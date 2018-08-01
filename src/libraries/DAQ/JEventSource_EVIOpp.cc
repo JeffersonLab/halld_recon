@@ -404,8 +404,8 @@ void JEventSource_EVIOpp::Dispatcher(void)
 		if(swap_needed && SWAP) myjobtype |= DEVIOWorkerThread::JOB_SWAP;
 		
 		// Wake up worker thread to handle event
-		thr->in_use = true;
 		thr->jobtype = (DEVIOWorkerThread::JOBTYPE)myjobtype;
+		thr->in_use = true;
 		thr->istreamorder = istreamorder++;
 
 		thr->cv.notify_all();
