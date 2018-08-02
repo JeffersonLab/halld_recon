@@ -160,15 +160,11 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
 	if (extrapolations.size()==0) return;
 
-	// for now just exit
-	//return;
-
 	// loop over DIRC hits and compare time with LUT
 	double locInputStartTime = locTrackTimeBased->t0();
 	shared_ptr<DDIRCMatchParams> locDIRCMatchParams;
-	shared_ptr<DDIRCLutPhotons> locDIRCLutPhotons;
-	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCLutPhotons))
-	locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCLutPhotons, locDIRCMatchParams);
+	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->mass(), locDIRCMatchParams))
+		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams); 
 }
 
 void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const

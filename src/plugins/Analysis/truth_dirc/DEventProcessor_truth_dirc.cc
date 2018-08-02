@@ -47,34 +47,6 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
 
 jerror_t DEventProcessor_truth_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
-   // Get the geometry
-   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-   DGeometry *geom = dapp->GetDGeometry(runnumber);
-
-   // Outer detector geometry parameters
-   vector<double>tof_face;
-   geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z", tof_face);
-   vector<double>tof_plane;  
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane);
-   double dTOFz=tof_face[2]+tof_plane[2]; 
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
-   dTOFz+=tof_face[2]+tof_plane[2];
-   dTOFz*=0.5;  // mid plane between tof Planes
-   std::cout<<"dTOFz "<<dTOFz<<std::endl;
-
-   double dDIRCz;
-   vector<double>dirc_face;
-   vector<double>dirc_plane;
-   vector<double>dirc_shift;
-   vector<double>bar_plane;
-   geom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", dirc_face);
-   geom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='1']", dirc_plane);
-   geom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
-   geom->Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", bar_plane);
-   
-   dDIRCz=dirc_face[2]+dirc_plane[0]+dirc_shift[2]+bar_plane[1]; // 585.862
-   std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
-
    return NOERROR;
 }
 
@@ -90,7 +62,7 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
-
+  
   TVector3 VertexGen = TVector3(mcthrowns[0]->position().X(),
 				mcthrowns[0]->position().Y(), mcthrowns[0]->position().Z());
   // Make Particle object for beam photon

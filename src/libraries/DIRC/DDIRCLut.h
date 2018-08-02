@@ -10,14 +10,16 @@
 #include <JANA/JObject.h>
 using namespace jana;
 
+#include <DANA/DApplication.h>
 #include <PID/DDetectorMatches.h>
-#include <PID/DDIRCLutPhotons.h>
+#include <DIRC/DDIRCLutPhotons.h>
 
 #include "TROOT.h"
 #include "TVector3.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1.h"
+#include "TH2.h"
 #include "TF1.h"
 
 class DDIRCLut: public JObject {
@@ -29,7 +31,7 @@ public:
 	DDIRCLut(JEventLoop *loop);
 	~DDIRCLut(){};
 
-	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, shared_ptr<DDIRCLutPhotons>& locDIRCLutPhotons) const;
+	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams) const;
 
 	uint GetLutPixelAngleSize(int bar, int pixel) const;
 	uint GetLutPixelTimeSize(int bar, int pixel) const;
@@ -39,16 +41,19 @@ public:
 	Long64_t GetLutPixelPath(int bar, int pixel, int entry) const;
 	
 private:
+	DApplication *dapp;
 
 	vector<TVector3> lutNodeAngle[48][10864];
 	vector<Double_t> lutNodeTime[48][10864];
 	vector<Long64_t> lutNodePath[48][10864];
 
-	TF1 *fAngle[3];
+	TF1 *fAngle[4];
 	
 	bool DIRC_DEBUG_HISTS;
-	TH1F *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
-	TH1F *hAngle[3];
+	TH1I *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
+	TH2I *hDiff_Pixel;
+	TH1I *hDeltaThetaC[4];
+	TH2I *hDeltaThetaC_Pixel[4];
 };
 
 #endif // _DDIRCLut_

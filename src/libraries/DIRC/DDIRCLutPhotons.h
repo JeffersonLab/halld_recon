@@ -22,6 +22,9 @@ class DDIRCLutPhotons : public jana::JObject
 {
  public:
   JOBJECT_PUBLIC(DDIRCLutPhotons);
+  
+  DDIRCLutPhotons(){};
+  ~DDIRCLutPhotons(){};
 
   vector< pair<double,double> > dPhoton; // thetaC, deltaT
 

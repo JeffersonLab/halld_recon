@@ -17,12 +17,32 @@ public:
 	~DDIRCLut_factory(){};
 
 private:
+	jerror_t brun(JEventLoop *loop, int32_t runnumber){
+		
+		assert( _data.size() == 0 );
+		
+		flags = PERSISTANT;
+		_data.push_back( new DDIRCLut(loop) );
+		
+		return NOERROR;
+	}
+
+        jerror_t erun(void){
+		
+		for(unsigned int i=0; i<_data.size(); i++)delete _data[i];
+		_data.clear();
+		
+		return NOERROR;
+	}
+
 	jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
 		
-		DDIRCLut *dDIRCLut = new DDIRCLut(loop);
-		SetFactoryFlag(PERSISTANT);
-		ClearFactoryFlag(WRITE_TO_OUTPUT);
-		_data.push_back(dDIRCLut);
+		//cout<<"DDIRCLut_factory::evnt()"<<_data.size()<<endl;
+
+		//DDIRCLut *dDIRCLut = new DDIRCLut(loop);
+		//SetFactoryFlag(PERSISTANT);
+		//ClearFactoryFlag(WRITE_TO_OUTPUT);
+		//_data.push_back(dDIRCLut);
 		
 		return NOERROR;
 	}

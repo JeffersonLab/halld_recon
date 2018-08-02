@@ -20,7 +20,7 @@
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
-#include <PID/DDIRCLutPhotons.h>
+#include <DIRC/DDIRCLutPhotons.h>
 #include <TMath.h>
 
 using namespace std;

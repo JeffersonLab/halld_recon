@@ -16,67 +16,66 @@ using namespace std;
 //---------------------------------
 DDIRCLut::DDIRCLut(JEventLoop *loop) 
 {
+	dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+	JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+
 	////////////////////////////////////
 	// LUT histograms and diagnostics //
 	////////////////////////////////////
-	DIRC_DEBUG_HISTS = true;
-	//gPARMS->SetDefaultParameter("DIRC:DEBUG_HISTS",DIRC_DEBUG_HISTS);
-
-	/*
-	string locDirName = "DIRC";
-	TDirectoryFile* locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
-	if(locDirectoryFile == NULL)
-		locDirectoryFile = new TDirectoryFile(locDirName.c_str(), locDirName.c_str());
-	locDirectoryFile->cd();
-	*/	
-
-	// Set expected angle functions: should get parameters from CCDB for sigma_thetaC
-	for(int loc_i = 0; loc_i<3; loc_i++) {
-		fAngle[loc_i] = new TF1(Form("fAngle_%d",loc_i),"[0]*exp(-0.5*((x-[1])/[2])*(x-[1])/[2])",0.7,0.9);
-		fAngle[loc_i]->SetParameter(0,1);         // const
-		fAngle[loc_i]->SetParameter(2,0.0085);    // sigma
-		// mean is set later depending on momentum of track
-		
-		//dapp->Lock(); //japp->RootWriteLock();
-		if(DIRC_DEBUG_HISTS) {
-			//gDirectory->cd("/");
-			cout<<"Initializing angle histograms"<<endl;
-			hAngle[loc_i] = (TH1F*)gROOT->FindObject(Form("hAngle_%d",loc_i));
-			if(!hAngle[loc_i]) 
-				hAngle[loc_i] = new TH1F(Form("hAngle_%d",loc_i),  "cherenkov angle;#theta_{C} [rad];entries/N_{max} [#]", 250,0.6,1);
-		}
-		//dapp->Unlock(); //japp->RootUnLock();
-	}
+	DIRC_DEBUG_HISTS = false;
+	gPARMS->SetDefaultParameter("DIRC:DEBUG_HISTS",DIRC_DEBUG_HISTS);
 
 	if(DIRC_DEBUG_HISTS) {
-		//dapp->Lock(); //japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-        	{
-			//gDirectory->cd("/");
-			cout<<endl<<endl<<"Initialize histograms"<<endl<<endl;
-			//hDiff = (TH1F*)gROOT->FindObject("hDiff");
-			//hDiffT = (TH1F*)gROOT->FindObject("hDiffT");
-			//hDiffD = (TH1F*)gROOT->FindObject("hDiffD");
-			//hDiffR = (TH1F*)gROOT->FindObject("hDiffR");
-			//hTime = (TH1F*)gROOT->FindObject("hTime");
-			//hCalc = (TH1F*)gROOT->FindObject("hCalc");
-			//hNph = (TH1F*)gROOT->FindObject("hNph");
-			if(!hDiff) hDiff = new TH1F("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiffT) hDiffT = new TH1F("hDiffT",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiffD) hDiffD = new TH1F("hDiffD",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiffR) hDiffR = new TH1F("hDiffR",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hTime) hTime = new TH1F("hTime",";propagation time [ns];entries [#]",   1000,0,200);
-			if(!hCalc) hCalc = new TH1F("hCalc",";calculated time [ns];entries [#]",   1000,0,200);
-			if(!hNph) hNph = new TH1F("hNph",";detected photons [#];entries [#]", 150,0,150);	
-		
-			cout<<"Found hDiff at "<<gROOT->FindObjectPathName(hDiff)<<endl;
-		}
-		//dapp->Unlock(); //japp->RootUnLock(); //REMOVE ROOT LOCK!!
-
+		string locDirName = "DIRC_DEBUG";
+		TDirectoryFile* locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
+		if(locDirectoryFile == NULL)
+			locDirectoryFile = new TDirectoryFile(locDirName.c_str(), locDirName.c_str());
+		locDirectoryFile->cd();
 	}
-	
 
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+	dapp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	// Set expected angle gaussian functions: should get parameters from CCDB for sigma_thetaC
+	for(int loc_i = 0; loc_i<4; loc_i++) {
+		fAngle[loc_i] = new TF1(Form("fAngle_%d",loc_i),"[0]*exp(-0.5*((x-[1])/[2])*(x-[1])/[2])",0.7,0.9);
+		fAngle[loc_i]->SetParameter(0,1);         // const
+		// mean is set later depending on momentum of track
+		fAngle[loc_i]->SetParameter(2,0.0085);    // sigma (thetaC for single photon)
+	}
+	dapp->RootUnLock(); //REMOVE ROOT LOCK!!
+
+	if(DIRC_DEBUG_HISTS) {
+		dapp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+        	{
+			hDiff = (TH1I*)gROOT->FindObject("hDiff");
+			hDiff_Pixel = (TH2I*)gROOT->FindObject("hDiff_Pixel");
+			hDiffT = (TH1I*)gROOT->FindObject("hDiffT");
+			hDiffD = (TH1I*)gROOT->FindObject("hDiffD");
+			hDiffR = (TH1I*)gROOT->FindObject("hDiffR");
+			hTime = (TH1I*)gROOT->FindObject("hTime");
+			hCalc = (TH1I*)gROOT->FindObject("hCalc");
+			hNph = (TH1I*)gROOT->FindObject("hNph");
+			if(!hDiff) hDiff = new TH1I("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+			if(!hDiff_Pixel) hDiff_Pixel = new TH2I("hDiff_Pixel","; Pixel ID; t_{calc}-t_{measured} [ns];entries [#]", 10000, 0, 10000, 400,-20,20);
+			if(!hDiffT) hDiffT = new TH1I("hDiffT",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+			if(!hDiffD) hDiffD = new TH1I("hDiffD",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+			if(!hDiffR) hDiffR = new TH1I("hDiffR",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+			if(!hTime) hTime = new TH1I("hTime",";propagation time [ns];entries [#]",   1000,0,200);
+			if(!hCalc) hCalc = new TH1I("hCalc",";calculated time [ns];entries [#]",   1000,0,200);
+			if(!hNph) hNph = new TH1I("hNph",";detected photons [#];entries [#]", 150,0,150);	
+
+			// DeltaThetaC for each particle type (e, pi, K, p) and per pixel
+			TString particleName[4] = {"Electron", "Pion", "Kaon", "Proton"};
+			for(int loc_i = 0; loc_i<4; loc_i++) {	
+				hDeltaThetaC[loc_i] = (TH1I*)gROOT->FindObject(Form("hDeltaThetaC_%s",particleName[loc_i].Data()));
+				if(!hDeltaThetaC[loc_i]) 
+					hDeltaThetaC[loc_i] = new TH1I(Form("hDeltaThetaC_%s",particleName[loc_i].Data()),  "cherenkov angle; #Delta#theta_{C} [rad]", 200,-0.5,0.5);
+				hDeltaThetaC_Pixel[loc_i] = (TH2I*)gROOT->FindObject(Form("hDeltaThetaC_Pixel_%s",particleName[loc_i].Data()));
+				if(!hDeltaThetaC_Pixel[loc_i]) 
+					hDeltaThetaC_Pixel[loc_i] = new TH2I(Form("hDeltaThetaC_Pixel_%s",particleName[loc_i].Data()),  "cherenkov angle; Pixel ID; #Delta#theta_{C} [rad]", 10000, 0, 10000, 200,-0.5,0.5);
+			}
+		}
+		dapp->RootUnLock(); //REMOVE ROOT LOCK!!
+	}
 
 	/////////////////////////////////
 	// retrieve from LUT from file //
@@ -85,8 +84,7 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 	
 	TFile *fLut = new TFile("/group/halld/Users/jrsteven/2018-dirc/lut_all_flat.root");
         TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
-	//tLut->Print();
-	
+
 	vector<Double_t> *LutPixelAngleX[luts];
 	vector<Double_t> *LutPixelAngleY[luts];
 	vector<Double_t> *LutPixelAngleZ[luts];
@@ -113,14 +111,10 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
         // fill nodes with LUT info for each bar/pixel combination
 	for(int i=0; i<tLut->GetEntries(); i++) { // get pixels from TTree
 		tLut->GetEntry(i);
-		//if(i<6800 || i>7000) continue;
-		//cout<<i<<endl;
+
 		for(int l=0; l<luts; l++){ // loop over bars
-			//if(l==0) cout<<"size="<<LutPixelAngleX[l]->size()<<endl;
 			for(uint j=0; j<LutPixelAngleX[l]->size(); j++) { // loop over possible paths
-				//if(l==31 && i==4432) 
-				//	cout<<j<<" "<<LutPixelTime[l]->at(j)<<" "<<LutPixelPath[l]->at(j)<<endl;
-				//cout<<"i="<<i<<" l="<<l<<" j="<<j<<endl;
+				
 				TVector3 angle(LutPixelAngleX[l]->at(j), LutPixelAngleY[l]->at(j), LutPixelAngleZ[l]->at(j));
 				lutNodeAngle[l][i].push_back(angle);
 				lutNodeTime[l][i].push_back(LutPixelTime[l]->at(j));
@@ -128,19 +122,14 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 			}
 		}
 	}
-	
-	//delete LutPixelAngleX;
-	//delete LutPixelAngleY;
-	//delete LutPixelAngleZ;
-	//delete LutPixelTime;
-	//delete LutPixelPath;
 
+	// close LUT file
+	fLut->Close();
 }
 
-bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, shared_ptr<DDIRCLutPhotons>& locDIRCLutPhotons) const
+bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams) const
 {
 	// get bar and track position/momentum from extrapolation
-	int bar = 31;
 	TVector3 momInBar = locProjMom;
 	double tangle,luttheta,evtime;
 	int64_t pathid; 
@@ -149,10 +138,16 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	
 	double mAngle = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
 	
-	Particle_t hypotheses[3] = {PiPlus, KPlus, Proton};
-	for(int loc_i = 0; loc_i<3; loc_i++) {
+	int locHypothesisIndex = -1;
+	Particle_t hypotheses[4] = {Electron, PiPlus, KPlus, Proton};
+	for(int loc_i = 0; loc_i<4; loc_i++) {
 		double expectedAngle = acos(sqrt(momInBar.Mag()*momInBar.Mag() + ParticleMass(hypotheses[loc_i])*ParticleMass(hypotheses[loc_i]))/momInBar.Mag()/1.473);
 		fAngle[loc_i]->SetParameter(1, expectedAngle);
+		
+		// get index of hypothesis for DeltaThetaC
+		if( fabs(ParticleMass(hypotheses[loc_i]) - locMass) < 0.01 ) {
+			locHypothesisIndex = loc_i;	
+		}
 	}
 
 	TVector3 fnX1 = TVector3 (1,0,0);
@@ -163,18 +158,19 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	double cut_tdiffd=2; // direct cut in ns
 	double cut_tdiffr=3; // reflected cut in ns
 
+	// create object to store good photons
+	DDIRCLutPhotons *locDIRCLutPhotons = new DDIRCLutPhotons();
+
 	// loop over DIRC hits
-	double logLikelihoodSum[3];
+	double logLikelihoodSum[4];
 	int nPhotons = 0;
 	int nPhotonsThetaC = 0;
 	double meanThetaC = 0.;
 	for (unsigned int loc_i = 0; loc_i < locDIRCHits.size(); loc_i++){
 		const DDIRCTruthPmtHit* locDIRCHit = locDIRCHits[loc_i];
-	
-		//cout<<"TruthHit i="<<loc_i<<endl;
-	
-		// cheat and determine bar from truth info
-		//bar = locDIRCHit->key_bar;
+		
+		// cheat and determine bar from truth info (replace with Geometry->GetBar(X,Y) function)
+		int bar = locDIRCHit->key_bar;
 
                 // get channel information for LUT
 		int pmt = locDIRCHit->ch/64;
@@ -182,7 +178,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		int sensorId = 100*pmt + pix;
 
 		// use hit time to determine if reflected or not
-		double hitTime = locDIRCHit->t;// - locFlightTime;
+		double hitTime = locDIRCHit->t; // - locFlightTime;
 
 		// needs to be X dependent choice for reflection cut (from CCDB?)
 		bool reflected = hitTime>48;
@@ -239,54 +235,57 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					double bartime = lenz/cos(luttheta)/208.0; 
 					double totalTime = bartime+evtime;
 
-					if(DIRC_DEBUG_HISTS) {
+					// calculate time difference
+					double locDeltaT = totalTime-hitTime;
 
-						//dapp->RootWriteLock();
+					if(DIRC_DEBUG_HISTS) {	
+						dapp->RootWriteLock(); 
 						hTime->Fill(hitTime);
 						hCalc->Fill(totalTime);
-						//cout<<lenz<<endl;
 						
 						if(fabs(tangle-mAngle)<0.2){
-							hDiff->Fill(totalTime-hitTime);
+							hDiff->Fill(locDeltaT);
+							hDiff_Pixel->Fill(sensorId, locDeltaT);
 							if(samepath){
-								hDiffT->Fill(totalTime-hitTime);
-								if(r) hDiffR->Fill(totalTime-hitTime);
-								else hDiffD->Fill(totalTime-hitTime);
+								hDiffT->Fill(locDeltaT);
+								if(r) hDiffR->Fill(locDeltaT);
+								else hDiffD->Fill(locDeltaT);
 							}
 						}
-						//dapp->RootUnLock();
-					}
-
-					double locDeltaT = totalTime-hitTime;
-					if(!r && fabs(totalTime-hitTime)>cut_tdiffd) continue;
-					if(r && fabs(totalTime-hitTime) >cut_tdiffr) continue;
-
-					if(DIRC_DEBUG_HISTS) {
-						//dapp->RootWriteLock();
-						hAngle[0]->Fill(tangle);
-						//cout<<"fill histograms"<<endl;
-						//dapp->RootUnLock();
+						dapp->RootUnLock();
 					}
 					
+					// save hits array which pass some lose time and angle criteria
+					pair<double, double> photonInfo(tangle, locDeltaT);
+					if(fabs(locDeltaT) < 20.0 && fabs(tangle-mAngle)<0.2)
+						locDIRCLutPhotons->dPhoton.push_back(photonInfo);
+
+					// reject photons that are too far out of time
+					if(!r && fabs(locDeltaT)>cut_tdiffd) continue;
+					if(r && fabs(locDeltaT) >cut_tdiffr) continue;
+
+					if(DIRC_DEBUG_HISTS) {
+						dapp->RootWriteLock();
+					        hDeltaThetaC[locHypothesisIndex]->Fill(tangle-mAngle);
+						hDeltaThetaC_Pixel[locHypothesisIndex]->Fill(sensorId, tangle-mAngle);
+						dapp->RootUnLock();
+					}
 					
 					// remove photon candidates not used in likelihood
 					if(fabs(tangle-mAngle)>0.02) continue;
 					
 					// save good photons to DIRCLutPhotons object
 					isGood = true;
-					pair<double, double> photonInfo(tangle, fabs(locDeltaT));
-					//locDIRCLutPhotons->dPhoton.push_back(photonInfo);
 					
 					// calculate average thetaC
 					nPhotonsThetaC++;
 					meanThetaC += tangle;
 					
 					// calculate likelihood
-					for(int loc_j = 0; loc_j<3; loc_j++) 
+					for(int loc_j = 0; loc_j<4; loc_j++) 
 						logLikelihoodSum[loc_j] += TMath::Log(fAngle[loc_j]->Eval(tangle)+0.0001);
 				}
 			} // end loop over reflections
-
 		} // end loop over nodes
 
 		// count good photons
@@ -294,19 +293,26 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 
 	} // end loop over hits
 
+	if(DIRC_DEBUG_HISTS) {
+		dapp->RootWriteLock();
+		hNph->Fill(nPhotons);
+		dapp->RootUnLock();
+	}
+
 	// skip tracks without enough photons
 	if(nPhotons<5) 
 		return false;
 
 	// set DIRCMatchParameters contents
-	/*
-	
+	if(locDIRCMatchParams == nullptr)
+		locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
+	locDIRCMatchParams->dDIRCLutPhotons = locDIRCLutPhotons;
 	locDIRCMatchParams->dThetaC = meanThetaC/(double)nPhotonsThetaC;
-	locDIRCMatchParams->dLikelihoodPion = logLikelihoodSum[0];
-	locDIRCMatchParams->dLikelihoodKaon = logLikelihoodSum[1];
-	locDIRCMatchParams->dLikelihoodProton = logLikelihoodSum[2];
+	locDIRCMatchParams->dLikelihoodElectron = logLikelihoodSum[0];
+	locDIRCMatchParams->dLikelihoodPion = logLikelihoodSum[1];
+	locDIRCMatchParams->dLikelihoodKaon = logLikelihoodSum[2];
+	locDIRCMatchParams->dLikelihoodProton = logLikelihoodSum[3];
 	locDIRCMatchParams->dNPhotons = nPhotons;
-	*/
 
 	return true;
 }

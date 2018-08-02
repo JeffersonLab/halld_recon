@@ -1700,7 +1700,7 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
 }
 
 
-bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locInputStartTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, shared_ptr<DDIRCLutPhotons>& locDIRCLutPhotons, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locInputStartTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
 {
 	if(extrapolations.size()==0)
 		return false;
@@ -1715,7 +1715,7 @@ bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &ext
 	}
 
 	// Calculate DIRC LUT
-	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locMass, locDIRCMatchParams, locDIRCLutPhotons);
+	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locMass, locDIRCMatchParams);
 
 }
 
