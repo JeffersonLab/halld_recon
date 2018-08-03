@@ -33,6 +33,8 @@ jerror_t DBCALHit_factory::init(void)
   CORRECT_SIPM_SATURATION = true;
   gPARMS->SetDefaultParameter("BCAL:CORRECT_SIPM_SATURATION", CORRECT_SIPM_SATURATION, "Set to 1 to correct for SiPM saturation, set to 0 to not correct pulse integral or peak. (default = 1)");
 
+  // cout << " CORRECT_SIPM_SATURATION=" << CORRECT_SIPM_SATURATION << endl;
+
    return NOERROR;
 }
 
@@ -134,7 +136,7 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	   int layer = (saturation_SiPM_pars[i])["LAYER"] - 1;
 	   integral_to_peak[end][layer] = (saturation_SiPM_pars[i])["INTEGRAL_TO_PEAK"];
 	   sipm_npixels[end][layer] = (saturation_SiPM_pars[i])["SIPM_NPIXELS"];
-	   integral_2V_pixels[end][layer] = (saturation_SiPM_pars[i])["INTEGRAL_2V_PIXELS"];
+	   pixel_per_count[end][layer] = (saturation_SiPM_pars[i])["PIXEL_PER_COUNT"];
    } 
 
 
@@ -244,15 +246,15 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// compute in double precision to prevent round off errors
 	if (CORRECT_SIPM_SATURATION) {
 	  double integral_pedsub_measured = integral_pedsub;
-	  double Npixels_measured = (integral_2V_pixels[digihit->end][digihit->layer-1]/integral_to_peak[digihit->end][digihit->layer-1])*(integral_pedsub_measured/4095.);
+	  double Npixels_measured = pixel_per_count[digihit->end][digihit->layer-1]*integral_pedsub_measured;
 	  double Mpixels = sipm_npixels[digihit->end][digihit->layer-1];
 	  double Npixels_true = Npixels_measured < Mpixels? -Mpixels*log(1 - Npixels_measured/Mpixels) : Mpixels;
-	  integral_pedsub = Npixels_true*4095*integral_to_peak[digihit->end][digihit->layer-1]/integral_2V_pixels[digihit->end][digihit->layer-1];
+	  integral_pedsub = Npixels_true/pixel_per_count[digihit->end][digihit->layer-1];
+	  // cout << " event=" << eventnumber << " Layer=" << digihit->layer << " integral_pedsub_measured=" << integral_pedsub_measured 
+	  //	     << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " integral_pedsub=" << integral_pedsub << endl;
 	}
 	hit_E = gain * integral_pedsub;
 
-	// cout << " event=" << eventnumber << " Layer=" << digihit->layer << " integral_pedsub_measured=" << integral_pedsub_measured 
-	//	     << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " integral_pedsub=" << integral_pedsub << endl;
       }
       if (VERBOSE>2) printf("%5lu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
 							eventnumber,i,digihits.size(),digihit->datasource,
@@ -265,10 +267,10 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       int pulse_peak_pedsub=0;
       	if (CORRECT_SIPM_SATURATION) {
 	  double pulse_peak_pedsub_measured = (int)digihit->pulse_peak - (int)single_sample_ped;
-	  double Npixels_measured = integral_2V_pixels[digihit->end][digihit->layer-1]*(pulse_peak_pedsub_measured/4095.);
+	  double Npixels_measured = pixel_per_count[digihit->end][digihit->layer-1]*pulse_peak_pedsub_measured*integral_to_peak[digihit->end][digihit->layer-1];
 	  double Mpixels = sipm_npixels[digihit->end][digihit->layer-1];
 	  double Npixels_true = Npixels_measured < Mpixels? -Mpixels*log(1 - Npixels_measured/Mpixels) : Mpixels;
-	  pulse_peak_pedsub = round(Npixels_true*4095/integral_2V_pixels[digihit->end][digihit->layer-1]);
+	  pulse_peak_pedsub = round(Npixels_true/pixel_per_count[digihit->end][digihit->layer-1]/integral_to_peak[digihit->end][digihit->layer-1]);
 	  // cout  << " event=" << eventnumber << " Layer=" << digihit->layer  << " pulse_peak_pedsub_measured=" << pulse_peak_pedsub_measured 
 	  //	    << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " pulse_peak_pedsub=" << pulse_peak_pedsub 
 	  //	    << " Int/Peak Ratio=" << integral_pedsub/pulse_peak_pedsub << endl;
