@@ -70,6 +70,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   locGeometry->GetFCALZ(dFCALz);
 
 	// Get start counter geometry;
+	int MAX_SC_SECTORS = 0;    // keep track of the number of sectors
 	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
 	{
 		dSCphi0=sc_pos[0][0].Phi();
@@ -91,6 +92,7 @@ DParticleID::DParticleID(JEventLoop *loop)
 			sc_dir.push_back(temp);
 		}
 	  START_EXIST = true;      // Found Start Counter
+	  MAX_SC_SECTORS = sc_pos.size();
 	}
 	else {
 	  START_EXIST = false;      // no Start Counter found
@@ -204,14 +206,14 @@ DParticleID::DParticleID(JEventLoop *loop)
 		jout << "Error loading /TOF/propagation_speed !" << endl;
 
 	map<string, double> tofparms;
- 	loop->GetCalib("TOF/tof_parms", tofparms);
+ 	loop->GetCalib("TOF/tof_parms", tofparms);   
 	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
 	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
-	TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];
+	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
 
 	loop->GetSingle(dTOFGeometry);
-	dHalfPaddle_OneSided = dTOFGeometry->SHORTBARLENGTH/2.0; //GET FROM GEOMETRY??
-	double locBeamHoleWidth = dTOFGeometry->LONGBARLENGTH - 2.0*dTOFGeometry->SHORTBARLENGTH;
+	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
+	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
 
 	// Start counter calibration constants
@@ -249,7 +251,7 @@ DParticleID::DParticleID(JEventLoop *loop)
 	      }
 	  }
 
-	// Individual attneuation calibrations (FIU bench mark data) 
+	// Individual attenuation calibrations (FIU bench mark data) 
 	if(loop->GetCalib("START_COUNTER/attenuation_factor", attn_vals))
 	  jout << "Error in loading START_COUNTER/attenuation_factor !" << endl;
 	else
@@ -274,12 +276,12 @@ DParticleID::DParticleID(JEventLoop *loop)
     if(loop->GetCalib("START_COUNTER/time_resol_paddle_v2", sc_paddle_resolution_params))
         jout << "Error in loading START_COUNTER/time_resol_paddle_v2 !" << endl;
 	else {
-        if(sc_paddle_resolution_params.size() != (unsigned int)DSCHit_factory::MAX_SECTORS)
+        if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
             jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl
                  << "  loaded = " << sc_paddle_resolution_params.size()
-                 << "  expected = " << DSCHit_factory::MAX_SECTORS << endl;
+                 << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<DSCHit_factory::MAX_SECTORS; i++) {
+        for(int i=0; i<MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
@@ -895,7 +897,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DTOFPoi
 		//Is unmatched horizontal paddle with only one hit above threshold
 		bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
 		int locBar = locTOFPoint->dHorizontalBar;
-		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
 		//Paddle midpoint
 		double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -920,7 +922,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DTOFPoi
 		//Is unmatched vertical paddle with only one hit above threshold
 		bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
 		int locBar = locTOFPoint->dVerticalBar;
-		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
 		//Paddle midpoint
 		double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -2066,7 +2068,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Horizontal(const DRefe
 	if(locReferenceTrajectory == nullptr)
 		return nullptr;
 
-	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->CenterHPlane); //a point on the TOF plane
+	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->Get_CenterHorizPlane()); //a point on the TOF plane
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_pos, proj_mom;
 	double locPathLength = 9.9E9, locFlightTime = 9.9E9;
@@ -2144,7 +2146,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Vertical(const DRefere
 		return nullptr;
 
 	// Evaluate matching solely by physical geometry of the paddle: NOT the distance along the paddle of the hit
-	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->CenterVPlane); //a point on the TOF plane
+	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->Get_CenterVertPlane()); //a point on the TOF plane
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_pos, proj_mom;
 	double locPathLength = 9.9E9, locFlightTime = 9.9E9;
@@ -2442,7 +2444,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Horizontal(const vecto
   // Find the track projection to the TOF
   DVector3 proj_pos=extrapolations[0].position; 
   DVector3 proj_mom=extrapolations[0].momentum;
-  double dz=dTOFGeometry->CenterHPlane-proj_pos.z();
+  double dz=dTOFGeometry->Get_CenterHorizPlane()-proj_pos.z();
   double px=proj_mom.Px();
   double py=proj_mom.Py();
   double pz=proj_mom.Pz();
@@ -2524,7 +2526,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Vertical(const vector<
   // Find the track projection to the TOF
   DVector3 proj_pos=extrapolations[0].position; 
   DVector3 proj_mom=extrapolations[0].momentum;
-  double dz=dTOFGeometry->CenterVPlane-proj_pos.z();
+  double dz=dTOFGeometry->Get_CenterVertPlane()-proj_pos.z();
   double px=proj_mom.Px();
   double py=proj_mom.Py();
   double pz=proj_mom.Pz();
@@ -2667,7 +2669,7 @@ bool DParticleID::PredictTOFPaddles(const DReferenceTrajectory *rt, unsigned int
 		return false;
 
 	// Find intersection with TOF plane given by tof_pos
-	DVector3 tof_pos(0,0,dTOFGeometry->CenterMPlane);
+	DVector3 tof_pos(0,0,dTOFGeometry->Get_CenterMidPlane());
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_mom,proj_pos;
 	if(rt->GetIntersectionWithPlane(tof_pos, norm, proj_pos, proj_mom, NULL,NULL,NULL,SYS_TOF) != NOERROR)
@@ -2929,7 +2931,7 @@ bool DParticleID::PredictTOFPaddles(const vector<DTrackFitter::Extrapolation_t>&
 		return false;
 
 	// Find intersection with TOF plane given by tof_pos
-	DVector3 tof_pos(0,0,dTOFGeometry->CenterMPlane);
+	DVector3 tof_pos(0,0,dTOFGeometry->Get_CenterMidPlane());
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_mom=extrapolations[0].momentum;
 	DVector3 proj_pos=extrapolations[0].position;
@@ -3318,7 +3320,7 @@ double DParticleID::Get_CorrectedHitTime(const DTOFPoint* locTOFPoint,
       //Is unmatched horizontal paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
       int locBar = locTOFPoint->dHorizontalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3340,7 +3342,7 @@ double DParticleID::Get_CorrectedHitTime(const DTOFPoint* locTOFPoint,
       //Is unmatched vertical paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
       int locBar = locTOFPoint->dVerticalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3371,7 +3373,7 @@ double DParticleID::Get_CorrectedHitEnergy(const DTOFPoint* locTOFPoint,
       //Is unmatched horizontal paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
       int locBar = locTOFPoint->dHorizontalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3391,7 +3393,7 @@ double DParticleID::Get_CorrectedHitEnergy(const DTOFPoint* locTOFPoint,
       //Is unmatched vertical paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
       int locBar = locTOFPoint->dVerticalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
