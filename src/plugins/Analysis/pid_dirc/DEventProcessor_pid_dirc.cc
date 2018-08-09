@@ -165,7 +165,7 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
 	int relevant(0);
 	// identify bar id
 	for (unsigned int j = 0; j < dircBarHits.size(); j++){
-	  if(j != fabs(dircPmtHits[h]->key_bar)) continue;
+		//if(j != fabs(dircPmtHits[h]->key_bar)) continue;
 	  if(mcthrowns[m]->myid == dircBarHits[j]->track){
 	    // double px = mcthrowns[m]->momentum().X();
 	    // double py = mcthrowns[m]->momentum().Y();
