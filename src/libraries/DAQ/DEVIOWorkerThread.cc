@@ -69,6 +69,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EPICS         = true;
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
+	PARSE_SSP           = true;
 	
 	LINK_TRIGGERTIME    = true;
 }
@@ -871,6 +872,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				ParseJLabModuleData(rocid, iptr, iend_data_block_bank);
 				break;
 
+			case 0x123:
+				ParseSSPBank(rocid, iptr, iend_data_block_bank);
+				break;
+
 			// These were implemented in the ROL for sync events
 			// as 0xEE02 and 0xEE05. However, that violates the
 			// spec. which reserves the top 4 bits as status bits
@@ -904,7 +909,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 
 
 			default:
-				jerr<<"Unknown module type ("<<det_id<<" = " << hex << det_id << dec << " ) encountered" << endl;
+				jerr<<"Unknown module type ("<<det_id<<" = 0x" << hex << det_id << dec << " ) encountered" << endl;
 //				if(VERBOSE>5){
 					cout << "----- First few words to help with debugging -----" << endl;
 					cout.flush(); cerr.flush();
@@ -1958,6 +1963,23 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 
 	// Skip filler words
 	while(iptr<iend && (*iptr&0xF8000000)==0xF8000000)iptr++;
+}
+
+//----------------
+// ParseSSPBank
+//----------------
+void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
+	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
+
+	/// No support for SSP just yet. 
+	static int iwarnings=0;
+	if(iwarnings<10){
+		jout << "WARNING: SSP data encountered but ignored for the moment" << endl;
+		if(iwarnings==9) jout << "----- LAST WARNING (SSP) ---" << endl;
+		iwarnings++;
+	}
+	iptr = &iptr[(*iptr) + 1];
 }
 
 //----------------
