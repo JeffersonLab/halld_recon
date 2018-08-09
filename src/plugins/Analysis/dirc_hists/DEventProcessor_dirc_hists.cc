@@ -62,7 +62,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 
 	  hThetaCVsP[locPID] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.6, 1.0);
 	  hDeltaThetaCVsP[locPID] = new TH2I(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
-	  hLikelihoodDiffVsP[locPID] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; ln L(%s) - ln L(%s);entries [#]", locParticleROOTName.data(), locParticleROOTNameAlt.data()), 120, 0.0, 12.0, 100, -200, 200);
+	  hLikelihoodDiffVsP[locPID] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); ln L(%s) - ln L(%s)", locParticleROOTName.data(), locParticleROOTNameAlt.data()), 120, 0.0, 12.0, 100, -200, 200);
 
 	  dir->cd();
   }
