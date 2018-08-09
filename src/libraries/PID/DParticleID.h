@@ -230,6 +230,8 @@ class DParticleID:public jana::JObject
 		double ATTEN_LENGTH; // Start counter attenuation length
 		double OUT_OF_TIME_CUT; //for all matches
 
+                vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
+
         // Start counter resolution parameters
         vector<double> SC_MAX_RESOLUTION;
         vector<double> SC_BOUNDARY1, SC_BOUNDARY2;
