@@ -19,22 +19,52 @@ DEventProcessor_dirc_hists::~DEventProcessor_dirc_hists() {
 }
 
 jerror_t DEventProcessor_dirc_hists::init(void) {
+  
   string locOutputFileName = "hd_root.root";
   if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+	  gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+
+  DIRC_TRUTH_BARHIT = false;
+  if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
+	  gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
 
   TDirectory *dir = new TDirectoryFile("DIRC","DIRC");
   dir->cd();
+ 
+  // list of particle IDs for histograms (and alternate hypotheses for likelihood diff)
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(Positron, PiPlus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(Electron, PiMinus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(PiPlus, KPlus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(PiMinus, KMinus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(KPlus, PiPlus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(KMinus, PiMinus));
+  dFinalStatePIDs.push_back(pair<Particle_t, Particle_t>(Proton, KPlus));
+ 
+  // plots for each hypothesis
+  for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
+	  Particle_t locPID = dFinalStatePIDs[loc_i].first;
+	  string locParticleName = ParticleType(locPID);
+	  string locParticleROOTName = ParticleName_ROOT(locPID);
+	  Particle_t locPIDAlt = dFinalStatePIDs[loc_i].second;
+	  string locParticleNameAlt = ParticleType(locPIDAlt);
+	  string locParticleROOTNameAlt = ParticleName_ROOT(locPIDAlt);
+	  
+	  TDirectory *locParticleDir = new TDirectoryFile(locParticleName.data(),locParticleName.data());
+	  locParticleDir->cd();
 
-  // timing difference for measured tracks
-  hDiff = new TH1I("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-  
-  // likelihood plots for each hypothesis
-  TString particleName[4] = {"Electron", "Pion", "Kaon", "Proton"};
-  for(int loc_i=0; loc_i<4; loc_i++) {
-	  hDeltaThetaC[loc_i] = new TH1I(Form("hDeltaThetaC_%s",particleName[loc_i].Data()),  "cherenkov angle; #Delta#theta_{C} [rad]", 200,-0.5,0.5);
-	  hLikelihood[loc_i] = new TH1I(Form("hLikelihood_%s",particleName[loc_i].Data()), "lnL;entries [#]",1000,-5000.,5000.);
-	  hLikelihoodDiff[loc_i] = new TH1I(Form("hLiklihoodDiff_%s",particleName[loc_i].Data()), "ln L(#pi) - ln L(K);entries [#]",100,-200.,200.);
+	  hDiff[locPID] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-20,20);
+	  hNphC[locPID] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
+	  hThetaC[locPID] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
+	  hDeltaThetaC[locPID] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
+	  hLikelihood[locPID] = new TH1I(Form("hLikelihood_%s",locParticleName.data()), Form("; %s lnL; entries [#]", locParticleROOTName.data()),1000,-1000.,1000.);
+	  hLikelihoodDiff[locPID] = new TH1I(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; ln L(%s) - ln L(%s);entries [#]", locParticleROOTName.data(), locParticleROOTNameAlt.data()),100,-200.,200.);
+
+
+	  hThetaCVsP[locPID] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.6, 1.0);
+	  hDeltaThetaCVsP[locPID] = new TH2I(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
+	  hLikelihoodDiffVsP[locPID] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; ln L(%s) - ln L(%s);entries [#]", locParticleROOTName.data(), locParticleROOTNameAlt.data()), 120, 0.0, 12.0, 100, -200, 200);
+
+	  dir->cd();
   }
 
   gDirectory->cd("/");
@@ -44,34 +74,6 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 
 jerror_t DEventProcessor_dirc_hists::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
-   // Get the geometry
-   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-   DGeometry *geom = dapp->GetDGeometry(runnumber);
-
-   // Outer detector geometry parameters
-   vector<double>tof_face;
-   geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z", tof_face);
-   vector<double>tof_plane;  
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane);
-   double dTOFz=tof_face[2]+tof_plane[2]; 
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
-   dTOFz+=tof_face[2]+tof_plane[2];
-   dTOFz*=0.5;  // mid plane between tof Planes
-   //std::cout<<"dTOFz "<<dTOFz<<std::endl;
-
-   double dDIRCz;
-   vector<double>dirc_face;
-   vector<double>dirc_plane;
-   vector<double>dirc_shift;
-   vector<double>bar_plane;
-   geom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", dirc_face);
-   geom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='1']", dirc_plane);
-   geom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
-   geom->Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", bar_plane);
-   
-   dDIRCz=dirc_face[2]+dirc_plane[0]+dirc_shift[2]+bar_plane[1]; // 585.862
-   //std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
-
    // get PID algos
    const DParticleID* locParticleID = NULL;
    loop->GetSingle(locParticleID);
@@ -84,63 +86,116 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
   // retrieve tracks and detector matches 
   vector<const DTrackTimeBased*> locTimeBasedTracks;
-  const DDetectorMatches* locDetectorMatches = NULL;
   loop->Get(locTimeBasedTracks);
+
+  const DDetectorMatches* locDetectorMatches = NULL;
   loop->GetSingle(locDetectorMatches);
 
-  // plot DIRC LUT variables for specific tracks
+  // truth information on tracks hitting DIRC bar (for comparison)
+  vector<const DDIRCTruthBarHit*> locDIRCBarHits;
+  loop->Get(locDIRCBarHits);
+
+  // plot DIRC LUT variables for specific tracks  
   for (unsigned int loc_i = 0; loc_i < locTimeBasedTracks.size(); loc_i++){
+
 	  const DTrackTimeBased* locTrackTimeBased = locTimeBasedTracks[loc_i];
-	  
-	  // expected thetaC
+
+	  // require well reconstructed tracks for initial studies
+	  int locDCHits = locTrackTimeBased->Ndof + 5;
+	  double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
+	  double locP = locTrackTimeBased->momentum().Mag();
+	  if(locDCHits < 25 || locTheta < 3.0 || locTheta > 10.0 || locP > 12.0)
+		  continue;
+
+	  // require has good match to TOF hit for cleaner sample
+	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+	  bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	  if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
+		  continue;
+
+	  // get expected thetaC from the extrapolation
 	  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
 	  if(extrapolations.size()==0) continue;
-	  DVector3 momInBar = extrapolations[0].momentum;
-	  double locMass = locTrackTimeBased->mass();
-	  double mAngle = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
 
-	  int locHypothesisIndex = -1;
-	  Particle_t hypotheses[4] = {Electron, PiPlus, KPlus, Proton};
-	  for(int loc_i = 0; loc_i<4; loc_i++) {
-		  if( fabs(ParticleMass(hypotheses[loc_i]) - locMass) < 0.01 )
-			  locHypothesisIndex = loc_i;	
+	  DVector3 momInBar = extrapolations[0].momentum;
+	  DVector3 posInBar = extrapolations[0].position;
+
+	  ////////////////////////////////////////////
+	  // option to cheat and use truth position //
+	  ////////////////////////////////////////////
+	  if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
+		  
+		  TVector3 bestMatchPos, bestMatchMom;
+		  double bestMatchDist = 999.;
+		  for(uint i=0; i<locDIRCBarHits.size(); i++) {
+			  TVector3 locDIRCBarHitPos(locDIRCBarHits[0]->x, locDIRCBarHits[0]->y, locDIRCBarHits[0]->z);
+			  TVector3 locDIRCBarHitMom(locDIRCBarHits[0]->px, locDIRCBarHits[0]->py, locDIRCBarHits[0]->pz);
+			  if((extrapolations[0].position - locDIRCBarHitPos).Mag() < bestMatchDist) {
+				  bestMatchDist = (extrapolations[0].position - locDIRCBarHitPos).Mag();
+				  bestMatchPos = locDIRCBarHitPos;
+				  bestMatchMom = locDIRCBarHitMom;
+			  }
+		  }
+		  
+		  momInBar = bestMatchMom;
+		  posInBar = bestMatchPos;
 	  }
 
+	  Particle_t locPID = locTrackTimeBased->PID();
+	  double locMass = locTrackTimeBased->mass();
+	  double locExpectedThetaC = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
+
+	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	  bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
-	  
+
 	  if(foundDIRC) {
 
-		  // loop over hits associated with track
+		  // loop over hits associated with track (from LUT)
 		  const DDIRCLutPhotons* locDIRCLutPhotons = locDIRCMatchParams->dDIRCLutPhotons;
 		  if(locDIRCLutPhotons) {
 			  vector< pair<double,double> > locPhotons = locDIRCLutPhotons->dPhoton;
 			  if(locPhotons.size() > 0) {
+
+				  // loop over candidate photons
 				  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
 					  double locDeltaT = locPhotons[loc_j].second;
-					  hDiff->Fill(locDeltaT);
-					  if(fabs(locDeltaT) < 2.0) 
-						  hDeltaThetaC[locHypothesisIndex]->Fill(locPhotons[loc_j].first-mAngle);
+					  hDiff[locPID]->Fill(locDeltaT);
+					  
+					  // fill histograms for candidate photons in timing cut
+					  if(fabs(locDeltaT) < 2.0) {
+						  hThetaC[locPID]->Fill(locPhotons[loc_j].first);
+						  hDeltaThetaC[locPID]->Fill(locPhotons[loc_j].first-locExpectedThetaC);
+						  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locPhotons[loc_j].first-locExpectedThetaC);
+					  }
 				  }
 			  }
 		  }			  
 		  
 		  // fill histograms with per-track quantities
-		  if(locHypothesisIndex == 0) {
-			  hLikelihood[0]->Fill(locDIRCMatchParams->dLikelihoodElectron);
-			  hLikelihoodDiff[0]->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
+		  hNphC[locPID]->Fill(locDIRCMatchParams->dNPhotons);
+		  hThetaCVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
+
+		  // for likelihood and difference for given track mass hypothesis
+		  if(locPID == Positron || locPID == Electron) {
+			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodElectron);
+			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 		  }
-		  else if(locHypothesisIndex == 1) {
-			  hLikelihood[1]->Fill(locDIRCMatchParams->dLikelihoodPion);
-			  hLikelihoodDiff[1]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+		  else if(locPID == PiPlus || locPID == PiMinus) {
+			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
-		  else if(locHypothesisIndex == 2) {
-			  hLikelihood[2]->Fill(locDIRCMatchParams->dLikelihoodKaon);
-			  hLikelihoodDiff[2]->Fill(locDIRCMatchParams->dLikelihoodKaon - locDIRCMatchParams->dLikelihoodProton);
+		  else if(locPID == KPlus || locPID == KMinus) {
+			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
-		  else if(locHypothesisIndex == 3) {
-			  hLikelihood[3]->Fill(locDIRCMatchParams->dLikelihoodProton);
-			  hLikelihoodDiff[3]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
+		  else if(locPID == Proton) {
+			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton);
+			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 	  }
   }

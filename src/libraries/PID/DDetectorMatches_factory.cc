@@ -58,6 +58,10 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	vector<const DDIRCTruthPmtHit*> locDIRCHits;
 	locEventLoop->Get(locDIRCHits);
 
+	// cheat and get truth info of track at bar
+	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
+	locEventLoop->Get(locDIRCBarHits);
+
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
 	//Match tracks to showers/hits
@@ -67,7 +71,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToTOF(locParticleID, locTrackTimeBasedVector[loc_i], locTOFPoints, locDetectorMatches);
 		MatchToFCAL(locParticleID, locTrackTimeBasedVector[loc_i], locFCALShowers, locDetectorMatches);
 		MatchToSC(locParticleID, locTrackTimeBasedVector[loc_i], locSCHits, locDetectorMatches);
-		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches);
+		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
 	}
 
 	//Find nearest tracks to showers
@@ -155,7 +159,7 @@ void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const
 	}
 }
 
-void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCTruthPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches) const
+void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCTruthPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const
 {
 	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
 	if (extrapolations.size()==0) return;
@@ -163,7 +167,7 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	// loop over DIRC hits and compare time with LUT
 	double locInputStartTime = locTrackTimeBased->t0();
 	shared_ptr<DDIRCMatchParams> locDIRCMatchParams;
-	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->mass(), locDIRCMatchParams))
+	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits))
 		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams); 
 }
 
