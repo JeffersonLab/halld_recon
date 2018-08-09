@@ -188,6 +188,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		bool     PARSE_EPICS;
 		bool     PARSE_EVENTTAG;
 		bool     PARSE_TRIGGER;
+		bool     PARSE_SSP;
 		bool     APPLY_TRANSLATION_TABLE;
 		int      ET_STATION_NEVENTS;
 		bool     ET_STATION_CREATE_BLOCKING;
