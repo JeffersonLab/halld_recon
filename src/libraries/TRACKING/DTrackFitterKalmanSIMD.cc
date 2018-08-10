@@ -3152,6 +3152,8 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
    // Input momentum 
    DVector3 pvec=input_params.momentum();
    double p_mag=pvec.Mag();
+   double px=pvec.x();
+   double py=pvec.y();
    double pz=pvec.z();
    double q_over_p0=q_over_p_=q/p_mag;
    double q_over_pt0=q_over_pt_=q/pvec.Perp();
@@ -3160,16 +3162,41 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
    double x0=x_=input_params.position().x();
    double y0=y_=input_params.position().y();
    double z0=z_=input_params.position().z();
+
+   if (fit_type==kWireBased && theta_deg>20.){
+     double Bz=fabs(bfield->GetBz(x0,y0,z0));
+     double sperp=30.;
+     double twokappa=qBr2p*Bz*q_over_pt0*FactorForSenseOfRotation;
+     double twoks=twokappa*sperp;
+     double one_over_2k=1./twokappa;
+     double cosphi=cos(phi0);
+     double sinphi=sin(phi0);
+     double sin2ks=sin(twoks);
+     double cos2ks=cos(twoks);
+     double one_minus_cos2ks=1.-cos2ks;
+     double myx=x0+one_over_2k*(cosphi*sin2ks-sinphi*one_minus_cos2ks);
+     double myy=y0+one_over_2k*(sinphi*sin2ks+cosphi*one_minus_cos2ks);
+     double mypx=px*cos2ks-py*sin2ks;
+     double mypy=py*cos2ks+px*sin2ks;
+     double myphi=atan2(mypy,mypx);
+     phi0=phi_=myphi;
+     px=mypx;
+     py=mypy;
+     x0=x_=myx;
+     y0=y_=myy;
+     z0+=tanl_*sperp;
+     z_=z0;     
+   }
    
    // Check integrity of input parameters
    if (!isfinite(x0) || !isfinite(y0) || !isfinite(q_over_p0)){
-      if (DEBUG_LEVEL>0) _DBG_ << "Invalid input parameters!" <<endl;
+     if (DEBUG_LEVEL>0) _DBG_ << "Invalid input parameters!" <<endl;
       return UNRECOVERABLE_ERROR;
    }
 
    // Initial direction tangents
-   double tx0=tx_=pvec.x()/pz;
-   double ty0=ty_=pvec.y()/pz;
+   double tx0=tx_=px/pz;
+   double ty0=ty_=py/pz;
    double one_plus_tsquare=1.+tx_*tx_+ty_*ty_;
 
    // deal with hits in FDC
@@ -6608,8 +6635,7 @@ kalman_error_t DTrackFitterKalmanSIMD::RecoverBrokenTracks(double anneal_factor,
       refit_chisq=-1.;
       refit_ndf=0; 
       refit_error=KalmanCentral(anneal_factor,S1,C1,refit_xy,
-            refit_chisq,refit_ndf);
-      _DBG_ << refit_error <<endl;
+				refit_chisq,refit_ndf);
       if (refit_error==FIT_SUCCEEDED
             || (refit_error==BREAK_POINT_FOUND 
                && break_point_cdc_index==1
@@ -7151,8 +7177,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
      double sinphi=sin(phi_);     
      if ((dx>0.0 && sinphi>0.0) || (dy<0.0 && cosphi>0.0) 
 	 || (dy>0.0 && cosphi<0.0) || (dx<0.0 && sinphi<0.0)) D_*=-1.; 
-     _DBG_ << "x,dx " <<x_ << " "<< x_-(-D_*sinphi) << " y,dy " <<y_<<" "<< y_- D_*cosphi << endl;
-     _DBG_ << "varx " << Clast(state_x,state_x) << " vary " << Clast(state_y,state_y) << endl;
      TransformCovariance(Clast);      
    }
    // Covariance matrix  
@@ -7298,23 +7322,22 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	  //break_point_step_index=old_point_step_index;
 	  
 	  if (error==MOMENTUM_OUT_OF_RANGE){
-	    _DBG_ << "Momentum out of range" <<endl;	
+	    //_DBG_ << "Momentum out of range" <<endl;	
 	    unsigned int new_index=(3*max_cdc_index)/4;
 	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
-	    //	    break_point_cdc_index=min_cdc_index_for_refit;
 	  }
 	  
 	  if (error==BROKEN_COVARIANCE_MATRIX){
 	    break_point_cdc_index=min_cdc_index_for_refit;
-	    _DBG_ << "Bad Cov" <<endl;
+	    //_DBG_ << "Bad Cov" <<endl;
 	  }
 	  if (error==POSITION_OUT_OF_RANGE){
-	    _DBG_ << "Bad position" << endl;
+	    //_DBG_ << "Bad position" << endl;
 	    unsigned int new_index=(max_cdc_index)/2;
 	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
 	  }
 	  if (error==PRUNED_TOO_MANY_HITS){
-	    _DBG_ << "Prune" << endl;
+	    //	    _DBG_ << "Prune" << endl;
 	    unsigned int new_index=(3*max_cdc_index)/4;
 	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
 	    // anneal_factor*=10.;
