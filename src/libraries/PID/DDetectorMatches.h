@@ -109,10 +109,9 @@ class DSCHitMatchParams
 class DDIRCMatchParams
 {
 	public:
-                DDIRCMatchParams(void) : dDIRCLutPhotons(NULL), dThetaC(0.0), dLikelihoodElectron(0.0), dLikelihoodPion(0.0), dLikelihoodKaon(0.0), dLikelihoodProton(0.0), dNPhotons(0){} 
+                DDIRCMatchParams(void) : dThetaC(0.0), dLikelihoodElectron(0.0), dLikelihoodPion(0.0), dLikelihoodKaon(0.0), dLikelihoodProton(0.0), dNPhotons(0){} 
 
-		const DDIRCLutPhotons* dDIRCLutPhotons;
-		//vector < pair<double,double> > dPhotons;
+		vector < pair<double,double> > dPhotons;
 
 		double dThetaC;
 		double dLikelihoodElectron, dLikelihoodPion, dLikelihoodKaon, dLikelihoodProton;

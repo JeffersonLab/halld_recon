@@ -151,24 +151,21 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  if(foundDIRC) {
 
 		  // loop over hits associated with track (from LUT)
-		  const DDIRCLutPhotons* locDIRCLutPhotons = locDIRCMatchParams->dDIRCLutPhotons;
-		  if(locDIRCLutPhotons) {
-			  vector< pair<double,double> > locPhotons = locDIRCLutPhotons->dPhoton;
-			  if(locPhotons.size() > 0) {
-
-				  // loop over candidate photons
-				  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
-					  double locDeltaT = locPhotons[loc_j].second;
-					  hDiff[locPID]->Fill(locDeltaT);
-					  
-					  // fill histograms for candidate photons in timing cut
-					  if(fabs(locDeltaT) < 2.0) {
-						  hThetaC[locPID]->Fill(locPhotons[loc_j].first);
-						  hDeltaThetaC[locPID]->Fill(locPhotons[loc_j].first-locExpectedThetaC);
-						  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locPhotons[loc_j].first-locExpectedThetaC);
-					  }
+		  vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
+		  if(locPhotons.size() > 0) {
+			  
+			  // loop over candidate photons
+			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
+				  double locDeltaT = locPhotons[loc_j].second;
+				  hDiff[locPID]->Fill(locDeltaT);
+				  
+				  // fill histograms for candidate photons in timing cut
+				  if(fabs(locDeltaT) < 2.0) {
+					  hThetaC[locPID]->Fill(locPhotons[loc_j].first);
+					  hDeltaThetaC[locPID]->Fill(locPhotons[loc_j].first-locExpectedThetaC);
+					  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locPhotons[loc_j].first-locExpectedThetaC);
 				  }
-			  }
+			  }	  
 		  }			  
 		  
 		  // remove final states not considered

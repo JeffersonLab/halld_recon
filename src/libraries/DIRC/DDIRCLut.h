@@ -44,6 +44,7 @@ public:
 	
 private:
 	DApplication *dapp;
+	//DDIRCLutPhotons *dDIRCLutPhotons;
 
 	vector<TVector3> lutNodeAngle[48][10864];
 	vector<Double_t> lutNodeTime[48][10864];

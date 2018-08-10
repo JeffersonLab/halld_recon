@@ -127,6 +127,9 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 
 	// close LUT file
 	fLut->Close();
+
+	// LUT photon container
+	//dDIRCLutPhotons = new DDIRCLutPhotons();
 }
 
 bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const
@@ -144,7 +147,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		
 		TVector3 bestMatchPos, bestMatchMom;
 		double bestMatchDist = 999.;
-		for(int i=0; i<(uint)locDIRCBarHits.size(); i++) {
+		for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
 			TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
 			TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
 			if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
@@ -181,12 +184,11 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	double cut_tdiffd=2; // direct cut in ns
 	double cut_tdiffr=3; // reflected cut in ns
 
-	/*
-	  Small memory leak from DDIRCLUTPhotons... manage with a pool and delete every event
-	*/
-
-	// create object to store good photons
-	DDIRCLutPhotons *locDIRCLutPhotons = new DDIRCLutPhotons();
+	// clear object to store good photons
+	//dDIRCLutPhotons->dPhoton.clear();
+	if(locDIRCMatchParams == nullptr)
+		locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
+	locDIRCMatchParams->dPhotons.clear();
 
 	// loop over DIRC hits
 	double logLikelihoodSum[4] = {0, 0, 0, 0};
@@ -291,8 +293,8 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					
 					// save hits array which pass some lose time and angle criteria
 					pair<double, double> photonInfo(tangle, locDeltaT);
-					if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2)
-						locDIRCLutPhotons->dPhoton.push_back(photonInfo);
+					if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2) 
+						locDIRCMatchParams->dPhotons.push_back(photonInfo);
 
 					// reject photons that are too far out of time
 					if(!r && fabs(locDeltaT)>cut_tdiffd) continue;
@@ -343,9 +345,6 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		return false;
 
 	// set DIRCMatchParameters contents
-	if(locDIRCMatchParams == nullptr)
-		locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
-	locDIRCMatchParams->dDIRCLutPhotons = locDIRCLutPhotons;
 	locDIRCMatchParams->dThetaC = meanThetaC/(double)nPhotonsThetaCLoose/2.; // why factor 2?
 	locDIRCMatchParams->dLikelihoodElectron = logLikelihoodSum[0];
 	locDIRCMatchParams->dLikelihoodPion = logLikelihoodSum[1];
