@@ -65,7 +65,7 @@ private:
   map<Particle_t, TH2I*> hLikelihoodDiffVsP;
 
   const DParticleID* dParticleID;
-  deque< pair<Particle_t, Particle_t> > dFinalStatePIDs;
+  deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
 
 };
