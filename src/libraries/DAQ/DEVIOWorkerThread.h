@@ -89,6 +89,7 @@ class DEVIOWorkerThread{
 		bool  PARSE_EPICS;
 		bool  PARSE_EVENTTAG;
 		bool  PARSE_TRIGGER;
+		bool  PARSE_SSP;
 		
 		bool  LINK_TRIGGERTIME;
 		bool  LINK_CONFIG;
@@ -121,6 +122,7 @@ class DEVIOWorkerThread{
 		void              Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void     MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr);
 		void             ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
+		void               ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 
 		void LinkAllAssociations(void);
 
