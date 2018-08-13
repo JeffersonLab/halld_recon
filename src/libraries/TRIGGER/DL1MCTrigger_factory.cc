@@ -315,6 +315,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
                 DL1MCTrigger *trigger = new DL1MCTrigger;
                 trigger->trig_mask = 1;
                 _data.push_back(trigger);
+		return NOERROR;
         }
 
         int l1_found = 1;  
