@@ -17,7 +17,7 @@ using namespace std;
 DDIRCLut::DDIRCLut(JEventLoop *loop) 
 {
 	dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+	dDIRCLutReader = dapp->GetDIRCLut(loop->GetJEvent().GetRunNumber());
 
 	DIRC_DEBUG_HISTS = false;
 	gPARMS->SetDefaultParameter("DIRC:DEBUG_HISTS",DIRC_DEBUG_HISTS);
@@ -78,55 +78,6 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 		}
 		dapp->RootUnLock(); //REMOVE ROOT LOCK!!
 	}
-
-	/////////////////////////////////
-	// retrieve from LUT from file //
-	/////////////////////////////////
-        const int luts = 48;
-	
-	TFile *fLut = new TFile("/group/halld/Users/jrsteven/2018-dirc/lut_all_flat.root");
-        TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
-
-	vector<Double_t> *LutPixelAngleX[luts];
-	vector<Double_t> *LutPixelAngleY[luts];
-	vector<Double_t> *LutPixelAngleZ[luts];
-	vector<Double_t> *LutPixelTime[luts];
-	vector<Long64_t> *LutPixelPath[luts];
-
-	// clear arrays to fill from TTree
-	for(int l=0; l<luts; l++){
-		LutPixelAngleX[l] = 0;
-		LutPixelAngleY[l] = 0;
-		LutPixelAngleZ[l] = 0;
-		LutPixelTime[l] = 0;
-		LutPixelPath[l] = 0;
-	}
-
-        for(int l=0; l<luts; l++){
-		tLut->SetBranchAddress(Form("LUT_AngleX_%d",l),&LutPixelAngleX[l]); 
-		tLut->SetBranchAddress(Form("LUT_AngleY_%d",l),&LutPixelAngleY[l]); 
-		tLut->SetBranchAddress(Form("LUT_AngleZ_%d",l),&LutPixelAngleZ[l]); 
-		tLut->SetBranchAddress(Form("LUT_Time_%d",l),&LutPixelTime[l]); 
-		tLut->SetBranchAddress(Form("LUT_Path_%d",l),&LutPixelPath[l]); 
-        }
-
-        // fill nodes with LUT info for each bar/pixel combination
-	for(int i=0; i<tLut->GetEntries(); i++) { // get pixels from TTree
-		tLut->GetEntry(i);
-
-		for(int l=0; l<luts; l++){ // loop over bars
-			for(uint j=0; j<LutPixelAngleX[l]->size(); j++) { // loop over possible paths
-				
-				TVector3 angle(LutPixelAngleX[l]->at(j), LutPixelAngleY[l]->at(j), LutPixelAngleZ[l]->at(j));
-				lutNodeAngle[l][i].push_back(angle);
-				lutNodeTime[l][i].push_back(LutPixelTime[l]->at(j));
-				lutNodePath[l][i].push_back(LutPixelPath[l]->at(j));
-			}
-		}
-	}
-
-	// close LUT file
-	fLut->Close();
 
 	// LUT photon container
 	//dDIRCLutPhotons = new DDIRCLutPhotons();
@@ -201,7 +152,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		
 		// cheat and determine bar from truth info (replace with Geometry->GetBar(X,Y) function)
 		int bar = locDIRCHit->key_bar;
-		if(bar < 0) continue;
+		if(bar < 0 || bar > 47) continue;
 
                 // get channel information for LUT
 		int pmt = locDIRCHit->ch/64;
@@ -237,14 +188,14 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		bool isGood(false);
 
 		// check for pixel before going through loop
-		if(GetLutPixelAngleSize(bar, sensorId) == 0) continue;
+		if(dDIRCLutReader->GetLutPixelAngleSize(bar, sensorId) == 0) continue;
 		
 		// loop over LUT table for this bar/pixel to calculate thetaC	     
-		for(uint i = 0; i < GetLutPixelAngleSize(bar, sensorId); i++){
+		for(uint i = 0; i < dDIRCLutReader->GetLutPixelAngleSize(bar, sensorId); i++){
 			
-			dird   = GetLutPixelAngle(bar, sensorId, i); 
-			evtime = GetLutPixelTime(bar, sensorId, i); 
-			pathid = GetLutPixelPath(bar, sensorId, i); 
+			dird   = dDIRCLutReader->GetLutPixelAngle(bar, sensorId, i); 
+			evtime = dDIRCLutReader->GetLutPixelTime(bar, sensorId, i); 
+			pathid = dDIRCLutReader->GetLutPixelPath(bar, sensorId, i); 
 			
 			// in MC we can check if the path of the LUT and measured photon are the same
 			bool samepath(false);
@@ -361,34 +312,4 @@ double DDIRCLut::CalcLikelihood(double locExpectedThetaC, double locThetaC) cons
 	double locLikelihood = TMath::Exp(-0.5*( (locExpectedThetaC-locThetaC)/locSigmaThetaC * (locExpectedThetaC-locThetaC)/locSigmaThetaC ) ) + 0.00001;
 
 	return locLikelihood;
-}
-
-uint DDIRCLut::GetLutPixelAngleSize(int bar, int pixel) const
-{
-	return lutNodeAngle[bar][pixel].size();
-}
-	
-uint DDIRCLut::GetLutPixelTimeSize(int bar, int pixel) const
-{
-	return lutNodeTime[bar][pixel].size();
-}
-	
-uint DDIRCLut::GetLutPixelPathSize(int bar, int pixel) const
-{
-	return lutNodePath[bar][pixel].size();
-}
-
-TVector3 DDIRCLut::GetLutPixelAngle(int bar, int pixel, int entry) const
-{
-	return lutNodeAngle[bar][pixel].at(entry);
-}
-
-Double_t DDIRCLut::GetLutPixelTime(int bar, int pixel, int entry) const
-{
-	return lutNodeTime[bar][pixel].at(entry);
-}
-
-Long64_t DDIRCLut::GetLutPixelPath(int bar, int pixel, int entry) const
-{
-	return lutNodePath[bar][pixel].at(entry);
 }

@@ -20,7 +20,7 @@ private:
 	jerror_t brun(JEventLoop *loop, int32_t runnumber){
 		
 		assert( _data.size() == 0 );
-		
+
 		flags = PERSISTANT;
 		_data.push_back( new DDIRCLut(loop) );
 		
@@ -36,13 +36,6 @@ private:
 	}
 
 	jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
-		
-		//cout<<"DDIRCLut_factory::evnt()"<<_data.size()<<endl;
-
-		//DDIRCLut *dDIRCLut = new DDIRCLut(loop);
-		//SetFactoryFlag(PERSISTANT);
-		//ClearFactoryFlag(WRITE_TO_OUTPUT);
-		//_data.push_back(dDIRCLut);
 		
 		return NOERROR;
 	}

@@ -12,6 +12,7 @@ using namespace jana;
 
 #include <DANA/DApplication.h>
 #include <PID/DDetectorMatches.h>
+#include <DIRC/DDIRCLutReader.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCLutPhotons.h>
 
@@ -34,21 +35,11 @@ public:
 
 	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
-
-	uint GetLutPixelAngleSize(int bar, int pixel) const;
-	uint GetLutPixelTimeSize(int bar, int pixel) const;
-	uint GetLutPixelPathSize(int bar, int pixel) const;
-	TVector3 GetLutPixelAngle(int bar, int pixel, int entry) const;
-	Double_t GetLutPixelTime(int bar, int pixel, int entry) const;
-	Long64_t GetLutPixelPath(int bar, int pixel, int entry) const;
 	
 private:
 	DApplication *dapp;
+	DDIRCLutReader *dDIRCLutReader;
 	//DDIRCLutPhotons *dDIRCLutPhotons;
-
-	vector<TVector3> lutNodeAngle[48][10864];
-	vector<Double_t> lutNodeTime[48][10864];
-	vector<Long64_t> lutNodePath[48][10864];
 	
 	bool DIRC_DEBUG_HISTS;
 	bool DIRC_TRUTH_BARHIT;
