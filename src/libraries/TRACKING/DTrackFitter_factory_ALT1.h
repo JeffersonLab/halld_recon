@@ -17,15 +17,42 @@ class DTrackFitter_factory_ALT1:public jana::JFactory<DTrackFitter>{
 		~DTrackFitter_factory_ALT1(){};
 		const char* Tag(void){return "ALT1";}
 
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		DTrackFitter *fitter=NULL;
 
-			// Create single DTrackFitter object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			DTrackFitter *fitter = new DTrackFitterALT1(loop);
-			SetFactoryFlag(PERSISTANT);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(fitter);
+			
+			if( fitter ) delete fitter;
+
+			fitter = new DTrackFitterALT1(loop);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DTrackFitterALT1 object.
+			if( fitter ) _data.push_back( fitter );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( fitter ) delete fitter;
+			fitter = NULL;
 			
 			return NOERROR;
 		}

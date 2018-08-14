@@ -18,9 +18,48 @@ class DTOFGeometry_factory:public JFactory<DTOFGeometry>{
 		DTOFGeometry_factory(){};
 		~DTOFGeometry_factory(){};
 
+		DTOFGeometry *tofgeometry;
 
-	private:
-		jerror_t brun(jana::JEventLoop *loop, int32_t runnumber);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
+			ClearFactoryFlag(WRITE_TO_OUTPUT);
+			
+			if( tofgeometry ) delete tofgeometry;
+
+			// Get the geometry
+			DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+			const DGeometry* locGeometry = dapp->GetDGeometry(runnumber);
+			tofgeometry = new DTOFGeometry(locGeometry);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DBCALGeometry object.
+			if( tofgeometry ) _data.push_back( tofgeometry );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( tofgeometry ) delete tofgeometry;
+			tofgeometry = NULL;
+			
+			return NOERROR;
+		}
 };
 
 #endif // _DTOFGeometry_factory_

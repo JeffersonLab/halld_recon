@@ -40,7 +40,7 @@ class DCCALGeometry_factory:public jana::JFactory<DCCALGeometry>{
 		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( bcalgeometry ) _data.push_back( bcalgeometry );
+			if( ccalgeometry ) _data.push_back( ccalgeometry );
 			 
 			 return NOERROR;
 		 }
