@@ -408,7 +408,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       if (timeBasedTrack->Ndof < 10) continue; // CDC: 5 params in fit, 10 dof => [15 hits]; FDC [10 hits]
 
       // Use CDC dEdx to help reject protons
-      double dEdx=1e6*timeBasedTrack->ddEdx_CDC;
+      double dEdx=1e6*timeBasedTrack->ddEdx_CDC_amp;
       double P_track=timeBasedTrack->momentum().Mag();
       bool dEdx_pion = 0;
       if (dEdx<2.5) dEdx_pion = 1;
@@ -727,7 +727,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
                float pulse_peak_min = min(thisADCHit_up->pulse_peak,thisADCHit_down->pulse_peak);
 
                double fibLen = dBCALGeom->GetBCAL_length();
-               double c_effective = dBCALGeom->C_EFFECTIVE;
+               double c_effective = dBCALGeom->GetBCAL_c_effective();
                double BCALtrackHitZ = trackHitZ - (dBCALGeom->GetBCAL_center() - fibLen/2); // position wrt BCAL front edge
                double barproptime_up   = BCALtrackHitZ / c_effective;
                double barproptime_down = (fibLen-BCALtrackHitZ) / c_effective;

@@ -59,28 +59,32 @@ void BCALSmearer::SmearEvent(hddm_s::HDDM *record)
     GetSiPMHits(record, SiPMHits, incident_particles);
 
     // Sampling fluctuations
-    ApplySamplingFluctuations(SiPMHits, incident_particles);
-
+	if(config->SMEAR_HITS)
+    	ApplySamplingFluctuations(SiPMHits, incident_particles);
+	
     // Merge hits associated with different incident particles
     MergeHits(SiPMHits, bcal_config->BCAL_TWO_HIT_RESO);
 
     // Poisson Statistics
-    ApplyPoissonStatistics(SiPMHits);
+	if(config->SMEAR_HITS) 
+    	ApplyPoissonStatistics(SiPMHits);
    
     // Place all hit cells into list indexed by fADC ID
     map<int, SumHits> bcalfADC;
     SortSiPMHits(SiPMHits, bcalfADC, bcal_config->BCAL_TWO_HIT_RESO);
 
     // Electronic noise/Dark hits Smearing
-    SimpleDarkHitsSmear(bcalfADC);
-   
+	if(config->SMEAR_HITS) 
+    	SimpleDarkHitsSmear(bcalfADC);
+    
     // Apply energy threshold to dismiss low-energy hits
     map<int, fADCHitList> fADCHits;
     map<int, TDCHitList> TDCHits;
     FindHits(bcal_config->BCAL_ADC_THRESHOLD_MEV, bcalfADC, fADCHits, TDCHits);
 
     // Apply time smearing to emulate the fADC resolution
-    ApplyTimeSmearing(bcal_config->BCAL_FADC_TIME_RESOLUTION, bcal_config->BCAL_TDC_TIME_RESOLUTION, fADCHits, TDCHits);
+	if(config->SMEAR_HITS) 
+    	ApplyTimeSmearing(bcal_config->BCAL_FADC_TIME_RESOLUTION, bcal_config->BCAL_TDC_TIME_RESOLUTION, fADCHits, TDCHits);
    
     // Copy hits into HDDM tree
     CopyBCALHitsToHDDM(fADCHits, TDCHits, record);
@@ -437,9 +441,9 @@ void BCALSmearer::SimpleDarkHitsSmear(map<int, SumHits> &bcalfADC)
    double sigma4 = bcal_config->BCAL_LAYER4_SIGMA_SCALE*bcal_config->BCAL_MEV_PER_ADC_COUNT; 
 
    // Loop over all fADC readout cells
-   for(int imodule=1; imodule<=dBCALGeom->NBCALMODS; imodule++){
+   for(int imodule=1; imodule<=dBCALGeom->GetBCAL_Nmodules(); imodule++){
 
-      int n_layers = dBCALGeom->NBCALLAYSIN + dBCALGeom->NBCALLAYSOUT;
+      int n_layers = dBCALGeom->GetBCAL_Nlayers();
       for(int fADC_lay=1; fADC_lay<=n_layers; fADC_lay++){
          if(fADC_lay == 1) 
          	sigma = sigma1;
@@ -450,7 +454,9 @@ void BCALSmearer::SimpleDarkHitsSmear(map<int, SumHits> &bcalfADC)
          else if(fADC_lay == 4) 
          	sigma = sigma4;
 
-         int n_sectors = (fADC_lay <= dBCALGeom->NBCALLAYSIN)? dBCALGeom->NBCALSECSIN : dBCALGeom->NBCALSECSOUT;
+		 // there's a constant number of sectors now...
+         //int n_sectors = (fADC_lay <= dBCALGeom->GetBCAL_NInnerLayers())? dBCALGeom->GetBCAL_NInnerSectors() : dBCALGeom->GetBCAL_NOuterSectors();
+		 int n_sectors = dBCALGeom->GetBCAL_Nsectors();
          for(int fADC_sec=1; fADC_sec<=n_sectors; fADC_sec++){
 
             // Use cellId(...) to convert fADC layer and sector into fADCId

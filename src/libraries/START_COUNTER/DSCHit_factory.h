@@ -9,7 +9,9 @@
 #define _DSCHit_factory_
 
 #include <JANA/JFactory.h>
-#include "TTAB/DTTabUtilities.h"
+#include <DANA/DApplication.h>
+#include <HDGEOMETRY/DGeometry.h>
+#include <TTAB/DTTabUtilities.h>
 #include "DSCHit.h"
 #include "DSCDigiHit.h"
 
@@ -39,11 +41,9 @@ class DSCHit_factory:public jana::JFactory<DSCHit>{
 		double HIT_TIME_WINDOW;
 		double ADC_THRESHOLD;
         double USE_TIMEWALK_CORRECTION;
+        int MAX_SECTORS;
 
-		// geometry information
-		static const int MAX_SECTORS = 30.;
-
-		DSCHit* FindMatch(int sector, double T);
+		DSCHit* FindMatch(vector<DSCHit*>&schits,int sector, double T);
 
 		const double GetConstant(const vector<double>  &the_table,
 					 const int in_sector) const;
@@ -63,6 +63,7 @@ class DSCHit_factory:public jana::JFactory<DSCHit>{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
         bool CHECK_FADC_ERRORS;
+	bool REQUIRE_ADC_TDC_MATCH;
 };
 
 #endif // _DSCHit_factory_
