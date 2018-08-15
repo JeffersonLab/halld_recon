@@ -11,6 +11,8 @@
 #include <JANA/JFactory.h>
 #include "DTranslationTable.h"
 
+#include <mutex>
+
 class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
 
 	public:
@@ -25,7 +27,7 @@ class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
 		jerror_t brun(JEventLoop *loop, int32_t runnumber)
 		{
 			// Print message about table, but only once for each run
-			static mutex mtx;
+			static std::mutex mtx;
 			mtx.lock();
 			static set<int32_t> runs_announced;
 			if( runs_announced.count(runnumber)==0 ){
