@@ -17,7 +17,6 @@ using namespace std;
 class Df250EmulatorAlgorithm_v1:public Df250EmulatorAlgorithm{
     public:
 
-        Df250EmulatorAlgorithm_v1(const char* source_name);
         Df250EmulatorAlgorithm_v1();
         ~Df250EmulatorAlgorithm_v1(){};
 
