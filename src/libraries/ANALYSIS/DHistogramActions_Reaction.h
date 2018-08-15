@@ -232,6 +232,7 @@ class DHistogramAction_ParticleComboKinematics : public DAnalysisAction
 		deque<map<Particle_t, map<bool, TH2I*> > > dHistDeque_DeltaBetaVsP;
 		deque<map<Particle_t, map<bool, TH2I*> > > dHistDeque_PhiVsTheta;
 		deque<map<Particle_t, map<bool, TH1I*> > > dHistDeque_P;
+		deque<map<Particle_t, map<bool, TH1I*> > > dHistDeque_Pt;
 		deque<map<Particle_t, map<bool, TH1I*> > > dHistDeque_Theta;
 		deque<map<Particle_t, map<bool, TH1I*> > > dHistDeque_Phi;
 		deque<map<Particle_t, map<bool, TH1I*> > > dHistDeque_VertexZ;
@@ -588,5 +589,49 @@ class DHistogramAction_MissingTransverseMomentum : public DAnalysisAction
 
 		set<set<pair<const JObject*, unsigned int> > > dPreviousSourceObjects;
 };
+
+
+
+
+
+
+
+class DHistogramAction_TransverseMomentum : public DAnalysisAction
+{
+	public:
+		DHistogramAction_TransverseMomentum(const DReaction* locReaction, bool locUseKinFitResultsFlag, unsigned int locNumPtBins = 0, double locMinPt = 0, double locMaxPt = 1.0, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Hist_TransverseMomentum", locUseKinFitResultsFlag, locActionUniqueString),
+		dNumPtBins(locNumPtBins), dMinPt(locMinPt), dMaxPt(locMaxPt)
+		{
+			dAnalysisUtilities = NULL;
+		}
+
+		void Initialize(JEventLoop* locEventLoop);
+		void Reset_NewEvent(void)
+		{
+			DAnalysisAction::Reset_NewEvent();
+			//dPreviousSourceObjects.clear();
+
+			dPreviouslyHistogrammedParticles.clear();
+
+		}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		unsigned int dNumPtBins;
+		double dMinPt, dMaxPt;
+		const DAnalysisUtilities* dAnalysisUtilities;
+		//TH1I* dHist_TransverseMomentum;
+		map<Particle_t, TH1I*> dHist_TransverseMomentum;
+
+		//set<pair<size_t, pair<Particle_t, const JObject*> > > dPreviouslyHistogrammedParticles;
+
+		set<pair<const DEventRFBunch*, pair<Particle_t, const JObject*> > > dPreviouslyHistogrammedParticles; //to prevent double-counting (JObject is source object)
+
+		//set<set<pair<const JObject*, unsigned int> > > dPreviousSourceObjects;
+};
+
+
 
 #endif // _DHistogramActions_Reaction_

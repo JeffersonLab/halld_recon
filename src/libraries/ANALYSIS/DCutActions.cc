@@ -781,6 +781,28 @@ bool DCutAction_TransverseMomentum::Perform_Action(JEventLoop* locEventLoop, con
 	return (dMaxTransverseMomentum >= locTotalMomentum.Perp());
 }
 
+
+string DCutAction_MinTransverseMomentumAny::Get_ActionName(void) const
+{
+	ostringstream locStream;
+	locStream << DAnalysisAction::Get_ActionName() << "_" << dMinTransverseMomentum;
+	return locStream.str();
+}
+
+bool DCutAction_MinTransverseMomentumAny::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	//auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
+	auto locParticles = Get_UseKinFitResultsFlag() ? locParticleCombo->Get_FinalParticles(Get_Reaction(), false, false, d_AllCharges) : locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
+
+    bool KeepCombo=0;
+	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
+		if (locParticles[loc_i]->momentum().Pt() > dMinTransverseMomentum) KeepCombo=1;
+
+	return KeepCombo;
+}
+
+
+
 string DCutAction_TrackHitPattern::Get_ActionName(void) const
 {
 	ostringstream locStream;

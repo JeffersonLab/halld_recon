@@ -479,8 +479,8 @@ class DCutAction_TransverseMomentum : public DAnalysisAction
 {
 	//cut on whether the thrown topology matches the DReaction
 	public:
-		DCutAction_TransverseMomentum(const DReaction* locReaction, double locMaxTransverseMomentum, string locActionUniqueString = "") : 
-		DAnalysisAction(locReaction, "Cut_TransverseMomentum", false, locActionUniqueString), 
+        DCutAction_TransverseMomentum(const DReaction* locReaction, double locMaxTransverseMomentum, string locActionUniqueString = "") : 
+        DAnalysisAction(locReaction, "Cut_TransverseMomentum", false, locActionUniqueString), 
 		dMaxTransverseMomentum(locMaxTransverseMomentum){}
 
 		string Get_ActionName(void) const;
@@ -491,6 +491,28 @@ class DCutAction_TransverseMomentum : public DAnalysisAction
 
 		double dMaxTransverseMomentum;
 };
+
+
+class DCutAction_MinTransverseMomentumAny : public DAnalysisAction
+{
+	// Require that at least one particle has a minimum trnsverse momentum
+	public:
+		/* DCutAction_MinTransverseMomentumAny(const DReaction* locReaction, double locMinTransverseMomentum, string locActionUniqueString = "") :  */
+		/* DAnalysisAction(locReaction, "Cut_MinTransverseMomentumAny", false, locActionUniqueString), */
+		DCutAction_MinTransverseMomentumAny(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinTransverseMomentum, string locActionUniqueString = "") : 
+		DAnalysisAction(locReaction, "Cut_MinTransverseMomentumAny", locUseKinFitResultsFlag, locActionUniqueString), 
+ 
+		dMinTransverseMomentum(locMinTransverseMomentum){}
+
+		string Get_ActionName(void) const;
+		void Initialize(JEventLoop* locEventLoop){}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		double dMinTransverseMomentum;
+};
+
 
 class DCutAction_TrackHitPattern : public DAnalysisAction
 {
