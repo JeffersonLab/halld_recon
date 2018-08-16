@@ -22,7 +22,7 @@ class DTrackFinder_factory:public jana::JFactory<DTrackFinder>{
     SetFactoryFlag(PERSISTANT);
     ClearFactoryFlag(WRITE_TO_OUTPUT);
    
-    _data.push_back(new DTrackFinder(loop));   
+    _data.push_back(new DTrackFinder());   
 
     return NOERROR;
   }
