@@ -22,7 +22,7 @@ class Df250EmulatorAlgorithm_factory_v1:public jana::JFactory<Df250EmulatorAlgor
 
 			// Create single Df250EmulatorAlgorithm object and mark the factory as
 			// persistent so it doesn't get deleted every event.
-			Df250EmulatorAlgorithm *emulator = new Df250EmulatorAlgorithm_v1(loop);
+			Df250EmulatorAlgorithm *emulator = new Df250EmulatorAlgorithm_v1();
 			SetFactoryFlag(PERSISTANT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			_data.push_back(emulator);
