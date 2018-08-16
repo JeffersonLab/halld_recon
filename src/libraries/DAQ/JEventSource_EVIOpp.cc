@@ -347,26 +347,32 @@ void JEventSource_EVIOpp::Dispatcher(void)
 		
 		bool swap_needed = false;
 
+_DBG__;
 		if(source_type==kFileSource){
 			// ---- Read From File ----
 //			hdevio->read(buff, buff_len, allow_swap);
 //			hdevio->readSparse(buff, buff_len, allow_swap);
 			hdevio->readNoFileBuff(buff, buff_len, allow_swap);
 			thr->pos = hdevio->last_event_pos;
+_DBG__;
 			if(hdevio->err_code == HDEVIO::HDEVIO_USER_BUFFER_TOO_SMALL){
+_DBG__;
 				delete[] buff;
 				buff_len = hdevio->last_event_len;
 				buff = new uint32_t[buff_len];
 				continue;
 			}else if(hdevio->err_code!=HDEVIO::HDEVIO_OK){
+_DBG__;
 				if(LOOP_FOREVER && NEVENTS_PROCESSED>=1){
 					if(hdevio){
 						hdevio->rewind();
 						continue;
 					}
 				}else{
+_DBG_"hdevio->err_code="<<hdevio->err_code<<endl;
 					cout << hdevio->err_mess.str() << endl;
 					if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
+_DBG__;
 						bool ignore_error = false;
 						if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
 						if(!ignore_error) japp->SetExitCode(hdevio->err_code);
@@ -375,6 +381,7 @@ void JEventSource_EVIOpp::Dispatcher(void)
 				break;
 			}else{
 				// HDEVIO_OK
+_DBG__;
 				swap_needed = hdevio->swap_needed;
 			}
 		}else{
