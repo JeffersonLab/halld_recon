@@ -94,6 +94,8 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
 	
      int ch=dircPmtHits[h]->ch;
+     if(ch >= 108*64) ch -= 108*64;
+
      int pmt=ch/64;
      int pix=ch%64;
      double x = dircPmtHits[h]->x;
@@ -103,17 +105,15 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 
      // get PMT labels
      int pmt_column = pmt/18; // 0 - 5
-     int pmt_row = 17 - pmt%18; // 0 - 17
+     int pmt_row = pmt%18; // 0 - 17
 
      // get pixel labels
      int pixel_column = pix/8; // 0 - 7
-     int pixel_row = 7 - pix%8; // 0 - 7
-     int pixel_x = 8*pmt_row + pixel_row;
-     int pixel_y = 47 - (8*pmt_column + pixel_column);
+     int pixel_row = pix%8; // 0 - 7
 
-     // temporary geometry check
-     //if(z > 550. && fabs(y) > 80) continue;
-     //if(pmt!=0  && pmt!=106 && pmt!=107) continue;
+     // format final pixel x' and y' axes for view from behind PMTs looking downstream
+     int pixel_x = abs(8*pmt_row + pixel_row - 143);
+     int pixel_y = 47 - (8*pmt_column + pixel_column);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
      if(x < 0.) {
