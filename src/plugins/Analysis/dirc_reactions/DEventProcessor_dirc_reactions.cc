@@ -73,7 +73,8 @@ jerror_t DEventProcessor_dirc_reactions::evnt(jana::JEventLoop* locEventLoop, ui
         // string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
         //const DEventWriterROOT* locEventWriterROOT = NULL;
         //locEventLoop->GetSingle(locEventWriterROOT);
-        //locEventWriterROOT->Fill_DataTrees(locEventLoop, "dirc_reactions");
+        //locEventWriterROOT->Fill_DataTrees(locEventLoop, "p2pi_dirc");
+	//locEventWriterROOT->Fill_DataTrees(locEventLoop, "p2k_dirc");
 	
 	// Get the analysis results for all DReactions. 
 		//Getting these objects triggers the analysis, if it wasn't performed already. 

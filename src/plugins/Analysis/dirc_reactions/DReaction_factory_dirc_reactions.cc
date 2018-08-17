@@ -47,6 +47,8 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	// Highly Recommended: When generating particle combinations, reject all beam photons that match to a different RF bunch
 	locReaction->Set_NumPlusMinusRFBunches(0);
 
+	locReaction->Enable_TTreeOutput("tree_p2pi_dirc.root");
+
 	/**************************************************** p2pi_dirc Analysis Actions ****************************************************/
 
 	// Recommended: Analysis actions automatically performed by the DAnalysisResults factories to histogram useful quantities.
@@ -104,6 +106,8 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	
 	// Highly Recommended: When generating particle combinations, reject all beam photons that match to a different RF bunch
 	locReaction->Set_NumPlusMinusRFBunches(0);
+
+	locReaction->Enable_TTreeOutput("tree_p2k_dirc.root");
 
 	/**************************************************** p2pi_dirc Analysis Actions ****************************************************/
 

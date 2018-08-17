@@ -18,7 +18,14 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
         locEventLoop->GetSingle(locParticleID);
         dParticleID = locParticleID;
 
+        locEventLoop->GetSingle(dDIRCLut);
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	// set PID for different passes in debuging histograms
+	dFinalStatePIDs.push_back(Positron);
+	dFinalStatePIDs.push_back(PiPlus);
+	dFinalStatePIDs.push_back(KPlus);
+	dFinalStatePIDs.push_back(Proton);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
@@ -46,8 +53,7 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		hThetaCVsP = GetOrCreate_Histogram<TH2I>(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.6, 1.0);
 		hDeltaThetaCVsP = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
 		hLikelihoodDiffVsP = GetOrCreate_Histogram<TH2I>(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName.data()), 120, 0.0, 12.0, 100, -200, 200);
-		
-		//dEgamma = GetOrCreate_Histogram<TH1I>("Egamma", "TAGGER photon energy; E_{#gamma}", endpoint_energy_bins, 0., endpoint_energy);
+		hReactionLikelihoodDiffVsP = GetOrCreate_Histogram<TH2I>(Form("hReactionLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName.data()), 120, 0.0, 12.0, 100, -200, 200);
 		
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
@@ -78,7 +84,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	int locDCHits = locTrackTimeBased->Ndof + 5;
 	double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
 	double locP = locParticle->lorentzMomentum().Vect().Mag();
-	if(locDCHits < 25 || locTheta < 3.0 || locTheta > 10.0 || locP > 12.0)
+	if(locDCHits < 25 || locTheta < 2.0 || locTheta > 12.0 || locP > 12.0)
 		return true;
 	
 	// require has good match to TOF hit for cleaner sample
@@ -125,6 +131,12 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
 	if(foundDIRC) {
+
+		// recalculate likelihood
+		double logLikelihoodSum[4] = {0, 0, 0, 0};
+		double locExpectedAngle[4];
+		for(int loc_i = 0; loc_i<4; loc_i++) 
+			locExpectedAngle[loc_i] = acos(sqrt(locP*locP + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/locP/1.473);
 		
 		// loop over hits associated with track (from LUT)
 		vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
@@ -145,6 +157,16 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 					hDeltaThetaC->Fill(locPhotons[loc_j].first-locExpectedThetaC);
 					hDeltaThetaCVsP->Fill(momInBar.Mag(), locPhotons[loc_j].first-locExpectedThetaC);
 					Unlock_Action(); //RELEASE ROOT LOCK!!
+
+					// likelihood recalculation
+					if(fabs(locPhotons[loc_j].first-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.02) {
+						
+						// calculate likelihood for each mass hypothesis
+						for(uint loc_k = 0; loc_k<4; loc_k++) {
+							logLikelihoodSum[loc_k] += TMath::Log( dDIRCLut->CalcLikelihood(locExpectedAngle[loc_k], locPhotons[loc_j].first));
+						}
+					}
+					
 				}
 			}	  
 		}			  
@@ -159,21 +181,25 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 			hLikelihood->Fill(locDIRCMatchParams->dLikelihoodElectron);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[0]-logLikelihoodSum[1]);
 		}
 		else if(locPID == PiPlus || locPID == PiMinus) {
 			hLikelihood->Fill(locDIRCMatchParams->dLikelihoodPion);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
 		}
 		else if(locPID == KPlus || locPID == KMinus) {
 			hLikelihood->Fill(locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
 		}
 		else if(locPID == Proton || locPID == AntiProton) {
 			hLikelihood->Fill(locDIRCMatchParams->dLikelihoodProton);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
-			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
+			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodKaon - locDIRCMatchParams->dLikelihoodProton);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[3]-logLikelihoodSum[2]);
 		}
 		Unlock_Action(); //RELEASE ROOT LOCK!!
 
