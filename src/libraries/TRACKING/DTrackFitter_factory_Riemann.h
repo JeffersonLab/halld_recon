@@ -14,15 +14,42 @@ class DTrackFitter_factory_Riemann:public jana::JFactory<DTrackFitter>{
 		~DTrackFitter_factory_Riemann(){};
 		const char* Tag(void){return "Riemann";}
 
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		DTrackFitter *fitter=NULL;
 
-			// Create single DTrackFitter object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			DTrackFitter *fitter = new DTrackFitterRiemann(loop);
-			SetFactoryFlag(PERSISTANT);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(fitter);
+			
+			if( fitter ) delete fitter;
+
+			fitter = new DTrackFitterRiemann(loop);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DTrackFitterRiemann object.
+			if( fitter ) _data.push_back( fitter );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( fitter ) delete fitter;
+			fitter = NULL;
 			
 			return NOERROR;
 		}

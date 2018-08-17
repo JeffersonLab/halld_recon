@@ -1,6 +1,6 @@
 #include <DAQ/Df250EmulatorAlgorithm_v1.h>
 
-Df250EmulatorAlgorithm_v1::Df250EmulatorAlgorithm_v1(JEventLoop *loop){
+Df250EmulatorAlgorithm_v1::Df250EmulatorAlgorithm_v1(){
     // Enables forced use of default values 
     FORCE_DEFAULT = 0;
     // Default values for the essential parameters

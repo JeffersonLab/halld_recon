@@ -17,7 +17,7 @@ using namespace std;
 class Df250EmulatorAlgorithm_v1:public Df250EmulatorAlgorithm{
     public:
 
-        Df250EmulatorAlgorithm_v1(JEventLoop *loop);
+        Df250EmulatorAlgorithm_v1();
         ~Df250EmulatorAlgorithm_v1(){};
 
         //Only the emulation routines need to be overwritten
@@ -31,7 +31,6 @@ class Df250EmulatorAlgorithm_v1:public Df250EmulatorAlgorithm{
         }
 
     protected:
-        Df250EmulatorAlgorithm_v1(){};
         // Enables forced use of default values
         int FORCE_DEFAULT;
         // Default values for the essential parameters

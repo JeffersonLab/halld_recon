@@ -21,6 +21,9 @@ using namespace jana;
 #include "TRIGGER/DTrigger.h"
 #include "HistogramTools.h"
 
+#include "PAIR_SPECTROMETER/DPSCHit.h"
+#include "PAIR_SPECTROMETER/DPSHit.h"
+
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -260,6 +263,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DFCALHit *> fcalHitVector;
     vector<const DTAGMHit *> tagmHitVector;
     vector<const DTAGHHit *> taghHitVector;
+    vector<const DPSHit *> psHitVector;
+    vector<const DPSCHit *> pscHitVector;
 
     loop->Get(cdcHitVector);
     loop->Get(fdcHitVector);
@@ -267,6 +272,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(bcalUnifiedHitVector);
     loop->Get(tofHitVector);
     loop->Get(fcalHitVector);
+    loop->Get(psHitVector);
+    loop->Get(pscHitVector);
     loop->Get(tagmHitVector, "Calib");
     loop->Get(taghHitVector, "Calib");
 
@@ -386,6 +393,17 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                 "TOFHit time;t [ns];", nBins, xMin, xMax);
     }
 
+    for (i = 0; i < psHitVector.size(); i++){
+	int nColumns = 145*2;
+        Fill1DHistogram ("HLDetectorTiming", "PS", "PSHit time", psHitVector[i]->t, 
+                "PSHit time;t [ns];", nBins, xMin, xMax);
+
+	Fill2DHistogram("HLDetectorTiming", "PS", "PSHit time per Column", 
+			psHitVector[i]->t, psHitVector[i]->column+psHitVector[i]->arm*nColumns/2, //GetCCDBIndexPS(psHitVector[i]),
+			"Hit time for each PS column; t [ns]; CCDB Index",
+			nBins, xMin, xMax, nColumns, 0.5, nColumns + 0.5);
+    }
+
     // from FCAL_online:  find energy weighted average time for FCAL hits, useful as a t0
     double fcalHitETot = 0;
     double fcalHitEwtT = 0;
@@ -436,7 +454,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     }
 
     // The detectors with both TDCs and ADCs need these two to be aligned
-    // These detectors are the SC,TAGM,TAGH,TOF
+    // These detectors are the SC,TAGM,TAGH,TOF,PSC
 
     // Break these histograms up into hits coming from the TDC and hits coming from the ADC
     for (i = 0; i < scHitVector.size(); i++){
@@ -588,6 +606,41 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                     GetCCDBIndexTOF(tofHitVector[i]), tofHitVector[i]->t_TDC - tofHitVector[i]->t_fADC,
                     "TOF #Deltat TDC-ADC; CDCB Index ;t_{TDC} - t_{ADC} [ns]", nTOFCounters, 0.5, nTOFCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
         }
+    }
+    for (i = 0; i < pscHitVector.size(); i++){
+        int nPSCCounters = 16;
+        const DPSCHit *thisPSCHit = pscHitVector[i];
+        if (thisPSCHit->has_fADC && !thisPSCHit->has_TDC){
+	  Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->t,
+			   "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
+	  // Manual loop over hits to match out of time
+	  for (auto hit = pscHitVector.begin(); hit != pscHitVector.end(); hit++){
+	    if ((*hit)->has_TDC && !(*hit)->has_fADC){
+	      if ( (pscHitVector[i]->arm == (*hit)->arm) && (pscHitVector[i]->module == (*hit)->module) ) {
+		Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
+				pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, (*hit)->time_tdc - pscHitVector[i]->time_fadc,
+				"PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+	      }
+	    }
+	  }
+        }
+        else if (!thisPSCHit->has_fADC && thisPSCHit->has_TDC){
+	  Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->t,
+			   "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
+        }
+        else{
+            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit Matched time", pscHitVector[i]->t,
+			     "PSCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
+            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->time_fadc,
+			     "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
+            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->time_tdc,
+			     "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
+
+            Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
+			    pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc,
+			    "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+        }
+
     }
 
     // Next the relative times between detectors using tracking
