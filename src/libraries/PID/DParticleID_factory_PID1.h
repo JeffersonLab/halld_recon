@@ -12,22 +12,50 @@
 #include "DParticleID_PID1.h"
 
 class DParticleID_factory_PID1:public jana::JFactory<DParticleID>{
- public:
-  DParticleID_factory_PID1(){};
-  ~DParticleID_factory_PID1(){};
-  const char* Tag(void){return "PID1";}
-  
- private:
-  jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
-    // Create single DParticleID object and mark the factory as
-    // persistent so it doesn't get deleted every event.
-    DParticleID *pid_algorithm = new DParticleID_PID1(loop);
-    SetFactoryFlag(PERSISTANT);
-    ClearFactoryFlag(WRITE_TO_OUTPUT);
-    _data.push_back(pid_algorithm);
+	public:
+		DParticleID_factory_PID1(){};
+		~DParticleID_factory_PID1(){};
+		const char* Tag(void){return "PID1";}
 
-    return NOERROR;
-  }
+		DParticleID_PID1 *particleid;
+
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
+			ClearFactoryFlag(WRITE_TO_OUTPUT);
+			
+			if( particleid ) delete particleid;
+
+			particleid = new DParticleID_PID1(loop);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DBCALGeometry object.
+			if( particleid ) _data.push_back( particleid );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( particleid ) delete particleid;
+			particleid = NULL;
+			
+			return NOERROR;
+		}
 
 };
 
