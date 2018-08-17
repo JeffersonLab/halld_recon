@@ -76,9 +76,6 @@ jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
     
     int ch=dircPmtHits[h]->ch;
-    int pmt=ch/64;
-    int pix=ch%64;
-    int id = 100*pmt + pix;
     int lutId = dircPmtHits[h]->key_bar;
     TVector3 dir =  TVector3(mcthrowns[0]->momentum().X(),
 			     mcthrowns[0]->momentum().Y(),
@@ -89,9 +86,9 @@ jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
     
     
     if(lutId>=0 && lutId<48)
-      ((DrcLutNode*)(fLut[lutId]->At(id)))->
+      ((DrcLutNode*)(fLut[lutId]->At(ch)))->
 	AddEntry(lutId,               // lut/bar id
-		 id,                  // pixel id
+		 ch,                  // pixel id
 		 dir,
 		 dircPmtHits[h]->path,
 		 dircPmtHits[h]->refl,

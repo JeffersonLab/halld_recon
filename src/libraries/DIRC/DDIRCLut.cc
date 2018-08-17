@@ -155,9 +155,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		if(bar < 0 || bar > 47) continue;
 
                 // get channel information for LUT
-		int pmt = locDIRCHit->ch/64;
-		int pix = locDIRCHit->ch%64;
-		int sensorId = 100*pmt + pix;
+		int sensorId = locDIRCHit->ch;
 
 		// use hit time to determine if reflected or not
 		double hitTime = locDIRCHit->t; // - locFlightTime;

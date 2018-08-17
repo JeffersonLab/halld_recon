@@ -27,17 +27,15 @@ public:
 	uint GetLutPixelPathSize(int bar, int pixel) const;
 	TVector3 GetLutPixelAngle(int bar, int pixel, int entry) const;
 	Double_t GetLutPixelTime(int bar, int pixel, int entry) const;
-	Long64_t GetLutPixelPath(int bar, int pixel, int entry) const;
-	vector<TVector3> lutNodeAngle[48][10864];
-		
+	Long64_t GetLutPixelPath(int bar, int pixel, int entry) const;		
 
 private:
 
 	pthread_mutex_t mutex;
 
-	//vector<TVector3> lutNodeAngle[48][10864];
-	vector<Double_t> lutNodeTime[48][10864];
-	vector<Long64_t> lutNodePath[48][10864];
+	vector<TVector3> lutNodeAngle[48][13824];
+	vector<Double_t> lutNodeTime[48][13824];
+	vector<Long64_t> lutNodePath[48][13824];
 };
 
 #endif // _DDIRCLutReader_
