@@ -310,7 +310,6 @@ void DEVIOWorkerThread::PublishEvents(void)
 //---------------------------------
 void DEVIOWorkerThread::ParseBank(void)
 {
-
 	uint32_t *iptr = buff;
 	uint32_t *iend = &buff[buff[0]+1];
 
@@ -334,6 +333,7 @@ void DEVIOWorkerThread::ParseBank(void)
 			case 0xFF78: current_parsed_events.back()->sync_flag = true;
 			case 0xFF50:     
 			case 0xFF70:     ParsePhysicsBank(iptr, iend);    break;
+			case 0xFF33:        ParseCDAQBank(iptr, iend);    break;
 
 			default:
 				_DBG_ << "Unknown outer EVIO bank tag: " << hex << tag << dec << endl;
@@ -720,6 +720,42 @@ void DEVIOWorkerThread::ParsePhysicsBank(uint32_t* &iptr, uint32_t *iend)
 }
 
 //---------------------------------
+// ParseCDAQBank
+//---------------------------------
+void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
+{
+	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT);
+
+	uint32_t physics_event_len      = *iptr++;
+	uint32_t *iend_physics_event    = &iptr[physics_event_len];
+	iptr++;
+
+	// Loop over Data banks
+	while( iptr < iend_physics_event ) {
+	
+		uint32_t data_bank_len = *iptr;
+		uint32_t *iend_data_bank = &iptr[data_bank_len+1];
+
+		// The CDAQ system does not strip off the raw trigger data from the from
+		// individual ROC data to make a built trigger bank. Thus, we must
+		// skip over it here. TO further complicate things, the ParseDataBank
+		// method assumes iptr points to the length word in the Physicss event
+		// data bank (whose header contains the rocid) and that it is immediately
+		// followed by the raw data.
+//		iptr += 2;
+//		uint32_t raw_trigger_bank_len = *iptr++;
+//		iptr = &iptr[raw_trigger_bank_len];
+
+//DumpBinary(iptr, iend_data_bank, 40);
+		ParseDataBank(iptr, iend_data_bank);
+
+		iptr = iend_data_bank;
+	}
+
+	iptr = iend_physics_event;
+}
+
+//---------------------------------
 // ParseBuiltTriggerBank
 //---------------------------------
 void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
@@ -841,6 +877,8 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 	// Loop over Data Block Banks
 	while(iptr < iend){
 		
+DumpBinary(iptr, iend, 8);
+
 		uint32_t data_block_bank_len     = *iptr++;
 		uint32_t *iend_data_block_bank   = &iptr[data_block_bank_len];
 		uint32_t data_block_bank_header  = *iptr++;
@@ -852,14 +890,17 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 		switch(det_id){
 
 			case 20:
+_DBG_<<" -- CAEN1190  rocid="<< rocid << endl;
 				ParseCAEN1190(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x55:
+_DBG_<<" -- Module Configuration  rocid="<< rocid << endl;
 				ParseModuleConfiguration(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x56:
+_DBG_<<" -- Event Tag  rocid="<< rocid << endl;
 				ParseEventTagBank(iptr, iend_data_block_bank);
 				break;
 
@@ -869,10 +910,12 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			case 6:  // flash 250 module, MMD 2014/2/4
 			case 16: // flash 125 module (CDC), DL 2014/6/19
 			case 26: // F1 TDC module (BCAL), MMD 2014-07-31
+_DBG_<<" -- JLab Module  rocid="<< rocid << endl;
 				ParseJLabModuleData(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x123:
+_DBG_<<" -- SSP  rocid="<< rocid << endl;
 				ParseSSPBank(rocid, iptr, iend_data_block_bank);
 				break;
 
@@ -882,24 +925,31 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// (the first "E" should really be a "1". We just check
 			// other 12 bits here.
 			case 0xE02:
+_DBG_<<" -- TSscaler  rocid="<< rocid << endl;
 				ParseTSscalerBank(iptr, iend);
 				break;
 			case 0xE05:
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
-			case 0xE10:  // really wish Sascha would share when he does this stuff!
-			  Parsef250scalerBank(rocid, iptr, iend);
+			case 0xE10:
+				Parsef250scalerBank(rocid, iptr, iend);
+				break;
+			
+			// The CDAQ system leave the raw trigger info in the Physics event data
+			// bank. Skip it for now.
+			case 0xF11:
+_DBG_<<"Raw Trigger bank  rocid="<< rocid << endl;
 				break;
 
-            // When we write out single events in the offline, we also can save some
-            // higher level data objects to save disk space and speed up 
-            // specialized processing (e.g. pi0 calibration)
-            case 0xD01:
-                ParseDVertexBank(iptr, iend);
-                break;
-            case 0xD02:
-                ParseDEventRFBunchBank(iptr, iend);
-                break;
+			// When we write out single events in the offline, we also can save some
+			// higher level data objects to save disk space and speed up
+			// specialized processing (e.g. pi0 calibration)
+			case 0xD01:
+				ParseDVertexBank(iptr, iend);
+				break;
+			case 0xD02:
+				ParseDEventRFBunchBank(iptr, iend);
+				break;
 
 			case 5:
 				// old ROL Beni used had this but I don't think its

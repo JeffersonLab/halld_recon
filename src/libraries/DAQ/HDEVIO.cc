@@ -528,18 +528,14 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 		br.first_event = 0;
 		br.last_event = 0;
 		
-_DBG_<<" <bh.eventcnt=" <<  bh.eventcnt << endl;
 		MapEvents(bh, br);
-_DBG__;
 
 		NB_next_pos = pos + (streampos)(bh.length<<2);
 	}
-_DBG__;
 
 	// Check if we did not find an event of interest above. 
 	// If not, report that there are no more events in the file.
 	if(br.evio_events.empty() || !ifs.good()){
-_DBG__;
 		SetErrorMessage("No more events");
 		err_code = HDEVIO_EOF;
 		return false; // isgood=false
