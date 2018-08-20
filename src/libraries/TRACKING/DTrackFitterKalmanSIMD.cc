@@ -441,7 +441,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    MOLIERE_RATIO1=0.5/(1.-MOLIERE_FRACTION);
    MOLIERE_RATIO2=MS_SCALE_FACTOR*1.e-6/(1.+MOLIERE_FRACTION*MOLIERE_FRACTION); //scale_factor/(1+F*F)
 
-   COVARIANCE_SCALE_FACTOR_CENTRAL=20.0;
+   COVARIANCE_SCALE_FACTOR_CENTRAL=2.0;
    gPARMS->SetDefaultParameter("KALMAN:COVARIANCE_SCALE_FACTOR_CENTRAL",
 			       COVARIANCE_SCALE_FACTOR_CENTRAL);
  
@@ -3163,9 +3163,13 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
    double y0=y_=input_params.position().y();
    double z0=z_=input_params.position().z();
 
-   if (fit_type==kWireBased && theta_deg>20.){
+   if (fit_type==kWireBased && theta_deg>10.){
      double Bz=fabs(bfield->GetBz(x0,y0,z0));
-     double sperp=30.;
+     double sinl=sin(atan(tanl_));
+     double sperp=25.*(1.+0.5*fabs(sinl)); // empirical guess
+     if (theta_deg<25.){
+       sperp=(endplate_z-z0)/tanl_;
+     }
      double twokappa=qBr2p*Bz*q_over_pt0*FactorForSenseOfRotation;
      double twoks=twokappa*sperp;
      double one_over_2k=1./twokappa;
@@ -3235,20 +3239,14 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
       if (fit_type==kWireBased) ExtrapolateToVertex(S0);
 
       kalman_error_t error=ForwardFit(S0,C0); 
-      if (error!=FIT_FAILED){
-       
-	//if (fit_type==kWireBased) return NOERROR;
-
-	if (my_cdchits.size()<6){
-	  if (ndf_==0) return UNRECOVERABLE_ERROR;
-	  return NOERROR;
-	}
-	fdc_prob=TMath::Prob(chisq_,ndf_);
-	if (fdc_prob>0.001 && error==FIT_SUCCEEDED) return NOERROR;
-	fdc_ndf=ndf_;
-	fdc_chisq=chisq_;
+      if (error==FIT_SUCCEEDED) return NOERROR;
+      if ((error==FIT_FAILED || ndf_==0) && my_cdchits.size()<6){
+	return UNRECOVERABLE_ERROR;
       }
-      if (my_cdchits.size()<6) return UNRECOVERABLE_ERROR;
+      
+      fdc_prob=TMath::Prob(chisq_,ndf_);
+      fdc_ndf=ndf_;
+      fdc_chisq=chisq_;
    }
 
    // Deal with hits in the CDC 
@@ -3314,42 +3312,36 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
          if (fit_type==kWireBased) ExtrapolateToVertex(S0);
 
          error=ForwardCDCFit(S0,C0);
-
-         if (error!=FIT_FAILED && error!=EXTRAPOLATION_FAILED){
-            // Find the CL of the fit
-            forward_prob=TMath::Prob(chisq_,ndf_);
-            if (my_fdchits.size()>0){
-               if (fdc_ndf==0 || forward_prob>fdc_prob){
-                  // We did not end up using the fdc hits after all...
-                  fdchits_used_in_fit.clear();
-               }
-               else{
-                  chisq_=fdc_chisq;
-                  ndf_=fdc_ndf;
-                  x_=x;
-                  y_=y;
-                  z_=z;
-                  phi_=phi;
-                  tanl_=tanl;
-                  q_over_pt_=q_over_pt;
-                  if (!fcov_save.empty()){
-                     fcov.assign(fcov_save.begin(),fcov_save.end());
-                  }
-		  if (!saved_extrapolations.empty()){
-		    extrapolations=saved_extrapolations;
-		  }
-		  IsSmoothed=save_IsSmoothed;
-		  pulls.assign(pulls_save.begin(),pulls_save.end());
-		  
-                  //                         _DBG_ << endl;
-                  return NOERROR;
-               }
+	 if (error==FIT_SUCCEEDED) return NOERROR;
+ 
+	 // Find the CL of the fit
+	 forward_prob=TMath::Prob(chisq_,ndf_);
+	 if (my_fdchits.size()>0){
+	   if (fdc_ndf==0 || forward_prob>fdc_prob){
+	     // We did not end up using the fdc hits after all...
+	     fdchits_used_in_fit.clear();
+	   }
+	   else{
+	     chisq_=fdc_chisq;
+	     ndf_=fdc_ndf;
+	     x_=x;
+	     y_=y;
+	     z_=z;
+	     phi_=phi;
+	     tanl_=tanl;
+	     q_over_pt_=q_over_pt;
+	     if (!fcov_save.empty()){
+	       fcov.assign(fcov_save.begin(),fcov_save.end());
+	     }
+	     if (!saved_extrapolations.empty()){
+	       extrapolations=saved_extrapolations;
+	     }
+	     IsSmoothed=save_IsSmoothed;
+	     pulls.assign(pulls_save.begin(),pulls_save.end());
+	     
+	     //                         _DBG_ << endl;
+	     return NOERROR;
             }
-	    double new_theta_deg=90.-180./M_PI*atan(tanl_);
-	    if (new_theta_deg<THETA_CUT_CENTRAL_FIT_TRY
-		&& error==FIT_SUCCEEDED){
-	      return NOERROR;
-	    }
 
             // Save the best values for the parameters and chi2 for now
             chisq_forward=chisq_;
@@ -3419,9 +3411,9 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
     
       cdc_error=CentralFit(xy,S0,C0);
       if (cdc_error==FIT_SUCCEEDED){
-         // if the result of the fit using the forward parameterization succeeded
-         // but the chi2 was too high, it still may provide the best estimate for 
-         // the track parameters... 
+	// if the result of the fit using the forward parameterization succeeded
+	// but the chi2 was too high, it still may provide the best estimate 
+	// for the track parameters... 
          double central_prob=TMath::Prob(chisq_,ndf_);
 
          if (central_prob<forward_prob){
@@ -3450,7 +3442,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
 
       }
       // otherwise if the fit using the forward parametrization worked, return that 
-      else if (error==FIT_SUCCEEDED || error==LOW_CL_FIT){
+      else if (error!=FIT_FAILED){
          phi_=phi;
          q_over_pt_=q_over_pt;
          tanl_=tanl;
@@ -3863,7 +3855,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
      num_cdc=break_point_cdc_index+1;
    }
 
-   if (cdc_index<MIN_HITS_FOR_REFIT) chi2cut=BIG;
+   if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
 
    // Wire origin and direction
    DVector2 origin=my_cdchits[cdc_index]->origin;
@@ -4256,8 +4248,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 						     DMatrix5x1 &S, 
 						     DMatrix5x5 &C,
 						     double &chisq, 
-						     unsigned int &numdof,
-						     bool flip_sign){
+						     unsigned int &numdof){
    DMatrix2x1 Mdiff; // difference between measurement and prediction 
    DMatrix2x5 H;  // Track projection matrix
    DMatrix5x2 H_T; // Transpose of track projection matrix 
@@ -4443,9 +4434,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 
             // (signed) distance of closest approach to wire
             double du=upred-u;
-	    if (flip_sign && id==num_fdc-1){
-	      du*=-1.;	      
-	    }
             double doca=du*cosalpha;
 
             // Correction for lorentz effect
@@ -5309,8 +5297,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 							DMatrix5x1 &S,
 							DMatrix5x5 &C,
 							double &chisq,
-							unsigned int &numdof,
-							bool flip_sign){
+							unsigned int &numdof){
    DMatrix1x5 H;  // Track projection matrix
    DMatrix5x1 H_T; // Transpose of track projection matrix
    DMatrix5x5 J;  // State vector Jacobian matrix
@@ -5353,7 +5340,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
      num_cdc=cdc_index+1;
    }
 
-   if (cdc_index<MIN_HITS_FOR_REFIT) chi2cut=BIG;
+   if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
 
    DVector2 origin=my_cdchits[cdc_index]->origin;
    double z0w=my_cdchits[cdc_index]->z0wire;
@@ -5649,9 +5636,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
             }
             // residual
             double res=dm-d;
-	    if (flip_sign && cdc_index==num_cdc-1){
-	      res*=-1;
-	    }
 
             // inverse of variance including prediction
             //InvV=1./(V+H*(C*H_T));
@@ -7025,52 +7009,36 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	_DBG_ << "Iter: " << iter+1 << " Chi2=" << chisq << " Ndf=" << my_ndf << " Error code: " << error << endl; 
       }
       // Try to recover tracks that failed the first attempt at fitting by
-      // flipping the sign of residual for the first hit, which gives a kick
-      // to the trajectory in the opposite direction with respect to the wire...
-      if (error!=FIT_SUCCEEDED && RECOVER_BROKEN_TRACKS){
-	unsigned int old_fdc_index=break_point_fdc_index;
-	unsigned int old_point_step_index=break_point_step_index;
-	break_point_fdc_index=num_fdchits-1;
-	break_point_step_index=0;
-	C=C0;
-	S=S0;
-	if (DEBUG_LEVEL>0){
-	  _DBG_ << "Attempting recovery method #1" << endl;
-	}
-	error=KalmanForward(fdc_anneal,cdc_anneal,S,C,chisq,my_ndf,true);
-	// Try to recover tracks that failed the first attempt at fitting
-	if (error!=FIT_SUCCEEDED 
-	    && num_fdchits>2  // some minimum to make this worthwhile...
-	    && break_point_fdc_index<num_fdchits
-	    && break_point_fdc_index+num_cdchits>=MIN_HITS_FOR_REFIT
-	    && forward_traj.size()>2*MIN_HITS_FOR_REFIT // avoid small track stubs
+      // cutting outer hits
+      if (error!=FIT_SUCCEEDED && RECOVER_BROKEN_TRACKS
+	  && num_fdchits>2  // some minimum to make this worthwhile...
+	  && break_point_fdc_index<num_fdchits
+	  && break_point_fdc_index+num_cdchits>=MIN_HITS_FOR_REFIT
+	  && forward_traj.size()>2*MIN_HITS_FOR_REFIT // avoid small track stubs
 	  ){
-	  DMatrix5x5 Ctemp=C;
-	  DMatrix5x1 Stemp=S;
-	  unsigned int temp_ndf=my_ndf;
-	  double temp_chi2=chisq;
-	  double x=x_,y=y_,z=z_;
-	  break_point_fdc_index=old_fdc_index;
-	  break_point_step_index=old_point_step_index;
+	DMatrix5x5 Ctemp=C;
+	DMatrix5x1 Stemp=S;
+	unsigned int temp_ndf=my_ndf;
+	double temp_chi2=chisq;
+	double x=x_,y=y_,z=z_;
 
-	  kalman_error_t refit_error=RecoverBrokenForwardTracks(fdc_anneal,
-								cdc_anneal,
-								S,C,C0,chisq,
-								my_ndf);
-	  if (refit_error!=FIT_SUCCEEDED){
-	    if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
-	      C=Ctemp;
-	      S=Stemp;
-	      my_ndf=temp_ndf;
-	      chisq=temp_chi2;
-	      x_=x,y_=y,z_=z;
-	      
-	      if (num_cdchits<6) error=FIT_SUCCEEDED;
-	    }
-	    else error=FIT_FAILED;
+	kalman_error_t refit_error=RecoverBrokenForwardTracks(fdc_anneal,
+							      cdc_anneal,
+							      S,C,C0,chisq,
+							      my_ndf);
+	if (refit_error!=FIT_SUCCEEDED){
+	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
+	    C=Ctemp;
+	    S=Stemp;
+	    my_ndf=temp_ndf;
+	    chisq=temp_chi2;
+	    x_=x,y_=y,z_=z;
+	    
+	    if (num_cdchits<6) error=FIT_SUCCEEDED;
 	  }
-	  else error=FIT_SUCCEEDED;
+	  else error=FIT_FAILED;
 	}
+	else error=FIT_SUCCEEDED;
       }
       if ((error==POSITION_OUT_OF_RANGE || error==MOMENTUM_OUT_OF_RANGE)
 	  && iter==0){ 
@@ -7226,6 +7194,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       }
       */
    double anneal_factor=anneal_scale+1.;
+   kalman_error_t error=FIT_NOT_DONE;
    /*
       if (fit_type==kTimeBased && fabs(1./S(state_q_over_p))<1.0 
       && my_anneal_const>=2.0){ 
@@ -7287,78 +7256,55 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       
       // perform the filter 
       C=C0;
-      kalman_error_t error=KalmanForwardCDC(anneal_factor,S,C,chisq,my_ndf);
+      error=KalmanForwardCDC(anneal_factor,S,C,chisq,my_ndf);
       
       // Try to recover tracks that failed the first attempt at fitting by
-      // flipping the sign of residual for the first hit, which gives a kick
-      // to the trajectory in the opposite direction with respect to the wire...
-      if (error!=FIT_SUCCEEDED && RECOVER_BROKEN_TRACKS){
-	/*
-	unsigned int old_cdc_index=break_point_cdc_index;
-	unsigned int old_point_step_index=break_point_step_index;
-	break_point_cdc_index=max_cdc_index;
-	break_point_step_index=0;
-	C=C0;
-	S=S0;
-	if (DEBUG_LEVEL>0)
-	{
-	  _DBG_ << "Attempting alternate L/R guess for outer ring" << endl;
-	}
-	error=KalmanForwardCDC(anneal_factor,S,C,chisq,my_ndf,true);
-       	if (DEBUG_LEVEL>0)
-	{
-	  _DBG_ << " Error: " << error << endl;
-	}
-	*/
-	// If this does not work, try to recover track by throwing away outer 
-	// hits
-	if (error!=FIT_SUCCEEDED && num_cdchits>=MIN_HITS_FOR_REFIT){
-	  DMatrix5x5 Ctemp=C;
-	  DMatrix5x1 Stemp=S;
-	  unsigned int temp_ndf=my_ndf;
-	  double temp_chi2=chisq;
-	  double x=x_,y=y_,z=z_;
-	  //break_point_cdc_index=old_cdc_index;
-	  //break_point_step_index=old_point_step_index;
+      // cutting outer hits
+      if (error!=FIT_SUCCEEDED && RECOVER_BROKEN_TRACKS
+	  && num_cdchits>=MIN_HITS_FOR_REFIT){
+	DMatrix5x5 Ctemp=C;
+	DMatrix5x1 Stemp=S;
+	unsigned int temp_ndf=my_ndf;
+	double temp_chi2=chisq;
+	double x=x_,y=y_,z=z_;
 	  
-	  if (error==MOMENTUM_OUT_OF_RANGE){
-	    //_DBG_ << "Momentum out of range" <<endl;	
-	    unsigned int new_index=(3*max_cdc_index)/4;
-	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
-	  }
-	  
-	  if (error==BROKEN_COVARIANCE_MATRIX){
-	    break_point_cdc_index=min_cdc_index_for_refit;
-	    //_DBG_ << "Bad Cov" <<endl;
-	  }
-	  if (error==POSITION_OUT_OF_RANGE){
-	    //_DBG_ << "Bad position" << endl;
-	    unsigned int new_index=(max_cdc_index)/2;
-	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
-	  }
-	  if (error==PRUNED_TOO_MANY_HITS){
-	    //	    _DBG_ << "Prune" << endl;
-	    unsigned int new_index=(3*max_cdc_index)/4;
-	    break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
-	    // anneal_factor*=10.;
-	  }
+	if (error==MOMENTUM_OUT_OF_RANGE){
+	  //_DBG_ << "Momentum out of range" <<endl;	
+	  unsigned int new_index=(3*max_cdc_index)/4;
+	  break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
+	}
 	
-	  kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
-	  
-	  if (refit_error!=FIT_SUCCEEDED){
-	    if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
-	      C=Ctemp;
-	      S=Stemp;
-	      my_ndf=temp_ndf;
-	      chisq=temp_chi2;
-	      x_=x,y_=y,z_=z;
-	      
-	      error=FIT_SUCCEEDED;
-	    }
-	    else error=FIT_FAILED;
-	  }
-	  else error=FIT_SUCCEEDED;
+	if (error==BROKEN_COVARIANCE_MATRIX){
+	  break_point_cdc_index=min_cdc_index_for_refit;
+	  //_DBG_ << "Bad Cov" <<endl;
 	}
+	if (error==POSITION_OUT_OF_RANGE){
+	  //_DBG_ << "Bad position" << endl;
+	  unsigned int new_index=(max_cdc_index)/2;
+	  break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
+	}
+	if (error==PRUNED_TOO_MANY_HITS){
+	  //	    _DBG_ << "Prune" << endl;
+	  unsigned int new_index=(3*max_cdc_index)/4;
+	  break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
+	  // anneal_factor*=10.;
+	}
+	
+	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	  
+	if (refit_error!=FIT_SUCCEEDED){
+	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
+	    C=Ctemp;
+	    S=Stemp;
+	    my_ndf=temp_ndf;
+	    chisq=temp_chi2;
+	    x_=x,y_=y,z_=z;
+	    
+	    //	    error=FIT_SUCCEEDED;
+	  }
+	  else error=FIT_FAILED;
+	}
+	else error=FIT_SUCCEEDED;
       }
       if ((error==POSITION_OUT_OF_RANGE || error==MOMENTUM_OUT_OF_RANGE)
 	  && iter2==0){ 
@@ -7467,7 +7413,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       fcov.push_back(dummy);
    }  
 
-   return FIT_SUCCEEDED;
+   return error;
 }
 
 // Routine to fit hits in the CDC using the central parametrization
@@ -7600,9 +7546,8 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	    pos=temp_pos;
 	    if (DEBUG_LEVEL > 1) _DBG_ << " Refit did not succeed, but restoring old values" << endl;
 	    
-	    error=FIT_SUCCEEDED;
+	    //error=FIT_SUCCEEDED;
 	  }
-	  else error=FIT_FAILED;
 	}
 	else error=FIT_SUCCEEDED;
       }
@@ -7721,7 +7666,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    ndf_=last_ndf;
    //printf("NDof %d\n",ndf);
 
-   return FIT_SUCCEEDED;
+   return error;
 }
 
 // Smoothing algorithm for the forward trajectory.  Updates the state vector
