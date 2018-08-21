@@ -15,6 +15,7 @@
 #include "JANA/JEventLoop.h"
 #include "JANA/JApplication.h"
 
+#include "DIRC/DDIRCGeometry.h"
 #include "DIRC/DDIRCLut.h"
 #include "ANALYSIS/DAnalysisAction.h"
 #include "ANALYSIS/DReaction.h"
@@ -42,7 +43,8 @@ class DCustomAction_dirc_reactions : public DAnalysisAction
 
 		// need PID algos for DIRC
                 const DParticleID* dParticleID;
-		
+		const DDIRCGeometry* dDIRCGeometry;
+
 		// DDIRCLut for likelihood calculation
 		const DDIRCLut* dDIRCLut;
 		deque<Particle_t> dFinalStatePIDs;
@@ -51,11 +53,16 @@ class DCustomAction_dirc_reactions : public DAnalysisAction
 		int dParticleComboStepIndex, dParticleIndex;
 		Particle_t dPID;
 
-		bool DIRC_TRUTH_BARHIT;
+		bool DIRC_TRUTH_BARHIT, DIRC_FILL_BAR_MAP;
 
 		//Store any histograms as member variables here
 		TH1I *hDiff, *hNphC, *hThetaC, *hDeltaThetaC, *hLikelihood, *hLikelihoodDiff;
 		TH2I *hThetaCVsP, *hDeltaThetaCVsP, *hLikelihoodDiffVsP, *hReactionLikelihoodDiffVsP;
+
+		TH2I *hExtrapolatedBarHitXY;
+		TH1I *hDiffMap[48][40], *hNphCMap[48][40];
+		TH2I *hTruthPixelHitMap[48][40];
+		TH2I *hDeltaThetaCVsPMap[48][40], *hReactionLikelihoodDiffVsPMap[48][40];
 };
 
 #endif // _DCustomAction_dirc_reactions_
