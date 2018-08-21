@@ -55,7 +55,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  hNphC[locPID] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
 	  hThetaC[locPID] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
 	  hDeltaThetaC[locPID] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
-	  hLikelihood[locPID] = new TH1I(Form("hLikelihood_%s",locParticleName.data()), Form("; %s lnL; entries [#]", locParticleROOTName.data()),1000,-1000.,1000.);
+	  hLikelihood[locPID] = new TH1I(Form("hLikelihood_%s",locParticleName.data()), Form("; %s -lnL; entries [#]", locParticleROOTName.data()),1000,0.,1000.);
 	  hLikelihoodDiff[locPID] = new TH1I(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; %s;entries [#]", locLikelihoodName[loc_i].Data()),100,-200.,200.);
 
 
@@ -151,19 +151,22 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  if(foundDIRC) {
 
 		  // loop over hits associated with track (from LUT)
-		  vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
+		  //vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
+		  vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
 		  if(locPhotons.size() > 0) {
 			  
 			  // loop over candidate photons
 			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
-				  double locDeltaT = locPhotons[loc_j].second;
+				  double locThetaC = locPhotons[loc_j][0];				
+				  double locDeltaT = locPhotons[loc_j][1];
+				  int locSensorId = (int)locPhotons[loc_j][2];
 				  hDiff[locPID]->Fill(locDeltaT);
 				  
 				  // fill histograms for candidate photons in timing cut
 				  if(fabs(locDeltaT) < 2.0) {
-					  hThetaC[locPID]->Fill(locPhotons[loc_j].first);
-					  hDeltaThetaC[locPID]->Fill(locPhotons[loc_j].first-locExpectedThetaC);
-					  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locPhotons[loc_j].first-locExpectedThetaC);
+					  hThetaC[locPID]->Fill(locThetaC );
+					  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
+					  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
 				  }
 			  }	  
 		  }			  
@@ -178,22 +181,22 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 		  // for likelihood and difference for given track mass hypothesis
 		  if(locPID == Positron || locPID == Electron) {
-			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodElectron);
+			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodElectron);
 			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 		  }
 		  else if(locPID == PiPlus || locPID == PiMinus) {
-			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodPion);
 			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 		  else if(locPID == KPlus || locPID == KMinus) {
-			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodKaon);
 			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 		  else if(locPID == Proton) {
-			  hLikelihood[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton);
+			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodProton);
 			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 		  }
