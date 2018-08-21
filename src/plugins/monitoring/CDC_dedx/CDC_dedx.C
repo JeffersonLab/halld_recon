@@ -1,23 +1,33 @@
 
+// The following are special comments used by RootSpy to know
+// which histograms to fetch for the macro.
+//
+// hnamepath: /CDC_dedx/dedx_p_pos
+// hnamepath: /CDC_dedx/dedx_p_neg
+
 
 void CDC_dedx(void) {
 
-  gStyle->SetCanvasDefW(1200);
-  gStyle->SetCanvasDefH(600);
+  gStyle->SetCanvasDefW(1000);
+  gStyle->SetCanvasDefH(1000);
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(0);
   gStyle->SetFuncWidth(1);
   gStyle->SetFuncColor(6);
 
 
- TDirectory *fmain = (TDirectory*)gDirectory->FindObjectAny("CDC_dedx");
-  if (!fmain) printf("Cannot find directory CDC_dedx\n"); 
-  if (!fmain) return;
-  fmain->cd();
+ TDirectory *CDCdir = (TDirectory*)gDirectory->FindObjectAny("CDC_dedx");
+  if (!CDCdir) printf("Cannot find directory CDC_dedx\n"); 
+  if (!CDCdir) return;
+  CDCdir->cd();
   
-  TH2I *h = (TH2I*)fmain->Get("dedx_p_pos");
+  TH2I *h = (TH2I*)CDCdir->Get("dedx_p_pos");
   if (!h) printf("Cannot find histogram dedx_p_pos\n");
   if (!h) return;
+
+  TH2I *hn = (TH2I*)CDCdir->Get("dedx_p_neg");
+  if (!hn) printf("Cannot find histogram dedx_p_neg\n");
+  if (!hn) return;
 
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1");
@@ -29,10 +39,23 @@ void CDC_dedx(void) {
   if(!gPad) return;
 
   TCanvas *c1 = gPad->GetCanvas();
-  c1->Divide(2,1);
+  c1->Divide(2,2);
 
   const float ymin=0;
   const float ymax=12;
+
+
+  c1->cd(1);
+
+  gPad->SetLogz();
+  h->Draw("colz");
+ 
+  c1->cd(2);
+
+  gPad->SetLogz();
+  hn->Draw("colz");
+
+  c1->cd(4);
 
   TF1 *g = new TF1("gaus","gaus",0,ymax);
 
@@ -41,7 +64,7 @@ void CDC_dedx(void) {
   double resp = 0;
   double respi = 0; 
 
-  c1->cd(2);
+
 
   // draw cut through histo at p=1.5 GeV/c
 
@@ -74,7 +97,7 @@ void CDC_dedx(void) {
   }
 
   
-  c1->cd(1);
+  c1->cd(3);
 
   // draw cut through histo at p=0.5 GeV/c
 
