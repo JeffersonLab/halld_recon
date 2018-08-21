@@ -111,7 +111,7 @@ class DDIRCMatchParams
 	public:
                 DDIRCMatchParams(void) : dThetaC(0.0), dLikelihoodElectron(0.0), dLikelihoodPion(0.0), dLikelihoodKaon(0.0), dLikelihoodProton(0.0), dNPhotons(0){} 
 
-		vector < pair<double,double> > dPhotons;
+	        vector < vector<double> > dPhotons; // thetaC, deltaT, sensorId
 
 		double dThetaC;
 		double dLikelihoodElectron, dLikelihoodPion, dLikelihoodKaon, dLikelihoodProton;

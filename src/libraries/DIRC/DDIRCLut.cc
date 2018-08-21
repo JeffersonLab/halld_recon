@@ -19,6 +19,11 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 	dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
 	dDIRCLutReader = dapp->GetDIRCLut(loop->GetJEvent().GetRunNumber());
 
+	// get DIRC geometry
+	vector<const DDIRCGeometry*> locDIRCGeometry;
+        loop->Get(locDIRCGeometry);
+        dDIRCGeometry = locDIRCGeometry[0];
+
 	DIRC_DEBUG_HISTS = false;
 	gPARMS->SetDefaultParameter("DIRC:DEBUG_HISTS",DIRC_DEBUG_HISTS);
 
@@ -79,8 +84,6 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 		dapp->RootUnLock(); //REMOVE ROOT LOCK!!
 	}
 
-	// LUT photon container
-	//dDIRCLutPhotons = new DDIRCLutPhotons();
 }
 
 bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const
@@ -136,7 +139,6 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	double cut_tdiffr=3; // reflected cut in ns
 
 	// clear object to store good photons
-	//dDIRCLutPhotons->dPhoton.clear();
 	if(locDIRCMatchParams == nullptr)
 		locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
 	locDIRCMatchParams->dPhotons.clear();
@@ -151,7 +153,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		const DDIRCTruthPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		
 		// cheat and determine bar from truth info (replace with Geometry->GetBar(X,Y) function)
-		int bar = locDIRCHit->key_bar;
+		int bar = dDIRCGeometry->GetBar(posInBar.Y()); //locDIRCHit->key_bar;
 		if(bar < 0 || bar > 47) continue;
 
                 // get channel information for LUT
@@ -241,7 +243,10 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					}
 					
 					// save hits array which pass some lose time and angle criteria
-					pair<double, double> photonInfo(tangle, locDeltaT);
+					vector<double> photonInfo;
+					photonInfo.push_back(tangle);  
+					photonInfo.push_back(locDeltaT); 
+					photonInfo.push_back(sensorId); 
 					if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2) 
 						locDIRCMatchParams->dPhotons.push_back(photonInfo);
 

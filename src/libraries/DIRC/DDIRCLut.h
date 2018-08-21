@@ -12,9 +12,9 @@ using namespace jana;
 
 #include <DANA/DApplication.h>
 #include <PID/DDetectorMatches.h>
+#include <DIRC/DDIRCGeometry.h>
 #include <DIRC/DDIRCLutReader.h>
 #include <DIRC/DDIRCTruthBarHit.h>
-#include <DIRC/DDIRCLutPhotons.h>
 
 #include "TROOT.h"
 #include "TVector3.h"
@@ -39,7 +39,7 @@ public:
 private:
 	DApplication *dapp;
 	DDIRCLutReader *dDIRCLutReader;
-	//DDIRCLutPhotons *dDIRCLutPhotons;
+	const DDIRCGeometry *dDIRCGeometry;
 	
 	bool DIRC_DEBUG_HISTS;
 	bool DIRC_TRUTH_BARHIT;
