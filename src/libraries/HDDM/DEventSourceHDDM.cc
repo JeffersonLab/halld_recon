@@ -75,7 +75,16 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
    geom = NULL;
    
    dRunNumber = -1;
-   
+	
+   if( ! gPARMS->Exists("JANA_CALIB_CONTEXT") ){
+   		cout << "============================================================" << endl;
+			cout << " WARNING: JANA_CALIB_CONTEXT not set. " << endl;
+			cout << "You are reading from an HDDM file which is most likely" << endl;
+			cout << "MC data. In most cases, you will want to set this parameter" << endl;
+			cout << "to get proper reconstruction." << endl;
+			cout << "(usually something like \"variation=mc\")" << endl;
+   		cout << "============================================================" << endl;
+	}
 }
 
 //----------------
