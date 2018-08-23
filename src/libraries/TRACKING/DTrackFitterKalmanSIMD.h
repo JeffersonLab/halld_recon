@@ -178,15 +178,13 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,
-				       double &chisq,unsigned int &numdof,
-				       bool flip_sign=false);
+				       double &chisq,unsigned int &numdof);
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
 
   kalman_error_t KalmanForwardCDC(double anneal,DMatrix5x1 &S,DMatrix5x5 &C,
-				  double &chisq,unsigned int &numdof,
-				  bool flip_sign=false);
+				  double &chisq,unsigned int &numdof);
   kalman_error_t KalmanCentral(double anneal_factor,DMatrix5x1 &S,
 			       DMatrix5x5 &C,DVector2 &xy,double &chisq,
 			       unsigned int &myndf);
@@ -480,7 +478,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double TARGET_Z;
   bool ADD_VERTEX_POINT;
   unsigned int MIN_HITS_FOR_REFIT;
-  double THETA_CUT,THETA_CUT_CENTRAL_FIT_TRY;
+  double THETA_CUT;
   bool USE_PASS1_TIME_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;

@@ -341,9 +341,6 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
   
    THETA_CUT=60.0; 
    gPARMS->SetDefaultParameter("KALMAN:THETA_CUT", THETA_CUT); 
-   THETA_CUT_CENTRAL_FIT_TRY=60.0; 
-   gPARMS->SetDefaultParameter("KALMAN:THETA_CUT_CENTRAL_FIT_TRY", 
-			       THETA_CUT_CENTRAL_FIT_TRY);
 
    RING_TO_SKIP=0;
    gPARMS->SetDefaultParameter("KALMAN:RING_TO_SKIP",RING_TO_SKIP);
@@ -351,7 +348,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    PLANE_TO_SKIP=0;
    gPARMS->SetDefaultParameter("KALMAN:PLANE_TO_SKIP",PLANE_TO_SKIP);
 
-   MIN_HITS_FOR_REFIT=8; 
+   MIN_HITS_FOR_REFIT=6; 
    gPARMS->SetDefaultParameter("KALMAN:MIN_HITS_FOR_REFIT", MIN_HITS_FOR_REFIT);
    PHOTON_ENERGY_CUTOFF=0.125; 
    gPARMS->SetDefaultParameter("KALMAN:PHOTON_ENERGY_CUTOFF",
@@ -3165,14 +3162,31 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
 
    if (fit_type==kWireBased && theta_deg>10.){
      double Bz=fabs(bfield->GetBz(x0,y0,z0));
-     double sinl=sin(atan(tanl_));
-     double sperp=25.*(1.+0.5*fabs(sinl)); // empirical guess
-     if (theta_deg<25.){
-       sperp=(endplate_z-z0)/tanl_;
+     double sperp=25.; // empirical guess
+     if (my_fdchits.size()>0){
+       double my_z=my_fdchits[0]->z;
+       double my_x=my_fdchits[0]->hit->xy.X();
+       double my_y=my_fdchits[0]->hit->xy.Y();
+       Bz+=fabs(bfield->GetBz(my_x,my_y,my_z));
+       Bz*=0.5; // crude average
+       sperp=(my_z-z0)/tanl_;
      }
-     double twokappa=qBr2p*Bz*q_over_pt0*FactorForSenseOfRotation;
-     double twoks=twokappa*sperp;
+     double twokappa=qBr2p*Bz*q_over_pt0*FactorForSenseOfRotation; 
      double one_over_2k=1./twokappa;
+     if (my_fdchits.size()==0){
+       for (unsigned int i=my_cdchits.size()-1;i>1;i--){
+	 // Use outermost axial straw to estimate a resonable arc length
+	 if (my_cdchits[i]->hit->is_stereo==false){
+	   double tworc=2.*fabs(one_over_2k);
+	   double ratio=(my_cdchits[i]->hit->wire->origin
+			 -input_params.position()).Perp()/tworc;
+	   sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
+	   if (sperp<25.) sperp=25.;
+	   break;
+	 }
+       }
+     }
+     double twoks=twokappa*sperp;
      double cosphi=cos(phi0);
      double sinphi=sin(phi0);
      double sin2ks=sin(twoks);
@@ -6948,13 +6962,14 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    // last z position
    double last_z=z_;
 
-   double fdc_anneal=FORWARD_ANNEAL_SCALE+1.;  // variable for scaling cut for hit pruning
+   double fdc_anneal=2.;  // variable for scaling cut for hit pruning
    double my_fdc_anneal_const=FORWARD_ANNEAL_POW_CONST;
-   //  if (fit_type==kTimeBased && fabs(1./S(state_q_over_p))<1.0
-   // && my_anneal_const>=2.0) my_anneal_const*=0.5;
-   double cdc_anneal=(fit_type==kTimeBased?ANNEAL_SCALE+1.:2.);  // variable for scaling cut for hit pruning
+   double cdc_anneal=2.;  // variable for scaling cut for hit pruning
    double my_cdc_anneal_const=ANNEAL_POW_CONST;
-
+   if (fit_type==kTimeBased){
+     cdc_anneal=ANNEAL_SCALE+1;
+     fdc_anneal=FORWARD_ANNEAL_SCALE+1.;
+   }
 
    // Chi-squared and degrees of freedom
    double chisq=-1.,chisq_forward=-1.;
