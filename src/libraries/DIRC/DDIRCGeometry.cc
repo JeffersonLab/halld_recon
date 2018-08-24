@@ -58,7 +58,7 @@ DDIRCGeometry::Initialize(int runnumber) {
 	DIRC_QZBL_DZ = QZBL_DXDYDZ[2];
 
 	// set array of bar positions
-	double arr[4] = {-1.*(DIRC_DCML_Y+DIRC_DCML_DY)+DIRC_DCBR_Y, -1.*DIRC_DCML_Y+DIRC_DCBR_Y, DIRC_DCML_Y-DIRC_DCBR_Y, DIRC_DCML_Y+DIRC_DCML_DY-DIRC_DCBR_Y};
+	double arr[4] = {-1.*DIRC_DCML_Y+DIRC_DCBR_Y, -1.*(DIRC_DCML_Y+DIRC_DCML_DY)+DIRC_DCBR_Y, DIRC_DCML_Y-DIRC_DCBR_Y, DIRC_DCML_Y+DIRC_DCML_DY-DIRC_DCBR_Y};
 	
 	for(int i=0; i<48; i++) {
 		double y = arr[i/12]+(i%12)*DIRC_DCBR_DY;
