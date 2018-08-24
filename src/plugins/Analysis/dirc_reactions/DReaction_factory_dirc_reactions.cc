@@ -74,9 +74,9 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 900, 0.3, 1.2, "Rho_KinFit_PostKinFitCut"));
 
 	// Custom histograms for DIRC
-	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiPlus, 0, 1, "PiPlus_DIRC"));
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiPlus, 0, 1, "PiPlus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, PiPlus, 0, 1, "PiPlus_DIRC_KinFit"));
-	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiMinus, 0, 2, "PiMinus_DIRC"));
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiMinus, 0, 2, "PiMinus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, PiMinus, 0, 2, "PiMinus_DIRC_KinFit"));
 
 	// Kinematics of final selection
@@ -134,9 +134,9 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 500, 0.9, 1.4, "Phi_KinFit_PostKinFitCut"));
 
 	// Custom histograms for DIRC
-	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KPlus, 0, 1, "KPlus_DIRC")); //PID, ComboStepIndex, ParticleIndex, "UniqueName"
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KPlus, 0, 1, "KPlus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, KPlus, 0, 1, "KPlus_DIRC_KinFit"));
-	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KMinus, 0, 2, "KMinus_DIRC"));
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KMinus, 0, 2, "KMinus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, KMinus, 0, 2, "KMinus_DIRC_KinFit"));
 
 	// Kinematics of final selection

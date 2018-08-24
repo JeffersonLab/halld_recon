@@ -1,7 +1,5 @@
 // -----------------------------------------
 // DEventProcessor_truth_dirc.h
-// created on: 07.04.2017
-// initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
 #ifndef DEVENTPROCESSOR_TRUTH_DIRC_H_
@@ -26,6 +24,8 @@ using namespace jana;
 #include <PID/DBeamPhoton.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
+#include "DIRC/DDIRCGeometry.h"
+#include <DIRC/DDIRCPmtHit.h>
 
 #include <TMath.h>
 #include <TFile.h>
@@ -54,11 +54,15 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
+  const DDIRCGeometry* dDIRCGeometry;
+
   TH1F *hTruthBarHitBar;
   TH2F *hTruthBarHitXY;
   TH2F *hTruthPmtHitZY_North, *hTruthPmtHitZY_South;
   TH2F *hTruthPmtHit_North, *hTruthPmtHit_South;
   TH2F *hTruthPixelHit_North, *hTruthPixelHit_South;
+  TH2F *hPixelHit_North, *hPixelHit_South;
+  TH2F *hTruthPixelHitTime;
 
 };
 

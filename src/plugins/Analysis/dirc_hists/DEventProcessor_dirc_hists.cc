@@ -103,7 +103,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  int locDCHits = locTrackTimeBased->Ndof + 5;
 	  double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
 	  double locP = locTrackTimeBased->momentum().Mag();
-	  if(locDCHits < 25 || locTheta < 3.0 || locTheta > 10.0 || locP > 12.0)
+	  if(locDCHits < 15 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
 		  continue;
 
 	  // require has good match to TOF hit for cleaner sample
@@ -151,13 +151,12 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  if(foundDIRC) {
 
 		  // loop over hits associated with track (from LUT)
-		  //vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
 		  vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
 		  if(locPhotons.size() > 0) {
 			  
 			  // loop over candidate photons
 			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
-				  double locThetaC = locPhotons[loc_j][0];				
+				  double locThetaC = locPhotons[loc_j][0];
 				  double locDeltaT = locPhotons[loc_j][1];
 				  int locSensorId = (int)locPhotons[loc_j][2];
 				  hDiff[locPID]->Fill(locDeltaT);

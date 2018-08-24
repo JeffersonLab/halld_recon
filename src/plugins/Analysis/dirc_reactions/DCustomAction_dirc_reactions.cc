@@ -49,6 +49,7 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		else if(dPID==Proton || dPID==AntiProton)
 			locLikelihoodName = "ln L(K) - ln L(p)";
 
+		hExtrapolatedBarHitXY_PreCut = GetOrCreate_Histogram<TH2I>(Form("hExtrapolatedBarHitXY_PreCut_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
 		hExtrapolatedBarHitXY = GetOrCreate_Histogram<TH2I>(Form("hExtrapolatedBarHitXY_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
 
 		hDiff = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-20,20);
@@ -81,14 +82,16 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 					if(locBinVect.Theta()*180/TMath::Pi() > 12.) 
 						continue;
 					
-					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80,-20,20);
+					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 200,-20,20);
+					hHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,100);
 					hNphCMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphC_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
 					
 					hDeltaThetaCVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 60,-0.15,0.15);
 					hReactionLikelihoodDiffVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hReactionLikelihoodDiffVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f]; p (GeV/c); %s", locBar,xbin_min,xbin_max,locLikelihoodName.data()), 60, 0.0, 12.0, 50, -200, 200);
 					
-					hTruthPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hTruthPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
-					
+					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
+					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
+					//hPixelHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitTime_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit Channel; Pixel Hit t [ns]", locBar,xbin_min,xbin_max), 6912, 0, 6912, 50, 0, 100);
 				}
 				
 				gDirectory->cd(".."); //End of single bar histograms
@@ -120,11 +123,23 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
 	const DTrackTimeBased* locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
 	
+	// Get expected thetaC from the extrapolation
+	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
+	if(extrapolations.size()==0) 
+		return true;
+	
+	DVector3 momInBar = extrapolations[0].momentum;
+	DVector3 posInBar = extrapolations[0].position;
+
+	Lock_Action(); //ACQUIRE ROOT LOCK!!
+	hExtrapolatedBarHitXY_PreCut->Fill(posInBar.X(), posInBar.Y());
+	Unlock_Action(); //RELEASE ROOT LOCK!!
+
 	// require well reconstructed tracks for initial studies
 	int locDCHits = locTrackTimeBased->Ndof + 5;
 	double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
 	double locP = locParticle->lorentzMomentum().Vect().Mag();
-	if(locDCHits < 25 || locTheta < 2.0 || locTheta > 12.0 || locP > 12.0)
+	if(locDCHits < 15 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
 		return true;
 	
 	// require has good match to TOF hit for cleaner sample
@@ -132,14 +147,6 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		return true;
-	
-	// get expected thetaC from the extrapolation
-	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
-	if(extrapolations.size()==0) 
-		return true;
-	
-	DVector3 momInBar = extrapolations[0].momentum;
-	DVector3 posInBar = extrapolations[0].position;
 	
 	////////////////////////////////////////////
 	// option to cheat and use truth position //
@@ -193,7 +200,6 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 			locExpectedAngle[loc_i] = acos(sqrt(locP*locP + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/locP/1.473);
 		
 		// loop over hits associated with track (from LUT)
-		//vector< pair<double,double> > locPhotons = locDIRCMatchParams->dPhotons;
 		vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
 		if(locPhotons.size() > 0) {
 
@@ -202,6 +208,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 				double locThetaC = locPhotons[loc_j][0];				
 				double locDeltaT = locPhotons[loc_j][1];
 				int locChannel = (int)locPhotons[loc_j][2];
+				double locHitTime = locPhotons[loc_j][3];				
 				if(locChannel >= 108*64) locChannel -= 108*64;
 
 				// format final pixel x' and y' axes for view from behind PMTs looking downstream
@@ -210,7 +217,10 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 
 				Lock_Action(); //ACQUIRE ROOT LOCK!!
 				hDiff->Fill(locDeltaT);
-				if(DIRC_FILL_BAR_MAP) hDiffMap[locBar][locXbin]->Fill(locDeltaT);
+				if(DIRC_FILL_BAR_MAP) {
+					hDiffMap[locBar][locXbin]->Fill(locDeltaT);
+					hHitTimeMap[locBar][locXbin]->Fill(locHitTime);
+				}
 				Unlock_Action(); //RELEASE ROOT LOCK!!
 
 				// fill histograms for candidate photons in timing cut
@@ -236,7 +246,11 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 					
 					Lock_Action(); //ACQUIRE ROOT LOCK!!
 					if(DIRC_FILL_BAR_MAP && locP > 4.) {
-						hTruthPixelHitMap[locBar][locXbin]->Fill(pixel_x, pixel_y);
+						//hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
+						if(locHitTime < 48.) 
+							hPixelHitMap[locBar][locXbin]->Fill(pixel_x, pixel_y);
+						else
+							hPixelHitMapReflected[locBar][locXbin]->Fill(pixel_x, pixel_y);
 					}
 					locUsedPixel.push_back(locChannel);
 					Unlock_Action(); //RELEASE ROOT LOCK!!

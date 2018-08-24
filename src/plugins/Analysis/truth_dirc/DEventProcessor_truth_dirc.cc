@@ -1,7 +1,5 @@
 // -----------------------------------------
 // DEventProcessor_truth_dirc.cc
-// created on: 07.04.2017
-// initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
 #include "DEventProcessor_truth_dirc.h"
@@ -32,6 +30,9 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
   else
     gDirectory->Cd("/");
 
+  int nChannels = 108*64;
+  hTruthPixelHitTime = new TH2F("hTruthPixelHitTime", "; Pixel Channel # ; #Delta t (ns)", nChannels, 0, nChannels, 200, -100, 100);
+
   hTruthBarHitXY = new TH2F("hTruthBarHitXY", "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
   hTruthBarHitBar = new TH1F("hTruthBarHitBar", "; Bar #", 48, 0.5, 47.5);
   hTruthPmtHitZY_North = new TH2F("hTruthPmtHitZY_North", "North Box; PMT Hit Z (cm); PMT Hit Y (cm)", 100, 525, 560, 110, 0., 110.);
@@ -41,13 +42,22 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
   hTruthPmtHit_South = new TH2F("hTruthPmtHit_South", "South Box; Pmt Hit Column ; Pixel Hit Row", 6, 0, 6, 18, 0, 18);
   hTruthPixelHit_North = new TH2F("hTruthPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
   hTruthPixelHit_South = new TH2F("hTruthPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
+
+  hPixelHit_North = new TH2F("hPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
+  hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
  
   return NOERROR;
 }
 
 jerror_t DEventProcessor_truth_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
-   return NOERROR;
+
+  // get DIRC geometry
+  vector<const DDIRCGeometry*> locDIRCGeometry;
+  loop->Get(locDIRCGeometry);
+  dDIRCGeometry = locDIRCGeometry[0];
+
+  return NOERROR;
 }
 
 jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
@@ -56,33 +66,22 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   vector<const DMCTrackHit*> mctrackhits;
   vector<const DDIRCTruthBarHit*> dircBarHits;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
+  vector<const DDIRCPmtHit*> dircRecoPmtHits;
   
   loop->Get(beam_photons);
   loop->Get(mcthrowns);
   loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
-  
-  TVector3 VertexGen = TVector3(mcthrowns[0]->position().X(),
-				mcthrowns[0]->position().Y(), mcthrowns[0]->position().Z());
-  // Make Particle object for beam photon
-  TLorentzVector beam_photon(0.0, 0.0, 9.0, 9.0);
-  if (beam_photons.size() > 0) {
-    const DLorentzVector &lv = beam_photons[0]->lorentzMomentum();
-    beam_photon.SetPxPyPzE(lv.Px(), lv.Py(), lv.Pz(), lv.E());
-  }
-
-  // Target is proton at rest in lab frame
-  TLorentzVector target(0.0, 0.0, 0.0, 0.93827);
+  loop->Get(dircRecoPmtHits);
 
   for (unsigned int j = 0; j < dircBarHits.size(); j++){
-    double px = dircBarHits[j]->px;
-    double py = dircBarHits[j]->py;
-    double pz = dircBarHits[j]->pz;
+    //double px = dircBarHits[j]->px;
+    //double py = dircBarHits[j]->py;
+    //double pz = dircBarHits[j]->pz;
 
     double x = dircBarHits[j]->x;
     double y = dircBarHits[j]->y;
-    double z = dircBarHits[j]->z;
     int bar = dircBarHits[j]->bar;
 
     japp->RootWriteLock(); //ACQUIRE ROOT LOCK
@@ -94,28 +93,23 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
 	
      int ch=dircPmtHits[h]->ch;
-     if(ch >= 108*64) ch -= 108*64;
-
-     int pmt=ch/64;
-     int pix=ch%64;
+    
      double x = dircPmtHits[h]->x;
      double y = dircPmtHits[h]->y;
      double z = dircPmtHits[h]->z;
      double t = dircPmtHits[h]->t;
+     double t_fixed = dircPmtHits[h]->t_fixed;
 
      // get PMT labels
-     int pmt_column = pmt/18; // 0 - 5
-     int pmt_row = pmt%18; // 0 - 17
+     int pmt_column = dDIRCGeometry->GetPmtColumn(ch); 
+     int pmt_row = dDIRCGeometry->GetPmtRow(ch);
 
      // get pixel labels
-     int pixel_column = pix/8; // 0 - 7
-     int pixel_row = pix%8; // 0 - 7
-
-     // format final pixel x' and y' axes for view from behind PMTs looking downstream
-     int pixel_x = abs(8*pmt_row + pixel_row - 143);
-     int pixel_y = 47 - (8*pmt_column + pixel_column);
+     int pixel_x = dDIRCGeometry->GetPixelX(ch);
+     int pixel_y = dDIRCGeometry->GetPixelY(ch);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+     hTruthPixelHitTime->Fill(ch, t-t_fixed);
      if(x < 0.) {
 	hTruthPmtHitZY_South->Fill(z, y);
 	hTruthPmtHit_South->Fill(pmt_column, pmt_row);
@@ -127,6 +121,35 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	hTruthPixelHit_North->Fill(pixel_x, pixel_y);
      }
      japp->RootUnLock();
+  }
+
+  for (unsigned int h = 0; h < dircRecoPmtHits.size(); h++){
+	  
+	  int ch=dircRecoPmtHits[h]->ch;
+	  //double t = dircRecoPmtHits[h]->t;
+	  
+	  // get pixel labels
+	  int pixel_x = dDIRCGeometry->GetPixelX(ch);
+	  int pixel_y = dDIRCGeometry->GetPixelY(ch);
+	  
+	  // comparison of truth and reco hits
+	  /*
+	  vector<const DDIRCTruthPmtHit*> dircTruthPmtHits;  
+	  dircRecoPmtHits[h]->Get(dircTruthPmtHits);
+	  if(dircTruthPmtHits.empty())
+		  cout<<"didn't find associated truth hit"<<endl;
+	  else if(fabs(t - dircTruthPmtHits[0]->t_fixed) > 1.0)
+		  cout<<"found associated truth hit with large DeltaT = "<<t - dircTruthPmtHits[0]->t_fixed<<endl;
+	  */
+
+	  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	  if(ch < 108*64) {
+		  hPixelHit_South->Fill(pixel_x, pixel_y);
+	  }
+	  else {
+		  hPixelHit_North->Fill(pixel_x, pixel_y);
+	  }
+	  japp->RootUnLock();
   }
   
   return NOERROR;
