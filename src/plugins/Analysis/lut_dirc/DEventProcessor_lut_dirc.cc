@@ -92,7 +92,7 @@ jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
 		 dir,
 		 dircPmtHits[h]->path,
 		 dircPmtHits[h]->refl,
-		 dircPmtHits[h]->t,
+		 dircPmtHits[h]->t_fixed,
 		 TVector3(dircPmtHits[h]->x,dircPmtHits[h]->y,dircPmtHits[h]->z),
 		 TVector3(dircPmtHits[h]->x,dircPmtHits[h]->y,dircPmtHits[h]->z));
   }
