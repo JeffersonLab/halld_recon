@@ -15,6 +15,7 @@ using namespace jana;
 #include <DIRC/DDIRCGeometry.h>
 #include <DIRC/DDIRCLutReader.h>
 #include <DIRC/DDIRCTruthBarHit.h>
+#include <DIRC/DDIRCPmtHit.h>
 
 #include "TROOT.h"
 #include "TVector3.h"
@@ -33,7 +34,7 @@ public:
 	DDIRCLut(JEventLoop *loop);
 	~DDIRCLut(){};
 
-	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const;
+	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
 	
 private:

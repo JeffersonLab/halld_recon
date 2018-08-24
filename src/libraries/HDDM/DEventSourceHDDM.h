@@ -63,6 +63,7 @@ using namespace std;
 #include "DIRC/DDIRCTruthHit.h"
 #include "DIRC/DDIRCTruthBarHit.h"
 #include "DIRC/DDIRCTruthPmtHit.h"
+#include "DIRC/DDIRCPmtHit.h"
 #include <RF/DRFTime.h>
 #include <DANA/DApplication.h>
 #include "PAIR_SPECTROMETER/DPSHit.h"
@@ -154,6 +155,7 @@ class DEventSourceHDDM:public JEventSource
       jerror_t Extract_DDIRCTruthHit(hddm_s::HDDM *record, JFactory<DDIRCTruthHit> *factory, string tag);
       jerror_t Extract_DDIRCTruthBarHit(hddm_s::HDDM *record, JFactory<DDIRCTruthBarHit> *factory, string tag);
       jerror_t Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record, JFactory<DDIRCTruthPmtHit> *factory, string tag);
+      jerror_t Extract_DDIRCPmtHit(hddm_s::HDDM *record, JFactory<DDIRCPmtHit> *factory, string tag, JEventLoop* eventLoop);
 
       std::ifstream *ifs;
       hddm_s::istream *fin;

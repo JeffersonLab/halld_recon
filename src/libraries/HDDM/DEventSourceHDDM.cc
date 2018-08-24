@@ -426,6 +426,10 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DDIRCTruthPmtHit")
      return Extract_DDIRCTruthPmtHit(record,
 		     dynamic_cast<JFactory<DDIRCTruthPmtHit>*>(factory), tag);
+   
+   if (dataClassName == "DDIRCPmtHit")
+     return Extract_DDIRCPmtHit(record,
+		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), tag, event.GetJEventLoop());
 
    // extract CereTruth and CereRichHit hits, yqiang Oct 3, 2012
    // removed CereTruth (merged into MCThrown), added CereHit, yqiang Oct 10 2012
@@ -2790,6 +2794,70 @@ jerror_t DEventSourceHDDM::Extract_DDIRCHit(hddm_s::HDDM *record,
 }
 
 //------------------
+// Extract_DDIRCPmtHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
+                                   JFactory<DDIRCPmtHit> *factory, string tag,
+                                   JEventLoop* eventLoop)
+{
+  /// Copies the data from the given hddm_s structure. This is called
+  /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+  /// returs OBJECT_NOT_AVAILABLE immediately.
+   
+  if (factory == NULL)
+     return OBJECT_NOT_AVAILABLE;
+  if (tag != "")
+     return OBJECT_NOT_AVAILABLE;
+
+  vector<DDIRCPmtHit*> data;
+
+  if (tag == "") {
+     const hddm_s::DircPmtHitList &hits = record->getDircPmtHits();
+     hddm_s::DircPmtHitList::iterator iter;
+     for (iter = hits.begin(); iter != hits.end(); ++iter) {
+         double time = iter->getT();
+         int channel = iter->getCh();
+
+         DDIRCPmtHit *hit = new DDIRCPmtHit();
+         hit->t  = time;
+         hit->ch = channel;
+
+	 // associate truth objects (with more information)
+	 const hddm_s::DircTruthPmtHitList &truthHits = record->getDircTruthPmtHits();
+	 hddm_s::DircTruthPmtHitList::iterator iterTruth;
+	 for (iterTruth = truthHits.begin(); iterTruth != truthHits.end(); ++iterTruth) {
+		 
+		 // must match channel and time
+		 if(channel == iterTruth->getCh() && fabs(time-iterTruth->getT()) < 5.0) {
+			 
+			 DDIRCTruthPmtHit *truthHit = new DDIRCTruthPmtHit();
+			 truthHit->x  = iterTruth->getX();
+			 truthHit->y = iterTruth->getY();
+			 truthHit->z  = iterTruth->getZ();
+			 truthHit->t = iterTruth->getT();
+			 truthHit->t_fixed = iterTruth->getT_fixed();
+			 truthHit->E  = iterTruth->getE();
+			 truthHit->ch = iterTruth->getCh();
+			 truthHit->key_bar  = iterTruth->getKey_bar();
+			 truthHit->path = iterTruth->getPath();
+			 truthHit->refl  = iterTruth->getRefl();
+			 
+			 hit->AddAssociatedObject(truthHit);
+			 break;
+		 }
+	 }
+	 
+         data.push_back(hit);
+     }
+  }
+  
+  // Copy into factory
+  factory->CopyTo(data);
+  
+  return NOERROR;
+}
+
+//------------------
 // Extract_DCereHit
 // added by yqiang Oct 11, 2012
 //------------------
@@ -2936,6 +3004,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       hit->y = iter->getY();
       hit->z = iter->getZ();
       hit->t = iter->getT();
+      hit->t_fixed = iter->getT_fixed();
       hit->E = iter->getE();
       hit->ch = iter->getCh();
       hit->key_bar = iter->getKey_bar();

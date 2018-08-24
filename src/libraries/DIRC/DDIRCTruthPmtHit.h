@@ -4,8 +4,8 @@
 // initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
-#ifndef DDIRCPMTHIT_H_
-#define DDIRCPMTHIT_H_
+#ifndef DDIRCTRUTHPMTHIT_H_
+#define DDIRCTRUTHPMTHIT_H_
 
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
@@ -18,6 +18,7 @@ public:
 
   float x, y, z;   // hit position
   float t;	   // detection time
+  float t_fixed;   // fixed pathlength time
   float E;	   // poton energy
   int   ch;        // PMT channel of the hit
   int   key_bar;   // key of the corresponding bar hit
@@ -29,6 +30,7 @@ public:
     AddString(items, "y", "%1.3f", y);
     AddString(items, "z", "%1.3f", z);
     AddString(items, "t", "%1.3f", t);
+    AddString(items, "t_fixed", "%1.3f", t_fixed);
     AddString(items, "E", "%1.3f", E);
     AddString(items, "ch", "%d", ch);
     AddString(items, "key_bar", "%d", key_bar);
@@ -37,4 +39,4 @@ public:
   }
 };
 
-#endif /* DDIRCPMTHIT_H_ */
+#endif /* DDIRCTRUTHPMTHIT_H_ */

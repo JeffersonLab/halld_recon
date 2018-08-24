@@ -34,6 +34,7 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 	// LUT histograms and diagnostics //
 	////////////////////////////////////
 	if(DIRC_DEBUG_HISTS) {
+	
 		string locDirName = "DIRC_DEBUG";
 		TDirectoryFile* locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
 		if(locDirectoryFile == NULL)
@@ -86,7 +87,7 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 
 }
 
-bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const
+bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const
 {
 	double locMass = ParticleMass(locPID);
 
@@ -100,6 +101,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
 		
 		TVector3 bestMatchPos, bestMatchMom;
+		double bestFlightTime = 999.;
 		double bestMatchDist = 999.;
 		for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
 			TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
@@ -108,11 +110,13 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 				bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
 				bestMatchPos = locDIRCBarHitPos;
 				bestMatchMom = locDIRCBarHitMom;
+				bestFlightTime = locDIRCBarHits[i]->t;
 			}
 		}
 		
 		momInBar = bestMatchMom;
 		posInBar = bestMatchPos;
+		locFlightTime = bestFlightTime;
 	}
 	
 	double tangle,luttheta,evtime;
@@ -150,17 +154,32 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	int nPhotonsThetaCLoose = 0;
 	double meanThetaC = 0.;
 	for (unsigned int loc_i = 0; loc_i < locDIRCHits.size(); loc_i++){
-		const DDIRCTruthPmtHit* locDIRCHit = locDIRCHits[loc_i];
-		
+		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
+		vector<const DDIRCTruthPmtHit*> locTruthDIRCHits;
+		locDIRCHit->Get(locTruthDIRCHits);
+
 		// cheat and determine bar from truth info (replace with Geometry->GetBar(X,Y) function)
-		int bar = dDIRCGeometry->GetBar(posInBar.Y()); //locDIRCHit->key_bar;
+		int bar = dDIRCGeometry->GetBar(posInBar.Y()); //locTruthDIRCHits[0]->key_bar;
 		if(bar < 0 || bar > 47) continue;
 
                 // get channel information for LUT
 		int sensorId = locDIRCHit->ch;
 
 		// use hit time to determine if reflected or not
-		double hitTime = locDIRCHit->t; // - locFlightTime;
+		double hitTime = locDIRCHit->t - locFlightTime;
+
+		// currently there's a problem with the G4 propogation time, for now use TRUTH
+		if(!locTruthDIRCHits.empty()) {
+			double locRecoTime = locTruthDIRCHits[0]->t - locFlightTime;
+			double locDeltaT_fixed = locRecoTime - locTruthDIRCHits[0]->t_fixed;
+			//cout<<"Time difference = "<<locDeltaT_fixed<<endl;
+			//hitTime = locTruthDIRCHits[0]->t - locFlightTime; // no time smearing
+
+			// use fixed time from G4 (matches dircsim_2018-08_ver01)
+			hitTime = locTruthDIRCHits[0]->t_fixed;           
+		}
+		else // skip those without truth hits for now
+			continue;
 
 		// needs to be X dependent choice for reflection cut (from CCDB?)
 		bool reflected = hitTime>48;
@@ -192,14 +211,15 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		
 		// loop over LUT table for this bar/pixel to calculate thetaC	     
 		for(uint i = 0; i < dDIRCLutReader->GetLutPixelAngleSize(bar, sensorId); i++){
-			
+
 			dird   = dDIRCLutReader->GetLutPixelAngle(bar, sensorId, i); 
 			evtime = dDIRCLutReader->GetLutPixelTime(bar, sensorId, i); 
 			pathid = dDIRCLutReader->GetLutPixelPath(bar, sensorId, i); 
 			
 			// in MC we can check if the path of the LUT and measured photon are the same
 			bool samepath(false);
-			if(fabs(pathid - locDIRCHit->path)<0.0001) samepath=true;
+			if(!locTruthDIRCHits.empty() && fabs(pathid - locTruthDIRCHits[0]->path)<0.0001) 
+				samepath=true;
 			
 			for(int r=0; r<2; r++){
 				if(!reflected && r==1) continue;
@@ -247,6 +267,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					photonInfo.push_back(tangle);  
 					photonInfo.push_back(locDeltaT); 
 					photonInfo.push_back(sensorId); 
+					photonInfo.push_back(hitTime);
 					if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2) 
 						locDIRCMatchParams->dPhotons.push_back(photonInfo);
 

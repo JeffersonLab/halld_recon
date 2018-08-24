@@ -55,7 +55,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	vector<const DBCALShower*> locBCALShowers;
 	locEventLoop->Get(locBCALShowers);
 
-	vector<const DDIRCTruthPmtHit*> locDIRCHits;
+	vector<const DDIRCPmtHit*> locDIRCHits;
 	locEventLoop->Get(locDIRCHits);
 
 	// cheat and get truth info of track at bar
@@ -159,7 +159,7 @@ void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const
 	}
 }
 
-void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCTruthPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const
+void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const
 {
 	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
 	if (extrapolations.size()==0) return;

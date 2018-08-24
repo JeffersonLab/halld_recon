@@ -77,10 +77,11 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	vector<const DTAGMHit*> TAGMHits;
 	vector<const DTPOLHit*> TPOLHits;
 	vector<const DRFTime*> RFtimes;
+	vector<const DDIRCPmtHit*> DIRCPmtHits;
 
 	locEventLoop->Get(CDCHits, CDC_TAG.c_str());	
 	locEventLoop->Get(FDCHits, FDC_TAG.c_str());
-    locEventLoop->Get(TOFHits);
+	locEventLoop->Get(TOFHits);
 	locEventLoop->Get(FCALHits);
 	locEventLoop->Get(BCALDigiHits);
 	locEventLoop->Get(BCALTDCDigiHits);
@@ -91,9 +92,9 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(TAGMHits, TAGM_TAG.c_str());
 	locEventLoop->Get(TPOLHits);
 	locEventLoop->Get(RFtimes);
+	locEventLoop->Get(DIRCPmtHits);
 
-
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0))
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0))
 	{
 		return false;
 	}
@@ -685,6 +686,36 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 		}
 	}
 
+	//========================================DIRC=======================================================
+
+	for(uint i=0; i<DIRCPmtHits.size(); ++i) {
+		if(i == 0) {
+			hitv->addDIRCs(); //if we have a hit then add the DIRC
+		}
+
+		bool found = false;
+		hddm_s::DircTruthPmtHitList *truthPmtHits = &hitv->getDIRC().getDircTruthPmtHits();
+		hddm_s::DircTruthPmtHitList::iterator iter;
+		
+		for(iter = truthPmtHits->begin(); iter != truthPmtHits->end(); truthPmtHits++) {
+			if(DIRCPmtHits[i]->ch==iter->getCh()) {
+				found=true;
+				break;
+			}
+		}
+		
+		if(found==false){
+			hitv->getDIRC().addDircTruthPmtHits();
+			iter=truthPmtHits->end()-1;
+			iter->setCh(DIRCPmtHits[i]->ch);
+		}
+		
+		iter->addDircPmtHits();
+		hddm_s::DircPmtHitList* DircPmtHitList = &iter->getDircPmtHits();
+		hddm_s::DircPmtHitList::iterator DircPmtHitIterator = DircPmtHitList->end()-1;
+		DircPmtHitIterator->setT(DIRCPmtHits[i]->t);
+		DircPmtHitIterator->setCh(DIRCPmtHits[i]->ch);
+	}
 
 	//*fout << *record; //stream the new record into the file
 
@@ -706,6 +737,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	TAGMHits.clear();
 	TPOLHits.clear();
 	RFtimes.clear();
+	DIRCPmtHits.clear();
 
 	return locWriteStatus;
 }

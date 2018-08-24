@@ -1730,14 +1730,14 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
 }
 
 
-bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCTruthPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
 {
 	if(extrapolations.size()==0)
 		return false;
 
 	DVector3 locProjPos = extrapolations[0].position;
 	DVector3 locProjMom = extrapolations[0].momentum;
-	double locFlightTime = extrapolations[0].t;
+	double locFlightTime = locInputStartTime + extrapolations[0].t;
 	
 	if(locOutputProjMom != nullptr) {
 		*locOutputProjPos = locProjPos;
