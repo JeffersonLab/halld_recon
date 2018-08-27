@@ -6962,14 +6962,8 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    // last z position
    double last_z=z_;
 
-   double fdc_anneal=2.;  // variable for scaling cut for hit pruning
-   double my_fdc_anneal_const=FORWARD_ANNEAL_POW_CONST;
-   double cdc_anneal=2.;  // variable for scaling cut for hit pruning
-   double my_cdc_anneal_const=ANNEAL_POW_CONST;
-   if (fit_type==kTimeBased){
-     cdc_anneal=ANNEAL_SCALE+1;
-     fdc_anneal=FORWARD_ANNEAL_SCALE+1.;
-   }
+   double fdc_anneal=FORWARD_ANNEAL_SCALE+1.;  // variable for scaling cut for hit pruning
+   double cdc_anneal=ANNEAL_SCALE+1.;  // variable for scaling cut for hit pruning
 
    // Chi-squared and degrees of freedom
    double chisq=-1.,chisq_forward=-1.;
@@ -7001,8 +6995,8 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       // Scale cut for pruning hits according to the iteration number
       if (fit_type==kTimeBased)
       {
-         fdc_anneal=FORWARD_ANNEAL_SCALE/pow(my_fdc_anneal_const,iter)+1.;
-         cdc_anneal=ANNEAL_SCALE/pow(my_cdc_anneal_const,iter)+1.;
+         fdc_anneal=FORWARD_ANNEAL_SCALE/pow(FORWARD_ANNEAL_POW_CONST,iter)+1.;
+         cdc_anneal=ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter)+1.;
       }
 
       // Swim through the field out to the most upstream FDC hit
@@ -7198,24 +7192,9 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    vector<pull_t>last_cdc_pulls;
    vector<bool>last_cdc_used_in_fit;
 
-   double anneal_scale=ANNEAL_SCALE; // variable for scaling cut for hit pruning
-   double my_anneal_const=ANNEAL_POW_CONST;
-   /* 
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      if (tanl>2.5){
-      anneal_scale=FORWARD_ANNEAL_SCALE;
-      my_anneal_const=FORWARD_ANNEAL_POW_CONST;
-      }
-      */
-   double anneal_factor=anneal_scale+1.;
+   double anneal_factor=ANNEAL_SCALE+1.;
    kalman_error_t error=FIT_NOT_DONE;
-   /*
-      if (fit_type==kTimeBased && fabs(1./S(state_q_over_p))<1.0 
-      && my_anneal_const>=2.0){ 
-      my_anneal_const*=0.5;
-      }
-      */
+    
    // Chi-squared and degrees of freedom
    double chisq=-1.,chisq_forward=-1.;
    unsigned int my_ndf=0;
@@ -7249,7 +7228,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       // Scale cut for pruning hits according to the iteration number
       if (fit_type==kTimeBased)
       {   
-         anneal_factor=anneal_scale/pow(my_anneal_const,iter2)+1.;
+        anneal_factor=ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.;
       }
 
       // Initialize path length variable and flight time
@@ -7461,8 +7440,6 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    vector<bool>last_cdc_used_in_fit(num_cdchits);
 
    double anneal_factor=ANNEAL_SCALE+1.; // variable for scaling cut for hit pruning
-   double my_anneal_const=ANNEAL_POW_CONST;
-   //if (fit_type==kTimeBased && fabs(1./Sc(state_q_over_p))<1.0) my_anneal_const*=0.5;
 
    //Initialization of chisq, ndf, and error status
    double chisq_iter=-1.,chisq=-1.;
@@ -7499,7 +7476,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       // Scale cut for pruning hits according to the iteration number
       if (fit_type==kTimeBased)
       {
-         anneal_factor=ANNEAL_SCALE/pow(my_anneal_const,iter2)+1.;
+         anneal_factor=ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.;
       }
 
       // Initialize trajectory deque
