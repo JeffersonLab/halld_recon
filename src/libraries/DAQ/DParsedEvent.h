@@ -58,6 +58,9 @@ using namespace jana;
 #include <DAQ/Df125BORConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/DCAEN1290TDCBORConfig.h>
+#include <DAQ/DDIRCTriggerTime.h>
+#include <DAQ/DDIRCTDCHit.h>
+#include <DAQ/DDIRCADCHit.h>
 #include <DAQ/DBORptrs.h>
 #include <PID/DVertex.h>
 #include <PID/DEventRFBunch.h>
@@ -101,7 +104,10 @@ using namespace jana;
 		X(DL1Info) \
 		X(Df250Scaler) \
 		X(DEPICSvalue) \
-		X(DEventTag) 
+		X(DEventTag) \
+		X(DDIRCTriggerTime) \
+		X(DDIRCTDCHit) \
+		X(DDIRCADCHit)
 
 // These data types are optionally stored in EVIO files from specialized process
 // (e.g. calibration skims) and could be provided by standard analysis factories
