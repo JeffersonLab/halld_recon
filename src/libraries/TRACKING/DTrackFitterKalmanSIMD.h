@@ -44,7 +44,7 @@
 #define TAN_MAX 10.
 
 #define MAX_CHI2 1e6
-#define MINIMUM_HIT_FRACTION 0.5
+//#define MINIMUM_HIT_FRACTION 0.5
 
 #define DELTA_R 1.0 // distance in r to extend the trajectory beyond the last point
 
@@ -478,7 +478,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double TARGET_Z;
   bool ADD_VERTEX_POINT;
   unsigned int MIN_HITS_FOR_REFIT;
-  double THETA_CUT;
+  double THETA_CUT,MINIMUM_HIT_FRACTION;
   bool USE_PASS1_TIME_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;
