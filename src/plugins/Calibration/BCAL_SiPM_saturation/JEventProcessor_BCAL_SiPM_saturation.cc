@@ -188,6 +188,9 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 		locNeutralShower->Get(Points);
         uint Ncell = Points.size();
 
+        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "NCell", Ncell,
+                         "BCAL SiPM Saturation; Number of cells",nbins,0,100);
+
         for (unsigned int j = 0; j < Ncell; j++){
             const DBCALPoint* locPoint = Points[j];
             float t = locPoint->t();
@@ -222,9 +225,6 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 
 
         // Fill 1D histograms
-
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "NCell", Ncell,
-                         "BCAL SiPM Saturation; Number of cells",nbins,0,100);
 
         Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "layer", layer,
                          "BCAL SiPM Saturation; Layer Number",5,0,5);
