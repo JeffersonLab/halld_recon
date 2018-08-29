@@ -281,7 +281,7 @@ DParticleID::DParticleID(JEventLoop *loop)
                  << "  loaded = " << sc_paddle_resolution_params.size()
                  << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<<(int)MAX_SC_SECTORS; i++) {
+        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
