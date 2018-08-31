@@ -2623,9 +2623,11 @@ bool DParticleID::PredictFCALHit(const DReferenceTrajectory *rt, unsigned int &r
 	if (intersection) *intersection=proj_pos;
 
 	double x=proj_pos.x();
-	double y=proj_pos.y();
-	row=dFCALGeometry->row(float(y));
-	col=dFCALGeometry->column(float(x));
+	double y=proj_pos.y();  
+	int calor=0;
+	if(fabs(x)<30.09 && fabs(y)<30.09) calor=1;
+	row=dFCALGeometry->row(float(y),calor);
+	col=dFCALGeometry->column(float(x),calor);
 	return (dFCALGeometry->isBlockActive(row,col));
 }
 
