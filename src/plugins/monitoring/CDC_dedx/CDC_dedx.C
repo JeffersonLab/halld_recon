@@ -4,9 +4,15 @@
 //
 // hnamepath: /CDC_dedx/dedx_p_pos
 // hnamepath: /CDC_dedx/dedx_p_neg
+// hnamepath: /CDC_dedx/dedx_i_p_pos
+// hnamepath: /CDC_dedx/dedx_i_p_neg
 
 
-void CDC_dedx(void) {
+// By default, use the dE/dx from amplitude histos
+// Set integral=1 to switch to integral instead 
+
+
+void CDC_dedx(int integral=0) {
 
   gStyle->SetCanvasDefW(1000);
   gStyle->SetCanvasDefH(1000);
@@ -20,13 +26,27 @@ void CDC_dedx(void) {
   if (!CDCdir) printf("Cannot find directory CDC_dedx\n"); 
   if (!CDCdir) return;
   CDCdir->cd();
-  
-  TH2I *h = (TH2I*)CDCdir->Get("dedx_p_pos");
-  if (!h) printf("Cannot find histogram dedx_p_pos\n");
+
+  char whichdedx[20];
+  char hname_pos[20];
+  char hname_neg[20];
+
+  if (integral == 0) {
+    sprintf(whichdedx,"");
+    sprintf(hname_pos,"dedx_p_pos");
+    sprintf(hname_neg,"dedx_p_neg");
+  } else {
+    sprintf(whichdedx," (integ)");
+    sprintf(hname_pos,"intdedx_p_pos");
+    sprintf(hname_neg,"intdedx_p_neg");
+  }  
+
+  TH2I *h = (TH2I*)CDCdir->Get(hname_pos);
+  if (!h) printf("Cannot find histogram %s\n",hname_pos);
   if (!h) return;
 
-  TH2I *hn = (TH2I*)CDCdir->Get("dedx_p_neg");
-  if (!hn) printf("Cannot find histogram dedx_p_neg\n");
+  TH2I *hn = (TH2I*)CDCdir->Get(hname_neg);
+  if (!hn) printf("Cannot find histogram %s\n",hname_neg);
   if (!hn) return;
 
   if(gPad == NULL){
@@ -65,7 +85,6 @@ void CDC_dedx(void) {
   double respi = 0; 
 
 
-
   // draw cut through histo at p=1.5 GeV/c
 
   float pcut = 1.5;
@@ -73,7 +92,7 @@ void CDC_dedx(void) {
 
   TH1D *p = h->ProjectionY("p1",pbin,pbin);
 
-  p->SetTitle(Form("CDC q+ dE/dx at %.2f GeV/c",pcut));
+  p->SetTitle(Form("CDC q+ dE/dx%s at %.2f GeV/c",whichdedx,pcut));
   p->GetXaxis()->SetRangeUser(ymin,ymax);
   p->DrawCopy("");
 
@@ -105,7 +124,7 @@ void CDC_dedx(void) {
   pbin = h->GetXaxis()->FindBin(pcut);
   p = h->ProjectionY("p1",pbin,pbin);
 
-  p->SetTitle(Form("CDC q+ dE/dx at %.2f GeV/c",pcut));
+  p->SetTitle(Form("CDC q+ dE/dx%s at %.2f GeV/c",whichdedx,pcut));
   p->GetXaxis()->SetRangeUser(ymin,ymax);
   p->DrawCopy("");
 

@@ -107,29 +107,51 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
     int nhits = (int)tracks[i]->dNumHitsUsedFordEdx_CDC; 
     if (nhits < 4) continue;
 
-    double dedx = 1.0e6*tracks[i]->ddEdx_CDC_amp;
-    if (! (dedx > 0)) continue;
-
     double charge = tracks[i]->charge();
     DVector3 mom = tracks[i]->momentum();
     double p = mom.Mag();
 
-    japp->RootFillLock(this);
+    double dedx = 1.0e6*tracks[i]->ddEdx_CDC_amp;
 
-    dedx_p->Fill(p,dedx);
+    if (dedx > 0) {
+
+      japp->RootFillLock(this);
+
+      dedx_p->Fill(p,dedx);
     
-    if (charge > 0) {
-      dedx_p_pos->Fill(p,dedx);
-    } else {
-      dedx_p_neg->Fill(p,dedx);
-    } 
+      if (charge > 0) {
+        dedx_p_pos->Fill(p,dedx);
+      } else {
+        dedx_p_neg->Fill(p,dedx);
+      } 
+
+      japp->RootFillUnLock(this);
+
+    }
+
+    // repeat for dedx from integral
+
+    dedx = 1.0e6*tracks[i]->ddEdx_CDC;
+
+    if (dedx > 0) {
+
+      japp->RootFillLock(this);
+
+      intdedx_p->Fill(p,dedx);
+    
+      if (charge > 0) {
+        intdedx_p_pos->Fill(p,dedx);
+      } else {
+        intdedx_p_neg->Fill(p,dedx);
+      } 
+
+      japp->RootFillUnLock(this);
+
+    }
 
 
-    japp->RootFillUnLock(this);
 
   }
-
-
 
 	return NOERROR;
 }
