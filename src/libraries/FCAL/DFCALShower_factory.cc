@@ -247,7 +247,11 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       cTime -= ( m_FCALback[index] - pos_corrected.Z() )/FCAL_C_EFFECTIVE[index];
 
       //Apply time-walk correction/global timing offset
-      cTime += ( timeConst0  +  timeConst1 * Ecorrected  +  timeConst2 * TMath::Power( Ecorrected, 2 ) + timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
+      if (index==0){
+	cTime += ( timeConst0  +  timeConst1 * Ecorrected  +  timeConst2 * TMath::Power( Ecorrected, 2 ) + timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
+      }
+      else cTime+=2.;
+      
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;
