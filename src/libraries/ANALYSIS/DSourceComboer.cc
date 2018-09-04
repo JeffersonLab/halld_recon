@@ -2526,7 +2526,7 @@ void DSourceComboer::Combo_Vertically_NParticles(const DSourceComboUse& locCombo
 
 		auto locIsZIndependent_NMinus1 = locCombo_NMinus1->Get_IsComboingZIndependent();
 
-		for(; locParticleSearchIndex != locParticles.size(); ++locParticleSearchIndex)
+		for(; locParticleSearchIndex < locParticles.size(); ++locParticleSearchIndex)
 		{
 			auto& locParticle = locParticles[locParticleSearchIndex];
 			auto locIsZIndependent = (locComboingStage == d_MixedStage_ZIndependent) || (locIsZIndependent_NMinus1 && Get_IsComboingZIndependent(locParticle, locPID));
