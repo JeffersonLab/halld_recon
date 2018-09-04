@@ -136,16 +136,6 @@ def mk_setenv_csh(env):
 	str += 'setenv %s ${ROOTSYS}/lib:${%s}\n' % (LDLPV, LDLPV)
 	str += '\n'
 
-	# AMPTOOLS
-	amptools   = os.getenv('AMPTOOLS')	
-	ampplotter = os.getenv('AMPPLOTTER')	
-	if amptools != None:
-		str += '# AMPTOOLS\n'
-		str += 'setenv AMPTOOLS %s\n' % amptools
-		if ampplotter != None:
-			str += 'setenv AMPPLOTTER %s\n' % ampplotter
-		str += '\n'
-
 	# CERNLIB
 	cern = os.getenv('CERN')
 	if cern != None:
@@ -318,16 +308,6 @@ def mk_setenv_bash(env):
 	str += 'export PATH=${ROOTSYS}/bin:${PATH}\n'
 	str += 'export %s=${ROOTSYS}/lib:${%s}\n' % (LDLPV, LDLPV)
 	str += '\n'
-
-	# AMPTOOLS
-	amptools = os.getenv('AMPTOOLS')	
-	ampplotter = os.getenv('AMPPLOTTER')	
-	if amptools != None:
-		str += '# AMPTOOLS\n'
-		str += 'export AMPTOOLS=%s\n' % amptools
-		if ampplotter != None:
-			str += 'export AMPPLOTTER=%s\n' % ampplotter
-		str += '\n'
 
 	# CERNLIB
 	cern = os.getenv('CERN')
