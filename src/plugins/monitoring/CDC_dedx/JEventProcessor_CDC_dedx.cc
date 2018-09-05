@@ -52,6 +52,15 @@ jerror_t JEventProcessor_CDC_dedx::init(void)
 
   dedx_p_neg = new TH2D("dedx_p_neg","CDC dE/dx vs p, q-, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
 
+
+  intdedx_p = new TH2D("intdedx_p","CDC dE/dx (from integral) vs p, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+  intdedx_p_pos = new TH2D("intdedx_p_pos","CDC dE/dx (from integral) vs p, q+, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+  intdedx_p_neg = new TH2D("intdedx_p_neg","CDC dE/dx (from integral) vs p, q-, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+
+
   main->cd();
 
 	return NOERROR;
