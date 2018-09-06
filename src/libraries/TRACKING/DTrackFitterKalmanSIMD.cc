@@ -723,7 +723,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    ResetKalmanSIMD();
 
    // Check that we have enough FDC and CDC hits to proceed
-   if (cdchits.size()+fdchits.size()/2 < 6) return kFitNotDone;
+   if (cdchits.size()+fdchits.size()*2 < 6) return kFitNotDone;
 
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS && cdchits.size()>=MIN_CDC_HITS) 
@@ -788,7 +788,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
          }
       }
    }
-   if(num_good_cdchits+num_good_fdchits/2 < 6) return kFitNotDone;
+   if(num_good_cdchits+num_good_fdchits*2 < 6) return kFitNotDone;
 
    // Create vectors of updates (from hits) to S and C
    if (my_cdchits.size()>0){
