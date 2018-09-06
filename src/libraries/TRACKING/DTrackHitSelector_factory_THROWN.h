@@ -18,15 +18,42 @@ class DTrackHitSelector_factory_THROWN:public jana::JFactory<DTrackHitSelector>{
 		~DTrackHitSelector_factory_THROWN(){};
 		const char* Tag(void){return "THROWN";}
 
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		DTrackHitSelector *selector=NULL;
 
-			// Create single DTrackHitSelector object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			DTrackHitSelector *selector = new DTrackHitSelectorTHROWN(loop);
-			SetFactoryFlag(PERSISTANT);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(selector);
+			
+			if( selector ) delete selector;
+
+			selector = new DTrackHitSelectorTHROWN(loop);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DTrackHitSelectorTHROWN object.
+			if( selector ) _data.push_back( selector );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( selector ) delete selector;
+			selector = NULL;
 			
 			return NOERROR;
 		}

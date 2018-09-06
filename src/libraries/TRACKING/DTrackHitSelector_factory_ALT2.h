@@ -13,27 +13,52 @@
 #include "DTrackHitSelectorALT2.h"
 
 class DTrackHitSelector_factory_ALT2:public jana::JFactory<DTrackHitSelector>{
+
 	public:
-                DTrackHitSelector_factory_ALT2():runnumber(1){};
+		DTrackHitSelector_factory_ALT2():runnumber(1){};
 		~DTrackHitSelector_factory_ALT2(){};
 		const char* Tag(void){return "ALT2";}
 
-	private:
-		jerror_t brun(jana::JEventLoop *loop, int new_runnumber){ runnumber = new_runnumber; return NOERROR; }
+		DTrackHitSelector *selector=NULL;
+		int32_t runnumber;
 
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
-
-			// Create single DTrackHitSelector object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			DTrackHitSelector *selector = new DTrackHitSelectorALT2(loop,runnumber);
-			SetFactoryFlag(PERSISTANT);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(selector);
+			
+			if( selector ) delete selector;
+
+			selector = new DTrackHitSelectorALT2(loop,runnumber);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DTrackHitSelectorALT2 object.
+			if( selector ) _data.push_back( selector );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( selector ) delete selector;
+			selector = NULL;
 			
 			return NOERROR;
 		}
-		
-		int32_t runnumber;
 };
 
 #endif // _DTrackHitSelector_factory_ALT2_

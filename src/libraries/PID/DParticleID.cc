@@ -70,7 +70,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   locGeometry->GetFCALZ(dFCALz);
 
 	// Get start counter geometry;
-	int MAX_SC_SECTORS = 0;    // keep track of the number of sectors
+	uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
 	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
 	{
 		dSCphi0=sc_pos[0][0].Phi();
@@ -193,6 +193,11 @@ DParticleID::DParticleID(JEventLoop *loop)
 
   fitter = fitters[0];
   
+  // CDC correction for gain drop from progressive gas deterioration in spring 2018
+  if(loop->GetCalib("CDC/gain_doca_correction", CDC_GAIN_DOCA_PARS))
+		jout << "Error loading CDC/gain_doca_correction !" << endl;
+
+
   // FCAL geometry
   loop->GetSingle(dFCALGeometry);
 
@@ -276,7 +281,7 @@ DParticleID::DParticleID(JEventLoop *loop)
                  << "  loaded = " << sc_paddle_resolution_params.size()
                  << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<MAX_SC_SECTORS; i++) {
+        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
@@ -490,13 +495,38 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
   double dx=CalcdXHit(mom,pos,hit->wire);
   if (dx>0.){
     // arc length and energy deposition
-    dedx.dx=dx;
-    dedx.dE=hit->dE; //GeV
-    dedx.dE_amp=hit->dE_amp;
-    dedx.p=mom.Mag();
-    dedx.dEdx=hit->dE/dx;
-    dedx.dEdx_amp=hit->dE_amp/dx;
 
+    // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
+    // dmax dcorr goodp0 goodp1 thisp0 thisp1
+    // 0: dmax ignore hits outside this doca
+    // 1: dcorr do not correct hits within this doca
+    // 2: goodp0 par0 for good reference run
+    // 3: goodp1 par1 for good reference run 
+    // 4: thisp0  par0 for this run
+    // 5: thisp1  par1 for this run
+
+    if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
+
+      dedx.dx=dx;
+      dedx.dE=hit->dE; //GeV
+      dedx.dE_amp=hit->dE_amp;
+      dedx.p=mom.Mag();
+
+      if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
+
+	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
+
+        double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
+
+        dedx.dE = dedx.dE * reference/this_run;
+        dedx.dE_amp = dedx.dE_amp * reference/this_run;
+
+      }
+
+      dedx.dEdx=dedx.dE/dx;
+      dedx.dEdx_amp=dedx.dE_amp/dx;
+
+    }
     return NOERROR;
   }
   
