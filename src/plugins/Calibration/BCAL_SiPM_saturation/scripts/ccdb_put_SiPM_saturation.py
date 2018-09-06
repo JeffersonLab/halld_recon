@@ -82,7 +82,7 @@ for jend in end:
     for jlayer in layer:
         integral_to_peak.append(12.8)
         sipm_npixels.append(57600.0*jlayer)
-        pixel_per_count.append(0.454)
+        pixel_per_count.append(0.478)
 
 print "end=",end," layer=",layer," integral_to_peak=",integral_to_peak," sipm_npixels=",sipm_npixels," pixel_per_count=",pixel_per_count
 
