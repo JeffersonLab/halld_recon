@@ -566,19 +566,20 @@ void DTrackWireBased_factory::FilterDuplicates(void)
 void DTrackWireBased_factory::DoFit(unsigned int c_id,
       const DTrackCandidate *candidate,
       DReferenceTrajectory *rt,
-      JEventLoop *loop, double mass){ 
+      JEventLoop *loop, double mass){
+   // Get the hits from the candidate
+  vector<const DFDCPseudo*>myfdchits;
+  candidate->GetT(myfdchits);
+  vector<const DCDCTrackHit *>mycdchits;
+  candidate->GetT(mycdchits);
+  
    // Do the fit
    DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
    if (USE_HITS_FROM_CANDIDATE) {
       fitter->Reset();
       fitter->SetFitType(DTrackFitter::kWireBased);	
 
-      // Get the hits from the track candidate
-      vector<const DFDCPseudo*>myfdchits;
-      candidate->GetT(myfdchits);
       fitter->AddHits(myfdchits);
-      vector<const DCDCTrackHit *>mycdchits;
-      candidate->GetT(mycdchits);
       fitter->AddHits(mycdchits);
 
       status=fitter->FitTrack(candidate->position(),candidate->momentum(),
@@ -593,17 +594,13 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
       rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
 
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,candidate->Ndof+3);
+      status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,
+					 mycdchits.size()+2*myfdchits.size());
       if (/*false && */status==DTrackFitter::kFitNotDone){
          if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
          fitter->Reset();
-
-         // Get the hits from the candidate
-         vector<const DFDCPseudo*>myfdchits;
-         candidate->GetT(myfdchits);
+        
          fitter->AddHits(myfdchits);
-         vector<const DCDCTrackHit *>mycdchits;
-         candidate->GetT(mycdchits);
          fitter->AddHits(mycdchits);
 
          status=fitter->FitTrack(candidate->position(),candidate->momentum(),
