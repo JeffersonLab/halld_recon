@@ -70,7 +70,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   locGeometry->GetFCALZ(dFCALz);
 
 	// Get start counter geometry;
-	int MAX_SC_SECTORS = 0;    // keep track of the number of sectors
+	uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
 	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
 	{
 		dSCphi0=sc_pos[0][0].Phi();
@@ -281,7 +281,7 @@ DParticleID::DParticleID(JEventLoop *loop)
                  << "  loaded = " << sc_paddle_resolution_params.size()
                  << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<MAX_SC_SECTORS; i++) {
+        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
@@ -341,8 +341,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
   // Position and momentum
   DVector3 pos,mom;
   // flight time and t0 for the event
-  double tflight=0.;
-  double t0=track->t0();
+  //double tflight=0.;
+  //double t0=track->t0();
   
   //dE and dx pairs
   dedx_t de_and_dx(0.,0.,0.,0.);
@@ -368,7 +368,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 	  unsigned int index=j-1;
 	  mom=cdc_extrapolations[index].momentum;
 	  pos=cdc_extrapolations[index].position;
-	  tflight=cdc_extrapolations[index].t;
+	  //tflight=cdc_extrapolations[index].t;
 	  break;
 	}
 	doca2_old=doca2;

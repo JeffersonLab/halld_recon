@@ -292,8 +292,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    geom->GetCDCWires(cdcwires);
    //   geom->GetCDCRmid(cdc_rmid); // THIS ISN'T IMPLEMENTED!!
    // extract the "mean" radius of each ring from the wire data
-   for(unsigned int ring=0; ring<cdcwires.size(); ring++)
-  		cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
+   for(uint ring=0; ring<cdcwires.size(); ring++)
+     cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
       
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
@@ -958,23 +958,23 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 	set<const DCDCWire *> expected_hit_straws;
 	set<int> expected_hit_fdc_planes;
 
-	for(unsigned int i=0; i<extrapolations[SYS_CDC].size(); i++) {
+	for(uint i=0; i<extrapolations[SYS_CDC].size(); i++) {
 		// figure out the radial position of the point to see which ring it's in
 		double r = extrapolations[SYS_CDC][i].position.Perp();
-		int ring=0;
-		for(; ring<int(cdc_rmid.size()); ring++) {
+		uint ring=0;
+		for(; ring<cdc_rmid.size(); ring++) {
 			//_DBG_ << "Rs = " << r << " " << cdc_rmid[ring] << endl;
 			if( (r<cdc_rmid[ring]-0.78) || (fabs(r-cdc_rmid[ring])<0.78) )
 				break;
 		}
-		if(ring == int(cdc_rmid.size())) ring--;
+		if(ring == cdc_rmid.size()) ring--;
 		//_DBG_ << "ring = " << ring << endl;
 		//_DBG_ << "ring = " << ring << "  stereo = " << cdcwires[ring][0]->stereo << endl;
 		int best_straw=0;
 		double best_dist_diff=fabs((extrapolations[SYS_CDC][i].position 
 			- cdcwires[ring][0]->origin).Mag());		
 	    // match based on straw center
-	    for(unsigned int straw=1; straw<cdcwires[ring].size(); straw++) {
+	    for(uint straw=1; straw<cdcwires[ring].size(); straw++) {
 	    	DVector3 wire_position = cdcwires[ring][straw]->origin;  // start with the nominal wire center
 	    	// now take into account the z dependence due to the stereo angle
 	    	double dz = extrapolations[SYS_CDC][i].position.Z() - cdcwires[ring][straw]->origin.Z();
@@ -989,14 +989,14 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 	    expected_hit_straws.insert(cdcwires[ring][best_straw]);
 	}
 	
-	for(unsigned int i=0; i<extrapolations[SYS_FDC].size(); i++) {
+	for(uint i=0; i<extrapolations[SYS_FDC].size(); i++) {
 		// check to make sure that the track goes through the sensitive region of the FDC
 		// assume one hit per plane
 		double z = extrapolations[SYS_FDC][i].position.Z();
 		double r = extrapolations[SYS_FDC][i].position.Perp();
 
 		// see if we're in the "sensitive area" of a package
-		for(unsigned int plane=0; plane<fdc_z_wires.size(); plane++) {
+		for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
 			int package = plane/6;
 			if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
 				if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
