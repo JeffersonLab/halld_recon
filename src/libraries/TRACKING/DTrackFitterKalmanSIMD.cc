@@ -411,7 +411,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
          "maximum distance in number of sigmas away from projection to accept fdc hit"); 
 
    ANNEAL_SCALE=1.5;
-   ANNEAL_POW_CONST=20.0;
+   ANNEAL_POW_CONST=1.5;
    gPARMS->SetDefaultParameter("KALMAN:ANNEAL_SCALE",ANNEAL_SCALE,
          "Scale factor for annealing");
    gPARMS->SetDefaultParameter("KALMAN:ANNEAL_POW_CONST",ANNEAL_POW_CONST,
