@@ -416,7 +416,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
          "Scale factor for annealing");
    gPARMS->SetDefaultParameter("KALMAN:ANNEAL_POW_CONST",ANNEAL_POW_CONST,
          "Annealing parameter"); 
-   FORWARD_ANNEAL_SCALE=1.5;
+   FORWARD_ANNEAL_SCALE=4.;
    FORWARD_ANNEAL_POW_CONST=1.5;
    gPARMS->SetDefaultParameter("KALMAN:FORWARD_ANNEAL_SCALE",
          FORWARD_ANNEAL_SCALE,
