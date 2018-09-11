@@ -646,9 +646,11 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_ST"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer2"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer3"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer4"), locArraySizeString, dInitNumNeutralArraySize);
+	if(BCAL_VERBOSE_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer2"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer3"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer4"), locArraySizeString, dInitNumNeutralArraySize);
+	}
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigLong_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigTheta_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigTrans_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
@@ -691,19 +693,23 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer2"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer3"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer4"), locArraySizeString, dInitNumNeutralArraySize);
+	if(BCAL_VERBOSE_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer2"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer3"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALLayer4"), locArraySizeString, dInitNumNeutralArraySize);
+	}
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigLong_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigTheta_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SigTrans_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "RMSTime_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
-
+	if(FCAL_VERBOSE_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E1E9_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
+	}
+	
 	//NEARBY TRACKS
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumNeutralArraySize);
