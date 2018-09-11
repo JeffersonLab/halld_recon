@@ -14,7 +14,7 @@ import sbms
 SHOWBUILD = ARGUMENTS.get('SHOWBUILD', 0)
 SHOWPROGRESS = ARGUMENTS.get('SHOWPROGRESS', 1)
 OPTIMIZATION = ARGUMENTS.get('OPTIMIZATION', 2)
-DEBUG = ARGUMENTS.get('DEBUG', 1)
+DEBUG = ARGUMENTS.get('DEBUG', '1')
 PROFILE = ARGUMENTS.get('PROFILE', 0)
 BUILDSWIG = ARGUMENTS.get('BUILDSWIG', 0)
 
@@ -96,16 +96,30 @@ env.PrependUnique(CPPPATH = ['#', '#libraries', '#libraries/include'])
 # Use C++11
 env.PrependUnique(    CXXFLAGS = ['-std=c++11'])
 
-# Standard flags (optimization level and warnings)
-env.PrependUnique(      CFLAGS = ['-O%s' % OPTIMIZATION, '-fPIC', '-Wall'])
-env.PrependUnique(    CXXFLAGS = ['-O%s' % OPTIMIZATION, '-fPIC', '-Wall'])
-env.PrependUnique(FORTRANFLAGS = ['-O%s' % OPTIMIZATION, '-fPIC', '-Wall'])
+# Standard flags (warnings)
+env.PrependUnique(      CFLAGS = ['-fPIC', '-Wall'])
+env.PrependUnique(    CXXFLAGS = ['-fPIC', '-Wall'])
+env.PrependUnique(FORTRANFLAGS = ['-fPIC', '-Wall'])
 
-# Turn on debug symbols unless user told us not to
-if not DEBUG=='0':
-	env.PrependUnique(      CFLAGS = ['-g'])
-	env.PrependUnique(    CXXFLAGS = ['-g'])
-	env.PrependUnique(FORTRANFLAGS = ['-g'])
+# Handle optimization and debug symbols
+if DEBUG == '1': # default
+   	print "Using optimization level", OPTIMIZATION, "including debugging symbols"
+	env.PrependUnique(      CFLAGS = ['-O%s' % OPTIMIZATION, '-g'])
+	env.PrependUnique(    CXXFLAGS = ['-O%s' % OPTIMIZATION, '-g'])
+	env.PrependUnique(FORTRANFLAGS = ['-O%s' % OPTIMIZATION, '-g'])
+elif DEBUG == '2':
+   	print "Using optimization flag \"-Og\" including debugging symbols"
+	env.PrependUnique(      CFLAGS = ['-Og', '-g'])
+	env.PrependUnique(    CXXFLAGS = ['-Og', '-g'])
+	env.PrependUnique(FORTRANFLAGS = ['-Og', '-g'])
+elif DEBUG == '0':
+   	print "Using optimization level", OPTIMIZATION, "without debugging symbols"
+	env.PrependUnique(      CFLAGS = ['-O%s' % OPTIMIZATION])
+	env.PrependUnique(    CXXFLAGS = ['-O%s' % OPTIMIZATION])
+	env.PrependUnique(FORTRANFLAGS = ['-O%s' % OPTIMIZATION])
+else:
+	errorMessage = "error: unrecognized value for DEBUG flag: " + DEBUG
+	sys.exit(errorMessage)
 
 # Turn on profiling if user asked for it
 if PROFILE=='1':
