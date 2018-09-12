@@ -2474,7 +2474,7 @@ TPolyLine* hdv_mainframe::GetFCALPolyLine(float x, float y)
 {
 	if(!fcalgeom)return NULL;
 	int calor=0;
- 	if (fabs(x)<53 && fabs(y)<53) calor=1;
+ 	if (fabs(x)<30 && fabs(y)<30) calor=1;
  	int row = fcalgeom->row(y,calor);
  	int column = fcalgeom->column(x,calor);
 
