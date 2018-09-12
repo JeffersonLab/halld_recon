@@ -41,7 +41,7 @@ public:
 
 	enum { kBlocksWide = 59 };
 	enum { kBlocksTall = 59 };
-	enum { kMaxChannels = kBlocksWide * kBlocksTall };
+	enum { kMaxChannels = kBlocksWide * kBlocksTall + kInnerBlocksWide*kInnerBlocksTall};
 	enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
 	enum { kBeamHoleSize = 3 };
 

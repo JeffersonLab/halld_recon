@@ -35,7 +35,7 @@ DFCALGeometry::DFCALGeometry()
  	
       double thisRadius = m_positionOnFace[row][col][calor].Mod();
       
-      if(thisRadius < radius() && (fabs(x)>30.09 || fabs(y)>30.09)){
+      if(thisRadius < radius() && (fabs(x)>30.0 || fabs(y)>30.0)){
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
@@ -57,15 +57,15 @@ DFCALGeometry::DFCALGeometry()
       
       // transform to beam axis
       m_positionOnFace[row][col][calor] = 
-	DVector2(  ( col - kInnerMidBlock ) * blockSize(calor),
-		   ( row - kInnerMidBlock ) * blockSize(calor) );
-      // Carve out a hole for the insert
+	DVector2(  ( col - kInnerMidBlock +0.5) * blockSize(calor),
+		   ( row - kInnerMidBlock +0.5 ) * blockSize(calor) );
+      // Carve out a hole for the beam
       float x=m_positionOnFace[row][col][calor].X();
       float y=m_positionOnFace[row][col][calor].Y();
       
       //printf("r %d c %d x %f y %f\n",row,col,x,y);
 
-      if (fabs(x)>5.0 || fabs(y)>5.0){
+      if (fabs(x)>2.0 || fabs(y)>2.0){
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
@@ -120,14 +120,14 @@ int
 DFCALGeometry::row( float y, int calor ) const 
 {
   if (calor==0) return static_cast<int>( y / blockSize(0) + kMidBlock + 0.5);
-  return (100+static_cast<int>( y / blockSize(1) + kInnerMidBlock + 0.5));
+  return (100+static_cast<int>( y / blockSize(1) + kInnerMidBlock ));
 }
 
 int
 DFCALGeometry::column( float x, int calor ) const 
-{	
+{	 
   if (calor==0) return static_cast<int>( x / blockSize(0) + kMidBlock + 0.5);
-  return (100+static_cast<int>( x / blockSize(1) + kInnerMidBlock + 0.5));
+  return (100+static_cast<int>( x / blockSize(1) + kInnerMidBlock ));
 }
 
 DVector2
