@@ -279,9 +279,9 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    double v =-x*sin(phi) + y*cos(phi);
    double vVar = SQR(MOLIERE_RADIUS);
    double min_dist=4.;
-   if (fabs(x)<53.0&&fabs(y)<53.0){
+   if (fabs(x)<30.0&&fabs(y)<30.0){
      vVar=SQR(2.2);
-     min_dist=2.075;
+     min_dist=2.0  ;
    }
    double uVar = vVar+SQR(SQR(8*theta));
    double vTail = 4.5+0.9*log(fEnergy+0.05);
