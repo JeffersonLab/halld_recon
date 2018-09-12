@@ -493,7 +493,9 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
   if (hit==NULL || hit->wire==NULL) return RESOURCE_UNAVAILABLE;
  
   double dx=CalcdXHit(mom,pos,hit->wire);
-  if (dx>0.){
+
+  if ((dx>0.) && (hit->dist >0.)){     // cannot cope w -ve doca
+
     // arc length and energy deposition
 
     // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
@@ -505,6 +507,9 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
     // 4: thisp0  par0 for this run
     // 5: thisp1  par1 for this run
 
+
+
+
     if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
 
       dedx.dx=dx;
@@ -512,16 +517,44 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dE_amp=hit->dE_amp;
       dedx.p=mom.Mag();
 
+      // amplitude correction for doca > dcorr     
+   
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
 
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
 
         double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
 
-        dedx.dE = dedx.dE * reference/this_run;
         dedx.dE_amp = dedx.dE_amp * reference/this_run;
 
       }
+
+      // integral correction
+
+      double dmax = CDC_GAIN_DOCA_PARS[0];
+      double dmin = CDC_GAIN_DOCA_PARS[1];
+
+      double reference;
+      double this_run;
+
+      if (hit->dist < dmin) {
+
+        reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
+        reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+
+        this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
+        this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
+
+      } else { 
+
+        reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
+        this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
+
+      }
+
+      dedx.dE = dedx.dE * reference/this_run;
+
+      // end of new integral correction
 
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;
