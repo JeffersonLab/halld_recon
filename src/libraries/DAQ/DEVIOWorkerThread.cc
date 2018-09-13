@@ -322,12 +322,14 @@ void DEVIOWorkerThread::ParseBank(void)
 
 		switch(tag){
 			case 0x0060:       ParseEPICSbank(iptr, iend);    break;
+			case 0xFF32:
 			case 0x0070:         ParseBORbank(iptr, iend);    break;
 
 			case 0xFFD0:
 			case 0xFFD1:
 			case 0xFFD2:
-			case 0xFFD3:    ParseControlEvent(iptr, iend);    break;
+			case 0xFFD3:
+			case 0xFFD4:    ParseControlEvent(iptr, iend);    break;
 
 			case 0xFF58:
 			case 0xFF78: current_parsed_events.back()->sync_flag = true;
@@ -915,6 +917,7 @@ _DBG_<<" -- JLab Module  rocid="<< rocid << endl;
 				break;
 
 			case 0x123:
+			case 0x28:
 _DBG_<<" -- SSP  rocid="<< rocid << endl;
 				ParseSSPBank(rocid, iptr, iend_data_block_bank);
 				break;
