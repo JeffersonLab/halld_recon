@@ -67,11 +67,10 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
    vector<double>dirc_shift;
    vector<double>bar_plane;
    geom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", dirc_face);
-   geom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='1']", dirc_plane);
+   geom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", dirc_plane);
    geom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
-   geom->Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", bar_plane);
    
-   dDIRCz=dirc_face[2]+dirc_plane[0]+dirc_shift[2]+bar_plane[1]; // 585.862
+   dDIRCz=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
    std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
 
    return NOERROR;

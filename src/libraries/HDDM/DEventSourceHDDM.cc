@@ -2812,6 +2812,9 @@ jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
   vector<DDIRCPmtHit*> data;
 
   if (tag == "") {
+     vector<const DDIRCTruthPmtHit*> locDIRCTruthPmtHit;
+     eventLoop->Get(locDIRCTruthPmtHit);
+
      const hddm_s::DircPmtHitList &hits = record->getDircPmtHits();
      hddm_s::DircPmtHitList::iterator iter;
      for (iter = hits.begin(); iter != hits.end(); ++iter) {
@@ -2823,13 +2826,16 @@ jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
          hit->ch = channel;
 
 	 // associate truth objects (with more information)
-	 const hddm_s::DircTruthPmtHitList &truthHits = record->getDircTruthPmtHits();
-	 hddm_s::DircTruthPmtHitList::iterator iterTruth;
-	 for (iterTruth = truthHits.begin(); iterTruth != truthHits.end(); ++iterTruth) {
+	 //const hddm_s::DircTruthPmtHitList &truthHits = record->getDircTruthPmtHits();
+	 //hddm_s::DircTruthPmtHitList::iterator iterTruth;
+	 //for (iterTruth = truthHits.begin(); iterTruth != truthHits.end(); ++iterTruth) {
+
+	 for (auto& iterTruth : locDIRCTruthPmtHit) { //.begin(); iterTruth != locDIRCTruthPmtHit.end(); ++iterTruth) {
 		 
 		 // must match channel and time
-		 if(channel == iterTruth->getCh() && fabs(time-iterTruth->getT()) < 5.0) {
+		 if(channel == iterTruth->ch && fabs(time-iterTruth->t) < 5.0) {
 			 
+/*
 			 DDIRCTruthPmtHit *truthHit = new DDIRCTruthPmtHit();
 			 truthHit->x  = iterTruth->getX();
 			 truthHit->y = iterTruth->getY();
@@ -2841,8 +2847,10 @@ jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
 			 truthHit->key_bar  = iterTruth->getKey_bar();
 			 truthHit->path = iterTruth->getPath();
 			 truthHit->refl  = iterTruth->getRefl();
-			 
 			 hit->AddAssociatedObject(truthHit);
+*/
+			 hit->AddAssociatedObject(iterTruth);
+
 			 break;
 		 }
 	 }

@@ -15,6 +15,7 @@ DDIRCGeometry::DDIRCGeometry(int runnumber) {
 	CHANNEL_PER_PMT = 64;
 	PMT_ROWS = 18;
 	PMT_COLUMNS = 6;
+	DIRC_QZBL_DY = 3.515; 
 
 	// Initialize DDIRCGeometry variables
 	Initialize(runnumber);
@@ -29,43 +30,36 @@ DDIRCGeometry::Initialize(int runnumber) {
 
 	vector<double>DIRC;
 	vector<double>DRCC;
-	vector<double>DCML_ZX;
-	vector<double>DCML_Y0;
-	vector<double>DCML_DY;
-	vector<double>DCBR_Y0;
-	vector<double>DCBR_DY;
-	vector<double>QZBL_DX;
-	vector<double>QZBL_YZ;
-	vector<double>QZBL_DXDYDZ;
+	vector<double>DCML00_XYZ;
+	vector<double>DCML01_XYZ;
+	vector<double>DCML10_XYZ;
+	vector<double>DCML11_XYZ;
 	jgeom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", DIRC);
 	jgeom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", DRCC);
-	jgeom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='3']", DCML_ZX);
-	jgeom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Y0/plane[@value='3']", DCML_Y0);
-	jgeom->Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@dY/plane[@value='3']", DCML_DY);
-	jgeom->Get("//composition[@name='DCML']/mposY[@volume='DCBR']/@Y0", DCBR_Y0);
-	jgeom->Get("//composition[@name='DCML']/mposY[@volume='DCBR']/@dY", DCBR_DY);
-	jgeom->Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@dX", QZBL_DX);
-	jgeom->Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", QZBL_YZ);
-	jgeom->Get("//box[@name='QZBL']/@X_Y_Z", QZBL_DXDYDZ);
+	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML00']/@X_Y_Z/plane[@value='4']", DCML00_XYZ);
+        jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML01']/@X_Y_Z/plane[@value='3']", DCML01_XYZ);
+	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", DCML10_XYZ);
+	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML11']/@X_Y_Z/plane[@value='2']", DCML11_XYZ);	 
 	
-	DIRC_LUT_X = (DCML_ZX[1] + 4*QZBL_DX[0]);
-	DIRC_LUT_Z = (DIRC[2] + DRCC[2] + DCML_ZX[0] + QZBL_YZ[1]);
-	DIRC_DCML_Y = DCML_Y0[0];
-	DIRC_DCML_DY = DCML_DY[0];
-	DIRC_DCBR_Y = fabs(DCBR_Y0[0]);
-	DIRC_DCBR_DY = DCBR_DY[0];
-	DIRC_QZBL_DY = QZBL_DXDYDZ[1];
-	DIRC_QZBL_DZ = QZBL_DXDYDZ[2];
-
 	// set array of bar positions
-	double arr[4] = {-1.*DIRC_DCML_Y+DIRC_DCBR_Y, -1.*(DIRC_DCML_Y+DIRC_DCML_DY)+DIRC_DCBR_Y, DIRC_DCML_Y-DIRC_DCBR_Y, DIRC_DCML_Y+DIRC_DCML_DY-DIRC_DCBR_Y};
-	
 	for(int i=0; i<48; i++) {
-		double y = arr[i/12]+(i%12)*DIRC_DCBR_DY;
-		if(i < 24)
-			y = arr[i/12]-(i%12)*DIRC_DCBR_DY;
-
-		DIRC_BAR_Y[i] = y;
+		vector<double>DCBR_XYZ;
+		if(i<12) {
+			jgeom->Get(Form("//composition[@name='DCML10']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
+			DIRC_BAR_Y[i] = DCML10_XYZ[1] - DCBR_XYZ[1];
+		}
+		else if(i<24) {
+			jgeom->Get(Form("//composition[@name='DCML11']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
+			DIRC_BAR_Y[i] = DCML11_XYZ[1] - DCBR_XYZ[1];
+		}
+		else if(i<36) {
+			jgeom->Get(Form("//composition[@name='DCML01']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
+			DIRC_BAR_Y[i] = DCML01_XYZ[1] - DCBR_XYZ[1];
+		}
+		else if(i<48) {
+			jgeom->Get(Form("//composition[@name='DCML00']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
+			DIRC_BAR_Y[i] = DCML00_XYZ[1] - DCBR_XYZ[1];
+		}
 	}
 	
 	return;
@@ -74,7 +68,11 @@ DDIRCGeometry::Initialize(int runnumber) {
 int
 DDIRCGeometry::GetPmtID( int channel ) const 
 {
-	return channel/CHANNEL_PER_PMT;
+	int MAX_BOX_CHANNEL = CHANNEL_PER_PMT * PMT_ROWS * PMT_COLUMNS;
+	if(channel < MAX_BOX_CHANNEL) 
+		return channel/CHANNEL_PER_PMT;
+	else 
+		return (channel-MAX_BOX_CHANNEL)/CHANNEL_PER_PMT;
 }
 
 int

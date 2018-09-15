@@ -16,27 +16,35 @@ public:
 	DDIRCLut_factory(){};
 	~DDIRCLut_factory(){};
 
-private:
+	DDIRCLut *dirclut;
+	
 	jerror_t brun(JEventLoop *loop, int32_t runnumber){
 		
 		assert( _data.size() == 0 );
 
-		flags = PERSISTANT;
-		_data.push_back( new DDIRCLut(loop) );
-		
-		return NOERROR;
+		SetFactoryFlag(NOT_OBJECT_OWNER);
+                ClearFactoryFlag(WRITE_TO_OUTPUT);
+
+                if( dirclut ) delete dirclut;
+
+                dirclut = new DDIRCLut(loop);
+
+        	return NOERROR;
 	}
 
         jerror_t erun(void){
 		
-		for(unsigned int i=0; i<_data.size(); i++)delete _data[i];
-		_data.clear();
+		if( dirclut ) delete dirclut;
+                dirclut = NULL;
 		
 		return NOERROR;
 	}
 
 	jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
-		
+
+		// Reuse existing DDIRCLut object
+		if( dirclut ) _data.push_back( dirclut );	
+	
 		return NOERROR;
 	}
 };

@@ -89,8 +89,8 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 					hDeltaThetaCVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 60,-0.15,0.15);
 					hReactionLikelihoodDiffVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hReactionLikelihoodDiffVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f]; p (GeV/c); %s", locBar,xbin_min,xbin_max,locLikelihoodName.data()), 60, 0.0, 12.0, 50, -200, 200);
 					
-					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
-					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
+					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
+					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit X ; Pixel Hit Y", locBar,xbin_min,xbin_max), 144, 0, 144, 48, 0, 48);
 					//hPixelHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitTime_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit Channel; Pixel Hit t [ns]", locBar,xbin_min,xbin_max), 6912, 0, 6912, 50, 0, 100);
 				}
 				
