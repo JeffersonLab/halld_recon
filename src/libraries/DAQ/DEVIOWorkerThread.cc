@@ -872,7 +872,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				ParseJLabModuleData(rocid, iptr, iend_data_block_bank);
 				break;
 
-			case 0x123:
+			case 0x28:
 				ParseSSPBank(rocid, iptr, iend_data_block_bank);
 				break;
 
