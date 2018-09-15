@@ -618,7 +618,6 @@ bool DTrackCandidate_factory_FDCCathodes::GetTrackMatch(double q,
     double dx=hit->xy.X()-pos.x();
     double dy=hit->xy.Y()-pos.y();
     double d2=dx*dx+dy*dy;
-
     if (d2<Match(mom.Mag())) return true;
   }
   return false;
@@ -652,8 +651,15 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
       if (segment->hits[0]->wire->origin.z()<pos.z()){
 	mom=-1.0*mom;
       }
-
-      if (GetTrackMatch(_data[i]->charge(),pos,mom,segment)){
+      // Match by swimming to a plane in the stray segment
+      bool got_match=GetTrackMatch(_data[i]->charge(),pos,mom,segment);      
+      // if this does not work, try to match using the centers of the circles
+      if (got_match==false){
+	double dx=segment->xc-_data[i]->xc;
+	double dy=segment->yc-_data[i]->yc;
+	if (dx*dx+dy*dy<9.0) got_match=true;
+      }
+      if (got_match){
 	// Add the segment as an associated object to _data[i]
 	_data[i]->AddAssociatedObject(segment);
    

@@ -2,10 +2,10 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-// hnamepath: /CDC_roc_hits/cdc_amp_roc25
-// hnamepath: /CDC_roc_hits/cdc_amp_roc26
-// hnamepath: /CDC_roc_hits/cdc_amp_roc27
-// hnamepath: /CDC_roc_hits/cdc_amp_roc28
+// hnamepath: /CDC_roc_hits/cdc_ped_roc25
+// hnamepath: /CDC_roc_hits/cdc_ped_roc26
+// hnamepath: /CDC_roc_hits/cdc_ped_roc27
+// hnamepath: /CDC_roc_hits/cdc_ped_roc28
 
 
 {
@@ -36,11 +36,11 @@
   for(unsigned int iroc=25; iroc<=28; iroc++){
     c1->cd(iroc-24);
     char hname[256];
-    sprintf(hname, "cdc_amp_roc%d", iroc);
+    sprintf(hname, "cdc_ped_roc%d", iroc);
     TH2 *h = (TH2*)(CDCdir->Get(hname));
 
     if(h){
-      sprintf(hname, "cdc_amp_roc%d_norm", iroc);
+      sprintf(hname, "cdc_ped_roc%d_norm", iroc);
       TH2 *hh = (TH2*)h->Clone(hname);
 
       hh->Scale(1.0/Nevents);
@@ -49,7 +49,7 @@
       c1->Update();  
 
       hh->GetXaxis()->SetRangeUser(290,1780);
-      hh->GetYaxis()->SetRangeUser(0,500);
+      hh->GetYaxis()->SetRangeUser(0,255);
       hh->GetYaxis()->SetNdivisions(210,kFALSE);
       hh->GetYaxis()->SetTickLength(0.001);
 
@@ -57,6 +57,7 @@
       hh->GetYaxis()->SetTitleSize(0.05);
       hh->GetXaxis()->SetLabelSize(0.05);
       hh->GetXaxis()->SetTitleSize(0.05);
+
       hh->GetZaxis()->SetLabelSize(0.05);
 
       gPad->Modified();

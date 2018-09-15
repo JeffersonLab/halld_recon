@@ -70,7 +70,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   locGeometry->GetFCALZ(dFCALz);
 
 	// Get start counter geometry;
-	int MAX_SC_SECTORS = 0;    // keep track of the number of sectors
+	uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
 	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
 	{
 		dSCphi0=sc_pos[0][0].Phi();
@@ -281,7 +281,7 @@ DParticleID::DParticleID(JEventLoop *loop)
                  << "  loaded = " << sc_paddle_resolution_params.size()
                  << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<MAX_SC_SECTORS; i++) {
+        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
@@ -344,8 +344,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
   // Position and momentum
   DVector3 pos,mom;
   // flight time and t0 for the event
-  double tflight=0.;
-  double t0=track->t0();
+  //double tflight=0.;
+  //double t0=track->t0();
   
   //dE and dx pairs
   dedx_t de_and_dx(0.,0.,0.,0.);
@@ -371,7 +371,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 	  unsigned int index=j-1;
 	  mom=cdc_extrapolations[index].momentum;
 	  pos=cdc_extrapolations[index].position;
-	  tflight=cdc_extrapolations[index].t;
+	  //tflight=cdc_extrapolations[index].t;
 	  break;
 	}
 	doca2_old=doca2;
@@ -496,7 +496,9 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
   if (hit==NULL || hit->wire==NULL) return RESOURCE_UNAVAILABLE;
  
   double dx=CalcdXHit(mom,pos,hit->wire);
-  if (dx>0.){
+
+  if ((dx>0.) && (hit->dist >0.)){     // cannot cope w -ve doca
+
     // arc length and energy deposition
 
     // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
@@ -508,6 +510,9 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
     // 4: thisp0  par0 for this run
     // 5: thisp1  par1 for this run
 
+
+
+
     if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
 
       dedx.dx=dx;
@@ -515,16 +520,44 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dE_amp=hit->dE_amp;
       dedx.p=mom.Mag();
 
+      // amplitude correction for doca > dcorr     
+   
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
 
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
 
         double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
 
-        dedx.dE = dedx.dE * reference/this_run;
         dedx.dE_amp = dedx.dE_amp * reference/this_run;
 
       }
+
+      // integral correction
+
+      double dmax = CDC_GAIN_DOCA_PARS[0];
+      double dmin = CDC_GAIN_DOCA_PARS[1];
+
+      double reference;
+      double this_run;
+
+      if (hit->dist < dmin) {
+
+        reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
+        reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+
+        this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
+        this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
+
+      } else { 
+
+        reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
+        this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
+
+      }
+
+      dedx.dE = dedx.dE * reference/this_run;
+
+      // end of new integral correction
 
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;

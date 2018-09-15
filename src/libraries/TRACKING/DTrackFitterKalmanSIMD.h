@@ -44,7 +44,7 @@
 #define TAN_MAX 10.
 
 #define MAX_CHI2 1e6
-#define MINIMUM_HIT_FRACTION 0.5
+//#define MINIMUM_HIT_FRACTION 0.5
 
 #define DELTA_R 1.0 // distance in r to extend the trajectory beyond the last point
 
@@ -55,8 +55,8 @@
 #define ONE_SIXTH  0.16666666666666667
 #define TWO_THIRDS 0.66666666666666667
 
-#define MIN_FDC_HITS 2 
-#define MIN_CDC_HITS 2 
+#define MIN_FDC_HITS 3 
+#define MIN_CDC_HITS 3 
 
 //#define DE_PER_STEP_WIRE_BASED 0.0005 // in GeV
 //#define DE_PER_STEP_TIME_BASED 0.0005 // in GeV
@@ -176,14 +176,15 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   jerror_t AddFDCHit(const DFDCPseudo *fdchit);
 
   jerror_t KalmanLoop(void);
-  virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,DMatrix5x1 &S,DMatrix5x5 &C,
-				 double &chisq,unsigned int &numdof);
+  virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
+				       DMatrix5x1 &S,DMatrix5x5 &C,
+				       double &chisq,unsigned int &numdof);
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
 
   kalman_error_t KalmanForwardCDC(double anneal,DMatrix5x1 &S,DMatrix5x5 &C,
-			    double &chisq,unsigned int &numdof);
+				  double &chisq,unsigned int &numdof);
   kalman_error_t KalmanCentral(double anneal_factor,DMatrix5x1 &S,
 			       DMatrix5x5 &C,DVector2 &xy,double &chisq,
 			       unsigned int &myndf);
@@ -477,7 +478,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double TARGET_Z;
   bool ADD_VERTEX_POINT;
   unsigned int MIN_HITS_FOR_REFIT;
-  double THETA_CUT;
+  double THETA_CUT,MINIMUM_HIT_FRACTION;
   bool USE_PASS1_TIME_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;
