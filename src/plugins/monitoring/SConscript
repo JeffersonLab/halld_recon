@@ -37,6 +37,7 @@ subdirs = [
 'TOF_TDC_shift',
 'BCAL_Eff',
 'BCAL_inv_mass',
+'CDC_dedx',
 'CDC_drift',
 'CDC_PerStrawReco',
 'CDC_roc_hits',
