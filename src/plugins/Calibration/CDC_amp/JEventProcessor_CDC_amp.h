@@ -24,6 +24,7 @@
 
 #include "DAQ/Df125Config.h"
 #include "TRIGGER/DTrigger.h"
+#include "PID/DVertex.h"
 
 #include <stdint.h>
 #include <vector>
@@ -33,6 +34,7 @@
 
 #include <TH2.h>
 #include <TH1.h>
+
 
 using namespace std;
 using namespace jana;
@@ -56,6 +58,7 @@ class JEventProcessor_CDC_amp:public jana::JEventProcessor{
 
                 int32_t run_number;
 
+
                 // default scaling factors will be overridden by Df125Config if present
 
                 uint16_t ASCALE = 1;   //amplitude  this was 8 for runs before 40,000
@@ -63,27 +66,33 @@ class JEventProcessor_CDC_amp:public jana::JEventProcessor{
 
                 // histograms
 
-                TH1I *asum = NULL; 
+                TH1I *time = NULL;
+                TH1I *a = NULL; 
                 TH2I *an = NULL; 
-
-                TH1I *atsum = NULL; 
-                TH2I *atn = NULL; 
-
-                TH1I *attsum = NULL; 
-                TH2I *attn = NULL; 
-
+                TH2D *atime = NULL;
                 TH2D *atheta = NULL;
 
-                TH1D *qsum = NULL; 
-                TH2D *qn = NULL; 
+                TH1I *a30 = NULL; 
+                TH1I *a30_100ns = NULL; 
+                TH2I *an30_100ns = NULL; 
+                TH2D *atime30 = NULL;
+                TH2D *adoca30 = NULL;
 
-                TH1D *qtsum = NULL; 
-                TH2D *qtn = NULL; 
+                TH1I *a45 = NULL; 
+                TH1I *a45_100ns = NULL; 
+                TH2I *an45_100ns = NULL; 
+                TH2D *atime45 = NULL;
+                TH2D *adoca45 = NULL;
 
-                TH1D *qttsum = NULL; 
-                TH2D *qttn = NULL; 
+                TH1I *a90 = NULL; 
+                TH1I *a90_100ns = NULL; 
+                TH2I *an90_100ns = NULL; 
+                TH2D *atime90 = NULL;
+                TH2D *adoca90 = NULL;
 
-                TH2D *qtheta = NULL;
+                TH2I *an90 = NULL; 
+                TH1I *time90 = NULL;
+                TH2D *xt90 = NULL;
 
 };
 

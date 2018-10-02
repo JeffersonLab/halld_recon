@@ -20,6 +20,7 @@ using namespace std;
 #include "DTOFGeometry.h"
 #include "TTAB/DTranslationTable.h"
 #include "TTAB/DTTabUtilities.h"
+#include <DAQ/Df250PulseData.h>
 using namespace jana;
 
 
@@ -50,7 +51,7 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   double TimeWidthCut;
 
   // ADC to Energy conversion for individual PMT channels
-  double adc2E[176]; // 4*44 channels
+  vector<double> adc2E;
 
   // PARAMETERS:
   double DELTA_T_ADC_TDC_MAX;

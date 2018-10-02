@@ -15,8 +15,8 @@
 
 	//Setpoints
 	double nominalFCALTime = 17.;
-	double nominalBCALADCTime = 17.;
-	double nominalBCALTDCTime = 17.;
+	double nominalBCALADCTime = 15.;
+	double nominalBCALTDCTime = 15.;
 
 	//Get Histograms
 	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("BCAL/BCALHit ADC time");

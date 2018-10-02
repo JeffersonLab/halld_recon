@@ -59,20 +59,22 @@ class DParticleID:public jana::JObject
 		class dedx_t
 		{
 			public:
-				dedx_t(double dE,double dx, double p):dE(dE),dx(dx),p(p){dEdx = dE/dx;}
+		dedx_t(double dE,double dE_amp,double dx, double p):dE(dE),dE_amp(dE_amp),dx(dx),p(p){dEdx = dE/dx; dEdx_amp=dE_amp/dx;}
 				double dE; // energy loss in layer
+				double dE_amp;
 				double dx; // path length in layer
 				double dEdx; // ratio dE/dx
+				double dEdx_amp;
 				double p;  // momentum at this dE/dx measurement
 		};
 
 		virtual jerror_t CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTrackHypothesis) const = 0;
 
-		jerror_t GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>& dEdxHits_CDC, vector<dedx_t>& dEdxHits_FDC) const;
-		jerror_t CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdx_CDC, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const;
-		jerror_t CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const vector<dedx_t>& locdEdxHits_CDC, const vector<dedx_t>& locdEdxHits_FDC, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdx_CDC, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const;
+		jerror_t GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>& dEdxHits_CDC,vector<dedx_t>& dEdxHits_FDC) const;
+		jerror_t CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdEdx_CDC_amp, double& locdx_CDC, double& locdx_CDC_amp, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const;
+		jerror_t CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const vector<dedx_t>& locdEdxHits_CDC, const vector<dedx_t>& locdEdxHits_FDC, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdEdx_CDC_amp,double& locdx_CDC, double& locdx_CDC_amp, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const;
 
-		jerror_t CalcdEdxHit(const DVector3 &mom, const DVector3 &pos, const DCDCTrackHit *hit, pair <double,double> &dedx) const;
+		jerror_t CalcdEdxHit(const DVector3 &mom, const DVector3 &pos, const DCDCTrackHit *hit, dedx_t &dedx) const;
 		double CalcdXHit(const DVector3 &mom,const DVector3 &pos,
 				 const DCoordinateSystem *wire) const;
 		jerror_t GroupTracks(vector<const DTrackTimeBased *> &tracks, vector<vector<const DTrackTimeBased*> >&grouped_tracks) const;
@@ -220,6 +222,8 @@ class DParticleID:public jana::JObject
 		double ATTEN_LENGTH; // Start counter attenuation length
 		double OUT_OF_TIME_CUT; //for all matches
 
+                vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
+
         // Start counter resolution parameters
         vector<double> SC_MAX_RESOLUTION;
         vector<double> SC_BOUNDARY1, SC_BOUNDARY2;
@@ -271,11 +275,13 @@ class DParticleID:public jana::JObject
 		// used to update hit energy & time when matching to un-matched, position-ill-defined bars
 		const DTOFGeometry* dTOFGeometry;
 		vector<double> propagation_speed;
-		double TOF_HALFPADDLE;
+		//double TOF_HALFPADDLE;
 		double dHalfPaddle_OneSided;
 		double TOF_ATTEN_LENGTH;
 		double TOF_E_THRESHOLD;
 		double ONESIDED_PADDLE_MIDPOINT_MAG; //+/- this number for North/South
+		// time cut for cdc hits
+		double CDC_TIME_CUT_FOR_DEDX;
 
 		double dTargetZCenter;
 

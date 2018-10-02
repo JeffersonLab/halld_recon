@@ -12,9 +12,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalCDCTime = 10.;
+	double nominalCDCTime = 6.;
 	double nominalFDCCathodeTime = 14.;
-	double nominalFDCWireTime = 10.;
+	double nominalFDCWireTime = 5.5;
 
 	//Get Histograms
 	TH1I* CDCHit_Timing    = (TH1I*)gDirectory->Get("CDC/CDCHit time");

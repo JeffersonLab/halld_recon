@@ -145,6 +145,7 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_FDC].clear();
 		  extrapolations[SYS_CDC].clear();
 		  extrapolations[SYS_START].clear();
+		  extrapolations[SYS_DIRC].clear();
 		};
 		
 		// Fit parameter accessor methods
@@ -154,6 +155,8 @@ class DTrackFitter:public jana::JObject{
 		int GetNdof(void) const {return Ndof;}
 		unsigned int GetNumPotentialFDCHits(void) const {return potential_fdc_hits_on_track;}
 		unsigned int GetNumPotentialCDCHits(void) const {return potential_cdc_hits_on_track;}
+		//virtual unsigned int GetRatioMeasuredPotentialFDCHits(void) const =0;
+		//virtual unsigned int GetRatioMeasuredPotentialCDCHits(void) const =0;
       bool GetIsSmoothed(void) const {return IsSmoothed;}
 		
       vector<pull_t>& GetPulls(void){return pulls;}

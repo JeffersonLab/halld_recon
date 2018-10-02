@@ -11,18 +11,52 @@
 #include <JANA/JFactory.h>
 using namespace jana;
 
-#include "DBCALGeometry.h"
+#include <BCAL/DBCALGeometry.h>
 
 class DBCALGeometry_factory:public JFactory<DBCALGeometry>{
 	public:
 		DBCALGeometry_factory(){};
 		~DBCALGeometry_factory(){};
 
-	private:
-        jerror_t brun(jana::JEventLoop*, int32_t);
-		//jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
-        jerror_t erun();
+		DBCALGeometry *bcalgeometry;
 
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
+			ClearFactoryFlag(WRITE_TO_OUTPUT);
+			
+			if( bcalgeometry ) delete bcalgeometry;
+
+			bcalgeometry = new DBCALGeometry(runnumber);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DBCALGeometry object.
+			if( bcalgeometry ) _data.push_back( bcalgeometry );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( bcalgeometry ) delete bcalgeometry;
+			bcalgeometry = NULL;
+			
+			return NOERROR;
+		}
 };
 
 #endif // _DBCALGeometry_factory_

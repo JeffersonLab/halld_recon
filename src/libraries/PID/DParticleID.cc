@@ -12,9 +12,12 @@
 #define M_TWO_PI 6.28318530717958647692
 #endif
 
-// Routine for sorting dEdx data
+// Routines for sorting dEdx data
 bool static DParticleID_dedx_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
   return a.dEdx < b.dEdx;
+}
+bool static DParticleID_dedx_amp_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
+  return a.dEdx_amp < b.dEdx_amp;
 }
 
 // Routine for sorting hypotheses accorpding to FOM
@@ -34,7 +37,10 @@ DParticleID::DParticleID(JEventLoop *loop)
 	C_EFFECTIVE = 15.0;
 	ATTEN_LENGTH = 150.0;
 	OUT_OF_TIME_CUT = 35.0; // Changed 200 -> 35 ns, March 2016
-    gPARMS->SetDefaultParameter("PID:OUT_OF_TIME_CUT",OUT_OF_TIME_CUT);
+    gPARMS->SetDefaultParameter("PID:OUT_OF_TIME_CUT",OUT_OF_TIME_CUT);	
+    CDC_TIME_CUT_FOR_DEDX = 1000.0; 
+    gPARMS->SetDefaultParameter("PID:CDC_TIME_CUT_FOR_DEDX",CDC_TIME_CUT_FOR_DEDX);
+
 
   DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   if(!dapp){
@@ -64,6 +70,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   locGeometry->GetFCALZ(dFCALz);
 
 	// Get start counter geometry;
+	uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
 	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
 	{
 		dSCphi0=sc_pos[0][0].Phi();
@@ -85,6 +92,7 @@ DParticleID::DParticleID(JEventLoop *loop)
 			sc_dir.push_back(temp);
 		}
 	  START_EXIST = true;      // Found Start Counter
+	  MAX_SC_SECTORS = sc_pos.size();
 	}
 	else {
 	  START_EXIST = false;      // no Start Counter found
@@ -185,6 +193,11 @@ DParticleID::DParticleID(JEventLoop *loop)
 
   fitter = fitters[0];
   
+  // CDC correction for gain drop from progressive gas deterioration in spring 2018
+  if(loop->GetCalib("CDC/gain_doca_correction", CDC_GAIN_DOCA_PARS))
+		jout << "Error loading CDC/gain_doca_correction !" << endl;
+
+
   // FCAL geometry
   loop->GetSingle(dFCALGeometry);
 
@@ -193,19 +206,19 @@ DParticleID::DParticleID(JEventLoop *loop)
 		jout << "Error loading /TOF/propagation_speed !" << endl;
 
 	map<string, double> tofparms;
- 	loop->GetCalib("TOF/tof_parms", tofparms);
+ 	loop->GetCalib("TOF/tof_parms", tofparms);   
 	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
 	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
-	TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];
+	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
 
 	loop->GetSingle(dTOFGeometry);
-	dHalfPaddle_OneSided = dTOFGeometry->SHORTBARLENGTH/2.0; //GET FROM GEOMETRY??
-	double locBeamHoleWidth = dTOFGeometry->LONGBARLENGTH - 2.0*dTOFGeometry->SHORTBARLENGTH;
+	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
+	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
 
 	// Start counter calibration constants
 	// vector<map<string,double> > tvals;
-	vector<map<string,double> > pt_vals;
+	vector< vector<double> > pt_vals;
 	vector<map<string,double> > attn_vals;
 
 	// if(loop->GetCalib("/START_COUNTER/propagation_speed",tvals))
@@ -220,25 +233,25 @@ DParticleID::DParticleID(JEventLoop *loop)
 	// }
 
 	// Individual propagation speed calibrations (beam data)
-	if(loop->GetCalib("/START_COUNTER/propagation_speed", pt_vals))
-	  jout << "Error loading /START_COUNTER/propagation_speed !" << endl;
+	if(loop->GetCalib("/START_COUNTER/propagation_time_corr", pt_vals))
+	  jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
 	else
 	  {
 	    for(unsigned int i = 0; i < pt_vals.size(); i++)
 	      {
 		// Functional form is: A + B*x
-		map<string, double> &row = pt_vals[i];
-		sc_pt_yint[SC_STRAIGHT].push_back(row["SC_STRAIGHT_PROPAGATION_A"]);
-		sc_pt_yint[SC_BEND].push_back(row["SC_BEND_PROPAGATION_A"]);
-		sc_pt_yint[SC_NOSE].push_back(row["SC_NOSE_PROPAGATION_A"]);
+              //map<string, double> &row = pt_vals[i];
+		sc_pt_yint[SC_STRAIGHT].push_back(pt_vals[i][0]);
+		sc_pt_yint[SC_BEND].push_back(pt_vals[i][2]);
+		sc_pt_yint[SC_NOSE].push_back(pt_vals[i][4]);
 		    
-		sc_pt_slope[SC_STRAIGHT].push_back(row["SC_STRAIGHT_PROPAGATION_B"]);
-		sc_pt_slope[SC_BEND].push_back(row["SC_BEND_PROPAGATION_B"]);
-		sc_pt_slope[SC_NOSE].push_back(row["SC_NOSE_PROPAGATION_B"]);
+		sc_pt_slope[SC_STRAIGHT].push_back(pt_vals[i][1]);
+		sc_pt_slope[SC_BEND].push_back(pt_vals[i][3]);
+		sc_pt_slope[SC_NOSE].push_back(pt_vals[i][5]);
 	      }
 	  }
 
-	// Individual attneuation calibrations (FIU bench mark data) 
+	// Individual attenuation calibrations (FIU bench mark data) 
 	if(loop->GetCalib("START_COUNTER/attenuation_factor", attn_vals))
 	  jout << "Error in loading START_COUNTER/attenuation_factor !" << endl;
 	else
@@ -263,12 +276,12 @@ DParticleID::DParticleID(JEventLoop *loop)
     if(loop->GetCalib("START_COUNTER/time_resol_paddle_v2", sc_paddle_resolution_params))
         jout << "Error in loading START_COUNTER/time_resol_paddle_v2 !" << endl;
 	else {
-        if(sc_paddle_resolution_params.size() != (unsigned int)DSCHit_factory::MAX_SECTORS)
+        if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
             jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl
                  << "  loaded = " << sc_paddle_resolution_params.size()
-                 << "  expected = " << DSCHit_factory::MAX_SECTORS << endl;
+                 << "  expected = " << MAX_SC_SECTORS << endl;
 
-        for(int i=0; i<DSCHit_factory::MAX_SECTORS; i++) {
+        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
             SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
             SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
             SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
@@ -322,14 +335,17 @@ jerror_t DParticleID::GroupTracks(vector<const DTrackTimeBased *> &tracks,
 // Compute the energy losses and the path lengths in the chambers for each hit 
 // on the track. Returns a list of dE and dx pairs with the momentum at the 
 // hit.
-jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>& dEdxHits_CDC, vector<dedx_t>& dEdxHits_FDC) const{
+jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>& dEdxHits_CDC,vector<dedx_t>& dEdxHits_FDC) const{
  
 
   // Position and momentum
   DVector3 pos,mom;
+  // flight time and t0 for the event
+  //double tflight=0.;
+  //double t0=track->t0();
   
   //dE and dx pairs
-  pair<double,double>de_and_dx;
+  dedx_t de_and_dx(0.,0.,0.,0.);
 
   //Get the list of cdc hits used in the fit
   vector<const DCDCTrackHit*>cdchits;
@@ -349,16 +365,24 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 	  *cdchits[i]->wire->udir;
 	double doca2=(wirepos-cdc_extrapolations[j].position).Mag2();
 	if (doca2>doca2_old){
-	  mom=cdc_extrapolations[j-1].momentum;
-	  pos=cdc_extrapolations[j-1].position;
+	  unsigned int index=j-1;
+	  mom=cdc_extrapolations[index].momentum;
+	  pos=cdc_extrapolations[index].position;
+	  //tflight=cdc_extrapolations[index].t;
 	  break;
 	}
 	doca2_old=doca2;
       }
+            
+      // Cut late drift time hits where the energy deposition is degraded
+      double dt=cdchits[i]->tdrift; //-tflight-t0;
+      if (dt>CDC_TIME_CUT_FOR_DEDX) continue;
+
       // Create the dE,dx pair from the position and momentum using a helical approximation for the path 
       // in the straw and keep track of the momentum in the active region of the detector
-      if (CalcdEdxHit(mom,pos,cdchits[i],de_and_dx)==NOERROR)
-	dEdxHits_CDC.push_back(dedx_t(de_and_dx.first, de_and_dx.second, mom.Mag()));
+      if (CalcdEdxHit(mom,pos,cdchits[i],de_and_dx)==NOERROR){
+	dEdxHits_CDC.push_back(de_and_dx);
+      }
     }
   }
   
@@ -381,7 +405,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       }
    
       double gas_thickness = 1.0; // cm
-      dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE, gas_thickness/cos(mom.Theta()), mom.Mag()));
+      dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
+				    gas_thickness/cos(mom.Theta()), mom.Mag()));
     }
   }
 
@@ -392,36 +417,55 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
   return NOERROR;
 }
 
-jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdx_CDC, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const
+jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdEdx_CDC_amp,double& locdx_CDC, double& locdx_CDC_amp,unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const
 {
-	vector<dedx_t> locdEdxHits_CDC, locdEdxHits_FDC;
-	jerror_t locReturnStatus = GetDCdEdxHits(locTrackTimeBased, locdEdxHits_CDC, locdEdxHits_FDC);
+  vector<dedx_t> locdEdxHits_CDC, locdEdxHits_CDC_amp,locdEdxHits_FDC;
+  jerror_t locReturnStatus = GetDCdEdxHits(locTrackTimeBased, locdEdxHits_CDC, locdEdxHits_FDC);
 	if(locReturnStatus != NOERROR)
 	{
 		locdEdx_FDC = numeric_limits<double>::quiet_NaN();
 		locdx_FDC = numeric_limits<double>::quiet_NaN();
 		locNumHitsUsedFordEdx_FDC = 0;
 		locdEdx_CDC = numeric_limits<double>::quiet_NaN();
+		locdEdx_CDC_amp = numeric_limits<double>::quiet_NaN();
 		locdx_CDC = numeric_limits<double>::quiet_NaN();
+		locdx_CDC_amp = numeric_limits<double>::quiet_NaN();
 		locNumHitsUsedFordEdx_CDC = 0;
 		return locReturnStatus;
 	}
-	return CalcDCdEdx(locTrackTimeBased, locdEdxHits_CDC, locdEdxHits_FDC, locdEdx_FDC, locdx_FDC, locdEdx_CDC, locdx_CDC, locNumHitsUsedFordEdx_FDC, locNumHitsUsedFordEdx_CDC);
+	return CalcDCdEdx(locTrackTimeBased, locdEdxHits_CDC,locdEdxHits_FDC, 
+			  locdEdx_FDC, locdx_FDC, locdEdx_CDC, locdEdx_CDC_amp,
+			  locdx_CDC, locdx_CDC_amp,locNumHitsUsedFordEdx_FDC, 
+			  locNumHitsUsedFordEdx_CDC);
 }
 
-jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const vector<dedx_t>& locdEdxHits_CDC, const vector<dedx_t>& locdEdxHits_FDC, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdx_CDC, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const
+jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const vector<dedx_t>& locdEdxHits_CDC, const vector<dedx_t>& locdEdxHits_FDC, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double &locdEdx_CDC_amp,double& locdx_CDC, double& locdx_CDC_amp,unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const
 {
 	locdx_CDC = 0.0;
+	locdx_CDC_amp = 0.0;
 	locdEdx_CDC = 0.0;
+	locdEdx_CDC_amp = 0.0;
 	locNumHitsUsedFordEdx_CDC = locdEdxHits_CDC.size()*4/5;
 	if(locNumHitsUsedFordEdx_CDC > 0)
 	{
-		for(unsigned int loc_i = 0; loc_i < locNumHitsUsedFordEdx_CDC; ++loc_i)
-		{
-			locdEdx_CDC += locdEdxHits_CDC[loc_i].dE; //weight is ~ #e- (scattering sites): dx!
-			locdx_CDC += locdEdxHits_CDC[loc_i].dx;
-		}
-		locdEdx_CDC /= locdx_CDC;
+	  for(unsigned int loc_i = 0; loc_i < locNumHitsUsedFordEdx_CDC; ++loc_i)
+	    {
+	      locdEdx_CDC += locdEdxHits_CDC[loc_i].dE; //weight is ~ #e- (scattering sites): dx!
+	      locdx_CDC += locdEdxHits_CDC[loc_i].dx;
+	    }
+	  locdEdx_CDC /= locdx_CDC;
+
+	  // Sort according to amplitude (the order of hits might be different
+	  // compared to sorting by the integral).
+	  vector<dedx_t>locdEdxHitsTemp(locdEdxHits_CDC);
+	  sort(locdEdxHitsTemp.begin(),locdEdxHitsTemp.end(),
+	       DParticleID_dedx_amp_cmp);  
+	  for(unsigned int loc_i = 0; loc_i < locNumHitsUsedFordEdx_CDC; ++loc_i)
+	    {
+	      locdEdx_CDC_amp+=locdEdxHitsTemp[loc_i].dE_amp;
+	      locdx_CDC_amp += locdEdxHitsTemp[loc_i].dx;
+	    }
+	  locdEdx_CDC_amp/=locdx_CDC_amp;
 	}
 
 	locdx_FDC = 0.0;
@@ -445,15 +489,77 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
 				  const DVector3 &pos,
 				  const DCDCTrackHit *hit,
-				  pair <double,double> &dedx) const{
+				  dedx_t &dedx) const{
   if (hit==NULL || hit->wire==NULL) return RESOURCE_UNAVAILABLE;
  
   double dx=CalcdXHit(mom,pos,hit->wire);
-  if (dx>0.){
-    // arc length and energy deposition
-    dedx.second=dx;
-    dedx.first=hit->dE; //GeV
 
+  if ((dx>0.) && (hit->dist >0.)){     // cannot cope w -ve doca
+
+    // arc length and energy deposition
+
+    // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
+    // dmax dcorr goodp0 goodp1 thisp0 thisp1
+    // 0: dmax ignore hits outside this doca
+    // 1: dcorr do not correct hits within this doca
+    // 2: goodp0 par0 for good reference run
+    // 3: goodp1 par1 for good reference run 
+    // 4: thisp0  par0 for this run
+    // 5: thisp1  par1 for this run
+
+
+
+
+    if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
+
+      dedx.dx=dx;
+      dedx.dE=hit->dE; //GeV
+      dedx.dE_amp=hit->dE_amp;
+      dedx.p=mom.Mag();
+
+      // amplitude correction for doca > dcorr     
+   
+      if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
+
+	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
+
+        double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
+
+        dedx.dE_amp = dedx.dE_amp * reference/this_run;
+
+      }
+
+      // integral correction
+
+      double dmax = CDC_GAIN_DOCA_PARS[0];
+      double dmin = CDC_GAIN_DOCA_PARS[1];
+
+      double reference;
+      double this_run;
+
+      if (hit->dist < dmin) {
+
+        reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
+        reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+
+        this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
+        this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
+
+      } else { 
+
+        reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
+        this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
+
+      }
+
+      dedx.dE = dedx.dE * reference/this_run;
+
+      // end of new integral correction
+
+      dedx.dEdx=dedx.dE/dx;
+      dedx.dEdx_amp=dedx.dE_amp/dx;
+
+    }
     return NOERROR;
   }
   
@@ -824,7 +930,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DTOFPoi
 		//Is unmatched horizontal paddle with only one hit above threshold
 		bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
 		int locBar = locTOFPoint->dHorizontalBar;
-		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
 		//Paddle midpoint
 		double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -849,7 +955,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DTOFPoi
 		//Is unmatched vertical paddle with only one hit above threshold
 		bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
 		int locBar = locTOFPoint->dVerticalBar;
-		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+		bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
 		//Paddle midpoint
 		double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -1995,7 +2101,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Horizontal(const DRefe
 	if(locReferenceTrajectory == nullptr)
 		return nullptr;
 
-	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->CenterHPlane); //a point on the TOF plane
+	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->Get_CenterHorizPlane()); //a point on the TOF plane
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_pos, proj_mom;
 	double locPathLength = 9.9E9, locFlightTime = 9.9E9;
@@ -2073,7 +2179,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Vertical(const DRefere
 		return nullptr;
 
 	// Evaluate matching solely by physical geometry of the paddle: NOT the distance along the paddle of the hit
-	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->CenterVPlane); //a point on the TOF plane
+	DVector3 tof_pos(0.0, 0.0, dTOFGeometry->Get_CenterVertPlane()); //a point on the TOF plane
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_pos, proj_mom;
 	double locPathLength = 9.9E9, locFlightTime = 9.9E9;
@@ -2371,7 +2477,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Horizontal(const vecto
   // Find the track projection to the TOF
   DVector3 proj_pos=extrapolations[0].position; 
   DVector3 proj_mom=extrapolations[0].momentum;
-  double dz=dTOFGeometry->CenterHPlane-proj_pos.z();
+  double dz=dTOFGeometry->Get_CenterHorizPlane()-proj_pos.z();
   double px=proj_mom.Px();
   double py=proj_mom.Py();
   double pz=proj_mom.Pz();
@@ -2453,7 +2559,7 @@ const DTOFPaddleHit* DParticleID::Get_ClosestTOFPaddleHit_Vertical(const vector<
   // Find the track projection to the TOF
   DVector3 proj_pos=extrapolations[0].position; 
   DVector3 proj_mom=extrapolations[0].momentum;
-  double dz=dTOFGeometry->CenterVPlane-proj_pos.z();
+  double dz=dTOFGeometry->Get_CenterVertPlane()-proj_pos.z();
   double px=proj_mom.Px();
   double py=proj_mom.Py();
   double pz=proj_mom.Pz();
@@ -2596,7 +2702,7 @@ bool DParticleID::PredictTOFPaddles(const DReferenceTrajectory *rt, unsigned int
 		return false;
 
 	// Find intersection with TOF plane given by tof_pos
-	DVector3 tof_pos(0,0,dTOFGeometry->CenterMPlane);
+	DVector3 tof_pos(0,0,dTOFGeometry->Get_CenterMidPlane());
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_mom,proj_pos;
 	if(rt->GetIntersectionWithPlane(tof_pos, norm, proj_pos, proj_mom, NULL,NULL,NULL,SYS_TOF) != NOERROR)
@@ -2858,7 +2964,7 @@ bool DParticleID::PredictTOFPaddles(const vector<DTrackFitter::Extrapolation_t>&
 		return false;
 
 	// Find intersection with TOF plane given by tof_pos
-	DVector3 tof_pos(0,0,dTOFGeometry->CenterMPlane);
+	DVector3 tof_pos(0,0,dTOFGeometry->Get_CenterMidPlane());
 	DVector3 norm(0.0, 0.0, 1.0); //normal vector to TOF plane
 	DVector3 proj_mom=extrapolations[0].momentum;
 	DVector3 proj_pos=extrapolations[0].position;
@@ -3247,7 +3353,7 @@ double DParticleID::Get_CorrectedHitTime(const DTOFPoint* locTOFPoint,
       //Is unmatched horizontal paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
       int locBar = locTOFPoint->dHorizontalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
 
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3269,7 +3375,7 @@ double DParticleID::Get_CorrectedHitTime(const DTOFPoint* locTOFPoint,
       //Is unmatched vertical paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
       int locBar = locTOFPoint->dVerticalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3300,7 +3406,7 @@ double DParticleID::Get_CorrectedHitEnergy(const DTOFPoint* locTOFPoint,
       //Is unmatched horizontal paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dHorizontalBarStatus == 1); //+x
       int locBar = locTOFPoint->dHorizontalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)
@@ -3320,7 +3426,7 @@ double DParticleID::Get_CorrectedHitEnergy(const DTOFPoint* locTOFPoint,
       //Is unmatched vertical paddle with only one hit above threshold
       bool locNorthIsGoodHit = (locTOFPoint->dVerticalBarStatus == 1); //+y
       int locBar = locTOFPoint->dVerticalBar;
-      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->FirstShortBar) || (locBar > dTOFGeometry->LastShortBar));
+      bool locIsDoubleEndedBar = ((locBar < dTOFGeometry->Get_FirstShortBar()) || (locBar > dTOFGeometry->Get_LastShortBar()));
       
       //Paddle midpoint
       double locPaddleMidPoint = 0.0; //is 0 except when is single-ended bar (22 & 23)

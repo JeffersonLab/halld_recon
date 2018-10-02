@@ -8,6 +8,7 @@ subdirs = [
 'BCAL_LEDonline',
 'BCAL_LED',
 'BCAL_LED_time',
+'CDC_dedx',
 'CDC_online',
 'DAQ_online',
 'FCAL_online',
@@ -39,6 +40,7 @@ subdirs = [
 'BCAL_inv_mass',
 'CDC_drift',
 'CDC_PerStrawReco',
+'CDC_roc_hits',
 'EPICS_dump',
 'CDC_Efficiency',
 'L1_online',
@@ -56,5 +58,5 @@ subdirs = [
 #'EVNT_online',
 
 
-sbms.OptionallyBuild(env, ['TAGH_doubles'])
+sbms.OptionallyBuild(env, ['TAGH_doubles','ST_ZEff'])
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)

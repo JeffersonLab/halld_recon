@@ -23,7 +23,7 @@ class DTrackFinder:public jana::JObject{
    public:
       JOBJECT_PUBLIC(DTrackFinder);
 
-      DTrackFinder(JEventLoop *loop);	// require JEventLoop in constructor
+      DTrackFinder();	// require JEventLoop in constructor
       virtual ~DTrackFinder();
 
       enum state_vector{
@@ -136,8 +136,6 @@ class DTrackFinder:public jana::JObject{
 
 
    private:
-      // Prohibit default constructor
-      DTrackFinder();
 
       TH1F *hCDCMatch_Axial, *hCDCMatch_Stereo, *hCDCMatch_PairD;
       TH1I *hFDCLayer, *hFDCLayerRaw, *hFDCLayerFirst;

@@ -28,11 +28,6 @@
 #define BIG 1.0e8
 #define EPS2 1.e-4
 #define EPS3 1.e-2
-#define BEAM_RADIUS  0.1 
-#define MAX_ITER 25
-#define MAX_CHI2 1e16
-#define CDC_BACKWARD_STEP_SIZE 0.5
-#define NUM_ITER 10
 #define Z_MIN -100.
 #define Z_MAX 370.0
 #define R_MAX 65.0
@@ -45,18 +40,14 @@
 // divisions by the speed of light
 #define TIME_UNIT_CONVERSION 3.33564095198152014e-02
 #define ONE_OVER_C TIME_UNIT_CONVERSION
-#define CDC_DRIFT_SPEED 55e-4
-#define VAR_S 0.09
 #define Q_OVER_PT_MAX 100. // 10 MeV/c
-#define MAX_PATH_LENGTH 500.
 #define TAN_MAX 10.
 
-
-#define MINIMUM_HIT_FRACTION 0.5
+#define MAX_CHI2 1e6
+//#define MINIMUM_HIT_FRACTION 0.5
 
 #define DELTA_R 1.0 // distance in r to extend the trajectory beyond the last point
 
-#define CDC_VARIANCE 0.0001
 #define FDC_CATHODE_VARIANCE 0.000225
 #define FDC_ANODE_VARIANCE 0.000225
 
@@ -64,20 +55,14 @@
 #define ONE_SIXTH  0.16666666666666667
 #define TWO_THIRDS 0.66666666666666667
 
-#define CHISQ_DIFF_CUT 20.
-#define MAX_DEDX 40.
-#define MIN_ITER 2
-#define MIN_CDC_ITER 0
-#define MIN_FDC_HITS 2 
-#define MIN_CDC_HITS 2 
+#define MIN_FDC_HITS 3 
+#define MIN_CDC_HITS 3 
 
 //#define DE_PER_STEP_WIRE_BASED 0.0005 // in GeV
 //#define DE_PER_STEP_TIME_BASED 0.0005 // in GeV
 #define DE_PER_STEP 0.001 // in GeV
 #define BFIELD_FRAC 0.0001
 #define MIN_STEP_SIZE 0.1 // in cm
-#define CDC_INTERNAL_STEP_SIZE 0.15 // in cm
-#define FDC_INTERNAL_STEP_SIZE 0.5 // in cm
 
 #define ELECTRON_MASS 0.000511 // GeV
 
@@ -184,18 +169,22 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   fit_status_t FitTrack(void);
   double ChiSq(fit_type_t fit_type, DReferenceTrajectory *rt, double *chisq_ptr=NULL, int *dof_ptr=NULL, vector<pull_t> *pulls_ptr=NULL);
 
+  unsigned int GetRatioMeasuredPotentialFDCHits(void) const {return my_fdchits.size()/potential_fdc_hits_on_track;}
+  unsigned int GetRatioMeasuredPotentialCDCHits(void) const {return my_cdchits.size()/potential_cdc_hits_on_track;}
+
   jerror_t AddCDCHit(const DCDCTrackHit *cdchit);
   jerror_t AddFDCHit(const DFDCPseudo *fdchit);
 
   jerror_t KalmanLoop(void);
-  virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,DMatrix5x1 &S,DMatrix5x5 &C,
-				 double &chisq,unsigned int &numdof);
+  virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
+				       DMatrix5x1 &S,DMatrix5x5 &C,
+				       double &chisq,unsigned int &numdof);
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
 
   kalman_error_t KalmanForwardCDC(double anneal,DMatrix5x1 &S,DMatrix5x5 &C,
-			    double &chisq,unsigned int &numdof);
+				  double &chisq,unsigned int &numdof);
   kalman_error_t KalmanCentral(double anneal_factor,DMatrix5x1 &S,
 			       DMatrix5x5 &C,DVector2 &xy,double &chisq,
 			       unsigned int &myndf);
@@ -222,6 +211,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double GetdEdx(double q_over_p,double K_rho_Z_over_A,double rho_Z_over_A,
 		 double rho_Z_over_A_LnI,double Z); 
   double GetEnergyVariance(double ds,double beta2,double K_rho_Z_over_A);
+
+
 
  protected:
   enum hit_status{
@@ -447,18 +438,10 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double m_ratio_sq; // .. and its square
   double two_m_e; // twice the electron mass
   double m_e_sq; // square of electron mass
-
-  // minimum drift time 
-  double mMinDriftTime;
-  unsigned int mMinDriftID;
   
   // Lorentz deflection parameters
   double LORENTZ_NR_PAR1,LORENTZ_NR_PAR2,LORENTZ_NZ_PAR1,LORENTZ_NZ_PAR2;
   
-  // CDC material properties
-  double dKRhoZoverA_CDC,dRhoZoverA_CDC,dLnI_CDC,dChi2c_factor_CDC;
-  double dChi2a_factor_CDC,dChi2a_corr_CDC,dZ_CDC;  
-
   // Moliere fraction F and functions that depend on it
   double MOLIERE_FRACTION,MOLIERE_RATIO1,MOLIERE_RATIO2;
   double MS_SCALE_FACTOR;
@@ -495,12 +478,13 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double TARGET_Z;
   bool ADD_VERTEX_POINT;
   unsigned int MIN_HITS_FOR_REFIT;
-  double THETA_CUT;
+  double THETA_CUT,MINIMUM_HIT_FRACTION;
   bool USE_PASS1_TIME_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;
   bool USE_FDC_DRIFT_TIMES;
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
+  double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
   bool USE_CDC_HITS,USE_FDC_HITS;
 
@@ -511,15 +495,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double ANNEAL_POW_CONST,ANNEAL_SCALE;
   double FORWARD_ANNEAL_POW_CONST,FORWARD_ANNEAL_SCALE;
 
-  // Min. momentum needed for fit before returning fitSuccess
-  double MIN_FIT_P;
-  // Maximum seed momentum
-  double MAX_SEED_P;
-  
-  // Minimum proton momentum
-  double MIN_PROTON_P;
-  // Minimum pion momentum
-  double MIN_PION_P;
   // minimum pt or p
   double PT_MIN;
   double Q_OVER_P_MAX;
@@ -535,6 +510,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 
   vector<vector<double> >max_sag;
   vector<vector<double> >sag_phi_offset;
+  
+  vector<vector<DCDCWire *> > cdcwires;
+  vector<double> cdc_rmid;
 
   // Parameters for dealing with FDC drift B dependence
   double FDC_DRIFT_BSCALE_PAR1,FDC_DRIFT_BSCALE_PAR2;
@@ -552,6 +530,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
   // FDC wire info
   vector<double>fdc_z_wires;
+  double fdc_package_size;
+  double fdc_rmax;
+  vector<double> fdc_rmin_packages;
 
   // start counter geom info
   vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic

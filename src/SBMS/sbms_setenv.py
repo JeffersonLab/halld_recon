@@ -97,13 +97,13 @@ def mk_setenv_csh(env):
 
 	# HALLD
 	str += '# HALLD\n'
-	str += 'setenv HALLD_HOME %s\n' % halld_home
+	str += 'setenv HALLD_RECON_HOME %s\n' % halld_home
 	str += 'setenv BMS_OSNAME %s\n' % env['OSNAME']
-	str += 'setenv PATH ${HALLD_HOME}/${BMS_OSNAME}/bin:${PATH}\n'
-	str += 'setenv JANA_PLUGIN_PATH ${HALLD_HOME}/${BMS_OSNAME}/plugins:${JANA_PLUGIN_PATH}\n'
+	str += 'setenv PATH ${HALLD_RECON_HOME}/${BMS_OSNAME}/bin:${PATH}\n'
+	str += 'setenv JANA_PLUGIN_PATH ${HALLD_RECON_HOME}/${BMS_OSNAME}/plugins:${JANA_PLUGIN_PATH}\n'
 	# python support
-	str += 'setenv %s ${HALLD_HOME}/${BMS_OSNAME}/lib:${%s}\n' %(LDLPV, LDLPV)
-	str += 'setenv PYTHONPATH ${HALLD_HOME}/${BMS_OSNAME}/lib/python:${PYTHONPATH}\n'
+	str += 'setenv %s ${HALLD_RECON_HOME}/${BMS_OSNAME}/lib:${%s}\n' %(LDLPV, LDLPV)
+	str += 'setenv PYTHONPATH ${HALLD_RECON_HOME}/${BMS_OSNAME}/lib/python:${PYTHONPATH}\n'
 	str += '\n'
 
 	# CCDB
@@ -136,13 +136,6 @@ def mk_setenv_csh(env):
 	str += 'setenv %s ${ROOTSYS}/lib:${%s}\n' % (LDLPV, LDLPV)
 	str += '\n'
 
-	# AMPTOOLS
-	amptools = os.getenv('AMPTOOLS')	
-	if amptools != None:
-		str += '# AMPTOOLS\n'
-		str += 'setenv AMPTOOLS %s\n' % amptools
-		str += '\n'
-
 	# CERNLIB
 	cern = os.getenv('CERN')
 	if cern != None:
@@ -169,17 +162,23 @@ def mk_setenv_csh(env):
 	
 	# EVIO
 	evioroot = os.getenv('EVIOROOT')
-        if evioroot != None:
+	if evioroot != None:
 		str += '# EVIO\n'
 		str += 'setenv EVIOROOT %s\n' % evioroot
 		str += 'setenv %s ${EVIOROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
 	
 	# ET
 	etroot = os.getenv('ETROOT')
-        if etroot != None:
+	if etroot != None:
 		str += '# ET\n'
-                str += 'setenv ETROOT %s\n' % etroot
-                str += 'setenv %s ${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
+		str += 'setenv ETROOT %s\n' % etroot
+		str += 'setenv %s ${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
+	
+	# SQLITECPP
+	sqlitecpp = os.getenv('SQLITECPP_HOME')
+	if sqlitecpp != None:
+		str += '# SQLITECPP\n'
+		str += 'setenv SQLITECPP_HOME %s\n' % sqlitecpp
 
 	# Make sure output directory exists
 	try:
@@ -271,13 +270,13 @@ def mk_setenv_bash(env):
 
 	# HALLD
 	str += '# HALLD\n'
-	str += 'export HALLD_HOME=%s\n' % halld_home
+	str += 'export HALLD_RECON_HOME=%s\n' % halld_home
 	str += 'export BMS_OSNAME=%s\n' % env['OSNAME']
-	str += 'export PATH=${HALLD_HOME}/${BMS_OSNAME}/bin:${PATH}\n'
-	str += 'export JANA_PLUGIN_PATH=${HALLD_HOME}/${BMS_OSNAME}/plugins:${JANA_PLUGIN_PATH}\n'
+	str += 'export PATH=${HALLD_RECON_HOME}/${BMS_OSNAME}/bin:${PATH}\n'
+	str += 'export JANA_PLUGIN_PATH=${HALLD_RECON_HOME}/${BMS_OSNAME}/plugins:${JANA_PLUGIN_PATH}\n'
 	# python support
-	str += 'export %s=${HALLD_HOME}/${BMS_OSNAME}/lib:${%s}\n' %(LDLPV, LDLPV)
-	str += 'export PYTHONPATH=${HALLD_HOME}/${BMS_OSNAME}/lib/python:${PYTHONPATH}\n'
+	str += 'export %s=${HALLD_RECON_HOME}/${BMS_OSNAME}/lib:${%s}\n' %(LDLPV, LDLPV)
+	str += 'export PYTHONPATH=${HALLD_RECON_HOME}/${BMS_OSNAME}/lib/python:${PYTHONPATH}\n'
 	str += '\n'
 
 	# CCDB
@@ -310,13 +309,6 @@ def mk_setenv_bash(env):
 	str += 'export %s=${ROOTSYS}/lib:${%s}\n' % (LDLPV, LDLPV)
 	str += '\n'
 
-	# AMPTOOLS
-	amptools = os.getenv('AMPTOOLS')	
-	if amptools != None:
-		str += '# AMPTOOLS\n'
-		str += 'export AMPTOOLS=%s\n' % amptools
-		str += '\n'
-
 	# CERNLIB
 	cern = os.getenv('CERN')
 	if cern != None:
@@ -342,18 +334,24 @@ def mk_setenv_bash(env):
 	str += '\n'
 
 	# EVIO
-        evioroot = os.getenv('EVIOROOT')
-        if evioroot != None:
+	evioroot = os.getenv('EVIOROOT')
+	if evioroot != None:
 		str += '# EVIO\n'
-        	str += 'export EVIOROOT=%s\n' % evioroot
-        	str += 'export %s=${EVIOROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
+		str += 'export EVIOROOT=%s\n' % evioroot
+		str += 'export %s=${EVIOROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
 
-        # ET
-        etroot = os.getenv('ETROOT')
-        if etroot != None:
+	# ET
+	etroot = os.getenv('ETROOT')
+	if etroot != None:
 		str += '# ET\n'
-        	str += 'export ETROOT=%s\n' % etroot
-        	str += 'export %s=${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
+		str += 'export ETROOT=%s\n' % etroot
+		str += 'export %s=${ETROOT}/lib:${%s}\n' % (LDLPV, LDLPV)
+
+	# SQLITECPP
+	sqlitecpp = os.getenv('SQLITECPP_HOME')
+	if sqlitecpp != None:
+		str += '# SQLITECPP\n'
+		str += 'export SQLITECPP_HOME=%s\n' % sqlitecpp
 
 	# Make sure output directory exists
 	try:

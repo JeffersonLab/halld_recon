@@ -46,37 +46,64 @@ jerror_t JEventProcessor_CDC_amp::init(void)
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC_amp")->cd();
 
+  time = new TH1I("time","CDC time (hits on tracks); raw time",200,0,2000);
 
+  a = new TH1I("a","CDC amplitude (hits on tracks);amplitude - pedestal",4096,0,4096);
 
-  asum = new TH1I("asum","CDC amplitude (all hits);amplitude - pedestal",4096,0,4096);
-  an = new TH2I("an","CDC amplitude vs n (all hits); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
+  an = new TH2I("an","CDC amplitude vs n (hits on tracks); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
 
-  atsum = new TH1I("atsum","CDC amplitude (hits on tracks);amplitude - pedestal",4096,0,4096);
-  atn = new TH2I("atn","CDC amplitude vs n (hits on tracks); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
-
-
-  attsum = new TH1I("attsum","CDC amplitude (tracks, theta 85-95 deg, z 50-80cm);amplitude - pedestal",4096,0,4096);
-  attn = new TH2I("attn","CDC amplitude vs n (tracks, theta 85-95 deg, z 50-80cm); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
+  atime = new TH2D("atime","CDC amplitude vs time (hits on tracks); raw time; amplitude - pedestal",200,0,2000,4096,0,4096);
 
   atheta = new TH2D("atheta","CDC amplitude vs theta (hits on tracks); theta; amplitude - pedestal",180,0,180,4096,0,4096);
 
 
-  qsum = new TH1D("qsum","charge (all hits);charge",1000,0,4e4);
-  qn = new TH2D("qn","charge vs n (all hits); n; charge",3522,0,3522,1000,0,4e4);
+  a30 = new TH1I("a30","CDC amplitude (tracks, theta 28-32 deg, z 52-78cm);amplitude - pedestal",4096,0,4096);
 
-  qtsum = new TH1D("qtsum","charge (hits on tracks);charge",1000,0,4e4);
-  qtn = new TH2D("qtn","charge vs n (hits on tracks); n; charge",3522,0,3522,400,0,4e4);
+  a30_100ns = new TH1I("a30_100ns","CDC amplitude, hits with drift time < 100ns (tracks, theta 28-32 deg, z 52-78cm);amplitude - pedestal",4096,0,4096);
 
-  qttsum = new TH1D("qttsum","charge (tracks, theta 85-95 deg, z 50-80 cm);charge",1000,0,4e4);
-  qttn = new TH2D("qttn","charge vs n (tracks, theta 85-95 deg, z 50-80 cm); n; charge",3522,0,3522,400,0,4e4);
+  an30_100ns = new TH2I("an30_100ns","CDC amplitude vs n, hits with drift time < 100ns (tracks, theta 28-32 deg, z 52-78cm); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
 
-  qtheta = new TH2D("qtheta","charge vs theta (hits on tracks); theta; charge",180,0,180,1000,0,4e4);
+  atime30 = new TH2D("atime30","CDC amplitude vs time (tracks, theta 28-32 deg, z 52-78cm); raw time; amplitude - pedestal",200,0,2000,4096,0,4096);
 
+  adoca30 = new TH2D("adoca30","CDC amplitude vs DOCA (tracks, theta 28-32 deg, z 52-78cm); DOCA (cm); amplitude - pedestal",200,0,1.0,4096,0,4096);
+
+
+
+  a45 = new TH1I("a45","CDC amplitude (tracks, theta 43-47 deg, z 52-78cm);amplitude - pedestal",4096,0,4096);
+
+  a45_100ns = new TH1I("a45_100ns","CDC amplitude, hits with drift time < 100ns (tracks, theta 43-47 deg, z 52-78cm); amplitude - pedestal",4096,0,4096);
+
+  an45_100ns = new TH2I("an45_100ns","CDC amplitude vs n, hits with drift time < 100ns (tracks, theta 43-47 deg, z 52-78cm); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
+
+  atime45 = new TH2D("atime45","CDC amplitude vs time (tracks, theta 43-47 deg, z 52-78cm); raw time; amplitude - pedestal",200,0,2000,4096,0,4096);
+
+  adoca45 = new TH2D("adoca45","CDC amplitude vs DOCA (tracks, theta 43-47 deg, z 52-78cm); DOCA (cm); amplitude - pedestal",200,0,1.0,4096,0,4096);
+
+
+
+
+
+
+  a90 = new TH1I("a90","CDC amplitude (tracks, theta 85-95 deg, z 52-78cm);amplitude - pedestal",4096,0,4096);
+
+  a90_100ns = new TH1I("a90_100ns","CDC amplitude, hits with drift time < 100ns (tracks, theta 85-95 deg, z 52-78cm);amplitude - pedestal",4096,0,4096);
+
+  an90_100ns = new TH2I("an90_100ns","CDC amplitude vs n, hits with drift time < 100ns (tracks, theta 85-95 deg, z 52-78cm); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
+
+  atime90 = new TH2D("atime90","CDC amplitude vs time (tracks, theta 85-95 deg, z 52-78cm); raw time; amplitude - pedestal",200,0,2000,4096,0,4096);
+
+  adoca90 = new TH2D("adoca90","CDC amplitude vs DOCA (tracks, theta 85-95 deg, z 52-78cm); DOCA (cm); amplitude - pedestal",200,0,1.0,4096,0,4096);
+
+  time90 = new TH1I("time90","CDC time (tracks, theta 85-95 deg, z 52-78cm); raw time",200,0,2000);
+
+  an90 = new TH2I("an90","CDC amplitude vs n (tracks, theta 85-95 deg, z 52-78cm); n; amplitude - pedestal",3522,0,3522,4096,0,4096);
+
+  xt90 = new TH2D("xt90","CDC DOCA vs time (tracks, theta 85-95 deg, z 52-78cm); time (ns); DOCA (cm)",400,0,1200,400,0,1.0);
 
 
   main->cd();
 
-	return NOERROR;
+  return NOERROR;
 }
 
 //------------------
@@ -87,6 +114,8 @@ jerror_t JEventProcessor_CDC_amp::brun(JEventLoop *eventLoop, int32_t runnumber)
 	// This is called whenever the run number changes
 
         if (runnumber<40000) ASCALE = 8;    // default for ASCALE before run 40,000 to be used if Df125config is not present
+
+        if (runnumber>41497) ASCALE = 8;    // default for ASCALE before run 40,000 to be used if Df125config is not present
 
 	return NOERROR;
 }
@@ -112,7 +141,7 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   int ring, straw, n;   // ring number, straw number within ring, straw number overall (1 to 3522)
 
-  uint32_t amp,ped;     // dcdcdigihits raw quantities: time, pedestal, amplitude, quality factor, overflow count
+  uint32_t amp,ped,t;     // dcdcdigihits raw quantities: time, pedestal, amplitude, quality factor, overflow count
 
   //scaling factors will be overridden by Df125Config if presqnt
   //  uint16_t ASCALE = 8;   //amplitude
@@ -128,90 +157,29 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
     return NOERROR;
 
-  // test whether this is simulated or real data (skip digihits for sim data)
-  int SIMULATION;
-  vector<const DMCThrown*> MCThrowns;
-  loop->Get(MCThrowns);
-  if (MCThrowns.empty()) SIMULATION = 0;
-  if (!MCThrowns.empty()) SIMULATION = 1;
+  // use only events with track vertex in the target region
+  const DVertex* locVertex  = NULL;
+  loop->GetSingle(locVertex);
+  double vertexz = locVertex->dSpacetimeVertex.Z();
+  if (vertexz < 52 || vertexz > 78) return NOERROR;
 
 
-  vector<const DCDCHit*> hits;
-  loop->Get(hits);
+  // // test whether this is simulated or real data (skip digihits for sim data)
+  // int SIMULATION;
+  // vector<const DMCThrown*> MCThrowns;
+  // loop->Get(MCThrowns);
+  // if (MCThrowns.empty()) SIMULATION = 0;
+  // if (!MCThrowns.empty()) SIMULATION = 1;
+
 
   const DCDCHit *hit = NULL;
   const DCDCDigiHit *digihit = NULL;
   const Df125CDCPulse *cp = NULL;
-  const Df125Config *config = NULL;
 
   int netamp = 0;
   float scaledped;
-  double charge;
 
-  int used[3522] = {0};
-
-
-  for (uint32_t i=0; i<hits.size(); i++) {
-
-    hit = hits[i];
-    netamp = 0;
-
-    if (!SIMULATION) {
-
-      digihit = NULL;
-      hit->GetSingle(digihit);
-      if (!digihit) continue;
-
-      cp = NULL; 
-      digihit->GetSingle(cp);
-      if (!cp) continue; //no CDCPulseData (happens occasionally)
-
-      if (cp->time_quality_bit) continue;
-      if (cp->overflow_count) continue;
-
-      config = NULL;
-      cp->GetSingle(config);
-
-      if (config) {  //defaults were set already in case config does not exist
-
-        PSCALE = 1<<config->PBIT;
-        ASCALE = 1<<config->ABIT;
-
-      } 
-
-      amp = cp->first_max_amp;
-      ped = cp->pedestal;
-
-      scaledped = ped*(float)PSCALE/(float)ASCALE;
-
-      netamp = (int)amp - (int)scaledped;
-
-    }
-
-    charge = hit->q;
-
-    ring     = (int)hit->ring;
-    straw    = (int)hit->straw;
-
-    n = straw_offset[ring] + straw;
- 
-    japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
-
-    if (netamp>0) {
-      asum->Fill(netamp);
-      an->Fill(n,netamp);
-    }
-
-    if (charge>0) {
-      qsum->Fill(charge);
-      qn->Fill(n,charge);
-    }
-
-    japp->RootFillUnLock(this); //ACQUIRE ROOT LOCK!!
-
-
-  }
-
+  int used[3523] = {0};
 
   //--------tracks---------------------------
   
@@ -236,9 +204,12 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
       hit = NULL;
       pulls[j].cdc_hit->GetSingle(hit);
 
+      double doca = pulls[j].d;
+      double tdrift = pulls[j].tdrift;
+
       netamp = 0;  
 
-      if (!SIMULATION) {
+      //   if (!SIMULATION) {
 
         digihit = NULL;
         hit->GetSingle(digihit);
@@ -253,19 +224,21 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         amp = cp->first_max_amp;
         ped = cp->pedestal;
+        t = cp->le_time;
 
         scaledped = ped*(float)PSCALE/(float)ASCALE;
 
         netamp = (int)amp - (int)scaledped;
 
-      }
+	//  }
+
+      if (netamp ==0) continue;
 
       ring     = (int)hit->ring;
       straw    = (int)hit->straw;
 
       n = straw_offset[ring] + straw;
- 
-      charge = hit->q;
+
 
       japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
@@ -273,41 +246,53 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         used[n] = 1;
 
-        if (netamp > 0) {
-          atsum->Fill(netamp);
-          atn->Fill(n,netamp);
-          atheta->Fill(theta,netamp);
-        }
+        a->Fill(netamp);
+        an->Fill(n,netamp);
+        atheta->Fill(theta,netamp);
+        atime->Fill((int)t,netamp);
+        time->Fill((int)t);
 
-        if (charge > 0) {
-          qtsum->Fill(charge);
-          qtn->Fill(n,charge);
-          qtheta->Fill(theta,charge);
-        }
+        if ((theta>85) && (theta<95)) {
 
-        double z = pulls[j].z;
+            a90->Fill(netamp);
+            atime90->Fill((int)t,netamp);
+            adoca90->Fill(doca,netamp);
 
-        if ((z>50) && (z<80) && (theta>85) && (theta<95)) {
+	    if (hit->t < 100.0) a90_100ns->Fill(netamp);
+	    if (hit->t < 100.0) an90_100ns->Fill(n,netamp);
 
-          if (netamp > 0) {
-            attsum->Fill(netamp);
-            attn->Fill(n,netamp);
-          }
+            an90->Fill(n,netamp);
+            time90->Fill((int)t);
+  	    xt90->Fill(tdrift,doca);
 
-          if (charge > 0) {
-            qttsum->Fill(charge);
-            qttn->Fill(n,charge);
-          }
-        }
+        } else if ((theta > 28.05) && (theta < 32)) {
 
-      }
+            a30->Fill(netamp);
+            atime30->Fill((int)t,netamp);
+            adoca30->Fill(doca,netamp);
+
+	    if (hit->t < 100.0) a30_100ns->Fill(netamp);
+	    if (hit->t < 100.0) an30_100ns->Fill(n,netamp);
+
+        } else if ((theta > 43.07) && (theta < 47)) {
+
+            a45->Fill(netamp);
+            atime45->Fill((int)t,netamp);
+            adoca45->Fill(doca,netamp);
+
+	    if (hit->t < 100.0) a45_100ns->Fill(netamp);
+	    if (hit->t < 100.0) an45_100ns->Fill(n,netamp);
+
+
+       }
+
+      } //if !used
+
 
       japp->RootFillUnLock(this); 
 
     }
   }
-
-
 
 	return NOERROR;
 }
@@ -329,17 +314,6 @@ jerror_t JEventProcessor_CDC_amp::erun(void)
 jerror_t JEventProcessor_CDC_amp::fini(void)
 {
 	// Called before program exit after event processing is finished.
-
-  if (!asum->GetEntries()) delete asum;
-  if (!an->GetEntries()) delete an;
-
-  if (!atsum->GetEntries()) delete atsum;
-  if (!atn->GetEntries()) delete atn;
-
-  if (!attsum->GetEntries()) delete attsum;
-  if (!attn->GetEntries()) delete attn;
-
-  if (!atheta->GetEntries()) delete atheta;
 
 
 	return NOERROR;

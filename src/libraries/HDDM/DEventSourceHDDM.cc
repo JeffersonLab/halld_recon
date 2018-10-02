@@ -75,7 +75,16 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
    geom = NULL;
    
    dRunNumber = -1;
-   
+	
+   if( ! gPARMS->Exists("JANA_CALIB_CONTEXT") ){
+   		cout << "============================================================" << endl;
+			cout << " WARNING: JANA_CALIB_CONTEXT not set. " << endl;
+			cout << "You are reading from an HDDM file which is most likely" << endl;
+			cout << "MC data. In most cases, you will want to set this parameter" << endl;
+			cout << "to get proper reconstruction." << endl;
+			cout << "(usually something like \"variation=mc\")" << endl;
+   		cout << "============================================================" << endl;
+	}
 }
 
 //----------------
@@ -423,6 +432,14 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DCereHit")
       return Extract_DCereHit(record, 
                      dynamic_cast<JFactory<DCereHit>*>(factory), tag);
+
+   if (dataClassName == "DTPOLHit")
+      return Extract_DTPOLHit(record,
+                     dynamic_cast<JFactory<DTPOLHit>*>(factory), tag);
+
+   if (dataClassName == "DTPOLTruthHit")
+      return Extract_DTPOLTruthHit(record,
+                     dynamic_cast<JFactory<DTPOLTruthHit>*>(factory), tag);
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -1240,8 +1257,8 @@ jerror_t DEventSourceHDDM::Extract_DCDCHit(JEventLoop* locEventLoop, hddm_s::HDD
             }
 	    else{  
 	      // for generated events (not folded-in background events) for which we
-	      // have no digi hits we simply scale q using Naomi's factor of 28.8
-	      hit->amp=hit->q/28.8;
+	      // have no digi hits return q
+	      hit->amp=hit->q;
 	    }
             hit->QF     = 0;
             if(iter->getCdcHitQFs().size() > 0) {
@@ -2565,6 +2582,87 @@ jerror_t DEventSourceHDDM::Extract_DPSCTruthHit(hddm_s::HDDM *record,
    return NOERROR;
 }
 
+//------------------
+// Etract_DTPOLHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DTPOLHit(hddm_s::HDDM *record,
+                                   JFactory<DTPOLHit>* factory, string tag)
+{
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+
+   vector<DTPOLHit*> data;
+
+   if (tag == "")
+   {
+      const hddm_s::TpolHitList &hits = record->getTpolHits();
+      hddm_s::TpolHitList::iterator iter;
+      for (iter = hits.begin(); iter != hits.end(); ++iter)
+      {
+         DTPOLHit *hit = new DTPOLHit;
+         hit->sector = iter->getSector();
+         hit->ring = iter->getRing();
+         hit->dE = iter->getDE();
+         hit->t = iter->getT();
+
+         data.push_back(hit);
+      }
+   }
+   else if (tag == "Truth")
+   {
+      const hddm_s::TpolTruthHitList &truthHits = record->getTpolTruthHits();
+      hddm_s::TpolTruthHitList::iterator iter;
+      for (iter = truthHits.begin(); iter != truthHits.end(); ++iter)
+      {
+         DTPOLHit *hit = new DTPOLHit;
+         hit->sector = iter->getSector();
+         hit->t = iter->getT();
+
+         data.push_back(hit);
+      }
+   }
+
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//------------------------
+// Extract_DTPOLTruthHit
+//------------------------
+jerror_t DEventSourceHDDM::Extract_DTPOLTruthHit(hddm_s::HDDM *record,                                                                      JFactory<DTPOLTruthHit>* factory, string tag)
+{
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+
+   vector<DTPOLTruthHit*> data;
+
+   const hddm_s::TpolTruthPointList &points = record->getTpolTruthPoints();
+   hddm_s::TpolTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter)
+   {
+      DTPOLTruthHit *hit = new DTPOLTruthHit;
+      hit->dEdx = iter->getDEdx();
+      hit->primary = iter->getPrimary();
+      hit->track = iter->getTrack();
+      hit->ptype = iter->getPtype();
+      hit->r = iter->getR();
+      hit->phi = iter->getPhi();
+      hit->t = iter->getT();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      hit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+
+      data.push_back(hit);
+   }
+
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
 
 Particle_t DEventSourceHDDM::IDTrack(float locCharge, float locMass) const
 {

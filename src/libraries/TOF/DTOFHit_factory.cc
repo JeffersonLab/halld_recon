@@ -27,11 +27,17 @@ using namespace jana;
 
 static bool COSMIC_DATA = false;
 
+int TOF_DEBUG = 0;
+
 //------------------
 // init
 //------------------
 jerror_t DTOFHit_factory::init(void)
 {
+
+  gPARMS->SetDefaultParameter("TOF:DEBUG_TOF_HITS", TOF_DEBUG,
+			      "Generate DEBUG output");
+
   USE_NEWAMP_4WALKCORR = 1;
   gPARMS->SetDefaultParameter("TOF:USE_NEWAMP_4WALKCORR", USE_NEWAMP_4WALKCORR,
 			      "Use Signal Amplitude for NEW walk correction with two fit functions");
@@ -42,7 +48,7 @@ jerror_t DTOFHit_factory::init(void)
   USE_NEW_4WALKCORR = 0;
   gPARMS->SetDefaultParameter("TOF:USE_NEW_4WALKCORR", USE_NEW_4WALKCORR,
 			      "Use NEW walk correction function with 4 parameters");
-  
+
   DELTA_T_ADC_TDC_MAX = 20.0; // ns
   //	DELTA_T_ADC_TDC_MAX = 30.0; // ns, value based on the studies from cosmic events
   gPARMS->SetDefaultParameter("TOF:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX, 
@@ -70,6 +76,7 @@ jerror_t DTOFHit_factory::init(void)
   else 
     tdc_adc_time_offset = 0.;
   
+  // default values, will override from DTOFGeometry
   TOF_NUM_PLANES = 2;
   TOF_NUM_BARS = 44;
   
@@ -98,6 +105,9 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     if(tofGeomVect.size()<1)  return OBJECT_NOT_AVAILABLE;
     const DTOFGeometry& tofGeom = *(tofGeomVect[0]);
     
+    TOF_NUM_PLANES = tofGeom.Get_NPlanes();
+    TOF_NUM_BARS = tofGeom.Get_NBars();
+    
     /// Read in calibration constants
     vector<double> raw_adc_pedestals;
     vector<double> raw_adc_gains;
@@ -118,7 +128,7 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       double hili = time_cut_values[1];
       TimeCenterCut = hili - (hili-loli)/2.;
       TimeWidthCut = (hili-loli)/2.;
-      cout<<"TOF Timing Cuts for PRUNING: "<<TimeCenterCut<<" +/- "<<TimeWidthCut<<endl;
+      //jout<<"TOF Timing Cuts for PRUNING: "<<TimeCenterCut<<" +/- "<<TimeWidthCut<<endl;
     }
 
     // load scale factors
@@ -211,6 +221,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     if(eventLoop->GetCalib("TOF/adc2E", raw_adc2E))
       jout << "Error loading /TOF/adc2E !" << endl;
 
+    // make sure we have one entry per channel
+	adc2E.resize(TOF_NUM_PLANES*TOF_NUM_BARS*2);
     for (unsigned int n=0; n<raw_adc2E.size(); n++){
       adc2E[n] = raw_adc2E[n];
     }
@@ -263,13 +275,27 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       //if (digihit->pulse_time == 0) continue; // Should already be caught
     }
     
-    if(CHECK_FADC_ERRORS && !locTTabUtilities->CheckFADC250_NoErrors(digihit->QF))
-      continue;
-    
+    if(CHECK_FADC_ERRORS && !locTTabUtilities->CheckFADC250_NoErrors(digihit->QF)){ 
+
+      if (TOF_DEBUG){
+	vector <const Df250PulseData *> pulses;
+	digihit->Get(pulses);
+	const Df250PulseData *p = pulses[0];
+	
+	cout<<"1: "<<eventnumber<<" P/B/E  "<<digihit->plane<<"/"<<digihit->bar<<"/"<<digihit->end
+	    <<" :::>  I/Ped/P/T   "<<digihit->pulse_integral<<"/"<<digihit->pedestal<<"/"<<digihit->pulse_peak<<"/"<<digihit->pulse_time
+	    <<" QF: 0x"<<hex<<digihit->QF<<dec
+	    <<"       roc/slot/chan "<<p->rocid<<"/"<<p->slot<<"/"<<p->channel
+	    << endl;
+      }
+
+      //continue;
+
+    }
     // Initialize pedestal to one found in CCDB, but override it
     // with one found in event if is available (?)
     // For now, only keep events with a correct pedestal
-    double pedestal = GetConstant(adc_pedestals, digihit);
+    double pedestal = GetConstant(adc_pedestals, digihit); // get mean pedestal from DB in case we need it
     double nsamples_integral = digihit->nsamples_integral;
     double nsamples_pedestal = digihit->nsamples_pedestal;
     
@@ -279,13 +305,35 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       continue;
     }
     
+    double pedestal4Amp = pedestal;
+    int AlreadyDone = 0;
     if( (digihit->pedestal>0) && locTTabUtilities->CheckFADC250_PedestalOK(digihit->QF) ) {
-      pedestal = digihit->pedestal * (double)(nsamples_integral)/(double)(nsamples_pedestal);
+      pedestal = digihit->pedestal * (double)(nsamples_integral)/(double)(nsamples_pedestal); // overwrite pedestal
     } else {
-      continue;
+
+      if (TOF_DEBUG){
+	vector <const Df250PulseData *> pulses;
+	digihit->Get(pulses);
+	const Df250PulseData *p = pulses[0];
+	
+	cout<<"2: "<<eventnumber<<" P/B/E  "<<digihit->plane<<"/"<<digihit->bar<<"/"<<digihit->end
+	    <<" :::>   I/Ped/P/T    "<<digihit->pulse_integral<<"/"<<digihit->pedestal<<"/"<<digihit->pulse_peak<<"/"<<digihit->pulse_time
+	    <<" QF: 0x"<<hex<<digihit->QF<<dec
+	    <<"       roc/slot/chan  "<<p->rocid<<"/"<<p->slot<<"/"<<p->channel
+ 	    << endl;
+	
+      }
+      
+      pedestal *= (double)(nsamples_integral); 
+      pedestal4Amp *= (double)nsamples_pedestal;
+      AlreadyDone = 1;
+      //continue;
     }
-    
-    //double single_sample_ped = pedestal/nsamples_pedestal;
+
+    if ((digihit->pulse_peak == 0) && (!AlreadyDone)){
+      pedestal = pedestal4Amp * (double)(nsamples_integral);
+      pedestal4Amp *=  (double)nsamples_pedestal;
+    }
     
     // Apply calibration constants here
     double A = (double)digihit->pulse_integral;
@@ -293,8 +341,23 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     T =  t_scale * T - GetConstant(adc_time_offsets, digihit) + t_base;
     double dA = A - pedestal;
     
-    if (dA<0) continue; 
+    if (dA<0) {
+      
+      if (TOF_DEBUG){
+	
+	vector <const Df250PulseData *> pulses;
+	digihit->Get(pulses);
+	const Df250PulseData *p = pulses[0];
+	
+	cout<<"3: "<<eventnumber<<"  "<<dA<<"   "<<digihit->plane<<"   "<<digihit->bar<<"   "<<digihit->end
+	    <<" :::>  "<<digihit->pulse_integral<<"  "<<digihit->pedestal<<"  "<<digihit->pulse_peak<<"   "<<digihit->pulse_time
+	    <<"       roc/slot/chan "<<p->rocid<<"/"<<p->slot<<"/"<<p->channel
+	    << endl;
 
+      }
+      // ok if Integral is below zero this is a good hint that we can not use this hit!
+      continue; 
+    }
     // apply Time cut to prune out of time hits
     if (TMath::Abs(T-TimeCenterCut)> TimeWidthCut ) continue;
     
@@ -303,7 +366,11 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->bar   = digihit->bar;
     hit->end   = digihit->end;
     hit->dE=dA;  // this will be scaled to energy units later
-    hit->Amp = (float)digihit->pulse_peak - (float)digihit->pedestal/(float)nsamples_pedestal;
+    hit->Amp = (float)digihit->pulse_peak - pedestal4Amp/(float)nsamples_pedestal;
+
+    if (hit->Amp<0){ // this happens if pulse_peak is reported as zero, resort to use scaled Integral value
+      hit->Amp = dA*0.163;
+    }
     
     if(COSMIC_DATA)
       hit->dE = (A - 55*pedestal); // value of 55 is taken from (NSB,NSA)=(10,45) in the confg file
@@ -417,7 +484,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   // Apply calibration constants to convert pulse integrals to energy units
   for (unsigned int i=0;i<_data.size();i++){
-    int id=88*_data[i]->plane + 44*_data[i]->end + _data[i]->bar-1;
+    int id=2*TOF_NUM_BARS*_data[i]->plane + TOF_NUM_BARS*_data[i]->end + _data[i]->bar-1;
     _data[i]->dE *= adc2E[id];
     //cout<<id<<"   "<< adc2E[id]<<"      "<<_data[i]->dE<<endl;
   }
@@ -488,13 +555,13 @@ void DTOFHit_factory::FillCalibTable(tof_digi_constants_t &table, vector<double>
     // reset the table before filling it
     table.clear();
 
-    for(int plane=0; plane<tofGeom.NLAYERS; plane++) {
-        int plane_index=2*TOF_NUM_BARS*plane;
-        table.push_back( vector< pair<double,double> >(TOF_NUM_BARS) );
-        for(int bar=0; bar<TOF_NUM_BARS; bar++) {
+    for(int plane=0; plane<tofGeom.Get_NPlanes(); plane++) {
+        int plane_index=2*tofGeom.Get_NBars()*plane;
+        table.push_back( vector< pair<double,double> >(tofGeom.Get_NBars()) );
+        for(int bar=0; bar<tofGeom.Get_NBars(); bar++) {
             table[plane][bar] 
                 = pair<double,double>(raw_table[plane_index+bar],
-                        raw_table[plane_index+TOF_NUM_BARS+bar]);
+                        raw_table[plane_index+tofGeom.Get_NBars()+bar]);
             channel+=2;	      
         }
     }
@@ -682,7 +749,7 @@ return the_table.at(the_cell).second;
 }
 */
 double DTOFHit_factory::CalcWalkCorrIntegral(DTOFHit* hit){
-  int id=88*hit->plane+44*hit->end+hit->bar-1;
+  int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double A=hit->dE;
   double C0=timewalk_parameters[id][1];
   double C1=timewalk_parameters[id][1];
@@ -704,7 +771,7 @@ double DTOFHit_factory::CalcWalkCorrIntegral(DTOFHit* hit){
 
 double DTOFHit_factory::CalcWalkCorrAmplitude(DTOFHit* hit){
 
-  int id=88*hit->plane+44*hit->end+hit->bar-1;
+  int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double A  = hit->Amp;
   double C0 = timewalk_parameters_AMP[id][0];
   double C1 = timewalk_parameters_AMP[id][1];
@@ -735,7 +802,7 @@ double DTOFHit_factory::CalcWalkCorrAmplitude(DTOFHit* hit){
 
 double DTOFHit_factory::CalcWalkCorrNEW(DTOFHit* hit){
  
-  int id=88*hit->plane+44*hit->end+hit->bar-1;
+  int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double ADC=hit->dE;
   double A = timewalk_parameters_NEW[id][0];
   double B = timewalk_parameters_NEW[id][1];
@@ -760,7 +827,7 @@ double DTOFHit_factory::CalcWalkCorrNEW(DTOFHit* hit){
 
 double DTOFHit_factory::CalcWalkCorrNEWAMP(DTOFHit* hit){
  
-  int id=88*hit->plane+44*hit->end+hit->bar-1;
+  int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double ADC=hit->Amp;
   double loc = timewalk_parameters_NEWAMP[id][8];
   int offset = 0;
