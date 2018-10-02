@@ -80,6 +80,8 @@
 		tpol_occ->SetFillColor(kOrange);
 		tpol_occ->SetLineWidth(5);
 		tpol_occ->SetLineColor(kBlack);
+		double max = tpol_occ->GetBinContent(10)*1.5;
+		tpol_occ->GetYaxis()->SetRangeUser(0., max);
 		tpol_occ->Draw("HIST");
 	}
 
