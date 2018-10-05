@@ -1121,6 +1121,14 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     // update the parameters for the track...
     if (fitter->GetChisq()<0) status=DTrackFitter::kFitFailed;
 
+    // if the fit flips the charge of the track, then this is bad as well
+    if(q != fitter->GetFitParameters().charge())
+        status=DTrackFitter::kFitFailed; 
+
+    // if we can't refit the track, it is likely of poor quality, so stop here and do not add the hypothesis
+    if(status == DTrackFitter::kFitFailed)
+        return;
+
     if (status==DTrackFitter::kFitSuccess){
       timebased_track->chisq = fitter->GetChisq();
       timebased_track->Ndof = fitter->GetNdof();
