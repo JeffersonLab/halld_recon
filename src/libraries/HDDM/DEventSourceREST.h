@@ -95,6 +95,8 @@ class DEventSourceREST:public JEventSource
 	bool USE_CCDB_BCAL_COVARIANCE;
 	bool USE_CCDB_FCAL_COVARIANCE;
 	
+	bool PRUNE_DUPLICATE_TRACKS;
+		
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;
 

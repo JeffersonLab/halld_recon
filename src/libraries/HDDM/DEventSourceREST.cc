@@ -36,6 +36,11 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
       // One might want to throw an exception or report an error here.
       fin = NULL;
    }
+   
+   PRUNE_DUPLICATE_TRACKS = true;
+   gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
+   								"Turn on/off cleaning up multiple tracks with the same hypothesis from the same candidate. Set to \"0\" to turn off (it's on by default)");
+
 }
 
 //----------------
@@ -1125,6 +1130,84 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       }
 
       data.push_back(tra);
+   }
+   
+   if( PRUNE_DUPLICATE_TRACKS && (data.size() > 1) ) {
+   		//cout << "IN PRUNING CODE" << endl;
+   		//cout << "NTRACKS = " << data.size() << endl;
+		
+		//cout << "LIST" << endl;
+		//for( unsigned int i=0; i<data.size(); i++) 
+			//cout << "TRACK " << data[i]->candidateid << " " << data[i]->PID() << endl;
+
+   		//vector< vector<DTrackTimeBased*>::iterator > indices_to_erase;
+   		vector< int > indices_to_erase;
+   		vector<DTrackTimeBased*>::iterator it = data.begin();
+   		
+   		/*
+   		for( unsigned int i=0; i<data.size()-1; i++, it++ ) {
+			//if(find(items_to_erase.begin(), items_to_erase.end(), it) != items_to_erase.end())
+			//	continue;
+
+   			// look through the remaining tracks for duplicates
+   			// (1) if there is a track with the same candidate/PID and worse chi^2, reject that track
+   			// (2) if there is a track with the same candidate/PID and better chi^2, reject this track
+   			vector<DTrackTimeBased*>::iterator it2 = it;
+   			it2++;  // start at the i+1 file
+   			while(it2 != data.end()) {
+   				//if(find(items_to_erase.begin(), items_to_erase.end(), it2) != items_to_erase.end())
+				//	continue;
+				
+				if( ((*it)->candidateid == (*it2)->candidateid) 
+					&& ((*it)->PID() == (*it2)->PID()) ) {  // is a duplicate track
+					// pick which track to delete
+					if((*it)->chisq < (*it2)->chisq) {
+						it2 = data.erase(it2);
+					 } else	{	
+						it = data.erase(it);
+					 }
+				} else {   // move on to the next one
+					it2++;
+				}	
+   			}
+   			*/
+   			
+   		 for( unsigned int i=0; i<data.size()-1; i++ ) {
+ 			//if(find(indices_to_erase.begin(), indices_to_erase.end(), i) != indices_to_erase.end())
+			//	continue;
+
+  			for( unsigned int j=i+1; j<data.size(); j++ ) {
+   			//cout << "  j = " << j << endl;
+				if(find(indices_to_erase.begin(), indices_to_erase.end(), j) != indices_to_erase.end())
+					continue;
+					
+				//cout << "COMPARE " << (*it)->candidateid << " " << (*it2)->candidateid
+				//		<< "   " << (*it)->PID() << " " << (*it2)->PID() << endl;
+				//cout << "COMPARE " << (*it)->candidateid << " " << (*it)->PID()
+				//		<< "   " << (*it2)->candidateid << " " << (*it2)->PID() << endl;
+				if( (data[i]->candidateid == data[j]->candidateid) 
+					&& (data[i]->PID() == data[j]->PID()) ) {  // is a duplicate track
+					//cout << "FOUND MATCH:  " << (*it)->chisq << " " << (*it2)->chisq << endl;
+					if(data[i]->chisq < data[j]->chisq) {
+						//cout << "ADD TRACK " << (*it2)->candidateid << " " << (*it2)->PID() << endl;
+						indices_to_erase.push_back(j);
+					 } else	{	
+						//cout << "ADD TRACK " << (*it)->candidateid << " " << (*it)->PID() << endl;
+						indices_to_erase.push_back(i);	
+					}	
+				}
+			}
+   		}
+		
+		// create the new set of tracks
+		vector<DTrackTimeBased*> new_data;
+		for( unsigned int i=0; i<data.size(); i++ ) {
+			if(find(indices_to_erase.begin(), indices_to_erase.end(), i) != indices_to_erase.end())
+				continue;
+
+			new_data.push_back(data[i]);
+		}
+		data = new_data;
    }
 
    // Copy into factory
