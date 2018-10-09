@@ -1126,8 +1126,10 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
         status=DTrackFitter::kFitFailed; 
 
     // if we can't refit the track, it is likely of poor quality, so stop here and do not add the hypothesis
-    if(status == DTrackFitter::kFitFailed)
+    if(status == DTrackFitter::kFitFailed) {
+        delete timebased_track;
         return;
+    }
 
     if (status==DTrackFitter::kFitSuccess){
       timebased_track->chisq = fitter->GetChisq();
