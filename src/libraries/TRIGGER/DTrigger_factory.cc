@@ -1,5 +1,32 @@
 #include "DTrigger_factory.h"
 #include <bitset>
+#include "BCAL/DBCALHit.h"
+#include "FCAL/DFCALHit.h"
+
+
+//------------------
+// init
+//------------------
+jerror_t DTrigger_factory::init(void)
+{
+	EMULATE_FCAL_LED_TRIGGER = false;
+	EMULATE_BCAL_LED_TRIGGER = false;
+	
+	BCAL_LED_NHITS_THRESHOLD = 200;
+	FCAL_LED_NHITS_THRESHOLD = 200;
+	
+	
+	string locUsageString = "Set BCAL LED front panel trigger bits if such events leak into other triggers (1/0, off by default)";
+	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_BCAL_LED_TRIGGER", EMULATE_BCAL_LED_TRIGGER, locUsageString);
+	locUsageString = "Set FCAL LED front panel trigger bits if such events leak into other triggers (1/0, off by default)";
+	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_FCAL_LED_TRIGGER", EMULATE_FCAL_LED_TRIGGER, locUsageString);
+	
+
+	return NOERROR;
+}
+
+
+
 
 //------------------
 // evnt
@@ -15,8 +42,36 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
 	//SET LEVEL-1 TRIGGER INFO
 	if(locL1Trigger != NULL)
 	{
-		locTrigger->Set_L1TriggerBits(locL1Trigger->trig_mask);
+		uint32_t locFpTrigMask = locL1Trigger->fp_trig_mask;
+	
+		// Sometimes the BCAL/FCAL LED trigger also trip the main physics trigger,
+		// due to hardware problems, afterglow, etc...
+		// These events are generally easy to identify due to their extremely large
+		// occupancies in the calorimeters.  So, we allow the option to exclude
+		// these events by setting the trigger bits when it looks like they are firing
+		
+		if(EMULATE_BCAL_LED_TRIGGER) {
+		    vector<const DBCALHit *> bcal_hits;
+			locEventLoop->Get(bcal_hits);
+			
+			if( bcal_hits.size() > BCAL_LED_NHITS_THRESHOLD) {
+				// naively, not sure if this due to the up- or down-stream LEDs, so pick the upstream one
+				locFpTrigMask |= 0x100;
+			}
+		}
+		
+		if(EMULATE_FCAL_LED_TRIGGER) {
+		    vector<const DFCALHit *> fcal_hits;
+			locEventLoop->Get(fcal_hits);
+			
+			if( fcal_hits.size() > FCAL_LED_NHITS_THRESHOLD) {
+				locFpTrigMask |= 0x004;
+			}
+		}
+		
+		locTrigger->Set_L1FrontPanelTriggerBits(locFpTrigMask);
 		locTrigger->Set_L1FrontPanelTriggerBits(locL1Trigger->fp_trig_mask);
+
 	}
 	else 
     {
