@@ -671,9 +671,9 @@ class FitWrapper{
 			latex.DrawLatex(0.3, max*0.565, str);
 		}
 
-		// Only try adding to time series if we have more than 20 particles in peak
+		// Only try adding to time series if we have more than 2000 particles in peak
 		cout << "====== pi0: I="<<I<<"  mean: " << pars[1] << " +/- " << errs[1] << "   sigma: "<< pars[2] << " +/- " << errs[2] << endl;
-		if( (I>1000.0) && (errs[1]<0.1*pars[1]) && (errs[2]<0.2*pars[2]) ){
+		if( (I>2000.0) && (errs[1]<0.07*pars[1]) && (errs[2]<0.2*pars[2]) ){
 			// Add to time series
 			InsertSeriesMassFit("pi0", pars[1], pars[2], errs[1], errs[2], unix_time);
 			
@@ -771,9 +771,9 @@ class FitWrapper{
 				latex.DrawLatex(1.4, max*0.565, str);
 			}
 
-			// Only try adding to time series if we have more than 20 particles in peak
+			// Only try adding to time series if we have more than 200 particles in peak
 			cout << "====== phi: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
-			if( (I>100.0) && (errs_out[1]<0.1*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
+			if( (I>200.0) && (errs_out[1]<0.07*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
 
 				// Add to time series
 				InsertSeriesMassFit("phi", pars_out[1], pars_out[2], errs_out[1], errs_out[2], unix_time);
@@ -848,9 +848,9 @@ class FitWrapper{
 				latex.DrawLatex(1.010, max*0.565, str);
 			}
 
-			// Only try adding to time series if we have more than 20 particles in peak
+			// Only try adding to time series if we have more than 1000 particles in peak
 			cout << "====== rho: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
-			if( (I>200.0) && (errs_out[1]<0.1*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
+			if( (I>1000.0) && (errs_out[1]<0.07*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
 				// Add to time series
 				InsertSeriesMassFit("rho", pars_out[1], pars_out[2], errs_out[1], errs_out[2], unix_time);
 					
@@ -924,9 +924,9 @@ class FitWrapper{
 				latex.DrawLatex(1.010, max*0.565, str);
 			}
 
-			// Only try adding to time series if we have more than 20 particles in peak
+			// Only try adding to time series if we have more than 200 particles in peak
 			cout << "====== omega: I="<<I<<"  mean: " << pars_out[1] << " +/- " << errs_out[1] << "   sigma: "<< pars_out[2] << " +/- " << errs_out[2] << endl;
-			if( (I>100.0) && (errs_out[1]<0.1*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
+			if( (I>200.0) && (errs_out[1]<0.07*pars_out[1]) && (errs_out[2]<0.2*pars_out[2]) ){
 				// Add to time series
 				InsertSeriesMassFit("omega", pars_out[1], pars_out[2], errs_out[1], errs_out[2], unix_time);
 					
