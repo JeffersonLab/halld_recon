@@ -172,7 +172,7 @@
 		}
 		
 		// Only write out once every 100000 objects
-		if(digihits_trig1->Integral()>100000){
+		if(digihits_trig4->Integral()>100000){
 			if(unix_time!=0.0) ss<<" "<<(uint64_t)(unix_time*1.0E9);  // time is in units of ns
 			InsertSeriesData( ss.str() );
 		
