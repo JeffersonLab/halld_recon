@@ -46,6 +46,7 @@ class DApplication:public JApplication{
 		DLorentzDeflections *GetLorentzDeflections(unsigned int run_number=1);
 		DGeometry* GetDGeometry(unsigned int run_number);
 		DRootGeom *GetRootGeom(unsigned int run_number);
+		void CopySQLiteToLocalDisk(void);
 
 		pthread_rwlock_t* GetReadWriteLock(string &name) {
 			return rw_locks.count( name ) == 0 ? nullptr : rw_locks[name];
