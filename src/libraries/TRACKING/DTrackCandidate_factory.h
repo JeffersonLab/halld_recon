@@ -85,6 +85,7 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   jerror_t GetPositionAndMomentum(const DTrackCandidate *cand,double Bz,
 				  const DVector3 &origin,DVector3 &pos,
 				  DVector3 &mom);
+  jerror_t GetPositionAndMomentum(DHelicalFit &fit,DVector3 &pos,DVector3 &mom) const;
 
   void UpdatePositionAndMomentum(DTrackCandidate *can,const DFDCPseudo *fdchit,
 				 DHelicalFit &fit,double Bz_avg,int axial_id);

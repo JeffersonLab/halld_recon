@@ -881,6 +881,36 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   return NOERROR;
 }
 
+// Get position and momentum at doca to beam line
+jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
+							 DVector3 &pos,
+							 DVector3 &mom) const{
+  // Find position at doca to beam line
+  double phi0=atan2(-fit.x0,fit.y0);
+  if (fit.h<0) phi0+=M_PI;
+  double sinphi0=sin(phi0);
+  double sign=(sinphi0>0)?1.:-1.;
+  if (fabs(sinphi0)<1e-8) sinphi0=sign*1e-8;
+  double cosphi0=cos(phi0);
+  double D=FactorForSenseOfRotation*fit.h*fit.r0-fit.x0/sinphi0;
+  double x=-D*sinphi0;
+  double y=D*cosphi0;
+  double dx=pos.x()-x;
+  double dy=pos.y()-y;
+  double ratio=sqrt(dx*dx+dy*dy)/(2.*fit.r0);
+  double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
+  pos.SetXYZ(x,y,pos.z()-phi_s*fit.tanl*fit.r0);
+  
+  pos.Print();
+  
+  // momentum at POCA to beam line
+  double Bz=fabs(bfield->GetBz(x,y,pos.z()));
+  double pt=0.003*Bz*fit.r0;
+  mom.SetXYZ(pt*cosphi0,pt*sinphi0,pt*fit.tanl);
+    
+  return NOERROR;
+}
+
 
 // Get the position and momentum at a fixed radius from the beam line
 jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
@@ -1460,6 +1490,10 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      }
      fit.tanl=tan(M_PI_2-theta);
      if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
+       fit.FindSenseOfRotation();
+       Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
+       can->setPID(locPID);
+
        if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
 				  pos,mom)==NOERROR){
 	 // FDC hit
@@ -1471,14 +1505,10 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	 double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
 	 
 	 pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	 Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-	 can->setPID(locPID);
        }
        else{
-	 //Set the charge for the stepper 
-	 stepper->SetCharge(q);
-	 // Swim to a radius just outside the start counter
-	 stepper->SwimToRadius(pos,mom,9.5,NULL);   
+	 // Get position and momentum at doca to beam line
+	 GetPositionAndMomentum(fit,pos,mom);
        }
        // circle parameters
        can->rc=fit.r0;
@@ -1488,7 +1518,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
        can->chisq=fit.chisq;
        can->Ndof=fit.ndof;
        can->setMomentum(mom);
-	 can->setPosition(pos);
+       can->setPosition(pos);
      }
      else{
        //_DBG_ << endl;
@@ -1639,6 +1669,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 		 pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);	    
 	       }
 	       else{
+		 _DBG_ << endl;
 		 mom=fdccan->momentum();
 		 pos=fdccan->position();
 	       }
@@ -1939,7 +1970,8 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
 	    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
 		Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
 		can->setPID(locPID);
-	  }    
+	  } 
+	  else _DBG_ << endl;
 	  can->chisq=fit.chisq;
 	  can->Ndof=fit.ndof;
 	  can->setMomentum(mom);
@@ -2064,6 +2096,7 @@ void DTrackCandidate_factory::MatchMethod6(DTrackCandidate *can,
   
       if (DEBUG_LEVEL>0) _DBG_ << "... matched stray CDC hits ..." << endl;
     }
+    else _DBG_ << endl;
   } // match at least one cdc hit
 }
 
@@ -2207,6 +2240,7 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 		double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
 		pos.SetZ(firsthit->wire->origin.z()-sperp*fit.tanl);
 	      }
+	      else _DBG_ << endl;
 	    }
 	    else{
 	      // put z position just upstream of the first hit in z
@@ -3314,6 +3348,8 @@ void DTrackCandidate_factory::UpdatePositionAndMomentum(DTrackCandidate *can,
     can->setPosition(pos);
   }
   else if (axial_id>=0){
+    _DBG_ << endl;
+
     // if the previous attempt to get the position at r^2=90 did not work,
     // then the circle after the refit does not intercept this radius.  
     // Use these previous estimates before the refit for the track parameters
