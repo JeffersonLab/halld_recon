@@ -2498,38 +2498,43 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 		double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
 		
 		my_pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	       	
-		DTrackCandidate *can = new DTrackCandidate;
-		// circle parameters
-		can->rc=fit.r0;
-		can->xc=fit.x0;
-		can->yc=fit.y0;
-
-		can->setPID((q > 0.0) ? PiPlus : PiMinus);
-		can->setMomentum(my_mom);
-		can->setPosition(my_pos);
-		can->chisq=fit.chisq;
-		can->Ndof=fit.ndof;
-		
-		// Add hits as associated objects
-		for (unsigned int m=0;m<segments.size();m++){
-		  for (unsigned int n=0;n<segments[m]->hits.size();n++){
-		    const DFDCPseudo *fdchit=segments[m]->hits[n];
-		    can->AddAssociatedObject(fdchit);
-		  }
-		}
-		for (unsigned int n=0;n<cdchits.size();n++){
-		  used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-		  can->AddAssociatedObject(cdchits[n]);
-		}
-		
-		trackcandidates.push_back(can);		     
-
-		if (DEBUG_LEVEL>0) _DBG_ << "Matched using Method #8" <<endl;
-
-		return true;
 	      }
-	      else _DBG_ << endl;
+	      else{
+		// Get position and momentum at doca to beam line
+		GetPositionAndMomentum(fit,my_pos,my_mom);
+		_DBG_ << endl;
+		my_pos.Print();
+	      }
+	       	
+	      DTrackCandidate *can = new DTrackCandidate;
+	      // circle parameters
+	      can->rc=fit.r0;
+	      can->xc=fit.x0;
+	      can->yc=fit.y0;
+	      
+	      can->setPID((q > 0.0) ? PiPlus : PiMinus);
+	      can->setMomentum(my_mom);
+	      can->setPosition(my_pos);
+	      can->chisq=fit.chisq;
+	      can->Ndof=fit.ndof;
+		
+	      // Add hits as associated objects
+	      for (unsigned int m=0;m<segments.size();m++){
+		for (unsigned int n=0;n<segments[m]->hits.size();n++){
+		  const DFDCPseudo *fdchit=segments[m]->hits[n];
+		  can->AddAssociatedObject(fdchit);
+		}
+	      }
+	      for (unsigned int n=0;n<cdchits.size();n++){
+		used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
+		can->AddAssociatedObject(cdchits[n]);
+	      }
+	      
+	      trackcandidates.push_back(can);		     
+	      
+	      if (DEBUG_LEVEL>0) _DBG_ << "Matched using Method #8" <<endl;
+	      
+	      return true;
 	    } // circle fit
 	  } // match criterion
 	} // check that fdc candidate has not already been matched
@@ -3082,26 +3087,8 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 						  myfdchits[0]->xy.Y(),
 						  myfdchits[0]->wire->origin.z());
 	    if (cdchits.size()) myorigin=cdchits[0]->wire->origin;
-	    DVector3 pos=can->position(),mom;
+	    DVector3 pos=fdccan->position(),mom;
 	    if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)==NOERROR){
-	      // circle parameters
-	      can->rc=fit.r0;
-	      can->xc=fit.x0;
-	      can->yc=fit.y0;
-	      
-	      // Add additional fdc hits to the track as associated objects
-	      for (unsigned int m=0;m<segments.size();m++){
-		for (unsigned int n=0;n<segments[m]->hits.size();n++){
-		  can->AddAssociatedObject(segments[m]->hits[n]);
-		}
-	      }
-	      can->chisq=fit.chisq;
-	      can->Ndof=fit.ndof;
-	      Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-	      can->setPID(locPID);
-	      can->setMomentum(mom);
-	       
-	      // FDC hit
 	      const DFDCPseudo *fdchit=myfdchits[0];
 	      // Find the z-position at the new position in x and y
 	      DVector2 xy0(pos.X(),pos.Y());
@@ -3109,18 +3096,38 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	      double ratio=(fdchit->xy-xy0).Mod()/tworc;
 	      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
 	      pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	      
-	      can->setPosition(pos);
-	      
-	      forward_matches[i]=1;
-	      num_fdc_cands_remaining--;
-	      
-	      if (DEBUG_LEVEL>0){
-		_DBG_ << "... Found match!" << endl;
-	      }
-	      return true;
 	    }
-	    else _DBG_ << endl;
+	    else{
+	      _DBG_ << endl;
+	      // Get position and momentum at doca to beam line
+	      GetPositionAndMomentum(fit,pos,mom);
+	    }
+
+	    // circle parameters
+	    can->rc=fit.r0;
+	    can->xc=fit.x0;
+	    can->yc=fit.y0;
+	    
+	    // Add additional fdc hits to the track as associated objects
+	    for (unsigned int m=0;m<segments.size();m++){
+	      for (unsigned int n=0;n<segments[m]->hits.size();n++){
+		can->AddAssociatedObject(segments[m]->hits[n]);
+	      }
+	    }
+	    can->chisq=fit.chisq;
+	    can->Ndof=fit.ndof;
+	    Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
+	    can->setPID(locPID);
+	    can->setMomentum(mom);
+	    can->setPosition(pos);
+	    
+	    forward_matches[i]=1;
+	    num_fdc_cands_remaining--;
+	    
+	    if (DEBUG_LEVEL>0){
+	      _DBG_ << "... Found match!" << endl;
+	    }
+	    return true;
 	  } // circle fit	   
 	} // look for packages downstream of those attached to candidate
       } // if we have fdc hits in the existing track candidate
@@ -3171,48 +3178,49 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	  // recompute position and momentum
 	  fit.tanl=tan(M_PI_2-theta);
 	  DVector3 myorigin=cdchits[0]->wire->origin;
-	  DVector3 pos=can->position(),mom;
+	  DVector3 pos=fdccan->position(),mom;
 	  if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)==NOERROR){
-	    // circle parameters
-	    can->rc=fit.r0;
-	    can->xc=fit.x0;
-	    can->yc=fit.y0;
- 
-	    // Add additional fdc hits to the track as associated objects
-	    for (unsigned int m=0;m<segments.size();m++){
-	      for (unsigned int n=0;n<segments[m]->hits.size();n++){
-		can->AddAssociatedObject(segments[m]->hits[n]);
-	      }
-	    }
-
 	    // FDC hit
 	    const DFDCPseudo *fdchit=segments[0]->hits[0];
 	    // Find the z-position at the new position in x and y
 	    DVector2 xy0(pos.X(),pos.Y());
 	    double tworc=2.*fit.r0;
 	    double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	    double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	    
+	    double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;	    
 	    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	    can->setPosition(pos);
+	  }
+	  else{
+	    _DBG_ << endl;
+	    // Get position and momentum at doca to beam line
+	    GetPositionAndMomentum(fit,pos,mom);
+	  }
 
-	    can->chisq=fit.chisq;
-	    can->Ndof=fit.ndof;
-		Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-		can->setPID(locPID);
-	    can->setMomentum(mom);
-
-	    forward_matches[i]=1;
-	    num_fdc_cands_remaining--;
-	    
-	    if (DEBUG_LEVEL>0){
-	      _DBG_ << "... Found match!" << endl;
-	    }
-	    return true;
+	  // circle parameters
+	  can->rc=fit.r0;
+	  can->xc=fit.x0;
+	  can->yc=fit.y0;
 	  
-	  } else _DBG_ <<endl;
-
-	  // momentum and position
+	  // Add additional fdc hits to the track as associated objects
+	  for (unsigned int m=0;m<segments.size();m++){
+	    for (unsigned int n=0;n<segments[m]->hits.size();n++){
+	      can->AddAssociatedObject(segments[m]->hits[n]);
+	    }
+	  }
+	   
+	  can->setPosition(pos);
+	  can->chisq=fit.chisq;
+	  can->Ndof=fit.ndof;
+	  Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
+	  can->setPID(locPID);
+	  can->setMomentum(mom);
+	  
+	  forward_matches[i]=1;
+	  num_fdc_cands_remaining--;
+	    
+	  if (DEBUG_LEVEL>0){
+	    _DBG_ << "... Found match!" << endl;
+	  }
+	  return true;
 	} // circle fit worked
       }
     } // matching criteria
