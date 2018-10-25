@@ -94,7 +94,8 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   bool MatchMethod1(const DTrackCandidate *fdccan,
 		    vector<unsigned int> &cdc_forward_ids,
 		    vector<DVector3>&cdc_endplate_projections,
-		    vector<unsigned int>&used_cdc_hits
+		    vector<unsigned int>&used_cdc_hits,
+		    vector<int>&cdc_forward_matches
 		    );
   bool MatchMethod2(const DTrackCandidate *fdccan,
 		    const DTrackCandidate *cdccan,
