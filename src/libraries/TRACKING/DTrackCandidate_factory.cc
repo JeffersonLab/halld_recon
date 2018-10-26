@@ -3094,7 +3094,6 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	      pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
 	    }
 	    else{
-	      _DBG_ << endl;
 	      // Get position and momentum at doca to beam line
 	      GetPositionAndMomentum(fit,pos,mom);
 	    }
