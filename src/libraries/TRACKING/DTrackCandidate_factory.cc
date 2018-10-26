@@ -938,10 +938,6 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
     double py=pt*cos(dphi1);
     double pz=pt*fit.tanl;
     mom.SetXYZ(px,py,pz);
-
-    printf("here:\n");
-    pos.Print();
-    mom.Print();
   }
  
   return NOERROR;
@@ -1779,7 +1775,8 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
       unsigned int pack2_first=segments[0]->package;
       unsigned int pack2_last=segments[segments.size()-1]->package;
       
-      if (pack2_first>pack1_last || pack2_last<pack1_first){
+      // if (pack2_first>pack1_last || pack2_last<pack1_first){
+      if (pack2_first-pack1_last==1 || pack1_first-pack2_last==1){
 	// Momentum and position vectors for the input candidate
 	DVector3 mom=srccan->momentum();
 	DVector3 pos=srccan->position();
@@ -1904,7 +1901,8 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	    
 	    num_fdc_cands_remaining--;
 	    
-	    if (DEBUG_LEVEL>0) _DBG_ << "Found a match using method #4" <<endl;
+	    if (DEBUG_LEVEL>0)
+	      _DBG_ << "Found a match using method #4" <<endl;
 	    return true;
 	  } // circle fit
 	} // got a match?
@@ -2502,8 +2500,6 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	      else{
 		// Get position and momentum at doca to beam line
 		GetPositionAndMomentum(fit,my_pos,my_mom);
-		_DBG_ << endl;
-		my_pos.Print();
 	      }
 	       	
 	      DTrackCandidate *can = new DTrackCandidate;
@@ -3190,7 +3186,6 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
 	  }
 	  else{
-	    _DBG_ << endl;
 	    // Get position and momentum at doca to beam line
 	    GetPositionAndMomentum(fit,pos,mom);
 	  }
