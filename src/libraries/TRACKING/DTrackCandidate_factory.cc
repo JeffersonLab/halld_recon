@@ -3376,60 +3376,6 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
   return false;
 }
 
-// Update the momentum and position entries for the candidate based on the
-// results of the most recent helical fit
-void DTrackCandidate_factory::UpdatePositionAndMomentum(DTrackCandidate *can,
-							const DFDCPseudo *fdchit,
-							DHelicalFit &fit,
-							double Bz_avg,
-							int axial_id){
-  DVector3 pos=can->position(),mom=can->momentum();
-  double q=can->charge();
-
-  if (GetPositionAndMomentum(fit,Bz_avg, pos,mom)==NOERROR){  
-    // Find the z-position at the new position in x and y
-    DVector2 xy0(pos.X(),pos.Y());
-    double tworc=2.*fit.r0;
-    double ratio=(fdchit->xy-xy0).Mod()/tworc;
-    double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-    
-    // update the track parameters
-    can->setMomentum(mom);
-    can->setPosition(pos);
-  }
-  else if (axial_id>=0){
-    _DBG_ << endl;
-
-    // if the previous attempt to get the position at r^2=90 did not work,
-    // then the circle after the refit does not intercept this radius.  
-    // Use these previous estimates before the refit for the track parameters
-    // and the inner-most axial wire to estimate the position.
-    fit.r0=mom.Perp()/(0.003*Bz_avg);
-    fit.phi=mom.Phi();
-    fit.h=q*FactorForSenseOfRotation;
-    fit.x0=pos.x()-fit.h*fit.r0*sin(fit.phi);
-    fit.y0=pos.y()+fit.h*fit.r0*cos(fit.phi);
-    fit.tanl=tan(M_PI_2-mom.Theta());
-    fit.z_vertex=0; // this will be changed later
-     
-    if (GetPositionAndMomentum(fit,Bz_avg,mycdchits[axial_id]->wire->origin,pos,
-			       mom)==NOERROR){  
-      // Find the z-position at the new position in x and y
-      DVector2 xy0(pos.X(),pos.Y());
-      double tworc=2.*fit.r0;
-      double ratio=(fdchit->xy-xy0).Mod()/tworc;
-      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-      pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-      
-      // update the track parameters
-      can->setMomentum(mom);
-      can->setPosition(pos);
-    }
-    else _DBG_ << endl;
-  }
-}
-
 // Routine to return momentum and position given the helical parameters and the
 // z-component of the magnetic field
 jerror_t 
