@@ -785,9 +785,9 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 // Obtain position and momentum at the exit of a given package using the 
 // helical track model.
-jerror_t DTrackCandidate_factory::GetPositionAndMomentum(
-					      const DFDCSegment *segment,
-					      DVector3 &pos, DVector3 &mom){
+void DTrackCandidate_factory::GetPositionAndMomentum(const DFDCSegment *segment,
+						     DVector3 &pos, 
+						     DVector3 &mom) const{
   // Position of track segment at last hit plane of package
   double x=segment->xc+segment->rc*cos(segment->Phi1);
   double y=segment->yc+segment->rc*sin(segment->Phi1);
@@ -819,84 +819,13 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(
 
   pos.SetXYZ(x,y,z);
   mom.SetXYZ(px,py,pz);
-
-  return NOERROR;
-}
-
-
-// Get the position and momentum at a fixed radius from the beam line
-jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
-							 double Bz,
-							 DVector3 &pos,
-							 DVector3 &mom){
-  double r2=90.0;
-  double xc=fit.x0;
-  double yc=fit.y0;
-  double rc=fit.r0;
-  double rc2=rc*rc;
-  double xc2=xc*xc;
-  double yc2=yc*yc;
-  double xc2_plus_yc2=xc2+yc2;
-  double a=(r2-xc2_plus_yc2-rc2)/(2.*rc);
-  double b=xc2_plus_yc2-a*a;
-  if (b<0){
-    // We did not find an intersection between the two circles, so return 
-    // an error.  The values of mom and pos are not changed. 
-    return VALUE_OUT_OF_RANGE;
-  }
-
-  double temp1=yc*sqrt(b);
-  double temp2=xc*a;
-  double cosphi_plus=(temp2+temp1)/xc2_plus_yc2;
-  double cosphi_minus=(temp2-temp1)/xc2_plus_yc2;
-
-  // Direction tangent and transverse momentum
-  double tanl=fit.tanl;
-  double pt=0.003*Bz*rc;
-
-  double phi_plus=acos(cosphi_plus);
-  double phi_minus=acos(cosphi_minus);
-  double x_plus=xc+rc*cosphi_plus;
-  double x_minus=xc+rc*cosphi_minus;
-  double y_plus=yc+rc*sin(phi_plus);
-  double y_minus=yc+rc*sin(phi_minus);
-
-  // if the resulting radial position on the circle from the fit does not agree
-  // with the radius to which we are matching, we have the wrong sign for phi+ 
-  // or phi-
-  double r2_plus=x_plus*x_plus+y_plus*y_plus;
-  double r2_minus=x_minus*x_minus+y_minus*y_minus;  
-  if (fabs(r2-r2_plus)>EPS){
-    phi_plus*=-1.;
-    y_plus=yc+rc*sin(phi_plus);
-  }
-  if (fabs(r2-r2_minus)>EPS){
-    phi_minus*=-1.;
-    y_minus=yc+rc*sin(phi_minus);
-  }
-
-  if (fit.h<0.){
-    phi_minus=M_PI-phi_minus;
-    pos.SetXYZ(x_minus,y_minus,0.); // z will be filled later
-    mom.SetXYZ(pt*sin(phi_minus),pt*cos(phi_minus),pt*tanl);
-  }
-  else{ 
-    phi_plus*=-1.;   
-    //phi_plus=M_PI-phi_plus;
-    pos.SetXYZ(x_plus,y_plus,0.); // z will be filled later
-    mom.SetXYZ(pt*sin(phi_plus),pt*cos(phi_plus),pt*tanl);
-  }
-
-  return NOERROR;
 }
 
 // Get position and momentum at doca to beam line
-jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
-							 DVector3 &pos,
-							 DVector3 &mom) const{
-  // B-field at input position
-  double Bz=fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()));
-
+void DTrackCandidate_factory::GetPositionAndMomentum(const DHelicalFit &fit,
+						     double Bz,
+						     DVector3 &pos,
+						     DVector3 &mom) const{
   // Find position at doca to beam line
   double phi0=atan2(-fit.x0,fit.y0);
   if (fit.h<0) phi0+=M_PI;
@@ -912,53 +841,29 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   double ratio=sqrt(dx*dx+dy*dy)/(2.*fit.r0);
   double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
   double newz=pos.z()-phi_s*fit.tanl*fit.r0;
-  if (newz>0.){
-    pos.SetXYZ(x,y,newz);
+  pos.SetXYZ(x,y,newz);
     
-    // momentum at POCA to beam line
-    double pt=0.003*Bz*fit.r0;
-    mom.SetXYZ(pt*cosphi0,pt*sinphi0,pt*fit.tanl);
-  }
-  else{
-    // If the projected position is way beyond the tracking volume, put at 
-    // fixed z position,  z=0
-    double phi1=atan2(pos.y()-fit.y0,pos.x()-fit.x0);
-    double q_over_rc_tanl=FactorForSenseOfRotation*fit.h/(fit.r0*fit.tanl);
-    double dphi_s=pos.z()*q_over_rc_tanl;
-    double dphi1=phi1-dphi_s;
-    double x=fit.x0+fit.r0*cos(dphi1);
-    double y=fit.y0+fit.r0*sin(dphi1);
-    pos.SetXYZ(x,y,0);
- 
-    // momentum at z=0 
-    dphi1*=-1.;
-    if (fit.h<0) dphi1+=M_PI;
-    double pt=0.003*Bz*fit.r0; 
-    double px=pt*sin(dphi1);
-    double py=pt*cos(dphi1);
-    double pz=pt*fit.tanl;
-    mom.SetXYZ(px,py,pz);
-  }
- 
-  return NOERROR;
+  // momentum at POCA to beam line
+  double pt=0.003*Bz*fit.r0;
+  mom.SetXYZ(pt*cosphi0,pt*sinphi0,pt*fit.tanl);
 }
-
 
 // Get the position and momentum at a fixed radius from the beam line
 jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
 							 double Bz,
 							 const DVector3 &origin,
 							 DVector3 &pos,
-							 DVector3 &mom){
+							 DVector3 &mom) const{
   double r2=90.0;
   double xc=fit.x0;
   double yc=fit.y0;
   double rc=fit.r0;
+  double tworc=2.*rc;
   double rc2=rc*rc;
   double xc2=xc*xc;
   double yc2=yc*yc;
   double xc2_plus_yc2=xc2+yc2;
-  double a=(r2-xc2_plus_yc2-rc2)/(2.*rc);
+  double a=(r2-xc2_plus_yc2-rc2)/tworc;
   double b=xc2_plus_yc2-a*a;
   if (b<0){
     // We did not find an intersection between the two circles, so return 
@@ -1006,103 +911,26 @@ jerror_t DTrackCandidate_factory::GetPositionAndMomentum(DHelicalFit &fit,
   dy=y_plus-ywire;
   double d2_plus=dx*dx+dy*dy;
  
+  DVector3 pos0(pos); // save the input position, for use in finding z
   if (d2_plus>d2_minus){
     fit.h=-1.;
     phi_minus=M_PI-phi_minus;
     pos.SetXYZ(x_minus,y_minus,0.); // z will be filled later
     mom.SetXYZ(pt*sin(phi_minus),pt*cos(phi_minus),pt*tanl);
-
   }
   else{
     fit.h=1.;
     phi_plus*=-1.;   
     pos.SetXYZ(x_plus,y_plus,0.); // z will be filled later
     mom.SetXYZ(pt*sin(phi_plus),pt*cos(phi_plus),pt*tanl);
-
   }
+  // Next find the z-position corresponding to the new (x,y) position
+  double ratio=(pos0-pos).Perp()/tworc;
+  double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
+  pos.SetZ(pos0.z()-sperp*tanl);
   
   return NOERROR;
 }
-
-// Get the position and momentum at a fixed radius from the beam line
-jerror_t DTrackCandidate_factory::GetPositionAndMomentum(const DTrackCandidate *cand,
-							 double Bz,
-							 const DVector3 &origin,
-							 DVector3 &pos,
-							 DVector3 &mom){
-  double r2=90.0;
-  double xc=cand->xc;
-  double yc=cand->yc;
-  double rc=cand->rc;
-  double rc2=rc*rc;
-  double xc2=xc*xc;
-  double yc2=yc*yc;
-  double xc2_plus_yc2=xc2+yc2;
-  double a=(r2-xc2_plus_yc2-rc2)/(2.*rc);
-  double b=xc2_plus_yc2-a*a;
-  if (b<0){
-    // We did not find an intersection between the two circles, so return 
-    // an error.  The values of mom and pos are not changed. 
-    return VALUE_OUT_OF_RANGE;
-  }
-  
-  double temp1=yc*sqrt(xc2_plus_yc2-a*a);
-  double temp2=xc*a;
-  double cosphi_plus=(temp2+temp1)/xc2_plus_yc2;
-  double cosphi_minus=(temp2-temp1)/xc2_plus_yc2;
-
-  // Direction tangent and transverse momentum
-  double tanl=tan(M_PI_2-mom.Theta());
-  double pt=0.003*Bz*rc;
-
-  double phi_plus=acos(cosphi_plus);
-  double phi_minus=acos(cosphi_minus);
-  double x_plus=xc+rc*cosphi_plus;
-  double x_minus=xc+rc*cosphi_minus;
-  double y_plus=yc+rc*sin(phi_plus);
-  double y_minus=yc+rc*sin(phi_minus);
-
-  // if the resulting radial position on the circle from the candidate does not
-  // agree with the radius to which we are matching, we have the wrong sign for
-  // phi+ or phi-
-  double r2_plus=x_plus*x_plus+y_plus*y_plus;
-  double r2_minus=x_minus*x_minus+y_minus*y_minus;  
-  if (fabs(r2-r2_plus)>EPS){
-    phi_plus*=-1.;
-    y_plus=yc+rc*sin(phi_plus);
-  }
-  if (fabs(r2-r2_minus)>EPS){
-    phi_minus*=-1.;
-    y_minus=yc+rc*sin(phi_minus);
-  }
-
-  // Choose phi- or phi+ depending on proximity to one of the cdc hits
-  double xwire=origin.x();
-  double ywire=origin.y();
-  double dx=x_minus-xwire;
-  double dy=y_minus-ywire;
-  double d2_minus=dx*dx+dy*dy;
-  dx=x_plus-xwire;
-  dy=y_plus-ywire;
-  double d2_plus=dx*dx+dy*dy;
- 
-  if (d2_plus>d2_minus){
-    phi_minus=M_PI-phi_minus;
-    pos.SetXYZ(x_minus,y_minus,0.); // z will be filled later
-    mom.SetXYZ(pt*sin(phi_minus),pt*cos(phi_minus),pt*tanl);
-
-  }
-  else{
-    phi_plus*=-1.;   
-    pos.SetXYZ(x_plus,y_plus,0.); // z will be fillted later
-    mom.SetXYZ(pt*sin(phi_plus),pt*cos(phi_plus),pt*tanl);
-
-  }
-  
-  return NOERROR;
-}
-
-
 
 // Find the position along a helical path at the z-position z
 void DTrackCandidate_factory::ProjectHelixToZ(const double z,const double q,
@@ -1374,19 +1202,15 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
     double zhit=fdchit->wire->origin.z();
     DVector3 pos(fdchit->xy.X(),fdchit->xy.Y(),zhit);
     DVector3 mom;
+    // Get position at fixed radius with respect to the beam line
     if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-			       pos,mom)==NOERROR){      
-      // Find the z-position at the new position in x and y
-      DVector2 xy0(pos.X(),pos.Y());
-      double tworc=2.*fit.r0;
-      double ratio=(fdchit->xy-xy0).Mod()/tworc;
-      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-      pos.SetZ(zhit-sperp*fit.tanl);
-    }
-    else{
+			       pos,mom)!=NOERROR){      
       // Get position and momentum at doca to beam line
-      GetPositionAndMomentum(fit,pos,mom);
+      GetPositionAndMomentum(fit,Bz_avg,pos,mom);
     }
+    // if the z-position is far away from the active volume of the detector,
+    // place position at fixed z=0.
+    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
       
     // Create new track candidate object 
     DTrackCandidate *can = new DTrackCandidate;
@@ -1531,22 +1355,20 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
        Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
        can->setPID(locPID);
 
+       // FDC hit
+       const DFDCPseudo *fdchit=segments[0]->hits[0];
+       double zhit=fdchit->wire->origin.z();
+       pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
+       // Get position at fixed radius with respect to the beam line
        if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				  pos,mom)==NOERROR){
-	 // FDC hit
-	 const DFDCPseudo *fdchit=segments[0]->hits[0];
-	 // Find the z-position at the new position in x and y
-	 DVector2 xy0(pos.X(),pos.Y());
-	 double tworc=2.*fit.r0;
-	 double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	 double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	 
-	 pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-       }
-       else{
+				  pos,mom)!=NOERROR){
 	 // Get position and momentum at doca to beam line
-	 GetPositionAndMomentum(fit,pos,mom);
+	 GetPositionAndMomentum(fit,Bz_avg,pos,mom);
        }
+       // if the z-position is far away from the active volume of the detector,
+       // place position at fixed z=0.
+       if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+       
        // circle parameters
        can->rc=fit.r0;
        can->xc=fit.x0;
@@ -1691,24 +1513,21 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       // Set the charge
 	       fit.FindSenseOfRotation();   
 	       Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-		   can->setPID(locPID);
-	       
+	       can->setPID(locPID);
+	       // FDC hit
+	       const DFDCPseudo *fdchit=segments[0]->hits[0];
+	       double zhit=fdchit->wire->origin.z();
+	       pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit); 
+	       // Get position at fixed radius with respect to the beam line
 	       if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-					  pos,mom)==NOERROR){
-		 // FDC hit
-		 const DFDCPseudo *fdchit=segments[0]->hits[0];
-		 // Find the z-position at the new position in x and y
-		 DVector2 xy0(pos.X(),pos.Y());
-		 double tworc=2.*fit.r0;
-		 double ratio=(fdchit->xy-xy0).Mod()/tworc;
-		 double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-		 
-		 pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);	    
-	       }
-	       else{
+					  pos,mom)!=NOERROR){
 		 // Get position and momentum at doca to beam line
-		 GetPositionAndMomentum(fit,pos,mom);
+		 GetPositionAndMomentum(fit,Bz_avg,pos,mom);
 	       }
+	       // if the z-position is far away from the active volume of the 
+	       // detector, place position at fixed z=0.
+	       if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+
 	       // circle parameters
 	       can->rc=fit.r0;
 	       can->xc=fit.x0;
@@ -1995,21 +1814,23 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
 	  double theta=fdccan->momentum().Theta();
 	  fit.tanl=tan(M_PI_2-theta);
 	  
+	  Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
+	  can->setPID(locPID);
+
+	  // FDC hit
+	  const DFDCPseudo *fdchit=segments[0]->hits[0];
+	  double zhit=fdchit->wire->origin.z();
+	  pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
+	  // Get position at fixed radius with respect to the beam line
 	  if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				     pos,mom)==NOERROR){
-	    // FDC hit
-	    const DFDCPseudo *fdchit=segments[0]->hits[0];
-	    // Find the z-position at the new position in x and y
-	    DVector2 xy0(pos.X(),pos.Y());
-	    double tworc=2.*fit.r0;
-	    double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	    double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	    
-	    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-		Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-		can->setPID(locPID);
-	  } 
-	  else _DBG_ << endl;
+				     pos,mom)!=NOERROR){
+	    // Get position and momentum at doca to beam line
+	    GetPositionAndMomentum(fit,Bz_avg,pos,mom);
+	  }
+	  // if the z-position is far away from the active volume of the 
+	  // detector, place position at fixed z=0.
+	  if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+
 	  can->chisq=fit.chisq;
 	  can->Ndof=fit.ndof;
 	  can->setMomentum(mom);
@@ -2118,20 +1939,21 @@ void DTrackCandidate_factory::MatchMethod6(DTrackCandidate *can,
     fit.x0=pos.x()-fit.h*fit.r0*sin(fit.phi);
     fit.y0=pos.y()+fit.h*fit.r0*cos(fit.phi);
     fit.tanl=tan(M_PI_2-mom.Theta());
-    fit.z_vertex=0; // this will be changed later
-    if (GetPositionAndMomentum(fit,Bz_avg,mycdchits[inner_index]->wire->origin,pos,
-			       mom)==NOERROR){  
-      // Find the z-position at the new position in x and y
-      DVector2 xy0(pos.X(),pos.Y());
-      double tworc=2.*fit.r0;
-      double ratio=(firsthit->xy-xy0).Mod()/tworc;
-      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-      pos.SetZ(firsthit->wire->origin.z()-sperp*fit.tanl);    
+    fit.z_vertex=0; // actualy we don't need this..
+    // Use fdc hit for input to the following routines because the z-position is 
+    // well-defined...
+    double zhit=firsthit->wire->origin.z();
+    pos.SetXYZ(firsthit->xy.X(),firsthit->xy.Y(),zhit);
+    // Get position at fixed radius with respect to the beam line
+    if (GetPositionAndMomentum(fit,Bz_avg,mycdchits[inner_index]->wire->origin,
+			       pos,mom)!=NOERROR){ 
+      // Get position and momentum at doca to beam line
+      GetPositionAndMomentum(fit,Bz_avg,pos,mom);
     }
-    else {
-      // get position and momentum at doca to beam line
-      GetPositionAndMomentum(fit,pos,mom);
-    }
+    // if the z-position is far away from the active volume of the detector,
+    // place position at fixed z=0.
+    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+
     // update the track parameters
     can->setMomentum(mom);
     can->setPosition(pos);
@@ -2271,19 +2093,18 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 	    }	   
       
 	    if (cdchits.size()>0){
+	      // FDC hit
+	      double zhit=firsthit->wire->origin.z();
+	      pos.SetXYZ(firsthit->xy.X(),firsthit->xy.Y(),zhit); 
+	      // Get position at fixed radius with respect to the beam line
 	      if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
-					 pos,mom)==NOERROR){
-		   // Find the z-position at the new position in x and y
-		DVector2 xy0(pos.X(),pos.Y());
-		double tworc=2.*fit.r0;
-		double ratio=(firsthit->xy-xy0).Mod()/tworc;
-		double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-		pos.SetZ(firsthit->wire->origin.z()-sperp*fit.tanl);
-	      }
-	      else{ 
+					 pos,mom)!=NOERROR){
 		// Get position and momentum at doca to beam line
-		GetPositionAndMomentum(fit,pos,mom);
+		GetPositionAndMomentum(fit,Bz,pos,mom);
 	      }
+	      // if the z-position is far away from the active volume of the 
+	      // detector, place position at fixed z=0.
+	      if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
 	    }
 	    else{
 	      // put z position just upstream of the first hit in z
@@ -2372,170 +2193,161 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 
     // Find the momentum of the particle and the position just outside the 
     // start counter
-    DVector3 pos,mom;
+    DVector3 pos=wirepos,mom;
     if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom)
-	==NOERROR){
-     
-      // Find the z-position at the new position in x and y
-      DVector2 xy0(pos.X(),pos.Y());
-      double tworc=2.*fit.r0;
-      double ratio=(wirepos-pos).Perp()/tworc;
-      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;   
-      pos.SetZ(wirepos.z()-sperp*fit.tanl);
+	!=NOERROR){
+      // Get position and momentum at doca to beam line
+      GetPositionAndMomentum(fit,Bz,pos,mom);
+    }
 
-      // Set the charge for the stepper 
-      stepper->SetCharge(q);
-      // Vector normal to the fdc planes
-      DVector3 norm(0.,0.,1.);
-      
-      // Loop over the fdc candidates looking for a match
-      for (unsigned int k=0;k<fdctrackcandidates.size();k++){
-	if (forward_matches[k]==0){
-	  const DTrackCandidate *fdccan = fdctrackcandidates[k];
+    // Set the charge for the stepper 
+    stepper->SetCharge(q);
+    // Vector normal to the fdc planes
+    DVector3 norm(0.,0.,1.);
+    
+    // Loop over the fdc candidates looking for a match
+    for (unsigned int k=0;k<fdctrackcandidates.size();k++){
+      if (forward_matches[k]==0){
+	const DTrackCandidate *fdccan = fdctrackcandidates[k];
 	  
-	  // Get the segment data
-	  vector<const DFDCSegment *>segments;
-	  fdccan->GetT(segments);
-	  stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
+	// Get the segment data
+	vector<const DFDCSegment *>segments;
+	fdccan->GetT(segments);
+	stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
 	
-	  // only do this for candidates with segments in the first package
-	  if (segments[0]->package>0) continue;
-
-	  const DFDCPseudo *firsthit=segments[0]->hits[0];
-	  
-	  // Make copies of the momentum and position vectors for input to 
-	  // the swimmer
-	  DVector3 my_mom(mom);
-	  DVector3 my_pos(pos);
+	// only do this for candidates with segments in the first package
+	if (segments[0]->package>0) continue;
+	
+	const DFDCPseudo *firsthit=segments[0]->hits[0];
+	
+	// Make copies of the momentum and position vectors for input to 
+	// the swimmer
+	DVector3 my_mom(mom);
+	DVector3 my_pos(pos);
 	 
-	  // Swim to the first hit in the candidate to which we wish to match
-	  // using the stepper
-	  stepper->SwimToPlane(my_pos,my_mom,firsthit->wire->origin,norm,NULL);
+	// Swim to the first hit in the candidate to which we wish to match
+	// using the stepper
+	stepper->SwimToPlane(my_pos,my_mom,firsthit->wire->origin,norm,NULL);
 	
-	  // Match based on proximity of projection to hit
-	  double dx=my_pos.x()-firsthit->xy.X();
-	  double dy=my_pos.y()-firsthit->xy.Y();
-	  double d2=dx*dx+dy*dy;
-	  double variance=1.;
-	  double prob=TMath::Prob(d2/variance,1);
+	// Match based on proximity of projection to hit
+	double dx=my_pos.x()-firsthit->xy.X();
+	double dy=my_pos.y()-firsthit->xy.Y();
+	double d2=dx*dx+dy*dy;
+	double variance=1.;
+	double prob=TMath::Prob(d2/variance,1);
+	
+	unsigned int num_match=(prob>0.01)?1:0;
+	
+	// Try to match further hits in most upstream segment
+	for (unsigned int i=1;i<segments[0]->hits.size();i++){
+	  const DFDCPseudo *hit=segments[0]->hits[i];
 	  
-	  unsigned int num_match=(prob>0.01)?1:0;
-
-	  // Try to match further hits in most upstream segment
-	  for (unsigned int i=1;i<segments[0]->hits.size();i++){
-	    const DFDCPseudo *hit=segments[0]->hits[i];
-		   
-	    if (my_pos.Perp()<48.5){
-	      ProjectHelixToZ(hit->wire->origin.z(),q,my_mom,my_pos);
+	  if (my_pos.Perp()<48.5){
+	    ProjectHelixToZ(hit->wire->origin.z(),q,my_mom,my_pos);
+	    
+	    DVector2 XY=hit->xy;
+	    double dx=XY.X()-my_pos.x();
+	    double dy=XY.Y()-my_pos.y();
+	    double dr2=dx*dx+dy*dy;
+	    
+	    double variance=1.0;
+	    double prob = isfinite(dr2) ? TMath::Prob(dr2/variance,1):0.0;
+	    if (prob>0.01) num_match++;
+	  }
+	} 
+	if (num_match>=3){
+	  forward_matches[k]=1;
+	  
+	  // Keep track of magnetic field in FDC
+	  double Bz_fdc=0;
+	  unsigned int num_hits_fdc=0;
+	  
+	  // Drop the first cdc hit in the list, since it isn't an
+	  // axial straw so the actual x,y position of the wire 
+	  // depends on z, which we don't really know yet.
+	  fit.PruneHit(0);
+	  
+	  // Add the fdc hits to the fit class
+	  for (unsigned int m=0;m<segments.size();m++){
+	    for (unsigned int n=0;n<segments[m]->hits.size();n++){
+	      const DFDCPseudo *fdchit=segments[m]->hits[n];
+	      fit.AddHit(fdchit);
 	      
-	      DVector2 XY=hit->xy;
-	      double dx=XY.X()-my_pos.x();
-	      double dy=XY.Y()-my_pos.y();
-	      double dr2=dx*dx+dy*dy;
-	      
-	      double variance=1.0;
-	      double prob = isfinite(dr2) ? TMath::Prob(dr2/variance,1):0.0;
-	      if (prob>0.01) num_match++;
+	      Bz_fdc+=bfield->GetBz(fdchit->xy.X(),fdchit->xy.Y(),
+				    fdchit->wire->origin.z());
 	    }
-	  } 
-	  if (num_match>=3){
-	    forward_matches[k]=1;
+	    num_hits_fdc+=segments[m]->hits.size();
+	  }
+	  
+	  // Fake point at origin
+	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true);
+	  // Fit the points to a circle
+	  if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
+	    // Use the fdc track candidate to get tanl
+	    double theta=fdccan->momentum().Theta();
+	    double theta_cdc=cdccan->momentum().Theta();
+	    if (segments.size()==1 && theta_cdc<M_PI_4){
+	      double numcdc=double(cdchits.size());
+	      double numfdc=segments[0]->hits.size();
+	      theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
+	    }
+	    fit.tanl=tan(M_PI_2-theta);
 	    
-	    // Keep track of magnetic field in FDC
-	    double Bz_fdc=0;
-	    unsigned int num_hits_fdc=0;
+	    Bz=0.5*(Bz+fabs(Bz_fdc)/num_hits_fdc);
 	    
-	    // Drop the first cdc hit in the list, since it isn't an
-	    // axial straw so the actual x,y position of the wire 
-	    // depends on z, which we don't really know yet.
-	    fit.PruneHit(0);
+	    double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+	    if (p>10.){
+	      // momentum is suspiciously high for a track going through both
+	      // the FDC and the CDC... try alternate circle fit
+	      fit.FitCircle();
+	    }
+	    // FDC hit
+	    const DFDCPseudo *fdchit=segments[0]->hits[0];
+	    double zhit=fdchit->wire->origin.z();
+	    pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
+	    // Get position at fixed radius with respect to the beam line
+	    if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
+				       pos,mom)!=NOERROR){      
+	      // Get position and momentum at doca to beam line
+	      GetPositionAndMomentum(fit,Bz,pos,mom);
+	    }
+	    // if the z-position is far away from the active volume of the 
+	    // detector, place position at fixed z=0.
+	    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
 	    
-	    // Add the fdc hits to the fit class
+	    DTrackCandidate *can = new DTrackCandidate;
+	    // circle parameters
+	    can->rc=fit.r0;
+	    can->xc=fit.x0;
+	    can->yc=fit.y0;
+	    
+	    can->setPID((q > 0.0) ? PiPlus : PiMinus);
+	    can->setMomentum(my_mom);
+	    can->setPosition(my_pos);
+	    can->chisq=fit.chisq;
+	    can->Ndof=fit.ndof;
+	    
+	    // Add hits as associated objects
 	    for (unsigned int m=0;m<segments.size();m++){
 	      for (unsigned int n=0;n<segments[m]->hits.size();n++){
 		const DFDCPseudo *fdchit=segments[m]->hits[n];
-		fit.AddHit(fdchit);
-		
-		Bz_fdc+=bfield->GetBz(fdchit->xy.X(),fdchit->xy.Y(),
-				      fdchit->wire->origin.z());
+		can->AddAssociatedObject(fdchit);
 	      }
-	      num_hits_fdc+=segments[m]->hits.size();
+	    }
+	    for (unsigned int n=0;n<cdchits.size();n++){
+	      used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
+		can->AddAssociatedObject(cdchits[n]);
 	    }
 	    
-	    // Fake point at origin
-	    fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true);
-	    // Fit the points to a circle
-	    if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
-	      // Use the fdc track candidate to get tanl
-	      double theta=fdccan->momentum().Theta();
-	      double theta_cdc=cdccan->momentum().Theta();
-	      if (segments.size()==1 && theta_cdc<M_PI_4){
-		double numcdc=double(cdchits.size());
-		double numfdc=segments[0]->hits.size();
-		theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
-	      }
-	      fit.tanl=tan(M_PI_2-theta);
-	      
-	      Bz=0.5*(Bz+fabs(Bz_fdc)/num_hits_fdc);
-
-	      double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-	      if (p>10.){
-		// momentum is suspiciously high for a track going through both
-		// the FDC and the CDC... try alternate circle fit
-		fit.FitCircle();
-	      }
-	      
-	      if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
-					 my_pos,my_mom)==NOERROR){
-		// FDC hit
-		const DFDCPseudo *fdchit=segments[0]->hits[0];
-		// Find the z-position at the new position in x and y
-		DVector2 xy0(my_pos.X(),my_pos.Y());
-		double tworc=2.*fit.r0;
-		double ratio=(fdchit->xy-xy0).Mod()/tworc;
-		double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-		
-		my_pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	      }
-	      else{
-		// Get position and momentum at doca to beam line
-		GetPositionAndMomentum(fit,my_pos,my_mom);
-	      }
-	       	
-	      DTrackCandidate *can = new DTrackCandidate;
-	      // circle parameters
-	      can->rc=fit.r0;
-	      can->xc=fit.x0;
-	      can->yc=fit.y0;
-	      
-	      can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	      can->setMomentum(my_mom);
-	      can->setPosition(my_pos);
-	      can->chisq=fit.chisq;
-	      can->Ndof=fit.ndof;
-		
-	      // Add hits as associated objects
-	      for (unsigned int m=0;m<segments.size();m++){
-		for (unsigned int n=0;n<segments[m]->hits.size();n++){
-		  const DFDCPseudo *fdchit=segments[m]->hits[n];
-		  can->AddAssociatedObject(fdchit);
-		}
-	      }
-	      for (unsigned int n=0;n<cdchits.size();n++){
-		used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-		can->AddAssociatedObject(cdchits[n]);
-	      }
-	      
-	      trackcandidates.push_back(can);		     
-	      
-	      if (DEBUG_LEVEL>0) _DBG_ << "Matched using Method #8" <<endl;
-	      
-	      return true;
-	    } // circle fit
-	  } // match criterion
-	} // check that fdc candidate has not already been matched
-      } // loop over fdc candidates
-    } // find new momentum and position after circle fit
+	    trackcandidates.push_back(can);		     
+	    
+	    if (DEBUG_LEVEL>0)  _DBG_ << "Matched using Method #8" <<endl;
+	    
+	    return true;
+	  } // circle fit
+	} // match criterion
+      } // check that fdc candidate has not already been matched
+    } // loop over fdc candidates
   } // Check that the outermost hit is a stereo hit
 
   return false;
@@ -3084,19 +2896,14 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 						  myfdchits[0]->wire->origin.z());
 	    if (cdchits.size()) myorigin=cdchits[0]->wire->origin;
 	    DVector3 pos=fdccan->position(),mom;
-	    if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)==NOERROR){
-	      const DFDCPseudo *fdchit=myfdchits[0];
-	      // Find the z-position at the new position in x and y
-	      DVector2 xy0(pos.X(),pos.Y());
-	      double tworc=2.*fit.r0;
-	      double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	      pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	    }
-	    else{
+	    // Get position at fixed radius with respect to the beam line
+	    if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)!=NOERROR){      
 	      // Get position and momentum at doca to beam line
-	      GetPositionAndMomentum(fit,pos,mom);
+	      GetPositionAndMomentum(fit,Bz,pos,mom);
 	    }
+	    // if the z-position is far away from the active volume of the 
+	    // detector,place position at fixed z=0.
+	    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
 
 	    // circle parameters
 	    can->rc=fit.r0;
@@ -3174,20 +2981,15 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	  fit.tanl=tan(M_PI_2-theta);
 	  DVector3 myorigin=cdchits[0]->wire->origin;
 	  DVector3 pos=fdccan->position(),mom;
-	  if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)==NOERROR){
-	    // FDC hit
-	    const DFDCPseudo *fdchit=segments[0]->hits[0];
-	    // Find the z-position at the new position in x and y
-	    DVector2 xy0(pos.X(),pos.Y());
-	    double tworc=2.*fit.r0;
-	    double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	    double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;	    
-	    pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	  }
-	  else{
+	  // Get position at fixed radius with respect to the beam line
+	  if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
+				     pos,mom)!=NOERROR){      
 	    // Get position and momentum at doca to beam line
-	    GetPositionAndMomentum(fit,pos,mom);
+	    GetPositionAndMomentum(fit,Bz,pos,mom);
 	  }
+	  // if the z-position is far away from the active volume of the 
+	  // detector,place position at fixed z=0.
+	  if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
 
 	  // circle parameters
 	  can->rc=fit.r0;
@@ -3378,10 +3180,10 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 
 // Routine to return momentum and position given the helical parameters and the
 // z-component of the magnetic field
-jerror_t 
-DTrackCandidate_factory::GetPositionAndMomentum(double z,DHelicalFit &fit,
+void
+DTrackCandidate_factory::GetPositionAndMomentum(double z,const DHelicalFit &fit,
 						double Bz,DVector3 &pos,
-						DVector3 &mom){
+						DVector3 &mom) const{
   double xc=fit.x0;
   double yc=fit.y0;
   double rc=fit.r0;
@@ -3403,8 +3205,6 @@ DTrackCandidate_factory::GetPositionAndMomentum(double z,DHelicalFit &fit,
   double py=pt*cos(dphi1);
   double pz=pt*fit.tanl;
   mom.SetXYZ(px,py,pz);
-
-  return NOERROR;
 }
 
 // Use information from the start counter to try to correct the momentum and
