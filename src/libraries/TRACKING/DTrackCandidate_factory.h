@@ -81,6 +81,9 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 			      double Bz,DVector3 &pos,DVector3 &mom) const;
   void GetPositionAndMomentum(const DHelicalFit &fit,double Bz,DVector3 &pos,
 			      DVector3 &mom) const; 
+  void UpdatePositionAndMomentum(DHelicalFit &fit,double Bz,
+				 const DVector3 &origin,DVector3 &pos,
+				 DVector3 &mom) const;
  
   // Various methods for matching CDC and FDC candidates
   bool MatchMethod1(const DTrackCandidate *fdccan,

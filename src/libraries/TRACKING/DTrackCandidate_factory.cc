@@ -1202,16 +1202,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
     double zhit=fdchit->wire->origin.z();
     DVector3 pos(fdchit->xy.X(),fdchit->xy.Y(),zhit);
     DVector3 mom;
-    // Get position at fixed radius with respect to the beam line
-    if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-			       pos,mom)!=NOERROR){      
-      // Get position and momentum at doca to beam line
-      GetPositionAndMomentum(fit,Bz_avg,pos,mom);
-    }
-    // if the z-position is far away from the active volume of the detector,
-    // place position at fixed z=0.
-    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
-      
+    UpdatePositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,pos,mom);
+
     // Create new track candidate object 
     DTrackCandidate *can = new DTrackCandidate;
     can->used_cdc_indexes=cdccan->used_cdc_indexes;
@@ -1359,15 +1351,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
        const DFDCPseudo *fdchit=segments[0]->hits[0];
        double zhit=fdchit->wire->origin.z();
        pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
-       // Get position at fixed radius with respect to the beam line
-       if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				  pos,mom)!=NOERROR){
-	 // Get position and momentum at doca to beam line
-	 GetPositionAndMomentum(fit,Bz_avg,pos,mom);
-       }
-       // if the z-position is far away from the active volume of the detector,
-       // place position at fixed z=0.
-       if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+       UpdatePositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,pos,mom);
        
        // circle parameters
        can->rc=fit.r0;
@@ -1518,15 +1502,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       const DFDCPseudo *fdchit=segments[0]->hits[0];
 	       double zhit=fdchit->wire->origin.z();
 	       pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit); 
-	       // Get position at fixed radius with respect to the beam line
-	       if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-					  pos,mom)!=NOERROR){
-		 // Get position and momentum at doca to beam line
-		 GetPositionAndMomentum(fit,Bz_avg,pos,mom);
-	       }
-	       // if the z-position is far away from the active volume of the 
-	       // detector, place position at fixed z=0.
-	       if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+	       UpdatePositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
+					 pos,mom);
 
 	       // circle parameters
 	       can->rc=fit.r0;
@@ -1821,15 +1798,8 @@ bool DTrackCandidate_factory::MatchMethod5(DTrackCandidate *can,
 	  const DFDCPseudo *fdchit=segments[0]->hits[0];
 	  double zhit=fdchit->wire->origin.z();
 	  pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
-	  // Get position at fixed radius with respect to the beam line
-	  if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				     pos,mom)!=NOERROR){
-	    // Get position and momentum at doca to beam line
-	    GetPositionAndMomentum(fit,Bz_avg,pos,mom);
-	  }
-	  // if the z-position is far away from the active volume of the 
-	  // detector, place position at fixed z=0.
-	  if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+	  UpdatePositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
+				    pos,mom);
 
 	  can->chisq=fit.chisq;
 	  can->Ndof=fit.ndof;
@@ -1944,15 +1914,8 @@ void DTrackCandidate_factory::MatchMethod6(DTrackCandidate *can,
     // well-defined...
     double zhit=firsthit->wire->origin.z();
     pos.SetXYZ(firsthit->xy.X(),firsthit->xy.Y(),zhit);
-    // Get position at fixed radius with respect to the beam line
-    if (GetPositionAndMomentum(fit,Bz_avg,mycdchits[inner_index]->wire->origin,
-			       pos,mom)!=NOERROR){ 
-      // Get position and momentum at doca to beam line
-      GetPositionAndMomentum(fit,Bz_avg,pos,mom);
-    }
-    // if the z-position is far away from the active volume of the detector,
-    // place position at fixed z=0.
-    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz_avg,pos,mom);
+    UpdatePositionAndMomentum(fit,Bz_avg,mycdchits[inner_index]->wire->origin,
+			      pos,mom);
 
     // update the track parameters
     can->setMomentum(mom);
@@ -2096,15 +2059,8 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 	      // FDC hit
 	      double zhit=firsthit->wire->origin.z();
 	      pos.SetXYZ(firsthit->xy.X(),firsthit->xy.Y(),zhit); 
-	      // Get position at fixed radius with respect to the beam line
-	      if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
-					 pos,mom)!=NOERROR){
-		// Get position and momentum at doca to beam line
-		GetPositionAndMomentum(fit,Bz,pos,mom);
-	      }
-	      // if the z-position is far away from the active volume of the 
-	      // detector, place position at fixed z=0.
-	      if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
+	      UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
+					pos,mom);
 	    }
 	    else{
 	      // put z position just upstream of the first hit in z
@@ -2191,14 +2147,10 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
     fit.GuessChargeFromCircleFit();
     double q=fit.h*FactorForSenseOfRotation;
 
-    // Find the momentum of the particle and the position just outside the 
-    // start counter
+    // Provide an initial guess for the position and momentum that is just 
+    // outside the CDC tracking volume
     DVector3 pos=wirepos,mom;
-    if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom)
-	!=NOERROR){
-      // Get position and momentum at doca to beam line
-      GetPositionAndMomentum(fit,Bz,pos,mom);
-    }
+    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
 
     // Set the charge for the stepper 
     stepper->SetCharge(q);
@@ -2305,15 +2257,7 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    const DFDCPseudo *fdchit=segments[0]->hits[0];
 	    double zhit=fdchit->wire->origin.z();
 	    pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
-	    // Get position at fixed radius with respect to the beam line
-	    if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
-				       pos,mom)!=NOERROR){      
-	      // Get position and momentum at doca to beam line
-	      GetPositionAndMomentum(fit,Bz,pos,mom);
-	    }
-	    // if the z-position is far away from the active volume of the 
-	    // detector, place position at fixed z=0.
-	    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
+	    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
 	    
 	    DTrackCandidate *can = new DTrackCandidate;
 	    // circle parameters
@@ -2896,14 +2840,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 						  myfdchits[0]->wire->origin.z());
 	    if (cdchits.size()) myorigin=cdchits[0]->wire->origin;
 	    DVector3 pos=fdccan->position(),mom;
-	    // Get position at fixed radius with respect to the beam line
-	    if (GetPositionAndMomentum(fit,Bz,myorigin,pos,mom)!=NOERROR){      
-	      // Get position and momentum at doca to beam line
-	      GetPositionAndMomentum(fit,Bz,pos,mom);
-	    }
-	    // if the z-position is far away from the active volume of the 
-	    // detector,place position at fixed z=0.
-	    if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
+	    UpdatePositionAndMomentum(fit,Bz,myorigin,pos,mom);
 
 	    // circle parameters
 	    can->rc=fit.r0;
@@ -2981,15 +2918,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	  fit.tanl=tan(M_PI_2-theta);
 	  DVector3 myorigin=cdchits[0]->wire->origin;
 	  DVector3 pos=fdccan->position(),mom;
-	  // Get position at fixed radius with respect to the beam line
-	  if (GetPositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,
-				     pos,mom)!=NOERROR){      
-	    // Get position and momentum at doca to beam line
-	    GetPositionAndMomentum(fit,Bz,pos,mom);
-	  }
-	  // if the z-position is far away from the active volume of the 
-	  // detector,place position at fixed z=0.
-	  if (pos.z()<0) GetPositionAndMomentum(0.,fit,Bz,pos,mom);
+	  UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
 
 	  // circle parameters
 	  can->rc=fit.r0;
@@ -3295,4 +3224,27 @@ bool DTrackCandidate_factory::MatchStraySegments(vector<int> &forward_matches,
     } // not already matched
   }
   return got_new_match;
+}
+
+// Routine for updating the position and radius given an input position pos.
+// If the circle from the track intersects the circle with a radius just outside
+// the start counter, returns the position and momentum at the place where the 
+// two circles intersect.  If the two circles do not intersect, returns the
+// position at the doca to the beam line.  If the z position is far upstream 
+// of the active volume for either case, places the position at z=0.
+void DTrackCandidate_factory::UpdatePositionAndMomentum(DHelicalFit &fit,
+							double Bz,
+							const DVector3 &origin,
+							DVector3 &pos,
+							DVector3 &mom) const{
+  // Get position at fixed radius with respect to the beam line
+  if (GetPositionAndMomentum(fit,Bz,origin,pos,mom)!=NOERROR){      
+    // Get position and momentum at doca to beam line
+    GetPositionAndMomentum(fit,Bz,pos,mom);
+  }
+  // if the z-position is far away from the active volume of the detector,
+  // place position at fixed z=0.
+  if (pos.z()<0){ 
+    GetPositionAndMomentum(0.,fit,Bz,pos,mom);
+  }
 }
