@@ -804,6 +804,11 @@ double DTOFHit_factory::CalcWalkCorrNEW(DTOFHit* hit){
  
   int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double ADC=hit->dE;
+
+  if (ADC<50.){
+    return 0;
+  }
+  
   double A = timewalk_parameters_NEW[id][0];
   double B = timewalk_parameters_NEW[id][1];
   double C = timewalk_parameters_NEW[id][2];
@@ -829,6 +834,9 @@ double DTOFHit_factory::CalcWalkCorrNEWAMP(DTOFHit* hit){
  
   int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double ADC=hit->Amp;
+  if (ADC<50.){
+    return 0;
+  }
   double loc = timewalk_parameters_NEWAMP[id][8];
   int offset = 0;
   if (ADC>loc){
