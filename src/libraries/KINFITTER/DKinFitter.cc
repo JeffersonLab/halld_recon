@@ -866,7 +866,36 @@ bool DKinFitter::Calc_dS(void)
 		dKinFitUtils->Print_Matrix(dS);
 		cout << "determinant magnitude = " << fabs(dS.Determinant()) << endl;
 	}
+	
 	TDecompLU locDecompLU_S(dS);
+	//debugging step: lowering Tol by iterations to pass.
+	if( locDecompLU_S.Decompose() && (fabs(dS.Determinant())==0)  )
+	{
+		        if(dDebugLevel > 30) cout << "trying to lower Tol"<< endl;
+			TVectorD b_S(dS.GetNrows());
+        		for(Int_t index_b = 0; index_b < dS.GetNrows(); index_b ++)
+			{ 
+				b_S(index_b) = 10.0;
+        		}
+			Bool_t ok;
+        		TVectorD x_S = locDecompLU_S.Solve(b_S,ok);
+
+        		Int_t nr = 0;
+			while (!ok)
+			{
+				locDecompLU_S.SetMatrix(dS);
+				locDecompLU_S.SetTol(0.1*locDecompLU_S.GetTol());
+				if (nr++ > 10)
+				{
+					break;
+					if(dDebugLevel > 30) cout << "nr =" << nr << "max num of iterations exceeded;" << endl;
+				}
+				if(dDebugLevel > 30) cout<< "--" << nr << "-th attempt --" << endl;
+				x_S = locDecompLU_S.Solve(b_S,ok);
+			}
+			if(x_S.IsValid()) dS.SetTol(locDecompLU_S.GetTol());
+	}
+	
 	//check to make sure that the matrix is decomposable and has a non-zero determinant
 	if((!locDecompLU_S.Decompose()) || (fabs(dS.Determinant()) < 1.0E-300))
 	{
