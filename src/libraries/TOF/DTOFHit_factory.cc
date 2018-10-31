@@ -368,7 +368,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->dE=dA;  // this will be scaled to energy units later
     hit->Amp = (float)digihit->pulse_peak - pedestal4Amp/(float)nsamples_pedestal;
 
-    if (hit->Amp<0){ // this happens if pulse_peak is reported as zero, resort to use scaled Integral value
+    if (hit->Amp<1){ // this happens if pulse_peak is reported as zero, resort to use scaled Integral value
       hit->Amp = dA*0.163;
     }
     
@@ -423,6 +423,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       DTOFHit *hit = FindMatch(digihit->plane, digihit->bar, digihit->end, T);
       //DTOFHit *hit = FindMatch(digihit->plane, hit->bar, hit->end, T);
       if(!hit){
+	continue; // Do not use unmatched TDC hits
 	hit = new DTOFHit;
 	hit->plane = digihit->plane;
 	hit->bar   = digihit->bar;
