@@ -219,7 +219,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	// Create emulator objects
 
     if(F250_EMULATION_VERSION == 1) {
-        f250Emulator = new Df250EmulatorAlgorithm_v1(NULL);
+        f250Emulator = new Df250EmulatorAlgorithm_v1();
     } else {
         if(F250_EMULATION_VERSION != 2) 
             jerr << "Invalid fADC250 firmware version specified for emulation == " << F250_EMULATION_VERSION

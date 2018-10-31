@@ -30,7 +30,7 @@ bool DTrackFinder_fdc_hit_cmp(const DTrackFinder::fdc_hit_t &a,
 //---------------------------------
 // DTrackFinder    (Constructor)
 //---------------------------------
-DTrackFinder::DTrackFinder(JEventLoop *loop)
+DTrackFinder::DTrackFinder()
 {
 
    COSMICS=false;

@@ -838,8 +838,9 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
     fitter->Reset();
     fitter->SetFitType(DTrackFitter::kTimeBased);    
     status = fitter->FindHitsAndFitTrack(*track, track->extrapolations,loop, 
-					 mass,track->Ndof+5,mStartTime,
-    					 mStartDetector);
+					 mass,
+					 mycdchits.size()+2*myfdchits.size(),
+					 mStartTime,mStartDetector);
     
     // If the status is kFitNotDone, then not enough hits were attached to this
     // track using the hit-gathering algorithm.  In this case get the hits 
@@ -1060,6 +1061,12 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   DTrackTimeBased *timebased_track = new DTrackTimeBased();
   *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(src_track);
 
+  // Get the hits used in the fit  
+  vector<const DCDCTrackHit *>src_cdchits;
+  src_track->GetT(src_cdchits);
+  vector<const DFDCPseudo *>src_fdchits;
+  src_track->GetT(src_fdchits);
+
   // Copy over DKinematicData part from the result of a successful fit
   timebased_track->setPID(IDTrack(q, my_mass));
   timebased_track->chisq = src_track->chisq;
@@ -1106,12 +1113,23 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     fitter->SetFitType(DTrackFitter::kTimeBased);    
     status = fitter->FindHitsAndFitTrack(*timebased_track,
 					 timebased_track->extrapolations,loop, 
-					 my_mass,timebased_track->Ndof+5,
+					 my_mass,
+					 src_cdchits.size()+2*src_fdchits.size(),
 					 timebased_track->t0(),
 					 timebased_track->t0_detector());
     // if the fit returns chisq=-1, something went terribly wrong.  Do not 
     // update the parameters for the track...
     if (fitter->GetChisq()<0) status=DTrackFitter::kFitFailed;
+
+    // if the fit flips the charge of the track, then this is bad as well
+    if(q != fitter->GetFitParameters().charge())
+        status=DTrackFitter::kFitFailed; 
+
+    // if we can't refit the track, it is likely of poor quality, so stop here and do not add the hypothesis
+    if(status == DTrackFitter::kFitFailed) {
+        delete timebased_track;
+        return;
+    }
 
     if (status==DTrackFitter::kFitSuccess){
       timebased_track->chisq = fitter->GetChisq();
@@ -1160,16 +1178,11 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     }
   }
 
-  if (status!=DTrackFitter::kFitSuccess){
-    // Get the hits used in the fit and add them as associated objects 
-    vector<const DCDCTrackHit *>cdchits;
-    src_track->GetT(cdchits);
-    vector<const DFDCPseudo *>fdchits;
-    src_track->GetT(fdchits);
-    for(unsigned int m=0; m<fdchits.size(); m++)
-      timebased_track->AddAssociatedObject(fdchits[m]); 
-    for(unsigned int m=0; m<cdchits.size(); m++)
-      timebased_track->AddAssociatedObject(cdchits[m]);
+  if (status!=DTrackFitter::kFitSuccess){ 
+    for(unsigned int m=0; m<src_fdchits.size(); m++)
+      timebased_track->AddAssociatedObject(src_fdchits[m]); 
+    for(unsigned int m=0; m<src_cdchits.size(); m++)
+      timebased_track->AddAssociatedObject(src_cdchits[m]);
   }
  
   // dEdx

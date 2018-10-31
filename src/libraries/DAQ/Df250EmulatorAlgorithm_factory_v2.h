@@ -17,18 +17,46 @@ class Df250EmulatorAlgorithm_factory_v1:public jana::JFactory<Df250EmulatorAlgor
 		~Df250EmulatorAlgorithm_factory_v1(){};
 		const char* Tag(void){return "v1";}
 
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		Df250EmulatorAlgorithm *emulator
 
-			// Create single Df250EmulatorAlgorithm object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			Df250EmulatorAlgorithm *emulator = new Df250EmulatorAlgorithm_v1(loop);
-			SetFactoryFlag(PERSISTANT);
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		{
+			// (See DTAGHGeometry_factory.h)
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(emulator);
+			
+			if( emulator ) delete emulator;
+
+			emulator = new Df250EmulatorAlgorithm_v1(loop);
+
+			return NOERROR;
+		}
+
+		//------------------
+		// evnt
+		//------------------
+		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 {
+			// Reuse existing DBCALGeometry object.
+			if( emulator ) _data.push_back( emulator );
+			 
+			 return NOERROR;
+		 }
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( emulator ) delete emulator;
+			emulator = NULL;
 			
 			return NOERROR;
 		}
+	
 };
 
 #endif // _Df250EmulatorAlgorithm_factory_v1_

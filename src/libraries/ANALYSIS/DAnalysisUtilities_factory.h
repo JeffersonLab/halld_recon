@@ -16,18 +16,46 @@ class DAnalysisUtilities_factory : public jana::JFactory<DAnalysisUtilities>
 	public:
 		DAnalysisUtilities_factory(){};
 		~DAnalysisUtilities_factory(){};
-  
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber)
+
+		//------------------
+		// brun
+		//------------------
+		jerror_t brun(JEventLoop *loop, int32_t runnumber)
 		{
-			// Create single DAnalysisUtilities object and mark the factory as
-			// persistent so it doesn't get deleted every event.
-			DAnalysisUtilities *locAnalysisUtilities = new DAnalysisUtilities(loop);
-			SetFactoryFlag(PERSISTANT);
+			// See note in DTAGMGeometry_factory
+			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(locAnalysisUtilities);
+
+			if( analysisutilities ) delete analysisutilities;
+
+			analysisutilities = new DAnalysisUtilities(loop);
+
 			return NOERROR;
 		}
+
+		//------------------
+		// evnt
+		//------------------
+		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		{
+ 			// Reuse existing DAnalysisUtilities object.
+   		if( analysisutilities ) _data.push_back( analysisutilities );
+
+			return NOERROR;
+		}
+
+		//------------------
+		// erun
+		//------------------
+		jerror_t erun(void)
+		{
+			if( analysisutilities ) delete analysisutilities;
+			analysisutilities = NULL;
+
+   		return NOERROR;
+		}
+	
+		DAnalysisUtilities *analysisutilities;
 };
 
 #endif // _DAnalysisUtilities_factory_

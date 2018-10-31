@@ -1405,7 +1405,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					}
 
 					// Event headers may be supressed so determine event from hit data
-					if( (event_number_within_block > current_parsed_events.size()) ) throw JException("Bad f250 event number", __FILE__, __LINE__);
+					if( (event_number_within_block > current_parsed_events.size()) ) { jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 event number", __FILE__, __LINE__);}
 					pe_iter = current_parsed_events.begin();
 					advance( pe_iter, event_number_within_block-1 );
 					pe = *pe_iter++;
@@ -1415,7 +1415,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 					while( (*++iptr>>31) == 0 ){
 					
-						if( (*iptr>>30) != 0x01) throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						if( (*iptr>>30) != 0x01) { jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);}
  
 						// from word 2
 						uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
@@ -2024,15 +2024,124 @@ void DEVIOWorkerThread::ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t
 void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_SSP){ iptr = &iptr[(*iptr) + 1]; return; }
+	
+	auto pe_iter = current_parsed_events.begin();
+	DParsedEvent *pe = NULL;
 
-	/// No support for SSP just yet. 
-	static int iwarnings=0;
-	if(iwarnings<10){
-		jout << "WARNING: SSP data encountered but ignored for the moment" << endl;
-		if(iwarnings==9) jout << "----- LAST WARNING (SSP) ---" << endl;
-		iwarnings++;
+	uint32_t slot_bh    = 0xFFFFFFFF;  //< slot number from block header
+	uint32_t slot       = 0xFFFFFFFF;  //< slot number from event header
+	uint32_t itrigger   = 0xFFFFFFFF;
+	uint32_t dev_id     = 0xFFFFFFFF;
+	uint32_t ievent_cnt = 0xFFFFFFFF;
+	for( ;  iptr<iend; iptr++){
+		if(((*iptr>>31) & 0x1) == 0)continue;
+
+		uint32_t data_type = (*iptr>>27) & 0x0F;
+		switch(data_type){
+			case 0:  // Block Header
+			{
+				slot_bh    = ((*iptr)>>22) & 0x1F;
+				uint32_t block_num  = ((*iptr)>> 8) & 0x3FF;
+				uint32_t block_size = ((*iptr)>> 0) & 0xFF;
+				if(VERBOSE>7) cout << "     SSP/DIRC Block Header:  slot=" << slot_bh << " block_num="<<block_num << " block_size=" << block_size << endl;
+			}
+				break;
+			case 1:  // Block Trailer
+				if(VERBOSE>7) cout << "     SSP/DIRC Block Trailer" << endl;
+				break;
+			case 2:  // Event Header
+				pe = *pe_iter++;
+				slot       = ((*iptr)>>22) & 0x1F;
+				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
+				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
+				if( slot != slot_bh ){
+					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
+				}
+				break;
+			case 3:  // Trigger Time
+				{
+					uint64_t t = ((*iptr)&0xFFFFFF)<<0;
+					if(VERBOSE>7) cout << "      SSP Trigger time low word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+					iptr++;
+					if(((*iptr>>31) & 0x1) == 0){   // Confirm that continuation word is present
+						t += ((*iptr)&0xFFFFFF)<<24;
+						if(VERBOSE>7) cout << "      SSP Trigger time high word="<<(((*iptr)&0xFFFFFF))<<" (0x"<<hex<<*iptr<<dec<<")  iptr=0x"<<hex<<iptr<<dec<<endl;
+					}else{
+						iptr--;
+					}
+					if(VERBOSE>7) cout << "      SSP Trigger Time: t="<<t<<endl;
+					if(pe) pe->NEW_DDIRCTriggerTime(rocid, slot, itrigger, t);
+				}
+				break;
+			case 4:  // Reserved
+			case 5:  // Reserved
+			case 6:  // Reserved
+			case 10: // Reserved
+			case 11: // Reserved
+			case 12: // Reserved
+			case 13: // Reserved
+				if(VERBOSE>7) cout << "     SSP/DIRC Reserved Word" << endl;
+				break;
+			case 7:  // Device ID
+				dev_id     = ((*iptr)>>22) & 0x1F;
+				ievent_cnt = ((*iptr)>>0 ) & 0x3FFFFF;
+				if(VERBOSE>7) cout << "     SSP/DIRC Device ID:  dev_id=" << dev_id << " ievent_cnt=" << ievent_cnt << endl;
+				break;
+			case 8:  // TDC Hit  (single channel)
+			{
+				uint32_t edge         = (*iptr>>26) & 0x01;
+				uint32_t channel_fpga = (*iptr>>16) & 0xFF;
+				uint32_t time         = (*iptr>>0 ) & 0xFFFF;
+				uint32_t channel = (dev_id<<8) + channel_fpga;
+				if(VERBOSE>7) cout << "      SSP/DIRC TDC Hit:  edge=" << edge << "channel_fpga=" << channel_fpga << "time=" << time << " channel=" << channel << endl;
+				if( pe ) pe->NEW_DDIRCTDCHit(rocid, slot, channel, itrigger, dev_id, ievent_cnt, channel_fpga, edge, time);
+			}
+				break;
+			case 9:  // ADC (64 channels, currently only used for bench testing and may not be supported by all firmware versions)
+			{
+				if(VERBOSE>7) cout << "      SSP/DIRC ADC data"<<endl;
+				uint32_t adc_hold2    = (*iptr>>16) & 0xFF;
+				uint32_t adc_hold1    = (*iptr>>8 ) & 0xFF;
+				uint32_t adc_max_bits = (*iptr>>4 ) & 0x0F;
+				uint32_t maroc_id     = (*iptr>>0 ) & 0x03;
+				for(uint32_t i=0; i<32; i++){
+					if(((*++iptr>>31) & 0x1) != 0){ iptr--; break;}
+					uint32_t channel_lower = (dev_id<<8) + (maroc_id<<6) + (i*2 + 0); // ADC_LOWER
+					uint32_t channel_upper = (dev_id<<8) + (maroc_id<<6) + (i*2 + 1); // ADC_UPPER
+					uint32_t adc_lower = (*iptr>>0 ) & 0xFFF;
+					uint32_t adc_upper = (*iptr>>16 ) & 0xFFF;
+					switch(adc_max_bits){
+						case 11:
+							break;
+						case 9:
+							adc_lower >>= 2;
+							adc_upper >>= 2;
+							break;
+						case 7:
+							adc_lower >>= 4;
+							adc_upper >>= 4;
+							break;
+						default:
+							jerr << "Bad value for adc_max_bits (" << adc_max_bits << ") from SSP/DIRC with rocid=" << rocid << " slot=" << slot << "channel=" << channel_lower << "," << channel_upper << endl;
+							break;
+					}
+					if( pe ) {
+						pe->NEW_DDIRCADCHit(rocid, slot, channel_lower, itrigger, dev_id, ievent_cnt, adc_hold1, adc_hold2, adc_max_bits, maroc_id, adc_lower);
+						pe->NEW_DDIRCADCHit(rocid, slot, channel_upper, itrigger, dev_id, ievent_cnt, adc_hold1, adc_hold2, adc_max_bits, maroc_id, adc_upper);
+					}
+				}
+			}
+				break;
+			case 14:  // Data not Valid
+				if(VERBOSE>7) cout << "     SSP/DIRC Data not Valid" << endl;
+				break;
+			case 15:  // Filler Word
+				if(VERBOSE>7) cout << "     SSP/DIRC Filler Word" << endl;
+				break;
+		}
 	}
-	iptr = &iptr[(*iptr) + 1];
+
+	iptr =iend;
 }
 
 //----------------

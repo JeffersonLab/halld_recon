@@ -57,6 +57,7 @@
       hh->GetYaxis()->SetTitleSize(0.05);
       hh->GetXaxis()->SetLabelSize(0.05);
       hh->GetXaxis()->SetTitleSize(0.05);
+      hh->GetZaxis()->SetLabelSize(0.05);
 
       gPad->Modified();
 

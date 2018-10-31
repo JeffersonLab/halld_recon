@@ -295,26 +295,21 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // Propagate track to CDC endplate
     bool isForward=false;
     if (fdctrackcandidates.size()>0){
-      // Check for candidates that appear to go backwards but are actually 
-      //going forwards...
-      if (mom.Theta()>M_PI_2 && !sc_pos.empty()){
-	TryToFlipDirection(schits,mom,pos);
-      }
       if (mom.Theta()<M_PI_2){
 	// First do a quick projection using a helical model to see if it is 
 	// worth adding this cdc candidate to the list of forward-going tracks
 	// that could pass into the FDC...
 	ProjectHelixToZ(cdc_endplate.z(),srccan->charge(),mom,pos);
 	
-	if (pos.Perp()<48.5){
+	if (pos.Perp()<60.){
 	  // do an actual swim to the cdc endplate
 	  mom=srccan->momentum();
 	  pos=srccan->position();
 	  stepper->SetCharge(srccan->charge());
 	  stepper->SwimToPlane(pos,mom,cdc_endplate,norm,NULL);
-	  if (pos.Perp()<48.5){
+	  if (pos.Perp()<60.){
 	    cdc_endplate_projections.push_back(pos);
-	    cdc_forward_ids.push_back(i);   
+	    cdc_forward_ids.push_back(i);
 	    isForward=true;
 	  }
 	}
@@ -359,19 +354,26 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
       else{  
 	if (DEBUG_LEVEL>0) _DBG_ << "Attempting FDC/CDC matching method #2..." <<endl; 
-
-	// Try to gather up stray CDC hits from candidates that were not 
-	// matched with the previous algorithm by projecting the helical track
-	// from the fdc into the cdc region
-	if (MatchMethod2(fdccan,cdc_forward_ids,used_cdc_hits)){
-	  if (DEBUG_LEVEL>0) _DBG_ << "... matched to FDC candidate #" << i <<endl;
-	       
-	  got_match=true;
+	// loop over the forward-pointing cdc candidates
+	for (unsigned int j=0;j<cdc_forward_ids.size();j++){
+	  const DTrackCandidate *cdccan=cdctrackcandidates[cdc_forward_ids[j]];
+	  
+	  // Try to gather up stray CDC hits from candidates that were not 
+	  // matched with the previous algorithm by projecting the helical track
+	  // from the fdc into the cdc region
+	  if (MatchMethod2(fdccan,cdccan,used_cdc_hits)){
+	    if (DEBUG_LEVEL>0) _DBG_ << "... matched to FDC candidate #" << i <<endl;
+	    // Remove the CDC candidate from the list
+	    cdc_forward_ids.erase(cdc_forward_ids.begin()+j); 
+	    
+	    if (DEBUG_LEVEL>0)
+	      _DBG_ << ".. matched to CDC candidate #" <<cdc_forward_ids[j] <<endl;
+	    got_match=true;
+	    break;
+	  }
 	}
-
       }
   
-
       if (got_match){
 	// Mark the FDC candidate as matched
 	forward_matches[i]=1;
@@ -392,7 +394,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     cdc_forward_matches[i]=0;
 
     if (DEBUG_LEVEL>0) _DBG_ << "Attempting FDC/CDC matching method #3..." <<endl; 
-    
+
     // This method projects the cdc track into the FDC region
     if (MatchMethod3(cdccan,forward_matches,used_cdc_hits)){
       num_fdc_cands_remaining--;
@@ -441,12 +443,6 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       DVector3 mom=cdccan->momentum();
       DVector3 pos=cdccan->position();
-      
-      // Check for candidates that appear to go backwards but are actually 
-      //going forwards...
-      if (mom.Theta()>M_PI_2 && !sc_pos.empty()){
-	TryToFlipDirection(schits,mom,pos);
-      }
 
       can->setMomentum(mom);
       can->setPosition(pos);
@@ -478,33 +474,88 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       DVector3 pos=cdccan->position();
 
       // Check for candidates that appear to go backwards but are actually 
-      //going forwards...
-      if (mom.Theta()>M_PI_2 && !sc_pos.empty()){
-	TryToFlipDirection(schits,mom,pos);
+      // going forwards and try to match these to remaining fdc candidates
+      bool got_match=false;
+      if (num_fdc_cands_remaining>0 && mom.Theta()>M_PI_2 && !sc_pos.empty()){
+	if (TryToFlipDirection(schits,mom,pos)){
+	  if (DEBUG_LEVEL>0){
+	    _DBG_<< "Flipped direction of track (backward to forward) to look for FDC match..." << endl;
+	  }
+	  DVector3 norm(0.,0.,1.);
+	  double p_cdc=mom.Mag();
+	  stepper->SetCharge(cdccan->charge());
+	  stepper->SwimToPlane(pos,mom,cdc_endplate,norm,NULL);
+
+	  for (unsigned int i=0;i<fdctrackcandidates.size();i++){
+	    if (num_fdc_cands_remaining==0) break;
+	    if (forward_matches[i]==0){
+	      const DTrackCandidate *fdccan=fdctrackcandidates[i];
+	      if (MatchMethod2(fdccan,cdccan,used_cdc_hits)){
+		if (DEBUG_LEVEL>0) {
+		  _DBG_ << "... matched to FDC candidate #" << i <<endl;
+		}
+		forward_matches[i]=1;
+		num_fdc_cands_remaining--;
+		got_match=true;
+		break;
+	      }
+
+	      // Use MatchMethod1 if the previous method did not work
+	      DVector3 fdcpos=fdccan->position();
+	      DVector3 fdcmom=fdccan->momentum();
+	      double p_fdc=fdcmom.Mag();
+	      ProjectHelixToZ(cdc_endplate.z(),fdccan->charge(),fdcmom,fdcpos);
+	      double diff=(pos-fdcpos).Mag(); 
+	      if (cdc_fdc_match(p_fdc,p_cdc,diff)){
+		// Get the segment data
+		vector<const DFDCSegment *>segments;
+		fdccan->GetT(segments);
+		
+		// The following code snippet is intended to prevent matching a cdc
+		// track candidate to a low momentum particle curling from the cdc endplate  
+		double theta=fdcmom.Theta();
+		if (segments.size()>1 && p_fdc<0.3 && theta< 5.*M_PI/180.){ 
+		  continue;
+		}
+		
+		if (MakeCandidateFromMethod1(theta,segments,cdccan,
+					     used_cdc_hits)){
+		  forward_matches[i]=1;
+		  num_fdc_cands_remaining--;
+		  got_match=true;   
+		  if (DEBUG_LEVEL>0)
+		    _DBG_ << ".. matched to CDC candidate #" << cdc_backward_ids[j] <<endl;
+		  break;
+		}
+	      } // match criterion met?
+	    } // fdc candidate not already matched?
+	  } // loop over fdc candidates
+	}
       }
-
-      DTrackCandidate *can = new DTrackCandidate;
-      can->setMomentum(mom);
-      can->setPosition(pos);
-      can->setPID(cdccan->PID());
-
-      // circle parameters
-      can->rc=cdccan->rc;
-      can->xc=cdccan->xc;
-      can->yc=cdccan->yc;
-
-      // Get the cdc hits and add them to the candidate
-      vector<const DCDCTrackHit *>cdchits;
-      cdccan->GetT(cdchits);
-      stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
-      for (unsigned int n=0;n<cdchits.size();n++){
-	used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-	can->AddAssociatedObject(cdchits[n]);
+      if (got_match==false){
+	DTrackCandidate *can = new DTrackCandidate;
+	can->setMomentum(cdccan->momentum());
+	can->setPosition(cdccan->position());
+	can->setPID(cdccan->PID());
+	
+	// circle parameters
+	can->rc=cdccan->rc;
+	can->xc=cdccan->xc;
+	can->yc=cdccan->yc;
+	
+	// Get the cdc hits and add them to the candidate
+	vector<const DCDCTrackHit *>cdchits;
+	cdccan->GetT(cdchits);
+	stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
+	for (unsigned int n=0;n<cdchits.size();n++){
+	  used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
+	  can->AddAssociatedObject(cdchits[n]);
+	}
+	can->chisq=cdccan->chisq;
+	can->Ndof=cdccan->Ndof;
+	
+	trackcandidates.push_back(can);
       }
-      can->chisq=cdccan->chisq;
-      can->Ndof=cdccan->Ndof;
- 
-      trackcandidates.push_back(can);
     }
   }	
 
@@ -1093,7 +1144,7 @@ double DTrackCandidate_factory::GetSenseOfRotation(DHelicalFit &fit,
   // Compute differences 
   double d2plus=(plus-fdchit->xy).Mod2();
   double d2minus=(minus-fdchit->xy).Mod2();
-    
+
   if (d2minus<d2plus)
     return (-1.0);
   else
@@ -1196,101 +1247,110 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
       double theta=180./M_PI*mom.Theta();
       if (p_fdc<0.3 && theta<5.) return false;
     }
-    
-    // JANA does not maintain the order that the segments were added
-    // as associated objects. Therefore, we need to reorder them here
-    // so segment[0] is the most upstream segment.
-    stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
-        
-    unsigned int cdc_index=cdc_forward_ids[jmin];
-    const DTrackCandidate *cdccan=cdctrackcandidates[cdc_index];
-    
-    // Get the associated cdc hits
-    vector<const DCDCTrackHit *>cdchits;
-    cdccan->GetT(cdchits);
-     
-    // Sort CDC hits by layer
-    stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
-        
-    // Abort if the track would have to pass from one quadrant into another
-    // quadrant (this is more likely two roughly back-to-back tracks rather than 
-    // a single track).
-    const DVector2 fdc_hit_pos=segments[0]->hits[0]->xy;
-    const DVector3 cdc_wire_origin=cdchits[0]->wire->origin;  
-    if (cdc_wire_origin.x()*fdc_hit_pos.X()<0.
-	|| cdc_wire_origin.y()*fdc_hit_pos.Y()<0.){
-      if (DEBUG_LEVEL>0) _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
-      return false; 
-    }
-    
-    // average Bz
-    double Bz_avg=0.;
-     
-    // Redo circle fit with additional hits
-    DHelicalFit fit;
-    if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
-      // Determine the polar angle
-      double theta=fdccan->momentum().Theta();
-      double theta_cdc=cdccan->momentum().Theta();
-      if (segments.size()==1 && theta_cdc<M_PI_4){
-	double numcdc=double(cdchits.size());
-	double numfdc=segments[0]->hits.size();
-	theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
-      }
-      fit.tanl=tan(M_PI_2-theta);
-      
-      if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				 pos,mom)==NOERROR){
-	// FDC hit
-	const DFDCPseudo *fdchit=segments[0]->hits[0];
-	// Find the z-position at the new position in x and y
-	DVector2 xy0(pos.X(),pos.Y());
-	double tworc=2.*fit.r0;
-	double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	
-	// Create new track candidate object 
-	DTrackCandidate *can = new DTrackCandidate;
-	can->used_cdc_indexes=cdccan->used_cdc_indexes;
-	// circle parameters
-	can->rc=fit.r0;
-	can->xc=fit.x0;
-	can->yc=fit.y0;
-	
-	// Add cdc and fdc hits to the track as associated objects
-	for (unsigned int m=0;m<segments.size();m++){
-	  for (unsigned int n=0;n<segments[m]->hits.size();n++){
-	    can->AddAssociatedObject(segments[m]->hits[n]);
-	  }
-	}
-	for (unsigned int n=0;n<cdchits.size();n++){
-	  used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-	  can->AddAssociatedObject(cdchits[n]); 
-	}
-	
-	pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
 
-	can->chisq=fit.chisq;
-	can->Ndof=fit.ndof;
-	Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
-    can->setPID(locPID);
-	can->setMomentum(mom);
-	can->setPosition(pos);
-    
-	trackcandidates.push_back(can);	    
-    
-	// Remove the CDC candidate from the id list because we 
-	// found a match
-	cdc_forward_ids.erase(cdc_forward_ids.begin()+jmin);
-	
-	if (DEBUG_LEVEL>0) _DBG_ << ".. matched to CDC candidate #" << cdc_index <<endl;
-    
-	return true;
-      }
+    unsigned int cdc_index=cdc_forward_ids[jmin];
+    if (MakeCandidateFromMethod1(mom.Theta(),segments,
+				 cdctrackcandidates[cdc_index],
+				 used_cdc_hits)){
+         
+      if (DEBUG_LEVEL>0)
+	_DBG_ << ".. matched to CDC candidate #" << cdc_index <<endl;
+      
+      // Remove the CDC candidate from the id list because we found a match
+      cdc_forward_ids.erase(cdc_forward_ids.begin()+jmin);
+      return true;
     }
   } // got a cdc-fdc match
   
   // no match
+  return false;
+}
+
+// Create new candidate after using Match Method 1 to match cdc and fdc 
+// candidates
+bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const DFDCSegment *>&segments,const DTrackCandidate *cdccan, vector<unsigned int>&used_cdc_hits){
+  // JANA does not maintain the order that the segments were added
+  // as associated objects. Therefore, we need to reorder them here
+  // so segment[0] is the most upstream segment.
+  stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
+  
+  // Get the associated cdc hits
+  vector<const DCDCTrackHit *>cdchits;
+  cdccan->GetT(cdchits);
+  
+  // Sort CDC hits by layer
+  stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
+  
+  // Abort if the track would have to pass from one quadrant into another
+  // quadrant (this is more likely two roughly back-to-back tracks rather than 
+  // a single track).
+  const DVector2 fdc_hit_pos=segments[0]->hits[0]->xy;
+  const DVector3 cdc_wire_origin=cdchits[0]->wire->origin;  
+  if (cdc_wire_origin.x()*fdc_hit_pos.X()<0.
+      || cdc_wire_origin.y()*fdc_hit_pos.Y()<0.){
+    if (DEBUG_LEVEL>0) _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
+    return false; 
+  }
+  
+  // average Bz
+  double Bz_avg=0.;
+  
+  // Redo circle fit with additional hits
+  DHelicalFit fit;
+  if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
+    // Determine the polar angle
+    double theta_cdc=cdccan->momentum().Theta();
+    if (segments.size()==1 && theta_cdc<M_PI_4){
+      double numcdc=double(cdchits.size());
+      double numfdc=segments[0]->hits.size();
+      theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
+    }
+    fit.tanl=tan(M_PI_2-theta);
+    
+    DVector3 pos,mom;
+    if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
+			       pos,mom)==NOERROR){
+      // FDC hit
+      const DFDCPseudo *fdchit=segments[0]->hits[0];
+      // Find the z-position at the new position in x and y
+      DVector2 xy0(pos.X(),pos.Y());
+      double tworc=2.*fit.r0;
+      double ratio=(fdchit->xy-xy0).Mod()/tworc;
+      double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
+      
+      // Create new track candidate object 
+      DTrackCandidate *can = new DTrackCandidate;
+      can->used_cdc_indexes=cdccan->used_cdc_indexes;
+      // circle parameters
+      can->rc=fit.r0;
+      can->xc=fit.x0;
+      can->yc=fit.y0;
+      
+      // Add cdc and fdc hits to the track as associated objects
+      for (unsigned int m=0;m<segments.size();m++){
+	for (unsigned int n=0;n<segments[m]->hits.size();n++){
+	  can->AddAssociatedObject(segments[m]->hits[n]);
+	}
+      }
+      for (unsigned int n=0;n<cdchits.size();n++){
+	used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
+	can->AddAssociatedObject(cdchits[n]); 
+      }
+      
+      pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
+      
+      can->chisq=fit.chisq;
+      can->Ndof=fit.ndof;
+      Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
+      can->setPID(locPID);
+      can->setMomentum(mom);
+      can->setPosition(pos);
+      
+      trackcandidates.push_back(can);	      
+       
+      return true;
+    }
+  }
   return false;
 }
  
@@ -1299,163 +1359,153 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
 // computes a doca to each wire in the cdc candidate and counts matches based
 // on the probability that the cdc wire is on the track.
  bool DTrackCandidate_factory::MatchMethod2(const DTrackCandidate *fdccan,
-					    vector<unsigned int> &cdc_forward_ids,
+					    const DTrackCandidate *cdccan,
 					    vector<unsigned int>&used_cdc_hits
 					    ){
-   // loop over the forward-pointing cdc candidates
-   for (unsigned int j=0;j<cdc_forward_ids.size();j++){
-     const DTrackCandidate *cdccan=cdctrackcandidates[cdc_forward_ids[j]];
-
-     // Get the cdc hits associated with this cdc candidate
-     vector<const DCDCTrackHit *>cdchits;
-     cdccan->GetT(cdchits);	 
-     stable_sort(cdchits.begin(),cdchits.end(),CDCHitSortByLayerincreasing);
-	  
-     // Variables to count the number of matching hits and the match fraction
-     unsigned int num_match=0;
-     unsigned int num_cdc=0;
-	  
+   // Get the cdc hits associated with this cdc candidate
+   vector<const DCDCTrackHit *>cdchits;
+   cdccan->GetT(cdchits);	 
+   stable_sort(cdchits.begin(),cdchits.end(),CDCHitSortByLayerincreasing);
+   
+   // Variables to count the number of matching hits and the match fraction
+   unsigned int num_match=0;
+   unsigned int num_cdc=0;
+   
      // Get the track parameters from the fdc candidate
-     DVector3 pos=fdccan->position();
-     DVector3 mom=fdccan->momentum();
-     double q=fdccan->charge();
+   DVector3 pos=fdccan->position();
+   DVector3 mom=fdccan->momentum();
+   double q=fdccan->charge();
 
-     // Check to see if the outer hit in the CDC does not exceed the radius of  
+   // Check to see if the outer hit in the CDC does not exceed the radius of  
      // the FDC position to try to avoid false matches...
-     unsigned int outer_index=cdchits.size()-1;
-     DVector3 origin=cdchits[outer_index]->wire->origin;
-     DVector3 dir=(1./cdchits[outer_index]->wire->udir.z())*cdchits[outer_index]->wire->udir;
-     DVector3 cdc_outer_wire_pos=origin+(167.-origin.z())*dir;
-     if (cdc_outer_wire_pos.Perp()>pos.Perp()) {
-       continue;
-     }
+   unsigned int outer_index=cdchits.size()-1;
+   DVector3 origin=cdchits[outer_index]->wire->origin;
+   DVector3 dir=(1./cdchits[outer_index]->wire->udir.z())*cdchits[outer_index]->wire->udir;
+   DVector3 cdc_outer_wire_pos=origin+(167.-origin.z())*dir;
+   if (cdc_outer_wire_pos.Perp()>pos.Perp()) {
+     return false;
+   }
 
-     // loop over the cdc hits and count hits that agree with a projection of 
-     // the helix into the cdc 
-     for (unsigned int m=0;m<cdchits.size();m++){
-       double variance=1.6;
-       // Use a helical approximation to the track to match both axial and
-       // stereo wires
-       double dr2=DocaToHelix(cdchits[m],q,pos,mom);
-       double prob=isfinite(dr2) ? TMath::Prob(dr2/variance,1):0.0;
-
-       if (prob>0.01) num_match++;
-       if (DEBUG_LEVEL>1) _DBG_ << "CDC s: " << cdchits[m]->wire->straw
-				<< " r: " << cdchits[m]->wire->ring
+   // loop over the cdc hits and count hits that agree with a projection of 
+   // the helix into the cdc 
+   for (unsigned int m=0;m<cdchits.size();m++){
+     double variance=1.6;
+     // Use a helical approximation to the track to match both axial and
+     // stereo wires
+     double dr2=DocaToHelix(cdchits[m],q,pos,mom);
+     double prob=isfinite(dr2) ? TMath::Prob(dr2/variance,1):0.0;
+     
+     if (prob>0.01) num_match++;
+     if (DEBUG_LEVEL>1) _DBG_ << "CDC s: " << cdchits[m]->wire->straw
+			      << " r: " << cdchits[m]->wire->ring
 				<< " prob: " << prob << endl;
-       
-       num_cdc++;
+     
+     num_cdc++;
+   }
+   
+   if (num_match>=3 && double(num_match)/double(num_cdc)>0.33){              
+     // Get the segment data
+     vector<const DFDCSegment *>segments;
+     fdccan->GetT(segments);
+     
+     // JANA does not maintain the order that the segments were added
+     // as associated objects. Therefore, we need to reorder them here
+     // so segment[0] is the most upstream segment.
+     stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
+     
+     // Abort if the track would have to pass from one quadrant into the opposite 
+     // quadrant (this is more likely two roughly back-to-back tracks rather than 
+     // a single track).
+     const DVector2 fdc_hit_pos=segments[0]->hits[0]->xy;
+     const DVector3 cdc_wire_origin=cdchits[0]->wire->origin;  
+     if (cdc_wire_origin.x()*fdc_hit_pos.X()<0.
+	 && cdc_wire_origin.y()*fdc_hit_pos.Y()<0.){
+       if (DEBUG_LEVEL>0) _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
+       return false;
      }
-
-     if (num_match>=3 && double(num_match)/double(num_cdc)>0.33){              
-       // Get the segment data
-       vector<const DFDCSegment *>segments;
-       fdccan->GetT(segments);
-       
-       // JANA does not maintain the order that the segments were added
-       // as associated objects. Therefore, we need to reorder them here
-       // so segment[0] is the most upstream segment.
-       stable_sort(segments.begin(), segments.end(), SegmentSortByLayerincreasing);
-
-       // Abort if the track would have to pass from one quadrant into the opposite 
-       // quadrant (this is more likely two roughly back-to-back tracks rather than 
-       // a single track).
-       const DVector2 fdc_hit_pos=segments[0]->hits[0]->xy;
-       const DVector3 cdc_wire_origin=cdchits[0]->wire->origin;  
-       if (cdc_wire_origin.x()*fdc_hit_pos.X()<0.
-	   && cdc_wire_origin.y()*fdc_hit_pos.Y()<0.){
-	 if (DEBUG_LEVEL>0) _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
-	 continue; 
+     
+     // Put the fdc candidate in the combined list
+     DTrackCandidate *can = new DTrackCandidate;
+     can->setPID((q > 0.0) ? PiPlus : PiMinus);
+     
+     // copy the list of cdc indices over from the cdc candidate
+     can->used_cdc_indexes=cdccan->used_cdc_indexes;
+     
+     // Add the fdc hits to track candidate as associated objects 
+     unsigned int num_fdc_hits=0;
+     for (unsigned int m=0;m<segments.size();m++){
+       for (unsigned int n=0;n<segments[m]->hits.size();n++){
+	 can->AddAssociatedObject(segments[m]->hits[n]);
+	 num_fdc_hits++;
        }
-
-       // Put the fdc candidate in the combined list
-       DTrackCandidate *can = new DTrackCandidate;
-       can->setPID((q > 0.0) ? PiPlus : PiMinus);
+     }
+     // Add the CDC hits to the track candidate
+     for (unsigned int m=0;m<cdchits.size();m++){
+       used_cdc_hits[cdccan->used_cdc_indexes[m]]=1;
+       can->AddAssociatedObject(cdchits[m]);
+     }
        
-       // copy the list of cdc indices over from the cdc candidate
-       can->used_cdc_indexes=cdccan->used_cdc_indexes;
-
-       // Add the fdc hits to track candidate as associated objects 
-       unsigned int num_fdc_hits=0;
-       for (unsigned int m=0;m<segments.size();m++){
-	 for (unsigned int n=0;n<segments[m]->hits.size();n++){
-	   can->AddAssociatedObject(segments[m]->hits[n]);
-	   num_fdc_hits++;
-	 }
-       }
-       // Add the CDC hits to the track candidate
-       for (unsigned int m=0;m<cdchits.size();m++){
-	 used_cdc_hits[cdccan->used_cdc_indexes[m]]=1;
-	 can->AddAssociatedObject(cdchits[m]);
-       }
-       
-       // Average Bz
-       double Bz_avg=0.;
-       
-       // Redo circle fit with additional hits
-       DHelicalFit fit;
-       //...first add the tangent to the dip angle to the fit class...
-       double theta=fdccan->momentum().Theta();
-       double theta_cdc=cdccan->momentum().Theta();
-       if (segments.size()==1&& theta_cdc<M_PI_4){
-	 double numcdc=double(cdchits.size());
-	 double numfdc=segments[0]->hits.size();
-	 theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
-       }
-       fit.tanl=tan(M_PI_2-theta);
-       if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
-	 if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
-				    pos,mom)==NOERROR){
-	   // FDC hit
-	   const DFDCPseudo *fdchit=segments[0]->hits[0];
-	   // Find the z-position at the new position in x and y
-	   DVector2 xy0(pos.X(),pos.Y());
-	   double tworc=2.*fit.r0;
-	   double ratio=(fdchit->xy-xy0).Mod()/tworc;
-	   double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
-	   
-	   pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
-	   Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-	   can->setPID(locPID);
-	 }
-	 else{
-	   //Set the charge for the stepper 
-	   stepper->SetCharge(q);
-	   // Swim to a radius just outside the start counter
-	   stepper->SwimToRadius(pos,mom,9.5,NULL);   
-	 }
-	 // circle parameters
-	 can->rc=fit.r0;
-	 can->xc=fit.x0;
-	 can->yc=fit.y0;
+     // Average Bz
+     double Bz_avg=0.;
+     
+     // Redo circle fit with additional hits
+     DHelicalFit fit;
+     //...first add the tangent to the dip angle to the fit class...
+     double theta=fdccan->momentum().Theta();
+     double theta_cdc=cdccan->momentum().Theta();
+     if (segments.size()==1&& theta_cdc<M_PI_4){
+       double numcdc=double(cdchits.size());
+       double numfdc=segments[0]->hits.size();
+       theta=(theta*numfdc+theta_cdc*numcdc)/(numfdc+numcdc);
+     }
+     fit.tanl=tan(M_PI_2-theta);
+     if (DoRefit(fit,segments,cdchits,Bz_avg)==NOERROR){
+       if (GetPositionAndMomentum(fit,Bz_avg,cdchits[0]->wire->origin,
+				  pos,mom)==NOERROR){
+	 // FDC hit
+	 const DFDCPseudo *fdchit=segments[0]->hits[0];
+	 // Find the z-position at the new position in x and y
+	 DVector2 xy0(pos.X(),pos.Y());
+	 double tworc=2.*fit.r0;
+	 double ratio=(fdchit->xy-xy0).Mod()/tworc;
+	 double sperp=(ratio<1.)?tworc*asin(ratio):tworc*M_PI_2;
 	 
-	 can->chisq=fit.chisq;
-	 can->Ndof=fit.ndof;
-	 can->setMomentum(mom);
-	 can->setPosition(pos);
+	 pos.SetZ(fdchit->wire->origin.z()-sperp*fit.tanl);
+	 Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
+	 can->setPID(locPID);
        }
        else{
-	 //_DBG_ << endl;
-	 // circle parameters
-	 can->rc=fdccan->rc;
-	 can->xc=fdccan->xc;
-	 can->yc=fdccan->yc;
-	 can->Ndof=fdccan->Ndof;
-	 can->chisq=fdccan->chisq;
-	 can->setMomentum(fdccan->momentum());
-	 can->setPosition(fdccan->position());	    
+	 //Set the charge for the stepper 
+	 stepper->SetCharge(q);
+	 // Swim to a radius just outside the start counter
+	 stepper->SwimToRadius(pos,mom,9.5,NULL);   
        }
+       // circle parameters
+       can->rc=fit.r0;
+       can->xc=fit.x0;
+       can->yc=fit.y0;
        
-       trackcandidates.push_back(can);
-       
-       // Remove the CDC candidate from the list
-       cdc_forward_ids.erase(cdc_forward_ids.begin()+j); 
-
-       if (DEBUG_LEVEL>0) _DBG_ << ".. matched to CDC candidate #" <<cdc_forward_ids[j] <<endl;
-       
-       return true;
-     }     
-   } // loop over forward cdc candidates
+       can->chisq=fit.chisq;
+       can->Ndof=fit.ndof;
+       can->setMomentum(mom);
+	 can->setPosition(pos);
+     }
+     else{
+       //_DBG_ << endl;
+       // circle parameters
+       can->rc=fdccan->rc;
+       can->xc=fdccan->xc;
+       can->yc=fdccan->yc;
+       can->Ndof=fdccan->Ndof;
+       can->chisq=fdccan->chisq;
+       can->setMomentum(fdccan->momentum());
+       can->setPosition(fdccan->position());	    
+     }
+     
+     trackcandidates.push_back(can);
+ 
+     return true;
+   }     
 
    return false;
  }
@@ -2893,7 +2943,7 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	unsigned int last_package
 	  =(myfdchits[myfdchits.size()-1]->wire->layer-1)/6;
 	// look for something downstream...
-	if (last_package<segments[0]->package){
+	if (segments[0]->package-last_package==1){
 	  vector<const DCDCTrackHit *>cdchits;
 	  can->GetT(cdchits);
 	  stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);

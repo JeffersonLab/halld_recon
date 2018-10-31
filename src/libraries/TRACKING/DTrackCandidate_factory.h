@@ -96,7 +96,7 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 		    vector<unsigned int>&used_cdc_hits
 		    );
   bool MatchMethod2(const DTrackCandidate *fdccan,
-		    vector<unsigned int> &cdc_forward_ids,
+		    const DTrackCandidate *cdccan,
 		    vector<unsigned int>&used_cdc_hits
 		    );
   bool MatchMethod3(const DTrackCandidate *cdccan,vector<int> &forward_matches,
@@ -137,6 +137,10 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 			  DVector3 &mom,DVector3 &pos) const;
   bool MatchStraySegments(vector<int> &forward_matches,
 			  int &num_fdc_cands_remaining);
+  bool MakeCandidateFromMethod1(double theta,
+				vector<const DFDCSegment *>&segments,
+				const DTrackCandidate *cdccan,
+				vector<unsigned int>&used_cdc_hits);
  
  private:
   const DMagneticFieldMap *bfield;

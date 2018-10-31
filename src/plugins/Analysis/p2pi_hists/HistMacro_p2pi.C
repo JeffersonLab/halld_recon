@@ -72,6 +72,8 @@
 		locHist_TimingCut_PiPlusPsi->SetMinimum(0);
 		locHist_TimingCut_PiPlusPsi->GetXaxis()->SetTitleSize(0.05);
 		locHist_TimingCut_PiPlusPsi->GetXaxis()->SetLabelSize(0.05);
+		locHist_TimingCut_PiPlusPsi->GetYaxis()->SetLabelSize(0.05);
+		locHist_TimingCut_PiPlusPsi->GetYaxis()->SetLabelFont(42);
 		locHist_TimingCut_PiPlusPsi->SetStats(0);
 		locHist_TimingCut_PiPlusPsi->Draw();
 		
@@ -194,18 +196,43 @@
 
 	}
 
-	// Print the rho mass and the number of reconstructed rhos per trigger
+	//t
 	locCanvas->cd(6);
+	gPad->SetTicks();
+	gPad->SetGrid();
+	if(locHist_PiPlusPsi_t != NULL)
+	{
+	        TH1D *locHist_TimingCut_t = (TH1D*)locHist_PiPlusPsi_t->ProjectionX();
+		locHist_TimingCut_t->SetTitle("Momentum Transfer to Proton");
+		//locHist_TimingCut_t->Rebin(4);
+		locHist_TimingCut_t->SetMinimum(0);
+		locHist_TimingCut_t->GetXaxis()->SetTitleSize(0.05);
+		locHist_TimingCut_t->GetXaxis()->SetLabelSize(0.05);
+		locHist_TimingCut_t->GetYaxis()->SetLabelSize(0.05);
+		locHist_TimingCut_t->GetYaxis()->SetLabelFont(42);
+		locHist_TimingCut_t->GetXaxis()->SetRangeUser(0,1);
+		locHist_TimingCut_t->GetYaxis()->SetRangeUser(1,locHist_TimingCut_t->GetMaximum()*2);
+		locHist_TimingCut_t->GetXaxis()->SetTitle("-t (GeV^{2}/c^{2})");
+		//locHist_TimingCut_t->SetLineColor(1);
+		locHist_TimingCut_t->SetFillColor(kOrange-2);
+		locHist_TimingCut_t->SetStats(0);
+		locHist_TimingCut_t->Draw();
+		gPad->SetLogy();
+
+	}
+
+	// Print the rho mass and the number of reconstructed rhos per trigger
+	locCanvas->cd(3);
 	TLatex tx;
 	tx.SetTextAlign(11);
 	tx.SetTextSize(0.07);
 	char text[100];
 	sprintf(text, "Post KinFit Cut");
-	tx.DrawLatex(0.05, 0.6, text);
+	tx.DrawLatex(0.1, locHist_KinFitConLev->GetMaximum()/4, text);
 	sprintf(text, "M(#rho) = %0.3f GeV/c^{2}", rho_mass);
-	tx.DrawLatex(0.05, 0.5, text);
+	tx.DrawLatex(0.1, locHist_KinFitConLev->GetMaximum()/16, text);
 	sprintf(text, "N(#rho) = %0.2f / 1k Trigger", n_rho_kinfit/n_triggers*1000);
-	tx.DrawLatex(0.05, 0.4, text);
+	tx.DrawLatex(0.1, locHist_KinFitConLev->GetMaximum()/64, text);
 
 }
 
