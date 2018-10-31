@@ -424,6 +424,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       //DTOFHit *hit = FindMatch(digihit->plane, hit->bar, hit->end, T);
       if(!hit){
 	continue; // Do not use unmatched TDC hits
+	/*
 	hit = new DTOFHit;
 	hit->plane = digihit->plane;
 	hit->bar   = digihit->bar;
@@ -434,6 +435,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->has_fADC=false;
 	
 	_data.push_back(hit);
+	*/
       } else if (hit->has_TDC) { // this tof ADC hit has already a matching TDC, make new tof ADC hit
 	DTOFHit *newhit = new DTOFHit;
 	newhit->plane = hit->plane;
@@ -806,7 +808,7 @@ double DTOFHit_factory::CalcWalkCorrNEW(DTOFHit* hit){
   int id=2*TOF_NUM_BARS*hit->plane+TOF_NUM_BARS*hit->end+hit->bar-1;
   double ADC=hit->dE;
 
-  if (ADC<50.){
+  if (ADC<1.){
     return 0;
   }
   
