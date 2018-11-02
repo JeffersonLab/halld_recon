@@ -213,8 +213,21 @@ void DEVIOWorkerThread::MakeEvents(void)
 
 	iptr++;
 	uint32_t mask = 0xFF001000;
-	if( ((*iptr)&mask) == mask ){
-		// Physics event
+	if( (*iptr)>>16 == 0xFF32){
+
+		// CDAQ BOR. Leave M=1
+
+	}else if( (*iptr)>>16 == 0xFF33){
+
+		// CDAQ Physics event
+		M = iptr[2]&0xFF;
+		
+		// Event number taken from first ROC's trigger bank
+		uint64_t eventnum_lo = iptr[6];
+		uint64_t eventnum_hi = 0; // Only lower 32bits in ROC trigger info.
+		event_num = (eventnum_hi<<32) + (eventnum_lo);		
+	}else if( ((*iptr)&mask) == mask ){
+		// CODA Physics event
 		M = *(iptr)&0xFF;
 		uint64_t eventnum_lo = iptr[4];
 		uint64_t eventnum_hi = iptr[5];
@@ -262,6 +275,8 @@ void DEVIOWorkerThread::MakeEvents(void)
 	for(auto pe : current_parsed_events){
 		if( ++pe->Nrecycled%pe->MAX_RECYCLES == 0) pe->Prune();
 	}
+
+_DBG_<<"CDAQ BOR Event -- Done" << endl;
 }	
 
 //---------------------------------
@@ -318,11 +333,10 @@ void DEVIOWorkerThread::ParseBank(void)
 		uint32_t event_head = iptr[1];
 		uint32_t tag = (event_head >> 16) & 0xFFFF;
 
-// _DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
+_DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
 
 		switch(tag){
 			case 0x0060:       ParseEPICSbank(iptr, iend);    break;
-			case 0xFF32:
 			case 0x0070:         ParseBORbank(iptr, iend);    break;
 
 			case 0xFFD0:
@@ -335,6 +349,7 @@ void DEVIOWorkerThread::ParseBank(void)
 			case 0xFF78: current_parsed_events.back()->sync_flag = true;
 			case 0xFF50:     
 			case 0xFF70:     ParsePhysicsBank(iptr, iend);    break;
+			case 0xFF32:
 			case 0xFF33:        ParseCDAQBank(iptr, iend);    break;
 
 			default:
@@ -466,6 +481,8 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	if(current_parsed_events.size() != 1){
 		stringstream ss;
 		ss << "DEVIOWorkerThread::ParseBORbank called for EVIO event with " << current_parsed_events.size() << " events in it. (Should be exactly 1!)";
+		jerr << ss.str() << endl;
+		jerr << "EVIO length=" << hex << iptr[0] << "  header=" << iptr[1] << endl;
 		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
@@ -491,6 +508,8 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	if(bor_header != 0x700e01){
 		stringstream ss;
 		ss << "Bad BOR header: 0x" << hex << bor_header;
+_DBG_<< ss.str() << endl;
+DumpBinary(&iptr[-4], iend, 32, iptr);
 		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
@@ -505,6 +524,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 		if( (crate_header>>16) != 0x71 ){
 			stringstream ss;
 			ss << "Bad BOR crate header: 0x" << hex << (crate_header>>16);
+_DBG_<< ss.str() << endl;
 			throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 		}
 
@@ -564,6 +584,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 			if( module_len > sizeof_dest ){
 				stringstream ss;
 				ss << "BOR module bank size does not match structure! " << module_len << " > " << sizeof_dest << " for modType " << modType;
+_DBG_<< ss.str() << endl;
 				throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 			}
 
@@ -590,6 +611,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	// Sort the BOR config events now so we don't have to do it for every event
 	borptrs->Sort();
 
+_DBG_<<"Finished parsing BOR ----" << endl;
 }
 
 //---------------------------------
@@ -726,6 +748,15 @@ void DEVIOWorkerThread::ParsePhysicsBank(uint32_t* &iptr, uint32_t *iend)
 //---------------------------------
 void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 {
+
+	// Check if this is a BOR event
+	if( (iptr[1]&0xFFFF) == 0xFF32 ){
+		iptr += 2;
+		ParseBORbank(iptr, iend);
+		return;
+	}
+
+	// Must be physics event(s)
 	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT);
 
 	uint32_t physics_event_len      = *iptr++;
@@ -738,17 +769,17 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 		uint32_t data_bank_len = *iptr;
 		uint32_t *iend_data_bank = &iptr[data_bank_len+1];
 
-		// The CDAQ system does not strip off the raw trigger data from the from
+		// The CDAQ system does not strip off the raw trigger data from the
 		// individual ROC data to make a built trigger bank. Thus, we must
 		// skip over it here. TO further complicate things, the ParseDataBank
-		// method assumes iptr points to the length word in the Physicss event
+		// method assumes iptr points to the length word in the Physics event
 		// data bank (whose header contains the rocid) and that it is immediately
 		// followed by the raw data.
 //		iptr += 2;
 //		uint32_t raw_trigger_bank_len = *iptr++;
 //		iptr = &iptr[raw_trigger_bank_len];
 
-//DumpBinary(iptr, iend_data_bank, 40);
+DumpBinary(iptr, iend_data_bank, 40);
 		ParseDataBank(iptr, iend_data_bank);
 
 		iptr = iend_data_bank;
@@ -879,8 +910,6 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 	// Loop over Data Block Banks
 	while(iptr < iend){
 		
-DumpBinary(iptr, iend, 8);
-
 		uint32_t data_block_bank_len     = *iptr++;
 		uint32_t *iend_data_block_bank   = &iptr[data_block_bank_len];
 		uint32_t data_block_bank_header  = *iptr++;
