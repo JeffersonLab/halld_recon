@@ -884,6 +884,15 @@ void HDEVIO::MapEvents(BLOCKHEADER_t &bh, EVIOBlockRecord &br)
 				if(er.first_event < br.first_event) br.first_event = er.first_event;
 				if(er.last_event  > br.last_event ) br.last_event  = er.last_event;
 				break;
+			case 0xFF32: er.event_type = kBT_BOR;        break; // CDAQ
+			case 0xFF33:                                        // CDAQ
+				M = eh->cdaqphysics.roc1_bank_header&0xFF;
+				er.event_type = kBT_PHYSICS;
+				er.first_event  = eh->cdaqphysics.first_event;
+				er.last_event   = er.first_event + (uint64_t)M - 1;
+				if(er.first_event < br.first_event) br.first_event = er.first_event;
+				if(er.last_event  > br.last_event ) br.last_event  = er.last_event;
+				break;
 			default:
 				if(VERBOSE>1) _DBG_ << "Uknown tag: " << hex << tag << dec << endl;
 		}
