@@ -275,8 +275,6 @@ void DEVIOWorkerThread::MakeEvents(void)
 	for(auto pe : current_parsed_events){
 		if( ++pe->Nrecycled%pe->MAX_RECYCLES == 0) pe->Prune();
 	}
-
-_DBG_<<"CDAQ BOR Event -- Done" << endl;
 }	
 
 //---------------------------------
@@ -333,7 +331,7 @@ void DEVIOWorkerThread::ParseBank(void)
 		uint32_t event_head = iptr[1];
 		uint32_t tag = (event_head >> 16) & 0xFFFF;
 
-_DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
+//_DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
 
 		switch(tag){
 			case 0x0060:       ParseEPICSbank(iptr, iend);    break;
@@ -476,6 +474,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	//	...
 
 	if(!PARSE_BOR){ iptr = &iptr[(*iptr) + 1]; return; }
+	if(VERBOSE>1) jout << "--- Parsing BOR Bank" << endl;
 
 	// Make sure there is exactly 1 event in current_parsed_events
 	if(current_parsed_events.size() != 1){
@@ -749,10 +748,16 @@ void DEVIOWorkerThread::ParsePhysicsBank(uint32_t* &iptr, uint32_t *iend)
 void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 {
 
+	if(VERBOSE>1) jout << "-- Parsing CDAQ Event" << endl;
+
 	// Check if this is a BOR event
-	if( (iptr[1]&0xFFFF) == 0xFF32 ){
+	if( (iptr[1]&0xFFFF0000) == 0xFF320000 ){
 		iptr += 2;
-		ParseBORbank(iptr, iend);
+		try{
+			ParseBORbank(iptr, iend);
+		}catch(JException &e){
+			cerr << e.what();
+		}
 		return;
 	}
 
@@ -769,17 +774,6 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 		uint32_t data_bank_len = *iptr;
 		uint32_t *iend_data_bank = &iptr[data_bank_len+1];
 
-		// The CDAQ system does not strip off the raw trigger data from the
-		// individual ROC data to make a built trigger bank. Thus, we must
-		// skip over it here. TO further complicate things, the ParseDataBank
-		// method assumes iptr points to the length word in the Physics event
-		// data bank (whose header contains the rocid) and that it is immediately
-		// followed by the raw data.
-//		iptr += 2;
-//		uint32_t raw_trigger_bank_len = *iptr++;
-//		iptr = &iptr[raw_trigger_bank_len];
-
-DumpBinary(iptr, iend_data_bank, 40);
 		ParseDataBank(iptr, iend_data_bank);
 
 		iptr = iend_data_bank;
@@ -921,17 +915,17 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 		switch(det_id){
 
 			case 20:
-_DBG_<<" -- CAEN1190  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout << " -- CAEN1190  rocid="<< rocid << endl;
 				ParseCAEN1190(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x55:
-_DBG_<<" -- Module Configuration  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<" -- Module Configuration  rocid="<< rocid << endl;
 				ParseModuleConfiguration(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x56:
-_DBG_<<" -- Event Tag  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<" -- Event Tag  rocid="<< rocid << endl;
 				ParseEventTagBank(iptr, iend_data_block_bank);
 				break;
 
@@ -941,13 +935,13 @@ _DBG_<<" -- Event Tag  rocid="<< rocid << endl;
 			case 6:  // flash 250 module, MMD 2014/2/4
 			case 16: // flash 125 module (CDC), DL 2014/6/19
 			case 26: // F1 TDC module (BCAL), MMD 2014-07-31
-_DBG_<<" -- JLab Module  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<" -- JLab Module  rocid="<< rocid << endl;
 				ParseJLabModuleData(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x123:
 			case 0x28:
-_DBG_<<" -- SSP  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<" -- SSP  rocid="<< rocid << endl;
 				ParseSSPBank(rocid, iptr, iend_data_block_bank);
 				break;
 
@@ -957,7 +951,7 @@ _DBG_<<" -- SSP  rocid="<< rocid << endl;
 			// (the first "E" should really be a "1". We just check
 			// other 12 bits here.
 			case 0xE02:
-_DBG_<<" -- TSscaler  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<" -- TSscaler  rocid="<< rocid << endl;
 				ParseTSscalerBank(iptr, iend);
 				break;
 			case 0xE05:
@@ -970,7 +964,7 @@ _DBG_<<" -- TSscaler  rocid="<< rocid << endl;
 			// The CDAQ system leave the raw trigger info in the Physics event data
 			// bank. Skip it for now.
 			case 0xF11:
-_DBG_<<"Raw Trigger bank  rocid="<< rocid << endl;
+				if(VERBOSE>3) jout <<"Raw Trigger bank  rocid="<< rocid << endl;
 				break;
 
 			// When we write out single events in the offline, we also can save some
