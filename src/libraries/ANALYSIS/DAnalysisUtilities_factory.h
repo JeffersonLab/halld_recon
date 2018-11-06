@@ -14,7 +14,7 @@
 class DAnalysisUtilities_factory : public jana::JFactory<DAnalysisUtilities>
 {
 	public:
-		DAnalysisUtilities_factory(){};
+		DAnalysisUtilities_factory(){analysisutilities=NULL;};
 		~DAnalysisUtilities_factory(){};
 
 		//------------------

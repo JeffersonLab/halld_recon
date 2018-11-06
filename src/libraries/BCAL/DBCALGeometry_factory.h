@@ -15,7 +15,7 @@ using namespace jana;
 
 class DBCALGeometry_factory:public JFactory<DBCALGeometry>{
 	public:
-		DBCALGeometry_factory(){};
+  DBCALGeometry_factory(){bcalgeometry=NULL;};
 		~DBCALGeometry_factory(){};
 
 		DBCALGeometry *bcalgeometry;
