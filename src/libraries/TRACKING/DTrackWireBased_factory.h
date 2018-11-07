@@ -92,6 +92,7 @@ class DTrackWireBased_factory:public jana::JFactory<DTrackWireBased>{
 		bool SKIP_MASS_HYPOTHESES_WIRE_BASED;
 		bool USE_HITS_FROM_CANDIDATE;
 		double MIN_FIT_P;
+		double PROTON_MOM_THRESH;
 		bool dIsNoFieldFlag;
 
 		double dFCALz,dTOFz;  
