@@ -62,9 +62,8 @@ class DTrackWireBased_factory:public jana::JFactory<DTrackWireBased>{
 
 		int DEBUG_LEVEL;
 		DTrackFitter *fitter;
-		vector<DReferenceTrajectory*> rtv;
+		DReferenceTrajectory *rt;
 
-		unsigned int num_used_rts;
 		vector<int> mass_hypotheses_positive;
 		vector<int> mass_hypotheses_negative;
 		size_t MAX_DReferenceTrajectoryPoolSize; 
