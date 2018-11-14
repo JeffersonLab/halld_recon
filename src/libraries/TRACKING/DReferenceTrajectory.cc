@@ -341,6 +341,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = 0.; // we do not need the time for our purpose...
@@ -471,6 +472,7 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = t;
