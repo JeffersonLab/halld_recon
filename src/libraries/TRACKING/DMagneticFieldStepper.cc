@@ -157,16 +157,19 @@ int grkuta_(double *CHARGE, double *STEP, double *VECT, double *VOUT,const DMagn
 // Alternate stepper that does not use the 4th order Runge-Kutta method but a simpler 
 // calculation that depends on a single itermediate step.  Assumes that the magnetic field
 // is constant over the full step. Only looks up the magnetic field once.
-double DMagneticFieldStepper::FastStep(const DVector3 &B,double stepsize){  
+double DMagneticFieldStepper::FastStep(double stepsize){  
   if(stepsize==0.0)stepsize = this->stepsize;  
 
   // Current position and momentum
   double x=pos.x(),y=pos.y(),z=pos.z();
   double px=mom.x(),py=mom.y(),pz=mom.z();
   double p=mom.Mag();
+
+  // B-field at this position
+  bfield->GetField(pos,B);
   
   // Compute convenience terms involving Bx, By, Bz
-  double k_q=0.003*q;
+  double k_q=0.002998*q;
   double ds_over_p=stepsize/p;
   double factor=k_q*(0.25*ds_over_p);
   double Bx=B.x(),By=B.y(),Bz=B.z();
