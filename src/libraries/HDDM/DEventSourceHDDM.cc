@@ -411,10 +411,6 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DFMWPCHit(record, 
                      dynamic_cast<JFactory<DFMWPCHit>*>(factory), tag);
 
-   if (dataClassName == "DDIRCHit")
-      return Extract_DDIRCHit(record, 
-                     dynamic_cast<JFactory<DDIRCHit>*>(factory), tag);
-
    if (dataClassName == "DDIRCTruthHit")
       return Extract_DDIRCTruthHit(record,
                      dynamic_cast<JFactory<DDIRCTruthHit>*>(factory), tag);
@@ -2756,41 +2752,6 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
    factory->CopyTo(data);
 
    return NOERROR;
-}
-
-//------------------
-// Extract_DDIRCHit
-//------------------
-jerror_t DEventSourceHDDM::Extract_DDIRCHit(hddm_s::HDDM *record,
-                                   JFactory<DDIRCHit>* factory, string tag)
-{
-   /// Copies the data from the given hddm_s structure. This is called
-   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
-   /// returns OBJECT_NOT_AVAILABLE immediately.
-
-   if (factory == NULL)
-      return OBJECT_NOT_AVAILABLE;
-   if (tag != "")
-      return OBJECT_NOT_AVAILABLE;
-
-   vector<DDIRCHit*> data;
-
-   const hddm_s::DircTruthHitList &hits = record->getDircTruthHits();
-   hddm_s::DircTruthHitList::iterator iter;
-   for (iter = hits.begin(); iter != hits.end(); ++iter) {
-      DDIRCHit *hit = new DDIRCHit;
-      hit->x = iter->getX();
-      hit->y = iter->getY();
-      hit->z = iter->getZ();
-      hit->t = iter->getT();
-      hit->E = iter->getE();
-      data.push_back(hit);
-   }
-
-  // Copy into factory
-  factory->CopyTo(data);
-
-  return NOERROR;
 }
 
 //------------------
