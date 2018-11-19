@@ -264,9 +264,11 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 	TLorentzVector ptot = sh1_p+sh2_p;
 	Double_t inv_mass = ptot.M();
 
-        Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+    //Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+        Candidate |= (E1 > 0.5 && E2 > 0.5 && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
 
-        if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
+        //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
+        if(E1 > 0.5 && E2 > 0.5 && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
                 locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
@@ -328,7 +330,7 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 
       DVector3 clusHMom = clusH.getCentroid(); 
       clusHMom.SetMag( eH );
-    
+   √ 
       double dt = fabs( tL - tH );
 
       DLorentzVector gamL( clusLMom, clusLMom.Mag() );
@@ -336,11 +338,11 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 
       double mass = ( gamL + gamH ).M();
 
-      hasCandidate |= 
+  √    hasCandidate |= 
 	( ( eL > MIN_E ) &&
 	  ( dt < MAX_DT ) &&
 	  ( rL > MIN_R ) && ( rH > MIN_R ) &&
-	  ( nHitL >= MIN_BLOCKS ) && ( nHitH >= MIN_BLOCKS ) &&
+√√	  ( nHitL >= MIN_BLOCKS ) && ( nHitH >= MIN_BLOCKS ) &&
 	  ( mass > MIN_MASS ) && ( mass < MAX_MASS  ) );
     }
   }
