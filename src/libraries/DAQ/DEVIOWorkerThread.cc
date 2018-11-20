@@ -504,11 +504,11 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	
 	// Make sure BOR header word is right
 	uint32_t bor_header = *iptr++;
-	if(bor_header != 0x700e01){
+	if( (bor_header!=0x700e01) && (bor_header!=0x700e34) ){
 		stringstream ss;
 		ss << "Bad BOR header: 0x" << hex << bor_header;
-_DBG_<< ss.str() << endl;
-DumpBinary(&iptr[-4], iend, 32, iptr);
+		_DBG_<< ss.str() << endl;
+		DumpBinary(&iptr[-4], iend, 32, iptr);
 		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
@@ -523,7 +523,7 @@ DumpBinary(&iptr[-4], iend, 32, iptr);
 		if( (crate_header>>16) != 0x71 ){
 			stringstream ss;
 			ss << "Bad BOR crate header: 0x" << hex << (crate_header>>16);
-_DBG_<< ss.str() << endl;
+			_DBG_<< ss.str() << endl;
 			throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 		}
 
@@ -543,6 +543,7 @@ _DBG_<< ss.str() << endl;
 			Df125BORConfig *f125conf = NULL;
 			DF1TDCBORConfig *F1TDCconf = NULL;
 			DCAEN1290TDCBORConfig *caen1190conf = NULL;
+			DTSGBORConfig *tsgconf = NULL;
 
 			switch(modType){
 				case DModuleType::FADC250: // f250
@@ -569,6 +570,18 @@ _DBG_<< ss.str() << endl;
 					dest = (uint32_t*)&caen1190conf->rocid;
 					sizeof_dest = sizeof(caen1190config)/sizeof(uint32_t);
 					break;
+				case DModuleType::CDAQTSG: // TSG (from CDAQ)
+					tsgconf = new DTSGBORConfig;
+					// Accomodate variable number of words by copying here
+					tsgconf->rocid = 81; // rocid member must exist for LinkAssociations.h::SortByModule
+					tsgconf->slot  = 1;  //        "                    "                      "
+					tsgconf->run_number = src[0];
+					tsgconf->unix_time = src[1];
+					for(uint32_t i=0; i<module_len; i++) tsgconf->misc_words.push_back(src[i]);
+					
+					sizeof_dest = module_len; // prevent error from being thrown below
+					dest = src;               // make copy benign. This allows us to keep mechansim used by other modules
+					break;
 				
 				default:
 					{
@@ -583,7 +596,7 @@ _DBG_<< ss.str() << endl;
 			if( module_len > sizeof_dest ){
 				stringstream ss;
 				ss << "BOR module bank size does not match structure! " << module_len << " > " << sizeof_dest << " for modType " << modType;
-_DBG_<< ss.str() << endl;
+				_DBG_<< ss.str() << endl;
 				throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 			}
 
@@ -600,6 +613,7 @@ _DBG_<< ss.str() << endl;
 			if(f125conf    ) borptrs->vDf125BORConfig.push_back(f125conf);
 			if(F1TDCconf   ) borptrs->vDF1TDCBORConfig.push_back(F1TDCconf);
 			if(caen1190conf) borptrs->vDCAEN1290TDCBORConfig.push_back(caen1190conf);
+			if(tsgconf     ) borptrs->vDTSGBORConfig.push_back(tsgconf);
 
 			iptr = &iptr[module_len];
 		}

@@ -50,6 +50,8 @@ class DModuleType{
 			CAEN1190,          // =18
 			CAEN1290,          // =19
 
+			CDAQTSG=22,        // = 22
+
 			N_MODULE_TYPES     // Make sure this is the last thing in the enum!
 		};
 
