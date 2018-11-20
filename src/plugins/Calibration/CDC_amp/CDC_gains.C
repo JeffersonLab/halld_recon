@@ -45,7 +45,7 @@ void CDC_gains(int EXIT_EARLY=0) {
   // Still use the restricted time range 0-100ns
   // Both of these give a higher amplitude peak which is easier to fit for high pressure runs
 
-  const float IDEALMPV=88.5315; //mpv for hits in 0-100ns with theta 28-32 degrees, z 52-78cm, from low pressure run 11621
+  const float IDEALMPV=88.5315*2.02/2.59; //mpv for hits in 0-100ns with theta 28-32 degrees, z 52-78cm, from low pressure run 11621, adjusted to put dE/dx (1.5GeV) at 2.02 keV/cm to match geant
 
   const float ASCALE=0.176;   //ascale for tracked ztheta hits from 011621
 
