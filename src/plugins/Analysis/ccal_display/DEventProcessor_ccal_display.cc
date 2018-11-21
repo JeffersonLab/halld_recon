@@ -72,12 +72,12 @@ jerror_t DEventProcessor_ccal_display::init(void)
       int index = ii*12 + jj;
       
       int column, row;
-      
-      if(ii < 6) column = 6 - ii; 
-      else column = 5 - ii;
 
-      if(jj < 6) row = jj - 6; 
-      else row = jj - 5;
+      if(jj < 6) column = jj - 6; 
+      else column = jj - 5;
+
+      if(ii < 6) row = ii - 6; 
+      else row = ii - 5;
      
       char title[30];
       sprintf(title,"Peak_%d_%d", column, row);    
@@ -108,7 +108,7 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 
 	vector<const DCCALDigiHit*> ccal_digihits;
 
-	int draw_cosmic = 0;
+	int draw_cosmic = 1;
 
 
 	cout << " Event number = " << eventnumber  <<  endl;
@@ -126,15 +126,8 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	  int row     =  ccal_hit->row;
 	  int column  =  ccal_hit->column; 
 
-	  int column_tmp, row_tmp;
 	  
-	  if(column > 0) column_tmp = 5 + column;
-	  else column_tmp = 6 + column;
-	  
-	  if(row > 0) row_tmp = 5 + row;
-	  else row_tmp = 6 + row;
-	  
-	  int index = row_tmp*12 + column_tmp;
+	  int index = row*12 + column;
 
 	  
           const Df250WindowRawData *windorawdata;
@@ -165,7 +158,7 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	if(draw_cosmic == 1){
 	  if( (ccal_digihits.size() > 30) || (ccal_digihits.size() == 0)){
 	  
-	    for(int ii = 0; ii < 143; ii++){
+	    for(int ii = 0; ii < 144; ii++){
 	      ccal_wave[ii]->Reset();
 	    }
 
@@ -196,7 +189,7 @@ jerror_t DEventProcessor_ccal_display::evnt(JEventLoop *loop, uint64_t eventnumb
 	my_canvas->Clear();
 	my_canvas->Divide(12,12,0.001);
 	
-	for(int ii = 0; ii < 143; ii++){
+	for(int ii = 0; ii < 144; ii++){
 	  ccal_wave[ii]->Reset();
 	}
 	
