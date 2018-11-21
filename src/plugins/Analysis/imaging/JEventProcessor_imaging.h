@@ -31,14 +31,14 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed. 
 
 		TH3I *TwoTrackXYZ;
-		TH1F *TwoTrackDoca,*TwoTrackZ,*TwoTrackRelCosTheta;
+		TH1F *TwoTrackZ;
 		TH1F *TwoTrackZFit;
 		TH2F *TwoTrackXYFit_at_65cm;
 		TH3I *TwoTrackXYZFit;
 		TH2F *TwoTrackPocaCut,*TwoTrackPocaCutFit;
 		TH2F *TwoTrackXY_at_65cm;
 		TH1F *TwoTrackChi2,*TwoTrackProb;
-		TH1F *DocaPull;
+		TH1F *TwoTrackDz;
 
 		vector<DReferenceTrajectory*> rtv;  
 		unsigned int num_used_rts;
