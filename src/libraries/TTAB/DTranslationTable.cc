@@ -753,9 +753,21 @@ DCCALDigiHit* DTranslationTable::MakeCCALDigiHit(const CCALIndex_t &idx,
    DCCALDigiHit *h = new DCCALDigiHit();
    CopyDf250Info(h, pd);
 
-   h->row    = idx.row;
-   h->column = idx.col;
+   // The CCAL coordinate system: (column,row) = (0,0) in the bottom right corner
 
+   if(idx.col < 0)
+     h->column = idx.col + 6;
+   else if(idx.col > 0) 
+     h->column = idx.col + 5;
+   
+   if(idx.row < 0)
+     h->row = idx.row + 6;
+   else if(idx.row > 0) 
+     h->row = idx.row + 5;
+   
+   //   h->row    = idx.row;
+   //   h->column = idx.col;
+   
    vDCCALDigiHit.push_back(h);
    
    return h;
@@ -936,8 +948,18 @@ DCCALDigiHit* DTranslationTable::MakeCCALDigiHit(const CCALIndex_t &idx,
    DCCALDigiHit *h = new DCCALDigiHit();
    CopyDf250Info(h, pi, pt, pp);
 
-   h->row    = idx.row;
-   h->column = idx.col;
+   if(idx.col < 0)
+     h->column = idx.col + 6;
+   else if(idx.col > 0) 
+     h->column = idx.col + 5;
+
+   if(idx.row < 0)
+     h->row = idx.row + 6;
+   else if(idx.row > 0) 
+     h->row = idx.row + 5;
+
+   //   h->row    = idx.row;
+   //   h->column = idx.col;
 
    vDCCALDigiHit.push_back(h);
    
