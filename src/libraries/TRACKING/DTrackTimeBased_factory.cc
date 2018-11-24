@@ -68,30 +68,13 @@ jerror_t DTrackTimeBased_factory::init(void)
 	DEBUG_HISTS = false;
 	//DEBUG_HISTS = true;
 	DEBUG_LEVEL = 0;
-	MOMENTUM_CUT_FOR_DEDX=0.5;	
-	MOMENTUM_CUT_FOR_PROTON_ID=2.0;
-
-	MIN_CDC_HITS_FOR_TB_FORWARD_TRACKING=3;
-	BYPASS_TB_FOR_FORWARD_TRACKS=false;
 
 	USE_HITS_FROM_WIREBASED_FIT=false;
 	gPARMS->SetDefaultParameter("TRKFIT:USE_HITS_FROM_WIREBASED_FIT",
 			      USE_HITS_FROM_WIREBASED_FIT);
 
-	gPARMS->SetDefaultParameter("TRKFIT:BYPASS_TB_FOR_FORWARD_TRACKS",
-				    BYPASS_TB_FOR_FORWARD_TRACKS);
-	gPARMS->SetDefaultParameter("TRKFIT:MIN_CDC_HITS_FOR_TB_FORWARD_TRACKING",
-				    MIN_CDC_HITS_FOR_TB_FORWARD_TRACKING);
-
-
 	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_HISTS",					DEBUG_HISTS);
 	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",					DEBUG_LEVEL);
-	gPARMS->SetDefaultParameter("TRKFIT:MOMENTUM_CUT_FOR_DEDX",MOMENTUM_CUT_FOR_DEDX);	
-	gPARMS->SetDefaultParameter("TRKFIT:MOMENTUM_CUT_FOR_PROTON_ID",MOMENTUM_CUT_FOR_PROTON_ID);
-	
-	SKIP_MASS_HYPOTHESES_WIRE_BASED=false; 
-	gPARMS->SetDefaultParameter("TRKFIT:SKIP_MASS_HYPOTHESES_WIRE_BASED",
-				    SKIP_MASS_HYPOTHESES_WIRE_BASED);
 	
 	vector<int> hypotheses;
 	hypotheses.push_back(Positron);
@@ -336,87 +319,23 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   for(unsigned int i=0; i<tracks.size(); i++){
     const DTrackWireBased *track = tracks[i];
 
-    if (SKIP_MASS_HYPOTHESES_WIRE_BASED){  
-      // Choose list of mass hypotheses based on charge of candidate
-      vector<int> mass_hypotheses;
-      if(track->charge()<0.0){
-	mass_hypotheses = mass_hypotheses_negative;
-      }else{
-	mass_hypotheses = mass_hypotheses_positive;
-      }
+    unsigned int num=_data.size();
 
-      for (unsigned int j=0;j<mass_hypotheses.size();j++){
-	if (ParticleMass(Particle_t(mass_hypotheses[j]))>0.9
-	    && track->momentum().Mag()>MOMENTUM_CUT_FOR_PROTON_ID) continue;
+    // Create vector of start times from various sources
+    vector<DTrackTimeBased::DStartTime_t>start_times;
+    CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,start_times);
 	
-	// Create vector of start times from various sources
-	vector<DTrackTimeBased::DStartTime_t>start_times;
-	CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,start_times);
-	
-	// Fit the track
-	DoFit(track,start_times,loop,ParticleMass(Particle_t(mass_hypotheses[j])));
-      }
-    }
-    else{  // We did not skip wire-based tracking for some hypotheses
-      if (BYPASS_TB_FOR_FORWARD_TRACKS){
-	// Lists of hits used in the previous pass
-	vector<const DCDCTrackHit *>cdchits;
-	track->GetT(cdchits);
-	vector<const DFDCPseudo *>fdchits;
-	track->GetT(fdchits);
-	
-	if (fdchits.size()>0
-	    && cdchits.size()<MIN_CDC_HITS_FOR_TB_FORWARD_TRACKING){
-	  // Copy over the results of the wire-based fit to DTrackTimeBased
-	  DTrackTimeBased *timebased_track = new DTrackTimeBased();
-      *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(track);
-	  timebased_track->chisq = track->chisq;
-	  timebased_track->Ndof = track->Ndof;
-	  timebased_track->pulls = track->pulls;
-	  timebased_track->extrapolations = track->extrapolations;
-	  timebased_track->trackid = track->id;
-	  timebased_track->candidateid=track->candidateid;
-	  timebased_track->flags=DTrackTimeBased::FLAG__USED_WIREBASED_FIT;
- 
-	  for(unsigned int m=0; m<fdchits.size(); m++)
-	    timebased_track->AddAssociatedObject(fdchits[m]); 
-	  for(unsigned int m=0; m<cdchits.size(); m++)
-	    timebased_track->AddAssociatedObject(cdchits[m]);
-      
- 	  timebased_track->measured_cdc_hits_on_track = cdchits.size();
- 	  timebased_track->measured_fdc_hits_on_track = fdchits.size();
-
-	  // Compute the figure-of-merit based on tracking
-	  timebased_track->FOM = TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
-
-	  // TODO: figure out projections in this case too	  
- 	  timebased_track->potential_cdc_hits_on_track = 0;
- 	  timebased_track->potential_fdc_hits_on_track = 0;
-	  
-      timebased_track->AddAssociatedObject(track);
-	  _data.push_back(timebased_track);
-	}
-      } 
-      else{ // Do not bypass time-based tracking for forward tracks
-	unsigned int num=_data.size();
-
-	// Create vector of start times from various sources
-	vector<DTrackTimeBased::DStartTime_t>start_times;
-	CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,start_times);
-	
-	// Fit the track
-	DoFit(track,start_times,loop,track->mass());
+    // Fit the track
+    DoFit(track,start_times,loop,track->mass());
   
-	//_DBG_<< "eventnumber:   " << eventnumber << endl;
-	if (PID_FORCE_TRUTH && _data.size()>num) {
-	  // Add figure-of-merit based on difference between thrown and reconstructed momentum 
-	  // if more than half of the track's hits match MC truth hits and also (charge,mass)
-	  // match; add FOM=0 otherwise	  
-	  _data[_data.size()-1]->FOM=GetTruthMatchingFOM(i,_data[_data.size()-1],
-							 mcthrowns);
-	}
-      } // Check if we are bypassing time-based tracking for forward tracks
-    }  // Did we skip some mass hypotheses for wire-based?
+    //_DBG_<< "eventnumber:   " << eventnumber << endl;
+    if (PID_FORCE_TRUTH && _data.size()>num) {
+      // Add figure-of-merit based on difference between thrown and reconstructed momentum 
+      // if more than half of the track's hits match MC truth hits and also (charge,mass)
+      // match; add FOM=0 otherwise	  
+      _data[_data.size()-1]->FOM=GetTruthMatchingFOM(i,_data[_data.size()-1],
+						     mcthrowns);
+    }
   } // loop over track candidates
 
   // Filter out duplicate tracks
@@ -1120,6 +1039,16 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     // if the fit returns chisq=-1, something went terribly wrong.  Do not 
     // update the parameters for the track...
     if (fitter->GetChisq()<0) status=DTrackFitter::kFitFailed;
+
+    // if the fit flips the charge of the track, then this is bad as well
+    if(q != fitter->GetFitParameters().charge())
+        status=DTrackFitter::kFitFailed; 
+
+    // if we can't refit the track, it is likely of poor quality, so stop here and do not add the hypothesis
+    if(status == DTrackFitter::kFitFailed) {
+        delete timebased_track;
+        return;
+    }
 
     if (status==DTrackFitter::kFitSuccess){
       timebased_track->chisq = fitter->GetChisq();

@@ -16,8 +16,8 @@
 
 class DCCALGeometry:public jana::JObject{
 
-#define kCCALBlocksWide 16
-#define kCCALBlocksTall 16
+#define kCCALBlocksWide 12
+#define kCCALBlocksTall 12
 #define kCCALMaxChannels kCCALBlocksWide * kCCALBlocksTall
 // Do not forget to adjust below formula if number of blocks chage in any direction:
 //   this is now used to convert from row/col to coordiantes y/x and back - MK

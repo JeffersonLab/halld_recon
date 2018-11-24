@@ -19,7 +19,14 @@ class DTrigger_factory : public jana::JFactory<DTrigger>
 		virtual ~DTrigger_factory(){};
 
 	private:
+		jerror_t init(void);						///< Called once at program start.
 		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
+		
+		bool EMULATE_BCAL_LED_TRIGGER;
+		bool EMULATE_FCAL_LED_TRIGGER;
+		
+		unsigned int BCAL_LED_NHITS_THRESHOLD;
+		unsigned int FCAL_LED_NHITS_THRESHOLD;
 };
 
 #endif // _DTrigger_factory_

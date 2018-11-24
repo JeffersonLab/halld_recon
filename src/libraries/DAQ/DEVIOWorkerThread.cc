@@ -1352,7 +1352,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					}
 
 					// Event headers may be supressed so determine event from hit data
-					if( (event_number_within_block > current_parsed_events.size()) ) throw JException("Bad f250 event number", __FILE__, __LINE__);
+					if( (event_number_within_block > current_parsed_events.size()) ) { jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 event number", __FILE__, __LINE__);}
 					pe_iter = current_parsed_events.begin();
 					advance( pe_iter, event_number_within_block-1 );
 					pe = *pe_iter++;
@@ -1362,7 +1362,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 					while( (*++iptr>>31) == 0 ){
 					
-						if( (*iptr>>30) != 0x01) throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						if( (*iptr>>30) != 0x01) { jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);}
  
 						// from word 2
 						uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
