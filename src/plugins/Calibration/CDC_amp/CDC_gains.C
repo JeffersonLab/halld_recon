@@ -21,22 +21,17 @@ void CDC_gains(int EXIT_EARLY=0) {
   // (For the first round of gain calibrations, ASCALE was chosen to match the simulation charge histogram.
   // For the next round, ASCALE was chosen to match the dedx histograms from the first round).
 
-  // CDC_amp provides 3 2D histograms of pulse amplitude vs straw
-  // The histograms are projected here into groups of 1D histograms, one per straw
-  //
-  // asum:   igroup 0 : all hits
-  // atsum:  igroup 1 : tracked hits, use these if not enough stats to use group 2
-  // attsum: igroup 2 : tracked hits for z=50-80 and theta 85-95.
-
-  // attsum provide the most Landau-like fits
-
-  // Need 80+ run files to get good fits for attsum.  2 run files are enough for atsum
+  // CDC_amp provides 2D histograms of pulse amplitude vs straw
+  // The histograms are projected here into 1D histograms, one per straw
+  // For Landau-like fits, need tracked hits with a narrow range of theta
 
   // NSJ 18 Nov 2016
 
-  // Updated in 2018 to use hits within the first 100ns only.  This avoids the gain loss at later drift times which is probably caused by oxygen in the chamber.
+  // Need 80+ run files to get good fits for individual straws.  2 run files are enough for sum.
+
 
   // NSJ 24 Apr 2018
+  // Updated in 2018 to use hits within the first 100ns only.  This avoids the gain loss at later drift times which is probably caused by oxygen in the chamber.
 
 
 
@@ -46,15 +41,22 @@ void CDC_gains(int EXIT_EARLY=0) {
 
   //  const float IDEALMPV=37.9649; //mpv for tracked hits ***at 0-100ns*** with restricted z,theta from low pressure run 11621
 
+  // NSJ 24 Aug 2018 modified to use 30 degree tracks instead of 90 degree tracks.
+  // Still use the restricted time range 0-100ns
+  // Both of these give a higher amplitude peak which is easier to fit for high pressure runs
 
-  const float IDEALMPV=37.9649; //mpv for tracked hits ***at 0-100ns*** with restricted z,theta from low pressure run 11621
-
+  const float IDEALMPV=88.5315*2.02/2.59; //mpv for hits in 0-100ns with theta 28-32 degrees, z 52-78cm, from low pressure run 11621, adjusted to put dE/dx (1.5GeV) at 2.02 keV/cm to match geant
 
   const float ASCALE=0.176;   //ascale for tracked ztheta hits from 011621
 
-
-
   const bool REBIN_HISTOS=kFALSE;
+
+
+  // which theta histos to use for fits 
+
+   int theta = 30;
+   int theta_low = 28;
+   int theta_high = 32;
 
 
   // get histograms
@@ -65,14 +67,14 @@ void CDC_gains(int EXIT_EARLY=0) {
   fmain->cd();
 
 
-  TH1I *attsum = (TH1I*)fmain->Get("attsum_100");
-  if (!attsum) printf("Cannot find histogram attsum_100\n");
+  TH1I *attsum = (TH1I*)fmain->Get(Form("a%i_100ns",theta));
+  if (!attsum) printf("Cannot find histogram a%i_100ns\n",theta);
   if (!attsum) return;
 
-  // get untracked amplitude histo to find readout range
+  // get sum amplitude histo to find readout range
 
-  TH1I *asum_all= (TH1I*)fmain->Get("asum");
-  if (!asum_all) printf("Cannot find histogram asum\n");
+  TH1I *asum_all= (TH1I*)fmain->Get("a");
+  if (!asum_all) printf("Cannot find amplitude (sum over all straws) histogram a\n");
   if (!asum_all) return;
 
   // find amplitude range 
@@ -217,7 +219,7 @@ void CDC_gains(int EXIT_EARLY=0) {
 
     fmain->cd();
 
-    anhisto = (TH2I*)fmain->Get("attn_100");
+    anhisto = (TH2I*)fmain->Get(Form("an%i_100ns",theta));
 
 
     badfit = 0;
@@ -245,7 +247,7 @@ void CDC_gains(int EXIT_EARLY=0) {
       if (REBIN_HISTOS) ahisto->Rebin(4);
 
 
-      sprintf(htitle,"Amplitude, tracked hits, z=50 to 80 cm, theta=85 to 95 degrees, straw %i; amplitude-pedestal",i);
+      sprintf(htitle,"Amplitude, tracked hits, z=52 to 78 cm, theta=%i to %i degrees, straw %i; amplitude-pedestal",theta_low,theta_high,i);
 
       ahisto->SetTitle(htitle);
 
