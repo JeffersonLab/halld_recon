@@ -154,6 +154,8 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	int nPhotonsThetaCLoose = 0;
 	double meanThetaC = 0.;
 	for (unsigned int loc_i = 0; loc_i < locDIRCHits.size(); loc_i++){
+		//if(true) break;
+
 		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		vector<const DDIRCTruthPmtHit*> locTruthDIRCHits;
 		locDIRCHit->Get(locTruthDIRCHits);
@@ -172,11 +174,11 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		if(!locTruthDIRCHits.empty()) {
 			double locRecoTime = locTruthDIRCHits[0]->t - locFlightTime;
 			double locDeltaT_fixed = locRecoTime - locTruthDIRCHits[0]->t_fixed;
-			//cout<<"Time difference = "<<locDeltaT_fixed<<endl;
+			//cout<<"Flight time = "<<locFlightTime<<" Time difference = "<<locDeltaT_fixed<<" Smeared difference ="<<hitTime-locRecoTime<<endl;
 			//hitTime = locTruthDIRCHits[0]->t - locFlightTime; // no time smearing
 
-			// use fixed time from G4 (matches dircsim_2018-08_ver01)
-			hitTime = locTruthDIRCHits[0]->t_fixed;           
+			// use fixed time from G4 (matches dircsim_2018-08_ver04)
+			//hitTime = locRecoTime; //locTruthDIRCHits[0]->t_fixed;           
 		}
 		else // skip those without truth hits for now
 			continue;
@@ -239,7 +241,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
 					tangle = momInBar.Angle(dir);//-0.002; //correction
 					
-					double bartime = lenz/cos(luttheta)/208.0; 
+					double bartime = lenz/cos(luttheta)/198.0; //203.767; 
 					double totalTime = bartime+evtime;
 
 					// calculate time difference

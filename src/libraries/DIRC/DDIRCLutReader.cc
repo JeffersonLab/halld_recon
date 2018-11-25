@@ -21,7 +21,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
         const int luts = 48;
 	
 	// eventually needs to come from CCDB with run number index
-	TFile *fLut = new TFile("/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver04/lut_all_flat.root");
+	TFile *fLut = new TFile("/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver05/lut_all_flat.root");
         TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 
 	vector<Double_t> *LutPixelAngleX[luts];
