@@ -114,7 +114,7 @@ jerror_t JEventProcessor_imaging::brun(JEventLoop *eventLoop, int32_t runnumber)
   gPARMS->SetDefaultParameter("IMAGING:FIT_CL_CUT",FIT_CL_CUT, "CL cut for vertex fit"); 
   TRACK_CL_CUT=1e-4;
   gPARMS->SetDefaultParameter("IMAGING:TRACK_CL_CUT",TRACK_CL_CUT, "CL cut for tracks");
-  DOCA_CUT=1.0; 
+  DOCA_CUT=3.0; 
   gPARMS->SetDefaultParameter("IMAGING:DOCA_CUT",DOCA_CUT, "Maximum doca between tracks");
 
   
@@ -170,16 +170,17 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	const DTrackTimeBased *track2=tracks[j]->Get_BestTrackingFOM()->Get_TrackTimeBased();
 
 	if (TMath::Prob(track2->chisq,track2->Ndof)>TRACK_CL_CUT){
-	  DVector3 pos2=track2->position();
+	  DVector3 myvertex;
 	  DVector3 mom2=track2->momentum();
 	  double phi2=mom2.Phi();
+	  DVector3 pos2=track2->position();
 	  double R2=mom2.Perp()/(0.003*fabs(bfield->GetBz(pos2.x(),pos2.y(),pos2.z())));
 	  double q2=track2->charge();
-	  // Find the center of the circle approximating the trajectory in the 
-	  // projection to a plane perpendicular to the beam line
+	  // Find the center of the circle approximating the trajectory in 
+	  // the projection to a plane perpendicular to the beam line
 	  double x2=pos2.x()+q2*R2*sin(phi2);
 	  double y2=pos2.y()-q2*R2*cos(phi2);
-
+	  
 	  // Find where the two circles intersect
 	  double dx=x1-x2;
 	  double dy=y1-y2;
@@ -188,7 +189,7 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  double temp1=dx*dx+dy*dy;
 	  double temp2=R2_sq-temp1;
 	  double temp3=2.*R1_sq*(R2_sq+temp1)-temp2*temp2-R1_sq*R1_sq;
-	  //printf("temp3 %f\n",temp3);
+	  // printf("temp3 %f\n",temp3);
 	  // if temp3 is less than zero, the two circles never intersect
 	  if (temp3>0.){
 	    double Ax=(R2_sq-R1_sq)*dx+(x1+x2)*temp1;
@@ -202,8 +203,7 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    //printf("x,y %f %f x,y %f %f \n",x1_vert,y1_vert,x2_vert,y2_vert);
 	    
 	    // There are two possible intersection points:  choose the solution
-	    // that is closest to one of the POCAs.
-	    DVector3 myvertex;
+	    // that is closest to one of the POCAs.	   
 	    double dx_test=pos1.x()-x1_vert;
 	    double dy_test=pos1.y()-y1_vert;
 	    double diff1=dx_test*dx_test+dy_test*dy_test;
@@ -218,18 +218,34 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	      myvertex.SetX(x1_vert);
 	      myvertex.SetY(y1_vert);
 	    }
-
+	  }
+	  else{
+	    // Check if the positions of the tracks are already close together
+	    // at the POCAs to the beam line
+	    double diff=(pos2-pos1).Perp();
+	    if (diff<1.){
+	      myvertex=0.5*(pos1+pos2);
+	    }
+	  }
+	  if (myvertex.Mag()>0.){
 	    // Find the z-positions for each track corresponding to
 	    // (myvertex.X(),myvertex.Y())
 	    double chord=(pos1-myvertex).Perp();
 	    double s1=2.*R1*asin(0.5*chord/R1);
+	    if (fabs(pos1.x())>fabs(myvertex.x())
+		|| fabs(pos1.y())>fabs(myvertex.y())){
+	      s1*=-1.;
+	    }
 	    double z1=pos1.z()+s1*tan(M_PI_2-mom1.Theta()); 
 	    chord=(pos2-myvertex).Perp();
-	    double s2=2.*R2*asin(0.5*chord/R2);
+	    double s2=2.*R2*asin(0.5*chord/R2); 
+	    if (fabs(pos2.x())>fabs(myvertex.x())
+		|| fabs(pos2.y())>fabs(myvertex.y())){
+	      s2*=-1.;
+	    }
 	    double z2=pos2.z()+s2*tan(M_PI_2-mom2.Theta());
-	  
 	    TwoTrackDz->Fill(z1-z2);
-	    if (fabs(z1-z2)<2.){
+	    if (fabs(z1-z2)<DOCA_CUT){
 	      myvertex.SetZ(0.5*(z1+z2));
 	      TwoTrackPocaCut->Fill(myvertex.z(),myvertex.Perp());
 	      TwoTrackXYZ->Fill(myvertex.x(),myvertex.y(),myvertex.z());
@@ -251,10 +267,11 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	      double mass2=track2->mass();
 	      rt.PropagateCovariance(s1,q1,mass1*mass1,mom1,pos1,B,cov1);
 	      rt.PropagateCovariance(s2,q2,mass2*mass2,mom2,pos2,B,cov2);
-	    
+	      
 	      // Do a fit using the Lagrange multiplier method
 	      double vertex_chi2=0.;
-	      rt.FitVertex(pos1,mom1,pos2,mom2,cov1,cov2,myvertex,vertex_chi2);
+	      rt.FitVertex(pos1,mom1,pos2,mom2,cov1,cov2,myvertex,vertex_chi2,
+			   q1,q2);
 	      TwoTrackChi2->Fill(vertex_chi2);
 	      double vertex_prob=TMath::Prob(vertex_chi2,1);
 	      TwoTrackProb->Fill(vertex_prob);
@@ -268,13 +285,12 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 		  TwoTrackZFit->Fill(myvertex.z());
 		}
 	      }
-	    }
-
-	  }
-	}
-      }
-    }
-  }
+	    } // delta z cut
+	  } // check for valid common vertex
+	} // second track
+      } // second loop over tracks
+    } // first track 
+  } // first loop over tracks
 
   japp->RootUnLock();
 
