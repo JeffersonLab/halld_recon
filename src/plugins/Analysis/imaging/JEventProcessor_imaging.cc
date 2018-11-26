@@ -87,6 +87,8 @@ jerror_t JEventProcessor_imaging::init(void)
   
   TwoTrackDz=new TH1F("TwoTrackDz","#deltaz at x,y vertex",100,-10,10);
 
+  TwoTrackDoca=new TH1F("TwoTrackDoca","#deltar",100,0,10);
+
   gDirectory->cd("../");
 
   return NOERROR;
@@ -223,6 +225,7 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    // Check if the positions of the tracks are already close together
 	    // at the POCAs to the beam line
 	    double diff=(pos2-pos1).Perp();
+	    TwoTrackDoca->Fill(diff);
 	    if (diff<1.){
 	      myvertex=0.5*(pos1+pos2);
 	    }
