@@ -623,8 +623,6 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	
 	// Sort the BOR config events now so we don't have to do it for every event
 	borptrs->Sort();
-
-_DBG_<<"Finished parsing BOR ----" << endl;
 }
 
 //---------------------------------
