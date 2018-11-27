@@ -1,18 +1,14 @@
 // $Id$
 //
-//    File: DEventProcessor_ccal_hits.h
-// Created: Mon Apr  3 11:38:03 EDT 2006
-// Creator: davidl (on Darwin swire-b241.jlab.org 8.4.0 powerpc)
-//
+//    File: DEventProcessor_fcal_led.h
 
-#ifndef _DEventProcessor_ccal_hits_
-#define _DEventProcessor_ccal_hits_
+#ifndef _DEventProcessor_fcal_led_
+#define _DEventProcessor_fcal_led_
 
 #include <JANA/JEventProcessor.h>
 using namespace jana;
 
 #include "TApplication.h"
-#include "TCanvas.h"
 
 #include "TProfile.h"
 #include <TTree.h>
@@ -22,11 +18,14 @@ using namespace jana;
 #include <TH2.h>
 
 
-class DEventProcessor_ccal_hits:public JEventProcessor{
-	public:
-		DEventProcessor_ccal_hits(){};
-		~DEventProcessor_ccal_hits(){};
-		const char* className(void){return "DEventProcessor_ccal_hits";}
+class DEventProcessor_fcal_led:public JEventProcessor{
+ public:
+                DEventProcessor_fcal_led(){ 
+		  pthread_mutex_init(&mutex, NULL); 
+		};
+
+               ~DEventProcessor_fcal_led(){};
+		const char* className(void){return "DEventProcessor_fcal_led";}
 
 	private:
 		jerror_t init(void);						///< Called once at program start.
@@ -35,10 +34,11 @@ class DEventProcessor_ccal_hits:public JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 		
+                pthread_mutex_t mutex;
 
 		TTree* tree1;
 
-		static const Int_t max_hit     =  3000;
+		static const Int_t max_hit     =  4000;
 		static const Int_t max_sample  =  100;
 
 		
@@ -56,11 +56,11 @@ class DEventProcessor_ccal_hits:public JEventProcessor{
 		Int_t nsamples_integral;
 		Int_t nsamples_pedestal;
 
-		TProfile *ccal_wave[144];
-		TH1F *ccal_peak[144];
-		TH1F *ccal_int[144];
+		TProfile *fcal_wave[59][59];
+		TH1F *fcal_peak[59][59];
+		TH1F *fcal_int[59][59];
 		
 };
 
-#endif // _DEventProcessor_ccal_hits_
+#endif // _DEventProcessor_fcal_led_
 
