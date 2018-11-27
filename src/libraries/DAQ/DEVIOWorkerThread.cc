@@ -900,6 +900,44 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 }
 
 //---------------------------------
+// ParseRawTriggerBank
+//---------------------------------
+void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
+	// CDAQ records the raw trigger bank rather than the built trigger bank.
+	// Create DCODAROCInfo objects for each of these. 
+
+	if(!PARSE_TRIGGER) return;
+	
+	// On entry, iptr points to word after the bank header (i.e. word after the one with 0xFF11)
+	
+	// Loop over events. Should be one segment for each event
+	uint32_t ievent = 0;
+	for(auto pe : current_parsed_events){
+		
+		uint32_t segment_header = *iptr++;
+		uint32_t segment_len = segment_header&0xFFFF;
+		uint32_t *iend_segment  = &iptr[segment_len];
+
+		uint32_t event_number = *iptr++;
+		uint64_t ts_low  = *iptr++;
+		uint64_t ts_high = *iptr++;
+
+		DCODAROCInfo *codarocinfo = pe->NEW_DCODAROCInfo();
+		codarocinfo->rocid = rocid;
+		codarocinfo->timestamp = (ts_high<<32) + ts_low;
+		codarocinfo->misc.clear(); // could be recycled from previous event
+		
+		// rocid=1 is TS and produces 2 extra words for the trigger bits
+		for(uint32_t i=3; i<segment_len; i++) codarocinfo->misc.push_back(*iptr++);
+		
+		if( iptr != iend_segment){
+			throw JExceptionDataFormat("Bad raw trigger bank format", __FILE__, __LINE__);
+		}
+	}
+}
+
+//---------------------------------
 // ParseDataBank
 //---------------------------------
 void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
@@ -977,6 +1015,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// bank. Skip it for now.
 			case 0xF11:
 				if(VERBOSE>3) jout <<"Raw Trigger bank  rocid="<< rocid << endl;
+				ParseRawTriggerBank(rocid, iptr, iend_data_block_bank);
 				break;
 
 			// When we write out single events in the offline, we also can save some
