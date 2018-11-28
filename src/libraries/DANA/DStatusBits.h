@@ -28,6 +28,8 @@ enum StatusBitType{
 	kSTATUS_HDDM,
 	kSTATUS_REST,
 	kSTATUS_EVIO,
+	kSTATUS_CODA,
+	kSTATUS_CDAQ,
 	kSTATUS_FROM_FILE,
 	kSTATUS_FROM_ET,
 	kSTATUS_CONTROL_EVENT,
@@ -60,6 +62,8 @@ class DStatusBits{
 			japp->SetStatusBitDescription( kSTATUS_HDDM,          "HDDM file" );
 			japp->SetStatusBitDescription( kSTATUS_REST,          "REST file" );
 			japp->SetStatusBitDescription( kSTATUS_EVIO,          "EVIO" );
+			japp->SetStatusBitDescription( kSTATUS_CODA,          "CODA event recorder" );
+			japp->SetStatusBitDescription( kSTATUS_CDAQ,          "CDAQ event recorder" );
 			japp->SetStatusBitDescription( kSTATUS_FROM_FILE,     "Event read from file" );
 			japp->SetStatusBitDescription( kSTATUS_FROM_ET,       "Event read from ET system" );
 			japp->SetStatusBitDescription( kSTATUS_CONTROL_EVENT, "Control event" );
