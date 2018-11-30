@@ -29,6 +29,14 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed. 
+		jerror_t FindDoca(double q1,double q2,
+				  const DVector3 &mom1_in, 
+				  const DVector3 &pos1_in,
+				  const DVector3 &mom2_in, 
+				  const DVector3 &pos2_in,
+				  DVector3 &mom1_out,DVector3 &pos1_out,
+				  DVector3 &mom2_out,DVector3 &pos2_out,
+				  double &doca, double &s1, double &s2) const;
 
 		TH3I *TwoTrackXYZ;
 		TH1F *TwoTrackZ;
