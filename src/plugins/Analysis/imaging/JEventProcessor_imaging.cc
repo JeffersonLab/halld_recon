@@ -456,9 +456,6 @@ jerror_t JEventProcessor_imaging::FindDoca(double q1,double q2,
 				     + py2*sin1 + pz2*tan1));
   double denom2=-2*(cos2sin1_minus_cos1sin2)*(b*(cos2*px1 + py1*sin2 + pz1*tan2) + a*(b*cos2*dy - cos2*px2 - b*dx*sin2 - py2*sin2 - pz2*tan2));
 
-  temp2_1=sqrt(temp2_1);
-  temp1_1=sqrt(temp1_1);
-
   // Arc length to POCA between tracks for track 1
   s1=(temp1_2+sqrt(temp1_1))/denom1;
   //s1=(temp1_2-temp1_1)/denom1;
