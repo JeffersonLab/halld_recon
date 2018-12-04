@@ -11,6 +11,7 @@ using namespace jana;
 #include <TMatrix.h>
 
 #include <PID/DChargedTrack.h>
+#include <TRACKING/DMCThrown.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -44,6 +45,9 @@ JEventProcessor_imaging::~JEventProcessor_imaging()
 //------------------
 jerror_t JEventProcessor_imaging::init(void)
 {
+  MC_RECON_CHECK=true;
+
+
   gDirectory->mkdir("Vertexes")->cd();
 
   TwoTrackXYZ= new TH3I("TwoTrackXYZ","z vs y vs x",400,-10,10,
@@ -87,7 +91,10 @@ jerror_t JEventProcessor_imaging::init(void)
   
   TwoTrackDz=new TH1F("TwoTrackDz","#deltaz at x,y vertex",100,-10,10);
 
-  TwoTrackDoca=new TH1F("TwoTrackDoca","#deltar",100,0,10);
+  TwoTrackDoca=new TH1F("TwoTrackDoca","#deltar",100,0,10); 
+
+  MCVertexDiff= new TH3I("MCVertexDiff","dz vs dy vs dx",400,-10,10,
+			400,-10,10,400,-10,10);
 
   gDirectory->cd("../");
 
@@ -146,8 +153,40 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
   loop->Get(tracks); 
   if (tracks.size()<2) return NOERROR;
 
+  vector<const DMCThrown*>mcthrowns;
+  if (MC_RECON_CHECK){
+    loop->Get(mcthrowns);
+  }
+
   japp->RootWriteLock();
 
+  if (MC_RECON_CHECK && tracks.size()==2){
+    // Check estimate of vertex position relative to thrown vertex for simple
+    // reactions
+    DVector3 truevertex;
+    for (unsigned int i=0;i<mcthrowns.size();i++){
+      if (mcthrowns[i]->parentid==1){
+	truevertex=mcthrowns[i]->position();
+	break;
+      }
+    }
+    const DTrackTimeBased *track1=tracks[0]->Get_BestTrackingFOM()->Get_TrackTimeBased();
+    const DTrackTimeBased *track2=tracks[1]->Get_BestTrackingFOM()->Get_TrackTimeBased();
+    double q1=track1->charge();
+    double q2=track2->charge();
+    DVector3 mom1_in=track1->momentum();
+    DVector3 mom2_in=track2->momentum();
+    DVector3 pos1_in=track1->position();
+    DVector3 pos2_in=track2->position();
+    double doca=0.,ds1=0.,ds2=0.;
+    DVector3 pos1_out,pos2_out,mom1_out,mom2_out;
+    if (FindDoca(q1,q2,mom1_in,pos1_in,mom2_in,pos2_in,mom1_out,
+		 pos1_out,mom2_out,pos2_out,doca,ds1,ds2)==NOERROR){  
+      DVector3 vertex=0.5*(pos1_out+pos2_out);
+      DVector3 diff=vertex-truevertex;
+      MCVertexDiff->Fill(diff.x(),diff.y(),diff.z());
+    }
+  }
   // Reset the number of used reference trajectories from the pool
   num_used_rts=0;
  
@@ -460,7 +499,7 @@ jerror_t JEventProcessor_imaging::FindDoca(double q1,double q2,
   s1=(temp1_2+sqrt(temp1_1))/denom1;
   //s1=(temp1_2-temp1_1)/denom1;
   double pt1=sqrt(px1*px1+py1*py1);
-  if (fabs(a*s1/pt1)>0.2){
+  if (fabs(a*s1/pt1)>0.3){
     //_DBG_ <<a*s1/pt1<< endl;
     return VALUE_OUT_OF_RANGE;
   }
@@ -473,7 +512,7 @@ jerror_t JEventProcessor_imaging::FindDoca(double q1,double q2,
   s2=(temp2_2+sqrt(temp2_1))/denom2;
   //s2=(temp2_2-temp2_1)/denom2;
   double pt2=sqrt(px2*px2+py2*py2);
-  if (fabs(b*s2/pt2)>0.2){
+  if (fabs(b*s2/pt2)>0.3){
     //_DBG_ <<b*s2/pt2 << endl;
     return VALUE_OUT_OF_RANGE;
   }

@@ -47,6 +47,7 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		TH2F *TwoTrackXY_at_65cm;
 		TH1F *TwoTrackChi2,*TwoTrackProb;
 		TH1F *TwoTrackDz,*TwoTrackDoca;
+		TH3I *MCVertexDiff;
 
 		vector<DReferenceTrajectory*> rtv;  
 		unsigned int num_used_rts;
@@ -54,7 +55,7 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		const DGeometry *geom;
 		const DMagneticFieldMap *bfield;
 
-		bool FIT_VERTEX;
+		bool FIT_VERTEX,MC_RECON_CHECK;
 		double TRACK_CL_CUT,FIT_CL_CUT,DOCA_CUT;
 };
 
