@@ -1,5 +1,5 @@
-// hnamepath: /Independent/Hist_DetectorPID/CDC/dEdxVsP_q-
-// hnamepath: /Independent/Hist_DetectorPID/CDC/dEdxVsP_q+
+// hnamepath: /Independent/Hist_DetectorPID/CDC/dEdxVsP_Amp_q-
+// hnamepath: /Independent/Hist_DetectorPID/CDC/dEdxVsP_Amp_q+
 // hnamepath: /Independent/Hist_DetectorPID/FDC/dEdxVsP_q-
 // hnamepath: /Independent/Hist_DetectorPID/FDC/dEdxVsP_q+
 
@@ -13,8 +13,8 @@
 
 	//Get Histograms
 	gDirectory->cd("CDC");
-	TH2I* locHist_CDCdEdXVsP_QMinus = (TH2I*)gDirectory->Get("dEdXVsP_q-"); //q-
-	TH2I* locHist_CDCdEdXVsP_QPlus = (TH2I*)gDirectory->Get("dEdXVsP_q+"); //q+
+	TH2I* locHist_CDCdEdXVsP_QMinus = (TH2I*)gDirectory->Get("dEdXVsP_Amp_q-"); //q-
+	TH2I* locHist_CDCdEdXVsP_QPlus = (TH2I*)gDirectory->Get("dEdXVsP_Amp_q+"); //q+
 	gDirectory->cd("../FDC");
 	TH2I* locHist_FDCdEdXVsP_QMinus = (TH2I*)gDirectory->Get("dEdXVsP_q-"); //q-
 	TH2I* locHist_FDCdEdXVsP_QPlus = (TH2I*)gDirectory->Get("dEdXVsP_q+"); //q+

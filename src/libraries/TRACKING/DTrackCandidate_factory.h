@@ -72,31 +72,28 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   void ProjectHelixToZ(const double z,const double q,const DVector3 &mom,
 		       DVector3 &pos);
 
-  jerror_t GetPositionAndMomentum(const DFDCSegment *segment,
-				  DVector3 &pos, DVector3 &mom);
+  void GetPositionAndMomentum(const DFDCSegment *segment,DVector3 &pos,
+			      DVector3 &mom) const;
   jerror_t GetPositionAndMomentum(DHelicalFit &fit,double Bz,
-				  const DVector3 &origin,
-				  DVector3 &pos,
-				  DVector3 &mom);
-  jerror_t GetPositionAndMomentum(DHelicalFit &fit,double Bz,DVector3 &pos,
-				  DVector3 &mom);
-  jerror_t GetPositionAndMomentum(double z,DHelicalFit &fit,
-				  double Bz,DVector3 &pos,DVector3 &mom);
-  jerror_t GetPositionAndMomentum(const DTrackCandidate *cand,double Bz,
 				  const DVector3 &origin,DVector3 &pos,
-				  DVector3 &mom);
-
-  void UpdatePositionAndMomentum(DTrackCandidate *can,const DFDCPseudo *fdchit,
-				 DHelicalFit &fit,double Bz_avg,int axial_id);
-
+				  DVector3 &mom) const;
+  void GetPositionAndMomentum(double z,const DHelicalFit &fit,
+			      double Bz,DVector3 &pos,DVector3 &mom) const;
+  void GetPositionAndMomentum(const DHelicalFit &fit,double Bz,DVector3 &pos,
+			      DVector3 &mom) const; 
+  void UpdatePositionAndMomentum(DHelicalFit &fit,double Bz,
+				 const DVector3 &origin,DVector3 &pos,
+				 DVector3 &mom) const;
+ 
   // Various methods for matching CDC and FDC candidates
   bool MatchMethod1(const DTrackCandidate *fdccan,
 		    vector<unsigned int> &cdc_forward_ids,
 		    vector<DVector3>&cdc_endplate_projections,
-		    vector<unsigned int>&used_cdc_hits
+		    vector<unsigned int>&used_cdc_hits,
+		    vector<int>&cdc_forward_matches
 		    );
   bool MatchMethod2(const DTrackCandidate *fdccan,
-		    vector<unsigned int> &cdc_forward_ids,
+		    const DTrackCandidate *cdccan,
 		    vector<unsigned int>&used_cdc_hits
 		    );
   bool MatchMethod3(const DTrackCandidate *cdccan,vector<int> &forward_matches,
@@ -137,6 +134,10 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 			  DVector3 &mom,DVector3 &pos) const;
   bool MatchStraySegments(vector<int> &forward_matches,
 			  int &num_fdc_cands_remaining);
+  bool MakeCandidateFromMethod1(double theta,
+				vector<const DFDCSegment *>&segments,
+				const DTrackCandidate *cdccan,
+				vector<unsigned int>&used_cdc_hits);
  
  private:
   const DMagneticFieldMap *bfield;

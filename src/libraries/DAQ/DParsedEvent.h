@@ -58,6 +58,7 @@ using namespace jana;
 #include <DAQ/Df125BORConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/DCAEN1290TDCBORConfig.h>
+#include <DAQ/DTSGBORConfig.h>
 #include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/DDIRCTDCHit.h>
 #include <DAQ/DDIRCADCHit.h>
