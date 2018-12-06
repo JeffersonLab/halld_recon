@@ -273,7 +273,7 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  pulse_peak_pedsub = round(Npixels_true/pixel_per_count[digihit->end][digihit->layer-1]/integral_to_peak[digihit->end][digihit->layer-1]);
 	  // cout  << " event=" << eventnumber << " Layer=" << digihit->layer  << " pulse_peak_pedsub_measured=" << pulse_peak_pedsub_measured 
 	  //	    << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " pulse_peak_pedsub=" << pulse_peak_pedsub 
-	  //	    << " Int/Peak Ratio=" << integral_pedsub/pulse_peak_pedsub << endl;
+	  //       << " Int/Peak Ratio=" << integral_pedsub/pulse_peak_pedsub << endl << endl;
 	}
 	else {
 	  pulse_peak_pedsub = (int)digihit->pulse_peak - (int)single_sample_ped;
