@@ -41,6 +41,9 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		TH1F *TwoTrackProb;
 		TH1F *TwoTrackDz,*TwoTrackDoca;
 		TH3I *MCVertexDiff;
+		TH2F *MCVertexDxVsZ,*MCVertexDyVsZ,*MCVertexDzVsZ;
+		TH2F *MCVertexDxVsR,*MCVertexDyVsR,*MCVertexDzVsR;
+
 
 		const DMagneticFieldMap *bfield;
 		const DAnalysisUtilities* dAnalysisUtilities = nullptr;

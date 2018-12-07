@@ -102,7 +102,13 @@ jerror_t JEventProcessor_imaging::init(void)
 
   if (MC_RECON_CHECK){
     MCVertexDiff= new TH3I("MCVertexDiff","dz vs dy vs dx",400,-10,10,
-			   400,-10,10,400,-10,10);
+			   400,-10,10,400,-10,10); 
+    MCVertexDxVsZ= new TH2F("MCVertexDxVsZ","dx vs z",400,0,200,400,-10,10);
+    MCVertexDyVsZ= new TH2F("MCVertexDyVsZ","dy vs z",400,0,200,400,-10,10); 
+    MCVertexDzVsZ= new TH2F("MCVertexDzVsZ","dz vs z",400,0,200,400,-10,10);
+    MCVertexDxVsR= new TH2F("MCVertexDxVsR","dx vs R",120,0,60,400,-10,10);
+    MCVertexDyVsR= new TH2F("MCVertexDyVsR","dy vs R",120,0,60,400,-10,10); 
+    MCVertexDzVsR= new TH2F("MCVertexDzVsR","dz vs R",120,0,60,400,-10,10);
   }
     
   gDirectory->cd("../");
@@ -179,7 +185,17 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 				      doca,ds1,ds2)==NOERROR){  
       DVector3 vertex=0.5*(pos1_out+pos2_out);
       DVector3 diff=vertex-truevertex;
+      double ztrue=truevertex.z();
+      double rtrue=truevertex.Perp();
       MCVertexDiff->Fill(diff.x(),diff.y(),diff.z());
+      MCVertexDxVsZ->Fill(ztrue,diff.x());   
+      MCVertexDyVsZ->Fill(ztrue,diff.y());
+      MCVertexDzVsZ->Fill(ztrue,diff.z()); 
+      MCVertexDxVsR->Fill(rtrue,diff.x());   
+      MCVertexDyVsR->Fill(rtrue,diff.y());
+      MCVertexDzVsR->Fill(rtrue,diff.z());
+      
+      
     }
   }
 
