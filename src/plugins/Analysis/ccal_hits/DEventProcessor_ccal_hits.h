@@ -36,9 +36,6 @@ class DEventProcessor_ccal_hits:public JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 		
 
-                TApplication *app1;
-                TCanvas *my_canvas;
-
 		TTree* tree1;
 
 		static const Int_t max_hit     =  3000;

@@ -10,17 +10,11 @@ using namespace std;
 
 #include "DEventProcessor_ccal_hits.h"
 
-#include <TLorentzVector.h>
-
 #include <DANA/DApplication.h>
 #include <CCAL/DCCALDigiHit.h>
 
-#include <DAQ/Df250PulseIntegral.h>
-#include <DAQ/Df250PulseData.h>
 #include <DAQ/Df250WindowRawData.h>
-#include <DAQ/Df250PulsePedestal.h>
-
-
+#include <DAQ/Df250PulseData.h>
 
 
 // Routine used to create our DEventProcessor
@@ -61,35 +55,18 @@ jerror_t DEventProcessor_ccal_hits::init(void)
 
   for(Int_t ii = 0; ii < 12; ii++){
     for(Int_t jj = 0; jj < 12; jj++){
-           
-      int column_tmp, row_tmp;
-      
-      if(ii < 6) column_tmp = 6 - ii; 
-      else column_tmp = 5 - ii;
-
-      if(jj < 6) row_tmp = jj - 6; 
-      else row_tmp = jj - 5;    
-
+                 
       char title[30];
-      char title_col[10];
-      char title_row[10];
-
-      int index = ii*12 + jj;
-
-
-      if(column_tmp > 0) sprintf(title_col,"%d",column_tmp);
-      else sprintf(title_col,"n%d",-column_tmp);
-
-      if(row_tmp > 0) sprintf(title_row,"%d",row_tmp);
-      else sprintf(title_row,"n%d",-row_tmp);
-
-      sprintf(title,"Waveform_%s_%s",title_col, title_row);    
+      
+      int index = jj + ii*12;
+      
+      sprintf(title,"Waveform_%d",index);    
       ccal_wave[index]  = new TProfile(title,title,100,-0.5,99.5,-10.,4096);
 
-      sprintf(title,"Peak_%s_%s", title_col, title_row);    
+      sprintf(title,"Peak_%d",index); 
       ccal_peak[index]  = new TH1F(title, title, 4096, -0.5, 4095.5);
-
-      sprintf(title,"Int_%s_%s", title_col, title_row);    
+      
+      sprintf(title,"Int_%d",index); 
       ccal_int[index]  = new TH1F(title, title, 500, 0., 20000.5);
 
     }
@@ -117,7 +94,7 @@ jerror_t DEventProcessor_ccal_hits::brun(JEventLoop *eventLoop, int32_t runnumbe
 //------------------
 jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
-
+	
 	vector<const DCCALDigiHit*> ccal_digihits;
 
 	loop->Get(ccal_digihits);
@@ -158,21 +135,9 @@ jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  pedestal[nhit]  =  ccal_hit->pedestal;
 	  time[nhit]      =  (ccal_hit->pulse_time  & 0x7FC0) >> 6;
 	  qf[nhit]        =  ccal_hit->QF;
-
-
-	  // Index for histograms
-
-	  int column_tmp, row_tmp;
-
-	  if(column[nhit] > 0) column_tmp = 6 - column[nhit];
-	  else column_tmp = 5 - column[nhit];
-
-	  if(row[nhit] > 0) row_tmp = 5 + row[nhit];
-	  else row_tmp = 6 + row[nhit];
 	  
-	  int index = row_tmp*12 + column_tmp;
-
-
+	  int index = ccal_hit->row*12 + ccal_hit->column;
+	  
 	  // Assume that baseline is at fadc count 100
 	  ccal_peak[index]->Fill(float(ccal_hit->pulse_peak) - 100.);
 	  ccal_int[index]->Fill(float(ccal_hit->pulse_integral) - 100*nsamples_integral);
