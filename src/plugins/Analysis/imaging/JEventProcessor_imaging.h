@@ -12,6 +12,7 @@
 #include <TRACKING/DReferenceTrajectory.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 #include <HDGEOMETRY/DGeometry.h>
+#include <ANALYSIS/DAnalysisUtilities.h>
 
 #include <TH1F.h>
 #include <TH2F.h>
@@ -29,15 +30,7 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed. 
-		jerror_t FindDoca(double q1,double q2,
-				  const DVector3 &mom1_in, 
-				  const DVector3 &pos1_in,
-				  const DVector3 &mom2_in, 
-				  const DVector3 &pos2_in,
-				  DVector3 &mom1_out,DVector3 &pos1_out,
-				  DVector3 &mom2_out,DVector3 &pos2_out,
-				  double &doca, double &s1, double &s2) const;
-
+	
 		TH3I *TwoTrackXYZ;
 		TH1F *TwoTrackZ;
 		TH1F *TwoTrackZFit;
@@ -45,17 +38,15 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		TH3I *TwoTrackXYZFit;
 		TH2F *TwoTrackPocaCut,*TwoTrackPocaCutFit;
 		TH2F *TwoTrackXY_at_65cm;
-		TH1F *TwoTrackChi2,*TwoTrackProb;
+		TH1F *TwoTrackProb;
 		TH1F *TwoTrackDz,*TwoTrackDoca;
 		TH3I *MCVertexDiff;
 
-		vector<DReferenceTrajectory*> rtv;  
-		unsigned int num_used_rts;
-		
-		const DGeometry *geom;
 		const DMagneticFieldMap *bfield;
+		const DAnalysisUtilities* dAnalysisUtilities = nullptr;
 
-		bool FIT_VERTEX,MC_RECON_CHECK;
+		bool MC_RECON_CHECK;
+		int DEBUG_LEVEL;
 		double TRACK_CL_CUT,FIT_CL_CUT,DOCA_CUT;
 };
 
