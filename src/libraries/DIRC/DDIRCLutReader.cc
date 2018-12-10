@@ -19,9 +19,12 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	// retrieve from LUT from file //
 	/////////////////////////////////
         const int luts = 48;
+        
+        string lut_file = "/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver05/lut_all_flat.root";
+        gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 	
 	// eventually needs to come from CCDB with run number index
-	TFile *fLut = new TFile("/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver05/lut_all_flat.root");
+	TFile *fLut = new TFile(lut_file.c_str());
         TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 
 	vector<Double_t> *LutPixelAngleX[luts];
@@ -67,9 +70,9 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 }
 
 DDIRCLutReader::~DDIRCLutReader() {
-	delete lutNodeAngle;
-	delete lutNodeTime;
-	delete lutNodePath;
+	delete[] lutNodeAngle;
+	delete[] lutNodeTime;
+	delete[] lutNodePath;
 }
 
 uint DDIRCLutReader::GetLutPixelAngleSize(int bar, int pixel) const
