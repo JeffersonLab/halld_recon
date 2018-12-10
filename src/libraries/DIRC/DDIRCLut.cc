@@ -175,18 +175,18 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		// currently there's a problem with the G4 propogation time, for now use TRUTH
 		if(!locTruthDIRCHits.empty()) {
 			double locRecoTime = locTruthDIRCHits[0]->t - locFlightTime;
-			double locDeltaT_fixed = locRecoTime - locTruthDIRCHits[0]->t_fixed;
+			//double locDeltaT_fixed = locRecoTime - locTruthDIRCHits[0]->t_fixed;
 			//cout<<"Flight time = "<<locFlightTime<<" Time difference = "<<locDeltaT_fixed<<" Smeared difference ="<<hitTime-locRecoTime<<endl;
 			//hitTime = locTruthDIRCHits[0]->t - locFlightTime; // no time smearing
 
 			// use fixed time from G4 (matches dircsim_2018-08_ver04)
-			//hitTime = locRecoTime; //locTruthDIRCHits[0]->t_fixed;           
+			hitTime = locRecoTime; //locTruthDIRCHits[0]->t_fixed;           
 		}
 		else // skip those without truth hits for now
 			continue;
 
 		// needs to be X dependent choice for reflection cut (from CCDB?)
-		bool reflected = hitTime>48;
+		bool reflected = hitTime>38;
 		
 		/*
 		  Need to double check all position units!
