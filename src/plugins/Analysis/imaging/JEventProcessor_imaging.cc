@@ -49,9 +49,9 @@ jerror_t JEventProcessor_imaging::init(void)
   gPARMS->SetDefaultParameter("IMAGING:MC_RECON_CHECK",MC_RECON_CHECK, "Turn on/off comparison to MC"); 
   DEBUG_LEVEL=0;
   gPARMS->SetDefaultParameter("IMAGING:DEBUG_LEVEL",DEBUG_LEVEL);
-  FIT_CL_CUT=0.01;
+  FIT_CL_CUT=0.05;
   gPARMS->SetDefaultParameter("IMAGING:FIT_CL_CUT",FIT_CL_CUT, "CL cut for vertex fit"); 
-  TRACK_CL_CUT=1e-10;
+  TRACK_CL_CUT=1e-3;
   gPARMS->SetDefaultParameter("IMAGING:TRACK_CL_CUT",TRACK_CL_CUT, "CL cut for tracks");
   DOCA_CUT=1.0; 
   gPARMS->SetDefaultParameter("IMAGING:DOCA_CUT",DOCA_CUT, "Maximum doca between tracks");
