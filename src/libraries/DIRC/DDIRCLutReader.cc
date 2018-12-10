@@ -24,6 +24,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
         gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 	
 	// eventually needs to come from CCDB with run number index
+	auto saveDir = gDirectory;
 	TFile *fLut = new TFile(lut_file.c_str());
         TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 
@@ -67,6 +68,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 
 	// close LUT file
 	fLut->Close();
+	saveDir->cd();
 }
 
 DDIRCLutReader::~DDIRCLutReader() {
