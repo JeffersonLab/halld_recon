@@ -159,7 +159,8 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 				  double locThetaC = locPhotons[loc_j][0];
 				  double locDeltaT = locPhotons[loc_j][1];
 				  int locSensorId = (int)locPhotons[loc_j][2];
-				  hDiff[locPID]->Fill(locDeltaT);
+				  if(fabs(locThetaC-locExpectedThetaC)<0.02)
+					  hDiff[locPID]->Fill(locDeltaT);
 				  
 				  // fill histograms for candidate photons in timing cut
 				  if(fabs(locDeltaT) < 2.0) {

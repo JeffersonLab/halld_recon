@@ -247,7 +247,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 					Lock_Action(); //ACQUIRE ROOT LOCK!!
 					if(DIRC_FILL_BAR_MAP && locP > 4.) {
 						//hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
-						if(locHitTime < 48.) 
+						if(locHitTime < 38.) 
 							hPixelHitMap[locBar][locXbin]->Fill(pixel_x, pixel_y);
 						else
 							hPixelHitMapReflected[locBar][locXbin]->Fill(pixel_x, pixel_y);
