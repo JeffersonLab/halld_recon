@@ -14,33 +14,13 @@ using namespace std;
 //---------------------------------
 // DDIRCLut    (Constructor)
 //---------------------------------
-DDIRCLut::DDIRCLut(JEventLoop *loop) 
+DDIRCLut::DDIRCLut() 
 {
-	dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	dDIRCLutReader = dapp->GetDIRCLut(loop->GetJEvent().GetRunNumber());
-
-	// get DIRC geometry
-	vector<const DDIRCGeometry*> locDIRCGeometry;
-        loop->Get(locDIRCGeometry);
-        dDIRCGeometry = locDIRCGeometry[0];
-
 	DIRC_DEBUG_HISTS = false;
 	gPARMS->SetDefaultParameter("DIRC:DEBUG_HISTS",DIRC_DEBUG_HISTS);
 
 	DIRC_TRUTH_BARHIT = false;
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
-
-	////////////////////////////////////
-	// LUT histograms and diagnostics //
-	////////////////////////////////////
-	if(DIRC_DEBUG_HISTS) {
-	
-		string locDirName = "DIRC_DEBUG";
-		TDirectoryFile* locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
-		if(locDirectoryFile == NULL)
-			locDirectoryFile = new TDirectoryFile(locDirName.c_str(), locDirName.c_str());
-		locDirectoryFile->cd();
-	}
 
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
@@ -48,43 +28,65 @@ DDIRCLut::DDIRCLut(JEventLoop *loop)
 	dFinalStatePIDs.push_back(KPlus);
 	dFinalStatePIDs.push_back(Proton);
 
-	if(DIRC_DEBUG_HISTS) {
-		dapp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-        	{
-			hDiff = (TH1I*)gROOT->FindObject("hDiff");
-			hDiff_Pixel = (TH2I*)gROOT->FindObject("hDiff_Pixel");
-			hDiffT = (TH1I*)gROOT->FindObject("hDiffT");
-			hDiffD = (TH1I*)gROOT->FindObject("hDiffD");
-			hDiffR = (TH1I*)gROOT->FindObject("hDiffR");
-			hTime = (TH1I*)gROOT->FindObject("hTime");
-			hCalc = (TH1I*)gROOT->FindObject("hCalc");
-			hNph = (TH1I*)gROOT->FindObject("hNph");
-			if(!hDiff) hDiff = new TH1I("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiff_Pixel) hDiff_Pixel = new TH2I("hDiff_Pixel","; Pixel ID; t_{calc}-t_{measured} [ns];entries [#]", 10000, 0, 10000, 400,-20,20);
-			if(!hDiffT) hDiffT = new TH1I("hDiffT",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiffD) hDiffD = new TH1I("hDiffD",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hDiffR) hDiffR = new TH1I("hDiffR",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-			if(!hTime) hTime = new TH1I("hTime",";propagation time [ns];entries [#]",   1000,0,200);
-			if(!hCalc) hCalc = new TH1I("hCalc",";calculated time [ns];entries [#]",   1000,0,200);
-			if(!hNph) hNph = new TH1I("hNph",";detected photons [#];entries [#]", 150,0,150);	
+	if(DIRC_DEBUG_HISTS) 	
+		CreateDebugHistograms();	
+}
 
-			// DeltaThetaC for each particle type (e, pi, K, p) and per pixel
-			for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
-				Particle_t locPID = dFinalStatePIDs[loc_i];
-				string locParticleName = ParticleType(locPID);
-				string locParticleROOTName = ParticleName_ROOT(locPID);
-				
-				hDeltaThetaC[loc_i] = (TH1I*)gROOT->FindObject(Form("hDeltaThetaC_%s",locParticleName.data()));
-				if(!hDeltaThetaC[loc_i]) 
-					hDeltaThetaC[loc_i] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()),  "cherenkov angle; #Delta#theta_{C} [rad]", 200,-0.5,0.5);
-				hDeltaThetaC_Pixel[loc_i] = (TH2I*)gROOT->FindObject(Form("hDeltaThetaC_Pixel_%s",locParticleName.data()));
-				if(!hDeltaThetaC_Pixel[loc_i]) 
-					hDeltaThetaC_Pixel[loc_i] = new TH2I(Form("hDeltaThetaC_Pixel_%s",locParticleName.data()),  "cherenkov angle; Pixel ID; #Delta#theta_{C} [rad]", 10000, 0, 10000, 200,-0.5,0.5);
-			}
+bool DDIRCLut::brun(JEventLoop *loop) {
+
+	dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+	dDIRCLutReader = dapp->GetDIRCLut(loop->GetJEvent().GetRunNumber());
+	
+	// get DIRC geometry
+	vector<const DDIRCGeometry*> locDIRCGeometry;
+        loop->Get(locDIRCGeometry);
+        dDIRCGeometry = locDIRCGeometry[0];
+	
+	return true;
+}
+
+bool DDIRCLut::CreateDebugHistograms() {
+
+	////////////////////////////////////
+	// LUT histograms and diagnostics //
+	////////////////////////////////////
+
+	//dapp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	{
+		hDiff = (TH1I*)gROOT->FindObject("hDiff");
+		hDiff_Pixel = (TH2I*)gROOT->FindObject("hDiff_Pixel");
+		hDiffT = (TH1I*)gROOT->FindObject("hDiffT");
+		hDiffD = (TH1I*)gROOT->FindObject("hDiffD");
+		hDiffR = (TH1I*)gROOT->FindObject("hDiffR");
+		hTime = (TH1I*)gROOT->FindObject("hTime");
+		hCalc = (TH1I*)gROOT->FindObject("hCalc");
+		hNph = (TH1I*)gROOT->FindObject("hNph");
+		if(!hDiff) hDiff = new TH1I("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+		if(!hDiff_Pixel) hDiff_Pixel = new TH2I("hDiff_Pixel","; Pixel ID; t_{calc}-t_{measured} [ns];entries [#]", 10000, 0, 10000, 400,-20,20);
+		if(!hDiffT) hDiffT = new TH1I("hDiffT",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+		if(!hDiffD) hDiffD = new TH1I("hDiffD",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+		if(!hDiffR) hDiffR = new TH1I("hDiffR",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
+		if(!hTime) hTime = new TH1I("hTime",";propagation time [ns];entries [#]",   1000,0,200);
+		if(!hCalc) hCalc = new TH1I("hCalc",";calculated time [ns];entries [#]",   1000,0,200);
+		if(!hNph) hNph = new TH1I("hNph",";detected photons [#];entries [#]", 150,0,150);	
+		
+		// DeltaThetaC for each particle type (e, pi, K, p) and per pixel
+		for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
+			Particle_t locPID = dFinalStatePIDs[loc_i];
+			string locParticleName = ParticleType(locPID);
+			string locParticleROOTName = ParticleName_ROOT(locPID);
+			
+			hDeltaThetaC[loc_i] = (TH1I*)gROOT->FindObject(Form("hDeltaThetaC_%s",locParticleName.data()));
+			if(!hDeltaThetaC[loc_i]) 
+				hDeltaThetaC[loc_i] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()),  "cherenkov angle; #Delta#theta_{C} [rad]", 200,-0.5,0.5);
+			hDeltaThetaC_Pixel[loc_i] = (TH2I*)gROOT->FindObject(Form("hDeltaThetaC_Pixel_%s",locParticleName.data()));
+			if(!hDeltaThetaC_Pixel[loc_i]) 
+				hDeltaThetaC_Pixel[loc_i] = new TH2I(Form("hDeltaThetaC_Pixel_%s",locParticleName.data()),  "cherenkov angle; Pixel ID; #Delta#theta_{C} [rad]", 10000, 0, 10000, 200,-0.5,0.5);
 		}
-		dapp->RootUnLock(); //REMOVE ROOT LOCK!!
 	}
-
+	//dapp->RootUnLock(); //REMOVE ROOT LOCK!!
+	
+	return true;
 }
 
 bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const
@@ -99,7 +101,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	// option to cheat and use truth position //
 	////////////////////////////////////////////
 	if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
-		
+
 		TVector3 bestMatchPos, bestMatchMom;
 		double bestFlightTime = 999.;
 		double bestMatchDist = 999.;

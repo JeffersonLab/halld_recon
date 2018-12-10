@@ -31,9 +31,11 @@ public:
 	
 	JOBJECT_PUBLIC(DDIRCLut);
 
-	DDIRCLut(JEventLoop *loop);
+	DDIRCLut();
 	~DDIRCLut(){};
 
+	bool brun(JEventLoop *loop);
+	bool CreateDebugHistograms();
 	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
 	
