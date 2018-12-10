@@ -34,13 +34,19 @@ DDIRCGeometry::Initialize(int runnumber) {
 	vector<double>DCML01_XYZ;
 	vector<double>DCML10_XYZ;
 	vector<double>DCML11_XYZ;
-	jgeom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", DIRC);
-	jgeom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", DRCC);
-	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML00']/@X_Y_Z/plane[@value='4']", DCML00_XYZ);
-        jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML01']/@X_Y_Z/plane[@value='3']", DCML01_XYZ);
-	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", DCML10_XYZ);
-	jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML11']/@X_Y_Z/plane[@value='2']", DCML11_XYZ);	 
+        bool all_found = true;
+	all_found &= jgeom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", DIRC);
+	all_found &= jgeom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", DRCC);
+	all_found &= jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML00']/@X_Y_Z/plane[@value='4']", DCML00_XYZ);
+        all_found &= jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML01']/@X_Y_Z/plane[@value='3']", DCML01_XYZ);
+	all_found &= jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", DCML10_XYZ);
+	all_found &= jgeom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML11']/@X_Y_Z/plane[@value='2']", DCML11_XYZ);	 
 	
+        if( !all_found ){
+                jerr << "Problem finding all DIRC geometry elements. Please make sure your HDDS is up to date!" << endl;
+                _exit(-1);
+        }
+        
 	// set array of bar positions
 	for(int i=0; i<48; i++) {
 		vector<double>DCBR_XYZ;
