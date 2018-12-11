@@ -66,6 +66,14 @@ class JEventProcessor_lowlevel_online:public jana::JEventProcessor{
         TH1I *bcal_adc_emudelta_coarsetime;
         TH1I *bcal_adc_emudelta_finetime;
 
+	//------------------------ CCAL -----------------------
+        TH1I *ccal_adc_multi;
+        TH1I *ccal_num_events;
+        TH1I *ccal_adc_integral;
+        TH1I *ccal_adc_time;
+        TH1I *ccal_adc_peak;
+	TH1I *ccal_adc_pedestal;
+	
 
 		//------------------------ CDC ------------------------
         TH1I *cdc_adc_multi;
