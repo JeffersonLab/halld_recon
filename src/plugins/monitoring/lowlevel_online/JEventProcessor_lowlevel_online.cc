@@ -10,6 +10,7 @@ using namespace jana;
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
+#include <CCAL/DCCALDigiHit.h>
 #include <CDC/DCDCDigiHit.h>
 #include <FDC/DFDCCathodeDigiHit.h>
 #include <FDC/DFDCWireDigiHit.h>
@@ -158,6 +159,21 @@ jerror_t JEventProcessor_lowlevel_online::init(void)
     */
 
 	bcal_num_events = new TH1I("bcal_num_events", "BCAL number of events", 1, 0.0, 1.0);
+
+	//------------------------ CCAL -----------------------
+    if(ANALYZE_F250_DATA) {
+        maindir->cd();
+        gDirectory->mkdir("CCAL")->cd();
+    
+        ccal_adc_multi = new TH1I("ccal_adc_multi", "CCAL ADC Multiplicity", 250, 0, 250);
+
+        ccal_adc_integral = new TH1I("ccal_adc_integral", "CCAL fADC250 Pulse Integral;Integral (fADC counts)", 1000, 0, 40000);
+        ccal_adc_peak = new TH1I("ccal_adc_peak", "CCAL fADC250 Pulse Peak;Peak (fADC counts)", 500, 0, 1000);
+        ccal_adc_time = new TH1I("ccal_adc_time", "CCAL fADC250 Pulse Time;Time (ns)", 1000, 0, 10000);
+        ccal_adc_pedestal = new TH1I("ccal_adc_pedestal", "CCAL fADC250 Summed Pedestal;Pedestal Sum (fADC counts)", 200, 0, 6000);
+
+        ccal_num_events = new TH1I("ccal_num_events", "CCAL number of events", 1, 0.0, 1.0);
+    }
 
 	//------------------------ CDC ------------------------
     if(ANALYZE_F125_DATA) {
@@ -570,6 +586,7 @@ jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventn
 {
 	vector<const DBCALDigiHit*>        bcaldigihits;
 	vector<const DBCALTDCDigiHit*>     bcaltdcdigihits;
+	vector<const DCCALDigiHit*>        ccaldigihits;
 	vector<const DCDCDigiHit*>         cdcdigihits;
 	vector<const DFDCCathodeDigiHit*>  fdccathodehits;
 	vector<const DFDCWireDigiHit*>     fdcwirehits;
@@ -599,6 +616,7 @@ jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventn
 	// Get hit data
 	loop->Get(bcaldigihits);
 	loop->Get(bcaltdcdigihits);
+	loop->Get(ccaldigihits);
 	loop->Get(cdcdigihits);
 	loop->Get(fdccathodehits);
 	loop->Get(fdcwirehits);
@@ -715,6 +733,23 @@ jerror_t JEventProcessor_lowlevel_online::evnt(JEventLoop *loop, uint64_t eventn
 		//bcal_tdc_time->Fill(t_tdc);
         bcal_tdc_time->Fill(digihit->time);
 	}
+
+	//------------------------ CCAL -----------------------
+
+	ccal_num_events->Fill(0.5);
+        ccal_adc_multi->Fill(ccaldigihits.size());
+
+	for(size_t loc_i = 0; loc_i < ccaldigihits.size(); ++loc_i){
+	  const DCCALDigiHit *hit = ccaldigihits[loc_i];
+
+	  if(hit->pulse_peak < F250_THRESHOLD)  continue;
+	  
+	  ccal_adc_integral->Fill(hit->pulse_integral);
+	  ccal_adc_peak->Fill(hit->pulse_peak);
+	  ccal_adc_time->Fill(hit->pulse_time);
+	  ccal_adc_pedestal->Fill(hit->pedestal);
+	}
+
 
 	//------------------------ FCAL -----------------------
     map<int, vector<const Df250PulseData*> > fcalhitmap;
