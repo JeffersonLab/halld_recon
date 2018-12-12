@@ -38,6 +38,8 @@ using namespace std;
 #include "JANA/JGeometry.h"
 #include "TRACKING/DMCTrajectoryPoint.h"
 #include "FCAL/DFCALHit.h"
+#include "CCAL/DCCALHit.h"
+#include "CCAL/DCCALCluster.h"
 #include "TOF/DTOFGeometry.h"
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFTDCDigiHit.h" 
@@ -668,6 +670,61 @@ void MyProcessor::FillGraphics(void)
 	    poly->SetFillColor(TColor::GetColor(r,g,b));
 	  }
 	}
+
+	// CCAL hits
+	if(hdvmf->GetCheckButton("ccal")){
+	  vector<const DCCALHit*> ccalhits;
+	  loop->Get(ccalhits);
+
+	  for(unsigned int i=0; i<ccalhits.size(); i++){
+	    const DCCALHit *hit = ccalhits[i];
+	    TPolyLine *poly = hdvmf->GetCCALPolyLine(hit->row, hit->column);
+	    if(!poly)continue;
+
+	    // The aim is to have a log scale in energy (see BCAL)
+	    double E = 1000*hit->E;      // Change Energy to MeV
+	    E /= 1000.0; // CCAL is currently not calibrated and appears to be at least 1E3 too large  2018-12-10 DL
+	    if(E<0.0) continue;
+	    double logE = log10(E);
+
+	    float r,g,b;
+	    if (logE<0){
+	    	r = 1.;
+	    	g = 1.;
+	    	b = 1.;
+	    } else {
+	    	if (logE<1){
+	    		r = 1.;
+	    		g = 1.;
+	    		b = 1.-logE;
+	    	} else {
+	    		if (logE<2){
+	    			r = 1.;
+	    			g = 1.-(logE-1);
+	    			b = 0.;
+	    		} else {
+	    			if (logE<3){
+	    				r = 1.;
+	    				g = 0.;
+	    				b = 1.-(logE-2);
+	    			} else {
+	    				if (logE<4){
+	    					r = 1.-(logE-3);
+	    					g = 0.;
+	    					b = 1.;
+	    				} else {
+	    					r = 0;
+	    					g = 0;
+	    					b = 0;
+	    				}
+	    			}
+	    		}
+	    	}
+	    }
+	    poly->SetFillColor(TColor::GetColor(r,g,b));
+	  }
+	}
+
 	// TOF hits
 	if(hdvmf->GetCheckButton("tof")){
 
@@ -1482,6 +1539,38 @@ void MyProcessor::FillGraphics(void)
 			e->SetLineWidth(4);
 			graphics_xyB.push_back(e);
 		}
+	}
+
+	// CCAL reconstructed clusters
+	if(hdvmf->GetCheckButton("recon_photons_ccal")){
+		vector<const DCCALCluster*> clusters;
+		loop->Get(clusters);
+		for(auto cluster : clusters){
+
+			double E = cluster->getEnergy()/1000.0; // divide by 1000 since energy does not seem to be calibrated to GeV at the moment.  2018-12-10 DL
+			double dist2 = 1.0 + 0.5*E;
+			DVector3 pos = cluster->getCentroid();
+
+			TEllipse *e = new TEllipse(pos.X(), pos.Y(), dist2, dist2);
+			e->SetLineColor(kGreen);
+			e->SetFillStyle(0);
+			e->SetLineWidth(2);
+			graphics_xyB.push_back(e);
+
+			TEllipse *e1 = new TEllipse(pos.Z(), pos.X(), dist2, dist2);
+			e1->SetLineColor(kGreen);
+			e1->SetFillStyle(0);
+			e1->SetLineWidth(2);
+
+			graphics_xz.push_back(e1);
+			TEllipse *e2 = new TEllipse(pos.Z(), pos.Y(), dist2, dist2);
+			e2->SetLineColor(kGreen);
+			e2->SetFillStyle(0);
+			e2->SetLineWidth(2);
+			graphics_yz.push_back(e2);
+
+		}
+		//graphics.push_back(gset);
 	}
 
 	// DMCTrajectoryPoints
