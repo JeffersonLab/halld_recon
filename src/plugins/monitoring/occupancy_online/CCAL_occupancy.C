@@ -8,8 +8,8 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-// hnamepath: /occupancy/fcal_occ
-// hnamepath: /occupancy/fcal_num_events
+// hnamepath: /occupancy/ccal_occ
+// hnamepath: /occupancy/ccal_num_events
 //
 // e-mail: davidl@jlab.org
 // e-mail: staylor@jlab.org
