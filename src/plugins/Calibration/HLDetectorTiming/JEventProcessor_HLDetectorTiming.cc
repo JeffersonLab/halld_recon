@@ -156,7 +156,7 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     }
 
     // DEBUG
-    NBINS_TDIFF = 2800; MIN_TDIFF = -200.0; MAX_TDIFF = 500.0;
+    //NBINS_TDIFF = 2800; MIN_TDIFF = -200.0; MAX_TDIFF = 500.0;
 
 
     if (DO_TRACK_BASED){
