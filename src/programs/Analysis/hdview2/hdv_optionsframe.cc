@@ -77,6 +77,7 @@ hdv_optionsframe::hdv_optionsframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt
 	checkbuttons["recon_charged_fcal"]			= new TGCheckButton(hitdrawopts,	"Draw reconstructed charged track projections on FCAL");
 	checkbuttons["thrown_photons_fcal"]			= new TGCheckButton(hitdrawopts,	"Draw thrown photon projections on FCAL");
 	checkbuttons["recon_photons_fcal"]			= new TGCheckButton(hitdrawopts,	"Draw reconstructed photon projections on FCAL");
+	checkbuttons["recon_photons_ccal"]			= new TGCheckButton(hitdrawopts,	"Draw reconstructed photon projections on CCAL");
 	TGHorizontal3DLine *separator2				= new TGHorizontal3DLine(hitdrawopts, 250);
 	checkbuttons["recon_photons_track_match"]	= new TGCheckButton(hitdrawopts,	"Draw reconstructed photons matched to charged tracks");
 	TGHorizontal3DLine *separator3				= new TGHorizontal3DLine(hitdrawopts, 250);
@@ -104,6 +105,8 @@ hdv_optionsframe::hdv_optionsframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt
 	hitdrawopts->AddFrame(checkbuttons["recon_charged_fcal"], lhints);
 	hitdrawopts->AddFrame(checkbuttons["thrown_photons_fcal"], lhints);
 	hitdrawopts->AddFrame(checkbuttons["recon_photons_fcal"], lhints);
+	hitdrawopts->AddFrame(separator2, chints);
+	hitdrawopts->AddFrame(checkbuttons["recon_photons_ccal"], lhints);
 	hitdrawopts->AddFrame(separator2, chints);
 	hitdrawopts->AddFrame(checkbuttons["recon_photons_track_match"], lhints);
 	hitdrawopts->AddFrame(separator3, chints);

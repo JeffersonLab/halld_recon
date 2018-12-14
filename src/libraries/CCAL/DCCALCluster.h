@@ -18,7 +18,7 @@ using namespace std;
 using namespace jana;
 
 #define CCAL_USER_HITS_MAX  1000
-#define MAX_SHOWER_RADIUS   5
+//#define MAX_SHOWER_RADIUS   5   <-- This appears to have been copied from DFCALCluster.h and then not used  2018-12-10  DL
 
 class DCCALCluster : public JObject {
    public:

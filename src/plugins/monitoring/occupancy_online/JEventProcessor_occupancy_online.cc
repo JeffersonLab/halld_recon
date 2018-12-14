@@ -12,6 +12,7 @@ using namespace jana;
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
+#include <CCAL/DCCALDigiHit.h>
 #include <CDC/DCDCDigiHit.h>
 #include <FDC/DFDCCathodeDigiHit.h>
 #include <FDC/DFDCWireDigiHit.h>
@@ -39,6 +40,7 @@ using namespace jana;
 #define DigiHitTypes(X) \
 	X(DBCALDigiHit) \
 	X(DBCALTDCDigiHit) \
+	X(DCCALDigiHit) \
 	X(DCDCDigiHit) \
 	X(DFDCCathodeDigiHit) \
 	X(DFDCWireDigiHit) \
@@ -136,6 +138,10 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 		bcal_tdc_occ->GetYaxis()->SetBinLabel(ibin + 13, ss.str().c_str());
 	}
 	bcal_num_events = new TH1I("bcal_num_events", "BCAL number of events", 1, 0.0, 1.0);
+
+	//------------------------ CCAL -----------------------
+	ccal_occ = new TH2F("ccal_occ", "CCAL Occupancy; column; row", 14, -1.5, 12.5, 14, -1.5, 12.5);
+	ccal_num_events = new TH1I("ccal_num_events", "CCAL number of events", 1, 0.0, 1.0);
 
 	//------------------------ CDC ------------------------
 	int Nstraws[28] = {42, 42, 54, 54, 66, 66, 80, 80, 93, 93, 106, 106, 123, 123, 
@@ -330,6 +336,12 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 			bcal_tdc_occ->Fill(ix, iy+13);
 		else if(hit->end == DBCALGeometry::kDownstream)
 			bcal_tdc_occ->Fill(ix, iy);
+	}
+
+	//------------------------ CCAL -----------------------
+	ccal_num_events->Fill(0.5);
+	for(size_t loc_i = 0; loc_i < vDCCALDigiHit.size(); ++loc_i){
+		ccal_occ->Fill(vDCCALDigiHit[loc_i]->column, vDCCALDigiHit[loc_i]->row);
 	}
 
 	//------------------------ CDC ------------------------

@@ -1667,6 +1667,24 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 }
 
 //---------------------------------
+// GetCCALZ
+//---------------------------------
+bool DGeometry::GetCCALZ(double &z_ccal) const
+{
+   vector<double> ComptonEMcalpos;
+   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+
+   if(!good){
+      _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+      z_ccal=876.106; // from some version of HDDS that may be out of date.  2018-12-10 DL
+      return false;
+   }else{
+	   z_ccal = ComptonEMcalpos[2];
+      return true;
+   }
+}
+
+//---------------------------------
 // GetFCALZ
 //---------------------------------
 bool DGeometry::GetFCALZ(double &z_fcal) const

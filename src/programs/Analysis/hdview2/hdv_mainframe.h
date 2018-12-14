@@ -139,6 +139,7 @@ class hdv_mainframe:public TGMainFrame {
 		void GetReconFactory(string &name, string &tag);
 		TPolyLine* GetFCALPolyLine(int channel);
 		TPolyLine* GetFCALPolyLine(float x, float y);
+		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);
 		
@@ -201,6 +202,7 @@ class hdv_mainframe:public TGMainFrame {
 		map<string, TGCheckButton*> checkbuttons;
 		map<int, TPolyLine*> fcalblocks;
 		map<int, TPolyLine*> bcalblocks;
+		map<int, TPolyLine*> ccalblocks;
 		map<int, map<int, TPolyLine*> > tofblocks;
 
 		TTimer *timer;
