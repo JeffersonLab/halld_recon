@@ -123,17 +123,11 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
 	const DTrackTimeBased* locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
 	
-	// Get expected thetaC from the extrapolation
-	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
-	if(extrapolations.size()==0) 
-		return true;
-	
-	DVector3 momInBar = extrapolations[0].momentum;
-	DVector3 posInBar = extrapolations[0].position;
+	Particle_t locPID = locTrackTimeBased->PID();
 
-	Lock_Action(); //ACQUIRE ROOT LOCK!!
-	hExtrapolatedBarHitXY_PreCut->Fill(posInBar.X(), posInBar.Y());
-	Unlock_Action(); //RELEASE ROOT LOCK!!
+	//Lock_Action(); //ACQUIRE ROOT LOCK!!
+	//hExtrapolatedBarHitXY_PreCut->Fill(posInBar.X(), posInBar.Y());
+	//Unlock_Action(); //RELEASE ROOT LOCK!!
 
 	// require well reconstructed tracks for initial studies
 	int locDCHits = locTrackTimeBased->Ndof + 5;
@@ -147,44 +141,6 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		return true;
-	
-	////////////////////////////////////////////
-	// option to cheat and use truth position //
-	////////////////////////////////////////////
-	if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
-		
-		TVector3 bestMatchPos, bestMatchMom;
-		double bestMatchDist = 999.;
-		for(uint i=0; i<locDIRCBarHits.size(); i++) {
-			TVector3 locDIRCBarHitPos(locDIRCBarHits[0]->x, locDIRCBarHits[0]->y, locDIRCBarHits[0]->z);
-			TVector3 locDIRCBarHitMom(locDIRCBarHits[0]->px, locDIRCBarHits[0]->py, locDIRCBarHits[0]->pz);
-			if((extrapolations[0].position - locDIRCBarHitPos).Mag() < bestMatchDist) {
-				bestMatchDist = (extrapolations[0].position - locDIRCBarHitPos).Mag();
-				bestMatchPos = locDIRCBarHitPos;
-				bestMatchMom = locDIRCBarHitMom;
-			}
-		}
-		
-		momInBar = bestMatchMom;
-		posInBar = bestMatchPos;
-	}
-	
-	Lock_Action(); //ACQUIRE ROOT LOCK!!
-	hExtrapolatedBarHitXY->Fill(posInBar.X(), posInBar.Y());
-	Unlock_Action(); //RELEASE ROOT LOCK!!
-
-	Particle_t locPID = locTrackTimeBased->PID();
-	double locMass = locTrackTimeBased->mass();
-	double locExpectedThetaC = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
-	
-	// get binning for histograms
-	int locBar = dDIRCGeometry->GetBar(posInBar.Y());
-	int locXbin = (int)(posInBar.X()/5.0) + 19;
-
-	// check that histogram index exists
-	TVector3 locBarHitVect(posInBar.X(), posInBar.Y(), posInBar.Z() - 65.);
-	if(locBar < 0 || locXbin < 0 || locXbin > 39 || locBarHitVect.Theta()*180/TMath::Pi() > 12.0)
-		return true;
 
 	// get DIRC match parameters (contains LUT information)
 	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
@@ -192,6 +148,23 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	vector<int> locUsedPixel;
 
 	if(foundDIRC) {
+
+		DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+		DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+		double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+
+		// get binning for histograms
+		int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+		int locXbin = (int)(posInBar.X()/5.0) + 19;
+		
+		// check that histogram index exists
+		TVector3 locBarHitVect(posInBar.X(), posInBar.Y(), posInBar.Z() - 65.);
+		if(locBar < 0 || locXbin < 0 || locXbin > 39 || locBarHitVect.Theta()*180/TMath::Pi() > 12.0)
+			return true;
+
+		Lock_Action(); //ACQUIRE ROOT LOCK!!
+		hExtrapolatedBarHitXY->Fill(posInBar.X(), posInBar.Y());
+		Unlock_Action(); //RELEASE ROOT LOCK!!
 
 		// recalculate likelihood
 		double logLikelihoodSum[4] = {0, 0, 0, 0};

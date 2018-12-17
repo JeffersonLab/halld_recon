@@ -90,10 +90,6 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
   const DDetectorMatches* locDetectorMatches = NULL;
   loop->GetSingle(locDetectorMatches);
 
-  // truth information on tracks hitting DIRC bar (for comparison)
-  vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-  loop->Get(locDIRCBarHits);
-
   // plot DIRC LUT variables for specific tracks  
   for (unsigned int loc_i = 0; loc_i < locTimeBasedTracks.size(); loc_i++){
 
@@ -112,43 +108,17 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		  continue;
 
-	  // get expected thetaC from the extrapolation
-	  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
-	  if(extrapolations.size()==0) continue;
-
-	  DVector3 momInBar = extrapolations[0].momentum;
-	  DVector3 posInBar = extrapolations[0].position;
-
-	  ////////////////////////////////////////////
-	  // option to cheat and use truth position //
-	  ////////////////////////////////////////////
-	  if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
-		  
-		  TVector3 bestMatchPos, bestMatchMom;
-		  double bestMatchDist = 999.;
-		  for(uint i=0; i<locDIRCBarHits.size(); i++) {
-			  TVector3 locDIRCBarHitPos(locDIRCBarHits[0]->x, locDIRCBarHits[0]->y, locDIRCBarHits[0]->z);
-			  TVector3 locDIRCBarHitMom(locDIRCBarHits[0]->px, locDIRCBarHits[0]->py, locDIRCBarHits[0]->pz);
-			  if((extrapolations[0].position - locDIRCBarHitPos).Mag() < bestMatchDist) {
-				  bestMatchDist = (extrapolations[0].position - locDIRCBarHitPos).Mag();
-				  bestMatchPos = locDIRCBarHitPos;
-				  bestMatchMom = locDIRCBarHitMom;
-			  }
-		  }
-		  
-		  momInBar = bestMatchMom;
-		  posInBar = bestMatchPos;
-	  }
-
 	  Particle_t locPID = locTrackTimeBased->PID();
-	  double locMass = locTrackTimeBased->mass();
-	  double locExpectedThetaC = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
 
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	  bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
-
+	  
 	  if(foundDIRC) {
+
+		  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+		  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 
 		  // loop over hits associated with track (from LUT)
 		  vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
@@ -164,7 +134,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 				  
 				  // fill histograms for candidate photons in timing cut
 				  if(fabs(locDeltaT) < 2.0) {
-					  hThetaC[locPID]->Fill(locThetaC );
+					  hThetaC[locPID]->Fill(locThetaC);
 					  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
 					  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
 				  }
