@@ -61,6 +61,9 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DTOFHitMatchParams> Get_TOFHitMatchParams(void) const{return dTrackingInfo->dTOFHitMatchParams;}
 		shared_ptr<const DBCALShowerMatchParams> Get_BCALShowerMatchParams(void) const{return dTrackingInfo->dBCALShowerMatchParams;}
 		shared_ptr<const DFCALShowerMatchParams> Get_FCALShowerMatchParams(void) const{return dTrackingInfo->dFCALShowerMatchParams;}
+		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
+		
+		
 
 		//SETTERS
 

@@ -33,6 +33,9 @@
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
+#include <DIRC/DDIRCPmtHit.h>
+#include <DIRC/DDIRCTruthBarHit.h>
+#include <PID/DParticleID.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include "DResourcePool.h"
@@ -84,6 +87,8 @@ class DEventSourceREST:public JEventSource
    jerror_t Extract_DRFTime(hddm_r::HDDM *record,
                     JFactory<DRFTime>* factory);
 #endif
+   jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
+                    JFactory<DDIRCPmtHit>* factory);
 
    void Get7x7ErrorMatrix(double mass, const double vec[5], const TMatrixFSym* C5x5, TMatrixFSym* loc7x7ErrorMatrix);
  private:
@@ -96,7 +101,8 @@ class DEventSourceREST:public JEventSource
 	bool USE_CCDB_FCAL_COVARIANCE;
 	
 	bool PRUNE_DUPLICATE_TRACKS;
-		
+	bool RECO_DIRC_CALC_LUT;
+
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;
 

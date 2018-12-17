@@ -109,13 +109,15 @@ class DSCHitMatchParams
 class DDIRCMatchParams
 {
 	public:
-                DDIRCMatchParams(void) : dThetaC(0.0), dLikelihoodElectron(0.0), dLikelihoodPion(0.0), dLikelihoodKaon(0.0), dLikelihoodProton(0.0), dNPhotons(0){} 
+                DDIRCMatchParams(void) : dExpectedThetaC(0.0), dThetaC(0.0), dLikelihoodElectron(0.0), dLikelihoodPion(0.0), dLikelihoodKaon(0.0), dLikelihoodProton(0.0), dNPhotons(0), dExtrapolatedPos(0,0,0), dExtrapolatedMom(0,0,0){} 
 
 	        vector < vector<double> > dPhotons; // thetaC, deltaT, sensorId
 
-		double dThetaC;
+		double dExpectedThetaC, dThetaC;
 		double dLikelihoodElectron, dLikelihoodPion, dLikelihoodKaon, dLikelihoodProton;
 		int dNPhotons;
+		DVector3 dExtrapolatedPos, dExtrapolatedMom;
+		double dExtrapolatedTime;
 };
 
 class DDetectorMatches : public JObject

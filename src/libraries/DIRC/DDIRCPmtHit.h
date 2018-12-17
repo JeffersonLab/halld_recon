@@ -16,7 +16,10 @@ public:
 
   float t;	   // detection time
   int   ch;        // PMT channel of the hit
-  
+ 
+  inline void setTime( double time ) { t = time;}
+  inline void setChannel( int channel ) { ch = channel;}
+ 
   void toStrings(vector<pair<string, string> >&items) const {
     AddString(items, "t", "%1.3f", t);
     AddString(items, "ch", "%d", ch);

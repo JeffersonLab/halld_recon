@@ -212,6 +212,9 @@ class DParticleID:public jana::JObject
 					      const DVector3 &locProjPos) const;
 		double Get_CorrectedHitTime(const DSCHit* locSCHit,
 					    const DVector3 &locProjPos) const;
+		
+		const DDIRCLut *Get_DIRCLut() const;
+
 	protected:
 		// gas material properties
 		double dKRhoZoverA_FDC, dRhoZoverA_FDC, dLnI_FDC;	
@@ -297,10 +300,9 @@ class DParticleID:public jana::JObject
 		const DTrackFinder *finder;
 		const DTrackFitter *fitter;
 		DTOFPoint_factory* dTOFPointFactory;
-
+		
 		// DIRC LUT
 		const DDIRCLut* dDIRCLut;
-		
 };
 
 #endif // _DParticleID_

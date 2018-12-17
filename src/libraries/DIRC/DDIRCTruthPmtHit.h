@@ -24,6 +24,8 @@ public:
   int   key_bar;   // key of the corresponding bar hit
   int64_t path;	   // path id of the photon in the optical box 
   int refl;	   // number of reflection in the optical box
+  bool bbrefl;     // reflected off far end mirror of bar box
+  int track;       // index of the MC track
   
   void toStrings(vector<pair<string, string> >&items) const {
     AddString(items, "x", "%1.3f", x);
@@ -36,6 +38,7 @@ public:
     AddString(items, "key_bar", "%d", key_bar);
     AddString(items, "path", "%ld", path);
     AddString(items, "refl", "%d", refl);
+    AddString(items, "bbrefl", "%d", bbrefl ? 1 : 0);
   }
 };
 

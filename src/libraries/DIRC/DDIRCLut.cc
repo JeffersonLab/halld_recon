@@ -156,7 +156,6 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	int nPhotonsThetaCLoose = 0;
 	double meanThetaC = 0.;
 	for (unsigned int loc_i = 0; loc_i < locDIRCHits.size(); loc_i++){
-		//if(true) break;
 
 		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		vector<const DDIRCTruthPmtHit*> locTruthDIRCHits;
@@ -182,8 +181,8 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 			// use fixed time from G4 (matches dircsim_2018-08_ver04)
 			hitTime = locRecoTime; //locTruthDIRCHits[0]->t_fixed;           
 		}
-		else // skip those without truth hits for now
-			continue;
+		//else // skip those without truth hits for now
+		//	continue;
 
 		// needs to be X dependent choice for reflection cut (from CCDB?)
 		bool reflected = hitTime>38;
@@ -325,11 +324,15 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 
 	// set DIRCMatchParameters contents
 	locDIRCMatchParams->dThetaC = meanThetaC/(double)nPhotonsThetaCLoose/2.; // why factor 2?
+	locDIRCMatchParams->dExpectedThetaC = mAngle;
 	locDIRCMatchParams->dLikelihoodElectron = logLikelihoodSum[0];
 	locDIRCMatchParams->dLikelihoodPion = logLikelihoodSum[1];
 	locDIRCMatchParams->dLikelihoodKaon = logLikelihoodSum[2];
 	locDIRCMatchParams->dLikelihoodProton = logLikelihoodSum[3];
 	locDIRCMatchParams->dNPhotons = nPhotons;
+	locDIRCMatchParams->dExtrapolatedPos = posInBar;
+	locDIRCMatchParams->dExtrapolatedMom = momInBar;
+	locDIRCMatchParams->dExtrapolatedTime = locFlightTime;
 
 	return true;
 }

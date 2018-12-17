@@ -41,6 +41,9 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
    								"Turn on/off cleaning up multiple tracks with the same hypothesis from the same candidate. Set to \"0\" to turn off (it's on by default)");
 
+   RECO_DIRC_CALC_LUT = false;
+   gPARMS->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction (it's off by default)");
+
 }
 
 //----------------
@@ -277,10 +280,15 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DTrigger(record,
                      dynamic_cast<JFactory<DTrigger>*>(factory));
    }
+   if (dataClassName =="DDIRCPmtHit") {
+      return Extract_DDIRCPmtHit(record,
+                     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory));
+   }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
    }
+
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -1202,6 +1210,15 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
    vector<const DFCALShower*> locFCALShowers;
    locEventLoop->Get(locFCALShowers);
 
+   const DParticleID* locParticleID = NULL;
+   vector<const DDIRCPmtHit*> locDIRCHits;
+   vector<const DDIRCTruthBarHit*> locDIRCBarHits;
+   if(RECO_DIRC_CALC_LUT) {
+	   locEventLoop->GetSingle(locParticleID);
+	   locEventLoop->Get(locDIRCHits);
+	   locEventLoop->Get(locDIRCBarHits);
+   }
+
    const hddm_r::DetectorMatchesList &detectormatches = record->getDetectorMatcheses();
 
    // loop over chargedTrack records
@@ -1212,6 +1229,35 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          continue;
 
       DDetectorMatches *locDetectorMatches = new DDetectorMatches();
+
+      const hddm_r::DircMatchParamsList &dircList = iter->getDircMatchParamses(); 
+      hddm_r::DircMatchParamsList::iterator dircIter = dircList.begin();
+      for(; dircIter != dircList.end(); ++dircIter)
+      {
+	      size_t locTrackIndex = dircIter->getTrack();
+
+	      auto locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
+	      if(RECO_DIRC_CALC_LUT) {
+		      TVector3 locProjPos(dircIter->getX(),dircIter->getY(),dircIter->getZ());
+		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
+		      double locFlightTime = dircIter->getT();
+		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBasedVector[locTrackIndex]->PID(), locDIRCMatchParams, locDIRCBarHits) ) 
+			      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
+	      }
+	      else {
+		      locDIRCMatchParams->dExtrapolatedPos = DVector3(dircIter->getX(),dircIter->getY(),dircIter->getZ());
+		      locDIRCMatchParams->dExtrapolatedMom = DVector3(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
+		      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
+		      locDIRCMatchParams->dExpectedThetaC = dircIter->getExpectthetac();
+		      locDIRCMatchParams->dThetaC = dircIter->getThetac();
+		      locDIRCMatchParams->dLikelihoodElectron = dircIter->getLele();
+		      locDIRCMatchParams->dLikelihoodPion = dircIter->getLpi();
+		      locDIRCMatchParams->dLikelihoodKaon = dircIter->getLk();
+		      locDIRCMatchParams->dLikelihoodProton = dircIter->getLp();
+		      locDIRCMatchParams->dNPhotons = dircIter->getNphotons();
+		      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
+	      }
+      }
 
       const hddm_r::BcalMatchParamsList &bcalList = iter->getBcalMatchParamses();
       hddm_r::BcalMatchParamsList::iterator bcalIter = bcalList.begin();
@@ -1388,3 +1434,40 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 	return uint32_t(-1*locSignedInt) + uint32_t(0x80000000); //bit 32 is 1, all others are negative of signed int (which was negative)
 }
 
+//-----------------------
+// Extract_DDIRCPmtHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
+                                   JFactory<DDIRCPmtHit>* factory)
+{
+   /// Copies the data from the fcalShower hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DDIRCPmtHit*> data;
+
+   // loop over fcal shower records
+   const hddm_r::DircHitList &hits =
+                 record->getDircHits();
+   hddm_r::DircHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DDIRCPmtHit *hit = new DDIRCPmtHit();
+      hit->setChannel(iter->getCh());
+      hit->setTime(iter->getT());
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+   
+   return NOERROR;
+}

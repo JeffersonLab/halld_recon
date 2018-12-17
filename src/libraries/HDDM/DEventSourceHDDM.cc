@@ -2979,6 +2979,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       hit->key_bar = iter->getKey_bar();
       hit->path = iter->getPath();
       hit->refl = iter->getRefl();
+      hit->bbrefl = iter->getBbrefl();
       data.push_back(hit);
    }
 

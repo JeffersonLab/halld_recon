@@ -3563,3 +3563,7 @@ double DParticleID::Get_CorrectedHitTime(const DSCHit* locSCHit,
     }
   return locCorrectedHitTime;
 }
+
+const DDIRCLut* DParticleID::Get_DIRCLut() const {
+	return dDIRCLut;
+}

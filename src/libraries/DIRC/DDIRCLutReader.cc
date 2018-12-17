@@ -20,7 +20,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	/////////////////////////////////
         const int luts = 48;
         
-        string lut_file = "/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver05/lut_all_flat.root";
+        string lut_file = "/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver07/lut_all_flat.root";
         gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 	
 	// eventually needs to come from CCDB with run number index
