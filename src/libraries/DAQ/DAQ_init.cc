@@ -38,6 +38,7 @@ using namespace jana;
 #include "Df125BORConfig.h"
 #include "DF1TDCBORConfig.h"
 #include "DCAEN1290TDCBORConfig.h"
+#include "DTSGBORConfig.h"
 #include "DL1Info.h"
 #include "Df250Scaler.h"
 #include "Df250AsyncPedestal.h"
@@ -87,6 +88,7 @@ jerror_t DAQ_init(JEventLoop *loop)
 	loop->AddFactory(new JFactory<Df125BORConfig>());
 	loop->AddFactory(new JFactory<DF1TDCBORConfig>());
 	loop->AddFactory(new JFactory<DCAEN1290TDCBORConfig>());
+	loop->AddFactory(new JFactory<DTSGBORConfig>());
 	loop->AddFactory(new JFactory<DL1Info>());
 	loop->AddFactory(new JFactory<Df250Scaler>());
 	loop->AddFactory(new JFactory<Df250AsyncPedestal>());

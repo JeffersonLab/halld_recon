@@ -17,12 +17,14 @@
 #include <DAQ/Df125BORConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/DCAEN1290TDCBORConfig.h>
+#include <DAQ/DTSGBORConfig.h>
 
 #define MyBORTypes(X) \
 	X(Df250BORConfig) \
 	X(Df125BORConfig) \
 	X(DF1TDCBORConfig) \
-	X(DCAEN1290TDCBORConfig)
+	X(DCAEN1290TDCBORConfig) \
+	X(DTSGBORConfig)
 
 
 #include <JANA/jerror.h>

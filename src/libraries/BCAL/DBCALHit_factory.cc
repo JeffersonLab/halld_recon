@@ -30,6 +30,10 @@ jerror_t DBCALHit_factory::init(void)
   gPARMS->SetDefaultParameter("BCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
   CORRECT_FADC_SATURATION = true;
   gPARMS->SetDefaultParameter("BCAL:CORRECT_FADC_SATURATION", CORRECT_FADC_SATURATION, "Set to 1 to correct pulse integral for fADC saturation, set to 0 to not correct pulse integral. (default = 1)");
+  CORRECT_SIPM_SATURATION = true;
+  gPARMS->SetDefaultParameter("BCAL:CORRECT_SIPM_SATURATION", CORRECT_SIPM_SATURATION, "Set to 1 to correct for SiPM saturation, set to 0 to not correct pulse integral or peak. (default = 1)");
+
+  // cout << " CORRECT_SIPM_SATURATION=" << CORRECT_SIPM_SATURATION << endl;
 
    return NOERROR;
 }
@@ -123,6 +127,20 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	   fADC_Saturation_Quadratic[end][layer] = (saturation_ADC_pars[i])["par2"];
    } 
 
+   // load parameters for SiPM saturation
+   std::vector<std::map<string,double> > saturation_SiPM_pars;
+   if(eventLoop->GetCalib("/BCAL/SiPM_saturation", saturation_SiPM_pars))
+      jout << "Error loading /SiPM/SiPM_saturation !" << endl;
+   for (unsigned int i=0; i < saturation_SiPM_pars.size(); i++) {
+	   int end = (saturation_SiPM_pars[i])["END"];
+	   int layer = (saturation_SiPM_pars[i])["LAYER"] - 1;
+	   integral_to_peak[end][layer] = (saturation_SiPM_pars[i])["INTEGRAL_TO_PEAK"];
+	   sipm_npixels[end][layer] = (saturation_SiPM_pars[i])["SIPM_NPIXELS"];
+	   pixel_per_count[end][layer] = (saturation_SiPM_pars[i])["PIXEL_PER_COUNT"];
+   } 
+
+
+
    return NOERROR;
 }
 
@@ -210,16 +228,33 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       double gain              = GetConstant(gains,digihit);
       double hit_E = 0;
       
+
+      // make corrections for SiPM saturation
+
+      double integral_pedsub =0;
       if ( integral > 0 ) { 
-	double integral_pedsub = integral - totalpedestal;
+	// compute in double precision to prevent round off errors
+      integral_pedsub = integral - totalpedestal;
 	if(CORRECT_FADC_SATURATION && integral_pedsub > fADC_MinIntegral_Saturation[digihit->end][digihit->layer-1]) {
 		if(digihit->pulse_peak > 4094 || (digihit->pedestal == 1 && digihit->QF == 1)) { // check if fADC is saturated or is MC event
 			double locSaturatedIntegral = integral_pedsub - fADC_MinIntegral_Saturation[digihit->end][digihit->layer-1];
 			double locScaleFactor = 1. + fADC_Saturation_Linear[digihit->end][digihit->layer-1]*locSaturatedIntegral + fADC_Saturation_Quadratic[digihit->end][digihit->layer-1]*locSaturatedIntegral*locSaturatedIntegral;
 	    		integral_pedsub *= 1./locScaleFactor;
 		}
+	} 
+	// make corrections for SiPM saturation (after correcting for fADC saturation)
+	// compute in double precision to prevent round off errors
+	if (CORRECT_SIPM_SATURATION) {
+	  double integral_pedsub_measured = integral_pedsub;
+	  double Npixels_measured = pixel_per_count[digihit->end][digihit->layer-1]*integral_pedsub_measured;
+	  double Mpixels = sipm_npixels[digihit->end][digihit->layer-1];
+	  double Npixels_true = Npixels_measured < Mpixels? -Mpixels*log(1 - Npixels_measured/Mpixels) : Mpixels;
+	  integral_pedsub = Npixels_true/pixel_per_count[digihit->end][digihit->layer-1];
+	  // cout << " event=" << eventnumber << " Layer=" << digihit->layer << " integral_pedsub_measured=" << integral_pedsub_measured 
+	  //	     << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " integral_pedsub=" << integral_pedsub << endl;
 	}
 	hit_E = gain * integral_pedsub;
+
       }
       if (VERBOSE>2) printf("%5lu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
 							eventnumber,i,digihits.size(),digihit->datasource,
@@ -227,7 +262,22 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 							pedestal,nsamples_pedestal,single_sample_ped,totalpedestal,gain,hit_E*1000);
       if ( hit_E <= 0 ) continue;  // Throw away negative energy hits  
 
-      int pulse_peak_pedsub = (int)digihit->pulse_peak - (int)single_sample_ped;
+      // integral and peak should be corrected separately because the ratio is not necessarily a constant.
+      //
+      int pulse_peak_pedsub=0;
+      	if (CORRECT_SIPM_SATURATION) {
+	  double pulse_peak_pedsub_measured = (int)digihit->pulse_peak - (int)single_sample_ped;
+	  double Npixels_measured = pixel_per_count[digihit->end][digihit->layer-1]*pulse_peak_pedsub_measured*integral_to_peak[digihit->end][digihit->layer-1];
+	  double Mpixels = sipm_npixels[digihit->end][digihit->layer-1];
+	  double Npixels_true = Npixels_measured < Mpixels? -Mpixels*log(1 - Npixels_measured/Mpixels) : Mpixels;
+	  pulse_peak_pedsub = round(Npixels_true/pixel_per_count[digihit->end][digihit->layer-1]/integral_to_peak[digihit->end][digihit->layer-1]);
+	  // cout  << " event=" << eventnumber << " Layer=" << digihit->layer  << " pulse_peak_pedsub_measured=" << pulse_peak_pedsub_measured 
+	  //	    << " Npixels_measured=" << Npixels_measured << " Mpixels=" << Mpixels << " pulse_peak_pedsub=" << pulse_peak_pedsub 
+	  //       << " Int/Peak Ratio=" << integral_pedsub/pulse_peak_pedsub << endl << endl;
+	}
+	else {
+	  pulse_peak_pedsub = (int)digihit->pulse_peak - (int)single_sample_ped;
+	}
  
       // Calculate time for channel
       double pulse_time        = (double)digihit->pulse_time;

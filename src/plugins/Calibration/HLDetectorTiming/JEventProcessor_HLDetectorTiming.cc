@@ -127,6 +127,8 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 
     USE_RF_BUNCH = 1;
 
+    NO_TRACKS = false;
+
     if(gPARMS){
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_CDC_TIMING", DO_CDC_TIMING, "Set to > 0 to do CDC Per channel Alignment");
@@ -139,6 +141,7 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_OPTIONAL", DO_OPTIONAL, "Set to >0 to enable optional histograms ");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_TRACKS", NO_TRACKS, "Don't use tracking information for timing calibrations");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -151,6 +154,10 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     else{
         NBINS_TDIFF = 200; MIN_TDIFF = -40.0; MAX_TDIFF = 40.0;
     }
+
+    // DEBUG
+    //NBINS_TDIFF = 2800; MIN_TDIFF = -200.0; MAX_TDIFF = 500.0;
+
 
     if (DO_TRACK_BASED){
         if (DO_HIGH_RESOLUTION) {
@@ -652,9 +659,15 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     // Some limits for these
     float nBinsE = 160, EMin = 3.0, EMax = 12.0;
 
-    const DEventRFBunch *thisRFBunch = NULL;
-    loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
 
+    const DEventRFBunch *thisRFBunch = NULL;
+    if(NO_TRACKS) {
+	    // If the drift chambers are turned off, we'll need to use the neutral showers
+	    // maybe a dedicated factory is needed for this case...
+	    loop->GetSingle(thisRFBunch);
+    } else {
+	    loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
+    }
     if (thisRFBunch->dNumParticleVotes < 2) return NOERROR;
 
     // Loop over TAGM hits
@@ -749,6 +762,37 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                 480, -30, 30);
     }
 
+    // now loop over neutral showers to align calorimeters
+    vector<const DNeutralShower *> neutralShowerVector;
+    loop->Get(neutralShowerVector);
+    
+    DVector3 locTargetCenter(0.,0.,Z_TARGET);
+
+    for (i = 0; i <  neutralShowerVector.size(); i++){
+	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
+	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
+	    
+	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
+	    //   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
+	    if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
+		    if(neutralShowerVector[i]->dEnergy > 0.2) {
+			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time (Neutral)",  locDeltaT,
+					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
+					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+		    }
+	    } else {
+		    if(neutralShowerVector[i]->dEnergy > 0.1) {
+			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time (Neutral)",  locDeltaT,
+					    "t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
+					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+		    }
+	    }
+	    
+    } // End of loop over neutral showers
+
+    // we went this far just to align the tagger with the RF time, nothing else to do without tracks
+    if(NO_TRACKS) 
+	    return NOERROR;
 
     if (!DO_TRACK_BASED && !DO_VERIFY ) return NOERROR; // Before this stage we aren't really ready yet, so just return
 
@@ -947,35 +991,6 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         }
 
     } // End of loop over time based tracks
-
-    // now loop over neutral showers to align calorimeters
-    vector<const DNeutralShower *> neutralShowerVector;
-    loop->Get(neutralShowerVector);
-    
-    DVector3 locTargetCenter(0.,0.,Z_TARGET);
-
-    for (i = 0; i <  neutralShowerVector.size(); i++){
-	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
-	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
-	    
-	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
-	    //   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
-	    if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
-		    if(neutralShowerVector[i]->dEnergy > 0.2) {
-			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time (Neutral)",  locDeltaT,
-					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
-					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    }
-	    } else {
-		    if(neutralShowerVector[i]->dEnergy > 0.1) {
-			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time (Neutral)",  locDeltaT,
-					    "t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
-					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    }
-	    }
-	    
-    } // End of loop over neutral showers
-
 
     if (DO_REACTION){
        // Trigger the analysis

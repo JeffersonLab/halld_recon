@@ -726,8 +726,39 @@ uint64_t JEventSource_EVIOpp::SearchFileForRunNumber(void)
 				}
 			}
 
-			// BOR event
+			// BOR event from CODA ER
 			if( (*iptr & 0xffffffff) ==  0x00700E01) continue;
+			
+			// BOR event from CDAQ ER
+			if( (*iptr & 0xffffffff) ==  0x00700e34){
+				iptr++;
+				uint32_t crate_len    = iptr[0];
+				uint32_t crate_header = iptr[1];
+				uint32_t *iend_crate  = &iptr[crate_len];
+			
+				// Make sure crate tag is right
+				if( (crate_header>>16) == 0x71 ){
+
+					// Loop over modules
+					iptr += 2;
+					while(iptr<iend_crate){
+						uint32_t module_header = *iptr++;
+						uint32_t module_len    = module_header&0xFFFF;
+						uint32_t modType       = (module_header>>20)&0x1f;
+
+						if(  modType == DModuleType::CDAQTSG){
+							uint64_t run_number_seed = iptr[0];
+							if(hdevio) delete hdevio;
+							if(buff) delete[] buff;
+							return run_number_seed;
+						}
+						iptr = &iptr[module_len];
+					}
+					iptr = iend_crate; // ensure we're pointing past this crate
+				}
+				
+				continue; // didn't find it in this CDAQ BOR. Keep looking
+			}
 
 			// PHYSICS event
 			bool not_in_this_buffer = false;

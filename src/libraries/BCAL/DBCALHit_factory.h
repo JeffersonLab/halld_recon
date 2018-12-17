@@ -86,10 +86,13 @@ class DBCALHit_factory:public jana::JFactory<DBCALHit>{
         void FillCalibTableShort( bcal_digi_constants_t &table,
                     const vector<double> &raw_table);
 
-        bool CHECK_FADC_ERRORS, CORRECT_FADC_SATURATION;
+        bool CHECK_FADC_ERRORS, CORRECT_FADC_SATURATION,CORRECT_SIPM_SATURATION;
 	double fADC_MinIntegral_Saturation[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];
         double fADC_Saturation_Linear[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];
 	double fADC_Saturation_Quadratic[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];
+        double integral_to_peak[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];     // ration of pulse integral to peak value (integral counts)
+	double sipm_npixels[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];         // number of pixels per sensor(s) 
+        double pixel_per_count[BCAL_NUM_ENDS][BCAL_NUM_LAYERS];   // conversion between counts and pixels
 };
 
 #endif // _DBCALHit_factory_
