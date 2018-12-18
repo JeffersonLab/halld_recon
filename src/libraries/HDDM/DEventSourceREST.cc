@@ -36,6 +36,10 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
       // One might want to throw an exception or report an error here.
       fin = NULL;
    }
+
+   SCALE_EBEAM_ENDPOINT = 1.0;
+   gPARMS->SetDefaultParameter("REST:SCALE_EBEAM_ENDPOINT", SCALE_EBEAM_ENDPOINT, "Scale factor for electron beam energy endpoint: multiplies tagger energy read from REST file");
+   
 }
 
 //----------------
@@ -496,8 +500,8 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
          continue;
 
       DBeamPhoton* gamma = new DBeamPhoton();
-
-		DVector3 mom(0.0, 0.0, locTAGMiter->getE());
+                double beamEnergy = locTAGMiter->getE()*SCALE_EBEAM_ENDPOINT;
+		DVector3 mom(0.0, 0.0, beamEnergy);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
@@ -521,8 +525,8 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
          continue;
 
       DBeamPhoton* gamma = new DBeamPhoton();
-
-		DVector3 mom(0.0, 0.0, locTAGHiter->getE());
+                double beamEnergy = locTAGHiter->getE()*SCALE_EBEAM_ENDPOINT;
+		DVector3 mom(0.0, 0.0, beamEnergy);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
