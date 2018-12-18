@@ -76,7 +76,7 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
    
    dRunNumber = -1;
 	
-   if( ! gPARMS->Exists("JANA_CALIB_CONTEXT") ){
+   if( (!gPARMS->Exists("JANA_CALIB_CONTEXT")) && (getenv("JANA_CALIB_CONTEXT")==NULL) ){
    		cout << "============================================================" << endl;
 			cout << " WARNING: JANA_CALIB_CONTEXT not set. " << endl;
 			cout << "You are reading from an HDDM file which is most likely" << endl;
