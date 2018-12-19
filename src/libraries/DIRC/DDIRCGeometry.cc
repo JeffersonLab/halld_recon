@@ -60,11 +60,11 @@ DDIRCGeometry::Initialize(int runnumber) {
 		}
 		else if(i<36) {
 			jgeom->Get(Form("//composition[@name='DCML01']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
-			DIRC_BAR_Y[i] = DCML01_XYZ[1] - DCBR_XYZ[1];
+			DIRC_BAR_Y[i] = DCML01_XYZ[1] + DCBR_XYZ[1];
 		}
 		else if(i<48) {
 			jgeom->Get(Form("//composition[@name='DCML00']/posXYZ[@volume='DCBR%02d']/@X_Y_Z", i), DCBR_XYZ);
-			DIRC_BAR_Y[i] = DCML00_XYZ[1] - DCBR_XYZ[1];
+			DIRC_BAR_Y[i] = DCML00_XYZ[1] + DCBR_XYZ[1];
 		}
 	}
 	
