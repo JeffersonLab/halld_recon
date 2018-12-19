@@ -251,7 +251,7 @@ void MakeSharedObjectFromXML(void)
 	// Generate C++ code from XML
 	cout<<endl;
 	cout << "Generating C++ from XML source ...." << endl;
-	string cmd = "$HDDS_HOME/bin/$BMS_OSNAME/hdds-root_h " + HDDS_XML + " >> tmp_hddsroot.cc";
+	string cmd = "$HDDS_HOME/$BMS_OSNAME/bin/hdds-root_h " + HDDS_XML + " >> tmp_hddsroot.cc";
 	cout << cmd << endl;
 	int err = system(cmd.c_str());
 	if(err!=0){ cerr << "Error running \""<< cmd << "\"" << endl; exit(-1); }
@@ -346,7 +346,7 @@ const char* md5geom_xml(void)
 	/// running the hdds-md5 program and parsing the output.
 	static string md5_xml=""; 
 	string fname = "tmp_hddsroot.md5";
-	string cmd = "$HDDS_HOME/bin/$BMS_OSNAME/hdds-md5 " + HDDS_XML + " > " + fname;
+	string cmd = "$HDDS_HOME/$BMS_OSNAME/bin/hdds-md5 " + HDDS_XML + " > " + fname;
 	int err = system(cmd.c_str());
 	if(err!=0){ cerr << "Error running \""<< cmd << "\"" << endl; exit(-1); }
 	ifstream ifs(fname.c_str());
