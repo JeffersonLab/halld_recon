@@ -308,8 +308,15 @@ void trk_mainframe::DoMyRedraw(void)
 	
 	// Update the histogram
 	histocanvas->GetCanvas()->cd();
-	resi->Fit("gaus","Q");
-	double sigma = resi->GetFunction("gaus")->GetParameter(2);
+	// Create my own gaussian fit function, in case predefined one gets lost somehow
+	static TF1 *mygaus = 0;
+	if (mygaus == 0)
+		mygaus = new TF1("mygaus", "[0]*exp(-0.5*((x-[1])/[2])**2)", -1e99, 1e99);
+	mygaus->SetParameter(0, resi->GetMaximum());
+	mygaus->SetParameter(1, resi->GetMean());
+	mygaus->SetParameter(2, resi->GetStdDev());
+	resi->Fit(mygaus,"Q");
+	double sigma = mygaus->GetParameter(2);
 
 	// Update label (this doesn't work, but may be only a tweak away!)
 	char title[256];
