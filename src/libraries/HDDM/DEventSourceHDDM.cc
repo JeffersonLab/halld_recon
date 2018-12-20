@@ -28,6 +28,7 @@ using namespace std;
 #include <JANA/JEvent.h>
 #include <DANA/DStatusBits.h>
 
+#include <JANA/JGeometryXML.h>
 #include "BCAL/DBCALGeometry.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
 
@@ -261,6 +262,27 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       DGeometry* locGeometry = dapp->GetDGeometry(loop->GetJEvent().GetRunNumber());
       double locTargetCenterZ = 0.0;
       locGeometry->GetTargetZ(locTargetCenterZ);
+
+      JGeometryXML *jgeom = dynamic_cast<JGeometryXML *>(locGeometry);
+      hddm_s::GeometryList geolist = record->getGeometrys();
+      if (jgeom != 0 && geolist.size() > 0) {
+         std::string md5sim = geolist(0).getMd5simulation();
+         std::string md5smear = geolist(0).getMd5smear();
+         std::string md5recon = jgeom->GetChecksum();
+         geolist(0).setMd5reconstruction(md5recon);
+         if (md5sim != md5smear) {
+            jerr << std::endl
+                 << "WARNING: simulation geometry checksum does not match"
+                 << " that shown for the mcsmear step."
+                 << std::endl;
+         }
+         else if (md5sim != md5recon) {
+            jerr << endl
+                 << "WARNING: simulation geometry checksum does not match"
+                 << " the geometry being used for reconstruction."
+                 << std::endl;
+         }
+      }
 
       vector<double> locBeamPeriodVector;
       if(loop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
