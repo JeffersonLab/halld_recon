@@ -9,6 +9,7 @@
 #include <JANA/JEventLoop.h>
 using namespace jana;
 
+#include "DDIRCTDCDigiHit.h"
 #include "DDIRCPmtHit.h"
 #include "DDIRCTruthBarHit.h"
 #include "DDIRCTruthPmtHit.h"
@@ -19,6 +20,7 @@ using namespace jana;
 jerror_t DIRC_init(JEventLoop *loop) {
 
 	/// Create and register DIRC data factories
+	loop->AddFactory(new JFactory<DDIRCTDCDigiHit>());
 	loop->AddFactory(new DDIRCGeometry_factory());
 	loop->AddFactory(new DDIRCPmtHit_factory());
 	loop->AddFactory(new JFactory<DDIRCTruthPmtHit>());

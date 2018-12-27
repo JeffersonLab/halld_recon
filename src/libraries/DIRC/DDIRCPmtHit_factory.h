@@ -11,7 +11,7 @@ using namespace std;
 
 #include <JANA/JFactory.h>
 #include "TTAB/DTranslationTable.h"
-//#include "DDIRCDigiHit.h"
+#include "DDIRCTDCDigiHit.h"
 #include "DDIRCPmtHit.h"
 
 // store constants so that they can be accessed by pixel number
@@ -29,10 +29,6 @@ class DDIRCPmtHit_factory:public jana::JFactory<DDIRCPmtHit>{
 		    BAD,
 		    NOISY
 		};
-
-		// overall scale factors
-		double t_scale;
-                double t_base;
 
 		// calibration constants stored in row, column format
 		dirc_digi_constants_t time_offsets;
