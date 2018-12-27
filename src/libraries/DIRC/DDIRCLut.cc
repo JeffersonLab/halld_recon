@@ -162,16 +162,16 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	double logLikelihoodSum[4] = {0, 0, 0, 0};
 	int nPhotons = 0;
 	int nPhotonsThetaC = 0;
-	int nPhotonsThetaCLoose = 0;
 	double meanThetaC = 0.;
+	double meanDeltaT = 0.;
 	for (unsigned int loc_i = 0; loc_i < locDIRCHits.size(); loc_i++){
 
 		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		vector<const DDIRCTruthPmtHit*> locTruthDIRCHits;
 		locDIRCHit->Get(locTruthDIRCHits);
 
-		// cheat and determine bar from truth info (replace with Geometry->GetBar(X,Y) function)
-		int bar = dDIRCGeometry->GetBar(posInBar.Y()); //locTruthDIRCHits[0]->key_bar;
+		// get bar number from geometry
+		int bar = dDIRCGeometry->GetBar(posInBar.Y()); 
 		if(bar < 0 || bar > 47) continue;
 
                 // get channel information for LUT
@@ -287,10 +287,6 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 						dapp->RootUnLock();
 					}
 					
-					// calculate average thetaC
-					nPhotonsThetaCLoose++;
-					meanThetaC += tangle;
-
 					// remove photon candidates not used in likelihood
 					if(fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))>0.02) continue;
 					
@@ -299,6 +295,10 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					
 					// count good photons
 					nPhotonsThetaC++;
+
+					// calculate average ThetaC and DeltaT
+					meanThetaC += tangle;
+					meanDeltaT += locDeltaT;
 					
 					// calculate likelihood for each mass hypothesis
 					for(int loc_j = 0; loc_j<4; loc_j++) {
@@ -325,7 +325,8 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		return false;
 
 	// set DIRCMatchParameters contents
-	locDIRCMatchParams->dThetaC = meanThetaC/(double)nPhotonsThetaCLoose/2.; // why factor 2?
+	locDIRCMatchParams->dThetaC = meanThetaC/(double)nPhotonsThetaC;
+	locDIRCMatchParams->dDeltaT = meanDeltaT/(double)nPhotonsThetaC;
 	locDIRCMatchParams->dExpectedThetaC = mAngle;
 	locDIRCMatchParams->dLikelihoodElectron = logLikelihoodSum[0];
 	locDIRCMatchParams->dLikelihoodPion = logLikelihoodSum[1];

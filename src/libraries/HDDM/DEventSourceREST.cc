@@ -1250,6 +1250,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 		      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
 		      locDIRCMatchParams->dExpectedThetaC = dircIter->getExpectthetac();
 		      locDIRCMatchParams->dThetaC = dircIter->getThetac();
+		      locDIRCMatchParams->dDeltaT = dircIter->getDeltat();
 		      locDIRCMatchParams->dLikelihoodElectron = dircIter->getLele();
 		      locDIRCMatchParams->dLikelihoodPion = dircIter->getLpi();
 		      locDIRCMatchParams->dLikelihoodKaon = dircIter->getLk();

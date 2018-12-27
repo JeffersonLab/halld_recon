@@ -63,6 +63,7 @@ private:
   map<Particle_t, TH2I*> hThetaCVsP;
   map<Particle_t, TH2I*> hDeltaThetaCVsP;
   map<Particle_t, TH2I*> hLikelihoodDiffVsP;
+  map<Particle_t, TH2I*> hDeltaTVsP;
 
   const DParticleID* dParticleID;
   deque<Particle_t> dFinalStatePIDs;

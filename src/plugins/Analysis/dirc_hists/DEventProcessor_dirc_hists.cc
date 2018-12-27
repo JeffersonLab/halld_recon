@@ -59,9 +59,11 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  hLikelihoodDiff[locPID] = new TH1I(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; %s;entries [#]", locLikelihoodName[loc_i].Data()),100,-200.,200.);
 
 
-	  hThetaCVsP[locPID] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.6, 1.0);
+	  hThetaCVsP[locPID] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.75, 0.85);
 	  hDeltaThetaCVsP[locPID] = new TH2I(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
 	  hLikelihoodDiffVsP[locPID] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName[loc_i].Data()), 120, 0.0, 12.0, 100, -200, 200);
+
+	  hDeltaTVsP[locPID] = new TH2I(Form("hDeltaTVsP_%s",locParticleName.data()), Form("#Delta T vs. momentum; p (GeV/c); %s #Delta T (ns)", locParticleROOTName.data()), 120, 0.0, 12.0, 100, -1.5, 1.5);
 
 	  dir->cd();
   }
@@ -128,7 +130,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
 				  double locThetaC = locPhotons[loc_j][0];
 				  double locDeltaT = locPhotons[loc_j][1];
-				  int locSensorId = (int)locPhotons[loc_j][2];
+				  //int locSensorId = (int)locPhotons[loc_j][2];
 				  if(fabs(locThetaC-locExpectedThetaC)<0.02)
 					  hDiff[locPID]->Fill(locDeltaT);
 				  
@@ -148,6 +150,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  // fill histograms with per-track quantities
 		  hNphC[locPID]->Fill(locDIRCMatchParams->dNPhotons);
 		  hThetaCVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
+		  hDeltaTVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dDeltaT);
 
 		  // for likelihood and difference for given track mass hypothesis
 		  if(locPID == Positron || locPID == Electron) {

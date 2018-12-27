@@ -548,6 +548,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				dircList().setPz(locProjMom.Z());
 				dircList().setExpectthetac(locDIRCMatchParams->dExpectedThetaC);
 				dircList().setThetac(locDIRCMatchParams->dThetaC);
+				dircList().setDeltat(locDIRCMatchParams->dDeltaT);
 				dircList().setLele(locDIRCMatchParams->dLikelihoodElectron);
 				dircList().setLpi(locDIRCMatchParams->dLikelihoodPion);
 				dircList().setLk(locDIRCMatchParams->dLikelihoodKaon);
