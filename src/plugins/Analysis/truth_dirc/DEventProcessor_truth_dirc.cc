@@ -28,7 +28,11 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
   if(locFile != NULL)
     locFile->cd("");
   else
-    gDirectory->Cd("/");
+    gDirectory->cd("/");
+
+  TDirectory *mainDir = gDirectory;
+  TDirectory *dircDir = gDirectory->mkdir("DIRC_truth");
+  dircDir->cd();
 
   int nChannels = 108*64;
   hTruthPixelHitTime = new TH2F("hTruthPixelHitTime", "; Pixel Channel # ; #Delta t (ns)", nChannels, 0, nChannels, 200, -100, 100);
@@ -45,6 +49,7 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
 
   hPixelHit_North = new TH2F("hPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
   hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
+  mainDir->cd();
  
   return NOERROR;
 }
