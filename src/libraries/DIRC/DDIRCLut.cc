@@ -22,6 +22,9 @@ DDIRCLut::DDIRCLut()
 	DIRC_TRUTH_BARHIT = false;
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
 
+	DIRC_TRUTH_PIXELTIME = false;
+	gPARMS->SetDefaultParameter("DIRC:TRUTH_PIXELTIME",DIRC_TRUTH_PIXELTIME);
+
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
 	dFinalStatePIDs.push_back(PiPlus);
@@ -53,6 +56,10 @@ bool DDIRCLut::CreateDebugHistograms() {
 
 	//dapp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
+		//TDirectory *mainDir = gDirectory;
+		//TDirectory *dircDir = gDirectory->mkdir("DIRC_debug");
+		//dircDir->cd();
+
 		hDiff = (TH1I*)gROOT->FindObject("hDiff");
 		hDiff_Pixel = (TH2I*)gROOT->FindObject("hDiff_Pixel");
 		hDiffT = (TH1I*)gROOT->FindObject("hDiffT");
@@ -83,6 +90,8 @@ bool DDIRCLut::CreateDebugHistograms() {
 			if(!hDeltaThetaC_Pixel[loc_i]) 
 				hDeltaThetaC_Pixel[loc_i] = new TH2I(Form("hDeltaThetaC_Pixel_%s",locParticleName.data()),  "cherenkov angle; Pixel ID; #Delta#theta_{C} [rad]", 10000, 0, 10000, 200,-0.5,0.5);
 		}
+
+		//mainDir->cd();
 	}
 	//dapp->RootUnLock(); //REMOVE ROOT LOCK!!
 	
@@ -171,18 +180,11 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		// use hit time to determine if reflected or not
 		double hitTime = locDIRCHit->t - locFlightTime;
 
-		// currently there's a problem with the G4 propogation time, for now use TRUTH
-		if(!locTruthDIRCHits.empty()) {
-			double locRecoTime = locTruthDIRCHits[0]->t - locFlightTime;
-			//double locDeltaT_fixed = locRecoTime - locTruthDIRCHits[0]->t_fixed;
-			//cout<<"Flight time = "<<locFlightTime<<" Time difference = "<<locDeltaT_fixed<<" Smeared difference ="<<hitTime-locRecoTime<<endl;
-			//hitTime = locTruthDIRCHits[0]->t - locFlightTime; // no time smearing
-
-			// use fixed time from G4 (matches dircsim_2018-08_ver04)
-			hitTime = locRecoTime; //locTruthDIRCHits[0]->t_fixed;           
+		// option to use truth hit time rather than smeared hit time
+		if(DIRC_TRUTH_PIXELTIME && locTruthDIRCHits.size() > 0) {
+			double locTruthTime = locTruthDIRCHits[0]->t - locFlightTime;
+			hitTime = locTruthTime;          
 		}
-		//else // skip those without truth hits for now
-		//	continue;
 
 		// needs to be X dependent choice for reflection cut (from CCDB?)
 		bool reflected = hitTime>38;

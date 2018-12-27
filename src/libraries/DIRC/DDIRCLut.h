@@ -46,6 +46,7 @@ private:
 	
 	bool DIRC_DEBUG_HISTS;
 	bool DIRC_TRUTH_BARHIT;
+	bool DIRC_TRUTH_PIXELTIME;
 
 	TH1I *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
 	TH2I *hDiff_Pixel;

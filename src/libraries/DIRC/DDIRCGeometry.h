@@ -33,6 +33,8 @@ public:
 	int GetPmtRow     ( int channel ) const;
 	int GetPmtColumn  ( int channel ) const;
 	int GetPixelID      ( int channel ) const;
+	int GetPmtPixelRow     ( int channel ) const;
+	int GetPmtPixelColumn  ( int channel ) const;
 	int GetPixelRow     ( int channel ) const;
 	int GetPixelColumn  ( int channel ) const;
 	int GetPixelX       ( int channel ) const;

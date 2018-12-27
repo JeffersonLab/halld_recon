@@ -99,30 +99,40 @@ int DDIRCGeometry::GetPmtRow( int channel ) const
 	return pmt%PMT_ROWS; //  0 - 17
 }
 
-int DDIRCGeometry::GetPixelColumn( int channel ) const 
+int DDIRCGeometry::GetPmtPixelColumn( int channel ) const 
 {
 	int pix = GetPixelID(channel);
 	return pix/8; //  0 - 7
 }
 
-int DDIRCGeometry::GetPixelRow( int channel ) const 
+int DDIRCGeometry::GetPmtPixelRow( int channel ) const 
 {
 	int pix = GetPixelID(channel);
 	return pix%8; //  0 - 7
 }
+
+int DDIRCGeometry::GetPixelRow( int channel ) const 
+{
+	int pmt_row = GetPmtRow(channel);
+	int pixel_row = GetPmtPixelRow(channel);
+	return 8*pmt_row + pixel_row; //  0 - 143
+}
+
+int DDIRCGeometry::GetPixelColumn( int channel ) const 
+{
+	int pmt_column = GetPmtColumn(channel);
+	int pixel_column = GetPmtPixelColumn(channel);
+	return 8*pmt_column + pixel_column; // 0 - 47
+}
 			
 int DDIRCGeometry::GetPixelX( int channel ) const 
 {
-	int pmt_row = GetPmtRow(channel);
-	int pixel_row = GetPixelRow(channel);
-	return abs(8*pmt_row + pixel_row - 143); //  0 - 143
+	return abs(GetPixelRow(channel) - 143); //  0 - 143
 }
 
 int DDIRCGeometry::GetPixelY( int channel ) const 
 {
-	int pmt_column = GetPmtColumn(channel);
-	int pixel_column = GetPixelColumn(channel);
-	return 47 - (8*pmt_column + pixel_column); // 0 - 47
+	return 47 - GetPixelColumn(channel); // 0 - 47
 }
 
 int
