@@ -15,14 +15,26 @@ using namespace std;
 //---------------------------------
 DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number) 
 {
-	/////////////////////////////////
-	// retrieve from LUT from file //
-	/////////////////////////////////
+	/////////////////////////////////////////
+	// retrieve from LUT from file or CCDB //
+	/////////////////////////////////////////
         const int luts = 48;
-        
-        string lut_file = "/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver08/lut_all_flat.root";
+
+        string lut_file = "/group/halld/Users/jrsteven/2018-dirc/dircsim-2018_08-ver09/lut_all_flat.root";
         gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 	
+	// follow similar procedure as other resources (DMagneticFieldMapFineMesh)
+	map<string,string> lut_map_name;
+	jcalib = japp->GetJCalibration(run_number);
+	if(jcalib->GetCalib("/DIRC/LUT/lut_map", lut_map_name)) {
+		jerr << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << endl;
+	}	
+       	if(lut_map_name.find("map_name") != lut_map_name.end()) {
+		jresman = japp->GetJResourceManager(run_number);
+		lut_file = jresman->GetLocalPathToResource(lut_map_name["map_name"]);
+	}
+	jout<<"Reading DIRC LUT TTree from "<<lut_file<<" ..."<<endl;
+
 	// eventually needs to come from CCDB with run number index
 	auto saveDir = gDirectory;
 	TFile *fLut = new TFile(lut_file.c_str());

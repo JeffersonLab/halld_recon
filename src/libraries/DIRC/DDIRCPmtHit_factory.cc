@@ -19,11 +19,11 @@ jerror_t DDIRCPmtHit_factory::init(void)
 {
 	// initialize calibration tables
 	vector<double> new_t0s(DIRC_MAX_CHANNELS);
-	//vector<double> new_qualities(DIRC_MAX_CHANNELS);
+	vector<int> new_status(DIRC_MAX_CHANNELS);
 	
-	time_offsets = new_t0s;
-	//block_qualities = new_qualities;
-	
+	time_offsets.push_back(new_t0s); time_offsets.push_back(new_t0s); 
+	channel_status.push_back(new_status); channel_status.push_back(new_status);
+
 	return NOERROR;
 }
 
@@ -43,36 +43,28 @@ jerror_t DDIRCPmtHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumbe
 	}
 	pthread_mutex_unlock(&print_mutex);
 	
-	// extract the DIRC Geometry
-	vector<const DDIRCGeometry*> dircGeomVect;
-	eventLoop->Get( dircGeomVect );
-	if (dircGeomVect.size() < 1)
-		return OBJECT_NOT_AVAILABLE;
-	const DDIRCGeometry& dircGeom = *(dircGeomVect[0]);
-	
-	/// Read in calibration constants
-	vector< double > raw_time_offsets;
-	//vector< double > raw_block_qualities;    // we should change this to an int?
-	
 	if(print_messages) jout << "In DDIRCPmtHit_factory, loading constants..." << endl;
 	
 	// load base time offset
 	map<string,double> base_time_offset;
-	//if (eventLoop->GetCalib("/DIRC/base_time_offset",base_time_offset))
-	//	jout << "Error loading /DIRC/base_time_offset !" << endl;
-	//if (base_time_offset.find("DIRC_BASE_TIME_OFFSET") != base_time_offset.end())
-	//	t_base = base_time_offset["DIRC_BASE_TIME_OFFSET"];
-	//else
-	//	jerr << "Unable to get DIRC_BASE_TIME_OFFSET from /DIRC/base_time_offset !" << endl;
+	if (eventLoop->GetCalib("/DIRC/base_time_offset",base_time_offset))
+		jout << "Error loading /DIRC/base_time_offset !" << endl;
+	else if (base_time_offset.find("t0_North") != base_time_offset.end() && base_time_offset.find("t0_South") != base_time_offset.end()) {
+		t_base[0] = base_time_offset["t0_North"];
+		t_base[1] = base_time_offset["t0_South"];
+	}
+	else
+		jerr << "Unable to get t0s from /DIRC/base_time_offset !" << endl;
 	
 	// load constant tables
-	//if (eventLoop->GetCalib("/DIRC/timing_offsets", raw_time_offsets))
-	//	jout << "Error loading /DIRC/timing_offsets !" << endl;
-	//if (eventLoop->GetCalib("/DIRC/block_quality", raw_block_qualities))
-	//	jout << "Error loading /DIRC/block_quality !" << endl;
-	
-	//FillCalibTable(time_offsets, raw_time_offsets, dircGeom);
-	//FillCalibTable(block_qualities, raw_block_qualities, dircGeom);
+	if (eventLoop->GetCalib("/DIRC/North/timing_offsets", time_offsets[0]))
+		jout << "Error loading /DIRC/North/timing_offsets !" << endl;
+	if (eventLoop->GetCalib("/DIRC/North/channel_status", channel_status[0]))
+		jout << "Error loading /DIRC/North/channel_status !" << endl;
+	if (eventLoop->GetCalib("/DIRC/South/timing_offsets", time_offsets[1]))
+		jout << "Error loading /DIRC/South/timing_offsets !" << endl;
+	if (eventLoop->GetCalib("/DIRC/South/channel_status", channel_status[1]))
+		jout << "Error loading /DIRC/South/channel_status !" << endl;
 
     return NOERROR;
 }
@@ -90,17 +82,6 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
-
-/*
-    char str[256];
-
-    // extract the DIRC Geometry (for positionOnFace())
-    vector<const DDIRCGeometry*> dircGeomVect;
-    eventLoop->Get( dircGeomVect );
-    if (dircGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
-    const DDIRCGeometry& dircGeom = *(dircGeomVect[0]);
-*/
 
     vector<const DDIRCTDCDigiHit*> digihits;
     loop->Get(digihits);
@@ -122,7 +103,9 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    
 		    // discard hits from different channels
 		    if(digihit_lead->channel != digihit_trail->channel) continue; 
-		    
+		    int channel = digihit_lead->channel;
+		    int box = (channel < DIRC_MAX_CHANNELS) ? 1 : 0; // North=0 and South=1
+
 		    // get time-over-threshold
 		    timeOverThreshold = (double)digihit_trail->time - (double)digihit_lead->time;
 		    
@@ -130,8 +113,8 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    if(timeOverThreshold < 0 || timeOverThreshold > 100) continue;
 		    
 		    // throw away hits from bad or noisy channels
-		    //dirc_quality_state quality = static_cast<dirc_quality_state>(block_qualities[digihit->row][digihit->column]);
-		    //if ( (quality==BAD) || (quality==NOISY) ) continue;
+		    dirc_status_state status = static_cast<dirc_status_state>(channel_status[box][channel]);
+		    if ( (status==BAD) || (status==NOISY) ) continue;
 		    
 		    // Build hit object
 		    DDIRCPmtHit *hit = new DDIRCPmtHit;
@@ -140,7 +123,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    
 		    // Apply calibration constants
 		    double T = (double)digihit_lead->time;
-		    hit->t = T; // - time_offsets[hit->ch] + t_base;
+		    hit->t = T - time_offsets[box][channel] + t_base[box];
 		    
 		    hit->AddAssociatedObject(digihit_lead);
 		    hit->AddAssociatedObject(digihit_trail);

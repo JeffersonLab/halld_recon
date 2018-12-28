@@ -7,6 +7,8 @@
 #define _DDIRCLutReader_
 
 #include <JANA/jerror.h>
+#include <JANA/JApplication.h>
+#include <JANA/JCalibration.h>
 
 #include <DANA/DApplication.h>
 
@@ -36,6 +38,10 @@ private:
 	vector<TVector3> lutNodeAngle[48][13824];
 	vector<Double_t> lutNodeTime[48][13824];
 	vector<Long64_t> lutNodePath[48][13824];
+
+protected:
+	JCalibration *jcalib;
+	JResourceManager *jresman;
 };
 
 #endif // _DDIRCLutReader_
