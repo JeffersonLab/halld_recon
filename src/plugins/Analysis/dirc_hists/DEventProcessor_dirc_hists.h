@@ -53,6 +53,8 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
+  TH2I* hDiffBar[48];
+  TH1I* hNphCBar[48];
   map<Particle_t, TH1I*> hDiff;
   map<Particle_t, TH1I*> hNphC;
   map<Particle_t, TH1I*> hThetaC;
@@ -65,7 +67,11 @@ private:
   map<Particle_t, TH2I*> hLikelihoodDiffVsP;
   map<Particle_t, TH2I*> hDeltaTVsP;
 
+  double dMaxChannels;
+
   const DParticleID* dParticleID;
+  const DDIRCGeometry* dDIRCGeometry;
+
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
 

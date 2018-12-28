@@ -20,10 +20,6 @@ DEventProcessor_dirc_hists::~DEventProcessor_dirc_hists() {
 
 jerror_t DEventProcessor_dirc_hists::init(void) {
   
-  string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-	  gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
-
   DIRC_TRUTH_BARHIT = false;
   if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
 	  gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
@@ -41,6 +37,14 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   dFinalStatePIDs.push_back(KMinus);      locLikelihoodName.push_back("ln L(#pi-) - ln L(K-)");
   dFinalStatePIDs.push_back(Proton);      locLikelihoodName.push_back("ln L(K+) - ln L(p)");
   dFinalStatePIDs.push_back(AntiProton);  locLikelihoodName.push_back("ln L(K-) - ln L(#bar{p}");
+
+  dMaxChannels = 108*64;
+
+  // plots for each bar
+  for(int i=0; i<48; i++) {
+	  hDiffBar[i] = new TH2I(Form("hDiff_bar%02d",i), Form("Bar %02d; Channel ID; t_{calc}-t_{measured} [ns]; entries [#]", i), dMaxChannels, 0, dMaxChannels, 400,-20,20);
+	  hNphCBar[i] = new TH1I(Form("hNphC_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
+  }
  
   // plots for each hypothesis
   for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
@@ -51,7 +55,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  TDirectory *locParticleDir = new TDirectoryFile(locParticleName.data(),locParticleName.data());
 	  locParticleDir->cd();
 
-	  hDiff[locPID] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-20,20);
+	  hDiff[locPID] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleName.data()), 400,-20,20);
 	  hNphC[locPID] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
 	  hThetaC[locPID] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
 	  hDeltaThetaC[locPID] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
@@ -79,6 +83,10 @@ jerror_t DEventProcessor_dirc_hists::brun(jana::JEventLoop *loop, int32_t runnum
    const DParticleID* locParticleID = NULL;
    loop->GetSingle(locParticleID);
    dParticleID = locParticleID;
+
+   vector<const DDIRCGeometry*> locDIRCGeometry;
+   loop->Get(locDIRCGeometry);
+   dDIRCGeometry = locDIRCGeometry[0];
 
    return NOERROR;
 }
@@ -121,6 +129,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 		  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+		  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
 
 		  // loop over hits associated with track (from LUT)
 		  vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
@@ -130,9 +139,11 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
 				  double locThetaC = locPhotons[loc_j][0];
 				  double locDeltaT = locPhotons[loc_j][1];
-				  //int locSensorId = (int)locPhotons[loc_j][2];
-				  if(fabs(locThetaC-locExpectedThetaC)<0.02)
+				  int locChannel = (int)locPhotons[loc_j][2];
+				  if(fabs(locThetaC-locExpectedThetaC)<0.02) {
 					  hDiff[locPID]->Fill(locDeltaT);
+					  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
+				  }
 				  
 				  // fill histograms for candidate photons in timing cut
 				  if(fabs(locDeltaT) < 2.0) {
@@ -149,6 +160,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  
 		  // fill histograms with per-track quantities
 		  hNphC[locPID]->Fill(locDIRCMatchParams->dNPhotons);
+		  hNphCBar[locBar]->Fill(locDIRCMatchParams->dNPhotons);
 		  hThetaCVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
 		  hDeltaTVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dDeltaT);
 
