@@ -48,8 +48,15 @@ private:
 	bool DIRC_TRUTH_BARHIT;
 	bool DIRC_TRUTH_PIXELTIME;
 
+	double DIRC_CUT_TDIFFD;
+	double DIRC_CUT_TDIFFR;
+	double DIRC_SIGMA_THETAC;
+	double DIRC_LIGHT_V;
+
+	int dMaxChannels;
+
 	TH1I *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
-	TH2I *hDiff_Pixel;
+	TH2I *hDiff_Pixel[2];
 	deque<Particle_t> dFinalStatePIDs;
 	TH1I* hDeltaThetaC[4];
 	TH2I* hDeltaThetaC_Pixel[4];

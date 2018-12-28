@@ -25,11 +25,27 @@ DDIRCLut::DDIRCLut()
 	DIRC_TRUTH_PIXELTIME = false;
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_PIXELTIME",DIRC_TRUTH_PIXELTIME);
 
+	// timing cuts for photons
+	DIRC_CUT_TDIFFD = 2; // direct cut in ns
+	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFD",DIRC_CUT_TDIFFD);
+	DIRC_CUT_TDIFFR = 3; // reflected cut in ns
+	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFR",DIRC_CUT_TDIFFR);
+
+	// Gives DeltaT = 0, but shouldn't it be v=20.3767 [cm/ns] for 1.47125
+	DIRC_LIGHT_V = 19.80; // v=19.8 [cm/ns] for 1.5141
+	gPARMS->SetDefaultParameter("DIRC:LIGHT_V",DIRC_LIGHT_V);
+
+	// sigma (thetaC for single photon) in radiams
+	DIRC_SIGMA_THETAC = 0.0085;
+	gPARMS->SetDefaultParameter("DIRC:SIGMA_THETAC",DIRC_SIGMA_THETAC);
+
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
 	dFinalStatePIDs.push_back(PiPlus);
 	dFinalStatePIDs.push_back(KPlus);
 	dFinalStatePIDs.push_back(Proton);
+
+	dMaxChannels = 108*64;
 
 	if(DIRC_DEBUG_HISTS) 	
 		CreateDebugHistograms();	
@@ -61,7 +77,8 @@ bool DDIRCLut::CreateDebugHistograms() {
 		//dircDir->cd();
 
 		hDiff = (TH1I*)gROOT->FindObject("hDiff");
-		hDiff_Pixel = (TH2I*)gROOT->FindObject("hDiff_Pixel");
+		hDiff_Pixel[0] = (TH2I*)gROOT->FindObject("hDiff_Pixel_N");
+		hDiff_Pixel[1] = (TH2I*)gROOT->FindObject("hDiff_Pixel_S");
 		hDiffT = (TH1I*)gROOT->FindObject("hDiffT");
 		hDiffD = (TH1I*)gROOT->FindObject("hDiffD");
 		hDiffR = (TH1I*)gROOT->FindObject("hDiffR");
@@ -69,7 +86,8 @@ bool DDIRCLut::CreateDebugHistograms() {
 		hCalc = (TH1I*)gROOT->FindObject("hCalc");
 		hNph = (TH1I*)gROOT->FindObject("hNph");
 		if(!hDiff) hDiff = new TH1I("hDiff",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
-		if(!hDiff_Pixel) hDiff_Pixel = new TH2I("hDiff_Pixel","; Pixel ID; t_{calc}-t_{measured} [ns];entries [#]", 10000, 0, 10000, 400,-20,20);
+		if(!hDiff_Pixel[0]) hDiff_Pixel[0] = new TH2I("hDiff_Pixel_N","; Channel ID; t_{calc}-t_{measured} [ns];entries [#]", dMaxChannels, 0, dMaxChannels, 400,-20,20);
+		if(!hDiff_Pixel[1]) hDiff_Pixel[1] = new TH2I("hDiff_Pixel_S","; Channel ID; t_{calc}-t_{measured} [ns];entries [#]", dMaxChannels, 0, dMaxChannels, 400,-20,20);
 		if(!hDiffT) hDiffT = new TH1I("hDiffT",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
 		if(!hDiffD) hDiffD = new TH1I("hDiffD",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
 		if(!hDiffR) hDiffR = new TH1I("hDiffR",";t_{calc}-t_{measured} [ns];entries [#]", 400,-20,20);
@@ -135,23 +153,20 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	TVector3 dir,dird;
 	double criticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	
-	double mAngle = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/1.473);
+	double mIndex = 1.473;
+	double mAngle = acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/mIndex);
 
 	// expected angles for electron, pion, kaon and proton
 	double locExpectedAngle[4];
 	int locHypothesisIndex = -1;
 	for(int loc_i = 0; loc_i<4; loc_i++) {
-		locExpectedAngle[loc_i] = acos(sqrt(momInBar.Mag()*momInBar.Mag() + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/momInBar.Mag()/1.473);
+		locExpectedAngle[loc_i] = acos(sqrt(momInBar.Mag()*momInBar.Mag() + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/momInBar.Mag()/mIndex);
 		if(fabs(ParticleMass(dFinalStatePIDs[loc_i])-ParticleMass(locPID)) < 0.01) locHypothesisIndex = loc_i;
 	}
 
 	TVector3 fnX1 = TVector3 (1,0,0);
 	TVector3 fnY1 = TVector3 (0,1,0);
 	TVector3 fnZ1 = TVector3 (0,0,1);
-
-	// timing cuts for photons
-	double cut_tdiffd=2; // direct cut in ns
-	double cut_tdiffr=3; // reflected cut in ns
 
 	// clear object to store good photons
 	if(locDIRCMatchParams == nullptr)
@@ -174,8 +189,12 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		int bar = dDIRCGeometry->GetBar(posInBar.Y()); 
 		if(bar < 0 || bar > 47) continue;
 
-                // get channel information for LUT
-		int sensorId = locDIRCHit->ch;
+		// get channel information for LUT
+		int channel = locDIRCHit->ch;
+
+		// get box from bar number (North/Upper = 0 and South/Lower = 1)
+		int box = (bar < 24) ? 1 : 0;
+		if((box == 0 && channel < dMaxChannels) || (box == 1 && channel >= dMaxChannels)) continue;
 
 		// use hit time to determine if reflected or not
 		double hitTime = locDIRCHit->t - locFlightTime;
@@ -195,13 +214,9 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		*/
 
 		// get position along bar for calculated time 
-		double radiatorL = 4*1225; // get from CCDB
-		double barend = 2940; // get from CCDB
-		double lenz = 0;
-		if(posInBar.Y() < 0) 
-			lenz = fabs(barend + posInBar.X()*10);  
-		else 
-			lenz = fabs(posInBar.X()*10 - barend);
+		double radiatorL = dDIRCGeometry->GetBarLength(bar); //4*1225;
+		double barend = dDIRCGeometry->GetBarEnd(bar); //2940;
+		double lenz = fabs(barend - posInBar.X());  
 
 		// get length for reflected and direct photons
 		double rlenz = 2*radiatorL - lenz; // reflected
@@ -212,14 +227,14 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		bool isGood(false);
 
 		// check for pixel before going through loop
-		if(dDIRCLutReader->GetLutPixelAngleSize(bar, sensorId) == 0) continue;
+		if(dDIRCLutReader->GetLutPixelAngleSize(bar, channel) == 0) continue;
 		
 		// loop over LUT table for this bar/pixel to calculate thetaC	     
-		for(uint i = 0; i < dDIRCLutReader->GetLutPixelAngleSize(bar, sensorId); i++){
+		for(uint i = 0; i < dDIRCLutReader->GetLutPixelAngleSize(bar, channel); i++){
 
-			dird   = dDIRCLutReader->GetLutPixelAngle(bar, sensorId, i); 
-			evtime = dDIRCLutReader->GetLutPixelTime(bar, sensorId, i); 
-			pathid = dDIRCLutReader->GetLutPixelPath(bar, sensorId, i); 
+			dird   = dDIRCLutReader->GetLutPixelAngle(bar, channel, i); 
+			evtime = dDIRCLutReader->GetLutPixelTime(bar, channel, i); 
+			pathid = dDIRCLutReader->GetLutPixelPath(bar, channel, i); 
 			
 			// in MC we can check if the path of the LUT and measured photon are the same
 			bool samepath(false);
@@ -244,7 +259,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
 					tangle = momInBar.Angle(dir);//-0.002; //correction
 					
-					double bartime = lenz/cos(luttheta)/198.0; //203.767; 
+					double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
 					double totalTime = bartime+evtime;
 
 					// calculate time difference
@@ -257,7 +272,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 						
 						if(fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2){
 							hDiff->Fill(locDeltaT);
-							hDiff_Pixel->Fill(sensorId, locDeltaT);
+							hDiff_Pixel[box]->Fill(channel%dMaxChannels, locDeltaT);
 							if(samepath){
 								hDiffT->Fill(locDeltaT);
 								if(r) hDiffR->Fill(locDeltaT);
@@ -271,19 +286,19 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 					vector<double> photonInfo;
 					photonInfo.push_back(tangle);  
 					photonInfo.push_back(locDeltaT); 
-					photonInfo.push_back(sensorId); 
+					photonInfo.push_back(channel); 
 					photonInfo.push_back(hitTime);
 					if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.2) 
 						locDIRCMatchParams->dPhotons.push_back(photonInfo);
 
 					// reject photons that are too far out of time
-					if(!r && fabs(locDeltaT)>cut_tdiffd) continue;
-					if(r && fabs(locDeltaT) >cut_tdiffr) continue;
+					if(!r && fabs(locDeltaT)>DIRC_CUT_TDIFFD) continue;
+					if( r && fabs(locDeltaT)>DIRC_CUT_TDIFFR) continue;
 
 					if(DIRC_DEBUG_HISTS) {
 						dapp->RootWriteLock();
 					        hDeltaThetaC[locHypothesisIndex]->Fill(tangle-mAngle);
-						hDeltaThetaC_Pixel[locHypothesisIndex]->Fill(sensorId, tangle-mAngle);
+						hDeltaThetaC_Pixel[locHypothesisIndex]->Fill(channel, tangle-mAngle);
 						dapp->RootUnLock();
 					}
 					
@@ -342,8 +357,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 
 double DDIRCLut::CalcLikelihood(double locExpectedThetaC, double locThetaC) const {
 	
-	double locSigmaThetaC = 0.0085; // sigma (thetaC for single photon)
-	double locLikelihood = TMath::Exp(-0.5*( (locExpectedThetaC-locThetaC)/locSigmaThetaC * (locExpectedThetaC-locThetaC)/locSigmaThetaC ) ) + 0.00001;
+	double locLikelihood = TMath::Exp(-0.5*( (locExpectedThetaC-locThetaC)/DIRC_SIGMA_THETAC * (locExpectedThetaC-locThetaC)/DIRC_SIGMA_THETAC ) ) + 0.00001;
 
 	return locLikelihood;
 }

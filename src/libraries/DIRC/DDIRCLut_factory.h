@@ -19,14 +19,11 @@ public:
 	DDIRCLut *dirclut;
 
 	jerror_t init(void){ 
-		//dirclut = new DDIRCLut();
 		return NOERROR;
 	}
 	
 	jerror_t brun(JEventLoop *loop, int32_t runnumber){
 		
-		//dirclut->brun(loop);
-
 		assert( _data.size() == 0 );
 
 		SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -35,7 +32,6 @@ public:
                 if( dirclut ) delete dirclut;
                 dirclut = new DDIRCLut();
 		dirclut->brun(loop);
-		dirclut->CreateDebugHistograms();
 
         	return NOERROR;
 	}

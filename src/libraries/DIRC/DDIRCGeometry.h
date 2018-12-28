@@ -26,7 +26,10 @@ public:
 	
 	// get bar # from y positions
 	int GetBar   ( float y ) const;
+	// get bar X, Y and Length from bar #
 	double GetBarY ( int locBar ) const;
+	double GetBarEnd ( int locBar ) const;
+	double GetBarLength ( int locBar ) const;
 
 	// get PMT and Pixel indices
 	int GetPmtID      ( int channel ) const;
@@ -54,8 +57,8 @@ private:
 
 	int CHANNEL_PER_PMT, PMT_ROWS, PMT_COLUMNS;
 
-	double DIRC_BAR_Y[48];
-	double DIRC_LUT_X, DIRC_LUT_Z;
+	double DIRC_BAR_END[48], DIRC_BAR_Y[48], DIRC_BAR_L[48];
+	double DIRC_LUT_Z;
 	double DIRC_QZBL_DY;
 };
 
