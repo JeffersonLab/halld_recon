@@ -43,7 +43,6 @@ jerror_t DEventProcessor_lut_dirc::init(void) {
       new((fLuta)[n]) DrcLutNode(-1);
     }
   }
-
   
   return NOERROR;
 }
@@ -51,26 +50,16 @@ jerror_t DEventProcessor_lut_dirc::init(void) {
 jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
   vector<const DMCThrown*> mcthrowns;
   vector<const DMCTrackHit*> mctrackhits;
-  vector<const DDIRCTruthBarHit*> dircBarHits;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
   
   loop->Get(mcthrowns);
   loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
-  loop->Get(dircBarHits);
 
   if(mcthrowns.size()<1) return NOERROR;
-  //if(dircBarHits.size()<1) return NOERROR;
   if(dircPmtHits.size()!=1) return NOERROR;
   
   japp->RootWriteLock(); //ACQUIRE ROOT LOCK
-
-  TVector3 mom(0,0,0);
-  if(dircBarHits.size()>0){
-    mom =  TVector3(dircBarHits[0]->px,
-		    dircBarHits[0]->py,
-		    dircBarHits[0]->pz).Unit();
-  }
   
   // loop over PMT's hits
   for (unsigned int h = 0; h < dircPmtHits.size(); h++){
@@ -83,8 +72,7 @@ jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
 
     //std::cout<<"dir.X() "<<dir.X() <<" "<<dir.Y() <<" "<<dir.Z() << " | "
     //	     <<mom.X() <<" "<<mom.Y() <<" "<<mom.Z() <<std::endl;
-    
-    
+        
     if(lutId>=0 && lutId<48)
       ((DrcLutNode*)(fLut[lutId]->At(ch)))->
 	AddEntry(lutId,               // lut/bar id
