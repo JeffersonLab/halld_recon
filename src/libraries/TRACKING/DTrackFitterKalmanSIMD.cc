@@ -101,7 +101,7 @@ unsigned int DTrackFitterKalmanSIMD::locate(vector<double>&xx,double x){
 }
 
 // Crude approximation for the variance in drift distance due to smearing
-double DTrackFitterKalmanSIMD::fdc_drift_variance(double t){
+double DTrackFitterKalmanSIMD::fdc_drift_variance(double t) const {
    //return FDC_ANODE_VARIANCE;
    if (t<5.) t=5.;
    double sigma=DRIFT_RES_PARMS[0]/(t+1.)+DRIFT_RES_PARMS[1]+DRIFT_RES_PARMS[2]*t*t;
@@ -222,7 +222,7 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
 #define FDC_T0_OFFSET 17.6
 // Interpolate on a table to convert time to distance for the fdc
 /*
-   double DTrackFitterKalmanSIMD::fdc_drift_distance(double t,double Bz){
+   double DTrackFitterKalmanSIMD::fdc_drift_distance(double t,double Bz) const {
    double a=93.31,b=4.614,Bref=2.143;
    t*=(a+b*Bref)/(a+b*Bz);
    int id=int((t+FDC_T0_OFFSET)/2.);
@@ -240,7 +240,7 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
    */
 
 // parametrization of time-to-distance for FDC
-double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz){
+double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz) const {
   if (time<0.) return 0.;
   double d=0.; 
   time/=1.+FDC_DRIFT_BSCALE_PAR1+FDC_DRIFT_BSCALE_PAR2*Bz*Bz;
