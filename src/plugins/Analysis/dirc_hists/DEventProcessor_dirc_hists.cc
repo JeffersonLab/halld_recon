@@ -41,10 +41,13 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   dMaxChannels = 108*64;
 
   // plots for each bar
+  TDirectory *locBarDir = new TDirectoryFile("PerBarDiagnostic","PerBarDiagnostic");
+  locBarDir->cd();
   for(int i=0; i<48; i++) {
 	  hDiffBar[i] = new TH2I(Form("hDiff_bar%02d",i), Form("Bar %02d; Channel ID; t_{calc}-t_{measured} [ns]; entries [#]", i), dMaxChannels, 0, dMaxChannels, 400,-20,20);
 	  hNphCBar[i] = new TH1I(Form("hNphC_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
   }
+  dir->cd();
  
   // plots for each hypothesis
   for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
@@ -88,6 +91,9 @@ jerror_t DEventProcessor_dirc_hists::brun(jana::JEventLoop *loop, int32_t runnum
    loop->Get(locDIRCGeometry);
    dDIRCGeometry = locDIRCGeometry[0];
 
+   // Initialize DIRC LUT
+   loop->GetSingle(dDIRCLut);
+
    return NOERROR;
 }
 
@@ -97,8 +103,12 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
   vector<const DTrackTimeBased*> locTimeBasedTracks;
   loop->Get(locTimeBasedTracks);
 
+  vector<const DDIRCPmtHit*> locDIRCPmtHits;
+  loop->Get(locDIRCPmtHits);
+
   const DDetectorMatches* locDetectorMatches = NULL;
   loop->GetSingle(locDetectorMatches);
+  DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 
   // plot DIRC LUT variables for specific tracks  
   for (unsigned int loc_i = 0; loc_i < locTimeBasedTracks.size(); loc_i++){
@@ -119,6 +129,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  continue;
 
 	  Particle_t locPID = locTrackTimeBased->PID();
+	  double locMass = ParticleMass(locPID);
 
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
@@ -126,38 +137,58 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  
 	  if(foundDIRC) {
 
-		  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-		  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+		  TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+		  TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 		  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
 
-		  // loop over hits associated with track (from LUT)
-		  vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
-		  if(locPhotons.size() > 0) {
-			  
-			  // loop over candidate photons
-			  for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
-				  double locThetaC = locPhotons[loc_j][0];
-				  double locDeltaT = locPhotons[loc_j][1];
-				  int locChannel = (int)locPhotons[loc_j][2];
-				  if(fabs(locThetaC-locExpectedThetaC)<0.02) {
-					  hDiff[locPID]->Fill(locDeltaT);
-					  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
+		  double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
+		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
+
+		  // get map of DIRCMatches to PMT hits
+		  map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+		  locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+		  map<Particle_t, double> logLikelihoodSum;
+
+		  // loop over associated hits for LUT diagnostic plots
+		  for(uint loc_i=0; loc_i<locDIRCPmtHits.size(); loc_i++) {
+			  vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
+			  double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
+			  int locChannel = locDIRCPmtHits[loc_i]->ch%dMaxChannels;
+
+			  if(locDIRCPhotons.size() > 0) {
+
+				  // loop over candidate photons
+				  for(uint loc_j = 0; loc_j<locDIRCPhotons.size(); loc_j++) {
+					  double locDeltaT = locDIRCPhotons[loc_j].first - locHitTime;
+					  double locThetaC = locDIRCPhotons[loc_j].second;
+
+					  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+					  
+					  if(fabs(locThetaC-locExpectedThetaC)<0.02) {
+						  hDiff[locPID]->Fill(locDeltaT);
+						  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
+					  }
+					  
+					  // fill histograms for candidate photons in timing cut
+					  if(fabs(locDeltaT) < 2.0) {
+						  hThetaC[locPID]->Fill(locThetaC);
+						  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
+						  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+					  }
+					  
+					  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 				  }
-				  
-				  // fill histograms for candidate photons in timing cut
-				  if(fabs(locDeltaT) < 2.0) {
-					  hThetaC[locPID]->Fill(locThetaC);
-					  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
-					  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
-				  }
-			  }	  
-		  }			  
+			  }
+		  }
 		  
 		  // remove final states not considered
 		  if(std::find(dFinalStatePIDs.begin(),dFinalStatePIDs.end(),locPID) == dFinalStatePIDs.end())
 			  continue;
-		  
+		    
+		  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
 		  // fill histograms with per-track quantities
 		  hNphC[locPID]->Fill(locDIRCMatchParams->dNPhotons);
 		  hNphCBar[locBar]->Fill(locDIRCMatchParams->dNPhotons);
@@ -185,6 +216,8 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 		  }
+
+		  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	  }
   }
   

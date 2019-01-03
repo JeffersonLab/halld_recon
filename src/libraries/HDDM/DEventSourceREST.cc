@@ -44,6 +44,7 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    RECO_DIRC_CALC_LUT = false;
    gPARMS->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction (it's off by default)");
 
+   dDIRCMaxChannels = 108*64;
 }
 
 //----------------
@@ -227,14 +228,26 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 		locGeometry->GetTargetZ(locTargetCenterZ);
 
 		vector<double> locBeamPeriodVector;
-        if(locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
-            throw JException("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
+		if(locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
+			throw JException("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
 		double locBeamBunchPeriod = locBeamPeriodVector[0];
 
+		vector< vector <int> > locDIRCChannelStatus;
+		vector<int> new_dirc_status(dDIRCMaxChannels);
+		locDIRCChannelStatus.push_back(new_dirc_status); 
+		locDIRCChannelStatus.push_back(new_dirc_status);
+		if(RECO_DIRC_CALC_LUT) { // get DIRC channel status from DB
+			if (locEventLoop->GetCalib("/DIRC/North/channel_status", locDIRCChannelStatus[0]))
+				jout << "Error loading /DIRC/North/channel_status !" << endl;
+			if (locEventLoop->GetCalib("/DIRC/South/channel_status", locDIRCChannelStatus[1]))
+				jout << "Error loading /DIRC/South/channel_status !" << endl;
+		}
+		
 		LockRead();
 		{
 			dTargetCenterZMap[locRunNumber] = locTargetCenterZ;
 			dBeamBunchPeriodMap[locRunNumber] = locBeamBunchPeriod;
+			dDIRCChannelStatusMap[locRunNumber] = locDIRCChannelStatus;
 		}
 		UnlockRead();
 	}
@@ -280,9 +293,9 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DTrigger(record,
                      dynamic_cast<JFactory<DTrigger>*>(factory));
    }
-   if (dataClassName =="DDIRCPmtHit") {
+   if (dataClassName =="DDIRCPmtHit") {      
       return Extract_DDIRCPmtHit(record,
-                     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory));
+		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), locEventLoop);
    }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
@@ -1232,19 +1245,35 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 
       const hddm_r::DircMatchParamsList &dircList = iter->getDircMatchParamses(); 
       hddm_r::DircMatchParamsList::iterator dircIter = dircList.begin();
+      const hddm_r::DircMatchHitList &dircMatchHitList = iter->getDircMatchHits(); 
+      
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
 
 	      auto locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
+	      map<shared_ptr<const DDIRCMatchParams> ,vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
+	      locDetectorMatches->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParams);
+
 	      if(RECO_DIRC_CALC_LUT) {
 		      TVector3 locProjPos(dircIter->getX(),dircIter->getY(),dircIter->getZ());
 		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      double locFlightTime = dircIter->getT();
-		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBasedVector[locTrackIndex]->PID(), locDIRCMatchParams, locDIRCBarHits) ) 
-			      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
+
+		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBasedVector[locTrackIndex]->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
+			  locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
 	      }
 	      else {
+		      // add hits to match list
+		      hddm_r::DircMatchHitList::iterator dircMatchHitIter = dircMatchHitList.begin();
+		      for(; dircMatchHitIter != dircMatchHitList.end(); ++dircMatchHitIter) {
+			      size_t locMatchHitTrackIndex = dircMatchHitIter->getTrack();
+			      if(locMatchHitTrackIndex == locTrackIndex) {
+				      size_t locMatchHitIndex = dircMatchHitIter->getHit();
+				      locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHits[locMatchHitIndex]);
+			      }
+		      }
+
 		      locDIRCMatchParams->dExtrapolatedPos = DVector3(dircIter->getX(),dircIter->getY(),dircIter->getZ());
 		      locDIRCMatchParams->dExtrapolatedMom = DVector3(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
@@ -1439,7 +1468,7 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 // Extract_DDIRCPmtHit
 //-----------------------
 jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
-                                   JFactory<DDIRCPmtHit>* factory)
+                                   JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop)
 {
    /// Copies the data from the fcalShower hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -1460,9 +1489,19 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
       if (iter->getJtag() != tag)
          continue;
 
+      // throw away hits from bad or noisy channels (after REST reconstruction)
+      int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
+      int box = (iter->getCh() < dDIRCMaxChannels) ? 1 : 0;
+      int channel = iter->getCh() % dDIRCMaxChannels;
+      dirc_status_state status = static_cast<dirc_status_state>(dDIRCChannelStatusMap[locRunNumber][box][channel]);
+      if ( (status==BAD) || (status==NOISY) ) {
+	      continue;
+      }
+
       DDIRCPmtHit *hit = new DDIRCPmtHit();
       hit->setChannel(iter->getCh());
       hit->setTime(iter->getT());
+      //hit->setTOT(iter->getTot());
 
       data.push_back(hit);
    }

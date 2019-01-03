@@ -40,10 +40,10 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	TFile *fLut = new TFile(lut_file.c_str());
         TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 
-	vector<Double_t> *LutPixelAngleX[luts];
-	vector<Double_t> *LutPixelAngleY[luts];
-	vector<Double_t> *LutPixelAngleZ[luts];
-	vector<Double_t> *LutPixelTime[luts];
+	vector<Float_t> *LutPixelAngleX[luts];
+	vector<Float_t> *LutPixelAngleY[luts];
+	vector<Float_t> *LutPixelAngleZ[luts];
+	vector<Float_t> *LutPixelTime[luts];
 	vector<Long64_t> *LutPixelPath[luts];
 
 	// clear arrays to fill from TTree
@@ -69,7 +69,6 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 
 		for(int l=0; l<luts; l++){ // loop over bars
 			for(uint j=0; j<LutPixelAngleX[l]->size(); j++) { // loop over possible paths
-				
 				TVector3 angle(LutPixelAngleX[l]->at(j), LutPixelAngleY[l]->at(j), LutPixelAngleZ[l]->at(j));
 				lutNodeAngle[l][i].push_back(angle);
 				lutNodeTime[l][i].push_back(LutPixelTime[l]->at(j));
@@ -84,13 +83,14 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 }
 
 DDIRCLutReader::~DDIRCLutReader() {
-	delete[] lutNodeAngle;
-	delete[] lutNodeTime;
-	delete[] lutNodePath;
+	//delete[] lutNodeAngle;
+	//delete[] lutNodeTime;
+	//delete[] lutNodePath;
 }
 
 uint DDIRCLutReader::GetLutPixelAngleSize(int bar, int pixel) const
 {
+	
 	return lutNodeAngle[bar][pixel].size();
 }
 	
@@ -109,7 +109,7 @@ TVector3 DDIRCLutReader::GetLutPixelAngle(int bar, int pixel, int entry) const
 	return lutNodeAngle[bar][pixel].at(entry);
 }
 
-Double_t DDIRCLutReader::GetLutPixelTime(int bar, int pixel, int entry) const
+Float_t DDIRCLutReader::GetLutPixelTime(int bar, int pixel, int entry) const
 {
 	return lutNodeTime[bar][pixel].at(entry);
 }

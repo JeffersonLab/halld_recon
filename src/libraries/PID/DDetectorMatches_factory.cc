@@ -162,13 +162,18 @@ void DDetectorMatches_factory::MatchToSC(const DParticleID* locParticleID, const
 void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const
 {
 	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
-	if (extrapolations.size()==0) return;
+	if(extrapolations.size()==0) return;
 
-	// loop over DIRC hits and compare time with LUT
 	double locInputStartTime = locTrackTimeBased->t0();
+
+	// objects to hold DIRC match parameters and links between tracks and DIRC hits
 	shared_ptr<DDIRCMatchParams> locDIRCMatchParams;
-	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits))
-		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams); 
+	map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
+	locDetectorMatches->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParams);
+
+	// run DIRC LUT algorithm and add detector match
+	if(locParticleID->Cut_MatchDIRC(extrapolations, locDIRCHits, locInputStartTime, locTrackTimeBased->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams))
+		locDetectorMatches->Add_Match(locTrackTimeBased, locDIRCMatchParams);
 }
 
 void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const

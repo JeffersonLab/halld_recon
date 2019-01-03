@@ -332,6 +332,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::DircHitList hit = res().addDircHits(1);
 			hit().setCh(locDIRCPmtHits[i]->ch);
 			hit().setT(locDIRCPmtHits[i]->t);
+			hit().setTot(locDIRCPmtHits[i]->tot);
 		}
 	}
 
@@ -528,12 +529,26 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				scList().setThitvar(locSCHitMatchParamsVector[loc_k]->dHitTimeVariance);
 			}
 
+			
 			shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-                        locDetectorMatches[loc_i]->Get_DIRCMatchParams(tracks[loc_j], locDIRCMatchParams);
-                        
+			map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+			DDetectorMatches *locDetectorMatch = (DDetectorMatches*)locDetectorMatches[loc_i];
+                        locDetectorMatch->Get_DIRCMatchParams(tracks[loc_j], locDIRCMatchParams);
+			locDetectorMatch->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+
 			if(locDIRCMatchParams) {
 				hddm_r::DircMatchParamsList dircList = matches().addDircMatchParamses(1);
         	                dircList().setTrack(loc_j);
+
+				vector<const DDIRCPmtHit*> locDIRCHitTrackMatch = (vector<const DDIRCPmtHit*>)locDIRCTrackMatchParamsMap[locDIRCMatchParams];
+				for(size_t loc_k = 0; loc_k < locDIRCPmtHits.size(); ++loc_k) {
+					const DDIRCPmtHit* locDIRCPmtHit = (DDIRCPmtHit*)locDIRCPmtHits[loc_k];
+					if(find(locDIRCHitTrackMatch.begin(), locDIRCHitTrackMatch.end(), locDIRCPmtHit) != locDIRCHitTrackMatch.end()) {
+						hddm_r::DircMatchHitList dircHitList = matches().addDircMatchHits(1);
+						dircHitList().setTrack(loc_j);
+						dircHitList().setHit(loc_k);
+					}
+				}
 
 				vector<DTrackFitter::Extrapolation_t> extrapolations=tracks[loc_j]->extrapolations.at(SYS_DIRC);
 				DVector3 locProjPos = locDIRCMatchParams->dExtrapolatedPos;

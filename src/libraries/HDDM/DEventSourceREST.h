@@ -88,7 +88,7 @@ class DEventSourceREST:public JEventSource
                     JFactory<DRFTime>* factory);
 #endif
    jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
-                    JFactory<DDIRCPmtHit>* factory);
+                    JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
 
    void Get7x7ErrorMatrix(double mass, const double vec[5], const TMatrixFSym* C5x5, TMatrixFSym* loc7x7ErrorMatrix);
  private:
@@ -102,6 +102,9 @@ class DEventSourceREST:public JEventSource
 	
 	bool PRUNE_DUPLICATE_TRACKS;
 	bool RECO_DIRC_CALC_LUT;
+	int dDIRCMaxChannels;
+	enum dirc_status_state {GOOD, BAD, NOISY};
+	map<unsigned int, vector<vector<int>>> dDIRCChannelStatusMap; //unsigned int is run number
 
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;

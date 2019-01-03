@@ -67,11 +67,12 @@ private:
   map<Particle_t, TH2I*> hLikelihoodDiffVsP;
   map<Particle_t, TH2I*> hDeltaTVsP;
 
-  double dMaxChannels;
+  int dMaxChannels;
 
   const DParticleID* dParticleID;
   const DDIRCGeometry* dDIRCGeometry;
-
+  const DDIRCLut* dDIRCLut;
+  
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
 

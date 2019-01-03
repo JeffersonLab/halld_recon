@@ -109,10 +109,14 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 
 	const DDetectorMatches* locDetectorMatches = NULL;
         locEventLoop->GetSingle(locDetectorMatches);
-
+	DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
+	
 	// truth information on tracks hitting DIRC bar (for comparison)
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
 	locEventLoop->Get(locDIRCBarHits);
+
+	vector<const DDIRCPmtHit*> locDIRCPmtHits;
+	locEventLoop->Get(locDIRCPmtHits);
 
 	// Get selected particle from reaction for DIRC analysis
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(dParticleComboStepIndex);
@@ -123,8 +127,6 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
 	const DTrackTimeBased* locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
 	
-	Particle_t locPID = locTrackTimeBased->PID();
-
 	//Lock_Action(); //ACQUIRE ROOT LOCK!!
 	//hExtrapolatedBarHitXY_PreCut->Fill(posInBar.X(), posInBar.Y());
 	//Unlock_Action(); //RELEASE ROOT LOCK!!
@@ -142,6 +144,9 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		return true;
 
+	Particle_t locPID = locTrackTimeBased->PID();
+	double locMass = ParticleMass(locPID);
+
 	// get DIRC match parameters (contains LUT information)
 	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
@@ -152,6 +157,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 		DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+		double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;		  
 
 		// get binning for histograms
 		int locBar = dDIRCGeometry->GetBar(posInBar.Y());
@@ -166,70 +172,66 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		hExtrapolatedBarHitXY->Fill(posInBar.X(), posInBar.Y());
 		Unlock_Action(); //RELEASE ROOT LOCK!!
 
-		// recalculate likelihood
-		double logLikelihoodSum[4] = {0, 0, 0, 0};
-		double locExpectedAngle[4];
-		for(int loc_i = 0; loc_i<4; loc_i++) 
-			locExpectedAngle[loc_i] = acos(sqrt(locP*locP + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/locP/1.473);
+		double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
+		map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
 		
-		// loop over hits associated with track (from LUT)
-		vector< vector<double> > locPhotons = locDIRCMatchParams->dPhotons;
-		if(locPhotons.size() > 0) {
+		// get map of DIRCMatches to PMT hits
+		map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+		locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+		map<Particle_t, double> logLikelihoodSum;
+		
+		// loop over associated hits for LUT diagnostic plots
+		for(uint loc_i=0; loc_i<locDIRCPmtHits.size(); loc_i++) {
+			vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
+			double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
+			int locChannel = locDIRCPmtHits[loc_i]->ch;
 
-			// loop over candidate photons
-			for(uint loc_j = 0; loc_j<locPhotons.size(); loc_j++) {
-				double locThetaC = locPhotons[loc_j][0];				
-				double locDeltaT = locPhotons[loc_j][1];
-				int locChannel = (int)locPhotons[loc_j][2];
-				double locHitTime = locPhotons[loc_j][3];				
-				if(locChannel >= 108*64) locChannel -= 108*64;
+			if(locDIRCPhotons.size() > 0) {
 
-				// format final pixel x' and y' axes for view from behind PMTs looking downstream
-				int pixel_x = dDIRCGeometry->GetPixelX(locChannel);
-				int pixel_y = dDIRCGeometry->GetPixelY(locChannel);
-
-				Lock_Action(); //ACQUIRE ROOT LOCK!!
-				hDiff->Fill(locDeltaT);
-				if(DIRC_FILL_BAR_MAP) {
-					hDiffMap[locBar][locXbin]->Fill(locDeltaT);
-					hHitTimeMap[locBar][locXbin]->Fill(locHitTime);
-				}
-				Unlock_Action(); //RELEASE ROOT LOCK!!
-
-				// fill histograms for candidate photons in timing cut
-				if(fabs(locDeltaT) < 2.0) {
+				// loop over candidate photons
+				for(uint loc_j = 0; loc_j<locDIRCPhotons.size(); loc_j++) {
+					double locDeltaT = locDIRCPhotons[loc_j].first - locHitTime;
+					double locThetaC = locDIRCPhotons[loc_j].second;
+					if(locChannel >= 108*64) locChannel -= 108*64;
+					
+					// format final pixel x' and y' axes for view from behind PMTs looking downstream
+					int pixel_x = dDIRCGeometry->GetPixelX(locChannel);
+					int pixel_y = dDIRCGeometry->GetPixelY(locChannel);
+					
 					Lock_Action(); //ACQUIRE ROOT LOCK!!
-					hThetaC->Fill(locThetaC);
-					hDeltaThetaC->Fill(locThetaC-locExpectedThetaC);
-					hDeltaThetaCVsP->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
-					if(DIRC_FILL_BAR_MAP) hDeltaThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+					hDiff->Fill(locDeltaT);
+					if(DIRC_FILL_BAR_MAP) {
+						hDiffMap[locBar][locXbin]->Fill(locDeltaT);
+						hHitTimeMap[locBar][locXbin]->Fill(locHitTime);
+					}
 					Unlock_Action(); //RELEASE ROOT LOCK!!
-
-					// likelihood recalculation
-					if(fabs(locThetaC-0.5*(locExpectedAngle[1]+locExpectedAngle[2]))<0.02) {
+					
+					// fill histograms for candidate photons in timing cut
+					if(fabs(locDeltaT) < 2.0) {
+						Lock_Action(); //ACQUIRE ROOT LOCK!!
+						hThetaC->Fill(locThetaC);
+						hDeltaThetaC->Fill(locThetaC-locExpectedThetaC);
+						hDeltaThetaCVsP->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						if(DIRC_FILL_BAR_MAP) hDeltaThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						Unlock_Action(); //RELEASE ROOT LOCK!!
 						
-						// calculate likelihood for each mass hypothesis
-						for(uint loc_k = 0; loc_k<4; loc_k++) {
-							logLikelihoodSum[loc_k] += TMath::Log( dDIRCLut->CalcLikelihood(locExpectedAngle[loc_k], locThetaC));
+						if(std::find(locUsedPixel.begin(), locUsedPixel.end(), locChannel) != locUsedPixel.end()) 
+							continue;
+						
+						Lock_Action(); //ACQUIRE ROOT LOCK!!
+						if(DIRC_FILL_BAR_MAP && locP > 4.) {
+							//hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
+							if(locHitTime < 38.) 
+								hPixelHitMap[locBar][locXbin]->Fill(pixel_x, pixel_y);
+							else
+								hPixelHitMapReflected[locBar][locXbin]->Fill(pixel_x, pixel_y);
 						}
+						locUsedPixel.push_back(locChannel);
+						Unlock_Action(); //RELEASE ROOT LOCK!!
 					}
-					
-					if(std::find(locUsedPixel.begin(), locUsedPixel.end(), locChannel) != locUsedPixel.end()) 
-						continue;
-					
-					Lock_Action(); //ACQUIRE ROOT LOCK!!
-					if(DIRC_FILL_BAR_MAP && locP > 4.) {
-						//hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
-						if(locHitTime < 38.) 
-							hPixelHitMap[locBar][locXbin]->Fill(pixel_x, pixel_y);
-						else
-							hPixelHitMapReflected[locBar][locXbin]->Fill(pixel_x, pixel_y);
-					}
-					locUsedPixel.push_back(locChannel);
-					Unlock_Action(); //RELEASE ROOT LOCK!!
-				}
-			}	  
-		}			  
+				}	  
+			}			  
+		}
 		
 		// fill histograms with per-track quantities
 		Lock_Action(); //ACQUIRE ROOT LOCK!!
@@ -242,33 +244,33 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 			hLikelihood->Fill(-1. * locDIRCMatchParams->dLikelihoodElectron);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
-			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[0]-logLikelihoodSum[1]);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[Positron]-logLikelihoodSum[PiPlus]);
 			if(DIRC_FILL_BAR_MAP) 
-				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[0]-logLikelihoodSum[1]);
+				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[Positron]-logLikelihoodSum[PiPlus]);
 		}
 		else if(locPID == PiPlus || locPID == PiMinus) {
 			hLikelihood->Fill(-1. * locDIRCMatchParams->dLikelihoodPion);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
-			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[PiPlus]-logLikelihoodSum[KPlus]);
 			if(DIRC_FILL_BAR_MAP)
-				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
+				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[PiPlus]-logLikelihoodSum[KPlus]);
 		}
 		else if(locPID == KPlus || locPID == KMinus) {
 			hLikelihood->Fill(-1. * locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
-			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[PiPlus]-logLikelihoodSum[KPlus]);
 			if(DIRC_FILL_BAR_MAP)
-				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[1]-logLikelihoodSum[2]);
+				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[PiPlus]-logLikelihoodSum[KPlus]);
 		}
 		else if(locPID == Proton || locPID == AntiProton) {
 			hLikelihood->Fill(-1. * locDIRCMatchParams->dLikelihoodProton);
 			hLikelihoodDiff->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 			hLikelihoodDiffVsP->Fill(locP, locDIRCMatchParams->dLikelihoodKaon - locDIRCMatchParams->dLikelihoodProton);
-			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[3]-logLikelihoodSum[2]);
+			hReactionLikelihoodDiffVsP->Fill(locP, logLikelihoodSum[KPlus]-logLikelihoodSum[Proton]);
 			if(DIRC_FILL_BAR_MAP)
-				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[3]-logLikelihoodSum[2]);
+				hReactionLikelihoodDiffVsPMap[locBar][locXbin]->Fill(locP, logLikelihoodSum[KPlus]-logLikelihoodSum[Proton]);
 		}
 		Unlock_Action(); //RELEASE ROOT LOCK!!
 

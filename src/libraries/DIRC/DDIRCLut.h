@@ -36,8 +36,12 @@ public:
 
 	bool brun(JEventLoop *loop);
 	bool CreateDebugHistograms();
-	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits) const;
+	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
+	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
+	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
+	double CalcAngle(TVector3 momInBar, double locMass) const;
+	map<Particle_t, double> CalcExpectedAngles(TVector3 momInBar) const;
 	
 private:
 	DApplication *dapp;
@@ -54,12 +58,13 @@ private:
 	double DIRC_LIGHT_V;
 
 	int dMaxChannels;
+	double dCriticalAngle, dIndex;
 
 	TH1I *hDiff, *hDiffT, *hDiffD, *hDiffR, *hTime, *hCalc, *hNph, *hNphC;
 	TH2I *hDiff_Pixel[2];
 	deque<Particle_t> dFinalStatePIDs;
-	TH1I* hDeltaThetaC[4];
-	TH2I* hDeltaThetaC_Pixel[4];
+	map<Particle_t, TH1I*> hDeltaThetaC;
+	map<Particle_t, TH2I*> hDeltaThetaC_Pixel;
 };
 
 #endif // _DDIRCLut_
