@@ -398,6 +398,7 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 	auto locFCALShowerMatchParams = locChargedTrackHypothesis->Get_FCALShowerMatchParams();
 	auto locTOFHitMatchParams = locChargedTrackHypothesis->Get_TOFHitMatchParams();
 	auto locSCHitMatchParams = locChargedTrackHypothesis->Get_SCHitMatchParams();
+	auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
 
 	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
 
@@ -449,6 +450,20 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 			double locEOverP = locFCALShower->getEnergy()/locP;
 			dHistMap_EOverPVsP[locPID][SYS_FCAL]->Fill(locP, locEOverP);
 			dHistMap_EOverPVsTheta[locPID][SYS_FCAL]->Fill(locTheta, locEOverP);
+		}
+
+		//DIRC
+		if(locDIRCMatchParams != NULL) {
+			
+			int locNumPhotons_DIRC = locDIRCMatchParams->dNPhotons;
+			double locThetaC_DIRC = locDIRCMatchParams->dThetaC;
+			dHistMap_NumPhotons_DIRC[locPID]->Fill(locNumPhotons_DIRC);
+			dHistMap_ThetaCVsP_DIRC[locPID]->Fill(locP, locThetaC_DIRC);
+			double locLpi_DIRC = locDIRCMatchParams->dLikelihoodPion;
+			double locLk_DIRC = locDIRCMatchParams->dLikelihoodKaon;
+			double locLp_DIRC = locDIRCMatchParams->dLikelihoodProton;
+			dHistMap_Ldiff_kpiVsP_DIRC[locPID]->Fill(locP, locLk_DIRC-locLpi_DIRC);
+			dHistMap_Ldiff_pkVsP_DIRC[locPID]->Fill(locP, locLp_DIRC-locLk_DIRC);
 		}
 
 		//Timing
