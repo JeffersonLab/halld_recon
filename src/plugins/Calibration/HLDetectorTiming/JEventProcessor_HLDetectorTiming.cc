@@ -663,8 +663,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     const DEventRFBunch *thisRFBunch = NULL;
     if(NO_TRACKS) {
 	    // If the drift chambers are turned off, we'll need to use the neutral showers
-	    // maybe a dedicated factory is needed for this case...
-	    loop->GetSingle(thisRFBunch);
+	    loop->GetSingle(thisRFBunch, "FCAL_CCAL");
     } else {
 	    loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
     }
