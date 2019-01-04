@@ -2,7 +2,7 @@
 //
 //    File: DDIRCGeometry.cc
 //
-
+#include <unistd.h>
 #include <DANA/DApplication.h>
 
 #include "DDIRCGeometry.h"

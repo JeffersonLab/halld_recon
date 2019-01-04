@@ -83,9 +83,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 }
 
 DDIRCLutReader::~DDIRCLutReader() {
-	//delete[] lutNodeAngle;
-	//delete[] lutNodeTime;
-	//delete[] lutNodePath;
+
 }
 
 uint DDIRCLutReader::GetLutPixelAngleSize(int bar, int pixel) const
