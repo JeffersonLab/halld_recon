@@ -433,10 +433,6 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DFMWPCHit(record, 
                      dynamic_cast<JFactory<DFMWPCHit>*>(factory), tag);
 
-   if (dataClassName == "DDIRCTruthHit")
-      return Extract_DDIRCTruthHit(record,
-                     dynamic_cast<JFactory<DDIRCTruthHit>*>(factory), tag);
-
    if (dataClassName == "DDIRCTruthBarHit")
      return Extract_DDIRCTruthBarHit(record,
 		     dynamic_cast<JFactory<DDIRCTruthBarHit>*>(factory), tag);
@@ -574,7 +570,6 @@ jerror_t DEventSourceHDDM::Extract_DMCTrackHit(hddm_s::HDDM *record,
    GetCherenkovTruthHits(record, data);
    GetFCALTruthHits(record, data);
    GetSCTruthHits(record, data);
-   GetDIRCTruthHits(record, data);
 
    // It has happened that some CDC hits have "nan" for the drift time
    // in a peculiar event Alex Somov came across. This ultimately caused
@@ -727,33 +722,6 @@ jerror_t DEventSourceHDDM::GetCherenkovTruthHits(hddm_s::HDDM *record,
       mctrackhit->primary = iter->getPrimary();
       mctrackhit->ptype   = iter->getPtype();    // save GEANT particle typ()e
       mctrackhit->system  = SYS_CHERENKOV;
-      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
-      mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
-      data.push_back(mctrackhit);
-   }
-
-   return NOERROR;
-}
-
-//-------------------
-// GetDIRCTruthHits
-//-------------------
-jerror_t DEventSourceHDDM::GetDIRCTruthHits(hddm_s::HDDM *record,
-                                            vector<DMCTrackHit*>& data)
-{
-   const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
-   hddm_s::DircTruthPointList::iterator iter;
-   for (iter = points.begin(); iter != points.end(); ++iter) {
-      float x = iter->getX();
-      float y = iter->getY();
-      DMCTrackHit *mctrackhit = new DMCTrackHit;
-      mctrackhit->r       = sqrt(x*x + y*y);
-      mctrackhit->phi     = atan2(y,x);
-      mctrackhit->z       = iter->getZ();
-      mctrackhit->track   = iter->getTrack();
-      mctrackhit->primary = iter->getPrimary();
-      mctrackhit->ptype   = iter->getPtype();    // save GEANT particle typ()e
-      mctrackhit->system  = SYS_DIRC;
       const hddm_s::TrackIDList &ids = iter->getTrackIDs();
       mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
       data.push_back(mctrackhit);
@@ -2888,44 +2856,6 @@ jerror_t DEventSourceHDDM::Extract_DCereHit(hddm_s::HDDM *record,
    // copy into factory
    factory->CopyTo(data);
 
-   return NOERROR;
-}
-
-//----------------------
-// Extract_DDIRCTruthHit
-//----------------------
-jerror_t DEventSourceHDDM::Extract_DDIRCTruthHit(hddm_s::HDDM *record,
-                                   JFactory<DDIRCTruthHit>* factory,
-                                   string tag)
-{
-   if (factory == NULL)
-      return OBJECT_NOT_AVAILABLE;
-   if (tag != "")
-      return OBJECT_NOT_AVAILABLE;
-
-   vector<DDIRCTruthHit*> data;
-
-   const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
-   hddm_s::DircTruthPointList::iterator iter;
-   for (iter = points.begin(); iter != points.end(); ++iter) {
-      DDIRCTruthHit *hit = new DDIRCTruthHit;
-      hit->x       = iter->getX();
-      hit->y       = iter->getY();
-      hit->z       = iter->getZ();
-      hit->px      = iter->getPx();
-      hit->py      = iter->getPy();
-      hit->pz      = iter->getPz();
-      hit->t       = iter->getT();
-      hit->E       = iter->getE();
-      hit->track   = iter->getTrack();
-      hit->primary = iter->getPrimary();
-      hit->ptype   = iter->getPtype();
-      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
-      hit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
-      data.push_back(hit);
-   }
-
-   factory->CopyTo(data);
    return NOERROR;
 }
 
