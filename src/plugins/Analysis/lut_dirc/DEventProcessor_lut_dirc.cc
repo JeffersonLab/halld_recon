@@ -49,11 +49,9 @@ jerror_t DEventProcessor_lut_dirc::init(void) {
 
 jerror_t DEventProcessor_lut_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
   vector<const DMCThrown*> mcthrowns;
-  vector<const DMCTrackHit*> mctrackhits;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
   
   loop->Get(mcthrowns);
-  loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
 
   if(mcthrowns.size()<1) return NOERROR;
