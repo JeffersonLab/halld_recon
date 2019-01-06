@@ -17,8 +17,8 @@ jerror_t DEventRFBunch_factory_CalorimeterOnly::init(void)
 {
 	dMinTrackingFOM = 0.0;
 	
-	USE_BCAL = true;   // false
-	USE_CCAL = false;  // true
+	USE_BCAL = false;  
+	USE_CCAL = true; 
 	USE_FCAL = true;
 	
 	gPARMS->SetDefaultParameter("EVENTRFBUNCH_CAL:USE_BCAL_SHOWERS", USE_BCAL, "Use BCAL showers for calorimeter-only RF bunch calculation");
