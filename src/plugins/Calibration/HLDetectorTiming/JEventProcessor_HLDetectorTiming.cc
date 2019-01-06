@@ -18,11 +18,13 @@ using namespace jana;
 #include "TTAB/DTranslationTable.h"
 #include "FCAL/DFCALGeometry.h"
 #include "BCAL/DBCALGeometry.h"
+#include "CCAL/DCCALGeometry.h"
 #include "TRIGGER/DTrigger.h"
 #include "HistogramTools.h"
 
 #include "PAIR_SPECTROMETER/DPSCHit.h"
 #include "PAIR_SPECTROMETER/DPSHit.h"
+#include "CCAL/DCCALHit.h"
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -268,6 +270,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DBCALUnifiedHit *> bcalUnifiedHitVector;
     vector<const DTOFHit *> tofHitVector;
     vector<const DFCALHit *> fcalHitVector;
+    vector<const DCCALHit *> ccalHitVector;
     vector<const DTAGMHit *> tagmHitVector;
     vector<const DTAGHHit *> taghHitVector;
     vector<const DPSHit *> psHitVector;
@@ -279,6 +282,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(bcalUnifiedHitVector);
     loop->Get(tofHitVector);
     loop->Get(fcalHitVector);
+    loop->Get(ccalHitVector);
     loop->Get(psHitVector);
     loop->Get(pscHitVector);
     loop->Get(tagmHitVector, "Calib");
@@ -450,6 +454,39 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                     fcalGeom.numActiveBlocks(), 0.5, fcalGeom.numActiveBlocks() + 0.5, 250, -50, 50); 
         }
     }
+
+    // Do the same thing for the CCAL as a start
+    double ccalHitETot = 0;
+    double ccalHitEwtT = 0;
+    for (i = 0; i < ccalHitVector.size(); i++){
+      ccalHitETot += ccalHitVector[i]->E;
+      ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
+    }
+    fcalHitEwtT /= fcalHitETot;
+
+    for (i = 0; i < fcalHitVector.size(); i++){
+        Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
+                "CCALHit time;t [ns];", nBins, xMin, xMax);
+
+	// extract the CCAL Geometry
+	vector<const DCCALGeometry*> ccalGeomVect;
+	loop->Get( ccalGeomVect );
+	if (ccalGeomVect.size() < 1){
+	  cout << "CCAL Geometry not available?" << endl;
+	} else {
+		const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+		Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
+				ccalHitVector[i]->row, ccalHitVector[i]->column, 
+				"CCAL Hit Occupancy; column; row",
+				61, -1.5, 59.5, 61, -1.5, 59.5);
+		double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
+		//Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+		Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+					ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
+					"CCAL Hit Local Time [ns]; column; row",
+					61, -1.5, 59.5, 61, -1.5, 59.5);
+		}
+	}
 
     for (i = 0; i < tagmHitVector.size(); i++){
         Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit time", tagmHitVector[i]->t,
@@ -663,7 +700,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     const DEventRFBunch *thisRFBunch = NULL;
     if(NO_TRACKS) {
 	    // If the drift chambers are turned off, we'll need to use the neutral showers
-	    loop->GetSingle(thisRFBunch, "FCAL_CCAL");
+	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
     } else {
 	    loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
     }

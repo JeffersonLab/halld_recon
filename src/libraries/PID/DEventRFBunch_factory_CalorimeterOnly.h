@@ -1,10 +1,10 @@
 // $Id$
 //
-//    File: DEventRFBunch_factory_FCAL_CCAL.h
+//    File: DEventRFBunch_factory_CalorimeterOnly.h
 //
 
-#ifndef _DEventRFBunch_factory_FCAL_CCAL_
-#define _DEventRFBunch_factory_FCAL_CCAL_
+#ifndef _DEventRFBunch_factory_CalorimeterOnly_
+#define _DEventRFBunch_factory_CalorimeterOnly_
 
 #include <iostream>
 #include <iomanip>
@@ -36,12 +36,12 @@
 using namespace std;
 using namespace jana;
 
-class DEventRFBunch_factory_FCAL_CCAL : public jana::JFactory<DEventRFBunch>
+class DEventRFBunch_factory_CalorimeterOnly : public jana::JFactory<DEventRFBunch>
 {
 	public:
-		DEventRFBunch_factory_FCAL_CCAL(){};
-		~DEventRFBunch_factory_FCAL_CCAL(){};
-		const char* Tag(void){return "FCAL_CCAL";}
+		DEventRFBunch_factory_CalorimeterOnly(){};
+		~DEventRFBunch_factory_CalorimeterOnly(){};
+		const char* Tag(void){return "CalorimeterOnly";}
 
 	private:
 

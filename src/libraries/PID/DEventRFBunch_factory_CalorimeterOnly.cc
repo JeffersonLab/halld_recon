@@ -1,9 +1,9 @@
 // $Id$
 //
-//    File: DEventRFBunch_factory_FCAL_CCAL.cc
+//    File: DEventRFBunch_factory_CalorimeterOnly.cc
 //
 
-#include "DEventRFBunch_factory_FCAL_CCAL.h"
+#include "DEventRFBunch_factory_CalorimeterOnly.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALCluster.h"
@@ -13,7 +13,7 @@ using namespace jana;
 //------------------
 // init
 //------------------
-jerror_t DEventRFBunch_factory_FCAL_CCAL::init(void)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::init(void)
 {
 	dMinTrackingFOM = 0.0;
 	
@@ -31,7 +31,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::init(void)
 //------------------
 // brun
 //------------------
-jerror_t DEventRFBunch_factory_FCAL_CCAL::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
 {
 	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	DGeometry* locGeometry = locApplication->GetDGeometry(runnumber);
@@ -52,7 +52,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::brun(jana::JEventLoop *locEventLoop, i
 //------------------
 // evnt
 //------------------
-jerror_t DEventRFBunch_factory_FCAL_CCAL::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 {
 	//There should ALWAYS be one and only one DEventRFBunch created.
 	//If there is not enough information, time is set to NaN
@@ -66,7 +66,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::evnt(JEventLoop* locEventLoop, uint64_
 		return Create_NaNRFBunch();   // there should always be RFTime data, otherwise there's not enough info to choose
 }
 
-jerror_t DEventRFBunch_factory_FCAL_CCAL::Select_RFBunch(JEventLoop* locEventLoop, const DRFTime* locRFTime)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::Select_RFBunch(JEventLoop* locEventLoop, const DRFTime* locRFTime)
 {
 	//If RF Time present:
 		// Let neutral showers vote (assume PID = photon) on RF bunch
@@ -100,7 +100,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::Select_RFBunch(JEventLoop* locEventLoo
 	return NOERROR;
 }
 
-int DEventRFBunch_factory_FCAL_CCAL::Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes)
+int DEventRFBunch_factory_CalorimeterOnly::Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes)
 {
 	map<int, vector<const JObject*> > locNumBeamBucketsShiftedMap;
 	set<int> locBestRFBunchShifts;
@@ -121,7 +121,7 @@ int DEventRFBunch_factory_FCAL_CCAL::Conduct_Vote(JEventLoop* locEventLoop, doub
 }
 
 
-bool DEventRFBunch_factory_FCAL_CCAL::Find_NeutralTimes(JEventLoop* locEventLoop, vector<pair<double, const JObject*> >& locTimes)
+bool DEventRFBunch_factory_CalorimeterOnly::Find_NeutralTimes(JEventLoop* locEventLoop, vector<pair<double, const JObject*> >& locTimes)
 {
 	locTimes.clear();
 
@@ -181,7 +181,7 @@ bool DEventRFBunch_factory_FCAL_CCAL::Find_NeutralTimes(JEventLoop* locEventLoop
 	return (locTimes.size() > 1);
 }
 
-int DEventRFBunch_factory_FCAL_CCAL::Find_BestRFBunchShifts(double locRFHitTime, const vector<pair<double, const JObject*> >& locTimes, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
+int DEventRFBunch_factory_CalorimeterOnly::Find_BestRFBunchShifts(double locRFHitTime, const vector<pair<double, const JObject*> >& locTimes, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
 {
 	//then find the #beam buckets the RF time needs to shift to match it
 	int locHighestNumVotes = 0;
@@ -208,7 +208,7 @@ int DEventRFBunch_factory_FCAL_CCAL::Find_BestRFBunchShifts(double locRFHitTime,
 	return locHighestNumVotes;
 }
 
-bool DEventRFBunch_factory_FCAL_CCAL::Break_TieVote_BeamPhotons(vector<const DBeamPhoton*>& locBeamPhotons, double locRFTime, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts, int locHighestNumVotes)
+bool DEventRFBunch_factory_CalorimeterOnly::Break_TieVote_BeamPhotons(vector<const DBeamPhoton*>& locBeamPhotons, double locRFTime, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts, int locHighestNumVotes)
 {
 	//locHighestNumVotes intentionally passed-in as value-type (non-reference)
 		//beam photons are only used to BREAK the tie, not count as equal votes
@@ -238,7 +238,7 @@ bool DEventRFBunch_factory_FCAL_CCAL::Break_TieVote_BeamPhotons(vector<const DBe
 }
 
 
-int DEventRFBunch_factory_FCAL_CCAL::Break_TieVote_Neutrals(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
+int DEventRFBunch_factory_CalorimeterOnly::Break_TieVote_Neutrals(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts)
 {
   //Break tie with highest total shower energy
 
@@ -282,7 +282,7 @@ int DEventRFBunch_factory_FCAL_CCAL::Break_TieVote_Neutrals(map<int, vector<cons
   return locBestRFBunchShift;
 }
 
-jerror_t DEventRFBunch_factory_FCAL_CCAL::Create_NaNRFBunch(void)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::Create_NaNRFBunch(void)
 {
 	DEventRFBunch* locEventRFBunch = new DEventRFBunch;
 	locEventRFBunch->dTime = numeric_limits<double>::quiet_NaN();
@@ -297,7 +297,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::Create_NaNRFBunch(void)
 //------------------
 // erun
 //------------------
-jerror_t DEventRFBunch_factory_FCAL_CCAL::erun(void)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::erun(void)
 {
 	return NOERROR;
 }
@@ -305,7 +305,7 @@ jerror_t DEventRFBunch_factory_FCAL_CCAL::erun(void)
 //------------------
 // fini
 //------------------
-jerror_t DEventRFBunch_factory_FCAL_CCAL::fini(void)
+jerror_t DEventRFBunch_factory_CalorimeterOnly::fini(void)
 {
 	return NOERROR;
 }
