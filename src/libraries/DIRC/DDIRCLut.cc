@@ -338,7 +338,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				// remove photon candidates not used in likelihood
 				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.02) continue;
 				
-				// save good photons to DIRCLutPhotons object
+				// save good photons to matched list
 				isGood = true;
 				
 				// count good photons

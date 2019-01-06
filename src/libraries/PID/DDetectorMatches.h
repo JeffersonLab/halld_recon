@@ -20,7 +20,6 @@
 #include <START_COUNTER/DSCHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
-#include <DIRC/DDIRCLutPhotons.h>
 
 using namespace std;
 
