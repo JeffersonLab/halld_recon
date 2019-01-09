@@ -392,7 +392,7 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100), 
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
-                dDIRCMinThetaC(0), dDIRCMaxThetaC(60), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
@@ -410,7 +410,7 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
-                dDIRCMinThetaC(0), dDIRCMaxThetaC(60), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
@@ -428,7 +428,7 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
-                dDIRCMinThetaC(0), dDIRCMaxThetaC(60), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);

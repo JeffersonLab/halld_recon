@@ -86,7 +86,7 @@ class DHistogramAction_PID : public DAnalysisAction
 		dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), dMinPull(-10.0), dMaxPull(10.0),
 	        dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
-                dDIRCMinThetaC(0), dDIRCMaxThetaC(60), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dThrownPIDs.push_back(Gamma);  dThrownPIDs.push_back(Neutron);
 			dThrownPIDs.push_back(PiPlus);  dThrownPIDs.push_back(KPlus);  dThrownPIDs.push_back(Proton);
