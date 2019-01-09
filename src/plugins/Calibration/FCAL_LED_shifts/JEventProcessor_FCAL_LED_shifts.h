@@ -57,6 +57,11 @@ class JEventProcessor_FCAL_LED_shifts:public jana::JEventProcessor{
   
   TH2I *m_fadcShifts;
   TH1I *m_totalEnergy;
+
+
+  int NBINS_TIME;
+  double TIME_MIN, TIME_MAX;
+
  
 };
 
