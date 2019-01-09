@@ -298,26 +298,28 @@ gStyle->SetPadBottomMargin(0.15);
     h1_eff_up[1]->GetYaxis()->SetTitleSize(0.05);
     h1_eff_up[1]->GetYaxis()->SetTitleOffset(1.5);
     h1_eff_up[1]->GetYaxis()->SetTitle("Layer Efficiency");
-    h1_eff_up[1]->GetXaxis()->SetTitle("Cell ID");
-    h1_eff_up[1]->SetMarkerColor(2);
-    h1_eff_up[1]->SetMarkerStyle(20);
+    h1_eff_up[1]->GetXaxis()->SetTitle("Cell Number");
+    h1_eff_up[1]->SetMarkerColor(1);
+    h1_eff_up[1]->SetLineColor(1);
+    h1_eff_up[1]->SetMarkerStyle(24);
     h1_eff_up[1]->SetMarkerSize(0.3);
     h1_eff_up[1]->Draw("");
     
     h1_MC_eff_up[1]->Draw("same");
-    h1_MC_eff_up[1]->SetMarkerColor(4);
+    h1_MC_eff_up[1]->SetMarkerColor(2);
+    h1_MC_eff_up[1]->SetLineColor(2);
     h1_MC_eff_up[1]->SetMarkerStyle(20);
     h1_MC_eff_up[1]->SetMarkerSize(0.3);
     
     
     // dummies to enlarge legend
     TH1F *dummy1 = new TH1F("dummy1","dummy1",100,0,100);
-    dummy1->SetMarkerColor(2);
-    dummy1->SetMarkerStyle(20);
+    dummy1->SetMarkerColor(1);
+    dummy1->SetMarkerStyle(24);
     dummy1->SetMarkerSize(0.7);
     
     TH1F *dummy2 = new TH1F("dummy2","dummy2",100,0,100);
-    dummy2->SetMarkerColor(4);
+    dummy2->SetMarkerColor(2);
     dummy2->SetMarkerStyle(20);
     dummy2->SetMarkerSize(0.7);
     
@@ -328,6 +330,10 @@ gStyle->SetPadBottomMargin(0.15);
     legend = "Layer 2: MC";
     leg1->AddEntry(dummy2,legend,"p");
     leg1->Draw();
+    
+    TLatex *t1 = new TLatex(0.25,0.7,"a)");
+    t1->SetNDC();
+    t1->Draw();
 
     c6->cd(2);
     
@@ -339,13 +345,15 @@ gStyle->SetPadBottomMargin(0.15);
     h1_eff_z_up[1]->GetYaxis()->SetTitleOffset(1.5);
     h1_eff_z_up[1]->GetYaxis()->SetTitle("Layer Efficiency");
     h1_eff_z_up[1]->GetXaxis()->SetTitle("Position (cm)");
-    h1_eff_z_up[1]->SetMarkerColor(2);
-    h1_eff_z_up[1]->SetMarkerStyle(20);
+    h1_eff_z_up[1]->SetMarkerColor(1);
+    h1_eff_z_up[1]->SetLineColor(1);
+    h1_eff_z_up[1]->SetMarkerStyle(24);
     h1_eff_z_up[1]->SetMarkerSize(0.3);
     h1_eff_z_up[1]->Draw("");
     
     h1_MC_eff_z_up[1]->Draw("same");
-    h1_MC_eff_z_up[1]->SetMarkerColor(4);
+    h1_MC_eff_z_up[1]->SetMarkerColor(2);
+    h1_MC_eff_z_up[1]->SetLineColor(2);
     h1_MC_eff_z_up[1]->SetMarkerStyle(20);
     h1_MC_eff_z_up[1]->SetMarkerSize(0.3);
     
@@ -356,6 +364,7 @@ gStyle->SetPadBottomMargin(0.15);
     leg2->AddEntry(dummy2,legend,"p");
     leg2->Draw();
     
+    t1->DrawLatex(0.25,0.7,"b)");
     
     c0->SaveAs("plot_compare_hists_"+prefix+".pdf(");
     c1->SaveAs("plot_compare_hists_"+prefix+".pdf");
