@@ -282,15 +282,17 @@ DParticleID::DParticleID(JEventLoop *loop)
                  << "  expected = " << MAX_SC_SECTORS << endl;
 
         for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
-            SC_MAX_RESOLUTION.push_back( sc_paddle_resolution_params[i][0] );
-            SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][1] );
-            SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][2] );
-            SC_SECTION1_P0.push_back( sc_paddle_resolution_params[i][3] ); 
-            SC_SECTION1_P1.push_back( sc_paddle_resolution_params[i][4] );
-            SC_SECTION2_P0.push_back( sc_paddle_resolution_params[i][5] ); 
-            SC_SECTION2_P1.push_back( sc_paddle_resolution_params[i][6] );
-            SC_SECTION3_P0.push_back( sc_paddle_resolution_params[i][7] ); 
-            SC_SECTION3_P1.push_back( sc_paddle_resolution_params[i][8] );
+            SC_SECTION1_P0.push_back( sc_paddle_resolution_params[i][0] ); 
+            SC_SECTION1_P1.push_back( sc_paddle_resolution_params[i][1] );
+            SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][2] );
+            SC_SECTION2_P0.push_back( sc_paddle_resolution_params[i][3] ); 
+            SC_SECTION2_P1.push_back( sc_paddle_resolution_params[i][4] );
+            SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][5] );
+            SC_SECTION3_P0.push_back( sc_paddle_resolution_params[i][6] ); 
+            SC_SECTION3_P1.push_back( sc_paddle_resolution_params[i][7] );
+            SC_BOUNDARY3.push_back( sc_paddle_resolution_params[i][8] );
+            SC_SECTION4_P0.push_back( sc_paddle_resolution_params[i][9] ); 
+            SC_SECTION4_P1.push_back( sc_paddle_resolution_params[i][10] );
         }
     }
 
@@ -1049,10 +1051,11 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit*
 	double locCorrectedHitEnergy = locSCHit->dE;
 
 	// Check to see if hit occured in the straight section
+	double L = 0.;
 	if (locProjPos.Z() <= sc_pos_eoss)
 	{
 		// Calculate hit distance along scintillator relative to upstream end
-		double L = locProjPos.Z() - sc_pos_soss;
+		L = locProjPos.Z() - sc_pos_soss;
 		// Apply propagation time correction
 		locCorrectedHitTime -= L*sc_pt_slope[SC_STRAIGHT][sc_index] + sc_pt_yint[SC_STRAIGHT][sc_index];
 		// Apply attenuation correction
@@ -1061,7 +1064,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit*
 	else if(locProjPos.Z() > sc_pos_eoss && locProjPos.Z() <= sc_pos_eobs) //check if in bend section: if so, apply corrections
 	{
 		// Calculate the hit position relative to the upstream end
-		double L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
+		L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
 		// Apply propagation time correction
 		locCorrectedHitTime -= L*sc_pt_slope[SC_BEND][sc_index] + sc_pt_yint[SC_BEND][sc_index];
 		// Apply attenuation correction
@@ -1071,7 +1074,7 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit*
 	else // nose section: apply corrections
 	{
 		// Calculate the hit position relative to the upstream end
-		double L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
+		L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
 		// Apply propagation time correction
 		locCorrectedHitTime -= L*sc_pt_slope[SC_NOSE][sc_index] + sc_pt_yint[SC_NOSE][sc_index];
 		// Apply attenuation correction
@@ -1101,22 +1104,18 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DSCHit*
     // Figure out timing resolution 
     // This is parameterized by 
     double time_resolution = 0.;
-    double sc_local_z = locProjPos.Z() - sc_pos_soss;    // resolutions are stored as a function of the z distance from the upstream end of the SC
+    //double sc_local_z = locProjPos.Z() - sc_pos_soss;    // resolutions are stored as a function of the z distance from the upstream end of the SC
 
-    if(sc_local_z < SC_BOUNDARY1[sc_index]) {
-        time_resolution = SC_SECTION1_P0[sc_index] + SC_SECTION1_P1[sc_index]*sc_local_z;
-    } else if(sc_local_z < SC_BOUNDARY2[sc_index]) {
-        time_resolution = SC_SECTION2_P0[sc_index] + SC_SECTION2_P1[sc_index]*sc_local_z;
-    } else {
-        time_resolution = SC_SECTION3_P0[sc_index] + SC_SECTION3_P1[sc_index]*sc_local_z;
-    }
+	if(L < SC_BOUNDARY1[sc_index]) {
+		time_resolution = SC_SECTION1_P0[sc_index] + SC_SECTION1_P1[sc_index]*L;
+	} else if(L < SC_BOUNDARY2[sc_index]) {
+		time_resolution = SC_SECTION2_P0[sc_index] + SC_SECTION2_P1[sc_index]*L;
+	} else if(L < SC_BOUNDARY3[sc_index]) {
+		time_resolution = SC_SECTION3_P0[sc_index] + SC_SECTION3_P1[sc_index]*L;
+	} else {
+		time_resolution = SC_SECTION4_P0[sc_index] + SC_SECTION4_P1[sc_index]*L;
+	}
         
-    // max sure that we aren't getting some ridiculously large resolution
-    if(time_resolution > SC_MAX_RESOLUTION[sc_index])
-        time_resolution = SC_MAX_RESOLUTION[sc_index];
-    
-    // convert ps to ns
-    time_resolution /= 1000.;
 
 	//SET MATCHING INFORMATION
 	if(locSCHitMatchParams == nullptr)
@@ -1317,93 +1316,103 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&e
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {
-  if(extrapolations.size()==0)
-    return false;
+	if(extrapolations.size()==0)
+	return false;
 
-  // Find the track projection to the Start Counter
-  DVector3 locProjPos=extrapolations[0].position;
-  DVector3 locProjMom=extrapolations[0].momentum;
-  double locFlightTime=extrapolations[0].t;
-  double locPathLength=extrapolations[0].s;
-  double locFlightTimeVariance=0.; // fill this in!
+	// Find the track projection to the Start Counter
+	DVector3 locProjPos=extrapolations[0].position;
+	DVector3 locProjMom=extrapolations[0].momentum;
+	double locFlightTime=extrapolations[0].t;
+	double locPathLength=extrapolations[0].s;
+	double locFlightTimeVariance=0.; // fill this in!
 
-  //Now, the input SC hit may have been on a separate SC paddle than the projection
-  //So, we have to assume that the locProjPos.Z() for the projected paddle is accurate enough for the hit paddle (no other way to get it).
-  //In fact, we assume that everything from the above is accurate except for locDeltaPhi (we'll recalculate it at the end)
-  
-  // Check that the hit is not out of time with respect to the track
-  if(fabs(locSCHit->t - locFlightTime - locInputStartTime) > OUT_OF_TIME_CUT)
-    return false;
+	//Now, the input SC hit may have been on a separate SC paddle than the projection
+	//So, we have to assume that the locProjPos.Z() for the projected paddle is accurate enough for the hit paddle (no other way to get it).
+	//In fact, we assume that everything from the above is accurate except for locDeltaPhi (we'll recalculate it at the end)
 
-  // Get corrected start counter time and energy deposition
-  double locCorrectedHitEnergy=Get_CorrectedHitEnergy(locSCHit,locProjPos);
-  double locCorrectedHitTime=Get_CorrectedHitTime(locSCHit,locProjPos);
+	// Check that the hit is not out of time with respect to the track
+	if(fabs(locSCHit->t - locFlightTime - locInputStartTime) > OUT_OF_TIME_CUT)
+	return false;
 
-  if(locOutputProjMom != nullptr)
-    {
-      *locOutputProjPos = locProjPos;
-      *locOutputProjMom = locProjMom;
-    }
+	// Get corrected start counter time and energy deposition
+	double locCorrectedHitEnergy=Get_CorrectedHitEnergy(locSCHit,locProjPos);
+	double locCorrectedHitTime=Get_CorrectedHitTime(locSCHit,locProjPos);
+
+	if(locOutputProjMom != nullptr)
+	{
+	  *locOutputProjPos = locProjPos;
+	  *locOutputProjMom = locProjMom;
+	}
+
+	// Correct the locDeltaPhi in case the projected and input SC hit paddles are different	
+	unsigned int sc_index=locSCHit->sector-1;
+	double z=locProjPos.z();
+	unsigned int locSCPlane=0;
+	if (z>sc_pos[sc_index][0].z()){
+		for (unsigned int j=0;j<sc_pos[sc_index].size();j++){
+		  if (z>sc_pos[sc_index][j].z()) continue;
+
+		  locSCPlane=j-1;
+		  break;
+		}
+	}
+	
+	DVector3 sc_pos_at_projz = sc_pos[sc_index][locSCPlane] + (locProjPos.Z() - sc_pos[sc_index][locSCPlane].z())*sc_dir[sc_index][locSCPlane];
+	double locDeltaPhi = sc_pos_at_projz.Phi() - locProjPos.Phi();
+	while(locDeltaPhi > TMath::Pi())
+	locDeltaPhi -= M_TWO_PI;
+	while(locDeltaPhi < -1.0*TMath::Pi())
+	locDeltaPhi += M_TWO_PI;
+
+	// Compute the track distance through the scintillator
+	DVector3 locPaddleNorm=sc_norm[sc_index][locSCPlane];
+	double ds = 0.3*locProjMom.Mag()/fabs(locProjMom.Dot(locPaddleNorm));
   
-  // Correct the locDeltaPhi in case the projected and input SC hit paddles are different	
-  unsigned int sc_index=locSCHit->sector-1;
-  double z=locProjPos.z();
-  unsigned int locSCPlane=0;
-  if (z>sc_pos[sc_index][0].z()){
-    for (unsigned int j=0;j<sc_pos[sc_index].size();j++){
-      if (z>sc_pos[sc_index][j].z()) continue;
-      
-      locSCPlane=j-1;
-      break;
-    }
-  }
-  DVector3 sc_pos_at_projz = sc_pos[sc_index][locSCPlane] + (locProjPos.Z() - sc_pos[sc_index][locSCPlane].z())*sc_dir[sc_index][locSCPlane];
-  double locDeltaPhi = sc_pos_at_projz.Phi() - locProjPos.Phi();
-  while(locDeltaPhi > TMath::Pi())
-    locDeltaPhi -= M_TWO_PI;
-  while(locDeltaPhi < -1.0*TMath::Pi())
-    locDeltaPhi += M_TWO_PI;
-  
-  // Compute the track distance through the scintillator
-  DVector3 locPaddleNorm=sc_norm[sc_index][locSCPlane];
-  double ds = 0.3*locProjMom.Mag()/fabs(locProjMom.Dot(locPaddleNorm));
-  
-  // ============================
-  // Figure out timing resolution 
-  // This is parameterized by 
-  double time_resolution = 0.;
-  double sc_local_z = z - sc_pos[sc_index][0].z();    // resolutions are stored as a function of the z distance from the upstream end of the SC
-  
-  if(sc_local_z < SC_BOUNDARY1[sc_index]) {
-    time_resolution = SC_SECTION1_P0[sc_index] + SC_SECTION1_P1[sc_index]*sc_local_z;
-  } else if(sc_local_z < SC_BOUNDARY2[sc_index]) {
-    time_resolution = SC_SECTION2_P0[sc_index] + SC_SECTION2_P1[sc_index]*sc_local_z;
-  } else {
-    time_resolution = SC_SECTION3_P0[sc_index] + SC_SECTION3_P1[sc_index]*sc_local_z;
-  }
+	// Start Counter geometry in hall coordinates, obtained from xml file
+	double sc_pos_soss = sc_pos[sc_index][0].z();   // Start of straight section
+	double sc_pos_eoss = sc_pos[sc_index][1].z();   // End of straight section
+	double sc_pos_eobs = sc_pos[sc_index][sc_pos[sc_index].size() - 2].z();  // End of bend section
+
+	// Check to see if hit occured in the straight section
+	double L = 0.;
+	if (locProjPos.Z() <= sc_pos_eoss)  // Calculate hit distance along scintillator relative to upstream end
+		L = locProjPos.Z() - sc_pos_soss;
+	else if(locProjPos.Z() > sc_pos_eoss && locProjPos.Z() <= sc_pos_eobs) //check if in bend section: if so, apply corrections
+		L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
+	else // nose section: apply corrections
+		L = (locProjPos.Z() - sc_pos_eoss)*sc_angle_cor + (sc_pos_eoss - sc_pos_soss);
+
+    // ============================
+    // Figure out timing resolution 
+    // This is parameterized by 
+    double time_resolution = 0.;
+    //double sc_local_z = locProjPos.Z() - sc_pos_soss;    // resolutions are stored as a function of the z distance from the upstream end of the SC
+
+	if(L < SC_BOUNDARY1[sc_index]) {
+		time_resolution = SC_SECTION1_P0[sc_index] + SC_SECTION1_P1[sc_index]*L;
+	} else if(L < SC_BOUNDARY2[sc_index]) {
+		time_resolution = SC_SECTION2_P0[sc_index] + SC_SECTION2_P1[sc_index]*L;
+	} else if(L < SC_BOUNDARY3[sc_index]) {
+		time_resolution = SC_SECTION3_P0[sc_index] + SC_SECTION3_P1[sc_index]*L;
+	} else {
+		time_resolution = SC_SECTION4_P0[sc_index] + SC_SECTION4_P1[sc_index]*L;
+	}
         
-  // max sure that we aren't getting some ridiculously large resolution
-  if(time_resolution > SC_MAX_RESOLUTION[sc_index])
-    time_resolution = SC_MAX_RESOLUTION[sc_index];
   
-  // convert ps to ns
-  time_resolution /= 1000.;
+	//SET MATCHING INFORMATION
+	if(locSCHitMatchParams == nullptr)
+	locSCHitMatchParams = std::make_shared<DSCHitMatchParams>();
+	locSCHitMatchParams->dSCHit = locSCHit;
+	locSCHitMatchParams->dHitEnergy = locCorrectedHitEnergy;
+	locSCHitMatchParams->dEdx = locSCHitMatchParams->dHitEnergy/ds;
+	locSCHitMatchParams->dHitTime = locCorrectedHitTime;
+	locSCHitMatchParams->dHitTimeVariance = time_resolution*time_resolution;
+	locSCHitMatchParams->dFlightTime = locFlightTime;
+	locSCHitMatchParams->dFlightTimeVariance = locFlightTimeVariance;
+	locSCHitMatchParams->dPathLength = locPathLength;
+	locSCHitMatchParams->dDeltaPhiToHit = locDeltaPhi;
 
-  
-  //SET MATCHING INFORMATION
-  if(locSCHitMatchParams == nullptr)
-    locSCHitMatchParams = std::make_shared<DSCHitMatchParams>();
-  locSCHitMatchParams->dSCHit = locSCHit;
-  locSCHitMatchParams->dHitEnergy = locCorrectedHitEnergy;
-  locSCHitMatchParams->dEdx = locSCHitMatchParams->dHitEnergy/ds;
-  locSCHitMatchParams->dHitTime = locCorrectedHitTime;
-  locSCHitMatchParams->dHitTimeVariance = time_resolution*time_resolution;
-  locSCHitMatchParams->dFlightTime = locFlightTime;
-  locSCHitMatchParams->dFlightTimeVariance = locFlightTimeVariance;
-  locSCHitMatchParams->dPathLength = locPathLength;
-  locSCHitMatchParams->dDeltaPhiToHit = locDeltaPhi;
-  
-  return true;
+	return true;
 }
 
 
