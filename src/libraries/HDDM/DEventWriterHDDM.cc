@@ -693,28 +693,14 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 			hitv->addDIRCs(); //if we have a hit then add the DIRC
 		}
 
-		bool found = false;
-		hddm_s::DircTruthPmtHitList *truthPmtHits = &hitv->getDIRC().getDircTruthPmtHits();
-		hddm_s::DircTruthPmtHitList::iterator iter;
-		
-		for(iter = truthPmtHits->begin(); iter != truthPmtHits->end(); truthPmtHits++) {
-			if(DIRCPmtHits[i]->ch==iter->getCh()) {
-				found=true;
-				break;
-			}
-		}
-		
-		if(found==false){
-			hitv->getDIRC().addDircTruthPmtHits();
-			iter=truthPmtHits->end()-1;
-			iter->setCh(DIRCPmtHits[i]->ch);
-		}
-		
-		iter->addDircPmtHits();
-		hddm_s::DircPmtHitList* DircPmtHitList = &iter->getDircPmtHits();
-		hddm_s::DircPmtHitList::iterator DircPmtHitIterator = DircPmtHitList->end()-1;
-		DircPmtHitIterator->setT(DIRCPmtHits[i]->t);
-		DircPmtHitIterator->setCh(DIRCPmtHits[i]->ch);
+
+		hddm_s::DircPmtHitList *pmtHits = &hitv->getDIRC().getDircPmtHits();
+                hddm_s::DircPmtHitList::iterator iter;
+
+                hitv->getDIRC().addDircPmtHits();
+                iter=pmtHits->end()-1;
+                iter->setCh(DIRCPmtHits[i]->ch);
+		iter->setT(DIRCPmtHits[i]->t);
 	}
 
 	//*fout << *record; //stream the new record into the file

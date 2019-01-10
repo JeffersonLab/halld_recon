@@ -2776,30 +2776,11 @@ jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
          hit->t  = time;
          hit->ch = channel;
 
-	 // associate truth objects (with more information)
-	 //const hddm_s::DircTruthPmtHitList &truthHits = record->getDircTruthPmtHits();
-	 //hddm_s::DircTruthPmtHitList::iterator iterTruth;
-	 //for (iterTruth = truthHits.begin(); iterTruth != truthHits.end(); ++iterTruth) {
-
 	 for (auto& iterTruth : locDIRCTruthPmtHit) { //.begin(); iterTruth != locDIRCTruthPmtHit.end(); ++iterTruth) {
 		 
 		 // must match channel and time
 		 if(channel == iterTruth->ch && fabs(time-iterTruth->t) < 5.0) {
 			 
-/*
-			 DDIRCTruthPmtHit *truthHit = new DDIRCTruthPmtHit();
-			 truthHit->x  = iterTruth->getX();
-			 truthHit->y = iterTruth->getY();
-			 truthHit->z  = iterTruth->getZ();
-			 truthHit->t = iterTruth->getT();
-			 truthHit->t_fixed = iterTruth->getT_fixed();
-			 truthHit->E  = iterTruth->getE();
-			 truthHit->ch = iterTruth->getCh();
-			 truthHit->key_bar  = iterTruth->getKey_bar();
-			 truthHit->path = iterTruth->getPath();
-			 truthHit->refl  = iterTruth->getRefl();
-			 hit->AddAssociatedObject(truthHit);
-*/
 			 hit->AddAssociatedObject(iterTruth);
 
 			 break;
@@ -2916,6 +2897,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       return OBJECT_NOT_AVAILABLE;
 
    vector<DDIRCTruthPmtHit*> data;
+   
 
    const hddm_s::DircTruthPmtHitList &hits = record->getDircTruthPmtHits();
    hddm_s::DircTruthPmtHitList::iterator iter;
@@ -2925,13 +2907,16 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       hit->y = iter->getY();
       hit->z = iter->getZ();
       hit->t = iter->getT();
-      hit->t_fixed = iter->getT_fixed();
       hit->E = iter->getE();
       hit->ch = iter->getCh();
       hit->key_bar = iter->getKey_bar();
-      hit->path = iter->getPath();
-      hit->refl = iter->getRefl();
-      hit->bbrefl = iter->getBbrefl();
+      hddm_s::DircTruthPmtHitExtraList &hitextras = iter->getDircTruthPmtHitExtras();
+      if(hitextras.size() > 0) {
+      	hit->t_fixed = hitextras(0).getT_fixed();
+      	hit->path = hitextras(0).getPath();
+      	hit->refl = hitextras(0).getRefl();
+      	hit->bbrefl = hitextras(0).getBbrefl();
+      }
       data.push_back(hit);
    }
 
