@@ -237,11 +237,11 @@ class DParticleID:public jana::JObject
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
 
         // Start counter resolution parameters
-        vector<double> SC_MAX_RESOLUTION;
-        vector<double> SC_BOUNDARY1, SC_BOUNDARY2;
+        vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
         vector<double> SC_SECTION1_P0, SC_SECTION1_P1;
         vector<double> SC_SECTION2_P0, SC_SECTION2_P1;
         vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
+        vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
 
 	private:
 
