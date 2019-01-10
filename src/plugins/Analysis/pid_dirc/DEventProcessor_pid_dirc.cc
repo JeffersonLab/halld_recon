@@ -37,10 +37,43 @@ jerror_t DEventProcessor_pid_dirc::init(void) {
 	
   
   fTree = new TTree("dirc", "dirc tree");
-  // fEvent = new TClonesArray("DrcEvent");
-  fEvent = new DrcEvent();
-  fTree->Branch("DrcEvent","DrcEvent",&fEvent,256000,0);
+  fcEvent = new TClonesArray("DrcEvent");
+  // fEvent = new DrcEvent();
+  //fTree->Branch("DrcEvent","DrcEvent",&fEvent,256000,0);
+  fTree->Branch("DrcEvent",&fcEvent,256000,2);
   return NOERROR;
+}
+
+jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
+{
+   // Get the geometry
+   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
+   DGeometry *geom = dapp->GetDGeometry(runnumber);
+
+   // Outer detector geometry parameters
+   vector<double>tof_face;
+   geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z", tof_face);
+   vector<double>tof_plane;  
+   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane);
+   double dTOFz=tof_face[2]+tof_plane[2]; 
+   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
+   dTOFz+=tof_face[2]+tof_plane[2];
+   dTOFz*=0.5;  // mid plane between tof Planes
+   std::cout<<"dTOFz "<<dTOFz<<std::endl;
+
+   double dDIRCz;
+   vector<double>dirc_face;
+   vector<double>dirc_plane;
+   vector<double>dirc_shift;
+   vector<double>bar_plane;
+   geom->Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z", dirc_face);
+   geom->Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", dirc_plane);
+   geom->Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
+   
+   dDIRCz=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
+   std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
+
+   return NOERROR;
 }
 
 jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
@@ -49,8 +82,6 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   vector<const DMCTrackHit*> mctrackhits;
   vector<const DDIRCTruthBarHit*> dircBarHits;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
-  const DDIRCTruthBarHit* relevantBarHit=nullptr;
-  const DMCThrown*  relevantMCThrown=nullptr;
   
   loop->Get(beam_photons);
   loop->Get(mcthrowns);
@@ -116,33 +147,44 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
     }
   }
   
-  std::cout<<"#hits "<< dircPmtHits.size()<<std::endl;
+  //  std::cout<<"#hits "<< dircPmtHits.size()<<std::endl;
 
   japp->RootWriteLock(); //ACQUIRE ROOT LOCK
   
   // loop over mc/reco tracks
+  TClonesArray& cevt = *fcEvent;
+  cevt.Clear();
   for (unsigned int m = 0; m < mcthrowns.size(); m++){
-
-    std::cout<<"initial position: x = "<< mcthrowns[m]->position().X()<<", y = "<< mcthrowns[m]->position().Y()<<", z = "<< mcthrowns[m]->position().Z()<<", track # = "<<mcthrowns[m]->myid <<std::endl;
-
     if(dircPmtHits.size() > 0.){
       fEvent = new DrcEvent();
       DrcHit hit;
+      
       // loop over PMT's hits
       for (unsigned int h = 0; h < dircPmtHits.size(); h++){
+	int relevant(0);
 	// identify bar id
 	for (unsigned int j = 0; j < dircBarHits.size(); j++){
-	  //cout<<"Bar Hit position: x = "<<dircBarHits[j]->x<<", y = "<<dircBarHits[j]->y<<", z = "<<dircBarHits[j]->z<<endl;
-	  if(j == fabs(dircPmtHits[h]->key_bar)){
-	    relevantBarHit = dircBarHits[j];
-	    for(unsigned int t = 0; t < mcthrowns.size(); t++){
-	      if(mcthrowns[t]->myid == relevantBarHit->track){
-		relevantMCThrown = mcthrowns[t];
-	      }
-	    }// for t
-	  }// if j == key_bar
-	}// for j
+		//if(j != fabs(dircPmtHits[h]->key_bar)) continue;
+	  if(mcthrowns[m]->myid == dircBarHits[j]->track){
+	    // double px = mcthrowns[m]->momentum().X();
+	    // double py = mcthrowns[m]->momentum().Y();
+	    // double pz = mcthrowns[m]->momentum().Z();
+	    
+	    double px = dircBarHits[j]->px;
+	    double py = dircBarHits[j]->py;
+	    double pz = dircBarHits[j]->pz;
+
+	    fEvent->SetMomentum(TVector3(px,py,pz));
+	    fEvent->SetPdg(mcthrowns[m]->pdgtype);
+	    fEvent->SetTime(dircBarHits[j]->t);
+	    fEvent->SetParent(mcthrowns[m]->parentid);
+	    fEvent->SetId(dircBarHits[j]->bar);// bar id where the particle hit the detector
+	    fEvent->SetPosition(TVector3(dircBarHits[j]->x, dircBarHits[j]->y, dircBarHits[j]->z)); // position where the charged particle hit the radiator
+	    relevant++;
+	  }
+	}	
 	
+	if(relevant<1) continue;
 	int ch=dircPmtHits[h]->ch;
 	int pmt=ch/64;
 	int pix=ch%64;
@@ -151,34 +193,18 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
 	hit.SetPmtId(pmt);
 	hit.SetPixelId(pix);
 	hit.SetPosition(TVector3(dircPmtHits[h]->x,dircPmtHits[h]->y,dircPmtHits[h]->z));
-	hit.SetMomentum(TVector3(0,0,0));
+	hit.SetEnergy(dircPmtHits[h]->E);
 	hit.SetLeadTime(dircPmtHits[h]->t);
+	hit.SetPathId(dircPmtHits[h]->path);
+	hit.SetNreflections(dircPmtHits[h]->refl);
 	fEvent->AddHit(hit);
-      }// for h
-        
-      if(relevantMCThrown){
-	fEvent->SetMomentum(TVector3(relevantMCThrown->momentum().X(), relevantMCThrown->momentum().Y(), relevantMCThrown->momentum().Z()));
-	fEvent->SetPdg(relevantMCThrown->pdgtype);
-	std::cout<<"pdg = "<<relevantMCThrown->pdgtype<<", momentum = "<<relevantMCThrown->momentum().Mag()<<", px = "<<relevantMCThrown->momentum().X()<<", py = "<<relevantMCThrown->momentum().Y()<<", pz = "<<relevantMCThrown->momentum().Z()<<std::endl;
-      }else{
-	fEvent->SetMomentum(TVector3(999.,999.,999.));
-	fEvent->SetPdg(99999.);
       }
-      if(relevantBarHit){
-	fEvent->SetId(relevantBarHit->bar);// bar id where the particle hit the detector
-	cout<<"bar id = "<<relevantBarHit->bar<<endl;
-      }else{
-	fEvent->SetId(-2);
-      }
-      fTree->Fill();
       
-      //    fEvent->Clear();
-      //TClonesArray& cevt = *fEvent;
-      //Int_t size = cevt.GetEntriesFast();
-      //new (cevt[size]) DrcEvent(evt);
+      if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);      
     }
-  }    
-
+  }
+  
+  if(cevt.GetEntriesFast()>0) fTree->Fill();
   japp->RootUnLock(); //RELEASE ROOT LOCK
       
   return NOERROR;

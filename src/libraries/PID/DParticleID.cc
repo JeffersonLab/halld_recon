@@ -301,6 +301,9 @@ DParticleID::DParticleID(JEventLoop *loop)
 	loop->Get(locTOFPoints);
 
 	dTOFPointFactory = static_cast<DTOFPoint_factory*>(loop->GetFactory("DTOFPoint"));
+	
+	// Initialize DIRC LUT
+	loop->GetSingle(dDIRCLut);
 }
 
 // Group fitted tracks according to candidate id
@@ -1769,6 +1772,26 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
 }
 
 
+bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+{
+	if (extrapolations.size()==0) 
+		return false;
+
+	DVector3 locProjPos = extrapolations[0].position;
+	DVector3 locProjMom = extrapolations[0].momentum;
+	double locFlightTime = locInputStartTime + extrapolations[0].t;
+	
+	if(locOutputProjMom != nullptr) {
+		*locOutputProjPos = locProjPos;
+		*locOutputProjMom = locProjMom;
+	}
+
+	// Calculate DIRC LUT
+	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locPID, locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams);
+
+}
+
+
 /********************************************************** GET BEST MATCH **********************************************************/
 
 bool DParticleID::Get_BestBCALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DBCALShowerMatchParams>& locBestMatchParams) const
@@ -1881,6 +1904,17 @@ shared_ptr<const DFCALShowerMatchParams> DParticleID::Get_BestFCALMatchParams(ve
 		locBestMatchParams = locShowerMatchParams[loc_i];
 	}
 	return locBestMatchParams;
+}
+
+bool DParticleID::Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const
+{
+	//choose the "best" shower to use for computing quantities
+	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+	if(!locDetectorMatches->Get_DIRCMatchParams(locTrack, locDIRCMatchParams))
+		return false;
+
+	locBestMatchParams = locDIRCMatchParams;
+	return true;
 }
 
 /********************************************************** GET CLOSEST TO TRACK **********************************************************/
@@ -3537,4 +3571,8 @@ double DParticleID::Get_CorrectedHitTime(const DSCHit* locSCHit,
       locCorrectedHitTime -= L*sc_pt_slope[SC_NOSE][sc_index] + sc_pt_yint[SC_NOSE][sc_index];
     }
   return locCorrectedHitTime;
+}
+
+const DDIRCLut* DParticleID::Get_DIRCLut() const {
+	return dDIRCLut;
 }

@@ -35,6 +35,7 @@ using namespace jana;
 #include <TAGGER/DTAGMDigiHit.h>
 #include <TAGGER/DTAGMTDCDigiHit.h>
 #include <TRIGGER/DL1Trigger.h>
+#include <DIRC/DDIRCTDCDigiHit.h>
 
 // Script-fu for handling digihit type enmasse
 #define DigiHitTypes(X) \
@@ -57,7 +58,8 @@ using namespace jana;
 	X(DTAGMTDCDigiHit) \
 	X(DTAGHDigiHit) \
 	X(DTAGHTDCDigiHit) \
-	X(DTPOLSectorDigiHit)
+	X(DTPOLSectorDigiHit)\
+	X(DDIRCTDCDigiHit) \
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -237,6 +239,11 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	tof_adc_U_occ = new TH1I("tof_adc_U_occ","TOF, fADC Occupancy",86,1,44);
 	tof_adc_D_occ = new TH1I("tof_adc_D_occ","TOF, fADC Occupancy",86,1,44);
 
+	//------------------------ DIRC ------------------------
+	dirc_num_events = new TH1I("dirc_num_events", "DIRC number of events", 1, 0.0, 1.0);
+	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+
 	//------------------------ DigiHits ------------------------
 	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size());
 	DigiHitTypes(FillDigiHitMap) // Initialize digihitbinmap with values from DigiHitTypes
@@ -282,6 +289,9 @@ jerror_t JEventProcessor_occupancy_online::brun(JEventLoop *eventLoop, int32_t r
 {
   // This is called whenever the run number changes
 
+  vector<const DDIRCGeometry*> locDIRCGeometry;
+  eventLoop->Get(locDIRCGeometry);
+  dDIRCGeometry = locDIRCGeometry[0];
 
   return NOERROR;
 }
@@ -468,6 +478,19 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		if( plane==0 && end==1 ) tof_tdc_D_occ->Fill(bar);
 		if( plane==1 && end==0 ) tof_tdc_N_occ->Fill(bar);
 		if( plane==1 && end==1 ) tof_tdc_S_occ->Fill(bar);
+	}
+
+	//------------------------ DIRC ------------------------
+	dirc_num_events->Fill(0.5);
+	for(uint32_t i=0; i<vDDIRCTDCDigiHit.size(); i++){
+
+		const DDIRCTDCDigiHit *hit = vDDIRCTDCDigiHit[i];
+		int ch = hit->channel;
+
+		if(ch >= 108*64) 
+			dirc_tdc_pixel_N_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		else 
+			dirc_tdc_pixel_S_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
 	}
 
 	//------------------------ DigiHits ------------------------

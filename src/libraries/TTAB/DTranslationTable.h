@@ -41,6 +41,7 @@ using namespace jana;
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DF1TDCTriggerTime.h>
 #include <DAQ/DCAEN1290TDCHit.h>
+#include <DAQ/DDIRCTDCHit.h>
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -66,6 +67,7 @@ using namespace jana;
 #include <TPOL/DTPOLSectorDigiHit.h>
 #include <TAC/DTACDigiHit.h>
 #include <TAC/DTACTDCDigiHit.h>
+#include <DIRC/DDIRCTDCDigiHit.h>
 
 // (See comments in DParsedEvent.h for enlightenment)
 #define MyTypes(X) \
@@ -92,7 +94,8 @@ using namespace jana;
 		X(DPSCTDCDigiHit) \
 		X(DTPOLSectorDigiHit) \
 		X(DTACDigiHit) \
-		X(DTACTDCDigiHit)
+		X(DTACTDCDigiHit) \
+		X(DDIRCTDCDigiHit)
 
 #define MyfADCTypes(X) \
 		X(DBCALDigiHit) \
@@ -153,6 +156,7 @@ class DTranslationTable:public jana::JObject{
 			TAC,
 			CCAL,
 			CCAL_REF,
+			DIRC,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -174,6 +178,7 @@ class DTranslationTable:public jana::JObject{
 				case TOF: return "TOF";
 				case TPOLSECTOR: return "TPOL"; // is set to TPOL to match what is in CCDB, fix later
 				case TAC: return "TAC";
+				case DIRC: return "DIRC";
 				case UNKNOWN_DETECTOR:
 				default:
 					return "UNKNOWN";
@@ -341,6 +346,15 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 
+		class DIRCIndex_t {
+		        public:
+			uint32_t pixel;
+
+			inline bool operator==( const DIRCIndex_t& rhs ) const {
+				return (pixel==rhs.pixel);
+			}
+		};
+
 		// DChannelInfo holds translation between indexing schemes
 		// for one channel.
 		class DChannelInfo{
@@ -365,6 +379,7 @@ class DTranslationTable:public jana::JObject{
 					TACIndex_t tac;
 					CCALIndex_t ccal;
 					CCALRefIndex_t ccal_ref;
+					DIRCIndex_t dirc;
 				};
 		};
 
@@ -496,6 +511,7 @@ class DTranslationTable:public jana::JObject{
 		DRFTDCDigiTime*  MakeRFTDCDigiTime(const RFIndex_t &idx,         const DCAEN1290TDCHit *hit) const;
 		DTACTDCDigiHit*  MakeTACTDCDigiHit( const TACIndex_t &idx,       const DCAEN1290TDCHit *hit) const;
 
+		DDIRCTDCDigiHit*  MakeDIRCTDCDigiHit( const DIRCIndex_t &idx,       const DDIRCTDCHit *hit) const;
 
 		void Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const;
 		void Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const;
@@ -514,6 +530,7 @@ class DTranslationTable:public jana::JObject{
 		template<class T> void CopyDf125Info(T *h, const Df125PulseIntegral *pi, const Df125PulseTime *pt, const Df125PulsePedestal *pp) const;
 		template<class T> void CopyDF1TDCInfo(T *h, const DF1TDCHit *hit) const;
 		template<class T> void CopyDCAEN1290TDCInfo(T *h, const DCAEN1290TDCHit *hit) const;
+		template<class T> void CopyDIRCTDCInfo(T *h, const DDIRCTDCHit *hit) const;
 
 		
 		// methods for others to search the Translation Table
@@ -681,6 +698,19 @@ void DTranslationTable::CopyDCAEN1290TDCInfo(T *h, const DCAEN1290TDCHit *hit) c
 {
 	/// Copy info from the CAEN1290 into a hit object.
 	h->time = hit->time;
+	
+	h->AddAssociatedObject(hit);
+}
+
+//---------------------------------
+// CopyDIRCTDCInfo
+//---------------------------------
+template<class T>
+void DTranslationTable::CopyDIRCTDCInfo(T *h, const DDIRCTDCHit *hit) const
+{
+	/// Copy info from the DIRCTDC into a hit object.
+	h->time = hit->time;
+	h->edge = hit->edge;
 	
 	h->AddAssociatedObject(hit);
 }
