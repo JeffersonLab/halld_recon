@@ -8,6 +8,8 @@
 
 #include <JANA/JFactory.h>
 #include <JANA/JObject.h>
+#include <JANA/JCalibration.h>
+
 using namespace jana;
 
 class DDIRCGeometry : public JObject {
