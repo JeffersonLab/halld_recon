@@ -27,6 +27,10 @@ DDIRCGeometry::Initialize(int runnumber) {
 	//Get pointer to DGeometry object
 	DApplication* dapp=dynamic_cast<DApplication*>(japp);
 	JGeometry *jgeom  = dapp->GetJGeometry(runnumber);	
+	JCalibration *jcalib = japp->GetJCalibration(runnumber);
+	map<string,string> installed;
+        if(jcalib->GetCalib("/DIRC/install_status", installed)) return;
+	if(atoi(installed["status"].data()) == 0) return;
 
 	vector<double>DIRC;
 	vector<double>DRCC;

@@ -28,7 +28,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	jcalib = japp->GetJCalibration(run_number);
 	if(jcalib->GetCalib("/DIRC/LUT/lut_map", lut_map_name)) 
 		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << endl;
-	else if(lut_map_name.find("map_name") != lut_map_name.end()) {
+	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None") {
 		jresman = japp->GetJResourceManager(run_number);
 		lut_file = jresman->GetLocalPathToResource(lut_map_name["map_name"]);
 	}
