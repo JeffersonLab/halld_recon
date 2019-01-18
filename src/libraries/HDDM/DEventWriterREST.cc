@@ -40,6 +40,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	else
 		gPARMS->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
 
+	REST_WRITE_DIRC_HITS = false;
+	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
+
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
     DApplication *dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
@@ -84,6 +87,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 	std::vector<const DDetectorMatches*> locDetectorMatches;
 	locEventLoop->Get(locDetectorMatches);
+
+	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
+	locEventLoop->Get(locDIRCPmtHits);
 
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
@@ -319,6 +325,17 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		hit().setDE(starthits[i]->dE);
 	}
 
+	if(REST_WRITE_DIRC_HITS) {
+		// push any DDIRCPmtHit objects to the output record
+		for (size_t i=0; i < locDIRCPmtHits.size(); i++)
+		{
+			hddm_r::DircHitList hit = res().addDircHits(1);
+			hit().setCh(locDIRCPmtHits[i]->ch);
+			hit().setT(locDIRCPmtHits[i]->t);
+			hit().setTot(locDIRCPmtHits[i]->tot);
+		}
+	}
+
 	// push any DTrackTimeBased objects to the output record
 	for (size_t i=0; i < tracks.size(); ++i)
 	{
@@ -510,6 +527,48 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				scList().setTflightvar(locSCHitMatchParamsVector[loc_k]->dFlightTimeVariance);
 				scList().setThit(locSCHitMatchParamsVector[loc_k]->dHitTime);
 				scList().setThitvar(locSCHitMatchParamsVector[loc_k]->dHitTimeVariance);
+			}
+
+			
+			shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+			map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+			DDetectorMatches *locDetectorMatch = (DDetectorMatches*)locDetectorMatches[loc_i];
+                        locDetectorMatch->Get_DIRCMatchParams(tracks[loc_j], locDIRCMatchParams);
+			locDetectorMatch->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+
+			if(locDIRCMatchParams) {
+				hddm_r::DircMatchParamsList dircList = matches().addDircMatchParamses(1);
+        	                dircList().setTrack(loc_j);
+
+				vector<const DDIRCPmtHit*> locDIRCHitTrackMatch = (vector<const DDIRCPmtHit*>)locDIRCTrackMatchParamsMap[locDIRCMatchParams];
+				for(size_t loc_k = 0; loc_k < locDIRCPmtHits.size(); ++loc_k) {
+					const DDIRCPmtHit* locDIRCPmtHit = (DDIRCPmtHit*)locDIRCPmtHits[loc_k];
+					if(find(locDIRCHitTrackMatch.begin(), locDIRCHitTrackMatch.end(), locDIRCPmtHit) != locDIRCHitTrackMatch.end()) {
+						hddm_r::DircMatchHitList dircHitList = matches().addDircMatchHits(1);
+						dircHitList().setTrack(loc_j);
+						dircHitList().setHit(loc_k);
+					}
+				}
+
+				vector<DTrackFitter::Extrapolation_t> extrapolations=tracks[loc_j]->extrapolations.at(SYS_DIRC);
+				DVector3 locProjPos = locDIRCMatchParams->dExtrapolatedPos;
+				DVector3 locProjMom = locDIRCMatchParams->dExtrapolatedMom;
+				double locFlightTime = locDIRCMatchParams->dExtrapolatedTime;
+				dircList().setX(locProjPos.X());
+				dircList().setY(locProjPos.Y());
+				dircList().setZ(locProjPos.Z());
+				dircList().setT(locFlightTime);
+				dircList().setPx(locProjMom.X());
+				dircList().setPy(locProjMom.Y());
+				dircList().setPz(locProjMom.Z());
+				dircList().setExpectthetac(locDIRCMatchParams->dExpectedThetaC);
+				dircList().setThetac(locDIRCMatchParams->dThetaC);
+				dircList().setDeltat(locDIRCMatchParams->dDeltaT);
+				dircList().setLele(locDIRCMatchParams->dLikelihoodElectron);
+				dircList().setLpi(locDIRCMatchParams->dLikelihoodPion);
+				dircList().setLk(locDIRCMatchParams->dLikelihoodKaon);
+				dircList().setLp(locDIRCMatchParams->dLikelihoodProton);
+				dircList().setNphotons(locDIRCMatchParams->dNPhotons);
 			}
 
 			double locFlightTimePCorrelation = 0.0;

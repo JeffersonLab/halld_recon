@@ -24,7 +24,7 @@
 //
 // Example:
 //
-// Bcal_hadronic_eff>root -l tree_bcal_hadronic_eff_010492_apr4.root
+// Bcal_hadronic_eff>root -l tree_hadronic_eff_010492_apr4.root
 // root [1] bcal_hadronic_eff->Process("Read_bcal_hadronic_eff2.C","010492_apr4 1")    Note: TString option = "010492_apr4 1", encodes "filerun layer". Note filerun should be consistent with input file name.
 //
 // Note: script depends on the following parameters, set at the start of the script
@@ -1094,6 +1094,8 @@ void Read_bcal_hadronic_eff2::Terminate()
     h1_eff_z_down->Write();
     h1_eff_Evis_up->Write();
     h1_eff_Evis_down->Write();
+    h1_diff_up->Write();
+    h1_diff_down->Write();
     outhist->Close();
 
     // open file for output

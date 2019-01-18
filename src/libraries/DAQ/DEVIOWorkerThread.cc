@@ -250,6 +250,7 @@ void DEVIOWorkerThread::MakeEvents(void)
 	
 	// Set indexes for the parsed event objects
 	// and flag them as being in use.
+	if( VERBOSE>3 ) cout << "  Creating " << current_parsed_events.size() << " parsed events ..." << endl;
 	for(auto pe : current_parsed_events){
 	
 		pe->Clear(); // return previous event's objects to pools and clear vectors
@@ -2107,6 +2108,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	uint32_t itrigger   = 0xFFFFFFFF;
 	uint32_t dev_id     = 0xFFFFFFFF;
 	uint32_t ievent_cnt = 0xFFFFFFFF;
+	uint32_t last_itrigger = itrigger;
 	for( ;  iptr<iend; iptr++){
 		if(((*iptr>>31) & 0x1) == 0)continue;
 
@@ -2124,9 +2126,10 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				if(VERBOSE>7) cout << "     SSP/DIRC Block Trailer" << endl;
 				break;
 			case 2:  // Event Header
-				pe = *pe_iter++;
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
+				if(itrigger != last_itrigger) pe = *pe_iter++;
+				last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
