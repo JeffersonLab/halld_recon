@@ -30,7 +30,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << endl;
 	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None") {
 		jresman = japp->GetJResourceManager(run_number);
-		lut_file = jresman->GetLocalPathToResource(lut_map_name["map_name"]);
+		lut_file = jresman->GetResource(lut_map_name["map_name"]);
 	}
 	
 	// only create reader if have tree from CCDB or command-line parameter is set
@@ -39,7 +39,15 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		
 		auto saveDir = gDirectory;
 		TFile *fLut = new TFile(lut_file.c_str());
+		if( !fLut->IsOpen() ){
+			jerr << "Unable to open " << lut_file << "!!" << endl;
+			_exit(-1);
+		}
 		TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
+		if( tLut == NULL ){
+			jerr << "Unable find TTree lut_dirc_flat in " << lut_file << "!!" << endl;
+			_exit(-1);
+		}
 		
 		vector<Float_t> *LutPixelAngleX[luts];
 		vector<Float_t> *LutPixelAngleY[luts];
