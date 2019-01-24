@@ -452,39 +452,40 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     double fcalHitETot = 0;
     double fcalHitEwtT = 0;
     for (i = 0; i < fcalHitVector.size(); i++){
-      fcalHitETot += fcalHitVector[i]->E;
-      fcalHitEwtT += fcalHitVector[i]->E * fcalHitVector[i]->t;
+        fcalHitETot += fcalHitVector[i]->E;
+        fcalHitEwtT += fcalHitVector[i]->E * fcalHitVector[i]->t;
     }
     fcalHitEwtT /= fcalHitETot;
-
-    for (i = 0; i < fcalHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCALHit time", fcalHitVector[i]->t,
-                "FCALHit time;t [ns];", nBins, xMin, xMax);
-
+    
 	// extract the FCAL Geometry
 	vector<const DFCALGeometry*> fcalGeomVect;
 	loop->Get( fcalGeomVect );
 	if (fcalGeomVect.size() < 1){
-	  cout << "FCAL Geometry not available?" << endl;
-	  return OBJECT_NOT_AVAILABLE;
+        cout << "FCAL Geometry not available?" << endl;
+        return OBJECT_NOT_AVAILABLE;
 	}
 	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
-	Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Occupancy",
-			fcalHitVector[i]->row, fcalHitVector[i]->column, 
-			"FCAL Hit Occupancy; column; row",
-			61, -1.5, 59.5, 61, -1.5, 59.5);
-	double locTime = ( fcalHitVector[i]->t - fcalHitEwtT )*k_to_nsec;
-	//Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
-	Fill2DWeightedHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
-				fcalHitVector[i]->row, fcalHitVector[i]->column, locTime,
-				"FCAL Hit Local Time [ns]; column; row",
-				61, -1.5, 59.5, 61, -1.5, 59.5);
 
+    for (i = 0; i < fcalHitVector.size(); i++){
+        Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCALHit time", fcalHitVector[i]->t,
+                         "FCALHit time;t [ns];", nBins, xMin, xMax);
+        
+        Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Occupancy",
+                        fcalHitVector[i]->row, fcalHitVector[i]->column, 
+                        "FCAL Hit Occupancy; column; row",
+                        61, -1.5, 59.5, 61, -1.5, 59.5);
+        double locTime = ( fcalHitVector[i]->t - fcalHitEwtT )*k_to_nsec;
+        //Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
+        Fill2DWeightedHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
+                                fcalHitVector[i]->row, fcalHitVector[i]->column, locTime,
+                                "FCAL Hit Local Time [ns]; column; row",
+                                61, -1.5, 59.5, 61, -1.5, 59.5);
+        
         if (DO_OPTIONAL){
             Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Per Channel Time",
-                    fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t,
-                    "FCAL Per Channel Hit time; channel; t [ns]",
-                    fcalGeom.numActiveBlocks(), 0.5, fcalGeom.numActiveBlocks() + 0.5, 250, -50, 50); 
+                            fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t,
+                            "FCAL Per Channel Hit time; channel; t [ns]",
+                            fcalGeom.numActiveBlocks(), 0.5, fcalGeom.numActiveBlocks() + 0.5, 250, -50, 50); 
         }
     }
 
@@ -495,32 +496,34 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
       ccalHitETot += ccalHitVector[i]->E;
       ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
     }
-    fcalHitEwtT /= fcalHitETot;
-
-    for (i = 0; i < fcalHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
-                "CCALHit time;t [ns];", nBins, xMin, xMax);
-
+    ccalHitEwtT /= ccalHitETot;
+    
 	// extract the CCAL Geometry
 	vector<const DCCALGeometry*> ccalGeomVect;
 	loop->Get( ccalGeomVect );
 	if (ccalGeomVect.size() < 1){
 	  cout << "CCAL Geometry not available?" << endl;
 	} else {
-		const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
-		Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
-				ccalHitVector[i]->row, ccalHitVector[i]->column, 
-				"CCAL Hit Occupancy; column; row",
-				61, -1.5, 59.5, 61, -1.5, 59.5);
-		double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
-		//Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-		Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-					ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
-					"CCAL Hit Local Time [ns]; column; row",
-					61, -1.5, 59.5, 61, -1.5, 59.5);
-		}
-	}
-
+        for (i = 0; i < ccalHitVector.size(); i++){
+            Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
+                             "CCALHit time;t [ns];", nBins, xMin, xMax);
+            
+            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+            for (i = 0; i < ccalHitVector.size(); i++) {
+                Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
+                                ccalHitVector[i]->row, ccalHitVector[i]->column, 
+                                "CCAL Hit Occupancy; column; row",
+                                61, -1.5, 59.5, 61, -1.5, 59.5);
+                double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
+                //Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+                Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+                                        ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
+                                        "CCAL Hit Local Time [ns]; column; row",
+                                        61, -1.5, 59.5, 61, -1.5, 59.5);
+            }
+        }
+    }
+    
     for (i = 0; i < tagmHitVector.size(); i++){
         Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit time", tagmHitVector[i]->t,
                 "TAGMHit time;t [ns];", nBins, xMin, xMax);
@@ -688,36 +691,35 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         int nPSCCounters = 16;
         const DPSCHit *thisPSCHit = pscHitVector[i];
         if (thisPSCHit->has_fADC && !thisPSCHit->has_TDC){
-	  Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->t,
-			   "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
-	  // Manual loop over hits to match out of time
-	  for (auto hit = pscHitVector.begin(); hit != pscHitVector.end(); hit++){
-	    if ((*hit)->has_TDC && !(*hit)->has_fADC){
-	      if ( (pscHitVector[i]->arm == (*hit)->arm) && (pscHitVector[i]->module == (*hit)->module) ) {
-		Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
-				pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, (*hit)->time_tdc - pscHitVector[i]->time_fadc,
-				"PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-	      }
-	    }
-	  }
+            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->t,
+                             "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
+            // Manual loop over hits to match out of time
+            for (auto hit = pscHitVector.begin(); hit != pscHitVector.end(); hit++){
+                if ((*hit)->has_TDC && !(*hit)->has_fADC){
+                    if ( (pscHitVector[i]->arm == (*hit)->arm) && (pscHitVector[i]->module == (*hit)->module) ) {
+                        Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
+                                        pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, (*hit)->time_tdc - pscHitVector[i]->time_fadc,
+                                        "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+                    }
+                }
+            }
         }
         else if (!thisPSCHit->has_fADC && thisPSCHit->has_TDC){
-	  Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->t,
-			   "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
+            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->t,
+                             "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
         }
         else{
             Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit Matched time", pscHitVector[i]->t,
-			     "PSCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
+                             "PSCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
             Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->time_fadc,
-			     "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
+                             "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
             Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->time_tdc,
-			     "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
-
+                             "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
+            
             Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
-			    pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc,
-			    "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+                            pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc,
+                            "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
         }
-
     }
 
     // Next the relative times between detectors using tracking
@@ -858,7 +860,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 	    }
 	    
     } // End of loop over neutral showers
-
+    
     // we went this far just to align the tagger with the RF time, nothing else to do without tracks
     if(NO_TRACKS) 
 	    return NOERROR;
@@ -1074,7 +1076,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 												locChannel-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, locDeltaT,
 												"DIRCHit South Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns] ",
 												DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
-												(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
+                                                (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
 							}
 						}
 					}
@@ -1161,13 +1163,14 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                       NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
 
                 Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch 1D Time p2pi",
-                      taghHitVector[j]->t - thisRFBunch->dTime,
-                      "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
-                      160, -20, 20);
+                                taghHitVector[j]->t - thisRFBunch->dTime,
+                                "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
+                                160, -20, 20);
              }
           }
        }
     }
+    
     return NOERROR;
 }
 
