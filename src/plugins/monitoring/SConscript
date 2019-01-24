@@ -50,7 +50,8 @@ subdirs = [
 'SC_Eff','TOF_Eff',
 'TS_scaler',
 'TrackingPulls',
-'timing_online'
+'timing_online',
+'DIRC_online'
 ]
 
 #'L3_online',

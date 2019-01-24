@@ -94,6 +94,13 @@ class HDEVIO{
 			uint32_t first_event_hi; // n.b. contradicts documentation!
 			uint32_t first_event_lo;
 		}PHYSICSHEADER_t;
+
+		typedef struct{
+			uint32_t roc1_bank_len;
+			uint32_t roc1_bank_header;
+			uint32_t roc1_trigger_bank_segment_header;
+			uint32_t first_event; // 32bit only in CDAQ
+		}CDAQPHYSICSHEADER_t;
 		
 		typedef struct{
 			// Standard EVIO 8 word block header
@@ -115,6 +122,7 @@ class HDEVIO{
 				EPICSHEADER_t    epics;
 				BORHEADER_t      bor;
 				PHYSICSHEADER_t  physics;
+				CDAQPHYSICSHEADER_t cdaqphysics;
 			};
 		}BLOCKHEADER_t;
 
@@ -128,6 +136,7 @@ class HDEVIO{
 				EPICSHEADER_t    epics;
 				BORHEADER_t      bor;
 				PHYSICSHEADER_t  physics;
+				CDAQPHYSICSHEADER_t cdaqphysics;
 			};
 		}EVENTHEADER_t;
 

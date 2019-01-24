@@ -17,6 +17,9 @@ using namespace jana;
 jerror_t DEventRFBunch_factory::init(void)
 {
 	dMinTrackingFOM = 0.0;
+	OVERRIDE_TAG = "";
+	
+	gPARMS->SetDefaultParameter("EVENTRFBUNCH:USE_TAG", OVERRIDE_TAG, "Use a particular tag for the general RF bunch calculation instead of the default calculation.");
 	return NOERROR;
 }
 
@@ -48,6 +51,21 @@ jerror_t DEventRFBunch_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 {
 	//There should ALWAYS be one and only one DEventRFBunch created.
 		//If there is not enough information, time is set to NaN
+
+	if(OVERRIDE_TAG != "") {
+		vector<const DEventRFBunch *> rfBunchVec;
+		locEventLoop->Get(rfBunchVec, OVERRIDE_TAG.c_str());
+		
+		if(rfBunchVec.size() > 0) {
+			DEventRFBunch *rfBunchCopy = new DEventRFBunch(*rfBunchVec[0]);
+			_data.push_back(rfBunchCopy);
+			return NOERROR;
+		} else {
+			jerr << "Could not find DEventRFBunch objects with tag " << OVERRIDE_TAG
+				 << ", falling back to default calculation ..." << endl;
+		}
+	}
+
 
 	//Select Good Tracks
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
