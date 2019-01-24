@@ -25,6 +25,8 @@ using namespace jana;
 #include "PAIR_SPECTROMETER/DPSCHit.h"
 #include "PAIR_SPECTROMETER/DPSHit.h"
 #include "CCAL/DCCALHit.h"
+#include "DIRC/DDIRCPmtHit.h"
+#include "DIRC/DDIRCPmtHit_factory.h"
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -116,6 +118,8 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     BEAM_CURRENT = 50; // Assume that there is beam until first EPICs event. Set from EPICS evio data, can override on command line
 
     fBeamEventCounter = 0;
+    dMaxDIRCChannels = 108*64;
+
     REQUIRE_BEAM = 0;
     BEAM_EVENTS_TO_KEEP = 1000000000; // Set enormously high
     DO_ROUGH_TIMING = 0;
@@ -210,6 +214,13 @@ jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t r
     vector<const DRFTime*> locRFTimes;
     eventLoop->Get(locRFTimes);
 
+    vector<const DDIRCGeometry*> locDIRCGeometry;
+    eventLoop->Get(locDIRCGeometry);
+    dDIRCGeometry = locDIRCGeometry[0];
+
+    // Initialize DIRC LUT
+    eventLoop->GetSingle(dDIRCLut);
+
     return NOERROR;
 }
 
@@ -271,6 +282,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DTOFHit *> tofHitVector;
     vector<const DFCALHit *> fcalHitVector;
     vector<const DCCALHit *> ccalHitVector;
+    vector<const DDIRCPmtHit *> dircPmtHitVector;
     vector<const DTAGMHit *> tagmHitVector;
     vector<const DTAGHHit *> taghHitVector;
     vector<const DPSHit *> psHitVector;
@@ -283,6 +295,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(tofHitVector);
     loop->Get(fcalHitVector);
     loop->Get(ccalHitVector);
+    loop->Get(dircPmtHitVector);
     loop->Get(psHitVector);
     loop->Get(pscHitVector);
     loop->Get(tagmHitVector, "Calib");
@@ -333,6 +346,26 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit time", scHitVector[i]->t,
                 "SCHit time;t [ns];", nBins, xMin, xMax);
     }
+
+    for (i = 0; i < dircPmtHitVector.size(); i++){
+        Fill1DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit time", dircPmtHitVector[i]->t,
+                "DIRCHit time;t [ns];", nBins, xMin, xMax);
+                
+        if(dircPmtHitVector[i]->ch < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
+            Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit North Per Channel TDC Hit Time",
+                            dircPmtHitVector[i]->ch, dircPmtHitVector[i]->t,
+                            "DIRCHit North Per Channel TDC Hit Time; channel ID; t_{TDC} [ns] ",
+                            DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+                            (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
+        } else {
+            Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit South Per Channel TDC Hit Time",
+                            dircPmtHitVector[i]->ch-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, dircPmtHitVector[i]->t,
+                            "DIRCHit South Per Channel TDC Hit Time; channel ID; t_{TDC} [ns] ",
+                            DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+                            (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
+        }
+    }
+    
     for (i = 0; i < bcalUnifiedHitVector.size(); i++){
         int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
         // There is one less layer of TDCs so the numbering relects this
@@ -846,7 +879,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
         if (pionHypothesis == NULL) continue;
 
-	auto locTrackTimeBased = pionHypothesis->Get_TrackTimeBased();
+		auto locTrackTimeBased = pionHypothesis->Get_TrackTimeBased();
         double trackingFOM = TMath::Prob(locTrackTimeBased->chisq, locTrackTimeBased->Ndof);
         // Some quality cuts for the tracks we will use
         // Keep this minimal for now and investigate later
@@ -879,44 +912,44 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         sprintf(name, "Sector %.2i", locSCHitMatchParams->dSCHit->sector);
         sprintf(title, "SC Sector %i t_{Target} - t_{RF}; t_{Target} - t_{RF} [ns]; Entries", locSCHitMatchParams->dSCHit->sector);
         double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
-	double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
+		double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
         Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare_all", name,
 			flightTimeCorrectedSCTime - locShiftedTime,
 			title,
 			NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-	Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time (all)",
+		Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time (all)",
 			flightTimeCorrectedSCTime - thisRFBunch->dTime,
 			"t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries",
 			NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 
-	// Stay away from the nose section, since the propagation time corrections are not stable there.
-	// cut corresponds to ~50 cm path length through the SC - not too far into the nose section
-	// but enough to get some statistics
+		// Stay away from the nose section, since the propagation time corrections are not stable there.
+		// cut corresponds to ~50 cm path length through the SC - not too far into the nose section
+		// but enough to get some statistics
 	
-	// need to get the projected hit position at the SC in order to cut on it
-	DVector3 IntersectionPoint, IntersectionMomentum;	
-	vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
-	shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-	bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-							   true, &IntersectionPoint, &IntersectionMomentum);
-	double locSCzIntersection = IntersectionPoint.z();
-	if( locSCzIntersection < 83. ) {
-		Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
-				flightTimeCorrectedSCTime - locShiftedTime,
-				title,
-				NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-		Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time",
-				flightTimeCorrectedSCTime - thisRFBunch->dTime,
-				"t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries",
-				NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		Fill2DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time vs. Sector",
-				locSCHitMatchParams->dSCHit->sector, locSCDeltaT,
-				"t_{SC} - t_{RF} at Target; Sector; t_{SC} - t_{RF} at Target [ns];",
-				30, 0.5, 30.5, 800, -20., 20.);
-	}
+		// need to get the projected hit position at the SC in order to cut on it
+		DVector3 IntersectionPoint, IntersectionMomentum;	
+		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
+		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
+		bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+								   true, &IntersectionPoint, &IntersectionMomentum);
+		double locSCzIntersection = IntersectionPoint.z();
+		if( locSCzIntersection < 83. ) {
+			Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
+					flightTimeCorrectedSCTime - locShiftedTime,
+					title,
+					NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
+			Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time",
+					flightTimeCorrectedSCTime - thisRFBunch->dTime,
+					"t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries",
+					NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+			Fill2DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time vs. Sector",
+					locSCHitMatchParams->dSCHit->sector, locSCDeltaT,
+					"t_{SC} - t_{RF} at Target; Sector; t_{SC} - t_{RF} at Target [ns];",
+					30, 0.5, 30.5, 800, -20., 20.);
+		}
 
         // Get the pulls vector from the track
-	auto thisTimeBasedTrack = pionHypothesis->Get_TrackTimeBased();
+		auto thisTimeBasedTrack = pionHypothesis->Get_TrackTimeBased();
 
         vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
         double earliestCDCTime = 10000.;
@@ -991,8 +1024,63 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                  earliestFDCTime,
                  "Earliest Flight-time corrected FDC Time; t_{FDC} [ns];",
                  200, -50, 150);
-        }
+                 
+		    // get DIRC match parameters (contains LUT information)
+			const DDetectorMatches* locDetectorMatches = NULL;
+			loop->GetSingle(locDetectorMatches);
+			DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
+		    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+		    bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
+        	// For DIRC calibrations, select tracks which have a good TOF match
+		    if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
+
+				// Get match parameters
+				TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+				TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+				double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
+				int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+
+				Particle_t locPID = locTrackTimeBased->PID();
+				double locMass = ParticleMass(locPID);
+				double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
+				map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
+
+				// get map of DIRCMatches to PMT hits
+				map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+				locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+				map<Particle_t, double> logLikelihoodSum;
+
+		  		// loop over associated hits for LUT diagnostic plots
+		  		for(uint loc_i=0; loc_i<dircPmtHitVector.size(); loc_i++) {
+			  		vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(dircPmtHitVector[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
+			  		double locHitTime = dircPmtHitVector[loc_i]->t - locExtrapolatedTime;
+			  		int locChannel = dircPmtHitVector[loc_i]->ch%dMaxDIRCChannels;
+
+			  		if(locDIRCPhotons.size() > 0) {
+						// loop over candidate photons
+						for(uint loc_j = 0; loc_j<locDIRCPhotons.size(); loc_j++) {
+							double locDeltaT = locDIRCPhotons[loc_j].first - locHitTime;
+		
+							if(locChannel < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
+								Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit North Per Channel t_{DIRC} - t_{track}",
+												locChannel, locDeltaT,
+												"DIRCHit North Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns] ",
+												DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+												(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
+							} else {
+								Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit South Per Channel t_{DIRC} - t_{track}",
+												locChannel-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, locDeltaT,
+												"DIRCHit South Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns] ",
+												DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+												(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
+							}
+						}
+					}
+				}
+			}
+		}
         if (locBCALShowerMatchParams != NULL){
            float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time",
