@@ -27,9 +27,9 @@ class DCCALCluster : public JObject {
       DCCALCluster();
       ~DCCALCluster();
 
-      double fEnergy;  // total cluster energy (GeV) or 0 if stale
+      double   fEnergy;      // total cluster energy (GeV) or 0 if stale
       DVector3 fCentroid;    // cluster centroid position (cm) [z=0 at target center]
-      double fTime;          // cluster time(ns) 
+      double   fTime;        // cluster time(ns) 
 
 
       double getEnergy() const; 
