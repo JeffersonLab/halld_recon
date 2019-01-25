@@ -2,6 +2,77 @@
 #define MAX_CC 60
 #define test_p
 *
+      subroutine init_island(in_filename, name_length)
+      implicit none
+      integer name_length
+	  character in_filename(1000)
+	  character(len=1000) filename
+      real acell, ad2c
+      integer i1, i2, id1, id2
+      real fcell_hyc, fd2c
+*
+      common/profile_com/ acell(0:1,0:500,0:500), ad2c(0:1,0:500,0:500)
+      logical profile_init_status
+      common/profile_init/ profile_init_status
+      data profile_init_status /.false./
+*
+	  do i1 = 1, name_length
+		filename(i1:i1) = in_filename(i1)
+	  enddo
+*
+*	  write(*,*) 'DEBUG: opening ',filename
+*
+      open(22,file=filename,
+     &          form='formatted', status='old')
+	  do i1 = 0, 500
+		do i2 = 0, i1
+          read(22,'(i3,1x,i3,2(1x,e20.10))')
+     &          id1, id2, fcell_hyc, fd2c
+		  acell(0,i1,i2) = fcell_hyc
+		  acell(0,i2,i1) = fcell_hyc
+		  ad2c(0,i2,i1) = fd2c
+		  ad2c(0,i1,i2) = fd2c
+		enddo
+	  enddo
+	  close(22)
+*
+	  profile_init_status=.true.
+	  return
+	  end
+
+/*
+      subroutine init_island(new_acell, new_ad2c)
+      implicit none
+	  real  new_acell(0:1,0:500,0:500)
+	  real  new_ad2c(0:1,0:500,0:500)
+      real acell, ad2c
+      integer i1, i2
+*
+      common/profile_com/ acell(0:1,0:500,0:500), ad2c(0:1,0:500,0:500)
+      logical profile_init_status
+      common/profile_init/ profile_init_status
+      data profile_init_status /.false./
+ 
+        do i1 = 0, 500
+        do i2 = 0, i1
+c          acell(0,i1,i2) = new_acell(0,i1,i2)
+c          acell(0,i2,i1) = new_acell(0,i2,i1)
+c           ad2c(0,i2,i1) = new_ad2c(0,i2,i1)
+c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
+          acell(0,i1,i2) = new_acell(i2,i1,0)
+          acell(0,i2,i1) = new_acell(i1,i2,0)
+           ad2c(0,i2,i1) = new_ad2c(i1,i2,0)
+           ad2c(0,i1,i2) = new_ad2c(i2,i1,0)
+           
+           write(*,*) i1,i2,acell(0,i1,i2),ad2c(0,i1,i2)
+        enddo
+        enddo
+*        
+	  profile_init_status=.true.
+	  return
+	  end
+*/
+*
       subroutine main_island
       implicit none
 #include "cphoto.inc"
@@ -24,10 +95,16 @@
       logical first
       data first /.true./
       save first
+      logical profile_init_status
+      common/profile_init/ profile_init_status
 *
       if(first) then
         first = .false.
 *
+	  if(profile_init_status.eqv..false.) then
+	  	write(*,*) 'WARNING: CCAL shower profile data not loaded!'
+	  endif
+/*
         open(22,file='prof_pwo.dat',
      &          form='formatted', status='old')
         do i1 = 0, 500
@@ -41,6 +118,7 @@
         enddo
         enddo
         close(22)
+*/
 /*
         open(22,file='prof_lg.dat',
      &          form='formatted', status='old')

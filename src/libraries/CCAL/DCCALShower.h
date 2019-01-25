@@ -43,6 +43,7 @@ class DCCALShower : public JObject {
       double sigma_E;
       double Emax;
       double time;
+      double sigma_t;
       
       void toStrings(vector<pair<string,string> > &items) const {
 	AddString(items, "E(GeV)",    "%2.3f",  E);

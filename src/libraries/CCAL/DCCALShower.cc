@@ -27,6 +27,7 @@ DCCALShower::DCCALShower()
   sigma_E  =  0;
   Emax     =  0;
   time     =  0;
+  sigma_t  =  0;
 }
 
 DCCALShower::~DCCALShower()

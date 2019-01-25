@@ -130,6 +130,9 @@ void fill_dst_histograms();
 
 extern "C"  void main_island_();
 
+extern "C"  void init_island_(char filename[1000], int *name_length);
+//extern "C"  void init_island_(float new_acell[2][501][501], float new_ad2c[2][501][501]);
+
 extern "C"  void iliya_test_();
 
 // void coord_align(hycalcluster_t* h_clusters, const int n, const float energy, const int central_id);
