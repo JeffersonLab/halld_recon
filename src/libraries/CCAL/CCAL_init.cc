@@ -8,7 +8,7 @@ using namespace jana;
 
 #include "DCCALDigiHit.h"
 #include "DCCALHit_factory.h"
-#include "DCCALCluster_factory.h"
+#include "DCCALShower_factory.h"
 
 #include "DCCALRefDigiHit.h"
 
@@ -18,7 +18,7 @@ jerror_t CCAL_init(JEventLoop *loop)
   	loop->AddFactory(new JFactory<DCCALDigiHit>());
   	loop->AddFactory(new JFactory<DCCALRefDigiHit>());
 	loop->AddFactory(new DCCALHit_factory());
-	loop->AddFactory(new DCCALCluster_factory());
+	loop->AddFactory(new DCCALShower_factory());
 	loop->AddFactory(new JFactory<DCCALHit>("TRUTH"));
 	loop->AddFactory(new DCCALTruthShower_factory());
 	loop->AddFactory(new DCCALGeometry_factory());
