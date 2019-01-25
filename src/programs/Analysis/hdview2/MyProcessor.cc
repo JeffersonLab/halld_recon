@@ -39,7 +39,7 @@ using namespace std;
 #include "TRACKING/DMCTrajectoryPoint.h"
 #include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALHit.h"
-#include "CCAL/DCCALCluster.h"
+#include "CCAL/DCCALShower.h"
 #include "TOF/DTOFGeometry.h"
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFTDCDigiHit.h" 
@@ -1543,13 +1543,13 @@ void MyProcessor::FillGraphics(void)
 
 	// CCAL reconstructed clusters
 	if(hdvmf->GetCheckButton("recon_photons_ccal")){
-		vector<const DCCALCluster*> clusters;
+		vector<const DCCALShower*> clusters;
 		loop->Get(clusters);
 		for(auto cluster : clusters){
 
-			double E = cluster->getEnergy()/1000.0; // divide by 1000 since energy does not seem to be calibrated to GeV at the moment.  2018-12-10 DL
+			double E = cluster->E/1000.0; // divide by 1000 since energy does not seem to be calibrated to GeV at the moment.  2018-12-10 DL
 			double dist2 = 1.0 + 0.5*E;
-			DVector3 pos = cluster->getCentroid();
+			DVector3 pos(cluster->x,cluster->y,cluster->z);
 
 			TEllipse *e = new TEllipse(pos.X(), pos.Y(), dist2, dist2);
 			e->SetLineColor(kGreen);
