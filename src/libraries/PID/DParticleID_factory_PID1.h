@@ -13,7 +13,7 @@
 
 class DParticleID_factory_PID1:public jana::JFactory<DParticleID>{
 	public:
-		DParticleID_factory_PID1(){};
+  DParticleID_factory_PID1(){particleid=NULL;};
 		~DParticleID_factory_PID1(){};
 		const char* Tag(void){return "PID1";}
 
