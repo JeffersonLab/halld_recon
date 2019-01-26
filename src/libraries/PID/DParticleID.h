@@ -90,6 +90,15 @@ class DParticleID:public jana::JObject
 		double GetMostProbabledEdx_DC(double p,double mass,double dx, bool locIsCDCFlag) const; //bool is false for FDC
 		double GetdEdxSigma_DC(double num_hits,double p,double mass, double mean_path_length, bool locIsCDCFlag) const; //bool is false for FDC
 
+		virtual jerror_t GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual double GetProtondEdxMean_SC(double locBeta) const=0;
+		virtual double GetProtondEdxSigma_SC(double locBeta) const=0;
+
+
+
 		/****************************************************** DISTANCE TO TRACK ******************************************************/
 
 		// NOTE: For these functions, an initial guess for start time is expected as input so that out-of-time tracks can be skipped
@@ -214,6 +223,7 @@ class DParticleID:public jana::JObject
 					    const DVector3 &locProjPos) const;
 		
 		const DDIRCLut *Get_DIRCLut() const;
+	
 
 	protected:
 		// gas material properties

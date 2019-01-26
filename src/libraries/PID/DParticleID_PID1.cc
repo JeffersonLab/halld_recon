@@ -126,6 +126,20 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
+  if (jcalib->Get("START_COUNTER/dEdxProtonMean",vals)==false){ 
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_SC_Proton.push_back(row["m1"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m2"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m3"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m4"]);
+  } 
+  if (jcalib->Get("START_COUNTER/dEdxProtonSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_SC_Proton.push_back(row["s1"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s2"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
+  }
 
 }
 
@@ -135,6 +149,15 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
 DParticleID_PID1::~DParticleID_PID1()
 {
 
+}
+
+double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdx(locBetaGammaValue, ddEdxMeanParams_SC_Proton);  
+}
+double DParticleID_PID1::GetProtondEdxSigma_SC(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_SC_Proton);  
 }
 
 jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const

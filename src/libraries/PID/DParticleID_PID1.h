@@ -20,6 +20,9 @@ class DParticleID_PID1:public DParticleID{
 	jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const;
 	jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const;
 	jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const;
+	double GetProtondEdxMean_SC(double locBeta) const;
+	double GetProtondEdxSigma_SC(double locBeta) const;
+
 	jerror_t CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTrackHypothesis) const;
 	inline double Function_dEdx(double locBetaGamma, const vector<float> &locParams) const{return locParams[0]/(locBetaGamma*locBetaGamma)+locParams[1]/locBetaGamma + locParams[2] + locParams[3]*locBetaGamma;}
 	inline double Function_dEdxSigma(double locBetaGamma, const vector<float> &locParams) const{return locParams[0]/(locBetaGamma*locBetaGamma)+locParams[1]/locBetaGamma + locParams[2];}
@@ -32,6 +35,7 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> ddEdxMeanParams_CDC_Proton;
 	vector<float> ddEdxMeanParams_CDC_KPlus;
 	vector<float> ddEdxMeanParams_CDC_PiPlus;
+	vector<float> ddEdxMeanParams_SC_Proton;
 
 	vector<float> ddEdxSigmaParams_FDC_Proton;
 	vector<float> ddEdxSigmaParams_FDC_KPlus;
@@ -39,6 +43,8 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> ddEdxSigmaParams_CDC_Proton;
 	vector<float> ddEdxSigmaParams_CDC_KPlus;
 	vector<float> ddEdxSigmaParams_CDC_PiPlus;
+	vector<float> ddEdxSigmaParams_SC_Proton;
+
 
 
  private:
