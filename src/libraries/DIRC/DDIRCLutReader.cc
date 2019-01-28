@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <math.h>
+#include <unistd.h>
 using namespace std;
 
 #include "DDIRCLutReader.h"
