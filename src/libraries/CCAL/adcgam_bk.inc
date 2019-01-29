@@ -1,6 +1,6 @@
 *
         integer    ladcgam          ! length of  characteristic
-        parameter (ladcgam   = 11)  ! 
+        parameter (ladcgam   = 12)  ! 
         integer    madcgam          ! maximum number of particles
         parameter (madcgam   = 50)
         integer    nadcgam          ! number of gammas
@@ -13,6 +13,7 @@
      $      z_adcgam(ladcgam,madcgam) ,! global z-coord 
      $     xc_adcgam(ladcgam,madcgam) ,! center of gravity x-coord 
      $     yc_adcgam(ladcgam,madcgam) ,! center of gravity y-coord 
+     $   time_adcgam(ladcgam,madcgam) ,! time 
      $   chi2_adcgam(ladcgam,madcgam)  ! chi2 
         integer*4
      $   type_adcgam(ladcgam,madcgam) ,! type(hit place)
@@ -27,11 +28,12 @@
      $ (     z_adcgam, adcgam( 4,1) ) ,! r4
      $ (    xc_adcgam, adcgam( 5,1) ) ,! r4
      $ (    yc_adcgam, adcgam( 6,1) ) ,! r4
-     $ (  chi2_adcgam, adcgam( 7,1) ) ,! r4
-     $ (  type_adcgam, adcgam( 8,1) ) ,! i4
-     $ (  dime_adcgam, adcgam( 9,1) ) ,! i4
-     $ (    id_adcgam, adcgam(10,1) ) ,! i4
-     $ (status_adcgam, adcgam(11,1) )  ! i4
+     $ (  time_adcgam, adcgam( 7,1) ) ,! r4
+     $ (  chi2_adcgam, adcgam( 8,1) ) ,! r4
+     $ (  type_adcgam, adcgam( 9,1) ) ,! i4
+     $ (  dime_adcgam, adcgam(10,1) ) ,! i4
+     $ (    id_adcgam, adcgam(11,1) ) ,! i4
+     $ (status_adcgam, adcgam(12,1) )  ! i4
 *
         common /adcgam_cbk/ nadcgam, adcgam
 *
