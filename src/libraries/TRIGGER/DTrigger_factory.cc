@@ -42,6 +42,7 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
 	//SET LEVEL-1 TRIGGER INFO
 	if(locL1Trigger != NULL)
 	{
+	        locTrigger->Set_L1TriggerBits(locL1Trigger->trig_mask);
 		uint32_t locFpTrigMask = locL1Trigger->fp_trig_mask;
 	
 		// Sometimes the BCAL/FCAL LED trigger also trip the main physics trigger,
@@ -70,7 +71,6 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
 		}
 		
 		locTrigger->Set_L1FrontPanelTriggerBits(locFpTrigMask);
-		locTrigger->Set_L1FrontPanelTriggerBits(locL1Trigger->fp_trig_mask);
 
 	}
 	else 

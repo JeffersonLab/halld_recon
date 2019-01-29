@@ -2,6 +2,7 @@
 
 static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
+static bool DIRC_OUTPUT = true;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
@@ -237,6 +238,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT);
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
 		gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT);
+	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
+		gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT);
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -665,6 +668,16 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumTrackArraySize);
+
+	//DIRC:
+	if(DIRC_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+	}
 }
 
 void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -1597,6 +1610,22 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	if(locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL)
 		locDOCAToShower_FCAL = locChargedTrackHypothesis->Get_FCALShowerMatchParams()->dDOCAToShower;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locDOCAToShower_FCAL, locArrayIndex);
+
+	// DIRC
+	if(DIRC_OUTPUT) {
+		int locDIRCNumPhotons = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dNPhotons : 0;
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locDIRCNumPhotons, locArrayIndex);
+		double locDIRCThetaC = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dThetaC : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locDIRCThetaC, locArrayIndex);
+		double locDIRCLele = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodElectron : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locDIRCLele, locArrayIndex);
+		double locDIRCLpi = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodPion : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locDIRCLpi, locArrayIndex);
+		double locDIRCLk = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodKaon : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locDIRCLk, locArrayIndex);
+		double locDIRCLp = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodProton : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
+	}
 }
 
 void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const

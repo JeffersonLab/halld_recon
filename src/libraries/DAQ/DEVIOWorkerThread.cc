@@ -213,8 +213,21 @@ void DEVIOWorkerThread::MakeEvents(void)
 
 	iptr++;
 	uint32_t mask = 0xFF001000;
-	if( ((*iptr)&mask) == mask ){
-		// Physics event
+	if( (*iptr)>>16 == 0xFF32){
+
+		// CDAQ BOR. Leave M=1
+
+	}else if( (*iptr)>>16 == 0xFF33){
+
+		// CDAQ Physics event
+		M = iptr[2]&0xFF;
+		
+		// Event number taken from first ROC's trigger bank
+		uint64_t eventnum_lo = iptr[6];
+		uint64_t eventnum_hi = 0; // Only lower 32bits in ROC trigger info.
+		event_num = (eventnum_hi<<32) + (eventnum_lo);		
+	}else if( ((*iptr)&mask) == mask ){
+		// CODA Physics event
 		M = *(iptr)&0xFF;
 		uint64_t eventnum_lo = iptr[4];
 		uint64_t eventnum_hi = iptr[5];
@@ -237,6 +250,7 @@ void DEVIOWorkerThread::MakeEvents(void)
 	
 	// Set indexes for the parsed event objects
 	// and flag them as being in use.
+	if( VERBOSE>3 ) cout << "  Creating " << current_parsed_events.size() << " parsed events ..." << endl;
 	for(auto pe : current_parsed_events){
 	
 		pe->Clear(); // return previous event's objects to pools and clear vectors
@@ -310,7 +324,6 @@ void DEVIOWorkerThread::PublishEvents(void)
 //---------------------------------
 void DEVIOWorkerThread::ParseBank(void)
 {
-
 	uint32_t *iptr = buff;
 	uint32_t *iend = &buff[buff[0]+1];
 
@@ -319,7 +332,7 @@ void DEVIOWorkerThread::ParseBank(void)
 		uint32_t event_head = iptr[1];
 		uint32_t tag = (event_head >> 16) & 0xFFFF;
 
-// _DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
+//_DBG_ << "0x" << hex << (uint64_t)iptr << dec << ": event_len=" << event_len << "tag=" << hex << tag << dec << endl;
 
 		switch(tag){
 			case 0x0060:       ParseEPICSbank(iptr, iend);    break;
@@ -328,12 +341,15 @@ void DEVIOWorkerThread::ParseBank(void)
 			case 0xFFD0:
 			case 0xFFD1:
 			case 0xFFD2:
-			case 0xFFD3:    ParseControlEvent(iptr, iend);    break;
+			case 0xFFD3:
+			case 0xFFD4:    ParseControlEvent(iptr, iend);    break;
 
 			case 0xFF58:
 			case 0xFF78: current_parsed_events.back()->sync_flag = true;
 			case 0xFF50:     
 			case 0xFF70:     ParsePhysicsBank(iptr, iend);    break;
+			case 0xFF32:
+			case 0xFF33:        ParseCDAQBank(iptr, iend);    break;
 
 			default:
 				_DBG_ << "Unknown outer EVIO bank tag: " << hex << tag << dec << endl;
@@ -459,11 +475,14 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	//	...
 
 	if(!PARSE_BOR){ iptr = &iptr[(*iptr) + 1]; return; }
+	if(VERBOSE>1) jout << "--- Parsing BOR Bank" << endl;
 
 	// Make sure there is exactly 1 event in current_parsed_events
 	if(current_parsed_events.size() != 1){
 		stringstream ss;
 		ss << "DEVIOWorkerThread::ParseBORbank called for EVIO event with " << current_parsed_events.size() << " events in it. (Should be exactly 1!)";
+		jerr << ss.str() << endl;
+		jerr << "EVIO length=" << hex << iptr[0] << "  header=" << iptr[1] << endl;
 		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 	
@@ -486,9 +505,11 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	
 	// Make sure BOR header word is right
 	uint32_t bor_header = *iptr++;
-	if(bor_header != 0x700e01){
+	if( (bor_header!=0x700e01) && (bor_header!=0x700e34) ){
 		stringstream ss;
 		ss << "Bad BOR header: 0x" << hex << bor_header;
+		_DBG_<< ss.str() << endl;
+		DumpBinary(&iptr[-4], iend, 32, iptr);
 		throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 	}
 
@@ -503,6 +524,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 		if( (crate_header>>16) != 0x71 ){
 			stringstream ss;
 			ss << "Bad BOR crate header: 0x" << hex << (crate_header>>16);
+			_DBG_<< ss.str() << endl;
 			throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 		}
 
@@ -522,6 +544,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 			Df125BORConfig *f125conf = NULL;
 			DF1TDCBORConfig *F1TDCconf = NULL;
 			DCAEN1290TDCBORConfig *caen1190conf = NULL;
+			DTSGBORConfig *tsgconf = NULL;
 
 			switch(modType){
 				case DModuleType::FADC250: // f250
@@ -548,6 +571,18 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 					dest = (uint32_t*)&caen1190conf->rocid;
 					sizeof_dest = sizeof(caen1190config)/sizeof(uint32_t);
 					break;
+				case DModuleType::CDAQTSG: // TSG (from CDAQ)
+					tsgconf = new DTSGBORConfig;
+					// Accomodate variable number of words by copying here
+					tsgconf->rocid = 81; // rocid member must exist for LinkAssociations.h::SortByModule
+					tsgconf->slot  = 1;  //        "                    "                      "
+					tsgconf->run_number = src[0];
+					tsgconf->unix_time = src[1];
+					for(uint32_t i=0; i<module_len; i++) tsgconf->misc_words.push_back(src[i]);
+					
+					sizeof_dest = module_len; // prevent error from being thrown below
+					dest = src;               // make copy benign. This allows us to keep mechansim used by other modules
+					break;
 				
 				default:
 					{
@@ -562,6 +597,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 			if( module_len > sizeof_dest ){
 				stringstream ss;
 				ss << "BOR module bank size does not match structure! " << module_len << " > " << sizeof_dest << " for modType " << modType;
+				_DBG_<< ss.str() << endl;
 				throw JExceptionDataFormat(ss.str(), __FILE__, __LINE__);
 			}
 
@@ -578,6 +614,7 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 			if(f125conf    ) borptrs->vDf125BORConfig.push_back(f125conf);
 			if(F1TDCconf   ) borptrs->vDF1TDCBORConfig.push_back(F1TDCconf);
 			if(caen1190conf) borptrs->vDCAEN1290TDCBORConfig.push_back(caen1190conf);
+			if(tsgconf     ) borptrs->vDTSGBORConfig.push_back(tsgconf);
 
 			iptr = &iptr[module_len];
 		}
@@ -587,7 +624,6 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	
 	// Sort the BOR config events now so we don't have to do it for every event
 	borptrs->Sort();
-
 }
 
 //---------------------------------
@@ -693,7 +729,7 @@ void DEVIOWorkerThread::ParseControlEvent(uint32_t* &iptr, uint32_t *iend)
 void DEVIOWorkerThread::ParsePhysicsBank(uint32_t* &iptr, uint32_t *iend)
 {
 
-	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT);
+	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT) +  (1<<kSTATUS_CODA);
 
 	uint32_t physics_event_len      = *iptr++;
 	uint32_t *iend_physics_event    = &iptr[physics_event_len];
@@ -708,6 +744,46 @@ void DEVIOWorkerThread::ParsePhysicsBank(uint32_t* &iptr, uint32_t *iend)
 	// Loop over Data banks
 	while( iptr < iend_physics_event ) {
 
+		uint32_t data_bank_len = *iptr;
+		uint32_t *iend_data_bank = &iptr[data_bank_len+1];
+
+		ParseDataBank(iptr, iend_data_bank);
+
+		iptr = iend_data_bank;
+	}
+
+	iptr = iend_physics_event;
+}
+
+//---------------------------------
+// ParseCDAQBank
+//---------------------------------
+void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
+{
+
+	if(VERBOSE>1) jout << "-- Parsing CDAQ Event" << endl;
+
+	// Check if this is a BOR event
+	if( (iptr[1]&0xFFFF0000) == 0xFF320000 ){
+		iptr += 2;
+		try{
+			ParseBORbank(iptr, iend);
+		}catch(JException &e){
+			cerr << e.what();
+		}
+		return;
+	}
+
+	// Must be physics event(s)
+	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT) + (1<<kSTATUS_CDAQ);
+
+	uint32_t physics_event_len      = *iptr++;
+	uint32_t *iend_physics_event    = &iptr[physics_event_len];
+	iptr++;
+
+	// Loop over Data banks
+	while( iptr < iend_physics_event ) {
+	
 		uint32_t data_bank_len = *iptr;
 		uint32_t *iend_data_bank = &iptr[data_bank_len+1];
 
@@ -825,6 +901,44 @@ void DEVIOWorkerThread::ParseBuiltTriggerBank(uint32_t* &iptr, uint32_t *iend)
 }
 
 //---------------------------------
+// ParseRawTriggerBank
+//---------------------------------
+void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
+	// CDAQ records the raw trigger bank rather than the built trigger bank.
+	// Create DCODAROCInfo objects for each of these. 
+
+	if(!PARSE_TRIGGER) return;
+	
+	// On entry, iptr points to word after the bank header (i.e. word after the one with 0xFF11)
+	
+	// Loop over events. Should be one segment for each event
+	uint32_t ievent = 0;
+	for(auto pe : current_parsed_events){
+		
+		uint32_t segment_header = *iptr++;
+		uint32_t segment_len = segment_header&0xFFFF;
+		uint32_t *iend_segment  = &iptr[segment_len];
+
+		uint32_t event_number = *iptr++;
+		uint64_t ts_low  = *iptr++;
+		uint64_t ts_high = *iptr++;
+
+		DCODAROCInfo *codarocinfo = pe->NEW_DCODAROCInfo();
+		codarocinfo->rocid = rocid;
+		codarocinfo->timestamp = (ts_high<<32) + ts_low;
+		codarocinfo->misc.clear(); // could be recycled from previous event
+		
+		// rocid=1 is TS and produces 2 extra words for the trigger bits
+		for(uint32_t i=3; i<segment_len; i++) codarocinfo->misc.push_back(*iptr++);
+		
+		if( iptr != iend_segment){
+			throw JExceptionDataFormat("Bad raw trigger bank format", __FILE__, __LINE__);
+		}
+	}
+}
+
+//---------------------------------
 // ParseDataBank
 //---------------------------------
 void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
@@ -852,14 +966,17 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 		switch(det_id){
 
 			case 20:
+				if(VERBOSE>3) jout << " -- CAEN1190  rocid="<< rocid << endl;
 				ParseCAEN1190(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x55:
+				if(VERBOSE>3) jout <<" -- Module Configuration  rocid="<< rocid << endl;
 				ParseModuleConfiguration(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x56:
+				if(VERBOSE>3) jout <<" -- Event Tag  rocid="<< rocid << endl;
 				ParseEventTagBank(iptr, iend_data_block_bank);
 				break;
 
@@ -869,10 +986,13 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			case 6:  // flash 250 module, MMD 2014/2/4
 			case 16: // flash 125 module (CDC), DL 2014/6/19
 			case 26: // F1 TDC module (BCAL), MMD 2014-07-31
+				if(VERBOSE>3) jout <<" -- JLab Module  rocid="<< rocid << endl;
 				ParseJLabModuleData(rocid, iptr, iend_data_block_bank);
 				break;
 
 			case 0x123:
+			case 0x28:
+				if(VERBOSE>3) jout <<" -- SSP  rocid="<< rocid << endl;
 				ParseSSPBank(rocid, iptr, iend_data_block_bank);
 				break;
 
@@ -882,24 +1002,32 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// (the first "E" should really be a "1". We just check
 			// other 12 bits here.
 			case 0xE02:
+				if(VERBOSE>3) jout <<" -- TSscaler  rocid="<< rocid << endl;
 				ParseTSscalerBank(iptr, iend);
 				break;
 			case 0xE05:
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
-			case 0xE10:  // really wish Sascha would share when he does this stuff!
-			  Parsef250scalerBank(rocid, iptr, iend);
+			case 0xE10:
+				Parsef250scalerBank(rocid, iptr, iend);
+				break;
+			
+			// The CDAQ system leave the raw trigger info in the Physics event data
+			// bank. Skip it for now.
+			case 0xF11:
+				if(VERBOSE>3) jout <<"Raw Trigger bank  rocid="<< rocid << endl;
+				ParseRawTriggerBank(rocid, iptr, iend_data_block_bank);
 				break;
 
-            // When we write out single events in the offline, we also can save some
-            // higher level data objects to save disk space and speed up 
-            // specialized processing (e.g. pi0 calibration)
-            case 0xD01:
-                ParseDVertexBank(iptr, iend);
-                break;
-            case 0xD02:
-                ParseDEventRFBunchBank(iptr, iend);
-                break;
+			// When we write out single events in the offline, we also can save some
+			// higher level data objects to save disk space and speed up
+			// specialized processing (e.g. pi0 calibration)
+			case 0xD01:
+				ParseDVertexBank(iptr, iend);
+				break;
+			case 0xD02:
+				ParseDEventRFBunchBank(iptr, iend);
+				break;
 
 			case 5:
 				// old ROL Beni used had this but I don't think its
@@ -1352,7 +1480,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					}
 
 					// Event headers may be supressed so determine event from hit data
-					if( (event_number_within_block > current_parsed_events.size()) ) throw JException("Bad f250 event number", __FILE__, __LINE__);
+					if( (event_number_within_block > current_parsed_events.size()) ) { jerr << "Bad f250 event number for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 event number", __FILE__, __LINE__);}
 					pe_iter = current_parsed_events.begin();
 					advance( pe_iter, event_number_within_block-1 );
 					pe = *pe_iter++;
@@ -1362,7 +1490,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 					while( (*++iptr>>31) == 0 ){
 					
-						if( (*iptr>>30) != 0x01) throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						if( (*iptr>>30) != 0x01) { jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);}
  
 						// from word 2
 						uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
@@ -1980,6 +2108,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	uint32_t itrigger   = 0xFFFFFFFF;
 	uint32_t dev_id     = 0xFFFFFFFF;
 	uint32_t ievent_cnt = 0xFFFFFFFF;
+	uint32_t last_itrigger = itrigger;
 	for( ;  iptr<iend; iptr++){
 		if(((*iptr>>31) & 0x1) == 0)continue;
 
@@ -1997,9 +2126,10 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 				if(VERBOSE>7) cout << "     SSP/DIRC Block Trailer" << endl;
 				break;
 			case 2:  // Event Header
-				pe = *pe_iter++;
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
+				if(itrigger != last_itrigger) pe = *pe_iter++;
+				last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;
