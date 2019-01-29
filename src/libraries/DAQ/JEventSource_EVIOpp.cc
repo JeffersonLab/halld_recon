@@ -365,11 +365,23 @@ void JEventSource_EVIOpp::Dispatcher(void)
 						continue;
 					}
 				}else{
-					cout << hdevio->err_mess.str() << endl;
-					if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
-						bool ignore_error = false;
-						if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
-						if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+					// Some CDAQ files do not have a proper trailer at the end of the
+					// EVIO file and so get reported by HDEVIO as truncated. We do not
+					// want to treat those as an error, but DO want to treat legitimate
+					// truncations as errors. If this is a CDAQ event and there are
+					// exactly zero words left in the file then assume it is OK. 
+					// n.b. the IS_CDAQ_FILE flag is set in DEVIOWorkerThread::ParseCDAQBank
+					// during the parsing of a previous event. It is possible we could
+					// reach here before that is set leading to a race condition!
+					if( IS_CDAQ_FILE && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) && (hdevio->GetNWordsLeftInFile()==0) ){
+						jout << "Missing EVIO file trailer in CDAQ file (ignoring..)" << endl; 
+					}else{
+						cout << hdevio->err_mess.str() << endl;
+						if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
+							bool ignore_error = false;
+							if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
+							if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+						}
 					}
 				}
 				break;
