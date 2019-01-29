@@ -161,6 +161,8 @@ extern "C" {extern struct {int mcread_flag, mc_eof_flag, nreadmc;} mcread_stat_c
 
 #define ECH(M,N) ech_common_.ech[N-1][M-1]
 extern "C" {extern struct {int ech[MROW][MCOL];} ech_common_;}
+#define TIME(M,N) tch_common_.time[N-1][M-1]
+extern "C" {extern struct {int time[MROW][MCOL];} tch_common_;}
 #define STAT_CH(M,N) stat_ch_common_.stat_ch[N-1][M-1]
 extern "C" {extern struct {int stat_ch[MROW][MCOL];} stat_ch_common_;}
 
@@ -185,7 +187,7 @@ extern "C" {extern struct {float xsize, ysize, mine, maxe; int min_dime; float m
                               int ncol, nrow; float zhycal; int isect;} set_common_;}
 
 extern "C" {extern struct {int nadcgam;
-            union {int iadcgam[50][11]; float fadcgam[50][11];} u;} adcgam_cbk_;}
+            union {int iadcgam[50][12]; float fadcgam[50][12];} u;} adcgam_cbk_;}
 
 extern "C" {extern struct {float fa[100];} hbk_common_;}
 #define FA(N) hbk_common_.fa[N-1]

@@ -40,6 +40,8 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		float         MIN_CLUSTER_SEED_ENERGY;
 		float         TIME_CUT;
 		unsigned int  MAX_HITS_FOR_CLUSTERING;
+		
+		pthread_mutex_t mutex;
 };
 
 #endif // _DCCALShower_factory_
