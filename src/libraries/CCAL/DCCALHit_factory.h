@@ -21,7 +21,7 @@ typedef  vector< vector<double> >  ccal_constants_t;
 
 class DCCALHit_factory:public jana::JFactory<DCCALHit>{
 	public:
-		DCCALHit_factory(){};
+                DCCALHit_factory();
 		~DCCALHit_factory(){};
 
 		ccal_constants_t  gains;
@@ -44,7 +44,10 @@ class DCCALHit_factory:public jana::JFactory<DCCALHit>{
 		void LoadCCALConst( ccal_constants_t &table, 
                                     const vector<double> &ccal_const_ch, 
                                     const DCCALGeometry  &ccalGeom);    
-		
+
+
+		unsigned int DB_PEDESTAL;
+		unsigned int HIT_DEBUG;
 
 };
 
