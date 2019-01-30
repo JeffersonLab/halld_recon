@@ -33,7 +33,8 @@ public:
   Int_t GetPmtId()       { return fPmtId; }
   Int_t GetPixelId()     { return fPixelId; }
   Int_t GetChannel() { return fChannel;}
-  Double_t GetLeadTime() { return fLeadTime; } 
+  Double_t GetLeadTime() { return fLeadTime; }
+  Double_t GetTotTime() { return fTotTime; }
     
   // Mutators
   void SetType(Int_t val)    { fType = val; }
@@ -47,7 +48,8 @@ public:
   void SetPmtId(Int_t val)   { fPmtId = val; }
   void SetPixelId(Int_t val) { fPixelId = val; }
   void SetChannel(Int_t val) { fChannel=val; }
-  void SetLeadTime(Double_t val) { fLeadTime=val; } 
+  void SetLeadTime(Double_t val) { fLeadTime=val; }
+  void SetTotTime(Double_t val) { fTotTime=val; } 
 
 protected:
 
@@ -62,9 +64,10 @@ protected:
   Int_t fPmtId;
   Int_t fPixelId;
   Int_t fChannel;
-  Double_t fLeadTime;    
+  Double_t fLeadTime;
+  Double_t fTotTime;
 
-  ClassDef(DrcHit,2)
+  ClassDef(DrcHit,3)
 };
 
 #endif
