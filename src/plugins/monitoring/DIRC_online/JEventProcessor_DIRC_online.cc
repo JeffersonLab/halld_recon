@@ -117,7 +117,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
         TString strT = ", " + box_str[i] + " box";
 	hDigiHit_pixelOccupancy[i] = new TH2I("TDCDigiHit_PixelOccupancy"+strN,"DIRCTDCDigiHit pixel occupancy"+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 	hDigiHit_tdcTime[i] = new TH1I("TDCDigiHit_Time"+strN,"DIRCTDCDigiHit time"+strT+";time [ns]; hits",500,0.0,100.0);
-	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,100.0);
+	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
 	digihitDir->cd();
     }
     // back to main dir
