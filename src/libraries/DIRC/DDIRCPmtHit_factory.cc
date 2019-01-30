@@ -89,7 +89,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // loop over leading edges
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DDIRCTDCDigiHit *digihit_lead = digihits[i];
-	    if(digihit_lead->edge == 0) continue; // remove trailing edges 
+	    if(digihit_lead->edge == 1) continue; // remove trailing edges 
 	    // Note this doesn't match SSP data format document, but appears correct for data...
 	    
 	    double timeOverThreshold = 0.;
@@ -98,7 +98,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    const DDIRCTDCDigiHit *digihit_trail = NULL;
 	    for (unsigned int j=0; j < digihits.size(); j++) {
 		    digihit_trail = digihits[j];
-		    if(i==j || digihit_trail->edge == 1) continue; // remove leading edges
+		    if(i==j || digihit_trail->edge == 0) continue; // remove leading edges
 		    // Note this doesn't match SSP data format document, but appears correct for data...
 		    
 		    // discard hits from different channels

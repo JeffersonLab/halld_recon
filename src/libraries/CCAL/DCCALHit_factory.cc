@@ -20,6 +20,21 @@ using namespace std;
 
 using namespace jana;
 
+//----------------
+// Constructor
+//----------------
+DCCALHit_factory::DCCALHit_factory(){
+
+  HIT_DEBUG    =  0;
+  DB_PEDESTAL  =  1;    //   1  -  take from DB
+                        //   0  -  event-by-event pedestal subtraction
+  
+  gPARMS->SetDefaultParameter("CCAL:HIT_DEBUG",    HIT_DEBUG);
+  gPARMS->SetDefaultParameter("CCAL:DB_PEDESTAL",  DB_PEDESTAL);
+
+}
+
+
 //------------------
 // init
 //------------------
@@ -56,8 +71,6 @@ jerror_t DCCALHit_factory::init(void)
 //------------------
 jerror_t DCCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-
-    int debug_level = 1;
 
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -123,7 +136,7 @@ jerror_t DCCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     LoadCCALConst(adc_offsets, adc_offsets_ch, ccalGeom);
 
     
-    if(debug_level == 1){
+    if(HIT_DEBUG  == 1){
 
 
       cout << endl;
@@ -208,19 +221,25 @@ jerror_t DCCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     loop->Get(digihits);
 
-    cout << "Number of DigiHits = " << digihits.size() << endl;
-
     for (unsigned int i = 0; i < digihits.size(); i++) {
 
         const DCCALDigiHit *digihit = digihits[i];
 
         double nsamples_integral   =  digihit->nsamples_integral;
-	//        double nsamples_pedestal   =  digihit->nsamples_pedestal; 
+	double nsamples_pedestal   =  digihit->nsamples_pedestal; 
 
 
 	// Currently use pedestals from the DB. We'll switch to the
 	// event-by-event pedestal subtraction later
-	double pedestal = pedestals[digihit->row][digihit->column];
+
+	double pedestal = 0;
+	
+	if(DB_PEDESTAL == 1) 
+	  pedestal = pedestals[digihit->row][digihit->column];
+	else {
+	  pedestal = (double)digihit->pedestal/nsamples_pedestal;
+	}
+
 
 	double integratedPedestal  =  pedestal * nsamples_integral;
         double pulse_amplitude     =  digihit->pulse_peak - pedestal;
@@ -228,8 +247,11 @@ jerror_t DCCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
         double pulse_int   =  (double)digihit->pulse_integral;
         double pulse_time  =  (double)digihit->pulse_time;
 
-	cout << "Row = " << digihit->row << "Column = " << digihit->column << "  pulse_int =  " 
-	     << pulse_int <<  " Pedestal = " << integratedPedestal << endl;
+
+	if(HIT_DEBUG == 1)
+	  cout << "Row = " << digihit->row << "Column = " << digihit->column << 
+	    "  pulse_int =  "   << pulse_int <<  "  integratedPedestal = " << integratedPedestal << 
+	    "  Pedestal  =  " << pedestal <<  endl;
 	
         double pulse_int_ped_subt   =  adc_en_scale * gains[digihit->row][digihit->column] * (pulse_int - integratedPedestal);
         double pulse_time_correct   =  adc_time_scale * pulse_time + base_time - time_offsets[digihit->row][digihit->column] + 

@@ -13,6 +13,8 @@ using namespace std;
 #include <DANA/DApplication.h>
 #include <CCAL/DCCALDigiHit.h>
 
+#include <CCAL/DCCALHit.h>
+
 #include <DAQ/Df250WindowRawData.h>
 #include <DAQ/Df250PulseData.h>
 
@@ -97,10 +99,15 @@ jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	vector<const DCCALDigiHit*> ccal_digihits;
 
+	vector<const DCCALHit*> ccal_hits;
+
 	loop->Get(ccal_digihits);
+	loop->Get(ccal_hits);
 
 	cout << " Event number = " << eventnumber  <<  endl;
-	cout << " Number of hits = " << ccal_digihits.size() <<  endl;
+	cout << " Number of digi hits = " << ccal_digihits.size() <<  endl;
+	cout << " Number of hits = " << ccal_hits.size() <<  endl;
+
 
 	nhit = 0;
 	memset(column,0,sizeof(column));

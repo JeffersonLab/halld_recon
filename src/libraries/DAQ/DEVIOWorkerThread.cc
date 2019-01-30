@@ -777,6 +777,9 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 	// Must be physics event(s)
 	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT) + (1<<kSTATUS_CDAQ);
 
+	// Set flag in JEventSource_EVIOpp that this is a CDAQ file
+	event_source->IS_CDAQ_FILE = true;
+
 	uint32_t physics_event_len      = *iptr++;
 	uint32_t *iend_physics_event    = &iptr[physics_event_len];
 	iptr++;

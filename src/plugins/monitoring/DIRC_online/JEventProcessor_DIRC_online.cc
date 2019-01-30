@@ -38,6 +38,7 @@ static TH1I *hHit_Box;
 static TH2I *hHit_NHitsVsBox;
 static TH1I *hHit_TimeOverThreshold[Nboxes];
 static TH2I *hHit_TimeOverThresholdVsChannel[Nboxes];
+static TH2I *hHit_TimeOverThresholdVsTime[Nboxes];
 static TH1I *hHit_tdcTime[Nboxes];
 static TH2I *hHit_tdcTimeVsChannel[Nboxes];
 static TH2I *hHit_pixelOccupancy[Nboxes];
@@ -96,10 +97,11 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
         TString strN = "_" + box_str[i] + "Box";
         TString strT = ", " + box_str[i] + " box";
 	hHit_pixelOccupancy[i] = new TH2I("Hit_PixelOccupancy"+strN,"DIRCPmtHit pixel occupancy"+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hHit_TimeOverThreshold[i] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold"+strT+"; time-over-threshold (ns); hits",100,0.0,100.0);
-	hHit_TimeOverThresholdVsChannel[i] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel"+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
-	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",100,0.0,100.0);
-	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
+	hHit_TimeOverThreshold[i] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold"+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
+	hHit_TimeOverThresholdVsChannel[i] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel"+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
+	hHit_TimeOverThresholdVsTime[i] = new TH2I("Hit_TimeOverThresholdVsTime"+strN,"DIRCPmtHit time-over-threshold vs time"+strT+"; time; time-over-threshold [ns]",500,0,500,100,0.0,100.);
+	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",100,0.0,500.0);
+	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,500.0);
         hitDir->cd();
     }
 
@@ -114,8 +116,8 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
         TString strN = "_" + box_str[i] + "Box";
         TString strT = ", " + box_str[i] + " box";
 	hDigiHit_pixelOccupancy[i] = new TH2I("TDCDigiHit_PixelOccupancy"+strN,"DIRCTDCDigiHit pixel occupancy"+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hDigiHit_tdcTime[i] = new TH1I("TDCDigiHit_Time"+strN,"DIRCTDCDigiHit time"+strT+";time [ns]; hits",500,0.0,1000.0);
-	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,1000.0);
+	hDigiHit_tdcTime[i] = new TH1I("TDCDigiHit_Time"+strN,"DIRCTDCDigiHit time"+strT+";time [ns]; hits",500,0.0,100.0);
+	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
 	digihitDir->cd();
     }
     // back to main dir
@@ -188,6 +190,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	hHit_pixelOccupancy[box]->Fill(dDIRCGeometry->GetPixelRow(hit->ch), dDIRCGeometry->GetPixelColumn(hit->ch));
 	hHit_TimeOverThreshold[box]->Fill(hit->tot);
 	hHit_TimeOverThresholdVsChannel[box]->Fill(channel,hit->tot);
+	hHit_TimeOverThresholdVsTime[box]->Fill(hit->t, hit->tot);
 	hHit_tdcTime[box]->Fill(hit->t);
 	hHit_tdcTimeVsChannel[box]->Fill(channel,hit->t);
     }
