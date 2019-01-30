@@ -27,6 +27,10 @@ using namespace jana;
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
 
+#include <DAQ/DDIRCTDCHit.h>
+#include <DIRC/DDIRCTDCDigiHit.h>
+#include <DIRC/DDIRCPmtHit.h>
+
 #include <TMath.h>
 #include <TFile.h>
 #include <TTree.h>
