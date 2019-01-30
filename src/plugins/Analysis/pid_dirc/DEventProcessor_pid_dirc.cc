@@ -19,8 +19,7 @@ DEventProcessor_pid_dirc::DEventProcessor_pid_dirc() {
   fEvent = NULL;
 }
 
-DEventProcessor_pid_dirc::~DEventProcessor_pid_dirc() {
-}
+DEventProcessor_pid_dirc::~DEventProcessor_pid_dirc() {}
 
 jerror_t DEventProcessor_pid_dirc::init(void) {
   string locOutputFileName = "hd_root.root";
@@ -77,77 +76,20 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
 }
 
 jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
-  vector<const DBeamPhoton*> beam_photons;
+
   vector<const DMCThrown*> mcthrowns;
   vector<const DMCTrackHit*> mctrackhits;
   vector<const DDIRCTruthBarHit*> dircBarHits;
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
-  
-  loop->Get(beam_photons);
+  vector<const DDIRCTDCDigiHit*> dataDigiHits;
+  vector<const DDIRCPmtHit*> dataPmtHits;
+    
   loop->Get(mcthrowns);
   loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
-
-  TVector3 VertexGen = TVector3(mcthrowns[0]->position().X(),
-				mcthrowns[0]->position().Y(), mcthrowns[0]->position().Z());
-  // Make Particle object for beam photon
-  TLorentzVector beam_photon(0.0, 0.0, 9.0, 9.0);
-  if (beam_photons.size() > 0) {
-    const DLorentzVector &lv = beam_photons[0]->lorentzMomentum();
-    beam_photon.SetPxPyPzE(lv.Px(), lv.Py(), lv.Pz(), lv.E());
-  }
-
-  // Target is proton at rest in lab frame
-  TLorentzVector target(0.0, 0.0, 0.0, 0.93827);
-
-  particle_set thr;
-
-  // Loop over track hits
-  // map first: DMCTrack index+1
-  // map second: number of hits
-  map<int, int> cdchits;
-  map<int, int> fdchits;
-  map<int, int> bcalhits;
-  map<int, int> fcalhits;
-  map<int, int> upvhits;
-  map<int, int> tofhits;
-  map<int, int> richpoints;
-  map<int, int> cerepoints;
-
-  for (unsigned int i = 0; i < mctrackhits.size(); i++) {
-    const DMCTrackHit *mctrackhit = mctrackhits[i];
-
-    switch (mctrackhit->system) {
-    case SYS_CDC:
-      if (mctrackhit->primary)
-	cdchits[mctrackhit->track]++;
-      break;
-    case SYS_FDC:
-      if (mctrackhit->primary)
-	fdchits[mctrackhit->track]++;
-      break;
-    case SYS_BCAL:
-      bcalhits[mctrackhit->track]++;
-      break;
-    case SYS_FCAL:
-      fcalhits[mctrackhit->track]++;
-      break;
-    case SYS_UPV:
-      upvhits[mctrackhit->track]++;
-      break;
-    case SYS_TOF:
-      tofhits[mctrackhit->track]++;
-      break;
-    case SYS_CHERENKOV:
-      cerepoints[mctrackhit->track]++;
-      break;
-    default:
-      break;
-    }
-  }
-  
-  //  std::cout<<"#hits "<< dircPmtHits.size()<<std::endl;
+  loop->Get(dataDigiHits);
+  loop->Get(dataPmtHits);
 
   japp->RootWriteLock(); //ACQUIRE ROOT LOCK
   
@@ -203,6 +145,40 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
       if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);      
     }
   }
+
+  // calibrated hists
+  if(dataDigiHits.size()>0){
+    fEvent = new DrcEvent();
+    DrcHit hit;
+    // for (const auto dhit : dataPmtHits) {
+    //   int ch=dhit->ch;
+    //   int pmt=ch/64;
+    //   int pix=ch%64;
+	
+    //   hit.SetChannel(ch);
+    //   hit.SetPmtId(pmt);
+    //   hit.SetPixelId(pix);
+    //   hit.SetLeadTime(dhit->t);
+    //   hit.SetTotTime(dhit->tot);
+    //   fEvent->AddHit(hit);      
+    // }
+
+    for (const auto dhit : dataDigiHits) {
+      int ch=dhit->channel;
+      int pmt=ch/64;
+      int pix=ch%64;
+	
+      hit.SetChannel(ch);
+      hit.SetPmtId(pmt);
+      hit.SetPixelId(pix);
+      hit.SetLeadTime(dhit->time);
+      hit.SetTotTime(dhit->edge);
+      fEvent->AddHit(hit);      
+    }
+    
+    
+    if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
+  }  
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
   japp->RootUnLock(); //RELEASE ROOT LOCK
