@@ -100,7 +100,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_TimeOverThreshold[i] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold"+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 	hHit_TimeOverThresholdVsChannel[i] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel"+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
 	hHit_TimeOverThresholdVsTime[i] = new TH2I("Hit_TimeOverThresholdVsTime"+strN,"DIRCPmtHit time-over-threshold vs time"+strT+"; time; time-over-threshold [ns]",500,0,500,100,0.0,100.);
-	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",100,0.0,1000.0);
+	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",100,0.0,500.0);
 	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,500.0);
         hitDir->cd();
     }
