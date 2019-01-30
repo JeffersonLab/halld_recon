@@ -3278,14 +3278,57 @@ double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutra
 void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHypothesis) const
 {
 	CalcDCdEdxChiSq(locChargedTrackHypothesis);
+	unsigned int locNDF_Total=locChargedTrackHypothesis->Get_NDF_DCdEdx();
+	double locChiSq_Total=locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+
+	// track momentum
+	const DTrackTimeBased *track=locChargedTrackHypothesis->Get_TrackTimeBased();
+	double p=track->momentum().Mag();
+
+	// Add dEdx from SC for protons/antiprotons
+	if (locChargedTrackHypothesis->PID()==Proton
+	    || locChargedTrackHypothesis->PID()==AntiProton){
+	   shared_ptr<const DSCHitMatchParams>scparms=locChargedTrackHypothesis->Get_SCHitMatchParams();
+	   if (scparms!=NULL){
+	     double beta=p/track->energy();
+	     double diff=scparms->dEdx-GetProtondEdxMean_SC(beta);
+	     double sigma=GetProtondEdxSigma_SC(beta);
+	     double chisq=diff*diff/(sigma*sigma);
+	     locChiSq_Total+=chisq;
+	     locNDF_Total+=1;
+	   }
+	}
+	// Add E/p for electrons/positrons
+	if (locChargedTrackHypothesis->PID()==Electron
+	    || locChargedTrackHypothesis->PID()==Positron){
+	  shared_ptr<const DBCALShowerMatchParams>bcalparms=locChargedTrackHypothesis->Get_BCALShowerMatchParams(); 
+	  shared_ptr<const DFCALShowerMatchParams>fcalparms=locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+	  if (bcalparms!=NULL){
+	    double E_over_p_mean=1.;
+	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
+	    double sigma=0.1; 
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  } 
+	  if (fcalparms!=NULL){
+	    double E_over_p_mean=1.;
+	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
+	    double sigma=0.0125/(p*p)+0.08; 
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  }
+	}
 
 	unsigned int locTimingNDF = 0;
 	double locTimingPull = 0.0;
 	double locTimingChiSq = Calc_TimingChiSq(locChargedTrackHypothesis, locTimingNDF, locTimingPull);
 	locChargedTrackHypothesis->Set_ChiSq_Timing(locTimingChiSq, locTimingNDF);
 
-	unsigned int locNDF_Total = locChargedTrackHypothesis->Get_NDF_Timing() + locChargedTrackHypothesis->Get_NDF_DCdEdx();
-	double locChiSq_Total = locChargedTrackHypothesis->Get_ChiSq_Timing() + locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+	locNDF_Total += locChargedTrackHypothesis->Get_NDF_Timing();
+	locChiSq_Total += locChargedTrackHypothesis->Get_ChiSq_Timing();
+
 	double locFOM = (locNDF_Total > 0) ? TMath::Prob(locChiSq_Total, locNDF_Total) : numeric_limits<double>::quiet_NaN();
 	locChargedTrackHypothesis->Set_ChiSq_Overall(locChiSq_Total, locNDF_Total, locFOM);
 }
