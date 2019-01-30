@@ -86,6 +86,7 @@ bool DCCALShower_factory::LoadCCALProfileData(JApplication *japp, int32_t runnum
 	// cleanup
 	ccal_profile.close();	
 */
+	
 	return true;
 }
 
@@ -108,6 +109,8 @@ DCCALShower_factory::DCCALShower_factory()
 	gPARMS->SetDefaultParameter("CCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("CCAL:TIME_CUT",TIME_CUT,"time cut for associating CCAL hits together into a cluster");
 
+	pthread_mutex_init(&mutex, NULL);
+
 }
 
 //------------------
@@ -126,13 +129,17 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
-  vector<const DCCALHit*> ccalhits;
+    vector<const DCCALHit*> ccalhits;
 	eventLoop->Get(ccalhits);
 	
 	if(ccalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
-	double tot_en = 0;
+	// The Fortran code below uses common blocks, so we need to set a lock
+	// so that different threads are not running on top of each other
+	//japp->WriteLock("CCALShower_factory");
+	pthread_mutex_lock(&mutex);
 	
+	double tot_en = 0;
 
 	SET_EMIN   =  0.05;    // banks->CONFIG->config->CLUSTER_ENERGY_MIN;
 	SET_EMAX   =  15.9;    // banks->CONFIG->config->CLUSTER_ENERGY_MAX;
@@ -144,6 +151,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	for(int icol = 1; icol <= MCOL; ++icol)
 	  for(int irow = 1; irow <= MROW; ++irow) {
 	    ECH(icol,irow) = 0;
+	    TIME(icol,irow) = 0;
 	    STAT_CH(icol,irow) = 0;
 	    if(icol>=17 && icol<=18 && irow>=17 && irow<=18) STAT_CH(icol,irow) = -1;
 	  }
@@ -169,6 +177,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  row    = (idhycal-1001)/34+1;
 	  
 	  ECH(column,row) = int(ccalhit->E*10.+0.5);
+	  TIME(column,row) = ccalhit->t;
 	}
 	
 	main_island_();
@@ -203,15 +212,20 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  shower->y       =   adcgam_cbk_.u.fadcgam[k][2];
 	  shower->x1      =   0;
 	  shower->y1      =   0;
+	  shower->time    =   adcgam_cbk_.u.iadcgam[k][6];
 
-	  shower->chi2    =   adcgam_cbk_.u.fadcgam[k][6];
-	  shower->type    =   adcgam_cbk_.u.iadcgam[k][7];
-	  shower->dime    =   adcgam_cbk_.u.iadcgam[k][8];
-	  shower->status  =   adcgam_cbk_.u.iadcgam[k][10];
+	  shower->chi2    =   adcgam_cbk_.u.fadcgam[k][7];
+	  shower->type    =   adcgam_cbk_.u.iadcgam[k][8];
+	  shower->dime    =   adcgam_cbk_.u.iadcgam[k][9];
+	  shower->status  =   adcgam_cbk_.u.iadcgam[k][11];
 
 	  _data.push_back( shower );
 	}
-	
+
+	// Release the lock	
+	//japp->Unlock("CCALShower_factory");
+	pthread_mutex_unlock(&mutex);
+
 	return NOERROR;
 	
 }

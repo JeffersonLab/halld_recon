@@ -3,6 +3,7 @@
 #define test_p
 *
       subroutine init_island(in_filename, name_length)
+*
       implicit none
       integer name_length
 	  character in_filename(1000)
@@ -18,7 +19,7 @@
 *
 	  do i1 = 1, name_length
 		filename(i1:i1) = in_filename(i1)
-	  enddo
+	  enddo 
 *
 *	  write(*,*) 'DEBUG: opening ',filename
 *
@@ -28,22 +29,21 @@
 		do i2 = 0, i1
           read(22,'(i3,1x,i3,2(1x,e20.10))')
      &          id1, id2, fcell_hyc, fd2c
-		  acell(0,i1,i2) = fcell_hyc
+          acell(0,i1,i2) = fcell_hyc
 		  acell(0,i2,i1) = fcell_hyc
 		  ad2c(0,i2,i1) = fd2c
-		  ad2c(0,i1,i2) = fd2c
-		enddo
-	  enddo
-	  close(22)
+          ad2c(0,i1,i2) = fd2c
+        enddo
+      enddo
+      close(22)
 *
-	  profile_init_status=.true.
-	  return
-	  end
-
+      profile_init_status=.true.
+      return
+      end
 /*
       subroutine init_island(new_acell, new_ad2c)
       implicit none
-	  real  new_acell(0:1,0:500,0:500)
+      real  new_acell(0:1,0:500,0:500)
 	  real  new_ad2c(0:1,0:500,0:500)
       real acell, ad2c
       integer i1, i2
@@ -63,8 +63,6 @@ c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
           acell(0,i2,i1) = new_acell(i1,i2,0)
            ad2c(0,i2,i1) = new_ad2c(i1,i2,0)
            ad2c(0,i1,i2) = new_ad2c(i2,i1,0)
-           
-           write(*,*) i1,i2,acell(0,i1,i2),ad2c(0,i1,i2)
         enddo
         enddo
 *        
@@ -86,6 +84,7 @@ c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
      &        id(10800)     ,! energy in counter             input/OUTPUT
      &        ncl           ,! number of clusters                  OUTPUT
      &        lencl(200)     ! length of a cluster                 OUTPUT
+      real    tt(10800)      ! time in counter               input/OUTPUT
 *
       real acell, ad2c
       common/profile_com/ acell(0:1,0:500,0:500), ad2c(0:1,0:500,0:500)
@@ -138,11 +137,11 @@ c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
 *
       nadcgam = 0
 *
-      call data_hyc(nw,ia,id)                ! Prepare data in dimensionless form
+      call data_hyc(nw,ia,id,tt)             ! Prepare data in dimensionless form
 c
       if(nw.gt.0) then                       ! if Photon has information 
 c
-        call clus_hyc(nw,ia,id,ncl,lencl)    ! Clusters search
+        call clus_hyc(nw,ia,id,tt,ncl,lencl)    ! Clusters search
 c
         if(ncl.gt.0) then                    ! if cluster exist
            ipncl=1                           ! first cluster
@@ -153,8 +152,8 @@ c
              enddo                           ! loop over counters in a cluster
 c             if(ecl/100..ge.min_energy) then ! if the energy is big enough
 c
-               call gams_hyc(lencl(icl),ia(ipncl),id(ipncl))    ! cluster
-                                                                ! processing
+               call gams_hyc(lencl(icl),ia(ipncl),id(ipncl),tt(ipncl)) ! cluster
+                                                                       ! processing
 c
                if(nadcgam.gt.madcgam) then   ! if the number of gammas too big
                  nadcgam = madcgam
@@ -174,22 +173,25 @@ c             endif                          ! if the energy is big enough
       return
       end
 *
-      subroutine data_hyc(nw,ia,id)
+      subroutine data_hyc(nw,ia,id,tt)
       implicit none
 #include "cphoto.inc"
       integer 
      &          nw            ,! number of hits in subdetector        OUTPUT
      &          ia(*)         ,! adresses of counters id = nx*100+ny  OUTPUT
      &          id(*)          ! energy in counter ( Pht e- )         OUTPUT
+      real      tt(*)          ! time in counter (ns)                 OUTPUT
 *
 *             ---------------Include files---------------
 *
 *
 *               -------------Local declarations------------
 *
-      integer   ech            ! hit array                            INPUT [0.1MeV]
+      integer  ech             ! hit array                            INPUT [0.1MeV]
       integer  i, j, ie
       common/ech_common/ ech(MCOL,MROW)
+      real     tch             ! hit time array
+      common/tch_common/ tch(MCOL,MROW)
 *
       nw = 0                   ! init output
 *
@@ -200,6 +202,7 @@ c             endif                          ! if the energy is big enough
             nw     = nw + 1             ! one more hit
             ia(nw) = 100*i+j            ! code address
             id(nw) = ie                 ! energy in 10 Mev
+            tt(nw) = tch(i,j)
           endif
         enddo
       enddo
@@ -209,7 +212,7 @@ c             endif                          ! if the energy is big enough
 *
 * ---------------------------------------------
 *
-      subroutine clus_hyc(nw,ia,id,ncl,lencl)
+      subroutine clus_hyc(nw,ia,id,tt,ncl,lencl)
       implicit none
 *
 *             -----------Argument declarations-----------
@@ -220,6 +223,7 @@ c             endif                          ! if the energy is big enough
      &        id(*)         ,! energy in counter             input/OUTPUT
      &        ncl           ,! number of clusters                  OUTPUT
      &        lencl(*)       ! length of a cluster                 OUTPUT
+      real    tt(*)          ! time in counter               input/OUTPUT
 *
 *               -------------Local declarations------------
 *
@@ -232,6 +236,7 @@ c             endif                          ! if the energy is big enough
      &        iwork(10800)    ,! working array
      &        idwork(10800)   ,! help me
      &        maxcl          ! Maximum number of clusters 
+      real    twork(10800)   ! working array
 *
 *               --------------Data statements--------------
 *
@@ -246,7 +251,7 @@ c             endif                          ! if the energy is big enough
       lencl(1)=1
       if(nw.lt.2) return          ! only one hit
 c
-      call order_hyc(nw,ia,id)    ! the addresses must be in increasing order.
+      call order_hyc(nw,ia,id,tt) ! the addresses must be in increasing order.
 c
       ncl=0                       ! zero output
       next=1
@@ -285,6 +290,9 @@ c
                 call ucopy(id(last+1-leng),iwork(1),leng)
                 call ucopy21(id(last+1),id(last+1-leng),(ib-1-last))
                 call ucopy(iwork(1),id(ib-leng),leng)
+                call fcopy(tt(last+1-leng),twork(1),leng)
+                call fcopy21(tt(last+1),tt(last+1-leng),(ib-1-last))
+                call fcopy(twork(1),tt(ib-leng),leng)
                 do j=icl,ncl-2
                   lencl(j)=lencl(j+1)
                 enddo
@@ -303,7 +311,7 @@ c
 *
 * ---------------------------------------------
 *
-      subroutine order_hyc(nw,ia,id)      
+      subroutine order_hyc(nw,ia,id,tt)      
       implicit none
 *
 *             -----------Argument declarations-----------
@@ -312,6 +320,7 @@ c
      &          nw            ,! number of hits in subdetector       
      &          ia(*)         ,! first  INPUT/OUTPUT array
      &          id(*)          ! second INPUT/OUTPUT array
+      real      tt(*)          ! time in counter               input/OUTPUT
 *
 *             ---------------Include files---------------
 *
@@ -322,6 +331,7 @@ c
       integer 
      &       i,k,
      &       iat,idt
+      real   ttt
 *
 *               --------------Event Analysis Code-------------
 *
@@ -338,19 +348,23 @@ c
         if(alarm) return 1
         iat=ia(k)
         idt=id(k)
+        ttt=tt(k)
         do i=k-1,0,-1
           if(i.ge.1) then
             if(iat.lt.ia(i)) then
               ia(i+1)=ia(i)
               id(i+1)=id(i)
+              tt(i+1)=tt(i)
             else
               ia(i+1)=iat
               id(i+1)=idt
+              tt(i+1)=ttt
               go to 2
             endif
           else
             ia(1)=iat
             id(1)=idt
+            tt(1)=ttt
           endif
         enddo                         ! loop over hits
       endif
@@ -361,7 +375,7 @@ c
 *
 * ---------------------------------------------
 *
-      subroutine gams_hyc(nadc,ia,id)
+      subroutine gams_hyc(nadc,ia,id,tt)
       implicit none
 *
 *             -----------Argument declarations-----------
@@ -370,6 +384,7 @@ c
      &       nadc             ,! number of counters in the cluster
      &       ia(nadc)         ,! adresses of counters
      &       id(nadc)          ! energy of counters
+      real   tt(nadc)          ! time of counters
 *
 *             ---------------include files---------------
 *
@@ -420,8 +435,8 @@ c
      &          ypk(10)       ,!
      &          a,dx,dy       ,!
      &          cell_hyc      ,!
-     &          e1,x1,y1      ,!
-     &          e2,x2,y2      ,!
+     &          e1,x1,y1,t1   ,!
+     &          e2,x2,y2,t2   ,!
      &          fwrk(10800,0:12)    ,! working array for resolved peaks
      &          fe, fia
 *
@@ -439,7 +454,7 @@ cc    data minpk/5/            ! min cell energy to be good for the 2nd peak if 
       data niter/6/
       save chisq1, chisq2, niter, idelta
 c
-      call order_hyc(nadc,ia,id)
+      call order_hyc(nadc,ia,id,tt)
 c
       ngam0=nadcgam
 c
@@ -503,14 +518,15 @@ c
       call peak_type(ix,iy,itype)
 c
       e2=0.
-      call gamma_hyc(itype,nadc,ia,id,chisq,
-     &               e1,x1,y1,
-     &               e2,x2,y2)
+      call gamma_hyc(itype,nadc,ia,id,tt,chisq,
+     &               e1,x1,y1,t1,
+     &               e2,x2,y2,t2)
         chi2_adcgam(1,nadcgam)=chisq          !  remember chi2 of the cluster
         type_adcgam(1,nadcgam)=itype          !  remember type of the cluster
       energy_adcgam(1,nadcgam)=e1
            x_adcgam(1,nadcgam)=x1
            y_adcgam(1,nadcgam)=y1
+        time_adcgam(1,nadcgam)=t1
         dime_adcgam(1,nadcgam)=nadc
           id_adcgam(1,nadcgam)=0
       status_adcgam(1,nadcgam)=itype
@@ -523,6 +539,7 @@ c
         energy_adcgam(1,nadcgam)=e2
              x_adcgam(1,nadcgam)=x2
              y_adcgam(1,nadcgam)=y2
+          time_adcgam(1,nadcgam)=t2
           dime_adcgam(1,nadcgam)=nadc
             id_adcgam(1,nadcgam)=2
             id_adcgam(1,nadcgam-1)=1
@@ -679,14 +696,15 @@ c
 c
         e2=0.
         call gamma_hyc(itype,leng,iwrk(1,npk+1),iwrk(1,npk+2),
-     &                 chisq,e1,x1,y1,
-     &                       e2,x2,y2)
+     &                 chisq,e1,x1,y1,t1,
+     &                       e2,x2,y2,t2)
         chi2_adcgam(1,nadcgam)=chisq      !  remember chi2 of the cluster
         type_adcgam(1,nadcgam)=itype      !  remember type of the cluster
         energy_adcgam(1,nadcgam)=e1
         x_adcgam(1,nadcgam)=x1
         y_adcgam(1,nadcgam)=y1
-        id_adcgam  (1,nadcgam)=90
+         time_adcgam(1,nadcgam)=t1
+       id_adcgam  (1,nadcgam)=90
         dime_adcgam  (1,nadcgam)=leng
         status_adcgam(1,nadcgam)=itype
         igmpk(1,ipk)=nadcgam
@@ -698,6 +716,7 @@ c
           energy_adcgam(1,nadcgam)=e2
           x_adcgam(1,nadcgam)=x2
           y_adcgam(1,nadcgam)=y2
+        time_adcgam(1,nadcgam)=t2
          xc_adcgam(1,nadcgam)=0.5*(x2-x1)
          yc_adcgam(1,nadcgam)=0.5*(y2-y1)
          xc_adcgam(1,nadcgam-1)=0.5*(x1-x2)
@@ -824,13 +843,14 @@ c
 c
         e2=0.
         call gamma_hyc(itype,leng,iwrk(1,npk+1),iwrk(1,npk+2),
-     &                 chisq,e1,x1,y1,
-     &                       e2,x2,y2)
+     &                 chisq,e1,x1,y1,t1,
+     &                       e2,x2,y2,t2)
         chi2_adcgam(1,nadcgam)=chisq      !  remember chi2 of the cluster
         type_adcgam(1,nadcgam)=itype      !  remember type of the cluster
         energy_adcgam(1,nadcgam)=e1
         x_adcgam(1,nadcgam)=x1
         y_adcgam(1,nadcgam)=y1
+        time_adcgam(1,nadcgam)=t1
         dime_adcgam  (1,nadcgam)=leng
         id_adcgam  (1,nadcgam)=10
         status_adcgam(1,nadcgam)=itype
@@ -840,6 +860,7 @@ c
           type_adcgam(1,nadcgam)=itype+10      !  remember type of the cluster
           type_adcgam(1,nadcgam-1)=itype+10      !  remember type of the cluster
           energy_adcgam(1,nadcgam)=e2
+          time_adcgam(1,nadcgam)=t2
           x_adcgam(1,nadcgam)=x2
           y_adcgam(1,nadcgam)=y2
          xc_adcgam(1,nadcgam)=0.5*(x2-x1)
@@ -921,9 +942,9 @@ c
 *
 * ---------------------------------------------
 *
-      subroutine gamma_hyc(itype,nadc,ia,id,chisq,
-     &                                e1,x1,y1,
-     &                                e2,x2,y2)
+      subroutine gamma_hyc(itype,nadc,ia,id,tt,chisq,
+     &                                e1,x1,y1,t1,
+     &                                e2,x2,y2,t2)
       implicit none
 *
 *
@@ -936,6 +957,7 @@ c
      &       ia(nadc)         ,! adresses of counters
      &       id(nadc)          ! energy of counters
       real
+     &       tt(nadc)         ,! time of counters
      &       chisq             ! reference value of chisq(input) 
                                ! improved  value of chisq(output) 
 c
@@ -948,6 +970,7 @@ c
      &       e1,x1,y1         ,! energy and coordinates of first gamma
      &       e2,x2,y2          ! energy and coordinates of second gamma(if any)
                                ! coordinates are in terms of sell size
+      real   t1,t2             ! time of both gammas
 *
 *             ---------------include files---------------
 *
@@ -983,10 +1006,11 @@ c
       e2=0.                             ! one gamma in a peak assumed
       x2=0.
       y2=0.
+      t2=0.
 *
       call fill_zeros(nadc,ia,nzero,iaz)
 c
-      call mom1_pht(nadc,ia,id,nzero,iaz,e1,x1,y1)! calculate initial values of e,x,y
+      call mom1_pht(nadc,ia,id,tt,nzero,iaz,e1,x1,y1,t1)! calculate initial values of e,x,y
       if(nadc.le.0) return                 ! if nadc=0 e1=0.
 c
       chimem=chisq                         ! remember reference value of chi2
@@ -1053,7 +1077,8 @@ c
 c  Try to improve chi2 by introducing second gamma
 c
       chiold=chisq
-      call tgamma_hyc(nadc,ia,id,nzero,iaz,chisq,ee,xx,yy,e2,x2,y2)
+      call tgamma_hyc(nadc,ia,id,tt,nzero,iaz,chisq,ee,xx,yy,t1,
+     &					e2,x2,y2,t2)
 c
       if(e2.gt.0.) then            ! if chi2 improved -decide if the
                                    ! separation has physical meaning by
@@ -1169,7 +1194,7 @@ cc      if(xm2.gt.xm2cut) then
 *
 * ---------------------------------------------
 *
-      subroutine mom1_pht(nadc,ia,id,nzero,iaz,a0,x0,y0)
+      subroutine mom1_pht(nadc,ia,id,tt,nzero,iaz,a0,x0,y0,t)
       implicit none
 *
 *
@@ -1179,9 +1204,11 @@ cc      if(xm2.gt.xm2cut) then
      &          nadc          ,! number of hits in cluster           INPUT
      &          ia(nadc)      ,! adresses of counters                INPUT
      &          id(nadc)       ! energy in counter                   INPUT
+      real      tt(nadc)       ! time of counter                     INPUT
 *
       real   
      *          a0,x0,y0       ! First momenta                      OUTPUT
+      real      t              ! energy weighted time               OUTPUT
 *
       integer   nzero,         ! number of neib. elements, supposed to have 0 energy
      &          iaz(nzero)     ! array  of neib. elements
@@ -1193,13 +1220,17 @@ cc      if(xm2.gt.xm2cut) then
      &     ix,iy                                !
       real a                                   ,!
      &     corr                                ,! Correction to energy
-     &     cell_hyc                             ! calc. energy in cell
+     &     cell_hyc                            ,! calc. energy in cell
+     &     sh_en                               ,! total shower energy  
+     &     tweight                              ! weighted time sum 
 *
 *               --------------Event Analysis Code-------------
 *
       a0=0.
       x0=0.
       y0=0.
+      t=0.
+      sh_en=0.
       if(nadc.le.0) return
       do i=1,nadc
         a=id(i)
@@ -1208,10 +1239,13 @@ cc      if(xm2.gt.xm2cut) then
         a0=a0+a
         x0=x0+a*ix
         y0=y0+a*iy
+        sh_en=sh_en+a
+        tweight=tt(i)*a
       enddo
       if(a0.le.0.) return
       x0=x0/a0
       y0=y0/a0
+      t=tweight/sh_en
       corr=0.              ! correction for delta
       do i=1,nadc
         ix=ia(i)/100
@@ -1417,7 +1451,7 @@ c
 *
 * ---------------------------------------------
 *
-      subroutine tgamma_hyc(nadc,ia,id,nzero,iaz,chisq,
+      subroutine tgamma_hyc(nadc,ia,id,tt,nzero,iaz,chisq,
      &                           e1,x1,y1,e2,x2,y2)
       implicit none
 *
@@ -1429,6 +1463,7 @@ c
      &       nadc             ,! number of counters in the peak
      &       ia(nadc)         ,! adresses of counters
      &       id(nadc)          ! energy of counters
+      real   tt(nadc)          ! time of counters
       real
      &       chisq             ! initial   value of chisq(input) 
                                ! improved  value of chisq(output) 
@@ -1439,8 +1474,8 @@ c
 *                                            output
 *
       real
-     &       e1,x1,y1         ,! energy and coordinates of first gamma
-     &       e2,x2,y2          ! energy and coordinates of second gamma
+     &       e1,x1,y1,t1      ,! energy and coordinates of first gamma
+     &       e2,x2,y2,t2       ! energy and coordinates of second gamma
                                ! coordinates are in terms of sell size
 *
 *               -------------Local declarations------------
@@ -1492,7 +1527,7 @@ c    &     const /1.5/
 *
 *               --------------Event Analysis Code-------------
 *
-      call mom2_pht(nadc,ia,id,nzero,iaz,e0,x0,y0,xx,yy,yx)
+      call mom2_pht(nadc,ia,id,nzero,iaz,e0,x0,y0,xx,yy,yx,t2)
 *
       e2=0.
       x2=0.
@@ -1693,7 +1728,7 @@ c
 *
 * ---------------------------------------------
 *
-      subroutine mom2_pht(nadc,ia,id,nzero,iaz,a0,x0,y0,xx,yy,yx)
+      subroutine mom2_pht(nadc,ia,id,nzero,iaz,a0,x0,y0,xx,yy,yx,t)
       implicit none
 *
 *             -----------Argument declarations-----------
@@ -1702,9 +1737,10 @@ c
      &          nadc          ,! number of hits in cluster           INPUT
      &          ia(nadc)      ,! adresses of counters                INPUT
      &          id(nadc)       ! energy in counter                   INPUT
+      real      tt(nadc)       ! time of counter                     INPUT
 *
       real   
-     *          a0,x0,y0      ,! First momenta                      OUTPUT
+     *          a0,x0,y0,t    ,! First momenta                      OUTPUT
      *          xx,yy,yx       ! Second momenta                     OUTPUT
 *
       integer   nzero,         ! number of neib. elements, supposed to have 0 energy
@@ -1717,7 +1753,9 @@ c
      &     ix,iy                                !
       real a                                   ,!
      &     corr                                ,! Correction to energy
-     &     cell_hyc                             ! calc. energy in cell
+     &     cell_hyc                            ,! calc. energy in cell
+     &     sh_en                               ,! total shower energy  
+     &     tweight                              ! weighted time sum 
 *
 *               --------------Event Analysis Code-------------
 *
@@ -1727,6 +1765,8 @@ c
       xx=0.
       yy=0.
       yx=0.
+      t=0.
+      sh_en=0.
       if(nadc.le.0) return
       do i=1,nadc        !  first momenta
         a=id(i)
@@ -1735,10 +1775,13 @@ c
         a0=a0+a
         x0=x0+a*ix
         y0=y0+a*iy
+        sh_en=sh_en+a
+        tweight=tt(i)*a
       enddo
       if(a0.le.0.) return
       x0=x0/a0
       y0=y0/a0
+      t=tweight/sh_en
       do i=1,nadc        !  second momenta
         a=id(i)/a0
         ix=ia(i)/100
@@ -1930,6 +1973,34 @@ C
    21 c(I) = A(I)
       DO 22 I = 1, N
    22 B(I) = c(I)
-*
       RETURN
       END
+*
+      SUBROUTINE FCOPY(A,B,N)
+      implicit none
+      INTEGER   N, I
+      REAL      A(*), B(*)
+C--                NO OVERLAP  OR  BEGINNING OF A ON END OF B
+      IF (N.LE.0) RETURN
+      DO 21 I = 1, N
+   21 B(I) = A(I)
+      RETURN
+      END
+*
+      SUBROUTINE FCOPY21(A,B,N)
+      implicit none
+      INTEGER N, I, IA, IB
+      REAL A(*), B(*), c(10800)
+C
+      IF(N.LE.0) return
+      IF(N.GT.10800) THEN
+        PRINT*, 'ERR% UCOPY21 ARRAY TOO LONG ', N
+        CALL EXIT(1)
+      ENDIF
+      DO 21 I = 1, N
+   21 c(I) = A(I)
+      DO 22 I = 1, N
+   22 B(I) = c(I)
+      RETURN
+      END
+*
