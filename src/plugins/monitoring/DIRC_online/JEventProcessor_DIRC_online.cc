@@ -16,6 +16,8 @@ using namespace jana;
 #include <DAQ/DDIRCTDCHit.h>
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
+#include <DAQ/Df250PulseData.h>
+#include <DAQ/Df250WindowRawData.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -33,6 +35,7 @@ const int NmultDigi = 1000;
 
 // root hist pointers
 static TH1I *dirc_num_events;
+static TH1I *hLEDRefTime;
 static TH1I *hHit_NHits;
 static TH1I *hHit_Box;
 static TH2I *hHit_NHitsVsBox;
@@ -41,6 +44,7 @@ static TH2I *hHit_TimeOverThresholdVsChannel[Nboxes];
 static TH2I *hHit_TimeOverThresholdVsTime[Nboxes];
 static TH1I *hHit_tdcTime[Nboxes];
 static TH2I *hHit_tdcTimeVsChannel[Nboxes];
+static TH2I *hHit_tdcTimeDiffVsChannel[Nboxes];
 static TH2I *hHit_pixelOccupancy[Nboxes];
 
 static TH1I *hDigiHit_NtdcHits;
@@ -84,6 +88,8 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
     dircDir->cd();
 
+    hLEDRefTime = new TH1I("LEDRefTime", "LED reference SiPM time; time (ns)", 500, 0, 500);
+
     // book hists
     dirc_num_events = new TH1I("dirc_num_events","DIRC Number of events",1,0.5,1.5);
     TDirectory *hitDir = gDirectory->mkdir("Hit"); hitDir->cd();
@@ -100,8 +106,9 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_TimeOverThreshold[i] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold"+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 	hHit_TimeOverThresholdVsChannel[i] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel"+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
 	hHit_TimeOverThresholdVsTime[i] = new TH2I("Hit_TimeOverThresholdVsTime"+strN,"DIRCPmtHit time-over-threshold vs time"+strT+"; time; time-over-threshold [ns]",500,0,500,100,0.0,100.);
-	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",100,0.0,500.0);
-	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,500.0);
+	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",500,0.0,500.0);
+	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
+	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_TimeDiffVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,-500.0,500.0);
         hitDir->cd();
     }
 
@@ -116,8 +123,8 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
         TString strN = "_" + box_str[i] + "Box";
         TString strT = ", " + box_str[i] + " box";
 	hDigiHit_pixelOccupancy[i] = new TH2I("TDCDigiHit_PixelOccupancy"+strN,"DIRCTDCDigiHit pixel occupancy"+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hDigiHit_tdcTime[i] = new TH1I("TDCDigiHit_Time"+strN,"DIRCTDCDigiHit time"+strT+";time [ns]; hits",500,0.0,100.0);
-	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
+	hDigiHit_tdcTime[i] = new TH1I("TDCDigiHit_Time"+strN,"DIRCTDCDigiHit time"+strT+";time [ns]; hits",500,0.0,500.0);
+	hDigiHit_tdcTimeVsChannel[i] = new TH2I("TDCDigiHit_TimeVsChannel"+strN,"DIRCTDCDigiHit time"+strT+"; channel; time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
 	digihitDir->cd();
     }
     // back to main dir
@@ -157,6 +164,26 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     vector<const DDIRCPmtHit*> hits;
     eventLoop->Get(hits);
 
+    // get LED trigger
+    double locLEDRefTime = 0;
+    if(true) {
+	    
+	    // Get LED SiPM reference
+	    vector<const DCAEN1290TDCHit*> sipmtdchits;
+	    eventLoop->Get(sipmtdchits);
+	    vector<const Df250PulseData*> sipmadchits;
+	    eventLoop->Get(sipmadchits);
+
+	    for(uint i=0; i<sipmadchits.size(); i++) {
+		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
+		    //cout<<sipmadchit->slot<<" "<<sipmadchit->channel<<" "<<sipmadchit->course_time<<" "<<sipmadchit->fine_time<<endl;
+		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
+			    locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
+			    hLEDRefTime->Fill(locLEDRefTime); 
+		    }
+	    }
+    }
+
     const DTTabUtilities* ttabUtilities = nullptr;
     eventLoop->GetSingle(ttabUtilities);
 
@@ -193,6 +220,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	hHit_TimeOverThresholdVsTime[box]->Fill(hit->t, hit->tot);
 	hHit_tdcTime[box]->Fill(hit->t);
 	hHit_tdcTimeVsChannel[box]->Fill(channel,hit->t);
+	hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locLEDRefTime);
     }
     hHit_NHits->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsBox->Fill(0.,NHits[0]); hHit_NHitsVsBox->Fill(1.,NHits[1]);
