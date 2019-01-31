@@ -174,6 +174,40 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
+
+  if (jcalib->Get("BCAL/TimeSigmas",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
 }
 
 //---------------------------------

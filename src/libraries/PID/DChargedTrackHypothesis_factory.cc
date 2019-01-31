@@ -156,7 +156,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->setTime(locBCALShower->t - locBCALShowerMatchParams->dFlightTime);
 //		double locFlightTimePCorrelation = locDetectorMatches->Get_FlightTimePCorrelation(locTrackTimeBased, SYS_BCAL); //uncomment when ready!!
 //		Add_TimeToTrackingMatrix(locChargedTrackHypothesis, locCovarianceMatrix.get(), locBCALShowerMatchParams->dFlightTimeVariance, locBCALShower->tErr()*locBCALShower->tErr(), locFlightTimePCorrelation); //uncomment when ready!!
-		(*locCovarianceMatrix)(6 , 6) = /*dPIDAlgorithm->GetTimeVariance(SYS_BCAL,PID,p)+*/locBCALShowerMatchParams->dFlightTimeVariance;
+		(*locCovarianceMatrix)(6 , 6) = dPIDAlgorithm->GetTimeVariance(SYS_BCAL,PID,p)+locBCALShowerMatchParams->dFlightTimeVariance;
 	}
 
 	// TOF
