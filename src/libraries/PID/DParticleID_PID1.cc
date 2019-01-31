@@ -140,7 +140,40 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
     ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
   }
-
+  
+  if (jcalib->Get("TOF/TimeSigmas",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_TOF_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_TOF_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
 }
 
 //---------------------------------
@@ -293,4 +326,108 @@ jerror_t DParticleID_PID1::CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTr
 
 	return NOERROR;
 }
+
+double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t particle,double p) const {
+  double locSigma=0.;
+	  
+  if (particle==Proton || particle==AntiProton){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_Proton[1]/p
+	+ dTimeSigmaParams_TOF_Proton[2]
+	+ dTimeSigmaParams_TOF_Proton[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_Proton[1]/p
+	+ dTimeSigmaParams_BCAL_Proton[2]
+	+ dTimeSigmaParams_BCAL_Proton[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_Proton[1]/p
+	+ dTimeSigmaParams_FCAL_Proton[2]
+	+ dTimeSigmaParams_FCAL_Proton[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }  
+  else if (particle==KPlus || particle==KMinus){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_KPlus[1]/p
+	+ dTimeSigmaParams_TOF_KPlus[2]
+	+ dTimeSigmaParams_TOF_KPlus[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_KPlus[1]/p
+	+ dTimeSigmaParams_BCAL_KPlus[2]
+	+ dTimeSigmaParams_BCAL_KPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_KPlus[1]/p
+	+ dTimeSigmaParams_FCAL_KPlus[2]
+	+ dTimeSigmaParams_FCAL_KPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+  else if (particle==PiPlus || particle==PiMinus){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_PiPlus[1]/p
+	+ dTimeSigmaParams_TOF_PiPlus[2]
+	+ dTimeSigmaParams_TOF_PiPlus[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_BCAL_PiPlus[2]
+	+ dTimeSigmaParams_BCAL_PiPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_FCAL_PiPlus[2]
+	+ dTimeSigmaParams_FCAL_PiPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  } 
+  else if (particle==Electron || particle==Positron){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_PiPlus[1]/p
+	+ dTimeSigmaParams_TOF_PiPlus[2]
+	+ dTimeSigmaParams_TOF_PiPlus[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_BCAL_PiPlus[2]
+	+ dTimeSigmaParams_BCAL_PiPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_FCAL_PiPlus[2]
+	+ dTimeSigmaParams_FCAL_PiPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+
+  return locSigma*locSigma;	  
+}
+  
 

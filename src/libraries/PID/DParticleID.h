@@ -96,7 +96,9 @@ class DParticleID:public jana::JObject
 		virtual jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
 		virtual double GetProtondEdxMean_SC(double locBeta) const=0;
 		virtual double GetProtondEdxSigma_SC(double locBeta) const=0;
-
+		virtual double GetTimeVariance(DetectorSystem_t detector,
+					       Particle_t particle,
+					       double p) const=0;
 
 
 		/****************************************************** DISTANCE TO TRACK ******************************************************/
