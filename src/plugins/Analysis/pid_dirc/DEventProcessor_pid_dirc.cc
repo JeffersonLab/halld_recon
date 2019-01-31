@@ -147,34 +147,35 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   }
 
   // calibrated hists
-  if(dataDigiHits.size()>0){
+  //if(dataDigiHits.size()>0){
+  if(dataPmtHits.size()>0){
     fEvent = new DrcEvent();
     DrcHit hit;
-    // for (const auto dhit : dataPmtHits) {
-    //   int ch=dhit->ch;
-    //   int pmt=ch/64;
-    //   int pix=ch%64;
-	
-    //   hit.SetChannel(ch);
-    //   hit.SetPmtId(pmt);
-    //   hit.SetPixelId(pix);
-    //   hit.SetLeadTime(dhit->t);
-    //   hit.SetTotTime(dhit->tot);
-    //   fEvent->AddHit(hit);      
-    // }
-
-    for (const auto dhit : dataDigiHits) {
-      int ch=dhit->channel;
+    for (const auto dhit : dataPmtHits) {
+      int ch=dhit->ch;
       int pmt=ch/64;
       int pix=ch%64;
 	
       hit.SetChannel(ch);
       hit.SetPmtId(pmt);
       hit.SetPixelId(pix);
-      hit.SetLeadTime(dhit->time);
-      hit.SetTotTime(dhit->edge);
+      hit.SetLeadTime(dhit->t);
+      hit.SetTotTime(dhit->tot);
       fEvent->AddHit(hit);      
     }
+
+    // for (const auto dhit : dataDigiHits) {
+    //   int ch=dhit->channel;
+    //   int pmt=ch/64;
+    //   int pix=ch%64;
+	
+    //   hit.SetChannel(ch);
+    //   hit.SetPmtId(pmt);
+    //   hit.SetPixelId(pix);
+    //   hit.SetLeadTime(dhit->time);
+    //   hit.SetTotTime(dhit->edge);
+    //   fEvent->AddHit(hit);      
+    // }
     
     
     if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
