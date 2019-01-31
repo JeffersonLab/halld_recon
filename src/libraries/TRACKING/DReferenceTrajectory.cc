@@ -329,7 +329,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
   double itheta02s2 = 0.0;
   double X0sum=0.0;
   swim_step_t *last_step=NULL;
-	
+
   for(double s=0; fabs(s)<1000.; Nswim_steps++, swim_step++){
        
     if(Nswim_steps>=this->max_swim_steps){
@@ -341,12 +341,16 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = 0.; // we do not need the time for our purpose...
     
-    // Magnetic field at current position
-    bfield->GetField(swim_step->origin,swim_step->B);
+    double Rsq=swim_step->origin.Perp2();
+    double z=swim_step->origin.Z();
+    if (z>345. || z<0. || Rsq>60.*60.){
+      Nswim_steps++; break;
+    }
 
     //magnitude of momentum and beta
     double p_sq=swim_step->mom.Mag2();
@@ -402,7 +406,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
     }
 
     // Swim to next
-    double ds=stepper.FastStep(swim_step->B);
+    double ds=stepper.FastStep();
   
     // Calculate momentum loss due to the step we're about to take
     dP = ds*dP_dx;
@@ -416,13 +420,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
       mom.SetMag(ptot);
       stepper.SetStartingParams(q, &pos, &mom);
     }
-    s += ds;
-
-    double Rsq=swim_step->origin.Perp2();
-    double z=swim_step->origin.Z();
-    if (z>345. || z<17. || Rsq>60.*60.){
-      Nswim_steps++; break;
-    }
+    s += ds; 
   }
 }
 
@@ -474,12 +472,10 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = t;
-    
-    // Magnetic field at current position
-    bfield->GetField(swim_step->origin,swim_step->B);
 
     //magnitude of momentum and beta
     double p_sq=swim_step->mom.Mag2();
@@ -548,7 +544,7 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     }
 
     // Swim to next
-    double ds=stepper.FastStep(swim_step->B);
+    double ds=stepper.FastStep();
   
     // Calculate momentum loss due to the step we're about to take
     dP = ds*dP_dx;

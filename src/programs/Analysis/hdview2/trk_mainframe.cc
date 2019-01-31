@@ -15,6 +15,7 @@ using namespace std;
 
 #include <CDC/DCDCWire.h>
 #include <CDC/DCDCTrackHit.h>
+#include <TRACKING/DTrackFitterKalmanSIMD.h>
 
 #include <TGButtonGroup.h>
 #include <TGTextEntry.h>
@@ -308,8 +309,15 @@ void trk_mainframe::DoMyRedraw(void)
 	
 	// Update the histogram
 	histocanvas->GetCanvas()->cd();
-	resi->Fit("gaus","Q");
-	double sigma = resi->GetFunction("gaus")->GetParameter(2);
+	// Create my own gaussian fit function, in case predefined one gets lost somehow
+	static TF1 *mygaus = 0;
+	if (mygaus == 0)
+		mygaus = new TF1("mygaus", "[0]*exp(-0.5*((x-[1])/[2])**2)", -1e99, 1e99);
+	mygaus->SetParameter(0, resi->GetMaximum());
+	mygaus->SetParameter(1, resi->GetMean());
+	mygaus->SetParameter(2, resi->GetStdDev());
+	resi->Fit(mygaus,"Q");
+	double sigma = mygaus->GetParameter(2);
 
 	// Update label (this doesn't work, but may be only a tweak away!)
 	char title[256];
@@ -640,7 +648,15 @@ void trk_mainframe::DrawHitsForOneTrack(
 	
 	// Get state of s-lock checkbutton
 	bool lock_s_coordinate = slock->GetState();
-	
+
+    // Get fdc drift time - distance function
+    vector<const DTrackFitter*> fitters;
+    eventloop->Get(fitters, "KalmanSIMD");
+    const DTrackFitterKalmanSIMD *fitter=0;
+    if (fitters.size() > 0)
+        fitter =  dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
+
+
 	vector<pair<const DCoordinateSystem*,double> > &hits = index==0 ? allhits:TRACKHITS;
 	
 	// Loop over all hits and create graphics objects for each
@@ -664,7 +680,23 @@ void trk_mainframe::DrawHitsForOneTrack(
 		double mass = 0.13957;
 		double beta = 1.0/sqrt(1.0 + pow(mass/mom_doca.Mag(), 2.0))*2.998E10;
 		double tof = s/beta/1.0E-9; // in ns
-		dist -= tof*55.0E-4;
+        if (fitter) {
+            double Bz = rt->FindClosestSwimStep(wire)->B[2];
+            dist = fitter->GetFDCDriftDistance(dist / 55.0e-4 - tof, Bz);
+#if PRINT_DRIFT_DISTANCE_MAP
+            static bool print_the_map=true;
+            if (print_the_map) {
+               print_the_map = false;
+               for (double t=0; t < 2.5; t += 0.001) {
+                  double d = fitter->GetFDCDriftDistance(t, Bz);
+                  std::cout << d << " " << t << std::endl;
+               }
+            }
+#endif
+        }
+        else {
+		    dist -= tof*55.0E-4;
+        }
 		shift.SetMag(dist);
 
 		// See comments in DTrack_factory_ALT1.cc::LeastSquaresB
@@ -683,7 +715,17 @@ void trk_mainframe::DrawHitsForOneTrack(
 		//double sign = (shift.Dot(pos_wire)<0.0) ? -1.0:+1.0;
 		double resi = fabs(doca)-fabs(dist);
 		if(!isfinite(resi))continue;
-		
+#if VERBOSE_PRINT_FDC_HIT_INFO
+         std::cout
+           << "hit " << i << ": "
+           << "dist=" << dist
+           << " (" << shift[0] << "," << shift[1] << "," << shift[2] << ")"
+           << ", sdist=" << sdist
+           << " (" << pos_diff[0] << "," << pos_diff[1] << "," << pos_diff[2] << ")"
+           << ", tof=" << tof
+           << " at (" << pos_doca[0] << "," << pos_doca[1] << "," << pos_doca[2] << ")"
+           << std::endl;
+#endif
 		// If the residual is reasonably small, consider this hit to be
 		// on this track and record it (if this is the prime track)
 		if(index==0)TRACKHITS.push_back(hits[i]);
@@ -765,5 +807,3 @@ bool trk_mainframe::WireInList(const DCoordinateSystem *wire, vector<const DCDCT
 
 	return false;
 }
-
-

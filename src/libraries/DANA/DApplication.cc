@@ -70,6 +70,7 @@ DApplication::DApplication(int narg, char* argv[]):JApplication(narg, argv)
 	bfield = NULL;
 	lorentz_def = NULL;
 	RootGeom = NULL;
+	dircLut = NULL;
 	
 	// Since we defer reading in some tables until they are requested
 	// (likely while processing the first event) that time gets counted
@@ -492,5 +493,24 @@ void DApplication::CopySQLiteToLocalDisk(void)
 	jout << "Overwriting JANA_CALIB_URL with: " << JANA_CALIB_URL << endl;
 	pm->SetParameter("JANA_CALIB_URL", JANA_CALIB_URL);
 }
-		
 
+//---------------------------------
+// GetDIRCLut
+//---------------------------------
+DDIRCLutReader* DApplication::GetDIRCLut(unsigned int run_number)
+{
+	pthread_mutex_lock(&mutex);
+
+	// If DIRC LUT already exists, return it immediately
+	if(dircLut){
+		pthread_mutex_unlock(&mutex);
+		return dircLut;
+	}
+	
+	// create new DIRC LUT
+	dircLut = new DDIRCLutReader(this, run_number);
+
+	pthread_mutex_unlock(&mutex);
+	
+	return dircLut;
+}

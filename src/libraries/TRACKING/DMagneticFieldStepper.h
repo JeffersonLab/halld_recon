@@ -32,7 +32,7 @@ class DMagneticFieldStepper
 		jerror_t SetStepSize(double step);
 		void SetCharge(double q){this->q = q;}
 		double Step(DVector3 *newpos=NULL, DVector3 *B=NULL,double stepsize=0.0);
-		double FastStep(const DVector3 &B,double stepsize=0.0);
+		double FastStep(double stepsize=0.0);
 
 		void GetDirs(DVector3 &xdir, DVector3 &ydir, DVector3 &zdir);
 		void GetBField(DVector3 &B){B = this->B;}

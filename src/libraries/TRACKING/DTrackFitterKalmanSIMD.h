@@ -212,7 +212,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 		 double rho_Z_over_A_LnI,double Z); 
   double GetEnergyVariance(double ds,double beta2,double K_rho_Z_over_A);
 
-
+  double GetFDCDriftDistance(double time, double Bz) const {
+    return fdc_drift_distance(time, Bz);
+  }
 
  protected:
   enum hit_status{
@@ -253,8 +255,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void locate(const double *xx,int n,double x,int *j);
   unsigned int locate(vector<double>&xx,double x);
   
-  double fdc_drift_variance(double t);
-  double fdc_drift_distance(double t,double Bz);
+  double fdc_drift_variance(double t) const;
+  double fdc_drift_distance(double t,double Bz) const;
 
   void ResetKalmanSIMD(void);
   jerror_t GetProcessNoise(double z,double ds,double chi2c_factor,

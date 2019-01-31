@@ -38,10 +38,17 @@
 #include <PID/DChargedTrackHypothesis.h>
 #include <PID/DNeutralParticleHypothesis.h>
 #include <PID/DEventRFBunch.h>
-#include <PID/DDetectorMatches.h>
+#include <DIRC/DDIRCLut.h>
+#include <DIRC/DDIRCTruthBarHit.h>
+#include <DIRC/DDIRCPmtHit.h>
 #include <TRACKING/DMagneticFieldStepper.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackCandidate.h>
+
+#include <TROOT.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TH1.h>
 
 #include <TMath.h>
 
@@ -111,6 +118,7 @@ class DParticleID:public jana::JObject
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime,shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, bool locIsTimeBased, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
+		bool Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 
 		/********************************************************** GET BEST MATCH **********************************************************/
 
@@ -119,6 +127,7 @@ class DParticleID:public jana::JObject
 		bool Get_BestSCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DSCHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestTOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTOFHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestFCALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALShowerMatchParams>& locBestMatchParams) const;
+		bool Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const;
 
 		// Actual
 		shared_ptr<const DBCALShowerMatchParams> Get_BestBCALMatchParams(DVector3 locMomentum, vector<shared_ptr<const DBCALShowerMatchParams> >& locShowerMatchParams) const;
@@ -203,6 +212,9 @@ class DParticleID:public jana::JObject
 					      const DVector3 &locProjPos) const;
 		double Get_CorrectedHitTime(const DSCHit* locSCHit,
 					    const DVector3 &locProjPos) const;
+		
+		const DDIRCLut *Get_DIRCLut() const;
+
 	protected:
 		// gas material properties
 		double dKRhoZoverA_FDC, dRhoZoverA_FDC, dLnI_FDC;	
@@ -225,11 +237,11 @@ class DParticleID:public jana::JObject
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
 
         // Start counter resolution parameters
-        vector<double> SC_MAX_RESOLUTION;
-        vector<double> SC_BOUNDARY1, SC_BOUNDARY2;
+        vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
         vector<double> SC_SECTION1_P0, SC_SECTION1_P1;
         vector<double> SC_SECTION2_P0, SC_SECTION2_P1;
         vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
+        vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
 
 	private:
 
@@ -288,6 +300,9 @@ class DParticleID:public jana::JObject
 		const DTrackFinder *finder;
 		const DTrackFitter *fitter;
 		DTOFPoint_factory* dTOFPointFactory;
+		
+		// DIRC LUT
+		const DDIRCLut* dDIRCLut;
 };
 
 #endif // _DParticleID_

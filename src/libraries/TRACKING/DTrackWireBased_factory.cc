@@ -22,8 +22,6 @@ using namespace std;
 
 #include <TROOT.h>
 
-#define C_EFFECTIVE     15.
-
 using namespace jana;
 
 //------------------
@@ -76,7 +74,6 @@ bool DTrackWireBased_cmp(DTrackWireBased *a,DTrackWireBased *b){
 jerror_t DTrackWireBased_factory::init(void)
 {
    fitter = NULL;
-   MAX_DReferenceTrajectoryPoolSize = 50;
 
    //DEBUG_HISTS = true;	
    DEBUG_HISTS = false;
@@ -84,71 +81,70 @@ jerror_t DTrackWireBased_factory::init(void)
 
    gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
 
-   SKIP_MASS_HYPOTHESES_WIRE_BASED=false; 
+   SKIP_MASS_HYPOTHESES_WIRE_BASED=true; 
    gPARMS->SetDefaultParameter("TRKFIT:SKIP_MASS_HYPOTHESES_WIRE_BASED",
-         SKIP_MASS_HYPOTHESES_WIRE_BASED);
+			       SKIP_MASS_HYPOTHESES_WIRE_BASED); 
+   PROTON_MOM_THRESH=0.8; // GeV 
+   gPARMS->SetDefaultParameter("TRKFIT:PROTON_MOM_THRESH",
+			       PROTON_MOM_THRESH);
 
-   mNumHypPlus=1;
-   mNumHypMinus=1;
-   if(!SKIP_MASS_HYPOTHESES_WIRE_BASED)
-   {
-      vector<int> hypotheses;
-      hypotheses.push_back(Positron);
-      hypotheses.push_back(PiPlus);
-      hypotheses.push_back(KPlus);
-      hypotheses.push_back(Proton);
-      hypotheses.push_back(Electron);
-      hypotheses.push_back(PiMinus);
-      hypotheses.push_back(KMinus);
-      hypotheses.push_back(AntiProton);
+   // Make list of mass hypotheses to use in fit
+   vector<int> hypotheses;
+   hypotheses.push_back(Positron);
+   hypotheses.push_back(PiPlus);
+   hypotheses.push_back(KPlus);
+   hypotheses.push_back(Proton);
+   hypotheses.push_back(Electron);
+   hypotheses.push_back(PiMinus);
+   hypotheses.push_back(KMinus);
+   hypotheses.push_back(AntiProton);
+   
+   ostringstream locMassStream;
+   for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
+     {
+	locMassStream << hypotheses[loc_i];
+	if(loc_i != (hypotheses.size() - 1))
+	  locMassStream << ",";
+     }
+   
+   string HYPOTHESES = locMassStream.str();
+   gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
 
-      ostringstream locMassStream;
-      for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
-      {
-         locMassStream << hypotheses[loc_i];
-         if(loc_i != (hypotheses.size() - 1))
-            locMassStream << ",";
-      }
-
-      string HYPOTHESES = locMassStream.str();
-      gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
-
-      // Parse MASS_HYPOTHESES strings to make list of masses to try
-      hypotheses.clear();
-      SplitString(HYPOTHESES, hypotheses, ",");
-      for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
-      {
-         if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0)
-            mass_hypotheses_positive.push_back(hypotheses[loc_i]);
-         else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0)
-            mass_hypotheses_negative.push_back(hypotheses[loc_i]);
-      }
-
-      if(mass_hypotheses_positive.empty()){
-         static once_flag pwarn_flag;
-         call_once(pwarn_flag, [](){
-               jout << endl;
-               jout << "############# WARNING !! ################ " <<endl;
-               jout << "There are no mass hypotheses for positive tracks!" << endl;
-               jout << "Be SURE this is what you really want!" << endl;
-               jout << "######################################### " <<endl;
-               jout << endl;
-               });
-      }
-      if(mass_hypotheses_negative.empty()){
-         static once_flag nwarn_flag;
-         call_once(nwarn_flag, [](){
-               jout << endl;
-               jout << "############# WARNING !! ################ " <<endl;
-               jout << "There are no mass hypotheses for negative tracks!" << endl;
-               jout << "Be SURE this is what you really want!" << endl;
-               jout << "######################################### " <<endl;
-               jout << endl;
-               });
-      }
-      mNumHypPlus=mass_hypotheses_positive.size();
-      mNumHypMinus=mass_hypotheses_negative.size();
+   // Parse MASS_HYPOTHESES strings to make list of masses to try
+   hypotheses.clear();
+   SplitString(HYPOTHESES, hypotheses, ",");
+   for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
+     {
+       if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0)
+	 mass_hypotheses_positive.push_back(hypotheses[loc_i]);
+       else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0)
+	 mass_hypotheses_negative.push_back(hypotheses[loc_i]);
+     }
+   
+   if(mass_hypotheses_positive.empty()){
+     static once_flag pwarn_flag;
+     call_once(pwarn_flag, [](){
+	 jout << endl;
+	 jout << "############# WARNING !! ################ " <<endl;
+	 jout << "There are no mass hypotheses for positive tracks!" << endl;
+	 jout << "Be SURE this is what you really want!" << endl;
+	 jout << "######################################### " <<endl;
+	 jout << endl;
+       });
    }
+   if(mass_hypotheses_negative.empty()){
+     static once_flag nwarn_flag;
+     call_once(nwarn_flag, [](){
+	 jout << endl;
+	 jout << "############# WARNING !! ################ " <<endl;
+	 jout << "There are no mass hypotheses for negative tracks!" << endl;
+	 jout << "Be SURE this is what you really want!" << endl;
+	 jout << "######################################### " <<endl;
+	 jout << endl;
+       });
+   }
+   mNumHypPlus=mass_hypotheses_positive.size();
+   mNumHypMinus=mass_hypotheses_negative.size();
 
    return NOERROR;
 }
@@ -162,7 +158,11 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
    geom = dapp->GetDGeometry(runnumber);
    // Check for magnetic field
-   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+   const DMagneticFieldMap *bfield=dapp->GetBfield(runnumber);
+   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
+   // set up reference trajectory
+   rt = new DReferenceTrajectory(bfield);
+   rt->SetDGeometry(geom);
 
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
@@ -200,12 +200,6 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 
    // Get the particle ID algorithms
    loop->GetSingle(dPIDAlgorithm);
-
-   //Pre-allocate memory for DReferenceTrajectory objects early
-   //The swim-step objects of these arrays take up a significant amount of memory, and it can be difficult to find enough free contiguous space for them.
-   //Therefore, allocate them at the beginning before the available memory becomes randomly populated
-   while(rtv.size() < MAX_DReferenceTrajectoryPoolSize)
-      rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
 
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
@@ -247,22 +241,12 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 
    if(!fitter)return NOERROR; 
-   
-   if(rtv.size() > MAX_DReferenceTrajectoryPoolSize){
-     for(size_t loc_i = MAX_DReferenceTrajectoryPoolSize; loc_i < rtv.size(); ++loc_i)
-       delete rtv[loc_i];
-     rtv.resize(MAX_DReferenceTrajectoryPoolSize);
-   }
-
 
    // Get candidates and hits
    vector<const DTrackCandidate*> candidates;
    loop->Get(candidates);
 
    if (candidates.size()==0) return NOERROR;
-
-   // Reset the number of used reference trajectories from the pool
-   num_used_rts=0;
 
    if (dIsNoFieldFlag){
       // Copy results over from the StraightLine or CDCCOSMIC candidate and
@@ -386,9 +370,6 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       return NOERROR;
    }
 
-
-
-
    // Loop over candidates
    for(unsigned int i=0; i<candidates.size(); i++){
       const DTrackCandidate *candidate = candidates[i];
@@ -399,22 +380,15 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
 
       if (SKIP_MASS_HYPOTHESES_WIRE_BASED){
-         // Make sure there are enough DReferenceTrajectory objects
-         unsigned int locNumInitialReferenceTrajectories = rtv.size();
-         while(rtv.size()<=num_used_rts){
-            //printf("Adding %d %d\n",rtv.size(),_data.size());
-            rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-         }
-         DReferenceTrajectory *rt = rtv[num_used_rts];
-         if(locNumInitialReferenceTrajectories == rtv.size()) //didn't create a new one
-            rt->Reset();
-         rt->SetDGeometry(geom);
-         rt->q = candidate->charge();
+	rt->Reset();
+	rt->q = candidate->charge();
 
-         // Increment the number of used reference trajectories
-         num_used_rts++;
-
-         DoFit(i,candidate,rt,loop,0.13957);
+	DoFit(i,candidate,rt,loop,ParticleMass(PiPlus));
+	// Only do fit for proton mass hypothesis for low momentum particles
+	if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
+	  rt->Reset();
+	  DoFit(i,candidate,rt,loop,ParticleMass(Proton));
+	}
       }
       else{
          // Choose list of mass hypotheses based on charge of candidate
@@ -431,23 +405,9 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
          // Loop over potential particle masses
          for(unsigned int j=0; j<mass_hypotheses.size(); j++){
             if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting wire based fit with id: "<<mass_hypotheses[j]<<endl;}
-            // Make sure there are enough DReferenceTrajectory objects
-            unsigned int locNumInitialReferenceTrajectories = rtv.size();
-            while(rtv.size()<=num_used_rts){
-               //printf("Adding %d\n",rtv.size());
-               rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-            }
-            DReferenceTrajectory *rt = rtv[num_used_rts];
-            if(locNumInitialReferenceTrajectories == rtv.size()){ //didn't create a new one
-               rt->Reset();
-	    }
-	 
-            rt->SetDGeometry(geom);
+
+	    rt->Reset();
             rt->q = candidate->charge();
-
-            // Increment the number of used reference trajectories
-            num_used_rts++;
-
             DoFit(i,candidate,rt,loop,ParticleMass(Particle_t(mass_hypotheses[j])));
          }
 
@@ -458,7 +418,9 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    FilterDuplicates();
 
    // Add any missing hypotheses
-   InsertMissingHypotheses();
+   if (SKIP_MASS_HYPOTHESES_WIRE_BASED==false){
+     InsertMissingHypotheses();
+   }
 
    return NOERROR;
 }
@@ -469,6 +431,7 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 //------------------
 jerror_t DTrackWireBased_factory::erun(void)
 {
+  if (rt) delete rt;
    return NOERROR;
 }
 
@@ -477,8 +440,6 @@ jerror_t DTrackWireBased_factory::erun(void)
 //------------------
 jerror_t DTrackWireBased_factory::fini(void)
 {
-   for(unsigned int i=0; i<rtv.size(); i++)delete rtv[i];
-   rtv.clear();
 
    return NOERROR;
 }
@@ -778,16 +739,7 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
 // POCA to the beam line, adding a bit of energy at each step that would have 
 // been lost had the particle emerged from the target.
 void DTrackWireBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momentum,double q,double my_mass){  
-  // Make sure there are enough DReferenceTrajectory objects
-  unsigned int locNumInitialReferenceTrajectories = rtv.size();
-  while(rtv.size()<=num_used_rts){
-    //printf("Adding %d\n",rtv.size());
-    rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-  }
-  DReferenceTrajectory *rt = rtv[num_used_rts];
-  if(locNumInitialReferenceTrajectories == rtv.size()) //didn't create a new one
-    rt->Reset();
-  rt->SetDGeometry(geom);
+  rt->Reset();
   rt->q = q;
   rt->SetMass(my_mass);
   rt->SetPLossDirection(DReferenceTrajectory::kBackward);
@@ -797,9 +749,6 @@ void DTrackWireBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momen
   rt->FastSwim(position,momentum,last_pos,last_mom,rt->q,origin,dir,300.);   
   position=last_pos;
   momentum=last_mom;   
-    
-  // Increment the number of used reference trajectories
-  num_used_rts++;
 }
 
 

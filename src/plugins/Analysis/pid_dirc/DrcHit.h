@@ -23,9 +23,10 @@ public:
  
   // Accessors 
   Int_t GetType()        { return fType; }
-  Int_t GetNreflectionsInPrizm()  { return fNreflectionsInPrizm; }
-  Double_t GetPathInPrizm()  { return fPathInPrizm; }
-  TVector3 GetMomentum()     { return fMomentum; }
+  Int_t GetNreflections()  { return fNreflections; }
+  Long64_t GetPathId()  { return fPathId; }
+  //  TVector3 GetMomentum()     { return fMomentum; }
+  Double_t GetEnergy()       { return fEnergy; }
   TVector3 GetPosition()     { return fPosition; }
   Double_t GetCherenkovMC()  { return fCherenkovMC;}
   
@@ -36,9 +37,10 @@ public:
     
   // Mutators
   void SetType(Int_t val)    { fType = val; }
-  void SetNreflectionsInPrizm(Int_t val)  { fNreflectionsInPrizm = val; }
-  void SetPathInPrizm(Double_t val) { fPathInPrizm = val; }
-  void SetMomentum(TVector3 val)    { fMomentum = val; }
+  void SetNreflections(Int_t val)  { fNreflections = val; }
+  void SetPathId(Long64_t val) { fPathId = val; }
+  //  void SetMomentum(TVector3 val)    { fMomentum = val; }
+  void SetEnergy(Double_t val)    { fEnergy = val; }
   void SetPosition(TVector3 val)    { fPosition = val; }
   void SetCherenkovMC(Double_t val) { fCherenkovMC = val; }
   
@@ -50,9 +52,10 @@ public:
 protected:
 
   Int_t fType;
-  Int_t fNreflectionsInPrizm;
-  Double_t fPathInPrizm;
-  TVector3 fMomentum;
+  Int_t fNreflections;
+  Long64_t fPathId;
+  //  TVector3 fMomentum;
+  Double_t fEnergy;
   TVector3 fPosition;
   Double_t fCherenkovMC;
   
@@ -61,7 +64,7 @@ protected:
   Int_t fChannel;
   Double_t fLeadTime;    
 
-  ClassDef(DrcHit,1)
+  ClassDef(DrcHit,2)
 };
 
 #endif
