@@ -3,6 +3,7 @@
 #include <TH2.h>
 #include <TStyle.h>
 #include <TCanvas.h>
+#include <iostream>
 
 void MakeAmpToolsFlat_mcthrown_pi0::Loop()
 {
@@ -84,9 +85,13 @@ void MakeAmpToolsFlat_mcthrown_pi0::Loop()
    for (Long64_t jentry=0; jentry<nentries;jentry++) {
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
+      cout << "Get next jentry=" << jentry << " nentries="  << nentries << " ientry="  << ientry << " NumThrown=" << NumThrown << endl;
+      if (jentry == 16690 || jentry == 25116 || jentry == 34576) continue;
       nb = fChain->GetEntry(jentry);   nbytes += nb;
+      cout << "Get next event=" << jentry << " nb=" << nb << endl;
       // if (Cut(ientry) < 0) continue;
       TLorentzVector *pb208 = (TLorentzVector *)Thrown__P4->At(0);
+
       if (NumThrown == 7) {
 	decaypi01 = (TLorentzVector *)Thrown__P4->At(5);
        decaypi02 = (TLorentzVector *)Thrown__P4->At(6);
@@ -97,6 +102,7 @@ void MakeAmpToolsFlat_mcthrown_pi0::Loop()
       }
       else {
 	cout << "**** MakeAmpToolsFlat_mcthrown_pi0 - illegal NumThrown=" << NumThrown << endl; 
+	continue;
       }
 
       cout << endl << " RunNumber=" << RunNumber << " EventNumber=" << EventNumber << " NumPIDThrown_FinalState=" << NumPIDThrown_FinalState 

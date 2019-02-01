@@ -64,8 +64,8 @@ void DSelector_Z2pi0_trees2::Init(TTree *locTree)
 	dHist_MissingMassSquared = new TH1I("MissingMassSquared", ";Missing Mass Squared (GeV/c^{2})^{2}", 600, -0.24, 0.24);
 	dHist_BeamEnergy = new TH1I("BeamEnergy", ";Beam Energy (GeV)", 600, 0.0, 12.0);
 	// dHist_pMomentumMeasured = new TH1I("pMomentumMeasured", ";p Momentum Measured (GeV)", 100, 0.0, 2);
-	dHist_piplusMomentumMeasured = new TH1I("piplusMomentumMeasured", ";#pi^{+} Momentum Measured (GeV)", 600, 0.0, 12);
-	dHist_piminusMomentumMeasured = new TH1I("piminusMomentumMeasured", ";#pi^{-} Momentum Measured (GeV)", 600, 0.0, 12);
+	dHist_pi01MomentumMeasured = new TH1I("pi01MomentumMeasured", ";#pi^{0}_{1} Momentum Measured (GeV)", 600, 0.0, 12);
+	dHist_pi02MomentumMeasured = new TH1I("pi02MomentumMeasured", ";#pi^{0}_{2} Momentum Measured (GeV)", 600, 0.0, 12);
 
 	// dHist_Proton_dEdx_P = new TH2I("Proton_dEdx_P", " ;p_{proton} GeV/c; dE/dx (keV/cm)", 250, 0.0, 5.0, 250, 0.0, 25.);
 	dHist_KinFitChiSq = new TH1I("KinFitChiSq", ";Kinematic Fit #chi^{2}/NDF", 250, 0., 25.);
@@ -74,9 +74,9 @@ void DSelector_Z2pi0_trees2::Init(TTree *locTree)
 	dHist_M2pigen = new TH1I("M2pigen", ";M_{#pi^{+}#pi^{-}} Gen (GeV/c^{2})", 400, 0.2, 0.6);
 	dHist_M2pikin = new TH1I("M2pikin", ";M_{#pi^{+}#pi^{-}} Kin (GeV/c^{2})", 400, 0.2, 0.6);
 	dHist_M2pidiff = new TH1I("M2pidiff", ";M_{#pi^{+}#pi^{-}} Kin - Gen (GeV/c^{2})", 400, -0.05, 0.05);
-	dHist_tgen = new TH1I("tgen", ";|t| Gen (GeV/c)^{2}", 500, 0.0, 0.05);
-	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 500, 0.0, 0.05);
-	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 500, -0.01, 0.05);
+	dHist_tgen = new TH1I("tgen", ";|t| Gen (GeV/c)^{2}", 100, 0.0, 0.01);
+	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 100, 0.0, 0.01);
+	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 100, -0.01, 0.01);
 	dHist_tkin_tgen = new TH2I("tkin_tgen", "; |t| Gen ; |t| Kin (GeV/c)^{2}", 50, 0, 0.002, 50, 0, 0.002);
 	dHist_CosTheta_psi = new TH2I("CosTheta_psi", "; #psi; Cos#Theta", 90, -180., 180, 200, -1., 1.);
 	dHist_CosThetakin_CosThetagen = new TH2I("CosThetakin_CosThetagen", "; Cos#Theta Gen; Cos#Theta Kin", 50, -1, 1, 50, -1., 1.);
@@ -106,11 +106,11 @@ void DSelector_Z2pi0_trees2::Init(TTree *locTree)
 	dHist_thetap_thetam = new TH2I("thetap_thetam", "; #theta- Lab Kin (deg); #theta+ Kin (deg)", 100, 0., 20., 100, 0., 20.);
 	dHist_thetap_thetam_Mcut = new TH2I("thetap_thetam_Mcut", "; (M#pi#pi < 0.4 ) #theta- Lab Kin (deg); #theta+ Kin (deg)", 100, 0., 20., 100, 0., 20.);
 
-	dHist_pipDeltap = new TH1I("pipDeltap","; #pi^{+}: Thrown p - KinFit p/Thrown p",100,-0.2,0.2);
-	dHist_pimDeltap = new TH1I("pimDeltap","; #pi^{-}: Thrown p - KinFit p/ Thrown p",100,-0.2,0.2);
+	dHist_pi01Deltap = new TH1I("pi01Deltap","; #pi^{0}_{1}: Thrown p - KinFit p/Thrown p",100,-0.2,0.2);
+	dHist_pi02Deltap = new TH1I("pi02Deltap","; #pi^{0}_{2}: Thrown p - KinFit p/ Thrown p",100,-0.2,0.2);
 
-	dHist_pipDeltap_Measured = new TH1I("pipDeltap_Measured","; #pi^{+}: Thrown p - Measured p/Thrown p",100,-0.2,0.2);
-	dHist_pimDeltap_Measured = new TH1I("pimDeltap_Measured","; #pi^{-}: Thrown p - Measured p/ Thrown p",100,-0.2,0.2);
+	dHist_pi01Deltap_Measured = new TH1I("pi01Deltap_Measured","; #pi^{0}_{1}: Thrown p - Measured p/Thrown p",100,-0.2,0.2);
+	dHist_pi02Deltap_Measured = new TH1I("pi02Deltap_Measured","; #pi^{0}_{2}: Thrown p - Measured p/ Thrown p",100,-0.2,0.2);
 	dHist_TaggerAccidentals = new TH1I("dHist_TaggerAccidentals", "Vertex time - RF (ns)", 400,-20,20);
 
 	// EXAMPLE CUT PARAMETERS:
@@ -493,6 +493,23 @@ Bool_t DSelector_Z2pi0_trees2::Process(Long64_t locEntry)
 		cout << "Photon2 Thrown P4.E=" << locPhoton2P4_Thrown.E() << " Kinfit P4.E=" << locPhoton2P4.E() << " P4 Measured =" << locPhoton2P4_Measured.E() << endl;
 		cout << "Photon3 Thrown P4.E=" << locPhoton3P4_Thrown.E() << " Kinfit P4.E=" << locPhoton3P4.E() << " P4 Measured =" << locPhoton3P4_Measured.E() << endl;
 		cout << "Photon4 Thrown P4.E=" << locPhoton4P4_Thrown.E() << " Kinfit P4.E=" << locPhoton4P4.E() << " P4 Measured =" << locPhoton4P4_Measured.E() << endl;*/
+
+		// enter two differences for each pi0
+
+	       dHist_pi01MomentumMeasured->Fill(locDecayingPi01P4.Vect().Mag());
+	       dHist_pi01Deltap->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi01P4.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi01Deltap_Measured->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi01P4_Measured.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+
+	       dHist_pi01Deltap->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi01P4.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi01Deltap_Measured->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi01P4_Measured.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
+
+	       dHist_pi02MomentumMeasured->Fill(locDecayingPi01P4.Vect().Mag());
+	       dHist_pi02Deltap->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi02P4.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi02Deltap_Measured->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi02P4_Measured.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+
+	       dHist_pi02Deltap->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi02Deltap_Measured->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4_Measured.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
+	       
 
 		map<Particle_t, set<Int_t> > locUsedThisCombo_Angles;
 		locUsedThisCombo_Angles[Unknown].insert(locBeamID); //beam

@@ -259,7 +259,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     ymin = 0;
     ymax = 1.2;
     
-    TH1F *M2piAcceptance = (TH1F*)M2piacc->Clone("M2piAcceptance");
+    // TH1F *M2piAcceptance = (TH1F*)M2piacc->Clone("M2piAcceptance");
+    TH1F *M2piAcceptance = (TH1F*)M2pidat->Clone("M2piAcceptance");
     M2piAcceptance->SetTitle("Acceptance");
     // M2piAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) M2piAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -275,7 +276,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     ymin = 0;
     // ymax = 1.2;
     
-    TH1F *cosThetaAcceptance = (TH1F*)cosThetaacc->Clone("cosThetaAcceptance");
+    // TH1F *cosThetaAcceptance = (TH1F*)cosThetaacc->Clone("cosThetaAcceptance");
+    TH1F *cosThetaAcceptance = (TH1F*)cosThetadat->Clone("cosThetaAcceptance");
     cosThetaAcceptance->SetTitle("Acceptance");
     // cosThetaAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) cosThetaAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -291,7 +293,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     ymin = 0;
     // ymax = 1.2;
     
-    TH1F *psiAcceptance = (TH1F*)psiacc->Clone("psiAcceptance");
+    // TH1F *psiAcceptance = (TH1F*)psiacc->Clone("psiAcceptance");
+    TH1F *psiAcceptance = (TH1F*)psidat->Clone("psiAcceptance");
     psiAcceptance->SetTitle("Acceptance");
     // psiAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) psiAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -307,7 +310,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     ymin = 0;
     // ymax = 1.2;
     
-    TH1F *PhiAcceptance = (TH1F*)Phiacc->Clone("PhiAcceptance");
+    // TH1F *PhiAcceptance = (TH1F*)Phiacc->Clone("PhiAcceptance");
+    TH1F *PhiAcceptance = (TH1F*)Phidat->Clone("PhiAcceptance");
     PhiAcceptance->SetTitle("Acceptance");
     // PhiAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) PhiAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -323,7 +327,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     ymin = 0;
     // ymax = 1.2;
     
-    TH1F *phiAcceptance = (TH1F*)phiacc->Clone("phiAcceptance");
+    // TH1F *phiAcceptance = (TH1F*)phiacc->Clone("phiAcceptance");
+    TH1F *phiAcceptance = (TH1F*)phidat->Clone("phiAcceptance");
     phiAcceptance->SetTitle("Acceptance");
     // phiAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) phiAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -337,11 +342,12 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     c2->cd(6);
     // gPad->SetLogy();
     ymin = 0;
-    // ymax = 1.2;
+    ymax = 3.0;
     xmin = 0;
     xmax = 0.012;
     
-    TH1F *tAcceptance = (TH1F*)tacc->Clone("tAcceptance");
+    // TH1F *tAcceptance = (TH1F*)tacc->Clone("tAcceptance");
+    TH1F *tAcceptance = (TH1F*)tdat->Clone("tAcceptance");
     tAcceptance->SetTitle("Acceptance");
     tAcceptance->GetXaxis()->SetRangeUser(xmin,xmax);
     if (setscale) tAcceptance->GetYaxis()->SetRangeUser(ymin,ymax);

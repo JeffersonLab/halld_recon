@@ -22,8 +22,8 @@ void plot_Z2pi_trees(TString filename)
     TH2F *NumCombosSurvivedAction = (TH2F*)f->Get("NumCombosSurvivedAction");
     TH1F *BeamEnergy = (TH1F*)f->Get("BeamEnergy");
     // TH1F *pMomentumMeasured = (TH1F*)f->Get("pMomentumMeasured");
-    TH1F *piplusMomentumMeasured = (TH1F*)f->Get("piplusMomentumMeasured");
-    TH1F *piminusMomentumMeasured = (TH1F*)f->Get("piminusMomentumMeasured");
+    TH1F *pi01MomentumMeasured = (TH1F*)f->Get("pi01MomentumMeasured");
+    TH1F *pi02MomentumMeasured = (TH1F*)f->Get("pi02MomentumMeasured");
     
     TH1F *KinFitChiSq = (TH1F*)f->Get("KinFitChiSq");
     TH1F *KinFitCL = (TH1F*)f->Get("KinFitCL");
@@ -36,11 +36,11 @@ void plot_Z2pi_trees(TString filename)
     TH1F *M2pidiff = (TH1F*)f->Get("M2pidiff");
     TH1F *tdiff = (TH1F*)f->Get("tdiff");
     TH1F *psidiff = (TH1F*)f->Get("psidiff");
-    TH1F *pipDeltap_Measured = (TH1F*)f->Get("pipDeltap_Measured");
-    TH1F *pimDeltap_Measured = (TH1F*)f->Get("pimDeltap_Measured");
+    TH1F *pi01Deltap_Measured = (TH1F*)f->Get("pi01Deltap_Measured");
+    TH1F *pi02Deltap_Measured = (TH1F*)f->Get("pi02Deltap_Measured");
     // TH1F *pDeltap = (TH1F*)f->Get("pDeltap");
-    TH1F *pipDeltap = (TH1F*)f->Get("pipDeltap");
-    TH1F *pimDeltap = (TH1F*)f->Get("pimDeltap");
+    TH1F *pi01Deltap = (TH1F*)f->Get("pi01Deltap");
+    TH1F *pi02Deltap = (TH1F*)f->Get("pi02Deltap");
 
     TH1F *Phikin = (TH1F*)f->Get("Phikin");
     TH1F *phikin = (TH1F*)f->Get("phikin");
@@ -117,28 +117,28 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    piplusMomentumMeasured->SetTitle(filename);
-    // piplusMomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
-    // piplusMomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
-    piplusMomentumMeasured->GetXaxis()->SetTitleSize(0.05);
-    piplusMomentumMeasured->GetYaxis()->SetTitleSize(0.05);
-    piplusMomentumMeasured->GetXaxis()->SetTitle("PiPlus Momentum (GeV)");
-    piplusMomentumMeasured->SetMarkerColor(4);
-    piplusMomentumMeasured->Draw();
+    pi01MomentumMeasured->SetTitle(filename);
+    // pi01MomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi01MomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi01MomentumMeasured->GetXaxis()->SetTitleSize(0.05);
+    pi01MomentumMeasured->GetYaxis()->SetTitleSize(0.05);
+    pi01MomentumMeasured->GetXaxis()->SetTitle("Pi01 Momentum (GeV)");
+    pi01MomentumMeasured->SetMarkerColor(4);
+    pi01MomentumMeasured->Draw();
     
     c0->cd(6);
     // gPad->SetLogy();
     ymin = 0;
     ymax = 4000;
     
-    piminusMomentumMeasured->SetTitle(filename);
-    // piminusMomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
-    // piminusMomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
-    piminusMomentumMeasured->GetXaxis()->SetTitleSize(0.05);
-    piminusMomentumMeasured->GetYaxis()->SetTitleSize(0.05);
-    piminusMomentumMeasured->GetXaxis()->SetTitle("PiMinus Momentum (GeV)");
-    piminusMomentumMeasured->SetMarkerColor(4);
-    piminusMomentumMeasured->Draw();
+    pi02MomentumMeasured->SetTitle(filename);
+    // pi02MomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi02MomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi02MomentumMeasured->GetXaxis()->SetTitleSize(0.05);
+    pi02MomentumMeasured->GetYaxis()->SetTitleSize(0.05);
+    pi02MomentumMeasured->GetXaxis()->SetTitle("Pi02 Momentum (GeV)");
+    pi02MomentumMeasured->SetMarkerColor(4);
+    pi02MomentumMeasured->Draw();
     
     
     TCanvas *c1 = new TCanvas("c1", "c1",200,10,1000,700);
@@ -258,28 +258,28 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    pipDeltap_Measured->SetTitle(filename);
-    // pipDeltap_Measured->GetXaxis()->SetRangeUser(xmin,xmax);
-    // pipDeltap_Measured->GetYaxis()->SetRangeUser(ymin,ymax);
-    pipDeltap_Measured->GetXaxis()->SetTitleSize(0.05);
-    pipDeltap_Measured->GetYaxis()->SetTitleSize(0.05);
-    // pipDeltap_Measured->GetXaxis()->SetTitle("#chi^{2}");
-    pipDeltap_Measured->SetMarkerColor(4);
-    pipDeltap_Measured->Draw();
+    pi01Deltap_Measured->SetTitle(filename);
+    // pi01Deltap_Measured->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi01Deltap_Measured->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi01Deltap_Measured->GetXaxis()->SetTitleSize(0.05);
+    pi01Deltap_Measured->GetYaxis()->SetTitleSize(0.05);
+    // pi01Deltap_Measured->GetXaxis()->SetTitle("#chi^{2}");
+    pi01Deltap_Measured->SetMarkerColor(4);
+    pi01Deltap_Measured->Draw();
     
     c2->cd(3);
     // gPad->SetLogy();
     ymin = 0;
     ymax = 4000;
     
-    pimDeltap_Measured->SetTitle(filename);
-    // pimDeltap_Measured->GetXaxis()->SetRangeUser(xmin,xmax);
-    // pimDeltap_Measured->GetYaxis()->SetRangeUser(ymin,ymax);
-    pimDeltap_Measured->GetXaxis()->SetTitleSize(0.05);
-    pimDeltap_Measured->GetYaxis()->SetTitleSize(0.05);
-    // pimDeltap_Measured->GetXaxis()->SetTitle("#chi^{2}");
-    pimDeltap_Measured->SetMarkerColor(4);
-    pimDeltap_Measured->Draw();
+    pi02Deltap_Measured->SetTitle(filename);
+    // pi02Deltap_Measured->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi02Deltap_Measured->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi02Deltap_Measured->GetXaxis()->SetTitleSize(0.05);
+    pi02Deltap_Measured->GetYaxis()->SetTitleSize(0.05);
+    // pi02Deltap_Measured->GetXaxis()->SetTitle("#chi^{2}");
+    pi02Deltap_Measured->SetMarkerColor(4);
+    pi02Deltap_Measured->Draw();
     
     c2->cd(4);
     // gPad->SetLogy();
@@ -302,28 +302,28 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    pipDeltap->SetTitle(filename);
-    // pipDeltap->GetXaxis()->SetRangeUser(xmin,xmax);
-    // pipDeltap->GetYaxis()->SetRangeUser(ymin,ymax);
-    pipDeltap->GetXaxis()->SetTitleSize(0.05);
-    pipDeltap->GetYaxis()->SetTitleSize(0.05);
-    // pipDeltap->GetXaxis()->SetTitle("#chi^{2}");
-    pipDeltap->SetMarkerColor(4);
-    pipDeltap->Draw();
+    pi01Deltap->SetTitle(filename);
+    // pi01Deltap->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi01Deltap->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi01Deltap->GetXaxis()->SetTitleSize(0.05);
+    pi01Deltap->GetYaxis()->SetTitleSize(0.05);
+    // pi01Deltap->GetXaxis()->SetTitle("#chi^{2}");
+    pi01Deltap->SetMarkerColor(4);
+    pi01Deltap->Draw();
     
     c2->cd(6);
     // gPad->SetLogy();
     ymin = 0;
     ymax = 4000;
     
-    pimDeltap->SetTitle(filename);
-    // pimDeltap->GetXaxis()->SetRangeUser(xmin,xmax);
-    // pimDeltap->GetYaxis()->SetRangeUser(ymin,ymax);
-    pimDeltap->GetXaxis()->SetTitleSize(0.05);
-    pimDeltap->GetYaxis()->SetTitleSize(0.05);
-    // pimDeltap->GetXaxis()->SetTitle("#chi^{2}");
-    pimDeltap->SetMarkerColor(4);
-    pimDeltap->Draw();
+    pi02Deltap->SetTitle(filename);
+    // pi02Deltap->GetXaxis()->SetRangeUser(xmin,xmax);
+    // pi02Deltap->GetYaxis()->SetRangeUser(ymin,ymax);
+    pi02Deltap->GetXaxis()->SetTitleSize(0.05);
+    pi02Deltap->GetYaxis()->SetTitleSize(0.05);
+    // pi02Deltap->GetXaxis()->SetTitle("#chi^{2}");
+    pi02Deltap->SetMarkerColor(4);
+    pi02Deltap->Draw();
 
     
     TCanvas *c3 = new TCanvas("c3", "c3",200,10,1000,700);
