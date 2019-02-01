@@ -3231,19 +3231,42 @@ double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData
 
 double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locPull) const
 {
-	if((locChargedHypo->t0_detector() == SYS_NULL) || (locChargedHypo->t1_detector() == SYS_NULL))
-	{
-		// not matched to any hits
-		locNDF = 0;
-		locPull = 0.0;
-		return 0.0;
-	}
+  double locT0=locChargedHypo->t0();
+  const DTrackTimeBased *locTrack=locChargedHypo->Get_TrackTimeBased();
+  double locP=locTrack->momentum().Mag();
+  Particle_t locPID=locChargedHypo->PID();
 
-	double locStartTimeError = locChargedHypo->t0_err();
-	double locTimeDifferenceVariance = (*locChargedHypo->errorMatrix())(6, 6) + locStartTimeError*locStartTimeError;
-	locPull = (locChargedHypo->t0() - locChargedHypo->Get_TimeAtPOCAToVertex())/sqrt(locTimeDifferenceVariance);
-	locNDF = 1;
-	return locPull*locPull;
+  double locChiSq_sum=0.;
+  locNDF = 0;
+  locPull = 0.0;
+
+  shared_ptr<const DTOFHitMatchParams>locTofParms=locChargedHypo->Get_TOFHitMatchParams();
+  if (locTofParms!=NULL){
+    double dt_tof=locTofParms->dHitTime-locTofParms->dFlightTime-locT0;
+    double vart_tof=GetTimeVariance(SYS_TOF,locPID,locP);
+    locChiSq_sum+=(dt_tof*dt_tof)/vart_tof;
+    locNDF++;
+  }
+
+  shared_ptr<const DBCALShowerMatchParams>locBcalParms=locChargedHypo->Get_BCALShowerMatchParams();
+  if (locBcalParms!=NULL){
+    double dt_bcal=locBcalParms->dBCALShower->t-locBcalParms->dFlightTime-locT0;
+    double vart_bcal=GetTimeVariance(SYS_BCAL,locPID,locP);
+    locChiSq_sum+=(dt_bcal*dt_bcal)/vart_bcal;
+    locNDF++;
+  }
+
+  // Only try to use FCAL if no other outer detector as a match
+  shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
+  if (locFcalParms!=NULL && locTofParms==NULL && locBcalParms==NULL){
+    double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
+    double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
+    locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
+    locNDF++;
+  }
+
+  locPull=sqrt(locChiSq_sum);
+  return locChiSq_sum;
 }
 
 double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutralHypo, unsigned int &locNDF, double& locTimingPull) const
@@ -3314,7 +3337,7 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	  if (fcalparms!=NULL){
 	    double E_over_p_mean=1.;
 	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
-	    double sigma=0.0125/(p*p)+0.08; 
+	    double sigma=0.1;
 	    double chisq=diff*diff/(sigma*sigma);
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
@@ -3326,8 +3349,8 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	double locTimingChiSq = Calc_TimingChiSq(locChargedTrackHypothesis, locTimingNDF, locTimingPull);
 	locChargedTrackHypothesis->Set_ChiSq_Timing(locTimingChiSq, locTimingNDF);
 
-	locNDF_Total += locChargedTrackHypothesis->Get_NDF_Timing();
-	locChiSq_Total += locChargedTrackHypothesis->Get_ChiSq_Timing();
+	locNDF_Total += locTimingNDF;
+	locChiSq_Total += locTimingChiSq;
 
 	double locFOM = (locNDF_Total > 0) ? TMath::Prob(locChiSq_Total, locNDF_Total) : numeric_limits<double>::quiet_NaN();
 	locChargedTrackHypothesis->Set_ChiSq_Overall(locChiSq_Total, locNDF_Total, locFOM);
