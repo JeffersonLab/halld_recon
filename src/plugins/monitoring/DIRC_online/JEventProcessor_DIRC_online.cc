@@ -17,7 +17,7 @@ using namespace jana;
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DAQ/Df250PulseData.h>
-#include <DAQ/Df250WindowRawData.h>
+#include <TRIGGER/DL1Trigger.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -36,6 +36,7 @@ const int NmultDigi = 1000;
 // root hist pointers
 static TH1I *dirc_num_events;
 static TH1I *hLEDRefTime;
+static TH1I *hLEDRefIntegral;
 static TH1I *hHit_NHits;
 static TH1I *hHit_Box;
 static TH2I *hHit_NHitsVsBox;
@@ -89,6 +90,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     dircDir->cd();
 
     hLEDRefTime = new TH1I("LEDRefTime", "LED reference SiPM time; time (ns)", 500, 0, 500);
+    hLEDRefIntegral = new TH1I("LEDRefIntegral", "LED reference SiPM integral; integral (ADC)", 500, 0, 2000);
 
     // book hists
     dirc_num_events = new TH1I("dirc_num_events","DIRC Number of events",1,0.5,1.5);
@@ -105,10 +107,10 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_pixelOccupancy[i] = new TH2I("Hit_PixelOccupancy"+strN,"DIRCPmtHit pixel occupancy"+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 	hHit_TimeOverThreshold[i] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold"+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 	hHit_TimeOverThresholdVsChannel[i] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel"+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
-	hHit_TimeOverThresholdVsTime[i] = new TH2I("Hit_TimeOverThresholdVsTime"+strN,"DIRCPmtHit time-over-threshold vs time"+strT+"; time; time-over-threshold [ns]",500,0,500,100,0.0,100.);
+	hHit_TimeOverThresholdVsTime[i] = new TH2I("Hit_TimeOverThresholdVsTime"+strN,"DIRCPmtHit time-over-threshold vs time"+strT+"; time; time-over-threshold [ns]",300,0,300,100,0.0,100.);
 	hHit_tdcTime[i] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time"+strT+";time [ns]; hits",500,0.0,500.0);
-	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
-	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_TimeDiffVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,-500.0,500.0);
+	hHit_tdcTimeVsChannel[i] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,300,0.0,300.0);
+	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_TimeDiffVsChannel"+strN,"DIRCPmtHit time vs. channel"+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,-300.0,300.0);
         hitDir->cd();
     }
 
@@ -164,9 +166,28 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     vector<const DDIRCPmtHit*> hits;
     eventLoop->Get(hits);
 
-    // get LED trigger
+    const DTTabUtilities* ttabUtilities = nullptr;
+    eventLoop->GetSingle(ttabUtilities);
+
+    // check for LED triggers
+    bool locDIRCLEDTrig = false;
+    bool locPhysicsTrig = false;
+    vector<const DL1Trigger*> trig;
+    eventLoop->Get(trig);
+    if (trig.size() > 0) {
+	    // LED appears as "bit" 15 in L1 front panel trigger monitoring plots
+	    if (trig[0]->fp_trig_mask & 0x4000){ 
+		    locDIRCLEDTrig = true;
+	    }
+	    // Physics trigger appears as "bit" 1 in L1 trigger monitoring plots
+	    if (trig[0]->trig_mask & 0x1){ 
+		    locPhysicsTrig = true;
+	    }
+    }
+
+    // LED specific information
     double locLEDRefTime = 0;
-    if(true) {
+    if(locDIRCLEDTrig) {
 	    
 	    // Get LED SiPM reference
 	    vector<const DCAEN1290TDCHit*> sipmtdchits;
@@ -176,16 +197,16 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 	    for(uint i=0; i<sipmadchits.size(); i++) {
 		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-		    //cout<<sipmadchit->slot<<" "<<sipmadchit->channel<<" "<<sipmadchit->course_time<<" "<<sipmadchit->fine_time<<endl;
 		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-			    locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
+			    locLEDRefTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
+			    locLEDRefTime *= 0.0625; // convert time from flash to ns
 			    hLEDRefTime->Fill(locLEDRefTime); 
+			    hLEDRefIntegral->Fill(sipmadchit->integral); 
 		    }
 	    }
     }
-
-    const DTTabUtilities* ttabUtilities = nullptr;
-    eventLoop->GetSingle(ttabUtilities);
+    else  // for now only fill LED data
+	    return NOERROR;
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
