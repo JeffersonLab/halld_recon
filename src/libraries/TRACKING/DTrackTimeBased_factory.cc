@@ -918,8 +918,8 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       for(unsigned int m=0; m<fdchits.size(); m++)
 	timebased_track->AddAssociatedObject(fdchits[m]);
       
- 	  timebased_track->measured_cdc_hits_on_track = cdchits.size();
- 	  timebased_track->measured_fdc_hits_on_track = fdchits.size();
+      timebased_track->measured_cdc_hits_on_track = cdchits.size();
+      timebased_track->measured_fdc_hits_on_track = fdchits.size();
 
       // dEdx
       double locdEdx_FDC, locdx_FDC, locdEdx_CDC, locdEdx_CDC_amp;
@@ -945,7 +945,7 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
       
       timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
- 	  timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
+      timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
 
       // Add DTrack object as associate object
       timebased_track->AddAssociatedObject(track);
@@ -1089,7 +1089,10 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
       for(unsigned int m=0; m<cdchits.size(); m++)
 	timebased_track->AddAssociatedObject(cdchits[m]);
       for(unsigned int m=0; m<fdchits.size(); m++)
-	timebased_track->AddAssociatedObject(fdchits[m]);
+	timebased_track->AddAssociatedObject(fdchits[m]); 
+      
+      timebased_track->measured_cdc_hits_on_track = cdchits.size();
+      timebased_track->measured_fdc_hits_on_track = fdchits.size();
       
       // Compute the figure-of-merit based on tracking
       timebased_track->FOM = TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
@@ -1102,8 +1105,11 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
       timebased_track->AddAssociatedObject(src_fdchits[m]); 
     for(unsigned int m=0; m<src_cdchits.size(); m++)
       timebased_track->AddAssociatedObject(src_cdchits[m]);
+    
+    timebased_track->measured_cdc_hits_on_track = src_cdchits.size();
+    timebased_track->measured_fdc_hits_on_track = src_fdchits.size();
   }
- 
+
   // dEdx
   double locdEdx_FDC, locdx_FDC, locdEdx_CDC, locdEdx_CDC_amp;
   double locdx_CDC,locdx_CDC_amp;
@@ -1118,7 +1124,19 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   timebased_track->ddx_CDC = locdx_CDC;
   timebased_track->ddx_CDC_amp = locdx_CDC_amp;
   timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
-   
+  
+  // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
+  vector<const DCDCTrackHit*> tempCDCTrackHits;
+  vector<const DFDCPseudo*> tempFDCPseudos;
+  timebased_track->Get(tempCDCTrackHits);
+  timebased_track->Get(tempFDCPseudos);
+  timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
+  timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
+  
+  timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
+  timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
+
+
   tracks_to_add.push_back(timebased_track);
 }
 
