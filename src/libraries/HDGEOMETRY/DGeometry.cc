@@ -1458,7 +1458,35 @@ bool DGeometry::GetCDCRmid(vector<double> &cdc_rmid) const
 //---------------------------------
 bool DGeometry::GetCDCNwires(vector<int> &cdc_nwires) const
 {
-
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(209);
+	cdc_nwires.push_back(209);
+	
    return false;
 }
 

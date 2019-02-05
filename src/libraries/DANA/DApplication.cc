@@ -10,6 +10,12 @@ using std::string;
 #include <JANA/JVersion.h>
 
 #include <pthread.h>
+#include <iostream>
+#include <fstream>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+ 
 
 #include "DApplication.h"
 #include <HDDM/DEventSourceHDDMGenerator.h>
@@ -77,6 +83,9 @@ DApplication::DApplication(int narg, char* argv[]):JApplication(narg, argv)
 	if (parmap.empty()) {
 		pm->SetParameter("THREAD_TIMEOUT", "30 seconds");
 	}
+	
+	// Optionally copy SQLite CCDB file to local disk
+	CopySQLiteToLocalDisk();
 
 	/// Add DEventSourceHDDMGenerator and
 	/// DFactoryGenerator, which adds the default
@@ -414,6 +423,75 @@ DRootGeom* DApplication::GetRootGeom(unsigned int run_number)
 	pthread_mutex_unlock(&mutex);
 	
 	return RootGeom;
+}
+
+//---------------------------------
+// CopySQLiteToLocalDisk
+//---------------------------------
+void DApplication::CopySQLiteToLocalDisk(void)
+{
+	// Check if parameters are set and consistent
+	JParameterManager *pm = GetJParameterManager();
+	if(! pm->Exists("SQLITE_TO_LOCAL") ) return;
+	
+	string tmp;
+	pm->SetDefaultParameter("SQLITE_TO_LOCAL", tmp);
+
+	string JANA_CALIB_URL;
+	if( pm->Exists("JANA_CALIB_URL" ) ){
+		pm->GetParameter("JANA_CALIB_URL", JANA_CALIB_URL);
+	}else{
+		auto url_env = getenv("JANA_CALIB_URL");
+		if( url_env != NULL) JANA_CALIB_URL = url_env;
+	}
+	if( JANA_CALIB_URL.empty() ) return;
+	
+	if( JANA_CALIB_URL.find("sqlite://") != 0 ){
+		jout << "WARNING: SQLITE_TO_LOCAL specified but JANA_CALIB_URL does not specify a" << endl;
+		jout << "         SQLite source. SQLITE_TO_LOCAL will be ignored." << endl;
+		return;
+	}
+
+	// Get destination and source file names
+	string dest;
+	pm->GetParameter("SQLITE_TO_LOCAL", dest);
+	string src = JANA_CALIB_URL.substr(10);
+	
+	// Check if source exists
+	if( access(src.c_str(), R_OK) == -1 ){
+		jout << "WARNING: SQLITE_TO_LOCAL specified but sqlite file specified in JANA_CALIB_URL:" << endl;
+		jout << "         " << src << "  does not exist. SQLITE_TO_LOCAL will be ignored." << endl;
+		return;
+	}
+	
+	// Check if destination exists
+	bool copy_sqlite_file = true;
+	if( access(dest.c_str(), R_OK) != -1 ){
+
+		struct stat src_result;
+		struct stat dest_result;
+		stat(src.c_str(), &src_result);
+		stat(dest.c_str(), &dest_result);
+		if( src_result.st_mtime < dest_result.st_mtime ){
+			jout << "Modification time of " << src << " is older than " << dest << endl;
+			jout << "so file will not be copied" << endl;
+			copy_sqlite_file = false;
+		}
+	}
+	
+	// Copy sqlite file to specified location if needed
+	if( copy_sqlite_file ){
+		jout << "Copying " << src << " -> " << dest << endl;
+		unlink(dest.c_str());
+		std::ifstream ifs(src.c_str(), std::ios::binary);
+		std::ofstream ofs(dest.c_str(), std::ios::binary);
+		ofs << ifs.rdbuf();
+	}
+	
+	// Overwrite the JANA_CALIB_URL config. parameter with the new destination
+	JANA_CALIB_URL = "sqlite:///" + dest;
+	jout << "Overwriting JANA_CALIB_URL with: " << JANA_CALIB_URL << endl;
+	pm->SetParameter("JANA_CALIB_URL", JANA_CALIB_URL);
 }
 
 //---------------------------------
