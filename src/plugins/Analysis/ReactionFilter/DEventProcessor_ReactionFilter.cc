@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_ReactionFilter.h"
+#include "DEventWriterROOT_kFitPullStudies.h"
 
 // Routine used to create our DEventProcessor
 
@@ -43,7 +44,7 @@ jerror_t DEventProcessor_ReactionFilter::brun(jana::JEventLoop* locEventLoop, in
 {
 	// This is called whenever the run number changes
 
-	return NOERROR;
+       return NOERROR;
 }
 
 //------------------
@@ -69,8 +70,8 @@ jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, ui
 		//If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations. 
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
-	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
+	const DEventWriterROOT_kFitPullStudies* locEventWriterROOT = NULL;
+	locEventLoop->GetSingle(locEventWriterROOT,"kFitPullStudies");
 	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionFilter");
 
 	/******************************************************** OPTIONAL: SKIMS *******************************************************/

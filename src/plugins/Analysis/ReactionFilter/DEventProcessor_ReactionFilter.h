@@ -11,7 +11,10 @@
 #include <JANA/JEventProcessor.h>
 #include <JANA/JApplication.h>
 
-#include <ANALYSIS/DEventWriterROOT.h>
+//#include <ANALYSIS/DEventWriterROOT.h>
+#include "ANALYSIS/DEventWriterROOT.h"
+#include "DEventWriterROOT_factory_kFitPullStudies.h"
+#include "DEventWriterROOT_kFitPullStudies.h"
 #include <HDDM/DEventWriterREST.h>
 #include <ANALYSIS/DHistogramActions.h>
 

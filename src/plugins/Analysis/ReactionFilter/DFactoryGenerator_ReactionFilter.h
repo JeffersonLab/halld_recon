@@ -12,6 +12,7 @@
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_ReactionFilter.h"
+#include "DEventWriterROOT_factory_kFitPullStudies.h"
 
 class DFactoryGenerator_ReactionFilter : public jana::JFactoryGenerator
 {
@@ -22,6 +23,7 @@ class DFactoryGenerator_ReactionFilter : public jana::JFactoryGenerator
 		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
 		{
 			locEventLoop->AddFactory(new DReaction_factory_ReactionFilter());
+            locEventLoop->AddFactory(new DEventWriterROOT_factory_kFitPullStudies());
 			return NOERROR;
 		}
 };
