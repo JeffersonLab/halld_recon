@@ -5,6 +5,9 @@
 // -----------------------------------------
 
 #include "DEventProcessor_pid_dirc.h"
+#include "TCanvas.h"
+#include "TH1.h"
+
 
 // Routine used to create our DEventProcessor
 extern "C" {
@@ -58,7 +61,6 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof Planes
-   std::cout<<"dTOFz "<<dTOFz<<std::endl;
 
    double dDIRCz;
    vector<double>dirc_face;
@@ -71,9 +73,11 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
    
    dDIRCz=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
    std::cout<<"dDIRCz "<<dDIRCz<<std::endl;
-
+   
    return NOERROR;
 }
+
+//TH1F *hfine = new TH1F("hfine","hfine",200,1600,1800);
 
 jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
 
@@ -146,6 +150,30 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
     }
   }
 
+  // get LED trigger
+  double locLEDRefTime = 0;
+  if(true) {
+    
+    // Get LED SiPM reference
+    vector<const DCAEN1290TDCHit*> sipmtdchits;
+    vector<const Df250PulseData*> sipmadchits;
+
+    loop->Get(sipmtdchits);
+    loop->Get(sipmadchits);
+
+    //std::cout<<"----- "<<std::endl;
+    
+    for(uint i=0; i<sipmadchits.size(); i++) {
+      const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
+      //cout<<sipmadchit->slot<<" "<<sipmadchit->channel<<" "<<sipmadchit->course_time<<" "<<sipmadchit->fine_time<<endl;
+      if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {	
+	locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
+	//std::cout<<"locLEDRefTime "<<locLEDRefTime<<" "<<(sipmadchit->course_time<<6)<<" "<<sipmadchit->fine_time << std::endl;
+	//hfine->Fill(sipmadchit->course_time<<6);
+      }
+    }
+  }
+  
   // calibrated hists
   //if(dataDigiHits.size()>0){
   if(dataPmtHits.size()>0){
@@ -230,5 +258,10 @@ jerror_t DEventProcessor_pid_dirc::erun(void) {
 }
 
 jerror_t DEventProcessor_pid_dirc::fini(void) {
+  // TCanvas *c = new TCanvas("c","c",800,500);
+  // hfine->Draw();
+  // c->Modified();
+  // c->Update();
+  // c->Print("htime.png");
   return NOERROR;
 }
