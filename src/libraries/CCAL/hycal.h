@@ -153,7 +153,7 @@ void fill_my_histograms();
 
 void close_dst_file();
 void open_dst_file(char *name);
-float shower_depth(const int it, float energy);
+float shower_depth(float energy);
 
 extern "C" {extern struct {int mcrun, mcevent; float hegen[64];
               int nout, iout[MAX_HHITS], aout[MAX_HHITS];} read_mcfile_com_;}

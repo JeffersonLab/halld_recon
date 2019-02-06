@@ -119,6 +119,21 @@ DCCALShower_factory::DCCALShower_factory()
 jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
 	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
+	
+	DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+    	const DGeometry *geom = dapp->GetDGeometry(runnumber);
+	
+	vector<double> CCALpos;
+	geom->Get("//composition[@name='ComptonEMcal']/posXYZ[@volume='comptonEMcal']/@X_Y_Z",CCALpos);
+    
+    	if (geom) {
+      	  geom->GetTargetZ(m_zTarget);
+      	  geom->GetCCALZ(m_CCALfront);
+    	}
+    	else{
+      	  cerr << "No geometry accessbile." << endl;
+      	  return RESOURCE_UNAVAILABLE;
+    	}
 
 	return NOERROR;
 }
@@ -129,7 +144,18 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
-    vector<const DCCALHit*> ccalhits;
+
+	// extract the CCAL Geometry
+	vector<const DCCALGeometry*> ccalGeomVect;
+    	eventLoop->Get( ccalGeomVect );
+    	if (ccalGeomVect.size() < 1)
+      	  return OBJECT_NOT_AVAILABLE;
+    	const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+    	
+	// for now, use center of target as vertex
+	DVector3 vertex(0.0, 0.0, m_zTarget);
+	
+    	vector<const DCCALHit*> ccalhits;
 	eventLoop->Get(ccalhits);
 	
 	if(ccalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
@@ -148,13 +174,36 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	ZHYCAL     =  1.e9;    // ALignment[1].al.z;
 	ISECT      =  0;       //  PWO
 
-	for(int icol = 1; icol <= MCOL; ++icol)
+	static int ich[MCOL][MROW]; 
+	
+	// fill array blockINFO with positions of blocks.
+	// for now, use the DCCALGeometry::positionOnFace,
+	// in future, update to read in geometry from ccdb
+	blockINFO_t blockINFO[T_BLOCKS];
+
+	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
 	    ECH(icol,irow) = 0;
 	    TIME(icol,irow) = 0;
 	    STAT_CH(icol,irow) = 0;
-	    if(icol>=17 && icol<=18 && irow>=17 && irow<=18) STAT_CH(icol,irow) = -1;
+	    if(icol>=17 && icol<=18 && irow>=17 && irow<=18) { STAT_CH(icol,irow) = -1; }
+	    
+	    if(icol>=12 && icol<=23 && irow>=12 && irow<=23) {
+	      int idhycal = 1000 + icol + (irow-1)*34;
+	      int ccal_row = 23-irow;
+	      int ccal_col = 23-icol;
+	      DVector2 pos = ccalGeom.positionOnFace(ccal_row, ccal_col);
+	      int chan     = ccalGeom.channel(ccal_row, ccal_col);
+	      
+	      blockINFO[idhycal-1].id     = chan;
+	      blockINFO[idhycal-1].x      = pos.X();
+	      blockINFO[idhycal-1].y      = pos.Y();
+	      blockINFO[idhycal-1].sector = 0;
+	      blockINFO[idhycal-1].row    = ccal_row;
+	      blockINFO[idhycal-1].col    = ccal_col;
+	    }
 	  }
+	}
 	
 	NCOL = 34; NROW = 34;
 
@@ -178,31 +227,106 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  
 	  ECH(column,row) = int(ccalhit->E*10.+0.5);
 	  TIME(column,row) = ccalhit->t;
+	  ich[column-1][row-1] = idhycal;
 	}
 	
 	main_island_();
 	
+	cluster_t cluster_storage[MAX_CLUSTERS]; 	
 	for(int k = 0; k < adcgam_cbk_.nadcgam; ++k)  {
-	  
 
-	  /*
-	    hycalcluster[n].type    = type;
-	    hycalcluster[n].nhits   = dime;
-	    hycalcluster[n].E       = e;
-	    hycalcluster[n].time    = 0.0;
-	    hycalcluster[n].x       = x;        // biased, unaligned
-	    hycalcluster[n].y       = y;
-	    hycalcluster[n].chi2    = chi2;
-	    hycalcluster[n].sigma_E = 0.0;
-	    hycalcluster[n].emax    = 0.0;
-	    hycalcluster[n].status  = status;
-	    hycalcluster[n].E1      = 0.;
-	    hycalcluster[n].E2      = 0.;
+	  // result of main_island_():
+	  float e     = adcgam_cbk_.u.fadcgam[k][0];
+	  float x     = adcgam_cbk_.u.fadcgam[k][1];
+	  float y     = adcgam_cbk_.u.fadcgam[k][2];
+	  float xc    = adcgam_cbk_.u.fadcgam[k][4];
+	  float yc    = adcgam_cbk_.u.fadcgam[k][5];
+	  float time  = adcgam_cbk_.u.fadcgam[k][6];
+	  float chi2  = adcgam_cbk_.u.fadcgam[k][7];
+	  int type    = adcgam_cbk_.u.iadcgam[k][8];
+	  int dime    = adcgam_cbk_.u.iadcgam[k][9];
+	  int status  = adcgam_cbk_.u.iadcgam[k][11];
+	  
+	  
+	  // do energy and position corrections:
+	  float ecellmax = -1; int idmax = -1;
+	  float sW   = 0.0;
+	  float xpos = 0.0;
+	  float ypos = 0.0;
+	  float e1   = 0.0;
+	  float e2   = 0.0;
+	  float W;
+	  
+	  // get id of cell with max energy:
+	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
+	    float ecell = 1.e-4*(float)ICL_IENER(k,j);
+	    int id = ICL_INDEX(k,j);
+	    int kx = (id/100), ky = id%100;
+	    id = ich[kx-1][ky-1];
+	    e1 += ecell;
+	    if(ecell>ecellmax) {
+	      ecellmax = ecell;
+	      idmax = id;
+	    }
+	  }
+	  
+	  // x and y pos of max cell
+	  float xmax    = blockINFO[idmax-1].x;
+	  float ymax    = blockINFO[idmax-1].y;
+	  
+	  
+	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
+	    int id = ICL_INDEX(k,j);
+	    int kx = (id/100), ky = id%100;
+	    id = ich[kx-1][ky-1];
 	    
-	    hycalcluster[n].x1      = 0.;
-	    hycalcluster[n].y1      = 0.;
-	    hycalcluster[n].id      = 0;
-	  */
+	    float ecell = 1.e-4*(float)ICL_IENER(k,j);
+	    float xcell = blockINFO[id-1].x;
+	    float ycell = blockINFO[id-1].y;
+	    
+	    if(type%10 == 1 || type%10 == 2) {
+	      xcell += xc;
+	      ycell += yc;
+	    }
+	    
+	    cluster_storage[k].id[j] = id;
+	    cluster_storage[k].E[j]  = ecell;
+	    cluster_storage[k].x[j]  = xcell;
+	    cluster_storage[k].y[j]  = ycell;
+	    
+	    if(ecell>0.009 && fabs(xcell-xmax)<6. && fabs(ycell-ymax)<6.) {
+	      W = 4.2 + log(ecell/e); 
+	      if(W > 0) { // i.e. if cell has > 1.5% of cluster energy
+		sW   += W;
+		xpos += xcell*W;
+		ypos += ycell*W;
+		e2   += ecell;
+	      }
+	    }	    
+	  }
+	  
+	  for(int j = dime; j < MAX_CC; ++j)  // zero the rest
+	    cluster_storage[k].id[j] = 0;
+	  
+	  
+	  //-----------------------------------------------------
+	  // Apply correction for finite depth of hit:
+	  
+	  float x1, y1;
+	  float zV = vertex.Z();
+	  float z0 = m_CCALfront - zV;
+	  if(sW) {
+	    float dz;
+	    dz = shower_depth(e);
+	    float zk = 1. / (1. + dz/z0);
+	    x1 = zk*xpos/sW;
+	    y1 = zk*ypos/sW;
+	  } else {
+	    printf("WRN bad cluster log. coord, center id = %i %f\n", idmax, e);
+	    x1 = 0.0;
+	    y1 = 0.0;
+	  }
+
 
 	  // Build hit object
 	  DCCALShower *shower = new DCCALShower;
@@ -210,17 +334,22 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  shower->E       =   adcgam_cbk_.u.fadcgam[k][0];
 	  shower->x       =   adcgam_cbk_.u.fadcgam[k][1];
 	  shower->y       =   adcgam_cbk_.u.fadcgam[k][2];
-	  shower->x1      =   0;
-	  shower->y1      =   0;
+	  shower->z       =   m_CCALfront;
+	  shower->x1      =   x1;
+	  shower->y1      =   y1;
 	  shower->time    =   adcgam_cbk_.u.iadcgam[k][6];
 
 	  shower->chi2    =   adcgam_cbk_.u.fadcgam[k][7];
 	  shower->type    =   adcgam_cbk_.u.iadcgam[k][8];
 	  shower->dime    =   adcgam_cbk_.u.iadcgam[k][9];
 	  shower->status  =   adcgam_cbk_.u.iadcgam[k][11];
+	  
+	  if(ecellmax > 0.) shower->Emax = ecellmax;
+	  if(idmax > 0) shower->idmax    = idmax;
 
 	  _data.push_back( shower );
 	}
+
 
 	// Release the lock	
 	//japp->Unlock("CCALShower_factory");
@@ -228,5 +357,17 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	return NOERROR;
 	
+}
+
+
+//------------------
+// shower_depth
+//------------------
+float shower_depth(float energy) {
+
+	float z0 = 0.86, e0 = 1.1e-3;
+	float res = (energy > 0.) ? z0*log(1.+energy/e0) : 0.;
+	return res;
+
 }
 

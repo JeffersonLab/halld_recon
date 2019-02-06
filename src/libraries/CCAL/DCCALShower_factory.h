@@ -33,6 +33,9 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		bool LoadCCALProfileData(JApplication *japp, int32_t runnumber);
 
+		double m_zTarget;
+		double m_CCALfront;
+
 		JApplication *japp;
 		
 		int           SHOWER_DEBUG;
