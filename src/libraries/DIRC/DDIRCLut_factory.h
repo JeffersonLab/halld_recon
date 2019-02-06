@@ -16,7 +16,7 @@ public:
 	DDIRCLut_factory(){};
 	~DDIRCLut_factory(){};
 
-	DDIRCLut *dirclut;
+	DDIRCLut *dirclut=nullptr;
 
 	jerror_t init(void){ 
 		return NOERROR;

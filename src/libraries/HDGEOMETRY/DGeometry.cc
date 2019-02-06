@@ -1868,7 +1868,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom1']/mposY/@dY",dy);
   	vector<double>tof_bottom1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom1']/@X_Y_Z",tof_bottom1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_bars1;k++){
     	y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-1));
   	}
   	num_bars+=num_bars1;
@@ -1878,7 +1878,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom2']/mposY/@dY",dy);
   	vector<double>tof_bottom2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom2']/@X_Y_Z",tof_bottom2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_narrow_bars1;k++){
     	y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-20));
   	}
   	num_bars+=num_narrow_bars1;
@@ -1888,7 +1888,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_north']/mposY/@dY",dy);
   	vector<double>tof_north;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north']/@X_Y_Z",tof_north);  
-  	for (unsigned int k=num_bars;k<num_bars+num_single_end_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_single_end_bars1;k++){
     	y_tof.push_back(y0+tof_north[1]+dy*double(k-22));
   	}
   	num_bars+=num_single_end_bars1;
@@ -1898,7 +1898,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_top2']/mposY/@dY",dy);
   	vector<double>tof_top2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top2']/@X_Y_Z",tof_top2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars2;k++){
+  	for (int k=num_bars;k<num_bars+num_narrow_bars2;k++){
     	y_tof.push_back(y0+tof_top2[1]+dy*double(k-24));
   	}
   	num_bars+=num_narrow_bars2;
@@ -1908,7 +1908,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_top1']/mposY/@dY",dy);
   	vector<double>tof_top1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top1']/@X_Y_Z",tof_top1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars2;k++){
+  	for (int k=num_bars;k<num_bars+num_bars2;k++){
    	 	y_tof.push_back(y0+tof_top1[1]+dy*double(k-26));
   	}
   	num_bars+=num_bars2;

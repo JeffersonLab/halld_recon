@@ -1473,7 +1473,6 @@ void DL1MCTrigger_factory::GetSeeds(JEventLoop *loop, uint64_t eventnumber, UInt
       seed3 = 709975946 + eventnumber;  
     } else {
       
-      const hddm_s::ReactionList &reacts = record->getReactions();
       
       hddm_s::ReactionList::iterator reiter = record->getReactions().begin();
       
