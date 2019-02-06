@@ -12,7 +12,7 @@ class DPSGeometry_factory:public JFactory<DPSGeometry> {
   DPSGeometry_factory(){psgeometry=NULL;};
 		~DPSGeometry_factory(){};
 
-		DPSGeometry *psgeometry;
+		DPSGeometry *psgeometry = nullptr;
 
 		//------------------
 		// brun

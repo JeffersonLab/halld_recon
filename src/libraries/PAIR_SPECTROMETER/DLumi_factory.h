@@ -12,7 +12,7 @@ class DLumi_factory:public JFactory<DLumi> {
 		DLumi_factory(){};
 		~DLumi_factory(){};
 
-		DLumi *lumi;
+		DLumi *lumi = nullptr;
 
 		//------------------
 		// brun
