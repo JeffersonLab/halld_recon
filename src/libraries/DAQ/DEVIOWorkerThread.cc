@@ -2126,6 +2126,8 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 			}
 				break;
 			case 1:  // Block Trailer
+				pe_iter = current_parsed_events.begin();
+				pe = NULL;
 				if(VERBOSE>7) cout << "     SSP/DIRC Block Trailer" << endl;
 				break;
 			case 2:  // Event Header
