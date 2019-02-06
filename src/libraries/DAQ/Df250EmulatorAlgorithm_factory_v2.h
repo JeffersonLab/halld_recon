@@ -17,7 +17,7 @@ class Df250EmulatorAlgorithm_factory_v1:public jana::JFactory<Df250EmulatorAlgor
 		~Df250EmulatorAlgorithm_factory_v1(){};
 		const char* Tag(void){return "v1";}
 
-		Df250EmulatorAlgorithm *emulator
+		Df250EmulatorAlgorithm *emulator = nullptr;
 
 		//------------------
 		// brun
