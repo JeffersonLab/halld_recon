@@ -134,8 +134,8 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	  //double t = dircRecoPmtHits[h]->t;
 	  
 	  // get pixel labels
-	  int pixel_x = dDIRCGeometry->GetPixelX(ch);
-	  int pixel_y = dDIRCGeometry->GetPixelY(ch);
+	  int pixel_row = dDIRCGeometry->GetPixelRow(ch);
+	  int pixel_col = dDIRCGeometry->GetPixelColumn(ch);
 	  
 	  // comparison of truth and reco hits
 	  /*
