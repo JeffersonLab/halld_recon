@@ -273,8 +273,8 @@ DParticleID::DParticleID(JEventLoop *loop)
 
     // Start counter individual paddle resolutions
     vector< vector<double> > sc_paddle_resolution_params;
-    if(loop->GetCalib("START_COUNTER/time_resol_paddle_v2", sc_paddle_resolution_params))
-        jout << "Error in loading START_COUNTER/time_resol_paddle_v2 !" << endl;
+    if(loop->GetCalib("START_COUNTER/TRvsPL", sc_paddle_resolution_params))
+        jout << "Error in loading START_COUNTER/TRvsPL !" << endl;
 	else {
         if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
             jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl

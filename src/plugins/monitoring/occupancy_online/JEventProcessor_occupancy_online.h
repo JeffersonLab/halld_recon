@@ -98,8 +98,8 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		TH1I *tof_adc_D_occ;
 
 		TH1I *dirc_num_events;
-		TH2I *dirc_tdc_pixel_N_occ;
-		TH2I *dirc_tdc_pixel_S_occ;
+		TH2I *dirc_tdc_pixel_N_occ, *dirc_tdc_pixel_N_occ_led;
+		TH2I *dirc_tdc_pixel_S_occ, *dirc_tdc_pixel_S_occ_led;
 
 		//------------------------ DigiHits ------------------------
 		map<string,double> digihitbinmap; // bin number
