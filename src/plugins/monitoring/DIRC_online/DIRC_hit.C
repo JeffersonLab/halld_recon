@@ -106,7 +106,7 @@
     hTS_LED->SetTitleSize(tsize,"xy");
     hTS_LED->Draw();
     hTS->Scale(hTS_LED->GetMaximum()/hTS->GetMaximum());
-    hTS->Draw("same");
+    hTS->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
     leg->AddEntry(hTS_LED,"LED trigger","l");

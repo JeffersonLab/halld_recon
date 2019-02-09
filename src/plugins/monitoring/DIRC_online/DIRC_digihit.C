@@ -67,7 +67,7 @@
     double scale = hDigiHit_Nhits_LED->GetMaximum()/hDigiHit_Nhits->GetMaximum();
     if(hDigiHit_Nhits->GetMaximum() == 0) scale = 1.;
     hDigiHit_Nhits->Scale(scale);
-    hDigiHit_Nhits->Draw("same");
+    hDigiHit_Nhits->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
     leg->AddEntry(hDigiHit_Nhits_LED,"LED trigger","l");
@@ -76,7 +76,7 @@
   }
 
   if(hDigiHit_Time && hDigiHit_Time_LED) {
-    hDigiHit_Time->SetFillColor(kBlack);
+    hDigiHit_Time->SetLineColor(kBlack);
     hDigiHit_Time_LED->SetLineColor(kBlue);
     c1->cd(3);
     hDigiHit_Time->SetTitleSize(tsize,"xy");
@@ -84,7 +84,7 @@
     double scale = hDigiHit_Time_LED->GetMaximum()/hDigiHit_Time->GetMaximum();
     if(hDigiHit_Time->GetMaximum() == 0) scale = 1.;
     hDigiHit_Time->Scale(scale);
-    hDigiHit_Time->Draw("same");
+    hDigiHit_Time->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
     leg->AddEntry(hDigiHit_Time_LED,"LED trigger","l");
