@@ -118,8 +118,8 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 		hHit_pixelOccupancy[i][j] = new TH2I("Hit_PixelOccupancy"+strN,"DIRCPmtHit pixel occupancy "+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 		hHit_TimeOverThreshold[i][j] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold "+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 		hHit_TimeOverThresholdVsChannel[i][j] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel "+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
-		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",500,0.0,1000.0);
-		hHit_tdcTimeVsChannel[i][j] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel "+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
+		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",500,0.0,500.0);
+		hHit_tdcTimeVsChannel[i][j] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel "+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
 	}
 
 	// LED specific histograms
@@ -232,13 +232,13 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 			    locLEDRefTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    locLEDRefTime *= 0.0625; // convert time from flash to ns
 			    locLEDRefTime -= 115; // adjust to time of LED hits
+			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 			    hLEDRefTime->Fill(locLEDRefTime); 
 			    hLEDRefIntegral->Fill(sipmadchit->integral); 
+			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
 		    }
 	    }
     }
-    else  // for now only fill LED data
-	    return NOERROR;
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
