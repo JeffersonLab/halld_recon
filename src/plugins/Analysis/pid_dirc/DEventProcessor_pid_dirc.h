@@ -28,8 +28,12 @@ using namespace jana;
 #include <DIRC/DDIRCTruthPmtHit.h>
 
 #include <DAQ/DDIRCTDCHit.h>
+#include "TTAB/DTTabUtilities.h"
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
+
+#include <DAQ/Df250PulseData.h>
+#include <DAQ/Df250WindowRawData.h>
 
 #include <TMath.h>
 #include <TFile.h>

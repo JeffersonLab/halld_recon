@@ -23,7 +23,8 @@ public:
 
   void AddHit(DrcHit hit);
   DrcHit GetHit(Int_t ind) { return fHitArray[ind]; }
-
+  std::vector<DrcHit> GetHits() { return fHitArray; }
+  
   // Accessors 
   Int_t GetId() const { return fId; }
   Int_t GetType() const { return fType; }
@@ -64,7 +65,7 @@ private:
   Double_t fTest1;
   Double_t fTest2;
   
-  ClassDef(DrcEvent, 1);
+  ClassDef(DrcEvent, 2);
 };
 
 #endif
