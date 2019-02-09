@@ -403,15 +403,15 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       
       for (unsigned int j=0;j<fdc_extrapolations.size();j++){
 	double z=fdc_extrapolations[j].position.z();
-	if (fabs(z-fdchits[i]->wire->origin.z())<1e-3){
+	if (fabs(z-fdchits[i]->wire->origin.z())<0.5){
 	  mom=fdc_extrapolations[j].momentum;
+	  double gas_thickness = 1.0; // cm
+	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
+					gas_thickness/cos(mom.Theta()), 
+					mom.Mag()));
 	  break;
 	}
       }
-   
-      double gas_thickness = 1.0; // cm
-      dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
-				    gas_thickness/cos(mom.Theta()), mom.Mag()));
     }
   }
 
@@ -485,6 +485,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 		}
 		locdEdx_FDC /= locdx_FDC; //weight is dx/dx_total
 	}
+	
 	return NOERROR;
 }
 
@@ -523,7 +524,6 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.p=mom.Mag();
 
       // amplitude correction for doca > dcorr     
-   
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
 
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
@@ -564,8 +564,8 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;
 
+      return NOERROR;
     }
-    return NOERROR;
   }
   
   return VALUE_OUT_OF_RANGE;
