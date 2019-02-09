@@ -18,7 +18,7 @@ public:
 	DDIRCGeometry_factory() {}
 	~DDIRCGeometry_factory(){}
 
-	DDIRCGeometry *dircgeometry;
+	DDIRCGeometry *dircgeometry=nullptr;
 	
 	//------------------
 	// brun

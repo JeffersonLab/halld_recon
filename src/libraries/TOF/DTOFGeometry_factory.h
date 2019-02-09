@@ -18,7 +18,7 @@ class DTOFGeometry_factory:public JFactory<DTOFGeometry>{
 		DTOFGeometry_factory(){};
 		~DTOFGeometry_factory(){};
 
-		DTOFGeometry *tofgeometry;
+		DTOFGeometry *tofgeometry=nullptr;
 
 		//------------------
 		// brun

@@ -162,6 +162,13 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     chisq_ = 0.0;
     ndf_ = 0;
 
+    for (unsigned int i=0;i<cdcwires.size();i++){
+      for (unsigned int j=0;j<cdcwires[i].size();j++){
+	delete cdcwires[i][j];
+      }
+    }
+    cdcwires.clear();
+
    }
 
   // Virtual methods from TrackFitter base class
