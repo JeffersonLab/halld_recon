@@ -2,13 +2,14 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /DIRC_online/Hit/Hit_NHitsVsBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeOverThresholdVsChannel_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_SouthLowerBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeVsChannel_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeVsChannel_SouthLowerBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_SouthLowerBox
+// hnamepath: /DIRC_online/Hit/Hit_NHits_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeVsChannel_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_NonLED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED
+
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");

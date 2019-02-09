@@ -5,6 +5,8 @@
 // hnamepath: /occupancy/dirc_num_events
 // hnamepath: /occupancy/dirc_tdc_pixel_N_occ
 // hnamepath: /occupancy/dirc_tdc_pixel_S_occ
+// hnamepath: /occupancy/dirc_tdc_pixel_N_occ_led
+// hnamepath: /occupancy/dirc_tdc_pixel_S_occ_led
 //
 // e-mail: davidl@jlab.org
 // e-mail: marki@jlab.org

@@ -2,9 +2,12 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /DIRC_online/DigiHit/Hit_NHitsVsBox
-// hnamepath: /DIRC_online/DigiHit/NorthUpperBox/TDCDigiHit_TimeVsChannel_NorthUpperBox
-// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_SouthLowerBox
+// hnamepath: /DIRC_online/DigiHit/DigiHit_NHits_LED
+// hnamepath: /DIRC_online/DigiHit/DigiHit_NHits_NonLED
+// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_LED
+// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_NonLED
+// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_LED
+// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_NonLED
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
