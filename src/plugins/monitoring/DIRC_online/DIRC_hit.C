@@ -105,6 +105,7 @@
     c1->cd(4);
     hTS_LED->SetTitleSize(tsize,"xy");
     hTS_LED->Draw();
+    hTS->Scale(hTS_LED->GetMaximum()/hTS->GetMaximum());
     hTS->Draw("same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);

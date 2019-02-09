@@ -12,10 +12,12 @@
 
   //TH2I* hOcc = (TH2I*)gDirectory->Get("DigiHit/DigiHit_NHitsVsBox");
   //TH2I* hTN = (TH2I*)gDirectory->Get("DigiHit/NorthUpperBox/TDCDigiHit_TimeVsChannel_NorthUpperBox");
-  TH1I* hDigiHit_Nhits = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_LED");
-  TH1I* hDigiHit_Time = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_LED");
-  TH2I* hTS = (TH2I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_NonLED");
+  TH1I* hDigiHit_Nhits_LED = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_LED");
+  TH1I* hDigiHit_Nhits = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_NonLED");
+  TH1I* hDigiHit_Time_LED = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_LED");
+  TH1I* hDigiHit_Time = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_NonLED");
   TH2I* hTS_LED = (TH2I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_LED");
+  TH2I* hTS = (TH2I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_NonLED");
 
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1","DIRC Hit Monitor",150,10,990,660);
@@ -50,18 +52,45 @@
   }
 */
 
-  if(hDigiHit_Nhits) { 
-    hDigiHit_Nhits->SetFillColor(kBlue);
+    TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
+    leg->AddEntry(hTS_LED,"LED trigger","l");
+    leg->AddEntry(hTS,"Non-LED triggers","l");
+    leg->Draw("same");
+
+
+  if(hDigiHit_Nhits && hDigiHit_Nhits_LED) { 
+    hDigiHit_Nhits->SetLineColor(kBlack);
+    hDigiHit_Nhits_LED->SetLineColor(kBlue);
     c1->cd(1);
-    hDigiHit_Nhits->SetTitleSize(tsize,"xy");
-    hDigiHit_Nhits->Draw();
+    hDigiHit_Nhits_LED->SetTitleSize(tsize,"xy");
+    hDigiHit_Nhits_LED->Draw();
+    double scale = hDigiHit_Nhits_LED->GetMaximum()/hDigiHit_Nhits->GetMaximum();
+    if(hDigiHit_Nhits->GetMaximum() == 0) scale = 1.;
+    hDigiHit_Nhits->Scale(scale);
+    hDigiHit_Nhits->Draw("same");
+
+    TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
+    leg->AddEntry(hDigiHit_Nhits_LED,"LED trigger","l");
+    leg->AddEntry(hDigiHit_Nhits,"Non-LED triggers","l");
+    leg->Draw("same");
   }
 
-  if(hDigiHit_Time) {
-    hDigiHit_Time->SetFillColor(kBlue);
+  if(hDigiHit_Time && hDigiHit_Time_LED) {
+    hDigiHit_Time->SetFillColor(kBlack);
+    hDigiHit_Time_LED->SetLineColor(kBlue);
     c1->cd(3);
     hDigiHit_Time->SetTitleSize(tsize,"xy");
-    hDigiHit_Time->Draw();
+    hDigiHit_Time_LED->Draw();
+    double scale = hDigiHit_Time_LED->GetMaximum()/hDigiHit_Time->GetMaximum();
+    if(hDigiHit_Time->GetMaximum() == 0) scale = 1.;
+    hDigiHit_Time->Scale(scale);
+    hDigiHit_Time->Draw("same");
+
+    TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
+    leg->AddEntry(hDigiHit_Time_LED,"LED trigger","l");
+    leg->AddEntry(hDigiHit_Time,"Non-LED triggers","l");
+    leg->Draw("same");
+
   }
 
   if(hTS){

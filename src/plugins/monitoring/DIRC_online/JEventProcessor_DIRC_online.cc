@@ -232,13 +232,13 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 			    locLEDRefTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    locLEDRefTime *= 0.0625; // convert time from flash to ns
 			    locLEDRefTime -= 115; // adjust to time of LED hits
+			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 			    hLEDRefTime->Fill(locLEDRefTime); 
 			    hLEDRefIntegral->Fill(sipmadchit->integral); 
+			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
 		    }
 	    }
     }
-    else  // for now only fill LED data
-	    return NOERROR;
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
