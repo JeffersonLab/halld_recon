@@ -44,11 +44,11 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
  
   hTruthPmtHit_North = new TH2F("hTruthPmtHit_North", "North Box; Pmt Hit Column ; Pixel Hit Row", 6, 0, 6, 18, 0, 18);
   hTruthPmtHit_South = new TH2F("hTruthPmtHit_South", "South Box; Pmt Hit Column ; Pixel Hit Row", 6, 0, 6, 18, 0, 18);
-  hTruthPixelHit_North = new TH2F("hTruthPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
-  hTruthPixelHit_South = new TH2F("hTruthPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
+  hTruthPixelHit_North = new TH2F("hTruthPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
+  hTruthPixelHit_South = new TH2F("hTruthPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
 
-  hPixelHit_North = new TH2F("hPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
-  hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, 0, 144, 48, 0, 48);
+  hPixelHit_North = new TH2F("hPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
+  hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
   mainDir->cd();
  
   return NOERROR;
@@ -110,20 +110,20 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      int pmt_row = dDIRCGeometry->GetPmtRow(ch);
 
      // get pixel labels
-     int pixel_x = dDIRCGeometry->GetPixelX(ch);
-     int pixel_y = dDIRCGeometry->GetPixelY(ch);
+     int pixel_row = dDIRCGeometry->GetPixelRow(ch);
+     int pixel_col = dDIRCGeometry->GetPixelColumn(ch);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
      hTruthPixelHitTime->Fill(ch, t-t_fixed);
      if(x < 0.) {
 	hTruthPmtHitZY_South->Fill(z, y);
 	hTruthPmtHit_South->Fill(pmt_column, pmt_row);
-	hTruthPixelHit_South->Fill(pixel_x, pixel_y);
+	hTruthPixelHit_South->Fill(pixel_row, pixel_col);
      }
      else {
 	hTruthPmtHitZY_North->Fill(z, y);
 	hTruthPmtHit_North->Fill(pmt_column, pmt_row);
-	hTruthPixelHit_North->Fill(pixel_x, pixel_y);
+	hTruthPixelHit_North->Fill(pixel_row, pixel_col);
      }
      japp->RootUnLock();
   }
@@ -149,10 +149,10 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
 	  if(ch < 108*64) {
-		  hPixelHit_South->Fill(pixel_x, pixel_y);
+		  hPixelHit_South->Fill(pixel_row, pixel_col);
 	  }
 	  else {
-		  hPixelHit_North->Fill(pixel_x, pixel_y);
+		  hPixelHit_North->Fill(pixel_row, pixel_col);
 	  }
 	  japp->RootUnLock();
   }
