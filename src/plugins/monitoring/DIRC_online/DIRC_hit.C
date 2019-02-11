@@ -2,25 +2,30 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /DIRC_online/Hit/Hit_NHitsVsBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeOverThresholdVsChannel_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_SouthLowerBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeVsChannel_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeVsChannel_SouthLowerBox
-// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_NorthUpperBox
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_SouthLowerBox
+// hnamepath: /DIRC_online/Hit/Hit_NHits_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeVsChannel_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_NonLED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_LED
+// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED
+
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
   if(dir) dir->cd();
 
-  TH2I* hOcc = (TH2I*)gDirectory->Get("Hit/Hit_NHitsVsBox");
-  TH2I* hTotN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_TimeOverThresholdVsChannel_NorthUpperBox");
-  TH2I* hTotS = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_SouthLowerBox");
-  TH2I* hTN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_TimeVsChannel_NorthUpperBox");
-  TH2I* hTS = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_TimeVsChannel_SouthLowerBox");
-  TH2I* hOccN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_PixelOccupancy_NorthUpperBox");
-  TH2I* hOccS = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_SouthLowerBox");
+  TH2I* hOcc = (TH2I*)gDirectory->Get("Hit/Hit_NHits_LED");
+  //TH2I* hTotN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_TimeOverThresholdVsChannel_NorthUpperBox");
+  TH2I* hTotS = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_LED");
+  //TH2I* hTN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_TimeVsChannel_NorthUpperBox");
+  TH2I* hTimeVsChannelS_LED = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_TimeVsChannel_LED");
+  TH1I* hTS = (TH1I*)gDirectory->Get("Hit/SouthLowerBox/Hit_Time_NonLED");
+  TH1I* hTS_LED = (TH1I*)gDirectory->Get("Hit/SouthLowerBox/Hit_Time_LED");  
+
+  //TH2I* hOccN = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_PixelOccupancy_NorthUpperBox");
+  TH2I* hOccS_LED = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED");
+  TH2I* hOccS = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED");
 
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1","DIRC Hit Monitor",150,10,990,660);
@@ -31,10 +36,12 @@
 
   if(!gPad) return;
   TCanvas* c1 = gPad->GetCanvas();
-  c1->Divide(3,2);
+  c1->Divide(2,2);
 
   double tsize = 0.05;  
   gStyle->SetOptStat("emr");
+
+/*
   if(hOcc){
     c1->cd(1);
     hOcc->SetLabelSize(0.08,"x");
@@ -48,12 +55,6 @@
     c1->cd(2);
     hTotN->SetTitleSize(tsize,"xy");
     hTotN->Draw("colz");
-  }
-
-  if(hTotS){
-    c1->cd(3);
-    hTotS->SetTitleSize(tsize,"xy");
-    hTotS->Draw("colz");
   }
 
   if(hOccN && hOccS){
@@ -78,12 +79,41 @@
     hTN->SetTitleSize(tsize,"xy");
     hTN->Draw("colz");
   }
+*/
 
-  if(hTS){
-    hTS->SetFillColor(kBlue);
-    c1->cd(6);
-    hTS->SetTitleSize(tsize,"xy");
-    hTS->Draw("colz");
+  if(hOccS_LED){
+    c1->cd(1);
+    hOccS_LED->SetTitleSize(tsize,"xy");
+    hOccS_LED->Draw("colz");
   }
+
+  if(hTimeVsChannelS_LED){
+    c1->cd(2);
+    hTimeVsChannelS_LED->SetTitleSize(tsize,"xy");
+    hTimeVsChannelS_LED->Draw("colz");
+  }
+
+  if(hOccS){
+    c1->cd(3);
+    hOccS->SetTitleSize(tsize,"xy");
+    hOccS->Draw("colz");
+  }
+
+
+  if(hTS && hTS_LED){
+    hTS->SetLineColor(kBlack);
+    hTS_LED->SetLineColor(kBlue);
+    c1->cd(4);
+    hTS_LED->SetTitleSize(tsize,"xy");
+    hTS_LED->Draw();
+    hTS->Scale(hTS_LED->GetMaximum()/hTS->GetMaximum());
+    hTS->Draw("h same");
+
+    TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
+    leg->AddEntry(hTS_LED,"LED trigger","l");
+    leg->AddEntry(hTS,"Non-LED triggers","l");
+    leg->Draw("same");
+  }
+
 
 }

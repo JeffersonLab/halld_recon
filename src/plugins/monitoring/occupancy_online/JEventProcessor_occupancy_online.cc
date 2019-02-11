@@ -241,8 +241,10 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 
 	//------------------------ DIRC ------------------------
 	dirc_num_events = new TH1I("dirc_num_events", "DIRC number of events", 1, 0.0, 1.0);
-	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
-	dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_N_occ_led = new TH2I("dirc_tdc_pixel_N_occ_led","DIRC, TDC North (Upper) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_S_occ_led = new TH2I("dirc_tdc_pixel_S_occ_led","DIRC, TDC South (Lower) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 
 	//------------------------ DigiHits ------------------------
 	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size());
@@ -314,8 +316,10 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	
 	// trig[idx[  where idx=0-31 corresponds to "trig bit 1-32"
 	vector<bool> trig(32, 0);
+	vector<bool> fp_trig(32, 0);
 	if(l1trigger){
 		for(int itrig=0; itrig<32; itrig++) trig[itrig] = (l1trigger->trig_mask >> itrig)&0x01;
+		for(int itrig=0; itrig<32; itrig++) fp_trig[itrig] = (l1trigger->fp_trig_mask >> itrig)&0x01;
 	}
 
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -487,10 +491,14 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		const DDIRCTDCDigiHit *hit = vDDIRCTDCDigiHit[i];
 		int ch = hit->channel;
 
-		if(ch >= 108*64) 
-			dirc_tdc_pixel_N_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
-		else 
-			dirc_tdc_pixel_S_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		if(ch >= 108*64) {
+			if(fp_trig[14]) dirc_tdc_pixel_N_occ_led->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+			else dirc_tdc_pixel_N_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		}
+		else { 
+			if(fp_trig[14]) dirc_tdc_pixel_S_occ_led->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+			else dirc_tdc_pixel_S_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		}
 	}
 
 	//------------------------ DigiHits ------------------------

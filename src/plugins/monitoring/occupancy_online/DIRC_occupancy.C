@@ -5,6 +5,8 @@
 // hnamepath: /occupancy/dirc_num_events
 // hnamepath: /occupancy/dirc_tdc_pixel_N_occ
 // hnamepath: /occupancy/dirc_tdc_pixel_S_occ
+// hnamepath: /occupancy/dirc_tdc_pixel_N_occ_led
+// hnamepath: /occupancy/dirc_tdc_pixel_S_occ_led
 //
 // e-mail: davidl@jlab.org
 // e-mail: marki@jlab.org
@@ -19,8 +21,10 @@
 	TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("occupancy");
 	if(dir) dir->cd();
 
+	TH2I *dirc_tdc_pixel_N_occ_led = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_N_occ_led");
+	TH2I *dirc_tdc_pixel_S_occ_led = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ_led");
 	TH2I *dirc_tdc_pixel_N_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_N_occ");
-	TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
+        TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
 
 	// Just for testing
 	if(gPad == NULL){
@@ -39,7 +43,7 @@
 	p1->Draw();
 	p1->cd();
 	gStyle->SetOptStat(0);
-	if(dirc_tdc_pixel_N_occ) dirc_tdc_pixel_N_occ->DrawCopy("colz");
+	if(dirc_tdc_pixel_S_occ_led) dirc_tdc_pixel_S_occ_led->DrawCopy("colz");
 
 	c1->cd(0);
 	TPad *p2 = new TPad("p2","p2",0.,0.,1.,0.5);

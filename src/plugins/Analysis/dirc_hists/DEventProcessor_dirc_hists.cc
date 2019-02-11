@@ -166,7 +166,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 					  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 					  
-					  if(fabs(locThetaC-locExpectedThetaC)<0.02) {
+					  if(fabs(locThetaC-locExpectedThetaC)<0.1) {
 						  hDiff[locPID]->Fill(locDeltaT);
 						  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
 					  }
