@@ -247,7 +247,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	}
 	
 	// needs to be X dependent choice for reflection cut (from CCDB?)
-	bool reflected = hitTime>38;
+	bool reflected = hitTime>25;
 	
 	// get position along bar for calculated time 
 	double radiatorL = dDIRCGeometry->GetBarLength(bar);
@@ -318,7 +318,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// save hits array which pass some lose time and angle criteria
-				if(fabs(locDeltaT) < 20.0 && fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))<0.2) {
+				if(fabs(locDeltaT) < 100.0 && fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))<0.2) {
 					locDIRCPhoton.first = totalTime;
 					locDIRCPhoton.second = tangle;
 					locDIRCPhotons.push_back(locDIRCPhoton);
@@ -336,7 +336,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// remove photon candidates not used in likelihood
-				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.02) continue;
+				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.05) continue;
 				
 				// save good photons to matched list
 				isGood = true;
