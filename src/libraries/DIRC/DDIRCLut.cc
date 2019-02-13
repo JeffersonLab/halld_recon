@@ -247,7 +247,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	}
 	
 	// needs to be X dependent choice for reflection cut (from CCDB?)
-	bool reflected = hitTime>25;
+	bool reflected = hitTime>0; // try all photons as reflected for now
 	
 	// get position along bar for calculated time 
 	double radiatorL = dDIRCGeometry->GetBarLength(bar);
