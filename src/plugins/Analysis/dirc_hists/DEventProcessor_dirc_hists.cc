@@ -43,7 +43,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   // plots for each bar
   TDirectory *locBarDir = new TDirectoryFile("PerBarDiagnostic","PerBarDiagnostic");
   locBarDir->cd();
-  for(int i=0; i<48; i++) {
+  for(int i=0; i<24; i++) {
 	  hDiffBar[i] = new TH2I(Form("hDiff_bar%02d",i), Form("Bar %02d; Channel ID; t_{calc}-t_{measured} [ns]; entries [#]", i), dMaxChannels, 0, dMaxChannels, 400,-20,20);
 	  hNphCBar[i] = new TH1I(Form("hNphC_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
 	  hNphCBarVsP[i] = new TH2I(Form("hNphCVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
@@ -169,6 +169,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 		  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+		  if(locBar > 23) continue; // skip north box for now
 
 		  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                   hExtrapolatedBarHitXY[locPID]->Fill(posInBar.X(), posInBar.Y());
