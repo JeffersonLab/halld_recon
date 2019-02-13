@@ -35,7 +35,8 @@ const int NmultDigi = 1000;
 
 // Hit pointers
 static TH1I *dirc_num_events;
-static TH1I *hLEDRefTime;
+static TH1I *hLEDRefAdcTime;
+static TH1I *hLEDRefTdcTime;
 static TH1I *hLEDRefIntegral;
 static TH1I *hRefTime;
 static TH1I *hHit_NHits[2];
@@ -44,6 +45,7 @@ static TH2I *hHit_NHitsVsBox[2];
 static TH1I *hHit_TimeOverThreshold[Nboxes][2];
 static TH2I *hHit_TimeOverThresholdVsChannel[Nboxes][2];
 static TH1I *hHit_tdcTime[Nboxes][2];
+static TH2I *hHit_tdcTimeVsEvent[Nboxes][2];
 static TH2I *hHit_tdcTimeVsChannel[Nboxes][2];
 static TH2I *hHit_pixelOccupancy[Nboxes][2];
 
@@ -94,7 +96,8 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
     dircDir->cd();
 
-    hLEDRefTime = new TH1I("LEDRefTime", "LED reference SiPM time; time (ns)", 500, 0, 500);
+    hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 500, 0, 500);
+    hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 500, 0, 500);
     hLEDRefIntegral = new TH1I("LEDRefIntegral", "LED reference SiPM integral; integral (ADC)", 500, 0, 2000);
     hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 500, 0, 100);
 
@@ -119,6 +122,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 		hHit_TimeOverThreshold[i][j] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold "+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 		hHit_TimeOverThresholdVsChannel[i][j] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel "+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
 		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",500,0.0,500.0);
+		hHit_tdcTimeVsEvent[i][j] = new TH2I("Hit_TimeVsEvent"+strN,"DIRCPmtHit time "+strT+"; event #; time [ns]; hits",1000,0,100e6,500,0.0,500.0);
 		hHit_tdcTimeVsChannel[i][j] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel "+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
 	}
 
@@ -220,6 +224,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // LED specific information
     double locLEDRefTime = 0;
+    double locLEDRefAdcTime = 0;
+    double locLEDRefTdcTime = 0;
     if(locDIRCLEDTrig) {
 	    
 	    // Get LED SiPM reference
@@ -231,13 +237,25 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	    for(uint i=0; i<sipmadchits.size(); i++) {
 		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
 		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-			    locLEDRefTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
-			    locLEDRefTime *= 0.0625; // convert time from flash to ns
-			    locLEDRefTime -= 115; // adjust to time of LED hits
+			    locLEDRefAdcTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
+			    locLEDRefAdcTime *= 0.0625; // convert time from flash to ns
+			    locLEDRefAdcTime -= 115; // adjust to time of LED hits
 			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefTime->Fill(locLEDRefTime); 
+			    hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
 			    hLEDRefIntegral->Fill(sipmadchit->integral); 
 			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
+			    locLEDRefTime = locLEDRefAdcTime;
+		    }
+	    }
+	    
+	    for(uint i=0; i<sipmtdchits.size(); i++) {
+		    const DCAEN1290TDCHit* sipmtdchit = (DCAEN1290TDCHit*)sipmtdchits[i];
+		    if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
+			    locLEDRefTdcTime = (double)((sipmtdchit->time));
+			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+			    hLEDRefTdcTime->Fill(locLEDRefTdcTime); 
+			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK	     
+			    locLEDRefTime = locLEDRefTdcTime;
 		    }
 	    }
     }
@@ -304,6 +322,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	hHit_TimeOverThreshold[box][loc_itrig]->Fill(hit->tot);
 	hHit_TimeOverThresholdVsChannel[box][loc_itrig]->Fill(channel,hit->tot);
 	hHit_tdcTime[box][loc_itrig]->Fill(hit->t);
+	hHit_tdcTimeVsEvent[box][loc_itrig]->Fill(eventnumber,hit->t);
 	hHit_tdcTimeVsChannel[box][loc_itrig]->Fill(channel,hit->t);
 
 	// LED specific histograms
