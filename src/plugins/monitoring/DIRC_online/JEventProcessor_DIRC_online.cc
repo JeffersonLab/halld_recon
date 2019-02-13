@@ -200,7 +200,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // check for LED triggers
     bool locDIRCLEDTrig = false;
-    //bool locPhysicsTrig = false;
+    bool locPhysicsTrig = false;
     vector<const DL1Trigger*> trig;
     eventLoop->Get(trig);
     if (trig.size() > 0) {
@@ -209,12 +209,14 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		    locDIRCLEDTrig = true;
 	    }
 	    // Physics trigger appears as "bit" 1 in L1 trigger monitoring plots
-	    //if (trig[0]->trig_mask & 0x1){ 
-	    //	    locPhysicsTrig = true;
-	    //}
+	    if (trig[0]->trig_mask & 0x1){ 
+	    	    locPhysicsTrig = true;
+	    }
     }
     int loc_itrig = 1;
     if(locDIRCLEDTrig) loc_itrig = 0;
+    else if(locPhysicsTrig) loc_itrig = 1;
+    else return NOERROR;
 
     // LED specific information
     double locLEDRefTime = 0;

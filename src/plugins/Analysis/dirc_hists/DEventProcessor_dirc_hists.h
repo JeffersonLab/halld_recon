@@ -25,6 +25,7 @@ using namespace jana;
 #include <PID/DParticleID.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
+#include <TRIGGER/DTrigger.h>
 
 #include <TMath.h>
 #include <TFile.h>
@@ -55,17 +56,27 @@ private:
 
   TH2I* hDiffBar[48];
   TH1I* hNphCBar[48];
+  TH1I* hNphCBarInclusive[48];
+  TH2I *hNphCBarVsP[48];
+  TH2I *hNphCBarInclusiveVsP[48];
+  map<Particle_t, TH2I*> hExtrapolatedBarHitXY;
   map<Particle_t, TH1I*> hDiff;
   map<Particle_t, TH1I*> hNphC;
+  map<Particle_t, TH1I*> hNphCInclusive;
   map<Particle_t, TH1I*> hThetaC;
   map<Particle_t, TH1I*> hDeltaThetaC;
   map<Particle_t, TH1I*> hLikelihood;
   map<Particle_t, TH1I*> hLikelihoodDiff;
-  
+ 
+  map<Particle_t, TH2I*> hNphCVsP;
+  map<Particle_t, TH2I*> hNphCInclusiveVsP;
   map<Particle_t, TH2I*> hThetaCVsP;
   map<Particle_t, TH2I*> hDeltaThetaCVsP;
   map<Particle_t, TH2I*> hLikelihoodDiffVsP;
   map<Particle_t, TH2I*> hDeltaTVsP;
+
+  TH1I *hHitTimeMap[40];
+  TH2S *hPixelHitMap[40], *hPixelHitMapReflected[40];
 
   int dMaxChannels;
 
