@@ -16,6 +16,7 @@ using namespace jana;
 #include <DAQ/DDIRCTDCHit.h>
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
+#include <DIRC/DDIRCLEDRef.h>
 #include <DAQ/Df250PulseData.h>
 #include <TRIGGER/DL1Trigger.h>
 
@@ -127,7 +128,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	}
 
 	// LED specific histograms
-	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.0);
+	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,100.0,200.0);
 	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
 	
 	if(i==1) {
@@ -229,17 +230,33 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     if(locDIRCLEDTrig) {
 	    
 	    // Get LED SiPM reference
-	    vector<const DCAEN1290TDCHit*> sipmtdchits;
-	    eventLoop->Get(sipmtdchits);
-	    vector<const Df250PulseData*> sipmadchits;
-	    eventLoop->Get(sipmadchits);
+	    //vector<const DCAEN1290TDCHit*> sipmtdchits;
+	    //eventLoop->Get(sipmtdchits);
+	    //vector<const Df250PulseData*> sipmadchits;
+	    //eventLoop->Get(sipmadchits);
 
+	    vector<const DDIRCLEDRef*> dircLEDRefs;
+            eventLoop->Get(dircLEDRefs);
+	    for(uint i=0; i<dircLEDRefs.size(); i++) {
+		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
+		locLEDRefAdcTime = dircLEDRef->t_fADC;
+		locLEDRefTdcTime = dircLEDRef->t_TDC;
+		locLEDRefTime = dircLEDRef->t;
+	
+		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+                hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
+                hLEDRefIntegral->Fill(dircLEDRef->integral);
+		hLEDRefTdcTime->Fill(locLEDRefTdcTime);
+		japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
+	    }
+    }
+
+/*
 	    for(uint i=0; i<sipmadchits.size(); i++) {
 		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
 		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
 			    locLEDRefAdcTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    locLEDRefAdcTime *= 0.0625; // convert time from flash to ns
-			    locLEDRefAdcTime -= 115; // adjust to time of LED hits
 			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 			    hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
 			    hLEDRefIntegral->Fill(sipmadchit->integral); 
@@ -259,6 +276,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		    }
 	    }
     }
+*/
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
