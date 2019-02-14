@@ -10,6 +10,7 @@ using namespace std;
 #include "DIRC/DDIRCGeometry.h"
 #include "DIRC/DDIRCPmtHit_factory.h"
 #include "TTAB/DTTabUtilities.h"
+#include "DAQ/DDIRCTriggerTime.h"
 using namespace jana;
 
 //------------------
@@ -82,6 +83,16 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+
+    // check that SSP board timestamps match for all modules 
+    vector<const DDIRCTriggerTime*> timestamps;
+    loop->Get(timestamps);
+    if(timestamps.size() > 0) {
+	    for (unsigned int i=0; i < timestamps.size()-1; i++) {
+		    if(timestamps[i]->time != timestamps[i+1]->time) 
+			    return NOERROR;
+	    }
+    }
 
     vector<const DDIRCTDCDigiHit*> digihits;
     loop->Get(digihits);
