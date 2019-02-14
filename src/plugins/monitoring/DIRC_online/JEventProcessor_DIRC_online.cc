@@ -241,7 +241,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
 		locLEDRefAdcTime = dircLEDRef->t_fADC;
 		locLEDRefTdcTime = dircLEDRef->t_TDC;
-		locLEDRefTime = dircLEDRef->t;
+		locLEDRefTime = dircLEDRef->t_TDC;
 	
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
