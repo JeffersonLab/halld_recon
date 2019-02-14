@@ -33,17 +33,21 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> ddEdxMeanParams_FDC_Proton;
 	vector<float> ddEdxMeanParams_FDC_KPlus;
 	vector<float> ddEdxMeanParams_FDC_PiPlus;
-	vector<float> ddEdxMeanParams_CDC_Proton;
+	vector<float> ddEdxMeanParams_CDC_Proton;	
+	vector<float> ddEdxMeanParams_FDC_Electron;
 	vector<float> ddEdxMeanParams_CDC_KPlus;
 	vector<float> ddEdxMeanParams_CDC_PiPlus;
+	vector<float> ddEdxMeanParams_CDC_Electron;
 	vector<float> ddEdxMeanParams_SC_Proton;
 
 	vector<float> ddEdxSigmaParams_FDC_Proton;
 	vector<float> ddEdxSigmaParams_FDC_KPlus;
 	vector<float> ddEdxSigmaParams_FDC_PiPlus;
+	vector<float> ddEdxSigmaParams_FDC_Electron;
 	vector<float> ddEdxSigmaParams_CDC_Proton;
 	vector<float> ddEdxSigmaParams_CDC_KPlus;
 	vector<float> ddEdxSigmaParams_CDC_PiPlus;
+	vector<float> ddEdxSigmaParams_CDC_Electron;
 	vector<float> ddEdxSigmaParams_SC_Proton;
 
 	vector<float> dTimeSigmaParams_TOF_Proton;
