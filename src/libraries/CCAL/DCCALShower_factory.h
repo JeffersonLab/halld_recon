@@ -12,6 +12,7 @@
 #include <JANA/JEventLoop.h>
 
 #include "DCCALShower.h"
+#include "hycal.h"
 
 using namespace jana;
 
@@ -31,7 +32,20 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	
 		
+		void glue_transition_island();
+		void merge_clusters(int i, int j);
+		void final_cluster_processing();
+		bool clusters_mindist(int i, int j);
+		
 		bool LoadCCALProfileData(JApplication *japp, int32_t runnumber);
+
+		double m_zTarget;
+		double m_CCALfront;
+		
+		int n_h_clusters;
+		ccalcluster_t ccalcluster[MAX_CLUSTERS];
+		cluster_t cluster_storage[MAX_CLUSTERS];
+		blockINFO_t blockINFO[T_BLOCKS];
 
 		JApplication *japp;
 		

@@ -2,7 +2,7 @@
      &        MCOL,           ! Max number of col. in the calorimeter matrix
      &        MROW            ! Max number of rows in the calorimeter matrix
 *
-      PARAMETER (MCOL = 34 , MROW = 34)
+      PARAMETER (MCOL = 12 , MROW = 12)
 *
       integer
      &        min_dime,       ! Min number of cells in cluster cut
