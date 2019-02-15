@@ -40,6 +40,7 @@ static TH1I *hLEDRefAdcTime;
 static TH1I *hLEDRefTdcTime;
 static TH1I *hLEDRefIntegral;
 static TH2I *hLEDRefAdcVsTdcTime;
+static TH1I *hLEDRefTdcChannelTimeDiff;
 static TH2I *hLEDRefTdcVsChannelTime;
 static TH2I *hLEDRefAdcVsChannelTime;
 static TH2I *hLEDRefIntegralVsTdcTime;
@@ -105,6 +106,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 100, -20, 20);
     hLEDRefIntegral = new TH1I("LEDRefIntegral", "LED reference SiPM integral; integral (ADC)", 100, 1000, 1500);
     hLEDRefAdcVsTdcTime = new TH2I("LEDRefAdcVsTdcTime", "LED ADC vs TDC reference SiPM time; TDC time (ns); ADC time (ns)", 100, -20, 20, 100, -20, 20);
+    hLEDRefTdcChannelTimeDiff = new TH1I("LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 400, 110, 150);
     hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 40, 110, 150, 100, -20, 20);
     hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 40, 110, 150, 100, -20, 20);
     hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, -20, 20, 100, 1000, 1500);
@@ -358,6 +360,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
 		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locLEDRefTime);
 		if(box==1 && channel==2490) {
+			hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
 			hLEDRefTdcVsChannelTime->Fill(hit->t,locLEDRefTdcTime);
 			hLEDRefAdcVsChannelTime->Fill(hit->t,locLEDRefAdcTime);
 		}
