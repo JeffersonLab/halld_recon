@@ -969,7 +969,7 @@ c
       real
      &       e1,x1,y1         ,! energy and coordinates of first gamma
      &       e2,x2,y2          ! energy and coordinates of second gamma(if any)
-                               ! coordinates are in terms of sell size
+                               ! coordinates are in terms of cell size
       real   t1,t2             ! time of both gammas
 *
 *             ---------------include files---------------

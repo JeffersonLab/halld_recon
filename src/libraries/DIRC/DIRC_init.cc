@@ -11,10 +11,12 @@ using namespace jana;
 
 #include "DDIRCTDCDigiHit.h"
 #include "DDIRCPmtHit.h"
+#include "DDIRCLEDRef.h"
 #include "DDIRCTruthBarHit.h"
 #include "DDIRCTruthPmtHit.h"
 #include "DDIRCLut_factory.h"
 #include "DDIRCPmtHit_factory.h"
+#include "DDIRCLEDRef_factory.h"
 #include "DDIRCGeometry_factory.h"
 
 jerror_t DIRC_init(JEventLoop *loop) {
@@ -23,6 +25,7 @@ jerror_t DIRC_init(JEventLoop *loop) {
 	loop->AddFactory(new JFactory<DDIRCTDCDigiHit>());
 	loop->AddFactory(new DDIRCGeometry_factory());
 	loop->AddFactory(new DDIRCPmtHit_factory());
+	loop->AddFactory(new DDIRCLEDRef_factory());
 	loop->AddFactory(new JFactory<DDIRCTruthPmtHit>());
 	loop->AddFactory(new JFactory<DDIRCTruthBarHit>());
 	loop->AddFactory(new DDIRCLut_factory());
