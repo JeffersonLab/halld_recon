@@ -35,14 +35,10 @@ jerror_t DEventProcessor_pid_dirc::init(void) {
     locFile->cd("");
   else
     gDirectory->Cd("/");
-
-	
   
   fTree = new TTree("dirc", "dirc tree");
   fcEvent = new TClonesArray("DrcEvent");
-  // fEvent = new DrcEvent();
-  //fTree->Branch("DrcEvent","DrcEvent",&fEvent,256000,0);
-  fTree->Branch("DrcEvent",&fcEvent,256000,2);
+  fTree->Branch("DrcEvent",&fcEvent,256000,1);
   return NOERROR;
 }
 
@@ -87,22 +83,50 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   vector<const DDIRCTruthPmtHit*> dircPmtHits;
   vector<const DDIRCTDCDigiHit*> dataDigiHits;
   vector<const DDIRCPmtHit*> dataPmtHits;
-    
+  vector<const DL1Trigger*> trig;
+  
   loop->Get(mcthrowns);
   loop->Get(mctrackhits);
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
   loop->Get(dataDigiHits);
   loop->Get(dataPmtHits);
-
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+  loop->Get(trig);
   
+  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+
+  int trigger = 0;
+  if(trig.size() > 0){
+    // LED appears as "bit" 15 in L1 front panel trigger monitoring plots
+    if (trig[0]->fp_trig_mask & 0x4000) trigger=15;  
+  }
+
+  // // get LED trigger
+  // double locLEDRefTime = 0;
+  // if(true){
+  //   // Get LED SiPM reference
+  //   vector<const DCAEN1290TDCHit*> sipmtdchits;
+  //   vector<const Df250PulseData*> sipmadchits;
+
+  //   loop->Get(sipmtdchits);
+  //   loop->Get(sipmadchits);
+
+  //   for(uint i=0; i<sipmadchits.size(); i++) {
+  //     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
+  //     if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
+  // 	locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
+  // 	//hfine->Fill(sipmadchit->course_time<<6);
+  //     }
+  //   }
+  // }
+
   // loop over mc/reco tracks
   TClonesArray& cevt = *fcEvent;
   cevt.Clear();
   for (unsigned int m = 0; m < mcthrowns.size(); m++){
     if(dircPmtHits.size() > 0.){
       fEvent = new DrcEvent();
+      fEvent->SetType(trigger);
       DrcHit hit;
       
       // loop over PMT's hits
@@ -149,35 +173,13 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
       if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);      
     }
   }
-
-  // get LED trigger
-  double locLEDRefTime = 0;
-  if(true) {
-    
-    // Get LED SiPM reference
-    vector<const DCAEN1290TDCHit*> sipmtdchits;
-    vector<const Df250PulseData*> sipmadchits;
-
-    loop->Get(sipmtdchits);
-    loop->Get(sipmadchits);
-
-    //std::cout<<"----- "<<std::endl;
-    
-    for(uint i=0; i<sipmadchits.size(); i++) {
-      const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-      //cout<<sipmadchit->slot<<" "<<sipmadchit->channel<<" "<<sipmadchit->course_time<<" "<<sipmadchit->fine_time<<endl;
-      if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {	
-	locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
-	//std::cout<<"locLEDRefTime "<<locLEDRefTime<<" "<<(sipmadchit->course_time<<6)<<" "<<sipmadchit->fine_time << std::endl;
-	//hfine->Fill(sipmadchit->course_time<<6);
-      }
-    }
-  }
   
   // calibrated hists
   //if(dataDigiHits.size()>0){
   if(dataPmtHits.size()>0){
     fEvent = new DrcEvent();
+    fEvent->SetType(trigger);
+	  
     DrcHit hit;
     for (const auto dhit : dataPmtHits) {
       int ch=dhit->ch;
@@ -207,51 +209,13 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
     
     
     if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
-  }  
+  }
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
   japp->RootUnLock(); //RELEASE ROOT LOCK
       
   return NOERROR;
 }
-
-Particle DEventProcessor_pid_dirc::MakeParticle(const DKinematicData *kd,
-						double mass, hit_set hits) {
-  // Create a ROOT TLorentzVector object out of a Hall-D DKinematic Data object.
-  // Here, we have the mass passed in explicitly rather than use the mass contained in
-  // the DKinematicData object itself. This is because right now (Feb. 2009) the
-  // PID code is not mature enough to give reasonable guesses. See above code.
-
-  double p = kd->momentum().Mag();
-  double theta = kd->momentum().Theta();
-  double phi = kd->momentum().Phi();
-  double px = p * sin(theta) * cos(phi);
-  double py = p * sin(theta) * sin(phi);
-  double pz = p * cos(theta);
-  double E = sqrt(mass * mass + p * p);
-  double x = kd->position().X();
-  double y = kd->position().Y();
-  double z = kd->position().Z();
-  
-  Particle part;
-  part.p.SetPxPyPzE(px, py, pz, E);
-  part.x.SetXYZ(x, y, z);
-  part.P = p;
-  part.E = E;
-  part.Th = theta;
-  part.Ph = phi;
-  part.hits_cdc = hits.hits_cdc;
-  part.hits_fdc = hits.hits_fdc;
-  part.hits_bcal = hits.hits_bcal;
-  part.hits_fcal = hits.hits_fcal;
-  part.hits_upv = hits.hits_upv;
-  part.hits_tof = hits.hits_tof;
-  part.hits_rich = hits.hits_rich;
-  part.hits_cere = hits.hits_cere;
-
-  return part;
-}
-
 
 jerror_t DEventProcessor_pid_dirc::erun(void) {
   return NOERROR;
