@@ -92,34 +92,36 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   loop->Get(dataDigiHits);
   loop->Get(dataPmtHits);
   loop->Get(trig);
+
   
   japp->RootWriteLock(); //ACQUIRE ROOT LOCK
 
+  // check for LED triggers
   int trigger = 0;
-  if(trig.size() > 0){
+  if (trig.size() > 0) {
     // LED appears as "bit" 15 in L1 front panel trigger monitoring plots
-    if (trig[0]->fp_trig_mask & 0x4000) trigger=15;  
+    if (trig[0]->fp_trig_mask & 0x4000) trigger = 1;
+    // Physics trigger appears as "bit" 1 in L1 trigger monitoring plots
+    if (trig[0]->trig_mask & 0x1) trigger = 2;    
   }
 
-  // // get LED trigger
-  // double locLEDRefTime = 0;
-  // if(true){
-  //   // Get LED SiPM reference
-  //   vector<const DCAEN1290TDCHit*> sipmtdchits;
-  //   vector<const Df250PulseData*> sipmadchits;
 
-  //   loop->Get(sipmtdchits);
-  //   loop->Get(sipmadchits);
-
-  //   for(uint i=0; i<sipmadchits.size(); i++) {
-  //     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-  //     if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-  // 	locLEDRefTime = ((sipmadchit->course_time<<6) + sipmadchit->fine_time) * 0.0625; // convert time from flash to ns
-  // 	//hfine->Fill(sipmadchit->course_time<<6);
-  //     }
-  //   }
-  // }
-
+  // LED specific information
+  double locLEDRefTime = 0;
+  // double locLEDRefAdcTime = 0;
+  // double locLEDRefTdcTime = 0;
+  if(trigger==1) {
+    vector<const DDIRCLEDRef*> dircLEDRefs;
+    loop->Get(dircLEDRefs);
+    for(uint i=0; i<dircLEDRefs.size(); i++) {
+      const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
+      // locLEDRefAdcTime = dircLEDRef->t_fADC;
+      // locLEDRefTdcTime = dircLEDRef->t_TDC;
+      locLEDRefTime = dircLEDRef->t_TDC;
+      break;
+    }
+  }
+  
   // loop over mc/reco tracks
   TClonesArray& cevt = *fcEvent;
   cevt.Clear();
@@ -175,10 +177,10 @@ jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) 
   }
   
   // calibrated hists
-  //if(dataDigiHits.size()>0){
   if(dataPmtHits.size()>0){
     fEvent = new DrcEvent();
     fEvent->SetType(trigger);
+    fEvent->SetTime(locLEDRefTime);
 	  
     DrcHit hit;
     for (const auto dhit : dataPmtHits) {

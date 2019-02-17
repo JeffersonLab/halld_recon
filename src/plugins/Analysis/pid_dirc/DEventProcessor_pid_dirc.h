@@ -32,9 +32,8 @@ using namespace jana;
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 
-#include <DAQ/Df250PulseData.h>
-#include <DAQ/Df250WindowRawData.h>
 #include <TRIGGER/DL1Trigger.h>
+#include <DIRC/DDIRCLEDRef.h>
 
 #include <TMath.h>
 #include <TFile.h>
