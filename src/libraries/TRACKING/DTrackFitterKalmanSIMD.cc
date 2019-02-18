@@ -9079,7 +9079,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 	// Magnetic field 
 	bfield->GetField(S(state_x),S(state_y),z,Bx,By,Bz); 
 
-	while (fabs(d)>0.05 && count<20){
+	while (fabs(d)>0.001 && count<20){
 	  // track direction
 	  DVector3 phat(S(state_tx),S(state_ty),1);
 	  phat.SetMag(1.);
