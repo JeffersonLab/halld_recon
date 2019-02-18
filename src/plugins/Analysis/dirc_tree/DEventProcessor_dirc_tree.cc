@@ -153,7 +153,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	int locBar = dDIRCGeometry->GetBar(posInBar.Y());
 
 	fEvent = new DrcEvent();
-	fEvent->SetType(0);
+	fEvent->SetType(2);
 	fEvent->SetMomentum(TVector3(momInBar.X(),momInBar.Y(),momInBar.Z()));
 	fEvent->SetPdg(PDGtype(locPID));
 	fEvent->SetTime(locExtrapolatedTime);
