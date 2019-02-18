@@ -74,6 +74,8 @@ class DEventRFBunch_factory : public jana::JFactory<DEventRFBunch>
 		DVector3 dTargetCenter;
 
 		double dMinTrackingFOM;
+		
+		string OVERRIDE_TAG;
 
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.

@@ -16,7 +16,7 @@ class DCCALGeometry_factory:public jana::JFactory<DCCALGeometry>{
 		DCCALGeometry_factory(){};
 		~DCCALGeometry_factory(){};
 
-		DCCALGeometry *ccalgeometry;
+		DCCALGeometry *ccalgeometry = nullptr;
 
 		//------------------
 		// brun

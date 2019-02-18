@@ -16,23 +16,21 @@
 
 class DCCALGeometry:public jana::JObject{
 
-#define kCCALBlocksWide 16
-#define kCCALBlocksTall 16
-#define kCCALMaxChannels kCCALBlocksWide * kCCALBlocksTall
-// Do not forget to adjust below formula if number of blocks chage in any direction:
-//   this is now used to convert from row/col to coordiantes y/x and back - MK
-#define kCCALMidBlock (kCCALBlocksWide)/2 			
-#define kCCALBeamHoleSize 2
-
 	public:
 		JOBJECT_PUBLIC(DCCALGeometry);
 		
 		DCCALGeometry();
 		~DCCALGeometry(){}
 
-		static double blockSize(){ return 2*k_cm; }
-		static double blockLength(){ return 18.0*k_cm; }
-		static double ccalFaceZ(){ return 1025.3*k_cm; }
+		static const int kCCALBlocksWide   = 12;
+		static const int kCCALBlocksTall   = 12;
+		static const int kCCALMaxChannels  = kCCALBlocksWide * kCCALBlocksTall;
+		static const int kCCALMidBlock     = (kCCALBlocksWide)/2;
+		static const int kCCALBeamHoleSize = 2;
+
+		static double blockSize()  { return 2.05 * k_cm; }
+		static double blockLength(){ return 20.0 * k_cm; }
+		static double ccalFaceZ()  { return 1215 * k_cm; }
 	
 		static double ccalMidplane() { return ccalFaceZ() + 0.5 * blockLength() ; } 
 	
@@ -53,10 +51,10 @@ class DCCALGeometry:public jana::JObject{
 		int column( float x ) const;
 
 		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "kCCALBlocksWide", "%d", kCCALBlocksWide);
-			AddString(items, "kCCALBlocksTall", "%d", kCCALBlocksTall);
-			AddString(items, "kCCALMaxChannels", "%d", kCCALMaxChannels);
-			AddString(items, "kCCALBeamHoleSize", "%2.3f", kCCALBeamHoleSize);
+		  AddString(items, "kCCALBlocksWide", "%d", (int) kCCALBlocksWide);
+		  AddString(items, "kCCALBlocksTall", "%d", (int) kCCALBlocksTall);
+		  AddString(items, "kCCALMaxChannels", "%d",(int) kCCALMaxChannels);
+		  AddString(items, "kCCALBeamHoleSize", "%2.3f",(int) kCCALBeamHoleSize);
 		}
 	
 	private:

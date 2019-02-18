@@ -149,6 +149,8 @@ class DGeometry{
       bool GetBCALDepth(float &bcal_depth) const; ///< depth (or height) of BCAL module in cm
       bool GetBCALPhiShift(float &bcal_phi_shift) const; ///< phi angle in degrees that first BCAL module is shifted from being centered at ph=0.0
 
+      bool GetCCALZ(double &z_ccal) const; /// z-location of front face of CCAL in cm
+
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm

@@ -41,6 +41,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	vector<const Df125FDCPulse*>      f125fdcpulses;
 	vector<const Df125WindowRawData*> f125wrds;
 	vector<const Df125Config*>        f125configs;
+	vector<const DDIRCTriggerTime*>   dirctts;
+	vector<const DDIRCTDCHit*>        dirctdchits;
 	vector<const DCAEN1290TDCHit*>    caen1290hits;
 	vector<const DCAEN1290TDCConfig*> caen1290configs;
 	vector<const DF1TDCHit*>          F1hits;
@@ -64,6 +66,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
         loop->Get(f125fdcpulses);
         loop->Get(f125wrds);
         loop->Get(f125configs);
+	loop->Get(dirctdchits);
+	loop->Get(dirctts);
         loop->Get(caen1290hits);
         loop->Get(caen1290configs);
         loop->Get(F1hits);
@@ -113,6 +117,10 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
                 f125fdcpulses.push_back(llobj_ptr);
             } else if(auto *llobj_ptr = dynamic_cast<const Df125WindowRawData *>(obj_ptr)) {
                 f125wrds.push_back(llobj_ptr);
+            } else if(auto *llobj_ptr = dynamic_cast<const DDIRCTDCHit *>(obj_ptr)) {
+                dirctdchits.push_back(llobj_ptr);
+            } else if(auto *llobj_ptr = dynamic_cast<const DDIRCTriggerTime *>(obj_ptr)) {
+                dirctts.push_back(llobj_ptr);
             } else if(auto *llobj_ptr = dynamic_cast<const DCAEN1290TDCHit *>(obj_ptr)) {
                 caen1290hits.push_back(llobj_ptr);
             } else if(auto *llobj_ptr = dynamic_cast<const DF1TDCHit *>(obj_ptr)) {
@@ -130,6 +138,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
                 vector<const Df125CDCPulse*>      obj_f125cdcpulses;
                 vector<const Df125FDCPulse*>      obj_f125fdcpulses;
                 vector<const Df125WindowRawData*> obj_f125wrds;
+                vector<const DDIRCTDCHit*>        obj_dirctdchits;
+                vector<const DDIRCTriggerTime*>   obj_dirctts;
                 vector<const DCAEN1290TDCHit*>    obj_caen1290hits;
                 vector<const DF1TDCHit*>          obj_F1hits;
                 vector<const DF1TDCTriggerTime*>  obj_F1tts;
@@ -143,6 +153,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
                 obj_ptr->Get(obj_f125cdcpulses);
                 obj_ptr->Get(obj_f125fdcpulses);
                 obj_ptr->Get(obj_f125wrds);
+                obj_ptr->Get(obj_dirctdchits);
+                obj_ptr->Get(obj_dirctts);
                 obj_ptr->Get(obj_caen1290hits);
                 obj_ptr->Get(obj_F1hits);
                 obj_ptr->Get(obj_F1tts);
@@ -156,6 +168,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
                 f125cdcpulses.insert(f125cdcpulses.end(), obj_f125cdcpulses.begin(), obj_f125cdcpulses.end());
                 f125fdcpulses.insert(f125fdcpulses.end(), obj_f125fdcpulses.begin(), obj_f125fdcpulses.end());
                 f125wrds.insert(f125wrds.end(), obj_f125wrds.begin(), obj_f125wrds.end());
+                dirctts.insert(dirctts.end(), obj_dirctts.begin(), obj_dirctts.end());
+                dirctdchits.insert(dirctdchits.end(), obj_dirctdchits.begin(), obj_dirctdchits.end());
                 caen1290hits.insert(caen1290hits.end(), obj_caen1290hits.begin(), obj_caen1290hits.end());
                 F1hits.insert(F1hits.end(), obj_F1hits.begin(), obj_F1hits.end());
                 F1tts.insert(F1tts.end(), obj_F1tts.begin(), obj_F1tts.end());
@@ -195,6 +209,7 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	for(uint32_t i=0; i<f125cdcpulses.size();i++) rocids.insert( f125cdcpulses[i]->rocid);
 	for(uint32_t i=0; i<f125fdcpulses.size();i++) rocids.insert( f125fdcpulses[i]->rocid);
 	for(uint32_t i=0; i<f125wrds.size();     i++) rocids.insert( f125wrds[i]->rocid     );
+	for(uint32_t i=0; i<dirctdchits.size();  i++) rocids.insert( dirctdchits[i]->rocid  );
 	for(uint32_t i=0; i<caen1290hits.size(); i++) rocids.insert( caen1290hits[i]->rocid );
 	for(uint32_t i=0; i<F1hits.size();       i++) rocids.insert( F1hits[i]->rocid       );
 	
@@ -240,6 +255,9 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	
 	// Write f125 hits
 	Writef125Data(buff, f125pis, f125cdcpulses, f125fdcpulses, f125tts, f125wrds, f125configs, Nevents);
+
+	// Write DIRC SSP hits
+       WriteDircData(buff, dirctdchits, dirctts, Nevents);
 	
     // Write out extra TS data if it exists ("sync event")
     if(l1_info.size() > 0) {
@@ -1163,6 +1181,119 @@ void DEVIOBufferWriter::Writef125Data(vector<uint32_t> &buff,
 		buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
 	}
 }
+
+
+//------------------
+// WriteDircData
+//------------------
+void DEVIOBufferWriter::WriteDircData(vector<uint32_t> &buff,
+				      vector<const DDIRCTDCHit*> &dirctdchits,
+				      vector<const DDIRCTriggerTime*>   &dirctts,
+				      unsigned int Nevents) const
+{
+  // Create lists of Pulse Integral objects indexed by rocid,slot
+  // At same time, make list of config objects to write
+  map<uint32_t, map<uint32_t, map<uint32_t, vector<const DDIRCTDCHit*> > > >  modules; // outer map index is rocid, middle map index is slot, inner map index is dev_id
+  //map<uint32_t, set<const DDIRCConfig*> > configs;
+  for(uint32_t i=0; i<dirctdchits.size(); i++){
+    const DDIRCTDCHit *tdchit = dirctdchits[i];
+    if(write_out_all_rocs || (rocs_to_write_out.find(tdchit->rocid) != rocs_to_write_out.end()) ) {
+      modules[tdchit->rocid][tdchit->slot][tdchit->dev_id].push_back(tdchit);
+            
+      //const Df250Config *config = NULL;
+      //tdchit->GetSingle(config);
+      //if(config) configs[tdchit->rocid].insert(config);
+    }
+  }
+  
+  // Loop over rocids
+  //map<uint32_t, map<uint32_t, vector<const DDIRCTDCHit*> > >::iterator it;
+  //for(it=modules.begin(); it!=modules.end(); it++){
+  for( auto const &it : modules ) {
+    uint32_t rocid = it.first;
+    
+    // Write Physics Event's Data Bank Header for this rocid
+    uint32_t data_bank_idx = buff.size();
+    buff.push_back(0); // Total bank length (will be overwritten later)
+    buff.push_back( (rocid<<16) + 0x1001 ); // 0x10=bank of banks, 0x01=1 event
+    
+    // Write Data Block Bank Header
+    // In principle, we could write one of these for each module, but
+    // we write all modules into the same data block bank to save space.
+    // n.b. the documentation mentions Single Event Mode (SEM) and that
+    // the values in the header and even the first couple of words depend
+    // on whether it is in that mode. It appears this mode is an alternative
+    // to having a Built Trigger Bank. Our data all seems to have been taken
+    // *not* in SEM. Empirically, it looks like the data also doesn't have
+    // the initial "Starting Event Number" though the documentation does not
+    // declare that as optional. We omit it here as well.
+    uint32_t data_block_bank_idx = buff.size();
+    buff.push_back(0); // Total bank length (will be overwritten later)
+    buff.push_back(0x00280101); // 0x00=status w/ little endian, 0x28=DIRC SSP, 0x01=uint32_t bank, 0x01=1 event
+    
+    // Loop over slots
+    //map<uint32_t, vector<const DDIRCTDCHit*> >::iterator it2;
+    //for(it2=it->second.begin(); it2!=it->second.end(); it2++){
+    for( auto const &it2 : it.second ) {
+      uint32_t slot  = it2.first;
+     
+      // Find Trigger Time object
+      const DDIRCTriggerTime *tt = NULL;
+      for(uint32_t i=0; i<dirctts.size(); i++){
+	if( (dirctts[i]->rocid==rocid) && (dirctts[i]->slot==slot) ){
+	  tt = dirctts[i];
+	  break;
+	}
+      }
+      
+      // Should we print a warning if no Trigger Time object found?
+      
+      // Set itrigger number and trigger time
+      uint32_t itrigger  = (tt==NULL) ? (Nevents&0x3FFFFF):tt->itrigger;
+      uint64_t trig_time = (tt==NULL) ? time(NULL):tt->time;
+
+      // Write module block and event headers
+      uint32_t block_header_idx = buff.size();
+      buff.push_back( 0x80280101 + (slot<<22) ); // Block Header 0x80=data defining, 0x28=DIRC SSP, 0x01=event block number,0x01=number of events in block
+      buff.push_back( 0x90000000 + (slot<<22) + itrigger);    // Event Header
+
+      // Write Trigger Time
+      buff.push_back(0x98000000 + ((trig_time>>0 )&0x00FFFFFF));
+      buff.push_back(0x00000000 + ((trig_time>>24)&0x00FFFFFF));
+
+      // Loop over fibers/devices
+      for( auto const &it3 : it2.second ) {
+	uint32_t device_id  = it3.first;
+
+	// Write Device ID
+	// pick event counter from the data
+	buff.push_back(0xB8000000 + (device_id<<22) + (it3.second[0]->ievent_cnt));
+
+	// Write module data
+	//vector<const DDIRCTDCHit*> &tdchits = it2->second;
+	//for(uint32_t i=0; i<tdchits.size(); i++){
+	for( auto const tdchit : it3.second ) {
+	  //const DDIRCTDCHit *tdchit = tdchits[i];
+
+	  // SSP TDC Hit 
+	  buff.push_back(0xC0000000 + (tdchit->edge<<26) + (tdchit->channel_fpga<<16) + (tdchit->time));
+	}
+      }
+      
+      // Write module block trailer
+      uint32_t Nwords_in_block = buff.size()-block_header_idx+1;
+      buff.push_back( 0x88000000 + (slot<<22) + Nwords_in_block );
+    }
+
+    // Update Data Block Bank length
+    buff[data_block_bank_idx] = buff.size() - data_block_bank_idx - 1;
+
+    // Update Physics Event's Data Bank length
+    buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
+  }
+
+}
+
 
 //------------------
 // WriteEPICSData

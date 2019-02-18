@@ -28,6 +28,7 @@ using namespace std;
 #include <JANA/JEvent.h>
 #include <DANA/DStatusBits.h>
 
+#include <JANA/JGeometryXML.h>
 #include "BCAL/DBCALGeometry.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
 
@@ -76,7 +77,7 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
    
    dRunNumber = -1;
 	
-   if( ! gPARMS->Exists("JANA_CALIB_CONTEXT") ){
+   if( (!gPARMS->Exists("JANA_CALIB_CONTEXT")) && (getenv("JANA_CALIB_CONTEXT")==NULL) ){
    		cout << "============================================================" << endl;
 			cout << " WARNING: JANA_CALIB_CONTEXT not set. " << endl;
 			cout << "You are reading from an HDDM file which is most likely" << endl;
@@ -262,6 +263,27 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       double locTargetCenterZ = 0.0;
       locGeometry->GetTargetZ(locTargetCenterZ);
 
+      JGeometryXML *jgeom = dynamic_cast<JGeometryXML *>(locGeometry);
+      hddm_s::GeometryList geolist = record->getGeometrys();
+      if (jgeom != 0 && geolist.size() > 0) {
+         std::string md5sim = geolist(0).getMd5simulation();
+         std::string md5smear = geolist(0).getMd5smear();
+         std::string md5recon = jgeom->GetChecksum();
+         geolist(0).setMd5reconstruction(md5recon);
+         if (md5sim != md5smear) {
+            jerr << std::endl
+                 << "WARNING: simulation geometry checksum does not match"
+                 << " that shown for the mcsmear step."
+                 << std::endl;
+         }
+         else if (md5sim != md5recon) {
+            jerr << endl
+                 << "WARNING: simulation geometry checksum does not match"
+                 << " the geometry being used for reconstruction."
+                 << std::endl;
+         }
+      }
+
       vector<double> locBeamPeriodVector;
       if(loop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
           throw runtime_error("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
@@ -411,14 +433,6 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DFMWPCHit(record, 
                      dynamic_cast<JFactory<DFMWPCHit>*>(factory), tag);
 
-   if (dataClassName == "DDIRCHit")
-      return Extract_DDIRCHit(record, 
-                     dynamic_cast<JFactory<DDIRCHit>*>(factory), tag);
-
-   if (dataClassName == "DDIRCTruthHit")
-      return Extract_DDIRCTruthHit(record,
-                     dynamic_cast<JFactory<DDIRCTruthHit>*>(factory), tag);
-
    if (dataClassName == "DDIRCTruthBarHit")
      return Extract_DDIRCTruthBarHit(record,
 		     dynamic_cast<JFactory<DDIRCTruthBarHit>*>(factory), tag);
@@ -426,6 +440,10 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DDIRCTruthPmtHit")
      return Extract_DDIRCTruthPmtHit(record,
 		     dynamic_cast<JFactory<DDIRCTruthPmtHit>*>(factory), tag);
+   
+   if (dataClassName == "DDIRCPmtHit")
+     return Extract_DDIRCPmtHit(record,
+		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), tag, event.GetJEventLoop());
 
    // extract CereTruth and CereRichHit hits, yqiang Oct 3, 2012
    // removed CereTruth (merged into MCThrown), added CereHit, yqiang Oct 10 2012
@@ -552,7 +570,6 @@ jerror_t DEventSourceHDDM::Extract_DMCTrackHit(hddm_s::HDDM *record,
    GetCherenkovTruthHits(record, data);
    GetFCALTruthHits(record, data);
    GetSCTruthHits(record, data);
-   GetDIRCTruthHits(record, data);
 
    // It has happened that some CDC hits have "nan" for the drift time
    // in a peculiar event Alex Somov came across. This ultimately caused
@@ -705,33 +722,6 @@ jerror_t DEventSourceHDDM::GetCherenkovTruthHits(hddm_s::HDDM *record,
       mctrackhit->primary = iter->getPrimary();
       mctrackhit->ptype   = iter->getPtype();    // save GEANT particle typ()e
       mctrackhit->system  = SYS_CHERENKOV;
-      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
-      mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
-      data.push_back(mctrackhit);
-   }
-
-   return NOERROR;
-}
-
-//-------------------
-// GetDIRCTruthHits
-//-------------------
-jerror_t DEventSourceHDDM::GetDIRCTruthHits(hddm_s::HDDM *record,
-                                            vector<DMCTrackHit*>& data)
-{
-   const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
-   hddm_s::DircTruthPointList::iterator iter;
-   for (iter = points.begin(); iter != points.end(); ++iter) {
-      float x = iter->getX();
-      float y = iter->getY();
-      DMCTrackHit *mctrackhit = new DMCTrackHit;
-      mctrackhit->r       = sqrt(x*x + y*y);
-      mctrackhit->phi     = atan2(y,x);
-      mctrackhit->z       = iter->getZ();
-      mctrackhit->track   = iter->getTrack();
-      mctrackhit->primary = iter->getPrimary();
-      mctrackhit->ptype   = iter->getPtype();    // save GEANT particle typ()e
-      mctrackhit->system  = SYS_DIRC;
       const hddm_s::TrackIDList &ids = iter->getTrackIDs();
       mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
       data.push_back(mctrackhit);
@@ -2755,37 +2745,55 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
 }
 
 //------------------
-// Extract_DDIRCHit
+// Extract_DDIRCPmtHit
 //------------------
-jerror_t DEventSourceHDDM::Extract_DDIRCHit(hddm_s::HDDM *record,
-                                   JFactory<DDIRCHit>* factory, string tag)
+jerror_t DEventSourceHDDM::Extract_DDIRCPmtHit(hddm_s::HDDM *record,
+                                   JFactory<DDIRCPmtHit> *factory, string tag,
+                                   JEventLoop* eventLoop)
 {
-   /// Copies the data from the given hddm_s structure. This is called
-   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
-   /// returns OBJECT_NOT_AVAILABLE immediately.
+  /// Copies the data from the given hddm_s structure. This is called
+  /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+  /// returs OBJECT_NOT_AVAILABLE immediately.
+   
+  if (factory == NULL)
+     return OBJECT_NOT_AVAILABLE;
+  if (tag != "")
+     return OBJECT_NOT_AVAILABLE;
 
-   if (factory == NULL)
-      return OBJECT_NOT_AVAILABLE;
-   if (tag != "")
-      return OBJECT_NOT_AVAILABLE;
+  vector<DDIRCPmtHit*> data;
 
-   vector<DDIRCHit*> data;
+  if (tag == "") {
+     vector<const DDIRCTruthPmtHit*> locDIRCTruthPmtHit;
+     eventLoop->Get(locDIRCTruthPmtHit);
 
-   const hddm_s::DircTruthHitList &hits = record->getDircTruthHits();
-   hddm_s::DircTruthHitList::iterator iter;
-   for (iter = hits.begin(); iter != hits.end(); ++iter) {
-      DDIRCHit *hit = new DDIRCHit;
-      hit->x = iter->getX();
-      hit->y = iter->getY();
-      hit->z = iter->getZ();
-      hit->t = iter->getT();
-      hit->E = iter->getE();
-      data.push_back(hit);
-   }
+     const hddm_s::DircPmtHitList &hits = record->getDircPmtHits();
+     hddm_s::DircPmtHitList::iterator iter;
+     for (iter = hits.begin(); iter != hits.end(); ++iter) {
+         double time = iter->getT();
+         int channel = iter->getCh();
 
+         DDIRCPmtHit *hit = new DDIRCPmtHit();
+         hit->t  = time;
+         hit->ch = channel;
+
+	 for (auto& iterTruth : locDIRCTruthPmtHit) { //.begin(); iterTruth != locDIRCTruthPmtHit.end(); ++iterTruth) {
+		 
+		 // must match channel and time
+		 if(channel == iterTruth->ch && fabs(time-iterTruth->t) < 5.0) {
+			 
+			 hit->AddAssociatedObject(iterTruth);
+
+			 break;
+		 }
+	 }
+	 
+         data.push_back(hit);
+     }
+  }
+  
   // Copy into factory
   factory->CopyTo(data);
-
+  
   return NOERROR;
 }
 
@@ -2829,44 +2837,6 @@ jerror_t DEventSourceHDDM::Extract_DCereHit(hddm_s::HDDM *record,
    // copy into factory
    factory->CopyTo(data);
 
-   return NOERROR;
-}
-
-//----------------------
-// Extract_DDIRCTruthHit
-//----------------------
-jerror_t DEventSourceHDDM::Extract_DDIRCTruthHit(hddm_s::HDDM *record,
-                                   JFactory<DDIRCTruthHit>* factory,
-                                   string tag)
-{
-   if (factory == NULL)
-      return OBJECT_NOT_AVAILABLE;
-   if (tag != "")
-      return OBJECT_NOT_AVAILABLE;
-
-   vector<DDIRCTruthHit*> data;
-
-   const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
-   hddm_s::DircTruthPointList::iterator iter;
-   for (iter = points.begin(); iter != points.end(); ++iter) {
-      DDIRCTruthHit *hit = new DDIRCTruthHit;
-      hit->x       = iter->getX();
-      hit->y       = iter->getY();
-      hit->z       = iter->getZ();
-      hit->px      = iter->getPx();
-      hit->py      = iter->getPy();
-      hit->pz      = iter->getPz();
-      hit->t       = iter->getT();
-      hit->E       = iter->getE();
-      hit->track   = iter->getTrack();
-      hit->primary = iter->getPrimary();
-      hit->ptype   = iter->getPtype();
-      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
-      hit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
-      data.push_back(hit);
-   }
-
-   factory->CopyTo(data);
    return NOERROR;
 }
 
@@ -2927,6 +2897,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       return OBJECT_NOT_AVAILABLE;
 
    vector<DDIRCTruthPmtHit*> data;
+   
 
    const hddm_s::DircTruthPmtHitList &hits = record->getDircTruthPmtHits();
    hddm_s::DircTruthPmtHitList::iterator iter;
@@ -2939,8 +2910,13 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
       hit->E = iter->getE();
       hit->ch = iter->getCh();
       hit->key_bar = iter->getKey_bar();
-      hit->path = iter->getPath();
-      hit->refl = iter->getRefl();
+      hddm_s::DircTruthPmtHitExtraList &hitextras = iter->getDircTruthPmtHitExtras();
+      if(hitextras.size() > 0) {
+      	hit->t_fixed = hitextras(0).getT_fixed();
+      	hit->path = hitextras(0).getPath();
+      	hit->refl = hitextras(0).getRefl();
+      	hit->bbrefl = hitextras(0).getBbrefl();
+      }
       data.push_back(hit);
    }
 

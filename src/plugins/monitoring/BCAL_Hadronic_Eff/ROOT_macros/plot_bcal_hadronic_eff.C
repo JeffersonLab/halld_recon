@@ -1,6 +1,7 @@
 void plot_bcal_hadronic_eff(void)
 {
 // read output of Read_bcal_hadronic_eff2 dat files with efficiency information and plot vs run number.
+// to obtain the list of run numbers run plot_bcal_hadronic_eff.py to obtain the plot_bcal_hadronic_eff.list file
 //
 
 #include <TRandom.h>
@@ -16,29 +17,29 @@ gStyle->SetPadBottomMargin(0.15);
 //
 
    char string[256];
-    const Int_t nruns=58;
+    Int_t const maxruns=100;
     
-    /*vector <float> eff_up1(nruns,0.);
-    vector <float> eff_up2(nruns,0.);
-    vector <float> eff_up3(nruns,0.);
-    vector <float> eff_up4(nruns,0.);
+    /*vector <float> eff_up1(maxruns,0.);
+    vector <float> eff_up2(maxruns,0.);
+    vector <float> eff_up3(maxruns,0.);
+    vector <float> eff_up4(maxruns,0.);
     
-    vector <float> eff_down1(nruns,0.);
-    vector <float> eff_down2(nruns,0.);
-    vector <float> eff_down3(nruns,0.);
-    vector <float> eff_down4(nruns,0.);*/
+    vector <float> eff_down1(maxruns,0.);
+    vector <float> eff_down2(maxruns,0.);
+    vector <float> eff_down3(maxruns,0.);
+    vector <float> eff_down4(maxruns,0.);*/
     
-    Float_t eff_up1[nruns]={0,0,0,0,0,0};
-    Float_t eff_up2[nruns]={0,0,0,0,0,0};
-    Float_t eff_up3[nruns]={0,0,0,0,0,0};
-    Float_t eff_up4[nruns]={0,0,0,0,0,0};
+    Float_t eff_up1[maxruns]={0,0,0,0,0,0};
+    Float_t eff_up2[maxruns]={0,0,0,0,0,0};
+    Float_t eff_up3[maxruns]={0,0,0,0,0,0};
+    Float_t eff_up4[maxruns]={0,0,0,0,0,0};
     
-    Float_t eff_down1[nruns]={0,0,0,0,0,0};
-    Float_t eff_down2[nruns]={0,0,0,0,0,0};
-    Float_t eff_down3[nruns]={0,0,0,0,0,0};
-    Float_t eff_down4[nruns]={0,0,0,0,0,0};
+    Float_t eff_down1[maxruns]={0,0,0,0,0,0};
+    Float_t eff_down2[maxruns]={0,0,0,0,0,0};
+    Float_t eff_down3[maxruns]={0,0,0,0,0,0};
+    Float_t eff_down4[maxruns]={0,0,0,0,0,0};
     
-    Float_t runnum[nruns]={10492,10498,10590,10598,10659,10778,10873,10907,11082,11128,11157,11264,11300,11405,11436,11529,11659,
+    /*Float_t runnum[maxruns]={10492,10498,10590,10598,10659,10778,10873,10907,11082,11128,11157,11264,11300,11405,11436,11529,11659,
         11366,11384,11407,11432,11436,11450,11473,11483,11510,11520,11553,
         30734,30801,30890,30830,30833,30834,30835,30836,30838,30900,30902,30903,30926,30927,30928,30930,
         30274,30280.30300,30350,30405,30450,30497,30592,30610,30650,30961,31000,31029,31056};
@@ -101,14 +102,47 @@ gStyle->SetPadBottomMargin(0.15);
     runs[54]="030961";
     runs[55]="031000";
     runs[56]="031029";
-    runs[57]="031056";
-    
-    
-    
-    
-    Int_t layer=1;
-    Int_t coinc_cut=3;
+    runs[57]="031056";*/
 
+    // Get run numbers and efficiency from file
+
+    TString runlistfile="plot_bcal_hadronic_eff.list";
+    ifstream runlist;
+    runlist.open (runlistfile.Data());   // open list of run numbers
+    if (!runlist) {
+      cout << "ERROR: Failed to open data file= " << runlistfile.Data() << endl;
+       return;
+    }
+    else { 
+      cout << "Open data file= " << runlistfile.Data() << endl;
+       }
+    Float_t runnum[maxruns];
+    
+    map<Int_t, TString> runs;
+    
+    Int_t ndx=0;
+    Int_t nruns;
+    TString line;
+   while (line.ReadLine(runlist)){
+       TObjArray *tokens = line.Tokenize(" ");
+       Int_t ntokens = tokens->GetEntries();
+       cout << " ndx=" << ndx << endl;
+       if (ndx == 0) {
+           nruns = ((TObjString*)tokens->At(0))->GetString().Atof();
+           // cout << " nruns=" << nruns << endl;
+	   ndx++;
+	   continue;
+       }
+       TString run = ((TObjString*)tokens->At(0))->GetString();
+       runs[ndx-1] = run;
+       // cout << " run=" << run << endl;
+       ndx++;
+   }
+
+    
+    Int_t layer;
+    Int_t coinc_cut=3;     // nominal is 3
+  
     TString datfile;
     
     for (Int_t jrun=0; jrun<nruns; jrun++) {
@@ -116,7 +150,7 @@ gStyle->SetPadBottomMargin(0.15);
     
     for (layer=1; layer<5; layer++) {
     
-    datfile = "dat/R"+runs[jrun]+"_layer"+TString::Itoa(layer,10)+"_cut"+TString::Itoa(coinc_cut,10)+".dat";
+    datfile = "dat/R0"+runs[jrun]+"_layer"+TString::Itoa(layer,10)+"_cut"+TString::Itoa(coinc_cut,10)+".dat";
     
     cout << "Opening file: " << datfile.Data() << endl;
 
@@ -127,8 +161,7 @@ gStyle->SetPadBottomMargin(0.15);
        return;
        }
         
-    Int_t ndx=0;
-    TString line;
+    ndx=0;
    while (line.ReadLine(file)){
        
        cout << "line=" << line << endl;
@@ -181,9 +214,14 @@ gStyle->SetPadBottomMargin(0.15);
     }
     }
     
-    cout << "up1=" << eff_up1[0] << endl;
-    cout << "up2=" << eff_up1[1] << endl;
-    cout << "up3=" << eff_up1[2] << endl;
+    cout << "up1[0]=" << eff_up1[0] << endl;
+    cout << "up1[1]=" << eff_up1[1] << endl;
+    cout << "up1[2]=" << eff_up1[2] << endl;
+    cout << " nruns=" << nruns << endl;
+
+    for (j=0; j<nruns; j++) {
+      cout << "j=" << j << " runnum=" << runnum[j] << " eff=" << eff_up1[j] << " " << eff_up2[j] << " " << eff_up3[j] << " " << eff_up4[j] <<  endl;
+    }
     
     TGraph *gr_eff_up1 = new TGraph(nruns,runnum,eff_up1);
     TGraph *gr_eff_up2 = new TGraph(nruns,runnum,eff_up2);
@@ -197,11 +235,15 @@ gStyle->SetPadBottomMargin(0.15);
     
     
     TCanvas *c0 = new TCanvas("c0", "c0",200,10,1000,700);
-       
+    gPad->SetGridx();
+    gPad->SetGridy();
+
+    ymin = 0.4;
+    ymax = 1.0;
        
     gr_eff_up1->SetTitle("");
     // gr_eff_up1->GetXaxis()->SetRangeUser(xmin,xmax);
-    gr_eff_up1->GetYaxis()->SetRangeUser(0.5,1);
+    gr_eff_up1->GetYaxis()->SetRangeUser(ymin,ymax);
     gr_eff_up1->GetXaxis()->SetTitleSize(0.05);
     gr_eff_up1->GetYaxis()->SetTitleSize(0.05);
     gr_eff_up1->GetYaxis()->SetTitle("Efficiency");
@@ -222,7 +264,7 @@ gStyle->SetPadBottomMargin(0.15);
     gr_eff_up4->SetMarkerStyle(20);
     gr_eff_up4->Draw("psame");
     
-    TLegend *leg = new TLegend(0.6,0.3,0.8,0.5);
+    TLegend *leg = new TLegend(0.65,0.45,0.8,0.6);
     leg->AddEntry(gr_eff_up1,"Layer 1","p");
     leg->AddEntry(gr_eff_up2,"Layer 2","p");
     leg->AddEntry(gr_eff_up3,"Layer 3","p");
@@ -233,31 +275,53 @@ gStyle->SetPadBottomMargin(0.15);
     TCanvas *c1 = new TCanvas("c1", "c1",200,10,1000,700);
     
     TGraph *gr_eff_up1_copy = (TGraph*)gr_eff_up1->Clone("gr_eff_up1_copy");
+    gPad->SetGridx();
+    gPad->SetGridy();
+
+    // 2017 ranges    
+    // xmin = 10000;
+    // xmax = 12000;
+
+    // 2018 ranges    
+    xmin = 40600;
+    // xmax = 41700;
+    xmax = 42500;
+    ymin = 0.9;
+    ymax = 1.0;
     
     gr_eff_up1_copy->GetYaxis()->SetRangeUser(0.9,1.0);
-    gr_eff_up1_copy->GetXaxis()->SetRangeUser(30200,31050);
+    gr_eff_up1_copy->GetXaxis()->SetRangeUser(xmin,xmax);
+    // gr_eff_up1_copy->GetXaxis()->SetRangeUser(30200,31050);
     
     gr_eff_up1_copy->Draw("Ap");
     gr_eff_up2->Draw("psame");
     gr_eff_up3->Draw("psame");
     gr_eff_up4->Draw("psame");
-    leg->Draw();
+
+    TLegend *leg1 = new TLegend(0.7,0.75,0.85,0.9);
+    leg1->AddEntry(gr_eff_up1,"Layer 1","p");
+    leg1->AddEntry(gr_eff_up2,"Layer 2","p");
+    leg1->AddEntry(gr_eff_up3,"Layer 3","p");
+    leg1->AddEntry(gr_eff_up4,"Layer 4","p");
+    leg1->Draw();
     
-    // 2017 ranges
     
-    xmin = 10000;
-    xmax = 12000;
-    ymin = 0.9;
-    ymax = 1.0;
-    
-    TLine *linea = new TLine(30795,ymin,30795,ymax);
+    TLine *linea = new TLine(41200,ymin,41200,ymax);
+    linea->SetLineWidth(2);
     linea->Draw();
     
-    TLatex *t1 = new TLatex(30274,1.001,"2017      Low Intensity");    // t1->SetNDC();
+    TLatex *t1 = new TLatex(40900,1.001,"ver07");    // t1->SetNDC();
     t1->SetTextSize(0.03);
     t1->Draw();
-    t1->DrawLatex(30800,1.001,"Hi Intensity");
+    t1->DrawLatex(41400,1.001,"ver11");
+    t1->Draw();
+
+    linea = new TLine(40700,0.95,41700,0.95);
+    // linea->Draw();
     
+
+    /* 2016 ranges
+
     TCanvas *c2 = new TCanvas("c2", "c2",200,10,1000,700);
     
     TGraph *gr_eff_up1_copy2 = (TGraph*)gr_eff_up1->Clone("gr_eff_up1_copy");
@@ -270,7 +334,6 @@ gStyle->SetPadBottomMargin(0.15);
     gr_eff_up4->Draw("psame");
     leg->Draw();
     
-    // 2016 ranges
     
     TLine *line1 = new TLine(11059,ymin,11059,ymax);
     line1->Draw();
@@ -284,11 +347,11 @@ gStyle->SetPadBottomMargin(0.15);
     t1->Draw();
     t1->DrawLatex(11366,1.001,"Golden");
     t1->DrawLatex(11655,1.001,"low rate");
-    t1->DrawLatex(10495,1.001,"2016");
+    t1->DrawLatex(10495,1.001,"2016");*/
     
     c0->SaveAs("plot_bcal_hadronic_eff.pdf(");
-    c1->SaveAs("plot_bcal_hadronic_eff.pdf");
-    c2->SaveAs("plot_bcal_hadronic_eff.pdf)");
+    c1->SaveAs("plot_bcal_hadronic_eff.pdf)");
+    //c2->SaveAs("plot_bcal_hadronic_eff.pdf)");
     
 }
 

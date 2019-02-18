@@ -618,7 +618,11 @@ void DSourceComboVertexer::Construct_DecayingParticle_MissingMass(const DReactio
 		auto locPreviousFullVertexCombo = dSourceComboer->Get_VertexPrimaryCombo(locReactionFullCombo, locPreviousVertexInfo);
 		auto locPreviousDecayPID = std::get<0>(locSourceComboUse);
 		auto locPreviousDecayParticleTuple = std::make_tuple(locPreviousDecayPID, locReactionFullCombo, locPreviousIsProdVertexFlag, locPreviousFullVertexCombo, locBeamParticle);
-		locInitialStateP4 = dReconDecayParticles_FromMissing[locPreviousDecayParticleTuple]->lorentzMomentum();
+		auto locPreviousIterator = dReconDecayParticles_FromMissing.find(locPreviousDecayParticleTuple);
+		if(locPreviousIterator != dReconDecayParticles_FromMissing.end())
+		  locInitialStateP4 = dReconDecayParticles_FromMissing[locPreviousDecayParticleTuple]->lorentzMomentum();
+		else //if the previous vertex only had additional photons, it might not be computed yet
+		  return; 
 		if(dDebugLevel >= 10)
 			cout << "retrieved decaying pid, p4: " << locPreviousDecayPID << ", " << locInitialStateP4.Px() << ", " << locInitialStateP4.Py() << ", " << locInitialStateP4.Pz() << ", " << locInitialStateP4.E() << endl;
 	}
