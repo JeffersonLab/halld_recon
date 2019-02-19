@@ -17,6 +17,7 @@ using namespace jana;
 #include <DIRC/DDIRCTDCDigiHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCLEDRef.h>
+#include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/Df250PulseData.h>
 #include <TRIGGER/DL1Trigger.h>
 
@@ -54,6 +55,8 @@ static TH1I *hHit_tdcTime[Nboxes][2];
 static TH2I *hHit_tdcTimeVsEvent[Nboxes][2];
 static TH2I *hHit_tdcTimeVsChannel[Nboxes][2];
 static TH2I *hHit_pixelOccupancy[Nboxes][2];
+static TH2I *hHit_TimeEventMeanVsLEDRef[Nboxes];
+static TH2I *hHit_TimeDiffEventMeanLEDRefVsTimestamp[Nboxes];
 
 // DigiHit pointers
 static TH1I *hDigiHit_NtdcHits[2];
@@ -138,8 +141,11 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	}
 
 	// LED specific histograms
-	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,100.0,200.0);
+	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,-10.0,30.0);
 	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
+
+	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
+        hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
 	
 	if(i==1) {
 		gDirectory->mkdir("Timewalk")->cd();	
@@ -209,9 +215,23 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     eventLoop->Get(digihits);
     vector<const DDIRCPmtHit*> hits;
     eventLoop->Get(hits);
+    vector<const DDIRCTriggerTime*> timestamps;
+    eventLoop->Get(timestamps);
 
-    //const DTTabUtilities* ttabUtilities = nullptr;
-    //eventLoop->GetSingle(ttabUtilities);
+    const DTTabUtilities* locTTabUtilities = nullptr;
+    eventLoop->GetSingle(locTTabUtilities);
+
+    // Get DCODAROCInfo for this ROC
+    vector<const DCODAROCInfo*> locCODAROCInfos;
+    eventLoop->Get(locCODAROCInfos);
+    uint64_t locReferenceClockTime = 0;
+    for (const auto& locCODAROCInfo : locCODAROCInfos) {
+	if(locCODAROCInfo->rocid == 92) {
+		locReferenceClockTime = locCODAROCInfo->timestamp;
+	}
+    }    
+    //if(locReferenceClockTime%2 != 0) 
+    //	return NOERROR;
 
     // check for LED triggers
     bool locDIRCLEDTrig = false;
@@ -313,20 +333,21 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // Loop over calibrated hits to get mean for reference time
     double locRefTime = 0;
     int locNHits = 0;
+    double locFirstFiberTime = 128.1; // 205.5; used for no time offset
     for (const auto& hit : hits) {
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
         int pmtrow = dDIRCGeometry->GetPmtRow(channel);
-        if(pmtrow < 6 && fabs(hit->t-10.) < 5.) {
+        if(pmtrow < 6 && fabs(hit->t-locFirstFiberTime) < 5.) {
 		//cout<<pmtrow<<" "<<hit->t<<endl;
 		locRefTime += hit->t;
 		locNHits++;
 	}
-        else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-20.) < 5.) {
+        else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-locFirstFiberTime-10) < 5.) {
 		//cout<<pmtrow<<" "<<hit->t<<endl;
 		locRefTime += (hit->t - 10);
 		locNHits++;
 	}
-        else if(pmtrow > 11 && pmtrow < 18 && fabs(hit->t-30.) < 5.) {
+        else if(pmtrow > 11 && pmtrow < 18 && fabs(hit->t-locFirstFiberTime-20) < 5.) {
 		//cout<<pmtrow<<" "<<hit->t<<endl;
 		locRefTime += (hit->t - 20);
 		locNHits++;
@@ -335,7 +356,9 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     }
     locRefTime /= locNHits;
     hRefTime->Fill(locRefTime);
-    
+    //if(locReferenceClockTime%2 == 0)
+    //    locRefTime += 4.0;
+ 
     // Fill calibrated-hit hists
     int NHits[] = {0,0};
     bool ledFiber[3] = {false, false, false};
@@ -358,7 +381,13 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	// LED specific histograms
 	if(locDIRCLEDTrig) {
 		hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
-		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locLEDRefTime);
+		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime);
+	
+		if(locLEDRefTdcTime > 0) {
+			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
+			hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime-locLEDRefTdcTime);
+		}
+
 		if(box==1 && channel==2490) {
 			hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
 			hLEDRefTdcVsChannelTime->Fill(hit->t,locLEDRefTdcTime);
