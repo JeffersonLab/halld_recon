@@ -1501,7 +1501,7 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
       DDIRCPmtHit *hit = new DDIRCPmtHit();
       hit->setChannel(iter->getCh());
       hit->setTime(iter->getT());
-      //hit->setTOT(iter->getTot());
+      hit->setTOT(iter->getTot());
 
       data.push_back(hit);
    }
