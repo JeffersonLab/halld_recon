@@ -94,6 +94,15 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    }
     }
 
+    vector<const DCODAROCInfo*> locCODAROCInfos;
+    eventLoop->Get(locCODAROCInfos);
+    uint64_t locReferenceClockTime = 0;
+    for (const auto& locCODAROCInfo : locCODAROCInfos) {
+        if(locCODAROCInfo->rocid == 92) {
+                locReferenceClockTime = locCODAROCInfo->timestamp;
+        }
+    }
+
     vector<const DDIRCTDCDigiHit*> digihits;
     loop->Get(digihits);
     
@@ -134,8 +143,21 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    
 		    // Apply calibration constants
 		    double T = (double)digihit_lead->time;
-		    hit->t = T - time_offsets[box][channel] + t_base[box];
-		    
+		    hit->t = T;
+		    if(locReferenceClockTime%2 == 0) 
+			hit->t += 4;
+
+	            applyTimeOffset = true;
+		    applyTimewalk = true;
+		    double slope = 0.3;
+		    double timeOverThresholdPeak = 50;
+		    if(applyTimeOffset) {
+			    hit->t = hit->t - time_offsets[box][channel] + t_base[box];
+		    }
+		    if(applyTimewalk) {
+			    hit->t += slope*(timeOverThreshold - timeOverThresholdPeak);
+		    }
+ 
 		    hit->AddAssociatedObject(digihit_lead);
 		    hit->AddAssociatedObject(digihit_trail);
 		    _data.push_back(hit);

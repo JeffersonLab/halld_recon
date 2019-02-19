@@ -63,6 +63,8 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 
 	  hExtrapolatedBarHitXY[locPID] = new TH2I(Form("hExtrapolatedBarHitXY_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100); 
 	  hDiff[locPID] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleName.data()), 400,-100,100);
+	  hDiffVsChannelDirect[locPID] = new TH2I(Form("hDiffVsChannelDirect_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
+	  hDiffVsChannelReflected[locPID] = new TH2I(Form("hDiffVsChannelReflected_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
 	  hNphC[locPID] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
 	  hNphCInclusive[locPID] = new TH1I(Form("hNphCInclusive_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
 	  hThetaC[locPID] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
@@ -219,6 +221,10 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 					  
 					  if(fabs(locThetaC-locExpectedThetaC)<0.05) {
 						  hDiff[locPID]->Fill(locDeltaT);
+						  if(locHitTime < 38)
+							  hDiffVsChannelDirect[locPID]->Fill(locChannel,locDeltaT);
+						  else 
+							  hDiffVsChannelReflected[locPID]->Fill(locChannel,locDeltaT);
 						  if(locPID == PiPlus || locPID == PiMinus)
 							  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
 					  }

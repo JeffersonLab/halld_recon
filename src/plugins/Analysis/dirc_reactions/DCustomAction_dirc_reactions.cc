@@ -82,8 +82,8 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 					if(locBinVect.Theta()*180/TMath::Pi() > 12.) 
 						continue;
 					
-					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 200,-20,20);
-					hHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,100);
+					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 200,-100,100);
+					hHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 200,0,200);
 					hNphCMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphC_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
 					hNphCMapSlot4[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphCSlot4_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
 					hNphCMapSlot5[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphCSlot5_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
@@ -94,7 +94,7 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
 					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
 
-					hHitTimeMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMapAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,100);
+					hHitTimeMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMapAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 200,0,200);
 					hPixelHitMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
 					hPixelHitMapAllReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAllReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
 					//hPixelHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitTime_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit Channel; Pixel Hit t [ns]", locBar,xbin_min,xbin_max), 6912, 0, 6912, 50, 0, 100);
@@ -163,8 +163,8 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 		DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
-		double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;		  
-
+		double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
+		
 		// get binning for histograms
 		int locBar = dDIRCGeometry->GetBar(posInBar.Y());
 		int locXbin = (int)(posInBar.X()/5.0) + 19;
