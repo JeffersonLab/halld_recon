@@ -155,6 +155,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // Do some backup calculations for runs in which the BCAL LED trigger did not latch correctly
     vector<const DBCALHit *> bcal_hits;
+    locEventLoop->Get(bcal_hits);
     double total_bcal_energy = 0.;
     if(write_out_bcal_led) {
         for(unsigned int i=0; i<bcal_hits.size(); i++) {
