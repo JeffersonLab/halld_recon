@@ -40,7 +40,7 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	else
 		gPARMS->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
 
-	REST_WRITE_DIRC_HITS = false;
+	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
     CCDB_CONTEXT_STRING = "";
