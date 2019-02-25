@@ -27,6 +27,8 @@
 #include <DAQ/DF1TDCConfig.h>
 #include <DAQ/DCAEN1290TDCConfig.h>
 #include <DAQ/DCAEN1290TDCHit.h>
+#include <DAQ/DDIRCTDCHit.h>
+#include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/DEPICSvalue.h>
 #include <DAQ/DEventTag.h>
 #include <DAQ/DCODAROCInfo.h>
@@ -115,6 +117,11 @@ class DEVIOBufferWriter
                            vector<const Df125TriggerTime*>   &f125tts,
                            vector<const Df125WindowRawData*> &f125wrds,
                            vector<const Df125Config*>        &f125configs,
+                           unsigned int Nevents) const;
+
+		void WriteDircData(vector<uint32_t> &buff,
+                           vector<const DDIRCTDCHit*> &dirctdchits,
+                           vector<const DDIRCTriggerTime*>   &dirctts,
                            unsigned int Nevents) const;
 
 		void WriteEPICSData(vector<uint32_t> &buff,
