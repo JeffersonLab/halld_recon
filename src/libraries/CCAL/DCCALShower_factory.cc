@@ -32,6 +32,15 @@ using namespace jana;
 //------------------
 bool DCCALShower_factory::LoadCCALProfileData(JApplication *japp, int32_t runnumber)
 {
+	static bool first = false;
+	
+	// we are just setting some global stuff inside island.F so it's OK
+	if(!first) {
+		return true;
+	} else {
+		first = true;
+	}
+
 	string ccal_profile_file;
 	gPARMS->SetDefaultParameter("CCAL_PROFILE_FILE", ccal_profile_file, "CCAL profile data file name");
 		
@@ -120,7 +129,6 @@ DCCALShower_factory::DCCALShower_factory()
 //------------------
 jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
-	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
 	
 	DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     	const DGeometry *geom = dapp->GetDGeometry(runnumber);
@@ -144,20 +152,28 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
       	  return OBJECT_NOT_AVAILABLE;
     	const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
 	
+	// accessing global variables again!
+	pthread_mutex_lock(&mutex);
+
+	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
+
 	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
-	    
-	    int id = (12-icol) + (12-irow)*12;
-	    DVector2 pos = ccalGeom.positionOnFace(12-irow,12-icol);
-	    
-	    blockINFO[id].id     = id;
-	    blockINFO[id].x      = pos.X();
-	    blockINFO[id].y      = pos.Y();
-	    blockINFO[id].sector = 0;
-	    blockINFO[id].row    = 12-irow;
-	    blockINFO[id].col    = 12-icol;
+	
+		int id = (12-icol) + (12-irow)*12;
+		DVector2 pos = ccalGeom.positionOnFace(12-irow,12-icol);
+	
+		blockINFO[id].id     = id;
+		blockINFO[id].x      = pos.X();
+		blockINFO[id].y      = pos.Y();
+		blockINFO[id].sector = 0;
+		blockINFO[id].row    = 12-irow;
+		blockINFO[id].col    = 12-icol;
 	  }
 	}
+
+	// Release the lock	
+	pthread_mutex_unlock(&mutex);
 
 	return NOERROR;
 }
