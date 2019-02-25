@@ -102,7 +102,7 @@ DCCALShower_factory::DCCALShower_factory()
     	MIN_CLUSTER_BLOCK_COUNT   =  2;
     	MIN_CLUSTER_SEED_ENERGY   =  0.035;  // GeV
 	TIME_CUT                  =  15.0 ;  // ns
-	MAX_HITS_FOR_CLUSTERING   =  200;
+	MAX_HITS_FOR_CLUSTERING   =  80;
 	SHOWER_DEBUG              =  0;
 
 	gPARMS->SetDefaultParameter("CCAL:SHOWER_DEBUG",   SHOWER_DEBUG);
@@ -196,7 +196,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
 	    ECH(icol,irow)     = 0;
-	    TIME(icol,irow)    = 0;
+	    //TIME(icol,irow)    = 0;
 	    STAT_CH(icol,irow) = 0;
 	    if(icol>=6 && icol<=7 && irow>=6 && irow<=7) { STAT_CH(icol,irow) = -1; }	
 	    
@@ -221,12 +221,12 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  int col   = 12-(ccalhit->column);
 	  
 	  ECH(col,row) = int(ccalhit->E*10.+0.5);
-	  TIME(col,row) = ccalhit->t;
+	  //TIME(col,row) = ccalhit->t;
 	}	
 	
 	main_island_();
 	
-	n_h_clusters = adcgam_cbk_.nadcgam; 	
+	n_h_clusters = adcgam_cbk_.nadcgam;
 	for(int k = 0; k < n_h_clusters; ++k)  {
 
 	  // results of main_island_():
@@ -235,11 +235,11 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  float y     = adcgam_cbk_.u.fadcgam[k][2];
 	  float xc    = adcgam_cbk_.u.fadcgam[k][4];
 	  float yc    = adcgam_cbk_.u.fadcgam[k][5];
-	  float time  = adcgam_cbk_.u.fadcgam[k][6];
-	  float chi2  = adcgam_cbk_.u.fadcgam[k][7];
-	  int type    = adcgam_cbk_.u.iadcgam[k][8];
-	  int dime    = adcgam_cbk_.u.iadcgam[k][9];
-	  int status  = adcgam_cbk_.u.iadcgam[k][11];
+	  //float time  = adcgam_cbk_.u.fadcgam[k][6];
+	  float chi2  = adcgam_cbk_.u.fadcgam[k][6];
+	  int type    = adcgam_cbk_.u.iadcgam[k][7];
+	  int dime    = adcgam_cbk_.u.iadcgam[k][8];
+	  int status  = adcgam_cbk_.u.iadcgam[k][10];
 	  
 	  
 	  
@@ -274,20 +274,19 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  int ccal_id;
 	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
 	    int id = ICL_INDEX(k,j);
-	    
 	    int kx = (id/100), ky = id%100;
 	    ccal_id = ich[kx-1][ky-1];
 	    
-	    float ecell = 1.e-4*(float)ICL_IENER(k,j);
-	    float xcell = blockINFO[ccal_id].x;
-	    float ycell = blockINFO[ccal_id].y;
+	    float ecell  = 1.e-4*(float)ICL_IENER(k,j);
+	    float xcell  = blockINFO[ccal_id].x;
+	    float ycell  = blockINFO[ccal_id].y;
 	    
 	    if(type%10 == 1 || type%10 == 2) {
 	      xcell += xc;
 	      ycell += yc;
 	    }
 	    
-	    cluster_storage[k].id[j] = id;
+	    cluster_storage[k].id[j] = ccal_id;
 	    cluster_storage[k].E[j]  = ecell;
 	    cluster_storage[k].x[j]  = xcell;
 	    cluster_storage[k].y[j]  = ycell;
@@ -325,13 +324,13 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	    x1 = 0.0;
 	    y1 = 0.0;
 	  }
-
+	  
 	  // fill cluster bank for further processing:	
 	  ccalcluster[k].type   = type;
 	  ccalcluster[k].nhits  = dime;
 	  ccalcluster[k].id     = idmax;
 	  ccalcluster[k].E      = e;
-	  ccalcluster[k].time   = time;
+	  //ccalcluster[k].time   = time;
 	  ccalcluster[k].x      = x;
 	  ccalcluster[k].y      = y;
 	  ccalcluster[k].chi2   = chi2;
@@ -341,8 +340,6 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  ccalcluster[k].status = status;
 	
 	}
-	
-	glue_transition_island(); // find adjacent clusters and glue 
 
 	final_cluster_processing(); 
 	
@@ -358,7 +355,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  shower->z        =   m_CCALfront;
 	  shower->x1       =   ccalcluster[k].x1;
 	  shower->y1       =   ccalcluster[k].y1;
-	  shower->time     =   ccalcluster[k].time;
+	  //shower->time     =   ccalcluster[k].time;
 	  shower->chi2     =   ccalcluster[k].chi2;
 	  shower->type     =   ccalcluster[k].type;
 	  shower->dime     =   ccalcluster[k].nhits;
@@ -366,6 +363,11 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  shower->sigma_E  =   ccalcluster[k].sigma_E;
 	  shower->Emax     =   ccalcluster[k].emax;
 	  shower->idmax    =   ccalcluster[k].id;
+	  
+	  for(int icell=0; icell<ccalcluster[k].nhits; icell++) {
+	    shower->id_storage[icell] = cluster_storage[k].id[icell];
+	    shower->en_storage[icell] = cluster_storage[k].E[icell];
+	  }
 
 	  _data.push_back( shower );
 	}
@@ -378,259 +380,6 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	return NOERROR;
 	
 }
-
-
-
-
-//----------------------------
-//   glue_transition_island
-//----------------------------
-void DCCALShower_factory::glue_transition_island() {
-
-	int ngroup = 0;
-	int group_number[MAX_CLUSTERS];
-	int group_size[MAX_CLUSTERS];
-	int group_member_list[MAX_CLUSTERS][MAX_CLUSTERS];
-	
-        for(int i = 0; i < MAX_CLUSTERS; ++i) { group_number[i] = 0; }
-
-        for(int i = 0; i < n_h_clusters; ++i)  {
-      	  int  idi = ccalcluster[i].id;
-
-    	  for(int j = i+1; j < n_h_clusters; ++j) {
-      	    int  idj = ccalcluster[j].id;
-      	    if(blockINFO[idi].sector == blockINFO[idj].sector) continue;
-
-      	    if(clusters_mindist(i,j)) continue;
-
-      	    int igr = group_number[i];
-      	    int jgr = group_number[j];
-
-	    // create new group and put theese two clusters into it
-    	    if(!igr && !jgr) {
-              ++ngroup;
-              group_number[i] = ngroup; group_number[j] = ngroup;
-              group_member_list[ngroup][0] = i;
-              group_member_list[ngroup][1] = j;
-              group_size[ngroup] = 2;
-              continue;
-      	    }
-	    // add jth cluster into group which ith cluster belongs to
-     	    if(igr && !jgr) {
-              group_number[j] = igr;
-              group_member_list[igr][group_size[igr]] = j;
-              group_size[igr] += 1;
-              continue;
-            }
-	    // add ith cluster into group which jth cluster belongs to
-            if(!igr && jgr) {
-              group_number[i] = jgr;
-              group_member_list[jgr][group_size[jgr]] = i;
-              group_size[jgr] += 1;
-              continue;
-            }
-
-	    // add jth group to ith than discard
-            if(igr && jgr) {
-              if(igr == jgr) continue; // nothing to do
-	      
-              int ni = group_size[igr];
-              int nj = group_size[jgr];
-
-              for(int k = 0; k < nj; ++k) {
-                group_member_list[igr][ni+k] = group_member_list[jgr][k];
-                group_number[group_member_list[jgr][k]] = igr;
-              }
-              group_size[igr] += nj;
-              group_size[jgr]  = 0;
-
-              continue;
-            }
-          }
-        }
-
-        for(int igr = 1; igr <= ngroup; ++igr) {
-
-          if(group_size[igr]<=0) continue;
-
-          // sort in increasing cluster number order:
-          int list[MAX_CLUSTERS];
-          for(int i = 0; i < group_size[igr]; ++i) { list[i] = i; }
-
-          for(int i = 0; i < group_size[igr]; ++i) {
-            for(int j = i+1; j < group_size[igr]; ++j) {
-              if(group_member_list[igr][list[j]] < group_member_list[igr][list[i]]) {
-                int l   = list[i];
-                list[i] = list[j];
-                list[j] = l;
-              }
-	    }
-	  }
-
-          int i0 = group_member_list[igr][list[0]];
-          if(ccalcluster[i0].status==-1) continue;
-
-          for(int k = 1; k < group_size[igr]; ++k) {
-            int k0 = group_member_list[igr][list[k]];
-            if(ccalcluster[k0].status==-1) {
-              printf("glue island warning neg. status\n");
-              continue;
-            }
-            merge_clusters(i0,k0);
-            ccalcluster[k0].status = -1;
-          }
-        }
-  
-  
-        int ifdiscarded;
-
-        // discrard clusters merged with others:
-        do {
-          ifdiscarded = 0;
-          for(int i = 0; i < n_h_clusters; ++i)  {
-            if(ccalcluster[i].status == -1 || \
-                ccalcluster[i].E       < 0.08 || \
-                ccalcluster[i].E       > 15.0 || \
-                ccalcluster[i].nhits   < MIN_CLUSTER_BLOCK_COUNT || \
-                ccalcluster[i].emax    < MIN_CLUSTER_SEED_ENERGY) {
-
-              n_h_clusters -= 1;
-              int nrest = n_h_clusters - i;
-              if(nrest) {
-                memmove((&ccalcluster[0]+i), (&ccalcluster[0]+i+1), nrest*sizeof(ccalcluster_t));
-                memmove((&cluster_storage[0]+i), (&cluster_storage[0]+i+1), nrest*sizeof(cluster_t));
-                ifdiscarded = 1;
-              }
-            }
-          }} while(ifdiscarded);
-
-
-	return;
-}
-
-
-
-//----------------------------
-//   merge_clusters
-//----------------------------
-void DCCALShower_factory::merge_clusters(int i, int j) {
-
-  	// merge jth cluster into ith cluster and discard jth
-
-  	// leave cluster with greater energy deposition in central cell, discard the second one:
-
-  	int i1 = (ccalcluster[i].emax > ccalcluster[j].emax) ? i : j;
-
-  	int dime1 = ccalcluster[i].nhits;
-	int dime2 = ccalcluster[j].nhits;
-  	float e = ccalcluster[i].E + ccalcluster[j].E;
-
-  	ccalcluster[i].id      = ccalcluster[i1].id;
-  	ccalcluster[i].sigma_E = ccalcluster[i1].sigma_E;
-  	ccalcluster[i].emax    = ccalcluster[i1].emax;
-  	ccalcluster[i].x       = ccalcluster[i1].x;
-  	ccalcluster[i].y       = ccalcluster[i1].y;
-  	ccalcluster[i].chi2    = (ccalcluster[i].chi2*dime1 + ccalcluster[j].chi2*dime2)/(dime1+dime2);
-
-  	if(ccalcluster[i].status>=2)
-  	  ccalcluster[i].status += 1; // glued
-  	ccalcluster[i].nhits   = dime1+dime2;
-  	ccalcluster[i].E       = e;
-  	ccalcluster[i].type    = ccalcluster[i1].type;
-
-  	for(int k1 = 0; k1 < (dime1>MAX_CC ? MAX_CC : dime1); ++k1) {
-    	  for(int k2 = 0; k2 < (dime2>MAX_CC ? MAX_CC : dime2); ++k2) {
-      	    if(cluster_storage[i].id[k1] == cluster_storage[j].id[k2]) {
-              if(cluster_storage[j].E[k2] > 0.) {
-                cluster_storage[i].E[k1] += cluster_storage[j].E[k2];
-                cluster_storage[i].x[k1] += cluster_storage[j].x[k2];
-                cluster_storage[i].x[k1] *= 0.5;
-                cluster_storage[i].y[k1] += cluster_storage[j].y[k2];
-                cluster_storage[i].y[k1] *= 0.5;
-
-                cluster_storage[j].E[k2] = 0.;
-                cluster_storage[j].x[k2] = 0.;
-                cluster_storage[j].y[k2] = 0.;
-              }
-              continue;
-      	    }
-    	  }
-  	}
-
-  	float sW      = 0.0;
-  	float xpos    = 0.0;
-  	float ypos    = 0.0;
-  	float W;
-
-  	for(int k1 = 0; k1 < (dime1>MAX_CC ? MAX_CC : dime1); ++k1) {
-    	  float ecell = cluster_storage[i].E[k1];
-    	  float xcell = cluster_storage[i].x[k1];
-    	  float ycell = cluster_storage[i].y[k1];
-    	  if(ecell>0.) {
-      	    W  = 4.2 + log(ecell/e);
-      	    if(W > 0) {
-              sW += W;
-              xpos += xcell*W;
-              ypos += ycell*W;
-      	    }
-    	  }
-  	}
-
-  	for(int k2 = 0; k2 < (dime2>MAX_CC ? MAX_CC : dime2); ++k2) {
-    	  float ecell = cluster_storage[j].E[k2];
-    	  float xcell = cluster_storage[j].x[k2];
-    	  float ycell = cluster_storage[j].y[k2];
-
-    	  if(ecell>0.) {
-      	    W  = 4.2 + log(ecell/e);
-      	    if(W > 0) {
-              sW += W;
-              xpos += xcell*W;
-              ypos += ycell*W;
-      	    }
-    	  }
-  	}
-
-  	if(sW) {
-    	  float dx = ccalcluster[i1].x1;
-    	  float dy = ccalcluster[i1].y1;
-    	  ccalcluster[i].x1 = xpos/sW;
-    	  ccalcluster[i].y1 = ypos/sW;
-    	  dx = ccalcluster[i1].x1 - dx;
-    	  dy = ccalcluster[i1].y1 - dy;
-    	  ccalcluster[i].x += dx;      // shift x0,y0 for glued cluster by x1,y1 shift values
-    	  ccalcluster[i].y += dy;
-  	} else {
-    	  printf("WRN bad cluster log. coord\n");
-    	  ccalcluster[i].x1 = 0.;
-    	  ccalcluster[i].y1 = 0.;
-  	}
-
-	// update cluster_storage
-
-  	int kk = dime1;
-
-  	for(int k = 0; k < (dime2>MAX_CC-dime1 ? MAX_CC-dime1 : dime2); ++k) {
-    	  if(cluster_storage[j].E[k] <= 0.) continue;
-    	  if(kk >= MAX_CC) {
-      	    printf("WARINING: number of cells in cluster exceeded max %i\n", dime1+dime2);
-      	    break;
-    	  }
-    	  cluster_storage[i].id[kk] = cluster_storage[j].id[k];
-    	  cluster_storage[i].E[kk]  = cluster_storage[j].E[k];
-    	  cluster_storage[i].x[kk]  = cluster_storage[j].x[k];
-    	  cluster_storage[i].y[kk]  = cluster_storage[j].y[k];
-    	  cluster_storage[j].id[k]  = 0;
-    	  cluster_storage[j].E[k]   = 0.;
-    	  ++kk;
-  	}
-
-  	ccalcluster[i].nhits = kk;
-
-  	return;
-	
-}
-
 
 
 //----------------------------
@@ -664,17 +413,13 @@ void DCCALShower_factory::final_cluster_processing() {
           itp  = 0;
       	  if(status==1) itp += 1;
 
-      	  /*for(int k = 0; k < (dime>MAX_CC ? MAX_CC : dime); ++k) {
-            if(itp<10) {
-              if(cluster_storage[i].id[k] < 1000) {itp =  2; break;}
-            } else {
-              if(cluster_storage[i].id[k] > 1000) {itp = 12; break;}
-            }
-	  }*/
+      	  for(int k = 0; k < (dime>MAX_CC ? MAX_CC : dime); ++k) {
+            if(itp>=10) {itp = 12; break;}
+	  }
           ccalcluster[i].type = itp;
 
       	  ist = type;
-      	  if(status>2) ist += 20; // glued
+      	  if(status>2) ist += 20;
       	  ccalcluster[i].status = ist;
 
       	  double se = sqrt(0.9*0.9*e*e+2.5*2.5*e+1.0); // from HYCAL reconstruction, may need to tune
@@ -693,42 +438,6 @@ void DCCALShower_factory::final_cluster_processing() {
 	return;
 
 }
-
-
-
-//-----------------------
-//   clusters_mindist
-//-----------------------
-bool DCCALShower_factory::clusters_mindist(int i, int j) {
-
-	double mindx_cut = 1.1, mindy_cut = 1.1; // maybe should be tuned
-
-	// min distance between two clusters cells cut
-
-  	double mindist = 1.e6, mindx = 1.e6, mindy = 1.e6, dx, dy, sx, sy;
-  	int dime1 = ccalcluster[i].nhits, dime2 = ccalcluster[j].nhits;
-
-	sx = CRYS_SIZE_X; sy = CRYS_SIZE_Y;
-
-  	for(int k1 = 0; k1 < (dime1>MAX_CC ? MAX_CC : dime1); ++k1) {
-    	  if(cluster_storage[i].E[k1] <= 0.) continue;
-
-    	  for(int k2 = 0; k2 < (dime2>MAX_CC ? MAX_CC : dime2); ++k2) {
-      	    if(cluster_storage[j].E[k2] <= 0.) continue;
-
-      	    dx = cluster_storage[i].x[k1] - cluster_storage[j].x[k2];
-      	    dx = 0.5*dx*(1./sx+1./sx);
-      	    dy = cluster_storage[i].y[k1] - cluster_storage[j].y[k2];
-      	    dy = 0.5*dy*(1./sy+1./sy);
-
-      	    if(dx*dx+dy*dy<mindist) { mindist = dx*dx+dy*dy; mindx = fabs(dx); mindy = fabs(dy); }
-    	  }
-  	}
-
-  	return (mindx>mindx_cut || mindy>mindy_cut);
-
-}
-
 
 
 //------------------------
