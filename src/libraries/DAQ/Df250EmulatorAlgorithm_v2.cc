@@ -37,8 +37,9 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
     // First check that we have window raw data available
     if (rawData == NULL) {
-        jout << " ERROR: Df250EmulatorAlgorithm_v2::EmulateFirmware - raw sample data is missing" << endl;
-        jout << " Contact mstaib@jlab.org" << endl;
+        jerr << " ERROR: Df250EmulatorAlgorithm_v2::EmulateFirmware - raw sample data is missing" << endl;
+        jerr << " Contact mstaib@jlab.org" << endl;
+	return;
     } 
 
     // We need the channel number to get the threshold
