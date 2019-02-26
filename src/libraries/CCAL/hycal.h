@@ -15,8 +15,8 @@
 #define CRYSTAL_BLOCKS 144 // 12x12 array (2x2 hole in the center)
 #define T_BLOCKS 144 
 
-#define MAX_HHITS 1728 // For Hycal
-#define MAX_CLUSTERS 250 // 1728/2 ?
+#define MAX_HHITS 144 // For Hycal
+#define MAX_CLUSTERS 60 // 1728/2 ?
 #define MAX_CC 60 // Maximum Cluster Cells per cluster
 
 #define nint_phot_cell  5
@@ -136,8 +136,8 @@ extern "C" {extern struct {int mcread_flag, mc_eof_flag, nreadmc;} mcread_stat_c
 
 #define ECH(M,N) ech_common_.ech[N-1][M-1]
 extern "C" {extern struct {int ech[MROW][MCOL];} ech_common_;}
-#define TIME(M,N) tch_common_.time[N-1][M-1]
-extern "C" {extern struct {int time[MROW][MCOL];} tch_common_;}
+//#define TIME(M,N) tch_common_.time[N-1][M-1]
+//extern "C" {extern struct {int time[MROW][MCOL];} tch_common_;}
 #define STAT_CH(M,N) stat_ch_common_.stat_ch[N-1][M-1]
 extern "C" {extern struct {int stat_ch[MROW][MCOL];} stat_ch_common_;}
 
