@@ -184,11 +184,14 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
+	cluster_t cluster_storage[MAX_CLUSTERS];
+	ccalcluster_t ccalcluster[MAX_CLUSTERS];
+	int n_h_clusters;
     	
 	// for now, use center of target as vertex
 	DVector3 vertex(0.0, 0.0, m_zTarget);
 	
-    	vector<const DCCALHit*> ccalhits;
+    vector<const DCCALHit*> ccalhits;
 	eventLoop->Get(ccalhits);
 	
 	if(ccalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
@@ -357,7 +360,11 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	
 	}
 
-	final_cluster_processing(); 
+	// Release the lock	
+	//japp->Unlock("CCALShower_factory");
+	pthread_mutex_unlock(&mutex);
+
+	final_cluster_processing(ccalcluster, n_h_clusters); 
 	
 
 	for(int k = 0; k < n_h_clusters; ++k) {
@@ -383,15 +390,15 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  for(int icell=0; icell<ccalcluster[k].nhits; icell++) {
 	    shower->id_storage[icell] = cluster_storage[k].id[icell];
 	    shower->en_storage[icell] = cluster_storage[k].E[icell];
-	  }
+	    
+	   // if(cluster_storage[k].E[icell] > 0.)  {   // maybe redundant if-statement???
+  	   // 	shower->AddAssociatedObject(ccalhits[ cluster_storage[k].id[icell] ]);
+	   //	}
+	  }	
 
 	  _data.push_back( shower );
 	}
 
-
-	// Release the lock	
-	//japp->Unlock("CCALShower_factory");
-	pthread_mutex_unlock(&mutex);
 
 	return NOERROR;
 	
@@ -401,7 +408,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 //----------------------------
 //   final_cluster_processing
 //----------------------------
-void DCCALShower_factory::final_cluster_processing() {
+void DCCALShower_factory::final_cluster_processing(ccalcluster_t ccalcluster[MAX_CLUSTERS], int n_h_clusters) {
 
 	//  final cluster processing (add status and energy resolution sigma_E):
 

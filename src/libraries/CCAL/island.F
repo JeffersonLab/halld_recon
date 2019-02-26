@@ -629,10 +629,11 @@ c             if(iter.ne.1)  ratio=float(iwrk(in,ipk))/iwrk(in,npk+1)
           if(epk(ipk).gt.0.) then
             xpk(ipk)=xpk(ipk)/epk(ipk)
             ypk(ipk)=ypk(ipk)/epk(ipk)
-          else
-            write(*,'(a,f6.2,a,i2)')
-     &       'WRN: lost maximum with peak energy ', id(ic)*1.e-4,
-     &       ' at ITER = ', iter
+*          else
+* TOO MANY WARNINGS, be smarter about how many one prints out
+*            write(*,'(a,f6.2,a,i2)')
+*     &       'WRN: lost maximum with peak energy ', id(ic)*1.e-4,
+*     &       ' at ITER = ', iter
           endif
 * li
           do i=1,nadc

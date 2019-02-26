@@ -34,7 +34,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		void glue_transition_island();
 		void merge_clusters(int i, int j);
-		void final_cluster_processing();
+		void final_cluster_processing(ccalcluster_t ccalcluster[MAX_CLUSTERS], int n_h_clusters);
 		bool clusters_mindist(int i, int j);
 		
 		bool LoadCCALProfileData(JApplication *japp, int32_t runnumber);
@@ -42,9 +42,9 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		double m_zTarget;
 		double m_CCALfront;
 		
-		int n_h_clusters;
-		ccalcluster_t ccalcluster[MAX_CLUSTERS];
-		cluster_t cluster_storage[MAX_CLUSTERS];
+		//int n_h_clusters;
+		//ccalcluster_t ccalcluster[MAX_CLUSTERS];
+		//cluster_t cluster_storage[MAX_CLUSTERS];
 		blockINFO_t blockINFO[T_BLOCKS];
 
 		JApplication *japp;
