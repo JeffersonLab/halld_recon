@@ -33,6 +33,7 @@
 		  acell(0,i2,i1) = fcell_hyc
 		  ad2c(0,i2,i1) = fd2c
           ad2c(0,i1,i2) = fd2c
+*          write(*,*) fcell_hyc,fd2c
         enddo
       enddo
       close(22)
