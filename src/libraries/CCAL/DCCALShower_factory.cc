@@ -32,13 +32,13 @@ using namespace jana;
 //------------------
 bool DCCALShower_factory::LoadCCALProfileData(JApplication *japp, int32_t runnumber)
 {
-	static bool first = false;
+	static bool first = true;
 	
 	// we are just setting some global stuff inside island.F so it's OK
 	if(!first) {
 		return true;
 	} else {
-		first = true;
+		first = false;
 	}
 
 	string ccal_profile_file;
@@ -133,7 +133,7 @@ DCCALShower_factory::DCCALShower_factory()
 //------------------
 jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
-	
+	cout << "in DCCALShower_factory::brun() ... " << endl;
 	DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     	const DGeometry *geom = dapp->GetDGeometry(runnumber);
 	
