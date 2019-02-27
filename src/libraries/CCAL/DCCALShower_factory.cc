@@ -110,6 +110,8 @@ DCCALShower_factory::DCCALShower_factory()
 	// Set defaults
     	MIN_CLUSTER_BLOCK_COUNT   =  2;
     	MIN_CLUSTER_SEED_ENERGY   =  0.035;  // GeV
+	MIN_CLUSTER_ENERGY        =  0.05;   // GeV
+	MAX_CLUSTER_ENERGY        =  15.9;   // GeV
 	TIME_CUT                  =  15.0 ;  // ns
 	MAX_HITS_FOR_CLUSTERING   =  80;
 	SHOWER_DEBUG              =  0;
@@ -117,6 +119,8 @@ DCCALShower_factory::DCCALShower_factory()
 	gPARMS->SetDefaultParameter("CCAL:SHOWER_DEBUG",   SHOWER_DEBUG);
 	gPARMS->SetDefaultParameter("CCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
 	gPARMS->SetDefaultParameter("CCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
+	gPARMS->SetDefaultParameter("CCAL:MIN_CLUSTER_ENERGY", MIN_CLUSTER_ENERGY);
+	gPARMS->SetDefaultParameter("CCAL:MAX_CLUSTER_ENERGY", MAX_CLUSTER_ENERGY);
 	gPARMS->SetDefaultParameter("CCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("CCAL:TIME_CUT",TIME_CUT,"time cut for associating CCAL hits together into a cluster");
 
@@ -145,18 +149,12 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
       	  return RESOURCE_UNAVAILABLE;
     	}
 	
-	// extract the CCAL Geometry
-	vector<const DCCALGeometry*> ccalGeomVect;
-    	eventLoop->Get( ccalGeomVect );
-    	if (ccalGeomVect.size() < 1)
-      	  return OBJECT_NOT_AVAILABLE;
-    	const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
-	
 	// accessing global variables again!
 	pthread_mutex_lock(&mutex);
 
 	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
 
+	/*
 	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
 	
@@ -171,6 +169,7 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 		blockINFO[id].col    = 12-icol;
 	  }
 	}
+	*/
 
 	// Release the lock	
 	pthread_mutex_unlock(&mutex);
@@ -184,6 +183,14 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
+
+	// extract the CCAL Geometry
+	vector<const DCCALGeometry*> ccalGeomVect;
+    	eventLoop->Get( ccalGeomVect );
+    	if (ccalGeomVect.size() < 1)
+      	  return OBJECT_NOT_AVAILABLE;
+    	const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+
 	cluster_t cluster_storage[MAX_CLUSTERS];
 	ccalcluster_t ccalcluster[MAX_CLUSTERS];
 	int n_h_clusters;
@@ -191,8 +198,9 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// for now, use center of target as vertex
 	DVector3 vertex(0.0, 0.0, m_zTarget);
 	
-    vector<const DCCALHit*> ccalhits;
+    	vector<const DCCALHit*> ccalhits;
 	eventLoop->Get(ccalhits);
+	int n_h_hits = (int)ccalhits.size();
 	
 	if(ccalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
@@ -261,7 +269,6 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  int status  = adcgam_cbk_.u.iadcgam[k][10];
 	  
 	  
-	  
 	  //------------------------------------------------------------
 	  //  Do energy and position corrections:
 	  
@@ -287,8 +294,8 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  }
 	  
 	  // x and y pos of max cell
-	  float xmax    = blockINFO[idmax].x;
-	  float ymax    = blockINFO[idmax].y;
+	  float xmax    = ccalGeom.positionOnFace(idmax).X();
+	  float ymax    = ccalGeom.positionOnFace(idmax).Y();
 	  
 	  int ccal_id;
 	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
@@ -297,18 +304,31 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	    ccal_id = ich[kx-1][ky-1];
 	    
 	    float ecell  = 1.e-4*(float)ICL_IENER(k,j);
-	    float xcell  = blockINFO[ccal_id].x;
-	    float ycell  = blockINFO[ccal_id].y;
+	    float xcell  = ccalGeom.positionOnFace(ccal_id).X();
+	    float ycell  = ccalGeom.positionOnFace(ccal_id).Y();
 	    
 	    if(type%10 == 1 || type%10 == 2) {
 	      xcell += xc;
 	      ycell += yc;
 	    }
 	    
+	    float hittime;
+	    int trialid;
+	    for(int ihit = 0; ihit < n_h_hits; ihit++) {
+	      trialid = 12*(ccalhits[ihit]->row)+ccalhits[ihit]->column;
+	      if(trialid == ccal_id) {
+	        hittime = ccalhits[ihit]->t;
+		break;
+	      }
+	      else
+	        hittime = 0.0;
+	    }
+	    
 	    cluster_storage[k].id[j] = ccal_id;
 	    cluster_storage[k].E[j]  = ecell;
 	    cluster_storage[k].x[j]  = xcell;
 	    cluster_storage[k].y[j]  = ycell;
+	    cluster_storage[k].t[j]  = hittime;
 	    
 	    if(ecell>0.009 && fabs(xcell-xmax)<6. && fabs(ycell-ymax)<6.) {
 	      W = 4.2 + log(ecell/e); 
@@ -324,6 +344,13 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  for(int j = dime; j < MAX_CC; ++j)  // zero the rest
 	    cluster_storage[k].id[j] = 0;
 	  
+	  float weightedtime = 0;
+	  float totEn = 0;
+	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
+	    weightedtime += cluster_storage[k].t[j]*cluster_storage[k].E[j];
+	    totEn += cluster_storage[k].E[j];
+	  }
+	  weightedtime /= totEn;
 	  
 	  
 	  //------------------------------------------------------------
@@ -349,7 +376,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  ccalcluster[k].nhits  = dime;
 	  ccalcluster[k].id     = idmax;
 	  ccalcluster[k].E      = e;
-	  //ccalcluster[k].time   = time;
+	  ccalcluster[k].time   = weightedtime;
 	  ccalcluster[k].x      = x;
 	  ccalcluster[k].y      = y;
 	  ccalcluster[k].chi2   = chi2;
@@ -361,10 +388,10 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	}
 
 	// Release the lock	
-	//japp->Unlock("CCALShower_factory");
+	// japp->Unlock("CCALShower_factory");
 	pthread_mutex_unlock(&mutex);
 
-	final_cluster_processing(ccalcluster, n_h_clusters); 
+	final_cluster_processing(ccalcluster, cluster_storage, n_h_clusters); 
 	
 
 	for(int k = 0; k < n_h_clusters; ++k) {
@@ -378,7 +405,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  shower->z        =   m_CCALfront;
 	  shower->x1       =   ccalcluster[k].x1;
 	  shower->y1       =   ccalcluster[k].y1;
-	  //shower->time     =   ccalcluster[k].time;
+	  shower->time     =   ccalcluster[k].time;
 	  shower->chi2     =   ccalcluster[k].chi2;
 	  shower->type     =   ccalcluster[k].type;
 	  shower->dime     =   ccalcluster[k].nhits;
@@ -408,17 +435,39 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 //----------------------------
 //   final_cluster_processing
 //----------------------------
-void DCCALShower_factory::final_cluster_processing(ccalcluster_t ccalcluster[MAX_CLUSTERS], int n_h_clusters) {
+void DCCALShower_factory::final_cluster_processing(ccalcluster_t ccalcluster[MAX_CLUSTERS], cluster_t cluster_storage[MAX_CLUSTERS], int n_h_clusters) {
+
+
+	//--------------------------
+	// discard bad clusters:
+	
+	int ifdiscarded;
+	do {
+	  ifdiscarded = 0;
+	  for(int i = 0; i < n_h_clusters; ++i) {
+	    if(ccalcluster[i].status == -1 || \
+		ccalcluster[i].E       < MIN_CLUSTER_ENERGY || \
+          	ccalcluster[i].E       > MAX_CLUSTER_ENERGY || \
+          	ccalcluster[i].nhits   < MIN_CLUSTER_BLOCK_COUNT || \
+          	ccalcluster[i].emax    < MIN_CLUSTER_SEED_ENERGY) {
+		
+	      n_h_clusters -= 1;
+	      int nrest = n_h_clusters - i;
+	      if(nrest) {
+	        memmove((&ccalcluster[0]+i),(&ccalcluster[0]+i+1),nrest*sizeof(ccalcluster_t));
+		memmove((&cluster_storage[0]+i), (&cluster_storage[0]+i+1), nrest*sizeof(cluster_t));
+		ifdiscarded = 1;
+	      }
+	    }
+	}} while(ifdiscarded);
+
+
 
 	//  final cluster processing (add status and energy resolution sigma_E):
 
     	for(int i = 0; i < n_h_clusters; ++i)  {
       	  float e   = ccalcluster[i].E;
       	  int idmax = ccalcluster[i].id;
-
-      	  // apply 1st approx. non-lin. corr. (was obtained for PWO):
-      	  // e *= 1. + 200.*pi/pow((pi+e),7.5);
-      	  // ccalcluster[i].E = e;
 
       	  float x   = ccalcluster[i].x1;
       	  float y   = ccalcluster[i].y1;
