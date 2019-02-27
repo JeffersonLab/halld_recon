@@ -133,7 +133,7 @@ DCCALShower_factory::DCCALShower_factory()
 //------------------
 jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
-	cout << "in DCCALShower_factory::brun() ... " << endl;
+
 	DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     	const DGeometry *geom = dapp->GetDGeometry(runnumber);
 	
