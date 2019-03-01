@@ -95,7 +95,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     M2pigen->GetYaxis()->SetRangeUser(ymin,ymax);
     M2pigen->GetXaxis()->SetTitleSize(0.05);
     M2pigen->GetYaxis()->SetTitleSize(0.05);
-    M2pigen->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-})");
+    M2pigen->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-}) (GeV)");
     M2pigen->SetMarkerColor(4);
     // M2piacc->Draw("samep");
     M2pidat->SetMarkerColor(2);
@@ -180,7 +180,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     if (setscale) Phigen->GetYaxis()->SetRangeUser(ymin,ymax);
     Phigen->GetXaxis()->SetTitleSize(0.05);
     Phigen->GetYaxis()->SetTitleSize(0.05);
-    Phigen->GetXaxis()->SetTitle("#Phi");
+    Phigen->GetXaxis()->SetTitle("#Phi (rad)");
     Phigen->SetMarkerColor(4);
     Phigen->Fit(cos2phi);
     Phigen->Draw("p");
@@ -232,7 +232,8 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     tdat->SetTitle(filename);
     tdat->GetXaxis()->SetTitleSize(0.05);
     tdat->GetYaxis()->SetTitleSize(0.05);
-    tdat->GetXaxis()->SetTitle("-t");
+    tdat->GetXaxis()->SetTitle("-t (GeV^{2})");
+    tgen->GetXaxis()->SetTitle("-t (GeV^{2})");
     // tacc->Draw("samep");
     tdat->GetXaxis()->SetRangeUser(xmin,xmax);
     tdat->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -267,7 +268,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     M2piAcceptance->Divide(M2pigen);
     M2piAcceptance->GetXaxis()->SetTitleSize(0.05);
     M2piAcceptance->GetYaxis()->SetTitleSize(0.05);
-    M2piAcceptance->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-})");
+    M2piAcceptance->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-}) (GeV)");
     M2piAcceptance->SetMarkerColor(4);
     M2piAcceptance->Draw("p");
     
@@ -511,7 +512,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     tdat->SetTitle(filename);
     tdat->GetXaxis()->SetTitleSize(0.05);
     tdat->GetYaxis()->SetTitleSize(0.05);
-    tdat->GetXaxis()->SetTitle("-t");
+    tdat->GetXaxis()->SetTitle("-t (GeV^{2})");
     // tacc->Draw("samep");
     tdat->GetXaxis()->SetRangeUser(xmin,xmax);
     tdat->GetYaxis()->SetRangeUser(ymin,ymax);
@@ -643,6 +644,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
 
     c3->cd(6);
     
+    
     // now read and print fitted values
     
     ifstream parameters;
@@ -690,10 +692,34 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
         
     
     parameters.close();
+
+    // create summary canvas for pi0 LOI
+    TCanvas *c4 = new TCanvas("c4", "c4",200,10,1000,1000);
+    c4->Divide(2,2);
+
+    c4->cd(1);
+    M2pigen->Draw("p");
+    M2pidat->Draw("samep");
+
+    c4->cd(2);
+    M2piAcceptance->Draw("p");
+
+    c4->cd(3);
+    Phigen->Draw("p");
+    Phidat->Draw("samep");
+
+    c4->cd(4);
+    gPad->SetLogy();
+    tdat->Draw("p");
+    tgen->Draw("samep");
+
+
+    c4->SaveAs(filename+"_sum.pdf");
     
 
     c0->SaveAs(filename+".pdf(");
     c1->SaveAs(filename+".pdf");
     c2->SaveAs(filename+".pdf");
-    c3->SaveAs(filename+".pdf)");
+    c3->SaveAs(filename+".pdf");
+    c4->SaveAs(filename+".pdf)");
 }

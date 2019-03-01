@@ -78,6 +78,11 @@ void DSelector_Z2pi0_trees2::Init(TTree *locTree)
 	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 100, 0.0, 0.01);
 	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 100, -0.01, 0.01);
 	dHist_tkin_tgen = new TH2I("tkin_tgen", "; |t| Gen ; |t| Kin (GeV/c)^{2}", 50, 0, 0.002, 50, 0, 0.002);
+	dHist_thetapipigen = new TH1I("thetapipigen", ";thetapipi Gen (degrees)", 100, 0.0, 5.);
+	dHist_thetapipikin = new TH1I("thetapipikin", ";thetapipi Kin (degrees)", 100, 0.0, 5.);
+	dHist_thetapipidiff = new TH1I("thetapipidiff", ";thetapipi Kin - Gen (degrees)", 100, -2.5, 2.5);
+	dHist_thetapipikin_thetapipigen = new TH2I("thetapipikin_thetapipigen", "; thetapipi Gen ; thetapipi Kin (degrees)", 100, 0, 5, 100, 0, 5);
+
 	dHist_CosTheta_psi = new TH2I("CosTheta_psi", "; #psi; Cos#Theta", 90, -180., 180, 200, -1., 1.);
 	dHist_CosThetakin_CosThetagen = new TH2I("CosThetakin_CosThetagen", "; Cos#Theta Gen; Cos#Theta Kin", 50, -1, 1, 50, -1., 1.);
 	dHist_phigen_Phigen = new TH2I("phigen_Phigen", "; #Phi Gen; #phi Gen", 90, -180., 180, 90,-180,180);
@@ -287,6 +292,7 @@ Bool_t DSelector_Z2pi0_trees2::Process(Long64_t locEntry)
 	cout << " locMissingP4="; locMissingP4_Thrown.Print();
 	cout << " loc2piP4="; loc2piP4_Thrown.Print();
 	double tgen = (dThrownBeam->Get_P4() - loc2piP4_Thrown).M2();    // use beam and 2pi momenta
+	double thetapipigen = loc2piP4_Thrown.Theta()*180./PI;
 
 
 	/************************************************* LOOP OVER COMBOS *************************************************/
@@ -554,6 +560,7 @@ Bool_t DSelector_Z2pi0_trees2::Process(Long64_t locEntry)
                 // Repeat for kinematically fit variables.
 		// calculate kinematic and angular variables
 		double tkin = (locBeamP4 - loc2piP4).M2();    // use beam and 2pi momenta
+		double thetapipikin = loc2piP4.Theta()*180./PI;
 		TLorentzRotation resonanceBoost2( -loc2piP4.BoostVector() );   // boost into 2pi frame
 		beam_res = resonanceBoost2 * locBeamP4;
 		recoil_res = resonanceBoost2 * locMissingPb208P4;
@@ -619,6 +626,10 @@ Bool_t DSelector_Z2pi0_trees2::Process(Long64_t locEntry)
 			dHist_tkin->Fill(fabs(tkin));
 			dHist_tdiff->Fill(fabs(tkin)-fabs(tgen));
 			dHist_tkin_tgen->Fill(fabs(tgen),fabs(tkin));
+			dHist_thetapipigen->Fill(thetapipigen);
+			dHist_thetapipikin->Fill(thetapipikin);
+			dHist_thetapipidiff->Fill(thetapipikin-thetapipigen);
+			dHist_thetapipikin_thetapipigen->Fill(thetapipigen,thetapipikin);
 			dHist_CosTheta_psi->Fill(psikin*180./3.14159, CosThetakin);
 			dHist_CosTheta->Fill(CosThetakin);
 			dHist_CosThetadiff->Fill(CosThetakin-CosThetagen);

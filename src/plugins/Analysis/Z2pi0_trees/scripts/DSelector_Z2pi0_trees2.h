@@ -61,8 +61,8 @@ class DSelector_Z2pi0_trees2 : public DSelector
 		TH1I* dHist_MissingMassSquared;
 		TH1I* dHist_BeamEnergy;
 		TH1I* dHist_pMomentumMeasured;
-		TH1I* dHist_piplusMomentumMeasured;
-		TH1I* dHist_piminusMomentumMeasured;
+		TH1I* dHist_pi01MomentumMeasured;
+		TH1I* dHist_pi02MomentumMeasured;
 		TH2I* dHist_Proton_dEdx_P;
 		TH1I* dHist_KinFitChiSq;
 		TH1I* dHist_KinFitCL;
@@ -72,7 +72,12 @@ class DSelector_Z2pi0_trees2 : public DSelector
 		TH1I* dHist_tgen;
 		TH1I* dHist_tkin;
 		TH1I* dHist_tdiff;
+		TH1I* dHist_thetapipigen;
+		TH1I* dHist_thetapipikin;
+		TH1I* dHist_thetapipidiff;
+
 		TH2I* dHist_tkin_tgen;
+		TH2I* dHist_thetapipikin_thetapipigen;
 		TH1I* dHist_CosTheta;
 		TH1I* dHist_CosThetadiff;
 		TH2I* dHist_CosTheta_psi;
@@ -102,11 +107,11 @@ class DSelector_Z2pi0_trees2 : public DSelector
 		TH1I* dHist_phidiff;
 		TH1I* dHist_psikin;
 		TH1I* dHist_pDeltap;
-		TH1I* dHist_pipDeltap;
-		TH1I* dHist_pimDeltap;
+		TH1I* dHist_pi01Deltap;
+		TH1I* dHist_pi02Deltap;
 		TH1I* dHist_pDeltap_Measured;
-		TH1I* dHist_pipDeltap_Measured;
-		TH1I* dHist_pimDeltap_Measured;
+		TH1I* dHist_pi01Deltap_Measured;
+		TH1I* dHist_pi02Deltap_Measured;
 		TH1I* dHist_TaggerAccidentals;
 
 		// Cut parameters
