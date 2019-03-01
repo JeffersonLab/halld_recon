@@ -50,6 +50,8 @@ void plot_Z2pi_trees(TString filename)
     TH1F *CosThetadiff = (TH1F*)f->Get("CosThetadiff");
 
     TH1F *dHist_TaggerAccidentals = (TH1F*)f->Get("dHist_TaggerAccidentals");
+    TH1F *thetapipikin = (TH1F*)f->Get("thetapipikin");
+    TH1F *thetapipidiff = (TH1F*)f->Get("thetapipidiff");
     
     TCanvas *c0 = new TCanvas("c0", "c0",200,10,1000,700);
 
@@ -184,7 +186,7 @@ void plot_Z2pi_trees(TString filename)
     // MissingMassSquared->GetYaxis()->SetRangeUser(ymin,ymax);
     MissingMassSquared->GetXaxis()->SetTitleSize(0.05);
     MissingMassSquared->GetYaxis()->SetTitleSize(0.05);
-    MissingMassSquared->GetXaxis()->SetTitle("Missing Mass (GeV2)");
+    MissingMassSquared->GetXaxis()->SetTitle("Missing Mass (GeV^{2})");
     MissingMassSquared->SetMarkerColor(4);
     MissingMassSquared->Draw();
     
@@ -198,7 +200,7 @@ void plot_Z2pi_trees(TString filename)
     // M2pikin->GetYaxis()->SetRangeUser(ymin,ymax);
     M2pikin->GetXaxis()->SetTitleSize(0.05);
     M2pikin->GetYaxis()->SetTitleSize(0.05);
-    M2pikin->GetXaxis()->SetTitle("Mass 2pi Kin (GeV)");
+    M2pikin->GetXaxis()->SetTitle("M_{#pi#pi} Kin (GeV)");
     M2pikin->SetMarkerColor(4);
     M2pikin->Draw();
     
@@ -212,7 +214,7 @@ void plot_Z2pi_trees(TString filename)
     // tkin->GetYaxis()->SetRangeUser(ymin,ymax);
     tkin->GetXaxis()->SetTitleSize(0.05);
     tkin->GetYaxis()->SetTitleSize(0.05);
-    tkin->GetXaxis()->SetTitle("-t Kin (GeV2)");
+    tkin->GetXaxis()->SetTitle("-t Kin (GeV^{2})");
     tkin->GetXaxis()->SetNdivisions(505);
     tkin->SetMarkerColor(4);
     tkin->Draw();
@@ -431,10 +433,61 @@ void plot_Z2pi_trees(TString filename)
     dHist_TaggerAccidentals->GetXaxis()->SetTitle("Vertex Time - RF (ns)");
     dHist_TaggerAccidentals->SetMarkerColor(4);
     dHist_TaggerAccidentals->Draw();
+
+    c4->cd(2);
+    thetapipikin->SetTitle(filename);
+    // thetapipikin->GetXaxis()->SetRangeUser(xmin,xmax);
+    // thetapipikin->GetYaxis()->SetRangeUser(ymin,ymax);
+    thetapipikin->GetXaxis()->SetTitleSize(0.05);
+    thetapipikin->GetYaxis()->SetTitleSize(0.05);
+    thetapipikin->GetXaxis()->SetTitle("Lab #Theta_{#pi#pi} Kin (deg)");
+    thetapipikin->SetMarkerColor(4);
+    thetapipikin->Draw();
+
+    c4->cd(3);
+    thetapipidiff->SetTitle(filename);
+    // thetapipidiff->GetXaxis()->SetRangeUser(xmin,xmax);
+    // thetapipidiff->GetYaxis()->SetRangeUser(ymin,ymax);
+    thetapipidiff->GetXaxis()->SetTitleSize(0.05);
+    thetapipidiff->GetYaxis()->SetTitleSize(0.05);
+    thetapipidiff->GetXaxis()->SetTitle("Lab #Theta_{#pi#pi} Kin-Gen (deg)");
+    thetapipidiff->SetMarkerColor(4);
+    thetapipidiff->Fit("gaus");
+    thetapipidiff->Draw();
+
     
+
+    TCanvas *c5 = new TCanvas("c5", "c5",200,10,1000,350);
+    c5->Divide(3,1);
+
+    c5->cd(1);
+    MissingMassSquared->Draw();
+    c5->cd(2);
+    M2pikin->Draw();
+    c5->cd(3);
+    gPad->SetLogy();
+    tkin->Draw();
+
+    TCanvas *c6 = new TCanvas("c6", "c6",200,10,1000,350);
+    c6->Divide(3,1);
+
+    c6->cd(1);
+    M2pidiff->Draw();
+    c6->cd(2);
+    tdiff->Draw();
+    c6->cd(3);
+    // gPad->SetLogy();
+    thetapipidiff->Draw();
+    
+
     c0->SaveAs(filename+".pdf(");
     c1->SaveAs(filename+".pdf");
     c2->SaveAs(filename+".pdf");
     c3->SaveAs(filename+".pdf");
     c4->SaveAs(filename+".pdf)");
+
+
+    // save plots for proposal
+    // c5->SaveAs("MMMpipit_signal_DSelector.pdf)");
+    // c6->SaveAs("Resolution_Mpipittag_signal_DSelector.pdf)");
 }

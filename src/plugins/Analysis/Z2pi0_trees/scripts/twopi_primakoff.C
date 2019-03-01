@@ -95,7 +95,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     M2pigen->GetYaxis()->SetRangeUser(ymin,ymax);
     M2pigen->GetXaxis()->SetTitleSize(0.05);
     M2pigen->GetYaxis()->SetTitleSize(0.05);
-    M2pigen->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-}) (GeV)");
+    M2pigen->GetXaxis()->SetTitle("M(#pi^{0}#pi^{0}) (GeV)");
     M2pigen->SetMarkerColor(4);
     // M2piacc->Draw("samep");
     M2pidat->SetMarkerColor(2);
@@ -268,7 +268,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     M2piAcceptance->Divide(M2pigen);
     M2piAcceptance->GetXaxis()->SetTitleSize(0.05);
     M2piAcceptance->GetYaxis()->SetTitleSize(0.05);
-    M2piAcceptance->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-}) (GeV)");
+    M2piAcceptance->GetXaxis()->SetTitle("M(#pi^{0}#pi^{0}) (GeV)");
     M2piAcceptance->SetMarkerColor(4);
     M2piAcceptance->Draw("p");
     
@@ -372,7 +372,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     M2piacc->GetYaxis()->SetRangeUser(ymin,ymax);
     M2piacc->GetXaxis()->SetTitleSize(0.05);
     M2piacc->GetYaxis()->SetTitleSize(0.05);
-    M2piacc->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-})");
+    M2piacc->GetXaxis()->SetTitle("M(#pi^{0}#pi^{0})");
     M2piacc->SetMarkerColor(1);
     M2piacc->SetLineColor(1);
     // M2piacc->Draw("samep");
@@ -543,7 +543,7 @@ void twopi_primakoff(TString filename, Int_t maxev=100000)
     // M2piacc->GetYaxis()->SetRangeUser(ymin,ymax);
     M2piacc->GetXaxis()->SetTitleSize(0.05);
     M2piacc->GetYaxis()->SetTitleSize(0.05);
-    M2piacc->GetXaxis()->SetTitle("M(#pi^{+}#pi^{-})");
+    M2piacc->GetXaxis()->SetTitle("M(#pi^{0}#pi^{0})");
     M2piacc->SetMarkerColor(1);
     // M2piacc->Draw("samep");
     M2pidatsub->SetMarkerColor(2);

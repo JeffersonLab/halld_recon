@@ -71,9 +71,9 @@ void DSelector_Z2pi0_trees2::Init(TTree *locTree)
 	dHist_KinFitChiSq = new TH1I("KinFitChiSq", ";Kinematic Fit #chi^{2}/NDF", 250, 0., 25.);
 	dHist_KinFitCL = new TH1I("KinFitCL", ";Kinematic Fit Confidence Level", 100, 0., 1.);
 
-	dHist_M2pigen = new TH1I("M2pigen", ";M_{#pi^{+}#pi^{-}} Gen (GeV/c^{2})", 400, 0.2, 0.6);
-	dHist_M2pikin = new TH1I("M2pikin", ";M_{#pi^{+}#pi^{-}} Kin (GeV/c^{2})", 400, 0.2, 0.6);
-	dHist_M2pidiff = new TH1I("M2pidiff", ";M_{#pi^{+}#pi^{-}} Kin - Gen (GeV/c^{2})", 400, -0.05, 0.05);
+	dHist_M2pigen = new TH1I("M2pigen", ";M_{#pi#pi} Gen (GeV/c^{2})", 400, 0.2, 0.6);
+	dHist_M2pikin = new TH1I("M2pikin", ";M_{#pi#pi} Kin (GeV/c^{2})", 400, 0.2, 0.6);
+	dHist_M2pidiff = new TH1I("M2pidiff", ";M_{#pi#pi} Kin - Gen (GeV/c^{2})", 400, -0.05, 0.05);
 	dHist_tgen = new TH1I("tgen", ";|t| Gen (GeV/c)^{2}", 100, 0.0, 0.01);
 	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 100, 0.0, 0.01);
 	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 100, -0.01, 0.01);
