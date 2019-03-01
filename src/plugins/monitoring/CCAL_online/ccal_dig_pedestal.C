@@ -1,8 +1,8 @@
-// hnamepath:  /ccal/digOcc2D
-// hnamepath:  /ccal/digPed2D
-// hnamepath:  /ccal/digPedSq2D
-// hnamepath:  /ccal/digPed
-// hnamepath:  /ccal/digPedChan
+// hnamepath: /ccal/digOcc2D
+// hnamepath: /ccal/digPed2D
+// hnamepath: /ccal/digPedSq2D
+// hnamepath: /ccal/digPed
+// hnamepath: /ccal/digPedChan
 
 {
 

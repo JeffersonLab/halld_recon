@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/digOcc2D
-// hnamepath:  /ccal/digPeakV2D
-// hnamepath:  /ccal/digPeakV
-// hnamepath:  /ccal/digN
+// hnamepath: /ccal/digOcc2D
+// hnamepath: /ccal/digN
+// hnamepath: /ccal/digPeak
+// hnamepath: /ccal/digIntVsPeak
 
 {
   

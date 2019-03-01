@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/hitOcc2D
-// hnamepath:  /ccal/hitN
-// hnamepath:  /ccal/hitETot
-// hnamepath:  /ccal/hitE2D
+// hnamepath: /ccal/hitOcc2D
+// hnamepath: /ccal/hitN
+// hnamepath: /ccal/hitETot
+// hnamepath: /ccal/hitE2D
 
 {
 
