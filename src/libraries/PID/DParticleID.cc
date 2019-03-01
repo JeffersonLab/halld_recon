@@ -3256,9 +3256,8 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
     locNDF++;
   }
 
-  // Only try to use FCAL if no other outer detector as a match
   shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
-  if (locFcalParms!=NULL && locTofParms==NULL && locBcalParms==NULL){
+  if (locFcalParms!=NULL){
     double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
     double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
     locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
