@@ -13,10 +13,10 @@ unset base
 unset maxev
 
 if( $#argv == 0 ) then
-    set run = "031001"
+    set run = "031002"
     set base = "p1"
 #    set base = "TEST"
-    set maxev = 10000
+    set maxev = 100000
 else if ( $#argv == 1) then
     set run = $1
     set base = ""
@@ -56,7 +56,7 @@ set savebase = $base
 # root -b -q tree_hd_root_Z2pi0_trees_${base}_signal_${maxev}.root 'call_DSelector2.C("DSelector_Z2pi0_trees2.C+")' >! DSelector_Z2pi0_trees_${base}_signal_${maxev}.list
 # mv DSelector_Z2pi0_trees2.root DSelector_Z2pi0_trees_${base}_signal_${maxev}.root
 # mv treeFlat_DSelector_Z2pi0_trees.root treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root
-# root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"\)
+root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"\)
 ## No Longer needed: tree_to_amptools treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root pi0pi0misspb208_TreeFlat
 # root -b -q treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root 'call_MakeAmpToolsFlat_pi0.C(1)'
 # mv AmpToolsInputTree.root treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}_amptools_W.root
@@ -96,11 +96,11 @@ set base = "p1"
 set tagfit = "W"
 set base = ${savebase}_${tagfit}
 
-fit -c fit_2pi0_primakoff_${tagfit}_${maxev}.cfg  >! twopi_primakoff_DSelect_${base}_${maxev}.list
-cp twopi0_primakoff.fit twopi_primakoff_DSelect_${base}_${maxev}.fit
-twopi_plotter_primakoff twopi_primakoff_DSelect_${base}_${maxev}.fit -o twopi_primakoff_DSelect_${base}_${maxev}.root
-mv twopi_fitPars.txt twopi_primakoff_DSelect_${base}_${maxev}.fit2
-root -b -q twopi_primakoff.C\(\"twopi_primakoff_DSelect_${base}_${maxev}\",${maxev}\)
+# fit -c fit_2pi0_primakoff_${tagfit}_${maxev}.cfg  >! twopi_primakoff_DSelect_${base}_${maxev}.list
+# cp twopi0_primakoff.fit twopi_primakoff_DSelect_${base}_${maxev}.fit
+# twopi_plotter_primakoff twopi_primakoff_DSelect_${base}_${maxev}.fit -o twopi_primakoff_DSelect_${base}_${maxev}.root
+# mv twopi_fitPars.txt twopi_primakoff_DSelect_${base}_${maxev}.fit2
+# root -b -q twopi_primakoff.C\(\"twopi_primakoff_DSelect_${base}_${maxev}\",${maxev}\)
 
 unset echo
 
