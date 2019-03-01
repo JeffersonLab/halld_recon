@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/clusN
-// hnamepath:  /ccal/clusE
-// hnamepath:  /ccal/clusT0
-// hnamepath:  /ccal/clusTmT0
+// hnamepath: /ccal/comp_cratio
+// hnamepath: /ccal/comp_cfbratio
+// hnamepath: /ccal/comp_cfb2d
+// hnamepath: /ccal/comp_pfpc
 
 {
 

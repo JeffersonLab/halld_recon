@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/clus2GMass
-// hnamepath:  /ccal/clusPhi
-// hnamepath:  /ccal/clusXYHigh
-// hnamepath:  /ccal/clusXYLow
+// hnamepath: /ccal/clus2GMass
+// hnamepath: /ccal/clusPhi
+// hnamepath: /ccal/clusXYHigh
+// hnamepath: /ccal/clusXYLow
 
 {
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("ccal");

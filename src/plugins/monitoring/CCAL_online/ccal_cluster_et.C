@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/clusN
-// hnamepath:  /ccal/clusE
-// hnamepath:  /ccal/clusT0
-// hnamepath:  /ccal/clusTmT0
+// hnamepath: /ccal/clusN
+// hnamepath: /ccal/clusE
+// hnamepath: /ccal/clusETot
+// hnamepath: /ccal/clusT
 
 {
 
