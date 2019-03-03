@@ -95,6 +95,7 @@ extern ccalcluster_t ccalcluster[MAX_CLUSTERS];
 
 float energy_correct(float c_energy, int central_id);
 float shower_depth(float energy);
+int IsIDinVec( vector< const DCCALHit* > hitarray, int id12 );
 
 extern "C"  void main_island_();
 
