@@ -111,7 +111,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
     for(size_t j = 0; j < locPassedParticleCombos.size(); ++j){
       double chisq = locPassedParticleCombos[j]->Get_KinFitResults ()->Get_ChiSq();
       if(chisq < bestchisq) {
-	chisq=bestchisq;
+	bestchisq=chisq;
 	bestind=j;
       }
     }

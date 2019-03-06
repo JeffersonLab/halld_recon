@@ -1072,7 +1072,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buff)
 							break;
 						case HDEVIO::HDEVIO_USER_BUFFER_TOO_SMALL:
 							if(VERBOSE>0) evioout << "EVIO buffer too small (" << buff_size << " bytes) . Reallocating to " << hdevio->last_event_len<< endl;
-							if(buff) delete[] buff;
+							if(buff) free(buff);
 							buff_size = hdevio->last_event_len;
 							buff = new uint32_t[buff_size];
 							continue;
@@ -1871,7 +1871,12 @@ void JEventSource_EVIO::EmulateDf250Firmware(JEvent &event, vector<JObject*> &wr
     if (f250EmFac) {
         f250EmFac->Get(f250Emulator_const);
         // Drop const
-        if (f250Emulator_const.size() != 0) f250Emulator = const_cast<Df250EmulatorAlgorithm*>(f250Emulator_const[0]);
+        if (f250Emulator_const.size() != 0) {
+	  f250Emulator = const_cast<Df250EmulatorAlgorithm*>(f250Emulator_const[0]);
+	} else {
+	  jerr << "Unable to load Df250EmulatorAlgorithm !  skipping emulation ..." << endl;
+	  return;
+	}
     }
 
     if(VERBOSE>3) evioout << " Looping over raw data ..." <<endl;
@@ -2115,7 +2120,12 @@ void JEventSource_EVIO::EmulateDf125Firmware( JEvent &event, vector<JObject*> &w
     if (f125EmFac) {
         f125EmFac->Get(f125Emulator_const);
         // Drop const
-        if (f125Emulator_const.size() != 0) f125Emulator = const_cast<Df125EmulatorAlgorithm*>(f125Emulator_const[0]);
+        if (f125Emulator_const.size() != 0) {
+	  f125Emulator = const_cast<Df125EmulatorAlgorithm*>(f125Emulator_const[0]);
+	} else {
+	  jerr << "Unable to load Df125EmulatorAlgorithm !  skipping emulation ..." << endl;
+	  return;
+	}
     }
 
     // Loop over all window raw data objects

@@ -15,8 +15,8 @@
 #define CRYSTAL_BLOCKS 144 // 12x12 array (2x2 hole in the center)
 #define T_BLOCKS 144 
 
-#define MAX_HHITS 1728 // For Hycal
-#define MAX_CLUSTERS 250 // 1728/2 ?
+#define MAX_HHITS 144 // For Hycal
+#define MAX_CLUSTERS 60 // 1728/2 ?
 #define MAX_CC 60 // Maximum Cluster Cells per cluster
 
 #define nint_phot_cell  5
@@ -24,7 +24,6 @@
 #define dcorr_phot_cell 16
 
 extern int status_global[MSECT][MCOL][MROW];
-// extern int HYCAL_STATUS[T_BLOCKS];   // HYCAL module status
 
 extern float Nonlin_en1[T_BLOCKS];          //  Hycal nonlin: term1
 extern float Nonlin_en2[T_BLOCKS];          //  Hycal nonlin: term2
@@ -62,6 +61,7 @@ typedef struct {
   float E[MAX_CC];   // Energy of ith block
   float x[MAX_CC];   // Center of ith block x-coord
   float y[MAX_CC];   // Center of ith block y-coord
+  float t[MAX_CC];
 } cluster_t;
 /*----- start of ccalcluster bank -----*/
 /* ccalcluster: CCAL cluster bank */
@@ -93,42 +93,14 @@ extern ccalhit_t ccalhit[T_BLOCKS];
 extern cluster_t cluster_storage[MAX_CLUSTERS];
 extern ccalcluster_t ccalcluster[MAX_CLUSTERS];
 
-void init_tables();
-void reset_event();
-void read_event();
-void read_constants();
-void call_island(int isect);
-void ed_prot();
-void fill_dst_histograms();
+float energy_correct(float c_energy, int central_id);
+float shower_depth(float energy);
+int IsIDinVec( vector< const DCCALHit* > hitarray, int id12 );
 
 extern "C"  void main_island_();
 
 extern "C"  void init_island_(char filename[1000], int *name_length);
 //extern "C"  void init_island_(float new_acell[2][501][501], float new_ad2c[2][501][501]);
-
-extern "C"  void iliya_test_();
-
-/* void coord_align(hycalcluster_t* h_clusters, const int n, const float energy, const int central_id);
-void glue_transition_island();
-void merge_clusters(int i, int j);
-void final_cluster_processing();
-int clusters_mindist(int i, int j);*/
-
-float energy_correct(float c_energy, int central_id);
-extern "C" void fill_histogram_(int *hid, float *val);
-extern "C" void fill_histogram2_(int *hid, float *val, float *val2);
-extern "C" void hopen_();
-extern "C" void hclose_();
-extern "C" void tt_write_(int *ntid);
-
-int mcfile_read();
-void read_mc_event();
-void mcdone();
-void fill_my_histograms();
-
-void close_dst_file();
-void open_dst_file(char *name);
-float shower_depth(float energy);
 
 extern "C" {extern struct {int mcrun, mcevent; float hegen[64];
               int nout, iout[MAX_HHITS], aout[MAX_HHITS];} read_mcfile_com_;}
@@ -136,8 +108,8 @@ extern "C" {extern struct {int mcread_flag, mc_eof_flag, nreadmc;} mcread_stat_c
 
 #define ECH(M,N) ech_common_.ech[N-1][M-1]
 extern "C" {extern struct {int ech[MROW][MCOL];} ech_common_;}
-#define TIME(M,N) tch_common_.time[N-1][M-1]
-extern "C" {extern struct {int time[MROW][MCOL];} tch_common_;}
+//#define TIME(M,N) tch_common_.time[N-1][M-1]
+//extern "C" {extern struct {int time[MROW][MCOL];} tch_common_;}
 #define STAT_CH(M,N) stat_ch_common_.stat_ch[N-1][M-1]
 extern "C" {extern struct {int stat_ch[MROW][MCOL];} stat_ch_common_;}
 

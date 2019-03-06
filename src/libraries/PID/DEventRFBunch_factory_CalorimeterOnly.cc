@@ -268,10 +268,18 @@ int DEventRFBunch_factory_CalorimeterOnly::Break_TieVote_Neutrals(map<int, vecto
 	    if( bcalShower != NULL ){
 
 	      locTotalEnergy += bcalShower->E;
+	    } 	  
+	    else{
+
+		    const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
+		    if( ccalShower != NULL ){
+			    
+			    locTotalEnergy += ccalShower->E;
+		    }
 	    }
 	  }
 	}
-
+      
       if(locTotalEnergy > locHighestTotalEnergy)
 	{
 	  locHighestTotalEnergy = locTotalEnergy;
