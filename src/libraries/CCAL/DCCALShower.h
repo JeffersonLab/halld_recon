@@ -11,6 +11,8 @@
 
 #include <DVector3.h>
 #include "DCCALHit.h"
+#include "hycal.h"
+
 using namespace std;
 
 #include <JANA/JObject.h>
@@ -28,7 +30,7 @@ class DCCALShower : public JObject {
       
       
       int type;
-      int dime;    
+      int dime;
       int status;
       int id;
       int idmax;
@@ -44,6 +46,10 @@ class DCCALShower : public JObject {
       double Emax;
       double time;
       double sigma_t;
+      
+      int id_storage[MAX_CC];
+      double en_storage[MAX_CC];
+      double t_storage[MAX_CC];
       
       void toStrings(vector<pair<string,string> > &items) const {
 	AddString(items, "E(GeV)",    "%2.3f",  E);

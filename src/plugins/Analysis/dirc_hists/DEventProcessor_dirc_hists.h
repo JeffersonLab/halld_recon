@@ -61,6 +61,8 @@ private:
   TH2I *hNphCBarInclusiveVsP[48];
   map<Particle_t, TH2I*> hExtrapolatedBarHitXY;
   map<Particle_t, TH1I*> hDiff;
+  map<Particle_t, TH2I*> hDiffVsChannelDirect;
+  map<Particle_t, TH2I*> hDiffVsChannelReflected;
   map<Particle_t, TH1I*> hNphC;
   map<Particle_t, TH1I*> hNphCInclusive;
   map<Particle_t, TH1I*> hThetaC;

@@ -65,9 +65,9 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   loop->GetSingle(locTTabUtilities);
  
   vector<const DCAEN1290TDCHit*> sipmtdchits;
-  eventLoop->Get(sipmtdchits);
+  loop->Get(sipmtdchits);
   vector<const Df250PulseData*> sipmadchits;
-  eventLoop->Get(sipmadchits);
+  loop->Get(sipmadchits);
 
             for(uint i=0; i<sipmadchits.size(); i++) {
                     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];

@@ -19,6 +19,12 @@ jerror_t DEventRFBunch_factory_Calibrations::init(void)
 	dMinHitRingsPerCDCSuperlayer = 2;
 	dMinHitPlanesPerFDCPackage = 4;
 
+	string locSystemName = "";
+	gPARMS->SetDefaultParameter("RF_CALIB:SOURCE_SYSTEM", locSystemName);
+	if(locSystemName != "")
+		dRFTDCSourceSystem = NameToSystem(locSystemName.c_str());
+
+
 	return NOERROR;
 }
 

@@ -407,7 +407,6 @@ void DEVIOWorkerThread::ParseEPICSbank(uint32_t* &iptr, uint32_t *iend)
 	}
 	
 	uint32_t *iend_epics = &iptr[epics_bank_len];
-	if( iend_epics < iend ) iend = iend_epics;
 	
 	// Advance to first daughter bank
 	iptr++;
@@ -2111,7 +2110,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	uint32_t itrigger   = 0xFFFFFFFF;
 	uint32_t dev_id     = 0xFFFFFFFF;
 	uint32_t ievent_cnt = 0xFFFFFFFF;
-	uint32_t last_itrigger = itrigger;
+	//uint32_t last_itrigger = itrigger;
 	for( ;  iptr<iend; iptr++){
 		if(((*iptr>>31) & 0x1) == 0)continue;
 

@@ -106,7 +106,7 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 	uint64_t Ncopied = nwords<(int64_t)left ? (uint64_t)nwords:left;
 	_gcount = Ncopied*sizeof(uint32_t);
 	if(_gcount>0) memcpy((char*)s, (char*)fnext, _gcount);
-	left -= Ncopied;
+	//left -= Ncopied;   // this is true, but not used later on
 	fnext += Ncopied;
 	s += _gcount; // advance pointer to user buff in case we need to write more
 	
