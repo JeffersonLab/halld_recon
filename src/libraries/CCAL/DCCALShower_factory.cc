@@ -9,6 +9,7 @@
 #include <fstream>
 #include <math.h>
 #include <DVector3.h>
+#include <mutex>
 using namespace std;
 
 #include <JANA/JEvent.h>
@@ -25,7 +26,7 @@ using namespace jana;
 
 #include "hycal.h"
 
-
+static mutex CCAL_MUTEX;
 
 //------------------
 // LoadCCALProfileData
@@ -152,7 +153,8 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
     	}
 	
 	// accessing global variables again!
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
+	std::lock_guard<std::mutex> lck(CCAL_MUTEX);
 
 	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
 
@@ -233,7 +235,8 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// The Fortran code below uses common blocks, so we need to set a lock
 	// so that different threads are not running on top of each other
 	//japp->WriteLock("CCALShower_factory");
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
+	std::unique_lock<std::mutex> lck(CCAL_MUTEX);
 	
 	SET_EMIN   =  0.05;    // banks->CONFIG->config->CLUSTER_ENERGY_MIN;
 	SET_EMAX   =  15.9;    // banks->CONFIG->config->CLUSTER_ENERGY_MAX;
@@ -409,7 +412,8 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	// Release the lock
 	// japp->Unlock("CCALShower_factory");
-	pthread_mutex_unlock(&mutex);
+	//pthread_mutex_unlock(&mutex);
+	lck.unlock();
 
 	if(n_h_clusters == 0) return NOERROR;
 	final_cluster_processing(ccalcluster, cluster_storage, n_h_clusters); 
