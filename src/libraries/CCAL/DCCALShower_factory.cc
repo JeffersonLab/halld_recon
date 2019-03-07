@@ -154,6 +154,8 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 
 	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
 
+	m_CCALfront = 1279.77;
+
 	/*
 	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
