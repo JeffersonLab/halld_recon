@@ -48,7 +48,7 @@
   if( comp_bcdt ){
 
     comp_bcdt->SetStats( 0 );
-    comp_bcdt->GetXaxis()->SetRangeUser(-20,20);
+    comp_bcdt->GetXaxis()->SetRangeUser(20,80);
     c1->cd( 3 );
     comp_bcdt->Draw();
   }
@@ -56,7 +56,7 @@
   if( comp_fcdt ){
 
     comp_fcdt->SetStats( 0 );
-    comp_fcdt->GetXaxis()->SetRangeUser(-40,20);
+    comp_fcdt->GetXaxis()->SetRangeUser(0,40);
     c1->cd( 4 );
     comp_fcdt->Draw();
   }
