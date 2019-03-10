@@ -202,6 +202,7 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    loop->GetSingle(dPIDAlgorithm);
 
    // Outer detector geometry parameters
+   if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
    geom->GetFCALZ(dFCALz); 
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
@@ -292,6 +293,7 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	 track->extrapolations.emplace(SYS_FCAL,myvector);
 	 track->extrapolations.emplace(SYS_FDC,myvector);
 	 track->extrapolations.emplace(SYS_CDC,myvector);
+	 track->extrapolations.emplace(SYS_DIRC,myvector);
 	 track->extrapolations.emplace(SYS_START,myvector);	
 
 	 // Extrapolate to TOF
@@ -301,10 +303,17 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	 double z0=track->position().z();
 	 double z=z0;
 	 double uz=dir.z();
-	 DVector3 diff=((dTOFz-z0)/uz)*dir;
+	 // Extrapolate to DIRC
+	 DVector3 diff=((dDIRCz-z0)/uz)*dir;
 	 DVector3 pos=pos0+diff;
 	 double s=diff.Mag();
 	 double t=s/29.98;
+	 track->extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+	 // Extrapolate to TOF
+	 diff=((dTOFz-z0)/uz)*dir;
+	 pos=pos0+diff;
+	 s=diff.Mag();
+	 t=s/29.98;
 	 track->extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
 	 // Extrapolate to FCAL
 	 diff=((dFCALz-z0)/uz)*dir;
