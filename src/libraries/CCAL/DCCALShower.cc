@@ -33,6 +33,7 @@ DCCALShower::DCCALShower()
   for(int icell=0; icell<MAX_CC; icell++) {
     id_storage[icell] = 0;
     en_storage[icell] = 0;
+    t_storage[icell]  = 0;
   }
   
 }

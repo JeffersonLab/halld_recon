@@ -49,6 +49,7 @@ class DCCALShower : public JObject {
       
       int id_storage[MAX_CC];
       double en_storage[MAX_CC];
+      double t_storage[MAX_CC];
       
       void toStrings(vector<pair<string,string> > &items) const {
 	AddString(items, "E(GeV)",    "%2.3f",  E);

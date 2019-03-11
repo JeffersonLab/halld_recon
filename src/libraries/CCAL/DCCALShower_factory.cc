@@ -9,6 +9,7 @@
 #include <fstream>
 #include <math.h>
 #include <DVector3.h>
+#include <mutex>
 using namespace std;
 
 #include <JANA/JEvent.h>
@@ -25,7 +26,7 @@ using namespace jana;
 
 #include "hycal.h"
 
-
+static mutex CCAL_MUTEX;
 
 //------------------
 // LoadCCALProfileData
@@ -115,6 +116,7 @@ DCCALShower_factory::DCCALShower_factory()
 	TIME_CUT                  =  15.0 ;  // ns
 	MAX_HITS_FOR_CLUSTERING   =  80;
 	SHOWER_DEBUG              =  0;
+	ALLOW_SINGLE_HIT_CLUSTERS =  0;
 
 	gPARMS->SetDefaultParameter("CCAL:SHOWER_DEBUG",   SHOWER_DEBUG);
 	gPARMS->SetDefaultParameter("CCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
@@ -123,6 +125,7 @@ DCCALShower_factory::DCCALShower_factory()
 	gPARMS->SetDefaultParameter("CCAL:MAX_CLUSTER_ENERGY", MAX_CLUSTER_ENERGY);
 	gPARMS->SetDefaultParameter("CCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("CCAL:TIME_CUT",TIME_CUT,"time cut for associating CCAL hits together into a cluster");
+	gPARMS->SetDefaultParameter("CCAL:ALLOW_SINGLE_HIT_CLUSTERS", ALLOW_SINGLE_HIT_CLUSTERS);
 
 	pthread_mutex_init(&mutex, NULL);
 
@@ -150,7 +153,8 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
     	}
 	
 	// accessing global variables again!
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
+	std::lock_guard<std::mutex> lck(CCAL_MUTEX);
 
 	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);
 
@@ -191,10 +195,13 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       	  return OBJECT_NOT_AVAILABLE;
     	const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
 
-	cluster_t cluster_storage[MAX_CLUSTERS];
-	ccalcluster_t ccalcluster[MAX_CLUSTERS];
-	int n_h_clusters;
-    	
+
+	vector< ccalcluster_t > ccalcluster;
+	vector< cluster_t > cluster_storage;
+	vector< const DCCALHit* > hit_storage;
+	
+	int n_h_clusters = 0;
+	
 	// for now, use center of target as vertex
 	DVector3 vertex(0.0, 0.0, m_zTarget);
 	
@@ -204,13 +211,33 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	
 	if(ccalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
+	// if a single module has multiple hits in same event, one will overwrite the 
+	// other in the cluster pattern. Maybe timing cut can be applied to remove 
+	// out of time hits, but for now just use hit with larger energy.
+	
+	for(int ihit = 0; ihit < n_h_hits; ihit++) {
+	  const DCCALHit *ccalhit = ccalhits[ihit];
+	  //if(ccalhit->t > 20.) continue;
+	  int id12 = (ccalhit->row)*12 + ccalhit->column;
+	  int findVal = IsIDinVec( hit_storage, id12 );
+	  if( findVal >= 0 ) {
+	    if( ccalhit->E > hit_storage[findVal]->E ) {
+	      hit_storage.erase( hit_storage.begin()+findVal );
+	      hit_storage.push_back( ccalhit );
+	    }
+	  } else {
+	    hit_storage.push_back( ccalhit );
+	  }
+	}
+	n_h_hits = (int)hit_storage.size();
+	
+	
 	// The Fortran code below uses common blocks, so we need to set a lock
 	// so that different threads are not running on top of each other
 	//japp->WriteLock("CCALShower_factory");
-	pthread_mutex_lock(&mutex);
+	//pthread_mutex_lock(&mutex);
+	std::unique_lock<std::mutex> lck(CCAL_MUTEX);
 	
-	double tot_en = 0;
-
 	SET_EMIN   =  0.05;    // banks->CONFIG->config->CLUSTER_ENERGY_MIN;
 	SET_EMAX   =  15.9;    // banks->CONFIG->config->CLUSTER_ENERGY_MAX;
 	SET_HMIN   =  2;       // banks->CONFIG->config->CLUSTER_MIN_HITS_NUMBER;
@@ -223,7 +250,6 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	for(int icol = 1; icol <= MCOL; ++icol) {
 	  for(int irow = 1; irow <= MROW; ++irow) {
 	    ECH(icol,irow)     = 0;
-	    //TIME(icol,irow)    = 0;
 	    STAT_CH(icol,irow) = 0;
 	    if(icol>=6 && icol<=7 && irow>=6 && irow<=7) { STAT_CH(icol,irow) = -1; }	
 	    
@@ -235,26 +261,20 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	NCOL = 12; NROW = 12;
 	SET_XSIZE = CRYS_SIZE_X; SET_YSIZE = CRYS_SIZE_Y;
 	
-	for (unsigned int i = 0; i < ccalhits.size(); i++) {	  
-	  const DCCALHit *ccalhit = ccalhits[i];
-
-	  if(SHOWER_DEBUG == 1){
-	    cout << "ccalhit row col e = " << ccalhit->row << " " << ccalhit->column << " " << ccalhit->E << endl;
-	  }
-
-	  tot_en += ccalhit->E;
-	  
-	  int row   = 12-(ccalhit->row);
-	  int col   = 12-(ccalhit->column);
-	  
+	for (int i = 0; i < n_h_hits; i++) {
+	  const DCCALHit *ccalhit = hit_storage[i];  
+	  int row   = 12-ccalhit->row;
+	  int col   = 12-ccalhit->column;
 	  ECH(col,row) = int(ccalhit->E*10.+0.5);
-	  //TIME(col,row) = ccalhit->t;
-	}	
+	}
 	
 	main_island_();
 	
-	n_h_clusters = adcgam_cbk_.nadcgam;
-	for(int k = 0; k < n_h_clusters; ++k)  {
+	int init_clusters = adcgam_cbk_.nadcgam;
+	for(int k = 0; k < init_clusters; ++k)  {
+	
+	  cluster_t clust_storage;
+	  ccalcluster_t clust;
 
 	  // results of main_island_():
 	  float e     = adcgam_cbk_.u.fadcgam[k][0];
@@ -262,12 +282,14 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  float y     = adcgam_cbk_.u.fadcgam[k][2];
 	  float xc    = adcgam_cbk_.u.fadcgam[k][4];
 	  float yc    = adcgam_cbk_.u.fadcgam[k][5];
-	  //float time  = adcgam_cbk_.u.fadcgam[k][6];
 	  float chi2  = adcgam_cbk_.u.fadcgam[k][6];
 	  int type    = adcgam_cbk_.u.iadcgam[k][7];
 	  int dime    = adcgam_cbk_.u.iadcgam[k][8];
 	  int status  = adcgam_cbk_.u.iadcgam[k][10];
 	  
+	  if( dime < MIN_CLUSTER_BLOCK_COUNT && !(ALLOW_SINGLE_HIT_CLUSTERS) ) { continue; } 
+	  if( e < MIN_CLUSTER_ENERGY || e > MAX_CLUSTER_ENERGY ) { continue; }
+	  n_h_clusters += 1;
 	  
 	  //------------------------------------------------------------
 	  //  Do energy and position corrections:
@@ -312,23 +334,21 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	      ycell += yc;
 	    }
 	    
-	    float hittime;
 	    int trialid;
+	    float hittime = 0.0;
 	    for(int ihit = 0; ihit < n_h_hits; ihit++) {
-	      trialid = 12*(ccalhits[ihit]->row)+ccalhits[ihit]->column;
+	      trialid = 12*(hit_storage[ihit]->row) + hit_storage[ihit]->column;
 	      if(trialid == ccal_id) {
-	        hittime = ccalhits[ihit]->t;
+	        hittime = hit_storage[ihit]->t;
 		break;
 	      }
-	      else
-	        hittime = 0.0;
 	    }
 	    
-	    cluster_storage[k].id[j] = ccal_id;
-	    cluster_storage[k].E[j]  = ecell;
-	    cluster_storage[k].x[j]  = xcell;
-	    cluster_storage[k].y[j]  = ycell;
-	    cluster_storage[k].t[j]  = hittime;
+	    clust_storage.id[j] = ccal_id;
+	    clust_storage.E[j]  = ecell;
+	    clust_storage.x[j]  = xcell;
+	    clust_storage.y[j]  = ycell;
+	    clust_storage.t[j]  = hittime;
 	    
 	    if(ecell>0.009 && fabs(xcell-xmax)<6. && fabs(ycell-ymax)<6.) {
 	      W = 4.2 + log(ecell/e); 
@@ -338,17 +358,17 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		ypos += ycell*W;
 		e2   += ecell;
 	      }
-	    }	    
+	    }
 	  }
 	  
 	  for(int j = dime; j < MAX_CC; ++j)  // zero the rest
-	    cluster_storage[k].id[j] = 0;
+	    clust_storage.id[j] = -1;
 	  
 	  float weightedtime = 0;
 	  float totEn = 0;
 	  for(int j = 0; j < (dime>MAX_CC ? MAX_CC : dime); ++j) {
-	    weightedtime += cluster_storage[k].t[j]*cluster_storage[k].E[j];
-	    totEn += cluster_storage[k].E[j];
+	    weightedtime += clust_storage.t[j]*clust_storage.E[j];
+	    totEn += clust_storage.E[j];
 	  }
 	  weightedtime /= totEn;
 	  
@@ -372,28 +392,32 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  }
 	  
 	  // fill cluster bank for further processing:	
-	  ccalcluster[k].type   = type;
-	  ccalcluster[k].nhits  = dime;
-	  ccalcluster[k].id     = idmax;
-	  ccalcluster[k].E      = e;
-	  ccalcluster[k].time   = weightedtime;
-	  ccalcluster[k].x      = x;
-	  ccalcluster[k].y      = y;
-	  ccalcluster[k].chi2   = chi2;
-	  ccalcluster[k].x1     = x1;
-	  ccalcluster[k].y1     = y1;
-	  ccalcluster[k].emax   = ecellmax;
-	  ccalcluster[k].status = status;
+	  clust.type   = type;
+	  clust.nhits  = dime;
+	  clust.id     = idmax;
+	  clust.E      = e;
+	  clust.time   = weightedtime;
+	  clust.x      = x;
+	  clust.y      = y;
+	  clust.chi2   = chi2;
+	  clust.x1     = x1;
+	  clust.y1     = y1;
+	  clust.emax   = ecellmax;
+	  clust.status = status;
+	  
+	  cluster_storage.push_back(clust_storage);
+	  ccalcluster.push_back(clust);
 	
 	}
 
-	// Release the lock	
+	// Release the lock
 	// japp->Unlock("CCALShower_factory");
-	pthread_mutex_unlock(&mutex);
+	//pthread_mutex_unlock(&mutex);
+	lck.unlock();
 
+	if(n_h_clusters == 0) return NOERROR;
 	final_cluster_processing(ccalcluster, cluster_storage, n_h_clusters); 
 	
-
 	for(int k = 0; k < n_h_clusters; ++k) {
 	
 	  // Build hit object
@@ -417,11 +441,12 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  for(int icell=0; icell<ccalcluster[k].nhits; icell++) {
 	    shower->id_storage[icell] = cluster_storage[k].id[icell];
 	    shower->en_storage[icell] = cluster_storage[k].E[icell];
+	    shower->t_storage[icell] = cluster_storage[k].t[icell];
 	    
 	   // if(cluster_storage[k].E[icell] > 0.)  {   // maybe redundant if-statement???
   	   // 	shower->AddAssociatedObject(ccalhits[ cluster_storage[k].id[icell] ]);
 	   //	}
-	  }	
+	  }
 
 	  _data.push_back( shower );
 	}
@@ -435,42 +460,34 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 //----------------------------
 //   final_cluster_processing
 //----------------------------
-void DCCALShower_factory::final_cluster_processing(ccalcluster_t ccalcluster[MAX_CLUSTERS], cluster_t cluster_storage[MAX_CLUSTERS], int n_h_clusters) {
+void DCCALShower_factory::final_cluster_processing( vector< ccalcluster_t > ccalcluster, vector< cluster_t > cluster_storage, int n_h_clusters ) {
 
 
 	//--------------------------
 	// discard bad clusters:
-	
-	int ifdiscarded;
-	do {
-	  ifdiscarded = 0;
-	  for(int i = 0; i < n_h_clusters; ++i) {
-	    if(ccalcluster[i].status == -1 || \
+	/*
+	for(int i = 0; i < n_h_clusters; ++i) {
+	  if(ccalcluster[i].status == -1 || \
 		ccalcluster[i].E       < MIN_CLUSTER_ENERGY || \
           	ccalcluster[i].E       > MAX_CLUSTER_ENERGY || \
           	ccalcluster[i].nhits   < MIN_CLUSTER_BLOCK_COUNT || \
           	ccalcluster[i].emax    < MIN_CLUSTER_SEED_ENERGY) {
-		
-	      n_h_clusters -= 1;
-	      int nrest = n_h_clusters - i;
-	      if(nrest) {
-	        memmove((&ccalcluster[0]+i),(&ccalcluster[0]+i+1),nrest*sizeof(ccalcluster_t));
-		memmove((&cluster_storage[0]+i), (&cluster_storage[0]+i+1), nrest*sizeof(cluster_t));
-		ifdiscarded = 1;
-	      }
-	    }
-	}} while(ifdiscarded);
+	
+	    ccalcluster.erase(ccalcluster.begin()+i);
+	    cluster_storage.erase(cluster_storage.begin()+i);
+	    n_h_clusters -= 1;
+	  }
+	}
+	*/
 
-
-
-	//  final cluster processing (add status and energy resolution sigma_E):
+	//--------------------------
+	// final cluster processing (add status and energy resolution sigma_E):
 
     	for(int i = 0; i < n_h_clusters; ++i)  {
       	  float e   = ccalcluster[i].E;
-      	  int idmax = ccalcluster[i].id;
-
-      	  float x   = ccalcluster[i].x1;
-      	  float y   = ccalcluster[i].y1;
+      	  //int idmax = ccalcluster[i].id;
+      	  //float x   = ccalcluster[i].x1;
+      	  //float y   = ccalcluster[i].y1;
 
           // coord_align(i, e, idmax);
       	  int status = ccalcluster[i].status;
@@ -510,6 +527,22 @@ void DCCALShower_factory::final_cluster_processing(ccalcluster_t ccalcluster[MAX
 	return;
 
 }
+
+
+//------------------------
+// IsIDinVec
+//------------------------
+int IsIDinVec( vector< const DCCALHit* > hitarray, int id12 ) {
+
+	int findVal = -1;
+	for(int ii = 0; ii < (int)hitarray.size(); ii++) {
+	  int id = 12*(hitarray[ii]->row) + hitarray[ii]->column;
+	  if(id == id12) { findVal = ii; break; }
+	}
+
+	return findVal;
+}
+
 
 
 //------------------------

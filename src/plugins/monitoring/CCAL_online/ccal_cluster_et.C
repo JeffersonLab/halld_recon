@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/clusN
-// hnamepath:  /ccal/clusE
-// hnamepath:  /ccal/clusT0
-// hnamepath:  /ccal/clusTmT0
+// hnamepath: /ccal/clusN
+// hnamepath: /ccal/clusE
+// hnamepath: /ccal/clusETot
+// hnamepath: /ccal/clusT
 
 {
 
@@ -55,7 +55,7 @@
 
     clusT->SetStats( 0 );
     clusT->SetFillColor( kBlue );
-    clusT->GetXaxis()->SetRangeUser(0,300);
+    clusT->GetXaxis()->SetRangeUser(-100,300);
     c1->cd( 3 );
     clusT->Draw();
   }

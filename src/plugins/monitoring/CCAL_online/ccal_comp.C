@@ -1,7 +1,7 @@
-// hnamepath:  /ccal/clusN
-// hnamepath:  /ccal/clusE
-// hnamepath:  /ccal/clusT0
-// hnamepath:  /ccal/clusTmT0
+// hnamepath: /ccal/comp_cratio
+// hnamepath: /ccal/comp_cfbratio
+// hnamepath: /ccal/comp_cfb2d
+// hnamepath: /ccal/comp_pfpc
 
 {
 
@@ -28,7 +28,7 @@
   if( comp_cratio ){
 
     comp_cratio->SetStats( 0 );
-    //comp_cratio->SetFillColor( kBlue );
+    comp_cratio->SetFillColor( kGray );
     comp_cratio->GetXaxis()->SetTitle("E_{ccal} / E_{comp}");
     comp_cratio->GetXaxis()->SetTitleOffset(1.3);
     TPad *p1 = (TPad*)c1->cd( 1 );
@@ -40,7 +40,7 @@
   if( comp_cfbratio ){
 
     comp_cfbratio->SetStats( 0 );
-    //comp_cfbratio->SetFillColor( kBlue );
+    comp_cfbratio->SetFillColor( kGray );
     comp_cfbratio->GetXaxis()->SetTitle("(E_{ccal}+E_{fcal}-E_{beam}) / E_{comp}");
     comp_cfbratio->GetXaxis()->SetTitleOffset(1.3);
     comp_cfbratio->SetTitle("Energy Conservation in Compton Events");

@@ -1,16 +1,16 @@
-// hnamepath:  /ccal/clus2GMass
-// hnamepath:  /ccal/clusPhi
-// hnamepath:  /ccal/clusXYHigh
-// hnamepath:  /ccal/clusXYLow
+// hnamepath: /ccal/clus2GMass
+// hnamepath: /ccal/clusPhi
+// hnamepath: /ccal/clusXYHigh
+// hnamepath: /ccal/clusXYLow
 
 {
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("ccal");
   if(dir) dir->cd();
 
-  TH1I* clus2GMass = (TH1I*)gDirectory->FindObjectAny( "clus2GMass" );
-  TH1I* clusPhi    = (TH1I*)gDirectory->FindObjectAny( "clusPhi" );
-  TH1I* clusXYHigh = (TH1I*)gDirectory->FindObjectAny( "clusXYHigh" );
-  TH1I* clusXYLow  = (TH1I*)gDirectory->FindObjectAny( "clusXYLow" );
+  TH1I* clus2GMass  = (TH1I*)gDirectory->FindObjectAny( "clus2GMass" );
+  TH1I* clusPhi     = (TH1I*)gDirectory->FindObjectAny( "clusPhi" );
+  TH1I* clusXYHigh  = (TH1I*)gDirectory->FindObjectAny( "clusXYHigh" );
+  TH1I* clusOccEmax = (TH1I*)gDirectory->FindObjectAny( "clusOccEmax" );
  
   if(gPad == NULL){
 
@@ -44,22 +44,21 @@
     clusPhi->Draw();
   }
 
-  if( clusXYLow ){
-
-    clusXYLow->SetStats( 0 );
-    TPad *p3 = (TPad*)c1->cd( 3 );
-    p3->SetLogz();
-    //c1->cd( 3 );
-    clusXYLow->Draw( "colz" );
-  }
-
   if( clusXYHigh ){
 
     clusXYHigh->SetStats( 0 );
-    TPad *p4 = (TPad*)c1->cd( 4 );
-    p4->SetLogz();
-    c1->cd( 4 );
+    TPad *p3 = (TPad*)c1->cd( 3 );
+    p3->SetLogz();
+    //c1->cd( 3 );
     clusXYHigh->Draw( "colz" );
+  }
+
+  if( clusOccEmax ){
+
+    clusOccEmax->SetStats( 0 );
+    clusOccEmax->SetTitle("CCAL Occup. for (E_{max} > 3 GeV) & (E_{cluster}-E_{max} < 1 GeV)");
+    c1->cd( 4 );
+    clusOccEmax->Draw( "colz" );
   }
 
 }
