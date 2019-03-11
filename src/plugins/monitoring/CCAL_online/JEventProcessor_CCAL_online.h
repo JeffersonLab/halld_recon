@@ -53,6 +53,7 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor{
   TH1I *hdigPed;
   TProfile *hdigPedChan;
   TH2F *hdigPed2D;
+  TH2F *hdigPedSq2D;
   TH2I *hdigIntVsPeak;
   TH1I *hdigQF;
   

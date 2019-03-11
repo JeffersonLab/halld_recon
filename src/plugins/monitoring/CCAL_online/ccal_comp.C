@@ -2,6 +2,8 @@
 // hnamepath: /ccal/comp_cfbratio
 // hnamepath: /ccal/comp_cfb2d
 // hnamepath: /ccal/comp_pfpc
+// hnamepath: /ccal/comp_cratio_bkgd
+// hnamepath: /ccal/comp_cfbratio_bkgd
 
 {
 
@@ -12,6 +14,8 @@
   TH1I* comp_cfbratio = (TH1I*)gDirectory->FindObjectAny( "comp_cfbratio" );
   TH1I* comp_cfb2d    = (TH1I*)gDirectory->FindObjectAny( "comp_cfb2d" );
   TH1I* comp_pfpc     = (TH1I*)gDirectory->FindObjectAny( "comp_pfpc" );
+  //TH1I* comp_cratio_bkgd   = (TH1I*)gDirectory->FindObjectAny( "comp_cratio_bkgd" );
+  //TH1I* comp_cfbratio_bkgd = (TH1I*)gDirectory->FindObjectAny( "comp_cfbratio_bkgd" );
  
   if(gPad == NULL){
 
@@ -31,10 +35,16 @@
     comp_cratio->SetFillColor( kGray );
     comp_cratio->GetXaxis()->SetTitle("E_{ccal} / E_{comp}");
     comp_cratio->GetXaxis()->SetTitleOffset(1.3);
+    
+    //comp_cratio_bkgd->SetStats( 0 );
+    //comp_cratio_bkgd->SetLineColor( kRed );
+    //comp_cratio_bkgd->Scale(0.25);
+
     TPad *p1 = (TPad*)c1->cd( 1 );
     p1->SetGrid();
     //c1->cd( 1 );
     comp_cratio->Draw();
+    //comp_cratio_bkgd->Draw( "same hist" );
   }
   
   if( comp_cfbratio ){
@@ -44,10 +54,16 @@
     comp_cfbratio->GetXaxis()->SetTitle("(E_{ccal}+E_{fcal}-E_{beam}) / E_{comp}");
     comp_cfbratio->GetXaxis()->SetTitleOffset(1.3);
     comp_cfbratio->SetTitle("Energy Conservation in Compton Events");
+
+    //comp_cfbratio_bkgd->SetStats( 0 );
+    //comp_cfbratio_bkgd->SetLineColor( kRed );
+    //comp_cfbratio_bkgd->Scale(0.25);
+
     TPad *p2 = (TPad*)c1->cd( 3 );
     p2->SetGrid();
     //c1->cd( 2 );
     comp_cfbratio->Draw();
+    //comp_cfbratio_bkgd->Draw("same hist");
   }
   
   if( comp_pfpc ){
