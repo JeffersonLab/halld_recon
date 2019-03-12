@@ -345,6 +345,17 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
       if (DEBUG_LEVEL>0) _DBG_ << "Attempting FDC/CDC matching method #1..." <<endl; 
 
+      // Check that the z-position at the doca to the beam line is within the 
+      // active volume of the detector to prevent connecting low momentum 
+      // curlers coming off the cdc endplate at a small angle with CDC
+      // candidates
+      if (CheckZPosition(fdccan)==false){
+	// mark to avoid trying to match to CDC with the alternate 
+	// matching algorithms below
+	forward_matches[i]=-1;
+	continue;
+      }
+
       // First try the matching method that projects the cdc candidate to the
       // cdc endplate where the fdc candidates are reported.
       if (MatchMethod1(fdccan,cdc_forward_ids,cdc_endplate_projections,
@@ -579,7 +590,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (num_fdc_cands_remaining>1){ 
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
       if (num_fdc_cands_remaining<1) break;
-      if (forward_matches[j]==0){
+      if (forward_matches[j]<=0){
 	// Try to match to fdc candidates that have not already been matched
 	// to another track
 	if (MatchMethod4(fdctrackcandidates[j],forward_matches,num_fdc_cands_remaining)==true){
@@ -594,7 +605,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // segment associated with them.
   if (num_fdc_cands_remaining>0){ 
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
-      if (forward_matches[j]==0){
+      if (forward_matches[j]<=0){
 	const DTrackCandidate *fdccan = fdctrackcandidates[j];
 	
 	// Get the segment data
@@ -634,7 +645,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (num_fdc_cands_remaining>0){
     vector<int>candidate_updated(trackcandidates.size());
     for (unsigned int i=0;i<trackcandidates.size();i++){
-      if (num_fdc_cands_remaining==0) break;
+      if (num_fdc_cands_remaining<=0) break;
       
       DTrackCandidate *can=trackcandidates[i];      
       if (MatchMethod7(can,forward_matches,num_fdc_cands_remaining)==false){
@@ -684,7 +695,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Not much we can do here -- add to the final list of candidates
       for (unsigned int j=0;j<forward_matches.size();j++){
 	if (num_fdc_cands_remaining==0) break;
-	if (forward_matches[j]==0){
+	if (forward_matches[j]<=0){
 	  const DTrackCandidate *srccan=fdctrackcandidates[j];
 	  // Get the segment data
 	  vector<const DFDCSegment *>segments;
@@ -1133,7 +1144,7 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
     // The following code snippet is intended to prevent matching a cdc
     // track candidate to a low momentum particle curling from the cdc endplate
     if (segments.size()>1){
-      double theta=180./M_PI*mom.Theta();
+      double theta=180./M_PI*mom.Theta();	
       if (p_fdc<0.3 && theta<5.) return false;
     }
 
@@ -3247,4 +3258,26 @@ void DTrackCandidate_factory::UpdatePositionAndMomentum(DHelicalFit &fit,
   if (pos.z()<0){ 
     GetPositionAndMomentum(0.,fit,Bz,pos,mom);
   }
+}
+
+// Returns false if the z position at the doca to the beam line is less than 0
+bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan) 
+  const{
+  double phi0=atan2(-fdccan->xc,fdccan->yc);  
+  double q=fdccan->charge();
+  if (FactorForSenseOfRotation*q<0) phi0+=M_PI;
+  double sinphi0=sin(phi0);
+  double sign=(sinphi0>0)?1.:-1.;
+  if (fabs(sinphi0)<1e-8) sinphi0=sign*1e-8;    
+  double D=q*fdccan->rc-fdccan->xc/sinphi0;
+  double x=-D*sinphi0;
+  double y=D*cos(phi0);
+  DVector3 pos=fdccan->position();
+  double dx=pos.x()-x;
+  double dy=pos.y()-y;
+  double ratio=sqrt(dx*dx+dy*dy)/(2.*fdccan->rc);
+  double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
+  double newz=pos.z()-phi_s*tan(M_PI_2-fdccan->momentum().Theta())*fdccan->rc;
+
+  return (newz>0);
 }
