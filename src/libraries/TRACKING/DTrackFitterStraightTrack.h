@@ -53,6 +53,8 @@ trajectory_t(double z,double t,DMatrix4x1 S,DMatrix4x4 J,DMatrix4x1 Skk,
   // Virtual methods from TrackFitter base class
   string Name(void) const {return string("StraightTrack");}
   fit_status_t FitTrack(void);
+double ChiSq(fit_type_t fit_type, DReferenceTrajectory *rt, double *chisq_ptr=NULL, int *dof_ptr=NULL, vector<pull_t> *pulls_ptr=NULL){return 0.;};
+
 
 unsigned int Locate(const vector<double>&xx,double x) const;
 double CDCDriftVariance(double t) const;
