@@ -17,6 +17,7 @@
 #include "DTrackFitter_factory.h"
 #include "DTrackFitter_factory_ALT1.h"
 #include "DTrackFitter_factory_Riemann.h"
+#include "DTrackFitter_factory_StraightTrack.h"
 #include "DTrackHitSelector_factory.h"
 #include "DTrackHitSelector_factory_ALT1.h"
 #include "DTrackHitSelector_factory_ALT2.h"
@@ -56,6 +57,7 @@ jerror_t TRACKING_init(JEventLoop *loop)
    loop->AddFactory(new DTrackHitSelector_factory_THROWN());
    loop->AddFactory(new DTrackFitter_factory_KalmanSIMD());   
    loop->AddFactory(new DTrackFitter_factory_KalmanSIMD_ALT1());
+   loop->AddFactory(new DTrackFitter_factory_StraightTrack());
 
    return NOERROR;
 }
