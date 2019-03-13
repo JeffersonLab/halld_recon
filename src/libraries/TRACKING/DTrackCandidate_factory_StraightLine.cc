@@ -324,60 +324,51 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 
          // Get the list of linked segments and fit the hits to lines
          const vector<DTrackFinder::cdc_track_t>tracks=finder->GetCDCTracks();
-         if (VERBOSE > 0) jout << "Looping over " << tracks.size() << " CDC tracks..." << endl;
+         if (VERBOSE > 0) jout << "Creating " << tracks.size() << " CDC track cndidates..." << endl;
          for (size_t i=0;i<tracks.size();i++){
+	   // Create new track candidate
+	   DTrackCandidate *cand = new DTrackCandidate;
+	   cand->setPID(PiPlus);
+	   
+	   // Add hits as associated objects
+	   // list of axial and stereo hits for this track
+	   vector<const DCDCTrackHit *>hits=tracks[i].axial_hits;
+	   for (unsigned int k=0;k<hits.size();k++){
+	     cand->AddAssociatedObject(hits[k]);
+	   }
+	   hits=tracks[i].stereo_hits; 
+	   for (unsigned int k=0;k<hits.size();k++){
+	     cand->AddAssociatedObject(hits[k]);
+	   }
 
-            // start z position and direction of propagation (default = +z direction)
-            double z0=tracks[i].z,dzsign=1.;
-            // Shift z0 towars target to limit LR ambiguity issues
-            if(!COSMICS) z0 = z0 - (z0-65.0)/2;
+	   double z=tracks[i].z;
+	   // state vector
+	   DMatrix4x1 S(tracks[i].S);
+	   double tx=tracks[i].S(state_tx),ty=tracks[i].S(state_ty);
+	   double phi=atan2(ty,tx);
+	   double tanl=1./sqrt(tx*tx+ty*ty);
+	   // Check for tracks heading upstream
+	   double phi_diff=phi-hits[0]->wire->origin.Phi()-M_PI;
+	   if (phi_diff<-M_PI) phi_diff+=2.*M_PI;
+	   if (phi_diff> M_PI) phi_diff-=2.*M_PI;
+	   if (fabs(phi_diff)<M_PI_2){
+	     tanl*=-1;
+	     phi+=M_PI;
+	   }
+	   double pt=10.*cos(atan(tanl));    
+	   cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
 
-            // Initial guess for state vector
-            DMatrix4x1 S(tracks[i].S);
-
-            // list of axial and stereo hits for this track
-            vector<const DCDCTrackHit *>hits=tracks[i].axial_hits;
-            hits.insert(hits.end(),tracks[i].stereo_hits.begin(),
-                  tracks[i].stereo_hits.end());
-
-            if (COSMICS){
-               // Step track to front plate.
-               if (VERBOSE) {
-                  jout<< " S before step. z = " << z0 << endl;
-                  S.Print();
-               }
-               S(state_x)-=(z0-(cdc_endplate_z-cdc_length))*S(state_tx);
-               S(state_y)-=(z0-(cdc_endplate_z-cdc_length))*S(state_ty);
-               z0=cdc_endplate_z-cdc_length;
-               if (VERBOSE){
-                  jout << " S after step z = " << z0 << endl;
-               }
-
-               if (S(state_ty) > 0.) sort(hits.begin(),hits.end(),DTrackCandidate_StraightLine_cdc_hit_reverse_cmp);
-               else sort(hits.begin(),hits.end(),DTrackCandidate_StraightLine_cdc_hit_cmp);
-            }
-            else{	
-               DVector3 pos,origin,dir(0,0,1.);
-               finder->FindDoca(z0,S,dir,origin,&pos);
-               S(state_x)=pos.x();
-               S(state_y)=pos.y();
-               if (z0<pos.z()) dzsign=-1.;
-               z0=pos.z();
-
-               sort(hits.begin(),hits.end(),DTrackCandidate_StraightLine_cdc_hit_radius_cmp);
-
-            }
-
-            // Use earliest cdc time to estimate t0
-            double t0=1e6;
-            for (unsigned int j=0;j<hits.size();j++){
-               double L=(hits[0]->wire->origin-hits[j]->wire->origin).Perp();
-               double t_test=hits[j]->tdrift-L/29.98;
-               if (t_test<t0) t0=t_test;
-            }
-
-            // Run the Kalman Filter algorithm
-            DoFilter(t0,z0,S,hits,dzsign);	 
+	   if (COSMICS==false){
+	     DVector3 pos,origin,dir(0,0,1.);
+	     finder->FindDoca(z,tracks[i].S,dir,origin,&pos);
+	     cand->setPosition(pos);
+	   }
+	   else{
+	     cand->setPosition(DVector3(tracks[i].S(state_x),
+					tracks[i].S(state_y),z));
+	   }
+	 
+	   _data.push_back(cand);
          }
       }
    }
@@ -450,6 +441,7 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double OuterZ,
    double z0=OuterZ;
 
    // Perform a wire-based pass
+   //   if (false)
    for(iter=0;iter<20;iter++){
       if (VERBOSE) jout << " Performing Wire Based Pass iter " << iter << endl;
       chi2_old=chi2; 
@@ -477,19 +469,21 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double OuterZ,
       Cbest=C;
       Sbest=S; 
    }
-   if (iter>0){
+   if (iter>0)
+     {
+
       // Perform a time-based pass
-      S=Sbest;
+       S=Sbest;
       chi2=1e16;
       ndof=0;
-
+      //      if (false)
       for (iter=0;iter<20;iter++){
          if (VERBOSE) jout << " Performing Time Based Pass iter " << iter << endl;
          chi2_old=chi2; 
          ndof_old=ndof;
          if (!COSMICS){
             DVector3 pos,origin,dir(0,0,1.);
-            finder->FindDoca(z0,S,dir,origin,&pos);
+	    finder->FindDoca(z0,S,dir,origin,&pos);
             S(state_x)=pos.x();
             S(state_y)=pos.y();
             z0=pos.z();
@@ -499,13 +493,13 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double OuterZ,
                ==NOERROR){
             if (VERBOSE) jout << " Set Reference Trajectory" << endl;
             C=C0;
-            if (KalmanFilter(S,C,hits,used_cdc_hits,trajectory,updates,chi2,ndof,true,iter)!=NOERROR) break;
+	    if (KalmanFilter(S,C,hits,used_cdc_hits,trajectory,updates,chi2,ndof,true,iter)!=NOERROR) break;
             if (VERBOSE) jout << " Fit Succeeded chi2 " << chi2 << " prob " << TMath::Prob(chi2,ndof) << " chi2_old " << chi2_old << " prob " << TMath::Prob(chi2_old,ndof_old) << endl;
 
             //printf("chi2 %f %f\n",chi2_old,chi2);
 
-            if (fabs(chi2-chi2_old)<0.1  
-                  || TMath::Prob(chi2,ndof)<TMath::Prob(chi2_old,ndof_old)) break;
+	    if (fabs(chi2-chi2_old)<0.1  
+	       || TMath::Prob(chi2,ndof)<TMath::Prob(chi2_old,ndof_old)) break;
 
             Sbest=S;
             Cbest=C;
@@ -519,11 +513,12 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double OuterZ,
             break;
          }
       }
-      if (iter>0 && trajectory.size()>1){
+   
+      if (iter>0 && trajectory.size()>1)
+	{
          // Create a new track candidate
          if (VERBOSE) jout << " Method converged on time based iter " << iter << endl;
          DTrackCandidate *cand = new DTrackCandidate;
-
          double sign=1.;
          unsigned int last_index=trajectory.size()-1;
          if (COSMICS==false){
@@ -607,7 +602,7 @@ jerror_t DTrackCandidate_factory_StraightLine
       double dphi=dir.Phi()-last_cdc->wire->origin.Phi(); 
       while (dphi>M_PI) dphi-=2*M_PI;
       while (dphi<-M_PI) dphi+=2*M_PI;
-      if (fabs(dphi) > M_PI/2.) dzsign*=-1.;
+      //if (fabs(dphi) > M_PI/2.) dzsign*=-1.;
    }
    if (fabs(dir.Theta() - M_PI/2.) < 0.2) ds = 0.1;
 
