@@ -3,6 +3,8 @@
 #include "JANA/JEventLoop.h"
 #include "DTrackWireBased_factory.h"
 #include "DTrackTimeBased_factory.h"
+#include "DTrackWireBased_factory_StraightLine.h"
+#include "DTrackTimeBased_factory_StraightLine.h"
 #include "DTrackCandidate_factory.h"
 #include "DTrackCandidate_factory_THROWN.h"
 #include "DTrackCandidate_factory_CDC.h"
@@ -47,7 +49,9 @@ jerror_t TRACKING_init(JEventLoop *loop)
    loop->AddFactory(new JFactory<DMCThrown>());
    loop->AddFactory(new JFactory<DMCTrajectoryPoint>());
    loop->AddFactory(new DTrackWireBased_factory_THROWN());
-   loop->AddFactory(new DTrackTimeBased_factory_THROWN());
+   loop->AddFactory(new DTrackTimeBased_factory_THROWN()); 
+   loop->AddFactory(new DTrackWireBased_factory_StraightLine());
+   loop->AddFactory(new DTrackTimeBased_factory_StraightLine());
    loop->AddFactory(new DTrackFitter_factory());
    loop->AddFactory(new DTrackFitter_factory_ALT1());
    loop->AddFactory(new DTrackFitter_factory_Riemann());
