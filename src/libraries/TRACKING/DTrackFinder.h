@@ -42,22 +42,23 @@ class DTrackFinder:public jana::JObject{
       };
 
       class fdc_segment_t{
-         public:
-            fdc_segment_t(vector<const DFDCPseudo *>&input_hits,bool matched=false){
-               for (unsigned int i=0;i<input_hits.size();i++){
-                  this->hits.push_back(input_hits[i]);
-               }
-               this->S=FindStateVector();
-               this->matched=matched;
-            };
-            ~fdc_segment_t(){};
-
-            DMatrix4x1 FindStateVector(void) const;
-
-            bool matched;
-            DMatrix4x1 S;
-            vector<const DFDCPseudo *>hits;
-
+      public:
+	fdc_segment_t(vector<const DFDCPseudo *>&input_hits,
+		      bool matched=false){
+	  for (unsigned int i=0;i<input_hits.size();i++){
+	    this->hits.push_back(input_hits[i]);
+	  }
+	  this->S=FindStateVector();
+	  this->matched=matched;
+	};
+	~fdc_segment_t(){};
+	
+	DMatrix4x1 FindStateVector(void) const;
+	
+	bool matched;
+	DMatrix4x1 S;
+	vector<const DFDCPseudo *>hits;
+	
       };
 
       class cdc_hit_t{
@@ -96,7 +97,7 @@ class DTrackFinder:public jana::JObject{
             };  
             ~cdc_track_t(){};
 
-            jerror_t FindStateVector(void);
+            jerror_t FindStateVector(bool IsCosmics=false);
 
             vector<const DCDCTrackHit *>axial_hits; 
             vector<const DCDCTrackHit *>stereo_hits;

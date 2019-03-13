@@ -288,7 +288,7 @@ bool DTrackFinder::LinkCDCSegments(void){
          if (VERBOSE) jout << " num_axial num_stereo " << num_axial << " " << num_stereo << endl; 
          if (num_stereo>0 && num_stereo+num_axial>4){
             mytrack.dir=vhat;
-            if (mytrack.FindStateVector()==NOERROR){
+            if (mytrack.FindStateVector(COSMICS)==NOERROR){
                cdc_tracks.push_back(mytrack);
             }
          }
@@ -336,14 +336,14 @@ bool DTrackFinder::MatchCDCStereoHit(const DVector3 &tdir,const DVector3 &t0,
 // Compute initial guess for state vector (x,y,tx,ty) for a track in the CDC
 // by fitting a line to the intersections between the line in the xy plane and 
 // the stereo wires.
-jerror_t DTrackFinder::cdc_track_t::FindStateVector(void){  
+jerror_t DTrackFinder::cdc_track_t::FindStateVector(bool IsCosmics){  
    // Parameters for line in x-y plane
    double vx=this->dir.x();
    double vy=this->dir.y();
    DVector3 pos0=this->axial_hits[0]->wire->origin;
    double xa=pos0.x();
    double ya=pos0.y();
-
+ 
    double sumv=0,sumx=0,sumy=0,sumz=0,sumxx=0,sumyy=0,sumxz=0,sumyz=0;
    for (unsigned int i=0;i<this->stereo_hits.size();i++){
       // Intersection of line in xy-plane with this stereo straw
@@ -368,6 +368,10 @@ jerror_t DTrackFinder::cdc_track_t::FindStateVector(void){
          sumxz+=x*z;
          sumyz+=y*z;
       }
+   }
+   if (IsCosmics==false){  // Encourage track to come from target region
+     sumz+=65.;
+     sumv+=1.;
    }
    const double EPS=1e-4;
    double xdenom=sumv*sumxz-sumx*sumz;
