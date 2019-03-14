@@ -179,6 +179,7 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
    loop->Get(fitters);
+   
    if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
       return RESOURCE_UNAVAILABLE;

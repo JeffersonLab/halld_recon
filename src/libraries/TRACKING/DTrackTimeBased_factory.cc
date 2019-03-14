@@ -164,6 +164,17 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Check for magnetic field
   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
 
+  if(dIsNoFieldFlag){
+    //Setting this flag makes it so that JANA does not delete the objects in 
+    //_data.  This factory will manage this memory.
+    //This is all of these pointers are just copied from the "StraightLine" 
+    //factory, and should not be re-deleted.
+    SetFactoryFlag(NOT_OBJECT_OWNER);
+  }
+  else{
+    ClearFactoryFlag(NOT_OBJECT_OWNER); //This factory will create it's own obje
+  }
+
   // Get pointer to TrackFitter object that actually fits a track
   vector<const DTrackFitter *> fitters;
   loop->Get(fitters);
@@ -235,60 +246,24 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   myevt=eventnumber;
   if(!fitter)return NOERROR;
 
+  if(dIsNoFieldFlag){
+    //Clear previous objects: 
+    //JANA doesn't do it because NOT_OBJECT_OWNER was set
+    //It DID delete them though, in the "StraightLine" factory
+    _data.clear();
+     
+    vector<const DTrackTimeBased*> locTimeBasedTracks;
+    loop->Get(locTimeBasedTracks, "StraightLine");
+    for(size_t loc_i = 0; loc_i < locTimeBasedTracks.size(); ++loc_i)
+      _data.push_back(const_cast<DTrackTimeBased*>(locTimeBasedTracks[loc_i]));
+    return NOERROR;
+  }
+
   // Get candidates and hits
   vector<const DTrackWireBased*> tracks;
   loop->Get(tracks);
   if (tracks.size()==0) return NOERROR;
-
-  if (dIsNoFieldFlag){
-    // Copy wire-based results 
-    for (unsigned int i=0;i<tracks.size();i++){
-      const DTrackWireBased *track = tracks[i];
-
-      // Copy over the results of the wire-based fit to DTrackTimeBased
-      DTrackTimeBased *timebased_track = new DTrackTimeBased(); //share the memory (isn't changed below)
-      *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(track);
-
-      timebased_track->chisq = track->chisq;
-      timebased_track->Ndof = track->Ndof;
-      timebased_track->FOM =  TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
-      timebased_track->pulls = track->pulls;
-      timebased_track->extrapolations = track->extrapolations;
-      timebased_track->trackid = track->id;
-      timebased_track->candidateid=track->candidateid;
-      timebased_track->IsSmoothed = track->IsSmoothed;
-      timebased_track->flags=DTrackTimeBased::FLAG__USED_WIREBASED_FIT;
-
-      // Lists of hits used in the previous pass
-      vector<const DCDCTrackHit *>cdchits;
-      track->GetT(cdchits);
-      vector<const DFDCPseudo *>fdchits;
-      track->GetT(fdchits);
-      
-      for (unsigned int k=0;k<cdchits.size();k++){
-	timebased_track->AddAssociatedObject(cdchits[k]);
-      }
-      for (unsigned int k=0;k<fdchits.size();k++){
-	timebased_track->AddAssociatedObject(fdchits[k]);
-      }
- 	  timebased_track->measured_cdc_hits_on_track = cdchits.size();
- 	  timebased_track->measured_fdc_hits_on_track = fdchits.size();
-
-      timebased_track->AddAssociatedObject(track);
-      timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(cdchits);
-      timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(fdchits);
-
-	  // TODO: figure out the potential hits on straight line tracks
- 	  timebased_track->potential_cdc_hits_on_track = 0;
- 	  timebased_track->potential_fdc_hits_on_track = 0;
-
-      _data.push_back(timebased_track);
-
-    }
-    return NOERROR;
-  }
-
-  
+ 
   // get start counter hits
   vector<const DSCHit*>sc_hits;
   if (USE_SC_TIME){

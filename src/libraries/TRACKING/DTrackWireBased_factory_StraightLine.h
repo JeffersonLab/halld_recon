@@ -11,6 +11,7 @@
 #include <JANA/JFactory.h>
 #include "DTrackWireBased.h"
 #include <TRACKING/DTrackFitter.h>
+#include <TRACKING/DTrackFinder.h>
 #include <TRACKING/DTrackCandidate.h>
 #include <PID/DParticleID.h>
 
@@ -26,6 +27,8 @@ class DTrackWireBased_factory_StraightLine:public jana::JFactory<DTrackWireBased
   jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+  double CDC_MATCH_CUT, FDC_MATCH_CUT;
 	
   // outer detector geom info
   double dFCALz,dTOFz,dDIRCz;
@@ -37,6 +40,8 @@ class DTrackWireBased_factory_StraightLine:public jana::JFactory<DTrackWireBased
   double SC_BARREL_R,SC_END_NOSE_Z,SC_PHI_SECTOR1;
   
   const DParticleID* dPIDAlgorithm;
+  DTrackFitter *fitter;
+  DTrackFinder *finder;
   
 };
 

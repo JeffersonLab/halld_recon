@@ -11,6 +11,7 @@
 #include <JANA/jerror.h>
 
 #include <TRACKING/DTrackFitter.h>
+
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h> 
 #include <DMatrixSIMD.h>
@@ -63,11 +64,14 @@ double CDCDriftDistance(double dphi,double delta,double t) const;
 			 const DCDCTrackHit *last_cdc,double &dzsign);
   jerror_t KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,vector<int>&used_hits,
 			vector<cdc_update_t>&updates,double &chi2,
-			unsigned int &ndof,unsigned int iter);
+			int &ndof,unsigned int iter);
   jerror_t Smooth(vector<cdc_update_t>&cdc_updates);
+  void FitCentralTrack(double z0,double t0,double dzsign,DMatrix4x1 &Sbest,
+		       DMatrix4x4 &Cbest,double &chi2_best,int &ndof_best);
 	
  private:
   deque<trajectory_t>trajectory;
+  deque<trajectory_t>best_trajectory;
 
 bool COSMICS,DO_PRUNING;
 int VERBOSE;
@@ -89,10 +93,9 @@ vector<vector<double> >sag_phi_offset;
 double long_drift_func[3][3];
 double short_drift_func[3][3];
 
-double cdc_endplate_z, cdc_endplate_rmin, cdc_endplate_rmax,cdc_length;
+ double downstreamEndplate,upstreamEndplate,cdc_endplate_rmin,cdc_endplate_rmax;
 	
 shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
-
 
 };
 
