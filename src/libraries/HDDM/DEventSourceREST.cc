@@ -1181,12 +1181,11 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 		old_track_indexes.clear();
 		for( unsigned int i=0; i<data.size(); i++ ) {
 		  if(find(indices_to_erase.begin(), indices_to_erase.end(), i) != indices_to_erase.end()){
-		    data[i]->Release();
 		    delete data[i];
 		    continue;
 		  }
 		  old_track_indexes.push_back(i);
-			new_data.push_back(data[i]);
+		  new_data.push_back(data[i]);
 		}
 
 		data.assign(new_data.begin(),new_data.end());   // replace the set of tracks with the pruned one
