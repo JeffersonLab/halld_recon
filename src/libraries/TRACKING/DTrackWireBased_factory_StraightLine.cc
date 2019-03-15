@@ -138,16 +138,18 @@ jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
        // candidate id
        track->candidateid=i+1;
 
-       /*
-	 for (unsigned int k=0;k<cdchits.size();k++){
-       track->AddAssociatedObject(cdchits[k]);
+       // Add hits used as associated objects
+       vector<const DCDCTrackHit*> cdchits = fitter->GetCDCFitHits();
+       vector<const DFDCPseudo*> fdchits = fitter->GetFDCFitHits();
+
+       for (unsigned int k=0;k<cdchits.size();k++){
+	 track->AddAssociatedObject(cdchits[k]);
        }
        for (unsigned int k=0;k<fdchits.size();k++){
-       track->AddAssociatedObject(fdchits[k]);
+	 track->AddAssociatedObject(fdchits[k]);
        }
        track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits);
        track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits);
-       */
 
        // Create the extrapolation vectors
        vector<DTrackFitter::Extrapolation_t>myvector;
