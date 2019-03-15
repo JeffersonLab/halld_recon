@@ -869,31 +869,27 @@ bool DKinFitter::Calc_dS(void)
 	
 	TDecompLU locDecompLU_S(dS);
 	//debugging step: lowering Tol by iterations to pass.
-	if( locDecompLU_S.Decompose() && (fabs(dS.Determinant())==0)  )
+	if( locDecompLU_S.Decompose() && fabs(dS.Determinant()==0.0) )
 	{
-		        if(dDebugLevel > 30) cout << "trying to lower Tol"<< endl;
-			TVectorD b_S(dS.GetNrows());
-        		for(Int_t index_b = 0; index_b < dS.GetNrows(); index_b ++)
-			{ 
-				b_S(index_b) = 10.0;
-        		}
-			Bool_t ok;
-        		TVectorD x_S = locDecompLU_S.Solve(b_S,ok);
+	    if(dDebugLevel > 10) cout << "trying to lower Tol"<< endl;
+		TMatrixD matrixLU_dS = locDecompLU_S.GetLU();
 
-        		Int_t nr = 0;
-			while (!ok)
-			{
-				locDecompLU_S.SetMatrix(dS);
-				locDecompLU_S.SetTol(0.1*locDecompLU_S.GetTol());
-				if (nr++ > 10)
-				{
-					break;
-					if(dDebugLevel > 30) cout << "nr =" << nr << "max num of iterations exceeded;" << endl;
-				}
-				if(dDebugLevel > 30) cout<< "--" << nr << "-th attempt --" << endl;
-				x_S = locDecompLU_S.Solve(b_S,ok);
-			}
-			if(x_S.IsValid()) dS.SetTol(locDecompLU_S.GetTol());
+		//Search for smallest diagonal term in matrixLU_dS
+	    Double_t minDiagElement = fabs(matrixLU_dS(0,0));
+	    for(int i=1;i<matrixLU_dS.GetNrows();i++)
+		    {
+		      if(fabs(matrixLU_dS(i,i))<minDiagElement) 
+		      {
+		      	minDiagElement = fabs(matrixLU_dS(i,i));
+		      }
+		    }
+		//Set the new tolerance
+	    if(dS.GetTol()>minDiagElement && minDiagElement>1.0E-26)
+	    {
+	      dS.SetTol(minDiagElement/2);
+	      if(dDebugLevel > 10) cout << "New Tol is set at " << minDiagElement/2 << endl;
+	    }
+
 	}
 	
 	//check to make sure that the matrix is decomposable and has a non-zero determinant
