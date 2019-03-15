@@ -757,7 +757,8 @@ jerror_t DTrackFitterStraightTrack::SetReferenceTrajectory(double t0,double z,
 
 // Routine for steering the fit of the track
 DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
-  if (cdchits.size()+fdchits.size() < 4) return DTrackFitter::kFitNotDone;
+  DTrackFitter::fit_status_t status=DTrackFitter::kFitNotDone;
+  if (cdchits.size()+fdchits.size() < 4) return status;
 
   // Initial guess for state vector
   DVector3 input_pos=input_params.position();
@@ -791,36 +792,51 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   if (fdchits.size()>0){
     // Sort FDC hits by z
     stable_sort(fdchits.begin(),fdchits.end(),DTrackFitterStraightTrack_fdc_hit_cmp);
-
+    status=FitForwardTrack(t0,z,S,C,chisq,Ndof);
   }
   else if (cdchits.size()>0){
     for (unsigned int i=0;i<cdchits.size();i++) cout << cdchits[i]->wire->ring << endl;
 
     double dzsign=(pz>0)?1.:-1.;
-    FitCentralTrack(z,t0,dzsign,S,C,chisq,Ndof);
+    status=FitCentralTrack(z,t0,dzsign,S,C,chisq,Ndof);
   }
 
-  // Output fit results
-  DVector3 pos(S(state_x),S(state_y),z);
-  double tx=S(state_tx),ty=S(state_ty);
-  double denom=sqrt(1.+tx*tx+ty*ty);
-  DVector3 mom(tx/denom,ty/denom,1./denom);
-  
-  fit_params.setPosition(pos);
-  fit_params.setMomentum(mom);
-  /*
-  auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-  locTrackingCovarianceMatrix->ResizeTo(5, 5); 
-  locTrackingCovarianceMatrix->Zero();
-  for(unsigned int loc_i = 0; loc_i < 4; ++loc_i){
-    for(unsigned int loc_j = 0; loc_j < 4; ++loc_j){
-      (*locTrackingCovarianceMatrix)(loc_i, loc_j) = C(loc_i, loc_j);
+  if (status==DTrackFitter::kFitSuccess){
+    // Output fit results
+    DVector3 pos(S(state_x),S(state_y),z);
+    double tx=S(state_tx),ty=S(state_ty);
+    double phi=atan2(ty,tx);
+    double tanl=1./sqrt(tx*tx+ty*ty);
+    // Check for tracks heading upstream
+    if (cdchits_used_in_fit.size()>0){
+      double phi_diff=phi-cdchits_used_in_fit[0]->wire->origin.Phi()-M_PI;
+      if (phi_diff<-M_PI) phi_diff+=2.*M_PI;
+      if (phi_diff> M_PI) phi_diff-=2.*M_PI;
+      if (fabs(phi_diff)<M_PI_2){
+	tanl*=-1;
+	phi+=M_PI;
+      }
     }
+    double pt=cos(atan(tanl)); //only direction is known...    
+    DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
+    
+    fit_params.setPosition(pos);
+    fit_params.setMomentum(mom);
+    /*
+      auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+      locTrackingCovarianceMatrix->ResizeTo(5, 5); 
+      locTrackingCovarianceMatrix->Zero();
+      for(unsigned int loc_i = 0; loc_i < 4; ++loc_i){
+      for(unsigned int loc_j = 0; loc_j < 4; ++loc_j){
+      (*locTrackingCovarianceMatrix)(loc_i, loc_j) = C(loc_i, loc_j);
+      }
+      }
+      (*locTrackingCovarianceMatrix)(4,4)=1.;
+      fit_params.setTrackingErrorMatrix(locTrackingCovarianceMatrix);
+    */
   }
-  (*locTrackingCovarianceMatrix)(4,4)=1.;
-  fit_params.setTrackingErrorMatrix(locTrackingCovarianceMatrix);
-  */
-  return kFitSuccess;
+
+  return status;
 }
 
 // Locate a position in vector xx given x
@@ -843,7 +859,7 @@ unsigned int DTrackFitterStraightTrack::Locate(const vector<double>&xx,double x)
 }
 
 // Steering routine for fitting CDC-only tracks
-void DTrackFitterStraightTrack::FitCentralTrack(double z0,double t0,
+DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitCentralTrack(double z0,double t0,
 						double dzsign,
 						DMatrix4x1 &Sbest,
 						DMatrix4x4 &Cbest,
@@ -871,7 +887,8 @@ void DTrackFitterStraightTrack::FitCentralTrack(double z0,double t0,
   best_trajectory.clear();
   
   // Perform the fit
-  for(int iter=0;iter<20;iter++){
+  int iter=0;
+  for(iter=0;iter<20;iter++){
     if (VERBOSE) jout << " Performing Pass iter " << iter << endl;
        
     trajectory.clear();
@@ -896,19 +913,32 @@ void DTrackFitterStraightTrack::FitCentralTrack(double z0,double t0,
     chi2_best=chi2; 
     ndof_best=ndof;
   }
+  if (iter==0) return DTrackFitter::kFitFailed;
+
   //Final z position (closest to beam line)
   z0=best_trajectory[best_trajectory.size()-1].z;
 
   //Run the smoother 
   if (Smooth(best_updates) == NOERROR) IsSmoothed=true;
 
+  // output list of cdc hits used in the fit
+  cdchits_used_in_fit.clear();
+  for (unsigned int m=0;m<used_cdc_hits_best_fit.size();m++){
+    if (used_cdc_hits_best_fit[m]){
+      cdchits_used_in_fit.push_back(cdchits[m]);
+    }
+  }
+
+  return DTrackFitter::kFitSuccess;
 }
 
 
-/*
+//----------------------------------------------------
+// FDC fitting routines
+//----------------------------------------------------
 
 // parametrization of time-to-distance for FDC
-double DTrackCandidate_factory_StraightLine::fdc_drift_distance(double time){
+double DTrackFitterStraightTrack::fdc_drift_distance(double time) const {
    if (time<0.) return 0.;
    double tsq=time*time;
    double d=DRIFT_FUNC_PARMS[0]*sqrt(time)+DRIFT_FUNC_PARMS[1]*time
@@ -918,7 +948,7 @@ double DTrackCandidate_factory_StraightLine::fdc_drift_distance(double time){
 }
 
 // Crude approximation for the variance in drift distance due to smearing
-double DTrackCandidate_factory_StraightLine::fdc_drift_variance(double t){
+double DTrackFitterStraightTrack::fdc_drift_variance(double t) const{
    //return FDC_ANODE_VARIANCE;
    if (t<5.) t=5.;
    double sigma=DRIFT_RES_PARMS[0]/(t+1.)+DRIFT_RES_PARMS[1]+DRIFT_RES_PARMS[2]*t*t;
@@ -929,66 +959,63 @@ double DTrackCandidate_factory_StraightLine::fdc_drift_variance(double t){
 
 
 // Steering routine for the kalman filter
-jerror_t 
-DTrackCandidate_factory_StraightLine::DoFilter(double t0,double start_z,
-      DMatrix4x1 &S,
-      vector<const DFDCPseudo *>&hits,
-      vector<const DCDCTrackHit *>&cdc_hits,
-      set<unsigned int> &used_cdc_hits){
-   // vectors of indexes to fdc hits used in the fit
-   unsigned int numhits=hits.size();
-   vector<int> used_fdc_hits(numhits);
-   vector<int> used_fdc_hits_best_fit(numhits);
+DTrackFitter::fit_status_t
+DTrackFitterStraightTrack::FitForwardTrack(double t0,double start_z,
+      DMatrix4x1 &Sbest,DMatrix4x4 &Cbest,double &chi2_best,int &ndof_best){
+  // State vector and covariance matrix
+  DMatrix4x1 S(Sbest);
+  DMatrix4x4 C(Cbest),C0(Cbest);
 
-   // Best guess for state vector at the beginning of the trajectory
-   DMatrix4x1 Sbest;
+  // vectors of indexes to fdc hits used in the fit
+  unsigned int numfdchits=fdchits.size();
+  vector<int> used_fdc_hits(numfdchits);
+  vector<int> used_fdc_hits_best_fit(numfdchits);
+  // vectors of indexes to cdc hits used in the fit
+  unsigned int numcdchits=cdchits.size();
+  vector<int> used_cdc_hits(numcdchits);
+  vector<int> used_cdc_hits_best_fit(numcdchits);
 
-   // Use the result from the initial line fit to form a reference trajectory 
-   // for the track. 
-   deque<trajectory_t>trajectory;
-   deque<trajectory_t>best_trajectory;
-
-   // vectors of residual information 
-   vector<fdc_update_t>updates(numhits);
-   vector<fdc_update_t>best_updates(numhits);
-   vector<cdc_update_t>cdc_updates;
-   vector<cdc_update_t>best_cdc_updates;
-
-   vector<const DCDCTrackHit *> matchedCDCHits;
-
-   // Intial guess for covariance matrix
-   DMatrix4x4 C,C0,Cbest;
-   C0(state_x,state_x)=C0(state_y,state_y)=1.;
-   C0(state_tx,state_tx)=C0(state_ty,state_ty)=0.01;
-
-   // Chi-squared and degrees of freedom
-   double chi2=1e16,chi2_old=1e16;
-   unsigned int ndof=0,ndof_old=0;
-   unsigned iter=0;
-   // First pass
-   for(iter=0;iter<20;iter++){
-      chi2_old=chi2; 
-      ndof_old=ndof;
-
-      trajectory.clear();
-      if (SetReferenceTrajectory(t0,start_z,S,trajectory,hits)!=NOERROR) break;
-
-      C=C0;
-      if (KalmanFilter(S,C,hits,used_fdc_hits,matchedCDCHits,trajectory,updates,cdc_updates,chi2,ndof
-               )!=NOERROR) break;
-
-      // printf(" == iter %d =====chi2 %f ndof %d \n",iter,chi2,ndof);
-      if (chi2>chi2_old || fabs(chi2_old-chi2)<0.1) break;  
-
-      // Save the current state and covariance matrixes
-      Cbest=C;
-      Sbest=S;
-
-      used_fdc_hits_best_fit=used_fdc_hits;
-      best_trajectory=trajectory;
-      best_updates=updates;
+  // vectors of residual information 
+  vector<fdc_update_t>updates(numfdchits);
+  vector<fdc_update_t>best_updates(numfdchits);
+  vector<cdc_update_t>cdc_updates(numcdchits);
+  vector<cdc_update_t>best_cdc_updates(numcdchits);
+  
+  vector<const DCDCTrackHit *> matchedCDCHits;
+  
+  // Chi-squared and degrees of freedom
+  double chi2=chi2_best;
+  int ndof=ndof_best;
+  
+  // Rest deque for "best" trajectory
+  best_trajectory.clear();
+  
+  unsigned iter=0;
+  // First pass
+  for(iter=0;iter<20;iter++){
+    trajectory.clear();
+    if (SetReferenceTrajectory(t0,start_z,S)!=NOERROR) break;
+    
+    C=C0;
+    if (KalmanFilter(S,C,used_fdc_hits,used_cdc_hits,updates,cdc_updates,
+		     chi2,ndof)!=NOERROR) break;
+    
+    // printf(" == iter %d =====chi2 %f ndof %d \n",iter,chi2,ndof);
+    if (iter>0 && (chi2>chi2_best || fabs(chi2_best-chi2)<0.1)) break;  
+    
+    // Save the current state and covariance matrixes
+    Cbest=C;
+    Sbest=S;
+    
+    // Save the current used hit and trajectory information
+    best_trajectory.assign(trajectory.begin(),trajectory.end());
+    used_cdc_hits_best_fit.assign(used_cdc_hits.begin(),used_cdc_hits.end());
+    best_updates.assign(updates.begin(),updates.end());
+    
+    chi2_best=chi2; 
+    ndof_best=ndof;
    }
-
+  /*
    // Take these best fit values and try to grab CDC hits that may be associated with this track.
    if (iter>0 && trajectory.size()>1 && !SKIP_CDC){
 
@@ -1012,15 +1039,15 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double start_z,
 
       double intersectionR=intersection.Perp();
       if(intersectionR > cdc_endplate_rmin && intersectionR < cdc_endplate_rmax){ // We might have some CDC hits
-         for (size_t i=0; i<cdc_hits.size(); i++){
-            origin = cdc_hits[i]->wire->origin;
+         for (size_t i=0; i<cdchits.size(); i++){
+            origin = cdchits[i]->wire->origin;
             if (origin.Perp() > intersectionR) continue; // Assume the track is coming from the target
-            dir = cdc_hits[i]->wire->udir;
+            dir = cdchits[i]->wire->udir;
             DVector3 pos;
             double doca = finder->FindDoca(z,Sbest,dir,origin,&pos);     
             if (doca < CDC_MATCH_DOCA){
-               if (VERBOSE) jout << " Matched CDC hit R" << cdc_hits[i]->wire->ring << " S" << cdc_hits[i]->wire->straw << "to FDC track " << endl;
-               matchedCDCHits.push_back(cdc_hits[i]);
+               if (VERBOSE) jout << " Matched CDC hit R" << cdchits[i]->wire->ring << " S" << cdchits[i]->wire->straw << "to FDC track " << endl;
+               matchedCDCHits.push_back(cdchits[i]);
                used_cdc_hits.insert(i);
             }
          }
@@ -1082,530 +1109,467 @@ DTrackCandidate_factory_StraightLine::DoFilter(double t0,double start_z,
 
       }
    }
+  */
 
-
-   if (iter>0 && trajectory.size()>1){  
-      // Create new track candidate
-      DTrackCandidate *cand = new DTrackCandidate;
-
-      double tx=Sbest(state_tx),ty=Sbest(state_ty);
-      double phi=atan2(ty,tx);
-      double tanl=1./sqrt(tx*tx+ty*ty);
-      double pt=10.*cos(atan(tanl));    
-      cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
-
-      unsigned int last_index=trajectory.size()-1;
-      DVector3 pos,origin,dir(0,0,1.);
-      double z=trajectory[last_index].z;
-      finder->FindDoca(z,Sbest,dir,origin,&pos);
-      cand->setPosition(pos);
-
-      // Run the smoother 
-      if (Smooth(best_trajectory,best_updates,hits,best_cdc_updates,matchedCDCHits,cand) == NOERROR) cand->IsSmoothed=true;
-
-      for (unsigned int k=0;k<used_fdc_hits_best_fit.size();k++){
-         if (used_fdc_hits_best_fit[k]==1){
-            cand->AddAssociatedObject(hits[k]);
-         }
-      }
-
-      if (DEBUG_HISTS){
-         for (unsigned int id=0;id<hits.size();id++){	  
-            double cospsi=hits[id]->wire->udir.y();
-            double sinpsi=hits[id]->wire->udir.x();
-
-            DVector3 norm(0,0,1);
-            DVector3 intersection;
-            finder->FindIntersectionWithPlane(hits[id]->wire->origin,norm,
-                  pos,cand->momentum(),intersection);
-            // To transform from (x,y) to (u,v), need to do a rotation:
-            double v = intersection.y()*cospsi+intersection.x()*sinpsi;
-
-            Hvres->Fill(v-hits[id]->s,hits[id]->wire->layer);
-
-         }
-      }
-
-
-      cand->Ndof=ndof_old;
-      cand->chisq=chi2_old;
-      cand->setPID(PiMinus);	
-
-      auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-      locTrackingCovarianceMatrix->ResizeTo(5, 5);
-      locTrackingCovarianceMatrix->Zero();
-      for(unsigned int loc_i = 0; loc_i < 4; ++loc_i)
-	{
-	  for(unsigned int loc_j = 0; loc_j < 4; ++loc_j)
-	    (*locTrackingCovarianceMatrix)(loc_i, loc_j) = Cbest(loc_i, loc_j);
-	  
-	}
-      (*locTrackingCovarianceMatrix)(4,4)=10.;
-      cand->setTrackingErrorMatrix(locTrackingCovarianceMatrix);
-      cand->setErrorMatrix(Get7x7ErrorMatrix(locTrackingCovarianceMatrix,Sbest));
- 
-      _data.push_back(cand);
-
-   }
-
-
-   return NOERROR;
+  if (Smooth(best_updates,best_cdc_updates) == NOERROR) IsSmoothed=true;
+  
+  return DTrackFitter::kFitSuccess;
 }
 
 
 // Reference trajectory for the track
 jerror_t 
-DTrackCandidate_factory_StraightLine::SetReferenceTrajectory(double t0,double z,
-      DMatrix4x1 &S,
-      deque<trajectory_t>&trajectory,
-      vector<const DFDCPseudo *>&pseudos){
-   const double EPS=1e-3;
+DTrackFitterStraightTrack::SetReferenceTrajectory(double t0,double z,
+						  DMatrix4x1 &S){
+  const double EPS=1e-3;
 
-   // Jacobian matrix 
-   DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
+  // Jacobian matrix 
+  DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
+  
+  double dz=1.1;
+  double t=t0;
+  trajectory.push_front(trajectory_t(z,t,S,J,DMatrix4x1(),DMatrix4x4()));
 
-   double dz=1.1;
-   double t=t0;
-   trajectory.push_front(trajectory_t(z,t,S,J,DMatrix4x1(),DMatrix4x4()));
-
-   double zhit=z;
-   double old_zhit=z;
-   for (unsigned int i=0;i<pseudos.size();i++){  
-      zhit=pseudos[i]->wire->origin.z();
-      dz=1.1;
-
-      if (fabs(zhit-old_zhit)<EPS && i>0){
-         trajectory[0].numhits++;
-         continue;
+  double zhit=z;
+  double old_zhit=z;
+  for (unsigned int i=0;i<fdchits.size();i++){  
+    zhit=fdchits[i]->wire->origin.z();
+    dz=1.1;
+    
+    if (fabs(zhit-old_zhit)<EPS && i>0){
+      trajectory[0].numhits++;
+      continue;
+    }
+    // propagate until we would step beyond the FDC hit plane
+    bool done=false;
+    while (!done){	    
+      double new_z=z+dz;	      
+      
+      if (new_z>zhit){
+	dz=zhit-z;
+	new_z=zhit;
+	done=true;
       }
-      // propagate until we would step beyond the FDC hit plane
-      bool done=false;
-      while (!done){	    
-         double new_z=z+dz;	      
-
-         if (new_z>zhit){
-            dz=zhit-z;
-            new_z=zhit;
-            done=true;
-         }
-         J(state_x,state_tx)=-dz;
-         J(state_y,state_ty)=-dz;
-         // Flight time: assume particle is moving at the speed of light
-         t+=dz*sqrt(1+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty))/29.98;
-         //propagate the state to the next z position
-         S(state_x)+=S(state_tx)*dz;
-         S(state_y)+=S(state_ty)*dz;
-
-
-         trajectory.push_front(trajectory_t(new_z,t,S,J,DMatrix4x1(),
-                  DMatrix4x4())); 
-         if (done){
-            trajectory[0].id=i+1;
-            trajectory[0].numhits=1;
-         }
-
-         z=new_z;
-      }	   
-      old_zhit=zhit;
-   }
-   // One last step
-   dz=1.1;
-   J(state_x,state_tx)=-dz;
-   J(state_y,state_ty)=-dz;
-
+      J(state_x,state_tx)=-dz;
+      J(state_y,state_ty)=-dz;
+      // Flight time: assume particle is moving at the speed of light
+      t+=dz*sqrt(1+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty))/29.98;
+      //propagate the state to the next z position
+      S(state_x)+=S(state_tx)*dz;
+      S(state_y)+=S(state_ty)*dz;
+      
+      trajectory.push_front(trajectory_t(new_z,t,S,J,DMatrix4x1(),
+					 DMatrix4x4())); 
+      if (done){
+	trajectory[0].id=i+1;
+	trajectory[0].numhits=1;
+      }
+      
+      z=new_z;
+    }	   
+    old_zhit=zhit;
+  }
+  // One last step
+  dz=1.1;
+  J(state_x,state_tx)=-dz;
+  J(state_y,state_ty)=-dz;
+  
    // Flight time: assume particle is moving at the speed of light
-   t+=dz*sqrt(1+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty))/29.98;
-
-   //propagate the state to the next z position
-   S(state_x)+=S(state_tx)*dz;
-   S(state_y)+=S(state_ty)*dz;
-   trajectory.push_front(trajectory_t(z+dz,t,S,J,DMatrix4x1(),DMatrix4x4()));
-
-   if (false)
+  t+=dz*sqrt(1+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty))/29.98;
+  
+  //propagate the state to the next z position
+  S(state_x)+=S(state_tx)*dz;
+  S(state_y)+=S(state_ty)*dz;
+  trajectory.push_front(trajectory_t(z+dz,t,S,J,DMatrix4x1(),DMatrix4x4()));
+  
+  if (false)
    {
-      printf("Trajectory:\n");
-      for (unsigned int i=0;i<trajectory.size();i++){
-         printf(" x %f y %f z %f first hit %d num in layer %d\n",trajectory[i].S(state_x),
-               trajectory[i].S(state_y),trajectory[i].z,trajectory[i].id,
-               trajectory[i].numhits); 
-      }
+     printf("Trajectory:\n");
+     for (unsigned int i=0;i<trajectory.size();i++){
+       printf(" x %f y %f z %f first hit %d num in layer %d\n",trajectory[i].S(state_x),
+	      trajectory[i].S(state_y),trajectory[i].z,trajectory[i].id,
+	      trajectory[i].numhits); 
+     }
    }
-
-   return NOERROR;
+  
+  return NOERROR;
 }
 
 // Perform Kalman Filter for the current trajectory
-jerror_t 
-DTrackCandidate_factory_StraightLine::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
-      vector<const DFDCPseudo *>&hits,
-      vector<int>&used_hits,
-      vector<const DCDCTrackHit *>&cdc_hits,
-      deque<trajectory_t>&trajectory,
-      vector<fdc_update_t>&updates,
-      vector<cdc_update_t>&cdc_updates,
-      double &chi2,unsigned int &ndof){
-   DMatrix2x4 H;  // Track projection matrix
-   DMatrix4x2 H_T; // Transpose of track projection matrix 
-   DMatrix4x2 K;  // Kalman gain matrix
-   DMatrix2x2 V(0.0833,0.,0.,0.000256);  // Measurement variance 
-   DMatrix2x2 Vtemp,InvV;
-   DMatrix2x1 Mdiff;
-   DMatrix4x4 I; // identity matrix
-   DMatrix4x4 J; // Jacobian matrix
-   DMatrix4x1 S0; // State vector from reference trajectory
+jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
+						 vector<int>&used_fdc_hits, 
+						 vector<int>&used_cdc_hits,
+						 vector<fdc_update_t>&updates,
+						 vector<cdc_update_t>&cdc_updates,
+						 double &chi2,int &ndof){
+  DMatrix2x4 H;  // Track projection matrix
+  DMatrix4x2 H_T; // Transpose of track projection matrix 
+  DMatrix4x2 K;  // Kalman gain matrix
+  DMatrix2x2 V(0.0833,0.,0.,0.000256);  // Measurement variance 
+  DMatrix2x2 Vtemp,InvV;
+  DMatrix2x1 Mdiff;
+  DMatrix4x4 I; // identity matrix
+  DMatrix4x4 J; // Jacobian matrix
+  DMatrix4x1 S0; // State vector from reference trajectory
+  
+  DMatrix1x4 H_CDC;  // Track projection matrix
+  DMatrix4x1 H_T_CDC; // Transpose of track projection matrix
+  DMatrix4x1 K_CDC;  // Kalman gain matrix
+  double V_CDC;
 
-   DMatrix1x4 H_CDC;  // Track projection matrix
-   DMatrix4x1 H_T_CDC; // Transpose of track projection matrix
-   DMatrix4x1 K_CDC;  // Kalman gain matrix
-   double V_CDC;
+  const double d_EPS=1e-8;
+  
+  // Zero out the vectors of used hit flags
+  for (unsigned int i=0;i<used_fdc_hits.size();i++) used_fdc_hits[i]=0; 
+  for (unsigned int i=0;i<used_cdc_hits.size();i++) used_cdc_hits[i]=0;
 
-   const double d_EPS=1e-8;
+  //Initialize chi2 and ndof
+  chi2=0.;
+  ndof=0;
+  
+  // Save the starting values for C and S in the deque
+  trajectory[0].Skk=S;
+  trajectory[0].Ckk=C;
+  
+  // Loop over all steps in the trajectory
+  S0=trajectory[0].S;
+  J=trajectory[0].J;
 
-   // Zero out the vector of used hit flags
-   for (unsigned int i=0;i<used_hits.size();i++) used_hits[i]=0;
+  // CDC index and wire position variables
+  bool more_hits = cdchits.size() == 0 ? false: true;
+  bool firstCDCStep=true;
+  unsigned int cdc_index=0;
+  const DCDCWire *wire;
+  DVector3 origin,wdir,wirepos;
+  double doca2=0.0, old_doca2=0.0;
+  if(more_hits){
+    cdc_index=cdchits.size()-1;
+    wire=cdchits[cdc_index]->wire;
+    origin=wire->origin;
+    double vz=wire->udir.z();
+    if (VERBOSE) jout << " Additional CDC Hits in FDC track Starting in Ring " << wire->ring << endl;
+    wdir=(1./vz)*wire->udir;
+  }
+  
+  for (unsigned int k=1;k<trajectory.size();k++){
+    if (C(0,0)<=0. || C(1,1)<=0. || C(2,2)<=0. || C(3,3)<=0.)
+      return UNRECOVERABLE_ERROR;
+    
+    // Propagate the state and covariance matrix forward in z
+    S=trajectory[k].S+J*(S-S0);
+    C=J*C*J.Transpose();
+    
+    // Save the current state and covariance matrix in the deque
+    trajectory[k].Skk=S;
+    trajectory[k].Ckk=C;
+     
+    // Save S and J for the next step
+    S0=trajectory[k].S;
+    J=trajectory[k].J;
+    
+    // Correct S and C for the hit 
+    if (trajectory[k].id>0){
+      unsigned int id=trajectory[k].id-1;
+      
+      double cospsi=cos(fdchits[id]->wire->angle);
+      double sinpsi=sin(fdchits[id]->wire->angle);
+       
+      // State vector
+      double x=S(state_x);
+      double y=S(state_y);
+      double tx=S(state_tx);
+      double ty=S(state_ty);
+       
 
-   //Initialize chi2 and ndof
-   chi2=0.;
-   ndof=0;
-
-   // Save the starting values for C and S in the deque
-   trajectory[0].Skk=S;
-   trajectory[0].Ckk=C;
-
-   // Loop over all steps in the trajectory
-   S0=trajectory[0].S;
-   J=trajectory[0].J;
-
-   // CDC index and wire position variables
-   bool more_hits = cdc_hits.size() == 0 ? false: true;
-   bool firstCDCStep=true;
-   unsigned int cdc_index=0;
-   const DCDCWire *wire;
-   DVector3 origin,wdir,wirepos;
-   double doca2=0.0, old_doca2=0.0;
-   if(more_hits){
-      cdc_index=cdc_hits.size()-1;
-      wire=cdc_hits[cdc_index]->wire;
-      origin=wire->origin;
-      double vz=wire->udir.z();
-      if (VERBOSE) jout << " Additional CDC Hits in FDC track Starting in Ring " << wire->ring << endl;
-      wdir=(1./vz)*wire->udir;
-   }
-
-   for (unsigned int k=1;k<trajectory.size();k++){
-      if (C(0,0)<=0. || C(1,1)<=0. || C(2,2)<=0. || C(3,3)<=0.)
-         return UNRECOVERABLE_ERROR;
-
-      // Propagate the state and covariance matrix forward in z
-      S=trajectory[k].S+J*(S-S0);
-      C=J*C*J.Transpose();
-
-      // Save the current state and covariance matrix in the deque
-      trajectory[k].Skk=S;
-      trajectory[k].Ckk=C;
-
-      // Save S and J for the next step
-      S0=trajectory[k].S;
-      J=trajectory[k].J;
-
-      // Correct S and C for the hit 
-      if (trajectory[k].id>0){
-         unsigned int id=trajectory[k].id-1;
-
-         double cospsi=cos(hits[id]->wire->angle);
-         double sinpsi=sin(hits[id]->wire->angle);
-
-         // State vector
-         double x=S(state_x);
-         double y=S(state_y);
-         double tx=S(state_tx);
-         double ty=S(state_ty);
-
-         // Small angle alignment correction
-         x = x + hits[id]->wire->angles.Z()*y;
-         y = y - hits[id]->wire->angles.Z()*x;
-         //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-         tx = (tx + hits[id]->wire->angles.Z()*ty - hits[id]->wire->angles.Y());
-         ty = (ty - hits[id]->wire->angles.Z()*tx + hits[id]->wire->angles.X());
-
-         if (std::isnan(x) || std::isnan(y)) return UNRECOVERABLE_ERROR;
-
-         // x,y and tx,ty in local coordinate system	
-         // To transform from (x,y) to (u,v), need to do a rotation:
-         //   u = x*cos(psi)-y*sin(psi)
-         //   v = y*cos(psi)+x*sin(psi)
-         // (without alignment offsets)
-         double vpred_wire_plane=y*cospsi+x*sinpsi;
-         double upred_wire_plane=x*cospsi-y*sinpsi;
-         double tu=tx*cospsi-ty*sinpsi;
-         double tv=tx*sinpsi+ty*cospsi;
-
-         // Variables for angle of incidence with respect to the z-direction in
-         // the u-z plane
-         double alpha=atan(tu);
-         double cosalpha=cos(alpha);
-         double cos2_alpha=cosalpha*cosalpha;
-         double sinalpha=sin(alpha);
-         double sin2_alpha=sinalpha*sinalpha;
-         double cos2_alpha_minus_sin2_alpha=cos2_alpha-sin2_alpha;
-
-         // Difference between measurement and projection
-         for (int m=trajectory[k].numhits-1;m>=0;m--){
-            unsigned int my_id=id+m;
-            double uwire=hits[my_id]->w;
-            // (signed) distance of closest approach to wire
-            double du=upred_wire_plane-uwire;
-            double doca=du*cosalpha;
-
-            // Predicted avalanche position along the wire
-            double vpred=vpred_wire_plane;
-
-            // Measured position of hit along wire
-            double v=hits[my_id]->s; 
-
-            // Difference between measurements and predictions
-            double drift=0.; // assume hit at wire position
-            if (USE_FDC_DRIFT_TIMES){
-               double drift_time=hits[my_id]->time-trajectory[k].t; 
-               drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
-
-               V(0,0)=fdc_drift_variance(drift_time);
-            }
-            Mdiff(0)=drift-doca;
-            Mdiff(1)=v-vpred;
-
-            // Matrix for transforming from state-vector space to measurement space
-            H_T(state_x,0)=cospsi*cosalpha;
-            H_T(state_y,0)=-sinpsi*cosalpha;
-            double temp=-du*sinalpha*cos2_alpha;
-            H_T(state_tx,0)=cospsi*temp;
-            H_T(state_ty,0)=-sinpsi*temp;
-            double temp2=cosalpha*sinalpha*tv;
-            H_T(state_x,1)=sinpsi-temp2*cospsi;
-            H_T(state_y,1)=cospsi+temp2*sinpsi;
-            double temp4=sinalpha*doca;
-            double temp5=tv*cos2_alpha*du*cos2_alpha_minus_sin2_alpha;
-            H_T(state_tx,1)=-sinpsi*temp4-cospsi*temp5;
-            H_T(state_ty,1)=-cospsi*temp4+sinpsi*temp5;
-
-            // Matrix transpose H_T -> H
-            H(0,state_x)=H_T(state_x,0);
-            H(0,state_y)=H_T(state_y,0);
-            H(0,state_tx)=H_T(state_tx,0);
-            H(0,state_ty)=H_T(state_ty,0);
-            H(1,state_x)=H_T(state_x,1);
-            H(1,state_y)=H_T(state_y,1);
-            H(1,state_tx)=H_T(state_tx,1);
-            H(1,state_ty)=H_T(state_ty,1);
-
-            // Variance for this hit
-            InvV=(V+H*C*H_T).Invert();
-
-            // Compute Kalman gain matrix
-            K=(C*H_T)*InvV;
-
-            if (hits[my_id]->wire->layer!=PLANE_TO_SKIP){        	
-               if(DEBUG_HISTS){
-                  hFDCOccTrkFit->Fill(hits[my_id]->wire->layer);
-               }
-               // Update the state vector 
-               S+=K*Mdiff;
-               if(VERBOSE) S.Print();
-               // Update state vector covariance matrix
-               C=C-K*(H*C);    
-
-               // Update the filtered measurement covariane matrix and put results in 
-               // update vector
-               DMatrix2x2 RC=V-H*C*H_T;
-               DMatrix2x1 res=Mdiff-H*K*Mdiff;
-
-               chi2+=RC.Chi2(res);
-               ndof+=2;
-
-               // fill pull vector entries
-               updates[my_id].V=RC;
-            }
-            else{
-               updates[my_id].V=V;
-            }
-
-            used_hits[my_id]=1;
-
-            // fill pull vector
-            updates[my_id].d=doca;
-            updates[my_id].S=S;
-            updates[my_id].C=C;
-            updates[my_id].tdrift=hits[my_id]->time-trajectory[k].t;
-            updates[my_id].s=29.98*trajectory[k].t; // assume beta=1
-         } 
+      //********************************** fix this!
+      // Small angle alignment correction
+      x = x + fdchits[id]->wire->angles.Z()*y;
+      y = y - fdchits[id]->wire->angles.Z()*x;
+      //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
+      tx = (tx + fdchits[id]->wire->angles.Z()*ty - fdchits[id]->wire->angles.Y());
+      ty = (ty - fdchits[id]->wire->angles.Z()*tx + fdchits[id]->wire->angles.X());
+      
+      if (std::isnan(x) || std::isnan(y)) return UNRECOVERABLE_ERROR;
+      
+      // x,y and tx,ty in local coordinate system	
+      // To transform from (x,y) to (u,v), need to do a rotation:
+      //   u = x*cos(psi)-y*sin(psi)
+      //   v = y*cos(psi)+x*sin(psi)
+      // (without alignment offsets)
+      double vpred_wire_plane=y*cospsi+x*sinpsi;
+      double upred_wire_plane=x*cospsi-y*sinpsi;
+      double tu=tx*cospsi-ty*sinpsi;
+      double tv=tx*sinpsi+ty*cospsi;
+      
+      // Variables for angle of incidence with respect to the z-direction in
+      // the u-z plane
+      double alpha=atan(tu);
+      double cosalpha=cos(alpha);
+      double cos2_alpha=cosalpha*cosalpha;
+      double sinalpha=sin(alpha);
+      double sin2_alpha=sinalpha*sinalpha;
+      double cos2_alpha_minus_sin2_alpha=cos2_alpha-sin2_alpha;
+      
+      // Difference between measurement and projection
+      for (int m=trajectory[k].numhits-1;m>=0;m--){
+	unsigned int my_id=id+m;
+	double uwire=fdchits[my_id]->w;
+	// (signed) distance of closest approach to wire
+	double du=upred_wire_plane-uwire;
+	double doca=du*cosalpha;
+	
+	// Predicted avalanche position along the wire
+	double vpred=vpred_wire_plane;
+	
+	// Measured position of hit along wire
+	double v=fdchits[my_id]->s; 
+	
+	// Difference between measurements and predictions
+	double drift=0.; // assume hit at wire position
+	if (fit_type==kTimeBased){
+	  double drift_time=fdchits[my_id]->time-trajectory[k].t; 
+	  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
+	  
+	  V(0,0)=fdc_drift_variance(drift_time);
+	}
+	Mdiff(0)=drift-doca;
+	Mdiff(1)=v-vpred;
+	
+	// Matrix for transforming from state-vector space to measurement space
+	H_T(state_x,0)=cospsi*cosalpha;
+	H_T(state_y,0)=-sinpsi*cosalpha;
+	double temp=-du*sinalpha*cos2_alpha;
+	H_T(state_tx,0)=cospsi*temp;
+	H_T(state_ty,0)=-sinpsi*temp;
+	double temp2=cosalpha*sinalpha*tv;
+	H_T(state_x,1)=sinpsi-temp2*cospsi;
+	H_T(state_y,1)=cospsi+temp2*sinpsi;
+	double temp4=sinalpha*doca;
+	double temp5=tv*cos2_alpha*du*cos2_alpha_minus_sin2_alpha;
+	H_T(state_tx,1)=-sinpsi*temp4-cospsi*temp5;
+	H_T(state_ty,1)=-cospsi*temp4+sinpsi*temp5;
+	
+	// Matrix transpose H_T -> H
+	H(0,state_x)=H_T(state_x,0);
+	H(0,state_y)=H_T(state_y,0);
+	H(0,state_tx)=H_T(state_tx,0);
+	H(0,state_ty)=H_T(state_ty,0);
+	H(1,state_x)=H_T(state_x,1);
+	H(1,state_y)=H_T(state_y,1);
+	H(1,state_tx)=H_T(state_tx,1);
+	H(1,state_ty)=H_T(state_ty,1);
+	
+	// Variance for this hit
+	InvV=(V+H*C*H_T).Invert();
+	
+	// Compute Kalman gain matrix
+	K=(C*H_T)*InvV;
+	
+	if (fdchits[my_id]->wire->layer!=PLANE_TO_SKIP){
+	  /*
+	    if(DEBUG_HISTS){
+	    hFDCOccTrkFit->Fill(fdchits[my_id]->wire->layer);
+	    }
+	  */
+	  // Update the state vector 
+	  S+=K*Mdiff;
+	  if(VERBOSE) S.Print();
+	  // Update state vector covariance matrix
+	  C=C-K*(H*C);    
+	  
+	  // Update the filtered measurement covariane matrix and put results in 
+	  // update vector
+	  DMatrix2x2 RC=V-H*C*H_T;
+	  DMatrix2x1 res=Mdiff-H*K*Mdiff;
+	  
+	  chi2+=RC.Chi2(res);
+	  ndof+=2;
+	   
+	  // fill pull vector entries
+	  updates[my_id].V=RC;
+	}
+	else{
+	  updates[my_id].V=V;
+	}
+	
+	used_fdc_hits[my_id]=1;
+	
+	// fill pull vector
+	updates[my_id].d=doca;
+	updates[my_id].S=S;
+	updates[my_id].C=C;
+	updates[my_id].tdrift=fdchits[my_id]->time-trajectory[k].t;
+	updates[my_id].s=29.98*trajectory[k].t; // assume beta=1
+      } 
+    }
+    
+    if (more_hits && trajectory[k].z < downstreamEndplate){
+      // Position along wire
+      double z0=origin.Z();
+      wirepos=origin+(trajectory[k].z-z0)*wdir;
+      
+      // New doca^2
+      double dx=S(state_x)-wirepos.X();
+      double dy=S(state_y)-wirepos.Y();
+      doca2=dx*dx+dy*dy;
+      if (VERBOSE > 10) jout<< "At Position " << S(state_x) << " " << S(state_y) << " " << trajectory[k].z << " doca2 " << doca2 << endl;
+      
+      if (doca2>old_doca2 && more_hits && !firstCDCStep){
+	
+	// zero-position and direction of line describing particle trajectory
+	double tx=S(state_tx),ty=S(state_ty);
+	DVector3 pos0(S(state_x),S(state_y),trajectory[k].z);
+	DVector3 tdir(tx,ty,1.);
+	
+	// Find the true doca to the wire
+	DVector3 diff=pos0-origin;
+	double dx0=diff.x(),dy0=diff.y();
+	double wdir_dot_diff=diff.Dot(wdir);
+	double tdir_dot_diff=diff.Dot(tdir);
+	double tdir_dot_wdir=tdir.Dot(wdir);
+	double tdir2=tdir.Mag2();
+	double wdir2=wdir.Mag2();
+	double D=tdir2*wdir2-tdir_dot_wdir*tdir_dot_wdir;
+	double N=tdir_dot_wdir*wdir_dot_diff-wdir2*tdir_dot_diff;
+	double N1=tdir2*wdir_dot_diff-tdir_dot_wdir*tdir_dot_diff;
+	double scale=1./D;
+	double s=scale*N;
+	double t=scale*N1;
+	diff+=s*tdir-t*wdir;
+	double d=diff.Mag()+d_EPS; // prevent division by zero
+	
+	// The next measurement and its variance
+	double tdrift=cdchits[cdc_index]->tdrift-trajectory[k].t;
+	V_CDC=CDCDriftVariance(tdrift);
+	
+	double phi_d=diff.Phi();
+	double dphi=phi_d-origin.Phi();
+	while (dphi>M_PI) dphi-=2*M_PI;
+	while (dphi<-M_PI) dphi+=2*M_PI;
+	
+	int ring_index=cdchits[cdc_index]->wire->ring-1;
+	int straw_index=cdchits[cdc_index]->wire->straw-1;
+	double dz=t*wdir.z();
+	double delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
+	  *cos(phi_d+sag_phi_offset[ring_index][straw_index]);
+	double dmeas=CDCDriftDistance(dphi,delta,tdrift);
+	
+	// residual
+	double res=dmeas-d;
+	if (VERBOSE>5) jout << " Residual " << res << endl;
+	// Track projection
+	double one_over_d=1./d;
+	double diffx=diff.x(),diffy=diff.y(),diffz=diff.z();
+	double wx=wdir.x(),wy=wdir.y();
+	
+	double dN1dtx=2.*tx*wdir_dot_diff-wx*tdir_dot_diff-tdir_dot_wdir*dx0;
+	double dDdtx=2.*tx*wdir2-2.*tdir_dot_wdir*wx;
+	double dtdtx=scale*(dN1dtx-t*dDdtx);
+	
+	double dN1dty=2.*ty*wdir_dot_diff-wy*tdir_dot_diff-tdir_dot_wdir*dy0;
+	double dDdty=2.*ty*wdir2-2.*tdir_dot_wdir*wy;
+	double dtdty=scale*(dN1dty-t*dDdty);
+	
+	double dNdtx=wx*wdir_dot_diff-wdir2*dx0;
+	double dsdtx=scale*(dNdtx-s*dDdtx);
+	
+	double dNdty=wy*wdir_dot_diff-wdir2*dy0;
+	double dsdty=scale*(dNdty-s*dDdty);
+	
+	H_CDC(state_tx)=H_T_CDC(state_tx)
+	  =one_over_d*(diffx*(s+tx*dsdtx-wx*dtdtx)+diffy*(ty*dsdtx-wy*dtdtx)
+		       +diffz*(dsdtx-dtdtx));
+	H_CDC(state_ty)=H_T_CDC(state_ty)
+	  =one_over_d*(diffx*(tx*dsdty-wx*dtdty)+diffy*(s+ty*dsdty-wy*dtdty)
+		       +diffz*(dsdty-dtdty));
+	
+	double dsdx=scale*(tdir_dot_wdir*wx-wdir2*tx);
+	double dtdx=scale*(tdir2*wx-tdir_dot_wdir*tx);
+	double dsdy=scale*(tdir_dot_wdir*wy-wdir2*ty);
+	double dtdy=scale*(tdir2*wy-tdir_dot_wdir*ty);
+	
+	H_CDC(state_x)=H_T_CDC(state_x)
+	  =one_over_d*(diffx*(1.+dsdx*tx-dtdx*wx)+diffy*(dsdx*ty-dtdx*wy)
+		       +diffz*(dsdx-dtdx));
+	H_CDC(state_y)=H_T_CDC(state_y)
+	  =one_over_d*(diffx*(dsdy*tx-dtdy*wx)+diffy*(1.+dsdy*ty-dtdy*wy)
+		       +diffz*(dsdy-dtdy));
+	
+	double InvV=1./(V_CDC+H_CDC*C*H_T_CDC);
+	
+	// Check how far this hit is from the projection
+	double chi2check=res*res*InvV;
+	if (chi2check < CHI2CUT || DO_PRUNING == 0){
+	  if (VERBOSE) jout << "CDC Hit Added to FDC track " << endl;
+	  // Compute Kalman gain matrix
+	  K_CDC=InvV*(C*H_T_CDC);
+	  // Update state vector covariance matrix
+	  DMatrix4x4 Ctest=C-K_CDC*(H_CDC*C);
+	  
+	  //C.Print();
+	  //K.Print();
+	  //Ctest.Print();
+	  
+	  // Check that Ctest is positive definite
+	  if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
+	  C=Ctest;
+	  if(VERBOSE>10) C.Print();
+	  // Update the state vector
+	  //S=S+res*K;
+	  S+=res*K_CDC;
+	  if(VERBOSE) {jout << "traj[z]=" << trajectory[k].z<< endl; S.Print();} 
+	  
+	  // Compute new residual
+	  //d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
+	  res=res-H_CDC*K_CDC*res;
+	  
+	  // Update chi2
+	  double fit_V=V_CDC-H_CDC*C*H_T_CDC;
+	  chi2+=res*res/fit_V;
+	  ndof++;
+	  
+	  // fill updates
+	  cdc_updates[cdc_index].resi=res;
+	  cdc_updates[cdc_index].d=d;
+	  cdc_updates[cdc_index].delta=delta;
+	  cdc_updates[cdc_index].S=S;
+	  cdc_updates[cdc_index].C=C;
+	  cdc_updates[cdc_index].V=V_CDC;
+	  cdc_updates[cdc_index].tdrift=tdrift;
+	  cdc_updates[cdc_index].ddrift=dmeas;
+	  cdc_updates[cdc_index].s=29.98*trajectory[k].t; // assume beta=1
+	  trajectory[k].id=cdc_index+1000;
+	  
+	  used_cdc_hits[cdc_index]=1;
+	}
+	// move to next cdc hit
+	if (cdc_index>0){
+	  cdc_index--;
+	  
+	  //New wire position
+	  wire=cdchits[cdc_index]->wire;
+	  if (VERBOSE>5) jout << " Next Wire ring " << wire->ring << endl;
+	  origin=wire->origin;
+	  double vz=wire->udir.z();
+	  wdir=(1./vz)*wire->udir;
+	  wirepos=origin+((trajectory[k].z-z0))*wdir;
+	  
+	  // New doca^2
+	  dx=S(state_x)-wirepos.x();
+	  dy=S(state_y)-wirepos.y();
+	  doca2=dx*dx+dy*dy;
+	  
+	}
+	else more_hits=false;
       }
-
-      if (more_hits && trajectory[k].z < cdc_endplate_z){
-         // Position along wire
-         double z0=origin.Z();
-         wirepos=origin+(trajectory[k].z-z0)*wdir;
-
-         // New doca^2
-         double dx=S(state_x)-wirepos.X();
-         double dy=S(state_y)-wirepos.Y();
-         doca2=dx*dx+dy*dy;
-         if (VERBOSE > 10) jout<< "At Position " << S(state_x) << " " << S(state_y) << " " << trajectory[k].z << " doca2 " << doca2 << endl;
-
-         if (doca2>old_doca2 && more_hits && !firstCDCStep){
-
-            // zero-position and direction of line describing particle trajectory
-            double tx=S(state_tx),ty=S(state_ty);
-            DVector3 pos0(S(state_x),S(state_y),trajectory[k].z);
-            DVector3 tdir(tx,ty,1.);
-
-            // Find the true doca to the wire
-            DVector3 diff=pos0-origin;
-            double dx0=diff.x(),dy0=diff.y();
-            double wdir_dot_diff=diff.Dot(wdir);
-            double tdir_dot_diff=diff.Dot(tdir);
-            double tdir_dot_wdir=tdir.Dot(wdir);
-            double tdir2=tdir.Mag2();
-            double wdir2=wdir.Mag2();
-            double D=tdir2*wdir2-tdir_dot_wdir*tdir_dot_wdir;
-            double N=tdir_dot_wdir*wdir_dot_diff-wdir2*tdir_dot_diff;
-            double N1=tdir2*wdir_dot_diff-tdir_dot_wdir*tdir_dot_diff;
-            double scale=1./D;
-            double s=scale*N;
-            double t=scale*N1;
-            diff+=s*tdir-t*wdir;
-            double d=diff.Mag()+d_EPS; // prevent division by zero
-
-            // The next measurement and its variance
-            double tdrift=cdc_hits[cdc_index]->tdrift-trajectory[k].t;
-            V_CDC=CDCDriftVariance(tdrift);
-
-            double phi_d=diff.Phi();
-            double dphi=phi_d-origin.Phi();
-            while (dphi>M_PI) dphi-=2*M_PI;
-            while (dphi<-M_PI) dphi+=2*M_PI;
-
-            int ring_index=cdc_hits[cdc_index]->wire->ring-1;
-            int straw_index=cdc_hits[cdc_index]->wire->straw-1;
-            double dz=t*wdir.z();
-            double delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
-               *cos(phi_d+sag_phi_offset[ring_index][straw_index]);
-            double dmeas=CDCDriftDistance(dphi,delta,tdrift);
-
-            // residual
-            double res=dmeas-d;
-            if (VERBOSE>5) jout << " Residual " << res << endl;
-            // Track projection
-            double one_over_d=1./d;
-            double diffx=diff.x(),diffy=diff.y(),diffz=diff.z();
-            double wx=wdir.x(),wy=wdir.y();
-
-            double dN1dtx=2.*tx*wdir_dot_diff-wx*tdir_dot_diff-tdir_dot_wdir*dx0;
-            double dDdtx=2.*tx*wdir2-2.*tdir_dot_wdir*wx;
-            double dtdtx=scale*(dN1dtx-t*dDdtx);
-
-            double dN1dty=2.*ty*wdir_dot_diff-wy*tdir_dot_diff-tdir_dot_wdir*dy0;
-            double dDdty=2.*ty*wdir2-2.*tdir_dot_wdir*wy;
-            double dtdty=scale*(dN1dty-t*dDdty);
-
-            double dNdtx=wx*wdir_dot_diff-wdir2*dx0;
-            double dsdtx=scale*(dNdtx-s*dDdtx);
-
-            double dNdty=wy*wdir_dot_diff-wdir2*dy0;
-            double dsdty=scale*(dNdty-s*dDdty);
-
-            H_CDC(state_tx)=H_T_CDC(state_tx)
-               =one_over_d*(diffx*(s+tx*dsdtx-wx*dtdtx)+diffy*(ty*dsdtx-wy*dtdtx)
-                     +diffz*(dsdtx-dtdtx));
-            H_CDC(state_ty)=H_T_CDC(state_ty)
-               =one_over_d*(diffx*(tx*dsdty-wx*dtdty)+diffy*(s+ty*dsdty-wy*dtdty)
-                     +diffz*(dsdty-dtdty));
-
-            double dsdx=scale*(tdir_dot_wdir*wx-wdir2*tx);
-            double dtdx=scale*(tdir2*wx-tdir_dot_wdir*tx);
-            double dsdy=scale*(tdir_dot_wdir*wy-wdir2*ty);
-            double dtdy=scale*(tdir2*wy-tdir_dot_wdir*ty);
-
-            H_CDC(state_x)=H_T_CDC(state_x)
-               =one_over_d*(diffx*(1.+dsdx*tx-dtdx*wx)+diffy*(dsdx*ty-dtdx*wy)
-                     +diffz*(dsdx-dtdx));
-            H_CDC(state_y)=H_T_CDC(state_y)
-               =one_over_d*(diffx*(dsdy*tx-dtdy*wx)+diffy*(1.+dsdy*ty-dtdy*wy)
-                     +diffz*(dsdy-dtdy));
-
-            double InvV=1./(V_CDC+H_CDC*C*H_T_CDC);
-
-            // Check how far this hit is from the projection
-            double chi2check=res*res*InvV;
-            if (chi2check < CHI2CUT || DO_PRUNING == 0){
-               if (VERBOSE) jout << "CDC Hit Added to FDC track " << endl;
-               // Compute Kalman gain matrix
-               K_CDC=InvV*(C*H_T_CDC);
-               // Update state vector covariance matrix
-               DMatrix4x4 Ctest=C-K_CDC*(H_CDC*C);
-
-               //C.Print();
-               //K.Print();
-               //Ctest.Print();
-
-               // Check that Ctest is positive definite
-               if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
-               C=Ctest;
-               if(VERBOSE>10) C.Print();
-               // Update the state vector
-               //S=S+res*K;
-               S+=res*K_CDC;
-               if(VERBOSE) {jout << "traj[z]=" << trajectory[k].z<< endl; S.Print();} 
-
-               // Compute new residual
-               //d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
-               res=res-H_CDC*K_CDC*res;
-
-               // Update chi2
-               double fit_V=V_CDC-H_CDC*C*H_T_CDC;
-               chi2+=res*res/fit_V;
-               ndof++;
-
-               // fill updates
-               cdc_updates[cdc_index].resi=res;
-               cdc_updates[cdc_index].d=d;
-               cdc_updates[cdc_index].delta=delta;
-               cdc_updates[cdc_index].S=S;
-               cdc_updates[cdc_index].C=C;
-               cdc_updates[cdc_index].V=V_CDC;
-               cdc_updates[cdc_index].tdrift=tdrift;
-               cdc_updates[cdc_index].ddrift=dmeas;
-               cdc_updates[cdc_index].s=29.98*trajectory[k].t; // assume beta=1
-               trajectory[k].id=cdc_index+1000;
-
-            }
-            // move to next cdc hit
-            if (cdc_index>0){
-               cdc_index--;
-
-               //New wire position
-               wire=cdc_hits[cdc_index]->wire;
-               if (VERBOSE>5) jout << " Next Wire ring " << wire->ring << endl;
-               origin=wire->origin;
-               double vz=wire->udir.z();
-               wdir=(1./vz)*wire->udir;
-               wirepos=origin+((trajectory[k].z-z0))*wdir;
-
-               // New doca^2
-               dx=S(state_x)-wirepos.x();
-               dy=S(state_y)-wirepos.y();
-               doca2=dx*dx+dy*dy;
-
-            }
-            else more_hits=false;
-         }
-         firstCDCStep=false;
-         old_doca2=doca2;
-      }
-   }
-
-   ndof-=4;
-
-   return NOERROR;
+      firstCDCStep=false;
+      old_doca2=doca2;
+    }
+  }
+  
+  ndof-=4;
+  
+  return NOERROR;
 }
 
 
@@ -1615,418 +1579,411 @@ DTrackCandidate_factory_StraightLine::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 // outermost step.
 
 jerror_t 
-DTrackCandidate_factory_StraightLine::Smooth(deque<trajectory_t>&trajectory,
-      vector<fdc_update_t>&fdc_updates,
-      vector<const DFDCPseudo *>&hits,
-      vector<cdc_update_t>&cdc_updates,
-      vector<const DCDCTrackHit *>&cdc_hits,
-      DTrackCandidate *cand){ 
-   unsigned int max=trajectory.size()-1;
-   DMatrix4x1 S=(trajectory[max].Skk);
-   DMatrix4x4 C=(trajectory[max].Ckk);
-   DMatrix4x4 JT=trajectory[max].J.Transpose();
-   DMatrix4x1 Ss=S;
-   DMatrix4x4 Cs=C;
-   DMatrix4x4 A,dC;
+DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
+      vector<cdc_update_t>&cdc_updates){ 
+  unsigned int max=best_trajectory.size()-1;
+  DMatrix4x1 S=(best_trajectory[max].Skk);
+  DMatrix4x4 C=(best_trajectory[max].Ckk);
+  DMatrix4x4 JT=best_trajectory[max].J.Transpose();
+  DMatrix4x1 Ss=S;
+  DMatrix4x4 Cs=C;
+  DMatrix4x4 A,dC;
+  
+  const double d_EPS=1e-8;
+  
+  for (unsigned int m=max-1;m>0;m--){
+    if (best_trajectory[m].id>0 && best_trajectory[m].id<1000){ // FDC Hit
+      unsigned int id=best_trajectory[m].id-1;
+      A=fdc_updates[id].C*JT*C.Invert();
+      Ss=fdc_updates[id].S+A*(Ss-S);
 
-   const double d_EPS=1e-8;
+      dC=A*(Cs-C)*A.Transpose();
+      Cs=fdc_updates[id].C+dC;
 
-   for (unsigned int m=max-1;m>0;m--){
-      if (trajectory[m].id>0 && trajectory[m].id<1000){ // FDC Hit
-         unsigned int id=trajectory[m].id-1;
-         A=fdc_updates[id].C*JT*C.Invert();
-         Ss=fdc_updates[id].S+A*(Ss-S);
+      double cosa=cos(fdchits[id]->wire->angle);
+      double cos2a=cos(2*fdchits[id]->wire->angle);
+      double sina=sin(fdchits[id]->wire->angle);
+      double u=fdchits[id]->w;
+      double v=fdchits[id]->s;
 
-         dC=A*(Cs-C)*A.Transpose();
-         Cs=fdc_updates[id].C+dC;
+      // Position and direction from state vector
+      double x=Ss(state_x);
+      double y=Ss(state_y);
+      double tx=Ss(state_tx);
+      double ty=Ss(state_ty);
+   
+      //******************* fix this!
+      // Small angle alignment correction
+      x = x + fdchits[id]->wire->angles.Z()*y;
+      y = y - fdchits[id]->wire->angles.Z()*x;
+      //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
+      tx = (tx + fdchits[id]->wire->angles.Z()*ty - fdchits[id]->wire->angles.Y());
+      ty = (ty - fdchits[id]->wire->angles.Z()*tx + fdchits[id]->wire->angles.X());
 
-         double cosa=cos(hits[id]->wire->angle);
-         double cos2a=cos(2*hits[id]->wire->angle);
-         double sina=sin(hits[id]->wire->angle);
-         double u=hits[id]->w;
-         double v=hits[id]->s;
+      // Projected position along the wire 
+      double vpred=x*sina+y*cosa;
+      
+      // Projected position in the plane of the wires transverse to the wires
+      double upred=x*cosa-y*sina;
 
-         // Position and direction from state vector
-         double x=Ss(state_x);
-         double y=Ss(state_y);
-         double tx=Ss(state_tx);
-         double ty=Ss(state_ty);
+      // Direction tangent in the u-z plane
+      double tu=tx*cosa-ty*sina;
+      double alpha=atan(tu);
+      double cosalpha=cos(alpha);
+      //double cosalpha2=cosalpha*cosalpha;
+      double sinalpha=sin(alpha);
 
-         // Small angle alignment correction
-         x = x + hits[id]->wire->angles.Z()*y;
-         y = y - hits[id]->wire->angles.Z()*x;
-         //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-         tx = (tx + hits[id]->wire->angles.Z()*ty - hits[id]->wire->angles.Y());
-         ty = (ty - hits[id]->wire->angles.Z()*tx + hits[id]->wire->angles.X());
-
-         // Projected position along the wire 
-         double vpred=x*sina+y*cosa;
-
-         // Projected position in the plane of the wires transverse to the wires
-         double upred=x*cosa-y*sina;
-
-         // Direction tangent in the u-z plane
-         double tu=tx*cosa-ty*sina;
-         double alpha=atan(tu);
-         double cosalpha=cos(alpha);
-         //double cosalpha2=cosalpha*cosalpha;
-         double sinalpha=sin(alpha);
-
-         // (signed) distance of closest approach to wire
-         double du=upred-u;
-         double doca=du*cosalpha;
-         // Difference between measurement and projection for the cathodes
-         double tv=tx*sina+ty*cosa;
-         double resi_c=v-vpred;
-
-         // Difference between measurement and projection perpendicular to the wire
-         double drift=0.; // assume hit at wire position
-         if (USE_FDC_DRIFT_TIMES){
-            double drift_time=fdc_updates[id].tdrift;
-            drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
-         }
-         double resi_a=drift-doca;
-
-         // Variance from filter step
-         DMatrix2x2 V=fdc_updates[id].V;
-         // Compute projection matrix and find the variance for the residual
-         DMatrix4x2 H_T;
-         double temp2=-tv*sinalpha;
-         H_T(state_x,1)=sina+cosa*cosalpha*temp2;	
-         H_T(state_y,1)=cosa-sina*cosalpha*temp2;	
-
-         double cos2_minus_sin2=cosalpha*cosalpha-sinalpha*sinalpha;
-         double doca_cosalpha=doca*cosalpha;
-         H_T(state_tx,1)=-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
-         H_T(state_ty,1)=-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
-
-         H_T(state_x,0)=cosa*cosalpha;
-         H_T(state_y,0)=-sina*cosalpha;
-         double one_plus_tu2=1.+tu*tu;
-         double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-         H_T(state_ty,0)=sina*factor;
-         H_T(state_tx,0)=-cosa*factor;
-
-         // Matrix transpose H_T -> H
-         DMatrix2x4 H;
-         H(0,state_x)=H_T(state_x,0);
-         H(0,state_y)=H_T(state_y,0);
-         H(0,state_tx)=H_T(state_tx,0);
-         H(0,state_ty)=H_T(state_ty,0);
-         H(1,state_x)=H_T(state_x,1);
-         H(1,state_y)=H_T(state_y,1);
-         H(1,state_tx)=H_T(state_tx,1);
-         H(1,state_ty)=H_T(state_ty,1);
-
-         if (hits[id]->wire->layer==PLANE_TO_SKIP){
-            //V+=Cs.SandwichMultiply(H_T);
-            V=V+H*Cs*H_T;
-         }
-         else{
-            //V-=dC.SandwichMultiply(H_T);
-            V=V-H*dC*H_T;
-         }
-
-         if(DEBUG_HISTS){
-            hFDCOccTrkSmooth->Fill(hits[id]->wire->layer);
-         }
-
-         // Implement derivatives wrt track parameters needed for millepede alignment
-	  // Add the pull
-	 double scale=1./sqrt(1.+tx*tx+ty*ty);
-	 double cosThetaRel=hits[id]->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
-         DTrackFitter::pull_t thisPull(resi_a,sqrt(V(0,0)),
-				       trajectory[m].t*SPEED_OF_LIGHT,
-				       fdc_updates[id].tdrift,
-				       fdc_updates[id].d,
-				       NULL,hits[id],
-				       0.0, //docaphi
-				       trajectory[m].z,cosThetaRel, 
-				       0.0, //tcorr
-				       resi_c, sqrt(V(1,1))
-				       );
-	 
-         if (hits[id]->wire->layer!=PLANE_TO_SKIP){
-            vector<double> derivatives;
-            derivatives.resize(FDCTrackD::size);
-
-            //dDOCAW/dDeltaX
-            derivatives[FDCTrackD::dDOCAW_dDeltaX] = -(1/sqrt(1 + pow(tx*cosa - ty*sina,2)));
-
-            //dDOCAW/dDeltaZ
-            derivatives[FDCTrackD::dDOCAW_dDeltaZ] = (tx*cosa - ty*sina)/sqrt(1 + pow(tx*cosa - ty*sina,2));
-
-            //dDOCAW/ddeltaPhiX
-            derivatives[FDCTrackD::dDOCAW_dDeltaPhiX] = (sina*(-(tx*cosa) + ty*sina)*(u - x*cosa + y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5);
-
-            //dDOCAW/ddeltaphiY
-            derivatives[FDCTrackD::dDOCAW_dDeltaPhiY] = (cosa*(tx*cosa - ty*sina)*(-u + x*cosa - y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5);
-
-            //dDOCAW/ddeltaphiZ
-            derivatives[FDCTrackD::dDOCAW_dDeltaPhiZ] = (tx*ty*u*cos2a + (x + pow(ty,2)*x - tx*ty*y)*sina + 
-                  cosa*(-(tx*ty*x) + y + pow(tx,2)*y + (pow(tx,2) - pow(ty,2))*u*sina))/
-               pow(1 + pow(tx*cosa - ty*sina,2),1.5);
-
-            // dDOCAW/dx
-            derivatives[FDCTrackD::dDOCAW_dx] = cosa/sqrt(1 + pow(tx*cosa - ty*sina,2));
-
-            // dDOCAW/dy
-            derivatives[FDCTrackD::dDOCAW_dy] = -(sina/sqrt(1 + pow(tx*cosa - ty*sina,2)));
-
-            // dDOCAW/dtx
-            derivatives[FDCTrackD::dDOCAW_dtx] = -((cosa*(tx*cosa - ty*sina)*(-u + x*cosa - y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5));
-
-            // dDOCAW/dty
-            derivatives[FDCTrackD::dDOCAW_dty] = (sina*(-(tx*cosa) + ty*sina)*(u - x*cosa + y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5); 
-
-            // And the cathodes
-            //dDOCAW/ddeltax
-            derivatives[FDCTrackD::dDOCAC_dDeltaX] = 0.;
-
-            //dDOCAW/ddeltax
-            derivatives[FDCTrackD::dDOCAC_dDeltaZ] = ty*cosa + tx*sina;
-
-            //dDOCAW/ddeltaPhiX
-            derivatives[FDCTrackD::dDOCAC_dDeltaPhiX] = 0.;
-
-            //dDOCAW/ddeltaPhiX
-            derivatives[FDCTrackD::dDOCAC_dDeltaPhiY] = 0.;
-
-            //dDOCAW/ddeltaPhiX
-            derivatives[FDCTrackD::dDOCAC_dDeltaPhiZ] = -(x*cosa) + y*sina;
-
-            // dDOCAW/dx
-            derivatives[FDCTrackD::dDOCAC_dx] = sina;
-
-            // dDOCAW/dy
-            derivatives[FDCTrackD::dDOCAW_dy] = cosa;
-
-            // dDOCAW/dtx
-            derivatives[FDCTrackD::dDOCAW_dtx] = 0.;
-
-            // dDOCAW/dty
-            derivatives[FDCTrackD::dDOCAW_dty] = 0.;
-
-            thisPull.AddTrackDerivatives(derivatives);
-         }
-
-         cand->pulls.push_back(thisPull);
-
+      // (signed) distance of closest approach to wire
+      double du=upred-u;
+      double doca=du*cosalpha;
+      // Difference between measurement and projection for the cathodes
+      double tv=tx*sina+ty*cosa;
+      double resi_c=v-vpred;
+      
+      // Difference between measurement and projection perpendicular to the wire
+      double drift=0.; // assume hit at wire position
+      if (fit_type==kTimeBased){
+	double drift_time=fdc_updates[id].tdrift;
+	drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
       }
-      else if (trajectory[m].id>=1000){ // CDC Hit
-         unsigned int id=trajectory[m].id-1000;
-         A=cdc_updates[id].C*JT*C.Invert();
-         Ss=cdc_updates[id].S+A*(Ss-S);
+      double resi_a=drift-doca;
 
-         dC=A*(Cs-C)*A.Transpose();
-         Cs=cdc_updates[id].C+dC;
-         if (VERBOSE > 10) {
-            jout << " In Smoothing Step Using ID " << id << "/" << cdc_updates.size() << " for ring " << cdc_hits[id]->wire->ring << endl;
-            jout << " A cdc_updates[id].C Ss Cs " << endl;
-            A.Print(); cdc_updates[id].C.Print(); Ss.Print(); Cs.Print();
-         }
-         if(!Cs.IsPosDef()) {
-            if (VERBOSE) jout << "Cs is not PosDef!" << endl;
-            return VALUE_OUT_OF_RANGE;
-         }
+      // Variance from filter step
+      DMatrix2x2 V=fdc_updates[id].V;
+      // Compute projection matrix and find the variance for the residual
+      DMatrix4x2 H_T;
+      double temp2=-tv*sinalpha;
+      H_T(state_x,1)=sina+cosa*cosalpha*temp2;	
+      H_T(state_y,1)=cosa-sina*cosalpha*temp2;	
+      
+      double cos2_minus_sin2=cosalpha*cosalpha-sinalpha*sinalpha;
+      double doca_cosalpha=doca*cosalpha;
+      H_T(state_tx,1)=-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
+      H_T(state_ty,1)=-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+      
+      H_T(state_x,0)=cosa*cosalpha;
+      H_T(state_y,0)=-sina*cosalpha;
+      double one_plus_tu2=1.+tu*tu;
+      double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
+      H_T(state_ty,0)=sina*factor;
+      H_T(state_tx,0)=-cosa*factor;
 
-         const DCDCWire *wire=cdc_hits[id]->wire;
-         DVector3 origin=wire->origin;
-         double z0=origin.z();
-         double vz=wire->udir.z();
-         DVector3 wdir=(1./vz)*wire->udir;
-         DVector3 wirepos=origin+(trajectory[m].z-z0)*wdir;
-         // Position and direction from state vector
-         double x=Ss(state_x);
-         double y=Ss(state_y);
-         double tx=Ss(state_tx);
-         double ty=Ss(state_ty);
+      // Matrix transpose H_T -> H
+      DMatrix2x4 H;
+      H(0,state_x)=H_T(state_x,0);
+      H(0,state_y)=H_T(state_y,0);
+      H(0,state_tx)=H_T(state_tx,0);
+      H(0,state_ty)=H_T(state_ty,0);
+      H(1,state_x)=H_T(state_x,1);
+      H(1,state_y)=H_T(state_y,1);
+      H(1,state_tx)=H_T(state_tx,1);
+      H(1,state_ty)=H_T(state_ty,1);
 
-         DVector3 pos0(x,y,trajectory[m].z);
-         DVector3 tdir(tx,ty,1.);
-
-         // Find the true doca to the wire
-         DVector3 diff=pos0-origin;
-         double dx0=diff.x(),dy0=diff.y();
-         double wdir_dot_diff=diff.Dot(wdir);
-         double tdir_dot_diff=diff.Dot(tdir);
-         double tdir_dot_wdir=tdir.Dot(wdir);
-         double tdir2=tdir.Mag2();
-         double wdir2=wdir.Mag2();
-         double D=tdir2*wdir2-tdir_dot_wdir*tdir_dot_wdir;
-         double N=tdir_dot_wdir*wdir_dot_diff-wdir2*tdir_dot_diff;
-         double N1=tdir2*wdir_dot_diff-tdir_dot_wdir*tdir_dot_diff;
-         double scale=1./D;
-         double s=scale*N;
-         double t=scale*N1;
-         diff+=s*tdir-t*wdir;
-         double d=diff.Mag()+d_EPS; // prevent division by zero
-         double ddrift = cdc_updates[id].ddrift;
-
-         double resi = ddrift - d;
-
-
-         // Track projection
-         DMatrix1x4 H; DMatrix4x1 H_T;
-         {
-            double one_over_d=1./d;
-            double diffx=diff.x(),diffy=diff.y(),diffz=diff.z();
-            double wx=wdir.x(),wy=wdir.y();
-
-            double dN1dtx=2.*tx*wdir_dot_diff-wx*tdir_dot_diff-tdir_dot_wdir*dx0;
-            double dDdtx=2.*tx*wdir2-2.*tdir_dot_wdir*wx;
-            double dtdtx=scale*(dN1dtx-t*dDdtx);
-
-            double dN1dty=2.*ty*wdir_dot_diff-wy*tdir_dot_diff-tdir_dot_wdir*dy0;
-            double dDdty=2.*ty*wdir2-2.*tdir_dot_wdir*wy;
-            double dtdty=scale*(dN1dty-t*dDdty);
-
-            double dNdtx=wx*wdir_dot_diff-wdir2*dx0;
-            double dsdtx=scale*(dNdtx-s*dDdtx);
-
-            double dNdty=wy*wdir_dot_diff-wdir2*dy0;
-            double dsdty=scale*(dNdty-s*dDdty);
-
-            H(state_tx)=H_T(state_tx)
-               =one_over_d*(diffx*(s+tx*dsdtx-wx*dtdtx)+diffy*(ty*dsdtx-wy*dtdtx)
-                     +diffz*(dsdtx-dtdtx));
-            H(state_ty)=H_T(state_ty)
-               =one_over_d*(diffx*(tx*dsdty-wx*dtdty)+diffy*(s+ty*dsdty-wy*dtdty)
-                     +diffz*(dsdty-dtdty));
-
-            double dsdx=scale*(tdir_dot_wdir*wx-wdir2*tx);
-            double dtdx=scale*(tdir2*wx-tdir_dot_wdir*tx);
-            double dsdy=scale*(tdir_dot_wdir*wy-wdir2*ty);
-            double dtdy=scale*(tdir2*wy-tdir_dot_wdir*ty);
-
-            H(state_x)=H_T(state_x)
-               =one_over_d*(diffx*(1.+dsdx*tx-dtdx*wx)+diffy*(dsdx*ty-dtdx*wy)
-                     +diffz*(dsdx-dtdx));
-            H(state_y)=H_T(state_y)
-               =one_over_d*(diffx*(dsdy*tx-dtdy*wx)+diffy*(1.+dsdy*ty-dtdy*wy)
-                     +diffz*(dsdy-dtdy));
-         }
-         double V=cdc_updates[id].V;
-
-         if (VERBOSE > 10) jout << " d " << d << " H*S " << H*S << endl;
-         V=V-H*Cs*H_T;
-         if (V<0) return VALUE_OUT_OF_RANGE;
-
-         // Add the pull
-	 double myscale=1./sqrt(1.+tx*tx+ty*ty);
-	 double cosThetaRel=wire->udir.Dot(DVector3(myscale*tx,myscale*ty,myscale));
-         DTrackFitter::pull_t thisPull(resi,sqrt(V),
-				       trajectory[m].t*SPEED_OF_LIGHT,
-				       cdc_updates[id].tdrift,
-				       d,cdc_hits[id], NULL,
-				       diff.Phi(), //docaphi
-				       trajectory[m].z,cosThetaRel,
-				       cdc_updates[id].tdrift);
-
-         // Derivatives for alignment
-         double wtx=wire->udir.X(), wty=wire->udir.Y(), wtz=wire->udir.Z();
-         double wx=wire->origin.X(), wy=wire->origin.Y(), wz=wire->origin.Z();
-
-         double z=trajectory[m].z;
-         double tx2=tx*tx, ty2=ty*ty;
-         double wtx2=wtx*wtx, wty2=wty*wty, wtz2=wtz*wtz;
-         double denom=(1 + ty2)*wtx2 + (1 + tx2)*wty2 - 2*ty*wty*wtz + (tx2 + ty2)*wtz2 - 2*tx*wtx*(ty*wty + wtz)+d_EPS;
-         double denom2=denom*denom;
-         double c1=-(wtx - tx*wtz)*(wy - y);
-         double c2=wty*(wx - tx*wz - x + tx*z);
-         double c3=ty*(-(wtz*wx) + wtx*wz + wtz*x - wtx*z);
-         double dscale=0.5*(1/d);
-
-         vector<double> derivatives(11);
-
-         derivatives[CDCTrackD::dDOCAdOriginX]=dscale*(2*(wty - ty*wtz)*(c1 + c2 + c3))/denom;
-
-         derivatives[CDCTrackD::dDOCAdOriginY]=dscale*(2*(-wtx + tx*wtz)*(c1 + c2 + c3))/denom;
-
-         derivatives[CDCTrackD::dDOCAdOriginZ]=dscale*(2*(ty*wtx - tx*wty)*(c1 + c2 + c3))/denom;
-
-         derivatives[CDCTrackD::dDOCAdDirX]=dscale*(2*(wty - ty*wtz)*(c1 + c2 + c3)*
-               (tx*(ty*wty + wtz)*(wx - x) + (wty - ty*wtz)*(-wy + y + ty*(wz - z)) +
-                wtx*(-((1 + ty2)*wx) + (1 + ty2)*x + tx*(ty*wy + wz - ty*y - z)) + tx2*(wty*(-wy + y) + wtz*(-wz + z))))/denom2;
-
-         derivatives[CDCTrackD::dDOCAdDirY]=dscale*(-2*(wtx - tx*wtz)*(c1 + c2 + c3)*
-               (tx*(ty*wty + wtz)*(wx - x) + (wty - ty*wtz)*(-wy + y + ty*(wz - z)) +
-                wtx*(-((1 + ty2)*wx) + (1 + ty2)*x + tx*(ty*wy + wz - ty*y - z)) + tx2*(wty*(-wy + y) + wtz*(-wz + z))))/denom2;
-
-         derivatives[CDCTrackD::dDOCAdDirZ]=dscale*(-2*(ty*wtx - tx*wty)*(c1 + c2 + c3)*
-               (-(tx*(ty*wty + wtz)*(wx - x)) + tx2*(wty*(wy - y) + wtz*(wz - z)) + (wty - ty*wtz)*(wy - y + ty*(-wz + z)) +
-                wtx*((1 + ty2)*wx - (1 + ty2)*x + tx*(-(ty*wy) - wz + ty*y + z))))/denom2;
-
-         derivatives[CDCTrackD::dDOCAdS0]=-derivatives[CDCTrackD::dDOCAdOriginX];
-
-         derivatives[CDCTrackD::dDOCAdS1]=-derivatives[CDCTrackD::dDOCAdOriginY];
-
-         derivatives[CDCTrackD::dDOCAdS2]=dscale*(2*(wty - ty*wtz)*(-c1 - c2 - c3)*
-               (-(wtx*wtz*wx) - wty*wtz*wy + wtx2*wz + wty2*wz + wtx*wtz*x + wty*wtz*y - wtx2*z - wty2*z +
-                tx*(wty2*(wx - x) + wtx*wty*(-wy + y) + wtz*(wtz*wx - wtx*wz - wtz*x + wtx*z)) +
-                ty*(wtx*wty*(-wx + x) + wtx2*(wy - y) + wtz*(wtz*wy - wty*wz - wtz*y + wty*z))))/denom2;
-
-         derivatives[CDCTrackD::dDOCAdS3]=dscale*(2*(wtx - tx*wtz)*(c1 + c2 + c3)*
-               (-(wtx*wtz*wx) - wty*wtz*wy + wtx2*wz + wty2*wz + wtx*wtz*x + wty*wtz*y - wtx2*z - wty2*z +
-                tx*(wty2*(wx - x) + wtx*wty*(-wy + y) + wtz*(wtz*wx - wtx*wz - wtz*x + wtx*z)) +
-                ty*(wtx*wty*(-wx + x) + wtx2*(wy - y) + wtz*(wtz*wy - wty*wz - wtz*y + wty*z))))/denom2;
-
-         thisPull.AddTrackDerivatives(derivatives);
-
-         cand->pulls.push_back(thisPull);
-
+      if (fdchits[id]->wire->layer==PLANE_TO_SKIP){
+	//V+=Cs.SandwichMultiply(H_T);
+	V=V+H*Cs*H_T;
       }
       else{
-         A=trajectory[m].Ckk*JT*C.Invert();
-         Ss=trajectory[m].Skk+A*(Ss-S);
-         Cs=trajectory[m].Ckk+A*(Cs-C)*A.Transpose();
+	//V-=dC.SandwichMultiply(H_T);
+	V=V-H*dC*H_T;
       }
+      /*
+      if(DEBUG_HISTS){
+	hFDCOccTrkSmooth->Fill(fdchits[id]->wire->layer);
+      }
+      */
+      // Implement derivatives wrt track parameters needed for millepede alignment
+      // Add the pull
+      double scale=1./sqrt(1.+tx*tx+ty*ty);
+      double cosThetaRel=fdchits[id]->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
+      DTrackFitter::pull_t thisPull(resi_a,sqrt(V(0,0)),
+				    best_trajectory[m].t*SPEED_OF_LIGHT,
+				    fdc_updates[id].tdrift,
+				    fdc_updates[id].d,
+				    NULL,fdchits[id],
+				    0.0, //docaphi
+				    best_trajectory[m].z,cosThetaRel, 
+				    0.0, //tcorr
+				    resi_c, sqrt(V(1,1))
+				    );
+	 
+      if (fdchits[id]->wire->layer!=PLANE_TO_SKIP){
+	vector<double> derivatives;
+	derivatives.resize(FDCTrackD::size);
+	
+	//dDOCAW/dDeltaX
+	derivatives[FDCTrackD::dDOCAW_dDeltaX] = -(1/sqrt(1 + pow(tx*cosa - ty*sina,2)));
 
-      S=trajectory[m].Skk;
-      C=trajectory[m].Ckk;
-      JT=trajectory[m].J.Transpose();
-   }
+	//dDOCAW/dDeltaZ
+	derivatives[FDCTrackD::dDOCAW_dDeltaZ] = (tx*cosa - ty*sina)/sqrt(1 + pow(tx*cosa - ty*sina,2));
 
-   return NOERROR;
+	//dDOCAW/ddeltaPhiX
+	derivatives[FDCTrackD::dDOCAW_dDeltaPhiX] = (sina*(-(tx*cosa) + ty*sina)*(u - x*cosa + y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5);
+
+	//dDOCAW/ddeltaphiY
+	derivatives[FDCTrackD::dDOCAW_dDeltaPhiY] = (cosa*(tx*cosa - ty*sina)*(-u + x*cosa - y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5);
+
+	//dDOCAW/ddeltaphiZ
+	derivatives[FDCTrackD::dDOCAW_dDeltaPhiZ] = (tx*ty*u*cos2a + (x + pow(ty,2)*x - tx*ty*y)*sina + 
+						     cosa*(-(tx*ty*x) + y + pow(tx,2)*y + (pow(tx,2) - pow(ty,2))*u*sina))/
+	  pow(1 + pow(tx*cosa - ty*sina,2),1.5);
+	
+	// dDOCAW/dx
+	derivatives[FDCTrackD::dDOCAW_dx] = cosa/sqrt(1 + pow(tx*cosa - ty*sina,2));
+
+	// dDOCAW/dy
+	derivatives[FDCTrackD::dDOCAW_dy] = -(sina/sqrt(1 + pow(tx*cosa - ty*sina,2)));
+
+	// dDOCAW/dtx
+	derivatives[FDCTrackD::dDOCAW_dtx] = -((cosa*(tx*cosa - ty*sina)*(-u + x*cosa - y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5));
+
+	// dDOCAW/dty
+	derivatives[FDCTrackD::dDOCAW_dty] = (sina*(-(tx*cosa) + ty*sina)*(u - x*cosa + y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5); 
+
+	// And the cathodes
+	//dDOCAW/ddeltax
+	derivatives[FDCTrackD::dDOCAC_dDeltaX] = 0.;
+
+	//dDOCAW/ddeltax
+	derivatives[FDCTrackD::dDOCAC_dDeltaZ] = ty*cosa + tx*sina;
+
+	//dDOCAW/ddeltaPhiX
+	derivatives[FDCTrackD::dDOCAC_dDeltaPhiX] = 0.;
+
+	//dDOCAW/ddeltaPhiX
+	derivatives[FDCTrackD::dDOCAC_dDeltaPhiY] = 0.;
+
+	//dDOCAW/ddeltaPhiX
+	derivatives[FDCTrackD::dDOCAC_dDeltaPhiZ] = -(x*cosa) + y*sina;
+
+	// dDOCAW/dx
+	derivatives[FDCTrackD::dDOCAC_dx] = sina;
+
+	// dDOCAW/dy
+	derivatives[FDCTrackD::dDOCAW_dy] = cosa;
+
+	// dDOCAW/dtx
+	derivatives[FDCTrackD::dDOCAW_dtx] = 0.;
+
+	// dDOCAW/dty
+	derivatives[FDCTrackD::dDOCAW_dty] = 0.;
+	
+	thisPull.AddTrackDerivatives(derivatives);
+      }
+      
+    }
+    else if (best_trajectory[m].id>=1000){ // CDC Hit
+      unsigned int id=best_trajectory[m].id-1000;
+      A=cdc_updates[id].C*JT*C.Invert();
+      Ss=cdc_updates[id].S+A*(Ss-S);
+      
+      dC=A*(Cs-C)*A.Transpose();
+      Cs=cdc_updates[id].C+dC;
+      if (VERBOSE > 10) {
+	jout << " In Smoothing Step Using ID " << id << "/" << cdc_updates.size() << " for ring " << cdchits[id]->wire->ring << endl;
+	jout << " A cdc_updates[id].C Ss Cs " << endl;
+	A.Print(); cdc_updates[id].C.Print(); Ss.Print(); Cs.Print();
+      }
+      if(!Cs.IsPosDef()) {
+	if (VERBOSE) jout << "Cs is not PosDef!" << endl;
+	return VALUE_OUT_OF_RANGE;
+      }
+      
+      const DCDCWire *wire=cdchits[id]->wire;
+      DVector3 origin=wire->origin;
+      double z0=origin.z();
+      double vz=wire->udir.z();
+      DVector3 wdir=(1./vz)*wire->udir;
+      DVector3 wirepos=origin+(best_trajectory[m].z-z0)*wdir;
+      // Position and direction from state vector
+      double x=Ss(state_x);
+      double y=Ss(state_y);
+      double tx=Ss(state_tx);
+      double ty=Ss(state_ty);
+      
+      DVector3 pos0(x,y,best_trajectory[m].z);
+      DVector3 tdir(tx,ty,1.);
+      
+      // Find the true doca to the wire
+      DVector3 diff=pos0-origin;
+      double dx0=diff.x(),dy0=diff.y();
+      double wdir_dot_diff=diff.Dot(wdir);
+      double tdir_dot_diff=diff.Dot(tdir);
+      double tdir_dot_wdir=tdir.Dot(wdir);
+      double tdir2=tdir.Mag2();
+      double wdir2=wdir.Mag2();
+      double D=tdir2*wdir2-tdir_dot_wdir*tdir_dot_wdir;
+      double N=tdir_dot_wdir*wdir_dot_diff-wdir2*tdir_dot_diff;
+      double N1=tdir2*wdir_dot_diff-tdir_dot_wdir*tdir_dot_diff;
+      double scale=1./D;
+      double s=scale*N;
+      double t=scale*N1;
+      diff+=s*tdir-t*wdir;
+      double d=diff.Mag()+d_EPS; // prevent division by zero
+      double ddrift = cdc_updates[id].ddrift;
+      
+      double resi = ddrift - d;
+      
+      
+      // Track projection
+      DMatrix1x4 H; DMatrix4x1 H_T;
+      {
+	double one_over_d=1./d;
+	double diffx=diff.x(),diffy=diff.y(),diffz=diff.z();
+	double wx=wdir.x(),wy=wdir.y();
+	
+	double dN1dtx=2.*tx*wdir_dot_diff-wx*tdir_dot_diff-tdir_dot_wdir*dx0;
+	double dDdtx=2.*tx*wdir2-2.*tdir_dot_wdir*wx;
+	double dtdtx=scale*(dN1dtx-t*dDdtx);
+	
+	double dN1dty=2.*ty*wdir_dot_diff-wy*tdir_dot_diff-tdir_dot_wdir*dy0;
+	double dDdty=2.*ty*wdir2-2.*tdir_dot_wdir*wy;
+	double dtdty=scale*(dN1dty-t*dDdty);
+	
+	double dNdtx=wx*wdir_dot_diff-wdir2*dx0;
+	double dsdtx=scale*(dNdtx-s*dDdtx);
+	
+	double dNdty=wy*wdir_dot_diff-wdir2*dy0;
+	double dsdty=scale*(dNdty-s*dDdty);
+	
+	H(state_tx)=H_T(state_tx)
+	  =one_over_d*(diffx*(s+tx*dsdtx-wx*dtdtx)+diffy*(ty*dsdtx-wy*dtdtx)
+		       +diffz*(dsdtx-dtdtx));
+	H(state_ty)=H_T(state_ty)
+	  =one_over_d*(diffx*(tx*dsdty-wx*dtdty)+diffy*(s+ty*dsdty-wy*dtdty)
+		       +diffz*(dsdty-dtdty));
+	
+	double dsdx=scale*(tdir_dot_wdir*wx-wdir2*tx);
+	double dtdx=scale*(tdir2*wx-tdir_dot_wdir*tx);
+	double dsdy=scale*(tdir_dot_wdir*wy-wdir2*ty);
+	double dtdy=scale*(tdir2*wy-tdir_dot_wdir*ty);
+
+	H(state_x)=H_T(state_x)
+	  =one_over_d*(diffx*(1.+dsdx*tx-dtdx*wx)+diffy*(dsdx*ty-dtdx*wy)
+		       +diffz*(dsdx-dtdx));
+	H(state_y)=H_T(state_y)
+	  =one_over_d*(diffx*(dsdy*tx-dtdy*wx)+diffy*(1.+dsdy*ty-dtdy*wy)
+		       +diffz*(dsdy-dtdy));
+      }
+      double V=cdc_updates[id].V;
+
+      if (VERBOSE > 10) jout << " d " << d << " H*S " << H*S << endl;
+      V=V-H*Cs*H_T;
+      if (V<0) return VALUE_OUT_OF_RANGE;
+      
+      // Add the pull
+      double myscale=1./sqrt(1.+tx*tx+ty*ty);
+      double cosThetaRel=wire->udir.Dot(DVector3(myscale*tx,myscale*ty,myscale));
+      DTrackFitter::pull_t thisPull(resi,sqrt(V),
+				    best_trajectory[m].t*SPEED_OF_LIGHT,
+				    cdc_updates[id].tdrift,
+				    d,cdchits[id], NULL,
+				    diff.Phi(), //docaphi
+				    best_trajectory[m].z,cosThetaRel,
+				    cdc_updates[id].tdrift);
+
+      // Derivatives for alignment
+      double wtx=wire->udir.X(), wty=wire->udir.Y(), wtz=wire->udir.Z();
+      double wx=wire->origin.X(), wy=wire->origin.Y(), wz=wire->origin.Z();
+      
+      double z=best_trajectory[m].z;
+      double tx2=tx*tx, ty2=ty*ty;
+      double wtx2=wtx*wtx, wty2=wty*wty, wtz2=wtz*wtz;
+      double denom=(1 + ty2)*wtx2 + (1 + tx2)*wty2 - 2*ty*wty*wtz + (tx2 + ty2)*wtz2 - 2*tx*wtx*(ty*wty + wtz)+d_EPS;
+      double denom2=denom*denom;
+      double c1=-(wtx - tx*wtz)*(wy - y);
+      double c2=wty*(wx - tx*wz - x + tx*z);
+      double c3=ty*(-(wtz*wx) + wtx*wz + wtz*x - wtx*z);
+      double dscale=0.5*(1/d);
+      
+      vector<double> derivatives(11);
+      
+      derivatives[CDCTrackD::dDOCAdOriginX]=dscale*(2*(wty - ty*wtz)*(c1 + c2 + c3))/denom;
+      
+      derivatives[CDCTrackD::dDOCAdOriginY]=dscale*(2*(-wtx + tx*wtz)*(c1 + c2 + c3))/denom;
+      
+      derivatives[CDCTrackD::dDOCAdOriginZ]=dscale*(2*(ty*wtx - tx*wty)*(c1 + c2 + c3))/denom;
+      
+      derivatives[CDCTrackD::dDOCAdDirX]=dscale*(2*(wty - ty*wtz)*(c1 + c2 + c3)*
+						 (tx*(ty*wty + wtz)*(wx - x) + (wty - ty*wtz)*(-wy + y + ty*(wz - z)) +
+						  wtx*(-((1 + ty2)*wx) + (1 + ty2)*x + tx*(ty*wy + wz - ty*y - z)) + tx2*(wty*(-wy + y) + wtz*(-wz + z))))/denom2;
+      
+      derivatives[CDCTrackD::dDOCAdDirY]=dscale*(-2*(wtx - tx*wtz)*(c1 + c2 + c3)*
+						 (tx*(ty*wty + wtz)*(wx - x) + (wty - ty*wtz)*(-wy + y + ty*(wz - z)) +
+						  wtx*(-((1 + ty2)*wx) + (1 + ty2)*x + tx*(ty*wy + wz - ty*y - z)) + tx2*(wty*(-wy + y) + wtz*(-wz + z))))/denom2;
+
+      derivatives[CDCTrackD::dDOCAdDirZ]=dscale*(-2*(ty*wtx - tx*wty)*(c1 + c2 + c3)*
+						 (-(tx*(ty*wty + wtz)*(wx - x)) + tx2*(wty*(wy - y) + wtz*(wz - z)) + (wty - ty*wtz)*(wy - y + ty*(-wz + z)) +
+						  wtx*((1 + ty2)*wx - (1 + ty2)*x + tx*(-(ty*wy) - wz + ty*y + z))))/denom2;
+
+      derivatives[CDCTrackD::dDOCAdS0]=-derivatives[CDCTrackD::dDOCAdOriginX];
+      
+      derivatives[CDCTrackD::dDOCAdS1]=-derivatives[CDCTrackD::dDOCAdOriginY];
+
+      derivatives[CDCTrackD::dDOCAdS2]=dscale*(2*(wty - ty*wtz)*(-c1 - c2 - c3)*
+					       (-(wtx*wtz*wx) - wty*wtz*wy + wtx2*wz + wty2*wz + wtx*wtz*x + wty*wtz*y - wtx2*z - wty2*z +
+						tx*(wty2*(wx - x) + wtx*wty*(-wy + y) + wtz*(wtz*wx - wtx*wz - wtz*x + wtx*z)) +
+						ty*(wtx*wty*(-wx + x) + wtx2*(wy - y) + wtz*(wtz*wy - wty*wz - wtz*y + wty*z))))/denom2;
+      
+      derivatives[CDCTrackD::dDOCAdS3]=dscale*(2*(wtx - tx*wtz)*(c1 + c2 + c3)*
+					       (-(wtx*wtz*wx) - wty*wtz*wy + wtx2*wz + wty2*wz + wtx*wtz*x + wty*wtz*y - wtx2*z - wty2*z +
+						tx*(wty2*(wx - x) + wtx*wty*(-wy + y) + wtz*(wtz*wx - wtx*wz - wtz*x + wtx*z)) +
+						ty*(wtx*wty*(-wx + x) + wtx2*(wy - y) + wtz*(wtz*wy - wty*wz - wtz*y + wty*z))))/denom2;
+      
+      thisPull.AddTrackDerivatives(derivatives);
+      
+      
+    }
+    else{
+      A=best_trajectory[m].Ckk*JT*C.Invert();
+      Ss=best_trajectory[m].Skk+A*(Ss-S);
+      Cs=best_trajectory[m].Ckk+A*(Cs-C)*A.Transpose();
+    }
+    
+    S=best_trajectory[m].Skk;
+    C=best_trajectory[m].Ckk;
+    JT=best_trajectory[m].J.Transpose();
+  }
+  
+  return NOERROR;
 }
 
 shared_ptr<TMatrixFSym> 
-DTrackCandidate_factory_StraightLine::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1 &S){
-   auto C7x7 = dResourcePool_TMatrixFSym->Get_SharedResource();
-   C7x7->ResizeTo(7, 7);
-   DMatrix J(7,5);
+DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1 &S){
+  auto C7x7 = dResourcePool_TMatrixFSym->Get_SharedResource();
+  C7x7->ResizeTo(7, 7);
+  DMatrix J(7,5);
 
-   double p=10.; // fixed: cannot measure
-   double tx_=S(state_tx);
-   double ty_=S(state_ty);
-   double x_=S(state_x);
-   double y_=S(state_y);
-   double tanl=1./sqrt(tx_*tx_+ty_*ty_);
-   double tanl2=tanl*tanl;
-   double lambda=atan(tanl);
-   double sinl=sin(lambda);
-   double sinl3=sinl*sinl*sinl;
-
-   J(state_X,state_x)=J(state_Y,state_y)=1.;
-   J(state_Pz,state_ty)=-p*ty_*sinl3;
-   J(state_Pz,state_tx)=-p*tx_*sinl3;
-   J(state_Px,state_ty)=J(state_Py,state_tx)=-p*tx_*ty_*sinl3;
-   J(state_Px,state_tx)=p*(1.+ty_*ty_)*sinl3;
-   J(state_Py,state_ty)=p*(1.+tx_*tx_)*sinl3;
-   J(state_Pz,4)=-p*p*sinl;
-   J(state_Px,4)=tx_*J(state_Pz,4);
-   J(state_Py,4)=ty_*J(state_Pz,4); 
-   J(state_Z,state_x)=-tx_*tanl2;
-   J(state_Z,state_y)=-ty_*tanl2;
-   double diff=tx_*tx_-ty_*ty_;
-   double frac=tanl2*tanl2;
-   J(state_Z,state_tx)=(x_*diff+2.*tx_*ty_*y_)*frac;
-   J(state_Z,state_ty)=(2.*tx_*ty_*x_-y_*diff)*frac;
-
-   // C'= JCJ^T
-   *C7x7=(*C).Similarity(J);
-
-   return C7x7;
+  double p=10.; // fixed: cannot measure
+  double tx_=S(state_tx);
+  double ty_=S(state_ty);
+  double x_=S(state_x);
+  double y_=S(state_y);
+  double tanl=1./sqrt(tx_*tx_+ty_*ty_);
+  double tanl2=tanl*tanl;
+  double lambda=atan(tanl);
+  double sinl=sin(lambda);
+  double sinl3=sinl*sinl*sinl;
+  
+  J(state_X,state_x)=J(state_Y,state_y)=1.;
+  J(state_Pz,state_ty)=-p*ty_*sinl3;
+  J(state_Pz,state_tx)=-p*tx_*sinl3;
+  J(state_Px,state_ty)=J(state_Py,state_tx)=-p*tx_*ty_*sinl3;
+  J(state_Px,state_tx)=p*(1.+ty_*ty_)*sinl3;
+  J(state_Py,state_ty)=p*(1.+tx_*tx_)*sinl3;
+  J(state_Pz,4)=-p*p*sinl;
+  J(state_Px,4)=tx_*J(state_Pz,4);
+  J(state_Py,4)=ty_*J(state_Pz,4); 
+  J(state_Z,state_x)=-tx_*tanl2;
+  J(state_Z,state_y)=-ty_*tanl2;
+  double diff=tx_*tx_-ty_*ty_;
+  double frac=tanl2*tanl2;
+  J(state_Z,state_tx)=(x_*diff+2.*tx_*ty_*y_)*frac;
+  J(state_Z,state_ty)=(2.*tx_*ty_*x_-y_*diff)*frac;
+  
+  // C'= JCJ^T
+  *C7x7=(*C).Similarity(J);
+  
+  return C7x7;
 }
 
-*/
