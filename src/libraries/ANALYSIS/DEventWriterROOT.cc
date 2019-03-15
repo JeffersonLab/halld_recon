@@ -934,6 +934,8 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 
 	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
+	japp->RootWriteLock();
+
 	//primary event info
 	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
 	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
@@ -946,6 +948,10 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 
 	//FILL TTREE
 	dThrownTreeInterface->Fill(dThrownTreeFillData);
+
+	
+	japp->RootUnLock();
+
 }
 
 void DEventWriterROOT::Fill_DataTrees(JEventLoop* locEventLoop, string locDReactionTag) const
@@ -1111,6 +1117,8 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locEventLoop->GetSingle(locTrigger);
 
 	/************************************************* EXECUTE ANALYSIS ACTIONS ************************************************/
+	       
+	japp->RootWriteLock();
 
 	Bool_t locIsThrownTopologyFlag = kFALSE;
 	vector<Bool_t> locIsTrueComboFlags;
@@ -1205,7 +1213,10 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//FILL
 	DTreeInterface* locTreeInterface = dTreeInterfaceMap.find(locReaction)->second;
-	locTreeInterface->Fill(*locTreeFillData);
+	locTreeInterface->Fill(*locTreeFillData);	
+	
+	japp->RootUnLock();
+
 }
 
 vector<const DBeamPhoton*> DEventWriterROOT::Get_BeamPhotons(const deque<const DParticleCombo*>& locParticleCombos) const
