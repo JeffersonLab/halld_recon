@@ -30,7 +30,7 @@
   if( hitN ){
 
     hitN->SetStats( 0 );
-    hitN->SetFillColor( kYellow );
+    hitN->SetFillColor( kYellow-10 );
     hitN->GetYaxis()->SetTitleOffset(1.4);
     c1->cd( 1 );
     hitN->Draw();
@@ -39,7 +39,7 @@
   if( hitETot ){
 
     hitETot->SetStats( 0 );
-    hitETot->SetFillColor( kYellow );
+    hitETot->SetFillColor( kYellow-10 );
     hitETot->GetYaxis()->SetTitleOffset(1.55);
     c1->cd( 2 );
     hitETot->Draw();

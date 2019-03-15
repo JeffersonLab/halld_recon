@@ -73,7 +73,7 @@
     digPed2DAvg->Divide( digOcc2D );
     digPedSq2DAvg->Divide( digOcc2D );
 
-    digPed2DRMS->SetTitle( "FCAL Pedestal RMS [ADC Counts]" );
+    digPed2DRMS->SetTitle( "CCAL Pedestal RMS [ADC Counts]" );
 
     for( int x = 1; x <= digPed2DAvg->GetNbinsX(); ++x ){
       for( int y = 1; y <= digPed2DAvg->GetNbinsY(); ++y ){
@@ -96,7 +96,6 @@
     }
 
     digPed2DRMS->SetStats( 0 );
-    digPed2DRMS->SetMaximum( 10 );
     digPed2DRMS->SetMinimum( 0 );
     c1->cd( 4 );
     digPed2DRMS->Draw( "colz" );

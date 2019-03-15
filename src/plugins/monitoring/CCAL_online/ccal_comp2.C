@@ -1,5 +1,6 @@
 // hnamepath: /ccal/comp_cxy
 // hnamepath: /ccal/comp_fxy
+// hnamepath: /ccal/comp_bcdt_full
 // hnamepath: /ccal/comp_bcdt
 // hnamepath: /ccal/comp_fcdt
 
@@ -10,6 +11,7 @@
 
   TH2F* comp_cxy  = (TH2F*)gDirectory->FindObjectAny( "comp_cxy" );
   TH2F* comp_fxy  = (TH2F*)gDirectory->FindObjectAny( "comp_fxy" );
+  TH1F* comp_bcdt_full = (TH1F*)gDirectory->FindObjectAny( "comp_bcdt_full" );
   TH1F* comp_bcdt = (TH1F*)gDirectory->FindObjectAny( "comp_bcdt" );
   TH1F* comp_fcdt = (TH1F*)gDirectory->FindObjectAny( "comp_fcdt" );
  
@@ -32,7 +34,7 @@
     comp_cxy->GetYaxis()->SetRangeUser(-10.4,10.4);
     //TPad *p1 = (TPad*)c1->cd( 1 );
     //p1->SetLogz();
-    c1->cd( 1 );    
+    c1->cd( 1 );
     comp_cxy->Draw("COLZ");
   }
   
@@ -45,18 +47,29 @@
     comp_fxy->Draw("COLZ");
   }
 
-  if( comp_bcdt ){
+  if( comp_bcdt_full && comp_bcdt ){
 
+    comp_bcdt_full->SetStats( 0 );
     comp_bcdt->SetStats( 0 );
-    comp_bcdt->GetXaxis()->SetRangeUser(-20,20);
+
+    comp_bcdt_full->SetLineColor( kBlack );
+    comp_bcdt->SetLineColor( kRed );
+
+    comp_bcdt_full->GetXaxis()->SetRangeUser(10,80);
+    comp_bcdt->GetXaxis()->SetRangeUser(10,80);
+
+    comp_bcdt_full->SetTitle("CCAL Shower Time - Beam Time");
+    comp_bcdt_full->GetXaxis()->SetTitle("t_{ccal}-t_{beam} [ns]");
+
     c1->cd( 3 );
-    comp_bcdt->Draw();
+    comp_bcdt_full->Draw();
+    //comp_bcdt->Draw("same");
   }
 
   if( comp_fcdt ){
 
     comp_fcdt->SetStats( 0 );
-    comp_fcdt->GetXaxis()->SetRangeUser(-40,20);
+    comp_fcdt->GetXaxis()->SetRangeUser(0,40);
     c1->cd( 4 );
     comp_fcdt->Draw();
   }

@@ -94,7 +94,7 @@ class DTrackWireBased_factory:public jana::JFactory<DTrackWireBased>{
 		double PROTON_MOM_THRESH;
 		bool dIsNoFieldFlag;
 
-		double dFCALz,dTOFz;  
+		double dFCALz,dTOFz,dDIRCz;
 		// start counter geom info
 		vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic
 		vector<vector<DVector3> >sc_pos;

@@ -28,7 +28,7 @@
   if( clusN ){
 
     clusN->SetStats( 0 );
-    clusN->SetFillColor( kBlue );
+    clusN->SetFillColor( kCyan-10 );
     c1->cd( 1 );
     clusN->Draw();
   }
@@ -36,7 +36,7 @@
   if( clusE ){
 
     clusE->SetStats( 0 );
-    clusE->SetFillColor( kBlue );
+    clusE->SetFillColor( kCyan-10 );
     clusE->GetXaxis()->SetRangeUser(0,12000);
     c1->cd( 2 );
     clusE->Draw();
@@ -45,7 +45,7 @@
   if( clusETot ){
 
     clusETot->SetStats( 0 );
-    clusETot->SetFillColor( kBlue );
+    clusETot->SetFillColor( kCyan-10 );
     clusETot->GetXaxis()->SetRangeUser(0,12000);
     c1->cd( 4 );
     clusETot->Draw();
@@ -54,8 +54,8 @@
   if( clusT ){
 
     clusT->SetStats( 0 );
-    clusT->SetFillColor( kBlue );
-    clusT->GetXaxis()->SetRangeUser(0,300);
+    clusT->SetFillColor( kCyan-10 );
+    clusT->GetXaxis()->SetRangeUser(-100,300);
     c1->cd( 3 );
     clusT->Draw();
   }

@@ -241,8 +241,7 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (tracks.size()==0) return NOERROR;
 
   if (dIsNoFieldFlag){
-    // Copy wire-based results -- no further steps are currently needed for the
-    // StraightLine fitter except for creation of a reference trajectory
+    // Copy wire-based results 
     for (unsigned int i=0;i<tracks.size();i++){
       const DTrackWireBased *track = tracks[i];
 
@@ -1002,6 +1001,11 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   // Add list of start times
   timebased_track->start_times.assign(src_track->start_times.begin(),  
 				      src_track->start_times.end());
+  // Set the start time we used
+  timebased_track->setT0(timebased_track->start_times[0].t0,
+			 timebased_track->start_times[0].t0_sigma, 
+			 timebased_track->start_times[0].system);
+
   // Add DTrack object as associate object
   vector<const DTrackWireBased*>wire_based_track;
   src_track->GetT(wire_based_track);
@@ -1135,8 +1139,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   
   timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
   timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
-
-
+  
   tracks_to_add.push_back(timebased_track);
 }
 
