@@ -102,6 +102,7 @@ public:
 		  vector<cdc_update_t>&cdc_updates); 
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,
 					    DMatrix4x1 &S);
+  void GetExtrapolations(const DVector3 &pos0,const DVector3 &dir);
 	
  private:
   deque<trajectory_t>trajectory;
@@ -112,7 +113,15 @@ public:
   double CHI2CUT;  
   int PLANE_TO_SKIP;
  
-  
+  // Geometry parameters
+  double dTOFz,dFCALz,dDIRCz;
+
+  // start counter geom info
+  vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic
+  vector<vector<DVector3> >sc_pos;
+  vector<vector<DVector3> >sc_norm;
+  double SC_BARREL_R,SC_END_NOSE_Z,SC_PHI_SECTOR1;
+
   // drift time tables
   vector<double>cdc_drift_table;
   vector<double>fdc_drift_table;

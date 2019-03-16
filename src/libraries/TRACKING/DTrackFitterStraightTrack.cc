@@ -118,6 +118,38 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
 			cdc_endplate_rmax);
    downstreamEndplate-=0.5*endplate_dz;
 
+   // Outer detector geometry parameters
+   if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
+   geom->GetFCALZ(dFCALz); 
+   vector<double>tof_face;
+   geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
+	     tof_face);
+   vector<double>tof_plane;  
+   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane);
+   dTOFz=tof_face[2]+tof_plane[2]; 
+   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
+   dTOFz+=tof_face[2]+tof_plane[2];
+   dTOFz*=0.5;  // mid plane between tof planes
+   
+   // Get start counter geometry;
+   if (geom->GetStartCounterGeom(sc_pos,sc_norm)){
+     // Create vector of direction vectors in scintillator planes
+     for (int i=0;i<30;i++){
+       vector<DVector3>temp;
+       for (unsigned int j=0;j<sc_pos[i].size()-1;j++){
+	 double dx=sc_pos[i][j+1].x()-sc_pos[i][j].x();
+	 double dy=sc_pos[i][j+1].y()-sc_pos[i][j].y();
+	 double dz=sc_pos[i][j+1].z()-sc_pos[i][j].z();
+	 temp.push_back(DVector3(dx/dz,dy/dz,1.));
+       }
+       sc_dir.push_back(temp);
+     }
+     SC_END_NOSE_Z=sc_pos[0][12].z();
+     SC_BARREL_R=sc_pos[0][0].Perp();
+     SC_PHI_SECTOR1=sc_pos[0][0].Phi();
+   }
+   
+
    //*************************
    // Command-line parameters
    //*************************
@@ -826,20 +858,26 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     double pt=cos(atan(tanl)); //only direction is known...    
     DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
     
-    DVector3 beamdir(0.,0.,1.);
-    DVector3 beampos(0.,0.,65.);
     DVector3 pos;
-    finder->FindDoca(z,S,beamdir,beampos,&pos);
+    if (COSMICS==false){
+      DVector3 beamdir(0.,0.,1.);
+      DVector3 beampos(0.,0.,65.);
+      finder->FindDoca(z,S,beamdir,beampos,&pos);
+      
+      // Jacobian matrix
+      double dz=pos.z()-z;
+      DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
+      J(state_x,state_tx)=dz;
+      J(state_y,state_ty)=dz;
+      C=J*C*J.Transpose();
+    }
+    else{
+      pos.SetXYZ(S(state_x),S(state_y),z);
+    }
+
 
     fit_params.setPosition(pos);
     fit_params.setMomentum(mom);
-
-    // Jacobian matrix
-    double dz=pos.z()-z;
-    DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
-    J(state_x,state_tx)=dz;
-    J(state_y,state_ty)=dz;
-    C=J*C*J.Transpose();
 
     // Add covariance matrices to output
     auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
@@ -855,6 +893,8 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     fit_params.setErrorMatrix(Get7x7ErrorMatrix(locTrackingCovarianceMatrix,
 						S));
 
+    // Get extrapolations to other detectors
+    GetExtrapolations(pos,mom);
   
   }
 
@@ -1792,7 +1832,7 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
 	
 	thisPull.AddTrackDerivatives(derivatives);
       }
-      
+      pulls.push_back(thisPull);  
     }
     else if (best_trajectory[m].id>=1000){ // CDC Hit
       unsigned int id=best_trajectory[m].id-1000;
@@ -1954,7 +1994,7 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       
       thisPull.AddTrackDerivatives(derivatives);
       
-      
+      pulls.push_back(thisPull);
     }
     else{
       A=best_trajectory[m].Ckk*JT*C.Invert();
@@ -1976,7 +2016,7 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1
   C7x7->ResizeTo(7, 7);
   DMatrix J(7,5);
 
-  double p=10.; // fixed: cannot measure
+  double p=1.; // fixed: cannot measure
   double tx_=S(state_tx);
   double ty_=S(state_ty);
   double x_=S(state_x);
@@ -2009,3 +2049,85 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1
   return C7x7;
 }
 
+// Routine to get extrapolations to other detectors
+void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
+						  const DVector3 &dir){
+  double z0=pos0.z();
+  double uz=dir.z();
+  ClearExtrapolations();
+
+   // Extrapolate to DIRC
+  DVector3 diff=((dDIRCz-z0)/uz)*dir;
+  DVector3 pos=pos0+diff;
+  double s=diff.Mag();
+  double t=s/29.98;
+  extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+
+  // Extrapolate to TOF
+  diff=((dTOFz-z0)/uz)*dir;
+  pos=pos0+diff;
+  s=diff.Mag();
+  t=s/29.98;
+  extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
+  
+  // Extrapolate to FCAL
+  diff=((dFCALz-z0)/uz)*dir;
+  pos=pos0+diff;
+  s=diff.Mag();
+  t=s/29.98;
+  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
+  // extrapolate to exit of FCAL
+  diff=((dFCALz+45.-z0)/uz)*dir;
+  pos=pos0+diff;
+  s=diff.Mag();
+  t=s/29.98;
+  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+
+  // Extrapolate to Start Counter and BCAL
+  double R=pos0.Perp();
+  diff.SetMag(0.);
+  double z=z0;
+  while (R<89.0 && z>17. && z<410.){
+    diff+=(1./dir.z())*dir;
+    pos=pos0+diff;
+    R=pos.Perp();
+    z=pos.z();
+    s=diff.Mag();
+    t=s/29.98;
+    //	   printf("R %f z %f\n",R,z);
+    // start counter
+    if (sc_pos.empty()==false && R<SC_BARREL_R && z<SC_END_NOSE_Z){
+      double d_old=1000.,d=1000.;
+      unsigned int index=0;
+      for (unsigned int m=0;m<12;m++){
+	double dphi=pos.Phi()-SC_PHI_SECTOR1;
+	if (dphi<0) dphi+=2.*M_PI;
+	index=int(floor(dphi/(2.*M_PI/30.)));
+	if (index>29) index=0;
+	d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
+	if (d*d_old<0){ // break if we cross the current plane  
+	  // Find the new distance to the start counter (which could 
+	  // now be to a plane in the one adjacent to the one before the
+	  // step...)
+	  int count=0;
+	  while (fabs(d)>0.05 && count<20){ 
+	    // Find the index for the nearest start counter paddle
+	    double dphi=pos.Phi()-SC_PHI_SECTOR1;
+	    if (dphi<0) dphi+=2.*M_PI;
+	    index=int(floor(dphi/(2.*M_PI/30.)));
+	    d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
+	    pos+=d*dir;
+	    count++;
+	  }
+	  extrapolations[SYS_START].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+	  break;
+	}
+	d_old=d;
+      }
+	 }
+    if (R>64.){	 
+      extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+    }
+  }
+ 
+}
