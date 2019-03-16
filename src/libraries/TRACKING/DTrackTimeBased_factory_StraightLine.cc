@@ -11,6 +11,8 @@
 using namespace std;
 
 #include "DTrackTimeBased_factory_StraightLine.h"
+#include <CDC/DCDCTrackHit.h>
+#include <FDC/DFDCPseudo.h>
 using namespace jana;
 
 //------------------
@@ -18,6 +20,12 @@ using namespace jana;
 //------------------
 jerror_t DTrackTimeBased_factory_StraightLine::init(void)
 {
+  CDC_MATCH_CUT=1.25;
+  gPARMS->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
+  FDC_MATCH_CUT=1.25;
+  gPARMS->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
+
+
   return NOERROR;
 }
 
@@ -64,6 +72,29 @@ jerror_t DTrackTimeBased_factory_StraightLine::brun(jana::JEventLoop *eventLoop,
     SC_PHI_SECTOR1=sc_pos[0][0].Phi();
   }
 
+  // Get pointer to TrackFinder object 
+  vector<const DTrackFinder *> finders;
+  eventLoop->Get(finders);
+  
+  if(finders.size()<1){
+    _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+  
+   // Drop the const qualifier from the DTrackFinder pointer
+  finder = const_cast<DTrackFinder*>(finders[0]);
+
+  // Get pointer to DTrackFitter object that actually fits a track
+  vector<const DTrackFitter *> fitters;
+  eventLoop->Get(fitters,"StraightTrack");
+  if(fitters.size()<1){
+    _DBG_<<"Unable to get a DTrackFitter object!"<<endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+  
+  // Drop the const qualifier from the DTrackFitter pointer
+  fitter = const_cast<DTrackFitter*>(fitters[0]);
+  
   return NOERROR;
 }
 
@@ -76,42 +107,66 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
   vector<const DTrackWireBased*> tracks;
   loop->Get(tracks);
 
+  // Get hits
+  vector<const DCDCTrackHit *>cdchits;
+  loop->Get(cdchits);
+  vector<const DFDCPseudo *>fdchits;
+  loop->Get(fdchits);
+
   // Copy wire-based results 
   for (unsigned int i=0;i<tracks.size();i++){
+    // Reset the fitter
+    fitter->Reset();
+    fitter->SetFitType(DTrackFitter::kTimeBased); 
+
     const DTrackWireBased *track = tracks[i];
+    DVector3 pos=track->position();
+    DVector3 dir=track->momentum();
+    // Select hits that belong to the track
+    for (unsigned int j=0;j<cdchits.size();j++){
+      double d=finder->FindDoca(pos,dir,cdchits[j]->wire->origin,
+				cdchits[j]->wire->udir);
+      if (d<CDC_MATCH_CUT) fitter->AddHit(cdchits[j]);
+    }
+    for (unsigned int i=0;i<fdchits.size();i++){
+      double pz=dir.z();
+      double tx=dir.x()/pz;
+      double ty=dir.y()/pz;
+      double dz=fdchits[i]->wire->origin.z()-pos.z();
+      DVector2 predpos(pos.x()+tx*dz,pos.y()+ty*dz);
+      DVector2 diff=predpos-fdchits[i]->xy;
+      if (diff.Mod()<FDC_MATCH_CUT) fitter->AddHit(fdchits[i]);
+    }
     
-    // Copy over the results of the wire-based fit to DTrackTimeBased
-    DTrackTimeBased *timebased_track = new DTrackTimeBased(); //share the memory (isn't changed below)
-      *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(track);
-      
-      timebased_track->chisq = track->chisq;
-      timebased_track->Ndof = track->Ndof;
-      timebased_track->FOM =  TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
-      timebased_track->pulls = track->pulls;
-      timebased_track->extrapolations = track->extrapolations;
-      timebased_track->trackid = track->id;
+    // Fit the track using the list of hits we gathered above
+    if (fitter->FitTrack(pos,dir,1.,0.,0.)==DTrackFitter::kFitSuccess){
+      DTrackTimeBased *timebased_track = new DTrackTimeBased();
       timebased_track->candidateid=track->candidateid;
-      timebased_track->IsSmoothed = track->IsSmoothed;
-      timebased_track->flags=DTrackTimeBased::FLAG__USED_WIREBASED_FIT;
+      *static_cast<DTrackingData*>(timebased_track) = fitter->GetFitParameters();
+      timebased_track->chisq = fitter->GetChisq();
+      timebased_track->Ndof = fitter->GetNdof();
+      timebased_track->setPID(PiPlus);
+      timebased_track->FOM = TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
+      timebased_track->pulls =std::move(fitter->GetPulls());
+      timebased_track->extrapolations=std::move(fitter->GetExtrapolations());
+      timebased_track->IsSmoothed = fitter->GetIsSmoothed();
       
-      // Lists of hits used in the previous pass
-      vector<const DCDCTrackHit *>cdchits;
-      track->GetT(cdchits);
-      vector<const DFDCPseudo *>fdchits;
-      track->GetT(fdchits);
+      // Add hits used as associated objects
+      vector<const DCDCTrackHit*> cdchits_on_track = fitter->GetCDCFitHits();
+      vector<const DFDCPseudo*> fdchits_on_track = fitter->GetFDCFitHits();
       
-      for (unsigned int k=0;k<cdchits.size();k++){
-	timebased_track->AddAssociatedObject(cdchits[k]);
+      for (unsigned int k=0;k<cdchits_on_track.size();k++){
+	timebased_track->AddAssociatedObject(cdchits_on_track[k]);
       }
-      for (unsigned int k=0;k<fdchits.size();k++){
-	timebased_track->AddAssociatedObject(fdchits[k]);
+      for (unsigned int k=0;k<fdchits_on_track.size();k++){
+	timebased_track->AddAssociatedObject(fdchits_on_track[k]);
       }
-      timebased_track->measured_cdc_hits_on_track = cdchits.size();
-      timebased_track->measured_fdc_hits_on_track = fdchits.size();
+      timebased_track->measured_cdc_hits_on_track = cdchits_on_track.size();
+      timebased_track->measured_fdc_hits_on_track = fdchits_on_track.size();
       
       timebased_track->AddAssociatedObject(track);
-      timebased_track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits);
-      timebased_track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits);
+      timebased_track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits_on_track);
+      timebased_track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits_on_track);
       
       // TODO: figure out the potential hits on straight line tracks
       timebased_track->potential_cdc_hits_on_track = 0;
@@ -119,6 +174,7 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
       
       _data.push_back(timebased_track);
       
+    }
   }
 
   return NOERROR;
