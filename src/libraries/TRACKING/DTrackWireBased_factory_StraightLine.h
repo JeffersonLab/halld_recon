@@ -29,15 +29,6 @@ class DTrackWireBased_factory_StraightLine:public jana::JFactory<DTrackWireBased
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
   double CDC_MATCH_CUT, FDC_MATCH_CUT;
-	
-  // outer detector geom info
-  double dFCALz,dTOFz,dDIRCz;
-
-  // start counter geom info
-  vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic
-  vector<vector<DVector3> >sc_pos;
-  vector<vector<DVector3> >sc_norm;
-  double SC_BARREL_R,SC_END_NOSE_Z,SC_PHI_SECTOR1;
   
   const DParticleID* dPIDAlgorithm;
   DTrackFitter *fitter;
