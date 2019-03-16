@@ -12,6 +12,7 @@ using namespace std;
 
 #include "DTrackWireBased_factory_StraightLine.h"
 #include <CDC/DCDCTrackHit.h>
+#include <FDC/DFDCPseudo.h>
 using namespace jana;
 
 //------------------
@@ -108,6 +109,8 @@ jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
    // Get hits
    vector<const DCDCTrackHit *>cdchits;
    loop->Get(cdchits);
+   vector<const DFDCPseudo *>fdchits;
+   loop->Get(fdchits);
   
    for (unsigned int i=0;i<candidates.size();i++){
      // Reset the fitter
@@ -116,10 +119,20 @@ jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
      const DTrackCandidate *cand=candidates[i];
      DVector3 pos=cand->position();
      DVector3 dir=cand->momentum();
+     // Select hits that belong to the track
      for (unsigned int j=0;j<cdchits.size();j++){
        double d=finder->FindDoca(pos,dir,cdchits[j]->wire->origin,
 				 cdchits[j]->wire->udir);
        if (d<CDC_MATCH_CUT) fitter->AddHit(cdchits[j]);
+     }
+     for (unsigned int i=0;i<fdchits.size();i++){
+       double pz=dir.z();
+       double tx=dir.x()/pz;
+       double ty=dir.y()/pz;
+       double dz=fdchits[i]->wire->origin.z()-pos.z();
+       DVector2 predpos(pos.x()+tx*dz,pos.y()+ty*dz);
+       DVector2 diff=predpos-fdchits[i]->xy;
+       if (diff.Mod()<FDC_MATCH_CUT) fitter->AddHit(fdchits[i]);
      }
 
      // Fit the track using the list of hits we gathered above
