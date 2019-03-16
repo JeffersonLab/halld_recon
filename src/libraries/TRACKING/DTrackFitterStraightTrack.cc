@@ -16,6 +16,18 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
   const DGeometry *geom = dapp->GetDGeometry(runnumber);
 
+  // Get pointer to TrackFinder object 
+  vector<const DTrackFinder *> finders;
+  loop->Get(finders);
+    
+   // Drop the const qualifier from the DTrackFinder pointer
+  finder = const_cast<DTrackFinder*>(finders[0]);
+
+  // Resource pool for matrices
+  dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>
+    ();
+  dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
+
   //****************
   // CDC parameters
   //****************
@@ -293,9 +305,6 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
   S0=trajectory[0].S;
   J=trajectory[0].J;
   for (unsigned int k=1;k<trajectory.size();k++){
-    printf("%d\n",k);
-    C.Print();
-    S.Print();
     if (!C.IsPosDef()) return UNRECOVERABLE_ERROR;
     
     // Propagate the state and covariance matrix forward in z
@@ -795,15 +804,12 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     status=FitForwardTrack(t0,z,S,C,chisq,Ndof);
   }
   else if (cdchits.size()>0){
-    for (unsigned int i=0;i<cdchits.size();i++) cout << cdchits[i]->wire->ring << endl;
-
     double dzsign=(pz>0)?1.:-1.;
     status=FitCentralTrack(z,t0,dzsign,S,C,chisq,Ndof);
   }
 
   if (status==DTrackFitter::kFitSuccess){
     // Output fit results
-    DVector3 pos(S(state_x),S(state_y),z);
     double tx=S(state_tx),ty=S(state_ty);
     double phi=atan2(ty,tx);
     double tanl=1./sqrt(tx*tx+ty*ty);
@@ -820,20 +826,36 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     double pt=cos(atan(tanl)); //only direction is known...    
     DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
     
+    DVector3 beamdir(0.,0.,1.);
+    DVector3 beampos(0.,0.,65.);
+    DVector3 pos;
+    finder->FindDoca(z,S,beamdir,beampos,&pos);
+
     fit_params.setPosition(pos);
     fit_params.setMomentum(mom);
-    /*
-      auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-      locTrackingCovarianceMatrix->ResizeTo(5, 5); 
-      locTrackingCovarianceMatrix->Zero();
-      for(unsigned int loc_i = 0; loc_i < 4; ++loc_i){
+
+    // Jacobian matrix
+    double dz=pos.z()-z;
+    DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
+    J(state_x,state_tx)=dz;
+    J(state_y,state_ty)=dz;
+    C=J*C*J.Transpose();
+
+    // Add covariance matrices to output
+    auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+    locTrackingCovarianceMatrix->ResizeTo(5, 5); 
+    locTrackingCovarianceMatrix->Zero();
+    for(unsigned int loc_i = 0; loc_i < 4; ++loc_i){
       for(unsigned int loc_j = 0; loc_j < 4; ++loc_j){
-      (*locTrackingCovarianceMatrix)(loc_i, loc_j) = C(loc_i, loc_j);
+	(*locTrackingCovarianceMatrix)(loc_i, loc_j) = C(loc_i, loc_j);
       }
-      }
-      (*locTrackingCovarianceMatrix)(4,4)=1.;
-      fit_params.setTrackingErrorMatrix(locTrackingCovarianceMatrix);
-    */
+    }
+    (*locTrackingCovarianceMatrix)(4,4)=1.;
+    fit_params.setTrackingErrorMatrix(locTrackingCovarianceMatrix);
+    fit_params.setErrorMatrix(Get7x7ErrorMatrix(locTrackingCovarianceMatrix,
+						S));
+
+  
   }
 
   return status;

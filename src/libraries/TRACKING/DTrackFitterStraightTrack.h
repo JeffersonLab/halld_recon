@@ -18,6 +18,7 @@
 #include <deque>
 #include <TMatrixFSym.h>
 #include "DResourcePool.h"
+#include <TRACKING/DTrackFinder.h>
 
 class DTrackFitterStraightTrack: public DTrackFitter { 
 public:
@@ -129,7 +130,7 @@ public:
   double short_drift_func[3][3];
   
   double downstreamEndplate,upstreamEndplate,cdc_endplate_rmin,cdc_endplate_rmax;
-  
+  DTrackFinder *finder;
   shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
   
 };
