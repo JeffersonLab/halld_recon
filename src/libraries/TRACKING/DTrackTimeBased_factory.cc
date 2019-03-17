@@ -649,7 +649,7 @@ void DTrackTimeBased_factory
   double locStartTimeVariance = 0.0;
   double track_t0=track->t0();
   double locStartTime = track_t0;  // initial guess from tracking
-  DSCHitMatchParams locSCBestMatchParams; 
+ 
   // Get start time estimate from Start Counter
   if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_START),sc_hits,locStartTime)){
     start_time.t0=locStartTime;
