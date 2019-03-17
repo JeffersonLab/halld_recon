@@ -13,6 +13,11 @@ using namespace std;
 #include "DTrackTimeBased_factory_StraightLine.h"
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
+#include <BCAL/DBCALShower.h>
+#include <FCAL/DFCALShower.h>
+#include <TOF/DTOFPoint.h>
+#include <START_COUNTER/DSCHit.h>
+
 using namespace jana;
 
 //------------------
@@ -112,8 +117,23 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
   loop->Get(cdchits);
   vector<const DFDCPseudo *>fdchits;
   loop->Get(fdchits);
+  
+  // get start counter hits
+  vector<const DSCHit*>sc_hits;
+  loop->Get(sc_hits);
+  
+  // Get TOF points
+  vector<const DTOFPoint*> tof_points;
+  loop->Get(tof_points);
 
-  // Copy wire-based results 
+  // Get BCAL and FCAL showers
+  vector<const DBCALShower*>bcal_showers;
+  loop->Get(bcal_showers);
+
+  vector<const DFCALShower*>fcal_showers;
+  loop->Get(fcal_showers);
+
+  // Start with wire-based results, refit with drift times 
   for (unsigned int i=0;i<tracks.size();i++){
     // Reset the fitter
     fitter->Reset();
@@ -138,8 +158,14 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
       if (diff.Mod()<FDC_MATCH_CUT) fitter->AddHit(fdchits[i]);
     }
     
+    // Estimate t0 for this track
+    double t0=0.;
+    DetectorSystem_t t0_detector=SYS_NULL;
+    GetStartTime(track,sc_hits,tof_points,bcal_showers,fcal_showers,t0,
+		 t0_detector);
+
     // Fit the track using the list of hits we gathered above
-    if (fitter->FitTrack(pos,dir,1.,0.,0.)==DTrackFitter::kFitSuccess){
+    if (fitter->FitTrack(pos,dir,1.,0.,t0,t0_detector)==DTrackFitter::kFitSuccess){
       DTrackTimeBased *timebased_track = new DTrackTimeBased();
       timebased_track->candidateid=track->candidateid;
       *static_cast<DTrackingData*>(timebased_track) = fitter->GetFitParameters();
@@ -196,3 +222,47 @@ jerror_t DTrackTimeBased_factory_StraightLine::fini(void)
   return NOERROR;
 }
 
+// Get an estimate for the start time for this track
+void 
+DTrackTimeBased_factory_StraightLine::GetStartTime(const DTrackWireBased *track,
+						   vector<const DSCHit*>&sc_hits,
+						   vector<const DTOFPoint*>&tof_points,
+						   vector<const DBCALShower*>&bcal_showers,	
+						   vector<const DFCALShower*>&fcal_showers,
+						   double &t0,DetectorSystem_t &t0_detector) const {
+  t0=track->t0();
+  t0_detector=track->t0_detector();
+  double track_t0=t0;
+  double locStartTime = track_t0;  // initial guess from tracking
+ 
+  // Get start time estimate from Start Counter
+  if (dPIDAlgorithm->Get_StartTime(track->extrapolations.at(SYS_START),sc_hits,locStartTime)){
+    t0=locStartTime;
+    t0_detector=SYS_START;
+    return;
+  }
+
+  // Get start time estimate from TOF
+  locStartTime = track_t0;  // initial guess from tracking
+  if (dPIDAlgorithm->Get_StartTime(track->extrapolations.at(SYS_TOF),tof_points,locStartTime)){
+    t0=locStartTime;
+    t0_detector=SYS_TOF;
+    return;
+  }
+
+  // Get start time estimate from FCAL
+  locStartTime = track_t0;  // initial guess from tracking
+  if (dPIDAlgorithm->Get_StartTime(track->extrapolations.at(SYS_FCAL),fcal_showers,locStartTime)){
+    t0=locStartTime;
+    t0_detector=SYS_FCAL;
+    return;
+  }
+
+  // Get start time estimate from BCAL
+  locStartTime=track_t0;
+  if (dPIDAlgorithm->Get_StartTime(track->extrapolations.at(SYS_BCAL),bcal_showers,locStartTime)){
+    t0=locStartTime;
+    t0_detector=SYS_BCAL;
+    return;
+  }
+}

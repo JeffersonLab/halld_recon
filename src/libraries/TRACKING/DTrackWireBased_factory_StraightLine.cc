@@ -121,12 +121,25 @@ jerror_t DTrackWireBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
        vector<const DCDCTrackHit*> cdchits_on_track = fitter->GetCDCFitHits();
        vector<const DFDCPseudo*> fdchits_on_track = fitter->GetFDCFitHits();
 
+       // ...also find minimum drift time...
+       double tmin=1e6;
+       DetectorSystem_t detector=SYS_NULL;
        for (unsigned int k=0;k<cdchits_on_track.size();k++){
+	 if (cdchits_on_track[k]->tdrift<tmin){
+	   tmin=cdchits_on_track[k]->tdrift;
+	   detector=SYS_CDC;
+	 }
 	 track->AddAssociatedObject(cdchits_on_track[k]);
        }
        for (unsigned int k=0;k<fdchits_on_track.size();k++){
+	 if (fdchits_on_track[k]->time<tmin){
+	   tmin=fdchits_on_track[k]->time;
+	   detector=SYS_FDC;
+	 }
 	 track->AddAssociatedObject(fdchits_on_track[k]);
        }
+       track->setT0(tmin,10.0,detector);
+       
        track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits_on_track);
        track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits_on_track);
 
