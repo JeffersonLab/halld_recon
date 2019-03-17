@@ -27,6 +27,25 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>
     ();
   dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
+  
+  //****************
+  // FDC parameters
+  //****************
+
+  // Time-to-distance function parameters for FDC
+  map<string,double>drift_func_parms;
+  jcalib->Get("FDC/drift_function_parms",drift_func_parms); 
+  DRIFT_FUNC_PARMS[0]=drift_func_parms["p0"];   
+  DRIFT_FUNC_PARMS[1]=drift_func_parms["p1"];
+  DRIFT_FUNC_PARMS[2]=drift_func_parms["p2"]; 
+  DRIFT_FUNC_PARMS[3]=drift_func_parms["p3"];
+  DRIFT_FUNC_PARMS[4]=1000.;
+  DRIFT_FUNC_PARMS[5]=0.;
+  map<string,double>drift_func_ext;
+  if (jcalib->Get("FDC/drift_function_ext",drift_func_ext)==false){
+    DRIFT_FUNC_PARMS[4]=drift_func_ext["p4"]; 
+    DRIFT_FUNC_PARMS[5]=drift_func_ext["p5"]; 
+  }
 
   //****************
   // CDC parameters
@@ -921,7 +940,7 @@ unsigned int DTrackFitterStraightTrack::Locate(const vector<double>&xx,double x)
 }
 
 // Steering routine for fitting CDC-only tracks
-DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitCentralTrack(double z0,double t0,
+DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitCentralTrack(double &z0,double t0,
 						double dzsign,
 						DMatrix4x1 &Sbest,
 						DMatrix4x4 &Cbest,
@@ -1001,12 +1020,24 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitCentralTrack(double z0,
 
 // parametrization of time-to-distance for FDC
 double DTrackFitterStraightTrack::fdc_drift_distance(double time) const {
-   if (time<0.) return 0.;
-   double tsq=time*time;
-   double d=DRIFT_FUNC_PARMS[0]*sqrt(time)+DRIFT_FUNC_PARMS[1]*time
+  if (time<0.) return 0.;
+  double d=0.; 
+  double tsq=time*time;
+  double t_high=DRIFT_FUNC_PARMS[4];
+  
+  if (time<t_high){
+    d=DRIFT_FUNC_PARMS[0]*sqrt(time)+DRIFT_FUNC_PARMS[1]*time
       +DRIFT_FUNC_PARMS[2]*tsq+DRIFT_FUNC_PARMS[3]*tsq*time;
+  }
+  else{
+    double t_high_sq=t_high*t_high;
+    d=DRIFT_FUNC_PARMS[0]*sqrt(t_high)+DRIFT_FUNC_PARMS[1]*t_high
+      +DRIFT_FUNC_PARMS[2]*t_high_sq+DRIFT_FUNC_PARMS[3]*t_high_sq*t_high;
+    d+=DRIFT_FUNC_PARMS[5]*(time-t_high);
+  }
+    
+  return d;
 
-   return d;
 }
 
 // Crude approximation for the variance in drift distance due to smearing
@@ -1018,11 +1049,9 @@ double DTrackFitterStraightTrack::fdc_drift_variance(double t) const{
    return sigma*sigma;
 }
 
-
-
 // Steering routine for the kalman filter
 DTrackFitter::fit_status_t
-DTrackFitterStraightTrack::FitForwardTrack(double t0,double start_z,
+DTrackFitterStraightTrack::FitForwardTrack(double t0,double &start_z,
       DMatrix4x1 &Sbest,DMatrix4x4 &Cbest,double &chi2_best,int &ndof_best){
   // State vector and covariance matrix
   DMatrix4x1 S(Sbest);
@@ -1072,108 +1101,35 @@ DTrackFitterStraightTrack::FitForwardTrack(double t0,double start_z,
     // Save the current used hit and trajectory information
     best_trajectory.assign(trajectory.begin(),trajectory.end());
     used_cdc_hits_best_fit.assign(used_cdc_hits.begin(),used_cdc_hits.end());
+    used_fdc_hits_best_fit.assign(used_fdc_hits.begin(),used_fdc_hits.end());
     best_updates.assign(updates.begin(),updates.end());
+    best_cdc_updates.assign(cdc_updates.begin(),cdc_updates.end());
     
     chi2_best=chi2; 
     ndof_best=ndof;
-   }
-  /*
-   // Take these best fit values and try to grab CDC hits that may be associated with this track.
-   if (iter>0 && trajectory.size()>1 && !SKIP_CDC){
+  }
+  if (iter==0) return DTrackFitter::kFitFailed;
 
-      // Get intersection of track with CDC endplate.
-      double tx=Sbest(state_tx),ty=Sbest(state_ty);
-      double phi=atan2(ty,tx);
-      double tanl=1./sqrt(tx*tx+ty*ty);
-      double pt=10.*cos(atan(tanl));
-      DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
+  //Final z position (closest to beam line)
+  start_z=best_trajectory[best_trajectory.size()-1].z;
 
-      unsigned int last_index=trajectory.size()-1;
-      DVector3 pos,origin,dir(0,0,1.);
-      double z=trajectory[last_index].z;
-      finder->FindDoca(z,Sbest,dir,origin,&pos);
-
-      DVector3 norm(0,0,1);
-      DVector3 pointInPlane(0.,0.,cdc_endplate_z);
-      DVector3 intersection;
-      finder->FindIntersectionWithPlane(pointInPlane,norm,
-            pos,mom,intersection);
-
-      double intersectionR=intersection.Perp();
-      if(intersectionR > cdc_endplate_rmin && intersectionR < cdc_endplate_rmax){ // We might have some CDC hits
-         for (size_t i=0; i<cdchits.size(); i++){
-            origin = cdchits[i]->wire->origin;
-            if (origin.Perp() > intersectionR) continue; // Assume the track is coming from the target
-            dir = cdchits[i]->wire->udir;
-            DVector3 pos;
-            double doca = finder->FindDoca(z,Sbest,dir,origin,&pos);     
-            if (doca < CDC_MATCH_DOCA){
-               if (VERBOSE) jout << " Matched CDC hit R" << cdchits[i]->wire->ring << " S" << cdchits[i]->wire->straw << "to FDC track " << endl;
-               matchedCDCHits.push_back(cdchits[i]);
-               used_cdc_hits.insert(i);
-            }
-         }
-      }
-      if (matchedCDCHits.size()  > 0) { 
-         if (VERBOSE) jout << matchedCDCHits.size() << " CDC hits have been found for this FDC track" << endl;
-         cdc_updates.resize(matchedCDCHits.size());
-         best_cdc_updates.resize(matchedCDCHits.size());
-         sort(matchedCDCHits.begin(),matchedCDCHits.end(),DTrackCandidate_StraightLine_cdc_hit_radius_cmp);
-
-         // Perform fit including the information from the CDC hits
-         // Chi-squared and degrees of freedom
-         chi2=1e16;chi2_old=1e16;
-         ndof=0;ndof_old=0;
-         // Pass including CDC hit information
-         for(iter=0;iter<20;iter++){
-            last_index=trajectory.size()-1;
-            z=trajectory[last_index].z;
-            DVector3 pos,origin,dir(0,0,1.);
-            finder->FindDoca(z,S,dir,origin,&pos);
-            if (VERBOSE) {jout << " Finding DOCA z=" << z << " S DOCA " << endl; S.Print(); pos.Print();}
-            S(state_x)=pos.x();
-            S(state_y)=pos.y();
-            double z0=pos.z();
-
-            // Use earliest fdc time to estimate t0
-            t0=1e6;
-            double dsdz=sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
-            for (unsigned int m=0;m<hits.size();m++){
-               if (hits[m]->time<t0){
-                  double L=(hits[m]->wire->origin.z()-z0)*dsdz;
-                  t0=hits[m]->time-L/29.98; // assume moving at speed of light
-               }
-            }
-
-            if (VERBOSE) jout << " FDC/CDC RT starting at z=" << z0 << " t0=" << t0 << endl;;
-            chi2_old=chi2;
-            ndof_old=ndof;
-
-            trajectory.clear();
-            if (SetReferenceTrajectory(t0,z0,S,trajectory,hits)!=NOERROR) break;
-
-            C=C0;
-            if (KalmanFilter(S,C,hits,used_fdc_hits,matchedCDCHits,trajectory,updates,cdc_updates,chi2,ndof
-                     )!=NOERROR) break;
-
-            // printf(" == iter %d =====chi2 %f ndof %d \n",iter,chi2,ndof);
-            if (chi2>chi2_old || fabs(chi2_old-chi2)<0.1) break;
-
-            // Save the current state and covariance matrixes
-            Cbest=C;
-            Sbest=S;
-
-            used_fdc_hits_best_fit=used_fdc_hits;
-            best_trajectory=trajectory;
-            best_updates=updates;
-            best_cdc_updates=cdc_updates;
-         }
-
-      }
-   }
-  */
-
+  //Run the smoother
   if (Smooth(best_updates,best_cdc_updates) == NOERROR) IsSmoothed=true;
+
+  // output list of hits used in the fit
+  cdchits_used_in_fit.clear();
+  for (unsigned int m=0;m<used_cdc_hits_best_fit.size();m++){
+    if (used_cdc_hits_best_fit[m]){
+      cdchits_used_in_fit.push_back(cdchits[m]);
+    }
+  }  
+  fdchits_used_in_fit.clear();
+  for (unsigned int m=0;m<used_fdc_hits_best_fit.size();m++){
+    if (used_fdc_hits_best_fit[m]){
+      fdchits_used_in_fit.push_back(fdchits[m]);
+    }
+  }
+
   
   return DTrackFitter::kFitSuccess;
 }

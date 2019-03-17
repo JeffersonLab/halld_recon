@@ -83,13 +83,13 @@ public:
 			vector<cdc_update_t>&updates,double &chi2,
 			int &ndof,unsigned int iter);
   jerror_t Smooth(vector<cdc_update_t>&cdc_updates);
-  DTrackFitter::fit_status_t FitCentralTrack(double z0,double t0,double dzsign,
+  DTrackFitter::fit_status_t FitCentralTrack(double &z0,double t0,double dzsign,
 					     DMatrix4x1 &Sbest,
 					     DMatrix4x4 &Cbest,
 					     double &chi2_best,int &ndof_best);
   double fdc_drift_distance(double time) const;
   double fdc_drift_variance(double t) const;
-  DTrackFitter::fit_status_t FitForwardTrack(double t0,double start_z,
+  DTrackFitter::fit_status_t FitForwardTrack(double t0,double &start_z,
 					     DMatrix4x1 &Sbest,
 					     DMatrix4x4 &Cbest,
 					     double &chi2_best,int &ndof_best);
@@ -130,7 +130,7 @@ public:
   double CDC_RES_PAR1,CDC_RES_PAR2,CDC_RES_PAR3;
   // Parameters for fdc drift resolution
   double DRIFT_RES_PARMS[3];
-  double DRIFT_FUNC_PARMS[4];
+  double DRIFT_FUNC_PARMS[6];
 
   // variables to deal with CDC straw sag
   vector<vector<double> >max_sag;
