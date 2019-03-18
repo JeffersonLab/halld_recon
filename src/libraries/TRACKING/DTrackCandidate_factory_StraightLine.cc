@@ -129,7 +129,7 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 	 double tx=tracks[i].S(state_tx),ty=tracks[i].S(state_ty);
 	 double phi=atan2(ty,tx);
 	 double tanl=1./sqrt(tx*tx+ty*ty);
-	 double pt=cos(atan(tanl)); //only direction is known...    
+	 double pt=10.0*cos(atan(tanl)); // arbitrary magnitude...    
 	 cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
 
 	 DVector3 pos,origin,dir(0,0,1.);
