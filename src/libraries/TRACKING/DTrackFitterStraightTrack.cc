@@ -672,8 +672,12 @@ jerror_t DTrackFitterStraightTrack::Smooth(vector<cdc_update_t>&cdc_updates){
       double V=cdc_updates[id].V;
     
       if (VERBOSE > 10) jout << " d " << d << " H*S " << H*S << endl;
-      V=V-H*Cs*H_T;
-      
+      if (cdchits[id]->wire->ring==RING_TO_SKIP){
+	V=V+H*Cs*H_T;
+      }
+      else{
+	V=V-H*Cs*H_T;
+      }      
       if (V<0) return VALUE_OUT_OF_RANGE;
 
       // Add the pull
@@ -759,7 +763,7 @@ jerror_t DTrackFitterStraightTrack::SetReferenceTrajectory(double t0,double z,
 							   double &dzsign){ 
   DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
 
-  double ds=1.0;
+  double ds=0.5;
   double t=t0;
   
   // last y position of hit (approximate, using center of wire)
@@ -767,13 +771,7 @@ jerror_t DTrackFitterStraightTrack::SetReferenceTrajectory(double t0,double z,
   double last_r2=last_cdc->wire->origin.Perp2();
   // Check that track points towards last wire, otherwise swap deltaz
   DVector3 dir(S(state_tx),S(state_ty),dzsign);
-  if (!COSMICS){
-    double dphi=dir.Phi()-last_cdc->wire->origin.Phi(); 
-    while (dphi>M_PI) dphi-=2*M_PI;
-    while (dphi<-M_PI) dphi+=2*M_PI;
-    //if (fabs(dphi) > M_PI/2.) dzsign*=-1.;
-  }
-  if (fabs(dir.Theta() - M_PI/2.) < 0.2) ds = 0.1;
+  if (fabs(dir.Theta() - M_PI_2) < 0.2) ds = 0.1;
   
   //jout << "dPhi " << dphi << " theta " << dir.Theta() << endl;
   double dz=dzsign*ds/sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
@@ -843,7 +841,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   // Initial guess for covariance matrix
   DMatrix4x4 C;
   C(state_x,state_x)=C(state_y,state_y)=10.0;     
-  C(state_tx,state_tx)=C(state_ty,state_ty)=0.1;
+  C(state_tx,state_tx)=C(state_ty,state_ty)=10.0;
 
   // Starting z-position and time
   double z=input_pos.z();
@@ -888,7 +886,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
 	phi+=M_PI;
       }
     }
-    double pt=10.0*cos(atan(tanl)); // arbitrary magnitude...
+    double pt=5.0*cos(atan(tanl)); // arbitrary magnitude...
     DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
     
     DVector3 pos;
@@ -908,6 +906,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
       pos.SetXYZ(S(state_x),S(state_y),z);
     }
 
+    fit_params.setForwardParmFlag(true);
 
     fit_params.setPosition(pos);
     fit_params.setMomentum(mom);
@@ -1305,21 +1304,13 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
       
       double cospsi=cos(fdchits[id]->wire->angle);
       double sinpsi=sin(fdchits[id]->wire->angle);
-       
-      // State vector
-      double x=S(state_x);
-      double y=S(state_y);
-      double tx=S(state_tx);
-      double ty=S(state_ty);
-       
-
-      //********************************** fix this!
+  
       // Small angle alignment correction
-      x = x + fdchits[id]->wire->angles.Z()*y;
-      y = y - fdchits[id]->wire->angles.Z()*x;
+      double x = S(state_x) + fdchits[id]->wire->angles.Z()*S(state_y);
+      double y = S(state_y) - fdchits[id]->wire->angles.Z()*S(state_x);
       //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-      tx = (tx + fdchits[id]->wire->angles.Z()*ty - fdchits[id]->wire->angles.Y());
-      ty = (ty - fdchits[id]->wire->angles.Z()*tx + fdchits[id]->wire->angles.X());
+      double tx = (S(state_tx) + fdchits[id]->wire->angles.Z()*S(state_ty) - fdchits[id]->wire->angles.Y());
+      double ty = (S(state_ty) - fdchits[id]->wire->angles.Z()*S(state_tx) + fdchits[id]->wire->angles.X());
       
       if (std::isnan(x) || std::isnan(y)) return UNRECOVERABLE_ERROR;
       
@@ -1646,19 +1637,12 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       double u=fdchits[id]->w;
       double v=fdchits[id]->s;
 
-      // Position and direction from state vector
-      double x=Ss(state_x);
-      double y=Ss(state_y);
-      double tx=Ss(state_tx);
-      double ty=Ss(state_ty);
-   
-      //******************* fix this!
       // Small angle alignment correction
-      x = x + fdchits[id]->wire->angles.Z()*y;
-      y = y - fdchits[id]->wire->angles.Z()*x;
+      double x = S(state_x) + fdchits[id]->wire->angles.Z()*S(state_y);
+      double y = S(state_y) - fdchits[id]->wire->angles.Z()*S(state_x);
       //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-      tx = (tx + fdchits[id]->wire->angles.Z()*ty - fdchits[id]->wire->angles.Y());
-      ty = (ty - fdchits[id]->wire->angles.Z()*tx + fdchits[id]->wire->angles.X());
+      double tx = (S(state_tx) + fdchits[id]->wire->angles.Z()*S(state_ty) - fdchits[id]->wire->angles.Y());
+      double ty = (S(state_ty) - fdchits[id]->wire->angles.Z()*S(state_tx) + fdchits[id]->wire->angles.X());
 
       // Projected position along the wire 
       double vpred=x*sina+y*cosa;
@@ -1725,7 +1709,7 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       }
       else{
 	//V-=dC.SandwichMultiply(H_T);
-	V=V-H*dC*H_T;
+	V=V-H*Cs*H_T;
       }
       /*
       if(DEBUG_HISTS){
@@ -1908,7 +1892,12 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       double V=cdc_updates[id].V;
 
       if (VERBOSE > 10) jout << " d " << d << " H*S " << H*S << endl;
-      V=V-H*Cs*H_T;
+      if (cdchits[id]->wire->ring==RING_TO_SKIP){
+	V=V+H*Cs*H_T;
+      }
+      else{
+	V=V-H*Cs*H_T;
+      }
       if (V<0) return VALUE_OUT_OF_RANGE;
       
       // Add the pull
@@ -1994,7 +1983,7 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1
   C7x7->ResizeTo(7, 7);
   DMatrix J(7,5);
 
-  double p=1.; // fixed: cannot measure
+  double p=5.; // fixed: cannot measure
   double tx_=S(state_tx);
   double ty_=S(state_ty);
   double x_=S(state_x);
