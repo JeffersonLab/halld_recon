@@ -47,9 +47,15 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
     DRIFT_FUNC_PARMS[5]=drift_func_ext["p5"]; 
   }
 
+  PLANE_TO_SKIP=0;
+  gPARMS->SetDefaultParameter("TRKFIT:PLANE_TO_SKIP",PLANE_TO_SKIP); 
+
   //****************
   // CDC parameters
   //****************
+  RING_TO_SKIP=0;
+  gPARMS->SetDefaultParameter("TRKFIT:RING_TO_SKIP",RING_TO_SKIP);
+  
   map<string, double> cdc_res_parms;
   jcalib->Get("CDC/cdc_resolution_parms_v2", cdc_res_parms);
   CDC_RES_PAR1 = cdc_res_parms["res_par1"];
@@ -58,7 +64,7 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   
   vector< map<string, double> > tvals;
   cdc_drift_table.clear();  
-  if (jcalib->Get("CDC/cdc_drift_table::NoBField", tvals)==false){    
+  if (jcalib->Get("CDC/cdc_drift_table", tvals)==false){    
     for(unsigned int i=0; i<tvals.size(); i++){
       map<string, double> &row = tvals[i];
       cdc_drift_table.push_back(1000.*row["t"]);
@@ -472,33 +478,42 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
       double chi2check=res*res*InvV;
       if (chi2check < CHI2CUT || DO_PRUNING == 0 || (COSMICS && iter == 0)){
 	if (VERBOSE>5) jout << "Hit Added to track " << endl;
-	// Compute Kalman gain matrix
-	K=InvV*(C*H_T);
-	
-	// Update state vector covariance matrix
-	DMatrix4x4 Ctest=C-K*(H*C);
-	
-	//C.Print();
-	//K.Print();
-	//Ctest.Print();
-	
-	// Check that Ctest is positive definite
-	if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
-	C=Ctest;
-	if(VERBOSE>10) C.Print();
-	// Update the state vector 
-	//S=S+res*K;
-	S+=res*K;
-	if(VERBOSE>10) S.Print();
-	
-	// Compute new residual 
-	//d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
-	res=res-H*K*res;
-	
-	// Update chi2 
-	double fit_V=V-H*C*H_T;
-	chi2+=res*res/fit_V;
-	ndof++;
+	if (cdchits[cdc_index]->wire->ring!=RING_TO_SKIP){
+	  
+	  // Compute Kalman gain matrix
+	  K=InvV*(C*H_T);
+	  
+	  // Update state vector covariance matrix
+	  DMatrix4x4 Ctest=C-K*(H*C);
+	  
+	  //C.Print();
+	  //K.Print();
+	  //Ctest.Print();
+	  
+	  // Check that Ctest is positive definite
+	  if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
+	  C=Ctest;
+	  if(VERBOSE>10) C.Print();
+	  // Update the state vector 
+	  //S=S+res*K;
+	  S+=res*K;
+	  if(VERBOSE>10) S.Print();
+	  
+	  // Compute new residual 
+	  //d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
+	  res=res-H*K*res;
+	  
+	  // Update chi2 
+	  double fit_V=V-H*C*H_T;
+	  chi2+=res*res/fit_V;
+	  ndof++;
+
+	  // fill pull vector entry
+	  updates[cdc_index].V=fit_V;
+	}
+	else {
+	  updates[cdc_index].V=V;
+	}
 	
 	// Flag that we used this hit
 	used_hits[cdc_index]=1;
@@ -509,7 +524,6 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	updates[cdc_index].delta=delta;
 	updates[cdc_index].S=S;
 	updates[cdc_index].C=C;
-	updates[cdc_index].V=V;
 	updates[cdc_index].tdrift=tdrift;
 	updates[cdc_index].ddrift=dmeas;
 	updates[cdc_index].s=29.98*trajectory[k].t; // assume beta=1
@@ -874,7 +888,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
 	phi+=M_PI;
       }
     }
-    double pt=cos(atan(tanl)); //only direction is known...    
+    double pt=10.0*cos(atan(tanl)); // arbitrary magnitude...
     DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
     
     DVector3 pos;
@@ -1519,40 +1533,48 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	double chi2check=res*res*InvV;
 	if (chi2check < CHI2CUT || DO_PRUNING == 0){
 	  if (VERBOSE) jout << "CDC Hit Added to FDC track " << endl;
-	  // Compute Kalman gain matrix
-	  K_CDC=InvV*(C*H_T_CDC);
-	  // Update state vector covariance matrix
-	  DMatrix4x4 Ctest=C-K_CDC*(H_CDC*C);
+	  if (cdchits[cdc_index]->wire->ring!=RING_TO_SKIP){
+
+	    // Compute Kalman gain matrix
+	    K_CDC=InvV*(C*H_T_CDC);
+	    // Update state vector covariance matrix
+	    DMatrix4x4 Ctest=C-K_CDC*(H_CDC*C);
+	    
+	    //C.Print();
+	    //K.Print();
+	    //Ctest.Print();
+	    
+	    // Check that Ctest is positive definite
+	    if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
+	    C=Ctest;
+	    if(VERBOSE>10) C.Print();
+	    // Update the state vector
+	    //S=S+res*K;
+	    S+=res*K_CDC;
+	    if(VERBOSE) {jout << "traj[z]=" << trajectory[k].z<< endl; S.Print();} 
+	    
+	    // Compute new residual
+	    //d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
+	    res=res-H_CDC*K_CDC*res;
+	    
+	    // Update chi2
+	    double fit_V=V_CDC-H_CDC*C*H_T_CDC;
+	    chi2+=res*res/fit_V;
+	    ndof++;
 	  
-	  //C.Print();
-	  //K.Print();
-	  //Ctest.Print();
-	  
-	  // Check that Ctest is positive definite
-	  if (!Ctest.IsPosDef()) return VALUE_OUT_OF_RANGE;
-	  C=Ctest;
-	  if(VERBOSE>10) C.Print();
-	  // Update the state vector
-	  //S=S+res*K;
-	  S+=res*K_CDC;
-	  if(VERBOSE) {jout << "traj[z]=" << trajectory[k].z<< endl; S.Print();} 
-	  
-	  // Compute new residual
-	  //d=finder->FindDoca(trajectory[k].z,S,wdir,origin);
-	  res=res-H_CDC*K_CDC*res;
-	  
-	  // Update chi2
-	  double fit_V=V_CDC-H_CDC*C*H_T_CDC;
-	  chi2+=res*res/fit_V;
-	  ndof++;
-	  
+	    // fill pull vector entry
+	    cdc_updates[cdc_index].V=fit_V;
+	  }
+	  else {
+	    cdc_updates[cdc_index].V=V_CDC;
+	  }
+
 	  // fill updates
 	  cdc_updates[cdc_index].resi=res;
 	  cdc_updates[cdc_index].d=d;
 	  cdc_updates[cdc_index].delta=delta;
 	  cdc_updates[cdc_index].S=S;
 	  cdc_updates[cdc_index].C=C;
-	  cdc_updates[cdc_index].V=V_CDC;
 	  cdc_updates[cdc_index].tdrift=tdrift;
 	  cdc_updates[cdc_index].ddrift=dmeas;
 	  cdc_updates[cdc_index].s=29.98*trajectory[k].t; // assume beta=1

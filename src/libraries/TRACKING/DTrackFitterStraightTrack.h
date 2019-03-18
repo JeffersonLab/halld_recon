@@ -111,7 +111,7 @@ public:
   bool COSMICS,DO_PRUNING;
   int VERBOSE;
   double CHI2CUT;  
-  int PLANE_TO_SKIP;
+  int PLANE_TO_SKIP,RING_TO_SKIP;
  
   // Geometry parameters
   double dTOFz,dFCALz,dDIRCz;
