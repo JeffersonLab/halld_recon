@@ -32,6 +32,12 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   // FDC parameters
   //****************
 
+  map<string,double>drift_res_parms;
+  jcalib->Get("FDC/drift_resolution_parms",drift_res_parms); 
+  DRIFT_RES_PARMS[0]=drift_res_parms["p0"];   
+  DRIFT_RES_PARMS[1]=drift_res_parms["p1"];
+  DRIFT_RES_PARMS[2]=drift_res_parms["p2"]; 
+
   // Time-to-distance function parameters for FDC
   map<string,double>drift_func_parms;
   jcalib->Get("FDC/drift_function_parms",drift_func_parms); 
@@ -840,8 +846,14 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
 
   // Initial guess for covariance matrix
   DMatrix4x4 C;
-  C(state_x,state_x)=C(state_y,state_y)=10.0;     
-  C(state_tx,state_tx)=C(state_ty,state_ty)=10.0;
+  if (fit_type==kWireBased){
+    C(state_x,state_x)=C(state_y,state_y)=4.0;     
+    C(state_tx,state_tx)=C(state_ty,state_ty)=1.0;
+  }
+  else{
+    C(state_x,state_x)=C(state_y,state_y)=1.;     
+    C(state_tx,state_tx)=C(state_ty,state_ty)=0.01;
+  }
 
   // Starting z-position and time
   double z=input_pos.z();
