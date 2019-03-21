@@ -70,8 +70,8 @@
       </startCntr>
       <barrelEMcal minOccurs="0">
         <bcalCell layer="int" maxOccurs="unbounded" minOccurs="0" module="int" sector="int">
-          <bcalSiPMUpHit E="float" maxOccurs="unbounded" minOccurs="0" t="float"/> <!-- DEPRECATED -->
-          <bcalSiPMDownHit E="float" maxOccurs="unbounded" minOccurs="0" t="float"/> <!-- DEPRECATED -->
+          <bcalSiPMUpHit E="float" maxOccurs="unbounded" minOccurs="0" t="float"/>
+          <bcalSiPMDownHit E="float" maxOccurs="unbounded" minOccurs="0" t="float"/>
           <!-- bcal hits are either upstream (end=0) or downstream (end=1)-->
           <bcalSiPMSpectrum end="int" maxOccurs="unbounded" minOccurs="0" tstart="float" bin_width="float" vals="string">
             <bcalSiPMTruth minOccurs="0" incident_id="int" E="float"/>
