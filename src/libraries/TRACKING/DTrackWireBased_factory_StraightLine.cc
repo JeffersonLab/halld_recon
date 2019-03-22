@@ -20,7 +20,7 @@ using namespace jana;
 //------------------
 jerror_t DTrackWireBased_factory_StraightLine::init(void)
 {
-  CDC_MATCH_CUT=1.25;
+  CDC_MATCH_CUT=2.;
   gPARMS->SetDefaultParameter("TRKFIT:CDC_MATCH_CUT",CDC_MATCH_CUT); 
   FDC_MATCH_CUT=1.25;
   gPARMS->SetDefaultParameter("TRKFIT:FDC_MATCH_CUT",FDC_MATCH_CUT); 
