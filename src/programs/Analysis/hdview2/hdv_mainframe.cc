@@ -65,6 +65,10 @@ static float FCAL_Zlen = 45.0;
 static float FCAL_Zmin = 622.8;
 static float FCAL_Rmin = 6.0;
 static float FCAL_Rmax = 212.0/2.0;
+static float CCAL_Zlen = 18.0;
+static float CCAL_Zmin = 876.106;
+static float CCAL_Rmin = 2.0;
+static float CCAL_Rmax = 24.0;
 static float CDC_Rmin = 9.0;
 static float CDC_Rmax = 59.0;
 static float CDC_Zlen = 150.0;
@@ -371,6 +375,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["toftruth"]	= new TGCheckButton(hitdrawopts,	"TOFTruth");
   checkbuttons["fcal"]		= new TGCheckButton(hitdrawopts,	"FCAL");
   checkbuttons["bcal"]		= new TGCheckButton(hitdrawopts,	"BCAL");
+  checkbuttons["ccal"]		= new TGCheckButton(hitdrawopts,	"CCAL");
   
   hitdrawopts->AddFrame(checkbuttons["cdc"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdcdrift"], lhints);
@@ -382,6 +387,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   hitdrawopts->AddFrame(checkbuttons["toftruth"], lhints);
   hitdrawopts->AddFrame(checkbuttons["fcal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["bcal"], lhints);
+  hitdrawopts->AddFrame(checkbuttons["ccal"], lhints);
   
   TGTextButton *moreOptions	= new TGTextButton(hitdrawopts,	"More options");
   hitdrawopts->AddFrame(moreOptions, lhints);
@@ -568,6 +574,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["bcaltruth"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["fcal"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["fcaltruth"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
+  checkbuttons["ccal"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   checkbuttons["trajectories"]->Connect("Clicked()","hdv_mainframe", this, "DoMyRedraw()");
   
   for (Int_t n=1;n<debugermf->GetNTrCand();n++){
@@ -743,13 +750,13 @@ void hdv_mainframe::SetRange(void)
 		// define range in each direction in cm
 		double x_width = 350.0/zoom_factor;
 		double y_width = x_width;
-		double z_width = 2.0*x_width;
+		double z_width = 2.70*x_width;
 		double xlo = x0 - x_width/2.0;
 		double xhi = x0 + x_width/2.0;
 		double ylo = y0 - y_width/2.0;
 		double yhi = y0 + y_width/2.0;
-		double zlo = z0 - z_width/2.0;
-		double zhi = z0 + z_width/2.0;
+		double zlo = z0 - z_width*0.40;
+		double zhi = z0 + z_width*0.60;
 		
 		sideviewA->GetCanvas()->cd();
 		sideviewA->GetCanvas()->Range(zlo, xlo, zhi, xhi);
@@ -766,11 +773,11 @@ void hdv_mainframe::SetRange(void)
 		endviewA->GetCanvas()->cd();
 		endviewA->GetCanvas()->Range(xlo, ylo, xhi, yhi);
 		endviewB->GetCanvas()->cd();
-		//endviewB->GetCanvas()->Range(xlo*1.3, ylo*1.3, xhi*1.3, yhi*1.3);
-		endviewB->GetCanvas()->Range(-158, -158, 158, 158);
+		endviewB->GetCanvas()->Range(xlo*1.3, ylo*1.3, xhi*1.3, yhi*1.3);
+		//endviewB->GetCanvas()->Range(-158, -158, 158, 158);
 		endviewAmf->SetRange(xlo, ylo, xhi, yhi);
-		//endviewBmf->SetRange(xlo*1.3, ylo*1.3, xhi*1.3, yhi*1.3);
-		endviewBmf->SetRange(-158, -158, 158, 158);
+		endviewBmf->SetRange(xlo*1.3, ylo*1.3, xhi*1.3, yhi*1.3);
+		//endviewBmf->SetRange(-158, -158, 158, 158);
 
 	}else{
 		// define range in each direction in cm, radians
@@ -1368,6 +1375,14 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		graphics_sideA.push_back(fcal1);
 		graphics_sideA.push_back(fcal2);
 		
+		// ----- CCAL ------
+		TBox *ccal1 = new TBox(CCAL_Zmin,  CCAL_Rmin, CCAL_Zmin+CCAL_Zlen,  CCAL_Rmax);
+		TBox *ccal2 = new TBox(CCAL_Zmin, -CCAL_Rmin, CCAL_Zmin+CCAL_Zlen, -CCAL_Rmax);
+		ccal1->SetFillColor(42);
+		ccal2->SetFillColor(42);
+		graphics_sideA.push_back(ccal1);
+		graphics_sideA.push_back(ccal2);
+
 		// ------ scale ------
 		DrawScale(sideviewA->GetCanvas(), graphics_sideA);
 	}
@@ -1609,7 +1624,7 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		
 		// Set up 4 2-D vectors that point from the center of a block to its
 		// corners. This makes it easier to represent each corner as a vector
-		// in lab corrdinate whch we can extract r, phi from.
+		// in lab coordinate which we can extract r, phi from.
 		double blocksize = fcalgeom->blockSize();
 		DVector2 shift[4];
 		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
@@ -1623,19 +1638,75 @@ void hdv_mainframe::DrawDetectorsXY(void)
 				int row = fcalgeom->row(chan);
 				int col = fcalgeom->column(chan);
 				if(!fcalgeom->isBlockActive(row, col))continue;
-				double x[4], y[4];
+				double x[5], y[5];
 				for(int i=0; i<4; i++){
 					DVector2 pos = shift[i] + fcalgeom->positionOnFace(chan);
 					x[i] = pos.X();
 					y[i] = pos.Y();
 				}
+				x[4] = x[0];
+				y[4] = y[0];
 				
-				TPolyLine *poly = new TPolyLine(4, x, y);
+				TPolyLine *poly = new TPolyLine(5, x, y);
 				poly->SetFillColor(0);
 				poly->SetLineColor(kBlack);
 				graphics_endB.push_back(poly);
 
 				fcalblocks[chan] = poly; // record so we can set the color later
+			}
+		}
+
+		// ----- CCAL ------
+		// Get list of blocks. Loop over all getting x,y coordinates of corners for all active ones.
+
+		// Set up 4 2-D vectors that point from the center of a block to its
+		// corners. This makes it easier to represent each corner as a vector
+		// in lab coordinate which we can extract r, phi from.
+		blocksize = 2.0;
+		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
+		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
+		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi coordinates also
+		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
+		ccalblocks.clear();
+
+		if(GetCheckButton("ccal")){
+			for(int irow=0; irow<12; irow++){
+				for(int icol=0; icol<12; icol++){
+					if( (irow==5 || irow==6) && (icol==5 || icol==6) ) continue;
+
+					double center_x = (-6.0 + (icol+0.5))*2.0;
+					double center_y = (-6.0 + (irow+0.5))*2.0;
+					DVector2 mypos(center_x,center_y);
+
+					double x[5], y[5];
+					for(int i=0; i<4; i++){
+						DVector2 pos = shift[i] + mypos;
+						x[i] = pos.X();
+						y[i] = pos.Y();
+					}
+					x[4] = x[0];
+					y[4] = y[0];
+
+					TPolyLine *poly = new TPolyLine(5, x, y);
+					poly->SetFillColor(0);
+					poly->SetLineColor(kBlack);
+					graphics_endB.push_back(poly);
+
+					int channel = icol + 12*(irow);
+					ccalblocks[channel] = poly; // record so we can set the color later
+				}
+			}
+
+			// If also drawing FCAL, draw an extra outline of the FCAL beam hole
+			if(GetCheckButton("fcal")){
+				double x[5] = {-6.0, -6.0, 6.0, 6.0, -6.0};
+				double y[5] = {-6.0,  6.0, 6.0,-6.0, -6.0};
+				TPolyLine *poly = new TPolyLine(5, x, y);
+				poly->SetFillColor(0);
+				poly->SetLineColor(kBlack);
+				poly->SetLineWidth(3);
+				poly->SetLineStyle(2);
+				graphics_endB.push_back(poly);
 			}
 		}
 
@@ -2417,6 +2488,17 @@ TPolyLine* hdv_mainframe::GetFCALPolyLine(float x, float y)
 	int row = fcalgeom->row(y);
 	int column = fcalgeom->column(x);
 	return GetFCALPolyLine(fcalgeom->channel(row, column));
+}
+
+//-------------------
+// GetCCALPolyLine
+//-------------------
+TPolyLine* hdv_mainframe::GetCCALPolyLine(int row, int col)
+{
+	int channel = col + 12*(row);
+	map<int, TPolyLine*>::iterator iter = ccalblocks.find(channel);
+	if(iter==ccalblocks.end())return NULL;
+	return iter->second;
 }
 
 //------------------- 

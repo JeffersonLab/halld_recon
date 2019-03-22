@@ -18,7 +18,7 @@ class DBCALGeometry_factory:public JFactory<DBCALGeometry>{
   DBCALGeometry_factory(){bcalgeometry=NULL;};
 		~DBCALGeometry_factory(){};
 
-		DBCALGeometry *bcalgeometry;
+		DBCALGeometry *bcalgeometry = nullptr;
 
 		//------------------
 		// brun

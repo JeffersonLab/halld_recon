@@ -106,7 +106,7 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 	uint64_t Ncopied = nwords<(int64_t)left ? (uint64_t)nwords:left;
 	_gcount = Ncopied*sizeof(uint32_t);
 	if(_gcount>0) memcpy((char*)s, (char*)fnext, _gcount);
-	left -= Ncopied;
+	//left -= Ncopied;   // this is true, but not used later on
 	fnext += Ncopied;
 	s += _gcount; // advance pointer to user buff in case we need to write more
 	
@@ -562,8 +562,18 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 	// Read data directly into user buffer
 	ifs.read((char*)user_buff, event_len*sizeof(uint32_t));
 	if(!ifs.good()){
-		SetErrorMessage("No more events");
-		err_code = HDEVIO_EOF;
+		uint64_t bytes_to_read =  (uint64_t)(event_len*sizeof(uint32_t));
+		if( (bytes_to_read + (uint64_t)last_event_pos) > total_size_bytes ){
+			auto words_left_in_file = total_size_bytes - last_event_pos;
+			err_mess << "Error reading EVIO event (truncated?)"<<endl;
+			err_mess << "words_left_in_file (before read): " << words_left_in_file << endl;
+			err_mess << "            bytes tried to read : " << bytes_to_read << endl;
+			err_mess << "                total_size_bytes: " << total_size_bytes << "   tellg: " << ifs.tellg();
+			err_code = HDEVIO_FILE_TRUNCATED;
+		}else{
+			SetErrorMessage("No more events");
+			err_code = HDEVIO_EOF;
+		}
 		return false; // isgood=false
 	}
 
@@ -623,6 +633,14 @@ void HDEVIO::rewind(void)
 	
 	ClearErrorMessage();
 	err_code = HDEVIO_OK;
+}
+
+//------------------------
+// GetNWordsLeftInFile
+//------------------------
+uint64_t HDEVIO::GetNWordsLeftInFile(void)
+{
+	return (total_size_bytes-NB_next_pos)/4;
 }
 
 //------------------------

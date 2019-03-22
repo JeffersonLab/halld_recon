@@ -19,7 +19,7 @@ class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
 		DTranslationTable_factory(){};
 		~DTranslationTable_factory(){};
 
-		DTranslationTable *tt=NULL;
+		DTranslationTable *tt = nullptr;
 
 		//------------------
 		// brun

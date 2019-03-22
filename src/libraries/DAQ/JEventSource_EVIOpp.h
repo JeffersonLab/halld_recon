@@ -209,6 +209,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		string   SYSTEMS_TO_PARSE;
 		
 		uint32_t jobtype;
+		bool IS_CDAQ_FILE = false;
 };
 
 #endif // _JEventSourceGenerator_EVIOpp_

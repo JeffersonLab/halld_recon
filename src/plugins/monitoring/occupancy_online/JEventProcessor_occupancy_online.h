@@ -12,7 +12,7 @@
 
 #include <GlueX.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
-
+#include <DIRC/DDIRCGeometry.h>
 
 #include <TDirectory.h>
 #include <TH2.h>
@@ -31,7 +31,11 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		//------------------------ BCAL -----------------------
 		TH1I *bcal_num_events;
 		TH2I *bcal_adc_occ;
-		TH2I *bcal_tdc_occ;
+		TH2I *bcal_tdc_occ;	
+
+		//------------------------ CCAL -----------------------
+		TH1I *ccal_num_events;
+		TH2F* ccal_occ;
 
 		//------------------------ CDC ------------------------
 		TH1I *cdc_num_events;
@@ -93,6 +97,10 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		TH1I *tof_adc_U_occ;
 		TH1I *tof_adc_D_occ;
 
+		TH1I *dirc_num_events;
+		TH2I *dirc_tdc_pixel_N_occ, *dirc_tdc_pixel_N_occ_led;
+		TH2I *dirc_tdc_pixel_S_occ, *dirc_tdc_pixel_S_occ_led;
+
 		//------------------------ DigiHits ------------------------
 		map<string,double> digihitbinmap; // bin number
 		map<string,double> digihitsclmap; // Scale number of hits by this (0 means don't scale)
@@ -108,6 +116,8 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
 		jerror_t erun(void);
 		jerror_t fini(void);
+
+		const DDIRCGeometry* dDIRCGeometry;
 };
 
 #endif // _JEventProcessor_occupancy_online_

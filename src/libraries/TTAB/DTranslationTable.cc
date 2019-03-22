@@ -283,6 +283,8 @@ void DTranslationTable::SetSystemsToParse(string systems, JEventSource *eventsou
 		rocid_map[name_to_id[         "TAC"]] = {14, 78};
 		rocid_map[name_to_id[        "CCAL"]] = {90};
 		rocid_map[name_to_id[        "CCAL_REF"]] = {90};
+		rocid_map[name_to_id[        "DIRC"]] = {92};
+		
 	}
 
 	// Parse string of system names
@@ -395,7 +397,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PSC:        MakePSCDigiHit(chaninfo.psc, pi, pt, pp);                break;
          case RF:         MakeRFDigiTime(chaninfo.rf, pt);                         break;
          case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pi, pt, pp);  break;
-         case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   		   break;
+         case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
 
          default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
@@ -659,6 +661,45 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       }
    }
 	
+   // DDIRCTDCHit
+   vector<const DDIRCTDCHit*> dirctdchits;
+   loop->Get(dirctdchits);
+   if (VERBOSE > 2) ttout << "  Number DDIRCTDCHit objects: " << dirctdchits.size() << std::endl;
+   for (uint32_t i=0; i<dirctdchits.size(); i++) {
+      const DDIRCTDCHit *hit = dirctdchits[i];
+
+      // Apply optional rocid translation
+      uint32_t rocid = hit->rocid;
+      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
+      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
+
+      if (VERBOSE > 4)
+         ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
+               << " chan:" << hit->channel << std::endl;
+      
+      // Create crate,slot,channel index and find entry in Translation table.
+      // If none is found, then just quietly skip this hit.
+      csc_t csc = {rocid, hit->slot, hit->channel};
+      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
+      if (iter == Get_TT().end()) {
+          if (VERBOSE > 6)
+             ttout << "     - Didn't find it" << std::endl;
+          continue;
+      }
+      const DChannelInfo &chaninfo = iter->second;
+      if (VERBOSE > 6)
+	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
+               << std::endl; 
+      
+      // Create the appropriate hit type based on detector type
+      switch (chaninfo.det_sys) {
+         case DIRC:    MakeDIRCTDCDigiHit(chaninfo.dirc, hit); break;
+         default:     
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             break;
+      }
+   }
+
 	// Optionally overwrite nsamples_integral and/or nsamples_pedestal if 
 	// user specified via config. parameters.
 	OverwriteNsamples();
@@ -1495,6 +1536,23 @@ DTACTDCDigiHit*  DTranslationTable::MakeTACTDCDigiHit(
 }
 
 //---------------------------------
+// MakeDIRCTDCDigiHit
+//---------------------------------
+DDIRCTDCDigiHit*  DTranslationTable::MakeDIRCTDCDigiHit(
+                                    const DIRCIndex_t &idx,
+                                    const DDIRCTDCHit *hit) const
+{
+   DDIRCTDCDigiHit *h = new DDIRCTDCDigiHit();
+   CopyDIRCTDCInfo(h, hit);
+
+   h->channel = idx.pixel;
+
+   vDDIRCTDCDigiHit.push_back(h);
+
+   return h;
+}
+
+//---------------------------------
 // GetDetectorIndex
 //---------------------------------
 const DTranslationTable::DChannelInfo 
@@ -1592,6 +1650,10 @@ const DTranslationTable::csc_t
              if ( det_channel.tac == in_channel.tac )
                 found = true;
              break;
+	  case DTranslationTable::DIRC:
+             if ( det_channel.dirc == in_channel.dirc )
+                found = true;
+             break;
 
           default:
              jerr << "DTranslationTable::GetDAQIndex(): "
@@ -1677,6 +1739,9 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
        break;
     case DTranslationTable::TAC:
        ss << " ";
+       break;
+    case DTranslationTable::DIRC:
+       ss << "pixel = " << in_channel.dirc.pixel;
        break;
 
     default:
@@ -1947,6 +2012,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
       return DTranslationTable::TPOLSECTOR;
    } else if ( type == "tac" ) {
 	      return DTranslationTable::TAC;
+   } else if ( type == "dirc" ) {
+	   return DTranslationTable::DIRC;
    } else
    {
       return DTranslationTable::UNKNOWN_DETECTOR;
@@ -1970,6 +2037,7 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
    int package=0,chamber=0,view=0,strip=0,wire=0;
    int id=0, strip_type=0;
    int side=0;
+   int pixel=0;
 
    // This complicated line just recasts the userData pointer into
    // a reference to the "TT" member of the DTranslationTable object
@@ -2067,6 +2135,9 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
             else if (sval == "B") {
                side = DPSGeometry::kSouth;
             }
+	 }
+	 else if (tag == "pixel") {
+		 pixel = ival;
 	 }
          else if (tag == "id")
             id = ival;
@@ -2211,6 +2282,9 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
          case DTranslationTable::TAC:
 //        	 ci.tac;
             break;
+         case DTranslationTable::DIRC:
+	      ci.dirc.pixel = pixel;
+	      break;
         case DTranslationTable::UNKNOWN_DETECTOR:
 		 default:
             break;
