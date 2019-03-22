@@ -160,6 +160,18 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Check for magnetic field
    const DMagneticFieldMap *bfield=dapp->GetBfield(runnumber);
    dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
+   
+   if(dIsNoFieldFlag){
+     //Setting this flag makes it so that JANA does not delete the objects in 
+     //_data.  This factory will manage this memory.
+     //This is all of these pointers are just copied from the "StraightLine" 
+     //factory, and should not be re-deleted.
+     SetFactoryFlag(NOT_OBJECT_OWNER);
+   }
+   else{
+     ClearFactoryFlag(NOT_OBJECT_OWNER); //This factory will create it's own obje
+   }
+
    // set up reference trajectory
    rt = new DReferenceTrajectory(bfield);
    rt->SetDGeometry(geom);
@@ -167,6 +179,7 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
    loop->Get(fitters);
+   
    if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
       return RESOURCE_UNAVAILABLE;
@@ -241,143 +254,26 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 
-   if(!fitter)return NOERROR; 
+  if(!fitter)return NOERROR; 
+  
+  if(dIsNoFieldFlag){
+    //Clear previous objects: 
+    //JANA doesn't do it because NOT_OBJECT_OWNER was set
+    //It DID delete them though, in the "StraightLine" factory
+    _data.clear();
+     
+    vector<const DTrackWireBased*> locWireBasedTracks;
+    loop->Get(locWireBasedTracks, "StraightLine");
+    for(size_t loc_i = 0; loc_i < locWireBasedTracks.size(); ++loc_i)
+      _data.push_back(const_cast<DTrackWireBased*>(locWireBasedTracks[loc_i]));
+    return NOERROR;
+  }
 
    // Get candidates and hits
    vector<const DTrackCandidate*> candidates;
    loop->Get(candidates);
 
    if (candidates.size()==0) return NOERROR;
-
-   if (dIsNoFieldFlag){
-      // Copy results over from the StraightLine or CDCCOSMIC candidate and
-     // add extrapolations
-      for (unsigned int i=0;i<candidates.size();i++){
-         const DTrackCandidate *cand=candidates[i];
-
-         // Make a new wire-based track
-         DTrackWireBased *track = new DTrackWireBased(); //share the memory: isn't changed below
-         *static_cast<DTrackingData*>(track) = *static_cast<const DTrackingData*>(cand);
-         track->IsSmoothed = cand->IsSmoothed;
-
-         // candidate id
-         track->candidateid=i+1;
-
-         // Track quality properties
-         track->Ndof=cand->Ndof;
-         track->chisq=cand->chisq;	
-         track->FOM = TMath::Prob(track->chisq, track->Ndof);
-
-         // pull vector
-         track->pulls = cand->pulls;
-
-         // Lists of hits used in the previous pass
-         vector<const DCDCTrackHit *>cdchits;
-         cand->GetT(cdchits);
-         vector<const DFDCPseudo *>fdchits;
-         cand->GetT(fdchits);
-
-         for (unsigned int k=0;k<cdchits.size();k++){
-            track->AddAssociatedObject(cdchits[k]);
-         }
-         for (unsigned int k=0;k<fdchits.size();k++){
-            track->AddAssociatedObject(fdchits[k]);
-         }
-         track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits);
-         track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits);
-
-	 // Create the extrapolation vectors
-	 vector<DTrackFitter::Extrapolation_t>myvector;
-	 track->extrapolations.emplace(SYS_BCAL,myvector);
-	 track->extrapolations.emplace(SYS_TOF,myvector);
-	 track->extrapolations.emplace(SYS_FCAL,myvector);
-	 track->extrapolations.emplace(SYS_FDC,myvector);
-	 track->extrapolations.emplace(SYS_CDC,myvector);
-	 track->extrapolations.emplace(SYS_DIRC,myvector);
-	 track->extrapolations.emplace(SYS_START,myvector);	
-
-	 // Extrapolate to TOF
-	 DVector3 dir=track->momentum();
-	 dir.SetMag(1.);
-	 DVector3 pos0=track->position();
-	 double z0=track->position().z();
-	 double z=z0;
-	 double uz=dir.z();
-	 // Extrapolate to DIRC
-	 DVector3 diff=((dDIRCz-z0)/uz)*dir;
-	 DVector3 pos=pos0+diff;
-	 double s=diff.Mag();
-	 double t=s/29.98;
-	 track->extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-	 // Extrapolate to TOF
-	 diff=((dTOFz-z0)/uz)*dir;
-	 pos=pos0+diff;
-	 s=diff.Mag();
-	 t=s/29.98;
-	 track->extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
-	 // Extrapolate to FCAL
-	 diff=((dFCALz-z0)/uz)*dir;
-	 pos=pos0+diff;
-	 s=diff.Mag();
-	 t=s/29.98;
-	 track->extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
-	 // extrapolate to exit of FCAL
-	 diff=((dFCALz+45.-z0)/uz)*dir;
-	 pos=pos0+diff;
-	 s=diff.Mag();
-	 t=s/29.98;
-	 track->extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-	  
-	 // Extrapolate to Start Counter and BCAL
-	 double R=pos0.Perp();
-	 diff.SetMag(0.);
-	 while (R<89.0 && z>17. && z<410.){
-	   diff+=(1./dir.z())*dir;
-	   pos=pos0+diff;
-	   R=pos.Perp();
-	   z=pos.z();
-	   s=diff.Mag();
-	   t=s/29.98;
-	   //	   printf("R %f z %f\n",R,z);
-	   // start counter
-	   if (sc_pos.empty()==false && R<SC_BARREL_R && z<SC_END_NOSE_Z){
-	     double d_old=1000.,d=1000.;
-	     unsigned int index=0;
-	     for (unsigned int m=0;m<12;m++){
-	       double dphi=pos.Phi()-SC_PHI_SECTOR1;
-	       if (dphi<0) dphi+=2.*M_PI;
-	       index=int(floor(dphi/(2.*M_PI/30.)));
-	       if (index>29) index=0;
-	       d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-	       if (d*d_old<0){ // break if we cross the current plane  
-		 // Find the new distance to the start counter (which could 
-		 // now be to a plane in the one adjacent to the one before the
-		 // step...)
-		 int count=0;
-		 while (fabs(d)>0.05 && count<20){ 
-		   // Find the index for the nearest start counter paddle
-		   double dphi=pos.Phi()-SC_PHI_SECTOR1;
-		   if (dphi<0) dphi+=2.*M_PI;
-		   index=int(floor(dphi/(2.*M_PI/30.)));
-		   d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-		   pos+=d*dir;
-		   count++;
-		 }
-		 track->extrapolations[SYS_START].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-		 break;
-	       }
-	       d_old=d;
-	     }
-	   }
-	   if (R>64.){	 
-	     track->extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-	   }
-	 }
-
-         _data.push_back(track);
-      }
-      return NOERROR;
-   }
 
    // Loop over candidates
    for(unsigned int i=0; i<candidates.size(); i++){

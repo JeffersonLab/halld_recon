@@ -7,12 +7,6 @@
 
 #include "DTrackFinder.h"
 
-#define CDC_MATCH_RADIUS 4.0
-#define CDC_AXIAL_MATCH_RADIUS 10.0
-#define CDC_COSMIC_MATCH_PHI 0.35
-#define CDC_MATCH_PHI 0.04
-
-
 bool DTrackFinder_cdc_hit_cosmics_cmp(const DCDCTrackHit *a,const DCDCTrackHit *b){
    return(a->wire->origin.Y()>b->wire->origin.Y());
 }
@@ -42,10 +36,19 @@ DTrackFinder::DTrackFinder()
    VERBOSE=0;
    gPARMS->SetDefaultParameter("TRKFIND:VERBOSE", VERBOSE);
 
+   CDC_MATCH_RADIUS=2.5;
+   gPARMS->SetDefaultParameter("TRKFIND:CDC_MATCH_RADIUS", CDC_MATCH_RADIUS);
+
+   CDC_MATCH_PHI=0.04;
+   gPARMS->SetDefaultParameter("TRKFIND:CDC_MATCH_PHI", CDC_MATCH_PHI);
+   
+   CDC_COSMIC_MATCH_PHI=0.35;
+   gPARMS->SetDefaultParameter("TRKFIND:CDC_COSMIC_MATCH_PHI", CDC_COSMIC_MATCH_PHI);
+
    if (DEBUG_HISTS){
       hCDCMatch_PairD = new TH1F("CDC Pair distance", "CDC Pair distance", 100, 0.0, 20.0);
-      hCDCMatch_Axial = new TH1F("CDC Match Axial", "CDC Match Axial", 100, 0.0, 20.0);
-      hCDCMatch_Stereo = new TH1F("CDC Match Stereo", "CDC Match Stereo", 100, 0.0, 20.0);
+      hCDCMatch_Axial = new TH1F("CDC Match Axial", "CDC Match Axial", 360, -M_PI_2, M_PI_2);
+   
       hFDCLayerRaw = new TH1I("FDC Layer Raw", "Layer of FDC hit before track finding", 24, 0.5 , 24.5);
       hFDCLayer = new TH1I("FDC Layer", "Layer of FDC hit after segment finding", 24, 0.5 , 24.5);
       hFDCLayerFirst = new TH1I("First FDC Layer", "First Layer of FDC segment finding", 24, 0.5 , 24.5);
@@ -217,6 +220,9 @@ bool DTrackFinder::LinkCDCSegments(void){
                while (dphi>M_PI) dphi-=2*M_PI;
                while (dphi<-M_PI) dphi+=2*M_PI;
                double matchphi = CDC_MATCH_PHI;
+	       if (DEBUG_HISTS){
+		 hCDCMatch_Axial->Fill(dphi);
+	       }
                if (COSMICS) matchphi = CDC_COSMIC_MATCH_PHI;
                if ( fabs(dphi) < matchphi){
                   axial_segments[j].matched=true;
@@ -288,7 +294,7 @@ bool DTrackFinder::LinkCDCSegments(void){
          if (VERBOSE) jout << " num_axial num_stereo " << num_axial << " " << num_stereo << endl; 
          if (num_stereo>0 && num_stereo+num_axial>4){
             mytrack.dir=vhat;
-            if (mytrack.FindStateVector()==NOERROR){
+            if (mytrack.FindStateVector(COSMICS)==NOERROR){
                cdc_tracks.push_back(mytrack);
             }
          }
@@ -336,14 +342,14 @@ bool DTrackFinder::MatchCDCStereoHit(const DVector3 &tdir,const DVector3 &t0,
 // Compute initial guess for state vector (x,y,tx,ty) for a track in the CDC
 // by fitting a line to the intersections between the line in the xy plane and 
 // the stereo wires.
-jerror_t DTrackFinder::cdc_track_t::FindStateVector(void){  
+jerror_t DTrackFinder::cdc_track_t::FindStateVector(bool IsCosmics){  
    // Parameters for line in x-y plane
    double vx=this->dir.x();
    double vy=this->dir.y();
    DVector3 pos0=this->axial_hits[0]->wire->origin;
    double xa=pos0.x();
    double ya=pos0.y();
-
+ 
    double sumv=0,sumx=0,sumy=0,sumz=0,sumxx=0,sumyy=0,sumxz=0,sumyz=0;
    for (unsigned int i=0;i<this->stereo_hits.size();i++){
       // Intersection of line in xy-plane with this stereo straw
@@ -369,6 +375,12 @@ jerror_t DTrackFinder::cdc_track_t::FindStateVector(void){
          sumyz+=y*z;
       }
    }
+   /*
+   if (IsCosmics==false){  // Encourage track to come from target region
+     sumz+=TARGET_Z;
+     sumv+=1.;
+   }
+   */
    const double EPS=1e-4;
    double xdenom=sumv*sumxz-sumx*sumz;
    if (fabs(xdenom)<EPS) return VALUE_OUT_OF_RANGE;
