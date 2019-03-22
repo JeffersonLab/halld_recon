@@ -901,6 +901,19 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     double pt=5.0*cos(atan(tanl)); // arbitrary magnitude...
     DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
     
+    // Convert 4x4 covariance matrix to a TMatrixFSym for output
+    TMatrixFSym errMatrix(5);
+    for(unsigned int loc_i = 0; loc_i < 4; ++loc_i){
+      for(unsigned int loc_j = 0; loc_j < 4; ++loc_j){
+	  errMatrix(loc_i, loc_j) = C(loc_i, loc_j);
+      }
+    }
+    errMatrix(4,4)=1.;
+    
+    // Add 7x7 covariance matrix to output
+    double sign=(mom.Theta()>M_PI_2)?-1.:1.;
+    fit_params.setErrorMatrix(Get7x7ErrorMatrix(errMatrix,S,sign));
+
     DVector3 pos;
     if (COSMICS==false){
       DVector3 beamdir(0.,0.,1.);
@@ -912,7 +925,8 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
       DMatrix4x4 J(1.,0.,1.,0., 0.,1.,0.,1., 0.,0.,1.,0., 0.,0.,0.,1.);
       J(state_x,state_tx)=dz;
       J(state_y,state_ty)=dz;
-      C=J*C*J.Transpose();
+      // Transform the matrix to the position of the doca
+      C=J*C*J.Transpose();  
     }
     else{
       pos.SetXYZ(S(state_x),S(state_y),z);
@@ -923,7 +937,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     fit_params.setPosition(pos);
     fit_params.setMomentum(mom);
 
-    // Add covariance matrices to output
+    // Add tracking covariance matrix to output
     auto locTrackingCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
     locTrackingCovarianceMatrix->ResizeTo(5, 5); 
     locTrackingCovarianceMatrix->Zero();
@@ -934,8 +948,6 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     }
     (*locTrackingCovarianceMatrix)(4,4)=1.;
     fit_params.setTrackingErrorMatrix(locTrackingCovarianceMatrix);
-    fit_params.setErrorMatrix(Get7x7ErrorMatrix(locTrackingCovarianceMatrix,
-						S));
 
     // Get extrapolations to other detectors
     GetExtrapolations(pos,mom);
@@ -1990,7 +2002,7 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
 }
 
 shared_ptr<TMatrixFSym> 
-DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1 &S){
+DTrackFitterStraightTrack::Get7x7ErrorMatrix(TMatrixFSym C,DMatrix4x1 &S,double sign){
   auto C7x7 = dResourcePool_TMatrixFSym->Get_SharedResource();
   C7x7->ResizeTo(7, 7);
   DMatrix J(7,5);
@@ -2000,7 +2012,7 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1
   double ty_=S(state_ty);
   double x_=S(state_x);
   double y_=S(state_y);
-  double tanl=1./sqrt(tx_*tx_+ty_*ty_);
+  double tanl=sign/sqrt(tx_*tx_+ty_*ty_);
   double tanl2=tanl*tanl;
   double lambda=atan(tanl);
   double sinl=sin(lambda);
@@ -2023,7 +2035,7 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1
   J(state_Z,state_ty)=(2.*tx_*ty_*x_-y_*diff)*frac;
   
   // C'= JCJ^T
-  *C7x7=(*C).Similarity(J);
+  *C7x7=C.Similarity(J);
   
   return C7x7;
 }

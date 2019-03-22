@@ -100,8 +100,8 @@ public:
 			int &ndof);
   jerror_t Smooth(vector<fdc_update_t>&fdc_updates,
 		  vector<cdc_update_t>&cdc_updates); 
-  shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,
-					    DMatrix4x1 &S);
+  shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(TMatrixFSym C,
+					    DMatrix4x1 &S,double sign);
   void GetExtrapolations(const DVector3 &pos0,const DVector3 &dir);
 	
  private:
