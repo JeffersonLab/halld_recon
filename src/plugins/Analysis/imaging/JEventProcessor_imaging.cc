@@ -125,6 +125,8 @@ jerror_t JEventProcessor_imaging::brun(JEventLoop *eventLoop, int32_t runnumber)
   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
   bfield=dapp->GetBfield(runnumber);
 
+  dIsNoFieldFlag = ((dynamic_cast<const DMagneticFieldMapNoField*>(bfield)) != NULL);
+
   eventLoop->GetSingle(dAnalysisUtilities);
   
   return NOERROR;
@@ -220,28 +222,40 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	  // Find the positions corresponding to the doca between the two
 	  // tracks
-	  double doca=0.,s1=0,s2=0.;
+	  double doca=1e7,s1=0,s2=0.;
 	  DVector3 pos2_out,pos1_out,mom2_out,mom1_out;
-	  if (dAnalysisUtilities->Calc_DOCA(q1,q2,mom1,pos1,mom2,pos2,
-					    mom1_out,pos1_out,mom2_out,
-					    pos2_out,doca,s1,s2)==NOERROR){  
-	    TwoTrackDoca->Fill(doca);
-	    TwoTrackDz->Fill(pos1_out.z()-pos2_out.z());
+	  if (dIsNoFieldFlag){
+	    DVector3 dir1=mom1;
+	    dir1.SetMag(1.);
+	    DVector3 dir2=mom2;
+	    dir2.SetMag(1.);
+	    doca=dAnalysisUtilities->Calc_DOCA(dir1,dir2,pos1,pos2,pos1_out,
+					       pos2_out); 
+	  }
+	  else {
+	    dAnalysisUtilities->Calc_DOCA(q1,q2,mom1,pos1,mom2,pos2,
+					  mom1_out,pos1_out,mom2_out,
+					  pos2_out,doca,s1,s2);
+	  }
+
+	  TwoTrackDoca->Fill(doca);
+	  TwoTrackDz->Fill(pos1_out.z()-pos2_out.z());
+	  
+	  if (doca<DOCA_CUT){
+	    // Use the positions corresponding to the doca of the tracks to 
+	    // refine the estimate for the vertex position
+	    DVector3 myvertex=0.5*(pos1_out+pos2_out);
 	    
-	    if (doca<DOCA_CUT){
-	      // Use the positions corresponding to the doca of the tracks to 
-	      // refine the estimate for the vertex position
-	      DVector3 myvertex=0.5*(pos1_out+pos2_out);
-	      
-	      TwoTrackPocaCut->Fill(myvertex.z(),myvertex.Perp());
-	      TwoTrackXYZ->Fill(myvertex.x(),myvertex.y(),myvertex.z());
-	      if (myvertex.z()>64.5 && myvertex.z()<65.5){
-		TwoTrackXY_at_65cm->Fill(myvertex.x(),myvertex.y());
-	      }
-	      if (myvertex.Perp()<0.5){
-		TwoTrackZ->Fill(myvertex.z());
-	      }
-	      
+	    TwoTrackPocaCut->Fill(myvertex.z(),myvertex.Perp());
+	    TwoTrackXYZ->Fill(myvertex.x(),myvertex.y(),myvertex.z());
+	    if (myvertex.z()>64.5 && myvertex.z()<65.5){
+	      TwoTrackXY_at_65cm->Fill(myvertex.x(),myvertex.y());
+	    }
+	    if (myvertex.Perp()<0.5){
+	      TwoTrackZ->Fill(myvertex.z());
+	    }
+	    
+	    if (dIsNoFieldFlag==false){
 	      // Propagate the covariances matrices to myvertex
 	      DReferenceTrajectory rt(bfield);
 	      DVector3 B;
@@ -271,8 +285,8 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 		  TwoTrackZFit->Fill(myvertex.z());
 		}
 	      }
-	    } // doca cut
-	  } // found the doca
+	    } // non-zero field?
+	  } // doca cut
 	} // second track
       } // second loop over tracks
     } // first track 

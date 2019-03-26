@@ -48,7 +48,7 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		const DMagneticFieldMap *bfield;
 		const DAnalysisUtilities* dAnalysisUtilities = nullptr;
 
-		bool MC_RECON_CHECK;
+		bool MC_RECON_CHECK,dIsNoFieldFlag;
 		int DEBUG_LEVEL;
 		double TRACK_CL_CUT,FIT_CL_CUT,DOCA_CUT;
 };
