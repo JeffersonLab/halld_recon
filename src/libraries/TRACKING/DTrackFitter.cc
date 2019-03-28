@@ -96,7 +96,7 @@ void DTrackFitter::Reset(void)
 #ifdef PROFILE_TRK_TIMES
     prof_time start_time;
 #endif
-
+	IsSmoothed=false;
 	cdchits.clear();
 	fdchits.clear();
 	fit_type = kWireBased;
@@ -158,7 +158,6 @@ DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DVector3 &pos, const DVe
 #ifdef PROFILE_TRK_TIMES
     prof_time start_time;
 #endif	
-
 	input_params.setPosition(pos);
 	input_params.setMomentum(mom);
 	input_params.setPID(IDTrack(q, mass));
