@@ -1,4 +1,5 @@
 *
+cc #define COUNT_ZERO
 #define MAX_CC 60
 #define test_p
 *
@@ -1254,12 +1255,13 @@ cc      if(xm2.gt.xm2cut) then
         iy=ia(i)-ix*100
         corr=corr+cell_hyc(float(ix)-x0,float(iy)-y0)
       enddo
-*
+#ifdef COUNT_ZERO
       do i=1,nzero
         ix=iaz(i)/100
         iy=iaz(i)-ix*100
         corr=corr+cell_hyc(float(ix)-x0,float(iy)-y0)
       enddo
+#endif
       corr = corr / 1.006
 *
       if(corr.lt..8) then
@@ -1798,11 +1800,13 @@ c
         iy=ia(i)-ix*100
         corr=corr+cell_hyc(float(ix)-x0,float(iy)-y0)
       enddo
+#ifdef COUNT_ZERO
       do i=1,nzero
         ix=iaz(i)/100
         iy=iaz(i)-ix*100
         corr=corr+cell_hyc(float(ix)-x0,float(iy)-y0)
       enddo
+#endif
       corr = corr /1.006
       if(corr.lt..8) then
         corr=.8
