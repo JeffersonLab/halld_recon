@@ -113,8 +113,6 @@ class DEventSourceREST:public JEventSource
 	map<unsigned int, double> dBeamBunchPeriodMap; //unsigned int is run number
     static thread_local shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
 
-		vector<size_t> old_track_indexes;	// for dealing with duplicate tracks 	
-
    std::ifstream *ifs;		// input hddm file ifstream
    hddm_r::istream *fin;	// provides hddm layer on top of ifstream
 };
