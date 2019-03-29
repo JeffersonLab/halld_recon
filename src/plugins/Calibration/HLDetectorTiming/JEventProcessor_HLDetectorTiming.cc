@@ -25,6 +25,7 @@ using namespace jana;
 #include "PAIR_SPECTROMETER/DPSCHit.h"
 #include "PAIR_SPECTROMETER/DPSHit.h"
 #include "CCAL/DCCALHit.h"
+#include "CCAL/DCCALShower.h"
 #include "DIRC/DDIRCPmtHit.h"
 #include "DIRC/DDIRCPmtHit_factory.h"
 
@@ -234,6 +235,10 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
+
+    if(!locTrigger->Get_IsPhysicsEvent())
+	    return NOERROR;
+
 
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
@@ -489,6 +494,10 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         }
     }
 
+    Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCAL total energy", fcalHitETot,
+                         "FCAL total energy;", 400, 0, 8000);
+
+
     // Do the same thing for the CCAL as a start
     double ccalHitETot = 0;
     double ccalHitEwtT = 0;
@@ -513,13 +522,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                 Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
                                 ccalHitVector[i]->row, ccalHitVector[i]->column, 
                                 "CCAL Hit Occupancy; column; row",
-                                61, -1.5, 59.5, 61, -1.5, 59.5);
+                                13, -1.5, 11.5, 13, -1.5, 11.5);
                 double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
                 //Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
                 Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
                                         ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
                                         "CCAL Hit Local Time [ns]; column; row",
-                                        61, -1.5, 59.5, 61, -1.5, 59.5);
+                                        13, -1.5, 11.5, 13, -1.5, 11.5);
             }
         }
     }
@@ -839,6 +848,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     
     DVector3 locTargetCenter(0.,0.,Z_TARGET);
 
+    //double largest_fcal_time = 
+
     for (i = 0; i <  neutralShowerVector.size(); i++){
 	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
 	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
@@ -846,12 +857,18 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
 	    //   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
 	    if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
+		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
+				    "Shower Energy [GeV]; t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
+				    100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    if(neutralShowerVector[i]->dEnergy > 0.2) {
 			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time (Neutral)",  locDeltaT,
 					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
 					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    }
 	    } else {
+		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
+				    "Shower Energy [GeV];t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
+				    100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    if(neutralShowerVector[i]->dEnergy > 0.1) {
 			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time (Neutral)",  locDeltaT,
 					    "t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
@@ -860,6 +877,28 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 	    }
 	    
     } // End of loop over neutral showers
+
+    vector<const DCCALShower *> ccalShowerVector;
+    loop->Get(ccalShowerVector);
+    
+    for (i = 0; i <  ccalShowerVector.size(); i++){
+	    DVector3 locShowerPos(ccalShowerVector[i]->x, ccalShowerVector[i]->y, ccalShowerVector[i]->z);
+	    //DVector3 locShowerPos(ccalShowerVector[i]->x, ccalShowerVector[i]->y, 1279.77);
+	    double locPathLength = (locShowerPos - locTargetCenter).Mag();
+	    double locDeltaT = ccalShowerVector[i]->time - locPathLength/29.9792458 - thisRFBunch->dTime;
+
+	    Fill2DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time vs. Energy (Neutral)",  ccalShowerVector[i]->E, locDeltaT,
+			    "Shower Energy [GeV];t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
+			    100, 0., 10., 200, -20, 20);
+	    
+	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
+	    if(ccalShowerVector[i]->E > 0.1) {
+		    Fill1DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time (Neutral)",  locDeltaT,
+				    "t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
+				    500, -50, 50);
+		    //NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+	    }
+    }
     
     // we went this far just to align the tagger with the RF time, nothing else to do without tracks
     if(NO_TRACKS) 
