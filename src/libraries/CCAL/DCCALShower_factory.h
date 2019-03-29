@@ -62,9 +62,12 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		vector< float > Nonlin_p1;
 		vector< float > Nonlin_p2;
 		vector< float > Nonlin_p3;
+
+		vector< float > timewalk_p0;
+		vector< float > timewalk_p1;
+		vector< float > timewalk_p2;
+		vector< float > timewalk_p3;
 		
-		
-		pthread_mutex_t mutex;
 };
 
 #endif // _DCCALShower_factory_
