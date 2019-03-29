@@ -27,12 +27,14 @@ using namespace jana;
 #include "hycal.h"
 
 static mutex CCAL_MUTEX;
+static bool CCAL_PROFILE_LOADED = false;
 
 //------------------
 // LoadCCALProfileData
 //------------------
 bool DCCALShower_factory::LoadCCALProfileData(JApplication *japp, int32_t runnumber)
 {
+	/*
 	static bool first = true;
 	
 	// we are just setting some global stuff inside island.F so it's OK
@@ -41,6 +43,11 @@ bool DCCALShower_factory::LoadCCALProfileData(JApplication *japp, int32_t runnum
 	} else {
 		first = false;
 	}
+	*/
+	if(CCAL_PROFILE_LOADED)
+		return true;
+	else
+		CCAL_PROFILE_LOADED = true;
 
 	string ccal_profile_file;
 	gPARMS->SetDefaultParameter("CCAL_PROFILE_FILE", ccal_profile_file, "CCAL profile data file name");
