@@ -1178,18 +1178,13 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 		
 		// create the new set of tracks
 		vector<DTrackTimeBased*> new_data;
-		old_track_indexes.clear();
 		for( unsigned int i=0; i<data.size(); i++ ) {
-		  if(find(indices_to_erase.begin(), indices_to_erase.end(), i) != indices_to_erase.end()){
-		    delete data[i];
-		    continue;
-		  }
-		  old_track_indexes.push_back(i);
-		  new_data.push_back(data[i]);
+			if(find(indices_to_erase.begin(), indices_to_erase.end(), i) != indices_to_erase.end())
+				continue;
+
+			new_data.push_back(data[i]);
 		}
-
-		data.assign(new_data.begin(),new_data.end());   // replace the set of tracks with the pruned one
-
+		data = new_data;   // replace the set of tracks with the pruned one
    }
 
    // Copy into factory
@@ -1299,20 +1294,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; bcalIter != bcalList.end(); ++bcalIter)
       {
          size_t locShowerIndex = bcalIter->getShower();
-         size_t locTrackIndexFromFile = bcalIter->getTrack();
-	 size_t locTrackIndex=0;
-	 if (PRUNE_DUPLICATE_TRACKS){
-	   bool got_track_index=false;
-	   for (size_t i=0;i<old_track_indexes.size();i++){
-	     if (old_track_indexes[i]==locTrackIndexFromFile){
-	       locTrackIndex=i;
-	       got_track_index=true;
-	       break;
-	     }
-	   }
-	   if (got_track_index==false) continue;
-	 }
-	 else locTrackIndex=locTrackIndexFromFile;
+         size_t locTrackIndex = bcalIter->getTrack();
 
          auto locShowerMatchParams = std::make_shared<DBCALShowerMatchParams>();
          locShowerMatchParams->dBCALShower = locBCALShowers[locShowerIndex];
@@ -1331,20 +1313,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; fcalIter != fcalList.end(); ++fcalIter)
       {
          size_t locShowerIndex = fcalIter->getShower();
-         size_t locTrackIndexFromFile = fcalIter->getTrack();
-	 size_t locTrackIndex=0;
-	 if (PRUNE_DUPLICATE_TRACKS){
-	   bool got_track_index=false;
-	   for (size_t i=0;i<old_track_indexes.size();i++){
-	     if (old_track_indexes[i]==locTrackIndexFromFile){
-	       locTrackIndex=i;
-	       got_track_index=true;
-	       break;
-	     }
-	   }
-	   if (got_track_index==false) continue;
-	 }
-	 else locTrackIndex=locTrackIndexFromFile;
+         size_t locTrackIndex = fcalIter->getTrack();
 
          auto locShowerMatchParams = std::make_shared<DFCALShowerMatchParams>();
          locShowerMatchParams->dFCALShower = locFCALShowers[locShowerIndex];
@@ -1362,20 +1331,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; scIter != scList.end(); ++scIter)
       {
          size_t locHitIndex = scIter->getHit();
-         size_t locTrackIndexFromFile = scIter->getTrack();
-	 size_t locTrackIndex=0;
-	 if (PRUNE_DUPLICATE_TRACKS){
-	   bool got_track_index=false;
-	   for (size_t i=0;i<old_track_indexes.size();i++){
-	     if (old_track_indexes[i]==locTrackIndexFromFile){
-	       locTrackIndex=i;
-	       got_track_index=true;
-	       break;
-	     }
-	   }
-	   if (got_track_index==false) continue;
-	 }
-	 else locTrackIndex=locTrackIndexFromFile;
+         size_t locTrackIndex = scIter->getTrack();
 
          auto locSCHitMatchParams = std::make_shared<DSCHitMatchParams>();
          locSCHitMatchParams->dSCHit = locSCHits[locHitIndex];
@@ -1396,20 +1352,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; tofIter != tofList.end(); ++tofIter)
       {
          size_t locHitIndex = tofIter->getHit();
-         size_t locTrackIndexFromFile = tofIter->getTrack();
-	 size_t locTrackIndex=0;
-	 if (PRUNE_DUPLICATE_TRACKS){
-	   bool got_track_index=false;
-	   for (size_t i=0;i<old_track_indexes.size();i++){
-	     if (old_track_indexes[i]==locTrackIndexFromFile){
-	       locTrackIndex=i;
-	       got_track_index=true;
-	       break;
-	     }
-	   }
-	   if (got_track_index==false) continue;
-	 }
-	 else locTrackIndex=locTrackIndexFromFile;
+         size_t locTrackIndex = tofIter->getTrack();
 
          auto locTOFHitMatchParams = std::make_shared<DTOFHitMatchParams>();
          locTOFHitMatchParams->dTOFPoint = locTOFPoints[locHitIndex];
@@ -1451,21 +1394,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       hddm_r::TflightPCorrelationList::iterator correlationIter = correlationList.begin();
       for(; correlationIter != correlationList.end(); ++correlationIter)
       {
-         size_t locTrackIndexFromFile = correlationIter->getTrack();
-	 size_t locTrackIndex=0;
-	 if (PRUNE_DUPLICATE_TRACKS){
-	   bool got_track_index=false;
-	   for (size_t i=0;i<old_track_indexes.size();i++){
-	     if (old_track_indexes[i]==locTrackIndexFromFile){
-	       locTrackIndex=i;
-	       got_track_index=true;
-	       break;
-	     }
-	   }
-	   if (got_track_index==false) continue;
-	 }
-	 else locTrackIndex=locTrackIndexFromFile;
-
+         size_t locTrackIndex = correlationIter->getTrack();
          DetectorSystem_t locDetectorSystem = (DetectorSystem_t)correlationIter->getSystem();
          double locCorrelation = correlationIter->getCorrelation();
          locDetectorMatches->Set_FlightTimePCorrelation(locTrackTimeBasedVector[locTrackIndex], locDetectorSystem, locCorrelation);
