@@ -162,7 +162,14 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
       	  cerr << "No geometry accessbile." << endl;
       	  return RESOURCE_UNAVAILABLE;
     	}
+
 	
+	//------------------------------------------------------------
+	// read in island algorithm configurations
+	
+	std::unique_lock<std::mutex> lck(CCAL_MUTEX);
+	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);	
+	lck.unlock();
 
 	//------------------------------------------------------------
 	// read in the nonlinearity parameters:
@@ -237,9 +244,9 @@ jerror_t DCCALShower_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 	//------------------------------------------------------------
 	
 	// LoadCCALProfileData() runs some Fortran routines which need access to globals - dangerous!
-	std::lock_guard<std::mutex> lck(CCAL_MUTEX);
+	//std::lock_guard<std::mutex> lck(CCAL_MUTEX);
 
-	LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);	
+	//LoadCCALProfileData(eventLoop->GetJApplication(), runnumber);	
 
 	return NOERROR;
 }
