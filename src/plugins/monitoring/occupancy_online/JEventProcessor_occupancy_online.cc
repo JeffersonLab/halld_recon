@@ -323,11 +323,15 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	}
 
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-
+	
 	//------------------------ BCAL -----------------------
-	bcal_num_events->Fill(0.5);
-	//ADC
-	for(unsigned int i = 0; i < vDBCALDigiHit.size(); i++){
+	
+	// don't fill occupancy plots for BCAL LED events
+	if( !((l1trigger->fp_trig_mask & 0x100) || (l1trigger->fp_trig_mask & 0x200)) ) {
+  
+            bcal_num_events->Fill(0.5);
+	    //ADC
+	    for(unsigned int i = 0; i < vDBCALDigiHit.size(); i++){
 		const DBCALDigiHit *hit = vDBCALDigiHit[i];
 
 		int ix = hit->module;
@@ -337,10 +341,10 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 			bcal_adc_occ->Fill(ix, iy+17);
 		else if(hit->end == DBCALGeometry::kDownstream)
 			bcal_adc_occ->Fill(ix, iy);
-	}
+	    }
 
-	//TDC
-	for(unsigned int i = 0; i < vDBCALTDCDigiHit.size(); i++){
+	    //TDC
+	    for(unsigned int i = 0; i < vDBCALTDCDigiHit.size(); i++){
 		const DBCALTDCDigiHit *hit = vDBCALTDCDigiHit[i];
 
 		int ix = hit->module;
@@ -350,7 +354,8 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 			bcal_tdc_occ->Fill(ix, iy+13);
 		else if(hit->end == DBCALGeometry::kDownstream)
 			bcal_tdc_occ->Fill(ix, iy);
-	}
+	    }
+        }
 
 	//------------------------ CCAL -----------------------
 	ccal_num_events->Fill(0.5);
