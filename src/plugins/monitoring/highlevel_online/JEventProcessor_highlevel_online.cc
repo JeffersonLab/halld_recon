@@ -554,7 +554,8 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 	{
 		for(unsigned int bit = 0; bit < 32; ++bit){
 			locgtpTrigBits[bit] = (locL1Trigger->trig_mask & (1 << bit)) ? 1 : 0;
-			locfpTrigBits[bit] = (locL1Trigger->fp_trig_mask & (1 << bit)) ? 1 : 0;
+			//Ignore BCAL LED FP triggers 9 & 10 (lanes 8 & 9) from high-level monitoring due to their instability
+			if ( bit < 8 || bit > 9) locfpTrigBits[bit] = (locL1Trigger->fp_trig_mask & (1 << bit)) ? 1 : 0;
 		}
 	}
 
