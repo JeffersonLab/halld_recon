@@ -191,10 +191,10 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // Save BCAL trigger if:
     // 1. Trigger front-panel bits 8 or 9
-    // 2. Total energy in BCAL > 12 GeV
-    // 3. Number of hits in BCAL > 200
+    // 2. Total energy in BCAL > 12 GeV (diabled to avoid GTP events leaking into BCAL LED skims)
+    // 3. Number of hits in BCAL > 1200 (raised to 1200 to avoid GTP events leaking into BCAL LED skims)
     bool save_BCAL_LED_event = is_BCAL_LED_US_trigger || is_BCAL_LED_DS_trigger
-      || (bcal_hits.size() >= 200) || (total_bcal_energy > 12.);
+      || (bcal_hits.size() >= 1200));// || (total_bcal_energy > 12.); Diabling energy trigger
     if ( write_out_bcal_led && save_BCAL_LED_event ) {
       locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "BCAL-LED");
     }
