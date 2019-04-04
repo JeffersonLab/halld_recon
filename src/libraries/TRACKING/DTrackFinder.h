@@ -42,22 +42,23 @@ class DTrackFinder:public jana::JObject{
       };
 
       class fdc_segment_t{
-         public:
-            fdc_segment_t(vector<const DFDCPseudo *>&input_hits,bool matched=false){
-               for (unsigned int i=0;i<input_hits.size();i++){
-                  this->hits.push_back(input_hits[i]);
-               }
-               this->S=FindStateVector();
-               this->matched=matched;
-            };
-            ~fdc_segment_t(){};
-
-            DMatrix4x1 FindStateVector(void) const;
-
-            bool matched;
-            DMatrix4x1 S;
-            vector<const DFDCPseudo *>hits;
-
+      public:
+	fdc_segment_t(vector<const DFDCPseudo *>&input_hits,
+		      bool matched=false){
+	  for (unsigned int i=0;i<input_hits.size();i++){
+	    this->hits.push_back(input_hits[i]);
+	  }
+	  this->S=FindStateVector();
+	  this->matched=matched;
+	};
+	~fdc_segment_t(){};
+	
+	DMatrix4x1 FindStateVector(void) const;
+	
+	bool matched;
+	DMatrix4x1 S;
+	vector<const DFDCPseudo *>hits;
+	
       };
 
       class cdc_hit_t{
@@ -96,7 +97,7 @@ class DTrackFinder:public jana::JObject{
             };  
             ~cdc_track_t(){};
 
-            jerror_t FindStateVector(void);
+            jerror_t FindStateVector(bool IsCosmics=false);
 
             vector<const DCDCTrackHit *>axial_hits; 
             vector<const DCDCTrackHit *>stereo_hits;
@@ -126,7 +127,7 @@ class DTrackFinder:public jana::JObject{
             const DVector3 &origin,DVector3 *poca=NULL) const;
       double FindDoca(const DVector3 &pos1,const DVector3 &mom1,
             const DVector3 &pos2,const DVector3 &mom2,
-            DVector3 *poca) const;
+            DVector3 *poca=NULL) const;
       bool FindIntersectionsWithCylinder(double R,const DVector3 &dir,
             const DVector3 &pos,DVector3 &out1,
             DVector3 &out2) const;
@@ -149,6 +150,7 @@ class DTrackFinder:public jana::JObject{
       vector<fdc_segment_t>fdc_tracks;
 
       bool COSMICS, DEBUG_HISTS, VERBOSE;
+      double CDC_MATCH_RADIUS,CDC_MATCH_PHI,CDC_COSMIC_MATCH_PHI;
 };
 
 #endif // _DTrackFinder_

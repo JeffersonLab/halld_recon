@@ -365,11 +365,23 @@ void JEventSource_EVIOpp::Dispatcher(void)
 						continue;
 					}
 				}else{
-					cout << hdevio->err_mess.str() << endl;
-					if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
-						bool ignore_error = false;
-						if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
-						if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+					// Some CDAQ files do not have a proper trailer at the end of the
+					// EVIO file and so get reported by HDEVIO as truncated. We do not
+					// want to treat those as an error, but DO want to treat legitimate
+					// truncations as errors. If this is a CDAQ event and there are
+					// exactly zero words left in the file then assume it is OK. 
+					// n.b. the IS_CDAQ_FILE flag is set in DEVIOWorkerThread::ParseCDAQBank
+					// during the parsing of a previous event. It is possible we could
+					// reach here before that is set leading to a race condition!
+					if( IS_CDAQ_FILE && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) && (hdevio->GetNWordsLeftInFile()==0) ){
+						jout << "Missing EVIO file trailer in CDAQ file (ignoring..)" << endl; 
+					}else{
+						cout << hdevio->err_mess.str() << endl;
+						if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
+							bool ignore_error = false;
+							if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
+							if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+						}
 					}
 				}
 				break;
@@ -726,8 +738,39 @@ uint64_t JEventSource_EVIOpp::SearchFileForRunNumber(void)
 				}
 			}
 
-			// BOR event
+			// BOR event from CODA ER
 			if( (*iptr & 0xffffffff) ==  0x00700E01) continue;
+			
+			// BOR event from CDAQ ER
+			if( (*iptr & 0xffffffff) ==  0x00700e34){
+				iptr++;
+				uint32_t crate_len    = iptr[0];
+				uint32_t crate_header = iptr[1];
+				uint32_t *iend_crate  = &iptr[crate_len];
+			
+				// Make sure crate tag is right
+				if( (crate_header>>16) == 0x71 ){
+
+					// Loop over modules
+					iptr += 2;
+					while(iptr<iend_crate){
+						uint32_t module_header = *iptr++;
+						uint32_t module_len    = module_header&0xFFFF;
+						uint32_t modType       = (module_header>>20)&0x1f;
+
+						if(  modType == DModuleType::CDAQTSG){
+							uint64_t run_number_seed = iptr[0];
+							if(hdevio) delete hdevio;
+							if(buff) delete[] buff;
+							return run_number_seed;
+						}
+						iptr = &iptr[module_len];
+					}
+					iptr = iend_crate; // ensure we're pointing past this crate
+				}
+				
+				continue; // didn't find it in this CDAQ BOR. Keep looking
+			}
 
 			// PHYSICS event
 			bool not_in_this_buffer = false;

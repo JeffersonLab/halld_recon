@@ -106,7 +106,7 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 	uint64_t Ncopied = nwords<(int64_t)left ? (uint64_t)nwords:left;
 	_gcount = Ncopied*sizeof(uint32_t);
 	if(_gcount>0) memcpy((char*)s, (char*)fnext, _gcount);
-	left -= Ncopied;
+	//left -= Ncopied;   // this is true, but not used later on
 	fnext += Ncopied;
 	s += _gcount; // advance pointer to user buff in case we need to write more
 	
@@ -529,10 +529,10 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 		br.last_event = 0;
 		
 		MapEvents(bh, br);
-		
+
 		NB_next_pos = pos + (streampos)(bh.length<<2);
 	}
-	
+
 	// Check if we did not find an event of interest above. 
 	// If not, report that there are no more events in the file.
 	if(br.evio_events.empty() || !ifs.good()){
@@ -562,8 +562,18 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 	// Read data directly into user buffer
 	ifs.read((char*)user_buff, event_len*sizeof(uint32_t));
 	if(!ifs.good()){
-		SetErrorMessage("No more events");
-		err_code = HDEVIO_EOF;
+		uint64_t bytes_to_read =  (uint64_t)(event_len*sizeof(uint32_t));
+		if( (bytes_to_read + (uint64_t)last_event_pos) > total_size_bytes ){
+			auto words_left_in_file = total_size_bytes - last_event_pos;
+			err_mess << "Error reading EVIO event (truncated?)"<<endl;
+			err_mess << "words_left_in_file (before read): " << words_left_in_file << endl;
+			err_mess << "            bytes tried to read : " << bytes_to_read << endl;
+			err_mess << "                total_size_bytes: " << total_size_bytes << "   tellg: " << ifs.tellg();
+			err_code = HDEVIO_FILE_TRUNCATED;
+		}else{
+			SetErrorMessage("No more events");
+			err_code = HDEVIO_EOF;
+		}
 		return false; // isgood=false
 	}
 
@@ -623,6 +633,14 @@ void HDEVIO::rewind(void)
 	
 	ClearErrorMessage();
 	err_code = HDEVIO_OK;
+}
+
+//------------------------
+// GetNWordsLeftInFile
+//------------------------
+uint64_t HDEVIO::GetNWordsLeftInFile(void)
+{
+	return (total_size_bytes-NB_next_pos)/4;
 }
 
 //------------------------
@@ -880,6 +898,15 @@ void HDEVIO::MapEvents(BLOCKHEADER_t &bh, EVIOBlockRecord &br)
 				er.event_type = kBT_PHYSICS;
 				er.first_event  = eh->physics.first_event_lo;
 				er.first_event += ((uint64_t)eh->physics.first_event_hi)<<32;
+				er.last_event   = er.first_event + (uint64_t)M - 1;
+				if(er.first_event < br.first_event) br.first_event = er.first_event;
+				if(er.last_event  > br.last_event ) br.last_event  = er.last_event;
+				break;
+			case 0xFF32: er.event_type = kBT_BOR;        break; // CDAQ
+			case 0xFF33:                                        // CDAQ
+				M = eh->cdaqphysics.roc1_bank_header&0xFF;
+				er.event_type = kBT_PHYSICS;
+				er.first_event  = eh->cdaqphysics.first_event;
 				er.last_event   = er.first_event + (uint64_t)M - 1;
 				if(er.first_event < br.first_event) br.first_event = er.first_event;
 				if(er.last_event  > br.last_event ) br.last_event  = er.last_event;

@@ -1458,7 +1458,35 @@ bool DGeometry::GetCDCRmid(vector<double> &cdc_rmid) const
 //---------------------------------
 bool DGeometry::GetCDCNwires(vector<int> &cdc_nwires) const
 {
-
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(209);
+	cdc_nwires.push_back(209);
+	
    return false;
 }
 
@@ -1667,6 +1695,24 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 }
 
 //---------------------------------
+// GetCCALZ
+//---------------------------------
+bool DGeometry::GetCCALZ(double &z_ccal) const
+{
+   vector<double> ComptonEMcalpos;
+   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+
+   if(!good){
+      _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+      z_ccal=876.106; // from some version of HDDS that may be out of date.  2018-12-10 DL
+      return false;
+   }else{
+	   z_ccal = ComptonEMcalpos[2];
+      return true;
+   }
+}
+
+//---------------------------------
 // GetFCALZ
 //---------------------------------
 bool DGeometry::GetFCALZ(double &z_fcal) const
@@ -1700,10 +1746,9 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
     vector<double>dirc_plane;
     vector<double>dirc_shift;
     vector<double>bar_plane;
-    Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='1']", dirc_plane);
+    Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", dirc_plane);
     Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
-    Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", bar_plane);
-    z_dirc=dirc_face[2]+dirc_plane[0]+dirc_shift[2]+bar_plane[1]; 
+    z_dirc=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
 
     jout << "DIRC z position = " << z_dirc << " cm." << endl;
     return true;
@@ -1823,7 +1868,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom1']/mposY/@dY",dy);
   	vector<double>tof_bottom1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom1']/@X_Y_Z",tof_bottom1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_bars1;k++){
     	y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-1));
   	}
   	num_bars+=num_bars1;
@@ -1833,7 +1878,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom2']/mposY/@dY",dy);
   	vector<double>tof_bottom2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom2']/@X_Y_Z",tof_bottom2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_narrow_bars1;k++){
     	y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-20));
   	}
   	num_bars+=num_narrow_bars1;
@@ -1843,7 +1888,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_north']/mposY/@dY",dy);
   	vector<double>tof_north;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north']/@X_Y_Z",tof_north);  
-  	for (unsigned int k=num_bars;k<num_bars+num_single_end_bars1;k++){
+  	for (int k=num_bars;k<num_bars+num_single_end_bars1;k++){
     	y_tof.push_back(y0+tof_north[1]+dy*double(k-22));
   	}
   	num_bars+=num_single_end_bars1;
@@ -1853,7 +1898,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_top2']/mposY/@dY",dy);
   	vector<double>tof_top2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top2']/@X_Y_Z",tof_top2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars2;k++){
+  	for (int k=num_bars;k<num_bars+num_narrow_bars2;k++){
     	y_tof.push_back(y0+tof_top2[1]+dy*double(k-24));
   	}
   	num_bars+=num_narrow_bars2;
@@ -1863,7 +1908,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_top1']/mposY/@dY",dy);
   	vector<double>tof_top1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top1']/@X_Y_Z",tof_top1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars2;k++){
+  	for (int k=num_bars;k<num_bars+num_bars2;k++){
    	 	y_tof.push_back(y0+tof_top1[1]+dy*double(k-26));
   	}
   	num_bars+=num_bars2;

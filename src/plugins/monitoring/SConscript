@@ -8,6 +8,7 @@ subdirs = [
 'BCAL_LEDonline',
 'BCAL_LED',
 'BCAL_LED_time',
+'CCAL_online',
 'CDC_dedx',
 'CDC_online',
 'DAQ_online',
@@ -50,7 +51,8 @@ subdirs = [
 'SC_Eff','TOF_Eff',
 'TS_scaler',
 'TrackingPulls',
-'timing_online'
+'timing_online',
+'DIRC_online'
 ]
 
 #'L3_online',

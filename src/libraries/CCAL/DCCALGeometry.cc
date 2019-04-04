@@ -16,30 +16,25 @@ using namespace std;
 // DCCALGeometry    (Constructor)
 //---------------------------------
 DCCALGeometry::DCCALGeometry() : 
-m_numActiveBlocks( 0 )
-{
-	double innerRadius = ( kCCALBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
-
-	// inflate the innner radius by 1% to for "safe" comparison
-	innerRadius *= 1.01;
-	
-	for( int row = 0; row < kCCALBlocksTall; row++ ){
-		for( int col = 0; col < kCCALBlocksWide; col++ ){
-			
-			// transform to beam axis
-			m_positionOnFace[row][col] = 
-			   DVector2(  ( (double)col - kCCALMidBlock +0.5 ) * blockSize(),
-					     ( (double)row - kCCALMidBlock +0.5 ) * blockSize() );
-			
-			m_activeBlock[row][col] = true;
-				
-			// build the "channel map"
-			m_channelNumber[row][col] = m_numActiveBlocks;
-			m_row[m_numActiveBlocks] = row;
-			m_column[m_numActiveBlocks] = col;
-
-			m_numActiveBlocks++;
-		}
+  m_numActiveBlocks( 0 ){
+  
+        for( int row = 0; row < kCCALBlocksTall; row++ ){
+	  for( int col = 0; col < kCCALBlocksWide; col++ ){
+      
+	    // transform to beam axis
+	    m_positionOnFace[row][col] = 
+	      DVector2(  ( (double)col - kCCALMidBlock  + 0.5 ) * blockSize(),
+			 ( (double)row - kCCALMidBlock + 0.5 ) * blockSize() );
+	    
+	    m_activeBlock[row][col] = true;
+      
+	    // build the "channel map"
+	    m_channelNumber[row][col]    =  m_numActiveBlocks;
+	    m_row[m_numActiveBlocks]     =  row;
+	    m_column[m_numActiveBlocks]  =  col;
+	    
+	    m_numActiveBlocks++;
+	  }
 	}
 }
 

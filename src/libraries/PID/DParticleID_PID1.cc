@@ -15,6 +15,13 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
   JCalibration * jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
   vector<map<string,double> >vals;
+  if (jcalib->Get("CDC/ElectrondEdxMean",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_CDC_Electron.push_back(row["m1"]);
+    ddEdxMeanParams_CDC_Electron.push_back(row["m2"]);
+    ddEdxMeanParams_CDC_Electron.push_back(row["m3"]);
+    ddEdxMeanParams_CDC_Electron.push_back(row["m4"]);
+  }
   if (jcalib->Get("CDC/dEdxMean",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -42,7 +49,13 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
-
+  if (jcalib->Get("CDC/ElectrondEdxSigma",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_CDC_Electron.push_back(row["s1"]);
+    ddEdxSigmaParams_CDC_Electron.push_back(row["s2"]);
+    ddEdxSigmaParams_CDC_Electron.push_back(row["s3"]);
+    ddEdxSigmaParams_CDC_Electron.push_back(row["s4"]);
+  }
   if (jcalib->Get("CDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -70,7 +83,14 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
-
+  
+   if (jcalib->Get("FDC/ElectrondEdxMean",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_FDC_Electron.push_back(row["m1"]);
+    ddEdxMeanParams_FDC_Electron.push_back(row["m2"]);
+    ddEdxMeanParams_FDC_Electron.push_back(row["m3"]);
+    ddEdxMeanParams_FDC_Electron.push_back(row["m4"]);
+  }
   if (jcalib->Get("FDC/dEdxMean",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -98,7 +118,13 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
-
+  if (jcalib->Get("FDC/ElectrondEdxSigma",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_FDC_Electron.push_back(row["s1"]);
+    ddEdxSigmaParams_FDC_Electron.push_back(row["s2"]);
+    ddEdxSigmaParams_FDC_Electron.push_back(row["s3"]);
+    ddEdxSigmaParams_FDC_Electron.push_back(row["s4"]);
+  }
   if (jcalib->Get("FDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -126,7 +152,122 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
+  if (jcalib->Get("START_COUNTER/dEdxProtonMean",vals)==false){ 
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_SC_Proton.push_back(row["m1"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m2"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m3"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m4"]);
+  } 
+  if (jcalib->Get("START_COUNTER/dEdxProtonSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_SC_Proton.push_back(row["s1"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s2"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
+  }
+  
+  if (jcalib->Get("TOF/TimeSigmas",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_TOF_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_TOF_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
 
+  if (jcalib->Get("BCAL/TimeSigmas",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_BCAL_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
+
+  if (jcalib->Get("FCAL/TimeSigmas",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_FCAL_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_FCAL_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_FCAL_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_FCAL_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_FCAL_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_FCAL_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_FCAL_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_FCAL_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_FCAL_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_FCAL_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_FCAL_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_FCAL_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_FCAL_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_FCAL_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_FCAL_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_FCAL_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
 }
 
 //---------------------------------
@@ -137,9 +278,22 @@ DParticleID_PID1::~DParticleID_PID1()
 
 }
 
+double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdx(locBetaGammaValue, ddEdxMeanParams_SC_Proton);  
+}
+double DParticleID_PID1::GetProtondEdxSigma_SC(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_SC_Proton);  
+}
+
 jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const
 {
-  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta); 
+  if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
+    locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_CDC_Electron)/1000000.0;
+    return NOERROR;
+  }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
     locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_CDC_Proton)/1000000.0;
     return NOERROR;
@@ -159,7 +313,10 @@ jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHi
 jerror_t DParticleID_PID1::GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const
 {
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
-
+  if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
+    locSigmadEdx = Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_CDC_Electron)/1000000.0;
+    return NOERROR;
+  }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
     locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_Proton)/1000000.0;
     return NOERROR;
@@ -179,7 +336,10 @@ jerror_t DParticleID_PID1::GetdEdxSigma_CDC(double locBeta, unsigned int locNumH
 jerror_t DParticleID_PID1::GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const
 {
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
-
+  if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
+    locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_FDC_Electron)/1000000.0;
+    return NOERROR;
+  }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
     locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_FDC_Proton)/1000000.0;
     return NOERROR;
@@ -199,7 +359,10 @@ jerror_t DParticleID_PID1::GetdEdxMean_FDC(double locBeta, unsigned int locNumHi
 jerror_t DParticleID_PID1::GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const
 {
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
-
+  if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
+    locSigmadEdx = Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_FDC_Electron)/1000000.0;
+    return NOERROR;
+  }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
     locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_Proton)/1000000.0;
     return NOERROR;
@@ -270,4 +433,108 @@ jerror_t DParticleID_PID1::CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTr
 
 	return NOERROR;
 }
+
+double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t particle,double p) const {
+  double locSigma=0.;
+	  
+  if (particle==Proton || particle==AntiProton){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_Proton[1]/p
+	+ dTimeSigmaParams_TOF_Proton[2]
+	+ dTimeSigmaParams_TOF_Proton[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_Proton[1]/p
+	+ dTimeSigmaParams_BCAL_Proton[2]
+	+ dTimeSigmaParams_BCAL_Proton[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_Proton[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_Proton[1]/p
+	+ dTimeSigmaParams_FCAL_Proton[2]
+	+ dTimeSigmaParams_FCAL_Proton[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }  
+  else if (particle==KPlus || particle==KMinus){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_KPlus[1]/p
+	+ dTimeSigmaParams_TOF_KPlus[2]
+	+ dTimeSigmaParams_TOF_KPlus[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_KPlus[1]/p
+	+ dTimeSigmaParams_BCAL_KPlus[2]
+	+ dTimeSigmaParams_BCAL_KPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_KPlus[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_KPlus[1]/p
+	+ dTimeSigmaParams_FCAL_KPlus[2]
+	+ dTimeSigmaParams_FCAL_KPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+  else if (particle==PiPlus || particle==PiMinus){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_PiPlus[1]/p
+	+ dTimeSigmaParams_TOF_PiPlus[2]
+	+ dTimeSigmaParams_TOF_PiPlus[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_BCAL_PiPlus[2]
+	+ dTimeSigmaParams_BCAL_PiPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_PiPlus[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_PiPlus[1]/p
+	+ dTimeSigmaParams_FCAL_PiPlus[2]
+	+ dTimeSigmaParams_FCAL_PiPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  } 
+  else if (particle==Electron || particle==Positron){
+    switch(detector){
+    case SYS_TOF:
+      locSigma=dTimeSigmaParams_TOF_Positron[0]/(p*p) 
+	+ dTimeSigmaParams_TOF_Positron[1]/p
+	+ dTimeSigmaParams_TOF_Positron[2]
+	+ dTimeSigmaParams_TOF_Positron[3]*p;
+      break;  
+    case SYS_BCAL:
+      locSigma=dTimeSigmaParams_BCAL_Positron[0]/(p*p) 
+	+ dTimeSigmaParams_BCAL_Positron[1]/p
+	+ dTimeSigmaParams_BCAL_Positron[2]
+	+ dTimeSigmaParams_BCAL_Positron[3]*p;
+      break;  
+    case SYS_FCAL:
+      locSigma=dTimeSigmaParams_FCAL_Positron[0]/(p*p) 
+	+ dTimeSigmaParams_FCAL_Positron[1]/p
+	+ dTimeSigmaParams_FCAL_Positron[2]
+	+ dTimeSigmaParams_FCAL_Positron[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+
+  return locSigma*locSigma;	  
+}
+  
 

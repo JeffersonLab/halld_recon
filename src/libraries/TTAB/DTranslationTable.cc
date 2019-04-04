@@ -281,6 +281,10 @@ void DTranslationTable::SetSystemsToParse(string systems, JEventSource *eventsou
 		rocid_map[name_to_id[         "TOF"]] = {77, 78};
 		rocid_map[name_to_id[        "TPOL"]] = {84};
 		rocid_map[name_to_id[         "TAC"]] = {14, 78};
+		rocid_map[name_to_id[        "CCAL"]] = {90};
+		rocid_map[name_to_id[        "CCAL_REF"]] = {90};
+		rocid_map[name_to_id[        "DIRC"]] = {92};
+		
 	}
 
 	// Parse string of system names
@@ -383,6 +387,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       switch (chaninfo.det_sys) {
          case BCAL:       MakeBCALDigiHit(chaninfo.bcal, pi, pt, pp);              break;
          case FCAL:       MakeFCALDigiHit(chaninfo.fcal, pi, pt, pp);              break;
+         case CCAL:       MakeCCALDigiHit(chaninfo.ccal, pi, pt, pp);              break;
+         case CCAL_REF:   MakeCCALRefDigiHit(chaninfo.ccal_ref, pi, pt, pp);       break;
          case SC:         MakeSCDigiHit(  chaninfo.sc, pi, pt, pp);                break;
          case TOF:        MakeTOFDigiHit( chaninfo.tof, pi, pt, pp);               break;
          case TAGM:       MakeTAGMDigiHit(chaninfo.tagm, pi, pt, pp);              break;
@@ -391,7 +397,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PSC:        MakePSCDigiHit(chaninfo.psc, pi, pt, pp);                break;
          case RF:         MakeRFDigiTime(chaninfo.rf, pt);                         break;
          case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pi, pt, pp);  break;
-         case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   		   break;
+         case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
 
          default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
@@ -427,6 +433,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       switch (chaninfo.det_sys) {
          case BCAL:       MakeBCALDigiHit( chaninfo.bcal, pd);             break;
          case FCAL:       MakeFCALDigiHit( chaninfo.fcal, pd);             break;
+         case CCAL:       MakeCCALDigiHit( chaninfo.ccal, pd);             break;
+         case CCAL_REF:   MakeCCALRefDigiHit( chaninfo.ccal_ref, pd);      break;	   
          case SC:         MakeSCDigiHit(   chaninfo.sc,   pd);             break;
          case TOF:        MakeTOFDigiHit(  chaninfo.tof,  pd);             break;
          case TAGM:       MakeTAGMDigiHit( chaninfo.tagm, pd);             break;
@@ -653,6 +661,45 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       }
    }
 	
+   // DDIRCTDCHit
+   vector<const DDIRCTDCHit*> dirctdchits;
+   loop->Get(dirctdchits);
+   if (VERBOSE > 2) ttout << "  Number DDIRCTDCHit objects: " << dirctdchits.size() << std::endl;
+   for (uint32_t i=0; i<dirctdchits.size(); i++) {
+      const DDIRCTDCHit *hit = dirctdchits[i];
+
+      // Apply optional rocid translation
+      uint32_t rocid = hit->rocid;
+      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
+      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
+
+      if (VERBOSE > 4)
+         ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
+               << " chan:" << hit->channel << std::endl;
+      
+      // Create crate,slot,channel index and find entry in Translation table.
+      // If none is found, then just quietly skip this hit.
+      csc_t csc = {rocid, hit->slot, hit->channel};
+      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
+      if (iter == Get_TT().end()) {
+          if (VERBOSE > 6)
+             ttout << "     - Didn't find it" << std::endl;
+          continue;
+      }
+      const DChannelInfo &chaninfo = iter->second;
+      if (VERBOSE > 6)
+	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
+               << std::endl; 
+      
+      // Create the appropriate hit type based on detector type
+      switch (chaninfo.det_sys) {
+         case DIRC:    MakeDIRCTDCDigiHit(chaninfo.dirc, hit); break;
+         default:     
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             break;
+      }
+   }
+
 	// Optionally overwrite nsamples_integral and/or nsamples_pedestal if 
 	// user specified via config. parameters.
 	OverwriteNsamples();
@@ -679,6 +726,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 		if(CALL_STACK){
       	Addf250ObjectsToCallStack(loop, "DBCALDigiHit");
       	Addf250ObjectsToCallStack(loop, "DFCALDigiHit");
+      	Addf250ObjectsToCallStack(loop, "DCCALDigiHit");
+      	Addf250ObjectsToCallStack(loop, "DCCALRefDigiHit");
       	Addf250ObjectsToCallStack(loop, "DSCDigiHit");
       	Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
       	Addf250ObjectsToCallStack(loop, "DTACDigiHit");
@@ -735,6 +784,52 @@ DFCALDigiHit* DTranslationTable::MakeFCALDigiHit(const FCALIndex_t &idx,
    
    return h;
 }
+
+//---------------------------------
+// MakeCCALDigiHit
+//---------------------------------
+DCCALDigiHit* DTranslationTable::MakeCCALDigiHit(const CCALIndex_t &idx,
+                                                 const Df250PulseData *pd) const
+{
+   DCCALDigiHit *h = new DCCALDigiHit();
+   CopyDf250Info(h, pd);
+
+   // The CCAL coordinate system: (column,row) = (0,0) in the bottom right corner
+
+   if(idx.col < 0)
+     h->column = idx.col + 6;
+   else if(idx.col > 0) 
+     h->column = idx.col + 5;
+   
+   if(idx.row < 0)
+     h->row = idx.row + 6;
+   else if(idx.row > 0) 
+     h->row = idx.row + 5;
+   
+   //   h->row    = idx.row;
+   //   h->column = idx.col;
+   
+   vDCCALDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
+// MakeCCALRefDigiHit
+//---------------------------------
+DCCALRefDigiHit* DTranslationTable::MakeCCALRefDigiHit(const CCALRefIndex_t &idx,
+                                                 const Df250PulseData *pd) const
+{
+   DCCALRefDigiHit *h = new DCCALRefDigiHit();
+   CopyDf250Info(h, pd);
+
+   h->id     = idx.id;
+
+   vDCCALRefDigiHit.push_back(h);
+   
+   return h;
+}
+
 
 //---------------------------------
 // MakeTOFDigiHit
@@ -882,6 +977,54 @@ DFCALDigiHit* DTranslationTable::MakeFCALDigiHit(const FCALIndex_t &idx,
    
    return h;
 }
+
+//---------------------------------
+// MakeCCALDigiHit
+//---------------------------------
+DCCALDigiHit* DTranslationTable::MakeCCALDigiHit(const CCALIndex_t &idx,
+                                                 const Df250PulseIntegral *pi,
+                                                 const Df250PulseTime *pt,
+                                                 const Df250PulsePedestal *pp) const
+{
+   DCCALDigiHit *h = new DCCALDigiHit();
+   CopyDf250Info(h, pi, pt, pp);
+
+   if(idx.col < 0)
+     h->column = idx.col + 6;
+   else if(idx.col > 0) 
+     h->column = idx.col + 5;
+
+   if(idx.row < 0)
+     h->row = idx.row + 6;
+   else if(idx.row > 0) 
+     h->row = idx.row + 5;
+
+   //   h->row    = idx.row;
+   //   h->column = idx.col;
+
+   vDCCALDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
+// MakeCCALRefDigiHit
+//---------------------------------
+DCCALRefDigiHit* DTranslationTable::MakeCCALRefDigiHit(const CCALRefIndex_t &idx,
+                                                 const Df250PulseIntegral *pi,
+                                                 const Df250PulseTime *pt,
+                                                 const Df250PulsePedestal *pp) const
+{
+   DCCALRefDigiHit *h = new DCCALRefDigiHit();
+   CopyDf250Info(h, pi, pt, pp);
+
+   h->id    = idx.id;
+
+   vDCCALRefDigiHit.push_back(h);
+   
+   return h;
+}
+
 
 //---------------------------------
 // MakeTOFDigiHit
@@ -1393,6 +1536,23 @@ DTACTDCDigiHit*  DTranslationTable::MakeTACTDCDigiHit(
 }
 
 //---------------------------------
+// MakeDIRCTDCDigiHit
+//---------------------------------
+DDIRCTDCDigiHit*  DTranslationTable::MakeDIRCTDCDigiHit(
+                                    const DIRCIndex_t &idx,
+                                    const DDIRCTDCHit *hit) const
+{
+   DDIRCTDCDigiHit *h = new DDIRCTDCDigiHit();
+   CopyDIRCTDCInfo(h, hit);
+
+   h->channel = idx.pixel;
+
+   vDDIRCTDCDigiHit.push_back(h);
+
+   return h;
+}
+
+//---------------------------------
 // GetDetectorIndex
 //---------------------------------
 const DTranslationTable::DChannelInfo 
@@ -1436,6 +1596,14 @@ const DTranslationTable::csc_t
              break;
           case DTranslationTable::FCAL:
              if ( det_channel.fcal == in_channel.fcal ) 
+                found = true;
+             break;
+          case DTranslationTable::CCAL:
+             if ( det_channel.ccal == in_channel.ccal ) 
+                found = true;
+             break;
+          case DTranslationTable::CCAL_REF:
+             if ( det_channel.ccal_ref == in_channel.ccal_ref ) 
                 found = true;
              break;
           case DTranslationTable::FDC_CATHODES:
@@ -1482,6 +1650,10 @@ const DTranslationTable::csc_t
              if ( det_channel.tac == in_channel.tac )
                 found = true;
              break;
+	  case DTranslationTable::DIRC:
+             if ( det_channel.dirc == in_channel.dirc )
+                found = true;
+             break;
 
           default:
              jerr << "DTranslationTable::GetDAQIndex(): "
@@ -1522,6 +1694,12 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
     case DTranslationTable::FCAL:
        ss << "row = " << in_channel.fcal.row << " column = " << in_channel.fcal.col;
        break;
+    case DTranslationTable::CCAL:
+       ss << "row = " << in_channel.ccal.row << " column = " << in_channel.ccal.col;
+       break;
+    case DTranslationTable::CCAL_REF:
+       ss << "id = " << in_channel.ccal_ref.id << " id = " << in_channel.ccal_ref.id;
+       break;
     case DTranslationTable::FDC_CATHODES:
        ss << "package = " << in_channel.fdc_cathodes.package
           << " chamber = " << in_channel.fdc_cathodes.chamber
@@ -1561,6 +1739,9 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
        break;
     case DTranslationTable::TAC:
        ss << " ";
+       break;
+    case DTranslationTable::DIRC:
+       ss << "pixel = " << in_channel.dirc.pixel;
        break;
 
     default:
@@ -1806,6 +1987,10 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
       return DTranslationTable::CDC;   
    } else if ( type == "fcal" ) {
       return DTranslationTable::FCAL;   
+   } else if ( type == "ccal" ) {
+      return DTranslationTable::CCAL;
+   } else if ( type == "ccal_ref" ) {
+     return DTranslationTable::CCAL_REF;
    } else if ( type == "ps" ) {
       return DTranslationTable::PS;
    } else if ( type == "psc" ) {
@@ -1827,6 +2012,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
       return DTranslationTable::TPOLSECTOR;
    } else if ( type == "tac" ) {
 	      return DTranslationTable::TAC;
+   } else if ( type == "dirc" ) {
+	   return DTranslationTable::DIRC;
    } else
    {
       return DTranslationTable::UNKNOWN_DETECTOR;
@@ -1850,6 +2037,7 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
    int package=0,chamber=0,view=0,strip=0,wire=0;
    int id=0, strip_type=0;
    int side=0;
+   int pixel=0;
 
    // This complicated line just recasts the userData pointer into
    // a reference to the "TT" member of the DTranslationTable object
@@ -1948,6 +2136,9 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
                side = DPSGeometry::kSouth;
             }
 	 }
+	 else if (tag == "pixel") {
+		 pixel = ival;
+	 }
          else if (tag == "id")
             id = ival;
          else if (tag == "end") {
@@ -2041,6 +2232,13 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
             ci.fcal.row = row;
             ci.fcal.col = column;
             break;
+         case DTranslationTable::CCAL:
+            ci.ccal.row = row;
+            ci.ccal.col = column;
+            break;
+         case DTranslationTable::CCAL_REF:
+            ci.ccal_ref.id = id;
+            break;
          case DTranslationTable::FDC_CATHODES:
             ci.fdc_cathodes.package = package;
             ci.fdc_cathodes.chamber = chamber;
@@ -2084,6 +2282,9 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
          case DTranslationTable::TAC:
 //        	 ci.tac;
             break;
+         case DTranslationTable::DIRC:
+	      ci.dirc.pixel = pixel;
+	      break;
         case DTranslationTable::UNKNOWN_DETECTOR:
 		 default:
             break;
