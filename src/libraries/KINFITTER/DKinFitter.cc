@@ -866,7 +866,33 @@ bool DKinFitter::Calc_dS(void)
 		dKinFitUtils->Print_Matrix(dS);
 		cout << "determinant magnitude = " << fabs(dS.Determinant()) << endl;
 	}
+	
 	TDecompLU locDecompLU_S(dS);
+	//debugging step: lowering Tol by iterations to pass.
+	if( locDecompLU_S.Decompose() && fabs(dS.Determinant()==0.0) )
+	{
+	    if(dDebugLevel > 10) cout << "trying to lower Tol = "<< dS.GetTol() << "\n" << endl;
+		TMatrixD matrixLU_dS = locDecompLU_S.GetLU();
+
+		//Search for smallest diagonal term in matrixLU_dS
+	    Double_t minDiagElement = fabs(matrixLU_dS(0,0));
+	    for(int i=1;i<matrixLU_dS.GetNrows();i++)
+		    {
+		      if(fabs(matrixLU_dS(i,i))<minDiagElement) 
+		      {
+		      	minDiagElement = fabs(matrixLU_dS(i,i));
+		      }
+		    }
+		//Set the new tolerance
+	    if(dS.GetTol()>minDiagElement && minDiagElement>1.0E-26)
+	    {
+	      //cout << "Old Tol = "<< dS.GetTol() << "\n" << endl;
+	      dS.SetTol(minDiagElement/2);
+	      if(dDebugLevel > 10) cout << "New Tol is set at " << minDiagElement/2 << "\n"  << endl;
+	    }
+
+	}
+	
 	//check to make sure that the matrix is decomposable and has a non-zero determinant
 	if((!locDecompLU_S.Decompose()) || (fabs(dS.Determinant()) < 1.0E-300))
 	{
@@ -881,6 +907,10 @@ bool DKinFitter::Calc_dS(void)
 		cout << "DKinFitter: dS_Inverse: " << endl;
 		dKinFitUtils->Print_Matrix(dS_Inverse);
 	}
+
+	//set dS and dS_Inverse back to standard value 
+	dS.SetTol(2.22044604925031308e-16);
+	dS_Inverse.SetTol(2.22044604925031308e-16);
 
 	return true;
 }
