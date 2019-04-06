@@ -467,15 +467,29 @@ void DApplication::CopySQLiteToLocalDisk(void)
 	// Check if destination exists
 	bool copy_sqlite_file = true;
 	if( access(dest.c_str(), R_OK) != -1 ){
+	
+		// Check if file sizes are identical
+		ifstream ifsrc(src.c_str());
+		ifsrc.seekg(0, ifsrc.end);
+		auto size_src = ifsrc.tellg();
+		ifsrc.close();
+		ifstream ifdest(dest.c_str());
+		ifdest.seekg(0, ifdest.end);
+		auto size_dest = ifdest.tellg();
+		ifdest.close();
+		
+		if( size_src == size_dest ){
 
-		struct stat src_result;
-		struct stat dest_result;
-		stat(src.c_str(), &src_result);
-		stat(dest.c_str(), &dest_result);
-		if( src_result.st_mtime < dest_result.st_mtime ){
-			jout << "Modification time of " << src << " is older than " << dest << endl;
-			jout << "so file will not be copied" << endl;
-			copy_sqlite_file = false;
+			// File sizes are identical. Check if source is also older than dest.
+			struct stat src_result;
+			struct stat dest_result;
+			stat(src.c_str(), &src_result);
+			stat(dest.c_str(), &dest_result);
+			if( src_result.st_mtime < dest_result.st_mtime ){
+				jout << "Modification time of " << src << " is older than " << dest << endl;
+				jout << "so file will not be copied" << endl;
+				copy_sqlite_file = false;
+			}
 		}
 	}
 	
