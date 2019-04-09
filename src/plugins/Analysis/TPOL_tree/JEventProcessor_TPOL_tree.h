@@ -35,13 +35,17 @@ private:
     jerror_t erun(void); ///< Called everytime run number changes, provided brun has been called.
     jerror_t fini(void); ///< Called after last event of last event source has been processed.
 
-    DBeamCurrent_factory *dBeamCurrentFactory;
+    clock_t t;
+
+    //DBeamCurrent_factory *dBeamCurrentFactory;
     double dBeamBunchPeriod;
 
     DTreeInterface* dTreeInterface;
     static thread_local DTreeFillData dTreeFillData;
 
     int geomModuleColumn[8][2] = {{110, 145}, {90, 115}, {73, 93}, {56, 76}, {40, 60}, {24, 45}, {8, 28}, {0, 12}};
+
+    unsigned int count;
 
 };
 

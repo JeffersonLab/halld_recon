@@ -171,19 +171,19 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
 
 	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything above if hadron, everything below if lepton
-/* //Uncomment and adjust when Lubomir gives good cuts.
 	//e- FCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
 
 	//e- BCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_BCAL] = "[0]";
-	dEOverPCuts_TF1Params[Electron][SYS_BCAL] = {0.67};
+	dEOverPCuts_TF1Params[Electron][SYS_BCAL] = {0.7};
 
 	//e+
 	dEOverPCuts_TF1FunctionStrings.emplace(Positron, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(Positron, dEOverPCuts_TF1Params[Electron]);
 
+	/*
 	//mu-
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonMinus, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(MuonMinus, dEOverPCuts_TF1Params[Electron]);
@@ -191,7 +191,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//mu+
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonPlus, dEOverPCuts_TF1FunctionStrings[MuonMinus]);
 	dEOverPCuts_TF1Params.emplace(MuonPlus, dEOverPCuts_TF1Params[MuonMinus]);
-*/
+	*/
 }
 
 void DSourceComboer::Get_CommandLineCuts_dEdx(void)
