@@ -75,30 +75,12 @@ jerror_t JEventProcessor_imaging::init(void)
   TwoTrackXY_at_65cm=new TH2F("TwoTrackXY_at_65cm","y vs x near 65 cm",400,-5,5,400,-5,5);
   TwoTrackXY_at_65cm->SetXTitle("x [cm]");
   TwoTrackXY_at_65cm->SetYTitle("y [cm]");
-  
-  //  TwoTrackRelCosTheta=new TH1F("TwoTrackRelCosTheta","relative direction",100,-1.,1.);
-  TwoTrackProb=new TH1F("TwoTrackProb","vertex probability",100,0,1.);
-
-  TwoTrackZFit=new TH1F("TwoTrackZFit","z for r<0.5 cm",1000,0,200);
-  TwoTrackZFit->SetXTitle("z [cm]");
-
-  TwoTrackPocaCutFit=new TH2F("TwoTrackPocaCutFit","2track POCA,doca cut",4000,0,400,650,0,65);
-  TwoTrackPocaCutFit->SetXTitle("z (cm)");
-  TwoTrackPocaCutFit->SetYTitle("r (cm)"); 
-
-  TwoTrackXYFit_at_65cm=new TH2F("TwoTrackXYFit_at_65cm","y vs x near 65 cm",400,-5,5,400,-5,5);
-  TwoTrackXYFit_at_65cm->SetXTitle("x [cm]");
-  TwoTrackXYFit_at_65cm->SetYTitle("y [cm]"); 
-
-  TwoTrackXYZFit= new TH3I("TwoTrackXYZFit","z vs y vs x",400,-10,10,
-			   400,-10,10,140,30,100);
-  TwoTrackXYZFit->SetXTitle("x (cm)");
-  TwoTrackXYZFit->SetYTitle("y (cm)");
-  TwoTrackXYZFit->SetZTitle("z (cm)");
-  
+    
   TwoTrackDz=new TH1F("TwoTrackDz","#deltaz at x,y vertex",100,-10,10);
+  TwoTrackDz->SetXTitle("#Deltaz [cm]");
 
-  TwoTrackDoca=new TH1F("TwoTrackDoca","#deltar",100,0,10); 
+  TwoTrackDoca=new TH1F("TwoTrackDoca","#deltar",1000,0,10);
+  TwoTrackDoca->SetXTitle("d [cm]");
 
   if (MC_RECON_CHECK){
     MCVertexDiff= new TH3I("MCVertexDiff","dz vs dy vs dx",400,-10,10,
@@ -254,38 +236,6 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    if (myvertex.Perp()<0.5){
 	      TwoTrackZ->Fill(myvertex.z());
 	    }
-	    
-	    if (dIsNoFieldFlag==false){
-	      // Propagate the covariances matrices to myvertex
-	      DReferenceTrajectory rt(bfield);
-	      DVector3 B;
-	      bfield->GetField(myvertex,B);
-	      TMatrixFSym cov1(7),cov2(7);
-	      cov1=*(track1->errorMatrix());
-	      cov2=*(track2->errorMatrix());
-	      double mass1=track1->mass();
-	      double mass2=track2->mass();
-	      rt.PropagateCovariance(s1,q1,mass1*mass1,mom1,pos1,B,cov1);
-	      rt.PropagateCovariance(s2,q2,mass2*mass2,mom2,pos2,B,cov2);
-		
-	      // Do a fit using the Lagrange multiplier method
-	      double vertex_chi2=0.;
-	      rt.FitVertex(pos1_out,mom1_out,pos2_out,mom2_out,cov1,cov2,
-			   myvertex,vertex_chi2,q1,q2);
-	      
-	      double vertex_prob=TMath::Prob(vertex_chi2,1);
-	      TwoTrackProb->Fill(vertex_prob);
-	      if (vertex_prob>FIT_CL_CUT){  
-		TwoTrackPocaCutFit->Fill(myvertex.z(),myvertex.Perp());
-		TwoTrackXYZFit->Fill(myvertex.x(),myvertex.y(),myvertex.z());
-		if (myvertex.z()>64.5 && myvertex.z()<65.5){
-		    TwoTrackXYFit_at_65cm->Fill(myvertex.x(),myvertex.y());
-		}
-		if (myvertex.Perp()<0.5){
-		  TwoTrackZFit->Fill(myvertex.z());
-		}
-	      }
-	    } // non-zero field?
 	  } // doca cut
 	} // second track
       } // second loop over tracks

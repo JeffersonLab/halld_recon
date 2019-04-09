@@ -34,11 +34,8 @@ class JEventProcessor_imaging:public jana::JEventProcessor{
 		TH3I *TwoTrackXYZ;
 		TH1F *TwoTrackZ;
 		TH1F *TwoTrackZFit;
-		TH2F *TwoTrackXYFit_at_65cm;
-		TH3I *TwoTrackXYZFit;
-		TH2F *TwoTrackPocaCut,*TwoTrackPocaCutFit;
+		TH2F *TwoTrackPocaCut;
 		TH2F *TwoTrackXY_at_65cm;
-		TH1F *TwoTrackProb;
 		TH1F *TwoTrackDz,*TwoTrackDoca;
 		TH3I *MCVertexDiff;
 		TH2F *MCVertexDxVsZ,*MCVertexDyVsZ,*MCVertexDzVsZ;
