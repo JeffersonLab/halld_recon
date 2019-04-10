@@ -186,6 +186,15 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
        if (!locIsHDDMEvent) goodtrigger=0;
    }
 
+   // calculate total BCAL energy in order to catch BCAL LED events
+   vector<const DBCALHit *> bcal_hits;
+   loop->Get(bcal_hits);
+   double total_bcal_energy = 0.;
+   for(unsigned int i=0; i<bcal_hits.size(); i++) {
+       total_bcal_energy += bcal_hits[i]->E;
+   }
+   if (total_bcal_energy > 12.) goodtrigger=0
+
    if (!goodtrigger) {
        return NOERROR;
    }
