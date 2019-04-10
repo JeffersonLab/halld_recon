@@ -718,16 +718,18 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
             bcal_Uhit_tTDC_twalk->Fill(Uhit->t_TDC - tdchit->t);
 			int ix = Uhit->module;
 			int iy = (Uhit->sector-1)*4 + Uhit->layer;
-			if(Uhit->end == DBCALGeometry::kUpstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
-			}
-			if(Uhit->end == DBCALGeometry::kDownstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
-			}
+			if (adchit->pulse_peak>=120) { // Only compare TDC and ADC where pulse is big enough that time-walk is small.
+				if(Uhit->end == DBCALGeometry::kUpstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
+				}
+				if(Uhit->end == DBCALGeometry::kDownstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
+				}
+            }
 		} else {
 			bcal_Uhit_noTDC_E->Fill(Uhit->E);
 		}
