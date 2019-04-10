@@ -193,7 +193,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    for(unsigned int i=0; i<bcal_hits.size(); i++) {
        total_bcal_energy += bcal_hits[i]->E;
    }
-   if (total_bcal_energy > 12.) goodtrigger=0
+   if (total_bcal_energy > 12.) goodtrigger=0;
 
    if (!goodtrigger) {
        return NOERROR;
