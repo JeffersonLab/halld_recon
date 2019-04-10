@@ -1,0 +1,12 @@
+<gversion version="1.0"
+><package name="evio" version="4.4.6"
+ /><package name="cernlib" version="2005"
+ /><package name="xerces-c" version="3.1.4"
+ /><package name="root" version="6.08.06"
+ /><package name="jana" version="0.7.9p1" dirtag="ccdb166"
+ /><package name="hdds" url="https://github.com/jeffersonlab/hdds"
+ /><package name="ccdb" version="1.06.06"
+ /><package name="rcdb" version="0.03.01"
+ /><package name="sqlitecpp" version="2.2.0" dirtag="bs130"
+ /></gversion
+>
