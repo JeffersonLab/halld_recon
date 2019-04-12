@@ -20,6 +20,7 @@ DAnalysisUtilities::DAnalysisUtilities(JEventLoop* locEventLoop)
 
 	//Get magnetic field map
 	dMagneticFieldMap = locApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
+	dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dMagneticFieldMap) != NULL);
 
 	//For "Unused" tracks/showers
 	//BEWARE: IF THIS IS CHANGED, CHANGE IN THE BLUEPRINT FACTORY AND THE EVENT WRITER ALSO!!
@@ -1031,20 +1032,42 @@ double DAnalysisUtilities::Calc_DOCAToVertex(const DVector3& locUnitDir, const D
 
 double DAnalysisUtilities::Calc_DOCAVertex(const DKinFitParticle* locKinFitParticle1, const DKinFitParticle* locKinFitParticle2, DVector3& locDOCAVertex) const
 {
-	DVector3 locUnitDir1(locKinFitParticle1->Get_Momentum().Unit().X(),locKinFitParticle1->Get_Momentum().Unit().Y(),locKinFitParticle1->Get_Momentum().Unit().Z());
-	DVector3 locUnitDir2(locKinFitParticle2->Get_Momentum().Unit().X(),locKinFitParticle2->Get_Momentum().Unit().Y(),locKinFitParticle2->Get_Momentum().Unit().Z());
-	DVector3 locVertex1(locKinFitParticle1->Get_Position().X(),locKinFitParticle1->Get_Position().Y(),locKinFitParticle1->Get_Position().Z());
-	DVector3 locVertex2(locKinFitParticle2->Get_Position().X(),locKinFitParticle2->Get_Position().Y(),locKinFitParticle2->Get_Position().Z());
-	return Calc_DOCAVertex(locUnitDir1, locUnitDir2, locVertex1, locVertex2, locDOCAVertex);
+  DVector3 locPOCA1, locPOCA2;
+  double locDOCA;
+  // Try to use helical approximation if B!=0
+  if (dIsNoFieldFlag==false && Calc_DOCA(locKinFitParticle1,locKinFitParticle2,
+					 locPOCA1,locPOCA2,locDOCA)==NOERROR){
+    locDOCAVertex=0.5*(locPOCA1+locPOCA2);
+    printf("Here\n");
+    locDOCAVertex.Print();
+    return locDOCA;
+  }
+
+  // Use straight line approximation
+  DVector3 locUnitDir1(locKinFitParticle1->Get_Momentum().Unit().X(),locKinFitParticle1->Get_Momentum().Unit().Y(),locKinFitParticle1->Get_Momentum().Unit().Z());
+  DVector3 locUnitDir2(locKinFitParticle2->Get_Momentum().Unit().X(),locKinFitParticle2->Get_Momentum().Unit().Y(),locKinFitParticle2->Get_Momentum().Unit().Z());
+  DVector3 locVertex1(locKinFitParticle1->Get_Position().X(),locKinFitParticle1->Get_Position().Y(),locKinFitParticle1->Get_Position().Z());
+  DVector3 locVertex2(locKinFitParticle2->Get_Position().X(),locKinFitParticle2->Get_Position().Y(),locKinFitParticle2->Get_Position().Z());
+  return Calc_DOCAVertex(locUnitDir1, locUnitDir2, locVertex1, locVertex2, locDOCAVertex);
 }
 
 double DAnalysisUtilities::Calc_DOCAVertex(const DKinematicData* locKinematicData1, const DKinematicData* locKinematicData2, DVector3& locDOCAVertex) const
 {
-	DVector3 locUnitDir1 = (1.0/locKinematicData1->momentum().Mag())*locKinematicData1->momentum();
-	DVector3 locUnitDir2 = (1.0/locKinematicData2->momentum().Mag())*locKinematicData2->momentum();
-	DVector3 locVertex1 = locKinematicData1->position();
-	DVector3 locVertex2 = locKinematicData2->position();
-	return Calc_DOCAVertex(locUnitDir1, locUnitDir2, locVertex1, locVertex2, locDOCAVertex);
+  DVector3 locPOCA1, locPOCA2;
+  double locDOCA;
+  // Try to use helical approximation if B!=0
+  if (dIsNoFieldFlag==false && Calc_DOCA(locKinematicData1,locKinematicData2,
+					 locPOCA1,locPOCA2,locDOCA)==NOERROR){
+    locDOCAVertex=0.5*(locPOCA1+locPOCA2);
+    return locDOCA;
+  }
+
+  // Use straight line approximation
+  DVector3 locUnitDir1 = (1.0/locKinematicData1->momentum().Mag())*locKinematicData1->momentum();
+  DVector3 locUnitDir2 = (1.0/locKinematicData2->momentum().Mag())*locKinematicData2->momentum();
+  DVector3 locVertex1 = locKinematicData1->position();
+  DVector3 locVertex2 = locKinematicData2->position();
+  return Calc_DOCAVertex(locUnitDir1, locUnitDir2, locVertex1, locVertex2, locDOCAVertex);
 }
 
 double DAnalysisUtilities::Calc_DOCAVertex(const DVector3 &locUnitDir1, const DVector3 &locUnitDir2, const DVector3 &locVertex1, const DVector3 &locVertex2, DVector3& locDOCAVertex) const
@@ -1116,19 +1139,64 @@ double DAnalysisUtilities::Calc_DOCA(const DVector3 &locUnitDir1, const DVector3
 	locPOCA2 = locVertex2 + locDistVertToInterDOCA2*locUnitDir2; //intersection point of DOCA line and track 2
 	return (locPOCA1 - locPOCA2).Mag();
 }
+	
+// Routine for steering the code that uses a small arc length approximation to 
+// a helical trajectory to find the doca between two tracks curving in the 
+// magnetic field.
+jerror_t 
+DAnalysisUtilities::Calc_DOCA(const DKinFitParticle* locKinFitParticle1, 
+			      const DKinFitParticle* locKinFitParticle2,
+			      DVector3 &pos1_out,DVector3 &pos2_out,
+			      double &doca) const{
+  // Charges for the two input tracks
+  double q1=locKinFitParticle1->Get_Charge();
+  double q2=locKinFitParticle2->Get_Charge();
+
+  // position info from the two input tracks
+  DVector3 pos1_in=locKinFitParticle1->Get_Position();
+  DVector3 pos2_in=locKinFitParticle2->Get_Position();
+
+  // momentum info from the two input tracks   
+  DVector3 mom1_in=locKinFitParticle1->Get_Momentum();
+  DVector3 mom2_in=locKinFitParticle2->Get_Momentum();
+
+  return Calc_DOCA(q1,q2,pos1_in,pos2_in,mom1_in,mom2_in,pos1_out,pos2_out,
+		   doca);
+}
+
+// Routine for steering the code that uses a small arc length approximation to 
+// a helical trajectory to find the doca between two tracks curving in the 
+// magnetic field.
+jerror_t DAnalysisUtilities::Calc_DOCA(const DKinematicData* kinematicData1,
+				       const DKinematicData* kinematicData2,
+				       DVector3 &pos1_out,DVector3 &pos2_out,
+				       double &doca
+				       ) const {
+  // Charges for the two input tracks
+  double q1=kinematicData1->charge();
+  double q2=kinematicData2->charge();
+  
+  // position info from the two input tracks
+  DVector3 pos1_in=kinematicData1->position();
+  DVector3 pos2_in=kinematicData2->position();  
+
+  // momentum info from the two input tracks
+  DVector3 mom1_in=kinematicData1->momentum();
+  DVector3 mom2_in=kinematicData2->momentum();
+  
+  return Calc_DOCA(q1,q2,pos1_in,pos2_in,mom1_in,mom2_in,pos1_out,pos2_out,
+		   doca);
+}
 
 // Use a small arc length approximation to a helical trajectory to find the 
 // doca between two tracks curving in the magnetic field.
 jerror_t DAnalysisUtilities::Calc_DOCA(double q1,double q2,
-				       const DVector3 &mom1_in, 
 				       const DVector3 &pos1_in,
-				       const DVector3 &mom2_in, 
 				       const DVector3 &pos2_in,
-				       DVector3 &mom1_out,
-				       DVector3 &pos1_out,
-				       DVector3 &mom2_out,
-				       DVector3 &pos2_out,
-				       double &doca,double &s1,double &s2
+				       const DVector3 &mom1_in,
+				       const DVector3 &mom2_in,
+				       DVector3 &pos1_out,DVector3 &pos2_out,
+				       double &doca
 				       ) const {
   DVector3 avg_pos=0.5*(pos1_in+pos2_in);
   DVector3 diff_pos=pos1_in-pos2_in;
@@ -1173,7 +1241,10 @@ jerror_t DAnalysisUtilities::Calc_DOCA(double q1,double q2,
 	   + sin2*tan1*tan2 - sin1*(1 + tan2sq)) 
      + cos1*(cos2*(2*dx*dy*kap2 + dy*sin2 + dz*tan2) 
 	     - dx*(2*dx*kap2*sin2 + sin2sq + tan2sq)));
-  if (B1<0.) return VALUE_OUT_OF_RANGE;
+  if (B1<0.){
+    doca=9.9e9;
+    return VALUE_OUT_OF_RANGE;
+  }
 
   double B2=pow(2*dx*kap2*sin1sq*sin2 - 2*dx*kap1*sin1*sin2sq - sin1sq*sin2sq 
 		+ tan1sq + 2*dx*kap2*sin2*tan1sq - 2*dx*kap1*sin1*tan2sq 
@@ -1198,8 +1269,11 @@ jerror_t DAnalysisUtilities::Calc_DOCA(double q1,double q2,
 	     + sin2*tan1*tan2 - sin1*(1 + tan2sq)) 
        + cos1*(cos2*(2*dx*dy*kap2 + dy*sin2 + dz*tan2) 
 	       - dx*(2*dx*kap2*sin2 + sin2sq + tan2sq)));
-  if (B2<0) return VALUE_OUT_OF_RANGE;
-  
+  if (B2<0){
+    doca=9.9e9;
+    return VALUE_OUT_OF_RANGE;
+  }
+
   double A1=2*cos1*cos2sq*dy*kap1 - 2*cos1sq*cos2*dy*kap2 
     - 4*cos1*cos2*dy_sq*kap1*kap2 - 2*cos1*cos2*dx*kap2*sin1 
     + 4*cos2*dx*dy*kap1*kap2*sin1 + cos2sq*sin1sq - 4*cos2*dy*kap2*sin1sq 
@@ -1235,28 +1309,28 @@ jerror_t DAnalysisUtilities::Calc_DOCA(double q1,double q2,
       + kap1*(-1 + 2*cos2*dy*kap2 - 2*dx*kap2*sin2 - tan2sq));
 
   // Arc lengths to doca points
-  s1=(A1-sqrt(B1))/C1;
-  s2=(A2-sqrt(B2))/C2;
+  double s1_minus=(A1-sqrt(B1))/C1;
+  double s2_minus=(A2-sqrt(B2))/C2; 
+  double s1_plus=(A1+sqrt(B1))/C1;
+  double s2_plus=(A2+sqrt(B2))/C2;
 
-  pos1_out.SetX(pos1_in.x()+cos1*s1);
-  pos1_out.SetY(pos1_in.y()+sin1*s1);
-  pos1_out.SetZ(pos1_in.z()+tan1*s1); 
+  // Position components
+  double x1=pos1_in.x();
+  double y1=pos1_in.y();
+  double z1=pos1_in.z();
+  double x2=pos2_in.x();
+  double y2=pos2_in.y();
+  double z2=pos2_in.z(); 
 
-  pos2_out.SetX(pos2_in.x()+cos2*s2);
-  pos2_out.SetY(pos2_in.y()+sin2*s2);
-  pos2_out.SetZ(pos2_in.z()+tan2*s2);
-
-  double px1=mom1_in.x(),py1=mom1_in.y();
-  double twoks1=2.*kap1*s1;
-  mom1_out.SetX(px1-py1*twoks1);
-  mom1_out.SetY(py1+px1*twoks1);
-  mom1_out.SetZ(mom1_in.z());
-
-  double px2=mom2_in.x(),py2=mom2_in.y();
-  double twoks2=2.*kap2*s2;
-  mom2_out.SetX(px2-py2*twoks2);
-  mom2_out.SetY(py2+px2*twoks2);
-  mom2_out.SetZ(mom2_in.z());
+  // Use solution corresponding to the smaller arc lengths
+  if (fabs(s1_minus+s2_minus)<fabs(s1_plus+s2_plus)){
+    pos1_out.SetXYZ(x1+cos1*s1_minus,y1+sin1*s1_minus,z1+tan1*s1_minus);
+    pos2_out.SetXYZ(x2+cos2*s2_minus,y2+sin2*s2_minus,z2+tan2*s2_minus);
+  }
+  else{
+    pos1_out.SetXYZ(x1+cos1*s1_plus,y1+sin1*s1_plus,z1+tan1*s1_plus);
+    pos2_out.SetXYZ(x2+cos2*s2_plus,y2+sin2*s2_plus,z2+tan2*s2_plus);
+  }
   
   doca=(pos1_out-pos2_out).Mag();
 
@@ -1339,7 +1413,8 @@ DVector3 DAnalysisUtilities::Calc_CrudeVertex(const vector<const DTrackTimeBased
 	{
 		for(size_t loc_k = loc_j + 1; loc_k < locParticles.size(); ++loc_k)
 		{
-			locDOCA = Calc_DOCAVertex(locParticles[loc_j], locParticles[loc_k], locTempVertex);
+		    locDOCA = Calc_DOCAVertex(locParticles[loc_j], locParticles[loc_k], locTempVertex);
+
 			if(locDOCA < locSmallestDOCA)
 			{
 				locSmallestDOCA = locDOCA;
