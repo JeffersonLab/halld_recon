@@ -141,6 +141,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 //  };
   DTrackFitterKalmanSIMD(JEventLoop *loop);
   ~DTrackFitterKalmanSIMD(){
+    if (WRITE_ML_TRAINING_OUTPUT){
+      mlfile.close();
+    }
     for (unsigned int i=0;i<my_cdchits.size();i++){
       delete my_cdchits[i];
     } 
@@ -150,7 +153,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     my_fdchits.clear();
     my_cdchits.clear();
     central_traj.clear();
-    forward_traj.clear();
+    forward_traj.clear(); 
     used_cdc_indices.clear();
     used_fdc_indices.clear();
     cov.clear();
@@ -414,12 +417,12 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
   // Lists containing state, covariance, and jacobian at each step
   deque<DKalmanCentralTrajectory_t>central_traj;
-  deque<DKalmanForwardTrajectory_t>forward_traj;
-
+  deque<DKalmanForwardTrajectory_t>forward_traj; 
+ 
   // lists containing updated state vector and covariance at measurement point
   vector<DKalmanUpdate_t>fdc_updates;
   vector<DKalmanUpdate_t>cdc_updates;
-
+ 
   // Keep track of which hits were used in the fit
   vector<bool>cdc_used_in_fit;
   vector<bool>fdc_used_in_fit;
@@ -556,6 +559,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool IsHadron,IsElectron,IsPositron;
   TH1I *alignDerivHists[46];
   TH2I *brentCheckHists[2];
+
+  bool WRITE_ML_TRAINING_OUTPUT;
+  ofstream mlfile;
 
  private:
   unsigned int last_material_map;
