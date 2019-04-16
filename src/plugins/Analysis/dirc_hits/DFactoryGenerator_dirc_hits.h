@@ -15,20 +15,25 @@
 
 #include "DReaction_factory_dirc_hits.h"
 
-class DFactoryGenerator_dirc_hits: public jana::JFactoryGenerator{
-	public:
-		DFactoryGenerator_dirc_hits(){}
-		virtual ~DFactoryGenerator_dirc_hits(){}
-		virtual const char* className(void){return static_className();}
-		static const char* static_className(void){return "DFactoryGenerator_dirc_hits";}
-		
-		jerror_t GenerateFactories(jana::JEventLoop *loop){
-			//loop->AddFactory(new dirc_hits_factory());
-			loop->AddFactory(new DReaction_factory_dirc_hits());
-			return NOERROR;
-		}
+class DFactoryGenerator_dirc_hits: public jana::JFactoryGenerator {
+    public:
+        DFactoryGenerator_dirc_hits() {}
+        virtual ~DFactoryGenerator_dirc_hits() {}
+        virtual const char* className(void) {
+            return static_className();
+        }
+        static const char* static_className(void) {
+            return "DFactoryGenerator_dirc_hits";
+        }
+
+        jerror_t GenerateFactories(jana::JEventLoop *loop) {
+            //loop->AddFactory(new dirc_hits_factory());
+            loop->AddFactory(new DReaction_factory_dirc_hits());
+            return NOERROR;
+        }
 
 };
 
 #endif // _DFactoryGenerator_dirc_hits_
+
 
