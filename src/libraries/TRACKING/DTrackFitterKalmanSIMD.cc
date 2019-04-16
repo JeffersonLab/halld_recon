@@ -3860,11 +3860,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    // Initialize the chi2 for this part of the track
    chisq=0.;
    my_ndf=0;
-   double var_cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
-   double my_anneal=anneal_factor*anneal_factor;
-   double chi2cut=my_anneal*var_cut;
-   
-   chi2cut=var_cut;
+
+   double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
 
    // path length increment
    double ds2=0.;
@@ -4124,17 +4121,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
             if (chi2check<chi2cut)
             {
                if (DEBUG_LEVEL>9) _DBG_ << " Passed Chi^2 check Ring " << my_cdchits[cdc_index]->hit->wire->ring << " Straw " << my_cdchits[cdc_index]->hit->wire->straw << endl;
-               /*
-                  if (chi2check>var_cut){
-               // Give hits that satisfy the wide cut but are still pretty far
-               // from the projected position less weight
 
-               // ad hoc correction 
-               double diff = chi2check-var_cut;    
-               V*=1.+my_anneal*diff;
-               InvV=1./(V+Vproj);
-               }
-               */
                // Compute Kalman gain matrix
                K=InvV*(Cc*H_T);
 
@@ -4321,16 +4308,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
    // Initialize number of degrees of freedom
    numdof=0;
 
-   double my_cdc_anneal=cdc_anneal_factor*cdc_anneal_factor;
-   double my_fdc_anneal=fdc_anneal_factor*fdc_anneal_factor;
-
-   double var_fdc_cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
-   double fdc_chi2cut=my_fdc_anneal*var_fdc_cut;
-   fdc_chi2cut=var_fdc_cut;
-
-   double var_cdc_cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
-   double cdc_chi2cut=my_cdc_anneal*var_cdc_cut;
-   cdc_chi2cut=var_cdc_cut;
+   double fdc_chi2cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
+   double cdc_chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
 
    unsigned int num_fdc_hits=break_point_fdc_index+1;
    unsigned int max_num_fdc_used_in_fit=num_fdc_hits;
@@ -5350,10 +5329,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
    // initialize chi2 info
    chisq=0.;
    numdof=0;
-   double var_cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
-   double my_anneal=anneal*anneal;
-   double chi2cut=my_anneal*var_cut;
-   chi2cut=var_cut;
+
+   double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
 
    // Save the starting values for C and S in the deque
    forward_traj[break_point_step_index].Skk=S;
@@ -5686,19 +5663,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
             double chi2check=res*res*InvV;
 	    if (chi2check<chi2cut/*&&dm>0.*/)
 	      {	  
-               /*
-                  if (chi2check>var_cut){
-               // Give hits that satisfy the wide cut but are still pretty far
-               // from the projected position less weight
-               //_DBG_ << my_anneal << endl;
-
-               // ad hoc correction 
-               double diff = chi2check-var_cut;    
-               V*=1.+my_anneal*diff*diff;
-               InvV=1./(V+Vproj);
-               }
-               */
-
                // Compute KalmanSIMD gain matrix
                K=InvV*(C*H_T);
 
