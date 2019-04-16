@@ -1,10 +1,10 @@
 // -----------------------------------------
-// DEventProcessor_pid_dirc.cc
+// DEventProcessor_dirc_hits.cc
 // created on: 07.04.2017
 // initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
-#include "DEventProcessor_pid_dirc.h"
+#include "DEventProcessor_dirc_hits.h"
 #include "TCanvas.h"
 #include "TH1.h"
 
@@ -13,19 +13,19 @@
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_pid_dirc());
-    app->AddFactoryGenerator(new JFactoryGenerator_dirc_tree()); //register the factory generator
+    app->AddProcessor(new DEventProcessor_dirc_hits());
+    app->AddFactoryGenerator(new DFactoryGenerator_dirc_hits()); //register the factory generator
   }
 }
 
-DEventProcessor_pid_dirc::DEventProcessor_pid_dirc() {
+DEventProcessor_dirc_hits::DEventProcessor_dirc_hits() {
   fTree = NULL;
   fEvent = NULL;
 }
 
-DEventProcessor_pid_dirc::~DEventProcessor_pid_dirc() {}
+DEventProcessor_dirc_hits::~DEventProcessor_dirc_hits() {}
 
-jerror_t DEventProcessor_pid_dirc::init(void) {
+jerror_t DEventProcessor_dirc_hits::init(void) {
 
 japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
@@ -57,7 +57,7 @@ japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
   return NOERROR;
 }
 
-jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
+jerror_t DEventProcessor_dirc_hits::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
 //////////////////////////////////////////////////////////////////////////////
 // dapp and geom are not used but without it dirc_hits.so will no be loaded
@@ -88,7 +88,7 @@ jerror_t DEventProcessor_pid_dirc::brun(jana::JEventLoop *loop, int32_t runnumbe
 
 
 
-jerror_t DEventProcessor_pid_dirc::evnt(JEventLoop *loop, uint64_t eventnumber) {
+jerror_t DEventProcessor_dirc_hits::evnt(JEventLoop *loop, uint64_t eventnumber) {
 
   vector<const DAnalysisResults*> locAnalysisResultsVector;
   loop->Get(locAnalysisResultsVector);
@@ -221,13 +221,13 @@ for(size_t j = 0; j < locPassedParticleCombos.size(); ++j){
 //------------------
 // erun
 //------------------
-jerror_t DEventProcessor_pid_dirc::erun(void) {
+jerror_t DEventProcessor_dirc_hits::erun(void) {
   return NOERROR;
 }
 //------------------
 // fini
 //------------------
-jerror_t DEventProcessor_pid_dirc::fini(void) {
+jerror_t DEventProcessor_dirc_hits::fini(void) {
   // TCanvas *c = new TCanvas("c","c",800,500);
   // hfine->Draw();
   // c->Modified();

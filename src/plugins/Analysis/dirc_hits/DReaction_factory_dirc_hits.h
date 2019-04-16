@@ -1,10 +1,10 @@
 // $Id$
 //
-//    File: DReaction_factory_dirc_tree.h
+//    File: DReaction_factory_dirc_hits.h
 //
 
-#ifndef _DReaction_factory_dirc_tree_
-#define _DReaction_factory_dirc_tree_
+#ifndef _DReaction_factory_dirc_hits_
+#define _DReaction_factory_dirc_hits_
 
 #include <iostream>
 #include <iomanip>
@@ -14,20 +14,20 @@
 #include <ANALYSIS/DHistogramActions.h>
 #include <ANALYSIS/DCutActions.h>
 
-//#include "DCustomAction_dirc_tree.h"
+//#include "DCustomAction_dirc_hits.h"
 
 using namespace std;
 using namespace jana;
 
-class DReaction_factory_dirc_tree : public jana::JFactory<DReaction>
+class DReaction_factory_dirc_hits : public jana::JFactory<DReaction>
 {
 	public:
-		DReaction_factory_dirc_tree()
+		DReaction_factory_dirc_hits()
 		{
 			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event. 
 			SetFactoryFlag(PERSISTANT);
 		}
-		const char* Tag(void){return "dirc_tree";}
+		const char* Tag(void){return "dirc_hits";}
 
 	private:
 		jerror_t brun(JEventLoop* locEventLoop, int32_t locRunNumber);
@@ -38,5 +38,5 @@ class DReaction_factory_dirc_tree : public jana::JFactory<DReaction>
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks
 };
 
-#endif // _DReaction_factory_dirc_tree_
+#endif // _DReaction_factory_dirc_hits_
 

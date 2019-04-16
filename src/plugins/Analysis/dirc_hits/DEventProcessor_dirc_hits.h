@@ -1,11 +1,11 @@
 // -----------------------------------------
-// DEventProcessor_pid_dirc.h
+// DEventProcessor_dirc_hits.h
 // created on: 07.04.2017
 // initial athor: r.dzhygadlo at gsi.de
 // -----------------------------------------
 
-#ifndef DEVENTPROCESSOR_PID_DIRC_H_
-#define DEVENTPROCESSOR_PID_DIRC_H_
+#ifndef DEVENTPROCESSOR_dirc_hits_H_
+#define DEVENTPROCESSOR_dirc_hits_H_
 
 
 #include <JANA/JEventProcessor.h>
@@ -18,7 +18,7 @@
 #include <HDDM/DEventWriterREST.h>
 #include <ANALYSIS/DHistogramActions.h>
 
-#include "JFactoryGenerator_dirc_tree.h"
+#include "DFactoryGenerator_dirc_hits.h"
 #include "DIRC/DDIRCGeometry.h"
 #include "DrcHit.h"
 #include "DrcEvent.h"
@@ -33,14 +33,14 @@ using namespace jana;
 using namespace std;
 
 
-class DEventProcessor_pid_dirc: public JEventProcessor {
+class DEventProcessor_dirc_hits: public JEventProcessor {
 
 public:
-  DEventProcessor_pid_dirc();
-  ~DEventProcessor_pid_dirc();
+  DEventProcessor_dirc_hits();
+  ~DEventProcessor_dirc_hits();
 
 
-   const char* className(void){return "DEventProcessor_dirc_tree";}
+   const char* className(void){return "DEventProcessor_dirc_hits";}
 
   const DParticleID* dParticleID;
   const DDIRCGeometry* dDIRCGeometry;
@@ -66,4 +66,4 @@ const DAnalysisUtilities* dAnalysisUtilities;
 
 };
 
-#endif /* DEVENTPROCESSOR_PID_DIRC_H_ */
+#endif /* DEVENTPROCESSOR_dirc_hits_H_ */

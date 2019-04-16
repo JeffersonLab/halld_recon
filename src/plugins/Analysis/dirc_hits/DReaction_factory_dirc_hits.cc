@@ -1,14 +1,14 @@
 // $Id$
 //
-//    File: DReaction_factory_dirc_tree.cc
+//    File: DReaction_factory_dirc_hits.cc
 //
 
-#include "DReaction_factory_dirc_tree.h"
+#include "DReaction_factory_dirc_hits.h"
 
 //------------------
 // brun
 //------------------
-jerror_t DReaction_factory_dirc_tree::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+jerror_t DReaction_factory_dirc_hits::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
 {
 	return NOERROR;
 }
@@ -16,7 +16,7 @@ jerror_t DReaction_factory_dirc_tree::brun(JEventLoop* locEventLoop, int32_t loc
 //------------------
 // init
 //------------------
-jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+jerror_t DReaction_factory_dirc_hits::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
 {
 
         // Make as many DReaction objects as desired
@@ -28,7 +28,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 
 	/**************************************************** p2pi_dirc Reaction Steps ****************************************************/
 
-	DReaction* locReaction = new DReaction("p2pi_dirc_tree"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
+	DReaction* locReaction = new DReaction("p2pi_dirc_hits"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
 
 	// g, p -> pi+, pi- ,p
 	locReactionStep = new DReactionStep();
@@ -61,14 +61,14 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
 
 	// Custom histograms for DIRC
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, PiPlus, 0, "PiPlus_DIRC_KinFit"));
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_hits(locReaction, true, PiPlus, 0, "PiPlus_DIRC_KinFit"));
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	
 	/**************************************************** p2pi_dirc Reaction Steps ****************************************************/
 
-	locReaction = new DReaction("p2k_dirc_tree"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
+	locReaction = new DReaction("p2k_dirc_hits"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
 
 	// g, p -> K+, K- ,p
 	locReactionStep = new DReactionStep();
@@ -100,7 +100,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
 
 	// Custom histograms for DIRC
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, KPlus, 0, "KPlus_DIRC_KinFit"));
+	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_hits(locReaction, true, KPlus, 0, "KPlus_DIRC_KinFit"));
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
@@ -110,7 +110,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 //------------------
 // fini
 //------------------
-jerror_t DReaction_factory_dirc_tree::fini(void)
+jerror_t DReaction_factory_dirc_hits::fini(void)
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
