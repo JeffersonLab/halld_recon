@@ -1038,8 +1038,6 @@ double DAnalysisUtilities::Calc_DOCAVertex(const DKinFitParticle* locKinFitParti
   if (dIsNoFieldFlag==false && Calc_DOCA(locKinFitParticle1,locKinFitParticle2,
 					 locPOCA1,locPOCA2,locDOCA)==NOERROR){
     locDOCAVertex=0.5*(locPOCA1+locPOCA2);
-    printf("Here\n");
-    locDOCAVertex.Print();
     return locDOCA;
   }
 
