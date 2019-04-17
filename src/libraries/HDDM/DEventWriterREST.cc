@@ -76,6 +76,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
+    std::vector<const DCCALShower*> ccalshowers;
+    locEventLoop->Get(ccalshowers);                                                                                                                  
 	std::vector<const DTOFPoint*> tofpoints;
 	locEventLoop->Get(tofpoints);
 
@@ -298,6 +300,22 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		bcallayerdata().setE_L4(bcalshowers[i]->E_L4);
 		bcallayerdata().setRmsTime(bcalshowers[i]->rmsTime);
 	}
+
+    // push any DCCALShower objects to the output record                                                                                         
+    for (size_t i=0; i < ccalshowers.size(); i++)                                                                                                
+    {                                                                                                                                            
+        hddm_r::CcalShowerList ccal = res().addCcalShowers(1);                                                                               
+        ccal().setX(ccalshowers[i]->x);                                                                                                      
+        ccal().setY(ccalshowers[i]->y);                                                                                                      
+        ccal().setZ(ccalshowers[i]->z);                                                                                                      
+        ccal().setT(ccalshowers[i]->time);                                                                                                   
+        ccal().setE(ccalshowers[i]->E);                                                                                                      
+        ccal().setTerr(ccalshowers[i]->sigma_t);                                                                                             
+        ccal().setEerr(ccalshowers[i]->sigma_E);                                                                                             
+        ccal().setEmax(ccalshowers[i]->Emax);                                                                                                
+        ccal().setType(ccalshowers[i]->type);                                                                                                
+        ccal().setDime(ccalshowers[i]->dime);                                                                                                
+    }                                                                                                                                            
 
 	// push any DTOFPoint objects to the output record
 	for (size_t i=0; i < tofpoints.size(); i++)

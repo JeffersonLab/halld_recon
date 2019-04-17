@@ -18,6 +18,7 @@
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
 #include "FCAL/DFCALShower.h"
+#include "CCAL/DCCALShower.h"
 #include "PID/DNeutralShower.h"
 #include <PID/DDetectorMatches.h>
 #include "BCAL/DBCALShower.h"

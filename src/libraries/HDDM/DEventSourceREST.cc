@@ -285,6 +285,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DBCALShower(record,
                      dynamic_cast<JFactory<DBCALShower>*>(factory));
    }
+   if (dataClassName =="DCCALShower") {
+      return Extract_DCCALShower(record,
+                     dynamic_cast<JFactory<DCCALShower>*>(factory));
+   }
    if (dataClassName =="DTrackTimeBased") {
       return Extract_DTrackTimeBased(record,
                      dynamic_cast<JFactory<DTrackTimeBased>*>(factory), locEventLoop);
@@ -970,6 +974,52 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
             }
 		}
 
+      data.push_back(shower);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DCCALShower
+//-----------------------
+jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
+                                   JFactory<DCCALShower>* factory)
+{
+   /// Copies the data from the bcalShower hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DCCALShower*> data;
+
+   // loop over ccal shower records
+   const hddm_r::CcalShowerList &showers =
+                 record->getCcalShowers();
+   hddm_r::CcalShowerList::iterator iter;
+   for (iter = showers.begin(); iter != showers.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DCCALShower *shower = new DCCALShower();
+      shower->E = iter->getE();
+      shower->x = iter->getX();
+      shower->y = iter->getY();
+      shower->z = iter->getZ();
+      shower->time = iter->getT();
+      shower->sigma_t = iter->getTerr();
+      shower->sigma_E = iter->getEerr();
+      shower->Emax = iter->getEmax();
+      shower->type = iter->getType();
+      shower->dime = iter->getDime();
+      
       data.push_back(shower);
    }
 
