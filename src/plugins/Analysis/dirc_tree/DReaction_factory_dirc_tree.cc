@@ -57,8 +57,17 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	//Pre-defined actions can be found in ANALYSIS/DHistogramActions.h and ANALYSIS/DCutActions.h
 	
 	// PID
+
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.77-0.15, 0.77+0.15));
+	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
+	
+	// MASSES, POST-KINFIT
+	deque<Particle_t> locRhoPIDs;  locRhoPIDs.push_back(PiPlus);  locRhoPIDs.push_back(PiMinus);
+	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, false, 900, 0.3, 1.2, "Rho_PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 900, 0.3, 1.2, "Rho_KinFit_PostKinFitCut"));
 
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, PiPlus, 0, "PiPlus_DIRC_KinFit"));
@@ -97,8 +106,17 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	//Pre-defined actions can be found in ANALYSIS/DHistogramActions.h and ANALYSIS/DCutActions.h
 	
 	// Kinematic Fit Results
-	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma	
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.95, 1.05));
+	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
+		
 
+	// MASSES, POST-KINFIT
+	deque<Particle_t> locPhiPIDs;  locPhiPIDs.push_back(KPlus);  locPhiPIDs.push_back(KMinus);
+	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, false, 500, 0.9, 1.4, "Phi_PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 500, 0.9, 1.4, "Phi_KinFit_PostKinFitCut"));
+	
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, KPlus, 0, "KPlus_DIRC_KinFit"));
 

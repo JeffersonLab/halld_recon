@@ -101,84 +101,98 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
   TClonesArray& cevt = *fcEvent;
   cevt.Clear();
 
-  // get track from combo with best chisq
-  for (unsigned int loc_i = 0; loc_i < locAnalysisResultsVector.size(); loc_i++){
+  for (size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); loc_i++){
     deque<const DParticleCombo*> locPassedParticleCombos;
     locAnalysisResultsVector[loc_i]->Get_PassedParticleCombos(locPassedParticleCombos);
+    const DReaction* locReaction = locAnalysisResultsVector[loc_i]->Get_Reaction();
+    std::vector<double> previousInv;
+    
+    // loop over combos
+    for(size_t icombo = 0; icombo < locPassedParticleCombos.size(); ++icombo){
+      double chisq = locPassedParticleCombos[icombo]->Get_KinFitResults()->Get_ChiSq();
+      DLorentzVector locMissingP4 = fAnalysisUtilities->Calc_MissingP4(locReaction, locPassedParticleCombos[icombo], false);
+      DLorentzVector locInvP4;
+      auto locParticleComboStep = locPassedParticleCombos[icombo]->Get_ParticleComboStep(0);
 
-    int bestind=-1;
-    double bestchisq=10000;
-    for(size_t j = 0; j < locPassedParticleCombos.size(); ++j){
-      double chisq = locPassedParticleCombos[j]->Get_KinFitResults ()->Get_ChiSq();
-      if(chisq < bestchisq) {
-	bestchisq=chisq;
-	bestind=j;
+      int numIt=0;
+      for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
+	auto locParticle = locParticleComboStep->Get_FinalParticle(parti); // Get_FinalParticle_Measured(parti);
+
+	// we expect only rho or phi events:  g,p->pi+,pi-,p  g,p->K+,K-,p
+	if(locParticle->PID() == PiPlus || locParticle->PID() == PiMinus || locParticle->PID() == KPlus || locParticle->PID() == KMinus){
+	  locInvP4 += locParticle->lorentzMomentum();
+	  numIt++;
+	  if(numIt==2){
+	    double tm = locInvP4.M();
+	    // do not store doubles
+	    if(std::find_if(previousInv.begin(), previousInv.end(), [&tm](double m){return fabs(m-tm)<0.000000001;}) != previousInv.end()) continue;
+	    previousInv.push_back(tm);
+	  }
+	}
+
+	// get track
+	auto locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(parti));
+	auto locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
+	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
+     
+	// require well reconstructed tracks for initial studies
+	int locDCHits = locTrackTimeBased->Ndof + 5;
+	double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
+	double locP = locTrackTimeBased->momentum().Mag();
+	if(locDCHits < 15 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
+	  continue;
+
+	// require has good match to TOF hit for cleaner sampleb
+	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
+	  continue;
+
+	Particle_t locPID = locTrackTimeBased->PID();
+
+	// get DIRC match parameters (contains LUT information)
+	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+	bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+
+	if(foundDIRC){
+
+	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
+	  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+
+	  fEvent = new DrcEvent();
+	  fEvent->SetType(2);
+	  fEvent->SetMomentum(TVector3(momInBar.X(),momInBar.Y(),momInBar.Z()));
+	  fEvent->SetPdg(PDGtype(locPID));
+	  fEvent->SetTime(locExtrapolatedTime);
+	  fEvent->SetParent(0);
+	  fEvent->SetId(locBar);// bar id where the particle hit the detector
+	  fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
+
+	  fEvent->SetInvMass(locInvP4.M());
+	  fEvent->SetMissMass(locMissingP4.M());
+	  fEvent->SetChiSq(chisq);
+
+	  DrcHit hit;
+	  for(const auto dhit : locDIRCPmtHits){
+	    int ch=dhit->ch;
+	    int pmt=ch/64;
+	    int pix=ch%64;
+
+	    hit.SetChannel(ch);
+	    hit.SetPmtId(pmt);
+	    hit.SetPixelId(pix);
+	    hit.SetLeadTime(dhit->t);
+	    hit.SetTotTime(dhit->tot); 
+	    fEvent->AddHit(hit);      
+	  }
+      
+	  if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
+	}
       }
     }
-    if(bestind<0) continue;    
-    auto locParticleComboStep = locPassedParticleCombos[bestind]->Get_ParticleComboStep(0);
-    for(unsigned int parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
-      auto locParticle = locParticleComboStep->Get_FinalParticle(parti);
-      //auto locParticle = locParticleComboStep->Get_FinalParticle_Measured(parti);
-    
-      // Get track
-      auto locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(parti));
-      auto locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
-      auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
-     
-      // require well reconstructed tracks for initial studies
-      int locDCHits = locTrackTimeBased->Ndof + 5;
-      double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
-      double locP = locTrackTimeBased->momentum().Mag();
-      if(locDCHits < 15 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
-	continue;
-
-      // require has good match to TOF hit for cleaner sample
-      shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-      bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
-      if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
-	continue;
-
-      Particle_t locPID = locTrackTimeBased->PID();
-
-      // get DIRC match parameters (contains LUT information)
-      shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-      bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
-
-      if(foundDIRC){
-
-	DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-	DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
-	double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-	int locBar = dDIRCGeometry->GetBar(posInBar.Y());
-
-	fEvent = new DrcEvent();
-	fEvent->SetType(2);
-	fEvent->SetMomentum(TVector3(momInBar.X(),momInBar.Y(),momInBar.Z()));
-	fEvent->SetPdg(PDGtype(locPID));
-	fEvent->SetTime(locExtrapolatedTime);
-	fEvent->SetParent(0);
-	fEvent->SetId(locBar);// bar id where the particle hit the detector
-	fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
-
-	DrcHit hit;
-	for(const auto dhit : locDIRCPmtHits){
-	  int ch=dhit->ch;
-	  int pmt=ch/64;
-	  int pix=ch%64;
-
-	  hit.SetChannel(ch);
-	  hit.SetPmtId(pmt);
-	  hit.SetPixelId(pix);
-	  hit.SetLeadTime(dhit->t);
-	  hit.SetTotTime(dhit->tot); 
-	  fEvent->AddHit(hit);      
-	}
-      
-	if(fEvent->GetHitSize()>0) new (cevt[ cevt.GetEntriesFast()]) DrcEvent(*fEvent);
-      }      
-    }    
-  }  
+  }
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
   japp->RootUnLock();

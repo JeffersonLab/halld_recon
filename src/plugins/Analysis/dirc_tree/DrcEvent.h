@@ -29,6 +29,9 @@ public:
   Int_t GetId() const { return fId; }
   Int_t GetType() const { return fType; }
   Double_t GetTime() const { return fTime; }
+  Double_t GetInvMass() const { return fInvMass; }
+  Double_t GetMissMass() const { return fMissMass; }
+  Double_t GetChiSq() const    { return fChiSq; }
 
   Int_t GetPdg()          const { return fPdg; }
   Int_t GetParent()       const { return fParent; }
@@ -39,16 +42,19 @@ public:
   Double_t GetTest2()     const { return fTest2; }
   
   // Mutators
-  void SetId(Int_t val)        { fId=val; }
-  void SetType(Int_t val)        { fType=val; }
-  void SetTime(Double_t val)      { fTime=val; }
+  void SetId(Int_t val)         { fId=val; }
+  void SetType(Int_t val)       { fType=val; }
+  void SetTime(Double_t val)    { fTime=val; }
+  void SetInvMass(Double_t val) { fInvMass=val; }
+  void SetMissMass(Double_t val){ fMissMass=val; }
+  void SetChiSq(Double_t val)   { fChiSq=val; }
 
-  void SetPdg(Int_t val) { fPdg = val; }
-  void SetParent(Int_t val) { fParent = val; }
-  void SetMomentum(TVector3 val) { fMomentum = val; }
-  void SetPosition(TVector3 val) { fPosition = val; }
-  void SetTest1(Double_t val) { fTest1 = val; }
-  void SetTest2(Double_t val) { fTest2 = val; }
+  void SetPdg(Int_t val)        { fPdg = val; }
+  void SetParent(Int_t val)     { fParent = val; }
+  void SetMomentum(TVector3 val){ fMomentum = val; }
+  void SetPosition(TVector3 val){ fPosition = val; }
+  void SetTest1(Double_t val)   { fTest1 = val; }
+  void SetTest2(Double_t val)   { fTest2 = val; }
 
 private: 
   Int_t fId;
@@ -56,6 +62,9 @@ private:
   Int_t fPdg;
   Int_t fParent;
   Double_t fTime;
+  Double_t fInvMass;
+  Double_t fMissMass;
+  Double_t fChiSq;
   
   Int_t fHitSize;
   std::vector<DrcHit> fHitArray;
@@ -65,7 +74,7 @@ private:
   Double_t fTest1;
   Double_t fTest2;
   
-  ClassDef(DrcEvent, 2);
+  ClassDef(DrcEvent, 3);
 };
 
 #endif
