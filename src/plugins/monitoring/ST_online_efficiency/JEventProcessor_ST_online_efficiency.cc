@@ -53,7 +53,7 @@ jerror_t JEventProcessor_ST_online_efficiency::init(void)
    // Do not reconstruct tracks with start counter time
   int USE_SC_TIME = 0;
   if(gPARMS){
-    gPARMS->SetDefaultParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME,"Do not reconstruct tracks with start counter time!");
+    gPARMS->SetDefaultParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME,"Do not reconstruct tracks with start counter time if set to 0!");
   }
   //cout << "USE_SC_TIME = " << USE_SC_TIME << endl;
   // Warning message if sc time is used in track reconstruction
@@ -61,8 +61,15 @@ jerror_t JEventProcessor_ST_online_efficiency::init(void)
     {
       cout << "=========================================================================="<< endl;
       cout << "TRKFIT: USE_SC_TIME = 0; WARNING SC TIME WILL NOT BE USED IN TRACK FITTING"<< endl;
-      cout << "This is required in ST_online_efficiency plugin                           "<< endl;
+      cout << "Which is required in this ST_online_efficiency plugin                     "<< endl;
       cout << "=========================================================================="<< endl;
+    }
+  else
+    {
+      cout << "=========================================================================="<< endl;
+      cout << "TRKFIT: USE_SC_TIME = 1;                                                  "<< endl;
+      cout << "Which will render this publing ST_online_efficiency useless!              "<< endl;
+      cout << "=========================================================================="<< endl;      
     }
   // Create root folder for ST and cd to it, store main dir
   TDirectory *main = gDirectory;
