@@ -51,11 +51,10 @@ jerror_t JEventProcessor_ST_online_efficiency::init(void)
 	// japp->RootUnLock();
 	//
    // Do not reconstruct tracks with start counter time
-  gPARMS->SetParameter("TRKFIT:USE_SC_TIME",false);
   int USE_SC_TIME = 0;
-  if(gPARMS->Exists("TRKFIT:USE_SC_TIME"))
-    gPARMS->GetParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME);
-    
+  if(gPARMS){
+    gPARMS->SetDefaultParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME,"Do not reconstruct tracks with start counter time!");
+  }
   //cout << "USE_SC_TIME = " << USE_SC_TIME << endl;
   // Warning message if sc time is used in track reconstruction
   if (USE_SC_TIME == 0)
