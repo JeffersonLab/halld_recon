@@ -543,8 +543,8 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
 	 // }
          double ccdb = tagh_tdc_time_offsets[i-1];
          double offset = ccdb + delta - taghTdcOffsets[i-1];
-         if (i == 1) c1_tdcOffset = offset;
-         offset -= c1_tdcOffset;
+         //if (i == 1) c1_tdcOffset = offset;
+         //offset -= c1_tdcOffset;
          outFile << i << " " << offset << endl;
          //if (verbose) printf("TDC\t%i\t%.3f\t\t%.3f\t\t%.3f\t\t%.3f\n", i, delta, ccdb, mpDelta[tdc_slot-1], offset);
          if (verbose) printf("TDC\t%i\t%.3f\t\t%.3f\t\t%.3f\n", i, delta, ccdb, offset);
@@ -940,7 +940,8 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
 	   printf("FDC TDC Base = %f - (%f) - (%f) = %f\n",fdc_t_base_tdc, MPV, meanSCOffset, fdc_t_base_tdc - MPV - meanSCOffset);
    }
    //outFile << fdc_t_base_fadc - MPV - meanSCOffset - (FDC_ADC_TDC_Offset-avg_FDC_TDC_wire_offsets) << " " << fdc_t_base_tdc - MPV - avg_FDC_TDC_wire_offsets - meanSCOffset << endl;
-   outFile << fdc_t_base_fadc + 5. - MPV - meanSCOffset - FDC_ADC_Offset << " " << fdc_t_base_tdc + 5. - MPV - avg_FDC_TDC_wire_offsets - meanSCOffset << endl;
+   //outFile << fdc_t_base_fadc + 5. - MPV - meanSCOffset - FDC_ADC_Offset << " " << fdc_t_base_tdc + 5. - MPV - avg_FDC_TDC_wire_offsets - meanSCOffset << endl;
+   outFile << fdc_t_base_fadc - MPV - meanSCOffset - FDC_ADC_TDC_Offset << " " << fdc_t_base_tdc - avg_FDC_TDC_wire_offsets - meanSCOffset << endl;
    outFile.close();
    
    

@@ -3,6 +3,8 @@
 #include "JANA/JEventLoop.h"
 #include "DTrackWireBased_factory.h"
 #include "DTrackTimeBased_factory.h"
+#include "DTrackWireBased_factory_StraightLine.h"
+#include "DTrackTimeBased_factory_StraightLine.h"
 #include "DTrackCandidate_factory.h"
 #include "DTrackCandidate_factory_THROWN.h"
 #include "DTrackCandidate_factory_CDC.h"
@@ -17,6 +19,7 @@
 #include "DTrackFitter_factory.h"
 #include "DTrackFitter_factory_ALT1.h"
 #include "DTrackFitter_factory_Riemann.h"
+#include "DTrackFitter_factory_StraightTrack.h"
 #include "DTrackHitSelector_factory.h"
 #include "DTrackHitSelector_factory_ALT1.h"
 #include "DTrackHitSelector_factory_ALT2.h"
@@ -46,7 +49,9 @@ jerror_t TRACKING_init(JEventLoop *loop)
    loop->AddFactory(new JFactory<DMCThrown>());
    loop->AddFactory(new JFactory<DMCTrajectoryPoint>());
    loop->AddFactory(new DTrackWireBased_factory_THROWN());
-   loop->AddFactory(new DTrackTimeBased_factory_THROWN());
+   loop->AddFactory(new DTrackTimeBased_factory_THROWN()); 
+   loop->AddFactory(new DTrackWireBased_factory_StraightLine());
+   loop->AddFactory(new DTrackTimeBased_factory_StraightLine());
    loop->AddFactory(new DTrackFitter_factory());
    loop->AddFactory(new DTrackFitter_factory_ALT1());
    loop->AddFactory(new DTrackFitter_factory_Riemann());
@@ -56,6 +61,7 @@ jerror_t TRACKING_init(JEventLoop *loop)
    loop->AddFactory(new DTrackHitSelector_factory_THROWN());
    loop->AddFactory(new DTrackFitter_factory_KalmanSIMD());   
    loop->AddFactory(new DTrackFitter_factory_KalmanSIMD_ALT1());
+   loop->AddFactory(new DTrackFitter_factory_StraightTrack());
 
    return NOERROR;
 }

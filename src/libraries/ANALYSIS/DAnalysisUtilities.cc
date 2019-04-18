@@ -7,6 +7,9 @@
 
 DAnalysisUtilities::DAnalysisUtilities(JEventLoop* locEventLoop)
 {
+  DEBUG_LEVEL=0;
+  gPARMS->SetDefaultParameter("DAnalysisUtilities:DEBUG_LEVEL",DEBUG_LEVEL);
+
 	locEventLoop->GetSingle(dPIDAlgorithm);
 
 	dTargetZCenter = 65.0;
@@ -1113,6 +1116,160 @@ double DAnalysisUtilities::Calc_DOCA(const DVector3 &locUnitDir1, const DVector3
 	locPOCA2 = locVertex2 + locDistVertToInterDOCA2*locUnitDir2; //intersection point of DOCA line and track 2
 	return (locPOCA1 - locPOCA2).Mag();
 }
+
+// Use a small arc length approximation to a helical trajectory to find the 
+// doca between two tracks curving in the magnetic field.
+jerror_t DAnalysisUtilities::Calc_DOCA(double q1,double q2,
+				       const DVector3 &mom1_in, 
+				       const DVector3 &pos1_in,
+				       const DVector3 &mom2_in, 
+				       const DVector3 &pos2_in,
+				       DVector3 &mom1_out,
+				       DVector3 &pos1_out,
+				       DVector3 &mom2_out,
+				       DVector3 &pos2_out,
+				       double &doca,double &s1,double &s2
+				       ) const {
+  DVector3 avg_pos=0.5*(pos1_in+pos2_in);
+  DVector3 diff_pos=pos1_in-pos2_in;
+  double B=fabs(dMagneticFieldMap->GetBz(avg_pos.x(),avg_pos.y(),avg_pos.z()));
+  double kap1=-0.003*B*q1/(2.*mom1_in.Perp());
+  double kap2=-0.003*B*q2/(2.*mom2_in.Perp());
+  double dx=diff_pos.x(),dy=diff_pos.y(),dz=diff_pos.z();
+  double tan1=tan(M_PI_2-mom1_in.Theta());
+  double tan1sq=tan1*tan1;
+  double phi1=mom1_in.Phi();
+  double cos1=cos(phi1),sin1=sin(phi1);
+  double cos1sq=cos1*cos1,sin1sq=sin1*sin1;
+  double tan2=tan(M_PI_2-mom2_in.Theta());
+  double tan2sq=tan2*tan2;
+  double phi2=mom2_in.Phi();
+  double cos2=cos(phi2),sin2=sin(phi2);
+  double cos2sq=cos2*cos2,sin2sq=sin2*sin2;
+  double dx_sq=dx*dx,dy_sq=dy*dy;
+  double cos2sin1_minus_cos1sin2=cos2*sin1 - cos1*sin2;
+
+  double B1=pow(2*dx*kap2*sin1sq*sin2 - 2*dx*kap1*sin1*sin2sq - sin1sq*sin2sq 
+		+ tan1sq + 2*dx*kap2*sin2*tan1sq - 2*dx*kap1*sin1*tan2sq 
+		- 2*sin1*sin2*(2*dx_sq*kap1*kap2 + tan1*tan2) 
+		+ sin1sq*(1 + tan2sq) + cos1sq*(-2*cos2*dy*kap2 
+						+ 4*dx*kap2*sin2 + sin2sq 
+						+ tan2sq) 
+		+ 2*cos2*(-2*dy*kap2*sin1sq + dy*kap1*sin1*sin2 
+			  - dy*kap2*tan1sq + sin1*(2*dx*dy*kap1*kap2 
+						   - dz*kap2*tan1 
+						   + dz*kap1*tan2)) 
+		+ 2*cos1*(cos2sq*dy*kap1 + dy*kap2*sin1*sin2 + dy*kap1*tan2sq 
+			  + sin2*(2*dx*dy*kap1*kap2 + dz*kap2*tan1
+				  - dz*kap1*tan2) 
+			  - cos2*(2*dy_sq*kap1*kap2 + dx*kap2*sin1 
+				  + dx*kap1*sin2 + sin1*sin2 + tan1*tan2)),2)
+    + 8*(cos2sin1_minus_cos1sin2)*(cos1*kap1*(cos2 - 2*dy*kap2) 
+				 + kap2*(-1 + 2*dx*kap1*sin1 - tan1sq)
+				 + kap1*(sin1*sin2 + tan1*tan2))*
+    (2*cos2*dy_sq*kap2*sin1 + cos2*dx*sin1*sin2 - dz*tan1 
+     - 2*dx*dz*kap2*sin2*tan1 + dz*sin1*sin2*tan2 + cos2*dx*tan1*tan2 
+     + dy*(-2*dx*kap2*sin1*sin2 + sin1*sin2sq + 2*cos2*dz*kap2*tan1 
+	   + sin2*tan1*tan2 - sin1*(1 + tan2sq)) 
+     + cos1*(cos2*(2*dx*dy*kap2 + dy*sin2 + dz*tan2) 
+	     - dx*(2*dx*kap2*sin2 + sin2sq + tan2sq)));
+  if (B1<0.) return VALUE_OUT_OF_RANGE;
+
+  double B2=pow(2*dx*kap2*sin1sq*sin2 - 2*dx*kap1*sin1*sin2sq - sin1sq*sin2sq 
+		+ tan1sq + 2*dx*kap2*sin2*tan1sq - 2*dx*kap1*sin1*tan2sq 
+		- 2*sin1*sin2*(2*dx_sq*kap1*kap2 + tan1*tan2) 
+		+ sin1sq*(1 + tan2sq) + cos1sq*(-2*cos2*dy*kap2 
+						+ 4*dx*kap2*sin2 + sin2sq 
+						+ tan2sq)
+		+ 2*cos2*(-2*dy*kap2*sin1sq + dy*kap1*sin1*sin2 -dy*kap2*tan1sq
+			  + sin1*(2*dx*dy*kap1*kap2 - dz*kap2*tan1 
+				  + dz*kap1*tan2)) 
+		+ 2*cos1*(cos2sq*dy*kap1 + dy*kap2*sin1*sin2 + dy*kap1*tan2sq 
+			  + sin2*(2*dx*dy*kap1*kap2 + dz*kap2*tan1 
+				  - dz*kap1*tan2) 
+			  - cos2*(2*dy_sq*kap1*kap2 + dx*kap2*sin1 
+				  + dx*kap1*sin2 + sin1*sin2 + tan1*tan2)),2) 
+    + 8*(cos2sin1_minus_cos1sin2)*(cos1*kap1*(cos2 - 2*dy*kap2)
+				 + kap2*(-1 + 2*dx*kap1*sin1 - tan1sq)
+				 + kap1*(sin1*sin2 + tan1*tan2))
+    * (2*cos2*dy_sq*kap2*sin1 + cos2*dx*sin1*sin2 - dz*tan1 
+       - 2*dx*dz*kap2*sin2*tan1 + dz*sin1*sin2*tan2 + cos2*dx*tan1*tan2 
+       + dy*(-2*dx*kap2*sin1*sin2 + sin1*sin2sq + 2*cos2*dz*kap2*tan1 
+	     + sin2*tan1*tan2 - sin1*(1 + tan2sq)) 
+       + cos1*(cos2*(2*dx*dy*kap2 + dy*sin2 + dz*tan2) 
+	       - dx*(2*dx*kap2*sin2 + sin2sq + tan2sq)));
+  if (B2<0) return VALUE_OUT_OF_RANGE;
+  
+  double A1=2*cos1*cos2sq*dy*kap1 - 2*cos1sq*cos2*dy*kap2 
+    - 4*cos1*cos2*dy_sq*kap1*kap2 - 2*cos1*cos2*dx*kap2*sin1 
+    + 4*cos2*dx*dy*kap1*kap2*sin1 + cos2sq*sin1sq - 4*cos2*dy*kap2*sin1sq 
+    - 2*cos1*cos2*dx*kap1*sin2 + 4*cos1sq*dx*kap2*sin2 
+    + 4*cos1*dx*dy*kap1*kap2*sin2 - 2*cos1*cos2*sin1*sin2 
+    + 2*cos2*dy*kap1*sin1*sin2 + 2*cos1*dy*kap2*sin1*sin2 
+    - 4*dx_sq*kap1*kap2*sin1*sin2 + 2*dx*kap2*sin1sq*sin2 + cos1sq*sin2sq 
+    - 2*dx*kap1*sin1*sin2sq - 2*cos2*dz*kap2*sin1*tan1 
+    + 2*cos1*dz*kap2*sin2*tan1 + cos2sq*tan1sq - 2*cos2*dy*kap2*tan1sq 
+    + 2*dx*kap2*sin2*tan1sq + sin2sq*tan1sq + 2*cos2*dz*kap1*sin1*tan2 
+    - 2*cos1*dz*kap1*sin2*tan2 - 2*cos1*cos2*tan1*tan2 - 2*sin1*sin2*tan1*tan2
+    + cos1sq*tan2sq + 2*cos1*dy*kap1*tan2sq - 2*dx*kap1*sin1*tan2sq 
+    + sin1sq*tan2sq;
+  double C1=-4.*(cos2sin1_minus_cos1sin2)
+    *(cos1*kap1*(cos2 - 2*dy*kap2) + kap2*(-1 + 2*dx*kap1*sin1 - tan1sq)
+      + kap1*(sin1*sin2 + tan1*tan2));
+
+  double A2=2*cos1*cos2sq*dy*kap1 - 2*cos1sq*cos2*dy*kap2 
+    - 4*cos1*cos2*dy_sq*kap1*kap2 - 4*cos2sq*dx*kap1*sin1 
+    + 2*cos1*cos2*dx*kap2*sin1 + 4*cos2*dx*dy*kap1*kap2*sin1 + cos2sq*sin1sq 
+    + 2*cos1*cos2*dx*kap1*sin2 + 4*cos1*dx*dy*kap1*kap2*sin2 
+    - 2*cos1*cos2*sin1*sin2 - 2*cos2*dy*kap1*sin1*sin2 
+    - 2*cos1*dy*kap2*sin1*sin2 - 4*dx_sq*kap1*kap2*sin1*sin2 
+    + 2*dx*kap2*sin1sq*sin2 + cos1sq*sin2sq + 4*cos1*dy*kap1*sin2sq 
+    - 2*dx*kap1*sin1*sin2sq + 2*cos2*dz*kap2*sin1*tan1 
+    - 2*cos1*dz*kap2*sin2*tan1 + cos2sq*tan1sq - 2*cos2*dy*kap2*tan1sq 
+    + 2*dx*kap2*sin2*tan1sq + sin2sq*tan1sq - 2*cos2*dz*kap1*sin1*tan2 
+    + 2*cos1*dz*kap1*sin2*tan2 - 2*cos1*cos2*tan1*tan2 - 2*sin1*sin2*tan1*tan2
+    + cos1sq*tan2sq + 2*cos1*dy*kap1*tan2sq - 2*dx*kap1*sin1*tan2sq 
+    + sin1sq*tan2sq;  
+  double C2=4.*(cos2sin1_minus_cos1sin2)
+    *(kap2*(cos1*cos2 + sin1*sin2 + tan1*tan2) 
+      + kap1*(-1 + 2*cos2*dy*kap2 - 2*dx*kap2*sin2 - tan2sq));
+
+  // Arc lengths to doca points
+  s1=(A1-sqrt(B1))/C1;
+  s2=(A2-sqrt(B2))/C2;
+
+  pos1_out.SetX(pos1_in.x()+cos1*s1);
+  pos1_out.SetY(pos1_in.y()+sin1*s1);
+  pos1_out.SetZ(pos1_in.z()+tan1*s1); 
+
+  pos2_out.SetX(pos2_in.x()+cos2*s2);
+  pos2_out.SetY(pos2_in.y()+sin2*s2);
+  pos2_out.SetZ(pos2_in.z()+tan2*s2);
+
+  double px1=mom1_in.x(),py1=mom1_in.y();
+  double twoks1=2.*kap1*s1;
+  mom1_out.SetX(px1-py1*twoks1);
+  mom1_out.SetY(py1+px1*twoks1);
+  mom1_out.SetZ(mom1_in.z());
+
+  double px2=mom2_in.x(),py2=mom2_in.y();
+  double twoks2=2.*kap2*s2;
+  mom2_out.SetX(px2-py2*twoks2);
+  mom2_out.SetY(py2+px2*twoks2);
+  mom2_out.SetZ(mom2_in.z());
+  
+  doca=(pos1_out-pos2_out).Mag();
+
+  if (DEBUG_LEVEL>0){
+    DVector3 myvertex=0.5*(pos1_out+pos2_out);
+    printf("Vertex position (x,y,z)=(%3.2f, %3.2f, %3.2f)\n",myvertex.x(),
+	   myvertex.y(),myvertex.z());
+  }
+
+  return NOERROR;
+}
+
+
 
 double DAnalysisUtilities::Calc_CrudeTime(const vector<const DKinematicData*>& locParticles, const DVector3& locCommonVertex) const
 {

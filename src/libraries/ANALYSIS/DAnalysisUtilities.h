@@ -85,6 +85,7 @@ class DAnalysisUtilities : public JObject
 		double Calc_DOCAVertex(const DKinFitParticle* locKinFitParticle1, const DKinFitParticle* locKinFitParticle2, DVector3& locDOCAVertex) const;
 		double Calc_DOCA(const DKinFitParticle* locKinFitParticle1, const DKinFitParticle* locKinFitParticle2) const;
 		double Calc_DOCA(const DKinFitParticle* locKinFitParticle1, const DKinFitParticle* locKinFitParticle2, DVector3 &locInterDOCA1, DVector3 &locInterDOCA2) const;
+		
 		double Calc_DOCAToVertex(const DKinFitParticle* locKinFitParticle, const DVector3& locVertex) const;
 		double Calc_DOCAToVertex(const DKinFitParticle* locKinFitParticle, const DVector3& locVertex, DVector3& locPOCA) const;
 
@@ -93,6 +94,15 @@ class DAnalysisUtilities : public JObject
 		double Calc_DOCA(const DKinematicData* locKinematicData1, const DKinematicData* locKinematicData2, DVector3 &locInterDOCA1, DVector3 &locInterDOCA2) const;
 		double Calc_DOCAToVertex(const DKinematicData* locKinematicData, const DVector3& locVertex) const;
 		double Calc_DOCAToVertex(const DKinematicData* locKinematicData, const DVector3& locVertex, DVector3& locPOCA) const;
+
+		jerror_t Calc_DOCA(double q1,double q2,const DVector3 &mom1_in, 
+				   const DVector3 &pos1_in,
+				   const DVector3 &mom2_in, 
+				   const DVector3 &pos2_in,
+				   DVector3 &mom1_out,DVector3 &pos1_out,
+				   DVector3 &mom2_out,DVector3 &pos2_out,
+				   double &doca,double &s1,double &s2
+				   ) const;
 
 		DLorentzVector Calc_MissingP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, bool locUseKinFitDataFlag) const;
 		DLorentzVector Calc_MissingP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, set<pair<const JObject*, unsigned int> >& locSourceObjects, bool locUseKinFitDataFlag) const;
@@ -139,6 +149,8 @@ class DAnalysisUtilities : public JObject
 		const DParticleID* dPIDAlgorithm = nullptr;
 		const DMagneticFieldMap* dMagneticFieldMap = nullptr;
 		mutable DParticleComboCreator* dParticleComboCreator = nullptr;
+
+		int DEBUG_LEVEL;
 };
 
 

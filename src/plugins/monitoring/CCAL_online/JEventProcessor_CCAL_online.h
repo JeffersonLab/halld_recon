@@ -53,6 +53,7 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor{
   TH1I *hdigPed;
   TProfile *hdigPedChan;
   TH2F *hdigPed2D;
+  TH2F *hdigPedSq2D;
   TH2I *hdigIntVsPeak;
   TH1I *hdigQF;
   
@@ -68,11 +69,17 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor{
   TH1I *hclusE;
   TH1I *hclusETot;
   TH1I *hclusT;
+  TH1I *hclusDime;
   TH2I *hclusXYHigh;
   TH2I *hclusXYLow;
   TH1I *hclusPhi;
   TH1I *hclus2GMass;
   TH1I *hclus2GMass_fcal;
+  TH2I *hclusOccEmax;
+  
+  TH1F *hcomp_bfdt;
+  TH1F *hcomp_fcdt;
+  TH1F *hcomp_bcdt_full;
   
   TH1F *hcomp_cratio;
   TH1F *hcomp_cfbratio;
@@ -80,10 +87,19 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor{
   TH1F *hcomp_pfpc;
   TH2F *hcomp_cxy;
   TH2F *hcomp_fxy;
-  TH1F *hcomp_bfdt;
   TH1F *hcomp_bcdt;
-  TH1F *hcomp_fcdt;
-  TH1F *hcomp_bcdt2;
+  
+  TH1F *hcomp_cratio_bkgd;
+  TH1F *hcomp_cfbratio_bkgd;
+  TH2F *hcomp_cfb2d_bkgd;
+  TH1F *hcomp_pfpc_bkgd;
+  TH2F *hcomp_cxy_bkgd;
+  TH2F *hcomp_fxy_bkgd;
+  TH1F *hcomp_bcdt_bkgd;
+  
+  TH1I *hNPhotons;
+
+  TH2F *hfcalOcc;
 
 };
 
