@@ -125,7 +125,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  if(numIt==2){
 	    double tm = locInvP4.M();
 	    // do not store doubles
-	    if(std::find_if(previousInv.begin(), previousInv.end(), [&tm](double m){return fabs(m-tm)<0.000000001;}) != previousInv.end()) continue;
+	    if(std::find_if(previousInv.begin(), previousInv.end(), [&tm](double m){return fabs(m-tm)<0.000000001;}) != previousInv.end()) { continue; }
 	    previousInv.push_back(tm);
 	  }
 	}
@@ -136,18 +136,16 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
      
 	// require well reconstructed tracks for initial studies
-	int locDCHits = locTrackTimeBased->Ndof + 5;
+	int locDCHits = locTrackTimeBased->Ndof + 5;	
 	double locTheta = locTrackTimeBased->momentum().Theta()*180/TMath::Pi();
 	double locP = locTrackTimeBased->momentum().Mag();
-	if(locDCHits < 15 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0)
-	  continue;
+	if(locDCHits < 10 || locTheta < 1.0 || locTheta > 12.0 || locP > 12.0) continue;
 
-	// require has good match to TOF hit for cleaner sampleb
+	// require has good match to TOF hit for cleaner sample
 	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
 	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
-	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
-	  continue;
-
+	if(!foundTOF || locTOFHitMatchParams->Get_DistanceToTrack() > 20.0) continue;
+	double toftrackdist = locTOFHitMatchParams->Get_DistanceToTrack();
 	Particle_t locPID = locTrackTimeBased->PID();
 
 	// get DIRC match parameters (contains LUT information)
@@ -155,7 +153,6 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
 	if(foundDIRC){
-
 	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
@@ -169,9 +166,10 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  fEvent->SetParent(0);
 	  fEvent->SetId(locBar);// bar id where the particle hit the detector
 	  fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
-
+	  fEvent->SetDcHits(locDCHits);
+	  fEvent->SetTofTrackDist(toftrackdist);
 	  fEvent->SetInvMass(locInvP4.M());
-	  fEvent->SetMissMass(locMissingP4.M());
+	  fEvent->SetMissMass(locMissingP4.M2());
 	  fEvent->SetChiSq(chisq);
 
 	  DrcHit hit;
