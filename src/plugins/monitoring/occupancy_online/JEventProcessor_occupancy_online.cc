@@ -322,6 +322,8 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		for(int itrig=0; itrig<32; itrig++) trig[itrig] = (l1trigger->trig_mask >> itrig)&0x01;
 		for(int itrig=0; itrig<32; itrig++) fp_trig[itrig] = (l1trigger->fp_trig_mask >> itrig)&0x01;
 	}
+	else // not a triggered event
+	  return NOERROR;
 
 	// calculate total BCAL energy in order to catch BCAL LED events
 	vector<const DBCALHit *> bcal_hits;
