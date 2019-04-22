@@ -63,6 +63,14 @@ jerror_t DEventProcessor_dirc_tree::init(void)
 //------------------
 jerror_t DEventProcessor_dirc_tree::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
 {
+  //////////////////////////////////////////////////////////////////////////////
+  // dapp and geom are not used but without it dirc_hits.so will no be loaded
+  // root [0] gSystem->Load("dirc_hits.so");
+  // cling::DynamicLibraryManager::loadLibrary(): dirc_hits.so: undefined symbol: _ZTV25DEventSourceRESTGenerator
+  DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+  DGeometry *geom = dapp->GetDGeometry(locRunNumber);
+  //////////////////////////////////////////////////////////////////////////////
+
   // This is called whenever the run number changes
 
   // get DIRC geometry
@@ -114,7 +122,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
       auto locParticleComboStep = locPassedParticleCombos[icombo]->Get_ParticleComboStep(0);
      
       // calculate pi+pi- and K+K- invariant mass by taking the final state and subtracting the proton 
-      DLorentzVector locInvP4 = fAnalysisUtilities->Calc_FinalStateP4(locReaction, locPassedParticleCombos[icombo], 0, false);
+      DLorentzVector locInvP4 = fAnalysisUtilities->Calc_FinalStateP4(locReaction, locPassedParticleCombos[icombo], 0, true);
       for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
 	auto locParticle = locParticleComboStep->Get_FinalParticle(parti);
         if(locParticle->PID() == Proton) locInvP4 -= locParticle->lorentzMomentum();
