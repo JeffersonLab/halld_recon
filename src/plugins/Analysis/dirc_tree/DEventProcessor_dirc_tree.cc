@@ -111,13 +111,21 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
     for(size_t icombo = 0; icombo < locPassedParticleCombos.size(); ++icombo){
       double chisq = locPassedParticleCombos[icombo]->Get_KinFitResults()->Get_ChiSq();
       DLorentzVector locMissingP4 = fAnalysisUtilities->Calc_MissingP4(locReaction, locPassedParticleCombos[icombo], false);
-      DLorentzVector locInvP4;
       auto locParticleComboStep = locPassedParticleCombos[icombo]->Get_ParticleComboStep(0);
+     
+      // calculate pi+pi- and K+K- invariant mass by taking the final state and subtracting the proton 
+      DLorentzVector locInvP4 = fAnalysisUtilities->Calc_FinalStateP4(locReaction, locPassedParticleCombos[icombo], 0, false);
+      for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
+	auto locParticle = locParticleComboStep->Get_FinalParticle(parti);
+        if(locParticle->PID() == Proton) locInvP4 -= locParticle->lorentzMomentum();
+      }
 
       int numIt=0;
       for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
 	auto locParticle = locParticleComboStep->Get_FinalParticle(parti); // Get_FinalParticle_Measured(parti);
+	if(locParticle->charge() == 0) continue;	
 
+/*
 	// we expect only rho or phi events:  g,p->pi+,pi-,p  g,p->K+,K-,p
 	if(locParticle->PID() == PiPlus || locParticle->PID() == PiMinus || locParticle->PID() == KPlus || locParticle->PID() == KMinus){
 	  locInvP4 += locParticle->lorentzMomentum();
@@ -129,6 +137,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	    previousInv.push_back(tm);
 	  }
 	}
+*/
 
 	// get track
 	auto locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(parti));
