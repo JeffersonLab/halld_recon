@@ -63,14 +63,6 @@ jerror_t DEventProcessor_dirc_tree::init(void)
 //------------------
 jerror_t DEventProcessor_dirc_tree::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
 {
-  //////////////////////////////////////////////////////////////////////////////
-  // dapp and geom are not used but without it dirc_hits.so will no be loaded
-  // root [0] gSystem->Load("dirc_hits.so");
-  // cling::DynamicLibraryManager::loadLibrary(): dirc_hits.so: undefined symbol: _ZTV25DEventSourceRESTGenerator
-  DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-  DGeometry *geom = dapp->GetDGeometry(locRunNumber);
-  //////////////////////////////////////////////////////////////////////////////
-
   // This is called whenever the run number changes
 
   // get DIRC geometry
@@ -113,6 +105,9 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
     deque<const DParticleCombo*> locPassedParticleCombos;
     locAnalysisResultsVector[loc_i]->Get_PassedParticleCombos(locPassedParticleCombos);
     const DReaction* locReaction = locAnalysisResultsVector[loc_i]->Get_Reaction();
+    if(locReaction->Get_ReactionName() != "p2pi_dirc_tree" &&
+       locReaction->Get_ReactionName() != "p2k_dirc_tree") continue;
+
     std::vector<double> previousInv;
     
     // loop over combos
@@ -128,24 +123,9 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
         if(locParticle->PID() == Proton) locInvP4 -= locParticle->lorentzMomentum();
       }
 
-      int numIt=0;
       for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
 	auto locParticle = locParticleComboStep->Get_FinalParticle(parti); // Get_FinalParticle_Measured(parti);
 	if(locParticle->charge() == 0) continue;	
-
-/*
-	// we expect only rho or phi events:  g,p->pi+,pi-,p  g,p->K+,K-,p
-	if(locParticle->PID() == PiPlus || locParticle->PID() == PiMinus || locParticle->PID() == KPlus || locParticle->PID() == KMinus){
-	  locInvP4 += locParticle->lorentzMomentum();
-	  numIt++;
-	  if(numIt==2){
-	    double tm = locInvP4.M();
-	    // do not store doubles
-	    if(std::find_if(previousInv.begin(), previousInv.end(), [&tm](double m){return fabs(m-tm)<0.000000001;}) != previousInv.end()) { continue; }
-	    previousInv.push_back(tm);
-	  }
-	}
-*/
 
 	// get track
 	auto locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(parti));
