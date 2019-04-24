@@ -731,7 +731,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    ResetKalmanSIMD();
 
    // Check that we have enough FDC and CDC hits to proceed
-   if (cdchits.size()==0 && fdchits.size()<5) return kFitNotDone;
+   if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
    if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
 
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
@@ -5209,7 +5209,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
          break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
       }
       else{
-         unsigned int new_index=num_fdc/2;
+	unsigned int new_index=(3*num_fdc)/4;
          if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
             break_point_fdc_index=new_index;
          }
@@ -5238,7 +5238,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
    if (num_cdc>0 && break_point_fdc_index>0 && break_point_cdc_index>2){ 
       if (break_point_fdc_index+num_cdc<MIN_HITS_FOR_REFIT){
          //_DBG_ << endl;
-         unsigned int new_index=num_fdc/2;
+	unsigned int new_index=(3*num_fdc)/4;
          if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
             break_point_fdc_index=new_index;
          }
@@ -5260,7 +5260,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
    }
    if (num_cdc>5 && break_point_cdc_index>2){
       //_DBG_ << endl;  
-      unsigned int new_index=num_fdc/2;
+     unsigned int new_index=3*(num_fdc)/4;
       if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
          break_point_fdc_index=new_index;
       }
@@ -5284,7 +5284,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
          break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
       }
       else{
-         unsigned int new_index=num_fdc/2;
+	unsigned int new_index=(3*num_fdc)/4;
          if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
             break_point_fdc_index=new_index;
          }
@@ -6977,9 +6977,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 
       // Scale cut for pruning hits according to the iteration number
       fdc_anneal=(iter<MIN_ITER)?(FORWARD_ANNEAL_SCALE/pow(FORWARD_ANNEAL_POW_CONST,iter)+1.):1.;
-      if (fit_type==kTimeBased){
-	cdc_anneal=(iter<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter)+1.):1.;
-      }
+      cdc_anneal=(iter<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter)+1.):1.;
 
       // Swim through the field out to the most upstream FDC hit
       jerror_t ref_track_error=SetReferenceTrajectory(S);
@@ -7210,10 +7208,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       }
 
       // Scale cut for pruning hits according to the iteration number
-      if (fit_type==kTimeBased)
-      {   
-        anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;
-      }
+      anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;
 
       // Initialize path length variable and flight time
       len=0;
@@ -7458,10 +7453,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       var_ftime=0.;
 
       // Scale cut for pruning hits according to the iteration number
-      if (fit_type==kTimeBased)
-      {
-	anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;
-      }
+      anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;
 
       // Initialize trajectory deque
       jerror_t ref_track_error=SetCDCReferenceTrajectory(last_pos,Sc);
