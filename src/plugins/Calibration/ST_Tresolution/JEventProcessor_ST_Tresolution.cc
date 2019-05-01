@@ -164,6 +164,15 @@ jerror_t JEventProcessor_ST_Tresolution::evnt(JEventLoop *loop, uint64_t eventnu
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
 	  return NOERROR;
 
+    vector<const DParticleID *> locParticleIDvec;
+    loop->Get(locParticleIDvec);
+    if(locParticleIDvec.size()<1){
+        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+        return RESOURCE_UNAVAILABLE;
+    }
+    const DParticleID *locParticleID = locParticleIDvec[0];
+
+
   double speed_light = 29.9792458;
   // SC hits
   vector<const DSCHit *> scHitVector;
@@ -202,7 +211,7 @@ jerror_t JEventProcessor_ST_Tresolution::evnt(JEventLoop *loop, uint64_t eventnu
 
       // Grab the ST hit match params object and cut on only tracks matched to the ST
       shared_ptr<const DSCHitMatchParams> locBestSCHitMatchParams;
-      bool foundSC = dParticleID->Get_BestSCMatchParams(timeBasedTrack, locDetectorMatches, locBestSCHitMatchParams);
+      bool foundSC = locParticleID->Get_BestSCMatchParams(timeBasedTrack, locDetectorMatches, locBestSCHitMatchParams);
       if (!foundSC) continue;
       
       // Define vertex vector and cut on target/scattering chamber geometry
@@ -223,7 +232,7 @@ jerror_t JEventProcessor_ST_Tresolution::evnt(JEventLoop *loop, uint64_t eventnu
       DVector3 IntersectionPoint, IntersectionMomentum;
       shared_ptr<DSCHitMatchParams> locSCHitMatchParams;
       vector<DTrackFitter::Extrapolation_t>extrapolations=timeBasedTrack->extrapolations.at(SYS_START);
-      bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
+      bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
 
       if(!sc_match_pid) continue; 
       // Cut on the number of particle votes to find the best RF time

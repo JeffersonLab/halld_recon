@@ -239,6 +239,14 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if(!locTrigger->Get_IsPhysicsEvent())
 	    return NOERROR;
 
+    vector<const DParticleID *> locParticleIDvec;
+    loop->Get(locParticleIDvec);
+    if(locParticleIDvec.size()<1){
+        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+        return RESOURCE_UNAVAILABLE;
+    }
+    const DParticleID *locParticleID = locParticleIDvec[0];
+
 
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
@@ -971,7 +979,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 		DVector3 IntersectionPoint, IntersectionMomentum;	
 		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-		bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
 								   true, &IntersectionPoint, &IntersectionMomentum);
 		double locSCzIntersection = IntersectionPoint.z();
 		if( locSCzIntersection < 83. ) {
@@ -1071,7 +1079,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			loop->GetSingle(locDetectorMatches);
 			DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
 		    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-		    bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+		    bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
         	// For DIRC calibrations, select tracks which have a good TOF match
 		    if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
