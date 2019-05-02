@@ -3,6 +3,7 @@
 //    File: DDIRCLutReader.cc
 //
 
+#include <unistd.h>
 #include <cassert>
 #include <math.h>
 using namespace std;
