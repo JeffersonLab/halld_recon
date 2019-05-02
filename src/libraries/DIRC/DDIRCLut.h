@@ -25,6 +25,9 @@ using namespace jana;
 #include "TH2.h"
 #include "TF1.h"
 
+// store constants so that they can be accessed by pixel number
+typedef  vector<double>  dirc_lut_constants_t;
+
 class DDIRCLut: public JObject {
 
 public:
@@ -34,14 +37,16 @@ public:
 	DDIRCLut();
 	~DDIRCLut(){};
 
+	vector<dirc_lut_constants_t> dThetaC_offsets;
+
 	bool brun(JEventLoop *loop);
 	bool CreateDebugHistograms();
-	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
+	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
 	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
 	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
-	double CalcAngle(TVector3 momInBar, double locMass) const;
-	map<Particle_t, double> CalcExpectedAngles(TVector3 momInBar) const;
+	double CalcAngle(double locP, double locMass) const;
+	map<Particle_t, double> CalcExpectedAngles(double locP) const;
 	
 private:
 	DApplication *dapp;

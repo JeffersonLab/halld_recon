@@ -33,6 +33,7 @@ public:
   Double_t GetMissMass() const { return fMissMass; }
   Double_t GetChiSq() const    { return fChiSq; }
   Double_t GetTofTrackDist() const    { return fTofTrackDist; }
+  Double_t GetTofTrackDeltaT() const    { return fTofTrackDeltaT; }
 
   Int_t GetPdg()          const { return fPdg; }
   Int_t GetParent()       const { return fParent; }
@@ -51,6 +52,7 @@ public:
   void SetMissMass(Double_t val){ fMissMass=val; }
   void SetChiSq(Double_t val)   { fChiSq=val; }
   void SetTofTrackDist(Double_t val) { fTofTrackDist=val; }
+  void SetTofTrackDeltaT(Double_t val) { fTofTrackDeltaT=val; }
 
   void SetPdg(Int_t val)        { fPdg = val; }
   void SetParent(Int_t val)     { fParent = val; }
@@ -71,6 +73,7 @@ private:
   Double_t fMissMass;
   Double_t fChiSq;
   Double_t fTofTrackDist;
+  Double_t fTofTrackDeltaT;
   
   Int_t fHitSize;
   std::vector<DrcHit> fHitArray;

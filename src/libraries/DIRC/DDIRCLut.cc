@@ -26,9 +26,9 @@ DDIRCLut::DDIRCLut()
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_PIXELTIME",DIRC_TRUTH_PIXELTIME);
 
 	// timing cuts for photons
-	DIRC_CUT_TDIFFD = 2; // direct cut in ns
+	DIRC_CUT_TDIFFD = 3; // direct cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFD",DIRC_CUT_TDIFFD);
-	DIRC_CUT_TDIFFR = 3; // reflected cut in ns
+	DIRC_CUT_TDIFFR = 4; // reflected cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFR",DIRC_CUT_TDIFFR);
 
 	// Gives DeltaT = 0, but shouldn't it be v=20.3767 [cm/ns] for 1.47125
@@ -36,7 +36,7 @@ DDIRCLut::DDIRCLut()
 	gPARMS->SetDefaultParameter("DIRC:LIGHT_V",DIRC_LIGHT_V);
 
 	// sigma (thetaC for single photon) in radiams
-	DIRC_SIGMA_THETAC = 0.0085;
+	DIRC_SIGMA_THETAC = 0.01;
 	gPARMS->SetDefaultParameter("DIRC:SIGMA_THETAC",DIRC_SIGMA_THETAC);
 
 	// set PID for different passes in debuging histograms
@@ -49,6 +49,9 @@ DDIRCLut::DDIRCLut()
 
 	dCriticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	dIndex = 1.473;
+
+	vector<double> new_thetac(108);
+	dThetaC_offsets.push_back(new_thetac); dThetaC_offsets.push_back(new_thetac);
 
 	if(DIRC_DEBUG_HISTS) 	
 		CreateDebugHistograms();	
@@ -63,6 +66,12 @@ bool DDIRCLut::brun(JEventLoop *loop) {
 	vector<const DDIRCGeometry*> locDIRCGeometry;
         loop->Get(locDIRCGeometry);
         dDIRCGeometry = locDIRCGeometry[0];
+
+	// load constant tables
+	if (loop->GetCalib("/DIRC/North/thetac_offsets", dThetaC_offsets[0]))
+		jout << "Error loading /DIRC/North/thetac_offsets !" << endl;	
+	if (loop->GetCalib("/DIRC/South/thetac_offsets", dThetaC_offsets[1]))
+                jout << "Error loading /DIRC/South/thetac_offsets !" << endl;
 
 	return true;
 }
@@ -119,10 +128,8 @@ bool DDIRCLut::CreateDebugHistograms() {
 	return true;
 }
 
-bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const
+bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const
 {
-	double locMass = ParticleMass(locPID);
-
 	// get bar and track position/momentum from extrapolation
 	TVector3 momInBar = locProjMom;
 	TVector3 posInBar = locProjPos;
@@ -156,13 +163,13 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 		locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
 
 	// initialize variables for LUT summary
-	double locAngle = CalcAngle(momInBar, locMass);
-	map<Particle_t, double> locExpectedAngle = CalcExpectedAngles(momInBar);
+	double locAngle = CalcAngle(momInBar.Mag(), locMass);
+	map<Particle_t, double> locExpectedAngle = CalcExpectedAngles(momInBar.Mag());
 	map<Particle_t, double> logLikelihoodSum;
 	Particle_t locHypothesisPID = PiPlus;
 	for(uint loc_i = 0; loc_i<dFinalStatePIDs.size(); loc_i++) {
 		logLikelihoodSum[dFinalStatePIDs[loc_i]]=0;
-		if(fabs(ParticleMass(dFinalStatePIDs[loc_i])-ParticleMass(locPID)) < 0.01) locHypothesisPID = dFinalStatePIDs[loc_i];
+		if(fabs(ParticleMass(dFinalStatePIDs[loc_i])-locMass) < 0.01) locHypothesisPID = dFinalStatePIDs[loc_i];
 	}
 
 	// loop over DIRC hits
@@ -234,6 +241,9 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	int box = (bar < 24) ? 1 : 0;
 	if((box == 0 && channel < dMaxChannels) || (box == 1 && channel >= dMaxChannels)) 
 		return locDIRCPhotons;
+
+	int pmt = channel/64;
+	double thetac_offset = dThetaC_offsets[box][pmt];
 	
 	// use hit time to determine if reflected or not
 	double hitTime = locDIRCHit->t - locFlightTime;
@@ -247,7 +257,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	}
 	
 	// needs to be X dependent choice for reflection cut (from CCDB?)
-	bool reflected = hitTime>0; // try all photons as reflected for now
+	bool reflected = hitTime>35; // try only some photons as reflected for now
 	
 	// get position along bar for calculated time 
 	double radiatorL = dDIRCGeometry->GetBarLength(bar);
@@ -292,7 +302,8 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				
 				luttheta = dir.Angle(TVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
-				tangle = momInBar.Angle(dir);//-0.002; //correction
+				tangle = momInBar.Angle(dir); 
+				tangle -= thetac_offset; //correction
 				
 				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
 				double totalTime = bartime+evtime;
@@ -336,7 +347,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// remove photon candidates not used in likelihood
-				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.05) continue;
+				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.03) continue;
 				
 				// save good photons to matched list
 				isGood = true;
@@ -376,15 +387,15 @@ double DDIRCLut::CalcLikelihood(double locExpectedThetaC, double locThetaC) cons
 	return locLikelihood;
 }
 
-double DDIRCLut::CalcAngle(TVector3 momInBar, double locMass) const {
-	return acos(sqrt(momInBar.Mag()*momInBar.Mag() + locMass*locMass)/momInBar.Mag()/dIndex);
+double DDIRCLut::CalcAngle(double locP, double locMass) const {
+	return acos(sqrt(locP*locP + locMass*locMass)/locP/dIndex);
 }
 
-map<Particle_t, double> DDIRCLut::CalcExpectedAngles(TVector3 momInBar) const {
+map<Particle_t, double> DDIRCLut::CalcExpectedAngles(double locP) const {
 	
 	map<Particle_t, double> locExpectedAngles;
 	for(uint loc_i = 0; loc_i<dFinalStatePIDs.size(); loc_i++) {
-		locExpectedAngles[dFinalStatePIDs[loc_i]] = acos(sqrt(momInBar.Mag()*momInBar.Mag() + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/momInBar.Mag()/dIndex);
+		locExpectedAngles[dFinalStatePIDs[loc_i]] = acos(sqrt(locP*locP + ParticleMass(dFinalStatePIDs[loc_i])*ParticleMass(dFinalStatePIDs[loc_i]))/locP/dIndex);
 	}
 	return locExpectedAngles;
 }

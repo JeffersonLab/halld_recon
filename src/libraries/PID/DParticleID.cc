@@ -1787,7 +1787,7 @@ bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &ext
 	}
 
 	// Calculate DIRC LUT
-	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locPID, locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams);
+	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, ParticleMass(locPID), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams);
 
 }
 

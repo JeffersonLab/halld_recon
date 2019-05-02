@@ -143,6 +143,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	if(!foundTOF || locTOFHitMatchParams->Get_DistanceToTrack() > 20.0) continue;
 	double toftrackdist = locTOFHitMatchParams->Get_DistanceToTrack();
+	double toftrackdeltat = locChargedTrackHypothesis->Get_TimeAtPOCAToVertex() - locChargedTrackHypothesis->t0();
 	Particle_t locPID = locTrackTimeBased->PID();
 
 	// get DIRC match parameters (contains LUT information)
@@ -165,6 +166,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
 	  fEvent->SetDcHits(locDCHits);
 	  fEvent->SetTofTrackDist(toftrackdist);
+	  fEvent->SetTofTrackDeltaT(toftrackdeltat);
 	  fEvent->SetInvMass(locInvP4.M());
 	  fEvent->SetMissMass(locMissingP4.M2());
 	  fEvent->SetChiSq(chisq);

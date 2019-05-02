@@ -1085,8 +1085,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 				Particle_t locPID = locTrackTimeBased->PID();
 				double locMass = ParticleMass(locPID);
-				double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
-				map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
+				double locAngle = dDIRCLut->CalcAngle(momInBar.Mag(), locMass);
+				map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar.Mag());
 
 				// get map of DIRCMatches to PMT hits
 				map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;

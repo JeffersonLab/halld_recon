@@ -177,8 +177,8 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
                   hExtrapolatedBarHitXY[locPID]->Fill(posInBar.X(), posInBar.Y());
         	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK          
 
-		  double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
-		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
+		  double locAngle = dDIRCLut->CalcAngle(locP, locMass);
+		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(locP);
 
 		  // get map of DIRCMatches to PMT hits
 		  map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
@@ -192,7 +192,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
 			  double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
 			  int locChannel = locDIRCPmtHits[loc_i]->ch%dMaxChannels;
-			  if(locHitTime > 0 && locHitTime < 100) locPhotonInclusive++;
+			  if(locHitTime > 0 && locHitTime < 150) locPhotonInclusive++;
 
 			  int pixel_row = dDIRCGeometry->GetPixelRow(locChannel);
 			  int pixel_col = dDIRCGeometry->GetPixelColumn(locChannel);
@@ -230,7 +230,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 					  }
 					  
 					  // fill histograms for candidate photons in timing cut
-					  if(fabs(locDeltaT) < 100.0) {
+					  if(fabs(locDeltaT) < 5.0) {
 						  hThetaC[locPID]->Fill(locThetaC);
 						  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
 						  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
