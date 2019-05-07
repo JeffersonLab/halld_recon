@@ -167,7 +167,29 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-		
+
+		///////////////////////////////////////////
+		// option to cheat and use truth bar hit //
+		///////////////////////////////////////////	
+		if(DIRC_TRUTH_BARHIT && locDIRCBarHits.size() > 0) {
+
+	                TVector3 bestMatchPos, bestMatchMom;
+                	double bestMatchDist = 999.;
+                	for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
+                        	TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
+                        	TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
+                        	if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
+                                	bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
+                                	bestMatchPos = locDIRCBarHitPos;
+                                	bestMatchMom = locDIRCBarHitMom;
+                        	}
+                	}
+
+                	momInBar = bestMatchMom;
+                	posInBar = bestMatchPos;
+        	}
+
+	
 		// get binning for histograms
 		int locBar = dDIRCGeometry->GetBar(posInBar.Y());
 		int locXbin = (int)(posInBar.X()/5.0) + 19;

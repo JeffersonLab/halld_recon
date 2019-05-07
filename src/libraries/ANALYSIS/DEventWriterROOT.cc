@@ -1624,17 +1624,26 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 
 	// DIRC
 	if(DIRC_OUTPUT) {
-		int locDIRCNumPhotons = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dNPhotons : 0;
+		int locDIRCNumPhotons = 0;
+		double locDIRCThetaC = 999.;
+		double locDIRCLele = 999.;
+		double locDIRCLpi = 999.;
+		double locDIRCLk = 999.;
+		double locDIRCLp = 999.;
+		auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
+		if(locDIRCMatchParams != NULL) {
+			locDIRCNumPhotons = locDIRCMatchParams->dNPhotons;
+			locDIRCThetaC = locDIRCMatchParams->dThetaC;
+			locDIRCLele =  locDIRCMatchParams->dLikelihoodElectron;
+			locDIRCLpi =  locDIRCMatchParams->dLikelihoodPion;	
+			locDIRCLk =  locDIRCMatchParams->dLikelihoodKaon;
+			locDIRCLp =  locDIRCMatchParams->dLikelihoodProton;
+		}
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locDIRCNumPhotons, locArrayIndex);
-		double locDIRCThetaC = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dThetaC : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locDIRCThetaC, locArrayIndex);
-		double locDIRCLele = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodElectron : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locDIRCLele, locArrayIndex);
-		double locDIRCLpi = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodPion : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locDIRCLpi, locArrayIndex);
-		double locDIRCLk = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodKaon : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locDIRCLk, locArrayIndex);
-		double locDIRCLp = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodProton : 0.0;
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
 	}
 }
