@@ -207,7 +207,8 @@ class async_filebuf : public std::filebuf {
       if (! readloop_active)
          return this->std::filebuf::seekoff(0, std::ios::cur, std::ios::in);
       else if (buffer_gptr == buffer_egptr) {
-         underflow();
+         if (segment_len[segment()] > 0)
+            underflow();
          if (buffer_gptr == buffer_egptr)
             return this->std::filebuf::seekoff(0, std::ios::cur, std::ios::in);
       }

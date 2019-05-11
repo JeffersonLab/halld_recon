@@ -3,6 +3,8 @@
 // Created: Wed May 1 09:22:00 EST 2019
 // Creator: richard.t.jones at uconn.edu
 //
+// Require: --std=c++11 -pthread
+//
 
 #include <string>
 #include <string.h>
@@ -68,6 +70,7 @@ int async_filebuf::readloop_terminate()
 #if VERBOSE_ASYNC_FILEBUF
    std::cout << THIS_ASYNCFB << "async_filebuf::readloop_terminate()" << std::endl;
 #endif
+   //std::cout << "bang!!!" << std::endl;
    if (readloop_active) {
       std::streampos pos = getpos();
       if (readloop_thread) {
@@ -85,7 +88,6 @@ int async_filebuf::readloop_terminate()
       segment_cond.clear();
       segment_pos.clear();
       segment_len.clear();
-std::cout << "bang" << std::endl;
    }
    return 0;
 }
@@ -101,17 +103,17 @@ int async_filebuf::readloop()
       while (readloop_active && segment_cond[seg] != sEmpty) {
          readloop_wake.wait(lk);
       }
-      lk.unlock();
       if (! readloop_active)
          break;
       segment_cond[seg] = sFilling;
+      lk.unlock();
       char *sbase = buffer_start + seg * segment_size;
       segment_pos[seg] = this->std::filebuf::seekoff(0, std::ios::cur, std::ios::in);
       std::streamsize nreq = buffer_end - sbase;
       nreq = (nreq > segment_size)? segment_size : nreq;
       segment_len[seg] = std::filebuf::xsgetn(sbase, nreq);
-      segment_cond[seg] = sFull;
       lk.lock();
+      segment_cond[seg] = sFull;
       readloop_woke.notify_one();
       seg = (seg + 1) % segment_count;
    }
@@ -143,12 +145,11 @@ int async_filebuf::underflow()
       readloop_wake.notify_one();
       segment_backstop = (segment_backstop + 1) % segment_count;
    }
-   if (segment_len[seg] == 0) {
-      return EOF;
-   }
    buffer_eback = buffer_start + seg * segment_size;
    buffer_egptr = buffer_eback + segment_len[seg];
    buffer_gptr = buffer_eback;
+   if (segment_len[seg] == 0)
+      return EOF;
    return (unsigned char)*buffer_gptr;
 }
 
@@ -198,7 +199,9 @@ std::streampos async_filebuf::seekpos(std::streampos pos, std::ios::openmode whi
       seg = prevseg;
    }
    while (pos >= segment_pos[seg] + segment_len[seg]) {
-      underflow();
+      buffer_gptr = buffer_egptr;
+      if (underflow() == EOF)
+         return std::streampos(std::streamoff(-1));
       seg = (seg + 1) % segment_count;
    }
    int off = pos - segment_pos[seg];
@@ -232,7 +235,7 @@ std::streamsize async_filebuf::xsgetn(char* s, std::streamsize n)
          if (shadow_ifs.read(shadowbuf, nbuf) && shadow_ifs.gcount() == nbuf) {
             for (int i=0; i<nbuf; ++i) {
                if (shadowbuf[i] != buffer_gptr[i]) {
-                  std::cout << "Error in async_filebuf::xsgetn - "
+                  std::cerr << "Error in async_filebuf::xsgetn - "
                                "data read from buffer does not match "
                                "what reading directly from the file "
                                "gives at the same offset! Cannot continue."
@@ -242,7 +245,7 @@ std::streamsize async_filebuf::xsgetn(char* s, std::streamsize n)
             }
          }
          else {
-            std::cout << "Error in async_filebuf::xsgetn - "
+            std::cerr << "Error in async_filebuf::xsgetn - "
                          "error reading from the shadow ifstream input. "
                          "Cannot continue."
                       << std::endl;
@@ -254,7 +257,7 @@ std::streamsize async_filebuf::xsgetn(char* s, std::streamsize n)
          buffer_gptr += nbuf;
          nleft -= nbuf;
       }
-      else if (underflow() == EOF){
+      else if (underflow() == EOF) {
          break;
       }
    }
