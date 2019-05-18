@@ -32,6 +32,7 @@ HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VE
 	buff  = NULL;
 
 	is_open = false;
+#ifndef USE_ASYNC_FILEBUF
 	ifs.open(filename.c_str());
 	if(!ifs.is_open()){
 		ClearErrorMessage();
@@ -39,7 +40,6 @@ HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VE
 		return;
 	}
 	
-#ifndef USE_ASYNC_FILEBUF
 	fbuff_size = 10000000; // 40MB input buffer
 	fbuff = new uint32_t[fbuff_size];;
 	fnext = fbuff;
@@ -49,9 +49,15 @@ HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VE
 #else	
 	// Use custom async_filebuf to buffer file input to save io bandwidth
 	// because of the read-ahead-then-back-up access pattern of evio input.
+	ifs.open("/dev/null");
 	async_filebuf* sb = new async_filebuf(1000000, 10, 2);
 	sb->open(filename, std::ios::in);
 	ifs.std::ios::rdbuf(sb);
+	if (! ifs.is_open()) {
+		ClearErrorMessage();
+		err_mess << "Unable to open EVIO file: " << filename;
+		return;
+	}
 #endif
 
 	buff_limit = 5000000; // Don't allow us to allocate more than 5M words for read buffer
@@ -91,7 +97,7 @@ HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VE
 //---------------------------------
 HDEVIO::~HDEVIO()
 {
-#ifndef USE_ASYNC_FILEBUF
+#ifdef USE_ASYNC_FILEBUF
 	delete ifs.std::ios::rdbuf();
 	ifs.std::ios::rdbuf(ifs.rdbuf());
 #endif
