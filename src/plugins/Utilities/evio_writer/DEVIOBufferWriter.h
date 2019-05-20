@@ -44,6 +44,8 @@
 #include <DAQ/DDAQConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/Df250Config.h>
+#include <DAQ/Df250Scaler.h>
+#include <DAQ/Df250AsyncPedestal.h>
 
 #include <DANA/DStatusBits.h>
 #include <TTAB/DTranslationTable.h>
