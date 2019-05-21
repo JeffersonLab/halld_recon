@@ -14,6 +14,7 @@
 #include <JANA/JFactory.h>
 #include <PID/DNeutralShower.h>
 #include <BCAL/DBCALShower.h>
+#include <FCAL/DFCALGeometry.h>
 
 using namespace std;
 using namespace jana;
@@ -32,10 +33,18 @@ class DNeutralShower_factory_PreSelect : public jana::JFactory<DNeutralShower>
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
+		const DFCALGeometry* dFCALGeometry = nullptr;
+
+
 		//Command-line values will override these
-                double dMinFCALE; //PRESELECT:MIN_FCAL_E 
-                double dMinBCALE; //PRESELECT:MIN_BCAL_E 
+        double dMinFCALE; //PRESELECT:MIN_FCAL_E 
+        double dMinBCALE; //PRESELECT:MIN_BCAL_E 
 		double dMinBCALNcell; //PRESELECT:MIN_BCAL_NCELL
+        double dMaxFCALR; //PRESELECT:MIN_FCAL_R
+        double dMaxBCALZ; //PRESELECT:MIN_BCAL_Z
+        double dFCALInnerRingCut; //PRESELECT:FCAL_INNER_CUT
+        
+        vector< int > dFCALInnerChannels;
 };
 
 #endif // _DNeutralShower_factory_PreSelect_
