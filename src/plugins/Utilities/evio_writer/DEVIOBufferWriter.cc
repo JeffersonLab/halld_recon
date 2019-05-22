@@ -250,8 +250,6 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	WriteF1Data(buff, F1hits, F1tts, F1configs, Nevents);
 	
 
-	cout << " NUMBER OF SCALERS = " << f250scalers.size() << endl;
-
 	// Write f250 hits
     // For now, output with the same data format as we got in
     if(f250pis.size() > 0)
@@ -676,6 +674,41 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 			buff[config_bank_idx] = buff.size() - config_bank_idx - 1;
 		}
 
+
+		// Write FADC scalers
+		if(f250scalers.size() > 0) {
+
+		  uint32_t scaler_bank_idx = buff.size();
+		  buff.push_back(0); // Total bank length (will be overwritten later)		  
+		  buff.push_back(0xEE100100); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+
+
+		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
+
+		    const Df250Scaler *scaler = f250scalers[ii];
+		    
+		    unsigned int sc_crate = scaler->crate;
+		    		    		    		   
+		    if(sc_crate == rocid){
+		      
+		      // Save header information
+		      buff.push_back(scaler->nsync);
+		      buff.push_back(scaler->trig_number);
+		      buff.push_back(scaler->version);
+		      buff.push_back(scaler->crate);
+		      
+		      if(scaler->fa250_sc.size() > 0){
+			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+			  buff.push_back(scaler->fa250_sc[sc_ch]);
+		      }
+		    
+  		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
+		      
+		    }		    
+		  }		  
+		}
+
+
 		// Write Data Block Bank Header
 		// In principle, we could write one of these for each module, but
 		// we write all modules into the same data block bank to save space.
@@ -850,11 +883,8 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 		}
 
 
-
-		// Write scalers
-
+		// Write FADC scalers
 		if(f250scalers.size() > 0) {
-
 
 		  uint32_t scaler_bank_idx = buff.size();
 		  buff.push_back(0); // Total bank length (will be overwritten later)		  
@@ -866,8 +896,7 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 		    const Df250Scaler *scaler = f250scalers[ii];
 		    
 		    unsigned int sc_crate = scaler->crate;
-		    
-		    		    		   
+		    		    		    		   
 		    if(sc_crate == rocid){
 		      
 		      // Save header information
@@ -883,10 +912,8 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 		    
   		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
 		      
-		    }
-		    
-		  }
-		  
+		    }		    
+		  }		  
 		}
 
 
