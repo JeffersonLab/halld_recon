@@ -52,6 +52,7 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	vector<const DCODAEventInfo*>     coda_events;
 	vector<const DCODAROCInfo*>       coda_rocinfos;
     vector<const DL1Info*>            l1_info;
+    vector<const Df250Scaler*>        f250scalars;
 
     // Optionally, allow the user to only save hits from specific objects
     if(objects_to_save.size()==0) {

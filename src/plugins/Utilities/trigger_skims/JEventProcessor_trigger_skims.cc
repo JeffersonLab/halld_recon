@@ -156,11 +156,11 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 			// FCAL LED trigger fired
 			is_FCAL_LED_trigger = true;
 		}
-		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 5
+		if (trig->fp_trig_mask & 0x010) {   // Trigger front-panel bit 5
 			// CCAL LED trigger fired
 			is_CCAL_LED_trigger = true;
 		}
-		if (trig->fp_trig_mask & 0x040) {   // Trigger front-panel bit 6
+		if (trig->fp_trig_mask & 0x020) {   // Trigger front-panel bit 6
 			// CCAL LED trigger fired
 			is_CCAL_LED_trigger = true;
 		}
