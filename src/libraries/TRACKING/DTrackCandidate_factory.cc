@@ -1271,12 +1271,17 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
    double q=fdccan->charge();
 
    // Check to see if the outer hit in the CDC does not exceed the radius of  
-     // the FDC position to try to avoid false matches...
+   // the FDC position to try to avoid false matches...
    unsigned int outer_index=cdchits.size()-1;
    DVector3 origin=cdchits[outer_index]->wire->origin;
    DVector3 dir=(1./cdchits[outer_index]->wire->udir.z())*cdchits[outer_index]->wire->udir;
    DVector3 cdc_outer_wire_pos=origin+(167.-origin.z())*dir;
    if (cdc_outer_wire_pos.Perp()>pos.Perp()) {
+     return false;
+   }
+   // Make sure that the rough position of the CDC track at the end plate 
+   // is not too far off from the position of the fdc track near the end plate
+   if ((cdc_outer_wire_pos-pos).Mag()>5.){
      return false;
    }
 
