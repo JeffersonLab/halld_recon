@@ -102,15 +102,15 @@ class DEVIOBufferWriter
 		void Writef250Data(vector<uint32_t> &buff,
                            vector<const Df250PulseData*>     &f250pulses,
                            vector<const Df250TriggerTime*>   &f250tts,
-                           vector<const Df250WindowRawData*> &f250wrds,
-                           unsigned int Nevents) const;
+			   vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
+		      	   unsigned int Nevents) const;
 
         // old (pre-Fall 2016) firmware data format
 		void Writef250Data(vector<uint32_t> &buff,
                            vector<const Df250PulseIntegral*> &f250pis,
-                           vector<const Df250TriggerTime*>   &f250tts,
-                           vector<const Df250WindowRawData*> &f250wrds,
-                           unsigned int Nevents) const;
+			   vector<const Df250TriggerTime*>   &f250tts,
+			   vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
+			   unsigned int Nevents ) const;
 
 		void Writef125Data(vector<uint32_t> &buff,
                            vector<const Df125PulseIntegral*> &f125pis,
