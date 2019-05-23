@@ -234,7 +234,7 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   } 
-  
+  /*
   if (jcalib->Get("BCAL/EOverPSigma",vals)==false){  
     map<string,double> &row = vals[0];
     dEOverPSigmaParams_BCAL.push_back(row["s0"]);
@@ -261,7 +261,7 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     dEOverPMeanParams_FCAL.push_back(row["m1"]);
     dEOverPMeanParams_FCAL.push_back(row["m2"]);
    }
-
+  */
   if (jcalib->Get("FCAL/TimeSigmas",vals)==false){ 
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
