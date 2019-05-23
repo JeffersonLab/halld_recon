@@ -51,7 +51,8 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	vector<const DEPICSvalue*>        epicsValues;
 	vector<const DCODAEventInfo*>     coda_events;
 	vector<const DCODAROCInfo*>       coda_rocinfos;
-    vector<const DL1Info*>            l1_info;
+	vector<const DL1Info*>            l1_info;
+	vector<const Df250Scaler*>        f250scalers;
 
     // Optionally, allow the user to only save hits from specific objects
     if(objects_to_save.size()==0) {
@@ -77,10 +78,12 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
         loop->Get(coda_events);
         loop->Get(coda_rocinfos);
         loop->Get(l1_info);
+	loop->Get(f250scalers);
     } else {
         // only save hits that correspond to certain reconstructed objects
         loop->Get(epicsValues);   // always read EPICS data
         loop->Get(l1_info);       // always read extra trigger data
+	loop->Get(f250scalers);
         loop->Get(coda_events);
         loop->Get(coda_rocinfos);
         loop->Get(f125configs);
@@ -246,12 +249,13 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 	// Write F1TDC hits
 	WriteF1Data(buff, F1hits, F1tts, F1configs, Nevents);
 	
+
 	// Write f250 hits
     // For now, output with the same data format as we got in
     if(f250pis.size() > 0)
-        Writef250Data(buff, f250pis, f250tts, f250wrds, Nevents);
+      Writef250Data(buff, f250pis, f250tts, f250wrds, f250scalers, Nevents);
     if(f250pulses.size() > 0)
-        Writef250Data(buff, f250pulses, f250tts, f250wrds, Nevents);
+      Writef250Data(buff, f250pulses, f250tts, f250wrds, f250scalers, Nevents);
 	
 	// Write f125 hits
 	Writef125Data(buff, f125pis, f125cdcpulses, f125fdcpulses, f125tts, f125wrds, f125configs, Nevents);
@@ -610,8 +614,8 @@ void DEVIOBufferWriter::WriteF1Data(vector<uint32_t> &buff,
 void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
                                       vector<const Df250PulseIntegral*> &f250pis,
                                       vector<const Df250TriggerTime*>   &f250tts,
-                                      vector<const Df250WindowRawData*> &f250wrds,
-                                      unsigned int Nevents) const
+                                      vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*>  &f250scalers, 
+                                      unsigned int Nevents ) const
 {
 	// Create lists of Pulse Integral objects indexed by rocid,slot
 	// At same time, make list of config objects to write
@@ -669,6 +673,41 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 			// Update Config Bank length
 			buff[config_bank_idx] = buff.size() - config_bank_idx - 1;
 		}
+
+
+		// Write FADC scalers
+		if(f250scalers.size() > 0) {
+
+		  uint32_t scaler_bank_idx = buff.size();
+		  buff.push_back(0); // Total bank length (will be overwritten later)		  
+		  buff.push_back(0xEE100100); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+
+
+		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
+
+		    const Df250Scaler *scaler = f250scalers[ii];
+		    
+		    unsigned int sc_crate = scaler->crate;
+		    		    		    		   
+		    if(sc_crate == rocid){
+		      
+		      // Save header information
+		      buff.push_back(scaler->nsync);
+		      buff.push_back(scaler->trig_number);
+		      buff.push_back(scaler->version);
+		      buff.push_back(scaler->crate);
+		      
+		      if(scaler->fa250_sc.size() > 0){
+			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+			  buff.push_back(scaler->fa250_sc[sc_ch]);
+		      }
+		    
+  		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
+		      
+		    }		    
+		  }		  
+		}
+
 
 		// Write Data Block Bank Header
 		// In principle, we could write one of these for each module, but
@@ -783,8 +822,8 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
                                       vector<const Df250PulseData*>     &f250pulses,
                                       vector<const Df250TriggerTime*>   &f250tts,
-                                      vector<const Df250WindowRawData*> &f250wrds,
-                                      unsigned int Nevents) const
+                                      vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
+                                      unsigned int Nevents ) const
 {
 	// Create lists of Pulse Integral objects indexed by rocid,slot
 	// At same time, make list of config objects to write
@@ -842,6 +881,41 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 			// Update Config Bank length
 			buff[config_bank_idx] = buff.size() - config_bank_idx - 1;
 		}
+
+
+		// Write FADC scalers
+		if(f250scalers.size() > 0) {
+
+		  uint32_t scaler_bank_idx = buff.size();
+		  buff.push_back(0); // Total bank length (will be overwritten later)		  
+		  buff.push_back(0xEE100100); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+
+
+		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
+
+		    const Df250Scaler *scaler = f250scalers[ii];
+		    
+		    unsigned int sc_crate = scaler->crate;
+		    		    		    		   
+		    if(sc_crate == rocid){
+		      
+		      // Save header information
+		      buff.push_back(scaler->nsync);
+		      buff.push_back(scaler->trig_number);
+		      buff.push_back(scaler->version);
+		      buff.push_back(scaler->crate);
+		      
+		      if(scaler->fa250_sc.size() > 0){
+			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+			  buff.push_back(scaler->fa250_sc[sc_ch]);
+		      }
+		    
+  		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
+		      
+		    }		    
+		  }		  
+		}
+
 
 		// Write Data Block Bank Header
 		// In principle, we could write one of these for each module, but
