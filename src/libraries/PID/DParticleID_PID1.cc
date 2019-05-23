@@ -304,7 +304,7 @@ DParticleID_PID1::~DParticleID_PID1()
 {
 
 }
-
+/*
 double DParticleID_PID1::GetEOverPMean(DetectorSystem_t detector,
 				       double p) const{
   double mean=0;
@@ -340,6 +340,7 @@ double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
   }
   return mean;
 }
+*/
 
 double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
