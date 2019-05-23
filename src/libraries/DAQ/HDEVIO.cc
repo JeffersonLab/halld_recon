@@ -50,7 +50,7 @@ HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VE
 	// Use custom async_filebuf to buffer file input to save io bandwidth
 	// because of the read-ahead-then-back-up access pattern of evio input.
 	ifs.open("/dev/null");
-	async_filebuf* sb = new async_filebuf(1000000, 10, 2);
+	async_filebuf* sb = new async_filebuf(30000000, 4, 1);
 	sb->open(filename, std::ios::in);
 	ifs.std::ios::rdbuf(sb);
 	if (! ifs.is_open()) {
