@@ -232,42 +232,42 @@ void DEVIOBufferWriter::WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &b
 
     unsigned int Nevents = loop->GetNevents();
 		
-	// Physics Bank Header
-	buff.clear();
-	buff.push_back(0); // Physics Event Length (must be updated at the end)
-	buff.push_back(0xFF701001);// 0xFF70=SEB in single event mode, 0x10=bank of banks, 0x01=1event
-	
-	// Write Built Trigger Bank
-	WriteBuiltTriggerBank(buff, loop, coda_rocinfos, coda_events);
-
-	// Write EventTag
-	WriteEventTagData(buff, loop->GetJEvent().GetStatus(), l3trigger);
-
-	// Write CAEN1290TDC hits
-	WriteCAEN1290Data(buff, caen1290hits, caen1290configs, Nevents);
-
-	// Write F1TDC hits
-	WriteF1Data(buff, F1hits, F1tts, F1configs, Nevents);
-	
-
-	// Write f250 hits
+    // Physics Bank Header
+    buff.clear();
+    buff.push_back(0); // Physics Event Length (must be updated at the end)
+    buff.push_back(0xFF701001);// 0xFF70=SEB in single event mode, 0x10=bank of banks, 0x01=1event
+    
+    // Write Built Trigger Bank
+    WriteBuiltTriggerBank(buff, loop, coda_rocinfos, coda_events);
+    
+    // Write EventTag
+    WriteEventTagData(buff, loop->GetJEvent().GetStatus(), l3trigger);
+    
+    // Write CAEN1290TDC hits
+    WriteCAEN1290Data(buff, caen1290hits, caen1290configs, Nevents);
+    
+    // Write F1TDC hits
+    WriteF1Data(buff, F1hits, F1tts, F1configs, Nevents);
+    
+    
+    // Write f250 hits
     // For now, output with the same data format as we got in
     if(f250pis.size() > 0)
       Writef250Data(buff, f250pis, f250tts, f250wrds, f250scalers, Nevents);
     if(f250pulses.size() > 0)
       Writef250Data(buff, f250pulses, f250tts, f250wrds, f250scalers, Nevents);
 	
-	// Write f125 hits
-	Writef125Data(buff, f125pis, f125cdcpulses, f125fdcpulses, f125tts, f125wrds, f125configs, Nevents);
-
-	// Write DIRC SSP hits
-       WriteDircData(buff, dirctdchits, dirctts, Nevents);
-	
+    // Write f125 hits
+    Writef125Data(buff, f125pis, f125cdcpulses, f125fdcpulses, f125tts, f125wrds, f125configs, Nevents);
+    
+    // Write DIRC SSP hits
+    WriteDircData(buff, dirctdchits, dirctts, Nevents);
+    
     // Write out extra TS data if it exists ("sync event")
     if(l1_info.size() > 0) {
-        WriteTSSyncData(loop, buff, l1_info[0]);
+      WriteTSSyncData(loop, buff, l1_info[0]);
     }
-
+    
     // save any extra objects 
     for(vector<const JObject *>::iterator obj_itr = objects_to_save.begin();
         obj_itr != objects_to_save.end(); obj_itr++) {
@@ -619,18 +619,21 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 {
 	// Create lists of Pulse Integral objects indexed by rocid,slot
 	// At same time, make list of config objects to write
-	map<uint32_t, map<uint32_t, vector<const Df250PulseIntegral*> > > modules; // outer map index is rocid, inner map index is slot
+        map<uint32_t, map<uint32_t, vector<const Df250PulseIntegral*> > > modules; // outer map index is rocid, inner map index is slot
 	map<uint32_t, set<const Df250Config*> > configs;
 	for(uint32_t i=0; i<f250pis.size(); i++){
-        const Df250PulseIntegral *pi = f250pis[i];
-        if(write_out_all_rocs || (rocs_to_write_out.find(pi->rocid) != rocs_to_write_out.end()) ) {
-            modules[pi->rocid][pi->slot].push_back(pi);
+	  const Df250PulseIntegral *pi = f250pis[i];
+	  if(write_out_all_rocs || (rocs_to_write_out.find(pi->rocid) != rocs_to_write_out.end()) ) {
+	    modules[pi->rocid][pi->slot].push_back(pi);
             
             const Df250Config *config = NULL;
             pi->GetSingle(config);
             if(config) configs[pi->rocid].insert(config);
-        }
-    }
+	  }
+	}
+
+
+
 	
 	// Make sure entries exist for all Df250WindowRawData objects as well
 	// so when we loop over rocid,slot below we can write those out under
@@ -672,40 +675,6 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 			
 			// Update Config Bank length
 			buff[config_bank_idx] = buff.size() - config_bank_idx - 1;
-		}
-
-
-		// Write FADC scalers
-		if(f250scalers.size() > 0) {
-
-		  uint32_t scaler_bank_idx = buff.size();
-		  buff.push_back(0); // Total bank length (will be overwritten later)		  
-		  buff.push_back(0xEE100100); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
-
-
-		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
-
-		    const Df250Scaler *scaler = f250scalers[ii];
-		    
-		    unsigned int sc_crate = scaler->crate;
-		    		    		    		   
-		    if(sc_crate == rocid){
-		      
-		      // Save header information
-		      buff.push_back(scaler->nsync);
-		      buff.push_back(scaler->trig_number);
-		      buff.push_back(scaler->version);
-		      buff.push_back(scaler->crate);
-		      
-		      if(scaler->fa250_sc.size() > 0){
-			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
-			  buff.push_back(scaler->fa250_sc[sc_ch]);
-		      }
-		    
-  		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
-		      
-		    }		    
-		  }		  
 		}
 
 
@@ -810,9 +779,121 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 		// Update Data Block Bank length
 		buff[data_block_bank_idx] = buff.size() - data_block_bank_idx - 1;
 		
+
+		// A.S. Write FADC scalers
+		if(f250scalers.size() > 0) {
+		  
+		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
+
+		    const Df250Scaler *scaler = f250scalers[ii];
+		    
+		    unsigned int sc_crate = scaler->crate;
+		    
+		    if(sc_crate == rocid){
+		      
+		      uint32_t scaler_block_bank_idx = buff.size();
+		      buff.push_back(0); // Total bank length (will be overwritten later)		  
+		      buff.push_back(0xEE100101); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+		      
+		      // Save header information
+		      buff.push_back(scaler->nsync);
+		      buff.push_back(scaler->trig_number);
+		      buff.push_back(scaler->version);
+		      
+		      if(scaler->fa250_sc.size() > 0){
+			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+			  buff.push_back(scaler->fa250_sc[sc_ch]);
+		      }
+		      
+		      // Update Scaler Bank length
+		      buff[scaler_block_bank_idx] = buff.size() - scaler_block_bank_idx - 1;
+		      
+		    }		    
+		  }		  
+		}   // FADC scalers exist
+
+
 		// Update Physics Event's Data Bank length
 		buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
-	}
+
+	}   // Pulse Integral Data
+
+
+
+	// A.S. Write fadc scalers for sync events for crates, which have no hits (Pulse Integral)
+	
+	if(f250scalers.size() > 0) {	  
+	  
+	  vector <unsigned int> scaler_index;
+	  
+	  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){	    
+	    
+	    const Df250Scaler *scaler = f250scalers[ii];  
+	    unsigned int sc_crate = scaler->crate;
+	    
+	    int crate_found = 0;
+	    
+	    
+	    for(uint32_t jj = 0; jj < f250pis.size(); jj++){
+	      const Df250PulseIntegral *pi = f250pis[jj];
+	      if(write_out_all_rocs || (rocs_to_write_out.find(pi->rocid) != rocs_to_write_out.end()) ) {
+		if(pi->rocid == sc_crate){
+		  crate_found = 1;
+		  break;
+		}	      
+	      }	      
+	      
+	    }
+	    
+	    if(crate_found == 0)	      
+	      scaler_index.push_back(ii);
+	  }
+	  
+	  
+	  // Write scalers to the data bank
+	  for(unsigned int ii = 0; ii < scaler_index.size(); ii++){
+	    
+	    const Df250Scaler *scaler = f250scalers[scaler_index[ii]]; 
+	    
+
+	    // Write Physics Event's Data Bank Header for this rocid
+	    uint32_t data_bank_idx = buff.size();
+	    buff.push_back(0); // Total bank length (will be overwritten later)
+	    buff.push_back( (scaler->crate<<16) + 0x1001 ); // 0x10=bank of banks, 0x01=1 event
+
+	  
+	    uint32_t scaler_block_bank_idx = buff.size();
+	    buff.push_back(0); // Total bank length (will be overwritten later)		  
+	    buff.push_back(0xEE100101); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+	    
+	    // Save header information
+	    buff.push_back(scaler->nsync);
+	    buff.push_back(scaler->trig_number);
+	    buff.push_back(scaler->version);
+	    
+	    if(scaler->fa250_sc.size() > 0){
+	      for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+		buff.push_back(scaler->fa250_sc[sc_ch]);
+	    }
+	    
+	    // Update Scaler Bank length
+	    buff[scaler_block_bank_idx] = buff.size() - scaler_block_bank_idx - 1;
+	    
+	    
+	    // Update Physics Event's Data Bank length
+	    buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
+	  
+	  }
+
+	}  //  FADC scalers exist
+
+
+
+
+
+
+
+
 }
 
 //------------------
@@ -825,21 +906,23 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
                                       vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
                                       unsigned int Nevents ) const
 {
+
 	// Create lists of Pulse Integral objects indexed by rocid,slot
 	// At same time, make list of config objects to write
 	map<uint32_t, map<uint32_t, vector<const Df250PulseData*> > > modules; // outer map index is rocid, inner map index is slot
 	map<uint32_t, set<const Df250Config*> > configs;
 	for(uint32_t i=0; i<f250pulses.size(); i++){
-        const Df250PulseData *pulse = f250pulses[i];
-        if(write_out_all_rocs || (rocs_to_write_out.find(pulse->rocid) != rocs_to_write_out.end()) ) {
+	  const Df250PulseData *pulse = f250pulses[i];
+	  if(write_out_all_rocs || (rocs_to_write_out.find(pulse->rocid) != rocs_to_write_out.end()) ) {
             modules[pulse->rocid][pulse->slot].push_back(pulse);
             
             const Df250Config *config = NULL;
             pulse->GetSingle(config);
             if(config) configs[pulse->rocid].insert(config);
-        }
-    }
+	  }
+	}
 	
+
 	// Make sure entries exist for all Df250WindowRawData objects as well
 	// so when we loop over rocid,slot below we can write those out under
 	// the appropriate block header.
@@ -850,11 +933,13 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 	for(it=modules.begin(); it!=modules.end(); it++){
 		uint32_t rocid = it->first;
 		
+
 		// Write Physics Event's Data Bank Header for this rocid
 		uint32_t data_bank_idx = buff.size();
 		buff.push_back(0); // Total bank length (will be overwritten later)
 		buff.push_back( (rocid<<16) + 0x1001 ); // 0x10=bank of banks, 0x01=1 event
-		
+			
+
 		// Write Config Bank
 		set<const Df250Config*> &confs = configs[rocid];
 		if(!confs.empty()){
@@ -880,40 +965,6 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 			
 			// Update Config Bank length
 			buff[config_bank_idx] = buff.size() - config_bank_idx - 1;
-		}
-
-
-		// Write FADC scalers
-		if(f250scalers.size() > 0) {
-
-		  uint32_t scaler_bank_idx = buff.size();
-		  buff.push_back(0); // Total bank length (will be overwritten later)		  
-		  buff.push_back(0xEE100100); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
-
-
-		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
-
-		    const Df250Scaler *scaler = f250scalers[ii];
-		    
-		    unsigned int sc_crate = scaler->crate;
-		    		    		    		   
-		    if(sc_crate == rocid){
-		      
-		      // Save header information
-		      buff.push_back(scaler->nsync);
-		      buff.push_back(scaler->trig_number);
-		      buff.push_back(scaler->version);
-		      buff.push_back(scaler->crate);
-		      
-		      if(scaler->fa250_sc.size() > 0){
-			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
-			  buff.push_back(scaler->fa250_sc[sc_ch]);
-		      }
-		    
-  		      buff[scaler_bank_idx] = buff.size() - scaler_bank_idx - 1;
-		      
-		    }		    
-		  }		  
 		}
 
 
@@ -1015,9 +1066,115 @@ void DEVIOBufferWriter::Writef250Data(vector<uint32_t> &buff,
 		// Update Data Block Bank length
 		buff[data_block_bank_idx] = buff.size() - data_block_bank_idx - 1;
 		
+
+		// A.S. Write FADC scalers
+		if(f250scalers.size() > 0) {
+		  
+		  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){
+
+		    const Df250Scaler *scaler = f250scalers[ii];
+		    
+		    unsigned int sc_crate = scaler->crate;
+		    
+		    if(sc_crate == rocid){
+
+
+		      uint32_t scaler_block_bank_idx = buff.size();
+		      buff.push_back(0); // Total bank length (will be overwritten later)		  
+		      buff.push_back(0xEE100101); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+		      
+		      // Save header information
+		      buff.push_back(scaler->nsync);
+		      buff.push_back(scaler->trig_number);
+		      buff.push_back(scaler->version);
+		      
+		      if(scaler->fa250_sc.size() > 0){
+			for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+			  buff.push_back(scaler->fa250_sc[sc_ch]);
+		      }
+		      
+		      // Update Scaler Bank length
+		      buff[scaler_block_bank_idx] = buff.size() - scaler_block_bank_idx - 1;
+		      
+		    }		    
+		  }		  
+		}   // FADC scalers exist
+		
 		// Update Physics Event's Data Bank length
 		buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
-	}
+
+	}  
+
+
+	// A.S. Write fadc scalers for sync events for crates, which have no hits (Pulse Integral)
+	
+	if(f250scalers.size() > 0) {	  
+
+	  vector <unsigned int> scaler_index;
+	  
+	  for(unsigned int ii = 0; ii < f250scalers.size(); ii++){	    
+
+	    const Df250Scaler *scaler = f250scalers[ii];  
+	    unsigned int sc_crate = scaler->crate;
+
+
+	    int crate_found = 0;
+	    
+	    for(uint32_t jj = 0; jj < f250pulses.size(); jj++){
+	      const Df250PulseData *pulse = f250pulses[jj];
+	      if(write_out_all_rocs || (rocs_to_write_out.find(pulse->rocid) != rocs_to_write_out.end()) ){
+		if(pulse->rocid == sc_crate){
+		  crate_found = 1;
+		  break;
+		}	      
+	      }	      
+	    }
+	    
+	    if(crate_found == 0){	      
+	      scaler_index.push_back(ii);
+	    }
+	  }
+	  
+	  
+	  // Write scalers to the data bank
+	  for(unsigned int ii = 0; ii < scaler_index.size(); ii++){
+
+	    const Df250Scaler *scaler = f250scalers[scaler_index[ii]]; 
+	    
+
+	    // Write Physics Event's Data Bank Header for this rocid
+	    uint32_t data_bank_idx = buff.size();
+	    buff.push_back(0); // Total bank length (will be overwritten later)
+	    buff.push_back( (scaler->crate<<16) + 0x1001 ); // 0x10=bank of banks, 0x01=1 event
+
+	  
+	    uint32_t scaler_block_bank_idx = buff.size();
+	    buff.push_back(0); // Total bank length (will be overwritten later)		  
+	    buff.push_back(0xEE100101); // 0xEE01 = Scaler Bank Tag, 0x01=u32int
+	    
+	    // Save header information
+	    buff.push_back(scaler->nsync);
+	    buff.push_back(scaler->trig_number);
+	    buff.push_back(scaler->version);
+	    
+	    if(scaler->fa250_sc.size() > 0){
+	      for(unsigned int sc_ch = 0; sc_ch < scaler->fa250_sc.size(); sc_ch++)
+		buff.push_back(scaler->fa250_sc[sc_ch]);
+	    }
+	    
+	    // Update Scaler Bank length
+	    buff[scaler_block_bank_idx] = buff.size() - scaler_block_bank_idx - 1;
+	    
+	    
+	    // Update Physics Event's Data Bank length
+	    buff[data_bank_idx] = buff.size() - data_bank_idx - 1;
+	  
+	  }
+
+	}  //  FADC scalers exist
+
+
+
 }
 
 //------------------
