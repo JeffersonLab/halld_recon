@@ -1529,14 +1529,15 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 	int locPxParamIndex = locKinFitParticle->Get_PxParamIndex();
 	int locVxParamIndex = locKinFitParticle->Get_VxParamIndex();
 	int locCommonVxParamIndex = locKinFitParticle->Get_CommonVxParamIndex();
+	TVector3 locBField = dKinFitUtils->Get_BField(locPosition);
+	bool IsNonZeroBField = (locBField.Mag()>1e-4)?true:false;
 
-	if((locCharge != 0) && dKinFitUtils->Get_IsBFieldNearBeamline() && ((locKinFitParticleType == d_DetectedParticle) || (locKinFitParticleType == d_BeamParticle)))
+	if((locCharge != 0) && IsNonZeroBField && ((locKinFitParticleType == d_DetectedParticle) || (locKinFitParticleType == d_BeamParticle)))
 	{
 		//detected charged particle in b-field (can be beam particle)
 		if(dDebugLevel > 30)
 			cout << "DKinFitter: Calc_dF_Vertex() Section 2; PID = " << locKinFitParticle->Get_PID() << endl;
 
-		TVector3 locBField = dKinFitUtils->Get_BField(locPosition);
 		TVector3 locH = locBField.Unit();
 		TVector3 locPCrossH = locMomentum.Cross(locH);
 		TVector3 locPCrossDeltaX = locMomentum.Cross(locDeltaX);
@@ -1545,7 +1546,64 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 		double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 		double locDeltaXDotH = locDeltaX.Dot(locH);
 		double locPDotH = locMomentum.Dot(locH);
+		double locPDotHsq= locPDotH*locPDotH;
+		double PsqMinusPDotHsq=locMomentum.Mag2()-locPDotHsq;
+		double RhoS=locA*locDeltaXDotH/locPDotH;
+		double sinRhoS=sin(RhoS);
+		double cosRhoS=cos(RhoS);
+		double OneMinusCosRhoS=1.-cosRhoS;
 
+		// Guard against division by zero errors
+		if (fabs(locPDotH)<1e-15){
+		  locPDotH+=(locPDotH>0.)?1e-15:-1e-15;
+		}
+
+		dF(locFIndex, 0) = locDeltaXDotH*locPDotH
+		  - locDeltaX.Dot(locMomentum)
+		  + PsqMinusPDotHsq*sinRhoS/locA;
+		dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
+		  + PsqMinusPDotHsq*OneMinusCosRhoS/locA;
+
+		dF_dEta(locFIndex, locVxParamIndex) = -locPDotH*locH.X()
+		  + locMomentum.X() - PsqMinusPDotHsq*cosRhoS*locH.X()/locPDotH;
+		dF_dEta(locFIndex, locVxParamIndex + 1) = -locPDotH*locH.Y()
+		  + locMomentum.Y() - PsqMinusPDotHsq*cosRhoS*locH.Y()/locPDotH;
+		dF_dEta(locFIndex, locVxParamIndex + 2) = -locPDotH*locH.Z()
+		  + locMomentum.Z() - PsqMinusPDotHsq*cosRhoS*locH.Z()/locPDotH;
+
+		dF_dEta(locFIndex, locPxParamIndex) = locDeltaXDotH*locH.X()
+		  - locDeltaX.X() 
+		  + (2./locA)*sinRhoS*(locMomentum.X()-locPDotH*locH.X())
+		  - PsqMinusPDotHsq*cosRhoS*locDeltaXDotH*locH.X()/locPDotHsq;
+		dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaXDotH*locH.Y()
+		  - locDeltaX.Y() 
+		  + (2./locA)*sinRhoS*(locMomentum.Y()-locPDotH*locH.Y())
+		  - PsqMinusPDotHsq*cosRhoS*locDeltaXDotH*locH.Y()/locPDotHsq;
+		dF_dEta(locFIndex, locPxParamIndex + 2) = locDeltaXDotH*locH.Z()
+		  - locDeltaX.Z() 
+		  + (2./locA)*sinRhoS*(locMomentum.Z()-locPDotH*locH.Z())
+		  - PsqMinusPDotHsq*cosRhoS*locDeltaXDotH*locH.Z()/locPDotHsq;
+
+		dF_dEta(locFIndex + 1, locVxParamIndex)
+		  = -locPCrossH.X() - PsqMinusPDotHsq*sinRhoS*locH.X()/locPDotH;
+		dF_dEta(locFIndex + 1, locVxParamIndex + 1)
+		  = -locPCrossH.Y() - PsqMinusPDotHsq*sinRhoS*locH.Y()/locPDotH;
+		dF_dEta(locFIndex + 1, locVxParamIndex + 2)
+		  = -locPCrossH.Z() - PsqMinusPDotHsq*sinRhoS*locH.Z()/locPDotH;
+		
+		dF_dEta(locFIndex + 1, locPxParamIndex)
+		  = -locDeltaXCrossH.X()
+		  + (2./locA)*OneMinusCosRhoS*(locMomentum.X()-locPDotH*locH.X())
+		  - PsqMinusPDotHsq*sinRhoS*locDeltaXDotH*locH.X()/locPDotHsq;
+		dF_dEta(locFIndex + 1, locPxParamIndex + 1)
+		  = -locDeltaXCrossH.Y()
+		  + (2./locA)*OneMinusCosRhoS*(locMomentum.Y()-locPDotH*locH.Y())
+		  - PsqMinusPDotHsq*sinRhoS*locDeltaXDotH*locH.Y()/locPDotHsq;
+		dF_dEta(locFIndex + 1, locPxParamIndex + 2)
+		  = -locDeltaXCrossH.Z()
+		  + (2./locA)*OneMinusCosRhoS*(locMomentum.Z()-locPDotH*locH.Z())
+		  - PsqMinusPDotHsq*sinRhoS*locDeltaXDotH*locH.Z()/locPDotHsq;
+		/*
 		TVector3 locQ, locM, locD;
 		double locJ;
 		Calc_Vertex_Params(locKinFitParticle, locJ, locQ, locM, locD);
@@ -1568,7 +1626,8 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 		dF_dEta(locFIndex + 1, locVxParamIndex) = locD.X();
 		dF_dEta(locFIndex + 1, locVxParamIndex + 1) = locD.Y();
 		dF_dEta(locFIndex + 1, locVxParamIndex + 2) = locD.Z();
-
+		*/
+		
 		dF_dXi(locFIndex, locCommonVxParamIndex) -= dF_dEta(locFIndex, locVxParamIndex);
 		dF_dXi(locFIndex, locCommonVxParamIndex + 1) -= dF_dEta(locFIndex, locVxParamIndex + 1);
 		dF_dXi(locFIndex, locCommonVxParamIndex + 2) -= dF_dEta(locFIndex, locVxParamIndex + 2);
@@ -1577,7 +1636,7 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 		dF_dXi(locFIndex + 1, locCommonVxParamIndex + 1) -= dF_dEta(locFIndex + 1, locVxParamIndex + 1);
 		dF_dXi(locFIndex + 1, locCommonVxParamIndex + 2) -= dF_dEta(locFIndex + 1, locVxParamIndex + 2);
 	}
-	else if((locCharge != 0) && dKinFitUtils->Get_IsBFieldNearBeamline() && (locKinFitParticleType == d_DecayingParticle))
+	else if((locCharge != 0) && IsNonZeroBField && (locKinFitParticleType == d_DecayingParticle))
 	{
 		//constraining this decaying charged particle in b-field //one-time contributions from decaying particle, does not include the particles it is replaced by (elsewhere)
 		if(dDebugLevel > 30)
@@ -1587,7 +1646,6 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
 		double locJ;
 		Calc_Vertex_Params(locKinFitParticle, locJ, locQ, locM, locD);
 
-		TVector3 locBField = dKinFitUtils->Get_BField(locPosition);
 		TVector3 locH = locBField.Unit();
 		double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
 
