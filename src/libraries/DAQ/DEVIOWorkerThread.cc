@@ -1011,7 +1011,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
 			case 0xE10:
-				Parsef250scalerBank(rocid, iptr, iend);
+				Parsef250scalerBank(rocid, iptr, iend_data_block_bank);
 				break;
 			
 			// The CDAQ system leave the raw trigger info in the Physics event data
@@ -1025,10 +1025,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// higher level data objects to save disk space and speed up
 			// specialized processing (e.g. pi0 calibration)
 			case 0xD01:
-				ParseDVertexBank(iptr, iend);
+				ParseDVertexBank(iptr, iend_data_block_bank);
 				break;
 			case 0xD02:
-				ParseDEventRFBunchBank(iptr, iend);
+				ParseDEventRFBunchBank(iptr, iend_data_block_bank);
 				break;
 
 			case 5:
