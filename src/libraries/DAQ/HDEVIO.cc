@@ -5,8 +5,12 @@
 // Creator: davidl (on Darwin harriet 13.4.0 i386)
 //
 
-
+// n.b. the async_filebuf code does not currently compile
+// on Mac OSX so we disable it's use here when compiling
+// on that pltform.
+#ifndef __APPLE__
 #define USE_ASYNC_FILEBUF 1
+#endif // __APPLE__
 
 #include <stdlib.h>
 #include <string.h>

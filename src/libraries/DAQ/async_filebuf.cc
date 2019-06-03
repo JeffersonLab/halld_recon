@@ -6,6 +6,11 @@
 // Require: --std=c++11 -pthread
 //
 
+// This code does not compile on Mac OS X using
+// Xcode 10.1 = Apple LLVM version 10.0.0 (clang-1000.10.44.4)
+// 6/3/2019 DL
+#ifndef __APPLE__
+
 #include <string>
 #include <string.h>
 #include <stdexcept>
@@ -263,3 +268,8 @@ std::streamsize async_filebuf::xsgetn(char* s, std::streamsize n)
    }
    return n - nleft;
 }
+
+#else  // __APPLE__
+int async_filebuff_disable_for_mac_osx = 0; // symbol so compiled object isn't empty
+#endif // __APPLE__
+
