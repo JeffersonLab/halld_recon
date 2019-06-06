@@ -8,6 +8,7 @@
 #include <math.h>
 #include "DCCALShower.h"
 #include "DCCALGeometry.h"
+#include "hycal.h"
 
 DCCALShower::DCCALShower()
 {
@@ -28,6 +29,13 @@ DCCALShower::DCCALShower()
   Emax     =  0;
   time     =  0;
   sigma_t  =  0;
+  
+  for(int icell=0; icell<MAX_CC; icell++) {
+    id_storage[icell] = 0;
+    en_storage[icell] = 0;
+    t_storage[icell]  = 0;
+  }
+  
 }
 
 DCCALShower::~DCCALShower()

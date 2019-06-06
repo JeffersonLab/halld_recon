@@ -10,6 +10,7 @@ using namespace std;
 #include "DIRC/DDIRCGeometry.h"
 #include "DIRC/DDIRCPmtHit_factory.h"
 #include "TTAB/DTTabUtilities.h"
+#include "DAQ/DDIRCTriggerTime.h"
 using namespace jana;
 
 //------------------
@@ -83,6 +84,25 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+    // check that SSP board timestamps match for all modules 
+    vector<const DDIRCTriggerTime*> timestamps;
+    loop->Get(timestamps);
+    if(timestamps.size() > 0) {
+	    for (unsigned int i=0; i < timestamps.size()-1; i++) {
+		    if(timestamps[i]->time != timestamps[i+1]->time) 
+			    return NOERROR;
+	    }
+    }
+
+    vector<const DCODAROCInfo*> locCODAROCInfos;
+    eventLoop->Get(locCODAROCInfos);
+    uint64_t locReferenceClockTime = 0;
+    for (const auto& locCODAROCInfo : locCODAROCInfos) {
+        if(locCODAROCInfo->rocid == 92) {
+                locReferenceClockTime = locCODAROCInfo->timestamp;
+        }
+    }
+
     vector<const DDIRCTDCDigiHit*> digihits;
     loop->Get(digihits);
     
@@ -123,8 +143,21 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    
 		    // Apply calibration constants
 		    double T = (double)digihit_lead->time;
-		    hit->t = T - time_offsets[box][channel] + t_base[box];
-		    
+		    hit->t = T;
+		    if(locReferenceClockTime%2 == 0) 
+			hit->t += 4;
+
+	            applyTimeOffset = true;
+		    applyTimewalk = true;
+		    double slope = 0.3;
+		    double timeOverThresholdPeak = 50;
+		    if(applyTimeOffset) {
+			    hit->t = hit->t - time_offsets[box][channel] + t_base[box];
+		    }
+		    if(applyTimewalk) {
+			    hit->t += slope*(timeOverThreshold - timeOverThresholdPeak);
+		    }
+ 
 		    hit->AddAssociatedObject(digihit_lead);
 		    hit->AddAssociatedObject(digihit_trail);
 		    _data.push_back(hit);

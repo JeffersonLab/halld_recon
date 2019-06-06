@@ -475,7 +475,24 @@ jerror_t JEventSource_EVIOpp::GetEvent(JEvent &event)
 	// Get next event from list, waiting if necessary
 	unique_lock<std::mutex> lck(PARSED_EVENTS_MUTEX);
 	while(parsed_events.empty()){
-		if(DONE) return NO_MORE_EVENTS_IN_SOURCE;
+		if(DONE){
+			done_reading = true;
+			
+			// There is a bug in JANA where an event id is inserted into
+			// the in_progress member before checking that this call
+			// succeeded. Normally, ids are removed via JEventSource::FreeEvent
+			// but this last one doesn't actually exist so we must remove
+			// it here.
+			// n.b. we check for an entry equal to Ncalls_to_GetEvent
+			// since that is what JEventSource::GetEvent stores there.
+			// In principle, if this ever gets fixed in JANA then it
+			// will not break this code.
+			pthread_mutex_lock(&in_progress_mutex);
+			auto it = in_progess_events.find(Ncalls_to_GetEvent);
+			if( it != in_progess_events.end() )in_progess_events.erase(it);
+			pthread_mutex_unlock(&in_progress_mutex);
+			return NO_MORE_EVENTS_IN_SOURCE;
+		}
 		NEVENTBUFF_STALLED++;
 		PARSED_EVENTS_CV.wait_for(lck,std::chrono::milliseconds(1));
 	}

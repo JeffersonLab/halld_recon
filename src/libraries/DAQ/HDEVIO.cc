@@ -5,6 +5,13 @@
 // Creator: davidl (on Darwin harriet 13.4.0 i386)
 //
 
+// n.b. the async_filebuf code does not currently compile
+// on Mac OSX so we disable it's use here when compiling
+// on that pltform.
+#ifndef __APPLE__
+#define USE_ASYNC_FILEBUF 1
+#endif // __APPLE__
+
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
@@ -14,10 +21,14 @@ using namespace std;
 
 #include "HDEVIO.h"
 
+#if USE_ASYNC_FILEBUF
+#include <async_filebuf.h>
+#endif
+
 //---------------------------------
 // HDEVIO    (Constructor)
 //---------------------------------
-HDEVIO::HDEVIO(string filename, bool read_map_file, int verbose):filename(filename),VERBOSE(verbose)
+HDEVIO::HDEVIO(string fname, bool read_map_file, int verbose):filename(fname),VERBOSE(verbose)
 {
 	// These must be initialized in case we return early
 	// so they aren't deleted in the destructor if they
@@ -26,6 +37,7 @@ HDEVIO::HDEVIO(string filename, bool read_map_file, int verbose):filename(filena
 	buff  = NULL;
 
 	is_open = false;
+#ifndef USE_ASYNC_FILEBUF
 	ifs.open(filename.c_str());
 	if(!ifs.is_open()){
 		ClearErrorMessage();
@@ -39,7 +51,20 @@ HDEVIO::HDEVIO(string filename, bool read_map_file, int verbose):filename(filena
 	fbuff_end = fbuff;
 	fbuff_len = 0;
 	_gcount = 0;
-	
+#else	
+	// Use custom async_filebuf to buffer file input to save io bandwidth
+	// because of the read-ahead-then-back-up access pattern of evio input.
+	ifs.open("/dev/null");
+	async_filebuf* sb = new async_filebuf(30000000, 4, 1);
+	sb->open(filename, std::ios::in);
+	ifs.std::ios::rdbuf(sb);
+	if (! ifs.is_open()) {
+		ClearErrorMessage();
+		err_mess << "Unable to open EVIO file: " << filename;
+		return;
+	}
+#endif
+
 	buff_limit = 5000000; // Don't allow us to allocate more than 5M words for read buffer
 	buff_size = 1024;     // initialize with 4kB buffer
 	buff_len = 0;
@@ -77,6 +102,10 @@ HDEVIO::HDEVIO(string filename, bool read_map_file, int verbose):filename(filena
 //---------------------------------
 HDEVIO::~HDEVIO()
 {
+#ifdef USE_ASYNC_FILEBUF
+	delete ifs.std::ios::rdbuf();
+	ifs.std::ios::rdbuf(ifs.rdbuf());
+#endif
 	if(ifs.is_open()) ifs.close();
 	if(buff ) delete[] buff;
 	if(fbuff) delete[] fbuff;
@@ -98,7 +127,13 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 	/// its performance. The main difference between this and
 	/// ifstream::read is that this does not return an istream&
 	/// reference.
-	
+
+#if USE_ASYNC_FILEBUF
+	ifs.read(s, nwords);
+	_gcount = ifs.gcount();
+    return;
+#endif
+
 	// Number of words left in fbuff	
 	uint64_t left = ((uint64_t)fbuff_end - (uint64_t)fnext)/sizeof(uint32_t);
 	
@@ -106,7 +141,7 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 	uint64_t Ncopied = nwords<(int64_t)left ? (uint64_t)nwords:left;
 	_gcount = Ncopied*sizeof(uint32_t);
 	if(_gcount>0) memcpy((char*)s, (char*)fnext, _gcount);
-	left -= Ncopied;
+	//left -= Ncopied;   // this is true, but not used later on
 	fnext += Ncopied;
 	s += _gcount; // advance pointer to user buff in case we need to write more
 	
@@ -152,6 +187,11 @@ void HDEVIO::buff_read(char* s, streamsize nwords)
 //---------------------------------
 void HDEVIO::buff_seekg (streamoff off, ios_base::seekdir way)
 {
+#if USE_ASYNC_FILEBUF
+	ifs.seekg(off, way);
+	return;
+#endif
+
 	// Convert offset from bytes to words
 	int64_t off_words = (int64_t)off/(int64_t)sizeof(uint32_t);
 
@@ -1410,32 +1450,32 @@ void HDEVIO::ReadFileMap(string fname, bool warn_if_not_found)
 	if(fname=="") return;
 	
 	// Open map file
-	ifstream ifs(fname.c_str());
-	if(!ifs.is_open()){
+	ifstream mifs(fname.c_str());
+	if(!mifs.is_open()){
 		if(warn_if_not_found) cerr << "Unable to open \""<<fname<<"\" for reading!" << endl;
 		return;
 	}
 
 	// Check if file was closed cleanly
 	string eof_string("# --- End of map ---");
-	ifs.seekg(-eof_string.length()*2, ifs.end); // not guaranteed how many char's endl is
+	mifs.seekg(-eof_string.length()*2, mifs.end); // not guaranteed how many char's endl is
 	bool closed_cleanly = false;
 	string line;
-	while(getline(ifs,line)){
+	while(getline(mifs,line)){
 		if(string(line).find(eof_string)!=string::npos) closed_cleanly = true;
 	}
 	if(!closed_cleanly){
 		cerr << "Found map file \"" << fname << "\" but it wasn't closed cleanly. Ignoring." << endl;
-		ifs.close();
+		mifs.close();
 		return;
 	}
 	
 	// Reset file pointers to start of file
-	ifs.clear();
-	ifs.seekg(0);
+	mifs.clear();
+	mifs.seekg(0);
 	
 	// Loop over header
-	while(getline(ifs, line)){
+	while(getline(mifs, line)){
 		
 		if(line.length() < 5   ) continue;
 		if(line.find("#") == 0 ) continue;
@@ -1446,7 +1486,7 @@ void HDEVIO::ReadFileMap(string fname, bool warn_if_not_found)
 	EVIOBlockRecord br;
 	bool first_block_found = false;
 	string s;
-	while(getline(ifs, s)){
+	while(getline(mifs, s)){
 		stringstream ss(s);
 		if(ss.str().find(eof_string) != string::npos ) break; // end of map trailer
 		if(ss.str().find("#") == 0 ) continue; // ignore all other comment lines

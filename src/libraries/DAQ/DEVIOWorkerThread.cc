@@ -407,7 +407,6 @@ void DEVIOWorkerThread::ParseEPICSbank(uint32_t* &iptr, uint32_t *iend)
 	}
 	
 	uint32_t *iend_epics = &iptr[epics_bank_len];
-	if( iend_epics < iend ) iend = iend_epics;
 	
 	// Advance to first daughter bank
 	iptr++;
@@ -1012,7 +1011,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
 			case 0xE10:
-				Parsef250scalerBank(rocid, iptr, iend);
+				Parsef250scalerBank(rocid, iptr, iend_data_block_bank);
 				break;
 			
 			// The CDAQ system leave the raw trigger info in the Physics event data
@@ -1026,10 +1025,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// higher level data objects to save disk space and speed up
 			// specialized processing (e.g. pi0 calibration)
 			case 0xD01:
-				ParseDVertexBank(iptr, iend);
+				ParseDVertexBank(iptr, iend_data_block_bank);
 				break;
 			case 0xD02:
-				ParseDEventRFBunchBank(iptr, iend);
+				ParseDEventRFBunchBank(iptr, iend_data_block_bank);
 				break;
 
 			case 5:
@@ -2111,7 +2110,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	uint32_t itrigger   = 0xFFFFFFFF;
 	uint32_t dev_id     = 0xFFFFFFFF;
 	uint32_t ievent_cnt = 0xFFFFFFFF;
-	uint32_t last_itrigger = itrigger;
+	//uint32_t last_itrigger = itrigger;
 	for( ;  iptr<iend; iptr++){
 		if(((*iptr>>31) & 0x1) == 0)continue;
 
@@ -2133,8 +2132,9 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 			case 2:  // Event Header
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
-				if(itrigger != last_itrigger) pe = *pe_iter++;
-				last_itrigger = itrigger;
+				pe = *pe_iter++;
+				//if(itrigger != last_itrigger) pe = *pe_iter++;
+				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;

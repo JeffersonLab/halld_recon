@@ -187,7 +187,8 @@ class DReferenceTrajectory{
 			       const DVector3 &pos2,const DVector3 &mom2,
 			       const TMatrixFSym &cov1,
 			       const TMatrixFSym &cov2,
-			       DVector3 &pos,double &vertex_chi2) const;
+			       DVector3 &pos,double &vertex_chi2,
+			       double q1=1., double q2=1.) const;
 
 
 		swim_step_t *swim_steps;

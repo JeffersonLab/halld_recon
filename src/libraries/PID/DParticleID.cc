@@ -403,15 +403,15 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       
       for (unsigned int j=0;j<fdc_extrapolations.size();j++){
 	double z=fdc_extrapolations[j].position.z();
-	if (fabs(z-fdchits[i]->wire->origin.z())<1e-3){
+	if (fabs(z-fdchits[i]->wire->origin.z())<0.5){
 	  mom=fdc_extrapolations[j].momentum;
+	  double gas_thickness = 1.0; // cm
+	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
+					gas_thickness/cos(mom.Theta()), 
+					mom.Mag()));
 	  break;
 	}
       }
-   
-      double gas_thickness = 1.0; // cm
-      dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
-				    gas_thickness/cos(mom.Theta()), mom.Mag()));
     }
   }
 
@@ -485,6 +485,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 		}
 		locdEdx_FDC /= locdx_FDC; //weight is dx/dx_total
 	}
+	
 	return NOERROR;
 }
 
@@ -520,14 +521,6 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dE_amp=hit->dE_amp;
       dedx.p=mom.Mag();
 
-      bool aq_same = 0;
-      if (dedx.dE_amp == dedx.dE) aq_same = 1; 
-
-      // amp = q for simulated data and for mode 5 when integral was not read out
-      // in this case use the amplitude correction for both
-
-      // amplitude correction
-   
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
         double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
@@ -535,19 +528,15 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       }
 
 
-      if (aq_same) {
+  // integral correction
 
-        dedx.dE = dedx.dE_amp;
+      double dmax = CDC_GAIN_DOCA_PARS[0];
+      double dmin = CDC_GAIN_DOCA_PARS[1];
 
-      } else {    // integral correction
+      double reference;
+      double this_run;
 
-	double dmax = CDC_GAIN_DOCA_PARS[0];
-	double dmin = CDC_GAIN_DOCA_PARS[1];
-
-	double reference;
-	double this_run;
-
-	if (hit->dist < dmin) {
+      if (hit->dist < dmin) {
 
 	  reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
 	  reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
@@ -555,23 +544,20 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
 	  this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
 	  this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
 
-	} else { 
+      } else { 
 
 	  reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
 	  this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
 
-	}
+      }
 
-        dedx.dE = dedx.dE * reference/this_run;
-
-      }   // end of new integral correction
-
+      dedx.dE = dedx.dE * reference/this_run;
 
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;
 
+      return NOERROR;
     }
-    return NOERROR;
   }
   
   return VALUE_OUT_OF_RANGE;
@@ -3237,19 +3223,41 @@ double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData
 
 double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locPull) const
 {
-	if((locChargedHypo->t0_detector() == SYS_NULL) || (locChargedHypo->t1_detector() == SYS_NULL))
-	{
-		// not matched to any hits
-		locNDF = 0;
-		locPull = 0.0;
-		return 0.0;
-	}
+  double locT0=locChargedHypo->t0();
+  const DTrackTimeBased *locTrack=locChargedHypo->Get_TrackTimeBased();
+  double locP=locTrack->momentum().Mag();
+  Particle_t locPID=locChargedHypo->PID();
 
-	double locStartTimeError = locChargedHypo->t0_err();
-	double locTimeDifferenceVariance = (*locChargedHypo->errorMatrix())(6, 6) + locStartTimeError*locStartTimeError;
-	locPull = (locChargedHypo->t0() - locChargedHypo->Get_TimeAtPOCAToVertex())/sqrt(locTimeDifferenceVariance);
-	locNDF = 1;
-	return locPull*locPull;
+  double locChiSq_sum=0.;
+  locNDF = 0;
+  locPull = 0.0;
+
+  shared_ptr<const DTOFHitMatchParams>locTofParms=locChargedHypo->Get_TOFHitMatchParams();
+  if (locTofParms!=NULL){
+    double dt_tof=locTofParms->dHitTime-locTofParms->dFlightTime-locT0;
+    double vart_tof=GetTimeVariance(SYS_TOF,locPID,locP);
+    locChiSq_sum+=(dt_tof*dt_tof)/vart_tof;
+    locNDF++;
+  }
+
+  shared_ptr<const DBCALShowerMatchParams>locBcalParms=locChargedHypo->Get_BCALShowerMatchParams();
+  if (locBcalParms!=NULL){
+    double dt_bcal=locBcalParms->dBCALShower->t-locBcalParms->dFlightTime-locT0;
+    double vart_bcal=GetTimeVariance(SYS_BCAL,locPID,locP);
+    locChiSq_sum+=(dt_bcal*dt_bcal)/vart_bcal;
+    locNDF++;
+  }
+
+  shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
+  if (locFcalParms!=NULL){
+    double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
+    double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
+    locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
+    locNDF++;
+  }
+
+  locPull=sqrt(locChiSq_sum);
+  return locChiSq_sum;
 }
 
 double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutralHypo, unsigned int &locNDF, double& locTimingPull) const
@@ -3284,14 +3292,57 @@ double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutra
 void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHypothesis) const
 {
 	CalcDCdEdxChiSq(locChargedTrackHypothesis);
+	unsigned int locNDF_Total=locChargedTrackHypothesis->Get_NDF_DCdEdx();
+	double locChiSq_Total=locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+
+	// track momentum
+	const DTrackTimeBased *track=locChargedTrackHypothesis->Get_TrackTimeBased();
+	double p=track->momentum().Mag();
+
+	// Add dEdx from SC for protons/antiprotons
+	if (locChargedTrackHypothesis->PID()==Proton
+	    || locChargedTrackHypothesis->PID()==AntiProton){
+	   shared_ptr<const DSCHitMatchParams>scparms=locChargedTrackHypothesis->Get_SCHitMatchParams();
+	   if (scparms!=NULL){
+	     double beta=p/track->energy();
+	     double diff=scparms->dEdx-GetProtondEdxMean_SC(beta);
+	     double sigma=GetProtondEdxSigma_SC(beta);
+	     double chisq=diff*diff/(sigma*sigma);
+	     locChiSq_Total+=chisq;
+	     locNDF_Total+=1;
+	   }
+	}
+	// Add E/p for electrons/positrons
+	if (locChargedTrackHypothesis->PID()==Electron
+	    || locChargedTrackHypothesis->PID()==Positron){
+	  shared_ptr<const DBCALShowerMatchParams>bcalparms=locChargedTrackHypothesis->Get_BCALShowerMatchParams(); 
+	  shared_ptr<const DFCALShowerMatchParams>fcalparms=locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+	  if (bcalparms!=NULL){
+	    double E_over_p_mean=1.;
+	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
+	    double sigma=0.1; 
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  } 
+	  if (fcalparms!=NULL){
+	    double E_over_p_mean=1.;
+	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
+	    double sigma=0.1;
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  }
+	}
 
 	unsigned int locTimingNDF = 0;
 	double locTimingPull = 0.0;
 	double locTimingChiSq = Calc_TimingChiSq(locChargedTrackHypothesis, locTimingNDF, locTimingPull);
 	locChargedTrackHypothesis->Set_ChiSq_Timing(locTimingChiSq, locTimingNDF);
 
-	unsigned int locNDF_Total = locChargedTrackHypothesis->Get_NDF_Timing() + locChargedTrackHypothesis->Get_NDF_DCdEdx();
-	double locChiSq_Total = locChargedTrackHypothesis->Get_ChiSq_Timing() + locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+	locNDF_Total += locTimingNDF;
+	locChiSq_Total += locTimingChiSq;
+
 	double locFOM = (locNDF_Total > 0) ? TMath::Prob(locChiSq_Total, locNDF_Total) : numeric_limits<double>::quiet_NaN();
 	locChargedTrackHypothesis->Set_ChiSq_Overall(locChiSq_Total, locNDF_Total, locFOM);
 }

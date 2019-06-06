@@ -81,53 +81,6 @@ class DTrackCandidate_factory_StraightLine:public jana::JFactory<DTrackCandidate
       jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
       jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-      double fdc_drift_distance(double time);
-      jerror_t DoFilter(double t0,double start_z,DMatrix4x1 &S,
-            vector<const DFDCPseudo *>&hits,vector<const DCDCTrackHit *>&cdc_hits,
-            set<unsigned int> &used_cdc_hits);
-      jerror_t DoFilter(double t0,double OuterZ,DMatrix4x1 &S,
-            vector<const DCDCTrackHit *>&hits,double dzsign);
-
-      jerror_t SetReferenceTrajectory(double t0,double z,DMatrix4x1 &S,
-            deque<trajectory_t>&trajectory,
-            vector<const DFDCPseudo *>&pseudos);
-      jerror_t SetReferenceTrajectory(double t0,double z,DMatrix4x1 &S,
-            deque<trajectory_t>&trajectory,
-            const DCDCTrackHit *last_cdc,double &dzsign); 
-
-      jerror_t KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
-            vector<const DFDCPseudo *>&hits,
-            vector<int>&used_fdc_hits,
-            vector<const DCDCTrackHit *>&cdc_hits,
-            deque<trajectory_t>&trajectory,
-            vector<fdc_update_t>&pulls,
-            vector<cdc_update_t>&cdc_pulls,
-            double &chi2,unsigned int &ndof);
-      jerror_t KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
-            vector<const DCDCTrackHit *>&hits,
-            vector<int>&used_hits,
-            deque<trajectory_t>&trajectory,
-            vector<cdc_update_t>&pulls,
-            double &chi2,unsigned int &ndof,bool timebased, unsigned int iter);
-      jerror_t Smooth(deque<trajectory_t>&trajectory,
-            vector<cdc_update_t>&cdc_updates,
-            vector<const DCDCTrackHit *>&hits,
-            DTrackCandidate *cand);
-      jerror_t Smooth(deque<trajectory_t>&trajectory,
-            vector<fdc_update_t>&updates,
-            vector<const DFDCPseudo *>&hits,
-            vector<cdc_update_t>&cdc_pulls,
-            vector<const DCDCTrackHit *>&cdc_hits,
-            DTrackCandidate *cand); 
-
-      shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(shared_ptr<TMatrixFSym>C,DMatrix4x1 &S);
-
-      double CDCDriftDistance(double t);
-      double CDCDriftDistance(double dphi, double delta,double t);
-      double CDCDriftVariance(double t);
-      double fdc_drift_variance(double);
-      unsigned int Locate(vector<double>&xx,double x);
-
       bool COSMICS,DEBUG_HISTS,USE_FDC_DRIFT_TIMES,SKIP_CDC,SKIP_FDC;
       float CHI2CUT;
       int DO_PRUNING;
@@ -135,27 +88,6 @@ class DTrackCandidate_factory_StraightLine:public jana::JFactory<DTrackCandidate
 
       DTrackFinder *finder;
       const DParticleID* dParticleID;
-
-      // drift time tables
-      vector<double>cdc_drift_table;
-      vector<double>fdc_drift_table;
-
-      // Resolution parameters
-      double CDC_RES_PAR1,CDC_RES_PAR2,CDC_RES_PAR3;
-      // Parameters for drift resolution
-      double DRIFT_RES_PARMS[3];
-      double DRIFT_FUNC_PARMS[4];
-      double CDC_MATCH_DOCA;
-      int VERBOSE;
-      bool isMC;
-
-      // variables to deal with CDC straw sag
-      vector<vector<double> >max_sag;
-      vector<vector<double> >sag_phi_offset;
-      double long_drift_func[3][3];
-      double short_drift_func[3][3];
-
-      double cdc_endplate_z, cdc_endplate_rmin, cdc_endplate_rmax,cdc_length;
 
       // Diagnostic histograms
       TH2F *Hvres;

@@ -511,6 +511,13 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
 		if (!locIsHDDMEvent) goodtrigger=0;		
 	}
+	// calculate total BCAL energy in order to catch BCAL LED events
+	loop->Get(dbcalhits);
+	double total_bcal_energy = 0.;
+	for(unsigned int i=0; i<dbcalhits.size(); i++) {
+		total_bcal_energy += dbcalhits[i]->E;
+	}
+	if (total_bcal_energy > 12.) goodtrigger=0;
 	
 	if (!goodtrigger) {
 		return NOERROR;
@@ -518,13 +525,12 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 
 	loop->Get(dbcaldigihits);
 	loop->Get(dbcaltdcdigihits);
-	loop->Get(dbcalhits);
 	loop->Get(dbcaltdchits);
 	loop->Get(dbcaluhits);
 	loop->Get(dbcalpoints);
 	loop->Get(dbcalclusters);
 	loop->Get(dbcalshowers);
-	
+
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -718,15 +724,17 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
             bcal_Uhit_tTDC_twalk->Fill(Uhit->t_TDC - tdchit->t);
 			int ix = Uhit->module;
 			int iy = (Uhit->sector-1)*4 + Uhit->layer;
-			if(Uhit->end == DBCALGeometry::kUpstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
-			}
-			if(Uhit->end == DBCALGeometry::kDownstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
+			if (adchit->pulse_peak>=120) { // Only compare TDC and ADC where pulse is big enough that time-walk is small.
+				if(Uhit->end == DBCALGeometry::kUpstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
+				}
+				if(Uhit->end == DBCALGeometry::kDownstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
+				}
 			}
 		} else {
 			bcal_Uhit_noTDC_E->Fill(Uhit->E);

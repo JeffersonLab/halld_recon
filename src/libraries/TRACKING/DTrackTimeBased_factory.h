@@ -94,7 +94,7 @@ class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
 //  DetectorSystem_t mDetector, mStartDetector;
   DetectorSystem_t mStartDetector;
   int mNumHypPlus,mNumHypMinus;
-  bool dIsNoFieldFlag;
+  bool dIsNoFieldFlag,INSERT_MISSING_HYPOTHESES;
   bool USE_SC_TIME; // use start counter hits for t0
   bool USE_FCAL_TIME; // use fcal hits for t0
   bool USE_BCAL_TIME; // use bcal hits for t0
