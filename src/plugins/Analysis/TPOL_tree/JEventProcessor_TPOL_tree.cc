@@ -22,7 +22,7 @@ using namespace std;
 #include <TAGGER/DTAGMGeometry.h>
 #include <PID/DBeamPhoton.h>
 #include <PID/DEventRFBunch.h>
-//#include <DAQ/DBeamCurrent.h>
+#include <DAQ/DBeamCurrent.h>
 
 const int NSECTORS = DTPOLHit_factory::NSECTORS;
 const double SECTOR_DIVISION = DTPOLHit_factory::SECTOR_DIVISION;
@@ -145,9 +145,9 @@ jerror_t JEventProcessor_TPOL_tree::brun(JEventLoop *eventLoop, int32_t runnumbe
 {
     // This is called whenever the run number changes
     // Set up beam current factory for is_Fiducial
-    //dBeamCurrentFactory = new DBeamCurrent_factory();
-    //dBeamCurrentFactory->init();
-    //dBeamCurrentFactory->brun(eventLoop, runnumber);
+    dBeamCurrentFactory = new DBeamCurrent_factory();
+    dBeamCurrentFactory->init();
+    dBeamCurrentFactory->brun(eventLoop, runnumber);
 
     // Set up beam period for beam bunches
     //vector<double> locBeamPeriodVector;
