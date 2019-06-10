@@ -37,8 +37,8 @@ private:
 
     clock_t t;
 
-    //DBeamCurrent_factory *dBeamCurrentFactory;
-    double dBeamBunchPeriod;
+    DBeamCurrent_factory *dBeamCurrentFactory;
+    //double dBeamBunchPeriod;
 
     DTreeInterface* dTreeInterface;
     static thread_local DTreeFillData dTreeFillData;
