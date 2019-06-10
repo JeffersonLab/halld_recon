@@ -21,7 +21,8 @@ using namespace std;
 #include <TAGGER/DTAGHGeometry.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <PID/DBeamPhoton.h>
-#include <DAQ/DBeamCurrent.h>
+#include <PID/DEventRFBunch.h>
+//#include <DAQ/DBeamCurrent.h>
 
 const int NSECTORS = DTPOLHit_factory::NSECTORS;
 const double SECTOR_DIVISION = DTPOLHit_factory::SECTOR_DIVISION;
@@ -74,35 +75,46 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
     // ROOT mutex like this:
     //
 
+    t= clock();
 
     // Construct DTreeInterface and register branches for TPOL tree
     double locNumTAGHhits = 500;
     double locNumTAGMhits = 200;
+    double locNumPShits = 200;
+    double locNumRFhits = 200;
 
     dTreeInterface = DTreeInterface::Create_DTreeInterface("TPOL_tree","tree_TPOL.root");
     DTreeBranchRegister locTreeBranchRegister;
 
     locTreeBranchRegister.Register_Single<UShort_t>("nadc");
     locTreeBranchRegister.Register_Single<ULong64_t>("eventnum");
-    locTreeBranchRegister.Register_Single<Bool_t>("isFiducial");
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("rocid","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("slot","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("channel","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("rocid","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("slot","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("channel","nadc",NSECTORS);
     locTreeBranchRegister.Register_FundamentalArray<UInt_t>("itrigger","nadc",NSECTORS);
     locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_integral","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_max","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_min","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_samp1","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("sector","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_max","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_min","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("i_w_max","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("i_w_min","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_samp1","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("sector","nadc",NSECTORS);
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("phi","nadc",NSECTORS);
-    locTreeBranchRegister.Register_Single<ULong64_t>("ntpol");
+    locTreeBranchRegister.Register_Single<UShort_t>("ntpol");
     locTreeBranchRegister.Register_FundamentalArray<UShort_t>("waveform","ntpol",NSECTORS*150);
-    locTreeBranchRegister.Register_Single<Double_t>("PSenergy_lhit");
-    locTreeBranchRegister.Register_Single<Double_t>("PSenergy_rhit");
-    locTreeBranchRegister.Register_Single<Double_t>("PSCtime_lhit");
-    locTreeBranchRegister.Register_Single<Double_t>("PSCtime_rhit");
-    locTreeBranchRegister.Register_Single<Double_t>("PStime_lhit");
-    locTreeBranchRegister.Register_Single<Double_t>("PStime_rhit");
+    locTreeBranchRegister.Register_Single<Bool_t>("isFiducial");
+    locTreeBranchRegister.Register_Single<UShort_t>("nPSC");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSCtime_lhit","nPSC",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSCtime_rhit","nPSC",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("PSCmodule_lhit","nPSC",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("PSCmodule_rhit","nPSC",locNumPShits);
+    locTreeBranchRegister.Register_Single<UShort_t>("nPS");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSenergy_lhit","nPS",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSenergy_rhit","nPS",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PStime_lhit","nPS",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("PStime_rhit","nPS",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("PScolumn_lhit","nPS",locNumPShits);
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("PScolumn_rhit","nPS",locNumPShits);
     locTreeBranchRegister.Register_Single<UShort_t>("ntagh");
     locTreeBranchRegister.Register_FundamentalArray<Bool_t>("TAGH_DBeam","ntagh",locNumTAGHhits);
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("TAGHenergy","ntagh",locNumTAGHhits);
@@ -113,7 +125,14 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("TAGMenergy","ntagm",locNumTAGMhits);
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("TAGMtime","ntagm",locNumTAGMhits);
     locTreeBranchRegister.Register_FundamentalArray<UInt_t>("TAGMcolumn","ntagm",locNumTAGMhits);
+    locTreeBranchRegister.Register_Single<UShort_t>("nRF");
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("RFDetSys","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTimeVar","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("RFNumParticleVotes","nRF",locNumRFhits);
     dTreeInterface->Create_Branches(locTreeBranchRegister);
+
+    count = 0;
 
     //
     return NOERROR;
@@ -126,14 +145,14 @@ jerror_t JEventProcessor_TPOL_tree::brun(JEventLoop *eventLoop, int32_t runnumbe
 {
     // This is called whenever the run number changes
     // Set up beam current factory for is_Fiducial
-    dBeamCurrentFactory = new DBeamCurrent_factory();
-    dBeamCurrentFactory->init();
-    dBeamCurrentFactory->brun(eventLoop, runnumber);
+    //dBeamCurrentFactory = new DBeamCurrent_factory();
+    //dBeamCurrentFactory->init();
+    //dBeamCurrentFactory->brun(eventLoop, runnumber);
 
     // Set up beam period for beam bunches
-    vector<double> locBeamPeriodVector;
-    eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period",locBeamPeriodVector);
-    dBeamBunchPeriod = locBeamPeriodVector[0];
+    //vector<double> locBeamPeriodVector;
+    //eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period",locBeamPeriodVector);
+    //dBeamBunchPeriod = locBeamPeriodVector[0];
     
     return NOERROR;
 }
@@ -148,7 +167,9 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     // loop->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
-    
+   
+    //if (count > 10000) return NOERROR;
+ 
     // Construct trigger information
     const DL1Trigger *trig_words = NULL;
     uint32_t trig_mask, fp_trig_mask;
@@ -168,6 +189,10 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (trig_bits!=8) {
         return NOERROR;
     }
+
+    //Get RF bunch information
+    vector<const DEventRFBunch*> rfBunch;
+    loop->Get(rfBunch);
     
     // Get fADC 250 windowraws 
     vector<const Df250WindowRawData*> windowraws;
@@ -201,27 +226,61 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (!beamCurrent.empty())
     {
 	// Check that photons are is_Fiducial
-    	Bool_t isFiducial = beamCurrent[0]->is_fiducial;
+   	Bool_t isFiducial = beamCurrent[0]->is_fiducial;
     	dTreeFillData.Fill_Single<Bool_t>("isFiducial",isFiducial);
     }
 
     // PSC coincidences
-    if (cpairs.size()>=1) {
-        // take pair with smallest time difference from sorted vector
-        const DPSCHit* clhit = cpairs[0]->ee.first; // left hit in coarse PS
-        const DPSCHit* crhit = cpairs[0]->ee.second;// right hit in coarse PS
- 	double PSC_tdiff = fabs(clhit->t-crhit->t);
-	if (PSC_tdiff > 6.0)
-	{
-		japp->RootFillUnLock(this);
-		return NOERROR;
-	}
-        // PSC,PS coincidences
-        if (fpairs.size()>=1) {
+
+    //if (cpairs.size()<1 || fpairs.size()<1) return NOERROR;
+   
+    dTreeFillData.Fill_Single<ULong64_t>("eventnum",eventnumber);
+ 
+    // loop over RF hits and save
+    unsigned int nRF = rfBunch.size();
+    dTreeFillData.Fill_Single<UShort_t>("nRF",nRF);
+    for (unsigned int i_RF = 0; i_RF < nRF; i_RF++)
+    {
+        dTreeFillData.Fill_Array<Double_t>("RFTime",rfBunch[i_RF]->dTime,i_RF);
+        dTreeFillData.Fill_Array<Double_t>("RFTimeVar",rfBunch[i_RF]->dTimeVariance,i_RF);
+        dTreeFillData.Fill_Array<UShort_t>("RFNumParticleVotes",rfBunch[i_RF]->dNumParticleVotes,i_RF);
+    }
+
+    // take pair with smallest time difference from sorted vector
+    unsigned int nPSC = cpairs.size(); 
+    dTreeFillData.Fill_Single<UShort_t>("nPSC",nPSC);
+    for (unsigned int i_PSC = 0; i_PSC < nPSC; i_PSC++)
+    {
+	const DPSCHit* clhit = cpairs[i_PSC]->ee.first; // left hit in coarse PS
+	const DPSCHit* crhit = cpairs[i_PSC]->ee.second;// right hit in coarse PS
+
+	dTreeFillData.Fill_Array<Double_t>("PSCtime_lhit",clhit->t,i_PSC);
+	dTreeFillData.Fill_Array<Double_t>("PSCtime_rhit",crhit->t,i_PSC);
+        dTreeFillData.Fill_Array<Int_t>("PSCmodule_lhit",clhit->module,i_PSC);
+	dTreeFillData.Fill_Array<Int_t>("PSCmodule_rhit",crhit->module,i_PSC);
+    }
+	
+    // Removed check on ensuring the pair are well timed
+	
+    // PSC,PS coincidences
             // take pair with smallest time difference from sorted vector
-            const DPSPair::PSClust* flhit = fpairs[0]->ee.first;  // left hit in fine PS
-            const DPSPair::PSClust* frhit = fpairs[0]->ee.second; // right hit in fine PS
-            if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1])
+    unsigned int nPS = fpairs.size();
+    dTreeFillData.Fill_Single<UShort_t>("nPS",nPS);
+    for (unsigned int i_PS = 0; i_PS < nPS; i_PS++)
+    {
+        //const DPSPair::PSClust* 
+        const DPSPair::PSClust* flhit = fpairs[i_PS]->ee.first;  // left hit in fine PS
+	//const DPSPair::PSClust* 
+	const DPSPair::PSClust* frhit = fpairs[i_PS]->ee.second; // right hit in fine PS
+
+        dTreeFillData.Fill_Array<Double_t>("PSenergy_lhit",flhit->E,i_PS);
+        dTreeFillData.Fill_Array<Double_t>("PSenergy_rhit",frhit->E,i_PS);
+        dTreeFillData.Fill_Array<Double_t>("PStime_lhit",flhit->t,i_PS);
+        dTreeFillData.Fill_Array<Double_t>("PStime_rhit",frhit->t,i_PS);
+        dTreeFillData.Fill_Array<Int_t>("PScolumn_lhit",flhit->column,i_PS);
+        dTreeFillData.Fill_Array<Int_t>("PScolumn_rhit",frhit->column,i_PS);
+
+     /**       if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1])
 	    {
     	        japp->RootFillUnLock(this);
 	        return NOERROR;
@@ -230,183 +289,182 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    {	
 		japp->RootFillUnLock(this);
 		return NOERROR;
+	    }**/
+   }
+   
+   // Loop over TAGH hits and match to DBeamPhotons
+   unsigned int htag = 0;
+   unsigned int htag_DBeam = 0;
+   for (unsigned int i=0; i < taghhits.size(); i++) {
+        const DTAGHHit* tag = taghhits[i];
+        if (!tag->has_TDC||!tag->has_fADC) continue;
+	if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
+	dTreeFillData.Fill_Array<Double_t>("TAGHenergy",tag->E,htag);
+        dTreeFillData.Fill_Array<Double_t>("TAGHtime",tag->t,htag);
+        dTreeFillData.Fill_Array<UInt_t>("TAGHcounter",tag->counter_id,htag);
+	unsigned int same = 0;
+        for (unsigned int j=0; j < beamPhotons.size(); j++)
+	{
+	    const DTAGHHit* tagh;
+	    beamPhotons[j]->GetSingle(tagh);
+	    if (!tagh) continue;
+	    if (!tagh->has_TDC || !tagh->has_fADC) continue;
+	    if (std::isnan(tagh->t) || std::isnan(tagh->E)) 
+	    {
+		if (VERBOSE) jerr<<"Found TAGH with NAN."<<tagh->counter_id<<endl;
+		continue;
 	    }
-            double t_lhit = clhit->t; 
-            double E_pair = flhit->E+frhit->E;
-     
-	    dTreeFillData.Fill_Single<ULong64_t>("eventnum",eventnumber);
-	    dTreeFillData.Fill_Single<Double_t>("PSenergy_lhit",flhit->E);
-            dTreeFillData.Fill_Single<Double_t>("PSenergy_rhit",frhit->E);
-	    dTreeFillData.Fill_Single<Double_t>("PSCtime_lhit",clhit->t);
-	    dTreeFillData.Fill_Single<Double_t>("PSCtime_rhit",crhit->t);
-	    dTreeFillData.Fill_Single<Double_t>("PStime_lhit",flhit->t);
-	    dTreeFillData.Fill_Single<Double_t>("PStime_rhit",frhit->t);
+	    if (tagh->t != tag->t || tagh->E != tag->E || tagh->counter_id != tag->counter_id) continue;
+	    same++;
+	    htag_DBeam++;
+	}
+	if (same > 1 && VERBOSE) jerr<<"Found more than one match for TAGH."<<endl;
+	if (same == 0) dTreeFillData.Fill_Array<Bool_t>("TAGH_DBeam",false,htag);
+	else dTreeFillData.Fill_Array<Bool_t>("TAGH_DBeam",true,htag);
+   	htag++;
+   }
 
-	    // PSC, PS, and TAGX coincidences
-	    // Loop over TAGH hits and match to DBeamPhotons
-	    unsigned int htag = 0;
-	    unsigned int htag_DBeam = 0;
-            double EdiffMax = 0.5; double tdiffMax = 10.0*dBeamBunchPeriod;
-            for (unsigned int i=0; i < taghhits.size(); i++) {
-                const DTAGHHit* tag = taghhits[i];
-                if (!tag->has_TDC||!tag->has_fADC) continue;
-		if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
-                if (fabs(E_pair-tag->E) > EdiffMax || fabs(t_lhit-tag->t) > tdiffMax) continue;
-		dTreeFillData.Fill_Array<Double_t>("TAGHenergy",tag->E,htag);
-                dTreeFillData.Fill_Array<Double_t>("TAGHtime",tag->t,htag);
-                dTreeFillData.Fill_Array<UInt_t>("TAGHcounter",tag->counter_id,htag);
-		unsigned int same = 0;
-                for (unsigned int j=0; j < beamPhotons.size(); j++)
-		{
-			const DTAGHHit* tagh;
-			beamPhotons[j]->GetSingle(tagh);
-			if (!tagh) continue;
-			if (!tagh->has_TDC || !tagh->has_fADC) continue;
-			if (std::isnan(tagh->t) || std::isnan(tagh->E)) 
-			{
-				if (VERBOSE) jerr<<"Found TAGH with NAN."<<tagh->counter_id<<endl;
-				continue;
-			}
-			if (fabs(E_pair-tagh->E) > EdiffMax || fabs(t_lhit-tagh->t) > tdiffMax) continue;
-			if (tagh->t != tag->t || tagh->E != tag->E || tagh->counter_id != tag->counter_id) continue;
-			same++;
-			htag_DBeam++;
-		}
-		if (same > 1 && VERBOSE) jerr<<"Found more than one match for TAGH."<<endl;
-		if (same == 0) dTreeFillData.Fill_Array<Bool_t>("TAGH_DBeam",false,htag);
-		else dTreeFillData.Fill_Array<Bool_t>("TAGH_DBeam",true,htag);
-		htag++;
-            }
-
-	    // Loop over TAGM hits and match to DBeamPhotons
-	    unsigned int mtag = 0;
-	    unsigned int mtag_DBeam = 0;
-            for (unsigned int i=0; i < tagmhits.size(); i++) {
-                const DTAGMHit* tag = tagmhits[i];
-                if (!tag->has_TDC||!tag->has_fADC) continue;
-                if (tag->row!=0) continue;
-		if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
-                if (fabs(E_pair-tag->E) > EdiffMax || fabs(t_lhit-tag->t) > tdiffMax) continue;
-		dTreeFillData.Fill_Array<Double_t>("TAGMenergy",tag->E,mtag);
-                dTreeFillData.Fill_Array<Double_t>("TAGMtime",tag->t,mtag);
-                dTreeFillData.Fill_Array<UInt_t>("TAGMcolumn",tag->column,mtag);
-		unsigned int same = 0;
-                for (unsigned int j=0; j < beamPhotons.size(); j++)
-                {
-                        const DTAGMHit* tagm;
-                        beamPhotons[j]->GetSingle(tagm);
-                        if (!tagm) continue;
-                        if (!tagm->has_TDC || !tagm->has_fADC) continue;
-			if (tagm->row != 0) continue;
-			if (std::isnan(tagm->t) || std::isnan(tagm->E)) 
-			{
-				if (VERBOSE) jerr<<"Found TAGM with NAN."<<tagm->column<<endl;
-				continue;
-			}
-                        if (fabs(E_pair-tagm->E) > EdiffMax || fabs(t_lhit-tagm->t) > tdiffMax) continue;
-			if (tagm->t != tag->t || tagm->E != tag->E || tagm->column != tag->column) continue;
-                        same++;
-                        mtag_DBeam++;
-                }
-		if (same > 1 && VERBOSE) jerr<<"Found more than one match for TAGM."<<endl;
-                if (same == 0) dTreeFillData.Fill_Array<Bool_t>("TAGM_DBeam",false,mtag);
-                else dTreeFillData.Fill_Array<Bool_t>("TAGM_DBeam",true,mtag);
-		mtag++;
+   // Loop over TAGM hits and match to DBeamPhotons
+   unsigned int mtag = 0;
+   unsigned int mtag_DBeam = 0;
+   for (unsigned int i=0; i < tagmhits.size(); i++) {
+	const DTAGMHit* tag = tagmhits[i];
+        if (!tag->has_TDC||!tag->has_fADC) continue;
+        if (tag->row!=0) continue;
+	if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
+	dTreeFillData.Fill_Array<Double_t>("TAGMenergy",tag->E,mtag);
+        dTreeFillData.Fill_Array<Double_t>("TAGMtime",tag->t,mtag);
+        dTreeFillData.Fill_Array<UInt_t>("TAGMcolumn",tag->column,mtag);
+	unsigned int same = 0;
+        for (unsigned int j=0; j < beamPhotons.size(); j++)
+        {
+	    const DTAGMHit* tagm;
+            beamPhotons[j]->GetSingle(tagm);
+            if (!tagm) continue;
+            if (!tagm->has_TDC || !tagm->has_fADC) continue;
+	    if (tagm->row != 0) continue;
+	    if (std::isnan(tagm->t) || std::isnan(tagm->E)) 
+	    {
+		if (VERBOSE) jerr<<"Found TAGM with NAN."<<tagm->column<<endl;
+		continue;
 	    }
-
-            // Ensure TAGH hits match DBeamPhotons
-            unsigned int htag_Check = 0;
-            for (unsigned int i=0; i < beamPhotons.size(); i++) {
-                const DTAGHHit* tag;
-                beamPhotons[i]->GetSingle(tag);
-		if (!tag) continue;
-		if (!tag->has_TDC||!tag->has_fADC) continue;
-		if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
-		if (fabs(E_pair-tag->E) > EdiffMax || fabs(t_lhit-tag->t) > tdiffMax) continue;	
-                htag_Check++;
+	    if (tagm->t != tag->t || tagm->E != tag->E || tagm->column != tag->column) continue;
+                same++;
+                mtag_DBeam++;
             }
-	    if (htag_Check != htag_DBeam && VERBOSE) jerr<<"TAGH: "<<htag_DBeam<<" , "<<htag_Check<<endl;
+	    if (same > 1 && VERBOSE) jerr<<"Found more than one match for TAGM."<<endl;
+            if (same == 0) dTreeFillData.Fill_Array<Bool_t>("TAGM_DBeam",false,mtag);
+            else dTreeFillData.Fill_Array<Bool_t>("TAGM_DBeam",true,mtag);
+	    mtag++;
+   }
 
-	    // Ensure TAGM hits match DBeamPhotons
-	    unsigned int mtag_Check = 0;
-            for (unsigned int i=0; i < beamPhotons.size(); i++) {
-                const DTAGMHit* tag;
-		beamPhotons[i]->GetSingle(tag);
-		if(!tag) continue;
-                if (!tag->has_TDC||!tag->has_fADC) continue;
-                if (tag->row!=0) continue;
-		if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
-                if (fabs(E_pair-tag->E) > EdiffMax || fabs(t_lhit-tag->t) > tdiffMax) continue;
-                mtag_Check++;
-            }
-	    if (mtag_Check != mtag_DBeam && VERBOSE) jerr<<"TAGM: "<<mtag_DBeam<<" , "<<mtag_Check<<endl;
+   // Ensure TAGH hits match DBeamPhotons
+   unsigned int htag_Check = 0;
+   for (unsigned int i=0; i < beamPhotons.size(); i++) {
+        const DTAGHHit* tag;
+        beamPhotons[i]->GetSingle(tag);
+	if (!tag) continue;
+	if (!tag->has_TDC||!tag->has_fADC) continue;
+	if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
+        htag_Check++;
+   }
+   if (htag_Check != htag_DBeam && VERBOSE) jerr<<"TAGH: "<<htag_DBeam<<" , "<<htag_Check<<endl;
 
-	    dTreeFillData.Fill_Single<UShort_t>("ntagh",htag);
-	    dTreeFillData.Fill_Single<UShort_t>("ntagm",mtag);
-
-	    // Loop over windowraws to collect TPOL hits
-	    // No cuts are applied to the TPOL hits
-            unsigned int hit = 0;
-	    unsigned int ntpol = 0;
-            for(unsigned int i=0; i< windowraws.size(); i++) {
-                const Df250WindowRawData *windowraw = windowraws[i];
-                if (windowraw->rocid!=84) continue;
-                if (!(windowraw->slot==13||windowraw->slot==14)) continue; // azimuthal sectors, rings: 15,16
-                unsigned int rocid = windowraw->rocid;
-                unsigned int slot = windowraw->slot;
-                unsigned int channel = windowraw->channel;
-                unsigned int itrigger = windowraw->itrigger;
-                // Get a vector of the samples for this channel
-                const vector<uint16_t> &samplesvector = windowraw->samples;
-                unsigned int nsamples = samplesvector.size();
-
-                // loop over the samples to calculate integral, min, max
-                if (nsamples==0 && VERBOSE) jerr << "Raw samples vector is empty." << endl;
-
-                unsigned int w_integral = 0;
-		unsigned int w_max = 0;
-		unsigned int w_min = 0;
-		unsigned int w_samp1 = 0;
-                for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
-		    dTreeFillData.Fill_Array<UShort_t>("waveform",samplesvector[c_samp],ntpol);
-		    ntpol++;
-                    if (c_samp==0) {  // use first sample for initialization
-                        w_integral = samplesvector[0];
-                        w_min = samplesvector[0];
-                        w_max = samplesvector[0];
-                        w_samp1 = samplesvector[0];
-                    } else {
-                        w_integral += samplesvector[c_samp];
-                        if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
-                        if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
-                    }
-                }
-
-                unsigned int sector = GetSector(slot,channel);
-                double phi = GetPhi(sector);
-	
-		dTreeFillData.Fill_Array<UInt_t>("rocid",rocid,hit);
-		dTreeFillData.Fill_Array<UInt_t>("slot",slot,hit);
-		dTreeFillData.Fill_Array<UInt_t>("channel",channel,hit);
-		dTreeFillData.Fill_Array<UInt_t>("itrigger",itrigger,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("w_integral",w_integral,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("w_max",w_max,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("w_min",w_min,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("w_samp1",w_samp1,hit);
-		dTreeFillData.Fill_Array<UInt_t>("sector",sector,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("phi",phi,hit);
-		hit++;
-            }
-            unsigned int nadc = hit;
-            if (nadc>NSECTORS && VERBOSE) jerr << "TPOL_tree plugin error: nadc exceeds nmax(" << NSECTORS << ")." << endl;
-            dTreeFillData.Fill_Single<UShort_t>("nadc",nadc);
-	    dTreeFillData.Fill_Single<ULong64_t>("ntpol",ntpol);
-	    dTreeInterface->Fill(dTreeFillData);
-        }
+   // Ensure TAGM hits match DBeamPhotons
+   unsigned int mtag_Check = 0;
+   for (unsigned int i=0; i < beamPhotons.size(); i++) {
+        const DTAGMHit* tag;
+	beamPhotons[i]->GetSingle(tag);
+	if(!tag) continue;
+        if (!tag->has_TDC||!tag->has_fADC) continue;
+        if (tag->row!=0) continue;
+	if (std::isnan(tag->t) || std::isnan(tag->E)) continue;
+        mtag_Check++;
     }
-    japp->RootFillUnLock(this);
-    //
-    return NOERROR;
+    if (mtag_Check != mtag_DBeam && VERBOSE) jerr<<"TAGM: "<<mtag_DBeam<<" , "<<mtag_Check<<endl;
+
+    dTreeFillData.Fill_Single<UShort_t>("ntagh",htag);
+    dTreeFillData.Fill_Single<UShort_t>("ntagm",mtag);
+
+    // Loop over windowraws to collect TPOL hits
+    // No cuts are applied to the TPOL hits
+    unsigned int hit = 0;
+    unsigned int ntpol = 0;
+    for(unsigned int i=0; i< windowraws.size(); i++) {
+	const Df250WindowRawData *windowraw = windowraws[i];
+        if (windowraw->rocid!=84) continue;
+        if (!(windowraw->slot==13||windowraw->slot==14)) continue; // azimuthal sectors, rings: 15,16
+        unsigned int rocid = windowraw->rocid;
+        unsigned int slot = windowraw->slot;
+        unsigned int channel = windowraw->channel;
+        unsigned int itrigger = windowraw->itrigger;
+        // Get a vector of the samples for this channel
+        const vector<uint16_t> &samplesvector = windowraw->samples;
+        unsigned int nsamples = samplesvector.size();
+
+        // loop over the samples to calculate integral, min, max
+        if (nsamples==0 && VERBOSE) jerr << "Raw samples vector is empty." << endl;
+
+        ULong64_t w_integral = 0;
+	unsigned int w_max = 0;
+	unsigned int w_min = 0;
+	unsigned int w_samp1 = 0;
+	unsigned int i_w_max = 0;
+	unsigned int i_w_min = 0;
+        for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
+	    dTreeFillData.Fill_Array<UShort_t>("waveform",samplesvector[c_samp],ntpol);
+	    ntpol++;
+            if (c_samp==0) {  // use first sample for initialization
+                w_integral = samplesvector[0];
+                w_min = samplesvector[0];
+                w_max = samplesvector[0];
+                w_samp1 = samplesvector[0];
+            } 
+            else {
+                w_integral += samplesvector[c_samp];
+                if (w_min > samplesvector[c_samp]) 
+		{
+		    w_min = samplesvector[c_samp];
+		    i_w_min = c_samp;
+		}
+                if (w_max < samplesvector[c_samp]) 
+		{
+		    w_max = samplesvector[c_samp];
+		    i_w_max = c_samp;
+		}
+            }
+        }
+
+        unsigned int sector = GetSector(slot,channel);
+        double phi = GetPhi(sector);
+	
+	dTreeFillData.Fill_Array<UShort_t>("rocid",rocid,hit);
+	dTreeFillData.Fill_Array<UShort_t>("slot",slot,hit);
+	dTreeFillData.Fill_Array<UShort_t>("channel",channel,hit);
+        dTreeFillData.Fill_Array<UInt_t>("itrigger",itrigger,hit);
+	dTreeFillData.Fill_Array<ULong64_t>("w_integral",w_integral,hit);
+	dTreeFillData.Fill_Array<UShort_t>("w_max",w_max,hit);
+	dTreeFillData.Fill_Array<UShort_t>("w_min",w_min,hit);
+        dTreeFillData.Fill_Array<UShort_t>("i_w_min",i_w_min,hit);
+	dTreeFillData.Fill_Array<UShort_t>("i_w_max",i_w_max,hit);
+	dTreeFillData.Fill_Array<UShort_t>("w_samp1",w_samp1,hit);
+	dTreeFillData.Fill_Array<UShort_t>("sector",sector,hit);
+	dTreeFillData.Fill_Array<Double_t>("phi",phi,hit);
+	hit++;
+   }
+   unsigned int nadc = hit;
+   if (nadc>NSECTORS && VERBOSE) jerr << "TPOL_tree plugin error: nadc exceeds nmax(" << NSECTORS << ")." << endl;
+   dTreeFillData.Fill_Single<UShort_t>("nadc",nadc);
+   dTreeFillData.Fill_Single<UShort_t>("ntpol",ntpol);
+
+   if (nadc == 0 && htag == 0 && mtag == 0 && nPS == 0 && nPSC == 0) return NOERROR;
+
+   dTreeInterface->Fill(dTreeFillData);
+   count++;
+
+   japp->RootFillUnLock(this);
+   //
+   return NOERROR;
 }
 
 int JEventProcessor_TPOL_tree::GetSector(int slot,int channel)
@@ -467,6 +525,10 @@ jerror_t JEventProcessor_TPOL_tree::erun(void)
 jerror_t JEventProcessor_TPOL_tree::fini(void)
 {
     delete dTreeInterface;
+
+    t = clock() - t;
+    cout<<endl<<endl;
+    cout<<"Time in minutes for the plugin to complete: "<<t*1.0/CLOCKS_PER_SEC/60.0<<endl<<endl;
     // Called before program exit after event processing is finished.
     return NOERROR;
 }
