@@ -21,7 +21,8 @@ using namespace std;
 #include <TAGGER/DTAGHGeometry.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <PID/DBeamPhoton.h>
-//#include <DAQ/DBeamCurrent.h>
+#include <PID/DEventRFBunch.h>
+#include <DAQ/DBeamCurrent.h>
 
 const int NSECTORS = DTPOLHit_factory::NSECTORS;
 const double SECTOR_DIVISION = DTPOLHit_factory::SECTOR_DIVISION;
@@ -79,7 +80,8 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
     // Construct DTreeInterface and register branches for TPOL tree
     double locNumTAGHhits = 500;
     double locNumTAGMhits = 200;
-    double locNumPShits = 100;
+    double locNumPShits = 200;
+    double locNumRFhits = 200;
 
     dTreeInterface = DTreeInterface::Create_DTreeInterface("TPOL_tree","tree_TPOL.root");
     DTreeBranchRegister locTreeBranchRegister;
@@ -100,6 +102,7 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("phi","nadc",NSECTORS);
     locTreeBranchRegister.Register_Single<UShort_t>("ntpol");
     locTreeBranchRegister.Register_FundamentalArray<UShort_t>("waveform","ntpol",NSECTORS*150);
+    locTreeBranchRegister.Register_Single<Bool_t>("isFiducial");
     locTreeBranchRegister.Register_Single<UShort_t>("nPSC");
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSCtime_lhit","nPSC",locNumPShits);
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("PSCtime_rhit","nPSC",locNumPShits);
@@ -122,6 +125,11 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("TAGMenergy","ntagm",locNumTAGMhits);
     locTreeBranchRegister.Register_FundamentalArray<Double_t>("TAGMtime","ntagm",locNumTAGMhits);
     locTreeBranchRegister.Register_FundamentalArray<UInt_t>("TAGMcolumn","ntagm",locNumTAGMhits);
+    locTreeBranchRegister.Register_Single<UShort_t>("nRF");
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("RFDetSys","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTimeVar","nRF",locNumRFhits);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("RFNumParticleVotes","nRF",locNumRFhits);
     dTreeInterface->Create_Branches(locTreeBranchRegister);
 
     count = 0;
@@ -137,14 +145,14 @@ jerror_t JEventProcessor_TPOL_tree::brun(JEventLoop *eventLoop, int32_t runnumbe
 {
     // This is called whenever the run number changes
     // Set up beam current factory for is_Fiducial
-    //dBeamCurrentFactory = new DBeamCurrent_factory();
-    //dBeamCurrentFactory->init();
-    //dBeamCurrentFactory->brun(eventLoop, runnumber);
+    dBeamCurrentFactory = new DBeamCurrent_factory();
+    dBeamCurrentFactory->init();
+    dBeamCurrentFactory->brun(eventLoop, runnumber);
 
     // Set up beam period for beam bunches
-    vector<double> locBeamPeriodVector;
-    eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period",locBeamPeriodVector);
-    dBeamBunchPeriod = locBeamPeriodVector[0];
+    //vector<double> locBeamPeriodVector;
+    //eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period",locBeamPeriodVector);
+    //dBeamBunchPeriod = locBeamPeriodVector[0];
     
     return NOERROR;
 }
@@ -181,6 +189,10 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (trig_bits!=8) {
         return NOERROR;
     }
+
+    //Get RF bunch information
+    vector<const DEventRFBunch*> rfBunch;
+    loop->Get(rfBunch);
     
     // Get fADC 250 windowraws 
     vector<const Df250WindowRawData*> windowraws;
@@ -207,16 +219,16 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     loop->Get(beamPhotons);
 
     // Get beam current
-    //vector<const DBeamCurrent*> beamCurrent;
-    //loop->Get(beamCurrent);
+    vector<const DBeamCurrent*> beamCurrent;
+    loop->Get(beamCurrent);
 
     japp->RootFillLock(this);
-    //if (!beamCurrent.empty())
-    //{
+    if (!beamCurrent.empty())
+    {
 	// Check that photons are is_Fiducial
-    //	Bool_t isFiducial = beamCurrent[0]->is_fiducial;
-    //	dTreeFillData.Fill_Single<Bool_t>("isFiducial",isFiducial);
-    //}
+   	Bool_t isFiducial = beamCurrent[0]->is_fiducial;
+    	dTreeFillData.Fill_Single<Bool_t>("isFiducial",isFiducial);
+    }
 
     // PSC coincidences
 
@@ -224,6 +236,16 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
    
     dTreeFillData.Fill_Single<ULong64_t>("eventnum",eventnumber);
  
+    // loop over RF hits and save
+    unsigned int nRF = rfBunch.size();
+    dTreeFillData.Fill_Single<UShort_t>("nRF",nRF);
+    for (unsigned int i_RF = 0; i_RF < nRF; i_RF++)
+    {
+        dTreeFillData.Fill_Array<Double_t>("RFTime",rfBunch[i_RF]->dTime,i_RF);
+        dTreeFillData.Fill_Array<Double_t>("RFTimeVar",rfBunch[i_RF]->dTimeVariance,i_RF);
+        dTreeFillData.Fill_Array<UShort_t>("RFNumParticleVotes",rfBunch[i_RF]->dNumParticleVotes,i_RF);
+    }
+
     // take pair with smallest time difference from sorted vector
     unsigned int nPSC = cpairs.size(); 
     dTreeFillData.Fill_Single<UShort_t>("nPSC",nPSC);
