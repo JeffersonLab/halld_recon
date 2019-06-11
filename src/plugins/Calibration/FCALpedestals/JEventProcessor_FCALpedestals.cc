@@ -105,19 +105,6 @@ jerror_t JEventProcessor_FCALpedestals::brun(JEventLoop *eventLoop,
     return RESOURCE_UNAVAILABLE;
   }
 
-
-  // we need an FCAL Geometry object
-  vector< const DFCALGeometry* > geomVec;
-  eventLoop->Get( geomVec );
-
-  if( geomVec.size() != 1 ){
-
-    cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
-  }
-
-  m_fcalGeom = geomVec[0];
-
   return NOERROR;
 }
 
@@ -134,6 +121,19 @@ jerror_t JEventProcessor_FCALpedestals::evnt(JEventLoop *eventLoop,
     return NOERROR;
   
  
+
+  // we need an FCAL Geometry object
+  vector< const DFCALGeometry* > geomVec;
+  eventLoop->Get( geomVec );
+
+  if( geomVec.size() != 1 ){
+
+    cerr << "No geometry accessbile." << endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+
+  fcalGeom = geomVec[0];
+
   vector< const DFCALDigiHit*  > digiHits;
   eventLoop->Get( digiHits );
    
@@ -147,8 +147,8 @@ jerror_t JEventProcessor_FCALpedestals::evnt(JEventLoop *eventLoop,
 
     m_r = dHit.row ;  
     m_c = dHit.column ;   
-    if( !m_fcalGeom->isBlockActive( m_r, m_c ) ) continue;
-    m_chan = m_fcalGeom->channel( dHit.row, dHit.column );
+    if( !fcalGeom->isBlockActive( m_r, m_c ) ) continue;
+    m_chan = fcalGeom->channel( dHit.row, dHit.column );
     m_pedestal = dHit.pedestal / dHit.nsamples_pedestal;
 
     if( m_pedestal > 0 ) {

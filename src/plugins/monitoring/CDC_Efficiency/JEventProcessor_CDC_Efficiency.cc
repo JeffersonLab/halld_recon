@@ -188,24 +188,6 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
       gPARMS->GetParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
    }
 
-   vector<const DTrackFitter *> fitters;
-	eventLoop->Get(fitters);
-	
-	if(fitters.size()<1){
-	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-	
-	fitter = fitters[0];
-	// Get the particle ID algorithms
-	vector<const DParticleID *> pid_algorithms;
-	eventLoop->Get(pid_algorithms);
-	if(pid_algorithms.size()<1){
-	  _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-
-	pid_algorithm = pid_algorithms[0];
 
    return NOERROR;
 }
@@ -214,13 +196,35 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
 // evnt
 //------------------
 jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnumber){
-   const DTrigger* locTrigger = NULL; 
-   loop->GetSingle(locTrigger); 
-   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-      return NOERROR;
-   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-      return NOERROR;
-   }
+	const DTrigger* locTrigger = NULL; 
+	loop->GetSingle(locTrigger); 
+	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
+	  return NOERROR;
+	if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
+	  return NOERROR;
+	}
+
+	
+   	vector<const DTrackFitter *> fitters;
+	loop->Get(fitters);
+
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
+	const DTrackFitter *fitter = fitters[0];
+	
+	
+	// Get the particle ID algorithms
+	vector<const DParticleID *> pid_algorithms;
+	loop->Get(pid_algorithms);
+	if(pid_algorithms.size()<1){
+	  _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
+	const DParticleID* pid_algorithm = pid_algorithms[0];
 
    //use CDC track hits: have drift time, can cut
    vector< const DCDCTrackHit *> locCDCTrackHits;
@@ -328,19 +332,21 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
             for (int locRing = locFirstRing; locRing < locFirstRing + 4; ++locRing)
             {
                if(locCDCRings.find(locRing) == locCDCRings.end())
-                  GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits); // git-r-dun
+                  GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits, pid_algorithm, fitter); // git-r-dun
             }
             continue;
          }
          //so many hits that no individual ring was required: evaluate for all
          for (int locRing = locFirstRing; locRing < locFirstRing + 4; ++locRing)
-            GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits); // git-r-dun
+            GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits, pid_algorithm, fitter); // git-r-dun
       }
    }
    return NOERROR;
 }
 
-void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, map<int, map<int, set<const DCDCTrackHit*> > >& locSortedCDCTrackHits)
+void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, 
+		map<int, map<int, set<const DCDCTrackHit*> > >& locSortedCDCTrackHits,
+		const DParticleID * pid_algorithm, const DTrackFitter *fitter)
 {
   vector<DTrackFitter::Extrapolation_t>extrapolations=thisTimeBasedTrack->extrapolations.at(SYS_CDC);
   if (extrapolations.size()==0) return;
@@ -469,7 +475,7 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
          Fill_ExpectedHit(ringNum, wireNum, distanceToWire);
          if(foundHit)
 	   Fill_MeasuredHit(ringNum, wireNum, distanceToWire, pos, mom, wire, 
-			    locHit);
+			    locHit, pid_algorithm);
       }
    }
 }
@@ -505,7 +511,7 @@ bool JEventProcessor_CDC_Efficiency::Expect_Hit(const DTrackTimeBased* thisTimeB
    return (distanceToWire < (0.78 + delta) && fabs(dz) < 65.0);
 }
 
-void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit)
+void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit, const DParticleID * pid_algorithm)
 {
    //Double_t w = cdc_occ_ring[ring]->GetBinContent(straw, 1) + 1.0;
    //cdc_occ_ring[ring]->SetBinContent(straw, 1, w);

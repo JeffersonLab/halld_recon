@@ -169,15 +169,6 @@ jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int
       }
    }
 
-   vector<const DTrackFitter *> fitters;
-   eventLoop->Get(fitters);
-   
-   if(fitters.size()<1){
-     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-     return RESOURCE_UNAVAILABLE;
-   }
-   fitter = fitters[0];
-
 
    MAX_DRIFT_TIME = 1000.0; //ns: from TRKFIND:MAX_DRIFT_TIME in DTrackCandidate_factory_CDC
    PLANE_TO_SKIP = 0;
@@ -194,6 +185,14 @@ jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int
 //------------------
 jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
+   vector<const DTrackFitter *> fitters;
+   eventLoop->Get(fitters);
+   
+   if(fitters.size()<1){
+     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+     return RESOURCE_UNAVAILABLE;
+   }
+   const DTrackFitter *fitter = fitters[0];
 
    vector <const DCDCHit *> cdcHitVector;
    loop->Get(cdcHitVector);

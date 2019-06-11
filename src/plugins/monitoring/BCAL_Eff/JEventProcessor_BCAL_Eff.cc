@@ -312,16 +312,17 @@ jerror_t JEventProcessor_BCAL_Eff::brun(jana::JEventLoop* locEventLoop, int locR
 	locEventLoop->GetSingle(dEventWriterROOT);
 	dEventWriterROOT->Create_DataTrees(locEventLoop);
 	*/
+	/*
 	vector<const DTrackFitter *> fitters;
 	locEventLoop->Get(fitters);
 
-        if(fitters.size()<1){
-          _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-          return RESOURCE_UNAVAILABLE;
-        }
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
 
-        fitter = fitters[0];
-
+	fitter = fitters[0];
+	*/
 
 	return NOERROR;
 }
@@ -357,6 +358,16 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	locEventLoop->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
 	  return NOERROR;
+
+	vector<const DTrackFitter *> fitters;
+	locEventLoop->Get(fitters);
+
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
+	const DTrackFitter *fitter = fitters[0];
 
 	vector<const DBCALShower*> locBCALShowers;
 	vector<const DBCALHit*> bcalhits;

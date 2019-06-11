@@ -39,7 +39,6 @@ class JEventProcessor_pi0bcalskim:public jana::JEventProcessor{
   int WRITE_EVIO;
   int num_epics_events;
 
-  const DTrackFitter *fitter;
 };
 #endif // _JEventProcessor_pi0bcalskim_
 
