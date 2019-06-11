@@ -113,23 +113,7 @@ jerror_t JEventProcessor_ST_ZEff::init(void)
 jerror_t JEventProcessor_ST_ZEff::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
   // This is called whenever the run number changes
-  // Get the particleID object for each run
-  vector<const DParticleID* > dParticleID_algos;
-  eventLoop->Get(dParticleID_algos);
-  if(dParticleID_algos.size() < 1)
-    {
-      _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
-    }
-  dParticleID = dParticleID_algos[0];
-  // We want to be use some of the tools available in the RFTime factory 
-  // Specifically steping the RF back to a chosen time
-  dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-  
-  // Be sure that DRFTime_factory::init() and brun() are called
-  vector<const DRFTime*> locRFTimes;
-  eventLoop->Get(locRFTimes);
-  
+    
   // Obtain the target center along z;
   map<string,double> target_params;
   if (eventLoop->GetCalib("/TARGET/target_parms", target_params))
@@ -233,7 +217,7 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
       if(tb_track->FOM  < trackingFOMCut)  continue;
       // Grab the ST hit match params object and cut on only tracks matched to the ST
       shared_ptr<const DSCHitMatchParams> locBestSCHitMatchParams;
-      bool foundSC = dParticleID->Get_BestSCMatchParams(tb_track, locDetectorMatches, locBestSCHitMatchParams);
+      bool foundSC = locParticleID->Get_BestSCMatchParams(tb_track, locDetectorMatches, locBestSCHitMatchParams);
       if (!foundSC) continue;
 
       // Define vertex vector
@@ -254,14 +238,14 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
        // Grab the TOF hit match params object and cut on tracks matched to the TOF
        // Want to use TOF/RF time for t0 for SC hit time
        shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-       bool foundTOF = dParticleID->Get_BestTOFMatchParams(tb_track, locDetectorMatches, locTOFHitMatchParams);
+       bool foundTOF = locParticleID->Get_BestTOFMatchParams(tb_track, locDetectorMatches, locTOFHitMatchParams);
 
        //BCAL Match Param
        shared_ptr<const DBCALShowerMatchParams> locBCALHitMatchParams;        
-       bool foundBCAL = dParticleID->Get_BestBCALMatchParams(tb_track, locDetectorMatches, locBCALHitMatchParams);
+       bool foundBCAL = locParticleID->Get_BestBCALMatchParams(tb_track, locDetectorMatches, locBCALHitMatchParams);
        //FCAL Match Param
        shared_ptr<const DFCALShowerMatchParams> locFCALHitMatchParams;
-       bool foundFCAL = dParticleID->Get_BestFCALMatchParams(tb_track, locDetectorMatches, locFCALHitMatchParams);
+       bool foundFCAL = locParticleID->Get_BestFCALMatchParams(tb_track, locDetectorMatches, locFCALHitMatchParams);
        // Hit must be matched to TOF, BCAL, or FCAL
        if (!(foundBCAL || (foundFCAL && foundTOF))) continue;
  
@@ -275,7 +259,7 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
       DVector3 IntersectionPoint, IntersectionMomentum,locProjMom, locPaddleNorm;
       shared_ptr<DSCHitMatchParams> locSCHitMatchParams;
       vector<DTrackFitter::Extrapolation_t>extrapolations=tb_track->extrapolations.at(SYS_START);
-      bool st_match_pid = dParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
+      bool st_match_pid = locParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
 
       if(!st_match_pid) continue;
  
@@ -350,7 +334,7 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 			  			   
 			  double pathlength = locSCzIntersection - sc_pos_soss;
 			  double corr_time = st_corr_FlightTime  - (incpt_ss + (slope_ss *  pathlength));
-			  SC_RFShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  corr_time);
+			  SC_RFShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  corr_time);
 			  //  double t_diff  =SC_RFShiftedTime - t0;
 			  double t_diff  =corr_time - t0; 
 			  h1_tDiff->Fill(t_diff);
@@ -399,7 +383,7 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 			  h1_tDiff->Fill(t_diff);
 			  h1_SC_ShiftedTime->Fill(SC_RFShiftedTime);
 			  
-			  SC_RFShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_bs);
+			  SC_RFShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_bs);
 			       			       
 			  //BS accidentals
 			  if (!((-10 < t_diff) && (t_diff <10)) && (-20 < t_diff) && (t_diff < 20))
@@ -438,17 +422,17 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 			  if (path_ns <= Bound1)
 			    {       
 			      Corr_Time_ns=  st_corr_FlightTime  - (incpt_ss + (slope_ss *  path_ns));
-			      SC_RFShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
+			      SC_RFShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
 			    }
 			  else if ((Bound1 < path_ns)&&(path_ns <= Bound2))
 			    {
 			      Corr_Time_ns = st_corr_FlightTime - (incpt_bs + (slope_bs *  path_ns));
-			      SC_RFShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
+			      SC_RFShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
 			    }
 			  else
 			    {
 			      Corr_Time_ns = st_corr_FlightTime - (incpt_ns + (slope_ns *  path_ns));
-			      SC_RFShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
+			      SC_RFShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(locVertexRFTime,  Corr_Time_ns);
 			    }
 			  double t_diff  =Corr_Time_ns - t0; 
 			  //NS Accidentals

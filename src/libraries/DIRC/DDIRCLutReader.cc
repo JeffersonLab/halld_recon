@@ -3,6 +3,7 @@
 //    File: DDIRCLutReader.cc
 //
 
+#include <unistd.h>
 #include <cassert>
 #include <math.h>
 using namespace std;
@@ -28,7 +29,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	jcalib = japp->GetJCalibration(run_number);
 	if(jcalib->GetCalib("/DIRC/LUT/lut_map", lut_map_name)) 
 		jout << "Can't find requested /DIRC/LUT/lut_map in CCDB for this run!" << endl;
-	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None") {
+	else if(lut_map_name.find("map_name") != lut_map_name.end() && lut_map_name["map_name"] != "None" && lut_file.empty()) {
 		jresman = japp->GetJResourceManager(run_number);
 		lut_file = jresman->GetResource(lut_map_name["map_name"]);
 	}

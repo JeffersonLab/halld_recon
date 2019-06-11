@@ -31,23 +31,6 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::init(void)
 //------------------
 jerror_t DEventProcessor_DCdEdxStudy_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
-  // Get the particle ID algorithms
-	vector<const DParticleID *> locPIDAlgorithms;
-	eventLoop->Get(locPIDAlgorithms);
-	if(locPIDAlgorithms.size() < 1){
-		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-	// Drop the const qualifier from the DParticleID pointer (I'm surely going to hell for this!)
-	LockState();
-	dPIDAlgorithm = const_cast<DParticleID*>(locPIDAlgorithms[0]);
-	UnlockState();
-
-	// Warn user if something happened that caused us NOT to get a dPIDAlgorithm object pointer
-	if(!dPIDAlgorithm){
-		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
 
 	return NOERROR;
 }
@@ -57,6 +40,22 @@ jerror_t DEventProcessor_DCdEdxStudy_tree::brun(JEventLoop *eventLoop, int32_t r
 //------------------
 jerror_t DEventProcessor_DCdEdxStudy_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
+  // Get the particle ID algorithms
+	vector<const DParticleID *> locPIDAlgorithms;
+	eventLoop->Get(locPIDAlgorithms);
+	if(locPIDAlgorithms.size() < 1){
+		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+		return RESOURCE_UNAVAILABLE;
+	}
+	// Drop the const qualifier from the DParticleID pointer (I'm surely going to hell for this!)
+	locPIDAlgorithm = const_cast<DParticleID*>(locPIDAlgorithms[0]);
+
+	// Warn user if something happened that caused us NOT to get a locPIDAlgorithm object pointer
+	if(!locPIDAlgorithm){
+		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+		return RESOURCE_UNAVAILABLE;
+	}
+
 	vector<const DMCThrown*> locDMCThrownVector;
 	const DMCThrown *locDMCThrown;
 	loop->Get(locDMCThrownVector);

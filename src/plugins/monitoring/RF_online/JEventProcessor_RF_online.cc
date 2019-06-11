@@ -239,14 +239,6 @@ jerror_t JEventProcessor_RF_online::brun(JEventLoop* locEventLoop, int32_t runnu
 {
 	// This is called whenever the run number changes
 
-        // make sure that the factory brun() is being called (which is not necessarily true if this plugin is being run by itself)
-	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEventLoop->GetFactory("DRFTime"));
-        if(!dRFTimeFactory->brun_was_called())
-	{
-	    dRFTimeFactory->brun(locEventLoop, locEventLoop->GetJEvent().GetRunNumber());
-	    dRFTimeFactory->Set_brun_called();
-	}
-
 	return NOERROR;
 }
 
@@ -263,6 +255,8 @@ jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t even
 
 	vector<const DTAGHHit*> locTAGHHits;
 	locEventLoop->Get(locTAGHHits);
+
+	auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEventLoop->GetFactory("DRFTime"));
 
 	//Convert TDCs to Times
 	//Use std::set: times are NOT necessarily in order (for high-resolution mode, times interleaved between different internal channels)

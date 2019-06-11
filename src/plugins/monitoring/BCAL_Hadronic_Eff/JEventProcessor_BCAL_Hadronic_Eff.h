@@ -54,10 +54,10 @@ class JEventProcessor_BCAL_Hadronic_Eff : public jana::JEventProcessor
 		double Calc_ProjectedSector(int locLayer, const map<int, map<int, set<const DBCALPoint*> > >& locSortedPoints);
 
 		pair<const DBCALPoint*, double> Find_NearestPoint(double locProjectedSector, const map<int, set<const DBCALPoint*> >& locLayerBCALPoints, const DBCALCluster* locBCALCluster, double locTimeCut = -1.0);
-		pair<const DBCALUnifiedHit*, double> Find_NearestHit(double locProjectedSector, const map<int, set<const DBCALUnifiedHit*> >& locLayerUnifiedHits, const DBCALCluster* locBCALCluster, double locTimeCut = -1.0);
+		pair<const DBCALUnifiedHit*, double> Find_NearestHit(double locProjectedSector, const map<int, set<const DBCALUnifiedHit*> >& locLayerUnifiedHits, const DBCALCluster* locBCALCluster, const DBCALGeometry *locBCALGeom, double locTimeCut = -1.0);
 
 		const DBCALPoint* Find_ClosestTimePoint(const set<const DBCALPoint*>& locPoints, const DBCALCluster* locBCALCluster, double locTimeCut);
-		const DBCALUnifiedHit* Find_ClosestTimeHit(const set<const DBCALUnifiedHit*>& locHits, const DBCALCluster* locBCALCluster, double locTimeCut);
+		const DBCALUnifiedHit* Find_ClosestTimeHit(const set<const DBCALUnifiedHit*>& locHits, const DBCALCluster* locBCALCluster, double locTimeCut, const DBCALGeometry *locBCALGeom);
 
 		template <typename DType> DType Calc_DeltaSector(DType locHitSector, DType locProjectedSector) const;
 
@@ -86,8 +86,6 @@ class JEventProcessor_BCAL_Hadronic_Eff : public jana::JEventProcessor
 		//EFFECTIVE VELOCITIES
 		vector<double> effective_velocities;
 		
-		const DBCALGeometry *dBCALGeom;
-
 };
 
 template <typename DType> inline DType JEventProcessor_BCAL_Hadronic_Eff::Calc_DeltaSector(DType locHitSector, DType locProjectedSector) const

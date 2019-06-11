@@ -194,33 +194,9 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
     // This is called whenever the run number changes
-    // Get the particleID object for each run
-    vector<const DParticleID *> dParticleID_algos;
-    eventLoop->Get(dParticleID_algos);
-    if(dParticleID_algos.size()<1){
-        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-        return RESOURCE_UNAVAILABLE;
-    }
-    dParticleID = dParticleID_algos[0];
-
-    // We want to be use some of the tools available in the RFTime factory 
-    // Specifivally steping the RF back to a chosen time
-    dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-
     DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     DGeometry* geom = app->GetDGeometry(runnumber);
     geom->GetTargetZ(Z_TARGET);
-
-    //be sure that DRFTime_factory::init() and brun() are called
-    vector<const DRFTime*> locRFTimes;
-    eventLoop->Get(locRFTimes);
-
-    vector<const DDIRCGeometry*> locDIRCGeometry;
-    eventLoop->Get(locDIRCGeometry);
-    dDIRCGeometry = locDIRCGeometry[0];
-
-    // Initialize DIRC LUT
-    eventLoop->GetSingle(dDIRCLut);
 
     return NOERROR;
 }
@@ -256,8 +232,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
     vector<const DDIRCGeometry*> locDIRCGeometryVec;
     loop->Get(locDIRCGeometryVec);
-    // next line commented out to supress warning
-    //    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
+    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
 
     // Initialize DIRC LUT
 	const DDIRCLut* dDIRCLut = nullptr;
@@ -374,7 +349,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit time", scHitVector[i]->t,
                 "SCHit time;t [ns];", nBins, xMin, xMax);
     }
-
+/*
     for (i = 0; i < dircPmtHitVector.size(); i++){
         Fill1DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit time", dircPmtHitVector[i]->t,
                 "DIRCHit time;t [ns];", nBins, xMin, xMax);
@@ -393,7 +368,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                             (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
         }
     }
-    
+*/  
     for (i = 0; i < bcalUnifiedHitVector.size(); i++){
         int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
         // There is one less layer of TDCs so the numbering relects this
@@ -960,7 +935,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 		DVector3 IntersectionPoint, IntersectionMomentum;	
 		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-		bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
 								   true, &IntersectionPoint, &IntersectionMomentum);
 		double locSCzIntersection = IntersectionPoint.z();
 		if( locSCzIntersection < 83. ) {
@@ -1054,13 +1029,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                  earliestFDCTime,
                  "Earliest Flight-time corrected FDC Time; t_{FDC} [ns];",
                  200, -50, 150);
-                 
+/*                 
 		    // get DIRC match parameters (contains LUT information)
 			const DDetectorMatches* locDetectorMatches = NULL;
 			loop->GetSingle(locDetectorMatches);
 			DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
 		    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-		    bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+		    bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
         	// For DIRC calibrations, select tracks which have a good TOF match
 		    if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
@@ -1070,7 +1045,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 				TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 				double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-				int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 
 				Particle_t locPID = locTrackTimeBased->PID();
 				double locMass = ParticleMass(locPID);
@@ -1110,6 +1085,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 					}
 				}
 			}
+*/
 		}
         if (locBCALShowerMatchParams != NULL){
            float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;

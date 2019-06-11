@@ -34,7 +34,6 @@ class JEventProcessor_BCAL_attenlength_gainratio:public jana::JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-		const DBCALGeometry *dBCALGeom;
 
 		//DO NOT MAKE THESE STATIC GLOBAL EVER AGAIN!!
 

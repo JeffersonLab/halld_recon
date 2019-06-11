@@ -25,6 +25,7 @@ using namespace jana;
 #include <PID/DParticleID.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <DIRC/DDIRCTruthPmtHit.h>
+#include <TRIGGER/DTrigger.h>
 
 #include <TMath.h>
 #include <TFile.h>
@@ -55,23 +56,43 @@ private:
 
   TH2I* hDiffBar[48];
   TH1I* hNphCBar[48];
-  map<Particle_t, TH1I*> hDiff;
-  map<Particle_t, TH1I*> hNphC;
-  map<Particle_t, TH1I*> hThetaC;
-  map<Particle_t, TH1I*> hDeltaThetaC;
-  map<Particle_t, TH1I*> hLikelihood;
-  map<Particle_t, TH1I*> hLikelihoodDiff;
-  
-  map<Particle_t, TH2I*> hThetaCVsP;
-  map<Particle_t, TH2I*> hDeltaThetaCVsP;
-  map<Particle_t, TH2I*> hLikelihoodDiffVsP;
-  map<Particle_t, TH2I*> hDeltaTVsP;
+  TH1I* hNphCBarInclusive[48];
+  TH2I *hNphCBarVsP[48];
+  TH2I *hNphCBarInclusiveVsP[48];
+  TH1I *hDeltaThetaCBar[48];
+  map<Particle_t, TH2I*> hExtrapolatedBarHitXY;
+  map<Particle_t, TH1I*> hExtrapolatedBarHitTime;
+  map<Particle_t, vector<TH1I*>> hExtrapolatedBarHitTime_BadTime;
+  map<Particle_t, vector<TH2I*>> hExtrapolatedBarHitXY_BadTime;
+  map<Particle_t, vector<TH2I*>> hExtrapolatedBarTimeVsPixelHitTime;
+  map<Particle_t, vector<TH2I*>> hExtrapolatedBarTimeVsPixelHitTime_BadTime;
+  map<Particle_t, vector<TH2I*>> hExtrapolationTimeVsStartTime;
+  map<Particle_t, vector<TH2I*>> hExtrapolationTimeVsStartTime_BadTime;
+  map<Particle_t, vector<TH2I*>> hDiffVsEventNumber;
+  map<Particle_t, vector<TH1I*>> hDiff;
+  map<Particle_t, vector<TH2I*>> hDiffVsChannelDirect;
+  map<Particle_t, vector<TH2I*>> hDiffVsChannelReflected;
+  map<Particle_t, vector<TH1I*>> hNphC;
+  map<Particle_t, vector<TH1I*>> hNphCInclusive;
+  map<Particle_t, vector<TH1I*>> hThetaC;
+  map<Particle_t, vector<TH1I*>> hDeltaThetaC;
+  map<Particle_t, vector<TH1I*>> hDeltaThetaC_BadTime;
+  map<Particle_t, vector<TH1I*>> hLikelihood;
+  map<Particle_t, vector<TH1I*>> hLikelihoodDiff;
+ 
+  map<Particle_t, vector<TH2I*>> hNphCVsP;
+  map<Particle_t, vector<TH2I*>> hNphCInclusiveVsP;
+  map<Particle_t, vector<TH2I*>> hThetaCVsP;
+  map<Particle_t, vector<TH2I*>> hDeltaThetaCVsP;
+  map<Particle_t, vector<TH2I*>> hLikelihoodDiffVsP;
+  map<Particle_t, vector<TH2I*>> hDeltaTVsP;
+  map<Particle_t, vector<TH2I*>> hTimeCalcVsMeas;
+  map<Particle_t, vector<TH2S*>> hPixelHitMap_BadTime;
+
+  TH1I *hHitTimeMap[40];
+  TH2S *hPixelHitMap[40], *hPixelHitMapReflected[40];
 
   int dMaxChannels;
-
-  const DParticleID* dParticleID;
-  const DDIRCGeometry* dDIRCGeometry;
-  const DDIRCLut* dDIRCLut;
   
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
