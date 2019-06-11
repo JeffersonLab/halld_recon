@@ -57,10 +57,6 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
 jerror_t DEventProcessor_truth_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
 
-  // get DIRC geometry
-  vector<const DDIRCGeometry*> locDIRCGeometry;
-  loop->Get(locDIRCGeometry);
-  dDIRCGeometry = locDIRCGeometry[0];
 
   return NOERROR;
 }
@@ -79,6 +75,11 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
   loop->Get(dircRecoPmtHits);
+
+  // get DIRC geometry
+  vector<const DDIRCGeometry*> locDIRCGeometryVec;
+  loop->Get(locDIRCGeometryVec);
+  auto locDIRCGeometry = locDIRCGeometryVec[0];
 
   for (unsigned int j = 0; j < dircBarHits.size(); j++){
     //double px = dircBarHits[j]->px;
@@ -106,12 +107,14 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      double t_fixed = dircPmtHits[h]->t_fixed;
 
      // get PMT labels
-     int pmt_column = dDIRCGeometry->GetPmtColumn(ch); 
-     int pmt_row = dDIRCGeometry->GetPmtRow(ch);
+     int pmt_column = locDIRCGeometry->GetPmtColumn(ch); 
+     int pmt_row = locDIRCGeometry->GetPmtRow(ch);
 
      // get pixel labels
-     int pixel_x = dDIRCGeometry->GetPixelX(ch);
-     int pixel_y = dDIRCGeometry->GetPixelY(ch);
+     int pixel_x = locDIRCGeometry->GetPixelX(ch);
+     int pixel_y = locDIRCGeometry->GetPixelY(ch);
+     int pixel_row = locDIRCGeometry->GetPixelRow(ch);
+     int pixel_col = locDIRCGeometry->GetPixelColumn(ch);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
      hTruthPixelHitTime->Fill(ch, t-t_fixed);
@@ -134,8 +137,10 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	  //double t = dircRecoPmtHits[h]->t;
 	  
 	  // get pixel labels
-	  int pixel_x = dDIRCGeometry->GetPixelX(ch);
-	  int pixel_y = dDIRCGeometry->GetPixelY(ch);
+	  int pixel_x = locDIRCGeometry->GetPixelX(ch);
+	  int pixel_y = locDIRCGeometry->GetPixelY(ch);
+	  int pixel_row = locDIRCGeometry->GetPixelRow(ch);
+	  int pixel_col = locDIRCGeometry->GetPixelColumn(ch);
 	  
 	  // comparison of truth and reco hits
 	  /*

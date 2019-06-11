@@ -85,7 +85,6 @@ class DEventProcessor_BCAL_gainmatrix : public jana::JEventProcessor
 
 		const DEventWriterROOT* dEventWriterROOT;
 		const DEventWriterREST* dEventWriterREST;  
-		const DTrackFitter *fitter;
 
 };
 

@@ -18,6 +18,7 @@ using namespace std;
 
 using namespace jana;
 
+#include <TRIGGER/DTrigger.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
 #include <TRACKING/DTrackTimeBased.h>
@@ -68,10 +69,6 @@ private:
   map<Particle_t, TH2I*> hDeltaTVsP;
 
   int dMaxChannels;
-
-  const DParticleID* dParticleID;
-  const DDIRCGeometry* dDIRCGeometry;
-  const DDIRCLut* dDIRCLut;
   
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;

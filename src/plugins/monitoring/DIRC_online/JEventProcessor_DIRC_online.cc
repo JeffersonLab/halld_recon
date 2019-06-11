@@ -142,10 +142,6 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 jerror_t JEventProcessor_DIRC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
     // This is called whenever the run number changes
 
-    vector<const DDIRCGeometry*> locDIRCGeometry;
-    eventLoop->Get(locDIRCGeometry);
-    dDIRCGeometry = locDIRCGeometry[0];
-
     return NOERROR;
 }
 
@@ -159,6 +155,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // loop-Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
+
+    vector<const DDIRCGeometry*> locDIRCGeometryVec;
+    eventLoop->Get(locDIRCGeometryVec);
+    auto locDIRCGeometry = locDIRCGeometryVec[0];
 
     // Get data for DIRC
     vector<const DDIRCTDCDigiHit*> digihits;
@@ -222,7 +222,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
         int channel = (hit->channel < Nchannels) ? hit->channel : (hit->channel - Nchannels);
         NDigiHits[box]++;
         hDigiHit_Box->Fill(box);
-	hDigiHit_pixelOccupancy[box]->Fill(dDIRCGeometry->GetPixelRow(hit->channel), dDIRCGeometry->GetPixelColumn(hit->channel));
+	hDigiHit_pixelOccupancy[box]->Fill(locDIRCGeometry->GetPixelRow(hit->channel), locDIRCGeometry->GetPixelColumn(hit->channel));
         hDigiHit_tdcTime[box]->Fill(hit->time);
         hDigiHit_tdcTimeVsChannel[box]->Fill(channel,hit->time);
     }
@@ -235,7 +235,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
 	hHit_Box->Fill(box);
 	NHits[box]++;
-	hHit_pixelOccupancy[box]->Fill(dDIRCGeometry->GetPixelRow(hit->ch), dDIRCGeometry->GetPixelColumn(hit->ch));
+	hHit_pixelOccupancy[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 	hHit_TimeOverThreshold[box]->Fill(hit->tot);
 	hHit_TimeOverThresholdVsChannel[box]->Fill(channel,hit->tot);
 	hHit_TimeOverThresholdVsTime[box]->Fill(hit->t, hit->tot);

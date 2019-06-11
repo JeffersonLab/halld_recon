@@ -106,19 +106,6 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::brun(JEventLoop *eventLoop,
     return RESOURCE_UNAVAILABLE;
   }
 
-
-  // we need an FCAL Geometry object
-  vector< const DFCALGeometry* > geomVec;
-  eventLoop->Get( geomVec );
-
-  if( geomVec.size() != 1 ){
-
-    cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
-  }
-
-  m_fcalGeom = geomVec[0];
-
   return NOERROR;
 }
 
@@ -135,6 +122,20 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
     return NOERROR;
 
+
+  // we need an FCAL Geometry object
+  vector< const DFCALGeometry* > geomVec;
+  eventLoop->Get( geomVec );
+
+  if( geomVec.size() != 1 ){
+
+    cerr << "No geometry accessbile." << endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+
+  auto fcalGeom = geomVec[0];
+
+
   double FCAL_C_EFFECTIVE = 15.0;
   DApplication* locApplication = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
   DGeometry* locGeometry = locApplication->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
@@ -142,7 +143,6 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
   locTargetZCenter = locGeometry->GetTargetZ(locTargetZCenter);
   dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
   
-  vector< const DFCALGeometry* > geomVec;
   vector< const DFCALDigiHit*  > digiHits;
   vector< const DFCALHit*      > hits;
   vector<const DEventRFBunch*> locEventRFBunches;
@@ -151,7 +151,6 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
   vector < const DFCALShower * > matchedShowers;
   
 
-  eventLoop->Get( geomVec );
   eventLoop->Get( hits );
   
   vector< const DFCALShower* > locFCALShowers;

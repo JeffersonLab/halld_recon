@@ -48,9 +48,9 @@ class JEventProcessor_CDC_Efficiency:public jana::JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-		void GitRDun(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, map<int, map<int, set<const DCDCTrackHit*> > >& locSorteDCDCTrackHits);
+		void GitRDun(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, map<int, map<int, set<const DCDCTrackHit*> > >& locSorteDCDCTrackHits, const DParticleID * pid_algorithm, const DTrackFitter *fitter);
 		bool Expect_Hit(const DTrackTimeBased* thisTimeBasedTrack, DCDCWire* wire, double distanceToWire, const DVector3 &pos, double& delta, double& dz);
-		void Fill_MeasuredHit(int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit);
+		void Fill_MeasuredHit(int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit, const DParticleID * pid_algorithm);
 		void Fill_ExpectedHit(int ringNum, int wireNum, double distanceToWire);
 		const DCDCTrackHit* Find_Hit(int locRing, int locProjectedStraw, map<int, set<const DCDCTrackHit*> >& locSorteDCDCTrackHits);
       double GetDOCAFieldOff(DVector3, DVector3, DVector3, DVector3, DVector3&, DVector3&);
@@ -81,8 +81,8 @@ class JEventProcessor_CDC_Efficiency:public jana::JEventProcessor{
 		TH1I * hChi2OverNDF;
 		TH2I *hResVsT;
 		
-		const DTrackFitter *fitter; 
-		const DParticleID* pid_algorithm;
+	 
+		
 
 };
 

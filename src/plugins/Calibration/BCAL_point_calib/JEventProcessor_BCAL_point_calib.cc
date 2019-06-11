@@ -323,22 +323,6 @@ jerror_t JEventProcessor_BCAL_point_calib::brun(JEventLoop *eventLoop, int32_t r
 	//BCAL_Neutrals->Fill();
 	//cout << " run number = " << RunNumber << endl;
 
-	// load BCAL geometry
-  	vector<const DBCALGeometry *> BCALGeomVec;
-  	eventLoop->Get(BCALGeomVec);
-  	if(BCALGeomVec.size() == 0)
-		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
-
-	vector<const DTrackFitter *> fitters;
-	eventLoop->Get(fitters);
-	
-	if(fitters.size()<1){
-	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-	
-	fitter = fitters[0];
 
 	return NOERROR;
 }
@@ -367,6 +351,23 @@ jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t event
 	loop->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
 	  return NOERROR;
+
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	loop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load DBCALGeometry object!");
+	auto locBCALGeom = BCALGeomVec[0];
+
+	vector<const DTrackFitter *> fitters;
+	loop->Get(fitters);
+	
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+	
+	auto fitter = fitters[0];
 	
 	vector<const DBCALShower*> locBCALShowers;
 	vector<const DBCALHit*> bcalhits;
@@ -433,7 +434,7 @@ jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t event
 	DVector3 mypos_4(0.0,0.0,0.0); // middle of Layer 4
 	
 	// get the inner radius of each layer (and the outer radius of layer 4)
-	const float*bcal_radii = dBCALGeom->GetBCAL_radii();
+	const float*bcal_radii = locBCALGeom->GetBCAL_radii();
 	
 	// the radii at the middle of each layer
 	double R1 = 0.5*(bcal_radii[0] + bcal_radii[1]); 

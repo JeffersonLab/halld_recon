@@ -136,16 +136,6 @@ jerror_t JEventProcessor_BCAL_inv_mass::init(void)
 //------------------
 jerror_t JEventProcessor_BCAL_inv_mass::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
 {
-    vector<const DTrackFitter *> fitters;
-    locEventLoop->Get(fitters);
-    
-    if(fitters.size()<1){
-      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
-    }
-    
-    fitter = fitters[0];
-
     
     return NOERROR;
 }
@@ -182,6 +172,15 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	locEventLoop->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
 	  return NOERROR;
+
+    vector<const DTrackFitter *> fitters;
+    locEventLoop->Get(fitters);
+    
+    if(fitters.size()<1){
+      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+      return RESOURCE_UNAVAILABLE;
+    }
+	const DTrackFitter *fitter = fitters[0];
 
 	vector<const DBCALShower*> locBCALShowers;
 	vector<const DFCALCluster*> locFCALClusters;

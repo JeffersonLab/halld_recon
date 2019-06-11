@@ -82,22 +82,29 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 
 jerror_t DEventProcessor_dirc_hists::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
-   // get PID algos
-   const DParticleID* locParticleID = NULL;
-   loop->GetSingle(locParticleID);
-   dParticleID = locParticleID;
-
-   vector<const DDIRCGeometry*> locDIRCGeometry;
-   loop->Get(locDIRCGeometry);
-   dDIRCGeometry = locDIRCGeometry[0];
-
-   // Initialize DIRC LUT
-   loop->GetSingle(dDIRCLut);
 
    return NOERROR;
 }
 
 jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber) {
+
+  // check trigger type
+  const DTrigger* locTrigger = NULL;
+  loop->GetSingle(locTrigger);
+  if(!locTrigger->Get_IsPhysicsEvent())
+	  return NOERROR;
+
+   // get PID algos
+   const DParticleID* locParticleID = NULL;
+   loop->GetSingle(locParticleID);
+
+   vector<const DDIRCGeometry*> locDIRCGeometryVec;
+   loop->Get(locDIRCGeometryVec);
+   auto locDIRCGeometry = locDIRCGeometryVec[0];
+
+   // Initialize DIRC LUT
+   const DDIRCLut* dDIRCLut = nullptr;
+  loop->GetSingle(dDIRCLut);
 
   // retrieve tracks and detector matches 
   vector<const DTrackTimeBased*> locTimeBasedTracks;
@@ -124,7 +131,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	  // require has good match to TOF hit for cleaner sample
 	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-	  bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	  bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	  if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		  continue;
 
@@ -133,15 +140,15 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-	  bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
-	  
+	  bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 	  if(foundDIRC) {
 
 		  TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 		  TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-		  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+		  int locBar = locDIRCGeometry->GetBar(posInBar.Y());
+		  if(locBar > 23) continue; // skip north box for now
 
 		  double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
 		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
@@ -156,7 +163,6 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
 			  double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
 			  int locChannel = locDIRCPmtHits[loc_i]->ch%dMaxChannels;
-
 			  if(locDIRCPhotons.size() > 0) {
 
 				  // loop over candidate photons
