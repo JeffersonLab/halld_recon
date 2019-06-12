@@ -1564,7 +1564,6 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
    // or the maximum radius
    while(z<endplate_z && z>=Z_MIN && r2<endplate_r2max
          && fabs(Sc(state_q_over_pt))<Q_OVER_PT_MAX
-         && fabs(Sc(state_tanl))<TAN_MAX
         ){
       if (PropagateCentral(central_traj_length,i,my_xy,var_t_factor,Sc,stepped_to_boundary)
             !=NOERROR) return UNRECOVERABLE_ERROR;    
