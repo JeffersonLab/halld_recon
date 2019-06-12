@@ -234,19 +234,19 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   } 
-  /*
+  
   if (jcalib->Get("BCAL/EOverPSigma",vals)==false){  
     map<string,double> &row = vals[0];
     dEOverPSigmaParams_BCAL.push_back(row["s0"]);
     dEOverPSigmaParams_BCAL.push_back(row["s1"]);
     dEOverPSigmaParams_BCAL.push_back(row["s2"]);
-   }
+  }
   if (jcalib->Get("BCAL/EOverPMean",vals)==false){
     map<string,double> &row = vals[0];
     dEOverPMeanParams_BCAL.push_back(row["m0"]);
     dEOverPMeanParams_BCAL.push_back(row["m1"]);
     dEOverPMeanParams_BCAL.push_back(row["m2"]);
-   }
+  }
 
 
   if (jcalib->Get("FCAL/EOverPSigma",vals)==false){  
@@ -254,14 +254,14 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     dEOverPSigmaParams_FCAL.push_back(row["s0"]);
     dEOverPSigmaParams_FCAL.push_back(row["s1"]);
     dEOverPSigmaParams_FCAL.push_back(row["s2"]);
-   }
+  }
   if (jcalib->Get("FCAL/EOverPMean",vals)==false){
     map<string,double> &row = vals[0];
     dEOverPMeanParams_FCAL.push_back(row["m0"]);
     dEOverPMeanParams_FCAL.push_back(row["m1"]);
     dEOverPMeanParams_FCAL.push_back(row["m2"]);
-   }
-  */
+  }
+  
   if (jcalib->Get("FCAL/TimeSigmas",vals)==false){ 
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -304,7 +304,7 @@ DParticleID_PID1::~DParticleID_PID1()
 {
 
 }
-/*
+
 double DParticleID_PID1::GetEOverPMean(DetectorSystem_t detector,
 				       double p) const{
   double mean=0;
@@ -340,7 +340,7 @@ double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
   }
   return mean;
 }
-*/
+
 
 double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);

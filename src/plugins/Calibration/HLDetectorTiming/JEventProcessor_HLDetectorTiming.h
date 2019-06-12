@@ -53,12 +53,7 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-        //HistogramTools *histoTools;
-        const DParticleID* dParticleID;
-        DRFTime_factory *dRFTimeFactory;
-     	const DDIRCGeometry* dDIRCGeometry;
-  		const DDIRCLut* dDIRCLut;
-     
+        //HistogramTools *histoTools;     
         
         void DoRoughTiming();
         void DoTDCADCAlign();

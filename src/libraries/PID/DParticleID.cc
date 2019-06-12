@@ -3318,17 +3318,17 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	  shared_ptr<const DBCALShowerMatchParams>bcalparms=locChargedTrackHypothesis->Get_BCALShowerMatchParams(); 
 	  shared_ptr<const DFCALShowerMatchParams>fcalparms=locChargedTrackHypothesis->Get_FCALShowerMatchParams();
 	  if (bcalparms!=NULL){
-	    double E_over_p_mean=1.;
+	    double E_over_p_mean=GetEOverPMean(SYS_BCAL,p);
 	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
-	    double sigma=0.1; 
+	    double sigma=GetEOverPSigma(SYS_BCAL,p);
 	    double chisq=diff*diff/(sigma*sigma);
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
 	  } 
 	  if (fcalparms!=NULL){
-	    double E_over_p_mean=1.;
+	    double E_over_p_mean=GetEOverPMean(SYS_FCAL,p);
 	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
-	    double sigma=0.1;
+	    double sigma=GetEOverPSigma(SYS_FCAL,p);
 	    double chisq=diff*diff/(sigma*sigma);
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
