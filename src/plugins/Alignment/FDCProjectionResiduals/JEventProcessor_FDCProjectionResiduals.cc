@@ -186,7 +186,7 @@ jerror_t JEventProcessor_FDCProjectionResiduals::brun(JEventLoop *eventLoop, int
 jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
    vector<const DTrackFitter *> fitters;
-   eventLoop->Get(fitters);
+   loop->Get(fitters);
    
    if(fitters.size()<1){
      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
@@ -267,7 +267,7 @@ jerror_t JEventProcessor_FDCProjectionResiduals::evnt(JEventLoop *loop, uint64_t
 	      POCAOnWire.Print(); 
 	      
 	      double delta = 0.0, dz = 0.0;
-	      if(!Expect_Hit(thisTimeBasedTrack, wire, distanceToWire, delta, dz))
+	      if(!Expect_Hit(thisTimeBasedTrack, wire, distanceToWire, delta, dz, fitter))
 		continue;
 	      // Check for a CDC Hit on this wire
 	      for (auto cdcHit = cdcHitVector.begin(); cdcHit != cdcHitVector.end(); cdcHit++){
@@ -402,7 +402,7 @@ double JEventProcessor_FDCProjectionResiduals::CDCDriftDistance(double delta, do
    return d;
 }
 
-bool JEventProcessor_FDCProjectionResiduals::Expect_Hit(const DTrackTimeBased* thisTimeBasedTrack, DCDCWire* wire, double distanceToWire, double& delta, double& dz)
+bool JEventProcessor_FDCProjectionResiduals::Expect_Hit(const DTrackTimeBased* thisTimeBasedTrack, DCDCWire* wire, double distanceToWire, double& delta, double& dz, const DTrackFitter *fitter)
 {
    delta = 0.0;
    dz = 0.0;
