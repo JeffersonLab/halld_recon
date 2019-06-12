@@ -319,13 +319,39 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       if (is_paired[i][k]==0 && LinkStraySegment(segment)) is_paired[i][k]=1;
     }
   }
+ 
+  vector<pair<unsigned int,unsigned int> >unused_segments;
+  for (unsigned int j=0;j<4;j++){
+    for (unsigned int i=0;i<packages[j].size();i++){
+      if (is_paired[j][i]==0){
+	unused_segments.push_back(make_pair(j,i));
+      }
+    }
+  }
 
+  // Find track candidates using Hough transform
+  if (unused_segments.size()>1){
+    if (LinkSegmentsHough(unused_segments,packages,is_paired)){
+      unused_segments.clear();
+      for (unsigned int j=0;j<4;j++){
+	for (unsigned int i=0;i<packages[j].size();i++){
+	  if (is_paired[j][i]==0){
+	    unused_segments.push_back(make_pair(j,i));
+	  }
+	}
+      }
+      if (unused_segments.size()>1){
+	LinkSegmentsHough(unused_segments,packages,is_paired);
+      }
+    }
+  }
+    
   // Create track stubs for unused segments
   for (unsigned int j=0;j<4;j++){
     for (unsigned int i=0;i<packages[j].size();i++){
       if (is_paired[j][i]==0){
 	const DFDCSegment* segment=packages[j][i];
-	
+
 	// Get the momentum and position at a specific z position
 	DVector3 mom, pos;
 	GetPositionAndMomentum(segment,pos,mom);
@@ -734,5 +760,135 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
       }
     }
   }
+  return false;
+}
+
+// Find circles using Hough transform
+bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segments,
+							    vector<DFDCSegment *>packages[4],
+							    vector<vector<int> >&is_paired){
+  DHoughFind hough(-400.0, +400.0, -400.0, +400.0, 100, 100);
+    
+  vector<pair<unsigned int, unsigned int> >associated_segments;
+  for (unsigned int i=0;i<unused_segments.size();i++){
+    unsigned int packNum=unused_segments[i].first;
+    unsigned int segmentNum=unused_segments[i].second;    
+    const DFDCSegment* segment=packages[packNum][segmentNum];
+    for (unsigned int m=0;m<segment->hits.size();m++){
+      hough.AddPoint(segment->hits[m]->xy);
+      associated_segments.push_back(unused_segments[i]);
+    }
+  }
+        
+  DVector2 Ro = hough.Find();
+  if(hough.GetMaxBinContent()>10.0){	
+    // Zoom in on resonance a little
+    double width = 60.0;
+    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 
+		    100, 100);
+    Ro = hough.Find();
+    
+    // Zoom in on resonance once more
+    width = 8.0;
+    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 100, 100);
+    Ro = hough.Find();
+    
+    vector<DVector2> points=hough.GetPoints();
+    set<pair<unsigned int, unsigned int> >associated_segments_to_use;
+    unsigned int num_hits_to_use=0;
+    for (unsigned int m=0;m<points.size();m++){
+      // Calculate distance between Hough transformed line (i.e.
+      // the line on which a circle that passes through both the
+      // origin and the point at hit->pos) and the circle center.
+      DVector2 h=0.5*points[m];
+      DVector2 g(h.Y(), -h.X()); 
+      g /= g.Mod();
+      DVector2 Ro_minus_h=Ro-h;	
+      double dist = fabs(g.X()*Ro_minus_h.Y() - g.Y()*Ro_minus_h.X());
+      
+      // If this is not close enough to the found circle's center,
+      // reject it for this track candidate
+      if(dist < 2.0){
+	num_hits_to_use++;
+	associated_segments_to_use.emplace(associated_segments[m]);
+      }
+    }
+    if (num_hits_to_use>5&&associated_segments_to_use.size()>1){
+      bool same_package=false;
+      set<pair<unsigned int,unsigned int> >::iterator it=associated_segments_to_use.begin();
+      for (; it!=associated_segments_to_use.end(); ++it){
+	unsigned int first_packNo=(*it).first;
+	unsigned int first_segmentNo=(*it).second;
+	set<pair<unsigned int,unsigned int> >::iterator it2=associated_segments_to_use.begin();
+	for (; it2!=associated_segments_to_use.end(); ++it2){
+	  unsigned int packNo=(*it2).first;
+	  unsigned int segmentNo=(*it2).second;
+	  if (packNo==first_packNo){
+	    if (segmentNo==first_segmentNo) continue;
+	    
+	    same_package=true;
+	    break;
+	  }
+	}
+      }
+      if (same_package==false){
+	DHelicalFit fit;
+	
+	set<pair<unsigned int,unsigned int> >::iterator it=associated_segments_to_use.begin();
+	const DFDCSegment *first_segment=NULL;
+	bool got_first_segment=false;
+	for (; it!=associated_segments_to_use.end(); ++it){
+	  unsigned int packNo=(*it).first;
+	  unsigned int segmentNo=(*it).second;	    
+	    DFDCSegment *segment=packages[packNo][segmentNo];
+	    if (got_first_segment==false){
+	      first_segment=segment;
+	      got_first_segment=true;
+	    }
+	    for (unsigned int m=0;m<segment->hits.size();m++){
+	      fit.AddHit(segment->hits[m]);
+	    }
+	    
+	}
+	if (fit.FitTrackRiemann(Ro.Mod())==NOERROR){
+	  rc=fit.r0;
+	  tanl=fit.tanl;
+	  xc=fit.x0;
+	  yc=fit.y0;
+	  q=FactorForSenseOfRotation*fit.h;
+	  
+	  // Get the momentum and position at a specific z position
+	  DVector3 mom, pos;
+	  GetPositionAndMomentum(first_segment,pos,mom);
+	  
+	  // Create new track
+	  DTrackCandidate *track = new DTrackCandidate;
+	  track->rc=rc;
+	  track->xc=xc;
+	  track->yc=yc;
+	  
+	  track->setPosition(pos);
+	  track->setMomentum(mom);
+	  track->setPID((q > 0.0) ? PiPlus : PiMinus);
+	  track->Ndof=fit.ndof;
+	  track->chisq=fit.chisq;
+	  
+	  for (it=associated_segments_to_use.begin(); 
+	       it!=associated_segments_to_use.end(); ++it){
+	    unsigned int packNo=(*it).first;
+	    unsigned int segmentNo=(*it).second;	    
+	    DFDCSegment *segment=packages[packNo][segmentNo];
+	    track->AddAssociatedObject(segment);
+	    is_paired[packNo][segmentNo]=1;
+	  }
+	  
+	  _data.push_back(track);
+	
+	  return true;
+	}
+      }
+    }
+  } // got resonance
+  
   return false;
 }
