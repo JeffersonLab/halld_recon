@@ -514,8 +514,6 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
     // 5: thisp1  par1 for this run
 
 
-
-
     if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
 
       dedx.dx=dx;
@@ -523,18 +521,14 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dE_amp=hit->dE_amp;
       dedx.p=mom.Mag();
 
-      // amplitude correction for doca > dcorr     
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
-
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
-
         double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
-
         dedx.dE_amp = dedx.dE_amp * reference/this_run;
-
       }
 
-      // integral correction
+
+  // integral correction
 
       double dmax = CDC_GAIN_DOCA_PARS[0];
       double dmin = CDC_GAIN_DOCA_PARS[1];
@@ -544,22 +538,20 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
 
       if (hit->dist < dmin) {
 
-        reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
-        reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+	  reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
+	  reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
 
-        this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
-        this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
+	  this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
+	  this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
 
       } else { 
 
-        reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
-        this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
+	  reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
+	  this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
 
       }
 
       dedx.dE = dedx.dE * reference/this_run;
-
-      // end of new integral correction
 
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;
