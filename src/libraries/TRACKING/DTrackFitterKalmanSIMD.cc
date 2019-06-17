@@ -7036,7 +7036,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 							      S,C,C0,chisq,
 							      my_ndf);
 	if (refit_error!=FIT_SUCCEEDED){
-	  if (error==PRUNED_TOO_MANY_HITS){
+	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
 	    //_DBG_ << "Trying again without pruning hits" << endl;
 	    fdc_anneal=1000.;
 	    cdc_anneal=1000.;
@@ -7302,6 +7302,12 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	    break_point_cdc_index=max_cdc_index;
 	    refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
 	    //_DBG_ << refit_error <<endl;
+	  }  
+	  if (error==BREAK_POINT_FOUND){
+	    // _DBG_ << "Trying again without pruning hits" << endl;
+	    anneal_factor=1000.; 
+	    refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	    //_DBG_ << refit_error <<endl;
 	  }
 	}
 	if (refit_error!=FIT_SUCCEEDED){
@@ -7550,6 +7556,12 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	    //_DBG_ << "Trying again without pruning hits" << endl;
 	    anneal_factor=1000.; 
 	    break_point_cdc_index=max_cdc_index;
+	    refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
+	    //_DBG_ << refit_error << endl;
+	  } 
+	  if (error==BREAK_POINT_FOUND){
+	    //_DBG_ << "Trying again without pruning hits" << endl;
+	    anneal_factor=1000.; 
 	    refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
 	    //_DBG_ << refit_error << endl;
 	  }
