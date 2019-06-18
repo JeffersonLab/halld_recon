@@ -7261,6 +7261,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       
       // perform the filter 
       C=C0;
+      bool did_second_refit=false;
       error=KalmanForwardCDC(anneal_factor,S,C,chisq,my_ndf);
       
       // Try to recover tracks that failed the first attempt at fitting by
@@ -7296,6 +7297,12 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	}
 	
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  anneal_factor=1000.;
+	  refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
 	  
 	if (refit_error!=FIT_SUCCEEDED){
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
@@ -7325,7 +7332,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 				<< " Prob: " << TMath::Prob(chisq,my_ndf)
 				<< endl;
       
-      if (iter2>MIN_ITER){
+      if (iter2>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_forward/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
@@ -7502,6 +7509,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       
       // perform the fit
       Cc=C0;
+      bool did_second_refit=false;
       error=KalmanCentral(anneal_factor,Sc,Cc,pos,chisq,my_ndf);
 
       // Try to recover tracks that failed the first attempt at fitting by
@@ -7537,6 +7545,13 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	}
 
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  anneal_factor=1000.;
+	  refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
+
 	if (refit_error!=FIT_SUCCEEDED){
 	  //_DBG_ << error << endl;
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
@@ -7565,7 +7580,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 			       << " Prob: " << TMath::Prob(chisq,my_ndf)
 			       << endl;
       
-      if (iter2>MIN_ITER){
+      if (iter2>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_iter/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
