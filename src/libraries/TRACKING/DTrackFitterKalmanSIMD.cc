@@ -7013,6 +7013,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       
       // perform the kalman filter 
       C=C0;
+      bool did_second_refit=false;
       error=KalmanForward(fdc_anneal,cdc_anneal,S,C,chisq,my_ndf);
       if (DEBUG_LEVEL>1){
 	_DBG_ << "Iter: " << iter+1 << " Chi2=" << chisq << " Ndf=" << my_ndf << " Error code: " << error << endl; 
@@ -7035,6 +7036,16 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 							      cdc_anneal,
 							      S,C,C0,chisq,
 							      my_ndf);
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  fdc_anneal=1000.;
+	  cdc_anneal=1000.;
+	  refit_error=RecoverBrokenForwardTracks(fdc_anneal,
+						 cdc_anneal,
+						 S,C,C0,chisq,
+						 my_ndf);
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
 	if (refit_error!=FIT_SUCCEEDED){
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
 	    C=Ctemp;
@@ -7058,7 +7069,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	break;
       }
       
-      if (iter>MIN_ITER){
+      if (iter>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_forward/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
