@@ -6401,7 +6401,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
    DVector2 xy1=xy;
    Step(xy1,ds,S1,dedx);
    beam_pos=beam_center+(S1(state_z)-beam_z0)*beam_dir;
-   r2=(xy0-beam_pos).Mod2();
+   r2=(xy1-beam_pos).Mod2();
    if (r2>r2_old) ds*=-1.;
    double ds_old=ds;
 
