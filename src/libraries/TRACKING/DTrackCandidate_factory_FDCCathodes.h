@@ -84,7 +84,7 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   TH2F *match_dist_fdc,*match_center_dist2;
  
   vector<double>z_wires;
-  double TARGET_Z,BEAM_VAR;
+  double TARGET_Z,BEAM_VAR,FDC_HOUGH_THRESHOLD;
   
   double FactorForSenseOfRotation;
   

@@ -50,6 +50,9 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
   BEAM_VAR=1.;
   gPARMS->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
 
+  FDC_HOUGH_THRESHOLD=10.;
+  gPARMS->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
+
   if(DEBUG_HISTS) {
     dapp->Lock();
     match_dist_fdc=(TH2F*)gROOT->FindObject("match_dist_fdc");
@@ -781,7 +784,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
   }
         
   DVector2 Ro = hough.Find();
-  if(hough.GetMaxBinContent()>10.0){	
+  if(hough.GetMaxBinContent()>FDC_HOUGH_THRESHOLD){	
     // Zoom in on resonance a little
     double width = 60.0;
     hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 
