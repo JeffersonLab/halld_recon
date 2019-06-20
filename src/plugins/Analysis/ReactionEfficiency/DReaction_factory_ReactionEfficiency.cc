@@ -148,8 +148,8 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	
 	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); // KPlus
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.7, 2.0, "Lambda1520Recoil"));
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.7, 2.0, "Lambda1520Recoil_KinFit"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
 	// HISTOGRAM PID
 	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
@@ -177,8 +177,8 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	
 	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); // KPlus
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.7, 2.0, "Lambda1520Recoil"));
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.7, 2.0, "Lambda1520Recoil_KinFit"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
 	// HISTOGRAM PID
 	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
@@ -206,8 +206,8 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	
 	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
         locRecoilIndices.clear();  locRecoilIndices.push_back(2); // KPlus
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.7, 2.0, "Sigma0Recoil"));
-	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.7, 2.0, "Sigma0Recoil_KinFit"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
 	// HISTOGRAM PID
 	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
