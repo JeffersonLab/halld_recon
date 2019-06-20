@@ -130,7 +130,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
-	/**************************************************** kpkmmissp__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** kpkmmissprot__B1_T1_U1_Effic ****************************************************/
 	
 	locReaction = new DReaction("kpkmmissprot__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {KPlus, KMinus}, Proton);
@@ -159,9 +159,9 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
-	/**************************************************** kpmisskm__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
 	
-	locReaction = new DReaction("kpmisskm__B1_T1_U1_Effic");
+	locReaction = new DReaction("kpmisskm__B1_T1_U1_Lambda1520Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {KPlus, Proton}, KMinus);
 	locReaction->Add_ReactionStep(locReactionStep);
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
@@ -169,7 +169,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // B1
 	locReaction->Set_MaxExtraGoodTracks(1); // T1
-	locReaction->Enable_TTreeOutput("tree_kpmisskm__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	locReaction->Enable_TTreeOutput("tree_kpmisskm__B1_T1_U1_Lambda1520Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
 	
 	// KINEMATIC FIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
@@ -188,7 +188,65 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
-	/**************************************************** gpimkpmisspkp__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
+	
+	locReaction = new DReaction("kpmisskm__B1_T1_U1_PhiEffic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {KPlus, Proton}, KMinus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_kpmisskm__B1_T1_U1_PhiEffic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(1); // Proton
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+	
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+	/**************************************************** kmmisskp__B1_T1_U1_PhiEffic ****************************************************/
+	
+	locReaction = new DReaction("kmmisskp__B1_T1_U1_PhiEffic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {KMinus, Proton}, KPlus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_kmmisskp__B1_T1_U1_PhiEffic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(1); // Proton
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+	
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+	/**************************************************** gpimkpmissprot__B1_T1_U1_Effic ****************************************************/
 	
 	locReaction = new DReaction("gpimkpmissprot__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {Gamma, PiMinus, KPlus}, Proton);
