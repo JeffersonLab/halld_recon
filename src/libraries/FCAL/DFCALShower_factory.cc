@@ -49,7 +49,7 @@ DFCALShower_factory::DFCALShower_factory()
   timeConst3 = 0; 
   timeConst4 = 0;
 
-  gPARMS->SetDefaultParameter("FCAL:cutoff_enegry", cutoff_energy);
+  gPARMS->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
   gPARMS->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
   gPARMS->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
   gPARMS->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
