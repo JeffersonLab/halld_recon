@@ -91,10 +91,10 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
   	loop->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
+	auto locBCALGeom = BCALGeomVec[0];
 
-    printf("dBCALGeom->GetBCAL_center()=%f\nZ_TARGET=%f\n",
-           dBCALGeom->GetBCAL_center(), Z_TARGET);
+    printf("locBCALGeom->GetBCAL_center()=%f\nZ_TARGET=%f\n",
+           locBCALGeom->GetBCAL_center(), Z_TARGET);
 
     // //////
     // // THIS NEEDS TO CHANGE IF THERE IS A NEW TABLE
@@ -122,7 +122,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     //    float c1 = (*iter)[5];
     //    float c2 = (*iter)[6];
     //    float a_thresh = (*iter)[7];
-    //    int cellId = dBCALGeom->cellId(module, layer, sector);
+    //    int cellId = locBCALGeom->cellId(module, layer, sector);
     //    readout_channel channel(cellId,end);
     //    tdc_timewalk_map[channel] = timewalk_coefficients(c0,c1,c2,a_thresh);
     // }
@@ -150,17 +150,6 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     }
     japp->RootFillUnLock(this);
 
-    vector<const DTrackFitter *> fitters;
-    loop->Get(fitters);
-    
-    if(fitters.size()<1){
-      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
-    }
-    
-    fitter = fitters[0];
-
-
     return NOERROR;
 }
 
@@ -185,6 +174,25 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
        bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
        if (!locIsHDDMEvent) goodtrigger=0;
    }
+   
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	loop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load DBCALGeometry object!");
+	auto locBCALGeom = BCALGeomVec[0];
+
+    vector<const DTrackFitter *> fitters;
+    loop->Get(fitters);
+    
+    if(fitters.size()<1){
+      _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+      return RESOURCE_UNAVAILABLE;
+    }
+    
+    auto fitter = fitters[0];
+
+
 
    // calculate total BCAL energy in order to catch BCAL LED events
    vector<const DBCALHit *> bcal_hits;
@@ -236,7 +244,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       //int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
       // There is one less layer of TDCs so the numbering relects this
       int the_tdc_cell = (bcalUnifiedHitVector[i]->module - 1) * 12 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
-      //int cellId = dBCALGeom->cellId(bcalUnifiedHitVector[i]->module, bcalUnifiedHitVector[i]->layer, bcalUnifiedHitVector[i]->sector);
+      //int cellId = locBCALGeom->cellId(bcalUnifiedHitVector[i]->module, bcalUnifiedHitVector[i]->layer, bcalUnifiedHitVector[i]->sector);
       // Get the underlying associated objects
       const DBCALHit * thisADCHit;
       const DBCALTDCHit * thisTDCHit;
@@ -439,14 +447,14 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
       // UNPROJECTION CODE
       // double shower_deltaz = thisShower->z-Z_TARGET;
       // double straightPathLength = sqrt(r_shower*r_shower + shower_deltaz*shower_deltaz);
-      // double modulepath = (r_shower-dBCALGeom->GetBCAL_inner_rad())/r_shower*straightPathLength; // project time back to shower location
+      // double modulepath = (r_shower-locBCALGeom->GetBCAL_inner_rad())/r_shower*straightPathLength; // project time back to shower location
       // double t_module = modulepath/SPEED_OF_LIGHT; // project time back to shower location
       // t_shower += t_module;
 
       // printf("shower (%5.1f,%5.1f,%5.1f) r=%5.1f t=%5.1f E=%5.3f rho=%5.1f module rho=%5.1f t=%5.1f new t=%5.1f\n",
       //         shower_x,shower_y,shower_deltaz,r_shower,thisShower->t,E_shower,straightPathLength,modulepath,t_module,t_shower);
       //int res1 = rt->GetIntersectionWithRadius(r_shower,proj_pos, &pathLength, &flightTime);
-      //int res2 = rt->GetIntersectionWithRadius(dBCALGeom->GetBCAL_inner_rad(),proj_pos, &innerpathLength, &innerflightTime);
+      //int res2 = rt->GetIntersectionWithRadius(locBCALGeom->GetBCAL_inner_rad(),proj_pos, &innerpathLength, &innerflightTime);
       //if (res1==NOERROR && res2==NOERROR) {
       DVector3 bcalpos(shower_x,shower_y,Z_shower);
       double R=bcalpos.Perp();
@@ -548,9 +556,9 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
             sprintf(chargename, "All_q%s", q);
             // These results are in slightly different coordinate systems. We want one where the center of the BCAL is z=0
             double trackHitZ = proj_pos.z();
-            double localTrackHitZ = proj_pos.z() - dBCALGeom->GetBCAL_center();
+            double localTrackHitZ = proj_pos.z() - locBCALGeom->GetBCAL_center();
             double BCALHitZ = thisPoint->z() + Z_TARGET;
-            //double localBCALHitZ = thisPoint->z() + Z_TARGET - dBCALGeom->GetBCAL_center();
+            //double localBCALHitZ = thisPoint->z() + Z_TARGET - locBCALGeom->GetBCAL_center();
             double deltaZ = trackHitZ-BCALHitZ;
             double Deltat = thisPoint->t_US() - thisPoint->t_DS();
 
@@ -735,9 +743,9 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
                float pulse_peak_max = max(thisADCHit_up->pulse_peak,thisADCHit_down->pulse_peak);
                float pulse_peak_min = min(thisADCHit_up->pulse_peak,thisADCHit_down->pulse_peak);
 
-               double fibLen = dBCALGeom->GetBCAL_length();
-               double c_effective = dBCALGeom->GetBCAL_c_effective();
-               double BCALtrackHitZ = trackHitZ - (dBCALGeom->GetBCAL_center() - fibLen/2); // position wrt BCAL front edge
+               double fibLen = locBCALGeom->GetBCAL_length();
+               double c_effective = locBCALGeom->GetBCAL_c_effective();
+               double BCALtrackHitZ = trackHitZ - (locBCALGeom->GetBCAL_center() - fibLen/2); // position wrt BCAL front edge
                double barproptime_up   = BCALtrackHitZ / c_effective;
                double barproptime_down = (fibLen-BCALtrackHitZ) / c_effective;
                double hitup_TargetCenterTime   = t_up   - barproptime_up   - flightTime - vertexTime;
@@ -893,7 +901,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
            float pathLength = sqrt(xdiff*xdiff + ydiff*ydiff + zdiff*zdiff);
             // UNPROJECTION CODE
            // since time is projected to BCAL inner radius, shorten pathlength to match
-           //pathLength *= dBCALGeom->GetBCAL_inner_rad()/R_shower;
+           //pathLength *= locBCALGeom->GetBCAL_inner_rad()/R_shower;
 
            float flightTime = pathLength/SPEED_OF_LIGHT;
            float vertexTime = (vertexZ - Z_TARGET) / SPEED_OF_LIGHT; // time for beam to go from center of target to vertex
@@ -990,7 +998,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
                // Now simulate the projection to the inner radius
 
-               pathLength = thisPoint->rho()*dBCALGeom->GetBCAL_inner_rad()/R_shower;
+               pathLength = thisPoint->rho()*locBCALGeom->GetBCAL_inner_rad()/R_shower;
                flightTime = pathLength/SPEED_OF_LIGHT;
                vertexTime = 0; // no vertex time since we are using target center from point
                targetCenterTime =  thisPoint->tInnerRadius() - flightTime - vertexTime;

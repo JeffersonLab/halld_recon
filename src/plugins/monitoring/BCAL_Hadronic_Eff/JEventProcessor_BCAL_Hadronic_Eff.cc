@@ -147,13 +147,6 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::brun(jana::JEventLoop* locEventLoop,
 	//Effective velocities
 	locEventLoop->GetCalib("/BCAL/effective_velocities", effective_velocities);
 
-	// load BCAL geometry
-  	vector<const DBCALGeometry *> BCALGeomVec;
-  	locEventLoop->Get(BCALGeomVec);
-  	if(BCALGeomVec.size() == 0)
-		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
-
 	return NOERROR;
 }
 
@@ -177,6 +170,13 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 	locEventLoop->GetSingle(locTrigger);
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
 		return NOERROR;
+
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	locEventLoop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load locBCALGeometry object!");
+	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];;
 
 	//COMPUTE TOTAL FCAL ENERGY
 	vector<const DFCALShower*> locFCALShowers;
@@ -419,13 +419,13 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 			pair<const DBCALUnifiedHit*, double> locNearestHit_Upstream(NULL, 999.0);
 			auto locHitsIterator = locSortedHits_Upstream.find(locLayer);
 			if(locHitsIterator != locSortedHits_Upstream.end())
-				locNearestHit_Upstream = Find_NearestHit(locProjectedSector, locHitsIterator->second, locCluster, 20.0);
+				locNearestHit_Upstream = Find_NearestHit(locProjectedSector, locHitsIterator->second, locCluster, locBCALGeom, 20.0);
 
 			//finally, search ALL hits: Downstream
 			pair<const DBCALUnifiedHit*, double> locNearestHit_Downstream(NULL, 999.0);
 			locHitsIterator = locSortedHits_Downstream.find(locLayer);
 			if(locHitsIterator != locSortedHits_Downstream.end())
-				locNearestHit_Downstream = Find_NearestHit(locProjectedSector, locHitsIterator->second, locCluster, 20.0);
+				locNearestHit_Downstream = Find_NearestHit(locProjectedSector, locHitsIterator->second, locCluster, locBCALGeom, 20.0);
 
 			/********************************************** REGISTER RESULTS **********************************************/
 
@@ -698,7 +698,8 @@ pair<const DBCALPoint*, double> JEventProcessor_BCAL_Hadronic_Eff::Find_NearestP
 	return pair<const DBCALPoint*, double>(locBestBCALPoint, locBestDeltaSector);
 }
 
-pair<const DBCALUnifiedHit*, double> JEventProcessor_BCAL_Hadronic_Eff::Find_NearestHit(double locProjectedSector, const map<int, set<const DBCALUnifiedHit*> >& locLayerUnifiedHits, const DBCALCluster* locBCALCluster, double locTimeCut)
+pair<const DBCALUnifiedHit*, double> JEventProcessor_BCAL_Hadronic_Eff::Find_NearestHit(double locProjectedSector, const map<int, set<const DBCALUnifiedHit*> >& locLayerUnifiedHits, 
+		const DBCALCluster* locBCALCluster, const DBCALGeometry *locBCALGeom, double locTimeCut)
 {
 	//input map int: full_sector
 	//returned double: delta-sector
@@ -707,7 +708,7 @@ pair<const DBCALUnifiedHit*, double> JEventProcessor_BCAL_Hadronic_Eff::Find_Nea
 
 	for(auto& locHitPair : locLayerUnifiedHits)
 	{
-		const DBCALUnifiedHit* locHit = Find_ClosestTimeHit(locHitPair.second, locBCALCluster, locTimeCut);
+		const DBCALUnifiedHit* locHit = Find_ClosestTimeHit(locHitPair.second, locBCALCluster, locTimeCut, locBCALGeom);
 		if(locHit == NULL)
 			continue; //no hits, or failed time cut //not applied if cut <= 0 //cluster
 
@@ -743,7 +744,8 @@ const DBCALPoint* JEventProcessor_BCAL_Hadronic_Eff::Find_ClosestTimePoint(const
 	return locBestPoint;
 }
 
-const DBCALUnifiedHit* JEventProcessor_BCAL_Hadronic_Eff::Find_ClosestTimeHit(const set<const DBCALUnifiedHit*>& locHits, const DBCALCluster* locBCALCluster, double locTimeCut)
+const DBCALUnifiedHit* JEventProcessor_BCAL_Hadronic_Eff::Find_ClosestTimeHit(const set<const DBCALUnifiedHit*>& locHits, 
+		const DBCALCluster* locBCALCluster, double locTimeCut, const DBCALGeometry *locBCALGeom)
 {
 	if(locHits.empty())
 		return nullptr;
@@ -758,11 +760,11 @@ const DBCALUnifiedHit* JEventProcessor_BCAL_Hadronic_Eff::Find_ClosestTimeHit(co
 		double locClusterZ = locBCALCluster->rho()*cos(locBCALCluster->theta()) + dTargetCenterZ;
 
 		// calc the distance to upstream or downstream end of BCAL depending on where the hit was with respect to the cluster z position.
-		double locDistance = dBCALGeom->GetBCAL_length()/2.0;
+		double locDistance = locBCALGeom->GetBCAL_length()/2.0;
 		if(locHit->end == 0)
-			locDistance += locClusterZ - dBCALGeom->GetBCAL_center();
+			locDistance += locClusterZ - locBCALGeom->GetBCAL_center();
 		else
-			locDistance += dBCALGeom->GetBCAL_center() - locClusterZ;
+			locDistance += locBCALGeom->GetBCAL_center() - locClusterZ;
 
 		//correct time, calc delta-t
 		int channel_calib = 16*(locHit->module - 1) + 4*(locHit->layer - 1) + locHit->sector - 1; //for CCDB
