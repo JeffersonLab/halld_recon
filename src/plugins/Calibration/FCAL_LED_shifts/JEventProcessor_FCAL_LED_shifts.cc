@@ -158,6 +158,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
   }
 	*/
 
+	// WARNING: THIS IS SUPER DANGEROUS
+	// FIGURE OUT A WAY TO SAVE THIS INFO FOR erun()
   // we need an FCAL Geometry object
   vector< const DFCALGeometry* > geomVec;
   eventLoop->Get( geomVec );
@@ -177,7 +179,6 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
 
   m_ttab = ttabVec[0];
 
-
   // save this info - not terribly thread safe, but this plugin
   // should only be used on one run at once
   m_runnumber = runnumber;
@@ -193,6 +194,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
 jerror_t JEventProcessor_FCAL_LED_shifts::evnt(JEventLoop *eventLoop, 
 					     uint64_t eventnumber)
 {
+
+
 
   	vector< const DFCALHit*  > hits;
   	eventLoop->Get( hits );
@@ -295,7 +298,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::erun(void)
   	// This is called whenever the run number changes, before it is
   	// changed to give you a chance to clean up before processing
   	// events from the next run number.
-  
+ 
+   
   	if(CALC_NEW_CONSTANTS_BEAM) {
   		// calculate time shifts
   		//cerr << "opening " << REFERENCE_FILE_NAME << endl;

@@ -619,18 +619,6 @@ jerror_t DEventProcessor_dc_alignment::brun(JEventLoop *loop, int32_t runnumber)
   
 	japp->RootUnLock(); //RELEASE ROOT LOCK
 
-   // Get pointer to TrackFinder object 
-  vector<const DTrackFinder *> finders;
-  loop->Get(finders);
-
-  if(finders.size()<1){
-    _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
-  }
-
-  // Drop the const qualifier from the DTrackFinder pointer
-  finder = const_cast<DTrackFinder*>(finders[0]);
-
   return NOERROR;
 }
 
@@ -649,6 +637,18 @@ jerror_t DEventProcessor_dc_alignment::erun(void)
 //------------------
 jerror_t DEventProcessor_dc_alignment::fini(void)
 {
+   // Get pointer to TrackFinder object 
+  vector<const DTrackFinder *> finders;
+  loop->Get(finders);
+
+  if(finders.size()<1){
+    _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+
+  // Drop the const qualifier from the DTrackFinder pointer
+  auto finder = const_cast<DTrackFinder*>(finders[0]);
+
 
   printf("Events processed = %d\n",myevt);
 
