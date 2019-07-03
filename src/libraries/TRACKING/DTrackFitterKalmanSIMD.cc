@@ -6213,9 +6213,18 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S){
       }
       r2_old=r2;
       dz_old=dz;
-      S1=S;
       z=newz;
    }
+
+   // If we extrapolate beyond the fiducial volume of the detector before 
+   // finding the doca, abandon the extrapolation...
+   if (newz<Z_MIN){
+     //_DBG_ << "Extrapolated z = " << newz << endl;
+     // Restore old state vector
+     S=S1;
+     return VALUE_OUT_OF_RANGE;
+   }
+
    // update internal variables
    x_=S(state_x);
    y_=S(state_y);
@@ -6370,12 +6379,15 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
 // Propagate track to point of distance of closest approach to origin
 jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       DMatrix5x1 &Sc){
-
-   // Initialize the beam position = center of target, and the direction
-   DVector2 origin;  
-   DVector2 dir;
-
-   // Position and step variables
+  // Save un-extroplated quantities
+  DMatrix5x1 S0(Sc);
+  DVector2 xy0(xy);
+  
+  // Initialize the beam position = center of target, and the direction
+  DVector2 origin;  
+  DVector2 dir;
+  
+  // Position and step variables
    DVector2 beam_pos=beam_center+(Sc(state_z)-beam_z0)*beam_dir;
    double r2=(xy-beam_pos).Mod2();
    double ds=-mStepSizeS; // step along path in cm
@@ -6385,9 +6397,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
    double dedx=0.;
 
    // Check direction of propagation
-   DMatrix5x1 S0;
-   S0=Sc; 
-   DVector2 xy0=xy;
+   DMatrix5x1 S1=Sc;
    DVector2 xy1=xy;
    Step(xy1,ds,S1,dedx);
    beam_pos=beam_center+(S1(state_z)-beam_z0)*beam_dir;
@@ -6440,6 +6450,16 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       r2_old=r2;
       ds_old=ds;
    }   
+
+   // If we extrapolate beyond the fiducial volume of the detector before 
+   // finding the doca, abandon the extrapolation...
+   if (Sc(state_z)<Z_MIN){
+     //_DBG_ << "Extrapolated z = " << Sc(state_z) << endl;
+     // Restore un-extrapolated values
+     Sc=S0;
+     xy=xy0;
+     return VALUE_OUT_OF_RANGE;
+   }
 
    return NOERROR;
 }
