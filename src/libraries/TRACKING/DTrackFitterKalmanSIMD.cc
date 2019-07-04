@@ -6382,12 +6382,12 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
   // Save un-extroplated quantities
   DMatrix5x1 S0(Sc);
   DVector2 xy0(xy);
-
-   // Initialize the beam position = center of target, and the direction
-   DVector2 origin;  
-   DVector2 dir;
-
-   // Position and step variables
+  
+  // Initialize the beam position = center of target, and the direction
+  DVector2 origin;  
+  DVector2 dir;
+  
+  // Position and step variables
    DVector2 beam_pos=beam_center+(Sc(state_z)-beam_z0)*beam_dir;
    double r2=(xy-beam_pos).Mod2();
    double ds=-mStepSizeS; // step along path in cm
@@ -6460,7 +6460,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
      xy=xy0;
      return VALUE_OUT_OF_RANGE;
    }
-   
 
    return NOERROR;
 }

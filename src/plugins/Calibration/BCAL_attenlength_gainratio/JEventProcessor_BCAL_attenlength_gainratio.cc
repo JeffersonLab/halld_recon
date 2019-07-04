@@ -184,13 +184,6 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::brun(JEventLoop *eventLoop,
 	DGeometry* geom = app->GetDGeometry(runnumber);
 	geom->GetTargetZ(z_target_center);
 	
-	// load BCAL geometry
-  	vector<const DBCALGeometry *> BCALGeomVec;
-  	eventLoop->Get(BCALGeomVec);
-  	if(BCALGeomVec.size() == 0)
-		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
-
 
 	return NOERROR;
 }
@@ -202,6 +195,13 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 {
     // simulation is tagged by being an HDDM file
     bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	loop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load DBCALGeometry object!");
+	auto locBCALGeom = BCALGeomVec[0];
 
 	// Start with matched points
 	vector<const DBCALPoint*> dbcalpoints;
@@ -274,7 +274,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 
 		//float timediff = t_ADCus_vec[0]-t_ADCds_vec[0];
 		//float zpos = (timediff)*17./2;
-		float zpos = point->z() - dBCALGeom->GetBCAL_center() + z_target_center;
+		float zpos = point->z() - locBCALGeom->GetBCAL_center() + z_target_center;
 		float intratio = (float)integralUS/(float)integralDS;
 		float logintratio = log(intratio);
 		float peakratio = (float)peakUS/(float)peakDS;

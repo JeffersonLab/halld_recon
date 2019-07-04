@@ -41,7 +41,7 @@ private:
     //important: manages it's own data internally: don't want to call new/delete every event!
     static thread_local DTreeFillData dTreeFillData;
 
-    const DPSGeometry *dPSGeom;
+   
     int geomModuleColumn[8][2] = {{110, 145}, {90, 115}, {73, 93}, {56, 76}, {40, 60}, {24, 45}, {8, 28}, {0, 12}}; // {min, max}
     TRandom3 *dRandom;
 };

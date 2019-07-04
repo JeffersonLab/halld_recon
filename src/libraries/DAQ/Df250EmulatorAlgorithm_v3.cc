@@ -1,8 +1,8 @@
-#include <DAQ/Df250EmulatorAlgorithm_v2.h>
+#include <DAQ/Df250EmulatorAlgorithm_v3.h>
 
-// corresponds to version 0x0C0C or 0x0C0D of the fADC250 firmwarer
+// corresponds to version 0x0C12 of the fADC250 firmware
 
-Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
+Df250EmulatorAlgorithm_v3::Df250EmulatorAlgorithm_v3(JEventLoop *loop){
     // Enables forced use of default values 
     FORCE_DEFAULT = 0;
     // Default values for the essential parameters
@@ -37,18 +37,18 @@ Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
     }
 }
 
-void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawData,
+void Df250EmulatorAlgorithm_v3::EmulateFirmware(const Df250WindowRawData* rawData,
                                                 std::vector<Df250PulseData*> &pdat_objs)
 {
     // This is the main routine called by JEventSource_EVIO::GetObjects() and serves as the entry point for the code.
     if (VERBOSE > 0) {
-        jout << " Df250EmulatorAlgorithm_v2::EmulateFirmware ==> Starting emulation <==" << endl;
+        jout << " Df250EmulatorAlgorithm_v3::EmulateFirmware ==> Starting emulation <==" << endl;
         jout << "rocid : " << rawData->rocid << " slot: " << rawData->slot << " channel: " << rawData->channel << endl;
     }
 
     // First check that we have window raw data available
     if (rawData == NULL) {
-        jerr << " ERROR: Df250EmulatorAlgorithm_v2::EmulateFirmware - raw sample data is missing" << endl;
+        jerr << " ERROR: Df250EmulatorAlgorithm_v3::EmulateFirmware - raw sample data is missing" << endl;
         jerr << " Contact mstaib@jlab.org" << endl;
 	return;
     } 
@@ -78,8 +78,8 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
         NSAT = NSAT_DEF;
         if (counter < 10){
             counter++;
-            if (counter == 10) jout << " WARNING Df250EmulatorAlgorithm_v2::EmulateFirmware No Df250BORConfig == Using default values == LAST WARNING" << endl;
-            else jout << " WARNING Df250EmulatorAlgorithm_v2::EmulateFirmware No Df250BORConfig == Using default values  " << endl;
+            if (counter == 10) jout << " WARNING Df250EmulatorAlgorithm_v3::EmulateFirmware No Df250BORConfig == Using default values == LAST WARNING" << endl;
+            else jout << " WARNING Df250EmulatorAlgorithm_v3::EmulateFirmware No Df250BORConfig == Using default values  " << endl;
 			 //<< rawData->rocid << "/" << rawData->slot << "/" << rawData->channel << endl;
         }
     }
@@ -90,10 +90,10 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
         NPED   = f250BORConfig->NPED;
         MAXPED = f250BORConfig->MaxPed;
         NSAT   = f250BORConfig->NSAT;
-        //if (VERBOSE > 0) jout << "Df250EmulatorAlgorithm_v2::EmulateFirmware NSA: " << NSA << " NSB: " << NSB << " THR: " << THR << endl; 
+        //if (VERBOSE > 0) jout << "Df250EmulatorAlgorithm_v3::EmulateFirmware NSA: " << NSA << " NSB: " << NSB << " THR: " << THR << endl; 
     }
 
-    if (VERBOSE > 0) jout << "Df250EmulatorAlgorithm_v2::EmulateFirmware NSA: " << NSA << " NSB: " << NSB << " THR: " << THR << endl; 
+    if (VERBOSE > 0) jout << "Df250EmulatorAlgorithm_v3::EmulateFirmware NSA: " << NSA << " NSB: " << NSB << " THR: " << THR << endl; 
 
     // Note that in principle we could get this information from the Df250Config objects as well, but generally only NPED and the value of NSA+NSB are saved
     // not the individual NSA and NSB values
@@ -140,7 +140,7 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
                 if(samples[i] == 0x1000)
                     jout << "Underflow at sample " << i << endl;
             }
-            if (VERBOSE > 5) jout << "Df250EmulatorAlgorithm_v2::EmulateFirmware samples[" << i << "]: " << samples[i] << endl;
+            if (VERBOSE > 5) jout << "Df250EmulatorAlgorithm_v3::EmulateFirmware samples[" << i << "]: " << samples[i] << endl;
         }
     }
 
@@ -148,6 +148,7 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
     // look for the threhold crossings and compute the integrals
     //unsigned int MAX_SAMPLE = (NSB>0) ? (NW-NSAT) : (NW-NSAT+NSB-1)); // check this
     unsigned int MAX_SAMPLE = NW-NSAT;
+    //for (unsigned int i=0; i < MAX_SAMPLE; i++) {
     for (unsigned int i=0; i < MAX_SAMPLE; i++) {
         if ((samples[i] & 0xfff) > THR) {
             if (VERBOSE > 1) {
@@ -163,7 +164,8 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
 		if(i==0) {
 		  // the algorithm only terminates if we dip below threshold...
-		  for(unsigned int j=i+1; ((samples[j]&0xfff)>=THR) && (j<MAX_SAMPLE+1); j++) {
+			//for(unsigned int j=i+1; ((samples[j]&0xfff)>=THR) && (j<MAX_SAMPLE+1); j++) {
+		  for(unsigned int j=i+1; ((samples[j]&0xfff)>THR) && (j<MAX_SAMPLE+1); j++) {
 		    // only count samples actually above threshold
 		    if ((samples[j] & 0xfff) > THR) 
 		      samples_over_threshold++;
@@ -256,9 +258,8 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
     // error conditions for timing algorithm
     //bool pedestal_underflow = false;
-    //for (unsigned int i=0; i < 5; i++) {
     for (unsigned int i=0; i < 4; i++) {
-        // We set the "Time Quality bit 0" to 1 if any of the first 5 samples is greated than MaxPed or TET...
+        // We set the "Time Quality bit 0" to 1 if any of the first 4 samples is greated than MaxPed or TET...
         if ( ((samples[i] & 0xfff) > MAXPED) || ((samples[i] & 0xfff) > THR) ) {
             bad_timing_pedestal = true;
         }
@@ -268,10 +269,7 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
         }
         //}
 
-        // TEST 
-        //for (unsigned int i=0; i < 4; i++) {
-
-        // "If any of the first 5 samples is greater than TET the TDC will NOT proceed..."
+        // "If any of the first 4 samples is greater than TET the TDC will NOT proceed..."
         // Waiit for iiit...
         if( (samples[i] & 0xfff) > THR ) {
             no_timing_calculation = true;
@@ -280,26 +278,27 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
 
     for (unsigned int p=0; p < npulses; ++p) {
-      // TEST
-      //TC[p] = TNSAT[p];
 
-        // "If any of the first 5 samples is greater than TET or underflow the TDC will NOT proceed
+        // "If any of the first 4 samples is greater than TET or underflow the TDC will NOT proceed
         //   1. pulse time is set to TC
-        //   2. pulse peak is set to zero
+        //   2. pulse peak is set to zero - not anymore!
         //   3. Time quality bits 0 and 1 are set to 1"
         if(no_timing_calculation) {
             TMID[p] = TC[p];
             TFINE[p] = 0;
             VPEAK[p] = 0;
-            vpeak_not_found[p] = true;   // this is "time quality bit 1"
+            //vpeak_not_found[p] = true;   // this is "time quality bit 1"
             // "Time Quality bit 0" should already be set
         }   // should just put an else here...
 
         // we set up a loop so that we can break out of it at appropriate times...
         // note that currently the timing algorithm is run when the pedestal has underflow samples,
         // but according to the documentation, it shouldn't...
+	// NOTE that we should always run the calculation since we always need to search for the
+	// peak position, just in some edge cases we don't need to run the timing algorithm
+
         //while ( (!no_timing_calculation || pedestal_underflow) && true) {
-        while ( (!no_timing_calculation) && true) {
+        while (true) {
             //if (VMIN == 99999) {
             //    VPEAK[p] = 0;
             //    reportTC[p] = true;
@@ -339,17 +338,13 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
                 break;
             }
 
+	    // we have found the peak position, now ignore the timing calculation if need be...
+	    if(no_timing_calculation)
+		    break;
+
             // VMID is the half amplitude
             VMID[p] = (VMIN + VPEAK[p]) >> 1;
             
-            /*
-            for (unsigned int i = TMIN[p] + 1; i < (uint32_t)ipeak; ++i) { // old
-                if ((samples[i] & 0xfff) > VMID[p]) {
-                    TMID[p] = i;
-                    break;
-                }
-            }
-            */
 
             // look down the leading edge for the sample that satisfies V(N1) <= VMID < V(N+1)
             // N1 is then the coarse time
@@ -490,6 +485,6 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
     }
 
-    if (VERBOSE > 0) jout << " Df250EmulatorAlgorithm_v2::EmulateFirmware ==> Emulation complete <==" << endl;    
+    if (VERBOSE > 0) jout << " Df250EmulatorAlgorithm_v3::EmulateFirmware ==> Emulation complete <==" << endl;    
     return;
 }

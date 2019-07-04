@@ -118,12 +118,6 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::init(void)
 jerror_t JEventProcessor_bcal_calib_cosmic_cdc::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
 	// This is called whenever the run number changes
-	// load BCAL geometry
-  	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
-  	if(BCALGeomVec.size() == 0)
-		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
 	
 	return NOERROR;
 }
@@ -147,6 +141,12 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 	//  ... fill historgrams or trees ...
 	// japp->RootUnLock();
 
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	loop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load DBCALGeometry object!");
+	auto dBCALGeom = BCALGeomVec[0];
 
 	/// DTrackCandidate:CDCCOSMIC
 	/// Get a vector of DTrackCandidate:CDCCOSMIC objects for this event 

@@ -38,7 +38,6 @@ class JEventProcessor_RF_online : public jana::JEventProcessor
 		const char* className(void){return "JEventProcessor_RF_online";}
 
 	private:
-		DRFTime_factory* dRFTimeFactory;
 		TDirectoryFile* dROCTIDirectory;
 
 		double dRFSignalPeriod; //not the same as the period of the beam //before multiplexing
