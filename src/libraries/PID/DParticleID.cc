@@ -201,10 +201,6 @@ DParticleID::DParticleID(JEventLoop *loop)
   // FCAL geometry
   loop->GetSingle(dFCALGeometry);
 
-	//TOF calibration constants & geometry
-	if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
-		jout << "Error loading /TOF/propagation_speed !" << endl;
-
 	map<string, double> tofparms;
  	loop->GetCalib("TOF/tof_parms", tofparms);   
 	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
@@ -215,6 +211,15 @@ DParticleID::DParticleID(JEventLoop *loop)
 	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
 	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
+
+	//TOF calibration constants & geometry
+	if(dTOFGeometry->Get_NBars() == 44) {
+		if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
+			jout << "Error loading /TOF/propagation_speed !" << endl;
+	} else {
+		if(loop->GetCalib("TOF/TOFv2/propagation_speed", propagation_speed))
+			jout << "Error loading /TOF/TOFv2/propagation_speed !" << endl;
+	}
 
 	// Start counter calibration constants
 	// vector<map<string,double> > tvals;

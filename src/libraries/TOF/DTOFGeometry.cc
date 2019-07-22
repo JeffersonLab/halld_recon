@@ -21,7 +21,7 @@ DTOFGeometry::DTOFGeometry(const DGeometry* locGeometry) {
   	CenterMPlane=0.5*(CenterHPlane+CenterVPlane);
 	
 	// load more geometry parameters 
-	if(!locGeometry->GetTOFPaddlePerpPositions(YPOS))
+	if(!locGeometry->GetTOFPaddlePerpPositions(YPOS, YWIDTH))
 		jerr << "Problem loading TOF Geometry!" << endl;
 
 	map<string,double> paddle_params;

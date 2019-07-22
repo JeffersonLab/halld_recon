@@ -21,6 +21,7 @@ using namespace jana;
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFDigiHit.h"
 #include "TOF/DTOFTDCDigiHit.h"
+#include "TOF/DTOFGeometry.h"
 
 #include <TDirectory.h>
 #include <TH2.h>
@@ -107,15 +108,15 @@ jerror_t JEventProcessor_TOF_online::init(void) {
   tofo1   = new TH2I("tofo1","TOF occupancy plane 1 by bar,top/bottom",50,0,50,2,0,2);
   tofo2   = new TH2I("tofo2","TOF occupancy plane 2 by left/right,bar",2,0,2,50,0,50);
 
-  tdcOccS = new TH1I("tdcOccS","TOF, TDC Occupancy",86,1,44);
-  tdcOccN = new TH1I("tdcOccN","TOF, TDC Occupancy",86,1,44);
-  tdcOccU = new TH1I("tdcOccU","TOF, TDC Occupancy",86,1,44);
-  tdcOccD = new TH1I("tdcOccD","TOF, TDC Occupancy",86,1,44);
+  tdcOccS = new TH1I("tdcOccS","TOF, TDC Occupancy",90,1,46);
+  tdcOccN = new TH1I("tdcOccN","TOF, TDC Occupancy",90,1,46);
+  tdcOccU = new TH1I("tdcOccU","TOF, TDC Occupancy",90,1,46);
+  tdcOccD = new TH1I("tdcOccD","TOF, TDC Occupancy",90,1,46);
 
-  adcOccS = new TH1I("adcOccS","TOF, fADC Occupancy",86,1,44);
-  adcOccN = new TH1I("adcOccN","TOF, fADC Occupancy",86,1,44);
-  adcOccU = new TH1I("adcOccU","TOF, fADC Occupancy",86,1,44);
-  adcOccD = new TH1I("adcOccD","TOF, fADC Occupancy",86,1,44);
+  adcOccS = new TH1I("adcOccS","TOF, fADC Occupancy",90,1,46);
+  adcOccN = new TH1I("adcOccN","TOF, fADC Occupancy",90,1,46);
+  adcOccU = new TH1I("adcOccU","TOF, fADC Occupancy",90,1,46);
+  adcOccD = new TH1I("adcOccD","TOF, fADC Occupancy",90,1,46);
 
   histPed = new TH1I("histPed","TOF, Pedestals",100, 0, 500);
 
@@ -127,18 +128,18 @@ jerror_t JEventProcessor_TOF_online::init(void) {
 
 
   TOFPedestalsPlane0 = new TH2F("TOFPedestalsPlane0","TOF Pedestals Plane 0 all PMTs",
-				100,0.,500., 88, 0., 88.);
+				100,0.,500., 92, 0., 92);
   TOFPedestalsPlane1 = new TH2F("TOFPedestalsPlane1","TOF Pedestals Plane 1 all PMTs",
-				100,0.,500., 88, 0., 88.);
+				100,0.,500., 92, 0., 92);
   TOFSignalsRawPlane0 = new TH2F("TOFSignalsRawPlane0","TOF ADC Integral Plane 0 all PMTs",
-				 300,0.,10000., 88, 0., 88.);
+				 300,0.,10000., 92, 0., 92);
   TOFSignalsRawPlane1 = new TH2F("TOFSignalsRawPlane1","TOF ADC Integral Plane 1 all PMTs",
-				 300,0.,10000., 88, 0., 88.);
+				 300,0.,10000., 92, 0., 92);
 
   TOFTimesPlane0 = new TH2F("TOFTimesPlane0","TOF TDC times Plane 0 all PMTs",
-			    800,0.,1000., 88, 0., 88.);
+			    800,0.,1000., 92, 0., 92);
   TOFTimesPlane1 = new TH2F("TOFTimesPlane1","TOF TDC times Plane 1 all PMTs",
-			    800,0.,1000., 88, 0., 88.);
+			    800,0.,1000., 92, 0., 92);
 
   TOFWalkExample = new TH2F("TOFWalkEXample", "TOF T-vs-E walk correction example", 200, 10., 24000., 500, 200.,350.);
 
@@ -175,6 +176,9 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
 
+  const DTOFGeometry* locTOFGeometry;
+  eventLoop->GetSingle(locTOFGeometry);
+
   uint32_t E,t,pedestal;
   int plane,bar,end;
   int count_tdc = 0;
@@ -189,10 +193,10 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   float tTDC = 0.;
   float EADC = 0.;
 
-  double hit_north[45];
-  double hit_south[45];
-  double hit_up[45];
-  double hit_down[45];
+  double hit_north[locTOFGeometry->Get_NBars()+1];
+  double hit_south[locTOFGeometry->Get_NBars()+1];
+  double hit_up[locTOFGeometry->Get_NBars()+1];
+  double hit_down[locTOFGeometry->Get_NBars()+1];
   double position, time, width;
   float integral;
 
@@ -213,6 +217,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     return NOERROR;
   }
   */
+  
 
   vector< const DCAEN1290TDCHit*> CAENHits;
   eventLoop->Get(CAENHits);
@@ -353,7 +358,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	  if (dtofhit->has_TDC){
 	    tdcOccD->Fill(bar);
 	    count_tdc++;
-	    if ( ( (hit_down[bar]<=0) || (t < hit_down[bar]) ) && (bar!=22 || bar!=23) ){
+	    if ( ( (hit_down[bar]<=0) || (t < hit_down[bar]) ) && (!locTOFGeometry->Is_ShortBar(bar)) ){
 	      hit_down[bar] = time;
 	    }
 	  }
@@ -368,7 +373,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	  if (dtofhit->has_TDC){
 	    tdcOccU->Fill(bar);
 	    count_tdc++;
-	    if ( ( (hit_up[bar]<=0) || (t < hit_up[bar]) ) && (bar!=22 || bar!=23) ){
+	    if ( ( (hit_up[bar]<=0) || (t < hit_up[bar]) ) && (!locTOFGeometry->Is_ShortBar(bar)) ){
 	      hit_up[bar] = time;
 	    }
 	  }
@@ -385,7 +390,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	  if (dtofhit->has_TDC){
 	    tdcOccN->Fill(bar);
 	    count_tdc++;
-	    if ( ( (hit_north[bar]<=0) || (t < hit_north[bar]) ) && (bar!=22 || bar!=23) ){
+	    if ( ( (hit_north[bar]<=0) || (t < hit_north[bar]) ) && (!locTOFGeometry->Is_ShortBar(bar)) ){
 	      hit_north[bar] = time;
 	    }
 	  }
@@ -400,7 +405,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	  if (dtofhit->has_TDC){
 	    tdcOccS->Fill(bar);
 	    count_tdc++;
-	    if ( ( (hit_south[bar]<=0) || (t < hit_south[bar]) ) && (bar!=22 || bar!=23) ){
+	    if ( ( (hit_south[bar]<=0) || (t < hit_south[bar]) ) && (!locTOFGeometry->Is_ShortBar(bar)) ){
 	      hit_south[bar] = time;
 	    }
 	  }
@@ -415,19 +420,13 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   }
 
 
-  for (int i=1; i<45; i++)
+  for (int i=1; i<locTOFGeometry->Get_NBars()+1; i++)
     {
-
-      if ( i == 20 || i == 21 || i == 24 || i == 25 ){
-	distY_Horz = distY_Horz + 1.5;
-	distX_Vert = distX_Vert + 1.5;
-	width = 3.0;
-      }
-      else{
-	distY_Horz = distY_Horz + 3;
-	distX_Vert = distX_Vert + 3;
-	width = 6.0;
-      }
+	
+	double width = locTOFGeometry->Get_BarWidth(i);
+	double bar_half_width = width / 2.;
+	distY_Horz += bar_half_width;
+	distX_Vert += bar_half_width;
 
       if( hit_south[i]>0 && hit_north[i]>0 )
 	{
@@ -443,14 +442,8 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	  planeVer->Fill(distX_Vert,position);
 	}
 
-      if ( i == 20 || i == 21 || i == 24 || i == 25 ){
-	distY_Horz = distY_Horz + 1.5;
-	distX_Vert = distX_Vert + 1.5;
-      }
-      else{
-	distY_Horz = distY_Horz + 3;
-	distX_Vert = distX_Vert + 3;
-      }
+	distY_Horz += bar_half_width;
+	distX_Vert += bar_half_width;
 
     }
 

@@ -47,12 +47,6 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 		E_THRESHOLD = 0.0005;
 		ATTEN_LENGTH = 400.;
 	}
-
-	if(eventLoop->GetCalib("TOF/propagation_speed", propagation_speed))
-		jout << "Error loading /TOF/propagation_speed !" << endl;
-	if(eventLoop->GetCalib("TOF/paddle_resolutions", paddle_resolutions))
-		jout << "Error loading /TOF/paddle_resolutions !" << endl;
-
 	loop->GetSingle(dTOFGeometry);
 
     HALFPADDLE = dTOFGeometry->Get_HalfLongBarLength();
@@ -61,6 +55,16 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 	ONESIDED_PADDLE_MIDPOINT_MAG = HALFPADDLE_ONESIDED + locBeamHoleWidth/2.0;
 
 	NUM_BARS = dTOFGeometry->Get_NBars();
+
+    string base_dirname = "TOF";
+    if(NUM_BARS == 46)
+    	base_dirname = "TOF/TOFv2";
+
+	if(eventLoop->GetCalib(base_dirname+"/propagation_speed", propagation_speed))
+		jout << "Error loading /"+base_dirname+"/propagation_speed !" << endl;
+	if(eventLoop->GetCalib(base_dirname+"/paddle_resolutions", paddle_resolutions))
+		jout << "Error loading /"+base_dirname+"/paddle_resolutions !" << endl;
+
 
 	dPositionMatchCut_DoubleEnded = 9.0; //1.5*BARWIDTH
 //	dTimeMatchCut_PositionWellDefined = 1.0;

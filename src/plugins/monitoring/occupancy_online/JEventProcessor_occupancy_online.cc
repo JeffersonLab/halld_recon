@@ -230,15 +230,15 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 
 	//------------------------ TOF ------------------------
 	tof_num_events = new TH1I("tof_num_events", "TOF number of events", 1, 0.0, 1.0);
-	tof_tdc_S_occ = new TH1I("tof_tdc_S_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_N_occ = new TH1I("tof_tdc_N_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_U_occ = new TH1I("tof_tdc_U_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_D_occ = new TH1I("tof_tdc_D_occ","TOF, TDC Occupancy",86,1,44);
+	tof_tdc_S_occ = new TH1I("tof_tdc_S_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_N_occ = new TH1I("tof_tdc_N_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_U_occ = new TH1I("tof_tdc_U_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_D_occ = new TH1I("tof_tdc_D_occ","TOF, TDC Occupancy",88,1,46);
 
-	tof_adc_S_occ = new TH1I("tof_adc_S_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_N_occ = new TH1I("tof_adc_N_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_U_occ = new TH1I("tof_adc_U_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_D_occ = new TH1I("tof_adc_D_occ","TOF, fADC Occupancy",86,1,44);
+	tof_adc_S_occ = new TH1I("tof_adc_S_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_N_occ = new TH1I("tof_adc_N_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_U_occ = new TH1I("tof_adc_U_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_D_occ = new TH1I("tof_adc_D_occ","TOF, fADC Occupancy",88,1,46);
 
 	//------------------------ DIRC ------------------------
 	dirc_num_events = new TH1I("dirc_num_events", "DIRC number of events", 1, 0.0, 1.0);

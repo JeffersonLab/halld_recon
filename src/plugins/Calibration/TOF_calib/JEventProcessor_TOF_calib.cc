@@ -7,6 +7,7 @@
 
 
 #include "JEventProcessor_TOF_calib.h"
+#include "TOF/DTOFGeometry.h"
 using namespace jana;
 
 // Routine used to create our JEventProcessor
@@ -160,6 +161,10 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (indx<0){
     return NOERROR;
   }
+  
+
+  const DTOFGeometry* locTOFGeometry;
+  loop->GetSingle(locTOFGeometry);
 
   uint64_t TriggerTime = ROCS[indx]->timestamp;
   int TriggerBIT = TriggerTime%6;
@@ -181,8 +186,8 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   // sort them into ADCLeft and ADCRight hits
   // only keep hits within the time-peak
   // also keep the hodoscope planes separate
-  int th[2][44][2];
-  memset(th,0,2*44*2*4);
+  int th[locTOFGeometry->Get_NPlanes()][locTOFGeometry->Get_NBars()][locTOFGeometry->Get_NEnds()];
+  memset(th,0,locTOFGeometry->Get_NPlanes()*locTOFGeometry->Get_NBars()*locTOFGeometry->Get_NEnds()*4);
   for (unsigned int k=0; k<ADCHits.size(); k++){
     const DTOFDigiHit *hit = ADCHits[k];
     int plane = hit->plane;
@@ -195,7 +200,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     int bar = hit->bar;
-    float indx = bar-1 + plane *88 + end*44;
+    float indx = bar-1 + plane*locTOFGeometry->Get_NBars()*2 + end*locTOFGeometry->Get_NBars();
     //cout<<plane<<"  "<<bar<<"  "<<end<<endl;
 
     if (hit->pedestal){
@@ -252,7 +257,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     int plane = hit->plane;
     int end = hit->end;
     float time = (float)hit->time * BINTDC_2_TIME;
-    float indx = plane*88 + end*44 + hit->bar-1;
+    float indx = plane*locTOFGeometry->Get_NBars()*2 + end*locTOFGeometry->Get_NBars() + hit->bar-1;
     TOFTDCtime->Fill(time, indx);
     if (fabsf(time-TDCTLOC)<TDCTimeCut){
       if (end){
@@ -274,11 +279,10 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   for (int plane=0; plane<2; plane++){
 
     // loop over right pmts to find single ended paddle hits
-    // these are paddle 22 and paddle 23
     for (unsigned int i = 0; i<ADCHitsRight[plane].size(); i++) {
       const DTOFDigiHit *hitR = ADCHitsRight[plane][i];
       int paddle = hitR->bar;
-      if ((paddle == 22) || (paddle == 23)){
+      if ( locTOFGeometry->Is_ShortBar(paddle) ){
 	struct SingleP newsingle;
 	newsingle.paddle = paddle;
 	newsingle.LR = 1;
@@ -294,13 +298,12 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     // loop over left pmts to find single ended paddle hits
-    // these are paddle 22 and paddle 23
     // for the other paddle loop over the right ones and find match
 
     for (unsigned int j = 0; j<ADCHitsLeft[plane].size(); j++) {
       const DTOFDigiHit *hit = ADCHitsLeft[plane][j];
       int paddle = hit->bar;
-      if ((paddle == 22) || (paddle == 23)){ // save singles of left pmts
+      if (locTOFGeometry->Is_ShortBar(paddle)){ // save singles of left pmts
 	struct SingleP newsingle;
 	newsingle.paddle = paddle;
 	newsingle.LR = 0;
@@ -335,7 +338,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    newpaddle.OverFlowL =  ADCLeftOverFlow[plane][j];
 	    newpaddle.OverFlowR =  ADCRightOverFlow[plane][i];
-	    if ((paddle != 22) && (paddle !=23)) {
+	    if (!locTOFGeometry->Is_ShortBar(paddle)) {
 	      //cout<<newpaddle.OverFlowL<<"   "<< newpaddle.OverFlowR <<endl;
 	      TOFADCPaddles[plane].push_back(newpaddle);
 	    }
@@ -357,7 +360,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int j = 0; j<TDCHitsRight[plane].size(); j++) {
       const DTOFTDCDigiHit *hit = TDCHitsRight[plane][j];
       int paddle = hit->bar;
-      if ((paddle == 22) || (paddle == 23)){
+      if (locTOFGeometry->Is_ShortBar(paddle)){
 	struct SingleP newsingle;
 	newsingle.paddle = paddle;
 	newsingle.LR = 1;
@@ -369,7 +372,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int j = 0; j<TDCHitsLeft[plane].size(); j++) {
       const DTOFTDCDigiHit *hit = TDCHitsLeft[plane][j];
       int paddle = hit->bar;
-      if ((paddle == 22) || (paddle == 23)){
+      if (locTOFGeometry->Is_ShortBar(paddle)){
 	struct SingleP newsingle;
 	newsingle.paddle = paddle;
 	newsingle.LR = 0;
