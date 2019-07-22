@@ -43,7 +43,7 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
     E_THRESHOLD    =    tofparms["TOF_E_THRESHOLD"];
     ATTEN_LENGTH   =    tofparms["TOF_ATTEN_LENGTH"];
   } else {
-    cout << "DTOFPaddleHit_factory: Error loading values from TOF data base" <<endl;
+    jout << "DTOFPaddleHit_factory: Error loading values from TOF data base" <<endl;
 
     C_EFFECTIVE = 15.;    // set to some reasonable value
     //HALFPADDLE = 126;     // set to some reasonable value
@@ -53,6 +53,11 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 
   // load values from geometry
   loop->Get(TOFGeom);
+  if(TOFGeom.size() < 1) {
+  	jout << "DTOFPaddleHit_factory: Error loading TOF Geometry!" <<endl;
+  	return OBJECT_NOT_AVAILABLE;
+  }
+  
   TOF_NUM_PLANES = TOFGeom[0]->Get_NPlanes();
   TOF_NUM_BARS = TOFGeom[0]->Get_NBars();
   HALFPADDLE = TOFGeom[0]->Get_HalfLongBarLength();
@@ -60,11 +65,15 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
   ENERGY_ATTEN_FACTOR=exp(HALFPADDLE/ATTEN_LENGTH);
   TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
 
-  if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
-    jout << "Error loading /TOF/propagation_speed !" << endl;
+  string base_dirname = "TOF";
+  if(TOF_NUM_BARS == 46)
+	base_dirname = "TOF/TOFv2";
+    
+  if(loop->GetCalib(base_dirname+"/propagation_speed", propagation_speed))
+    jout << "Error loading /"+base_dirname+"/propagation_speed !" << endl;
 
-  if (loop->GetCalib("TOF/attenuation_lengths",AttenuationLengths))
-    jout << "Error loading /TOF/attenuation_lengths !" <<endl;
+  if (loop->GetCalib(base_dirname+"/attenuation_lengths",AttenuationLengths))
+    jout << "Error loading /"+base_dirname+"/attenuation_lengths !" <<endl;
 
 
   return NOERROR;

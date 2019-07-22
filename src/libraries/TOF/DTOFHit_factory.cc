@@ -75,7 +75,8 @@ jerror_t DTOFHit_factory::init(void)
     tdc_adc_time_offset = 110.;
   else 
     tdc_adc_time_offset = 0.;
-  
+        
+
   // default values, will override from DTOFGeometry
   TOF_NUM_PLANES = 2;
   TOF_NUM_BARS = 44;
@@ -160,20 +161,24 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     else
       jerr << "Unable to get TOF_TDC_BASE_TIME_OFFSET from /TOF/base_time_offset !" << endl;
     
+    string base_dirname = "TOF";
+    if(TOF_NUM_BARS == 46)
+    	base_dirname = "TOF/TOFv2";
+    
     // load constant tables
-    if(eventLoop->GetCalib("TOF/pedestals", raw_adc_pedestals))
-      jout << "Error loading /TOF/pedestals !" << endl;
-    if(eventLoop->GetCalib("TOF/gains", raw_adc_gains))
-      jout << "Error loading /TOF/gains !" << endl;
-    if(eventLoop->GetCalib("TOF/adc_timing_offsets", raw_adc_offsets))
-      jout << "Error loading /TOF/adc_timing_offsets !" << endl;
+    if(eventLoop->GetCalib(base_dirname+"/pedestals", raw_adc_pedestals))
+      jout << "Error loading /"+base_dirname+"/pedestals !" << endl;
+    if(eventLoop->GetCalib(base_dirname+"/gains", raw_adc_gains))
+      jout << "Error loading /"+base_dirname+"/gains !" << endl;
+    if(eventLoop->GetCalib(base_dirname+"/adc_timing_offsets", raw_adc_offsets))
+      jout << "Error loading /"+base_dirname+"/adc_timing_offsets !" << endl;
 
     if (USE_NEWAMP_4WALKCORR){
 
-      if(eventLoop->GetCalib("TOF/timing_offsets_NEWAMP", raw_tdc_offsets)){
+      if(eventLoop->GetCalib(base_dirname+"/timing_offsets_NEWAMP", raw_tdc_offsets)){
 
 	jout<<"\033[1;31m";  // red text";
-	jout<< "Error loading /TOF/timing_offsets_NEWAMP !\033[0m" << endl;
+	jout<< "Error loading /"+base_dirname+"/timing_offsets_NEWAMP !\033[0m" << endl;
 
 	USE_NEWAMP_4WALKCORR = 0;
 	jout << "\033[1;31m"; // red text again";
@@ -188,8 +193,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
       } else { // timing offsets for NEWAMP exist, get also the walk parameters
 
-	if(eventLoop->GetCalib("TOF/timewalk_parms_NEWAMP", timewalk_parameters_NEWAMP))
-	  jout << "Error loading /TOF/timewalk_parms_NEWAMP !" << endl;
+	if(eventLoop->GetCalib(base_dirname+"/timewalk_parms_NEWAMP", timewalk_parameters_NEWAMP))
+	  jout << "Error loading /"+base_dirname+"/timewalk_parms_NEWAMP !" << endl;
       
       }
 
