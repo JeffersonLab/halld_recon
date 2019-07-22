@@ -105,17 +105,6 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 
 jerror_t DEventProcessor_dirc_hists::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
-   // get PID algos
-   const DParticleID* locParticleID = NULL;
-   loop->GetSingle(locParticleID);
-   dParticleID = locParticleID;
-
-   vector<const DDIRCGeometry*> locDIRCGeometry;
-   loop->Get(locDIRCGeometry);
-   dDIRCGeometry = locDIRCGeometry[0];
-
-   // Initialize DIRC LUT
-   loop->GetSingle(dDIRCLut);
 
    return NOERROR;
 }
@@ -127,6 +116,18 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
   loop->GetSingle(locTrigger);
   if(!locTrigger->Get_IsPhysicsEvent())
 	  return NOERROR;
+
+   // get PID algos
+   const DParticleID* locParticleID = NULL;
+   loop->GetSingle(locParticleID);
+
+   vector<const DDIRCGeometry*> locDIRCGeometryVec;
+   loop->Get(locDIRCGeometryVec);
+   auto locDIRCGeometry = locDIRCGeometryVec[0];
+
+   // Initialize DIRC LUT
+   const DDIRCLut* dDIRCLut = nullptr;
+  loop->GetSingle(dDIRCLut);
 
   // retrieve tracks and detector matches 
   vector<const DTrackTimeBased*> locTimeBasedTracks;
@@ -153,7 +154,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	  // require has good match to TOF hit for cleaner sample
 	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-	  bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	  bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	  if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		  continue;
 
@@ -162,7 +163,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-	  bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+	  bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 	 
 	  if(foundDIRC) {
 
@@ -170,7 +171,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-		  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+		  int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 		  if(locBar > 23) continue; // skip north box for now
 
 		  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -194,8 +195,8 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  int locChannel = locDIRCPmtHits[loc_i]->ch%dMaxChannels;
 			  if(locHitTime > 0 && locHitTime < 150) locPhotonInclusive++;
 
-			  int pixel_row = dDIRCGeometry->GetPixelRow(locChannel);
-			  int pixel_col = dDIRCGeometry->GetPixelColumn(locChannel);
+			  int pixel_row = locDIRCGeometry->GetPixelRow(locChannel);
+			  int pixel_col = locDIRCGeometry->GetPixelColumn(locChannel);
 
 			  // if find track which points to relevant bar, fill photon yield and matched
 			  int locXbin = (int)(posInBar.X()/5.0) + 19;

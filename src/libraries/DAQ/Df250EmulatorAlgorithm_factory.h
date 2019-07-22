@@ -25,9 +25,11 @@ class Df250EmulatorAlgorithm_factory:public jana::JFactory<Df250EmulatorAlgorith
             // changing the tag here or on the command line.
 
             // v1 = f250 code used until mid 2016
-            // v1 = f250 code used starting fall 2016
+            // v2 = f250 code used starting fall 2016
+	    // v3 = f250 code used starting fall 2019 (hopefully)
 
             vector<const Df250EmulatorAlgorithm*> emulators;
+			/*
             Df250EmulatorAlgorithm_factory *f250EmFac = static_cast<Df250EmulatorAlgorithm_factory*>(loop->GetFactory("Df250EmulatorAlgorithm","v1"));
             if (f250EmFac) f250EmFac->Get(emulators);
             for(unsigned int i=0; i< emulators.size(); i++){
@@ -37,6 +39,13 @@ class Df250EmulatorAlgorithm_factory:public jana::JFactory<Df250EmulatorAlgorith
             // add the v2 factory for now as well
             Df250EmulatorAlgorithm_factory *f250EmFacV2 = static_cast<Df250EmulatorAlgorithm_factory*>(loop->GetFactory("Df250EmulatorAlgorithm","v2"));
             if (f250EmFacV2) f250EmFacV2->Get(emulators);
+            for(unsigned int i=0; i< emulators.size(); i++){
+                _data.push_back(const_cast<Df250EmulatorAlgorithm*>(emulators[i]));
+            }
+			*/
+            // add the v3 factory 
+            Df250EmulatorAlgorithm_factory *f250EmFacV3 = static_cast<Df250EmulatorAlgorithm_factory*>(loop->GetFactory("Df250EmulatorAlgorithm","v3"));
+            if (f250EmFacV3) f250EmFacV3->Get(emulators);
             for(unsigned int i=0; i< emulators.size(); i++){
                 _data.push_back(const_cast<Df250EmulatorAlgorithm*>(emulators[i]));
             }

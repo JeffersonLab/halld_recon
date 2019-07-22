@@ -78,7 +78,8 @@ c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
 #include "cphoto.inc"
 #include "adcgam_bk.inc"
 *
-      integer i, j, icl, ipncl
+C supress warning     integer i, j, icl, ipncl
+      integer i, icl, ipncl
       real ecl
       integer 
      &        nw            ,! number of hits in subdetector       INPUT
@@ -91,8 +92,8 @@ c           ad2c(0,i1,i2) = new_ad2c(0,i1,i2)
       real acell, ad2c
       common/profile_com/ acell(0:1,0:500,0:500), ad2c(0:1,0:500,0:500)
 *
-      integer i1, i2, id1, id2
-      real fcell_hyc, fd2c
+C supress warnings      integer i1, i2, id1, id2
+C supress warnings      real fcell_hyc, fd2c
       logical first
       data first /.true./
       save first
@@ -236,7 +237,7 @@ c             endif                          ! if the energy is big enough
      &        last,lastcl   ,!
      &        next,leng     ,!
      &        iwork(10800)    ,! working array
-     &        idwork(10800)   ,! help me
+C supress warning     &        idwork(10800)   ,! help me
      &        maxcl          ! Maximum number of clusters 
 *      real    twork(10800)   ! working array
 *
@@ -673,7 +674,7 @@ c
 cc        if(iwrk(i,0).gt.0) then
           if(fwrk(i,0).gt.1.e-2) then
             ixy=ia(i)
-            ie=id(i)*float(iwrk(i,ipk))/iwrk(i,0)+.5  ! part of cell energy #i belonging to peak #ipk
+            ie=int(id(i)*float(iwrk(i,ipk))/iwrk(i,0)+.5)  ! part of cell energy #i belonging to peak #ipk
             fe=id(i)*fwrk(i,ipk)/fwrk(i,0)            ! part of cell energy #i belonging to peak #ipk
             if(fe.gt.idelta) then
               leng=leng+1
@@ -982,7 +983,7 @@ c
 *               -------------Local declarations------------
 *
       integer*4 
-     &     i,ix,iy,
+C supress warnings    &     i,ix,iy,
      &     dof                 !  number of degrees of freedom  
       real
      &     dxy                ,!  initial step for iteration
@@ -996,6 +997,7 @@ c
      &     x0,y0              ,!
      &     ee,xx,yy           ,!
      &     d2,xm2,xm2cut
+      integer idummy ! for supressing warning
 *
 *               --------------Data statements--------------
 *
@@ -1006,6 +1008,7 @@ c
 *
 *               --------------Event Analysis Code-------------
 *
+      idummy = itype ! supress warning
       e2=0.                             ! one gamma in a peak assumed
       x2=0.
       y2=0.
@@ -1226,9 +1229,11 @@ cc      if(xm2.gt.xm2cut) then
      &     cell_hyc                             ! calc. energy in cell
 *     &     sh_en                               ,! total shower energy  
 *     &     tweight                              ! weighted time sum 
+      integer*4 idummy
 *
 *               --------------Event Analysis Code-------------
 *
+      idummy = iaz(1) ! supress warning
       a0=0.
       x0=0.
       y0=0.
@@ -1300,7 +1305,7 @@ cc      print*, 'corr = ', corr, a0, x0, y0 ! to many if around central hole
      &        i,ix,iy                ! 
       real
 c    &        const                 ,!
-     &        a,d                   ,! 
+C     &        a,d                   ,! 
      &        cell_hyc               ! calc. energy in cell
 *
 *               --------------data statements--------------
@@ -1503,7 +1508,8 @@ c    &     const              ,!
      &     chisq2,chisqc      ,! 
      &     dchi,dchida,dchi0  ,!
      &     a0,a1,a2           ,!
-     &     ex,d,dd            ,!
+C     &     ex,d,dd            ,!
+     &     ex                 ,!
      &     e1c,x1c,y1c        ,!
      &     e2c,x2c,y2c        ,!
      &     gr,gre,grx,gry     ,!
@@ -1760,9 +1766,11 @@ c
      &     cell_hyc                             ! calc. energy in cell
 *     &     sh_en                               ,! total shower energy  
 *     &     tweight                              ! weighted time sum 
+      integer*4 idummy
 *
 *               --------------Event Analysis Code-------------
 *
+      idummy = iaz(1)
       a0=0.
       x0=0.
       y0=0.
@@ -1824,7 +1832,8 @@ c
       implicit none
 #include "cphoto.inc"
 *
-      real x, y, x1, y1, x2, y2, cellsize
+C      real x, y, x1, y1, x2, y2, cellsize
+      real x, y
 *
       integer i, j, i0
       real ax, ay, wx, wy
@@ -1872,9 +1881,11 @@ c    &             acell(i0,i+1,j+1) * (1.-wx) * (1.-wy)
 *
 *               -------------local declarations------------
 *
-      integer i, nold, j, k
+C      integer i, nold, j, k
+      integer i, j, k
 *
-      integer tmpadcgam(ladcgam), wbuf
+      real*4 tmpadcgam(ladcgam)
+      integer wbuf
 *
       integer icl_index, icl_iener      ! list of cluster elements
       common /icl_common/ icl_index(200,MAX_CC), icl_iener(200,MAX_CC)
@@ -1895,9 +1906,9 @@ c    &             acell(i0,i+1,j+1) * (1.-wx) * (1.-wy)
       do i = 1, nadcgam
       do j = i+1, nadcgam
         if(energy_adcgam(1,i).lt.energy_adcgam(1,j)) then
-          call ucopy(adcgam(1,i),  tmpadcgam,ladcgam)
-          call ucopy(adcgam(1,j),adcgam(1,i),ladcgam)
-          call ucopy(tmpadcgam,  adcgam(1,j),ladcgam)
+          call ucopyr(adcgam(1,i),  tmpadcgam,ladcgam)
+          call ucopyr(adcgam(1,j),adcgam(1,i),ladcgam)
+          call ucopyr(tmpadcgam,  adcgam(1,j),ladcgam)
           do k = 1, MAX_CC
             wbuf           = icl_index(i,k)
             icl_index(i,k) = icl_index(j,k)
@@ -1966,9 +1977,21 @@ C--                NO OVERLAP  OR  BEGINNING OF A ON END OF B
       RETURN
       END
 *
+      SUBROUTINE UCOPYR(A,B,N)
+      implicit none
+      REAL*4   A(*), B(*)
+      INTEGER*4 N, I
+C--                NO OVERLAP  OR  BEGINNING OF A ON END OF B
+      IF (N.LE.0) RETURN
+      DO 21 I = 1, N
+   21 B(I) = A(I)
+      RETURN
+      END
+*
       SUBROUTINE UCOPY21(A,B,N)
       implicit none
-      INTEGER A(*), B(*), N, I, IA, IB, c(10800)
+C supress warnings      INTEGER A(*), B(*), N, I, IA, IB, c(10800)
+      INTEGER A(*), B(*), N, I, c(10800)
 C
       IF(N.LE.0) return
       IF(N.GT.10800) THEN

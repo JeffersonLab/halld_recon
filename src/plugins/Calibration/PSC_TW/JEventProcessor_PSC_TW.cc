@@ -51,7 +51,7 @@ Double_t rf_l;
 Double_t rf_r;
 
 // Define RFTime_factory
-DRFTime_factory* dRFTimeFactory;
+DRFTime_factory* locRFTimeFactory;
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -135,14 +135,6 @@ jerror_t JEventProcessor_PSC_TW::brun(JEventLoop *eventLoop, int32_t runnumber)
    // RF
    //////////////
 
-   // Initialize RF time factory
-   dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-
-   // be sure that DRFTime_factory::init() and brun() are called
-   vector<const DRFTime*> locRFTimes;
-
-   eventLoop->Get(locRFTimes);
-
 	return NOERROR;
 }
 
@@ -164,6 +156,9 @@ jerror_t JEventProcessor_PSC_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// japp->RootWriteLock();
 	//  ... fill historgrams or trees ...
 	// japp->RootUnLock();
+
+   // Initialize RF time factory
+   auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
 
    vector<const DRFTime*>	locRFTimes;
    vector<const DPSCPair*>	pairs;
@@ -198,8 +193,8 @@ jerror_t JEventProcessor_PSC_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
       t_r = pairs[i]->ee.second->t;
 
       // Use the ADC time to find the closest RF time.
-      rf_l = dRFTimeFactory->Step_TimeToNearInputTime(locRFTime->dTime,adc_l);
-      rf_r = dRFTimeFactory->Step_TimeToNearInputTime(locRFTime->dTime,adc_r);
+      rf_l = locRFTimeFactory->Step_TimeToNearInputTime(locRFTime->dTime,adc_l);
+      rf_r = locRFTimeFactory->Step_TimeToNearInputTime(locRFTime->dTime,adc_r);
 
       h_dt_vs_pp_tdc_l[psc_mod_l - 1]->Fill(pp_l, tdc_l - rf_l);
       h_dt_vs_pp_t_l[psc_mod_l - 1]->Fill(pp_l, t_l - rf_l);

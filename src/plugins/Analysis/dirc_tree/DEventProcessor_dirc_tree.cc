@@ -65,16 +65,6 @@ jerror_t DEventProcessor_dirc_tree::brun(jana::JEventLoop* locEventLoop, int loc
 {
   // This is called whenever the run number changes
 
-  // get DIRC geometry
-  vector<const DDIRCGeometry*> locDIRCGeometry;
-  locEventLoop->Get(locDIRCGeometry);
-  dDIRCGeometry = locDIRCGeometry[0];
-
-  // get PID algos
-  const DParticleID* locParticleID = NULL;
-  locEventLoop->GetSingle(locParticleID);
-  dParticleID = locParticleID;
-
   return NOERROR;
 }
 
@@ -83,6 +73,15 @@ jerror_t DEventProcessor_dirc_tree::brun(jana::JEventLoop* locEventLoop, int loc
 //------------------
 jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEventNumber)
 {
+  // get DIRC geometry
+  vector<const DDIRCGeometry*> locDIRCGeometryVec;
+  loop->Get(locDIRCGeometryVec);
+  auto locDIRCGeometry = locDIRCGeometryVec[0];
+
+  // get PID algos
+  const DParticleID* locParticleID = NULL;
+  loop->GetSingle(locParticleID);
+
   vector<const DAnalysisResults*> locAnalysisResultsVector;
   loop->Get(locAnalysisResultsVector);
 
@@ -140,7 +139,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 
 	// require has good match to TOF hit for cleaner sample
 	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-	bool foundTOF = dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	if(!foundTOF || locTOFHitMatchParams->Get_DistanceToTrack() > 20.0) continue;
 	double toftrackdist = locTOFHitMatchParams->Get_DistanceToTrack();
 	double toftrackdeltat = locChargedTrackHypothesis->Get_TimeAtPOCAToVertex() - locChargedTrackHypothesis->t0();
@@ -148,7 +147,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 
 	// get DIRC match parameters (contains LUT information)
 	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-	bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+	bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
 	if(foundDIRC){
 	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 

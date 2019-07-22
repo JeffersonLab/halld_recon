@@ -29,6 +29,7 @@ using namespace std::chrono;
 #include <TTAB/DTranslationTable_factory.h>
 #include <DAQ/Df250EmulatorAlgorithm_v1.h>
 #include <DAQ/Df250EmulatorAlgorithm_v2.h>
+#include <DAQ/Df250EmulatorAlgorithm_v3.h>
 #include <DAQ/Df125EmulatorAlgorithm_v2.h>
 
 
@@ -95,7 +96,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
 	F125_EMULATION_MODE = kEmulationAuto;
-	F250_EMULATION_VERSION = 2;
+	F250_EMULATION_VERSION = 3;
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
 	SYSTEMS_TO_PARSE = "";
@@ -218,14 +219,17 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	
 	// Create emulator objects
 
-    if(F250_EMULATION_VERSION == 1) {
-        f250Emulator = new Df250EmulatorAlgorithm_v1();
-    } else {
-        if(F250_EMULATION_VERSION != 2) 
-            jerr << "Invalid fADC250 firmware version specified for emulation == " << F250_EMULATION_VERSION
-                 << " ,  Using v2 firmware as default ..." << endl;
-        f250Emulator = new Df250EmulatorAlgorithm_v2(NULL);
-    }
+	if(F250_EMULATION_VERSION == 1) {
+		f250Emulator = new Df250EmulatorAlgorithm_v1();
+	} else if(F250_EMULATION_VERSION == 2) {
+		f250Emulator = new Df250EmulatorAlgorithm_v2(NULL);
+	} else {
+		cerr << "loading VERSION 3" << endl;
+		if(F250_EMULATION_VERSION != 3) 
+				jerr << "Invalid fADC250 firmware version specified for emulation == " << F250_EMULATION_VERSION
+				     << " ,  Using v3 firmware as default ..." << endl;
+		f250Emulator = new Df250EmulatorAlgorithm_v3(NULL);
+	}
 
 	f125Emulator = new Df125EmulatorAlgorithm_v2();
 
@@ -949,6 +953,37 @@ void JEventSource_EVIOpp::EmulateDf250Firmware(DParsedEvent *pe)
         }
 
     } else if(F250_EMULATION_VERSION == 2) {   // Fall 2016 -> ?
+
+        for(auto wrd : pe->vDf250WindowRawData){
+            // See if we need to remake Df250PulseData objects?
+            vector<const Df250PulseData*> cpdats;   // existing pulse data objects
+            try{ wrd->Get(cpdats); }catch(...){}
+
+            vector<Df250PulseData*> pdats;
+            for(auto cpdat : cpdats) 
+                pdats.push_back((Df250PulseData*)cpdat);
+
+	    // Sort the pulses since we apparently don't always get them in the right order
+	    sort(pdats.begin(), pdats.end(), sortf250pulsenumbers);
+
+            // Flag all objects as emulated and their values will be replaced with emulated quantities
+            if (F250_EMULATION_MODE == kEmulationAlways){
+                for(auto pdat : pdats)
+                    pdat->emulated = 1;
+            }
+
+            // Emulate firmware
+            f250Emulator->EmulateFirmware(wrd, pdats);
+				
+	    // Above call overwrites values with emulated values, but may also
+	    // find additional pulses. Add any extra pulse data objects found
+	    // to end of list
+	    for(uint32_t i=cpdats.size(); i<pdats.size(); i++){
+		    pe->vDf250PulseData.push_back(pdats[i]);
+	    }
+        }
+
+    } else if(F250_EMULATION_VERSION == 3) {   // Fall 2019 -> ?
 
         for(auto wrd : pe->vDf250WindowRawData){
             // See if we need to remake Df250PulseData objects?
