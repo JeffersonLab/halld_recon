@@ -4203,15 +4203,25 @@ bool DSourceComboer::Check_Reactions(vector<const DReaction*>& locReactions)
 	//Check Max neutrals
 	auto locNumNeutralNeeded = locReactions.front()->Get_FinalPIDs(-1, false, false, d_Neutral, true).size(); //no missing, no decaying, include duplicates
 	auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-	if(false) //COMPARE: Comparison-to-old mode
-	{
-		if(locNumDetectedShowers > dMaxNumNeutrals)
-			return false;
-	}
 	if((locNumNeutralNeeded > 0) && (locNumDetectedShowers > dMaxNumNeutrals))
 	{
 		if(dDebugLevel > 0)
 			cout << "Too many neutrals: No combos." << endl;
+		return false;
+	}
+	//Check additional showers
+	auto NumShower_Checker = [&](const DReaction* locReaction) -> bool
+	{
+		auto locCutPair = locReaction->Get_MaxExtraShowers();
+		if(!locCutPair.first)
+			return false;
+		return ((locNumDetectedShowers - locNumNeutralNeeded) > locCutPair.second);
+	};
+	locReactions.erase(std::remove_if(locReactions.begin(), locReactions.end(), NumShower_Checker), locReactions.end());
+	if(locReactions.empty())
+	{
+		if(dDebugLevel > 0)
+			cout << "Too many showers (" << locNumDetectedShowers << "): No combos." << endl;
 		return false;
 	}
 
