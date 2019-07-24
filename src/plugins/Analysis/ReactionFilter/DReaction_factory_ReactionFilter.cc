@@ -89,6 +89,7 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 	//First set defaults, then let user override them
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // +/- 1 bunch for sideband subtraction
+	locReaction->Set_MaxExtraShowers(999);
 	locReaction->Set_MaxExtraGoodTracks(3);
 
 	bool locSaveUnusedHypotheses = false;
@@ -122,6 +123,9 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 				break;
 			case 'F': //kinfit enum value
 				locReaction->Set_KinFitType(DKinFitType(locFlagArg));
+				break;
+			case 'S': //# extra showers
+				locReaction->Set_MaxExtraShowers(locFlagArg);
 				break;
 			case 'T': //# extra tracks
 				locReaction->Set_MaxExtraGoodTracks(locFlagArg);

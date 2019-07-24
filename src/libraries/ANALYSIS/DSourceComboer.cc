@@ -4214,6 +4214,21 @@ bool DSourceComboer::Check_Reactions(vector<const DReaction*>& locReactions)
 			cout << "Too many neutrals: No combos." << endl;
 		return false;
 	}
+	//Check additional showers
+	auto NumShower_Checker = [&](const DReaction* locReaction) -> bool
+	{
+		auto locCutPair = locReaction->Get_MaxExtraShowers();
+		if(!locCutPair.first)
+			return false;
+		return ((locNumDetectedShowers - locNumNeutralNeeded) > locCutPair.second);
+	};
+	locReactions.erase(std::remove_if(locReactions.begin(), locReactions.end(), NumShower_Checker), locReactions.end());
+	if(locReactions.empty())
+	{
+		if(dDebugLevel > 0)
+			cout << "Too many showers (" << locNumDetectedShowers << "): No combos." << endl;
+		return false;
+	}
 
 	//Check Max charged tracks
 	auto locNumTracksNeeded = locReactions.front()->Get_FinalPIDs(-1, false, false, d_Charged, true).size(); //no missing, no decaying, include duplicates
