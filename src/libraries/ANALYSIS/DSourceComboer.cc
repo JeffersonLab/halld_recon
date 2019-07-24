@@ -4203,11 +4203,6 @@ bool DSourceComboer::Check_Reactions(vector<const DReaction*>& locReactions)
 	//Check Max neutrals
 	auto locNumNeutralNeeded = locReactions.front()->Get_FinalPIDs(-1, false, false, d_Neutral, true).size(); //no missing, no decaying, include duplicates
 	auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-	if(false) //COMPARE: Comparison-to-old mode
-	{
-		if(locNumDetectedShowers > dMaxNumNeutrals)
-			return false;
-	}
 	if((locNumNeutralNeeded > 0) && (locNumDetectedShowers > dMaxNumNeutrals))
 	{
 		if(dDebugLevel > 0)
