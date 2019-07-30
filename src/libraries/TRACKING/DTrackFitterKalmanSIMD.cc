@@ -103,9 +103,19 @@ unsigned int DTrackFitterKalmanSIMD::locate(vector<double>&xx,double x){
 // Crude approximation for the variance in drift distance due to smearing
 double DTrackFitterKalmanSIMD::fdc_drift_variance(double t) const {
    //return FDC_ANODE_VARIANCE;
-   if (t<5.) t=5.;
+  double dt=0.;
+  double t_lo=DRIFT_RES_PARMS[3];
+  double t_hi=DRIFT_RES_PARMS[4];
+   if (t<t_lo) t=t_lo;
+   if (t>t_hi){
+     t=t_hi;
+     dt=t-t_hi;
+   }
    double sigma=DRIFT_RES_PARMS[0]/(t+1.)+DRIFT_RES_PARMS[1]+DRIFT_RES_PARMS[2]*t*t;
-
+   if (dt>0){
+     sigma+=DRIFT_RES_PARMS[5]*dt;
+   }
+  
    return sigma*sigma;
 }
 
@@ -550,7 +560,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    jcalib->Get("FDC/drift_resolution_parms",drift_res_parms); 
    DRIFT_RES_PARMS[0]=drift_res_parms["p0"];   
    DRIFT_RES_PARMS[1]=drift_res_parms["p1"];
-   DRIFT_RES_PARMS[2]=drift_res_parms["p2"]; 
+   DRIFT_RES_PARMS[2]=drift_res_parms["p2"];  
+   map<string,double>drift_res_ext;
+   jcalib->Get("FDC/drift_resolution_ext",drift_res_ext); 
+   DRIFT_RES_PARMS[3]=drift_res_ext["t_low"];   
+   DRIFT_RES_PARMS[4]=drift_res_ext["t_high"];
+   DRIFT_RES_PARMS[5]=drift_res_ext["res_slope"]; 
 
    // Time-to-distance function parameters for FDC
    map<string,double>drift_func_parms;
