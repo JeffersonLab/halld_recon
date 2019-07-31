@@ -22,6 +22,8 @@ class DParticleID_PID1:public DParticleID{
 	jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const;
 	double GetProtondEdxMean_SC(double locBeta) const;
 	double GetProtondEdxSigma_SC(double locBeta) const;
+	double GetEOverPMean(DetectorSystem_t detector,double p) const;
+	double GetEOverPSigma(DetectorSystem_t detector,double p) const;
 	double GetTimeVariance(DetectorSystem_t detector,Particle_t particle,double p) const;
 
 	jerror_t CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTrackHypothesis) const;
@@ -39,6 +41,9 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> ddEdxMeanParams_CDC_PiPlus;
 	vector<float> ddEdxMeanParams_CDC_Electron;
 	vector<float> ddEdxMeanParams_SC_Proton;
+
+	vector<float> dEOverPMeanParams_BCAL;
+	vector<float> dEOverPMeanParams_FCAL;
 
 	vector<float> ddEdxSigmaParams_FDC_Proton;
 	vector<float> ddEdxSigmaParams_FDC_KPlus;
@@ -58,12 +63,14 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> dTimeSigmaParams_BCAL_Proton;
 	vector<float> dTimeSigmaParams_BCAL_KPlus;
 	vector<float> dTimeSigmaParams_BCAL_PiPlus;
-	vector<float> dTimeSigmaParams_BCAL_Positron;	
+	vector<float> dTimeSigmaParams_BCAL_Positron;
+	vector<float> dEOverPSigmaParams_BCAL;
 
 	vector<float> dTimeSigmaParams_FCAL_Proton;
 	vector<float> dTimeSigmaParams_FCAL_KPlus;
 	vector<float> dTimeSigmaParams_FCAL_PiPlus;
 	vector<float> dTimeSigmaParams_FCAL_Positron;
+	vector<float> dEOverPSigmaParams_FCAL;
 
  private:
   int DEBUG_LEVEL;

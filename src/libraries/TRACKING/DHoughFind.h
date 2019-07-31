@@ -19,7 +19,6 @@ using namespace jana;
 
 #include <DVector2.h>
 
-
 class DHoughFind:public JObject{
 	public:
 		DHoughFind();
@@ -42,12 +41,12 @@ class DHoughFind:public JObject{
 		void Fill(double x, double sigmax, double y, double sigmay);
 		static DVector2 GetMaxBinLocation(vector<const DHoughFind*> &houghs); // does not look at "this" object!
 		void Add(const DHoughFind* hough);
-		
-		
+
 		void AddPoint(const DVector2 &point);
 		void AddPoint(const double &x, const double &y);
 		void AddPoints(const vector<DVector2> &points);
 		unsigned int GetNPoints(void){return points.size();}
+		vector<DVector2>GetPoints(void){return points;};
 		void ClearPoints(void);
 		void PrintHist(void);
 		
@@ -59,6 +58,7 @@ class DHoughFind:public JObject{
 
 	protected:
 		vector<DVector2> points;
+
 		double xmin, xmax, ymin, ymax;
 		unsigned int Nbinsx, Nbinsy;
 		double bin_widthx, bin_widthy, bin_size;

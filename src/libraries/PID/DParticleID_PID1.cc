@@ -233,8 +233,35 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
 	break;
       }
     }
+  } 
+  
+  if (jcalib->Get("BCAL/EOverPSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    dEOverPSigmaParams_BCAL.push_back(row["s0"]);
+    dEOverPSigmaParams_BCAL.push_back(row["s1"]);
+    dEOverPSigmaParams_BCAL.push_back(row["s2"]);
+  }
+  if (jcalib->Get("BCAL/EOverPMean",vals)==false){
+    map<string,double> &row = vals[0];
+    dEOverPMeanParams_BCAL.push_back(row["m0"]);
+    dEOverPMeanParams_BCAL.push_back(row["m1"]);
+    dEOverPMeanParams_BCAL.push_back(row["m2"]);
   }
 
+
+  if (jcalib->Get("FCAL/EOverPSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    dEOverPSigmaParams_FCAL.push_back(row["s0"]);
+    dEOverPSigmaParams_FCAL.push_back(row["s1"]);
+    dEOverPSigmaParams_FCAL.push_back(row["s2"]);
+  }
+  if (jcalib->Get("FCAL/EOverPMean",vals)==false){
+    map<string,double> &row = vals[0];
+    dEOverPMeanParams_FCAL.push_back(row["m0"]);
+    dEOverPMeanParams_FCAL.push_back(row["m1"]);
+    dEOverPMeanParams_FCAL.push_back(row["m2"]);
+  }
+  
   if (jcalib->Get("FCAL/TimeSigmas",vals)==false){ 
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -277,6 +304,43 @@ DParticleID_PID1::~DParticleID_PID1()
 {
 
 }
+
+double DParticleID_PID1::GetEOverPMean(DetectorSystem_t detector,
+				       double p) const{
+  double mean=0;
+  switch(detector){
+  case SYS_FCAL:
+    mean=dEOverPMeanParams_FCAL[0]/p+dEOverPMeanParams_FCAL[1]
+      +dEOverPMeanParams_FCAL[2]*p;
+    break;
+  case SYS_BCAL: 
+    mean=dEOverPMeanParams_BCAL[0]/p+dEOverPMeanParams_BCAL[1]
+      +dEOverPMeanParams_BCAL[2]*p;
+    break;
+  default:
+    break;
+  }
+  return mean;
+}
+
+double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
+				       double p) const{
+  double mean=0;
+  switch(detector){
+  case SYS_FCAL:
+    mean=dEOverPSigmaParams_FCAL[0]/p+dEOverPSigmaParams_FCAL[1]
+      +dEOverPSigmaParams_FCAL[2]*p;
+    break;
+  case SYS_BCAL: 
+    mean=dEOverPSigmaParams_BCAL[0]/p+dEOverPSigmaParams_BCAL[1]
+      +dEOverPSigmaParams_BCAL[2]*p;
+    break;
+  default:
+    break;
+  }
+  return mean;
+}
+
 
 double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
@@ -399,7 +463,7 @@ jerror_t DParticleID_PID1::CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTr
 	
 	// Get the dEdx values for each detector group
 	double locDCdEdx_FDC=locTrackTimeBased->ddEdx_FDC;
-	double locDCdEdx_CDC=locTrackTimeBased->ddEdx_CDC;
+	double locDCdEdx_CDC=locTrackTimeBased->ddEdx_CDC_amp;
 
 	double locMeandEdx_FDC, locMeandEdx_CDC, locSigmadEdx_FDC, locSigmadEdx_CDC;
 	double locDeltadEdx_CDC = 0.0, locDeltadEdx_FDC = 0.0;

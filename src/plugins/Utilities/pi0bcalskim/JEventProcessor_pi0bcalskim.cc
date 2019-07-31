@@ -91,15 +91,6 @@ jerror_t JEventProcessor_pi0bcalskim::brun(JEventLoop *eventLoop, int32_t runnum
         locEventWriterEVIO->SetDetectorsToWriteOut("BCAL","pi0bcalskim");
     }
     */
-  vector<const DTrackFitter*>fitters;
-  eventLoop->Get(fitters);
-  
-  if(fitters.size()<1){
-    _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
-  }
-  
-  fitter = fitters[0];
 
 
     return NOERROR;
@@ -138,6 +129,16 @@ jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
   }
 
   if(locBCALShowers.size() < 2 ) return NOERROR;
+
+  vector<const DTrackFitter*>fitters;
+  loop->Get(fitters);
+  
+  if(fitters.size()<1){
+    _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+    return RESOURCE_UNAVAILABLE;
+  }
+  
+  const DTrackFitter *fitter = fitters[0];
 
 	bool Candidate = false;
 	double sh1_E, sh2_E, inv_mass, kinfitVertexZ=0.0, kinfitVertexX=0.0, kinfitVertexY=0.0;

@@ -81,23 +81,6 @@ jerror_t JEventProcessor_ST_Tresolution::init(void)
 jerror_t JEventProcessor_ST_Tresolution::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
 	// This is called whenever the run number changes
-  // Get the particleID object for each run
-  vector<const DParticleID *> dParticleID_algos;
-  eventLoop->Get(dParticleID_algos);
-  if(dParticleID_algos.size() < 1)
-    {
-      _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
-    }
-  dParticleID = dParticleID_algos[0];
-  
-  // We want to be use some of the tools available in the RFTime factory 
-  // Specifically steping the RF back to a chosen time
-  dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-  
-  // Be sure that DRFTime_factory::init() and brun() are called
-  vector<const DRFTime*> locRFTimes;
-  eventLoop->Get(locRFTimes);
   
   //RF Period
   vector<double> locRFPeriodVector;
@@ -169,10 +152,10 @@ jerror_t JEventProcessor_ST_Tresolution::evnt(JEventLoop *loop, uint64_t eventnu
   vector<const DSCHit *> scHitVector;
   loop->Get(scHitVector);
 
-  // RF time object
+  // RF time object (and factory)
   const DRFTime* thisRFTime = NULL;
   vector <const DRFTime*> RFTimeVector;
-  loop->Get(RFTimeVector);
+  auto dRFTimeFactory = static_cast<DRFTime_factory*>(loop->Get(RFTimeVector));
   if (RFTimeVector.size() != 0)
     thisRFTime = RFTimeVector[0];
 
@@ -187,6 +170,10 @@ jerror_t JEventProcessor_ST_Tresolution::evnt(JEventLoop *loop, uint64_t eventnu
   // Grab the associated RF bunch object
   const DEventRFBunch *thisRFBunch = NULL;
   loop->GetSingle(thisRFBunch);
+  
+  // Grab DParticleID object
+  const DParticleID *dParticleID = NULL;
+  loop->GetSingle(dParticleID);
 
   for (uint32_t i = 0; i < chargedTrackVector.size(); i++)
     {   

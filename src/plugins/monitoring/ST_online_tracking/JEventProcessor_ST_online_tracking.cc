@@ -113,15 +113,7 @@ jerror_t JEventProcessor_ST_online_tracking::init(void)
 jerror_t JEventProcessor_ST_online_tracking::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
   // This is called whenever the run number changes
-  // Get the particleID object for each run
-  vector<const DParticleID *> dParticleID_algos;
-  eventLoop->Get(dParticleID_algos);
-  if(dParticleID_algos.size() < 1)
-    {
-      _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
-    }
-  dParticleID = dParticleID_algos[0];
+
   return NOERROR;
 }
 
@@ -151,6 +143,16 @@ jerror_t JEventProcessor_ST_online_tracking::evnt(JEventLoop *eventLoop, uint64_
   eventLoop->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
     return NOERROR;
+
+  // Get the particleID object for each run
+  vector<const DParticleID *> locParticleID_algos;
+  eventLoop->Get(locParticleID_algos);
+  if(locParticleID_algos.size() < 1)
+    {
+      _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+      return RESOURCE_UNAVAILABLE;
+    }
+  const DParticleID* locParticleID = locParticleID_algos[0];
 
   eventLoop->Get(st_adc_digi_hits);
   eventLoop->Get(pid_algorithm);
@@ -183,7 +185,7 @@ jerror_t JEventProcessor_ST_online_tracking::evnt(JEventLoop *eventLoop, uint64_
       int q = timeBasedTrack->charge();
       // Grab the ST hit match params object and cut on only tracks matched to the ST
       shared_ptr<const DSCHitMatchParams> locBestSCHitMatchParams;
-      bool foundSC = dParticleID->Get_BestSCMatchParams(timeBasedTrack, locDetectorMatches, locBestSCHitMatchParams);
+      bool foundSC = locParticleID->Get_BestSCMatchParams(timeBasedTrack, locDetectorMatches, locBestSCHitMatchParams);
       if (!foundSC) continue;
       // Define vertex vector
       DVector3 vertex;
@@ -215,7 +217,7 @@ jerror_t JEventProcessor_ST_online_tracking::evnt(JEventLoop *eventLoop, uint64_
 
       shared_ptr<DSCHitMatchParams> locSCHitMatchParams;
       vector<DTrackFitter::Extrapolation_t>extrapolations=timeBasedTrack->extrapolations.at(SYS_START);
-      bool st_match_pid = dParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
+      bool st_match_pid = locParticleID->Cut_MatchDistance(extrapolations, st_params[0]->dSCHit, st_params[0]->dSCHit->t, locSCHitMatchParams, true, &IntersectionPoint, &IntersectionMomentum);
 
       if(!st_match_pid) continue;  
 

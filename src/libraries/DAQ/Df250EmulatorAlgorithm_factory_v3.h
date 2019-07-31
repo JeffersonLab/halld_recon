@@ -5,17 +5,17 @@
 // Creator: mstaib
 //
 
-#ifndef _Df250EmulatorAlgorithm_factory_v2_
-#define _Df250EmulatorAlgorithm_factory_v2_
+#ifndef _Df250EmulatorAlgorithm_factory_v3_
+#define _Df250EmulatorAlgorithm_factory_v3_
 
 #include <JANA/JFactory.h>
-#include <DAQ/Df250EmulatorAlgorithm_v2.h>
+#include <DAQ/Df250EmulatorAlgorithm_v3.h>
 
-class Df250EmulatorAlgorithm_factory_v2:public jana::JFactory<Df250EmulatorAlgorithm>{
+class Df250EmulatorAlgorithm_factory_v3:public jana::JFactory<Df250EmulatorAlgorithm>{
 	public:
-		Df250EmulatorAlgorithm_factory_v2(){};
-		~Df250EmulatorAlgorithm_factory_v2(){};
-		const char* Tag(void){return "v2";}
+		Df250EmulatorAlgorithm_factory_v3(){};
+		~Df250EmulatorAlgorithm_factory_v3(){};
+		const char* Tag(void){return "v3";}
 
 		Df250EmulatorAlgorithm *emulator = nullptr;
 
@@ -30,7 +30,7 @@ class Df250EmulatorAlgorithm_factory_v2:public jana::JFactory<Df250EmulatorAlgor
 			
 			if( emulator ) delete emulator;
 
-			emulator = new Df250EmulatorAlgorithm_v2(loop);
+			emulator = new Df250EmulatorAlgorithm_v3(loop);
 
 			return NOERROR;
 		}
@@ -59,5 +59,5 @@ class Df250EmulatorAlgorithm_factory_v2:public jana::JFactory<Df250EmulatorAlgor
 	
 };
 
-#endif // _Df250EmulatorAlgorithm_factory_v2_
+#endif // _Df250EmulatorAlgorithm_factory_v3_
 
