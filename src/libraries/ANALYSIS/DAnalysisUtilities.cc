@@ -950,7 +950,7 @@ DLorentzVector DAnalysisUtilities::Calc_FinalStateP4(const DReaction* locReactio
 	return locFinalStateP4;
 }
 
-double DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo) const
+int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers) const
 {
 	DVector3 locVertex(0.0, 0.0, dTargetZCenter);
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
@@ -959,7 +959,8 @@ double DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, c
 	vector<const DNeutralShower*> locUnusedNeutralShowers;
 	Get_UnusedNeutralShowers(locEventLoop, locParticleCombo, locUnusedNeutralShowers);
 	
-	double locEnergy_UnusedShowers = 0.; 
+	locEnergy_UnusedShowers = 0.; 
+	int locNumber_UnusedShowers = 0;
 	for(size_t loc_i = 0; loc_i < locUnusedNeutralShowers.size(); ++loc_i) {
 		const DNeutralShower* locUnusedNeutralShower = locUnusedNeutralShowers[loc_i];
 
@@ -967,13 +968,14 @@ double DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, c
 		double locFlightTime = (locUnusedNeutralShower->dSpacetimeVertex.Vect() - locVertex).Mag()/SPEED_OF_LIGHT;
 		double locDeltaT = locUnusedNeutralShower->dSpacetimeVertex.T() - locFlightTime - locRFTime;
 		double locDetectorTheta = (locUnusedNeutralShower->dSpacetimeVertex.Vect()-locVertex).Theta()*180./TMath::Pi();
-		if(locDetectorTheta < 2.0 || fabs(locDeltaT) > 4.)
+		if(fabs(locDeltaT) > 4.)
 			continue;		
 
 		locEnergy_UnusedShowers += locUnusedNeutralShower->dEnergy;
+		locNumber_UnusedShowers++;
 	}
 	
-	return locEnergy_UnusedShowers;
+	return locNumber_UnusedShowers;
 }
 
 int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
