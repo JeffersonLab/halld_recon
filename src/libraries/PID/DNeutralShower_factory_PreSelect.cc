@@ -68,11 +68,6 @@ jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, 
 	dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 31 ) );
 	dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 31 ) );
 
-    cout << "dFCALInnerChannels = ";
-    for(auto chan : dFCALInnerChannels)
-        cout << chan << " ";
-    cout << endl;
-
 
 	return NOERROR;
 }
