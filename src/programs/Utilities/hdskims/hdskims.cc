@@ -15,8 +15,12 @@ using namespace std;
 
 #include <TFile.h>
 
+#include "HDEVIOWriter.h"
+#undef _DBG_
+#undef _DBG__
 
 #include <DAQ/HDEVIO.h>
+
 
 enum EventType_t{
     kUNKNOWN_EVENT,
@@ -31,7 +35,7 @@ enum EventType_t{
 void Usage(string mess);
 void ParseCommandLineArguments(int narg, char *argv[]);
 void MakeSkim(string &fname);
-void ProcessEvent( uint32_t *buff, uint32_t buff_len, ofstream &ofs);
+bool ProcessEvent( uint32_t *buff, uint32_t buff_len);
 void GetEventInfo( uint32_t *buff, uint32_t buff_len, EventType_t &type, uint32_t &Mevents );
 void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<uint32_t> &trig_masks, vector<uint32_t> &fp_trig_masks );
 
@@ -128,30 +132,41 @@ void MakeSkim( string &filename )
     ofilename.erase( pos );
     ofilename += "_skims.evio";
 
-    // Open EVIO file
+    // Open EVIO input file
     cout << "Processing file: "  << filename << " -> " << ofilename << endl;
     HDEVIO *hdevio = new HDEVIO(filename);
     if(!hdevio->is_open){
         cout << hdevio->err_mess.str() << endl;
         return;
     }
+    auto Nwords_in_input_file = hdevio->GetNWordsLeftInFile();
 
-    ofstream ofs( ofilename );
+    // Open EVIO output file
+	HDEVIOWriter evioout( ofilename );
+	std::thread thr(HDEVIOOutputThread, &evioout);
 
     // Read all events in file
-    uint32_t buff_len = 1000;
-    uint32_t *buff = new uint32_t[buff_len];
+	vector<uint32_t> *vbuff = evioout.GetBufferFromPool();
     bool done = false;
     while(!done){
-        hdevio->readNoFileBuff(buff, buff_len);
+
+	    uint32_t *buff    = vbuff->data();
+	    uint32_t buff_len = vbuff->capacity();
+	    vbuff->resize( buff_len ); // we do this here so when we resize below, it does not re-initialize the contents
+	    hdevio->readNoFileBuff(buff, buff_len);
+
         switch(hdevio->err_code){
             case HDEVIO::HDEVIO_OK:
-                if( Nevents>= SKIP_EVIO_EVENTS ) ProcessEvent( buff, buff_len, ofs );
+                if( Nevents>= SKIP_EVIO_EVENTS ) {
+                	if( ProcessEvent( buff, buff_len ) ){
+                		vbuff->resize( (*vbuff)[0] + 1);
+		                evioout.AddBufferToOutput(vbuff); // HDEVIOWriter takes ownership of buffer
+		                vbuff = evioout.GetBufferFromPool(); // get a new buffer
+                	}
+                }
                 break;
             case HDEVIO::HDEVIO_USER_BUFFER_TOO_SMALL:
-                buff_len = hdevio->last_event_len;
-                delete[] buff;
-                buff = new uint32_t[buff_len];
+            	vbuff->reserve( hdevio->last_event_len );
                 break;
             case HDEVIO::HDEVIO_EOF:
                 cout << endl << " end of file" << endl;
@@ -165,8 +180,10 @@ void MakeSkim( string &filename )
         }
 
         if((++Nevents % 1000) == 0) {
-            int percent_done = (100*Nevents)/MAX_EVIO_EVENTS;
-            cout << " " << Nevents << "/" << MAX_EVIO_EVENTS << " (" << percent_done << "%) processed       \r"; cout.flush();
+        	auto Nleft = hdevio->GetNWordsLeftInFile();
+        	auto Nread = Nwords_in_input_file - Nleft;
+            int percent_done = (100*Nread)/Nwords_in_input_file;
+            cout << " " << Nread << "/" << Nwords_in_input_file << " (" << percent_done << "%) processed       \r"; cout.flush();
         }
         if( Nevents > (SKIP_EVIO_EVENTS+MAX_EVIO_EVENTS) ) break;
     }
@@ -174,9 +191,11 @@ void MakeSkim( string &filename )
 
     // Close EVIO files
     delete hdevio;
-    ofs.close();
+	evioout.ReturnBufferToPool(vbuff);
+	evioout.Quit();
+	thr.join();
 
-    cout << "===== Summary for " << filename << ":" << endl;
+	cout << "===== Summary for " << filename << ":" << endl;
     cout << "    NFCAL_BCAL_TOTAL: " << NFCAL_BCAL_TOTAL << endl;
     cout << "         NBCAL_TOTAL: " << NBCAL_TOTAL << endl;
     cout << "           NPS_TOTAL: " << NPS_TOTAL << endl;
@@ -195,10 +214,17 @@ void MakeSkim( string &filename )
 
 }
 
-//----------------
+//------------------------------------------------------------------
 // ProcessEvent
-//----------------
-void ProcessEvent( uint32_t *buff, uint32_t buff_len, ofstream &ofs)
+//
+// Scan event in the given buffer and decide whether to write the
+// event to the output file. Returns true if it should be written
+// and false if it shouldn't.
+//
+// This will also accumulate statistics on how many events and
+// triggers there are.
+//------------------------------------------------------------------
+bool ProcessEvent( uint32_t *buff, uint32_t buff_len)
 {
     EventType_t event_type;
     uint32_t Mevents;
@@ -246,6 +272,7 @@ void ProcessEvent( uint32_t *buff, uint32_t buff_len, ofstream &ofs)
             if (fp_trig_mask & 0x4000) NDIRC_LED++;
         }
 
+	    NEVENTS_TOTAL += Mevents;
         NBCAL_LED_US_TOTAL += NBCAL_LED_US;
         NBCAL_LED_DS_TOTAL += NBCAL_LED_DS;
         Nrandom_TOTAL += Nrandom;
@@ -256,11 +283,10 @@ void ProcessEvent( uint32_t *buff, uint32_t buff_len, ofstream &ofs)
 
         auto NFP = NBCAL_LED_US + NBCAL_LED_DS + Nrandom + NFCAL_LED + NCCAL_LED1 + NCCAL_LED2 + NDIRC_LED;
         if( NFP > 0 ) {
-             ofs.write( (const char*)buff, buff_len );
             NEVIO_BLOCKS_TOTAL++;
+            return true; // Tell caller to write this event to file
         }
-        NEVENTS_TOTAL += Mevents;
-
+		return false; // Tell caller not to write this event to file
 //
 //        cout << "      trigs: ";
 //        for( auto t: trig_masks ){
@@ -277,6 +303,8 @@ void ProcessEvent( uint32_t *buff, uint32_t buff_len, ofstream &ofs)
 //        }
 //        cout << endl;
     }
+
+    return true; // write out all non-physics events
 }
 
 //----------------
@@ -423,6 +451,8 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
 
         iptr = iend_common_header ;
     }
+
+    iptr = iend_physics_event;
 
     return;
 }
