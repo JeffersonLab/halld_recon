@@ -14,4 +14,5 @@ sbms.AddEVIO(env)
 sbms.AddDANA(env)
 sbms.executable(env)
 
+sbms.script(env, 'hdmk_skims.py')
 
