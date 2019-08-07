@@ -84,16 +84,17 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 	vector<const DNeutralShower*> locNeutralShowers;
 	locEventLoop->Get(locNeutralShowers);
 
-	//Cut on shower energy, BCAL cells
+	//Cut on shower energy, BCAL cells, fiducial regions
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
 	{
 		if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_FCAL)
 		{
 			if(locNeutralShowers[loc_i]->dEnergy < dMinFCALE) 
 				continue;
+
 			// Fiducial cut: reject showers whose center is in the outer range of the FCAL,
 			//   which is partially shadowed by the BCAL
-			if(locNeutralShowers[loc_i]->dSpacetimeVertex.Rho() > dMaxFCALR)
+			if(locNeutralShowers[loc_i]->dSpacetimeVertex.Vect().Perp() > dMaxFCALR)
 				continue;
 			// Fiducial cut: reject showers in the inner ring(s) which may leak into the beam hole 
 			if(dFCALInnerRingCut) {
@@ -103,11 +104,12 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 				int row = dFCALGeometry->row((float)locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
 				int col = dFCALGeometry->column((float)locNeutralShowers[loc_i]->dSpacetimeVertex.X());
 				int channel = dFCALGeometry->channel(row,col);
-				
+
 				// is the center of shower in one of the channels outside of our fiducial cut?
 				if( find(dFCALInnerChannels.begin(), dFCALInnerChannels.end(), channel) 
-						!= dFCALInnerChannels.end() )
+                    != dFCALInnerChannels.end() ) {
 					continue;
+                }
 			}
 		}
 		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
