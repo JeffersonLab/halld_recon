@@ -4,7 +4,7 @@
 #
 # This will run the hdskims program on a given 20GB raw data file
 # writing out blocks of events which contain a FP trigger event.
-# A second pass over the produced file using hd_root with the 
+# A second pass over the produced file using hd_ana with the 
 # trigger_skims plugin will produce the standard set of skim files.
 # 
 # This script takes 2 arguments:
@@ -16,6 +16,10 @@
 # directory for working. Once the files are created, they will
 # be moved to the output directory and the temporary directory
 # will be deleted.
+#
+# This was developed for the online systems in order to do produce
+# skims in the counting house.
+#
 
 import os
 import sys
@@ -59,7 +63,7 @@ ret = subprocess.call( cmd )
 
 print('\nRunning hd_root ...')
 block_skim_files = glob.glob('*_skims.evio')
-cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + block_skim_files
+cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + block_skim_files
 print('cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
