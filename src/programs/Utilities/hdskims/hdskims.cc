@@ -41,6 +41,7 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
 
 
 vector<string> filenames;
+string USER_OFILENAME="";
 uint64_t MAX_EVIO_EVENTS = 50000;
 uint64_t SKIP_EVIO_EVENTS = 0;
 uint64_t Nevents = 0;
@@ -90,6 +91,7 @@ void Usage(string mess="")
 	cout << "   -h, --help        Print this usage statement" << endl;
 	cout << "   -m max_events     Max. EVIO events (not physics events) to process." << endl;
 	cout << "   -i ignore_events  Num. EVIO events (not physics events) to ignore at start." << endl;
+	cout << "   -o outfilename    Output filename (only use with single input file!)." << endl;
 	cout << endl;
 	cout << "n.b. When using the -i (ignore) flag, the total number of events" << endl;
 	cout << "     read in will be the sum of how many are ignored and the \"max\"" << endl;
@@ -116,8 +118,13 @@ void ParseCommandLineArguments(int narg, char *argv[])
 		if(arg == "-h" || arg == "--help") Usage();
 		else if(arg == "-i"){ SKIP_EVIO_EVENTS = atoi(next.c_str()); i++;}
 		else if(arg == "-m"){ MAX_EVIO_EVENTS = atoi(next.c_str()); i++;}
+		else if(arg == "-o"){ USER_OFILENAME = next.c_str(); i++;}
 		else if(arg[0] == '-') {cout << "Unknown option \""<<arg<<"\" !" << endl; exit(-1);}
 		else filenames.push_back(arg);
+	}
+	
+	if( (filenames.size()>1) && (USER_OFILENAME.length()>0) ){
+		Usage("ERROR: You may only use the -o option with a single input file! (otherwise output skim files will overwrite one another)");
 	}
 }
 
@@ -131,6 +138,10 @@ void MakeSkim( string &filename )
     auto pos = ofilename.find(".evio");
     ofilename.erase( pos );
     ofilename += "_skims.evio";
+	 pos = ofilename.find_last_of('/');
+	 if( pos != string::npos ) ofilename.erase(0, pos);
+	 
+	 if( USER_OFILENAME.length()>0 ) ofilename = USER_OFILENAME;
 
     // Open EVIO input file
     cout << "Processing file: "  << filename << " -> " << ofilename << endl;
@@ -368,8 +379,8 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
     iptr++;
 
     // Built Trigger Bank
-    uint32_t built_trigger_bank_len  = *iptr;
-    uint32_t *iend_built_trigger_bank = &iptr[built_trigger_bank_len+1];
+    //uint32_t built_trigger_bank_len  = *iptr;
+    //uint32_t *iend_built_trigger_bank = &iptr[built_trigger_bank_len+1];
 
     iptr++; // advance past length word
     uint32_t mask = 0xFF202000;
@@ -385,11 +396,11 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
     //-------- Common data (64bit)
     uint32_t common_header64 = *iptr++;
     uint32_t common_header64_len = common_header64 & 0xFFFF;
-    uint64_t *iptr64 = (uint64_t*)iptr;
+    //uint64_t *iptr64 = (uint64_t*)iptr;
     iptr = &iptr[common_header64_len];
 
     // First event number
-    uint64_t first_event_num = *iptr64++;
+    //uint64_t first_event_num = *iptr64++;
 
     // Hi and lo 32bit words in 64bit numbers seem to be
     // switched for events read from ET, but not read from
@@ -400,15 +411,15 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
     uint32_t Ntimestamps = (common_header64_len/2)-1;
     if(tag & 0x2) Ntimestamps--; // subtract 1 for run number/type word if present
     vector<uint64_t> avg_timestamps;
-    for(uint32_t i=0; i<Ntimestamps; i++) avg_timestamps.push_back(*iptr64++);
+    //for(uint32_t i=0; i<Ntimestamps; i++) avg_timestamps.push_back(*iptr64++);
 
     // run number and run type
-    uint32_t run_number = 0;
-    uint32_t run_type   = 0;
+    //uint32_t run_number = 0;
+    //uint32_t run_type   = 0;
     if(tag & 0x02){
-        run_number = (*iptr64) >> 32;
-        run_type   = (*iptr64) & 0xFFFFFFFF;
-        iptr64++;
+        //run_number = (*iptr64) >> 32;
+        //run_type   = (*iptr64) & 0xFFFFFFFF;
+        //iptr64++;
     }
 
     //-------- Common data (16bit)
@@ -431,8 +442,8 @@ void GetTrigMasks( uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector<u
             uint32_t Nwords_per_event = common_header32_len/Mevents;
             for(uint32_t i=0; i<Mevents; i++){
 
-                uint64_t ts_low  = *iptr++;
-                uint64_t ts_high = *iptr++;
+                iptr++; // uint64_t ts_low
+                iptr++; // uint64_t ts_high
                 // uint64_t timestamp = (ts_high<<32) + ts_low;
                 if( Nwords_per_event>3){
                     uint32_t trig_mask = *iptr++;
