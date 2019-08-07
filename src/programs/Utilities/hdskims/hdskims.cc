@@ -139,7 +139,7 @@ void MakeSkim( string &filename )
     ofilename.erase( pos );
     ofilename += "_skims.evio";
 	 pos = ofilename.find_last_of('/');
-	 if( pos != string::npos ) ofilename.erase(0, pos);
+	 if( pos != string::npos ) ofilename.erase(0, pos+1);
 	 
 	 if( USER_OFILENAME.length()>0 ) ofilename = USER_OFILENAME;
 
