@@ -52,28 +52,41 @@ print('  Work dir: ' + workdir)
 print('')
 
 # Create workdir and cd to it
-print('Creating working directory: ' + workdir)
+print('hdmk_skims.py: Creating working directory: ' + workdir)
 os.mkdir(workdir)
 os.chdir(workdir)
 
-print('\nRunning hdskims ...')
+print('\nhdmk_skims.py: Running hdskims ...')
 cmd = ['hdskims', infilename]
-print('cmd: ' + ' '.join(cmd))
+print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
-print('\nRunning hd_root ...')
+# The skim plugins base their output filenames on input filenames
+# remove original input file and create a symbolic link with
+# its name pointing to the block skim file so we can trick the
+# plugins into producing the correct names.
+os.unlink( infilename )
 block_skim_files = glob.glob('*_skims.evio')
+os.symlink( block_skim_files[0], infilename )
+
+print('\nhdmk_skims.py: Running hd_root ...')
 cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + block_skim_files
-print('cmd: ' + ' '.join(cmd))
+print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
-print('\nMoving output files ...')
-for f in block_skim_files: os.unlink( f )
+print('\nhdmk_skims.py: Removing input file and intermediate files ...')
+os.unlink( infilename )
+for f in block_skim_files: os.unlink( f )  # Remove intermediate files
+
+print('\nhdmk_skims.py: Moving output files ...')
 for srcfile in glob.glob('*.evio'):
 	destfile = outdir + '/' + srcfile
 	print('   ' + srcfile + ' -> ' + destfile)
 	os.rename( srcfile, destfile )
 
-print('Removing working directory: ' + workdir)
+print('hdmk_skims.py: Removing working directory: ' + workdir)
 os.chdir(cwd)
 shutil.rmtree(workdir, True)
+
+
+
