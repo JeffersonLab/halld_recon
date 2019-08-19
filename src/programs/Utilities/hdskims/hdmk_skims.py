@@ -27,6 +27,11 @@ import glob
 import shutil
 import subprocess
 
+MYSQL_HOST = 'hallddb'
+MYSQL_DB   = 'test'
+MYSQL_USER = 'test'
+MYSQL_PASSWORD = ''
+
 if len(sys.argv) != 3:
 	print('\nUsage:\n\n   hdmk_skims.py input.evio outputdir\n')
 	print('Run hdskims to extract blocks containing a FP triggered event')
@@ -57,26 +62,41 @@ os.mkdir(workdir)
 os.chdir(workdir)
 
 print('\nhdmk_skims.py: Running hdskims ...')
-cmd = ['hdskims', infilename]
+cmd = ['hdskims', "--sql", infilename]
 print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
-# The skim plugins base their output filenames on input filenames
-# remove original input file and create a symbolic link with
-# its name pointing to the block skim file so we can trick the
+# The skim plugins base their output filenames on input filenames.
+# Create a symbolic link with the same name as the input file
+# pointing to the block skim file so we can trick the
 # plugins into producing the correct names.
-os.unlink( infilename )
+# n.b. since we are in our own working directory the original
+# input file will not exist here.
 block_skim_files = glob.glob('*_skims.evio')
-os.symlink( block_skim_files[0], infilename )
+os.symlink( block_skim_files[0], os.path.basename(infilename) )
 
 print('\nhdmk_skims.py: Running hd_root ...')
 cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + block_skim_files
 print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
+# Update skininfo DB with any .sql files found in working directory
+sqlfiles = glob.glob('*.sql')
+if len(sqlfiles) > 0:
+	import mysql.connector
+	mydb = mysql.connector.connect( host=MYSQL_HOST, user=MYSQL_USER, password=MYSQL_PASSWORD, database=MYSQL_DB)
+	mycursor = mydb.cursor()
+	for sqlfile in sqlfiles:
+		with open(sqlfile) as f :
+			print('\nhdmk_skims.py: Updating skiminfo DB from ' + sqlfile + ' ...')
+			for line in f.readlines(): mycursor.execute( line )
+	mycursor.close()
+	mydb.commit();
+
 print('\nhdmk_skims.py: Removing input file and intermediate files ...')
 os.unlink( infilename )
 for f in block_skim_files: os.unlink( f )  # Remove intermediate files
+for f in sqlfiles        : os.unlink( f )  # Remove intermediate files
 
 print('\nhdmk_skims.py: Moving output files ...')
 for srcfile in glob.glob('*.evio'):
