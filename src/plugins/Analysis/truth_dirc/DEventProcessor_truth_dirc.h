@@ -54,6 +54,8 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
+  const DDIRCGeometry* dDIRCGeometry;
+
   TH1F *hTruthBarHitBar;
   TH2F *hTruthBarHitXY;
   TH2F *hTruthPmtHitZY_North, *hTruthPmtHitZY_South;
@@ -61,6 +63,11 @@ private:
   TH2F *hTruthPixelHit_North, *hTruthPixelHit_South;
   TH2F *hPixelHit_North, *hPixelHit_South;
   TH2F *hTruthPixelHitTime;
+
+  //addition to get energy/wavelength spectrum
+  TH1F *hDetPhotonEnergy;
+  TH1F *hDetPhotonLambda;
+  TH1F *hNph;
 
 };
 

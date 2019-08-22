@@ -49,6 +49,11 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
 
   hPixelHit_North = new TH2F("hPixelHit_North", "North Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
   hPixelHit_South = new TH2F("hPixelHit_South", "South Box; Pixel Hit X ; Pixel Hit Y", 144, -0.5, 143.5, 48, -0.5, 47.5);
+
+  hDetPhotonEnergy = new TH1F("hDetPhotonEnergy", "Detected energy spectrum ; E [eV] ;", 400, 1.5, 5);
+  hDetPhotonLambda = new TH1F("hDetPhotonLambda", "Detected wavelength spectrum ; #lambda [nm] ;", 400, 200, 700);
+  hNph             = new TH1F("hNph", ";Nph;", 150, -0.5, 149.5);
+
   mainDir->cd();
  
   return NOERROR;
@@ -57,6 +62,10 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
 jerror_t DEventProcessor_truth_dirc::brun(jana::JEventLoop *loop, int32_t runnumber)
 {
 
+  // get DIRC geometry
+  vector<const DDIRCGeometry*> locDIRCGeometry;
+  loop->Get(locDIRCGeometry);
+  dDIRCGeometry = locDIRCGeometry[0];
 
   return NOERROR;
 }
@@ -75,11 +84,6 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
   loop->Get(dircPmtHits);
   loop->Get(dircBarHits);
   loop->Get(dircRecoPmtHits);
-
-  // get DIRC geometry
-  vector<const DDIRCGeometry*> locDIRCGeometryVec;
-  loop->Get(locDIRCGeometryVec);
-  auto locDIRCGeometry = locDIRCGeometryVec[0];
 
   for (unsigned int j = 0; j < dircBarHits.size(); j++){
     //double px = dircBarHits[j]->px;
@@ -106,13 +110,16 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      double t = dircPmtHits[h]->t;
      double t_fixed = dircPmtHits[h]->t_fixed;
 
+     double E = dircPmtHits[h]->E * 1e9;
+     double lambda = 1239.84193/E; 
+
      // get PMT labels
-     int pmt_column = locDIRCGeometry->GetPmtColumn(ch); 
-     int pmt_row = locDIRCGeometry->GetPmtRow(ch);
+     int pmt_column = dDIRCGeometry->GetPmtColumn(ch); 
+     int pmt_row = dDIRCGeometry->GetPmtRow(ch);
 
      // get pixel labels
-     int pixel_row = locDIRCGeometry->GetPixelRow(ch);
-     int pixel_col = locDIRCGeometry->GetPixelColumn(ch);
+     int pixel_row = dDIRCGeometry->GetPixelRow(ch);
+     int pixel_col = dDIRCGeometry->GetPixelColumn(ch);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
      hTruthPixelHitTime->Fill(ch, t-t_fixed);
@@ -126,8 +133,15 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	hTruthPmtHit_North->Fill(pmt_column, pmt_row);
 	hTruthPixelHit_North->Fill(pixel_row, pixel_col);
      }
+
+     hDetPhotonEnergy -> Fill(E);
+     hDetPhotonLambda -> Fill(lambda);
+
      japp->RootUnLock();
   }
+  japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+  hNph->Fill(int(dircPmtHits.size()));
+  japp->RootUnLock();
 
   for (unsigned int h = 0; h < dircRecoPmtHits.size(); h++){
 	  
@@ -135,8 +149,8 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
 	  //double t = dircRecoPmtHits[h]->t;
 	  
 	  // get pixel labels
-	  int pixel_row = locDIRCGeometry->GetPixelRow(ch);
-	  int pixel_col = locDIRCGeometry->GetPixelColumn(ch);
+	  int pixel_row = dDIRCGeometry->GetPixelRow(ch);
+	  int pixel_col = dDIRCGeometry->GetPixelColumn(ch);
 	  
 	  // comparison of truth and reco hits
 	  /*
