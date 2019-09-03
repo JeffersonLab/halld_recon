@@ -100,6 +100,8 @@ class DSourceComboer : public JObject
 
 		//RESET
 		void Reset_NewEvent(JEventLoop* locEventLoop);
+		
+		void Set_RunDependent_Data(JEventLoop *locEventLoop);
 
 		//BUILD COMBOS (what should be called from the outside to do all of the work)
 		DCombosByReaction Build_ParticleCombos(const DReactionVertexInfo* locReactionVertexInfo);

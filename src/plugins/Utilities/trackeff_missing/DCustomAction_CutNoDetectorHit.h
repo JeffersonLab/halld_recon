@@ -42,6 +42,11 @@ class DCustomAction_CutNoDetectorHit : public DAnalysisAction
 		dSCMatchMinDeltaPhi(-180.0), dSCMatchMaxDeltaPhi(180.0), dMinTrackDOCA(0.0), dMaxTrackMatchDOCA(200.0), dMinDeltaZ(-60.0), dMaxDeltaZ(60.0) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {
+			DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+			dMagneticFieldMap = locApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
+			locEventLoop->GetSingle(dParticleID);		
+		}
 		void Reset_NewEvent(void){}; //RESET HISTOGRAM DUPLICATE-CHECK TRACKING HERE!!
 
 	private:

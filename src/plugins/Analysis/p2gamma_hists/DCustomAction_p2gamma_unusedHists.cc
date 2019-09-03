@@ -9,11 +9,7 @@
 
 void DCustomAction_p2gamma_unusedHists::Initialize(JEventLoop* locEventLoop)
 {
-
-	// get PID algos
-	const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
-	dParticleID = locParticleID;
+	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock

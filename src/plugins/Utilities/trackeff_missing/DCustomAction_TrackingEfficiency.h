@@ -40,7 +40,10 @@ class DCustomAction_TrackingEfficiency : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
-
+		void Run_Update(JEventLoop* locEventLoop) {
+			locEventLoop->GetSingle(dAnalysisUtilities);
+			locEventLoop->GetSingle(dParticleID);
+		}
 		~DCustomAction_TrackingEfficiency(void)
 		{
 			if(dTreeInterface != NULL)

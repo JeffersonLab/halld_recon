@@ -66,13 +66,13 @@ class DAnalysisResults_factory : public jana::JFactory<DAnalysisResults>
 		DApplication* dApplication;
 		double dMinThrownMatchFOM;
 		DSourceComboer* dSourceComboer = nullptr;
-		DParticleComboCreator* dParticleComboCreator;
+		DParticleComboCreator* dParticleComboCreator = nullptr;
 		bool dIsMCFlag = false;
 
 		bool dRequireKinFitConvergence = true;
 		unsigned int dKinFitDebugLevel = 0;
-		DKinFitter* dKinFitter;
-		DKinFitUtils_GlueX* dKinFitUtils;
+		DKinFitter* dKinFitter = nullptr;
+		DKinFitUtils_GlueX* dKinFitUtils = nullptr;
 		map<pair<set<shared_ptr<DKinFitConstraint>>, bool>, DKinFitResults*> dConstraintResultsMap; //used for determining if kinfit results will be identical //bool: update cov matrix flag
 		map<tuple<const DParticleCombo*, DKinFitType, bool, set<size_t>>, const DParticleCombo*> dPreToPostKinFitComboMap; //set: no-mass-constrain steps //bool: update cov matrix flag
 
