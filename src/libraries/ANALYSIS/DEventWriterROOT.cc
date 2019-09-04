@@ -59,6 +59,25 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 	}
 }
 
+void DEventWriterROOT::Run_Update(JEventLoop* locEventLoop)
+{
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//Get Target Center Z
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	dTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(dTargetCenterZ);
+
+	// update run-dependent info/objects
+	for(auto& locMapPair : dCutActionMap_ThrownTopology)
+		locMapPair.second->Run_Update(locEventLoop);
+	for(auto& locMapPair : dCutActionMap_TrueCombo)
+		locMapPair.second->Run_Update(locEventLoop);
+	for(auto& locMapPair : dCutActionMap_BDTSignalCombo)
+		locMapPair.second->Run_Update(locEventLoop);
+}
+
 DEventWriterROOT::~DEventWriterROOT(void)
 {
 	//Delete tree interface objects
