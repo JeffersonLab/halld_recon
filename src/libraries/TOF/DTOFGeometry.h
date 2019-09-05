@@ -49,6 +49,14 @@ class DTOFGeometry : public JObject {
   float Get_CenterHorizPlane() const { return CenterHPlane; };
   float Get_CenterMidPlane() const { return CenterMPlane; };
 
+  string Get_CCDB_DirectoryName() const {
+  	if(Get_NBars() == 46) {
+  		return "TOF2";
+  	} else {
+  		return "TOF";
+  	}
+  }
+
   float bar2y(int bar, int end=0) const;  
   int y2bar(double y) const;
 

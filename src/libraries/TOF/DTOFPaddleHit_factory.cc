@@ -33,31 +33,8 @@ using namespace std;
 jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
 
-  map<string, double> tofparms;
- 
-  if ( !loop->GetCalib("TOF/tof_parms", tofparms)){
-    //cout<<"DTOFPaddleHit_factory: loading values from TOF data base"<<endl;
-
-    C_EFFECTIVE    =    tofparms["TOF_C_EFFECTIVE"];
-    //HALFPADDLE     =    tofparms["TOF_HALFPADDLE"];
-    E_THRESHOLD    =    tofparms["TOF_E_THRESHOLD"];
-    ATTEN_LENGTH   =    tofparms["TOF_ATTEN_LENGTH"];
-  } else {
-    jout << "DTOFPaddleHit_factory: Error loading values from TOF data base" <<endl;
-
-    C_EFFECTIVE = 15.;    // set to some reasonable value
-    //HALFPADDLE = 126;     // set to some reasonable value
-    E_THRESHOLD = 0.0005; // energy threshold in GeV
-    ATTEN_LENGTH = 400.;  // 400cm attenuation length
-  }
-
   // load values from geometry
   loop->Get(TOFGeom);
-  if(TOFGeom.size() < 1) {
-  	jout << "DTOFPaddleHit_factory: Error loading TOF Geometry!" <<endl;
-  	return OBJECT_NOT_AVAILABLE;
-  }
-  
   TOF_NUM_PLANES = TOFGeom[0]->Get_NPlanes();
   TOF_NUM_BARS = TOFGeom[0]->Get_NBars();
   HALFPADDLE = TOFGeom[0]->Get_HalfLongBarLength();
@@ -65,16 +42,30 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
   ENERGY_ATTEN_FACTOR=exp(HALFPADDLE/ATTEN_LENGTH);
   TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
 
-  string base_dirname = "TOF";
-  if(TOF_NUM_BARS == 46)
-	base_dirname = "TOF/TOFv2";
-    
-  if(loop->GetCalib(base_dirname+"/propagation_speed", propagation_speed))
-    jout << "Error loading /"+base_dirname+"/propagation_speed !" << endl;
+  map<string, double> tofparms; 
+  string locTOFParmsTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/tof_parms";
+  if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms)) {
+    //cout<<"DTOFPaddleHit_factory: loading values from TOF data base"<<endl;
 
-  if (loop->GetCalib(base_dirname+"/attenuation_lengths",AttenuationLengths))
-    jout << "Error loading /"+base_dirname+"/attenuation_lengths !" <<endl;
+    C_EFFECTIVE    =    tofparms["TOF_C_EFFECTIVE"];
+    //HALFPADDLE     =    tofparms["TOF_HALFPADDLE"];
+    E_THRESHOLD    =    tofparms["TOF_E_THRESHOLD"];
+    ATTEN_LENGTH   =    tofparms["TOF_ATTEN_LENGTH"];
+  } else {
+    cout << "DTOFPaddleHit_factory: Error loading values from TOF data base" <<endl;
 
+    C_EFFECTIVE = 15.;    // set to some reasonable value
+    //HALFPADDLE = 126;     // set to some reasonable value
+    E_THRESHOLD = 0.0005; // energy threshold in GeV
+    ATTEN_LENGTH = 400.;  // 400cm attenuation length
+  }
+
+	string locTOFPropSpeedTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+	string locTOFAttenLengthTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/attenuation_lengths";
+	if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
+		jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
 
   return NOERROR;
 
