@@ -201,25 +201,22 @@ DParticleID::DParticleID(JEventLoop *loop)
   // FCAL geometry
   loop->GetSingle(dFCALGeometry);
 
-	map<string, double> tofparms;
- 	loop->GetCalib("TOF/tof_parms", tofparms);   
-	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
-	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
-	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
-
+	//TOF calibration constants & geometry
 	loop->GetSingle(dTOFGeometry);
 	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
 	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
 
-	//TOF calibration constants & geometry
-	if(dTOFGeometry->Get_NBars() == 44) {
-		if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
-			jout << "Error loading /TOF/propagation_speed !" << endl;
-	} else {
-		if(loop->GetCalib("TOF/TOFv2/propagation_speed", propagation_speed))
-			jout << "Error loading /TOF/TOFv2/propagation_speed !" << endl;
-	}
+	string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(loop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+
+	map<string, double> tofparms;
+	string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+ 	loop->GetCalib(locTOFParmsTable.c_str(), tofparms);   
+	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
+	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
+	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
 
 	// Start counter calibration constants
 	// vector<map<string,double> > tvals;

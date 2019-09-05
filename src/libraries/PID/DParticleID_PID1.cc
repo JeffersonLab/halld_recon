@@ -12,6 +12,8 @@
 //---------------------------------
 DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
 {
+
+   
   DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
   JCalibration * jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
   vector<map<string,double> >vals;
@@ -126,7 +128,57 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
+  if (jcalib->Get("START_COUNTER/dEdxProtonMean",vals)==false){ 
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_SC_Proton.push_back(row["m1"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m2"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m3"]);
+    ddEdxMeanParams_SC_Proton.push_back(row["m4"]);
+  } 
+  if (jcalib->Get("START_COUNTER/dEdxProtonSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_SC_Proton.push_back(row["s1"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s2"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
+    ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
+  }
 
+  loop->GetSingle(dTOFGeometry);
+  string locTOFTimeSigmasTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/TimeSigmas";
+  if (jcalib->Get(locTOFTimeSigmasTable.c_str(),vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeSigmaParams_TOF_Positron.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Positron.push_back(row["s4"]);
+	break;
+      case 8:
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_PiPlus.push_back(row["s4"]);
+	break;
+      case 11:
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_KPlus.push_back(row["s4"]);
+	break;
+      case 14:
+	dTimeSigmaParams_TOF_Proton.push_back(row["s1"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s2"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s3"]);
+	dTimeSigmaParams_TOF_Proton.push_back(row["s4"]);
+	break;
+      default:
+	break;
+      }
+    }
+
+  }    
 }
 
 //---------------------------------
@@ -139,6 +191,7 @@ DParticleID_PID1::~DParticleID_PID1()
 
 jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const
 {
+    
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
     locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_CDC_Proton)/1000000.0;
@@ -152,6 +205,7 @@ jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHi
     locMeandEdx = Function_dEdx(locBetaGammaValue, ddEdxMeanParams_CDC_PiPlus)/1000000.0;
     return NOERROR;
   }
+    
   
   return RESOURCE_UNAVAILABLE;
 }

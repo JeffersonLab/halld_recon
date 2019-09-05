@@ -26,19 +26,45 @@ class DParticleID_PID1:public DParticleID{
 
 
  protected:
-	vector<float> ddEdxMeanParams_FDC_Proton;
-	vector<float> ddEdxMeanParams_FDC_KPlus;
-	vector<float> ddEdxMeanParams_FDC_PiPlus;
-	vector<float> ddEdxMeanParams_CDC_Proton;
-	vector<float> ddEdxMeanParams_CDC_KPlus;
-	vector<float> ddEdxMeanParams_CDC_PiPlus;
+    vector<float> ddEdxMeanParams_FDC_Proton;
+    vector<float> ddEdxMeanParams_FDC_KPlus;
+    vector<float> ddEdxMeanParams_FDC_PiPlus;
+    vector<float> ddEdxMeanParams_CDC_Proton;
+    vector<float> ddEdxMeanParams_FDC_Electron;
+    vector<float> ddEdxMeanParams_CDC_KPlus;
+    vector<float> ddEdxMeanParams_CDC_PiPlus;
+    vector<float> ddEdxMeanParams_CDC_Electron;
+    vector<float> ddEdxMeanParams_SC_Proton;
 
-	vector<float> ddEdxSigmaParams_FDC_Proton;
-	vector<float> ddEdxSigmaParams_FDC_KPlus;
-	vector<float> ddEdxSigmaParams_FDC_PiPlus;
-	vector<float> ddEdxSigmaParams_CDC_Proton;
-	vector<float> ddEdxSigmaParams_CDC_KPlus;
-	vector<float> ddEdxSigmaParams_CDC_PiPlus;
+    vector<float> dEOverPMeanParams_BCAL;
+    vector<float> dEOverPMeanParams_FCAL;
+
+    vector<float> ddEdxSigmaParams_FDC_Proton;
+    vector<float> ddEdxSigmaParams_FDC_KPlus;
+    vector<float> ddEdxSigmaParams_FDC_PiPlus;
+    vector<float> ddEdxSigmaParams_FDC_Electron;
+    vector<float> ddEdxSigmaParams_CDC_Proton;
+    vector<float> ddEdxSigmaParams_CDC_KPlus;
+    vector<float> ddEdxSigmaParams_CDC_PiPlus;
+    vector<float> ddEdxSigmaParams_CDC_Electron;
+    vector<float> ddEdxSigmaParams_SC_Proton;
+
+    vector<float> dTimeSigmaParams_TOF_Proton;
+    vector<float> dTimeSigmaParams_TOF_KPlus;
+    vector<float> dTimeSigmaParams_TOF_PiPlus;
+    vector<float> dTimeSigmaParams_TOF_Positron;
+
+    vector<float> dTimeSigmaParams_BCAL_Proton;
+    vector<float> dTimeSigmaParams_BCAL_KPlus;
+    vector<float> dTimeSigmaParams_BCAL_PiPlus;
+    vector<float> dTimeSigmaParams_BCAL_Positron;
+    vector<float> dEOverPSigmaParams_BCAL;
+
+    vector<float> dTimeSigmaParams_FCAL_Proton;
+    vector<float> dTimeSigmaParams_FCAL_KPlus;
+    vector<float> dTimeSigmaParams_FCAL_PiPlus;
+    vector<float> dTimeSigmaParams_FCAL_Positron;
+    vector<float> dEOverPSigmaParams_FCAL;
 
 
  private:

@@ -31,9 +31,11 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 //------------------
 jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
+	loop->GetSingle(dTOFGeometry);
 
 	map<string, double> tofparms;
- 	if( !loop->GetCalib("TOF/tof_parms", tofparms))
+	string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+ 	if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms))
 	{
 		//cout<<"DTOFPoint_factory: loading values from TOF data base"<<endl;
 		//HALFPADDLE = tofparms["TOF_HALFPADDLE"];
@@ -47,7 +49,14 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 		E_THRESHOLD = 0.0005;
 		ATTEN_LENGTH = 400.;
 	}
-	loop->GetSingle(dTOFGeometry);
+
+	string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+	string locTOFPaddleResolTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/paddle_resolutions";
+	if(eventLoop->GetCalib(locTOFPaddleResolTable.c_str(), paddle_resolutions))
+		jout << "Error loading " << locTOFPaddleResolTable << " !" << endl;
+
 
     HALFPADDLE = dTOFGeometry->Get_HalfLongBarLength();
 	HALFPADDLE_ONESIDED = dTOFGeometry->Get_HalfShortBarLength();
@@ -55,16 +64,6 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 	ONESIDED_PADDLE_MIDPOINT_MAG = HALFPADDLE_ONESIDED + locBeamHoleWidth/2.0;
 
 	NUM_BARS = dTOFGeometry->Get_NBars();
-
-    string base_dirname = "TOF";
-    if(NUM_BARS == 46)
-    	base_dirname = "TOF/TOFv2";
-
-	if(eventLoop->GetCalib(base_dirname+"/propagation_speed", propagation_speed))
-		jout << "Error loading /"+base_dirname+"/propagation_speed !" << endl;
-	if(eventLoop->GetCalib(base_dirname+"/paddle_resolutions", paddle_resolutions))
-		jout << "Error loading /"+base_dirname+"/paddle_resolutions !" << endl;
-
 
 	dPositionMatchCut_DoubleEnded = 9.0; //1.5*BARWIDTH
 //	dTimeMatchCut_PositionWellDefined = 1.0;

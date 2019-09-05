@@ -157,7 +157,10 @@ jerror_t JEventProcessor_TOF_online::brun(JEventLoop *eventLoop, int32_t runnumb
   // This is called whenever the run number changes
 
   map<string,double> tdcshift;
-  if (!eventLoop->GetCalib("/TOF/tdc_shift", tdcshift)){
+  const DTOFGeometry *locTOFGeometry = nullptr;
+  eventLoop->GetSingle(locTOFGeometry);
+  string locTOFTDCShiftTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tdc_shift";
+  if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tdcshift)) {
     TOF_TDC_SHIFT = tdcshift["TOF_TDC_SHIFT"];
   }
 

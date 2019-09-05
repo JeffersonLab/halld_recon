@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "ANALYSIS/DHistogramActions.h"
+#include "TOF/DTOFGeometry.h"
 
 void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 {
@@ -792,7 +793,10 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
 
 	map<string, double> tofparms;
-	locEventLoop->GetCalib("TOF/tof_parms", tofparms);
+	const DTOFGeometry *locTOFGeometry = nullptr;
+	locEventLoop->GetSingle(locTOFGeometry);
+	string locTOFParmsTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+	locEventLoop->GetCalib(locTOFParmsTable.c_str(), tofparms);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
