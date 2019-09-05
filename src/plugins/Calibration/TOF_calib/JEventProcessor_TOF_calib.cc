@@ -534,7 +534,11 @@ jerror_t JEventProcessor_TOF_calib::fini(void)
 {
   // Called before program exit after event processing is finished.
 
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
   WriteRootFile();
+
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   return NOERROR;
 }
