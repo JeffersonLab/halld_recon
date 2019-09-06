@@ -967,7 +967,8 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 		// requirements on unused showers
 		double locFlightTime = (locUnusedNeutralShower->dSpacetimeVertex.Vect() - locVertex).Mag()/SPEED_OF_LIGHT;
 		double locDeltaT = locUnusedNeutralShower->dSpacetimeVertex.T() - locFlightTime - locRFTime;
-		double locDetectorTheta = (locUnusedNeutralShower->dSpacetimeVertex.Vect()-locVertex).Theta()*180./TMath::Pi();
+		// next line commented out to suppress warnings
+		// double locDetectorTheta = (locUnusedNeutralShower->dSpacetimeVertex.Vect()-locVertex).Theta()*180./TMath::Pi();
 		if(fabs(locDeltaT) > 4.)
 			continue;		
 
