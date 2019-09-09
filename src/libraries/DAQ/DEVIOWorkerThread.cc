@@ -915,14 +915,16 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 	// On entry, iptr points to word after the bank header (i.e. word after the one with 0xFF11)
 	
 	// Loop over events. Should be one segment for each event
-	uint32_t ievent = 0;
+	// suppress warning
+	//	uint32_t ievent = 0;
 	for(auto pe : current_parsed_events){
 		
 		uint32_t segment_header = *iptr++;
 		uint32_t segment_len = segment_header&0xFFFF;
 		uint32_t *iend_segment  = &iptr[segment_len];
 
-		uint32_t event_number = *iptr++;
+		// suppress warning
+		//		uint32_t event_number = *iptr++;
 		uint64_t ts_low  = *iptr++;
 		uint64_t ts_high = *iptr++;
 
