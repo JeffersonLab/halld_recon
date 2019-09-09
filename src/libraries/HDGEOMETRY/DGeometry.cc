@@ -1919,16 +1919,16 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> 
   	num_bars+=num_single_end_bars1;
 
   	// two narrower long bars - added by upgrade
-  	if(num_narrower_bars1 > 0) {
-		Get("//composition[@name='forwardTOF_bottom3']/mposY/@Y0",y0);
-		Get("//composition[@name='forwardTOF_bottom3']/mposY/@dY",dy);
-		vector<double>tof_bottom3;
-		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom3']/@X_Y_Z",tof_bottom3);  
-		for (int k=num_bars;k<num_bars+num_narrower_bars1;k++){
-			y_tof.push_back(y0+tof_bottom3[1]+dy*double(k-num_bars));
+  	if(num_narrower_bars2 > 0) {
+		Get("//composition[@name='forwardTOF_top3']/mposY/@Y0",y0);
+		Get("//composition[@name='forwardTOF_top3']/mposY/@dY",dy);
+		vector<double>tof_top3;
+		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top3']/@X_Y_Z",tof_top3);  
+		for (int k=num_bars;k<num_bars+num_narrower_bars2;k++){
+			y_tof.push_back(y0+tof_top3[1]+dy*double(k-num_bars));
     		y_widths.push_back(dy);
 		}
-		num_bars+=num_narrow_bars1;
+		num_bars+=num_narrow_bars2;
   	}
 
   	// two narrow long bars
