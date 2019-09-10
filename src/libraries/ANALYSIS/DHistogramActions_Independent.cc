@@ -309,21 +309,15 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 	//Check if is REST event (high-level objects only)
 	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
 
+	Run_Update(locEventLoop);
+
 	vector<const DMCThrown*> locMCThrowns;
 	locEventLoop->Get(locMCThrowns);
-
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-	double locTargetZCenter = 0.0;
-	locGeometry->GetTargetZ(locTargetZCenter);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
-		if(dTargetCenter.Z() < -9.8E9)
-			dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
-
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it.
 		CreateAndChangeTo_ActionDirectory();
@@ -483,6 +477,17 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_Reconstruction::Run_Update(JEventLoop* locEventLoop)
+{
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	double locTargetZCenter = 0.0;
+	locGeometry->GetTargetZ(locTargetZCenter);
+	
+	if(dTargetCenter.Z() < -9.8E9)
+		dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
 }
 
 bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -792,17 +797,12 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
 
-	map<string, double> tofparms;
-	const DTOFGeometry *locTOFGeometry = nullptr;
-	locEventLoop->GetSingle(locTOFGeometry);
-	string locTOFParmsTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
-	locEventLoop->GetCalib(locTOFParmsTable.c_str(), tofparms);
+	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
-		TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -1097,6 +1097,16 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_DetectorMatching::Run_Update(JEventLoop* locEventLoop)
+{
+	map<string, double> tofparms;
+	const DTOFGeometry *locTOFGeometry = nullptr;
+	locEventLoop->GetSingle(locTOFGeometry);
+	string locTOFParmsTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+	locEventLoop->GetCalib(locTOFParmsTable.c_str(), tofparms);
+	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
 }
 
 bool DHistogramAction_DetectorMatching::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -2187,12 +2197,9 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 	//When creating a reaction-independent action, only modify member variables within a ROOT lock.
 		//Objects created within a plugin (such as reaction-independent actions) can be accessed by many threads simultaneously.
 
-	string locHistName;
+	Run_Update(locEventLoop);
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-	double locTargetZCenter = 0.0;
-	locGeometry->GetTargetZ(locTargetZCenter);
+	string locHistName;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
@@ -2202,8 +2209,6 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 			//If another thread has already created the folder, it just changes to it.
 		CreateAndChangeTo_ActionDirectory();
 
-		if(dTargetCenter.Z() < -9.8E9)
-			dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
 
 		//BCAL
 		locHistName = "BCALTrackDOCA";
@@ -2235,6 +2240,17 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_Neutrals::Run_Update(JEventLoop* locEventLoop)
+{
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	double locTargetZCenter = 0.0;
+	locGeometry->GetTargetZ(locTargetZCenter);
+
+	if(dTargetCenter.Z() < -9.8E9)
+		dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
 }
 
 bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -2307,7 +2323,6 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 	return true; //return false if you want to use this action to apply a cut (and it fails the cut!)
 }
 
-
 void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 {
 	//Create any histograms/trees/etc. within a ROOT lock.
@@ -2317,14 +2332,11 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 		//Objects created within a plugin (such as reaction-independent actions) can be accessed by many threads simultaneously.
 
 	string locHistName, locHistTitle;
+	
+	Run_Update(locEventLoop);
 
 	vector<const DMCThrown*> locMCThrowns;
 	locEventLoop->Get(locMCThrowns);
-
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-	double locTargetZCenter = 0.0;
-	locGeometry->GetTargetZ(locTargetZCenter);
 
 	string locTrackSelectionTag = "NotATag";
 	if(gPARMS->Exists("COMBO:TRACK_SELECT_TAG"))
@@ -2343,9 +2355,6 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it.
 		CreateAndChangeTo_ActionDirectory();
-
-		if(dTargetCenterZ < -9.8E9)
-			dTargetCenterZ = locTargetZCenter; //only set if not already set
 
 		//Track Matched to Hit
 		for(int locTruePIDFlag = 0; locTruePIDFlag < 2; ++locTruePIDFlag)
@@ -2424,6 +2433,17 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_DetectorMatchParams::Run_Update(JEventLoop* locEventLoop)
+{
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	double locTargetZCenter = 0.0;
+	locGeometry->GetTargetZ(locTargetZCenter);
+	
+	if(dTargetCenterZ < -9.8E9)
+		dTargetCenterZ = locTargetZCenter; //only set if not already set
 }
 
 bool DHistogramAction_DetectorMatchParams::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)

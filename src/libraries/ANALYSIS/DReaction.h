@@ -55,6 +55,7 @@ class DReaction : public JObject
 
 		// SET PRE-DPARTICLECOMBO CUT VALUES //Command-line values will override these values
 		void Set_NumPlusMinusRFBunches(size_t locNumPlusMinusRFBunches){dNumPlusMinusRFBunches = locNumPlusMinusRFBunches;}
+		void Set_MaxExtraShowers(size_t locMaxExtraShowers){dMaxExtraShowers = pair<bool, size_t>(true, locMaxExtraShowers);}
 		void Set_MaxExtraGoodTracks(size_t locMaxExtraGoodTracks){dMaxExtraGoodTracks = pair<bool, size_t>(true, locMaxExtraGoodTracks);}
 
 		//DEPRECATED FUNCTIONS
@@ -95,6 +96,7 @@ class DReaction : public JObject
 		// GET PRE-DPARTICLECOMBO CUT VALUES //Command-line values will override these values
 		size_t Get_NumPlusMinusRFBunches(void) const{return dNumPlusMinusRFBunches;}
 		pair<bool, double> Get_MaxPhotonRFDeltaT(void) const{return dMaxPhotonRFDeltaT;} //DEPRECATED!!!
+		pair<bool, size_t> Get_MaxExtraShowers(void) const{return dMaxExtraShowers;}
 		pair<bool, size_t> Get_MaxExtraGoodTracks(void) const{return dMaxExtraGoodTracks;}
 
 		// GET EventStore SKIMS //comma-separated list expected
@@ -128,6 +130,7 @@ class DReaction : public JObject
 			//Command-line values (variable names are below in all-caps) will override these values
 		size_t dNumPlusMinusRFBunches = 99999; //COMBO:NUM_PLUSMINUS_RF_BUNCHES //e.g. if 0 then only center bunch, if 2 then +/- 2 bunches
 		pair<bool, double> dMaxPhotonRFDeltaT = make_pair(false, 0.0); //DEPRECATED!!!!
+		pair<bool, size_t> dMaxExtraShowers = make_pair(false, size_t(0)); //COMBO:MAX_EXTRA_SHOWERS
 		pair<bool, size_t> dMaxExtraGoodTracks = make_pair(false, size_t(0)); //COMBO:MAX_EXTRA_GOOD_TRACKS - "good" defined by PreSelect factory
 
 		// EVENT STORE QUERY

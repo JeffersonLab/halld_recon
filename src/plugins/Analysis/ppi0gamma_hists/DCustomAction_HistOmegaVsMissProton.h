@@ -32,6 +32,7 @@ class DCustomAction_HistOmegaVsMissProton : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_HistOmegaVsMissProton", false, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) { locEventLoop->GetSingle(dAnalysisUtilities); }
 
 	private:
 

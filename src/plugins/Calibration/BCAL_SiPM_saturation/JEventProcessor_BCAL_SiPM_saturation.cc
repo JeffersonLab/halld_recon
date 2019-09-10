@@ -235,8 +235,9 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 	// cout << " Point: Ept=" << Ept << endl;
 	float upHit=0;
 	float downHit=0;
-	float uppeak=0;
-	float downpeak=0;
+	// following two lines commented out to supress warning
+	//	float uppeak=0;
+	//	float downpeak=0;
 
              vector<const DBCALHit*> Hits;
 		locPoint->Get(Hits);
@@ -255,11 +256,13 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 
 		if (end == 0) {
 		  upHit = Ehit;
-		  uppeak = pulse_peak;
+		  // following line commented out to supress warning
+		  //		  uppeak = pulse_peak;
 		}
 		if (end == 1) {
 		  downHit = Ehit;
-		  downpeak = pulse_peak;
+		  // following line commented out to supress warning
+		  //		  downpeak = pulse_peak;
 		}
 
 
