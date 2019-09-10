@@ -190,6 +190,19 @@
 	legend_na->Draw();
 	lat.DrawLatex(225.0, 1.075*ymax, nevents_str);
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "TAGGER Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("TAGGER_occupancy", 1);
+			rs_SavePad("TAGGER_occupancy", 2);
+			rs_ResetAllMacroHistos("//TAGGER_occupancy");
+		}
+	}
+#endif
 }
 
 
