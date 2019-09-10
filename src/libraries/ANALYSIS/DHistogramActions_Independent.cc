@@ -921,19 +921,19 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 			locHistName = "TrackYVsVerticalPaddle_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle Has Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)");
-			dHistMap_TOFPaddleTrackYVsVerticalPaddle_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNumFCALTOFXYBins, -130.0, 130.0);
+			dHistMap_TOFPaddleTrackYVsVerticalPaddle_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNumFCALTOFXYBins, -130.0, 130.0);
 
 			locHistName = "TrackYVsVerticalPaddle_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle No Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)");
-			dHistMap_TOFPaddleTrackYVsVerticalPaddle_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNumFCALTOFXYBins, -130.0, 130.0);
+			dHistMap_TOFPaddleTrackYVsVerticalPaddle_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNumFCALTOFXYBins, -130.0, 130.0);
 
 			locHistName = "HorizontalPaddleVsTrackX_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle Has Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle");
-			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 44, 0.5, 44.5);
+			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 46, 0.5, 46.5);
 
 			locHistName = "HorizontalPaddleVsTrackX_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle No Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle");
-			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 44, 0.5, 44.5);
+			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 46, 0.5, 46.5);
 			gDirectory->cd("..");
 
 			//TOFPoint
@@ -948,11 +948,11 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 			locHistName = "TrackTOF2DPaddles_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Has Hit;Projected Vertical TOF Paddle;Projected Horizontal TOF Paddle");
-			dHistMap_TrackTOF2DPaddles_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, 44, 0.5, 44.5);
+			dHistMap_TrackTOF2DPaddles_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, 46, 0.5, 46.5);
 
 			locHistName = "TrackTOF2DPaddles_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF No Hit;Projected Vertical TOF Paddle;Projected Horizontal TOF Paddle");
-			dHistMap_TrackTOF2DPaddles_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, 44, 0.5, 44.5);
+			dHistMap_TrackTOF2DPaddles_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, 46, 0.5, 46.5);
 
 			locHistName = "TrackTOFP_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Has Hit;p (GeV/c)");
@@ -980,19 +980,19 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 			locHistName = "TOFTrackDeltaXVsHorizontalPaddle";
 			locHistTitle = locTrackString + string(";TOF Horizontal Paddle;TOF / Track #DeltaX (cm)");
-			dHistMap_TOFPointTrackDeltaXVsHorizontalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
+			dHistMap_TOFPointTrackDeltaXVsHorizontalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
 
 			locHistName = "TOFTrackDeltaXVsVerticalPaddle";
 			locHistTitle = locTrackString + string(";TOF Vertical Paddle;TOF / Track #DeltaX (cm)");
-			dHistMap_TOFPointTrackDeltaXVsVerticalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
+			dHistMap_TOFPointTrackDeltaXVsVerticalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
 
 			locHistName = "TOFTrackDeltaYVsHorizontalPaddle";
 			locHistTitle = locTrackString + string(";TOF Horizontal Paddle;TOF / Track #DeltaY (cm)");
-			dHistMap_TOFPointTrackDeltaYVsHorizontalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
+			dHistMap_TOFPointTrackDeltaYVsHorizontalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
 
 			locHistName = "TOFTrackDeltaYVsVerticalPaddle";
 			locHistTitle = locTrackString + string(";TOF Vertical Paddle;TOF / Track #DeltaY (cm)");
-			dHistMap_TOFPointTrackDeltaYVsVerticalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
+			dHistMap_TOFPointTrackDeltaYVsVerticalPaddle[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNum2DTrackDOCABins, -1.0*dMaxTrackMatchDOCA, dMaxTrackMatchDOCA);
 
 			locHistName = "TOFTrackDistance_BothPlanes";
 			locHistTitle = locTrackString + string("TOF Hit in Both Planes;TOF / Track Distance (cm)");
