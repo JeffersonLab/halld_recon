@@ -37,6 +37,7 @@ class DCustomAction_p2pi_unusedHists : public DAnalysisAction
 	        DAnalysisAction(locReaction, "Custom_p2pi_unusedHists", locUseKinFitResultsFlag, locActionUniqueString){}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 	private:
 

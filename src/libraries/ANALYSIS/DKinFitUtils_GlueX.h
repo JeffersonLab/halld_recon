@@ -47,6 +47,7 @@ class DKinFitUtils_GlueX : public DKinFitUtils
 		DKinFitUtils_GlueX(const DMagneticFieldMap* locMagneticFieldMap, const DAnalysisUtilities* locAnalysisUtilities);
 
 		void Reset_NewEvent(void);
+		void Set_RunDependent_Data(JEventLoop *locEventLoop);
 		void Set_IncludeBeamlineInVertexFitFlag(bool locIncludeBeamlineInVertexFitFlag){dIncludeBeamlineInVertexFitFlag = locIncludeBeamlineInVertexFitFlag;}
 
 		/************************************************************** CREATE PARTICLES ************************************************************/

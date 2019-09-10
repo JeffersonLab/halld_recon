@@ -37,6 +37,7 @@ class DCustomAction_ee_ShowerEoverP_cut : public DAnalysisAction
 
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 	private:
 

@@ -92,6 +92,7 @@ class DHistogramAction_ParticleComboGenReconComparison : public DAnalysisAction
 		double dMinP, dMaxP, dMinTheta, dMaxTheta, dMinRFDeltaT, dMaxRFDeltaT;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -109,11 +110,11 @@ class DHistogramAction_ParticleComboGenReconComparison : public DAnalysisAction
 		deque<DKinFitPullType> dPullTypes;
 		double dTargetZCenter;
 
-		TH1I* dRFBeamBunchDeltaT_Hist;
+		TH1I* dRFBeamBunchDeltaT_Hist = nullptr;
 
-		TH1I* dBeamParticleHist_DeltaPOverP;
-		TH2I* dBeamParticleHist_DeltaPOverPVsP;
-		TH1I* dBeamParticleHist_DeltaT;
+		TH1I* dBeamParticleHist_DeltaPOverP = nullptr;
+		TH2I* dBeamParticleHist_DeltaPOverPVsP = nullptr;
+		TH1I* dBeamParticleHist_DeltaT = nullptr;
 
 		deque<map<Particle_t, TH1I*> > dHistDeque_DeltaPOverP;
 		deque<map<Particle_t, TH1I*> > dHistDeque_DeltaTheta;
@@ -196,6 +197,7 @@ class DHistogramAction_ThrownParticleKinematics : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 //so: in multi-thread, make direct call. in the main func, no check!
 	//in single-thread, call pre-func to check flag
@@ -270,13 +272,14 @@ class DHistogramAction_ReconnedThrownKinematics : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
 
 		const DAnalysisUtilities* dAnalysisUtilities;
 
-		TH1I* 	dBeamParticle_P;
+		TH1I* 	dBeamParticle_P = nullptr;
 
 		//PID
 		map<int, TH2I*> dHistMap_QBetaVsP; //int is charge: -1, 1
@@ -350,13 +353,14 @@ class DHistogramAction_GenReconTrackComparison : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
 
 		deque<DKinFitPullType> dPullTypes;
 		double dTargetZCenter;
-		TH1I* dRFBeamBunchDeltaT_Hist;
+		TH1I* dRFBeamBunchDeltaT_Hist = nullptr;
 
 		map<Particle_t, TH1I*> dHistMap_MatchFOM;
 		map<Particle_t, TH1I*> dHistMap_DeltaPOverP;
@@ -413,6 +417,7 @@ class DHistogramAction_TruePID : public DAnalysisAction
 		double dMinP, dMaxP, dMinTheta, dMaxTheta;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -425,7 +430,7 @@ class DHistogramAction_TruePID : public DAnalysisAction
 //		double dMinThrownMatchFOM;
 		const DAnalysisUtilities* dAnalysisUtilities;
 
-		TH1I* dHist_TruePIDStatus;
+		TH1I* dHist_TruePIDStatus = nullptr;
 		deque<map<Particle_t, TH1I*> > dHistDeque_P_CorrectID;
 		deque<map<Particle_t, TH1I*> > dHistDeque_P_IncorrectID;
 		deque<map<Particle_t, TH2I*> > dHistDeque_PVsTheta_CorrectID;
