@@ -1848,6 +1848,7 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> 
 	// add in a dummy entry, since we are indexing by paddle number, which starts at 1
 	// maybe change this some day?
 	y_tof.push_back(0);
+	y_widths.push_back(0);
 	
   	// Next fill array of bar positions within a plane
   	// y_tof[barnumber] gives y position in the center of the bar. [currently barnumber = 1 - 46]

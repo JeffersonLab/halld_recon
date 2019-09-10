@@ -51,7 +51,7 @@ class DTOFGeometry : public JObject {
 
   string Get_CCDB_DirectoryName() const {
   	if(Get_NBars() == 46) {
-  		return "TOF2";
+	    return "TOF2";
   	} else {
   		return "TOF";
   	}
