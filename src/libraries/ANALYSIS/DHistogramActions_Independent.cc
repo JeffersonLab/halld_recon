@@ -2,6 +2,7 @@
 #include <unistd.h>
 
 #include "ANALYSIS/DHistogramActions.h"
+#include "TOF/DTOFGeometry.h"
 
 void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 {
@@ -920,19 +921,19 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 			locHistName = "TrackYVsVerticalPaddle_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle Has Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)");
-			dHistMap_TOFPaddleTrackYVsVerticalPaddle_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNumFCALTOFXYBins, -130.0, 130.0);
+			dHistMap_TOFPaddleTrackYVsVerticalPaddle_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNumFCALTOFXYBins, -130.0, 130.0);
 
 			locHistName = "TrackYVsVerticalPaddle_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle No Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)");
-			dHistMap_TOFPaddleTrackYVsVerticalPaddle_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 44, 0.5, 44.5, dNumFCALTOFXYBins, -130.0, 130.0);
+			dHistMap_TOFPaddleTrackYVsVerticalPaddle_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 46, 0.5, 46.5, dNumFCALTOFXYBins, -130.0, 130.0);
 
 			locHistName = "HorizontalPaddleVsTrackX_HasHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle Has Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle");
-			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 44, 0.5, 44.5);
+			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_HasHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 46, 0.5, 46.5);
 
 			locHistName = "HorizontalPaddleVsTrackX_NoHit";
 			locHistTitle = locTrackString + string(", Has Other Match, TOF Paddle No Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle");
-			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 44, 0.5, 44.5);
+			dHistMap_TOFPaddleHorizontalPaddleVsTrackX_NoHit[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFCALTOFXYBins, -130.0, 130.0, 46, 0.5, 46.5);
 			gDirectory->cd("..");
 
 			//TOFPoint
@@ -1101,7 +1102,10 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 void DHistogramAction_DetectorMatching::Run_Update(JEventLoop* locEventLoop)
 {
 	map<string, double> tofparms;
-	locEventLoop->GetCalib("TOF/tof_parms", tofparms);
+	const DTOFGeometry *locTOFGeometry = nullptr;
+	locEventLoop->GetSingle(locTOFGeometry);
+	string locTOFParmsTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+	locEventLoop->GetCalib(locTOFParmsTable.c_str(), tofparms);
 	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
 }
 

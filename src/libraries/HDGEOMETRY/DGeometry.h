@@ -154,7 +154,7 @@ class DGeometry{
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
-	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof) const;
+	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;
 	  bool GetTOFPaddleParameters(map<string,double> &paddle_params) const;
       bool GetTargetZ(double &z_target) const; ///< z-location of center of target
       bool GetTargetLength(double &target_length) const; ///< z-location of center of target
