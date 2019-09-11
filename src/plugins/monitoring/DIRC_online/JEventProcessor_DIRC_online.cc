@@ -254,7 +254,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     else return NOERROR;
 
     // LED specific information
-    double locLEDRefTime = 0;
+    // next line commented out to supress warning: variable not used
+    //    double locLEDRefTime = 0;
     double locLEDRefAdcTime = 0;
     double locLEDRefTdcTime = 0;
     if(locDIRCLEDTrig) {
@@ -271,7 +272,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
 		locLEDRefAdcTime = dircLEDRef->t_fADC;
 		locLEDRefTdcTime = dircLEDRef->t_TDC;
-		locLEDRefTime = dircLEDRef->t_TDC;
+		// next line commented out to supress warning: variable not used
+		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
