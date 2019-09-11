@@ -37,6 +37,7 @@ class DCustomAction_p3pi_hists : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_p3pi_hists", locUseKinFitResultsFlag, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 	private:
 

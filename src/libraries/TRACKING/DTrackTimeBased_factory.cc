@@ -72,9 +72,12 @@ jerror_t DTrackTimeBased_factory::init(void)
 	USE_HITS_FROM_WIREBASED_FIT=false;
 	gPARMS->SetDefaultParameter("TRKFIT:USE_HITS_FROM_WIREBASED_FIT",
 			      USE_HITS_FROM_WIREBASED_FIT);
+	INSERT_MISSING_HYPOTHESES=true;
+	gPARMS->SetDefaultParameter("TRKFIT:INSERT_MISSING_HYPOTHESES",
+				    INSERT_MISSING_HYPOTHESES);
 
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_HISTS",					DEBUG_HISTS);
-	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",					DEBUG_LEVEL);
+	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_HISTS",DEBUG_HISTS);
+	gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
 	
 	vector<int> hypotheses;
 	hypotheses.push_back(Positron);
@@ -316,7 +319,9 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   FilterDuplicates();
 
   // Fill in track data for missing hypotheses 
-  InsertMissingHypotheses(loop);
+  if (INSERT_MISSING_HYPOTHESES){
+    InsertMissingHypotheses(loop);
+  }
 
   // Set MC Hit-matching information
   for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)

@@ -31,7 +31,6 @@ class DEventProcessor_DCdEdxStudy_tree:public JEventProcessor{
 		DCdEdxInformation *dDCdEdxInformation;
 		TTree* dPluginTree_DCdEdxInformation;
 
-		DParticleID *dPIDAlgorithm;
 };
 
 #endif // _DEventProcessor_DCdEdxStudy_tree_

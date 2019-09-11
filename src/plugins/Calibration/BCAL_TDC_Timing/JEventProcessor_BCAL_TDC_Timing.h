@@ -29,7 +29,6 @@ class JEventProcessor_BCAL_TDC_Timing:public jana::JEventProcessor{
 		uint32_t VERBOSEHISTOGRAMS;
 
       double Z_TARGET;
-	  const DBCALGeometry *dBCALGeom;
 
       //Used as a key for maps
       class readout_channel {
@@ -60,8 +59,6 @@ class JEventProcessor_BCAL_TDC_Timing:public jana::JEventProcessor{
       };
 
       map<readout_channel,timewalk_coefficients> tdc_timewalk_map; 
-
-      const DTrackFitter *fitter;
 
 };
 

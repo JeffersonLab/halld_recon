@@ -14,7 +14,7 @@ void DCustomAction_CutExtraPi0::Initialize(JEventLoop* locEventLoop)
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		// Optional: Useful utility functions.
-		locEventLoop->GetSingle(dAnalysisUtilities);
+		Run_Update(locEventLoop);
 
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 

@@ -112,7 +112,7 @@ inline size_t Get_NumTrackHits(const DTrackTimeBased* locTrackTimeBased)
 inline bool DTrackTimeBased::GetProjection(DetectorSystem_t detector,
 					   DVector3 &pos,
 					   DVector3 *mom,double *t) const{
-  if (detector>SYS_BCAL && extrapolations.at(detector).size()>0){
+  if (extrapolations.at(detector).size()>0){
     DTrackFitter::Extrapolation_t extrapolation=extrapolations.at(detector)[0];
     pos=extrapolation.position;
     if (mom){

@@ -81,22 +81,6 @@ jerror_t DEventProcessor_trackeff_hists2::brun(JEventLoop *loop, int32_t runnumb
 	dgeom->GetCDCAxialLength(cdc_axial_length);
 	CDCZmin = CDCZmax-cdc_axial_length;
 
-  // Get the particle ID algorithms
-	vector<const DParticleID *> locPIDAlgorithms;
-	loop->Get(locPIDAlgorithms);
-	if(locPIDAlgorithms.size() < 1){
-		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-	// Drop the const qualifier from the DParticleID pointer (I'm surely going to hell for this!)
-	dPIDAlgorithm = const_cast<DParticleID*>(locPIDAlgorithms[0]);
-  
-	// Warn user if something happened that caused us NOT to get a dPIDAlgorithm object pointer
-	if(!dPIDAlgorithm){
-		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-
 	use_rt_thrown = true; //mctrajpoints.size()<20;
 
 	return NOERROR;
@@ -124,6 +108,22 @@ jerror_t DEventProcessor_trackeff_hists2::fini(void)
 jerror_t DEventProcessor_trackeff_hists2::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 	
+  // Get the particle ID algorithms
+	vector<const DParticleID *> locPIDAlgorithms;
+	loop->Get(locPIDAlgorithms);
+	if(locPIDAlgorithms.size() < 1){
+		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+		return RESOURCE_UNAVAILABLE;
+	}
+	// Drop the const qualifier from the DParticleID pointer (I'm surely going to hell for this!)
+	locPIDAlgorithm = const_cast<DParticleID*>(locPIDAlgorithms[0]);
+  
+	// Warn user if something happened that caused us NOT to get a locPIDAlgorithm object pointer
+	if(!locPIDAlgorithm){
+		_DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+		return RESOURCE_UNAVAILABLE;
+	}
+
 	// Bail quick on events with too many or too few CDC hits
 	vector<const DCDCTrackHit*> cdctrackhits;
 	loop->Get(cdctrackhits);
@@ -284,7 +284,7 @@ bool DEventProcessor_trackeff_hists2::Search_ChargedTrackHypotheses(JEventLoop *
 
 			trk.q_timebased = locTimeBasedTrack->charge();
 
-			trk.PID_timebased = int(dPIDAlgorithm->IDTrack(locTimeBasedTrack->charge(), locTimeBasedTrack->mass()));
+			trk.PID_timebased = int(locPIDAlgorithm->IDTrack(locTimeBasedTrack->charge(), locTimeBasedTrack->mass()));
 
 			trk.pfit = pfit;
 			trk.trk_chisq = locTimeBasedTrack->chisq;
@@ -377,7 +377,7 @@ bool DEventProcessor_trackeff_hists2::Search_WireBasedTracks(JEventLoop *loop, u
 
 			trk.q_wirebased = track->charge();
 
-			trk.PID_wirebased = int(dPIDAlgorithm->IDTrack(track->charge(), track->mass()));
+			trk.PID_wirebased = int(locPIDAlgorithm->IDTrack(track->charge(), track->mass()));
 
 			trk.pfit_wire = pfit_wire;
 			trk.trk_chisq_wb = track->chisq;
@@ -468,7 +468,7 @@ bool DEventProcessor_trackeff_hists2::Search_TrackCandidates(JEventLoop *loop, u
 			locFoundFlag = true;
 			trk.dTrackReconstructedFlag_Candidate = true;
 			trk.q_candidate = trackcandidate->charge();
-			trk.PID_candidate = int(dPIDAlgorithm->IDTrack(trackcandidate->charge(), trackcandidate->mass()));
+			trk.PID_candidate = int(locPIDAlgorithm->IDTrack(trackcandidate->charge(), trackcandidate->mass()));
 			trk.pcan = pcan;
 			trk.delta_pt_over_pt_can = delta_pt_over_pt_can;
 			trk.delta_theta_can = delta_theta_can;

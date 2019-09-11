@@ -114,16 +114,6 @@ jerror_t DEventProcessor_BCAL_gainmatrix::brun(jana::JEventLoop* locEventLoop, i
 	locEventLoop->GetSingle(dEventWriterROOT);
 	dEventWriterROOT->Create_DataTrees(locEventLoop);
 	*/
-	vector<const DTrackFitter *> fitters;
-	locEventLoop->Get(fitters);
-	
-	if(fitters.size()<1){
-	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-	
-	fitter = fitters[0];
-
 
 	return NOERROR;
 }
@@ -156,6 +146,17 @@ jerror_t DEventProcessor_BCAL_gainmatrix::evnt(jana::JEventLoop* locEventLoop, u
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
+
+	vector<const DTrackFitter *> fitters;
+	locEventLoop->Get(fitters);
+	
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+	
+	const DTrackFitter *fitter = fitters[0];
+
 
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 

@@ -313,9 +313,6 @@ class DEventProcessor_dc_alignment:public jana::JEventProcessor{
   // Resolution parameters
   double CDC_RES_PAR1,CDC_RES_PAR2;
 
-  // Track finder
-  DTrackFinder *finder;
-
   // Geometry
   const DGeometry *dgeom;
 

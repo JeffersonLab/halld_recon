@@ -36,6 +36,12 @@ class DCustomAction_p2gamma_unusedHists : public DAnalysisAction
 	        DAnalysisAction(locReaction, "Custom_p2gamma_unusedHists", locUseKinFitResultsFlag, locActionUniqueString){}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {
+			// get PID algos
+			const DParticleID* locParticleID = NULL;
+			locEventLoop->GetSingle(locParticleID);
+			dParticleID = locParticleID;
+		}
 
 	private:
 

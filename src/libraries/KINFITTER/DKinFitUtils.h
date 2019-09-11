@@ -10,6 +10,8 @@
 #include "TLorentzVector.h"
 #include "TMatrixFSym.h"
 
+#include "JANA/JEventLoop.h"
+
 #include "DResourcePool.h"
 
 #include "DKinFitter.h"
@@ -22,6 +24,7 @@
 #include "DKinFitConstraint_Spacetime.h"
 
 using namespace std;
+using namespace jana;
 
 class DKinFitUtils //contains pure-virtual functions: cannot directly instantiate class, can only inherit from it
 {
@@ -34,10 +37,12 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		//STRUCTORS
 		DKinFitUtils(void);
 		virtual ~DKinFitUtils(void){};
-
+		
 		//RESET: IF YOU OVERRIDE THESE IN THE DERIVED CLASS, BE SURE TO CALL THE BASE CLASS FUNCTIONS!
 		virtual void Reset_NewEvent(void);
 		virtual void Reset_NewFit(void){};
+		
+		virtual void Set_RunDependent_Data(JEventLoop *locEventLoop) {}
 
 		/************************************************************ CONTROL AND MAPPING ***********************************************************/
 

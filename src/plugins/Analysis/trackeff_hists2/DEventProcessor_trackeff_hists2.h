@@ -68,7 +68,6 @@ class DEventProcessor_trackeff_hists2:public JEventProcessor{
 
 
 	private:
-		DParticleID *dPIDAlgorithm;
 		bool use_rt_thrown;
 
 		jerror_t init(void);	///< Invoked via DEventProcessor virtual method

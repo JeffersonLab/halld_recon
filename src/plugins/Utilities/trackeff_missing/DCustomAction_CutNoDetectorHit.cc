@@ -19,9 +19,7 @@ void DCustomAction_CutNoDetectorHit::Initialize(JEventLoop* locEventLoop)
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	dMagneticFieldMap = locApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
-	locEventLoop->GetSingle(dParticleID);
+	Run_Update(locEventLoop);
 
 	string locHistName, locHistTitle;
 	string locTrackString = string("Missing ") + ParticleName_ROOT(dMissingPID);

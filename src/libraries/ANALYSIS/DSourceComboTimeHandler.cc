@@ -353,28 +353,16 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 
 	if(locEventLoop == nullptr)
 		return; //only interested in querying cuts
-
-	//UTILITIES
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
-	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-
-	//TARGET INFORMATION
-	double locTargetCenterZ = 65.0;
-	locGeometry->GetTargetZ(locTargetCenterZ);
-	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
-	double locTargetLength;
-	locGeometry->GetTargetLength(locTargetLength);
+		
+	Set_RunDependent_Data(locEventLoop);
 
 	//INITIALIZE PHOTON VERTEX-Z EVALUATION BINNING
 	//MAKE SURE THAT THE CENTER OF THE TARGET IS THE CENTER OF A BIN
 	//this is a little convoluted (and can probably be calculated without loops ...), but it ensures the above
 	dPhotonVertexZBinWidth = 10.0;
 	size_t locN = 0;
-	double locTargetUpstreamZ = dTargetCenter.Z() - locTargetLength/2.0;
-	double locTargetDownstreamZ = dTargetCenter.Z() + locTargetLength/2.0;
+	double locTargetUpstreamZ = dTargetCenter.Z() - dTargetLength/2.0;
+	double locTargetDownstreamZ = dTargetCenter.Z() + dTargetLength/2.0;
 	do
 	{
 		++locN;
@@ -404,11 +392,6 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 		dShowerRFBunches[locZBin] = {};
 		dShowersByBeamBunchByZBin[locZBin] = {};
 	}
-
-	//BEAM BUNCH PERIOD
-	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
-	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 	//Look for troublesome channels: those with photons being produced from a detached vertex
 	//If any, adjust dMaxDecayTimeOffset accordingly
@@ -515,6 +498,30 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 		locCurrentDir->cd();
 	}
 	japp->RootUnLock(); //unlock
+}
+
+void DSourceComboTimeHandler::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
+	//UTILITIES
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//GET THE GEOMETRY
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+
+	//TARGET INFORMATION
+	double locTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(locTargetCenterZ);
+	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
+	double locTargetLength;
+	locGeometry->GetTargetLength(locTargetLength);
+	dTargetLength = locTargetLength;
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
+
 }
 
 void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeutralShowers, const DEventRFBunch* locInitialEventRFBunch, const DDetectorMatches* locDetectorMatches)

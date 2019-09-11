@@ -11,15 +11,8 @@ DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSo
 	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
 
-	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-
-	//TARGET INFORMATION
-	double locTargetCenterZ = 65.0;
-	locGeometry->GetTargetZ(locTargetCenterZ);
-	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
-
+	Set_RunDependent_Data(locEventLoop);
+	
 	dResourcePool_KinematicData.Set_ControlParams(20, 20, 200, 1000, 0);
 	dResourcePool_ParticleCombo.Set_ControlParams(100, 20, 1000, 3000, 0);
 	dResourcePool_ParticleComboStep.Set_ControlParams(100, 50, 1500, 4000, 0);
@@ -36,8 +29,6 @@ DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSo
 	locEventLoop->Get(locBeamPhotons); //make sure that brun() is called for the default factory!!!
 	dBeamPhotonfactory = static_cast<DBeamPhoton_factory*>(locEventLoop->GetFactory("DBeamPhoton"));
 
-	locEventLoop->GetSingle(dParticleID);
-
 	//error matrix //too lazy to compute properly right now ... need to hack DAnalysisUtilities::Calc_DOCA()
 	dVertexCovMatrix.ResizeTo(4, 4);
 	dVertexCovMatrix.Zero();
@@ -46,6 +37,22 @@ DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSo
 	dVertexCovMatrix(2, 2) = 1.5; //z variance //a guess, semi-guarding against the worst case scenario //ugh
 	dVertexCovMatrix(3, 3) = 0.0; //t variance //not used
 }
+
+void DParticleComboCreator::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
+	//GET THE GEOMETRY
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+
+	//TARGET INFORMATION
+	double locTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(locTargetCenterZ);
+	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
+
+	locEventLoop->GetSingle(dParticleID);
+		
+	dKinFitUtils->Set_RunDependent_Data(locEventLoop);
+}		
 
 void DParticleComboCreator::Reset(void)
 {
