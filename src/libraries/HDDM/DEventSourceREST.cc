@@ -989,7 +989,7 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
 jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
                                    JFactory<DCCALShower>* factory)
 {
-   /// Copies the data from the bcalShower hddm record. This is
+   /// Copies the data from the ccalShower hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
@@ -1017,8 +1017,15 @@ jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
       shower->sigma_t = iter->getTerr();
       shower->sigma_E = iter->getEerr();
       shower->Emax = iter->getEmax();
+      shower->x1 = iter->getX1();
+      shower->y1 = iter->getY1();
+      shower->chi2 = iter->getChi2();
+      
       shower->type = iter->getType();
       shower->dime = iter->getDime();
+      shower->status = iter->getDime();
+      shower->id = iter->getId();
+      shower->idmax = iter->getIdmax();
       
       data.push_back(shower);
    }

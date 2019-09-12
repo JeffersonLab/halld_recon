@@ -310,11 +310,18 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
         ccal().setZ(ccalshowers[i]->z);                                                                                                      
         ccal().setT(ccalshowers[i]->time);                                                                                                   
         ccal().setE(ccalshowers[i]->E);                                                                                                      
+        ccal().setEmax(ccalshowers[i]->Emax);
         ccal().setTerr(ccalshowers[i]->sigma_t);                                                                                             
         ccal().setEerr(ccalshowers[i]->sigma_E);                                                                                             
-        ccal().setEmax(ccalshowers[i]->Emax);                                                                                                
+        ccal().setChi2(ccalshowers[i]->chi2);
+        ccal().setX1(ccalshowers[i]->x1);
+        ccal().setY1(ccalshowers[i]->y1);
+                                                                                                     
         ccal().setType(ccalshowers[i]->type);                                                                                                
         ccal().setDime(ccalshowers[i]->dime);                                                                                                
+        ccal().setStatus(ccalshowers[i]->status);                                                                                                
+        ccal().setId(ccalshowers[i]->id);                                                                                                
+        ccal().setIdmax(ccalshowers[i]->idmax);                                                                                                
     }                                                                                                                                            
 
 	// push any DTOFPoint objects to the output record

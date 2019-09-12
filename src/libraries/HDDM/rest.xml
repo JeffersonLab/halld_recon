@@ -48,7 +48,8 @@
     <ccalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 Eerr="float" terr="float" Emax="float"
-                type="int" dime="int"
+                x1="float" y1="float" chi2="float"
+                type="int" dime="int" status="int" id="int" idmax="int"
                 lunit="cm" tunit="ns" Eunit="GeV">
     </ccalShower>
     <chargedTrack minOccurs="0" maxOccurs="unbounded" jtag="string"
