@@ -200,7 +200,9 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   double hit_south[locTOFGeometry->Get_NBars()+1];
   double hit_up[locTOFGeometry->Get_NBars()+1];
   double hit_down[locTOFGeometry->Get_NBars()+1];
-  double position, time, width;
+  // comment out "width" to suppress warning
+  //  double position, time, width;
+  double position, time;
   float integral;
 
   Float_t distY_Horz = -126; // Horizontal plane start counting from the Bottom to Top
