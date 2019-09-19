@@ -150,6 +150,7 @@
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGridy();
+	pad1->SetName("TAGM"); // used by RSAI in filenaming
 	double ymax = 1.0;
 	if(tagm_adc_occ) ymax = tagm_adc_occ->GetMaximum();
 	if(tagm_tdc_occ){
@@ -172,6 +173,7 @@
 	pad1 = c1->cd(2);
 	pad1->SetTicks();
 	pad1->SetGridy();
+	pad1->SetName("TAGH"); // used by RSAI in filenaming
 	ymax = 1.0;
 	if(tagh_adc_occ) ymax = tagh_adc_occ->GetMaximum();
 	if(tagh_tdc_occ){
