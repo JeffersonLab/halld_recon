@@ -166,8 +166,10 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
     ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
   }
-  
-  if (jcalib->Get("TOF/TimeSigmas",vals)==false){ 
+
+  loop->GetSingle(dTOFGeometry);
+  string locTOFTimeSigmasTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/TimeSigmas";
+  if (jcalib->Get(locTOFTimeSigmasTable.c_str(),vals)==false){ 
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
       switch(int(row["PID"])){  
