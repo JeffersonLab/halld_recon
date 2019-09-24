@@ -202,11 +202,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
         return RESOURCE_UNAVAILABLE;
     }
-    auto locParticleID = locParticleID_algos[0];
+    // next line commented out, unsued variable, suppress warnings
+    //    auto locParticleID = locParticleID_algos[0];
 
     // We want to be use some of the tools available in the RFTime factory 
     // Specifivally steping the RF back to a chosen time
-    auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+    // another unused variable
+    //    auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
 
 
 #if 1
@@ -945,6 +947,7 @@ jerror_t JEventProcessor_HLDetectorTiming::erun(void)
     int act_slot;
     for(int ibin=1; ibin<=48; ibin++){
       int mod = Get_FDCTDC_crate_slot(ibin, act_crate, act_slot);
+      if (mod) {} // use mod to suppress warning
       stringstream ss;
       ss << act_crate << "/" << act_slot;
       fdc_time_module_hist->GetXaxis()->SetBinLabel(ibin, ss.str().c_str());
