@@ -9,6 +9,13 @@ namespace DAnalysis
 DSourceComboVertexer::DSourceComboVertexer(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler) :
 dSourceComboer(locSourceComboer), dSourceComboP4Handler(locSourceComboP4Handler)
 {
+	Set_RunDependent_Data(locEventLoop);
+
+	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+}
+
+void DSourceComboVertexer::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
 	locEventLoop->GetSingle(dAnalysisUtilities);
 
 	//GET THE GEOMETRY
@@ -19,8 +26,6 @@ dSourceComboer(locSourceComboer), dSourceComboP4Handler(locSourceComboP4Handler)
 	double locTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(locTargetCenterZ);
 	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
-
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 }
 
 vector<signed char> DSourceComboVertexer::Get_VertexZBins(const DReactionVertexInfo* locReactionVertexInfo, const DSourceCombo* locReactionCombo, const DKinematicData* locBeamParticle, bool locComboIsFullyCharged) const

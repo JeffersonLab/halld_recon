@@ -150,6 +150,7 @@
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGridy();
+	pad1->SetName("TAGM"); // used by RSAI in filenaming
 	double ymax = 1.0;
 	if(tagm_adc_occ) ymax = tagm_adc_occ->GetMaximum();
 	if(tagm_tdc_occ){
@@ -172,6 +173,7 @@
 	pad1 = c1->cd(2);
 	pad1->SetTicks();
 	pad1->SetGridy();
+	pad1->SetName("TAGH"); // used by RSAI in filenaming
 	ymax = 1.0;
 	if(tagh_adc_occ) ymax = tagh_adc_occ->GetMaximum();
 	if(tagh_tdc_occ){
@@ -190,6 +192,19 @@
 	legend_na->Draw();
 	lat.DrawLatex(225.0, 1.075*ymax, nevents_str);
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "TAGGER Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("TAGGER_occupancy", 1);
+			rs_SavePad("TAGGER_occupancy", 2);
+			rs_ResetAllMacroHistos("//TAGGER_occupancy");
+		}
+	}
+#endif
 }
 
 

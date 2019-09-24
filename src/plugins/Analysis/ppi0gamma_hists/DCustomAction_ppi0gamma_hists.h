@@ -37,6 +37,7 @@ class DCustomAction_ppi0gamma_hists : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_ppi0gamma_hists", locUseKinFitResultsFlag, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 	private:
 

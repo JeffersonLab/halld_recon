@@ -100,6 +100,7 @@ class DHistogramAction_PID : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -174,6 +175,7 @@ class DHistogramAction_TrackVertexComparison : public DAnalysisAction
 		double dMinDeltaVertexZ, dMaxDeltaVertexZ, dMinDeltaVertexT, dMaxDeltaVertexT, dMinDOCA, dMaxDOCA, dMinP, dMaxP, dMinTheta, dMaxTheta;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
@@ -215,6 +217,7 @@ class DHistogramAction_ParticleComboKinematics : public DAnalysisAction
 		double dMinBeta, dMaxBeta, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltaTRF, dMaxDeltaTRF, dMaxPathLength, dMaxLifetime;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -286,6 +289,7 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dMinBeamE(0.0), dMaxBeamE(12.0) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -360,6 +364,7 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -431,6 +436,7 @@ class DHistogramAction_MissingMassSquared : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -467,6 +473,7 @@ class DHistogramAction_2DInvariantMass : public DAnalysisAction
 		dMinX(locMinX), dMaxX(locMaxX), dMinY(locMinY), dMaxY(locMaxY), dAnalysisUtilities(NULL) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -497,6 +504,7 @@ class DHistogramAction_Dalitz : public DAnalysisAction
 		dMinX(locMinX), dMaxX(locMaxX), dMinY(locMinY), dMaxY(locMaxY), dAnalysisUtilities(NULL) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -540,6 +548,7 @@ class DHistogramAction_KinFitResults : public DAnalysisAction
 		double dMinPull, dMaxPull, dMinP, dMaxP, dMinTheta, dMaxTheta, dMinPhi, dMaxPhi, dMinBeamE, dMaxBeamE;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
@@ -588,6 +597,7 @@ class DHistogramAction_MissingTransverseMomentum : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();

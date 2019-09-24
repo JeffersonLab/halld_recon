@@ -33,9 +33,18 @@ using namespace std;
 jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
 
-  map<string, double> tofparms;
- 
-  if ( !loop->GetCalib("TOF/tof_parms", tofparms)){
+  // load values from geometry
+  loop->Get(TOFGeom);
+  TOF_NUM_PLANES = TOFGeom[0]->Get_NPlanes();
+  TOF_NUM_BARS = TOFGeom[0]->Get_NBars();
+  HALFPADDLE = TOFGeom[0]->Get_HalfLongBarLength();
+
+  ENERGY_ATTEN_FACTOR=exp(HALFPADDLE/ATTEN_LENGTH);
+  TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
+
+  map<string, double> tofparms; 
+  string locTOFParmsTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/tof_parms";
+  if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms)) {
     //cout<<"DTOFPaddleHit_factory: loading values from TOF data base"<<endl;
 
     C_EFFECTIVE    =    tofparms["TOF_C_EFFECTIVE"];
@@ -51,21 +60,12 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
     ATTEN_LENGTH = 400.;  // 400cm attenuation length
   }
 
-  // load values from geometry
-  loop->Get(TOFGeom);
-  TOF_NUM_PLANES = TOFGeom[0]->Get_NPlanes();
-  TOF_NUM_BARS = TOFGeom[0]->Get_NBars();
-  HALFPADDLE = TOFGeom[0]->Get_HalfLongBarLength();
-
-  ENERGY_ATTEN_FACTOR=exp(HALFPADDLE/ATTEN_LENGTH);
-  TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
-
-  if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
-    jout << "Error loading /TOF/propagation_speed !" << endl;
-
-  if (loop->GetCalib("TOF/attenuation_lengths",AttenuationLengths))
-    jout << "Error loading /TOF/attenuation_lengths !" <<endl;
-
+	string locTOFPropSpeedTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+	string locTOFAttenLengthTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/attenuation_lengths";
+	if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
+		jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
 
   return NOERROR;
 

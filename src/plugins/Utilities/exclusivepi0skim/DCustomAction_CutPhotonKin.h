@@ -30,6 +30,7 @@ class DCustomAction_CutPhotonKin : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_CutPhotonKin", false, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 	private:
 

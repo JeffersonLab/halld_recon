@@ -32,6 +32,7 @@ class DCustomAction_HistMass_b1_1235 : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_HistMass_b1_1235", locUseKinFitResultsFlag, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) { locEventLoop->GetSingle(dAnalysisUtilities); }
 
 	private:
 

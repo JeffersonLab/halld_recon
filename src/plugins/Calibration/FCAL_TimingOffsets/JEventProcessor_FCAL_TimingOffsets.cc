@@ -133,7 +133,8 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
     return RESOURCE_UNAVAILABLE;
   }
 
-  auto fcalGeom = geomVec[0];
+  // next line commented out to suppress warning, variable unused
+  //  auto fcalGeom = geomVec[0];
 
 
   double FCAL_C_EFFECTIVE = 15.0;

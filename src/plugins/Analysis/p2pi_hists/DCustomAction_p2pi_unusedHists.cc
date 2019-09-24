@@ -7,9 +7,9 @@
 
 #include "DCustomAction_p2pi_unusedHists.h"
 
-void DCustomAction_p2pi_unusedHists::Initialize(JEventLoop* locEventLoop)
-{
 
+void DCustomAction_p2pi_unusedHists::Run_Update(JEventLoop* locEventLoop)
+{
 	// get PID algos
 	const DParticleID* locParticleID = NULL;
         locEventLoop->GetSingle(locParticleID);
@@ -22,6 +22,11 @@ void DCustomAction_p2pi_unusedHists::Initialize(JEventLoop* locEventLoop)
 	vector<const DTrackFitter*>locFitters;
 	locEventLoop->Get(locFitters);
 	dFitter=locFitters[0];
+}
+	
+void DCustomAction_p2pi_unusedHists::Initialize(JEventLoop* locEventLoop)
+{
+	Run_Update(locEventLoop);
 	
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock

@@ -448,6 +448,25 @@ void DSourceComboer::Create_CutFunctions(void)
 
 /********************************************************************* CONSTRUCTOR **********************************************************************/
 
+void DSourceComboer::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
+	// Set member data
+	//GET THE GEOMETRY
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+
+	//TARGET INFORMATION
+	double locTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(locTargetCenterZ);
+	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);	
+
+	// Update linked objects
+	dSourceComboP4Handler->Set_RunDependent_Data(locEventLoop);
+	dSourceComboVertexer->Set_RunDependent_Data(locEventLoop);
+	dSourceComboTimeHandler->Set_RunDependent_Data(locEventLoop);
+	dParticleComboCreator->Set_RunDependent_Data(locEventLoop);	
+}
+
 DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 {
 	dResourcePool_SourceCombo.Set_ControlParams(100, 50, 1000, 20000, 0);
@@ -461,14 +480,6 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 	gPARMS->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
 	gPARMS->SetDefaultParameter("COMBO:MAX_NEUTRALS", dMaxNumNeutrals);
 
-	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-
-	//TARGET INFORMATION
-	double locTargetCenterZ = 65.0;
-	locGeometry->GetTargetZ(locTargetCenterZ);
-	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
 
 	//SETUP CUTS
 	Define_DefaultCuts();
@@ -498,6 +509,8 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 	dSourceComboP4Handler->Set_SourceComboVertexer(dSourceComboVertexer);
 	dSourceComboVertexer->Set_SourceComboTimeHandler(dSourceComboTimeHandler);
 	dParticleComboCreator = new DParticleComboCreator(locEventLoop, this, dSourceComboTimeHandler, dSourceComboVertexer);
+
+	Set_RunDependent_Data(locEventLoop);
 
 	//save rf bunch cuts
 	if(gPARMS->Exists("COMBO:NUM_PLUSMINUS_RF_BUNCHES"))

@@ -1,5 +1,6 @@
 #include "ANALYSIS/DHistogramActions.h"
 
+
 void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* locEventLoop)
 {
 	if(Get_UseKinFitResultsFlag() && (Get_Reaction()->Get_KinFitType() == d_NoFit))
@@ -7,6 +8,8 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 		cout << "WARNING: REQUESTED HISTOGRAM OF KINEMAITIC FIT RESULTS WHEN NO KINEMATIC FIT!!!" << endl;
 		return; //no fit performed, but kinfit data requested!!
 	}
+	
+	Run_Update(locEventLoop);
 
 	vector<const DParticleID*> locParticleIDs;
 	locEventLoop->Get(locParticleIDs);
@@ -54,16 +57,11 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 	dHistDeque_TimePullVsP_TOF.resize(locNumSteps);
 	dHistDeque_TimePullVsP_FCAL.resize(locNumSteps);
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
-
-		locGeometry->GetTargetZ(dTargetZCenter);
 
 		//RF
 		locHistName = "DeltaT_RFBeamBunch";
@@ -327,6 +325,13 @@ void DHistogramAction_ParticleComboGenReconComparison::Initialize(JEventLoop* lo
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_ParticleComboGenReconComparison::Run_Update(JEventLoop* locEventLoop)
+{
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
 }
 
 bool DHistogramAction_ParticleComboGenReconComparison::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -838,14 +843,12 @@ void DHistogramAction_ReconnedThrownKinematics::Initialize(JEventLoop* locEventL
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 
-	const DAnalysisUtilities* locAnalysisUtilities = NULL;
-	locEventLoop->GetSingle(locAnalysisUtilities);
+	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
-		dAnalysisUtilities = locAnalysisUtilities;
 
 		CreateAndChangeTo_ActionDirectory();
 
@@ -928,6 +931,13 @@ void DHistogramAction_ReconnedThrownKinematics::Initialize(JEventLoop* locEventL
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_ReconnedThrownKinematics::Run_Update(JEventLoop* locEventLoop)
+{
+	const DAnalysisUtilities* locAnalysisUtilities = NULL;
+	locEventLoop->GetSingle(locAnalysisUtilities);
+	dAnalysisUtilities = locAnalysisUtilities;
 }
 
 bool DHistogramAction_ReconnedThrownKinematics::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1014,17 +1024,14 @@ void DHistogramAction_GenReconTrackComparison::Initialize(JEventLoop* locEventLo
 {
 	string locHistName, locHistTitle, locParticleName, locParticleROOTName;
 	Particle_t locPID;
-
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	
+	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
-
-		locGeometry->GetTargetZ(dTargetZCenter);
 
 		locHistName = "DeltaT_RFBeamBunch";
 		dRFBeamBunchDeltaT_Hist = GetOrCreate_Histogram<TH1I>(locHistName, ";RF #Deltat (Reconstructed - Thrown)", dNumRFDeltaTBins, dMinRFDeltaT, dMaxRFDeltaT);
@@ -1244,6 +1251,13 @@ void DHistogramAction_GenReconTrackComparison::Initialize(JEventLoop* locEventLo
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_GenReconTrackComparison::Run_Update(JEventLoop* locEventLoop)
+{
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
 }
 
 bool DHistogramAction_GenReconTrackComparison::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1502,15 +1516,14 @@ void DHistogramAction_TruePID::Initialize(JEventLoop* locEventLoop)
 	dHistDeque_PVsTheta_CorrectID.resize(locNumSteps);
 	dHistDeque_PVsTheta_IncorrectID.resize(locNumSteps);
 
-	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
-		dAnalysisUtilities = locAnalysisUtilitiesVector[0];
+
 		for(size_t loc_i = 0; loc_i < locNumSteps; ++loc_i)
 		{
 			auto locDetectedPIDs = Get_Reaction()->Get_FinalPIDs(loc_i, false, false, d_AllCharges, false);
@@ -1562,6 +1575,13 @@ void DHistogramAction_TruePID::Initialize(JEventLoop* locEventLoop)
 		ChangeTo_BaseDirectory();
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DHistogramAction_TruePID::Run_Update(JEventLoop* locEventLoop)
+{
+	const DAnalysisUtilities* locAnalysisUtilities = NULL;
+	locEventLoop->GetSingle(locAnalysisUtilities);
+	dAnalysisUtilities = locAnalysisUtilities;
 }
 
 bool DHistogramAction_TruePID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)

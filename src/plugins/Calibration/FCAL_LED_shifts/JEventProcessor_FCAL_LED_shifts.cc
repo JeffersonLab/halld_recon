@@ -118,7 +118,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::init(void)
   		uint32_t crate = firstCrate + i;
     	m_crateTimes[crate] = (new TH1I(Form("crate_times_%i",crate),Form("Hit Times for Crate %i",crate),NBINS_TIME,TIME_MIN,TIME_MAX));
 	  	for (int i = 0; i < numSlots; ++i) {
-	  		uint32_t slot = firstSlot + i;
+		  // next line commented out to avoid unused variable warning
+			//uint32_t slot = firstSlot + i;
 			//pair<uint32_t,uint32_t> crate_slot(crate,slot);
 		   	//m_slotTimes[crate_slot] = (new TH1I(Form("slot_times_c%i_s%i",crate,slot),
 		   	//							Form("Hit Times for Crate %i, Slot %i",crate,slot),200,60.,110.));

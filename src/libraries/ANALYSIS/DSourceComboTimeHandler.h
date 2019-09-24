@@ -40,6 +40,7 @@ class DSourceComboTimeHandler
 		DSourceComboTimeHandler(void) = delete;
 		DSourceComboTimeHandler(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer);
 		~DSourceComboTimeHandler(void){Fill_Histograms();}
+		void Set_RunDependent_Data(JEventLoop *locEventLoop);
 
 		//SETUP
 		void Reset(void);
@@ -128,6 +129,7 @@ class DSourceComboTimeHandler
 		double dTargetLength = 30.0;
 		double dBeamBunchPeriod = 1000.0/249.5;
 		bool dUseSigmaForRFSelectionFlag = false;
+
 
 		//VERTEX-DEPENDENT PHOTON INFORMATION
 		//For every 10cm in vertex-z, calculate the photon p4 & time for placing mass & delta-t cuts

@@ -230,7 +230,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
     vector<const DDIRCGeometry*> locDIRCGeometryVec;
     loop->Get(locDIRCGeometryVec);
-    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
+    // next line commented out to supress warning
+    //    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
 
     // Initialize DIRC LUT
 	const DDIRCLut* dDIRCLut = nullptr;
@@ -512,8 +513,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         for (i = 0; i < ccalHitVector.size(); i++){
             Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
                              "CCALHit time;t [ns];", nBins, xMin, xMax);
-            
-            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+	    // next line commented out to suppress warning
+	    //            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
             for (i = 0; i < ccalHitVector.size(); i++) {
                 Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
                                 ccalHitVector[i]->row, ccalHitVector[i]->column, 
@@ -967,8 +968,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 		DVector3 IntersectionPoint, IntersectionMomentum;	
 		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-								   true, &IntersectionPoint, &IntersectionMomentum);
+		// comment out definition of sc_match_pid to suppress warning
+		//		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+		//								   true, &IntersectionPoint, &IntersectionMomentum);
 		double locSCzIntersection = IntersectionPoint.z();
 		if( locSCzIntersection < 83. ) {
 			Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
@@ -1075,9 +1077,11 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 				// Get match parameters
 				TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 				TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
-				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+				// next line commented out to suppress warning
+				//				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 				double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
+				// next line commented out to suppress warning
+				//				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 
 				Particle_t locPID = locTrackTimeBased->PID();
 				double locMass = ParticleMass(locPID);
@@ -1228,6 +1232,7 @@ jerror_t JEventProcessor_HLDetectorTiming::erun(void)
     int act_slot;
     for(int ibin=1; ibin<=48; ibin++){
       int mod = Get_FDCTDC_crate_slot(ibin, act_crate, act_slot);
+      if (mod) {} // gratuitious check of return value to suppress warning
       stringstream ss;
       ss << act_crate << "/" << act_slot;
       fdc_time_module_hist->GetXaxis()->SetBinLabel(ibin, ss.str().c_str());
