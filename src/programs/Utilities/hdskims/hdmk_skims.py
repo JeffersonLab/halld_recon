@@ -72,11 +72,12 @@ ret = subprocess.call( cmd )
 # plugins into producing the correct names.
 # n.b. since we are in our own working directory the original
 # input file will not exist here.
+infilename_base = os.path.basename(infilename)
 block_skim_files = glob.glob('*_skims.evio')
-os.symlink( block_skim_files[0], os.path.basename(infilename) )
+os.symlink( block_skim_files[0], infilename_base )
 
 print('\nhdmk_skims.py: Running hd_root ...')
-cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + block_skim_files
+cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + [infilename_base]
 print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
@@ -95,6 +96,7 @@ if len(sqlfiles) > 0:
 
 print('\nhdmk_skims.py: Removing input file and intermediate files ...')
 os.unlink( infilename )
+os.unlink( infilename_base )
 for f in block_skim_files: os.unlink( f )  # Remove intermediate files
 for f in sqlfiles        : os.unlink( f )  # Remove intermediate files
 
