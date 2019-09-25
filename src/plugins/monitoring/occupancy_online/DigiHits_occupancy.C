@@ -12,19 +12,6 @@
 //
 
 {
-
-// The following are empty versions of routines defined in RootSpy
-// compiled executables. These are defined here for when this
-// macro is run outside that context.
-#ifndef ROOTSPY_MACROS
-#define rs_SetFlag(A) cout<<"rs_SetFlag ignored outside of RootSpy context"<<endl
-#define rs_GetFlag(A) 0
-#define rs_ResetHisto(A) cout<<"rs_ResetHisto ignored outside of RootSpy context"<<endl
-#define rs_RestoreHisto(A) cout<<"rs_RestoreHisto ignored outside of RootSpy context"<<endl
-#define InsertSeriesData(A) cout<<"InsertSeriesData ignored outside of RootSpy context"<<endl
-#define InsertSeriesMassFit(A,B,C,D,E,F) cout<<"InsertSeriesMassFit ignored outside of RootSpy context"<<endl
-#endif
-
 	// RootSpy saves the current directory and style before
 	// calling the macro and restores it after so it is OK to
 	// change them and not change them back.
@@ -54,6 +41,9 @@
 	TH2I *digihits_trig3 = (TH2I*)gDirectory->FindObjectAny("digihits_trig3");
 	TH2I *digihits_trig4 = (TH2I*)gDirectory->FindObjectAny("digihits_trig4");
 	TH1F *digihits_scale_factors = (TH1F*)gDirectory->FindObjectAny("digihits_scale_factors");
+
+	double Nevents = 1; // will be overwritten by digihits_trig1->Integral() below
+
 
 	// Just for testing
 	if(gPad == NULL){
@@ -171,7 +161,7 @@
 			}
 		}
 		
-		// Only write out once every 100000 objects
+		// ------ The following is used by RSTimeSeries --------
 		if(digihits_trig4->Integral()>100000){
 			if(unix_time!=0.0) ss<<" "<<(uint64_t)(unix_time*1.0E9);  // time is in units of ns
 			InsertSeriesData( ss.str() );
@@ -271,8 +261,9 @@
 			}
 		}
 		
-		// Only write out once every 100000 objects
-		if(digihits_trig1->Integral()>100000){
+		// ------ The following is used by RSTimeSeries --------
+		Nevents = digihits_trig1->Integral();
+		if(Nevents>100000){
 			if(unix_time!=0.0) ss<<" "<<(uint64_t)(unix_time*1.0E9);  // time is in units of ns
 			InsertSeriesData( ss.str() );
 		
@@ -280,6 +271,21 @@
 			if(rs_GetFlag("RESET_AFTER_FIT")) rs_ResetHisto("/occupancy/digihits_trig1");
 		}
 	}
+
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = 10*rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E5;
+		if( Nevents >= min_events ) {
+			cout << "DigiHits Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("DigiHits_occupancy", 0);
+			rs_ResetHisto("/occupancy/digihits_trig1");
+			rs_ResetHisto("/occupancy/digihits_trig3");
+			rs_ResetHisto("/occupancy/digihits_trig4");
+		}
+	}
+#endif
 }
 
 

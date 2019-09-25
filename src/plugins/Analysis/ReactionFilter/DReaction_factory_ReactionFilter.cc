@@ -68,8 +68,12 @@ DReactionStep* DReaction_factory_ReactionFilter::Create_DefaultDecayStep(Particl
 		return (new DReactionStep(SigmaPlus, {Pi0, Proton}));
 	else if(locPID == Xi0)
 		return (new DReactionStep(Xi0, {Pi0, Lambda}));
+	else if(locPID == AntiXi0)
+		return (new DReactionStep(AntiXi0, {Pi0, AntiLambda}));
 	else if(locPID == XiMinus)
 		return (new DReactionStep(XiMinus, {PiMinus, Lambda}));
+	else if(locPID == AntiXiPlus)
+		return (new DReactionStep(AntiXiPlus, {PiPlus, AntiLambda}));
 	else if(locPID == OmegaMinus)
 		return (new DReactionStep(OmegaMinus, {KMinus, Lambda}));
 	else if(locPID == Lambda_c)
@@ -85,6 +89,7 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 	//First set defaults, then let user override them
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // +/- 1 bunch for sideband subtraction
+	locReaction->Set_MaxExtraShowers(999);
 	locReaction->Set_MaxExtraGoodTracks(3);
 
 	bool locSaveUnusedHypotheses = false;
@@ -118,6 +123,9 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 				break;
 			case 'F': //kinfit enum value
 				locReaction->Set_KinFitType(DKinFitType(locFlagArg));
+				break;
+			case 'S': //# extra showers
+				locReaction->Set_MaxExtraShowers(locFlagArg);
 				break;
 			case 'T': //# extra tracks
 				locReaction->Set_MaxExtraGoodTracks(locFlagArg);

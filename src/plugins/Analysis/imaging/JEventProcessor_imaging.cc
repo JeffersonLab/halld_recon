@@ -194,7 +194,9 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	  // Find the positions corresponding to the doca between the two
 	  // tracks
-	  double doca=1e7,s1=0,s2=0.;
+	  // next commented line shows original, changed to eliminate unused variables for warning supression
+	  //	  double doca=1e7,s1=0,s2=0.;
+	  double doca=1e7;
 	  DVector3 pos2_out,pos1_out,mom2_out,mom1_out;
 	  if (dIsNoFieldFlag){
 	    DVector3 dir1=mom1;

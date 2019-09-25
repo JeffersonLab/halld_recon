@@ -49,7 +49,7 @@ DFCALShower_factory::DFCALShower_factory()
   timeConst3 = 0; 
   timeConst4 = 0;
 
-  gPARMS->SetDefaultParameter("FCAL:cutoff_enegry", cutoff_energy);
+  gPARMS->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
   gPARMS->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
   gPARMS->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
   gPARMS->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
@@ -64,9 +64,9 @@ DFCALShower_factory::DFCALShower_factory()
 
   // Parameters to make shower-depth correction taken from Radphi, 
   // slightly modifed to match photon-polar angle
-  FCAL_RADIATION_LENGTH = 3.1;
-  FCAL_CRITICAL_ENERGY = 0.035;
-  FCAL_SHOWER_OFFSET = 1.0;
+  FCAL_RADIATION_LENGTH = 0;
+  FCAL_CRITICAL_ENERGY = 0;
+  FCAL_SHOWER_OFFSET = 0;
 	
   gPARMS->SetDefaultParameter("FCAL:FCAL_RADIATION_LENGTH", FCAL_RADIATION_LENGTH);
   gPARMS->SetDefaultParameter("FCAL:FCAL_CRITICAL_ENERGY", FCAL_CRITICAL_ENERGY);
@@ -84,7 +84,17 @@ DFCALShower_factory::DFCALShower_factory()
 //------------------
 jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
- 
+
+      map<string, double> depth_correction_params;
+      if(loop->GetCalib("FCAL/depth_correction_params", depth_correction_params)) {
+         jerr << "Problem loading FCAL/depth_correction_params from CCDB!" << endl;
+      } else {
+         FCAL_RADIATION_LENGTH   = depth_correction_params["radiation_length"];
+         FCAL_CRITICAL_ENERGY  = depth_correction_params["critical_energy"];
+         FCAL_SHOWER_OFFSET = depth_correction_params["shower_offset"];
+      }
+
+	
   // Get calibration constants
   map<string, double> fcal_parms;
   loop->GetCalib("FCAL/fcal_parms", fcal_parms);

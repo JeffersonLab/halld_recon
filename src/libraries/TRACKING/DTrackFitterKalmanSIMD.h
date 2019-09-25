@@ -527,7 +527,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double FDC_DRIFT_BSCALE_PAR1,FDC_DRIFT_BSCALE_PAR2;
 
   // Parameters for drift resolution
-  double DRIFT_RES_PARMS[3];
+  double DRIFT_RES_PARMS[6];
   // parameters for time-to-distance function for FDC
   double DRIFT_FUNC_PARMS[6];
 

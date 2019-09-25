@@ -6,6 +6,7 @@
 //
 
 #include "DTTabUtilities_factory.h"
+#include "TOF/DTOFGeometry.h"
 
 jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber)
 {
@@ -35,7 +36,10 @@ jerror_t DTTabUtilities_factory::brun(jana::JEventLoop* locEventLoop, int32_t ru
 	//CAEN1290/TI Phase Difference
 	dCAENTIPhaseDifference = 1;
 	map<string, double> tof_tdc_shift;
-	if(!eventLoop->GetCalib("/TOF/tdc_shift", tof_tdc_shift))
+	const DTOFGeometry *locTOFGeometry = nullptr;
+	locEventLoop->GetSingle(locTOFGeometry);
+	string locTOFTDCShiftTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tdc_shift";
+	if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tof_tdc_shift))
 		dCAENTIPhaseDifference = tof_tdc_shift["TOF_TDC_SHIFT"];
 
 	return NOERROR;

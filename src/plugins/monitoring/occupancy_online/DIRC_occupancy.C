@@ -17,14 +17,18 @@
 	// RootSpy saves the current directory and style before
 	// calling the macro and restores it after so it is OK to
 	// change them and not change them back.
-        TDirectory *savedir = gDirectory;
+   TDirectory *savedir = gDirectory;
 	TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("occupancy");
 	if(dir) dir->cd();
 
 	TH2I *dirc_tdc_pixel_N_occ_led = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_N_occ_led");
 	TH2I *dirc_tdc_pixel_S_occ_led = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ_led");
 	TH2I *dirc_tdc_pixel_N_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_N_occ");
-        TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
+   TH2I *dirc_tdc_pixel_S_occ = (TH2I*)gDirectory->FindObjectAny("dirc_tdc_pixel_S_occ");
+	TH1I *dirc_num_events = (TH1I*)gDirectory->FindObjectAny("dirc_num_events");
+
+	double Nevents = 1.0;
+	if(dirc_num_events) Nevents = (double)dirc_num_events->GetBinContent(1);
 
 	// Just for testing
 	if(gPad == NULL){
@@ -53,4 +57,17 @@
 	p2->cd();
 	gStyle->SetOptStat(0);
 	if(dirc_tdc_pixel_S_occ) dirc_tdc_pixel_S_occ->DrawCopy("colz");
+
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "DIRC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("DIRC_occupancy", 0);
+			rs_ResetAllMacroHistos("//DIRC_occupancy");
+		}
+	}
+#endif
 }

@@ -45,11 +45,11 @@ jerror_t JEventProcessor_TOF_Eff::init(void)
 	gDirectory->mkdir("TOFPaddle")->cd();
 	locHistName = "TrackYVsVerticalPaddle_HasHit_Top";
 	locHistTitle = "TOF Paddle Has Top Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)";
-	dHist_TOFPaddleTrackYVsVerticalPaddle_HasHit_Top = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 44, 0.5, 44.5, 130, -130.0, 130.0);
+	dHist_TOFPaddleTrackYVsVerticalPaddle_HasHit_Top = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 46, 0.5, 46.5, 130, -130.0, 130.0);
 
 	locHistName = "TrackYVsVerticalPaddle_TotalHit_Top";
 	locHistTitle = "TOF Paddle Total Top Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)";
-	dHist_TOFPaddleTrackYVsVerticalPaddle_TotalHit_Top = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 44, 0.5, 44.5, 130, -130.0, 130.0);
+	dHist_TOFPaddleTrackYVsVerticalPaddle_TotalHit_Top = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 46, 0.5, 46.5, 130, -130.0, 130.0);
 
 	locHistName = "HorizontalPaddleVsTrackX_HasHit_North";
 	locHistTitle = "TOF Paddle Has North Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle";
@@ -61,11 +61,11 @@ jerror_t JEventProcessor_TOF_Eff::init(void)
 
 	locHistName = "TrackYVsVerticalPaddle_HasHit_Bottom";
 	locHistTitle = "TOF Paddle Has Bottom Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)";
-	dHist_TOFPaddleTrackYVsVerticalPaddle_HasHit_Bottom = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 44, 0.5, 44.5, 130, -130.0, 130.0);
+	dHist_TOFPaddleTrackYVsVerticalPaddle_HasHit_Bottom = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 46, 0.5, 46.5, 130, -130.0, 130.0);
 
 	locHistName = "TrackYVsVerticalPaddle_TotalHit_Bottom";
 	locHistTitle = "TOF Paddle Total Bottom Hit;Projected Vertical Paddle;Projected TOF Hit Y (cm)";
-	dHist_TOFPaddleTrackYVsVerticalPaddle_TotalHit_Bottom = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 44, 0.5, 44.5, 130, -130.0, 130.0);
+	dHist_TOFPaddleTrackYVsVerticalPaddle_TotalHit_Bottom = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 46, 0.5, 46.5, 130, -130.0, 130.0);
 
 	locHistName = "HorizontalPaddleVsTrackX_HasHit_South";
 	locHistTitle = "TOF Paddle Has South Hit;Projected TOF Hit X (cm);Projected Horizontal Paddle";
@@ -291,8 +291,8 @@ jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t 
 		int locNearestTOFPointStatus = 0;
 		if(locClosestTOFPoint != NULL)
 		{
-			locNearestTOFPointStatus = locClosestTOFPoint->dHorizontalBar + 45*locClosestTOFPoint->dVerticalBar;
-			locNearestTOFPointStatus += 45*45*locClosestTOFPoint->dHorizontalBarStatus + 45*45*4*locClosestTOFPoint->dVerticalBarStatus;
+			locNearestTOFPointStatus = locClosestTOFPoint->dHorizontalBar + 47*locClosestTOFPoint->dVerticalBar;
+			locNearestTOFPointStatus += 47*47*locClosestTOFPoint->dHorizontalBarStatus + 47*47*4*locClosestTOFPoint->dVerticalBarStatus;
 		}
 
 		int locNearestTOFHitHorizontal = Calc_NearestHit(locClosestTOFPaddleHit_Horizontal);

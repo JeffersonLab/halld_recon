@@ -1545,49 +1545,79 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
     double locA = -0.00299792458*(double(locCharge))*locBField.Mag();
     double locDeltaXDotH = locDeltaX.Dot(locH);
     double locPDotH = locMomentum.Dot(locH);
-    double locPDotHsq= locPDotH*locPDotH;
-    double PsqMinusPDotHsq=locMomentum.Mag2()-locPDotHsq;
-    double RhoS=locA*locDeltaXDotH/locPDotH;
-    double sinRhoS=sin(RhoS);
-    double cosRhoS=cos(RhoS);
-    double OneMinusCosRhoS=1.-cosRhoS;
-    
     // Guard against division by zero errors
     if (fabs(locPDotH)<1e-15){
       locPDotH+=(locPDotH>0.)?1e-15:-1e-15;
     }
 
-    dF(locFIndex, 0) = locDeltaXDotH*locPDotH - locDeltaX.Dot(locMomentum)
-      + PsqMinusPDotHsq*sinRhoS/locA;
-    dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
-      + PsqMinusPDotHsq*OneMinusCosRhoS/locA;
+    // First attempt to use the constraint equations from Avery:  one in the 
+    // non-bending plane, one in the bending plane.  Unfortunately, one of 
+    // these equations contains an arcsin whose argument is not necessarily 
+    // constrained to be valid from the input data.  For the problematic 
+    // inputs, use an alternate form for the constaint equations.
+    TVector3 locQ, locM, locD;
+    double locJ;
+    if (Calc_Vertex_Params(locKinFitParticle, locJ, locQ, locM, locD)){     
+      dF(locFIndex, 0) = locPCrossDeltaX.Dot(locH)
+	- 0.5*locA*(locDeltaX.Mag2() - locDeltaXDotH*locDeltaXDotH);
+      dF(locFIndex + 1, 0) = locDeltaXDotH - (locPDotH/locA)*asin(locJ);
 
-    TVector3 dF0_dEta_VxVec = locMomentum 
-      - (locPDotH + PsqMinusPDotHsq*cosRhoS/locPDotH)*locH;
-    dF_dEta(locFIndex, locVxParamIndex) = dF0_dEta_VxVec.X();
-    dF_dEta(locFIndex, locVxParamIndex + 1) = dF0_dEta_VxVec.Y();
-    dF_dEta(locFIndex, locVxParamIndex + 2) = dF0_dEta_VxVec.Z();
+      dF_dEta(locFIndex, locPxParamIndex) = locDeltaXCrossH.X();
+      dF_dEta(locFIndex, locPxParamIndex + 1) = locDeltaXCrossH.Y();
+      dF_dEta(locFIndex, locPxParamIndex + 2) = locDeltaXCrossH.Z();
 
-    TVector3 dF0_dEta_PxVec = -locDeltaX 
-      + (locDeltaXDotH - PsqMinusPDotHsq*cosRhoS*locDeltaXDotH/locPDotHsq)*locH 
-      + (2./locA)*sinRhoS*(locMomentum-locPDotH*locH);
-    dF_dEta(locFIndex, locPxParamIndex) = dF0_dEta_PxVec.X();
-    dF_dEta(locFIndex, locPxParamIndex + 1) = dF0_dEta_PxVec.Y();
-    dF_dEta(locFIndex, locPxParamIndex + 2) = dF0_dEta_PxVec.Z();
+      dF_dEta(locFIndex, locVxParamIndex) = (locPCrossH + locA*locM).X();
+      dF_dEta(locFIndex, locVxParamIndex + 1) = (locPCrossH + locA*locM).Y();
+      dF_dEta(locFIndex, locVxParamIndex + 2) = (locPCrossH + locA*locM).Z();
+      
+      dF_dEta(locFIndex + 1, locPxParamIndex) = locQ.X();
+      dF_dEta(locFIndex + 1, locPxParamIndex + 1) = locQ.Y();
+      dF_dEta(locFIndex + 1, locPxParamIndex + 2) = locQ.Z();
+      
+      dF_dEta(locFIndex + 1, locVxParamIndex) = locD.X();
+      dF_dEta(locFIndex + 1, locVxParamIndex + 1) = locD.Y();
+      dF_dEta(locFIndex + 1, locVxParamIndex + 2) = locD.Z();
+    }  
+    else{
+      double locPDotHsq= locPDotH*locPDotH;
+      double PsqMinusPDotHsq=locMomentum.Mag2()-locPDotHsq;
+      double RhoS=locA*locDeltaXDotH/locPDotH;
+      double sinRhoS=sin(RhoS);
+      double cosRhoS=cos(RhoS);
+      double OneMinusCosRhoS=1.-cosRhoS;
+      
+      dF(locFIndex, 0) = locDeltaXDotH*locPDotH - locDeltaX.Dot(locMomentum)
+	+ PsqMinusPDotHsq*sinRhoS/locA;
+      dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
+	+ PsqMinusPDotHsq*OneMinusCosRhoS/locA;
 
-    TVector3 dF1_dEta_VxVec = -locPCrossH
-      - PsqMinusPDotHsq*sinRhoS/locPDotH*locH;
-    dF_dEta(locFIndex + 1, locVxParamIndex) = dF1_dEta_VxVec.X();
-    dF_dEta(locFIndex + 1, locVxParamIndex + 1) = dF1_dEta_VxVec.Y();
-    dF_dEta(locFIndex + 1, locVxParamIndex + 2) = dF1_dEta_VxVec.Z();
-
-    TVector3 dF1_dEta_PxVec =  -locDeltaXCrossH
-      + (2./locA)*OneMinusCosRhoS*(locMomentum-locPDotH*locH)
-      - PsqMinusPDotHsq*sinRhoS*locDeltaXDotH/locPDotHsq*locH;
-    dF_dEta(locFIndex + 1, locPxParamIndex) = dF1_dEta_PxVec.X();
-    dF_dEta(locFIndex + 1, locPxParamIndex + 1) = dF1_dEta_PxVec.Y();
-    dF_dEta(locFIndex + 1, locPxParamIndex + 2) = dF1_dEta_PxVec.Z();
-    
+      TVector3 dF0_dEta_VxVec = locMomentum 
+	- (locPDotH + PsqMinusPDotHsq*cosRhoS/locPDotH)*locH;
+      dF_dEta(locFIndex, locVxParamIndex) = dF0_dEta_VxVec.X();
+      dF_dEta(locFIndex, locVxParamIndex + 1) = dF0_dEta_VxVec.Y();
+      dF_dEta(locFIndex, locVxParamIndex + 2) = dF0_dEta_VxVec.Z();
+      
+      TVector3 dF0_dEta_PxVec = -locDeltaX 
+	+ (locDeltaXDotH - PsqMinusPDotHsq*cosRhoS*locDeltaXDotH/locPDotHsq)*locH 
+	+ (2./locA)*sinRhoS*(locMomentum-locPDotH*locH);
+      dF_dEta(locFIndex, locPxParamIndex) = dF0_dEta_PxVec.X();
+      dF_dEta(locFIndex, locPxParamIndex + 1) = dF0_dEta_PxVec.Y();
+      dF_dEta(locFIndex, locPxParamIndex + 2) = dF0_dEta_PxVec.Z();
+      
+      TVector3 dF1_dEta_VxVec = -locPCrossH
+	- PsqMinusPDotHsq*sinRhoS/locPDotH*locH;
+      dF_dEta(locFIndex + 1, locVxParamIndex) = dF1_dEta_VxVec.X();
+      dF_dEta(locFIndex + 1, locVxParamIndex + 1) = dF1_dEta_VxVec.Y();
+      dF_dEta(locFIndex + 1, locVxParamIndex + 2) = dF1_dEta_VxVec.Z();
+      
+      TVector3 dF1_dEta_PxVec =  -locDeltaXCrossH
+	+ (2./locA)*OneMinusCosRhoS*(locMomentum-locPDotH*locH)
+	- PsqMinusPDotHsq*sinRhoS*locDeltaXDotH/locPDotHsq*locH;
+      dF_dEta(locFIndex + 1, locPxParamIndex) = dF1_dEta_PxVec.X();
+      dF_dEta(locFIndex + 1, locPxParamIndex + 1) = dF1_dEta_PxVec.Y();
+      dF_dEta(locFIndex + 1, locPxParamIndex + 2) = dF1_dEta_PxVec.Z();
+    }
+      
     dF_dXi(locFIndex, locCommonVxParamIndex) -= dF_dEta(locFIndex, locVxParamIndex);
     dF_dXi(locFIndex, locCommonVxParamIndex + 1) -= dF_dEta(locFIndex, locVxParamIndex + 1);
     dF_dXi(locFIndex, locCommonVxParamIndex + 2) -= dF_dEta(locFIndex, locVxParamIndex + 2);
@@ -1607,7 +1637,11 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
     TVector3 locPCrossH = locMomentum.Cross(locH);
     TVector3 locPCrossDeltaX = locMomentum.Cross(locDeltaX);
     double locDeltaXDotH = locDeltaX.Dot(locH);
-    double locPDotH = locMomentum.Dot(locH);
+    double locPDotH = locMomentum.Dot(locH);     
+    // Guard against division by zero errors
+    if (fabs(locPDotH)<1e-15){
+      locPDotH+=(locPDotH>0.)?1e-15:-1e-15;
+    }
     
     //true if the object's p3, & x4 are defined at its production vertex (& common x4 is at decay vertex). 
     bool locVertexP4AtProductionVertexFlag = locKinFitParticle->Get_VertexP4AtProductionVertex();
@@ -1621,25 +1655,39 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
     //Main case: The Sigma+ in:   g, p -> K0, Sigma+     K0 -> pi+, pi-    Sigma+ -> p, pi0
     bool locP4DerivedAtCommonVertexFlag = (locP4DefinedByInvariantMassFlag == locVertexP4AtProductionVertexFlag);
 
-    if(locP4DerivedAtCommonVertexFlag) //Tricky case
-      {
-	TVector3 locQ, locM, locD;
-	double locJ;
-	Calc_Vertex_Params(locKinFitParticle, locJ, locQ, locM, locD);
-		
-	dF(locFIndex, 0) = locPCrossDeltaX.Dot(locH) - 0.5*locA*(locDeltaX.Mag2() - locDeltaXDotH*locDeltaXDotH);
-	dF(locFIndex + 1, 0) = locDeltaXDotH - (locPDotH/locA)*asin(locJ);
-		  
+    // First attempt to use the constraint equations from Avery:  one in the 
+    // non-bending plane, one in the bending plane.  Unfortunately, one of 
+    // these equations contains an arcsin whose argument is not necessarily 
+    // constrained to be valid from the input data.  For the problematic 
+    // inputs, use an alternate form for the constaint equations.
+    TVector3 locQ, locM, locD;
+    double locJ;
+    if (Calc_Vertex_Params(locKinFitParticle, locJ, locQ, locM, locD)){
+      dF(locFIndex, 0) = locPCrossDeltaX.Dot(locH) 
+	- 0.5*locA*(locDeltaX.Mag2() - locDeltaXDotH*locDeltaXDotH);
+      dF(locFIndex + 1, 0) = locDeltaXDotH - (locPDotH/locA)*asin(locJ);
+
+      if(locP4DerivedAtCommonVertexFlag){ //Tricky case 
 	TVector3 locR = Calc_VertexParams_P4DerivedAtCommonVertex(locKinFitParticle);
 
 	dF_dXi(locFIndex, locVxParamIndex) += locPCrossH.X();
 	dF_dXi(locFIndex, locVxParamIndex + 1) += locPCrossH.Y();
 	dF_dXi(locFIndex, locVxParamIndex + 2) += locPCrossH.Z();
-	
+
 	dF_dXi(locFIndex + 1, locVxParamIndex) += locR.X();
 	dF_dXi(locFIndex + 1, locVxParamIndex + 1) += locR.Y();
 	dF_dXi(locFIndex + 1, locVxParamIndex + 2) += locR.Z();
       }
+      else{
+	dF_dXi(locFIndex, locVxParamIndex) += locPCrossH.X() + locA*locM.X();
+	dF_dXi(locFIndex, locVxParamIndex + 1) += locPCrossH.Y() + locA*locM.Y();
+	dF_dXi(locFIndex, locVxParamIndex + 2) += locPCrossH.Z() + locA*locM.Z();
+	
+	dF_dXi(locFIndex + 1, locVxParamIndex) += locD.X();
+	dF_dXi(locFIndex + 1, locVxParamIndex + 1) += locD.Y();
+	dF_dXi(locFIndex + 1, locVxParamIndex + 2) += locD.Z();
+      }
+    }
     else{
       double locPDotHsq= locPDotH*locPDotH;
       double PsqMinusPDotHsq=locMomentum.Mag2()-locPDotHsq;
@@ -1647,12 +1695,7 @@ void DKinFitter::Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParti
       double sinRhoS=sin(RhoS);
       double cosRhoS=cos(RhoS);
       double OneMinusCosRhoS=1.-cosRhoS;
-      
-      // Guard against division by zero errors
-      if (fabs(locPDotH)<1e-15){
-	locPDotH+=(locPDotH>0.)?1e-15:-1e-15;
-      }
-
+     
       dF(locFIndex, 0) = locDeltaXDotH*locPDotH - locDeltaX.Dot(locMomentum)
 	+ PsqMinusPDotHsq*sinRhoS/locA;
       dF(locFIndex, 1) = -locPCrossDeltaX.Dot(locH)
@@ -2315,7 +2358,7 @@ void DKinFitter::Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFi
 	}
 }
 
-void DKinFitter::Calc_Vertex_Params(const DKinFitParticle* locKinFitParticle, double& locJ, TVector3& locQ, TVector3& locM, TVector3& locD)
+bool DKinFitter::Calc_Vertex_Params(const DKinFitParticle* locKinFitParticle, double& locJ, TVector3& locQ, TVector3& locM, TVector3& locD)
 {
 	int locCharge = locKinFitParticle->Get_Charge();
 	TVector3 locPosition = locKinFitParticle->Get_Position();
@@ -2338,12 +2381,16 @@ void DKinFitter::Calc_Vertex_Params(const DKinFitParticle* locKinFitParticle, do
 	TVector3 locDeltaXCrossH = locDeltaX.Cross(locH);
 	double locK = locPDotDeltaX - locPDotH*locDeltaXDotH;
 	locJ = locA*locK/locPCrossHMagSq;
+	if (fabs(locJ)>1.) return false;
+
 	double locC = locPDotH/(locPCrossHMagSq*sqrt(1.0 - locJ*locJ));
 	TVector3 locPCrossHCrossH = locPCrossH.Cross(locH);
 
 	locM = locDeltaX - locDeltaXDotH*locH;
 	locD = locC*(locMomentum - locPDotH*locH) - locH;
 	locQ = -1.0*locH*(asin(locJ)/locA) - locC*(locM + 2.0*(locK/locPCrossHMagSq)*locPCrossHCrossH);
+
+	return true;
 }
 
 TVector3 DKinFitter::Calc_VertexParams_P4DerivedAtCommonVertex(const DKinFitParticle* locKinFitParticle)

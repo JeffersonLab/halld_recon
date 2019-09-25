@@ -89,4 +89,16 @@
 	}
 	lat.DrawLatex(13.5, 100.0,nevents_str);
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "FDC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("FDC_occupancy", 0);
+			rs_ResetAllMacroHistos("//FDC_occupancy");
+		}
+	}
+#endif
 }

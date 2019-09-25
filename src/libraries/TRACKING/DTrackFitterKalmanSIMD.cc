@@ -103,9 +103,19 @@ unsigned int DTrackFitterKalmanSIMD::locate(vector<double>&xx,double x){
 // Crude approximation for the variance in drift distance due to smearing
 double DTrackFitterKalmanSIMD::fdc_drift_variance(double t) const {
    //return FDC_ANODE_VARIANCE;
-   if (t<5.) t=5.;
+  double dt=0.;
+  double t_lo=DRIFT_RES_PARMS[3];
+  double t_hi=DRIFT_RES_PARMS[4];
+   if (t<t_lo) t=t_lo;
+   if (t>t_hi){
+     t=t_hi;
+     dt=t-t_hi;
+   }
    double sigma=DRIFT_RES_PARMS[0]/(t+1.)+DRIFT_RES_PARMS[1]+DRIFT_RES_PARMS[2]*t*t;
-
+   if (dt>0){
+     sigma+=DRIFT_RES_PARMS[5]*dt;
+   }
+  
    return sigma*sigma;
 }
 
@@ -550,7 +560,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    jcalib->Get("FDC/drift_resolution_parms",drift_res_parms); 
    DRIFT_RES_PARMS[0]=drift_res_parms["p0"];   
    DRIFT_RES_PARMS[1]=drift_res_parms["p1"];
-   DRIFT_RES_PARMS[2]=drift_res_parms["p2"]; 
+   DRIFT_RES_PARMS[2]=drift_res_parms["p2"];  
+   map<string,double>drift_res_ext;
+   jcalib->Get("FDC/drift_resolution_ext",drift_res_ext); 
+   DRIFT_RES_PARMS[3]=drift_res_ext["t_low"];   
+   DRIFT_RES_PARMS[4]=drift_res_ext["t_high"];
+   DRIFT_RES_PARMS[5]=drift_res_ext["res_slope"]; 
 
    // Time-to-distance function parameters for FDC
    map<string,double>drift_func_parms;
@@ -1564,7 +1579,6 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
    // or the maximum radius
    while(z<endplate_z && z>=Z_MIN && r2<endplate_r2max
          && fabs(Sc(state_q_over_pt))<Q_OVER_PT_MAX
-         && fabs(Sc(state_tanl))<TAN_MAX
         ){
       if (PropagateCentral(central_traj_length,i,my_xy,var_t_factor,Sc,stepped_to_boundary)
             !=NOERROR) return UNRECOVERABLE_ERROR;    
@@ -6214,9 +6228,18 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S){
       }
       r2_old=r2;
       dz_old=dz;
-      S1=S;
       z=newz;
    }
+
+   // If we extrapolate beyond the fiducial volume of the detector before 
+   // finding the doca, abandon the extrapolation...
+   if (newz<Z_MIN){
+     //_DBG_ << "Extrapolated z = " << newz << endl;
+     // Restore old state vector
+     S=S1;
+     return VALUE_OUT_OF_RANGE;
+   }
+
    // update internal variables
    x_=S(state_x);
    y_=S(state_y);
@@ -6371,12 +6394,15 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
 // Propagate track to point of distance of closest approach to origin
 jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       DMatrix5x1 &Sc){
-
-   // Initialize the beam position = center of target, and the direction
-   DVector2 origin;  
-   DVector2 dir;
-
-   // Position and step variables
+  // Save un-extroplated quantities
+  DMatrix5x1 S0(Sc);
+  DVector2 xy0(xy);
+  
+  // Initialize the beam position = center of target, and the direction
+  DVector2 origin;  
+  DVector2 dir;
+  
+  // Position and step variables
    DVector2 beam_pos=beam_center+(Sc(state_z)-beam_z0)*beam_dir;
    double r2=(xy-beam_pos).Mod2();
    double ds=-mStepSizeS; // step along path in cm
@@ -6386,13 +6412,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
    double dedx=0.;
 
    // Check direction of propagation
-   DMatrix5x1 S0;
-   S0=Sc; 
-   DVector2 xy0=xy;
+   DMatrix5x1 S1=Sc;
    DVector2 xy1=xy;
-   Step(xy0,ds,S0,dedx);
-   beam_pos=beam_center+(S0(state_z)-beam_z0)*beam_dir;
-   r2=(xy0-beam_pos).Mod2();
+   Step(xy1,ds,S1,dedx);
+   beam_pos=beam_center+(S1(state_z)-beam_z0)*beam_dir;
+   r2=(xy1-beam_pos).Mod2();
    if (r2>r2_old) ds*=-1.;
    double ds_old=ds;
 
@@ -6441,6 +6465,16 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
       r2_old=r2;
       ds_old=ds;
    }   
+
+   // If we extrapolate beyond the fiducial volume of the detector before 
+   // finding the doca, abandon the extrapolation...
+   if (Sc(state_z)<Z_MIN){
+     //_DBG_ << "Extrapolated z = " << Sc(state_z) << endl;
+     // Restore un-extrapolated values
+     Sc=S0;
+     xy=xy0;
+     return VALUE_OUT_OF_RANGE;
+   }
 
    return NOERROR;
 }
@@ -6952,7 +6986,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    double chisq=-1.,chisq_forward=-1.;
    unsigned int my_ndf=0;
    unsigned int last_ndf=1;
-   kalman_error_t error=FIT_NOT_DONE;
+   kalman_error_t error=FIT_NOT_DONE,last_error=FIT_NOT_DONE;
 
    // Iterate over reference trajectories
    for (int iter=0;
@@ -6993,6 +7027,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       
       // perform the kalman filter 
       C=C0;
+      bool did_second_refit=false;
       error=KalmanForward(fdc_anneal,cdc_anneal,S,C,chisq,my_ndf);
       if (DEBUG_LEVEL>1){
 	_DBG_ << "Iter: " << iter+1 << " Chi2=" << chisq << " Ndf=" << my_ndf << " Error code: " << error << endl; 
@@ -7015,6 +7050,16 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 							      cdc_anneal,
 							      S,C,C0,chisq,
 							      my_ndf);
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  fdc_anneal=1000.;
+	  cdc_anneal=1000.;
+	  refit_error=RecoverBrokenForwardTracks(fdc_anneal,
+						 cdc_anneal,
+						 S,C,C0,chisq,
+						 my_ndf);
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
 	if (refit_error!=FIT_SUCCEEDED){
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
 	    C=Ctemp;
@@ -7038,7 +7083,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	break;
       }
       
-      if (iter>MIN_ITER){
+      if (iter>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_forward/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
@@ -7051,6 +7096,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       
       chisq_forward=chisq; 
       last_ndf=my_ndf;
+      last_error=error;
       Slast=S;
       Clast=C;	 
       last_z=z_;
@@ -7148,7 +7194,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       fcov.push_back(dummy);
    }
 
-   return error;
+   return last_error;
 }
 
 // Routine to fit hits in the CDC using the forward parametrization
@@ -7175,7 +7221,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    vector<bool>last_cdc_used_in_fit;
 
    double anneal_factor=ANNEAL_SCALE+1.;
-   kalman_error_t error=FIT_NOT_DONE;
+   kalman_error_t error=FIT_NOT_DONE,last_error=FIT_NOT_DONE;
     
    // Chi-squared and degrees of freedom
    double chisq=-1.,chisq_forward=-1.;
@@ -7229,6 +7275,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       
       // perform the filter 
       C=C0;
+      bool did_second_refit=false;
       error=KalmanForwardCDC(anneal_factor,S,C,chisq,my_ndf);
       
       // Try to recover tracks that failed the first attempt at fitting by
@@ -7264,6 +7311,12 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	}
 	
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  anneal_factor=1000.;
+	  refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
 	  
 	if (refit_error!=FIT_SUCCEEDED){
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
@@ -7293,7 +7346,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 				<< " Prob: " << TMath::Prob(chisq,my_ndf)
 				<< endl;
       
-      if (iter2>MIN_ITER){
+      if (iter2>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_forward/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
@@ -7305,6 +7358,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       chisq_forward=chisq;
       Slast=S;
       Clast=C;
+      last_error=error;
       last_ndf=my_ndf;
       zlast=z_;
       
@@ -7386,7 +7440,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       fcov.push_back(dummy);
    }  
 
-   return error;
+   return last_error;
 }
 
 // Routine to fit hits in the CDC using the central parametrization
@@ -7425,7 +7479,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    unsigned int my_ndf=0;
    ndf_=0.;
    unsigned int last_ndf=1;
-   kalman_error_t error=FIT_NOT_DONE;
+   kalman_error_t error=FIT_NOT_DONE,last_error=FIT_NOT_DONE;
 
    // Iterate over reference trajectories
    int iter2=0;
@@ -7469,6 +7523,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       
       // perform the fit
       Cc=C0;
+      bool did_second_refit=false;
       error=KalmanCentral(anneal_factor,Sc,Cc,pos,chisq,my_ndf);
 
       // Try to recover tracks that failed the first attempt at fitting by
@@ -7504,6 +7559,13 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	}
 
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
+	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  anneal_factor=1000.;
+	  refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
+	  chisq=1e6;
+	  did_second_refit=true;
+	}
+
 	if (refit_error!=FIT_SUCCEEDED){
 	  //_DBG_ << error << endl;
 	  if (error==PRUNED_TOO_MANY_HITS || error==BREAK_POINT_FOUND){
@@ -7532,7 +7594,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 			       << " Prob: " << TMath::Prob(chisq,my_ndf)
 			       << endl;
       
-      if (iter2>MIN_ITER){
+      if (iter2>MIN_ITER && did_second_refit==false){
 	double new_reduced_chisq=chisq/my_ndf;
 	double old_reduced_chisq=chisq_iter/last_ndf;
 	double new_prob=TMath::Prob(chisq,my_ndf);
@@ -7547,6 +7609,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       last_pos=pos;
       chisq_iter=chisq;
       last_ndf=my_ndf;
+      last_error=error;
    
       last_cdc_used_in_fit=cdc_used_in_fit;
    }
@@ -7634,7 +7697,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    ndf_=last_ndf;
    //printf("NDof %d\n",ndf);
 
-   return error;
+   return last_error;
 }
 
 // Smoothing algorithm for the forward trajectory.  Updates the state vector

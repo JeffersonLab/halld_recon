@@ -186,8 +186,9 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
                     
                     Int_t numhits_per_cluster1 = associated_clusters1[loc_j]->GetNHits();
                     Int_t numhits_per_cluster2 = associated_clusters2[loc_jj]->GetNHits();
-                    double hitEnergyMax1=associated_clusters1[loc_j]->getEmax();
-                    double hitEnergyMax2=associated_clusters1[loc_j]->getEmax();
+		    // next two lines commented out to supress warnings, variables unused
+		    //                    double hitEnergyMax1=associated_clusters1[loc_j]->getEmax();
+		    //                    double hitEnergyMax2=associated_clusters1[loc_j]->getEmax();
 
                     double frac1 = associated_clusters1[loc_j]->getEmax()/associated_clusters1[loc_j]->getEnergy();
                     if(associated_clusters1[loc_j]->getEnergy() < 0.8) continue;
@@ -196,17 +197,20 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
                     if(associated_clusters2[loc_jj]->getEnergy() < 0.8) continue;
                     
                     if (numhits_per_cluster1<1) continue;
-                    
-                    double energry1[numhits_per_cluster1];
+		    // next line commented out to supress warning, variable unused                    
+		    //                    double energry1[numhits_per_cluster1];
                     double fEmax1=0, eMax1=0;
-                    int chMax1=0, fChannelEmax1=0;
+		    //                    int chMax1=0, fChannelEmax1=0;
+                    int chMax1=0; // supress warning
                     for(  int i = 0; i < numhits_per_cluster1; ++i ){
-                        energry1[i]=hits1[i].E;
+		      // next line commented out to supress warning, variable unused                    
+		      //                        energry1[i]=hits1[i].E;
                         eMax1=hits1[i].E;
                         chMax1=hits1[i].ch;
                         if (fabs(eMax1-fEmax1) > 0.001) {
                             fEmax1 = eMax1;
-                            fChannelEmax1 = chMax1;
+			    //supress warning, variable unused
+			    //                            fChannelEmax1 = chMax1;
                         }
                         Fill1DHistogram("FCAL_Pi0HFA","","eMax",
                                         fEmax1,
@@ -214,16 +218,20 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
                                         500, 0.05, 04);
                     }
                     
-                    double energry2[numhits_per_cluster2];
+		    // next line commented out to supress warning, variable unused                    
+		    //                    double energry2[numhits_per_cluster2];
                     double fEmax2=0, eMax2=0;
-                    int chMax2=0, fChannelEmax2=0;
+		    //                    int chMax2=0, fChannelEmax2=0;
+                    int chMax2=0; // supress warning
                     for(  int i = 0; i < numhits_per_cluster2; ++i ){
-                        energry2[i]=hits2[i].E;
+		      // next line commented out to supress warning, variable unused                    
+		      //                        energry2[i]=hits2[i].E;
                         eMax2=hits2[i].E;
                         chMax2=hits2[i].ch;
                         if (fabs(eMax2-fEmax2) > 0.001) {
                             fEmax2 = eMax2;
-                            fChannelEmax2 = chMax2;
+			    // supress warning, variable unused
+			    //                            fChannelEmax2 = chMax2;
                         }
                         Fill1DHistogram("FCAL_Pi0HFA","","eMax",
                                         fEmax2,

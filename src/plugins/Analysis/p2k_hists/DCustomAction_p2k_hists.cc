@@ -7,31 +7,37 @@
 
 #include "DCustomAction_p2k_hists.h"
 
-void DCustomAction_p2k_hists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2k_hists::Run_Update(JEventLoop* locEventLoop)
 {
 	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-        JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
+	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
 
-        // Parameters for event selection to fill histograms
-        endpoint_energy = 12.;
-        map<string, double> photon_endpoint_energy;
-        if(jcalib->Get("/PHOTON_BEAM/endpoint_energy", photon_endpoint_energy) == false) {
-                endpoint_energy = photon_endpoint_energy["PHOTON_BEAM_ENDPOINT_ENERGY"];
-        }
-        endpoint_energy_bins = (int)(20*endpoint_energy);
+	// Parameters for event selection to fill histograms
+	endpoint_energy = 12.;
+	map<string, double> photon_endpoint_energy;
+	if(jcalib->Get("/PHOTON_BEAM/endpoint_energy", photon_endpoint_energy) == false) {
+			endpoint_energy = photon_endpoint_energy["PHOTON_BEAM_ENDPOINT_ENERGY"];
+	}
+	endpoint_energy_bins = (int)(20*endpoint_energy);
 
-        cohmin_energy = 0.;
-        cohedge_energy = 12.;
-        map<string, double> photon_beam_param;
-        if(jcalib->Get("/ANALYSIS/beam_asymmetry/coherent_energy", photon_beam_param) == false) {
-                cohmin_energy = photon_beam_param["cohmin_energy"];
-                cohedge_energy = photon_beam_param["cohedge_energy"];
-        }
+	cohmin_energy = 0.;
+	cohedge_energy = 12.;
+	map<string, double> photon_beam_param;
+	if(jcalib->Get("/ANALYSIS/beam_asymmetry/coherent_energy", photon_beam_param) == false) {
+			cohmin_energy = photon_beam_param["cohmin_energy"];
+			cohedge_energy = photon_beam_param["cohedge_energy"];
+	}
+}
 
-        dEdxCut = 2.2;
-        minMM2Cut = -0.01;
-        maxMM2Cut = 0.01;
-        maxPhiMassCut = 1.05;
+
+void DCustomAction_p2k_hists::Initialize(JEventLoop* locEventLoop)
+{
+	Run_Update(locEventLoop);
+
+	dEdxCut = 2.2;
+	minMM2Cut = -0.01;
+	maxMM2Cut = 0.01;
+	maxPhiMassCut = 1.05;
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
