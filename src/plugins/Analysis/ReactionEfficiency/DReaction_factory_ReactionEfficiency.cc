@@ -157,7 +157,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	//_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
 	
@@ -186,7 +186,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	//_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
 	
