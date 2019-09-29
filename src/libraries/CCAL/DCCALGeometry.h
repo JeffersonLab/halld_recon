@@ -28,9 +28,9 @@ class DCCALGeometry:public jana::JObject{
 		static const int kCCALMidBlock     = (kCCALBlocksWide)/2;
 		static const int kCCALBeamHoleSize = 2;
 
-		static double blockSize()  { return 2.05 * k_cm; }
-		static double blockLength(){ return 20.0 * k_cm; }
-		static double ccalFaceZ()  { return 1215 * k_cm; }
+		static double blockSize()  { return  2.09 * k_cm; }
+		static double blockLength(){ return  20.0 * k_cm; }
+		static double ccalFaceZ()  { return  1279.376 * k_cm; }
 	
 		static double ccalMidplane() { return ccalFaceZ() + 0.5 * blockLength() ; } 
 	
