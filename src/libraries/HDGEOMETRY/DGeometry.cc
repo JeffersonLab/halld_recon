@@ -1704,7 +1704,7 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
 
    if(!good){
       _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
-      z_ccal=876.106; // from some version of HDDS that may be out of date.  2018-12-10 DL
+      z_ccal = 1279.376;   
       return false;
    }else{
 	   z_ccal = ComptonEMcalpos[2];
@@ -2002,7 +2002,26 @@ bool DGeometry::GetTargetZ(double &z_target) const
       return true;
    }
    
-   jout << " WARNING: Unable to get target location from XML for any of GlueX, or CPP targets. Using default of " << z_target << " cm" << endl;
+   // Check if PrimEx Be target is defined
+   bool primex_target_exists = true;
+   vector<double> xyz_BETG;
+   if(primex_target_exists) primex_target_exists = Get("//composition[@name='targetVessel']/posXYZ[@volume='BETG']/@X_Y_Z", xyz_BETG);
+   if(primex_target_exists) primex_target_exists = Get("//composition[@name='Target']/posXYZ[@volume='targetVessel']/@X_Y_Z", xyz_target);
+   if(primex_target_exists) primex_target_exists = Get("//posXYZ[@volume='Target']/@X_Y_Z", xyz_detector);
+   if(primex_target_exists) {
+
+     z_target = xyz_BETG[2] + xyz_target[2] + xyz_detector[2];
+     
+     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
+     
+     return true;
+   }
+   
+
+
+   jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " << 
+     z_target << " cm" << endl;
+
 
    return false;
 }
