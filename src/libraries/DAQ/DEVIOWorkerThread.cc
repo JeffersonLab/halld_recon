@@ -923,8 +923,9 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 		uint32_t segment_len = segment_header&0xFFFF;
 		uint32_t *iend_segment  = &iptr[segment_len];
 
-		// suppress warning
+		// suppress warning, remove assignment to unused variable but increment the pointer
 		//		uint32_t event_number = *iptr++;
+		iptr++;
 		uint64_t ts_low  = *iptr++;
 		uint64_t ts_high = *iptr++;
 
