@@ -402,7 +402,7 @@ class DTranslationTable:public jana::JObject{
 		MyTypes(makefactoryptr)
 		
 		// Method to initialize factory pointers
-		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A);
+		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A, NULL, false);
 		void InitFactoryPointers(JEventLoop *loop){ MyTypes(copyfactoryptr) }
 
 		// Method to clear each of the vectors at beginning of event
