@@ -117,6 +117,33 @@ def executable(env, exename=''):
 
 
 ##################################
+# script
+##################################
+def script(env, scriptname, installname=None):
+
+	# Only thing to do for script is to install it.
+
+	# Cleaning and installation are restricted to the directory
+	# scons was launched from or its descendents
+	CurrentDir = env.Dir('.').srcnode().abspath
+	if not CurrentDir.startswith(env.GetLaunchDir()):
+		# Not in launch directory. Tell scons not to clean these targets
+		env.NoClean([scriptname])
+	else:
+		# We're in launch directory (or descendent) schedule installation
+
+		# Installation directories for executable and headers
+		installdir = env.subst('$INSTALLDIR')
+		bindir = env.subst('$BINDIR')
+
+		# Install targets 
+		if installname==None:
+			env.Install(bindir, scriptname)
+		else:
+			env.InstallAs(bindir+'/'+installname, scriptname)
+
+
+##################################
 # python_so_module
 ##################################
 def python_so_module(env, modname):
