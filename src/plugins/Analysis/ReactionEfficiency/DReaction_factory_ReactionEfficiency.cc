@@ -5,7 +5,6 @@
 // Creator: jrsteven (on Linux ifarm1402.jlab.org 3.10.0-327.el7.x86_64 x86_64)
 //
 
-
 #include "DReaction_factory_ReactionEfficiency.h"
 
 //------------------
@@ -157,7 +156,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 	
-	//_data.push_back(locReaction); //Register the DReaction with the factory
+	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
 	
@@ -186,7 +185,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
-	//_data.push_back(locReaction); //Register the DReaction with the factory
+	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
 	
@@ -274,6 +273,214 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
+
+	/**************************************************** kpsigmamissprot__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("kpsigmamissprot__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {Sigma0, KPlus});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	
+	locReactionStep = new DReactionStep(Sigma0, {Lambda, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {PiMinus}, Proton);
+	locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_kpsigmamissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(1); // KPlus
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+
+	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("antilamblambmissprot__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {AntiLambda, Lambda, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(AntiLambda, {PiPlus, AntiProton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {PiMinus}, Proton);
+	locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_antilamblambmissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+	
+	/**************************************************** antilamblambmisspim__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("antilamblambmisspim__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {AntiLambda, Lambda, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(AntiLambda, {PiPlus, AntiProton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {Proton}, PiMinus);
+	locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_antilamblambmisspim__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+	
+	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("antilamblambmissantip__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {AntiLambda, Lambda, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(AntiLambda, {PiPlus}, AntiProton);
+	locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {PiMinus, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_antilamblambmissantip__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	_data.push_back(locReaction); //Register the DReaction with the factory
+	
+
+	/**************************************************** antilamblambmisspip__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("antilamblambmisspip__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {AntiLambda, Lambda, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(AntiLambda, {AntiProton}, PiPlus);
+	locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {PiMinus, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_antilamblambmisspip__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	_data.push_back(locReaction); //Register the DReaction with the factory
+
+
+	/**************************************************** pi0kpmisslamb__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("pi0kpmisslamb__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, Lambda},  KPlus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(Lambda, {PiMinus, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_antilamblambmissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 0.0)); //0% confidence level cut //require kinematic fit converges
+	
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(1); // Lambda
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "K*Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "K*Recoil_KinFit"));
+	
+	// HISTOGRAM PID
+	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
+	
+	// Kinematics
+	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
+
+	//_data.push_back(locReaction); //Register the DReaction with the factory
 
 	return NOERROR;
 }

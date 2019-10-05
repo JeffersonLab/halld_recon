@@ -30,6 +30,8 @@ class DCustomAction_RecoilMass : public DAnalysisAction
 	        DAnalysisAction(locReaction, "Custom_RecoilMass", locUseKinFitResultsFlag, locActionUniqueString), dRecoilIndices(locRecoilIndices), dMinRecoilMass(locMinRecoilMass), dMaxRecoilMass(locMaxRecoilMass) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {};
+
 		void Reset_NewEvent(void){}; //RESET HISTOGRAM DUPLICATE-CHECK TRACKING HERE!!
 	private:
 
