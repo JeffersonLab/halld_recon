@@ -78,14 +78,8 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
-
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
@@ -118,14 +112,8 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
-
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
@@ -150,12 +138,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-	
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
@@ -179,12 +161,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
@@ -207,12 +183,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(1); // Proton
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
-	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 	
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
@@ -237,12 +207,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-	
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** gpimkpmissprot__B1_T1_U1_Effic ****************************************************/
@@ -266,12 +230,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** kpsigmamissprot__B1_T1_U1_Effic ****************************************************/
@@ -304,12 +262,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 
@@ -342,12 +294,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	
@@ -379,12 +325,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// CUT ACTION FOR LAMBDA
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
-
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
 
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
@@ -418,12 +358,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 	
 
@@ -456,12 +390,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 
@@ -495,12 +423,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 0.95, 1.25, "LambdaMassCut"));
 
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	
@@ -528,12 +450,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 
@@ -561,12 +477,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	// HISTOGRAM PID
-	locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction));
-	
-	// Kinematics
-	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: measured data
-
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	return NOERROR;
