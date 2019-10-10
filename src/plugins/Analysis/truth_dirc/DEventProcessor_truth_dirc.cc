@@ -34,6 +34,8 @@ jerror_t DEventProcessor_truth_dirc::init(void) {
   TDirectory *dircDir = gDirectory->mkdir("DIRC_truth");
   dircDir->cd();
 
+  hTruthWavelength = new TH1F("hTruthWavelength", "; Wavelength (nm)", 300, 200, 800);
+
   int nChannels = 108*64;
   hTruthPixelHitTime = new TH2F("hTruthPixelHitTime", "; Pixel Channel # ; #Delta t (ns)", nChannels, 0, nChannels, 200, -100, 100);
 
@@ -104,6 +106,7 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      double z = dircPmtHits[h]->z;
      double t = dircPmtHits[h]->t;
      double t_fixed = dircPmtHits[h]->t_fixed;
+     double lambda = 1240./dircPmtHits[h]->E/1e9;
 
      // get PMT labels
      int pmt_column = dDIRCGeometry->GetPmtColumn(ch); 
@@ -114,6 +117,7 @@ jerror_t DEventProcessor_truth_dirc::evnt(JEventLoop *loop, uint64_t eventnumber
      int pixel_col = dDIRCGeometry->GetPixelColumn(ch);
 
      japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+     hTruthWavelength->Fill(lambda);
      hTruthPixelHitTime->Fill(ch, t-t_fixed);
      if(x < 0.) {
 	hTruthPmtHitZY_South->Fill(z, y);
