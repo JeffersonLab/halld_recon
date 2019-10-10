@@ -24,6 +24,7 @@ class JEventProcessor_DIRC_online:public jana::JEventProcessor{
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
   const DDIRCGeometry* dDIRCGeometry;
+  bool FillTimewalk;
 };
 
 #endif // _JEventProcessor_DIRC_online_
