@@ -54,8 +54,6 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
-  const DDIRCGeometry* dDIRCGeometry;
-
   TH1F *hTruthWavelength;
   TH1F *hTruthBarHitBar;
   TH2F *hTruthBarHitXY;

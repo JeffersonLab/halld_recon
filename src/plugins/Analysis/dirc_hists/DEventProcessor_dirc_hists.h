@@ -81,10 +81,6 @@ private:
   TH2S *hPixelHitMap[40], *hPixelHitMapReflected[40];
 
   int dMaxChannels;
-
-  const DParticleID* dParticleID;
-  const DDIRCGeometry* dDIRCGeometry;
-  const DDIRCLut* dDIRCLut;
   
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;

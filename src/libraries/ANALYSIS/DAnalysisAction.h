@@ -40,6 +40,7 @@ class DAnalysisAction
 				//when creating ROOT objects, call CreateAndChangeTo_ActionDirectory() to navigate to the proper directory
 			//if not creating any objects, just define the function but leave it empty
 		virtual void Initialize(JEventLoop* locEventLoop) = 0;
+		virtual void Run_Update(JEventLoop* locEventLoop) = 0;
 
 		//INHERITING CLASSES THAT OVERRIDE THIS METHOD MUST CALL THE BASE METHOD!!!
 		//Reset event (for clearing previously-histogrammed info (duplicate checking)

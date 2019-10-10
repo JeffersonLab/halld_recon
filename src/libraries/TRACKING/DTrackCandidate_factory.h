@@ -90,15 +90,11 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   bool MatchMethod1(const DTrackCandidate *fdccan,
 		    vector<unsigned int> &cdc_forward_ids,
 		    vector<DVector3>&cdc_endplate_projections,
-		    vector<unsigned int>&used_cdc_hits,
 		    vector<int>&cdc_forward_matches
 		    );
-  bool MatchMethod2(const DTrackCandidate *fdccan,
-		    const DTrackCandidate *cdccan,
-		    vector<unsigned int>&used_cdc_hits
+  bool MatchMethod2(const DTrackCandidate *fdccan,const DTrackCandidate *cdccan
 		    );
-  bool MatchMethod3(const DTrackCandidate *cdccan,vector<int> &forward_matches,
-		    vector<unsigned int>&used_cdc_hits
+  bool MatchMethod3(const DTrackCandidate *cdccan,vector<int> &forward_matches
 		    );  
   bool MatchMethod4(const DTrackCandidate *srccan,vector<int> &forward_matches,
 		    int &num_fdc_cands_remaining);
@@ -112,8 +108,7 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 		    );
   bool MatchMethod7(DTrackCandidate *srccan,vector<int> &forward_matches,
 		    int &num_fdc_cands_remaining);
-  bool MatchMethod8(const DTrackCandidate *cdccan,vector<int> &forward_matches,
-		    vector<unsigned int>&used_cdc_hits);
+  bool MatchMethod8(const DTrackCandidate *cdccan,vector<int> &forward_matches);
   bool MatchMethod9(unsigned int src_index,const DTrackCandidate *srccan, 
 		    const DFDCSegment *segment,
 		    vector<const DTrackCandidate*>&cands,
@@ -137,8 +132,7 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 			  int &num_fdc_cands_remaining);
   bool MakeCandidateFromMethod1(double theta,
 				vector<const DFDCSegment *>&segments,
-				const DTrackCandidate *cdccan,
-				vector<unsigned int>&used_cdc_hits);
+				const DTrackCandidate *cdccan);
  
  private:
   const DMagneticFieldMap *bfield;

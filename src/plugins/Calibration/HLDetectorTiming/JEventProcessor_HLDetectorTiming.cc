@@ -194,33 +194,9 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
     // This is called whenever the run number changes
-    // Get the particleID object for each run
-    vector<const DParticleID *> dParticleID_algos;
-    eventLoop->Get(dParticleID_algos);
-    if(dParticleID_algos.size()<1){
-        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-        return RESOURCE_UNAVAILABLE;
-    }
-    dParticleID = dParticleID_algos[0];
-
-    // We want to be use some of the tools available in the RFTime factory 
-    // Specifivally steping the RF back to a chosen time
-    dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-
     DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     DGeometry* geom = app->GetDGeometry(runnumber);
     geom->GetTargetZ(Z_TARGET);
-
-    //be sure that DRFTime_factory::init() and brun() are called
-    vector<const DRFTime*> locRFTimes;
-    eventLoop->Get(locRFTimes);
-
-    vector<const DDIRCGeometry*> locDIRCGeometry;
-    eventLoop->Get(locDIRCGeometry);
-    dDIRCGeometry = locDIRCGeometry[0];
-
-    // Initialize DIRC LUT
-    eventLoop->GetSingle(dDIRCLut);
 
     return NOERROR;
 }
@@ -239,6 +215,27 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if(!locTrigger->Get_IsPhysicsEvent())
 	    return NOERROR;
 
+    // Get the particleID object for each run
+    vector<const DParticleID *> locParticleID_algos;
+    loop->Get(locParticleID_algos);
+    if(locParticleID_algos.size()<1){
+        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+        return RESOURCE_UNAVAILABLE;
+    }
+    auto locParticleID = locParticleID_algos[0];
+
+    // We want to be use some of the tools available in the RFTime factory 
+    // Specifivally steping the RF back to a chosen time
+    auto dRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+
+    vector<const DDIRCGeometry*> locDIRCGeometryVec;
+    loop->Get(locDIRCGeometryVec);
+    // next line commented out to supress warning
+    //    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
+
+    // Initialize DIRC LUT
+	const DDIRCLut* dDIRCLut = nullptr;
+    loop->GetSingle(dDIRCLut);
 
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
@@ -516,8 +513,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         for (i = 0; i < ccalHitVector.size(); i++){
             Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
                              "CCALHit time;t [ns];", nBins, xMin, xMax);
-            
-            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+	    // next line commented out to suppress warning
+	    //            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
             for (i = 0; i < ccalHitVector.size(); i++) {
                 Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
                                 ccalHitVector[i]->row, ccalHitVector[i]->column, 
@@ -971,8 +968,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 		DVector3 IntersectionPoint, IntersectionMomentum;	
 		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-		bool sc_match_pid = dParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-								   true, &IntersectionPoint, &IntersectionMomentum);
+		// comment out definition of sc_match_pid to suppress warning
+		//		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+		//								   true, &IntersectionPoint, &IntersectionMomentum);
 		double locSCzIntersection = IntersectionPoint.z();
 		if( locSCzIntersection < 83. ) {
 			Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
@@ -1071,7 +1069,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			loop->GetSingle(locDetectorMatches);
 			DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
 		    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-		    bool foundDIRC = dParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
+		    bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
         	// For DIRC calibrations, select tracks which have a good TOF match
 		    if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
@@ -1079,9 +1077,11 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 				// Get match parameters
 				TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 				TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
-				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+				// next line commented out to suppress warning
+				//				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 				double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-				int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+				// next line commented out to suppress warning
+				//				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 
 				Particle_t locPID = locTrackTimeBased->PID();
 				double locMass = ParticleMass(locPID);
@@ -1232,6 +1232,7 @@ jerror_t JEventProcessor_HLDetectorTiming::erun(void)
     int act_slot;
     for(int ibin=1; ibin<=48; ibin++){
       int mod = Get_FDCTDC_crate_slot(ibin, act_crate, act_slot);
+      if (mod) {} // gratuitious check of return value to suppress warning
       stringstream ss;
       ss << act_crate << "/" << act_slot;
       fdc_time_module_hist->GetXaxis()->SetBinLabel(ibin, ss.str().c_str());

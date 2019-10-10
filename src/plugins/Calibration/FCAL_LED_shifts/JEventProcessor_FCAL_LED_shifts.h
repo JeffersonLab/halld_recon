@@ -45,9 +45,6 @@ class JEventProcessor_FCAL_LED_shifts:public jana::JEventProcessor{
   double FCAL_TOTAL_ENERGY_HI;
   double FCAL_TOTAL_ENERGY_LO;
  
-  const DTranslationTable *m_ttab;
-  const DFCALGeometry* m_fcalGeom;
-  
   int32_t m_runnumber;
   vector< double > old_ADCoffsets;
 
@@ -57,7 +54,9 @@ class JEventProcessor_FCAL_LED_shifts:public jana::JEventProcessor{
   
   TH2I *m_fadcShifts;
   TH1I *m_totalEnergy;
-
+  
+  const DFCALGeometry* m_fcalGeom;
+  const DTranslationTable* m_ttab;
 
   int NBINS_TIME;
   double TIME_MIN, TIME_MAX;

@@ -156,17 +156,10 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
     const DTrackTimeBased *track1=tracks[0]->Get_BestTrackingFOM()->Get_TrackTimeBased();
     const DTrackTimeBased *track2=tracks[1]->Get_BestTrackingFOM()->Get_TrackTimeBased();
-    double q1=track1->charge();
-    double q2=track2->charge();
-    DVector3 mom1_in=track1->momentum();
-    DVector3 mom2_in=track2->momentum();
-    DVector3 pos1_in=track1->position();
-    DVector3 pos2_in=track2->position();
-    double doca=0.,ds1=0.,ds2=0.;
-    DVector3 pos1_out,pos2_out,mom1_out,mom2_out;
-    if (dAnalysisUtilities->Calc_DOCA(q1,q2,mom1_in,pos1_in,mom2_in,pos2_in,
-				      mom1_out, pos1_out,mom2_out,pos2_out,
-				      doca,ds1,ds2)==NOERROR){  
+    double doca=0.;
+    DVector3 pos1_out,pos2_out;
+    if (dAnalysisUtilities->Calc_DOCA(track1,track2,pos1_out,pos2_out,doca)
+	==NOERROR){  
       DVector3 vertex=0.5*(pos1_out+pos2_out);
       DVector3 diff=vertex-truevertex;
       double ztrue=truevertex.z();
@@ -178,7 +171,6 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
       MCVertexDxVsR->Fill(rtrue,diff.x());   
       MCVertexDyVsR->Fill(rtrue,diff.y());
       MCVertexDzVsR->Fill(rtrue,diff.z());
-      
       
     }
   }
@@ -192,19 +184,19 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (TMath::Prob(track1->chisq,track1->Ndof)>TRACK_CL_CUT){
       DVector3 pos1=track1->position();
       DVector3 mom1=track1->momentum();
-      double q1=track1->charge();
 
       for (unsigned int j=i+1;j<tracks.size();j++){
 	const DTrackTimeBased *track2=tracks[j]->Get_BestTrackingFOM()->Get_TrackTimeBased();
 
 	if (TMath::Prob(track2->chisq,track2->Ndof)>TRACK_CL_CUT){
 	  DVector3 mom2=track2->momentum();
-	  double q2=track2->charge();
 	  DVector3 pos2=track2->position();
 
 	  // Find the positions corresponding to the doca between the two
 	  // tracks
-	  double doca=1e7,s1=0,s2=0.;
+	  // next commented line shows original, changed to eliminate unused variables for warning supression
+	  //	  double doca=1e7,s1=0,s2=0.;
+	  double doca=1e7;
 	  DVector3 pos2_out,pos1_out,mom2_out,mom1_out;
 	  if (dIsNoFieldFlag){
 	    DVector3 dir1=mom1;
@@ -215,9 +207,7 @@ jerror_t JEventProcessor_imaging::evnt(JEventLoop *loop, uint64_t eventnumber)
 					       pos2_out); 
 	  }
 	  else {
-	    dAnalysisUtilities->Calc_DOCA(q1,q2,mom1,pos1,mom2,pos2,
-					  mom1_out,pos1_out,mom2_out,
-					  pos2_out,doca,s1,s2);
+	    dAnalysisUtilities->Calc_DOCA(track1,track2,pos1_out,pos2_out,doca);
 	  }
 
 	  TwoTrackDoca->Fill(doca);

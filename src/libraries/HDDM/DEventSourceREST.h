@@ -26,6 +26,7 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
+#include <CCAL/DCCALShower.h>
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALShower_factory_IU.h>
 #include <START_COUNTER/DSCHit.h>
@@ -77,6 +78,8 @@ class DEventSourceREST:public JEventSource
                     JFactory<DFCALShower>* factory);
    jerror_t Extract_DBCALShower(hddm_r::HDDM *record,
                     JFactory<DBCALShower>* factory);
+   jerror_t Extract_DCCALShower(hddm_r::HDDM *record,
+                    JFactory<DCCALShower>* factory);
    jerror_t Extract_DTrackTimeBased(hddm_r::HDDM *record,
                     JFactory<DTrackTimeBased>* factory, JEventLoop* locEventLoop);
    jerror_t Extract_DTrigger(hddm_r::HDDM *record,

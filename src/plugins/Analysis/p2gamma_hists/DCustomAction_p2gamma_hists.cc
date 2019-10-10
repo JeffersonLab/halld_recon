@@ -7,7 +7,8 @@
 
 #include "DCustomAction_p2gamma_hists.h"
 
-void DCustomAction_p2gamma_hists::Initialize(JEventLoop* locEventLoop)
+
+void DCustomAction_p2gamma_hists::Run_Update(JEventLoop* locEventLoop)
 {
 	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
@@ -27,7 +28,12 @@ void DCustomAction_p2gamma_hists::Initialize(JEventLoop* locEventLoop)
 		cohmin_energy = photon_beam_param["cohmin_energy"];
 		cohedge_energy = photon_beam_param["cohedge_energy"];
 	}
+}
 
+void DCustomAction_p2gamma_hists::Initialize(JEventLoop* locEventLoop)
+{
+	Run_Update(locEventLoop);
+	
 	dEdxCut = 2.2;
         minMM2Cut = -0.05;
         maxMM2Cut = 0.05;

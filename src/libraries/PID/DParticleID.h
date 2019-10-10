@@ -99,7 +99,10 @@ class DParticleID:public jana::JObject
 		virtual double GetTimeVariance(DetectorSystem_t detector,
 					       Particle_t particle,
 					       double p) const=0;
-
+		virtual double GetEOverPMean(DetectorSystem_t detector,
+					     double p) const=0;
+		virtual double GetEOverPSigma(DetectorSystem_t detector,
+					      double p) const=0;
 
 		/****************************************************** DISTANCE TO TRACK ******************************************************/
 
@@ -255,12 +258,6 @@ class DParticleID:public jana::JObject
         vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
         vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
 
-	private:
-
-		int DEBUG_LEVEL;
-		// Prohibit default constructor
-		DParticleID();
-
 		// define bool in case there is no Start Counter in geometry (e.g. CPP)
 		bool START_EXIST = true;
 
@@ -315,6 +312,13 @@ class DParticleID:public jana::JObject
 		
 		// DIRC LUT
 		const DDIRCLut* dDIRCLut;
+
+	private:
+
+		int DEBUG_LEVEL;
+		// Prohibit default constructor
+		DParticleID();
+
 };
 
 #endif // _DParticleID_

@@ -195,10 +195,6 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 jerror_t JEventProcessor_DIRC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
     // This is called whenever the run number changes
 
-    vector<const DDIRCGeometry*> locDIRCGeometry;
-    eventLoop->Get(locDIRCGeometry);
-    dDIRCGeometry = locDIRCGeometry[0];
-
     return NOERROR;
 }
 
@@ -212,6 +208,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // loop-Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
+
+    vector<const DDIRCGeometry*> locDIRCGeometryVec;
+    eventLoop->Get(locDIRCGeometryVec);
+    auto locDIRCGeometry = locDIRCGeometryVec[0];
 
     // Get data for DIRC
     vector<const DDIRCTDCDigiHit*> digihits;
@@ -257,7 +257,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     else return NOERROR;
 
     // LED specific information
-    double locLEDRefTime = 0;
+    // next line commented out to supress warning: variable not used
+    //    double locLEDRefTime = 0;
     double locLEDRefAdcTime = 0;
     double locLEDRefTdcTime = 0;
     if(locDIRCLEDTrig) {
@@ -274,7 +275,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
 		locLEDRefAdcTime = dircLEDRef->t_fADC;
 		locLEDRefTdcTime = dircLEDRef->t_TDC;
-		locLEDRefTime = dircLEDRef->t_TDC;
+		// next line commented out to supress warning: variable not used
+		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
@@ -327,7 +329,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
         int channel = (hit->channel < Nchannels) ? hit->channel : (hit->channel - Nchannels);
         NDigiHits[box]++;
         hDigiHit_Box[loc_itrig]->Fill(box);
-	hDigiHit_pixelOccupancy[box][loc_itrig]->Fill(dDIRCGeometry->GetPixelRow(hit->channel), dDIRCGeometry->GetPixelColumn(hit->channel));
+	hDigiHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->channel), locDIRCGeometry->GetPixelColumn(hit->channel));
         hDigiHit_tdcTime[box][loc_itrig]->Fill(hit->time);
         hDigiHit_tdcTimeVsChannel[box][loc_itrig]->Fill(channel,hit->time);
     }
@@ -339,7 +341,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     double locFirstFiberTime = 128.1; // 205.5; used for no time offset
     for (const auto& hit : hits) {
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
-        int pmtrow = dDIRCGeometry->GetPmtRow(channel);
+        int pmtrow = locDIRCGeometry->GetPmtRow(channel);
         if(pmtrow < 6 && fabs(hit->t-locFirstFiberTime) < 5.) {
 		//cout<<pmtrow<<" "<<hit->t<<endl;
 		locRefTime += hit->t;
@@ -368,13 +370,13 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     for (const auto& hit : hits) {
 	int box = (hit->ch < Nchannels) ? 1 : 0;
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
-	int pmtrow = dDIRCGeometry->GetPmtRow(channel);
+	int pmtrow = locDIRCGeometry->GetPmtRow(channel);
 	if(pmtrow < 6) ledFiber[0] = true;
 	else if(pmtrow < 12) ledFiber[1] = true;
 	else ledFiber[2] = true; 
 	hHit_Box[loc_itrig]->Fill(box);
 	NHits[box]++;
-	hHit_pixelOccupancy[box][loc_itrig]->Fill(dDIRCGeometry->GetPixelRow(hit->ch), dDIRCGeometry->GetPixelColumn(hit->ch));
+	hHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 	hHit_TimeOverThreshold[box][loc_itrig]->Fill(hit->tot);
 	hHit_TimeOverThresholdVsChannel[box][loc_itrig]->Fill(channel,hit->tot);
 	hHit_tdcTime[box][loc_itrig]->Fill(hit->t);

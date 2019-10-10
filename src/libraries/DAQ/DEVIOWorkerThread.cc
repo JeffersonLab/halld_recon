@@ -915,14 +915,17 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 	// On entry, iptr points to word after the bank header (i.e. word after the one with 0xFF11)
 	
 	// Loop over events. Should be one segment for each event
-	uint32_t ievent = 0;
+	// suppress warning
+	//	uint32_t ievent = 0;
 	for(auto pe : current_parsed_events){
 		
 		uint32_t segment_header = *iptr++;
 		uint32_t segment_len = segment_header&0xFFFF;
 		uint32_t *iend_segment  = &iptr[segment_len];
 
-		uint32_t event_number = *iptr++;
+		// suppress warning, remove assignment to unused variable but increment the pointer
+		//		uint32_t event_number = *iptr++;
+		iptr++;
 		uint64_t ts_low  = *iptr++;
 		uint64_t ts_high = *iptr++;
 
@@ -1011,7 +1014,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
 			case 0xE10:
-				Parsef250scalerBank(rocid, iptr, iend);
+				Parsef250scalerBank(rocid, iptr, iend_data_block_bank);
 				break;
 			
 			// The CDAQ system leave the raw trigger info in the Physics event data
@@ -1025,10 +1028,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// higher level data objects to save disk space and speed up
 			// specialized processing (e.g. pi0 calibration)
 			case 0xD01:
-				ParseDVertexBank(iptr, iend);
+				ParseDVertexBank(iptr, iend_data_block_bank);
 				break;
 			case 0xD02:
-				ParseDEventRFBunchBank(iptr, iend);
+				ParseDEventRFBunchBank(iptr, iend_data_block_bank);
 				break;
 
 			case 5:

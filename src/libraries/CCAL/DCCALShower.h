@@ -29,27 +29,27 @@ class DCCALShower : public JObject {
       ~DCCALShower();
       
       
-      int type;
-      int dime;
-      int status;
-      int id;
-      int idmax;
+      int type= 0;
+      int dime= 0;
+      int status= 0;
+      int id= 0;
+      int idmax= 0;
 
-      double E;
-      double x;
-      double y;
-      double z;
-      double x1;
-      double y1;
-      double chi2;
-      double sigma_E;
-      double Emax;
-      double time;
-      double sigma_t;
+      double E= 0;
+      double x= 0;
+      double y= 0;
+      double z= 0;
+      double x1= 0;
+      double y1= 0;
+      double chi2= 0;
+      double sigma_E= 0;
+      double Emax= 0;
+      double time= 0;
+      double sigma_t= 0;
       
-      int id_storage[MAX_CC];
-      double en_storage[MAX_CC];
-      double t_storage[MAX_CC];
+      int id_storage[MAX_CC] = {0};
+      double en_storage[MAX_CC] {0.};
+      double t_storage[MAX_CC] = {0.};
       
       void toStrings(vector<pair<string,string> > &items) const {
 	AddString(items, "E(GeV)",    "%2.3f",  E);

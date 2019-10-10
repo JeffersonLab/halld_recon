@@ -20,8 +20,7 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
-	locEventLoop->GetSingle(dParticleID);
+	Run_Update(locEventLoop);
 
 	//CREATE TTREE, TFILE
 	dTreeInterface = DTreeInterface::Create_DTreeInterface(locReaction->Get_ReactionName(), "tree_trackeff.root");

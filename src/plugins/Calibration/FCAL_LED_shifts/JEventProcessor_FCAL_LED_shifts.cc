@@ -118,7 +118,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::init(void)
   		uint32_t crate = firstCrate + i;
     	m_crateTimes[crate] = (new TH1I(Form("crate_times_%i",crate),Form("Hit Times for Crate %i",crate),NBINS_TIME,TIME_MIN,TIME_MAX));
 	  	for (int i = 0; i < numSlots; ++i) {
-	  		uint32_t slot = firstSlot + i;
+		  // next line commented out to avoid unused variable warning
+			//uint32_t slot = firstSlot + i;
 			//pair<uint32_t,uint32_t> crate_slot(crate,slot);
 		   	//m_slotTimes[crate_slot] = (new TH1I(Form("slot_times_c%i_s%i",crate,slot),
 		   	//							Form("Hit Times for Crate %i, Slot %i",crate,slot),200,60.,110.));
@@ -158,6 +159,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
   }
 	*/
 
+	// WARNING: THIS IS SUPER DANGEROUS
+	// FIGURE OUT A WAY TO SAVE THIS INFO FOR erun()
   // we need an FCAL Geometry object
   vector< const DFCALGeometry* > geomVec;
   eventLoop->Get( geomVec );
@@ -177,7 +180,6 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
 
   m_ttab = ttabVec[0];
 
-
   // save this info - not terribly thread safe, but this plugin
   // should only be used on one run at once
   m_runnumber = runnumber;
@@ -193,6 +195,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
 jerror_t JEventProcessor_FCAL_LED_shifts::evnt(JEventLoop *eventLoop, 
 					     uint64_t eventnumber)
 {
+
+
 
   	vector< const DFCALHit*  > hits;
   	eventLoop->Get( hits );
@@ -295,7 +299,8 @@ jerror_t JEventProcessor_FCAL_LED_shifts::erun(void)
   	// This is called whenever the run number changes, before it is
   	// changed to give you a chance to clean up before processing
   	// events from the next run number.
-  
+ 
+   
   	if(CALC_NEW_CONSTANTS_BEAM) {
   		// calculate time shifts
   		//cerr << "opening " << REFERENCE_FILE_NAME << endl;
