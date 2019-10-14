@@ -84,6 +84,13 @@ ret = subprocess.call( cmd )
 # Update skininfo DB with any .sql files found in working directory
 sqlfiles = glob.glob('*.sql')
 if len(sqlfiles) > 0:
+
+	# We need to import mysql.connector but the RCDB version is
+	# not compatible with what is installed on the gluons. Thus,
+	# we need to make sure it is not in our path
+	mypath = sys.path.copy()  # loop over copy so we can change real list within loop
+	for p in mypath:
+		if '/rcdb/' in p: sys.path.remove(p)
 	import mysql.connector
 	mydb = mysql.connector.connect( host=MYSQL_HOST, user=MYSQL_USER, password=MYSQL_PASSWORD, database=MYSQL_DB)
 	mycursor = mydb.cursor()
