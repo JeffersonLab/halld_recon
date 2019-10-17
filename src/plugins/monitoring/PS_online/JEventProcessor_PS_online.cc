@@ -177,11 +177,13 @@ jerror_t JEventProcessor_PS_online::init(void) {
 
 jerror_t JEventProcessor_PS_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
     // This is called whenever the run number changes
+
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
     eventLoop->Get(psGeomVect);
     if (psGeomVect.size() == 0) return OBJECT_NOT_AVAILABLE;
     const DPSGeometry& psGeom = *(psGeomVect[0]);
+
     // Get photon energy bin lows for variable-width energy binning
     double Elows[Narms][Ncols+1];
     double cols[Ncols+1];

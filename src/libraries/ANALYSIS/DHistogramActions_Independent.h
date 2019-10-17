@@ -103,6 +103,7 @@ class DHistogramAction_ObjectMemory : public DAnalysisAction
 		dMaxNumEvents(50000), dEventCounter(0) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 		void Read_MemoryUsage(double& vm_usage, double& resident_set);
 
@@ -142,12 +143,12 @@ class DHistogramAction_ObjectMemory : public DAnalysisAction
 		DResourcePool<DKinFitConstraint_Vertex> dResourcePool_VertexConstraint;
 		DResourcePool<DKinFitConstraint_Spacetime> dResourcePool_SpacetimeConstraint;
 
-		TH2I* dHist_NumObjects;
-		TH2F* dHist_Memory;
+		TH2I* dHist_NumObjects = nullptr;
+		TH2F* dHist_Memory = nullptr;
 
-		TH1F* dVirtualMemoryVsEventNumber;
-		TH1F* dResidentMemoryVsEventNumber;
-		TH1F* dHist_TotalMemory;
+		TH1F* dVirtualMemoryVsEventNumber = nullptr;
+		TH1F* dResidentMemoryVsEventNumber = nullptr;
+		TH1F* dHist_TotalMemory = nullptr;
 };
 
 class DHistogramAction_Reconstruction : public DAnalysisAction
@@ -189,6 +190,7 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 		unsigned int dNumFCALTOFXYBins, dNumShowerEnergyBins, dNumPhiBins, dNum2DBCALZBins, dNum2DPhiBins;
 		unsigned int dNumHitEnergyBins, dNum2DHitEnergyBins, dNum2DThetaBins, dNumFOMBins, dNum2DFOMBins, dNum2DPBins, dNum2DDeltaTBins;
@@ -202,35 +204,35 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 
 		DVector3 dTargetCenter;
 
-		TH2I* dHist_FCALShowerYVsX;
-		TH1I* dHist_FCALShowerEnergy;
+		TH2I* dHist_FCALShowerYVsX = nullptr;
+		TH1I* dHist_FCALShowerEnergy = nullptr;
 
-		TH1I* dHist_BCALShowerEnergy;
-		TH1I* dHist_BCALShowerPhi;
-		TH2I* dHist_BCALShowerPhiVsZ;
+		TH1I* dHist_BCALShowerEnergy = nullptr;
+		TH1I* dHist_BCALShowerPhi = nullptr;
+		TH2I* dHist_BCALShowerPhiVsZ = nullptr;
 
-		TH1I* dHist_TOFPointEnergy;
-		TH2I* dHist_TOFPointYVsX;
+		TH1I* dHist_TOFPointEnergy = nullptr;
+		TH2I* dHist_TOFPointYVsX = nullptr;
 
-		TH1I* dHist_SCHitSector;
-		TH1I* dHist_SCHitEnergy;
-		TH2I* dHist_SCHitEnergyVsSector;
-		TH2I *dHist_SCRFDeltaTVsSector;
+		TH1I* dHist_SCHitSector = nullptr;
+		TH1I* dHist_SCHitEnergy = nullptr;
+		TH2I* dHist_SCHitEnergyVsSector = nullptr;
+		TH2I *dHist_SCRFDeltaTVsSector = nullptr;
 
-		TH2I *dHist_TAGMRFDeltaTVsColumn;
-		TH2I *dHist_TAGHRFDeltaTVsCounter;
+		TH2I *dHist_TAGMRFDeltaTVsColumn = nullptr;
+		TH2I *dHist_TAGHRFDeltaTVsCounter = nullptr;
 
-		TH1I* dHist_NumDCHitsPerTrack;
-		TH1I* dHist_NumPossDCHitsPerTrack;
-		TH1I* dHist_TrackHitFraction;
-		TH2I* dHist_NumDCHitsPerTrackVsTheta;
-		TH2I* dHist_NumPossDCHitsPerTrackVsTheta;
-		TH2I* dHist_TrackHitFractionVsTheta;
-		TH1I* dHist_TrackingFOM;
-		TH1I* dHist_TrackingFOM_WireBased;
-		TH2I* dHist_TrackingFOMVsTheta;
-		TH2I* dHist_TrackingFOMVsP;
-		TH2I* dHist_TrackingFOMVsNumHits;
+		TH1I* dHist_NumDCHitsPerTrack = nullptr;
+		TH1I* dHist_NumPossDCHitsPerTrack = nullptr;
+		TH1I* dHist_TrackHitFraction = nullptr;
+		TH2I* dHist_NumDCHitsPerTrackVsTheta = nullptr;
+		TH2I* dHist_NumPossDCHitsPerTrackVsTheta = nullptr;
+		TH2I* dHist_TrackHitFractionVsTheta = nullptr;
+		TH1I* dHist_TrackingFOM = nullptr;
+		TH1I* dHist_TrackingFOM_WireBased = nullptr;
+		TH2I* dHist_TrackingFOMVsTheta = nullptr;
+		TH2I* dHist_TrackingFOMVsP = nullptr;
+		TH2I* dHist_TrackingFOMVsNumHits = nullptr;
 		map<int, TH2I*> dHistMap_PVsTheta_Candidates; //int is charge
 		map<int, TH2I*> dHistMap_PVsTheta_WireBased; //int is charge
 		map<int, TH2I*> dHistMap_PVsTheta_TimeBased; //int is charge
@@ -241,17 +243,17 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		map<int, TH2I*> dHistMap_PVsTheta_GoodWireBased_GoodTimeBased; //int is charge
 		map<int, TH2I*> dHistMap_PVsTheta_GoodWireBased_BadTimeBased; //int is charge
 
-		TH2I* dHist_CDCRingVsTheta_Candidates;
-		TH2I* dHist_CDCRingVsTheta_WireBased;
-		TH2I* dHist_CDCRingVsTheta_TimeBased;
-		TH2I* dHist_CDCRingVsTheta_TimeBased_GoodTrackFOM;
-		TH2I* dHist_FDCPlaneVsTheta_Candidates;
-		TH2I* dHist_FDCPlaneVsTheta_WireBased;
-		TH2I* dHist_FDCPlaneVsTheta_TimeBased;
-		TH2I* dHist_FDCPlaneVsTheta_TimeBased_GoodTrackFOM;
+		TH2I* dHist_CDCRingVsTheta_Candidates = nullptr;
+		TH2I* dHist_CDCRingVsTheta_WireBased = nullptr;
+		TH2I* dHist_CDCRingVsTheta_TimeBased = nullptr;
+		TH2I* dHist_CDCRingVsTheta_TimeBased_GoodTrackFOM = nullptr;
+		TH2I* dHist_FDCPlaneVsTheta_Candidates = nullptr;
+		TH2I* dHist_FDCPlaneVsTheta_WireBased = nullptr;
+		TH2I* dHist_FDCPlaneVsTheta_TimeBased = nullptr;
+		TH2I* dHist_FDCPlaneVsTheta_TimeBased_GoodTrackFOM = nullptr;
 
-		TH2I* dHist_MCMatchedHitsVsTheta;
-		TH2I* dHist_MCMatchedHitsVsP;
+		TH2I* dHist_MCMatchedHitsVsTheta = nullptr;
+		TH2I* dHist_MCMatchedHitsVsP = nullptr;
 };
 
 class DHistogramAction_DetectorMatching : public DAnalysisAction
@@ -284,6 +286,7 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		dMinTrackingFOM(0.0027), dMinTOFPaddleMatchDistance(9.0), dMinHitRingsPerCDCSuperlayer(2), dMinHitPlanesPerFDCPackage(4) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 		unsigned int dNum2DThetaBins, dNumPBins, dNum2DPBins, dNum2DPhiBins, dNum2DDeltaPhiBins, dNum2DDeltaZBins;
 		unsigned int dNum2DTrackDOCABins, dNumTrackDOCABins, dNumFCALTOFXYBins, dNum2DBCALZBins, dNum2DSCZBins, dNumTOFRBins;
@@ -385,11 +388,14 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		//user can call any of these three constructors
 		DHistogramAction_DetectorPID(const DReaction* locReaction, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_DetectorPID", false, locActionUniqueString),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DEOverPBins(300), 
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DEOverPBins(300),
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
-		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
+		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
+		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100), 
+		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
@@ -404,7 +410,10 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
-		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
+		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
+		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
+		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
@@ -419,7 +428,10 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
-		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
+		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
+		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
+		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
+                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
 		{
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
@@ -429,12 +441,16 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins;
 		unsigned int dNum2DEOverPBins, dNum2DDeltaBetaBins, dNum2DDeltadEdxBins, dNum2DDeltaTBins, dNum2DPullBins, dNum2DFOMBins;
 		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta;
 		double dMinEOverP, dMaxEOverP, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltadEdx, dMaxDeltadEdx, dMinDeltaT, dMaxDeltaT, dMinPull, dMaxPull;
 		string dTrackSelectionTag, dShowerSelectionTag; //In Initialize, will default to "PreSelect" unless otherwise specified
+		unsigned int dDIRCNumPhotonsBins, dDIRCThetaCBins, dDIRCLikelihoodBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons;
+                double dDIRCMinThetaC, dDIRCMaxThetaC;
+                double dDIRCMinLikelihood, dDIRCMaxLikelihood;
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
@@ -460,6 +476,11 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_DeltaTVsP;
 //		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_TimePullVsP;
 //		map<DetectorSystem_t, map<Particle_t, TH2I*> > dHistMap_TimeFOMVsP;
+
+		map<Particle_t, TH1I*> dHistMap_NumPhotons_DIRC;
+                map<Particle_t, TH2I*> dHistMap_ThetaCVsP_DIRC;
+                map<Particle_t, TH2I*> dHistMap_Ldiff_kpiVsP_DIRC;
+                map<Particle_t, TH2I*> dHistMap_Ldiff_pkVsP_DIRC;
 };
 
 class DHistogramAction_Neutrals : public DAnalysisAction
@@ -495,6 +516,7 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 		unsigned int dNumTrackDOCABins, dNumDeltaPhiBins, dNumShowerEnergyBins, dNumDeltaTBins, dNum2DShowerEnergyBins, dNum2DDeltaTBins, dNum2DBCALZBins;
 		double dMinTrackDOCA, dMaxTrackDOCA, dMinDeltaPhi, dMaxDeltaPhi, dMinShowerEnergy, dMaxShowerEnergy, dMaxBCALP, dMinDeltaT, dMaxDeltaT;
@@ -504,18 +526,18 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 
 		DVector3 dTargetCenter;
 
-		TH1I* dHist_BCALTrackDOCA;
-		TH1I* dHist_BCALTrackDeltaPhi;
-		TH1I* dHist_BCALTrackDeltaZ;
-		TH1I* dHist_BCALNeutralShowerEnergy;
-		TH1I* dHist_BCALNeutralShowerDeltaT;
-		TH2I* dHist_BCALNeutralShowerDeltaTVsE;
-		TH2I* dHist_BCALNeutralShowerDeltaTVsZ;
+		TH1I* dHist_BCALTrackDOCA = nullptr;
+		TH1I* dHist_BCALTrackDeltaPhi = nullptr;
+		TH1I* dHist_BCALTrackDeltaZ = nullptr;
+		TH1I* dHist_BCALNeutralShowerEnergy = nullptr;
+		TH1I* dHist_BCALNeutralShowerDeltaT = nullptr;
+		TH2I* dHist_BCALNeutralShowerDeltaTVsE = nullptr;
+		TH2I* dHist_BCALNeutralShowerDeltaTVsZ = nullptr;
 
-		TH1I* dHist_FCALTrackDOCA;
-		TH1I* dHist_FCALNeutralShowerEnergy;
-		TH1I* dHist_FCALNeutralShowerDeltaT;
-		TH2I* dHist_FCALNeutralShowerDeltaTVsE;
+		TH1I* dHist_FCALTrackDOCA = nullptr;
+		TH1I* dHist_FCALNeutralShowerEnergy = nullptr;
+		TH1I* dHist_FCALNeutralShowerDeltaT = nullptr;
+		TH2I* dHist_FCALNeutralShowerDeltaTVsE = nullptr;
 };
 
 class DHistogramAction_DetectorMatchParams : public DAnalysisAction
@@ -560,6 +582,7 @@ class DHistogramAction_DetectorMatchParams : public DAnalysisAction
 		}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 		unsigned int dNumShowerEnergyBins, dNumShowerDepthBins, dNum2DPBins, dNum2DThetaBins, dNum2DHitEnergyBins;
 		double dMinShowerEnergy, dMaxShowerEnergy, dMaxBCALP, dMinShowerDepth, dMaxShowerDepth, dMinP, dMaxP;
@@ -629,20 +652,21 @@ class DHistogramAction_EventVertex : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
 
-		TH1I* dRFTrackDeltaT;
-		TH1I* dEventVertexZ_AllEvents;
-		TH2I* dEventVertexYVsX_AllEvents;
-		TH1I* dEventVertexT_AllEvents;
+		TH1I* dRFTrackDeltaT = nullptr;
+		TH1I* dEventVertexZ_AllEvents = nullptr;
+		TH2I* dEventVertexYVsX_AllEvents = nullptr;
+		TH1I* dEventVertexT_AllEvents = nullptr;
 
-		TH1I* dEventVertexZ_2OrMoreGoodTracks;
-		TH2I* dEventVertexYVsX_2OrMoreGoodTracks;
-		TH1I* dEventVertexT_2OrMoreGoodTracks;
+		TH1I* dEventVertexZ_2OrMoreGoodTracks = nullptr;
+		TH2I* dEventVertexYVsX_2OrMoreGoodTracks = nullptr;
+		TH1I* dEventVertexT_2OrMoreGoodTracks = nullptr;
 
-		TH1I* dHist_KinFitConfidenceLevel;
+		TH1I* dHist_KinFitConfidenceLevel = nullptr;
 		map<Particle_t, map<DKinFitPullType, TH1I*> > dHistMap_KinFitPulls;
 };
 
@@ -698,11 +722,12 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
 
-		TH1I* dBeamParticle_P;
+		TH1I* dBeamParticle_P = nullptr;
 
 		//PID
 		map<int, TH2I*> dHistMap_QBetaVsP; //int is charge: -1, 1
@@ -765,6 +790,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
@@ -834,53 +860,54 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 		unsigned int dMaxNumBeamPhotons;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
 
-		TH2D* dHist_NumHighLevelObjects;
+		TH2D* dHist_NumHighLevelObjects = nullptr;
 
-		TH1D* dHist_NumChargedTracks;
-		TH1D* dHist_NumPosChargedTracks;
-		TH1D* dHist_NumNegChargedTracks;
+		TH1D* dHist_NumChargedTracks = nullptr;
+		TH1D* dHist_NumPosChargedTracks = nullptr;
+		TH1D* dHist_NumNegChargedTracks = nullptr;
 
-		TH1D* dHist_NumTimeBasedTracks;
-		TH1D* dHist_NumPosTimeBasedTracks;
-		TH1D* dHist_NumNegTimeBasedTracks;
-		TH1D* dHist_NumWireBasedTracks;
-		TH1D* dHist_NumPosWireBasedTracks;
-		TH1D* dHist_NumNegWireBasedTracks;
-		TH1D* dHist_NumTrackCandidates;
-		TH1D* dHist_NumPosTrackCandidates;
-		TH1D* dHist_NumNegTrackCandidates;
-		TH1D* dHist_NumPosTrackCandidates_CDC;
-		TH1D* dHist_NumNegTrackCandidates_CDC;
-		TH1D* dHist_NumPosTrackCandidates_FDC;
-		TH1D* dHist_NumNegTrackCandidates_FDC;
+		TH1D* dHist_NumTimeBasedTracks = nullptr;
+		TH1D* dHist_NumPosTimeBasedTracks = nullptr;
+		TH1D* dHist_NumNegTimeBasedTracks = nullptr;
+		TH1D* dHist_NumWireBasedTracks = nullptr;
+		TH1D* dHist_NumPosWireBasedTracks = nullptr;
+		TH1D* dHist_NumNegWireBasedTracks = nullptr;
+		TH1D* dHist_NumTrackCandidates = nullptr;
+		TH1D* dHist_NumPosTrackCandidates = nullptr;
+		TH1D* dHist_NumNegTrackCandidates = nullptr;
+		TH1D* dHist_NumPosTrackCandidates_CDC = nullptr;
+		TH1D* dHist_NumNegTrackCandidates_CDC = nullptr;
+		TH1D* dHist_NumPosTrackCandidates_FDC = nullptr;
+		TH1D* dHist_NumNegTrackCandidates_FDC = nullptr;
 
-		TH1D* dHist_NumBeamPhotons;
-		TH1D* dHist_NumFCALShowers;
-		TH1D* dHist_NumBCALShowers;
-		TH1D* dHist_NumNeutralShowers;
-		TH1D* dHist_NumTOFPoints;
-		TH1D* dHist_NumSCHits;
-		TH1D* dHist_NumTAGMHits;
-		TH1D* dHist_NumTAGHHits;
+		TH1D* dHist_NumBeamPhotons = nullptr;
+		TH1D* dHist_NumFCALShowers = nullptr;
+		TH1D* dHist_NumBCALShowers = nullptr;
+		TH1D* dHist_NumNeutralShowers = nullptr;
+		TH1D* dHist_NumTOFPoints = nullptr;
+		TH1D* dHist_NumSCHits = nullptr;
+		TH1D* dHist_NumTAGMHits = nullptr;
+		TH1D* dHist_NumTAGHHits = nullptr;
 
-		TH1D* dHist_NumTrackBCALMatches;
-		TH1D* dHist_NumTrackFCALMatches;
-		TH1D* dHist_NumTrackTOFMatches;
-		TH1D* dHist_NumTrackSCMatches;
+		TH1D* dHist_NumTrackBCALMatches = nullptr;
+		TH1D* dHist_NumTrackFCALMatches = nullptr;
+		TH1D* dHist_NumTrackTOFMatches = nullptr;
+		TH1D* dHist_NumTrackSCMatches = nullptr;
 
-		TH1I* dHist_NumCDCHits;
-		TH1I* dHist_NumFDCWireHits;
-		TH1I* dHist_NumFDCCathodeHits;
-		TH1I* dHist_NumFDCPseudoHits;
-		TH1I* dHist_NumTOFHits;
-		TH1I* dHist_NumBCALHits;
-		TH1I* dHist_NumFCALHits;
+		TH1I* dHist_NumCDCHits = nullptr;
+		TH1I* dHist_NumFDCWireHits = nullptr;
+		TH1I* dHist_NumFDCCathodeHits = nullptr;
+		TH1I* dHist_NumFDCPseudoHits = nullptr;
+		TH1I* dHist_NumTOFHits = nullptr;
+		TH1I* dHist_NumBCALHits = nullptr;
+		TH1I* dHist_NumFCALHits = nullptr;
 
-		TH1I* dHist_NumRFSignals; //all sources
+		TH1I* dHist_NumRFSignals = nullptr; //all sources
 };
 
 class DHistogramAction_TrackMultiplicity : public DAnalysisAction
@@ -925,12 +952,13 @@ class DHistogramAction_TrackMultiplicity : public DAnalysisAction
 		deque<Particle_t> dFinalStatePIDs;
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
 
 	private:
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
 
-		TH2D* dHist_NumReconstructedParticles;
-		TH2D* dHist_NumGoodReconstructedParticles;
+		TH2D* dHist_NumReconstructedParticles = nullptr;
+		TH2D* dHist_NumGoodReconstructedParticles = nullptr;
 };
 
 #endif // _DHistogramActions_Independent_

@@ -31,9 +31,11 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 //------------------
 jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
+	loop->GetSingle(dTOFGeometry);
 
 	map<string, double> tofparms;
- 	if( !loop->GetCalib("TOF/tof_parms", tofparms))
+	string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+ 	if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms))
 	{
 		//cout<<"DTOFPoint_factory: loading values from TOF data base"<<endl;
 		//HALFPADDLE = tofparms["TOF_HALFPADDLE"];
@@ -48,12 +50,13 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 		ATTEN_LENGTH = 400.;
 	}
 
-	if(eventLoop->GetCalib("TOF/propagation_speed", propagation_speed))
-		jout << "Error loading /TOF/propagation_speed !" << endl;
-	if(eventLoop->GetCalib("TOF/paddle_resolutions", paddle_resolutions))
-		jout << "Error loading /TOF/paddle_resolutions !" << endl;
+	string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+	string locTOFPaddleResolTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/paddle_resolutions";
+	if(eventLoop->GetCalib(locTOFPaddleResolTable.c_str(), paddle_resolutions))
+		jout << "Error loading " << locTOFPaddleResolTable << " !" << endl;
 
-	loop->GetSingle(dTOFGeometry);
 
     HALFPADDLE = dTOFGeometry->Get_HalfLongBarLength();
 	HALFPADDLE_ONESIDED = dTOFGeometry->Get_HalfShortBarLength();

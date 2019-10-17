@@ -191,22 +191,23 @@ jerror_t JEventProcessor_PS_flux::init(void)
 jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
     // This is called whenever the run number changes
+   
+    dBeamCurrentFactory = new DBeamCurrent_factory();
+    dBeamCurrentFactory->init();
+    dBeamCurrentFactory->brun(eventLoop, runnumber);
+
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
     eventLoop->Get(psGeomVect);
     if (psGeomVect.size() < 1)
     return OBJECT_NOT_AVAILABLE;
-    dPSGeom = psGeomVect[0];
+    const DPSGeometry *locPSGeom = psGeomVect[0];
 
-    dBeamCurrentFactory = new DBeamCurrent_factory();
-    dBeamCurrentFactory->init();
-    dBeamCurrentFactory->brun(eventLoop, runnumber);
-   
     // PS pair energy binning
     double wl_min=0.05,wr_min = 0.05;
     double Ebw_PS = wl_min + wr_min;
-    const double Ebl_PS = dPSGeom->getElow(0,1) + dPSGeom->getElow(1,1);
-    const double Ebh_PS = dPSGeom->getEhigh(0,NC_PS) + dPSGeom->getEhigh(1,NC_PS);
+    const double Ebl_PS = locPSGeom->getElow(0,1) + locPSGeom->getElow(1,1);
+    const double Ebh_PS = locPSGeom->getEhigh(0,NC_PS) + locPSGeom->getEhigh(1,NC_PS);
     double range = fabs(Ebh_PS-Ebl_PS);
     int NEb_PS = range/Ebw_PS-int(range/Ebw_PS) < 0.5 ? int(range/Ebw_PS) : int(range/Ebw_PS) + 1;
     double Elows_PS[NEb_PS+1];
@@ -294,6 +295,13 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
     vector<const DBeamPhoton*> beamPhotons;
     loop->Get(beamPhotons);
 
+    // extract the PS geometry
+    vector<const DPSGeometry*> psGeomVect;
+    loop->Get(psGeomVect);
+    if (psGeomVect.size() < 1)
+    return OBJECT_NOT_AVAILABLE;
+    const DPSGeometry *locPSGeom = psGeomVect[0];
+
     // beam current and fiducial definition
     vector<const DBeamCurrent*> beamCurrent;
     loop->Get(beamCurrent);
@@ -341,10 +349,10 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    // energy variables with random spread in energy bite
 	    // left  - arm 0
 	    // right - arm 1
-	    double E_left_rndm = dRandom->Rndm()*(dPSGeom->getEhigh(0,flhit->column) - dPSGeom->getElow(0,flhit->column)) + 
-	      dPSGeom->getElow(0,flhit->column);
-	    double E_right_rndm = dRandom->Rndm()*(dPSGeom->getEhigh(1,frhit->column)-dPSGeom->getElow(1,frhit->column)) + 
-	      dPSGeom->getElow(1,frhit->column);
+	    double E_left_rndm = dRandom->Rndm()*(locPSGeom->getEhigh(0,flhit->column) - locPSGeom->getElow(0,flhit->column)) + 
+	      locPSGeom->getElow(0,flhit->column);
+	    double E_right_rndm = dRandom->Rndm()*(locPSGeom->getEhigh(1,frhit->column)-locPSGeom->getElow(1,frhit->column)) + 
+	      locPSGeom->getElow(1,frhit->column);
 
             double E_pair = flhit->E+frhit->E;
 	    double E_pair_uni = E_left_rndm+E_right_rndm;

@@ -177,26 +177,9 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
     // This is called whenever the run number changes
-    // Get the particleID object for each run
-    vector<const DParticleID *> dParticleID_algos;
-    eventLoop->Get(dParticleID_algos);
-    if(dParticleID_algos.size()<1){
-        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-        return RESOURCE_UNAVAILABLE;
-    }
-    dParticleID = dParticleID_algos[0];
-
-    // We want to be use some of the tools available in the RFTime factory 
-    // Specifivally steping the RF back to a chosen time
-    dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
-
     DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     DGeometry* geom = app->GetDGeometry(runnumber);
     geom->GetTargetZ(Z_TARGET);
-
-    //be sure that DRFTime_factory::init() and brun() are called
-    vector<const DRFTime*> locRFTimes;
-    eventLoop->Get(locRFTimes);
 
     return NOERROR;
 }
@@ -211,6 +194,22 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
+
+    // Get the particleID object for each run
+    vector<const DParticleID *> locParticleID_algos;
+    loop->Get(locParticleID_algos);
+    if(locParticleID_algos.size()<1){
+        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+        return RESOURCE_UNAVAILABLE;
+    }
+    // next line commented out, unsued variable, suppress warnings
+    //    auto locParticleID = locParticleID_algos[0];
+
+    // We want to be use some of the tools available in the RFTime factory 
+    // Specifivally steping the RF back to a chosen time
+    // another unused variable
+    //    auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+
 
 #if 1
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
@@ -617,7 +616,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             char title[500];
             sprintf(name, "Column %.3i Row %.1i", tagmHitVector[j]->column, tagmHitVector[j]->row);
             sprintf(title, "TAGM Column %i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", tagmHitVector[j]->column);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
+            double locShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
             Fill1DHistogram("HLDetectorTiming", "TAGM_ADC_RF_Compare", name,
                     tagmHitVector[j]->time_fadc - locShiftedTime,
                     title,
@@ -629,7 +628,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             char title[500];
             sprintf(name, "Column %.3i Row %.1i", tagmHitVector[j]->column, tagmHitVector[j]->row);
             sprintf(title, "TAGM Column %i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", tagmHitVector[j]->column);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
+            double locShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
             Fill1DHistogram("HLDetectorTiming", "TAGM_TDC_RF_Compare", name,
                     tagmHitVector[j]->t - locShiftedTime,
                     title,
@@ -667,7 +666,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             char title[500];
             sprintf(name, "Counter ID %.3i", taghHitVector[j]->counter_id);
             sprintf(title, "TAGH Counter ID %i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", taghHitVector[j]->counter_id);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_fadc);
+            double locShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_fadc);
             Fill1DHistogram("HLDetectorTiming", "TAGH_ADC_RF_Compare", name,
                     taghHitVector[j]->time_fadc - locShiftedTime,
                     title,
@@ -678,7 +677,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             char title[500];
             sprintf(name, "Counter ID %.3i", taghHitVector[j]->counter_id);
             sprintf(title, "TAGH Counter ID %i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", taghHitVector[j]->counter_id);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_tdc);
+            double locShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_tdc);
             Fill1DHistogram("HLDetectorTiming", "TAGH_TDC_RF_Compare", name,
                     taghHitVector[j]->time_tdc - locShiftedTime,
                     title,
@@ -750,7 +749,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         char title[500];
         sprintf(name, "Sector %.2i", locSCHitMatchParams->dSCHit->sector);
         sprintf(title, "SC Sector %i t_{Target} - t_{RF}; t_{Target} - t_{RF} [ns]; Entries", locSCHitMatchParams->dSCHit->sector);
-        double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
+        double locShiftedTime = locRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
         Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
                 flightTimeCorrectedSCTime - locShiftedTime,
                 title,
@@ -948,6 +947,7 @@ jerror_t JEventProcessor_HLDetectorTiming::erun(void)
     int act_slot;
     for(int ibin=1; ibin<=48; ibin++){
       int mod = Get_FDCTDC_crate_slot(ibin, act_crate, act_slot);
+      if (mod) {} // use mod to suppress warning
       stringstream ss;
       ss << act_crate << "/" << act_slot;
       fdc_time_module_hist->GetXaxis()->SetBinLabel(ibin, ss.str().c_str());

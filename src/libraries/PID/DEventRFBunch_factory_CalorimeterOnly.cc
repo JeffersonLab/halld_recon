@@ -6,7 +6,7 @@
 #include "DEventRFBunch_factory_CalorimeterOnly.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
-#include "CCAL/DCCALCluster.h"
+#include "CCAL/DCCALShower.h"
 
 using namespace jana;
 
@@ -161,18 +161,18 @@ bool DEventRFBunch_factory_CalorimeterOnly::Find_NeutralTimes(JEventLoop* locEve
 	}
 	
 	if(USE_CCAL) {
-		vector< const DCCALCluster* > ccalShowers;
+		vector< const DCCALShower* > ccalShowers;
 		locEventLoop->Get( ccalShowers );
-
+		
 		for( size_t i = 0; i < ccalShowers.size(); ++i ){
-		  DVector3 locHitPoint = ccalShowers[i]->getCentroid();
+		  DVector3 locHitPoint(ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z);
 		  DVector3 locPath = locHitPoint - dTargetCenter;
 		  double locPathLength = locPath.Mag();
 		  if(!(locPathLength > 0.0))
 			continue;
   
 		  double locFlightTime = locPathLength/29.9792458;
-		  double locHitTime = ccalShowers[i]->getTime();
+		  double locHitTime = ccalShowers[i]->time;
 		  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
 		}
 	}
@@ -268,10 +268,18 @@ int DEventRFBunch_factory_CalorimeterOnly::Break_TieVote_Neutrals(map<int, vecto
 	    if( bcalShower != NULL ){
 
 	      locTotalEnergy += bcalShower->E;
+	    } 	  
+	    else{
+
+		    const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
+		    if( ccalShower != NULL ){
+			    
+			    locTotalEnergy += ccalShower->E;
+		    }
 	    }
 	  }
 	}
-
+      
       if(locTotalEnergy > locHighestTotalEnergy)
 	{
 	  locHighestTotalEnergy = locTotalEnergy;

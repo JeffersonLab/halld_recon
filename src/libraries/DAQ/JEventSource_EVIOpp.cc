@@ -29,6 +29,7 @@ using namespace std::chrono;
 #include <TTAB/DTranslationTable_factory.h>
 #include <DAQ/Df250EmulatorAlgorithm_v1.h>
 #include <DAQ/Df250EmulatorAlgorithm_v2.h>
+#include <DAQ/Df250EmulatorAlgorithm_v3.h>
 #include <DAQ/Df125EmulatorAlgorithm_v2.h>
 
 
@@ -95,10 +96,11 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
 	F125_EMULATION_MODE = kEmulationAuto;
-	F250_EMULATION_VERSION = 2;
+	F250_EMULATION_VERSION = 3;
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
 	SYSTEMS_TO_PARSE = "";
+    SYSTEMS_TO_PARSE_FORCE = 0;
 
 	gPARMS->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
 	gPARMS->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
@@ -140,12 +142,15 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 			"Comma separated list of systems to parse EVIO data for. "
 			"Default is empty string which means to parse all. System "
 			"names should be what is returned by DTranslationTable::DetectorName() .");
+    gPARMS->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE_FORCE", SYSTEMS_TO_PARSE_FORCE,
+	        "How to handle mismatches between hard coded map and one read from CCDB "
+         "when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
 
 
 	if(gPARMS->Exists("RECORD_CALL_STACK")) gPARMS->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
 
 	// Set rocids of all systems to parse (if specified)
-	DTranslationTable::SetSystemsToParse(SYSTEMS_TO_PARSE, this);
+	DTranslationTable::SetSystemsToParse(SYSTEMS_TO_PARSE, SYSTEMS_TO_PARSE_FORCE, this);
 
 	jobtype = DEVIOWorkerThread::JOB_NONE;
 	if( PARSE ) jobtype |= DEVIOWorkerThread::JOB_FULL_PARSE;
@@ -218,14 +223,17 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	
 	// Create emulator objects
 
-    if(F250_EMULATION_VERSION == 1) {
-        f250Emulator = new Df250EmulatorAlgorithm_v1();
-    } else {
-        if(F250_EMULATION_VERSION != 2) 
-            jerr << "Invalid fADC250 firmware version specified for emulation == " << F250_EMULATION_VERSION
-                 << " ,  Using v2 firmware as default ..." << endl;
-        f250Emulator = new Df250EmulatorAlgorithm_v2(NULL);
-    }
+	if(F250_EMULATION_VERSION == 1) {
+		f250Emulator = new Df250EmulatorAlgorithm_v1();
+	} else if(F250_EMULATION_VERSION == 2) {
+		f250Emulator = new Df250EmulatorAlgorithm_v2(NULL);
+	} else {
+		cerr << "loading VERSION 3" << endl;
+		if(F250_EMULATION_VERSION != 3) 
+				jerr << "Invalid fADC250 firmware version specified for emulation == " << F250_EMULATION_VERSION
+				     << " ,  Using v3 firmware as default ..." << endl;
+		f250Emulator = new Df250EmulatorAlgorithm_v3(NULL);
+	}
 
 	f125Emulator = new Df125EmulatorAlgorithm_v2();
 
@@ -365,11 +373,23 @@ void JEventSource_EVIOpp::Dispatcher(void)
 						continue;
 					}
 				}else{
-					cout << hdevio->err_mess.str() << endl;
-					if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
-						bool ignore_error = false;
-						if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
-						if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+					// Some CDAQ files do not have a proper trailer at the end of the
+					// EVIO file and so get reported by HDEVIO as truncated. We do not
+					// want to treat those as an error, but DO want to treat legitimate
+					// truncations as errors. If this is a CDAQ event and there are
+					// exactly zero words left in the file then assume it is OK. 
+					// n.b. the IS_CDAQ_FILE flag is set in DEVIOWorkerThread::ParseCDAQBank
+					// during the parsing of a previous event. It is possible we could
+					// reach here before that is set leading to a race condition!
+					if( IS_CDAQ_FILE && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) && (hdevio->GetNWordsLeftInFile()==0) ){
+						jout << "Missing EVIO file trailer in CDAQ file (ignoring..)" << endl; 
+					}else{
+						cout << hdevio->err_mess.str() << endl;
+						if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
+							bool ignore_error = false;
+							if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
+							if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+						}
 					}
 				}
 				break;
@@ -463,7 +483,24 @@ jerror_t JEventSource_EVIOpp::GetEvent(JEvent &event)
 	// Get next event from list, waiting if necessary
 	unique_lock<std::mutex> lck(PARSED_EVENTS_MUTEX);
 	while(parsed_events.empty()){
-		if(DONE) return NO_MORE_EVENTS_IN_SOURCE;
+		if(DONE){
+			done_reading = true;
+			
+			// There is a bug in JANA where an event id is inserted into
+			// the in_progress member before checking that this call
+			// succeeded. Normally, ids are removed via JEventSource::FreeEvent
+			// but this last one doesn't actually exist so we must remove
+			// it here.
+			// n.b. we check for an entry equal to Ncalls_to_GetEvent
+			// since that is what JEventSource::GetEvent stores there.
+			// In principle, if this ever gets fixed in JANA then it
+			// will not break this code.
+			pthread_mutex_lock(&in_progress_mutex);
+			auto it = in_progess_events.find(Ncalls_to_GetEvent);
+			if( it != in_progess_events.end() )in_progess_events.erase(it);
+			pthread_mutex_unlock(&in_progress_mutex);
+			return NO_MORE_EVENTS_IN_SOURCE;
+		}
 		NEVENTBUFF_STALLED++;
 		PARSED_EVENTS_CV.wait_for(lck,std::chrono::milliseconds(1));
 	}
@@ -920,6 +957,37 @@ void JEventSource_EVIOpp::EmulateDf250Firmware(DParsedEvent *pe)
         }
 
     } else if(F250_EMULATION_VERSION == 2) {   // Fall 2016 -> ?
+
+        for(auto wrd : pe->vDf250WindowRawData){
+            // See if we need to remake Df250PulseData objects?
+            vector<const Df250PulseData*> cpdats;   // existing pulse data objects
+            try{ wrd->Get(cpdats); }catch(...){}
+
+            vector<Df250PulseData*> pdats;
+            for(auto cpdat : cpdats) 
+                pdats.push_back((Df250PulseData*)cpdat);
+
+	    // Sort the pulses since we apparently don't always get them in the right order
+	    sort(pdats.begin(), pdats.end(), sortf250pulsenumbers);
+
+            // Flag all objects as emulated and their values will be replaced with emulated quantities
+            if (F250_EMULATION_MODE == kEmulationAlways){
+                for(auto pdat : pdats)
+                    pdat->emulated = 1;
+            }
+
+            // Emulate firmware
+            f250Emulator->EmulateFirmware(wrd, pdats);
+				
+	    // Above call overwrites values with emulated values, but may also
+	    // find additional pulses. Add any extra pulse data objects found
+	    // to end of list
+	    for(uint32_t i=cpdats.size(); i<pdats.size(); i++){
+		    pe->vDf250PulseData.push_back(pdats[i]);
+	    }
+        }
+
+    } else if(F250_EMULATION_VERSION == 3) {   // Fall 2019 -> ?
 
         for(auto wrd : pe->vDf250WindowRawData){
             // See if we need to remake Df250PulseData objects?

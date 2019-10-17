@@ -34,7 +34,7 @@ class DDIRCTDCHit:public DDAQAddress{
 			AddString(items, "dev_id",       "%d", dev_id);
 			AddString(items, "ievent_cnt",   "%d", ievent_cnt);
 			AddString(items, "channel_fpga", "%d", channel_fpga);
-         AddString(items, "edge",         "%d", edge);
+			AddString(items, "edge",         "%d", edge);
 			AddString(items, "time",         "%d", time);
 		}
 };

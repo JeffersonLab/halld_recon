@@ -69,10 +69,11 @@ jerror_t DEventProcessor_ReactionFilter::evnt(jana::JEventLoop* locEventLoop, ui
 		//If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations. 
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
+  
 	const DEventWriterROOT* locEventWriterROOT = NULL;
 	locEventLoop->GetSingle(locEventWriterROOT);
 	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionFilter");
-
+  
 	/******************************************************** OPTIONAL: SKIMS *******************************************************/
 
 	/*

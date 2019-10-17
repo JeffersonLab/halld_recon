@@ -30,6 +30,7 @@ class DCustomAction_p3pi_Pi0Cuts : public DAnalysisAction
 	        DAnalysisAction(locReaction, "Custom_p3pi_Pi0Cuts", locUseKinFitResultsFlag, locActionUniqueString), dMinFCAL(locMinFCAL){}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
 
 	private:
 

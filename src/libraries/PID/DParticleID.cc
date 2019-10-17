@@ -202,19 +202,21 @@ DParticleID::DParticleID(JEventLoop *loop)
   loop->GetSingle(dFCALGeometry);
 
 	//TOF calibration constants & geometry
-	if(loop->GetCalib("TOF/propagation_speed", propagation_speed))
-		jout << "Error loading /TOF/propagation_speed !" << endl;
-
-	map<string, double> tofparms;
- 	loop->GetCalib("TOF/tof_parms", tofparms);   
-	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
-	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
-	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
-
 	loop->GetSingle(dTOFGeometry);
 	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
 	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
+
+	string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+	if(loop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+
+	map<string, double> tofparms;
+	string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+ 	loop->GetCalib(locTOFParmsTable.c_str(), tofparms);   
+	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
+	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
+	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
 
 	// Start counter calibration constants
 	// vector<map<string,double> > tvals;
@@ -273,8 +275,8 @@ DParticleID::DParticleID(JEventLoop *loop)
 
     // Start counter individual paddle resolutions
     vector< vector<double> > sc_paddle_resolution_params;
-    if(loop->GetCalib("START_COUNTER/time_resol_paddle_v2", sc_paddle_resolution_params))
-        jout << "Error in loading START_COUNTER/time_resol_paddle_v2 !" << endl;
+    if(loop->GetCalib("START_COUNTER/TRvsPL", sc_paddle_resolution_params))
+        jout << "Error in loading START_COUNTER/TRvsPL !" << endl;
 	else {
         if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
             jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl
@@ -301,6 +303,9 @@ DParticleID::DParticleID(JEventLoop *loop)
 	loop->Get(locTOFPoints);
 
 	dTOFPointFactory = static_cast<DTOFPoint_factory*>(loop->GetFactory("DTOFPoint"));
+	
+	// Initialize DIRC LUT
+	loop->GetSingle(dDIRCLut);
 }
 
 // Group fitted tracks according to candidate id
@@ -400,15 +405,15 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       
       for (unsigned int j=0;j<fdc_extrapolations.size();j++){
 	double z=fdc_extrapolations[j].position.z();
-	if (fabs(z-fdchits[i]->wire->origin.z())<1e-3){
+	if (fabs(z-fdchits[i]->wire->origin.z())<0.5){
 	  mom=fdc_extrapolations[j].momentum;
+	  double gas_thickness = 1.0; // cm
+	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
+					gas_thickness/cos(mom.Theta()), 
+					mom.Mag()));
 	  break;
 	}
       }
-   
-      double gas_thickness = 1.0; // cm
-      dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
-				    gas_thickness/cos(mom.Theta()), mom.Mag()));
     }
   }
 
@@ -482,6 +487,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 		}
 		locdEdx_FDC /= locdx_FDC; //weight is dx/dx_total
 	}
+	
 	return NOERROR;
 }
 
@@ -510,8 +516,6 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
     // 5: thisp1  par1 for this run
 
 
-
-
     if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
 
       dedx.dx=dx;
@@ -519,19 +523,14 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
       dedx.dE_amp=hit->dE_amp;
       dedx.p=mom.Mag();
 
-      // amplitude correction for doca > dcorr     
-   
       if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
-
 	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
-
         double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
-
         dedx.dE_amp = dedx.dE_amp * reference/this_run;
-
       }
 
-      // integral correction
+
+  // integral correction
 
       double dmax = CDC_GAIN_DOCA_PARS[0];
       double dmin = CDC_GAIN_DOCA_PARS[1];
@@ -541,28 +540,26 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
 
       if (hit->dist < dmin) {
 
-        reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
-        reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+	  reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
+	  reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
 
-        this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
-        this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
+	  this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
+	  this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
 
       } else { 
 
-        reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
-        this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
+	  reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
+	  this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
 
       }
 
       dedx.dE = dedx.dE * reference/this_run;
 
-      // end of new integral correction
-
       dedx.dEdx=dedx.dE/dx;
       dedx.dEdx_amp=dedx.dE_amp/dx;
 
+      return NOERROR;
     }
-    return NOERROR;
   }
   
   return VALUE_OUT_OF_RANGE;
@@ -1769,6 +1766,26 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
 }
 
 
+bool DParticleID::Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+{
+	if (extrapolations.size()==0) 
+		return false;
+
+	DVector3 locProjPos = extrapolations[0].position;
+	DVector3 locProjMom = extrapolations[0].momentum;
+	double locFlightTime = locInputStartTime + extrapolations[0].t;
+	
+	if(locOutputProjMom != nullptr) {
+		*locOutputProjPos = locProjPos;
+		*locOutputProjMom = locProjMom;
+	}
+
+	// Calculate DIRC LUT
+	return dDIRCLut->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locPID, locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams);
+
+}
+
+
 /********************************************************** GET BEST MATCH **********************************************************/
 
 bool DParticleID::Get_BestBCALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DBCALShowerMatchParams>& locBestMatchParams) const
@@ -1881,6 +1898,17 @@ shared_ptr<const DFCALShowerMatchParams> DParticleID::Get_BestFCALMatchParams(ve
 		locBestMatchParams = locShowerMatchParams[loc_i];
 	}
 	return locBestMatchParams;
+}
+
+bool DParticleID::Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const
+{
+	//choose the "best" shower to use for computing quantities
+	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+	if(!locDetectorMatches->Get_DIRCMatchParams(locTrack, locDIRCMatchParams))
+		return false;
+
+	locBestMatchParams = locDIRCMatchParams;
+	return true;
 }
 
 /********************************************************** GET CLOSEST TO TRACK **********************************************************/
@@ -3197,19 +3225,41 @@ double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData
 
 double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locPull) const
 {
-	if((locChargedHypo->t0_detector() == SYS_NULL) || (locChargedHypo->t1_detector() == SYS_NULL))
-	{
-		// not matched to any hits
-		locNDF = 0;
-		locPull = 0.0;
-		return 0.0;
-	}
+  double locT0=locChargedHypo->t0();
+  const DTrackTimeBased *locTrack=locChargedHypo->Get_TrackTimeBased();
+  double locP=locTrack->momentum().Mag();
+  Particle_t locPID=locChargedHypo->PID();
 
-	double locStartTimeError = locChargedHypo->t0_err();
-	double locTimeDifferenceVariance = (*locChargedHypo->errorMatrix())(6, 6) + locStartTimeError*locStartTimeError;
-	locPull = (locChargedHypo->t0() - locChargedHypo->Get_TimeAtPOCAToVertex())/sqrt(locTimeDifferenceVariance);
-	locNDF = 1;
-	return locPull*locPull;
+  double locChiSq_sum=0.;
+  locNDF = 0;
+  locPull = 0.0;
+
+  shared_ptr<const DTOFHitMatchParams>locTofParms=locChargedHypo->Get_TOFHitMatchParams();
+  if (locTofParms!=NULL){
+    double dt_tof=locTofParms->dHitTime-locTofParms->dFlightTime-locT0;
+    double vart_tof=GetTimeVariance(SYS_TOF,locPID,locP);
+    locChiSq_sum+=(dt_tof*dt_tof)/vart_tof;
+    locNDF++;
+  }
+
+  shared_ptr<const DBCALShowerMatchParams>locBcalParms=locChargedHypo->Get_BCALShowerMatchParams();
+  if (locBcalParms!=NULL){
+    double dt_bcal=locBcalParms->dBCALShower->t-locBcalParms->dFlightTime-locT0;
+    double vart_bcal=GetTimeVariance(SYS_BCAL,locPID,locP);
+    locChiSq_sum+=(dt_bcal*dt_bcal)/vart_bcal;
+    locNDF++;
+  }
+
+  shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
+  if (locFcalParms!=NULL){
+    double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
+    double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
+    locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
+    locNDF++;
+  }
+
+  locPull=sqrt(locChiSq_sum);
+  return locChiSq_sum;
 }
 
 double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutralHypo, unsigned int &locNDF, double& locTimingPull) const
@@ -3244,14 +3294,57 @@ double DParticleID::Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutra
 void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHypothesis) const
 {
 	CalcDCdEdxChiSq(locChargedTrackHypothesis);
+	unsigned int locNDF_Total=locChargedTrackHypothesis->Get_NDF_DCdEdx();
+	double locChiSq_Total=locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+
+	// track momentum
+	const DTrackTimeBased *track=locChargedTrackHypothesis->Get_TrackTimeBased();
+	double p=track->momentum().Mag();
+
+	// Add dEdx from SC for protons/antiprotons
+	if (locChargedTrackHypothesis->PID()==Proton
+	    || locChargedTrackHypothesis->PID()==AntiProton){
+	   shared_ptr<const DSCHitMatchParams>scparms=locChargedTrackHypothesis->Get_SCHitMatchParams();
+	   if (scparms!=NULL){
+	     double beta=p/track->energy();
+	     double diff=scparms->dEdx-GetProtondEdxMean_SC(beta);
+	     double sigma=GetProtondEdxSigma_SC(beta);
+	     double chisq=diff*diff/(sigma*sigma);
+	     locChiSq_Total+=chisq;
+	     locNDF_Total+=1;
+	   }
+	}
+	// Add E/p for electrons/positrons
+	if (locChargedTrackHypothesis->PID()==Electron
+	    || locChargedTrackHypothesis->PID()==Positron){
+	  shared_ptr<const DBCALShowerMatchParams>bcalparms=locChargedTrackHypothesis->Get_BCALShowerMatchParams(); 
+	  shared_ptr<const DFCALShowerMatchParams>fcalparms=locChargedTrackHypothesis->Get_FCALShowerMatchParams();
+	  if (bcalparms!=NULL){
+	    double E_over_p_mean=GetEOverPMean(SYS_BCAL,p);
+	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
+	    double sigma=GetEOverPSigma(SYS_BCAL,p);
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  } 
+	  if (fcalparms!=NULL){
+	    double E_over_p_mean=GetEOverPMean(SYS_FCAL,p);
+	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
+	    double sigma=GetEOverPSigma(SYS_FCAL,p);
+	    double chisq=diff*diff/(sigma*sigma);
+	    locChiSq_Total+=chisq;
+	    locNDF_Total+=1;
+	  }
+	}
 
 	unsigned int locTimingNDF = 0;
 	double locTimingPull = 0.0;
 	double locTimingChiSq = Calc_TimingChiSq(locChargedTrackHypothesis, locTimingNDF, locTimingPull);
 	locChargedTrackHypothesis->Set_ChiSq_Timing(locTimingChiSq, locTimingNDF);
 
-	unsigned int locNDF_Total = locChargedTrackHypothesis->Get_NDF_Timing() + locChargedTrackHypothesis->Get_NDF_DCdEdx();
-	double locChiSq_Total = locChargedTrackHypothesis->Get_ChiSq_Timing() + locChargedTrackHypothesis->Get_ChiSq_DCdEdx();
+	locNDF_Total += locTimingNDF;
+	locChiSq_Total += locTimingChiSq;
+
 	double locFOM = (locNDF_Total > 0) ? TMath::Prob(locChiSq_Total, locNDF_Total) : numeric_limits<double>::quiet_NaN();
 	locChargedTrackHypothesis->Set_ChiSq_Overall(locChiSq_Total, locNDF_Total, locFOM);
 }
@@ -3537,4 +3630,8 @@ double DParticleID::Get_CorrectedHitTime(const DSCHit* locSCHit,
       locCorrectedHitTime -= L*sc_pt_slope[SC_NOSE][sc_index] + sc_pt_yint[SC_NOSE][sc_index];
     }
   return locCorrectedHitTime;
+}
+
+const DDIRCLut* DParticleID::Get_DIRCLut() const {
+	return dDIRCLut;
 }

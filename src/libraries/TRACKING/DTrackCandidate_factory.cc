@@ -42,6 +42,7 @@ using namespace std;
 #include "START_COUNTER/DSCHit.h"
 #include "DANA/DApplication.h"
 #include <JANA/JCalibration.h>
+#include <TRACKING/DHoughFind.h>
 
 #include <TROOT.h>
 #include <TH2F.h>
@@ -285,8 +286,20 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // Normal vector for CDC endplate
   DVector3 norm(0,0,1);
 
+  // Keep track of CDC hits that have already been used in track candidates
+  for(unsigned int i=0; i<cdctrackcandidates.size(); i++){ 
+    const DTrackCandidate *srccan = cdctrackcandidates[i];
+    for (unsigned int n=0;n<srccan->used_cdc_indexes.size();n++){
+      used_cdc_hits[srccan->used_cdc_indexes[n]]=1;
+    }
+  }
+  unsigned int num_unmatched_cdcs=0;
+  for (unsigned int i=0;i<used_cdc_hits.size();i++){
+    if (used_cdc_hits[i]==0) num_unmatched_cdcs++;
+  }
+
   //Loop through the list of CDC candidates, flagging those that point toward 
-  // the FDC.  The others are put in the final candidate list.
+  // the FDC.
   for(unsigned int i=0; i<cdctrackcandidates.size(); i++){	
     const DTrackCandidate *srccan = cdctrackcandidates[i];
     DVector3 mom=srccan->momentum();
@@ -323,7 +336,8 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // Variables for candidate number accounting
   int num_forward_cdc_cands_remaining=cdc_forward_ids.size();
   int num_fdc_cands_remaining=fdctrackcandidates.size();
-  vector<int>cdc_forward_matches(cdc_forward_ids.size());
+  vector<int>cdc_forward_matches(cdc_forward_ids.size()); 
+  vector<int>cdc_backward_matches(cdc_backward_ids.size());
 
   // Loop through the list of FDC candidates looking for matches between the
   // CDC and the FDC in the transition region.
@@ -345,10 +359,21 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
       if (DEBUG_LEVEL>0) _DBG_ << "Attempting FDC/CDC matching method #1..." <<endl; 
 
+      // Check that the z-position at the doca to the beam line is within the 
+      // active volume of the detector to prevent connecting low momentum 
+      // curlers coming off the cdc endplate at a small angle with CDC
+      // candidates
+      if (CheckZPosition(fdccan)==false){
+	// mark to avoid trying to match to CDC with the alternate 
+	// matching algorithms below
+	forward_matches[i]=-1;
+	continue;
+      }
+
       // First try the matching method that projects the cdc candidate to the
       // cdc endplate where the fdc candidates are reported.
       if (MatchMethod1(fdccan,cdc_forward_ids,cdc_endplate_projections,
-		       used_cdc_hits,cdc_forward_matches)){
+		       cdc_forward_matches)){
 	if (DEBUG_LEVEL>0) _DBG_ << "... matched to FDC candidate #" << i <<endl;
 
 	got_match=true;
@@ -363,7 +388,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  // Try to gather up stray CDC hits from candidates that were not 
 	  // matched with the previous algorithm by projecting the helical track
 	  // from the fdc into the cdc region
-	  if (MatchMethod2(fdccan,cdccan,used_cdc_hits)){
+	  if (MatchMethod2(fdccan,cdccan)){
 	    if (DEBUG_LEVEL>0) _DBG_ << "... matched to FDC candidate #" << i <<endl;
 	    // mark the cdc candidate as matched
 	    cdc_forward_matches[j]=1;
@@ -399,7 +424,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       // This method projects the cdc track into the FDC region
       const DTrackCandidate *cdccan=cdctrackcandidates[cdc_forward_ids[i]];
-      if (MatchMethod3(cdccan,forward_matches,used_cdc_hits)){
+      if (MatchMethod3(cdccan,forward_matches)){
 	num_fdc_cands_remaining--;
 	num_forward_cdc_cands_remaining--;
 	
@@ -424,7 +449,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       if (cdc_forward_matches[j]==0){ 
 	const DTrackCandidate *cdccan = cdctrackcandidates[cdc_forward_ids[j]];
 	
-        if (MatchMethod8(cdccan,forward_matches,used_cdc_hits)==true){
+        if (MatchMethod8(cdccan,forward_matches)==true){
 	  cdc_forward_matches[j]=1;
 	  num_fdc_cands_remaining--;
 	  num_forward_cdc_cands_remaining--;
@@ -433,16 +458,16 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       } 
     } 
   }
- 
-  // Unmatched CDC track candidates
+
+  // add to the main list of candidates those we did not successfully merge
   if (num_forward_cdc_cands_remaining>0){
     for (unsigned int j=0;j<cdc_forward_ids.size();j++){
       if (cdc_forward_matches[j]==0){
 	DTrackCandidate *can = new DTrackCandidate;
+
 	const DTrackCandidate *cdccan = cdctrackcandidates[cdc_forward_ids[j]];
 	vector<const DCDCTrackHit *>cdchits;
 	cdccan->GetT(cdchits);
-	stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
 	
 	// circle parameters
 	can->rc=cdccan->rc;
@@ -475,8 +500,9 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // end plate, so the previous matching methods fail.  Try one more time 
     // to match these to FDC segments by using Method 8...
     if (num_fdc_cands_remaining>0 
-	&& MatchMethod8(cdccan,forward_matches,used_cdc_hits)==true){
+	&& MatchMethod8(cdccan,forward_matches)==true){
       num_fdc_cands_remaining--;
+      cdc_backward_matches[j]=1;
     }
     else{
       DVector3 mom=cdccan->momentum();
@@ -484,7 +510,6 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       // Check for candidates that appear to go backwards but are actually 
       // going forwards and try to match these to remaining fdc candidates
-      bool got_match=false;
       if (num_fdc_cands_remaining>0 && mom.Theta()>M_PI_2 && !sc_pos.empty()){
 	if (TryToFlipDirection(schits,mom,pos)){
 	  if (DEBUG_LEVEL>0){
@@ -499,13 +524,13 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    if (num_fdc_cands_remaining==0) break;
 	    if (forward_matches[i]==0){
 	      const DTrackCandidate *fdccan=fdctrackcandidates[i];
-	      if (MatchMethod2(fdccan,cdccan,used_cdc_hits)){
+	      if (MatchMethod2(fdccan,cdccan)){
 		if (DEBUG_LEVEL>0) {
 		  _DBG_ << "... matched to FDC candidate #" << i <<endl;
 		}
 		forward_matches[i]=1;
+		cdc_backward_matches[j]=1;
 		num_fdc_cands_remaining--;
-		got_match=true;
 		break;
 	      }
 
@@ -527,11 +552,10 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		  continue;
 		}
 		
-		if (MakeCandidateFromMethod1(theta,segments,cdccan,
-					     used_cdc_hits)){
+		if (MakeCandidateFromMethod1(theta,segments,cdccan)){
 		  forward_matches[i]=1;
 		  num_fdc_cands_remaining--;
-		  got_match=true;   
+		  cdc_backward_matches[j]=1;
 		  if (DEBUG_LEVEL>0)
 		    _DBG_ << ".. matched to CDC candidate #" << cdc_backward_ids[j] <<endl;
 		  break;
@@ -540,37 +564,38 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    } // fdc candidate not already matched?
 	  } // loop over fdc candidates
 	}
-      }
-      if (got_match==false){
-	DTrackCandidate *can = new DTrackCandidate;
-	can->setMomentum(cdccan->momentum());
-	can->setPosition(cdccan->position());
-	can->setPID(cdccan->PID());
-	
-	// circle parameters
-	can->rc=cdccan->rc;
-	can->xc=cdccan->xc;
-	can->yc=cdccan->yc;
-	
-	// Get the cdc hits and add them to the candidate
-	vector<const DCDCTrackHit *>cdchits;
-	cdccan->GetT(cdchits);
-	stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
-	for (unsigned int n=0;n<cdchits.size();n++){
-	  used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-	  can->AddAssociatedObject(cdchits[n]);
-	}
-	can->chisq=cdccan->chisq;
-	can->Ndof=cdccan->Ndof;
-	
-	trackcandidates.push_back(can);
-      }
+      } // do we have fdc candidates remaining?
     }
-  }	
+  } //loop over "backward" going cdc tracks
 
-  unsigned int num_unmatched_cdcs=0;
-  for (unsigned int i=0;i<used_cdc_hits.size();i++){
-    if (!used_cdc_hits[i]) num_unmatched_cdcs++;
+  // put the remaining "backward" tracks in the main list of candidates
+  for (unsigned int j=0;j<cdc_backward_ids.size();j++){
+    if (cdc_backward_matches[j]==0){
+      const DTrackCandidate *cdccan = cdctrackcandidates[cdc_backward_ids[j]]; 
+
+      // Get the cdc hits
+      vector<const DCDCTrackHit *>cdchits;
+      cdccan->GetT(cdchits);
+      stable_sort(cdchits.begin(), cdchits.end(), CDCHitSortByLayerincreasing);
+     
+      DTrackCandidate *can = new DTrackCandidate;
+      can->setMomentum(cdccan->momentum());
+      can->setPosition(cdccan->position());
+      can->setPID(cdccan->PID());
+      
+      // circle parameters
+      can->rc=cdccan->rc;
+      can->xc=cdccan->xc;
+      can->yc=cdccan->yc;
+      
+      for (unsigned int n=0;n<cdchits.size();n++){
+	can->AddAssociatedObject(cdchits[n]);
+      }
+      can->chisq=cdccan->chisq;
+      can->Ndof=cdccan->Ndof;
+      
+      trackcandidates.push_back(can);
+    }
   }
 
   // If there are more than one FDC candidates remaining, use the best track 
@@ -579,7 +604,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (num_fdc_cands_remaining>1){ 
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
       if (num_fdc_cands_remaining<1) break;
-      if (forward_matches[j]==0){
+      if (forward_matches[j]<=0){
 	// Try to match to fdc candidates that have not already been matched
 	// to another track
 	if (MatchMethod4(fdctrackcandidates[j],forward_matches,num_fdc_cands_remaining)==true){
@@ -594,7 +619,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // segment associated with them.
   if (num_fdc_cands_remaining>0){ 
     for (unsigned int j=0;j<fdctrackcandidates.size();j++){
-      if (forward_matches[j]==0){
+      if (forward_matches[j]<=0){
 	const DTrackCandidate *fdccan = fdctrackcandidates[j];
 	
 	// Get the segment data
@@ -611,7 +636,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  
 	  can->setMomentum(fdccan->momentum());
 	  can->setPosition(fdccan->position());
-      can->setPID(fdccan->PID());
+	  can->setPID(fdccan->PID());
 	  can->chisq=fdccan->chisq;
 	  can->Ndof=fdccan->Ndof; 
 	  for (unsigned int m=0;m<segments.size();m++){		  
@@ -634,7 +659,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (num_fdc_cands_remaining>0){
     vector<int>candidate_updated(trackcandidates.size());
     for (unsigned int i=0;i<trackcandidates.size();i++){
-      if (num_fdc_cands_remaining==0) break;
+      if (num_fdc_cands_remaining<=0) break;
       
       DTrackCandidate *can=trackcandidates[i];      
       if (MatchMethod7(can,forward_matches,num_fdc_cands_remaining)==false){
@@ -684,7 +709,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Not much we can do here -- add to the final list of candidates
       for (unsigned int j=0;j<forward_matches.size();j++){
 	if (num_fdc_cands_remaining==0) break;
-	if (forward_matches[j]==0){
+	if (forward_matches[j]<=0){
 	  const DTrackCandidate *srccan=fdctrackcandidates[j];
 	  // Get the segment data
 	  vector<const DFDCSegment *>segments;
@@ -738,7 +763,7 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
        }
       }
     }
-  }
+  } 
 
   // Only output the candidates that have at least a minimum number of hits
   for (unsigned int i=0;i<trackcandidates.size();i++){
@@ -1096,7 +1121,6 @@ jerror_t DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
 bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
 					   vector<unsigned int> &cdc_forward_ids,
 					   vector<DVector3>&cdc_endplate_projections,
-					   vector<unsigned int>&used_cdc_hits,
 					   vector<int>&cdc_forward_matches
 					   ){
   // Momentum and position vectors for the FDC candidate
@@ -1133,14 +1157,13 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
     // The following code snippet is intended to prevent matching a cdc
     // track candidate to a low momentum particle curling from the cdc endplate
     if (segments.size()>1){
-      double theta=180./M_PI*mom.Theta();
+      double theta=180./M_PI*mom.Theta();	
       if (p_fdc<0.3 && theta<5.) return false;
     }
 
     unsigned int cdc_index=cdc_forward_ids[jmin];
     if (MakeCandidateFromMethod1(mom.Theta(),segments,
-				 cdctrackcandidates[cdc_index],
-				 used_cdc_hits)){
+				 cdctrackcandidates[cdc_index])){
          
       if (DEBUG_LEVEL>0)
 	_DBG_ << ".. matched to CDC candidate #" << cdc_index <<endl;   
@@ -1158,7 +1181,7 @@ bool DTrackCandidate_factory::MatchMethod1(const DTrackCandidate *fdccan,
 
 // Create new candidate after using Match Method 1 to match cdc and fdc 
 // candidates
-bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const DFDCSegment *>&segments,const DTrackCandidate *cdccan, vector<unsigned int>&used_cdc_hits){
+bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const DFDCSegment *>&segments,const DTrackCandidate *cdccan){
   // JANA does not maintain the order that the segments were added
   // as associated objects. Therefore, we need to reorder them here
   // so segment[0] is the most upstream segment.
@@ -1219,7 +1242,6 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
       }
     }
     for (unsigned int n=0;n<cdchits.size();n++){
-      used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
       can->AddAssociatedObject(cdchits[n]); 
     }
 
@@ -1242,8 +1264,7 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 // computes a doca to each wire in the cdc candidate and counts matches based
 // on the probability that the cdc wire is on the track.
  bool DTrackCandidate_factory::MatchMethod2(const DTrackCandidate *fdccan,
-					    const DTrackCandidate *cdccan,
-					    vector<unsigned int>&used_cdc_hits
+					    const DTrackCandidate *cdccan
 					    ){
    // Get the cdc hits associated with this cdc candidate
    vector<const DCDCTrackHit *>cdchits;
@@ -1260,12 +1281,17 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
    double q=fdccan->charge();
 
    // Check to see if the outer hit in the CDC does not exceed the radius of  
-     // the FDC position to try to avoid false matches...
+   // the FDC position to try to avoid false matches...
    unsigned int outer_index=cdchits.size()-1;
    DVector3 origin=cdchits[outer_index]->wire->origin;
    DVector3 dir=(1./cdchits[outer_index]->wire->udir.z())*cdchits[outer_index]->wire->udir;
    DVector3 cdc_outer_wire_pos=origin+(167.-origin.z())*dir;
    if (cdc_outer_wire_pos.Perp()>pos.Perp()) {
+     return false;
+   }
+   // Make sure that the rough position of the CDC track at the end plate 
+   // is not too far off from the position of the fdc track near the end plate
+   if ((cdc_outer_wire_pos-pos).Mag()>5.){
      return false;
    }
 
@@ -1324,7 +1350,6 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
      }
      // Add the CDC hits to the track candidate
      for (unsigned int m=0;m<cdchits.size();m++){
-       used_cdc_hits[cdccan->used_cdc_indexes[m]]=1;
        can->AddAssociatedObject(cdchits[m]);
      }
        
@@ -1386,9 +1411,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
  // Method to match CDC and FDC candidates that projects the CDC track into the
  // FDC region.
  bool DTrackCandidate_factory::MatchMethod3(const DTrackCandidate *cdccan,
-					    vector<int> &forward_matches,
-					    vector<unsigned int>&used_cdc_hits
-){   
+					    vector<int> &forward_matches
+					    ){
    // Get hits already linked to this candidate from associated objects
    vector<const DCDCTrackHit *>cdchits;
    cdccan->GetT(cdchits);
@@ -1464,7 +1488,6 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	     
 	     // Add cdc hits to the candidate
 	     for (unsigned int m=0;m<cdchits.size();m++){
-	       used_cdc_hits[cdccan->used_cdc_indexes[m]]=1;
 	       can->AddAssociatedObject(cdchits[m]);
 	     } 
 	     
@@ -2097,8 +2120,7 @@ bool DTrackCandidate_factory::MatchMethod7(DTrackCandidate *srccan,
 // the code adjusts the dip angle and tries to match to the remaining fdc 
 // candidates.
 bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
-					   vector<int> &forward_matches,
-					   vector<unsigned int>&used_cdc_hits
+					   vector<int> &forward_matches
 					   ){
   // Get the cdc hits associated with this track candidate	  
   vector<const DCDCTrackHit *>cdchits;
@@ -2279,8 +2301,7 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	      }
 	    }
 	    for (unsigned int n=0;n<cdchits.size();n++){
-	      used_cdc_hits[cdccan->used_cdc_indexes[n]]=1;
-		can->AddAssociatedObject(cdchits[n]);
+	      can->AddAssociatedObject(cdchits[n]);
 	    }
 	    
 	    trackcandidates.push_back(can);		     
@@ -3248,3 +3269,27 @@ void DTrackCandidate_factory::UpdatePositionAndMomentum(DHelicalFit &fit,
     GetPositionAndMomentum(0.,fit,Bz,pos,mom);
   }
 }
+
+// Returns false if the z position at the doca to the beam line is less than 0
+bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan) 
+  const{
+  double phi0=atan2(-fdccan->xc,fdccan->yc);  
+  double q=fdccan->charge();
+  if (FactorForSenseOfRotation*q<0) phi0+=M_PI;
+  double sinphi0=sin(phi0);
+  double sign=(sinphi0>0)?1.:-1.;
+  if (fabs(sinphi0)<1e-8) sinphi0=sign*1e-8;    
+  double D=q*fdccan->rc-fdccan->xc/sinphi0;
+  double x=-D*sinphi0;
+  double y=D*cos(phi0);
+  DVector3 pos=fdccan->position();
+  double dx=pos.x()-x;
+  double dy=pos.y()-y;
+  double ratio=sqrt(dx*dx+dy*dy)/(2.*fdccan->rc);
+  double phi_s=(ratio<1.)?2.*asin(ratio):M_PI;
+  double newz=pos.z()-phi_s*tan(M_PI_2-fdccan->momentum().Theta())*fdccan->rc;
+
+  return (newz>0);
+}
+
+

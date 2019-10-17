@@ -18,6 +18,7 @@
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
 #include "FCAL/DFCALShower.h"
+#include "CCAL/DCCALShower.h"
 #include "PID/DNeutralShower.h"
 #include <PID/DDetectorMatches.h>
 #include "BCAL/DBCALShower.h"
@@ -25,6 +26,7 @@
 #include "START_COUNTER/DSCHit.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
+#include "DIRC/DDIRCPmtHit.h"
 #include "RF/DRFTime.h"
 
 using namespace std;
@@ -53,6 +55,7 @@ class DEventWriterREST : public JObject
 		string dOutputFileBaseName;
 		bool HDDM_USE_COMPRESSION;
 		bool HDDM_USE_INTEGRITY_CHECKS;
+		bool REST_WRITE_DIRC_HITS;
 
         // metadata to save in the REST file
         // these should be consistent during program execution

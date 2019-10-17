@@ -101,6 +101,17 @@ jerror_t DEventProcessor_monitoring_hists::evnt(JEventLoop *locEventLoop, uint64
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 
+        // first fill histograms which should always be filled, whether or not this is a real "physics" event
+	vector<const DMCThrown*> locMCThrowns;
+	locEventLoop->Get(locMCThrowns);
+	if(!locMCThrowns.empty())
+	{
+		dHistogramAction_ThrownParticleKinematics(locEventLoop);
+	}
+
+	if(dNumMemoryMonitorEvents > 0)
+		dHistogramAction_ObjectMemory(locEventLoop);
+
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
 	locEventLoop->GetSingle(locTrigger);
@@ -112,9 +123,6 @@ jerror_t DEventProcessor_monitoring_hists::evnt(JEventLoop *locEventLoop, uint64
 		dHist_IsEvent->Fill(1);
 	}
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
 
 	//Fill reaction-independent histograms.
 	dHistogramAction_NumReconstructedObjects(locEventLoop);
@@ -129,12 +137,9 @@ jerror_t DEventProcessor_monitoring_hists::evnt(JEventLoop *locEventLoop, uint64
 	dHistogramAction_TrackMultiplicity(locEventLoop);
 	dHistogramAction_DetectedParticleKinematics(locEventLoop);
 	dHistogramAction_TrackShowerErrors(locEventLoop);
-	if(dNumMemoryMonitorEvents > 0)
-		dHistogramAction_ObjectMemory(locEventLoop);
 
 	if(!locMCThrowns.empty())
 	{
-		dHistogramAction_ThrownParticleKinematics(locEventLoop);
 		dHistogramAction_ReconnedThrownKinematics(locEventLoop);
 		dHistogramAction_GenReconTrackComparison(locEventLoop);
 	}

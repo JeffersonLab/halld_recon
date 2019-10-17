@@ -377,7 +377,9 @@ class constant_attribute_t : public attribute_t {
    }
    void set(const char *str) {
       if (value)
-         delete value;
+	delete value;
+      if (!str)
+	return;
       int size = (strlen(str) + 7) / 4 * 4;
       value = new char[size];
       strncpy(value, str, size);
@@ -429,7 +431,7 @@ class element_t {
       if (size == 0)
          return 4;
       int seen;
-      int reps;
+      int reps=1;
       if (fRepeats) {
          *ifx >> reps;
          seen = 4;

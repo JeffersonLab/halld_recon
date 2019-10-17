@@ -45,6 +45,13 @@
 	   <bcalCorrelations maxOccurs="1" minOccurs="0" Excorr="float" Eycorr="float" Etcorr="float" txcorr="float" tycorr="float"/>
 	   <bcalLayers minOccurs="0" maxOccurs="1" E_L2="float" E_L3="float" E_L4="float" rmsTime="float"/>
     </bcalShower>
+    <ccalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
+                x="float" y="float" z="float" t="float" E="float"
+                Eerr="float" terr="float" Emax="float"
+                x1="float" y1="float" chi2="float"
+                type="int" dime="int" status="int" id="int" idmax="int"
+                lunit="cm" tunit="ns" Eunit="GeV">
+    </ccalShower>
     <chargedTrack minOccurs="0" maxOccurs="unbounded" jtag="string"
                 ptype="Particle_t" candidateId="int">
       <trackFit Ndof="int" chisq="float"
@@ -82,6 +89,7 @@
       -->
       <tofStatus maxOccurs="1" minOccurs="0" status="int"/>
     </tofPoint>
+    <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
     <RFtime minOccurs="0" jtag="string"
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
@@ -118,6 +126,10 @@
                 dEdx="float" thit="float" thitvar="float" ehit="float"
                 pathlength="float" tflight="float" tflightvar="float" deltaphi="float"
                 tunit="ns" lunit="cm" aunit="rad" Eunit="GeV" dEdx_unit="GeV/cm"/>
+      <dircMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" x="float" y="float" z="float" t="float" px="float" py="float" pz="float"
+		expectthetac="float" thetac="float" deltat="float" lele="float" lpi="float" lk="float" lp="float" nphotons="int"/>
+      <dircMatchHit maxOccurs="unbounded" minOccurs="0" track="int" hit="int"/>
       <bcalDOCAtoTrack maxOccurs="unbounded" minOccurs="0"
                 shower="int" deltaphi="float" deltaz="float"
                 lunit="cm"/>

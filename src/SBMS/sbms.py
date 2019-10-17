@@ -117,6 +117,33 @@ def executable(env, exename=''):
 
 
 ##################################
+# script
+##################################
+def script(env, scriptname, installname=None):
+
+	# Only thing to do for script is to install it.
+
+	# Cleaning and installation are restricted to the directory
+	# scons was launched from or its descendents
+	CurrentDir = env.Dir('.').srcnode().abspath
+	if not CurrentDir.startswith(env.GetLaunchDir()):
+		# Not in launch directory. Tell scons not to clean these targets
+		env.NoClean([scriptname])
+	else:
+		# We're in launch directory (or descendent) schedule installation
+
+		# Installation directories for executable and headers
+		installdir = env.subst('$INSTALLDIR')
+		bindir = env.subst('$BINDIR')
+
+		# Install targets 
+		if installname==None:
+			env.Install(bindir, scriptname)
+		else:
+			env.InstallAs(bindir+'/'+installname, scriptname)
+
+
+##################################
 # python_so_module
 ##################################
 def python_so_module(env, modname):
@@ -603,7 +630,7 @@ def AddDANA(env):
 	DANA_LIBS += " CERE DIRC CDC TRIGGER PAIR_SPECTROMETER RF"
 	DANA_LIBS += " FDC TOF BCAL FCAL CCAL TPOL HDGEOMETRY TTAB FMWPC TAC"
 	DANA_LIBS += " DAQ JANA EVENTSTORE"
-	DANA_LIBS += " expat"
+	DANA_LIBS += " expat gfortran" 
 	env.PrependUnique(LIBS = DANA_LIBS.split())
         env.Append(LIBS = 'DANA')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = DANA_LIBS.split())
@@ -778,7 +805,7 @@ def AddCERNLIB(env):
 	env.AppendUnique(CPPPATH   = CERN_FORTRANPATH)
 	env.AppendUnique(LIBPATH   = CERN_LIBPATH)
 	env.AppendUnique(LINKFLAGS = ['-rdynamic', '-Wl,--no-as-needed'])
-	env.AppendUnique(LIBS      = ['geant321', 'pawlib', 'lapack3', 'blas', 'graflib', 'grafX11', 'packlib', 'mathlib', 'kernlib', 'gfortran', 'X11', 'nsl', 'crypt', 'dl'])
+	env.AppendUnique(LIBS      = ['geant321', 'pawlib', 'lapack3', 'blas', 'graflib', 'grafX11', 'packlib', 'packlib-shift', 'mathlib', 'kernlib', 'gfortran', 'X11', 'nsl', 'crypt', 'dl'])
 	env.SetOption('warn', 'no-fortran-cxx-mix')  # supress warnings about linking fortran with c++
 
 

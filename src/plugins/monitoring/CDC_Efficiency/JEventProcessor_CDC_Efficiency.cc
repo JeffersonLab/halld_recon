@@ -54,6 +54,26 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
     if(gPARMS){
         gPARMS->SetDefaultParameter("CDC_EFFICIENCY:DOCACUT", DOCACUT, "DOCA Cut on Efficiency Measurement");
     }  
+
+
+    // Reject tracks with momentum less than PCUTL
+    PCUTL = 0.5;
+    if(gPARMS){
+        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:PCUTL", PCUTL, "Low momentum Cut on Efficiency Measurement");
+    }  
+
+    // Reject tracks with momentum greater than PCUTH
+    PCUTH = 6.0;
+    if(gPARMS){
+        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:PCUTH", PCUTH, "High momentum Cut on Efficiency Measurement");
+    }  
+
+    // Fill extra histos requiring dE/dx > 0 if set to 1
+    FILL_DEDX_HISTOS = 0;
+    if(gPARMS){
+        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:FILL_DEDX_HISTOS", FILL_DEDX_HISTOS, "Fill 'with dE/dx' histos if DOCA < CDC_GAIN_DOCA_PARS[0]");
+    }  
+
     
     for (unsigned int i=0; i < 28; i++){
         for (unsigned int j=0; j < 209; j++){
@@ -79,10 +99,16 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
 
     cdc_measured_ring.resize(29);
     cdc_expected_ring.resize(29);
+
+    cdc_measured_with_dedx_ring.resize(29);
+
+
     for(int locDOCABin = 0; locDOCABin < 8; ++locDOCABin)
     {
     	cdc_measured_ringmap[locDOCABin].resize(29);
     	cdc_expected_ringmap[locDOCABin].resize(29);
+
+    	cdc_measured_with_dedx_ringmap[locDOCABin].resize(29);
     }
 
     for(int iring=0; iring<28; iring++){
@@ -96,26 +122,44 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
         sprintf(hname_measured, "cdc_measured_ring[%d]", iring+1);
         sprintf(hname_expected, "cdc_expected_ring[%d]", iring+1);
 
-		cdc_measured_ring[iring+1] = new TH2D(hname_measured, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ring[iring+1] = new TH2D(hname_measured, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
 
-		cdc_measured_ringmap[0][iring+1] = new TH2D((TString)hname_measured +"DOCA0", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[1][iring+1] = new TH2D((TString)hname_measured +"DOCA1", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[2][iring+1] = new TH2D((TString)hname_measured +"DOCA2", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[3][iring+1] = new TH2D((TString)hname_measured +"DOCA3", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[4][iring+1] = new TH2D((TString)hname_measured +"DOCA4", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[5][iring+1] = new TH2D((TString)hname_measured +"DOCA5", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[6][iring+1] = new TH2D((TString)hname_measured +"DOCA6", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_measured_ringmap[7][iring+1] = new TH2D((TString)hname_measured +"DOCA7", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[0][iring+1] = new TH2D((TString)hname_measured +"DOCA0", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[1][iring+1] = new TH2D((TString)hname_measured +"DOCA1", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[2][iring+1] = new TH2D((TString)hname_measured +"DOCA2", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[3][iring+1] = new TH2D((TString)hname_measured +"DOCA3", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[4][iring+1] = new TH2D((TString)hname_measured +"DOCA4", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[5][iring+1] = new TH2D((TString)hname_measured +"DOCA5", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[6][iring+1] = new TH2D((TString)hname_measured +"DOCA6", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_measured_ringmap[7][iring+1] = new TH2D((TString)hname_measured +"DOCA7", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
 
-		cdc_expected_ring[iring+1] = new TH2D(hname_expected, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[0][iring+1] = new TH2D((TString)hname_expected + "DOCA0", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[1][iring+1] = new TH2D((TString)hname_expected + "DOCA1", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[2][iring+1] = new TH2D((TString)hname_expected + "DOCA2", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[3][iring+1] = new TH2D((TString)hname_expected + "DOCA3", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[4][iring+1] = new TH2D((TString)hname_expected + "DOCA4", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[5][iring+1] = new TH2D((TString)hname_expected + "DOCA5", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[6][iring+1] = new TH2D((TString)hname_expected + "DOCA6", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
-		cdc_expected_ringmap[7][iring+1] = new TH2D((TString)hname_expected + "DOCA7", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ring[iring+1] = new TH2D(hname_expected, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[0][iring+1] = new TH2D((TString)hname_expected + "DOCA0", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[1][iring+1] = new TH2D((TString)hname_expected + "DOCA1", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[2][iring+1] = new TH2D((TString)hname_expected + "DOCA2", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[3][iring+1] = new TH2D((TString)hname_expected + "DOCA3", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[4][iring+1] = new TH2D((TString)hname_expected + "DOCA4", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[5][iring+1] = new TH2D((TString)hname_expected + "DOCA5", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[6][iring+1] = new TH2D((TString)hname_expected + "DOCA6", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	cdc_expected_ringmap[7][iring+1] = new TH2D((TString)hname_expected + "DOCA7", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+
+	if (FILL_DEDX_HISTOS) {
+
+	  sprintf(hname_measured, "cdc_measured_with_dedx_ring[%d]", iring+1);
+	  sprintf(hname_expected, "cdc_expected_with_dedx_ring[%d]", iring+1);
+
+	  cdc_measured_with_dedx_ring[iring+1] = new TH2D(hname_measured, "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+
+	  cdc_measured_with_dedx_ringmap[0][iring+1] = new TH2D((TString)hname_measured +"DOCA0", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[1][iring+1] = new TH2D((TString)hname_measured +"DOCA1", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[2][iring+1] = new TH2D((TString)hname_measured +"DOCA2", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[3][iring+1] = new TH2D((TString)hname_measured +"DOCA3", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[4][iring+1] = new TH2D((TString)hname_measured +"DOCA4", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[5][iring+1] = new TH2D((TString)hname_measured +"DOCA5", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[6][iring+1] = new TH2D((TString)hname_measured +"DOCA6", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	  cdc_measured_with_dedx_ringmap[7][iring+1] = new TH2D((TString)hname_measured +"DOCA7", "", Nstraws[iring], phi_start, phi_end, 1, r_start, r_end);
+	}
+
     }	
 
     gDirectory->cd("/CDC_Efficiency");
@@ -180,6 +224,12 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
             }
         }
     }
+
+    // CDC correction for gain drop from progressive gas deterioration in spring 2018
+
+    if (jcalib->Get("CDC/gain_doca_correction", CDC_GAIN_DOCA_PARS)) cout << "Error loading CDC/gain_doca_correction !" << endl;
+
+
 	MAX_DRIFT_TIME = 1000.0; //ns: from TRKFIND:MAX_DRIFT_TIME in DTrackCandidate_factory_CDC
 	//Make sure it gets initialize first, in case we want to change it:
    if(!dIsNoFieldFlag){
@@ -188,24 +238,6 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
       gPARMS->GetParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
    }
 
-   vector<const DTrackFitter *> fitters;
-	eventLoop->Get(fitters);
-	
-	if(fitters.size()<1){
-	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-	
-	fitter = fitters[0];
-	// Get the particle ID algorithms
-	vector<const DParticleID *> pid_algorithms;
-	eventLoop->Get(pid_algorithms);
-	if(pid_algorithms.size()<1){
-	  _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
-	}
-
-	pid_algorithm = pid_algorithms[0];
 
    return NOERROR;
 }
@@ -214,13 +246,35 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
 // evnt
 //------------------
 jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnumber){
-   const DTrigger* locTrigger = NULL; 
-   loop->GetSingle(locTrigger); 
-   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-      return NOERROR;
-   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-      return NOERROR;
-   }
+	const DTrigger* locTrigger = NULL; 
+	loop->GetSingle(locTrigger); 
+	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
+	  return NOERROR;
+	if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
+	  return NOERROR;
+	}
+
+	
+   	vector<const DTrackFitter *> fitters;
+	loop->Get(fitters);
+
+	if(fitters.size()<1){
+	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
+	const DTrackFitter *fitter = fitters[0];
+	
+	
+	// Get the particle ID algorithms
+	vector<const DParticleID *> pid_algorithms;
+	loop->Get(pid_algorithms);
+	if(pid_algorithms.size()<1){
+	  _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
+	const DParticleID* pid_algorithm = pid_algorithms[0];
 
    //use CDC track hits: have drift time, can cut
    vector< const DCDCTrackHit *> locCDCTrackHits;
@@ -271,7 +325,7 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
             //cout << "Cut on dEdX" << endl;
             continue; // Trying to cut out "proton" candidates
          }
-         if(thisTimeBasedTrack->pmag() < 0.5 || thisTimeBasedTrack->pmag() > 6.0) {
+         if(thisTimeBasedTrack->pmag() < PCUTL || thisTimeBasedTrack->pmag() > PCUTH) {
             //cout << "Cut on momentum" << endl;
             continue; // Cut on the reconstructed momentum to make sure we have the right
          }
@@ -328,19 +382,26 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
             for (int locRing = locFirstRing; locRing < locFirstRing + 4; ++locRing)
             {
                if(locCDCRings.find(locRing) == locCDCRings.end())
-                  GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits); // git-r-dun
+
+		 //june12
+
+                  Fill_Efficiency_Histos(locRing, thisTimeBasedTrack, locSortedCDCTrackHits, pid_algorithm, fitter); 
+
             }
             continue;
          }
          //so many hits that no individual ring was required: evaluate for all
          for (int locRing = locFirstRing; locRing < locFirstRing + 4; ++locRing)
-            GitRDun(locRing, thisTimeBasedTrack, locSortedCDCTrackHits); // git-r-dun
+
+	   //june12
+            Fill_Efficiency_Histos(locRing, thisTimeBasedTrack, locSortedCDCTrackHits, pid_algorithm, fitter); 
       }
    }
    return NOERROR;
 }
 
-void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, map<int, map<int, set<const DCDCTrackHit*> > >& locSortedCDCTrackHits)
+
+void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum, const DTrackTimeBased *thisTimeBasedTrack, map<int, map<int, set<const DCDCTrackHit*> > >& locSortedCDCTrackHits, const DParticleID * pid_algorithm, const DTrackFitter *fitter)
 {
   vector<DTrackFitter::Extrapolation_t>extrapolations=thisTimeBasedTrack->extrapolations.at(SYS_CDC);
   if (extrapolations.size()==0) return;
@@ -410,8 +471,14 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
          locTrackHit->GetSingle(locHit);
 
       bool foundHit = (locTrackHit != nullptr);
+
+      bool foundHitWithdEdx = foundHit;
+      // hits with doca outside param 0 are ignored in dE/dx calc
+      if (distanceToWire > CDC_GAIN_DOCA_PARS[0]) foundHitWithdEdx = 0;
+
       if(foundHit)
       {
+
          const DCDCDigiHit *thisDigiHit = NULL;
          const Df125CDCPulse *thisPulse = NULL;
          locHit->GetSingle(thisDigiHit);
@@ -423,6 +490,9 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
             SlotFromRingStraw[ringNum - 1][wireNum - 1] = thisPulse->slot;
             ChannelFromRingStraw[ringNum - 1][wireNum - 1] = thisPulse->channel;
          }
+
+
+
          Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs Path Length", dx, "Measured Hits", 100, 0 , 4.0);
          Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.78);
          Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
@@ -434,6 +504,20 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
          //expected hits by straw number
          Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs N", Nstraws_previous[ringNum-1]+wireNum, "Measured Hits", 3522, 0.5 , 3522.5);
 
+	 if (FILL_DEDX_HISTOS) {
+	   if (foundHitWithdEdx) { // fill histos for which hit contributes to dE/dx
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs Path Length", dx, "Measured Hits with dE/dx info", 100, 0 , 4.0);
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs DOCA", distanceToWire, "Measured Hits with dE/dx info", 100, 0 , 0.78);
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits with dE/dx info", 100, 0 , 1.0);
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs theta", locTheta, "Measured Hits with dE/dx info", 100, 0, 180);
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs p", thisTimeBasedTrack->pmag(), "Measured Hits with dE/dx info", 100, 0 , 4.0);
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs delta", delta, "Measured Hits with dE/dx info", 100, -0.3 , 0.3);
+	     Fill2DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info  p Vs Theta", locTheta, thisTimeBasedTrack->pmag(), "Measured Hits with dE/dx info", 100, 0, 180, 100, 0 , 4.0);
+
+	     //expected hits by straw number
+	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs N", Nstraws_previous[ringNum-1]+wireNum, "Measured Hits with dE/dx info", 3522, 0.5 , 3522.5);
+	   }
+	 }
 
       }
 
@@ -448,6 +532,20 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
       //expected hits by straw number
       Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs N", Nstraws_previous[ringNum-1]+wireNum, foundHit,"Efficiency; N; Efficiency", 3522, 0.5 , 3522.5);
 
+      // repeat for hits contributing to dE/dx
+
+      if (FILL_DEDX_HISTOS) {
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Path Length", dx,foundHitWithdEdx, "Efficiency (with dE/dx); dx [cm]; Efficiency (with dE/dx)", 100, 0 , 4.0);
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs DOCA", distanceToWire,foundHitWithdEdx, "Efficiency (with dE/dx); DOCA [cm]; Efficiency (with dE/dx)", 100, 0 , 0.78);
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Tracking FOM", thisTimeBasedTrack->FOM,foundHitWithdEdx, "Efficiency (with dE/dx); Tracking FOM; Efficiency (with dE/dx)", 100, 0 , 1.0);
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs theta", locTheta,foundHitWithdEdx, "Efficiency (with dE/dx); Track #Theta [deg]; Efficiency (with dE/dx)", 100, 0, 180);
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs p", thisTimeBasedTrack->pmag(),foundHitWithdEdx, "Efficiency (with dE/dx); Momentum [GeV]; Efficiency (with dE/dx)", 100, 0 , 4.0);
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs delta", delta,foundHitWithdEdx, "Efficiency (with dE/dx); #delta [cm]; Efficiency (with dE/dx)", 100, -0.3 , 0.3);
+
+	//expected hits by straw number
+	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs N", Nstraws_previous[ringNum-1]+wireNum, foundHitWithdEdx,"Efficiency (with dE/dx); N; Efficiency (with dE/dx)", 3522, 0.5 , 3522.5);
+      }
+
 
       if( ChannelFromRingStraw[ringNum - 1][wireNum - 1] != -1)
       {
@@ -457,19 +555,37 @@ void JEventProcessor_CDC_Efficiency::GitRDun(unsigned int ringNum, const DTrackT
          Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHit, "Efficiency; Slot Number; Efficiency", 21, -0.5 , 20.5);
          sprintf(name, "Channel Efficiency ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
          Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHit, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
+
+	 if (FILL_DEDX_HISTOS) {
+	   // repeat w dedx info 
+	   Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Channel Number", ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Channel Number; Efficiency (with dE/dx)", 73, -0.5 , 72.5);
+	   sprintf(name, "Slot Efficiency (with dE/dx) ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
+	   Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Slot Number; Efficiency (with dE/dx)", 21, -0.5 , 20.5);
+	   sprintf(name, "Channel Efficiency (with dE/dx) ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
+	   Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Channel; Efficiency (with dE/dx)", 1501, 299.5 , 1800.5);
+	 }
       }
 
       Fill2DProfile("CDC_Efficiency", "Online", "Efficiency p Vs Theta", locTheta, thisTimeBasedTrack->pmag(),foundHit, "Efficiency; Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
       Fill2DProfile("CDC_Efficiency", "Online", "Efficiency distance Vs delta", delta,distanceToWire,foundHit, "Efficiency;#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
       Fill2DProfile("CDC_Efficiency", "Online", "Efficiency z Vs delta", delta,dz,foundHit, "Efficiency;#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
-   
+
+      if (FILL_DEDX_HISTOS) {
+         // repeat w dedx info 
+	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) p Vs Theta", locTheta, thisTimeBasedTrack->pmag(),foundHitWithdEdx, "Efficiency (with dE/dx); Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
+	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) distance Vs delta", delta,distanceToWire,foundHitWithdEdx, "Efficiency (with dE/dx);#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
+	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) z Vs delta", delta,dz,foundHitWithdEdx, "Efficiency (with dE/dx);#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
+      }
+
+
       //FILL AS FUNCTION OF DOCA
       if (distanceToWire < 0.78)
       {
          Fill_ExpectedHit(ringNum, wireNum, distanceToWire);
          if(foundHit)
-	   Fill_MeasuredHit(ringNum, wireNum, distanceToWire, pos, mom, wire, 
-			    locHit);
+	   //june12
+	   Fill_MeasuredHit(foundHitWithdEdx, ringNum, wireNum, distanceToWire, pos, mom, wire, 
+			    locHit, pid_algorithm);
       }
    }
 }
@@ -505,7 +621,9 @@ bool JEventProcessor_CDC_Efficiency::Expect_Hit(const DTrackTimeBased* thisTimeB
    return (distanceToWire < (0.78 + delta) && fabs(dz) < 65.0);
 }
 
-void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit)
+//june12
+
+void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(bool withdEdx, int ringNum, int wireNum, double distanceToWire, const DVector3 &pos, const DVector3 &mom, DCDCWire* wire, const DCDCHit* locHit, const DParticleID * pid_algorithm)
 {
    //Double_t w = cdc_occ_ring[ring]->GetBinContent(straw, 1) + 1.0;
    //cdc_occ_ring[ring]->SetBinContent(straw, 1, w);
@@ -519,6 +637,13 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(int ringNum, int wireNum, 
          cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, v);
          double dx = pid_algorithm->CalcdXHit(mom,pos,wire);
          ChargeVsTrackLength->Fill(dx, locHit->q);
+
+	if (FILL_DEDX_HISTOS) {
+	  if (withdEdx) {
+	    Double_t vw = cdc_measured_with_dedx_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
+	    cdc_measured_with_dedx_ring[ringNum]->SetBinContent(wireNum, 1, vw);
+	  }
+	}
 
          // ?	Double_t w = cdc_expected_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          // ?    cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, w);
@@ -534,6 +659,20 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(int ringNum, int wireNum, 
       locHistToFill->SetBinContent(wireNum, 1, w);
    }
    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+   if (FILL_DEDX_HISTOS) {
+     if (withdEdx) {
+
+       TH2D* locHistToFill = cdc_measured_with_dedx_ringmap[locDOCABin][ringNum];
+       japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+       {
+	 Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
+	 locHistToFill->SetBinContent(wireNum, 1, w);
+       }
+       japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+     }
+   }
 }
 
 void JEventProcessor_CDC_Efficiency::Fill_ExpectedHit(int ringNum, int wireNum, double distanceToWire)

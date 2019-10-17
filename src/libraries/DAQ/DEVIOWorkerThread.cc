@@ -250,6 +250,7 @@ void DEVIOWorkerThread::MakeEvents(void)
 	
 	// Set indexes for the parsed event objects
 	// and flag them as being in use.
+	if( VERBOSE>3 ) cout << "  Creating " << current_parsed_events.size() << " parsed events ..." << endl;
 	for(auto pe : current_parsed_events){
 	
 		pe->Clear(); // return previous event's objects to pools and clear vectors
@@ -406,7 +407,6 @@ void DEVIOWorkerThread::ParseEPICSbank(uint32_t* &iptr, uint32_t *iend)
 	}
 	
 	uint32_t *iend_epics = &iptr[epics_bank_len];
-	if( iend_epics < iend ) iend = iend_epics;
 	
 	// Advance to first daughter bank
 	iptr++;
@@ -776,6 +776,9 @@ void DEVIOWorkerThread::ParseCDAQBank(uint32_t* &iptr, uint32_t *iend)
 	// Must be physics event(s)
 	for(auto pe : current_parsed_events) pe->event_status_bits |= (1<<kSTATUS_PHYSICS_EVENT) + (1<<kSTATUS_CDAQ);
 
+	// Set flag in JEventSource_EVIOpp that this is a CDAQ file
+	event_source->IS_CDAQ_FILE = true;
+
 	uint32_t physics_event_len      = *iptr++;
 	uint32_t *iend_physics_event    = &iptr[physics_event_len];
 	iptr++;
@@ -912,14 +915,17 @@ void DEVIOWorkerThread::ParseRawTriggerBank(uint32_t rocid, uint32_t* &iptr, uin
 	// On entry, iptr points to word after the bank header (i.e. word after the one with 0xFF11)
 	
 	// Loop over events. Should be one segment for each event
-	uint32_t ievent = 0;
+	// suppress warning
+	//	uint32_t ievent = 0;
 	for(auto pe : current_parsed_events){
 		
 		uint32_t segment_header = *iptr++;
 		uint32_t segment_len = segment_header&0xFFFF;
 		uint32_t *iend_segment  = &iptr[segment_len];
 
-		uint32_t event_number = *iptr++;
+		// suppress warning, remove assignment to unused variable but increment the pointer
+		//		uint32_t event_number = *iptr++;
+		iptr++;
 		uint64_t ts_low  = *iptr++;
 		uint64_t ts_high = *iptr++;
 
@@ -1008,7 +1014,7 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			  //				Parsef250scalerBank(iptr, iend);
 				break;
 			case 0xE10:
-				Parsef250scalerBank(rocid, iptr, iend);
+				Parsef250scalerBank(rocid, iptr, iend_data_block_bank);
 				break;
 			
 			// The CDAQ system leave the raw trigger info in the Physics event data
@@ -1022,10 +1028,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 			// higher level data objects to save disk space and speed up
 			// specialized processing (e.g. pi0 calibration)
 			case 0xD01:
-				ParseDVertexBank(iptr, iend);
+				ParseDVertexBank(iptr, iend_data_block_bank);
 				break;
 			case 0xD02:
-				ParseDEventRFBunchBank(iptr, iend);
+				ParseDEventRFBunchBank(iptr, iend_data_block_bank);
 				break;
 
 			case 5:
@@ -2107,6 +2113,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	uint32_t itrigger   = 0xFFFFFFFF;
 	uint32_t dev_id     = 0xFFFFFFFF;
 	uint32_t ievent_cnt = 0xFFFFFFFF;
+	//uint32_t last_itrigger = itrigger;
 	for( ;  iptr<iend; iptr++){
 		if(((*iptr>>31) & 0x1) == 0)continue;
 
@@ -2121,12 +2128,16 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 			}
 				break;
 			case 1:  // Block Trailer
+				pe_iter = current_parsed_events.begin();
+				pe = NULL;
 				if(VERBOSE>7) cout << "     SSP/DIRC Block Trailer" << endl;
 				break;
 			case 2:  // Event Header
-				pe = *pe_iter++;
 				slot       = ((*iptr)>>22) & 0x1F;
 				itrigger   = ((*iptr)>> 0) & 0x3FFFFF;
+				pe = *pe_iter++;
+				//if(itrigger != last_itrigger) pe = *pe_iter++;
+				//last_itrigger = itrigger;
 				if(VERBOSE>7) cout << "     SSP/DIRC Event Header:  slot=" << slot << " itrigger=" << itrigger << endl;
 				if( slot != slot_bh ){
 					jerr << "Slot from SSP/DIRC event header does not match slot from last block header (" <<slot<<" != " << slot_bh << ")" <<endl;

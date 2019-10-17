@@ -1,5 +1,7 @@
 #include <DAQ/Df250EmulatorAlgorithm_v2.h>
 
+// corresponds to version 0x0C0C or 0x0C0D of the fADC250 firmwarer
+
 Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
     // Enables forced use of default values 
     FORCE_DEFAULT = 0;
@@ -10,6 +12,15 @@ Df250EmulatorAlgorithm_v2::Df250EmulatorAlgorithm_v2(JEventLoop *loop){
     NPED_DEF = 4;
     MAXPED_DEF = 512;
     NSAT_DEF = 2;
+
+    // DEBUG
+    NSA_DEF = 15;
+    NSB_DEF = 1;
+    THR_DEF = 108;
+    NPED_DEF = 4;
+    MAXPED_DEF = 512;
+    NSAT_DEF = 2;
+
 
     // Set verbosity
     VERBOSE = 0;
@@ -37,8 +48,9 @@ void Df250EmulatorAlgorithm_v2::EmulateFirmware(const Df250WindowRawData* rawDat
 
     // First check that we have window raw data available
     if (rawData == NULL) {
-        jout << " ERROR: Df250EmulatorAlgorithm_v2::EmulateFirmware - raw sample data is missing" << endl;
-        jout << " Contact mstaib@jlab.org" << endl;
+        jerr << " ERROR: Df250EmulatorAlgorithm_v2::EmulateFirmware - raw sample data is missing" << endl;
+        jerr << " Contact mstaib@jlab.org" << endl;
+	return;
     } 
 
     // We need the channel number to get the threshold

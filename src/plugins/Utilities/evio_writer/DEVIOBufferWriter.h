@@ -27,6 +27,8 @@
 #include <DAQ/DF1TDCConfig.h>
 #include <DAQ/DCAEN1290TDCConfig.h>
 #include <DAQ/DCAEN1290TDCHit.h>
+#include <DAQ/DDIRCTDCHit.h>
+#include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/DEPICSvalue.h>
 #include <DAQ/DEventTag.h>
 #include <DAQ/DCODAROCInfo.h>
@@ -42,6 +44,8 @@
 #include <DAQ/DDAQConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/Df250Config.h>
+#include <DAQ/Df250Scaler.h>
+#include <DAQ/Df250AsyncPedestal.h>
 
 #include <DANA/DStatusBits.h>
 #include <TTAB/DTranslationTable.h>
@@ -98,15 +102,15 @@ class DEVIOBufferWriter
 		void Writef250Data(vector<uint32_t> &buff,
                            vector<const Df250PulseData*>     &f250pulses,
                            vector<const Df250TriggerTime*>   &f250tts,
-                           vector<const Df250WindowRawData*> &f250wrds,
-                           unsigned int Nevents) const;
+			   vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
+		      	   unsigned int Nevents) const;
 
         // old (pre-Fall 2016) firmware data format
 		void Writef250Data(vector<uint32_t> &buff,
                            vector<const Df250PulseIntegral*> &f250pis,
-                           vector<const Df250TriggerTime*>   &f250tts,
-                           vector<const Df250WindowRawData*> &f250wrds,
-                           unsigned int Nevents) const;
+			   vector<const Df250TriggerTime*>   &f250tts,
+			   vector<const Df250WindowRawData*> &f250wrds, vector<const Df250Scaler*> &f250scalers,
+			   unsigned int Nevents ) const;
 
 		void Writef125Data(vector<uint32_t> &buff,
                            vector<const Df125PulseIntegral*> &f125pis,
@@ -115,6 +119,11 @@ class DEVIOBufferWriter
                            vector<const Df125TriggerTime*>   &f125tts,
                            vector<const Df125WindowRawData*> &f125wrds,
                            vector<const Df125Config*>        &f125configs,
+                           unsigned int Nevents) const;
+
+		void WriteDircData(vector<uint32_t> &buff,
+                           vector<const DDIRCTDCHit*> &dirctdchits,
+                           vector<const DDIRCTriggerTime*>   &dirctts,
                            unsigned int Nevents) const;
 
 		void WriteEPICSData(vector<uint32_t> &buff,

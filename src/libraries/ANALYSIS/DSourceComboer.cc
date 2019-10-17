@@ -171,19 +171,19 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
 
 	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything above if hadron, everything below if lepton
-/* //Uncomment and adjust when Lubomir gives good cuts.
 	//e- FCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
 
 	//e- BCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_BCAL] = "[0]";
-	dEOverPCuts_TF1Params[Electron][SYS_BCAL] = {0.67};
+	dEOverPCuts_TF1Params[Electron][SYS_BCAL] = {0.7};
 
 	//e+
 	dEOverPCuts_TF1FunctionStrings.emplace(Positron, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(Positron, dEOverPCuts_TF1Params[Electron]);
 
+	/*
 	//mu-
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonMinus, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(MuonMinus, dEOverPCuts_TF1Params[Electron]);
@@ -191,7 +191,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//mu+
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonPlus, dEOverPCuts_TF1FunctionStrings[MuonMinus]);
 	dEOverPCuts_TF1Params.emplace(MuonPlus, dEOverPCuts_TF1Params[MuonMinus]);
-*/
+	*/
 }
 
 void DSourceComboer::Get_CommandLineCuts_dEdx(void)
@@ -448,6 +448,25 @@ void DSourceComboer::Create_CutFunctions(void)
 
 /********************************************************************* CONSTRUCTOR **********************************************************************/
 
+void DSourceComboer::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
+	// Set member data
+	//GET THE GEOMETRY
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+
+	//TARGET INFORMATION
+	double locTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(locTargetCenterZ);
+	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);	
+
+	// Update linked objects
+	dSourceComboP4Handler->Set_RunDependent_Data(locEventLoop);
+	dSourceComboVertexer->Set_RunDependent_Data(locEventLoop);
+	dSourceComboTimeHandler->Set_RunDependent_Data(locEventLoop);
+	dParticleComboCreator->Set_RunDependent_Data(locEventLoop);	
+}
+
 DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 {
 	dResourcePool_SourceCombo.Set_ControlParams(100, 50, 1000, 20000, 0);
@@ -461,14 +480,6 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 	gPARMS->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
 	gPARMS->SetDefaultParameter("COMBO:MAX_NEUTRALS", dMaxNumNeutrals);
 
-	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
-
-	//TARGET INFORMATION
-	double locTargetCenterZ = 65.0;
-	locGeometry->GetTargetZ(locTargetCenterZ);
-	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
 
 	//SETUP CUTS
 	Define_DefaultCuts();
@@ -498,6 +509,8 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 	dSourceComboP4Handler->Set_SourceComboVertexer(dSourceComboVertexer);
 	dSourceComboVertexer->Set_SourceComboTimeHandler(dSourceComboTimeHandler);
 	dParticleComboCreator = new DParticleComboCreator(locEventLoop, this, dSourceComboTimeHandler, dSourceComboVertexer);
+
+	Set_RunDependent_Data(locEventLoop);
 
 	//save rf bunch cuts
 	if(gPARMS->Exists("COMBO:NUM_PLUSMINUS_RF_BUNCHES"))
@@ -4203,15 +4216,25 @@ bool DSourceComboer::Check_Reactions(vector<const DReaction*>& locReactions)
 	//Check Max neutrals
 	auto locNumNeutralNeeded = locReactions.front()->Get_FinalPIDs(-1, false, false, d_Neutral, true).size(); //no missing, no decaying, include duplicates
 	auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-	if(false) //COMPARE: Comparison-to-old mode
-	{
-		if(locNumDetectedShowers > dMaxNumNeutrals)
-			return false;
-	}
 	if((locNumNeutralNeeded > 0) && (locNumDetectedShowers > dMaxNumNeutrals))
 	{
 		if(dDebugLevel > 0)
 			cout << "Too many neutrals: No combos." << endl;
+		return false;
+	}
+	//Check additional showers
+	auto NumShower_Checker = [&](const DReaction* locReaction) -> bool
+	{
+		auto locCutPair = locReaction->Get_MaxExtraShowers();
+		if(!locCutPair.first)
+			return false;
+		return ((locNumDetectedShowers - locNumNeutralNeeded) > locCutPair.second);
+	};
+	locReactions.erase(std::remove_if(locReactions.begin(), locReactions.end(), NumShower_Checker), locReactions.end());
+	if(locReactions.empty())
+	{
+		if(dDebugLevel > 0)
+			cout << "Too many showers (" << locNumDetectedShowers << "): No combos." << endl;
 		return false;
 	}
 

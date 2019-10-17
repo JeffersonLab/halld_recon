@@ -28,10 +28,25 @@ jerror_t DAnalysisResults_factory::init(void)
 //------------------
 jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 {
+	// As originally written, this function and the classes that it calls work
+	// correctly when running over just one run, but when data spanning multiple
+	// runs is analyzed during one program execution, there were problems - 
+	// memory was lost, pointers were not properly propagated.
+	// It has been written with the following design:  during the first brun()
+	// call, all of the needed initialization is performed which requires 
+	// a JEventLoop object (i.e. most of it).  In subsequent brun() calls, only the
+	// run-dependent settings are updated
+	// - sdobbs -- 28 August 2019
 	dApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 
 	gPARMS->SetDefaultParameter("ANALYSIS:DEBUG_LEVEL", dDebugLevel);
 	gPARMS->SetDefaultParameter("ANALYSIS:KINFIT_CONVERGENCE", dRequireKinFitConvergence);
+
+	// Use the existence of dSourceComboer as a switch to see if this is the first time
+	// in the function
+	bool locInitialize = false;
+	if(dSourceComboer == nullptr)
+		locInitialize = true;
 
 	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
 	Check_ReactionNames(locReactions);
@@ -53,9 +68,15 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 		for(size_t loc_j = 0; loc_j < locNumActions; ++loc_j)
 		{
 			DAnalysisAction* locAnalysisAction = locActions[loc_j];
-			if(dDebugLevel > 0)
-				cout << "Initialize Action # " << loc_j + 1 << ": " << locAnalysisAction->Get_ActionName() << " of reaction: " << locReaction->Get_ReactionName() << endl;
-			locAnalysisAction->Initialize(locEventLoop);
+			if(locInitialize) {
+				if(dDebugLevel > 0)
+					cout << "Initialize Action # " << loc_j + 1 << ": " << locAnalysisAction->Get_ActionName() << " of reaction: " << locReaction->Get_ReactionName() << endl;
+				locAnalysisAction->Initialize(locEventLoop);
+			} else {
+				if(dDebugLevel > 0)
+					cout << "Update Action # " << loc_j + 1 << ": " << locAnalysisAction->Get_ActionName() << " of reaction: " << locReaction->Get_ReactionName() << endl;
+				locAnalysisAction->Run_Update(locEventLoop);
+			}
 		}
 
 		if(locMCThrowns.empty())
@@ -69,21 +90,34 @@ jerror_t DAnalysisResults_factory::brun(JEventLoop *locEventLoop, int32_t runnum
 			locExactMatchFlag = false;
 
 		dMCReactionExactMatchFlags[locReactions[loc_i]] = locExactMatchFlag;
-		dTrueComboCuts[locReactions[loc_i]] = new DCutAction_TrueCombo(locReactions[loc_i], dMinThrownMatchFOM, locExactMatchFlag);
-		dTrueComboCuts[locReactions[loc_i]]->Initialize(locEventLoop);
+		if(locInitialize) {
+			// only create object the first time through this function
+			dTrueComboCuts[locReactions[loc_i]] = new DCutAction_TrueCombo(locReactions[loc_i], dMinThrownMatchFOM, locExactMatchFlag);
+			dTrueComboCuts[locReactions[loc_i]]->Initialize(locEventLoop);
+		} else {
+			dTrueComboCuts[locReactions[loc_i]]->Run_Update(locEventLoop);
+		}
 	}
 
-	//CREATE FIT UTILS AND FITTER
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
-	dKinFitter = new DKinFitter(dKinFitUtils);
+	if(locInitialize) {
+		//CREATE FIT UTILS AND FITTER
+		dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+		dKinFitter = new DKinFitter(dKinFitUtils);
 
-	gPARMS->SetDefaultParameter("KINFIT:DEBUG_LEVEL", dKinFitDebugLevel);
-	dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
+		gPARMS->SetDefaultParameter("KINFIT:DEBUG_LEVEL", dKinFitDebugLevel);
+		dKinFitter->Set_DebugLevel(dKinFitDebugLevel);
 
-	//CREATE COMBOERS
-	dSourceComboer = new DSourceComboer(locEventLoop);
-	dParticleComboCreator = dSourceComboer->Get_ParticleComboCreator();
-
+		//CREATE COMBOERS
+		dSourceComboer = new DSourceComboer(locEventLoop);
+		dParticleComboCreator = dSourceComboer->Get_ParticleComboCreator();
+	} else {
+		// if we are returning for another round, just update the object settings
+		dKinFitUtils->Set_RunDependent_Data(locEventLoop);
+		//dKinFitter->Set_RunDependent_Data(locEventLoop);  // NO CURRENT RUN DEPENDENCE
+		dSourceComboer->Set_RunDependent_Data(locEventLoop);
+		dParticleComboCreator->Set_RunDependent_Data(locEventLoop);  // assume dSourceComber "owns" this object
+	}
+	
 	return NOERROR;
 }
 

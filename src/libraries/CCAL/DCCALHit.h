@@ -33,7 +33,7 @@ class DCCALHit:public jana::JObject{
 			AddString(items, "column", "%4d", column);
 			AddString(items, "x(cm)", "%3.1f", x);
 			AddString(items, "y(cm)", "%3.1f", y);
-			AddString(items, "E(MeV)", "%2.3f", E*1000.0);
+			AddString(items, "E(MeV)", "%2.3f", E);
 			AddString(items, "t(ns)", "%2.3f", t);
 			AddString(items, "integral over peak",  "%2.3f", intOverPeak);
 		}

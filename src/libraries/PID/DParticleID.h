@@ -38,10 +38,17 @@
 #include <PID/DChargedTrackHypothesis.h>
 #include <PID/DNeutralParticleHypothesis.h>
 #include <PID/DEventRFBunch.h>
-#include <PID/DDetectorMatches.h>
+#include <DIRC/DDIRCLut.h>
+#include <DIRC/DDIRCTruthBarHit.h>
+#include <DIRC/DDIRCPmtHit.h>
 #include <TRACKING/DMagneticFieldStepper.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackCandidate.h>
+
+#include <TROOT.h>
+#include <TFile.h>
+#include <TTree.h>
+#include <TH1.h>
 
 #include <TMath.h>
 
@@ -83,6 +90,20 @@ class DParticleID:public jana::JObject
 		double GetMostProbabledEdx_DC(double p,double mass,double dx, bool locIsCDCFlag) const; //bool is false for FDC
 		double GetdEdxSigma_DC(double num_hits,double p,double mass, double mean_path_length, bool locIsCDCFlag) const; //bool is false for FDC
 
+		virtual jerror_t GetdEdxMean_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
+		virtual jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual double GetProtondEdxMean_SC(double locBeta) const=0;
+		virtual double GetProtondEdxSigma_SC(double locBeta) const=0;
+		virtual double GetTimeVariance(DetectorSystem_t detector,
+					       Particle_t particle,
+					       double p) const=0;
+		virtual double GetEOverPMean(DetectorSystem_t detector,
+					     double p) const=0;
+		virtual double GetEOverPSigma(DetectorSystem_t detector,
+					      double p) const=0;
+
 		/****************************************************** DISTANCE TO TRACK ******************************************************/
 
 		// NOTE: For these functions, an initial guess for start time is expected as input so that out-of-time tracks can be skipped
@@ -111,6 +132,7 @@ class DParticleID:public jana::JObject
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime,shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, bool locIsTimeBased, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
+		bool Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 
 		/********************************************************** GET BEST MATCH **********************************************************/
 
@@ -119,6 +141,7 @@ class DParticleID:public jana::JObject
 		bool Get_BestSCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DSCHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestTOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTOFHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestFCALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALShowerMatchParams>& locBestMatchParams) const;
+		bool Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const;
 
 		// Actual
 		shared_ptr<const DBCALShowerMatchParams> Get_BestBCALMatchParams(DVector3 locMomentum, vector<shared_ptr<const DBCALShowerMatchParams> >& locShowerMatchParams) const;
@@ -203,6 +226,10 @@ class DParticleID:public jana::JObject
 					      const DVector3 &locProjPos) const;
 		double Get_CorrectedHitTime(const DSCHit* locSCHit,
 					    const DVector3 &locProjPos) const;
+		
+		const DDIRCLut *Get_DIRCLut() const;
+	
+
 	protected:
 		// gas material properties
 		double dKRhoZoverA_FDC, dRhoZoverA_FDC, dLnI_FDC;	
@@ -230,12 +257,6 @@ class DParticleID:public jana::JObject
         vector<double> SC_SECTION2_P0, SC_SECTION2_P1;
         vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
         vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
-
-	private:
-
-		int DEBUG_LEVEL;
-		// Prohibit default constructor
-		DParticleID();
 
 		// define bool in case there is no Start Counter in geometry (e.g. CPP)
 		bool START_EXIST = true;
@@ -288,6 +309,16 @@ class DParticleID:public jana::JObject
 		const DTrackFinder *finder;
 		const DTrackFitter *fitter;
 		DTOFPoint_factory* dTOFPointFactory;
+		
+		// DIRC LUT
+		const DDIRCLut* dDIRCLut;
+
+	private:
+
+		int DEBUG_LEVEL;
+		// Prohibit default constructor
+		DParticleID();
+
 };
 
 #endif // _DParticleID_

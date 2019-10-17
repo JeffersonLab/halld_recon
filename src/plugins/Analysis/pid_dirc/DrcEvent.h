@@ -19,29 +19,32 @@ class DrcEvent: public TObject  {
 public:
 
   DrcEvent(); 	//the default constructor
-  ~DrcEvent(){}; 
+  ~DrcEvent() {}; 
 
   void AddHit(DrcHit hit);
   DrcHit GetHit(Int_t ind) { return fHitArray[ind]; }
-
+  std::vector<DrcHit> GetHits() { return fHitArray; }
+  
   // Accessors 
   Int_t GetId() const { return fId; }
   Int_t GetType() const { return fType; }
-  Long_t GetTime() const { return fTime; }
+  Double_t GetTime() const { return fTime; }
 
-  Int_t GetPdg()      const { return fPdg; }
-  TVector3 GetMomentum()   const { return fMomentum; }
-  TVector3 GetPosition()   const { return fPosition; }
-  Int_t GetHitSize()       const { return fHitSize; }
-  Double_t GetTest1()      const { return fTest1; }
-  Double_t GetTest2()      const { return fTest2; }
+  Int_t GetPdg()          const { return fPdg; }
+  Int_t GetParent()       const { return fParent; }
+  TVector3 GetMomentum()  const { return fMomentum; }
+  TVector3 GetPosition()  const { return fPosition; }
+  Int_t GetHitSize()      const { return fHitSize; }
+  Double_t GetTest1()     const { return fTest1; }
+  Double_t GetTest2()     const { return fTest2; }
   
   // Mutators
   void SetId(Int_t val)        { fId=val; }
   void SetType(Int_t val)        { fType=val; }
-  void SetTime(Long_t val)      { fTime=val; }
+  void SetTime(Double_t val)      { fTime=val; }
 
   void SetPdg(Int_t val) { fPdg = val; }
+  void SetParent(Int_t val) { fParent = val; }
   void SetMomentum(TVector3 val) { fMomentum = val; }
   void SetPosition(TVector3 val) { fPosition = val; }
   void SetTest1(Double_t val) { fTest1 = val; }
@@ -50,18 +53,19 @@ public:
 private: 
   Int_t fId;
   Int_t fType;
-  Long_t fTime;
-
+  Int_t fPdg;
+  Int_t fParent;
+  Double_t fTime;
+  
   Int_t fHitSize;
   std::vector<DrcHit> fHitArray;
 
-  Int_t fPdg;
   TVector3 fMomentum;
   TVector3 fPosition;
   Double_t fTest1;
   Double_t fTest2;
   
-  ClassDef(DrcEvent, 1);
+  ClassDef(DrcEvent, 2);
 };
 
 #endif

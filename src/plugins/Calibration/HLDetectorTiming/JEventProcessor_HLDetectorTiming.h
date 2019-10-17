@@ -34,6 +34,9 @@
 #include "TObjArray.h"
 #include "TMath.h"
 
+#include <DIRC/DDIRCGeometry.h>
+#include <DIRC/DDIRCLut.h>
+
 //#include "HistogramTools.h"
 
 //class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor, public HistogramTools{
@@ -50,9 +53,8 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-        //HistogramTools *histoTools;
-        const DParticleID* dParticleID;
-        DRFTime_factory *dRFTimeFactory;
+        //HistogramTools *histoTools;     
+        
         void DoRoughTiming();
         void DoTDCADCAlign();
         void DoTrackBased();
@@ -65,9 +67,10 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         double BEAM_CURRENT;
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
-	int DO_HIGH_RESOLUTION;
+		int DO_HIGH_RESOLUTION;
         int fBeamEventCounter;
-	bool NO_TRACKS;
+        int dMaxDIRCChannels;
+		bool NO_TRACKS;
         // The final setup requires some shifts relative to the previous values, need to store them
 
         int NBINS_TDIFF, NBINS_TAGGER_TIME, NBINS_MATCHING, NBINS_RF_COMPARE;

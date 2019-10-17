@@ -6,8 +6,14 @@
 
 void DCutAction_MinTrackHits::Initialize(JEventLoop* locEventLoop)
 {
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_MinTrackHits::Run_Update(JEventLoop* locEventLoop)
+{
 	locEventLoop->GetSingle(dParticleID);
 }
+
 
 string DCutAction_MinTrackHits::Get_ActionName(void) const
 {
@@ -42,6 +48,11 @@ string DCutAction_ThrownTopology::Get_ActionName(void) const
 }
 
 void DCutAction_ThrownTopology::Initialize(JEventLoop* locEventLoop)
+{
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_ThrownTopology::Run_Update(JEventLoop* locEventLoop)
 {
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
@@ -209,6 +220,11 @@ string DCutAction_MissingMass::Get_ActionName(void) const
 
 void DCutAction_MissingMass::Initialize(JEventLoop* locEventLoop)
 {
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
+{
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -242,6 +258,12 @@ void DCutAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
+void DCutAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
+{
+	locEventLoop->GetSingle(dAnalysisUtilities);
+}
+
+
 bool DCutAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
 	//build all possible combinations of the included pids
@@ -268,6 +290,11 @@ string DCutAction_InvariantMass::Get_ActionName(void) const
 }
 
 void DCutAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
+{
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
 {
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
@@ -347,6 +374,11 @@ string DCutAction_MaxTrackDOCA::Get_ActionName(void) const
 
 void DCutAction_MaxTrackDOCA::Initialize(JEventLoop* locEventLoop)
 {
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_MaxTrackDOCA::Run_Update(JEventLoop* locEventLoop)
+{
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -389,8 +421,14 @@ bool DCutAction_KinFitFOM::Perform_Action(JEventLoop* locEventLoop, const DParti
 
 void DCutAction_BDTSignalCombo::Initialize(JEventLoop* locEventLoop)
 {
-	dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
+	if(dCutAction_TrueBeamParticle == nullptr)
+		dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
 	dCutAction_TrueBeamParticle->Initialize(locEventLoop);
+	Run_Update(locEventLoop);
+}
+
+void DCutAction_BDTSignalCombo::Run_Update(JEventLoop* locEventLoop)
+{
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -527,10 +565,18 @@ DCutAction_BDTSignalCombo::~DCutAction_BDTSignalCombo(void)
 
 void DCutAction_TrueCombo::Initialize(JEventLoop* locEventLoop)
 {
-	dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
+	if(dCutAction_TrueBeamParticle == nullptr)
+		dCutAction_TrueBeamParticle = new DCutAction_TrueBeamParticle(Get_Reaction());
 	dCutAction_TrueBeamParticle->Initialize(locEventLoop);
-	dCutAction_ThrownTopology = new DCutAction_ThrownTopology(Get_Reaction(), dExclusiveMatchFlag);
+	if(dCutAction_ThrownTopology == nullptr)
+		dCutAction_ThrownTopology = new DCutAction_ThrownTopology(Get_Reaction(), dExclusiveMatchFlag);
 	dCutAction_ThrownTopology->Initialize(locEventLoop);
+}
+
+void DCutAction_TrueCombo::Run_Update(JEventLoop* locEventLoop)
+{
+	dCutAction_TrueBeamParticle->Run_Update(locEventLoop);
+	dCutAction_ThrownTopology->Run_Update(locEventLoop);
 }
 
 bool DCutAction_TrueCombo::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1163,19 +1209,19 @@ bool DCutAction_NoPIDHit::Perform_Action(JEventLoop* locEventLoop, const DPartic
 
 void DCutAction_OneVertexKinFit::Initialize(JEventLoop* locEventLoop)
 {
+	// Optional: Useful utility functions.
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
 	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
 	dKinFitter = new DKinFitter(dKinFitUtils);
 	dKinFitUtils->Set_UpdateCovarianceMatricesFlag(false);
-
-	// Optional: Useful utility functions.
-	locEventLoop->GetSingle(dAnalysisUtilities);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
-			//If another thread has already created the folder, it just changes to it. 
+		//If another thread has already created the folder, it just changes to it. 
 		CreateAndChangeTo_ActionDirectory();
 
 		dHist_ConfidenceLevel = GetOrCreate_Histogram<TH1I>("ConfidenceLevel", "Vertex Kinematic Fit;Confidence Level", 500, 0.0, 1.0);
@@ -1183,6 +1229,13 @@ void DCutAction_OneVertexKinFit::Initialize(JEventLoop* locEventLoop)
 		dHist_VertexYVsX = GetOrCreate_Histogram<TH2I>("VertexYVsX", "Vertex Kinematic Fit;Vertex-X (cm);Vertex-Y (cm)", 300, -10.0, 10.0, 300, -10.0, 10.0);
 	}
 	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+void DCutAction_OneVertexKinFit::Run_Update(JEventLoop* locEventLoop)
+{
+	locEventLoop->GetSingle(dAnalysisUtilities);
+	dKinFitUtils->Set_RunDependent_Data(locEventLoop);
+	dKinFitter->Set_RunDependent_Data(locEventLoop);
 }
 
 bool DCutAction_OneVertexKinFit::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)

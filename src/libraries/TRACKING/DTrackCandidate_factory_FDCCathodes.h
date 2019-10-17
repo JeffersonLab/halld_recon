@@ -74,13 +74,17 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   bool GetTrackMatch(double q,DVector3 &pos,DVector3 &mom,
 		     const DFDCSegment *segment);
   bool LinkStraySegment(const DFDCSegment *segment);
+  bool LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segements,
+			 vector<DFDCSegment *>packages[4],
+			 vector<vector<int> >&is_paired);
+
 
   bool DEBUG_HISTS,USE_FDC;
 
   TH2F *match_dist_fdc,*match_center_dist2;
  
   vector<double>z_wires;
-  double TARGET_Z,BEAM_VAR;
+  double TARGET_Z,BEAM_VAR,FDC_HOUGH_THRESHOLD;
   
   double FactorForSenseOfRotation;
   

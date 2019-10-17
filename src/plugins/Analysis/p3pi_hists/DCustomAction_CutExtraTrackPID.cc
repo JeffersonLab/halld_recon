@@ -9,14 +9,14 @@
 
 void DCustomAction_CutExtraTrackPID::Initialize(JEventLoop* locEventLoop)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
 	dPIDCuts[SYS_TOF] = 1.0;
 	dPIDCuts[SYS_BCAL] = 1.0;
 	dPIDCuts[SYS_FCAL] = 2.0;
 
 	ddEdxCutAction = new DCutAction_dEdx(Get_Reaction());
 	ddEdxCutAction->Initialize(locEventLoop);
+	
+	Run_Update(locEventLoop);
 }
 
 bool DCustomAction_CutExtraTrackPID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)

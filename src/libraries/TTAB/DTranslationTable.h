@@ -41,6 +41,7 @@ using namespace jana;
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DF1TDCTriggerTime.h>
 #include <DAQ/DCAEN1290TDCHit.h>
+#include <DAQ/DDIRCTDCHit.h>
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -66,6 +67,7 @@ using namespace jana;
 #include <TPOL/DTPOLSectorDigiHit.h>
 #include <TAC/DTACDigiHit.h>
 #include <TAC/DTACTDCDigiHit.h>
+#include <DIRC/DDIRCTDCDigiHit.h>
 
 // (See comments in DParsedEvent.h for enlightenment)
 #define MyTypes(X) \
@@ -92,7 +94,8 @@ using namespace jana;
 		X(DPSCTDCDigiHit) \
 		X(DTPOLSectorDigiHit) \
 		X(DTACDigiHit) \
-		X(DTACTDCDigiHit)
+		X(DTACTDCDigiHit) \
+		X(DDIRCTDCDigiHit)
 
 #define MyfADCTypes(X) \
 		X(DBCALDigiHit) \
@@ -153,6 +156,7 @@ class DTranslationTable:public jana::JObject{
 			TAC,
 			CCAL,
 			CCAL_REF,
+			DIRC,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -174,6 +178,7 @@ class DTranslationTable:public jana::JObject{
 				case TOF: return "TOF";
 				case TPOLSECTOR: return "TPOL"; // is set to TPOL to match what is in CCDB, fix later
 				case TAC: return "TAC";
+				case DIRC: return "DIRC";
 				case UNKNOWN_DETECTOR:
 				default:
 					return "UNKNOWN";
@@ -341,6 +346,15 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 
+		class DIRCIndex_t {
+		        public:
+			uint32_t pixel;
+
+			inline bool operator==( const DIRCIndex_t& rhs ) const {
+				return (pixel==rhs.pixel);
+			}
+		};
+
 		// DChannelInfo holds translation between indexing schemes
 		// for one channel.
 		class DChannelInfo{
@@ -365,6 +379,7 @@ class DTranslationTable:public jana::JObject{
 					TACIndex_t tac;
 					CCALIndex_t ccal;
 					CCALRefIndex_t ccal_ref;
+					DIRCIndex_t dirc;
 				};
 		};
 
@@ -387,7 +402,7 @@ class DTranslationTable:public jana::JObject{
 		MyTypes(makefactoryptr)
 		
 		// Method to initialize factory pointers
-		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A);
+		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A, NULL, false);
 		void InitFactoryPointers(JEventLoop *loop){ MyTypes(copyfactoryptr) }
 
 		// Method to clear each of the vectors at beginning of event
@@ -496,6 +511,7 @@ class DTranslationTable:public jana::JObject{
 		DRFTDCDigiTime*  MakeRFTDCDigiTime(const RFIndex_t &idx,         const DCAEN1290TDCHit *hit) const;
 		DTACTDCDigiHit*  MakeTACTDCDigiHit( const TACIndex_t &idx,       const DCAEN1290TDCHit *hit) const;
 
+		DDIRCTDCDigiHit*  MakeDIRCTDCDigiHit( const DIRCIndex_t &idx,       const DDIRCTDCHit *hit) const;
 
 		void Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const;
 		void Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const;
@@ -505,8 +521,8 @@ class DTranslationTable:public jana::JObject{
 		void AddToCallStack(JEventLoop *loop, string caller, string callee) const;
 
 		void ReadOptionalROCidTranslation(void);
-		static void SetSystemsToParse(string systems, JEventSource *eventsource);
-		void SetSystemsToParse(JEventSource *eventsource){SetSystemsToParse(SYSTEMS_TO_PARSE, eventsource);}
+		static void SetSystemsToParse(string systems, int systems_to_parse_force, JEventSource *eventsource);
+		void SetSystemsToParse(JEventSource *eventsource){SetSystemsToParse(SYSTEMS_TO_PARSE, 0, eventsource);}
 		void ReadTranslationTable(JCalibration *jcalib=NULL);
 		
 		template<class T> void CopyDf250Info(T *h, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -514,6 +530,7 @@ class DTranslationTable:public jana::JObject{
 		template<class T> void CopyDf125Info(T *h, const Df125PulseIntegral *pi, const Df125PulseTime *pt, const Df125PulsePedestal *pp) const;
 		template<class T> void CopyDF1TDCInfo(T *h, const DF1TDCHit *hit) const;
 		template<class T> void CopyDCAEN1290TDCInfo(T *h, const DCAEN1290TDCHit *hit) const;
+		template<class T> void CopyDIRCTDCInfo(T *h, const DDIRCTDCHit *hit) const;
 
 		
 		// methods for others to search the Translation Table
@@ -522,6 +539,7 @@ class DTranslationTable:public jana::JObject{
 
 		//public so that StartElement can access it
 		static map<DTranslationTable::Detector_t, set<uint32_t> >& Get_ROCID_By_System(void); //this is static so that StartElement can access it
+		static int& Get_ROCID_By_System_Mismatch_Behaviour(void);
 
 		// This was left over from long ago and is not currently used. It seems
 		// potentially useful though in the future so I don't want to get rid
@@ -681,6 +699,19 @@ void DTranslationTable::CopyDCAEN1290TDCInfo(T *h, const DCAEN1290TDCHit *hit) c
 {
 	/// Copy info from the CAEN1290 into a hit object.
 	h->time = hit->time;
+	
+	h->AddAssociatedObject(hit);
+}
+
+//---------------------------------
+// CopyDIRCTDCInfo
+//---------------------------------
+template<class T>
+void DTranslationTable::CopyDIRCTDCInfo(T *h, const DDIRCTDCHit *hit) const
+{
+	/// Copy info from the DIRCTDC into a hit object.
+	h->time = hit->time;
+	h->edge = hit->edge;
 	
 	h->AddAssociatedObject(hit);
 }

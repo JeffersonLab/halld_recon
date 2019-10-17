@@ -17,7 +17,7 @@ class DParticleID_factory_PID1:public jana::JFactory<DParticleID>{
 		~DParticleID_factory_PID1(){};
 		const char* Tag(void){return "PID1";}
 
-		DParticleID_PID1 *particleid;
+		DParticleID_PID1 *particleid = nullptr;
 
 		//------------------
 		// brun

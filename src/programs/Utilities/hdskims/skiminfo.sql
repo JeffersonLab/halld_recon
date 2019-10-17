@@ -1,0 +1,71 @@
+
+CREATE TABLE IF NOT EXISTS skiminfo  (
+
+    run INT,
+    file INT,
+    UNIQUE KEY (run, file),
+    num_physics_events INT,
+    num_bor_events INT,
+    num_epics_events INT,
+    num_control_events INT,
+    first_event INT,
+    last_event INT,
+    
+    NGTP0 INT DEFAULT 0,
+    NGTP1 INT DEFAULT 0,
+    NGTP2 INT DEFAULT 0,
+    NGTP3 INT DEFAULT 0,
+    NGTP4 INT DEFAULT 0,
+    NGTP5 INT DEFAULT 0,
+    NGTP6 INT DEFAULT 0,
+    NGTP7 INT DEFAULT 0,
+    NGTP8 INT DEFAULT 0,
+    NGTP9 INT DEFAULT 0,
+    NGTP10 INT DEFAULT 0,
+    NGTP11 INT DEFAULT 0,
+    NGTP12 INT DEFAULT 0,
+    NGTP13 INT DEFAULT 0,
+    NGTP14 INT DEFAULT 0,
+    NGTP15 INT DEFAULT 0,
+
+    NFP0 INT DEFAULT 0,
+    NFP1 INT DEFAULT 0,
+    NFP2 INT DEFAULT 0,
+    NFP3 INT DEFAULT 0,
+    NFP4 INT DEFAULT 0,
+    NFP5 INT DEFAULT 0,
+    NFP6 INT DEFAULT 0,
+    NFP7 INT DEFAULT 0,
+    NFP8 INT DEFAULT 0,
+    NFP9 INT DEFAULT 0,
+    NFP10 INT DEFAULT 0,
+    NFP11 INT DEFAULT 0,
+    NFP12 INT DEFAULT 0,
+    NFP13 INT DEFAULT 0,
+    NFP14 INT DEFAULT 0,
+    NFP15 INT DEFAULT 0,
+
+    skim_host VARCHAR(256),
+    created TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS trigtypes (
+
+    col_name VARCHAR(64) UNIQUE ,
+    trig     VARCHAR(256)
+);
+
+INSERT INTO trigtypes (col_name, trig) VALUES ('GTP0','FCAL_BCAL') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('GTP2','BCAL') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('GTP3','PS') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('GTP4','FCAL_BCAL_ST') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP2','FCAL_LED') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP4','CCAL_LED1') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP5','CCAL_LED2') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP8','BCAL_LED_US') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP9','BCAL_LED_DS') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP11','random') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+INSERT INTO trigtypes (col_name, trig) VALUES ('FP14','DIRC_LED') ON DUPLICATE KEY UPDATE trig=VALUES(trig);
+
+

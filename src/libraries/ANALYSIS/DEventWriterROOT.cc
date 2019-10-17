@@ -2,6 +2,7 @@
 
 static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
+static bool DIRC_OUTPUT = true;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
@@ -56,6 +57,25 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 				Create_DataTree(locReaction, locEventLoop, !locMCThrowns.empty());
 		}
 	}
+}
+
+void DEventWriterROOT::Run_Update(JEventLoop* locEventLoop)
+{
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//Get Target Center Z
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	dTargetCenterZ = 65.0;
+	locGeometry->GetTargetZ(dTargetCenterZ);
+
+	// update run-dependent info/objects
+	for(auto& locMapPair : dCutActionMap_ThrownTopology)
+		locMapPair.second->Run_Update(locEventLoop);
+	for(auto& locMapPair : dCutActionMap_TrueCombo)
+		locMapPair.second->Run_Update(locEventLoop);
+	for(auto& locMapPair : dCutActionMap_BDTSignalCombo)
+		locMapPair.second->Run_Update(locEventLoop);
 }
 
 DEventWriterROOT::~DEventWriterROOT(void)
@@ -237,6 +257,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT);
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
 		gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT);
+	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
+		gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT);
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -665,6 +687,16 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumTrackArraySize);
+
+	//DIRC:
+	if(DIRC_OUTPUT) {
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+	}
 }
 
 void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -751,6 +783,7 @@ void DEventWriterROOT::Create_Branches_Combo(DTreeBranchRegister& locBranchRegis
 		if((locKinFitType == d_SpacetimeFit) || (locKinFitType == d_P4AndSpacetimeFit))
 			locBranchRegister.Register_FundamentalArray<Float_t>("RFTime_KinFit", locNumComboString, dInitNumComboArraySize);
 	}
+	locBranchRegister.Register_FundamentalArray<UChar_t>("NumUnusedShowers", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("Energy_UnusedShowers", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("SumPMag_UnusedTracks", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_ClonesArray<TVector3>("SumP3_UnusedTracks", dInitNumComboArraySize);
@@ -921,6 +954,8 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 
 	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
+	japp->RootWriteLock();
+
 	//primary event info
 	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
 	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
@@ -933,6 +968,10 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 
 	//FILL TTREE
 	dThrownTreeInterface->Fill(dThrownTreeFillData);
+
+	
+	japp->RootUnLock();
+
 }
 
 void DEventWriterROOT::Fill_DataTrees(JEventLoop* locEventLoop, string locDReactionTag) const
@@ -1098,6 +1137,8 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locEventLoop->GetSingle(locTrigger);
 
 	/************************************************* EXECUTE ANALYSIS ACTIONS ************************************************/
+	       
+	japp->RootWriteLock();
 
 	Bool_t locIsThrownTopologyFlag = kFALSE;
 	vector<Bool_t> locIsTrueComboFlags;
@@ -1170,7 +1211,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		Fill_ComboData(locTreeFillData, locReaction, locParticleCombos[loc_i], loc_i, locObjectToArrayIndexMap);
 		
 		//ENERGY OF UNUSED SHOWERS (access to event loop required)
-		double locEnergy_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i]);
+		double locEnergy_UnusedShowers = 0.;
+		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers);
+		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers", locNumber_UnusedShowers, loc_i);
 		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers", locEnergy_UnusedShowers, loc_i);
 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
@@ -1192,7 +1235,10 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//FILL
 	DTreeInterface* locTreeInterface = dTreeInterfaceMap.find(locReaction)->second;
-	locTreeInterface->Fill(*locTreeFillData);
+	locTreeInterface->Fill(*locTreeFillData);	
+	
+	japp->RootUnLock();
+
 }
 
 vector<const DBeamPhoton*> DEventWriterROOT::Get_BeamPhotons(const deque<const DParticleCombo*>& locParticleCombos) const
@@ -1597,6 +1643,22 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	if(locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL)
 		locDOCAToShower_FCAL = locChargedTrackHypothesis->Get_FCALShowerMatchParams()->dDOCAToShower;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locDOCAToShower_FCAL, locArrayIndex);
+
+	// DIRC
+	if(DIRC_OUTPUT) {
+		int locDIRCNumPhotons = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dNPhotons : 0;
+		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locDIRCNumPhotons, locArrayIndex);
+		double locDIRCThetaC = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dThetaC : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locDIRCThetaC, locArrayIndex);
+		double locDIRCLele = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodElectron : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locDIRCLele, locArrayIndex);
+		double locDIRCLpi = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodPion : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locDIRCLpi, locArrayIndex);
+		double locDIRCLk = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodKaon : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lk_DIRC"), locDIRCLk, locArrayIndex);
+		double locDIRCLp = (locChargedTrackHypothesis->Get_DIRCMatchParams() != NULL) ? locChargedTrackHypothesis->Get_DIRCMatchParams()->dLikelihoodProton : 0.0;
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lp_DIRC"), locDIRCLp, locArrayIndex);
+	}
 }
 
 void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DDetectorMatches* locDetectorMatches) const
@@ -1639,7 +1701,7 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Beta_Timing"), locNeutralParticleHypothesis->measuredBeta(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Timing"), locNeutralParticleHypothesis->Get_ChiSq(), locArrayIndex);
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Timing"), locNeutralParticleHypothesis->Get_NDF(), locArrayIndex);
-	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locNeutralShower->dQuality, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locNeutralShower->dQuality, locArrayIndex);
 
 	//SHOWER ENERGY
 	DetectorSystem_t locDetector = locNeutralShower->dDetectorSystem;

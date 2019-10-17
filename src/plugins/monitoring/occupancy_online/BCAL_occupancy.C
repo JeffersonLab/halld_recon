@@ -17,7 +17,7 @@
 	// RootSpy saves the current directory and style before
 	// calling the macro and restores it after so it is OK to
 	// change them and not change them back.
-        TDirectory *savedir = gDirectory;
+	TDirectory *savedir = gDirectory;
 	TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("occupancy");
 	if(dir) dir->cd();
 
@@ -67,6 +67,18 @@
 	lat.SetTextSize(0.035);
 	lat.Draw();
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "BCAL Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("BCAL_occupancy", 0);
+			rs_ResetAllMacroHistos("//BCAL_occupancy");
+		}
+	}
+#endif
 }
 
 
