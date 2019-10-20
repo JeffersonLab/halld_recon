@@ -4,6 +4,7 @@
 // Creator: jonesrt on gluey.phys.uconn.edu
 //
 
+
 #ifndef _DTAGMGeometry_
 #define _DTAGMGeometry_
 
@@ -46,6 +47,7 @@ class DTAGMGeometry : public JObject {
    
  private:
    double m_endpoint_energy_GeV;
+   double m_endpoint_energy_calib_GeV;
    double m_column_xlow[TAGM_MAX_COLUMN+1];
    double m_column_xhigh[TAGM_MAX_COLUMN+1];
 };
