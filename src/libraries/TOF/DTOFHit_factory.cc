@@ -79,6 +79,7 @@ jerror_t DTOFHit_factory::init(void)
   // default values, will override from DTOFGeometry
   TOF_NUM_PLANES = 2;
   TOF_NUM_BARS = 44;
+  TOF_MAX_CHANNELS = 176;
   
   return NOERROR;
 }
@@ -107,6 +108,7 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     
     TOF_NUM_PLANES = tofGeom.Get_NPlanes();
     TOF_NUM_BARS = tofGeom.Get_NBars();
+    TOF_MAX_CHANNELS = TOF_NUM_PLANES*TOF_NUM_BARS*2;  // total number of bars * 2 ends
     
     /// Read in calibration constants
     vector<double> raw_adc_pedestals;
@@ -584,7 +586,7 @@ void DTOFHit_factory::FillCalibTable(tof_digi_constants_t &table, vector<double>
 
     // check to make sure that we loaded enough channels
     if(channel != TOF_MAX_CHANNELS) { 
-        sprintf(str, "Not enough channels for TOF table! channel=%d (should be %d)", 
+        sprintf(str, "Wrong number of channels for TOF table! channel=%d (should be %d)", 
                 channel, TOF_MAX_CHANNELS);
         cerr << str << endl;
         throw JException(str);
