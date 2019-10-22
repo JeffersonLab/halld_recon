@@ -56,6 +56,19 @@ map<DTranslationTable::Detector_t, set<uint32_t> >& DTranslationTable::Get_ROCID
 	return rocid_by_system;
 }
 
+int& DTranslationTable::Get_ROCID_By_System_Mismatch_Behaviour(void)
+{
+    // This is a flag set via the EVIO:SYSTEMS_TO_PARSE_FORCE variable. It is used
+    // to determine how mismatches between the CCDB and the hard-coded rocid map
+    // are handled. Note that this is really only used when EVIO:SYSTEMS_TO_PARSE
+    // is set. Values are:
+    // 0  -  Treat as error
+    // 1  -  Use CCDB
+    // 2  -  Use hard-coded
+    static int mismatch_behaviour = 0;
+    return mismatch_behaviour;
+}
+
 //...................................
 // Less than operator for csc_t data types. This is used by
 // the map<csc_t, XX> to order the entires by key
@@ -230,13 +243,16 @@ void DTranslationTable::ReadOptionalROCidTranslation(void)
 //---------------------------------
 // SetSystemsToParse
 //---------------------------------
-void DTranslationTable::SetSystemsToParse(string systems, JEventSource *eventsource)
+void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_force, JEventSource *eventsource)
 {
 	/// This takes a string of comma separated system names and
 	/// identifies a list of Detector_t values from this (using
 	/// strings returned by DetectorName() ). It then tries to 
 	/// copy the value into the DAQ plugin so they can be used
 	/// to restrict which banks to parse.
+
+	// Copy value on how to handle mismatch bewtween CCDB and hard-coded to internal variable
+    Get_ROCID_By_System_Mismatch_Behaviour() = systems_to_parse_force;
 	
 	if(systems == "") return; // nothing to do for empty strings
 	jout << "Setting systems to parse to: " << systems << endl;
@@ -1938,14 +1954,21 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
 	// if so, compare the 2.
 	if( !save_rocid_map.empty() ){
 		if( save_rocid_map != Get_ROCID_By_System() ){
-			jerr << "The rocid by system map read from the translation table in" << endl;
-			jerr << "the CCDB differs from the default. This may happen if you" << endl;
-			jerr << "specified EVIO:SYSTEMS_TO_PARSE and the hardcoded table is" << endl;
-			jerr << "out of date. If this is the case, you'll need to modify" << endl;
-			jerr << "DTranslationTable.cc or just run without specifying which" << endl;
-			jerr << "systems to parse." << endl;
+			jerr << " The rocid by system map read from the translation table in" << endl;
+			jerr << " the CCDB differs from the default. This may happen if you" << endl;
+			jerr << " specified EVIO:SYSTEMS_TO_PARSE and the hardcoded table is" << endl;
+			jerr << " out of date. This may be handled in different ways depending" << endl;
+			jerr << " on how EVIO:SYSTEMS_TO_PARSE_FORCE is set:" << endl;
+			jerr << "    0 = Treat mismatch as error " << endl;
+			jerr << "    1 = Use CCDB map in case of mismatch" << endl;
+			jerr << "    2 = Use hardcoded map in case of mismatch" << endl;
+			jerr << " n.b because the hardcoded map may actually need to be used before" << endl;
+			jerr << " the CCDB map is read in choosing option 1 may not be absolutely" << endl;
+			jerr << " true for all events." << endl;
+			jerr << " The value of EVIO:SYSTEMS_TO_PARSE_FORCE is currently: " << Get_ROCID_By_System_Mismatch_Behaviour() << endl;
+			jerr << " Here are the (mismatched) maps:" << endl;
 			for(auto it : Get_ROCID_By_System()){
-				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB rocids=" << Get_ROCID_By_System()[it.first].size() << "  hardcoded rocids=" << save_rocid_map[it.first].size() << endl;
+				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  num. hardcoded rocids=" << save_rocid_map[it.first].size() << endl;
 				cerr << "       CCDB={";
 				for(auto a : Get_ROCID_By_System()[it.first]) cerr << a <<", ";
 				cerr << "}  hardcoded={";
@@ -1954,14 +1977,27 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
 			}
 			for(auto it : save_rocid_map){
 				if(Get_ROCID_By_System().find(it.first) != Get_ROCID_By_System().end()) continue;
-				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB rocids=" << Get_ROCID_By_System()[it.first].size() << "  hardcoded rocids=" << save_rocid_map[it.first].size() << endl;
+				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  hardcoded num. rocids=" << save_rocid_map[it.first].size() << endl;
 				cerr << "       CCDB={";
 				for(auto a : Get_ROCID_By_System()[it.first]) cerr << a <<", ";
 				cerr << "}  hardcoded={";
 				for(auto a : save_rocid_map[it.first]) cerr << a <<", ";
 				cerr << "}" << endl;
 			}
-			exit(-1);
+			switch( Get_ROCID_By_System_Mismatch_Behaviour() ){
+				case 0:
+					exit(-1);  // treat as error
+				case 1:
+					// Use CCDB map (already in Get_ROCID_By_System())
+					break;
+				case 2:
+					// Use hard coded map
+					Get_ROCID_By_System() = save_rocid_map;
+					break;
+				default:
+					jerr << "Bad value for Get_ROCID_By_System_Mismatch_Behaviour() (aka EVIO:SYSTEMS_TO_PARSE_FORCE)" << endl;
+					exit(-1);
+			}
 		}
 	}
 

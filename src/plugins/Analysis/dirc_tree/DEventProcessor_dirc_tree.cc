@@ -76,7 +76,8 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
   // get DIRC geometry
   vector<const DDIRCGeometry*> locDIRCGeometryVec;
   loop->Get(locDIRCGeometryVec);
-  auto locDIRCGeometry = locDIRCGeometryVec[0];
+  // next line commented out to supress warning, variable not used
+  //  auto locDIRCGeometry = locDIRCGeometryVec[0];
 
   // get PID algos
   const DParticleID* locParticleID = NULL;

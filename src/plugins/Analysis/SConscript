@@ -4,7 +4,7 @@ import sbms
 Import('*')
 
 # Default targets (always built)
-subdirs = ['ReactionFilter', 'b1pi_hists']
+subdirs = ['ReactionFilter', 'b1pi_hists', 'ReactionEfficiency']
 subdirs.extend(['DAQTree', 'DAQTreeBCAL'])
 subdirs.extend(['monitoring_hists'])
 subdirs.extend(['p2pi_hists','p3pi_hists','p4pi_hists','p2k_hists'])

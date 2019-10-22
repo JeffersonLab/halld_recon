@@ -53,8 +53,11 @@ typedef struct {
 extern blockINFO_t blockINFO[T_BLOCKS];
 
 #define CRYS_ROWS 12
-#define CRYS_SIZE_X 2.077   // real X-size of crystal
-#define CRYS_SIZE_Y 2.075   // real Y-size of crystal
+// #define CRYS_SIZE_X 2.077   // real X-size of crystal
+// #define CRYS_SIZE_Y 2.075   // real Y-size of crystal
+
+#define CRYS_SIZE_X 2.09   // real X-size of crystal
+#define CRYS_SIZE_Y 2.09   // real Y-size of crystal
 
 typedef struct {
   int  id[MAX_CC];   // ID of ith block, where i runs from 0 to 8

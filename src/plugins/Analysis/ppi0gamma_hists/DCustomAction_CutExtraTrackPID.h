@@ -32,6 +32,10 @@ class DCustomAction_CutExtraTrackPID : public DAnalysisAction
 		dExtraTrackTargetPID(locExtraTrackTargetPID) {}
 
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {
+			locEventLoop->GetSingle(dAnalysisUtilities);
+			ddEdxCutAction->Run_Update(locEventLoop);
+		}
 
 	private:
 

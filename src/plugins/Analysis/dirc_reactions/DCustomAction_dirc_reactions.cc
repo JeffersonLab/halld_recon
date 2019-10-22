@@ -5,6 +5,23 @@
 
 #include "DCustomAction_dirc_reactions.h"
 
+void DCustomAction_dirc_reactions::Run_Update(JEventLoop* locEventLoop)
+{
+	// get PID algos
+	const DParticleID* locParticleID = NULL;
+	locEventLoop->GetSingle(locParticleID);
+	dParticleID = locParticleID;
+
+	locEventLoop->GetSingle(dDIRCLut);
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	// get DIRC geometry
+	vector<const DDIRCGeometry*> locDIRCGeometry;
+	locEventLoop->Get(locDIRCGeometry);
+	dDIRCGeometry = locDIRCGeometry[0];
+
+}
+
 void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 {
 	DIRC_TRUTH_BARHIT = false;
@@ -13,19 +30,8 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 
 	DIRC_FILL_BAR_MAP = false;
 	gPARMS->SetDefaultParameter("DIRC:FILL_BAR_MAP",DIRC_FILL_BAR_MAP);
-
-	// get PID algos
-        const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
-        dParticleID = locParticleID;
-
-        locEventLoop->GetSingle(dDIRCLut);
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
-	// get DIRC geometry
-	vector<const DDIRCGeometry*> locDIRCGeometry;
-        locEventLoop->Get(locDIRCGeometry);
-        dDIRCGeometry = locDIRCGeometry[0];
+	
+	Run_Update(locEventLoop);
 
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);

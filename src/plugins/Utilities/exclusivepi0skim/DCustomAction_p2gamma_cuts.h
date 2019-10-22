@@ -32,7 +32,8 @@ class DCustomAction_p2gamma_cuts : public DAnalysisAction
 		DAnalysisAction(locReaction, "Custom_p2gamma_cuts", locUseKinFitResultsFlag, locActionUniqueString) {}
 
 		void Initialize(JEventLoop* locEventLoop);
-
+		void Run_Update(JEventLoop* locEventLoop) {}
+ 
 	private:
 
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);

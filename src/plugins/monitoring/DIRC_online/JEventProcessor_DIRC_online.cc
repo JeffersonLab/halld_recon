@@ -100,6 +100,9 @@ JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
 
 jerror_t JEventProcessor_DIRC_online::init(void) {
 
+    FillTimewalk = false;
+    gPARMS->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
+
     // create root folder for psc and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
     TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
@@ -147,7 +150,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
         hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
 	
-	if(i==1) {
+	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
 		for(int j=0; j<Nchannels; j++) {
 			hHit_Timewalk[i][j] = new TH2I(Form("Hit_Timewalk_%d",j),Form("DIRCPmtHit channel %d: #Delta t vs time-over-threshold; time-over-threshold [ns]; #Delta t [ns]",j),100,0,100,100,-50.,50.);
@@ -254,7 +257,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     else return NOERROR;
 
     // LED specific information
-    double locLEDRefTime = 0;
+    // next line commented out to supress warning: variable not used
+    //    double locLEDRefTime = 0;
     double locLEDRefAdcTime = 0;
     double locLEDRefTdcTime = 0;
     if(locDIRCLEDTrig) {
@@ -271,7 +275,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
 		locLEDRefAdcTime = dircLEDRef->t_fADC;
 		locLEDRefTdcTime = dircLEDRef->t_TDC;
-		locLEDRefTime = dircLEDRef->t_TDC;
+		// next line commented out to supress warning: variable not used
+		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
@@ -333,7 +338,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // Loop over calibrated hits to get mean for reference time
     double locRefTime = 0;
     int locNHits = 0;
-    double locFirstFiberTime = 128.1; // 205.5; used for no time offset
+    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
     for (const auto& hit : hits) {
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
@@ -397,7 +402,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		double locDeltaT = hit->t - locRefTime;
 		if(ledFiber[1]) locDeltaT -= 10.;
 		if(ledFiber[2]) locDeltaT -= 20.;
-		hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
+		if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
 	}
 
     }

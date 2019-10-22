@@ -1537,6 +1537,12 @@ c    &     const /1.5/
 *
 *               --------------Event Analysis Code-------------
 *
+c     initialize variables to suppress warnings
+      gry = 0.0
+      grx = 0.0
+      gre = 0.0
+      gr = 0.0
+*
       call mom2_pht(nadc,ia,id,nzero,iaz,e0,x0,y0,xx,yy,yx)
 *
       e2=0.
