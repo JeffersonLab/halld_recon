@@ -672,6 +672,8 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	//DIRC:
 	if(DIRC_OUTPUT) {
 		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ExtrapolatedX_DIRC"), locArraySizeString, dInitNumTrackArraySize);
+		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ExtrapolatedY_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locArraySizeString, dInitNumTrackArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locArraySizeString, dInitNumTrackArraySize);
@@ -1625,6 +1627,8 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	// DIRC
 	if(DIRC_OUTPUT) {
 		int locDIRCNumPhotons = 0;
+		double locDIRCExtrapolatedX = 999;
+		double locDIRCExtrapolatedY = 999;
 		double locDIRCThetaC = 999.;
 		double locDIRCLele = 999.;
 		double locDIRCLpi = 999.;
@@ -1632,6 +1636,8 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 		double locDIRCLp = 999.;
 		auto locDIRCMatchParams = locChargedTrackHypothesis->Get_DIRCMatchParams();
 		if(locDIRCMatchParams != NULL) {
+		        locDIRCExtrapolatedX = locDIRCMatchParams->dExtrapolatedPos.X();
+			locDIRCExtrapolatedY = locDIRCMatchParams->dExtrapolatedPos.Y();
 			locDIRCNumPhotons = locDIRCMatchParams->dNPhotons;
 			locDIRCThetaC = locDIRCMatchParams->dThetaC;
 			locDIRCLele =  locDIRCMatchParams->dLikelihoodElectron;
@@ -1640,6 +1646,8 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 			locDIRCLp =  locDIRCMatchParams->dLikelihoodProton;
 		}
 		locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "NumPhotons_DIRC"), locDIRCNumPhotons, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ExtrapolatedX_DIRC"), locDIRCExtrapolatedX, locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ExtrapolatedY_DIRC"), locDIRCExtrapolatedY, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ThetaC_DIRC"), locDIRCThetaC, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lele_DIRC"), locDIRCLele, locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Lpi_DIRC"), locDIRCLpi, locArrayIndex);
