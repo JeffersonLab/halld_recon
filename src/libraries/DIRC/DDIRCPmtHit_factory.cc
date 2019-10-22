@@ -125,6 +125,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    if(digihit_lead->channel != digihit_trail->channel) continue; 
 		    int channel = digihit_lead->channel;
 		    int box = (channel < DIRC_MAX_CHANNELS) ? 1 : 0; // North=0 and South=1
+		    if(box == 0) channel -= DIRC_MAX_CHANNELS; // box-local channel to index CCDB tables
 
 		    // get time-over-threshold
 		    timeOverThreshold = (double)digihit_trail->time - (double)digihit_lead->time;
@@ -152,7 +153,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    double slope = 0.3;
 		    double timeOverThresholdPeak = 50;
 		    if(applyTimeOffset) {
-			    hit->t = hit->t - time_offsets[box][channel] + t_base[box];
+			    hit->t = hit->t + t_base[box] - time_offsets[box][channel];
 		    }
 		    if(applyTimewalk) {
 			    hit->t += slope*(timeOverThreshold - timeOverThresholdPeak);

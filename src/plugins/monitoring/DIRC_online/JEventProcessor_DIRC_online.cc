@@ -138,7 +138,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 		hHit_pixelOccupancy[i][j] = new TH2I("Hit_PixelOccupancy"+strN,"DIRCPmtHit pixel occupancy "+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 		hHit_TimeOverThreshold[i][j] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold "+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 		hHit_TimeOverThresholdVsChannel[i][j] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel "+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
-		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",6500,-500.0,6000.0);
+		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",500,0.0,500.0);
 		hHit_tdcTimeVsEvent[i][j] = new TH2I("Hit_TimeVsEvent"+strN,"DIRCPmtHit time "+strT+"; event #; time [ns]; hits",1000,0,100e6,500,0.0,500.0);
 		hHit_tdcTimeVsChannel[i][j] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel "+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
 	}
@@ -338,7 +338,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // Loop over calibrated hits to get mean for reference time
     double locRefTime = 0;
     int locNHits = 0;
-    double locFirstFiberTime = 128.1; // 205.5; used for no time offset
+    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
     for (const auto& hit : hits) {
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
