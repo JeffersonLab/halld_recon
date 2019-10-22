@@ -50,9 +50,6 @@ DDIRCLut::DDIRCLut()
 	dCriticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	dIndex = 1.473;
 
-	vector<double> new_thetac(108);
-	dThetaC_offsets.push_back(new_thetac); dThetaC_offsets.push_back(new_thetac);
-
 	if(DIRC_DEBUG_HISTS) 	
 		CreateDebugHistograms();	
 }
@@ -66,12 +63,6 @@ bool DDIRCLut::brun(JEventLoop *loop) {
 	vector<const DDIRCGeometry*> locDIRCGeometry;
         loop->Get(locDIRCGeometry);
         dDIRCGeometry = locDIRCGeometry[0];
-
-	// load constant tables
-	if (loop->GetCalib("/DIRC/North/thetac_offsets", dThetaC_offsets[0]))
-		jout << "Error loading /DIRC/North/thetac_offsets !" << endl;	
-	if (loop->GetCalib("/DIRC/South/thetac_offsets", dThetaC_offsets[1]))
-                jout << "Error loading /DIRC/South/thetac_offsets !" << endl;
 
 	return true;
 }
@@ -243,7 +234,6 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 		return locDIRCPhotons;
 
 	int pmt = channel/64;
-	double thetac_offset = dThetaC_offsets[box][pmt];
 	
 	// use hit time to determine if reflected or not
 	double hitTime = locDIRCHit->t - locFlightTime;
@@ -303,7 +293,6 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				luttheta = dir.Angle(TVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
 				tangle = momInBar.Angle(dir); 
-				tangle -= thetac_offset; //correction
 				
 				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
 				double totalTime = bartime+evtime;
