@@ -25,9 +25,6 @@ using namespace jana;
 #include "TH2.h"
 #include "TF1.h"
 
-// store constants so that they can be accessed by pixel number
-typedef  vector<double>  dirc_lut_constants_t;
-
 class DDIRCLut: public JObject {
 
 public:
@@ -36,8 +33,6 @@ public:
 
 	DDIRCLut();
 	~DDIRCLut(){};
-
-	vector<dirc_lut_constants_t> dThetaC_offsets;
 
 	bool brun(JEventLoop *loop);
 	bool CreateDebugHistograms();
@@ -56,11 +51,14 @@ private:
 	bool DIRC_DEBUG_HISTS;
 	bool DIRC_TRUTH_BARHIT;
 	bool DIRC_TRUTH_PIXELTIME;
+	bool DIRC_ROTATE_TRACK;
 
 	double DIRC_CUT_TDIFFD;
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
+
+	double dRotationX[48], dRotationY[48], dRotationZ[48];
 
 	int dMaxChannels;
 	double dCriticalAngle, dIndex;

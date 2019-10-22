@@ -39,6 +39,10 @@ DDIRCLut::DDIRCLut()
 	DIRC_SIGMA_THETAC = 0.01;
 	gPARMS->SetDefaultParameter("DIRC:SIGMA_THETAC",DIRC_SIGMA_THETAC);
 
+	// Rotate tracks angle based on bar box survey data
+	DIRC_ROTATE_TRACK = false;
+	gPARMS->SetDefaultParameter("DIRC:ROTATE_TRACK",DIRC_ROTATE_TRACK);
+
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
 	dFinalStatePIDs.push_back(PiPlus);
@@ -49,9 +53,6 @@ DDIRCLut::DDIRCLut()
 
 	dCriticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	dIndex = 1.473;
-
-	vector<double> new_thetac(108);
-	dThetaC_offsets.push_back(new_thetac); dThetaC_offsets.push_back(new_thetac);
 
 	if(DIRC_DEBUG_HISTS) 	
 		CreateDebugHistograms();	
@@ -67,11 +68,17 @@ bool DDIRCLut::brun(JEventLoop *loop) {
         loop->Get(locDIRCGeometry);
         dDIRCGeometry = locDIRCGeometry[0];
 
-	// load constant tables
-	if (loop->GetCalib("/DIRC/North/thetac_offsets", dThetaC_offsets[0]))
-		jout << "Error loading /DIRC/North/thetac_offsets !" << endl;	
-	if (loop->GetCalib("/DIRC/South/thetac_offsets", dThetaC_offsets[1]))
-                jout << "Error loading /DIRC/South/thetac_offsets !" << endl;
+	// rotation angles for bar boxes (reverse sign from survey)
+	for(int i=0; i<12; i++) {
+	  dRotationX[i] = -0.2134*TMath::DegToRad(); // +pitch // -0.00219;
+	  dRotationY[i] =  0.0963*TMath::DegToRad(); // -yaw   //  0.00181
+	  dRotationZ[i] = -0.0355*TMath::DegToRad(); // -roll  // -0.00062;
+	}
+	for(int i=12; i<24; i++) {
+	  dRotationX[i] = -0.0791*TMath::DegToRad(); // +pitch // -0.00138;
+	  dRotationY[i] =  0.1003*TMath::DegToRad(); // -yaw   //  0.00175;
+	  dRotationZ[i] = -0.0381*TMath::DegToRad(); // -roll  // -0.00066;
+	}
 
 	return true;
 }
@@ -243,8 +250,14 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 		return locDIRCPhotons;
 
 	int pmt = channel/64;
-	double thetac_offset = dThetaC_offsets[box][pmt];
-	
+	double rotX = 0, rotY = 0, rotZ=0;
+	int xbin = (int)(posInBar.X()/5.0) + 19;
+	if(bar>=0 && bar<=23 && xbin>=0 && xbin<=39) {
+	  rotX = dRotationX[bar];
+	  rotY = dRotationY[bar];
+	  rotZ = dRotationZ[bar];
+	}
+
 	// use hit time to determine if reflected or not
 	double hitTime = locDIRCHit->t - locFlightTime;
 	
@@ -300,11 +313,16 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				if(r) dir.SetXYZ( -dir.X(), dir.Y(), dir.Z());
 				if(dir.Angle(fnY1) < dCriticalAngle || dir.Angle(fnZ1) < dCriticalAngle) continue;
 				
+				TVector3 trackMom = momInBar;
+				if(DIRC_ROTATE_TRACK) { // rotate tracks to bar plane from survey data
+				  trackMom.RotateX(rotX);
+				  trackMom.RotateY(rotY);
+				  trackMom.RotateZ(rotZ);
+				}
+				tangle = trackMom.Angle(dir); 
+
 				luttheta = dir.Angle(TVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
-				tangle = momInBar.Angle(dir); 
-				tangle -= thetac_offset; //correction
-				
 				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
 				double totalTime = bartime+evtime;
 
