@@ -18,6 +18,9 @@ using namespace jana;
 //------------------
 jerror_t DDIRCPmtHit_factory::init(void)
 {
+        DIRC_SKIP = false;
+	gPARMS->SetDefaultParameter("DIRC:SKIP",DIRC_SKIP);
+
 	// initialize calibration tables
 	vector<double> new_t0s(DIRC_MAX_CHANNELS);
 	vector<int> new_status(DIRC_MAX_CHANNELS);
@@ -83,6 +86,9 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
+
+    if(DIRC_SKIP) 
+      return NOERROR;
 
     // check that SSP board timestamps match for all modules 
     vector<const DDIRCTriggerTime*> timestamps;
