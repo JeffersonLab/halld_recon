@@ -158,7 +158,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-	  int locBar = locDIRCGeometry->GetBar(posInBar.Y());
+	  int locBar = locDIRCGeometryVec[0]->GetBar(posInBar.Y());
 
 	  fEvent = new DrcEvent();
 	  fEvent->SetType(2);
