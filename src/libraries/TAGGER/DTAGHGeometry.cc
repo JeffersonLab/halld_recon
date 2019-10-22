@@ -3,6 +3,16 @@
 // Created: Sat Jul 5 10:18:56 EST 2014
 // Creator: jonesrt on gluey.phys.uconn.edu
 //
+//  10/19/2019 A.S 
+//
+//  Modify calculation of the photon beam energy to account 
+//  for the fact that the energy of bremsstrahlung electrons detected
+//  by each tagger counter does not depend on the electron beam energy.
+//  The photon beam energy E_gamma has to be computed as
+//  
+//     E_gamma = R * E_endpoint_calib  +  DE,  where
+//
+// 
 
 #include <stdlib.h>
 #include <iostream>
@@ -46,40 +56,86 @@ DTAGHGeometry::DTAGHGeometry(JEventLoop *loop)
    }
    else {
       for (unsigned int i=0; i < result2.size(); ++i) {
-         int ctr = (result2[i])["counter"];
+	int ctr = (result2[i])["counter"];
          m_counter_xlow[ctr] = (result2[i])["xlow"];
          m_counter_xhigh[ctr] = (result2[i])["xhigh"];
       }
    }
+
+
+   int status = 0;
+   m_endpoint_energy_calib_GeV = 0.;
+   
+   std::map<string,double> result3;
+   status = loop->GetCalib("/PHOTON_BEAM/hodoscope/endpoint_calib",result3);
+   
+   
+   if(!status){
+     if (result3.find("TAGGER_CALIB_ENERGY") == result3.end()) {
+       std::cerr << "Error in DTAGHGeometry constructor: "
+		 <<  "failed to read  endpoint_calib field "
+		 <<  "from /PHOTON_BEAM/hodoscope/endpoint_calib table" << std::endl;
+       
+     } else {
+       m_endpoint_energy_calib_GeV  = result3["TAGGER_CALIB_ENERGY"];
+
+       printf(" Correct Beam Photon Energy  (TAGH)   %f \n\n", m_endpoint_energy_calib_GeV);
+
+     }
+   }
+   
 }
 
 DTAGHGeometry::~DTAGHGeometry() { }
 
+
 bool DTAGHGeometry::E_to_counter(double E, unsigned int &counter) const
-{
-   double x = E/m_endpoint_energy_GeV;
-   for (counter=1; counter <= kCounterCount; ++counter) {
-      if ( x >= m_counter_xlow[counter] &&
-           x <= m_counter_xhigh[counter] )
+{  
+  for (counter = 1; counter <= kCounterCount; ++counter) {     
+    
+    double Emin = getElow(counter);
+    double Emax = getEhigh(counter);
+    
+    if ( E >= Emin &&  E <= Emax )
       {
-         return true;
+	return true;
       }
-   }
-   return false;
+  }
+  return false;
 }
+
 
 double DTAGHGeometry::getElow(unsigned int counter) const
 {
-   if (counter > 0 && counter <= kCounterCount)
+  if (counter > 0 && counter <= kCounterCount){
+    if(m_endpoint_energy_calib_GeV  > 0){
+
+      double delta_E  =  m_endpoint_energy_GeV  -  m_endpoint_energy_calib_GeV;
+      double Emin     =  m_counter_xlow[counter]*m_endpoint_energy_calib_GeV  +  delta_E;
+      
+      return Emin;
+
+    } else
       return m_endpoint_energy_GeV * m_counter_xlow[counter];
-   else
-      return 0;
+
+  }  else
+    return 0;
 }
+
 
 double DTAGHGeometry::getEhigh(unsigned int counter) const
 {
-   if (counter > 0 && counter <= kCounterCount)
+  if (counter > 0 && counter <= kCounterCount){
+    if(m_endpoint_energy_calib_GeV  > 0){
+      
+      double delta_E  =  m_endpoint_energy_GeV  -  m_endpoint_energy_calib_GeV;
+      double Emax     =  m_counter_xhigh[counter]*m_endpoint_energy_calib_GeV  +  delta_E;
+      
+      return Emax;
+      
+    } else    
       return m_endpoint_energy_GeV * m_counter_xhigh[counter];
-   else
-      return 0;
+    
+  } else
+    return 0;
 }
