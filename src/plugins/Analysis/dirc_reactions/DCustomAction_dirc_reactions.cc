@@ -74,6 +74,8 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 				CreateAndChangeTo_Directory(Form("Bar %d", locBar), Form("Bar %d", locBar));
 				double bar_y = dDIRCGeometry->GetBarY(locBar);
 				
+				hDeltaThetaCVsChannelMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsChannel_%s_%d",locParticleName.data(),locBar),  Form("cherenkov angle vs. channel; channel ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar), 6912, 0, 6912, 200,-0.2,0.2);
+
 				for(int locXbin=0; locXbin<40; locXbin++) {
 					
 					double xbin_min = -100.0 + locXbin*5.0; 
@@ -83,7 +85,8 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 					TVector3 locBinVect((xbin_min+xbin_max)/2., bar_y, 586.5 - 65.);
 					if(locBinVect.Theta()*180/TMath::Pi() > 12.) 
 						continue;
-					
+
+					hDeltaTOF[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaTOF_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s TOF #Delta x [cm]; %s TOF #Delta y [cm]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data(),locParticleROOTName.data()), 40,-10,10,40,-10,10);
 					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,-20,20);
 					hHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,150);
 					hNphCMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphC_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
@@ -153,6 +156,16 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
 		return true;
 
+	/*
+	// get FCAL for check on residual
+	shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
+	bool foundFCAL = dParticleID->Get_BestFCALMatchParams(locTrackTimeBased, locDetectorMatches, locFCALShowerMatchParams);
+	const DFCALShower* locMatchedFCALShower;
+	if(foundFCAL) {
+	  locMatchedFCALShower = locFCALShowerMatchParams->dFCALShower; 
+	}
+	*/
+
 	Particle_t locPID = locTrackTimeBased->PID();
 	double locMass = ParticleMass(locPID);
 
@@ -201,6 +214,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 
 		Lock_Action(); //ACQUIRE ROOT LOCK!!
 		hExtrapolatedBarHitXY->Fill(posInBar.X(), posInBar.Y());
+		if(DIRC_FILL_BAR_MAP) hDeltaTOF[locBar][locXbin]->Fill(locTOFHitMatchParams->dDeltaXToHit,locTOFHitMatchParams->dDeltaYToHit);
 		Unlock_Action(); //RELEASE ROOT LOCK!!
 
 		double locAngle = dDIRCLut->CalcAngle(locP, locMass);
@@ -278,8 +292,10 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 						hThetaCVsP->Fill(momInBar.Mag(), locThetaC);
 						hDeltaThetaCVsP->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
 						hDeltaThetaCVsChannel->Fill(locChannel, locThetaC-locExpectedThetaC);
+						
 						if(DIRC_FILL_BAR_MAP) {
 						  hDeltaThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						  hDeltaThetaCVsChannelMap[locBar]->Fill(locChannel, locThetaC-locExpectedThetaC);
 						  hThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC);
 						}
 						Unlock_Action(); //RELEASE ROOT LOCK!!

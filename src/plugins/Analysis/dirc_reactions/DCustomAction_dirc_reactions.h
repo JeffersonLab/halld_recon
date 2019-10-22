@@ -60,8 +60,10 @@ class DCustomAction_dirc_reactions : public DAnalysisAction
 		TH1I *hDiff, *hNphC, *hThetaC, *hDeltaThetaC, *hLikelihood, *hLikelihoodDiff;
 		TH2I *hThetaCVsP, *hDeltaThetaCVsP, *hLikelihoodDiffVsP, *hReactionLikelihoodDiffVsP;
 		TH2I *hDeltaThetaCVsChannel;
+		TH2I *hDeltaThetaCVsChannelMap[48];
 
 		TH2I *hExtrapolatedBarHitXY, *hExtrapolatedBarHitXY_PreCut;
+		TH2I *hDeltaTOF[48][40];
 		TH1I *hDiffMap[48][40], *hHitTimeMap[48][40], *hHitTimeMapAll[48][40];
 		TH1I *hNphCMap[48][40], *hNphCMapSlot4[48][40], *hNphCMapSlot5[48][40];
 		TH3S *hPixelHitMap3D[48][40];
