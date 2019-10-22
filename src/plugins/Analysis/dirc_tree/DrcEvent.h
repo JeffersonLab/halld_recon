@@ -40,6 +40,10 @@ public:
   Int_t GetDcHits()       const { return fDcHits; }
   TVector3 GetMomentum()  const { return fMomentum; }
   TVector3 GetPosition()  const { return fPosition; }
+  Int_t GetId_Truth()  const { return fId_Truth; }
+  Double_t GetTime_Truth()  const { return fTime_Truth; }
+  TVector3 GetMomentum_Truth()  const { return fMomentum_Truth; }
+  TVector3 GetPosition_Truth()  const { return fPosition_Truth; }
   Int_t GetHitSize()      const { return fHitSize; }
   Double_t GetTest1()     const { return fTest1; }
   Double_t GetTest2()     const { return fTest2; }
@@ -59,6 +63,10 @@ public:
   void SetDcHits(Int_t val)     { fDcHits = val; }
   void SetMomentum(TVector3 val){ fMomentum = val; }
   void SetPosition(TVector3 val){ fPosition = val; }
+  void SetId_Truth(Int_t val)         { fId_Truth = val; }
+  void SetTime_Truth(Double_t val)    { fTime_Truth = val; }
+  void SetMomentum_Truth(TVector3 val){ fMomentum_Truth = val; }
+  void SetPosition_Truth(TVector3 val){ fPosition_Truth = val; }
   void SetTest1(Double_t val)   { fTest1 = val; }
   void SetTest2(Double_t val)   { fTest2 = val; }
 
@@ -74,12 +82,16 @@ private:
   Double_t fChiSq;
   Double_t fTofTrackDist;
   Double_t fTofTrackDeltaT;
-  
+  Int_t fId_Truth;
+  Double_t fTime_Truth;
+
   Int_t fHitSize;
   std::vector<DrcHit> fHitArray;
 
   TVector3 fMomentum;
   TVector3 fPosition;
+  TVector3 fMomentum_Truth;
+  TVector3 fPosition_Truth;
   Double_t fTest1;
   Double_t fTest2;
   

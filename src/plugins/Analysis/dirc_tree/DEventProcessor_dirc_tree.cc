@@ -95,6 +95,10 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
   loop->GetSingle(locDetectorMatches);
   DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 
+  // cheat and get truth info of track at bar
+  vector<const DDIRCTruthBarHit*> locDIRCBarHits;
+  loop->Get(locDIRCBarHits);
+
   japp->RootWriteLock();
     
   TClonesArray& cevt = *fcEvent;
@@ -153,7 +157,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-	  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+	  int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 
 	  fEvent = new DrcEvent();
 	  fEvent->SetType(2);
@@ -170,6 +174,30 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  fEvent->SetMissMass(locMissingP4.M2());
 	  fEvent->SetChiSq(chisq);
 
+	  if(locDIRCBarHits.size() > 0) {
+
+	    TVector3 bestMatchPos, bestMatchMom;
+	    double bestFlightTime = 999.;
+	    double bestMatchDist = 999.;
+	    int bestBar = -1;
+	    for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
+	      TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
+	      TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
+	      if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
+		bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
+		bestMatchPos = locDIRCBarHitPos;
+		bestMatchMom = locDIRCBarHitMom;
+		bestFlightTime = locDIRCBarHits[i]->t;
+		bestBar = locDIRCBarHits[i]->bar;
+	      }
+	    }
+
+	    fEvent->SetMomentum_Truth(TVector3(bestMatchMom.X(), bestMatchMom.Y(), bestMatchMom.Z()));
+	    fEvent->SetPosition_Truth(TVector3(bestMatchPos.X(), bestMatchPos.Y(), bestMatchPos.Z()));
+	    fEvent->SetTime_Truth(bestFlightTime);
+	    fEvent->SetId_Truth(bestBar);
+	  }
+	  
 	  DrcHit hit;
 	  for(const auto dhit : locDIRCPmtHits){
 	    int ch=dhit->ch;
