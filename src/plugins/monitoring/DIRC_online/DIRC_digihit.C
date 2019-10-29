@@ -13,8 +13,6 @@
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
   if(dir) dir->cd();
 
-  //TH2I* hOcc = (TH2I*)gDirectory->Get("DigiHit/DigiHit_NHitsVsBox");
-  //TH2I* hTN = (TH2I*)gDirectory->Get("DigiHit/NorthUpperBox/TDCDigiHit_TimeVsChannel_NorthUpperBox");
   TH1I* hDigiHit_Nhits_LED = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_LED");
   TH1I* hDigiHit_Nhits = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_NonLED");
   TH1I* hDigiHit_Time_LED = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_LED");
@@ -35,25 +33,6 @@
 
   double tsize = 0.05;  
   gStyle->SetOptStat("emr");
-
-/*
-  if(hOcc){
-    hOcc->SetFillColor(kBlue);
-    c1->cd(1);
-    hOcc->SetLabelSize(0.08,"x");
-    hOcc->SetTitleSize(tsize,"xy");
-    hOcc->GetXaxis()->SetBinLabel(1, "North");
-    hOcc->GetXaxis()->SetBinLabel(2, "South");
-    hOcc->Draw("colz");
-  }
- 
-  if(hTN){
-    hTN->SetFillColor(kBlue);
-    c1->cd(3);
-    hTN->SetTitleSize(tsize,"xy");
-    hTN->Draw("colz");
-  }
-*/
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
     leg->AddEntry(hTS_LED,"LED trigger","l");

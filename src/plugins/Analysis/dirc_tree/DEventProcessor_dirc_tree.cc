@@ -96,6 +96,10 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
   loop->GetSingle(locDetectorMatches);
   DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 
+  // cheat and get truth info of track at bar
+  vector<const DDIRCTruthBarHit*> locDIRCBarHits;
+  loop->Get(locDIRCBarHits);
+
   japp->RootWriteLock();
     
   TClonesArray& cevt = *fcEvent;
@@ -105,30 +109,27 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
     deque<const DParticleCombo*> locPassedParticleCombos;
     locAnalysisResultsVector[loc_i]->Get_PassedParticleCombos(locPassedParticleCombos);
     const DReaction* locReaction = locAnalysisResultsVector[loc_i]->Get_Reaction();
+    if(locReaction->Get_ReactionName() != "p2pi_dirc_tree" &&
+       locReaction->Get_ReactionName() != "p2k_dirc_tree") continue;
+
     std::vector<double> previousInv;
     
     // loop over combos
     for(size_t icombo = 0; icombo < locPassedParticleCombos.size(); ++icombo){
       double chisq = locPassedParticleCombos[icombo]->Get_KinFitResults()->Get_ChiSq();
       DLorentzVector locMissingP4 = fAnalysisUtilities->Calc_MissingP4(locReaction, locPassedParticleCombos[icombo], false);
-      DLorentzVector locInvP4;
       auto locParticleComboStep = locPassedParticleCombos[icombo]->Get_ParticleComboStep(0);
+     
+      // calculate pi+pi- and K+K- invariant mass by taking the final state and subtracting the proton 
+      DLorentzVector locInvP4 = fAnalysisUtilities->Calc_FinalStateP4(locReaction, locPassedParticleCombos[icombo], 0, true);
+      for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
+	auto locParticle = locParticleComboStep->Get_FinalParticle(parti);
+        if(locParticle->PID() == Proton) locInvP4 -= locParticle->lorentzMomentum();
+      }
 
-      int numIt=0;
       for(size_t parti=0; parti<locParticleComboStep->Get_NumFinalParticles(); parti++){
 	auto locParticle = locParticleComboStep->Get_FinalParticle(parti); // Get_FinalParticle_Measured(parti);
-
-	// we expect only rho or phi events:  g,p->pi+,pi-,p  g,p->K+,K-,p
-	if(locParticle->PID() == PiPlus || locParticle->PID() == PiMinus || locParticle->PID() == KPlus || locParticle->PID() == KMinus){
-	  locInvP4 += locParticle->lorentzMomentum();
-	  numIt++;
-	  if(numIt==2){
-	    double tm = locInvP4.M();
-	    // do not store doubles
-	    if(std::find_if(previousInv.begin(), previousInv.end(), [&tm](double m){return fabs(m-tm)<0.000000001;}) != previousInv.end()) { continue; }
-	    previousInv.push_back(tm);
-	  }
-	}
+	if(locParticle->charge() == 0) continue;	
 
 	// get track
 	auto locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(parti));
@@ -146,6 +147,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
 	if(!foundTOF || locTOFHitMatchParams->Get_DistanceToTrack() > 20.0) continue;
 	double toftrackdist = locTOFHitMatchParams->Get_DistanceToTrack();
+	double toftrackdeltat = locChargedTrackHypothesis->Get_TimeAtPOCAToVertex() - locChargedTrackHypothesis->t0();
 	Particle_t locPID = locTrackTimeBased->PID();
 
 	// get DIRC match parameters (contains LUT information)
@@ -156,7 +158,7 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
 	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-	  int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+	  int locBar = locDIRCGeometryVec[0]->GetBar(posInBar.Y());
 
 	  fEvent = new DrcEvent();
 	  fEvent->SetType(2);
@@ -168,10 +170,35 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  fEvent->SetPosition(TVector3(posInBar.X(), posInBar.Y(), posInBar.Z()));
 	  fEvent->SetDcHits(locDCHits);
 	  fEvent->SetTofTrackDist(toftrackdist);
+	  fEvent->SetTofTrackDeltaT(toftrackdeltat);
 	  fEvent->SetInvMass(locInvP4.M());
 	  fEvent->SetMissMass(locMissingP4.M2());
 	  fEvent->SetChiSq(chisq);
 
+	  if(locDIRCBarHits.size() > 0) {
+
+	    TVector3 bestMatchPos, bestMatchMom;
+	    double bestFlightTime = 999.;
+	    double bestMatchDist = 999.;
+	    int bestBar = -1;
+	    for(int i=0; i<(int)locDIRCBarHits.size(); i++) {
+	      TVector3 locDIRCBarHitPos(locDIRCBarHits[i]->x, locDIRCBarHits[i]->y, locDIRCBarHits[i]->z);
+	      TVector3 locDIRCBarHitMom(locDIRCBarHits[i]->px, locDIRCBarHits[i]->py, locDIRCBarHits[i]->pz);
+	      if((posInBar - locDIRCBarHitPos).Mag() < bestMatchDist) {
+		bestMatchDist = (posInBar - locDIRCBarHitPos).Mag();
+		bestMatchPos = locDIRCBarHitPos;
+		bestMatchMom = locDIRCBarHitMom;
+		bestFlightTime = locDIRCBarHits[i]->t;
+		bestBar = locDIRCBarHits[i]->bar;
+	      }
+	    }
+
+	    fEvent->SetMomentum_Truth(TVector3(bestMatchMom.X(), bestMatchMom.Y(), bestMatchMom.Z()));
+	    fEvent->SetPosition_Truth(TVector3(bestMatchPos.X(), bestMatchPos.Y(), bestMatchPos.Z()));
+	    fEvent->SetTime_Truth(bestFlightTime);
+	    fEvent->SetId_Truth(bestBar);
+	  }
+	  
 	  DrcHit hit;
 	  for(const auto dhit : locDIRCPmtHits){
 	    int ch=dhit->ch;
