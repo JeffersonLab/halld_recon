@@ -1040,6 +1040,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				// this though (???)
 				break;
 
+			case 0x11: 
+				// temporary skip for non-existant module (GEM APV)
+				//ParseDGEMAPVBank(iptr, iend_data_block_bank);
+				break;
 
 			default:
 				jerr<<"Unknown module type ("<<det_id<<" = 0x" << hex << det_id << dec << " ) encountered" << endl;

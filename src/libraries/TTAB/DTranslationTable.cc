@@ -300,6 +300,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 		rocid_map[name_to_id[        "CCAL"]] = {90};
 		rocid_map[name_to_id[        "CCAL_REF"]] = {90};
 		rocid_map[name_to_id[        "DIRC"]] = {92};
+		rocid_map[name_to_id[         "TRD"]] = {76};
 		
 	}
 
@@ -545,6 +546,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
          case CDC:  MakeCDCDigiHit(chaninfo.cdc, p); break;
+		 //case TRD:  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
              if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
@@ -583,8 +585,9 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
-			case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, p); break;
+         case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, p); break;
          case CDC         :  MakeCDCDigiHit(chaninfo.cdc, p); break;
+	 case TRD         :  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
              if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
@@ -1274,6 +1277,54 @@ DFDCCathodeDigiHit* DTranslationTable::MakeFDCCathodeDigiHit(
 }
 
 //---------------------------------
+// MakeTRDDigiHit
+//---------------------------------
+DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
+                                       const TRDIndex_t &idx,
+                                       const Df125CDCPulse *p) const
+{
+	DTRDDigiHit *h = new DTRDDigiHit();
+	h->plane             = idx.plane;
+	h->strip             = idx.strip;
+	h->pulse_integral    = p->integral;
+	h->pulse_time        = p->le_time;
+	h->pedestal          = p->pedestal;
+	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->nsamples_integral = p->nsamples_integral;
+	h->nsamples_pedestal = p->nsamples_pedestal;
+
+	h->AddAssociatedObject(p);
+
+	vDTRDDigiHit.push_back(h);
+   
+	return h;
+}
+
+//---------------------------------
+// MakeTRDDigiHit
+//---------------------------------
+DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
+                                       const TRDIndex_t &idx,
+                                       const Df125FDCPulse *p) const
+{
+	DTRDDigiHit *h = new DTRDDigiHit();
+	h->plane             = idx.plane;
+	h->strip             = idx.strip;
+	h->pulse_integral    = p->integral;
+	h->pulse_time        = p->le_time;
+	h->pedestal          = p->pedestal;
+	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->nsamples_integral = p->nsamples_integral;
+	h->nsamples_pedestal = p->nsamples_pedestal;
+
+	h->AddAssociatedObject(p);
+
+	vDTRDDigiHit.push_back(h);
+   
+	return h;
+}
+
+//---------------------------------
 // MakeBCALTDCDigiHit
 //---------------------------------
 DBCALTDCDigiHit* DTranslationTable::MakeBCALTDCDigiHit(
@@ -1669,6 +1720,10 @@ const DTranslationTable::csc_t
 	  case DTranslationTable::DIRC:
              if ( det_channel.dirc == in_channel.dirc )
                 found = true;
+	     break;
+	  case DTranslationTable::TRD:
+             if ( det_channel.trd == in_channel.trd )
+                found = true;
              break;
 
           default:
@@ -1758,6 +1813,10 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
        break;
     case DTranslationTable::DIRC:
        ss << "pixel = " << in_channel.dirc.pixel;
+       break;
+    case DTranslationTable::TRD:
+       ss << "plane = " << in_channel.trd.plane;
+       ss << "strip = " << in_channel.trd.strip;
        break;
 
     default:
@@ -2050,6 +2109,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
 	      return DTranslationTable::TAC;
    } else if ( type == "dirc" ) {
 	   return DTranslationTable::DIRC;
+   } else if ( type == "trd" ) {
+	   return DTranslationTable::TRD;
    } else
    {
       return DTranslationTable::UNKNOWN_DETECTOR;
@@ -2320,6 +2381,10 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
             break;
          case DTranslationTable::DIRC:
 	      ci.dirc.pixel = pixel;
+	      break;
+         case DTranslationTable::TRD:
+	      ci.trd.plane = plane;
+	      ci.trd.strip = strip;
 	      break;
         case DTranslationTable::UNKNOWN_DETECTOR:
 		 default:
