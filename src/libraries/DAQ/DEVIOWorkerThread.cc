@@ -2240,7 +2240,7 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 void DEVIOWorkerThread::ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
 {
 	if(!PARSE_GEMSRS){ iptr = &iptr[(*iptr) + 1]; return; }
-	cout << "ROC " << rocid <<endl;
+	if(VERBOSE>7) cout << "GEMSRS ROC " << rocid <<endl;
 
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
