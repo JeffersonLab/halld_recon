@@ -15,7 +15,7 @@ class DTRDDigiHit:public jana::JObject{
 		
 		uint32_t plane;
 		uint32_t strip;
-		uint32_t pulse_integral;       ///< identified pulse integral as returned by FPGA algorithm
+		uint32_t pulse_peak;           ///< identified pulse peak as returned by FPGA algorithm
 		uint32_t pulse_time;           ///< identified pulse time as returned by FPGA algorithm
 		uint32_t pedestal;             ///< pedestal info used by FPGA (if any)
 		uint32_t QF;                   ///< Quality Factor from FPGA algorithms
@@ -27,7 +27,7 @@ class DTRDDigiHit:public jana::JObject{
 		void toStrings(vector<pair<string,string> > &items)const{
 			AddString(items, "plane", "%d", plane);
 			AddString(items, "strip", "%d", strip);
-			AddString(items, "pulse_integral", "%d", pulse_integral);
+			AddString(items, "pulse_peak", "%d", pulse_peak);
 			AddString(items, "pulse_time", "%d", pulse_time);
 			AddString(items, "pedestal", "%d", pedestal);
 			AddString(items, "QF", "%d", QF);
