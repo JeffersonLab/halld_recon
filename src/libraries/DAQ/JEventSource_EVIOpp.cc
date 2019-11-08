@@ -92,6 +92,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	PARSE_EVENTTAG = true;
 	PARSE_TRIGGER = true;
 	PARSE_SSP = true;
+	PARSE_GEMSRS = true;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
@@ -131,6 +132,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	gPARMS->SetDefaultParameter("EVIO:PARSE_EVENTTAG", PARSE_EVENTTAG, "Set this to 0 to disable parsing of event tag data in the data stream (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_TRIGGER", PARSE_TRIGGER, "Set this to 0 to disable parsing of the built trigger bank from CODA (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_SSP", PARSE_SSP, "Set this to 0 to disable parsing of the SSP (DIRC data) bank from CODA (for benchmarking/debugging)");
+	gPARMS->SetDefaultParameter("EVIO:PARSE_GEMSRS", PARSE_GEMSRS, "Set this to 0 to disable parsing of the SRS (GEM data) bank from CODA (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:APPLY_TRANSLATION_TABLE", APPLY_TRANSLATION_TABLE, "Apply the translation table to create DigiHits (you almost always want this on)");
 	gPARMS->SetDefaultParameter("EVIO:IGNORE_EMPTY_BOR", IGNORE_EMPTY_BOR, "Set to non-zero to continue processing data even if an empty BOR event is encountered.");
 	gPARMS->SetDefaultParameter("EVIO:TREAT_TRUNCATED_AS_ERROR", TREAT_TRUNCATED_AS_ERROR, "Set to non-zero to have a truncated EVIO file the JANA return code to non-zero indicating the program errored.");
@@ -215,6 +217,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 		w->PARSE_EVENTTAG      = PARSE_EVENTTAG;
 		w->PARSE_TRIGGER       = PARSE_TRIGGER;
 		w->PARSE_SSP           = PARSE_SSP;
+		w->PARSE_GEMSRS        = PARSE_GEMSRS;
 		w->LINK_TRIGGERTIME    = LINK_TRIGGERTIME;
 		w->LINK_CONFIG         = LINK_CONFIG;
 		w->run_number_seed     = run_number_seed;
