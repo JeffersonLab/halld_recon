@@ -60,8 +60,7 @@ jerror_t DTRDStripCluster_factory::init(void){
 ///
 jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
 	vector<const DTRDHit*> allHits;
-	vector<const DTRDHit*> xHits;
-	vector<const DTRDHit*> yHits;
+	vector<const DTRDHit*> planeHits[3];
 	vector<vector<const DTRDHit*> >thisLayer;
 	
 	eventLoop->Get(allHits);
@@ -72,46 +71,48 @@ jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 		
 		// Sift through all hits and select out X and Y hits.
 		for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i){
-			if ((*i)->plane == 2) 
-				yHits.push_back(*i);
-			else if((*i)->plane == 3)
-				xHits.push_back(*i);
+			if ((*i)->plane == 0) continue;
+			int stripPlane = (*i)->plane - 1;
+			planeHits[stripPlane].push_back(*i);
 		} 
 
-		// Plane by plane, create clusters of X hits.
-		if (xHits.size()>0){
-			thisLayer.clear();
-			vector<const DTRDHit*>::iterator i = xHits.begin();	      
-			vector<const DTRDHit*> hits;	
-			float old_time=(*i)->t;
-			while(i!=xHits.end()){ 
-				// Look for hits falling within a time slice
-				if (fabs((*i)->t-old_time)>TIME_SLICE){
-					// Sort hits by strip number
-					sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
-					// put into the vector
-					thisLayer.push_back(hits);
-					hits.clear();
-					old_time=(*i)->t;
+		// Plane by plane, create clusters of strips
+		for(uint iplane = 0; iplane < 3; iplane++) {
+			if (planeHits[iplane].size()>0){
+				thisLayer.clear();
+				vector<const DTRDHit*>::iterator i = planeHits[iplane].begin();	      
+				vector<const DTRDHit*> hits;	
+				float old_time=(*i)->t;
+				while(i!=planeHits[iplane].end()){ 
+					// Look for hits falling within a time slice
+					if (fabs((*i)->t-old_time)>TIME_SLICE){
+						// Sort hits by strip number
+						sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
+						// put into the vector
+						thisLayer.push_back(hits);
+						hits.clear();
+						old_time=(*i)->t;
+					}
+					hits.push_back(*i);
+					
+					i++;
 				}
-				hits.push_back(*i);
 				
-				i++;
+				// Sort hits by strip number
+				sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
+				// add the last vector of hits
+				thisLayer.push_back(hits);
+				
+				// Create clusters from these lists of hits
+				for (unsigned int k=0;k<thisLayer.size();k++) pique(thisLayer[k]);
+				
+				// Clear the hits and layer vectors for the next ones
+				thisLayer.clear();	
+				hits.clear();
 			}
-			
-			// Sort hits by strip number
-			sort(hits.begin(),hits.end(),DTRDHit_strip_cmp);
-			// add the last vector of hits
-			thisLayer.push_back(hits);
-			
-			// Create clusters from these lists of hits
-			for (unsigned int k=0;k<thisLayer.size();k++) pique(thisLayer[k]);
-			
-			// Clear the hits and layer vectors for the next ones
-			thisLayer.clear();	
-			hits.clear();
 		}
 		
+		/*
 		// Layer by layer, create clusters of V hits.
 		if (yHits.size()>0){
 			thisLayer.clear();
@@ -145,7 +146,8 @@ jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 			thisLayer.clear();
 			hits.clear();
 		}
-		
+		*/
+
 		// Ensure that the data are still in order of planes.
 		std::sort(_data.begin(), _data.end(), DTRDStripCluster_gPlane_cmp);
 	}

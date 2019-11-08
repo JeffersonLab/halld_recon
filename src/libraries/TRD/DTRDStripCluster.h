@@ -18,7 +18,7 @@ class DTRDStripCluster : public JObject {
   JOBJECT_PUBLIC(DTRDStripCluster);		/// DANA identifier
   
   vector<const DTRDHit*> members; ///< DTRDHits that make up this cluster
-  int plane;			  ///< Y=2, X=3
+  int plane;			  ///< WIRE STRIP=1, GEM X=2, GEM Y=3
   float q_tot;		          ///< total energy/charge deposited in the cluster
 		
   /// Return a sensible string representation of this object
