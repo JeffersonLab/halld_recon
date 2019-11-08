@@ -10,9 +10,10 @@ using namespace jana;
 
 #include "DTRDDigiHit.h"
 #include "DGEMDigiWindowRawData.h"
-//#include "DTRDWireHit.h"
-//#include "DTRDWireCluster.h"
-//#include "DTRDWirePoint.h"
+#include "DTRDHit.h"
+#include "DTRDHit_factory.h"
+#include "DTRDStripCluster_factory.h"
+//#include "DTRDStripPoint.h"
 
 
 jerror_t TRD_init(JEventLoop *loop) {
@@ -20,9 +21,13 @@ jerror_t TRD_init(JEventLoop *loop) {
 	/// Create and register TRD data factories
 	loop->AddFactory(new JFactory<DTRDDigiHit>());
 	loop->AddFactory(new JFactory<DGEMDigiWindowRawData>());
+	loop->AddFactory(new DTRDHit_factory());
+
+	//loop->AddFactory(new DTRDWirePoint_factory());
+	loop->AddFactory(new DTRDStripCluster_factory());
+	//loop->AddFactory(new DTRDStripPoint_factory());
+
 	//loop->AddFactory(new DTRDGeometry_factory());
-	//loop->AddFactory(new DTRDGEMHit_factory());
-	//loop->AddFactory(new DTRDWireHit_factory());
 	//loop->AddFactory(new JFactory<DTRDTruthGEMHit>());
 	//loop->AddFactory(new JFactory<DTRDTruthWireHit>());
 
