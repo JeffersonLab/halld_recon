@@ -35,8 +35,7 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   DTOFHit_factory(){};
   ~DTOFHit_factory(){};
   
-  // geometry info - maybe redundant?
-  const static int TOF_MAX_CHANNELS = 176;
+  int TOF_MAX_CHANNELS;
   int TOF_NUM_PLANES;
   int TOF_NUM_BARS;
   

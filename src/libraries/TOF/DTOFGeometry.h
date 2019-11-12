@@ -8,6 +8,8 @@
 #ifndef _DTOFGeometry_
 #define _DTOFGeometry_
 
+#define DTOFGEOMETRY_VERSION 2
+
 #include <HDGEOMETRY/DGeometry.h>
 #include <DANA/DApplication.h>
 
