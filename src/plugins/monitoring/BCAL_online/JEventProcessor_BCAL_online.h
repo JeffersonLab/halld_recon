@@ -17,10 +17,6 @@ class JEventProcessor_BCAL_online:public jana::JEventProcessor{
   ~JEventProcessor_BCAL_online();
   const char* className(void){return "JEventProcessor_BCAL_online";}
 
-  bool REQUIRE_PHYSICS_TRIG;
-
-  
-  
   time_t  recentwalltime; 
 
  private:
