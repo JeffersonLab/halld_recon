@@ -45,6 +45,9 @@ class JEventProcessor_BCAL_LED:public jana::JEventProcessor{
 //  int low_down_1_counter, low_down_2_counter, low_down_3_counter, low_down_4_counter, low_up_1_counter, low_up_2_counter, low_up_3_counter, low_up_4_counter, high_down_1_counter, high_down_2_counter, high_down_3_counter, high_down_4_counter, high_up_1_counter, high_up_2_counter, high_up_3_counter, high_up_4_counter;
 //  int unidentified, ledcounter;
   int adccount;
+  bool simultaneous;
+        int up_trigger_count = 0;
+        int down_trigger_count = 0;
 
  private:
   jerror_t init(void);						///< Called once at program start.
@@ -64,6 +67,8 @@ class JEventProcessor_BCAL_LED:public jana::JEventProcessor{
 // root hist pointers
 TProfile *bcal_vevent = NULL;
    
+TProfile *down = NULL;
+TProfile *up = NULL;
 TProfile *low_up_1 = NULL;
 TProfile *low_up_2 = NULL;
 TProfile *low_up_3 = NULL;
@@ -119,7 +124,15 @@ TProfile* h2_leddown_Adown_vs_event = NULL;
 TProfile* h2_leddown_Aall_vs_event = NULL;
 TProfile* h2_leddown_sector_vs_event = NULL;
 
+TH1I* dHist_L1bits_fp;
+TH1I* dHist_L1bits_fp_twelvehundhits;
+TH1I* dHist_quad_count_up;
+TH1I* dHist_quad_count_down;
+// TH2I* dHist_quad_occ_up;
+// TH2I* dHist_quad_occ_down;
 
+TH1F* dHist_quad_occ_up;
+TH1F* dHist_quad_occ_down;
 
 };
 
