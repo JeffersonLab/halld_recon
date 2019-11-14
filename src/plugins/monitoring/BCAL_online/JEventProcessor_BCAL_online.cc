@@ -188,6 +188,13 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 	gDirectory->mkdir("bcal")->cd();
 	//gStyle->SetOptStat(111110);
 
+	REQUIRE_PHYSICS_TRIG = true;
+	
+	if(gPARMS) {
+	  gPARMS->SetDefaultParameter("BCALONLINE:REQUIRE_PHYSICS_TRIG",   REQUIRE_PHYSICS_TRIG);
+	}
+	
+	
 	// book hists
 	int timemin_ns = -200;
 	int timemax_ns = 400;
@@ -479,7 +486,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load locBCALGeometry object!");
 	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];
-
+	
 	vector<const DEPICSvalue*> depicsvalue;
 	loop->Get(depicsvalue);
 	if (depicsvalue.size()>0) {
@@ -500,11 +507,13 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	bool goodtrigger=1;
 
 	const DL1Trigger *trig = NULL;
+		
 	try {
 		loop->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
-		if (trig->fp_trig_mask){
+		// if (trig->fp_trig_mask){
+		if (trig->fp_trig_mask&&REQUIRE_PHYSICS_TRIG){
 			goodtrigger=0;
 		}
 	} else {
@@ -512,14 +521,15 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
 		if (!locIsHDDMEvent) goodtrigger=0;		
 	}
+		
 	// calculate total BCAL energy in order to catch BCAL LED events
 	loop->Get(dbcalhits);
 	double total_bcal_energy = 0.;
 	for(unsigned int i=0; i<dbcalhits.size(); i++) {
 		total_bcal_energy += dbcalhits[i]->E;
 	}
-	if (total_bcal_energy > 12.) goodtrigger=0;
-	
+	if (total_bcal_energy > 12.&&REQUIRE_PHYSICS_TRIG) goodtrigger=0;
+		
 	if (!goodtrigger) {
 		return NOERROR;
 	}
@@ -531,7 +541,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	loop->Get(dbcalpoints);
 	loop->Get(dbcalclusters);
 	loop->Get(dbcalshowers);
-
+	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
