@@ -170,7 +170,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings.emplace(Positron, ddEdxCuts_TF1FunctionStrings[Electron]);
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
 
-	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything above if electron/positron, everything below if else
+	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything below if electron/positron, everything above if else
 	//e- FCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
