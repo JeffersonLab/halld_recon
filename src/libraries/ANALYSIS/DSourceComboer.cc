@@ -170,7 +170,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings.emplace(Positron, ddEdxCuts_TF1FunctionStrings[Electron]);
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
 
-	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything above if hadron, everything below if lepton
+	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything below if electron/positron, everything above if else
 	//e- FCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
@@ -183,15 +183,18 @@ void DSourceComboer::Define_DefaultCuts(void)
 	dEOverPCuts_TF1FunctionStrings.emplace(Positron, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(Positron, dEOverPCuts_TF1Params[Electron]);
 
-	/*
-	//mu-
-	dEOverPCuts_TF1FunctionStrings.emplace(MuonMinus, dEOverPCuts_TF1FunctionStrings[Electron]);
-	dEOverPCuts_TF1Params.emplace(MuonMinus, dEOverPCuts_TF1Params[Electron]);
+	//mu- FCAL
+	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_FCAL] = "[0]";
+	dEOverPCuts_TF1Params[MuonMinus][SYS_FCAL] = {0.2};
+
+	//mu- BCAL
+	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_BCAL] = "[0]";
+	dEOverPCuts_TF1Params[MuonMinus][SYS_BCAL] = {0.45};
 
 	//mu+
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonPlus, dEOverPCuts_TF1FunctionStrings[MuonMinus]);
 	dEOverPCuts_TF1Params.emplace(MuonPlus, dEOverPCuts_TF1Params[MuonMinus]);
-	*/
+	
 }
 
 void DSourceComboer::Get_CommandLineCuts_dEdx(void)
