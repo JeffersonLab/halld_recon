@@ -154,6 +154,12 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings[Electron][SYS_CDC].second = "[0]"; //high bound
 	ddEdxCuts_TF1Params[Electron][SYS_CDC].second = {5.5};
 
+	//CDC mu+
+	ddEdxCuts_TF1FunctionStrings[MuonPlus][SYS_CDC].first = "[0]"; //low bound
+	ddEdxCuts_TF1Params[MuonPlus][SYS_CDC].first = {-9.9E9};
+	ddEdxCuts_TF1FunctionStrings[MuonPlus][SYS_CDC].second = "exp(-1.0*[0]*x + [1]) + [2]"; //high bound
+	ddEdxCuts_TF1Params[MuonPlus][SYS_CDC].second = {7.0, 3.0, 6.2};
+
 	//pbar
 	ddEdxCuts_TF1FunctionStrings.emplace(AntiProton, ddEdxCuts_TF1FunctionStrings[Proton]);
 	ddEdxCuts_TF1Params.emplace(AntiProton, ddEdxCuts_TF1Params[Proton]);
@@ -169,6 +175,11 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//e+
 	ddEdxCuts_TF1FunctionStrings.emplace(Positron, ddEdxCuts_TF1FunctionStrings[Electron]);
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
+
+	//mu-
+	ddEdxCuts_TF1FunctionStrings.emplace(MuonMinus, ddEdxCuts_TF1FunctionStrings[MuonPlus]);
+	ddEdxCuts_TF1Params.emplace(MuonMinus, ddEdxCuts_TF1Params[MuonPlus]);
+
 
 	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything below if electron/positron, everything above if else
 	//e- FCAL
