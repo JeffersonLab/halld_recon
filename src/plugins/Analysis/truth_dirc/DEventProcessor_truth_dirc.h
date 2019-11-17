@@ -54,6 +54,7 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
+  TH1F *hTruthWavelength;
   TH1F *hTruthBarHitBar;
   TH2F *hTruthBarHitXY;
   TH2F *hTruthPmtHitZY_North, *hTruthPmtHitZY_South;

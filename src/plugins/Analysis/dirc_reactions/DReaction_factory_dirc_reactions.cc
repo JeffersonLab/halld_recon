@@ -72,6 +72,7 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, false, 900, 0.3, 1.2, "Rho_PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 900, 0.3, 1.2, "Rho_KinFit_PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 0.5, 1.0));
 
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiPlus, 0, 1, "PiPlus_DIRC"));
@@ -132,6 +133,7 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, false, 500, 0.9, 1.4, "Phi_PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 500, 0.9, 1.4, "Phi_KinFit_PostKinFitCut"));
+	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 0.95, 1.05));
 
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KPlus, 0, 1, "KPlus_DIRC"));

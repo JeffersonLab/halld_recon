@@ -44,6 +44,7 @@ class DDIRCPmtHit_factory:public jana::JFactory<DDIRCPmtHit>{
 
 		double t_base[2];
 		bool applyTimeOffset, applyTimewalk;
+		bool DIRC_SKIP;
 };
 
 #endif // _DDIRCPmtHit_factory_

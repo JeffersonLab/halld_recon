@@ -527,7 +527,7 @@ inline bool DSourceComboer::Cut_EOverP(Particle_t locPID, DetectorSystem_t locSy
 		return true;
 
 	auto locCutFunc = dEOverPCutMap[locPID][locSystem];
-	return (IsLepton(locPID) == (locEOverP >= locCutFunc->Eval(locP)));
+	return (((locPID == Electron) || (locPID == Positron)) == (locEOverP >= locCutFunc->Eval(locP)));
 }
 
 inline DSourceComboer::~DSourceComboer(void)

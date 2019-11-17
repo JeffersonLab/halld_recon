@@ -1307,6 +1307,10 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
+	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
+
+	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
+	      if( !locTrackTimeBased ) continue;
 
 	      auto locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
 	      map<shared_ptr<const DDIRCMatchParams> ,vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
@@ -1317,7 +1321,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      double locFlightTime = dircIter->getT();
 
-		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBasedVector[locTrackIndex]->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
+		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
 			  locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
 	      }
 	      else {
