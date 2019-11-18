@@ -27,20 +27,44 @@ import glob
 import shutil
 import subprocess
 
-MYSQL_HOST = 'hallddb'
-MYSQL_DB   = 'test'
-MYSQL_USER = 'test'
+# This must be run from gluon computer to write to gluondb1
+MYSQL_HOST = 'gluondb1'
+MYSQL_DB   = 'HOSS'
+MYSQL_USER = 'hoss'
 MYSQL_PASSWORD = ''
 
-if len(sys.argv) != 3:
-	print('\nUsage:\n\n   hdmk_skims.py input.evio outputdir\n')
+DELETE_INPUT_FILE = False
+RUN_HD_ANA       = True
+KEEP_INTERMEDIATE_FILES = False
+WRITE_TO_DB = True
+
+# Parse command line args
+args = []
+for arg in sys.argv[1:]:
+	if arg == '-d' : DELETE_INPUT_FILE=True
+	if arg == '-c' : RUN_HD_ANA=False
+	if arg == '-k' : KEEP_INTERMEDIATE_FILES = True
+	if arg == '-D' : WRITE_TO_DB = False
+	if not arg.startswith('-'): args.append(arg)
+	
+if len(args) != 2:
+	print('\nUsage:\n\n   hdmk_skims.py [options] input.evio outputdir\n')
 	print('Run hdskims to extract blocks containing a FP triggered event')
 	print('and then run hd_root on that with the trigger_skims plugin')
-	print('to generate the skim files')
+	print('to generate the skim files.')
+	print('')
+	print(' options:')
+	print('     -d   delete the input file when done with it')
+	print('     -D   do not write trigger info to DB (default is to write)')
+	print('     -c   count only. This will run hdskims but not hd_ana')
+	print('          so the final skim files won\'t be produced.')
+	print('          The trigger counts will be entered into the DB though.')
+	print('     -k   Keep intermediate files (for debugging only)')
+	print('')
 	sys.exit(-1)
 
-infilename = sys.argv[1]
-outdir     = sys.argv[2]
+infilename = args[0]
+outdir     = args[1]
 cwd        = os.getcwd()
 
 # If infilename is local then pre-pend cwd so we can access it from
@@ -58,7 +82,7 @@ print('')
 
 # Create workdir and cd to it
 print('hdmk_skims.py: Creating working directory: ' + workdir)
-os.mkdir(workdir)
+os.makedirs(workdir)
 os.chdir(workdir)
 
 print('\nhdmk_skims.py: Running hdskims ...')
@@ -76,14 +100,15 @@ infilename_base = os.path.basename(infilename)
 block_skim_files = glob.glob('*_skims.evio')
 os.symlink( block_skim_files[0], infilename_base )
 
-print('\nhdmk_skims.py: Running hd_root ...')
-cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + [infilename_base]
-print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
-ret = subprocess.call( cmd )
+if RUN_HD_ANA:
+	print('\nhdmk_skims.py: Running hd_ana ...')
+	cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + [infilename_base]
+	print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
+	ret = subprocess.call( cmd )
 
 # Update skininfo DB with any .sql files found in working directory
 sqlfiles = glob.glob('*.sql')
-if len(sqlfiles) > 0:
+if (len(sqlfiles)>0) AND WRITE_TO_DB:
 
 	# We need to import mysql.connector but the RCDB version is
 	# not compatible with what is installed on the gluons. Thus,
@@ -102,20 +127,22 @@ if len(sqlfiles) > 0:
 	mydb.commit();
 
 print('\nhdmk_skims.py: Removing input file and intermediate files ...')
-os.unlink( infilename )
-os.unlink( infilename_base )
-for f in block_skim_files: os.unlink( f )  # Remove intermediate files
-for f in sqlfiles        : os.unlink( f )  # Remove intermediate files
+if DELETE_INPUT_FILE: os.unlink( infilename ) # Remove input file
+if not KEEP_INTERMEDIATE_FILES:
+	os.unlink( infilename_base )               # Remove symlink
+	for f in block_skim_files: os.unlink( f )  # Remove block skim file
+	for f in sqlfiles        : os.unlink( f )  # Remove sql file
 
-print('\nhdmk_skims.py: Moving output files ...')
+print('\nhdmk_skims.py: Moving evio skim files ...')
 for srcfile in glob.glob('*.evio'):
 	destfile = outdir + '/' + srcfile
 	print('   ' + srcfile + ' -> ' + destfile)
 	os.rename( srcfile, destfile )
 
-print('hdmk_skims.py: Removing working directory: ' + workdir)
-os.chdir(cwd)
-shutil.rmtree(workdir, True)
+if not KEEP_INTERMEDIATE_FILES:
+	print('hdmk_skims.py: Removing working directory: ' + workdir)
+	os.chdir(cwd)
+	shutil.rmtree(workdir, True)
 
 
 
