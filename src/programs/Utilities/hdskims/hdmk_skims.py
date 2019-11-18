@@ -27,14 +27,16 @@ import glob
 import shutil
 import subprocess
 
-MYSQL_HOST = 'hallddb'
-MYSQL_DB   = 'test'
-MYSQL_USER = 'test'
+# This must be run from gluon computer to write to gluondb1
+MYSQL_HOST = 'gluondb1'
+MYSQL_DB   = 'HOSS'
+MYSQL_USER = 'hoss'
 MYSQL_PASSWORD = ''
 
 DELETE_INPUT_FILE = False
 RUN_HD_ANA       = True
 KEEP_INTERMEDIATE_FILES = False
+WRITE_TO_DB = True
 
 # Parse command line args
 args = []
@@ -42,6 +44,7 @@ for arg in sys.argv[1:]:
 	if arg == '-d' : DELETE_INPUT_FILE=True
 	if arg == '-c' : RUN_HD_ANA=False
 	if arg == '-k' : KEEP_INTERMEDIATE_FILES = True
+	if arg == '-D' : WRITE_TO_DB = False
 	if not arg.startswith('-'): args.append(arg)
 	
 if len(args) != 2:
@@ -52,6 +55,7 @@ if len(args) != 2:
 	print('')
 	print(' options:')
 	print('     -d   delete the input file when done with it')
+	print('     -D   do not write trigger info to DB (default is to write)')
 	print('     -c   count only. This will run hdskims but not hd_ana')
 	print('          so the final skim files won\'t be produced.')
 	print('          The trigger counts will be entered into the DB though.')
@@ -104,7 +108,7 @@ if RUN_HD_ANA:
 
 # Update skininfo DB with any .sql files found in working directory
 sqlfiles = glob.glob('*.sql')
-if len(sqlfiles) > 0:
+if (len(sqlfiles)>0) AND WRITE_TO_DB:
 
 	# We need to import mysql.connector but the RCDB version is
 	# not compatible with what is installed on the gluons. Thus,
