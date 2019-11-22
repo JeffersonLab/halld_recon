@@ -35,7 +35,7 @@ DFCALGeometry::DFCALGeometry()
  	
       double thisRadius = m_positionOnFace[row][col][calor].Mod();
       
-      if(thisRadius < radius() && (fabs(x)>30.0 || fabs(y)>30.0)){
+      if(thisRadius < radius() && (fabs(x)>50.0 || fabs(y)>50.0)){
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
