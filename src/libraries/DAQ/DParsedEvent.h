@@ -58,6 +58,7 @@ using namespace jana;
 #include <DAQ/Df125BORConfig.h>
 #include <DAQ/DF1TDCBORConfig.h>
 #include <DAQ/DCAEN1290TDCBORConfig.h>
+#include <DAQ/DTSGBORConfig.h>
 #include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/DDIRCTDCHit.h>
 #include <DAQ/DDIRCADCHit.h>
@@ -211,7 +212,7 @@ class DParsedEvent{
 		// One of these is instantiated for each JEventLoop encountered.
 		// See comments below for CopyToFactories for details.
 		#define makefactoryptr(A) JFactory<A> *fac_##A;
-		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A);
+		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A, NULL, false);
 		class DFactoryPointers{
 			public:
 				JEventLoop *loop;

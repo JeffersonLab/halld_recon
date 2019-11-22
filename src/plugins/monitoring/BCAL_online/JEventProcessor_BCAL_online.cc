@@ -188,6 +188,13 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 	gDirectory->mkdir("bcal")->cd();
 	//gStyle->SetOptStat(111110);
 
+	REQUIRE_PHYSICS_TRIG = true;
+	
+	if(gPARMS) {
+	  gPARMS->SetDefaultParameter("BCALONLINE:REQUIRE_PHYSICS_TRIG",   REQUIRE_PHYSICS_TRIG);
+	}
+	
+	
 	// book hists
 	int timemin_ns = -200;
 	int timemax_ns = 400;
@@ -458,12 +465,6 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 
 jerror_t JEventProcessor_BCAL_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
 	// This is called whenever the run number changes
-	// load BCAL geometry
-  	vector<const DBCALGeometry *> BCALGeomVec;
-  	eventLoop->Get(BCALGeomVec);
-  	if(BCALGeomVec.size() == 0)
-		throw JException("Could not load DBCALGeometry object!");
-	dBCALGeom = BCALGeomVec[0];
 
 	return NOERROR;
 }
@@ -479,6 +480,13 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
+	// load BCAL geometry
+  	vector<const DBCALGeometry *> BCALGeomVec;
+  	loop->Get(BCALGeomVec);
+  	if(BCALGeomVec.size() == 0)
+		throw JException("Could not load locBCALGeometry object!");
+	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];
+	
 	vector<const DEPICSvalue*> depicsvalue;
 	loop->Get(depicsvalue);
 	if (depicsvalue.size()>0) {
@@ -499,11 +507,13 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	bool goodtrigger=1;
 
 	const DL1Trigger *trig = NULL;
+		
 	try {
 		loop->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
-		if (trig->fp_trig_mask){
+		// if (trig->fp_trig_mask){
+		if (trig->fp_trig_mask&&REQUIRE_PHYSICS_TRIG){
 			goodtrigger=0;
 		}
 	} else {
@@ -511,14 +521,21 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
 		if (!locIsHDDMEvent) goodtrigger=0;		
 	}
-	
+		
+	// calculate total BCAL energy in order to catch BCAL LED events
+	loop->Get(dbcalhits);
+	double total_bcal_energy = 0.;
+	for(unsigned int i=0; i<dbcalhits.size(); i++) {
+		total_bcal_energy += dbcalhits[i]->E;
+	}
+	if (total_bcal_energy > 12.&&REQUIRE_PHYSICS_TRIG) goodtrigger=0;
+		
 	if (!goodtrigger) {
 		return NOERROR;
 	}
 
 	loop->Get(dbcaldigihits);
 	loop->Get(dbcaltdcdigihits);
-	loop->Get(dbcalhits);
 	loop->Get(dbcaltdchits);
 	loop->Get(dbcaluhits);
 	loop->Get(dbcalpoints);
@@ -563,7 +580,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		bcal_fadc_digi_nsamples_integral->Fill(hit->nsamples_integral);
 		bcal_fadc_digi_nsamples_pedestal->Fill(hit->nsamples_pedestal);
 		int layer = hit->layer;
-		int glosect = dBCALGeom->getglobalsector(hit->module, hit->sector);
+		int glosect = locBCALGeom->getglobalsector(hit->module, hit->sector);
 		if (layer==1) bcal_fadc_digi_occ_layer1->Fill(glosect);
 		if (layer==2) bcal_fadc_digi_occ_layer2->Fill(glosect);
 		if (layer==3) bcal_fadc_digi_occ_layer3->Fill(glosect);
@@ -604,7 +621,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 			bcal_tdc_digi_reltime->Fill(f1tdchits[0]->time,f1tdchits[0]->trig_time);
 
 		int layer = hit->layer;
-		int glosect = dBCALGeom->getglobalsector(hit->module, hit->sector);
+		int glosect = locBCALGeom->getglobalsector(hit->module, hit->sector);
 		if (layer==1) bcal_tdc_digi_occ_layer1->Fill(glosect);
 		if (layer==2) bcal_tdc_digi_occ_layer2->Fill(glosect);
 		if (layer==3) bcal_tdc_digi_occ_layer3->Fill(glosect);
@@ -718,15 +735,17 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
             bcal_Uhit_tTDC_twalk->Fill(Uhit->t_TDC - tdchit->t);
 			int ix = Uhit->module;
 			int iy = (Uhit->sector-1)*4 + Uhit->layer;
-			if(Uhit->end == DBCALGeometry::kUpstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
-			}
-			if(Uhit->end == DBCALGeometry::kDownstream) {
-				bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
-				bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
-				bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
+			if (adchit->pulse_peak>=120) { // Only compare TDC and ADC where pulse is big enough that time-walk is small.
+				if(Uhit->end == DBCALGeometry::kUpstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
+				}
+				if(Uhit->end == DBCALGeometry::kDownstream) {
+					bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
+					bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
+					bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
+				}
 			}
 		} else {
 			bcal_Uhit_noTDC_E->Fill(Uhit->E);
@@ -757,7 +776,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		vector<const DBCALUnifiedHit*> endhits;
 		point->Get(endhits);
 
-		int glosect = dBCALGeom->getglobalsector(endhits[0]->module, endhits[0]->sector);
+		int glosect = locBCALGeom->getglobalsector(endhits[0]->module, endhits[0]->sector);
 		bcal_point_z_sector->Fill(glosect,point->z());
 		bcal_point_E_sector->Fill(glosect,point->E());
 		if (layer==1) bcal_point_aveE_sector_layer1->Fill(glosect,point->E());

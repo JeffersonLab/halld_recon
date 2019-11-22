@@ -61,6 +61,9 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DTOFHitMatchParams> Get_TOFHitMatchParams(void) const{return dTrackingInfo->dTOFHitMatchParams;}
 		shared_ptr<const DBCALShowerMatchParams> Get_BCALShowerMatchParams(void) const{return dTrackingInfo->dBCALShowerMatchParams;}
 		shared_ptr<const DFCALShowerMatchParams> Get_FCALShowerMatchParams(void) const{return dTrackingInfo->dFCALShowerMatchParams;}
+		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
+		
+		
 
 		//SETTERS
 
@@ -79,6 +82,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_TOFHitMatchParams(shared_ptr<const DTOFHitMatchParams> locMatchParams){dTrackingInfo->dTOFHitMatchParams = locMatchParams;}
 		void Set_BCALShowerMatchParams(shared_ptr<const DBCALShowerMatchParams> locMatchParams){dTrackingInfo->dBCALShowerMatchParams = locMatchParams;}
 		void Set_FCALShowerMatchParams(shared_ptr<const DFCALShowerMatchParams> locMatchParams){dTrackingInfo->dFCALShowerMatchParams = locMatchParams;}
+		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}
 
 		void toStrings(vector<pair<string,string> > &items) const
 		{
@@ -137,6 +141,7 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DTOFHitMatchParams> dTOFHitMatchParams = nullptr;
 				shared_ptr<const DBCALShowerMatchParams> dBCALShowerMatchParams = nullptr;
 				shared_ptr<const DFCALShowerMatchParams> dFCALShowerMatchParams = nullptr;
+				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;
 		};
 
 	private:
@@ -333,6 +338,7 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dTOFHitMatchParams = nullptr;
 	dBCALShowerMatchParams = nullptr;
 	dFCALShowerMatchParams = nullptr;
+	dDIRCMatchParams = nullptr;
 }
 
 #endif // _DChargedTrackHypothesis_

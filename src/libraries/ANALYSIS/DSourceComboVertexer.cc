@@ -9,6 +9,13 @@ namespace DAnalysis
 DSourceComboVertexer::DSourceComboVertexer(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler) :
 dSourceComboer(locSourceComboer), dSourceComboP4Handler(locSourceComboP4Handler)
 {
+	Set_RunDependent_Data(locEventLoop);
+
+	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+}
+
+void DSourceComboVertexer::Set_RunDependent_Data(JEventLoop *locEventLoop)
+{
 	locEventLoop->GetSingle(dAnalysisUtilities);
 
 	//GET THE GEOMETRY
@@ -19,8 +26,6 @@ dSourceComboer(locSourceComboer), dSourceComboP4Handler(locSourceComboP4Handler)
 	double locTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(locTargetCenterZ);
 	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
-
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 }
 
 vector<signed char> DSourceComboVertexer::Get_VertexZBins(const DReactionVertexInfo* locReactionVertexInfo, const DSourceCombo* locReactionCombo, const DKinematicData* locBeamParticle, bool locComboIsFullyCharged) const
@@ -618,7 +623,11 @@ void DSourceComboVertexer::Construct_DecayingParticle_MissingMass(const DReactio
 		auto locPreviousFullVertexCombo = dSourceComboer->Get_VertexPrimaryCombo(locReactionFullCombo, locPreviousVertexInfo);
 		auto locPreviousDecayPID = std::get<0>(locSourceComboUse);
 		auto locPreviousDecayParticleTuple = std::make_tuple(locPreviousDecayPID, locReactionFullCombo, locPreviousIsProdVertexFlag, locPreviousFullVertexCombo, locBeamParticle);
-		locInitialStateP4 = dReconDecayParticles_FromMissing[locPreviousDecayParticleTuple]->lorentzMomentum();
+		auto locPreviousIterator = dReconDecayParticles_FromMissing.find(locPreviousDecayParticleTuple);
+		if(locPreviousIterator != dReconDecayParticles_FromMissing.end())
+		  locInitialStateP4 = dReconDecayParticles_FromMissing[locPreviousDecayParticleTuple]->lorentzMomentum();
+		else //if the previous vertex only had additional photons, it might not be computed yet
+		  return; 
 		if(dDebugLevel >= 10)
 			cout << "retrieved decaying pid, p4: " << locPreviousDecayPID << ", " << locInitialStateP4.Px() << ", " << locInitialStateP4.Py() << ", " << locInitialStateP4.Pz() << ", " << locInitialStateP4.E() << endl;
 	}

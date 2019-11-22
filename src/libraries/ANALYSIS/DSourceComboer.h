@@ -100,6 +100,8 @@ class DSourceComboer : public JObject
 
 		//RESET
 		void Reset_NewEvent(JEventLoop* locEventLoop);
+		
+		void Set_RunDependent_Data(JEventLoop *locEventLoop);
 
 		//BUILD COMBOS (what should be called from the outside to do all of the work)
 		DCombosByReaction Build_ParticleCombos(const DReactionVertexInfo* locReactionVertexInfo);
@@ -525,7 +527,7 @@ inline bool DSourceComboer::Cut_EOverP(Particle_t locPID, DetectorSystem_t locSy
 		return true;
 
 	auto locCutFunc = dEOverPCutMap[locPID][locSystem];
-	return (IsLepton(locPID) == (locEOverP >= locCutFunc->Eval(locP)));
+	return (((locPID == Electron) || (locPID == Positron)) == (locEOverP >= locCutFunc->Eval(locP)));
 }
 
 inline DSourceComboer::~DSourceComboer(void)

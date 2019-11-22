@@ -57,8 +57,6 @@ class JEventProcessor_FDCProjectionResiduals:public jana::JEventProcessor{
       int PLANE_TO_SKIP;
       double dMinTrackingFOM;
 
-      const DTrackFitter *fitter;
-
       vector< vector< DCDCWire * > > cdcwires; // CDC Wires Referenced by [ring][straw]
       vector<vector<double> >max_sag;
       vector<vector<double> >sag_phi_offset;
@@ -68,7 +66,7 @@ class JEventProcessor_FDCProjectionResiduals:public jana::JEventProcessor{
       double short_drift_func[3][3];
       double endplate_z,endplate_dz,endplate_rmin,endplate_rmax;
 
-      bool Expect_Hit(const DTrackTimeBased* thisTimeBasedTrack, DCDCWire* wire, double distanceToWire, double& delta, double& dz);
+      bool Expect_Hit(const DTrackTimeBased* thisTimeBasedTrack, DCDCWire* wire, double distanceToWire, double& delta, double& dz, const DTrackFitter *fitter);
       double CDCDriftDistance(double delta, double t);
       unsigned int Locate(vector<double>&xx,double x);
       double GetDOCA(DVector3, DVector3, DVector3, DVector3, DVector3&, DVector3&);

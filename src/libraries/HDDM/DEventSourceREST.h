@@ -26,6 +26,7 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
+#include <CCAL/DCCALShower.h>
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALShower_factory_IU.h>
 #include <START_COUNTER/DSCHit.h>
@@ -33,6 +34,9 @@
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
+#include <DIRC/DDIRCPmtHit.h>
+#include <DIRC/DDIRCTruthBarHit.h>
+#include <PID/DParticleID.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include "DResourcePool.h"
@@ -74,6 +78,8 @@ class DEventSourceREST:public JEventSource
                     JFactory<DFCALShower>* factory);
    jerror_t Extract_DBCALShower(hddm_r::HDDM *record,
                     JFactory<DBCALShower>* factory);
+   jerror_t Extract_DCCALShower(hddm_r::HDDM *record,
+                    JFactory<DCCALShower>* factory);
    jerror_t Extract_DTrackTimeBased(hddm_r::HDDM *record,
                     JFactory<DTrackTimeBased>* factory, JEventLoop* locEventLoop);
    jerror_t Extract_DTrigger(hddm_r::HDDM *record,
@@ -84,6 +90,8 @@ class DEventSourceREST:public JEventSource
    jerror_t Extract_DRFTime(hddm_r::HDDM *record,
                     JFactory<DRFTime>* factory);
 #endif
+   jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
+                    JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
 
    void Get7x7ErrorMatrix(double mass, const double vec[5], const TMatrixFSym* C5x5, TMatrixFSym* loc7x7ErrorMatrix);
  private:
@@ -95,6 +103,12 @@ class DEventSourceREST:public JEventSource
 	bool USE_CCDB_BCAL_COVARIANCE;
 	bool USE_CCDB_FCAL_COVARIANCE;
 	
+	bool PRUNE_DUPLICATE_TRACKS;
+	bool RECO_DIRC_CALC_LUT;
+	int dDIRCMaxChannels;
+	enum dirc_status_state {GOOD, BAD, NOISY};
+	map<unsigned int, vector<vector<int>>> dDIRCChannelStatusMap; //unsigned int is run number
+
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;
 

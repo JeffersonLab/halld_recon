@@ -17,7 +17,7 @@ class DTAGHGeometry_factory : public JFactory<DTAGHGeometry> {
 		DTAGHGeometry_factory(){}
 		~DTAGHGeometry_factory(){}
 	
-		DTAGHGeometry *taghgeometry;
+		DTAGHGeometry *taghgeometry=nullptr;
 
 		//------------------
 		// brun

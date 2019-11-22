@@ -10,8 +10,10 @@
 #include "JEventProcessor_occupancy_online.h"
 using namespace jana;
 
+#include <BCAL/DBCALHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
+#include <CCAL/DCCALDigiHit.h>
 #include <CDC/DCDCDigiHit.h>
 #include <FDC/DFDCCathodeDigiHit.h>
 #include <FDC/DFDCWireDigiHit.h>
@@ -34,11 +36,13 @@ using namespace jana;
 #include <TAGGER/DTAGMDigiHit.h>
 #include <TAGGER/DTAGMTDCDigiHit.h>
 #include <TRIGGER/DL1Trigger.h>
+#include <DIRC/DDIRCTDCDigiHit.h>
 
 // Script-fu for handling digihit type enmasse
 #define DigiHitTypes(X) \
 	X(DBCALDigiHit) \
 	X(DBCALTDCDigiHit) \
+	X(DCCALDigiHit) \
 	X(DCDCDigiHit) \
 	X(DFDCCathodeDigiHit) \
 	X(DFDCWireDigiHit) \
@@ -55,7 +59,8 @@ using namespace jana;
 	X(DTAGMTDCDigiHit) \
 	X(DTAGHDigiHit) \
 	X(DTAGHTDCDigiHit) \
-	X(DTPOLSectorDigiHit)
+	X(DTPOLSectorDigiHit)\
+	X(DDIRCTDCDigiHit) \
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -136,6 +141,10 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 		bcal_tdc_occ->GetYaxis()->SetBinLabel(ibin + 13, ss.str().c_str());
 	}
 	bcal_num_events = new TH1I("bcal_num_events", "BCAL number of events", 1, 0.0, 1.0);
+
+	//------------------------ CCAL -----------------------
+	ccal_occ = new TH2F("ccal_occ", "CCAL Occupancy; column; row", 14, -1.5, 12.5, 14, -1.5, 12.5);
+	ccal_num_events = new TH1I("ccal_num_events", "CCAL number of events", 1, 0.0, 1.0);
 
 	//------------------------ CDC ------------------------
 	int Nstraws[28] = {42, 42, 54, 54, 66, 66, 80, 80, 93, 93, 106, 106, 123, 123, 
@@ -221,15 +230,22 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 
 	//------------------------ TOF ------------------------
 	tof_num_events = new TH1I("tof_num_events", "TOF number of events", 1, 0.0, 1.0);
-	tof_tdc_S_occ = new TH1I("tof_tdc_S_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_N_occ = new TH1I("tof_tdc_N_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_U_occ = new TH1I("tof_tdc_U_occ","TOF, TDC Occupancy",86,1,44);
-	tof_tdc_D_occ = new TH1I("tof_tdc_D_occ","TOF, TDC Occupancy",86,1,44);
+	tof_tdc_S_occ = new TH1I("tof_tdc_S_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_N_occ = new TH1I("tof_tdc_N_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_U_occ = new TH1I("tof_tdc_U_occ","TOF, TDC Occupancy",88,1,46);
+	tof_tdc_D_occ = new TH1I("tof_tdc_D_occ","TOF, TDC Occupancy",88,1,46);
 
-	tof_adc_S_occ = new TH1I("tof_adc_S_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_N_occ = new TH1I("tof_adc_N_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_U_occ = new TH1I("tof_adc_U_occ","TOF, fADC Occupancy",86,1,44);
-	tof_adc_D_occ = new TH1I("tof_adc_D_occ","TOF, fADC Occupancy",86,1,44);
+	tof_adc_S_occ = new TH1I("tof_adc_S_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_N_occ = new TH1I("tof_adc_N_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_U_occ = new TH1I("tof_adc_U_occ","TOF, fADC Occupancy",88,1,46);
+	tof_adc_D_occ = new TH1I("tof_adc_D_occ","TOF, fADC Occupancy",88,1,46);
+
+	//------------------------ DIRC ------------------------
+	dirc_num_events = new TH1I("dirc_num_events", "DIRC number of events", 1, 0.0, 1.0);
+	dirc_tdc_pixel_N_occ_led = new TH2I("dirc_tdc_pixel_N_occ_led","DIRC, TDC North (Upper) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_S_occ_led = new TH2I("dirc_tdc_pixel_S_occ_led","DIRC, TDC South (Lower) Pixel Occupancy: LED trigger; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+	dirc_tdc_pixel_N_occ = new TH2I("dirc_tdc_pixel_N_occ","DIRC, TDC North (Upper) Pixel Occupancy: Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
+        dirc_tdc_pixel_S_occ = new TH2I("dirc_tdc_pixel_S_occ","DIRC, TDC South (Lower) Pixel Occupancy; Non-LED triggers; pixel rows; pixel columns",144,-0.5,143.5,48,-0.5,47.5);
 
 	//------------------------ DigiHits ------------------------
 	#define FillDigiHitMap(A) digihitbinmap[#A]=(double)(digihitbinmap.size());
@@ -276,6 +292,9 @@ jerror_t JEventProcessor_occupancy_online::brun(JEventLoop *eventLoop, int32_t r
 {
   // This is called whenever the run number changes
 
+  vector<const DDIRCGeometry*> locDIRCGeometry;
+  eventLoop->Get(locDIRCGeometry);
+  dDIRCGeometry = locDIRCGeometry[0];
 
   return NOERROR;
 }
@@ -298,16 +317,34 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	
 	// trig[idx[  where idx=0-31 corresponds to "trig bit 1-32"
 	vector<bool> trig(32, 0);
+	vector<bool> fp_trig(32, 0);
 	if(l1trigger){
 		for(int itrig=0; itrig<32; itrig++) trig[itrig] = (l1trigger->trig_mask >> itrig)&0x01;
+		for(int itrig=0; itrig<32; itrig++) fp_trig[itrig] = (l1trigger->fp_trig_mask >> itrig)&0x01;
 	}
+	else // not a triggered event
+	  return NOERROR;
+
+	// calculate total BCAL energy in order to catch BCAL LED events
+	vector<const DBCALHit *> bcal_hits;
+	loop->Get(bcal_hits);
+	double total_bcal_energy = 0.;
+	for(unsigned int i=0; i<bcal_hits.size(); i++) {
+            total_bcal_energy += bcal_hits[i]->E;
+        }
+	
 
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-
+	
 	//------------------------ BCAL -----------------------
-	bcal_num_events->Fill(0.5);
-	//ADC
-	for(unsigned int i = 0; i < vDBCALDigiHit.size(); i++){
+	
+	// don't fill occupancy plots for BCAL LED events
+	if( !((l1trigger->fp_trig_mask & 0x100) || (l1trigger->fp_trig_mask & 0x200)) 
+               && (total_bcal_energy < 20.) ) {
+  
+            bcal_num_events->Fill(0.5);
+	    //ADC
+	    for(unsigned int i = 0; i < vDBCALDigiHit.size(); i++){
 		const DBCALDigiHit *hit = vDBCALDigiHit[i];
 
 		int ix = hit->module;
@@ -317,10 +354,10 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 			bcal_adc_occ->Fill(ix, iy+17);
 		else if(hit->end == DBCALGeometry::kDownstream)
 			bcal_adc_occ->Fill(ix, iy);
-	}
+	    }
 
-	//TDC
-	for(unsigned int i = 0; i < vDBCALTDCDigiHit.size(); i++){
+	    //TDC
+	    for(unsigned int i = 0; i < vDBCALTDCDigiHit.size(); i++){
 		const DBCALTDCDigiHit *hit = vDBCALTDCDigiHit[i];
 
 		int ix = hit->module;
@@ -330,6 +367,13 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 			bcal_tdc_occ->Fill(ix, iy+13);
 		else if(hit->end == DBCALGeometry::kDownstream)
 			bcal_tdc_occ->Fill(ix, iy);
+	    }
+        }
+
+	//------------------------ CCAL -----------------------
+	ccal_num_events->Fill(0.5);
+	for(size_t loc_i = 0; loc_i < vDCCALDigiHit.size(); ++loc_i){
+		ccal_occ->Fill(vDCCALDigiHit[loc_i]->column, vDCCALDigiHit[loc_i]->row);
 	}
 
 	//------------------------ CDC ------------------------
@@ -456,6 +500,23 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		if( plane==0 && end==1 ) tof_tdc_D_occ->Fill(bar);
 		if( plane==1 && end==0 ) tof_tdc_N_occ->Fill(bar);
 		if( plane==1 && end==1 ) tof_tdc_S_occ->Fill(bar);
+	}
+
+	//------------------------ DIRC ------------------------
+	dirc_num_events->Fill(0.5);
+	for(uint32_t i=0; i<vDDIRCTDCDigiHit.size(); i++){
+
+		const DDIRCTDCDigiHit *hit = vDDIRCTDCDigiHit[i];
+		int ch = hit->channel;
+
+		if(ch >= 108*64) {
+			if(fp_trig[14]) dirc_tdc_pixel_N_occ_led->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+			else dirc_tdc_pixel_N_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		}
+		else { 
+			if(fp_trig[14]) dirc_tdc_pixel_S_occ_led->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+			else dirc_tdc_pixel_S_occ->Fill(dDIRCGeometry->GetPixelRow(ch), dDIRCGeometry->GetPixelColumn(ch));
+		}
 	}
 
 	//------------------------ DigiHits ------------------------

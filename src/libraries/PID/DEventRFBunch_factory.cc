@@ -17,6 +17,9 @@ using namespace jana;
 jerror_t DEventRFBunch_factory::init(void)
 {
 	dMinTrackingFOM = 0.0;
+	OVERRIDE_TAG = "";
+	
+	gPARMS->SetDefaultParameter("EVENTRFBUNCH:USE_TAG", OVERRIDE_TAG, "Use a particular tag for the general RF bunch calculation instead of the default calculation.");
 	return NOERROR;
 }
 
@@ -48,6 +51,21 @@ jerror_t DEventRFBunch_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 {
 	//There should ALWAYS be one and only one DEventRFBunch created.
 		//If there is not enough information, time is set to NaN
+
+	if(OVERRIDE_TAG != "") {
+		vector<const DEventRFBunch *> rfBunchVec;
+		locEventLoop->Get(rfBunchVec, OVERRIDE_TAG.c_str());
+		
+		if(rfBunchVec.size() > 0) {
+			DEventRFBunch *rfBunchCopy = new DEventRFBunch(*rfBunchVec[0]);
+			_data.push_back(rfBunchCopy);
+			return NOERROR;
+		} else {
+			jerr << "Could not find DEventRFBunch objects with tag " << OVERRIDE_TAG
+				 << ", falling back to default calculation ..." << endl;
+		}
+	}
+
 
 	//Select Good Tracks
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
@@ -96,22 +114,21 @@ void DEventRFBunch_factory::Select_GoodTracks(JEventLoop* locEventLoop, vector<c
 
 jerror_t DEventRFBunch_factory::Select_RFBunch(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector, const DRFTime* locRFTime)
 {
-	//If RF Time present:
-		//Use tracks with matching TOF hits (unless track is very slow (track projection out to TOF is bad)). For those without, use SC hits instead.  If any.
-		//If none, use tracks with matching hits in any detector, if any
-		//If none: Let neutral showers vote (assume PID = photon) on RF bunch
-		//If None: set DEventRFBunch::dTime to NaN
+  //If RF Time present:
+  // Use track matches in the following order: SC, TOF, BCAL, FCAL. 
+  // If none: Let neutral showers vote (assume PID = photon) on RF bunch
+  // If None: set DEventRFBunch::dTime to NaN
 
-	//Voting when RF time present:
-		//Propagate track/shower times to vertex
-		//Compare times to possible RF bunches, select the bunch with the most votes
-		//If there is a tie: let DBeamPhoton's vote to break tie
-			//If still a tie, and voting with tracks:
-				//Select the bunch with the most total track hits (highest total tracking NDF)
-				//If still a tie: 
-					//Select the bunch with the lowest total chisq
-			//If still a tie, and voting with neutral showers:
-				//Select the bunch with the highest total shower energy
+  //Voting when RF time present:
+  //Propagate track/shower times to vertex
+  //Compare times to possible RF bunches, select the bunch with the most votes
+  //If there is a tie: let DBeamPhoton's vote to break tie
+  //If still a tie, and voting with tracks:
+  //Select the bunch with the most total track hits (highest total tracking NDF)
+  //If still a tie: 
+  //Select the bunch with the lowest total chisq
+  //If still a tie, and voting with neutral showers:
+  //Select the bunch with the highest total shower energy
 
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches);
@@ -119,10 +136,7 @@ jerror_t DEventRFBunch_factory::Select_RFBunch(JEventLoop* locEventLoop, vector<
 	vector<pair<double, const JObject*> > locTimes;
 	int locBestRFBunchShift = 0, locHighestNumVotes = 0;
 
-	//Use tracks with matching SC hits, if any
-	if(Find_TrackTimes_SCTOF(locDetectorMatches, locTrackTimeBasedVector, locTimes))
-		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime->dTime, locTimes, true, locHighestNumVotes);
-	else if(Find_TrackTimes_All(locDetectorMatches, locTrackTimeBasedVector, locTimes))
+	if(Find_TrackTimes_All(locDetectorMatches, locTrackTimeBasedVector, locTimes))
 		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime->dTime, locTimes, true, locHighestNumVotes);
 	else if(Find_NeutralTimes(locEventLoop, locTimes))
 		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime->dTime, locTimes, false, locHighestNumVotes);
@@ -208,45 +222,58 @@ bool DEventRFBunch_factory::Find_TrackTimes_All(const DDetectorMatches* locDetec
 		//max can be off = rf-frequency/2 ns (if off by more, will pick wrong beam bunch)
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
 	{
-		const DTrackTimeBased* locTrackTimeBased = locTrackTimeBasedVector[loc_i];
+	  const DTrackTimeBased* locTrackTimeBased = locTrackTimeBasedVector[loc_i];
 
-		//TOF resolution = 80ps, 3sigma = 240ps
-			//max PID delta-t = 762ps (assuming 499 MHz and no buffer)
-			//for pion-proton: delta-t is ~750ps at ~170 MeV/c or lower: cannot have proton this slow anyway
-			//for pion-kaon delta-t is ~750ps at ~80 MeV/c or lower: won't reconstruct these anyway, and not likely to be forward-going anyway
-		shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-		if(dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
-		{
-			double locPropagatedTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-			continue;
-		}
+	  // start with SC: closest to target, minimal dependence on particle type
+	  shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
+	  if(dParticleID->Get_BestSCMatchParams(locTrackTimeBased, locDetectorMatches, locSCHitMatchParams))
+	    {
+	      double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+	      continue;
+	      
+	    }
+	  
+	  // Next use the TOF (best timing resolution for outer detectors
+	  //TOF resolution = 80ps, 3sigma = 240ps
+	  //max PID delta-t = 762ps (assuming 499 MHz and no buffer)
+	  //for pion-proton: delta-t is ~750ps at ~170 MeV/c or lower: cannot have proton this slow anyway
+	  //for pion-kaon delta-t is ~750ps at ~80 MeV/c or lower: won't reconstruct these anyway, and not likely to be forward-going anyway
+	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+	  if(dParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
+	    {
+	      double locPropagatedTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+	      continue;
+	    }
+	  
+	  // Else match to BCAL if fast enough (low time resolution for slow particles)
+	  double locP = locTrackTimeBased->momentum().Mag();
+	  //at 250 MeV/c, BCAL t-resolution is ~310ps (3sigma = 920ps), BCAL delta-t error is ~40ps: ~960 ps < 1 ns: OK!!
+	  //at 225 MeV/c, BCAL t-resolution is ~333ps (3sigma = 999ps), BCAL delta-t error is ~40ps: ~1040ps: bad at 499 MHz
+	  if((locP < 0.25) && (dBeamBunchPeriod < 2.005))
+	    continue; //too slow for the BCAL to distinguish RF bunch
+	  
+	  shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
+	  if(dParticleID->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
+	    {
+	      const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
+	      double locPropagatedTime = locBCALShower->t - locBCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+	      continue;
+	    }
 
-		//Prefer TOF over SC in nose region because hard to tell which SC counter should have been hit
-		shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
-		if(dParticleID->Get_BestSCMatchParams(locTrackTimeBased, locDetectorMatches, locSCHitMatchParams))
-		{
-			double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-			continue;
+	  // If all else fails, use FCAL 
+	  shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
+	  if(dParticleID->Get_BestFCALMatchParams(locTrackTimeBased, locDetectorMatches, locFCALShowerMatchParams))
+	    {
+	      const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+	      double locPropagatedTime = locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
+	      locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
+	      continue;
+	    }
 
-		}
-
-		// Else match to BCAL if fast enough (low time resolution for slow particles)
-		double locP = locTrackTimeBased->momentum().Mag();
-		//at 250 MeV/c, BCAL t-resolution is ~310ps (3sigma = 920ps), BCAL delta-t error is ~40ps: ~960 ps < 1 ns: OK!!
-		//at 225 MeV/c, BCAL t-resolution is ~333ps (3sigma = 999ps), BCAL delta-t error is ~40ps: ~1040ps: bad at 499 MHz
-		if((locP < 0.25) && (dBeamBunchPeriod < 2.005))
-			continue; //too slow for the BCAL to distinguish RF bunch
-
-		shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
-		if(dParticleID->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
-		{
-			const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
-			double locPropagatedTime = locBCALShower->t - locBCALShowerMatchParams->dFlightTime + (dTargetCenter.Z() - locTrackTimeBased->z())/29.9792458;
-			locTimes.push_back(pair<double, const JObject*>(locPropagatedTime, locTrackTimeBased));
-			continue;
-		}
+	  
 	}
 
 	return (!locTimes.empty());

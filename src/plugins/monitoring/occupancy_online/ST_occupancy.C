@@ -83,4 +83,17 @@
 		lat.SetTextSize(0.035);
 		lat.Draw();
 	}
+
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "ST Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("ST_occupancy", 0);
+			rs_ResetAllMacroHistos("//ST_occupancy");
+		}
+	}
+#endif
 }

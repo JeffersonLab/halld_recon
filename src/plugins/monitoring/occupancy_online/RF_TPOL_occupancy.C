@@ -48,6 +48,7 @@
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGrid();
+	pad1->SetName("RF");
 	if(rf_occ){
 		
 		// Draw axes
@@ -76,11 +77,27 @@
 	TVirtualPad *pad2 = c1->cd(2);
 	pad2->SetTicks();
 	pad2->SetGrid();
+	pad2->SetName("TPOL");
 	if(tpol_occ){
 		tpol_occ->SetFillColor(kOrange);
 		tpol_occ->SetLineWidth(5);
 		tpol_occ->SetLineColor(kBlack);
+		double max = tpol_occ->GetBinContent(10)*1.5;
+		tpol_occ->GetYaxis()->SetRangeUser(0., max);
 		tpol_occ->Draw("HIST");
 	}
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 1E4;
+		if( Nevents >= min_events ) {
+			cout << "RF_TPOL Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("RF_TPOL_occupancy", 1);
+			rs_SavePad("RF_TPOL_occupancy", 2);
+			rs_ResetAllMacroHistos("//RF_TPOL_occupancy");
+		}
+	}
+#endif
 }

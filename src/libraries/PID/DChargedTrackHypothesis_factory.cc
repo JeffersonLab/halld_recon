@@ -134,12 +134,15 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
 	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
 	shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
+	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	if(dPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
 		locChargedTrackHypothesis->Set_BCALShowerMatchParams(locBCALShowerMatchParams);
 	if(dPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
 		locChargedTrackHypothesis->Set_TOFHitMatchParams(locTOFHitMatchParams);
 	if(dPIDAlgorithm->Get_BestFCALMatchParams(locTrackTimeBased, locDetectorMatches, locFCALShowerMatchParams))
 		locChargedTrackHypothesis->Set_FCALShowerMatchParams(locFCALShowerMatchParams);
+	if(dPIDAlgorithm->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams))
+		locChargedTrackHypothesis->Set_DIRCMatchParams(locDIRCMatchParams);
 
 	//PID
 	if(locChargedTrackHypothesis->t1_detector() == SYS_BCAL)
@@ -149,7 +152,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->setTime(locBCALShower->t - locBCALShowerMatchParams->dFlightTime);
 //		double locFlightTimePCorrelation = locDetectorMatches->Get_FlightTimePCorrelation(locTrackTimeBased, SYS_BCAL); //uncomment when ready!!
 //		Add_TimeToTrackingMatrix(locChargedTrackHypothesis, locCovarianceMatrix.get(), locBCALShowerMatchParams->dFlightTimeVariance, locBCALShower->tErr()*locBCALShower->tErr(), locFlightTimePCorrelation); //uncomment when ready!!
-		(*locCovarianceMatrix)(6 , 6) = 0.3*0.3+locBCALShowerMatchParams->dFlightTimeVariance;
+		(*locCovarianceMatrix)(6 , 6) = 0.25*0.25+locBCALShowerMatchParams->dFlightTimeVariance;
 	}
 
 	// TOF
@@ -170,7 +173,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->setTime(locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime);
 //		double locFlightTimePCorrelation = locDetectorMatches->Get_FlightTimePCorrelation(locTrackTimeBased, SYS_FCAL); //uncomment when ready!!
 //		Add_TimeToTrackingMatrix(locChargedTrackHypothesis, locCovarianceMatrix.get(), locFCALShowerMatchParams->dFlightTimeVariance, locFCALShower->dCovarianceMatrix(4, 4), locFlightTimePCorrelation); //uncomment when ready!!
-		(*locCovarianceMatrix)(6, 6) = 0.5*0.5+locFCALShowerMatchParams->dFlightTimeVariance;
+		(*locCovarianceMatrix)(6, 6) = 0.7*0.7+locFCALShowerMatchParams->dFlightTimeVariance;
 	}
 
 	locChargedTrackHypothesis->setErrorMatrix(locCovarianceMatrix);

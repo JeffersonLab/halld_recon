@@ -17,7 +17,7 @@ class DTAGMGeometry_factory : public JFactory<DTAGMGeometry> {
 		DTAGMGeometry_factory(){};
 		~DTAGMGeometry_factory(){};
 
-		DTAGMGeometry *tagmgeometry;
+		DTAGMGeometry *tagmgeometry=nullptr;
 
 		//------------------
 		// brun

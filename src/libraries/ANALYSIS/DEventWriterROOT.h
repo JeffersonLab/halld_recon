@@ -49,6 +49,7 @@ class DEventWriterROOT : public JObject
 
 		virtual ~DEventWriterROOT(void);
 		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop);
 
 		void Create_ThrownTree(JEventLoop* locEventLoop, string locOutputFileName) const;
 

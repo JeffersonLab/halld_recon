@@ -35,6 +35,10 @@ class JEventProcessor_CDC_dedx:public jana::JEventProcessor{
                 TH2D *dedx_p_pos = NULL;
                 TH2D *dedx_p_neg = NULL;
 
+                TH2D *intdedx_p = NULL;
+                TH2D *intdedx_p_pos = NULL;
+                TH2D *intdedx_p_neg = NULL;
+
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.

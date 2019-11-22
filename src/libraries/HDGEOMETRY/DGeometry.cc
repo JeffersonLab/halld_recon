@@ -1458,7 +1458,35 @@ bool DGeometry::GetCDCRmid(vector<double> &cdc_rmid) const
 //---------------------------------
 bool DGeometry::GetCDCNwires(vector<int> &cdc_nwires) const
 {
-
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(42);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(54);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(66);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(80);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(93);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(106);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(123);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(135);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(146);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(158);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(170);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(182);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(197);
+	cdc_nwires.push_back(209);
+	cdc_nwires.push_back(209);
+	
    return false;
 }
 
@@ -1667,6 +1695,24 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 }
 
 //---------------------------------
+// GetCCALZ
+//---------------------------------
+bool DGeometry::GetCCALZ(double &z_ccal) const
+{
+   vector<double> ComptonEMcalpos;
+   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+
+   if(!good){
+      _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+      z_ccal = 1279.376;   
+      return false;
+   }else{
+	   z_ccal = ComptonEMcalpos[2];
+      return true;
+   }
+}
+
+//---------------------------------
 // GetFCALZ
 //---------------------------------
 bool DGeometry::GetFCALZ(double &z_fcal) const
@@ -1700,10 +1746,9 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
     vector<double>dirc_plane;
     vector<double>dirc_shift;
     vector<double>bar_plane;
-    Get("//composition[@name='DRCC']/mposY[@volume='DCML']/@Z_X/plane[@value='1']", dirc_plane);
+    Get("//composition[@name='DRCC']/posXYZ[@volume='DCML10']/@X_Y_Z/plane[@value='1']", dirc_plane);
     Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
-    Get("//composition[@name='DCBR']/mposX[@volume='QZBL']/@Y_Z", bar_plane);
-    z_dirc=dirc_face[2]+dirc_plane[0]+dirc_shift[2]+bar_plane[1]; 
+    z_dirc=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
 
     jout << "DIRC z position = " << z_dirc << " cm." << endl;
     return true;
@@ -1744,8 +1789,12 @@ bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
     if(!Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1)) return false; 
     int num_narrow_bars1 = 0;
     if(!Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1)) return false; 
+    int num_narrower_bars1 = 0;   // optional - added during upgrade
+    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_single_end_bars1 = 0;
     if(!Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1)) return false;
+    int num_narrower_bars2 = 0;   // optional  - added during upgrade
+    Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
     int num_narrow_bars2 = 0;
     if(!Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2)) return false;
     int num_bars2 = 0;
@@ -1753,11 +1802,12 @@ bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
     int num_single_end_bars2 = 0;
     if(!Get("//composition[@name='forwardTOF_south']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars2)) return false;
 
-	int NLONGBARS = num_bars1 + num_bars2 + num_narrow_bars1 + num_narrow_bars2;
+	int NLONGBARS = num_bars1 + num_bars2 + num_narrow_bars1 + num_narrow_bars2
+						 + num_narrower_bars1 + num_narrower_bars2;
 	int NSHORTBARS = num_single_end_bars1 + num_single_end_bars2;
-	int FIRSTSHORTBAR = num_bars1 + num_narrow_bars1 + 1;
-	int LASTSHORTBAR = FIRSTSHORTBAR + NSHORTBARS/4;
-	
+	int FIRSTSHORTBAR = num_bars1 + num_narrow_bars1 + num_narrower_bars1 + 1;
+	int LASTSHORTBAR = FIRSTSHORTBAR + NSHORTBARS/2 - 1;
+
 	// load bar sizes
 	//Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@X_Y_Z",xyz_bar);
     if(!Get("//box[@name='FTOC' and sensitive='true']/@X_Y_Z", xyz_bar)) return false;
@@ -1793,11 +1843,12 @@ bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
 //---------------------------------
 // GetTOFPaddlePerpPositions
 //---------------------------------
-bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
+bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const
 {
 	// add in a dummy entry, since we are indexing by paddle number, which starts at 1
 	// maybe change this some day?
 	y_tof.push_back(0);
+	y_widths.push_back(0);
 	
   	// Next fill array of bar positions within a plane
   	// y_tof[barnumber] gives y position in the center of the bar. [currently barnumber = 1 - 46]
@@ -1809,8 +1860,12 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
     Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1); 
     int num_narrow_bars1 = 0;
     Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1); 
+    int num_narrower_bars1 = 0;
+    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_single_end_bars1 = 0;
     Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1); 
+    int num_narrower_bars2 = 0;
+    Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
     int num_narrow_bars2 = 0;
     Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2); 
     int num_bars2 = 0;
@@ -1823,8 +1878,9 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom1']/mposY/@dY",dy);
   	vector<double>tof_bottom1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom1']/@X_Y_Z",tof_bottom1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars1;k++){
-    	y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-1));
+  	for (int k=num_bars;k<num_bars+num_bars1;k++){
+    	y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-num_bars));
+    	y_widths.push_back(dy);
   	}
   	num_bars+=num_bars1;
   
@@ -1833,28 +1889,57 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_bottom2']/mposY/@dY",dy);
   	vector<double>tof_bottom2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom2']/@X_Y_Z",tof_bottom2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars1;k++){
-    	y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-20));
+  	for (int k=num_bars;k<num_bars+num_narrow_bars1;k++){
+    	y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-num_bars));
+    	y_widths.push_back(dy);
   	}
   	num_bars+=num_narrow_bars1;
+  	
+  	// two narrower long bars - added by upgrade
+  	if(num_narrower_bars1 > 0) {
+		Get("//composition[@name='forwardTOF_bottom3']/mposY/@Y0",y0);
+		Get("//composition[@name='forwardTOF_bottom3']/mposY/@dY",dy);
+		vector<double>tof_bottom3;
+		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom3']/@X_Y_Z",tof_bottom3);  
+		for (int k=num_bars;k<num_bars+num_narrower_bars1;k++){
+			y_tof.push_back(y0+tof_bottom3[1]+dy*double(k-num_bars));
+ 	   		y_widths.push_back(dy);
+		}
+		num_bars+=num_narrow_bars1;
+  	}
 
-  	// two short wide bars
+  	// two short wide bars  (4 wide in upgrade)
   	Get("//composition[@name='forwardTOF_north']/mposY/@Y0",y0);
   	Get("//composition[@name='forwardTOF_north']/mposY/@dY",dy);
   	vector<double>tof_north;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north']/@X_Y_Z",tof_north);  
-  	for (unsigned int k=num_bars;k<num_bars+num_single_end_bars1;k++){
-    	y_tof.push_back(y0+tof_north[1]+dy*double(k-22));
+  	for (int k=num_bars;k<num_bars+num_single_end_bars1;k++){
+    	y_tof.push_back(y0+tof_north[1]+dy*double(k-num_bars));
+    	y_widths.push_back(dy);
   	}
   	num_bars+=num_single_end_bars1;
+
+  	// two narrower long bars - added by upgrade
+  	if(num_narrower_bars2 > 0) {
+		Get("//composition[@name='forwardTOF_top3']/mposY/@Y0",y0);
+		Get("//composition[@name='forwardTOF_top3']/mposY/@dY",dy);
+		vector<double>tof_top3;
+		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top3']/@X_Y_Z",tof_top3);  
+		for (int k=num_bars;k<num_bars+num_narrower_bars2;k++){
+			y_tof.push_back(y0+tof_top3[1]+dy*double(k-num_bars));
+    		y_widths.push_back(dy);
+		}
+		num_bars+=num_narrow_bars2;
+  	}
 
   	// two narrow long bars
   	Get("//composition[@name='forwardTOF_top2']/mposY/@Y0",y0);
   	Get("//composition[@name='forwardTOF_top2']/mposY/@dY",dy);
   	vector<double>tof_top2;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top2']/@X_Y_Z",tof_top2);  
-  	for (unsigned int k=num_bars;k<num_bars+num_narrow_bars2;k++){
-    	y_tof.push_back(y0+tof_top2[1]+dy*double(k-24));
+  	for (int k=num_bars;k<num_bars+num_narrow_bars2;k++){
+    	y_tof.push_back(y0+tof_top2[1]+dy*double(k-num_bars));
+    	y_widths.push_back(dy);
   	}
   	num_bars+=num_narrow_bars2;
 
@@ -1863,8 +1948,9 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof) const
   	Get("//composition[@name='forwardTOF_top1']/mposY/@dY",dy);
   	vector<double>tof_top1;
   	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top1']/@X_Y_Z",tof_top1);  
-  	for (unsigned int k=num_bars;k<num_bars+num_bars2;k++){
-   	 	y_tof.push_back(y0+tof_top1[1]+dy*double(k-26));
+  	for (int k=num_bars;k<num_bars+num_bars2;k++){
+   	 	y_tof.push_back(y0+tof_top1[1]+dy*double(k-num_bars));
+    	y_widths.push_back(dy);
   	}
   	num_bars+=num_bars2;
 
@@ -1916,7 +2002,26 @@ bool DGeometry::GetTargetZ(double &z_target) const
       return true;
    }
    
-   jout << " WARNING: Unable to get target location from XML for any of GlueX, or CPP targets. Using default of " << z_target << " cm" << endl;
+   // Check if PrimEx Be target is defined
+   bool primex_target_exists = true;
+   vector<double> xyz_BETG;
+   if(primex_target_exists) primex_target_exists = Get("//composition[@name='targetVessel']/posXYZ[@volume='BETG']/@X_Y_Z", xyz_BETG);
+   if(primex_target_exists) primex_target_exists = Get("//composition[@name='Target']/posXYZ[@volume='targetVessel']/@X_Y_Z", xyz_target);
+   if(primex_target_exists) primex_target_exists = Get("//posXYZ[@volume='Target']/@X_Y_Z", xyz_detector);
+   if(primex_target_exists) {
+
+     z_target = xyz_BETG[2] + xyz_target[2] + xyz_detector[2];
+     
+     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
+     
+     return true;
+   }
+   
+
+
+   jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " << 
+     z_target << " cm" << endl;
+
 
    return false;
 }

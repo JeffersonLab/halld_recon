@@ -7,7 +7,7 @@
 
 #include "DCustomAction_p2pi_hists.h"
 
-void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_hists::Run_Update(JEventLoop* locEventLoop)
 {
 	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
@@ -34,6 +34,17 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 		jout<<"No /ANALYSIS/beam_asymmetry/coherent_energy for this run number: using default range of 0-12 GeV"<<endl;
 	}
 
+	// get PID algos
+	const DParticleID* locParticleID = NULL;
+	locEventLoop->GetSingle(locParticleID);
+	dParticleID = locParticleID;
+
+	locEventLoop->GetSingle(dAnalysisUtilities);
+
+}
+
+void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
+{
 	dEdxCut = 2.2;
 	minMMCut = 0.8;
 	maxMMCut = 1.05;
@@ -43,12 +54,7 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 	minRhoMassCut = 0.6;
 	maxRhoMassCut = 0.88;
 
-	// get PID algos
-        const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
-        dParticleID = locParticleID;
-
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	Run_Update(locEventLoop);
 
 	// check if a particle is missing
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();

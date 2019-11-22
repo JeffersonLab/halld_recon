@@ -22,8 +22,6 @@ using namespace std;
 
 #include <TROOT.h>
 
-#define C_EFFECTIVE     15.
-
 using namespace jana;
 
 //------------------
@@ -76,7 +74,6 @@ bool DTrackWireBased_cmp(DTrackWireBased *a,DTrackWireBased *b){
 jerror_t DTrackWireBased_factory::init(void)
 {
    fitter = NULL;
-   MAX_DReferenceTrajectoryPoolSize = 50;
 
    //DEBUG_HISTS = true;	
    DEBUG_HISTS = false;
@@ -84,71 +81,70 @@ jerror_t DTrackWireBased_factory::init(void)
 
    gPARMS->SetDefaultParameter("TRKFIT:DEBUG_LEVEL",DEBUG_LEVEL);
 
-   SKIP_MASS_HYPOTHESES_WIRE_BASED=false; 
+   SKIP_MASS_HYPOTHESES_WIRE_BASED=true; 
    gPARMS->SetDefaultParameter("TRKFIT:SKIP_MASS_HYPOTHESES_WIRE_BASED",
-         SKIP_MASS_HYPOTHESES_WIRE_BASED);
+			       SKIP_MASS_HYPOTHESES_WIRE_BASED); 
+   PROTON_MOM_THRESH=0.8; // GeV 
+   gPARMS->SetDefaultParameter("TRKFIT:PROTON_MOM_THRESH",
+			       PROTON_MOM_THRESH);
 
-   mNumHypPlus=1;
-   mNumHypMinus=1;
-   if(!SKIP_MASS_HYPOTHESES_WIRE_BASED)
-   {
-      vector<int> hypotheses;
-      hypotheses.push_back(Positron);
-      hypotheses.push_back(PiPlus);
-      hypotheses.push_back(KPlus);
-      hypotheses.push_back(Proton);
-      hypotheses.push_back(Electron);
-      hypotheses.push_back(PiMinus);
-      hypotheses.push_back(KMinus);
-      hypotheses.push_back(AntiProton);
+   // Make list of mass hypotheses to use in fit
+   vector<int> hypotheses;
+   hypotheses.push_back(Positron);
+   hypotheses.push_back(PiPlus);
+   hypotheses.push_back(KPlus);
+   hypotheses.push_back(Proton);
+   hypotheses.push_back(Electron);
+   hypotheses.push_back(PiMinus);
+   hypotheses.push_back(KMinus);
+   hypotheses.push_back(AntiProton);
+   
+   ostringstream locMassStream;
+   for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
+     {
+	locMassStream << hypotheses[loc_i];
+	if(loc_i != (hypotheses.size() - 1))
+	  locMassStream << ",";
+     }
+   
+   string HYPOTHESES = locMassStream.str();
+   gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
 
-      ostringstream locMassStream;
-      for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
-      {
-         locMassStream << hypotheses[loc_i];
-         if(loc_i != (hypotheses.size() - 1))
-            locMassStream << ",";
-      }
-
-      string HYPOTHESES = locMassStream.str();
-      gPARMS->SetDefaultParameter("TRKFIT:HYPOTHESES", HYPOTHESES);
-
-      // Parse MASS_HYPOTHESES strings to make list of masses to try
-      hypotheses.clear();
-      SplitString(HYPOTHESES, hypotheses, ",");
-      for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
-      {
-         if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0)
-            mass_hypotheses_positive.push_back(hypotheses[loc_i]);
-         else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0)
-            mass_hypotheses_negative.push_back(hypotheses[loc_i]);
-      }
-
-      if(mass_hypotheses_positive.empty()){
-         static once_flag pwarn_flag;
-         call_once(pwarn_flag, [](){
-               jout << endl;
-               jout << "############# WARNING !! ################ " <<endl;
-               jout << "There are no mass hypotheses for positive tracks!" << endl;
-               jout << "Be SURE this is what you really want!" << endl;
-               jout << "######################################### " <<endl;
-               jout << endl;
-               });
-      }
-      if(mass_hypotheses_negative.empty()){
-         static once_flag nwarn_flag;
-         call_once(nwarn_flag, [](){
-               jout << endl;
-               jout << "############# WARNING !! ################ " <<endl;
-               jout << "There are no mass hypotheses for negative tracks!" << endl;
-               jout << "Be SURE this is what you really want!" << endl;
-               jout << "######################################### " <<endl;
-               jout << endl;
-               });
-      }
-      mNumHypPlus=mass_hypotheses_positive.size();
-      mNumHypMinus=mass_hypotheses_negative.size();
+   // Parse MASS_HYPOTHESES strings to make list of masses to try
+   hypotheses.clear();
+   SplitString(HYPOTHESES, hypotheses, ",");
+   for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
+     {
+       if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0)
+	 mass_hypotheses_positive.push_back(hypotheses[loc_i]);
+       else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0)
+	 mass_hypotheses_negative.push_back(hypotheses[loc_i]);
+     }
+   
+   if(mass_hypotheses_positive.empty()){
+     static once_flag pwarn_flag;
+     call_once(pwarn_flag, [](){
+	 jout << endl;
+	 jout << "############# WARNING !! ################ " <<endl;
+	 jout << "There are no mass hypotheses for positive tracks!" << endl;
+	 jout << "Be SURE this is what you really want!" << endl;
+	 jout << "######################################### " <<endl;
+	 jout << endl;
+       });
    }
+   if(mass_hypotheses_negative.empty()){
+     static once_flag nwarn_flag;
+     call_once(nwarn_flag, [](){
+	 jout << endl;
+	 jout << "############# WARNING !! ################ " <<endl;
+	 jout << "There are no mass hypotheses for negative tracks!" << endl;
+	 jout << "Be SURE this is what you really want!" << endl;
+	 jout << "######################################### " <<endl;
+	 jout << endl;
+       });
+   }
+   mNumHypPlus=mass_hypotheses_positive.size();
+   mNumHypMinus=mass_hypotheses_negative.size();
 
    return NOERROR;
 }
@@ -162,11 +158,28 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
    geom = dapp->GetDGeometry(runnumber);
    // Check for magnetic field
-   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+   const DMagneticFieldMap *bfield=dapp->GetBfield(runnumber);
+   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
+   
+   if(dIsNoFieldFlag){
+     //Setting this flag makes it so that JANA does not delete the objects in 
+     //_data.  This factory will manage this memory.
+     //This is all of these pointers are just copied from the "StraightLine" 
+     //factory, and should not be re-deleted.
+     SetFactoryFlag(NOT_OBJECT_OWNER);
+   }
+   else{
+     ClearFactoryFlag(NOT_OBJECT_OWNER); //This factory will create it's own obje
+   }
+
+   // set up reference trajectory
+   rt = new DReferenceTrajectory(bfield);
+   rt->SetDGeometry(geom);
 
    // Get pointer to DTrackFitter object that actually fits a track
    vector<const DTrackFitter *> fitters;
    loop->Get(fitters);
+   
    if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
       return RESOURCE_UNAVAILABLE;
@@ -201,13 +214,8 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Get the particle ID algorithms
    loop->GetSingle(dPIDAlgorithm);
 
-   //Pre-allocate memory for DReferenceTrajectory objects early
-   //The swim-step objects of these arrays take up a significant amount of memory, and it can be difficult to find enough free contiguous space for them.
-   //Therefore, allocate them at the beginning before the available memory becomes randomly populated
-   while(rtv.size() < MAX_DReferenceTrajectoryPoolSize)
-      rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-
    // Outer detector geometry parameters
+   if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
    geom->GetFCALZ(dFCALz); 
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
@@ -246,148 +254,26 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 
-   if(!fitter)return NOERROR; 
-   
-   if(rtv.size() > MAX_DReferenceTrajectoryPoolSize){
-     for(size_t loc_i = MAX_DReferenceTrajectoryPoolSize; loc_i < rtv.size(); ++loc_i)
-       delete rtv[loc_i];
-     rtv.resize(MAX_DReferenceTrajectoryPoolSize);
-   }
-
+  if(!fitter)return NOERROR; 
+  
+  if(dIsNoFieldFlag){
+    //Clear previous objects: 
+    //JANA doesn't do it because NOT_OBJECT_OWNER was set
+    //It DID delete them though, in the "StraightLine" factory
+    _data.clear();
+     
+    vector<const DTrackWireBased*> locWireBasedTracks;
+    loop->Get(locWireBasedTracks, "StraightLine");
+    for(size_t loc_i = 0; loc_i < locWireBasedTracks.size(); ++loc_i)
+      _data.push_back(const_cast<DTrackWireBased*>(locWireBasedTracks[loc_i]));
+    return NOERROR;
+  }
 
    // Get candidates and hits
    vector<const DTrackCandidate*> candidates;
    loop->Get(candidates);
 
    if (candidates.size()==0) return NOERROR;
-
-   // Reset the number of used reference trajectories from the pool
-   num_used_rts=0;
-
-   if (dIsNoFieldFlag){
-      // Copy results over from the StraightLine or CDCCOSMIC candidate and
-     // add extrapolations
-      for (unsigned int i=0;i<candidates.size();i++){
-         const DTrackCandidate *cand=candidates[i];
-
-         // Make a new wire-based track
-         DTrackWireBased *track = new DTrackWireBased(); //share the memory: isn't changed below
-         *static_cast<DTrackingData*>(track) = *static_cast<const DTrackingData*>(cand);
-         track->IsSmoothed = cand->IsSmoothed;
-
-         // candidate id
-         track->candidateid=i+1;
-
-         // Track quality properties
-         track->Ndof=cand->Ndof;
-         track->chisq=cand->chisq;	
-         track->FOM = TMath::Prob(track->chisq, track->Ndof);
-
-         // pull vector
-         track->pulls = cand->pulls;
-
-         // Lists of hits used in the previous pass
-         vector<const DCDCTrackHit *>cdchits;
-         cand->GetT(cdchits);
-         vector<const DFDCPseudo *>fdchits;
-         cand->GetT(fdchits);
-
-         for (unsigned int k=0;k<cdchits.size();k++){
-            track->AddAssociatedObject(cdchits[k]);
-         }
-         for (unsigned int k=0;k<fdchits.size();k++){
-            track->AddAssociatedObject(fdchits[k]);
-         }
-         track->dCDCRings = dPIDAlgorithm->Get_CDCRingBitPattern(cdchits);
-         track->dFDCPlanes = dPIDAlgorithm->Get_FDCPlaneBitPattern(fdchits);
-
-	 // Create the extrapolation vectors
-	 vector<DTrackFitter::Extrapolation_t>myvector;
-	 track->extrapolations.emplace(SYS_BCAL,myvector);
-	 track->extrapolations.emplace(SYS_TOF,myvector);
-	 track->extrapolations.emplace(SYS_FCAL,myvector);
-	 track->extrapolations.emplace(SYS_FDC,myvector);
-	 track->extrapolations.emplace(SYS_CDC,myvector);
-	 track->extrapolations.emplace(SYS_START,myvector);	
-
-	 // Extrapolate to TOF
-	 DVector3 dir=track->momentum();
-	 dir.SetMag(1.);
-	 DVector3 pos0=track->position();
-	 double z0=track->position().z();
-	 double z=z0;
-	 double uz=dir.z();
-	 DVector3 diff=((dTOFz-z0)/uz)*dir;
-	 DVector3 pos=pos0+diff;
-	 double s=diff.Mag();
-	 double t=s/29.98;
-	 track->extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
-	 // Extrapolate to FCAL
-	 diff=((dFCALz-z0)/uz)*dir;
-	 pos=pos0+diff;
-	 s=diff.Mag();
-	 t=s/29.98;
-	 track->extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
-	 // extrapolate to exit of FCAL
-	 diff=((dFCALz+45.-z0)/uz)*dir;
-	 pos=pos0+diff;
-	 s=diff.Mag();
-	 t=s/29.98;
-	 track->extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-	  
-	 // Extrapolate to Start Counter and BCAL
-	 double R=pos0.Perp();
-	 diff.SetMag(0.);
-	 while (R<89.0 && z>17. && z<410.){
-	   diff+=(1./dir.z())*dir;
-	   pos=pos0+diff;
-	   R=pos.Perp();
-	   z=pos.z();
-	   s=diff.Mag();
-	   t=s/29.98;
-	   //	   printf("R %f z %f\n",R,z);
-	   // start counter
-	   if (sc_pos.empty()==false && R<SC_BARREL_R && z<SC_END_NOSE_Z){
-	     double d_old=1000.,d=1000.;
-	     unsigned int index=0;
-	     for (unsigned int m=0;m<12;m++){
-	       double dphi=pos.Phi()-SC_PHI_SECTOR1;
-	       if (dphi<0) dphi+=2.*M_PI;
-	       index=int(floor(dphi/(2.*M_PI/30.)));
-	       if (index>29) index=0;
-	       d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-	       if (d*d_old<0){ // break if we cross the current plane  
-		 // Find the new distance to the start counter (which could 
-		 // now be to a plane in the one adjacent to the one before the
-		 // step...)
-		 int count=0;
-		 while (fabs(d)>0.05 && count<20){ 
-		   // Find the index for the nearest start counter paddle
-		   double dphi=pos.Phi()-SC_PHI_SECTOR1;
-		   if (dphi<0) dphi+=2.*M_PI;
-		   index=int(floor(dphi/(2.*M_PI/30.)));
-		   d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-		   pos+=d*dir;
-		   count++;
-		 }
-		 track->extrapolations[SYS_START].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-		 break;
-	       }
-	       d_old=d;
-	     }
-	   }
-	   if (R>64.){	 
-	     track->extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-	   }
-	 }
-
-         _data.push_back(track);
-      }
-      return NOERROR;
-   }
-
-
-
 
    // Loop over candidates
    for(unsigned int i=0; i<candidates.size(); i++){
@@ -399,22 +285,15 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
 
       if (SKIP_MASS_HYPOTHESES_WIRE_BASED){
-         // Make sure there are enough DReferenceTrajectory objects
-         unsigned int locNumInitialReferenceTrajectories = rtv.size();
-         while(rtv.size()<=num_used_rts){
-            //printf("Adding %d %d\n",rtv.size(),_data.size());
-            rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-         }
-         DReferenceTrajectory *rt = rtv[num_used_rts];
-         if(locNumInitialReferenceTrajectories == rtv.size()) //didn't create a new one
-            rt->Reset();
-         rt->SetDGeometry(geom);
-         rt->q = candidate->charge();
+	rt->Reset();
+	rt->q = candidate->charge();
 
-         // Increment the number of used reference trajectories
-         num_used_rts++;
-
-         DoFit(i,candidate,rt,loop,0.13957);
+	DoFit(i,candidate,rt,loop,ParticleMass(PiPlus));
+	// Only do fit for proton mass hypothesis for low momentum particles
+	if (candidate->momentum().Mag()<PROTON_MOM_THRESH){
+	  rt->Reset();
+	  DoFit(i,candidate,rt,loop,ParticleMass(Proton));
+	}
       }
       else{
          // Choose list of mass hypotheses based on charge of candidate
@@ -431,23 +310,9 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
          // Loop over potential particle masses
          for(unsigned int j=0; j<mass_hypotheses.size(); j++){
             if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting wire based fit with id: "<<mass_hypotheses[j]<<endl;}
-            // Make sure there are enough DReferenceTrajectory objects
-            unsigned int locNumInitialReferenceTrajectories = rtv.size();
-            while(rtv.size()<=num_used_rts){
-               //printf("Adding %d\n",rtv.size());
-               rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-            }
-            DReferenceTrajectory *rt = rtv[num_used_rts];
-            if(locNumInitialReferenceTrajectories == rtv.size()){ //didn't create a new one
-               rt->Reset();
-	    }
-	 
-            rt->SetDGeometry(geom);
+
+	    rt->Reset();
             rt->q = candidate->charge();
-
-            // Increment the number of used reference trajectories
-            num_used_rts++;
-
             DoFit(i,candidate,rt,loop,ParticleMass(Particle_t(mass_hypotheses[j])));
          }
 
@@ -458,7 +323,9 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    FilterDuplicates();
 
    // Add any missing hypotheses
-   InsertMissingHypotheses();
+   if (SKIP_MASS_HYPOTHESES_WIRE_BASED==false){
+     InsertMissingHypotheses();
+   }
 
    return NOERROR;
 }
@@ -469,6 +336,7 @@ jerror_t DTrackWireBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 //------------------
 jerror_t DTrackWireBased_factory::erun(void)
 {
+  if (rt) delete rt;
    return NOERROR;
 }
 
@@ -477,8 +345,6 @@ jerror_t DTrackWireBased_factory::erun(void)
 //------------------
 jerror_t DTrackWireBased_factory::fini(void)
 {
-   for(unsigned int i=0; i<rtv.size(); i++)delete rtv[i];
-   rtv.clear();
 
    return NOERROR;
 }
@@ -566,19 +432,20 @@ void DTrackWireBased_factory::FilterDuplicates(void)
 void DTrackWireBased_factory::DoFit(unsigned int c_id,
       const DTrackCandidate *candidate,
       DReferenceTrajectory *rt,
-      JEventLoop *loop, double mass){ 
+      JEventLoop *loop, double mass){
+   // Get the hits from the candidate
+  vector<const DFDCPseudo*>myfdchits;
+  candidate->GetT(myfdchits);
+  vector<const DCDCTrackHit *>mycdchits;
+  candidate->GetT(mycdchits);
+  
    // Do the fit
    DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
    if (USE_HITS_FROM_CANDIDATE) {
       fitter->Reset();
       fitter->SetFitType(DTrackFitter::kWireBased);	
 
-      // Get the hits from the track candidate
-      vector<const DFDCPseudo*>myfdchits;
-      candidate->GetT(myfdchits);
       fitter->AddHits(myfdchits);
-      vector<const DCDCTrackHit *>mycdchits;
-      candidate->GetT(mycdchits);
       fitter->AddHits(mycdchits);
 
       status=fitter->FitTrack(candidate->position(),candidate->momentum(),
@@ -593,17 +460,13 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       //rt->Swim(candidate->position(),candidate->momentum(),candidate->charge());
       rt->FastSwimForHitSelection(candidate->position(),candidate->momentum(),candidate->charge());
 
-      status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,candidate->Ndof+3);
+      status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,
+					 mycdchits.size()+2*myfdchits.size());
       if (/*false && */status==DTrackFitter::kFitNotDone){
          if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
          fitter->Reset();
-
-         // Get the hits from the candidate
-         vector<const DFDCPseudo*>myfdchits;
-         candidate->GetT(myfdchits);
+        
          fitter->AddHits(myfdchits);
-         vector<const DCDCTrackHit *>mycdchits;
-         candidate->GetT(mycdchits);
          fitter->AddHits(mycdchits);
 
          status=fitter->FitTrack(candidate->position(),candidate->momentum(),
@@ -781,16 +644,7 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
 // POCA to the beam line, adding a bit of energy at each step that would have 
 // been lost had the particle emerged from the target.
 void DTrackWireBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momentum,double q,double my_mass){  
-  // Make sure there are enough DReferenceTrajectory objects
-  unsigned int locNumInitialReferenceTrajectories = rtv.size();
-  while(rtv.size()<=num_used_rts){
-    //printf("Adding %d\n",rtv.size());
-    rtv.push_back(new DReferenceTrajectory(fitter->GetDMagneticFieldMap()));
-  }
-  DReferenceTrajectory *rt = rtv[num_used_rts];
-  if(locNumInitialReferenceTrajectories == rtv.size()) //didn't create a new one
-    rt->Reset();
-  rt->SetDGeometry(geom);
+  rt->Reset();
   rt->q = q;
   rt->SetMass(my_mass);
   rt->SetPLossDirection(DReferenceTrajectory::kBackward);
@@ -800,9 +654,6 @@ void DTrackWireBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momen
   rt->FastSwim(position,momentum,last_pos,last_mom,rt->q,origin,dir,300.);   
   position=last_pos;
   momentum=last_mom;   
-    
-  // Increment the number of used reference trajectories
-  num_used_rts++;
 }
 
 

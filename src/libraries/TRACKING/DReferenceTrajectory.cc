@@ -329,7 +329,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
   double itheta02s2 = 0.0;
   double X0sum=0.0;
   swim_step_t *last_step=NULL;
-	
+
   for(double s=0; fabs(s)<1000.; Nswim_steps++, swim_step++){
        
     if(Nswim_steps>=this->max_swim_steps){
@@ -341,12 +341,16 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = 0.; // we do not need the time for our purpose...
     
-    // Magnetic field at current position
-    bfield->GetField(swim_step->origin,swim_step->B);
+    double Rsq=swim_step->origin.Perp2();
+    double z=swim_step->origin.Z();
+    if (z>345. || z<0. || Rsq>60.*60.){
+      Nswim_steps++; break;
+    }
 
     //magnitude of momentum and beta
     double p_sq=swim_step->mom.Mag2();
@@ -402,7 +406,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
     }
 
     // Swim to next
-    double ds=stepper.FastStep(swim_step->B);
+    double ds=stepper.FastStep();
   
     // Calculate momentum loss due to the step we're about to take
     dP = ds*dP_dx;
@@ -416,13 +420,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
       mom.SetMag(ptot);
       stepper.SetStartingParams(q, &pos, &mom);
     }
-    s += ds;
-
-    double Rsq=swim_step->origin.Perp2();
-    double z=swim_step->origin.Z();
-    if (z>345. || z<17. || Rsq>60.*60.){
-      Nswim_steps++; break;
-    }
+    s += ds; 
   }
 }
 
@@ -474,12 +472,10 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     
     stepper.GetDirs(swim_step->sdir, swim_step->tdir, swim_step->udir);
     stepper.GetPosMom(swim_step->origin, swim_step->mom);
+    stepper.GetBField(swim_step->B);
     swim_step->Ro = stepper.GetRo();
     swim_step->s = s;
     swim_step->t = t;
-    
-    // Magnetic field at current position
-    bfield->GetField(swim_step->origin,swim_step->B);
 
     //magnitude of momentum and beta
     double p_sq=swim_step->mom.Mag2();
@@ -548,7 +544,7 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     }
 
     // Swim to next
-    double ds=stepper.FastStep(swim_step->B);
+    double ds=stepper.FastStep();
   
     // Calculate momentum loss due to the step we're about to take
     dP = ds*dP_dx;
@@ -2972,20 +2968,30 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
 				     const DVector3 &pos2,const DVector3 &mom2,
 				     const TMatrixFSym &cov1,
 				     const TMatrixFSym &cov2,
-				     DVector3 &pos,double &vertex_chi2) const{
+				     DVector3 &pos,double &vertex_chi2,double q1,double q2) const{
   // Vectors of measured quantities (eta0) and these quantities after adjustment
   // based on constraints (eta)
-  TMatrix eta0(12,1),eta(12,1);
+  TMatrixD eta0(12,1),eta(12,1);
   // Vectors of unmeasured quantities (common vertex {x,y,z})
-  TMatrix xi(3,1),xi_old(3,1);
-  TMatrix f(4,1); // vector representing constraint equations
-  TMatrix F_eta(4,12);  // Matrix of derivatives of f with respect to eta
-  TMatrix F_xi(4,3);  // Matrix of derivatives of f with respect to xi
+  TMatrixD xi(3,1),xi_old(3,1);
+  TMatrixD f(4,1); // vector representing constraint equations
+  TMatrixD F_eta(4,12);  // Matrix of derivatives of f with respect to eta
+  TMatrixD F_xi(4,3);  // Matrix of derivatives of f with respect to xi
 
-  // Initialize to guess we got from Brent's algorithm
+  // Initialize to the guess to the vertex position 
   xi(0,0)=pos.x();
   xi(1,0)=pos.y();
-  xi(2,0)=pos.z();
+  xi(2,0)=pos.z();  
+
+  // B-field
+  double Bz=fabs(bfield->GetBz(xi(0,0),xi(1,0),xi(2,0)));
+  bool got_field=false;
+  double a1=0.,a2=0.;
+  if (Bz>0.01){
+    a1=0.003*Bz*q1;
+    a2=0.003*Bz*q2;
+    got_field=true;
+  }
 
   // Initialize to the measured values
   eta0(kX,0)=pos1.x();
@@ -3002,7 +3008,7 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
   eta0(kPz+6,0)=mom2.z();
 
   // Fill error matrix V from covariance matrices from the two tracks
-  TMatrix V(12,12);
+  TMatrixD V(12,12);
   for (int m=0;m<6;m++){
     for (int n=0;n<6;n++){
       V(m,n)=cov1(n,m);
@@ -3014,9 +3020,9 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
   eta=eta0;
   
   // Define some matrices needed for some of the internal steps of the procedure
-  TMatrix LagMul(4,1);  //Lagrange multipliers
-  TMatrix r(4,1);  // r=f+F_eta*(eta0-eta)
-  TMatrix S(4,4),Sinv(4,4); // S=F_eta*S*F_eta^T
+  TMatrixD LagMul(4,1);  //Lagrange multipliers
+  TMatrixD r(4,1);  // r=f+F_eta*(eta0-eta)
+  TMatrixD S(4,4); // S=F_eta*V*F_eta^T
       
   if (debug_level>1){
     cout << "Measured quantities:" <<endl;
@@ -3045,13 +3051,32 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
     double pz2=eta(kPz+6,0);
     
     // Constraint equations
-    f(0,0)=pz1*dx1-px1*dz1;
-    f(1,0)=pz1*dy1-py1*dz1; 
-    f(2,0)=pz2*dx2-px2*dz2;
-    f(3,0)=pz2*dy2-py2*dz2;
+    if (got_field==false){
+      // No field...
+      f(0,0)=pz1*dx1-px1*dz1;
+      f(1,0)=pz1*dy1-py1*dz1; 
+      f(2,0)=pz2*dx2-px2*dz2;
+      f(3,0)=pz2*dy2-py2*dz2;
+    }
+    else{
+      double twoks1=0.;
+      if (fabs(pz1)>1e-8) twoks1=a1*dz1/pz1; 
+      double one_minus_cos_2ks1=1.-cos(twoks1);
+      double sin_2ks1=sin(twoks1);
+      f(0,0)=a1*dx1-px1*sin_2ks1+py1*one_minus_cos_2ks1;
+      f(1,0)=a1*dy1-py1*sin_2ks1-px1*one_minus_cos_2ks1;
+
+      double twoks2=0.;
+      if (fabs(pz2)>1e-8) twoks2=a2*dz2/pz2; 
+      double one_minus_cos_2ks2=1.-cos(twoks2);
+      double sin_2ks2=sin(twoks2);
+      f(2,0)=a2*dx2-px2*sin_2ks2+py2*one_minus_cos_2ks2;
+      f(3,0)=a2*dy2-py2*sin_2ks2-px2*one_minus_cos_2ks2;
+      
+    }
     
     if (iter>0){
-      TMatrix LagMul_T(TMatrix::kTransposed,LagMul);
+      TMatrixD LagMul_T(TMatrixD::kTransposed,LagMul);
       chi2=(LagMul_T*S*LagMul)(0,0);
       LagMul_T*=2.;
       chi2+=(LagMul_T*f)(0,0);
@@ -3067,37 +3092,83 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
 	  eta.Print();
 	}
       }
-
-      if (chi2>chi2_old) break;
+      
+      //if (chi2>chi2_old) break;
     }
      
-    // Compute the Jacobian matrix for eta
-    F_eta(0,kX)=-pz1;
-    F_eta(0,kZ)=+px1;
-    F_eta(0,kPx)=-dz1;
-    F_eta(0,kPz)=+dx1;  
-    F_eta(1,kY)=-pz1;
-    F_eta(1,kZ)=+py1;
-    F_eta(1,kPy)=-dz1;
-    F_eta(1,kPz)=+dy1; 
-    F_eta(2,kX+6)=-pz2;
-    F_eta(2,kZ+6)=+px2;
-    F_eta(2,kPx+6)=-dz2;
-    F_eta(2,kPz+6)=+dx2;  
-    F_eta(3,kY+6)=-pz2;
-    F_eta(3,kZ+6)=+py2;
-    F_eta(3,kPy+6)=-dz2;
-    F_eta(3,kPz+6)=+dy2;
+    if (got_field==false){
+      // Compute the Jacobian matrix for eta
+      F_eta(0,kX)=-pz1;
+      F_eta(0,kZ)=+px1;
+      F_eta(0,kPx)=-dz1;
+      F_eta(0,kPz)=+dx1;  
+      F_eta(1,kY)=-pz1;
+      F_eta(1,kZ)=+py1;
+      F_eta(1,kPy)=-dz1;
+      F_eta(1,kPz)=+dy1; 
+      F_eta(2,kX+6)=-pz2;
+      F_eta(2,kZ+6)=+px2;
+      F_eta(2,kPx+6)=-dz2;
+      F_eta(2,kPz+6)=+dx2;  
+      F_eta(3,kY+6)=-pz2;
+      F_eta(3,kZ+6)=+py2;
+      F_eta(3,kPy+6)=-dz2;
+      F_eta(3,kPz+6)=+dy2;
     
-    // Compute the Jacobian matrix for xi
-    F_xi(0,0)=pz1;
-    F_xi(0,2)=-px1;
-    F_xi(1,1)=pz1;
-    F_xi(1,2)=-py1; 
-    F_xi(2,0)=pz2;
-    F_xi(2,2)=-px2;
-    F_xi(3,1)=pz2;
-    F_xi(3,2)=-py2;
+      // Compute the Jacobian matrix for xi
+      F_xi(0,0)=pz1;
+      F_xi(0,2)=-px1;
+      F_xi(1,1)=pz1;
+      F_xi(1,2)=-py1; 
+      F_xi(2,0)=pz2;
+      F_xi(2,2)=-px2;
+      F_xi(3,1)=pz2;
+      F_xi(3,2)=-py2;
+    }
+    else{ 
+      // Compute the Jacobian matrix for eta
+      double twoks1=0.;
+      if (fabs(pz1)>1e-8) twoks1=a1*dz1/pz1; 
+      double cos_2ks1=cos(twoks1);
+      double one_minus_cos_2ks1=1.-cos_2ks1;
+      double sin_2ks1=sin(twoks1);
+      F_eta(0,kX)=-a1;
+      F_eta(0,kZ)=(-a1/pz1)*(py1*sin_2ks1-px1*cos_2ks1);
+      F_eta(0,kPx)=-sin_2ks1;
+      F_eta(0,kPy)=one_minus_cos_2ks1;
+      F_eta(0,kPz)=(a1*dz1/(pz1*pz1))*(px1*cos_2ks1-py1*sin_2ks1);
+      F_eta(1,kY)=-a1;
+      F_eta(1,kZ)=(a1/pz1)*(py1*cos_2ks1+px1*sin_2ks1);
+      F_eta(1,kPy)=-sin_2ks1;
+      F_eta(1,kPx)=-one_minus_cos_2ks1; 
+      F_eta(1,kPz)=(a1*dz1/(pz1*pz1))*(px1*cos_2ks1-py1*sin_2ks1); 
+      double twoks2=0.;
+      if (fabs(pz2)>1e-8) twoks2=a2*dz2/pz2; 
+      double cos_2ks2=cos(twoks2);
+      double one_minus_cos_2ks2=1.-cos_2ks2;
+      double sin_2ks2=sin(twoks2);
+      F_eta(2,kX+6)=-a2;
+      F_eta(2,kZ+6)=(-a2/pz2)*(py2*sin_2ks2-px2*cos_2ks2);
+      F_eta(2,kPx+6)=-sin_2ks2;
+      F_eta(2,kPy+6)=one_minus_cos_2ks2;
+      F_eta(2,kPz+6)=(a2*dz2/(pz2*pz2))*(px2*cos_2ks2-py2*sin_2ks2);
+      F_eta(3,kY+6)=-a2;
+      F_eta(3,kZ+6)=(a2/pz2)*(py2*cos_2ks2+px2*sin_2ks2);
+      F_eta(3,kPy+6)=-sin_2ks2;
+      F_eta(3,kPx+6)=-one_minus_cos_2ks2; 
+      F_eta(3,kPz+6)=(a2*dz2/(pz2*pz2))*(px2*cos_2ks2-py2*sin_2ks2);
+
+      // Compute the Jacobian matrix for xi
+      F_xi(0,0)=-F_eta(0,kX);
+      F_xi(0,2)=-F_eta(0,kZ);
+      F_xi(1,1)=-F_eta(1,kY);
+      F_xi(1,2)=-F_eta(1,kZ);
+      F_xi(2,0)=-F_eta(2,kX+6);
+      F_xi(2,2)=-F_eta(2,kZ+6);
+      F_xi(3,1)=-F_eta(3,kY+6);
+      F_xi(3,2)=-F_eta(3,kZ+6);
+
+    }
     
     if (debug_level>1){	
       cout << "Jacobian matrices for eta and xi" <<endl;
@@ -3105,15 +3176,16 @@ void DReferenceTrajectory::FitVertex(const DVector3 &pos1,const DVector3 &mom1,
       F_xi.Print();      
     }
         
-    TMatrix F_eta_T(TMatrix::kTransposed,F_eta);
-    TMatrix F_xi_T(TMatrix::kTransposed,F_xi);
+    TMatrixD F_eta_T(TMatrixD::kTransposed,F_eta);
+    TMatrixD F_xi_T(TMatrixD::kTransposed,F_xi);
     
     // Adjust xi, then the Lagrange multipliers, then eta for this iteration
     xi_old=xi;
     S=F_eta*V*F_eta_T;
-    Sinv=S.Invert();
+    TMatrixD Sinv(TMatrixD::kInverted,S);
     r=f+F_eta*(eta0-eta);
-    xi=xi_old-(F_xi_T*Sinv*F_xi).Invert()*F_xi_T*Sinv*r;
+    TMatrixD Mtemp(TMatrixD::kInverted,F_xi_T*Sinv*F_xi);
+    xi=xi_old-Mtemp*F_xi_T*Sinv*r;
     LagMul=Sinv*(r+F_xi*(xi-xi_old));
     eta=eta0-V*F_eta_T*LagMul;
   }

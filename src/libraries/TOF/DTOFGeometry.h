@@ -8,6 +8,8 @@
 #ifndef _DTOFGeometry_
 #define _DTOFGeometry_
 
+#define DTOFGEOMETRY_VERSION 2
+
 #include <HDGEOMETRY/DGeometry.h>
 #include <DANA/DApplication.h>
 
@@ -37,15 +39,25 @@ class DTOFGeometry : public JObject {
   int Get_FirstShortBar() const { return FirstShortBar; }
   int Get_LastShortBar() const { return LastShortBar; }
 
+  bool Is_ShortBar(int paddle) const { return (paddle >= FirstShortBar) && (paddle <= LastShortBar); }
+
   float Get_LongBarLength() const { return LONGBARLENGTH; }
   float Get_HalfLongBarLength() const { return HALFLONGBARLENGTH; }
   float Get_ShortBarLength() const { return SHORTBARLENGTH; }
   float Get_HalfShortBarLength() const { return HALFSHORTBARLENGTH; }
-  float Get_BarWidth() const { return BARWIDTH; }
+  float Get_BarWidth(int bar) const { return YWIDTH[bar]; }
 
   float Get_CenterVertPlane() const { return CenterVPlane; };  
   float Get_CenterHorizPlane() const { return CenterHPlane; };
   float Get_CenterMidPlane() const { return CenterMPlane; };
+
+  string Get_CCDB_DirectoryName() const {
+  	if(Get_NBars() == 46) {
+	    return "TOF2";
+  	} else {
+  		return "TOF";
+  	}
+  }
 
   float bar2y(int bar, int end=0) const;  
   int y2bar(double y) const;
@@ -56,7 +68,7 @@ class DTOFGeometry : public JObject {
 		AddString(items, "NSHORTBARS", "%d", Get_NShortBars() );
 		AddString(items, "LONGBARLENGTH", "%6.3f", Get_LongBarLength() );
 		AddString(items, "SHORTBARLENGTH", "%6.3f", Get_ShortBarLength() );
-		AddString(items, "BARWIDTH", "%6.3f", Get_BarWidth() );
+		AddString(items, "BARWIDTH", "%6.3f", Get_BarWidth(0) );
   }
   
  private:
@@ -83,6 +95,7 @@ class DTOFGeometry : public JObject {
   float CenterMPlane;  /// center z position between the two Plane
 
   vector<double> YPOS;  ///> y (perpendicular) position for bar number
+  vector<double> YWIDTH;  ///> y (perpendicular) bar width per bar number
  
 };
 
