@@ -51,12 +51,6 @@ class DCCALShower : public JObject {
       		- time:    Energy-weighted average of shower's constituent times 
 				(with time-walk correction)
       		
-      		- status (enum):
-      		
-        	  kInner  - shower is in most inner layer (under absorber)
-		  kMiddle - shower is in middle layers of calorimeter
-		  kOuter  - shower is in most outer layer of calorimeter
-      		
       		- ClusterType (enum):
         	
 		  SinglePeak - shower is in a single-peak cluster
