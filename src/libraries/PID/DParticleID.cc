@@ -2962,8 +2962,10 @@ bool DParticleID::PredictFCALHit(const vector<DTrackFitter::Extrapolation_t>&ext
 
 	double x=proj_pos.x();
 	double y=proj_pos.y();
-	row=dFCALGeometry->row(float(y));
-	col=dFCALGeometry->column(float(x));
+	int calor=0;
+	if (fabs(x)<50.16 && fabs(y)<50.16) calor=1;
+	row=dFCALGeometry->row(float(y),calor);
+	col=dFCALGeometry->column(float(x),calor);
 	return (dFCALGeometry->isBlockActive(row,col));
 }
 
