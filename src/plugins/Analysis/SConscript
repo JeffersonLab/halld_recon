@@ -13,7 +13,6 @@ subdirs.extend(['fcal_charged','TPOL_tree','mcthrown_tree'])
 subdirs.extend(['trackeff_hists','imaging'])
 subdirs.extend(['pid_dirc','truth_dirc', 'lut_dirc', 'dirc_hists', 'dirc_reactions', 'dirc_tree'])
 subdirs.extend(['B3pi_eff_missgamma','B3pi_eff_misspip','B3pi_eff_misspim','B3pi_eff_missprot'])
-subdirs.extend(['F250_mode8_pedestal'])
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
 
