@@ -87,9 +87,13 @@ static TH1I *bcal_Uhit_noTDC_E = NULL;
 static TH2I *bcal_Uhit_tTDC_tADC = NULL;
 static TH2I *bcal_Uhit_tTDC_E = NULL;
 static TH2I *bcal_Uhit_tADC_E = NULL;
+static TProfile2D *bcal_hit_tADC_ave = NULL;
+static TProfile2D *bcal_hit_tTDC_ave = NULL;
 static TProfile2D *bcal_Uhit_tdiff_ave = NULL;
 static TProfile2D *bcal_hit_tdiff_raw_ave = NULL;
 static TProfile2D *bcal_hit_tdiff_ave = NULL;
+
+
 
 static TH1I *bcal_num_points = NULL;
 static TH1I *bcal_point_E = NULL;
@@ -290,6 +294,10 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 				     100, Ehit_min, Ehit_max, 100, timemin_ns, timemax_ns);
 	bcal_Uhit_tTDC_twalk = new TH1I("bcal_Uhit_tTDC_twalk","TDC timewalk correction (DBCALUnifiedHit);Timewalk correction  (ns)", 
 				 150, -140, 10);
+    bcal_hit_tADC_ave = new TProfile2D("bcal_hit_tADC_ave", "Mean ADC time, arb. offsets (ns);Module",
+                                         48, 0.5, 48.5, 33, 0.5, 33.5);
+    bcal_hit_tTDC_ave = new TProfile2D("bcal_hit_tTDC_ave", "Mean TDC time, arb. offsets (ns);Module",
+                                         48, 0.5, 48.5, 33, 0.5, 33.5);
     bcal_Uhit_tdiff_ave = new TProfile2D("bcal_Uhit_tdiff_ave", "Mean time diff. (TDC-ADC) (UnifiedHit);Module",
                                          48, 0.5, 48.5, 33, 0.5, 33.5);
     bcal_hit_tdiff_raw_ave = new TProfile2D("bcal_hit_tdiff_raw_ave", "Mean time diff. uncalib. (TDC-ADC) (Hit);Module",
@@ -376,6 +384,8 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 	bcal_point_z_dist->SetStats(0);
 	bcal_point_z_sector->SetStats(0);
 	bcal_fadc_digi_pedestal_ave->SetStats(0);
+	bcal_hit_tADC_ave->SetStats(0);
+	bcal_hit_tTDC_ave->SetStats(0);
 	bcal_Uhit_tdiff_ave->SetStats(0);
 	bcal_hit_tdiff_raw_ave->SetStats(0);
 	bcal_hit_tdiff_ave->SetStats(0);
@@ -397,6 +407,8 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 		bcal_fadc_avgE->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
 		bcal_fadc_saturated->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
 		bcal_fadc_digi_pedestal_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
+		bcal_hit_tADC_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
+		bcal_hit_tTDC_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
 		bcal_Uhit_tdiff_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
 		bcal_hit_tdiff_raw_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
 		bcal_hit_tdiff_ave->GetYaxis()->SetBinLabel(ibin, ss.str().c_str());
@@ -410,6 +422,8 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 		bcal_fadc_avgE->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
 		bcal_fadc_saturated->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
 		bcal_fadc_digi_pedestal_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
+		bcal_hit_tADC_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
+		bcal_hit_tTDC_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
 		bcal_Uhit_tdiff_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
 		bcal_hit_tdiff_raw_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
 		bcal_hit_tdiff_ave->GetYaxis()->SetBinLabel(ibin+17, ss.str().c_str());
@@ -737,11 +751,15 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 			int iy = (Uhit->sector-1)*4 + Uhit->layer;
 			if (adchit->pulse_peak>=120) { // Only compare TDC and ADC where pulse is big enough that time-walk is small.
 				if(Uhit->end == DBCALGeometry::kUpstream) {
+					bcal_hit_tADC_ave->Fill(ix, iy+17, adchit->t);
+					bcal_hit_tTDC_ave->Fill(ix, iy+17, tdchit->t);
 					bcal_Uhit_tdiff_ave->Fill(ix, iy+17, t_diff);
 					bcal_hit_tdiff_raw_ave->Fill(ix, iy+17, t_diff_hit_raw);
 					bcal_hit_tdiff_ave->Fill(ix, iy+17, t_diff_hit);
 				}
 				if(Uhit->end == DBCALGeometry::kDownstream) {
+					bcal_hit_tADC_ave->Fill(ix, iy, adchit->t);
+					bcal_hit_tTDC_ave->Fill(ix, iy, tdchit->t);
 					bcal_Uhit_tdiff_ave->Fill(ix, iy, t_diff);
 					bcal_hit_tdiff_raw_ave->Fill(ix, iy, t_diff_hit_raw);
 					bcal_hit_tdiff_ave->Fill(ix, iy, t_diff_hit);
