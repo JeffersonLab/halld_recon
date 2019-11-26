@@ -12,6 +12,8 @@
 #include <JANA/JFactoryGenerator.h>
 
 #include "DCDCDigiHit_factory_KO.h"
+#include "DBCALDigiHit_factory_KO.h"
+#include "DBCALTDCDigiHit_factory_KO.h"
 
 class JFactoryGenerator_RSAI_KO: public jana::JFactoryGenerator{
 	public:
@@ -22,6 +24,8 @@ class JFactoryGenerator_RSAI_KO: public jana::JFactoryGenerator{
 		
 		jerror_t GenerateFactories(jana::JEventLoop *loop){
 			loop->AddFactory(new DCDCDigiHit_factory_KO());
+			loop->AddFactory(new DBCALDigiHit_factory_KO());
+			loop->AddFactory(new DBCALTDCDigiHit_factory_KO());
 			return NOERROR;
 		}
 

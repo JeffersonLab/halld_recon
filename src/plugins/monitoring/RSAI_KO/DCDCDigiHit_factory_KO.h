@@ -19,7 +19,6 @@ class DCDCDigiHit_factory_KO:public jana::JFactory<DCDCDigiHit>{
 
 		std::map< std::pair<int,int>, double > CDC_pin_eff;
 
-		void Usage(void);
 		int SetBoardEfficiency(string boardname, double eff); // returns number of pins in board
 
 	private:

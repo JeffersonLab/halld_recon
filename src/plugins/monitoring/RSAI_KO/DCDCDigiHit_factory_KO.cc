@@ -58,9 +58,9 @@ jerror_t DCDCDigiHit_factory_KO::init(void)
 	// Tell JANA we don't own any of the objects in _data
 	SetFactoryFlag( NOT_OBJECT_OWNER );
 
-	// Tell JANA not to look in the source when trying to find
-	// DCDCDigiHit objects for *this* factory.
-	use_factory = 1;
+//	// Tell JANA not to look in the source when trying to find
+//	// DCDCDigiHit objects for *this* factory.
+//	use_factory = 1;
 
 	// Get all parameters starting with "KO:CDC_". The keys will have that
 	// portion of the string removed leaving only the board name.
@@ -82,6 +82,7 @@ jerror_t DCDCDigiHit_factory_KO::init(void)
 		for( auto p : Npins ){
 			cout << "  " << p.first << " eff=" << stod(parms.at(p.first)) << " Npins=" << p.second << endl;
 		}
+		cout << endl;
 	});
 
 	return NOERROR;
