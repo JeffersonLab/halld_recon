@@ -521,8 +521,8 @@ class DTranslationTable:public jana::JObject{
 		void AddToCallStack(JEventLoop *loop, string caller, string callee) const;
 
 		void ReadOptionalROCidTranslation(void);
-		static void SetSystemsToParse(string systems, JEventSource *eventsource);
-		void SetSystemsToParse(JEventSource *eventsource){SetSystemsToParse(SYSTEMS_TO_PARSE, eventsource);}
+		static void SetSystemsToParse(string systems, int systems_to_parse_force, JEventSource *eventsource);
+		void SetSystemsToParse(JEventSource *eventsource){SetSystemsToParse(SYSTEMS_TO_PARSE, 0, eventsource);}
 		void ReadTranslationTable(JCalibration *jcalib=NULL);
 		
 		template<class T> void CopyDf250Info(T *h, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -539,6 +539,7 @@ class DTranslationTable:public jana::JObject{
 
 		//public so that StartElement can access it
 		static map<DTranslationTable::Detector_t, set<uint32_t> >& Get_ROCID_By_System(void); //this is static so that StartElement can access it
+		static int& Get_ROCID_By_System_Mismatch_Behaviour(void);
 
 		// This was left over from long ago and is not currently used. It seems
 		// potentially useful though in the future so I don't want to get rid

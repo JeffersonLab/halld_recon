@@ -207,6 +207,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		bool     IGNORE_EMPTY_BOR;
 		bool     TREAT_TRUNCATED_AS_ERROR;
 		string   SYSTEMS_TO_PARSE;
+		int      SYSTEMS_TO_PARSE_FORCE;
 		
 		uint32_t jobtype;
 		bool IS_CDAQ_FILE = false;

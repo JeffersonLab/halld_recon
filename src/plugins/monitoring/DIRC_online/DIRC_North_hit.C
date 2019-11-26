@@ -2,24 +2,24 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeOverThresholdVsChannel_LED
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_TimeVsChannel_LED
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_NonLED
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_LED
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_LED
-// hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeOverThresholdVsChannel_LED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_TimeVsChannel_LED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_Time_NonLED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_Time_LED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_LED
+// hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_NonLED
 
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
   if(dir) dir->cd();
 
-  TH2I* hTimeVsChannel_LED = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_TimeVsChannel_LED");
-  TH1I* hTS = (TH1I*)gDirectory->Get("Hit/SouthLowerBox/Hit_Time_NonLED");
-  TH1I* hTS_LED = (TH1I*)gDirectory->Get("Hit/SouthLowerBox/Hit_Time_LED");  
+  TH2I* hTimeVsChannel_LED = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_TimeVsChannel_LED");
+  TH1I* hTS = (TH1I*)gDirectory->Get("Hit/NorthUpperBox/Hit_Time_NonLED");
+  TH1I* hTS_LED = (TH1I*)gDirectory->Get("Hit/NorthUpperBox/Hit_Time_LED");  
 
-  TH2I* hOcc_LED = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED");
-  TH2I* hOcc = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED");
+  TH2I* hOcc_LED = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_PixelOccupancy_LED");
+  TH2I* hOcc = (TH2I*)gDirectory->Get("Hit/NorthUpperBox/Hit_PixelOccupancy_NonLED");
 
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1","DIRC Hit Monitor",150,10,990,660);

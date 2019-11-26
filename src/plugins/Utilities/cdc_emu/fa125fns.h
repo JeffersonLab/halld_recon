@@ -235,6 +235,7 @@ void cdc_time(Int_t &le_time, Int_t &q_code, Int_t adc[], Int_t NU, Int_t PG, In
 
 
   i = 0;
+  q_code = 0;
   while (i<NU) {
 
     if (adc[i] == 0) {

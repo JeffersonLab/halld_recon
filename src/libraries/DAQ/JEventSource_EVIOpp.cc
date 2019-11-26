@@ -100,6 +100,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
 	SYSTEMS_TO_PARSE = "";
+    SYSTEMS_TO_PARSE_FORCE = 0;
 
 	gPARMS->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
 	gPARMS->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
@@ -141,12 +142,15 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 			"Comma separated list of systems to parse EVIO data for. "
 			"Default is empty string which means to parse all. System "
 			"names should be what is returned by DTranslationTable::DetectorName() .");
+    gPARMS->SetDefaultParameter("EVIO:SYSTEMS_TO_PARSE_FORCE", SYSTEMS_TO_PARSE_FORCE,
+	        "How to handle mismatches between hard coded map and one read from CCDB "
+         "when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
 
 
 	if(gPARMS->Exists("RECORD_CALL_STACK")) gPARMS->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
 
 	// Set rocids of all systems to parse (if specified)
-	DTranslationTable::SetSystemsToParse(SYSTEMS_TO_PARSE, this);
+	DTranslationTable::SetSystemsToParse(SYSTEMS_TO_PARSE, SYSTEMS_TO_PARSE_FORCE, this);
 
 	jobtype = DEVIOWorkerThread::JOB_NONE;
 	if( PARSE ) jobtype |= DEVIOWorkerThread::JOB_FULL_PARSE;
