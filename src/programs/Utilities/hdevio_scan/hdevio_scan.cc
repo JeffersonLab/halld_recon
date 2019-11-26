@@ -277,6 +277,9 @@ void MapEVIOWords(void)
 		delete hdevio;
 	}
 	
+	// Allow some histograms to be scaled.
+	mapevio.Finish();
+	
 	// Flush and close ROOT file
 	rootfile->Write();
 	rootfile->Close();
