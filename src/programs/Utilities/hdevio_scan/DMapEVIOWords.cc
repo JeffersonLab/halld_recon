@@ -29,7 +29,7 @@ using namespace jana;
 extern uint32_t BLOCK_SIZE;
 
 // root hist pointers
-static TProfile *daq_hits_per_event;
+static TH1D *daq_hits_per_event;
 static TProfile *daq_words_per_event;
 static TH1D *daq_event_size;
 static TH1D *daq_block_size; // Adds together BLOCK_SIZE EVIO events (n.b. evio events could already be blocks!)
@@ -45,11 +45,12 @@ static TH1D *daq_words_by_type;
 DMapEVIOWords::DMapEVIOWords()
 {
 	max_history_buff_size = 400;
+	Nphysics_events = 0;
 
 	char daq_block_size_title[256];
 	sprintf(daq_block_size_title, "Block size (%d EVIO events) in kB", BLOCK_SIZE);
 
-	daq_hits_per_event = new TProfile("daq_hits_per_event", "Hits/event vs. rocid", 100, 0.5, 100.5);
+	daq_hits_per_event = new TH1D("daq_hits_per_event", "Hits/event vs. rocid", 100, 0.5, 100.5);
 	daq_words_per_event = new TProfile("daq_words_per_event", "words/event vs. rocid", 100, 0.5, 100.5);
 	daq_event_size = new TH1D("daq_event_size", "Event size in kB", 10000, 0.0, 1.0E3);
 	daq_block_size = new TH1D("daq_block_size", daq_block_size_title, 1000, 0.0, 1.0E3);
@@ -163,6 +164,19 @@ DMapEVIOWords::~DMapEVIOWords()
 }
 
 //------------------
+// Finish
+//------------------
+void DMapEVIOWords::Finish(void)
+{
+	// This is called just before the ROOT file is closed.
+	// Here we scale some histograms by the number of events.
+	double norm = 1.0/(double)Nphysics_events;
+	daq_hits_per_event->Scale(norm);
+	daq_words_per_event->Scale(norm);	
+}
+
+
+//------------------
 // AddROCIDLabels
 //------------------
 void DMapEVIOWords::AddROCIDLabels(void)
@@ -187,8 +201,10 @@ void DMapEVIOWords::AddROCIDLabels(void)
 				try{
 					DTranslationTable::csc_t csc = {rocid, slot, channel};
 					const DTranslationTable::DChannelInfo &chinfo = ttab.GetDetectorIndex(csc);
-					daq_hits_per_event->GetXaxis()->SetBinLabel(rocid, ttab.DetectorName(chinfo.det_sys).c_str());
-					daq_words_per_event->GetXaxis()->SetBinLabel(rocid, ttab.DetectorName(chinfo.det_sys).c_str());
+					char lab[256];
+					sprintf(lab, "%s:rocid%d", ttab.DetectorName(chinfo.det_sys).c_str(), rocid);
+					daq_hits_per_event->GetXaxis()->SetBinLabel(rocid, lab);
+					daq_words_per_event->GetXaxis()->SetBinLabel(rocid, lab);
 					found_chan = true;
 					break;
 				}catch(JException &e){
@@ -275,6 +291,10 @@ void DMapEVIOWords::ParseEvent(uint32_t *buff)
 		cout << "Too many words in physics event: " << physics_event_len+1 << " > " << evio_buffwords << endl;
 		return;
 	}
+
+	// Number of physics events in EVIO block
+	uint64_t M = istart[1] & 0x0FF;
+	Nphysics_events += M;
 	
 	// Trigger bank event length
 	uint32_t trigger_bank_len = istart[2];
@@ -508,6 +528,7 @@ void DMapEVIOWords::Parsef250Bank(uint32_t rocid, uint32_t *&iptr, uint32_t *ien
 			case  9: word_stats[kf250PulseData]++;	       iptr++;
 				while( ((*iptr>>31) & 0x1) == 0 ){
 					word_stats[kf250PulseData]++;	          iptr++;
+					daq_hits_per_event->Fill(rocid);
 					if(iptr == iend) break;
 				}
 				break;
@@ -551,16 +572,19 @@ void DMapEVIOWords::Parsef125Bank(uint32_t rocid, uint32_t *&iptr, uint32_t *ien
 			case  5: word_stats[kf125CDCPulse]++;
 				iptr++;
 				if(((*iptr>>31) & 0x1) == 0){ word_stats[kf125CDCPulse]++; iptr++; }
+				daq_hits_per_event->Fill(rocid);
 				break;
 			case  6: word_stats[kf125FDCPulse6]++;
 				iptr++;
 				if(((*iptr>>31) & 0x1) == 0){ word_stats[kf125FDCPulse6]++; iptr++; }
+				daq_hits_per_event->Fill(rocid);
 				break;
 			case  7: word_stats[kf125PulseIntegral]++;    iptr++;  break;
 			case  8: word_stats[kf125PulseTime]++;        iptr++;  break;
 			case  9: word_stats[kf125FDCPulse9]++;
 				iptr++;
 				if(((*iptr>>31) & 0x1) == 0){ word_stats[kf125FDCPulse9]++; iptr++; }
+				daq_hits_per_event->Fill(rocid);
 				break;
 			case 10: word_stats[kf125PulsePedestal]++;    iptr++;  break;
 			case 13: word_stats[kf125EventTrailer]++;     iptr++;  break;
@@ -580,7 +604,7 @@ void DMapEVIOWords::ParseF1v2TDCBank(uint32_t rocid, uint32_t *&iptr, uint32_t *
 	while(iptr<iend){
 		switch( (*iptr++) & 0xF8000000 ){
 			case 0xC0000000: word_stats[kF1v2ChipHeader]++;   break;
-			case 0xB8000000: word_stats[kF1v2Data]++;         break;
+			case 0xB8000000: word_stats[kF1v2Data]++;         daq_hits_per_event->Fill(rocid); break;
 			case 0xF8000000: word_stats[kF1v2Filler]++;       break;
 			case 0x80000000: word_stats[kF1v2BlockHeader]++;  break;
 			case 0x88000000: word_stats[kF1v2BLockTrailer]++; break;
@@ -600,7 +624,7 @@ void DMapEVIOWords::ParseF1v3TDCBank(uint32_t rocid, uint32_t *&iptr, uint32_t *
 	while(iptr<iend){
 		switch( (*iptr++) & 0xF8000000 ){
 			case 0xC0000000: word_stats[kF1v3ChipHeader]++;   break;
-			case 0xB8000000: word_stats[kF1v3Data]++;         break;
+			case 0xB8000000: word_stats[kF1v3Data]++;         daq_hits_per_event->Fill(rocid); break;
 			case 0xF8000000: word_stats[kF1v3Filler]++;       break;
 			case 0x80000000: word_stats[kF1v3BlockHeader]++;  break;
 			case 0x88000000: word_stats[kF1v3BLockTrailer]++; break;
@@ -633,7 +657,7 @@ void DMapEVIOWords::ParseCAEN1190(uint32_t rocid, uint32_t *&iptr, uint32_t *ien
 			case 0b10000: word_stats[kCAEN1190GlobalTrailer]++;     break;
 			case 0b10001: word_stats[kCAEN1190GlobalTriggerTime]++; break;
 			case 0b00001: word_stats[kCAEN1190TDCHeader]++;         break;
-			case 0b00000: word_stats[kCAEN1190TDCData]++;           break;
+			case 0b00000: word_stats[kCAEN1190TDCData]++;           daq_hits_per_event->Fill(rocid); break;
 			case 0b00100: word_stats[kCAEN1190TDCError]++;          break;
 			case 0b00011: word_stats[kCAEN1190TDCTrailer]++;        break;
 			case 0b11000: word_stats[kCAEN1190Filler]++;            break;
