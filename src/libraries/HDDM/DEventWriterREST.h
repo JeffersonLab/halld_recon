@@ -55,6 +55,7 @@ class DEventWriterREST : public JObject
 		bool HDDM_USE_COMPRESSION;
 		bool HDDM_USE_INTEGRITY_CHECKS;
 		bool REST_WRITE_DIRC_HITS;
+		bool REST_WRITE_CCAL_SHOWERS;
 
         // metadata to save in the REST file
         // these should be consistent during program execution
