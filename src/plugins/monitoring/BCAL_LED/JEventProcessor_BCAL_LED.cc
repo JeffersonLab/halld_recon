@@ -205,7 +205,7 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
 	// back to main dir
 	main->cd();
 	
-	gDirectory->mkdir("highlevel")->cd();
+	gDirectory->mkdir("BCAL_LED_highlevel")->cd();
 	
 	dHist_L1bits_fp  = new TH1I("L1bits_fp", "L1 trig bits from FP;Trig. bit (9-10)", 4, 7.5, 11.5);
 

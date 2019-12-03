@@ -53,7 +53,8 @@ subdirs = [
 'TrackingPulls',
 'timing_online',
 'DIRC_online',
-'TRD_online'
+'TRD_online',
+'RSAI_KO'
 ]
 
 #'L3_online',

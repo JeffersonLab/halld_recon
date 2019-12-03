@@ -130,6 +130,7 @@ class DMapEVIOWords{
 
 		DMapEVIOWords();
 		~DMapEVIOWords();
+		void Finish(void);
 		void AddROCIDLabels(void);
 		void ParseEvent(uint32_t *buff);
 		void DataWordStats(uint32_t *iptr, uint32_t *iend, uint32_t *word_stats);
@@ -147,6 +148,8 @@ class DMapEVIOWords{
 
 		set<uint64_t> ts_history;
 		uint32_t max_history_buff_size;
+		
+		uint64_t Nphysics_events;
 
 	private:
 };

@@ -1771,13 +1771,15 @@ bool DGeometry::GetTRDZ(vector<double> &z_trd) const
      vector<double>trd_G10;
      Get("//composition[@name='TRDGEM']/posXYZ[@volume='TGPK']/@X_Y_Z",trd_G10);
 
+     jout << "TRD z positions = ";
      for(int i=0; i<5; i++) {
        vector<double>trd_plane;
        Get(Form("//composition[@name='TGPK']/posXYZ[@volume='TRDG']/@X_Y_Z/plane[@value='%d']",i),trd_plane);
        double z_trd_plane=trd_origin[2]+trd_G10[2]+trd_plane[2];
-       jout << "TRD z position = " << z_trd_plane << " cm for plane " << i << endl;
+       jout << z_trd_plane << ", ";
        z_trd.push_back(z_trd_plane);
      }
+     jout << "cm" << endl;
    }
 
    return true;
