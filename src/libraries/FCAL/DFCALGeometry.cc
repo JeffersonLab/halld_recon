@@ -35,7 +35,7 @@ DFCALGeometry::DFCALGeometry()
  	
       double thisRadius = m_positionOnFace[row][col][calor].Mod();
       
-      if(thisRadius < radius() && (fabs(x)>50.0 || fabs(y)>50.0)){
+      if(thisRadius < radius() && getCalorimeterIndex(x,y)==0){
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
@@ -65,7 +65,7 @@ DFCALGeometry::DFCALGeometry()
       
       //printf("r %d c %d x %f y %f\n",row,col,x,y);
 
-      if (fabs(x)>2.0 || fabs(y)>2.0){
+      if (fabs(x)>blockSize(calor) || fabs(y)>blockSize(calor)){
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
@@ -172,7 +172,7 @@ DFCALGeometry::channel( int row, int column) const
   }
   else{
     
-    cerr << "ERROR: request for channel number of inactive block!  row " 
+    cout << "ERROR: request for channel number of inactive block!  row " 
 	 << row << " column " <<  column << endl;
     return -1;
   }
