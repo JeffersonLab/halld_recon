@@ -79,11 +79,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
-    std::vector<const DCCALShower*> ccalshowers;
+  std::vector<const DCCALShower*> ccalshowers;
 	if(REST_WRITE_CCAL_SHOWERS) {
 	    locEventLoop->Get(ccalshowers);
 	}
-
+  
 	std::vector<const DTOFPoint*> tofpoints;
 	locEventLoop->Get(tofpoints);
 
@@ -324,8 +324,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
         ccal().setY1(ccalshowers[i]->y1);
                                                                                                      
         ccal().setType(ccalshowers[i]->type);                                                                                                
-        ccal().setDime(ccalshowers[i]->dime);                                                                                                
-        ccal().setStatus(ccalshowers[i]->status);                                                                                                
+        ccal().setDime(ccalshowers[i]->dime);                                                                                             
         ccal().setId(ccalshowers[i]->id);                                                                                                
         ccal().setIdmax(ccalshowers[i]->idmax);                                                                                                
     }                                                                                                                                            
