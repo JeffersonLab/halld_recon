@@ -70,6 +70,12 @@ public:
   int row   ( int channel) const { return m_row[channel];    }
   int column( int channel) const { return m_column[channel]; }
   
+  int getCalorimeterIndex(float x, float y) const {
+    float insert_size=kInnerMidBlock*blockSize(1);
+    if (fabs(x)<insert_size && fabs(y)<insert_size) return 1;
+    return 0;
+  }
+
   // get row and column from x and y positions
   int row   ( float y, int calor ) const;
   int column( float x, int calor ) const;
