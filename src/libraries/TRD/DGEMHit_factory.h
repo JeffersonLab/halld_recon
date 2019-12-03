@@ -1,29 +1,29 @@
 // $Id$
 //
-//    File: DTRDHit_factory.h
+//    File: DGEMHit_factory.h
 //
 
-#ifndef _DTRDHit_factory_
-#define _DTRDHit_factory_
+#ifndef _DGEMHit_factory_
+#define _DGEMHit_factory_
 
 #include <vector>
 using namespace std;
 
 #include <JANA/JFactory.h>
 #include "TTAB/DTranslationTable.h"
-#include "DTRDDigiHit.h"
-#include "DTRDHit.h"
+#include "DGEMDigiWindowRawData.h"
+#include "DGEMHit.h"
 
 // store constants so that they can be accessed by pixel number
-typedef  vector<double>  trd_digi_constants_t;
+typedef  vector<double>  gem_digi_constants_t;
 
-class DTRDHit_factory:public jana::JFactory<DTRDHit>{
+class DGEMHit_factory:public jana::JFactory<DGEMHit>{
 	public:
-		DTRDHit_factory(){};
-		~DTRDHit_factory(){};
+		DGEMHit_factory(){};
+		~DGEMHit_factory(){};
 
 		// calibration constants stored in channel format
-		vector<trd_digi_constants_t> time_offsets;
+		vector<gem_digi_constants_t> time_offsets;
 
 	private:
 		jerror_t init(void);						///< Called once at program start.2
@@ -36,5 +36,5 @@ class DTRDHit_factory:public jana::JFactory<DTRDHit>{
 		double pulse_peak_threshold;
 };
 
-#endif // _DTRDHit_factory_
+#endif // _DGEMHit_factory_
 
