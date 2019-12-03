@@ -180,8 +180,8 @@ static inline Particle_t RemapParticleID(Particle_t p)
   // they are not the same as the definitions used from
   // E-852 in the enum above. Remap them using this routine
   // which is called from several of the routines below.
-  if(p==80) return Rho0;
-  if(p==81) return omega;
+  //if(p==80) return Rho0;
+  //if(p==81) return omega;
   return p;
 }
 

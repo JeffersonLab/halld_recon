@@ -1023,7 +1023,6 @@ jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
       
       shower->type = iter->getType();
       shower->dime = iter->getDime();
-      shower->status = iter->getDime();
       shower->id = iter->getId();
       shower->idmax = iter->getIdmax();
       
