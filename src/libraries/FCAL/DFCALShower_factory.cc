@@ -77,6 +77,17 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
   gPARMS->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
 
+  
+  INSERT_PAR1=1.397;
+  INSERT_PAR2=0.0598;
+  INSERT_PAR3=1.173;
+  INSERT_PAR4=2.;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
+
+
 }
 
 //------------------
@@ -110,16 +121,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   FCAL_RADIATION_LENGTH[1] = 0.89;
   FCAL_CRITICAL_ENERGY[1] = 0.00964;
   FCAL_SHOWER_OFFSET[1] = 1.0;
-
-  INSERT_PAR1=1.2065;
-  INSERT_PAR2=0.01099;
-  INSERT_PAR3=1.164;
-  INSERT_PAR4=2.;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
-
+ 
   DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   const DGeometry *geom = dapp->GetDGeometry(runnumber);
     
@@ -140,8 +142,6 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     geom->Get("//posXYZ[@volume='LeadTungstateLower']/@X_Y_Z",insert_center);
     m_FCALback[1]=midz+insert_center[2]+0.5*block[2];
     m_FCALfront[1]=m_FCALback[1]-block[2];
-
-    printf("front %f  %f\n",m_FCALfront[0],m_FCALfront[1]);
   }
   else{
       
@@ -252,7 +252,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       double x=pos_corrected.X();
       double y=pos_corrected.Y();
       unsigned int index=0;
-      if (fabs(x)<50. && fabs(y)<50.) index=1;
+      if (fabs(x)<50.16 && fabs(y)<50.16) index=1;
 	
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
@@ -351,9 +351,9 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setSumV( sumV );
       
       shower->AddAssociatedObject( cluster );
-
+      
       // Kludge for covariance matrix for insert
-        if (index==1){
+      if (index==1){
 	double sigx=0.1016/sqrt(Ecorrected)+0.2219;
 	shower->ExyztCovariance(1,1)=sigx*sigx;
 	shower->ExyztCovariance(2,2)=sigx*sigx;
@@ -366,7 +366,6 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  }
 	  
 	}
-	shower->ExyztCovariance.Print();
       }
 
 
@@ -392,7 +391,7 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   float y0 = posInCal.Py();
 
   unsigned int index=0;
-  if (fabs(x0)<50. && fabs(y0)<50.) index=1;
+  if (fabs(x0)<50.16 && fabs(y0)<50.16) index=1;
 
   double Eclust = cluster->getEnergy();
   
