@@ -55,8 +55,9 @@ static TH2I *hGEMSRSClusterAmpCorr;
 static TH2I *hWireTRDPointAmp_DeltaT, *hGEMTRDPointAmp_DeltaT;
 static TH2I *hGEMSRSPointAmp_DeltaT, *hGEMSRSPointAmp_DeltaT_Good;
 static TH2I *hWireTRDPoint_WireStrip, *hGEMTRDPoint_XY; 
+static TH1I *hWireTRDX_Time, *hGEMTRDX_Time;
 
-static TH2I *hWire_GEMTRDX, *hWire_GEMSRSX, *hWire_GEMSRSXstrip;
+static TH2I *hWire_GEMTRDX, *hWire_GEMTRDXstrip, *hWire_GEMTRDX_DeltaT, *hWire_GEMSRSX, *hWire_GEMSRSXstrip;
 static TH2I *hStrip_GEMTRDY, *hStrip_GEMSRSY, *hStrip_GEMSRSYstrip;
 
 //----------------------------------------------------------------------------------
@@ -107,19 +108,19 @@ jerror_t JEventProcessor_TRD_online::init(void) {
 		    hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_WirePlane%d", i),Form("Plane %d TRD Wire hit occupancy;strip;raw hits / counter",i),NTRDwires,-0.5,-0.5+NTRDwires);
 		    hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_WirePlane%d", i),Form("Plane %d TRD Wire quality factor;quality factor;raw hits",i),4,-0.5,3.5);
 		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse peak vs. strip;strip;pulse peak",i),NTRDwires,-0.5,-0.5+NTRDwires,410,0.0,4100.0);
-		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,6500.0);
-		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [ns];raw hits / 2 ns",i),200,0.0,400.0);
-		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse time vs. strip;strip;pulse time [ns]",i),NTRDwires,-0.5,-0.5+NTRDwires,200,0.0,400.0);
-		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_WirePlane%d", i),Form("Plane %d TRD Wire time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,400.0);
+		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,5000.0);
+		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [ns];raw hits / 2 ns",i),2500,0.0,5000.0);
+		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse time vs. strip;strip;pulse time [ns]",i),NTRDwires,-0.5,-0.5+NTRDwires,200,0.0,1000.0);
+		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_WirePlane%d", i),Form("Plane %d TRD Wire time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,1000.0);
 	    }
 	    else { // GEM TRD
 		    hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_GEMPlane%d", i),Form("Plane %d TRD GEM hit occupancy;strip;raw hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		    hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_GEMPlane%d", i),Form("Plane %d TRD GEM hit quality factor;quality factor;raw hits",i),4,-0.5,3.5);
 		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse peak vs. strip;strip;pulse peak",i),NTRDstrips,-0.5,-0.5+NTRDstrips,410,0.0,4100.0);
-		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,6500.0);
-		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [ns];raw hits / 2 ns",i),200,0.0,400.0);
-		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,400.0);
-		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_GEMPlane%d", i),Form("Plane %d TRD GEM time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,400.0);
+		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,5000.0);
+		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [ns];raw hits / 2 ns",i),2500,0.0,5000.0);
+		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,1000.0);
+		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_GEMPlane%d", i),Form("Plane %d TRD GEM time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,1000.0);
 	    }
     }
 
@@ -152,6 +153,11 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     
     // TRD - GEM (SRS) correlations
     hWire_GEMTRDX = new TH2I("Wire_GEMTRDX", "GEM TRD X position vs TRD wire # ; TRD wire # ; GEM TRD X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
+    hWire_GEMTRDXstrip = new TH2I("Wire_GEMTRDXstrip", "GEM TRD X strip vs TRD wire # ; TRD wire # ; GEM TRD X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
+    hWire_GEMTRDX_DeltaT = new TH2I("Wire_GEMTRDX_DeltaT", "GEM TRD X Amplitude vs #Delta t ; #Delta t (ns) ; GEM TRD X Amplitude", 500, -500, 500, 100, 0, 10000);
+    hWireTRDX_Time = new TH1I("WireTRDX_Time", "Wire TRD X Time ; t (ns)", 1000, 0, 1000);
+    hGEMTRDX_Time = new TH1I("GEMTRDX_Time", "GEM TRD X Time ; t (ns)", 1000, 0, 1000);
+
     hStrip_GEMTRDY = new TH2I("Strip_GEMTRDY", "GEM TRD Y position vs TRD strip # ; TRD strip # ; GEM TRD Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
     hWire_GEMSRSXstrip = new TH2I("Wire_GEMSRSXstrip", "GEM SRS X strip vs TRD wire # ; TRD wire # ; GEM SRS X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
     hStrip_GEMSRSYstrip = new TH2I("Strip_GEMSRSYstrip", "GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
@@ -251,7 +257,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    hDigiHit_QualityFactor[iplane]->Fill(hit->QF);
 	    hDigiHit_PeakVsStrip[iplane]->Fill(strip,hit->pulse_peak);
 	    hDigiHit_PulseTime[iplane]->Fill(hit->pulse_time);
-	    double t_ns = 0.0625*hit->pulse_time;
+	    double t_ns = 0.8*hit->pulse_time;
 	    hDigiHit_Time[iplane]->Fill(t_ns);
 	    hDigiHit_TimeVsStrip[iplane]->Fill(strip,t_ns);
 	    hDigiHit_TimeVsPeak[iplane]->Fill(hit->pulse_peak,t_ns);
@@ -371,6 +377,19 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 			    hWire_GEMTRDX->Fill(wire, point->x);
 	    }
 	    
+	    // GEM TRD hits
+	    for (const auto& gemtrd_hit : hits) {
+		    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 6) continue; 
+		    double locDeltaT = gemtrd_hit->t - hit->t;
+		    
+		    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
+		    hGEMTRDX_Time->Fill(gemtrd_hit->t);
+		    hWireTRDX_Time->Fill(hit->t);
+		    
+		    if(fabs(locDeltaT) < 100.)
+			    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
+	    }
+
 	    // GEM SRS hit
 	    for (const auto& gem_hit : gem_hits) {
 		    if(gem_hit->plane%2 != 0) continue; // skip Y strips

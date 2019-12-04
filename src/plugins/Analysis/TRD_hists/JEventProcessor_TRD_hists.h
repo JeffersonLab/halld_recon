@@ -1,14 +1,16 @@
 
-#ifndef _JEventProcessor_TRD_online_
-#define _JEventProcessor_TRD_online_
+#ifndef _JEventProcessor_TRD_hists_
+#define _JEventProcessor_TRD_hists_
 
 #include <JANA/JEventProcessor.h>
+#include <TRACKING/DTrackFitter.h>
+#include <TRACKING/DTrackWireBased.h>
 
-class JEventProcessor_TRD_online:public jana::JEventProcessor{
+class JEventProcessor_TRD_hists:public jana::JEventProcessor{
 public:
-    JEventProcessor_TRD_online();
-    ~JEventProcessor_TRD_online();
-    const char* className(void){return "JEventProcessor_TRD_online";}
+    JEventProcessor_TRD_hists();
+    ~JEventProcessor_TRD_hists();
+    const char* className(void){return "JEventProcessor_TRD_hists";}
 
 private:
     jerror_t init(void); ///< Called once at program start.
@@ -19,5 +21,5 @@ private:
     int wirePlaneOffset;
 };
 
-#endif // _JEventProcessor_TRD_online_
+#endif // _JEventProcessor_TRD_hists_
 
