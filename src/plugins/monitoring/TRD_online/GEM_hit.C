@@ -12,7 +12,6 @@
 {
     TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD/GEMHit");
     if(dir) dir->cd();
-    gDirectory->ls();
 
     const int maxplane = 10;
     TH2I* gemHit_Plane[maxplane];
