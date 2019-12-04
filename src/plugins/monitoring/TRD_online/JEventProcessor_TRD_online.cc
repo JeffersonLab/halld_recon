@@ -48,6 +48,7 @@ static TH2I *hDigiHit_TimeVsPeak[NTRDplanes];
 static TH1I *hGEMHit_NHits;
 static TH1I *hGEMHit_Occupancy[NGEMplanes];
 static TH2I *hGEMHit_SampleVsStrip[NGEMplanes];
+static TH2I *hGEMHit_PlaneVsStrip;
 static TH2I *hGEMSRSAmp_Time, *hGEMSRSAmp_Time_Cluster;
 static TH2I *hGEMSRSClusterAmpCorr;
 
@@ -131,6 +132,7 @@ jerror_t JEventProcessor_TRD_online::init(void) {
 	    hGEMHit_Occupancy[i] = new TH1I(Form("GEMHit_Occupancy_Plane%d", i),Form("Plane %d: GEM raw data hit occupancy;strip;raw hits / counter",i),NGEMstrips,-0.5,-0.5+NGEMstrips);
 	    hGEMHit_SampleVsStrip[i] = new TH2I(Form("GEMHit_SampleVsStrip_Plane%d", i),Form("Plane %d: GEM ADC time samples vs strip;strip;sample",i),NGEMstrips,-0.5,-0.5+NGEMstrips,NGEMsamples,-0.5,-0.5+NGEMsamples);
     }
+    hGEMHit_PlaneVsStrip = new TH2I("GEMHit_PlaneVsStrip","GEM ADC plane vs strip;strip;plane",NGEMstrips,-0.5,-0.5+NGEMstrips,NGEMplanes,-0.5,-0.5+NGEMplanes);
 
     trdDir->cd();
     gDirectory->mkdir("Correlations")->cd();
@@ -176,8 +178,6 @@ jerror_t JEventProcessor_TRD_online::brun(JEventLoop *eventLoop, int32_t runnumb
     const DGeometry *geom = dapp->GetDGeometry(runnumber);
     vector<double> z_trd;
     geom->GetTRDZ(z_trd);
-    for(uint i=0; i<z_trd.size(); i++)
-	    jout<<i<<" "<<z_trd[i]<<endl;
 
     return NOERROR;
 }
@@ -274,6 +274,10 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	
 	// loop over samples for each channel
 	vector<uint16_t> samples = srswindow->samples;
+	for(uint isample=0; isample<samples.size(); isample++) {
+		hGEMHit_PlaneVsStrip->Fill(1.*strip, 1.*plane, 1.*samples[isample]);
+	}
+
 	uint16_t pedestal = samples[0];
 	int max_adc_zs = 0;
 	for(uint isample=1; isample<samples.size(); isample++) {
@@ -283,7 +287,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	}		    
 	
 	// fill all hits in channels with a large signal
-	if(max_adc_zs > 400) {
+	if(max_adc_zs > 0) {
 		for(uint isample=1; isample<samples.size(); isample++) {
 			int adc_zs = -1 * (samples[isample]-pedestal);
 			hGEMHit_SampleVsStrip[plane]->Fill(strip,isample,adc_zs);
@@ -318,12 +322,12 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    for (const auto& hit : cluster->members) {
 		    if(hit->plane == 7 && hit->strip > 100 && hit->strip < 130) 
 			    hGEMSRSAmp_Time_Cluster->Fill(hit->t, hit->pulse_height);
-		    if(!max_hit || hit->pulse_height > max_hit->pulse_height)
-			    max_hit = hit;
+		    //if(!max_hit) max_hit = hit;
+		    //if(hit->pulse_height > max_hit->pulse_height) max_hit = hit;
 	    }
 
 	    // compare max strip to cluster time and position
-	    hGEMSRSClusterAmpCorr->Fill(cluster->q_tot, max_hit->pulse_height);
+	    //hGEMSRSClusterAmpCorr->Fill(cluster->q_tot, max_hit->pulse_height);
     }
 
     // points

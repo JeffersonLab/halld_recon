@@ -2329,7 +2329,7 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	rawDataTS.clear();
 
 	Int_t fAPVHeaderLevel = 1500;
-	Int_t fNbOfTimeSamples = 100; // arbitrarily large number of samples
+	Int_t fNbOfTimeSamples = 21; // hard coded maximum number of time samples
 
 	uint8_t NCH = 128;
 	
