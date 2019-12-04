@@ -94,7 +94,6 @@ jerror_t DGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				
 				double t_diff = tx_clus - ty_clus;
 				double dE_amp = gemClusX[i]->q_tot + gemClusY[j]->q_tot;
-				double dE_amp_diff = (gemClusX[i]->q_tot + gemClusY[j]->q_tot)/dE_amp;
 				
 				// some requirements for a good point
 				if(fabs(t_diff) < gem_time_max) {// && fabs(dE_amp_diff) <gem_dE_max) {

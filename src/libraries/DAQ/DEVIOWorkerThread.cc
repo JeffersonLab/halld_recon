@@ -2329,7 +2329,8 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	rawDataTS.clear();
 
 	Int_t fAPVHeaderLevel = 1500;
-	Int_t fNbOfTimeSamples = 21;
+	Int_t fNbOfTimeSamples = 100; // arbitrarily large number of samples
+
 	uint8_t NCH = 128;
 	
 	Int_t fStartData = 0;
@@ -2349,90 +2350,29 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	
 	// set range for data
 	firstdata = fStartData ;
-	lastdata  = firstdata  + NCH ;
-
-	///////////////////////////////////////////
-	// common mode correction each time bins //
-	///////////////////////////////////////////
-	/*
-	int commonMode = 0 ;
-	vector<Float_t> dataTest, commonModeOffsets ;
-
-	int fComModeCut = 20;
-	int fAPVBaseline = 2500;
-	vector<Float_t> fPedestalOffsets; 
-	for(int i=0; i<128; i++) fPedestalOffsets.push_back(3000); // how do I fill this...
-	fAPVBaseline = std::accumulate(fPedestalOffsets.begin(), fPedestalOffsets.end(), 0.0) / NCH ;
-
-	for(Int_t timebin = 0; timebin < fNbOfTimeSamples; timebin++) {
-		dataTest.insert(dataTest.end(), &rawData16bits[firstdata], &rawData16bits[lastdata]);
-		assert(dataTest.size() == NCH );
-		
-		// PERFORM APV25 PEDESTAL OFFSET CORRECTION  FOR A GIVEN TIME BIN
-		std::transform (dataTest.begin(), dataTest.end(), fPedestalOffsets.begin(), dataTest.begin(), std::minus<Float_t>());
-		
-		map<Float_t, Int_t> rawdatamap ;
-		for(int j = 0; j < NCH; j++) {
-			rawdatamap[dataTest[j]] = j ;
-		}
-		// Select only 100 channels with lowest adc
-		std::sort(dataTest.begin(), dataTest.end());
-		assert( fComModeCut < 28 ) ;
-		for(int i = 0; i < fComModeCut; i++) {
-			//     if(fAPVID == 0) printf("\n Enter  GEMHitDecoder::APVEventDecoder()=>BF: data[%d]=%f \n",timebin,dataTest[i]) ;
-			dataTest[i] = -fPedestalOffsets[rawdatamap[dataTest[i]]] + fAPVBaseline ;
-			//     if(fAPVID == 0) printf(" Enter  GEMHitDecoder::APVEventDecoder()=>AF: data[%d]=%f \n",  timebin,dataTest[i]) ;
-		}
-		assert( dataTest.size() == NCH );
-		rawdatamap.clear() ;
-		
-		// COMPUTE COMMON MODE FOR A GIVEN APV AND TIME BIN
-		commonMode = std::accumulate(dataTest.begin(), dataTest.end(), 0.0) / NCH ;
-		commonModeOffsets.push_back(commonMode) ;
-		//    if(fAPVID == 0) printf(" Enter  GEMHitDecoder::APVEventDecoder(), timebin = %d, commonMode = %d \n",  timebin, commonMode) ;
-		
-		// PROCEED TO NEXT TIME BIN
-		firstdata = lastdata + 12 ;
-		lastdata = firstdata + NCH ;
-		
-		// CLEAR EVERYTHING
-		dataTest.clear() ;
-	}
-
-	// reset initial indices for ADC words after common mode correction
-	firstdata = fStartData ;
-	lastdata  = firstdata  + NCH ;
-	*/
+	lastdata  = firstdata  + NCH;
 
 	///////////////////////////////////////////////////////////////////////
 	// loop over time bins and store samples in map for all APV channels //
 	///////////////////////////////////////////////////////////////////////
 	vector<uint16_t> windowDataAPV[NCH];
-	for(int i=0; i<NCH; i++) windowDataAPV[i].resize(fNbOfTimeSamples);
+	//for(int i=0; i<NCH; i++) windowDataAPV[i].resize(fNbOfTimeSamples);
 
 	for(Int_t timebin = 0; timebin < fNbOfTimeSamples; timebin++) {
 		// EXTRACT APV25 DATA FOR A GIVEN TIME BIN
 		rawDataTS.insert(rawDataTS.end(), &rawData16bits[firstdata], &rawData16bits[lastdata]);
 		assert( rawDataTS.size() == 128 );
 		for(Int_t chNo = 0; chNo < NCH; chNo++) {
-			windowDataAPV[chNo].at(timebin) = rawDataTS[chNo]; // - commonModeOffsets[timebin];
-
-			/*
-			Int_t hitID = (fAPVKey << 8) | chNo ;
-			Float_t data    = -(rawDataTS[chNo] - fPedestalOffsets[chNo] - commonModeOffsets[timebin]) ;
-			
-			// NO ZERO SUPPRESSION
-			if(!fListOfHits[hitID]) {
-			GEMHit * hit = new GEMHit(hitID, fAPVID, chNo, 0, fIsHitMaxOrTotalADCs, fNbOfTimeSamples, fStopTimeSamples, fStartTimeSamples) ;
-			fListOfHits[hitID] = hit ;
-			}
-			fListOfHits[hitID]->AddTimeBinADCs(timebin, data, fPedestalNoises[chNo]) ;
-			*/
+			//windowDataAPV[chNo].at(timebin) = rawDataTS[chNo];
+			windowDataAPV[chNo].push_back(rawDataTS[chNo]);
 		}
 		
 		firstdata = lastdata + 12 ;
-		lastdata = firstdata + NCH ;
+		lastdata = firstdata + NCH;
 		rawDataTS.clear() ;
+		
+		// if next time sample beyond last word, break from loop
+		if(lastdata > size) break;
 	}
 
 	// write sample data to GEMSRS object

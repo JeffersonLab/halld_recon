@@ -48,7 +48,7 @@ bool DGEMStripCluster_gPlane_cmp(	const DGEMStripCluster* a,
 /// Initialization
 ///
 jerror_t DGEMStripCluster_factory::init(void){
-  TIME_SLICE=200.0; //ns,  Changed from 10->100 4/7/16 SJT
+  TIME_SLICE=50.0; //ns
   gPARMS->SetDefaultParameter("GEM:CLUSTER_TIME_SLICE",TIME_SLICE);
   return NOERROR;	
 }

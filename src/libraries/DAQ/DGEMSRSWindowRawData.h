@@ -29,7 +29,6 @@ class DGEMSRSWindowRawData:public DDAQAddress{
 		void toStrings(vector<pair<string,string> > &items)const{
 			DDAQAddress::toStrings(items);
 			AddString(items, "apv_id",       "%d", apv_id);
-			//AddString(items, "fec_id",       "%d", fec_id);
 			AddString(items, "channel_apv",  "%d", channel_apv);
 			AddString(items, "samples",      "%d", samples.size());
 		}
