@@ -48,7 +48,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	// constructor completes so we do the remaining initializations
 	// below.
 	
-	VERBOSE             = 1;
+	VERBOSE             = 0;
 	Nrecycled           = 0;     // Incremented in JEventSource_EVIOpp::Dispatcher()
 	MAX_EVENT_RECYCLES  = 1000;  // In EVIO events (not L1 trigger events!) overwritten in JEventSource_EVIOpp constructor
 	MAX_OBJECT_RECYCLES = 1000;  // overwritten in JEventSource_EVIOpp constructor
@@ -70,6 +70,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_EVENTTAG      = true;
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
+	PARSE_GEMSRS        = true;
 	
 	LINK_TRIGGERTIME    = true;
 }
@@ -1040,6 +1041,10 @@ void DEVIOWorkerThread::ParseDataBank(uint32_t* &iptr, uint32_t *iend)
 				// this though (???)
 				break;
 
+			case 0x11: 
+				// attempt at GEM SRS parsing
+				ParseDGEMSRSBank(rocid, iptr, iend_data_block_bank);
+				break;
 
 			default:
 				jerr<<"Unknown module type ("<<det_id<<" = 0x" << hex << det_id << dec << " ) encountered" << endl;
@@ -2227,6 +2232,155 @@ void DEVIOWorkerThread::ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *
 	}
 
 	iptr =iend;
+}
+
+//----------------
+// ParseGEMSRSBank
+//----------------
+void DEVIOWorkerThread::ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend)
+{
+	if(!PARSE_GEMSRS){ iptr = &iptr[(*iptr) + 1]; return; }
+	if(VERBOSE>7) cout << "GEMSRS ROC " << rocid <<endl;
+
+	auto pe_iter = current_parsed_events.begin();
+	DParsedEvent *pe = NULL;
+
+	// fictitious slot for TT, since SRS is a separate crate but read through ROC 76
+	uint32_t slot       = 24; 
+	uint32_t apv_id     = 0xFFFFFFFF;
+	uint32_t fec_id     = 0xFFFFFFFF;
+	uint32_t itrigger   = 0xFFFFFFFF;
+	//uint32_t ievent_cnt = 0xFFFFFFFF;
+	//uint32_t last_itrigger = itrigger;
+
+	vector<int> rawData16bits;
+
+	iptr++; //skip first word? (no idata=0) used in GEMRawDecoder::Decode
+
+	while(true) { // while haven't reached event trailer
+
+		if(((*iptr>>8) & 0xffffff) == 0x414443) { // magic key for "Data Header" in ADC format
+
+			if(rawData16bits.size() > 0) {
+				if(VERBOSE>7) cout<<"Previous channel: apv_id = "<<apv_id<<" fec_id = "<<fec_id<<" had "<<rawData16bits.size()<<" 16 bit words"<<endl;
+
+				if( pe ) MakeDGEMSRSWindowRawData(pe, rocid, slot, itrigger, apv_id, rawData16bits);
+			}
+			else { // for first APV in event initialize DParsedEvent
+				pe = *pe_iter++;
+			}
+			
+			// initial word is "Data Header"
+			apv_id = (*iptr) & 0xff; // equivalent to nadcCh in GEMRawDecoder::Decode
+			iptr++; // next word is "Header Info" (reserved)
+			fec_id = (*iptr>>16) & 0xff; // equivalent to nfecID in GEMRawDecoder::Decode
+
+			if(VERBOSE>7) cout<<"Data Header for APV = "<<apv_id<<" FEC = "<<fec_id<<endl;
+
+			// clear vector for raw data from this APV
+			rawData16bits.clear();
+		}
+		else {
+			unsigned int word32bit = *iptr;
+			unsigned int word16bit1 = 0;
+			unsigned int word16bit2 = 0;
+
+			unsigned int data1 = ( (word32bit)>>24 ) & 0xff;
+			unsigned int data2 = ( (word32bit)>>16 ) & 0xff;
+			unsigned int data3 = ( (word32bit)>>8  ) & 0xff;
+			unsigned int data4 = (word32bit) & 0xff;
+			
+			(word16bit1) = (data2 << 8) | data1;
+			(word16bit2) = (data4 << 8) | data3;
+			rawData16bits.push_back(word16bit1);
+			rawData16bits.push_back(word16bit2);
+		}
+
+		// trailer word (cleanup data from last APV?)
+		if(*iptr == 0xfafafafa) {
+			
+			// write last ADC channel out from rawData16bits vector
+			if(rawData16bits.size() > 0) {
+				if(VERBOSE>7) cout<<"Previous channel: apv_id = "<<apv_id<<" fec_id = "<<fec_id<<" had "<<rawData16bits.size()<<" 16 bit words"<<endl;
+			
+				if( pe ) MakeDGEMSRSWindowRawData(pe, rocid, slot, itrigger, apv_id, rawData16bits);
+			}
+
+			// reset DParsedEvent with event trailer?
+			pe_iter = current_parsed_events.begin();
+			pe = NULL;
+			break;
+		}
+
+		iptr++;
+	}
+
+	iptr =iend;   
+}
+
+//-------------------------
+// MakeDGEMSRSWindowRawData
+//-------------------------
+void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t apv_id, vector<int>rawData16bits)
+{
+	Int_t idata = 0, firstdata = 0, lastdata = 0;
+	Int_t size = rawData16bits.size() ;
+	vector<Float_t> rawDataTS, rawDataZS;
+	rawDataTS.clear();
+
+	Int_t fAPVHeaderLevel = 1500;
+	Int_t fNbOfTimeSamples = 21; // hard coded maximum number of time samples
+
+	uint8_t NCH = 128;
+	
+	Int_t fStartData = 0;
+	for(idata = 0; idata < size; idata++) {
+		if (rawData16bits[idata] < fAPVHeaderLevel) {
+			idata++ ;
+			if (rawData16bits[idata] < fAPVHeaderLevel) {
+				idata++ ;
+				if (rawData16bits[idata] < fAPVHeaderLevel) {
+					idata += 10;
+					fStartData = idata ;
+					idata = size ;
+				}
+			}
+		}
+	}
+	
+	// set range for data
+	firstdata = fStartData ;
+	lastdata  = firstdata  + NCH;
+
+	///////////////////////////////////////////////////////////////////////
+	// loop over time bins and store samples in map for all APV channels //
+	///////////////////////////////////////////////////////////////////////
+	vector<uint16_t> windowDataAPV[NCH];
+	//for(int i=0; i<NCH; i++) windowDataAPV[i].resize(fNbOfTimeSamples);
+
+	for(Int_t timebin = 0; timebin < fNbOfTimeSamples; timebin++) {
+		// EXTRACT APV25 DATA FOR A GIVEN TIME BIN
+		rawDataTS.insert(rawDataTS.end(), &rawData16bits[firstdata], &rawData16bits[lastdata]);
+		assert( rawDataTS.size() == 128 );
+		for(Int_t chNo = 0; chNo < NCH; chNo++) {
+			//windowDataAPV[chNo].at(timebin) = rawDataTS[chNo];
+			windowDataAPV[chNo].push_back(rawDataTS[chNo]);
+		}
+		
+		firstdata = lastdata + 12 ;
+		lastdata = firstdata + NCH;
+		rawDataTS.clear() ;
+		
+		// if next time sample beyond last word, break from loop
+		if(lastdata > size) break;
+	}
+
+	// write sample data to GEMSRS object
+	for(int ichan=0; ichan<NCH; ichan++) {
+		uint32_t channel = apv_id * 128 + ichan; 
+		DGEMSRSWindowRawData *windowRawData = pe->NEW_DGEMSRSWindowRawData(rocid, slot, channel, itrigger, apv_id, ichan);
+		windowRawData->samples = windowDataAPV[ichan];
+	}
 }
 
 //----------------
