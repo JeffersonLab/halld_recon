@@ -78,9 +78,9 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
 
   
-  INSERT_PAR1=1.397;
-  INSERT_PAR2=0.0598;
-  INSERT_PAR3=1.173;
+  INSERT_PAR1=1.37389;
+  INSERT_PAR2=0.044927;
+  INSERT_PAR3=1.17745;
   INSERT_PAR4=2.;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
