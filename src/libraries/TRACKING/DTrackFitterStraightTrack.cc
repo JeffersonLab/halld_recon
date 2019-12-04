@@ -2047,12 +2047,12 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
   double z0=pos0.z();
   double uz=dir.z();
   double s=0.,t=0.;
-  DVector3 pos,diff;
+  DVector3 pos(0,0,0);
+  DVector3 diff(0,0,0);
   ClearExtrapolations();
 
   // Extrapolate to Start Counter and BCAL
   double R=pos0.Perp();
-  diff.SetMag(0.);
   double z=z0;
   while (R<89.0 && z>17. && z<410.){
     diff+=(1./dir.z())*dir;
