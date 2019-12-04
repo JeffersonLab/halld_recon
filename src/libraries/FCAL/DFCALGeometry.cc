@@ -35,7 +35,10 @@ DFCALGeometry::DFCALGeometry()
  	
       double thisRadius = m_positionOnFace[row][col][calor].Mod();
       
-      if(thisRadius < radius() && getCalorimeterIndex(x,y)==0){
+      if(thisRadius > radius()){	
+	m_activeBlock[row][col][calor] = false;
+      }
+      else{
 	m_activeBlock[row][col][calor] = true;
 	
 	// build the "channel map"
@@ -44,10 +47,6 @@ DFCALGeometry::DFCALGeometry()
 	m_column[m_numActiveBlocks] =col;
 	
 	m_numActiveBlocks++;
-      }
-      else{
-	
-	m_activeBlock[row][col][calor] = false;
       }
     }
   }
@@ -98,22 +97,8 @@ DFCALGeometry::isBlockActive( int row, int column) const
 	// assert(    row >= 0 &&    row < kBlocksTall );
 	// assert( column >= 0 && column < kBlocksWide );
 	
-	int calor=0;
-	if (row>=100 && column>=100){
-	  row-=100;
-	  column-=100;
-	  calor=1;
-	}
-	if (calor==0){
-	  if( row < 0 ||  row >= kBlocksTall )return false;
-	  if( column < 0 ||  column >= kBlocksWide )return false;
-	}
-	else{
-	  if( row < 0 ||  row >= kInnerBlocksTall )return false;
-	  if( column < 0 ||  column >= kInnerBlocksWide )return false;
-	}
-
-	return m_activeBlock[row][column][calor];	
+  if (row>=100 && column>=100) return true;
+  return m_activeBlock[row][column][0];	
 }
 
 int

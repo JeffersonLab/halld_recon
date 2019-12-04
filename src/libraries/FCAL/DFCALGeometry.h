@@ -46,7 +46,7 @@ public:
 	enum { kBeamHoleSize = 2 };
 
 	static double blockSize(int calor)  { 
-	  if (calor==1) return 2.055*k_cm;
+	  if (calor==1) return 2.09*k_cm;
 	  return 4.0157*k_cm; 
 	}
 	static double radius()  { return 1.20471*k_m; }
