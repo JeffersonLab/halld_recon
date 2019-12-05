@@ -92,7 +92,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	PARSE_EVENTTAG = true;
 	PARSE_TRIGGER = true;
 	PARSE_SSP = true;
-	PARSE_GEMSRS = true;
+	PARSE_GEMSRS = false;
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;

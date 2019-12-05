@@ -57,7 +57,7 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	jout << "Error loading /TRD/Wire/timing_offsets !" << endl;
 	*/
 
-	pulse_peak_threshold = 400;
+	pulse_peak_threshold = 200;
 
     return NOERROR;
 }
@@ -83,19 +83,31 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < digihits.size(); i++) {
 	    const DTRDDigiHit *digihit = digihits[i];
 	    
-	    if(digihit->pulse_peak < pulse_peak_threshold) continue;
-	    
+	    // subtract pedestal
+	    double pulse_height = digihit->pulse_peak - digihit->pedestal;
+
+	    // mask noisy wires for now
+	    if(digihit->plane == 4)
+		    if(digihit->strip == 0 || digihit->strip == 11 || digihit->strip == 12 || digihit->strip == 23) continue;
+
+	    // separate theresholds for Wire and GEM TRD
+	    if((digihit->plane == 4 || digihit->plane == 5 || digihit->plane == 0 || digihit->plane == 1) && pulse_height < 200) continue;
+	    if((digihit->plane == 2 || digihit->plane == 6) && pulse_height < 300) continue;
+
+	    // Time cut now
+	    double T = (double)digihit->pulse_time * 0.8;
+	    if(T < 145.) continue;
+
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
-	    hit->pulse_height = digihit->pulse_peak;
+	    hit->pulse_height = pulse_height;
 	    hit->plane = digihit->plane;
 	    hit->strip = digihit->strip;
-
+ 
 	    // Apply calibration constants
-	    double T = (double)digihit->pulse_time;
 	    hit->t = T;
 	    //hit->t = hit->t + t_base[plane] - time_offsets[plane][strip];
- 
+
 	    hit->AddAssociatedObject(digihit);
 	    _data.push_back(hit);
     }

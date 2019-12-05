@@ -2,12 +2,18 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /TRD/DigiHit/
+// hnamepath: /TRD/DigiHit/DigiHit_Occupancy_WirePlane0
+// hnamepath: /TRD/DigiHit/DigiHit_Occupancy_WirePlane1
+// hnamepath: /TRD/DigiHit/DigiHit_Occupancy_GEMPlane2
+// hnamepath: /TRD/DigiHit/DigiHit_Occupancy_GEMPlane3
+// hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_WirePlane0
+// hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_WirePlane1
+// hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_GEMPlane2
+// hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_GEMPlane3
 
 {
     TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD/DigiHit");
     if(dir) dir->cd();
-    gDirectory->ls();
 
     TH2I* occWire0 = (TH2I*)gDirectory->FindObjectAny("DigiHit_Occupancy_WirePlane0");
     TH2I* timeWire0 = (TH2I*)gDirectory->FindObjectAny("DigiHit_TimeVsStrip_WirePlane0");

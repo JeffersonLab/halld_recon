@@ -35,8 +35,8 @@ jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   //const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
     
   // Get TRD geometry (needs to come from geometry file or CCDB?)
-  wireX0 = 0.;
-  stripY0 = 0.;
+  wireX0 = 26.6;
+  stripY0 = -80.0;
   wireX_pitch = 1.0;  // 10 mm
   stripY_pitch = 0.5; //  5 mm
 
