@@ -167,7 +167,7 @@ jerror_t JEventProcessor_TRD_online::init(void) {
 	    hStrip_GEMSRSYstrip[i] = new TH2I(Form("Strip_GEMSRSYstrip_%d",i), Form("Package %d GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip",i), NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
 
 	    hWire_GEMSRSX[i] = new TH2I(Form("Wire_GEMSRSX_%d",i), Form("Package %d GEM SRS X position vs TRD wire # ; TRD wire # ; GEM SRS X (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-	    hStrip_GEMSRSY[i] = new TH2I(Form("Strip_GEMSRSY",i), Form("Package %d GEM SRS Y position vs TRD strip # ; TRD strip # ; GEM SRS Y (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
+	    hStrip_GEMSRSY[i] = new TH2I(Form("Strip_GEMSRSY_%d",i), Form("Package %d GEM SRS Y position vs TRD strip # ; TRD strip # ; GEM SRS Y (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
     }
     
     // back to main dir
