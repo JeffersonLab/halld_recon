@@ -21,6 +21,15 @@
   TH2I* hOcc_LED = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED");
   TH2I* hOcc = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_NonLED");
 
+//   /*--------------------------------------------------*/
+//   // WL
+//   // Nov/24/2019
+//   // Occupancy individual LED
+// 
+//   TH2I* hOcc_LED_1 = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED_1");
+//   TH2I* hOcc_LED_2 = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED_2");
+//   TH2I* hOcc_LED_3 = (TH2I*)gDirectory->Get("Hit/SouthLowerBox/Hit_PixelOccupancy_LED_3");
+
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1","DIRC Hit Monitor",150,10,990,660);
     c1->cd(0);
