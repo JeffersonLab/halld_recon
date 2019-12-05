@@ -35,8 +35,8 @@ jerror_t DGEMPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   //const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
     
   // Get GEM geometry (needs to come from geometry file or CCDB?)
-  gemX0 = 0;
-  gemY0 = 0;
+  gemX0 = 43.0;
+  gemY0 = -80.0;
   gem_pitch = 0.04;   // 0.4 mm
 
   // Some parameters for defining wire and strip X/Y matching
@@ -106,7 +106,7 @@ jerror_t DGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 					newPoint->t_y = ty_clus;
 					newPoint->time = (tx_clus*gemClusX[i]->q_tot + ty_clus*gemClusY[j]->q_tot) / dE_amp;
 					newPoint->dE_amp = dE_amp;
-					newPoint->detector = 1;
+					newPoint->detector = ipkg;
 					newPoint->status = 1;
 					newPoint->itrack = 0;
 					
@@ -146,7 +146,7 @@ double DGEMPoint_factory::calcClusterPosition(const DGEMStripCluster *clus)
 		const DGEMHit* hit = clus->members[i];
 		pulseHeightSum += hit->pulse_height;
 		if(hit->plane%2 == 0) // GEM X strip
-			meanPosition += (gemX0 + hit->strip * gem_pitch)* hit->pulse_height;
+			meanPosition += (gemX0 - hit->strip * gem_pitch)* hit->pulse_height;
 		else // GEM Y strip
 			meanPosition += (gemY0 + hit->strip * gem_pitch)* hit->pulse_height;
 	}
