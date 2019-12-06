@@ -85,20 +85,20 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     trdDir->cd();
     gDirectory->mkdir("StraightTracks")->cd();
 
-    hWireTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X; Extrapolated track X",200,25,55,200,25,55);
+    hWireTRDPoint_TrackX = new TH2I("WireTRDPoint_TrackX","; Wire TRD X; Extrapolated track X",200,-55,55,200,-55,55);
     hWireTRDPoint_TrackY = new TH2I("WireTRDPoint_TrackY","; Wire TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
     hWireTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X; #Delta Y",100,-5,5,100,-5,5);
     hWireTRDPoint_Time = new TH1I("WireTRDPoint_Time","; hit time",1000,0,1000);
 
     // GEM TRD
-    hGEMTRDHit_TrackX = new TH2I("GEMTRDHit_TrackX","; GEM TRD X; Extrapolated track X",200,25,55,200,25,55);
+    hGEMTRDHit_TrackX = new TH2I("GEMTRDHit_TrackX","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
     hGEMTRDHit_DeltaX_T = new TH2I("GEMTRDHit_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
 
     // GEM SRS
     for(int i=0; i<5; i++) {
-	    hGEMSRSPoint_TrackX[i] = new TH2I(Form("GEMSRSPoint_TrackX_%d",i),Form("Package %d; Wire TRD X; Extrapolated track X",i),200,25,55,200,25,55);
+	    hGEMSRSPoint_TrackX[i] = new TH2I(Form("GEMSRSPoint_TrackX_%d",i),Form("Package %d; Wire TRD X; Extrapolated track X",i),200,-55,55,200,-55,55);
 	    hGEMSRSPoint_TrackY[i] = new TH2I(Form("GEMSRSPoint_TrackY_%d",i),Form("Package %d; Wire TRD Y; Extrapolated track Y",i),200,-85,-65,200,-85,-65);
-	    hGEMSRSPoint_DeltaXY[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_%d",i),Form("Package %d; #Delta X; #Delta Y",i),100,-10,10,100,-10,10);
+	    hGEMSRSPoint_DeltaXY[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_%d",i),Form("Package %d; #Delta X; #Delta Y",i),500,-5,5,500,-5,5);
     }
 
     // GEM-Wire TRD correlatioin

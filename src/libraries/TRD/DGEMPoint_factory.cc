@@ -31,12 +31,17 @@ jerror_t DGEMPoint_factory::init(void)
 jerror_t DGEMPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
   // Get pointer to DGeometry object
-  //DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  //const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-    
-  // Get GEM geometry (needs to come from geometry file or CCDB?)
+  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
+
+  // Get GEM geometry from xml (CCDB or private HDDS)
+  dgeom->GetTRDZ(dTRDz);
+
+  // X and Y positions currently hard coded...
   gemX0 = 43.0;
   gemY0 = -80.0;
+  if(runnumber > 70727 && runnumber < 70735) gemX0 = -34.2;
+  if(runnumber > 70734) gemX0 = 5.0;
   gem_pitch = 0.04;   // 0.4 mm
 
   // Some parameters for defining wire and strip X/Y matching
@@ -109,6 +114,8 @@ jerror_t DGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 					newPoint->detector = ipkg;
 					newPoint->status = 1;
 					newPoint->itrack = 0;
+					newPoint->z = 0;
+					if(dTRDz.size() == 5) newPoint->z = dTRDz[ipkg];
 					
 					newPoint->AddAssociatedObject(gemClusX[i]);
 					newPoint->AddAssociatedObject(gemClusY[j]);

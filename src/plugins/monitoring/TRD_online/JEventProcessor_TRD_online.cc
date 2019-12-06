@@ -422,7 +422,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    
 	    // GEM SRS hit
 	    for (const auto& gem_hit : gem_hits) {
-		    if(gem_hit->plane%2 == 0) continue; // skip X strips
+		    if(gem_hit->plane%2 == 0 && gem_hit->plane != 6) continue; // skip X strips
 		    hStrip_GEMSRSYstrip[gem_hit->plane/2]->Fill(strip, gem_hit->strip);
 	    }
 
