@@ -440,6 +440,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   vector<double>cdc_origin;
   // outer detectors
   double dTOFz,dFCALz,dDIRCz;
+  vector<double>dTRDz_vec;
 
   // Mass hypothesis
   double MASS,mass2;
