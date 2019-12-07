@@ -317,7 +317,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
-
+   geom->GetTRDZ(dTRDz_vec); // TRD planes
    
    
    // Get start counter geometry;
@@ -9304,6 +9304,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
   const double y_max=130.;
   bool hit_tof=false; 
   bool hit_dirc=false;
+  unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
 	 && fabs(S(state_y))<y_max){   
     // Bail if the momentum has dropped below some minimum
@@ -9379,6 +9380,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
     if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      newz=dTRDz_vec[trd_index]+EPS;
+      ds=(newz-z)/dz_ds;   
+    }
     if (hit_tof==false && newz>dTOFz){
       newz=dTOFz+EPS;
       ds=(newz-z)/dz_ds;
@@ -9414,6 +9419,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 
     // Step through field
     Step(z,newz,dEdx,S); 
+    z=newz;
 
     if (got_fdc_hit){
       double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
@@ -9429,6 +9435,19 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 
       fdc_plane++;
     }        
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      position.Print();
+      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s));
+      trd_index++;
+    }
     if (hit_dirc==false && newz>dDIRCz){
       hit_dirc=true;
 
@@ -9484,7 +9503,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 
       return NOERROR;
     }
-    z=newz;
   }
   return NOERROR;
 }
