@@ -9443,7 +9443,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
       double phi=atan2(S(state_ty),S(state_tx));
       DVector3 position(S(state_x),S(state_y),z);
       DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      position.Print();
+      //position.Print();
       extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
 							t*TIME_UNIT_CONVERSION,s));
       trd_index++;

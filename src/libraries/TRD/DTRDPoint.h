@@ -26,7 +26,7 @@ class DTRDPoint : public JObject {
       ///
       DTRDPoint(){}
 
-      double x,y; ///< centroid positions from two planes
+      double x,y,z; ///< centroid positions from two planes
       double t_x,t_y; ///< time of the two cathode clusters
       double time; ///< time corresponding to this pseudopoint.
       int status; ///< status word for pseudopoint
@@ -38,6 +38,7 @@ class DTRDPoint : public JObject {
       void toStrings(vector<pair<string,string> > &items)const{ 
          AddString(items,"x","%3.2f",x);
          AddString(items,"y","%3.2f",y);
+	 AddString(items,"z","%3.2f",z);
          AddString(items,"t_x","%3.2f",t_x);
          AddString(items,"t_y","%3.2f",t_y);
          AddString(items, "time", "%3.1f", time);

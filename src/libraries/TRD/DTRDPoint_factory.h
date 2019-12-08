@@ -40,6 +40,7 @@ class DTRDPoint_factory : public JFactory<DTRDPoint> {
 		double wire_time_max;
 		double gemX0, gemY0, gem_pitch;
 		double gem_time_max, gem_dE_max;
+		vector<double>dTRDz;
 
 };
 

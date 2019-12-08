@@ -31,18 +31,30 @@ jerror_t DTRDPoint_factory::init(void)
 jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
   // Get pointer to DGeometry object
-  //DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  //const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
-    
+  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
+  
+  // Get GEM geometry from xml (CCDB or private HDDS)
+  dgeom->GetTRDZ(dTRDz);
+  
   // Get TRD geometry (needs to come from geometry file or CCDB?)
   wireX0 = 26.6;
   stripY0 = -80.0;
   wireX_pitch = 1.0;  // 10 mm
   stripY_pitch = 0.5; //  5 mm
 
-  gemX0 = 0;
+  gemX0 = 43.0;
   gemY0 = 0;
   gem_pitch = 0.04;   // 0.4 mm
+
+  if(runnumber > 70727 && runnumber < 70735) {
+	  wireX0 = -50.6;
+	  gemX0 = -34.2;
+  }
+  if(runnumber > 70734) {
+	  wireX0 = -11.8;
+	  gemX0 = -5.0;
+  }
 
   // Some parameters for defining wire and strip X/Y matching
   wire_time_max = 50;
@@ -116,6 +128,8 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				newPoint->detector = 0;
 				newPoint->status = 1;
 				newPoint->itrack = 0;
+				newPoint->z = 0;
+				if(dTRDz.size() == 5) newPoint->z = dTRDz[2];
 
 				newPoint->AddAssociatedObject(wireHitsX[i]);
 				newPoint->AddAssociatedObject(stripClusY[j]);
@@ -154,6 +168,8 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				newPoint->detector = 1;
 				newPoint->status = 1;
 				newPoint->itrack = 0;
+				newPoint->z = 0;
+				if(dTRDz.size() == 5) newPoint->z = dTRDz[3];
 
 				newPoint->AddAssociatedObject(gemClusX[i]);
 				newPoint->AddAssociatedObject(gemClusY[j]);
