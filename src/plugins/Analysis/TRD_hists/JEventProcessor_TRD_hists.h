@@ -5,6 +5,7 @@
 #include <JANA/JEventProcessor.h>
 #include <TRACKING/DTrackFitter.h>
 #include <TRACKING/DTrackWireBased.h>
+#include <TRACKING/DTrackTimeBased.h>
 
 class JEventProcessor_TRD_hists:public jana::JEventProcessor{
 public:
