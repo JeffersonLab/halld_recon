@@ -191,10 +191,10 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     eventLoop->Get(gem_points);
 
     vector<const DTrackWireBased*> straight_tracks;
-    eventLoop->Get(straight_tracks, "StraightLine");
+    //eventLoop->Get(straight_tracks, "StraightLine");
 
     vector<const DTrackTimeBased*> tracks;
-    //eventLoop->Get(tracks);
+    eventLoop->Get(tracks);
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock

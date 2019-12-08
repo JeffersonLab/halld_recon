@@ -165,8 +165,8 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     hStrip_GEMTRDY = new TH2I("Strip_GEMTRDY", "GEM TRD Y position vs TRD strip # ; TRD strip # ; GEM TRD Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
 
     for(int i=0; i<5; i++) {
-	    hWire_GEMSRSXstrip[i] = new TH2I(Form("Wire_GEMSRSXstrip_%d",i), Form("Package %d: GEM SRS X strip vs TRD wire # ; TRD wire # ; GEM SRS X strip #",i), NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
-	    hStrip_GEMSRSYstrip[i] = new TH2I(Form("Strip_GEMSRSYstrip_%d",i), Form("Package %d GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip",i), NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
+	    hWire_GEMSRSXstrip[i] = new TH2I(Form("Wire_GEMSRSXstrip_%d",i), Form("Package %d: GEM SRS X strip vs TRD wire # ; TRD wire # ; GEM SRS X strip #",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
+	    hStrip_GEMSRSYstrip[i] = new TH2I(Form("Strip_GEMSRSYstrip_%d",i), Form("Package %d GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
 
 	    hWire_GEMSRSX[i] = new TH2I(Form("Wire_GEMSRSX_%d",i), Form("Package %d GEM SRS X position vs TRD wire # ; TRD wire # ; GEM SRS X (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
 	    hStrip_GEMSRSY[i] = new TH2I(Form("Strip_GEMSRSY_%d",i), Form("Package %d GEM SRS Y position vs TRD strip # ; TRD strip # ; GEM SRS Y (cm)",i), NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
@@ -292,18 +292,18 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 		hGEMHit_PlaneVsStrip->Fill(1.*strip, 1.*plane, 1.*samples[isample]);
 	}
 
-	uint16_t pedestal = samples[0];
+	uint16_t pedestal = 0; //samples[0];
 	int max_adc_zs = 0;
-	for(uint isample=1; isample<samples.size(); isample++) {
-		int adc_zs = -1 * (samples[isample]-pedestal);
+	for(uint isample=0; isample<samples.size(); isample++) {
+		int adc_zs = (samples[isample]-pedestal);
 		if(adc_zs > max_adc_zs) 
 			max_adc_zs = adc_zs;
 	}		    
 	
 	// fill all hits in channels with a large signal
 	if(max_adc_zs > 400) {
-		for(uint isample=1; isample<samples.size(); isample++) {
-			int adc_zs = -1 * (samples[isample]-pedestal);
+		for(uint isample=0; isample<samples.size(); isample++) {
+			int adc_zs = (samples[isample]-pedestal);
 			hGEMHit_SampleVsStrip[plane]->Fill(strip,isample,adc_zs);
 		}
 	}	
@@ -380,8 +380,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 		    }
 	    }
     }
-
-    
 
     ///////////////////////////
     // Wire-GEM correlations //
