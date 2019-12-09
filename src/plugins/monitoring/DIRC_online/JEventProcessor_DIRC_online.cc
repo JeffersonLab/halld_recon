@@ -113,6 +113,9 @@ static TH2I *hHit_pixelOccupancy_LED_timing_cut[Nboxes];
 
 static TH1I *hHit_tdcTime_LED_5000[Nboxes];
 
+uint64_t event_counter;
+
+
 //static TH1I *hHit_per_Event_photon_LED[Nboxes][2];
 
 
@@ -147,6 +150,8 @@ JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
 
 jerror_t JEventProcessor_DIRC_online::init(void) {
 
+	event_counter = 0;
+
     FillTimewalk = false;
     gPARMS->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
 
@@ -163,7 +168,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 40, 110, 150, 100, -20, 20);
     hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 40, 110, 150, 100, -20, 20);
     hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, -20, 20, 100, 1000, 1500);
-    hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 500, 0, 100);
+    hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 100, 0, 1000);
 
     // book hists
     dirc_num_events = new TH1I("dirc_num_events","DIRC Number of events",1,0.5,1.5);
@@ -351,7 +356,9 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	// First 5000 events: treatment, determine LED fiber #1 average hit time.
     for (const auto& hit : hits) {
 		
-		if (eventnumber < 5000) {
+//		if (eventnumber < 5000) {
+		if (event_counter < 5000) {
+
 			int box = (hit->ch < Nchannels) ? 1 : 0;
 		    int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
 	
@@ -362,17 +369,31 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 //				if(eventnumber == 1) {
 					hHit_pixelOccupancy_LED_Event_5000[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 	
-					if ( pmtrow > 0 && pmtrow < 5 && pmtcol >0 && pmtcol < 5) {			
+// 					if ( pmtrow > 0 && pmtrow < 5 && pmtcol >0 && pmtcol < 5) {			
+// 						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
+// 						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+// 					}
+
+					if ( pmtrow > 13 && pmtrow < 16 && pmtcol >0 && pmtcol < 5) {			
 						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
 						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-					}
-//				}
+	
+				}
 			}
 		}
 	}
 
-	if (eventnumber < 5000) return NOERROR;
-;
+//	cout << eventnumber << "   " << event_counter << endl;
+//	if (eventnumber < 5000) return NOERROR;
+
+	if (event_counter < 5000){ 
+		event_counter++;
+		return NOERROR;
+	}
+
+//	cout << "???????????????" << endl;
+
+//	if (event_counter < 5000) return NOERROR;
 
 	/// Ending treatment for the first event
 	/*--------------------------------------------------*/
@@ -410,7 +431,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		// next line commented out to supress warning: variable not used
 		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+//		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
                 hLEDRefIntegral->Fill(dircLEDRef->integral);
 		hLEDRefTdcTime->Fill(locLEDRefTdcTime);
@@ -476,8 +497,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(0.,NDigiHits[0]); hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(1.,NDigiHits[1]);
 
     // Loop over calibrated hits to get mean for reference time
-    double locRefTime = 0;
-    int locNHits = 0;
+    double locRefTime[2];
+    int locNHits[2];
 
 //    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
 
@@ -487,29 +508,41 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		int box = (hit->ch < Nchannels) ? 1 : 0;
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
 
-    	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
+ //   	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
+    	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin()) - 20;
+
+//    	double locFirstFiberTime = 166.5;
+//    	double locFirstFiberTime = 127;
+
+//		cout << "asdasdad ad "  << locFirstFiberTime << endl;
 
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
 
         if(pmtrow < 6 && fabs(hit->t-locFirstFiberTime) < 5.) {
 			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime += hit->t;
-			locNHits++;
+			locRefTime[box] += hit->t;
+			locNHits[box]++;
 		} else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-locFirstFiberTime-10) < 5.) {
 			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime += (hit->t - 10);
-			locNHits++;
+			locRefTime[box] += (hit->t - 10);
+			locNHits[box]++;
 		} else if(pmtrow > 11 && pmtrow < 18 && fabs(hit->t-locFirstFiberTime-20) < 5.) {
 			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime += (hit->t - 20);
-			locNHits++;
+			locRefTime[box] += (hit->t - 20);
+			locNHits[box]++;
 		}
 		//cout<<"locRefTime "<<locRefTime<<"  "<<locNHits<<endl;
     }
 
+	locRefTime[0] /= locNHits[0];
+	locRefTime[1] /= locNHits[1];
 
-    locRefTime /= locNHits;
-    hRefTime->Fill(locRefTime);
+    hRefTime->Fill(locRefTime[0]);
+    hRefTime->Fill(locRefTime[1]);
+
+
+
+
     //if(locReferenceClockTime%2 == 0)
     //    locRefTime += 4.0;
  
@@ -536,11 +569,14 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		
 		if (locDIRCLEDTrig) {
 	
-			if(eventnumber == 5001) {
+//			if(eventnumber == 5001) {
+			if(event_counter == 5001) {
 				hHit_pixelOccupancy_LED_Event_1[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-			} else if(eventnumber == 5002) {
+//			} else if(eventnumber == 5002) {
+			} else if(event_counter == 5002) {
 				hHit_pixelOccupancy_LED_Event_2[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-			} else if(eventnumber == 5003) {
+//			} else if(eventnumber == 5003) {
+			} else if(event_counter == 5003) {
 				hHit_pixelOccupancy_LED_Event_3[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 			}
 	
@@ -619,12 +655,12 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	
 		// LED specific histograms
 		if(locDIRCLEDTrig) {
-			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
-			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime);
+			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime[box]);
+			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime[box]);
 		
 			if(locLEDRefTdcTime > 0) {
-				hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
-				hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime-locLEDRefTdcTime);
+				hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime[box],locLEDRefTdcTime);
+				hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime[box]-locLEDRefTdcTime);
 			}
 	
 			if(box==1 && channel==2490) {
@@ -633,7 +669,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 				hLEDRefAdcVsChannelTime->Fill(hit->t,locLEDRefAdcTime);
 			}
 		
-			double locDeltaT = hit->t - locRefTime;
+			double locDeltaT = hit->t - locRefTime[box];
 			if(ledFiber[1]) locDeltaT -= 10.;
 			if(ledFiber[2]) locDeltaT -= 20.;
 			if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
@@ -644,6 +680,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     hHit_NHitsVsBox[loc_itrig]->Fill(0.,NHits[0]); hHit_NHitsVsBox[loc_itrig]->Fill(1.,NHits[1]);
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+	event_counter++;
 
     return NOERROR;
 }
