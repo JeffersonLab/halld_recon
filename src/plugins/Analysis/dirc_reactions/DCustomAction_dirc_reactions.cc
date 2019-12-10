@@ -75,7 +75,7 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		// Map of histograms for every bar, binned in x position
 		if(DIRC_FILL_BAR_MAP) {
 
-			for(int locBar=0; locBar<24; locBar++) {
+			for(int locBar=0; locBar<48; locBar++) {
 				
 				CreateAndChangeTo_Directory(Form("Bar %d", locBar), Form("Bar %d", locBar));
 				double bar_y = dDIRCGeometry->GetBarY(locBar);
@@ -215,7 +215,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		
 		// check that histogram index exists
 		TVector3 locBarHitVect(posInBar.X(), posInBar.Y(), posInBar.Z() - 65.);
-		if(locBar < 0 || locBar >23 || locXbin < 0 || locXbin > 39 || locBarHitVect.Theta()*180/TMath::Pi() > 12.0)
+		if(locBar < 0 || locXbin < 0 || locXbin > 39 || locBarHitVect.Theta()*180/TMath::Pi() > 12.0)
 			return true;
 
 		Lock_Action(); //ACQUIRE ROOT LOCK!!
