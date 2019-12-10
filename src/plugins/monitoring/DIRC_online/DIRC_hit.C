@@ -58,7 +58,7 @@
     c1->cd(2);
     hTS_LED_North->SetTitleSize(tsize,"xy");
     hTS_LED_North->Draw();
-    hTS_North->Scale(hTS_LED->GetMaximum()/hTS_North->GetMaximum());
+    hTS_North->Scale(hTS_LED_North->GetMaximum()/hTS_North->GetMaximum());
     hTS_North->Draw("h same");
   }
 

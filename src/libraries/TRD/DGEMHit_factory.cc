@@ -81,29 +81,44 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     vector<const DGEMDigiWindowRawData*> windowrawdata;
     eventLoop->Get(windowrawdata);
+    if(windowrawdata.size() == 0) 
+      return NOERROR;
 
-    // loop over GEM channels
+    // determine pedestals for each APV and time slice
+    const DGEMSRSWindowRawData* srswindow;
+    windowrawdata[windowrawdata.size()-1]->GetSingle(srswindow);
+    uint nSamples = srswindow->samples.size();
+    uint nAPV = srswindow->apv_id + 1;
+
+    // vector of each time slice for given APV
+    vector<double> pedestalAPV[nAPV]; 
+    for(uint i=0; i<nAPV; i++) pedestalAPV[i].resize(nSamples);
+    
+    for (const auto& window : windowrawdata) {
+	const DGEMSRSWindowRawData* srswindow;
+	window->GetSingle(srswindow);
+        
+        vector<uint16_t> samples = srswindow->samples;
+        for(uint isample=0; isample<samples.size(); isample++) {
+          pedestalAPV[srswindow->apv_id][isample] += samples[isample]/128.;
+        }
+    }
+
+    // loop over GEM channels and subtract pedestal
     for (const auto& window : windowrawdata) {
 	const DGEMSRSWindowRawData* srswindow;
 	window->GetSingle(srswindow);
 	
 	int plane = window->plane;
 	int strip = window->strip;
-	
-	// loop over samples for each channel
-	vector<uint16_t> samples = srswindow->samples;
-	double pedestal = 0;
-	const int nsample_pedestal = 4;
-	for(int i=0; i<nsample_pedestal; i++) {
-		pedestal += samples[i];
-	}
-	pedestal /= nsample_pedestal;
-	
+        vector<uint16_t> samples = srswindow->samples;
+
 	// loop over samples to get pulse peak and time
 	double pulse_peak = 0;
 	double pulse_time = 0;
-	for(uint isample=nsample_pedestal; isample<samples.size(); isample++) {
-		int adc_zs = -1 * (samples[isample]-pedestal); // invert zero suppressed ADC
+	for(uint isample=1; isample<samples.size(); isample++) {
+                int adc_zs = -1. * (samples[isample]-pedestalAPV[srswindow->apv_id][isample]); // invert zero suppressed ADC
+                //cout<<samples[isample]<<" "<<pedestalAPV[srswindow->apv_id][isample]<<" "<<adc_zs<<endl;
 		if(adc_zs > pulse_peak) {
 			pulse_peak = adc_zs;
 			pulse_time = isample * ns_per_sample;
@@ -111,7 +126,7 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	}
 
 	if(pulse_peak < pulse_peak_threshold) continue;
-	    
+  
 	// Build hit object
 	DGEMHit *hit = new DGEMHit;
 	hit->pulse_height = pulse_peak;
@@ -121,7 +136,6 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// Apply calibration constants
 	double T = pulse_time;
 	hit->t = T;
-	//hit->t = hit->t + t_base[plane] - time_offsets[plane][strip];
 	
 	hit->AddAssociatedObject(window);
 	_data.push_back(hit);

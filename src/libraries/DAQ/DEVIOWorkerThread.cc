@@ -71,6 +71,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
 	PARSE_GEMSRS        = true;
+        NSAMPLES_GEMSRS     = 9;
 	
 	LINK_TRIGGERTIME    = true;
 }
@@ -2329,7 +2330,7 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	rawDataTS.clear();
 
 	Int_t fAPVHeaderLevel = 1500;
-	Int_t fNbOfTimeSamples = 21; // hard coded maximum number of time samples
+	Int_t fNbOfTimeSamples = NSAMPLES_GEMSRS; // hard coded maximum number of time samples
 
 	uint8_t NCH = 128;
 	

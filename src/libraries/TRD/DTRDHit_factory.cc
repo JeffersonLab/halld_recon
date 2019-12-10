@@ -92,7 +92,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	    // separate theresholds for Wire and GEM TRD
 	    if((digihit->plane == 4 || digihit->plane == 5 || digihit->plane == 0 || digihit->plane == 1) && pulse_height < 200) continue;
-	    if((digihit->plane == 2 || digihit->plane == 6) && pulse_height < 300) continue;
+	    if((digihit->plane == 2 || digihit->plane == 6) && pulse_height < 350) continue;
 
 	    // Time cut now
 	    double T = (double)digihit->pulse_time * 0.8;
