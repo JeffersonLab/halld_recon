@@ -291,7 +291,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 					}					
 
 					// fill histograms for candidate photons in timing cut
-					if(fabs(locDeltaT) < 2.0) {
+					if(fabs(locDeltaT) < 5.0) {
 						Lock_Action(); //ACQUIRE ROOT LOCK!!
 						hThetaC->Fill(locThetaC);
 						hDeltaThetaC->Fill(locThetaC-locExpectedThetaC);

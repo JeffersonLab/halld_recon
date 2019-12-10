@@ -49,6 +49,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  hNphCBarVsP[i] = new TH2I(Form("hNphCVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
 	  hNphCBarInclusive[i] = new TH1I(Form("hNphCInclusive_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
 	  hNphCBarInclusiveVsP[i] = new TH2I(Form("hNphCInclusiveVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
+	  hDeltaThetaCBar[i] = new TH1I(Form("hDeltaThetaC_bar%d",i), "cherenkov angle; %s #Delta#theta_{C} [rad]", 200,-0.2,0.2);
   }
   dir->cd();
  
@@ -209,22 +210,22 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  continue;
 
 	  // require has good match to TOF hit for cleaner sample
-	  //shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
-	  //bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
-	  //if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
-	  //continue;
+	  shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+	  bool foundTOF = locParticleID->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams);
+	  if(!foundTOF || locTOFHitMatchParams->dDeltaXToHit > 10.0 || locTOFHitMatchParams->dDeltaYToHit > 10.0)
+		  continue;
 
 	  Particle_t locPID = locTrackTimeBased->PID();
 	  double locMass = ParticleMass(locPID);
 
-	  double locInputStartTime = locTrackTimeBased->t0();
+	  double locInputStartTime = 0.; //locTrackTimeBased->t0();
 	  //if(locTrackTimeBased->t0_detector() == SYS_TOF) {
 		  //cout<<"TOF hit"<<endl;
 		  //continue;
 	  //}
-	  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
-	  if(extrapolations.size()==0) continue;
-	  double locExtrapolationTime = extrapolations[0].t;
+	  //vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
+	  //if(extrapolations.size()==0) continue;
+	  double locExtrapolationTime = 0.; //extrapolations[0].t;
 
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
@@ -315,7 +316,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 							  hDiffVsChannelDirect[locPID][locBox]->Fill(locChannel,locDeltaT);
 						  else 
 							  hDiffVsChannelReflected[locPID][locBox]->Fill(locChannel,locDeltaT);
-						  if(locPID == PiPlus || locPID == PiMinus)
+						  if(locPID == PiPlus || locPID == PiMinus) 
 							  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
 					  }
 					  
@@ -324,7 +325,9 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 						  hThetaC[locPID][locBox]->Fill(locThetaC);
 						  hDeltaThetaC[locPID][locBox]->Fill(locThetaC-locExpectedThetaC);
 						  hDeltaThetaCVsP[locPID][locBox]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
-
+						  if(locPID == PiPlus || locPID == PiMinus) {
+							  hDeltaThetaCBar[locBar]->Fill(locThetaC-locExpectedThetaC);
+						  }
 					  }
 					  
 					  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
