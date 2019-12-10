@@ -6,6 +6,7 @@
 #include <TRACKING/DTrackFitter.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackTimeBased.h>
+#include <HDGEOMETRY/DMagneticFieldMapNoField.h>
 
 class JEventProcessor_TRD_hists:public jana::JEventProcessor{
 public:
@@ -20,6 +21,7 @@ private:
     jerror_t erun(void); ///< Called everytime run number changes, provided brun has been called.
     jerror_t fini(void); ///< Called after last event of last event source has been processed.
     int wirePlaneOffset;
+    bool dIsNoFieldFlag;
 };
 
 #endif // _JEventProcessor_TRD_hists_

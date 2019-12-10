@@ -36,6 +36,7 @@ const int NAPVchannels = 128;
 const int NGEMsamples = 21;
 
 static TH1I *trd_num_events;
+static TH1I *num_tracks;
 
 static TH2I *hWireTRDPoint_TrackX, *hWireTRDPoint_TrackY;
 static TH2I *hGEMTRDHit_TrackX, *hGEMTRDHit_TrackY, *hGEMTRDHit_DeltaXY;
@@ -83,6 +84,7 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     trdDir->cd();
     // book hists
     trd_num_events = new TH1I("trd_hists_num_events","TRD number of events",1,0.5,1.5);
+    num_tracks = new TH1I("num_tracks", "; # of straight (0) and time based (1) tracks",2,-0.5,1.5);
 
     trdDir->cd();
 
@@ -135,6 +137,9 @@ jerror_t JEventProcessor_TRD_hists::brun(JEventLoop *eventLoop, int32_t runnumbe
     const DGeometry *geom = dapp->GetDGeometry(runnumber);
     vector<double> z_trd;
     geom->GetTRDZ(z_trd);
+
+    const DMagneticFieldMap *bfield = dapp->GetBfield(runnumber);
+    dIsNoFieldFlag = ((dynamic_cast<const DMagneticFieldMapNoField*>(bfield)) != NULL);
 
     return NOERROR;
 }
@@ -191,10 +196,14 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     eventLoop->Get(gem_points);
 
     vector<const DTrackWireBased*> straight_tracks;
-    //eventLoop->Get(straight_tracks, "StraightLine");
-
     vector<const DTrackTimeBased*> tracks;
-    eventLoop->Get(tracks);
+    if (dIsNoFieldFlag)
+	    eventLoop->Get(straight_tracks, "StraightLine");
+    else
+	    eventLoop->Get(tracks);
+
+    num_tracks->Fill(0.,(double)straight_tracks.size());
+    num_tracks->Fill(1.,(double)tracks.size());
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
