@@ -20,6 +20,7 @@ using namespace jana;
 #include "BCAL/DBCALGeometry.h"
 #include "CCAL/DCCALGeometry.h"
 #include "TRIGGER/DTrigger.h"
+#include "RF/DRFTime.h"
 #include "HistogramTools.h"
 
 #include "PAIR_SPECTROMETER/DPSCHit.h"
@@ -225,7 +226,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     auto locParticleID = locParticleID_algos[0];
 
     // We want to be use some of the tools available in the RFTime factory 
-    // Specifivally steping the RF back to a chosen time
+    // Specifically steping the RF back to a chosen time
+    vector<const DRFTime *> locRFTimes;
+    loop->Get(locRFTimes);      // make sure brun() gets called for this factory!
     auto dRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
 
     vector<const DDIRCGeometry*> locDIRCGeometryVec;
