@@ -102,7 +102,8 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
 	SYSTEMS_TO_PARSE = "";
-    SYSTEMS_TO_PARSE_FORCE = 0;
+	SYSTEMS_TO_PARSE_FORCE = 0;
+	BLOCKS_TO_SKIP = 0;
 
 	gPARMS->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
 	gPARMS->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
@@ -150,6 +151,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	        "How to handle mismatches between hard coded map and one read from CCDB "
          "when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
 
+	gPARMS->SetDefaultParameter("EVIO:BLOCKS_TO_SKIP", BLOCKS_TO_SKIP, "Number of EVIO blocks to skip parsing at start of file (typically 1 block=40 events)");
 
 	if(gPARMS->Exists("RECORD_CALL_STACK")) gPARMS->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
 
@@ -334,6 +336,8 @@ void JEventSource_EVIOpp::Dispatcher(void)
 	/// This creates backpressure here by having no worker threads
 	/// available.
 	
+	if( BLOCKS_TO_SKIP>0 ) SkipEVIOBlocks(BLOCKS_TO_SKIP);
+	
 	bool allow_swap = false; // Defer swapping to DEVIOWorkerThread
 	uint64_t istreamorder = 0;
 	while(true){
@@ -479,6 +483,49 @@ void JEventSource_EVIOpp::Dispatcher(void)
  	worker_threads.clear();
 	
 	tend = std::chrono::high_resolution_clock::now();
+}
+
+//----------------
+// SkipEVIOBlocks
+//----------------
+jerror_t JEventSource_EVIOpp::SkipEVIOBlocks(uint32_t N)
+{
+	/// Read and discard a specified number of EVIO blocks.
+	/// This is used to skip parsing completely for blocks
+	/// of EVIO events where corruption is suspected. Set the
+	/// number of EVIO blocks to skip using the EVIO:BLOCKS_TO_SKIP
+	/// configuration parameter. Remember that for typical GlueX
+	/// production data, one EVIO block contains 40 physics 
+	/// events.
+
+	uint32_t  buff_len = 20480;
+	uint32_t* buff     = new uint32_t[buff_len];
+
+	jout << "Skipping " << N << " EVIO blocks " << endl;
+	while(N>0){
+		hdevio->readNoFileBuff(buff, buff_len, false);
+		if(hdevio->err_code == HDEVIO::HDEVIO_USER_BUFFER_TOO_SMALL){
+			delete[] buff;
+			buff_len = hdevio->last_event_len;
+			buff = new uint32_t[buff_len];
+			continue;
+		}else if(hdevio->err_code!=HDEVIO::HDEVIO_OK){
+			cout << hdevio->err_mess.str() << endl;
+			if(hdevio->err_code != HDEVIO::HDEVIO_EOF){
+				bool ignore_error = false;
+				if( (!TREAT_TRUNCATED_AS_ERROR) && (hdevio->err_code == HDEVIO::HDEVIO_FILE_TRUNCATED) ) ignore_error = true;
+				if(!ignore_error) japp->SetExitCode(hdevio->err_code);
+			}
+			break;
+		}else{
+			// HDEVIO_OK
+			N--;
+		}
+	}
+		
+	if( buff )delete[] buff;
+	
+	return NOERROR;
 }
 
 //----------------
