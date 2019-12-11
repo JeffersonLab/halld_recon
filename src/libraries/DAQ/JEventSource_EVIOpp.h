@@ -190,6 +190,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		bool     PARSE_TRIGGER;
 		bool     PARSE_SSP;
 		bool     PARSE_GEMSRS;
+                int      NSAMPLES_GEMSRS;
 		bool     APPLY_TRANSLATION_TABLE;
 		int      ET_STATION_NEVENTS;
 		bool     ET_STATION_CREATE_BLOCKING;
