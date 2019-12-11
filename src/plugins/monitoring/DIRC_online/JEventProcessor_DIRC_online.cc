@@ -144,7 +144,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	}
 
 	// LED specific histograms
-	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,-10.0,30.0);
+	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,300,-5.0,25.0);
 	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
 
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
@@ -258,7 +258,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // LED specific information
     // next line commented out to supress warning: variable not used
-    //    double locLEDRefTime = 0;
+    double locRefTime = 0;
     double locLEDRefAdcTime = 0;
     double locLEDRefTdcTime = 0;
     if(locDIRCLEDTrig) {
@@ -288,33 +288,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	    }
     }
 
-/*
-	    for(uint i=0; i<sipmadchits.size(); i++) {
-		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-			    locLEDRefAdcTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
-			    locLEDRefAdcTime *= 0.0625; // convert time from flash to ns
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
-			    hLEDRefIntegral->Fill(sipmadchit->integral); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
-			    locLEDRefTime = locLEDRefAdcTime;
-		    }
-	    }
-	    
-	    for(uint i=0; i<sipmtdchits.size(); i++) {
-		    const DCAEN1290TDCHit* sipmtdchit = (DCAEN1290TDCHit*)sipmtdchits[i];
-		    if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
-			    locLEDRefTdcTime = (double)((sipmtdchit->time));
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefTdcTime->Fill(locLEDRefTdcTime); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK	     
-			    locLEDRefTime = locLEDRefTdcTime;
-		    }
-	    }
-    }
-*/
-
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -336,7 +309,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(0.,NDigiHits[0]); hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(1.,NDigiHits[1]);
 
     // Loop over calibrated hits to get mean for reference time
-    double locRefTime = 0;
     int locNHits = 0;
     double locFirstFiberTime = 125.5; // 205.5; used for no time offset
     for (const auto& hit : hits) {
@@ -363,6 +335,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     hRefTime->Fill(locRefTime);
     //if(locReferenceClockTime%2 == 0)
     //    locRefTime += 4.0;
+
+    // set reference time from SiPM if it exists
+    if(locLEDRefTdcTime > 0)
+      locRefTime = locLEDRefTdcTime + 92.5;
  
     // Fill calibrated-hit hists
     int NHits[] = {0,0};
@@ -385,8 +361,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 	// LED specific histograms
 	if(locDIRCLEDTrig) {
-		hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
-		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime);
+                if(locLEDRefTdcTime > 0) {
+                  hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
+                  hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime);
+                }
 	
 		if(locLEDRefTdcTime > 0) {
 			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
