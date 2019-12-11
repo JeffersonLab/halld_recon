@@ -22,6 +22,8 @@
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
 #include <TRACKING/DReferenceTrajectory.h>
+#include <TRD/DTRDPoint.h>
+#include <TRD/DGEMPoint.h>
 
 using namespace std;
 
@@ -224,7 +226,10 @@ class DTrackFitter:public jana::JObject{
 		// The following should be used as inputs by FitTrack(void)
 		vector<const DCDCTrackHit*> cdchits;	//< Hits in the CDC
 		vector<const DFDCPseudo*> fdchits;		//< Hits in the FDC
-		DTrackingData input_params;				//< Starting parameters for the fit
+		vector<const DTRDPoint*> trdhits;
+		vector<const DGEMPoint*> gemhits;
+
+	DTrackingData input_params;				//< Starting parameters for the fit
 		fit_type_t fit_type;							//< kWireBased or kTimeBased
 		const DMagneticFieldMap *bfield;			//< Magnetic field map for current event (acquired through loop)
 		const DGeometry *geom;						//< DGeometry pointer used to access materials through calibDB maps for eloss

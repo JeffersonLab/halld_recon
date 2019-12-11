@@ -101,6 +101,8 @@ void DTrackFitter::Reset(void)
 	IsSmoothed=false;
 	cdchits.clear();
 	fdchits.clear();
+	trdhits.clear();
+	gemhits.clear();
 	fit_type = kWireBased;
 	chisq = 1.0E6;
 	Ndof=0;
@@ -224,8 +226,12 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   // Get hits to be used for the fit
   vector<const DCDCTrackHit*> cdctrackhits;
   vector<const DFDCPseudo*> fdcpseudos;
+  vector<const DTRDPoint *> trdhits_in;
+  vector<const DGEMPoint *> gemhits_in;
   loop->Get(cdctrackhits);
   loop->Get(fdcpseudos);
+  loop->Get(trdhits_in);
+  loop->Get(gemhits_in);
 
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
@@ -242,6 +248,12 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
     DVector3 mypos=extraps[extraps.size()/2].position;
     double Bz=GetDMagneticFieldMap()->GetBz(mypos.x(),mypos.y(),mypos.z());
     hitselector->GetFDCHits(Bz,q,extraps,fdcpseudos,this,N);	
+    got_hits=true;
+  }
+  if (extrapolations.at(SYS_TRD).size()>0){
+    vector<Extrapolation_t>extraps=extrapolations.at(SYS_TRD);
+    hitselector->GetTRDHits(extraps,trdhits_in,trdhits);
+    hitselector->GetGEMHits(extraps,gemhits_in,gemhits); 
     got_hits=true;
   }
   if (got_hits==false){

@@ -128,6 +128,49 @@ DTrackHitSelectorALT2::~DTrackHitSelectorALT2()
 
 }
 
+
+//---------------------------------
+// GetTRDHits
+//---------------------------------
+void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const {
+  // Vector of pairs storing the hit with the probability it is on the track
+  vector<pair<double,const DTRDPoint*> >trdhits_tmp;
+  
+  for (unsigned int k=0;k<extrapolations.size();k++){
+    DVector3 pos=extrapolations[k].position;
+    for (unsigned int j=0;j<trdhits_in.size();j++){
+      if (fabs(pos.z()-trdhits_in[j]->z)<0.1){
+	printf("x,y,z %f %f %f \n",trdhits_in[j]->x,trdhits_in[j]->y,
+	       trdhits_in[j]->z);
+	pos.Print();
+      }
+    }
+
+  }
+}
+
+//---------------------------------
+// GetGEMHits
+//---------------------------------
+void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const {
+  // Vector of pairs storing the hit with the probability it is on the track
+  vector<pair<double,const DGEMPoint*> >gemhits_tmp;
+  
+  for (unsigned int k=0;k<extrapolations.size();k++){
+    DVector3 pos=extrapolations[k].position;
+    for (unsigned int j=0;j<gemhits_in.size();j++){
+      if (fabs(pos.z()-gemhits_in[j]->z)<0.1){
+	printf("x,y,z %f %f %f\n",gemhits_in[j]->x,gemhits_in[j]->y,
+	       gemhits_in[j]->z);
+	pos.Print();
+      }
+    }
+
+  }
+}
+
+
+
 //---------------------------------
 // GetCDCHits
 //---------------------------------
@@ -847,12 +890,11 @@ void DTrackHitSelectorALT2::GetFDCHits(double Bz,double q,
   /// of the trajectory to the wire and the drift distance
   /// and the distance along the wire.
 
-  // Sort so innermost ring is first and outermost is last
+  // Sort so innermost plane is first and outermost is last
   vector<const DFDCPseudo*> fdchits_in_sorted = fdchits_in;
   sort(fdchits_in_sorted.begin(),fdchits_in_sorted.end(),DTrackHitSelector_fdchit_in_cmp);
 
   // The variance on the residual due to measurement error.
- // The variance on the residual due to measurement error.
   double var_anode = 0.25*ONE_OVER_12;
   const double VAR_CATHODE_STRIPS=0.000225;
   double var_cathode = VAR_CATHODE_STRIPS+0.15*0.15*ONE_OVER_12; 
