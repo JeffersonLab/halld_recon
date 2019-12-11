@@ -45,6 +45,11 @@ bool DAnalysisUtilities::Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const 
 	if(dParticleComboCreator == nullptr) //Can't create in constructor: infinite recursion
 		dParticleComboCreator = new DParticleComboCreator(locEventLoop, nullptr, nullptr, nullptr);
 	DReaction_factory_Thrown* dThrownReactionFactory = static_cast<DReaction_factory_Thrown*>(locEventLoop->GetFactory("DReaction", "Thrown"));
+        if(!dThrownReactionFactory->brun_was_called())
+	{
+            dThrownReactionFactory->brun(locEventLoop, locEventLoop->GetJEvent().GetRunNumber());
+            dThrownReactionFactory->Set_brun_called();
+	}
 
 	vector<const DReaction*> locThrownReactions;
 	locEventLoop->Get(locThrownReactions, "Thrown");

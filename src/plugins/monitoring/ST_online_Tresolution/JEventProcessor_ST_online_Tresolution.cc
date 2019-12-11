@@ -13,6 +13,9 @@ using namespace jana;
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
+
+#include "RF/DRFTime.h"
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
@@ -149,6 +152,23 @@ jerror_t JEventProcessor_ST_online_Tresolution::evnt(JEventLoop *loop, uint64_t 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
     return NOERROR;
 
+  // Get the particleID object for each run
+  // Be sure that DRFTime_factory::init() and brun() are called
+  vector<const DParticleID *> locParticleID_algos;
+  loop->Get(locParticleID_algos);
+  if(locParticleID_algos.size() < 1)
+    {
+      _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+      return RESOURCE_UNAVAILABLE;
+    }
+  auto locParticleID = locParticleID_algos[0];
+  
+  // We want to be use some of the tools available in the RFTime factory 
+  // Specifically stepping the RF back to a chosen time
+  vector<const DRFTime *> locRFTimes;
+  loop->Get(locRFTimes);      // make sure brun() gets called for this factory!
+  auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+  
   // SC hits
   vector<const DSCHit *> scHitVector;
   loop->Get(scHitVector);

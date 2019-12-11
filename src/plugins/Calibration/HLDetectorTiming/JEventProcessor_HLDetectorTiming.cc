@@ -20,6 +20,7 @@ using namespace jana;
 #include "BCAL/DBCALGeometry.h"
 #include "CCAL/DCCALGeometry.h"
 #include "TRIGGER/DTrigger.h"
+#include "RF/DRFTime.h"
 #include "HistogramTools.h"
 
 #include "PAIR_SPECTROMETER/DPSCHit.h"
@@ -234,6 +235,33 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
+
+    if(!locTrigger->Get_IsPhysicsEvent())
+	    return NOERROR;
+
+    // Get the particleID object for each run
+    vector<const DParticleID *> locParticleID_algos;
+    loop->Get(locParticleID_algos);
+    if(locParticleID_algos.size()<1){
+        _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
+        return RESOURCE_UNAVAILABLE;
+    }
+    auto locParticleID = locParticleID_algos[0];
+
+    // We want to be use some of the tools available in the RFTime factory 
+    // Specifically steping the RF back to a chosen time
+    vector<const DRFTime *> locRFTimes;
+    loop->Get(locRFTimes);      // make sure brun() gets called for this factory!
+    auto dRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+
+    vector<const DDIRCGeometry*> locDIRCGeometryVec;
+    loop->Get(locDIRCGeometryVec);
+    // next line commented out to supress warning
+    //    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
+
+    // Initialize DIRC LUT
+	const DDIRCLut* dDIRCLut = nullptr;
+    loop->GetSingle(dDIRCLut);
 
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
