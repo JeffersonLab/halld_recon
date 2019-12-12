@@ -35,7 +35,7 @@
 
 inline bool static DKalmanSIMDFDCHit_cmp(DKalmanSIMDFDCHit_t *a, DKalmanSIMDFDCHit_t *b){
   if (fabs(a->z-b->z)<EPS){
-    if (fabs(a->t-b->t)<EPS){
+    if (a->hit!=NULL && b->hit!=NULL && fabs(a->t-b->t)<EPS){
       double tsum_1=a->hit->t_u+a->hit->t_v;
       double tsum_2=b->hit->t_u+b->hit->t_v;
       if (fabs(tsum_1-tsum_2)<EPS){
@@ -369,7 +369,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    USE_FDC_HITS=true;
    gPARMS->SetDefaultParameter("TRKFIT:USE_FDC_HITS",USE_FDC_HITS);
    USE_CDC_HITS=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS);
+   gPARMS->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS); 
+   USE_TRD_HITS=false;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS);
+   USE_GEM_HITS=false;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
+
 
    // Flag to enable calculation of alignment derivatives
    ALIGNMENT=false;
@@ -754,6 +759,10 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
      for(unsigned int i=0; i<cdchits.size(); i++)AddCDCHit(cdchits[i]);
    if (USE_FDC_HITS)
      for(unsigned int i=0; i<fdchits.size(); i++)AddFDCHit(fdchits[i]);
+   if (USE_TRD_HITS)
+     for(unsigned int i=0; i<trdhits.size(); i++)AddTRDHit(trdhits[i]); 
+   if (USE_GEM_HITS)
+     for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
@@ -790,6 +799,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
       // Look for multiple hits on the same wire 
       for (unsigned int i=0;i<my_fdchits.size()-1;i++){
+	if (my_fdchits[i]->hit==NULL || my_fdchits[i+1]->hit==NULL) continue;
          if (my_fdchits[i]->hit->wire->layer==my_fdchits[i+1]->hit->wire->layer &&
                my_fdchits[i]->hit->wire->wire==my_fdchits[i+1]->hit->wire->wire){
             num_good_fdchits--;
@@ -1072,13 +1082,66 @@ inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
    pos.SetXYZ(x_,y_,z_);
 }
 
+// Add GEM points
+void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
+  DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
+
+  hit->t=gemhit->time;
+  hit->uwire=gemhit->x;
+  hit->vstrip=gemhit->y;
+  // From Justin (12/12/19):
+  // DGEMPoint (GEM2 SRS, plane closest to the DIRC):
+  // sigma_X = sigma_Y = 100 um
+  hit->vvar=0.01*0.01;
+  hit->uvar=hit->vvar;
+  hit->z=gemhit->z;
+  hit->cosa=1.;
+  hit->sina=0.;
+  hit->phiX=0.;
+  hit->phiY=0.;
+  hit->phiZ=0.;
+  hit->nr=0.;
+  hit->nz=0.;
+  hit->hit=NULL;
+
+  my_fdchits.push_back(hit);
+}
+
+
+
+// Add TRD points
+void DTrackFitterKalmanSIMD::AddTRDHit(const DTRDPoint *trdhit){
+  DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
+
+  hit->t=trdhit->time;
+  hit->uwire=trdhit->x;
+  hit->vstrip=trdhit->y;
+  // From Justin (12/12/19):
+  // sigma_X = 1 mm / sqrt(12)
+  // sigma_Y = 300 um
+  hit->vvar=0.03*0.03;
+  hit->uvar=0.1*0.1/12.;
+  hit->z=trdhit->z;
+  hit->cosa=1.;
+  hit->sina=0.;
+  hit->phiX=0.;
+  hit->phiY=0.;
+  hit->phiZ=0.;
+  hit->nr=0.;
+  hit->nz=0.;
+  hit->hit=NULL;
+
+  my_fdchits.push_back(hit);
+}
+
 // Add FDC hits
-jerror_t DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
+void DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
    DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
 
    hit->t=fdchit->time;
    hit->uwire=fdchit->w;
    hit->vstrip=fdchit->s;
+   hit->uvar=0.0833;
    hit->vvar=fdchit->ds*fdchit->ds;
    hit->z=fdchit->wire->origin.z();
    hit->cosa=cos(fdchit->wire->angle);
@@ -1094,12 +1157,10 @@ jerror_t DTrackFitterKalmanSIMD::AddFDCHit(const DFDCPseudo *fdchit){
    hit->status=good_hit;
 
    my_fdchits.push_back(hit);
-
-   return NOERROR;
 }
 
 //  Add CDC hits
-jerror_t DTrackFitterKalmanSIMD::AddCDCHit (const DCDCTrackHit *cdchit){
+void DTrackFitterKalmanSIMD::AddCDCHit (const DCDCTrackHit *cdchit){
    DKalmanSIMDCDCHit_t *hit= new DKalmanSIMDCDCHit_t;
 
    hit->hit=cdchit;
@@ -1112,8 +1173,6 @@ jerror_t DTrackFitterKalmanSIMD::AddCDCHit (const DCDCTrackHit *cdchit){
    hit->cosstereo=cos(cdchit->wire->stereo);
    hit->tdrift=cdchit->tdrift;
    my_cdchits.push_back(hit);
-
-   return NOERROR;
 }
 
 // Calculate the derivative of the state vector with respect to z
@@ -1942,6 +2001,7 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    for (unsigned int m=0;m<forward_traj.size();m++){
       if (my_id>0){
          unsigned int hit_id=my_id-1;
+	 if (my_fdchits[hit_id]->hit==NULL) continue;
          double z=forward_traj[m].z;
          if (fabs(z-my_fdchits[hit_id]->z)<EPS2){
             forward_traj[m].h_id=my_id;
@@ -3189,7 +3249,7 @@ jerror_t DTrackFitterKalmanSIMD::KalmanLoop(void){
    if (fit_type==kWireBased && theta_deg>10.){
      double Bz=fabs(bfield->GetBz(x0,y0,z0));
      double sperp=25.; // empirical guess
-     if (my_fdchits.size()>0){
+     if (my_fdchits.size()>0 && my_fdchits[0]->hit!=NULL){
        double my_z=my_fdchits[0]->z;
        double my_x=my_fdchits[0]->hit->xy.X();
        double my_y=my_fdchits[0]->hit->xy.Y();
@@ -4465,6 +4525,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
             double nr=my_fdchits[id]->nr;
             double nz_sinalpha_plus_nr_cosalpha=nz*sinalpha+nr*cosalpha;
 
+	    // Variance in coordinate transverse to wire
+	    V(0,0)=my_fdchits[id]->uvar;
+	    
             // Variance in coordinate along wire
             V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
 
@@ -4484,7 +4547,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
                Mdiff(0)=drift-doca;
 
                // Variance in drift distance
-               V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
+	       if (my_fdchits[id]->hit!=NULL){
+		 V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
+	       }
             }
 
             // To transform from (x,y) to (u,v), need to do a rotation:
@@ -4637,7 +4702,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 
                // Adjust the state vector and the covariance using the hit 
                //information
-               bool skip_plane=(my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+               bool skip_plane=(my_fdchits[id]->hit!=NULL && my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
                if (skip_plane==false){
                   DMatrix5x5 sum=I5x5;
                   DMatrix5x5 sum2;
@@ -4699,7 +4764,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
                   // Compute Kalman gain matrix
                   K=C*H_T*InvV;
 
-                  bool skip_plane=(my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+                  bool skip_plane=(my_fdchits[id]->hit!=NULL
+				   &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
                   if (skip_plane==false){
                      // Update the state vector 
                      S+=K*Mdiff;
@@ -7127,7 +7193,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    }
    fdchits_used_in_fit.clear();
    for (unsigned int m=0;m<last_fdc_used_in_fit.size();m++){
-      if (last_fdc_used_in_fit[m]){
+      if (last_fdc_used_in_fit[m] && my_fdchits[m]->hit!=NULL){
          fdchits_used_in_fit.push_back(my_fdchits[m]->hit);
       }
    }
@@ -7836,7 +7902,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                // Matrix transpose H_T -> H
                DMatrix2x5 H=Transpose(H_T);
 
-               if (my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP){
+               if (my_fdchits[id]->hit!=NULL 
+		   && my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP){
                   //V+=Cs.SandwichMultiply(H_T);
                   V=V+H*Cs*H_T;
                }
@@ -7847,7 +7914,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 
 
                vector<double> alignmentDerivatives;
-               if (ALIGNMENT_FORWARD){
+               if (ALIGNMENT_FORWARD && my_fdchits[id]->hit!=NULL){
                   alignmentDerivatives.resize(FDCTrackD::size);
                   // Let's get the alignment derivatives
 
@@ -7963,7 +8030,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 
                }
 
-               if (DEBUG_LEVEL>19){
+               if (DEBUG_LEVEL>19 && my_fdchits[id]->hit!=NULL){
                   jout << "Layer " << my_fdchits[id]->hit->wire->layer
                      <<":   t " << drift_time << " x "<< x << " y " << y 
                      << " coordinate along wire " << v << " resi_c " <<resi
@@ -7973,7 +8040,10 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                }
 
 	       double scale=1./sqrt(1.+tx*tx+ty*ty);
-	       double cosThetaRel=my_fdchits[id]->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
+	       double cosThetaRel=0.;
+	       if (my_fdchits[id]->hit!=NULL){
+		 my_fdchits[id]->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
+	       }
                DTrackFitter::pull_t thisPull = pull_t(resi_a,sqrt(V(0,0)),
 						      forward_traj[m].s,
 						      fdc_updates[id].tdrift,
@@ -8551,7 +8621,7 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
    // If we are doing the alignment, we need to numerically calculate the derivatives
    // wrt the wire origin, direction, and the track parameters.
    vector<double> alignmentDerivatives;
-   if (ALIGNMENT_FORWARD){
+   if (ALIGNMENT_FORWARD && hit->hit!=NULL){
       double dzcut_min=0., dzcut_max=1.;
       DMatrix5x1 alignS=Ss; // We will mess with this one
       DVector3 wireDir = hit->hit->wire->udir;

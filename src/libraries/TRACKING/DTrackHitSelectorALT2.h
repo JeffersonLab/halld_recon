@@ -33,8 +33,10 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 
 		int HS_DEBUG_LEVEL;
 		bool MAKE_DEBUG_TREES;
-		double MIN_HIT_PROB_CDC;
+		double MIN_HIT_PROB_CDC;	
 		double MIN_HIT_PROB_FDC;
+		double MIN_HIT_PROB_GEM;
+		double MIN_HIT_PROB_TRD;
 		double MIN_FDC_SIGMA_ANODE_CANDIDATE;
 		double MIN_FDC_SIGMA_CATHODE_CANDIDATE;
 		double MIN_FDC_SIGMA_ANODE_WIREBASED;

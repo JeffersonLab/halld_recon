@@ -39,6 +39,18 @@ bool static DTrackHitSelector_fdchit_cmp(pair<double,const DFDCPseudo *>a,
     return (a.second->wire->layer>b.second->wire->layer);
   return (a.first>b.first);
 }
+bool static DTrackHitSelector_gemhit_cmp(pair<double,const DGEMPoint *>a,
+				      pair<double,const DGEMPoint *>b){
+  if (a.second->detector!=b.second->detector) 
+    return (a.second->detector>b.second->detector);
+  return (a.first>b.first);
+}
+bool static DTrackHitSelector_trdhit_cmp(pair<double,const DTRDPoint *>a,
+				      pair<double,const DTRDPoint *>b){
+  if (a.second->detector!=b.second->detector) 
+    return (a.second->detector>b.second->detector);
+  return (a.first>b.first);
+}
 
 bool static DTrackHitSelector_cdchit_in_cmp(const DCDCTrackHit *a, const DCDCTrackHit *b){
   if (a->wire->ring != b->wire->ring) return (a->wire->ring < b->wire->ring);
@@ -60,6 +72,8 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 	MAKE_DEBUG_TREES = false;
 	MIN_HIT_PROB_CDC = 0.01;
 	MIN_HIT_PROB_FDC = 0.01;
+	MIN_HIT_PROB_TRD = 0.01;
+	MIN_HIT_PROB_GEM = 0.01;
 	MIN_FDC_SIGMA_ANODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_CATHODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_ANODE_WIREBASED = 0.0100;
@@ -138,7 +152,9 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
   
   for (unsigned int k=0;k<extrapolations.size();k++){
     DVector3 pos=extrapolations[k].position;
-    for (unsigned int j=0;j<trdhits_in.size();j++){
+    for (unsigned int j=0;j<trdhits_in.size();j++){  
+      const DTRDPoint *hit=trdhits_in[j];
+      printf("k %d %d\n",k,hit->detector);
       if (fabs(pos.z()-trdhits_in[j]->z)<0.1){
 	printf("x,y,z %f %f %f \n",trdhits_in[j]->x,trdhits_in[j]->y,
 	       trdhits_in[j]->z);
@@ -159,17 +175,42 @@ void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_
   for (unsigned int k=0;k<extrapolations.size();k++){
     DVector3 pos=extrapolations[k].position;
     for (unsigned int j=0;j<gemhits_in.size();j++){
+      const DGEMPoint *hit=gemhits_in[j];
+      printf("k %d %d\n",k,hit->detector);
       if (fabs(pos.z()-gemhits_in[j]->z)<0.1){
 	printf("x,y,z %f %f %f\n",gemhits_in[j]->x,gemhits_in[j]->y,
 	       gemhits_in[j]->z);
-	pos.Print();
+	pos.Print();  
+	double dx=hit->x-pos.X();
+	double dy=hit->y-pos.Y();
+	double varx=1.,vary=1.;
+	double chisq=dx*dx/varx+dy*dy/vary;
+	// Use chi-sq probability function with Ndof=1 to calculate probability
+	double probability = TMath::Prob(chisq, 2);
+	printf("dx %f dy %f prob %f\n",dx,dy,probability);
+	if(probability>=MIN_HIT_PROB_GEM){
+	  pair<double,const DGEMPoint*>myhit;
+	  myhit.first=probability;
+	  myhit.second=hit;
+	  gemhits_tmp.push_back(myhit);
+	}
       }
     }
 
   }
+  // Order according to layer number and probability,then put the hits in the 
+  // output list with the following algorithm:  put hits with the highest 
+  // probability in a given layer in the output list. 
+  sort(gemhits_tmp.begin(),gemhits_tmp.end(),DTrackHitSelector_gemhit_cmp);
+  int old_layer=1000;
+  for (unsigned int i=0;i<gemhits_tmp.size();i++){
+    if (gemhits_tmp[i].second->detector!=old_layer){
+      gemhits_out.push_back(gemhits_tmp[i].second);   
+    }
+    old_layer=gemhits_tmp[i].second->detector;
+  }
+  
 }
-
-
 
 //---------------------------------
 // GetCDCHits
