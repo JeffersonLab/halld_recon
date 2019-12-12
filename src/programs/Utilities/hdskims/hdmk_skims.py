@@ -106,9 +106,9 @@ if RUN_HD_ANA:
 	print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 	ret = subprocess.call( cmd )
 
-# Update skininfo DB with any .sql files found in working directory
+# Update skiminfo DB with any .sql files found in working directory
 sqlfiles = glob.glob('*.sql')
-if (len(sqlfiles)>0) AND WRITE_TO_DB:
+if (len(sqlfiles)>0) and WRITE_TO_DB:
 
 	# We need to import mysql.connector but the RCDB version is
 	# not compatible with what is installed on the gluons. Thus,
