@@ -202,11 +202,6 @@ DTrackFitter::fit_status_t DTrackFitter::FitTrack(const DVector3 &pos, const DVe
 	input_params.setPID(IDTrack(q, mass));
 	input_params.setTime(t0);
 	input_params.setT0(t0,0.,t0_det);
-	
-	cout << trdhits.size() << endl;
-	cout << gemhits.size() << endl;	
-	cout << cdchits.size() << endl;
-	cout << fdchits.size() << endl;
 
 	DTrackFitter::fit_status_t status = FitTrack();
 
@@ -294,11 +289,9 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
     vector<Extrapolation_t>extraps=extrapolations.at(SYS_TRD);
     if (trdhits_in.size()>0){
       hitselector->GetTRDHits(extraps,trdhits_in,this);
-      cout << trdhits.size() << endl;
     }
     if (gemhits_in.size()>0){
       hitselector->GetGEMHits(extraps,gemhits_in,gemhits);
-      cout << gemhits.size() << endl;
     }
   }
   if (got_hits==false){
