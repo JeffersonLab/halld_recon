@@ -763,14 +763,14 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    if (USE_TRD_HITS){
      for(unsigned int i=0; i<trdhits.size(); i++)AddTRDHit(trdhits[i]);
      if (trdhits.size()>0){
-       _DBG_ << "Got TRD" <<endl;
+       //_DBG_ << "Got TRD" <<endl;
        got_trd_gem_hits=true;
      }
    }
    if (USE_GEM_HITS){
      for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
      if (gemhits.size()>0){
-       _DBG_ << " Got GEM" << endl;
+       //_DBG_ << " Got GEM" << endl;
        got_trd_gem_hits=true;
      }
    }
@@ -8061,7 +8061,6 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 	       if (my_fdchits[id]->hit!=NULL){
 		 my_fdchits[id]->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
 	       }
-	       if (my_fdchits[id]->hit==NULL)_DBG_ << "Used TRD/GEM?" << endl;
                DTrackFitter::pull_t thisPull = pull_t(resi_a,sqrt(V(0,0)),
 						      forward_traj[m].s,
 						      fdc_updates[id].tdrift,
