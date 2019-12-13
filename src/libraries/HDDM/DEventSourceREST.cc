@@ -285,6 +285,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DBCALShower(record,
                      dynamic_cast<JFactory<DBCALShower>*>(factory));
    }
+   if (dataClassName =="DCCALShower") {
+      return Extract_DCCALShower(record,
+                     dynamic_cast<JFactory<DCCALShower>*>(factory));
+   }
    if (dataClassName =="DTrackTimeBased") {
       return Extract_DTrackTimeBased(record,
                      dynamic_cast<JFactory<DTrackTimeBased>*>(factory), locEventLoop);
@@ -979,6 +983,58 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
    return NOERROR;
 }
 
+//-----------------------
+// Extract_DCCALShower
+//-----------------------
+jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
+                                   JFactory<DCCALShower>* factory)
+{
+   /// Copies the data from the ccalShower hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DCCALShower*> data;
+
+   // loop over ccal shower records
+   const hddm_r::CcalShowerList &showers =
+                 record->getCcalShowers();
+   hddm_r::CcalShowerList::iterator iter;
+   for (iter = showers.begin(); iter != showers.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DCCALShower *shower = new DCCALShower();
+      shower->E = iter->getE();
+      shower->x = iter->getX();
+      shower->y = iter->getY();
+      shower->z = iter->getZ();
+      shower->time = iter->getT();
+      shower->sigma_t = iter->getTerr();
+      shower->sigma_E = iter->getEerr();
+      shower->Emax = iter->getEmax();
+      shower->x1 = iter->getX1();
+      shower->y1 = iter->getY1();
+      shower->chi2 = iter->getChi2();
+      
+      shower->type = iter->getType();
+      shower->dime = iter->getDime();
+      shower->id = iter->getId();
+      shower->idmax = iter->getIdmax();
+      
+      data.push_back(shower);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
 //--------------------------------
 // Extract_DTrackTimeBased
 //--------------------------------
@@ -1250,6 +1306,10 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
+	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
+
+	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
+	      if( !locTrackTimeBased ) continue;
 
 	      auto locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
 	      map<shared_ptr<const DDIRCMatchParams> ,vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
@@ -1260,7 +1320,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      double locFlightTime = dircIter->getT();
 
-		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBasedVector[locTrackIndex]->PID(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
+		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
 			  locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
 	      }
 	      else {
@@ -1501,7 +1561,7 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
       DDIRCPmtHit *hit = new DDIRCPmtHit();
       hit->setChannel(iter->getCh());
       hit->setTime(iter->getT());
-      //hit->setTOT(iter->getTot());
+      hit->setTOT(iter->getTot());
 
       data.push_back(hit);
    }
