@@ -136,6 +136,10 @@ class DTrackFitter:public jana::JObject{
 		void AddHits(vector<const DCDCTrackHit*> cdchits);
 		void AddHit(const DFDCPseudo* fdchit);
 		void AddHits(vector<const DFDCPseudo*> fdchits);
+		void AddHit(const DTRDPoint* trdhit);
+		void AddHits(vector<const DTRDPoint*> trdhits);
+		void AddHit(const DGEMPoint* gemhit);
+		void AddHits(vector<const DGEMPoint*> gemhits);
 		const vector<const DCDCTrackHit*>& GetCDCInputHits(void) const {return cdchits;}
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}

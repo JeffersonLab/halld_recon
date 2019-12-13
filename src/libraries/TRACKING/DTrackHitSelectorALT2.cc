@@ -154,14 +154,34 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
     DVector3 pos=extrapolations[k].position;
     for (unsigned int j=0;j<trdhits_in.size();j++){  
       const DTRDPoint *hit=trdhits_in[j];
-      printf("k %d %d\n",k,hit->detector);
-      if (fabs(pos.z()-trdhits_in[j]->z)<0.1){
-	printf("x,y,z %f %f %f \n",trdhits_in[j]->x,trdhits_in[j]->y,
-	       trdhits_in[j]->z);
-	pos.Print();
+      if (int(k)==hit->detector){
+	double dx=hit->x-pos.X();
+	double dy=hit->y-pos.Y();
+	double varx=1.,vary=1.;
+	double chisq=dx*dx/varx+dy*dy/vary;
+	// Use chi-sq probability function with Ndof=2 to calculate probability
+	double probability = TMath::Prob(chisq, 2); 
+	if(probability>=MIN_HIT_PROB_GEM){
+	  printf("!>>> dx %f dy %f prob %f\n",dx,dy,probability);
+	  pair<double,const DTRDPoint*>myhit;
+	  myhit.first=probability;
+	  myhit.second=hit;
+	  trdhits_tmp.push_back(myhit);
+	}
+
       }
     }
-
+  }
+  // Order according to layer number and probability,then put the hits in the 
+  // output list with the following algorithm:  put hits with the highest 
+  // probability in a given layer in the output list. 
+  sort(trdhits_tmp.begin(),trdhits_tmp.end(),DTrackHitSelector_trdhit_cmp);
+  int old_layer=1000;
+  for (unsigned int i=0;i<trdhits_tmp.size();i++){
+    if (trdhits_tmp[i].second->detector!=old_layer){
+      trdhits_out.push_back(trdhits_tmp[i].second);   
+    }
+    old_layer=trdhits_tmp[i].second->detector;
   }
 }
 
@@ -171,24 +191,20 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
 void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const {
   // Vector of pairs storing the hit with the probability it is on the track
   vector<pair<double,const DGEMPoint*> >gemhits_tmp;
-  
+
   for (unsigned int k=0;k<extrapolations.size();k++){
     DVector3 pos=extrapolations[k].position;
     for (unsigned int j=0;j<gemhits_in.size();j++){
       const DGEMPoint *hit=gemhits_in[j];
-      printf("k %d %d\n",k,hit->detector);
-      if (fabs(pos.z()-gemhits_in[j]->z)<0.1){
-	printf("x,y,z %f %f %f\n",gemhits_in[j]->x,gemhits_in[j]->y,
-	       gemhits_in[j]->z);
-	pos.Print();  
+      if (int(k)==hit->detector){
 	double dx=hit->x-pos.X();
 	double dy=hit->y-pos.Y();
 	double varx=1.,vary=1.;
 	double chisq=dx*dx/varx+dy*dy/vary;
-	// Use chi-sq probability function with Ndof=1 to calculate probability
+	// Use chi-sq probability function with Ndof=2 to calculate probability
 	double probability = TMath::Prob(chisq, 2);
-	printf("dx %f dy %f prob %f\n",dx,dy,probability);
 	if(probability>=MIN_HIT_PROB_GEM){
+	  printf(">>>> dx %f dy %f prob %f\n",dx,dy,probability);
 	  pair<double,const DGEMPoint*>myhit;
 	  myhit.first=probability;
 	  myhit.second=hit;

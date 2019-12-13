@@ -501,6 +501,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
   bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
+  bool got_trd_gem_hits;
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;

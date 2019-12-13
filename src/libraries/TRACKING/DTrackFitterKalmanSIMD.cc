@@ -689,6 +689,7 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
    cdc_updates.clear();
    fdc_used_in_fit.clear();
    cdc_used_in_fit.clear();
+   got_trd_gem_hits=false;
 
    cov.clear();
    fcov.clear();
@@ -753,16 +754,35 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    // Check that we have enough FDC and CDC hits to proceed
    if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
    if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
+   
+   cout << "________________" << endl;
+   	cout << trdhits.size() << endl;
+	cout << gemhits.size() << endl;	
+	cout << cdchits.size() << endl;
+	cout << fdchits.size() << endl;
+
 
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS) 
      for(unsigned int i=0; i<cdchits.size(); i++)AddCDCHit(cdchits[i]);
    if (USE_FDC_HITS)
      for(unsigned int i=0; i<fdchits.size(); i++)AddFDCHit(fdchits[i]);
-   if (USE_TRD_HITS)
-     for(unsigned int i=0; i<trdhits.size(); i++)AddTRDHit(trdhits[i]); 
-   if (USE_GEM_HITS)
+   if (USE_TRD_HITS){
+     for(unsigned int i=0; i<trdhits.size(); i++)AddTRDHit(trdhits[i]);
+     if (trdhits.size()>0){
+       _DBG_ << "Got " << trdhits.size() << " TRD hits" << endl;
+       got_trd_gem_hits=true;
+     }
+   }
+   if (USE_GEM_HITS){
      for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
+     if (gemhits.size()>0){
+       _DBG_ << "Got " << gemhits.size() << " GEM hits" << endl;
+       got_trd_gem_hits=true;
+     }
+   }
+   //if (trdhits.size()>0 || gemhits.size()>0) DEBUG_LEVEL=51;
+   //else DEBUG_LEVEL=0;
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
@@ -796,7 +816,9 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    // Order the fdc hits by z
    if (num_good_fdchits>0){
       stable_sort(my_fdchits.begin(),my_fdchits.end(),DKalmanSIMDFDCHit_cmp);
-
+      for (unsigned int i=0;i<my_fdchits.size();i++){
+	printf("z %f\n",my_fdchits[i]->z);
+      }
       // Look for multiple hits on the same wire 
       for (unsigned int i=0;i<my_fdchits.size()-1;i++){
 	if (my_fdchits[i]->hit==NULL || my_fdchits[i+1]->hit==NULL) continue;
@@ -1884,12 +1906,14 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    bool stepped_to_boundary=false;
    bool stepped_to_endplate=false;
    unsigned int m=0;
+   double z_max=400.;
+   if (got_trd_gem_hits) z_max=600.;
    for (m=0;m<my_fdchits.size();m++){
       if (fabs(S(state_q_over_p))>Q_OVER_P_MAX
 	  || fabs(S(state_tx))>TAN_MAX
 	  || fabs(S(state_ty))>TAN_MAX
 	  || S(state_x)*S(state_x)+S(state_y)*S(state_y)>50.*50.  
-	  || z>400. || z<Z_MIN
+	  || z>z_max || z<Z_MIN
          ){
          break;
       }
@@ -1924,11 +1948,11 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    // downstream hit plane
    if (m==my_fdchits.size()){
       bool done=false;  
-      if (PropagateForward(forward_traj_length,i,z,400.,S,done,
+      if (PropagateForward(forward_traj_length,i,z,z_max,S,done,
                stepped_to_boundary,stepped_to_endplate)
             !=NOERROR)
          return UNRECOVERABLE_ERROR;  
-      if (PropagateForward(forward_traj_length,i,z,400.,S,done,
+      if (PropagateForward(forward_traj_length,i,z,z_max,S,done,
                stepped_to_boundary,stepped_to_endplate)
             !=NOERROR)
          return UNRECOVERABLE_ERROR;   
