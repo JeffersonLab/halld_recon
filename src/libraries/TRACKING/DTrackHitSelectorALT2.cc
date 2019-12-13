@@ -162,13 +162,11 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
 	// Use chi-sq probability function with Ndof=2 to calculate probability
 	double probability = TMath::Prob(chisq, 2); 
 	if(probability>=MIN_HIT_PROB_GEM){
-	  printf("!>>> dx %f dy %f prob %f\n",dx,dy,probability);
 	  pair<double,const DTRDPoint*>myhit;
 	  myhit.first=probability;
 	  myhit.second=hit;
 	  trdhits_tmp.push_back(myhit);
 	}
-
       }
     }
   }
@@ -204,7 +202,6 @@ void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_
 	// Use chi-sq probability function with Ndof=2 to calculate probability
 	double probability = TMath::Prob(chisq, 2);
 	if(probability>=MIN_HIT_PROB_GEM){
-	  printf(">>>> dx %f dy %f prob %f\n",dx,dy,probability);
 	  pair<double,const DGEMPoint*>myhit;
 	  myhit.first=probability;
 	  myhit.second=hit;
