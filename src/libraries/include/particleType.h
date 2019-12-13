@@ -54,8 +54,59 @@ typedef enum {
   Helium         = 47,
   Geantino       = 48,
   He3            = 49,
-  
+
+  Li6            = 61,
+  Li7            = 62,
+  Be7            = 63,
+  Be9            = 64,
+  B10            = 65,
+  B11            = 66,
+  C12            = 67,
+  N14            = 68,
+  O16            = 69,
+  F19            = 70,
+  Ne20           = 71,
+  Na23           = 72,
+  Mg24           = 73,
+  Al27           = 74,
+  Si28           = 75,
+  P31            = 76,
+  S32            = 77,
+  Cl35           = 78,
+  Ar36           = 79,
+  K39            = 80,
+  Ca40           = 81,
+  Sc45           = 82,
+  Ti48           = 83,
+  V51            = 84,
+  Cr52           = 85,
+  Mn55           = 86,
+  Fe56           = 87,
+  Co59           = 88,
+  Ni58           = 89,
+  Cu63           = 90,
+  Zn64           = 91,
+  Ge74           = 92,
+  Se80           = 93,
+  Kr84           = 94,
+  Sr88           = 95,
+  Zr90           = 96,
+  Mo98           = 97,
+  Pd106          = 98,
+  Cd114          = 99,
+  Sn120          = 100,
+  Xe132          = 101,
+  Ba138          = 102,
+  Ce140          = 103,
+  Sm152          = 104,
+  Dy164          = 105,
+  Yb174          = 106,
+  W184           = 107,
+  Pt194          = 108,
+  Au197          = 109,
+  Hg202          = 110,
   Pb208          = 111,
+  U238           = 112,
 
   /* the constants defined by GEANT end here */
   
@@ -101,24 +152,24 @@ typedef enum {
   Sigma_1385_0 = 173,
   Sigma_1385_Plus = 174,
 
-  Jpsi = 83,
-  Eta_c = 84,
-  Chi_c0 = 85,
-  Chi_c1 = 86,
-  Chi_c2 = 87,
-  Psi2s = 88,
-  D0 = 89,
-  DPlus = 90,
-  Dstar0 = 91,
-  DstarPlus = 92,
-  Lambda_c = 93,
-  AntiD0 = 94, 
+  Jpsi = 183,
+  Eta_c = 184,
+  Chi_c0 = 185,
+  Chi_c1 = 186,
+  Chi_c2 = 187,
+  Psi2s = 188,
+  D0 = 189,
+  DPlus = 190,
+  Dstar0 = 191,
+  DstarPlus = 192,
+  Lambda_c = 193,
+  AntiD0 = 194, 
 
   /* These are defined in pythia-geant.map in bggen */
 
   //Rho0          = 80,  // already defined above (44)
   //omega         = 81,  // already defined above (33)
-  DeltaPlusPlus = 82
+  DeltaPlusPlus = 182
 
 
 } Particle_t;
@@ -129,8 +180,8 @@ static inline Particle_t RemapParticleID(Particle_t p)
   // they are not the same as the definitions used from
   // E-852 in the enum above. Remap them using this routine
   // which is called from several of the routines below.
-  if(p==80) return Rho0;
-  if(p==81) return omega;
+  //if(p==80) return Rho0;
+  //if(p==81) return omega;
   return p;
 }
 
@@ -256,8 +307,110 @@ inline static char* ParticleType(Particle_t p)
     return (char*)"Helium";
   case He3:
     return (char*)"Helium-3";
+  case Li6:
+    return (char*)"Lithium-6";
+  case Li7:
+    return (char*)"Lithium-7";
+  case Be7:
+    return (char*)"Beryllium-7";
+  case Be9:
+    return (char*)"Beryllium-9";
+  case B10:
+    return (char*)"Boron-10";
+  case B11:
+    return (char*)"Boron-11";
+  case C12:
+    return (char*)"Carbon";
+  case N14:
+    return (char*)"Nitrogen";
+  case O16:
+    return (char*)"Oxygen";
+  case F19:
+    return (char*)"Fluorine";
+  case Ne20:
+    return (char*)"Neon";
+  case Na23:
+    return (char*)"Sodium";
+  case Mg24:
+    return (char*)"Magnesium";
+  case Al27:
+    return (char*)"Aluminum";
+  case Si28:
+    return (char*)"Silicon";
+  case P31:
+    return (char*)"Phosphorous";
+  case S32:
+    return (char*)"Sulphur";
+  case Cl35:
+    return (char*)"Chlorine";
+  case Ar36:
+    return (char*)"Argon";
+  case K39:
+    return (char*)"Potassium";
+  case Ca40:
+    return (char*)"Calcium";
+  case Sc45:
+    return (char*)"Scandium";
+  case Ti48:
+    return (char*)"Titanium";
+  case V51:
+    return (char*)"Vanadium";
+  case Cr52:
+    return (char*)"Chromium";
+  case Mn55:
+    return (char*)"Manganese";
+  case Fe56:
+    return (char*)"Iron";
+  case Co59:
+    return (char*)"Cobalt";
+  case Ni58:
+    return (char*)"Nickel";
+  case Cu63:
+    return (char*)"Copper";
+  case Zn64:
+    return (char*)"Zinc";
+  case Ge74:
+    return (char*)"Germanium";
+  case Se80:
+    return (char*)"Selenium";
+  case Kr84:
+    return (char*)"Krypton";
+  case Sr88:
+    return (char*)"Strontium";
+  case Zr90:
+    return (char*)"Zirconium";
+  case Mo98:
+    return (char*)"Molybdenum";
+  case Pd106:
+    return (char*)"Palladium";
+  case Cd114:
+    return (char*)"Cadmium";
+  case Sn120:
+    return (char*)"Tin";
+  case Xe132:
+    return (char*)"Xenon";
+  case Ba138:
+    return (char*)"Barium";
+  case Ce140:
+    return (char*)"Cesium";
+  case Sm152:
+    return (char*)"Samerium";
+  case Dy164:
+    return (char*)"Dysprosium";
+  case Yb174:
+    return (char*)"Ytterbium";
+  case W184:
+    return (char*)"Tungsten";
+  case Pt194:
+    return (char*)"Platium";
+  case Au197:
+    return (char*)"Gold";
+  case Hg202:
+    return (char*)"Mercury";
   case Pb208:
-    return (char*)"Pb208";
+    return (char*)"Lead";
+  case U238:
+    return (char*)"Uranium";
   case DeltaPlusPlus:
     return (char*)"Delta++";
   case Jpsi:
@@ -407,8 +560,110 @@ inline static char* EnumString(Particle_t p)
     return (char*)"Helium";
   case He3:
     return (char*)"Helium-3";
+  case Li6:
+    return (char*)"Lithium-6";
+  case Li7:
+    return (char*)"Lithium-7";
+  case Be7:
+    return (char*)"Beryllium-7";
+  case Be9:
+    return (char*)"Beryllium-9";
+  case B10:
+    return (char*)"Boron-10";
+  case B11:
+    return (char*)"Boron-11";
+  case C12:
+    return (char*)"Carbon";
+  case N14:
+    return (char*)"Nitrogen";
+  case O16:
+    return (char*)"Oxygen";
+  case F19:
+    return (char*)"Fluorine";
+  case Ne20:
+    return (char*)"Neon";
+  case Na23:
+    return (char*)"Sodium";
+  case Mg24:
+    return (char*)"Magnesium";
+  case Al27:
+    return (char*)"Aluminum";
+  case Si28:
+    return (char*)"Silicon";
+  case P31:
+    return (char*)"Phosphorous";
+  case S32:
+    return (char*)"Sulphur";
+  case Cl35:
+    return (char*)"Chlorine";
+  case Ar36:
+    return (char*)"Argon";
+  case K39:
+    return (char*)"Potassium";
+  case Ca40:
+    return (char*)"Calcium";
+  case Sc45:
+    return (char*)"Scandium";
+  case Ti48:
+    return (char*)"Titanium";
+  case V51:
+    return (char*)"Vanadium";
+  case Cr52:
+    return (char*)"Chromium";
+  case Mn55:
+    return (char*)"Manganese";
+  case Fe56:
+    return (char*)"Iron";
+  case Co59:
+    return (char*)"Cobalt";
+  case Ni58:
+    return (char*)"Nickel";
+  case Cu63:
+    return (char*)"Copper";
+  case Zn64:
+    return (char*)"Zinc";
+  case Ge74:
+    return (char*)"Germanium";
+  case Se80:
+    return (char*)"Selenium";
+  case Kr84:
+    return (char*)"Krypton";
+  case Sr88:
+    return (char*)"Strontium";
+  case Zr90:
+    return (char*)"Zirconium";
+  case Mo98:
+    return (char*)"Molybdenum";
+  case Pd106:
+    return (char*)"Palladium";
+  case Cd114:
+    return (char*)"Cadmium";
+  case Sn120:
+    return (char*)"Tin";
+  case Xe132:
+    return (char*)"Xenon";
+  case Ba138:
+    return (char*)"Barium";
+  case Ce140:
+    return (char*)"Cesium";
+  case Sm152:
+    return (char*)"Samerium";
+  case Dy164:
+    return (char*)"Dysprosium";
+  case Yb174:
+    return (char*)"Ytterbium";
+  case W184:
+    return (char*)"Tungsten";
+  case Pt194:
+    return (char*)"Platium";
+  case Au197:
+    return (char*)"Gold";
+  case Hg202:
+    return (char*)"Mercury";
   case Pb208:
-    return (char*)"Pb208";
+    return (char*)"Lead";
+  case U238:
+    return (char*)"Uranium";
   case DeltaPlusPlus:
     return (char*)"DeltaPlusPlus";
   case Jpsi:
@@ -435,6 +690,259 @@ inline static char* EnumString(Particle_t p)
     return (char*)"DstarPlus";
   case Lambda_c:
     return (char*)"Lambda_c";
+  default:
+    return (char*)"Unknown";
+  }
+}
+
+inline static char* EvtGenString(Particle_t p)
+{
+  //returns string that is exact match to enum name. for auto-generating code
+  p = RemapParticleID(p);
+
+  switch (p) {
+  case Unknown:
+    return (char*)"Unknown";
+  case Gamma:
+    return (char*)"gamma";
+  case Positron:
+    return (char*)"e+";
+  case Electron:
+    return (char*)"e-";
+  case Neutrino:
+    return (char*)"nu_e";
+  case MuonPlus:
+    return (char*)"mu+";
+  case MuonMinus:
+    return (char*)"mu-";
+  case Pi0:
+    return (char*)"pi0";
+  case PiPlus:
+    return (char*)"pi+";
+  case PiMinus:
+    return (char*)"pi-";
+  case KLong:
+    return (char*)"K_L0";
+  case KPlus:
+    return (char*)"K+";
+  case KMinus:
+    return (char*)"K-";
+  case Neutron:
+    return (char*)"n0";
+  case Proton:
+    return (char*)"p+";
+  case AntiProton:
+    return (char*)"anti-p-";
+  case KShort:
+    return (char*)"K_S0";
+  case Eta:
+    return (char*)"eta";
+  case Lambda:
+    return (char*)"Lambda0";
+  case SigmaPlus:
+    return (char*)"Sigma+";
+  case Sigma0:
+    return (char*)"Sigma0";
+  case SigmaMinus:
+    return (char*)"Sigma-";
+  case Xi0:
+    return (char*)"Xi0";
+  case XiMinus:
+    return (char*)"Xi-";
+  case OmegaMinus:
+    return (char*)"Omega-";
+  case AntiNeutron:
+    return (char*)"anti-n0";
+  case AntiLambda:
+    return (char*)"anti-Lambda0";
+  case AntiSigmaMinus:
+    return (char*)"anti-Sigma-";
+  case AntiSigma0:
+    return (char*)"anti-Sigma0";
+  case AntiSigmaPlus:
+    return (char*)"anti-Sigma+";
+  case AntiXi0:
+    return (char*)"anti-Xi0";
+  case AntiXiPlus:
+    return (char*)"anti-Xi+";
+  case AntiOmegaPlus:
+    return (char*)"anti-Omega+";
+  case Geantino:
+    return (char*)"geantino";
+  case Rho0:
+    return (char*)"rho0";
+  case RhoPlus:
+    return (char*)"rho+";
+  case RhoMinus:
+    return (char*)"rho-";
+  case omega:
+    return (char*)"omega";
+  case EtaPrime:
+    return (char*)"eta'";
+  case phiMeson:
+    return (char*)"phi";
+  case a0_980:
+    return (char*)"a_0";
+  case f0_980:
+    return (char*)"f_0";
+  case KStar_892_0:
+    return (char*)"K*0";
+  case KStar_892_Plus:
+    return (char*)"K*+";
+  case KStar_892_Minus:
+    return (char*)"K*-";
+  case AntiKStar_892_0:
+    return (char*)"anti-K*0";
+  case K1_1400_Plus:
+    return (char*)"K'_1+";
+  case K1_1400_Minus:
+    return (char*)"K'_1-";
+  case b1_1235_Plus:
+    return (char*)"b_1+";
+  case Sigma_1385_Minus:
+    return (char*)"Sigma_1385_Minus";
+  case Sigma_1385_0:
+    return (char*)"Sigma_1385_0";
+  case Sigma_1385_Plus:
+    return (char*)"Sigma_1385_Plus";
+  case Deuteron:
+    return (char*)"deuteron";
+  case Triton:
+    return (char*)"Triton";  // FIX
+  case Helium:
+    return (char*)"Helium";  // FIX
+  case He3:
+    return (char*)"He3";
+  case Li6:
+    return (char*)"Lithium-6";
+  case Li7:
+    return (char*)"Lithium-7";
+  case Be7:
+    return (char*)"Beryllium-7";
+  case Be9:
+    return (char*)"Beryllium-9";
+  case B10:
+    return (char*)"Boron-10";
+  case B11:
+    return (char*)"Boron-11";
+  case C12:
+    return (char*)"Carbon";
+  case N14:
+    return (char*)"Nitrogen";
+  case O16:
+    return (char*)"Oxygen";
+  case F19:
+    return (char*)"Fluorine";
+  case Ne20:
+    return (char*)"Neon";
+  case Na23:
+    return (char*)"Sodium";
+  case Mg24:
+    return (char*)"Magnesium";
+  case Al27:
+    return (char*)"Aluminum";
+  case Si28:
+    return (char*)"Silicon";
+  case P31:
+    return (char*)"Phosphorous";
+  case S32:
+    return (char*)"Sulphur";
+  case Cl35:
+    return (char*)"Chlorine";
+  case Ar36:
+    return (char*)"Argon";
+  case K39:
+    return (char*)"Potassium";
+  case Ca40:
+    return (char*)"Calcium";
+  case Sc45:
+    return (char*)"Scandium";
+  case Ti48:
+    return (char*)"Titanium";
+  case V51:
+    return (char*)"Vanadium";
+  case Cr52:
+    return (char*)"Chromium";
+  case Mn55:
+    return (char*)"Manganese";
+  case Fe56:
+    return (char*)"Iron";
+  case Co59:
+    return (char*)"Cobalt";
+  case Ni58:
+    return (char*)"Nickel";
+  case Cu63:
+    return (char*)"Copper";
+  case Zn64:
+    return (char*)"Zinc";
+  case Ge74:
+    return (char*)"Germanium";
+  case Se80:
+    return (char*)"Selenium";
+  case Kr84:
+    return (char*)"Krypton";
+  case Sr88:
+    return (char*)"Strontium";
+  case Zr90:
+    return (char*)"Zirconium";
+  case Mo98:
+    return (char*)"Molybdenum";
+  case Pd106:
+    return (char*)"Palladium";
+  case Cd114:
+    return (char*)"Cadmium";
+  case Sn120:
+    return (char*)"Tin";
+  case Xe132:
+    return (char*)"Xenon";
+  case Ba138:
+    return (char*)"Barium";
+  case Ce140:
+    return (char*)"Cesium";
+  case Sm152:
+    return (char*)"Samerium";
+  case Dy164:
+    return (char*)"Dysprosium";
+  case Yb174:
+    return (char*)"Ytterbium";
+  case W184:
+    return (char*)"Tungsten";
+  case Pt194:
+    return (char*)"Platium";
+  case Au197:
+    return (char*)"Gold";
+  case Hg202:
+    return (char*)"Mercury";
+  case Pb208:
+    return (char*)"Lead";
+  case U238:
+    return (char*)"Uranium";
+  case DeltaPlusPlus:
+    return (char*)"Delta++";
+  case Jpsi:
+    return (char*)"J/psi";
+  case Eta_c:
+    return (char*)"eta_c";
+  case Chi_c0:
+    return (char*)"chi_c0";
+  case Chi_c1:
+    return (char*)"chi_c1";
+  case Chi_c2:
+    return (char*)"chi_c2";
+  case Psi2s:
+    return (char*)"psi(2S)";
+  case D0:
+    return (char*)"D0";
+  case AntiD0:
+    return (char*)"anti-D0";
+  case DPlus:
+    return (char*)"D+";
+  case Dstar0:
+    return (char*)"D*0";
+  case DstarPlus:
+    return (char*)"D*+";
+  case Lambda_c:
+    return (char*)"Lambda_c0";
   default:
     return (char*)"Unknown";
   }
@@ -528,8 +1036,110 @@ inline static char* ShortName(Particle_t locPID)
 	return (char*)"he";
   case He3:
 	return (char*)"he3";
+  case Li6:
+    return (char*)"li6";
+  case Li7:
+    return (char*)"li7";
+  case Be7:
+    return (char*)"be7";
+  case Be9:
+    return (char*)"be9";
+  case B10:
+    return (char*)"b10";
+  case B11:
+    return (char*)"b11";
+  case C12:
+    return (char*)"c12";
+  case N14:
+    return (char*)"n14";
+  case O16:
+    return (char*)"o16";
+  case F19:
+    return (char*)"f19";
+  case Ne20:
+    return (char*)"ne20";
+  case Na23:
+    return (char*)"na23";
+  case Mg24:
+    return (char*)"mg24";
+  case Al27:
+    return (char*)"al27";
+  case Si28:
+    return (char*)"si28";
+  case P31:
+    return (char*)"p31";
+  case S32:
+    return (char*)"s32";
+  case Cl35:
+    return (char*)"cl35";
+  case Ar36:
+    return (char*)"ar36";
+  case K39:
+    return (char*)"k39";
+  case Ca40:
+    return (char*)"ca40";
+  case Sc45:
+    return (char*)"sc45";
+  case Ti48:
+    return (char*)"ti48";
+  case V51:
+    return (char*)"v51";
+  case Cr52:
+    return (char*)"cr52";
+  case Mn55:
+    return (char*)"mn55";
+  case Fe56:
+    return (char*)"fe56";
+  case Co59:
+    return (char*)"co59";
+  case Ni58:
+    return (char*)"ni58";
+  case Cu63:
+    return (char*)"cu63";
+  case Zn64:
+    return (char*)"zn64";
+  case Ge74:
+    return (char*)"ge74";
+  case Se80:
+    return (char*)"se80";
+  case Kr84:
+    return (char*)"kr84";
+  case Sr88:
+    return (char*)"sr88";
+  case Zr90:
+    return (char*)"zr90";
+  case Mo98:
+    return (char*)"mo98";
+  case Pd106:
+    return (char*)"pd106";
+  case Cd114:
+    return (char*)"cd114";
+  case Sn120:
+    return (char*)"sn120";
+  case Xe132:
+    return (char*)"xe132";
+  case Ba138:
+    return (char*)"ba138";
+  case Ce140:
+    return (char*)"ce140";
+  case Sm152:
+    return (char*)"sm152";
+  case Dy164:
+    return (char*)"dy164";
+  case Yb174:
+    return (char*)"yb174";
+  case W184:
+    return (char*)"w184";
+  case Pt194:
+    return (char*)"pt194";
+  case Au197:
+    return (char*)"au197";
+  case Hg202:
+    return (char*)"hg202";
   case Pb208:
-	return (char*)"pb208";
+    return (char*)"pb208";
+  case U238:
+    return (char*)"u238";
   case Jpsi:
 	return (char*)"jpsi";
   case Eta_c:
@@ -708,8 +1318,110 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
     return Helium;
   else if(strcmp(locParticleName, "Helium-3") == 0)
     return He3;
-  else if(strcmp(locParticleName, "Pb208") == 0)
+  else if(strcmp(locParticleName, "Lithium-6") == 0)
+    return Li6;
+  else if(strcmp(locParticleName, "Lithium-7") == 0)
+    return Li7;
+  else if(strcmp(locParticleName, "Beryllium-7") == 0)
+    return Be7;
+  else if(strcmp(locParticleName, "Beryllium-9") == 0)
+    return Be9;
+  else if(strcmp(locParticleName, "Boron-10") == 0)
+    return B10;
+  else if(strcmp(locParticleName, "Boron-11") == 0)
+    return B11;
+  else if(strcmp(locParticleName, "Carbon") == 0)
+    return C12;
+  else if(strcmp(locParticleName, "Nitrogen") == 0)
+    return N14;
+  else if(strcmp(locParticleName, "Oxygen") == 0)
+    return O16;
+  else if(strcmp(locParticleName, "Fluorine") == 0)
+    return F19;
+  else if(strcmp(locParticleName, "Neon") == 0)
+    return Ne20;
+  else if(strcmp(locParticleName, "Sodium") == 0)
+    return Na23;
+  else if(strcmp(locParticleName, "Magnesium") == 0)
+    return Mg24;
+  else if(strcmp(locParticleName, "Aluminum") == 0)
+    return Al27;
+  else if(strcmp(locParticleName, "Silicon") == 0)
+    return Si28;
+  else if(strcmp(locParticleName, "Phosphorous") == 0)
+    return P31;
+  else if(strcmp(locParticleName, "Sulphur") == 0)
+    return S32;
+  else if(strcmp(locParticleName, "Chlorine") == 0)
+    return Cl35;
+  else if(strcmp(locParticleName, "Argon") == 0)
+    return Ar36;
+  else if(strcmp(locParticleName, "Potassium") == 0)
+    return K39;
+  else if(strcmp(locParticleName, "Calcium") == 0)
+    return Ca40;
+  else if(strcmp(locParticleName, "Scandium") == 0)
+    return Sc45;
+  else if(strcmp(locParticleName, "Titanium") == 0)
+    return Ti48;
+  else if(strcmp(locParticleName, "Vanadium") == 0)
+    return V51;
+  else if(strcmp(locParticleName, "Chromium") == 0)
+    return Cr52;
+  else if(strcmp(locParticleName, "Manganese") == 0)
+    return Mn55;
+  else if(strcmp(locParticleName, "Iron") == 0)
+    return Fe56;
+  else if(strcmp(locParticleName, "Cobalt") == 0)
+    return Co59;
+  else if(strcmp(locParticleName, "Nickel") == 0)
+    return Ni58;
+  else if(strcmp(locParticleName, "Copper") == 0)
+    return Cu63;
+  else if(strcmp(locParticleName, "Zinc") == 0)
+    return Zn64;
+  else if(strcmp(locParticleName, "Germanium") == 0)
+    return Ge74;
+  else if(strcmp(locParticleName, "Selenium") == 0)
+    return Se80;
+  else if(strcmp(locParticleName, "Krypton") == 0)
+    return Kr84;
+  else if(strcmp(locParticleName, "Strontium") == 0)
+    return Sr88;
+  else if(strcmp(locParticleName, "Zirconium") == 0)
+    return Zr90;
+  else if(strcmp(locParticleName, "Molybdenum") == 0)
+    return Mo98;
+  else if(strcmp(locParticleName, "Palladium") == 0)
+    return Pd106;
+  else if(strcmp(locParticleName, "Cadmium") == 0)
+    return Cd114;
+  else if(strcmp(locParticleName, "Tin") == 0)
+    return Sn120;
+  else if(strcmp(locParticleName, "Xenon") == 0)
+    return Xe132;
+  else if(strcmp(locParticleName, "Barium") == 0)
+    return Ba138;
+  else if(strcmp(locParticleName, "Cesium") == 0)
+    return Ce140;
+  else if(strcmp(locParticleName, "Samerium") == 0)
+    return Sm152;
+  else if(strcmp(locParticleName, "Dysprosium") == 0)
+    return Dy164;
+  else if(strcmp(locParticleName, "Ytterbium") == 0)
+    return Yb174;
+  else if(strcmp(locParticleName, "Tungsten") == 0)
+    return W184;
+  else if(strcmp(locParticleName, "Platium") == 0)
+    return Pt194;
+  else if(strcmp(locParticleName, "Gold") == 0)
+    return Au197;
+  else if(strcmp(locParticleName, "Mercury") == 0)
+    return Hg202;
+  else if(strcmp(locParticleName, "Lead") == 0)
     return Pb208;
+  else if(strcmp(locParticleName, "Uranium") == 0)
+    return U238;
   else if(strcmp(locParticleName, "Delta++") == 0)
     return DeltaPlusPlus;
   else if(strcmp(locParticleName, "Jpsi") == 0)
@@ -782,7 +1494,58 @@ inline static unsigned short int IsFixedMass(Particle_t p)
   case Triton:   	return 1;
   case Helium:		return 1;
   case He3:		return 1;
-  case Pb208:	return 1;
+  case Li6:     return 1;
+  case Li7:     return 1;
+  case Be7:     return 1;
+  case Be9:     return 1;
+  case B10:     return 1;
+  case B11:     return 1;
+  case C12:     return 1;
+  case N14:     return 1;
+  case O16:     return 1;
+  case F19:     return 1;
+  case Ne20:    return 1;
+  case Na23:    return 1;
+  case Mg24:    return 1;
+  case Al27:    return 1;
+  case Si28:    return 1;
+  case P31:     return 1;
+  case S32:     return 1;
+  case Cl35:    return 1;
+  case Ar36:    return 1;
+  case K39:     return 1;
+  case Ca40:    return 1;
+  case Sc45:    return 1;
+  case Ti48:    return 1;
+  case V51:     return 1;
+  case Cr52:    return 1;
+  case Mn55:    return 1;
+  case Fe56:    return 1;
+  case Co59:    return 1;
+  case Ni58:    return 1;
+  case Cu63:    return 1;
+  case Zn64:    return 1;
+  case Ge74:    return 1;
+  case Se80:    return 1;
+  case Kr84:    return 1;
+  case Sr88:    return 1;
+  case Zr90:    return 1;
+  case Mo98:    return 1;
+  case Pd106:   return 1;
+  case Cd114:   return 1;
+  case Sn120:   return 1;
+  case Xe132:   return 1;
+  case Ba138:   return 1;
+  case Ce140:   return 1;
+  case Sm152:   return 1;
+  case Dy164:   return 1;
+  case Yb174:   return 1;
+  case W184:    return 1;
+  case Pt194:   return 1;
+  case Au197:   return 1;
+  case Hg202:   return 1;
+  case Pb208:   return 1;
+  case U238:    return 1;
   case Jpsi:    return 1;
   //case eta_c:   return 1;
   //case chi_c0:  return 1;
@@ -958,9 +1721,111 @@ inline static char* ParticleName_ROOT(Particle_t p)
   case Helium:
     return (char*)"He";
   case He3:
-    return (char*)"3He";
+    return (char*)"^{3}He";
+  case Li6:
+    return (char*)"^{6}Li";
+  case Li7:
+    return (char*)"^{7}Li";
+  case Be7:
+    return (char*)"^{7}Be";
+  case Be9:
+    return (char*)"^{9}Be";
+  case B10:
+    return (char*)"^{10}B";
+  case B11:
+    return (char*)"^{11}B";
+  case C12:
+    return (char*)"^{12}C";
+  case N14:
+    return (char*)"^{14}N";
+  case O16:
+    return (char*)"^{16}O";
+  case F19:
+    return (char*)"^{19}F";
+  case Ne20:
+    return (char*)"^{20}Ne";
+  case Na23:
+    return (char*)"^{23}Na";
+  case Mg24:
+    return (char*)"^{24}Mg";
+  case Al27:
+    return (char*)"^{27}Al";
+  case Si28:
+    return (char*)"^{28}Si";
+  case P31:
+    return (char*)"^{31}P";
+  case S32:
+    return (char*)"^{32}S";
+  case Cl35:
+    return (char*)"^{35}Cl";
+  case Ar36:
+    return (char*)"^{36}Ar";
+  case K39:
+    return (char*)"^{39}K";
+  case Ca40:
+    return (char*)"^{40}Ca";
+  case Sc45:
+    return (char*)"^{45}Sc";
+  case Ti48:
+    return (char*)"^{48}Ti";
+  case V51:
+    return (char*)"^{51}V";
+  case Cr52:
+    return (char*)"^{52}Cr";
+  case Mn55:
+    return (char*)"^{55}Mn";
+  case Fe56:
+    return (char*)"^{56}Fe";
+  case Co59:
+    return (char*)"^{59}Co";
+  case Ni58:
+    return (char*)"^{58}Ni";
+  case Cu63:
+    return (char*)"^{63}Cu";
+  case Zn64:
+    return (char*)"^{64}Zn";
+  case Ge74:
+    return (char*)"^{74}Ge";
+  case Se80:
+    return (char*)"^{80}Se";
+  case Kr84:
+    return (char*)"^{84}Kr";
+  case Sr88:
+    return (char*)"^{88}Sr";
+  case Zr90:
+    return (char*)"^{90}Zr";
+  case Mo98:
+    return (char*)"^{98}Mo";
+  case Pd106:
+    return (char*)"^{106}Pd";
+  case Cd114:
+    return (char*)"^{114}Cd";
+  case Sn120:
+    return (char*)"^{120}Sn";
+  case Xe132:
+    return (char*)"^{132}Xe";
+  case Ba138:
+    return (char*)"^{138}Ba";
+  case Ce140:
+    return (char*)"^{140}Ce";
+  case Sm152:
+    return (char*)"^{152}Sm";
+  case Dy164:
+    return (char*)"^{164}Dy";
+  case Yb174:
+    return (char*)"^{174}Yb";
+  case W184:
+    return (char*)"^{184}W";
+  case Pt194:
+    return (char*)"^{194}Pt";
+  case Au197:
+    return (char*)"^{197}Au";
+  case Hg202:
+    return (char*)"^{202}Hg";
   case Pb208:
-    return (char*)"Pb^{208}";
+    return (char*)"^{208}Pb";
+  case U238:
+    return (char*)"^{238}U";
   case Sigma_1385_Minus:
     return (char*)"#Sigma(1385)^{#minus}";
   case Sigma_1385_0:
@@ -1057,7 +1922,58 @@ inline static double ParticleMass(Particle_t p)
   case Triton:	    return 2.808921004;     // from NIST 5.00735630 x 10^-27 kg
   case Helium:		return 3.727379238;     // from NIST 6.64465675 x 10-27 kg
   case He3:  		return 2.809413498;
-  case Pb208:	        return 193.72899;       // NIST gives 207.976627 AMU
+  case Li6:         return 5.60305;
+  case Li7:         return 6.53536;
+  case Be7:         return 6.53622;
+  case Be9:         return 8.39479;
+  case B10:         return 9.32699;
+  case B11:         return 10.25510;
+  case C12:         return 11.17793;
+  case N14:         return 13.04378;
+  case O16:         return 14.89917;
+  case F19:         return 17.69690;
+  case Ne20:        return 18.62284;
+  case Na23:        return 21.41483;
+  case Mg24:        return 22.34193;
+  case Al27:        return 25.13314;
+  case Si28:        return 26.06034;
+  case P31:         return 28.85188;
+  case S32:         return 29.78180;
+  case Cl35:        return 32.57328;
+  case Ar36:        return 33.50356;
+  case K39:         return 36.29447;
+  case Ca40:        return 37.22492;
+  case Sc45:        return 41.87617;
+  case Ti48:        return 44.66324;
+  case V51:         return 47.45401;
+  case Cr52:        return 48.38228;
+  case Mn55:        return 51.17447;
+  case Fe56:        return 52.10307;
+  case Co59:        return 54.89593;
+  case Ni58:        return 53.96644;
+  case Cu63:        return 58.61856;
+  case Zn64:        return 59.54963;
+  case Ge74:        return 68.85715;
+  case Se80:        return 74.44178;
+  case Kr84:        return 78.16309;
+  case Sr88:        return 81.88358;
+  case Zr90:        return 83.74571;
+  case Mo98:        return 91.19832;
+  case Pd106:       return 98.64997;
+  case Cd114:       return 106.10997;
+  case Sn120:       return 111.68821;
+  case Xe132:       return 122.86796;
+  case Ba138:       return 128.45793;
+  case Ce140:       return 130.32111;
+  case Sm152:       return 141.51236;
+  case Dy164:       return 152.69909;
+  case Yb174:       return 162.02245;
+  case W184:        return 171.34924;
+  case Pt194:       return 180.67513;
+  case Au197:       return 183.47324;
+  case Hg202:       return 188.13451;
+  case Pb208:	    return 193.72899;       // NIST gives 207.976627 AMU
+  case U238:        return 221.74295;
   case Sigma_1385_Minus:	return 1.3872;
   case Sigma_1385_0:		return 1.3837;
   case Sigma_1385_Plus:	return 1.38280;
@@ -1138,8 +2054,59 @@ inline static int ParticleCharge(Particle_t p)
   case Deuteron:	return 1;
   case Triton:  	return 1;
   case Helium:		return 2;
-  case He3:		return 2;
-  case Pb208:	return 82;
+  case He3:		    return 2;
+  case Li6:         return 3;
+  case Li7:         return 3;
+  case Be7:         return 4;
+  case Be9:         return 4;
+  case B10:         return 5;
+  case B11:         return 5;
+  case C12:         return 6;
+  case N14:         return 7;
+  case O16:         return 8;
+  case F19:         return 9;
+  case Ne20:        return 10;
+  case Na23:        return 11;
+  case Mg24:        return 12;
+  case Al27:        return 13;
+  case Si28:        return 14;
+  case P31:         return 15;
+  case S32:         return 16;
+  case Cl35:        return 17;
+  case Ar36:        return 18;
+  case K39:         return 19;
+  case Ca40:        return 20;
+  case Sc45:        return 21;
+  case Ti48:        return 22;
+  case V51:         return 23;
+  case Cr52:        return 24;
+  case Mn55:        return 25;
+  case Fe56:        return 26;
+  case Co59:        return 27;
+  case Ni58:        return 28;
+  case Cu63:        return 29;
+  case Zn64:        return 30;
+  case Ge74:        return 32;
+  case Se80:        return 34;
+  case Kr84:        return 36;
+  case Sr88:        return 38;
+  case Zr90:        return 40;
+  case Mo98:        return 42;
+  case Pd106:       return 46;
+  case Cd114:       return 48;
+  case Sn120:       return 50;
+  case Xe132:       return 54;
+  case Ba138:       return 56;
+  case Ce140:       return 58;
+  case Sm152:       return 62;
+  case Dy164:       return 66;
+  case Yb174:       return 70;
+  case W184:        return 74;
+  case Pt194:       return 78;
+  case Au197:       return 79;
+  case Hg202:       return 80;
+  case Pb208:       return 82;
+  case U238:        return 92;
   case Sigma_1385_Minus:	return -1;
   case Sigma_1385_0:		return 0;
   case Sigma_1385_Plus:	return 1;
@@ -1225,7 +2192,58 @@ inline static int PDGtype(Particle_t p)
   case Sigma_1385_Minus:	return 3114;
   case Sigma_1385_0:		return 3214;
   case Sigma_1385_Plus:	return 3224;
-  case Pb208: return 1000822080; // see note 14 in PDG (pg. 416 of 2012 full listing)
+  case Li6:      return 1000030060;
+  case Li7:      return 1000030070;
+  case Be7:      return 1000040070;
+  case Be9:      return 1000040090;
+  case B10:      return 1000050100;
+  case B11:      return 1000050110;
+  case C12:      return 1000060120;
+  case N14:      return 1000070140;
+  case O16:      return 1000080160;
+  case F19:      return 1000090190;
+  case Ne20:     return 1000100200;
+  case Na23:     return 1000110230;
+  case Mg24:     return 1000120240;
+  case Al27:     return 1000130270;
+  case Si28:     return 1000140280;
+  case P31:      return 1000150310;
+  case S32:      return 1000160320;
+  case Cl35:     return 1000170350;
+  case Ar36:     return 1000180360;
+  case K39:      return 1000190390;
+  case Ca40:     return 1000200400;
+  case Sc45:     return 1000210450;
+  case Ti48:     return 1000220480;
+  case V51:      return 1000230510;
+  case Cr52:     return 1000240520;
+  case Mn55:     return 1000250550;
+  case Fe56:     return 1000260560;
+  case Co59:     return 1000270590;
+  case Ni58:     return 1000280580;
+  case Cu63:     return 1000290630;
+  case Zn64:     return 1000300640;
+  case Ge74:     return 1000320740;
+  case Se80:     return 1000340800;
+  case Kr84:     return 1000360840;
+  case Sr88:     return 1000380880;
+  case Zr90:     return 1000400900;
+  case Mo98:     return 1000420980;
+  case Pd106:    return 1000461060;
+  case Cd114:    return 1000481140;
+  case Sn120:    return 1000501200;
+  case Xe132:    return 1000541320;
+  case Ba138:    return 1000561380;
+  case Ce140:    return 1000581400;
+  case Sm152:    return 1000621520;
+  case Dy164:    return 1000661640;
+  case Yb174:    return 1000701740;
+  case W184:     return 1000741840;
+  case Pt194:    return 1000781940;
+  case Au197:    return 1000791970;
+  case Hg202:    return 1000802020;
+  case Pb208:    return 1000822080;
+  case U238:     return 1000922380;
   case DeltaPlusPlus: return 2224;
   case Jpsi:          return 443;
   case Eta_c:         return 441;
@@ -1301,7 +2319,58 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 3114:			return Sigma_1385_Minus;
   case 3214:			return Sigma_1385_0;
   case 3224:			return Sigma_1385_Plus;
-  case 1000822080:	return Pb208; // see note 14 in PDG (pg. 416 of 2012 full listing)
+  case 1000030060:  return Li6;
+  case 1000030070:  return Li7;
+  case 1000040070:  return Be7;
+  case 1000040090:  return Be9;
+  case 1000050100:  return B10;
+  case 1000050110:  return B11;
+  case 1000060120:  return C12;
+  case 1000070140:  return N14;
+  case 1000080160:  return O16;
+  case 1000090190:  return F19;
+  case 1000100200:  return Ne20;
+  case 1000110230:  return Na23;
+  case 1000120240:  return Mg24;
+  case 1000130270:  return Al27;
+  case 1000140280:  return Si28;
+  case 1000150310:  return P31;
+  case 1000160320:  return S32;
+  case 1000170350:  return Cl35;
+  case 1000180360:  return Ar36;
+  case 1000190390:  return K39;
+  case 1000200400:  return Ca40;
+  case 1000210450:  return Sc45;
+  case 1000220480:  return Ti48;
+  case 1000230510:  return V51;
+  case 1000240520:  return Cr52;
+  case 1000250550:  return Mn55;
+  case 1000260560:  return Fe56;
+  case 1000270590:  return Co59;
+  case 1000280580:  return Ni58;
+  case 1000290630:  return Cu63;
+  case 1000300640:  return Zn64;
+  case 1000320740:  return Ge74;
+  case 1000340800:  return Se80;
+  case 1000360840:  return Kr84;
+  case 1000380880:  return Sr88;
+  case 1000400900:  return Zr90;
+  case 1000420980:  return Mo98;
+  case 1000461060:  return Pd106;
+  case 1000481140:  return Cd114;
+  case 1000501200:  return Sn120;
+  case 1000541320:  return Xe132;
+  case 1000561380:  return Ba138;
+  case 1000581400:  return Ce140;
+  case 1000621520:  return Sm152;
+  case 1000661640:  return Dy164;
+  case 1000701740:  return Yb174;
+  case 1000741840:  return W184;
+  case 1000781940:  return Pt194;
+  case 1000791970:  return Au197;
+  case 1000802020:  return Hg202;
+  case 1000822080:  return Pb208;
+  case 1000922380:  return U238;
   case 2224:         return DeltaPlusPlus;
   case 443:          return Jpsi;
   case 441:          return Eta_c;
@@ -1342,7 +2411,58 @@ inline static int Is_FinalStateParticle(Particle_t locPID)
 		case Triton:      return 1;
 		case Helium:      return 1;
 		case He3:         return 1;
-		case Pb208:       return 1;
+        case Li6:         return 1;
+        case Li7:         return 1;
+        case Be7:         return 1;
+        case Be9:         return 1;
+        case B10:         return 1;
+        case B11:         return 1;
+        case C12:         return 1;
+        case N14:         return 1;
+        case O16:         return 1;
+        case F19:         return 1;
+        case Ne20:        return 1;
+        case Na23:        return 1;
+        case Mg24:        return 1;
+        case Al27:        return 1;
+        case Si28:        return 1;
+        case P31:         return 1;
+        case S32:         return 1;
+        case Cl35:        return 1;
+        case Ar36:        return 1;
+        case K39:         return 1;
+        case Ca40:        return 1;
+        case Sc45:        return 1;
+        case Ti48:        return 1;
+        case V51:         return 1;
+        case Cr52:        return 1;
+        case Mn55:        return 1;
+        case Fe56:        return 1;
+        case Co59:        return 1;
+        case Ni58:        return 1;
+        case Cu63:        return 1;
+        case Zn64:        return 1;
+        case Ge74:        return 1;
+        case Se80:        return 1;
+        case Kr84:        return 1;
+        case Sr88:        return 1;
+        case Zr90:        return 1;
+        case Mo98:        return 1;
+        case Pd106:       return 1;
+        case Cd114:       return 1;
+        case Sn120:       return 1;
+        case Xe132:       return 1;
+        case Ba138:       return 1;
+        case Ce140:       return 1;
+        case Sm152:       return 1;
+        case Dy164:       return 1;
+        case Yb174:       return 1;
+        case W184:        return 1;
+        case Pt194:       return 1;
+        case Au197:       return 1;
+        case Hg202:       return 1;
+        case Pb208:       return 1;
+        case U238:        return 1;
 		default: return 0; //decaying
 	}
 }
@@ -1432,9 +2552,110 @@ inline static char* Get_ShortName(Particle_t locPID)
 		return (char*)"he";
 	case He3:
 		return (char*)"he3";
-	case Pb208:
-		return (char*)"pb";
-
+    case Li6:
+        return (char*)"li6";
+    case Li7:
+        return (char*)"li7";
+    case Be7:
+        return (char*)"be7";
+    case Be9:
+        return (char*)"be9";
+    case B10:
+        return (char*)"b10";
+    case B11:
+        return (char*)"b11";
+    case C12:
+        return (char*)"c12";
+    case N14:
+        return (char*)"n14";
+    case O16:
+        return (char*)"o16";
+    case F19:
+        return (char*)"f19";
+    case Ne20:
+        return (char*)"ne20";
+    case Na23:
+        return (char*)"na23";
+    case Mg24:
+        return (char*)"mg24";
+    case Al27:
+        return (char*)"al27";
+    case Si28:
+        return (char*)"si28";
+    case P31:
+        return (char*)"p31";
+    case S32:
+        return (char*)"s32";
+    case Cl35:
+        return (char*)"cl35";
+    case Ar36:
+        return (char*)"ar36";
+    case K39:
+        return (char*)"k39";
+    case Ca40:
+        return (char*)"ca40";
+    case Sc45:
+        return (char*)"sc45";
+    case Ti48:
+        return (char*)"ti48";
+    case V51:
+        return (char*)"v51";
+    case Cr52:
+        return (char*)"cr52";
+    case Mn55:
+        return (char*)"mn55";
+    case Fe56:
+        return (char*)"fe56";
+    case Co59:
+        return (char*)"co59";
+    case Ni58:
+        return (char*)"ni58";
+    case Cu63:
+        return (char*)"cu63";
+    case Zn64:
+        return (char*)"zn64";
+    case Ge74:
+        return (char*)"ge74";
+    case Se80:
+        return (char*)"se80";
+    case Kr84:
+        return (char*)"kr84";
+    case Sr88:
+        return (char*)"sr88";
+    case Zr90:
+        return (char*)"zr90";
+    case Mo98:
+        return (char*)"mo98";
+    case Pd106:
+        return (char*)"pd106";
+    case Cd114:
+        return (char*)"cd114";
+    case Sn120:
+        return (char*)"sn120";
+    case Xe132:
+        return (char*)"xe132";
+    case Ba138:
+        return (char*)"ba138";
+    case Ce140:
+        return (char*)"ce140";
+    case Sm152:
+        return (char*)"sm152";
+    case Dy164:
+        return (char*)"dy164";
+    case Yb174:
+        return (char*)"yb174";
+    case W184:
+        return (char*)"w184";
+    case Pt194:
+        return (char*)"pt194";
+    case Au197:
+        return (char*)"au197";
+    case Hg202:
+        return (char*)"hg202";
+    case Pb208:
+        return (char*)"pb208";
+    case U238:
+        return (char*)"u238";
 	case Jpsi:
 		return (char*)"jpsi";
 	case Eta_c:
