@@ -136,6 +136,7 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     USE_RF_BUNCH = 1;
 
     NO_TRACKS = false;
+    CCAL_CALIB = false;
 
     if(gPARMS){
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
@@ -150,6 +151,7 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_TRACKS", NO_TRACKS, "Don't use tracking information for timing calibrations");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:CCAL_CALIB", CCAL_CALIB, "Perform CCAL calibrations");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -299,7 +301,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(bcalUnifiedHitVector);
     loop->Get(tofHitVector);
     loop->Get(fcalHitVector);
-    loop->Get(ccalHitVector);
+    if(CCAL_CALIB) {
+      loop->Get(ccalHitVector);
+    }
     loop->Get(dircPmtHitVector);
     loop->Get(psHitVector);
     loop->Get(pscHitVector);
@@ -497,42 +501,43 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCAL total energy", fcalHitETot,
                          "FCAL total energy;", 400, 0, 8000);
 
-
-    // Do the same thing for the CCAL as a start
-    double ccalHitETot = 0;
-    double ccalHitEwtT = 0;
-    for (i = 0; i < ccalHitVector.size(); i++){
-      ccalHitETot += ccalHitVector[i]->E;
-      ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
-    }
-    ccalHitEwtT /= ccalHitETot;
+    if(CCAL_CALIB) {
+      // Do the same thing for the CCAL as a start
+      double ccalHitETot = 0;
+      double ccalHitEwtT = 0;
+      for (i = 0; i < ccalHitVector.size(); i++){
+	ccalHitETot += ccalHitVector[i]->E;
+	ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
+      }
+      ccalHitEwtT /= ccalHitETot;
     
-	// extract the CCAL Geometry
-	vector<const DCCALGeometry*> ccalGeomVect;
-	loop->Get( ccalGeomVect );
-	if (ccalGeomVect.size() < 1){
-	  cout << "CCAL Geometry not available?" << endl;
-	} else {
+      // extract the CCAL Geometry
+      vector<const DCCALGeometry*> ccalGeomVect;
+      loop->Get( ccalGeomVect );
+      if (ccalGeomVect.size() < 1){
+	cout << "CCAL Geometry not available?" << endl;
+      } else {
         for (i = 0; i < ccalHitVector.size(); i++){
-            Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
-                             "CCALHit time;t [ns];", nBins, xMin, xMax);
-	    // next line commented out to suppress warning
-	    //            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
-            for (i = 0; i < ccalHitVector.size(); i++) {
-                Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
-                                ccalHitVector[i]->row, ccalHitVector[i]->column, 
-                                "CCAL Hit Occupancy; column; row",
-                                13, -1.5, 11.5, 13, -1.5, 11.5);
-                double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
-                //Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-                Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-                                        ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
-                                        "CCAL Hit Local Time [ns]; column; row",
-                                        13, -1.5, 11.5, 13, -1.5, 11.5);
-            }
+	  Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
+			   "CCALHit time;t [ns];", nBins, xMin, xMax);
+	  // next line commented out to suppress warning
+	  //            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
+	  for (i = 0; i < ccalHitVector.size(); i++) {
+	    Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
+			    ccalHitVector[i]->row, ccalHitVector[i]->column, 
+			    "CCAL Hit Occupancy; column; row",
+			    13, -1.5, 11.5, 13, -1.5, 11.5);
+	    double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
+	    //Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+	    Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
+				    ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
+				    "CCAL Hit Local Time [ns]; column; row",
+				    13, -1.5, 11.5, 13, -1.5, 11.5);
+	  }
         }
+      }
     }
-    
+
     for (i = 0; i < tagmHitVector.size(); i++){
         Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit time", tagmHitVector[i]->t,
                 "TAGMHit time;t [ns];", nBins, xMin, xMax);
