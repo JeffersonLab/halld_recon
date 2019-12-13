@@ -755,13 +755,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
    if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
    
-   cout << "________________" << endl;
-   	cout << trdhits.size() << endl;
-	cout << gemhits.size() << endl;	
-	cout << cdchits.size() << endl;
-	cout << fdchits.size() << endl;
-
-
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS) 
      for(unsigned int i=0; i<cdchits.size(); i++)AddCDCHit(cdchits[i]);
@@ -770,19 +763,17 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    if (USE_TRD_HITS){
      for(unsigned int i=0; i<trdhits.size(); i++)AddTRDHit(trdhits[i]);
      if (trdhits.size()>0){
-       _DBG_ << "Got " << trdhits.size() << " TRD hits" << endl;
+       _DBG_ << "Got TRD" <<endl;
        got_trd_gem_hits=true;
      }
    }
    if (USE_GEM_HITS){
      for(unsigned int i=0; i<gemhits.size(); i++)AddGEMHit(gemhits[i]);
      if (gemhits.size()>0){
-       _DBG_ << "Got " << gemhits.size() << " GEM hits" << endl;
+       _DBG_ << " Got GEM" << endl;
        got_trd_gem_hits=true;
      }
    }
-   //if (trdhits.size()>0 || gemhits.size()>0) DEBUG_LEVEL=51;
-   //else DEBUG_LEVEL=0;
 
    unsigned int num_good_cdchits=my_cdchits.size();
    unsigned int num_good_fdchits=my_fdchits.size(); 
@@ -816,9 +807,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    // Order the fdc hits by z
    if (num_good_fdchits>0){
       stable_sort(my_fdchits.begin(),my_fdchits.end(),DKalmanSIMDFDCHit_cmp);
-      for (unsigned int i=0;i<my_fdchits.size();i++){
-	printf("z %f\n",my_fdchits[i]->z);
-      }
+
       // Look for multiple hits on the same wire 
       for (unsigned int i=0;i<my_fdchits.size()-1;i++){
 	if (my_fdchits[i]->hit==NULL || my_fdchits[i+1]->hit==NULL) continue;
@@ -1907,17 +1896,21 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    bool stepped_to_endplate=false;
    unsigned int m=0;
    double z_max=400.;
-   if (got_trd_gem_hits) z_max=600.;
+   double r2max=50.*50.;
+   if (got_trd_gem_hits){
+     z_max=600.;
+     r2max=100.*100.;
+   }
    for (m=0;m<my_fdchits.size();m++){
       if (fabs(S(state_q_over_p))>Q_OVER_P_MAX
 	  || fabs(S(state_tx))>TAN_MAX
 	  || fabs(S(state_ty))>TAN_MAX
-	  || S(state_x)*S(state_x)+S(state_y)*S(state_y)>50.*50.  
+	  || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max  
 	  || z>z_max || z<Z_MIN
          ){
          break;
       }
-
+     
       zhit=my_fdchits[m]->z;
       if (fabs(old_zhit-zhit)>EPS){
          bool done=false;
@@ -1925,8 +1918,8 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
 	   if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX
 	       || fabs(S(state_tx))>TAN_MAX
 	       || fabs(S(state_ty))>TAN_MAX  
-	       || S(state_x)*S(state_x)+S(state_y)*S(state_y)>50.*50.
-	       || z>400. || z< Z_MIN
+	       || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max
+	       || z>z_max || z< Z_MIN
                ){
                break;
             }
@@ -2024,33 +2017,33 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    // Fill in Lorentz deflection parameters
    for (unsigned int m=0;m<forward_traj.size();m++){
       if (my_id>0){
-         unsigned int hit_id=my_id-1;
-	 if (my_fdchits[hit_id]->hit==NULL) continue;
+         unsigned int hit_id=my_id-1;	
          double z=forward_traj[m].z;
          if (fabs(z-my_fdchits[hit_id]->z)<EPS2){
             forward_traj[m].h_id=my_id;
 
-            // Get the magnetic field at this position along the trajectory
-            bfield->GetField(forward_traj[m].S(state_x),forward_traj[m].S(state_y),
-                  z,Bx,By,Bz);
-            double Br=sqrt(Bx*Bx+By*By);
+	    if (my_fdchits[hit_id]->hit!=NULL){
+	      // Get the magnetic field at this position along the trajectory
+	      bfield->GetField(forward_traj[m].S(state_x),forward_traj[m].S(state_y),
+			       z,Bx,By,Bz);
+	      double Br=sqrt(Bx*Bx+By*By);
 
-            // Angle between B and wire
-            double my_phi=0.;
-            if (Br>0.) my_phi=acos((Bx*my_fdchits[hit_id]->sina 
-                     +By*my_fdchits[hit_id]->cosa)/Br);
-            /*
-               lorentz_def->GetLorentzCorrectionParameters(forward_traj[m].pos.x(),
-               forward_traj[m].pos.y(),
-               forward_traj[m].pos.z(),
-               tanz,tanr);
-               my_fdchits[hit_id]->nr=tanr;
-               my_fdchits[hit_id]->nz=tanz;
-               */
+	      // Angle between B and wire
+	      double my_phi=0.;
+	      if (Br>0.) my_phi=acos((Bx*my_fdchits[hit_id]->sina 
+				      +By*my_fdchits[hit_id]->cosa)/Br);
+	      /*
+		lorentz_def->GetLorentzCorrectionParameters(forward_traj[m].pos.x(),
+		forward_traj[m].pos.y(),
+		forward_traj[m].pos.z(),
+		tanz,tanr);
+		my_fdchits[hit_id]->nr=tanr;
+		my_fdchits[hit_id]->nz=tanz;
+	      */
 
-            my_fdchits[hit_id]->nr=LORENTZ_NR_PAR1*Bz*(1.+LORENTZ_NR_PAR2*Br);
-            my_fdchits[hit_id]->nz=(LORENTZ_NZ_PAR1+LORENTZ_NZ_PAR2*Bz)*(Br*cos(my_phi));
-
+	      my_fdchits[hit_id]->nr=LORENTZ_NR_PAR1*Bz*(1.+LORENTZ_NR_PAR2*Br);
+	      my_fdchits[hit_id]->nz=(LORENTZ_NZ_PAR1+LORENTZ_NZ_PAR2*Bz)*(Br*cos(my_phi));
+	    }
 
             my_id--;
 
@@ -2068,7 +2061,7 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
    }
 
    if (DEBUG_LEVEL>20)
-   {
+    {
       cout << "--- Forward fdc trajectory ---" <<endl;
       for (unsigned int m=0;m<forward_traj.size();m++){
          DMatrix5x1 S=(forward_traj[m].S);
@@ -8068,6 +8061,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 	       if (my_fdchits[id]->hit!=NULL){
 		 my_fdchits[id]->hit->wire->udir.Dot(DVector3(scale*tx,scale*ty,scale));
 	       }
+	       if (my_fdchits[id]->hit==NULL)_DBG_ << "Used TRD/GEM?" << endl;
                DTrackFitter::pull_t thisPull = pull_t(resi_a,sqrt(V(0,0)),
 						      forward_traj[m].s,
 						      fdc_updates[id].tdrift,
