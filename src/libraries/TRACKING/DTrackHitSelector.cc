@@ -68,6 +68,19 @@ void DTrackHitSelector::GetFDCHits(fit_type_t fit_type, const DReferenceTrajecto
 }
 
 //---------------------
+// GetFDCHits
+//---------------------
+void DTrackHitSelector::GetFDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, DTrackFitter *fitter,int N) const
+{
+	/// Get all hits from the FDC and add them to the specified DTrackFitter object
+
+	vector<const DFDCPseudo*> fdchits_out;
+	GetFDCHits(Bz,q,extrapolations, fdchits_in, fdchits_out,N);
+	sort(fdchits_out.begin(), fdchits_out.end(), FDCSortByZincreasing);
+	for(unsigned int i=0; i<fdchits_out.size(); i++)fitter->AddHit(fdchits_out[i]);
+}
+
+//---------------------
 // GetTRDHits
 //---------------------
 void DTrackHitSelector::GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, DTrackFitter *fitter) const
