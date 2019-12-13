@@ -2,6 +2,7 @@
 
 #include <DANA/DApplication.h>
 #include <JANA/JCalibration.h>
+#include <CCAL/DCCALShower.h>
 
 int& DEventWriterREST::Get_NumEventWriterThreads(void) const
 {

@@ -1315,38 +1315,28 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 	      map<shared_ptr<const DDIRCMatchParams> ,vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
 	      locDetectorMatches->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParams);
 
-	      if(RECO_DIRC_CALC_LUT) {
-		      TVector3 locProjPos(dircIter->getX(),dircIter->getY(),dircIter->getZ());
-		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
-		      double locFlightTime = dircIter->getT();
-
-		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
-			  locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
+	      // add hits to match list
+	      hddm_r::DircMatchHitList::iterator dircMatchHitIter = dircMatchHitList.begin();
+	      for(; dircMatchHitIter != dircMatchHitList.end(); ++dircMatchHitIter) {
+		size_t locMatchHitTrackIndex = dircMatchHitIter->getTrack();
+		if(locMatchHitTrackIndex == locTrackIndex) {
+		  size_t locMatchHitIndex = dircMatchHitIter->getHit();
+		  locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHits[locMatchHitIndex]);
+		}
 	      }
-	      else {
-		      // add hits to match list
-		      hddm_r::DircMatchHitList::iterator dircMatchHitIter = dircMatchHitList.begin();
-		      for(; dircMatchHitIter != dircMatchHitList.end(); ++dircMatchHitIter) {
-			      size_t locMatchHitTrackIndex = dircMatchHitIter->getTrack();
-			      if(locMatchHitTrackIndex == locTrackIndex) {
-				      size_t locMatchHitIndex = dircMatchHitIter->getHit();
-				      locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHits[locMatchHitIndex]);
-			      }
-		      }
-
-		      locDIRCMatchParams->dExtrapolatedPos = DVector3(dircIter->getX(),dircIter->getY(),dircIter->getZ());
-		      locDIRCMatchParams->dExtrapolatedMom = DVector3(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
-		      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
-		      locDIRCMatchParams->dExpectedThetaC = dircIter->getExpectthetac();
-		      locDIRCMatchParams->dThetaC = dircIter->getThetac();
-		      locDIRCMatchParams->dDeltaT = dircIter->getDeltat();
-		      locDIRCMatchParams->dLikelihoodElectron = dircIter->getLele();
-		      locDIRCMatchParams->dLikelihoodPion = dircIter->getLpi();
-		      locDIRCMatchParams->dLikelihoodKaon = dircIter->getLk();
-		      locDIRCMatchParams->dLikelihoodProton = dircIter->getLp();
-		      locDIRCMatchParams->dNPhotons = dircIter->getNphotons();
-		      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
-	      }
+	      
+	      locDIRCMatchParams->dExtrapolatedPos = DVector3(dircIter->getX(),dircIter->getY(),dircIter->getZ());
+	      locDIRCMatchParams->dExtrapolatedMom = DVector3(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
+	      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
+	      locDIRCMatchParams->dExpectedThetaC = dircIter->getExpectthetac();
+	      locDIRCMatchParams->dThetaC = dircIter->getThetac();
+	      locDIRCMatchParams->dDeltaT = dircIter->getDeltat();
+	      locDIRCMatchParams->dLikelihoodElectron = dircIter->getLele();
+	      locDIRCMatchParams->dLikelihoodPion = dircIter->getLpi();
+	      locDIRCMatchParams->dLikelihoodKaon = dircIter->getLk();
+	      locDIRCMatchParams->dLikelihoodProton = dircIter->getLp();
+	      locDIRCMatchParams->dNPhotons = dircIter->getNphotons();
+	      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
       }
 
       const hddm_r::BcalMatchParamsList &bcalList = iter->getBcalMatchParamses();
