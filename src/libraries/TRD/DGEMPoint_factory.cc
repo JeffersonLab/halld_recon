@@ -41,7 +41,7 @@ jerror_t DGEMPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   gemX0 = 43.0;
   gemY0 = -80.0;
   if(runnumber > 70727 && runnumber < 70735) gemX0 = -34.3;
-  if(runnumber > 70734) gemX0 = 4.75;
+  if(runnumber > 70734 && runnumber < 71009) gemX0 = 4.75;
   gem_pitch = 0.04;   // 0.4 mm
 
   // Some parameters for defining wire and strip X/Y matching

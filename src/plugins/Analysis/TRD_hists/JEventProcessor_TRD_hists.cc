@@ -46,6 +46,11 @@ static TH1I *hWireTRDPoint_Time;
 static TH2I *hGEMSRSPoint_TrackX[5], *hGEMSRSPoint_TrackY[5];
 static TH2I *hGEMSRSPoint_DeltaXY[5], *hGEMSRSPoint_DeltaXY_Pos[5], *hGEMSRSPoint_DeltaXY_Neg[5];
 
+const int pbins = 10;
+static TH2I *hGEMSRSPointMomentum_DeltaXY_Pos[pbins], *hWireTRDPointMomentum_DeltaXY_Pos[pbins];
+static TH2I *hGEMSRSPointMomentum_DeltaXY_Neg[pbins], *hWireTRDPointMomentum_DeltaXY_Neg[pbins];
+static TH2I *hPoint_DeltaPsiXY_Pos[pbins], *hPoint_DeltaPsiXY_Neg[pbins];
+
 static TH2I *hWire_GEMTRDXstrip, *hWire_GEMTRDX_DeltaT;
 
 //----------------------------------------------------------------------------------
@@ -109,9 +114,19 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
 	    hGEMSRSPoint_TrackX[i] = new TH2I(Form("GEMSRSPoint_TrackX_%d",i),Form("Package %d; GEM SRS X (cm); Extrapolated track X (cm)",i),200,-55,55,200,-55,55);
 	    hGEMSRSPoint_TrackY[i] = new TH2I(Form("GEMSRSPoint_TrackY_%d",i),Form("Package %d; GEM SRS Y (cm); Extrapolated track Y (cm)",i),200,-85,-65,200,-85,-65);
 	    hGEMSRSPoint_DeltaXY[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
-	     hGEMSRSPoint_DeltaXY_Pos[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Pos_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
-	     hGEMSRSPoint_DeltaXY_Neg[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Neg_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
+	    hGEMSRSPoint_DeltaXY_Pos[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Pos_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
+	    hGEMSRSPoint_DeltaXY_Neg[i] = new TH2I(Form("GEMSRSPoint_DeltaXY_Neg_%d",i),Form("Package %d; #Delta X (cm); #Delta Y (cm)",i),500,-5,5,500,-5,5);
     }
+
+    // Momentum binning (position and angle residuals)
+    for(int i=0; i<pbins; i++) {
+	    hGEMSRSPointMomentum_DeltaXY_Pos[i] = new TH2I(Form("GEMSRSPointMomentum_DeltaXY_Pos_%d",i),Form("Momentum %d-%d (GeV); #Delta X (cm); #Delta Y (cm)",i,i+1),250,-5,5,250,-5,5);
+	    hGEMSRSPointMomentum_DeltaXY_Neg[i] = new TH2I(Form("GEMSRSPointMomentum_DeltaXY_Neg_%d",i),Form("Momentum %d-%d (GeV); #Delta X (cm); #Delta Y (cm)",i,i+1),250,-5,5,250,-5,5);
+	    hWireTRDPointMomentum_DeltaXY_Pos[i] = new TH2I(Form("WireTRDPointMomentum_DeltaXY_Pos_%d",i),Form("Momentum %d-%d (GeV); #Delta X (cm); #Delta Y (cm)",i,i+1),250,-5,5,250,-5,5);
+	    hWireTRDPointMomentum_DeltaXY_Neg[i] = new TH2I(Form("WireTRDPointMomentum_DeltaXY_Neg_%d",i),Form("Momentum %d-%d (GeV); #Delta X (cm); #Delta Y (cm)",i,i+1),250,-5,5,250,-5,5);
+	    hPoint_DeltaPsiXY_Pos[i] = new TH2I(Form("Point_DeltaPsiXY_Pos_%d",i),Form("Momentum %d-%d (GeV); #Delta #Psi_{X} (rad); #Delta #Psi_{Y} (rad)",i,i+1),250,-0.1,0.1,250,-0.1,0.1);
+	    hPoint_DeltaPsiXY_Neg[i] = new TH2I(Form("Point_DeltaPsiXY_Neg_%d",i),Form("Momentum %d-%d (GeV); #Delta #Psi_{X} (rad); #Delta #Psi_{Y} (rad)",i,i+1),250,-0.1,0.1,250,-0.1,0.1);
+    }    
 
     // GEM-Wire TRD correlatioin
     hWire_GEMTRDXstrip = new TH2I("Wire_GEMTRDXstrip", "GEM TRD X strip vs TRD wire # ; TRD wire # ; GEM TRD X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
@@ -296,6 +311,8 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
     for (const auto& track : tracks) {
 
+	    int pbin = track->pmag(); 
+	    if(pbin >= pbins) continue;
 	    int charge = track->charge();
 	    vector<DTrackFitter::Extrapolation_t>extrapolations=track->extrapolations.at(SYS_TRD);
 	    //cout<<"found straight track with "<<extrapolations.size()<<" extrapolations"<<endl;
@@ -313,8 +330,14 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 				    double locDeltaX = point->x - extrapolation.position.X();
 				    double locDeltaY = point->y - extrapolation.position.Y();
 				    hWireTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
-				    if(charge > 0) hWireTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
-				    else hWireTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
+				    if(charge > 0) {
+					    hWireTRDPoint_DeltaXY_Pos->Fill(locDeltaX, locDeltaY);
+					    hWireTRDPointMomentum_DeltaXY_Pos[pbin]->Fill(locDeltaX, locDeltaY);
+				    }
+				    else {
+					    hWireTRDPoint_DeltaXY_Neg->Fill(locDeltaX, locDeltaY);
+					    hWireTRDPointMomentum_DeltaXY_Neg[pbin]->Fill(locDeltaX, locDeltaY);
+				    }
 
 				    if(fabs(locDeltaX) < 5. && fabs(locDeltaY) < 5.) {
 					    hWireTRDPoint_Time->Fill(point->time);
@@ -348,8 +371,37 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 				    double locDeltaX = point->x - extrapolation.position.X();
 				    double locDeltaY = point->y - extrapolation.position.Y();
 				    hGEMSRSPoint_DeltaXY[point->detector]->Fill(locDeltaX, locDeltaY);
-				    if(charge > 0) hGEMSRSPoint_DeltaXY_Pos[point->detector]->Fill(locDeltaX, locDeltaY);
-				    else hGEMSRSPoint_DeltaXY_Neg[point->detector]->Fill(locDeltaX, locDeltaY);
+				    if(charge > 0) {
+					    hGEMSRSPoint_DeltaXY_Pos[point->detector]->Fill(locDeltaX, locDeltaY);
+					    hGEMSRSPointMomentum_DeltaXY_Pos[pbin]->Fill(locDeltaX, locDeltaY);
+				    }
+				    else {
+					    hGEMSRSPoint_DeltaXY_Neg[point->detector]->Fill(locDeltaX, locDeltaY);
+					    hGEMSRSPointMomentum_DeltaXY_Neg[pbin]->Fill(locDeltaX, locDeltaY);
+				    }
+				    
+				    // remove tracks that don't match in position
+				    if(fabs(locDeltaX) > 1. || fabs(locDeltaY) > 1.)
+					    continue;
+
+				    // correlate wire TRD and GEM SRS tracklet with track
+				    for (const auto& trd_point : points) {
+					    
+					    TVector3 trdPoint(trd_point->x, trd_point->y, trd_point->z);
+					    TVector3 gemPoint(point->x, point->y, point->z);
+					    TVector3 tracklet = gemPoint - trdPoint;
+					    TVector3 trackletX = tracklet; trackletX.SetY(0.);
+					    TVector3 trackletY = tracklet; trackletX.SetX(0.);
+					    TVector3 extrapX = extrapolation.momentum; extrapX.SetY(0.); 
+					    TVector3 extrapY = extrapolation.momentum; extrapY.SetX(0.); 
+					    TVector3 zvec(0,0,1);
+					    double locDeltaPsiX = trackletX.Theta() - extrapX.Theta();
+					    double locDeltaPsiY = trackletY.Theta() - extrapY.Theta();
+					    if(charge > 0) 
+						    hPoint_DeltaPsiXY_Pos[pbin]->Fill(locDeltaPsiX, locDeltaPsiY);
+					    else
+						    hPoint_DeltaPsiXY_Neg[pbin]->Fill(locDeltaPsiX, locDeltaPsiY);
+				    }
 			    }
 		    }
 	    }

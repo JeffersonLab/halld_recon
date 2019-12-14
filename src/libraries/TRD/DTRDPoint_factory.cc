@@ -51,7 +51,7 @@ jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 	  wireX0 = -50.6;
 	  gemX0 = -34.2;
   }
-  if(runnumber > 70734) {
+  if(runnumber > 70734 && runnumber < 71009) {
 	  wireX0 = -11.8;
 	  gemX0 = -5.0;
   }

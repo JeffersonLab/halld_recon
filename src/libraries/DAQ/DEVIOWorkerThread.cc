@@ -2258,7 +2258,7 @@ void DEVIOWorkerThread::ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32
 
 	iptr++; //skip first word? (no idata=0) used in GEMRawDecoder::Decode
 
-	while(true) { // while haven't reached event trailer
+	for( ;  iptr<iend; iptr++){
 
 		if(((*iptr>>8) & 0xffffff) == 0x414443) { // magic key for "Data Header" in ADC format
 
@@ -2312,8 +2312,6 @@ void DEVIOWorkerThread::ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32
 			pe = NULL;
 			break;
 		}
-
-		iptr++;
 	}
 
 	iptr =iend;   
