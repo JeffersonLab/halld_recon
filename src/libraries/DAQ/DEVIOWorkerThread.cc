@@ -71,6 +71,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	PARSE_TRIGGER       = true;
 	PARSE_SSP           = true;
 	PARSE_GEMSRS        = true;
+        NSAMPLES_GEMSRS     = 9;
 	
 	LINK_TRIGGERTIME    = true;
 }
@@ -1500,7 +1501,11 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 					while( (*++iptr>>31) == 0 ){
 					
-						if( (*iptr>>30) != 0x01) { jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl; throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);}
+						if( (*iptr>>30) != 0x01) {
+							jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+							DumpBinary(&iptr[-2], iend, 128, iptr);
+							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						}
  
 						// from word 2
 						uint32_t integral                  = (*iptr>>12) & 0x3FFFF;
@@ -1511,7 +1516,10 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						if(VERBOSE>7) cout << "      FADC250 Pulse Data word 2(0x"<<hex<<*iptr<<dec<<")  integral="<<integral<<endl;
 
 						iptr++;
-						if( (*iptr>>30) != 0x00) throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						if( (*iptr>>30) != 0x00){
+							DumpBinary(&iptr[-3], iend, 128, iptr);
+							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+						}
  
 						// from word 3
 						uint32_t course_time               = (*iptr>>21) & 0x1FF;//< 4 ns/count
@@ -2329,7 +2337,7 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	rawDataTS.clear();
 
 	Int_t fAPVHeaderLevel = 1500;
-	Int_t fNbOfTimeSamples = 21; // hard coded maximum number of time samples
+	Int_t fNbOfTimeSamples = NSAMPLES_GEMSRS; // hard coded maximum number of time samples
 
 	uint8_t NCH = 128;
 	
