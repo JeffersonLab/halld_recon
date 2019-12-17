@@ -9,6 +9,11 @@
 // hnamepath: /DIRC_online/LEDRefAdcTime
 // hnamepath: /DIRC_online/LEDRefTdcTime
 // hnamepath: /DIRC_online/LEDRefAdcVsTdcTime
+//
+// e-mail: davidl@jlab.org
+// e-mail: jrsteven@jlab.org
+// e-mail: billlee@jlab.org
+// e-mail: tbritton@jlab.org
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");

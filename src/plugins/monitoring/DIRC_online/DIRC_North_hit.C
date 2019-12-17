@@ -8,6 +8,11 @@
 // hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_Time_LED
 // hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_LED
 // hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_PixelOccupancy_NonLED
+//
+// e-mail: davidl@jlab.org
+// e-mail: jrsteven@jlab.org
+// e-mail: billlee@jlab.org
+// e-mail: tbritton@jlab.org
 
 
 {  

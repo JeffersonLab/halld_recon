@@ -505,8 +505,14 @@ void DEVIOWorkerThread::ParseBORbank(uint32_t* &iptr, uint32_t *iend)
 	iend = &iptr[borevent_len]; // in case they give us too much data!
 	
 	// Make sure BOR header word is right
+	// n.b. CODA writes bor_header = 0x700e01
+	// CDAQ replaces the last "01" with the number of crates.
+	// Prior to Fall 2019 this was 0x700e34 and then 2 more crates
+	// were added to make it 0x700e36. Now we just ignore those
+	// lower 8 bits so this doesn't break in the future.
 	uint32_t bor_header = *iptr++;
-	if( (bor_header!=0x700e01) && (bor_header!=0x700e34) ){
+//	if( (bor_header!=0x700e01) && (bor_header!=0x700e34) ){
+	if( (bor_header>>8) != 0x700e ){
 		stringstream ss;
 		ss << "Bad BOR header: 0x" << hex << bor_header;
 		_DBG_<< ss.str() << endl;
