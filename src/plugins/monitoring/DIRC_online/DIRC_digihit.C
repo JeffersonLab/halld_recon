@@ -8,6 +8,11 @@
 // hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_NonLED
 // hnamepath: /DIRC_online/DigiHit/NorthUpperBox/TDCDigiHit_Time_LED
 // hnamepath: /DIRC_online/DigiHit/NorthUpperBox/TDCDigiHit_Time_NonLED
+//
+// e-mail: davidl@jlab.org
+// e-mail: jrsteven@jlab.org
+// e-mail: billlee@jlab.org
+// e-mail: tbritton@jlab.org
 
 
 {  
