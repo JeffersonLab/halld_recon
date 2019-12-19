@@ -125,7 +125,7 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				newPoint->t_y = t_clus;
 				newPoint->time = (wireHitsX[i]->t + t_clus) / 2.;
 				newPoint->dE_amp = dE_amp;
-				newPoint->detector = 0;
+				newPoint->detector = 2;
 				newPoint->status = 1;
 				newPoint->itrack = 0;
 				newPoint->z = 0;
@@ -165,7 +165,7 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 				newPoint->t_y = ty_clus;
 				newPoint->time = (tx_clus*gemClusX[i]->q_tot + ty_clus*gemClusY[j]->q_tot) / dE_amp;
 				newPoint->dE_amp = dE_amp;
-				newPoint->detector = 1;
+				newPoint->detector = 3;
 				newPoint->status = 1;
 				newPoint->itrack = 0;
 				newPoint->z = 0;
