@@ -5,6 +5,9 @@
 Df250EmulatorAlgorithm_v3::Df250EmulatorAlgorithm_v3(JEventLoop *loop){
     // Enables forced use of default values 
     FORCE_DEFAULT = 0;
+
+    USE_CRATE_DEFAULTS = 1;
+
     // Default values for the essential parameters
     NSA_DEF = 20;
     NSB_DEF = 5;
@@ -26,6 +29,7 @@ Df250EmulatorAlgorithm_v3::Df250EmulatorAlgorithm_v3(JEventLoop *loop){
     VERBOSE = 0;
 
     if(gPARMS){
+        gPARMS->SetDefaultParameter("EMULATION250:USE_CRATE_DEFAULTS", USE_CRATE_DEFAULTS,"Set to >0 to force use of crate-dependent default values");
         gPARMS->SetDefaultParameter("EMULATION250:FORCE_DEFAULT", FORCE_DEFAULT,"Set to >0 to force use of default values");
         gPARMS->SetDefaultParameter("EMULATION250:NSA", NSA_DEF,"Set NSA for firmware emulation, will be overwritten by BORConfig if present");
         gPARMS->SetDefaultParameter("EMULATION250:NSB", NSB_DEF,"Set NSB for firmware emulation, will be overwritten by BORConfig if present");
@@ -50,6 +54,12 @@ void Df250EmulatorAlgorithm_v3::EmulateFirmware(const Df250WindowRawData* rawDat
     if (rawData == NULL) {
         jerr << " ERROR: Df250EmulatorAlgorithm_v3::EmulateFirmware - raw sample data is missing" << endl;
         jerr << " Contact mstaib@jlab.org" << endl;
+	return;
+    } 
+    if (rawData->samples.size() == 0) {
+	jerr << " ERROR: Df250EmulatorAlgorithm_v3::EmulateFirmware - raw sample data has zero size" << endl;
+        jerr << "rocid : " << rawData->rocid << " slot: " << rawData->slot << " channel: " << rawData->channel << endl;
+        //jerr << " Contact mstaib@jlab.org" << endl;
 	return;
     } 
 
@@ -82,6 +92,74 @@ void Df250EmulatorAlgorithm_v3::EmulateFirmware(const Df250WindowRawData* rawDat
             else jout << " WARNING Df250EmulatorAlgorithm_v3::EmulateFirmware No Df250BORConfig == Using default values  " << endl;
 			 //<< rawData->rocid << "/" << rawData->slot << "/" << rawData->channel << endl;
         }
+
+
+	if(USE_CRATE_DEFAULTS) {
+		// BASED on run 71137
+		// FCAL, crates = 11-22
+		if( (rawData->rocid >= 11) && (rawData->rocid <= 22) ) {
+			NSA = 15;
+			NSB = 1;
+			THR = 108;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// BCAL, crates = 31-46
+		else if( (rawData->rocid >= 31) && (rawData->rocid <= 46) ) {
+			NSA = 26;
+			NSB = 1;
+			THR = 105;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// TAGH, crates 73-74, 75[slot 7-16]
+		else if( (rawData->rocid == 73) || (rawData->rocid == 74) || ( (rawData->rocid == 75) && (rawData->slot >= 7) && (rawData->slot <= 16)) ) {
+			NSA = 6;
+			NSB = 3;
+			THR = 300;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// TAGM, crates 71-72, 75[slot 3-6]
+		else if( (rawData->rocid == 71) || (rawData->rocid == 72) || ( (rawData->rocid == 75) && (rawData->slot >= 3) && (rawData->slot <= 6)) ) {
+			NSA = 6;
+			NSB = 3;
+			THR = 150;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// TOF, crates = 77
+		else if( rawData->rocid == 77 ) {
+			NSA = 10;
+			NSB = 1;
+			THR = 160;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// PS, crates = 83-84
+		else if( (rawData->rocid >= 83) && (rawData->rocid <= 84) ) {
+			NSA = 10;
+			NSB = 3;
+			THR = 130;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}
+		// ST, crates = 94
+		else if( rawData->rocid == 94 ) {
+			NSA = 20;
+			NSB = 5;
+			THR = 120;
+			//NPED = NPED_DEF;
+			//MAXPED = MAXPED_DEF;
+			NSAT = 2;
+		}       
+	}
     }
     else{
         NSA    = f250BORConfig->NSA;
@@ -148,6 +226,7 @@ void Df250EmulatorAlgorithm_v3::EmulateFirmware(const Df250WindowRawData* rawDat
     // look for the threhold crossings and compute the integrals
     //unsigned int MAX_SAMPLE = (NSB>0) ? (NW-NSAT) : (NW-NSAT+NSB-1)); // check this
     unsigned int MAX_SAMPLE = NW-NSAT;
+    //cerr << " MAX_SAMPLE = " << MAX_SAMPLE << "  NW = " << NW << "  NSAT = " << NSAT << endl;
     //for (unsigned int i=0; i < MAX_SAMPLE; i++) {
     for (unsigned int i=0; i < MAX_SAMPLE; i++) {
         if ((samples[i] & 0xfff) > THR) {

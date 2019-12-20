@@ -36,6 +36,7 @@ class Df250EmulatorAlgorithm_v3:public Df250EmulatorAlgorithm{
         Df250EmulatorAlgorithm_v3(){};
         // Enables forced use of default values
         int FORCE_DEFAULT;
+        int USE_CRATE_DEFAULTS;
         // Default values for the essential parameters
         uint32_t NSA_DEF; 
         uint32_t NSB_DEF; 
