@@ -8,13 +8,13 @@
 // hnamepath: /TRD_hists/StraightTracks/WireTRDPoint_Time
 
 {
-    TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD_hists/StraightTracks");
+    TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD_hists");
     if(dir) dir->cd();
 
-    TH2I* trackX = (TH2I*)gDirectory->FindObjectAny("WireTRDPoint_TrackX");
-    TH2I* trackY = (TH2I*)gDirectory->FindObjectAny("WireTRDPoint_TrackY");
-    TH2I* deltaXY = (TH2I*)gDirectory->FindObjectAny("WireTRDPoint_DeltaXY");
-    TH2I* t = (TH2I*)gDirectory->FindObjectAny("WireTRDPoint_Time");
+    TH2I* trackX = (TH2I*)gDirectory->FindObjectAny("StraightTracks/WireTRDPoint_TrackX");
+    TH2I* trackY = (TH2I*)gDirectory->FindObjectAny("StraightTracks/WireTRDPoint_TrackY");
+    TH2I* deltaXY = (TH2I*)gDirectory->FindObjectAny("StraightTracks/WireTRDPoint_DeltaXY");
+    TH2I* t = (TH2I*)gDirectory->FindObjectAny("StraightTracks/WireTRDPoint_Time");
     
     if(gPad == NULL){
         TCanvas *c1 = new TCanvas("c1","TRD Extapolated Track Monitor",150,10,990,660);

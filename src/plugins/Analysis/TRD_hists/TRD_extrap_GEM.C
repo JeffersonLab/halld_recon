@@ -7,13 +7,13 @@
 // hnamepath: /TRD_hists/StraightTracks/GEMSRSPoint_DeltaXY_4
 
 {
-    TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD_hists/StraightTracks");
+    TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD_hists");
     if(dir) dir->cd();
 
     int plane = 4;
-    TH2I* trackX = (TH2I*)gDirectory->FindObjectAny(Form("GEMSRSPoint_TrackX_%d",plane));
-    TH2I* trackY = (TH2I*)gDirectory->FindObjectAny(Form("GEMSRSPoint_TrackY_%d",plane));
-    TH2I* deltaXY = (TH2I*)gDirectory->FindObjectAny(Form("GEMSRSPoint_DeltaXY_%d",plane));
+    TH2I* trackX = (TH2I*)gDirectory->FindObjectAny(Form("StraightTracks/GEMSRSPoint_TrackX_%d",plane));
+    TH2I* trackY = (TH2I*)gDirectory->FindObjectAny(Form("StraightTracks/GEMSRSPoint_TrackY_%d",plane));
+    TH2I* deltaXY = (TH2I*)gDirectory->FindObjectAny(Form("StraightTracks/GEMSRSPoint_DeltaXY_%d",plane));
     
     if(gPad == NULL){
         TCanvas *c1 = new TCanvas("c1","TRD Extapolated Track GEM Monitor",150,10,990,660);
