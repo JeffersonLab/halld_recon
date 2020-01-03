@@ -123,6 +123,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		 static const char* static_className(void){return "JEventSource_EVIOpp";}
 		
 		               void Dispatcher(void);
+		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
 		           jerror_t GetEvent(jana::JEvent &event);
 		               void FreeEvent(jana::JEvent &event);
@@ -144,6 +145,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		std::chrono::high_resolution_clock::time_point tstart;
 		std::chrono::high_resolution_clock::time_point tend;
 
+		uint32_t BLOCKS_TO_SKIP;
 		uint32_t MAX_PARSED_EVENTS;
 		mutex PARSED_EVENTS_MUTEX;
 		condition_variable PARSED_EVENTS_CV;
@@ -189,6 +191,8 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		bool     PARSE_EVENTTAG;
 		bool     PARSE_TRIGGER;
 		bool     PARSE_SSP;
+		bool     PARSE_GEMSRS;
+                int      NSAMPLES_GEMSRS;
 		bool     APPLY_TRANSLATION_TABLE;
 		int      ET_STATION_NEVENTS;
 		bool     ET_STATION_CREATE_BLOCKING;
