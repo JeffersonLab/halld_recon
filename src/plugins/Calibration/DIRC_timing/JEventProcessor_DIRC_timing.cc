@@ -1,12 +1,12 @@
 // $Id$
 //
-//    File: JEventProcessor_DIRC_online.cc
+//    File: JEventProcessor_DIRC_timing.cc
 
 
 #include <stdint.h>
 #include <vector>
 
-#include "JEventProcessor_DIRC_online.h"
+#include "JEventProcessor_DIRC_timing.h"
 #include <JANA/JApplication.h>
 
 using namespace std;
@@ -88,26 +88,6 @@ static TH2I *hHit_pixelOccupancy_LED_Event_3[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_Event_5000[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_Event_5000_cut[Nboxes];
 
-static TH1I *hHit_tdcTime_single_channel_r50_c10[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r77_c47[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r103_c47[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r77_c24[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED3[Nboxes];
-
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_in[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_out[Nboxes];
 
@@ -115,7 +95,14 @@ static TH1I *hHit_tdcTime_LED_5000[Nboxes];
 
 uint64_t event_counter;
 
+static TH1I *hHit_areaTime[Nboxes][18];
+
+static TH2I *hHit_pixelOccupancy_LED_column[Nboxes][18];
+
 //static TH1I *hHit_per_Event_photon_LED[Nboxes][2];
+
+static TH2I *hHit_pixelRow_timing[Nboxes];
+
 
 //----------------------------------------------------------------------------------
 
@@ -123,7 +110,7 @@ uint64_t event_counter;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_DIRC_online());
+        app->AddProcessor(new JEventProcessor_DIRC_timing());
     }
 }
 
@@ -131,20 +118,20 @@ extern "C"{
 //----------------------------------------------------------------------------------
 
 
-JEventProcessor_DIRC_online::JEventProcessor_DIRC_online() {
+JEventProcessor_DIRC_timing::JEventProcessor_DIRC_timing() {
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
+JEventProcessor_DIRC_timing::~JEventProcessor_DIRC_timing() {
 }
 
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_DIRC_online::init(void) {
+jerror_t JEventProcessor_DIRC_timing::init(void) {
 
 	event_counter = 0;
 
@@ -153,7 +140,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 
     // create root folder for psc and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
-    TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
+    TDirectory *dircDir = gDirectory->mkdir("DIRC_timing");
     dircDir->cd();
 
     hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 100, -20, 20);
@@ -207,26 +194,6 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 
 	hHit_pixelOccupancy_LED_Event_5000_cut[i] = new TH2I("Hit_PixelOccupancy_Event_5000_event_cut","DIRCPmtHit pixel occupancy event first",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
-	hHit_tdcTime_single_channel_r50_c10[i] = new TH1I("Hit_Time_r50_c10", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r50_c10_LED1[i] = new TH1I("Hit_Time_r50_c10_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r50_c10_LED2[i] = new TH1I("Hit_Time_r50_c10_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r50_c10_LED3[i] = new TH1I("Hit_Time_r50_c10_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r77_c47[i] = new TH1I("Hit_Time_r77_c47", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r77_c47_LED1[i] = new TH1I("Hit_Time_r77_c47_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c47_LED2[i] = new TH1I("Hit_Time_r77_c47_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c47_LED3[i] = new TH1I("Hit_Time_r77_c47_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r103_c47[i] = new TH1I("Hit_Time_r103_c47", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r103_c47_LED1[i] = new TH1I("Hit_Time_r103_c47_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r103_c47_LED2[i] = new TH1I("Hit_Time_r103_c47_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r103_c47_LED3[i] = new TH1I("Hit_Time_r103_c47_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r77_c24[i] = new TH1I("Hit_Time_r77_c24", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r77_c24_LED1[i] = new TH1I("Hit_Time_r77_c24_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c24_LED2[i] = new TH1I("Hit_Time_r77_c24_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c24_LED3[i] = new TH1I("Hit_Time_r77_c24_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
 	hHit_tdcTime_LED_5000[i] = new TH1I("Hit_Time_5000","DIRCPmtHit time; time [ns]; hits",500,0.0,500.0);
 
 	hHit_pixelOccupancy_LED_timing_cut_in[i] = new TH2I("Hit_PixelOccupancy_timing_cut_in","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
@@ -240,6 +207,29 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
         hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
+
+
+
+	hHit_pixelRow_timing[i] =   new TH2I("Hit_pixelRow_timing","Hit_pixelRow_timing; channel; time-over-threshold [ns]", 150,0,150,100,-50,50);
+
+
+	for(int k = 0; k < 18; k++) {
+
+		TString name; 
+		name.Form("%d", k); 
+
+		hHit_areaTime[i][k] = new TH1I("Hit_LEDTimeDiffEvent_" + name,"LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
+
+
+		hHit_pixelOccupancy_LED_column[i][k] = new TH2I("hHit_pixelOccupancy_LED_column_" + name, "LED DIRCPmtHit time diff in event; #Delta t [ns]", Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
+
+	}
+
+
+
+
+
+
 	
 	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
@@ -283,7 +273,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+jerror_t JEventProcessor_DIRC_timing::brun(JEventLoop *eventLoop, int32_t runnumber) {
     // This is called whenever the run number changes
 
     return NOERROR;
@@ -293,7 +283,7 @@ jerror_t JEventProcessor_DIRC_online::brun(JEventLoop *eventLoop, int32_t runnum
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -355,7 +345,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	// First 5000 events: treatment, determine LED fiber #1 average hit time.
     for (const auto& hit : hits) {
 		
-//		if (eventnumber < 5000) {
 		if (event_counter < 5000) {
 
 			int box = (hit->ch < Nchannels) ? 1 : 0;
@@ -365,14 +354,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	        int pmtcol = locDIRCGeometry->GetPmtColumn(channel);
 	
 			if (locDIRCLEDTrig) {
-//				if(eventnumber == 1) {
 					hHit_pixelOccupancy_LED_Event_5000[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 	
-// 					if ( pmtrow > 0 && pmtrow < 5 && pmtcol >0 && pmtcol < 5) {			
-// 						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
-// 						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 					}
-
 					if ( pmtrow > 13 && pmtrow < 16 && pmtcol >0 && pmtcol < 5) {			
 						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
 						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
@@ -382,31 +365,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		}
 	}
 
-//	cout << eventnumber << "   " << event_counter << endl;
-//	if (eventnumber < 5000) return NOERROR;
-
 	if (event_counter < 5000){ 
 		event_counter++;
 		return NOERROR;
 	}
-
-//	cout << "???????????????" << endl;
-
-//	if (event_counter < 5000) return NOERROR;
-
-	/// Ending treatment for the first event
-	/*--------------------------------------------------*/
-
-
-
-
-
-
-
-
-
-
-
 
     // LED specific information
     // next line commented out to supress warning: variable not used
@@ -467,14 +429,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     }
 */
 
-
-
-
-
-
-
-
-
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -499,26 +453,22 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     double locRefTime[2];
     int locNHits[2];
 
-//    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
-
-
     for (const auto& hit : hits) {
 
 		int box = (hit->ch < Nchannels) ? 1 : 0;
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
 
  //   	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
+
     	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin()) - 20;
 
-//    	double locFirstFiberTime = 166.5;
-//    	double locFirstFiberTime = 127;
-
-//		cout << "asdasdad ad "  << locFirstFiberTime << endl;
+		
+//    	double locFirstFiberTime = 159;
 
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
 
         if(pmtrow < 6 && fabs(hit->t-locFirstFiberTime) < 5.) {
-			//cout<<pmtrow<<" "<<hit->t<<endl;
+//			cout<<pmtrow<<" "<<hit->t<<endl;
 			locRefTime[box] += hit->t;
 			locNHits[box]++;
 		} else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-locFirstFiberTime-10) < 5.) {
@@ -530,21 +480,22 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 			locRefTime[box] += (hit->t - 20);
 			locNHits[box]++;
 		}
-		//cout<<"locRefTime "<<locRefTime<<"  "<<locNHits<<endl;
     }
+
+	
+//	cout << "!!!!! box 0 " << locRefTime[0] << "  " << locNHits[0] << endl;
+//	cout << "????? box 0 " << locRefTime[1] << "  " << locNHits[1] << endl;
 
 	locRefTime[0] /= locNHits[0];
 	locRefTime[1] /= locNHits[1];
 
+
+//	cout << "box 0 " << locRefTime[0] << "  " << locNHits[0] << endl;
+//	cout << "box 1 " << locRefTime[1] << "  " << locNHits[1] << endl;
+
     hRefTime->Fill(locRefTime[0]);
     hRefTime->Fill(locRefTime[1]);
 
-
-
-
-    //if(locReferenceClockTime%2 == 0)
-    //    locRefTime += 4.0;
- 
     // Fill calibrated-hit hists
     int NHits[] = {0,0};
     bool ledFiber[3] = {false, false, false};
@@ -555,96 +506,14 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	    int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
 		int pmtrow = locDIRCGeometry->GetPmtRow(channel);
 
-		int event_count = 0;
-
 		if(pmtrow < 6) ledFiber[0] = true;
 		else if(pmtrow < 12) ledFiber[1] = true;
 		else ledFiber[2] = true; 
 		hHit_Box[loc_itrig]->Fill(box);
 		NHits[box]++;
 		hHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-
-//		event_count++;
 		
 		if (locDIRCLEDTrig) {
-	
-//			if(eventnumber == 5001) {
-			if(event_counter == 5001) {
-				hHit_pixelOccupancy_LED_Event_1[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-//			} else if(eventnumber == 5002) {
-			} else if(event_counter == 5002) {
-				hHit_pixelOccupancy_LED_Event_2[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-//			} else if(eventnumber == 5003) {
-			} else if(event_counter == 5003) {
-				hHit_pixelOccupancy_LED_Event_3[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-			}
-	
-	// 		if (hit->t >= 123 && hit->t < 158) {
-	// 			hHit_pixelOccupancy_LED_timing_cut[i]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-	// 		}
-	
-// 			if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 				hHit_tdcTime_single_channel_r50_c10[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {		
-// 				hHit_tdcTime_single_channel_r77_c47[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 				hHit_tdcTime_single_channel_r103_c47[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 				hHit_tdcTime_single_channel_r77_c24[box]->Fill(hit->t);
-// 			}
-	
-// 			if(hit->t >= 123 && hit->t < 136) {
-// 			   	hHit_pixelOccupancy_LED_1[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED1[box]->Fill(hit->t);
-// 		
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {	
-// 					hHit_tdcTime_single_channel_r77_c47_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED1[box]->Fill(hit->t);
-// 				}
-// 	
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 			} else if (hit->t >= 136 && hit->t < 146) {
-// 				hHit_pixelOccupancy_LED_2[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED2[box]->Fill(hit->t);
-// 	
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {	
-// 					hHit_tdcTime_single_channel_r77_c47_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED2[box]->Fill(hit->t);
-// 				}
-// 	
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 			} else if (hit->t >= 146 && hit->t <= 158){ 
-// 			   	hHit_pixelOccupancy_LED_3[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED3[box]->Fill(hit->t);
-// 	
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r77_c47_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED3[box]->Fill(hit->t);
-// 				}
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 	        }
-// 
 
 			double led3_time = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
 
@@ -668,13 +537,35 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	
 		// LED specific histograms
 		if(locDIRCLEDTrig) {
+
 			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime[box]);
 			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime[box]);
-		
-			if(locLEDRefTdcTime > 0) {
-				hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime[box],locLEDRefTdcTime);
-				hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime[box]-locLEDRefTdcTime);
+
+//			cout << box << "    " << pmtrow << endl;
+//			cout << box << "    " << locRefTime[box]  << endl;
+
+			hHit_areaTime[box][pmtrow]->Fill(hit->t-locRefTime[box]);
+
+			hHit_pixelOccupancy_LED_column[box][pmtrow]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+
+
+			hHit_pixelRow_timing[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), hit->t-locRefTime[box]);
+
+
+			if(hit->t-locRefTime[box] >=  -5 && hit->t-locRefTime[box] <  5 ) {
+				hHit_pixelOccupancy_LED_1[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+			} else if( hit->t-locRefTime[box] >= 5 &&  hit->t-locRefTime[box] < 15) {
+				hHit_pixelOccupancy_LED_2[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+			} else if ( hit->t-locRefTime[box] >= 15 &&  hit->t-locRefTime[box] < 25) {
+				hHit_pixelOccupancy_LED_3[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 			}
+
+
+
+			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime[box],locLEDRefTdcTime);
+			hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime[box]-locLEDRefTdcTime);
+
+		}
 	
 			if(box==1 && channel==2490) {
 				hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
@@ -687,19 +578,8 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 			if(ledFiber[2]) locDeltaT -= 20.;
 			if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
 
-			if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-				hHit_tdcTime_single_channel_r50_c10[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {		
-				hHit_tdcTime_single_channel_r77_c47[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-				hHit_tdcTime_single_channel_r103_c47[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-				hHit_tdcTime_single_channel_r77_c24[box]->Fill(locDeltaT);
-			}
-
 		}
 
-    }
     hHit_NHits[loc_itrig]->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsBox[loc_itrig]->Fill(0.,NHits[0]); hHit_NHitsVsBox[loc_itrig]->Fill(1.,NHits[1]);
 
@@ -714,7 +594,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::erun(void) {
+jerror_t JEventProcessor_DIRC_timing::erun(void) {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
@@ -725,7 +605,7 @@ jerror_t JEventProcessor_DIRC_online::erun(void) {
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::fini(void) {
+jerror_t JEventProcessor_DIRC_timing::fini(void) {
     // Called before program exit after event processing is finished.
     return NOERROR;
 }
