@@ -1140,13 +1140,9 @@ bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
   vector<DTrackTimeBased*>tracks_to_add;
   for (size_t i=0;i<_data.size();i++){
     if (_data[i]->candidateid!=old_id){
-      int num_hyp=myhypotheses.size();
-      if ((q<0 && num_hyp!=mNumHypMinus)||(q>0 && num_hyp!=mNumHypPlus)
-	  || flipped_charge){
-	AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-				  flipped_charge,loop);
-      }
-      
+      AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
+				flipped_charge,loop);
+
       // Clear the myhypotheses vector for the next track
       myhypotheses.clear();
       // Reset flags and charge 
@@ -1171,12 +1167,8 @@ bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
     old_id=_data[i]->candidateid;
   }
   // Deal with last track candidate	
-  int num_hyp=myhypotheses.size();
-  if ((q<0 && num_hyp!=mNumHypMinus)||(q>0 && num_hyp!=mNumHypPlus)
-      || flipped_charge){
-    AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-			      flipped_charge,loop);
-  }
+  AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
+			    flipped_charge,loop);
     
   // Add the new list of tracks to the output list
   if (tracks_to_add.size()>0){
