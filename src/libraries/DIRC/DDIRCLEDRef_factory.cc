@@ -71,11 +71,11 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
             for(uint i=0; i<sipmadchits.size(); i++) {
                     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-                    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
+                    if(sipmadchit->rocid == 77 && sipmadchit->slot == 19 && sipmadchit->channel == 15) {
                             double T = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    
 			    // Apply calibration constants here
-			    T =  t_scale * T - 115;
+			    T =  t_scale * T - 35.6;
 			    //T =  T - GetConstant(adc_time_offsets, digihit) + t_base;
 			
 			    DDIRCLEDRef *hit = new DDIRCLEDRef;
@@ -100,7 +100,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
                     if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
 
 			    // Apply calibration constants here
-			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 368.;
+			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 322.7;
 			    //T += t_base_tdc - GetConstant(tdc_time_offsets, digihit) + tdc_adc_time_offset;
 
 			    // Look for existing hits to see if there is a match

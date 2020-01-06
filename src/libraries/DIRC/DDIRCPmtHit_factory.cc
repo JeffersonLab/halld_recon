@@ -18,6 +18,9 @@ using namespace jana;
 //------------------
 jerror_t DDIRCPmtHit_factory::init(void)
 {
+        DIRC_SKIP = false;
+	gPARMS->SetDefaultParameter("DIRC:SKIP",DIRC_SKIP);
+
 	// initialize calibration tables
 	vector<double> new_t0s(DIRC_MAX_CHANNELS);
 	vector<int> new_status(DIRC_MAX_CHANNELS);
@@ -84,6 +87,9 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
+    if(DIRC_SKIP) 
+      return NOERROR;
+
     // check that SSP board timestamps match for all modules 
     vector<const DDIRCTriggerTime*> timestamps;
     loop->Get(timestamps);
@@ -125,6 +131,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    if(digihit_lead->channel != digihit_trail->channel) continue; 
 		    int channel = digihit_lead->channel;
 		    int box = (channel < DIRC_MAX_CHANNELS) ? 1 : 0; // North=0 and South=1
+		    if(box == 0) channel -= DIRC_MAX_CHANNELS; // box-local channel to index CCDB tables
 
 		    // get time-over-threshold
 		    timeOverThreshold = (double)digihit_trail->time - (double)digihit_lead->time;
@@ -152,7 +159,7 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    double slope = 0.3;
 		    double timeOverThresholdPeak = 50;
 		    if(applyTimeOffset) {
-			    hit->t = hit->t - time_offsets[box][channel] + t_base[box];
+			    hit->t = hit->t + t_base[box] - time_offsets[box][channel];
 		    }
 		    if(applyTimewalk) {
 			    hit->t += slope*(timeOverThreshold - timeOverThresholdPeak);

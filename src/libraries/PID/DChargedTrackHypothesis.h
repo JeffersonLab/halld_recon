@@ -338,6 +338,7 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dTOFHitMatchParams = nullptr;
 	dBCALShowerMatchParams = nullptr;
 	dFCALShowerMatchParams = nullptr;
+	dDIRCMatchParams = nullptr;
 }
 
 #endif // _DChargedTrackHypothesis_

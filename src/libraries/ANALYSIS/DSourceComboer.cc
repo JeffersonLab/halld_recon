@@ -154,6 +154,12 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings[Electron][SYS_CDC].second = "[0]"; //high bound
 	ddEdxCuts_TF1Params[Electron][SYS_CDC].second = {5.5};
 
+	//CDC mu+
+	ddEdxCuts_TF1FunctionStrings[MuonPlus][SYS_CDC].first = "[0]"; //low bound
+	ddEdxCuts_TF1Params[MuonPlus][SYS_CDC].first = {-9.9E9};
+	ddEdxCuts_TF1FunctionStrings[MuonPlus][SYS_CDC].second = "exp(-1.0*[0]*x + [1]) + [2]"; //high bound
+	ddEdxCuts_TF1Params[MuonPlus][SYS_CDC].second = {7.0, 3.0, 6.2};
+
 	//pbar
 	ddEdxCuts_TF1FunctionStrings.emplace(AntiProton, ddEdxCuts_TF1FunctionStrings[Proton]);
 	ddEdxCuts_TF1Params.emplace(AntiProton, ddEdxCuts_TF1Params[Proton]);
@@ -170,7 +176,12 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings.emplace(Positron, ddEdxCuts_TF1FunctionStrings[Electron]);
 	ddEdxCuts_TF1Params.emplace(Positron, ddEdxCuts_TF1Params[Electron]);
 
-	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything above if hadron, everything below if lepton
+	//mu-
+	ddEdxCuts_TF1FunctionStrings.emplace(MuonMinus, ddEdxCuts_TF1FunctionStrings[MuonPlus]);
+	ddEdxCuts_TF1Params.emplace(MuonMinus, ddEdxCuts_TF1Params[MuonPlus]);
+
+
+	//DEFINE DEFAULT E/p CUTS //vs p, cut away everything below if electron/positron, everything above if else
 	//e- FCAL
 	dEOverPCuts_TF1FunctionStrings[Electron][SYS_FCAL] = "[0]";
 	dEOverPCuts_TF1Params[Electron][SYS_FCAL] = {0.7};
@@ -183,15 +194,18 @@ void DSourceComboer::Define_DefaultCuts(void)
 	dEOverPCuts_TF1FunctionStrings.emplace(Positron, dEOverPCuts_TF1FunctionStrings[Electron]);
 	dEOverPCuts_TF1Params.emplace(Positron, dEOverPCuts_TF1Params[Electron]);
 
-	/*
-	//mu-
-	dEOverPCuts_TF1FunctionStrings.emplace(MuonMinus, dEOverPCuts_TF1FunctionStrings[Electron]);
-	dEOverPCuts_TF1Params.emplace(MuonMinus, dEOverPCuts_TF1Params[Electron]);
+	//mu- FCAL
+	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_FCAL] = "[0]";
+	dEOverPCuts_TF1Params[MuonMinus][SYS_FCAL] = {0.2};
+
+	//mu- BCAL
+	dEOverPCuts_TF1FunctionStrings[MuonMinus][SYS_BCAL] = "[0]";
+	dEOverPCuts_TF1Params[MuonMinus][SYS_BCAL] = {0.45};
 
 	//mu+
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonPlus, dEOverPCuts_TF1FunctionStrings[MuonMinus]);
 	dEOverPCuts_TF1Params.emplace(MuonPlus, dEOverPCuts_TF1Params[MuonMinus]);
-	*/
+	
 }
 
 void DSourceComboer::Get_CommandLineCuts_dEdx(void)

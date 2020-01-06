@@ -43,16 +43,49 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   // plots for each bar
   TDirectory *locBarDir = new TDirectoryFile("PerBarDiagnostic","PerBarDiagnostic");
   locBarDir->cd();
-  for(int i=0; i<24; i++) {
+  for(int i=0; i<48; i++) {
 	  hDiffBar[i] = new TH2I(Form("hDiff_bar%02d",i), Form("Bar %02d; Channel ID; t_{calc}-t_{measured} [ns]; entries [#]", i), dMaxChannels, 0, dMaxChannels, 400,-20,20);
 	  hNphCBar[i] = new TH1I(Form("hNphC_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
 	  hNphCBarVsP[i] = new TH2I(Form("hNphCVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
 	  hNphCBarInclusive[i] = new TH1I(Form("hNphCInclusive_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
 	  hNphCBarInclusiveVsP[i] = new TH2I(Form("hNphCInclusiveVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
+	  hDeltaThetaCBar[i] = new TH1I(Form("hDeltaThetaC_bar%d",i), "cherenkov angle; %s #Delta#theta_{C} [rad]", 200,-0.2,0.2);
   }
   dir->cd();
  
   // plots for each hypothesis
+  for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
+	  Particle_t locPID = dFinalStatePIDs[loc_i];
+	  hExtrapolatedBarHitTime_BadTime[locPID].resize(2);
+	  hExtrapolatedBarHitXY_BadTime[locPID].resize(2);
+	  hExtrapolatedBarTimeVsPixelHitTime[locPID].resize(2);
+	  hExtrapolatedBarTimeVsPixelHitTime_BadTime[locPID].resize(2);
+	  hDiffVsEventNumber[locPID].resize(2);
+
+	  hDiff[locPID].resize(2);
+	  hDiffVsChannelDirect[locPID].resize(2);
+	  hDiffVsChannelReflected[locPID].resize(2);
+	  hNphC[locPID].resize(2);
+	  hNphCInclusive[locPID].resize(2);
+	  hThetaC[locPID].resize(2);
+	  hDeltaThetaC[locPID].resize(2);
+	  hDeltaThetaC_BadTime[locPID].resize(2);
+	  hLikelihood[locPID].resize(2);
+	  hLikelihoodDiff[locPID].resize(2);
+	  
+	  hNphCVsP[locPID].resize(2);
+	  hNphCInclusiveVsP[locPID].resize(2);
+	  hThetaCVsP[locPID].resize(2);
+	  hDeltaThetaCVsP[locPID].resize(2);
+	  hLikelihoodDiffVsP[locPID].resize(2);
+	  hDeltaTVsP[locPID].resize(2);
+
+	  hExtrapolationTimeVsStartTime[locPID].resize(2);
+	  hExtrapolationTimeVsStartTime_BadTime[locPID].resize(2);
+	  hTimeCalcVsMeas[locPID].resize(2);
+	  hPixelHitMap_BadTime[locPID].resize(2);
+  }
+  
   for(uint loc_i=0; loc_i<dFinalStatePIDs.size(); loc_i++) {
 	  Particle_t locPID = dFinalStatePIDs[loc_i];
 	  string locParticleName = ParticleType(locPID);
@@ -60,27 +93,51 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  
 	  TDirectory *locParticleDir = new TDirectoryFile(locParticleName.data(),locParticleName.data());
 	  locParticleDir->cd();
+	  
+	  hExtrapolatedBarHitXY[locPID] = new TH2I(Form("hExtrapolatedBarHitXY_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
+	  hExtrapolatedBarHitTime[locPID] = new TH1I(Form("hExtrapolatedBarHitTime_%s",locParticleName.data()), "; Bar Hit Time (ns)", 200, 0, 100);
 
-	  hExtrapolatedBarHitXY[locPID] = new TH2I(Form("hExtrapolatedBarHitXY_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100); 
-	  hDiff[locPID] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleName.data()), 400,-100,100);
-	  hDiffVsChannelDirect[locPID] = new TH2I(Form("hDiffVsChannelDirect_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
-	  hDiffVsChannelReflected[locPID] = new TH2I(Form("hDiffVsChannelReflected_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
-	  hNphC[locPID] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
-	  hNphCInclusive[locPID] = new TH1I(Form("hNphCInclusive_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
-	  hThetaC[locPID] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
-	  hDeltaThetaC[locPID] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
-	  hLikelihood[locPID] = new TH1I(Form("hLikelihood_%s",locParticleName.data()), Form("; %s -lnL; entries [#]", locParticleROOTName.data()),1000,0.,1000.);
-	  hLikelihoodDiff[locPID] = new TH1I(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; %s;entries [#]", locLikelihoodName[loc_i].Data()),100,-200.,200.);
+	  string boxName[2] = {"North", "South"};
+	  for(uint loc_box = 0; loc_box<2; loc_box++) {
+		  TDirectory *locBoxDir = new TDirectoryFile(boxName[loc_box].data(),boxName[loc_box].data());
+		  locBoxDir->cd();
 
+		  hExtrapolatedBarHitTime_BadTime[locPID][loc_box] = new TH1I(Form("hExtrapolatedBarHitTime_BadTime%s",locParticleName.data()), "; Bar Hit Time (ns)", 200, 0, 100);
+		  hExtrapolatedBarHitXY_BadTime[locPID][loc_box] = new TH2I(Form("hExtrapolatedBarHitXY_BadTime_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100); 
+		  hExtrapolatedBarTimeVsPixelHitTime[locPID][loc_box] = new TH2I(Form("hExtrapolatedBarTimeVsPixelHitTime_%s",locParticleName.data()), "; Pixel Hit Time (nx); Bar Hit Time (ns)", 200, 0, 100, 200, 0, 100);
+		  hExtrapolatedBarTimeVsPixelHitTime_BadTime[locPID][loc_box] = new TH2I(Form("hExtrapolatedBarTimeVsPixelHitTime_BadTime_%s",locParticleName.data()), "; Pixel Hit Time (ns); Bar Hit Time (ns)", 200, 0, 100, 200, 0, 100);
 
-	  hNphCVsP[locPID] = new TH2I(Form("hNphCVsP_%s",locParticleName.data()), Form("# photons vs. momentum; p (GeV/c); %s # photons", locParticleROOTName.data()), 120, 0, 12.0, 150, 0, 150);
-	  hNphCInclusiveVsP[locPID] = new TH2I(Form("hNphCInclusiveVsP_%s",locParticleName.data()), Form("# photons vs. momentum; p (GeV/c); %s # photons", locParticleROOTName.data()), 120, 0, 12.0, 150, 0, 150);
-	  hThetaCVsP[locPID] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.75, 0.85);
-	  hDeltaThetaCVsP[locPID] = new TH2I(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
-	  hLikelihoodDiffVsP[locPID] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName[loc_i].Data()), 120, 0.0, 12.0, 100, -200, 200);
+		  hDiff[locPID][loc_box] = new TH1I(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleName.data()), 400,-100,100);
 
-	  hDeltaTVsP[locPID] = new TH2I(Form("hDeltaTVsP_%s",locParticleName.data()), Form("#Delta T vs. momentum; p (GeV/c); %s #Delta T (ns)", locParticleROOTName.data()), 120, 0.0, 12.0, 200, -100, 100);
+		  hDiffVsEventNumber[locPID][loc_box] = new TH2I(Form("hDiffVsEventNumber_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; event number; entries [#]", locParticleName.data()), 1000, 0, 1e6, 400,-100,100);
 
+		  hDiffVsChannelDirect[locPID][loc_box] = new TH2I(Form("hDiffVsChannelDirect_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
+		  hDiffVsChannelReflected[locPID][loc_box] = new TH2I(Form("hDiffVsChannelReflected_%s",locParticleName.data()), Form("; Channel ID; %s t_{calc}-t_{measured} [ns]; entries [#]",locParticleName.data()), dMaxChannels, 0, dMaxChannels, 400,-20,20);
+		  hNphC[locPID][loc_box] = new TH1I(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
+		  hNphCInclusive[locPID][loc_box] = new TH1I(Form("hNphCInclusive_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
+		  hThetaC[locPID][loc_box] = new TH1I(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
+		  hDeltaThetaC[locPID][loc_box] = new TH1I(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
+		  hDeltaThetaC_BadTime[locPID][loc_box] = new TH1I(Form("hDeltaThetaC_BadTime_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
+		  hLikelihood[locPID][loc_box] = new TH1I(Form("hLikelihood_%s",locParticleName.data()), Form("; %s -lnL; entries [#]", locParticleROOTName.data()),1000,0.,1000.);
+		  hLikelihoodDiff[locPID][loc_box] = new TH1I(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; %s;entries [#]", locLikelihoodName[loc_i].Data()),100,-200.,200.);
+		  
+		  
+		  hNphCVsP[locPID][loc_box] = new TH2I(Form("hNphCVsP_%s",locParticleName.data()), Form("# photons vs. momentum; p (GeV/c); %s # photons", locParticleROOTName.data()), 120, 0, 12.0, 150, 0, 150);
+		  hNphCInclusiveVsP[locPID][loc_box] = new TH2I(Form("hNphCInclusiveVsP_%s",locParticleName.data()), Form("# photons vs. momentum; p (GeV/c); %s # photons", locParticleROOTName.data()), 120, 0, 12.0, 150, 0, 150);
+		  hThetaCVsP[locPID][loc_box] = new TH2I(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.75, 0.85);
+		  hDeltaThetaCVsP[locPID][loc_box] = new TH2I(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
+		  hLikelihoodDiffVsP[locPID][loc_box] = new TH2I(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName[loc_i].Data()), 120, 0.0, 12.0, 100, -200, 200);
+		  
+		  hDeltaTVsP[locPID][loc_box] = new TH2I(Form("hDeltaTVsP_%s",locParticleName.data()), Form("#Delta T vs. momentum; p (GeV/c); %s #Delta T (ns)", locParticleROOTName.data()), 120, 0.0, 12.0, 200, -100, 100);
+		  
+		  hExtrapolationTimeVsStartTime[locPID][loc_box] = new TH2I(Form("hExtrapolationTimeVsStartTime_%s",locParticleName.data()), Form("%s; t_0 start time (ns); track extrapolation time (ns)", locParticleName.data()), 200, -40, 40, 200, -40, 40);
+		  hExtrapolationTimeVsStartTime_BadTime[locPID][loc_box] = new TH2I(Form("hExtrapolationTimeVsStartTime_BadTime_%s",locParticleName.data()), Form("%s; t_0 start time (ns); track extrapolation time (ns)", locParticleName.data()), 200, -40, 40, 200, -40, 40);
+		  
+		  hTimeCalcVsMeas[locPID][loc_box] = new TH2I(Form("hTimeCalcVsMeas_%s",locParticleName.data()), Form("%s; Measured time (ns); Calculated time (ns)", locParticleName.data()), 200, 0, 200, 200, 0, 200);
+		  hPixelHitMap_BadTime[locPID][loc_box] = new TH2S(Form("hPixelHit_BadTime_%s",locParticleName.data()), Form("%s; pixel rows; pixel columns", locParticleName.data()), 144, -0.5, 143.5, 48, -0.5, 47.5);
+		  
+		  locParticleDir->cd();
+	  }
 	  dir->cd();
   }
   
@@ -161,6 +218,15 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	  Particle_t locPID = locTrackTimeBased->PID();
 	  double locMass = ParticleMass(locPID);
 
+	  double locInputStartTime = 0.; //locTrackTimeBased->t0();
+	  //if(locTrackTimeBased->t0_detector() == SYS_TOF) {
+		  //cout<<"TOF hit"<<endl;
+		  //continue;
+	  //}
+	  //vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
+	  //if(extrapolations.size()==0) continue;
+	  double locExtrapolationTime = 0.; //extrapolations[0].t;
+
 	  // get DIRC match parameters (contains LUT information)
 	  shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	  bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
@@ -172,14 +238,17 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 		  int locBar = locDIRCGeometry->GetBar(posInBar.Y());
-		  if(locBar > 23) continue; // skip north box for now
+		  int locBox = 1;
+		  if(locBar > 23) //continue; // skip north box for now
+			  locBox = 0;
 
 		  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                   hExtrapolatedBarHitXY[locPID]->Fill(posInBar.X(), posInBar.Y());
+		  hExtrapolatedBarHitTime[locPID]->Fill(locExtrapolatedTime);
         	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK          
 
-		  double locAngle = dDIRCLut->CalcAngle(momInBar, locMass);
-		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar);
+		  double locAngle = dDIRCLut->CalcAngle(locP, locMass);
+		  map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(locP);
 
 		  // get map of DIRCMatches to PMT hits
 		  map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
@@ -193,7 +262,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 			  vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
 			  double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
 			  int locChannel = locDIRCPmtHits[loc_i]->ch%dMaxChannels;
-			  if(locHitTime > 0 && locHitTime < 100) locPhotonInclusive++;
+			  if(locHitTime > 0 && locHitTime < 150) locPhotonInclusive++;
 
 			  int pixel_row = locDIRCGeometry->GetPixelRow(locChannel);
 			  int pixel_col = locDIRCGeometry->GetPixelColumn(locChannel);
@@ -219,23 +288,46 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 					  double locThetaC = locDIRCPhotons[loc_j].second;
 
 					  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-					  
+
+					  if(fabs(locDeltaT + 15.) < 5.)
+						  hDeltaThetaC_BadTime[locPID][locBox]->Fill(locThetaC-locExpectedThetaC);
+
 					  if(fabs(locThetaC-locExpectedThetaC)<0.05) {
-						  hDiff[locPID]->Fill(locDeltaT);
+						  hTimeCalcVsMeas[locPID][locBox]->Fill(locHitTime, locDIRCPhotons[loc_j].first);
+						  
+						  if(fabs(locDeltaT + 15.) < 5.) {
+							  hPixelHitMap_BadTime[locPID][locBox]->Fill(pixel_row, pixel_col);
+							  hExtrapolatedBarHitXY_BadTime[locPID][locBox]->Fill(posInBar.X(), posInBar.Y());
+							  hExtrapolatedBarHitTime_BadTime[locPID][locBox]->Fill(locExtrapolatedTime);
+							  hExtrapolatedBarTimeVsPixelHitTime_BadTime[locPID][locBox]->Fill(locDIRCPmtHits[loc_i]->t, locExtrapolatedTime);
+							  hExtrapolationTimeVsStartTime_BadTime[locPID][locBox]->Fill(locInputStartTime, locExtrapolationTime);
+						  }
+						  else if(fabs(locDeltaT) < 5.) {
+							  hExtrapolatedBarTimeVsPixelHitTime[locPID][locBox]->Fill(locDIRCPmtHits[loc_i]->t, locExtrapolatedTime);
+							  hExtrapolationTimeVsStartTime[locPID][locBox]->Fill(locInputStartTime, locExtrapolationTime);
+						  }
+					  }					  
+
+					  // diagnostic plots for good cherenkov photons
+					  if(fabs(locThetaC-locExpectedThetaC)<0.05) {
+						  hDiff[locPID][locBox]->Fill(locDeltaT);
+						  hDiffVsEventNumber[locPID][locBox]->Fill(eventnumber, locDeltaT);
 						  if(locHitTime < 38)
-							  hDiffVsChannelDirect[locPID]->Fill(locChannel,locDeltaT);
+							  hDiffVsChannelDirect[locPID][locBox]->Fill(locChannel,locDeltaT);
 						  else 
-							  hDiffVsChannelReflected[locPID]->Fill(locChannel,locDeltaT);
-						  if(locPID == PiPlus || locPID == PiMinus)
+							  hDiffVsChannelReflected[locPID][locBox]->Fill(locChannel,locDeltaT);
+						  if(locPID == PiPlus || locPID == PiMinus) 
 							  hDiffBar[locBar]->Fill(locChannel,locDeltaT);
 					  }
 					  
 					  // fill histograms for candidate photons in timing cut
-					  if(fabs(locDeltaT) < 100.0) {
-						  hThetaC[locPID]->Fill(locThetaC);
-						  hDeltaThetaC[locPID]->Fill(locThetaC-locExpectedThetaC);
-						  hDeltaThetaCVsP[locPID]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
-
+					  if(fabs(locDeltaT) < 5.0) {
+						  hThetaC[locPID][locBox]->Fill(locThetaC);
+						  hDeltaThetaC[locPID][locBox]->Fill(locThetaC-locExpectedThetaC);
+						  hDeltaThetaCVsP[locPID][locBox]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						  if(locPID == PiPlus || locPID == PiMinus) {
+							  hDeltaThetaCBar[locBar]->Fill(locThetaC-locExpectedThetaC);
+						  }
 					  }
 					  
 					  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
@@ -250,12 +342,12 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 		  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 		  // fill histograms with per-track quantities
-		  hNphC[locPID]->Fill(locDIRCMatchParams->dNPhotons);
-		  hNphCInclusive[locPID]->Fill(locPhotonInclusive);
-		  hNphCVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dNPhotons);
-		  hNphCInclusiveVsP[locPID]->Fill(momInBar.Mag(), locPhotonInclusive);
-		  hThetaCVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
-		  hDeltaTVsP[locPID]->Fill(momInBar.Mag(), locDIRCMatchParams->dDeltaT);
+		  hNphC[locPID][locBox]->Fill(locDIRCMatchParams->dNPhotons);
+		  hNphCInclusive[locPID][locBox]->Fill(locPhotonInclusive);
+		  hNphCVsP[locPID][locBox]->Fill(momInBar.Mag(), locDIRCMatchParams->dNPhotons);
+		  hNphCInclusiveVsP[locPID][locBox]->Fill(momInBar.Mag(), locPhotonInclusive);
+		  hThetaCVsP[locPID][locBox]->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
+		  hDeltaTVsP[locPID][locBox]->Fill(momInBar.Mag(), locDIRCMatchParams->dDeltaT);
 
 		  if(locPID == PiPlus || locPID == PiMinus) {
 			  hNphCBar[locBar]->Fill(locDIRCMatchParams->dNPhotons);
@@ -266,24 +358,24 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 		  // for likelihood and difference for given track mass hypothesis
 		  if(locPID == Positron || locPID == Electron) {
-			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodElectron);
-			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
-			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihood[locPID][locBox]->Fill(-1. * locDIRCMatchParams->dLikelihoodElectron);
+			  hLikelihoodDiff[locPID][locBox]->Fill(locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihoodDiffVsP[locPID][locBox]->Fill(locP, locDIRCMatchParams->dLikelihoodElectron - locDIRCMatchParams->dLikelihoodPion);
 		  }
 		  else if(locPID == PiPlus || locPID == PiMinus) {
-			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodPion);
-			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
-			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihood[locPID][locBox]->Fill(-1. * locDIRCMatchParams->dLikelihoodPion);
+			  hLikelihoodDiff[locPID][locBox]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID][locBox]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 		  else if(locPID == KPlus || locPID == KMinus) {
-			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodKaon);
-			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
-			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihood[locPID][locBox]->Fill(-1. * locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiff[locPID][locBox]->Fill(locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID][locBox]->Fill(locP, locDIRCMatchParams->dLikelihoodPion - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 		  else if(locPID == Proton) {
-			  hLikelihood[locPID]->Fill(-1. * locDIRCMatchParams->dLikelihoodProton);
-			  hLikelihoodDiff[locPID]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
-			  hLikelihoodDiffVsP[locPID]->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihood[locPID][locBox]->Fill(-1. * locDIRCMatchParams->dLikelihoodProton);
+			  hLikelihoodDiff[locPID][locBox]->Fill(locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
+			  hLikelihoodDiffVsP[locPID][locBox]->Fill(locP, locDIRCMatchParams->dLikelihoodProton - locDIRCMatchParams->dLikelihoodKaon);
 		  }
 
 		  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK

@@ -1742,6 +1742,11 @@ void CodeBuilder::writeMatcher()
          << "   if (strncmp(a,b,len) == 0) {"                   << std::endl
          << "      return 0;"                                   << std::endl
          << "   }"                                              << std::endl
+         << "   else if (strncmp(a,\"<HDDM \",6) == 0 && "      << std::endl
+         << "            strncmp(b,\"<HDDM \",6) == 0)"         << std::endl
+         << "   {\n"                                            << std::endl
+         << "      return 0;\n"                                 << std::endl
+         << "   }"                                              << std::endl
          << "   else {"                                         << std::endl
          << "      for (; *a == *b; ++a, ++b, --len) {}"        << std::endl
          << "      for (; *a == ' '; ++a, --len) {}"            << std::endl

@@ -161,6 +161,7 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
+   geom->GetTRDZ(dTRDz_vec); // TRD planes
    
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos,sc_norm)){
@@ -2045,38 +2046,13 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
 						  const DVector3 &dir){
   double z0=pos0.z();
   double uz=dir.z();
+  double s=0.,t=0.;
+  DVector3 pos(0,0,0);
+  DVector3 diff(0,0,0);
   ClearExtrapolations();
-
-   // Extrapolate to DIRC
-  DVector3 diff=((dDIRCz-z0)/uz)*dir;
-  DVector3 pos=pos0+diff;
-  double s=diff.Mag();
-  double t=s/29.98;
-  extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-
-  // Extrapolate to TOF
-  diff=((dTOFz-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
-  
-  // Extrapolate to FCAL
-  diff=((dFCALz-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
-  // extrapolate to exit of FCAL
-  diff=((dFCALz+45.-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
 
   // Extrapolate to Start Counter and BCAL
   double R=pos0.Perp();
-  diff.SetMag(0.);
   double z=z0;
   while (R<89.0 && z>17. && z<410.){
     diff+=(1./dir.z())*dir;
@@ -2115,10 +2091,57 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
 	}
 	d_old=d;
       }
-	 }
+    }
     if (R>64.){	 
       extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
     }
   }
- 
+
+  // Extrapolate to TRD
+  for (unsigned int i=0;i<dTRDz_vec.size();i++){
+    diff=((dTRDz_vec[i]-z0)/uz)*dir;
+    pos=pos0+diff;
+    if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+      s=diff.Mag();
+      t=s/29.98;
+      extrapolations[SYS_TRD].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));   	
+    }
+  }
+
+  // Extrapolate to DIRC
+  diff=((dDIRCz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+  }
+
+  // Extrapolate to TOF
+  diff=((dTOFz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    double s=diff.Mag();
+    double t=s/29.98;
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	
+  }
+  
+  // Extrapolate to FCAL
+  diff=((dFCALz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
+  }
+  // extrapolate to exit of FCAL
+  diff=((dFCALz+45.-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+  } 
 }

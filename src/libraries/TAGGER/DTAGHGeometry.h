@@ -38,6 +38,7 @@ class DTAGHGeometry : public JObject {
    
  private:
    double m_endpoint_energy_GeV;
+   double m_endpoint_energy_calib_GeV;
    double m_counter_xlow[TAGH_MAX_COUNTER+1];
    double m_counter_xhigh[TAGH_MAX_COUNTER+1];
 };

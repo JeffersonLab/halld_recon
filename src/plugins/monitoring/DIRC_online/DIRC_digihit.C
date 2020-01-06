@@ -2,25 +2,34 @@
 // which histograms to fetch for the macro.
 //
 
-// hnamepath: /DIRC_online/DigiHit/DigiHit_NHits_LED
-// hnamepath: /DIRC_online/DigiHit/DigiHit_NHits_NonLED
+// hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_LED
+// hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_NonLED
 // hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_LED
 // hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_NonLED
-// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_LED
-// hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_NonLED
+// hnamepath: /DIRC_online/DigiHit/NorthUpperBox/TDCDigiHit_Time_LED
+// hnamepath: /DIRC_online/DigiHit/NorthUpperBox/TDCDigiHit_Time_NonLED
+//
+// e-mail: davidl@jlab.org
+// e-mail: jrsteven@jlab.org
+// e-mail: billlee@jlab.org
+// e-mail: tbritton@jlab.org
+
 
 {  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
   if(dir) dir->cd();
 
-  //TH2I* hOcc = (TH2I*)gDirectory->Get("DigiHit/DigiHit_NHitsVsBox");
-  //TH2I* hTN = (TH2I*)gDirectory->Get("DigiHit/NorthUpperBox/TDCDigiHit_TimeVsChannel_NorthUpperBox");
-  TH1I* hDigiHit_Nhits_LED = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_LED");
-  TH1I* hDigiHit_Nhits = (TH1I*)gDirectory->Get("DigiHit/DigiHit_NHits_NonLED");
+  TH2I* hDigiHit_NhitsVsBox_LED = (TH2I*)gDirectory->Get("DigiHit/DigiHit_NHitsVsBox_LED");
+  TH2I* hDigiHit_NhitsVsBox = (TH2I*)gDirectory->Get("DigiHit/DigiHit_NHitsVsBox_NonLED");
+  TH1I* hDigiHit_Nhits_LED = (TH1I*)hDigiHit_NhitsVsBox_LED->ProjectionY("Nhits_LED",2,2);
+  TH1I* hDigiHit_Nhits_LED_North = (TH1I*)hDigiHit_NhitsVsBox_LED->ProjectionY("Nhits_LED_North",1,1);
+  TH1I* hDigiHit_Nhits = (TH1I*)hDigiHit_NhitsVsBox->ProjectionY("Nhits",2,2);
+  TH1I* hDigiHit_Nhits_North = (TH1I*)hDigiHit_NhitsVsBox->ProjectionY("Nhits_North",1,1);
+
   TH1I* hDigiHit_Time_LED = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_LED");
   TH1I* hDigiHit_Time = (TH1I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_Time_NonLED");
-  TH2I* hTS_LED = (TH2I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_LED");
-  TH2I* hTS = (TH2I*)gDirectory->Get("DigiHit/SouthLowerBox/TDCDigiHit_TimeVsChannel_NonLED");
+  TH1I* hDigiHit_Time_LED_North = (TH1I*)gDirectory->Get("DigiHit/NorthUpperBox/TDCDigiHit_Time_LED");
+  TH1I* hDigiHit_Time_North = (TH1I*)gDirectory->Get("DigiHit/NorthUpperBox/TDCDigiHit_Time_NonLED");
 
   if(gPad == NULL){
     TCanvas *c1 = new TCanvas("c1","DIRC Hit Monitor",150,10,990,660);
@@ -36,28 +45,9 @@
   double tsize = 0.05;  
   gStyle->SetOptStat("emr");
 
-/*
-  if(hOcc){
-    hOcc->SetFillColor(kBlue);
-    c1->cd(1);
-    hOcc->SetLabelSize(0.08,"x");
-    hOcc->SetTitleSize(tsize,"xy");
-    hOcc->GetXaxis()->SetBinLabel(1, "North");
-    hOcc->GetXaxis()->SetBinLabel(2, "South");
-    hOcc->Draw("colz");
-  }
- 
-  if(hTN){
-    hTN->SetFillColor(kBlue);
-    c1->cd(3);
-    hTN->SetTitleSize(tsize,"xy");
-    hTN->Draw("colz");
-  }
-*/
-
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
-    leg->AddEntry(hTS_LED,"LED trigger","l");
-    leg->AddEntry(hTS,"Non-LED triggers","l");
+    leg->AddEntry(hDigiHit_Nhits_LED,"LED trigger","l");
+    leg->AddEntry(hDigiHit_Nhits,"Non-LED triggers","l");
     leg->Draw("same");
 
 
@@ -78,7 +68,19 @@
     leg->Draw("same");
   }
 
-  if(hDigiHit_Time && hDigiHit_Time_LED) {
+  if(hDigiHit_Nhits_North && hDigiHit_Nhits_LED_North) { 
+    hDigiHit_Nhits_North->SetLineColor(kBlack);
+    hDigiHit_Nhits_LED_North->SetLineColor(kBlue);
+    c1->cd(2);
+    hDigiHit_Nhits_LED_North->SetTitleSize(tsize,"xy");
+    hDigiHit_Nhits_LED_North->Draw();
+    double scale = hDigiHit_Nhits_LED_North->GetMaximum()/hDigiHit_Nhits_North->GetMaximum();
+    if(hDigiHit_Nhits_North->GetMaximum() == 0) scale = 1.;
+    hDigiHit_Nhits_North->Scale(scale);
+    hDigiHit_Nhits_North->Draw("h same");
+  }
+
+  if(hDigiHit_Time_North && hDigiHit_Time_LED_North) {
     hDigiHit_Time->SetLineColor(kBlack);
     hDigiHit_Time_LED->SetLineColor(kBlue);
     c1->cd(3);
@@ -88,26 +90,18 @@
     if(hDigiHit_Time->GetMaximum() == 0) scale = 1.;
     hDigiHit_Time->Scale(scale);
     hDigiHit_Time->Draw("h same");
-
-    TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
-    leg->AddEntry(hDigiHit_Time_LED,"LED trigger","l");
-    leg->AddEntry(hDigiHit_Time,"Non-LED triggers","l");
-    leg->Draw("same");
-
   }
 
-  if(hTS){
+  if(hDigiHit_Time_North && hDigiHit_Time_LED_North) {
+    hDigiHit_Time_North->SetLineColor(kBlack);
+    hDigiHit_Time_LED_North->SetLineColor(kBlue);
     c1->cd(4);
-    hTS->SetTitleSize(tsize,"xy");
-    hTS->Draw("colz");
+    hDigiHit_Time_North->SetTitleSize(tsize,"xy");
+    hDigiHit_Time_LED_North->Draw();
+    double scale = hDigiHit_Time_LED_North->GetMaximum()/hDigiHit_Time_North->GetMaximum();
+    if(hDigiHit_Time_North->GetMaximum() == 0) scale = 1.;
+    hDigiHit_Time_North->Scale(scale);
+    hDigiHit_Time_North->Draw("h same");
   }
-
-  if(hTS_LED){
-    c1->cd(2);
-    hTS_LED->SetTitleSize(tsize,"xy");
-    hTS_LED->Draw("colz");
-  }
-
-
 
 }

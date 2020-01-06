@@ -13,6 +13,8 @@
 #include "HDGEOMETRY/DMaterialMap.h"
 #include "CDC/DCDCTrackHit.h"
 #include "FDC/DFDCPseudo.h"
+#include <TRD/DTRDPoint.h>
+#include <TRD/DGEMPoint.h>
 #include <TH3.h>
 #include <TH2.h>
 #include <TH1I.h>
@@ -92,7 +94,7 @@ typedef struct{
 typedef struct{ 
   double t,cosa,sina;
   double phiX,phiY,phiZ; // Alignment constants
-  double uwire,vstrip,vvar,z,dE;
+  double uwire,vstrip,uvar,vvar,z,dE;
   double nr,nz;
   int status;
   const DFDCPseudo *hit;
@@ -179,8 +181,10 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   unsigned int GetRatioMeasuredPotentialFDCHits(void) const {return my_fdchits.size()/potential_fdc_hits_on_track;}
   unsigned int GetRatioMeasuredPotentialCDCHits(void) const {return my_cdchits.size()/potential_cdc_hits_on_track;}
 
-  jerror_t AddCDCHit(const DCDCTrackHit *cdchit);
-  jerror_t AddFDCHit(const DFDCPseudo *fdchit);
+  void AddCDCHit(const DCDCTrackHit *cdchit);
+  void AddFDCHit(const DFDCPseudo *fdchit);
+  void AddTRDHit(const DTRDPoint *trdhit);
+  void AddGEMHit(const DGEMPoint *gemhit);
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
@@ -440,6 +444,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   vector<double>cdc_origin;
   // outer detectors
   double dTOFz,dFCALz,dDIRCz;
+  vector<double>dTRDz_vec;
 
   // Mass hypothesis
   double MASS,mass2;
@@ -495,7 +500,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
-  bool USE_CDC_HITS,USE_FDC_HITS;
+  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
+  bool got_trd_gem_hits;
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;

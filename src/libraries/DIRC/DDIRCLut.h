@@ -36,12 +36,12 @@ public:
 
 	bool brun(JEventLoop *loop);
 	bool CreateDebugHistograms();
-	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
+	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
 	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
 	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
-	double CalcAngle(TVector3 momInBar, double locMass) const;
-	map<Particle_t, double> CalcExpectedAngles(TVector3 momInBar) const;
+	double CalcAngle(double locP, double locMass) const;
+	map<Particle_t, double> CalcExpectedAngles(double locP) const;
 	
 private:
 	DApplication *dapp;
@@ -51,11 +51,14 @@ private:
 	bool DIRC_DEBUG_HISTS;
 	bool DIRC_TRUTH_BARHIT;
 	bool DIRC_TRUTH_PIXELTIME;
+	bool DIRC_ROTATE_TRACK;
 
 	double DIRC_CUT_TDIFFD;
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
+
+	double dRotationX[48], dRotationY[48], dRotationZ[48];
 
 	int dMaxChannels;
 	double dCriticalAngle, dIndex;
