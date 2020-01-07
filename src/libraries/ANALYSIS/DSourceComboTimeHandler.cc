@@ -1123,7 +1123,7 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 
 	//ok, total chisq's are computed, pick the one that is the best!
 	auto Compare_RFChiSqs = [](const pair<int, double>& lhs, const pair<int, double>& rhs) -> bool {return lhs.second < rhs.second;};
-	auto locRFBunch = std::max_element(locChiSqByRFBunch.begin(), locChiSqByRFBunch.end(), Compare_RFChiSqs)->first;
+	auto locRFBunch = std::min_element(locChiSqByRFBunch.begin(), locChiSqByRFBunch.end(), Compare_RFChiSqs)->first;
 
 	if(dDebugLevel >= 10)
 		cout << "chosen bunch: " << locRFBunch << endl;
