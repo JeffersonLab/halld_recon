@@ -37,6 +37,7 @@ class JEventProcessor_pi0bcalskim:public jana::JEventProcessor{
   double MIN_SH2_E;
  
   int WRITE_EVIO;
+  int WRITE_HDDM;
   int num_epics_events;
 
 };
