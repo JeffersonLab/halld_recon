@@ -1400,6 +1400,8 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 	uint32_t slot = 0;
 	uint32_t itrigger = -1;
 
+	uint32_t *istart_pulse_data = iptr;
+
     // Loop over data words
     for(; iptr<iend; iptr++){
 
@@ -1509,7 +1511,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 						if( (*iptr>>30) != 0x01) {
 							jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-							DumpBinary(&iptr[-2], iend, 128, iptr);
+							DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
 							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
 						}
  
@@ -1523,7 +1525,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 
 						iptr++;
 						if( (*iptr>>30) != 0x00){
-							DumpBinary(&iptr[-3], iend, 128, iptr);
+							DumpBinary(istart_pulse_data, iend, 128, iptr);
 							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
 						}
  
@@ -1630,6 +1632,11 @@ void DEVIOWorkerThread::MakeDf250WindowRawData(DParsedEvent *pe, uint32_t rocid,
         wrd->invalid_samples |= invalid_2;
         wrd->overflow |= (sample_2>>12) & 0x1;
     }
+	 
+	 if(VERBOSE>7) cout << "      FADC250 Window Raw Data: size from header=" << window_width << " Nsamples found=" << wrd->samples.size() << endl;
+	 if( window_width != wrd->samples.size() ){
+	 	jerr <<" FADC250 Window Raw Data number of samples does not match header! (" <<wrd->samples.size() << " != " << window_width << ") for rocid=" << rocid << " slot=" << slot << " channel=" << channel << endl;
+	 }
 }
 
 //----------------
