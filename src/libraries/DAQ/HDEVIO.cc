@@ -801,6 +801,12 @@ void HDEVIO::MapBlocks(bool print_ticker)
 				br.first_event += ((uint64_t)bh.physics.first_event_hi)<<32;
 				br.last_event   = br.first_event + (uint64_t)M - 1;
 				break;
+			case 0xFF33:                                        // CDAQ
+				//M = eh->cdaqphysics.roc1_bank_header&0xFF;
+				br.block_type   = kBT_PHYSICS;
+				br.first_event  = bh.cdaqphysics.first_event;
+				br.last_event   = br.first_event + (uint64_t)M - 1; // M is probably wrong here! (see MapEvents below)
+				break;
 			default:
 				br.block_type   = kBT_UNKNOWN;
 				_DBG_ << "Uknown tag: " << hex << tag << dec << endl;
