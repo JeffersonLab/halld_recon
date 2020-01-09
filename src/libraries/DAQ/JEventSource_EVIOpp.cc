@@ -820,12 +820,16 @@ uint64_t JEventSource_EVIOpp::SearchFileForRunNumber(void)
 			if( (*iptr & 0xffffffff) ==  0x00700E01) continue;
 			
 			// BOR event from CDAQ ER
-			if( (*iptr & 0xffffffff) ==  0x00700e34){
+			// Prior to Fall 2019 this was 0x00700e34 where the 34 represented the number of crates
+			// Two crates were added in Fall 2019 so this changed to 0x00700e36. To future-proof
+			// this, we ignore the last 8 bits and hope this is unique enough not to get confused!
+			//if( (*iptr & 0xffffffff) ==  0x00700e34){
+			if( (*iptr & 0xffffff00) ==  0x00700e00){
 				iptr++;
 				uint32_t crate_len    = iptr[0];
 				uint32_t crate_header = iptr[1];
 				uint32_t *iend_crate  = &iptr[crate_len];
-			
+
 				// Make sure crate tag is right
 				if( (crate_header>>16) == 0x71 ){
 
@@ -846,7 +850,7 @@ uint64_t JEventSource_EVIOpp::SearchFileForRunNumber(void)
 					}
 					iptr = iend_crate; // ensure we're pointing past this crate
 				}
-				
+
 				continue; // didn't find it in this CDAQ BOR. Keep looking
 			}
 
