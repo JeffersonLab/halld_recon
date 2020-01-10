@@ -196,7 +196,7 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for(unsigned int i=0; i< windowraws.size(); i++){
         const Df250WindowRawData *windowraw = windowraws[i];
         if (windowraw->rocid!=84) continue; // choose rocPS2
-        if (!(windowraw->slot==13||windowraw->slot==14)) continue; // azimuthal sectors: 13,14; rings: 15,16
+        if (!(windowraw->slot==13||windowraw->slot==14||windowraw->slot==15||windowraw->slot==16)) continue; // azimuthal sectors: 13,14,15,16 (no rings instrumented)
         int slot = windowraw->slot;
         int channel = windowraw->channel;
         // Get a vector of the samples for this channel
