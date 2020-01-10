@@ -190,15 +190,37 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (trig_bits!=8) {
         return NOERROR;
     }
+
     // get raw samples and make TPOL hits
-    vector<const Df250WindowRawData*> windowraws;
-    loop->Get(windowraws);
-    for(unsigned int i=0; i< windowraws.size(); i++){
-        const Df250WindowRawData *windowraw = windowraws[i];
-        if (windowraw->rocid!=84) continue; // choose rocPS2
-        if (!(windowraw->slot==13||windowraw->slot==14||windowraw->slot==15||windowraw->slot==16)) continue; // azimuthal sectors: 13,14,15,16 (no rings instrumented)
-        int slot = windowraw->slot;
-        int channel = windowraw->channel;
+    vector<const DTPOLSectorDigiHit*> sectordigihits;
+    loop->Get(sectordigihits);
+    sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
+   
+    // Loop over SECTOR hits
+    for (unsigned int i = 0; i < sectordigihits.size(); i++){
+	
+	// get raw pulse from DigiHit object
+	const DTPOLSectorDigiHit *sectordigihit = sectordigihits[i];
+	vector<const Df250PulseData*> f250PulseData;
+	sectordigihit->Get(f250PulseData);
+
+	vector<const Df250WindowRawData*> f250WindowRawData;
+	if (f250PulseData.size()>0) f250PulseData[0]->Get(f250WindowRawData);
+	else continue;
+	
+	const Df250WindowRawData* windowraw;
+	if (f250WindowRawData.size()>0) windowraw = f250WindowRawData[0];
+	else continue;	
+
+	//vector<const Df250WindowRawData*> windowraws;
+	//loop->Get(windowraws);
+	//for(unsigned int i=0; i< windowraws.size(); i++){
+	//const Df250WindowRawData *windowraw = windowraws[i];
+        //if (windowraw->rocid!=84) continue; // choose rocPS2
+        //if (!(windowraw->slot==13||windowraw->slot==14||windowraw->slot==15||windowraw->slot==16)) continue; // azimuthal sectors: 13,14,15,16 (no rings instrumented)
+        //int slot = windowraw->slot;
+        //int channel = windowraw->channel;
+
         // Get a vector of the samples for this channel
         const vector<uint16_t> &samplesvector = windowraw->samples;
         unsigned int nsamples=samplesvector.size();
@@ -221,7 +243,7 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
         double pulse_height = w_max - w_min;
         if (pulse_height < ADC_THRESHOLD) continue;
         DTPOLHit *hit = new DTPOLHit;
-        hit->sector = GetSector(slot,channel);
+        hit->sector = sectordigihit->sector; //GetSector(slot,channel);
         hit->phi = GetPhi(hit->sector);
         hit->ring = 0;
         hit->theta = 0;
@@ -250,20 +272,6 @@ jerror_t DTPOLHit_factory::fini(void)
     return NOERROR;
 }
 
-int DTPOLHit_factory::GetSector(int slot,int channel)
-{
-    int sector = 0;
-    if (slot == 13) sector = 25 - channel;
-    if (slot == 14) {
-        if (channel <= 8) sector = 9 - channel;
-        else sector = NSECTORS + 9 - channel;
-    }
-    // fix cable swap
-    if (sector == 9) sector = 6;
-    else if (sector == 6) sector = 9;
-    if (sector == 0) jerr << "sector did not change from initial value (0)." << endl;
-    return sector;
-}
 double DTPOLHit_factory::GetPhi(int sector)
 {
     double phi = -10.0;
