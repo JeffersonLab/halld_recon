@@ -1,3 +1,12 @@
+/**************************************************************************                                                                                                                           
+* HallD software                                                          * 
+* Copyright(C) 2019  GlueX and PrimEX-D Collaborations                    * 
+*                                                                         *                                                                                                                               
+* Author: The GlueX and PrimEX-D Collaborations                           *                                                                                                                                
+* Contributors: Andrew Smith                                              *                                                                                                                               
+*                                                                         *                                                                                                                               
+* This software is provided "as is" without any warranty.                 *
+**************************************************************************/
 // $Id$
 //
 //    File: JEventProcessor_compton_simple.h
