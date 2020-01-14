@@ -143,7 +143,7 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 				break;
 			default:
 				cout << "BUILDING DREACTION, FLAG " << locThisFlagString << " NOT RECOGNIZED." << endl;
-				continue;
+				break;
 		}
 
 		if(locUnderscoreIndex == string::npos)
