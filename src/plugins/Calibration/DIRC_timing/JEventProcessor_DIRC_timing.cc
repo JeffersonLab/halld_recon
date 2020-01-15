@@ -91,6 +91,9 @@ static TH2I *hHit_pixelOccupancy_LED_Event_5000_cut[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_in[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_out[Nboxes];
 
+static TH1I *hHit_LEDRefTime[Nboxes];
+static TH1I *hHit_LEDRefTdcChannelTimeDiff[Nboxes];
+
 static TH1I *hHit_tdcTime_LED_5000[Nboxes];
 
 uint64_t event_counter;
@@ -153,6 +156,8 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
     hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, -20, 20, 100, 1000, 1500);
     hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 100, 0, 1000);
 
+
+
     // book hists
     dirc_num_events = new TH1I("dirc_num_events","DIRC Number of events",1,0.5,1.5);
     TDirectory *hitDir = gDirectory->mkdir("Hit"); hitDir->cd();
@@ -211,6 +216,15 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 
 
 	hHit_pixelRow_timing[i] =   new TH2I("Hit_pixelRow_timing","Hit_pixelRow_timing; channel; time-over-threshold [ns]", 150,0,150,100,-50,50);
+
+
+	/*--------------------------------------------------*/
+	// LED SiPM reference time
+
+    hHit_LEDRefTime[i] = new TH1I("Hit_LEDRefTime", "LED TDC reference SiPM time; SiPM TDC time (ns)", 300, -10,20);
+    hHit_LEDRefTdcChannelTimeDiff[i] = new TH1I("Hit_LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 300, 0, 300);
+
+
 
 
 	for(int k = 0; k < 18; k++) {
@@ -540,6 +554,10 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 
 			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime[box]);
 			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime[box]);
+
+			hHit_LEDRefTime[box]->Fill(locLEDRefTdcTime);
+
+			hHit_LEDRefTdcChannelTimeDiff[box]->Fill(hit->t-locLEDRefTdcTime);
 
 //			cout << box << "    " << pmtrow << endl;
 //			cout << box << "    " << locRefTime[box]  << endl;
