@@ -43,7 +43,7 @@ class DDIRCPmtHit_factory:public jana::JFactory<DDIRCPmtHit>{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 		double t_base[2];
-		bool applyTimeOffset, applyTimewalk;
+		bool DIRC_TIME_OFFSET, DIRC_TIMEWALK;
 		bool DIRC_SKIP;
 };
 
