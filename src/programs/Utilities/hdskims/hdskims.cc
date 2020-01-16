@@ -54,7 +54,9 @@ string   USER_OFILENAME = "";
 uint64_t MAX_EVIO_EVENTS = 50000;
 uint64_t SKIP_EVIO_EVENTS = 0;
 uint64_t Nevents = 0;
+uint64_t Nevents_saved = 0;
 bool     WRITE_SQL_FILE = false;
+bool     FP_IGNORE[32];
 
 uint32_t NGTP_TOTAL[32];
 uint32_t NFP_TOTAL[32];
@@ -113,6 +115,9 @@ void Usage(string mess = "") {
 void ParseCommandLineArguments(int narg, char *argv[]) {
 
 	if (narg < 2) Usage("You must supply a filename!");
+	
+	// By default, all FP triggers can cause a block to be written out
+	for(int itrig=0; itrig<32; itrig++) FP_IGNORE[itrig] = false;
 
 	for (int i = 1; i < narg; i++) {
 		string arg = argv[i];
@@ -131,6 +136,15 @@ void ParseCommandLineArguments(int narg, char *argv[]) {
 			USER_OFILENAME = next.c_str();
 			i++;
 		}
+		else if (arg == "-fp") {
+			int itrig = atoi(next.c_str());
+			if(itrig<0 || itrig>=32){
+				cerr<<"ERROR: argument to -fp option must be number in 0-31 range" << endl;
+				exit(-1);
+			}
+			FP_IGNORE[itrig] = true;
+			i++;
+		}
 		else if (arg == "-sql" || arg == "--sql") {
 			WRITE_SQL_FILE = true;
 		}
@@ -144,6 +158,10 @@ void ParseCommandLineArguments(int narg, char *argv[]) {
 	if ((filenames.size() > 1) && (USER_OFILENAME.length() > 0)) {
 		Usage("ERROR: You may only use the -o option with a single input file! (otherwise output skim files will overwrite one another)");
 	}
+	
+	cout << "The following FP triggers will be saved: ";
+	for(int itrig=0; itrig<16; itrig++) if(!FP_IGNORE[itrig]) cout << itrig << ",";
+	cout << endl; 
 }
 
 
@@ -197,6 +215,7 @@ void MakeSkim(string &filename) {
 						vbuff->resize((*vbuff)[0] + 1);
 						evioout.AddBufferToOutput(vbuff); // HDEVIOWriter takes ownership of buffer
 						vbuff = evioout.GetBufferFromPool(); // get a new buffer
+						Nevents_saved++;
 					}
 				}
 				break;
@@ -218,7 +237,8 @@ void MakeSkim(string &filename) {
 			auto Nleft = hdevio->GetNWordsLeftInFile();
 			auto Nread = Nwords_in_input_file - Nleft;
 			int percent_done = (100 * Nread) / Nwords_in_input_file;
-			cout << " " << Nread << "/" << Nwords_in_input_file << " (" << percent_done << "%) processed       \r";
+			int percent_saved = (100 * Nevents_saved ) / Nevents;
+			cout << " " << Nread << "/" << Nwords_in_input_file << " (" << percent_done << "%) processed  - " << percent_saved << "% saved     \r";
 			cout.flush();
 		}
 		if (Nevents > (SKIP_EVIO_EVENTS + MAX_EVIO_EVENTS)) break;
@@ -365,7 +385,10 @@ bool ProcessEvent(uint32_t *buff, uint32_t buff_len) {
 		}
 
 		auto NFP_TOT = 0;
-		for(int itrig=0; itrig<32; itrig++) NFP_TOT += NFP[itrig];
+		for(int itrig=0; itrig<32; itrig++){
+			if( FP_IGNORE[itrig] ) continue;  // Allow user to specify certain FP triggers not to cause block to be written
+			NFP_TOT += NFP[itrig];
+		}
 		//auto NFP = NBCAL_LED_US + NBCAL_LED_DS + Nrandom + NFCAL_LED + NCCAL_LED1 + NCCAL_LED2 + NDIRC_LED;
 		if (NFP_TOT > 0) {
 			NEVIO_BLOCKS_TOTAL++;

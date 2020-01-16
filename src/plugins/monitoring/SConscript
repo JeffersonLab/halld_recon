@@ -54,7 +54,8 @@ subdirs = [
 'timing_online',
 'DIRC_online',
 'TRD_online',
-'RSAI_KO'
+'RSAI_KO',
+'BEAM_online'
 ]
 
 #'L3_online',
