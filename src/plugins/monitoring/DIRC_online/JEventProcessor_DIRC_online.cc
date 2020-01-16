@@ -100,19 +100,22 @@ JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
 
 jerror_t JEventProcessor_DIRC_online::init(void) {
 
+    FillTimewalk = false;
+    gPARMS->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
+
     // create root folder for psc and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
     TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
     dircDir->cd();
 
-    hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 100, -20, 20);
-    hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 100, -20, 20);
+    hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 100, 0, 100);
+    hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 100, 0, 100);
     hLEDRefIntegral = new TH1I("LEDRefIntegral", "LED reference SiPM integral; integral (ADC)", 100, 1000, 1500);
-    hLEDRefAdcVsTdcTime = new TH2I("LEDRefAdcVsTdcTime", "LED ADC vs TDC reference SiPM time; TDC time (ns); ADC time (ns)", 100, -20, 20, 100, -20, 20);
-    hLEDRefTdcChannelTimeDiff = new TH1I("LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 400, 110, 150);
-    hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 40, 110, 150, 100, -20, 20);
-    hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 40, 110, 150, 100, -20, 20);
-    hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, -20, 20, 100, 1000, 1500);
+    hLEDRefAdcVsTdcTime = new TH2I("LEDRefAdcVsTdcTime", "LED ADC vs TDC reference SiPM time; TDC time (ns); ADC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefTdcChannelTimeDiff = new TH1I("LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 100, 0, 100);
+    hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, 0, 100, 100, 1000, 1500);
     hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 500, 0, 100);
 
     // book hists
@@ -147,7 +150,7 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
         hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
 	
-	if(i==1) {
+	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
 		for(int j=0; j<Nchannels; j++) {
 			hHit_Timewalk[i][j] = new TH2I(Form("Hit_Timewalk_%d",j),Form("DIRCPmtHit channel %d: #Delta t vs time-over-threshold; time-over-threshold [ns]; #Delta t [ns]",j),100,0,100,100,-50.,50.);
@@ -285,33 +288,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	    }
     }
 
-/*
-	    for(uint i=0; i<sipmadchits.size(); i++) {
-		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-			    locLEDRefAdcTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
-			    locLEDRefAdcTime *= 0.0625; // convert time from flash to ns
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
-			    hLEDRefIntegral->Fill(sipmadchit->integral); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
-			    locLEDRefTime = locLEDRefAdcTime;
-		    }
-	    }
-	    
-	    for(uint i=0; i<sipmtdchits.size(); i++) {
-		    const DCAEN1290TDCHit* sipmtdchit = (DCAEN1290TDCHit*)sipmtdchits[i];
-		    if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
-			    locLEDRefTdcTime = (double)((sipmtdchit->time));
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefTdcTime->Fill(locLEDRefTdcTime); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK	     
-			    locLEDRefTime = locLEDRefTdcTime;
-		    }
-	    }
-    }
-*/
-
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -335,7 +311,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // Loop over calibrated hits to get mean for reference time
     double locRefTime = 0;
     int locNHits = 0;
-    double locFirstFiberTime = 128.1; // 205.5; used for no time offset
+    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
     for (const auto& hit : hits) {
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
@@ -361,6 +337,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     //if(locReferenceClockTime%2 == 0)
     //    locRefTime += 4.0;
  
+    // use LED reference SiPM if available
+    if(locLEDRefTdcTime > 0. && locLEDRefAdcTime > 0.)
+	    locRefTime = locLEDRefTdcTime;
+
     // Fill calibrated-hit hists
     int NHits[] = {0,0};
     bool ledFiber[3] = {false, false, false};
@@ -382,8 +362,10 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 	// LED specific histograms
 	if(locDIRCLEDTrig) {
-		hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime);
-		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime);
+		double locHitTime = hit->t;
+		if(box == 0) locHitTime -= 40.0 / 0.983571; // LED fiber length / c (ft/ns)
+		hHit_tdcTimeDiffEvent[box]->Fill(locHitTime-locRefTime);
+		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,locHitTime-locRefTime);
 	
 		if(locLEDRefTdcTime > 0) {
 			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
@@ -391,15 +373,15 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		}
 
 		if(box==1 && channel==2490) {
-			hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
-			hLEDRefTdcVsChannelTime->Fill(hit->t,locLEDRefTdcTime);
-			hLEDRefAdcVsChannelTime->Fill(hit->t,locLEDRefAdcTime);
+			hLEDRefTdcChannelTimeDiff->Fill(locHitTime-locLEDRefTdcTime);
+			hLEDRefTdcVsChannelTime->Fill(locHitTime,locLEDRefTdcTime);
+			hLEDRefAdcVsChannelTime->Fill(locHitTime,locLEDRefAdcTime);
 		}
 	
-		double locDeltaT = hit->t - locRefTime;
+		double locDeltaT = locHitTime - locRefTime;
 		if(ledFiber[1]) locDeltaT -= 10.;
 		if(ledFiber[2]) locDeltaT -= 20.;
-		hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
+		if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
 	}
 
     }

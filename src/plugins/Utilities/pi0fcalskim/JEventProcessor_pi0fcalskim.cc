@@ -22,6 +22,7 @@ using namespace jana;
 #include "ANALYSIS/DAnalysisUtilities.h"
 #include "PID/DVertex.h"
 #include "PID/DEventRFBunch.h"
+#include "HDDM/DEventWriterHDDM.h"
 
 #include "GlueX.h"
 #include <vector>
@@ -46,7 +47,13 @@ extern "C"{
 JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
 {
 
- WRITE_EVIO = 1;
+  WRITE_EVIO = 1;
+  WRITE_HDDM = 0;
+
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM );
+
+
 /*
   MIN_MASS   = 0.03; // GeV
   MAX_MASS   = 0.30; // GeV
@@ -67,7 +74,6 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO );
   */
 }
 
@@ -280,9 +286,14 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
  if( Candidate ){
 
     if( WRITE_EVIO ){
-
         locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcalskim", locObjectsToSave );
     }
+    if( WRITE_HDDM ) {
+      vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
+      loop->Get(locEventWriterHDDMVector);
+      locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+    }
+
  }
  
  

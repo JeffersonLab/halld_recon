@@ -54,6 +54,8 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
 // 		return NOERROR;
 // 	}
 	
+        //int up_trigger_count = 0;
+        //int down_trigger_count = 0;
 	//NOtrig=0; FPtrig=0; GTPtrig=0; FPGTPtrig=0; trigUS=0; trigDS=0; trigCosmic=0;
 	//low_down_1_counter=0; low_down_2_counter=0; low_down_3_counter=0; low_down_4_counter=0; low_up_1_counter=0; low_up_2_counter=0; low_up_3_counter=0; 		low_up_4_counter=0; high_down_1_counter=0; high_down_2_counter=0; high_down_3_counter=0; high_down_4_counter=0; high_up_1_counter=0;
 	//high_up_2_counter=0; high_up_3_counter=0; high_up_4_counter=0;
@@ -161,6 +163,9 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
 	high_down_3 = new TProfile("high_bias_down_sector_3_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);
 	high_down_4 = new TProfile("high_bias_down_sector_4_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);	
 
+	down = new TProfile("down_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);	
+	up = new TProfile("up_peak_vchannel","Avg BCAL peak vs channel;channel ID;peak",1536,0,1536);	
+
 
 	h2_ledboth_Aall_vs_event = new TProfile("h2_ledboth_Aall_vs_event", "LED uboth - Aup and Adown vs event", 20000,0,200000000);
 	h2_ledboth_sector_vs_event = new TProfile("h2_ledboth_sector_vs_event", "LED both - sector vs event", 20000,0,200000000);
@@ -200,6 +205,22 @@ jerror_t JEventProcessor_BCAL_LED::init(void) {
 	// back to main dir
 	main->cd();
 	
+	gDirectory->mkdir("BCAL_LED_highlevel")->cd();
+	
+	dHist_L1bits_fp  = new TH1I("L1bits_fp", "L1 trig bits from FP;Trig. bit (9-10)", 4, 7.5, 11.5);
+
+	dHist_L1bits_fp_twelvehundhits  = new TH1I("L1bits_fp_twelvehundhits", "Pseudo-trig bits (FP or >1200 hits);Trig. bit (1-32)", 4, 7.5, 11.5);
+
+	dHist_quad_count_up  = new TH1I("dHist_quad_count_up", "Quadrants Count - Upstream LED; Quadrant (1-4)", 8, 0.5, 1535.5);
+	dHist_quad_count_down  = new TH1I("dHist_quad_count_down", "Quadrants Count - Downstream LED; Quadrant (1-4)", 8, 0.5, 1535.5);
+
+// 	dHist_quad_occ_up  = new TH2I("dHist_quad_occ_up", "Quadrants Occupancy - Upstream Pulser", 2, 0.5, 2.5, 2, 0.5, 2.5);
+// 	dHist_quad_occ_down  = new TH2I("dHist_quad_occ_down", "Quadrants triggered -  Downstream Pulser", 2, 0.5, 2.5, 2, 0.5, 2.5);
+
+	dHist_quad_occ_up  = new TH1F("dHist_quad_occ_up", "Quadrants Occupancy - Upstream Pulser", 4, 0.5, 4.5);
+	dHist_quad_occ_down  = new TH1F("dHist_quad_occ_down", "Quadrants triggered -  Downstream Pulser", 4, 0.5, 4.5);
+	// back to main dir
+	main->cd();
 	// unlock
 	japp->RootUnLock();
 	
@@ -216,22 +237,10 @@ jerror_t JEventProcessor_BCAL_LED::brun(JEventLoop *eventLoop, int32_t runnumber
 	
 	adccount = 1700; //default threshold
 	
-	//In case different thresholds are required for different run periods.
-	if (runnumber < 20000 && runnumber > 10000)//Spring 2016
-	{
-	  adccount = 1700;
-	}
-	else if (runnumber < 30000 && runnumber > 20000)//Fall 2016
-	{
-	  adccount = 1700;
-	}
-	else if (runnumber < 40000 && runnumber > 30000)//Spring 2017
-	{
-	  adccount = 1700;
-	}
-	else if (runnumber < 50000 && runnumber > 40000)//Spring 2018
-	{
-	  adccount = 1700;
+	if (runnumber > 50742)
+	{//fall2018 all sectors pulsed simultaneously with single bias
+	
+	simultaneous = 1;
 	}
 	return NOERROR;
 }
@@ -280,13 +289,13 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			// Cosmic trigger fired
 			//trigCosmic++;
 		}
-		if (trig->fp_trig_mask & 0x100){
+		if (trig->fp_trig_mask & 0x100){//bit=9
 			// Upstream LED trigger fired
 			//trigUS++;
 			LED_US=1;
 			
 		}
-		if (trig->fp_trig_mask & 0x200){
+		if (trig->fp_trig_mask & 0x200){//bit=10
 			// Downstream LED trigger fired
 			//trigDS++;
 			LED_DS=1;
@@ -306,8 +315,9 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 	//int leddown_sector_int = 0;
 	float leddown_mean = 0;
 	int leddown_events = 0;
-	
-	if (LED_US || LED_DS) {
+	int pseudo_triggerbit = 0;
+//	int up_trigger_count = 0;
+//	int down_trigger_count = 0;
 		
 		dTreeFillData.Fill_Single<ULong64_t>("EventNumber", eventnumber); 
 
@@ -315,6 +325,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 		loop->Get(bcaldigihits);
 		loop->Get(dbcalpoints);
 		
+      if (LED_US || LED_DS || dbcalhits.size() >= 1200.) {
 	        // float apedsubtime[1536] = { 0. };
 	        int apedsubpeak[1536] = { 0 };
 		int cellsector[1536] =  { 0 };
@@ -463,9 +474,8 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 				else if (cellsector[chid] == 3) {bcal_vevent->Fill(6,apedsubpeak[chid]);}
 				else if (cellsector[chid] == 4) {bcal_vevent->Fill(7,apedsubpeak[chid]);}
 		}//loop over bcalhits
-	 
-	 
-		   //Deduce LED pulsing configuration based on average pulse peak in BCAL, each side & each sector then fill correponding profile.
+    
+		 //Deduce LED pulsing configuration based on average pulse peak in BCAL, each side & each sector then fill correponding profile.
 		 double sector1up = 0;
  		 double sector2up = 0;
 		 double sector3up = 0;
@@ -486,14 +496,18 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
  		 sector3down = bcal_vevent->GetBinContent(bcal_vevent->FindBin(14));
 		 sector4down = bcal_vevent->GetBinContent(bcal_vevent->FindBin(15));
 
-		 if (LED_US){
-		 
-		    
+if (simultaneous == 0){//Pulsing sectors separately for runs before 50743
+
+		 if (LED_US || sector1down+sector2down+sector3down+sector4down > sector1up+sector2up+sector3up+sector4up){
+			//set psedo-trigger bit=9 for upstream pulser.
+		 	pseudo_triggerbit = 9;
+			up_trigger_count++;
 			if (adccount > sector1down && sector1down > sector1up && sector1up > sector2up && sector1down > sector2down && sector1up > sector3up && sector1down > sector3down && sector1up > sector4up && sector1down > sector4down)
 			    {//sector = 1;
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 0 && apedsubpeak[k] > 0) {low_up_1->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
 					    if (k < 768) {bcal_vevent->Fill(20,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(16,apedsubpeak[k]);
@@ -505,9 +519,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    
 			else if (adccount > sector2down && sector2down > sector2up && sector2up > sector1up && sector2down > sector1down && sector2up > sector3up && sector2down > sector3down && sector2up > sector4up && sector2down > sector4down)
 			    {//sector = 2;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 1 && apedsubpeak[k] > 0) {low_up_2->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
 					    if (k < 768) {bcal_vevent->Fill(21,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(17,apedsubpeak[k]);
@@ -521,6 +536,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 2 && apedsubpeak[k] > 0) {low_up_3->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
 					    if (k < 768) {bcal_vevent->Fill(22,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(18,apedsubpeak[k]);
@@ -531,9 +547,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 			else if (adccount > sector4down && sector4down > sector4up && sector4up > sector1up && sector4down > sector1down && sector4up > sector2up && sector4down > sector2down && sector4up > sector3up && sector4down > sector3down)
 			    {//sector = 4;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 3 && apedsubpeak[k] > 0) {low_up_4->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
 					    if (k < 768) {bcal_vevent->Fill(23,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(19,apedsubpeak[k]);
@@ -546,9 +563,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 
 			else if (sector1down > adccount && sector1down > sector1up && sector1up > sector2up && sector1down > sector2down && sector1up > sector3up && sector1down > sector3down && sector1up > sector4up && sector1down > sector4down)
 			    {//sector = 1;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 0 && apedsubpeak[k] > 0) {high_up_1->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(36,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(32,apedsubpeak[k]);
@@ -559,9 +577,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 			else if (sector2down > adccount && sector2down > sector2up && sector2up > sector1up && sector2down > sector1down && sector2up > sector3up && sector2down > sector3down && sector2up > sector4up && sector2down > sector4down)
 			    {//sector = 2;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 1 && apedsubpeak[k] > 0) {high_up_2->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
      					    if (k < 768) {bcal_vevent->Fill(37,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(33,apedsubpeak[k]);
@@ -572,9 +591,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 			else if (sector3down > adccount && sector3down > sector3up && sector3up > sector1up && sector3down > sector1down && sector3up > sector2up && sector3down > sector2down && sector3up > sector4up && sector3down > sector4down)
 			    {//sector = 3;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 2 && apedsubpeak[k] > 0) {high_up_3->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(38,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(34,apedsubpeak[k]);
@@ -585,9 +605,10 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 			else if (sector4down > adccount && sector4down > sector4up && sector4up > sector1up && sector4down > sector1down && sector4up > sector2up && sector4down > sector2down && sector4up > sector3up && sector4down > sector3down)
 			    {//sector = 4;
-			    for(int k=0 ;k < 1536;k++) 
+                            for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 3 && apedsubpeak[k] > 0) {high_up_4->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_up->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(39,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(35,apedsubpeak[k]);
@@ -598,13 +619,18 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 			}//if LED_US
 			
-			if (LED_DS){
+			if (LED_DS || sector1down+sector2down+sector3down+sector4down < sector1up+sector2up+sector3up+sector4up){
+			//set psedo-trigger bit=10 for Downstream pulser.
+		 	pseudo_triggerbit = 10;
+                        down_trigger_count++;
+
 			    if (adccount > sector1up && sector1up > sector1down && sector1up > sector2up && sector1down > sector2down && sector1up > sector3up && sector1down > sector3down && sector1up > sector4up && sector1down > sector4down)
 			    {
 			      //sector = 1;
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 0 && apedsubpeak[k] > 0) {low_down_1->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(28,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(24,apedsubpeak[k]);
@@ -618,6 +644,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 1 && apedsubpeak[k] > 0) {low_down_2->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(29,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(25,apedsubpeak[k]);
@@ -631,6 +658,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 2 && apedsubpeak[k] > 0) {low_down_3->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(30,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(26,apedsubpeak[k]);
@@ -644,6 +672,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 3 && apedsubpeak[k] > 0) {low_down_4->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(31,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(27,apedsubpeak[k]);
@@ -657,6 +686,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 0 && apedsubpeak[k] > 0) {high_down_1->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(44,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(40,apedsubpeak[k]);
@@ -670,6 +700,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 1 && apedsubpeak[k] > 0) {high_down_2->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(45,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(41,apedsubpeak[k]);
@@ -683,6 +714,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 2 && apedsubpeak[k] > 0) {high_down_3->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(46,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(42,apedsubpeak[k]);
@@ -696,6 +728,7 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    for(int k=0 ;k < 1536;k++) 
 			    {if (chcounter[k] != 1) continue;
 			      if (k%4 == 3 && apedsubpeak[k] > 0) {high_down_4->Fill(k, apedsubpeak[k]);
+								   dHist_quad_count_down->Fill(k);
     					    if (k < 768) {bcal_vevent->Fill(47,apedsubpeak[k]);
 							  }
 					    else if  (k > 767) {bcal_vevent->Fill(43,apedsubpeak[k]);
@@ -706,6 +739,49 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 			    }
 		  
 			}//if LED_DS
+}//Pulsing sectors separately for runs before 50743
+
+else if (simultaneous == 1){//Pulsing all sectors simultaneously starting run 50743
+    
+		 
+		 if (LED_US || sector1down+sector2down+sector3down+sector4down > sector1up+sector2up+sector3up+sector4up){
+			//set psedo-trigger bit=9 for upstream pulser.
+		 	pseudo_triggerbit = 9;
+                        up_trigger_count++;
+
+			    for(int k=0 ;k < 1536;k++) 
+			    {if (chcounter[k] != 1) continue;
+			      if (apedsubpeak[k] > 0) {up->Fill(k, apedsubpeak[k]);
+						      dHist_quad_count_up->Fill(k);
+					    if (k < 768) {bcal_vevent->Fill(20,apedsubpeak[k]);
+							  }
+					    else if  (k > 767) {bcal_vevent->Fill(16,apedsubpeak[k]);
+								}
+					    }
+			    }
+			    //up_counter++;			    
+			    
+			}//if LED_US
+			
+        if (LED_DS || sector1down+sector2down+sector3down+sector4down < sector1up+sector2up+sector3up+sector4up){
+			//set psedo-trigger bit=10 for Downstream pulser.
+		 	pseudo_triggerbit = 10;
+	                down_trigger_count++;
+
+			    for(int k=0 ;k < 1536;k++) 
+			    {if (chcounter[k] != 1) continue;
+			      if (apedsubpeak[k] > 0) {down->Fill(k, apedsubpeak[k]);
+						      dHist_quad_count_down->Fill(k);
+    					    if (k < 768) {bcal_vevent->Fill(28,apedsubpeak[k]);
+							  }
+					    else if  (k > 767) {bcal_vevent->Fill(24,apedsubpeak[k]);
+								}
+					    }
+			    }
+			    //down_counter++;
+		  
+			}//if LED_DS
+}//Pulsing all sectors simultaneously starting run 50743
 
 		//Fill diagnostic tree branches
 		dTreeFillData.Fill_Single<Double_t>("bcal_peak", bcal_vevent->GetBinContent(bcal_vevent->FindBin(1)));//1
@@ -770,9 +846,36 @@ jerror_t JEventProcessor_BCAL_LED::evnt(JEventLoop *loop, uint64_t eventnumber) 
 
 		dTreeInterface->Fill(dTreeFillData);
 		
+		for (int quad = 1; quad < 5; quad++)
+		{
+		  int quad_occ_up, quad_occ_down = 0;
+		  
+		  quad_occ_up = dHist_quad_count_up->GetBinContent(dHist_quad_count_up->FindBin(quad))+dHist_quad_count_up->GetBinContent(dHist_quad_count_up->FindBin(quad+4));
+//		 cout << "quad " << quad <<" occ_up =" << quad_occ_up << ", down =" << quad_occ_down << endl;
+		 if (quad_occ_up > 191) dHist_quad_occ_up->Fill(quad);
+		  
+		 quad_occ_down = dHist_quad_count_down->GetBinContent(dHist_quad_count_down->FindBin(quad))+dHist_quad_count_down->GetBinContent(dHist_quad_count_up->FindBin(quad+4));
+		  if (quad_occ_down > 191) dHist_quad_occ_down->Fill(quad);
+		 //cout << "quad " << quad <<" occ_up =" << quad_occ_up << ", down =" << quad_occ_down << endl;
+		}
+
+
 		bcal_vevent->Reset();
+		dHist_quad_count_up->Reset();
+		dHist_quad_count_down->Reset();
+
+	/*************************************************************** TRIGGER **************************************************************/
+
+	//Fill histogram if fp LED trigger exists
+	if(LED_US || LED_DS)
+	{
+	dHist_L1bits_fp->Fill(pseudo_triggerbit);		
+    	}
+
+	//Fill histogram if fp LED trigger exists or number of BCAL hits is > 1200
+	dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);	
 		 
-	}//if LEDUP || LEDDOWN    
+	}//if LEDUP || LEDDOWN || 1200 hits   
 	// Unlock ROOT
 	japp->RootUnLock();
 	
@@ -832,6 +935,13 @@ jerror_t JEventProcessor_BCAL_LED::erun(void) {
 jerror_t JEventProcessor_BCAL_LED::fini(void) {
 	// Called before program exit after event processing is finished.
 
+	int quad_count_up = dHist_quad_occ_up->GetMaximum();
+//	if (up_trigger_count > 0) dHist_quad_occ_up->Scale(1/up_trigger_count);
+	int quad_count_down = dHist_quad_occ_down->GetMaximum();
+//	if (down_trigger_count > 0) dHist_quad_occ_down->Scale(1/down_trigger_count);
+        //cout << "up/ trigger count =" <<  quad_count_up << "/"<< up_trigger_count << ", down = " << quad_count_down<< "/"<< down_trigger_count << endl;
+
+if (simultaneous == 0){
 // 	//Write mean pulse peak to output file
 	ofstream foutlowdown ; foutlowdown.open("LED_lowbias_downstream.txt");
 	ofstream foutlowup; foutlowup.open("LED_lowbias_upstream.txt");
@@ -888,6 +998,29 @@ jerror_t JEventProcessor_BCAL_LED::fini(void) {
 	foutlowup.close();
 	fouthighdown.close();
 	fouthighup.close();
+}
+
+if (simultaneous == 1){
+// 	//Write mean pulse peak to output file
+	ofstream foutdown ; foutdown.open("LED_downstream.txt");
+	ofstream foutup; foutup.open("LED_upstream.txt");
+
+	for(int k=0 ;k < 768;k += 4)
+	{
+	double downmeandown = down->GetBinContent(down->FindBin(k));
+	double downmeanup = down->GetBinContent(down->FindBin(768+k));
+
+   	double upmeandown = up->GetBinContent(up->FindBin(k));
+	double upmeanup = up->GetBinContent(up->FindBin(768+k));
+
+	//TString sep = "        ";
+	foutdown << downmeandown << endl << downmeanup << endl;
+	foutup << upmeandown << endl << upmeanup << endl;
+	}
+
+	foutdown.close();
+	foutup.close();
+}
 
 	delete dTreeInterface; //saves trees to file, closes file	
 	delete bcal_vevent;

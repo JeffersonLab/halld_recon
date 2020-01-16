@@ -1,0 +1,12 @@
+
+
+This plugin can can apply an efficiency to specific regions of specific detectors.
+The intended purpose is it generate plots indicating problems so we can use them
+to try the hydra models for DQM AI.
+
+The map of which CDC straws belong to which board are in the CDC_pins_spacedelim.txt.
+The script cdc_pins2c++.py reads this file and generates C++ code in the file
+CDC_pins.h. This is not done by the build system since the original file is never
+expected to change. The original file and code generator script are kept here though
+to record the method by which CDC_pins.h was generated.
+
