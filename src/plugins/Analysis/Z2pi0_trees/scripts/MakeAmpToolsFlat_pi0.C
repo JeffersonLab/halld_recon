@@ -132,15 +132,15 @@ void MakeAmpToolsFlat_pi0::Loop(Int_t foption)
       Long64_t ientry = LoadTree(jentry);
       if (ientry < 0) break;
       nb = fChain->GetEntry(jentry); 
-      nb = b_decaypi01_p4_kin->GetEntry(jentry);
+      /*nb = b_decaypi01_p4_kin->GetEntry(jentry);
       nbytes += nb; 
       nb = b_decaypi02_p4_kin->GetEntry(jentry);
       nbytes += nb; 
-      nb = b_misspb_p4_kin->GetEntry(jentry);
+      nb = b_misspb208_p4_kin->GetEntry(jentry);
       nbytes += nb; 
       nb = b_beam_p4_kin->GetEntry(jentry);
       nbytes += nb;
-      nb = b_AccWeight->GetEntry(jentry);
+      nb = b_AccWeight->GetEntry(jentry);*/
       nbytes += nb;
       // if (Cut(ientry) < 0) continue;
         
@@ -148,7 +148,7 @@ void MakeAmpToolsFlat_pi0::Loop(Int_t foption)
       cout<< "jentry=" << jentry << " weight=" << AccWeight << endl; 
       cout<< "jentry=" << jentry << " px=" << decaypi01_p4_kin->Px()<< " py=" << decaypi01_p4_kin->Py()<< " pz=" << decaypi01_p4_kin->Pz()<< " E=" << decaypi01_p4_kin->E()<< endl; 
       cout<< "jentry=" << jentry << " px=" << decaypi02_p4_kin->Px()<< " py=" << decaypi02_p4_kin->Py()<< " pz=" << decaypi02_p4_kin->Pz()<< " E=" << decaypi02_p4_kin->E()<< endl; 
-      cout<< "jentry=" << jentry << " px=" << misspb_p4_kin->Px()<< " py=" << misspb_p4_kin->Py()<< " pz=" << misspb_p4_kin->Pz()<< " E=" << misspb_p4_kin->E()<< endl << endl;
+      cout<< "jentry=" << jentry << " px=" << misspb208_p4_kin->Px()<< " py=" << misspb208_p4_kin->Py()<< " pz=" << misspb208_p4_kin->Pz()<< " E=" << misspb208_p4_kin->E()<< endl << endl;
 
       TLorentzVector Target(0,0,0,m_TargetMass);
 
@@ -164,10 +164,10 @@ void MakeAmpToolsFlat_pi0::Loop(Int_t foption)
    m_px[1] = decaypi02_p4_kin->Px();
    m_py[1] = decaypi02_p4_kin->Py();
    m_pz[1] = decaypi02_p4_kin->Pz();
-   m_e[2] = misspb_p4_kin->E();
-   m_px[2] = misspb_p4_kin->Px();
-   m_py[2] = misspb_p4_kin->Py();
-   m_pz[2] = misspb_p4_kin->Pz();
+   m_e[2] = misspb208_p4_kin->E();
+   m_px[2] = misspb208_p4_kin->Px();
+   m_py[2] = misspb208_p4_kin->Py();
+   m_pz[2] = misspb208_p4_kin->Pz();
    m_eBeam = beam_p4_kin->E();
    m_pxBeam = beam_p4_kin->Px();
    m_pyBeam = beam_p4_kin->Py();

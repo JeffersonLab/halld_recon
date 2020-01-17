@@ -91,7 +91,7 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    BeamEnergy->SetTitle(filename);
+    BeamEnergy->SetTitle("");
     // BeamEnergy->GetXaxis()->SetRangeUser(xmin,xmax);
     // BeamEnergy->GetYaxis()->SetRangeUser(ymin,ymax);
     BeamEnergy->GetXaxis()->SetTitleSize(0.05);
@@ -119,12 +119,12 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    pi01MomentumMeasured->SetTitle(filename);
+    pi01MomentumMeasured->SetTitle("");
     // pi01MomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
     // pi01MomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
     pi01MomentumMeasured->GetXaxis()->SetTitleSize(0.05);
     pi01MomentumMeasured->GetYaxis()->SetTitleSize(0.05);
-    pi01MomentumMeasured->GetXaxis()->SetTitle("Pi01 Momentum (GeV)");
+    pi01MomentumMeasured->GetXaxis()->SetTitle("#pi^{0}_{1} Momentum Measured (GeV)");
     pi01MomentumMeasured->SetMarkerColor(4);
     pi01MomentumMeasured->Draw();
     
@@ -133,12 +133,12 @@ void plot_Z2pi_trees(TString filename)
     ymin = 0;
     ymax = 4000;
     
-    pi02MomentumMeasured->SetTitle(filename);
+    pi02MomentumMeasured->SetTitle("");
     // pi02MomentumMeasured->GetXaxis()->SetRangeUser(xmin,xmax);
     // pi02MomentumMeasured->GetYaxis()->SetRangeUser(ymin,ymax);
     pi02MomentumMeasured->GetXaxis()->SetTitleSize(0.05);
     pi02MomentumMeasured->GetYaxis()->SetTitleSize(0.05);
-    pi02MomentumMeasured->GetXaxis()->SetTitle("Pi02 Momentum (GeV)");
+    pi02MomentumMeasured->GetXaxis()->SetTitle("#pi^{0}_{2} Momentum Measured (GeV)");
     pi02MomentumMeasured->SetMarkerColor(4);
     pi02MomentumMeasured->Draw();
     
@@ -478,6 +478,17 @@ void plot_Z2pi_trees(TString filename)
     c6->cd(3);
     // gPad->SetLogy();
     thetapipidiff->Draw();
+
+    TCanvas *c7 = new TCanvas("c7", "c7",200,10,1000,350);
+    c7->Divide(3,1);
+
+    c7->cd(1);
+    BeamEnergy->Draw();
+    c7->cd(2);
+    pi01MomentumMeasured->Draw();
+    c7->cd(3);
+    // gPad->SetLogy();
+    pi02MomentumMeasured->Draw();
     
 
     c0->SaveAs(filename+".pdf(");
@@ -490,4 +501,5 @@ void plot_Z2pi_trees(TString filename)
     // save plots for proposal
     // c5->SaveAs("MMMpipit_signal_DSelector.pdf)");
     // c6->SaveAs("Resolution_Mpipittag_signal_DSelector.pdf)");
+    c7->SaveAs("EgP1P2_signal_DSelector.pdf)");
 }

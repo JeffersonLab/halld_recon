@@ -509,9 +509,9 @@ Bool_t DSelector_Z2pi0_trees2::Process(Long64_t locEntry)
 	       dHist_pi01Deltap->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi01P4.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
 	       dHist_pi01Deltap_Measured->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi01P4_Measured.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
 
-	       dHist_pi02MomentumMeasured->Fill(locDecayingPi01P4.Vect().Mag());
-	       dHist_pi02Deltap->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi02P4.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
-	       dHist_pi02Deltap_Measured->Fill(locDecayingPi01P4_Thrown.Vect().Mag() > 0? (locDecayingPi01P4_Thrown.Vect().Mag()-locDecayingPi02P4_Measured.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi02MomentumMeasured->Fill(locDecayingPi02P4.Vect().Mag());
+	       dHist_pi02Deltap->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4.Vect().Mag())/locDecayingPi01P4_Thrown.Vect().Mag() : 0);
+	       dHist_pi02Deltap_Measured->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4_Measured.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
 
 	       dHist_pi02Deltap->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
 	       dHist_pi02Deltap_Measured->Fill(locDecayingPi02P4_Thrown.Vect().Mag() > 0? (locDecayingPi02P4_Thrown.Vect().Mag()-locDecayingPi02P4_Measured.Vect().Mag())/locDecayingPi02P4_Thrown.Vect().Mag() : 0);
