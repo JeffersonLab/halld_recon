@@ -7,7 +7,7 @@
 
 #include "JEventProcessor_MilleFieldOff.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
-#include "TRACKING/DTrackCandidate.h"
+#include "TRACKING/DTrackTimeBased.h"
 #include "CDC/DCDCTrackHit.h"
 #include "CDC/DCDCWire.h"
 #include "TDirectory.h"
@@ -235,11 +235,11 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop, uint64_t eventnum
 {
    int straw_offset[29] = {0,0,42,84,138,192,258,324,404,484,577,670,776,882,1005,1128,1263,1398,1544,1690,1848,2006,2176,2346,2528,2710,2907,3104,3313};
    // Loop over the tracks, get the tracking pulls, and fill some histograms. Easy peasy
-   vector<const DTrackCandidate *> trackVector;
+   vector<const DTrackTimeBased *> trackVector;
    loop->Get(trackVector,"StraightLine");
 
    for (size_t i = 0; i < trackVector.size(); i++){
-      const DTrackCandidate *track = trackVector[i];
+      const DTrackTimeBased *track = trackVector[i];
 
       double trackingFOM = TMath::Prob(track->chisq, track->Ndof);
 

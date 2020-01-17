@@ -1728,14 +1728,19 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       H(1,state_tx)=H_T(state_tx,1);
       H(1,state_ty)=H_T(state_ty,1);
 
-      if (fdchits[id]->wire->layer==PLANE_TO_SKIP){
-	//V+=Cs.SandwichMultiply(H_T);
-	V=V+H*Cs*H_T;
+      if (fdchits[id]->wire->layer == PLANE_TO_SKIP) {
+        // V += Cs.SandwichMultiply(H_T);
+        V = V + H * Cs * H_T;
+      } else {
+        // V -= dC.SandwichMultiply(H_T);
+
+        // R. Fruehwirth, Nucl. Instrum. Methods Phys. Res. A 262, 444 (1987).
+        // Eq. (9)
+        // The following V (lhs) corresponds to R^n_k in the paper.
+        // dC corresponds to 'A_k * (C^n_{k+1} - C^k_{k+1}) * A_k^T' in the paper.
+        V = V - H * dC * H_T;
       }
-      else{
-	//V-=dC.SandwichMultiply(H_T);
-	V=V-H*Cs*H_T;
-      }
+
       /*
       if(DEBUG_HISTS){
 	hFDCOccTrkSmooth->Fill(fdchits[id]->wire->layer);
