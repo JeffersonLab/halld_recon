@@ -44,7 +44,7 @@ public :
    TLorentzVector  *beam_p4_true;
    TLorentzVector  *decaypi01_p4_kin;
    TLorentzVector  *decaypi02_p4_kin;
-   TLorentzVector  *misspb_p4_kin;
+   TLorentzVector  *misspb208_p4_kin;
    UInt_t          g1_showid;
    TLorentzVector  *g1_x4_meas;
    TLorentzVector  *g1_p4_meas;
@@ -137,7 +137,7 @@ public :
    TBranch        *b_beam_p4_true;   //!
    TBranch        *b_decaypi01_p4_kin;   //!
    TBranch        *b_decaypi02_p4_kin;   //!
-   TBranch        *b_misspb_p4_kin;   //!
+   TBranch        *b_misspb208_p4_kin;   //!
    TBranch        *b_g1_showid;   //!
    TBranch        *b_g1_x4_meas;   //!
    TBranch        *b_g1_p4_meas;   //!
@@ -308,7 +308,7 @@ void MakeAmpToolsFlat_pi0::Init(TTree *tree)
    beam_p4_true = 0;
    decaypi01_p4_kin = 0;
    decaypi02_p4_kin = 0;
-   misspb_p4_kin = 0;
+   misspb208_p4_kin = 0;
    g1_x4_meas = 0;
    g1_p4_meas = 0;
    g1_x4_kin = 0;
@@ -360,7 +360,7 @@ void MakeAmpToolsFlat_pi0::Init(TTree *tree)
    fChain->SetBranchAddress("beam_p4_true", &beam_p4_true, &b_beam_p4_true);
    fChain->SetBranchAddress("decaypi01_p4_kin", &decaypi01_p4_kin, &b_decaypi01_p4_kin);
    fChain->SetBranchAddress("decaypi02_p4_kin", &decaypi02_p4_kin, &b_decaypi02_p4_kin);
-   fChain->SetBranchAddress("misspb_p4_kin", &misspb_p4_kin, &b_misspb_p4_kin);
+   fChain->SetBranchAddress("misspb208_p4_kin", &misspb208_p4_kin, &b_misspb208_p4_kin);
    fChain->SetBranchAddress("g1_showid", &g1_showid, &b_g1_showid);
    fChain->SetBranchAddress("g1_x4_meas", &g1_x4_meas, &b_g1_x4_meas);
    fChain->SetBranchAddress("g1_p4_meas", &g1_p4_meas, &b_g1_p4_meas);

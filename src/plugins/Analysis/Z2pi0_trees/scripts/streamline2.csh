@@ -13,8 +13,8 @@ unset base
 unset maxev
 
 if( $#argv == 0 ) then
-    set run = "031002"
-    set base = "p1"
+    set run = "031000"
+    set base = "test"
 #    set base = "TEST"
     set maxev = 100000
 else if ( $#argv == 1) then
@@ -51,12 +51,13 @@ set savebase = $base
 #
 # Use this option if root trees have already been created using MC wrapper
 # rm -f tree_pi0pi0misspb208.root
-# hadd tree_pi0pi0misspb208.root ../root/tree_pi0pi0misspb208__B2_gen_2pi0_primakoff_${base}_${run}_*.root
+# hadd tree_pi0pi0misspb208.root ../root/trees/tree_pi0pi0misspb208__B2_gen_2pi0_primakoff_${base}_${run}_*.root
 # mv tree_pi0pi0misspb208.root tree_hd_root_Z2pi0_trees_${base}_signal_${maxev}.root
 # root -b -q tree_hd_root_Z2pi0_trees_${base}_signal_${maxev}.root 'call_DSelector2.C("DSelector_Z2pi0_trees2.C+")' >! DSelector_Z2pi0_trees_${base}_signal_${maxev}.list
 # mv DSelector_Z2pi0_trees2.root DSelector_Z2pi0_trees_${base}_signal_${maxev}.root
 # mv treeFlat_DSelector_Z2pi0_trees.root treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root
-root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"\)
+# echo root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"\)
+# root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"\)
 ## No Longer needed: tree_to_amptools treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root pi0pi0misspb208_TreeFlat
 # root -b -q treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}.root 'call_MakeAmpToolsFlat_pi0.C(1)'
 # mv AmpToolsInputTree.root treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}_amptools_W.root
@@ -68,7 +69,7 @@ root -l -q  plot_Z2pi_trees.C\(\"DSelector_Z2pi0_trees_${base}_signal_${maxev}\"
 # mv AmpToolsInputTreeInTimeW.root treeFlat_DSelector_Z2pi0_trees_${base}_signal_${maxev}_amptools_InTimeW.root
 
 # Now repeat for flat distribution. Also need the generated flat distributions.
-set base = "p1"
+set base = "test"
 
 #No longer needed: gen_2pi0_primakoff -c gen_2pi0_primakoff_flat.cfg -o tree_gen_2pi0_${base}_primakoff_flat_${maxev}.root -hd gen_2pi0_primakoff_flat.hddm -a 5.5 -b 6.0 -p 6.0 -m 11.6 -n ${maxev} -r ${run}
 #No longer needed: root -b -q tree_gen_2pi0_primakoff_${base}_flat_${maxev}_gen.root 'call_MakeAmpToolsFlat_gen.C'
@@ -82,7 +83,7 @@ set base = "p1"
 #
 # Use this option if root trees have already been created using MC wrapper for flat files.
 # rm -f tree_pi0pi0misspb208.root
-# hadd tree_pi0pi0misspb208.root ../../gen_2pi0_primakoff_flat/root/tree_pi0pi0misspb208__B2_gen_2pi0_primakoff_${base}_${run}_*.root
+# hadd tree_pi0pi0misspb208.root ../../gen_2pi0_primakoff_flat/root/trees/tree_pi0pi0misspb208__B2_gen_2pi0_primakoff_${base}_${run}_*.root
 # mv tree_pi0pi0misspb208.root tree_hd_root_Z2pi0_trees_${base}_flat_${maxev}.root
 # root -b -q tree_hd_root_Z2pi0_trees_${base}_flat_${maxev}.root 'call_DSelector2.C("DSelector_Z2pi0_trees2.C+")' >! DSelector_Z2pi0_trees_${base}_flat_${maxev}.list
 # mv DSelector_Z2pi0_trees2.root DSelector_Z2pi0_trees_${base}_flat_${maxev}.root
@@ -99,8 +100,8 @@ set base = ${savebase}_${tagfit}
 # fit -c fit_2pi0_primakoff_${tagfit}_${maxev}.cfg  >! twopi_primakoff_DSelect_${base}_${maxev}.list
 # cp twopi0_primakoff.fit twopi_primakoff_DSelect_${base}_${maxev}.fit
 # twopi_plotter_primakoff twopi_primakoff_DSelect_${base}_${maxev}.fit -o twopi_primakoff_DSelect_${base}_${maxev}.root
-# mv twopi_fitPars.txt twopi_primakoff_DSelect_${base}_${maxev}.fit2
-# root -b -q twopi_primakoff.C\(\"twopi_primakoff_DSelect_${base}_${maxev}\",${maxev}\)
+mv twopi_fitPars.txt twopi_primakoff_DSelect_${base}_${maxev}.fit2
+root -b -q twopi_primakoff.C\(\"twopi_primakoff_DSelect_${base}_${maxev}\",${maxev}\)
 
 unset echo
 

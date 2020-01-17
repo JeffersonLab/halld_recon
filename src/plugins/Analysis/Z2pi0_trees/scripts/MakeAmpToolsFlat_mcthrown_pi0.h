@@ -92,6 +92,7 @@ MakeAmpToolsFlat_mcthrown_pi0::MakeAmpToolsFlat_mcthrown_pi0(TTree *tree) : fCha
 {
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
+  // extern TFile *_file0;
       if (_file0) {
 	tree = (TTree *) _file0->Get("Thrown_Tree");    // require  input file if provided!
       }
