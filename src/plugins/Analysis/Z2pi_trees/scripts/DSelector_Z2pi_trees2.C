@@ -8,24 +8,46 @@ void DSelector_Z2pi_trees2::Init(TTree *locTree)
 	// Typically here the branch addresses and branch pointers of the tree will be set.
 	// Init() will be called many times when running on PROOF (once per file to be processed).
 
+
+	cout << "Debug: Start of Init" << endl;
+
 	//USERS: SET OUTPUT FILE NAME //can be overriden by user in PROOF
-	dOutputFileName = "DSelector_Z2pi_trees.root"; //"" for none
+	dOutputFileName = "DSelector_Z2pi_trees2.root"; //"" for none
 	dOutputTreeFileName = "tree_DSelector_Z2pi_trees.root"; //"" for none
 	dFlatTreeFileName = "treeFlat_DSelector_Z2pi_trees.root"; //output flat tree (one combo per tree entry), "" for none
+
+	cout << "Debug: 1" << endl;
+
+
 	dFlatTreeName = "pippimmisspb208_TreeFlat"; //if blank, default name will be chosen
+
+
+	cout << "Debug: 2" << endl;
 
 	//Because this function gets called for each TTree in the TChain, we must be careful:
 		//We need to re-initialize the tree interface & branch wrappers, but don't want to recreate histograms
 	bool locInitializedPriorFlag = dInitializedFlag; //save whether have been initialized previously
+
+	cout << "Debug: 2a" << endl;
+
 	DSelector::Init(locTree); //This must be called to initialize wrappers for each new TTree
 	//gDirectory now points to the output file with name dOutputFileName (if any)
+
+	cout << "Debug: 2b" << endl;
+
 	if(locInitializedPriorFlag)
 		return; //have already created histograms, etc. below: exit
+
+	cout << "Debug: 3" << endl;
 
 	Get_ComboWrappers();
 	dPreviousRunNumber = 0;
 
 	/*********************************** EXAMPLE USER INITIALIZATION: ANALYSIS ACTIONS **********************************/
+
+	cout << "Debug: Start of Analysis actions" << endl;
+
+	
 
 	//ANALYSIS ACTIONS: //Executed in order if added to dAnalysisActions
 	//false/true below: use measured/kinfit data
@@ -59,6 +81,8 @@ void DSelector_Z2pi_trees2::Init(TTree *locTree)
 
 	/******************************** EXAMPLE USER INITIALIZATION: STAND-ALONE HISTOGRAMS *******************************/
 
+	cout << "Debug: Initialize historgrams" << endl;
+
 	//EXAMPLE MANUAL HISTOGRAMS:
 	dHist_MissingMassSquared = new TH1I("MissingMassSquared", ";Missing Mass Squared (GeV/c^{2})^{2}", 600, -0.24, 0.24);
 	dHist_BeamEnergy = new TH1I("BeamEnergy", ";Beam Energy (GeV)", 600, 0.0, 12.0);
@@ -73,9 +97,9 @@ void DSelector_Z2pi_trees2::Init(TTree *locTree)
 	dHist_M2pigen = new TH1I("M2pigen", ";M_{#pi^{+}#pi^{-}} Gen (GeV/c^{2})", 400, 0.2, 0.6);
 	dHist_M2pikin = new TH1I("M2pikin", ";M_{#pi^{+}#pi^{-}} Kin (GeV/c^{2})", 400, 0.2, 0.6);
 	dHist_M2pidiff = new TH1I("M2pidiff", ";M_{#pi^{+}#pi^{-}} Kin - Gen (GeV/c^{2})", 400, -0.05, 0.05);
-	dHist_tgen = new TH1I("tgen", ";|t| Gen (GeV/c)^{2}", 100, 0.0, 0.01);
-	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 100, 0.0, 0.01);
-	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 100, -0.01, 0.01);
+	dHist_tgen = new TH1I("tgen", ";|t| Gen (GeV/c)^{2}", 500, 0.0, 0.05);
+	dHist_tkin = new TH1I("tkin", ";|t| Kin (GeV/c)^{2}", 500, 0.0, 0.05);
+	dHist_tdiff = new TH1I("tdiff", ";|t| Kin - Gen (GeV/c)^{2}", 500, -0.01, 0.05);
 	dHist_tkin_tgen = new TH2I("tkin_tgen", "; |t| Gen ; |t| Kin (GeV/c)^{2}", 50, 0, 0.002, 50, 0, 0.002);
 	dHist_CosTheta_psi = new TH2I("CosTheta_psi", "; #psi; Cos#Theta", 90, -180., 180, 200, -1., 1.);
 	dHist_CosThetakin_CosThetagen = new TH2I("CosThetakin_CosThetagen", "; Cos#Theta Gen; Cos#Theta Kin", 50, -1, 1, 50, -1., 1.);
@@ -102,6 +126,8 @@ void DSelector_Z2pi_trees2::Init(TTree *locTree)
 	dHist_Phidiff = new TH1I("Phidiff", ";Phi Kin - Gen (degrees)", 100,-50,50);
 	dHist_phidiff = new TH1I("phidiff", ";phi Kin - Gen (degrees)", 100,-50,50);
 	dHist_psidiff = new TH1I("psidiff", ";psi Kin - Gen (degrees)", 100,-50,50);
+	dHist_thetap_thetam = new TH2I("thetap_thetam", "; #theta- Lab Kin (deg); #theta+ Kin (deg)", 100, 0., 20., 100, 0., 20.);
+	dHist_thetap_thetam_Mcut = new TH2I("thetap_thetam_Mcut", "; (M#pi#pi < 0.4 ) #theta- Lab Kin (deg); #theta+ Kin (deg)", 100, 0., 20., 100, 0., 20.);
 
 
 
@@ -123,7 +149,7 @@ void DSelector_Z2pi_trees2::Init(TTree *locTree)
 	dMinBeamEnergy = 5.5;
 	dMaxBeamEnergy = 6.0;
 	dMin2piMass = 0.2;
-	dMax2piMass = 0.6;
+	dMax2piMass = 0.5;
 	dMinMissingMassSquared = -0.1;
 	dMaxMissingMassSquared = 0.1;
 
@@ -179,6 +205,14 @@ Bool_t DSelector_Z2pi_trees2::Process(Long64_t locEntry)
 	// The processing can be stopped by calling Abort().
 	// Use fStatus to set the return value of TTree::Process().
 	// The return value is currently not used.
+
+  /*if (locEntry > 10) {
+       return kTRUE;
+  }
+  else {
+       cout << " locEntry=" << locEntry << endl;
+       }*/
+
 
 	double PI = 3.14159;
 
@@ -316,6 +350,10 @@ Bool_t DSelector_Z2pi_trees2::Process(Long64_t locEntry)
 		cout << " locMissingP4="; locMissingP4.Print();
 		cout << " loc2piP4="; loc2piP4.Print();
 
+		double ThetaLabKinPlus = locPiPlusP4.Vect().Theta();
+		double ThetaLabKinMinus = locPiMinusP4.Vect().Theta();
+		cout << " ThetaLabKinPlus=" << ThetaLabKinPlus << " ThetaLabKinMinus =" << ThetaLabKinMinus << endl;
+
 
 		cout << "KIN: MM2 =" << locMissingP4.M2() << " DeltaE=" << locBeamP4.E()-loc2piP4.E() << " GenDeltaE=" << locEbeam_Thrown-locBeamP4.E() << endl;
 
@@ -439,7 +477,7 @@ Bool_t DSelector_Z2pi_trees2::Process(Long64_t locEntry)
 		} 
 		cout << " Passed 2pi mass cut " << endl;
 
-
+		Double_t M2pikin = loc2piP4.M();
 		if(locUsedSoFar_2pi.find(locUsedThisCombo_2piMass) == locUsedSoFar_2pi.end())
 		{
 			dHist_M2pikin->Fill(loc2piP4.M());
@@ -648,6 +686,9 @@ Bool_t DSelector_Z2pi_trees2::Process(Long64_t locEntry)
 			dHist_psikin->Fill(psikin*180./3.14159);
 			dHist_psidiff->Fill((psikin-psigen)*180./3.14159);
 			// dHist_psikin->Fill(psikin*180./3.14159);
+			dHist_thetap_thetam->Fill(ThetaLabKinMinus*180./3.14159,ThetaLabKinPlus*180./3.14159);
+			if (M2pikin < 0.4) dHist_thetap_thetam_Mcut->Fill(ThetaLabKinMinus*180./3.14159,ThetaLabKinPlus*180./3.14159);
+
 			locUsedSoFar_Angles.insert(locUsedThisCombo_Angles);
 
 		}
