@@ -203,29 +203,20 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 
 	hHit_pixelOccupancy_LED_timing_cut_in[i] = new TH2I("Hit_PixelOccupancy_timing_cut_in","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
-
 	hHit_pixelOccupancy_LED_timing_cut_out[i] = new TH2I("Hit_PixelOccupancy_timing_cut_out","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
 	// LED specific histograms
 	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,-10.0,30.0);
-	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]", 300,-50, 100);
-
+	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]", 300,-50, 250);
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
-        hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
-
-
-
+    hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
 	hHit_pixelRow_timing[i] =   new TH2I("Hit_pixelRow_timing","Hit_pixelRow_timing; channel; time-over-threshold [ns]", 150,0,150,100,-50,50);
-
 
 	/*--------------------------------------------------*/
 	// LED SiPM reference time
-
+	
     hHit_LEDRefTime[i] = new TH1I("Hit_LEDRefTime", "LED TDC reference SiPM time; SiPM TDC time (ns)", 100, 0,100);
     hHit_LEDRefTdcChannelTimeDiff[i] = new TH1I("Hit_LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 300, 0, 150);
-
-
-
 
 	for(int k = 0; k < 18; k++) {
 
@@ -234,17 +225,10 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 
 		hHit_areaTime[i][k] = new TH1I("Hit_LEDTimeDiffEvent_" + name,"LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
 
-
 		hHit_pixelOccupancy_LED_column[i][k] = new TH2I("hHit_pixelOccupancy_LED_column_" + name, "LED DIRCPmtHit time diff in event; #Delta t [ns]", Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
 	}
 
-
-
-
-
-
-	
 	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
 		for(int j=0; j<Nchannels; j++) {
@@ -494,6 +478,9 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
     double locRefTime[2];
     int locNHits[2];
 
+    locNHits[0]=0.0;
+    locNHits[1]=0.0;
+
     for (const auto& hit : hits) {
 
 		int box = (hit->ch < Nchannels) ? 1 : 0;
@@ -503,6 +490,12 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 
     	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin()) - 20;
 		
+
+
+//    	double locFirstFiberTime = 154.5 - 20;
+
+//    	double locFirstFiberTime = 159;
+
 //    	double locFirstFiberTime = 159;
 
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
@@ -527,7 +520,7 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 
 	
 //	cout << "!!!!! box 0 " << locRefTime[0] << "  " << locNHits[0] << endl;
-//	cout << "????? box 0 " << locRefTime[1] << "  " << locNHits[1] << endl;
+//	cout << "????? box 1 " << locRefTime[1] << "  " << locNHits[1] << endl;
 
 	locRefTime[0] /= locNHits[0];
 	locRefTime[1] /= locNHits[1];
@@ -595,6 +588,9 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 
 			///*--------------------------------------------------*/
 			/// Filling LED timing
+
+
+//			cout << "(((((((((  " << box << "     " << locRefTime[box] << endl;
 
 			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime[box]);
 			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime[box]);
