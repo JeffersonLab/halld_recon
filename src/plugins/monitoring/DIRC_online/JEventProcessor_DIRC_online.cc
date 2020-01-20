@@ -70,6 +70,7 @@ static TH2I *hDigiHit_pixelOccupancy[Nboxes][2];
 static TH2I *hHit_tdcTimeDiffVsChannel[Nboxes];
 static TH1I *hHit_tdcTimeDiffEvent[Nboxes];
 static TH2I *hHit_Timewalk[Nboxes][Nchannels];
+static TH1I *hHit_LEDRefTdcChannelTimeDiff[Nboxes];
 
 //----------------------------------------------------------------------------------
 
@@ -148,7 +149,9 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
 
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
-        hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
+    hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
+
+	hHit_LEDRefTdcChannelTimeDiff[i] = new TH1I("Hit_LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 300, 0, 150);
 	
 	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
@@ -259,10 +262,14 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     // LED specific information
     // next line commented out to supress warning: variable not used
     //    double locLEDRefTime = 0;
-    double locLEDRefAdcTime = 0;
-    double locLEDRefTdcTime = 0;
+    double locLEDRefAdcTime;
+    double locLEDRefTdcTime;
     if(locDIRCLEDTrig) {
-	    
+
+
+		locLEDRefAdcTime = 0;
+		locLEDRefTdcTime = 0;	    
+
 	    // Get LED SiPM reference
 	    //vector<const DCAEN1290TDCHit*> sipmtdchits;
 	    //eventLoop->Get(sipmtdchits);
@@ -367,6 +374,11 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		hHit_tdcTimeDiffEvent[box]->Fill(locHitTime-locRefTime);
 		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,locHitTime-locRefTime);
 	
+
+		if(locLEDRefTdcTime != 0.0) {
+			hHit_LEDRefTdcChannelTimeDiff[box]->Fill(hit->t-locLEDRefTdcTime);
+		}
+
 		if(locLEDRefTdcTime > 0) {
 			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
 			hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime-locLEDRefTdcTime);
