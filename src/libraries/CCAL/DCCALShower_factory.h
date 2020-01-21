@@ -93,8 +93,8 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		//-----------------   Shower Profile Data & Channel Status  -----------------//
 		
-		double acell[501][501] = { { {0.} } };
-		double  ad2c[501][501] = { { {0.} } };
+		double acell[501][501] = { {0.} };
+		double  ad2c[501][501] = { {0.} };
 		
 		int stat_ch[MROW][MCOL];	
 		
