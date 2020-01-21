@@ -137,7 +137,7 @@ void MakeAmpToolsFlat::Loop(Int_t foption)
       nbytes += nb; 
       nb = b_pim_p4_kin->GetEntry(jentry);
       nbytes += nb; 
-      nb = b_misspb_p4_kin->GetEntry(jentry);
+      nb = b_misspb208_p4_kin->GetEntry(jentry);
       nbytes += nb; 
       nb = b_beam_p4_kin->GetEntry(jentry);
       nbytes += nb;
@@ -149,7 +149,7 @@ void MakeAmpToolsFlat::Loop(Int_t foption)
       cout<< "jentry=" << jentry << " weight=" << AccWeight << endl; 
       cout<< "jentry=" << jentry << " px=" << pip_p4_kin->Px()<< " py=" << pip_p4_kin->Py()<< " pz=" << pip_p4_kin->Pz()<< " E=" << pip_p4_kin->E()<< endl; 
       cout<< "jentry=" << jentry << " px=" << pim_p4_kin->Px()<< " py=" << pim_p4_kin->Py()<< " pz=" << pim_p4_kin->Pz()<< " E=" << pim_p4_kin->E()<< endl; 
-      cout<< "jentry=" << jentry << " px=" << misspb_p4_kin->Px()<< " py=" << misspb_p4_kin->Py()<< " pz=" << misspb_p4_kin->Pz()<< " E=" << misspb_p4_kin->E()<< endl << endl;*/
+      cout<< "jentry=" << jentry << " px=" << misspb208_p4_kin->Px()<< " py=" << misspb208_p4_kin->Py()<< " pz=" << misspb208_p4_kin->Pz()<< " E=" << misspb208_p4_kin->E()<< endl << endl;*/
 
    m_e[0] = pip_p4_kin->E();
    m_px[0] = pip_p4_kin->Px();
@@ -159,10 +159,10 @@ void MakeAmpToolsFlat::Loop(Int_t foption)
    m_px[1] = pim_p4_kin->Px();
    m_py[1] = pim_p4_kin->Py();
    m_pz[1] = pim_p4_kin->Pz();
-   m_e[2] = misspb_p4_kin->E();
-   m_px[2] = misspb_p4_kin->Px();
-   m_py[2] = misspb_p4_kin->Py();
-   m_pz[2] = misspb_p4_kin->Pz();
+   m_e[2] = misspb208_p4_kin->E();
+   m_px[2] = misspb208_p4_kin->Px();
+   m_py[2] = misspb208_p4_kin->Py();
+   m_pz[2] = misspb208_p4_kin->Pz();
    m_eBeam = beam_p4_kin->E();
    m_pxBeam = beam_p4_kin->Px();
    m_pyBeam = beam_p4_kin->Py();
