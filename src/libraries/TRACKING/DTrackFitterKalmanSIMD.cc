@@ -7140,7 +7140,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 						 cdc_anneal,
 						 S,C,C0,chisq,
 						 my_ndf);
-	  chisq=1e6;
+	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 	if (refit_error!=FIT_SUCCEEDED){
@@ -7397,7 +7397,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
 	  anneal_factor=1000.;
 	  refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
-	  chisq=1e6;
+	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 	  
@@ -7645,7 +7645,7 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
 	  anneal_factor=1000.;
 	  refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
-	  chisq=1e6;
+	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 
