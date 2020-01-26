@@ -105,10 +105,12 @@ jerror_t DTrackTimeBased_factory::init(void)
 	SplitString(HYPOTHESES, hypotheses, ",");
 	for(size_t loc_i = 0; loc_i < hypotheses.size(); ++loc_i)
 	{
-		if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0)
-			mass_hypotheses_positive.push_back(hypotheses[loc_i]);
-		else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0)
+	  if(ParticleCharge(Particle_t(hypotheses[loc_i])) > 0){
+	    mass_hypotheses_positive.push_back(hypotheses[loc_i]);
+	  }
+	  else if(ParticleCharge(Particle_t(hypotheses[loc_i])) < 0){
 			mass_hypotheses_negative.push_back(hypotheses[loc_i]);
+	  }
 	}
 
 	if(mass_hypotheses_positive.empty()){
@@ -953,8 +955,7 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
 							double my_mass,
 							double q,
 							JEventLoop *loop){
- 
-  
+
   // Create a new time-based track object
   DTrackTimeBased *timebased_track = new DTrackTimeBased();
   *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(src_track);
@@ -1010,7 +1011,6 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     CorrectForELoss(position,momentum,q,my_mass);  
     timebased_track->setMomentum(momentum);
     timebased_track->setPosition(position);
-
     // Redo the fit with the new position and momentum as initial guesses
     fitter->Reset();
     fitter->SetFitType(DTrackFitter::kTimeBased);    
@@ -1140,13 +1140,9 @@ bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
   vector<DTrackTimeBased*>tracks_to_add;
   for (size_t i=0;i<_data.size();i++){
     if (_data[i]->candidateid!=old_id){
-      int num_hyp=myhypotheses.size();
-      if ((q<0 && num_hyp!=mNumHypMinus)||(q>0 && num_hyp!=mNumHypPlus)
-	  || flipped_charge){
-	AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-				  flipped_charge,loop);
-      }
-      
+      AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
+				flipped_charge,loop);
+
       // Clear the myhypotheses vector for the next track
       myhypotheses.clear();
       // Reset flags and charge 
@@ -1171,16 +1167,11 @@ bool DTrackTimeBased_factory::InsertMissingHypotheses(JEventLoop *loop){
     old_id=_data[i]->candidateid;
   }
   // Deal with last track candidate	
-  int num_hyp=myhypotheses.size();
-  if ((q<0 && num_hyp!=mNumHypMinus)||(q>0 && num_hyp!=mNumHypPlus)
-      || flipped_charge){
-    AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
-			      flipped_charge,loop);
-  }
+  AddMissingTrackHypotheses(mass_bits,tracks_to_add,myhypotheses,q,
+			    flipped_charge,loop);
     
   // Add the new list of tracks to the output list
   if (tracks_to_add.size()>0){
-    //_DBG_ << "Adding tracks " <<endl;
     for (size_t i=0;i<tracks_to_add.size();i++){
       _data.push_back(tracks_to_add[i]);
     }
@@ -1215,57 +1206,66 @@ void DTrackTimeBased_factory::AddMissingTrackHypotheses(unsigned int mass_bits,
 							double q,
 							bool flipped_charge,
 							JEventLoop *loop){ 
-  Particle_t negative_particles[3]={KMinus,PiMinus,Electron};
-  Particle_t positive_particles[3]={KPlus,PiPlus,Positron};
 
   unsigned int last_index=myhypotheses.size()-1;
+  unsigned int index=0;
   if (q>0){
     if (flipped_charge){
-      if ((mass_bits & (1<<AntiProton))==0){
+      /*if ((mass_bits & (1<<AntiProton))==0){
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
 				  ParticleMass(Proton),-1.,loop);  
-      } 	
-      for (int i=0;i<3;i++){
-	if ((mass_bits & (1<<negative_particles[i]))==0){
-	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[0],
-				    ParticleMass(negative_particles[i]),
+      } 
+      */
+      for (unsigned int i=0;i<mass_hypotheses_negative.size();i++){
+	if ((mass_bits & (1<<mass_hypotheses_negative[i]))==0){
+	  if (mass_hypotheses_negative[i]>13) index=last_index;
+	  else index=0;
+	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
+				    ParticleMass(Particle_t(mass_hypotheses_negative[i])),
 				    -1.,loop);  
 	} 
       }
     }
-    if ((mass_bits & (1<<Proton))==0){
+    /*   if ((mass_bits & (1<<Proton))==0){
       AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
 				ParticleMass(Proton),+1.,loop);  
-    } 
-    for (int i=0;i<3;i++){
-      if ((mass_bits & (1<<positive_particles[i]))==0){
-	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[0],
-				  ParticleMass(positive_particles[i]),
+				} */
+    for (unsigned int i=0;i<mass_hypotheses_positive.size();i++){
+      if ((mass_bits & (1<<mass_hypotheses_positive[i]))==0){
+	if (mass_hypotheses_positive[i]>13) index=last_index;
+	else index=0;
+	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
+				  ParticleMass(Particle_t(mass_hypotheses_positive[i])),
 				  +1.,loop);  
       } 
     }    
   }
   else{
+    /*
     if ((mass_bits & (1<<AntiProton))==0){
       AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
 				ParticleMass(Proton),-1.,loop);  
-    } 	
-    for (int i=0;i<3;i++){
-      if ((mass_bits & (1<<negative_particles[i]))==0){
-	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[0],
-				  ParticleMass(negative_particles[i]),
+				} */	
+    for (unsigned int i=0;i<mass_hypotheses_negative.size();i++){
+      if ((mass_bits & (1<<mass_hypotheses_negative[i]))==0){
+	if (mass_hypotheses_negative[i]>13) index=last_index;
+	else index=0;
+	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
+				  ParticleMass(Particle_t(mass_hypotheses_negative[i])),
 				  -1.,loop);  
       } 
     }
     if (flipped_charge){
-      if ((mass_bits & (1<<Proton))==0){
+      /*if ((mass_bits & (1<<Proton))==0){
 	AddMissingTrackHypothesis(tracks_to_add,myhypotheses[last_index],
 				  ParticleMass(Proton),+1.,loop);  
-      } 
-      for (int i=0;i<3;i++){
-	if ((mass_bits & (1<<positive_particles[i]))==0){
-	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[0],
-				    ParticleMass(positive_particles[i]),
+				  } */
+      for (unsigned int i=0;i<mass_hypotheses_positive.size();i++){
+	if ((mass_bits & (1<<mass_hypotheses_positive[i]))==0){
+	  if (mass_hypotheses_positive[i]>13) index=last_index;
+	  else index=0;
+	  AddMissingTrackHypothesis(tracks_to_add,myhypotheses[index],
+				    ParticleMass(Particle_t(mass_hypotheses_positive[i])),
 				    +1.,loop);  
 	} 
       }	

@@ -44,6 +44,7 @@ class JEventProcessor_pi0fcalskim:public jana::JEventProcessor{
 
   int WRITE_ROOT;
   int WRITE_EVIO;
+  int WRITE_HDDM;
 
   TTree* m_tree;
   int m_nClus;

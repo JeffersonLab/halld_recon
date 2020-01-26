@@ -32,6 +32,8 @@ void plot_Z2pi_trees(TString filename)
     TH1F *tkin = (TH1F*)f->Get("tkin");
     TH1F *psikin = (TH1F*)f->Get("psikin");
     TH2F *CosTheta_Psi = (TH2F*)f->Get("CosTheta_Psi");
+    TH2F *thetap_thetam = (TH2F*)f->Get("thetap_thetam");
+    TH2F *thetap_thetam_Mcut = (TH2F*)f->Get("thetap_thetam_Mcut");
     
     TH1F *M2pidiff = (TH1F*)f->Get("M2pidiff");
     TH1F *tdiff = (TH1F*)f->Get("tdiff");
@@ -368,7 +370,7 @@ void plot_Z2pi_trees(TString filename)
     // psikin->GetYaxis()->SetRangeUser(ymin,ymax);
     psikin->GetXaxis()->SetTitleSize(0.05);
     psikin->GetYaxis()->SetTitleSize(0.05);
-    psikin->GetXaxis()->SetTitle("#psii Kin (Degrees)");
+    psikin->GetXaxis()->SetTitle("#psi Kin (Degrees)");
     psikin->SetMarkerColor(4);
     psikin->Draw();
 
@@ -431,6 +433,39 @@ void plot_Z2pi_trees(TString filename)
     dHist_TaggerAccidentals->GetXaxis()->SetTitle("Vertex Time - RF (ns)");
     dHist_TaggerAccidentals->SetMarkerColor(4);
     dHist_TaggerAccidentals->Draw();
+
+    /*c4->cd(2);
+    // gPad->SetLogy();
+    ymin = 0;
+    ymax = 4000;
+    
+    thetap_thetam->SetTitle(filename);
+    // thetap_thetam->GetXaxis()->SetRangeUser(xmin,xmax);
+    // thetap_thetam->GetYaxis()->SetRangeUser(ymin,ymax);
+    thetap_thetam->GetXaxis()->SetTitleSize(0.05);
+    thetap_thetam->GetYaxis()->SetTitleSize(0.05);
+    thetap_thetam->GetXaxis()->SetTitle("#theta^{-}");
+    thetap_thetam->GetYaxis()->SetTitle("#theta^{+}");
+    thetap_thetam->SetMarkerColor(4);
+    thetap_thetam->Draw("colz");
+
+    c4->cd(3);
+    // gPad->SetLogy();
+    ymin = 0;
+    ymax = 4000;
+    
+    thetap_thetam_Mcut->SetTitle(filename);
+    // thetap_thetam_Mcut->GetXaxis()->SetRangeUser(xmin,xmax);
+    // thetap_thetam_Mcut->GetYaxis()->SetRangeUser(ymin,ymax);
+    thetap_thetam_Mcut->GetXaxis()->SetTitleSize(0.05);
+    thetap_thetam_Mcut->GetYaxis()->SetTitleSize(0.05);
+    thetap_thetam_Mcut->GetXaxis()->SetTitle("Mcut>0.4 #theta^{-}");
+    thetap_thetam_Mcut->GetYaxis()->SetTitle("#theta^{+}");
+    thetap_thetam_Mcut->SetMarkerColor(4);
+    thetap_thetam_Mcut->Draw("colz");*/
+
+
+
     
     c0->SaveAs(filename+".pdf(");
     c1->SaveAs(filename+".pdf");

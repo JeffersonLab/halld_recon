@@ -51,10 +51,12 @@ subdirs = [
 'SC_Eff','TOF_Eff',
 'TS_scaler',
 'TrackingPulls',
+'TrackingPulls_straight',
 'timing_online',
 'DIRC_online',
 'TRD_online',
-'RSAI_KO'
+'RSAI_KO',
+'BEAM_online'
 ]
 
 #'L3_online',
