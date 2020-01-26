@@ -81,6 +81,8 @@ static TH2I *hHit_pixelOccupancy_LED_1[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_2[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_3[Nboxes];
 
+static TH2I *hHit_pixelOccupancy_LED_2_narrow[Nboxes];
+
 static TH2I *hHit_pixelOccupancy_LED_Event_1[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_Event_2[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_Event_3[Nboxes];
@@ -90,6 +92,8 @@ static TH2I *hHit_pixelOccupancy_LED_Event_5000_cut[Nboxes];
 
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_in[Nboxes];
 static TH2I *hHit_pixelOccupancy_LED_timing_cut_out[Nboxes];
+
+static TH2I *hHit_pixelOccupancy_LED_fourth_peak[Nboxes];
 
 static TH1I *hHit_LEDRefTime[Nboxes];
 static TH1I *hHit_LEDRefTdcChannelTimeDiff[Nboxes];
@@ -191,6 +195,9 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 	hHit_pixelOccupancy_LED_2[i] = new TH2I("Hit_PixelOccupancy_LED_2","DIRCPmtHit pixel occupancy LED 2",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 	hHit_pixelOccupancy_LED_3[i] = new TH2I("Hit_PixelOccupancy_LED_3","DIRCPmtHit pixel occupancy LED 3",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
+
+	hHit_pixelOccupancy_LED_2_narrow[i] = new TH2I("Hit_PixelOccupancy_LED_2_narrow","DIRCPmtHit pixel occupancy LED 2",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
+
 	hHit_pixelOccupancy_LED_Event_1[i] = new TH2I("Hit_PixelOccupancy_Event_5001","DIRCPmtHit pixel occupancy event 1",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 	hHit_pixelOccupancy_LED_Event_2[i] = new TH2I("Hit_PixelOccupancy_Event_5002","DIRCPmtHit pixel occupancy event 2",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 	hHit_pixelOccupancy_LED_Event_3[i] = new TH2I("Hit_PixelOccupancy_Event_5003","DIRCPmtHit pixel occupancy event 3",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
@@ -204,6 +211,8 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 	hHit_pixelOccupancy_LED_timing_cut_in[i] = new TH2I("Hit_PixelOccupancy_timing_cut_in","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
 	hHit_pixelOccupancy_LED_timing_cut_out[i] = new TH2I("Hit_PixelOccupancy_timing_cut_out","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
+
+	hHit_pixelOccupancy_LED_fourth_peak[i] = new TH2I("Hit_PixelOccupancy_timing_fourth_peak","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
 	// LED specific histograms
 	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,-10.0,30.0);
@@ -601,7 +610,6 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 				first_loop[box] = false;
 			}
 
-
 			if(locLEDRefTdcTime != 0.0) {
 				hHit_LEDRefTdcChannelTimeDiff[box]->Fill(hit->t-locLEDRefTdcTime);
 			}
@@ -619,6 +627,11 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 				hHit_pixelOccupancy_LED_1[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 			} else if( hit->t-locRefTime[box] >= 5 &&  hit->t-locRefTime[box] < 15) {
 				hHit_pixelOccupancy_LED_2[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+
+				if( hit->t-locRefTime[box] >= 9 &&  hit->t-locRefTime[box] < 11) {
+					hHit_pixelOccupancy_LED_2_narrow[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+				}	
+
 			} else if ( hit->t-locRefTime[box] >= 15 &&  hit->t-locRefTime[box] < 25) {
 				hHit_pixelOccupancy_LED_3[box]-> Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
 			}
@@ -626,7 +639,19 @@ jerror_t JEventProcessor_DIRC_timing::evnt(JEventLoop *eventLoop, uint64_t event
 			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime[box],locLEDRefTdcTime);
 			hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime[box]-locLEDRefTdcTime);
 
+			/*--------------------------------------------------*/
+			/// Occupancy for the fourth peak in the timing distribution 
+
+ 			if (  hit->t-locRefTime[box] >= 111.5 &&  hit->t-locRefTime[box] <= 117) {
+				hHit_pixelOccupancy_LED_fourth_peak[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+			}
+
+
 		}
+
+
+
+
 	
 			if(box==1 && channel==2490) {
 				hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
