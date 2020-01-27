@@ -58,7 +58,10 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   BINTDC_2_TIME = 0.0234375;
   BINADC_2_TIME = 0.0625; // is 4ns/64
 
-  TDCTLOC = 420.;
+  //TDCTLOC = 420.;
+  //ADCTLOC = 130.;
+
+  TDCTLOC = 180.;
   ADCTLOC = 130.;
 
   ADCTimeCut = 70.;
