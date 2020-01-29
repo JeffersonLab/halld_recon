@@ -228,7 +228,7 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	const int Nsectors = DTPOLHit_factory::NSECTORS;
 	tpol_occ = new TH1I("tpol_occ","TPOL fADC hit occupancy;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
 	tpol_occ2 = new TH1I("tpol_occ2","TPOL fADC hit occupancy waveform[0] < 150.0;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
-	tpol_occ3 = new TH1I("tpol_occ3","TPOL fADC hit occupancy;sector waveform[0] < 150.0 & amp > 50.0;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
+	tpol_occ3 = new TH1I("tpol_occ3","TPOL fADC hit occupancy waveform[0] < 150.0 & amp > 50.0;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
 
 	//------------------------ TOF ------------------------
 	tof_num_events = new TH1I("tof_num_events", "TOF number of events", 1, 0.0, 1.0);
