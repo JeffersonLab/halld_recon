@@ -58,11 +58,14 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   BINTDC_2_TIME = 0.0234375;
   BINADC_2_TIME = 0.0625; // is 4ns/64
 
-  TDCTLOC = 385.;
-  ADCTLOC = 115.;
+  //TDCTLOC = 420.;
+  //ADCTLOC = 130.;
 
-  ADCTimeCut = 50.;
-  TDCTimeCut = 60.;
+  TDCTLOC = 180.;
+  ADCTLOC = 130.;
+
+  ADCTimeCut = 70.;
+  TDCTimeCut = 70.;
 
   first = 1;
   MakeHistograms();

@@ -150,6 +150,7 @@ class DMapEVIOWords{
 		uint32_t max_history_buff_size;
 		
 		uint64_t Nphysics_events;
+		uint64_t Nevent_blocks;
 
 	private:
 };

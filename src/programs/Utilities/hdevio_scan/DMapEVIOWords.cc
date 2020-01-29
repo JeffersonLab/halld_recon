@@ -27,6 +27,7 @@ using namespace jana;
 #include <TROOT.h>
 
 extern uint32_t BLOCK_SIZE;
+extern int32_t RUNNUMBER;
 
 // root hist pointers
 static TH1D *daq_hits_per_event;
@@ -46,6 +47,7 @@ DMapEVIOWords::DMapEVIOWords()
 {
 	max_history_buff_size = 400;
 	Nphysics_events = 0;
+	Nevent_blocks = 0;
 
 	char daq_block_size_title[256];
 	sprintf(daq_block_size_title, "Block size (%d EVIO events) in kB", BLOCK_SIZE);
@@ -172,7 +174,12 @@ void DMapEVIOWords::Finish(void)
 	// Here we scale some histograms by the number of events.
 	double norm = 1.0/(double)Nphysics_events;
 	daq_hits_per_event->Scale(norm);
-	daq_words_per_event->Scale(norm);	
+	
+	// daq_words_per_event is a profile hist that already averages
+	// by number of event blocks. Here we need to scale only by block
+	// size.
+	auto scale = (double)Nevent_blocks/(double)Nphysics_events;
+	daq_words_per_event->Scale(scale);
 }
 
 
@@ -181,12 +188,21 @@ void DMapEVIOWords::Finish(void)
 //------------------
 void DMapEVIOWords::AddROCIDLabels(void)
 {
+	// This is called via the hdevio_scan.cc:MapEVIOWords->DMapEvioWords::DMapEVIOWords
+	// It does not pass the command line nor does it give
+	// access to the run number via the main event loop. 
+	 
+
 	/// This is called just once to set the x-axis labels
 	/// of histograms whose x-axis is the rocid so that we
 	/// can label them by detector.
 	
 	DApplication dapp(0, NULL);
+	//auto jparms = dapp.GetJParameterManager();
+	//int RUNNUMBER = 1234;
+	//jparms->SetDefaultParameter("RUNNUMBER", RUNNUMBER);
 	JEventLoop loop(&dapp);
+	loop.GetJEvent().SetRunNumber(RUNNUMBER);
 	DTranslationTable ttab(&loop);
 
 	// Loop over all rocid values
@@ -295,6 +311,7 @@ void DMapEVIOWords::ParseEvent(uint32_t *buff)
 	// Number of physics events in EVIO block
 	uint64_t M = istart[1] & 0x0FF;
 	Nphysics_events += M;
+	Nevent_blocks++;
 	
 	// Trigger bank event length
 	uint32_t trigger_bank_len = istart[2];
