@@ -413,7 +413,6 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PS:         MakePSDigiHit(chaninfo.ps, pi, pt, pp);                  break;
          case PSC:        MakePSCDigiHit(chaninfo.psc, pi, pt, pp);                break;
          case RF:         MakeRFDigiTime(chaninfo.rf, pt);                         break;
-         case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pi, pt, pp);  break;
          case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
 
          default:
@@ -459,12 +458,46 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PS:         MakePSDigiHit(   chaninfo.ps,   pd);             break;
          case PSC:        MakePSCDigiHit(  chaninfo.psc,  pd);             break;
          case RF:         MakeRFDigiTime(  chaninfo.rf,   pd);             break;
-         case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pd);  break;
          case TAC: 		  MakeTACDigiHit(chaninfo.tac, pd);  			   break;
         default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
             break;
       }
+   }
+
+   // Direct creation of DigiHits from Df250WindowRawData for TPOL (always raw mode readout) 
+   vector<const Df250WindowRawData*> windowrawdata;
+   loop->Get(windowrawdata);
+   if (VERBOSE > 2) ttout << "  Number Df250WindowRawData objects: " << windowrawdata.size() << std::endl;
+   for (uint32_t i=0; i<windowrawdata.size(); i++) {
+      const Df250WindowRawData *window = windowrawdata[i];
+
+      // Apply optional rocid translation
+      uint32_t rocid = window->rocid;
+      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
+      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
+
+      if (VERBOSE > 4)
+         ttout << "    Looking for rocid:" << rocid << " slot:" << window->slot
+               << " chan:" << window->channel << std::endl;
+      
+      // Create crate,slot,channel index and find entry in Translation table.
+      // If none is found, then just quietly skip this hit.
+      csc_t csc = {rocid, window->slot, window->channel};
+      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
+      if (iter == Get_TT().end()) {
+          if (VERBOSE > 6)
+             ttout << "     - Didn't find it" << std::endl;
+          continue;
+      }
+      const DChannelInfo &chaninfo = iter->second;
+      if (VERBOSE > 6)
+	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
+               << std::endl; 
+      
+      // Create the appropriate hit type based on detector type
+      if(chaninfo.det_sys == TPOLSECTOR) 
+	      MakeTPOLSectorDigiHit(chaninfo.tpolsector, window);
    }
 
    // Df125PulseIntegral (will apply Df125PulseTime via associated objects)
@@ -1612,7 +1645,21 @@ DTPOLSectorDigiHit* DTranslationTable::MakeTPOLSectorDigiHit(const TPOLSECTORInd
    return h;
 }
 
+//---------------------------------
+// MakeTPOLSectorDigiHit
+//---------------------------------
+DTPOLSectorDigiHit* DTranslationTable::MakeTPOLSectorDigiHit(const TPOLSECTORIndex_t &idx,
+							     const Df250WindowRawData *window) const
+{
+   DTPOLSectorDigiHit *h = new DTPOLSectorDigiHit();
 
+   h->sector = idx.sector;
+   h->AddAssociatedObject(window);
+
+   vDTPOLSectorDigiHit.push_back(h);
+   
+   return h;
+}
 
 //---------------------------------
 // MakeTACDigiHit
