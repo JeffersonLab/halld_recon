@@ -201,16 +201,11 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	// get raw pulse from DigiHit object
 	const DTPOLSectorDigiHit *sectordigihit = sectordigihits[i];
-	vector<const Df250PulseData*> f250PulseData;
-	sectordigihit->Get(f250PulseData);
-
-	vector<const Df250WindowRawData*> f250WindowRawData;
-	if (f250PulseData.size()>0) f250PulseData[0]->Get(f250WindowRawData);
-	else continue;
+	vector<const Df250WindowRawData*> windowraws;
+	sectordigihit->Get(windowraws);
+	if (windowraws.size() < 1) continue;
+	const Df250WindowRawData* windowraw = windowraws[0];
 	
-	const Df250WindowRawData* windowraw;
-	if (f250WindowRawData.size()>0) windowraw = f250WindowRawData[0];
-	else continue;	
 
 	//vector<const Df250WindowRawData*> windowraws;
 	//loop->Get(windowraws);
