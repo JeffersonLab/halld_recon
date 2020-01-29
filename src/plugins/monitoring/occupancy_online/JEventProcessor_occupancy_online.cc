@@ -227,6 +227,8 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	//------------------------ TPOL -----------------------
 	const int Nsectors = DTPOLHit_factory::NSECTORS;
 	tpol_occ = new TH1I("tpol_occ","TPOL fADC hit occupancy;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
+	tpol_occ2 = new TH1I("tpol_occ2","TPOL fADC hit occupancy waveform[0] < 150.0;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
+	tpol_occ3 = new TH1I("tpol_occ3","TPOL fADC hit occupancy;sector waveform[0] < 150.0 & amp > 50.0;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
 
 	//------------------------ TOF ------------------------
 	tof_num_events = new TH1I("tof_num_events", "TOF number of events", 1, 0.0, 1.0);
@@ -470,7 +472,30 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	}
 
 	//------------------------ TPOL -----------------------
-	for(unsigned int i=0; i < vDTPOLSectorDigiHit.size(); i++) tpol_occ->Fill(vDTPOLSectorDigiHit[i]->sector);
+	for(unsigned int i=0; i < vDTPOLSectorDigiHit.size(); i++) 
+	{
+		tpol_occ->Fill(vDTPOLSectorDigiHit[i]->sector);
+		const DTPOLSectorDigiHit* hit = vDTPOLSectorDigiHit[i];
+		vector<const Df250WindowRawData*> windowraws;
+		hit->Get(windowraws);
+		if (windowraws.size() < 1) continue;
+		const Df250WindowRawData* windowraw = windowraws[0];
+		const vector<uint16_t> &samplesvector = windowraw->samples;
+		unsigned int w_samp1 = samplesvector[0]; 
+		unsigned int w_max = samplesvector[0];
+		unsigned int w_min = samplesvector[0];
+		if (w_samp1 > 150.0) continue;
+		tpol_occ2->Fill(vDTPOLSectorDigiHit[i]->sector);		
+
+		for (uint16_t c_samp=1; c_samp<samplesvector.size(); c_samp++)
+		{
+			if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
+			if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
+		}
+		unsigned int pulse_height = w_max - w_min;
+		if (pulse_height > 50.0) continue;
+		tpol_occ3->Fill(vDTPOLSectorDigiHit[i]->sector);
+	}
 
 	//------------------------ TOF ------------------------
 	tof_num_events->Fill(0.5);
