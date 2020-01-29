@@ -67,6 +67,12 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   ADCTimeCut = 70.;
   TDCTimeCut = 70.;
 
+  gPARMS->SetDefaultParameter("TOFCALIB:TDCTPEAK",TDCTLOC,
+                              "Define location of TOF TDC time-peak in Raw histogram");
+  gPARMS->SetDefaultParameter("TOFCALIB:ADCTPEAK",ADCTLOC,
+                              "Defin location of TOF ADC time-peak in Raw histogram");
+
+
   first = 1;
   MakeHistograms();
 
