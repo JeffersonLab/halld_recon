@@ -105,7 +105,7 @@
 		}
 		else if(tpol_occ3 && i==2)
 		{
-			pad22->SetName("TPOL waveform[0] < 133.0 & amp > 50.0");
+			pad22->SetName("TPOL waveform[0] < 150.0 & amp > 50.0");
                         tpol_occ3->SetFillColor(kOrange);
                         tpol_occ3->SetLineWidth(5);
                         tpol_occ3->SetLineColor(kBlack);
