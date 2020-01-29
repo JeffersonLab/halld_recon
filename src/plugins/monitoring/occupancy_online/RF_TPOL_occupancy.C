@@ -22,6 +22,8 @@
 
 	TH2I *rf_occ = (TH2I*)gDirectory->FindObjectAny("rf_occ");
 	TH2I *tpol_occ = (TH2I*)gDirectory->FindObjectAny("tpol_occ");
+	TH2I *tpol_occ2 = (TH2I*)gDirectory->FindObjectAny("tpol_occ2");
+	TH2I *tpol_occ3 = (TH2I*)gDirectory->FindObjectAny("tpol_occ3");
 	TH1I *rf_num_events = (TH1I*)gDirectory->FindObjectAny("rf_num_events");
 
 	double Nevents = 1.0;
@@ -75,18 +77,43 @@
 	}
 
 	TVirtualPad *pad2 = c1->cd(2);
-	pad2->SetTicks();
-	pad2->SetGrid();
-	pad2->SetName("TPOL");
-	if(tpol_occ){
-		tpol_occ->SetFillColor(kOrange);
-		tpol_occ->SetLineWidth(5);
-		tpol_occ->SetLineColor(kBlack);
-		double max = tpol_occ->GetBinContent(2)*1.5;
-		tpol_occ->GetYaxis()->SetRangeUser(0., max);
-		tpol_occ->Draw("HIST");
-	}
+	pad2->Divide(3,1);
 
+	for (unsigned int i=0; i < 3; i++)
+	{
+		TPad* pad22 = (TPad*) pad2->cd(i+1);
+		pad22->SetTicks();
+		pad22->SetGrid();
+		if(tpol_occ && i==0){
+			pad22->SetName("TPOL");
+			tpol_occ->SetFillColor(kOrange);
+			tpol_occ->SetLineWidth(5);
+			tpol_occ->SetLineColor(kBlack);
+			double max = tpol_occ->GetBinContent(2)*1.5;
+			tpol_occ->GetYaxis()->SetRangeUser(0., max);
+			tpol_occ->Draw("HIST");
+		}
+		else if(tpol_occ2 && i==1)
+		{
+			pad22->SetName("TPOL waveform[0] < 150.0");
+                        tpol_occ2->SetFillColor(kOrange);
+                        tpol_occ2->SetLineWidth(5);
+                        tpol_occ2->SetLineColor(kBlack);
+                        double max = tpol_occ2->GetBinContent(tpol_occ2->GetMaximumBin())*1.5;
+                        tpol_occ2->GetYaxis()->SetRangeUser(0., max);
+                        tpol_occ2->Draw("HIST");
+		}
+		else if(tpol_occ3 && i==2)
+		{
+			pad22->SetName("TPOL waveform[0] < 133.0 & amp > 50.0");
+                        tpol_occ3->SetFillColor(kOrange);
+                        tpol_occ3->SetLineWidth(5);
+                        tpol_occ3->SetLineColor(kBlack);
+                        double max = tpol_occ3->GetBinContent(tpol_occ3->GetMaximumBin())*1.5;
+                        tpol_occ3->GetYaxis()->SetRangeUser(0., max);
+                        tpol_occ3->Draw("HIST");		
+		}
+	}
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
