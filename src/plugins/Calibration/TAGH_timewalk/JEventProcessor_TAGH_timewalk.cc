@@ -120,7 +120,7 @@ jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnum
         const DTAGHHit *hit = taghhits[i];
         if (!hit->has_TDC || !hit->has_fADC) continue;
         int id = hit->counter_id;
-        double t_tdc = hit->t;
+        double t_tdc = hit->time_tdc;
         double t_adc = hit->time_fadc;
         double pulse_height = hit->pulse_peak;
         hTAGH_tdcadcTimeDiffVsSlotID->Fill(id,t_tdc-t_adc);
