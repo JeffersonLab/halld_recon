@@ -4,6 +4,8 @@
 //
 // hnamepath: /occupancy/rf_occ
 // hnamepath: /occupancy/tpol_occ
+// hnamepath: /occupancy/tpol_occ2
+// hnamepath: /occupancy/tpol_occ3
 // hnamepath: /occupancy/rf_num_events
 //
 // e-mail: davidl@jlab.org
