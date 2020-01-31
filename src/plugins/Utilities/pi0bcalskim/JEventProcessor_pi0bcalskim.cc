@@ -26,6 +26,7 @@
 #include "BCAL/DBCALShower.h"
 #include "RF/DRFTime.h"
 #include "PID/DEventRFBunch.h"
+#include "HDDM/DEventWriterHDDM.h"
 
 #include "DLorentzVector.h"
 #include "TTree.h"
@@ -50,10 +51,12 @@ JEventProcessor_pi0bcalskim::JEventProcessor_pi0bcalskim()
   MIN_SH2_E = 0.2;
 
   WRITE_EVIO = 1;
+  WRITE_HDDM = 0;
 
   gPARMS->SetDefaultParameter( "PI0BCALSKIM:WRITE_EVIO", WRITE_EVIO );
-  gPARMS->SetDefaultParameter("PI0BCALSKIM:MIN_SH1_E" , MIN_SH1_E );
-  gPARMS->SetDefaultParameter("PI0BCALSKIM:MIN_SH2_E" , MIN_SH2_E );
+  gPARMS->SetDefaultParameter( "PI0BCALSKIM:WRITE_HDDM", WRITE_HDDM );
+  gPARMS->SetDefaultParameter( "PI0BCALSKIM:MIN_SH1_E" , MIN_SH1_E );
+  gPARMS->SetDefaultParameter( "PI0BCALSKIM:MIN_SH2_E" , MIN_SH2_E );
 
   num_epics_events = 0;
   
@@ -227,14 +230,20 @@ jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
         }
 	}
   }
-  	if(Candidate){
-	        if( WRITE_EVIO ) {
-                //	cout << " inv mass = " << inv_mass << " sh1 E = " << sh1_E << " sh2 E = " << sh2_E << " event num = " << eventnumber << endl;
-                //cout << "writing out " << eventnumber << endl;
-                locEventWriterEVIO->Write_EVIOEvent( loop, "pi0bcalskim", locObjectsToSave );
-  		  }
-			}
 
+  if(Candidate){
+    if( WRITE_EVIO ) {
+      //	cout << " inv mass = " << inv_mass << " sh1 E = " << sh1_E << " sh2 E = " << sh2_E << " event num = " << eventnumber << endl;
+      //cout << "writing out " << eventnumber << endl;
+      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0bcalskim", locObjectsToSave );
+    }
+    if( WRITE_HDDM ) {
+      vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
+      loop->Get(locEventWriterHDDMVector);
+      locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+    }
+  }
+  
 
   //japp->RootUnLock();
   

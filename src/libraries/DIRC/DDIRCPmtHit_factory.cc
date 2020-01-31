@@ -20,6 +20,10 @@ jerror_t DDIRCPmtHit_factory::init(void)
 {
         DIRC_SKIP = false;
 	gPARMS->SetDefaultParameter("DIRC:SKIP",DIRC_SKIP);
+	DIRC_TIME_OFFSET = true;
+	gPARMS->SetDefaultParameter("DIRC:TIME_OFFSET",DIRC_TIME_OFFSET);
+	DIRC_TIMEWALK = true;
+        gPARMS->SetDefaultParameter("DIRC:TIMEWALK",DIRC_TIMEWALK);
 
 	// initialize calibration tables
 	vector<double> new_t0s(DIRC_MAX_CHANNELS);
@@ -154,14 +158,13 @@ jerror_t DDIRCPmtHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		    if(locReferenceClockTime%2 == 0) 
 			hit->t += 4;
 
-	            applyTimeOffset = true;
-		    applyTimewalk = true;
-		    double slope = 0.3;
-		    double timeOverThresholdPeak = 50;
-		    if(applyTimeOffset) {
-			    hit->t = hit->t + t_base[box] - time_offsets[box][channel];
+		    hit->t = hit->t + t_base[box];
+		    if(DIRC_TIME_OFFSET) {
+			    hit->t = hit->t - time_offsets[box][channel];
 		    }
-		    if(applyTimewalk) {
+		    if(DIRC_TIMEWALK) {
+			    double slope = 0.3;
+			    double timeOverThresholdPeak = 50;
 			    hit->t += slope*(timeOverThreshold - timeOverThresholdPeak);
 		    }
  

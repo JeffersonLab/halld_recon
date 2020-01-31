@@ -42,6 +42,7 @@ using namespace jana;
 #include <DAQ/DF1TDCTriggerTime.h>
 #include <DAQ/DCAEN1290TDCHit.h>
 #include <DAQ/DDIRCTDCHit.h>
+#include <DAQ/DGEMSRSWindowRawData.h>
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -68,6 +69,8 @@ using namespace jana;
 #include <TAC/DTACDigiHit.h>
 #include <TAC/DTACTDCDigiHit.h>
 #include <DIRC/DDIRCTDCDigiHit.h>
+#include <TRD/DTRDDigiHit.h>
+#include <TRD/DGEMDigiWindowRawData.h>
 
 // (See comments in DParsedEvent.h for enlightenment)
 #define MyTypes(X) \
@@ -95,7 +98,9 @@ using namespace jana;
 		X(DTPOLSectorDigiHit) \
 		X(DTACDigiHit) \
 		X(DTACTDCDigiHit) \
-		X(DDIRCTDCDigiHit)
+		X(DDIRCTDCDigiHit) \
+		X(DTRDDigiHit) \
+		X(DGEMDigiWindowRawData)
 
 #define MyfADCTypes(X) \
 		X(DBCALDigiHit) \
@@ -111,7 +116,8 @@ using namespace jana;
 		X(DPSDigiHit) \
 		X(DPSCDigiHit) \
 		X(DTPOLSectorDigiHit) \
-		X(DTACDigiHit)
+		X(DTACDigiHit) \
+		X(DTRDDigiHit)
 
 
 #include "GlueX.h"
@@ -157,6 +163,7 @@ class DTranslationTable:public jana::JObject{
 			CCAL,
 			CCAL_REF,
 			DIRC,
+			TRD,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -179,6 +186,7 @@ class DTranslationTable:public jana::JObject{
 				case TPOLSECTOR: return "TPOL"; // is set to TPOL to match what is in CCDB, fix later
 				case TAC: return "TAC";
 				case DIRC: return "DIRC";
+			        case TRD: return "TRD";
 				case UNKNOWN_DETECTOR:
 				default:
 					return "UNKNOWN";
@@ -355,6 +363,16 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 
+		class TRDIndex_t{
+			public:
+			uint32_t plane;
+			uint32_t strip;
+
+			inline bool operator==(const TRDIndex_t &rhs) const {
+			    return (plane==rhs.plane) && (strip==rhs.strip);
+			}
+		};
+
 		// DChannelInfo holds translation between indexing schemes
 		// for one channel.
 		class DChannelInfo{
@@ -380,6 +398,7 @@ class DTranslationTable:public jana::JObject{
 					CCALIndex_t ccal;
 					CCALRefIndex_t ccal_ref;
 					DIRCIndex_t dirc;
+					TRDIndex_t trd;
 				};
 		};
 
@@ -474,6 +493,7 @@ class DTranslationTable:public jana::JObject{
 		DRFDigiTime*        MakeRFDigiTime(        const RFIndex_t &idx,         const Df250PulseData *pd) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250PulseData *pd) const;
 		DTACDigiHit* 		MakeTACDigiHit( 	   const TACIndex_t &idx, 		 const Df250PulseData *pd) const;
+		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250WindowRawData *window) const;
 
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -495,7 +515,10 @@ class DTranslationTable:public jana::JObject{
 		DCDCDigiHit* MakeCDCDigiHit(const CDCIndex_t &idx, const Df125CDCPulse *p) const;
 		DCDCDigiHit* MakeCDCDigiHit(const CDCIndex_t &idx, const Df125FDCPulse *p) const;
 		DFDCCathodeDigiHit* MakeFDCCathodeDigiHit(const FDC_CathodesIndex_t &idx, const Df125PulseIntegral *pi, const Df125PulseTime *pt, const Df125PulsePedestal *pp) const;
-		DFDCCathodeDigiHit* MakeFDCCathodeDigiHit(const FDC_CathodesIndex_t &idx, const Df125FDCPulse *p) const;
+                DFDCCathodeDigiHit* MakeFDCCathodeDigiHit(const FDC_CathodesIndex_t &idx, const Df125FDCPulse *p) const;
+                DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125CDCPulse *p) const;
+		DTRDDigiHit* MakeTRDDigiHit(const TRDIndex_t &idx, const Df125FDCPulse *p) const;
+		DGEMDigiWindowRawData *MakeGEMDigiWindowRawData(const TRDIndex_t &idx, const DGEMSRSWindowRawData *p) const;
 
 		// F1TDC
 		DBCALTDCDigiHit* MakeBCALTDCDigiHit(const BCALIndex_t &idx,      const DF1TDCHit *hit) const;

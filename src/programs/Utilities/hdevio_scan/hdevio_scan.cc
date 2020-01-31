@@ -36,6 +36,7 @@ uint64_t MAX_EVIO_EVENTS = 20000;
 uint64_t SKIP_EVIO_EVENTS = 0;
 uint32_t BLOCK_SIZE = 20; // used for daq_block_size histogram
 uint32_t MAX_HISTORY_BUFF_SIZE = 400;
+int32_t  RUNNUMBER = (1<<30);
 
 //----------------
 // main
@@ -77,6 +78,7 @@ void Usage(string mess="")
 	cout << "   -blocksonly       Save only block map not events. (Only use with -s)" << endl;
 	cout << "   -f file.map       Set name of file to save block/event to. " << endl;
 	cout << "                     (implies -s)" << endl;
+	cout << "   -R RUNNUMBER      Set the run number used to access the TTAB in the CCDB" << endl;
 	cout << endl;
 	cout << "n.b. When using the -i (ignore) flag, the total number of events" << endl;
 	cout << "     read in will be the sum of how many are ignored and the \"max\"" << endl;
@@ -110,9 +112,22 @@ void ParseCommandLineArguments(int narg, char *argv[])
 		else if(arg == "-n"){ MAX_HISTORY_BUFF_SIZE = atoi(next.c_str()); i++;}		
 		else if(arg == "-s"){ SAVE_FILE_MAP = true;}
 		else if(arg == "-f"){ SAVE_FILE_MAP = true; MAP_FILENAME = next; i++;}
+		else if(arg == "-R"){ RUNNUMBER = atoi(next.c_str()); i++;}
 		else if(arg == "-blocksonly") { SKIP_EVENT_MAPPING = true;}
 		else if(arg[0] == '-') {cout << "Unknown option \""<<arg<<"\" !" << endl; exit(-1);}
 		else filenames.push_back(arg);
+	}
+	
+	// If user did not set run number, try extracting it from file
+	if(RUNNUMBER >= (1<<30)){
+		if(!filenames.empty()){
+			cout << "No run number given, trying to extract from filename: " << filenames[0] << endl;
+			auto pos = filenames[0].find("hd_rawdata_");
+			if(pos != string::npos ){
+				auto runstr = filenames[0].substr( pos+11, 6);
+				RUNNUMBER = atoi( runstr.c_str() );
+			}
+		}
 	}
 }
 

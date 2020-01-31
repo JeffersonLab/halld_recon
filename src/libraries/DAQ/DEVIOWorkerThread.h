@@ -90,7 +90,9 @@ class DEVIOWorkerThread{
 		bool  PARSE_EVENTTAG;
 		bool  PARSE_TRIGGER;
 		bool  PARSE_SSP;
-		
+		bool  PARSE_GEMSRS;
+                int   NSAMPLES_GEMSRS;
+
 		bool  LINK_TRIGGERTIME;
 		bool  LINK_CONFIG;
 		
@@ -125,6 +127,8 @@ class DEVIOWorkerThread{
 		void     MakeDf125WindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t* &iptr);
 		void             ParseF1TDCBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
 		void               ParseSSPBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
+		void           ParseDGEMSRSBank(uint32_t rocid, uint32_t* &iptr, uint32_t *iend);
+		void   MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t rocid, uint32_t slot, uint32_t itrigger, uint32_t apv_id, vector<int>rawData16bits);
 
 		void LinkAllAssociations(void);
 

@@ -62,6 +62,7 @@ using namespace jana;
 #include <DAQ/DDIRCTriggerTime.h>
 #include <DAQ/DDIRCTDCHit.h>
 #include <DAQ/DDIRCADCHit.h>
+#include <DAQ/DGEMSRSWindowRawData.h>
 #include <DAQ/DBORptrs.h>
 #include <PID/DVertex.h>
 #include <PID/DEventRFBunch.h>
@@ -108,7 +109,8 @@ using namespace jana;
 		X(DEventTag) \
 		X(DDIRCTriggerTime) \
 		X(DDIRCTDCHit) \
-		X(DDIRCADCHit)
+		X(DDIRCADCHit) \
+		X(DGEMSRSWindowRawData)
 
 // These data types are optionally stored in EVIO files from specialized process
 // (e.g. calibration skims) and could be provided by standard analysis factories

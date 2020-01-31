@@ -37,6 +37,9 @@ DELETE_INPUT_FILE = False
 RUN_HD_ANA       = True
 KEEP_INTERMEDIATE_FILES = False
 WRITE_TO_DB = True
+FP_IGNORE = []
+
+PLUGINS = ['evio_writer', 'trigger_skims', 'ps_skim', 'TOF_calib']
 
 # Parse command line args
 args = []
@@ -45,6 +48,7 @@ for arg in sys.argv[1:]:
 	if arg == '-c' : RUN_HD_ANA=False
 	if arg == '-k' : KEEP_INTERMEDIATE_FILES = True
 	if arg == '-D' : WRITE_TO_DB = False
+	if arg.startswith('-ignore_fp=') : FP_IGNORE = arg.split('-ignore_fp=')[1].split(',')
 	if not arg.startswith('-'): args.append(arg)
 	
 if len(args) != 2:
@@ -56,10 +60,14 @@ if len(args) != 2:
 	print(' options:')
 	print('     -d   delete the input file when done with it')
 	print('     -D   do not write trigger info to DB (default is to write)')
-	print('     -c   count only. This will run hdskims but not hd_ana')
+	print('     -c   count only. This will run hdskims but not hd_root')
 	print('          so the final skim files won\'t be produced.')
 	print('          The trigger counts will be entered into the DB though.')
 	print('     -k   Keep intermediate files (for debugging only)')
+	print('     -ignore_fp=bits   tell hdskims not to consider any of the')
+	print('                       bits specified in the comma separated')
+	print('                       list of triggers "bits" when deciding')
+	print('                       whether to write out a block')
 	print('')
 	sys.exit(-1)
 
@@ -87,6 +95,7 @@ os.chdir(workdir)
 
 print('\nhdmk_skims.py: Running hdskims ...')
 cmd = ['hdskims', "--sql", infilename]
+for trig in FP_IGNORE: cmd.extend(['-fp', str(trig)])
 print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 ret = subprocess.call( cmd )
 
@@ -100,20 +109,32 @@ infilename_base = os.path.basename(infilename)
 block_skim_files = glob.glob('*_skims.evio')
 os.symlink( block_skim_files[0], infilename_base )
 
+# Make list of plugins into single string of comma separated values
+PLUGINS = ','.join(PLUGINS)
+
 if RUN_HD_ANA:
 	print('\nhdmk_skims.py: Running hd_ana ...')
-	cmd = ['hd_ana', '-PPLUGINS=evio_writer,trigger_skims,ps_skim', '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + [infilename_base]
+	cmd = ['hd_ana', '-PPLUGINS=' + PLUGINS, '-PNTHREADS=18', '-PEVIO:NTHREADS=28'] + [infilename_base]
 	print('hdmk_skims.py: cmd: ' + ' '.join(cmd))
 	ret = subprocess.call( cmd )
 
-# Update skininfo DB with any .sql files found in working directory
+# Rename the hd_root.root file to hd_root_tofcalib_RUN_FILE.root
+nums = infilename_base.split('_')
+if len(nums) >= 2:
+	RUN  = int(nums[-2])
+	FILE = int(nums[-1].split('.')[0])
+	tof_fname = 'hd_root_tofcalib_%06d_%03d.root' % (RUN, FILE)
+	if os.path.exists( 'hd_root_tofcalib.root' ):
+		os.rename( 'hd_root_tofcalib.root', tof_fname )
+
+# Update skiminfo DB with any .sql files found in working directory
 sqlfiles = glob.glob('*.sql')
-if (len(sqlfiles)>0) AND WRITE_TO_DB:
+if (len(sqlfiles)>0) and WRITE_TO_DB:
 
 	# We need to import mysql.connector but the RCDB version is
 	# not compatible with what is installed on the gluons. Thus,
 	# we need to make sure it is not in our path
-	mypath = sys.path.copy()  # loop over copy so we can change real list within loop
+	mypath = list(sys.path)  # loop over copy so we can change real list within loop
 	for p in mypath:
 		if '/rcdb/' in p: sys.path.remove(p)
 	import mysql.connector
@@ -134,7 +155,7 @@ if not KEEP_INTERMEDIATE_FILES:
 	for f in sqlfiles        : os.unlink( f )  # Remove sql file
 
 print('\nhdmk_skims.py: Moving evio skim files ...')
-for srcfile in glob.glob('*.evio'):
+for srcfile in glob.glob('*.evio') + glob.glob('*.root'):
 	destfile = outdir + '/' + srcfile
 	print('   ' + srcfile + ' -> ' + destfile)
 	os.rename( srcfile, destfile )

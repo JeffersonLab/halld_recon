@@ -115,6 +115,7 @@ public:
  
   // Geometry parameters
   double dTOFz,dFCALz,dDIRCz;
+  vector<double>dTRDz_vec;
 
   // start counter geom info
   vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic
