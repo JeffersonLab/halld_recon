@@ -127,7 +127,9 @@ chomp $ccversion;
 
 # Decide if we are using gcc or clang or an "other" compiler type
 $compiler_type = "cc";
-$compiler_version_str = `cc -v 2>&1`;
+$CC = 'cc';
+if ( defined($ENV{"CC"}) ) { $CC=$ENV{"CC"}; }
+$compiler_version_str = `$CC -v 2>&1`;
 if ($compiler_version_str =~ /\sgcc version\s/) {
 
 	$compiler_type = "gcc";
