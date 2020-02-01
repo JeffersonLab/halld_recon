@@ -26,6 +26,8 @@ using namespace std;
 using namespace jana;
 
 static bool COSMIC_DATA = false;
+static bool OVERRIDE_HIGH_TIME_CUT = false;
+static bool OVERRIDE_LOW_TIME_CUT = false;
 
 int TOF_DEBUG = 0;
 
@@ -61,7 +63,13 @@ jerror_t DTOFHit_factory::init(void)
     COSMIC_DATA = true;
   
   CHECK_FADC_ERRORS = true;
-  gPARMS->SetDefaultParameter("TOF:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+  gPARMS->SetDefaultParameter("TOF:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, set to 0 to keep these hits");
+
+
+  gPARMS->SetDefaultParameter("TOF:OVERRIDE_HIGH_TIME_CUT", OVERRIDE_HIGH_TIME_CUT, "Set to 1 to override the high side time cut, set to 0 to use the values from CCDB");
+  gPARMS->SetDefaultParameter("TOF:HIGH_TIME_CUT", hi_time_cut, "Set the value of the high side time cut");
+  gPARMS->SetDefaultParameter("TOF:OVERRIDE_LOW_TIME_CUT", OVERRIDE_LOW_TIME_CUT, "Set to 1 to override the low side time cut, set to 0 to use the values from CCDB");
+  gPARMS->SetDefaultParameter("TOF:LOW_TIME_CUT", lo_time_cut, "Set the value of the low side time cut");
   
   
   /// Set basic conversion constants
@@ -120,18 +128,37 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     if(print_messages) jout << "In DTOFHit_factory, loading constants..." << endl;
     
     // load timing cut values
-    vector<double> time_cut_values;
-	string locTOFHitTimeCutTable = tofGeom.Get_CCDB_DirectoryName() + "/HitTimeCut";
-    if(eventLoop->GetCalib(locTOFHitTimeCutTable.c_str(), time_cut_values)){
-      jout << "Error loading " << locTOFHitTimeCutTable << " SET DEFUALT to 0 and 100!" << endl;
-      TimeCenterCut = 0.;
-      TimeWidthCut = 100.;
-    } else {
-      double loli = time_cut_values[0];
-      double hili = time_cut_values[1];
+    if(OVERRIDE_HIGH_TIME_CUT && OVERRIDE_LOW_TIME_CUT) {
+
+      double loli = lo_time_cut;
+      double hili = hi_time_cut;
       TimeCenterCut = hili - (hili-loli)/2.;
       TimeWidthCut = (hili-loli)/2.;
-      //jout<<"TOF Timing Cuts for PRUNING: "<<TimeCenterCut<<" +/- "<<TimeWidthCut<<endl;
+
+    } else {
+
+      vector<double> time_cut_values;
+      string locTOFHitTimeCutTable = tofGeom.Get_CCDB_DirectoryName() + "/HitTimeCut";
+      if(eventLoop->GetCalib(locTOFHitTimeCutTable.c_str(), time_cut_values)){
+	jout << "Error loading " << locTOFHitTimeCutTable << " SET DEFUALT to 0 and 100!" << endl;
+	TimeCenterCut = 0.;
+	TimeWidthCut = 100.;
+      } else {
+
+	double loli = 0., hili = 0.;
+	if(OVERRIDE_LOW_TIME_CUT)
+	  loli = lo_time_cut;
+	else
+	  loli = time_cut_values[0];
+	if(OVERRIDE_HIGH_TIME_CUT)
+	  hili = hi_time_cut;
+	else
+	  hili = time_cut_values[1];
+	TimeCenterCut = hili - (hili-loli)/2.;
+	TimeWidthCut = (hili-loli)/2.;
+	//jout<<"TOF Timing Cuts for PRUNING: "<<TimeCenterCut<<" +/- "<<TimeWidthCut<<endl;
+      }
+
     }
 
     // load scale factors

@@ -48,6 +48,8 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   // Timing Cut Values
   double TimeCenterCut;
   double TimeWidthCut;
+  double hi_time_cut;
+  double lo_time_cut;
 
   // ADC to Energy conversion for individual PMT channels
   vector<double> adc2E;
