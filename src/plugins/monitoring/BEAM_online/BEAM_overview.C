@@ -34,6 +34,23 @@
   cBEAM->cd(1);
   dtp->Draw();
 
+  int binl = dtp->FindBin(0.0-2.004);
+  int binh = dtp->FindBin(0.0+2.004);
+  double Ic = dtp->Integral(binl, binh);
+  int binll = dtp->FindBin(0.0-2.004 - 10.*4.008);
+  int binhh = dtp->FindBin(0.0+2.004 + 10.*4.008);
+  double Il = dtp->Integral(binll, binl-1);
+  double Ih = dtp->Integral(binh+1, binhh);
+  double BG = (Il+Ih)/2./10.;
+  double Rrand = Ic/BG;
+  char text0[128];
+  sprintf(text0, "Scaling: %5.2f",Scale);
+  TText *t0 = new TText(0.15, 0.7, text0);
+  t0->SetTextSize(0.1);
+  t0->SetNDC();
+  t0->Draw();
+
+
   cBEAM->cd(2);
   PStagmEnergyOutOfTime->Scale(1./20.);
   PStagmEnergyInTime->Draw();
