@@ -44,7 +44,7 @@
   double BG = (Il+Ih)/2./10.;
   double Rrand = Ic/BG;
   char text0[128];
-  sprintf(text0, "Scaling: %5.2f",Scale);
+  sprintf(text0, "Scaling: %5.2f",Rrand);
   TText *t0 = new TText(0.15, 0.7, text0);
   t0->SetTextSize(0.1);
   t0->SetNDC();
