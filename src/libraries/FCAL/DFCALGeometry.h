@@ -19,13 +19,16 @@ class DFCALGeometry : public JObject {
 
   //#define kBlocksWide 59
   //#define kBlocksTall 59
-#define kInnerBlocksWide 48 
-#define kInnerBlocksTall 48 
+  //#define kInnerBlocksWide 48  (larger desired insert!)
+  //#define kInnerBlocksTall 48 
+  #define kInnerBlocksWide 40
+  #define kInnerBlocksTall 40
+
   //#define kMaxChannels kBlocksWide * kBlocksTall * 2
 // Do not forget to adjust below formula if number of blocks chage in any direction:
 //   this is now used to convert from row/col to coordiantes y/x and back - MK
 //#define kMidBlock (kBlocksWide-1)/2
-#define kInnerMidBlock 24                     			
+#define kInnerMidBlock 20                     			
   //#define kBeamHoleSize 3
 
 public:
@@ -44,6 +47,10 @@ public:
 	enum { kMaxChannels = kBlocksWide * kBlocksTall + kInnerBlocksWide*kInnerBlocksTall};
 	enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
 	enum { kBeamHoleSize = 2 };
+
+	static double insertSize(){
+	  return kInnerMidBlock*2.09;
+	}
 
 	static double blockSize(int calor)  { 
 	  if (calor==1) return 2.09*k_cm;
