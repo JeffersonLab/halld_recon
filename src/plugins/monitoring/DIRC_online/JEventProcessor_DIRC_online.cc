@@ -55,7 +55,6 @@ static TH1I *hHit_tdcTime[Nboxes][2];
 static TH2I *hHit_tdcTimeVsEvent[Nboxes][2];
 static TH2I *hHit_tdcTimeVsChannel[Nboxes][2];
 static TH2I *hHit_pixelOccupancy[Nboxes][2];
-
 static TH2I *hHit_TimeEventMeanVsLEDRef[Nboxes];
 static TH2I *hHit_TimeDiffEventMeanLEDRefVsTimestamp[Nboxes];
 
@@ -71,51 +70,7 @@ static TH2I *hDigiHit_pixelOccupancy[Nboxes][2];
 static TH2I *hHit_tdcTimeDiffVsChannel[Nboxes];
 static TH1I *hHit_tdcTimeDiffEvent[Nboxes];
 static TH2I *hHit_Timewalk[Nboxes][Nchannels];
-
-/*--------------------------------------------------*/
-// Data: Nov/25
-// WL
-// row is on the x axis, column is on the y axis
-
-static TH2I *hHit_pixelOccupancy_LED_1[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_2[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_3[Nboxes];
-
-static TH2I *hHit_pixelOccupancy_LED_Event_1[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_Event_2[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_Event_3[Nboxes];
-
-static TH2I *hHit_pixelOccupancy_LED_Event_5000[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_Event_5000_cut[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r50_c10[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r50_c10_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r77_c47[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c47_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r103_c47[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r103_c47_LED3[Nboxes];
-
-static TH1I *hHit_tdcTime_single_channel_r77_c24[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED1[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED2[Nboxes];
-static TH1I *hHit_tdcTime_single_channel_r77_c24_LED3[Nboxes];
-
-static TH2I *hHit_pixelOccupancy_LED_timing_cut_in[Nboxes];
-static TH2I *hHit_pixelOccupancy_LED_timing_cut_out[Nboxes];
-
-static TH1I *hHit_tdcTime_LED_5000[Nboxes];
-
-uint64_t event_counter;
-
-//static TH1I *hHit_per_Event_photon_LED[Nboxes][2];
+static TH1I *hHit_LEDRefTdcChannelTimeDiff[Nboxes];
 
 //----------------------------------------------------------------------------------
 
@@ -146,8 +101,6 @@ JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
 
 jerror_t JEventProcessor_DIRC_online::init(void) {
 
-	event_counter = 0;
-
     FillTimewalk = false;
     gPARMS->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
 
@@ -156,15 +109,15 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     TDirectory *dircDir = gDirectory->mkdir("DIRC_online");
     dircDir->cd();
 
-    hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 100, -20, 20);
-    hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 100, -20, 20);
+    hLEDRefAdcTime = new TH1I("LEDRefAdcTime", "LED ADC reference SiPM time; time (ns)", 100, 0, 100);
+    hLEDRefTdcTime = new TH1I("LEDRefTdcTime", "LED TDC reference SiPM time; time (ns)", 100, 0, 100);
     hLEDRefIntegral = new TH1I("LEDRefIntegral", "LED reference SiPM integral; integral (ADC)", 100, 1000, 1500);
-    hLEDRefAdcVsTdcTime = new TH2I("LEDRefAdcVsTdcTime", "LED ADC vs TDC reference SiPM time; TDC time (ns); ADC time (ns)", 100, -20, 20, 100, -20, 20);
-    hLEDRefTdcChannelTimeDiff = new TH1I("LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 400, 110, 150);
-    hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 40, 110, 150, 100, -20, 20);
-    hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 40, 110, 150, 100, -20, 20);
-    hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, -20, 20, 100, 1000, 1500);
-    hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 100, 0, 1000);
+    hLEDRefAdcVsTdcTime = new TH2I("LEDRefAdcVsTdcTime", "LED ADC vs TDC reference SiPM time; TDC time (ns); ADC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefTdcChannelTimeDiff = new TH1I("LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 100, 0, 100);
+    hLEDRefTdcVsChannelTime = new TH2I("LEDRefTdcVsChannelTime", "LED TDC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); TDC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefAdcVsChannelTime = new TH2I("LEDRefAdcVsChannelTime", "LED ADC reference SiPM time vs PMT pixel hit time; PMT Channel time (ns); ADC time (ns)", 100, 0, 100, 100, 0, 100);
+    hLEDRefIntegralVsTdcTime = new TH2I("LEDRefIntegralVsTdcTime", "LED TDC reference SiPM time; TDC time (ns); Pulse Integral", 100, 0, 100, 100, 1000, 1500);
+    hRefTime = new TH1I("RefTime", "Reference time from mean hit time; time (ns)", 500, 0, 100);
 
     // book hists
     dirc_num_events = new TH1I("dirc_num_events","DIRC Number of events",1,0.5,1.5);
@@ -184,62 +137,21 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
 		TString strN = "_" + trig_str[j];
 		TString strT = ", " + box_str[i] + " box " + trig_str[j] + " trigger";
 		hHit_pixelOccupancy[i][j] = new TH2I("Hit_PixelOccupancy"+strN,"DIRCPmtHit pixel occupancy "+strT+"; pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
 		hHit_TimeOverThreshold[i][j] = new TH1I("Hit_TimeOverThreshold"+strN,"DIRCPmtHit time-over-threshold "+strT+"; time-over-threshold (ns); hits",100,0.0,100.);
 		hHit_TimeOverThresholdVsChannel[i][j] = new TH2I("Hit_TimeOverThresholdVsChannel"+strN,"DIRCPmtHit time-over-threshold vs channel "+strT+"; channel; time-over-threshold [ns]",Nchannels,-0.5,-0.5+Nchannels,100,0.0,100.);
 		hHit_tdcTime[i][j] = new TH1I("Hit_Time"+strN,"DIRCPmtHit time "+strT+";time [ns]; hits",500,0.0,500.0);
 		hHit_tdcTimeVsEvent[i][j] = new TH2I("Hit_TimeVsEvent"+strN,"DIRCPmtHit time "+strT+"; event #; time [ns]; hits",1000,0,100e6,500,0.0,500.0);
 		hHit_tdcTimeVsChannel[i][j] = new TH2I("Hit_TimeVsChannel"+strN,"DIRCPmtHit time vs. channel "+strT+"; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,500,0.0,500.0);
-
-//		hHit_per_Event_photon_LED[i][j] = new TH1I("per_event_photon_"+strN,"Per Event Photon Distribution"+strT+";time [ns]; hits",200,0.0,1000.0);
-
 	}
-
-	hHit_pixelOccupancy_LED_1[i] = new TH2I("Hit_PixelOccupancy_LED_1","DIRCPmtHit pixel occupancy LED 1",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hHit_pixelOccupancy_LED_2[i] = new TH2I("Hit_PixelOccupancy_LED_2","DIRCPmtHit pixel occupancy LED 2",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hHit_pixelOccupancy_LED_3[i] = new TH2I("Hit_PixelOccupancy_LED_3","DIRCPmtHit pixel occupancy LED 3",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
-	hHit_pixelOccupancy_LED_Event_1[i] = new TH2I("Hit_PixelOccupancy_Event_5001","DIRCPmtHit pixel occupancy event 1",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hHit_pixelOccupancy_LED_Event_2[i] = new TH2I("Hit_PixelOccupancy_Event_5002","DIRCPmtHit pixel occupancy event 2",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-	hHit_pixelOccupancy_LED_Event_3[i] = new TH2I("Hit_PixelOccupancy_Event_5003","DIRCPmtHit pixel occupancy event 3",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
-	hHit_pixelOccupancy_LED_Event_5000[i] = new TH2I("Hit_PixelOccupancy_Event_5000_event","DIRCPmtHit pixel occupancy event first",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
-	hHit_pixelOccupancy_LED_Event_5000_cut[i] = new TH2I("Hit_PixelOccupancy_Event_5000_event_cut","DIRCPmtHit pixel occupancy event first",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
-	hHit_tdcTime_single_channel_r50_c10[i] = new TH1I("Hit_Time_r50_c10", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r50_c10_LED1[i] = new TH1I("Hit_Time_r50_c10_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r50_c10_LED2[i] = new TH1I("Hit_Time_r50_c10_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r50_c10_LED3[i] = new TH1I("Hit_Time_r50_c10_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r77_c47[i] = new TH1I("Hit_Time_r77_c47", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r77_c47_LED1[i] = new TH1I("Hit_Time_r77_c47_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c47_LED2[i] = new TH1I("Hit_Time_r77_c47_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c47_LED3[i] = new TH1I("Hit_Time_r77_c47_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r103_c47[i] = new TH1I("Hit_Time_r103_c47", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r103_c47_LED1[i] = new TH1I("Hit_Time_r103_c47_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r103_c47_LED2[i] = new TH1I("Hit_Time_r103_c47_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r103_c47_LED3[i] = new TH1I("Hit_Time_r103_c47_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_single_channel_r77_c24[i] = new TH1I("Hit_Time_r77_c24", "DIRCPmtHit time [ns]; hits", 500, -200, 300);
-	hHit_tdcTime_single_channel_r77_c24_LED1[i] = new TH1I("Hit_Time_r77_c24_LED1", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c24_LED2[i] = new TH1I("Hit_Time_r77_c24_LED2", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-	hHit_tdcTime_single_channel_r77_c24_LED3[i] = new TH1I("Hit_Time_r77_c24_LED3", "DIRCPmtHit time [ns]; hits", 500, 0.0, 500.0);
-
-	hHit_tdcTime_LED_5000[i] = new TH1I("Hit_Time_5000","DIRCPmtHit time; time [ns]; hits",500,0.0,500.0);
-
-	hHit_pixelOccupancy_LED_timing_cut_in[i] = new TH2I("Hit_PixelOccupancy_timing_cut_in","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
-
-
-	hHit_pixelOccupancy_LED_timing_cut_out[i] = new TH2I("Hit_PixelOccupancy_timing_cut_out","DIRCPmtHit pixel occupancy  pixel rows; pixel columns",Npixelcolumns,-0.5,-0.5+Npixelcolumns,Npixelrows,-0.5,-0.5+Npixelrows);
 
 	// LED specific histograms
 	hHit_tdcTimeDiffVsChannel[i] = new TH2I("Hit_LEDTimeDiffVsChannel","LED DIRCPmtHit time diff vs. channel; channel;time [ns]",Nchannels,-0.5,-0.5+Nchannels,100,-10.0,30.0);
 	hHit_tdcTimeDiffEvent[i] = new TH1I("Hit_LEDTimeDiffEvent","LED DIRCPmtHit time diff in event; #Delta t [ns]",200,-50,50);
 
 	hHit_TimeEventMeanVsLEDRef[i] = new TH2I("Hit_TimeEventMeanVsLEDRef","LED Time Event Mean DIRCPmtHit time vs. LED Reference time; LED reference time [ns] ; LED pixel event mean time [ns]", 100, 100, 150, 400, -10, 30);
-        hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
+    hHit_TimeDiffEventMeanLEDRefVsTimestamp[i] = new TH2I("Hit_TimeDiffeventMeanLEDRefVsTimestamp","LED Time Event Mean DIRCPmtHit time - LED reference time vs. event timestamp; event timestamp [ns?] ; time difference [ns]", 1000, 0, 1e10, 400, 100, 140);
+
+	hHit_LEDRefTdcChannelTimeDiff[i] = new TH1I("Hit_LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 300, 0, 150);
 	
 	if(FillTimewalk) {
 		gDirectory->mkdir("Timewalk")->cd();	
@@ -347,74 +259,17 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     else if(locPhysicsTrig) loc_itrig = 1;
     else return NOERROR;
 
-    // FILL HISTOGRAMS
-    // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-
-	/*--------------------------------------------------*/
-	// First 5000 events: treatment, determine LED fiber #1 average hit time.
-    for (const auto& hit : hits) {
-		
-//		if (eventnumber < 5000) {
-		if (event_counter < 5000) {
-
-			int box = (hit->ch < Nchannels) ? 1 : 0;
-		    int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
-	
-	        int pmtrow = locDIRCGeometry->GetPmtRow(channel);
-	        int pmtcol = locDIRCGeometry->GetPmtColumn(channel);
-	
-			if (locDIRCLEDTrig) {
-//				if(eventnumber == 1) {
-					hHit_pixelOccupancy_LED_Event_5000[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-	
-// 					if ( pmtrow > 0 && pmtrow < 5 && pmtcol >0 && pmtcol < 5) {			
-// 						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
-// 						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 					}
-
-					if ( pmtrow > 13 && pmtrow < 16 && pmtcol >0 && pmtcol < 5) {			
-						hHit_tdcTime_LED_5000[box]->Fill(hit->t);
-						hHit_pixelOccupancy_LED_Event_5000_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-	
-				}
-			}
-		}
-	}
-
-//	cout << eventnumber << "   " << event_counter << endl;
-//	if (eventnumber < 5000) return NOERROR;
-
-	if (event_counter < 5000){ 
-		event_counter++;
-		return NOERROR;
-	}
-
-//	cout << "???????????????" << endl;
-
-//	if (event_counter < 5000) return NOERROR;
-
-	/// Ending treatment for the first event
-	/*--------------------------------------------------*/
-
-
-
-
-
-
-
-
-
-
-
-
     // LED specific information
     // next line commented out to supress warning: variable not used
     //    double locLEDRefTime = 0;
-    double locLEDRefAdcTime = 0;
-    double locLEDRefTdcTime = 0;
+    double locLEDRefAdcTime;
+    double locLEDRefTdcTime;
     if(locDIRCLEDTrig) {
-	    
+
+
+		locLEDRefAdcTime = 0;
+		locLEDRefTdcTime = 0;	    
+
 	    // Get LED SiPM reference
 	    //vector<const DCAEN1290TDCHit*> sipmtdchits;
 	    //eventLoop->Get(sipmtdchits);
@@ -430,7 +285,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		// next line commented out to supress warning: variable not used
 		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
-//		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
                 hLEDRefIntegral->Fill(dircLEDRef->integral);
 		hLEDRefTdcTime->Fill(locLEDRefTdcTime);
@@ -439,41 +294,6 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
 	    }
     }
-
-/*
-	    for(uint i=0; i<sipmadchits.size(); i++) {
-		    const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-		    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
-			    locLEDRefAdcTime = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
-			    locLEDRefAdcTime *= 0.0625; // convert time from flash to ns
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
-			    hLEDRefIntegral->Fill(sipmadchit->integral); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
-			    locLEDRefTime = locLEDRefAdcTime;
-		    }
-	    }
-	    
-	    for(uint i=0; i<sipmtdchits.size(); i++) {
-		    const DCAEN1290TDCHit* sipmtdchit = (DCAEN1290TDCHit*)sipmtdchits[i];
-		    if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
-			    locLEDRefTdcTime = (double)((sipmtdchit->time));
-			    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-			    hLEDRefTdcTime->Fill(locLEDRefTdcTime); 
-			    japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK	     
-			    locLEDRefTime = locLEDRefTdcTime;
-		    }
-	    }
-    }
-*/
-
-
-
-
-
-
-
-
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
@@ -489,223 +309,98 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
         int channel = (hit->channel < Nchannels) ? hit->channel : (hit->channel - Nchannels);
         NDigiHits[box]++;
         hDigiHit_Box[loc_itrig]->Fill(box);
-		hDigiHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->channel), locDIRCGeometry->GetPixelColumn(hit->channel));
+	hDigiHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->channel), locDIRCGeometry->GetPixelColumn(hit->channel));
         hDigiHit_tdcTime[box][loc_itrig]->Fill(hit->time);
         hDigiHit_tdcTimeVsChannel[box][loc_itrig]->Fill(channel,hit->time);
     }
     hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(0.,NDigiHits[0]); hDigiHit_NtdcHitsVsBox[loc_itrig]->Fill(1.,NDigiHits[1]);
 
     // Loop over calibrated hits to get mean for reference time
-    double locRefTime[2];
-    int locNHits[2];
-
-//    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
-
-
+    double locRefTime = 0;
+    int locNHits = 0;
+    double locFirstFiberTime = 125.5; // 205.5; used for no time offset
     for (const auto& hit : hits) {
-
-		int box = (hit->ch < Nchannels) ? 1 : 0;
         int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
-
- //   	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
-    	double locFirstFiberTime = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin()) - 20;
-
-//    	double locFirstFiberTime = 166.5;
-//    	double locFirstFiberTime = 127;
-
-//		cout << "asdasdad ad "  << locFirstFiberTime << endl;
-
         int pmtrow = locDIRCGeometry->GetPmtRow(channel);
-
         if(pmtrow < 6 && fabs(hit->t-locFirstFiberTime) < 5.) {
-			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime[box] += hit->t;
-			locNHits[box]++;
-		} else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-locFirstFiberTime-10) < 5.) {
-			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime[box] += (hit->t - 10);
-			locNHits[box]++;
-		} else if(pmtrow > 11 && pmtrow < 18 && fabs(hit->t-locFirstFiberTime-20) < 5.) {
-			//cout<<pmtrow<<" "<<hit->t<<endl;
-			locRefTime[box] += (hit->t - 20);
-			locNHits[box]++;
-		}
-		//cout<<"locRefTime "<<locRefTime<<"  "<<locNHits<<endl;
+		//cout<<pmtrow<<" "<<hit->t<<endl;
+		locRefTime += hit->t;
+		locNHits++;
+	}
+        else if(pmtrow > 5 && pmtrow < 12 && fabs(hit->t-locFirstFiberTime-10) < 5.) {
+		//cout<<pmtrow<<" "<<hit->t<<endl;
+		locRefTime += (hit->t - 10);
+		locNHits++;
+	}
+        else if(pmtrow > 11 && pmtrow < 18 && fabs(hit->t-locFirstFiberTime-20) < 5.) {
+		//cout<<pmtrow<<" "<<hit->t<<endl;
+		locRefTime += (hit->t - 20);
+		locNHits++;
+	}
+	//cout<<"locRefTime "<<locRefTime<<"  "<<locNHits<<endl;
     }
-
-	locRefTime[0] /= locNHits[0];
-	locRefTime[1] /= locNHits[1];
-
-    hRefTime->Fill(locRefTime[0]);
-    hRefTime->Fill(locRefTime[1]);
-
-
-
-
+    locRefTime /= locNHits;
+    hRefTime->Fill(locRefTime);
     //if(locReferenceClockTime%2 == 0)
     //    locRefTime += 4.0;
  
+    // use LED reference SiPM if available
+    if(locLEDRefTdcTime > 0. && locLEDRefAdcTime > 0.)
+	    locRefTime = locLEDRefTdcTime;
+
     // Fill calibrated-hit hists
     int NHits[] = {0,0};
     bool ledFiber[3] = {false, false, false};
-
     for (const auto& hit : hits) {
+	int box = (hit->ch < Nchannels) ? 1 : 0;
+        int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
+	int pmtrow = locDIRCGeometry->GetPmtRow(channel);
+	if(pmtrow < 6) ledFiber[0] = true;
+	else if(pmtrow < 12) ledFiber[1] = true;
+	else ledFiber[2] = true; 
+	hHit_Box[loc_itrig]->Fill(box);
+	NHits[box]++;
+	hHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+	hHit_TimeOverThreshold[box][loc_itrig]->Fill(hit->tot);
+	hHit_TimeOverThresholdVsChannel[box][loc_itrig]->Fill(channel,hit->tot);
+	hHit_tdcTime[box][loc_itrig]->Fill(hit->t);
+	hHit_tdcTimeVsEvent[box][loc_itrig]->Fill(eventnumber,hit->t);
+	hHit_tdcTimeVsChannel[box][loc_itrig]->Fill(channel,hit->t);
 
-		int box = (hit->ch < Nchannels) ? 1 : 0;
-	    int channel = (hit->ch < Nchannels) ? hit->ch : (hit->ch - Nchannels);
-		int pmtrow = locDIRCGeometry->GetPmtRow(channel);
-
-		int event_count = 0;
-
-		if(pmtrow < 6) ledFiber[0] = true;
-		else if(pmtrow < 12) ledFiber[1] = true;
-		else ledFiber[2] = true; 
-		hHit_Box[loc_itrig]->Fill(box);
-		NHits[box]++;
-		hHit_pixelOccupancy[box][loc_itrig]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-
-//		event_count++;
-		
-		if (locDIRCLEDTrig) {
+	// LED specific histograms
+	if(locDIRCLEDTrig) {
+		double locHitTime = hit->t;
+		if(box == 0) locHitTime -= 40.0 / 0.983571; // LED fiber length / c (ft/ns)
+		hHit_tdcTimeDiffEvent[box]->Fill(locHitTime-locRefTime);
+		hHit_tdcTimeDiffVsChannel[box]->Fill(channel,locHitTime-locRefTime);
 	
-//			if(eventnumber == 5001) {
-			if(event_counter == 5001) {
-				hHit_pixelOccupancy_LED_Event_1[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-//			} else if(eventnumber == 5002) {
-			} else if(event_counter == 5002) {
-				hHit_pixelOccupancy_LED_Event_2[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-//			} else if(eventnumber == 5003) {
-			} else if(event_counter == 5003) {
-				hHit_pixelOccupancy_LED_Event_3[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-			}
-	
-	// 		if (hit->t >= 123 && hit->t < 158) {
-	// 			hHit_pixelOccupancy_LED_timing_cut[i]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-	// 		}
-	
-// 			if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 				hHit_tdcTime_single_channel_r50_c10[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {		
-// 				hHit_tdcTime_single_channel_r77_c47[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 				hHit_tdcTime_single_channel_r103_c47[box]->Fill(hit->t);
-// 			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 				hHit_tdcTime_single_channel_r77_c24[box]->Fill(hit->t);
-// 			}
-	
-// 			if(hit->t >= 123 && hit->t < 136) {
-// 			   	hHit_pixelOccupancy_LED_1[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED1[box]->Fill(hit->t);
-// 		
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {	
-// 					hHit_tdcTime_single_channel_r77_c47_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED1[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED1[box]->Fill(hit->t);
-// 				}
-// 	
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 			} else if (hit->t >= 136 && hit->t < 146) {
-// 				hHit_pixelOccupancy_LED_2[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED2[box]->Fill(hit->t);
-// 	
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {	
-// 					hHit_tdcTime_single_channel_r77_c47_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED2[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED2[box]->Fill(hit->t);
-// 				}
-// 	
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 			} else if (hit->t >= 146 && hit->t <= 158){ 
-// 			   	hHit_pixelOccupancy_LED_3[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 			   	hHit_tdcTime_single_channel_r50_c10_LED3[box]->Fill(hit->t);
-// 	
-// 				if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-// 					hHit_tdcTime_single_channel_r50_c10_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r77_c47_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-// 					hHit_tdcTime_single_channel_r103_c47_LED3[box]->Fill(hit->t);
-// 				} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-// 					hHit_tdcTime_single_channel_r77_c24_LED3[box]->Fill(hit->t);
-// 				}
-// 	
-// 	 			hHit_pixelOccupancy_LED_timing_cut[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-// 	
-// 	        }
-// 
 
-			double led3_time = hHit_tdcTime_LED_5000[box]->GetBinCenter(hHit_tdcTime_LED_5000[box]->GetMaximumBin());
+		if(locLEDRefTdcTime != 0.0) {
+			hHit_LEDRefTdcChannelTimeDiff[box]->Fill(hit->t-locLEDRefTdcTime);
+		}
 
-	 		if (hit->t >= led3_time - 40 && hit->t <= led3_time + 20) {
-			
- 				hHit_pixelOccupancy_LED_timing_cut_in[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
+		if(locLEDRefTdcTime > 0) {
+			hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime,locLEDRefTdcTime);
+			hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime-locLEDRefTdcTime);
+		}
 
-			} else {
-
- 				hHit_pixelOccupancy_LED_timing_cut_out[box]->Fill(locDIRCGeometry->GetPixelRow(hit->ch), locDIRCGeometry->GetPixelColumn(hit->ch));
-
-			}
-
+		if(box==1 && channel==2490) {
+			hLEDRefTdcChannelTimeDiff->Fill(locHitTime-locLEDRefTdcTime);
+			hLEDRefTdcVsChannelTime->Fill(locHitTime,locLEDRefTdcTime);
+			hLEDRefAdcVsChannelTime->Fill(locHitTime,locLEDRefAdcTime);
 		}
 	
-		hHit_TimeOverThreshold[box][loc_itrig]->Fill(hit->tot);
-		hHit_TimeOverThresholdVsChannel[box][loc_itrig]->Fill(channel,hit->tot);
-		hHit_tdcTime[box][loc_itrig]->Fill(hit->t);
-		hHit_tdcTimeVsEvent[box][loc_itrig]->Fill(eventnumber,hit->t);
-		hHit_tdcTimeVsChannel[box][loc_itrig]->Fill(channel,hit->t);
-	
-		// LED specific histograms
-		if(locDIRCLEDTrig) {
-			hHit_tdcTimeDiffEvent[box]->Fill(hit->t-locRefTime[box]);
-			hHit_tdcTimeDiffVsChannel[box]->Fill(channel,hit->t-locRefTime[box]);
-		
-			if(locLEDRefTdcTime > 0) {
-				hHit_TimeEventMeanVsLEDRef[box]->Fill(locRefTime[box],locLEDRefTdcTime);
-				hHit_TimeDiffEventMeanLEDRefVsTimestamp[box]->Fill(locReferenceClockTime, locRefTime[box]-locLEDRefTdcTime);
-			}
-	
-			if(box==1 && channel==2490) {
-				hLEDRefTdcChannelTimeDiff->Fill(hit->t-locLEDRefTdcTime);
-				hLEDRefTdcVsChannelTime->Fill(hit->t,locLEDRefTdcTime);
-				hLEDRefAdcVsChannelTime->Fill(hit->t,locLEDRefAdcTime);
-			}
-		
-			double locDeltaT = hit->t - locRefTime[box];
-			if(ledFiber[1]) locDeltaT -= 10.;
-			if(ledFiber[2]) locDeltaT -= 20.;
-			if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
-
-			if (locDIRCGeometry->GetPixelRow(hit->ch) == 50 && locDIRCGeometry->GetPixelColumn(hit->ch) == 10) {	
-				hHit_tdcTime_single_channel_r50_c10[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {		
-				hHit_tdcTime_single_channel_r77_c47[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 103 && locDIRCGeometry->GetPixelColumn(hit->ch) == 47) {
-				hHit_tdcTime_single_channel_r103_c47[box]->Fill(locDeltaT);
-			} else if (locDIRCGeometry->GetPixelRow(hit->ch) == 77 && locDIRCGeometry->GetPixelColumn(hit->ch) == 24) {
-				hHit_tdcTime_single_channel_r77_c24[box]->Fill(locDeltaT);
-			}
-
-		}
+		double locDeltaT = locHitTime - locRefTime;
+		if(ledFiber[1]) locDeltaT -= 10.;
+		if(ledFiber[2]) locDeltaT -= 20.;
+		if(FillTimewalk) hHit_Timewalk[box][channel]->Fill(hit->tot, locDeltaT);
+	}
 
     }
     hHit_NHits[loc_itrig]->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsBox[loc_itrig]->Fill(0.,NHits[0]); hHit_NHitsVsBox[loc_itrig]->Fill(1.,NHits[1]);
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	event_counter++;
 
     return NOERROR;
 }

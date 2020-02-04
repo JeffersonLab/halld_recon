@@ -224,7 +224,7 @@ jerror_t JEventProcessor_DIRC_timing::init(void) {
 	/*--------------------------------------------------*/
 	// LED SiPM reference time
 	
-    hHit_LEDRefTime[i] = new TH1I("Hit_LEDRefTime", "LED TDC reference SiPM time; SiPM TDC time (ns)", 100, 0,100);
+    hHit_LEDRefTime[i] = new TH1I("Hit_LEDRefTime", "LED TDC reference SiPM time; SiPM TDC time (ns)", 200, -1000, 1000);
     hHit_LEDRefTdcChannelTimeDiff[i] = new TH1I("Hit_LEDRefTdcChannelTimeDiff", "PMT pixel hit - LED TDC reference SiPM time; PMT Channel - SiPM TDC time (ns)", 300, 0, 150);
 
 	for(int k = 0; k < 18; k++) {
