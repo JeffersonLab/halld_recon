@@ -30,9 +30,9 @@ DFCALGeometry::DFCALGeometry()
       m_positionOnFace[row][col][calor] = 
 	DVector2(  ( col - kMidBlock ) * blockSize(calor),
 		   ( row - kMidBlock ) * blockSize(calor) );
-      float x=m_positionOnFace[row][col][calor].X();
-      float y=m_positionOnFace[row][col][calor].Y();
- 	
+      //float x=m_positionOnFace[row][col][calor].X();
+      //float y=m_positionOnFace[row][col][calor].Y();
+     
       double thisRadius = m_positionOnFace[row][col][calor].Mod();
       
       if(thisRadius > radius()){	
