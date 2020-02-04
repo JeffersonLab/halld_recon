@@ -193,8 +193,9 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 
   }
 
-	
-
+  const DFCALGeometry *dFCALGeometry;
+  loop->GetSingle(dFCALGeometry);
+  insertSize=dFCALGeometry->insertSize();
 
   jerror_t result = LoadCovarianceLookupTables(eventLoop);
   if (result!=NOERROR) return result;
@@ -252,7 +253,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       double x=pos_corrected.X();
       double y=pos_corrected.Y();
       unsigned int index=0;
-      if (fabs(x)<50.16 && fabs(y)<50.16) index=1;
+      if (fabs(x)<insertSize && fabs(y)<insertSize) index=1;
 	
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
@@ -391,7 +392,7 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   float y0 = posInCal.Py();
 
   unsigned int index=0;
-  if (fabs(x0)<50.16 && fabs(y0)<50.16) index=1;
+  if (fabs(x0)<insertSize && fabs(y0)<insertSize) index=1;
 
   double Eclust = cluster->getEnergy();
   

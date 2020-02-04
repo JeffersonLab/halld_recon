@@ -12,6 +12,7 @@
 #include <JANA/JEventLoop.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>
+#include <FCAL/DFCALGeometry.h>
 #include <DANA/DApplication.h>
 
 #include <DMatrixDSym.h>
@@ -68,6 +69,8 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double timeConst2;
   double timeConst3;
   double timeConst4;
+
+  double insertSize;
 
   double FCAL_RADIATION_LENGTH[2];
   double FCAL_CRITICAL_ENERGY[2];
