@@ -72,7 +72,6 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   tdc_time_offset = 0.0;
   adc_time_offset = 0.0;
 
-
   map<string,double> led_ref_time_offset;
   
   if (loop->GetCalib("DIRC/led_ref_time_offset", led_ref_time_offset)) 
@@ -96,9 +95,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
                             double T = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    
 			    // Apply calibration constants here
-//			    T =  t_scale * T - 35.6;
 			    T =  t_scale * T + adc_time_offset;
-			    //T =  T - GetConstant(adc_time_offsets, digihit) + t_base;
 			
 			    DDIRCLEDRef *hit = new DDIRCLEDRef;
 			    hit->amp = (double)sipmadchit->pulse_peak;
@@ -122,16 +119,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
                     if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
 
 			    // Apply calibration constants here
-
-				/// Old parameter before 71593
-			    //double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 322.7;
-
-				/// New parameter for 71593 and after
-//			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 82.7;
 			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) + tdc_time_offset;
-
-
-			    //T += t_base_tdc - GetConstant(tdc_time_offsets, digihit) + tdc_adc_time_offset;
 
 			    // Look for existing hits to see if there is a match
       			    // or create new one if there is no match
