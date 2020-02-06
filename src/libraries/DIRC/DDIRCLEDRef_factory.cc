@@ -69,13 +69,35 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const Df250PulseData*> sipmadchits;
   loop->Get(sipmadchits);
 
+  tdc_time_offset = 0.0;
+  adc_time_offset = 0.0;
+
+
+  map<string,double> led_ref_time_offset;
+  
+  if (loop->GetCalib("DIRC/led_ref_time_offset", led_ref_time_offset)) 
+	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+  
+  if (led_ref_time_offset.find("ADC_time_offset") != led_ref_time_offset.end())
+	  adc_time_offset = led_ref_time_offset["ADC_time_offset"];
+  else
+	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+  
+  if (led_ref_time_offset.find("TDC_time_offset") != led_ref_time_offset.end())
+	  tdc_time_offset = led_ref_time_offset["TDC_time_offset"];
+  else
+	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+
+  //cout << "Timing: " << adc_time_offset << "    " << tdc_time_offset  << endl;
+
             for(uint i=0; i<sipmadchits.size(); i++) {
                     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
                     if(sipmadchit->rocid == 77 && sipmadchit->slot == 19 && sipmadchit->channel == 15) {
                             double T = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    
 			    // Apply calibration constants here
-			    T =  t_scale * T - 35.6;
+//			    T =  t_scale * T - 35.6;
+			    T =  t_scale * T + adc_time_offset;
 			    //T =  T - GetConstant(adc_time_offsets, digihit) + t_base;
 			
 			    DDIRCLEDRef *hit = new DDIRCLEDRef;
@@ -100,7 +122,15 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
                     if(sipmtdchit->rocid == 78 && sipmtdchit->slot == 8 && sipmtdchit->channel == 30) {
 
 			    // Apply calibration constants here
-			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 322.7;
+
+				/// Old parameter before 71593
+			    //double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 322.7;
+
+				/// New parameter for 71593 and after
+//			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) - 82.7;
+			    double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(sipmtdchit) + tdc_time_offset;
+
+
 			    //T += t_base_tdc - GetConstant(tdc_time_offsets, digihit) + tdc_adc_time_offset;
 
 			    // Look for existing hits to see if there is a match
