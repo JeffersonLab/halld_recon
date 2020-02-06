@@ -2376,7 +2376,9 @@ void DEVIOWorkerThread::MakeDGEMSRSWindowRawData(DParsedEvent *pe, uint32_t roci
 	///////////////////////////////////////////////////////////////////////
 	// loop over time bins and store samples in map for all APV channels //
 	///////////////////////////////////////////////////////////////////////
-	vector<uint16_t> windowDataAPV[NCH];
+	//vector<uint16_t> windowDataAPV[NCH];
+	std::shared_ptr< vector<uint16_t> > sptr_windowDataAPV( new vector<uint16_t>[NCH] );
+	vector<uint16_t>* windowDataAPV = sptr_windowDataAPV.get();
 	//for(int i=0; i<NCH; i++) windowDataAPV[i].resize(fNbOfTimeSamples);
 
 	for(Int_t timebin = 0; timebin < fNbOfTimeSamples; timebin++) {
