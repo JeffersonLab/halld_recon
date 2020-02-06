@@ -159,7 +159,7 @@ jerror_t DL1MCTrigger_factory::init(void)
 jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
 
-  int use_rcdb = 1;
+  int use_rcdb = 0;
 
   int status   = 0;
 
@@ -231,58 +231,19 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
   
   if(print_messages) jout << "In DL1MCTrigger_factory, loading constants..." << endl;
-  
-  vector< double > fcal_gains_ch;
-  vector< double > fcal_pedestals_ch;
-  
-  if (eventLoop->GetCalib("/FCAL/gains", fcal_gains_ch)){
-    jout << "DL1MCTrigger_factory: Error loading /FCAL/gains !" << endl;
-    // Load default values of gains if CCDB table is not found
-    for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
-      for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
-	fcal_gains[ii][jj] = 1.;	
-      }
+    
+  // Load default values of gains 
+  for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
+    for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
+      fcal_gains[ii][jj] = 1.;	
     }
-  } else {
-    LoadFCALConst(fcal_gains, fcal_gains_ch, fcalGeom);
-
-    if(debug){
-      for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
-	int row = fcalGeom.row(ch);
-	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
-	  hfcal_gains->Fill(fcal_gains[row][col]);
-	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
-	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
-	  //	  cout << aaa.X() << "  " << aaa.Y() << endl;
-	  
-	}	
-      }
-    }
-
   }
 
-  if (eventLoop->GetCalib("/FCAL/pedestals", fcal_pedestals_ch)){
-    jout << "DL1MCTrigger_factory: Error loading /FCAL/pedestals !" << endl;
-    // Load default values of pedestals if CCDB table is not found
-    for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
-      for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
-	fcal_pedestals[ii][jj] = 100.;	
-      }
+  // Load default values of pedestals
+  for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
+    for(int jj = 0; jj < DFCALGeometry::kBlocksWide; jj++){
+      fcal_pedestals[ii][jj] = 100.;	
     }
-  } else {
-    LoadFCALConst(fcal_pedestals, fcal_pedestals_ch, fcalGeom);
-
-    if(debug){
-      for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
-	int row = fcalGeom.row(ch);
-	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
-	  hfcal_ped->Fill(fcal_pedestals[row][col]);
-	}
-      }	
-    }
-    
   }
   
   if(!SIMU_BASELINE){
@@ -294,14 +255,15 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     simu_gain_fcal = 0;
     simu_gain_bcal = 0;
   }
-  
+
+  /*
   if(debug){
     for(int ii = 0; ii < 100; ii++){
       cout << " Channel = " << ii <<  " Value = " << 
 	fcal_gains_ch[ii] << endl;
     }
   }
-
+  */
 
   return NOERROR;
 }
@@ -405,9 +367,10 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    
 	    // Account for gain fluctuations 
 	    if(simu_gain_fcal){
-	      
-	      double gain  =  fcal_gains[row][col];	  
-	      
+	      double gain  = 1.;
+	      if (row<100&&col<100){
+		fcal_gains[row][col];	  
+	      }
 	      fcal_adc_en *= gain;
 	    }
 	    
@@ -452,7 +415,10 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	  for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++){
 	    int row     = fcal_merged_hits[ii].row;
 	    int column  = fcal_merged_hits[ii].column;
-	    double pedestal =  fcal_pedestals[row][column];	    
+	    double pedestal =  100.;
+	    if (row<100&&column<100){
+	      fcal_pedestals[row][column];
+	    }
 	    AddBaseline(fcal_merged_hits[ii].adc_en, pedestal, gDRandom);       
 	  }
 	}
