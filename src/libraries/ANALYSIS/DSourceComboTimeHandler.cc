@@ -173,6 +173,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	//Photon
 	dPIDTimingCuts_TF1Params[Gamma][SYS_BCAL] = {1.5};
 	dPIDTimingCuts_TF1Params[Gamma][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[Gamma][SYS_CCAL] = {10.0};
 
 	//Unknown: initial RF selection for photons (at beginning of event, prior to vertex) //can be separate cut function
 	dPIDTimingCuts_TF1Params.emplace(Unknown, dPIDTimingCuts_TF1Params[Gamma]);
@@ -181,6 +182,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[Electron][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Electron][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[Electron][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Electron][SYS_CCAL] = {10.0};
 
 	//Other Leptons
 	dPIDTimingCuts_TF1Params.emplace(Positron, dPIDTimingCuts_TF1Params[Electron]);
@@ -191,18 +193,21 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[PiPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(PiMinus, dPIDTimingCuts_TF1Params[PiPlus]);
 
 	//Kaons
 	dPIDTimingCuts_TF1Params[KPlus][SYS_BCAL] = {0.75};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_TOF] = {0.3};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[KPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(KMinus, dPIDTimingCuts_TF1Params[KPlus]);
 
 	//Protons
 	dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {0.6};
 	dPIDTimingCuts_TF1Params[Proton][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Proton][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(AntiProton, dPIDTimingCuts_TF1Params[Proton]);
 	
 //COMPARE:
@@ -639,7 +644,7 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 			dShowersByBeamBunchByZBin[locZBinPair.first][{}].push_back(locJObject); //save showers by bunch: any bunch (empty vector)
 		}
 	}
-	else //BCAL: Save to this z-bin & unknown
+	else if(locSystem == SYS_BCAL) //BCAL: Save to this z-bin & unknown
 	{
 		dShowerRFBunches[locZBin].emplace(locJObject, locRFShifts);
 		dShowerRFBunches[DSourceComboInfo::Get_VertexZIndex_Unknown()].emplace(locJObject, locRFShifts); //will dupe over z's
@@ -650,6 +655,16 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 		}
 		dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].push_back(locJObject); //will dupe over z's
 		dShowersByBeamBunchByZBin[locZBin][{}].push_back(locJObject);
+	}
+	else if(locSystem == SYS_CCAL) //BCAL: Save to this z-bin & unknown
+	{
+	        for(auto& locZBinPair : dShowerRFBunches) //loop over z-bins
+		{
+			locZBinPair.second.emplace(locJObject, locRFShifts); //save bunches for each shower
+			for(const auto& locNumShifts : locRFShifts) //save showers by bunch
+				dShowersByBeamBunchByZBin[locZBinPair.first][{locNumShifts}].push_back(locJObject);
+			dShowersByBeamBunchByZBin[locZBinPair.first][{}].push_back(locJObject); //save showers by bunch: any bunch (empty vector)
+		}
 	}
 }
 
@@ -683,7 +698,7 @@ vector<int> DSourceComboTimeHandler::Calc_BeamBunchShifts(double locVertexTime, 
 		if((locDeltaT >= locMinDeltaT) && (locDeltaT < locMaxDeltaT))
 		{
 			if(dDebugLevel >= 10)
-				cout << "save shift: " << locNumShifts << endl;
+			  cout << "save shift: " << locNumShifts << endl;
 			locRFShifts.push_back(locNumShifts);
 		}
 		++locNumShifts;

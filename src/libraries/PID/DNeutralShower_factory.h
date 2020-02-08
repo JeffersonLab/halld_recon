@@ -17,6 +17,7 @@
 #include <PID/DChargedTrackHypothesis.h>
 #include <FCAL/DFCALShower.h>
 #include <BCAL/DBCALShower.h>
+#include <CCAL/DCCALShower.h>
 #include "DResourcePool.h"
 #include "DVector3.h"
 
@@ -29,7 +30,7 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
 {
  public:
   DNeutralShower_factory();
-  ~DNeutralShower_factory(){ delete dFCALClassifier; }
+  ~DNeutralShower_factory(){ delete dFCALClassifier;}
 
  private:
   jerror_t init(void);						///< Called once at program start.

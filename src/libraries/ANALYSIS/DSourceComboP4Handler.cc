@@ -554,10 +554,22 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			locHistName = "InvariantMass_2Gamma_FCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_FCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			
+			locHistName = "InvariantMass_2Gamma_CCAL";
+			locHist = gDirectory->Get(locHistName.c_str());
+			dHistMap_2GammaMass[SYS_CCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 
 			locHistName = "InvariantMass_2Gamma_BCALFCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
 			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+
+			locHistName = "InvariantMass_2Gamma_BCALCCAL";
+			locHist = gDirectory->Get(locHistName.c_str());
+			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+
+			locHistName = "InvariantMass_2Gamma_FCALCCAL";
+			locHist = gDirectory->Get(locHistName.c_str());
+			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
 		}
 
 		//INVARIANT MASS HISTOGRAMS: PIDS

@@ -8,6 +8,7 @@
 #include "DEventRFBunch_factory.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
+//#include "CCAL/DCCALShower.h"
 
 using namespace jana;
 
@@ -314,7 +315,23 @@ bool DEventRFBunch_factory::Find_NeutralTimes(JEventLoop* locEventLoop, vector<p
 	  double locHitTime = bcalShowers[i]->t;
 	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, bcalShowers[i] ) );
 	}
-	    
+	/*
+	vector< const DCCALShower* > ccalShowers;
+	locEventLoop->Get( ccalShowers );
+
+	for( size_t i = 0; i < ccalShowers.size(); ++i ){
+
+	  DVector3 locHitPoint( ccalShowers[i]->x, ccalShowers[i]->y, ccalShowers[i]->z );
+	  DVector3 locPath = locHitPoint - dTargetCenter;
+	  double locPathLength = locPath.Mag();
+	  if(!(locPathLength > 0.0))
+	    continue;
+	  
+	  double locFlightTime = locPathLength/29.9792458;
+	  double locHitTime = ccalShowers[i]->time;
+	  locTimes.push_back( pair< double, const JObject*>( locHitTime - locFlightTime, ccalShowers[i] ) );
+	}
+	*/  
 	return (locTimes.size() > 1);
 }
 
@@ -435,29 +452,37 @@ int DEventRFBunch_factory::Break_TieVote_Neutrals(map<int, vector<const JObject*
 	  // or DFCALShower objects -- figure out which and record the energy
 	  
 	  const DFCALShower* fcalShower = dynamic_cast< const DFCALShower* >( locVoters[loc_i] );
+	  
 	  if( fcalShower != NULL ){
 
 	    locTotalEnergy += fcalShower->getEnergy();
 	  }
 	  else{
-
+	    
 	    const DBCALShower* bcalShower = dynamic_cast< const DBCALShower* >( locVoters[loc_i] );
 	    if( bcalShower != NULL ){
-
+	      
 	      locTotalEnergy += bcalShower->E;
 	    }
+	    /*else{
+	      const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
+	      if( ccalShower != NULL ){
+		
+		locTotalEnergy += ccalShower->E;
+		}*/
 	  }
 	}
-
+    
       if(locTotalEnergy > locHighestTotalEnergy)
 	{
 	  locHighestTotalEnergy = locTotalEnergy;
 	  locBestRFBunchShift = locRFBunchShift;
 	}
     }
-
+  
   return locBestRFBunchShift;
 }
+
 
 jerror_t DEventRFBunch_factory::Select_RFBunch_NoRFTime(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector)
 {
