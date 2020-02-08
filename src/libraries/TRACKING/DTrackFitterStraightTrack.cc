@@ -1663,11 +1663,11 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       double v=fdchits[id]->s;
 
       // Small angle alignment correction
-      double x = S(state_x) + fdchits[id]->wire->angles.Z()*S(state_y);
-      double y = S(state_y) - fdchits[id]->wire->angles.Z()*S(state_x);
-      //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-      double tx = (S(state_tx) + fdchits[id]->wire->angles.Z()*S(state_ty) - fdchits[id]->wire->angles.Y());
-      double ty = (S(state_ty) - fdchits[id]->wire->angles.Z()*S(state_tx) + fdchits[id]->wire->angles.X());
+      double x = Ss(state_x) + fdchits[id]->wire->angles.Z() * Ss(state_y);
+      double y = Ss(state_y) - fdchits[id]->wire->angles.Z() * Ss(state_x);
+      // tz = 1.0 + my_fdchits[id]->phiY * tx - my_fdchits[id]->phiX * ty;
+      double tx = Ss(state_tx) + fdchits[id]->wire->angles.Z() * Ss(state_ty) - fdchits[id]->wire->angles.Y();
+      double ty = Ss(state_ty) - fdchits[id]->wire->angles.Z() * Ss(state_tx) + fdchits[id]->wire->angles.X();
 
       // Projected position along the wire 
       double vpred=x*sina+y*cosa;
