@@ -420,7 +420,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 	}
 
 	vector<DetectorSystem_t> locTimingSystems_Charged {SYS_TOF, SYS_BCAL, SYS_FCAL, SYS_START};
-	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL};
+	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL, SYS_CCAL};
 	vector<Particle_t> locPIDs {Unknown, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
 
 	//CREATE HISTOGRAMS
@@ -541,11 +541,12 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 
 	//ARRANGE NEUTRAL SHOWERS
 	//also, save to unknown-z, unknown-rf (all showers)
-	vector<const DNeutralShower*> locBCALShowers, locFCALShowers;
+	vector<const DNeutralShower*> locBCALShowers, locFCALShowers, locCCALShowers;
 	auto locUnknownZBin = DSourceComboInfo::Get_VertexZIndex_Unknown();
 	for(const auto& locShower : locNeutralShowers)
 	{
-		auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
+	        auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
+		if (locShower->dDetectorSystem == SYS_CCAL) locContainer = locCCALShowers;
 		locContainer.push_back(locShower);
 	}
 
@@ -554,6 +555,10 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	auto locFCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
 	for(const auto& locShower : locFCALShowers)
 		dPhotonKinematics[locFCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
+
+	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
+	for(const auto& locShower : locCCALShowers)
+		dPhotonKinematics[locCCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
 	//BCAL: in vertex-z bins
 	for(size_t loc_i = 0; loc_i < dNumPhotonVertexZBins; ++loc_i)
@@ -567,6 +572,9 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	//FCAL: at target center
 	for(const auto& locShower : locFCALShowers)
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locFCALZBin][locShower], dInitialEventRFBunch->dTime, locFCALZBin);
+	
+	for(const auto& locShower : locCCALShowers)
+		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locCCALZBin][locShower], dInitialEventRFBunch->dTime, locCCALZBin);
 
 	//BCAL + FCAL: in vertex-z bins
 	for(size_t loc_i = 0; loc_i < dNumPhotonVertexZBins; ++loc_i)
@@ -656,7 +664,7 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 		dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].push_back(locJObject); //will dupe over z's
 		dShowersByBeamBunchByZBin[locZBin][{}].push_back(locJObject);
 	}
-	else if(locSystem == SYS_CCAL) //BCAL: Save to this z-bin & unknown
+	else if(locSystem == SYS_CCAL) //CCAL: Save to this z-bin & unknown
 	{
 	        for(auto& locZBinPair : dShowerRFBunches) //loop over z-bins
 		{

@@ -126,7 +126,7 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	
 	ifstream ccal_profile(ccal_profile_file.c_str());
 	for(int i=0; i<=500; i++) {
-		for(int j=0; j<=i; j++) {
+	     for(int j=0; j<=i; j++) {
 			int id1, id2;
 			double fcell_hyc, fd2c;
 			
@@ -317,7 +317,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  
 	  /*-------------     call to island     -------------*/
 	  	  
-	  vector< gamma_t > gammas; // Output of main_island (holds reconstructed photons)
+	  vector< gamma_t > gammas; gammas.clear();// Output of main_island (holds reconstructed photons)
 	  main_island( ia, id, gammas );
 	
 	
@@ -2298,7 +2298,8 @@ double DCCALShower_factory::d2c( double dx, double dy )
 	i = int(ax);
 	j = int(ay);
 	
-	if( i < 500. && j < 500. ) {
+	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
+	//if( i < 500. && j < 500. ) {
 	
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
@@ -2325,11 +2326,11 @@ double DCCALShower_factory::cell_hyc( double dx, double dy )
 	i = static_cast<int>(ax);
 	j = static_cast<int>(ay);
 	
-	if( i < 500. && j < 500. ) {
+	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
 	
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
-	  
+	  //std::cout << "i " << i << " j " << j << " wx " << wx << " wy " << wy << std::endl;
 	  cell_hyc = acell[i][j]     * (1.-wx) * (1.-wy) + 
 	  	     acell[i+1][j]   *     wx  * (1.-wy) + 
 		     acell[i][j+1]   * (1.-wx) *     wy  +

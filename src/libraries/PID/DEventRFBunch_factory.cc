@@ -8,7 +8,7 @@
 #include "DEventRFBunch_factory.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
-//#include "CCAL/DCCALShower.h"
+#include "CCAL/DCCALShower.h"
 
 using namespace jana;
 
@@ -464,15 +464,16 @@ int DEventRFBunch_factory::Break_TieVote_Neutrals(map<int, vector<const JObject*
 	      
 	      locTotalEnergy += bcalShower->E;
 	    }
-	    /*else{
+	    else{
 	      const DCCALShower* ccalShower = dynamic_cast< const DCCALShower* >( locVoters[loc_i] );
 	      if( ccalShower != NULL ){
 		
 		locTotalEnergy += ccalShower->E;
-		}*/
+	      }
+	    }
 	  }
 	}
-    
+      
       if(locTotalEnergy > locHighestTotalEnergy)
 	{
 	  locHighestTotalEnergy = locTotalEnergy;
