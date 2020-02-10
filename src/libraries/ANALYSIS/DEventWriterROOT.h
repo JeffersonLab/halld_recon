@@ -18,6 +18,7 @@
 #include "TRIGGER/DTrigger.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"
+#include "CCAL/DCCALShower.h"
 #include "TRACKING/DMCThrown.h"
 #include "TRACKING/DTrackTimeBased.h"
 

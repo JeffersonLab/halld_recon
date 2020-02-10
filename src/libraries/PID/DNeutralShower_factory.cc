@@ -22,6 +22,7 @@ inline bool DNeutralShower_SortByEnergy(const DNeutralShower* locNeutralShower1,
     return true;
   double locE1 = locNeutralShower1->dEnergy - double(int(locNeutralShower1->dEnergy*100.0))/100.0;
   double locE2 = locNeutralShower2->dEnergy - double(int(locNeutralShower2->dEnergy*100.0))/100.0;
+
   return (locE1 < locE2);
 }
 
@@ -76,12 +77,19 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
   vector<const DFCALShower*> locFCALShowers;
   locEventLoop->Get(locFCALShowers);
 
+  vector<const DCCALShower*> locCCALShowers;
+  locEventLoop->Get(locCCALShowers);
+
   vector< const DEventRFBunch* > eventRFBunches;
   locEventLoop->Get(eventRFBunches);
   // there should always be one and only one object or else it is a coding error
   assert( eventRFBunches.size() == 1 );
   double rfTime = eventRFBunches[0]->dTime; // this is the RF time at the center of the target
-  
+  /*if (locCCALShowers.size() > 0) {
+    std::cout <<"size bcal " << locBCALShowers.size() << std::endl; 
+    std::cout <<"size fcal " << locFCALShowers.size() << std::endl; 
+    std::cout <<"size ccal " << locCCALShowers.size() << std::endl;
+    }*/ 
   // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
   // The chance of an actual neutral shower matching to a bogus track is very small
   JObject::oid_t locShowerID = 0;
@@ -96,7 +104,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       locNeutralShower->dDetectorSystem = SYS_BCAL;
       locNeutralShower->dShowerID = locShowerID;
       ++locShowerID;
-
+      
       // in the BCAL set the quality variable 1 to avoid eliminating
       // NeutralShowers in future splitoff rejection algorithms
       locNeutralShower->dQuality = 1;
@@ -107,7 +115,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       locCovMatrix->ResizeTo(5, 5);
       *locCovMatrix = locBCALShowers[loc_i]->ExyztCovariance;
       locNeutralShower->dCovarianceMatrix = locCovMatrix;
-
+      
       locNeutralShower->AddAssociatedObject(locBCALShowers[loc_i]);
 
       _data.push_back(locNeutralShower);
@@ -126,11 +134,11 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       locNeutralShower->dDetectorSystem = SYS_FCAL;
       locNeutralShower->dShowerID = locShowerID;
       ++locShowerID;
-
+      
       locNeutralShower->dEnergy = locFCALShowers[loc_i]->getEnergy();
       locNeutralShower->dSpacetimeVertex.SetVect(locFCALShowers[loc_i]->getPosition());
       locNeutralShower->dSpacetimeVertex.SetT(locFCALShowers[loc_i]->getTime());
-
+      
       locNeutralShower->dQuality = getFCALQuality( locFCALShowers[loc_i], rfTime );
       
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
@@ -142,7 +150,36 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 
       _data.push_back(locNeutralShower);
     }
+  
+  // Loop over all DCCALShowers, create DNeutralShower if didn't match to any tracks
+  // The chance of an actual neutral shower matching to a bogus track is very small
+  for(size_t loc_i = 0; loc_i < locCCALShowers.size(); ++loc_i)
+    {
+      //if(locDetectorMatches->Get_IsMatchedToTrack(locCCALShowers[loc_i]))
+      //continue;
 
+      // create DNeutralShower
+      DNeutralShower* locNeutralShower = new DNeutralShower();
+      locNeutralShower->dBCALFCALShower = static_cast<const JObject*>(locCCALShowers[loc_i]);
+      locNeutralShower->dDetectorSystem = SYS_CCAL;
+      locNeutralShower->dShowerID = locShowerID;
+      ++locShowerID;
+      
+      locNeutralShower->dQuality = 1;
+      
+      locNeutralShower->dEnergy = locCCALShowers[loc_i]->E;
+      locNeutralShower->dSpacetimeVertex.SetXYZT(locCCALShowers[loc_i]->x, locCCALShowers[loc_i]->y, locCCALShowers[loc_i]->z, locCCALShowers[loc_i]->time);
+      //std::cout << "CCAL MERDE Energy " <<  locCCALShowers[loc_i]->E << " time " << locCCALShowers[loc_i]->time << std::endl;
+      auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+      locCovMatrix->ResizeTo(5, 5);
+      *locCovMatrix = locCCALShowers[loc_i]->ExyztCovariance;
+      locNeutralShower->dCovarianceMatrix = locCovMatrix;
+
+      locNeutralShower->AddAssociatedObject(locCCALShowers[loc_i]);
+      
+      _data.push_back(locNeutralShower);
+    }
+  
   sort(_data.begin(), _data.end(), DNeutralShower_SortByEnergy);
 
   return NOERROR;
@@ -181,3 +218,4 @@ double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, do
   
   return dFCALClassifier->GetMvaValue( mvaInputs );
 }
+

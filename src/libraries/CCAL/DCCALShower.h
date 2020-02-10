@@ -9,7 +9,12 @@
 #ifndef _DCCALShower_
 #define _DCCALShower_
 
+#include <math.h>
 #include <DVector3.h>
+#include <DLorentzVector.h>
+#include <DMatrix.h>
+#include <DMatrix.h>
+#include <TMatrixFSym.h>
 #include "DCCALHit.h"
 #include "ccal.h"
 
@@ -89,6 +94,54 @@ class DCCALShower : public JObject {
 		PeakType_t PeakType;
       		
 		
+		TMatrixFSym ExyztCovariance;
+		
+		float EErr() const { return sqrt(ExyztCovariance(0,0)); }
+		float xErr() const { return sqrt(ExyztCovariance(1,1)); }
+		float yErr() const { return sqrt(ExyztCovariance(2,2)); }
+		float zErr() const { return sqrt(ExyztCovariance(3,3)); }
+		float tErr() const { return sqrt(ExyztCovariance(4,4)); }
+		float XYcorr() const {
+		  if (xErr()>0 && yErr()>0) return ExyztCovariance(1,2)/xErr()/yErr();
+		  else return 0;
+		}
+		float XZcorr() const {
+		  if (xErr()>0 && zErr()>0) return ExyztCovariance(1,3)/xErr()/zErr();
+		  else return 0;
+		}
+		float YZcorr() const {
+		  if (yErr()>0 && zErr()>0) return ExyztCovariance(2,3)/yErr()/zErr();
+		  else return 0;
+		}
+		float EXcorr() const {
+		  if (EErr()>0 && xErr()>0) return ExyztCovariance(0,1)/EErr()/xErr();
+		  else return 0;
+		}
+		float EYcorr() const {
+		  if (EErr()>0 && yErr()>0) return ExyztCovariance(0,2)/EErr()/yErr();
+		  else return 0;
+		}
+		float EZcorr() const {
+		  if (EErr()>0 && zErr()>0) return ExyztCovariance(0,3)/EErr()/zErr();
+		  else return 0;
+		}
+		float XTcorr() const {
+		  if (xErr()>0 && tErr()>0) return ExyztCovariance(1,4)/xErr()/tErr();
+		  else return 0;
+		}
+		float YTcorr() const {
+		  if (yErr()>0 && tErr()>0) return ExyztCovariance(2,4)/yErr()/tErr();
+		  else return 0;
+		}
+		float ZTcorr() const {
+		  if (zErr()>0 && tErr()>0) return ExyztCovariance(3,4)/zErr()/tErr();
+		  else return 0;
+		}
+		float ETcorr() const {
+		  if (EErr()>0 && tErr()>0) return ExyztCovariance(0,4)/EErr()/tErr();
+		  else return 0;
+		}
+
       		void toStrings(vector<pair<string,string> > &items) const {
 		  AddString(items, "E(GeV)",      "%2.3f",  E);
 		  AddString(items, "Emax(GeV)",   "%2.3f",  Emax);
@@ -105,11 +158,22 @@ class DCCALShower : public JObject {
 		  AddString(items, "t(ns)",       "%2.3f",  time);
 		  AddString(items, "ClusterType", "%d",     (int)ClusterType);
 		  AddString(items, "PeakType",    "%d",     (int)PeakType);
+
+		  AddString(items, "EXcorr", "%5.3f", EXcorr());
+		  AddString(items, "EYcorr", "%5.3f", EYcorr());
+		  AddString(items, "EZcorr", "%5.3f", EZcorr());
+		  AddString(items, "ETcorr", "%5.3f", ETcorr());
+		  AddString(items, "XYcorr", "%5.3f", XYcorr());
+		  AddString(items, "XZcorr", "%5.3f", XZcorr());
+		  AddString(items, "XTcorr", "%5.3f", XTcorr());
+		  AddString(items, "YZcorr", "%5.3f", YZcorr());
+		  AddString(items, "YTcorr", "%5.3f", YTcorr());
+		  AddString(items, "ZTcorr", "%5.3f", ZTcorr());
       		}
       		
- 	
-	private:
-      	
+         private:
+
+
 };
 
 
