@@ -2,6 +2,7 @@
 
 static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
+static bool CCAL_VERBOSE_OUTPUT = false;
 static bool DIRC_OUTPUT = true;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
@@ -257,6 +258,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT);
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
 		gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT);
+	if(gPARMS->Exists("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT"))
+		gPARMS->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT);
 	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
 		gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT);
 
@@ -682,6 +685,9 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "E9E25_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
+	
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locArraySizeString, dInitNumNeutralArraySize);
+
 
 	//SHOWER MATCHING:
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumTrackArraySize);
@@ -743,7 +749,7 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumU_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
 		locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "SumV_FCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	}
-	
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	//NEARBY TRACKS
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumNeutralArraySize);
@@ -1599,6 +1605,9 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	
 	double locFCALEnergy = (locFCALShower != NULL) ? locFCALShower->getEnergy() : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_FCAL"), locFCALEnergy, locArrayIndex);
+	
+	//double locCCALEnergy = (locCCALShower != NULL) ? locCCALShower->getEnergy() : 0.0;
+	//locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locCCALEnergy, locArrayIndex);
 
 	//SHOWER PROPERTIES
 	double locSigLongBCAL = (locBCALShower != NULL) ? locBCALShower->sigLong : 0.0;
@@ -1688,6 +1697,8 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locNeutralShower->GetSingle(locBCALShower);
 	const DFCALShower* locFCALShower = NULL;
 	locNeutralShower->GetSingle(locFCALShower);
+	const DCCALShower* locCCALShower = NULL;
+	locNeutralShower->GetSingle(locCCALShower);
 
 	//IDENTIFIERS
 	Particle_t locPID = locNeutralParticleHypothesis->PID();
@@ -1737,6 +1748,9 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	
 	double locFCALEnergy = (locDetector == SYS_FCAL) ? locNeutralShower->dEnergy : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_FCAL"), locFCALEnergy, locArrayIndex);
+
+	double locCCALEnergy = (locDetector == SYS_CCAL) ? locNeutralShower->dEnergy : 0.0;
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "Energy_CCAL"), locCCALEnergy, locArrayIndex);
 
 	//SHOWER POSITION
 	DLorentzVector locHitDX4 = locNeutralShower->dSpacetimeVertex;

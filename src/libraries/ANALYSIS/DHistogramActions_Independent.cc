@@ -328,6 +328,12 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		locHistName = "FCALShowerEnergy";
 		dHist_FCALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";FCAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
 
+		//CCAL
+		locHistName = "CCALShowerYVsX";
+		dHist_CCALShowerYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";CCAL Shower X (cm);CCAL Shower Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
+		locHistName = "CCALShowerEnergy";
+		dHist_CCALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";CCAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+
 		//BCAL
 		locHistName = "BCALShowerEnergy";
 		dHist_BCALShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";BCAL Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
@@ -505,6 +511,9 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	vector<const DFCALShower*> locFCALShowers;
 	locEventLoop->Get(locFCALShowers);
 
+	vector<const DCCALShower*> locCCALShowers;
+	locEventLoop->Get(locCCALShowers);
+
 	vector<const DTOFPoint*> locTOFPoints;
 	locEventLoop->Get(locTOFPoints);
 
@@ -586,11 +595,18 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action(); //ACQUIRE ROOT LOCK!!
 	{
-		//FCAL
+	        //FCAL
 		for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
 		{
 			dHist_FCALShowerEnergy->Fill(locFCALShowers[loc_i]->getEnergy());
 			dHist_FCALShowerYVsX->Fill(locFCALShowers[loc_i]->getPosition().X(), locFCALShowers[loc_i]->getPosition().Y());
+		}
+
+		//CCAL
+		for(size_t loc_i = 0; loc_i < locCCALShowers.size(); ++loc_i)
+		{
+		        dHist_CCALShowerEnergy->Fill(locCCALShowers[loc_i]->E);
+			dHist_CCALShowerYVsX->Fill(locCCALShowers[loc_i]->x, locCCALShowers[loc_i]->y);
 		}
 
 		//BCAL
@@ -823,11 +839,12 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 			vector<DetectorSystem_t> locDetectorSystems;
 			locDetectorSystems.push_back(SYS_START);  locDetectorSystems.push_back(SYS_BCAL);
 			locDetectorSystems.push_back(SYS_TOF);  locDetectorSystems.push_back(SYS_FCAL);
+			//locDetectorSystems.push_back(SYS_CCAL);
 			for(size_t loc_i = 0; loc_i < locDetectorSystems.size(); ++loc_i)
 			{
 				DetectorSystem_t locSystem = locDetectorSystems[loc_i];
 
-				double locMaxTheta = ((locSystem == SYS_FCAL) || (locSystem == SYS_TOF)) ? 12.0 : dMaxTheta;
+				double locMaxTheta = ((locSystem == SYS_FCAL) || (locSystem == SYS_TOF) /*|| (locSystem == SYS_CCAL)*/) ? 12.0 : dMaxTheta;
 				double locMaxP = (locSystem == SYS_BCAL) ? 3.0 : dMaxP;
 
 				string locSystemName = SystemName(locSystem);
@@ -1045,7 +1062,8 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 			locHistTitle = locTrackString + string(";#theta#circ;FCAL / Track Distance (cm)");
 			dHistMap_FCALTrackDistanceVsTheta[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, 20.0, dNum2DTrackDOCABins, dMinTrackDOCA, dMaxTrackMatchDOCA);
 			gDirectory->cd("..");
-
+			
+			
 			//BCAL
 			CreateAndChangeTo_Directory("BCAL", "BCAL");
 			locHistName = "TrackBCALModuleVsZ_HasHit";
@@ -1180,6 +1198,9 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 
 	vector<const DFCALShower*> locFCALShowers;
 	locEventLoop->Get(locFCALShowers);
+
+	vector<const DCCALShower*> locCCALShowers;
+	locEventLoop->Get(locCCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
 	locEventLoop->Get(locTOFPoints);
@@ -1722,6 +1743,20 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 		locHistTitle = string("FCAL ") + locParticleROOTName + string(";Shower Energy (GeV);Timing PID Confidence Level");
 		dHistMap_TimeFOMVsP[SYS_FCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
 */
+
+		gDirectory->cd("..");
+
+		//CCAL
+		CreateAndChangeTo_Directory("CCAL", "CCAL");
+
+		locHistName = "BetaVsP_q0";
+		locHistTitle = "CCAL q^{0};Shower Energy (GeV);#beta";
+		dHistMap_BetaVsP[SYS_CCAL][0] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DBetaBins, dMinBeta, dMaxBeta);
+
+		locHistName = "DeltaTVsShowerE_Photon";
+		locHistTitle = string("CCAL ") + locParticleROOTName + string(";Shower Energy (GeV);#Deltat_{CCAL - RF}");
+		dHistMap_DeltaTVsP[SYS_CCAL][Gamma] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
 		gDirectory->cd("..");
 
 		//q +/-
@@ -1917,6 +1952,20 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 			locHistTitle = string("FCAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);Timing PID Confidence Level");
 			dHistMap_TimeFOMVsP[SYS_FCAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DFOMBins, 0.0, 1.0);
 */
+
+			gDirectory->cd("..");
+
+			//CCAL
+			CreateAndChangeTo_Directory("CCAL", "CCAL");
+
+			locHistName = string("DeltaBetaVsP_") + locParticleName;
+			locHistTitle = string("CCAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Delta#beta");
+			dHistMap_DeltaBetaVsP[SYS_CCAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaBetaBins, dMinDeltaBeta, dMaxDeltaBeta);
+
+			locHistName = string("DeltaTVsP_") + locParticleName;
+			locHistTitle = string("CCAL ") + locParticleROOTName + string(" Candidates;p (GeV/c);#Deltat_{CCAL - RF}");
+			dHistMap_DeltaTVsP[SYS_CCAL][locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
 			gDirectory->cd("..");
 
 			//CDC
@@ -2032,10 +2081,15 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 					dHistMap_BetaVsP[SYS_BCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
 					dHistMap_DeltaTVsP[SYS_BCAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
 				}
-				else
+				else if(locNeutralShower->dDetectorSystem == SYS_FCAL)
 				{
 					dHistMap_BetaVsP[SYS_FCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
 					dHistMap_DeltaTVsP[SYS_FCAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
+				}
+				else if(locNeutralShower->dDetectorSystem == SYS_CCAL)
+				{
+					dHistMap_BetaVsP[SYS_CCAL][0]->Fill(locShowerEnergy, locBeta_Timing);
+					dHistMap_DeltaTVsP[SYS_CCAL][Gamma]->Fill(locShowerEnergy, locDeltaT);
 				}
 			}
 		}
@@ -2236,6 +2290,17 @@ void DHistogramAction_Neutrals::Initialize(JEventLoop* locEventLoop)
 		locHistName = "FCALNeutralShowerDeltaTVsE";
 		dHist_FCALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";FCAL Neutral Shower Energy (GeV);FCAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
 
+
+		//CCAL
+		//locHistName = "CCALTrackDOCA";
+		//dHist_CCALTrackDOCA = GetOrCreate_Histogram<TH1I>(locHistName, ";CCAL Shower Distance to Nearest Track (cm)", dNumTrackDOCABins, dMinTrackDOCA, dMaxTrackDOCA);
+		locHistName = "CCALNeutralShowerEnergy";
+		dHist_CCALNeutralShowerEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";CCAL Neutral Shower Energy (GeV)", dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
+		locHistName = "CCALNeutralShowerDeltaT";
+		dHist_CCALNeutralShowerDeltaT = GetOrCreate_Histogram<TH1I>(locHistName, ";CCAL Neutral Shower #Deltat (Propagated - RF) (ns)", dNumDeltaTBins, dMinDeltaT, dMaxDeltaT);
+		locHistName = "CCALNeutralShowerDeltaTVsE";
+		dHist_CCALNeutralShowerDeltaTVsE = GetOrCreate_Histogram<TH2I>(locHistName, ";CCAL Neutral Shower Energy (GeV);CCAL Neutral Shower #Deltat (ns)", dNum2DShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy, dNum2DDeltaTBins, dMinDeltaT, dMaxDeltaT);
+
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
@@ -2283,7 +2348,7 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 			//assume is photon
 			double locPathLength = (locNeutralShowers[loc_i]->dSpacetimeVertex.Vect() - dTargetCenter).Mag();
 			double locDeltaT = locNeutralShowers[loc_i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - locStartTime;
-
+			
 			if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_FCAL)
 			{
 				const DFCALShower* locFCALShower = NULL;
@@ -2297,7 +2362,7 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 				dHist_FCALNeutralShowerDeltaT->Fill(locDeltaT);
 				dHist_FCALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
 			}
-			else
+			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
 			{
 				const DBCALShower* locBCALShower = NULL;
 				locNeutralShowers[loc_i]->GetSingle(locBCALShower);
@@ -2315,6 +2380,19 @@ bool DHistogramAction_Neutrals::Perform_Action(JEventLoop* locEventLoop, const D
 				dHist_BCALNeutralShowerDeltaT->Fill(locDeltaT);
 				dHist_BCALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
 				dHist_BCALNeutralShowerDeltaTVsZ->Fill(locNeutralShowers[loc_i]->dSpacetimeVertex.Z(), locDeltaT);
+			}
+			else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_CCAL)
+			{
+				const DCCALShower* locCCALShower = NULL;
+				locNeutralShowers[loc_i]->GetSingle(locCCALShower);
+
+				//double locDistance = 9.9E9;
+				//if(locDetectorMatches->Get_DistanceToNearestTrack(locFCALShower, locDistance))
+				//	dHist_FCALTrackDOCA->Fill(locDistance);
+
+				dHist_CCALNeutralShowerEnergy->Fill(locNeutralShowers[loc_i]->dEnergy);
+				dHist_CCALNeutralShowerDeltaT->Fill(locDeltaT);
+				dHist_CCALNeutralShowerDeltaTVsE->Fill(locNeutralShowers[loc_i]->dEnergy, locDeltaT);
 			}
 		}
 	}
@@ -2414,6 +2492,11 @@ void DHistogramAction_DetectorMatchParams::Initialize(JEventLoop* locEventLoop)
 				locHistName = "FCALShowerTrackDepthVsP";
 				locHistTitle = locParticleROOTName + ";p (GeV/c);FCAL Shower Track Depth (cm)";
 				dHistMap_FCALShowerTrackDepthVsP[locPIDPair] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DPBins, dMinP, dMaxP, dNumShowerDepthBins, dMinShowerDepth, dMaxShowerDepth);
+
+				//CCAL
+				locHistName = "CCALShowerEnergy";
+				locHistTitle = locParticleROOTName + ";CCAL Shower Energy (GeV)";
+				dHistMap_CCALShowerEnergy[locPIDPair] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumShowerEnergyBins, dMinShowerEnergy, dMaxShowerEnergy);
 
 				//SC
 				locHistName = "SCEnergyVsTheta";
@@ -3128,7 +3211,7 @@ void DHistogramAction_TrackShowerErrors::Initialize(JEventLoop* locEventLoop)
 		//SHOWERS
 		for(bool locIsBCALFlag : {false, true})
 		{
-			string locDirName = locIsBCALFlag ? "Photon_BCAL" : "Photon_FCAL";
+		  string locDirName = locIsBCALFlag ? "Photon_BCAL" : "Photon_FCAL";
 			locParticleROOTName = ParticleName_ROOT(Gamma);
 			CreateAndChangeTo_Directory(locDirName, locDirName);
 
@@ -3343,7 +3426,7 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumHighLevelObjects = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
 		else
 		{
-			dHist_NumHighLevelObjects = new TH2D(locHistName.c_str(), ";;# Objects / Event", 13, 0.5, 13.5, dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+			dHist_NumHighLevelObjects = new TH2D(locHistName.c_str(), ";;# Objects / Event", 14, 0.5, 14.5, dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(1, "DRFTime");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(2, "DSCHit");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(3, "DTOFPoint");
@@ -3357,6 +3440,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(11, "DBeamPhoton");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(12, "DChargedTrack");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(13, "DNeutralShower");
+			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(14, "DCCALShower");
+			
 		}
 
 		//Charged
@@ -3413,6 +3498,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 		//Showers / Neutrals / TOF / SC
 		locHistName = "NumFCALShowers";
 		dHist_NumFCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DFCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+		locHistName = "NumCCALShowers";
+		dHist_NumCCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DCCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumBCALShowers";
 		dHist_NumBCALShowers = GetOrCreate_Histogram<TH1D>(locHistName, ";# DBCALShower", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
 		locHistName = "NumNeutralShowers";
@@ -3458,6 +3545,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumBCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DBCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumFCALHits";
 			dHist_NumFCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
+			locHistName = "NumCCALHits";
+			dHist_NumCCALHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFCALHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 
 			locHistName = "NumRFSignals";
 			dHist_NumRFSignals = GetOrCreate_Histogram<TH1I>(locHistName, ";# DRFDigiTime + # DRFTDCDigiTime", dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
@@ -3484,6 +3573,9 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 
 	vector<const DFCALShower*> locFCALShowers;
 	locEventLoop->Get(locFCALShowers);
+
+	vector<const DCCALShower*> locCCALShowers;
+	locEventLoop->Get(locCCALShowers);
 
 	vector<const DChargedTrack*> locChargedTracks;
 	locEventLoop->Get(locChargedTracks);
@@ -3516,6 +3608,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	vector<const DTOFHit*> locTOFHits;
 	vector<const DBCALHit*> locBCALHits;
 	vector<const DFCALHit*> locFCALHits;
+	vector<const DCCALHit*> locCCALHits;
 	vector<const DTAGMHit*> locTAGMHits;
 	vector<const DTAGHHit*> locTAGHHits;
 	vector<const DFDCPseudo*> locFDCPseudoHits;
@@ -3535,6 +3628,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 		locEventLoop->Get(locTOFHits);
 		locEventLoop->Get(locBCALHits);
 		locEventLoop->Get(locFCALHits);
+		locEventLoop->Get(locCCALHits);
 		locEventLoop->Get(locTAGHHits);
 		locEventLoop->Get(locTAGMHits);
 		locEventLoop->Get(locRFDigiTimes);
@@ -3568,7 +3662,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 		dHist_NumHighLevelObjects->Fill(11, (Double_t)locBeamPhotons.size());
 		dHist_NumHighLevelObjects->Fill(12, (Double_t)locChargedTracks.size());
 		dHist_NumHighLevelObjects->Fill(13, (Double_t)locNeutralShowers.size());
-
+		dHist_NumHighLevelObjects->Fill(14, (Double_t)locCCALShowers.size());
 		//Charged
 		unsigned int locNumPos = 0, locNumNeg = 0;
 		for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
@@ -3653,6 +3747,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 
 		//Showers
 		dHist_NumFCALShowers->Fill((Double_t)locFCALShowers.size());
+		dHist_NumCCALShowers->Fill((Double_t)locCCALShowers.size());
 		dHist_NumBCALShowers->Fill((Double_t)locBCALShowers.size());
 		dHist_NumNeutralShowers->Fill((Double_t)locNeutralShowers.size());
 
@@ -3683,6 +3778,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			dHist_NumTOFHits->Fill((Double_t)locTOFHits.size());
 			dHist_NumBCALHits->Fill((Double_t)locBCALHits.size());
 			dHist_NumFCALHits->Fill((Double_t)locFCALHits.size());
+			dHist_NumCCALHits->Fill((Double_t)locCCALHits.size());
 			dHist_NumRFSignals->Fill((Double_t)(locRFDigiTimes.size() + locRFTDCDigiTimes.size()));
 		}
 	}

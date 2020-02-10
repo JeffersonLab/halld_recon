@@ -173,7 +173,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		
 		
-		
+		int VERBOSE;
 };
 
 #endif // _DCCALShower_factory_
