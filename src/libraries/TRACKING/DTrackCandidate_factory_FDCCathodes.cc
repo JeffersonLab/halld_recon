@@ -773,18 +773,22 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
   DHoughFind hough(-400.0, +400.0, -400.0, +400.0, 100, 100);
     
   vector<pair<unsigned int, unsigned int> >associated_segments;
+  unsigned int oldPackNum=unused_segments[0].first;
   for (unsigned int i=0;i<unused_segments.size();i++){
     unsigned int packNum=unused_segments[i].first;
-    unsigned int segmentNum=unused_segments[i].second;    
-    const DFDCSegment* segment=packages[packNum][segmentNum];
-    for (unsigned int m=0;m<segment->hits.size();m++){
-      hough.AddPoint(segment->hits[m]->xy);
-      associated_segments.push_back(unused_segments[i]);
+    if (packNum-oldPackNum<2){
+      unsigned int segmentNum=unused_segments[i].second;    
+      const DFDCSegment* segment=packages[packNum][segmentNum];
+      for (unsigned int m=0;m<segment->hits.size();m++){
+	hough.AddPoint(segment->hits[m]->xy);
+	associated_segments.push_back(unused_segments[i]);
+      }
     }
+    oldPackNum=packNum;
   }
         
   DVector2 Ro = hough.Find();
-  if(hough.GetMaxBinContent()>FDC_HOUGH_THRESHOLD){	
+  if(hough.GetMaxBinContent()>FDC_HOUGH_THRESHOLD){
     // Zoom in on resonance a little
     double width = 60.0;
     hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 
@@ -795,7 +799,6 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
     width = 8.0;
     hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 100, 100);
     Ro = hough.Find();
-    
     vector<DVector2> points=hough.GetPoints();
     set<pair<unsigned int, unsigned int> >associated_segments_to_use;
     unsigned int num_hits_to_use=0;

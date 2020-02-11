@@ -20,6 +20,7 @@ using namespace jana;
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "FDC/DFDCSegment.h"
 #include "DHelicalFit.h"
+#include "DHoughFind.h"
 #include "DMagneticFieldStepper.h"
 #include "PID/DParticleID.h"
 
