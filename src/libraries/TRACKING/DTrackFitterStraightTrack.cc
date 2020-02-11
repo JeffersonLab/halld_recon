@@ -1688,14 +1688,16 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       // Difference between measurement and projection for the cathodes
       double tv=tx*sina+ty*cosa;
       double resi_c=v-vpred;
-      
+
       // Difference between measurement and projection perpendicular to the wire
-      double drift=0.; // assume hit at wire position
-      if (fit_type==kTimeBased){
-	double drift_time=fdc_updates[id].tdrift;
-	drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
+      double drift = 0.0;  // assume hit at wire position
+      int left_right = -999;
+      if (fit_type == kTimeBased) {
+        double drift_time = fdc_updates[id].tdrift;
+        drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(drift_time);
+        left_right = (du > 0.0 ? +1 : -1);
       }
-      double resi_a=drift-doca;
+      double resi_a = drift - doca;
 
       // Variance from filter step
       DMatrix2x2 V=fdc_updates[id].V;
@@ -1760,7 +1762,8 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
 				    0.0, //tcorr
 				    resi_c, sqrt(V(1,1))
 				    );
-	 
+      thisPull.left_right = left_right;
+
       if (fdchits[id]->wire->layer!=PLANE_TO_SKIP){
 	vector<double> derivatives;
 	derivatives.resize(FDCTrackD::size);

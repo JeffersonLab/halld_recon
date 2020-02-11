@@ -120,6 +120,7 @@ class DTrackFitter:public jana::JObject{
 		    double tcorr; // drift time with correction for B
 		    double resic; // residual for FDC cathode measuremtns
 		    double errc;
+		    int left_right;  // left-right info. of the wire plane (-1: left or +1: right)
           vector<double> trackDerivatives;
           inline void AddTrackDerivatives(vector<double> d){ trackDerivatives = d;}
              
