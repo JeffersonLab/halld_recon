@@ -56,8 +56,8 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
 
   // PARAMETERS:
   double DELTA_T_ADC_TDC_MAX;
-  int USE_AMP_4WALKCORR;
   int USE_NEW_4WALKCORR;
+  int USE_AMP_4WALKCORR;
   int USE_NEWAMP_4WALKCORR;
   int USE_NEW_WALK_NEW;
 
