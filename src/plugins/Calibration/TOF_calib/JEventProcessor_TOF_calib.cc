@@ -98,6 +98,26 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
   if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tdcshift)) {
     TOF_TDC_SHIFT = tdcshift["TOF_TDC_SHIFT"];
   }
+  
+  const DTOFGeometry& tofGeom = *locTOFGeometry; 
+  // load base time offset
+  map<string,double> base_time_offset;
+  string locTOFBaseTimeOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/base_time_offset";
+  if (eventLoop->GetCalib(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
+    jout << "Error loading " << locTOFBaseTimeOffsetTable << " !" << endl;
+  if (base_time_offset.find("TOF_BASE_TIME_OFFSET") != base_time_offset.end())
+    ADCTLOC = base_time_offset["TOF_BASE_TIME_OFFSET"];
+  else
+    jerr << "Unable to get TOF_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;      
+  
+  if (base_time_offset.find("TOF_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
+    TDCTLOC = base_time_offset["TOF_TDC_BASE_TIME_OFFSET"];
+  else
+    jerr << "Unable to get TOF_TDC_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;
+  
+
+  jout<<"TOF: Updated ADC and TDC offsets according to CCDB: "<<ADCTLOC<<" / "<<TDCTLOC<<endl;
+
 
   return NOERROR;
 }
