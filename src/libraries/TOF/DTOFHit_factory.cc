@@ -40,33 +40,10 @@ jerror_t DTOFHit_factory::init(void)
   gPARMS->SetDefaultParameter("TOF:DEBUG_TOF_HITS", TOF_DEBUG,
 			      "Generate DEBUG output");
 
-  USE_NEWAMP_4WALKCORR = 1;
-  gPARMS->SetDefaultParameter("TOF:USE_NEWAMP_4WALKCORR", USE_NEWAMP_4WALKCORR,
-			      "Use Signal Amplitude for NEW walk correction with two fit functions");
+  USE_NEWAMP_4WALKCORR = 0;
   USE_AMP_4WALKCORR = 0;
-  gPARMS->SetDefaultParameter("TOF:USE_AMP_4WALKCORR", USE_AMP_4WALKCORR,
-			      "Use Signal Amplitude for walk correction rather than Integral");
-  if (USE_AMP_4WALKCORR){
-    USE_NEWAMP_4WALKCORR = 0;
-    cout<<"TOF: Default walk correction over written!"<<endl;
-  }
-
-  USE_NEW_4WALKCORR = 0;
-  gPARMS->SetDefaultParameter("TOF:USE_NEW_4WALKCORR", USE_NEW_4WALKCORR,
-			      "Use NEW walk correction function with 4 parameters");
-  if (USE_NEW_4WALKCORR){
-    USE_NEWAMP_4WALKCORR = 0;
-    cout<<"TOF: Default walk correction over written!"<<endl;
-  }
-
   USE_NEW_WALK_NEW = 0;
-  gPARMS->SetDefaultParameter("TOF:USE_NEW_WALK_NEW", USE_NEW_WALK_NEW,
-			      "Use NEW walk correction function with 5 parameters, single function for full range");
-  if (USE_NEW_WALK_NEW){
-    USE_NEWAMP_4WALKCORR = 0;
-     cout<<"TOF: Default walk correction over written!"<<endl;
-  }
-
+  USE_NEW_4WALKCORR = 0; // this is new always zero and not used!
 
   DELTA_T_ADC_TDC_MAX = 20.0; // ns
   //	DELTA_T_ADC_TDC_MAX = 30.0; // ns, value based on the studies from cosmic events
@@ -81,7 +58,6 @@ jerror_t DTOFHit_factory::init(void)
   
   CHECK_FADC_ERRORS = true;
   gPARMS->SetDefaultParameter("TOF:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, set to 0 to keep these hits");
-
 
   gPARMS->SetDefaultParameter("TOF:OVERRIDE_HIGH_TIME_CUT", OVERRIDE_HIGH_TIME_CUT, "Set to 1 to override the high side time cut, set to 0 to use the values from CCDB");
   gPARMS->SetDefaultParameter("TOF:HIGH_TIME_CUT", hi_time_cut, "Set the value of the high side time cut");
@@ -210,7 +186,7 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       jerr << "Unable to get TOF_TDC_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;
     
     // load constant tables
-	string locTOFPedestalsTable = tofGeom.Get_CCDB_DirectoryName() + "/pedestals";
+    string locTOFPedestalsTable = tofGeom.Get_CCDB_DirectoryName() + "/pedestals";
     if(eventLoop->GetCalib(locTOFPedestalsTable.c_str(), raw_adc_pedestals))
       jout << "Error loading " << locTOFPedestalsTable << " !" << endl;
     string locTOFGainsTable = tofGeom.Get_CCDB_DirectoryName() + "/gains";
@@ -220,62 +196,78 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     if(eventLoop->GetCalib(locTOFADCTimeOffetsTable.c_str(), raw_adc_offsets))
       jout << "Error loading " << locTOFADCTimeOffetsTable << " !" << endl;
     
-    if (USE_NEWAMP_4WALKCORR){
-      
-      string locTOFChanOffsetNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets_NEWAMP";
-      if(eventLoop->GetCalib(locTOFChanOffsetNEWAMPTable.c_str(), raw_tdc_offsets)) {
-	jout<<"\033[1;31m";  // red text";
-	jout<< "Error loading "<<locTOFChanOffsetNEWAMPTable<<" !\033[0m" << endl;
-	
-	USE_NEWAMP_4WALKCORR = 0;
-	jout << "\033[1;31m"; // red text again";
-	string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-	jout << "Try to resort back to old calibration table "<<locTOFChanOffsetTable<<" !\033[0m" << endl; 
-	if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets)) {
-	  jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
-	} else {
-	  jout<<"OK Found!"<<endl;
-	}
-	
-	string locTOFTimewalkTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms";
-	if(eventLoop->GetCalib(locTOFTimewalkTable.c_str(), timewalk_parameters))
-	  jout << "Error loading "<<locTOFTimewalkTable<<" !" << endl;
-      } else { // timing offsets for NEWAMP exist, get also the walk parameters
-	string locTOFTimewalkNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_NEWAMP";
-	if(eventLoop->GetCalib(locTOFTimewalkNEWAMPTable.c_str(), timewalk_parameters_NEWAMP))
-	  jout << "Error loading "<<locTOFTimewalkNEWAMPTable<<" !" << endl;
-      }
-      
-    } else if (USE_AMP_4WALKCORR){
-      string locTOFTimewalkAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_AMP";
-      if(eventLoop->GetCalib(locTOFTimewalkAMPTable.c_str(), timewalk_parameters_AMP))
-	jout << "Error loading "<<locTOFTimewalkAMPTable<<" !" << endl;
-      string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-      if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets))
-	jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
-    } else if (USE_NEW_4WALKCORR){
-      string locTOFTimewalkNEWTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_NEW";
-      if(eventLoop->GetCalib(locTOFTimewalkNEWTable.c_str(), timewalk_parameters_NEW))
-	jout << "Error loading "<<locTOFTimewalkNEWTable<<" !" << endl;
-      string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-      if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets))
-	jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
-    } else if (USE_NEW_WALK_NEW) {
-      string locTOFTimewalkNEWTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_5PAR";
-      if(eventLoop->GetCalib(locTOFTimewalkNEWTable.c_str(), timewalk_parameters_5PAR))
-	jout << "Error loading "<<locTOFTimewalkNEWTable<<" !" << endl;
-      string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-      if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets))
-	jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
-    }else {
-      string locTOFTimewalkTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms";
-      if(eventLoop->GetCalib(locTOFTimewalkTable.c_str(), timewalk_parameters))
-	jout << "Error loading "<<locTOFTimewalkTable<<" !" << endl;
-      string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
-      if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets))
-	jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
+    // check which walk correction to use:
+    string locTOFWalkCorrectionType = tofGeom.Get_CCDB_DirectoryName() + "/walkcorr_type";
+    vector<int> walkcorrtype;
+    if(eventLoop->GetCalib(locTOFWalkCorrectionType.c_str(), walkcorrtype)) {
+      jout<<"\033[1;31m";  // red text";
+      jout<< "Error loading "<<locTOFWalkCorrectionType<<" !\033[0m" << endl;
+      return (jerror_t)101;
     }
+    
+    switch ((int)walkcorrtype[0]) {
+      
+    case 1:  // walk corrections based on Integral values
+      {
+	cout<<"TOF: USE WALK CORRECTION TYPE 1"<<endl;
+	string locTOFTimewalkTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms";
+	if(eventLoop->GetCalib(locTOFTimewalkTable.c_str(), timewalk_parameters)){
+	  jout << "Error loading "<<locTOFTimewalkTable<<" !" << endl;
+	}
+	string locTOFChanOffsetTable1 = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
+	if(eventLoop->GetCalib(locTOFChanOffsetTable1.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable1<<" !" << endl;
+	}
+      }
+      break;
 
+    case 2:  // walk correction based on peak Amplitudes single function 
+      {
+	cout<<"TOF: USE WALK CORRECTION TYPE 2"<<endl;
+	USE_AMP_4WALKCORR = 1;
+	string locTOFTimewalkAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_AMP";
+	if(eventLoop->GetCalib(locTOFTimewalkAMPTable.c_str(), timewalk_parameters_AMP)){
+	  jout << "Error loading "<<locTOFTimewalkAMPTable<<" !" << endl;
+	}
+	string locTOFChanOffsetTable2 = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets";
+	if(eventLoop->GetCalib(locTOFChanOffsetTable2.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable2<<" !" << endl;
+	}
+      }
+      break;
+      
+    case 3:
+      {
+	cout<<"TOF: USE WALK CORRECTION TYPE 3"<<endl;
+	USE_NEWAMP_4WALKCORR = 1;
+	string locTOFChanOffsetNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets_NEWAMP";
+	if(eventLoop->GetCalib(locTOFChanOffsetNEWAMPTable.c_str(), raw_tdc_offsets)) {
+	  jout<< "Error loading "<<locTOFChanOffsetNEWAMPTable<<" !" << endl;
+	}
+	string locTOFTimewalkNEWAMPTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_NEWAMP";
+	if(eventLoop->GetCalib(locTOFTimewalkNEWAMPTable.c_str(), timewalk_parameters_NEWAMP)){
+	  jout << "Error loading "<<locTOFTimewalkNEWAMPTable<<" !" << endl;
+	}
+      }
+      break;
+
+    case 4:
+      {
+	cout<<"TOF: USE WALK CORRECTION TYPE 4"<<endl;
+	USE_NEW_WALK_NEW = 1;
+	string locTOFTimewalkNEWTable = tofGeom.Get_CCDB_DirectoryName() + "/timewalk_parms_5PAR";
+	if(eventLoop->GetCalib(locTOFTimewalkNEWTable.c_str(), timewalk_parameters_5PAR)){
+	  jout << "Error loading "<<locTOFTimewalkNEWTable<<" !" << endl;
+	}
+	string locTOFChanOffsetTable = tofGeom.Get_CCDB_DirectoryName() + "/timing_offsets_5PAR";
+	if(eventLoop->GetCalib(locTOFChanOffsetTable.c_str(), raw_tdc_offsets)){
+	  jout << "Error loading "<<locTOFChanOffsetTable<<" !" << endl;
+	}
+      }
+      break;
+
+    }
+    
     
     FillCalibTable(adc_pedestals, raw_adc_pedestals, tofGeom);
     FillCalibTable(adc_gains, raw_adc_gains, tofGeom);
@@ -959,14 +951,10 @@ double DTOFHit_factory::CalcWalkCorrNEW5PAR(DTOFHit* hit){
   double D = timewalk_parameters_5PAR[id][3];
   double E = timewalk_parameters_5PAR[id][4];
 
-  double ADCREF = timewalk_parameters_NEWAMP[id][9];
+  double ADCREF = timewalk_parameters_5PAR[id][9];
 
   double a1 = A + B/ADC + C/ADC/ADC + D/ADC/ADC/ADC/ADC + E/sqrt(ADC);
   double a2 = A + B/ADCREF + C/ADCREF/ADCREF + D/ADCREF/ADCREF/ADCREF/ADCREF + E/sqrt(ADCREF);
-
-  if (ADC>4095){
-    a1 += 0.6; // overflow hits are off by about 0.6ns to the regular curve.
-  }
 
   float corr = a1 - a2;
 
