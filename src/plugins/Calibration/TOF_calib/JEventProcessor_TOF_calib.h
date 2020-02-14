@@ -28,7 +28,7 @@ using namespace std;
 #include <TTree.h>
 #include <TH1F.h>
 #include <TH2F.h>
-
+#include <TMath.h>
 #include <math.h>
 
 #define MaxHits 100

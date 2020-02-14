@@ -74,7 +74,7 @@ jerror_t JEventProcessor_TOF_calib::init(void)
 
 
   first = 1;
-  MakeHistograms();
+  //MakeHistograms();
 
   return NOERROR;
 }
@@ -87,6 +87,8 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
   // This is called whenever the run number changes
 
   RunNumber = runnumber;
+
+  MakeHistograms();
 
   // this should have already been done in init()
   // so just in case.....
@@ -106,12 +108,12 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
   if (eventLoop->GetCalib(locTOFBaseTimeOffsetTable.c_str(),base_time_offset))
     jout << "Error loading " << locTOFBaseTimeOffsetTable << " !" << endl;
   if (base_time_offset.find("TOF_BASE_TIME_OFFSET") != base_time_offset.end())
-    ADCTLOC = base_time_offset["TOF_BASE_TIME_OFFSET"];
+    ADCTLOC = TMath::Abs(base_time_offset["TOF_BASE_TIME_OFFSET"]);
   else
     jerr << "Unable to get TOF_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;      
   
   if (base_time_offset.find("TOF_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
-    TDCTLOC = base_time_offset["TOF_TDC_BASE_TIME_OFFSET"];
+    TDCTLOC = TMath::Abs(base_time_offset["TOF_TDC_BASE_TIME_OFFSET"]);
   else
     jerr << "Unable to get TOF_TDC_BASE_TIME_OFFSET from "<<locTOFBaseTimeOffsetTable<<" !" << endl;
   
@@ -429,16 +431,19 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
   }
 
-	// FILL HISTOGRAMS
-	// Since we are filling histograms (and trees in a file) local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  // FILL HISTOGRAMS
+  // Since we are filling histograms (and trees in a file) local to this plugin, 
+  // it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 
+
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  
   Event = eventnumber;
   TShift = TimingShift;
   Nhits = TOFTDCPaddles[0].size() + TOFTDCPaddles[1].size();
   int cnt = 0;
   int AllHits[4]={0,0,0,0};
-
+  
   if (Nhits<MaxHits){
     for (unsigned int k = 0; k<TOFTDCPaddles[0].size() ; k++){
       Plane[cnt] = 0;
@@ -460,7 +465,7 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   } else {
     Nhits = 0;
   }
-
+  
   cnt = 0;
   NhitsA = TOFADCPaddles[0].size() + TOFADCPaddles[1].size();
   if (NhitsA<MaxHits){
@@ -475,11 +480,11 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       OFR[cnt] = TOFADCPaddles[0][k].OverFlowR;
       PEAKL[cnt] = TOFADCPaddles[0][k].PeakL;
       PEAKR[cnt] = TOFADCPaddles[0][k].PeakR;
-
+      
       cnt++;
       AllHits[2]++;
     }
-
+    
     for (unsigned int k = 0; k<TOFADCPaddles[1].size() ; k++){
       PlaneA[cnt] = 1;
       PaddleA[cnt] = TOFADCPaddles[1][k].paddle;
@@ -491,14 +496,14 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       OFR[cnt] = TOFADCPaddles[1][k].OverFlowR;
       PEAKL[cnt] = TOFADCPaddles[1][k].PeakL;
       PEAKR[cnt] = TOFADCPaddles[1][k].PeakR;
-
+      
       cnt++;
       AllHits[3]++;
     }
   } else {
     NhitsA = 0;
   }
-
+  
   NsinglesA = TOFADCSingles[0].size() + TOFADCSingles[1].size();
   NsinglesT = TOFTDCSingles[0].size() + TOFTDCSingles[1].size();
 
@@ -542,9 +547,9 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       ((AllHits[2]>0) &&  (AllHits[3]>0))){
     t3->Fill();
   }
-
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
+  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  
   return NOERROR;
 }
 
@@ -578,10 +583,6 @@ jerror_t JEventProcessor_TOF_calib::fini(void)
 
 jerror_t JEventProcessor_TOF_calib::WriteRootFile(void){
 
-
-  //sprintf(ROOTFileName,"tofdata_run%d.root",RunNumber);
-  //ROOTFile = new TFile(ROOTFileName,"recreate");
-
   TDirectory *top = gDirectory;
 
   ROOTFile->cd();
@@ -594,9 +595,9 @@ jerror_t JEventProcessor_TOF_calib::WriteRootFile(void){
   TOFPedestal->Write();
 
   t3->Write();
-  //t3->AutoSave("SaveSelf");
 
-  //ROOTFile->Close();
+  ROOTFile->cd();
+  ROOTFile->Close();
   top->cd();
 
   return NOERROR;
