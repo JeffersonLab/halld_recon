@@ -335,6 +335,8 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
             total_bcal_energy += bcal_hits[i]->E;
         }
 	
+	vector<const DTPOLHit *> tpol_hits;
+	loop->Get(tpol_hits);
 
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
@@ -472,29 +474,13 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	}
 
 	//------------------------ TPOL -----------------------
-	for(unsigned int i=0; i < vDTPOLSectorDigiHit.size(); i++) 
+	for(unsigned int i=0; i < tpol_hits.size(); i++) 
 	{
-		tpol_occ->Fill(vDTPOLSectorDigiHit[i]->sector);
-		const DTPOLSectorDigiHit* hit = vDTPOLSectorDigiHit[i];
-		vector<const Df250WindowRawData*> windowraws;
-		hit->Get(windowraws);
-		if (windowraws.size() < 1) continue;
-		const Df250WindowRawData* windowraw = windowraws[0];
-		const vector<uint16_t> &samplesvector = windowraw->samples;
-		unsigned int w_samp1 = samplesvector[0]; 
-		unsigned int w_max = samplesvector[0];
-		unsigned int w_min = samplesvector[0];
-		if (w_samp1 > 150.0) continue;
-		tpol_occ2->Fill(vDTPOLSectorDigiHit[i]->sector);		
-
-		for (uint16_t c_samp=1; c_samp<samplesvector.size(); c_samp++)
-		{
-			if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
-			if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
-		}
-		unsigned int pulse_height = w_max - w_min;
-		if (pulse_height > 50.0) continue;
-		tpol_occ3->Fill(vDTPOLSectorDigiHit[i]->sector);
+		tpol_occ->Fill(tpol_hits[i]->sector);
+		if (tpol_hits[i]->w_samp1 > 160.0) continue;
+		tpol_occ2->Fill(tpol_hits[i]->sector);		
+		if (tpol_hits[i]->pulse_peak > 60.0) continue;
+		tpol_occ3->Fill(tpol_hits[i]->sector);
 	}
 
 	//------------------------ TOF ------------------------
