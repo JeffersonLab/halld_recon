@@ -73,18 +73,18 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
 
     locTreeBranchRegister.Register_Single<UShort_t>("nadc");
     locTreeBranchRegister.Register_Single<ULong64_t>("eventnum");
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("rocid","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("slot","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("channel","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("itrigger","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("sector","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<Double_t>("phi","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_integral","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_max","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_min","nadc",NSECTORS);
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_samp1","nadc",NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("rocid","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("slot","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("channel","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("itrigger","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UInt_t>("sector","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("phi","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<ULong64_t>("w_integral","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_max","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_min","nadc",10*NSECTORS);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("w_samp1","nadc",10*NSECTORS);
     locTreeBranchRegister.Register_Single<UShort_t>("ntpol");
-    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("waveform","ntpol",NSECTORS*150);
+    locTreeBranchRegister.Register_FundamentalArray<UShort_t>("waveform","ntpol",10*NSECTORS*150);
     locTreeBranchRegister.Register_Single<Double_t>("t_lhit");
     locTreeBranchRegister.Register_Single<Double_t>("t_rhit");
     locTreeBranchRegister.Register_Single<Double_t>("E_lhit");
@@ -145,8 +145,8 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     //
     //vector<const DTPOLHit*> hits;
     //loop->Get(hits);
-    vector<const DTPOLSectorDigiHit*> sectordigihits;
-    loop->Get(sectordigihits);
+    vector<const DTPOLHit*> tpolhits;
+    loop->Get(tpolhits);
     //sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
 
     //vector<const Df250WindowRawData*> windowraws;
@@ -242,20 +242,23 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
  
 	    unsigned int hit = 0;
 	    unsigned int ntpol = 0;
-	    ULong64_t w_integral = 0;
-	    unsigned int w_max = 0;
-	    unsigned int w_min = 0;
-	    unsigned int w_samp1 = 0;
+	    //ULong64_t w_integral = 0;
+	    //unsigned int w_max = 0;
+	    //unsigned int w_min = 0;
+	    //unsigned int w_samp1 = 0;
             //for(unsigned int i=0; i< windowraws.size(); i++) {
             //    const Df250WindowRawData *windowraw = windowraws[i];
             //    if (windowraw->rocid!=84) continue;
             //    if (!(windowraw->slot==13||windowraw->slot==14||windowraw->slot==15||windowraw->slot==16)) continue; // azimuthal sectors, rings: 15,16
 
-	    for (unsigned int i = 0; i < sectordigihits.size(); i++){
-		const DTPOLSectorDigiHit *sectordigihit = sectordigihits[i];
+	    //for (unsigned int i = 0; i < sectordigihits.size(); i++){
+	    //    const DTPOLSectorDigiHit* sectordigihit = sectordigihits[i];
+
+	    for (unsigned int i = 0; i < tpolhits.size(); i++){
+		const DTPOLHit *tpolhit = tpolhits[i];
 
         	vector<const Df250WindowRawData*> windowraws;
-		sectordigihit->Get(windowraws);
+		tpolhit->Get(windowraws);
 		if (windowraws.size() < 1) continue;
 		const Df250WindowRawData* windowraw = windowraws[0];
 
@@ -263,7 +266,7 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
                 unsigned int slot = windowraw->slot;
                 unsigned int channel = windowraw->channel;
                 unsigned int itrigger = windowraw->itrigger;
-		unsigned int sector = sectordigihit->sector;
+		unsigned int sector = tpolhit->sector;
 		double phi = GetPhi(sector); 
 
 		// Get a vector of the samples for this channel
@@ -275,7 +278,7 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
                 for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
                     dTreeFillData.Fill_Array<UShort_t>("waveform",samplesvector[c_samp],ntpol);
 		    ntpol++;
-		    if (c_samp==0) {  // use first sample for initialization
+		    /**if (c_samp==0) {  // use first sample for initialization
                         w_integral = samplesvector[0];
                         w_min = samplesvector[0];
                         w_max = samplesvector[0];
@@ -284,7 +287,7 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
                         w_integral += samplesvector[c_samp];
                         if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
                         if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
-                    }
+                    }**/
                 }
 
 		dTreeFillData.Fill_Array<UShort_t>("rocid",rocid,hit);
@@ -293,10 +296,10 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	        dTreeFillData.Fill_Array<UInt_t>("itrigger",itrigger,hit);
 		dTreeFillData.Fill_Array<UInt_t>("sector",sector,hit);
 		dTreeFillData.Fill_Array<Double_t>("phi",phi,hit);
-		dTreeFillData.Fill_Array<ULong64_t>("w_integral",w_integral,hit);
-		dTreeFillData.Fill_Array<UShort_t>("w_max",w_max,hit);
-		dTreeFillData.Fill_Array<UShort_t>("w_min",w_min,hit);
-		dTreeFillData.Fill_Array<UShort_t>("w_samp1",w_samp1,hit);
+		dTreeFillData.Fill_Array<ULong64_t>("w_integral",tpolhit->integral,hit);
+		dTreeFillData.Fill_Array<UShort_t>("w_max",tpolhit->w_max,hit);
+		dTreeFillData.Fill_Array<UShort_t>("w_min",tpolhit->w_min,hit);
+		dTreeFillData.Fill_Array<UShort_t>("w_samp1",tpolhit->w_samp1,hit);
                 hit++;
             }
             UShort_t nadc = hit;
