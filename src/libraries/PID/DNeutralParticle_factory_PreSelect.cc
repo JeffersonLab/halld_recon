@@ -16,6 +16,11 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
 	SetFactoryFlag(NOT_OBJECT_OWNER);
 
+	// OK let's plan to manage our own memory...
+
+	// default selections
+	dMaxNeutronBeta = 0.9;
+
 	return NOERROR;
 }
 
@@ -24,6 +29,8 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 //------------------
 jerror_t DNeutralParticle_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
 {
+	//gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   // TEMP
+
 	return NOERROR;
 }
 
@@ -45,11 +52,20 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
 		locNeutralShowerSet.insert(locNeutralShowers[loc_i]);
 
-	//if neutral shower was good, keep particle, else ignore it
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
-		if(locNeutralShowerSet.find(locNeutralParticles[loc_i]->dNeutralShower) != locNeutralShowerSet.end())
-			_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticles[loc_i]));
+		//if neutral shower was good, keep particle, else ignore it
+		if(locNeutralShowerSet.find(locNeutralParticles[loc_i]->dNeutralShower) == locNeutralShowerSet.end())
+			continue;
+			/*
+		// extra selections for neutrons
+		if(locNeutralParticles[loc_i]->Get_PID() == Neutron) {
+			if(locNeutralParticles[loc_i]->measuredBeta() > dMaxNeutronBeta)
+				continue;
+		}
+		*/
+		// keep the shower
+		_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticles[loc_i]));
 	}
 
 	return NOERROR;

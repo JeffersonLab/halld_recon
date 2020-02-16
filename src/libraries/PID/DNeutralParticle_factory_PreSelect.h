@@ -29,6 +29,9 @@ class DNeutralParticle_factory_PreSelect : public jana::JFactory<DNeutralParticl
 		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+		//Command-line values will override these
+		double dMaxNeutronBeta; //PRESELECT:MAX_NEUTRON_BETA 
 };
 
 #endif // _DNeutralParticle_factory_PreSelect_

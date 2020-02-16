@@ -27,8 +27,6 @@ jerror_t DNeutralParticleHypothesis_factory::init(void)
 	dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
 	dResourcePool_TMatrixFSym->Set_ControlParams(50, 20, 1000, 15000, 0);
 
-	gPARMS->SetDefaultParameter("COMBO:MAX_MASSIVE_NEUTRAL_BETA", dMaxMassiveNeutralBeta);
-
 	return NOERROR;
 }
 
@@ -43,6 +41,9 @@ jerror_t DNeutralParticleHypothesis_factory::brun(jana::JEventLoop *locEventLoop
 	locGeometry->GetTargetZ(dTargetCenterZ);
 	locEventLoop->GetSingle(dParticleID);
 
+	gPARMS->SetDefaultParameter("COMBO:MAX_MASSIVE_NEUTRAL_BETA", dMaxMassiveNeutralBeta); 
+	gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   // HACK
+	
 	return NOERROR;
 }
 
@@ -60,6 +61,7 @@ jerror_t DNeutralParticleHypothesis_factory::evnt(jana::JEventLoop *locEventLoop
 
 	vector<Particle_t> locPIDHypotheses;
 	locPIDHypotheses.push_back(Gamma);
+	locPIDHypotheses.push_back(Neutron);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
 	locEventLoop->GetSingle(locEventRFBunch);
@@ -118,6 +120,10 @@ DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralP
 		locPMag = locGamma*locBeta*locMass;
 		locMomentum.SetMag(locPMag);
 
+		// HACK - apply beta cut
+		if(locBeta < dMaxNeutronBeta)
+			return NULL;
+		
 //cout << "DNeutralParticleHypothesis_factory: pid, mass, shower-z, vertex-z, path, shower t, rf t, delta-t, beta, pmag = " << locPID << ", " << locMass << ", " << locHitPoint.Z() << ", " << locVertexGuess.Z() << ", " << locPathLength << ", " << locHitTime << ", " << locStartTime << ", " << locDeltaT << ", " << locBeta << ", " << locPMag << endl;
 
 		locProjectedTime = locStartTime + (locVertexGuess.Z() - dTargetCenterZ)/29.9792458;
@@ -230,16 +236,33 @@ void DNeutralParticleHypothesis_factory::Calc_ParticleCovariance_Massive(const D
 {
 	//build 9x9 matrix: 5x5 shower, 4x4 vertex position & time
 	TMatrixFSym locShowerPlusVertCovariance(9);
+	// initialize (to be sure - we are currently keeping most off-diagonal terms zero)
+	for(unsigned int loc_l = 0; loc_l < 9; ++loc_l)
+		for(unsigned int loc_m = 0; loc_m < 9; ++loc_m)
+			locShowerPlusVertCovariance(loc_l, loc_m) = 0.;
+	
+	// calculate E/position uncertainties
+	// very rough - assume known energy resolution (actually momentum) is related to the fractional uncertainty of beta
+	locShowerPlusVertCovariance(0,0) = locMomentum.Mag() * (0.3)/locDeltaT;  
+	locShowerPlusVertCovariance(1,1) = 5.;   // assume shower position resolution of 5. cm
+	locShowerPlusVertCovariance(2,2) = 5.;
+	locShowerPlusVertCovariance(3,3) = 5.;
+	locShowerPlusVertCovariance(4,4) = 0.3;  // assume time resolution of 0.3;
+
+	/**** right now this covariance matrix is set assuming that the shower is a photon - let's override this for now
 	for(unsigned int loc_l = 0; loc_l < 5; ++loc_l) //shower: e, x, y, z, t
 	{
 		for(unsigned int loc_m = 0; loc_m < 5; ++loc_m)
 			locShowerPlusVertCovariance(loc_l, loc_m) = (*(locNeutralShower->dCovarianceMatrix))(loc_l, loc_m);
 	}
+	**/
+
 	for(unsigned int loc_l = 0; loc_l < 4; ++loc_l) //vertex xyzt
 	{
 		for(unsigned int loc_m = 0; loc_m < 4; ++loc_m)
 			locShowerPlusVertCovariance(5 + loc_l, 5 + loc_m) = (*locVertexCovMatrix)(loc_l, loc_m);
 	}
+
 
 	//the input delta X/t are defined as "hit - start"
 	//however, the documentation and derivations define delta x/t as "start - hit"
