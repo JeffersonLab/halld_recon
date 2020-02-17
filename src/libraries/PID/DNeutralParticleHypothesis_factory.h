@@ -49,8 +49,6 @@ class DNeutralParticleHypothesis_factory : public jana::JFactory<DNeutralParticl
 		double dMaxMassiveNeutralBeta = 0.99999;
 		const DParticleID* dParticleID = nullptr;
 
-		//Command-line values will override these
-		double dMaxNeutronBeta; //PRESELECT:MAX_NEUTRON_BETA   -  HACK
 
 		//RESOURCE POOL
 		vector<DNeutralParticleHypothesis*> dCreated;

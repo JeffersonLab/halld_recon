@@ -16,10 +16,12 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
 	SetFactoryFlag(NOT_OBJECT_OWNER);
 
-	// OK let's plan to manage our own memory...
-
 	// default selections
-	dMaxNeutronBeta = 0.9;
+	// NOTE: disabling this for now, will try to handle all event selections in ANALYSIS library
+	// since beta depends on the vertex.  If we go back and try to do some loose preselections here,
+	// then we'll want to not just copy pointers, but manage our own memory so that we can 
+	// decide if we want to keep one hypothesis but not the other
+	//dMaxNeutronBeta = 0.9;
 
 	return NOERROR;
 }
@@ -29,7 +31,7 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 //------------------
 jerror_t DNeutralParticle_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
 {
-	//gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   // TEMP
+	//gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   
 
 	return NOERROR;
 }
@@ -57,13 +59,13 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 		//if neutral shower was good, keep particle, else ignore it
 		if(locNeutralShowerSet.find(locNeutralParticles[loc_i]->dNeutralShower) == locNeutralShowerSet.end())
 			continue;
-			/*
+		
 		// extra selections for neutrons
-		if(locNeutralParticles[loc_i]->Get_PID() == Neutron) {
-			if(locNeutralParticles[loc_i]->measuredBeta() > dMaxNeutronBeta)
-				continue;
-		}
-		*/
+		//if(locNeutralParticles[loc_i]->Get_PID() == Neutron) {
+		//	if(locNeutralParticles[loc_i]->measuredBeta() > dMaxNeutronBeta)
+		//		continue;
+		//}
+		
 		// keep the shower
 		_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticles[loc_i]));
 	}
