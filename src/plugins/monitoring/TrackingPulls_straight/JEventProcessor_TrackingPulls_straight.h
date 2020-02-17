@@ -9,6 +9,7 @@
 #define _JEventProcessor_TrackingPulls_straight_
 
 #include <JANA/JEventProcessor.h>
+#include <TTree.h>
 
 class JEventProcessor_TrackingPulls_straight : public jana::JEventProcessor {
  public:
@@ -29,6 +30,27 @@ class JEventProcessor_TrackingPulls_straight : public jana::JEventProcessor {
                         ///< has been called.
   jerror_t fini(void);  ///< Called after last event of last event source has
                         ///< been processed.
+
+  TTree *tree_;
+  double chi2_;
+  int ndf_;
+  double phi_;
+  double theta_;
+  double pos_x_;
+  double pos_y_;
+  double pos_z_;
+  double resi_[24];
+  double resic_[24];
+  double err_[24];
+  double errc_[24];
+  double x_[24];
+  double y_[24];
+  double z_[24];
+  double w_[24];
+  double s_[24];
+  double tdrift_[24];
+  int wire_[24];
+  int left_right_[24];  // -1: left, +1: right
 };
 
 #endif  // _JEventProcessor_TrackingPulls_straight_
