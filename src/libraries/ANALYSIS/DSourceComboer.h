@@ -133,6 +133,7 @@ class DSourceComboer : public JObject
 		void Define_DefaultCuts(void);
 		void Get_CommandLineCuts_dEdx(void);
 		void Get_CommandLineCuts_EOverP(void);
+		void Get_CommandLineCuts_Beta(void);
 		void Create_CutFunctions(void);
 		void Setup_NeutralShowers(JEventLoop* locEventLoop);
 		void Recycle_Vectors(void);
@@ -146,6 +147,8 @@ class DSourceComboer : public JObject
 		bool Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locHypo);
 		bool Cut_dEdx(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locdEdx);
 		bool Cut_EOverP(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locEOverP);
+		bool Cut_Beta(const DNeutralParticleHypothesis* locNeutralParticleHypothesis);
+		bool Cut_Beta(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locBeta);
 		void Fill_CutHistograms(void);
 		void Fill_SurvivalHistograms(void);
 
@@ -328,6 +331,13 @@ class DSourceComboer : public JObject
 		map<Particle_t, map<DetectorSystem_t, TF1*>> dEOverPCutMap; //if lepton, select above function, else select below
 		map<Particle_t, map<DetectorSystem_t, vector<pair<double, double>>>> dEOverPValueMap; //pair: first is p, 2nd is E/p
 		map<Particle_t, map<DetectorSystem_t, TH2*>> dHistMap_EOverP;
+
+		//beta
+		map<Particle_t, map<DetectorSystem_t, string>> dBetaCuts_TF1FunctionStrings;
+		map<Particle_t, map<DetectorSystem_t, vector<double>>> dBetaCuts_TF1Params;
+		map<Particle_t, map<DetectorSystem_t, TF1*>> dBetaCutMap; //if lepton, select above function, else select below
+		map<Particle_t, map<DetectorSystem_t, vector<pair<double, double>>>> dBetaValueMap; //pair: first is p, 2nd is E/p
+		map<Particle_t, map<DetectorSystem_t, TH2*>> dHistMap_Beta;
 };
 
 /*********************************************************** INLINE MEMBER FUNCTION DEFINITIONS ************************************************************/
@@ -528,6 +538,16 @@ inline bool DSourceComboer::Cut_EOverP(Particle_t locPID, DetectorSystem_t locSy
 
 	auto locCutFunc = dEOverPCutMap[locPID][locSystem];
 	return (((locPID == Electron) || (locPID == Positron)) == (locEOverP >= locCutFunc->Eval(locP)));
+}
+
+inline bool DSourceComboer::Cut_Beta(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locBeta)
+{
+	dBetaValueMap[locPID][locSystem].emplace_back(locP, locBeta);
+	if(dBetaCutMap[locPID].find(locSystem) == dBetaCutMap[locPID].end())
+		return true;
+
+	auto locCutFunc = dBetaCutMap[locPID][locSystem];
+	return ((locPID == Gamma) == (locBeta >= locCutFunc->Eval(locP)));
 }
 
 inline DSourceComboer::~DSourceComboer(void)
