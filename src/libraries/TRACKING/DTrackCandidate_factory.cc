@@ -1609,6 +1609,12 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
 	       
 	       // Redo the line fit
 	       fit.FitLineRiemann();
+
+	       double p=0.003*fit.r0*Bz_avg/cos(atan(fit.tanl));
+	       if (p>3.){
+		 // unphysical momentum, try alternate circle fit...
+		 fit.FitCircle();
+	       }
 	       
 	       // Set the charge
 	       fit.FindSenseOfRotation();   
@@ -2947,6 +2953,14 @@ bool DTrackCandidate_factory::MatchMethod12(DTrackCandidate *can,
 	    fit.tanl=tan(M_PI_2-theta);
 	    // Redo the line fit
 	    fit.FitLineRiemann();
+
+	    double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+	    // Hmm, some of these "low momentum" tracks don't seem to be low
+	    // momentum after all?
+	    if (myfdchits.size()?(p>10.):(p>3.)){
+	      // unphysical momentum, try alternate circle fit...
+	      fit.FitCircle();
+	    }
 	    
 	    DVector3 myorigin;
 	    if (myfdchits.size()) myorigin.SetXYZ(myfdchits[0]->xy.X(),
@@ -3186,8 +3200,23 @@ bool DTrackCandidate_factory::MatchMethod13(unsigned int src_index,
 	    can->chisq=fit1.chisq;
 	      
 	    // Redo line fit
-	    fit1.FitLineRiemann();
-	    
+	    fit1.FitLineRiemann();   
+ 
+	    // Guard against completely unreasonable momenta
+	    double p=0.003*fit1.r0*Bz/cos(atan(fit1.tanl));
+	    if (p>10.){	
+	      // Save the current fit values just in case the revised fit 
+	      // still gives nonsense...
+	      double rc=fit1.r0,xc=fit1.x0,yc=fit1.y0,old_p=p;
+	      fit1.FitCircle();
+	      p=0.003*fit1.r0*Bz/cos(atan(fit1.tanl));
+	      if (p>old_p){
+		fit1.r0=rc;
+		fit1.x0=xc;
+		fit1.y0=yc;
+	      }
+	    }
+
 	    // Guess charge from fit
 	    fit1.h=GetSenseOfRotation(fit1,segments2[0]->hits[0],
 				      srccan->position());
@@ -3388,7 +3417,9 @@ bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan)
 // Make last-ditch attempt to use the remaining CDC hits after all other 
 // methods failed, starting with the inner-most axial layers that have not 
 // yet been used.
-bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int>&axial_hits_used_in_fit,vector<unsigned int>&stereo_hits,vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs){
+bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int>&axial_hits_used_in_fit,vector<unsigned int>&stereo_hits,vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs){ 
+
+  if (DEBUG_LEVEL>0) _DBG_ << "Attempting to make candidates from unused CDC hits..." <<endl;
   // Set up the helical fitter
   DHelicalFit fit;
       
@@ -3475,6 +3506,10 @@ bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int
       can->setPosition(pos);
       
       trackcandidates.push_back(can);
+      
+      if (DEBUG_LEVEL>0){
+	_DBG_ << ">>> CDC fit succeeded!" << endl;
+      }
       
       return true;
     } // line fit
