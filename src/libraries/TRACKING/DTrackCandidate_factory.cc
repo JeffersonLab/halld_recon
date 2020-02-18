@@ -3388,154 +3388,208 @@ bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan)
 // Make last-ditch attempt to use the remaining CDC hits after all other 
 // methods failed, starting with the inner-most axial layers that have not 
 // yet been used.
-bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int>&hits_to_use_in_fit,vector<unsigned int>&stereo_hits,vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs){
+bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int>&axial_hits_used_in_fit,vector<unsigned int>&stereo_hits,vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs){
   // Set up the helical fitter
   DHelicalFit fit;
       
   // Add axial hits and fit circle
-  for (unsigned int m=0;m<hits_to_use_in_fit.size();m++){
-    unsigned int index=hits_to_use_in_fit[m];
+  for (unsigned int m=0;m<axial_hits_used_in_fit.size();m++){
+    unsigned int index=axial_hits_used_in_fit[m];
     DVector3 origin=mycdchits[index]->wire->origin;
     fit.AddHitXYZ(origin.x(),origin.y(),origin.z());
   }
   if (fit.FitCircleRiemann(TARGET_Z,1.0)==NOERROR){
     fit.GuessChargeFromCircleFit();
     
-    // Make vector of intersections between the circle and the stereo hits
-    vector<DVector3>intersections;
-    for (unsigned int m=0;m<stereo_hits.size();m++){
-      unsigned int index=stereo_hits[m];
-      const DCDCWire *wire=mycdchits[index]->wire;
-      DVector3 origin = wire->origin;
-      DVector3 dir = (1./wire->udir.z())*wire->udir;
-      double dx = origin.x() - fit.x0;
-      double dy = origin.y() - fit.y0;
-      double ux = dir.x();
-      double uy = dir.y();
-      double temp1 = ux*ux + uy*uy;
-      double temp2 = ux*dy - uy*dx;
-      double b = -ux*dx - uy*dy;
-      double dr = fit.r0;
-      double r0_sq = dr*dr;
-      double A = r0_sq*temp1 - temp2*temp2;
-      
-      // Check that this wire intersects this circle
-      if(A < 0.0) continue;
-      
-      // Calculate intersection points for the two roots 
-      double B = sqrt(A);
-      double dz1 = (b - B)/temp1;
-      double dz2 = (b + B)/temp1;
-      
-      // At this point we must decide which value of alpha to use. 
-      // For now, we just use the value closest to zero (i.e. closest to
-      // the center of the wire).
-      double dz = dz1;
-      if(fabs(dz2) < fabs(dz1))
-	dz = dz2;	
-      // Compute the position for this hit
-      DVector3 pos = origin + dz*dir;
-      // Don't allow the intersection point to be outside of the CDC volume
-      if (pos.z()>167. || pos.z()<17.) continue;
-      
-      intersections.push_back(pos);
-      hits_to_use_in_fit.push_back(index);
-    }
-    if (intersections.size()>1){
-      // Sort by radial distance from beam line
-      stable_sort(intersections.begin(), intersections.end(), CDC_Intersection_cmp);
-      // Compute the arc lengths between the origin in x and y and (xi,yi)
-      double xc = fit.x0;
-      double yc = fit.y0;
-      double rc = fit.r0;
-      double two_rc = 2.*rc;
-      
-      // Find POCA to beam line
-      double myphi = atan2(yc, xc);
-      double y0 = yc - rc*sin(myphi);
-      double x0 = xc - rc*cos(myphi);
-      
-      // Arc length to first measurement
-      DVector3 diff(intersections[0].x()-x0,intersections[0].y()-y0,0);
-      double chord = diff.Perp();
-      double ratio = chord/two_rc;
-      double s = (ratio < 1.) ? two_rc*asin(ratio) : M_PI_2*two_rc;
-      
-      // Perform fit to find the slope tanl
-      double sumv=1.; // assume all errors are the same size
-      double sumx=s,sumy=intersections[0].z();
-      double sumxx=s*s;
-      double sumxy=intersections[0].z()*s;
-      unsigned int num_good_s=1;
-      double Bz=0; // B-field, to be averaged later
-      for(size_t m = 1; m < intersections.size(); ++m){
-	diff=intersections[m]-intersections[m-1];
-	chord = diff.Perp();
-	ratio = chord/two_rc;
-	if(ratio > 0.999) continue;
-	
-	double ds = two_rc*asin(ratio);
-	s += ds;
-	sumv += 1.;
-	sumx += s;
-	sumy += intersections[m].z();
-	sumxx += s*s;
-	sumxy +=s*intersections[m].z();
-	    
-	// Accumulate B-field info
-	Bz+=bfield->GetBz(intersections[m].x(),intersections[m].y(),
-			  intersections[m].z());  
-	num_good_s++;
-      }
-      if (num_good_s==1) printf("got here\n");
-      if (num_good_s>1){
-	double Delta = sumv*sumxx - sumx*sumx;
-	
-	fit.tanl = (sumv*sumxy - sumx*sumy)/Delta;
-	fit.z_vertex = (sumxx*sumy - sumx*sumxy)/Delta;
-	
-	printf("z0 %f theta %f\n",fit.z_vertex,180./M_PI*(M_PI_2-atan(fit.tanl)));
-	double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-	if (p>3.){
-	  printf("p %f xc %f yc %f rc %f\n",p,fit.x0,fit.y0,fit.r0);
-	  // Suspiciously high momentum:  try alternate circle fit...
-	  fit.FitCircle();
-	  printf("    %f %f %f\n",fit.x0,fit.y0,fit.r0);
-	}	   
+    // Fit line of arc lengths vs z to find tanl; also find average Bz
+    double Bz=0;
+    vector<unsigned int>stereo_hits_used_in_fit;
+    DVector3 pos; // some position on helix, to be filled in later
+    if (FitLineCDC(fit,stereo_hits,stereo_hits_used_in_fit,pos,Bz)){
+      // Check that the resulting momentum is reasonable      
+      double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+      if (p>3.){
+	// Save the current fit values just in case the revised fit fails
+	double rc=fit.r0,xc=fit.x0,yc=fit.y0,h=fit.h,old_Bz=Bz;
+	vector<unsigned int>saved_hits;
+	saved_hits.assign(stereo_hits_used_in_fit.begin(),
+			  stereo_hits_used_in_fit.end());
 
-	// Create new track candidate object 
-	DTrackCandidate *can = new DTrackCandidate;
-	// circle parameters
-	can->rc=fit.r0;
-	can->xc=fit.x0;
-	can->yc=fit.y0; 
+	// Suspiciously high momentum:  try alternate circle fit...
+	fit.FitCircle();
+	fit.GuessChargeFromCircleFit();
 	
-	Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
-	can->setPID(locPID);
-	
-	// Add the CDC hits to the track candidate
-	num_unmatched_cdcs-=hits_to_use_in_fit.size();
-	for (unsigned int m=0;m<hits_to_use_in_fit.size();m++){
-	  used_cdc_hits[hits_to_use_in_fit[m]]=1;
-	  can->AddAssociatedObject(mycdchits[hits_to_use_in_fit[m]]);
+	// Redo line fit with revised circle parameters
+	stereo_hits_used_in_fit.clear();
+	if (FitLineCDC(fit,stereo_hits,stereo_hits_used_in_fit,pos,Bz)==false){
+	  // restore the old fit values, because not enough intersection points
+	  // were found...
+	  fit.h=h;
+	  fit.r0=rc;
+	  fit.x0=xc;
+	  fit.y0=yc;
+	  Bz=old_Bz;
+	  stereo_hits_used_in_fit.assign(saved_hits.begin(),saved_hits.end());
 	}
-	
-	// Find the position and momentum for this track candidate
-	DVector3 mom;
-	DVector3 pos=intersections[0];
-	DVector3 cdc_hit_origin=pos;
-	Bz=fabs(Bz)/double(num_good_s);
-	UpdatePositionAndMomentum(fit,Bz,cdc_hit_origin,pos,mom);
-	
-	can->setMomentum(mom);
-	can->setPosition(pos);
-	
-	trackcandidates.push_back(can);
-	
-	return true;
+	else {
+	  // sometimes we still end up with ridiculously large values for p
+	  p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+	  if (p>3.){
+	    // Assume the track came from the center of the target, for lack
+	    // of a better guess...
+	    fit.z_vertex=TARGET_Z;
+	    fit.tanl=(pos.z()-TARGET_Z)/pos.Perp();  // crude approximation
+	  }
+	}
       }
-    } //got enough intersection points?
+
+      // Create new track candidate object 
+      DTrackCandidate *can = new DTrackCandidate;
+      // circle parameters
+      can->rc=fit.r0;
+      can->xc=fit.x0;
+      can->yc=fit.y0; 
+      
+      Particle_t locPID = ((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
+      can->setPID(locPID);
+      
+      // Add the CDC hits to the track candidate
+      num_unmatched_cdcs-=axial_hits_used_in_fit.size();
+      num_unmatched_cdcs-=stereo_hits_used_in_fit.size();
+      for (unsigned int m=0;m<axial_hits_used_in_fit.size();m++){
+	used_cdc_hits[axial_hits_used_in_fit[m]]=1;
+	can->AddAssociatedObject(mycdchits[axial_hits_used_in_fit[m]]);
+      } 
+      for (unsigned int m=0;m<stereo_hits_used_in_fit.size();m++){
+	used_cdc_hits[stereo_hits_used_in_fit[m]]=1;
+	can->AddAssociatedObject(mycdchits[stereo_hits_used_in_fit[m]]);
+      }
+	
+      // Find the position and momentum for this track candidate
+      DVector3 mom;
+      DVector3 cdc_hit_origin=pos;
+      
+      UpdatePositionAndMomentum(fit,Bz,cdc_hit_origin,pos,mom);
+      
+      can->setMomentum(mom);
+      can->setPosition(pos);
+      
+      trackcandidates.push_back(can);
+      
+      return true;
+    } // line fit
   } // circle fit
+
+  return false;
+}
+
+// Find intersections between circle and stereo straws and fit to a line
+bool 
+DTrackCandidate_factory::FitLineCDC(DHelicalFit &fit,
+				    vector<unsigned int>&stereo_hits,
+				    vector<unsigned int>&hits_used_in_fit,
+				    DVector3 &pos_out,
+				    double &Bz
+				    ) const {
+  Bz=0; // initialize B-field, to be averaged later
+
+  // Make vector of intersections between the circle and the stereo hits
+  vector<DVector3>intersections;
+  for (unsigned int m=0;m<stereo_hits.size();m++){
+    unsigned int index=stereo_hits[m];
+    const DCDCWire *wire=mycdchits[index]->wire;
+    DVector3 origin = wire->origin;
+    DVector3 dir = (1./wire->udir.z())*wire->udir;
+    double dx = origin.x() - fit.x0;
+    double dy = origin.y() - fit.y0;
+    double ux = dir.x();
+    double uy = dir.y();
+    double temp1 = ux*ux + uy*uy;
+    double temp2 = ux*dy - uy*dx;
+    double b = -ux*dx - uy*dy;
+    double dr = fit.r0;
+    double r0_sq = dr*dr;
+    double A = r0_sq*temp1 - temp2*temp2;
+    
+    // Check that this wire intersects this circle
+    if(A < 0.0) continue;
+    
+    // Calculate intersection points for the two roots 
+    double B = sqrt(A);
+    double dz1 = (b - B)/temp1;
+    double dz2 = (b + B)/temp1;
+    
+    // At this point we must decide which value of alpha to use. 
+    // For now, we just use the value closest to zero (i.e. closest to
+    // the center of the wire).
+    double dz = dz1;
+    if(fabs(dz2) < fabs(dz1))
+      dz = dz2;	
+    // Compute the position for this hit
+    DVector3 pos = origin + dz*dir;
+    // Don't allow the intersection point to be outside of the CDC volume
+    if (pos.z()>167. || pos.z()<17.) continue;
+    
+    intersections.push_back(pos);
+    hits_used_in_fit.push_back(index);
+  }
+  if (intersections.size()>1){
+    // Sort by radial distance from beam line
+    stable_sort(intersections.begin(), intersections.end(), CDC_Intersection_cmp);
+    // Compute the arc lengths between the origin in x and y and (xi,yi)
+    double xc = fit.x0;
+    double yc = fit.y0;
+    double rc = fit.r0;
+    double two_rc = 2.*rc;
+    
+    // Find POCA to beam line
+    double myphi = atan2(yc, xc);
+    double y0 = yc - rc*sin(myphi);
+    double x0 = xc - rc*cos(myphi);
+    
+    // Arc length to first measurement
+    DVector3 diff(intersections[0].x()-x0,intersections[0].y()-y0,0);
+    double chord = diff.Perp();
+    double ratio = chord/two_rc;
+    double s = (ratio < 1.) ? two_rc*asin(ratio) : M_PI_2*two_rc;
+    
+    // Perform fit to find the slope tanl
+    double sumv=1.; // assume all errors are the same size
+    double sumx=s,sumy=intersections[0].z();
+    double sumxx=s*s;
+    double sumxy=intersections[0].z()*s;
+    unsigned int num_good_s=1;  
+    for(size_t m = 1; m < intersections.size(); ++m){
+      diff=intersections[m]-intersections[m-1];
+      chord = diff.Perp();
+      ratio = chord/two_rc;
+      if(ratio > 0.999) continue;
+      
+      double ds = two_rc*asin(ratio);
+      s += ds;
+      sumv += 1.;
+      sumx += s;
+      sumy += intersections[m].z();
+      sumxx += s*s;
+      sumxy +=s*intersections[m].z();
+      
+      // Accumulate B-field info
+      Bz+=bfield->GetBz(intersections[m].x(),intersections[m].y(),
+			intersections[m].z());  
+      num_good_s++;
+    }
+    if (num_good_s>1){
+      double Delta = sumv*sumxx - sumx*sumx;
+	
+      fit.tanl = (sumv*sumxy - sumx*sumy)/Delta;
+      fit.z_vertex = (sumxx*sumy - sumx*sumxy)/Delta;
+
+      pos_out=intersections[0];
+      Bz=fabs(Bz)/double(num_good_s);
+      
+      return true;
+    }
+  }
 
   return false;
 }
