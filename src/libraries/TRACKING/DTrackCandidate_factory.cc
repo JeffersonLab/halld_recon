@@ -2379,7 +2379,7 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    double zhit=fdchit->wire->origin.z();
 	    pos.SetXYZ(fdchit->xy.X(),fdchit->xy.Y(),zhit);
 	    UpdatePositionAndMomentum(fit,Bz,cdchits[0]->wire->origin,pos,mom);
-	    
+
 	    DTrackCandidate *can = new DTrackCandidate;
 	    // circle parameters
 	    can->rc=fit.r0;
@@ -2387,8 +2387,8 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    can->yc=fit.y0;
 	    
 	    can->setPID((q > 0.0) ? PiPlus : PiMinus);
-	    can->setMomentum(my_mom);
-	    can->setPosition(my_pos);
+	    can->setMomentum(mom);
+	    can->setPosition(pos);
 	    can->chisq=fit.chisq;
 	    can->Ndof=fit.ndof;
 	    
