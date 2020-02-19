@@ -743,10 +743,11 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
 					 mStartTime,mStartDetector);
     
     // If the status is kFitNotDone, then not enough hits were attached to this
-    // track using the hit-gathering algorithm.  In this case get the hits 
-    // from the wire-based track
-    if (status==DTrackFitter::kFitNotDone){
-      //_DBG_ << " Using wire-based hits " << endl;
+    // track using the hit-gathering algorithm. Sometimes the fit fails even if
+    // there are enough hits. In these cases get the hits from the wire-based 
+    // track. 
+    if (status!=DTrackFitter::kFitSuccess){
+      //_DBG_ << " Using wire-based hits because status=" << status << endl;
       fitter->Reset();
       fitter->SetFitType(DTrackFitter::kTimeBased);   
       fitter->AddHits(myfdchits);

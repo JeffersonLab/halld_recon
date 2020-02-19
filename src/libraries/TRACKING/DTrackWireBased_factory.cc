@@ -477,7 +477,7 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
 
       status=fitter->FindHitsAndFitTrack(*candidate,rt,loop,mass,
 					 mycdchits.size()+2*myfdchits.size());
-      if (/*false && */status==DTrackFitter::kFitNotDone){
+      if (status!=DTrackFitter::kFitSuccess){
          if (DEBUG_LEVEL>1)_DBG_ << "Using hits from candidate..." << endl;
          fitter->Reset();
         
