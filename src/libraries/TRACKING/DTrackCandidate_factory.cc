@@ -779,6 +779,11 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
   }
 
+  if (num_fdc_cands_remaining>1){
+    // Try to use the Hough transform to link together unused FDC segments
+    LinkSegmentsHough(forward_matches,num_fdc_cands_remaining);
+  }
+
   // We should be left with only single-segment fdc candidates.  We try to 
   // connect them together using alternate fitting techniques, either by
   // forcing the circle to originate from the target or at the other extreme
@@ -3631,4 +3636,132 @@ DTrackCandidate_factory::FitLineCDC(DHelicalFit &fit,const DVector3 &axial_pos,
   }
 
   return false;
+}
+
+// Use the Hough transform to associate segments together, then create new
+// candidates from the combined hits.
+void DTrackCandidate_factory::LinkSegmentsHough(vector<int> &forward_matches,
+						int &num_fdc_cands_remaining){
+  for (unsigned int j=0;j<forward_matches.size();j++){
+    if (num_fdc_cands_remaining<2) break;
+    if (forward_matches[j]<=0){
+      const DTrackCandidate *can1=fdctrackcandidates[j];
+      vector<const DFDCSegment*>segments1;
+      can1->GetT(segments1);
+      
+      for (unsigned int k=j+1;k<forward_matches.size();k++){
+	if (forward_matches[k]<=0){
+	  const DTrackCandidate *can2=fdctrackcandidates[k];
+	  vector<const DFDCSegment*>segments2;
+	  can2->GetT(segments2);
+	  if (segments1[0]->package==segments2[0]->package) continue;
+	  
+	  DHoughFind hough(-400.0, +400.0, -400.0, +400.0, 100, 100); 
+	  vector<unsigned int>associated_segment;
+	  for (unsigned int m=0;m<segments1[0]->hits.size();m++){
+	    hough.AddPoint(segments1[0]->hits[m]->xy);
+	    associated_segment.push_back(0);
+	  }  
+	  for (unsigned int m=0;m<segments2[0]->hits.size();m++){
+	    hough.AddPoint(segments2[0]->hits[m]->xy);
+	    associated_segment.push_back(1);
+	  }
+
+	  DVector2 Ro = hough.Find();
+	  if(hough.GetMaxBinContent()>10.){
+	    // Zoom in on resonance a little
+	    double width = 60.0;
+	    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, 
+			    Ro.Y()+width, 100, 100);
+	    Ro = hough.Find();
+	    
+	    // Zoom in on resonance once more
+	    width = 8.0;
+	    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 100, 100);
+	    Ro = hough.Find();
+	    vector<DVector2> points=hough.GetPoints();
+	    set<unsigned int>associated_segments_to_use;
+	    unsigned int num_hits_to_use=0;
+	    for (unsigned int m=0;m<points.size();m++){
+	      // Calculate distance between Hough transformed line (i.e.
+	      // the line on which a circle that passes through both the
+	      // origin and the point at hit->pos) and the circle center.
+	      DVector2 h=0.5*points[m];
+	      DVector2 g(h.Y(), -h.X()); 
+	      g /= g.Mod();
+	      DVector2 Ro_minus_h=Ro-h;	
+	      double dist = fabs(g.X()*Ro_minus_h.Y() - g.Y()*Ro_minus_h.X());
+	      
+	      // If this is not close enough to the found circle's center,
+	      // reject it for this track candidate
+	      if(dist < 2.0){
+		num_hits_to_use++;
+		associated_segments_to_use.emplace(associated_segment[m]);
+	      }
+	    }
+	    if (num_hits_to_use>5 && associated_segments_to_use.size()>1){
+	      // If we associated the segments together using the Hough
+	      // transform, set up the helical fit to find the track 
+	      // parameters.
+	      DHelicalFit fit;
+	      for (unsigned int m=0;m<segments1[0]->hits.size();m++){
+		fit.AddHit(segments1[0]->hits[m]);
+	      }
+	      for (unsigned int m=0;m<segments2[0]->hits.size();m++){
+		fit.AddHit(segments2[0]->hits[m]);
+		  }
+	      if (fit.FitTrackRiemann(Ro.Mod())==NOERROR){  
+		DTrackCandidate *can = new DTrackCandidate;
+		// circle parameters
+		can->rc=fit.r0;
+		can->xc=fit.x0;
+		can->yc=fit.y0;
+		    
+		// Find the average Bz as we add the hits as associated objects 
+		// to the candidate
+		double Bz=0.;
+		for (unsigned int n=0;n<segments1[0]->hits.size();n++){
+		  const DFDCPseudo *hit=segments1[0]->hits[n];
+		  can->AddAssociatedObject(hit);
+		  
+		  Bz+=bfield->GetBz(hit->xy.X(),hit->xy.Y(),
+				    hit->wire->origin.z());
+		}
+		for (unsigned int n=0;n<segments2[0]->hits.size();n++){
+		  const DFDCPseudo *hit=segments2[0]->hits[n];
+		  can->AddAssociatedObject(hit);
+		  
+		  Bz+=bfield->GetBz(hit->xy.X(),hit->xy.Y(),
+				    hit->wire->origin.z());
+		}
+		Bz/=double(segments1[0]->hits.size()+segments2[0]->hits.size());
+		
+		// Get position and momentum near first wire plane
+		double z=segments1[0]->hits[0]->wire->origin.z()-1;
+		DVector3 pos,mom;
+		GetPositionAndMomentum(z,fit,Bz,pos,mom);
+
+		can->setPosition(pos);
+		can->setMomentum(mom);
+		can->setPID((FactorForSenseOfRotation*fit.h> 0.0) ? PiPlus : PiMinus);
+		can->Ndof=fit.ndof;
+		can->chisq=fit.chisq;
+		
+		trackcandidates.push_back(can);
+		
+		forward_matches[j]=1;
+		forward_matches[k]=1;
+		
+		num_fdc_cands_remaining-=2;
+
+		if (DEBUG_LEVEL>0){
+		  _DBG_ << "Found match between segments using Hough transform" <<endl;
+		}
+	      } // helical fit result
+	    } // anough segments?
+	  } // hough transform
+	} // unused segment?
+      }
+    } // unused segment?
+  } // loop over forward tracks
 }

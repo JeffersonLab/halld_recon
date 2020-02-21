@@ -322,32 +322,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       if (is_paired[i][k]==0 && LinkStraySegment(segment)) is_paired[i][k]=1;
     }
   }
- 
-  vector<pair<unsigned int,unsigned int> >unused_segments;
-  for (unsigned int j=0;j<4;j++){
-    for (unsigned int i=0;i<packages[j].size();i++){
-      if (is_paired[j][i]==0){
-	unused_segments.push_back(make_pair(j,i));
-      }
-    }
-  }
-
-  // Find track candidates using Hough transform
-  if (unused_segments.size()>1){
-    if (LinkSegmentsHough(unused_segments,packages,is_paired)){
-      unused_segments.clear();
-      for (unsigned int j=0;j<4;j++){
-	for (unsigned int i=0;i<packages[j].size();i++){
-	  if (is_paired[j][i]==0){
-	    unused_segments.push_back(make_pair(j,i));
-	  }
-	}
-      }
-      if (unused_segments.size()>1){
-	LinkSegmentsHough(unused_segments,packages,is_paired);
-      }
-    }
-  }
     
   // Create track stubs for unused segments
   for (unsigned int j=0;j<4;j++){
@@ -766,6 +740,8 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
   return false;
 }
 
+// The following functiality has been moved to DTrackCandidate_factory:
+/*
 // Find circles using Hough transform
 bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segments,
 							    vector<DFDCSegment *>packages[4],
@@ -898,3 +874,4 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
   
   return false;
 }
+*/
