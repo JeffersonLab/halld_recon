@@ -603,6 +603,93 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       trackcandidates.push_back(can);
     }
   }
+  
+  // Try to make candidates out of the remaining unused CDC hits
+  if (num_unmatched_cdcs>5){
+    // group axial hits by rings
+    int old_ring=29;
+    vector<vector<unsigned int> >axial_rings;
+    vector<unsigned int>axial_hits_in_ring;
+    for (unsigned int m=0;m<used_cdc_hits.size();m++){    
+      if (used_cdc_hits[m]==0 && mycdchits[m]->is_stereo==false){
+	int current_ring=mycdchits[m]->wire->ring;
+	if (current_ring>old_ring){  
+	  axial_rings.push_back(axial_hits_in_ring);
+	  axial_hits_in_ring.clear();
+	}
+	axial_hits_in_ring.push_back(m);
+	old_ring=current_ring;
+      }
+    } 
+    axial_rings.push_back(axial_hits_in_ring);
+    
+    // Require that there be a minimum number of distict rings containing hits
+    unsigned int num_axial_rings=axial_rings.size();
+    if (num_axial_rings>2){
+      // Make list of unused stereo hits
+      vector<unsigned int>stereo_hits;
+      for (unsigned int m=0;m<used_cdc_hits.size();m++){
+	if (used_cdc_hits[m]==0 && mycdchits[m]->is_stereo==true){
+	  stereo_hits.push_back(m);
+	}
+      }
+      if (stereo_hits.size()>0){ 
+	// Look for pairs of axial hits in different rings that are close 
+	// together in radius
+	vector<pair<unsigned int,unsigned int> > straw_pairs;
+	for (unsigned int i=0;i<num_axial_rings-1;i++){
+	  unsigned int j=i+1;
+	  for (unsigned int m=0;m<axial_rings[i].size();m++){	    
+	    double diff_min=1e6;
+	    unsigned int index2_min_doca=0;
+	    unsigned int index1=axial_rings[i][m];
+	    DVector3 pos1=mycdchits[index1]->wire->origin;
+	    for (unsigned int n=0;n<axial_rings[j].size();n++){
+	      unsigned int index2=axial_rings[j][n];
+	      DVector3 pos2=mycdchits[index2]->wire->origin;
+	      double diff=(pos2-pos1).Perp();
+	      if (diff<diff_min){
+		diff_min=diff;
+		index2_min_doca=index2;
+	      } 
+	    }
+	    if (diff_min<3.5){
+	      straw_pairs.push_back(make_pair(index1,index2_min_doca));
+	    }
+	  }
+	}
+	// Try to make segments out of the vector of pairs
+	for (unsigned int i=0;i<straw_pairs.size();i++){
+	  // We handle one axial superlayer at a time, under the assumption 
+	  // that the regular CDC candidate finder code already handled the 
+	  // multi-superlayer case.
+	  vector<unsigned int>axial_hits_to_use;
+	  for (unsigned int j=i+1;j<straw_pairs.size();j++){
+	    if (straw_pairs[i].second==straw_pairs[j].first
+		&& used_cdc_hits[straw_pairs[i].second]==0
+		&& used_cdc_hits[straw_pairs[j].first]==0
+		&& used_cdc_hits[straw_pairs[j].second]==0	
+		){
+	      axial_hits_to_use.push_back(straw_pairs[i].first);
+	      axial_hits_to_use.push_back(straw_pairs[i].second);
+	      axial_hits_to_use.push_back(straw_pairs[j].second);
+	      for (unsigned int k=j+1;k<straw_pairs.size();k++){
+		if (straw_pairs[j].second==straw_pairs[k].first
+		    && used_cdc_hits[straw_pairs[k].second]==0
+		    ){
+		  axial_hits_to_use.push_back(straw_pairs[k].second);
+		}
+	      }
+	    }
+	  }	 
+	  if (num_unmatched_cdcs>5&&axial_hits_to_use.size()>0){
+	    MakeCDCCandidateFromUnusedHits(axial_hits_to_use,stereo_hits,
+					   used_cdc_hits,num_unmatched_cdcs);
+	  }
+	}
+      } // got some stereo hits to use
+    } // got enough axial hits to do a circle fit
+  } // got enough unused cdc hits to make a candidate
 
   // If there are more than one FDC candidates remaining, use the best track 
   // candidate knowledge we have so far to recheck for matches to other fdc 
@@ -770,93 +857,6 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
     }
   } 
-
-  // Try to make candidates out of the remaining unused CDC hits
-  if (num_unmatched_cdcs>5){
-    // group axial hits by rings
-    int old_ring=29;
-    vector<vector<unsigned int> >axial_rings;
-    vector<unsigned int>axial_hits_in_ring;
-    for (unsigned int m=0;m<used_cdc_hits.size();m++){    
-      if (used_cdc_hits[m]==0 && mycdchits[m]->is_stereo==false){
-	int current_ring=mycdchits[m]->wire->ring;
-	if (current_ring>old_ring){  
-	  axial_rings.push_back(axial_hits_in_ring);
-	  axial_hits_in_ring.clear();
-	}
-	axial_hits_in_ring.push_back(m);
-	old_ring=current_ring;
-      }
-    } 
-    axial_rings.push_back(axial_hits_in_ring);
-    
-    // Require that there be a minimum number of distict rings containing hits
-    unsigned int num_axial_rings=axial_rings.size();
-    if (num_axial_rings>2){
-      // Make list of unused stereo hits
-      vector<unsigned int>stereo_hits;
-      for (unsigned int m=0;m<used_cdc_hits.size();m++){
-	if (used_cdc_hits[m]==0 && mycdchits[m]->is_stereo==true){
-	  stereo_hits.push_back(m);
-	}
-      }
-      if (stereo_hits.size()>0){ 
-	// Look for pairs of axial hits in different rings that are close 
-	// together in radius
-	vector<pair<unsigned int,unsigned int> > straw_pairs;
-	for (unsigned int i=0;i<num_axial_rings-1;i++){
-	  unsigned int j=i+1;
-	  for (unsigned int m=0;m<axial_rings[i].size();m++){	    
-	    double diff_min=1e6;
-	    unsigned int index2_min_doca=0;
-	    unsigned int index1=axial_rings[i][m];
-	    DVector3 pos1=mycdchits[index1]->wire->origin;
-	    for (unsigned int n=0;n<axial_rings[j].size();n++){
-	      unsigned int index2=axial_rings[j][n];
-	      DVector3 pos2=mycdchits[index2]->wire->origin;
-	      double diff=(pos2-pos1).Perp();
-	      if (diff<diff_min){
-		diff_min=diff;
-		index2_min_doca=index2;
-	      } 
-	    }
-	    if (diff_min<3.5){
-	      straw_pairs.push_back(make_pair(index1,index2_min_doca));
-	    }
-	  }
-	}
-	// Try to make segments out of the vector of pairs
-	for (unsigned int i=0;i<straw_pairs.size();i++){
-	  // We handle one axial superlayer at a time, under the assumption 
-	  // that the regular CDC candidate finder code already handled the 
-	  // multi-superlayer case.
-	  vector<unsigned int>axial_hits_to_use;
-	  for (unsigned int j=i+1;j<straw_pairs.size();j++){
-	    if (straw_pairs[i].second==straw_pairs[j].first
-		&& used_cdc_hits[straw_pairs[i].second]==0
-		&& used_cdc_hits[straw_pairs[j].first]==0
-		&& used_cdc_hits[straw_pairs[j].second]==0	
-		){
-	      axial_hits_to_use.push_back(straw_pairs[i].first);
-	      axial_hits_to_use.push_back(straw_pairs[i].second);
-	      axial_hits_to_use.push_back(straw_pairs[j].second);
-	      for (unsigned int k=j+1;k<straw_pairs.size();k++){
-		if (straw_pairs[j].second==straw_pairs[k].first
-		    && used_cdc_hits[straw_pairs[k].second]==0
-		    ){
-		  axial_hits_to_use.push_back(straw_pairs[k].second);
-		}
-	      }
-	    }
-	  }	 
-	  if (num_unmatched_cdcs>5&&axial_hits_to_use.size()>0){
-	    MakeCDCCandidateFromUnusedHits(axial_hits_to_use,stereo_hits,
-					   used_cdc_hits,num_unmatched_cdcs);
-	  }
-	}
-      } // got some stereo hits to use
-    } // got enough axial hits to do a circle fit
-  } // got enough unused cdc hits to make a candidate
 
   // Only output the candidates that have at least a minimum number of hits
   for (unsigned int i=0;i<trackcandidates.size();i++){
@@ -3434,8 +3434,9 @@ bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int
     // Fit line of arc lengths vs z to find tanl; also find average Bz
     double Bz=0;
     vector<unsigned int>stereo_hits_used_in_fit;
+    DVector3 axial_pos=mycdchits[axial_hits_used_in_fit[0]]->wire->origin; // one of the axial straws we used earlier
     DVector3 pos; // some position on helix, to be filled in later
-    if (FitLineCDC(fit,stereo_hits,stereo_hits_used_in_fit,pos,Bz)){
+    if (FitLineCDC(fit,axial_pos,stereo_hits,stereo_hits_used_in_fit,pos,Bz)){
       // Check that the resulting momentum is reasonable      
       double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
       if (p>3.){
@@ -3451,7 +3452,7 @@ bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int
 	
 	// Redo line fit with revised circle parameters
 	stereo_hits_used_in_fit.clear();
-	if (FitLineCDC(fit,stereo_hits,stereo_hits_used_in_fit,pos,Bz)==false){
+	if (FitLineCDC(fit,axial_pos,stereo_hits,stereo_hits_used_in_fit,pos,Bz)==false){
 	  // restore the old fit values, because not enough intersection points
 	  // were found...
 	  fit.h=h;
@@ -3519,7 +3520,7 @@ bool DTrackCandidate_factory::MakeCDCCandidateFromUnusedHits(vector<unsigned int
 
 // Find intersections between circle and stereo straws and fit to a line
 bool 
-DTrackCandidate_factory::FitLineCDC(DHelicalFit &fit,
+DTrackCandidate_factory::FitLineCDC(DHelicalFit &fit,const DVector3 &axial_pos,
 				    vector<unsigned int>&stereo_hits,
 				    vector<unsigned int>&hits_used_in_fit,
 				    DVector3 &pos_out,
@@ -3564,6 +3565,10 @@ DTrackCandidate_factory::FitLineCDC(DHelicalFit &fit,
     // Don't allow the intersection point to be outside of the CDC volume
     if (pos.z()>167. || pos.z()<17.) continue;
     
+    // Prevent matches with straws in opposite quadrants to prevent crossing
+    // over to the other side of the beam line.
+    if (axial_pos.x()*pos.x()<0 && axial_pos.y()*pos.y()<0) continue;
+
     intersections.push_back(pos);
     hits_used_in_fit.push_back(index);
   }

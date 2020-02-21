@@ -138,11 +138,14 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
 				      vector<unsigned int>&stereo_hits,
 				      vector<unsigned int>&used_cdc_hits,
 				      unsigned int &num_unmatched_cdcs);
-  bool FitLineCDC(DHelicalFit &fit,vector<unsigned int>&stereo_hits,
+  bool FitLineCDC(DHelicalFit &fit,const DVector3 &input_pos,
+		  vector<unsigned int>&stereo_hits,
 		  vector<unsigned int>&hits_used_in_fit,DVector3 &pos,
 		  double &Bz) const;
-  
- private:
+  void LinkSegmentsHough(vector<int> &forward_matches,
+			 int &num_fdc_cands_remaining);
+ 
+  private:
   const DMagneticFieldMap *bfield;
   bool dIsNoFieldFlag;
   DMagneticFieldStepper *stepper;
