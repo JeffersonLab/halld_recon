@@ -1747,8 +1747,7 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	    
 	  // Create a new DHelicalFit object for fitting combined data
 	  DHelicalFit fit; 
-	  // Fake point at origin
-	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true); 
+	
 	  // Add hits to the fit object and also to the track candidate
 	  // itself as associated objects
 	  for (unsigned int m=0;m<src_segments.size();m++){
