@@ -12,9 +12,15 @@ public:
     double phi;
     int ring;      // ring number 1-24
     double theta;
-    double pulse_peak;
-    double integral;
-    double dE;     // Energy loss in keV
+    unsigned int nsamples;
+    unsigned int w_samp1;
+    unsigned int w_min;
+    unsigned int w_max;
+    unsigned int integral; 
+    double pulse_peak;     // Energy loss in keV
+    double dE_proxy;
+    double t_proxy;
+    double dE;
     double t;
 
     void toStrings(vector<pair<string,string> > &items)const{
@@ -22,8 +28,14 @@ public:
         AddString(items, "phi", "%3.3f", phi);
         AddString(items, "ring", "%d", ring);
         AddString(items, "theta", "%3.3f", theta);
-        AddString(items, "pulse_peak", "%3.3f", pulse_peak);
-        AddString(items, "integral", "%3.3f", integral);
+        AddString(items, "nsamples", "%d", nsamples);
+        AddString(items, "w_samp1", "%d", w_samp1);
+        AddString(items, "w_min", "%d", w_min);
+        AddString(items, "w_max", "%d", w_max);
+	AddString(items, "integral", "%d", integral);
+	AddString(items, "pulse_peak", "%3.3f", pulse_peak);
+	AddString(items, "dE_proxy", "%3.3f", dE_proxy);
+        AddString(items, "t_proxy", "%3.3f", t_proxy);
         AddString(items, "dE", "%3.3f", dE);
         AddString(items, "t", "%3.3f", t);
     }

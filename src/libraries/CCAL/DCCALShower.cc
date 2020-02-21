@@ -10,7 +10,7 @@
 #include "DCCALGeometry.h"
 #include "ccal.h"
 
-DCCALShower::DCCALShower()
+DCCALShower::DCCALShower():ExyztCovariance(5)
 {
 
   E        =  0.;
@@ -32,7 +32,7 @@ DCCALShower::DCCALShower()
   idmax    =  0;
   id       =  0;
   type     =  0;
-  
+
 }
 
 DCCALShower::~DCCALShower()

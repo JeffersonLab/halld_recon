@@ -7884,11 +7884,13 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                double drift_time=my_fdchits[id]->t-mT0
                   -forward_traj[m].t*TIME_UNIT_CONVERSION;
                double drift = 0.0;
-               if (USE_FDC_DRIFT_TIMES){
-                  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[m].B);
+               int left_right = -999;
+               if (USE_FDC_DRIFT_TIMES) {
+                 drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(drift_time, forward_traj[m].B);
+                 left_right = (du > 0.0 ? +1 : -1);
                }
 
-               double resi_a=drift-doca;
+               double resi_a = drift - doca;
 
                // Variance from filter step
                // This V is really "R" in Fruhwirths notation, in the case that the track is used in the fit.
@@ -8070,6 +8072,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 						      forward_traj[m].z,
 						      cosThetaRel,0.,
 						      resi,sqrt(V(1,1)));
+               thisPull.left_right = left_right;
                thisPull.AddTrackDerivatives(alignmentDerivatives);
                forward_pulls.push_back(thisPull);
             }
