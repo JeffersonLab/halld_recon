@@ -134,6 +134,8 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   bool MakeCandidateFromMethod1(double theta,
 				vector<const DFDCSegment *>&segments,
 				const DTrackCandidate *cdccan);
+  void MakeCDCCandidatesFromUnusedHits(vector<unsigned int>&used_cdc_hits,
+				       unsigned int &num_unmatched_cdcs);
   bool MakeCDCCandidateFromUnusedHits(vector<unsigned int>&hits_to_use_in_fit,
 				      vector<unsigned int>&stereo_hits,
 				      vector<unsigned int>&used_cdc_hits,
