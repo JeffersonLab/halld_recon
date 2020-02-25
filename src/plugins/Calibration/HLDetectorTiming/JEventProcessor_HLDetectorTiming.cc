@@ -213,7 +213,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DTPOLHit *> tpolHitVector;
     loop->Get(tpolHitVector);
     
-    if (tpolHitVector.size() > 0) cout<<tpolHitVector.size()<<endl;
+    //if (tpolHitVector.size() > 0) cout<<tpolHitVector.size()<<endl;
     //Loop over TPOL hits. Not in physics event trigger.
     //If loop over below, size of tpolHitVector is always 0. 
     //Might want check for the specific trigger implemented.
