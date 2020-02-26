@@ -46,7 +46,6 @@ class DNeutralParticleHypothesis_factory : public jana::JFactory<DNeutralParticl
 
 	private:
 		double dTargetCenterZ;
-		double dMaxMassiveNeutralBeta = 0.99999;
 		const DParticleID* dParticleID = nullptr;
 
 
