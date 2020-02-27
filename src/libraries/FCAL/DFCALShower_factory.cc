@@ -111,6 +111,11 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   if (geom) {
     geom->GetTargetZ(m_zTarget);
     geom->GetFCALZ(m_FCALfront);
+
+    vector<double>fcal_center;
+    geom->Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z",fcal_center);
+    FCALdX=fcal_center[0];
+    FCALdY=fcal_center[1];
   }
   else{
       
@@ -228,6 +233,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       //Apply time-walk correction/global timing offset
       cTime += ( timeConst0  +  timeConst1 * Ecorrected  +  timeConst2 * TMath::Power( Ecorrected, 2 ) +
 		 timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
+
+      // apply global offsets in x and y
+      pos_corrected.SetX(pos_corrected.X()+FCALdX);
+      pos_corrected.SetY(pos_corrected.Y()+FCALdY);
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;

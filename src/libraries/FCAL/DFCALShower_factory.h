@@ -53,6 +53,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
     filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
   
   double m_zTarget, m_FCALfront;
+  double FCALdX,FCALdY;
 
   double LOAD_CCDB_CONSTANTS;
   double SHOWER_ENERGY_THRESHOLD;
