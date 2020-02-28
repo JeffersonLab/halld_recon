@@ -112,7 +112,7 @@ DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralP
 		
 		// Make sure that the beta is physically meaningful for this 
 		// mass hypothesis
-		if (locBeta>=1.0 || locBeta<0) return NULL;
+		//if (locBeta>=1.0 || locBeta<0) return NULL;
 
 		double locGamma = 1.0/sqrt(1.0 - locBeta*locBeta);
 		locPMag = locGamma*locBeta*locMass;
