@@ -219,7 +219,6 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     //Might want check for the specific trigger implemented.
     for (unsigned int j = 0; j < tpolHitVector.size(); j++){
         if (tpolHitVector[j]->w_samp1 > 160.0 || tpolHitVector[j]->pulse_peak < 60.0) continue;
-        cout<<"HERE"<<endl;
         unsigned int NSECTORS = 32;
         unsigned int nsamples = tpolHitVector[j]->nsamples;
         Fill2DHistogram("HLDetectorTiming","TPOL","TPOL_time_per_sector",tpolHitVector[j]->sector,tpolHitVector[j]->t_proxy,"TPOL time vs. sector; Sector; Time [ns]",NSECTORS,0.5,NSECTORS+0.5,nsamples+25,0.0,4.0*nsamples+100);
@@ -227,6 +226,11 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         Fill1DHistogram("HLDetectorTiming","TPOL","TPOL_time",tpolHitVector[j]->t_proxy,"TPOL time; Time [ns]; Entries",nsamples+25,0.0,4.0*nsamples+100);
     }
 
+   DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
+   DGeometry* geom = app->GetDGeometry(loop->GetJEvent().GetRunNumber());
+   // Check for magnetic field
+   const DMagneticFieldMap *bfield=app->GetBfield(loop->GetJEvent().GetRunNumber());
+   bool locIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
 
 
     const DTrigger* locTrigger = NULL; 
@@ -938,9 +942,15 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
     for (i = 0; i < chargedTrackVector.size(); i++){
 
+        const DChargedTrackHypothesis *pionHypothesis;
+
         // We only want negative particles to kick out protons
-        if (chargedTrackVector[i]->Get_Charge() > 0) continue;
-        const DChargedTrackHypothesis *pionHypothesis = chargedTrackVector[i]->Get_Hypothesis(PiMinus);
+		if(!locIsNoFieldFlag) {
+	        if (chargedTrackVector[i]->Get_Charge() > 0) continue;
+	        pionHypothesis = chargedTrackVector[i]->Get_Hypothesis(PiMinus);
+		} else {
+	        pionHypothesis = chargedTrackVector[i]->Get_Hypothesis(PiPlus);
+		}
 
         if (pionHypothesis == NULL) continue;
 
