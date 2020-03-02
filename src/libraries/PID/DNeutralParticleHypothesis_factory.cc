@@ -74,7 +74,7 @@ jerror_t DNeutralParticleHypothesis_factory::evnt(jana::JEventLoop *locEventLoop
 		for(size_t loc_j = 0; loc_j < locPIDHypotheses.size(); ++loc_j)
 		{
 			DNeutralParticleHypothesis* locNeutralParticleHypothesis = Create_DNeutralParticleHypothesis(locNeutralShower, locPIDHypotheses[loc_j], locEventRFBunch, locVertex->dSpacetimeVertex, &locVertex->dCovarianceMatrix);
-			if(locNeutralParticleHypothesis != NULL)
+			if(locNeutralParticleHypothesis != nullptr)
 				_data.push_back(locNeutralParticleHypothesis);	
 		}
 	}
@@ -83,7 +83,7 @@ jerror_t DNeutralParticleHypothesis_factory::evnt(jana::JEventLoop *locEventLoop
 	return NOERROR;
 }
 
-DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralParticleHypothesis(const DNeutralShower* locNeutralShower, Particle_t locPID, const DEventRFBunch* locEventRFBunch, const DLorentzVector& dSpacetimeVertex, const TMatrixFSym* locVertexCovMatrix)
+DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralParticleHypothesis(const DNeutralShower* locNeutralShower, Particle_t locPID, const DEventRFBunch* locEventRFBunch, const DLorentzVector& dSpacetimeVertex, const TMatrixFSym* locVertexCovMatrix, bool locPerfomBetaCut)
 {
 	DVector3 locVertexGuess = dSpacetimeVertex.Vect();
 	double locStartTime = dSpacetimeVertex.T();
@@ -97,7 +97,7 @@ DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralP
 	DVector3 locPath = locHitPoint - locVertexGuess;
 	double locPathLength = locPath.Mag();
 	if(!(locPathLength > 0.0))
-		return NULL; //invalid, will divide by zero when creating error matrix, so skip!
+		return nullptr; //invalid, will divide by zero when creating error matrix, so skip!
 
 	DVector3 locMomentum(locPath);
 	shared_ptr<TMatrixFSym> locParticleCovariance = (locVertexCovMatrix != nullptr) ? dResourcePool_TMatrixFSym->Get_SharedResource() : nullptr;
@@ -110,10 +110,12 @@ DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralP
 		double locDeltaT = locHitTime - locStartTime;
 		double locBeta = locPathLength/(locDeltaT*29.9792458);
 		
-		// Make sure that the beta is physically meaningful for this 
-		// mass hypothesis
-		//if (locBeta>=1.0 || locBeta<0) return NULL;
-
+		if(locPerfomBetaCut) {
+			// Make sure that the beta is physically meaningful for this 
+			// mass hypothesis
+			if (locBeta>=1.0 || locBeta<0) return nullptr;
+		}
+		
 		double locGamma = 1.0/sqrt(1.0 - locBeta*locBeta);
 		locPMag = locGamma*locBeta*locMass;
 		locMomentum.SetMag(locPMag);

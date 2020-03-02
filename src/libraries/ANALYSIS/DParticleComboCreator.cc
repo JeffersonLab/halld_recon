@@ -279,7 +279,8 @@ const DParticleCombo* DParticleComboCreator::Build_ParticleCombo(const DReaction
 					//even if locCreateNeutralErrorMatrixFlag is false, create it anyway if massive neutral and no time constraint!
 					auto locCreateThisNeutralErrorMatrixFlag = locCreateNeutralErrorMatrixFlag ? true : ((ParticleMass(locPID) > 0.0) && !locSpactimeIsFitFlag);
 					auto locVertexCovMatrix = locCreateThisNeutralErrorMatrixFlag ? &dVertexCovMatrix : nullptr;
-					locNewNeutralHypo = dNeutralParticleHypothesisFactory->Create_DNeutralParticleHypothesis(locNeutralShower, locPID, locEventRFBunch, locSpacetimeVertex, locVertexCovMatrix);
+					locNewNeutralHypo = dNeutralParticleHypothesisFactory->Create_DNeutralParticleHypothesis(locNeutralShower, locPID, locEventRFBunch, locSpacetimeVertex, locVertexCovMatrix, false);
+					assert(locNewNeutralHypo != nullptr);
 					dCreated_NeutralHypo.push_back(const_cast<DNeutralParticleHypothesis*>(locNewNeutralHypo));
 					dNeutralHypoMap.emplace(locHypoTuple, locNewNeutralHypo);
 				}
