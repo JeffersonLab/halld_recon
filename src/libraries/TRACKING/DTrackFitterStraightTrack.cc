@@ -2155,11 +2155,10 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
     s=diff.Mag();
     t=s/29.98;
     extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
-  }
-  // extrapolate to exit of FCAL
-  diff=((dFCALz+45.-z0)/uz)*dir;
-  pos=pos0+diff;
-  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+  
+    // extrapolate to exit of FCAL
+    diff=((dFCALz+45.-z0)/uz)*dir;
+    pos=pos0+diff;
     s=diff.Mag();
     t=s/29.98;
     extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
