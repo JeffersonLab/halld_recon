@@ -44,8 +44,12 @@ class JEventProcessor_BEAM_online:public jana::JEventProcessor{
   JEventProcessor_BEAM_online();
   ~JEventProcessor_BEAM_online();
   const char* className(void){return "JEventProcessor_BEAM_online";}
-  
 
+  int BlockStart;
+  uint64_t LastTime;
+  double RFWidth;
+
+  TH1D *TriggerTime;
   TH1D *PStagm;
   TH1D *PStagh;
 

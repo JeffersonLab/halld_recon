@@ -46,6 +46,10 @@ jerror_t JEventProcessor_BEAM_online::init(void)
   TDirectory *main = gDirectory;
   gDirectory->mkdir("BEAM")->cd();
   
+  TriggerTime = new TH1D("TriggerTime", "Time difference of consecuitive triggers [ns]", 10000, 0., 200e3);
+  TriggerTime->SetTitle("Time difference between two consecutive physics triggers");
+  TriggerTime->GetXaxis()->SetTitle("#Deltat [ns]");
+
   PStagm = new TH1D("PStagm", "PStime minus tagm time", 5000, -120., 100.);
   PStagh = new TH1D("PStagh", "PStime minus tagh time", 5000, -120., 100.);
 
@@ -93,6 +97,9 @@ jerror_t JEventProcessor_BEAM_online::init(void)
 jerror_t JEventProcessor_BEAM_online::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
   // This is called whenever the run number changes
+  BlockStart = 1;
+  RFWidth = 4.008; // 249.5MHz correspondes to 4.008ns
+
   return NOERROR;
 }
 
@@ -115,6 +122,7 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
   //  ... fill historgrams or trees ...
   // japp->RootFillUnLock(this);
 
+
   vector <const DL1Trigger*> trig;
   loop->Get(trig);
 
@@ -123,8 +131,26 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
     return NOERROR;     
   }
 
+  if (!eventnumber%40){
+    // this is the first event in the block
+    BlockStart = 1;
+  }
+
+  if (!BlockStart && (trig[0]->trig_mask & 0x3)){
+    double dt = (double)(trig[0]->timestamp - LastTime)*4.;  // units are in ns
+    TriggerTime->Fill(dt);
+    LastTime = trig[0]->timestamp;
+  }
+
+  if (BlockStart && (trig[0]->trig_mask > 0)){
+    // this is the first physics trigger in the block
+    BlockStart = 0;
+    LastTime = trig[0]->timestamp;
+  }
+
+
   // This of for PS-Triggers Bit 4 
-  if (trig[0]->trig_mask > 0x3){ 
+  if (trig[0]->trig_mask & 0x8){ 
    
     vector <const DBeamPhoton*> Beam;
     loop->Get(Beam);
@@ -142,7 +168,7 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
     vector <const DBeamPhoton*> OutOfTimeBeamH;
     vector <const DBeamPhoton*> OutOfTimeBeamPhotons;
     
-    double Width = 4.008; // 249.5MHz correspondes to 4.008ns
+    double Width = RFWidth; // 249.5MHz correspondes to 4.008ns
     double tpair = (PSPairs[0]->ee.first->t + PSPairs[0]->ee.second->t) / 2.;
     double epair = (PSPairs[0]->ee.first->E + PSPairs[0]->ee.second->E);
 
@@ -359,15 +385,16 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
     }
   }
 
+
   // Any front pannel trigger is random like LED, clock, etc.
-  if (trig[0]->trig_mask > 1){ 
+  if (trig[0]->fp_trig_mask > 1){ 
     vector <const DBeamPhoton*> Beam;
     loop->Get(Beam);
     int NBeamPhotons = Beam.size();
 
     for (int j=0; j<50; j++) {
       
-      double TIME = -56.+j*4.0;
+      double TIME = -16.*RFWidth + j*RFWidth;
       int REF_IDg = -1;
       //cout<<NBeamPhotons<<endl;
       for (int k=0 ;k<NBeamPhotons; k++){
@@ -412,6 +439,7 @@ jerror_t JEventProcessor_BEAM_online::evnt(JEventLoop *loop, uint64_t eventnumbe
       }	
     }
   }
+
   return NOERROR;
 }
 
