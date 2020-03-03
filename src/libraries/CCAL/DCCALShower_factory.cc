@@ -10,7 +10,7 @@
 
 
 static mutex CCAL_MUTEX;
-static bool CCAL_PROFILE_LOADED = false;
+//static bool CCAL_PROFILE_LOADED = false;
 
 
 //==========================================================
@@ -80,6 +80,12 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	if (geom) {
       	  geom->GetTargetZ(m_zTarget);
       	  geom->GetCCALZ(m_CCALfront);
+
+	  vector<double>ccal_center;
+	  geom->Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z",ccal_center);
+	  CCALdX=ccal_center[0];
+	  CCALdY=ccal_center[1];
+
     	}
     	else{
       	  cerr << "No geometry accessbile." << endl;
@@ -346,10 +352,10 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  shower->E        =   ccalClusters[k].E;
 	  shower->Esum     =   ccalClusters[k].Esum;
 	  
-	  shower->x        =   ccalClusters[k].x;
-	  shower->y        =   ccalClusters[k].y;
-	  shower->x1       =   ccalClusters[k].x1;
-	  shower->y1       =   ccalClusters[k].y1;
+	  shower->x        =   ccalClusters[k].x+CCALdX;
+	  shower->y        =   ccalClusters[k].y+CCALdY;
+	  shower->x1       =   ccalClusters[k].x1+CCALdX;
+	  shower->y1       =   ccalClusters[k].y1+CCALdY;
 	  shower->z        =   m_CCALfront;
 	  
 	  shower->chi2     =   ccalClusters[k].chi2;

@@ -74,7 +74,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 	
 		double m_zTarget;
 		double m_CCALfront;
-		
+		double CCALdX,CCALdY;	
 		
 		
 		//-------------------  Nonlinearity & Timewalk Parameters -------------------//
