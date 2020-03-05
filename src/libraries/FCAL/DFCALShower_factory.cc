@@ -114,8 +114,8 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 
     vector<double>fcal_center;
     geom->Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z",fcal_center);
-    FCALdX=fcal_center[0];
-    FCALdY=fcal_center[1];
+    m_FCALdX=fcal_center[0];
+    m_FCALdY=fcal_center[1];
   }
   else{
       
@@ -235,8 +235,8 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		 timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
 
       // apply global offsets in x and y
-      pos_corrected.SetX(pos_corrected.X()+FCALdX);
-      pos_corrected.SetY(pos_corrected.Y()+FCALdY);
+      pos_corrected.SetX(pos_corrected.X()+m_FCALdX);
+      pos_corrected.SetY(pos_corrected.Y()+m_FCALdY);
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;
