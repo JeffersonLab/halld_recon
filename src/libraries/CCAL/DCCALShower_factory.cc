@@ -82,8 +82,8 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
       	  if (geom->GetCCALZ(m_CCALfront)){
 	    vector<double>ccal_center;
 	    geom->Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z",ccal_center);
-	    CCALdX=ccal_center[0];
-	    CCALdY=ccal_center[1];
+	    m_CCALdX=ccal_center[0];
+	    m_CCALdY=ccal_center[1];
 	  }
     	}
     	else{
@@ -351,10 +351,10 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  shower->E        =   ccalClusters[k].E;
 	  shower->Esum     =   ccalClusters[k].Esum;
 	  
-	  shower->x        =   ccalClusters[k].x+CCALdX;
-	  shower->y        =   ccalClusters[k].y+CCALdY;
-	  shower->x1       =   ccalClusters[k].x1+CCALdX;
-	  shower->y1       =   ccalClusters[k].y1+CCALdY;
+	  shower->x        =   ccalClusters[k].x+m_CCALdX;
+	  shower->y        =   ccalClusters[k].y+m_CCALdY;
+	  shower->x1       =   ccalClusters[k].x1+m_CCALdX;
+	  shower->y1       =   ccalClusters[k].y1+m_CCALdY;
 	  shower->z        =   m_CCALfront;
 	  
 	  shower->chi2     =   ccalClusters[k].chi2;
