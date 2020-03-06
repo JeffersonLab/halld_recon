@@ -10,7 +10,7 @@
 
 
 static mutex CCAL_MUTEX;
-static bool CCAL_PROFILE_LOADED = false;
+//static bool CCAL_PROFILE_LOADED = false;
 
 
 //==========================================================
@@ -79,10 +79,10 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	
 	if (geom) {
       	  geom->GetTargetZ(m_zTarget);
-      	  geom->GetCCALZ(m_CCALfront);
+      	  geom->GetCCALPosition(m_CCALdX,m_CCALdY,m_CCALfront);
     	}
     	else{
-      	  cerr << "No geometry accessbile." << endl;
+      	  jerr << "No geometry accessible." << endl;
       	  return RESOURCE_UNAVAILABLE;
     	}
 	
@@ -346,10 +346,10 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  shower->E        =   ccalClusters[k].E;
 	  shower->Esum     =   ccalClusters[k].Esum;
 	  
-	  shower->x        =   ccalClusters[k].x;
-	  shower->y        =   ccalClusters[k].y;
-	  shower->x1       =   ccalClusters[k].x1;
-	  shower->y1       =   ccalClusters[k].y1;
+	  shower->x        =   ccalClusters[k].x+m_CCALdX;
+	  shower->y        =   ccalClusters[k].y+m_CCALdY;
+	  shower->x1       =   ccalClusters[k].x1+m_CCALdX;
+	  shower->y1       =   ccalClusters[k].y1+m_CCALdY;
 	  shower->z        =   m_CCALfront;
 	  
 	  shower->chi2     =   ccalClusters[k].chi2;
