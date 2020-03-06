@@ -79,12 +79,7 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	
 	if (geom) {
       	  geom->GetTargetZ(m_zTarget);
-      	  if (geom->GetCCALZ(m_CCALfront)){
-	    vector<double>ccal_center;
-	    geom->Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z",ccal_center);
-	    m_CCALdX=ccal_center[0];
-	    m_CCALdY=ccal_center[1];
-	  }
+      	  geom->GetCCALPosition(m_CCALdX,m_CCALdY,m_CCALfront);
     	}
     	else{
       	  jerr << "No geometry accessible." << endl;
