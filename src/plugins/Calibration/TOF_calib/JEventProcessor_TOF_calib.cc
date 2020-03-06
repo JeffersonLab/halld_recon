@@ -53,6 +53,8 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   cout<<"INITIALIZE VARIABLES "<<flush<<endl;
 
   pthread_mutex_init(&mutex, NULL);
+  ThreadCounter = 0;
+
 
   //BINTDC_2_TIME = 0.025;
   BINTDC_2_TIME = 0.0234375;
@@ -87,6 +89,9 @@ jerror_t JEventProcessor_TOF_calib::brun(JEventLoop *eventLoop, int32_t runnumbe
   // This is called whenever the run number changes
 
   RunNumber = runnumber;
+  japp->RootWriteLock();
+  ThreadCounter++;
+  japp->RootUnLock();
 
   MakeHistograms();
 
@@ -435,7 +440,6 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   // Since we are filling histograms (and trees in a file) local to this plugin, 
   // it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 
-
   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   
   Event = eventnumber;
@@ -573,7 +577,10 @@ jerror_t JEventProcessor_TOF_calib::fini(void)
 
   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
-  WriteRootFile();
+  ThreadCounter--;
+  if (ThreadCounter == 0) {
+    WriteRootFile();
+  }
 
   japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
