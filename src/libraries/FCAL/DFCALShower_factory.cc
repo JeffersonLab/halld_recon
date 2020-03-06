@@ -110,16 +110,11 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     
   if (geom) {
     geom->GetTargetZ(m_zTarget);
-    geom->GetFCALZ(m_FCALfront);
-
-    vector<double>fcal_center;
-    geom->Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z",fcal_center);
-    m_FCALdX=fcal_center[0];
-    m_FCALdY=fcal_center[1];
-  }
+    geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+   }
   else{
       
-    cerr << "No geometry accessbile." << endl;
+    cerr << "No geometry accessible." << endl;
     return RESOURCE_UNAVAILABLE;
   }
 
