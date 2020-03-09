@@ -100,9 +100,9 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
     const DNeutralParticleHypothesis *photon1 = neutralParticleVector[i]->Get_Hypothesis(Gamma);
     if(photon1 == nullptr) continue;
     // Go into the FCAL shower and find the largest energy deposition
-    const DNeutralShower *shower1;
-    photon1->GetSingle(shower1);
-    if(shower1 == nullptr) continue;
+    const DNeutralShower *shower1 = photon1->Get_NeutralShower();
+    //photon1->GetSingle(shower1);
+    //if(shower1 == nullptr) continue;
     if(shower1->dDetectorSystem != SYS_FCAL) continue;
     DFCALShower *fcalShower1 = (DFCALShower *) shower1->dBCALFCALShower;
     const DFCALCluster *fcalCluster1;
@@ -117,9 +117,10 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
     for (unsigned int j=i+1; j< neutralParticleVector.size(); j++){
       const DNeutralParticleHypothesis *photon2 = neutralParticleVector[j]->Get_Hypothesis(Gamma);
       if(photon2 == nullptr) continue;
-      const DNeutralShower *shower2;
-      if(shower2 == nullptr) continue;
-      photon2->GetSingle(shower2);
+      const DNeutralShower *shower2 = photon2->Get_NeutralShower();
+      //const DNeutralShower *shower2;
+      //if(shower2 == nullptr) continue;
+      //photon2->GetSingle(shower2);
       if(shower2->dDetectorSystem != SYS_FCAL) continue;
       DFCALShower *fcalShower2 = (DFCALShower *) shower2->dBCALFCALShower;
       const DFCALCluster *fcalCluster2;
