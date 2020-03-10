@@ -37,23 +37,11 @@ jerror_t JEventProcessor_MilleFieldOff::init(void) {
     milleWriter = new Mille(Form("mil/nofield_mille_out_v%02d.mil", version));
   }
 
-  gDirectory->mkdir("AlignmentConstants");
-  gDirectory->cd("AlignmentConstants");
-  // We need the constants used for this iteration
-  // Use a TProfile to avoid problems adding together multiple root files...
-  HistCurrentConstantsCDC =
-      new TProfile("CDCAlignmentConstants",
-                   "Constants Used for CDC Alignment (In MILLEPEDE Order)",
-                   16000, 0.5, 16000.5);
-
-  gDirectory->cd("..");
-
   return NOERROR;
 }
 
 jerror_t JEventProcessor_MilleFieldOff::brun(JEventLoop *eventLoop,
                                              int32_t runnumber) {
-  // Get the current set of constants and sve them in the histogram
   // This is called whenever the run number changes
   // Check for magnetic field
   DApplication *dapp =
@@ -71,31 +59,6 @@ jerror_t JEventProcessor_MilleFieldOff::brun(JEventLoop *eventLoop,
     japp->Quit();
   }
 
-  // Store the current values of the alignment constants
-  JCalibration *jcalib = eventLoop->GetJCalibration();
-  vector<map<string, double> > vals;
-  if (jcalib->Get("CDC/global_alignment", vals) == false) {
-    map<string, double> &row = vals[0];
-    // Get the offsets from the calibration database
-    HistCurrentConstantsCDC->Fill(1, row["dX"]);
-    HistCurrentConstantsCDC->Fill(2, row["dY"]);
-    HistCurrentConstantsCDC->Fill(3, row["dZ"]);
-    HistCurrentConstantsCDC->Fill(4, row["dPhiX"]);
-    HistCurrentConstantsCDC->Fill(5, row["dPhiY"]);
-    HistCurrentConstantsCDC->Fill(6, row["dPhiZ"]);
-  }
-
-  if (jcalib->Get("CDC/wire_alignment", vals) == false) {
-    for (unsigned int i = 0; i < vals.size(); i++) {
-      map<string, double> &row = vals[i];
-      // Get the offsets from the calibration database
-      HistCurrentConstantsCDC->Fill(1000 + (i * 4 + 1), row["dxu"]);
-      HistCurrentConstantsCDC->Fill(1000 + (i * 4 + 2), row["dyu"]);
-      HistCurrentConstantsCDC->Fill(1000 + (i * 4 + 3), row["dxd"]);
-      HistCurrentConstantsCDC->Fill(1000 + (i * 4 + 4), row["dyd"]);
-    }
-  }
-
   return NOERROR;
 }
 
@@ -105,8 +68,6 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
                           404,  484,  577,  670,  776,  882,  1005, 1128,
                           1263, 1398, 1544, 1690, 1848, 2006, 2176, 2346,
                           2528, 2710, 2907, 3104, 3313};
-  // Loop over the tracks, get the tracking pulls, and fill some histograms.
-  // Easy peasy
   vector<const DTrackTimeBased *> trackVector;
   loop->Get(trackVector, "StraightLine");
 
