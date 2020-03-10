@@ -483,11 +483,11 @@ jerror_t JEventProcessor_MilleFieldOn::evnt(JEventLoop *loop, uint64_t eventnumb
 
             if (isCDCOnly){ // Global shifts will not affect residuals
                globalDer[0]=0.0; label[0]=1;
-               globalDer[1]=0.0; label[0]=2;
-               globalDer[2]=0.0; label[0]=3;
-               globalDer[3]=0.0; label[0]=4;
-               globalDer[4]=0.0; label[0]=5;
-               globalDer[5]=0.0; label[0]=6;
+               globalDer[1]=0.0; label[1]=2;
+               globalDer[2]=0.0; label[2]=3;
+               globalDer[3]=0.0; label[3]=4;
+               globalDer[4]=0.0; label[4]=5;
+               globalDer[5]=0.0; label[5]=6;
             }
             else{
                globalDer[0]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaX]
