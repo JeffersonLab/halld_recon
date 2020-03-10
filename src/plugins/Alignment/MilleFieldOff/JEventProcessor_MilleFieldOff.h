@@ -10,7 +10,6 @@
 
 #include <JANA/JEventProcessor.h>
 #include "Mille.h"
-#include "TProfile.h"
 
 class JEventProcessor_MilleFieldOff : public jana::JEventProcessor {
  public:
@@ -30,7 +29,6 @@ class JEventProcessor_MilleFieldOff : public jana::JEventProcessor {
   jerror_t fini(void);  ///< Called after last event of last event source has
                         ///< been processed.
   Mille *milleWriter;
-  TProfile *HistCurrentConstantsCDC;
 };
 
 #endif  // _JEventProcessor_MilleFieldOff_
