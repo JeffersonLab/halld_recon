@@ -241,39 +241,67 @@
 
 		gPad->SetTicks();
 		gPad->SetGrid();
+		gPad->SetLogy();
 
 		double max_gtp = locHist_L1bits_gtp->GetMaximum();
 		double max_fp  = locHist_L1bits_fp->GetMaximum();
 		double max = (max_gtp>max_fp) ? max_gtp:max_fp;
 		
-		locHist_L1bits_gtp->GetYaxis()->SetRangeUser(1.0, max*2.0);
-		locHist_L1bits_gtp->GetXaxis()->SetRangeUser(0.0, 17.0);
-	
-		locHist_L1bits_gtp->GetXaxis()->SetTitleSize(0.05);
-		locHist_L1bits_gtp->GetYaxis()->SetTitleSize(0.04);
-		locHist_L1bits_gtp->SetStats(0);
+		const int bin_number = 8;
+		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "BCal LED (9)", "BCal LED (10)", "Random (12)", "DIRC LED (15)"};
+		TH1I *locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
+		// helper histograms for the individual columns
+		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
+		for (i=1; i <= bin_number; i++)
+		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
 
-		locHist_L1bits_gtp->SetLineColor(kBlack);
-		locHist_L1bits_gtp->SetBarOffset(0.15);
-		locHist_L1bits_gtp->SetBarWidth(0.35);
-		locHist_L1bits_fp->SetBarOffset(0.5);
-		locHist_L1bits_fp->SetBarWidth(0.35);
+		// Main Trigger BCAL+FCAL: GTP Bit 1
+		locHist_Trigger_GTP->Fill(0., locHist_L1bits_gtp->GetBinContent(1));
+		// BCAL Trigger: GTP Bit 3
+		locHist_Trigger_GTP->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
+		locHist_Trigger_alt1->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
+		// PS Trigger: GTP Bit 4
+		locHist_Trigger_GTP->Fill(2., locHist_L1bits_gtp->GetBinContent(4));
 
-		locHist_L1bits_gtp->SetFillColor(kOrange);
-		locHist_L1bits_fp->SetFillColor(kRed-4);
+		// FCAL LED: FP Bit 3
+		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
+		// BCAL LED: FP Bit 9
+		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+		locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+		// BCAL LED: FP Bit 10
+		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
+		// Random Trigger: FP Bit 12
+		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
+		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
+		// DIRC LED: FP Bit 15
+		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(15));
 
-		locHist_L1bits_gtp->Draw("bar");
-		locHist_L1bits_fp->Draw("bar same");
+		locHist_Trigger_GTP->SetFillColor(kOrange);
+		locHist_Trigger_GTP->SetStats(0);
+		locHist_Trigger_GTP->GetXaxis()->LabelsOption("v");
+		locHist_Trigger_GTP->GetXaxis()->SetLabelSize(0.06);
+		locHist_Trigger_GTP->GetYaxis()->SetRangeUser(1.0, max*2.0);
+		locHist_Trigger_GTP->Draw("hist");
+		locHist_Trigger_alt1->Draw("hist same");
+
+		locHist_Trigger_FP->SetFillColor(kRed-4);
+		locHist_Trigger_FP->Draw("hist same");
+		locHist_Trigger_alt2->Draw("hist same");
+		locHist_Trigger_alt3->Draw("hist same");
+
+		gPad->SetBottomMargin(0.25);
+		gPad->RedrawAxis();
 
 		TLegend *legend_gtp = new TLegend(0.5,0.85,0.7,0.9);
 		TLegend *legend_fp  = new TLegend(0.7,0.85,0.9,0.9);
-		legend_gtp->AddEntry(locHist_L1bits_gtp,"GTP","f");
-		legend_fp->AddEntry(locHist_L1bits_fp,"FP","f");
+		legend_gtp->AddEntry(locHist_Trigger_GTP,"GTP","f");
+		legend_fp->AddEntry(locHist_Trigger_FP,"FP","f");
 		legend_gtp->Draw();
 		legend_fp->Draw();
 
-		gPad->SetLogy();
-		gPad->Update();
 	}
 
 	locCanvas->cd(0);
