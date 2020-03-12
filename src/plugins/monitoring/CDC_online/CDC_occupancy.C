@@ -52,11 +52,12 @@
 //  If you see single hot (bright yellow) or new dead (white or dark blue) channels, 
 //  please make a logentry in HDCDC and notify the experts in the logentry.
 //
-//  If you see a cluster of hot or dead channels, please make the log entry 
-//  and also contact the experts using the drift chamber on call phone number.  
+//  If you see a cluster of hot or dead channels, please make the log entry  
+//  and also contact the experts as below.
 //
-//  Daytime - contact the expert
-//  Overnight - contact the expert if the cluster includes more than 24 channels.
+//  Daytime - contact the expert by phone using the drift chamber on call number
+//  Overnight - contact the expert by phone if the cluster includes more than 24 channels.
+//
 //
 // End Guidance: ----------------------------------------
 
