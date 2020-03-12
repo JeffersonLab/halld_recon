@@ -104,6 +104,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   vector<const DNeutralParticle *> neutralParticleVector;
   loop->Get(neutralParticleVector);
   
+  vector<const DTOFPoint*> tof_points;
   loop->Get(tof_points);
   
   vector<const DVertex*> kinfitVertex;
@@ -145,10 +146,47 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double radiusShower1=sqrt(pow(xShower1,2)+pow(yShower1,2));
     
     double frac1 = fcalCluster1->getEmax()/fcalCluster1->getEnergy();
-    if(fcalCluster1->getEnergy() < 0.1) continue;
+    if(fcalCluster1->getEnergy() < 0.25) continue;
     
-    int tof_match1 = TOF_Match(kinfitVertexX, kinfitVertexY, kinfitVertexZ, x1, y1, z1);
-    
+    int tof_match1 = 0;//TOF_Match(kinfitVertexX, kinfitVertexY, kinfitVertexZ, x1, y1, z1);
+    for (vector< const DTOFPoint* >::const_iterator tof_p = tof_points.begin(); tof_p != tof_points.end(); tof_p++ ) {
+      
+      double xtof = (*tof_p)->pos.X() - kinfitVertexX;
+      double ytof = (*tof_p)->pos.Y() - kinfitVertexY;
+      double ztof = (*tof_p)->pos.Z() - kinfitVertexZ;
+      
+      //double rtof = sqrt(xtof*xtof + ytof*ytof + ztof*ztof );
+      //double ttof = (*tof_p)->t - (rtof/TMath::C());
+      
+      xtof = xtof * (z1 / ztof);
+      ytof = ytof * (z1 / ztof);
+      
+      int hbar  = (*tof_p)->dHorizontalBar;			
+      int hstat = (*tof_p)->dHorizontalBarStatus;
+      int vbar  = (*tof_p)->dVerticalBar;
+      int vstat = (*tof_p)->dVerticalBarStatus;
+      
+      double dx, dy;
+      if( hstat==3 && vstat==3 ) {
+	dx = x1 - xtof;
+	dy = y1 - ytof;
+      } else if( vstat==3 ) {
+	dx = x1 - bar2x(vbar)*(z1 / ztof);
+	dy = y1 - ytof;
+      } else if( hstat==3 ) {
+	dx = x1 - xtof;
+	dy = y1 - bar2x(hbar)*(z1 / ztof);
+      } else {
+	dx = x1 - bar2x(vbar)*(z1 / ztof);
+	dy = y1 - bar2x(hbar)*(z1 / ztof);
+      }
+      
+      if( fabs(dx) < 6. && fabs(dy) < 6. ) { 
+	//if( dt > -1. && dt < 3. ) tof_match = 1;
+	tof_match1 = 1;
+      }
+    } // end DTOFPoint loop
+        
     for (unsigned int j=i+1; j< neutralParticleVector.size(); j++){
       const DNeutralParticleHypothesis *photon2 = neutralParticleVector[j]->Get_Hypothesis(Gamma);
       if(photon2 == nullptr) continue;
@@ -166,10 +204,47 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       double z2 = zShower2 - kinfitVertexZ;
       double radiusShower2=sqrt(pow(xShower2,2)+pow(yShower2,2));
       double frac2 = fcalCluster2->getEmax()/fcalCluster2->getEnergy();
-      if(fcalCluster2->getEnergy() < 0.1) continue;
+      if(fcalCluster2->getEnergy() < 0.25) continue;
       
-      int tof_match2 = TOF_Match(kinfitVertexX, kinfitVertexY, kinfitVertexZ, x2, y2, z2);
-
+      int tof_match2 = 0;//TOF_Match(kinfitVertexX, kinfitVertexY, kinfitVertexZ, x2, y2, z2);
+      for (vector< const DTOFPoint* >::const_iterator tof_p = tof_points.begin(); tof_p != tof_points.end(); tof_p++ ) {
+	
+	double xtof = (*tof_p)->pos.X() - kinfitVertexX;
+	double ytof = (*tof_p)->pos.Y() - kinfitVertexY;
+	double ztof = (*tof_p)->pos.Z() - kinfitVertexZ;
+	
+	//double rtof = sqrt(xtof*xtof + ytof*ytof + ztof*ztof );
+	//double ttof = (*tof_p)->t - (rtof/TMath::C());
+	
+	xtof = xtof * (z2 / ztof);
+	ytof = ytof * (z2 / ztof);
+	
+	int hbar  = (*tof_p)->dHorizontalBar;			
+	int hstat = (*tof_p)->dHorizontalBarStatus;
+	int vbar  = (*tof_p)->dVerticalBar;
+	int vstat = (*tof_p)->dVerticalBarStatus;
+	
+	double dx, dy;
+	if( hstat==3 && vstat==3 ) {
+	  dx = x2 - xtof;
+	  dy = y2 - ytof;
+	} else if( vstat==3 ) {
+	  dx = x2 - bar2x(vbar)*(z2 / ztof);
+	  dy = y2 - ytof;
+	} else if( hstat==3 ) {
+	  dx = x2 - xtof;
+	  dy = y2 - bar2x(hbar)*(z2 / ztof);
+	} else {
+	  dx = x2 - bar2x(vbar)*(z2 / ztof);
+	  dy = y2 - bar2x(hbar)*(z2 / ztof);
+	}
+	
+	if( fabs(dx) < 6. && fabs(dy) < 6. ) { 
+	  //if( dt > -1. && dt < 3. ) tof_match = 1;
+	  tof_match2 = 1;
+	}
+      } // end DTOFPoint loop
+      
       double pi0Mass = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).M();
       double avgE = 0.5*fcalCluster1->getEnergy() + 0.5*fcalCluster2->getEnergy();
       
@@ -616,7 +691,7 @@ double JEventProcessor_FCAL_Pi0TOF::bar2x(int bar) {
   
   return x;
 }
-
+/*
 int JEventProcessor_FCAL_Pi0TOF::TOF_Match(double kinVertexX, double kinVertexY, double kinVertexZ, double x, double y, double z) {
   
   //-----   Check for match between TOF and FCAL   -----//
@@ -661,7 +736,7 @@ int JEventProcessor_FCAL_Pi0TOF::TOF_Match(double kinVertexX, double kinVertexY,
   
   return tof_match;
 }
-
+*/
 
 
 
