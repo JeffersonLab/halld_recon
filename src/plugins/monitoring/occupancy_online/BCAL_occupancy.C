@@ -12,6 +12,27 @@
 // e-mail: zisis@uregina.ca
 // e-mail: tbritton@jlab.org
 //
+// Guidance: --------------------------------------------
+//
+//  The ADC occupancies are influenced mostly by the distance between the signal
+//  baseline (set during periodic pedestal scans) and the readout threshold 
+//  (105 for all channels).  
+//  The TDC occupancies are influenced mostly by the distance between the 
+//  baseline and the discriminator threshold (set for each channel.)
+//
+//  In both cases, if there is a hot channel it is usually because the baseline has 
+//  drifted upwards.  During office hours contact the Calorimeters/Scintillators on 
+//  call phone.  After hours, this can usually wait until the next day so make a log 
+//  entry and email to Halld-cal@jlab.org.  If the channel has a occupancy an order 
+//  of magnitude higher than the neighbors then contact the on call phone.
+//
+//  If there is a dead channel make a log entry and email to Halld-cal@jlab.org, if 
+//  there is more than 1 dead channel then call the expert.
+//
+//  Calorimeters/Scintillators on call phone:  354-9399
+//
+// End Guidance: ----------------------------------------
+
 
 {
 	// RootSpy saves the current directory and style before
