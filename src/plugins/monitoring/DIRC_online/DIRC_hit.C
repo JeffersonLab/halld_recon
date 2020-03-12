@@ -1,7 +1,25 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-
+// Guidance: --------------------------------------------
+//
+// Upper 2 panels: DIRC PMT hit time for physics triggers 
+// (black) and LED triggers (blue) for South and North boxes
+// Lower left panel: LED reference time signal from SiPM: 
+// ADC (red) and TDC (blue), both should have clear single peaks
+// Lower right panel: LED reference time signal ADC vs TDC
+//
+// If you have concerns about the plots or any of them look
+// significantly different than the reference, please contact 
+// one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Justin Stevens:   x7237    (office)
+//                    585-4870 (cell)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_NonLED
 // hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_LED
 // hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_Time_NonLED

@@ -255,7 +255,7 @@
 		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
-		for (i=1; i <= bin_number; i++)
+		for (int i=1; i <= bin_number; i++)
 		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
 
 		// Main Trigger BCAL+FCAL: GTP Bit 1
