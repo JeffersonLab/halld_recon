@@ -155,9 +155,9 @@
 			double diff = 1.0 - left_scale;
 			double min = left_scale - diff*0.1;
 			double max = left_scale + diff*1.2;
-			if( (max-min) < 0.4 ){
+			if( (max-min) < 0.5 ){
 				min = 0.25;
-				if(max<1.50) max =1.50;
+				if(max<1.50) max =1.14;
 			}
 			
 			// max = 1.50;
