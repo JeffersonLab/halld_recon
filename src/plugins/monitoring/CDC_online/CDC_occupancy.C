@@ -32,6 +32,34 @@
 // hnamepath: /CDC/rings_occupancy/cdc_occ_ring[27]
 // hnamepath: /CDC/rings_occupancy/cdc_occ_ring[28]
 
+// e-mail: zihlmann@jlab.org
+// e-mail: njarvis@jlab.org
+//
+// Guidance: --------------------------------------------
+//
+//  During regular runs with beam the CDC occupancies should show a smooth trend
+//  from high (bright yellow) in the innermost ring to low (dark blue) in the outermost ring.
+//  During cosmics runs, the whole detector is a uniform low occupancy.
+// 
+//  Hot channels can be caused by faulty electronics, baseline shift or noise.
+//  Cold channels can be caused by poor connections, baseline shift or faulty electronics.
+//
+//  The channels are connected to the HV boards in clusters of 20 to 24.
+//  
+//  There are 2 known dead channels (wire disconnected) and a small number (4-6) 
+// of channels with persistent problems. These channels are not neighbouring.
+//
+//  If you see single hot (bright yellow) or new dead (white or dark blue) channels, 
+//  please make a logentry in HDCDC and notify the experts in the logentry.
+//
+//  If you see a cluster of hot or dead channels, please make the log entry 
+//  and also contact the experts using the drift chamber on call phone number.  
+//
+//  Daytime - contact the expert
+//  Overnight - contact the expert if the cluster includes more than 24 channels.
+//
+// End Guidance: ----------------------------------------
+
 
 {
 	// Get number of events
