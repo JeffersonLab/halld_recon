@@ -46,6 +46,21 @@ bool FDCSortByZincreasing(const DFDCPseudo* const &hit1, const DFDCPseudo* const
    return hit1->wire->layer < hit2->wire->layer;
 }
 
+//------------------
+// TRDSortByZincreasing
+//------------------
+bool TRDSortByZincreasing(const DTRDPoint* const &hit1, const DTRDPoint* const &hit2) {
+
+   return hit1->detector < hit2->detector;
+}
+
+//------------------
+// GEMSortByZincreasing
+//------------------
+bool GEMSortByZincreasing(const DGEMPoint* const &hit1, const DGEMPoint* const &hit2) {
+
+   return hit1->detector < hit2->detector;
+}
 
 //------------------
 // count_common_members

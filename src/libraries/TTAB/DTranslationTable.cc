@@ -300,6 +300,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 		rocid_map[name_to_id[        "CCAL"]] = {90};
 		rocid_map[name_to_id[        "CCAL_REF"]] = {90};
 		rocid_map[name_to_id[        "DIRC"]] = {92};
+		rocid_map[name_to_id[         "TRD"]] = {76};
 		
 	}
 
@@ -412,7 +413,6 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PS:         MakePSDigiHit(chaninfo.ps, pi, pt, pp);                  break;
          case PSC:        MakePSCDigiHit(chaninfo.psc, pi, pt, pp);                break;
          case RF:         MakeRFDigiTime(chaninfo.rf, pt);                         break;
-         case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pi, pt, pp);  break;
          case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
 
          default:
@@ -458,12 +458,46 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PS:         MakePSDigiHit(   chaninfo.ps,   pd);             break;
          case PSC:        MakePSCDigiHit(  chaninfo.psc,  pd);             break;
          case RF:         MakeRFDigiTime(  chaninfo.rf,   pd);             break;
-         case TPOLSECTOR: MakeTPOLSectorDigiHit(chaninfo.tpolsector, pd);  break;
          case TAC: 		  MakeTACDigiHit(chaninfo.tac, pd);  			   break;
         default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
             break;
       }
+   }
+
+   // Direct creation of DigiHits from Df250WindowRawData for TPOL (always raw mode readout) 
+   vector<const Df250WindowRawData*> windowrawdata;
+   loop->Get(windowrawdata);
+   if (VERBOSE > 2) ttout << "  Number Df250WindowRawData objects: " << windowrawdata.size() << std::endl;
+   for (uint32_t i=0; i<windowrawdata.size(); i++) {
+      const Df250WindowRawData *window = windowrawdata[i];
+
+      // Apply optional rocid translation
+      uint32_t rocid = window->rocid;
+      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
+      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
+
+      if (VERBOSE > 4)
+         ttout << "    Looking for rocid:" << rocid << " slot:" << window->slot
+               << " chan:" << window->channel << std::endl;
+      
+      // Create crate,slot,channel index and find entry in Translation table.
+      // If none is found, then just quietly skip this hit.
+      csc_t csc = {rocid, window->slot, window->channel};
+      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
+      if (iter == Get_TT().end()) {
+          if (VERBOSE > 6)
+             ttout << "     - Didn't find it" << std::endl;
+          continue;
+      }
+      const DChannelInfo &chaninfo = iter->second;
+      if (VERBOSE > 6)
+	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
+               << std::endl; 
+      
+      // Create the appropriate hit type based on detector type
+      if(chaninfo.det_sys == TPOLSECTOR) 
+	      MakeTPOLSectorDigiHit(chaninfo.tpolsector, window);
    }
 
    // Df125PulseIntegral (will apply Df125PulseTime via associated objects)
@@ -545,6 +579,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
          case CDC:  MakeCDCDigiHit(chaninfo.cdc, p); break;
+		 //case TRD:  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
              if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
@@ -583,8 +618,9 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
-			case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, p); break;
+         case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, p); break;
          case CDC         :  MakeCDCDigiHit(chaninfo.cdc, p); break;
+	 case TRD         :  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
              if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
@@ -716,12 +752,51 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       }
    }
 
-	// Optionally overwrite nsamples_integral and/or nsamples_pedestal if 
-	// user specified via config. parameters.
-	OverwriteNsamples();
+   // DGEMSRSWindowRawData
+   vector<const DGEMSRSWindowRawData*> gemsrswindowrawdata;
+   loop->Get(gemsrswindowrawdata);
+   if (VERBOSE > 2) ttout << "  Number DGEMSRSWindowRawData objects: " << gemsrswindowrawdata.size() << std::endl;
+   for (uint32_t i=0; i<gemsrswindowrawdata.size(); i++) {
+      const DGEMSRSWindowRawData *hit = gemsrswindowrawdata[i];
 
-	// Sort object order (this makes it easier to browse with hd_dump)
-	sort(vDBCALDigiHit.begin(), vDBCALDigiHit.end(), SortBCALDigiHit);
+      // Apply optional rocid translation
+      uint32_t rocid = hit->rocid;
+      map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
+      if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
+
+      if (VERBOSE > 4)
+         ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
+               << " chan:" << hit->channel << std::endl;
+      
+      // Create crate,slot,channel index and find entry in Translation table.
+      // If none is found, then just quietly skip this hit.
+      csc_t csc = {rocid, hit->slot, hit->channel};
+      map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
+      if (iter == Get_TT().end()) {
+          if (VERBOSE > 6)
+             ttout << "     - Didn't find it" << std::endl;
+          continue;
+      }
+      const DChannelInfo &chaninfo = iter->second;
+      if (VERBOSE > 6)
+	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
+               << std::endl; 
+      
+      // Create the appropriate hit type based on detector type
+      switch (chaninfo.det_sys) {
+         case TRD:    MakeGEMDigiWindowRawData(chaninfo.trd, hit); break;
+         default:     
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             break;
+      }
+   }
+
+   // Optionally overwrite nsamples_integral and/or nsamples_pedestal if 
+   // user specified via config. parameters.
+   OverwriteNsamples();
+   
+   // Sort object order (this makes it easier to browse with hd_dump)
+   sort(vDBCALDigiHit.begin(), vDBCALDigiHit.end(), SortBCALDigiHit);
    
    // Copy pointers to all objects produced to their appropriate
    // factories. This hands ownership of them over to the factories
@@ -1274,6 +1349,72 @@ DFDCCathodeDigiHit* DTranslationTable::MakeFDCCathodeDigiHit(
 }
 
 //---------------------------------
+// MakeTRDDigiHit
+//---------------------------------
+DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
+                                       const TRDIndex_t &idx,
+                                       const Df125CDCPulse *p) const
+{
+	DTRDDigiHit *h = new DTRDDigiHit();
+	h->plane             = idx.plane;
+	h->strip             = idx.strip;
+	h->pulse_peak        = p->first_max_amp;
+	h->pulse_time        = p->le_time;
+	h->pedestal          = p->pedestal;
+	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->nsamples_integral = p->nsamples_integral;
+	h->nsamples_pedestal = p->nsamples_pedestal;
+
+	h->AddAssociatedObject(p);
+
+	vDTRDDigiHit.push_back(h);
+   
+	return h;
+}
+
+//---------------------------------
+// MakeTRDDigiHit
+//---------------------------------
+DTRDDigiHit* DTranslationTable::MakeTRDDigiHit(
+                                       const TRDIndex_t &idx,
+                                       const Df125FDCPulse *p) const
+{
+	DTRDDigiHit *h = new DTRDDigiHit();
+	h->plane             = idx.plane;
+	h->strip             = idx.strip;
+	h->pulse_peak        = p->peak_amp;
+	h->pulse_time        = p->le_time;
+	h->pedestal          = p->pedestal;
+	h->QF                = p->time_quality_bit + (p->overflow_count<<1);
+	h->nsamples_integral = p->nsamples_integral;
+	h->nsamples_pedestal = p->nsamples_pedestal;
+
+	h->AddAssociatedObject(p);
+
+	vDTRDDigiHit.push_back(h);
+   
+	return h;
+}
+
+//---------------------------------
+// MakeDigiWindowRawData
+//---------------------------------
+DGEMDigiWindowRawData* DTranslationTable::MakeGEMDigiWindowRawData(
+                                       const TRDIndex_t &idx,
+                                       const DGEMSRSWindowRawData *p) const
+{
+	DGEMDigiWindowRawData *h = new DGEMDigiWindowRawData();
+	h->plane             = idx.plane;
+	h->strip             = idx.strip;
+
+	h->AddAssociatedObject(p);
+
+	vDGEMDigiWindowRawData.push_back(h);
+   
+	return h;
+}
+
+//---------------------------------
 // MakeBCALTDCDigiHit
 //---------------------------------
 DBCALTDCDigiHit* DTranslationTable::MakeBCALTDCDigiHit(
@@ -1504,7 +1645,21 @@ DTPOLSectorDigiHit* DTranslationTable::MakeTPOLSectorDigiHit(const TPOLSECTORInd
    return h;
 }
 
+//---------------------------------
+// MakeTPOLSectorDigiHit
+//---------------------------------
+DTPOLSectorDigiHit* DTranslationTable::MakeTPOLSectorDigiHit(const TPOLSECTORIndex_t &idx,
+							     const Df250WindowRawData *window) const
+{
+   DTPOLSectorDigiHit *h = new DTPOLSectorDigiHit();
 
+   h->sector = idx.sector;
+   h->AddAssociatedObject(window);
+
+   vDTPOLSectorDigiHit.push_back(h);
+   
+   return h;
+}
 
 //---------------------------------
 // MakeTACDigiHit
@@ -1669,6 +1824,10 @@ const DTranslationTable::csc_t
 	  case DTranslationTable::DIRC:
              if ( det_channel.dirc == in_channel.dirc )
                 found = true;
+	     break;
+	  case DTranslationTable::TRD:
+             if ( det_channel.trd == in_channel.trd )
+                found = true;
              break;
 
           default:
@@ -1758,6 +1917,10 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
        break;
     case DTranslationTable::DIRC:
        ss << "pixel = " << in_channel.dirc.pixel;
+       break;
+    case DTranslationTable::TRD:
+       ss << "plane = " << in_channel.trd.plane;
+       ss << "strip = " << in_channel.trd.strip;
        break;
 
     default:
@@ -2050,6 +2213,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
 	      return DTranslationTable::TAC;
    } else if ( type == "dirc" ) {
 	   return DTranslationTable::DIRC;
+   } else if ( type == "trd" ) {
+	   return DTranslationTable::TRD;
    } else
    {
       return DTranslationTable::UNKNOWN_DETECTOR;
@@ -2320,6 +2485,10 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
             break;
          case DTranslationTable::DIRC:
 	      ci.dirc.pixel = pixel;
+	      break;
+         case DTranslationTable::TRD:
+	      ci.trd.plane = plane;
+	      ci.trd.strip = strip;
 	      break;
         case DTranslationTable::UNKNOWN_DETECTOR:
 		 default:

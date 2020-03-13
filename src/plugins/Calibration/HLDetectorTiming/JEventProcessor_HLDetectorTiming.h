@@ -25,6 +25,7 @@
 #include <PID/DEventRFBunch.h>
 #include <PID/DParticleID.h>
 #include <TRACKING/DTrackFitter.h>
+#include <TPOL/DTPOLHit.h>
 
 #include "DFactoryGenerator_p2pi.h"
 
@@ -71,6 +72,7 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         int fBeamEventCounter;
         int dMaxDIRCChannels;
 		bool NO_TRACKS;
+		bool CCAL_CALIB;
         // The final setup requires some shifts relative to the previous values, need to store them
 
         int NBINS_TDIFF, NBINS_TAGGER_TIME, NBINS_MATCHING, NBINS_RF_COMPARE;

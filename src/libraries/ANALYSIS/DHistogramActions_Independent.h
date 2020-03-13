@@ -39,6 +39,8 @@
 #include "BCAL/DBCALHit.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALHit.h"
+#include "CCAL/DCCALShower.h"
+#include "CCAL/DCCALHit.h"
 
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRACKING/DTrackWireBased.h"
@@ -206,6 +208,9 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 
 		TH2I* dHist_FCALShowerYVsX = nullptr;
 		TH1I* dHist_FCALShowerEnergy = nullptr;
+
+		TH2I* dHist_CCALShowerYVsX = nullptr;
+		TH1I* dHist_CCALShowerEnergy = nullptr;
 
 		TH1I* dHist_BCALShowerEnergy = nullptr;
 		TH1I* dHist_BCALShowerPhi = nullptr;
@@ -388,9 +393,10 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		//user can call any of these three constructors
 		DHistogramAction_DetectorPID(const DReaction* locReaction, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_DetectorPID", false, locActionUniqueString),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DEOverPBins(300),
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DEOverPBins(300),
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
+		dMinCCALTheta(0.0), dMaxCCALTheta(2.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100), 
@@ -406,9 +412,10 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 
 		DHistogramAction_DetectorPID(string locActionUniqueString) :
 		DAnalysisAction(NULL, "Hist_DetectorPID", false, locActionUniqueString),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DEOverPBins(300), 
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DCCALThetaBins(120), dNum2DEOverPBins(300), 
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
+		dMinCCALTheta(0.0), dMaxCCALTheta(2.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
@@ -424,9 +431,10 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 
 		DHistogramAction_DetectorPID(void) :
 		DAnalysisAction(NULL, "Hist_DetectorPID", false, ""),
-		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120), dNum2DEOverPBins(300), 
+		dNum2DPBins(250), dNum2DdEdxBins(400), dNum2DBetaBins(400), dNum2DBCALThetaBins(260), dNum2DFCALThetaBins(120),dNum2DCCALThetaBins(120), dNum2DEOverPBins(300), 
 		dNum2DDeltaBetaBins(400), dNum2DDeltadEdxBins(300), dNum2DDeltaTBins(400), dNum2DPullBins(200), dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), 
 		dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), 
+		dMinCCALTheta(0.0), dMaxCCALTheta(2.0), 
 		dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), 
 		dMinPull(-10.0), dMaxPull(10.0), dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag"),
 		dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
@@ -443,9 +451,9 @@ class DHistogramAction_DetectorPID : public DAnalysisAction
 		void Initialize(JEventLoop* locEventLoop);
 		void Run_Update(JEventLoop* locEventLoop) {}
 
-		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins;
+		unsigned int dNum2DPBins, dNum2DdEdxBins, dNum2DBetaBins, dNum2DBCALThetaBins, dNum2DFCALThetaBins, dNum2DCCALThetaBins;
 		unsigned int dNum2DEOverPBins, dNum2DDeltaBetaBins, dNum2DDeltadEdxBins, dNum2DDeltaTBins, dNum2DPullBins, dNum2DFOMBins;
-		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta;
+		double dMinP, dMaxP, dMaxBCALP, dMindEdX, dMaxdEdX, dMinBeta, dMaxBeta, dMinBCALTheta, dMaxBCALTheta, dMinFCALTheta, dMaxFCALTheta, dMinCCALTheta, dMaxCCALTheta;
 		double dMinEOverP, dMaxEOverP, dMinDeltaBeta, dMaxDeltaBeta, dMinDeltadEdx, dMaxDeltadEdx, dMinDeltaT, dMaxDeltaT, dMinPull, dMaxPull;
 		string dTrackSelectionTag, dShowerSelectionTag; //In Initialize, will default to "PreSelect" unless otherwise specified
 		unsigned int dDIRCNumPhotonsBins, dDIRCThetaCBins, dDIRCLikelihoodBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons;
@@ -538,6 +546,10 @@ class DHistogramAction_Neutrals : public DAnalysisAction
 		TH1I* dHist_FCALNeutralShowerEnergy = nullptr;
 		TH1I* dHist_FCALNeutralShowerDeltaT = nullptr;
 		TH2I* dHist_FCALNeutralShowerDeltaTVsE = nullptr;
+
+		TH1I* dHist_CCALNeutralShowerEnergy = nullptr;
+		TH1I* dHist_CCALNeutralShowerDeltaT = nullptr;
+		TH2I* dHist_CCALNeutralShowerDeltaTVsE = nullptr;
 };
 
 class DHistogramAction_DetectorMatchParams : public DAnalysisAction
@@ -608,6 +620,8 @@ class DHistogramAction_DetectorMatchParams : public DAnalysisAction
 		map<pair<int, bool>, TH1I*> dHistMap_FCALShowerEnergy;
 		map<pair<int, bool>, TH1I*> dHistMap_FCALShowerTrackDepth;
 		map<pair<int, bool>, TH2I*> dHistMap_FCALShowerTrackDepthVsP;
+
+		map<pair<int, bool>, TH1I*> dHistMap_CCALShowerEnergy;
 
 		map<pair<int, bool>, TH2I*> dHistMap_SCEnergyVsTheta;
 		map<pair<int, bool>, TH2I*> dHistMap_SCPhiVsTheta;
@@ -751,7 +765,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		DAnalysisAction(locReaction, "Hist_TrackShowerErrors", false, locActionUniqueString),
 		dMinPIDFOM(5.73303E-7), dNum2DPBins(250), dNum2DThetaBins(140), dNum2DPhiBins(180),
 		dNum2DXYErrorBins(300), dNum2DZErrorBins(400), dNum2DShowerZErrorBins(300), dNum2DPxyErrorBins(200), dNum2DPzErrorBins(400), dNum2DEErrorBins(200), dNum2DTErrorBins(200),
-		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMinPhi(-180.0), dMaxPhi(180.0),
+		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMaxThetaCCAL(3.0), dMinPhi(-180.0), dMaxPhi(180.0),
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
@@ -762,7 +776,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		DAnalysisAction(NULL, "Hist_TrackShowerErrors", false, locActionUniqueString),
 		dMinPIDFOM(5.73303E-7), dNum2DPBins(250), dNum2DThetaBins(140), dNum2DPhiBins(180),
 		dNum2DXYErrorBins(300), dNum2DZErrorBins(400), dNum2DShowerZErrorBins(300), dNum2DPxyErrorBins(200), dNum2DPzErrorBins(400), dNum2DEErrorBins(200), dNum2DTErrorBins(200),
-		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMinPhi(-180.0), dMaxPhi(180.0),
+		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMaxThetaCCAL(3.0), dMinPhi(-180.0), dMaxPhi(180.0),
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
@@ -773,7 +787,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		DAnalysisAction(NULL, "Hist_TrackShowerErrors", false, ""),
 		dMinPIDFOM(5.73303E-7), dNum2DPBins(250), dNum2DThetaBins(140), dNum2DPhiBins(180),
 		dNum2DXYErrorBins(300), dNum2DZErrorBins(400), dNum2DShowerZErrorBins(300), dNum2DPxyErrorBins(200), dNum2DPzErrorBins(400), dNum2DEErrorBins(200), dNum2DTErrorBins(200),
-		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMinPhi(-180.0), dMaxPhi(180.0),
+		dMinP(0.0), dMaxP(10.0), dMaxPBCAL(2.0), dMinTheta(0.0), dMinThetaBCAL(10.0), dMaxTheta(140.0), dMaxThetaFCAL(15.0), dMaxThetaCCAL(3.0), dMinPhi(-180.0), dMaxPhi(180.0),
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
@@ -783,7 +797,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		double dMinPIDFOM;
 		unsigned int dNum2DPBins, dNum2DThetaBins, dNum2DPhiBins, dNum2DXYErrorBins, dNum2DZErrorBins, dNum2DShowerZErrorBins;
 		unsigned int dNum2DPxyErrorBins, dNum2DPzErrorBins, dNum2DEErrorBins, dNum2DTErrorBins;
-		double dMinP, dMaxP, dMaxPBCAL, dMinTheta, dMinThetaBCAL, dMaxTheta, dMaxThetaFCAL, dMinPhi, dMaxPhi;
+		double dMinP, dMaxP, dMaxPBCAL, dMinTheta, dMinThetaBCAL, dMaxTheta, dMaxThetaFCAL, dMaxThetaCCAL, dMinPhi, dMaxPhi;
 		double dMaxPxyError, dMaxPzError, dMaxXYError, dMaxZError, dMaxShowerZError, dMaxEError, dMaxTError;
 		string dTrackSelectionTag, dShowerSelectionTag; //In Initialize, will default to "PreSelect" unless otherwise specified
 
@@ -887,6 +901,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 
 		TH1D* dHist_NumBeamPhotons = nullptr;
 		TH1D* dHist_NumFCALShowers = nullptr;
+		TH1D* dHist_NumCCALShowers = nullptr;
 		TH1D* dHist_NumBCALShowers = nullptr;
 		TH1D* dHist_NumNeutralShowers = nullptr;
 		TH1D* dHist_NumTOFPoints = nullptr;
@@ -906,6 +921,7 @@ class DHistogramAction_NumReconstructedObjects : public DAnalysisAction
 		TH1I* dHist_NumTOFHits = nullptr;
 		TH1I* dHist_NumBCALHits = nullptr;
 		TH1I* dHist_NumFCALHits = nullptr;
+		TH1I* dHist_NumCCALHits = nullptr;
 
 		TH1I* dHist_NumRFSignals = nullptr; //all sources
 };

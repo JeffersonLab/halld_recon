@@ -17,10 +17,10 @@ void MakeCDCConstraintsFile(bool perRing = true){
     outFile_dyd.open("dyd_Constraints.txt");
 
     if (!perRing){
-        outFile_dxu << "Contraint 0.0" << endl;
-        outFile_dxd << "Contraint 0.0" << endl;
-        outFile_dyu << "Contraint 0.0" << endl;
-        outFile_dyd << "Contraint 0.0" << endl;
+        outFile_dxu << "Constraint 0.0" << endl;
+        outFile_dxd << "Constraint 0.0" << endl;
+        outFile_dyu << "Constraint 0.0" << endl;
+        outFile_dyd << "Constraint 0.0" << endl;
     }
     // No shrinking or stretching of CDC
     // Loop over the rings
@@ -33,10 +33,10 @@ void MakeCDCConstraintsFile(bool perRing = true){
         //Get angular spacing between straws
         double dPhi = 2*TMath::Pi() / Nstraws[iRing-1];
         if (perRing){
-            outFile_dxu << "Contraint 0.0" << endl;
-            outFile_dxd << "Contraint 0.0" << endl;
-            outFile_dyu << "Contraint 0.0" << endl;
-            outFile_dyd << "Contraint 0.0" << endl;
+            outFile_dxu << "Constraint 0.0" << endl;
+            outFile_dxd << "Constraint 0.0" << endl;
+            outFile_dyu << "Constraint 0.0" << endl;
+            outFile_dyd << "Constraint 0.0" << endl;
         }
         //Loop over straws
         for (unsigned int iStraw = 1; iStraw <= Nstraws[iRing-1]; iStraw++){
@@ -60,10 +60,10 @@ void MakeCDCConstraintsFile(bool perRing = true){
     }
 
     if (!perRing){
-        outFile_dxu << "Contraint 0.0" << endl;
-        outFile_dxd << "Contraint 0.0" << endl;
-        outFile_dyu << "Contraint 0.0" << endl;
-        outFile_dyd << "Contraint 0.0" << endl;
+        outFile_dxu << "Constraint 0.0" << endl;
+        outFile_dxd << "Constraint 0.0" << endl;
+        outFile_dyu << "Constraint 0.0" << endl;
+        outFile_dyd << "Constraint 0.0" << endl;
     }
     // No shrinking or stretching of CDC
     // Loop over the rings
@@ -76,10 +76,10 @@ void MakeCDCConstraintsFile(bool perRing = true){
         //Get angular spacing between straws
         double dPhi = 2*TMath::Pi() / Nstraws[iRing-1];
         if (perRing){
-            outFile_dxu << "Contraint 0.0" << endl;
-            outFile_dxd << "Contraint 0.0" << endl;
-            outFile_dyu << "Contraint 0.0" << endl;
-            outFile_dyd << "Contraint 0.0" << endl;
+            outFile_dxu << "Constraint 0.0" << endl;
+            outFile_dxd << "Constraint 0.0" << endl;
+            outFile_dyu << "Constraint 0.0" << endl;
+            outFile_dyd << "Constraint 0.0" << endl;
         }
         //Loop over straws
         for (unsigned int iStraw = 1; iStraw <= Nstraws[iRing-1]; iStraw++){
@@ -103,19 +103,19 @@ void MakeCDCConstraintsFile(bool perRing = true){
     /*
     // Suppress next order of harmonics
     if (!perRing){
-    outFile_dxu << "Contraint 0.0" << endl;
-    outFile_dxd << "Contraint 0.0" << endl;
-    outFile_dyu << "Contraint 0.0" << endl;
-    outFile_dyd << "Contraint 0.0" << endl;
+    outFile_dxu << "Constraint 0.0" << endl;
+    outFile_dxd << "Constraint 0.0" << endl;
+    outFile_dyu << "Constraint 0.0" << endl;
+    outFile_dyd << "Constraint 0.0" << endl;
     }
     for (unsigned int iRing = 1; iRing <= 28; iRing++){
 //Get angular spacing between straws
 double dPhi = 2*TMath::Pi() / Nstraws[iRing-1];
 if (perRing){
-outFile_dxu << "Contraint 0.0" << endl;
-outFile_dxd << "Contraint 0.0" << endl;
-outFile_dyu << "Contraint 0.0" << endl;
-outFile_dyd << "Contraint 0.0" << endl;
+outFile_dxu << "Constraint 0.0" << endl;
+outFile_dxd << "Constraint 0.0" << endl;
+outFile_dyu << "Constraint 0.0" << endl;
+outFile_dyd << "Constraint 0.0" << endl;
 }
 //Loop over straws
 for (unsigned int iStraw = 1; iStraw <= Nstraws[iRing-1]; iStraw++){
@@ -138,10 +138,10 @@ outFile_dyd << dyd_index << " " << ConstraintYD << endl;
 }
 }
 */
-outFile_dxu << "Contraint 0.0" << endl;
-outFile_dxd << "Contraint 0.0" << endl;
-outFile_dyu << "Contraint 0.0" << endl;
-outFile_dyd << "Contraint 0.0" << endl;
+outFile_dxu << "Constraint 0.0" << endl;
+outFile_dxd << "Constraint 0.0" << endl;
+outFile_dyu << "Constraint 0.0" << endl;
+outFile_dyd << "Constraint 0.0" << endl;
 
 //No global shifts
 for (unsigned int iRing = 1; iRing <= 28; iRing++){

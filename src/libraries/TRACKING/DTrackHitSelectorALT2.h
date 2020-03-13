@@ -18,21 +18,25 @@
 class DTrackHitSelectorALT2:public DTrackHitSelector{
 	public:
 	DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t runnumber);
-		virtual ~DTrackHitSelectorALT2();
+	virtual ~DTrackHitSelectorALT2();
 		
-		void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=20) const;
-		void GetFDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out, int N=20) const;
-		void GetCDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out, int N) const;
-		void GetFDCHits(double Bz,double q,
-				const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const;
+	void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=20) const;
+	void GetFDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out, int N=20) const;
+	void GetCDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out, int N) const;
+	void GetFDCHits(double Bz,double q,
+			const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const;
+	void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const;
+	void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const;
 
 	private:
 		const DMagneticFieldMap *bfield;
 
 		int HS_DEBUG_LEVEL;
 		bool MAKE_DEBUG_TREES;
-		double MIN_HIT_PROB_CDC;
+		double MIN_HIT_PROB_CDC;	
 		double MIN_HIT_PROB_FDC;
+		double MIN_HIT_PROB_GEM;
+		double MIN_HIT_PROB_TRD;
 		double MIN_FDC_SIGMA_ANODE_CANDIDATE;
 		double MIN_FDC_SIGMA_CATHODE_CANDIDATE;
 		double MIN_FDC_SIGMA_ANODE_WIREBASED;

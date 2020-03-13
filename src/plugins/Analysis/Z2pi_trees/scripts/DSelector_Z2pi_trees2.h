@@ -72,6 +72,8 @@ class DSelector_Z2pi_trees2 : public DSelector
 		TH2I* dHist_Delta_Phi;
 		TH2I* dHist_Delta_phimeas;
 		TH2I* dHist_Delta_Phimeas;
+		TH2I* dHist_thetap_thetam;
+		TH2I* dHist_thetap_thetam_Mcut;
 
 
 		TH1I* dHist_Phigen;

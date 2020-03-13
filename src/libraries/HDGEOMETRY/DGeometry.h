@@ -159,6 +159,11 @@ class DGeometry{
       bool GetTargetZ(double &z_target) const; ///< z-location of center of target
       bool GetTargetLength(double &target_length) const; ///< z-location of center of target
 
+      bool GetTRDZ(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm
+      
+      bool GetFCALPosition(double &x,double &y,double &z) const;
+      bool GetCCALPosition(double &x,double &y,double &z) const;
+
       bool GetStartCounterGeom(vector<vector<DVector3> >&pos,
             vector<vector<DVector3> >&norm) const; // < vectors containing positions and norm 3-vectors for start counter 
       // There are 30 sets of positions (pos) of points along the 

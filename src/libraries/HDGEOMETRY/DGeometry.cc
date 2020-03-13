@@ -1729,6 +1729,40 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
       return true;
    }
 }
+
+
+bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
+  vector<double> ForwardEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z", ForwardEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ForwardEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ForwardEMcalpos[0],y=ForwardEMcalpos[1],z=ForwardEMcalpos[2];
+    _DBG_ << "FCAL position: (x,y,z)=(" << x <<"," << y << "," << z << ")"
+	  <<endl;
+    return true;
+  }
+}
+
+bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
+  vector<double> ComptonEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ComptonEMcalpos[0],y=ComptonEMcalpos[1],z=ComptonEMcalpos[2]; 
+    _DBG_ << "CCAL position: (x,y,z)=(" << ComptonEMcalpos[0] <<","
+	  << ComptonEMcalpos[1]<<","<<ComptonEMcalpos[2]<< ")" << endl;
+    return true;
+  }
+}
+
 //---------------------------------
 // GetDIRCZ
 //---------------------------------
@@ -1753,6 +1787,36 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
     jout << "DIRC z position = " << z_dirc << " cm." << endl;
     return true;
   }
+}
+
+//---------------------------------
+// GetTRDZ
+//---------------------------------
+bool DGeometry::GetTRDZ(vector<double> &z_trd) const
+{
+   vector<double> trd_origin;
+   bool good = Get("//section/composition/posXYZ[@volume='TRDGEM']/@X_Y_Z",trd_origin);
+   
+   if(!good){
+     _DBG_<<"Unable to retrieve TRD position."<<endl;
+     return false;
+   }
+   else{ 
+     vector<double>trd_G10;
+     Get("//composition[@name='TRDGEM']/posXYZ[@volume='TGPK']/@X_Y_Z",trd_G10);
+
+     jout << "TRD z positions = ";
+     for(int i=0; i<5; i++) {
+       vector<double>trd_plane;
+       Get(Form("//composition[@name='TGPK']/posXYZ[@volume='TRDG']/@X_Y_Z/plane[@value='%d']",i),trd_plane);
+       double z_trd_plane=trd_origin[2]+trd_G10[2]+trd_plane[2];
+       jout << z_trd_plane << ", ";
+       z_trd.push_back(z_trd_plane);
+     }
+     jout << "cm" << endl;
+   }
+
+   return true;
 }
 
 //---------------------------------

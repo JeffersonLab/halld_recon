@@ -227,6 +227,8 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	//------------------------ TPOL -----------------------
 	const int Nsectors = DTPOLHit_factory::NSECTORS;
 	tpol_occ = new TH1I("tpol_occ","TPOL fADC hit occupancy;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
+	tpol_occ2 = new TH1I("tpol_occ2","TPOL fADC hit occupancy waveform[0] < 150.0;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
+	tpol_occ3 = new TH1I("tpol_occ3","TPOL fADC hit occupancy waveform[0] < 150.0 & amp > 50.0;sector;raw hits / counter",Nsectors,0.5,0.5+Nsectors);
 
 	//------------------------ TOF ------------------------
 	tof_num_events = new TH1I("tof_num_events", "TOF number of events", 1, 0.0, 1.0);
@@ -333,6 +335,8 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
             total_bcal_energy += bcal_hits[i]->E;
         }
 	
+	vector<const DTPOLHit *> tpol_hits;
+	loop->Get(tpol_hits);
 
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
@@ -470,7 +474,14 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 	}
 
 	//------------------------ TPOL -----------------------
-	for(unsigned int i=0; i < vDTPOLSectorDigiHit.size(); i++) tpol_occ->Fill(vDTPOLSectorDigiHit[i]->sector);
+	for(unsigned int i=0; i < tpol_hits.size(); i++) 
+	{
+		tpol_occ->Fill(tpol_hits[i]->sector);
+		if (tpol_hits[i]->w_samp1 > 160.0) continue;
+		tpol_occ2->Fill(tpol_hits[i]->sector);		
+		if (tpol_hits[i]->pulse_peak > 60.0) continue;
+		tpol_occ3->Fill(tpol_hits[i]->sector);
+	}
 
 	//------------------------ TOF ------------------------
 	tof_num_events->Fill(0.5);

@@ -190,46 +190,68 @@ jerror_t DTPOLHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (trig_bits!=8) {
         return NOERROR;
     }
+
     // get raw samples and make TPOL hits
-    vector<const Df250WindowRawData*> windowraws;
-    loop->Get(windowraws);
-    for(unsigned int i=0; i< windowraws.size(); i++){
-        const Df250WindowRawData *windowraw = windowraws[i];
-        if (windowraw->rocid!=84) continue; // choose rocPS2
-        if (!(windowraw->slot==13||windowraw->slot==14)) continue; // azimuthal sectors: 13,14; rings: 15,16
-        int slot = windowraw->slot;
-        int channel = windowraw->channel;
+    vector<const DTPOLSectorDigiHit*> sectordigihits;
+    loop->Get(sectordigihits);
+    sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
+   
+    // Loop over SECTOR hits
+    for (unsigned int i = 0; i < sectordigihits.size(); i++){
+	
+	// get raw pulse from DigiHit object
+	const DTPOLSectorDigiHit *sectordigihit = sectordigihits[i];
+	vector<const Df250WindowRawData*> windowraws;
+	sectordigihit->Get(windowraws);
+	if (windowraws.size() < 1) continue;
+	const Df250WindowRawData* windowraw = windowraws[0];
+	
+	//vector<const Df250WindowRawData*> windowraws;
+	//loop->Get(windowraws);
+	//for(unsigned int i=0; i< windowraws.size(); i++){
+	//const Df250WindowRawData *windowraw = windowraws[i];
+        //if (windowraw->rocid!=84) continue; // choose rocPS2
+        //if (!(windowraw->slot==13||windowraw->slot==14||windowraw->slot==15||windowraw->slot==16)) continue; // azimuthal sectors: 13,14,15,16 (no rings instrumented)
+        //int slot = windowraw->slot;
+        //int channel = windowraw->channel;
+
         // Get a vector of the samples for this channel
         const vector<uint16_t> &samplesvector = windowraw->samples;
         unsigned int nsamples=samplesvector.size();
         // loop over the samples to calculate integral, min, max
-        if (nsamples==0) jerr << "Raw samples vector is empty." << endl;
-        if (samplesvector[0] > 133.0) continue; // require first sample below readout threshold
-        double w_samp1 = 0.0; double w_min = 0.0; double w_max = 0.0; double w_integral = 0.0;
-        for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
-            if (c_samp==0) {  // use first sample for initialization
-                w_integral = samplesvector[0];
-                w_min = samplesvector[0];
-                w_max = samplesvector[0];
-                w_samp1 = samplesvector[0];
-            } else {
-                w_integral += samplesvector[c_samp];
-                if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
-                if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
-            }
+        if (nsamples<1) jerr << "Raw samples vector is empty." << endl;
+	
+        //if (samplesvector[0] > 133.0) continue; // require first sample below readout threshold
+	unsigned int w_integral = samplesvector[0];
+        unsigned int w_min = samplesvector[0];
+        unsigned int w_max = samplesvector[0];
+        unsigned int w_samp1 = samplesvector[0];
+	for (uint16_t c_samp=1; c_samp<nsamples; c_samp++) {
+            w_integral += samplesvector[c_samp];
+            if (w_min > samplesvector[c_samp]) w_min = samplesvector[c_samp];
+            if (w_max < samplesvector[c_samp]) w_max = samplesvector[c_samp];
         }
-        double pulse_height = w_max - w_min;
-        if (pulse_height < ADC_THRESHOLD) continue;
+        unsigned int pulse_height = w_max - w_min;
+	//if (w_max == w_samp1) continue;
+        //if (pulse_height < ADC_THRESHOLD) continue;
         DTPOLHit *hit = new DTPOLHit;
-        hit->sector = GetSector(slot,channel);
+        hit->sector = sectordigihit->sector; //GetSector(slot,channel);
         hit->phi = GetPhi(hit->sector);
         hit->ring = 0;
         hit->theta = 0;
+        hit->nsamples = nsamples;
+	hit->w_samp1 = w_samp1;
+	hit->w_min = w_min;
+	hit->w_max = w_max;
+        hit->integral = w_integral;
         hit->pulse_peak = pulse_height;
-        hit->integral = w_integral - nsamples*w_samp1;
-        hit->dE = pulse_height;
+        if (w_max == w_samp1) hit->t_proxy = 0.0;
+	else hit->t_proxy = 4.0*nsamples - 4.0*((w_integral - w_samp1*nsamples) / (w_max - w_samp1));
+        hit->dE_proxy = pulse_height*1125*2000.0/4096.0;
+	hit->dE = pulse_height;
         hit->t = t_scale*GetPulseTime(samplesvector,w_min,w_max,ADC_THRESHOLD);
-        _data.push_back(hit);
+	hit->AddAssociatedObject(windowraw);
+	_data.push_back(hit);
     }
     return NOERROR;
 }
@@ -250,20 +272,6 @@ jerror_t DTPOLHit_factory::fini(void)
     return NOERROR;
 }
 
-int DTPOLHit_factory::GetSector(int slot,int channel)
-{
-    int sector = 0;
-    if (slot == 13) sector = 25 - channel;
-    if (slot == 14) {
-        if (channel <= 8) sector = 9 - channel;
-        else sector = NSECTORS + 9 - channel;
-    }
-    // fix cable swap
-    if (sector == 9) sector = 6;
-    else if (sector == 6) sector = 9;
-    if (sector == 0) jerr << "sector did not change from initial value (0)." << endl;
-    return sector;
-}
 double DTPOLHit_factory::GetPhi(int sector)
 {
     double phi = -10.0;

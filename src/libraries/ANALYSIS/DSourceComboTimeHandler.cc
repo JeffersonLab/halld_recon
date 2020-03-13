@@ -173,6 +173,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	//Photon
 	dPIDTimingCuts_TF1Params[Gamma][SYS_BCAL] = {1.5};
 	dPIDTimingCuts_TF1Params[Gamma][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[Gamma][SYS_CCAL] = {10.0};
 
 	//Unknown: initial RF selection for photons (at beginning of event, prior to vertex) //can be separate cut function
 	dPIDTimingCuts_TF1Params.emplace(Unknown, dPIDTimingCuts_TF1Params[Gamma]);
@@ -181,6 +182,7 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[Electron][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Electron][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[Electron][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Electron][SYS_CCAL] = {10.0};
 
 	//Other Leptons
 	dPIDTimingCuts_TF1Params.emplace(Positron, dPIDTimingCuts_TF1Params[Electron]);
@@ -191,18 +193,21 @@ void DSourceComboTimeHandler::Define_DefaultCuts(void)
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_TOF] = {0.5};
 	dPIDTimingCuts_TF1Params[PiPlus][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[PiPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(PiMinus, dPIDTimingCuts_TF1Params[PiPlus]);
 
 	//Kaons
 	dPIDTimingCuts_TF1Params[KPlus][SYS_BCAL] = {0.75};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_TOF] = {0.3};
 	dPIDTimingCuts_TF1Params[KPlus][SYS_FCAL] = {2.5};
+	dPIDTimingCuts_TF1Params[KPlus][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(KMinus, dPIDTimingCuts_TF1Params[KPlus]);
 
 	//Protons
 	dPIDTimingCuts_TF1Params[Proton][SYS_BCAL] = {1.0};
 	dPIDTimingCuts_TF1Params[Proton][SYS_TOF] = {0.6};
 	dPIDTimingCuts_TF1Params[Proton][SYS_FCAL] = {2.0};
+	dPIDTimingCuts_TF1Params[Proton][SYS_CCAL] = {10.0};
 	dPIDTimingCuts_TF1Params.emplace(AntiProton, dPIDTimingCuts_TF1Params[Proton]);
 	
 //COMPARE:
@@ -415,7 +420,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 	}
 
 	vector<DetectorSystem_t> locTimingSystems_Charged {SYS_TOF, SYS_BCAL, SYS_FCAL, SYS_START};
-	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL};
+	vector<DetectorSystem_t> locTimingSystems_Neutral {SYS_BCAL, SYS_FCAL, SYS_CCAL};
 	vector<Particle_t> locPIDs {Unknown, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
 
 	//CREATE HISTOGRAMS
@@ -536,11 +541,12 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 
 	//ARRANGE NEUTRAL SHOWERS
 	//also, save to unknown-z, unknown-rf (all showers)
-	vector<const DNeutralShower*> locBCALShowers, locFCALShowers;
+	vector<const DNeutralShower*> locBCALShowers, locFCALShowers, locCCALShowers;
 	auto locUnknownZBin = DSourceComboInfo::Get_VertexZIndex_Unknown();
 	for(const auto& locShower : locNeutralShowers)
 	{
-		auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
+	        auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
+		if (locShower->dDetectorSystem == SYS_CCAL) locContainer = locCCALShowers;
 		locContainer.push_back(locShower);
 	}
 
@@ -549,6 +555,10 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	auto locFCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
 	for(const auto& locShower : locFCALShowers)
 		dPhotonKinematics[locFCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
+
+	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
+	for(const auto& locShower : locCCALShowers)
+		dPhotonKinematics[locCCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
 	//BCAL: in vertex-z bins
 	for(size_t loc_i = 0; loc_i < dNumPhotonVertexZBins; ++loc_i)
@@ -562,6 +572,9 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	//FCAL: at target center
 	for(const auto& locShower : locFCALShowers)
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locFCALZBin][locShower], dInitialEventRFBunch->dTime, locFCALZBin);
+	
+	for(const auto& locShower : locCCALShowers)
+		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locCCALZBin][locShower], dInitialEventRFBunch->dTime, locCCALZBin);
 
 	//BCAL + FCAL: in vertex-z bins
 	for(size_t loc_i = 0; loc_i < dNumPhotonVertexZBins; ++loc_i)
@@ -639,7 +652,7 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 			dShowersByBeamBunchByZBin[locZBinPair.first][{}].push_back(locJObject); //save showers by bunch: any bunch (empty vector)
 		}
 	}
-	else //BCAL: Save to this z-bin & unknown
+	else if(locSystem == SYS_BCAL) //BCAL: Save to this z-bin & unknown
 	{
 		dShowerRFBunches[locZBin].emplace(locJObject, locRFShifts);
 		dShowerRFBunches[DSourceComboInfo::Get_VertexZIndex_Unknown()].emplace(locJObject, locRFShifts); //will dupe over z's
@@ -650,6 +663,16 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 		}
 		dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].push_back(locJObject); //will dupe over z's
 		dShowersByBeamBunchByZBin[locZBin][{}].push_back(locJObject);
+	}
+	else if(locSystem == SYS_CCAL) //CCAL: Save to this z-bin & unknown
+	{
+	        for(auto& locZBinPair : dShowerRFBunches) //loop over z-bins
+		{
+			locZBinPair.second.emplace(locJObject, locRFShifts); //save bunches for each shower
+			for(const auto& locNumShifts : locRFShifts) //save showers by bunch
+				dShowersByBeamBunchByZBin[locZBinPair.first][{locNumShifts}].push_back(locJObject);
+			dShowersByBeamBunchByZBin[locZBinPair.first][{}].push_back(locJObject); //save showers by bunch: any bunch (empty vector)
+		}
 	}
 }
 
@@ -683,7 +706,7 @@ vector<int> DSourceComboTimeHandler::Calc_BeamBunchShifts(double locVertexTime, 
 		if((locDeltaT >= locMinDeltaT) && (locDeltaT < locMaxDeltaT))
 		{
 			if(dDebugLevel >= 10)
-				cout << "save shift: " << locNumShifts << endl;
+			  cout << "save shift: " << locNumShifts << endl;
 			locRFShifts.push_back(locNumShifts);
 		}
 		++locNumShifts;
@@ -1123,7 +1146,7 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 
 	//ok, total chisq's are computed, pick the one that is the best!
 	auto Compare_RFChiSqs = [](const pair<int, double>& lhs, const pair<int, double>& rhs) -> bool {return lhs.second < rhs.second;};
-	auto locRFBunch = std::max_element(locChiSqByRFBunch.begin(), locChiSqByRFBunch.end(), Compare_RFChiSqs)->first;
+	auto locRFBunch = std::min_element(locChiSqByRFBunch.begin(), locChiSqByRFBunch.end(), Compare_RFChiSqs)->first;
 
 	if(dDebugLevel >= 10)
 		cout << "chosen bunch: " << locRFBunch << endl;

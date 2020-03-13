@@ -84,6 +84,8 @@ class JEventProcessor_occupancy_online:public jana::JEventProcessor{
 
 		//------------------------ TPOL -----------------------
 		TH1I *tpol_occ;
+		TH1I *tpol_occ2;
+		TH1I *tpol_occ3;
 
 		//------------------------ TOF ------------------------
 		TH1I *tof_num_events;

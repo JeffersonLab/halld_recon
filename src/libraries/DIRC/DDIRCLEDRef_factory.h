@@ -31,6 +31,9 @@ class DDIRCLEDRef_factory:public jana::JFactory<DDIRCLEDRef>{
   double t_base,t_base_tdc;
   double tdc_adc_time_offset;
 
+  double tdc_time_offset;
+  double adc_time_offset;
+
   DDIRCLEDRef* FindMatch(double T);
   
  private:

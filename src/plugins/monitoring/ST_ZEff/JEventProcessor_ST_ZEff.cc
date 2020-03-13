@@ -187,6 +187,8 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
   auto locParticleID = locParticleID_algos[0];
   // We want to be use some of the tools available in the RFTime factory 
   // Specifically steping the RF back to a chosen time
+  vector<DRFTime *> locRFTimes;
+  eventLoop->Get(locRFTimes);      // make sure brun() gets called for this factory!
   auto locRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
 
   // Grab the associated detector matches object

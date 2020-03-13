@@ -261,6 +261,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DFCALHit *> fcalHitVector;
     vector<const DTAGMHit *> tagmHitVector;
     vector<const DTAGHHit *> taghHitVector;
+    vector<const DTPOLHit *> tpolHitVector;
 
     loop->Get(cdcHitVector);
     loop->Get(fdcHitVector);
@@ -270,6 +271,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(fcalHitVector);
     loop->Get(tagmHitVector, "Calib");
     loop->Get(taghHitVector, "Calib");
+    loop->Get(tpolHitVector);
 
     // TTabUtilities object used for RF time conversion
     const DTTabUtilities* locTTabUtilities = NULL;
@@ -311,6 +313,15 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             Fill1DHistogram ("HLDetectorTiming", "FDC", "FDCHit Cathode time", fdcHitVector[i]->t,
                     "FDCHit Cathode time;t [ns];", nBins, xMin, xMax);
         }
+    }
+
+    for (unsigned int j = 0; j < tpolHitVector.size(); j++){
+           if (tpolHitVector[j]->w_samp1 > 160.0 || tpolHitVector[j]->pulse_peak < 60.0) continue;
+           unsigned int NSECTORS = 32;
+           unsigned int nsamples = tpolHitVector[j]->nsamples;
+           Fill2DHistogram("HLDetectorTiming","TPOL","TPOL time per sector",tpolHitVector[j]->sector,tpolHitVector[j]->t_proxy,"TPOL time vs. sector; Sector; Time [ns]",NSECTORS,0.5,NSECTORS+0.5,nsamples+25,0.0,4.0*nsamples+100);
+
+           Fill1DHistogram("HLDetectorTiming","TPOL","TPOL time",tpolHitVector[j]->t_proxy,"TPOL time; Time [ns]; Entries",nsamples+25,0.0,4.0*nsamples+100);
     }
 
 #if 0

@@ -198,6 +198,7 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         hit->t=hit->time_fadc;
         hit->has_TDC=false;
         hit->has_fADC=true;
+        hit->time_tdc = 0;
 
         hit->AddAssociatedObject(digihit);
         _data.push_back(hit);
@@ -221,10 +222,11 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         DTAGMHit *hit = nullptr;
         for (unsigned int j=0; j < _data.size(); ++j) {
             if (_data[j]->row == row && _data[j]->column == column &&
-            fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
-          {
-            hit = _data[j];
-          }
+                _data[j]->time_fadc != 0 && _data[j]->integral != 0 &&
+                fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+            {
+                hit = _data[j];
+            }
         }
         if (hit == nullptr) {
             hit = new DTAGMHit;

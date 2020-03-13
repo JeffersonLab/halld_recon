@@ -92,7 +92,7 @@ public :
    Float_t         pim_bcal_delphi;
    Float_t         pim_bcal_delz;
    Float_t         pim_fcal_doca;
-   TLorentzVector  *misspb_p4_kin;
+   TLorentzVector  *misspb208_p4_kin;
    Double_t        AccWeight;
 
    // List of branches
@@ -165,7 +165,7 @@ public :
    TBranch        *b_pim_bcal_delphi;   //!
    TBranch        *b_pim_bcal_delz;   //!
    TBranch        *b_pim_fcal_doca;   //!
-   TBranch        *b_misspb_p4_kin;   //!
+   TBranch        *b_misspb208_p4_kin;   //!
    TBranch        *b_AccWeight;   //!
 
    MakeAmpToolsFlat(TTree *tree=0);
@@ -276,7 +276,7 @@ void MakeAmpToolsFlat::Init(TTree *tree)
    pim_p4_kin = 0;
    pim_x4_true = 0;
    pim_p4_true = 0;
-   misspb_p4_kin = 0;
+   misspb208_p4_kin = 0;
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -352,7 +352,7 @@ void MakeAmpToolsFlat::Init(TTree *tree)
    fChain->SetBranchAddress("pim_bcal_delphi", &pim_bcal_delphi, &b_pim_bcal_delphi);
    fChain->SetBranchAddress("pim_bcal_delz", &pim_bcal_delz, &b_pim_bcal_delz);
    fChain->SetBranchAddress("pim_fcal_doca", &pim_fcal_doca, &b_pim_fcal_doca);
-   fChain->SetBranchAddress("misspb_p4_kin", &misspb_p4_kin, &b_misspb_p4_kin);
+   fChain->SetBranchAddress("misspb208_p4_kin", &misspb208_p4_kin, &b_misspb208_p4_kin);
    fChain->SetBranchAddress("AccWeight", &AccWeight, &b_AccWeight);
    Notify();
 }

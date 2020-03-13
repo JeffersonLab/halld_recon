@@ -161,6 +161,7 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
    geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
+   geom->GetTRDZ(dTRDz_vec); // TRD planes
    
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos,sc_norm)){
@@ -1662,11 +1663,11 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       double v=fdchits[id]->s;
 
       // Small angle alignment correction
-      double x = S(state_x) + fdchits[id]->wire->angles.Z()*S(state_y);
-      double y = S(state_y) - fdchits[id]->wire->angles.Z()*S(state_x);
-      //tz = 1. + my_fdchits[id]->phiY*tx - my_fdchits[id]->phiX*ty;
-      double tx = (S(state_tx) + fdchits[id]->wire->angles.Z()*S(state_ty) - fdchits[id]->wire->angles.Y());
-      double ty = (S(state_ty) - fdchits[id]->wire->angles.Z()*S(state_tx) + fdchits[id]->wire->angles.X());
+      double x = Ss(state_x) + fdchits[id]->wire->angles.Z() * Ss(state_y);
+      double y = Ss(state_y) - fdchits[id]->wire->angles.Z() * Ss(state_x);
+      // tz = 1.0 + my_fdchits[id]->phiY * tx - my_fdchits[id]->phiX * ty;
+      double tx = Ss(state_tx) + fdchits[id]->wire->angles.Z() * Ss(state_ty) - fdchits[id]->wire->angles.Y();
+      double ty = Ss(state_ty) - fdchits[id]->wire->angles.Z() * Ss(state_tx) + fdchits[id]->wire->angles.X();
 
       // Projected position along the wire 
       double vpred=x*sina+y*cosa;
@@ -1687,14 +1688,16 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       // Difference between measurement and projection for the cathodes
       double tv=tx*sina+ty*cosa;
       double resi_c=v-vpred;
-      
+
       // Difference between measurement and projection perpendicular to the wire
-      double drift=0.; // assume hit at wire position
-      if (fit_type==kTimeBased){
-	double drift_time=fdc_updates[id].tdrift;
-	drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
+      double drift = 0.0;  // assume hit at wire position
+      int left_right = -999;
+      double drift_time = fdc_updates[id].tdrift;
+      if (fit_type == kTimeBased) {
+        drift = (du > 0.0 ? 1.0 : -1.0) * fdc_drift_distance(drift_time);
+        left_right = (du > 0.0 ? +1 : -1);
       }
-      double resi_a=drift-doca;
+      double resi_a = drift - doca;
 
       // Variance from filter step
       DMatrix2x2 V=fdc_updates[id].V;
@@ -1727,14 +1730,19 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
       H(1,state_tx)=H_T(state_tx,1);
       H(1,state_ty)=H_T(state_ty,1);
 
-      if (fdchits[id]->wire->layer==PLANE_TO_SKIP){
-	//V+=Cs.SandwichMultiply(H_T);
-	V=V+H*Cs*H_T;
+      if (fdchits[id]->wire->layer == PLANE_TO_SKIP) {
+        // V += Cs.SandwichMultiply(H_T);
+        V = V + H * Cs * H_T;
+      } else {
+        // V -= dC.SandwichMultiply(H_T);
+
+        // R. Fruehwirth, Nucl. Instrum. Methods Phys. Res. A 262, 444 (1987).
+        // Eq. (9)
+        // The following V (lhs) corresponds to R^n_k in the paper.
+        // dC corresponds to 'A_k * (C^n_{k+1} - C^k_{k+1}) * A_k^T' in the paper.
+        V = V - H * dC * H_T;
       }
-      else{
-	//V-=dC.SandwichMultiply(H_T);
-	V=V-H*Cs*H_T;
-      }
+
       /*
       if(DEBUG_HISTS){
 	hFDCOccTrkSmooth->Fill(fdchits[id]->wire->layer);
@@ -1754,7 +1762,8 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
 				    0.0, //tcorr
 				    resi_c, sqrt(V(1,1))
 				    );
-	 
+      thisPull.left_right = left_right;
+
       if (fdchits[id]->wire->layer!=PLANE_TO_SKIP){
 	vector<double> derivatives;
 	derivatives.resize(FDCTrackD::size);
@@ -1787,6 +1796,18 @@ DTrackFitterStraightTrack::Smooth(vector<fdc_update_t>&fdc_updates,
 
 	// dDOCAW/dty
 	derivatives[FDCTrackD::dDOCAW_dty] = (sina*(-(tx*cosa) + ty*sina)*(u - x*cosa + y*sina))/pow(1 + pow(tx*cosa - ty*sina,2),1.5); 
+
+    // dDOCAW/dt0
+    double t0shift = 4.0;  // ns
+    double drift_shift = 0.0;
+    if (drift_time < 0.0) {
+      drift_shift = drift;
+    } else {
+      drift_shift =
+          (du > 0.0 ? 1.0 : -1.0) *
+          fdc_drift_distance(drift_time + t0shift);
+    }
+    derivatives[FDCTrackD::dW_dt0] = (drift_shift - drift) / t0shift;
 
 	// And the cathodes
 	//dDOCAW/ddeltax
@@ -2045,38 +2066,13 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
 						  const DVector3 &dir){
   double z0=pos0.z();
   double uz=dir.z();
+  double s=0.,t=0.;
+  DVector3 pos(0,0,0);
+  DVector3 diff(0,0,0);
   ClearExtrapolations();
-
-   // Extrapolate to DIRC
-  DVector3 diff=((dDIRCz-z0)/uz)*dir;
-  DVector3 pos=pos0+diff;
-  double s=diff.Mag();
-  double t=s/29.98;
-  extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
-
-  // Extrapolate to TOF
-  diff=((dTOFz-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	 
-  
-  // Extrapolate to FCAL
-  diff=((dFCALz-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
-  // extrapolate to exit of FCAL
-  diff=((dFCALz+45.-z0)/uz)*dir;
-  pos=pos0+diff;
-  s=diff.Mag();
-  t=s/29.98;
-  extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
 
   // Extrapolate to Start Counter and BCAL
   double R=pos0.Perp();
-  diff.SetMag(0.);
   double z=z0;
   while (R<89.0 && z>17. && z<410.){
     diff+=(1./dir.z())*dir;
@@ -2115,10 +2111,56 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
 	}
 	d_old=d;
       }
-	 }
+    }
     if (R>64.){	 
       extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
     }
   }
- 
+
+  // Extrapolate to TRD
+  for (unsigned int i=0;i<dTRDz_vec.size();i++){
+    diff=((dTRDz_vec[i]-z0)/uz)*dir;
+    pos=pos0+diff;
+    if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+      s=diff.Mag();
+      t=s/29.98;
+      extrapolations[SYS_TRD].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));   	
+    }
+  }
+
+  // Extrapolate to DIRC
+  diff=((dDIRCz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_DIRC].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+  }
+
+  // Extrapolate to TOF
+  diff=((dTOFz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    double s=diff.Mag();
+    double t=s/29.98;
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_TOF].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));	
+  }
+  
+  // Extrapolate to FCAL
+  diff=((dFCALz-z0)/uz)*dir;
+  pos=pos0+diff;
+  if (fabs(pos.x())<130. && fabs(pos.y())<130.){
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));  
+  
+    // extrapolate to exit of FCAL
+    diff=((dFCALz+45.-z0)/uz)*dir;
+    pos=pos0+diff;
+    s=diff.Mag();
+    t=s/29.98;
+    extrapolations[SYS_FCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+  } 
 }
