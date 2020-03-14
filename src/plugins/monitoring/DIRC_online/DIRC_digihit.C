@@ -120,7 +120,7 @@
     hDigiHit_Time->SetTitleSize(tsize,"xy");
     h2->Draw();
     double scale = h2->GetMaximum()/h1->GetMaximum();
-    if(h1->GetMaximum() == 0) scale = 1.;
+    if(h1->GetMaximum() == 0) scale = 1/15.;
     h1->Scale(scale);
     h1->Draw("h same");
   }
@@ -143,7 +143,7 @@
     h2->SetTitleSize(tsize,"xy");
     h2->Draw();
     double scale = h2->GetMaximum()/h1->GetMaximum();
-    if(h1->GetMaximum() == 0) scale = 1.;
+    if(h1->GetMaximum() == 0) scale = 1/15.;
     h1->Scale(scale);
     h1->Draw("h same");
   }
