@@ -66,7 +66,9 @@
     c1->cd(1);
     hTS_LED->SetTitleSize(tsize,"xy");
     hTS_LED->Draw();
-    hTS->Scale(hTS_LED->GetMaximum()/hTS->GetMaximum());
+    double scale = hTS_LED->GetMaximum()/hTS->GetMaximum();
+    if(hTS->GetMaximum() == 0) scale = 1/5.;
+    hTS->Scale(scale);
     hTS->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
@@ -81,17 +83,21 @@
     c1->cd(2);
     hTS_LED_North->SetTitleSize(tsize,"xy");
     hTS_LED_North->Draw();
-    hTS_North->Scale(hTS_LED_North->GetMaximum()/hTS_North->GetMaximum());
+    double scale = hTS_LED_North->GetMaximum()/hTS_North->GetMaximum();
+    if(hTS_North->GetMaximum() == 0) scale = 1/5.;
+    hTS_North->Scale(scale);
     hTS_North->Draw("h same");
   }
 
-  if(hAdcTime && hAdcTime){
+  if(hAdcTime && hTdcTime){
     hAdcTime->SetLineColor(kRed);
     hTdcTime->SetLineColor(kGreen);
     c1->cd(3);
     hAdcTime->SetTitleSize(tsize,"xy");
     hAdcTime->Draw();
-    hTdcTime->Scale(hAdcTime->GetMaximum()/hTdcTime->GetMaximum());
+    double scale = hAdcTime->GetMaximum()/hTdcTime->GetMaximum();
+    if(hTdcTime->GetMaximum() == 0) scale = 1;
+    hTdcTime->Scale(scale);
     hTdcTime->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
