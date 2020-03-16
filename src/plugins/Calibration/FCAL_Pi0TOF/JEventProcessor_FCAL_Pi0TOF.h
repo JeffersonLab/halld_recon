@@ -40,7 +40,7 @@ class JEventProcessor_FCAL_Pi0TOF:public jana::JEventProcessor{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 		
-		vector<const DTOFPoint*> tof_points;
+		//vector<const DTOFPoint*> tof_points;
 		double bar2x( int bar );
 		int TOF_Match(double kinVertexX, double kinVertexY, double kinVertexZ, double x, double y, double z);
                 double m_beamSpotX;
