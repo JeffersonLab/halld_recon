@@ -31,6 +31,8 @@ class JEventProcessor_TrackingPulls : public jana::JEventProcessor {
                         ///< has been called.
   jerror_t fini(void);  ///< Called after last event of last event source has
                         ///< been processed.
+ 
+  bool SAVE_TREES;
 
   TTree *tree_;
   int eventnumber_;

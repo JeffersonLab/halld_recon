@@ -36,48 +36,55 @@ JEventProcessor_TrackingPulls::~JEventProcessor_TrackingPulls() {}
 jerror_t JEventProcessor_TrackingPulls::init(void) {
   // This is called once at program startup.
 
-  tree_ = new TTree("tracking_pulls", "tracking_pulls");
-  tree_->SetAutoSave(1000);
-  tree_->Branch("eventnumber", &eventnumber_, "eventnumber/I");
-  tree_->Branch("track_index", &track_index_, "track_index/I");
-  tree_->Branch("chi2", &chi2_, "chi2/D");
-  tree_->Branch("ndf", &ndf_, "ndf/I");
-  tree_->Branch("mom", &mom_, "mom/D");
-  tree_->Branch("phi", &phi_, "phi/D");
-  tree_->Branch("theta", &theta_, "theta/D");
-  tree_->Branch("pos_x", &pos_x_, "pos_x/D");
-  tree_->Branch("pos_y", &pos_y_, "pos_y/D");
-  tree_->Branch("pos_z", &pos_z_, "pos_z/D");
-  tree_->Branch("smoothed", &smoothed_, "smoothed/I");
-  tree_->Branch("any_nan", &any_nan_, "any_nan/I");
-  tree_->Branch("cdc_ring_multi_hits", &cdc_ring_multi_hits_,
-                "cdc_ring_multi_hits/I");
-  tree_->Branch("fdc_resi", fdc_resi_, Form("fdc_resi[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_resic", fdc_resic_,
-                Form("fdc_resic[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_err", fdc_err_, Form("fdc_err[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_errc", fdc_errc_, Form("fdc_errc[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_x", fdc_x_, Form("fdc_x[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_y", fdc_y_, Form("fdc_y[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_z", fdc_z_, Form("fdc_z[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_w", fdc_w_, Form("fdc_w[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_s", fdc_s_, Form("fdc_s[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_d", fdc_d_, Form("fdc_d[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_tdrift", fdc_tdrift_,
-                Form("fdc_tdrift[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_wire", fdc_wire_, Form("fdc_wire[%d]/I", kNumFdcPlanes));
-  tree_->Branch("fdc_left_right", fdc_left_right_,
-                Form("fdc_left_right[%d]/I", kNumFdcPlanes));
-  tree_->Branch("cdc_resi", cdc_resi_, Form("cdc_resi[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_err", cdc_err_, Form("cdc_err[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_z", cdc_z_, Form("cdc_z[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_tdrift", cdc_tdrift_,
-                Form("cdc_tdrift[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_straw", cdc_straw_, Form("cdc_straw[%d]/I", kNumCdcRings));
-  tree_->Branch("cdc_left_right", cdc_left_right_,
-                Form("cdc_left_right[%d]/I", kNumCdcRings));
-  tree_->Branch("cdc_phi_intersect", cdc_phi_intersect_,
-                Form("cdc_phi_intersect[%d]/D", kNumCdcRings));
+  // don't save trees by default so that we can use this in monitoring
+  SAVE_TREES = false;
+  gPARMS->SetDefaultParameter("TRACKING_PULLS:SAVE_TREES", SAVE_TREES,
+  						"Set to >0 to save trees for tracking pull studies");
+
+  if(SAVE_TREES) {
+	  tree_ = new TTree("tracking_pulls", "tracking_pulls");
+	  tree_->SetAutoSave(1000);
+	  tree_->Branch("eventnumber", &eventnumber_, "eventnumber/I");
+	  tree_->Branch("track_index", &track_index_, "track_index/I");
+	  tree_->Branch("chi2", &chi2_, "chi2/D");
+	  tree_->Branch("ndf", &ndf_, "ndf/I");
+	  tree_->Branch("mom", &mom_, "mom/D");
+	  tree_->Branch("phi", &phi_, "phi/D");
+	  tree_->Branch("theta", &theta_, "theta/D");
+	  tree_->Branch("pos_x", &pos_x_, "pos_x/D");
+	  tree_->Branch("pos_y", &pos_y_, "pos_y/D");
+	  tree_->Branch("pos_z", &pos_z_, "pos_z/D");
+	  tree_->Branch("smoothed", &smoothed_, "smoothed/I");
+	  tree_->Branch("any_nan", &any_nan_, "any_nan/I");
+	  tree_->Branch("cdc_ring_multi_hits", &cdc_ring_multi_hits_,
+					"cdc_ring_multi_hits/I");
+	  tree_->Branch("fdc_resi", fdc_resi_, Form("fdc_resi[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_resic", fdc_resic_,
+					Form("fdc_resic[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_err", fdc_err_, Form("fdc_err[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_errc", fdc_errc_, Form("fdc_errc[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_x", fdc_x_, Form("fdc_x[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_y", fdc_y_, Form("fdc_y[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_z", fdc_z_, Form("fdc_z[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_w", fdc_w_, Form("fdc_w[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_s", fdc_s_, Form("fdc_s[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_d", fdc_d_, Form("fdc_d[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_tdrift", fdc_tdrift_,
+					Form("fdc_tdrift[%d]/D", kNumFdcPlanes));
+	  tree_->Branch("fdc_wire", fdc_wire_, Form("fdc_wire[%d]/I", kNumFdcPlanes));
+	  tree_->Branch("fdc_left_right", fdc_left_right_,
+					Form("fdc_left_right[%d]/I", kNumFdcPlanes));
+	  tree_->Branch("cdc_resi", cdc_resi_, Form("cdc_resi[%d]/D", kNumCdcRings));
+	  tree_->Branch("cdc_err", cdc_err_, Form("cdc_err[%d]/D", kNumCdcRings));
+	  tree_->Branch("cdc_z", cdc_z_, Form("cdc_z[%d]/D", kNumCdcRings));
+	  tree_->Branch("cdc_tdrift", cdc_tdrift_,
+					Form("cdc_tdrift[%d]/D", kNumCdcRings));
+	  tree_->Branch("cdc_straw", cdc_straw_, Form("cdc_straw[%d]/I", kNumCdcRings));
+	  tree_->Branch("cdc_left_right", cdc_left_right_,
+					Form("cdc_left_right[%d]/I", kNumCdcRings));
+	  tree_->Branch("cdc_phi_intersect", cdc_phi_intersect_,
+					Form("cdc_phi_intersect[%d]/D", kNumCdcRings));
+  }
 
   return NOERROR;
 }
@@ -488,19 +495,21 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
               "Distance to Wire; Distance Along the Wire",
               100, -50., 50., 100, -50., 50.);
         }
-        fdc_resi_[fdc_hit->wire->layer - 1] = resi;
-        fdc_resic_[fdc_hit->wire->layer - 1] = resic;
-        fdc_err_[fdc_hit->wire->layer - 1] = err;
-        fdc_errc_[fdc_hit->wire->layer - 1] = errc;
-        fdc_x_[fdc_hit->wire->layer - 1] = fdc_hit->xy.X();
-        fdc_y_[fdc_hit->wire->layer - 1] = fdc_hit->xy.Y();
-        fdc_z_[fdc_hit->wire->layer - 1] = pulls[iPull].z;
-        fdc_w_[fdc_hit->wire->layer - 1] = fdc_hit->w;
-        fdc_s_[fdc_hit->wire->layer - 1] = fdc_hit->s;
-        fdc_d_[fdc_hit->wire->layer - 1] = pulls[iPull].d;
-        fdc_tdrift_[fdc_hit->wire->layer - 1] = tdrift;
-        fdc_wire_[fdc_hit->wire->layer - 1] = fdc_hit->wire->wire;
-        fdc_left_right_[fdc_hit->wire->layer - 1] = pulls[iPull].left_right;
+		if(SAVE_TREES) {
+			fdc_resi_[fdc_hit->wire->layer - 1] = resi;
+			fdc_resic_[fdc_hit->wire->layer - 1] = resic;
+			fdc_err_[fdc_hit->wire->layer - 1] = err;
+			fdc_errc_[fdc_hit->wire->layer - 1] = errc;
+			fdc_x_[fdc_hit->wire->layer - 1] = fdc_hit->xy.X();
+			fdc_y_[fdc_hit->wire->layer - 1] = fdc_hit->xy.Y();
+			fdc_z_[fdc_hit->wire->layer - 1] = pulls[iPull].z;
+			fdc_w_[fdc_hit->wire->layer - 1] = fdc_hit->w;
+			fdc_s_[fdc_hit->wire->layer - 1] = fdc_hit->s;
+			fdc_d_[fdc_hit->wire->layer - 1] = pulls[iPull].d;
+			fdc_tdrift_[fdc_hit->wire->layer - 1] = tdrift;
+			fdc_wire_[fdc_hit->wire->layer - 1] = fdc_hit->wire->wire;
+			fdc_left_right_[fdc_hit->wire->layer - 1] = pulls[iPull].left_right;
+		}
       }
 
       // Once we are done with the FDC, move on to the CDC.
@@ -615,18 +624,22 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
                         pmag, resi, ";#theta;|P|", 70, 0.0, 140.0, 50, 0.0,
                         10.0);
         }
-        cdc_resi_[cdc_hit->wire->ring - 1] = resi;
-        cdc_err_[cdc_hit->wire->ring - 1] = err;
-        cdc_z_[cdc_hit->wire->ring - 1] = pulls[iPull].z;
-        cdc_tdrift_[cdc_hit->wire->ring - 1] = tdrift;
-        cdc_straw_[cdc_hit->wire->ring - 1] = cdc_hit->wire->straw;
-        cdc_left_right_[cdc_hit->wire->ring - 1] = pulls[iPull].left_right;
-        cdc_phi_intersect_[cdc_hit->wire->ring - 1] =
-            (cdc_hit->wire->origin + (z - 92.0) * cdc_hit->wire->udir).Phi() *
-            TMath::RadToDeg();
+  		if(SAVE_TREES) {
+			cdc_resi_[cdc_hit->wire->ring - 1] = resi;
+			cdc_err_[cdc_hit->wire->ring - 1] = err;
+			cdc_z_[cdc_hit->wire->ring - 1] = pulls[iPull].z;
+			cdc_tdrift_[cdc_hit->wire->ring - 1] = tdrift;
+			cdc_straw_[cdc_hit->wire->ring - 1] = cdc_hit->wire->straw;
+			cdc_left_right_[cdc_hit->wire->ring - 1] = pulls[iPull].left_right;
+			cdc_phi_intersect_[cdc_hit->wire->ring - 1] =
+				(cdc_hit->wire->origin + (z - 92.0) * cdc_hit->wire->udir).Phi() *
+				TMath::RadToDeg();
+		}
       }
     }
-    tree_->Fill();
+    if(SAVE_TREES) {
+      tree_->Fill();
+    }
   }
 
   return NOERROR;
