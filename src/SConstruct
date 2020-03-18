@@ -84,9 +84,9 @@ env.Replace( CXX = os.getenv('CXX', 'c++'),
 # Get compiler name
 compiler = 'unknown'
 compiler_string = subprocess.Popen([env['CC'],"-v"], stderr=subprocess.PIPE).communicate()[1]
-if 'clang' in compiler_string:
+if b'clang' in compiler_string:
 	compiler = 'clang'
-if 'gcc' in compiler_string and 'clang' not in compiler_string:
+if b'gcc' in compiler_string and 'clang' not in compiler_string:
 	compiler = 'gcc'
 env.Replace(COMPILER = compiler)
 
@@ -139,7 +139,7 @@ env.Alias('install', installdir)
 
 # Create setenv if user explicitly specified "install" target
 build_targets = map(str,BUILD_TARGETS)
-if len(build_targets)>0 and not env.GetOption('clean'):
+if len(list(build_targets))>0 and not env.GetOption('clean'):
 	if 'install' in build_targets:
 		import sbms_setenv
 		sbms_setenv.mk_setenv_csh(env)

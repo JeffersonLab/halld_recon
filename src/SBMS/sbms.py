@@ -46,6 +46,7 @@ def library(env, libname=''):
 		sources = [s for s in env['ALL_SOURCES'] if s.name not in ignore]		
 
 	# Build static library from all source
+	sources = [str(x) for x in sources]
 	myobjs = env.Object(sources)
 	myobjs.extend(objects)
 	mylib = env.Library(target = libname, source = myobjs)
@@ -182,7 +183,7 @@ def python_so_module(env, modname):
 		mymod = modname + '.so'
 		moduledir = env.subst('$PYTHON2DIR')
 	else:
-		mymod = modname + EXT_SUFFIX
+		mymod = modname + str(EXT_SUFFIX)
 		moduledir = env.subst('$PYTHON3DIR')
 	modsource = 'setup_' + modname + '.py'
 	modlib = env.PYMODBUILD(mymod, modsource)
@@ -389,11 +390,11 @@ def AddCompileFlags(env, allflags):
 	cxxflags = []
 	cpppath = []
 	for f in allflags.split():
-		if f.startswith('-I'):
+		if f.startswith(b'-I'):
 			cpppath.append(f[2:])
 		else:
 			if f == '-g': continue
-			if f.startswith('-std=c++'):
+			if f.startswith(b'-std=c++'):
 				cxxflags.append(f)
 			else:
 				ccflags.append(f)
@@ -422,6 +423,7 @@ def AddLinkFlags(env, allflags):
 	libpath = []
 	libs = []
 	for f in allflags.split():
+		f = str(f)
 		if f.startswith('-L'):
 			libpath.append(f[2:])
 		elif f.startswith('-l'):
@@ -479,21 +481,21 @@ def ApplyPlatformSpecificSettings(env, platform):
 	# "."s. The Python module loader doesn't like these and we have to
 	# replace them with "-"s to appease it.
 
-	platform = re.sub('\.', '-', platform)
+	platform = re.sub('\.', '-', str(platform))
 
 	modname = "sbms_%s" % platform
 	if (int(env['SHOWBUILD']) > 0):
-		print "looking for %s.py" % modname
+		print("looking for %s.py" % modname)
 	try:
 		InitENV = getattr(__import__(modname), "InitENV")
 
 		# Run the InitENV function (if found)
 		if(InitENV != None):
-			print "sbms : Applying settings for platform %s" % platform
+			print("sbms : Applying settings for platform %s" % platform)
 			InitENV(env)
 
-	except ImportError,e:
-		if (int(env['SHOWBUILD']) > 0): print "%s" % e
+	except ImportError as e:
+		if (int(env['SHOWBUILD']) > 0): print("%s" % e)
 		pass
 
 
@@ -632,7 +634,7 @@ def AddDANA(env):
 	DANA_LIBS += " DAQ JANA EVENTSTORE"
 	DANA_LIBS += " expat gfortran" 
 	env.PrependUnique(LIBS = DANA_LIBS.split())
-        env.Append(LIBS = 'DANA')
+	env.Append(LIBS = 'DANA')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = DANA_LIBS.split())
 
 ##################################
@@ -826,7 +828,7 @@ def AddROOT(env):
 
 	rootsys = os.getenv('ROOTSYS', '/usr/local/root/PRO')
 	if not os.path.isdir(rootsys):
-		print 'ROOTSYS not defined or points to a non-existant directory!'
+		print('ROOTSYS not defined or points to a non-existant directory!')
 		sys.exit(-1)
 
 	# Only root-config the first time through
@@ -834,9 +836,9 @@ def AddROOT(env):
 		AddROOT.ROOT_CFLAGS    = subprocess.Popen(["%s/bin/root-config" % rootsys, "--cflags"], stdout=subprocess.PIPE).communicate()[0]
 		AddROOT.ROOT_LINKFLAGS = subprocess.Popen(["%s/bin/root-config" % rootsys, "--glibs" ], stdout=subprocess.PIPE).communicate()[0]
 		has_tmva = subprocess.Popen(["%s/bin/root-config" % rootsys, "--has-tmva" ], stdout=subprocess.PIPE).communicate()[0]
-		if 'yes' in has_tmva:
-			AddROOT.ROOT_CFLAGS    += ' -DHAVE_TMVA=1'
-			AddROOT.ROOT_LINKFLAGS += ' -lTMVA'
+		if b'yes' in has_tmva:
+			AddROOT.ROOT_CFLAGS    += b' -DHAVE_TMVA=1'
+			AddROOT.ROOT_LINKFLAGS += b' -lTMVA'
 
 	AddCompileFlags(env, AddROOT.ROOT_CFLAGS)
 	AddLinkFlags(env, AddROOT.ROOT_LINKFLAGS)
@@ -874,7 +876,7 @@ def AddROOT(env):
 	elif os.path.exists(rootcintpath):
 		bld = SCons.Script.Builder(action = rootcintaction, suffix='_Dict.cc', src_suffix='.h')
 	else:
-		print 'Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.'
+		print('Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.')
 		return
 
 	env.Append(BUILDERS = {'ROOTDict' : bld})
@@ -891,13 +893,13 @@ def AddROOT(env):
 	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
-		print "---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath
+		print("---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath)
 	os.chdir(srcpath)
 	for f in glob.glob('*.[h|hh|hpp]'):
 		if 'ClassDef' in open(f).read():
 			env.AppendUnique(ALL_SOURCES = env.ROOTDict(f))
 			if(int(env['SHOWBUILD'])>1):
-				print "       ROOT dictionary for %s" % f
+				print("       ROOT dictionary for %s" % f)
 	os.chdir(curpath)
 
 
@@ -978,11 +980,11 @@ def AddROOTSpyMacros(env):
 	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
-		print "---- Looking for ROOT macro files (*.C) in: %s" % srcpath
+		print("---- Looking for ROOT macro files (*.C) in: %s" % srcpath)
 	os.chdir(srcpath)
 	for f in glob.glob('*.C'):
 		env.AppendUnique(ALL_SOURCES = env.ROOTSpyMacro(f))
-		if(int(env['SHOWBUILD'])>1) : print "       ROOTSpy Macro for %s" % f
+		if(int(env['SHOWBUILD'])>1) : print("       ROOTSpy Macro for %s" % f)
 
 	os.chdir(curpath)
 
@@ -997,8 +999,8 @@ def AddSWIG(env):
 	if ProgramExists("swig"):
 		env.AppendUnique(SWIG_EXISTS = "1")
 		if not env['BUILDSWIG'] or int(env['BUILDSWIG']) != 1:
-			print '-- NOTE: swig exists but will not be used unless you  --'
-			print '--       add "BUILDSWIG=1" to the scons command line. --'
+			print('-- NOTE: swig exists but will not be used unless you  --')
+			print('--       add "BUILDSWIG=1" to the scons command line. --')
 	else:
 		env.AppendUnique(SWIG_EXISTS = "0")
 	# TEMPORARILY DISABLE
@@ -1041,7 +1043,7 @@ def AddCUDA(env):
 		srcpath = env.Dir('.').srcnode().abspath
 		os.chdir(srcpath)
 		for f in glob.glob('*.cu'):
-			if env['SHOWBUILD']>0 : print 'Adding %s' % f
+			if env['SHOWBUILD']>0 : print('Adding %s' % f)
 			env.AppendUnique(MISC_OBJECTS = env.CUDA(f))
 		os.chdir(curpath)
 
@@ -1060,10 +1062,10 @@ def AddAmpTools(env):
 	# printed and env left unchanged.
 	AMPTOOLS = os.getenv('AMPTOOLS')
 	if AMPTOOLS==None:
-		print ''
-		print 'AmpTools is being requested but the AMPTOOLS environment variable'
-		print 'is not set. Expect to see an error message below....'
-		print ''
+		print('')
+		print('AmpTools is being requested but the AMPTOOLS environment variable')
+		print('is not set. Expect to see an error message below....')
+		print('')
 	else:
 		env.AppendUnique(CUDAFLAGS=['-I%s -I%s/src/libraries' % (AMPTOOLS, os.getenv('HALLD_RECON_HOME',os.getcwd()))])
 		AddCUDA(env)
@@ -1072,7 +1074,7 @@ def AddAmpTools(env):
 		AMPTOOLS_LIBS = 'AmpTools'
 		if os.getenv('CUDA')!=None and os.path.exists('%s/lib/libAmpTools_GPU.a' % AMPTOOLS):
 			AMPTOOLS_LIBS = 'AmpTools_GPU'
-			print 'Using GPU enabled AMPTOOLS library'
+			print('Using GPU enabled AMPTOOLS library')
 
 		env.AppendUnique(CPPPATH = AMPTOOLS_CPPPATH)
 		env.AppendUnique(LIBPATH = AMPTOOLS_LIBPATH)
