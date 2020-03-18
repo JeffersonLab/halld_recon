@@ -1,7 +1,41 @@
+//
+// Guidance: --------------------------------------------
+//
+// The peaks should be generally aligned with the red line.
+// The signal/background level depends on the electron beam
+// current.
+//
+// The TAGH TDC-ADC distribution should be generally centered
+// around zero, though it may be a little ratty.  Sometimes
+// a shift of 32 ns is seen, this will be taken care of by
+// standard calibrations.
+//
+// The TAGM TDC-ADC distribution should be centered around
+// zero.  There are four apparent gaps in the distribution,
+// they correspond to the columns which are individually 
+// read out, and can be ignored.
+//  
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/TAGM/TAGMHit Matched time
 // hnamepath: /HLDetectorTiming/TAGM/TAGMHit TDC_ADC Difference
 // hnamepath: /HLDetectorTiming/TAGH/TAGHHit Matched time
 // hnamepath: /HLDetectorTiming/TAGH/TAGHHit TDC_ADC Difference
+
+// e-mail: aaustreg@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
+// e-mail: jonesrt@jlab.org
 
 {
 	//Goto Path
@@ -11,8 +45,8 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalTAGHTime = -5.;
-        double nominalTAGMTime = -4.;	
+        double nominalTAGHTime = -1.;
+        double nominalTAGMTime = -1.;	
 
 	//Get Histograms
 	TH1I* TAGH_Timing        = (TH1I*)gDirectory->Get("TAGH/TAGHHit Matched time");
