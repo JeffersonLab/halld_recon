@@ -161,9 +161,8 @@ void HistMacro_CDCTimeToDistance(){
 
    c->cd(1);
 
-   TProfile2D *profile = (TProfile2D *) gDirectory->Get("/CDC_TimeToDistance/Predicted Drift Distance Vs Delta Vs t_drift");
 
-   //   gStyle->SetOptStat(0);
+   TProfile2D *profile = (TProfile2D *) gDirectory->Get("/CDC_TimeToDistance/Predicted Drift Distance Vs Delta Vs t_drift");
 
    Double_t contours[21] =
    { 0.00, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
@@ -172,7 +171,8 @@ void HistMacro_CDCTimeToDistance(){
    profile->SetContour(21, contours);
    profile->SetStats(0);
    profile->Draw("colz");
-   profile->GetXaxis()->SetRangeUser(0,1200);
+   profile->SetMaximum(1);
+   profile->GetXaxis()->SetRangeUser(0,1000);
    profile->GetYaxis()->SetRangeUser(-0.22,0.22);
    profile->GetYaxis()->SetTitleOffset(1.15);
    f->SetContour(21, contours);
@@ -180,26 +180,52 @@ void HistMacro_CDCTimeToDistance(){
    profile->Draw("cont2 list same");
    f->Draw("cont2 list same");
 
+
+
+   //-----------------------------------------------------------------------------------------
+
+
    TPad *p = (TPad*)c->cd(2);
    p->SetRightMargin(0.12);
-   
+   p->SetGridx();
+   p->SetGridy();
+
+
    TH2I *hist = (TH2I *) gDirectory->Get("/CDC_TimeToDistance/Residual Vs. Drift Time"); 
+   gStyle->SetOptStat(100);
    hist->SetStats(1);
+   hist->GetXaxis()->SetRangeUser(0,1000);
+   hist->GetYaxis()->SetTitleOffset(1.40);
    hist->Draw("colz");
-   c->Update();
+
+   // get stats in cm
+   double ymean = hist->GetMean(2);
+   double ysd = hist->GetRMS(2);
+   // convert to um
+   ymean = ymean* 1e4;
+   ysd = ysd * 1e4;
+   
+   c->Update();  // need this so that the next line can find the stats box
 
    TPaveStats *st = (TPaveStats*)hist->FindObject("stats");
-   st->SetOptStat(1100);
-   st->SetX1NDC(0.62);
+   st->SetOptStat(100);
+   st->SetX1NDC(0.62); 
    st->SetY1NDC(0.65);
    st->SetX2NDC(0.85);
    st->SetY2NDC(0.88);
 
-   hist->GetXaxis()->SetRangeUser(0,1200);
-   hist->GetYaxis()->SetTitleOffset(1.40);
-   c->cd(2)->SetGridx();
-   c->cd(2)->SetGridy();
+   TList *listOfLines = st->GetListOfLines();
+   TText *tline = st->GetLineWith("Mean x");
+   listOfLines->Remove(tline);
+   tline = st->GetLineWith("Mean y");
+   listOfLines->Remove(tline);
 
-   c->cd();
+   st->AddText("Residuals");
+   st->AddText(Form("Mean %.2f #mum",ymean));
+   st->AddText(Form("Sigma %.2f #mum",ysd));
+
+   st->DrawClone();
+ 
    c->Update();
-}
+
+  }
