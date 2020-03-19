@@ -94,7 +94,20 @@ jerror_t JEventProcessor_pi0bcalskim::brun(JEventLoop *eventLoop, int32_t runnum
         locEventWriterEVIO->SetDetectorsToWriteOut("BCAL","pi0bcalskim");
     }
     */
-
+  DGeometry* dgeom = NULL;
+  DApplication* dapp = dynamic_cast< DApplication* >(eventLoop->GetJApplication());
+  if (dapp) dgeom = dapp->GetDGeometry(runnumber);
+  if (dgeom) {
+    dgeom->GetTargetZ(m_targetZ);
+  } else {
+    cerr << "No geometry accessbile to ccal_timing monitoring plugin." << endl;
+    return RESOURCE_UNAVAILABLE;
+  }	
+  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  std::map<string, float> beam_spot;
+  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+  m_beamSpotX = beam_spot.at("x");
+  m_beamSpotY = beam_spot.at("y");
 
     return NOERROR;
 }
@@ -144,7 +157,10 @@ jerror_t JEventProcessor_pi0bcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
   const DTrackFitter *fitter = fitters[0];
 
 	bool Candidate = false;
-	double sh1_E, sh2_E, inv_mass, kinfitVertexZ=0.0, kinfitVertexX=0.0, kinfitVertexY=0.0;
+	double sh1_E, sh2_E, inv_mass;
+	double kinfitVertexX=m_beamSpotX;
+	double kinfitVertexY=m_beamSpotY;
+	double kinfitVertexZ=m_targetZ;
 	vector <const DBCALShower *> matchedShowers;
 	DVector3 mypos(0.0,0.0,0.0);
 	for(unsigned int i = 0 ; i < locTrackTimeBased.size() ; ++i)

@@ -31,10 +31,17 @@ jerror_t DVertex_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber
 	dTargetZCenter = 65.0;
 	dTargetLength = 30.0;
 	dTargetRadius = 1.5; //FIX: grab from database!!!
+	m_beamSpotX = 0;
+	m_beamSpotY = 0;
 	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
 	locGeometry->GetTargetZ(dTargetZCenter);
 	locGeometry->GetTargetLength(dTargetLength);
+	jana::JCalibration *jcalib = japp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
+	std::map<string, float> beam_spot;
+	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+	m_beamSpotX = beam_spot.at("x");
+	m_beamSpotY = beam_spot.at("y");
 
 	gPARMS->SetDefaultParameter("VERTEX:NO_KINFIT_FLAG", dNoKinematicFitFlag);
 	gPARMS->SetDefaultParameter("VERTEX:DEBUGLEVEL", dKinFitDebugLevel);
@@ -127,7 +134,7 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 jerror_t DVertex_factory::Create_Vertex_NoTracks(const DEventRFBunch* locEventRFBunch)
 {
 	DVertex* locVertex = new DVertex();
-	locVertex->dSpacetimeVertex = DLorentzVector(DVector3(0.0, 0.0, dTargetZCenter), locEventRFBunch->dTime);
+	locVertex->dSpacetimeVertex = DLorentzVector(DVector3(m_beamSpotX, m_beamSpotY, dTargetZCenter), locEventRFBunch->dTime);
 	locVertex->dKinFitNDF = 0;
 	locVertex->dKinFitChiSq = 0.0;
 

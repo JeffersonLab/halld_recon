@@ -2,6 +2,24 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
+// Guidance: --------------------------------------------
+//
+// Upper panel: DIRC PMT occupancy for LED triggers. If this
+// is empty then the DIRC LED is not functioning properly.
+// Lower panel: DIRC PMT occupancy for non-LED triggers. If 
+// this is empty then there may not be any physics triggers.
+//
+// If you have concerns about the plots or any of them look
+// significantly different than the reference, please contact 
+// one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Justin Stevens:   x7237    (office)
+//                    585-4870 (cell)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /occupancy/dirc_num_events
 // hnamepath: /occupancy/dirc_tdc_pixel_S_occ
 // hnamepath: /occupancy/dirc_tdc_pixel_S_occ_led

@@ -1,9 +1,40 @@
+//
+// Guidance: --------------------------------------------
+//
+// These peaks should be centered at zero, with shapes
+// similar to that seen in the reference plot.
+// Note that the tagger "picket fence" plots can take
+// awhile to accumulate enough data to acquire the
+// expected shape.
+//
+// Sometimes, common shifts of 2 ns are seen in all detectors.
+// These are due to a change in the master RF time due
+// to a rebooted crate, and will be calibrated away
+// by standard processes.
+// 
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/TRACKING/TAGM - RFBunch 1D Time
 // hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch 1D Time
 // hnamepath: /HLDetectorTiming/TRACKING/SC - RF Time
 // hnamepath: /HLDetectorTiming/TRACKING/FCAL - RF Time
 // hnamepath: /HLDetectorTiming/TRACKING/TOF - RF Time
 // hnamepath: /HLDetectorTiming/TRACKING/BCAL - RF Time
+//
+// e-mail: aaustreg@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
+//
 
 {
 	//Goto Path

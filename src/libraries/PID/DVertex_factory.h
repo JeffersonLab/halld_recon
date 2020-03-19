@@ -51,6 +51,8 @@ class DVertex_factory : public jana::JFactory<DVertex>
 		double dTargetLength;
 		double dTargetRadius;
 		double dMinTrackingFOM;
+		double m_beamSpotX;
+		double m_beamSpotY;
 };
 
 #endif // _DVertex_factory_

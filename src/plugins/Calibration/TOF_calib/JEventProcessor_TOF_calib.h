@@ -41,6 +41,7 @@ class JEventProcessor_TOF_calib:public jana::JEventProcessor{
 
   int first;
   int RunNumber;
+  int ThreadCounter;
 
   float TDCTLOC;
   float ADCTLOC;

@@ -1,7 +1,27 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-
+// Guidance: --------------------------------------------
+//
+// Upper 2 panels: DIRC PMT digihit multiplicity for physics 
+// triggers (black) and LED triggers (blue), for South (left)
+// and North (right) optical boxes
+// Lower 2 panels: DIRC PMT digihit time for physics triggers 
+// (black) and LED triggers (blue) for South (left) and North
+// (right) optical boxes.  There should be 2 broad peaks in the 
+// LED distribution from the rising and trailing edge.
+//
+// If you have concerns about the plots or any of them look
+// significantly different than the reference, please contact 
+// one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Justin Stevens:   x7237    (office)
+//                    585-4870 (cell)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_LED
 // hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_NonLED
 // hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_LED
@@ -15,7 +35,9 @@
 // e-mail: tbritton@jlab.org
 
 
-{  
+{
+  //gDirectory->cd("rootspy");
+  
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("DIRC_online");
   if(dir) dir->cd();
 
@@ -82,44 +104,48 @@
 
   if(hDigiHit_Time_North && hDigiHit_Time_LED_North) {
   
-	auto hDigiHit_Time_scaled = (TH1D*)gDirectory->Get("hDigiHit_Time_scaled");
-	if( !hDigiHit_Time_scaled ) hDigiHit_Time_scaled = (TH1D*)hDigiHit_Time->Clone("hDigiHit_Time_scaled");
-	hDigiHit_Time_scaled->SetContent(hDigiHit_Time->GetArray());
+    auto h1 = (TH1I*)gDirectory->Get("hDigiHit_Time_scaled");
+    if( !h1 ) h1 = (TH1I*)hDigiHit_Time->Clone("hDigiHit_Time_scaled");
+	 for( int ibin=1; ibin<=hDigiHit_Time->GetNbinsX(); ibin++) h1->SetBinContent( ibin, (Int_t)hDigiHit_Time->GetBinContent(ibin));
+    //h1->SetContent(hDigiHit_Time->GetArray());
 
-	auto hDigiHit_Time_LED_scaled = (TH1D*)gDirectory->Get("hDigiHit_Time_LED_scaled");
-	if( !hDigiHit_Time_LED_scaled ) hDigiHit_Time_LED_scaled = (TH1D*)hDigiHit_Time_LED->Clone("hDigiHit_Time_LED_scaled");
-	hDigiHit_Time_LED_scaled->SetContent(hDigiHit_Time_LED->GetArray());
+    auto h2 = (TH1I*)gDirectory->Get("h2");
+    if( !h2 ) h2 = (TH1I*)hDigiHit_Time_LED->Clone("h2");
+	 for( int ibin=1; ibin<=hDigiHit_Time_LED->GetNbinsX(); ibin++) h2->SetBinContent( ibin, (Int_t)hDigiHit_Time_LED->GetBinContent(ibin));
+    //h2->SetContent(hDigiHit_Time_LED->GetArray());
 
-    hDigiHit_Time_scaled->SetLineColor(kBlack);
-    hDigiHit_Time_LED_scaled->SetLineColor(kBlue);
+    h1->SetLineColor(kBlack);
+    h2->SetLineColor(kBlue);
     c1->cd(3);
     hDigiHit_Time->SetTitleSize(tsize,"xy");
-    hDigiHit_Time_LED_scaled->Draw();
-    double scale = hDigiHit_Time_LED_scaled->GetMaximum()/hDigiHit_Time_scaled->GetMaximum();
-    if(hDigiHit_Time_scaled->GetMaximum() == 0) scale = 1.;
-    hDigiHit_Time_scaled->Scale(scale);
-    hDigiHit_Time_scaled->Draw("h same");
+    h2->Draw();
+    double scale = h2->GetMaximum()/h1->GetMaximum();
+    if(h1->GetMaximum() == 0) scale = 1/15.;
+    h1->Scale(scale);
+    h1->Draw("h same");
   }
 
   if(hDigiHit_Time_North && hDigiHit_Time_LED_North) {
 
-	auto hDigiHit_Time_North_scaled = (TH1D*)gDirectory->Get("hDigiHit_Time_North_scaled");
-	if( !hDigiHit_Time_North_scaled ) hDigiHit_Time_North_scaled = (TH1D*)hDigiHit_Time_North->Clone("hDigiHit_Time_North_scaled");
-	hDigiHit_Time_North_scaled->SetContent(hDigiHit_Time_North->GetArray());
+    auto h1 = (TH1I*)gDirectory->Get("hDigiHit_Time_North_scaled");
+    if( !h1 ) h1 = (TH1I*)hDigiHit_Time_North->Clone("hDigiHit_Time_North_scaled");
+	 for( int ibin=1; ibin<=hDigiHit_Time_North->GetNbinsX(); ibin++) h1->SetBinContent( ibin, (Int_t)hDigiHit_Time_North->GetBinContent(ibin));
+    //h1->SetContent(hDigiHit_Time_North->GetArray());
 
-	auto hDigiHit_Time_North_LED_scaled = (TH1D*)gDirectory->Get("hDigiHit_Time_North_LED_scaled");
-	if( !hDigiHit_Time_North_LED_scaled ) hDigiHit_Time_North_LED_scaled = (TH1D*)hDigiHit_Time_North_LED->Clone("hDigiHit_Time_North_LED_scaled");
-	hDigiHit_Time_North_LED_scaled->SetContent(hDigiHit_Time_North_LED->GetArray());
+    auto h2 = (TH1I*)gDirectory->Get("hDigiHit_Time_North_LED_scaled");
+    if( !h2 ) h2 = (TH1I*)hDigiHit_Time_LED_North->Clone("hDigiHit_Time_North_LED_scaled");
+	 for( int ibin=1; ibin<=hDigiHit_Time_LED_North->GetNbinsX(); ibin++) h2->SetBinContent( ibin, (Int_t)hDigiHit_Time_LED_North->GetBinContent(ibin));
+    //h2->SetContent(hDigiHit_Time_North_LED->GetArray());
 
-    hDigiHit_Time_North_North->SetLineColor(kBlack);
-    hDigiHit_Time_North_LED_North->SetLineColor(kBlue);
+    h1->SetLineColor(kBlack);
+    h2->SetLineColor(kBlue);
     c1->cd(4);
-    hDigiHit_Time_North_North->SetTitleSize(tsize,"xy");
-    hDigiHit_Time_North_LED_North->Draw();
-    double scale = hDigiHit_Time_North_LED_North->GetMaximum()/hDigiHit_Time_North_North->GetMaximum();
-    if(hDigiHit_Time_North_North->GetMaximum() == 0) scale = 1.;
-    hDigiHit_Time_North_North->Scale(scale);
-    hDigiHit_Time_North_North->Draw("h same");
+    h2->SetTitleSize(tsize,"xy");
+    h2->Draw();
+    double scale = h2->GetMaximum()/h1->GetMaximum();
+    if(h1->GetMaximum() == 0) scale = 1/15.;
+    h1->Scale(scale);
+    h1->Draw("h same");
   }
 
 }

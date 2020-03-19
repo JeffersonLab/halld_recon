@@ -1,3 +1,20 @@
+//
+// Guidance: --------------------------------------------
+//
+//
+// 
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/TPOL/TPOL_time
 // hnamepath: /HLDetectorTiming/TPOL/TPOL_time_per_sector
 

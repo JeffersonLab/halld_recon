@@ -1729,6 +1729,40 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
       return true;
    }
 }
+
+
+bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
+  vector<double> ForwardEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z", ForwardEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ForwardEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ForwardEMcalpos[0],y=ForwardEMcalpos[1],z=ForwardEMcalpos[2];
+    _DBG_ << "FCAL position: (x,y,z)=(" << x <<"," << y << "," << z << ")"
+	  <<endl;
+    return true;
+  }
+}
+
+bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
+  vector<double> ComptonEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ComptonEMcalpos[0],y=ComptonEMcalpos[1],z=ComptonEMcalpos[2]; 
+    _DBG_ << "CCAL position: (x,y,z)=(" << ComptonEMcalpos[0] <<","
+	  << ComptonEMcalpos[1]<<","<<ComptonEMcalpos[2]<< ")" << endl;
+    return true;
+  }
+}
+
 //---------------------------------
 // GetDIRCZ
 //---------------------------------

@@ -29,10 +29,15 @@
 
   TCanvas *cBEAM = new TCanvas("cBEAM","Beam Conditions TAGGER-PS Matches", 900, 600 );
 
-  cBEAM->Divide(1,3);
+  cBEAM->Divide(1,4);
+  gStyle->SetTitleSize(0.1,"t");
+  gStyle->SetOptStat(0);
 
   cBEAM->cd(1);
   dtp->Draw();
+  dtp->GetXaxis()->SetLabelSize(0.1);
+  dtp->GetYaxis()->SetLabelSize(0.1);
+  dtp->GetXaxis()->SetTitle("#Deltat [ns]");
 
   int binl = dtp->FindBin(0.0-2.004);
   int binh = dtp->FindBin(0.0+2.004);
@@ -50,10 +55,45 @@
   t0->SetNDC();
   t0->Draw();
 
+  double Y[50];
+  double X[50];
+  int counter = 0;
+  for (int k=1;k<15;k++){
+    int bin2 = dtp->FindBin(0.0+2.004 + k*4.008);
+    int bin1 = dtp->FindBin(0.0+2.004 + (k-1)*4.008);
+    Il = dtp->Integral(bin1, bin2);
+    Y[counter] = (double)Ic / (double)Il;
+    X[counter] =  k*4.008;
+    counter++;
+  }
+  for (int k=1;k<15;k++){
+    int bin2 = dtp->FindBin(0.0-2.004 - k*4.008);
+    int bin1 = dtp->FindBin(0.0-2.004 - (k-1)*4.008);
+    Il = dtp->Integral(bin2, bin1);
+    Y[counter] = (double)Ic / (double)Il ;
+    X[counter] =  -k*4.008;
+    counter++;
+  }
 
   cBEAM->cd(2);
+  TGraphErrors *gr = new TGraphErrors(counter, X, Y, NULL, NULL);
+  gr->SetTitle("Peak Integrals normalized Icenter/Iside");
+  gr->SetMarkerStyle(33);
+  gr->SetMarkerColor(4);
+  gr->Draw("AP");
+  gPad->SetGrid();
+  gr->GetYaxis()->SetRangeUser(0.8, 1.2);
+  gr->GetXaxis()->SetLabelSize(0.1);
+  gr->GetYaxis()->SetLabelSize(0.1);
+  gr->GetXaxis()->SetTitle("#Deltat [ns]");
+  gPad->Update();
+
+  cBEAM->cd(3);
   PStagmEnergyOutOfTime->Scale(1./20.);
   PStagmEnergyInTime->Draw();
+  PStagmEnergyInTime->GetXaxis()->SetLabelSize(0.1);
+  PStagmEnergyInTime->GetYaxis()->SetLabelSize(0.1);
+  PStagmEnergyInTime->GetXaxis()->SetTitle("#DeltaE [GeV]");
 
   double ISignalL = PStagmEnergyInTime->Integral(700, 750);
   double IBackgrL = PStagmEnergyOutOfTime->Integral(700, 750);
@@ -73,15 +113,18 @@
   gPad->SetGrid();
   char text1[128];
   sprintf(text1, "Scaling: %5.2f",Scale);
-  TText *t1 = new TText(0.2, 0.7, text1);
+  TText *t1 = new TText(0.12, 0.7, text1);
   t1->SetTextSize(0.1);
   t1->SetNDC();
   t1->Draw();
 
 
-  cBEAM->cd(3);
+  cBEAM->cd(4);
   PStaghEnergyOutOfTime->Scale(1./20.);
   PStaghEnergyInTime->Draw();
+  PStaghEnergyInTime->GetXaxis()->SetLabelSize(0.1);
+  PStaghEnergyInTime->GetYaxis()->SetLabelSize(0.1);
+  PStaghEnergyInTime->GetXaxis()->SetTitle("#DeltaE [GeV]");
   PStaghEnergyOutOfTime->SetLineColor(7);
   PStaghEnergyOutOfTime->Draw("same");
   gPad->SetLogy(1);
@@ -107,7 +150,7 @@
   h->Draw("same");
 
   sprintf(text1, "Scaling: %5.2f",Scale);
-  TText *t2 = new TText(0.2, 0.7, text1);
+  TText *t2 = new TText(0.12, 0.7, text1);
   t2->SetTextSize(0.1);
   t2->SetNDC();
   t2->Draw();
