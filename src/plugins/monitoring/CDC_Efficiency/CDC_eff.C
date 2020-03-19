@@ -21,7 +21,7 @@
         EffDOCA->SetTitle("CDC Per Straw Efficiency Vs. DOCA");
         EffDOCA->GetXaxis()->SetTitle("Closest distance between track and wire [cm]");
         EffDOCA->GetYaxis()->SetTitle("Efficiency");
-        cDOCA->SaveAs("cDOCA.png");
+        //cDOCA->SaveAs("cDOCA.png");
     }
 
 
