@@ -1541,12 +1541,12 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						// FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
 						// skip over bogus repeated pulse time repeats, and ignore it altogether.
 						// March 18, 2020 -rtj-
-						if (integral == 0) {
+						if (integral == 0 && *iptr == *(iptr + 1)) {
 							while (*(iptr + 1) == *iptr) {
 								++iptr;
 							}
 							jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-							continue;
+							break;
 						}
 
 						if( pe ) {
