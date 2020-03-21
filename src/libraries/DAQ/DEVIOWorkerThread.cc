@@ -1538,6 +1538,17 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
 						if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  course_time="<<course_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
 
+						// FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
+						// skip over bogus repeated pulse time repeats, and ignore it altogether.
+						// March 18, 2020 -rtj-
+						if (integral == 0 && *iptr == *(iptr + 1)) {
+							while (*(iptr + 1) == *iptr) {
+								++iptr;
+							}
+							jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+							break;
+						}
+
 						if( pe ) {
 							pe->NEW_Df250PulseData(rocid, slot, channel, itrigger
 							, event_number_within_block
