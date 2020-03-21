@@ -1,8 +1,34 @@
+//
+// Guidance: --------------------------------------------
+//
+// The peaks in the top row should be aligned with the red
+// line within 10 ns or so.  
+//
+// The peaks on the 2D plots should be aligned with each
+// other, at a value slightly larger than zero.
+// 
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/CDC/CDCHit time
 // hnamepath: /HLDetectorTiming/CDC/CDCHit time per Straw Raw
 // hnamepath: /HLDetectorTiming/FDC/FDCHit Cathode time
 // hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time
 // hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time vs. module
+
+// e-mail: aaustreg@jlab.org
+// e-mail: pentchev@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
 
 {
 	//Goto Path
@@ -12,9 +38,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalCDCTime = 6.;
+	double nominalCDCTime = 10.;
 	double nominalFDCCathodeTime = 14.;
-	double nominalFDCWireTime = 5.5;
+	double nominalFDCWireTime = 12.;
 
 	//Get Histograms
 	TH1I* CDCHit_Timing    = (TH1I*)gDirectory->Get("CDC/CDCHit time");

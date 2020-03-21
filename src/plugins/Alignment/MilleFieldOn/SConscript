@@ -1,5 +1,3 @@
-
-
 import sbms
 
 # get env object and clone it
@@ -11,5 +9,3 @@ sbms.AddJANA(env)
 sbms.AddDANA(env)
 sbms.AddROOT(env)
 sbms.plugin(env)
-
-

@@ -25,6 +25,7 @@
 #include <PID/DEventRFBunch.h>
 #include <PID/DParticleID.h>
 #include <TRACKING/DTrackFitter.h>
+#include <TPOL/DTPOLHit.h>
 
 #include "DFactoryGenerator_p2pi.h"
 

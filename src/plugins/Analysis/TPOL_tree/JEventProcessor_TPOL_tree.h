@@ -14,6 +14,7 @@
 #include "ANALYSIS/DTreeInterface.h"
 #include <TPOL/DTPOLSectorDigiHit.h>
 #include <TPOL/DTPOLRingDigiHit.h>
+#include <TPOL/DTPOLHit.h>
 
 class JEventProcessor_TPOL_tree:public jana::JEventProcessor{
 public:

@@ -38,6 +38,32 @@
 // e-mail: zihlmann@jlab.org
 // e-mail: tbritton@jlab.org
 //
+//  Guidance: --------------------------------------------
+//
+//  During regular runs with beam the CDC occupancies should show a smooth trend
+//  from high (bright yellow) in the innermost ring to low (dark blue) in the outermost ring.
+//  During cosmics runs, the whole detector is a uniform low occupancy.
+// 
+//  Hot channels can be caused by faulty electronics, baseline shift or noise.
+//  Cold channels can be caused by poor connections, baseline shift or faulty electronics.
+//
+//  The channels are connected to the HV boards in clusters of 20 to 24.
+//  
+//  There are 2 known dead channels (wire disconnected) and a small number (4-6) 
+// of channels with persistent problems. These channels are not neighbouring.
+//
+//  If you see single hot (bright yellow) or new dead (white or dark blue) channels, 
+//  please make a logentry in HDCDC and notify the experts in the logentry.
+//
+//  If you see a cluster of hot or dead channels, please make the logentry  
+//  and also contact the experts as below.
+//
+//  Daytime - contact the expert by phone using the drift chamber on call number
+//  Overnight - contact the expert by phone if the cluster includes more than 24 channels.
+//
+//
+// End Guidance: ----------------------------------------
+
 
 
 {
@@ -107,8 +133,8 @@
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
-		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
-		if( min_events < 1 ) min_events = 1E4;
+		auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 5E5;
 		if( Nevents >= min_events ) {
 			cout << "CDC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
 			rs_SavePad("CDC_occupancy", 0);

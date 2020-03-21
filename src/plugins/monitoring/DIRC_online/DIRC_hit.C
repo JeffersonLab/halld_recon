@@ -1,7 +1,25 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-
+// Guidance: --------------------------------------------
+//
+// Upper 2 panels: DIRC PMT hit time for physics triggers 
+// (black) and LED triggers (blue) for South and North boxes
+// Lower left panel: LED reference time signal from SiPM: 
+// ADC (red) and TDC (blue), both should have clear single peaks
+// Lower right panel: LED reference time signal ADC vs TDC
+//
+// If you have concerns about the plots or any of them look
+// significantly different than the reference, please contact 
+// one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Justin Stevens:   x7237    (office)
+//                    585-4870 (cell)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_NonLED
 // hnamepath: /DIRC_online/Hit/SouthLowerBox/Hit_Time_LED
 // hnamepath: /DIRC_online/Hit/NorthUpperBox/Hit_Time_NonLED
@@ -48,7 +66,9 @@
     c1->cd(1);
     hTS_LED->SetTitleSize(tsize,"xy");
     hTS_LED->Draw();
-    hTS->Scale(hTS_LED->GetMaximum()/hTS->GetMaximum());
+    double scale = hTS_LED->GetMaximum()/hTS->GetMaximum();
+    if(hTS->GetMaximum() == 0) scale = 1/5.;
+    hTS->Scale(scale);
     hTS->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
@@ -63,17 +83,21 @@
     c1->cd(2);
     hTS_LED_North->SetTitleSize(tsize,"xy");
     hTS_LED_North->Draw();
-    hTS_North->Scale(hTS_LED_North->GetMaximum()/hTS_North->GetMaximum());
+    double scale = hTS_LED_North->GetMaximum()/hTS_North->GetMaximum();
+    if(hTS_North->GetMaximum() == 0) scale = 1/5.;
+    hTS_North->Scale(scale);
     hTS_North->Draw("h same");
   }
 
-  if(hAdcTime && hAdcTime){
+  if(hAdcTime && hTdcTime){
     hAdcTime->SetLineColor(kRed);
     hTdcTime->SetLineColor(kGreen);
     c1->cd(3);
     hAdcTime->SetTitleSize(tsize,"xy");
     hAdcTime->Draw();
-    hTdcTime->Scale(hAdcTime->GetMaximum()/hTdcTime->GetMaximum());
+    double scale = hAdcTime->GetMaximum()/hTdcTime->GetMaximum();
+    if(hTdcTime->GetMaximum() == 0) scale = 1;
+    hTdcTime->Scale(scale);
     hTdcTime->Draw("h same");
 
     TLegend *leg = new TLegend(0.6, 0.6, 0.85, 0.8);
