@@ -398,7 +398,36 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
       double Chi2_pi0eta_0 = Chi2_pi0Mass[0] + Chi2_etaMass[1];
       double Chi2_pi0eta_1 = Chi2_etaMass[0] + Chi2_pi0Mass[1];
       double Chi2_2eta     = Chi2_etaMass[0] + Chi2_etaMass[1];
-      if (Chi2_2pi0 < bestChi22Pi0 && Esum > 0.25) {
+      bool An2Eta  = false; 
+      bool An2Pi0 = false; 
+      bool AnPi0Eta0 = false; 
+      bool AnPi0Eta1 = false; 
+      
+      if (GG[0].M() > 400.0e-3 && 
+	  GG[1].M() > 400.0e-3 &&
+	  GG[0].M() < 1000.0e-3 && 
+	  GG[1].M() < 1000.0e-3)
+	An2Eta = true;
+
+      if (GG[0].M() > 40.0e-3 && 
+	  GG[1].M() > 40.0e-3 &&
+	  GG[0].M() < 210.0e-3 && 
+	  GG[1].M() < 210.0e-3)
+	An2Pi0 = true;
+      
+      if (GG[0].M() > 40.0e-3 && 
+	  GG[1].M() > 400.0e-3 &&
+	  GG[0].M() < 210.0e-3 && 
+	  GG[1].M() < 1000.0e-3)
+	AnPi0Eta0 = true;
+
+      if (GG[0].M() > 400.0e-3 && 
+	  GG[1].M() > 40.0e-3 &&
+	  GG[0].M() < 1000.0e-3 && 
+	  GG[1].M() < 210.0e-3)
+	AnPi0Eta1 = true;
+      
+      if (Chi2_2pi0 < bestChi22Pi0 && Esum > 0.25 && An2Pi0) {
 	bestChi22Pi0 = Chi2_2pi0;
 	Photon2Pi0List.clear();
 	Photon2Pi0List.push_back(EMList[combi4->combi[0]]);
@@ -406,7 +435,7 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
 	Photon2Pi0List.push_back(EMList[combi4->combi[2]]);
 	Photon2Pi0List.push_back(EMList[combi4->combi[3]]);
       }
-      if (Chi2_2eta < bestChi22Eta && Esum > 1.0) {
+      if (Chi2_2eta < bestChi22Eta && Esum > 1.0 && An2Eta) {
 	bestChi22Eta = Chi2_2eta;
 	Photon2EtaList.clear();
 	Photon2EtaList.push_back(EMList[combi4->combi[0]]);
@@ -416,7 +445,7 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
       }
       double Esum2gg1 = EMList[combi4->combi[2]].E() + EMList[combi4->combi[3]].E();
       double Esum2gg2 = EMList[combi4->combi[0]].E() + EMList[combi4->combi[1]].E();
-      if (Chi2_pi0eta_0 < bestChi2EtaPi0 && Esum2gg1 > 0.5 && Esum > 0.65) {
+      if (Chi2_pi0eta_0 < bestChi2EtaPi0 && Esum2gg1 > 0.5 && Esum > 0.65 && AnPi0Eta0) {
 	bestChi2EtaPi0 = Chi2_pi0eta_0;
 	PhotonEtaPi0List.clear();
 	PhotonEtaPi0List.push_back(EMList[combi4->combi[0]]);
@@ -424,7 +453,7 @@ void JEventProcessor_etapi0_skim::Combined4g(vector<TLorentzVector>&EMList,
 	PhotonEtaPi0List.push_back(EMList[combi4->combi[2]]);
 	PhotonEtaPi0List.push_back(EMList[combi4->combi[3]]);
       }
-      if (Chi2_pi0eta_1 < bestChi2EtaPi0 && Esum2gg2 > 0.5 && Esum > 0.65) {
+      if (Chi2_pi0eta_1 < bestChi2EtaPi0 && Esum2gg2 > 0.5 && Esum > 0.65 && AnPi0Eta1) {
 	bestChi2EtaPi0 = Chi2_pi0eta_1;
 	PhotonEtaPi0List.clear();
 	PhotonEtaPi0List.push_back(EMList[combi4->combi[2]]);
