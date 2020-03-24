@@ -107,9 +107,17 @@ Double_t TimeToDistance( Double_t *x, Double_t *par){
 
 
 void HistMacro_CDCTimeToDistance(){
+
+   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("CDC_TimeToDistance");
+   if(!dir) return;
+
+
    TF2 *f = new TF2("f",TimeToDistance, 10, 1500, -0.3, 0.3, 18);
 
    TProfile *constants = (TProfile *) gDirectory->Get("/CDC_TimeToDistance/CDC_TD_Constants");
+
+   if (!constants) return;
+
    long_drift_func[0][0] = constants->GetBinContent(101);
    long_drift_func[0][1] = constants->GetBinContent(102);
    long_drift_func[0][2] = constants->GetBinContent(103);
@@ -148,35 +156,76 @@ void HistMacro_CDCTimeToDistance(){
    f->SetParameters(parameters);
 
    TCanvas *c = new TCanvas("c_TD","CDC TD", 1200, 550);
+
    c->Divide(2,1);
 
    c->cd(1);
 
-   TProfile2D *profile = (TProfile2D *) gDirectory->Get("/CDC_TimeToDistance/Predicted Drift Distance Vs Delta Vs t_drift");
 
-   gStyle->SetOptStat(0);
+   TProfile2D *profile = (TProfile2D *) gDirectory->Get("/CDC_TimeToDistance/Predicted Drift Distance Vs Delta Vs t_drift");
 
    Double_t contours[21] =
    { 0.00, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
       0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0};
 
    profile->SetContour(21, contours);
+   profile->SetStats(0);
    profile->Draw("colz");
-   profile->GetXaxis()->SetRangeUser(0,1200);
+   profile->SetMaximum(1);
+   profile->GetXaxis()->SetRangeUser(0,1000);
    profile->GetYaxis()->SetRangeUser(-0.22,0.22);
    profile->GetYaxis()->SetTitleOffset(1.15);
    f->SetContour(21, contours);
+
    profile->Draw("cont2 list same");
    f->Draw("cont2 list same");
 
-   c->cd(2);
-   TH2I *hist = (TH2I *) gDirectory->Get("/CDC_TimeToDistance/Residual Vs. Drift Time"); 
-   hist->Draw("colz");
-   hist->GetXaxis()->SetRangeUser(0,1200);
-   hist->GetYaxis()->SetTitleOffset(1.40);
-   c->cd(2)->SetGridx();
-   c->cd(2)->SetGridy();
 
-   c->cd();
+
+   //-----------------------------------------------------------------------------------------
+
+
+   TPad *p = (TPad*)c->cd(2);
+   p->SetRightMargin(0.12);
+   p->SetGridx();
+   p->SetGridy();
+
+
+   TH2I *hist = (TH2I *) gDirectory->Get("/CDC_TimeToDistance/Residual Vs. Drift Time"); 
+   gStyle->SetOptStat(100);
+   hist->SetStats(1);
+   hist->GetXaxis()->SetRangeUser(0,1000);
+   hist->GetYaxis()->SetTitleOffset(1.40);
+   hist->Draw("colz");
+
+   // get stats in cm
+   double ymean = hist->GetMean(2);
+   double ysd = hist->GetRMS(2);
+   // convert to um
+   ymean = ymean* 1e4;
+   ysd = ysd * 1e4;
+   
+   c->Update();  // need this so that the next line can find the stats box
+
+   TPaveStats *st = (TPaveStats*)hist->FindObject("stats");
+   st->SetOptStat(100);
+   st->SetX1NDC(0.62); 
+   st->SetY1NDC(0.65);
+   st->SetX2NDC(0.85);
+   st->SetY2NDC(0.88);
+
+   TList *listOfLines = st->GetListOfLines();
+   TText *tline = st->GetLineWith("Mean x");
+   listOfLines->Remove(tline);
+   tline = st->GetLineWith("Mean y");
+   listOfLines->Remove(tline);
+
+   st->AddText("Residuals");
+   st->AddText(Form("Mean %.2f #mum",ymean));
+   st->AddText(Form("Sigma %.2f #mum",ysd));
+
+   st->DrawClone();
+ 
    c->Update();
-}
+
+  }
