@@ -305,7 +305,8 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
   if( Candidate ){
     
     if( WRITE_EVIO ){
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim", locObjectsToSave );
+      //locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;

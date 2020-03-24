@@ -317,12 +317,14 @@ jerror_t JEventProcessor_etapi0_skim::evnt(JEventLoop *loop, uint64_t eventnumbe
 	     PhotonPi0EtaList,
 	     Photon2EtaList);
   
-  Candidate |= ( (4 <= photon_nb && photon_nb <= 5) && (Photon2Pi0List.size() > 0 || PhotonPi0EtaList.size() > 0 || Photon2EtaList.size() > 0) );
+  //Candidate |= ( (4 <= photon_nb && photon_nb <= 5) && (Photon2Pi0List.size() > 0 || PhotonPi0EtaList.size() > 0 || Photon2EtaList.size() > 0) );
+  Candidate |= ( (4 <= photon_nb && photon_nb <= 5) && (PhotonPi0EtaList.size() > 0 || Photon2EtaList.size() > 0) );
   
   if ( Candidate ){
     //cout <<"etapi0_skim"<<endl;
     if( WRITE_EVIO ){
-      locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim", locObjectsToSave );
+      //locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "etapi0_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;

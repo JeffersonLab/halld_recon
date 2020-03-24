@@ -293,7 +293,8 @@ jerror_t JEventProcessor_compton_neutral_skim::evnt(JEventLoop *loop, uint64_t e
   if( Candidate ){
     
     if( WRITE_EVIO ){
-      locEventWriterEVIO->Write_EVIOEvent( loop, "compton_neutral_skim", locObjectsToSave );
+      //locEventWriterEVIO->Write_EVIOEvent( loop, "compton_neutral_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "compton_neutral_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;

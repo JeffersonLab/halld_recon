@@ -317,7 +317,8 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
   if ( Candidate ) {
     //cout <<"eta6g_skim"<<endl;
     if( WRITE_EVIO ){
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g_skim", locObjectsToSave );
+      //locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;

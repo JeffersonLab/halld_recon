@@ -188,9 +188,9 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
 
   // always write out BOR events
   if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
-      //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "single_neutral_skim" );
-      return NOERROR;
+    //jout << "Found BOR!" << endl;
+    locEventWriterEVIO->Write_EVIOEvent( loop, "single_neutral_skim" );
+    return NOERROR;
   }
 
   // write out the first few EPICS events to save run number & other meta info
@@ -301,7 +301,8 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
   if( Candidate ){
     //cout <<"single_neutral_skim"<<endl;
     if( WRITE_EVIO ){
-      locEventWriterEVIO->Write_EVIOEvent( loop, "single_neutral_skim", locObjectsToSave );
+      //locEventWriterEVIO->Write_EVIOEvent( loop, "single_neutral_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "single_neutral_skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
