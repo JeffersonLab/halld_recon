@@ -255,7 +255,7 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double z1 = locFCALShowers[i]->getPosition().Z() - kinfitVertexZ;
       DVector3 vertex1(x1, y1, z1);
       double r1 = vertex1.Mag();
-      double t1 = locFCALShowers[i]->getTime() - (r1 / TMath::C() * 1e6);
+      double t1 = locFCALShowers[i]->getTime() - (r1 / TMath::C() * 1e7);
       
       double p1 = e1;
       double px1 = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
@@ -279,7 +279,7 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double z1 = locCCALShowers[i]->z - kinfitVertexZ;
       DVector3 vertex1(x1, y1, z1);
       double r1 = vertex1.Mag();
-      double t1 = locCCALShowers[i]->time - (r1 / TMath::C() * 1e6);
+      double t1 = locCCALShowers[i]->time - (r1 / TMath::C() * 1e7);
       
       double p1 = e1;
       double px1 = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
