@@ -658,6 +658,7 @@ def AddCCDB(env):
 		env.AppendUnique(CPPPATH = CCDB_CPPPATH)
 		env.AppendUnique(LIBPATH = CCDB_LIBPATH)
 		env.AppendUnique(LIBS    = CCDB_LIBS)
+		env.AppendUnique(LIBS    = "fmt")
 
 ##################################
 # SQLite
