@@ -389,8 +389,8 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
    
     double z0 = m_FCALfront - zV;
     double zMax = FCAL_RADIATION_LENGTH*(FCAL_SHOWER_OFFSET 
-					 //+ log(Egamma/FCAL_CRITICAL_ENERGY));
-					 + log(Eclust/FCAL_CRITICAL_ENERGY));
+					 + log(Egamma/FCAL_CRITICAL_ENERGY));
+					 //+ log(Eclust/FCAL_CRITICAL_ENERGY));
     double zed = z0;
     double zed1 = z0 + zMax;
 
