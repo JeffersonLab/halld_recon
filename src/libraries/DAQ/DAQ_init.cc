@@ -1,7 +1,5 @@
-// $Id$
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactoryGenerator.h>
 
 #include "DBeamCurrent_factory.h"
 #include "Df250Config.h"
@@ -53,57 +51,62 @@ using namespace jana;
 #include "Df250EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory_v3.h"
 
-jerror_t DAQ_init(JEventLoop *loop)
-{
-	/// Create and register DTranslationTable factory
-	loop->AddFactory(new DBeamCurrent_factory());
-	loop->AddFactory(new JFactory<Df250Config>());
-	loop->AddFactory(new JFactory<Df250PulseIntegral>());
-	loop->AddFactory(new JFactory<Df250StreamingRawData>());
-	loop->AddFactory(new JFactory<Df250WindowSum>());
-	loop->AddFactory(new JFactory<Df250PulseRawData>());
-	loop->AddFactory(new JFactory<Df250TriggerTime>());
-	loop->AddFactory(new JFactory<Df250PulseTime>());
-	loop->AddFactory(new JFactory<Df250PulsePedestal>());
-	loop->AddFactory(new JFactory<Df250PulseData>());
-	loop->AddFactory(new JFactory<Df250WindowRawData>());
-	loop->AddFactory(new JFactory<Df125Config>());
-	loop->AddFactory(new JFactory<Df125TriggerTime>());
-	loop->AddFactory(new JFactory<Df125PulseIntegral>());
-	loop->AddFactory(new JFactory<Df125PulseTime>());
-	loop->AddFactory(new JFactory<Df125PulsePedestal>());
-	loop->AddFactory(new JFactory<Df125PulseRawData>());
-	loop->AddFactory(new JFactory<Df125WindowRawData>());
-	loop->AddFactory(new JFactory<Df125CDCPulse>());
-	loop->AddFactory(new JFactory<Df125FDCPulse>());
-	loop->AddFactory(new JFactory<DF1TDCHit>());
-	loop->AddFactory(new JFactory<DF1TDCConfig>());
-	loop->AddFactory(new JFactory<DF1TDCTriggerTime>());
-	loop->AddFactory(new JFactory<DCAEN1290TDCConfig>());
-	loop->AddFactory(new JFactory<DCAEN1290TDCHit>());
-	loop->AddFactory(new JFactory<DCODAEventInfo>());
-	loop->AddFactory(new JFactory<DCODAControlEvent>());
-	loop->AddFactory(new JFactory<DCODAROCInfo>());
-	loop->AddFactory(new JFactory<DTSscalers>());
-	loop->AddFactory(new JFactory<DEPICSvalue>());
-	loop->AddFactory(new JFactory<DEventTag>());
-	loop->AddFactory(new JFactory<Df250BORConfig>());
-	loop->AddFactory(new JFactory<Df125BORConfig>());
-	loop->AddFactory(new JFactory<DF1TDCBORConfig>());
-	loop->AddFactory(new JFactory<DCAEN1290TDCBORConfig>());
-	loop->AddFactory(new JFactory<DTSGBORConfig>());
-	loop->AddFactory(new JFactory<DL1Info>());
-	loop->AddFactory(new JFactory<Df250Scaler>());
-	loop->AddFactory(new JFactory<Df250AsyncPedestal>());
-	loop->AddFactory(new JFactory<DDIRCTriggerTime>());
-	loop->AddFactory(new JFactory<DDIRCTDCHit>());
-	loop->AddFactory(new JFactory<DDIRCADCHit>());
-	loop->AddFactory(new JFactory<DGEMSRSWindowRawData>());
-	loop->AddFactory(new Df125EmulatorAlgorithm_factory());
-	loop->AddFactory(new Df125EmulatorAlgorithm_factory_v2());
-	loop->AddFactory(new Df250EmulatorAlgorithm_factory());
-	loop->AddFactory(new Df250EmulatorAlgorithm_factory_v1()); 
-	loop->AddFactory(new Df250EmulatorAlgorithm_factory_v2()); 
-	loop->AddFactory(new Df250EmulatorAlgorithm_factory_v3()); 
-	return NOERROR;
-}
+
+class JFactoryGenerator_DAQ : public JFactoryGenerator{
+public:
+
+    void GenerateFactories(JFactorySet *factory_set) override {
+
+        factory_set->Add(new JFactoryT<Df250Config>());
+        factory_set->Add(new JFactoryT<Df250PulseIntegral>());
+        factory_set->Add(new JFactoryT<Df250StreamingRawData>());
+        factory_set->Add(new JFactoryT<Df250WindowSum>());
+        factory_set->Add(new JFactoryT<Df250PulseRawData>());
+        factory_set->Add(new JFactoryT<Df250TriggerTime>());
+        factory_set->Add(new JFactoryT<Df250PulseTime>());
+        factory_set->Add(new JFactoryT<Df250PulsePedestal>());
+        factory_set->Add(new JFactoryT<Df250PulseData>());
+        factory_set->Add(new JFactoryT<Df250WindowRawData>());
+        factory_set->Add(new JFactoryT<Df125Config>());
+        factory_set->Add(new JFactoryT<Df125TriggerTime>());
+        factory_set->Add(new JFactoryT<Df125PulseIntegral>());
+        factory_set->Add(new JFactoryT<Df125PulseTime>());
+        factory_set->Add(new JFactoryT<Df125PulsePedestal>());
+        factory_set->Add(new JFactoryT<Df125PulseRawData>());
+        factory_set->Add(new JFactoryT<Df125WindowRawData>());
+        factory_set->Add(new JFactoryT<Df125CDCPulse>());
+        factory_set->Add(new JFactoryT<Df125FDCPulse>());
+        factory_set->Add(new JFactoryT<DF1TDCHit>());
+        factory_set->Add(new JFactoryT<DF1TDCConfig>());
+        factory_set->Add(new JFactoryT<DF1TDCTriggerTime>());
+        factory_set->Add(new JFactoryT<DCAEN1290TDCConfig>());
+        factory_set->Add(new JFactoryT<DCAEN1290TDCHit>());
+        factory_set->Add(new JFactoryT<DCODAEventInfo>());
+        factory_set->Add(new JFactoryT<DCODAControlEvent>());
+        factory_set->Add(new JFactoryT<DCODAROCInfo>());
+        factory_set->Add(new JFactoryT<DTSscalers>());
+        factory_set->Add(new JFactoryT<DEPICSvalue>());
+        factory_set->Add(new JFactoryT<DEventTag>());
+        factory_set->Add(new JFactoryT<Df250BORConfig>());
+        factory_set->Add(new JFactoryT<Df125BORConfig>());
+        factory_set->Add(new JFactoryT<DF1TDCBORConfig>());
+        factory_set->Add(new JFactoryT<DCAEN1290TDCBORConfig>());
+        factory_set->Add(new JFactoryT<DTSGBORConfig>());
+        factory_set->Add(new JFactoryT<DL1Info>());
+        factory_set->Add(new JFactoryT<Df250Scaler>());
+        factory_set->Add(new JFactoryT<Df250AsyncPedestal>());
+        factory_set->Add(new JFactoryT<DDIRCTriggerTime>());
+        factory_set->Add(new JFactoryT<DDIRCTDCHit>());
+        factory_set->Add(new JFactoryT<DDIRCADCHit>());
+        factory_set->Add(new JFactoryT<DGEMSRSWindowRawData>());
+
+        factory_set->Add(new DBeamCurrent_factory());
+        factory_set->Add(new Df125EmulatorAlgorithm_factory());
+        factory_set->Add(new Df125EmulatorAlgorithm_factory_v2());
+        factory_set->Add(new Df250EmulatorAlgorithm_factory());
+        factory_set->Add(new Df250EmulatorAlgorithm_factory_v1());
+        factory_set->Add(new Df250EmulatorAlgorithm_factory_v2());
+        factory_set->Add(new Df250EmulatorAlgorithm_factory_v3());
+    }
+};
+
