@@ -54,7 +54,10 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   
   double m_zTarget, m_FCALfront;
   double m_FCALdX,m_FCALdY;
-
+  double m_beamSpotX;
+  double m_beamSpotY;  
+  double LOAD_NONLIN_CCDB;
+  double LOAD_TIMING_CCDB; 
   double LOAD_CCDB_CONSTANTS;
   double SHOWER_ENERGY_THRESHOLD;
   double cutoff_energy;

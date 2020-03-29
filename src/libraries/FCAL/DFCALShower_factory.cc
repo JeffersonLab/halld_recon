@@ -27,7 +27,11 @@ DFCALShower_factory::DFCALShower_factory()
 {
   // should we use CCDB constants?
   LOAD_CCDB_CONSTANTS = 1.;
-  gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_CCDB_CONSTANTS);
+  LOAD_NONLIN_CCDB = 1.;
+  LOAD_TIMING_CCDB = 1.;
+  // 29/03/2020 ijaegle@jlab.org decouple non linear and timing correction
+  gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
+  gPARMS->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
 
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
@@ -117,10 +121,16 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     cerr << "No geometry accessible." << endl;
     return RESOURCE_UNAVAILABLE;
   }
-
+  // 29/03/2020 ijaegle@jlab.org add x,y
+  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  std::map<string, float> beam_spot;
+  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+  m_beamSpotX = beam_spot.at("x");
+  m_beamSpotY = beam_spot.at("y");
+  
   // by default, load non-linear shower corrections from the CCDB
   // but allow these to be overridden by command line parameters
-  if(LOAD_CCDB_CONSTANTS > 0.1) {
+  if(LOAD_NONLIN_CCDB > 0.1) {
     map<string, double> shower_calib_piecewise;
     loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
     cutoff_energy = shower_calib_piecewise["cutoff_energy"];
@@ -142,7 +152,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   }
 
   // Get timing correction polynomial, J. Mirabelli 10/31/17
-  if(LOAD_CCDB_CONSTANTS > 0.1) {
+  if(LOAD_TIMING_CCDB > 0.1) {
     map<string,double> timing_correction;
     loop->GetCalib("FCAL/shower_timing_correction", timing_correction); 
     timeConst0 = timing_correction["P0"];
@@ -194,7 +204,8 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   if(fcalClusters.size()<1)return NOERROR;
  
   // Use the center of the target as an approximation for the vertex position
-  DVector3 vertex(0.0, 0.0, m_zTarget);
+  // 29/03/2020 ijaegle@jlab.org add beam center in x,y
+  DVector3 vertex(m_beamSpotX, m_beamSpotY, m_zTarget);
   
   vector< const DTrackWireBased* > allWBTracks;
   eventLoop->Get( allWBTracks );
@@ -216,7 +227,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     double Ecorrected;
     DVector3 pos_corrected;
     GetCorrectedEnergyAndPosition( cluster , Ecorrected, pos_corrected, errZ, &vertex);
-
+    
     if (Ecorrected>0.){		
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
@@ -349,26 +360,28 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   double E  = expfit_param3;
 
 	 
-  double Egamma = 0.;
-  
+  double Egamma = 0;
+  Ecorrected = 0;
   // 06/02/2016 Shower Non-linearity Correction by Adesh. 
-  
+  // 29/03/2020 ijaegle@jlab.org the linear part correction is never applied
   if ( Eclust <= Ecutoff ) { 
-  
+    
     Egamma = Eclust/(A*Eclust + B); // Linear part
   
-  }
-  
+  } else
+  // 29/03/2020 ijaegle@jlab.org this correction is always applied if all C=D=E=0 then Egamma = - Eclust
   if ( Eclust > Ecutoff ) { 
   
     Egamma = Eclust/(C - exp(-D*Eclust+ E)); // Non-linear part
   
   }
-  
+  // 29/03/2020 this correction is always applied if all C=D=E=0 then Egamma = - Eclust
+  if (Egamma <= 0 && Eclust > 0) Egamma = Eclust; 
   // End Correction  
   
 
   // then depth corrections 
+  // 29/03/2020 ijaegle@jlab.org depth correction used the energy corrected by the dependence energy function BUG? Change so that it uses the cluster energy
   if ( Egamma > 0 ) { 
     float dxV = x0-vertex->X();
     float dyV = y0-vertex->Y();
@@ -376,7 +389,8 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
    
     double z0 = m_FCALfront - zV;
     double zMax = FCAL_RADIATION_LENGTH*(FCAL_SHOWER_OFFSET 
-					 + log(Egamma/FCAL_CRITICAL_ENERGY));
+					 //+ log(Egamma/FCAL_CRITICAL_ENERGY));
+					 + log(Eclust/FCAL_CRITICAL_ENERGY));
     double zed = z0;
     double zed1 = z0 + zMax;
 
@@ -398,6 +412,7 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   
   Ecorrected = Egamma;
   pos_corrected = posInCal;
+ 
 }
 
 
