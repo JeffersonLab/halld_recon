@@ -16,3 +16,5 @@ sim-recon_prereqs_version.xml
 *.png
 *.swp
 *.mil
+cmake-build-debug/
+.idea/
