@@ -15,7 +15,10 @@ set(HALLD_RECON_SOURCES
         ${DAQ_HEADERS}
     )
 
-add_executable(halld_recon ${HALLD_RECON_SOURCES})
+add_executable(halld_recon
+        src/programs/Analysis/hd_port/hd_port.cc
+        ${HALLD_RECON_SOURCES}
+        )
 
 target_include_directories(halld_recon PRIVATE src/libraries ${JANA_INCLUDE_DIR})
 target_link_libraries(halld_recon jana2)
