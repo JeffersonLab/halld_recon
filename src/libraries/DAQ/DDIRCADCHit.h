@@ -33,17 +33,16 @@ class DDIRCADCHit:public DDAQAddress{
 		uint32_t maroc_id;       ///< from Pulse Integral Data word (future)
 		uint32_t adc;            ///< number of samples used in integral 
 
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "dev_id",       "%d", dev_id);
-			AddString(items, "ievent_cnt",   "%d", ievent_cnt);
-			AddString(items, "adc_hold1",    "%d", adc_hold1);
-         AddString(items, "adc_hold2",    "%d", adc_hold2);
-			AddString(items, "adc_max_bits", "%d", adc_max_bits);
-         AddString(items, "maroc_id",     "%d", maroc_id);
-			AddString(items, "adc",          "%d", adc);
+
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(dev_id, NAME_OF(dev_id), "%d");
+			summary.add(ievent_cnt, NAME_OF(ievent_cnt), "%d");
+			summary.add(adc_hold1, NAME_OF(adc_hold1), "%d");
+			summary.add(adc_hold2, NAME_OF(adc_hold2), "%d");
+			summary.add(adc_max_bits, NAME_OF(adc_max_bits), "%d");
+			summary.add(maroc_id, NAME_OF(maroc_id), "%d");
+			summary.add(adc, NAME_OF(adc), "%d");
 		}
 };
 

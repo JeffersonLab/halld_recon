@@ -10,7 +10,6 @@
 #define _DDAQAddress_
 
 #include <JANA/JObject.h>
-#include <JANA/jerror.h>
 
 //--------------------------------------------------------------
 /// This class holds the Crate, Slot, Channel address for
@@ -23,7 +22,7 @@
 /// containing a single L1-triggered event.
 ///
 //--------------------------------------------------------------
-class DDAQAddress:public jana::JObject{
+class DDAQAddress:public JObject{
 	public:
 		JOBJECT_PUBLIC(DDAQAddress);
 		DDAQAddress(uint32_t rocid=0, uint32_t slot=0, uint32_t channel=0, uint32_t itrigger=0):rocid(rocid),slot(slot),channel(channel),itrigger(itrigger){};
@@ -44,11 +43,11 @@ class DDAQAddress:public jana::JObject{
 				
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid", "%d", rocid);
-			AddString(items, "slot", "%d", slot);
-			AddString(items, "channel", "%d", channel);
-			AddString(items, "itrigger", "%d", itrigger);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(rocid, NAME_OF(rocid), "%d");
+			summary.add(slot, NAME_OF(slot), "%d");
+			summary.add(channel, NAME_OF(channel), "%d");
+			summary.add(itrigger, NAME_OF(itrigger), "%d");
 		}
 };
 

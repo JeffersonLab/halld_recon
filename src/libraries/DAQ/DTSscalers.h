@@ -25,16 +25,15 @@ class DTSscalers:public JObject{
 		uint32_t fp_scalers[16];
 		uint32_t gtp_rate[32];
 		uint32_t fp_rate[16];
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "live_time"     , "%d" , live_time);
-			AddString(items, "busy_time"     , "%d" , busy_time);
-			AddString(items, "inst_livetime" , "%4.1f", 0.1*(float)inst_livetime);
-			AddString(items, "time"          , "%d" , time);
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(live_time, NAME_OF(live_time), "%d");
+			summary.add(busy_time, NAME_OF(busy_time), "%d");
+			summary.add(0.1*(float)inst_livetime, "inst_livetime", "%4.1f");
+			summary.add(time, NAME_OF(time), "%d");
 		}
-		
+
 };
 
 #endif // _DTSscalers_

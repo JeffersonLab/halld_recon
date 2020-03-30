@@ -22,21 +22,19 @@
 //
 
 
-class DCAEN1290TDCBORConfig:public jana::JObject, public caen1190config{
+class DCAEN1290TDCBORConfig : public JObject, public caen1190config{
 	public:
 		JOBJECT_PUBLIC(DCAEN1290TDCBORConfig);
 
 		DCAEN1290TDCBORConfig(){}
 		virtual ~DCAEN1290TDCBORConfig(){}
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"   , "%d", rocid);
-			AddString(items, "slot"    , "%d", slot);
-			AddString(items, "firmwareRev" , "0x%x", firmwareRev);
-			AddString(items, "edge_resolution" , "%d", edge_resolution);
-			AddString(items, "almostFullLevel" , "%d", almostFullLevel);
+        void Summarize(JObjectSummary& summary) const override {
+            summary.add(rocid, NAME_OF(rocid), "%d");
+            summary.add(slot, NAME_OF(slot), "%d");
+			summary.add(firmwareRev, NAME_OF(firmwareRev), "0x%x");
+			summary.add(edge_resolution, NAME_OF(edge_resolution), "%d");
+			summary.add(almostFullLevel, NAME_OF(almostFullLevel), "%d");
 		}
 
 };

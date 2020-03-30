@@ -28,15 +28,13 @@ class Df125PulsePedestal:public DDAQAddress{
 		uint32_t nsamples;       ///< number of samples used in pedestal
 		bool     emulated;       ///< true if made from Window Raw Data
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "pulse_number", "%d", pulse_number);
-			AddString(items, "pedestal", "%d", pedestal);
-			AddString(items, "pulse_peak", "%d", pulse_peak);
-			AddString(items, "nsamples", "%d", nsamples);
-			AddString(items, "emulated", "%d", emulated);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+			summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+			summary.add(nsamples, NAME_OF(nsamples), "%d");
+			summary.add(emulated, NAME_OF(emulated), "%d");
 		}
 };
 

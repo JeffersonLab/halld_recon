@@ -116,9 +116,8 @@ class Df250PulseData:public DDAQAddress{
         uint32_t pulse_peak_emulated;  ///< Value calculated from raw data (if available)
         uint32_t QF_emulated;
 
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
+
+		void Summarize(JObjectSummary& summary) const override {
 		
 			uint32_t QF = 0; // make single quality factor number for compactness
 			if( QF_pedestal         ) QF |= (1<<0);
@@ -134,26 +133,26 @@ class Df250PulseData:public DDAQAddress{
 			if( integral_emulated ) emulated_all |= (1<<1);
 			if( pedestal_emulated ) emulated_all |= (1<<2);
 		
-			DDAQAddress::toStrings(items);
-			//AddString(items, "event_within_block"      , "%d", event_within_block      );
-			AddString(items, "integral"                , "%d", integral                );
-			AddString(items, "pedestal"                , "%d", pedestal                );
-			AddString(items, "course_time"             , "%d", course_time             );
-			AddString(items, "fine_time"               , "%d", fine_time               );
-			AddString(items, "pulse_peak"              , "%d", pulse_peak              );
-			AddString(items, "pulse_number"            , "%d", pulse_number            );
-			AddString(items, "nsamples_integral"       , "%d", nsamples_integral       );
-			AddString(items, "nsamples_pedestal"       , "%d", nsamples_pedestal       );
-			AddString(items, "nsamples_over_threshold" , "%d", nsamples_over_threshold );
-			AddString(items, "QF"                      , "%x", QF                      );
-			AddString(items, "emulated"                , "%x", emulated_all            );
+			DDAQAddress::Summarize(summary);
+            //summary.add(event_within_block, NAME_OF(event_within_block), "%d");
+			summary.add(integral, NAME_OF(integral), "%d");
+            summary.add(pedestal, NAME_OF(pedestal), "%d");
+            summary.add(course_time, NAME_OF(course_time), "%d");
+            summary.add(fine_time, NAME_OF(fine_time), "%d");
+            summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+            summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+            summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+            summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
+            summary.add(nsamples_over_threshold, NAME_OF(nsamples_over_threshold), "%d");
 
-			AddString(items, "integral_emulated"       , "%d", integral_emulated       );
-			AddString(items, "pedestal_emulated"       , "%d", pedestal_emulated       );
-			AddString(items, "course_time_emulated"           , "%d", course_time_emulated           );
-			AddString(items, "fine_time_emulated"           , "%d", fine_time_emulated           );
-			AddString(items, "pulse_peak_emulated"     , "%d", pulse_peak_emulated     );
-			AddString(items, "QF_emulated"     , "%x", QF_emulated     ); 
+            summary.add(QF, NAME_OF(QF), "%x");
+            summary.add(emulated_all, "emulated", "%x");
+            summary.add(integral_emulated, NAME_OF(integral_emulated), "%x");
+            summary.add(pedestal_emulated, NAME_OF(pedestal_emulated), "%d");
+            summary.add(course_time_emulated, NAME_OF(course_time_emulated), "%d");
+            summary.add(fine_time_emulated, NAME_OF(fine_time_emulated), "%d");
+            summary.add(pulse_peak_emulated, NAME_OF(pulse_peak_emulated), "%d");
+            summary.add(QF_emulated, NAME_OF(QF_emulated), "%x");
 		}
 };
 

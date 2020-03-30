@@ -22,7 +22,7 @@
 //
 
 
-class Df250BORConfig:public jana::JObject, public f250config{
+class Df250BORConfig:public JObject, public f250config{
 	public:
 		JOBJECT_PUBLIC(Df250BORConfig);
 
@@ -50,23 +50,21 @@ class Df250BORConfig:public jana::JObject, public f250config{
 			NSAT     = ((adc_config[0]>>10)&0x3) + 1;
 		}
 
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"     , "%d", rocid);
-			AddString(items, "slot"      , "%d", slot);
-			AddString(items, "version"   , "0x%x", version);
-			AddString(items, "ctrl1"     , "0x%x", ctrl1);
-			AddString(items, "ctrl2"     , "0x%x", ctrl2);
-			AddString(items, "blk_level" , "%d", blk_level);
-			AddString(items, "ptw"       , "%d", adc_ptw);
-			AddString(items, "pl"        , "%d", adc_pl);
-			AddString(items, "NSB"       , "%d", NSB);
-			AddString(items, "NSA"       , "%d", NSA);
-			AddString(items, "NSA_trig"  , "%d", NSA_trig);
-			AddString(items, "NPED"      , "%d", NPED);
-			AddString(items, "MaxPed"    , "%d", MaxPed);
-			AddString(items, "NSAT"      , "%d", NSAT);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(rocid, NAME_OF(rocid), "%d");
+			summary.add(slot, NAME_OF(slot), "%d");
+			summary.add(version, NAME_OF(version), "0x%x");
+			summary.add(ctrl1, NAME_OF(ctrl1), "0x%x");
+			summary.add(ctrl2, NAME_OF(ctrl2), "0x%x");
+			summary.add(blk_level, NAME_OF(blk_level), "%d");
+			summary.add(adc_ptw, "ptw", "%d");
+			summary.add(adc_pl, "pl", "%d");
+			summary.add(NSB, NAME_OF(NSB), "%d");
+			summary.add(NSA, NAME_OF(NSA), "%d");
+			summary.add(NSA_trig, NAME_OF(NSA_trig), "%d");
+			summary.add(NPED, NAME_OF(NPED), "%d");
+			summary.add(MaxPed, NAME_OF(MaxPed), "%d");
+			summary.add(NSAT, NAME_OF(NSAT), "%d");
 		}
 
 };

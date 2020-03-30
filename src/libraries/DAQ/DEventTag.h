@@ -8,11 +8,10 @@
 #ifndef _DEventTag_
 #define _DEventTag_
 
-#include <JANA/jerror.h>
 
 #include <TRIGGER/DL3Trigger.h>
 
-class DEventTag:public jana::JObject{
+class DEventTag:public JObject{
 	public:
 		JOBJECT_PUBLIC(DEventTag);
 
@@ -31,12 +30,12 @@ class DEventTag:public jana::JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "event_status", "0x%x"     , event_status);
-			AddString(items, "L3_decision" , "%d"     , L3_decision);
-			AddString(items, "L3_status"   , "0x%016x" , L3_status);
-			AddString(items, "L3_algorithm", "0x%08x"  , L3_algorithm);
-			AddString(items, "L3_mva_response", "%5.3f"  , mva_response);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(event_status, NAME_OF(event_status), "0x%x");
+			summary.add(L3_decision, NAME_OF(L3_decision), "%d");
+			summary.add(L3_status, NAME_OF(L3_status), "0x%016x");
+			summary.add(L3_algorithm, NAME_OF(L3_algorithm), "0x%08x");
+			summary.add(mva_response, "L3_mva_response", "%5.3f");
 		}
 
 };
