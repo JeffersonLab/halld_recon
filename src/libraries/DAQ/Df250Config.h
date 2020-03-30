@@ -25,14 +25,13 @@ class Df250Config:public DDAQConfig{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQConfig::toStrings(items);
-			AddString(items, "NSA"     , "%d", NSA);
-			AddString(items, "NSB"     , "%d", NSB);
-			AddString(items, "NSA_NSB" , "%d", NSA_NSB);
-			AddString(items, "NPED"    , "%d", NPED);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQConfig::Summarize(summary);
+			summary.add(NSA, NAME_OF(NSA), "%d");
+			summary.add(NSB, NAME_OF(NSB), "%d");
+			summary.add(NSA_NSB, NAME_OF(NSA_NSB), "%d");
+			summary.add(NPED, NAME_OF(NPED), "%d");
 		}
-		
 };
 
 #endif // _Df250Config_
