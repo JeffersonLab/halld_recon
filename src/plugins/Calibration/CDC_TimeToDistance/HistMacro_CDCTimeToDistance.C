@@ -30,9 +30,9 @@ Double_t TimeToDistance( Double_t *x, Double_t *par){
    double delta = x[1]; // yAxis
    double t = x[0]; // xAxis
 
-   // Cut out region in  fit.
-   if (delta > deltaMax || delta < deltaMin) return 0.0;
-   if (delta < (((deltaMax - deltaMin) / (tMax - tMin))*(t - tMin) + deltaMin)) return 0.0;
+   // Cut out region in  fit.  *** these 2 lines create the half trapezium boundaries
+   //  if (delta > deltaMax || delta < deltaMin) return 0.0;
+   //  if (delta < (((deltaMax - deltaMin) / (tMax - tMin))*(t - tMin) + deltaMin)) return 0.0;
    // Variables to store values for time-to-distance functions for delta=0
    // and delta!=0
    double f_0=0.;
@@ -112,7 +112,7 @@ void HistMacro_CDCTimeToDistance(){
    if(!dir) return;
 
 
-   TF2 *f = new TF2("f",TimeToDistance, 10, 1500, -0.3, 0.3, 18);
+   TF2 *f = new TF2("f",TimeToDistance, 1, 1000, -0.3, 0.3, 18);
 
    TProfile *constants = (TProfile *) gDirectory->Get("/CDC_TimeToDistance/CDC_TD_Constants");
 
@@ -168,17 +168,17 @@ void HistMacro_CDCTimeToDistance(){
    { 0.00, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45,
       0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0};
 
-   profile->SetContour(21, contours);
+   profile->SetContour(17, contours);
    profile->SetStats(0);
    profile->Draw("colz");
    profile->SetMaximum(1);
    profile->GetXaxis()->SetRangeUser(0,1000);
    profile->GetYaxis()->SetRangeUser(-0.22,0.22);
    profile->GetYaxis()->SetTitleOffset(1.15);
-   f->SetContour(21, contours);
-
    profile->Draw("cont2 list same");
-   f->Draw("cont2 list same");
+
+   f->SetContour(17, contours);
+   f->Draw("cont3 list same");
 
 
 
