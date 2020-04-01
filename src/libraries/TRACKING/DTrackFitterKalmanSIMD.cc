@@ -371,7 +371,9 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    USE_CDC_HITS=true;
    gPARMS->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS); 
    USE_TRD_HITS=false;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS);
+   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS); 
+   USE_TRD_DRIFT_TIMES=true;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
    USE_GEM_HITS=false;
    gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
 
@@ -753,7 +755,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    // Check that we have enough FDC and CDC hits to proceed
    if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
-   if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
+   if (cdchits.size()>0 && (cdchits.size()+fdchits.size() < 6)) return kFitNotDone;
    
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS) 
@@ -834,7 +836,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
       }
    }
    if (num_good_cdchits==0 && num_good_fdchits<4) return kFitNotDone;
-   if(num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
+   if(num_good_cdchits>0 && num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
 
    // Create vectors of updates (from hits) to S and C
    if (my_cdchits.size()>0){
@@ -4559,13 +4561,24 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
                double drift_time=my_fdchits[id]->t-mT0
                   -forward_traj[k].t*TIME_UNIT_CONVERSION;
                //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
-               double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
-
-               Mdiff(0)=drift-doca;
-
-               // Variance in drift distance
 	       if (my_fdchits[id]->hit!=NULL){
+		 double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
+
+		 Mdiff(0)=drift-doca;
+
+		 // Variance in drift distance
 		 V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
+	       }
+	       else if (USE_TRD_DRIFT_TIMES){
+		 double drift = 0.1*pow(drift_time/0.91,1./1.556);
+		 if (DEBUG_LEVEL>0){
+		   cout << my_fdchits[id]->uwire << " " << my_fdchits[id]->vstrip 
+			<< " " << my_fdchits[id]->z << " " << my_fdchits[id]->t << "  " <<mT0
+		     +forward_traj[k].t*TIME_UNIT_CONVERSION << endl;
+		   cout  << " >>d " << doca << " " << drift <<endl;
+		 }
+		 Mdiff(0)=drift-doca;
+		 V(0,0)=0.05*0.05;
 	       }
             }
 
@@ -4658,14 +4671,24 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
                      if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
                         double drift_time=my_fdchits[id]->t-mT0
                            -forward_traj[k].t*TIME_UNIT_CONVERSION;
-                        //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
-                        double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
+			if (my_fdchits[id]->hit!=NULL){
+			  //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
+			  double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
 
-                        Mdiff(0)=drift-doca;
-
-                        // Variance in drift distance
-                        V(0,0)=fdc_drift_variance(drift_time);
-
+			  Mdiff(0)=drift-doca;
+			
+			  // Variance in drift distance
+			  V(0,0)=fdc_drift_variance(drift_time);
+			}
+			else if (USE_TRD_DRIFT_TIMES){ 
+			  double drift = 0.1*pow(drift_time/0.91,1./1.556);
+			  cout << my_fdchits[id]->uwire << " " << my_fdchits[id]->vstrip
+			       << " "<< my_fdchits[id]->z << " " << my_fdchits[id]->t << "  " <<mT0
+			    +forward_traj[k].t*TIME_UNIT_CONVERSION << endl;
+			  cout  << ">>d " << doca << " " << drift <<endl; 
+			  Mdiff(0)=drift-doca;
+			  V(0,0)=0.05*0.05;
+			}
                      }
 
                      // Update the terms in H/H_T that depend on the particular hit    
