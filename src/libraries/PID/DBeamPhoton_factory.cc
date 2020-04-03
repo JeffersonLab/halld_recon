@@ -75,6 +75,12 @@ jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locE
     for (unsigned int ih=0; ih < tagm_hits.size(); ++ih)
     {
         if (!tagm_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
+        // Requiring tdc hits in time with the adc hit
+        // increases the purity of good tags and improves
+        // the time resolution by making sure that all 
+        // tagm hits have the time resolution provided
+        // by the time-walk-corrected tdc. -rtj
+        if (!tagm_hits[ih]->has_TDC) continue; // Skip ADC-only hits (i.e. hits with no TDC info.)
         if (tagm_hits[ih]->row > 0) continue; // Skip individual fiber readouts
         DBeamPhoton* gamma = Get_Resource();
 

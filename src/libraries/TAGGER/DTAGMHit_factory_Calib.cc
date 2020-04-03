@@ -31,7 +31,21 @@ jerror_t DTAGMHit_factory_Calib::init(void)
 {
     DELTA_T_ADC_TDC_MAX = 10.0; // ns
     USE_ADC = 0;
-    CUT_FACTOR = 1;
+    // This adc threshold is currently set to a constant of 250 channels in
+    // all TAGM channels for all run periods in CCDB. This is a problem in
+    // particular for data taken after January 2020, when the gains in some
+    // of the low-yield fibers were reduced for better performance under
+    // conditions of running at high rates. This only changes the default
+    // behavior; JANA parameter TAGMHit:CUT_FACTOR still allows the user
+    // to put it back to 1 if the old behavior is desired. The new default
+    // behavior is to fall back on the readout threshold in the fadc pulse
+    // finding algorithm to provide the minimum pulse height for hits in
+    // the tagm. Supplementing this with a requirement of a tdc hit in
+    // time with the adc pulse time provides a much better way of selecting
+    // good tags in the tagm, especially for data taken after Jan 2020.
+    // -rtj-
+    //CUT_FACTOR = 1;
+    CUT_FACTOR = 0;
     gPARMS->SetDefaultParameter("TAGMHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
                 "Maximum difference in ns between a (calibrated) fADC time and"
                 " F1TDC time for them to be matched in a single hit");
