@@ -55,8 +55,8 @@
     comp_bcdt_full->SetLineColor( kBlack );
     comp_bcdt->SetLineColor( kRed );
 
-    comp_bcdt_full->GetXaxis()->SetRangeUser(10,80);
-    comp_bcdt->GetXaxis()->SetRangeUser(10,80);
+    comp_bcdt_full->GetXaxis()->SetRangeUser(-20,20);
+    comp_bcdt->GetXaxis()->SetRangeUser(-20,20);
 
     comp_bcdt_full->SetTitle("CCAL Shower Time - Beam Time");
     comp_bcdt_full->GetXaxis()->SetTitle("t_{ccal}-t_{beam} [ns]");
@@ -69,7 +69,7 @@
   if( comp_fcdt ){
 
     comp_fcdt->SetStats( 0 );
-    comp_fcdt->GetXaxis()->SetRangeUser(0,40);
+    comp_fcdt->GetXaxis()->SetRangeUser(-20,20);
     c1->cd( 4 );
     comp_fcdt->Draw();
   }
