@@ -74,7 +74,7 @@ jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locE
 
     for (unsigned int ih=0; ih < tagm_hits.size(); ++ih)
     {
-        if (!tagm_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
+        if (!tagm_hits[ih]->has_fADC || !tagm_hits[ih]->has_TDC) continue;  // Require hits to register in both the ADC and TDC
         if (tagm_hits[ih]->row > 0) continue; // Skip individual fiber readouts
         DBeamPhoton* gamma = Get_Resource();
 
@@ -87,7 +87,7 @@ jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locE
 
     for (unsigned int ih=0; ih < tagh_hits.size(); ++ih)
     {
-        if (!tagh_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
+        if (!tagh_hits[ih]->has_fADC || !tagh_hits[ih]->has_TDC) continue;  // Require hits to register in both the ADC and TDC
         DBeamPhoton *gamma = nullptr;
         for (unsigned int jh=0; jh < _data.size(); ++jh)
         {
