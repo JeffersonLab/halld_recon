@@ -5,8 +5,8 @@ Import('*')
 
 # update this when plugins are added
 
-subdirs = ['BCAL_SiPM_saturation','FCAL_Pi0HFA','BCAL_attenlength_gainratio','BCAL_gainmatrix','BCAL_point_time','BCAL_point_calib','BCAL_saturation','BCAL_TDC_Timing','CDC_amp','HLDetectorTiming','TAGH_timewalk','CDC_TimeToDistance','PS_timing','PSC_TW','PS_E_calib','st_tw_corr_auto','ST_Propagation_Time','ST_Tresolution','TAGM_TW','TOF_calib','FCAL_TimingOffsets','FCALLEDTree','FCAL_LED_shifts', 'FCAL_Pi0TOF']
+subdirs = ['BCAL_SiPM_saturation','FCAL_Pi0HFA','BCAL_attenlength_gainratio','BCAL_gainmatrix','BCAL_point_time','BCAL_point_calib','BCAL_saturation','BCAL_TDC_Timing','CDC_amp','HLDetectorTiming','TAGH_timewalk','CDC_TimeToDistance','PS_timing','PSC_TW','PS_E_calib','st_tw_corr_auto','ST_Propagation_Time','ST_Tresolution','TAGM_TW','TOF_calib','FCALLEDTree','FCAL_LED_shifts', 'FCAL_Pi0TOF', 'FCAL_TimingOffsets_Primex']
 
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
-sbms.OptionallyBuild(env, ['FCALgains','FCALpedestals','FCALpulsepeak'])
+sbms.OptionallyBuild(env, ['FCALgains','FCALpedestals','FCALpulsepeak','FCAL_TimingOffsets'])
