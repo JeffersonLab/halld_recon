@@ -2143,7 +2143,16 @@ void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
     s=diff.Mag();
     t=s/29.98;
     pos=pos0+diff;
-    extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+    extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s)); 
+    Rd=89.; // approximate BCAL outer radius
+    B=uy2*(Rd - x0)*(Rd + x0) + 2*ux*uy*x0*y0 + ux2*(Rd - y0)*(Rd + y0);
+    if (B>0){
+      diff=-(A-sqrt(B))/(C*uz)*dir;
+      s=diff.Mag();
+      t=s/29.98;
+      pos=pos0+diff;
+      extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+    }
   }
 
   // Extrapolate to TRD
