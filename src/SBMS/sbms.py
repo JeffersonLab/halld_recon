@@ -640,6 +640,7 @@ def AddDANA(env):
 ##################################
 def Add_xstream(env):
 	env.AppendUnique(CPPPATH = ['#external/xstream/include'])
+	env.AppendUnique(CPPPATH = ['/usr/include/tirpc'])
 	env.AppendUnique(CCFLAGS = ['-fPIC'])
 	env.AppendUnique(LIBS=['xstream', 'bz2', 'z'])
 	env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['xstream', 'bz2', 'z'])
