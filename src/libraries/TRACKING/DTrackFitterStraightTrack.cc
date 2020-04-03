@@ -321,7 +321,8 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
     }
     d=f_delta*(d_0/f_0*P+1.-P);
   }
-  V=CDCDriftVariance(t)+mVarT0*dd_dt*dd_dt;
+  double VarMs=0.001; // kludge for material effects
+  V=CDCDriftVariance(t)+mVarT0*dd_dt*dd_dt+VarMs;
 }
 
 // Perform the Kalman Filter for the current set of cdc hits
@@ -861,16 +862,15 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   double z=input_pos.z();
   double t0=input_params.t0();
   // Variance in start time
-  cout << SystemName(input_params.t0_detector()) << endl;
   switch(input_params.t0_detector()){
   case SYS_TOF:
     mVarT0=0.01;
     break;
   case SYS_CDC:
-    mVarT0=7.5;
+    mVarT0=25.;
     break;
   case SYS_FDC:
-    mVarT0=7.5;
+    mVarT0=25.;
     break;
   case SYS_BCAL:
     mVarT0=0.25;
@@ -882,7 +882,6 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
     mVarT0=0.;
     break;
   }
-
 
   // Chisq and ndof
   chisq=1e16;
@@ -1285,7 +1284,8 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
   DMatrix2x4 H;  // Track projection matrix
   DMatrix4x2 H_T; // Transpose of track projection matrix 
   DMatrix4x2 K;  // Kalman gain matrix
-  DMatrix2x2 V(0.0833,0.,0.,0.000256);  // Measurement variance 
+  double VarMs=0.001; // kludge for material
+  DMatrix2x2 V(0.0833,0.,0.,0.000256+VarMs);  // Measurement variance 
   DMatrix2x2 Vtemp,InvV;
   DMatrix2x1 Mdiff;
   DMatrix4x4 I; // identity matrix
@@ -1400,9 +1400,8 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	double drift=0.; // assume hit at wire position
 	if (fit_type==kTimeBased){
 	  double drift_time=fdchits[my_id]->time-trajectory[k].t; 
-	  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
-	  
-	  V(0,0)=fdc_drift_variance(drift_time);
+	  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);	 
+	  V(0,0)=fdc_drift_variance(drift_time)+VarMs;
 	}
 	Mdiff(0)=drift-doca;
 	Mdiff(1)=v-vpred;
