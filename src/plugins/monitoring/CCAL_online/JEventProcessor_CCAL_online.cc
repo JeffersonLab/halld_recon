@@ -82,7 +82,7 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 	
 	hcomp_bfdt         = new TH1F("comp_bfdt","FCAL Shower Time - Beam Time; t_{fcal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
 	hcomp_fcdt         = new TH1F("comp_fcdt","CCAL Time - FCAL Time; t_{fcal}-t_{ccal} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
-	hcomp_bcdt_full    = new TH1F("comp_bcdt_full","CCAL Shower Time - Beam Time (No Cuts); t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
+	hcomp_bcdt     = new TH1F("comp_bcdt","CCAL Shower Time - Beam Time; t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
 	
 	hcomp_cratio   = new TH1F("comp_cratio", "CCAL Energy over Calculated Compton Energy; #frac{E_{ccal}}{E_{comp}}", 1000, 0., 2.);
 	hcomp_cfbratio = new TH1F("comp_cfbratio", "Energy Conservation; #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 1000, -1., 1.);
@@ -91,7 +91,6 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 	hcomp_pfpc     = new TH1F("comp_pfpc", "FCAL - CCAL Azimuthal Angle; #phi_{fcal}-#phi_{ccal} [deg]; Counts / 0.5 degrees", 1440, -360., 360.);
 	hcomp_cxy      = new TH2F("comp_cxy","Reconstructed Compton Positions in CCAL; x_{ccal} [cm]; y_{ccal} [cm]", 200, -12.5, 12.5, 200, -12.5, 12.5);
 	hcomp_fxy      = new TH2F("comp_fxy","Reconstructed Compton Positions in FCAL; x_{fcal} [cm]; y_{fcal} [cm]", 200, -50., 50., 200, -50., 50.);
-	hcomp_bcdt     = new TH1F("comp_bcdt","CCAL Shower Time - Beam Time; t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
 	
 	hcomp_cratio_bkgd   = new TH1F("comp_cratio_bkgd", "CCAL Energy over Calculated Compton Energy (Accidentals); #frac{E_{ccal}}{E_{comp}}", 1000, 0., 2.);
 	hcomp_cfbratio_bkgd = new TH1F("comp_cfbratio_bkgd", "Energy Conservation (Accidentals); #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 1000, -1., 1.);
@@ -100,7 +99,6 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 	hcomp_pfpc_bkgd     = new TH1F("comp_pfpc_bkgd", "FCAL - CCAL Azimuthal Angle (Accidentals); #phi_{fcal}-#phi_{ccal} [deg]; Counts / 0.5 degrees", 1440, -360., 360.);
 	hcomp_cxy_bkgd      = new TH2F("comp_cxy_bkgd","Reconstructed Compton Positions in CCAL (Accidentals); x_{ccal} [cm]; y_{ccal} [cm]", 200, -12.5, 12.5, 200, -12.5, 12.5);
 	hcomp_fxy_bkgd      = new TH2F("comp_fxy_bkgd","Reconstructed Compton Positions in FCAL (Accidentals); x_{fcal} [cm]; y_{fcal} [cm]", 200, -50., 50., 200, -50., 50.);
-	hcomp_bcdt_bkgd     = new TH1F("comp_bcdt_bkgd","CCAL Shower Time - Beam Time (Accidentals); t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 400, -100., 100.);
 
 	hNPhotons = new TH1I("NPhotons","Number of Beam Photons per Event",80,-0.5,79.5);
 	
@@ -189,9 +187,15 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	
 	//----------   Get Data Objects   ----------//
 	
-	vector< const DCCALGeometry* > locCCALGeomVec;
-	eventLoop->Get( locCCALGeomVec );
-	const DCCALGeometry& ccalGeom = *(locCCALGeomVec[0]);
+	vector< const DCCALGeometry* > ccalGeomVec;
+  	eventLoop->Get( ccalGeomVec );
+	
+  	if( ccalGeomVec.size() != 1 ) {
+    		cerr << "No CCAL geometry accessbile." << endl;
+    		return RESOURCE_UNAVAILABLE;
+  	}
+	
+	const DCCALGeometry *ccalGeom = ccalGeomVec[0];
 	
 	
 	vector< const DCCALDigiHit*  > locDigiHits;
@@ -208,6 +212,15 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 		eventLoop->Get( locFCALShowers );
 		eventLoop->Get( locBeamPhotons );
 	}
+	
+	
+	const DEventRFBunch *locRFBunch = NULL;
+	try { 
+	  	eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
+	} catch (...) { return NOERROR; }
+	double rfTime = locRFBunch->dTime;
+	if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+	
 	
 	
 	DVector3 locVertex;
@@ -244,7 +257,7 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 		dHitItr != locDigiHits.end(); ++dHitItr ) {
 		
 		const DCCALDigiHit& dHit = (**dHitItr);
-		int chan = ccalGeom.channel( dHit.row, dHit.column );
+		int chan = ccalGeom->channel( dHit.row, dHit.column );
 		
 		hdigOcc2D->Fill( dHit.column, dHit.row );
 		hdigInt->Fill( dHit.pulse_integral );
@@ -464,8 +477,8 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 			double dt_fc_cc = ccal_t - fcal_t;
 			hcomp_fcdt->Fill( dt_fc_cc );
 			
-			if( fabs(dt_fc_cc) > 6. ) continue;
-			
+			if( fabs(fcal_t - rfTime) > 2.004 ) continue;
+			if( fabs(ccal_t - rfTime) > 2.004 ) continue;
 			
 			
 			
@@ -475,11 +488,13 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 				double beam_e = beam_photon->lorentzMomentum().E();
 				double beam_t = beam_photon->time();
 				
+				double brfdt  = beam_t - rfTime;
+				
 				double dt_fcal_bm = fcal_t - beam_t;
-				double dt_cc_bm   = ccal_t - beam_t;
+				double dt_ccal_bm   = ccal_t - beam_t;
 				
 				hcomp_bfdt->Fill( dt_fcal_bm );
-				hcomp_bcdt_full->Fill( dt_cc_bm );
+				hcomp_bcdt->Fill( dt_ccal_bm );
 				
 				if( beam_e < 6. ) continue;
 				
@@ -487,7 +502,7 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 				double ecompc  =  1. / ( (1./beam_e)  +  (1./m_e)*(1. - cos(ccal_pos.Theta())) );
 				
 				
-				if( fabs(dt_fcal_bm) <  6.012 ) {
+				if( fabs(brfdt) <  2.004 ) {
 					
 					hcomp_cratio->Fill( ccal_e/ecompc );
 					hcomp_cfbratio->Fill( (ccal_e+fcal_e-beam_e)/beam_e );
@@ -496,10 +511,8 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 					hcomp_cfb2d->Fill( (ecompc+ecompf)/beam_e, (ccal_e+fcal_e)/beam_e );
 					hcomp_pfpc->Fill( (phif-phic)*180./TMath::Pi() );
 					
-					hcomp_bcdt->Fill(dt_cc_bm);
-					
-				} else if( (  -(6.012 + 6.*4.008) <= dt_fcal_bm && dt_fcal_bm <= -(6.012 + 3.*4.008) )
-					|| (   (6.012 + 3.*4.008) <= dt_fcal_bm && dt_fcal_bm <=  (6.012 + 6.*4.008) ) ) {
+				} else if( (  -(6.012 + 2.*4.008) <= brfdt && brfdt <= -(6.012 + 1.*4.008) )
+					|| (   (6.012 + 1.*4.008) <= brfdt && brfdt <=  (6.012 + 2.*4.008) ) ) {
 					
 					hcomp_cratio_bkgd->Fill( ccal_e/ecompc );
 					hcomp_cfbratio_bkgd->Fill( (ccal_e+fcal_e-beam_e)/beam_e );
@@ -507,8 +520,6 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 					hcomp_fxy_bkgd->Fill( fcal_pos.X(), fcal_pos.Y() );
 					hcomp_cfb2d_bkgd->Fill( (ecompc+ecompf)/beam_e, (ccal_e+fcal_e)/beam_e );
 					hcomp_pfpc_bkgd->Fill( (phif-phic)*180./TMath::Pi() );
-					
-					hcomp_bcdt_bkgd->Fill(dt_cc_bm);
 					
 				}
 			}

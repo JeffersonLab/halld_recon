@@ -27,6 +27,7 @@
 #include <FCAL/DFCALGeometry.h>
 
 #include <PID/DBeamPhoton.h>
+#include <PID/DEventRFBunch.h>
 #include <HDGEOMETRY/DGeometry.h>
 
 #include <TRIGGER/DL1Trigger.h>
@@ -120,7 +121,7 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
   		
 		TH1F *hcomp_bfdt;
 		TH1F *hcomp_fcdt;
-		TH1F *hcomp_bcdt_full;
+		TH1F *hcomp_bcdt;
 		
 		TH1F *hcomp_cratio;
 		TH1F *hcomp_cfbratio;
@@ -128,7 +129,6 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 		TH1F *hcomp_pfpc;
 		TH2F *hcomp_cxy;
 		TH2F *hcomp_fxy;
-		TH1F *hcomp_bcdt;
 		
 		TH1F *hcomp_cratio_bkgd;
 		TH1F *hcomp_cfbratio_bkgd;
@@ -136,7 +136,6 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 		TH1F *hcomp_pfpc_bkgd;
 		TH2F *hcomp_cxy_bkgd;
 		TH2F *hcomp_fxy_bkgd;
-		TH1F *hcomp_bcdt_bkgd;
 		
 		TH1I *hNPhotons;
 	
