@@ -76,7 +76,7 @@ public:
   
   unsigned int Locate(const vector<double>&xx,double x) const;
   double CDCDriftVariance(double t) const;
-  double CDCDriftDistance(double dphi,double delta,double t) const;
+  void CDCDriftParameters(double dphi,double delta,double t,double &d,double &V) const;
   jerror_t SetReferenceTrajectory(double t0,double z,DMatrix4x1 &S,
 				  const DCDCTrackHit *last_cdc,double &dzsign);
   jerror_t KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,vector<int>&used_hits,
@@ -128,7 +128,7 @@ public:
   vector<double>fdc_drift_table;
   
   // Resolution parameters
-  double CDC_RES_PAR1,CDC_RES_PAR2,CDC_RES_PAR3;
+  double CDC_RES_PAR1,CDC_RES_PAR2,CDC_RES_PAR3,mVarT0;
   // Parameters for fdc drift resolution
   double DRIFT_RES_PARMS[3];
   double DRIFT_FUNC_PARMS[6];
