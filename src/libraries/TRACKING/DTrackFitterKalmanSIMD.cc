@@ -4570,7 +4570,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 		 V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
 	       }
 	       else if (USE_TRD_DRIFT_TIMES){
-		 double drift = 0.1*pow(drift_time/0.91,1./1.556);
+		 double drift = 0.1*pow(drift_time/8./0.91,1./1.556);
 		 if (DEBUG_LEVEL>0){
 		   cout << my_fdchits[id]->uwire << " " << my_fdchits[id]->vstrip 
 			<< " " << my_fdchits[id]->z << " " << my_fdchits[id]->t << "  " <<mT0
