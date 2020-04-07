@@ -25,7 +25,10 @@ using namespace jana;
 // init
 //------------------
 jerror_t DFDCHit_factory::init(void)
-{
+{ 
+  USE_FDC=true; 
+  gPARMS->SetDefaultParameter("FDC:ENABLE",USE_FDC);
+  
    /// set the base conversion scales
    a_scale      = 2.4E4/1.3E5;  // cathodes
    t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
@@ -40,6 +43,8 @@ jerror_t DFDCHit_factory::init(void)
 //------------------
 jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
+  if (USE_FDC==false) return RESOURCE_UNAVAILABLE;
+
    // Only print messages for one thread whenever run number change
    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
    static set<int> runs_announced;
@@ -123,6 +128,8 @@ jerror_t DFDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t DFDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
+  if (USE_FDC==false) return RESOURCE_UNAVAILABLE;
+
    /// Generate DFDCHit object for each DFDCCathodeDigiHit and
    /// each DFDCWireDigiHit object.
    /// This is where the first set of calibration constants
