@@ -164,7 +164,7 @@ void DDetectorMatches_factory::MatchToDIRC(const DParticleID* locParticleID, con
 	vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_DIRC);
 	if(extrapolations.size()==0) return;
 
-	double locInputStartTime = locTrackTimeBased->t0();
+	double locInputStartTime = locTrackTimeBased->time();
 
 	// objects to hold DIRC match parameters and links between tracks and DIRC hits
 	shared_ptr<DDIRCMatchParams> locDIRCMatchParams;
