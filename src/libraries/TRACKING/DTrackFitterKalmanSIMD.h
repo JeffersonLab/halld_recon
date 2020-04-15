@@ -199,6 +199,12 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 		double &dx,double &dy,double &dz,bool do_reverse=false);
   void StepBack(double dedx,double newz,double z,
 		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C);
+  void FindSag(double dx,double dy, double zlocal,const DCDCWire *mywire,
+               double &delta,double &dphi) const;
+  void SwimToEndplate(double z,const DKalmanForwardTrajectory_t &traj,
+		      DMatrix5x1 &S);
+  void FindDocaAndProjection(const DKalmanSIMDFDCHit_t *hit,const DMatrix5x1 &S,
+			     DMatrix2x1 &M,DMatrix5x2 &H_T);
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);

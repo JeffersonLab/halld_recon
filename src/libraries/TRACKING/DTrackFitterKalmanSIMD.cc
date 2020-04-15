@@ -4884,26 +4884,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  // In this case, find the doca at the cdc endplate.
 	  if (z>endplate_z){
 	    swimmed_to_doca=true;
-	    
+	    SwimToEndplate(z,forward_traj[k],S);
+
 	    // wire position at the endplate
 	    wirepos=origin;
 	    wirepos+=(endplate_z-z0w)*dir;
-
-	    // Swim to the cdc endplate
-	    double dedx=0.;
-	    if (CORRECT_FOR_ELOSS){
-	      dedx=GetdEdx(S(state_q_over_p), forward_traj[k].K_rho_Z_over_A,
-			   forward_traj[k].rho_Z_over_A,
-			   forward_traj[k].LnI,forward_traj[k].Z);
-	    }
-	    double my_z=newz,old_z=z;
-	    int num_steps=int(fabs(dz/mStepSizeZ));
-	    for (int m=0;m<num_steps;m++){
-	      my_z=old_z-mStepSizeZ;
-	      Step(old_z,my_z,dedx,S);
-	      old_z=my_z;
-	    }
-	    Step(old_z,newz,dedx,S);
 	    
 	    dx=S(state_x)-wirepos.X();
 	    dy=S(state_y)-wirepos.Y();
@@ -4944,19 +4929,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  if (fit_type==kTimeBased){
 	    // Find offset of wire with respect to the center of the
 	    // straw at this z position
-	    const DCDCWire *mywire=my_cdchits[cdc_index]->hit->wire;
-	    int ring_index=mywire->ring-1;
-	    int straw_index=mywire->straw-1;
-	    double zlocal=newz-z0w;
-	    double phi_d=atan2(dy,dx);
-	    double delta
-	      =max_sag[ring_index][straw_index]*(1.-zlocal*zlocal/5625.)
-	      *cos(phi_d + sag_phi_offset[ring_index][straw_index]);
-	    double dphi=phi_d-mywire->origin.Phi();
-	    while (dphi>M_PI) dphi-=2*M_PI;
-	    while (dphi<-M_PI) dphi+=2*M_PI;
-	    if (mywire->origin.Y()<0) dphi*=-1.;
-	    
+	    double delta=0,dphi=0.;
+	    FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+
+	    // Find drift time and distance	    
 	    tdrift=my_cdchits[cdc_index]->tdrift-mT0
 	      -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
 	    double B=forward_traj[k_minus_1].B;
@@ -9769,8 +9745,25 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
    DMatrix5x5 Ctest; // Covariance matrix
    DMatrix2x2 InvV; // Inverse of error matrix
 
+   unsigned int cdc_index=0;
+   unsigned int num_cdc_hits=my_cdchits.size();
+   bool more_cdc_measurements=(num_cdc_hits>0);
+   double old_doca2=1e6;
+
+   // Vectors for cdc wires
+   DVector2 origin,dir,wirepos;
+   double z0w=0.; // origin in z for wire
+
    deque<DKalmanForwardTrajectory_t>::reverse_iterator rit = forward_traj.rbegin();
    S=S0_=(*rit).S;
+   
+   if (more_cdc_measurements){
+     origin=my_cdchits[0]->origin;  
+     dir=my_cdchits[0]->dir;   
+     z0w=my_cdchits[0]->z0wire;
+     wirepos=origin+((*rit).z-z0w)*dir;
+   }
+
    for (rit=forward_traj.rbegin()+1;rit!=forward_traj.rend();++rit){
      // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
@@ -9787,7 +9780,92 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      // Save the current state of the reference trajectory
      S0_=S0;
 
-     
+     // Z position along the trajectory 
+     double z=(*rit).z;
+
+     if (more_cdc_measurements){
+       // new wire position
+       wirepos=origin;
+       wirepos+=(z-z0w)*dir;
+       
+       // doca variables
+       double dx=S(state_x)-wirepos.X();
+       double dy=S(state_y)-wirepos.Y();
+       double doca2=dx*dx+dy*dy;
+      
+       if (doca2>old_doca2){
+	 if(my_cdchits[cdc_index]->status==good_hit){
+	   	  double swimmed_to_doca=false;
+	  double newz=endplate_z;
+	  double dz=newz-z;
+	  // Sometimes the true doca would correspond to the case where the 
+	  // wire would need to extend beyond the physical volume of the straw. 
+	  // In this case, find the doca at the cdc endplate.
+	  if (z>endplate_z){
+	    swimmed_to_doca=true;
+	    SwimToEndplate(z,*rit,S);
+
+	    // wire position at the endplate
+	    wirepos=origin;
+	    wirepos+=(endplate_z-z0w)*dir;
+	    
+	    dx=S(state_x)-wirepos.X();
+	    dy=S(state_y)-wirepos.Y();
+	  }
+	  else{
+	    // Find the true doca to the wire.  If we had to use Brent's 
+	    // algorithm, the routine returns true.
+	    swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,S0,S,C,dx,dy,
+				     dz,true);  
+	    newz=z+dz;
+	  }
+	  double cosstereo=my_cdchits[cdc_index]->cosstereo;
+	  double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+
+	  // Track projection
+	  double cosstereo2_over_d=cosstereo*cosstereo/d;
+	  Hc_T(state_x)=dx*cosstereo2_over_d; 
+	  Hc(state_x)=Hc_T(state_x);
+	  Hc_T(state_y)=dy*cosstereo2_over_d;	  
+	  Hc(state_y)=Hc_T(state_y);
+	  if (swimmed_to_doca==false){
+	    Hc_T(state_ty)=Hc_T(state_y)*dz;
+	    Hc(state_ty)=Hc_T(state_ty);	  
+	    Hc_T(state_tx)=Hc_T(state_x)*dz;
+	    Hc(state_tx)=Hc_T(state_tx);
+	  }
+	  else{
+	    Hc_T(state_ty)=0.;
+	    Hc(state_ty)=0.;
+	    Hc_T(state_tx)=0.;
+	    Hc(state_tx)=0.;
+	  }
+	  // Find offset of wire with respect to the center of the
+	  // straw at this z position
+	  double delta=0.,dphi=0.;
+	  FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+
+	 }
+
+	 // new wire origin and direction
+	 if (cdc_index<num_cdc_hits-1){
+	   cdc_index++;
+	   origin=my_cdchits[cdc_index]->origin;
+	   z0w=my_cdchits[cdc_index]->z0wire;
+	   dir=my_cdchits[cdc_index]->dir;
+	 }
+	 else more_cdc_measurements=false;
+	 
+	 // Update the wire position
+	 wirepos=origin+(z-z0w)*dir;
+	 
+	 // new doca
+	 dx=S(state_x)-wirepos.X();
+	 dy=S(state_y)-wirepos.Y();
+	 doca2=dx*dx+dy*dy;
+       }
+       old_doca2=doca2; 
+     }
    }
 
    return FIT_SUCCEEDED;
@@ -9834,7 +9912,8 @@ bool DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
   // if the path length increment is small relative to the radius 
   // of curvature, use a linear approximation to find dz	
   bool do_brent=false;
-  double two_step=2.*(do_reverse?-mStepSizeZ:mStepSizeZ);
+  double sign=do_reverse?-1.:1.;
+  double two_step=2.*sign*mStepSizeZ;
   if (fabs(qBr2p*S(state_q_over_p)
 	   *bfield->GetBz(S(state_x),S(state_y),z)
 	   *two_step/sinl)<0.05
@@ -9842,8 +9921,7 @@ bool DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
     double dzw=z-z0w;
     dz=-((S(state_x)-origin.X()-ux*dzw)*my_ux
 	 +(S(state_y)-origin.Y()-uy*dzw)*my_uy)/denom;
-    
-    if (fabs(dz)>two_step || dz<0){
+    if (fabs(dz)>fabs(two_step) || sign*dz<0){
       do_brent=true;
     }
     else{
@@ -9985,3 +10063,38 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
   }
 }
 
+// Swim a track to the CDC endplate given starting z position
+void DTrackFitterKalmanSIMD::SwimToEndplate(double z,
+					    const DKalmanForwardTrajectory_t &traj,
+					    DMatrix5x1 &S){
+  double dedx=0.;
+  if (CORRECT_FOR_ELOSS){
+    dedx=GetdEdx(S(state_q_over_p),traj.K_rho_Z_over_A,traj.rho_Z_over_A,
+		 traj.LnI,traj.Z);
+  }
+  double my_z=z;
+  int num_steps=int(fabs((endplate_z-z)/mStepSizeZ));
+  for (int m=0;m<num_steps;m++){
+    my_z=z-mStepSizeZ;
+    Step(z,my_z,dedx,S);
+    z=my_z;
+  }
+  Step(z,endplate_z,dedx,S);
+}
+
+// Find the sag parameters (delta,dphi) for the given straw at the local z 
+// position
+void DTrackFitterKalmanSIMD::FindSag(double dx,double dy, double zlocal,
+				     const DCDCWire *mywire,double &delta,
+				     double &dphi) const{
+  int ring_index=mywire->ring-1;
+  int straw_index=mywire->straw-1;
+  double phi_d=atan2(dy,dx);
+  delta=max_sag[ring_index][straw_index]*(1.-zlocal*zlocal/5625.)
+    *cos(phi_d + sag_phi_offset[ring_index][straw_index]);
+
+  dphi=phi_d-mywire->origin.Phi();
+  while (dphi>M_PI) dphi-=2*M_PI;
+  while (dphi<-M_PI) dphi+=2*M_PI;
+  if (mywire->origin.Y()<0) dphi*=-1.;
+}
