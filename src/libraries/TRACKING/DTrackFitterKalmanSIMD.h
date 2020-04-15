@@ -187,9 +187,18 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddGEMHit(const DGEMPoint *gemhit);
 
   jerror_t KalmanLoop(void);
+  virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
+				       DMatrix5x1 &S,DMatrix5x5 &C,
+				       double &chisq,unsigned int &numdof);
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,
 				       double &chisq,unsigned int &numdof);
+  bool FindDoca(const DKalmanSIMDCDCHit_t *hit,
+	 	const DKalmanForwardTrajectory_t &traj,
+		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C,
+		double &dx,double &dy,double &dz,bool do_reverse=false);
+  void StepBack(double dedx,double newz,double z,
+		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C);
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
