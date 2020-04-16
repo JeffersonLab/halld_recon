@@ -204,9 +204,17 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void SwimToEndplate(double z,const DKalmanForwardTrajectory_t &traj,
 		      DMatrix5x1 &S);
   void FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit_t *hit,
-				   const DMatrix5x1 &S,double &dv,double &doca,
-	                           double &cosalpha,
-		             double &lorentz_factor,DMatrix5x2 &H_T);
+				   const DMatrix5x1 &S,double &upred,
+				   double &vpred,double &doca,double &cosalpha,
+				   double &lorentz_factor,DMatrix5x2 &H_T);
+  void UpdateSandCMultiHit(const DKalmanForwardTrajectory_t &traj,
+			   double upred,double vpred,double doca,
+			   double cosalpha,double lorentz_factor,DMatrix2x2 &V,
+			   DMatrix2x2 &Vtemp,DMatrix2x1 &Mdiff,DMatrix2x5 &H,
+			   const DMatrix5x2 &H_T,DMatrix5x1 &S,DMatrix5x5 &C,
+			   double fdc_chi2cut,bool skip_plane,double &chisq,
+			   unsigned int &numdof);
+
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
