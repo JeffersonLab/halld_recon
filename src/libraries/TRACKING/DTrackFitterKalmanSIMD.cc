@@ -9745,17 +9745,25 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
    DMatrix5x5 Ctest; // Covariance matrix
    DMatrix2x2 InvV; // Inverse of error matrix
 
+   double Vc=0.0507;
+
    unsigned int cdc_index=0;
    unsigned int num_cdc_hits=my_cdchits.size();
    bool more_cdc_measurements=(num_cdc_hits>0);
    double old_doca2=1e6;
 
+   // Initialize chi squared
+   chisq=0;
+   
+   // Initialize number of degrees of freedom
+   numdof=0;
+   
    // Vectors for cdc wires
    DVector2 origin,dir,wirepos;
    double z0w=0.; // origin in z for wire
-
+   
    deque<DKalmanForwardTrajectory_t>::reverse_iterator rit = forward_traj.rbegin();
-   S=S0_=(*rit).S;
+   S0_=(*rit).S;
    
    if (more_cdc_measurements){
      origin=my_cdchits[0]->origin;  
@@ -9795,56 +9803,91 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
       
        if (doca2>old_doca2){
 	 if(my_cdchits[cdc_index]->status==good_hit){
-	   	  double swimmed_to_doca=false;
-	  double newz=endplate_z;
-	  double dz=newz-z;
-	  // Sometimes the true doca would correspond to the case where the 
-	  // wire would need to extend beyond the physical volume of the straw. 
-	  // In this case, find the doca at the cdc endplate.
-	  if (z>endplate_z){
-	    swimmed_to_doca=true;
-	    SwimToEndplate(z,*rit,S);
+	   double swimmed_to_doca=false;
+	   double newz=endplate_z;
+	   double dz=newz-z;
+	   // Sometimes the true doca would correspond to the case where the 
+	   // wire would need to extend beyond the physical volume of the straw. 
+	   // In this case, find the doca at the cdc endplate.
+	   if (z>endplate_z){
+	     swimmed_to_doca=true;
+	     SwimToEndplate(z,*rit,S);
+	     
+	     // wire position at the endplate
+	     wirepos=origin;
+	     wirepos+=(endplate_z-z0w)*dir;
+	     
+	     dx=S(state_x)-wirepos.X();
+	     dy=S(state_y)-wirepos.Y();
+	   }
+	   else{
+	     // Find the true doca to the wire.  If we had to use Brent's 
+	     // algorithm, the routine returns true.
+	     swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,S0,S,C,dx,dy,
+				      dz,true);  
+	     newz=z+dz;
+	   }
+	   double cosstereo=my_cdchits[cdc_index]->cosstereo;
+	   double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+	   
+	   // Track projection
+	   double cosstereo2_over_d=cosstereo*cosstereo/d;
+	   Hc_T(state_x)=dx*cosstereo2_over_d; 
+	   Hc(state_x)=Hc_T(state_x);
+	   Hc_T(state_y)=dy*cosstereo2_over_d;	  
+	   Hc(state_y)=Hc_T(state_y);
+	   if (swimmed_to_doca==false){
+	     Hc_T(state_ty)=Hc_T(state_y)*dz;
+	     Hc(state_ty)=Hc_T(state_ty);	  
+	     Hc_T(state_tx)=Hc_T(state_x)*dz;
+	     Hc(state_tx)=Hc_T(state_tx);
+	   }
+	   else{
+	     Hc_T(state_ty)=0.;
+	     Hc(state_ty)=0.;
+	     Hc_T(state_tx)=0.;
+	     Hc(state_tx)=0.;
+	   }
+	   // Find offset of wire with respect to the center of the
+	   // straw at this z position
+	   double delta=0.,dphi=0.;
+	   FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+	   
+	   // Find drift time and distance	    
+	   double tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	     -(*rit).t*TIME_UNIT_CONVERSION;
+	   double tcorr=0.,dmeas=0.;
+	   double B=(*rit).B;
+	   ComputeCDCDrift(dphi,delta,tdrift,B,dmeas,Vc,tcorr);
+	   
+	   printf("d %f %f\n",d,dmeas);	  
+	   // Residual
+	   double res=dmeas-d;
+	   
+	   // inverse variance including prediction
+	   double Vproj=Hc*C*Hc_T;
+	   double InvV1=1./(Vc+Vproj);
 
-	    // wire position at the endplate
-	    wirepos=origin;
-	    wirepos+=(endplate_z-z0w)*dir;
-	    
-	    dx=S(state_x)-wirepos.X();
-	    dy=S(state_y)-wirepos.Y();
-	  }
-	  else{
-	    // Find the true doca to the wire.  If we had to use Brent's 
-	    // algorithm, the routine returns true.
-	    swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,S0,S,C,dx,dy,
-				     dz,true);  
-	    newz=z+dz;
-	  }
-	  double cosstereo=my_cdchits[cdc_index]->cosstereo;
-	  double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+	   // Compute KalmanSIMD gain matrix
+	   Kc=InvV1*(C*Hc_T);
+	   
+	   // Update state vector covariance matrix
+	   //C=C-K*(H*C);    
+	   Ctest=C.SubSym(Kc*(Hc*C));
 
-	  // Track projection
-	  double cosstereo2_over_d=cosstereo*cosstereo/d;
-	  Hc_T(state_x)=dx*cosstereo2_over_d; 
-	  Hc(state_x)=Hc_T(state_x);
-	  Hc_T(state_y)=dy*cosstereo2_over_d;	  
-	  Hc(state_y)=Hc_T(state_y);
-	  if (swimmed_to_doca==false){
-	    Hc_T(state_ty)=Hc_T(state_y)*dz;
-	    Hc(state_ty)=Hc_T(state_ty);	  
-	    Hc_T(state_tx)=Hc_T(state_x)*dz;
-	    Hc(state_tx)=Hc_T(state_tx);
-	  }
-	  else{
-	    Hc_T(state_ty)=0.;
-	    Hc(state_ty)=0.;
-	    Hc_T(state_tx)=0.;
-	    Hc(state_tx)=0.;
-	  }
-	  // Find offset of wire with respect to the center of the
-	  // straw at this z position
-	  double delta=0.,dphi=0.;
-	  FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+	   if (!Ctest.IsPosDef()){
+	     if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	   }
 
+	   if (tdrift >= CDC_T_DRIFT_MIN){
+	     C=Ctest;
+	     S+=res*Kc;
+
+	     chisq+=(1.-Hc*Kc)*res*res/Vc;
+	     numdof++;
+
+	     printf("chisq %f ndof %d\n",chisq,numdof);
+	   }
 	 }
 
 	 // new wire origin and direction
@@ -9866,6 +9909,35 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
        }
        old_doca2=doca2; 
      }
+     if ((*rit).h_id>0&&(*rit).h_id<1000){
+       unsigned int id=(*rit).h_id-1;
+       double dv=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+       FindDocaAndProjectionMatrix(my_fdchits[id],S,dv,doca,cosalpha,
+				   lorentz_factor,H_T);
+       // Residual for coordinate along wire
+       Mdiff(1)=dv-doca*lorentz_factor;
+
+       // Residual for coordinate transverse to wire
+       double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
+       if (my_fdchits[id]->hit!=NULL){
+	 double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
+	 Mdiff(0)=drift-doca;
+ 
+	 // Variance in drift distance
+	 V(0,0)=fdc_drift_variance(drift_time);
+       }
+       else if (USE_TRD_DRIFT_TIMES){
+	 double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	 Mdiff(0)=drift-doca;
+
+	 // Variance in drift distance
+	 V(0,0)=0.05*0.05;
+       }
+
+       
+     }
+
+
    }
 
    return FIT_SUCCEEDED;
@@ -10098,3 +10170,70 @@ void DTrackFitterKalmanSIMD::FindSag(double dx,double dy, double zlocal,
   while (dphi<-M_PI) dphi+=2*M_PI;
   if (mywire->origin.Y()<0) dphi*=-1.;
 }
+
+void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit_t *hit,
+							 const DMatrix5x1 &S,
+							 double &dv,
+							 double &doca,
+							 double &cosalpha,
+							 double &lorentz_factor,
+							 DMatrix5x2 &H_T){
+  // Make the small alignment rotations
+  // Use small-angle form.
+  
+  // Position and direction from state vector
+  double x=S(state_x) + hit->phiZ*S(state_y);
+  double y=S(state_y) - hit->phiZ*S(state_x);
+  double tx =S(state_tx) + hit->phiZ*S(state_ty) - hit->phiY;
+  double ty =S(state_ty) - hit->phiZ*S(state_tx) + hit->phiX;
+
+  // Plane orientation and measurements
+  double cosa=hit->cosa;
+  double sina=hit->sina;
+  double u=hit->uwire; 
+  double v=hit->vstrip;
+
+  // Difference for coordinate along wire, without Lorentz deflection correction
+  dv=v-(x*sina+y*cosa);
+
+  // Direction tangent in the u-z plane
+  double tu=tx*cosa-ty*sina;
+  double tv=tx*sina+ty*cosa;
+  double alpha=atan(tu);
+  cosalpha=cos(alpha);
+  double cosalpha2=cosalpha*cosalpha;
+  double sinalpha=sin(alpha);
+  
+  // (signed) distance of closest approach to wire
+  double du=x*cosa-y*sina-u;
+  doca=du*cosalpha;
+
+  // Correction for lorentz effect
+  double nz=hit->nz;
+  double nr=hit->nr;
+  double nz_sinalpha_plus_nr_cosalpha=nz*sinalpha+nr*cosalpha;
+  lorentz_factor=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
+
+  // To transform from (x,y) to (u,v), need to do a rotation:
+  //   u = x*cosa-y*sina
+  //   v = y*cosa+x*sina
+  H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
+  H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;	
+	
+  double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
+  double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
+  double doca_cosalpha=doca*cosalpha;
+  double temp=doca_cosalpha*fac;	
+  H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
+  H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+  
+  H_T(state_x,0)=cosa*cosalpha;
+  H_T(state_y,0)=-sina*cosalpha;
+
+  double factor=doca*tu*cosalpha2;
+  H_T(state_ty,0)=sina*factor;
+  H_T(state_tx,0)=-cosa*factor;  
+}
+
+
+
