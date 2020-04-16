@@ -132,11 +132,13 @@ jerror_t DEventSourceHDDM::GetEvent(JEvent &event)
 
    int event_number = -1;
    int run_number = -1;
-   
-   // Get event/run numbers from HDDM
-   hddm_s::PhysicsEvent &pe = record->getPhysicsEvent(0);
-   event_number = pe.getEventNo();
-   run_number = pe.getRunNo();
+
+   if(!record->getPhysicsEvents().empty()) {
+       // Get event/run numbers from HDDM
+       hddm_s::PhysicsEvent &pe = record->getPhysicsEvent(0);
+       event_number = pe.getEventNo();
+       run_number = pe.getRunNo();
+   }
 
    // Copy the reference info into the JEvent object
    event.SetJEventSource(this);
