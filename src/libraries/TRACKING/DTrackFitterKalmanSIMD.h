@@ -213,7 +213,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 			   DMatrix2x2 &Vtemp,DMatrix2x1 &Mdiff,DMatrix2x5 &H,
 			   const DMatrix5x2 &H_T,DMatrix5x1 &S,DMatrix5x5 &C,
 			   double fdc_chi2cut,bool skip_plane,double &chisq,
-			   unsigned int &numdof);
+			   unsigned int &numdof,double fdc_anneal_factor=1.);
 
   virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  

@@ -4506,360 +4506,114 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     // Add the hit
     if (num_fdc_hits>0){
       if (forward_traj[k].h_id>0 && forward_traj[k].h_id<1000){
-	unsigned int id=forward_traj[k].h_id-1;
-	
-	// Make the small alignment rotations
-	// Use small-angle form.
-	
-	// Position and direction from state vector
-	double x=S(state_x) + my_fdchits[id]->phiZ*S(state_y);
-	double y=S(state_y) - my_fdchits[id]->phiZ*S(state_x);
-	double tx = (S(state_tx) + my_fdchits[id]->phiZ*S(state_ty) - my_fdchits[id]->phiY) ;
-	double ty = (S(state_ty) - my_fdchits[id]->phiZ*S(state_tx) + my_fdchits[id]->phiX) ;
-	
-	double cosa=my_fdchits[id]->cosa;
-	double sina=my_fdchits[id]->sina;
-	double u=my_fdchits[id]->uwire;
-	double v=my_fdchits[id]->vstrip;
-	
-	// Projected position along the wire without doca-dependent corrections
-	double vpred_uncorrected=x*sina+y*cosa;
-	
-	// Projected postion in the plane of the wires transverse to the wires
-	double upred=x*cosa-y*sina;
-
-	// Direction tangent in the u-z plane
-	double tu=tx*cosa-ty*sina;
-	double alpha=atan(tu);
-	double cosalpha=cos(alpha);
-	double cosalpha2=cosalpha*cosalpha;
-	double sinalpha=sin(alpha);
-
-	// (signed) distance of closest approach to wire
-	double du=upred-u;
-	double doca=du*cosalpha;
-	
-	// Correction for lorentz effect
-	double nz=my_fdchits[id]->nz;
-	double nr=my_fdchits[id]->nr;
-	double nz_sinalpha_plus_nr_cosalpha=nz*sinalpha+nr*cosalpha;
+	unsigned int id=forward_traj[k].h_id-1; 
+	// Check if this is a plane we want to skip in the fit (we still want
+	// to store track and hit info at this plane, however).
+	bool skip_plane=(my_fdchits[id]->hit!=NULL
+			 &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+	double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+	FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
+				    lorentz_factor,H_T);
+	// Matrix transpose H_T -> H
+	H=Transpose(H_T);
 	
 	// Variance in coordinate transverse to wire
 	V(0,0)=my_fdchits[id]->uvar;
 	
 	// Variance in coordinate along wire
 	V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
-	
-	// Difference between measurement and projection
-	double tv=tx*sina+ty*cosa;
-	Mdiff(1)=v-(vpred_uncorrected+doca*(nz_sinalpha_plus_nr_cosalpha
-					    -tv*sinalpha
-					    ));
-	Mdiff(0)=-doca;
 
-	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
-	  double drift_time=my_fdchits[id]->t-mT0
-	    -forward_traj[k].t*TIME_UNIT_CONVERSION;
-	  //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
+	// Add contribution of track covariance from state vector propagation to
+	// measurement errors
+	DMatrix2x2 Vtemp=V+H*C*H_T;
+
+	// Residual for coordinate along wire
+	Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
+       
+	// Residual for coordinate transverse to wire
+	Mdiff(0)=-doca;
+	double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
+	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
 	  if (my_fdchits[id]->hit!=NULL){
-	    double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
-	    
-	    Mdiff(0)=drift-doca;
-	    
+	    double drift=(doca>0.0?1.:-1.)
+	      *fdc_drift_distance(drift_time,forward_traj[k].B);
+	    Mdiff(0)+=drift;
+ 
 	    // Variance in drift distance
-	    V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
+	    V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;	
 	  }
 	  else if (USE_TRD_DRIFT_TIMES){
-	    double drift = 0.1*pow(drift_time/8./0.91,1./1.556);
-	    if (DEBUG_LEVEL>0){
-	      cout << my_fdchits[id]->uwire << " " << my_fdchits[id]->vstrip 
-		   << " " << my_fdchits[id]->z << " " << my_fdchits[id]->t << "  " <<mT0
-		+forward_traj[k].t*TIME_UNIT_CONVERSION << endl;
-	      cout  << " >>d " << doca << " " << drift <<endl;
-	    }
-	    Mdiff(0)=drift-doca;
+	    double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	    Mdiff(0)+=drift;
+
+	    // Variance in drift distance
 	    V(0,0)=0.05*0.05;
 	  }
 	}
 	
-	// To transform from (x,y) to (u,v), need to do a rotation:
-	//   u = x*cosa-y*sina
-	//   v = y*cosa+x*sina
-	double temp2=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
-	H_T(state_x,1)=sina+cosa*cosalpha*temp2;	
-	H_T(state_y,1)=cosa-sina*cosalpha*temp2;	
-	
-	double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
-	double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
-	double doca_cosalpha=doca*cosalpha;
-	double temp=doca_cosalpha*fac;	
-	H_T(state_tx,1)=cosa*temp
-	  -doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
-	  ;
-	H_T(state_ty,1)=-sina*temp
-	  -doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
-	  ;
+	// Cut outliers
+	double chi2_hit=Vtemp.Chi2(Mdiff); 
+	if (chi2_hit<fdc_chi2cut){
+	  fdc_updates[id].tdrift=drift_time;
+	  fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
+	  fdc_updates[id].doca=doca;
+	  fdc_used_in_fit[id]=true;
 
-	H_T(state_x,0)=cosa*cosalpha;
-	H_T(state_y,0)=-sina*cosalpha;
-	double one_plus_tu2=1.+tu*tu;
-	double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-	H_T(state_ty,0)=sina*factor;
-	H_T(state_tx,0)=-cosa*factor;
-	
-	// Matrix transpose H_T -> H
-	H=Transpose(H_T);
-	
-	// Check to see if we have multiple hits in the same plane
-	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){ 
-	  // If we do have multiple hits, then all of the hits within some
-	  // validation region are included with weights determined by how
-	  // close the hits are to the track projection of the state to the
-	  // "hit space".
-	  vector<DMatrix5x2> Klist;
-	  vector<DMatrix2x1> Mlist;
-	  vector<DMatrix2x5> Hlist;
-	  vector<DMatrix5x2> HTlist;
-	  vector<DMatrix2x2> Vlist;
-	  vector<double>probs;
-	  vector<unsigned int>used_ids;
+	  break_point_fdc_index=id;
+	  break_point_step_index=k;	
 	  
-	  // Deal with the first hit:
-	  //double Vtemp=V+H*C*H_T;
-	  DMatrix2x2 Vtemp=V+H*C*H_T;
-	  InvV=Vtemp.Invert();
-	  
-	  //probability
-	  double chi2_hit=Vtemp.Chi2(Mdiff);
-	  double prob_hit=exp(-0.5*chi2_hit)
-	    /(M_TWO_PI*sqrt(Vtemp.Determinant()));
-	  
-	  if (DEBUG_LEVEL > 25) jout << " == There are multiple (" << forward_traj[k].num_hits << ") FDC hits" << endl;
-	  
-	  // Cut out outliers
-	  if (chi2_hit<fdc_chi2cut && my_fdchits[id]->status==good_hit){
-	    probs.push_back(prob_hit);
-	    Vlist.push_back(V);
-	    Hlist.push_back(H);
-	    HTlist.push_back(H_T);
-	    Mlist.push_back(Mdiff);
-	    Klist.push_back(C*H_T*InvV); // Kalman gain
-	    
-	    used_ids.push_back(id);
-	    fdc_used_in_fit[id]=true;
-	  }
-
-	  // loop over the remaining hits
-	  for (unsigned int m=1;m<forward_traj[k].num_hits;m++){
-	    unsigned int my_id=id-m;
-	    if (my_fdchits[my_id]->status==good_hit){
-	      u=my_fdchits[my_id]->uwire;
-	      v=my_fdchits[my_id]->vstrip;
-	      
-	      // Doca to this wire
-	      du=upred-u;
-	      doca=du*cosalpha;
-	      
-	      // variance for coordinate along the wire
-	      V(1,1)=my_fdchits[my_id]->vvar;
-	      
-	      // Difference between measurement and projection
-	      Mdiff(1)=v-(vpred_uncorrected+doca*(nz_sinalpha_plus_nr_cosalpha
-						  -tv*sinalpha
-						  ));
-	      Mdiff(0)=-doca;
-	      if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
-		double drift_time=my_fdchits[id]->t-mT0
-		  -forward_traj[k].t*TIME_UNIT_CONVERSION;
-		if (my_fdchits[id]->hit!=NULL){
-		  //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
-		  double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
-		  
-		  Mdiff(0)=drift-doca;
-		  
-		  // Variance in drift distance
-		  V(0,0)=fdc_drift_variance(drift_time);
-		}
-		else if (USE_TRD_DRIFT_TIMES){ 
-		  double drift = 0.1*pow(drift_time/0.91,1./1.556);
-		  cout << my_fdchits[id]->uwire << " " << my_fdchits[id]->vstrip
-		       << " "<< my_fdchits[id]->z << " " << my_fdchits[id]->t << "  " <<mT0
-		    +forward_traj[k].t*TIME_UNIT_CONVERSION << endl;
-		  cout  << ">>d " << doca << " " << drift <<endl; 
-		  Mdiff(0)=drift-doca;
-		  V(0,0)=0.05*0.05;
-		}
-	      }
-	      
-	      // Update the terms in H/H_T that depend on the particular hit    
-	      doca_cosalpha=doca*cosalpha;
-	      temp=doca_cosalpha*fac;	
-	      H_T(state_tx,1)=cosa*temp	 
-		-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
-		;
-	      H_T(state_ty,1)=-sina*temp
-		-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
-		;
-	      factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-	      H_T(state_ty,0)=sina*factor;	     
-	      H_T(state_tx,0)=-cosa*factor;   
-	      
-	      // Matrix transpose H_T -> H
-	      H(1,state_tx)=H_T(state_tx,1);
-	      H(1,state_ty)=H_T(state_ty,1);
-	      H(0,state_ty)=H_T(state_ty,0);
-	      H(0,state_tx)=H_T(state_tx,0);
-	      
-	      // Calculate the kalman gain for this hit 
-	      ///Vtemp=V+H*C*H_T;
-	      Vtemp=V+H*C*H_T;
-	      InvV=Vtemp.Invert();
-	      
-	      // probability
-	      double chi2_hit=Vtemp.Chi2(Mdiff);
-	      double prob_hit=exp(-0.5*chi2_hit)
-		/(M_TWO_PI*sqrt(Vtemp.Determinant()));
-	      
-	      // Cut out outliers
-	      if(chi2_hit<fdc_chi2cut){	      
-		probs.push_back(prob_hit);	
-		Mlist.push_back(Mdiff);
-		Vlist.push_back(V);
-		Hlist.push_back(H);   
-		HTlist.push_back(H_T);
-		Klist.push_back(C*H_T*InvV);	  
-		
-		used_ids.push_back(my_id);
-		fdc_used_in_fit[my_id]=true;
-		
-		
-	      }
-	    }
-	  }
-	  double prob_tot=1e-100;
-	  for (unsigned int m=0;m<probs.size();m++){
-	    prob_tot+=probs[m];
-	  }
-	  
-	  // Adjust the state vector and the covariance using the hit 
-	  //information
-	  bool skip_plane=(my_fdchits[id]->hit!=NULL && my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
-	  if (skip_plane==false){
-	    DMatrix5x5 sum=I5x5;
-	    DMatrix5x5 sum2;
-	    for (unsigned int m=0;m<Klist.size();m++){
-	      double my_prob=probs[m]/prob_tot;
-	      S+=my_prob*(Klist[m]*Mlist[m]);
-	      sum-=my_prob*(Klist[m]*Hlist[m]);
-	      sum2+=(my_prob*my_prob)*(Klist[m]*Vlist[m]*Transpose(Klist[m]));
-	      
-	      // Update chi2
-	      DMatrix2x2 HK=Hlist[m]*Klist[m];
-	      R=Mlist[m]-HK*Mlist[m];
-	      RC=Vlist[m]-HK*Vlist[m];
-	      chisq+=my_prob*RC.Chi2(R);
-	      
-	      unsigned int my_id=used_ids[m];  
-	      fdc_updates[my_id].V=RC;
-	      
-	      if (DEBUG_LEVEL > 25) {
-		jout << " Adjusting state vector for FDC hit " << m << " with prob " << my_prob << " S:" << endl;
-		S.Print();
-	      }
-	    }
-	    // C=C.SandwichMultiply(sum)+sum2;  
-	    C=sum2.AddSym(sum*C*sum.Transpose());
-	    
-	    if (DEBUG_LEVEL > 25) { jout << " C: " << endl; C.Print();}
-	  }
-	  
-	  for (unsigned int m=0;m<Hlist.size();m++){
-	    unsigned int my_id=used_ids[m];  
-	    fdc_updates[my_id].S=S;
-	    fdc_updates[my_id].C=C; 
-	    fdc_updates[my_id].tdrift
-	      =my_fdchits[my_id]->t-forward_traj[k].t*TIME_UNIT_CONVERSION-mT0;
-	    fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift; // temporary!
-	    fdc_updates[my_id].doca=doca;
-	    
-	    if (skip_plane){
-	      fdc_updates[my_id].V=Vlist[m];
-	    }
-	  }
-	  
-	  // update number of degrees of freedom
-	  if (skip_plane==false){
-	    numdof+=2;
-	  }
-	}
-	else{
-	  if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
-	  
-	  // Variance for this hit
-	  DMatrix2x2 Vtemp=V+H*C*H_T;
-	  InvV=Vtemp.Invert();
-	  
-	  // Check if this hit is an outlier
-	  double chi2_hit=Vtemp.Chi2(Mdiff);
-	  if (chi2_hit<fdc_chi2cut){
-	    // Compute Kalman gain matrix
-	    K=C*H_T*InvV;
-	    
-	    bool skip_plane=(my_fdchits[id]->hit!=NULL
-			     &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+	  if (forward_traj[k].num_hits==1){  
+	    if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;	   
 	    if (skip_plane==false){
+	      // Compute Kalman gain matrix
+	      DMatrix2x2 InvV=Vtemp.Invert();
+	      DMatrix5x2 K=C*H_T*InvV;
+	     
 	      // Update the state vector 
 	      S+=K*Mdiff;
-
+	      
 	      // Update state vector covariance matrix
 	      //C=C-K*(H*C);    
 	      C=C.SubSym(K*(H*C));
 	      
 	      if (DEBUG_LEVEL > 25) {
 		jout << "S Update: " << endl; S.Print();
-		jout << "C Uodate: " << endl; C.Print();
+		jout << "C Update: " << endl; C.Print();
 	      }
-	    }
-	    
-	    // Store the "improved" values for the state vector and covariance
-	    fdc_updates[id].S=S;
-	    fdc_updates[id].C=C;
-	    fdc_updates[id].tdrift
-	      =my_fdchits[id]->t-forward_traj[k].t*TIME_UNIT_CONVERSION-mT0;
-	    fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-	    fdc_updates[id].doca=doca;
-	    fdc_used_in_fit[id]=true;
-	    
-	    if (skip_plane==false){  
-	      // Filtered residual and covariance of filtered residual
-	      R=Mdiff-H*K*Mdiff;   
-	      RC=V-H*(C*H_T);
 	      
+	      // Filtered residual and covariance of filtered residual
+	      DMatrix2x1 R=Mdiff-H*K*Mdiff;   
+	      DMatrix2x2 RC=V-H*(C*H_T);
 	      fdc_updates[id].V=RC;
 	      
 	      // Update chi2 for this segment
 	      chisq+=RC.Chi2(R);
-
-	      // update number of degrees of freedom
-	      numdof+=2;
 	      
-	      if (DEBUG_LEVEL>20)
-		{
-		  printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
-			 id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
-			 sqrt(V(1,1)),RC.Chi2(R),
-			 forward_traj[k].z);
-		  
-		}
+	      //if (DEBUG_LEVEL>20)
+	      {
+		printf("hit %d p %5.2f dm %5.2f %5.2f sig %5.2f %5.2f chi2 %5.2f\n",
+		       id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
+		       sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
+	      }
+	      
+	      numdof+=2;
 	    }
 	    else{
 	      fdc_updates[id].V=V;
 	    }
-	    
-	    break_point_fdc_index=id;
-	    break_point_step_index=k;		 
+	    // Store the "improved" values for the state vector and covariance
+	    fdc_updates[id].S=S;
+	    fdc_updates[id].C=C;
 	  }
 	}
+	// Handle the case where there are multiple adjacent hits in the plane
+	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
+	  if (DEBUG_LEVEL > 25) jout << " == There are multiple (" << forward_traj[k].num_hits << ") FDC hits" << endl;
+	  UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
+			      lorentz_factor,V,Vtemp,Mdiff,H,H_T,S,C,
+			      fdc_chi2cut,skip_plane,chisq,numdof,
+			      fdc_anneal_factor);
+	} 
 	if (num_fdc_hits>=forward_traj[k].num_hits)
 	  num_fdc_hits-=forward_traj[k].num_hits;
       }
@@ -9913,6 +9667,12 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
        // to store track and hit info at this plane, however).
        bool skip_plane=(my_fdchits[id]->hit!=NULL
 			&&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+       
+       // Variance in coordinate transverse to wire
+       V(0,0)=my_fdchits[id]->uvar;
+       
+       // Variance in coordinate along wire
+       V(1,1)=my_fdchits[id]->vvar;
 	   
        double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
        FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
@@ -10313,7 +10073,8 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 						 DMatrix5x1 &S,DMatrix5x5 &C,
 						 double fdc_chi2cut,
 						 bool skip_plane,double &chisq,
-						 unsigned int &numdof){
+						 unsigned int &numdof,
+						 double fdc_anneal_factor){
   // If we do have multiple hits, then all of the hits within some
   // validation region are included with weights determined by how
   // close the hits are to the track projection of the state to the
@@ -10357,7 +10118,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
       double mydoca=(upred-u)*cosalpha;
       
       // variance for coordinate along the wire
-      V(1,1)=my_fdchits[my_id]->vvar;
+      V(1,1)=my_fdchits[my_id]->vvar*fdc_anneal_factor;
       
       // Difference between measurement and projection
       Mdiff(1)=v-(vpred+mydoca*lorentz_factor);
@@ -10370,7 +10131,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	  Mdiff(0)+=drift;
 		  
 	  // Variance in drift distance
-	  V(0,0)=fdc_drift_variance(drift_time);
+	  V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
 	}
 	else if (USE_TRD_DRIFT_TIMES){ 
 	  double drift = sign*0.1*pow(drift_time/0.91,1./1.556);
