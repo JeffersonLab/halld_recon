@@ -66,10 +66,19 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
 {
    /// Constructor for DEventSourceHDDM object
    ifs = new ifstream(source_name);
-   if (ifs->is_open())
-      fin = new hddm_s::istream(*ifs);
-   else
-      fin = NULL;
+   if (*ifs) {
+      std::string head;
+      std::getline(*ifs, head);
+      std::string expected = " class=\"s\" ";
+      if (head.find(expected) == head.npos) {
+         std::string msg("Unexpected header found in input HDDM file: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
+   }
+   delete ifs;
+
+   ifs = new ifstream(source_name);
+   fin = new hddm_s::istream(*ifs);
    initialized = false;
    dapp = NULL;
    bfield = NULL;
@@ -120,12 +129,14 @@ jerror_t DEventSourceHDDM::GetEvent(JEvent &event)
    }
    
    hddm_s::HDDM *record = new hddm_s::HDDM();
-   if (! (*fin >> *record)) {
-      delete fin;
-      fin = NULL;
-      delete ifs;
-      ifs = NULL;
-      return NO_MORE_EVENTS_IN_SOURCE;
+   while (record->getPhysicsEvents().size() == 0) {
+      if (! (*fin >> *record)) {
+         delete fin;
+         fin = NULL;
+         delete ifs;
+         ifs = NULL;
+         return NO_MORE_EVENTS_IN_SOURCE;
+      }
    }
 
    ++Nevents_read;
