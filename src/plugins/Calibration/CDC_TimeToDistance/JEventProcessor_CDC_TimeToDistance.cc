@@ -211,7 +211,14 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time",
                time,residual,
                "Residual Vs. Drift Time; Drift time [ns];Residual [cm]",
-               250,0.,1250,100, -0.05,0.05);
+               250,0.,1000,100, -0.05,0.05);
+
+         if (max_sag[ring - 1][straw - 1] < 0.02) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, max sag < 0.2mm",
+               time,residual,
+               "Residual Vs. Drift Time (straight straws); Drift time [ns];Residual [cm]",
+               250,0.,1000,100, -0.05,0.05);
+
+
 
          if(UNBIASED_RING != 0 && (ring != UNBIASED_RING) ) continue;
 
@@ -230,41 +237,44 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          }
          double delta = max_sag[ring - 1][straw - 1]*(1.-dz*dz/5625.)
             *cos(docaphi + sag_phi_offset[ring - 1][straw - 1]);
+
+         int prof_td_max = 1000;
+
          // We only really need one histogram here
          Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift",
                time, delta, predictedDistance,
                "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-               500, 0, 1500, 200, -0.3, 0.3);
+               500, 0, prof_td_max, 200, -0.3, 0.3);
          // To investigate some features, also do this in bins of Max sag
          if (max_sag[ring - 1][straw - 1] < 0.05){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.05",
                   time, delta, predictedDistance,
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, 1500, 200, -0.3, 0.3);
+                  500, 0, prof_td_max, 200, -0.3, 0.3);
          } 
          else if (max_sag[ring - 1][straw - 1] < 0.10){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.10",
                   time, delta, predictedDistance,
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, 1500, 200, -0.3, 0.3);
+                  500, 0, prof_td_max, 200, -0.3, 0.3);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.15){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.15",
                   time, delta, predictedDistance,
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, 1500, 200, -0.3, 0.3);
+                  500, 0, prof_td_max, 200, -0.3, 0.3);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.20){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.20",
                   time, delta, predictedDistance,
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, 1500, 200, -0.3, 0.3);
+                  500, 0, prof_td_max, 200, -0.3, 0.3);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.25){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.25",
                   time, delta, predictedDistance,
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, 1500, 200, -0.3, 0.3);
+                  500, 0, prof_td_max, 200, -0.3, 0.3);
          }
       }   
    }

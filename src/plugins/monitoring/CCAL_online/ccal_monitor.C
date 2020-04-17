@@ -40,6 +40,7 @@
 
     comp_cfbratio->SetStats( 0 );
     //comp_cfbratio->SetFillColor( kBlue );
+    comp_cfbratio->Rebin(2);
     comp_cfbratio->GetXaxis()->SetTitle("(E_{ccal}+E_{fcal}-E_{beam}) / E_{comp}");
     comp_cfbratio->GetXaxis()->SetTitleOffset(1.3);
     comp_cfbratio->SetTitle("Energy Conservation in Compton Events");

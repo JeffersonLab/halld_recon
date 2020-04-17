@@ -44,6 +44,7 @@
     gPad->SetGrid();
     if(TAGH_PStimeVsE != NULL)
     {
+      TAGH_PStimeVsE->GetXaxis()->SetRangeUser(8.4,11.4);
       TAGH_PStimeVsE->GetYaxis()->SetRangeUser(-20,20.);
         TAGH_PStimeVsE->Draw("COLZ");
     }
@@ -72,6 +73,7 @@
     gPad->SetGrid();
     if(TAGM_PStimeVsE != NULL)
     {
+	  TAGM_PStimeVsE->GetXaxis()->SetRangeUser(7.5,9.);
 	  TAGM_PStimeVsE->GetYaxis()->SetRangeUser(-20.,20.);
         TAGM_PStimeVsE->Draw("COLZ");
     }

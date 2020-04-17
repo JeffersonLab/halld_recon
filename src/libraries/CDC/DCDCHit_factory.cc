@@ -21,6 +21,10 @@ static double DIGI_THRESHOLD = -1.0e8;
 jerror_t DCDCHit_factory::init(void)
 {
 
+  USE_CDC=true; 
+  gPARMS->SetDefaultParameter("CDC:ENABLE",USE_CDC);
+  if (USE_CDC==false) return RESOURCE_UNAVAILABLE;
+  
   LowTCut = -10000.;
   HighTCut = 10000.;
 
@@ -59,7 +63,8 @@ jerror_t DCDCHit_factory::init(void)
 //------------------
 jerror_t DCDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-  
+  if (USE_CDC==false) return RESOURCE_UNAVAILABLE;
+
   /// Read in calibration constants
   
   vector<double> cdc_timing_cuts;
@@ -96,7 +101,8 @@ jerror_t DCDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 // evnt
 //------------------
 jerror_t DCDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
-{
+{ 
+  if (USE_CDC==false) return RESOURCE_UNAVAILABLE;
  
   // Clear _data vector
   _data.clear();  

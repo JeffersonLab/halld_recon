@@ -43,6 +43,7 @@ jerror_t DVertex_factory::brun(jana::JEventLoop* locEventLoop, int32_t runnumber
 	m_beamSpotX = beam_spot.at("x");
 	m_beamSpotY = beam_spot.at("y");
 
+	gPARMS->SetDefaultParameter("VERTEX:USE_TARGET_CENTER", dForceTargetCenter);
 	gPARMS->SetDefaultParameter("VERTEX:NO_KINFIT_FLAG", dNoKinematicFitFlag);
 	gPARMS->SetDefaultParameter("VERTEX:DEBUGLEVEL", dKinFitDebugLevel);
 
@@ -71,6 +72,11 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches);
+
+	// give option for just using the target center, e.g. if the magnetic
+	// field is off and/or tracking is otherwise not working well
+	if(dForceTargetCenter)
+		return Create_Vertex_NoTracks(locEventRFBunch);
 
 	//select the best DTrackTimeBased for each track: use best tracking FOM
 	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
