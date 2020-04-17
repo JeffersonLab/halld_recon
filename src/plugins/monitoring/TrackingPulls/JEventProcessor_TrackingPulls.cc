@@ -626,7 +626,10 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
             TMath::RadToDeg();
       }
     }
+    // this plugin needs to be rewritten to use the threadsafe interface
+#if 0    // COMMENT THIS OUT SO THINGS STOP CRASHING
     tree_->Fill();
+#endif
   }
 
   return NOERROR;
