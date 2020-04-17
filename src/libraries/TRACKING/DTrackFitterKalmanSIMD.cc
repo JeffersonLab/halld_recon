@@ -4522,6 +4522,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	
 	// Variance in coordinate along wire
 	V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
+	
+	if (fit_type==kTimeBased) printf("sig %f a %f\n",sqrt(V(1,1)),fdc_anneal_factor);
 
 	// Add contribution of track covariance from state vector propagation to
 	// measurement errors
@@ -4550,25 +4552,28 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    V(0,0)=0.05*0.05;
 	  }
 	}
-	
-	// Cut outliers
-	double chi2_hit=Vtemp.Chi2(Mdiff); 
-	if (chi2_hit<fdc_chi2cut){
-	  fdc_updates[id].tdrift=drift_time;
-	  fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-	  fdc_updates[id].doca=doca;
-	  fdc_used_in_fit[id]=true;
+	// Check to see if we have multiple hits in the same plane
+	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
+	  printf("got here\n");
+	  UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
+			      lorentz_factor,V,Vtemp,Mdiff,H,H_T,S,C,
+			      fdc_chi2cut,skip_plane,chisq,numdof,
+			      fdc_anneal_factor);
+	}
+	else{
+	  if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
 
-	  break_point_fdc_index=id;
-	  break_point_step_index=k;	
+	  // Variance for this hit
+	  DMatrix2x2 Vtemp=V+H*C*H_T;
+	  InvV=Vtemp.Invert();
 	  
-	  if (forward_traj[k].num_hits==1){  
-	    if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;	   
+	  // Check if this hit is an outlier
+	  double chi2_hit=Vtemp.Chi2(Mdiff);
+	  if (chi2_hit<fdc_chi2cut){
+	    // Compute Kalman gain matrix
+	    K=C*H_T*InvV;
+
 	    if (skip_plane==false){
-	      // Compute Kalman gain matrix
-	      DMatrix2x2 InvV=Vtemp.Invert();
-	      DMatrix5x2 K=C*H_T*InvV;
-	     
 	      // Update the state vector 
 	      S+=K*Mdiff;
 	      
@@ -4578,42 +4583,48 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	      
 	      if (DEBUG_LEVEL > 25) {
 		jout << "S Update: " << endl; S.Print();
-		jout << "C Update: " << endl; C.Print();
+		jout << "C Uodate: " << endl; C.Print();
 	      }
-	      
+	    }
+	    
+	    // Store the "improved" values for the state vector and covariance
+	    fdc_updates[id].S=S;
+	    fdc_updates[id].C=C;
+	    fdc_updates[id].tdrift=drift_time;
+	    fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
+	    fdc_updates[id].doca=doca;
+	    fdc_used_in_fit[id]=true;
+	    
+	    if (skip_plane==false){  
 	      // Filtered residual and covariance of filtered residual
-	      DMatrix2x1 R=Mdiff-H*K*Mdiff;   
-	      DMatrix2x2 RC=V-H*(C*H_T);
+	      R=Mdiff-H*K*Mdiff;   
+	      RC=V-H*(C*H_T);
+	      
 	      fdc_updates[id].V=RC;
 	      
 	      // Update chi2 for this segment
 	      chisq+=RC.Chi2(R);
 	      
-	      //if (DEBUG_LEVEL>20)
-	      {
-		printf("hit %d p %5.2f dm %5.2f %5.2f sig %5.2f %5.2f chi2 %5.2f\n",
-		       id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
-		       sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
-	      }
-	      
+	      // update number of degrees of freedom
 	      numdof+=2;
+	      
+	      if (DEBUG_LEVEL>20)
+		{
+		  printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
+			 id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
+			 sqrt(V(1,1)),RC.Chi2(R),
+			 forward_traj[k].z);
+		  
+		}
 	    }
 	    else{
 	      fdc_updates[id].V=V;
 	    }
-	    // Store the "improved" values for the state vector and covariance
-	    fdc_updates[id].S=S;
-	    fdc_updates[id].C=C;
+	    
+	    break_point_fdc_index=id;
+	    break_point_step_index=k;
 	  }
 	}
-	// Handle the case where there are multiple adjacent hits in the plane
-	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
-	  if (DEBUG_LEVEL > 25) jout << " == There are multiple (" << forward_traj[k].num_hits << ") FDC hits" << endl;
-	  UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
-			      lorentz_factor,V,Vtemp,Mdiff,H,H_T,S,C,
-			      fdc_chi2cut,skip_plane,chisq,numdof,
-			      fdc_anneal_factor);
-	} 
 	if (num_fdc_hits>=forward_traj[k].num_hits)
 	  num_fdc_hits-=forward_traj[k].num_hits;
       }
@@ -6806,7 +6817,10 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
      }
      double reverse_chisq=1e16;
      unsigned int reverse_ndf=0;
-     KalmanReverse(fdc_anneal,cdc_anneal,S,C,reverse_chisq,reverse_ndf);
+    
+     DMatrix5x5 CReverse=C;
+     DMatrix5x1 SReverse=S;
+     KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,reverse_chisq,reverse_ndf);
    }
 
    // total chisq and ndf
@@ -9663,10 +9677,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      }
      if ((*rit).h_id>0&&(*rit).h_id<1000){
        unsigned int id=(*rit).h_id-1;
-       // Check if this is a plane we want to skip in the fit (we still want
-       // to store track and hit info at this plane, however).
-       bool skip_plane=(my_fdchits[id]->hit!=NULL
-			&&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
        
        // Variance in coordinate transverse to wire
        V(0,0)=my_fdchits[id]->uvar;
@@ -9703,61 +9713,46 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	 // Variance in drift distance
 	 V(0,0)=0.05*0.05;
        }
-       
-       double chi2_hit=Vtemp.Chi2(Mdiff); 
-       if (chi2_hit<fdc_chi2cut){
-	 fdc_updates[id].tdrift=drift_time;
-	 fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-	 fdc_updates[id].doca=doca;
-	 fdc_used_in_fit[id]=true;
-	 
-	 if ((*rit).num_hits==1){	   
-	   if (skip_plane==false){
-	     // Compute Kalman gain matrix
-	     DMatrix2x2 InvV=Vtemp.Invert();
-	     DMatrix5x2 K=C*H_T*InvV;
-	     
-	     // Update the state vector 
-	     S+=K*Mdiff;
-	     
-	     // Update state vector covariance matrix
-	     //C=C-K*(H*C);    
-	     C=C.SubSym(K*(H*C));
-	     
-	     if (DEBUG_LEVEL > 25) {
-	       jout << "S Update: " << endl; S.Print();
-	       jout << "C Update: " << endl; C.Print();
-	     }
-	     
-	     // Filtered residual and covariance of filtered residual
-	     DMatrix2x1 R=Mdiff-H*K*Mdiff;   
-	     DMatrix2x2 RC=V-H*(C*H_T);
-	     fdc_updates[id].V=RC;
-	     
-	     // Update chi2 for this segment
-	     chisq+=RC.Chi2(R);
-     
-	     //if (DEBUG_LEVEL>20)
-	     {
-	       printf("hit %d p %5.2f dm %5.2f %5.2f sig %5.2f %5.2f chi2 %5.2f\n",
-		      id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
-		      sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
-	     }
-	 
-	     numdof+=2;
+       if ((*rit).num_hits==1){
+	 double chi2_hit=Vtemp.Chi2(Mdiff); 
+	 if (chi2_hit<fdc_chi2cut){  
+	   // Compute Kalman gain matrix
+	   DMatrix2x2 InvV=Vtemp.Invert();
+	   DMatrix5x2 K=C*H_T*InvV;
+	   
+	   // Update the state vector 
+	   S+=K*Mdiff;
+	   
+	   // Update state vector covariance matrix
+	   //C=C-K*(H*C);    
+	   C=C.SubSym(K*(H*C));
+	   
+	   if (DEBUG_LEVEL > 35) {
+	     jout << "S Update: " << endl; S.Print();
+	     jout << "C Update: " << endl; C.Print();
 	   }
-	   else{
-	   fdc_updates[id].V=V;
+	   
+	   // Filtered residual and covariance of filtered residual
+	   DMatrix2x1 R=Mdiff-H*K*Mdiff;   
+	   DMatrix2x2 RC=V-H*(C*H_T);
+	   
+	   // Update chi2 for this segment
+	   chisq+=RC.Chi2(R);
+	   
+	   //if (DEBUG_LEVEL>30)
+	   {
+	     printf("hit %d p %5.2f dm %5.4f %5.4f sig %5.4f %5.4f chi2 %5.2f\n",
+		    id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
+		    sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
 	   }
-	   // Store the "improved" values for the state vector and covariance
-	   fdc_updates[id].S=S;
-	   fdc_updates[id].C=C;
+	   
+	   numdof+=2;
 	 }
        }
        // Handle the case where there are multiple adjacent hits in the plane
-       if ((*rit).num_hits>1){
+       else {
 	 UpdateSandCMultiHit(*rit,upred,vpred,doca,cosalpha,lorentz_factor,V,
-			     Vtemp,Mdiff,H,H_T,S,C,fdc_chi2cut,skip_plane,
+			     Vtemp,Mdiff,H,H_T,S,C,fdc_chi2cut,false,
 			     chisq,numdof);
        }
      }
