@@ -210,7 +210,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void UpdateSandCMultiHit(const DKalmanForwardTrajectory_t &traj,
 			   double upred,double vpred,double doca,
 			   double cosalpha,double lorentz_factor,DMatrix2x2 &V,
-			   DMatrix2x2 &Vtemp,DMatrix2x1 &Mdiff,DMatrix2x5 &H,
+			   DMatrix2x1 &Mdiff,DMatrix2x5 &H,
 			   const DMatrix5x2 &H_T,DMatrix5x1 &S,DMatrix5x5 &C,
 			   double fdc_chi2cut,bool skip_plane,double &chisq,
 			   unsigned int &numdof,double fdc_anneal_factor=1.);
