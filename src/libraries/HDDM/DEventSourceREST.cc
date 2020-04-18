@@ -26,18 +26,23 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
 {
    /// Constructor for DEventSourceREST object
    ifs = new ifstream(source_name);
-   if (*ifs) {
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
       std::string head;
-      std::getline(*ifs, head);
+      std::getline(sbuf, head);
       std::string expected = " class=\"r\" ";
       if (head.find(expected) == head.npos) {
-         std::string msg("Unexpected header found in input REST file ");
+         std::string msg("Unexpected header found in input REST stream: ");
          throw std::runtime_error(msg + head + source_name);
       }
    }
-   delete ifs;
 
-   ifs = new std::ifstream(source_name);
    fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;

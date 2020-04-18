@@ -66,18 +66,23 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
 {
    /// Constructor for DEventSourceHDDM object
    ifs = new ifstream(source_name);
-   if (*ifs) {
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
       std::string head;
-      std::getline(*ifs, head);
+      std::getline(sbuf, head);
       std::string expected = " class=\"s\" ";
       if (head.find(expected) == head.npos) {
-         std::string msg("Unexpected header found in input HDDM file: ");
+         std::string msg("Unexpected header found in input HDDM stream: ");
          throw std::runtime_error(msg + head + source_name);
       }
    }
-   delete ifs;
 
-   ifs = new ifstream(source_name);
    fin = new hddm_s::istream(*ifs);
    initialized = false;
    dapp = NULL;
