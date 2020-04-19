@@ -55,23 +55,36 @@ JEventProcessor_syncskim::~JEventProcessor_syncskim()
 //------------------
 jerror_t JEventProcessor_syncskim::init(void)
 {
+	bool SYNCSKIM_FAST = false;
+	gPARMS->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
+
+	// The default behavior here has changed.
+	// It used to be that these settings were always made and there
+	// was no option to turn them off. In order to make this 
+	// friendlier with the monitoring runs which this will soon
+	// be included with, the option was added and the adjustment
+	// of these setting disabled by default.
+	// 4/17/2020 D.L.
+	if(SYNCSKIM_FAST){
+		gPARMS->SetParameter("EVIO:LINK",              false); 
+		gPARMS->SetParameter("EVIO:LINK_BORCONFIG",    false); 
+		gPARMS->SetParameter("EVIO:PARSE_F250",        false); 
+		gPARMS->SetParameter("EVIO:PARSE_F125",        false); 
+		gPARMS->SetParameter("EVIO:PARSE_F1TDC",       false); 
+		gPARMS->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
+		gPARMS->SetParameter("EVIO:PARSE_CONFIG",      false); 
+		gPARMS->SetParameter("EVIO:PARSE_BOR",         false); 
+		gPARMS->SetParameter("EVIO:PARSE_EPICS",       false); 
+		gPARMS->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
+		//gPARMS->SetParameter("EVIO:PARSE_TRIGGER",     false);
+		gPARMS->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
+		gPARMS->SetParameter("EVIO:F250_EMULATION_MODE", 0);
+		gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
+	}
 	
-	gPARMS->SetParameter("EVIO:LINK",              false); 
-	gPARMS->SetParameter("EVIO:LINK_BORCONFIG",    false); 
-	gPARMS->SetParameter("EVIO:PARSE_F250",        false); 
-	gPARMS->SetParameter("EVIO:PARSE_F125",        false); 
-	gPARMS->SetParameter("EVIO:PARSE_F1TDC",       false); 
-	gPARMS->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
-	gPARMS->SetParameter("EVIO:PARSE_CONFIG",      false); 
-	gPARMS->SetParameter("EVIO:PARSE_BOR",         false); 
-	gPARMS->SetParameter("EVIO:PARSE_EPICS",       false); 
-	gPARMS->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
-	//gPARMS->SetParameter("EVIO:PARSE_TRIGGER",     false);
-	gPARMS->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
-	gPARMS->SetParameter("EVIO:F250_EMULATION_MODE", 0);
-	gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
+	file = new TFile("syncskim.root", "RECREATE");
 	
-	tree = new TTree("T", "Sync Events Tree");
+	tree = new TTree("sync", "Sync Events Tree");
 	tree->Branch("run_number",    &synevt.run_number,    "run_number/i"    );
 	tree->Branch("run_type",      &synevt.run_type,      "run_type/i"      );
 	tree->Branch("event_number",  &synevt.event_number,  "event_number/l"  );
@@ -185,6 +198,11 @@ jerror_t JEventProcessor_syncskim::erun(void)
 //------------------
 jerror_t JEventProcessor_syncskim::fini(void)
 {
+	if( file ){
+		file->Write();
+		file->Close();
+		delete file;
+	}
 
 	double m = (sum_n*sum_xy - sum_x*sum_y)/(sum_n*sum_x2 - sum_x*sum_x);
 	double b = (sum_y*sum_x2 - sum_x*sum_xy)/(sum_n*sum_x2 - sum_x*sum_x);
