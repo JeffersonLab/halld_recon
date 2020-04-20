@@ -84,7 +84,7 @@ jerror_t JEventProcessor_syncskim::init(void)
 	
 	file = new TFile("syncskim.root", "RECREATE");
 	
-	tree = new TTree("sync", "Sync Events Tree");
+	tree = new TTree("synctree", "Sync Events Tree");
 	tree->Branch("run_number",    &synevt.run_number,    "run_number/i"    );
 	tree->Branch("run_type",      &synevt.run_type,      "run_type/i"      );
 	tree->Branch("event_number",  &synevt.event_number,  "event_number/l"  );
