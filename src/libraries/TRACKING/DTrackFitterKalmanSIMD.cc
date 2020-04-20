@@ -6615,16 +6615,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
      if (SmoothForward(forward_pulls) == NOERROR){
        IsSmoothed = true;
        pulls.assign(forward_pulls.begin(),forward_pulls.end());
-     }
-     
-     if (forward_traj.size()>1){
-       double reverse_chisq=1e16;
-       unsigned int reverse_ndf=0;
-       
-       DMatrix5x5 CReverse=C;
-       DMatrix5x1 SReverse=S;
-       KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,reverse_chisq,reverse_ndf);
-     }
+     }   
    }
 
    // total chisq and ndf
@@ -6649,14 +6640,27 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 
    // fill vector of extrapolations
    ClearExtrapolations();
-   ExtrapolateForwardToOtherDetectors(); 
-   if (extrapolations.at(SYS_BCAL).size()==1){
-     // There needs to be some steps inside the the volume of the BCAL for 
-     // the extrapolation to be useful.  If this is not the case, clear 
-     // the extrolation vector.
-     extrapolations[SYS_BCAL].clear();
+   if (forward_traj.size()>1){
+     ExtrapolateToInnerDetectors();
+     if (fit_type==kTimeBased){
+       double reverse_chisq=1e16;
+       unsigned int reverse_ndf=0;
+
+       // Run the Kalman filter in the reverse direction, to get the best guess
+       // for the state vector at the last FDC point on the track
+       DMatrix5x5 CReverse=C;
+       DMatrix5x1 SReverse=S;
+       KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,reverse_chisq,reverse_ndf);
+       // ExtrapolateToOuterDetectors(forward_traj[0].S);
+       ExtrapolateToOuterDetectors(SReverse);
+     }
+     if (extrapolations.at(SYS_BCAL).size()==1){
+       // There needs to be some steps inside the the volume of the BCAL for 
+       // the extrapolation to be useful.  If this is not the case, clear 
+       // the extrolation vector.
+       extrapolations[SYS_BCAL].clear();
+     }
    }
-   
    // Extrapolate to the point of closest approach to the beam line
    z_=last_z;
    if (sqrt(Slast(state_x)*Slast(state_x)+Slast(state_y)*Slast(state_y))
@@ -8597,11 +8601,209 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
    return NOERROR;
 }
 
-// Routine to find intersections with surfaces useful at a later stage for track
-// matching
-jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
-  if (forward_traj.size()<2) return RESOURCE_UNAVAILABLE;
+// Find extrapolations to detectors outside of the tracking volume
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S0){
+  DMatrix5x1 S=S0;
+ // Energy loss
+  double dEdx=0.;
+  
+  // material properties
+  double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
+  double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
 
+  // Position variables
+  double z=forward_traj[0].z;
+  double newz=z,dz=0.;
+
+  // Current time and path length
+  double t=forward_traj[0].t;
+  double s=forward_traj[0].s;
+  
+  // Loop to propagate track to outer detectors
+  const double z_outer_max=650.;
+  const double x_max=130.;
+  const double y_max=130.;
+  bool hit_tof=false; 
+  bool hit_dirc=false;
+  unsigned int trd_index=0;
+  while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
+	 && fabs(S(state_y))<y_max){   
+    // Bail if the momentum has dropped below some minimum
+    if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
+      if (DEBUG_LEVEL>2)
+	{
+	  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p))
+		<< endl;
+	}
+      return VALUE_OUT_OF_RANGE;
+    }
+
+    // Check if we have passed into the BCAL
+    double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+    if (r2>89.*89. && z<400.) return VALUE_OUT_OF_RANGE;
+    if (r2>64.9*64.9 && r2<89.*89.){
+      if (extrapolations.at(SYS_BCAL).size()>299){
+	return VALUE_OUT_OF_RANGE;
+      }
+      if (z<406.){
+	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+	double tanl=1./sqrt(tsquare);
+	double cosl=cos(atan(tanl));
+	double pt=cosl/fabs(S(state_q_over_p));
+	double phi=atan2(S(state_ty),S(state_tx));
+	DVector3 position(S(state_x),S(state_y),z);
+	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
+							   t*TIME_UNIT_CONVERSION,s));
+      }
+      else if (extrapolations.at(SYS_BCAL).size()<5){
+	// There needs to be some steps inside the the volume of the BCAL for 
+	// the extrapolation to be useful.  If this is not the case, clear 
+	// the extrapolation vector.
+	extrapolations[SYS_BCAL].clear();
+      }
+    }    
+   
+    // Relationship between arc length and z
+    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)
+			   +S(state_ty)*S(state_ty));
+    
+    // get material properties from the Root Geometry
+    DVector3 pos(S(state_x),S(state_y),z); 
+    DVector3 dir(S(state_tx),S(state_ty),1.);
+    double s_to_boundary=0.;
+    if (geom->FindMatKalman(pos,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
+			    chi2c_factor,chi2a_factor,chi2a_corr,
+			    last_material_map,&s_to_boundary)
+	  !=NOERROR){
+      if (DEBUG_LEVEL>0)
+	{
+	_DBG_ << "Material error in ExtrapolateForwardToOuterDetectors!"<< endl;
+	_DBG_ << " Position (x,y,z)=("<<pos.x()<<","<<pos.y()<<","<<pos.z()<<")"
+	      <<endl;
+      }
+      return VALUE_OUT_OF_RANGE;
+    }
+    
+    // Get dEdx for the upcoming step
+    if (CORRECT_FOR_ELOSS){
+      dEdx=GetdEdx(S(state_q_over_p),K_rho_Z_over_A,rho_Z_over_A,LnI,Z); 
+    }
+    
+    // Adjust the step size 
+    double ds=mStepSizeS;
+    if (fabs(dEdx)>EPS){     
+      ds=DE_PER_STEP/fabs(dEdx);
+    }
+    if (ds>mStepSizeS) ds=mStepSizeS;
+    if (s_to_boundary<ds) ds=s_to_boundary;
+    if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
+    if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
+    dz=ds*dz_ds;
+    newz=z+dz;
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      newz=dTRDz_vec[trd_index]+EPS;
+      ds=(newz-z)/dz_ds;   
+    }
+    if (hit_tof==false && newz>dTOFz){
+      newz=dTOFz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (hit_dirc==false && newz>dDIRCz){
+      newz=dDIRCz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (newz>dFCALz){
+      newz=dFCALz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    s+=ds;
+
+    // Flight time
+    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+    double one_over_beta2=1.+mass2*q_over_p_sq;
+    if (one_over_beta2>BIG) one_over_beta2=BIG;
+    t+=ds*sqrt(one_over_beta2); // in units where c=1
+
+    // Step through field
+    Step(z,newz,dEdx,S); 
+    z=newz;
+
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      //position.Print();
+      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s));
+      trd_index++;
+    }
+    if (hit_dirc==false && newz>dDIRCz){
+      hit_dirc=true;
+
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_DIRC].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s));
+    }  
+    if (hit_tof==false && newz>dTOFz){
+      hit_tof=true;
+
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s)); 
+    }  
+    if (newz>dFCALz){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
+					    t*TIME_UNIT_CONVERSION,s)); 
+
+      // add another extrapolation point at downstream end of FCAL
+      double zend=newz+45.;
+      Step(newz,zend,dEdx,S); 
+      ds=(zend-newz)/dz_ds;
+      t+=ds*sqrt(one_over_beta2); // in units where c=1 
+      s+=ds;
+      tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      tanl=1./sqrt(tsquare); 
+      cosl=cos(atan(tanl));
+      pt=cosl/fabs(S(state_q_over_p));
+      phi=atan2(S(state_ty),S(state_tx));
+      position.SetXYZ(S(state_x),S(state_y),zend);
+      momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
+					    t*TIME_UNIT_CONVERSION,s)); 
+
+      return NOERROR;
+    }
+  }
+  return NOERROR;
+}
+
+// Find extrapolations to detector layers within the tracking volume and 
+// inward (toward the target).
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
   // First deal with start counter.  Only do this if the track has a chance
   // to intersect with the start counter volume.
   unsigned int inner_index=forward_traj.size()-1; 
@@ -8763,10 +8965,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 
     }
     else{ // extrapolations in FDC region
-      if (fdc_plane==24){
-	break;	
-      }
-    
       // output step near wire plane  
       if (z>fdc_z_wires[fdc_plane]-0.25){	
 	double dz=z-fdc_z_wires[fdc_plane];
@@ -8784,49 +8982,42 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 	extrapolations[SYS_FDC].push_back(Extrapolation_t(position,momentum,
 						t*TIME_UNIT_CONVERSION,s,
 						s_theta_ms_sum,theta2ms_sum));
-
+	if (fdc_plane==23){
+	  return NOERROR;	
+	}
+	
 	fdc_plane++;
       }
-      
     }
-
   }
   
 
-  //--------------------------------
-  // Next swim to outer detectors...
-  //--------------------------------
-  DMatrix5x5 Q;  // multiple scattering matrix
-
-  // Direction and origin of beam line
-  DVector2 dir;
-  DVector2 origin;
-
-  // Energy loss
-  double dEdx=0.;
+  //--------------------------------------------------------------------------
+  // The following code continues the extrapolations to wire planes that were
+  // not included in the forward trajectory
+  //--------------------------------------------------------------------------
   
-  // material properties
+  // Material properties
   double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
   double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
 
+  // Energy loss
+  double dEdx=0.;
+
+  // multiple scattering matrix
+  DMatrix5x5 Q; 
+  
   // Position variables
-  double z=forward_traj[0].z;
-  double newz=z,dz=0.;
   S=forward_traj[0].S;
+  double z=forward_traj[0].z,newz=z,dz=0.; 
 
   // Current time and path length
   double t=forward_traj[0].t;
   double s=forward_traj[0].s;
-  
-  // Loop to propagate track to outer detectors
-  const double z_outer_max=650.;
-  const double x_max=130.;
-  const double y_max=130.;
-  bool hit_tof=false; 
-  bool hit_dirc=false;
-  unsigned int trd_index=0;
-  while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
-	 && fabs(S(state_y))<y_max){   
+
+  // Find intersection points to FDC planes beyond the exent of the forward
+  // trajectory.
+  while (z>Z_MIN && z<fdc_z_wires[23]+1. && fdc_plane<24){
     // Bail if the momentum has dropped below some minimum
     if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
       if (DEBUG_LEVEL>2)
@@ -8836,39 +9027,12 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 	}
       return VALUE_OUT_OF_RANGE;
     }
-
-    // Check if we have passed into the BCAL
-    double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
-    if (r2>89.*89. && z<400.) return VALUE_OUT_OF_RANGE;
-    if (r2>64.9*64.9 && r2<89.*89.){
-      if (extrapolations.at(SYS_BCAL).size()>299){
-	return VALUE_OUT_OF_RANGE;
-      }
-      if (z<406.){
-	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-	double tanl=1./sqrt(tsquare);
-	double cosl=cos(atan(tanl));
-	double pt=cosl/fabs(S(state_q_over_p));
-	double phi=atan2(S(state_ty),S(state_tx));
-	DVector3 position(S(state_x),S(state_y),z);
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
-							   t*TIME_UNIT_CONVERSION,s));
-      }
-      else if (extrapolations.at(SYS_BCAL).size()<5){
-	// There needs to be some steps inside the the volume of the BCAL for 
-	// the extrapolation to be useful.  If this is not the case, clear 
-	// the extrapolation vector.
-	extrapolations[SYS_BCAL].clear();
-      }
-    }    
-   
-    // Relationship between arc length and z
-    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)
-			   +S(state_ty)*S(state_ty));
-    
-    // get material properties from the Root Geometry
+  
+    // Current position
     DVector3 pos(S(state_x),S(state_y),z); 
+    if (pos.Perp()>50.) break;
+
+    // get material properties from the Root Geometry
     DVector3 dir(S(state_tx),S(state_ty),1.);
     double s_to_boundary=0.;
     if (geom->FindMatKalman(pos,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
@@ -8888,6 +9052,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
     if (CORRECT_FOR_ELOSS){
       dEdx=GetdEdx(S(state_q_over_p),K_rho_Z_over_A,rho_Z_over_A,LnI,Z); 
     }
+ 
+    // Relationship between arc length and z
+    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
     
     // Adjust the step size 
     double ds=mStepSizeS;
@@ -8897,25 +9064,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
     if (ds>mStepSizeS) ds=mStepSizeS;
     if (s_to_boundary<ds) ds=s_to_boundary;
     if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
-    if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      newz=dTRDz_vec[trd_index]+EPS;
-      ds=(newz-z)/dz_ds;   
-    }
-    if (hit_tof==false && newz>dTOFz){
-      newz=dTOFz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
-    if (hit_dirc==false && newz>dDIRCz){
-      newz=dDIRCz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
-    if (newz>dFCALz){
-      newz=dFCALz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
+
     bool got_fdc_hit=false;
     if (fdc_plane<24 && newz>fdc_z_wires[fdc_plane]){
       newz=fdc_z_wires[fdc_plane];
@@ -8954,77 +9105,29 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 						s_theta_ms_sum,theta2ms_sum));
 
       fdc_plane++;
-    }        
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      //position.Print();
-      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-      trd_index++;
-    }
-    if (hit_dirc==false && newz>dDIRCz){
-      hit_dirc=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_DIRC].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-    }  
-    if (hit_tof==false && newz>dTOFz){
-      hit_tof=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-    }  
-    if (newz>dFCALz){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
-
-      // add another extrapolation point at downstream end of FCAL
-      double zend=newz+45.;
-      Step(newz,zend,dEdx,S); 
-      ds=(zend-newz)/dz_ds;
-      t+=ds*sqrt(one_over_beta2); // in units where c=1 
-      s+=ds;
-      tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      tanl=1./sqrt(tsquare); 
-      cosl=cos(atan(tanl));
-      pt=cosl/fabs(S(state_q_over_p));
-      phi=atan2(S(state_ty),S(state_tx));
-      position.SetXYZ(S(state_x),S(state_y),zend);
-      momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
-
-      return NOERROR;
-    }
+    }          
   }
+  
   return NOERROR;
+}
+
+// Routine to find intersections with surfaces useful at a later stage for track
+// matching
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
+  if (forward_traj.size()<2) return RESOURCE_UNAVAILABLE;
+  //--------------------------------
+  // First swim to Start counter and CDC/FDC layers
+  //--------------------------------
+  jerror_t error=ExtrapolateToInnerDetectors();
+
+  //--------------------------------
+  // Next swim to outer detectors...
+  //--------------------------------
+  if (error==NOERROR){
+    return ExtrapolateToOuterDetectors(forward_traj[0].S);
+  }
+  
+  return error;
 }
 
 // Routine to find intersections with surfaces useful at a later stage for track
