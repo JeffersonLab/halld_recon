@@ -6691,6 +6691,9 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	 ExtrapolateToOuterDetectors(SBest);
        }
      }
+     else{
+       ExtrapolateToOuterDetectors(forward_traj[0].S);
+     }
      if (extrapolations.at(SYS_BCAL).size()==1){
        // There needs to be some steps inside the the volume of the BCAL for 
        // the extrapolation to be useful.  If this is not the case, clear 
