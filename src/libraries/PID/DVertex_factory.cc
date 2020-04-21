@@ -15,6 +15,7 @@ jerror_t DVertex_factory::init(void)
 	dKinFitDebugLevel = 0;
 	dMinTrackingFOM = 5.73303E-7;
 	dNoKinematicFitFlag = false;
+	dForceTargetCenter = false;
 	return NOERROR;
 }
 
