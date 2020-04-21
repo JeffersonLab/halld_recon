@@ -188,7 +188,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
-				       DMatrix5x1 &S,DMatrix5x5 &C,
+				       const DMatrix5x1 &Sstart,DMatrix5x5 &C,
+					DMatrix5x1 &S,
 				       double &chisq,unsigned int &numdof);
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,

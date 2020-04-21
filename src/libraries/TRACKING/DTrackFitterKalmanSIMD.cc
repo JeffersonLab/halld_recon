@@ -308,6 +308,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
+
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
 	      tof_face);
@@ -6643,16 +6644,52 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    if (forward_traj.size()>1){
      ExtrapolateToInnerDetectors();
      if (fit_type==kTimeBased){
-       double reverse_chisq=1e16;
-       unsigned int reverse_ndf=0;
+       double reverse_chisq=1e16,reverse_chisq_old=1e16;
+       unsigned int reverse_ndf=0,reverse_ndf_old=0;
 
        // Run the Kalman filter in the reverse direction, to get the best guess
        // for the state vector at the last FDC point on the track
        DMatrix5x5 CReverse=C;
-       DMatrix5x1 SReverse=S;
-       KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,reverse_chisq,reverse_ndf);
-       // ExtrapolateToOuterDetectors(forward_traj[0].S);
-       ExtrapolateToOuterDetectors(SReverse);
+       DMatrix5x1 SReverse=S,SDownstream,SBest;
+       kalman_error_t reverse_error=FIT_NOT_DONE;
+       for (int iter=0;iter<20;iter++){
+	 reverse_chisq_old=reverse_chisq;
+	 reverse_ndf_old=reverse_ndf;
+	 SBest=SDownstream;
+	 reverse_error=KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,
+				     SDownstream,reverse_chisq,reverse_ndf);
+	 if (reverse_error!=FIT_SUCCEEDED) break;
+
+	 SReverse=SDownstream;
+	 for (unsigned int k=0;k<forward_traj.size()-1;k++){
+	   // Get dEdx for the upcoming step
+	   double dEdx=0.;
+	   if (CORRECT_FOR_ELOSS){
+	     dEdx=GetdEdx(SReverse(state_q_over_p),
+			  forward_traj[k].K_rho_Z_over_A,
+			  forward_traj[k].rho_Z_over_A,
+			  forward_traj[k].LnI,forward_traj[k].Z); 
+	   }
+	   // Step through field
+	   DMatrix5x5 J;
+	   StepJacobian(forward_traj[k].z,forward_traj[k+1].z,SReverse,dEdx,J);
+	   Step(forward_traj[k].z,forward_traj[k+1].z,dEdx,SReverse);
+	   
+	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	 }
+
+	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
+	 double reduced_chisq_old=reverse_chisq_old/double(reverse_ndf_old);
+	 if (reduced_chisq>reduced_chisq_old
+	     || fabs(reduced_chisq-reduced_chisq_old)<0.01) break;
+       }
+
+       if (reverse_error!=FIT_SUCCEEDED){
+	 ExtrapolateToOuterDetectors(forward_traj[0].S);
+       }
+       else{
+	 ExtrapolateToOuterDetectors(SBest);
+       }
      }
      if (extrapolations.at(SYS_BCAL).size()==1){
        // There needs to be some steps inside the the volume of the BCAL for 
@@ -8609,7 +8646,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   
   // material properties
   double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
-  double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
 
   // Position variables
   double z=forward_traj[0].z;
@@ -8673,7 +8709,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     DVector3 dir(S(state_tx),S(state_ty),1.);
     double s_to_boundary=0.;
     if (geom->FindMatKalman(pos,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-			    chi2c_factor,chi2a_factor,chi2a_corr,
 			    last_material_map,&s_to_boundary)
 	  !=NOERROR){
       if (DEBUG_LEVEL>0)
@@ -9401,8 +9436,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 // the outermost hits (opposite to regular direction).
 kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 						     double cdc_anneal_factor,
-						     DMatrix5x1 &S, 
+						     const DMatrix5x1 &Sstart, 
 						     DMatrix5x5 &C,
+						     DMatrix5x1 &S,
 						     double &chisq, 
 						     unsigned int &numdof){
    DMatrix2x1 Mdiff; // difference between measurement and prediction 
@@ -9442,6 +9478,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
    
    deque<DKalmanForwardTrajectory_t>::reverse_iterator rit = forward_traj.rbegin();
    S0_=(*rit).S;
+   S=Sstart;
    
    if (more_cdc_measurements){
      origin=my_cdchits[0]->origin;  
@@ -9454,7 +9491,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
      S0=(*rit).S;
-     J=(*rit).J;
+     J=2.*I5x5-(*rit).J; // We only want to change the signs of the parts that depend on dz ...
      Q=(*rit).Q;
      
      // Update the actual state vector and covariance matrix
