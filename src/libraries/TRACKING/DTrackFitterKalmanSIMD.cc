@@ -10057,17 +10057,17 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // To transform from (x,y) to (u,v), need to do a rotation:
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
-  H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
-  H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
-    
-  double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
-  double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
-  double doca_cosalpha=doca*cosalpha;
-  double temp=doca_cosalpha*fac;	
-  H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
-  H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
-  
   if (hit->status!=gem_hit){
+    H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
+    H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
+    
+    double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
+    double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
+    double doca_cosalpha=doca*cosalpha;
+    double temp=doca_cosalpha*fac;	
+    H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
+    H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+  
     H_T(state_x,0)=cosa*cosalpha;
     H_T(state_y,0)=-sina*cosalpha;
     
@@ -10075,7 +10075,9 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
     H_T(state_ty,0)=sina*factor;
     H_T(state_tx,0)=-cosa*factor; 
   }
-  else{
+  else{  
+    H_T(state_x,1)=sina;
+    H_T(state_y,1)=cosa;    
     H_T(state_x,0)=cosa;
     H_T(state_y,0)=-sina;
   }
