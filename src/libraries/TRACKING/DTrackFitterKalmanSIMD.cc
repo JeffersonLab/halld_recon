@@ -1143,6 +1143,7 @@ void DTrackFitterKalmanSIMD::AddTRDHit(const DTRDPoint *trdhit){
   hit->phiZ=0.;
   hit->nr=0.;
   hit->nz=0.;
+  hit->status=trd_hit;
   hit->hit=NULL;
 
   my_fdchits.push_back(hit);
@@ -4539,7 +4540,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    // Variance in drift distance
 	    V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;	
 	  }
-	  else if (USE_TRD_DRIFT_TIMES){
+	  else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
 	    double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
 	    Mdiff(0)+=drift;
 
@@ -9714,7 +9715,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	 // Variance in drift distance
 	 V(0,0)=fdc_drift_variance(drift_time);	
        }
-       else if (USE_TRD_DRIFT_TIMES){
+       else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
 	 double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
 	 Mdiff(0)=drift-doca;
 
@@ -10138,12 +10139,8 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	  // Variance in drift distance
 	  V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
 	}
-	else if (USE_TRD_DRIFT_TIMES){ 
+	else if (USE_TRD_DRIFT_TIMES&&my_fdchits[my_id]->status==trd_hit){ 
 	  double drift = sign*0.1*pow(drift_time/0.91,1./1.556);
-	  cout << my_fdchits[my_id]->uwire << " " << my_fdchits[my_id]->vstrip
-	       << " "<< my_fdchits[my_id]->z << " " << my_fdchits[my_id]->t 
-	       << "  " <<mT0+traj.t*TIME_UNIT_CONVERSION << endl;
-	  cout  << ">>d " << doca << " " << drift <<endl; 
 	  Mdiff(0)+=drift;
 	  V(0,0)=0.05*0.05;
 	}
