@@ -261,6 +261,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     bad_hit,
     late_hit,
     trd_hit,
+    gem_hit,
   };
   enum fit_region{
     kForward,

@@ -1116,6 +1116,7 @@ void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
   hit->phiZ=0.;
   hit->nr=0.;
   hit->nz=0.;
+  hit->status=gem_hit;
   hit->hit=NULL;
 
   my_fdchits.push_back(hit);
@@ -4521,6 +4522,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	
 	// Variance in coordinate transverse to wire
 	V(0,0)=my_fdchits[id]->uvar;
+	if (my_fdchits[id]->hit==NULL&&my_fdchits[id]->status!=trd_hit){
+	  V(0,0)*=fdc_anneal_factor;
+	}
 	
 	// Variance in coordinate along wire
 	V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
@@ -4545,7 +4549,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    Mdiff(0)+=drift;
 
 	    // Variance in drift distance
-	    V(0,0)=0.05*0.05;
+	    V(0,0)=0.05*0.05*fdc_anneal_factor;
 	  }
 	}
 	// Check to see if we have multiple hits in the same plane
@@ -10037,7 +10041,12 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   
   // (signed) distance of closest approach to wire
   upred=x*cosa-y*sina;
-  doca=(upred-u)*cosalpha;
+  if (hit->status==gem_hit){
+    doca=upred-u;
+  }
+  else{
+    doca=(upred-u)*cosalpha;
+  }
 
   // Correction for lorentz effect
   double nz=hit->nz;
@@ -10049,8 +10058,8 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
   H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
-  H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;	
-	
+  H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
+    
   double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
   double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
   double doca_cosalpha=doca*cosalpha;
@@ -10058,12 +10067,18 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
   H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
   
-  H_T(state_x,0)=cosa*cosalpha;
-  H_T(state_y,0)=-sina*cosalpha;
-
-  double factor=doca*tu*cosalpha2;
-  H_T(state_ty,0)=sina*factor;
-  H_T(state_tx,0)=-cosa*factor;  
+  if (hit->status!=gem_hit){
+    H_T(state_x,0)=cosa*cosalpha;
+    H_T(state_y,0)=-sina*cosalpha;
+    
+    double factor=doca*tu*cosalpha2;
+    H_T(state_ty,0)=sina*factor;
+    H_T(state_tx,0)=-cosa*factor; 
+  }
+  else{
+    H_T(state_x,0)=cosa;
+    H_T(state_y,0)=-sina;
+  }
 }
 
 // Update S and C using all the good adjacent hits in a particular FDC plane
