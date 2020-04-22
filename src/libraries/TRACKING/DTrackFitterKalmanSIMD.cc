@@ -6672,8 +6672,10 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	   }
 	   // Step through field
 	   DMatrix5x5 J;
-	   StepJacobian(forward_traj[k].z,forward_traj[k+1].z,SReverse,dEdx,J);
-	   Step(forward_traj[k].z,forward_traj[k+1].z,dEdx,SReverse);
+	   double z=forward_traj[k].z;
+	   double newz=forward_traj[k+1].z;
+	   StepJacobian(z,newz,SReverse,dEdx,J);
+	   Step(z,newz,dEdx,SReverse);
 	   
 	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
 	 }
@@ -6948,7 +6950,62 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 
    // Fill extrapolation vector
    ClearExtrapolations();
-   ExtrapolateForwardToOtherDetectors();  
+   if (forward_traj.size()>1){
+     if (fit_type==kWireBased){
+     ExtrapolateForwardToOtherDetectors();
+     }
+     else{
+       ExtrapolateToInnerDetectors();
+
+       double reverse_chisq=1e16,reverse_chisq_old=1e16;
+       unsigned int reverse_ndf=0,reverse_ndf_old=0;
+
+       // Run the Kalman filter in the reverse direction, to get the best guess
+       // for the state vector at the last FDC point on the track
+       DMatrix5x5 CReverse=C;
+       DMatrix5x1 SReverse=S,SDownstream,SBest;
+       kalman_error_t reverse_error=FIT_NOT_DONE;
+       for (int iter=0;iter<20;iter++){
+	 reverse_chisq_old=reverse_chisq;
+	 reverse_ndf_old=reverse_ndf;
+	 SBest=SDownstream;
+	 reverse_error=KalmanReverse(0.,anneal_factor,SReverse,CReverse,
+				     SDownstream,reverse_chisq,reverse_ndf);
+	 if (reverse_error!=FIT_SUCCEEDED) break;
+	 
+	 SReverse=SDownstream;
+	 for (unsigned int k=0;k<forward_traj.size()-1;k++){
+	   // Get dEdx for the upcoming step
+	   double dEdx=0.;
+	   if (CORRECT_FOR_ELOSS){
+	     dEdx=GetdEdx(SReverse(state_q_over_p),
+			  forward_traj[k].K_rho_Z_over_A,
+			  forward_traj[k].rho_Z_over_A,
+			  forward_traj[k].LnI,forward_traj[k].Z); 
+	   }
+	   // Step through field
+	   DMatrix5x5 J;
+	   double z=forward_traj[k].z;
+	   double newz=forward_traj[k+1].z;
+	   StepJacobian(z,newz,SReverse,dEdx,J);
+	   Step(z,newz,dEdx,SReverse);
+	   
+	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	 }
+	 
+	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
+	 double reduced_chisq_old=reverse_chisq_old/double(reverse_ndf_old);
+	 if (reduced_chisq>reduced_chisq_old
+	     || fabs(reduced_chisq-reduced_chisq_old)<0.01) break;
+       }
+       if (reverse_error!=FIT_SUCCEEDED){
+	 ExtrapolateToOuterDetectors(forward_traj[0].S);
+       }
+       else{
+	 ExtrapolateToOuterDetectors(SBest);
+       }
+     }
+   }
    if (extrapolations.at(SYS_BCAL).size()==1){
      // There needs to be some steps inside the the volume of the BCAL for 
      // the extrapolation to be useful.  If this is not the case, clear 
