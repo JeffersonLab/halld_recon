@@ -1,7 +1,9 @@
+
 #include "DEventWriterREST.h"
 
 #include <DANA/DApplication.h>
 #include <JANA/JCalibration.h>
+#include <TRACKING/DTrackFitter.h>
 
 int& DEventWriterREST::Get_NumEventWriterThreads(void) const
 {
@@ -26,6 +28,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	}
 	japp->Unlock("RESTWriter");
 	
+	REST_WRITE_TRACK_EXIT_PARAMS=false;
+	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
+
 	HDDM_USE_COMPRESSION = true;
 	string locCompressionString = "Turn on/off compression of the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
 	gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
@@ -369,6 +374,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	// push any DTrackTimeBased objects to the output record
 	for (size_t i=0; i < tracks.size(); ++i)
 	{
+	
+
 		hddm_r::ChargedTrackList tra = res().addChargedTracks(1);
 		tra().setCandidateId(tracks[i]->candidateid);
 		tra().setPtype(tracks[i]->PID());
@@ -443,6 +450,23 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			elo2().setDEdxCDCAmp(tracks[i]->ddEdx_CDC_amp);
 
 		}
+		if (REST_WRITE_TRACK_EXIT_PARAMS){
+		  vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
+		  if (extraps.size()>0){
+		    extraps[extraps.size()-1].position.Print();	
+		    hddm_r::ExitParamsList locExitParams = tra().addExitParamses(1);
+		    DVector3 pos=extraps[0].position;
+		    DVector3 mom=extraps[0].momentum;
+		    locExitParams().setX1(pos.X());
+		    locExitParams().setY1(pos.Y());
+		    locExitParams().setZ1(pos.Z()); 
+		    locExitParams().setPx1(mom.X());
+		    locExitParams().setPy1(mom.Y());
+		    locExitParams().setPz1(mom.Z());
+		    locExitParams().setT1(extraps[0].t);
+		  }
+		}
+		
 	}
 
 	// push any DTrigger objects to the output record

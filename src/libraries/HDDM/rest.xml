@@ -74,6 +74,10 @@
               lunit="cm" dEdx_unit="GeV/cm">
 	<CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
       </dEdxDC>
+      <exitParams maxOccurs="1" minOccurs="0" 
+		  x1="float" y1="float" z1="float"
+                  px1="float" py1="float" pz1="float"
+                  t1="float" punit="GeV/c" lunit="cm" tunit="ns"/>
     </chargedTrack>
     <startHit maxOccurs="unbounded" minOccurs="0" jtag="string"
               sector="int" t="float" dE="float"
