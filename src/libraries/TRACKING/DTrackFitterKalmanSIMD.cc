@@ -8719,7 +8719,19 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   // Current time and path length
   double t=forward_traj[0].t;
   double s=forward_traj[0].s;
-  
+
+  // Store the position and momentum at the exit to the tracking volume
+  double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+  double tanl=1./sqrt(tsquare);
+  double cosl=cos(atan(tanl));
+  double pt=cosl/fabs(S(state_q_over_p));
+  double phi=atan2(S(state_ty),S(state_tx));
+  DVector3 position(S(state_x),S(state_y),z);
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION,
+						     s));
+
   // Loop to propagate track to outer detectors
   const double z_outer_max=650.;
   const double x_max=130.;
