@@ -9571,6 +9571,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      J=2.*I5x5-(*rit).J; // We only want to change the signs of the parts that depend on dz ...
      Q=(*rit).Q;
      
+     // Check that the position is within the tracking volume!
+     if (S(state_x)*S(state_x)+S(state_y)*S(state_y)>65.*65.){
+       return POSITION_OUT_OF_RANGE;
+     }
      // Update the actual state vector and covariance matrix
      S=S0+J*(S-S0_);
      C=Q.AddSym(J*C*J.Transpose());
