@@ -127,8 +127,8 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
    //V=0.0507; // initialize with (cell size)/12.
    tcorr = t; // Need this value even when t is negative for calibration
    if (t>0){
-      //double dtc =(CDC_DRIFT_BSCALE_PAR1 + CDC_DRIFT_BSCALE_PAR2 * B)* t;
-      //tcorr=t-dtc;
+     double dtc =(CDC_DRIFT_BSCALE_PAR1 + CDC_DRIFT_BSCALE_PAR2 * B)* t;
+     tcorr=t-dtc;
 
       //      CDC_RES_PAR2=0.005;
       double sigma=CDC_RES_PAR1/(tcorr+1.) + CDC_RES_PAR2 + CDC_RES_PAR3*tcorr;
@@ -141,8 +141,8 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
       // dependence to sigma
       double dd_dt=0;
       // Scale factor to account for affect of B-field on maximum drift time
-      double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
-      tcorr=t*Bscale;
+      // double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
+      //tcorr=t*Bscale;
 
       //	if (delta>0)
       if (delta>-EPS2){
