@@ -9396,26 +9396,27 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
       
     }
   }
+  // Save the extrapolatoin at the exit of the tracking volume
+  S=central_traj[0].S;
+  xy=central_traj[0].xy;
+  double t=central_traj[0].t*TIME_UNIT_CONVERSION; // convert to ns
+  double s=central_traj[0].s;
+  double tanl=S(state_tanl);
+  double pt=1/fabs(S(state_q_over_pt));
+  double phi=S(state_phi); 
+  DVector3 position(xy.X(),xy.Y(),S(state_z));
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
+  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,t,s));
 
   //------------------------------
   // Next swim to outer detectors
-  //------------------------------
-  S=central_traj[0].S;
- 
+  //------------------------------ 
   // Position and step variables 
-  xy=central_traj[0].xy;
   double r2=xy.Mod2();
   double ds=mStepSizeS; // step along path in cm
   
   // Energy loss
   double dedx=0.;
-  
-  // Current time and path length
-  double t=central_traj[0].t;
-  double s=central_traj[0].s;
-
-  // Matrix for multiple scattering covariance terms
-  DMatrix5x5 Q;
 
   // Track propagation loop
   //if (false)
@@ -9433,12 +9434,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
     
     // get material properties from the Root Geometry
     double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
-    double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
     DVector3 pos3d(xy.X(),xy.Y(),S(state_z));
     double s_to_boundary=0.;
     DVector3 dir(cos(S(state_phi)),sin(S(state_phi)),S(state_tanl));
     if (geom->FindMatKalman(pos3d,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-			    chi2c_factor,chi2a_factor,chi2a_corr,
 			    last_material_map,&s_to_boundary)
 	!=NOERROR){
       _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
@@ -9469,13 +9468,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
     double one_over_beta2=1.+mass2*q_over_p_sq;
     if (one_over_beta2>BIG) one_over_beta2=BIG;
     t+=ds*sqrt(one_over_beta2); // in units where c=1
-    
-    // Multiple scattering
-    GetProcessNoiseCentral(ds,chi2c_factor,chi2a_factor,chi2a_corr,S,Q);
-   
-    double ds_theta_ms_sq=3.*fabs(Q(state_D,state_D));
-    s_theta_ms_sum+=sqrt(fabs(Q(state_D,state_D)));
-    theta2ms_sum+=ds_theta_ms_sq/(ds*ds);
 
     // Propagate the state through the field
     Step(xy,ds,S,dedx);
@@ -9487,11 +9479,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	return VALUE_OUT_OF_RANGE;
       }
       if (S(state_z)<406.&&S(state_z)>17.0){
-	double tanl=S(state_tanl);
-	double pt=1/fabs(S(state_q_over_pt));
-	double phi=S(state_phi);
-	DVector3 position(xy.X(),xy.Y(),S(state_z));   
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	tanl=S(state_tanl);
+	pt=1/fabs(S(state_q_over_pt));
+	phi=S(state_phi);
+	position.SetXYZ(xy.X(),xy.Y(),S(state_z));   
+	momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
 	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
 							   t*TIME_UNIT_CONVERSION,s));
       }
