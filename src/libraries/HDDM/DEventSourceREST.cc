@@ -1170,7 +1170,25 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
-		// Hit layers
+      // Track parameters at exit of tracking volume
+      const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
+      hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	
+      if (locExitParamsIterator!=locExitParamsList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_NULL,myvector);
+	
+	for(; locExitParamsIterator != locExitParamsList.end(); ++locExitParamsIterator){
+	  DVector3 pos(locExitParamsIterator->getX1(),
+		       locExitParamsIterator->getY1(),
+		       locExitParamsIterator->getZ1());
+	  DVector3 mom(locExitParamsIterator->getPx1(),
+		     locExitParamsIterator->getPy1(),
+		       locExitParamsIterator->getPz1());
+	  tra->extrapolations[SYS_NULL].push_back(DTrackFitter::Extrapolation_t(pos,mom,locExitParamsIterator->getT1(),0.));
+	}
+      }
+      // Hit layers
       const hddm_r::ExpectedhitsList& locExpectedhitsList = iter->getExpectedhitses();
 	   hddm_r::ExpectedhitsList::iterator locExpectedhitsIterator = locExpectedhitsList.begin();
 		if(locExpectedhitsIterator == locExpectedhitsList.end())
