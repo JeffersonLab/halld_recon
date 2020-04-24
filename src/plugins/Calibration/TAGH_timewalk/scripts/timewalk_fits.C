@@ -38,8 +38,12 @@ void WriteNA(ofstream &fout, ofstream &fout_ccdb, int counter) {
     fout << sep << na << sep << na << sep << na << sep << na << endl; sep = "        ";
     fout_ccdb << counter << sep << 0.0 << sep << 0.0 << sep << 0.0 << sep << 0.0 << endl;
 }
-void WriteTimewalkFitResults(ofstream &fout, ofstream &fout_ccdb, int counter, double *y, double *dy, double min, double max, double xmin, double xmax) {
-    if (min == 0.0 && max == 0.0) {WriteNA(fout,fout_ccdb,counter); return;}
+void WriteTimewalkFitResults(ofstream &fout, ofstream &fout_ccdb, ofstream &fout_badchans, int counter, double *y, double *dy, double min, double max, double xmin, double xmax) {
+    if (min == 0.0 && max == 0.0) {
+    	fout_badchans << counter << endl;
+    	WriteNA(fout,fout_ccdb,counter); 
+    	return;
+    }
     TString sep = ",";
     stringstream ss; ss << counter;
     TCanvas c("c","c",800,500);
@@ -49,17 +53,8 @@ void WriteTimewalkFitResults(ofstream &fout, ofstream &fout_ccdb, int counter, d
     for (int i = 0; i < N; i++) {
         x[i] = 50.0 + i*100.0;
         dx[i] = 0.0;
-
-	//std::cout << i << " " << x[i] << " " << y[i] << std::endl;
     }
     
-    //xmin = 700;
-   	/* 
-    cout << " MIN = " << min; // << endl;
-    cout << " MAX = " << max; // << endl;
-    cout << "   XMIN = " << xmin; // << endl;
-    cout << " XMAX = " << xmax << endl;
-    */
     TGraphErrors gr(N,x,y,dx,dy);
     //TF1 f("f",func,200.0,4000.0,4);
     TF1 f("f",func,xmin,xmax,4);
@@ -80,8 +75,10 @@ void WriteTimewalkFitResults(ofstream &fout, ofstream &fout_ccdb, int counter, d
     gr.Draw("AP");
     
     cout << "chi^2/dof = " << f.GetChisquare()/f.GetNDF()  << endl;
-    //if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 15.0) {
-    if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 80.) {   // allow for bad fits to channels with hardware problems
+    if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 15.0) {
+     	fout_badchans << counter << endl;   
+    }
+    if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 100.) {   // allow for bad fits to channels with hardware problems
         WriteNA(fout,fout_ccdb,counter);
         return;
     }
@@ -133,6 +130,7 @@ int timewalk_fits(TString dir) {
     TString fname = "timewalk-fits.txt";
     ofstream fout; fout.open(fname);
     ofstream fout_ccdb; fout_ccdb.open("tdc_timewalk.txt");
+    ofstream fout_badchans; fout_badchans.open("bad_channels");
     for (int i = 1; i <= 274; i++) { // counters
         stringstream ss; ss << i;
         const int N = 41; // pulse-height bins
@@ -140,9 +138,9 @@ int timewalk_fits(TString dir) {
         double max = -10.0; double min = 10.0;
         double xmax = 0; double xmin = 4000;
         GetData(dir+"/counter_"+TString(ss.str())+".txt",y,dy,min,max,xmin,xmax);
-        WriteTimewalkFitResults(fout,fout_ccdb,i,y,dy,min,max,xmin,xmax);
+        WriteTimewalkFitResults(fout,fout_ccdb,fout_badchans,i,y,dy,min,max,xmin,xmax);
     }
-    fout.close(); fout_ccdb.close();
+    fout.close(); fout_ccdb.close(); fout_badchans.close();
     PrintHistograms(fname);
     return 0;
 }
