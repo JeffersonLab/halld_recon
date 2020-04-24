@@ -453,7 +453,6 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
 		  vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
 		  if (extraps.size()>0){
-		    extraps[extraps.size()-1].position.Print();	
 		    hddm_r::ExitParamsList locExitParams = tra().addExitParamses(1);
 		    DVector3 pos=extraps[0].position;
 		    DVector3 mom=extraps[0].momentum;
