@@ -9399,14 +9399,16 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
   // Save the extrapolatoin at the exit of the tracking volume
   S=central_traj[0].S;
   xy=central_traj[0].xy;
-  double t=central_traj[0].t*TIME_UNIT_CONVERSION; // convert to ns
+  double t=central_traj[0].t;
   double s=central_traj[0].s;
   double tanl=S(state_tanl);
   double pt=1/fabs(S(state_q_over_pt));
   double phi=S(state_phi); 
   DVector3 position(xy.X(),xy.Y(),S(state_z));
   DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
-  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,t,s));
+  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION
+						     ,s));
 
   //------------------------------
   // Next swim to outer detectors
