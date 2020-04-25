@@ -82,6 +82,12 @@ enum kalman_error_t{
   FIT_NOT_DONE,
 };
 
+enum find_doca_error_t{
+  DOCA_NO_BRENT,
+  DOCA_ENDPLATE,
+  USED_BRENT,
+  BRENT_FAILED,
+};
 
 typedef struct{
   DVector2 dir,origin;
@@ -194,10 +200,12 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,
 				       double &chisq,unsigned int &numdof);
-  bool FindDoca(const DKalmanSIMDCDCHit_t *hit,
-	 	const DKalmanForwardTrajectory_t &traj,
-		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C,
-		double &dx,double &dy,double &dz,bool do_reverse=false);
+  find_doca_error_t FindDoca(const DKalmanSIMDCDCHit_t *hit,
+			     const DKalmanForwardTrajectory_t &traj,
+			     double step1,double step2,
+			     DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C,
+			     double &dx,double &dy,double &dz,
+			     bool do_reverse=false);
   void StepBack(double dedx,double newz,double z,
 		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C);
   void FindSag(double dx,double dy, double zlocal,const DCDCWire *mywire,

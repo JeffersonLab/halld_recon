@@ -4661,8 +4661,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  else{
 	    // Find the true doca to the wire.  If we had to use Brent's 
 	    // algorithm, the routine returns true.
+	    double step1=mStepSizeZ;
+	    double step2=mStepSizeZ;
+	    if (k>=2){
+	      step1=-forward_traj[k].z+forward_traj[k_minus_1].z;
+	      step2=-forward_traj[k_minus_1].z+forward_traj[k-2].z;
+	    }
 	    swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
-				     S0,S,C,dx,dy,dz);  
+				     step1,step2,S0,S,C,dx,dy,dz);  
 	    if (swimmed_to_doca==BRENT_FAILED){
 	      //break_point_fdc_index=(3*num_fdc)/4;
 	      return MOMENTUM_OUT_OF_RANGE;
@@ -4821,7 +4827,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    }
 	    StepBack(dedx,newz,forward_traj[k].z,S0,S,C);
 	  }
-	  
+	
 	  cdc_updates[cdc_index].S=S;
 	  cdc_updates[cdc_index].C=C;	  
 	}
@@ -5164,8 +5170,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	else{
 	  // Find the true doca to the wire.  If we had to use Brent's 
 	  // algorithm, the routine returns USED_BRENT
+	  double step1=mStepSizeZ;
+	  double step2=mStepSizeZ;
+	  if (k>=2){
+	    step1=-forward_traj[k].z+forward_traj[k_minus_1].z;
+	    step2=-forward_traj[k_minus_1].z+forward_traj[k-2].z;
+	  }
 	  swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
-				   S0,S,C,dx,dy,dz);
+				   step1,step2,S0,S,C,dx,dy,dz);
 	  if (swimmed_to_doca==BRENT_FAILED){
 	    break_point_cdc_index=(3*num_cdc)/4;
 	    return MOMENTUM_OUT_OF_RANGE;
@@ -9621,8 +9633,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	   else{
 	     // Find the true doca to the wire.  If we had to use Brent's 
 	     // algorithm, the routine returns USED_BRENT
-	     swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,S0,S,C,dx,dy,
-				      dz,true);
+	     swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,mStepSizeZ,
+				      mStepSizeZ,S0,S,C,dx,dy,dz,true);
 	     if (swimmed_to_doca==BRENT_FAILED){
 	       //_DBG_ << "Brent's algorithm failed" <<endl;
 	       return MOMENTUM_OUT_OF_RANGE;
@@ -9691,6 +9703,20 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	       chisq+=(1.-Hc*Kc)*res*res/Vc;
 	       numdof++;
 	     }
+	   }
+	   
+	   // If we had to use Brent's algorithm to find the true doca or the 
+	   // doca to the line corresponding to the wire is downstream of the 
+	   // cdc endplate, we need to swim the state vector and covariance 
+	   // matrix back to the appropriate position along the reference 
+	   // trajectory.
+	   if (swimmed_to_doca!=DOCA_NO_BRENT){
+	     double dedx=0.;
+	     if (CORRECT_FOR_ELOSS){
+	       dedx=GetdEdx(S(state_q_over_p),(*rit).K_rho_Z_over_A,
+			    (*rit).rho_Z_over_A,(*rit).LnI,(*rit).Z);
+	     }
+	     StepBack(dedx,newz,z,S0,S,C);
 	   }
 	 }
 	   
@@ -9807,6 +9833,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 find_doca_error_t 
 DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
 				 const DKalmanForwardTrajectory_t &traj,
+				 double step1,double step2,
 				 DMatrix5x1 &S0,DMatrix5x1 &S,
 				 DMatrix5x5 &C,
 				 double &dx,double &dy,double &dz,
@@ -9845,7 +9872,7 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
   // of curvature, use a linear approximation to find dz	
   bool do_brent=false;
   double sign=do_reverse?-1.:1.;
-  double two_step=2.*sign*mStepSizeZ;
+  double two_step=sign*(step1+step2);
   if (fabs(qBr2p*S(state_q_over_p)
 	   *bfield->GetBz(S(state_x),S(state_y),z)
 	   *two_step/sinl)<0.05
