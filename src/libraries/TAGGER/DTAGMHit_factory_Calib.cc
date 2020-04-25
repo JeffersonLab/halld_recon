@@ -263,6 +263,12 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         if (USE_ADC && hit->has_fADC) hit->t = hit->time_fadc;
         else  hit->t = T;
         
+        // Interpret a negative value on the integral cut to require
+        // an associated tdc hit in place of an the pulse integral cut.
+        if (CUT_FACTOR*int_cuts[row][column] < 0 && T == 0) {
+           hit->has_fADC = 0;
+        }
+
         hit->AddAssociatedObject(digihit);
     }
 
