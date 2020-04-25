@@ -4641,14 +4641,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
       // Check if the doca is no longer decreasing
       if (doca2>old_doca2){
 	if(my_cdchits[cdc_index]->status==good_hit){
-	  bool swimmed_to_doca=false;
+	  find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
 	  double newz=endplate_z;
 	  double dz=newz-z;
 	  // Sometimes the true doca would correspond to the case where the 
 	  // wire would need to extend beyond the physical volume of the straw. 
 	  // In this case, find the doca at the cdc endplate.
 	  if (z>endplate_z){
-	    swimmed_to_doca=true;
+	    swimmed_to_doca=DOCA_ENDPLATE;
 	    SwimToEndplate(z,forward_traj[k],S);
 
 	    // wire position at the endplate
@@ -4663,6 +4663,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    // algorithm, the routine returns true.
 	    swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
 				     S0,S,C,dx,dy,dz);  
+	    if (swimmed_to_doca==BRENT_FAILED){
+	      //break_point_fdc_index=(3*num_fdc)/4;
+	      return MOMENTUM_OUT_OF_RANGE;
+	    }
+
 	    newz=forward_traj[k].z+dz;
 	  }
 	  double cosstereo=my_cdchits[cdc_index]->cosstereo;
@@ -4674,7 +4679,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  Hc(state_x)=Hc_T(state_x);
 	  Hc_T(state_y)=dy*cosstereo2_over_d;	  
 	  Hc(state_y)=Hc_T(state_y);
-	  if (swimmed_to_doca==false){
+	  if (swimmed_to_doca==DOCA_NO_BRENT){
 	    Hc_T(state_ty)=Hc_T(state_y)*dz;
 	    Hc(state_ty)=Hc_T(state_ty);	  
 	    Hc_T(state_tx)=Hc_T(state_x)*dz;
@@ -4806,7 +4811,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	  // cdc endplate, we need to swim the state vector and covariance 
 	  // matrix back to the appropriate position along the reference 
 	  // trajectory.
-	  if (swimmed_to_doca){
+	  if (swimmed_to_doca!=DOCA_NO_BRENT){
 	    double dedx=0.;
 	    if (CORRECT_FOR_ELOSS){
 	      dedx=GetdEdx(S(state_q_over_p),
@@ -5139,14 +5144,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
     // Check if the doca is no longer decreasing
     if (more_measurements && doca2>old_doca2/* && z<endplate_z_downstream*/){
       if (my_cdchits[cdc_index]->status==good_hit){
-	bool swimmed_to_doca=false;
+	find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
 	double newz=endplate_z;
 	double dz=newz-z;
 	// Sometimes the true doca would correspond to the case where the 
 	// wire would need to extend beyond the physical volume of the straw. 
 	// In this case, find the doca at the cdc endplate.
 	if (z>endplate_z){
-	  swimmed_to_doca=true;
+	  swimmed_to_doca=DOCA_ENDPLATE;
 	  SwimToEndplate(z,forward_traj[k],S);
 	  
 	  // wire position at the endplate
@@ -5158,9 +5163,13 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	}
 	else{
 	  // Find the true doca to the wire.  If we had to use Brent's 
-	  // algorithm, the routine returns true.
+	  // algorithm, the routine returns USED_BRENT
 	  swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
-				   S0,S,C,dx,dy,dz);  
+				   S0,S,C,dx,dy,dz);
+	  if (swimmed_to_doca==BRENT_FAILED){
+	    break_point_cdc_index=(3*num_cdc)/4;
+	    return MOMENTUM_OUT_OF_RANGE;
+	  }
 	  newz=forward_traj[k].z+dz;
 	}
 	double cosstereo=my_cdchits[cdc_index]->cosstereo;
@@ -5172,7 +5181,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	H(state_x)=H_T(state_x);
 	H_T(state_y)=dy*cosstereo2_over_d;	  
 	H(state_y)=H_T(state_y);
-	if (swimmed_to_doca==false){
+	if (swimmed_to_doca==DOCA_NO_BRENT){
 	  H_T(state_ty)=H_T(state_y)*dz;
 	  H(state_ty)=H_T(state_ty);	  
 	  H_T(state_tx)=H_T(state_x)*dz;
@@ -5281,7 +5290,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	// cdc endplate, we need to swim the state vector and covariance 
 	// matrix back to the appropriate position along the reference 
 	// trajectory.
-	if (swimmed_to_doca){
+	if (swimmed_to_doca!=DOCA_NO_BRENT){
 	  double dedx=0.;
 	  if (CORRECT_FOR_ELOSS){
 	    dedx=GetdEdx(S(state_q_over_p),
@@ -8706,7 +8715,7 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
 // Find extrapolations to detectors outside of the tracking volume
 jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S0){
   DMatrix5x1 S=S0;
- // Energy loss
+  // Energy loss
   double dEdx=0.;
   
   // material properties
@@ -9592,14 +9601,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
       
        if (doca2>old_doca2){
 	 if(my_cdchits[cdc_index]->status==good_hit){
-	   bool swimmed_to_doca=false;
+	   find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
 	   double newz=endplate_z;
 	   double dz=newz-z;
 	   // Sometimes the true doca would correspond to the case where the 
 	   // wire would need to extend beyond the physical volume of the straw. 
 	   // In this case, find the doca at the cdc endplate.
 	   if (z>endplate_z){
-	     swimmed_to_doca=true;
+	     swimmed_to_doca=DOCA_ENDPLATE;
 	     SwimToEndplate(z,*rit,S);
 	     
 	     // wire position at the endplate
@@ -9611,9 +9620,14 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	   }
 	   else{
 	     // Find the true doca to the wire.  If we had to use Brent's 
-	     // algorithm, the routine returns true.
+	     // algorithm, the routine returns USED_BRENT
 	     swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,S0,S,C,dx,dy,
-				      dz,true);  
+				      dz,true);
+	     if (swimmed_to_doca==BRENT_FAILED){
+	       //_DBG_ << "Brent's algorithm failed" <<endl;
+	       return MOMENTUM_OUT_OF_RANGE;
+	     }
+
 	     newz=z+dz;
 	   }
 	   double cosstereo=my_cdchits[cdc_index]->cosstereo;
@@ -9625,7 +9639,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	   Hc(state_x)=Hc_T(state_x);
 	   Hc_T(state_y)=dy*cosstereo2_over_d;	  
 	   Hc(state_y)=Hc_T(state_y);
-	   if (swimmed_to_doca==false){
+	   if (swimmed_to_doca==DOCA_NO_BRENT){
 	     Hc_T(state_ty)=Hc_T(state_y)*dz;
 	     Hc(state_ty)=Hc_T(state_ty);	  
 	     Hc_T(state_tx)=Hc_T(state_x)*dz;
@@ -9790,12 +9804,13 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 
 // Finds the distance of closest approach between a CDC wire and the trajectory
 // of the track and updates the state vector and covariance matrix at this point.
-bool DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
-				      const DKalmanForwardTrajectory_t &traj,
-				      DMatrix5x1 &S0,DMatrix5x1 &S,
-				      DMatrix5x5 &C,
-				      double &dx,double &dy,double &dz,
-				      bool do_reverse){
+find_doca_error_t 
+DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
+				 const DKalmanForwardTrajectory_t &traj,
+				 DMatrix5x1 &S0,DMatrix5x1 &S,
+				 DMatrix5x5 &C,
+				 double &dx,double &dy,double &dz,
+				 bool do_reverse){
   double z=traj.z,newz=z;
   DMatrix5x5 J;
 
@@ -9857,8 +9872,9 @@ bool DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
     }
     
     // We have bracketed the minimum doca:  use Brent's agorithm
-    BrentForward(z,dedx,z0w,origin,dir,S,dz);
-
+    if (BrentForward(z,dedx,z0w,origin,dir,S,dz)!=NOERROR){
+      return BRENT_FAILED;
+    }
     // Step the state and covariance through the field
     if (fabs(dz)>mStepSizeZ){
       my_dz=(dz>0?1.0:-1.)*mStepSizeZ;
@@ -9922,8 +9938,9 @@ bool DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
     dy=S(state_y)-yw;
     dx=S(state_x)-xw; 
   }
-  
-  return do_brent;
+
+  if (do_brent) return USED_BRENT;
+  return DOCA_NO_BRENT;
 }
 
 // Swim along a trajectory to the z-position z.
