@@ -24,8 +24,10 @@ class DEventProcessor_mcthrown_tree : public JEventProcessor
 	private:
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
+		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 		bool dTagCheck;
+		int numgoodevents;
 };
 
 #endif // _DEventProcessor_mcthrown_tree_
