@@ -141,8 +141,8 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
       // dependence to sigma
       double dd_dt=0;
       // Scale factor to account for affect of B-field on maximum drift time
-      // double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
-      //tcorr=t*Bscale;
+      //double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
+      // tcorr=t*Bscale;
 
       //	if (delta>0)
       if (delta>-EPS2){
@@ -756,7 +756,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    // Check that we have enough FDC and CDC hits to proceed
    if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
-   if (cdchits.size()>0 && (cdchits.size()+fdchits.size() < 6)) return kFitNotDone;
+   if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
    
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS) 
@@ -837,7 +837,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
       }
    }
    if (num_good_cdchits==0 && num_good_fdchits<4) return kFitNotDone;
-   if(num_good_cdchits>0 && num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
+   if (num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
 
    // Create vectors of updates (from hits) to S and C
    if (my_cdchits.size()>0){
@@ -10211,7 +10211,7 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
 	  V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
 	}
 	else if (USE_TRD_DRIFT_TIMES&&my_fdchits[my_id]->status==trd_hit){ 
-	  double drift = sign*0.1*pow(drift_time/0.91,1./1.556);
+	  double drift = sign*0.1*pow(drift_time/8./0.91,1./1.556);
 	  Mdiff(0)+=drift;
 	  V(0,0)=0.05*0.05;
 	}
