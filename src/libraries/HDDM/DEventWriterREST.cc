@@ -28,7 +28,7 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	}
 	japp->Unlock("RESTWriter");
 	
-	REST_WRITE_TRACK_EXIT_PARAMS=false;
+	REST_WRITE_TRACK_EXIT_PARAMS=true;
 	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
 
 	HDDM_USE_COMPRESSION = true;
