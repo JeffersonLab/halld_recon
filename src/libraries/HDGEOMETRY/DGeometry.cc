@@ -295,6 +295,47 @@ jerror_t DGeometry::FindMatKalman(const DVector3 &pos,const DVector3 &mom,
 return RESOURCE_UNAVAILABLE;
 }
 
+jerror_t DGeometry::FindMatKalman(const DVector3 &pos,const DVector3 &mom,
+				  double &KrhoZ_overA, 
+				  double &rhoZ_overA, 
+				  double &LnI,double &Z,
+				  unsigned int &last_index,
+				  double *s_to_boundary) const
+{
+//	ReadMaterialMaps();
+
+  //last_index=0;
+  for(unsigned int i=last_index; i<materialmaps.size(); i++){
+    jerror_t err = materialmaps[i]->FindMatKalman(pos,KrhoZ_overA,
+						  rhoZ_overA,LnI,Z);
+    if(err==NOERROR){
+      if(i==materialmaps.size()-1) last_index=0;
+      else last_index=i;
+      if(s_to_boundary==NULL)return NOERROR;	// User doesn't want distance to boundary
+
+      *s_to_boundary = 1.0E6;
+      // If we are in the main mother volume, search through all the maps for
+      // the nearest boundary
+      if(last_index==0){
+	for(unsigned int j=0; j<materialmaps.size();j++){
+	  double s = materialmaps[j]->EstimatedDistanceToBoundary(pos, mom);
+	  if(s<*s_to_boundary){
+	    *s_to_boundary = s;
+	  }
+	}
+      }
+      else{
+	// otherwise, we found the material map containing this point. 
+	double s = materialmaps[last_index]->EstimatedDistanceToBoundary(pos, mom);
+	if(s<*s_to_boundary)*s_to_boundary = s;
+      }
+      return NOERROR;
+    }
+  }
+       
+return RESOURCE_UNAVAILABLE;
+}
+
 //---------------------------------
 jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
 				  double &KrhoZ_overA, 
@@ -320,6 +361,33 @@ jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
        
   return RESOURCE_UNAVAILABLE;
 }
+
+//---------------------------------
+// Get material properties needed for dEdx
+jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
+				  double &KrhoZ_overA, 
+				  double &rhoZ_overA, 
+				  double &LnI, double &Z,
+				  unsigned int &last_index) const
+{
+//	ReadMaterialMaps();
+
+  //last_index=0;
+  for(unsigned int i=last_index; i<materialmaps.size(); i++){
+    jerror_t err = materialmaps[i]->FindMatKalman(pos,KrhoZ_overA,
+						  rhoZ_overA,LnI,Z);
+    if(err==NOERROR){
+      if(i==materialmaps.size()-1) last_index=0;
+      else last_index=i;
+      return err;
+    }
+  }
+       
+  return RESOURCE_UNAVAILABLE;
+}
+
+
+
 
 //---------------------------------
 // FindMat

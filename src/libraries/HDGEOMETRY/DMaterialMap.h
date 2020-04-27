@@ -45,6 +45,10 @@ class DMaterialMap{
 				       double &rho_Z_over_A,double &LogI,
 				       double &chi2c_factor,
 				       double &chi2a_factor,double &chi2a_corr,
+				       double &Z) const;	
+		jerror_t FindMatKalman(const DVector3 &pos,
+				       double &K_rho_Z_over_A,
+				       double &rho_Z_over_A,double &LogI,
 				       double &Z) const;
 		bool IsInMap(const DVector3 &pos) const;
 		double EstimatedDistanceToBoundary(const DVector3 &pos, const DVector3 &mom);
