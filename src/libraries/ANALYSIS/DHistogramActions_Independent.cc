@@ -1225,7 +1225,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 		
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 	
 	  double locStartTime = locTrackIterator->second->t0();
@@ -1244,7 +1244,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
 	  double locStartTime = locTrackIterator->second->t0();
@@ -1260,7 +1260,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 	  
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
 	  double locStartTime = locTrackIterator->second->t0();
@@ -1279,7 +1279,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 	  
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
 	  double locStartTime = locTrackIterator->second->t0();
@@ -1297,7 +1297,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 	  
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
 	  double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
@@ -1328,7 +1328,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	  map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >extrapolations;
 	  Get_Extrapolations(locTrackIterator->second,extrapolations);
 	  
-	  if(extrapolations.size()==0)
+	  if(extrapolations.size()<2)
 	    break; //e.g. REST data: no trajectory
 
 	  //SC

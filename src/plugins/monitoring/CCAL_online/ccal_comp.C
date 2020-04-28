@@ -32,13 +32,15 @@
   if( comp_cratio ){
 
     comp_cratio->SetStats( 0 );
+    comp_cratio->Rebin(2);
     comp_cratio->SetFillColor( kGray );
     comp_cratio->GetXaxis()->SetTitle("E_{ccal} / E_{comp}");
     comp_cratio->GetXaxis()->SetTitleOffset(1.3);
     
     //comp_cratio_bkgd->SetStats( 0 );
+    //comp_cratio_bkgd->Rebin(2);
     //comp_cratio_bkgd->SetLineColor( kRed );
-    //comp_cratio_bkgd->Scale(0.25);
+    //comp_cratio_bkgd->Scale(0.5);
 
     TPad *p1 = (TPad*)c1->cd( 1 );
     p1->SetGrid();
@@ -50,14 +52,16 @@
   if( comp_cfbratio ){
 
     comp_cfbratio->SetStats( 0 );
+    comp_cfbratio->Rebin(2);
     comp_cfbratio->SetFillColor( kGray );
     comp_cfbratio->GetXaxis()->SetTitle("(E_{ccal}+E_{fcal}-E_{beam}) / E_{comp}");
     comp_cfbratio->GetXaxis()->SetTitleOffset(1.3);
     comp_cfbratio->SetTitle("Energy Conservation in Compton Events");
 
     //comp_cfbratio_bkgd->SetStats( 0 );
+    //comp_cfbratio_bkgd->Rebin(2);
     //comp_cfbratio_bkgd->SetLineColor( kRed );
-    //comp_cfbratio_bkgd->Scale(0.25);
+    //comp_cfbratio_bkgd->Scale(0.5);
 
     TPad *p2 = (TPad*)c1->cd( 3 );
     p2->SetGrid();

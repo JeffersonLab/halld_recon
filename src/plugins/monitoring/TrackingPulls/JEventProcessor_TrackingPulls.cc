@@ -42,6 +42,7 @@ jerror_t JEventProcessor_TrackingPulls::init(void) {
   tree_->Branch("track_index", &track_index_, "track_index/I");
   tree_->Branch("chi2", &chi2_, "chi2/D");
   tree_->Branch("ndf", &ndf_, "ndf/I");
+  tree_->Branch("mom", &mom_, "mom/D");
   tree_->Branch("phi", &phi_, "phi/D");
   tree_->Branch("theta", &theta_, "theta/D");
   tree_->Branch("pos_x", &pos_x_, "pos_x/D");
@@ -143,7 +144,7 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
                     50, 0.0, 10.0);
 
     // Get the pulls vector from the track
-    auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
+    auto track = bestHypothesis->Get_TrackTimeBased();
 
     // Initializes TTree variables.
     for (int j = 0; j < kNumFdcPlanes; ++j) {
@@ -172,16 +173,17 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     }
     eventnumber_ = (int)eventnumber;
     track_index_ = (int)i;
-    chi2_ = thisTimeBasedTrack->chisq;
-    ndf_ = thisTimeBasedTrack->Ndof;
-    phi_ = thisTimeBasedTrack->momentum().Phi() * TMath::RadToDeg();
-    theta_ = thisTimeBasedTrack->momentum().Theta() * TMath::RadToDeg();
-    pos_x_ = thisTimeBasedTrack->position().X();
-    pos_y_ = thisTimeBasedTrack->position().Y();
-    pos_z_ = thisTimeBasedTrack->position().Z();
-    smoothed_ = (thisTimeBasedTrack->IsSmoothed ? 1 : 0);
+    chi2_ = track->chisq;
+    ndf_ = track->Ndof;
+    mom_ = track->momentum().Mag();
+    phi_ = track->momentum().Phi() * TMath::RadToDeg();
+    theta_ = track->momentum().Theta() * TMath::RadToDeg();
+    pos_x_ = track->position().X();
+    pos_y_ = track->position().Y();
+    pos_z_ = track->position().Z();
+    smoothed_ = (track->IsSmoothed ? 1 : 0);
 
-    if (!thisTimeBasedTrack->IsSmoothed) {
+    if (!track->IsSmoothed) {
       Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothFailure",
                       "Tracking FOM", trackingFOM, "Tracking FOM", 200, 0.0,
                       1.0);
@@ -212,7 +214,7 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
                       -180, 180.0, 50, 0.0, 10.0);
     }
 
-    vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
+    vector<DTrackFitter::pull_t> pulls = track->pulls;
 
     // Check for NaNs
     any_nan_ = false;
@@ -624,7 +626,10 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
             TMath::RadToDeg();
       }
     }
+    // this plugin needs to be rewritten to use the threadsafe interface
+#if 0    // COMMENT THIS OUT SO THINGS STOP CRASHING
     tree_->Fill();
+#endif
   }
 
   return NOERROR;

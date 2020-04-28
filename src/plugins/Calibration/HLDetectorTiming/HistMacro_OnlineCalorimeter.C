@@ -1,3 +1,27 @@
+//
+// Guidance: --------------------------------------------
+//
+// The main features to focus on are the top row of plots,
+// where the peak position should be aligned with the red line
+// to around 10 ns, and the peak shape should be generally
+// like what is seen in the reference plot. 
+//
+// The FCAL local hit time plot requires a substantial amount
+// of data.  The channels showing up as white should correspond
+// to channels with little or no occupancy. 
+// The BCAL ADC/TDC alignment is performed at a later stage.
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/BCAL/BCALHit ADC time
 // hnamepath: /HLDetectorTiming/BCAL/BCALHit TDC time
 // hnamepath: /HLDetectorTiming/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time
@@ -5,6 +29,13 @@
 // hnamepath: /HLDetectorTiming/FCAL/FCALHit time
 // hnamepath: /HLDetectorTiming/FCAL/FCALHit Local Time
 // hnamepath: /HLDetectorTiming/FCAL/FCALHit Occupancy
+//
+// e-mail: aaustreg@jlab.org
+// e-mail: dalton@jlab.org
+// e-mail: gleasonc@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
+//
 
 {
 	//Goto Path
@@ -14,9 +45,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalFCALTime = 17.;
-	double nominalBCALADCTime = 15.;
-	double nominalBCALTDCTime = 15.;
+	double nominalFCALTime = 19.;
+	double nominalBCALADCTime = 17.5;
+	double nominalBCALTDCTime = 17.5;
 
 	//Get Histograms
 	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("BCAL/BCALHit ADC time");

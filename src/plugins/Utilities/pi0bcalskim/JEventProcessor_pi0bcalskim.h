@@ -40,6 +40,9 @@ class JEventProcessor_pi0bcalskim:public jana::JEventProcessor{
   int WRITE_HDDM;
   int num_epics_events;
 
+  double m_beamSpotX;
+  double m_beamSpotY;
+  double m_targetZ;
 };
 #endif // _JEventProcessor_pi0bcalskim_
 

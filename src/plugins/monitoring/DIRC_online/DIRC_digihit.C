@@ -1,7 +1,27 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-
+// Guidance: --------------------------------------------
+//
+// Upper 2 panels: DIRC PMT digihit multiplicity for physics 
+// triggers (black) and LED triggers (blue), for South (left)
+// and North (right) optical boxes
+// Lower 2 panels: DIRC PMT digihit time for physics triggers 
+// (black) and LED triggers (blue) for South (left) and North
+// (right) optical boxes.  There should be 2 broad peaks in the 
+// LED distribution from the rising and trailing edge.
+//
+// If you have concerns about the plots or any of them look
+// significantly different than the reference, please contact 
+// one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Justin Stevens:   x7237    (office)
+//                    585-4870 (cell)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_LED
 // hnamepath: /DIRC_online/DigiHit/DigiHit_NHitsVsBox_NonLED
 // hnamepath: /DIRC_online/DigiHit/SouthLowerBox/TDCDigiHit_Time_LED
@@ -100,7 +120,7 @@
     hDigiHit_Time->SetTitleSize(tsize,"xy");
     h2->Draw();
     double scale = h2->GetMaximum()/h1->GetMaximum();
-    if(h1->GetMaximum() == 0) scale = 1.;
+    if(h1->GetMaximum() == 0) scale = 1/15.;
     h1->Scale(scale);
     h1->Draw("h same");
   }
@@ -123,7 +143,7 @@
     h2->SetTitleSize(tsize,"xy");
     h2->Draw();
     double scale = h2->GetMaximum()/h1->GetMaximum();
-    if(h1->GetMaximum() == 0) scale = 1.;
+    if(h1->GetMaximum() == 0) scale = 1/15.;
     h1->Scale(scale);
     h1->Draw("h same");
   }

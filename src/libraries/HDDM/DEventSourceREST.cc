@@ -25,17 +25,25 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
-   ifs = new std::ifstream(source_name);
-   if (ifs && ifs->is_open()) {
-      // hddm_r::istream constructor can throw a std::runtime_error
-      // which is not being caught here -- policy question in JANA:
-      // who catches the exceptions, top-level user code or here?
-      fin = new hddm_r::istream(*ifs);
+   ifs = new ifstream(source_name);
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
+      std::string head;
+      std::getline(sbuf, head);
+      std::string expected = " class=\"r\" ";
+      if (head.find(expected) == head.npos) {
+         std::string msg("Unexpected header found in input REST stream: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
    }
-   else {
-      // One might want to throw an exception or report an error here.
-      fin = NULL;
-   }
+
+   fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
@@ -116,12 +124,14 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
 
    hddm_r::HDDM *record = new hddm_r::HDDM();
    try{
-      if (! (*fin >> *record)) {
-         delete fin;
-         fin = NULL;
-         delete ifs;
-         ifs = NULL;
-	     return NO_MORE_EVENTS_IN_SOURCE;
+      while (record->getReconstructedPhysicsEvents().size() == 0) {
+         if (! (*fin >> *record)) {
+            delete fin;
+            fin = NULL;
+            delete ifs;
+            ifs = NULL;
+	        return NO_MORE_EVENTS_IN_SOURCE;
+         }
       }
    }catch(std::runtime_error &e){
       cerr << "Exception caught while trying to read REST file!" << endl;
@@ -164,12 +174,15 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
              gPARMS->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
          }
 
-         if (! (*fin >> *record)) {
-            delete fin;
-            fin = NULL;
-            delete ifs;
-            ifs = NULL;
-	        return NO_MORE_EVENTS_IN_SOURCE;
+         record->clear();
+         while (record->getReconstructedPhysicsEvents().size() == 0) {
+            if (! (*fin >> *record)) {
+               delete fin;
+               fin = NULL;
+               delete ifs;
+               ifs = NULL;
+	           return NO_MORE_EVENTS_IN_SOURCE;
+            }
          }
 
          continue;
@@ -1157,7 +1170,25 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
-		// Hit layers
+      // Track parameters at exit of tracking volume
+      const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
+      hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	
+      if (locExitParamsIterator!=locExitParamsList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_NULL,myvector);
+	
+	for(; locExitParamsIterator != locExitParamsList.end(); ++locExitParamsIterator){
+	  DVector3 pos(locExitParamsIterator->getX1(),
+		       locExitParamsIterator->getY1(),
+		       locExitParamsIterator->getZ1());
+	  DVector3 mom(locExitParamsIterator->getPx1(),
+		     locExitParamsIterator->getPy1(),
+		       locExitParamsIterator->getPz1());
+	  tra->extrapolations[SYS_NULL].push_back(DTrackFitter::Extrapolation_t(pos,mom,locExitParamsIterator->getT1(),0.));
+	}
+      }
+      // Hit layers
       const hddm_r::ExpectedhitsList& locExpectedhitsList = iter->getExpectedhitses();
 	   hddm_r::ExpectedhitsList::iterator locExpectedhitsIterator = locExpectedhitsList.begin();
 		if(locExpectedhitsIterator == locExpectedhitsList.end())

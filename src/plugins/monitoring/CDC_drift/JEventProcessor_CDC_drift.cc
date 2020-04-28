@@ -369,7 +369,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
     bg = bg/(Double_t)bgrange;
 
 
-    TF1 *f = new TF1("f","[9] + [0] * (1 + [1]*exp(([3]-x)/[2]) + [7]*exp(([3]-x)/[8]) ) / ( (1+exp(([3]-x)/[5])) * (1+exp((x-[4])/[6])) )",xmin,xmax);
+    TF1 *f = new TF1("fdrift","[9] + [0] * (1 + [1]*exp(([3]-x)/[2]) + [7]*exp(([3]-x)/[8]) ) / ( (1+exp(([3]-x)/[5])) * (1+exp((x-[4])/[6])) )",xmin,xmax);
 
     f->SetLineWidth(1);
     f->SetLineColor(6);
@@ -446,6 +446,8 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
     rtfit->SetBranchAddress("tdiff_ns",&tdiff);
 
     rtfit->Fill();
+    
+    delete f;
 
     // **** reset histogram ****
     if (RESET) cdc_rawtime->Reset();

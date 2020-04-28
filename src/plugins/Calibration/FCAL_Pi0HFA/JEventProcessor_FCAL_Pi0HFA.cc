@@ -134,7 +134,7 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
             
       double pi0Mass = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).M();
       double avgE = 0.5*fcalCluster1->getEnergy() + 0.5*fcalCluster2->getEnergy();
-            
+      
       Fill1DHistogram("FCAL_Pi0HFA","","Pi0Mass",
 		      pi0Mass,
 		      "#pi^{0} Mass; #pi^{0} Mass;",

@@ -1,7 +1,36 @@
+//
+// Guidance: --------------------------------------------
+//
+// For the plots in the left column, the peak position should 
+// be aligned with the red line to around 10 ns, and the peak 
+// shape should be generally like what is seen in the reference plot. 
+//
+// The SC TDC-ADC distributions should be generally peaked
+// around zero.  The TOF TDC-ADC alignment is done at a later point.
+// 
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/SC/SCHit Matched time
 // hnamepath: /HLDetectorTiming/SC/SCHit TDC_ADC Difference
 // hnamepath: /HLDetectorTiming/TOF/TOFHit Matched time
 // hnamepath: /HLDetectorTiming/TOF/TOFHit TDC_ADC Difference
+//
+// e-mail: aaustreg@jlab.org
+// e-mail: marki@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
+// e-mail: zihlmann@jlab.org
+//
 
 {
 	//Goto Path
@@ -11,8 +40,8 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalSCTime = 0.;
-        double nominalTOFTime = 21.;
+        double nominalSCTime = 4.;
+        double nominalTOFTime = 24.;
 
 	//Get Histograms
 	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("SC/SCHit Matched time");

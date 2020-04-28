@@ -10,7 +10,7 @@ import subprocess
 
 def main():
   # user setting
-  runnum = 40847
+  runnum = 40856
   pede_path = '/home/keigo/work/20191126/target/pede'
 
   # CCDB table list
@@ -41,7 +41,7 @@ def main():
   new_ver = int(args[2])
   old_ccdb_path = 'ccdb/ccdb_v%02d.sqlite' % old_ver
   new_ccdb_path = 'ccdb/ccdb_v%02d.sqlite' % new_ver
-  mil_list = ['mil/nofield_mille_out_v%02d.mil' % old_ver]
+  mil_list = ['mil/fieldon_mille_out_v%02d.mil' % old_ver]
 
   # Copies old CCDB to a new one.
   if os.path.exists(new_ccdb_path):
@@ -101,7 +101,7 @@ def add_res_to_dict(dict0):
     if int(par_id / 100000) == 1:  # FDC parameters
       par_id %= 100000
       plane = int(par_id / 1000)
-      par_id -= plane * 1000  # 1-5, 100-104, 200-209, 999
+      par_id -= plane * 1000  # 1-5, 100-104, 200-209, 997, 998
 
       if par_id == 1 or par_id == 100:
         table = '/FDC/cell_offsets'
@@ -128,10 +128,10 @@ def add_res_to_dict(dict0):
         row = plane - 1
         col = par_id - 200
         dict0[table][row][col] = str(float(dict0[table][row][col]) + value)
-      elif par_id == 999:
+      elif par_id == 997 or par_id == 998:
         table = '/FDC/package%d/wire_timing_offsets' % (int((plane - 1) / 6) + 1)
         row = (plane - 1) % 6  # cell number, 0-based
-        for col in range(96):
+        for col in [cc + (par_id - 997) * 48 for cc in range(48)]:
           dict0[table][row][col] = str(float(dict0[table][row][col]) - value)
       else:
         print('Error: Unknown parameter', par_id)
@@ -181,17 +181,17 @@ def par_list():
   fixCDCGlobalPhiZ = True
   fixCDCWires = True
 
-  fixFDCCathodeOffsets = False
-  fixFDCCathodeAngles = False
-  fixFDCCellOffsetsWires = False
-  fixFDCCellOffsetsCathodes = False
-  fixFDCWireRotationX = False
-  fixFDCWireRotationY = False
-  fixFDCWireRotationZ = False
-  fixFDCZ = False
-  fixFDCPitch = False
-  fixFDCGap = False
-  fixFDCT0 = True
+  fixFDCCathodeOffsets = True
+  fixFDCCathodeAngles = True
+  fixFDCCellOffsetsWires = True
+  fixFDCCellOffsetsCathodes = True
+  fixFDCWireRotationX = True
+  fixFDCWireRotationY = True
+  fixFDCWireRotationZ = True
+  fixFDCZ = True
+  fixFDCPitch = True
+  fixFDCGap = True
+  fixFDCT0 = False
 
   translationPresigma = 0.0005
   rotationPresigma = 0.0001
@@ -239,7 +239,8 @@ def par_list():
     l0.append("%10d  %10.4f  %12.4f\n" % (label_offset + 209, 0.0, -1.0 if fixFDCPitch                else       pitchPresigma))
 
     # t0
-    l0.append("%10d  %10.4f  %12.4f\n" % (label_offset + 999, 0.0, -1.0 if fixFDCT0                   else          t0Presigma))
+    l0.append("%10d  %10.4f  %12.4f\n" % (label_offset + 997, 0.0, -1.0 if fixFDCT0                   else          t0Presigma))
+    l0.append("%10d  %10.4f  %12.4f\n" % (label_offset + 998, 0.0, -1.0 if fixFDCT0                   else          t0Presigma))
   return (''.join(l0))
 
 
