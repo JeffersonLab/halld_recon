@@ -773,14 +773,18 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
   DHoughFind hough(-400.0, +400.0, -400.0, +400.0, 100, 100);
     
   vector<pair<unsigned int, unsigned int> >associated_segments;
+  unsigned int oldPackNum=unused_segments[0].first;
   for (unsigned int i=0;i<unused_segments.size();i++){
     unsigned int packNum=unused_segments[i].first;
-    unsigned int segmentNum=unused_segments[i].second;    
-    const DFDCSegment* segment=packages[packNum][segmentNum];
-    for (unsigned int m=0;m<segment->hits.size();m++){
-      hough.AddPoint(segment->hits[m]->xy);
-      associated_segments.push_back(unused_segments[i]);
+    if (packNum-oldPackNum<2){
+      unsigned int segmentNum=unused_segments[i].second;    
+      const DFDCSegment* segment=packages[packNum][segmentNum];
+      for (unsigned int m=0;m<segment->hits.size();m++){
+	hough.AddPoint(segment->hits[m]->xy);
+	associated_segments.push_back(unused_segments[i]);
+      }
     }
+    oldPackNum=packNum; 
   }
         
   DVector2 Ro = hough.Find();
