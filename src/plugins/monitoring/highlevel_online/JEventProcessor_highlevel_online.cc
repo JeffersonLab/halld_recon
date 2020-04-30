@@ -803,17 +803,16 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 		
 		}
             }
-        int pseudo_triggerbit = 0;
-        if (LED_US || LED_DS || locdbcalhits.size() >= 1200.) {   	//Fill histogram if fp LED trigger exists
-        if(LED_US){
+        int pseudo_triggerbit = 8;
+        //Fill histogram if fp LED trigger exists or number of BCAL hits is > 1200  	
+        if(LED_US || locdbcalhits.size() >=1200.){
         pseudo_triggerbit=9;
+        dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
         }
-        if(LED_DS){
+        if(LED_DS || locdbcalhits.size() >=1200.){
         pseudo_triggerbit=10;
-        }
-	//Fill histogram if fp LED trigger exists or number of BCAL hits is > 1200
 	dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
-       }
+        }
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {
         japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
