@@ -26,9 +26,9 @@ DDIRCLut::DDIRCLut()
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_PIXELTIME",DIRC_TRUTH_PIXELTIME);
 
 	// timing cuts for photons
-	DIRC_CUT_TDIFFD = 3; // direct cut in ns
+	DIRC_CUT_TDIFFD = 2; // direct cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFD",DIRC_CUT_TDIFFD);
-	DIRC_CUT_TDIFFR = 4; // reflected cut in ns
+	DIRC_CUT_TDIFFR = 3; // reflected cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFR",DIRC_CUT_TDIFFR);
 
 	// Gives DeltaT = 0, but shouldn't it be v=20.3767 [cm/ns] for 1.47125
@@ -188,13 +188,13 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 
 		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		bool locIsGood = false;
-		CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locHypothesisPID, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, locIsGood);
+		bool locIsReflected = false;
+		CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locHypothesisPID, locIsReflected, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, locIsGood);
 		if(locIsGood) {
 			// count good photons and add hits to associated objects
 			nPhotons++;
 			locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHit);
 		} 
-
 	}// end loop over hits
 		
 	if(DIRC_DEBUG_HISTS) {
@@ -223,7 +223,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	return true;
 }
 
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
 {	
 	// initialize photon pairs for time and thetaC
 	pair<double, double> locDIRCPhoton(-999., -999.);
@@ -365,10 +365,11 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// remove photon candidates not used in likelihood
-				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.03) continue;
+				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.02) continue;
 				
 				// save good photons to matched list
 				isGood = true;
+				isReflected = r;
 				
 				// count good photons
 				nPhotonsThetaC++;
@@ -390,12 +391,12 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 }
 
 // overloaded function when calculating outside LUT factory
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum) const
 {
 	int nPhotonsThetaC=0;
 	double meanThetaC=0.0, meanDeltaT=0.0;
 	bool isGood=false;
-	return CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, isGood);
+	return CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, isReflected, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, isGood);
 }
 
 double DDIRCLut::CalcLikelihood(double locExpectedThetaC, double locThetaC) const {
