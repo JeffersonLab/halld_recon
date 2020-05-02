@@ -55,7 +55,6 @@ class DTrackCandidate_factory_CDC : public JFactory<DTrackCandidate>
 				const DCDCTrackHit* hit;
 				unsigned int index;
 				unsigned int flags;
-				float var_z;
 				DVector3 dStereoHitPos;
 				float dPhiStereo;
 				bool dValidStereoHitPosFlag; //false if prior to calc, or if hit doesn't intersect circle
@@ -238,7 +237,7 @@ class DTrackCandidate_factory_CDC : public JFactory<DTrackCandidate>
 		void Filter_TrackCircles_Axial(vector<DCDCTrackCircle*>& locCDCTrackCircles);
 		void Create_NewCDCSuperLayerSeeds(DCDCTrackCircle* locCDCTrackCircle);
 		DCDCSuperLayerSeed* Create_NewStereoSuperLayerSeed(DCDCSuperLayerSeed* locCDCSuperLayerSeed, const DCDCTrackCircle* locCDCTrackCircle, map<DCDCTrkHit*, DCDCTrkHit*>& locProjectedStereoHitMap);
-		bool Calc_StereoPosition(const DCDCWire *wire, const DHelicalFit* fit, DVector3 &pos, double &var_z, double& locPhiStereo, double d = 0.0);
+		bool Calc_StereoPosition(const DCDCWire *wire, const DHelicalFit* fit, DVector3 &pos, double& locPhiStereo, double d = 0.0);
 
 		// Select Best Stereo Seeds and Calculate Theta & Z
 		bool Select_CDCSuperLayerSeeds(DCDCTrackCircle* locCDCTrackCircle, bool locFinalPassFlag);

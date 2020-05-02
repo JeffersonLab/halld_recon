@@ -3165,15 +3165,14 @@ DTrackCandidate_factory_CDC::DCDCSuperLayerSeed* DTrackCandidate_factory_CDC::Cr
 			{
 				// Clone the hit and set it's stereo-hit-position
 				DVector3 locStereoHitPos;
-				double locPhiStereo = 0.0, var_z = 9.9E9;
+				double locPhiStereo = 0.0;
 				locProjectedCDCTrkHit = Get_Resource_CDCTrkHit();
 				*locProjectedCDCTrkHit = *hits[loc_l];
 				//if below is false: wire doesn't intersect the circle: in this case, don't reject hit outright: ignore for theta/z, but let wire-based tracking try to use it
 					//e.g., track has a spiral turn in SL6, and since there is no SL7, the circle-fit is extrapolated into SL6 and doesn't quite catch the spiral turn
-				if(Calc_StereoPosition(locProjectedCDCTrkHit->hit->wire, locCDCTrackCircle->fit, locStereoHitPos, var_z, locPhiStereo))
+				if(Calc_StereoPosition(locProjectedCDCTrkHit->hit->wire, locCDCTrackCircle->fit, locStereoHitPos, locPhiStereo))
 					locProjectedCDCTrkHit->dValidStereoHitPosFlag = true; 
 				locProjectedCDCTrkHit->dStereoHitPos = locStereoHitPos;
-				locProjectedCDCTrkHit->var_z = var_z;
 				locProjectedCDCTrkHit->dPhiStereo = locPhiStereo;
 				dStereoHitNumUsedMap[locProjectedCDCTrkHit] = 1;
 			}
@@ -3196,7 +3195,7 @@ DTrackCandidate_factory_CDC::DCDCSuperLayerSeed* DTrackCandidate_factory_CDC::Cr
 //--------------------
 // Calc_StereoPosition
 //--------------------
-bool DTrackCandidate_factory_CDC::Calc_StereoPosition(const DCDCWire *wire, const DHelicalFit* fit, DVector3 &pos, double &var_z, double& locPhiStereo, double d)
+bool DTrackCandidate_factory_CDC::Calc_StereoPosition(const DCDCWire *wire, const DHelicalFit* fit, DVector3 &pos, double& locPhiStereo, double d)
 {
 	// Calculate intersection point between circle and stereo wire
 	DVector3 origin = wire->origin;
@@ -3215,10 +3214,6 @@ bool DTrackCandidate_factory_CDC::Calc_StereoPosition(const DCDCWire *wire, cons
 	// Check that this wire intersects this circle
 	if(A < 0.0)
 		return false; // line along wire does not intersect circle, ever.
-
-	// Guess for variance for z: assume straw cell size??
-	double temp = 1.6/sin(wire->stereo);
-	var_z = temp*temp/12.;
 	
 	// Calculate intersection points for the two roots 
 	double B = sqrt(A);
@@ -3832,6 +3827,17 @@ bool DTrackCandidate_factory_CDC::Find_ThetaZ_Regression(const DHelicalFit* locF
 	if(locStereoHits.empty() || (!(locFit->normal.Mag() > 0.0)))
 		return false;
 
+	// Find the minimum drift time in this set of stereo hits
+	double min_time=1e6;
+	for (size_t m=0;m<locStereoHits.size();m++){
+	  if (locStereoHits[m]->hit->tdrift<min_time){
+	    min_time=locStereoHits[m]->hit->tdrift;
+	  }
+	}
+	// Factor to account for the stereo angle (all of them are roughly 
+	// the same in magnitude, so just choose one).
+	double stereo_scale_factor=pow(sin(locStereoHits[0]->hit->wire->stereo),2);
+
 	// Vector of intersections between the circle and the stereo wires
 	vector<intersection_t> intersections;
 	for(size_t m = 0; m < locStereoHits.size(); ++m)
@@ -3844,7 +3850,8 @@ bool DTrackCandidate_factory_CDC::Find_ThetaZ_Regression(const DHelicalFit* locF
 		intersection.y = trkhit->dStereoHitPos.Y();
 		intersection.perp2 = intersection.x*intersection.x + intersection.y*intersection.y;
 		intersection.z = trkhit->dStereoHitPos.Z();
-		intersection.var_z = trkhit->var_z;
+		double d_guess=sqrt(trkhit->hit->tdrift-min_time);
+		intersection.var_z=(d_guess*d_guess/12.+0.1)/stereo_scale_factor;
 		intersections.push_back(intersection);
 	}
 
@@ -3902,11 +3909,10 @@ bool DTrackCandidate_factory_CDC::Find_ThetaZ_Regression(const DHelicalFit* locF
 
 		// Find average variances for z and s
 		double avg_var_s = 0., avg_var_z = 0.;
-		double var_r = 1.6*1.6/12.; // assume cell size
 		for (size_t m = 0; m < n; ++m)
 		{
 			fit.s[m] = arclengths[m];
-			fit.var_s[m] = var_r/(1. - ratios[m]*ratios[m]);
+			fit.var_s[m] = intersections[m].var_z*stereo_scale_factor/(1. - ratios[m]*ratios[m]);
 
 			avg_var_s += fit.var_s[m];
 			avg_var_z += intersections[m].var_z;
@@ -4749,7 +4755,6 @@ void DTrackCandidate_factory_CDC::DCDCTrkHit::Reset(void)
 	hit = NULL;
 	index = 0;
 	flags = NONE;
-	var_z = 0.0;
 	dStereoHitPos.SetXYZ(0.0, 0.0, 0.0);
 	dPhiStereo = 0.0;
 	dValidStereoHitPosFlag = false;
