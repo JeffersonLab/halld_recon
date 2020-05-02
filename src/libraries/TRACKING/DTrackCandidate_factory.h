@@ -133,7 +133,14 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   bool MakeCandidateFromMethod1(double theta,
 				vector<const DFDCSegment *>&segments,
 				const DTrackCandidate *cdccan);
- 
+  void MakeCDCCandidatesFromUnusedHits(vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs);
+  bool MakeCDCCandidateFromUnusedHits(vector<unsigned int>&axial_hits_used_in_fit,vector<unsigned int>&stereo_hits,vector<unsigned int>&used_cdc_hits,unsigned int &num_unmatched_cdcs);
+  bool FitLineCDC(DHelicalFit &fit,const DVector3 &axial_pos,
+				    vector<unsigned int>&stereo_hits,
+				    vector<unsigned int>&hits_used_in_fit,
+				    DVector3 &pos_out,
+				    double &Bz
+				    ) const; 
  private:
   const DMagneticFieldMap *bfield;
   bool dIsNoFieldFlag;
