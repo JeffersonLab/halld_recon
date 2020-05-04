@@ -331,23 +331,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       }
     }
   }
-
-  // Find track candidates using Hough transform
-  if (unused_segments.size()>1){
-    if (LinkSegmentsHough(unused_segments,packages,is_paired)){
-      unused_segments.clear();
-      for (unsigned int j=0;j<4;j++){
-	for (unsigned int i=0;i<packages[j].size();i++){
-	  if (is_paired[j][i]==0){
-	    unused_segments.push_back(make_pair(j,i));
-	  }
-	}
-      }
-      if (unused_segments.size()>1){
-	LinkSegmentsHough(unused_segments,packages,is_paired);
-      }
-    }
-  }
     
   // Create track stubs for unused segments
   for (unsigned int j=0;j<4;j++){
