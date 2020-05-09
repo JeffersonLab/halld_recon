@@ -1125,8 +1125,10 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 {
 	//check if it's actually a new event
 	auto locEventNumber = locEventLoop->GetJEvent().GetEventNumber();
-	if(locEventNumber == dEventNumber)
+	if(locEventNumber == dEventNumber) {
+        jout << "WARNING: Calling DSourceComboer::Reset_NewEvent() with repeated run number: " << locEventNumber << endl;
 		return; //nope
+    }
 	dEventNumber = locEventNumber;
 	if(dDebugLevel >= 5) //for the last event
 	{
