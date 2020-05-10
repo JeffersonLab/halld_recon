@@ -33,8 +33,8 @@
 		double max_fp  = locHist_L1bits_fp->GetMaximum();
 		
 		
-		const int bin_number = 7;
-		const char *bin_label[bin_number] = { "FCal LED (3)", "BCal LED (9)", "pseudoTrig(9)","BCal LED (10)", "pseudoTrig(10)","Random (12)", "DIRC LED (15)"};
+		const int bin_number = 8;
+		const char *bin_label[bin_number] = { "FCal LED (3)","BCAL 1200Hits", "BCal LED (9)", "pseudoTrig(9)","BCal LED (10)", "pseudoTrig(10)","Random (12)", "DIRC LED (15)"};
 		TH1I *locHist_Trigger_pseudo = new TH1I("locHist_Trigger_pseudo", "L1 Front Panel Trigger Bits", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
 	
@@ -44,18 +44,20 @@
 
 		// FCAL LED: FP Bit 3
 		locHist_Trigger_FP->Fill(0., locHist_L1bits_fp->GetBinContent(3));
+                //BCAL:1200 hits
+                locHist_Trigger_FP->Fill(1., locHist_L1bits_fp_twelvehundhits->GetBinContent(1));
 		// BCAL LED: FP Bit 9
-		locHist_Trigger_FP->Fill(1., locHist_L1bits_fp->GetBinContent(9));
+		locHist_Trigger_FP->Fill(2., locHist_L1bits_fp->GetBinContent(9));
                 // BCAL LED: pseudo Trigger 9
-		locHist_Trigger_pseudo->Fill(2., locHist_L1bits_fp_twelvehundhits->GetBinContent(2));
+		locHist_Trigger_pseudo->Fill(3., locHist_L1bits_fp_twelvehundhits->GetBinContent(3));
 		// BCAL LED: FP Bit 10
-		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(10));
+		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(10));
                 // BCAL LED: pseudo Trigger 10
-		locHist_Trigger_pseudo->Fill(4., locHist_L1bits_fp_twelvehundhits->GetBinContent(3));
+		locHist_Trigger_pseudo->Fill(5., locHist_L1bits_fp_twelvehundhits->GetBinContent(5));
 		// Random Trigger: FP Bit 12
-		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(12));
+		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
 		// DIRC LED: FP Bit 15
-		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(15));
+		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(15));
 
 		locHist_Trigger_pseudo->SetFillColor(kBlue);
 		locHist_Trigger_pseudo->SetStats(0);

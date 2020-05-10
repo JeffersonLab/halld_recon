@@ -226,7 +226,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	dHist_L1bits_gtp = new TH1I("L1bits_gtp", "L1 trig bits from GTP;Trig. bit (1-32)", 34, 0.5, 34.5);
 	dHist_L1bits_fp  = new TH1I("L1bits_fp", "L1 trig bits from FP;Trig. bit (1-32)", 32, 0.5, 32.5);
         // BCAL LED Pseudo Trigger(1200 hits in BCAL) //
-        dHist_L1bits_fp_twelvehundhits  = new TH1I("L1bits_fp_twelvehundhits", "Pseudo-trig bits (FP or >1200 hits);Trig. bit (1-32)", 4, 7.5, 11.5);
+        dHist_L1bits_fp_twelvehundhits  = new TH1I("L1bits_fp_twelvehundhits", "Pseudo-trig bits (FP or >1200 hits);Trig. bit (1-32)", 5, 6.5, 11.5);
 	/****************************************************** NUM RECONSTRUCTED OBJECTS *****************************************************/
 
 	//2D Summary
@@ -803,16 +803,27 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 		
 		}
             }
-        int pseudo_triggerbit = 8;
+        int pseudo_triggerbit = 0;
         //Fill histogram if fp LED trigger exists or number of BCAL hits is > 1200  	
-        if(LED_US || locdbcalhits.size() >=1200.){
-        pseudo_triggerbit=9;
-        dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
-        }
-        if(LED_DS || locdbcalhits.size() >=1200.){
-        pseudo_triggerbit=10;
-	dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
-        }
+        if (locdbcalhits.size()>1200){
+        pseudo_triggerbit = 7;
+           }
+        if(LED_US){
+                pseudo_triggerbit = 8;
+ 
+                if (locdbcalhits.size() >1200){
+                 pseudo_triggerbit=9;
+                 }
+            }
+ 
+        if (LED_DS){
+                pseudo_triggerbit=10;
+ 
+                if (locdbcalhits.size() >1200){
+                 pseudo_triggerbit=11;
+                 }
+           }
+       dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {
         japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
