@@ -3324,6 +3324,8 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	    double diff=bcalparms->dBCALShower->E/p-E_over_p_mean;
 	    double sigma=GetEOverPSigma(SYS_BCAL,p);
 	    double chisq=diff*diff/(sigma*sigma);
+	    locChargedTrackHypothesis->Set_ChiSq_EOverP(SYS_BCAL,chisq,1);
+
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
 	  } 
@@ -3332,6 +3334,8 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	    double diff=fcalparms->dFCALShower->getEnergy()/p-E_over_p_mean;
 	    double sigma=GetEOverPSigma(SYS_FCAL,p);
 	    double chisq=diff*diff/(sigma*sigma);
+	    locChargedTrackHypothesis->Set_ChiSq_EOverP(SYS_FCAL,chisq,1);
+
 	    locChiSq_Total+=chisq;
 	    locNDF_Total+=1;
 	  }
