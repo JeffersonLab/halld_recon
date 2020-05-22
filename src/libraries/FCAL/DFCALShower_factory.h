@@ -34,7 +34,8 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   jerror_t brun(JEventLoop *loop, int32_t runnumber);
   jerror_t erun(void);
 
-  void GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, double &Ecorrected,
+  void GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb,
+				     double &Ecorrected,
 				     DVector3 &pos_corrected, double &errZ,
 				     const DVector3 *aVertex);
 
@@ -54,7 +55,10 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   
   double m_zTarget, m_FCALfront;
   double m_FCALdX,m_FCALdY;
-
+  double m_beamSpotX;
+  double m_beamSpotY;  
+  double LOAD_NONLIN_CCDB;
+  double LOAD_TIMING_CCDB; 
   double LOAD_CCDB_CONSTANTS;
   double SHOWER_ENERGY_THRESHOLD;
   double cutoff_energy;
@@ -63,7 +67,9 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double expfit_param1;
   double expfit_param2;
   double expfit_param3;
-		
+  
+  vector < vector <double> > energy_dependence_correction_vs_ring;
+  
   double timeConst0;
   double timeConst1;
   double timeConst2;
