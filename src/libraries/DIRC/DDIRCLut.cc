@@ -43,6 +43,10 @@ DDIRCLut::DDIRCLut()
 	DIRC_ROTATE_TRACK = false;
 	gPARMS->SetDefaultParameter("DIRC:ROTATE_TRACK",DIRC_ROTATE_TRACK);
 
+	// Rotate tracks angle based on bar box survey data
+	DIRC_THETAC_OFFSET = true;
+	gPARMS->SetDefaultParameter("DIRC:THETAC_OFFSET",DIRC_THETAC_OFFSET);
+
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
 	dFinalStatePIDs.push_back(PiPlus);
@@ -68,18 +72,40 @@ bool DDIRCLut::brun(JEventLoop *loop) {
         loop->Get(locDIRCGeometry);
         dDIRCGeometry = locDIRCGeometry[0];
 
-	// rotation angles for bar boxes (reverse sign from survey)
-	for(int i=0; i<12; i++) {
-	  dRotationX[i] = -0.2134*TMath::DegToRad(); // +pitch // -0.00219;
-	  dRotationY[i] =  0.0963*TMath::DegToRad(); // -yaw   //  0.00181
-	  dRotationZ[i] = -0.0355*TMath::DegToRad(); // -roll  // -0.00062;
-	}
-	for(int i=12; i<24; i++) {
-	  dRotationX[i] = -0.0791*TMath::DegToRad(); // +pitch // -0.00138;
-	  dRotationY[i] =  0.1003*TMath::DegToRad(); // -yaw   //  0.00175;
-	  dRotationZ[i] = -0.0381*TMath::DegToRad(); // -roll  // -0.00066;
+	// get cherenkov angle corrections from CCDB
+	vector <double> thetac_offsets_bar(5184);
+	if(loop->GetCalib("/DIRC/thetac_offsets_bar", thetac_offsets_bar)) 
+	  jout << "Can't find requested /DIRC/thetac_offsets_bar in CCDB for this run!" << endl;
+	
+	for(int ibar=0; ibar<48; ibar++) {
+	  for(int ipmt=0; ipmt<108; ipmt++) {
+	    int index = ipmt + ibar*108;
+	    dThetaCOffset[ibar][ipmt] = thetac_offsets_bar.at(index);
+	  }
 	}
 
+	// rotation angles for bar boxes
+	for(int i=0; i<12; i++) {
+	  dRotationX[i] = -0.2134*TMath::DegToRad(); // +pitch 
+	  dRotationY[i] =  0.0963*TMath::DegToRad(); // -yaw   
+	  dRotationZ[i] = -0.0355*TMath::DegToRad(); // -roll  
+	}
+	for(int i=12; i<24; i++) {
+	  dRotationX[i] = -0.0791*TMath::DegToRad(); // +pitch 
+	  dRotationY[i] =  0.1003*TMath::DegToRad(); // -yaw   
+	  dRotationZ[i] = -0.0381*TMath::DegToRad(); // -roll  
+	}
+	for(int i=24; i<36; i++) {
+	  dRotationX[i] = -0.15384*TMath::DegToRad(); // +pitch 
+	  dRotationY[i] =  0.08365*TMath::DegToRad(); // -yaw   
+	  dRotationZ[i] =  0.00773*TMath::DegToRad(); // -roll  
+	}
+	for(int i=36; i<48; i++) {
+	  dRotationX[i] = -0.18363*TMath::DegToRad(); // +pitch 
+	  dRotationY[i] =  0.09568*TMath::DegToRad(); // -yaw   
+	  dRotationZ[i] =  0.01461*TMath::DegToRad(); // -roll  
+	}
+	
 	return true;
 }
 
@@ -249,10 +275,9 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	if((box == 0 && channel < dMaxChannels) || (box == 1 && channel >= dMaxChannels)) 
 		return locDIRCPhotons;
 
-	int pmt = channel/64;
 	double rotX = 0, rotY = 0, rotZ=0;
 	int xbin = (int)(posInBar.X()/5.0) + 19;
-	if(bar>=0 && bar<=23 && xbin>=0 && xbin<=39) {
+	if(bar>=0 && bar<=47 && xbin>=0 && xbin<=39) {
 	  rotX = dRotationX[bar];
 	  rotY = dRotationY[bar];
 	  rotZ = dRotationZ[bar];
@@ -284,6 +309,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 		
 	// check for pixel before going through loop
 	int box_channel = channel%dMaxChannels;
+	int box_pmt = box_channel/64;
 	if(dDIRCLutReader->GetLutPixelAngleSize(bar, box_channel) == 0) 
 		return locDIRCPhotons;
 	
@@ -319,7 +345,11 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				  trackMom.RotateY(rotY);
 				  trackMom.RotateZ(rotZ);
 				}
-				tangle = trackMom.Angle(dir); 
+				tangle = trackMom.Angle(dir);
+ 
+				if(DIRC_THETAC_OFFSET) { // ad-hoc correction per-PMT
+				  tangle -= dThetaCOffset[bar][box_pmt];
+				}
 
 				luttheta = dir.Angle(TVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
@@ -365,11 +395,12 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// remove photon candidates not used in likelihood
-				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.02) continue;
+				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.03) continue;
 				
+				isReflected = r;
+
 				// save good photons to matched list
 				isGood = true;
-				isReflected = r;
 				
 				// count good photons
 				nPhotonsThetaC++;
@@ -377,6 +408,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				// calculate average ThetaC and DeltaT
 				meanThetaC += tangle;
 				meanDeltaT += locDeltaT;
+				
 				
 				// calculate likelihood for each mass hypothesis
 				for(uint loc_j = 0; loc_j<dFinalStatePIDs.size(); loc_j++) {

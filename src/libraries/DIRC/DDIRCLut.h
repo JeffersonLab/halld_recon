@@ -52,12 +52,14 @@ private:
 	bool DIRC_TRUTH_BARHIT;
 	bool DIRC_TRUTH_PIXELTIME;
 	bool DIRC_ROTATE_TRACK;
+	bool DIRC_THETAC_OFFSET;
 
 	double DIRC_CUT_TDIFFD;
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
 
+	double dThetaCOffset[48][108]; 
 	double dRotationX[48], dRotationY[48], dRotationZ[48];
 
 	int dMaxChannels;
@@ -68,6 +70,7 @@ private:
 	deque<Particle_t> dFinalStatePIDs;
 	map<Particle_t, TH1I*> hDeltaThetaC;
 	map<Particle_t, TH2I*> hDeltaThetaC_Pixel;
+
 };
 
 #endif // _DDIRCLut_
