@@ -84,28 +84,17 @@ bool DDIRCLut::brun(JEventLoop *loop) {
 	  }
 	}
 
-	// rotation angles for bar boxes
-	for(int i=0; i<12; i++) {
-	  dRotationX[i] = -0.2134*TMath::DegToRad(); // +pitch 
-	  dRotationY[i] =  0.0963*TMath::DegToRad(); // -yaw   
-	  dRotationZ[i] = -0.0355*TMath::DegToRad(); // -roll  
-	}
-	for(int i=12; i<24; i++) {
-	  dRotationX[i] = -0.0791*TMath::DegToRad(); // +pitch 
-	  dRotationY[i] =  0.1003*TMath::DegToRad(); // -yaw   
-	  dRotationZ[i] = -0.0381*TMath::DegToRad(); // -roll  
-	}
-	for(int i=24; i<36; i++) {
-	  dRotationX[i] = -0.15384*TMath::DegToRad(); // +pitch 
-	  dRotationY[i] =  0.08365*TMath::DegToRad(); // -yaw   
-	  dRotationZ[i] =  0.00773*TMath::DegToRad(); // -roll  
-	}
-	for(int i=36; i<48; i++) {
-	  dRotationX[i] = -0.18363*TMath::DegToRad(); // +pitch 
-	  dRotationY[i] =  0.09568*TMath::DegToRad(); // -yaw   
-	  dRotationZ[i] =  0.01461*TMath::DegToRad(); // -roll  
-	}
+	// get track rotation corrections from CCDB
+	vector< map<string, double> > bar_rotation(48);
+	if(loop->GetCalib("/DIRC/bar_rotation", bar_rotation)) 
+	  jout << "Can't find requested /DIRC/bar_rotation in CCDB for this run!" << endl;
 	
+	for(int ibar=0; ibar<48; ibar++) {
+	    dRotationX[ibar] = bar_rotation[ibar].at("rotationX");
+	    dRotationY[ibar] = bar_rotation[ibar].at("rotationY");
+	    dRotationZ[ibar] = bar_rotation[ibar].at("rotationZ");
+	}
+
 	return true;
 }
 
