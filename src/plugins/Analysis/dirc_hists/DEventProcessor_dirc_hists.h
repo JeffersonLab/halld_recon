@@ -60,6 +60,9 @@ private:
   TH2I *hNphCBarVsP[48];
   TH2I *hNphCBarInclusiveVsP[48];
   TH1I *hDeltaThetaCBar[48];
+  TH2I *hDeltaThetaCVsDeltaYBar[48];
+  TH2I *hDeltaThetaCVsDeltaYBarX[48][40];
+  TH2I *hDeltaThetaCVsDeltaYBarXPos[48][40], *hDeltaThetaCVsDeltaYBarXNeg[48][40];
   map<Particle_t, TH2I*> hExtrapolatedBarHitXY;
   map<Particle_t, TH1I*> hExtrapolatedBarHitTime;
   map<Particle_t, vector<TH1I*>> hExtrapolatedBarHitTime_BadTime;
