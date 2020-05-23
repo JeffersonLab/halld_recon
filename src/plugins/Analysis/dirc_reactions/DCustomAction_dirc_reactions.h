@@ -58,20 +58,28 @@ class DCustomAction_dirc_reactions : public DAnalysisAction
 		bool DIRC_TRUTH_BARHIT, DIRC_FILL_BAR_MAP;
 
 		//Store any histograms as member variables here
-		TH1I *hDiff, *hNphC, *hThetaC, *hDeltaThetaC, *hLikelihood, *hLikelihoodDiff;
-		TH2I *hThetaCVsP, *hDeltaThetaCVsP, *hLikelihoodDiffVsP, *hReactionLikelihoodDiffVsP;
+		TH1I *hDiff, *hDiffDirect, *hDiffReflected;
+		TH1I *hDeltaThetaC, *hDeltaThetaCDirect, *hDeltaThetaCReflected;
+		TH1I *hNphC, *hThetaC, *hLikelihood, *hLikelihoodDiff;
+		TH2I *hThetaCVsP, *hLikelihoodDiffVsP, *hReactionLikelihoodDiffVsP;
+		TH2I *hDeltaThetaCVsP, *hDeltaThetaCVsPDirect, *hDeltaThetaCVsPReflected;
 		TH2I *hDeltaThetaCVsChannel;
 		TH2I *hDeltaThetaCVsChannelMap[48];
+		TH2I *hDeltaThetaCDirectVsChannelMap[48], *hDeltaThetaCReflectedVsChannelMap[48];
+		TH2I *hDeltaThetaCDirectVsPMTMap[48], *hDeltaThetaCReflectedVsPMTMap[48];
+		TH2I *hDeltaThetaCVsDeltaYMap[48];
 
 		TH2I *hExtrapolatedBarHitXY, *hExtrapolatedBarHitXY_PreCut;
 		TH2I *hDeltaTOF[48][40];
-		TH1I *hDiffMap[48][40], *hHitTimeMap[48][40], *hHitTimeMapAll[48][40];
-		TH1I *hNphCMap[48][40], *hNphCMapSlot4[48][40], *hNphCMapSlot5[48][40];
-		TH3S *hPixelHitMap3D[48][40];
+		TH1I *hDiffMap[48][40], *hDiffMapDirect[48][40], *hDiffMapReflected[48][40];
+		TH1I *hHitTimeMap[48][40], *hHitTimeMapAll[48][40];
+		TH1I *hNphCMap[48][40]; //, *hNphCMapSlot4[48][40], *hNphCMapSlot5[48][40];
+		//TH3S *hPixelHitMap3D[48][40];
 		TH2S *hPixelHitMap[48][40], *hPixelHitMapReflected[48][40];
-		TH2S *hPixelHitMapAll[48][40], *hPixelHitMapAllReflected[48][40];
+		//TH2S *hPixelHitMapAll[48][40], *hPixelHitMapAllReflected[48][40];
 		//TH2I *hPixelHitTimeMap[48][40];
-		TH2I *hThetaCVsPMap[48][40], *hDeltaThetaCVsPMap[48][40], *hReactionLikelihoodDiffVsPMap[48][40];
+		TH2I *hThetaCVsPMap[48][40], *hReactionLikelihoodDiffVsPMap[48][40];
+		TH2I *hDeltaThetaCVsPMap[48][40], *hDeltaThetaCVsPMapDirect[48][40], *hDeltaThetaCVsPMapReflected[48][40];
 };
 
 #endif // _DCustomAction_dirc_reactions_

@@ -66,18 +66,17 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05, true)); //5% confidence level cut on pull histograms only
-	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 1e-5));
 
 	// MASSES, POST-KINFIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, false, 900, 0.3, 1.2, "Rho_PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 900, 0.3, 1.2, "Rho_KinFit_PostKinFitCut"));
-	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 0.5, 1.0));
+	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locRhoPIDs, true, 0.6, 0.9));
 
 	// Custom histograms for DIRC
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiPlus, 0, 1, "PiPlus_DIRC"));
+	locReaction->Add_AnalysisAction(new DCustomAction_dirc_track_pair(locReaction, true, 0, 1, 2, "PairPion_DIRC_KinFit"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, PiPlus, 0, 1, "PiPlus_DIRC_KinFit"));
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, PiMinus, 0, 2, "PiMinus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, PiMinus, 0, 2, "PiMinus_DIRC_KinFit"));
 
 	// Kinematics of final selection
@@ -86,7 +85,7 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
 	
-	/**************************************************** p2pi_dirc Reaction Steps ****************************************************/
+	/**************************************************** p2k_dirc Reaction Steps ****************************************************/
 
 	locReaction = new DReaction("p2k_dirc"); //needs to be a unique name for each DReaction object, CANNOT (!) be "Thrown"
 
@@ -127,18 +126,17 @@ jerror_t DReaction_factory_dirc_reactions::evnt(JEventLoop* locEventLoop, uint64
 
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05, true)); //5% confidence level cut on pull histograms only
-	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 1e-5)); 
 
 	// MASSES, POST-KINFIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 1000, -0.1, 0.1, "PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, false, 500, 0.9, 1.4, "Phi_PostKinFitCut"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 500, 0.9, 1.4, "Phi_KinFit_PostKinFitCut"));
-	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 0.95, 1.05));
+	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locPhiPIDs, true, 1.0, 1.04));
 
 	// Custom histograms for DIRC
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KPlus, 0, 1, "KPlus_DIRC"));
+	locReaction->Add_AnalysisAction(new DCustomAction_dirc_track_pair(locReaction, true, 0, 1, 2, "PairKaon_DIRC_KinFit"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, KPlus, 0, 1, "KPlus_DIRC_KinFit"));
-	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, false, KMinus, 0, 2, "KMinus_DIRC"));
 	locReaction->Add_AnalysisAction(new DCustomAction_dirc_reactions(locReaction, true, KMinus, 0, 2, "KMinus_DIRC_KinFit"));
 
 	// Kinematics of final selection
