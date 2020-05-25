@@ -301,7 +301,7 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
 
       f_delta= (a1+a2*delta_mag+a3*delta_sq)*sqrt_t
 	+(b1+b2*delta_mag+b3*delta_sq)*my_t
-	+(c1+c2*delta_mag+c3*delta*delta)*t3;
+	+(c1+c2*delta_mag+c3*delta_sq)*t3;
 
       f_0=a1*sqrt_t+b1*my_t+c1*t3;
 

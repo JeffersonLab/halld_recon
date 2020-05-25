@@ -187,7 +187,7 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
          double delta_sq=delta*delta;
          double a=a1+a2*delta_mag+a3*delta_sq;
          double b=b1+b2*delta_mag+b3*delta_sq;
-         double c=c1+c2*delta_mag+c3*delta*delta;
+         double c=c1+c2*delta_mag+c3*delta_sq;
 
          //f_delta=a*sqrt_t+b*my_t;
          //f_0=a1*sqrt_t+b1*my_t;
