@@ -1837,6 +1837,13 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 		locHistTitle << " Constraints, " << locNumUnknowns << " Unknowns: " << locNDF << "-C Fit);# Combos";
 		dHist_ConfidenceLevel = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle.str(), dNumConfidenceLevelBins, 0.0, 1.0);
 
+		// Reduced chi^2 (chi^2/# d.o.f.)
+		locHistName = "ChiSq";
+		locHistTitle.str("");   // clear the ostringstream
+		locHistTitle << "Kinematic Fit Constraints: " << locConstraintString << "; #chi^{2}/# d.o.f. (" << locNumConstraints;
+		locHistTitle << " Constraints, " << locNumUnknowns << " Unknowns: " << locNDF << "-C Fit);# Combos";
+		dHist_ChiSq = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle.str(), dNumChiSqBins, 0.0, dMaxChiSq);
+
 		//beam (pulls & conlev)
 		Particle_t locInitialPID = Get_Reaction()->Get_ReactionStep(0)->Get_InitialPID();
 		bool locBeamFlag = Get_IsFirstStepBeam(Get_Reaction());
@@ -2171,6 +2178,9 @@ bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, co
 
 	// Get Confidence Level
 	double locConfidenceLevel = locKinFitResults->Get_ConfidenceLevel();
+	
+	// Get reduced chi^2
+	double locChiSq = locKinFitResults->Get_ChiSq()/locKinFitResults->Get_NDF() ;
 
 	// Get Pulls
 	map<const JObject*, map<DKinFitPullType, double> > locPulls; //DKinematicData is the MEASURED particle
@@ -2185,7 +2195,8 @@ bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, co
 	Lock_Action();
 	{
 		dHist_ConfidenceLevel->Fill(locConfidenceLevel);
-
+		dHist_ChiSq->Fill(locChiSq);
+		
 		// beam
 		if(locBeamFlag)
 		{

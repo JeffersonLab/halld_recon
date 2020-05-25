@@ -532,22 +532,22 @@ class DHistogramAction_KinFitResults : public DAnalysisAction
 	public:
 		DHistogramAction_KinFitResults(const DReaction* locReaction, double locPullHistConfidenceLevelCut, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_KinFitResults", true, locActionUniqueString),
-		dHistDependenceFlag(false), dNumConfidenceLevelBins(400), dNumPullBins(200), dNum2DPBins(200), dNum2DThetaBins(140), dNum2DPhiBins(180), dNum2DPullBins(100),
+		dHistDependenceFlag(false), dNumConfidenceLevelBins(400), dNumChiSqBins(400), dNumPullBins(200), dNum2DPBins(200), dNum2DThetaBins(140), dNum2DPhiBins(180), dNum2DPullBins(100),
 		dNum2DConfidenceLevelBins(100), dNum2DBeamEBins(240), dMinPull(-4.0), dMaxPull(4.0), dMinP(0.0), dMaxP(10.0), dMinTheta(0.0), dMaxTheta(140.0),
-		dMinPhi(-180.0), dMaxPhi(180.0), dMinBeamE(0.0), dMaxBeamE(12.0), dPullHistConfidenceLevelCut(locPullHistConfidenceLevelCut) {}
+		dMinPhi(-180.0), dMaxPhi(180.0), dMinBeamE(0.0), dMaxBeamE(12.0), dMaxChiSq(100.), dPullHistConfidenceLevelCut(locPullHistConfidenceLevelCut) {}
 
 		DHistogramAction_KinFitResults(const DReaction* locReaction, double locPullHistConfidenceLevelCut, bool locHistDependenceFlag, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Hist_KinFitResults", true, locActionUniqueString), 
-		dHistDependenceFlag(locHistDependenceFlag), dNumConfidenceLevelBins(400), dNumPullBins(200), dNum2DPBins(200), dNum2DThetaBins(140), dNum2DPhiBins(180), dNum2DPullBins(100),
+		dHistDependenceFlag(locHistDependenceFlag), dNumConfidenceLevelBins(400), dNumChiSqBins(400), dNumPullBins(200), dNum2DPBins(200), dNum2DThetaBins(140), dNum2DPhiBins(180), dNum2DPullBins(100),
 		dNum2DConfidenceLevelBins(100), dNum2DBeamEBins(240), dMinPull(-4.0), dMaxPull(4.0), dMinP(0.0), dMaxP(10.0), dMinTheta(0.0), dMaxTheta(140.0),
-		dMinPhi(-180.0), dMaxPhi(180.0), dMinBeamE(0.0), dMaxBeamE(12.0), dPullHistConfidenceLevelCut(locPullHistConfidenceLevelCut) {}
+		dMinPhi(-180.0), dMaxPhi(180.0), dMinBeamE(0.0), dMaxBeamE(12.0), dMaxChiSq(100.), dPullHistConfidenceLevelCut(locPullHistConfidenceLevelCut) {}
 
 	private:
 		bool dHistDependenceFlag;
 
 	public:
-		unsigned int dNumConfidenceLevelBins, dNumPullBins, dNum2DPBins, dNum2DThetaBins, dNum2DPhiBins, dNum2DPullBins, dNum2DConfidenceLevelBins, dNum2DBeamEBins;
-		double dMinPull, dMaxPull, dMinP, dMaxP, dMinTheta, dMaxTheta, dMinPhi, dMaxPhi, dMinBeamE, dMaxBeamE;
+		unsigned int dNumConfidenceLevelBins, dNumChiSqBins, dNumPullBins, dNum2DPBins, dNum2DThetaBins, dNum2DPhiBins, dNum2DPullBins, dNum2DConfidenceLevelBins, dNum2DBeamEBins;
+		double dMinPull, dMaxPull, dMinP, dMaxP, dMinTheta, dMaxTheta, dMinPhi, dMaxPhi, dMinBeamE, dMaxBeamE, dMaxChiSq;
 
 		void Initialize(JEventLoop* locEventLoop);
 		void Run_Update(JEventLoop* locEventLoop);
@@ -572,6 +572,7 @@ class DHistogramAction_KinFitResults : public DAnalysisAction
 
 		//below maps: int is step index (-1 for beam), 2nd is particle
 		TH1I* dHist_ConfidenceLevel;
+		TH1I* dHist_ChiSq;
 		map<pair<int, Particle_t>, TH2I*> dHistMap_ConfidenceLevel_VsP;
 		map<pair<int, Particle_t>, TH2I*> dHistMap_ConfidenceLevel_VsTheta;
 		map<pair<int, Particle_t>, TH2I*> dHistMap_ConfidenceLevel_VsPhi;

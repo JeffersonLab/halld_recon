@@ -45,6 +45,7 @@ DCutAction_ProductionVertexZ
 DCutAction_AllVertexZ
 DCutAction_MaxTrackDOCA
 DCutAction_KinFitFOM
+DCutAction_KinFitChiSq
 
 DCutAction_MissingMass
 DCutAction_MissingMassSquared
@@ -357,6 +358,23 @@ class DCutAction_KinFitFOM : public DAnalysisAction
 
 		const string dKinFitName;
 		double dMinimumConfidenceLevel;
+};
+
+class DCutAction_KinFitChiSq : public DAnalysisAction
+{
+	public:
+		DCutAction_KinFitChiSq(const DReaction* locReaction, double locMaximumChiSq, string locActionUniqueString = "") : 
+		DAnalysisAction(locReaction, "Cut_KinFitFOM", true, locActionUniqueString), dMaximumChiSq(locMaximumChiSq){}
+
+		string Get_ActionName(void) const;
+		inline void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		const string dKinFitName;
+		double dMaximumChiSq;
 };
 
 class DCutAction_MissingMass : public DAnalysisAction

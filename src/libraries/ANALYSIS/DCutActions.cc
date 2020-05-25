@@ -419,6 +419,21 @@ bool DCutAction_KinFitFOM::Perform_Action(JEventLoop* locEventLoop, const DParti
 	return (locKinFitResults->Get_ConfidenceLevel() > dMinimumConfidenceLevel);
 }
 
+string DCutAction_KinFitChiSq::Get_ActionName(void) const
+{
+	ostringstream locStream;
+	locStream << DAnalysisAction::Get_ActionName() << "_" << dMaximumChiSq;
+	return locStream.str();
+}
+
+bool DCutAction_KinFitChiSq::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
+	if(locKinFitResults == NULL)
+		return false;
+	return (locKinFitResults->Get_ChiSq()/locKinFitResults->Get_NDF() < dMaximumChiSq);
+}
+
 void DCutAction_BDTSignalCombo::Initialize(JEventLoop* locEventLoop)
 {
 	if(dCutAction_TrueBeamParticle == nullptr)

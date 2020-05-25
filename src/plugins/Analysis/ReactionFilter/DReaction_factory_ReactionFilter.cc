@@ -166,6 +166,10 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 	//INIT
 	dSourceComboP4Handler = new DSourceComboP4Handler(nullptr, false);
 	dSourceComboTimeHandler = new DSourceComboTimeHandler(nullptr, nullptr, nullptr);
+	
+	double locKinFitChiSqCut = -1.;
+	gPARMS->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", locKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
+
 
 	auto locInputTuple = Parse_Input();
 	auto locReactions = Create_Reactions(locInputTuple);
@@ -193,6 +197,8 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 
 		// KINEMATIC FIT
 		locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+		if(locKinFitChiSqCut > 0.)
+			locReaction->Add_AnalysisAction(new DCutAction_KinFitChiSq(locReaction, locKinFitChiSqCut));
 
 		//POST-KINFIT PID CUTS
 		Add_PostKinfitTimingCuts(locReaction);
