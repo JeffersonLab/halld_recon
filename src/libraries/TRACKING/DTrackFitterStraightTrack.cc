@@ -283,6 +283,7 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
     else{
       double my_t=0.001*t;
       double sqrt_t=sqrt(my_t);
+      double t3=my_t*my_t*my_t;
       double delta_mag=fabs(delta);
       
       // use "short side" functional form
@@ -292,13 +293,19 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
       double b1=short_drift_func[1][0];
       double b2=short_drift_func[1][1];
       double b3=short_drift_func[1][2];
+      double c1=short_drift_func[2][0];
+      double c2=short_drift_func[2][1];
+      double c3=short_drift_func[2][2];
       
       double delta_sq=delta*delta;
+
       f_delta= (a1+a2*delta_mag+a3*delta_sq)*sqrt_t
-	+(b1+b2*delta_mag+b3*delta_sq)*my_t;
-      f_0=a1*sqrt_t+b1*my_t;
-      
-      dd_dt=0.001*(0.5*a1/sqrt_t+b1);
+	+(b1+b2*delta_mag+b3*delta_sq)*my_t
+	+(c1+c2*delta_mag+c3*delta*delta)*t3;
+
+      f_0=a1*sqrt_t+b1*my_t+c1*t3;
+
+      dd_dt=0.001*(0.5*a1/sqrt_t+b1+3.*c1*my_t*my_t);
     }
     
     unsigned int max_index=cdc_drift_table.size()-1;
