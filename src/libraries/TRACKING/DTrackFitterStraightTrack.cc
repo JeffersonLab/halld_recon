@@ -254,7 +254,13 @@ inline double DTrackFitterStraightTrack::CDCDriftVariance(double t) const {
 void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
 						   double t, double &d, 
 						   double &V) const{
-  d=0.; 
+  
+// NSJ 26 May 2020 included long side a3, b3 and short side c1, c2, c3
+// Previously these parameters were not used (0 in ccdb) for production runs
+// except intensity scan run 72312 by accident 5 May 2020, superseded 8 May.
+// They were used in 2015 for runs 0-3050.
+
+d=0.; 
   double dd_dt=0;
   if (t>0){
     double f_0=0.;

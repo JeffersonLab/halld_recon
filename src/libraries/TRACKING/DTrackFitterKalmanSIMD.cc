@@ -140,9 +140,14 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
       // Derivative of d with respect to t, needed to add t0 variance 
       // dependence to sigma
       double dd_dt=0;
-      // Scale factor to account for affect of B-field on maximum drift time
+      // Scale factor to account for effect of B-field on maximum drift time
       //double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
       // tcorr=t*Bscale;
+
+      // NSJ 26 May 2020 included long side a3, b3 and short side c1, c2, c3
+      // Previously these parameters were not used (0 in ccdb) for production runs
+      // except intensity scan run 72312 by accident 5 May 2020, superseded 8 May.
+      // They were used in 2015 for runs 0-3050.
 
       //	if (delta>0)
       if (delta>-EPS2){
