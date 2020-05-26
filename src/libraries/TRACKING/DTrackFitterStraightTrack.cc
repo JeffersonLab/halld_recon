@@ -263,8 +263,10 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
     if (delta>0){
       double a1=long_drift_func[0][0];
       double a2=long_drift_func[0][1];
+      double a3=long_drift_func[0][2];
       double b1=long_drift_func[1][0];
       double b2=long_drift_func[1][1];
+      double b3=long_drift_func[1][2];
       double c1=long_drift_func[2][0];
       double c2=long_drift_func[2][1];
       double c3=long_drift_func[2][2];
@@ -274,11 +276,17 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
       double sqrt_t=sqrt(my_t);
       double t3=my_t*my_t*my_t;
       double delta_mag=fabs(delta);
-      f_delta=(a1+a2*delta_mag)*sqrt_t+(b1+b2*delta_mag)*my_t
-	+(c1+c2*delta_mag+c3*delta*delta)*t3;
+
+      double delta_sq=delta*delta;
+      double a=a1+a2*delta_mag+a3*delta_sq;
+      double b=b1+b2*delta_mag+b3*delta_sq;
+      double c=c1+c2*delta_mag+c3*delta_sq;
+
+      f_delta=a*sqrt_t+b*my_t+c*t3;
       f_0=a1*sqrt_t+b1*my_t+c1*t3;
 
-      dd_dt=0.001*(0.5*a1/sqrt_t+b1+3.*c1*my_t*my_t);
+      dd_dt=0.001*(0.5*a/sqrt_t+b+3.*c*my_t*my_t);
+
       }
     else{
       double my_t=0.001*t;
@@ -296,16 +304,17 @@ void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
       double c1=short_drift_func[2][0];
       double c2=short_drift_func[2][1];
       double c3=short_drift_func[2][2];
-      
+
       double delta_sq=delta*delta;
+      double a=a1+a2*delta_mag+a3*delta_sq;
+      double b=b1+b2*delta_mag+b3*delta_sq;
+      double c=c1+c2*delta_mag+c3*delta_sq;
 
-      f_delta= (a1+a2*delta_mag+a3*delta_sq)*sqrt_t
-	+(b1+b2*delta_mag+b3*delta_sq)*my_t
-	+(c1+c2*delta_mag+c3*delta_sq)*t3;
-
+      f_delta=a*sqrt_t+b*my_t+c*t3;
       f_0=a1*sqrt_t+b1*my_t+c1*t3;
 
-      dd_dt=0.001*(0.5*a1/sqrt_t+b1+3.*c1*my_t*my_t);
+      dd_dt=0.001*(0.5*a/sqrt_t+b+3.*c*my_t*my_t);
+      
     }
     
     unsigned int max_index=cdc_drift_table.size()-1;
