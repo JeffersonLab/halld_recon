@@ -64,22 +64,22 @@ class DCustomAction_dirc_reactions : public DAnalysisAction
 		TH2I *hThetaCVsP, *hLikelihoodDiffVsP, *hReactionLikelihoodDiffVsP;
 		TH2I *hDeltaThetaCVsP, *hDeltaThetaCVsPDirect, *hDeltaThetaCVsPReflected;
 		TH2I *hDeltaThetaCVsChannel;
-		TH2I *hDeltaThetaCVsChannelMap[48];
-		TH2I *hDeltaThetaCDirectVsChannelMap[48], *hDeltaThetaCReflectedVsChannelMap[48];
-		TH2I *hDeltaThetaCDirectVsPMTMap[48], *hDeltaThetaCReflectedVsPMTMap[48];
-		TH2I *hDeltaThetaCVsDeltaYMap[48];
+		TH2I *hDeltaThetaCVsChannelMap[DDIRCGeometry::kBars];
+		TH2I *hDeltaThetaCDirectVsChannelMap[DDIRCGeometry::kBars], *hDeltaThetaCReflectedVsChannelMap[DDIRCGeometry::kBars];
+		TH2I *hDeltaThetaCDirectVsPMTMap[DDIRCGeometry::kBars], *hDeltaThetaCReflectedVsPMTMap[DDIRCGeometry::kBars];
+		TH2I *hDeltaThetaCVsDeltaYMap[DDIRCGeometry::kBars];
 
 		TH2I *hExtrapolatedBarHitXY, *hExtrapolatedBarHitXY_PreCut;
-		TH2I *hDeltaTOF[48][40];
-		TH1I *hDiffMap[48][40], *hDiffMapDirect[48][40], *hDiffMapReflected[48][40];
-		TH1I *hHitTimeMap[48][40], *hHitTimeMapAll[48][40];
-		TH1I *hNphCMap[48][40]; //, *hNphCMapSlot4[48][40], *hNphCMapSlot5[48][40];
-		//TH3S *hPixelHitMap3D[48][40];
-		TH2S *hPixelHitMap[48][40], *hPixelHitMapReflected[48][40];
-		//TH2S *hPixelHitMapAll[48][40], *hPixelHitMapAllReflected[48][40];
-		//TH2I *hPixelHitTimeMap[48][40];
-		TH2I *hThetaCVsPMap[48][40], *hReactionLikelihoodDiffVsPMap[48][40];
-		TH2I *hDeltaThetaCVsPMap[48][40], *hDeltaThetaCVsPMapDirect[48][40], *hDeltaThetaCVsPMapReflected[48][40];
+		TH2I *hDeltaTOF[DDIRCGeometry::kBars][40];
+		TH1I *hDiffMap[DDIRCGeometry::kBars][40], *hDiffMapDirect[DDIRCGeometry::kBars][40], *hDiffMapReflected[DDIRCGeometry::kBars][40];
+		TH1I *hHitTimeMap[DDIRCGeometry::kBars][40], *hHitTimeMapAll[DDIRCGeometry::kBars][40];
+		TH1I *hNphCMap[DDIRCGeometry::kBars][40]; //, *hNphCMapSlot4[DDIRCGeometry::kBars][40], *hNphCMapSlot5[DDIRCGeometry::kBars][40];
+		//TH3S *hPixelHitMap3D[DDIRCGeometry::kBars][40];
+		TH2S *hPixelHitMap[DDIRCGeometry::kBars][40], *hPixelHitMapReflected[DDIRCGeometry::kBars][40];
+		//TH2S *hPixelHitMapAll[DDIRCGeometry::kBars][40], *hPixelHitMapAllReflected[DDIRCGeometry::kBars][40];
+		//TH2I *hPixelHitTimeMap[DDIRCGeometry::kBars][40];
+		TH2I *hThetaCVsPMap[DDIRCGeometry::kBars][40], *hReactionLikelihoodDiffVsPMap[DDIRCGeometry::kBars][40];
+		TH2I *hDeltaThetaCVsPMap[DDIRCGeometry::kBars][40], *hDeltaThetaCVsPMapDirect[DDIRCGeometry::kBars][40], *hDeltaThetaCVsPMapReflected[DDIRCGeometry::kBars][40];
 };
 
 #endif // _DCustomAction_dirc_reactions_
