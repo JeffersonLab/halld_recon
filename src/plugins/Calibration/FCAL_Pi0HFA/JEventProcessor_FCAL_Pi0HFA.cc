@@ -88,6 +88,12 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
   // japp->RootFillLock(this);
   //  ... fill historgrams or trees ...
   // japp->RootFillUnLock(this);
+
+  vector<const DFCALGeometry*> fcalGeomVect;
+  loop->Get( fcalGeomVect );
+  if (fcalGeomVect.size() < 1)
+    return OBJECT_NOT_AVAILABLE;
+  const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
     
   vector<const DNeutralParticle *> neutralParticleVector;
   loop->Get(neutralParticleVector);
@@ -111,6 +117,9 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
     double xShower1=fcalShower1->getPosition().X();
     double yShower1=fcalShower1->getPosition().Y();
     double radiusShower1=sqrt(pow(xShower1,2)+pow(yShower1,2));
+    double radius1 = fcalGeom.positionOnFace(ch1).Mod();
+    int ring1 = (int)(radius1/(5*k_cm));
+    double avgE1 = fcalCluster1->getEnergy();
 
     double frac1 = fcalCluster1->getEmax()/fcalCluster1->getEnergy();
     if(fcalCluster1->getEnergy() < 0.8) continue;
@@ -130,10 +139,13 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
       double yShower2=fcalShower2->getPosition().Y();
       double radiusShower2=sqrt(pow(xShower2,2)+pow(yShower2,2));
       double frac2 = fcalCluster2->getEmax()/fcalCluster2->getEnergy();
+      double radius2 = fcalGeom.positionOnFace(ch2).Mod();
+      int ring2 = (int)(radius2/(5*k_cm));
       if(fcalCluster2->getEnergy() < 0.8) continue;
             
       double pi0Mass = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).M();
       double avgE = 0.5*fcalCluster1->getEnergy() + 0.5*fcalCluster2->getEnergy();
+      double avgE2 = fcalCluster2->getEnergy();
       
       Fill1DHistogram("FCAL_Pi0HFA","","Pi0Mass",
 		      pi0Mass,
@@ -295,12 +307,58 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
                 
       }
+
+      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_ring_%d", ring1),
+		      avgE1, pi0Mass,
+		      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+		      100, 0.0, 10.0, 100, 0.05, 0.25);
+      
+      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_ring_%d", ring2),
+		      avgE2, pi0Mass,
+		      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+		      100, 0.0, 10.0, 100, 0.05, 0.25);
+      
+      if (neutralParticleVector.size() == 2) {
+	Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE2g_ring_%d", ring1),
+			avgE1, pi0Mass,
+			"#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			100, 0.0, 10.0, 100, 0.05, 0.25);
+	
+	Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE2g_ring_%d", ring2),
+			avgE2, pi0Mass,
+			"#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			100, 0.0, 10.0, 100, 0.05, 0.25);
+      }
+
+
       if (fabs(fcalCluster1->getEnergy() - fcalCluster2->getEnergy()) < 0.1){
 	Fill2DHistogram("FCAL_Pi0HFA","","Pi0MassVsE_100",
 			avgE, pi0Mass,
 			"#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
 			100, 0.0, 10.0, 100, 0.05, 0.25);
-                
+
+	Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_100_ring_%d", ring1),
+			avgE, pi0Mass,
+			"#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			100, 0.0, 10.0, 100, 0.05, 0.25);
+	
+	Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_100_ring_%d", ring2),
+			avgE, pi0Mass,
+			"#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			100, 0.0, 10.0, 100, 0.05, 0.25);
+	
+	if (neutralParticleVector.size() == 2) {
+	  Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE2g_100_ring_%d", ring1),
+			  avgE, pi0Mass,
+			  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			  100, 0.0, 10.0, 100, 0.05, 0.25);
+	  
+	  Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE2g_100_ring_%d", ring2),
+			  avgE, pi0Mass,
+			  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+			  100, 0.0, 10.0, 100, 0.05, 0.25);
+	}
+	
 	if(radiusShower2<108.4239 && radiusShower2>20.785){
 	  Fill2DHistogram("FCAL_Pi0HFA","","Pi0MassVsE_100_Fiducial",
 			  avgE, pi0Mass,
