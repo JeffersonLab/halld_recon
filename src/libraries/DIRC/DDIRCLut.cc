@@ -53,7 +53,7 @@ DDIRCLut::DDIRCLut()
 	dFinalStatePIDs.push_back(KPlus);
 	dFinalStatePIDs.push_back(Proton);
 
-	dMaxChannels = 108*64;
+	dMaxChannels = DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels;
 
 	dCriticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	dIndex = 1.473;
@@ -77,19 +77,19 @@ bool DDIRCLut::brun(JEventLoop *loop) {
 	if(loop->GetCalib("/DIRC/thetac_offsets_bar", thetac_offsets_bar)) 
 	  jout << "Can't find requested /DIRC/thetac_offsets_bar in CCDB for this run!" << endl;
 	
-	for(int ibar=0; ibar<48; ibar++) {
-	  for(int ipmt=0; ipmt<108; ipmt++) {
-	    int index = ipmt + ibar*108;
+	for(int ibar=0; ibar<DDIRCGeometry::kBars; ibar++) {
+	  for(int ipmt=0; ipmt<DDIRCGeometry::kPMTs; ipmt++) {
+	    int index = ipmt + ibar*DDIRCGeometry::kPMTs;
 	    dThetaCOffset[ibar][ipmt] = thetac_offsets_bar.at(index);
 	  }
 	}
 
 	// get track rotation corrections from CCDB
-	vector< map<string, double> > bar_rotation(48);
+	vector< map<string, double> > bar_rotation(DDIRCGeometry::kBars);
 	if(loop->GetCalib("/DIRC/bar_rotation", bar_rotation)) 
 	  jout << "Can't find requested /DIRC/bar_rotation in CCDB for this run!" << endl;
 	
-	for(int ibar=0; ibar<48; ibar++) {
+	for(int ibar=0; ibar<DDIRCGeometry::kBars; ibar++) {
 	    dRotationX[ibar] = bar_rotation[ibar].at("rotationX");
 	    dRotationY[ibar] = bar_rotation[ibar].at("rotationY");
 	    dRotationZ[ibar] = bar_rotation[ibar].at("rotationZ");
@@ -298,7 +298,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 		
 	// check for pixel before going through loop
 	int box_channel = channel%dMaxChannels;
-	int box_pmt = box_channel/64;
+	int box_pmt = box_channel/DDIRCGeometry::kPixels;
 	if(dDIRCLutReader->GetLutPixelAngleSize(bar, box_channel) == 0) 
 		return locDIRCPhotons;
 	

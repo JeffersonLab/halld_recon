@@ -12,7 +12,7 @@
 //---------------------------------
 DDIRCGeometry::DDIRCGeometry(int runnumber) {
 
-	CHANNEL_PER_PMT = 64;
+	CHANNEL_PER_PMT = kPixels; // 64 = 8 x 8 pixels
 	PMT_ROWS = 18;
 	PMT_COLUMNS = 6;
 	DIRC_QZBL_DY = 3.515; 
@@ -62,7 +62,7 @@ DDIRCGeometry::Initialize(int runnumber) {
         }
         
 	// set array of bar positions
-	for(int i=0; i<48; i++) {
+	for(int i=0; i<kBars; i++) {
 		// get bar length by looping over individual components
 		DIRC_BAR_L[i] = 0.;
 		for(int j=0; j<4; j++) {
@@ -178,7 +178,7 @@ DDIRCGeometry::GetBar( float y ) const
 {	
 	int locBar = -1;
 
-	for(int i=0; i<48; i++) {
+	for(int i=0; i<kBars; i++) {
 		if(y > (DIRC_BAR_Y[i] - DIRC_QZBL_DY/2.0) && y < (DIRC_BAR_Y[i] + DIRC_QZBL_DY/2.0))
 			locBar = i;
 	}
