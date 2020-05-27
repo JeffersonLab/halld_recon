@@ -14,13 +14,14 @@ jerror_t DTrigger_factory::init(void)
 	
 	BCAL_LED_NHITS_THRESHOLD = 200;
 	FCAL_LED_NHITS_THRESHOLD = 200;
-	
-	
+		
 	string locUsageString = "Set BCAL LED front panel trigger bits if such events leak into other triggers (1/0, off by default)";
 	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_BCAL_LED_TRIGGER", EMULATE_BCAL_LED_TRIGGER, locUsageString);
 	locUsageString = "Set FCAL LED front panel trigger bits if such events leak into other triggers (1/0, off by default)";
 	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_FCAL_LED_TRIGGER", EMULATE_FCAL_LED_TRIGGER, locUsageString);
 	
+    FORCE_PHYSICS_TRIGGER = false;
+	gPARMS->SetDefaultParameter("TRIGGER:FORCE_PHYSICS_TRIGGER", FORCE_PHYSICS_TRIGGER, "Force every event to have the physics trigger bit set; particularly useful for studying particle gun simulations");
 
 	return NOERROR;
 }
@@ -42,7 +43,11 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
 	//SET LEVEL-1 TRIGGER INFO
 	if(locL1Trigger != NULL)
 	{
-	        locTrigger->Set_L1TriggerBits(locL1Trigger->trig_mask);
+        uint32_t locTrigMask = locL1Trigger->trig_mask;
+        if(FORCE_PHYSICS_TRIGGER)
+            locTrigMask |= 0x01;
+
+        locTrigger->Set_L1TriggerBits(locTrigMask);
 		uint32_t locFpTrigMask = locL1Trigger->fp_trig_mask;
 	
 		// Sometimes the BCAL/FCAL LED trigger also trip the main physics trigger,
@@ -94,14 +99,17 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         if(locMCTrigger != NULL)
         {
             //IS MC DATA: USE SIMULATED TRIGGER INFORMATION IF AVAILABLE
-            locTrigger->Set_L1TriggerBits(locMCTrigger->trig_mask);
+            uint32_t locTrigMask = locMCTrigger->trig_mask;
+            if(FORCE_PHYSICS_TRIGGER)
+                locTrigMask |= 0x01;
+            locTrigger->Set_L1TriggerBits(locTrigMask);
             locTrigger->Set_L1FrontPanelTriggerBits(0);
         }
         else 
         {
-	  locTrigger->Set_L1TriggerBits(0);
-	  locTrigger->Set_L1FrontPanelTriggerBits(0); 
-	}
+            locTrigger->Set_L1TriggerBits(FORCE_PHYSICS_TRIGGER);
+            locTrigger->Set_L1FrontPanelTriggerBits(0); 
+        }
     }
 
 	//SET LEVEL-3 TRIGGER INFO HERE

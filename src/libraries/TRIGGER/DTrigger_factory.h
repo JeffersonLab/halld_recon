@@ -21,6 +21,8 @@ class DTrigger_factory : public jana::JFactory<DTrigger>
 	private:
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
+
+        bool FORCE_PHYSICS_TRIGGER;
 		
 		bool EMULATE_BCAL_LED_TRIGGER;
 		bool EMULATE_FCAL_LED_TRIGGER;
