@@ -24,6 +24,10 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
 	  gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
 
+  DIRC_CUT_TDIFF = 3.0;
+  if(gPARMS->Exists("DIRC:HIST_CUT_TDIFF"))
+          gPARMS->GetParameter("DIRC:HIST_CUT_TDIFF",DIRC_CUT_TDIFF);
+
   TDirectory *dir = new TDirectoryFile("DIRC","DIRC");
   dir->cd();
  
@@ -38,12 +42,12 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   dFinalStatePIDs.push_back(Proton);      locLikelihoodName.push_back("ln L(K+) - ln L(p)");
   dFinalStatePIDs.push_back(AntiProton);  locLikelihoodName.push_back("ln L(K-) - ln L(#bar{p}");
 
-  dMaxChannels = 108*64;
+  dMaxChannels = DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels;
 
   // plots for each bar
   TDirectory *locBarDir = new TDirectoryFile("PerBarDiagnostic","PerBarDiagnostic");
   locBarDir->cd();
-  for(int i=0; i<48; i++) {
+  for(int i=0; i<DDIRCGeometry::kBars; i++) {
 	  hDiffBar[i] = new TH2I(Form("hDiff_bar%02d",i), Form("Bar %02d; Channel ID; t_{calc}-t_{measured} [ns]; entries [#]", i), dMaxChannels, 0, dMaxChannels, 400,-20,20);
 	  hNphCBar[i] = new TH1I(Form("hNphC_bar%02d",i), Form("Bar %02d; # photons", i), 150, 0, 150);
 	  hNphCBarVsP[i] = new TH2I(Form("hNphCVsP_bar%d",i), Form("Bar %02d # photons vs. momentum; p (GeV/c); # photons", i), 120, 0, 12.0, 150, 0, 150);
@@ -143,7 +147,7 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 		  hExtrapolationTimeVsStartTime_BadTime[locPID][loc_box] = new TH2I(Form("hExtrapolationTimeVsStartTime_BadTime_%s",locParticleName.data()), Form("%s; t_0 start time (ns); track extrapolation time (ns)", locParticleName.data()), 200, -40, 40, 200, -40, 40);
 		  
 		  hTimeCalcVsMeas[locPID][loc_box] = new TH2I(Form("hTimeCalcVsMeas_%s",locParticleName.data()), Form("%s; Measured time (ns); Calculated time (ns)", locParticleName.data()), 200, 0, 200, 200, 0, 200);
-		  hPixelHitMap_BadTime[locPID][loc_box] = new TH2S(Form("hPixelHit_BadTime_%s",locParticleName.data()), Form("%s; pixel rows; pixel columns", locParticleName.data()), 144, -0.5, 143.5, 48, -0.5, 47.5);
+		  hPixelHitMap_BadTime[locPID][loc_box] = new TH2S(Form("hPixelHit_BadTime_%s",locParticleName.data()), Form("%s; pixel rows; pixel columns", locParticleName.data()), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
 		  
 		  locParticleDir->cd();
 	  }
@@ -160,8 +164,8 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  double xbin_max = xbin_min + 5.0;
 	 
 	  hHitTimeMap[locXbin] = new TH1I(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; t_{measured} [ns]; entries [#]",locBar,xbin_min,xbin_max), 100,0,100); 
-	  hPixelHitMap[locXbin] = new TH2S(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
-	  hPixelHitMapReflected[locXbin] = new TH2S(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
+	  hPixelHitMap[locXbin] = new TH2S(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+	  hPixelHitMapReflected[locXbin] = new TH2S(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
   }
 
   gDirectory->cd("/");
@@ -334,7 +338,7 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 					  }
 					  
 					  // fill histograms for candidate photons in timing cut
-					  if(fabs(locDeltaT) < 3.0) {
+					  if(fabs(locDeltaT) < DIRC_CUT_TDIFF) {
 						  hThetaC[locPID][locBox]->Fill(locThetaC);
 						  hDeltaThetaC[locPID][locBox]->Fill(locThetaC-locExpectedThetaC);
 						  hDeltaThetaCVsP[locPID][locBox]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);

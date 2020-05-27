@@ -59,8 +59,8 @@ private:
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
 
-	double dThetaCOffset[48][108]; 
-	double dRotationX[48], dRotationY[48], dRotationZ[48];
+	double dThetaCOffset[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs]; 
+	double dRotationX[DDIRCGeometry::kBars], dRotationY[DDIRCGeometry::kBars], dRotationZ[DDIRCGeometry::kBars];
 
 	int dMaxChannels;
 	double dCriticalAngle, dIndex;

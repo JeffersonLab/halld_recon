@@ -125,8 +125,8 @@ bool DCustomAction_dirc_tree::Perform_Action(JEventLoop* locEventLoop, const DPa
 
       for(const auto dhit : locDIRCPmtHits){
 	int ch=dhit->ch;
-	int pmt=ch/64;
-	int pix=ch%64;
+	int pmt=ch/DDIRCGeometry::kPixels;
+	int pix=ch%DDIRCGeometry::kPixels;
 
 	hit.SetChannel(ch);
 	hit.SetPmtId(pmt);

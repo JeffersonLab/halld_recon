@@ -25,7 +25,11 @@ public:
 	// it probably doesn't make sense to retrieve them
 	// from a database as they aren't going to change unless
 	// the detector is reconstructed
-	
+
+	enum { kBars = 48 };
+	enum { kPMTs = 108 };
+	enum { kPixels = 64 };	
+
 	// get bar # from y positions
 	int GetBar   ( float y ) const;
 	// get bar X, Y and Length from bar #
@@ -59,7 +63,7 @@ private:
 
 	int CHANNEL_PER_PMT, PMT_ROWS, PMT_COLUMNS;
 
-	double DIRC_BAR_END[48], DIRC_BAR_Y[48], DIRC_BAR_L[48];
+	double DIRC_BAR_END[kBars], DIRC_BAR_Y[kBars], DIRC_BAR_L[kBars];
 	double DIRC_LUT_Z;
 	double DIRC_QZBL_DY;
 };
