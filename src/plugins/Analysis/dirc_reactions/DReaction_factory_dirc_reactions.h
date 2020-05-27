@@ -15,6 +15,7 @@
 #include <ANALYSIS/DCutActions.h>
 
 #include "DCustomAction_dirc_reactions.h"
+#include "DCustomAction_dirc_track_pair.h"
 
 using namespace std;
 using namespace jana;
