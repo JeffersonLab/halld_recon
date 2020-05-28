@@ -1393,8 +1393,6 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 		      TVector3 locProjMom(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
 		      double locFlightTime = dircIter->getT();
 
-		      //jout<<locTrackIndex<<" of "<<locTrackTimeBasedVector.size()<<endl;
-		      //jout<<locTrackTimeBased->mass()<<endl;
 		      if( locParticleID->Get_DIRCLut()->CalcLUT(locProjPos, locProjMom, locDIRCHits, locFlightTime, locTrackTimeBased->mass(), locDIRCMatchParams, locDIRCBarHits, locDIRCTrackMatchParams) )
 			  locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
 	      }
