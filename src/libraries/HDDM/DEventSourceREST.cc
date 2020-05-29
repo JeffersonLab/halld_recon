@@ -1379,7 +1379,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
-	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
+	      if(locTrackIndex >= locTrackTimeBasedVector.size()) continue;
 
 	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
 	      if( !locTrackTimeBased ) continue;

@@ -90,9 +90,9 @@ bool DDIRCLut::brun(JEventLoop *loop) {
 	  jout << "Can't find requested /DIRC/bar_rotation in CCDB for this run!" << endl;
 	
 	for(int ibar=0; ibar<DDIRCGeometry::kBars; ibar++) {
-	    dRotationX[ibar] = bar_rotation[ibar].at("rotationX");
-	    dRotationY[ibar] = bar_rotation[ibar].at("rotationY");
-	    dRotationZ[ibar] = bar_rotation[ibar].at("rotationZ");
+	    dRotationX[ibar] = bar_rotation[ibar].at("rotationX")*TMath::DegToRad();
+	    dRotationY[ibar] = bar_rotation[ibar].at("rotationY")*TMath::DegToRad();
+	    dRotationZ[ibar] = bar_rotation[ibar].at("rotationZ")*TMath::DegToRad();
 	}
 
 	return true;
