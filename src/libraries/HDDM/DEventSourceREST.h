@@ -108,6 +108,9 @@ class DEventSourceREST:public JEventSource
 	int dDIRCMaxChannels;
 	enum dirc_status_state {GOOD, BAD, NOISY};
 	map<unsigned int, vector<vector<int>>> dDIRCChannelStatusMap; //unsigned int is run number
+	
+	map<unsigned int, DVector2> dBeamCenterMap,dBeamDirMap;
+	map<unsigned int, double> dBeamZ0Map;
 
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;

@@ -1110,7 +1110,8 @@ inline void DTrackFitterKalmanSIMD::GetMomentum(DVector3 &mom){
 
 // Return the "vertex" position (position at which track crosses beam line)
 inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
-   pos.SetXYZ(x_,y_,z_);
+  DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+  pos.SetXYZ(x_+beam_pos.X(),y_+beam_pos.Y(),z_);
 }
 
 // Add GEM points
@@ -6748,14 +6749,18 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    }
    // Extrapolate to the point of closest approach to the beam line
    z_=last_z;
-   if (sqrt(Slast(state_x)*Slast(state_x)+Slast(state_y)*Slast(state_y))
-         >EPS2){  
+   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   double dx=Slast(state_x)-beam_pos.X();
+   double dy=Slast(state_y)-beam_pos.Y();
+   bool extrapolated=false;
+   if (sqrt(dx*dx+dy*dy)>EPS2){  
       DMatrix5x5 Ctemp=Clast;
       DMatrix5x1 Stemp=Slast; 
       double ztemp=z_;
       if (ExtrapolateToVertex(Stemp,Ctemp)==NOERROR){
          Clast=Ctemp;
          Slast=Stemp;
+	 extrapolated=true;
       }
       else{
          //_DBG_ << endl;
@@ -6775,9 +6780,11 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    q_over_pt_=q_over_p_/cosl;
    phi_=atan2(ty_,tx_);
    if (FORWARD_PARMS_COV==false){
-     DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
-     double dx=x_-beam_pos.X();
-     double dy=y_-beam_pos.Y();
+     if (extrapolated){
+       beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+       dx=x_-beam_pos.X();
+       dy=y_-beam_pos.Y();
+     }
      D_=sqrt(dx*dx+dy*dy)+EPS;
      x_ = dx; y_ = dy;
      double cosphi=cos(phi_);
@@ -7058,9 +7065,14 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 
    // Extrapolate to the point of closest approach to the beam line
    z_=zlast;
-   if (sqrt(Slast(state_x)*Slast(state_x)+Slast(state_y)*Slast(state_y))
-         >EPS2) 
-      if (ExtrapolateToVertex(Slast,Clast)!=NOERROR) return EXTRAPOLATION_FAILED;
+   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   double dx=Slast(state_x)-beam_pos.X();
+   double dy=Slast(state_y)-beam_pos.Y();
+   bool extrapolated=false;
+   if (sqrt(dx*dx+dy*dy)>EPS2){
+     if (ExtrapolateToVertex(Slast,Clast)!=NOERROR) return EXTRAPOLATION_FAILED;
+     extrapolated=true;
+   }
 
    // Final momentum, positions and tangents
    x_=Slast(state_x), y_=Slast(state_y);
@@ -7074,9 +7086,11 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    q_over_pt_=q_over_p_/cosl;
    phi_=atan2(ty_,tx_);
    if (FORWARD_PARMS_COV==false){
-     DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
-     double dx=x_-beam_pos.X();
-     double dy=y_-beam_pos.Y();
+     if (extrapolated){
+       beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+       dx=x_-beam_pos.X();
+       dy=y_-beam_pos.Y();
+     }
      D_=sqrt(dx*dx+dy*dy)+EPS;
      x_ = dx; y_ = dy;
      double cosphi=cos(phi_);
@@ -7290,8 +7304,13 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
      // the extrolation vector.
      extrapolations[SYS_BCAL].clear();
    }
-   if (last_pos.Mod()>0.001){ // in cm
+
+   // Extrapolate to the point of closest approach to the beam line
+   DVector2 beam_pos=beam_center+(Sclast(state_z)-beam_z0)*beam_dir;
+   bool extrapolated=false;
+   if ((last_pos-beam_pos).Mod()>EPS2){ // in cm
       if (ExtrapolateToVertex(last_pos,Sclast,Cclast)!=NOERROR) return EXTRAPOLATION_FAILED; 
+      extrapolated=true;
    }
 
    // output lists of hits used in the fit 
@@ -7312,7 +7331,9 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    y_=last_pos.Y();
    z_=Sclast(state_z);  
    // Find the (signed) distance of closest approach to the beam line
-   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   if (extrapolated){
+     beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   }
    double dx=x_-beam_pos.X();
    double dy=y_-beam_pos.Y();
    D_=sqrt(dx*dx+dy*dy)+EPS;
