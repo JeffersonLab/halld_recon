@@ -82,6 +82,7 @@ typedef pair<int,int> tagNum;
 
 #include "Df125EmulatorAlgorithm.h"
 #include "Df250EmulatorAlgorithm.h"
+#include "jerror.h"
 
 #include <PID/DVertex.h>
 
@@ -471,7 +472,7 @@ void JEventSource_EVIO::GetEVIOBuffer(JEvent &jevent, uint32_t* &buff, uint32_t 
 
 	// Make sure this JEvent actually came from this source
 	if(jevent.GetJEventSource() != this){
-		jerr<<" ERROR: Attempting to get EVIO buffer for event not produced by this source!!"<<endl;
+		jerr<<" ERROR: Attempting to get EVIO buffer for event not produced by this source!!"<<jendl;
 		return;
 	}
 
@@ -498,7 +499,7 @@ evioDOMTree* JEventSource_EVIO::GetEVIODOMTree(JEvent &jevent) const
 
 	// Make sure this JEvent actually came from this source
 	if(jevent.GetJEventSource() != this){
-		jerr<<" ERROR: Attempting to get EVIO buffer for event not produced by this source!!"<<endl;
+		jerr<<" ERROR: Attempting to get EVIO buffer for event not produced by this source!!"<<jendl;
 		return NULL;
 	}
 

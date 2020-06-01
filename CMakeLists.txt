@@ -29,6 +29,8 @@ file(GLOB DAQ_HEADERS ${PROJECT_SOURCE_DIR}/src/libraries/DAQ/*.h)
 set(HALLD_RECON_SOURCES
         src/libraries/DAQ/JEventSource_EVIO.cc
         src/libraries/DAQ/JEventSource_EVIO.h
+        src/libraries/DAQ/JEventSourceGenerator_EVIO.cc
+        src/libraries/DAQ/JEventSourceGenerator_EVIO.h
     )
 
 add_executable(halld_recon
@@ -36,7 +38,7 @@ add_executable(halld_recon
         ${HALLD_RECON_SOURCES}
         )
 
-target_include_directories(halld_recon PRIVATE src/libraries src/libraries/include ${ROOT_INCLUDE_DIRS} ${JANA_INCLUDE_DIR} ${EVIO_INCLUDE_DIR})
+target_include_directories(halld_recon PRIVATE src/libraries src/libraries/include src/include ${ROOT_INCLUDE_DIRS} ${JANA_INCLUDE_DIR} ${EVIO_INCLUDE_DIR})
 target_link_libraries(halld_recon jana2 ${EVIO_LIBS})
 
 

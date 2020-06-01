@@ -21,8 +21,8 @@ using namespace std;
 class Df250EmulatorAlgorithm:public JObject{
     public:
         JOBJECT_PUBLIC(Df250EmulatorAlgorithm);
-        Df250EmulatorAlgorithm(JEventLoop *loop){};
-        ~Df250EmulatorAlgorithm(){};
+        Df250EmulatorAlgorithm() = default;
+        ~Df250EmulatorAlgorithm() = default;
 
         // The main emulation routines are overwritten in the inherited classes
         
@@ -59,10 +59,6 @@ class Df250EmulatorAlgorithm:public JObject{
 				for(auto p : mypdat_objs) pdat_objs.push_back(p);
 
 			}
-    protected:
-        // Suppress default constructor
-        Df250EmulatorAlgorithm(){};
-
 };
 
 #endif // _Df250EmulatorAlgorithm_factory_
