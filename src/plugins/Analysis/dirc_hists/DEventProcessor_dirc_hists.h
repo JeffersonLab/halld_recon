@@ -54,12 +54,15 @@ private:
   jerror_t erun(void);
   jerror_t fini(void); // called after last event
 
-  TH2I* hDiffBar[48];
-  TH1I* hNphCBar[48];
-  TH1I* hNphCBarInclusive[48];
-  TH2I *hNphCBarVsP[48];
-  TH2I *hNphCBarInclusiveVsP[48];
-  TH1I *hDeltaThetaCBar[48];
+  TH2I* hDiffBar[DDIRCGeometry::kBars];
+  TH1I* hNphCBar[DDIRCGeometry::kBars];
+  TH1I* hNphCBarInclusive[DDIRCGeometry::kBars];
+  TH2I *hNphCBarVsP[DDIRCGeometry::kBars];
+  TH2I *hNphCBarInclusiveVsP[DDIRCGeometry::kBars];
+  TH1I *hDeltaThetaCBar[DDIRCGeometry::kBars];
+  TH2I *hDeltaThetaCVsDeltaYBar[DDIRCGeometry::kBars];
+  TH2I *hDeltaThetaCVsDeltaYBarX[DDIRCGeometry::kBars][40];
+  TH2I *hDeltaThetaCVsDeltaYBarXPos[DDIRCGeometry::kBars][40], *hDeltaThetaCVsDeltaYBarXNeg[DDIRCGeometry::kBars][40];
   map<Particle_t, TH2I*> hExtrapolatedBarHitXY;
   map<Particle_t, TH1I*> hExtrapolatedBarHitTime;
   map<Particle_t, vector<TH1I*>> hExtrapolatedBarHitTime_BadTime;
@@ -96,6 +99,7 @@ private:
   
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
+  double DIRC_CUT_TDIFF;
 
 };
 

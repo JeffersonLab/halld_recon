@@ -202,8 +202,8 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	  DrcHit hit;
 	  for(const auto dhit : locDIRCPmtHits){
 	    int ch=dhit->ch;
-	    int pmt=ch/64;
-	    int pix=ch%64;
+	    int pmt=ch/DDIRCGeometry::kPixels;
+	    int pix=ch%DDIRCGeometry::kPixels;
 
 	    hit.SetChannel(ch);
 	    hit.SetPmtId(pmt);
