@@ -15,7 +15,6 @@
 #include <DAQ/JEventSource_EVIOpp.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
 
-using namespace jana;
 using namespace std;
 
 
@@ -255,7 +254,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
     Get_ROCID_By_System_Mismatch_Behaviour() = systems_to_parse_force;
 	
 	if(systems == "") return; // nothing to do for empty strings
-	jout << "Setting systems to parse to: " << systems << endl;
+	jout << "Setting systems to parse to: " << systems << jendl;
 
 	// Make sure this is a JEventSource_EVIO object pointer
 	JEventSource_EVIO   *eviosource   = dynamic_cast<JEventSource_EVIO*  >(eventsource);
@@ -333,7 +332,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 			uint32_t rocid = *it;
 			if(eviosource  ) eviosource->AddROCIDtoParseList(rocid);	
 			if(evioppsource) evioppsource->AddROCIDtoParseList(rocid);	
-			jout << "   Added rocid " << rocid << " for system " << token << " to parse list" << endl;
+			jout << "   Added rocid " << rocid << " for system " << token << " to parse list" << jendl;
 		}
 	}
 

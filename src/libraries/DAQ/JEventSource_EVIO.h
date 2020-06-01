@@ -21,12 +21,10 @@ using std::vector;
 using std::queue;
 using std::set;
 
-#include <JANA/jerror.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
-#include <JANA/JFactory.h>
-#include <JANA/JStreamLog.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
+#include <JANA/JLogger.h>
 
 #include "HDEVIO.h"
 
@@ -160,7 +158,7 @@ extern set<uint32_t> ROCIDS_TO_PARSE;
 ///
 ///----------------------------------------------------------------------
 
-class JEventSource_EVIO: public jana::JEventSource{
+class JEventSource_EVIO: public JEventSource {
 	public:
 
 		enum EVIOSourceType{
@@ -181,9 +179,9 @@ class JEventSource_EVIO: public jana::JEventSource{
 		virtual const char* className(void){return static_className();}
 		 static const char* static_className(void){return "JEventSource_EVIO";}
 
-		          jerror_t GetEvent(jana::JEvent &event);
-		              void FreeEvent(jana::JEvent &event);
-				    jerror_t GetObjects(jana::JEvent &event, jana::JFactory_base *factory);
+		          void GetEvent(JEvent &event);
+		              void FreeEvent(JEvent &event);
+				    void GetObjects(JEvent &event, JFactory *factory);
 
                     bool quit_on_next_ET_timeout;
 
@@ -191,7 +189,7 @@ class JEventSource_EVIO: public jana::JEventSource{
                     void ReadOptionalModuleTypeTranslation(void);
 		         uint32_t* GetPoolBuffer(void);
 		  virtual jerror_t ReadEVIOEvent(uint32_t* &buf);
-             inline void GetEVIOBuffer(jana::JEvent &jevent, uint32_t* &buff, uint32_t &size) const;
+             inline void GetEVIOBuffer(JEvent &jevent, uint32_t* &buff, uint32_t &size) const;
           EVIOSourceType GetEVIOSourceType(void){ return source_type; }
 		            void AddROCIDtoParseList(uint32_t rocid){ ROCIDS_TO_PARSE.insert(rocid); }
 		   set<uint32_t> GetROCIDParseList(uint32_t rocid){ return ROCIDS_TO_PARSE; }
@@ -202,7 +200,7 @@ class JEventSource_EVIO: public jana::JEventSource{
            static double GetEVIOParseTimeFromRef(void *ref){ return ((ObjList*)ref)->time_evio_parse; }
 
 #ifdef HAVE_EVIO		
-     inline evioDOMTree* GetEVIODOMTree(jana::JEvent &jevent) const;
+     inline evioDOMTree* GetEVIODOMTree(JEvent &jevent) const;
 #endif // HAVE_EVIO		
 
 	protected:
@@ -222,7 +220,7 @@ class JEventSource_EVIO: public jana::JEventSource{
 		map<tagNum, MODULE_TYPE> module_type;
 		map<MODULE_TYPE, MODULE_TYPE> modtype_translate;
 
-		JStreamLog evioout;
+		JLogger evioout;
 
 		bool  AUTODETECT_MODULE_TYPES;
 		bool  DUMP_MODULE_MAP;
@@ -460,7 +458,7 @@ double JEventSource_EVIO::GetTime(void)
 //----------------
 // GetEVIOBuffer
 //----------------
-void JEventSource_EVIO::GetEVIOBuffer(jana::JEvent &jevent, uint32_t* &buff, uint32_t &size) const
+void JEventSource_EVIO::GetEVIOBuffer(JEvent &jevent, uint32_t* &buff, uint32_t &size) const
 {
 	/// Use the reference stored in the supplied JEvent to extract the evio
 	/// buffer and size for the event. If there is no buffer for the event
@@ -491,7 +489,7 @@ void JEventSource_EVIO::GetEVIOBuffer(jana::JEvent &jevent, uint32_t* &buff, uin
 //----------------
 // GetEVIODOMTree
 //----------------
-evioDOMTree* JEventSource_EVIO::GetEVIODOMTree(jana::JEvent &jevent) const
+evioDOMTree* JEventSource_EVIO::GetEVIODOMTree(JEvent &jevent) const
 {
 	/// Use the reference stored in the supplied JEvent to extract the evio
 	/// DOM tree for the event. If there is no DOM tree for the event
@@ -527,10 +525,10 @@ evioDOMTree* JEventSource_EVIO::GetEVIODOMTree(jana::JEvent &jevent) const
 ///// converted once JANA has been updated.
 ////----------------------------------------------------------------------
 //template<class T>
-//bool JFactory_base_CopyToT(jana::JFactory_base *fac, vector<jana::JObject *>& objs)
+//bool JFactory_base_CopyToT(JFactory_base *fac, vector<JObject *>& objs)
 //{
 //	// Try casting this factory to the desired type of JFactory<>
-//	jana::JFactory<T> *tfac = dynamic_cast<jana::JFactory<T>* >(fac);
+//	JFactoryT<T> *tfac = dynamic_cast<JFactoryT<T>* >(fac);
 //	if(!tfac) return false;
 //	
 //	// Factory cast worked. Cast all pointers
@@ -551,7 +549,7 @@ evioDOMTree* JEventSource_EVIO::GetEVIODOMTree(jana::JEvent &jevent) const
 ////----------------------------
 //// JFactory_base_CopyTo
 ////----------------------------
-//static bool JFactory_base_CopyTo(jana::JFactory_base *fac, vector<jana::JObject *>& objs)
+//static bool JFactory_base_CopyTo(JFactory_base *fac, vector<JObject *>& objs)
 //{
 //	// Eventually, this will be a virtual method of JFactory_base
 //	// that gets implemented in JFactory<T> which will know how

@@ -8,10 +8,10 @@
 #ifndef _DBeamCurrent_factory_
 #define _DBeamCurrent_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DBeamCurrent.h"
 
-class DBeamCurrent_factory:public jana::JFactory<DBeamCurrent>{
+class DBeamCurrent_factory:public JFactoryT<DBeamCurrent>{
 	public:
 		DBeamCurrent_factory(){};
 		~DBeamCurrent_factory(){};
@@ -45,11 +45,11 @@ class DBeamCurrent_factory:public jana::JFactory<DBeamCurrent>{
 		// Return the total integrated time of the run.
 		double IntegratedTime(void);
 		
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop,  int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		jerror_t brun(JEventLoop *eventLoop,  int32_t runnumber);	///< Called everytime a new run number is detected.
+		void Process(const std::shared_ptr<const JEvent>& aEvent) override;
+		void EndRun();
+		void Finish();
 };
 
 #endif // _DBeamCurrent_factory_

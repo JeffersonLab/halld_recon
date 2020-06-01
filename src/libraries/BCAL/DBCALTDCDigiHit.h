@@ -8,7 +8,6 @@
 #ifndef _DBCALTDCDigiHit_
 #define _DBCALTDCDigiHit_
 
-#include <JANA/jerror.h>
 #include <JANA/JObject.h>
 
 #include <BCAL/DBCALGeometry.h>

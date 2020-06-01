@@ -22,7 +22,7 @@ using namespace jana;
 //------------------
 // init
 //------------------
-jerror_t DBeamCurrent_factory::init(void)
+void DBeamCurrent_factory::Init()
 {
 	BEAM_ON_MIN_nA  = 10.0;  // nA
 	BEAM_TRIP_MIN_T = 3.0;   // seconds
@@ -40,7 +40,7 @@ jerror_t DBeamCurrent_factory::init(void)
 //------------------
 // brun
 //------------------
-jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
+jerror_t DBeamCurrent_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
 	// Clear maps in case we are called more than once
 	boundaries.clear();
@@ -131,7 +131,7 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 	lock_guard<mutex> lck(mtx);
 	static set<int32_t> runs_loaded;
 	if(runs_loaded.find(runnumber) == runs_loaded.end()){
-		jout << "Electron beam current trip map for run " << runnumber << " loaded with " << boundaries.size() << " boundaries (" << trip.size() << " trips over " << t_max << " sec)" << endl;
+		jout << "Electron beam current trip map for run " << runnumber << " loaded with " << boundaries.size() << " boundaries (" << trip.size() << " trips over " << t_max << " sec)" << jendl;
 		runs_loaded.insert(runnumber);
 	}
 
@@ -141,7 +141,7 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 //------------------
 // evnt
 //------------------
-jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBeamCurrent_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	if(boundaries.empty()) return NOERROR;
 
@@ -190,7 +190,7 @@ jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 //------------------
 // erun
 //------------------
-jerror_t DBeamCurrent_factory::erun(void)
+void DBeamCurrent_factory::EndRun()
 {
 	return NOERROR;
 }
@@ -198,7 +198,7 @@ jerror_t DBeamCurrent_factory::erun(void)
 //------------------
 // fini
 //------------------
-jerror_t DBeamCurrent_factory::fini(void)
+void DBeamCurrent_factory::Finish()
 {
 	return NOERROR;
 }

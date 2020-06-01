@@ -9,12 +9,11 @@
 #ifndef _JEventSourceGenerator_EVIO_
 #define _JEventSourceGenerator_EVIO_
 
-#include <JANA/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
 
 #include "JEventSource_EVIO.h"
 
-class JEventSourceGenerator_EVIO: public jana::JEventSourceGenerator{
+class JEventSourceGenerator_EVIO: public JEventSourceGenerator{
 	public:
 		JEventSourceGenerator_EVIO(){}
 		virtual ~JEventSourceGenerator_EVIO(){}
@@ -23,7 +22,7 @@ class JEventSourceGenerator_EVIO: public jana::JEventSourceGenerator{
 		
 		const char* Description(void);
 		double CheckOpenable(string source);
-		jana::JEventSource* MakeJEventSource(string source);
+		JEventSource* MakeJEventSource(string source);
 };
 
 #endif // _JEventSourceGenerator_EVIO_

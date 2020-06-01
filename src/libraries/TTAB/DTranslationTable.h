@@ -15,12 +15,10 @@ using namespace std;
 
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JCalibration.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Calibrations/JCalibration.h>
 #include <JANA/JException.h>
 #include <JANA/JEventSource.h>
-using namespace jana;
 
 #include <DAQ/DModuleType.h>
 #include <DAQ/Df250PulseData.h>
@@ -122,7 +120,7 @@ using namespace jana;
 
 #include "GlueX.h"
 
-class DTranslationTable:public jana::JObject{
+class DTranslationTable:public JObject{
 	public:
 		JOBJECT_PUBLIC(DTranslationTable);
 		
@@ -477,7 +475,7 @@ class DTranslationTable:public jana::JObject{
 		//-----------------------------------------------------------------------
 
 		// Methods
-		void ApplyTranslationTable(jana::JEventLoop *loop) const;
+		void ApplyTranslationTable(JEventLoop *loop) const;
 		
 		// fADC250 -- Fall 2016 -> ?
 		DBCALDigiHit*       MakeBCALDigiHit(       const BCALIndex_t &idx,       const Df250PulseData *pd) const;

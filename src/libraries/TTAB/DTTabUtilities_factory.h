@@ -12,8 +12,6 @@
 #include "DTTabUtilities.h"
 #include "TRACKING/DMCThrown.h"
 
-using namespace jana;
-
 class DTTabUtilities_factory : public jana::JFactory<DTTabUtilities>
 {
 	public:
