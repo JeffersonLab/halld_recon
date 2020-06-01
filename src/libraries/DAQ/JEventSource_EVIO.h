@@ -10,6 +10,8 @@
 #define _JEventSource_EVIO_
 
 
+#include <sys/time.h> // TODO: what was this doing before?
+
 #include <map>
 #include <vector>
 #include <queue>
