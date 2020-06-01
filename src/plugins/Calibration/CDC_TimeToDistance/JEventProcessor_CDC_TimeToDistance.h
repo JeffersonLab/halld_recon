@@ -29,6 +29,7 @@ class JEventProcessor_CDC_TimeToDistance:public jana::JEventProcessor{
         TProfile *HistCurrentConstants;
         const DMagneticFieldMap* dMagneticField;
         int UNBIASED_RING;
+        double MIN_FOM;
 };
 
 #endif // _JEventProcessor_CDC_TimeToDistance_
