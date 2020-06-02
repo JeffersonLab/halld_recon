@@ -357,8 +357,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // is because this routine is called while already in a loop->Get() call
    // so JANA will treat all other loop->Get() calls we make as being dependencies
    // of the loop->Get() call that we are already in. (Confusing eh?) 
-   bool record_call_stack = loop->GetCallStackRecordingStatus();
-   if (record_call_stack) loop->DisableCallStackRecording();
+   //bool record_call_stack = loop->GetCallStackRecordingStatus();
+   //if (record_call_stack) loop->DisableCallStackRecording();
    
    // Df250PulseIntegral (will apply Df250PulseTime via associated objects)
    vector<const Df250PulseIntegral*> pulseintegrals250;
@@ -811,26 +811,26 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // are correct. That would just be too complicated given how that code works.
    if (record_call_stack) {
       // re-enable call stack recording
-      loop->EnableCallStackRecording();
+      // loop->EnableCallStackRecording();
 
-		if(CALL_STACK){
-      	Addf250ObjectsToCallStack(loop, "DBCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DFCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DCCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DCCALRefDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DSCDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DTACDigiHit");
-      	Addf125CDCObjectsToCallStack(loop, "DCDCDigiHit", cdcpulses.size()>0);
-      	Addf125FDCObjectsToCallStack(loop, "DFDCCathodeDigiHit", fdcpulses.size()>0);
-      	AddF1TDCObjectsToCallStack(loop, "DBCALTDCDigiHit");
-      	AddF1TDCObjectsToCallStack(loop, "DFDCWireDigiHit");
-      	AddF1TDCObjectsToCallStack(loop, "DRFDigiTime");
-      	AddF1TDCObjectsToCallStack(loop, "DRFTDCDigiTime");
-      	AddF1TDCObjectsToCallStack(loop, "DSCTDCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DTOFTDCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DTACTDCDigiHit");
-		}
+		// if(CALL_STACK){
+      	// Addf250ObjectsToCallStack(loop, "DBCALDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DFCALDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DCCALDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DCCALRefDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DSCDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
+      	// Addf250ObjectsToCallStack(loop, "DTACDigiHit");
+      	// Addf125CDCObjectsToCallStack(loop, "DCDCDigiHit", cdcpulses.size()>0);
+      	// Addf125FDCObjectsToCallStack(loop, "DFDCCathodeDigiHit", fdcpulses.size()>0);
+      	// AddF1TDCObjectsToCallStack(loop, "DBCALTDCDigiHit");
+      	// AddF1TDCObjectsToCallStack(loop, "DFDCWireDigiHit");
+      	// AddF1TDCObjectsToCallStack(loop, "DRFDigiTime");
+      	// AddF1TDCObjectsToCallStack(loop, "DRFTDCDigiTime");
+      	// AddF1TDCObjectsToCallStack(loop, "DSCTDCDigiHit");
+      	// AddCAEN1290TDCObjectsToCallStack(loop, "DTOFTDCDigiHit");
+      	// AddCAEN1290TDCObjectsToCallStack(loop, "DTACTDCDigiHit");
+		// }
    }
 }
 
@@ -1932,89 +1932,89 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
 //----------------
 // Addf250ObjectsToCallStack
 //----------------
-void DTranslationTable::Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const
-{
-	AddToCallStack(loop, caller, "Df250Config");
-	AddToCallStack(loop, caller, "Df250PulseIntegral");
-	AddToCallStack(loop, caller, "Df250PulsePedestal");
-	AddToCallStack(loop, caller, "Df250PulseTime");
-}
+// void DTranslationTable::Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const
+// {
+// 	AddToCallStack(loop, caller, "Df250Config");
+// 	AddToCallStack(loop, caller, "Df250PulseIntegral");
+// 	AddToCallStack(loop, caller, "Df250PulsePedestal");
+// 	AddToCallStack(loop, caller, "Df250PulseTime");
+// }
 
 //----------------
 // Addf125CDCObjectsToCallStack
 //----------------
-void DTranslationTable::Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
-{
-	AddToCallStack(loop, caller, "Df125Config");
-	if(addpulseobjs){
-		// new style
-		AddToCallStack(loop, caller, "Df125CDCPulse");
-	}else{
-		// old style
-		AddToCallStack(loop, caller, "Df125PulseIntegral");
-		AddToCallStack(loop, caller, "Df125PulsePedestal");
-		AddToCallStack(loop, caller, "Df125PulseTime");
-	}
-}
+// void DTranslationTable::Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
+// {
+// 	AddToCallStack(loop, caller, "Df125Config");
+// 	if(addpulseobjs){
+// 		// new style
+// 		AddToCallStack(loop, caller, "Df125CDCPulse");
+// 	}else{
+// 		// old style
+// 		AddToCallStack(loop, caller, "Df125PulseIntegral");
+// 		AddToCallStack(loop, caller, "Df125PulsePedestal");
+// 		AddToCallStack(loop, caller, "Df125PulseTime");
+// 	}
+// }
 
 //----------------
 // Addf125FDCObjectsToCallStack
 //----------------
-void DTranslationTable::Addf125FDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
-{
-	AddToCallStack(loop, caller, "Df125Config");
-	if(addpulseobjs){
-		// new style
-		AddToCallStack(loop, caller, "Df125FDCPulse");
-	}else{
-		// old style
-		AddToCallStack(loop, caller, "Df125PulseIntegral");
-		AddToCallStack(loop, caller, "Df125PulsePedestal");
-		AddToCallStack(loop, caller, "Df125PulseTime");
-	}
-}
+// void DTranslationTable::Addf125FDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
+// {
+// 	AddToCallStack(loop, caller, "Df125Config");
+// 	if(addpulseobjs){
+// 		// new style
+// 		AddToCallStack(loop, caller, "Df125FDCPulse");
+// 	}else{
+// 		// old style
+// 		AddToCallStack(loop, caller, "Df125PulseIntegral");
+// 		AddToCallStack(loop, caller, "Df125PulsePedestal");
+// 		AddToCallStack(loop, caller, "Df125PulseTime");
+// 	}
+// }
 
 //----------------
 // AddF1TDCObjectsToCallStack
 //----------------
-void DTranslationTable::AddF1TDCObjectsToCallStack(JEventLoop *loop, string caller) const
-{
-	AddToCallStack(loop, caller, "DF1TDCConfig");
-	AddToCallStack(loop, caller, "DF1TDCHit");
-}
+// void DTranslationTable::AddF1TDCObjectsToCallStack(JEventLoop *loop, string caller) const
+// {
+// 	AddToCallStack(loop, caller, "DF1TDCConfig");
+// 	AddToCallStack(loop, caller, "DF1TDCHit");
+// }
 
 //----------------
 // AddCAEN1290TDCObjectsToCallStack
 //----------------
-void DTranslationTable::AddCAEN1290TDCObjectsToCallStack(JEventLoop *loop, string caller) const
-{
-	AddToCallStack(loop, caller, "DCAEN1290TDCConfig");
-	AddToCallStack(loop, caller, "DCAEN1290TDCHit");
-}
+// void DTranslationTable::AddCAEN1290TDCObjectsToCallStack(JEventLoop *loop, string caller) const
+// {
+// 	AddToCallStack(loop, caller, "DCAEN1290TDCConfig");
+// 	AddToCallStack(loop, caller, "DCAEN1290TDCHit");
+// }
 
 //----------------
 // AddToCallStack
 //----------------
-void DTranslationTable::AddToCallStack(JEventLoop *loop, 
-                                       string caller, string callee) const
-{
-   /// This is used to give information to JANA regarding the relationship and
-   /// origin of some of these data objects. This is really just needed so that
-   /// the janadot program can be used to produce the correct callgraph. Because
-   /// of how this plugin works, JANA can't record the correct call stack (at
-   /// least not easily!) Therefore, we have to give it a little help here.
-
-   JEventLoop::call_stack_t cs;
-   cs.start_time = cs.end_time = 0.0;
-   cs.caller_name = caller;
-   cs.callee_name = callee;
-   cs.data_source = JEventLoop::DATA_FROM_CACHE;
-   loop->AddToCallStack(cs);
-   cs.callee_name = cs.caller_name;
-   cs.caller_name = "<ignore>";
-   cs.data_source = JEventLoop::DATA_FROM_FACTORY;
-   loop->AddToCallStack(cs);
-}
+// void DTranslationTable::AddToCallStack(JEventLoop *loop,
+//                                        string caller, string callee) const
+// {
+//    /// This is used to give information to JANA regarding the relationship and
+//    /// origin of some of these data objects. This is really just needed so that
+//    /// the janadot program can be used to produce the correct callgraph. Because
+//    /// of how this plugin works, JANA can't record the correct call stack (at
+//    /// least not easily!) Therefore, we have to give it a little help here.
+//
+//    JEventLoop::call_stack_t cs;
+//    cs.start_time = cs.end_time = 0.0;
+//    cs.caller_name = caller;
+//    cs.callee_name = callee;
+//    cs.data_source = JEventLoop::DATA_FROM_CACHE;
+//    loop->AddToCallStack(cs);
+//    cs.callee_name = cs.caller_name;
+//    cs.caller_name = "<ignore>";
+//    cs.data_source = JEventLoop::DATA_FROM_FACTORY;
+//    loop->AddToCallStack(cs);
+// }
 
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------

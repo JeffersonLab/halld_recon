@@ -1418,10 +1418,10 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // are emulated (e.g. Df250PulseIntegral) they need to be added differently so the correct
     // dependence is shown. The first step is to add entries for all of the hit objects we
     // actually did find in the file. Do that here.
-    map<string, vector<JObject*> >::iterator hoiter;
-    for(hoiter=hit_objs_by_type.begin(); hoiter!=hit_objs_by_type.end(); hoiter++){
-        AddSourceObjectsToCallStack(loop, hoiter->first); 
-    }
+    // map<string, vector<JObject*> >::iterator hoiter;
+    // for(hoiter=hit_objs_by_type.begin(); hoiter!=hit_objs_by_type.end(); hoiter++){
+    //     AddSourceObjectsToCallStack(loop, hoiter->first);
+    // }
 
     // Get references to various objects
     vector<JObject*> &f250_wrd_objs = hit_objs_by_type["Df250WindowRawData"];
@@ -1478,12 +1478,12 @@ jerror_t JEventSource_EVIO::GetObjects(JEvent &event, JFactory_base *factory)
     // Add data objects to call stack for the classes we can provide, but for which
     // there are no objects for this event. Again, this is so janadot will display things
     // properly.
-    set<string>::iterator siter;
-    for(siter=event_source_data_types.begin(); siter!=event_source_data_types.end(); siter++){
-        if(hit_objs_by_type.find(*siter) == hit_objs_by_type.end()){
-            AddSourceObjectsToCallStack(loop, *siter);
-        }
-    }
+    // set<string>::iterator siter;
+    // for(siter=event_source_data_types.begin(); siter!=event_source_data_types.end(); siter++){
+    //     if(hit_objs_by_type.find(*siter) == hit_objs_by_type.end()){
+    //         AddSourceObjectsToCallStack(loop, *siter);
+    //     }
+    // }
 
     // The f125 firmware used for the 2014 and Spring 2015 commissioning
     // data was hardwired to report pedestals that were an average of
@@ -1813,46 +1813,46 @@ void JEventSource_EVIO::CopyBOR(JEventLoop *loop, map<string, vector<JObject*> >
 //----------------
 // AddSourceObjectsToCallStack
 //----------------
-void JEventSource_EVIO::AddSourceObjectsToCallStack(JEventLoop *loop, string className)
-{
-    /// This is used to give information to JANA regarding the origin of objects
-    /// that *should* come from the source. We add them in explicitly because
-    /// the file may not have any, but factories may ask for them. We want those
-    /// links to indicate that the "0" objects in the factory came from the source
-    /// so that janadot draws these objects correctly.
-
-    JEventLoop::call_stack_t cs;
-    cs.caller_name = "<ignore>"; // tells janadot this object wasn't actually requested by anybody
-    cs.caller_tag = "";
-    cs.callee_name = className;
-    cs.callee_tag = "";
-    cs.start_time = 0.0;
-    cs.end_time = 0.0;
-    cs.data_source = JEventLoop::DATA_FROM_SOURCE;
-    loop->AddToCallStack(cs);
-}
+// void JEventSource_EVIO::AddSourceObjectsToCallStack(JEventLoop *loop, string className)
+// {
+//     /// This is used to give information to JANA regarding the origin of objects
+//     /// that *should* come from the source. We add them in explicitly because
+//     /// the file may not have any, but factories may ask for them. We want those
+//     /// links to indicate that the "0" objects in the factory came from the source
+//     /// so that janadot draws these objects correctly.
+//
+//     JEventLoop::call_stack_t cs;
+//     cs.caller_name = "<ignore>"; // tells janadot this object wasn't actually requested by anybody
+//     cs.caller_tag = "";
+//     cs.callee_name = className;
+//     cs.callee_tag = "";
+//     cs.start_time = 0.0;
+//     cs.end_time = 0.0;
+//     cs.data_source = JEventLoop::DATA_FROM_SOURCE;
+//     loop->AddToCallStack(cs);
+// }
 
 //----------------
 // AddEmulatedObjectsToCallStack
 //----------------
-void JEventSource_EVIO::AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee)
-{
-    /// This is used to give information to JANA regarding the relationship and
-    /// origin of some of these data objects. This is really just needed so that
-    /// the janadot program can be used to produce the correct callgraph. Because
-    /// of how this plugin works, JANA can't record the correct call stack (at
-    /// least not easily!) Therefore, we have to give it a little help here.
-
-    JEventLoop::call_stack_t cs;
-    cs.caller_name = caller;
-    cs.callee_name = callee;
-    cs.data_source = JEventLoop::DATA_FROM_SOURCE;
-    loop->AddToCallStack(cs);
-    cs.callee_name = cs.caller_name;
-    cs.caller_name = "<ignore>";
-    cs.data_source = JEventLoop::DATA_FROM_FACTORY;
-    loop->AddToCallStack(cs);
-}
+// void JEventSource_EVIO::AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee)
+// {
+//     /// This is used to give information to JANA regarding the relationship and
+//     /// origin of some of these data objects. This is really just needed so that
+//     /// the janadot program can be used to produce the correct callgraph. Because
+//     /// of how this plugin works, JANA can't record the correct call stack (at
+//     /// least not easily!) Therefore, we have to give it a little help here.
+//
+//     JEventLoop::call_stack_t cs;
+//     cs.caller_name = caller;
+//     cs.callee_name = callee;
+//     cs.data_source = JEventLoop::DATA_FROM_SOURCE;
+//     loop->AddToCallStack(cs);
+//     cs.callee_name = cs.caller_name;
+//     cs.caller_name = "<ignore>";
+//     cs.data_source = JEventLoop::DATA_FROM_FACTORY;
+//     loop->AddToCallStack(cs);
+// }
 
 //----------------
 // EmulateDf250Firmware

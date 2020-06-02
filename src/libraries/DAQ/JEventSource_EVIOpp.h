@@ -133,9 +133,9 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		           uint64_t SearchFileForRunNumber(void);
 		               void EmulateDf250Firmware(DParsedEvent *pe);
 		               void EmulateDf125Firmware(DParsedEvent *pe);
-		               void AddToCallStack(DParsedEvent *pe, JEventLoop *loop);
-		               void AddSourceObjectsToCallStack(JEventLoop *loop, string className);
-		               void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
+		               // void AddToCallStack(DParsedEvent *pe, JEventLoop *loop);
+		               // void AddSourceObjectsToCallStack(JEventLoop *loop, string className);
+		               // void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
 		               void AddROCIDtoParseList(uint32_t rocid){ ROCIDS_TO_PARSE.insert(rocid); }
 		      set<uint32_t> GetROCIDParseList(uint32_t rocid){ return ROCIDS_TO_PARSE; }
 

@@ -666,7 +666,7 @@ jerror_t JEventSource_EVIOpp::GetObjects(JEvent &event, JFactory_base *factory)
 	}
 	
 	// Optionally record call stack
-	if(RECORD_CALL_STACK) AddToCallStack(pe, loop);
+	// if(RECORD_CALL_STACK) AddToCallStack(pe, loop);
 
 	// Decide whether this is a data type the source supplies
     // If the data type is that of some derived data that is nominally
@@ -1156,60 +1156,60 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe)
 //----------------
 // AddToCallStack
 //----------------
-void JEventSource_EVIOpp::AddToCallStack(DParsedEvent *pe, JEventLoop *loop)
-{
-	/// Add information to JANA's call stack so that the janadot
-	/// plugin can better display the actual relationship of the
-	/// the data objects. This only gets called if the RECORD_CALL_STACK
-	/// config. parameter is set (which is done automatically by 
-	/// the janadot plugin)
-
-	// Add all source object types as defined in DParsedEvent
-	vector<string> sourcetypes;
-	pe->GetParsedDataTypes(sourcetypes);
-	for(auto t:sourcetypes) AddSourceObjectsToCallStack(loop, t);
-}
+// void JEventSource_EVIOpp::AddToCallStack(DParsedEvent *pe, JEventLoop *loop)
+// {
+// 	/// Add information to JANA's call stack so that the janadot
+// 	/// plugin can better display the actual relationship of the
+// 	/// the data objects. This only gets called if the RECORD_CALL_STACK
+// 	/// config. parameter is set (which is done automatically by
+// 	/// the janadot plugin)
+//
+// 	// Add all source object types as defined in DParsedEvent
+// 	vector<string> sourcetypes;
+// 	pe->GetParsedDataTypes(sourcetypes);
+// 	for(auto t:sourcetypes) AddSourceObjectsToCallStack(loop, t);
+// }
 
 //----------------
 // AddSourceObjectsToCallStack
 //----------------
-void JEventSource_EVIOpp::AddSourceObjectsToCallStack(JEventLoop *loop, string className)
-{
-	/// This is used to give information to JANA regarding the origin of objects
-	/// that *should* come from the source. We add them in explicitly because
-	/// the file may not have any, but factories may ask for them. We want those
-	/// links to indicate that the "0" objects in the factory came from the source
-	/// so that janadot draws these objects correctly.
-
-	JEventLoop::call_stack_t cs;
-	cs.caller_name = "<ignore>"; // tells janadot this object wasn't actually requested by anybody
-	cs.caller_tag = "";
-	cs.callee_name = className;
-	cs.callee_tag = "";
-	cs.start_time = 0.0;
-	cs.end_time = 0.0;
-	cs.data_source = JEventLoop::DATA_FROM_SOURCE;
-	loop->AddToCallStack(cs);
-}
+// void JEventSource_EVIOpp::AddSourceObjectsToCallStack(JEventLoop *loop, string className)
+// {
+// 	/// This is used to give information to JANA regarding the origin of objects
+// 	/// that *should* come from the source. We add them in explicitly because
+// 	/// the file may not have any, but factories may ask for them. We want those
+// 	/// links to indicate that the "0" objects in the factory came from the source
+// 	/// so that janadot draws these objects correctly.
+//
+// 	JEventLoop::call_stack_t cs;
+// 	cs.caller_name = "<ignore>"; // tells janadot this object wasn't actually requested by anybody
+// 	cs.caller_tag = "";
+// 	cs.callee_name = className;
+// 	cs.callee_tag = "";
+// 	cs.start_time = 0.0;
+// 	cs.end_time = 0.0;
+// 	cs.data_source = JEventLoop::DATA_FROM_SOURCE;
+// 	loop->AddToCallStack(cs);
+// }
 
 //----------------
 // AddEmulatedObjectsToCallStack
 //----------------
-void JEventSource_EVIOpp::AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee)
-{
-	/// This is used to give information to JANA regarding the relationship and
-	/// origin of some of these data objects. This is really just needed so that
-	/// the janadot program can be used to produce the correct callgraph. Because
-	/// of how this plugin works, JANA can't record the correct call stack (at
-	/// least not easily!) Therefore, we have to give it a little help here.
-
-	JEventLoop::call_stack_t cs;
-	cs.caller_name = caller;
-	cs.callee_name = callee;
-	cs.data_source = JEventLoop::DATA_FROM_SOURCE;
-	loop->AddToCallStack(cs);
-	cs.callee_name = cs.caller_name;
-	cs.caller_name = "<ignore>";
-	cs.data_source = JEventLoop::DATA_FROM_FACTORY;
-	loop->AddToCallStack(cs);
-}
+// void JEventSource_EVIOpp::AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee)
+// {
+// 	/// This is used to give information to JANA regarding the relationship and
+// 	/// origin of some of these data objects. This is really just needed so that
+// 	/// the janadot program can be used to produce the correct callgraph. Because
+// 	/// of how this plugin works, JANA can't record the correct call stack (at
+// 	/// least not easily!) Therefore, we have to give it a little help here.
+//
+// 	JEventLoop::call_stack_t cs;
+// 	cs.caller_name = caller;
+// 	cs.callee_name = callee;
+// 	cs.data_source = JEventLoop::DATA_FROM_SOURCE;
+// 	loop->AddToCallStack(cs);
+// 	cs.callee_name = cs.caller_name;
+// 	cs.caller_name = "<ignore>";
+// 	cs.data_source = JEventLoop::DATA_FROM_FACTORY;
+// 	loop->AddToCallStack(cs);
+// }
