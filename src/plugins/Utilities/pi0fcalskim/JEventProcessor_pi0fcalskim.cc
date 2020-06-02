@@ -65,6 +65,8 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   //MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
   //MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
 
+  SAVE_TOF_HITS = 1;
+
   WRITE_ROOT = 0;
   WRITE_EVIO = 1;
 
@@ -76,7 +78,8 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
   //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
   //gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
-  
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:SAVE_TOF_HITS", MAX_DT, "Save hits from TOF points (default=1)" );
+
 }
 
 //------------------
@@ -168,8 +171,10 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
   vector< const JObject* > locObjectsToSave;  
 
   // save TOF points to help with background rejection, especially near the beam hole
-  for (unsigned int i = 0 ; i < locTOFPoints.size(); i++) {
-    locObjectsToSave.push_back(static_cast<const JObject *>(locTOFPoints[i]));
+  if(SAVE_TOF_HITS) {
+	  for (unsigned int i = 0 ; i < locTOFPoints.size(); i++) {
+		locObjectsToSave.push_back(static_cast<const JObject *>(locTOFPoints[i]));
+	  }
   }
 
   bool Candidate = false;
