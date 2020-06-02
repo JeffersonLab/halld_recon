@@ -59,7 +59,6 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   MIN_MASS   = 0.0; // GeV
   //MAX_MASS   = 0.30; // GeV - old default
   MAX_MASS   = 1.0; // GeV
-  //MIN_E      = 0.5; // GeV (photon energy cut)
   MIN_E      = 0.5; // GeV (photon energy cut)
   MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
   MAX_DT     =   10; // ns  (cluster time diff. cut)
@@ -167,6 +166,11 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
   }
 
   vector< const JObject* > locObjectsToSave;  
+
+  // save TOF points to help with background rejection, especially near the beam hole
+  for (unsigned int i = 0 ; i < locTOFPoints.size(); i++) {
+    locObjectsToSave.push_back(static_cast<const JObject *>(locTOFPoints[i]));
+  }
 
   bool Candidate = false;
   
