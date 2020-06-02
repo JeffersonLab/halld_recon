@@ -138,9 +138,9 @@ DTranslationTable::DTranslationTable(JEventLoop *loop)
 			"plugin, but otherwise, it will just give a slight performance"
 			"hit.");
 	if(SYSTEMS_TO_PARSE != ""){
-		jerr << "You have set the TT:SYSTEMS_TO_PARSE config. parameter." << endl;
-		jerr << "This is now deprecated. Please use EVIO:SYSTEMS_TO_PARSE" << endl;
-		jerr << "instead. Quitting now to make sure you see this message." << endl;
+		jerr << "You have set the TT:SYSTEMS_TO_PARSE config. parameter." << jendl;
+		jerr << "This is now deprecated. Please use EVIO:SYSTEMS_TO_PARSE" << jendl;
+		jerr << "instead. Quitting now to make sure you see this message." << jendl;
 		exit(-1);
 	}
 
@@ -197,7 +197,7 @@ void DTranslationTable::ReadOptionalROCidTranslation(void)
    ifstream ifs(ROCID_MAP_FILENAME.c_str());
    if (!ifs.is_open()) return;
    
-   std::cout << "Opened ROC id translation map: " << ROCID_MAP_FILENAME << std::endl;
+   std::cout << "Opened ROC id translation map: " << ROCID_MAP_FILENAME << jendl;
    while (ifs.good()) {
       char line[256];
       ifs.getline(line, 256);
@@ -209,8 +209,8 @@ void DTranslationTable::ReadOptionalROCidTranslation(void)
       ss >> from >> to;  // from=evio  to=TT
       if ( to == 10000 ) {
          if ( from != 10000) {
-            std::cout << "unable to convert line:" << std::endl;
-            std::cout << "  " << line;
+            jout << "unable to convert line:" << jendl;
+            jout << "  " << line;
          }
       }else{
          Get_ROCID_Map()[from] = to;
@@ -260,7 +260,8 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 	JEventSource_EVIO   *eviosource   = dynamic_cast<JEventSource_EVIO*  >(eventsource);
 	JEventSource_EVIOpp *evioppsource = dynamic_cast<JEventSource_EVIOpp*>(eventsource);
 	if( (!eviosource) && !(evioppsource) ) {
-		jerr << "eventsource not a JEventSource_EVIO or JEventSource_EVIOpp object! Cannot restrict parsing list!" << endl;
+		jerr << "eventsource not a JEventSource_EVIO or JEventSource_EVIOpp object! Cannot restrict parsing list!" <<
+		jendl;
 		return;
 	}
 
@@ -347,7 +348,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    /// generate detector hit objects from them, placing
    /// them in the appropriate DANA factories.
 
-   if (VERBOSE > 2) ttout << "Entering ApplyTranslationTable:" << std::endl;
+   if (VERBOSE > 2) ttout << "Entering ApplyTranslationTable:" << jendl;
    
    // Clear our internal vectors of pointers from previous event
    ClearVectors();
@@ -363,7 +364,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Df250PulseIntegral (will apply Df250PulseTime via associated objects)
    vector<const Df250PulseIntegral*> pulseintegrals250;
    loop->Get(pulseintegrals250);
-   if (VERBOSE > 2) ttout << "  Number Df250PulseIntegral objects: "  << pulseintegrals250.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df250PulseIntegral objects: "  << pulseintegrals250.size() << jendl;
    for (uint32_t i=0; i<pulseintegrals250.size(); i++) {
       const Df250PulseIntegral *pi = pulseintegrals250[i];
       
@@ -374,7 +375,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << pi->slot
-               << " chan:" << pi->channel << std::endl;
+               << " chan:" << pi->channel << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -382,13 +383,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
          if (VERBOSE > 6)
-            ttout << "     - Didn't find it" << std::endl;
+            ttout << "     - Didn't find it" << jendl;
          continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
          ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl;
+               << jendl;
       
       // Check for a pulse time (this should have been added in JEventSource_EVIO.cc)
       const Df250PulseTime *pt = NULL;
@@ -415,7 +416,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
 
          default:
-            if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+            if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << jendl;
             break;
       }
    }
@@ -423,7 +424,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Df250PulseData
    vector<const Df250PulseData*> pulsedatas250;
    loop->Get(pulsedatas250);
-   if (VERBOSE > 2) ttout << "  Number Df250PulseData objects: "  << pulsedatas250.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df250PulseData objects: "  << pulsedatas250.size() << jendl;
    for(auto pd : pulsedatas250){
       
       // Apply optional rocid translation
@@ -431,18 +432,19 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<uint32_t, uint32_t>::iterator rocid_iter = Get_ROCID_Map().find(rocid);
       if (rocid_iter != Get_ROCID_Map().end()) rocid = rocid_iter->second;
       
-      if (VERBOSE > 4) ttout << "    Looking for rocid:" << rocid << " slot:" << pd->slot << " chan:" << pd->channel << std::endl;
+      if (VERBOSE > 4) ttout << "    Looking for rocid:" << rocid << " slot:" << pd->slot << " chan:" << pd->channel
+      << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
       csc_t csc = {rocid, pd->slot, pd->channel};
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
-         if (VERBOSE > 6)  ttout << "     - Didn't find it" << std::endl;
+         if (VERBOSE > 6)  ttout << "     - Didn't find it" << jendl;
          continue;
       }
       const DChannelInfo &chaninfo = iter->second;
-      if (VERBOSE > 6) ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys) << std::endl;
+      if (VERBOSE > 6) ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys) << jendl;
 
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -459,7 +461,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case RF:         MakeRFDigiTime(  chaninfo.rf,   pd);             break;
          case TAC: 		  MakeTACDigiHit(chaninfo.tac, pd);  			   break;
         default:
-            if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+            if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" <<
+            jendl;
             break;
       }
    }
@@ -467,7 +470,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Direct creation of DigiHits from Df250WindowRawData for TPOL (always raw mode readout) 
    vector<const Df250WindowRawData*> windowrawdata;
    loop->Get(windowrawdata);
-   if (VERBOSE > 2) ttout << "  Number Df250WindowRawData objects: " << windowrawdata.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df250WindowRawData objects: " << windowrawdata.size() << jendl;
    for (uint32_t i=0; i<windowrawdata.size(); i++) {
       const Df250WindowRawData *window = windowrawdata[i];
 
@@ -478,7 +481,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << window->slot
-               << " chan:" << window->channel << std::endl;
+               << " chan:" << window->channel << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -486,13 +489,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << jendl;
       
       // Create the appropriate hit type based on detector type
       if(chaninfo.det_sys == TPOLSECTOR) 
@@ -502,7 +505,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Df125PulseIntegral (will apply Df125PulseTime via associated objects)
    vector<const Df125PulseIntegral*> pulseintegrals125;
    loop->Get(pulseintegrals125);
-   if (VERBOSE > 2) ttout << "  Number Df125PulseIntegral objects: " << pulseintegrals125.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df125PulseIntegral objects: " << pulseintegrals125.size() << jendl;
    for (uint32_t i=0; i<pulseintegrals125.size(); i++) {
       const Df125PulseIntegral *pi = pulseintegrals125[i];
 
@@ -513,7 +516,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << pi->slot
-               << " chan:" << pi->channel << std::endl;
+               << " chan:" << pi->channel << jendl;
    
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -521,13 +524,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
          ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys) 
-               << std::endl;
+               << jendl;
 
       // Check for a pulse time (this should have been added in JEventSource_EVIO.cc
       const Df125PulseTime *pt = NULL;
@@ -540,7 +543,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case CDC:           MakeCDCDigiHit(chaninfo.cdc, pi, pt, pp);                 break;
          case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, pi, pt, pp); break;
          default: 
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl; 
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" <<
+             jendl;
              break;
       }
    }
@@ -548,7 +552,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Df125CDCPulse
    vector<const Df125CDCPulse*> cdcpulses;
    loop->Get(cdcpulses);
-   if (VERBOSE > 2) ttout << "  Number Df125CDCPulse objects: " << cdcpulses.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df125CDCPulse objects: " << cdcpulses.size() << jendl;
    for (uint32_t i=0; i<cdcpulses.size(); i++) {
       const Df125CDCPulse *p = cdcpulses[i];
 
@@ -559,7 +563,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << p->slot
-               << " chan:" << p->channel << std::endl;
+               << " chan:" << p->channel << jendl;
    
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -567,20 +571,20 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
          ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys) 
-               << std::endl;
+               << jendl;
 
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
          case CDC:  MakeCDCDigiHit(chaninfo.cdc, p); break;
 		 //case TRD:  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!"<<jendl;
              break;
       }
    }
@@ -588,7 +592,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Df125FDCPulse
    vector<const Df125FDCPulse*> fdcpulses;
    loop->Get(fdcpulses);
-   if (VERBOSE > 2) ttout << "  Number Df125FDCPulse objects: " << fdcpulses.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number Df125FDCPulse objects: " << fdcpulses.size() << jendl;
    for (uint32_t i=0; i<fdcpulses.size(); i++) {
       const Df125FDCPulse *p = fdcpulses[i];
 
@@ -599,7 +603,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << p->slot
-               << " chan:" << p->channel << std::endl;
+               << " chan:" << p->channel << jendl;
    
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -607,13 +611,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
          ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys) 
-               << std::endl;
+               << jendl;
 
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -621,7 +625,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case CDC         :  MakeCDCDigiHit(chaninfo.cdc, p); break;
 	 case TRD         :  MakeTRDDigiHit(chaninfo.trd, p); break;
          default: 
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!"<<jendl;
              break;
       }
    }
@@ -629,7 +633,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // DF1TDCHit
    vector<const DF1TDCHit*> f1tdchits;
    loop->Get(f1tdchits);
-   if (VERBOSE > 2) ttout << "  Number DF1TDCHit objects: " << f1tdchits.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number DF1TDCHit objects: " << f1tdchits.size() << jendl;
    for (uint32_t i=0; i<f1tdchits.size(); i++) {
       const DF1TDCHit *hit = f1tdchits[i];
 
@@ -640,7 +644,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
-               << " chan:" << hit->channel << std::endl;
+               << " chan:" << hit->channel << jendl;
 
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -648,13 +652,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6) 
          ttout << "     - Found entry for: " 
-               << DetectorName(chaninfo.det_sys) << std::endl;
+               << DetectorName(chaninfo.det_sys) << jendl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -666,7 +670,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case TAGH:        MakeTAGHTDCDigiHit(chaninfo.tagh, hit);      break;
          case PSC:         MakePSCTDCDigiHit(chaninfo.psc, hit);        break;
         default:
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << jendl;
              break;
       }
    }
@@ -674,7 +678,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // DCAEN1290TDCHit
    vector<const DCAEN1290TDCHit*> caen1290tdchits;
    loop->Get(caen1290tdchits);
-   if (VERBOSE > 2) ttout << "  Number DCAEN1290TDCHit objects: " << caen1290tdchits.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number DCAEN1290TDCHit objects: " << caen1290tdchits.size() << jendl;
    for (uint32_t i=0; i<caen1290tdchits.size(); i++) {
       const DCAEN1290TDCHit *hit = caen1290tdchits[i];
 
@@ -685,7 +689,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
-               << " chan:" << hit->channel << std::endl;
+               << " chan:" << hit->channel << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -693,13 +697,13 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
          ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl;
+               << jendl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -707,7 +711,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case RF:     MakeRFTDCDigiTime(chaninfo.rf, hit);  break;
          case TAC:    MakeTACTDCDigiHit(chaninfo.tac, hit); break;
          default:     
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << jendl;
              break;
       }
    }
@@ -715,7 +719,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // DDIRCTDCHit
    vector<const DDIRCTDCHit*> dirctdchits;
    loop->Get(dirctdchits);
-   if (VERBOSE > 2) ttout << "  Number DDIRCTDCHit objects: " << dirctdchits.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number DDIRCTDCHit objects: " << dirctdchits.size() << jendl;
    for (uint32_t i=0; i<dirctdchits.size(); i++) {
       const DDIRCTDCHit *hit = dirctdchits[i];
 
@@ -726,7 +730,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
-               << " chan:" << hit->channel << std::endl;
+               << " chan:" << hit->channel << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -734,19 +738,19 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << jendl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
          case DIRC:    MakeDIRCTDCDigiHit(chaninfo.dirc, hit); break;
          default:     
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << jendl;
              break;
       }
    }
@@ -754,7 +758,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // DGEMSRSWindowRawData
    vector<const DGEMSRSWindowRawData*> gemsrswindowrawdata;
    loop->Get(gemsrswindowrawdata);
-   if (VERBOSE > 2) ttout << "  Number DGEMSRSWindowRawData objects: " << gemsrswindowrawdata.size() << std::endl;
+   if (VERBOSE > 2) ttout << "  Number DGEMSRSWindowRawData objects: " << gemsrswindowrawdata.size() << jendl;
    for (uint32_t i=0; i<gemsrswindowrawdata.size(); i++) {
       const DGEMSRSWindowRawData *hit = gemsrswindowrawdata[i];
 
@@ -765,7 +769,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
       if (VERBOSE > 4)
          ttout << "    Looking for rocid:" << rocid << " slot:" << hit->slot
-               << " chan:" << hit->channel << std::endl;
+               << " chan:" << hit->channel << jendl;
       
       // Create crate,slot,channel index and find entry in Translation table.
       // If none is found, then just quietly skip this hit.
@@ -773,19 +777,19 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       map<csc_t, DChannelInfo>::const_iterator iter = Get_TT().find(csc);
       if (iter == Get_TT().end()) {
           if (VERBOSE > 6)
-             ttout << "     - Didn't find it" << std::endl;
+             ttout << "     - Didn't find it" << jendl;
           continue;
       }
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << jendl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
          case TRD:    MakeGEMDigiWindowRawData(chaninfo.trd, hit); break;
          default:     
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << jendl;
              break;
       }
    }
@@ -843,7 +847,7 @@ DBCALDigiHit* DTranslationTable::MakeBCALDigiHit(const BCALIndex_t &idx,
    if (VERBOSE > 4)
       ttout << "       - Making DBCALDigiHit for (mod,lay,sec,end)=("
             << idx.module << "," << idx.layer << "," << idx.sector 
-            << "," << (DBCALGeometry::End)idx.end << std::endl;
+            << "," << (DBCALGeometry::End)idx.end << jendl;
 
    DBCALDigiHit *h = new DBCALDigiHit();
    CopyDf250Info(h, pd);
@@ -1032,7 +1036,7 @@ DBCALDigiHit* DTranslationTable::MakeBCALDigiHit(const BCALIndex_t &idx,
    if (VERBOSE > 4)
       ttout << "       - Making DBCALDigiHit for (mod,lay,sec,end)=("
             << idx.module << "," << idx.layer << "," << idx.sector 
-            << "," << (DBCALGeometry::End)idx.end << std::endl;
+            << "," << (DBCALGeometry::End)idx.end << jendl;
 
    DBCALDigiHit *h = new DBCALDigiHit();
    CopyDf250Info(h, pi, pt, pp);
@@ -1832,7 +1836,7 @@ const DTranslationTable::csc_t
           default:
              jerr << "DTranslationTable::GetDAQIndex(): "
                   << "Invalid detector type = " << in_channel.det_sys 
-                  << std::endl;
+                  << jendl;
        }
    }
 
@@ -1843,7 +1847,7 @@ const DTranslationTable::csc_t
     if (tt_itr == Get_TT().end()) {
        stringstream ss_err;
        ss_err << "Could not find DAQ channel in Translaton Table:  "
-              << Channel2Str(in_channel) << std::endl;
+              << Channel2Str(in_channel) << jendl;
        throw JException(ss_err.str());
     }
 
@@ -1923,7 +1927,7 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
        break;
 
     default:
-       ss << "Unknown detector type" << std::endl;
+       ss << "Unknown detector type" << jendl;
     }   
 
     return ss.str();
@@ -2047,11 +2051,11 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
    if (jcalib && !NO_CCDB) {
       map<string,string> tt;
       string namepath = "Translation/DAQ2detector";
-      jout << "Reading translation table from calib DB: " << namepath << " ..." << std::endl;
+      jout << "Reading translation table from calib DB: " << namepath << " ..." << jendl;
       jcalib->GetCalib(namepath, tt);
       if (tt.size() != 1) {
-         jerr << " Error: Unexpected translation table format!" << std::endl;
-         jerr << "        tt.size()=" << tt.size() << " (expected 1)" << std::endl;
+         jerr << " Error: Unexpected translation table format!" << jendl;
+         jerr << "        tt.size()=" << tt.size() << " (expected 1)" << jendl;
       }else{
          // Copy table into tt string
          map<string,string>::iterator iter = tt.begin();
@@ -2061,13 +2065,13 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
    
    // If getting from CCDB fails, try just reading in local file
    if (tt_xml.size() == 0) {
-      if (!NO_CCDB) jout << "Unable to get translation table from CCDB." << std::endl;
-      jout << "Will try reading TT from local file: " << XML_FILENAME << std::endl;
+      if (!NO_CCDB) jout << "Unable to get translation table from CCDB." << jendl;
+      jout << "Will try reading TT from local file: " << XML_FILENAME << jendl;
 
       // Open file
       ifstream ifs(XML_FILENAME.c_str());
       if (! ifs.is_open()) {
-         jerr << " Error: Cannot open file! Translation table unavailable." << std::endl;
+         jerr << " Error: Cannot open file! Translation table unavailable." << jendl;
          pthread_mutex_unlock(&Get_TT_Mutex());
          return;
       }
@@ -2099,7 +2103,7 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
    // create parser and specify element handlers
    XML_Parser xmlParser = XML_ParserCreate(NULL);
    if (xmlParser == NULL) {
-      jerr << "readTranslationTable...unable to create parser" << std::endl;
+      jerr << "readTranslationTable...unable to create parser" << jendl;
       exit(EXIT_FAILURE);
    }
    XML_SetElementHandler(xmlParser,StartElement,EndElement);
@@ -2108,43 +2112,44 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
    // Parse XML string
    int status=XML_Parse(xmlParser, tt_xml.c_str(), tt_xml.size(), 1); // "1" indicates this is the final piece of XML
    if (status == 0) {
-      jerr << "  ?readTranslationTable...parseXMLFile parse error for " << XML_FILENAME << std::endl;
-      jerr << XML_ErrorString(XML_GetErrorCode(xmlParser)) << std::endl;
+      jerr << "  ?readTranslationTable...parseXMLFile parse error for " << XML_FILENAME << jendl;
+      jerr << XML_ErrorString(XML_GetErrorCode(xmlParser)) << jendl;
    }
    
 	// Check if there was a rocid map prior to parsing and
 	// if so, compare the 2.
 	if( !save_rocid_map.empty() ){
 		if( save_rocid_map != Get_ROCID_By_System() ){
-			jerr << " The rocid by system map read from the translation table in" << endl;
-			jerr << " the CCDB differs from the default. This may happen if you" << endl;
-			jerr << " specified EVIO:SYSTEMS_TO_PARSE and the hardcoded table is" << endl;
-			jerr << " out of date. This may be handled in different ways depending" << endl;
-			jerr << " on how EVIO:SYSTEMS_TO_PARSE_FORCE is set:" << endl;
-			jerr << "    0 = Treat mismatch as error " << endl;
-			jerr << "    1 = Use CCDB map in case of mismatch" << endl;
-			jerr << "    2 = Use hardcoded map in case of mismatch" << endl;
-			jerr << " n.b because the hardcoded map may actually need to be used before" << endl;
-			jerr << " the CCDB map is read in choosing option 1 may not be absolutely" << endl;
-			jerr << " true for all events." << endl;
-			jerr << " The value of EVIO:SYSTEMS_TO_PARSE_FORCE is currently: " << Get_ROCID_By_System_Mismatch_Behaviour() << endl;
-			jerr << " Here are the (mismatched) maps:" << endl;
+			jerr << " The rocid by system map read from the translation table in" << jendl;
+			jerr << " the CCDB differs from the default. This may happen if you" << jendl;
+			jerr << " specified EVIO:SYSTEMS_TO_PARSE and the hardcoded table is" << jendl;
+			jerr << " out of date. This may be handled in different ways depending" << jendl;
+			jerr << " on how EVIO:SYSTEMS_TO_PARSE_FORCE is set:" << jendl;
+			jerr << "    0 = Treat mismatch as error " << jendl;
+			jerr << "    1 = Use CCDB map in case of mismatch" << jendl;
+			jerr << "    2 = Use hardcoded map in case of mismatch" << jendl;
+			jerr << " n.b because the hardcoded map may actually need to be used before" << jendl;
+			jerr << " the CCDB map is read in choosing option 1 may not be absolutely" << jendl;
+			jerr << " true for all events." << jendl;
+			jerr << " The value of EVIO:SYSTEMS_TO_PARSE_FORCE is currently: " <<
+			Get_ROCID_By_System_Mismatch_Behaviour() << jendl;
+			jerr << " Here are the (mismatched) maps:" << jendl;
 			for(auto it : Get_ROCID_By_System()){
-				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  num. hardcoded rocids=" << save_rocid_map[it.first].size() << endl;
-				cerr << "       CCDB={";
+				jerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  num. hardcoded rocids=" << save_rocid_map[it.first].size() << jendl;
+				jerr << "       CCDB={";
 				for(auto a : Get_ROCID_By_System()[it.first]) cerr << a <<", ";
-				cerr << "}  hardcoded={";
+				jerr << "}  hardcoded={";
 				for(auto a : save_rocid_map[it.first]) cerr << a <<", ";
-				cerr << "}" << endl;
+				jerr << "}" << jendl;
 			}
 			for(auto it : save_rocid_map){
 				if(Get_ROCID_By_System().find(it.first) != Get_ROCID_By_System().end()) continue;
-				cerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  hardcoded num. rocids=" << save_rocid_map[it.first].size() << endl;
-				cerr << "       CCDB={";
+				jerr << " " << DetectorName((Detector_t)it.first) << ": CCDB num. rocids=" << Get_ROCID_By_System()[it.first].size() << "  hardcoded num. rocids=" << save_rocid_map[it.first].size() << jendl;
+				jerr << "       CCDB={";
 				for(auto a : Get_ROCID_By_System()[it.first]) cerr << a <<", ";
-				cerr << "}  hardcoded={";
+				jerr << "}  hardcoded={";
 				for(auto a : save_rocid_map[it.first]) cerr << a <<", ";
-				cerr << "}" << endl;
+				jerr << "}" << jendl;
 			}
 			switch( Get_ROCID_By_System_Mismatch_Behaviour() ){
 				case 0:
@@ -2157,13 +2162,13 @@ void DTranslationTable::ReadTranslationTable(JCalibration *jcalib)
 					Get_ROCID_By_System() = save_rocid_map;
 					break;
 				default:
-					jerr << "Bad value for Get_ROCID_By_System_Mismatch_Behaviour() (aka EVIO:SYSTEMS_TO_PARSE_FORCE)" << endl;
+					jerr << "Bad value for Get_ROCID_By_System_Mismatch_Behaviour() (aka EVIO:SYSTEMS_TO_PARSE_FORCE)" << jendl;
 					exit(-1);
 			}
 		}
 	}
 
-   jout << Get_TT().size() << " channels defined in translation table" << std::endl;
+   jout << Get_TT().size() << " channels defined in translation table" << jendl;
    XML_ParserFree(xmlParser);
 
    pthread_mutex_unlock(&Get_TT_Mutex());
@@ -2385,19 +2390,19 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
 //      // Data integrity check
 //      if (crate < 0 || crate >= MAXDCRATE) {
 //         jerr << " Crate value of " << crate 
-//              << " is not in range 0 <= crate < " << MAXDCRATE << std::endl;
+//              << " is not in range 0 <= crate < " << MAXDCRATE << jendl;
 //         exit(-1);
 //      }
 //      
 //      if (slot < 0 || slot >= MAXDSLOT) {
 //         jerr << " Slot value of " << slot 
-//              << " is not in range 0 <= slot < " << MAXDSLOT << std::endl;
+//              << " is not in range 0 <= slot < " << MAXDSLOT << jendl;
 //         exit(-1);
 //      }
 //      
 //      if (channel < 0 || channel >= MAXDCHANNEL) {
 //         jerr << " Crate value of " << channel 
-//              << " is not in range 0 <= channel < " << MAXDCHANNEL << std::endl;
+//              << " is not in range 0 <= channel < " << MAXDCHANNEL << jendl;
 //         exit(-1);
 //      }
       
@@ -2495,9 +2500,8 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
       }
 
    } else {
-      jerr << std::endl << std::endl 
-           << "?startElement...unknown xml tag " << xmlname 
-           << std::endl << std::endl;
+      jerr << "\n\n?startElement...unknown xml tag " << xmlname
+           << "\n\n" << jendl;
    }
    
 }
