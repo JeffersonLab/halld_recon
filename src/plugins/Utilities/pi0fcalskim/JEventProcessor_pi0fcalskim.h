@@ -41,6 +41,8 @@ class JEventProcessor_pi0fcalskim:public jana::JEventProcessor{
   double MAX_DT;
   double MAX_ETOT;
   int    MIN_BLOCKS;
+  
+  int SAVE_TOF_HITS;
 
   int WRITE_ROOT;
   int WRITE_EVIO;
