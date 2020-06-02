@@ -9,8 +9,6 @@
 #define _DBCALGeometry_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 // create a single number channel id which is useful in algorithms
 // if M L S are module layer sector the bit map looks like:

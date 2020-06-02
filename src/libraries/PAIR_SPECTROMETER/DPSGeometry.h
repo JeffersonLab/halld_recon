@@ -3,8 +3,7 @@
 #define _DPSGeometry_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
+class JApplication;
 
 #include <string>
 
@@ -14,7 +13,7 @@ class DPSGeometry : public JObject {
   
   JOBJECT_PUBLIC(DPSGeometry);
   
-  DPSGeometry(JEventLoop *loop);
+  DPSGeometry(JApplication* loop); // TODO: Rethink this! Maybe pass in calibration manager instead?
   ~DPSGeometry();
 
   enum Arm { kNorth, kSouth };

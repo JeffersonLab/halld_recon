@@ -9,9 +9,8 @@
 #define _DTOFTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTOFTDCDigiHit:public jana::JObject{
+class DTOFTDCDigiHit:public JObject{
 	public:
 		JOBJECT_PUBLIC(DTOFTDCDigiHit);
 		
@@ -19,16 +18,13 @@ class DTOFTDCDigiHit:public jana::JObject{
 		int bar;        ///< bar number
 		int end;        ///< left/right 0/1 or North/South 0/1
 		uint32_t time;	///< hit time
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "bar", "%d", bar);
-			AddString(items, "plane", "%d", plane);
-			AddString(items, "end", "%d", end);
-			AddString(items, "time", "%d", time);
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(bar, NAME_OF(bar), "%d");
+			summary.add(plane, NAME_OF(plane), "%d");
+			summary.add(end, NAME_OF(end), "%d");
+			summary.add(time, NAME_OF(time), "%d");
 		}
-		
 };
 
 #endif // _DTOFTDCDigiHit_

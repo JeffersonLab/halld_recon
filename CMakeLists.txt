@@ -27,10 +27,13 @@ file(GLOB DAQ_SOURCES ${PROJECT_SOURCE_DIR}/src/libraries/DAQ/*.cc)
 file(GLOB DAQ_HEADERS ${PROJECT_SOURCE_DIR}/src/libraries/DAQ/*.h)
 
 set(HALLD_RECON_SOURCES
-        src/libraries/DAQ/JEventSource_EVIO.cc
-        src/libraries/DAQ/JEventSource_EVIO.h
-        src/libraries/DAQ/JEventSourceGenerator_EVIO.cc
-        src/libraries/DAQ/JEventSourceGenerator_EVIO.h
+        src/libraries/TTAB/DTranslationTable.cc
+        src/libraries/TTAB/DTranslationTable.h
+
+        #src/libraries/DAQ/JEventSource_EVIO.cc
+        #src/libraries/DAQ/JEventSource_EVIO.h
+        #src/libraries/DAQ/JEventSourceGenerator_EVIO.cc
+        #src/libraries/DAQ/JEventSourceGenerator_EVIO.h
     )
 
 add_executable(halld_recon

@@ -2,9 +2,8 @@
 #define _DTPOLSectorDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTPOLSectorDigiHit:public jana::JObject{
+class DTPOLSectorDigiHit : public JObject {
 	public:
 		JOBJECT_PUBLIC(DTPOLSectorDigiHit);
 
@@ -16,21 +15,18 @@ class DTPOLSectorDigiHit:public jana::JObject{
 		uint32_t nsamples_integral; //  number of samples used in integral 
 		uint32_t nsamples_pedestal; //  number of samples used in pedestal
 		uint32_t pulse_peak;        //  maximum sample in pulse
-		
 		uint32_t datasource;        //  0=window raw data, 1=old(pre-Fall16) firmware, 2=Df250PulseData
-	
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "pulse_integral", "%d", pulse_integral);
-			AddString(items, "pulse_time", "%d", pulse_time);
-			AddString(items, "pedestal", "%d", pedestal);
-			AddString(items, "QF", "%d", QF);
-			AddString(items, "nsamples_integral", "%d", nsamples_integral);
-			AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(sector, NAME_OF(sector), "%d");
+			summary.add(pulse_integral, NAME_OF(pulse_integral), "%d");
+			summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+			summary.add(QF, NAME_OF(QF), "%d");
+			summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+			summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
 		}
-		
 };
 
 #endif // _DTPOLSectorDigiHit_
