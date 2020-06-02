@@ -23,6 +23,7 @@ using namespace jana;
 #include "PID/DVertex.h"
 #include "PID/DEventRFBunch.h"
 #include "HDDM/DEventWriterHDDM.h"
+#include "TOF/DTOFPoint.h"
 
 #include "GlueX.h"
 #include <vector>
@@ -54,14 +55,16 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM );
 
 
-/*
-  MIN_MASS   = 0.03; // GeV
-  MAX_MASS   = 0.30; // GeV
-  MIN_E      =  1.0; // GeV (photon energy cut)
-  MIN_R      =   20; // cm  (cluster distance to beam line)
+
+  MIN_MASS   = 0.0; // GeV
+  //MAX_MASS   = 0.30; // GeV - old default
+  MAX_MASS   = 1.0; // GeV
+  //MIN_E      = 0.5; // GeV (photon energy cut)
+  MIN_E      = 0.5; // GeV (photon energy cut)
+  MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
   MAX_DT     =   10; // ns  (cluster time diff. cut)
-  MAX_ETOT   =   12; // GeV (max total FCAL energy)
-  MIN_BLOCKS =    2; // minumum blocks per cluster
+  MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
+  MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
 
   WRITE_ROOT = 0;
   WRITE_EVIO = 1;
@@ -74,7 +77,7 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
   gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
-  */
+  
 }
 
 //------------------
@@ -133,9 +136,11 @@ jerror_t JEventProcessor_pi0fcalskim::brun(JEventLoop *eventLoop, int32_t runnum
 jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
  
- vector< const DFCALShower* > locFCALShowers;
+  vector< const DFCALShower* > locFCALShowers;
+  vector< const DTOFPoint* > locTOFPoints;
   vector< const DVertex* > kinfitVertex;
   loop->Get(locFCALShowers);
+  loop->Get(locTOFPoints);
   loop->Get(kinfitVertex);
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
@@ -202,7 +207,7 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
       //for LH2 target
       //DVector3 pos_FCAL(0,0,625.406);
       
-      DVector3 pos_FCAL(0,0,638);
+      DVector3 pos_FCAL(0,0,638);   //TOFIX: shouldn't this come from the geometry??
       //at the end of the start counter; use this fall for fall '15 data
       // DVector3 pos_FCAL(0,0,692);
          //DVector3 pos_FCAL(0.0,0.0,650);
@@ -254,33 +259,33 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 			
       for(unsigned int j=i+1; j<locFCALShowers.size(); j++)
       {
-	const DFCALShower *s2 = locFCALShowers[j];
-	if (find(matchedShowers.begin(), matchedShowers.end(),s2) != matchedShowers.end()) continue;
+		const DFCALShower *s2 = locFCALShowers[j];
+		if (find(matchedShowers.begin(), matchedShowers.end(),s2) != matchedShowers.end()) continue;
 	
-	vector<const DFCALCluster*> associated_clusters2;
-	s2->Get(associated_clusters2);
-	Double_t dx2 = s2->getPosition().X() - kinfitVertexX;
-	Double_t dy2 = s2->getPosition().Y() - kinfitVertexY;
-	Double_t dz2 = s2->getPosition().Z() - kinfitVertexZ; 
-	Double_t R2 = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
-	Double_t E2 = s2->getEnergy();
-	Double_t  t2 = s2->getTime();
+		vector<const DFCALCluster*> associated_clusters2;
+		s2->Get(associated_clusters2);
+		Double_t dx2 = s2->getPosition().X() - kinfitVertexX;
+		Double_t dy2 = s2->getPosition().Y() - kinfitVertexY;
+		Double_t dz2 = s2->getPosition().Z() - kinfitVertexZ; 
+		Double_t R2 = sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
+		Double_t E2 = s2->getEnergy();
+		Double_t  t2 = s2->getTime();
 	
-	TLorentzVector sh2_p(E2*dx2/R2, E2*dy2/R2, E2*dz2/R2, E2);
-	TLorentzVector ptot = sh1_p+sh2_p;
-	Double_t inv_mass = ptot.M();
+		TLorentzVector sh2_p(E2*dx2/R2, E2*dy2/R2, E2*dz2/R2, E2);
+		TLorentzVector ptot = sh1_p+sh2_p;
+		Double_t inv_mass = ptot.M();
 
-    //Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidate |= (E1 > 0.5 && E2 > 0.5 && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+		//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+        Candidate |= ( (E1 > MIN_MASS) && (E2 > MAX_MASS) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) );
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-        if(E1 > 0.5 && E2 > 0.5 && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
+        if( (E1 > MIN_MASS) && (E2 > MAX_MASS) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
                 locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
                 locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[j]));
         }
- 			}
+ 	  }
  	}		
  
  if( Candidate ){
