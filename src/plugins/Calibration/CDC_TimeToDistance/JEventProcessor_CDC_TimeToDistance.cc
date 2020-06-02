@@ -13,10 +13,12 @@ using namespace jana;
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
 #include "HistogramTools.h"
+#include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
+
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -58,9 +60,11 @@ jerror_t JEventProcessor_CDC_TimeToDistance::init(void)
    gDirectory->cd("..");
 
    UNBIASED_RING=0;
+   MIN_FOM = 1e-8;
    if(gPARMS){
       gPARMS->SetDefaultParameter("KALMAN:RING_TO_SKIP",UNBIASED_RING);
       gPARMS->SetDefaultParameter("CDCCOSMIC:EXCLUDERING", UNBIASED_RING);
+      gPARMS->SetDefaultParameter("CDC_TTOD:MIN_FOM", MIN_FOM);
    }
    return NOERROR;
 }
@@ -170,6 +174,45 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
    vector <const DChargedTrack *> chargedTrackVector;
    loop->Get(chargedTrackVector);
 
+   
+   // 2 track events 
+
+    if ((int)chargedTrackVector.size() == 2) {
+
+        const DVertex* locVertex  = NULL;
+        loop->GetSingle(locVertex);
+        double z = locVertex->dSpacetimeVertex.Z();
+        double x = locVertex->dSpacetimeVertex.X();
+        double y = locVertex->dSpacetimeVertex.Y();
+
+        double least_fom=1;
+
+        if (sqrt(x*x + y*y) > 1.0) {
+
+            least_fom = 0;  // don't use this event for vertex z plots
+
+        } else {
+
+            for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
+
+                const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
+
+                auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
+
+                if (thisTimeBasedTrack->FOM < least_fom) least_fom = thisTimeBasedTrack->FOM;
+                if(!thisTimeBasedTrack->IsSmoothed) least_fom = 0; // don't use this event
+            }
+        }
+
+        if (least_fom >= 0.001) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_001", z, "Vertex z from 2 tracks with fom 0.001+; z (cm)",700,30,100);     
+
+        if (least_fom >= 0.01) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_01", z, "Vertex z from 2 tracks with fom 0.01+; z (cm)",700,30,100);     
+
+        if (least_fom >= 0.1) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_1", z, "Vertex z from 2 tracks with fom 0.1+; z (cm)",700,30,100);
+
+   }   // end if 2 tracks
+
+
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
       const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
@@ -180,7 +223,8 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
       // Cut very loosely on the track quality
       auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
       if(!thisTimeBasedTrack->IsSmoothed) continue;
-      if (thisTimeBasedTrack->FOM < 1E-10) continue;
+
+      if (thisTimeBasedTrack->FOM < MIN_FOM) continue;  // was 1e-10
       vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
       // Loop over the pulls to get the appropriate information for our ring
       for (unsigned int i = 0; i < pulls.size(); i++){
@@ -195,6 +239,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          //if (docaz < 140.0) continue; // Only focus on downstream end of chamber
          double predictedDistance = thisPull.d; // This is the DOCA of the track
          //double distance = residual + predictedDistance; // This is the distance from the T-D lookup
+
          const DCDCTrackHit* thisCDCHit = thisPull.cdc_hit;
 
          if (thisCDCHit == NULL) continue;
@@ -202,7 +247,21 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          int ring = thisCDCHit->wire->ring;
          int straw = thisCDCHit->wire->straw;
 
-         // Fill Histogram with the drift times neat t0 (+-50 ns)
+
+         Fill2DHistogram("CDC_TimeToDistance","","Residual vs logFOM",
+			 log10(thisTimeBasedTrack->FOM), thisPull.resi,
+               "Residual vs log10(FOM); log10(FOM); Residual(cm)",
+			 50,-10,0,100, -0.05,0.05);
+
+
+         Fill2DHistogram("CDC_TimeToDistance","","Residual vs FOM",
+			 thisTimeBasedTrack->FOM, thisPull.resi,
+               "Residual vs FOM; FOM; Residual(cm)",
+			 50,0,1,100, -0.05,0.05);
+
+
+
+         // Fill Histogram with the drift times near t0 (+-50 ns)
          Fill2DHistogram("CDC_TimeToDistance","","Early Drift Times",
                time,straw_offset[ring]+straw,
                "Per straw drift times; Drift time [ns];CCDB Index",
@@ -212,6 +271,15 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
                time,residual,
                "Residual Vs. Drift Time; Drift time [ns];Residual [cm]",
                250,0.,1000,100, -0.05,0.05);
+
+         if (thisTimeBasedTrack->FOM >= 0.9) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.9+", time,residual, "Residual Vs. Drift Time, FOM 0.9+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
+
+         if (thisTimeBasedTrack->FOM >= 0.6) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.6+", time,residual, "Residual Vs. Drift Time, FOM 0.6+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
+
+         if (thisTimeBasedTrack->FOM >= 0.1) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.1+", time,residual, "Residual Vs. Drift Time, FOM 0.1+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
+
+         if (thisTimeBasedTrack->FOM >= 0.01) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.01+", time,residual, "Residual Vs. Drift Time, FOM 0.01+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
+
 
          if (max_sag[ring - 1][straw - 1] < 0.02) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, max sag < 0.2mm",
                time,residual,
@@ -224,7 +292,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
 
          // Now just make a bunch of histograms to display all of the information
          //Time to distance relation in bins
-         // Calcuate delta
+         // Calculate delta
          double dz = docaz - 92.0;
          // We need the BField to make a cut for the field on data
          DVector3 udir = thisCDCHit->wire->udir;
@@ -245,6 +313,19 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
                time, delta, predictedDistance,
                "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
                500, 0, prof_td_max, 200, -0.3, 0.3);
+
+
+         if (thisTimeBasedTrack->FOM >= 0.01) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.01+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.01+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
+
+         if (thisTimeBasedTrack->FOM >= 0.1) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.1+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.1+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
+
+         if (thisTimeBasedTrack->FOM >= 0.6) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.6+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.6+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
+
+         if (thisTimeBasedTrack->FOM >= 0.9) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.9+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
+
+
+
+
          // To investigate some features, also do this in bins of Max sag
          if (max_sag[ring - 1][straw - 1] < 0.05){
             Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.05",
@@ -276,6 +357,15 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
                   "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
                   500, 0, prof_td_max, 200, -0.3, 0.3);
          }
+
+         // histo for hits in 1.8T region
+         if (Bz > 1/75 && Bz < 1.85) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, Bz 1.8T",
+               time, delta, predictedDistance,
+               "Predicted Drift Distance Vs. #delta Vs. t_{drift}, 1.8T; t_{drift} [ns]; #delta [cm]",
+               500, 0, prof_td_max, 200, -0.3, 0.3);
+
+
+
       }   
    }
    return NOERROR;
