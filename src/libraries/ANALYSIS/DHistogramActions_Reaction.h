@@ -86,9 +86,10 @@ class DHistogramAction_PID : public DAnalysisAction
 		dNum2DFOMBins(200), dMinP(0.0), dMaxP(10.0), dMaxBCALP(3.0), dMindEdX(0.0), dMaxdEdX(25.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinBCALTheta(10.0), 
 		dMaxBCALTheta(140.0), dMinFCALTheta(0.0), dMaxFCALTheta(12.0), dMinCCALTheta(0.0), dMaxCCALTheta(2.0), dMinTheta(0.0), dMaxTheta(140.0), dMinEOverP(0.0), dMaxEOverP(4.0), dMinDeltaBeta(-1.0), 
 		dMaxDeltaBeta(1.0), dMinDeltadEdx(-30.0), dMaxDeltadEdx(30.0), dMinDeltaT(-10.0), dMaxDeltaT(10.0), dMinPull(-10.0), dMaxPull(10.0),
-	        dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
+	    dDIRCNumPhotonsBins(100), dDIRCThetaCBins(100), dDIRCLikelihoodBins(100),
 		dDIRCMinNumPhotons(0), dDIRCMaxNumPhotons(100),
-                dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000)
+        dDIRCMinThetaC(0.6), dDIRCMaxThetaC(1.0), dDIRCMinLikelihood(0), dDIRCMaxLikelihood(1000),
+        dNumFlightDistanceBins(200), dNumFlightSignificanceBins(200), dMaxFlightDistance(20.), dMaxFlightSignificance(40.)
 		{
 			dThrownPIDs.push_back(Gamma);  dThrownPIDs.push_back(Neutron);
 			dThrownPIDs.push_back(PiPlus);  dThrownPIDs.push_back(KPlus);  dThrownPIDs.push_back(Proton);
@@ -116,6 +117,9 @@ class DHistogramAction_PID : public DAnalysisAction
 		unsigned int dDIRCNumPhotonsBins, dDIRCThetaCBins, dDIRCLikelihoodBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons;
                 double dDIRCMinThetaC, dDIRCMaxThetaC;
                 double dDIRCMinLikelihood, dDIRCMaxLikelihood;
+                
+        unsigned int dNumFlightDistanceBins, dNumFlightSignificanceBins;
+        double dMaxFlightDistance, dMaxFlightSignificance;
 
 		deque<Particle_t> dThrownPIDs;
 
@@ -124,6 +128,7 @@ class DHistogramAction_PID : public DAnalysisAction
 
 		void Fill_ChargedHists(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const DEventRFBunch* locEventRFBunch);
 		void Fill_NeutralHists(const DNeutralParticleHypothesis* locNeutralParticleHypothesis, const DMCThrownMatching* locMCThrownMatching, const DEventRFBunch* locEventRFBunch);
+		void Fill_DecayingHists(const DKinematicData *locInitiaParticle, std::shared_ptr<const DKinFitParticle> locDecayingParticle, const DReactionStepVertexInfo *locStepVertexInfo);
 
 		DetectorSystem_t SYS_CDC_AMP;
 
@@ -153,6 +158,14 @@ class DHistogramAction_PID : public DAnalysisAction
 		map<Particle_t, TH2I*> dHistMap_PVsTheta_NegativeBeta;
 
 		map<pair<Particle_t, Particle_t>, TH1I*> dHistMap_PIDFOMForTruePID;
+
+		map<Particle_t, TH1I*> dHistMap_FlightDistance; 
+		map<Particle_t, TH1I*> dHistMap_FlightSignificance; 
+
+		map<Particle_t, TH2I*> dHistMap_FlightDistanceVsP; 
+		map<Particle_t, TH2I*> dHistMap_FlightDistanceVsTheta; 
+		map<Particle_t, TH2I*> dHistMap_FlightSignificanceVsP; 
+		map<Particle_t, TH2I*> dHistMap_FlightSignificanceVsTheta; 
 
 		map<Particle_t, TH1I*> dHistMap_NumPhotons_DIRC;
                 map<Particle_t, TH2I*> dHistMap_ThetaCVsP_DIRC;
