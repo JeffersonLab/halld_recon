@@ -51,8 +51,8 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   WRITE_EVIO = 1;
   WRITE_HDDM = 0;
 
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO, "Save skim output as reduced EVIO files (default=1)" );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM, "Save skim output as HDDM (default=0)" );
 
 
 
@@ -60,22 +60,22 @@ JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
   //MAX_MASS   = 0.30; // GeV - old default
   MAX_MASS   = 1.0; // GeV
   MIN_E      = 0.5; // GeV (photon energy cut)
-  MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
+  //MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
   MAX_DT     =   10; // ns  (cluster time diff. cut)
-  MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
-  MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
+  //MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
+  //MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
 
   WRITE_ROOT = 0;
   WRITE_EVIO = 1;
 
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_MASS", MIN_MASS );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_MASS", MAX_MASS );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_E", MIN_E );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_R", MIN_R );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_DT", MAX_DT );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_MASS", MIN_MASS, "Minimum two-gamma invariant mass to save (default=0.0 GeV)" );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_MASS", MAX_MASS, "Maximum two-gamma invariant mass to save (default=1.0 GeV)" );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_E", MIN_E, "Minimum photon energy to consider (default = 0.5 GeV)" );
+  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_R", MIN_R );
+  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_DT", MAX_DT, "Minimum Delta T cut between two photons (default = 10 ns)" );
+  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
+  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
+  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
   
 }
 
