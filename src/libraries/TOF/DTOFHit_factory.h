@@ -48,15 +48,18 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   // Timing Cut Values
   double TimeCenterCut;
   double TimeWidthCut;
+  double hi_time_cut;
+  double lo_time_cut;
 
   // ADC to Energy conversion for individual PMT channels
   vector<double> adc2E;
 
   // PARAMETERS:
   double DELTA_T_ADC_TDC_MAX;
-  int USE_AMP_4WALKCORR;
   int USE_NEW_4WALKCORR;
+  int USE_AMP_4WALKCORR;
   int USE_NEWAMP_4WALKCORR;
+  int USE_NEW_WALK_NEW;
 
   tof_digi_constants_t adc_pedestals;
   tof_digi_constants_t adc_gains;
@@ -67,6 +70,7 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   vector<vector<double> >timewalk_parameters_AMP;
   vector<vector<double> >timewalk_parameters_NEW;
   vector<vector<double> >timewalk_parameters_NEWAMP;
+  vector<vector<double> >timewalk_parameters_5PAR;
 
   
   DTOFHit* FindMatch(int plane, int bar, int end, double T);
@@ -99,7 +103,7 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   double CalcWalkCorrAmplitude(DTOFHit* hit);
   double CalcWalkCorrNEW(DTOFHit* hit);
   double CalcWalkCorrNEWAMP(DTOFHit* hit);
-
+  double CalcWalkCorrNEW5PAR(DTOFHit* hit);
 
   bool CHECK_FADC_ERRORS;
 };

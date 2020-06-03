@@ -18,6 +18,7 @@ jerror_t DNeutralShower_factory_PreSelect::init(void)
 
 	dMinFCALE = 0.1;
 	dMinBCALE = 0.1;
+	dMinCCALE = 0.1;
 	dMinBCALNcell = 2;
 	dMaxFCALR = 105.5;
 	dMaxBCALZ = 393.0;
@@ -34,6 +35,7 @@ jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, 
 {
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_E", dMinFCALE);
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_E", dMinBCALE);
+	gPARMS->SetDefaultParameter("PRESELECT:MIN_CCAL_E", dMinCCALE);
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_NCELL", dMinBCALNcell);
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_R", dMaxFCALR);
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_Z", dMaxBCALZ);
@@ -113,7 +115,7 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 			}
 		}
 		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
-		{
+		  {
 			if(locNeutralShowers[loc_i]->dEnergy < dMinBCALE)
 				continue;
 			// Fiducial cut: reject showers too close to the downstream face of the BCAL 
@@ -124,7 +126,20 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 			locNeutralShowers[loc_i]->GetSingleT(locBCALShower);
 			if(locBCALShower->N_cell < dMinBCALNcell)
 				continue;
-		}
+		  }
+		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_CCAL)
+		  {
+			if(locNeutralShowers[loc_i]->dEnergy < dMinCCALE)
+				continue;
+			// Fiducial cut: reject showers too close to the downstream face of the BCAL 
+			//if(locNeutralShowers[loc_i]->dSpacetimeVertex.Z() > dMaxBCALZ)
+			//	continue;
+
+			//const DCCALShower* locCCALShower = NULL;
+			//locNeutralShowers[loc_i]->GetSingleT(locCCALShower);
+			//if(locCCALShower->N_cell < dMinCCALNcell)
+			//	continue;
+		  }
 
 		_data.push_back(const_cast<DNeutralShower*>(locNeutralShowers[loc_i]));
 	}

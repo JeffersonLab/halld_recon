@@ -27,6 +27,7 @@ static TH1I *hRaw_NHits;
 static TH1I *hHit_NHits;
 static TH1I *hHit_Occupancy;
 static TH1F *hHit_Phi;
+static TH2F *hHit_PhiSector;
 static TH1I *hHit_Peak;
 static TH2I *hHit_PeakVsSector;
 static TH1I *hHit_Integral;
@@ -58,6 +59,7 @@ static TH1I *hDigiHit_Time;
 static TH2I *hDigiHit_TimeVsSector;
 static TH2I *hDigiHit_TimeVsPeak;
 static TH2I *hDigiHit_TimeVsIntegral;
+
 //----------------------------------------------------------------------------------
 
 
@@ -100,6 +102,7 @@ jerror_t JEventProcessor_TPOL_online::init(void) {
     hHit_NHits = new TH1I("Hit_NHits","TPOL hit multiplicity;hits;events",NmultBins,0.5,0.5+NmultBins);
     hHit_Occupancy = new TH1I("Hit_Occupancy","TPOL occupancy;sector;hits / sector",Nsectors,0.5,0.5+Nsectors);
     hHit_Phi = new TH1F("Hit_Phi","TPOL azimuthal angle;triplet azimuthal angle [degrees];hits / sector",Nsectors,0.0,360.0);
+    hHit_PhiSector = new TH2F("Hit_PhiSector","TPOL azimuthal angle vs. sector;sector;triplet azimuthal angle [degrees];",Nsectors,0.5,0.5+Nsectors,Nsectors,0.0,360.0);
     hHit_Peak = new TH1I("Hit_Peak","TPOL fADC pulse peak;pulse peak;hits",410,0.0,4100.0);
     hHit_PeakVsSector = new TH2I("Hit_PeakVsSector","TPOL fADC pulse peak vs. sector;sector;pulse peak",Nsectors,0.5,0.5+Nsectors,410,0.0,4100.0);
     hHit_Integral = new TH1I("Hit_Integral","TPOL fADC pulse integral;pulse integral;hits",1000,0.0,30000.0);
@@ -198,7 +201,7 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
     for (const auto& wrd : windowrawdata) {
         if (wrd->rocid == 84
             &&
-            (wrd->slot == 13 || wrd->slot == 14)) {
+            (wrd->slot == 13 || wrd->slot == 14 || wrd->slot == 15 || wrd->slot == 16)) {
                 NHits++;
         }
     }
@@ -240,6 +243,7 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
     for (const auto& hit : hits) {
         hHit_Occupancy->Fill(hit->sector);
         hHit_Phi->Fill(hit->phi);
+	hHit_PhiSector->Fill(hit->sector,hit->phi);
         hHit_Integral->Fill(hit->integral);
         hHit_IntegralVsSector->Fill(hit->sector,hit->integral);
         hHit_Peak->Fill(hit->pulse_peak);
@@ -256,7 +260,6 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
     return NOERROR;
 }
 //----------------------------------------------------------------------------------
-
 
 jerror_t JEventProcessor_TPOL_online::erun(void) {
     // This is called whenever the run number changes, before it is

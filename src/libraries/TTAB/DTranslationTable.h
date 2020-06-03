@@ -493,6 +493,7 @@ class DTranslationTable:public jana::JObject{
 		DRFDigiTime*        MakeRFDigiTime(        const RFIndex_t &idx,         const Df250PulseData *pd) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250PulseData *pd) const;
 		DTACDigiHit* 		MakeTACDigiHit( 	   const TACIndex_t &idx, 		 const Df250PulseData *pd) const;
+		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250WindowRawData *window) const;
 
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;

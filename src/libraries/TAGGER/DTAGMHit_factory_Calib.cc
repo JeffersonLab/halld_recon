@@ -112,6 +112,27 @@ jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     {
         return NOERROR;
     }
+
+    // The meaning of the integral_cuts table is as follows.
+    // For each column col, if
+    //   *) int_cuts[col] > 0 then apply an offline threshold of
+    //                        int_cuts[col] * CUT_FACTOR to the fadc
+    //                        pulse integral value, thits that fail
+    //                        are never added to the list of TAGMHits.
+    //   *) int_cuts[col] < 0 then require each TAGM hit to consist
+    //                        of a fadc pulse with a tdc in coincidence,
+    //                        otherwise mark hits as has_fADC=false
+    //                        which leaves them in the list, but no
+    //                        DBeamPhoton is made from them;
+    //   *) int_cuts[col] = 0 then no offline requirement is applied,
+    //                        all raw fADC hits show up with has_fADC
+    //                        set to True, regardless of pulse height
+    //                        or presence of a tdc in coincidence.
+    // The individual int_cuts[col] values are multiplied by a
+    // global commandline parameter CUT_FACTOR (default 1) before
+    // the above logic is applied, which makes it possible to suspend
+    // or reverse the logic of the above cuts at reconstruction time.
+
     return UNRECOVERABLE_ERROR;
 }
 
@@ -197,7 +218,16 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         hit->time_fadc = T * fadc_t_scale - fadc_time_offsets[row][column] + t_base;
         hit->t=hit->time_fadc;
         hit->has_TDC=false;
-        hit->has_fADC=true;
+        hit->time_tdc = 0;
+
+        // Interpret a negative value on the integral cut to require
+        // an associated tdc hit in place of an the pulse integral cut.
+        // Preemptively set it to false here, and reverse it later
+        // if and when an associated tdc is found.
+        if (CUT_FACTOR*int_cuts[row][column] < 0)
+           hit->has_fADC=false;
+        else
+           hit->has_fADC=true;
 
         hit->AddAssociatedObject(digihit);
         _data.push_back(hit);
@@ -221,10 +251,11 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         DTAGMHit *hit = nullptr;
         for (unsigned int j=0; j < _data.size(); ++j) {
             if (_data[j]->row == row && _data[j]->column == column &&
-            fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
-          {
-            hit = _data[j];
-          }
+                _data[j]->time_fadc != 0 && _data[j]->integral != 0 &&
+                fabs(T - _data[j]->time_fadc) < DELTA_T_ADC_TDC_MAX)
+            {
+                hit = _data[j];
+            }
         }
         if (hit == nullptr) {
             hit = new DTAGMHit;
@@ -240,6 +271,12 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
             hit->has_fADC=false;
             _data.push_back(hit);
         }
+        // Interpret a negative value on the integral cut to require
+        // an associated tdc hit in place of an the pulse integral cut.
+        else if (CUT_FACTOR*int_cuts[row][column] < 0) {
+           hit->has_fADC = (T != 0);
+        }
+
         hit->time_tdc=T;
         hit->has_TDC=true;
 

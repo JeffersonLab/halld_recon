@@ -5,6 +5,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <memory>
 using namespace std;
 
 #include "TRD/DGEMHit_factory.h"
@@ -91,7 +92,9 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     uint nAPV = srswindow->apv_id + 1;
 
     // vector of each time slice for given APV
-    vector<double> pedestalAPV[nAPV]; 
+    //vector<double> pedestalAPV[nAPV]; 
+	std::shared_ptr< vector<double> > sptr_pedestalAPV( new vector<double>[nAPV] );
+	vector<double>* pedestalAPV = sptr_pedestalAPV.get();
     for(uint i=0; i<nAPV; i++) pedestalAPV[i].resize(nSamples);
     
     for (const auto& window : windowrawdata) {

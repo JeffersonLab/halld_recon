@@ -1,620 +1,407 @@
 // $Id$
 //
 //    File: JEventProcessor_MilleFieldOn.cc
-// Created: Tue Jan 17 19:32:32 Local time zone must be set--see zic manual page 2017
+// Created: Tue Jan 17 19:32:32
 // Creator: mstaib (on Linux egbert 2.6.32-642.6.2.el6.x86_64 x86_64)
 //
 
 #include "JEventProcessor_MilleFieldOn.h"
-#include "HDGEOMETRY/DMagneticFieldMapNoField.h"
-#include "PID/DChargedTrack.h"
-#include "TRACKING/DTrackTimeBased.h"
 #include "CDC/DCDCTrackHit.h"
 #include "CDC/DCDCWire.h"
+#include "HDGEOMETRY/DMagneticFieldMapNoField.h"
+#include "PID/DChargedTrack.h"
 #include "TDirectory.h"
+#include "TRACKING/DTrackTimeBased.h"
 using namespace jana;
-
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
-extern "C"{
-void InitPlugin(JApplication *app){
-   InitJANAPlugin(app);
-   app->AddProcessor(new JEventProcessor_MilleFieldOn());
+extern "C" {
+void InitPlugin(JApplication *app) {
+  InitJANAPlugin(app);
+  app->AddProcessor(new JEventProcessor_MilleFieldOn());
 }
-} // "C"
+}  // "C"
 
+JEventProcessor_MilleFieldOn::JEventProcessor_MilleFieldOn() {}
 
-//------------------
-// JEventProcessor_MilleFieldOn (Constructor)
-//------------------
-JEventProcessor_MilleFieldOn::JEventProcessor_MilleFieldOn()
-{
+JEventProcessor_MilleFieldOn::~JEventProcessor_MilleFieldOn() {}
 
-}
+jerror_t JEventProcessor_MilleFieldOn::init(void) {
+  // This is called once at program startup.
+  int version = -1;
+  gPARMS->SetDefaultParameter("MILLE:VERSION", version);
+  if (version < 0) {
+    milleWriter = new Mille("fieldon_mille_out.mil");
+  } else {
+    milleWriter = new Mille(Form("mil/fieldon_mille_out_v%02d.mil", version));
+  }
 
-//------------------
-// ~JEventProcessor_MilleFieldOn (Destructor)
-//------------------
-JEventProcessor_MilleFieldOn::~JEventProcessor_MilleFieldOn()
-{
-
-}
-
-//------------------
-// init
-//------------------
-jerror_t JEventProcessor_MilleFieldOn::init(void)
-{
-   // This is called once at program startup.
-   milleWriter = new Mille("fieldon_mille_out.mil");
-
-   gDirectory->mkdir("AlignmentConstants");
-   gDirectory->cd("AlignmentConstants");
-   // We need the constants used for this iteration
-   // Use a TProfile to avoid problems adding together multiple root files...
-   HistCurrentConstantsCDC = new TProfile("CDCAlignmentConstants", "Constants Used for CDC Alignment (In MILLEPEDE Order)", 20000 ,0.5, 20000.5);
-   HistCurrentConstantsFDC = new TProfile("FDCAlignmentConstants", "Constants Used for FDC Alignment (In MILLEPEDE Order)", 26000 ,0.5, 26000.5);
-
-   gDirectory->cd("..");
-
-   return NOERROR;
+  return NOERROR;
 }
 
-//------------------
-// brun
-//------------------
-jerror_t JEventProcessor_MilleFieldOn::brun(JEventLoop *eventLoop, int32_t runnumber)
-{
-   // Get the current set of constants and sve them in the histogram
-   // This is called whenever the run number changes
-   // Check for magnetic field
-   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+jerror_t JEventProcessor_MilleFieldOn::brun(JEventLoop *eventLoop,
+                                            int32_t runnumber) {
+  // This is called whenever the run number changes
+  // Check for magnetic field
+  DApplication *dapp =
+      dynamic_cast<DApplication *>(eventLoop->GetJApplication());
+  bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(
+                             dapp->GetBfield(runnumber)) != nullptr);
 
-   // This plugin is designed for field off data. If this is used for field on data, Abort...
-   if (dIsNoFieldFlag){
-      jerr << " ********No Field******** Plugin MilleFieldOn is for use with magnetic field!!! Aborting " << endl;
-      japp->Quit();
-   }
+  // This plugin is designed for field on data. If this is used for field off
+  // data, Abort...
+  if (dIsNoFieldFlag) {
+    jerr << " ********No Field******** Plugin MilleFieldOn is for use with "
+            "magnetic field!!! Aborting "
+         << endl;
+    japp->Quit();
+  }
 
-   // Store the current values of the alignment constants
-   JCalibration * jcalib = eventLoop->GetJCalibration();
-   vector<map<string,double> >vals;
-   if (jcalib->Get("CDC/global_alignment",vals)==false){
-      map<string,double> &row = vals[0];
-      // Get the offsets from the calibration database
-      HistCurrentConstantsCDC->Fill(1,row["dX"]);
-      HistCurrentConstantsCDC->Fill(2,row["dY"]);
-      HistCurrentConstantsCDC->Fill(3,row["dZ"]);
-      HistCurrentConstantsCDC->Fill(4,row["dPhiX"]);
-      HistCurrentConstantsCDC->Fill(5,row["dPhiY"]);
-      HistCurrentConstantsCDC->Fill(6,row["dPhiZ"]);
-   }
-
-   if (jcalib->Get("CDC/wire_alignment",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         HistCurrentConstantsCDC->Fill(1000+(i*4+1),row["dxu"]);
-         HistCurrentConstantsCDC->Fill(1000+(i*4+2),row["dyu"]);
-         HistCurrentConstantsCDC->Fill(1000+(i*4+3),row["dxd"]);
-         HistCurrentConstantsCDC->Fill(1000+(i*4+4),row["dyd"]);
-      }
-   }
-
-   if (jcalib->Get("CDC/timing_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         HistCurrentConstantsCDC->Fill(16000+(i+1),row["t0"]);
-      }
-   }
-
-   if (jcalib->Get("FDC/cathode_alignment",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         HistCurrentConstantsFDC->Fill((i+1)*1000+101,row["dU"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+102,row["dV"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+103,row["dPhiU"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+104,row["dPhiV"]);
-      }
-   }
-
-   if (jcalib->Get("FDC/cell_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         HistCurrentConstantsFDC->Fill((i+1)*1000+1,row["xshift"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+100,row["yshift"]);
-      }
-   }
-
-   if (jcalib->Get("FDC/cell_rotations",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         HistCurrentConstantsFDC->Fill((i+1)*1000+2,row["dPhiX"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+3,row["dPhiY"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000+4,row["dPhiZ"]);
-      }
-   }
-   if (jcalib->Get("FDC/wire_alignment",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         HistCurrentConstantsFDC->Fill((i+1)*1000+5,row["dZ"]);
-      }
-   }
-
-   if (jcalib->Get("FDC/package1/strip_gains_v2",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 216; j++)
-         {
-            sprintf(name,"strip%i", j);
-            if (i%2){ // V
-               HistCurrentConstantsFDC->Fill((i/2+1)*1000+600+j,row[name]);
-            }
-            else {// U
-               HistCurrentConstantsFDC->Fill((i/2+1)*1000+300+j,row[name]);
-            }
-         }
-      }
-   }
-
-   if (jcalib->Get("FDC/package2/strip_gains_v2",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 216; j++)
-         {
-            sprintf(name,"strip%i", j);
-            if (i%2){ // V
-               HistCurrentConstantsFDC->Fill((i/2+7)*1000+600+j,row[name]);
-            }
-            else // U
-               HistCurrentConstantsFDC->Fill((i/2+7)*1000+300+j,row[name]);
-         }
-      }
-   }
-
-   if (jcalib->Get("FDC/package3/strip_gains_v2",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 216; j++)
-         {
-            sprintf(name,"strip%i", j);
-            if (i%2){ // V
-               HistCurrentConstantsFDC->Fill((i/2+13)*1000+600+j,row[name]);
-            }
-            else // U
-               HistCurrentConstantsFDC->Fill((i/2+13)*1000+300+j,row[name]);
-         }
-      }
-   }
-
-   if (jcalib->Get("FDC/package4/strip_gains_v2",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 216; j++)
-         {
-            sprintf(name,"strip%i", j);
-            if (i%2){ // V
-               HistCurrentConstantsFDC->Fill((i/2+19)*1000+600+j,row[name]);
-            }
-            else // U
-               HistCurrentConstantsFDC->Fill((i/2+19)*1000+300+j,row[name]);
-         }
-      }
-   }
-
-   if (jcalib->Get("FDC/package1/wire_timing_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 96; j++)
-         {
-            sprintf(name,"wire%i", j);
-            HistCurrentConstantsFDC->Fill((i+1)*1000+900+j,row[name]);
-         }
-      }
-   }
-   if (jcalib->Get("FDC/package2/wire_timing_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 96; j++)
-         {
-            sprintf(name,"wire%i", j);
-            HistCurrentConstantsFDC->Fill((i+7)*1000+900+j,row[name]);
-         }
-      }
-   }
-   if (jcalib->Get("FDC/package3/wire_timing_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 96; j++)
-         {
-            sprintf(name,"wire%i", j);
-            HistCurrentConstantsFDC->Fill((i+13)*1000+900+j,row[name]);
-         }
-      }
-   }
-   if (jcalib->Get("FDC/package4/wire_timing_offsets",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         // Get the offsets from the calibration database
-         char name[32];
-         for (unsigned int j=1; j<= 96; j++)
-         {
-            sprintf(name,"wire%i", j);
-            HistCurrentConstantsFDC->Fill((i+19)*1000+900+j,row[name]);
-         }
-      }
-   }
-
-
-   if (jcalib->Get("FDC/strip_pitches_v2",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 200, row["U_SP_1"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 201, row["U_G_1"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 202, row["U_SP_2"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 203, row["U_G_2"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 204, row["U_SP_3"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 205, row["V_SP_1"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 206, row["V_G_1"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 207, row["V_SP_2"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 208, row["V_G_2"]);
-         HistCurrentConstantsFDC->Fill((i+1)*1000 + 209, row["V_SP_3"]);
-      }
-   }
-
-   return NOERROR;
+  return NOERROR;
 }
 
-//------------------
-// evnt
-//------------------
-jerror_t JEventProcessor_MilleFieldOn::evnt(JEventLoop *loop, uint64_t eventnumber)
-{
-   int straw_offset[29] = {0,0,42,84,138,192,258,324,404,484,577,670,776,882,1005,1128,1263,1398,1544,1690,1848,2006,2176,2346,2528,2710,2907,3104,3313};
-   // Loop over the tracks, get the tracking pulls, and fill some histograms. Easy peasy
-   vector<const DChargedTrack *> trackVector;
-   loop->Get(trackVector);
+jerror_t JEventProcessor_MilleFieldOn::evnt(JEventLoop *loop,
+                                            uint64_t eventnumber) {
+  int straw_offset[29] = {0,    0,    42,   84,   138,  192,  258,  324,
+                          404,  484,  577,  670,  776,  882,  1005, 1128,
+                          1263, 1398, 1544, 1690, 1848, 2006, 2176, 2346,
+                          2528, 2710, 2907, 3104, 3313};
+  vector<const DChargedTrack *> trackVector;
+  loop->Get(trackVector);
 
-   for (size_t i = 0; i < trackVector.size(); i++){
-      // TODO: Should be changed to use PID FOM when ready
-      const DChargedTrackHypothesis *bestHypothesis = trackVector[i]->Get_BestTrackingFOM();
+  for (size_t i = 0; i < trackVector.size(); ++i) {
+    // TODO: Should be changed to use PID FOM when ready
+    const DChargedTrackHypothesis *bestHypothesis =
+        trackVector[i]->Get_BestTrackingFOM();
 
-      if (bestHypothesis == NULL) continue;
+    if (bestHypothesis == nullptr) continue;
 
-      auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
-      double trackingFOM = TMath::Prob(thisTimeBasedTrack->chisq, thisTimeBasedTrack->Ndof);
+    auto track = bestHypothesis->Get_TrackTimeBased();
 
-      // Some quality cuts for the tracks we will use
-      // Keep this minimal for now and investigate later
-      float trackingFOMCut = 0.001;
-      if(trackingFOM < trackingFOMCut) continue;
+    // Some quality cuts for the tracks we will use
+    // Keep this minimal for now and investigate later
+    if (TMath::Prob(track->chisq, track->Ndof) < 0.001) continue;
 
-      // Get the pulls vector from the track
-      if (!thisTimeBasedTrack->IsSmoothed) continue;
+    // Get the pulls vector from the track
+    if (!track->IsSmoothed) continue;
 
-      vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
-      // Determine TrackType and check for nan
-      bool isCDCOnly=true; //bool isFDCOnly=true;
-      bool anyNaN=false;
-      int nCDC=0, nFDC=0;
-      int pullsNDF=0;
-      for (size_t iPull = 0; iPull < pulls.size(); iPull++){
-         const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
-         //const DFDCPseudo *fdc_hit   = pulls[iPull].fdc_hit;
-         float err = pulls[iPull].err;
-         float errc = pulls[iPull].errc;
-         if (cdc_hit == NULL) {pullsNDF+=2;nFDC++;isCDCOnly=false;}
-         else {pullsNDF++;nCDC++;}
-         if ( err != err || errc != errc) anyNaN=true;
-         //if (fdc_hit == NULL) isFDCOnly=false;
+    vector<DTrackFitter::pull_t> pulls = track->pulls;
+    // Determine TrackType and check for nan
+    bool isCDCOnly = true;
+    bool anyNaN = false;
+    int pullsNDF = -5;
+    for (size_t iPull = 0; iPull < pulls.size(); ++iPull) {
+      const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
+      float err = pulls[iPull].err;
+      float errc = pulls[iPull].errc;
+      if (cdc_hit == nullptr) {
+        pullsNDF += 2;
+        isCDCOnly = false;
+      } else {
+        pullsNDF++;
       }
-      pullsNDF-=5;
-      if (anyNaN)  continue;
-      if(pullsNDF != thisTimeBasedTrack->Ndof) continue;
-
-      int trackingNDFCut = 22;
-      if (isCDCOnly) trackingNDFCut = 10;
-
-      if( thisTimeBasedTrack->Ndof < trackingNDFCut) continue;
-      /*
-         double phi = bestHypothesis->momentum().Phi()*TMath::RadToDeg();
-         double theta = bestHypothesis->momentum().Theta()*TMath::RadToDeg();
-         double pmag = bestHypothesis->momentum().Mag();
-
-         if (pmag < 0.5) continue;
-         */
-
-      japp->RootWriteLock(); // Just use the root lock as a temporary
-      for (size_t iPull = 0; iPull < pulls.size(); iPull++){
-         // Here is all of the information currently stored in the pulls from the fit
-         // From TRACKING/DTrackFitter.h
-         float resi                 = pulls[iPull].resi;   // residual of measurement
-         float err                  = pulls[iPull].err;      // estimated error of measurement
-         //double s                    = pulls[iPull].s;
-         //double tdrift               = pulls[iPull].tdrift;      // drift time of this measurement
-         //double d                    = pulls[iPull].d;  // doca to wire
-         const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
-         const DFDCPseudo *fdc_hit   = pulls[iPull].fdc_hit;
-         //double docaphi              = pulls[iPull].docaphi; // phi of doca in CDC straws
-         //double z                    = pulls[iPull].z;// z position at doca
-         //double tcorr                = pulls[iPull].tcorr; // drift time with correction for B
-         float resic                = pulls[iPull].resic; // residual for FDC cathode measuremtns
-         float errc                 = pulls[iPull].errc;
-
-         vector<double> trackDerivatives = pulls[iPull].trackDerivatives;
-         if (trackDerivatives.size()==0) continue;
-
-         if (fdc_hit != NULL && fdc_hit->status == 6) {
-            // Add fdc hit
-            DFDCPseudo *thisHit = const_cast<DFDCPseudo *>(fdc_hit);
-
-            vector<double> pseudoAlignmentDerivatives = thisHit->GetFDCPseudoAlignmentDerivatives();
-            vector<double> fdcStripGainDerivatives    = thisHit->GetFDCStripGainDerivatives();
-            vector<double> fdcStripPitchDerivatives   = thisHit->GetFDCStripPitchDerivatives();
-
-            unsigned int layerOffset = 100000 + thisHit->wire->layer * 1000;
-
-            //Now we need to fill the Mille structure once for our wire measurment and once for our cathode measurement
-            const int NLC = 4; // Number of local parameters
-            const int NGL_W = 6; // Number of global parameters for wire alignment
-            float localDerW[NLC];
-            float globalDerW[NGL_W];
-            int labelW[NGL_W];
-
-            localDerW[0]=trackDerivatives[FDCTrackD::dDOCAW_dx]; localDerW[1]=trackDerivatives[FDCTrackD::dDOCAW_dy];
-            localDerW[2]=trackDerivatives[FDCTrackD::dDOCAW_dtx]; localDerW[3]=trackDerivatives[FDCTrackD::dDOCAW_dty];
-
-            globalDerW[0] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaX];    labelW[0] = layerOffset + 1;
-            globalDerW[1] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiX]; labelW[1] = layerOffset + 2;
-            globalDerW[2] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiY]; labelW[2] = layerOffset + 3;
-            globalDerW[3] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiZ]; labelW[3] = layerOffset + 4;
-            globalDerW[4] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaZ];    labelW[4] = layerOffset + 5;
-            globalDerW[5] = -trackDerivatives[FDCTrackD::dW_dt0];           labelW[5] = layerOffset + 900 + fdc_hit->wire->wire;
-
-            milleWriter->mille(NLC, localDerW, NGL_W, globalDerW, labelW, resi, err);
-
-            // Now for the cathode measurement, there are more alignment parameters.
-            const int NGL_C = 26; // Number of global parameters for wire alignment
-            float localDerC[NLC];
-            float globalDerC[NGL_C];
-            int labelC[NGL_C];
-
-            localDerC[0]=trackDerivatives[FDCTrackD::dDOCAC_dx]; localDerC[1]=trackDerivatives[FDCTrackD::dDOCAC_dy];
-            localDerC[2]=trackDerivatives[FDCTrackD::dDOCAC_dtx]; localDerC[3]=trackDerivatives[FDCTrackD::dDOCAC_dty];
-
-            globalDerC[0] = -1.0;                                                labelC[0] = layerOffset + 100;
-            globalDerC[1] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaX];         labelC[1] = layerOffset + 1;
-            globalDerC[2] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiX];      labelC[2] = layerOffset + 2;
-            globalDerC[3] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiY];      labelC[3] = layerOffset + 3;
-            globalDerC[4] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiZ];      labelC[4] = layerOffset + 4;
-            globalDerC[5] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaZ];         labelC[5] = layerOffset + 5;
-
-            // Cathode U and V offsets
-            globalDerC[6] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU];    labelC[6] = layerOffset + 101;
-            globalDerC[7] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV];    labelC[7] = layerOffset + 102;
-            globalDerC[8] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaPhiU]; labelC[8] = layerOffset + 103;
-            globalDerC[9] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaPhiV]; labelC[9] = layerOffset + 104;
-
-            // Strip Pitch Calibration
-            globalDerC[10] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripPitchDerivatives[0]; labelC[10] = layerOffset + 200;
-            globalDerC[11] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripPitchDerivatives[1]; labelC[11] = layerOffset + 201;
-            globalDerC[12] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripPitchDerivatives[2]; labelC[12] = layerOffset + 202;
-            globalDerC[13] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripPitchDerivatives[3]; labelC[13] = layerOffset + 203;
-            globalDerC[14] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripPitchDerivatives[4]; labelC[14] = layerOffset + 204;
-            globalDerC[15] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripPitchDerivatives[5]; labelC[15] = layerOffset + 205;
-            globalDerC[16] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripPitchDerivatives[6]; labelC[16] = layerOffset + 206;
-            globalDerC[17] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripPitchDerivatives[7]; labelC[17] = layerOffset + 207;
-            globalDerC[18] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripPitchDerivatives[8]; labelC[18] = layerOffset + 208;
-            globalDerC[19] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripPitchDerivatives[9]; labelC[19] = layerOffset + 209;
-
-            // Strip Gain Calibration
-            vector<const DFDCCathodeCluster *> cathodeClusters;
-            thisHit->Get(cathodeClusters);
-            unsigned int gainLabels[6]={};
-            for(unsigned int j = 0; j< cathodeClusters.size(); j++){
-               if(cathodeClusters[j]->plane == 3) { // U strips
-                  unsigned int k=0;
-                  for (; k < cathodeClusters[j]->members.size(); k++){
-                     if (thisHit->cluster_u.index(0) == cathodeClusters[j]->members[k]->element) break;
-                  }
-                  gainLabels[0] = cathodeClusters[j]->members[k]->type != 3   ? thisHit->cluster_u.index(0) : thisHit->cluster_u.index(0)+108;
-                  gainLabels[1] = cathodeClusters[j]->members[k+1]->type != 3 ? thisHit->cluster_u.index(1) : thisHit->cluster_u.index(1)+108;
-                  gainLabels[2] = cathodeClusters[j]->members[k+2]->type != 3 ? thisHit->cluster_u.index(2) : thisHit->cluster_u.index(2)+108;
-               }
-               else if (cathodeClusters[j]->plane == 1) { // V strips
-                  unsigned int k=0;
-                  for (; k < cathodeClusters[j]->members.size(); k++){
-                     if (thisHit->cluster_v.index(0) == cathodeClusters[j]->members[k]->element) break;
-                  }
-                  gainLabels[3] = cathodeClusters[j]->members[k]->type != 3   ? thisHit->cluster_v.index(0) : thisHit->cluster_v.index(0)+108;
-                  gainLabels[4] = cathodeClusters[j]->members[k+1]->type != 3 ? thisHit->cluster_v.index(1) : thisHit->cluster_v.index(1)+108;
-                  gainLabels[5] = cathodeClusters[j]->members[k+2]->type != 3 ? thisHit->cluster_v.index(2) : thisHit->cluster_v.index(2)+108;
-               }
-            }
-
-            globalDerC[20] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripGainDerivatives[0]; labelC[20] = layerOffset + 300 + gainLabels[0];
-            globalDerC[21] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripGainDerivatives[1]; labelC[21] = layerOffset + 300 + gainLabels[1];
-            globalDerC[22] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU]*fdcStripGainDerivatives[2]; labelC[22] = layerOffset + 300 + gainLabels[2];
-            globalDerC[23] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripGainDerivatives[3]; labelC[23] = layerOffset + 600 + gainLabels[3];
-            globalDerC[24] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripGainDerivatives[4]; labelC[24] = layerOffset + 600 + gainLabels[4];
-            globalDerC[25] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV]*fdcStripGainDerivatives[5]; labelC[25] = layerOffset + 600 + gainLabels[5];
-
-            milleWriter->mille(NLC, localDerC, NGL_C, globalDerC, labelC, resic, errc);
-         }
-
-         if (cdc_hit != NULL){
-
-            const DCDCWire *constWire = cdc_hit->wire;
-            DCDCWire *thisWire = const_cast<DCDCWire *>(constWire);
-
-            vector<double> wireDerivatives = thisWire->GetCDCWireDerivatives();
-
-            //Now we need to fill the Mille structure once for our wire measurment and once for our cathode measurement
-            const int NLC = 5; // Number of local parameters
-            const int NGL = 11; // Number of global parameters for wire alignment
-            float localDer[NLC];
-            float globalDer[NGL];
-            int label[NGL];
-
-            localDer[0]=trackDerivatives[CDCTrackD::dDOCAdS0]; localDer[1]=trackDerivatives[CDCTrackD::dDOCAdS1];
-            localDer[2]=trackDerivatives[CDCTrackD::dDOCAdS2]; localDer[3]=trackDerivatives[CDCTrackD::dDOCAdS3];
-            localDer[4]=trackDerivatives[CDCTrackD::dDOCAdS4];
-
-            if (isCDCOnly){ // Global shifts will not affect residuals
-               globalDer[0]=0.0; label[0]=1;
-               globalDer[1]=0.0; label[0]=2;
-               globalDer[2]=0.0; label[0]=3;
-               globalDer[3]=0.0; label[0]=4;
-               globalDer[4]=0.0; label[0]=5;
-               globalDer[5]=0.0; label[0]=6;
-            }
-            else{
-               globalDer[0]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaX]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaX]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaX];
-               label[0]=1;
-
-               globalDer[1]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaY]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaY]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaY];
-               label[1]=2;
-
-               globalDer[2]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaZ];
-               label[2]=3;
-
-               globalDer[3]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaPhiX]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaPhiX]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaPhiX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaPhiX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaPhiX]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaPhiX];
-               label[3]=4;
-
-               globalDer[4]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaPhiY]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaPhiY]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaPhiY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaPhiY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaPhiY]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaPhiY];
-               label[4]=5;
-
-               globalDer[5]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaPhiZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaPhiZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaPhiZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaPhiZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaPhiZ]
-                  +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaPhiZ];
-               label[5]=6;
-            }
-            globalDer[6]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaXu]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaXu]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaXu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaXu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaXu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaXu];
-            label[6]=1000 + (straw_offset[thisWire->ring]+(thisWire->straw-1))*4 + 1;
-
-            if (false){
-               jout << " Dumping deltaXu derivatives============ Wire " << thisWire->ring << " Straw " << thisWire->straw << endl;
-               jout << " Total = " << globalDer[6] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdOriginX] " << trackDerivatives[CDCTrackD::dDOCAdOriginX] << " wireDerivatives[CDCWireD::dOriginXddeltaXu]" << wireDerivatives[CDCWireD::dOriginXddeltaXu] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdOriginY] " << trackDerivatives[CDCTrackD::dDOCAdOriginY] << " wireDerivatives[CDCWireD::dOriginYddeltaXu]" << wireDerivatives[CDCWireD::dOriginYddeltaXu] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdOriginZ] " << trackDerivatives[CDCTrackD::dDOCAdOriginZ] << " wireDerivatives[CDCWireD::dOriginZddeltaXu]" << wireDerivatives[CDCWireD::dOriginZddeltaXu] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdDirX] " << trackDerivatives[CDCTrackD::dDOCAdDirX] << " wireDerivatives[CDCWireD::dDirXddeltaXu]" << wireDerivatives[CDCWireD::dDirXddeltaXu] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdDirY] " << trackDerivatives[CDCTrackD::dDOCAdDirY] << " wireDerivatives[CDCWireD::dDirYddeltaXu]" << wireDerivatives[CDCWireD::dDirYddeltaXu] << endl;
-               jout << "trackDerivatives[CDCTrackD::dDOCAdDirZ] " << trackDerivatives[CDCTrackD::dDOCAdDirZ] << " wireDerivatives[CDCWireD::dDirZddeltaXu]" << wireDerivatives[CDCWireD::dDirZddeltaXu] << endl;
-            }
-
-            globalDer[7]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaYu]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaYu]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaYu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaYu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaYu]
-               +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaYu];
-            label[7]=1000 + (straw_offset[thisWire->ring]+(thisWire->straw-1))*4 + 2;
-
-            globalDer[8]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaXd]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaXd]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaXd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaXd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaXd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaXd];
-            label[8]=1000 + (straw_offset[thisWire->ring]+(thisWire->straw-1))*4 + 3;
-
-            globalDer[9]=trackDerivatives[CDCTrackD::dDOCAdOriginX]*wireDerivatives[CDCWireD::dOriginXddeltaYd]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginY]*wireDerivatives[CDCWireD::dOriginYddeltaYd]
-               +trackDerivatives[CDCTrackD::dDOCAdOriginZ]*wireDerivatives[CDCWireD::dOriginZddeltaYd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirX]*wireDerivatives[CDCWireD::dDirXddeltaYd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirY]*wireDerivatives[CDCWireD::dDirYddeltaYd]
-               +trackDerivatives[CDCTrackD::dDOCAdDirZ]*wireDerivatives[CDCWireD::dDirZddeltaYd];
-            label[9]=1000 + (straw_offset[thisWire->ring]+(thisWire->straw-1))*4 + 4;
-
-            globalDer[10]=-trackDerivatives[CDCTrackD::dDdt0];
-            label[10]=16000+straw_offset[thisWire->ring]+thisWire->straw;
-
-            milleWriter->mille(NLC, localDer, NGL, globalDer, label, resi, err);
-         }
-
+      if (err != err || errc != errc) {
+        anyNaN = true;
+        break;
       }
-      milleWriter->end();
+    }
+    if (anyNaN) continue;
+    if (pullsNDF != track->Ndof) continue;
+    if (track->Ndof < (isCDCOnly ? 10 : 22)) continue;
 
-      japp->RootUnLock();
+    japp->RootWriteLock();  // Just use the root lock as a temporary
+    for (size_t iPull = 0; iPull < pulls.size(); ++iPull) {
+      float resi = pulls[iPull].resi;  // residual of measurement
+      float err = pulls[iPull].err;    // estimated error of measurement
+      const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
+      const DFDCPseudo *fdc_hit = pulls[iPull].fdc_hit;
+      float resic = pulls[iPull].resic;  // residual for FDC cathode measurement
+      float errc = pulls[iPull].errc;
 
-   }// End loop over tracks
+      vector<double> der = pulls[iPull].trackDerivatives;
 
-   return NOERROR;
+      if (fdc_hit != nullptr && fdc_hit->status == 6) {
+        // Add fdc hit
+        DFDCPseudo *hit = const_cast<DFDCPseudo *>(fdc_hit);
+
+        vector<double> pseudo_der = hit->GetFDCPseudoAlignmentDerivatives();
+        vector<double> strip_der = hit->GetFDCStripPitchDerivatives();
+
+        int label_layer_offset = 100000 + hit->wire->layer * 1000;
+
+        // For wire measurment.
+        const int NLC = 4;
+        const int NGL_W = 6;
+        float derLc_W[NLC];
+        float derGl_W[NGL_W];
+        int label_W[NGL_W];
+
+        derLc_W[0] = der[FDCTrackD::dDOCAW_dx];
+        derLc_W[1] = der[FDCTrackD::dDOCAW_dy];
+        derLc_W[2] = der[FDCTrackD::dDOCAW_dtx];
+        derLc_W[3] = der[FDCTrackD::dDOCAW_dty];
+
+        derGl_W[0] = der[FDCTrackD::dDOCAW_dDeltaX];
+        derGl_W[1] = der[FDCTrackD::dDOCAW_dDeltaPhiX];
+        derGl_W[2] = der[FDCTrackD::dDOCAW_dDeltaPhiY];
+        derGl_W[3] = der[FDCTrackD::dDOCAW_dDeltaPhiZ];
+        derGl_W[4] = der[FDCTrackD::dDOCAW_dDeltaZ];
+        derGl_W[5] = -der[FDCTrackD::dW_dt0];
+
+        label_W[0] = label_layer_offset + 1;
+        label_W[1] = label_layer_offset + 2;
+        label_W[2] = label_layer_offset + 3;
+        label_W[3] = label_layer_offset + 4;
+        label_W[4] = label_layer_offset + 5;
+        if (fdc_hit->wire->wire <= 48) {
+          label_W[5] = label_layer_offset + 997;
+        } else {
+          label_W[5] = label_layer_offset + 998;
+        }
+
+        milleWriter->mille(NLC, derLc_W, NGL_W, derGl_W, label_W, resi, err);
+
+        // For cathode measurement.
+        const int NGL_C = 20;
+        float derLc_C[NLC];
+        float derGl_C[NGL_C];
+        int label_C[NGL_C];
+
+        derLc_C[0] = der[FDCTrackD::dDOCAC_dx];
+        derLc_C[1] = der[FDCTrackD::dDOCAC_dy];
+        derLc_C[2] = der[FDCTrackD::dDOCAC_dtx];
+        derLc_C[3] = der[FDCTrackD::dDOCAC_dty];
+
+        derGl_C[0] = -1.0;
+        derGl_C[1] = der[FDCTrackD::dDOCAC_dDeltaX];
+        derGl_C[2] = der[FDCTrackD::dDOCAC_dDeltaPhiX];
+        derGl_C[3] = der[FDCTrackD::dDOCAC_dDeltaPhiY];
+        derGl_C[4] = der[FDCTrackD::dDOCAC_dDeltaPhiZ];
+        derGl_C[5] = der[FDCTrackD::dDOCAC_dDeltaZ];
+
+        label_C[0] = label_layer_offset + 100;
+        label_C[1] = label_layer_offset + 1;
+        label_C[2] = label_layer_offset + 2;
+        label_C[3] = label_layer_offset + 3;
+        label_C[4] = label_layer_offset + 4;
+        label_C[5] = label_layer_offset + 5;
+
+        // Cathode U and V offsets
+        derGl_C[6] = -pseudo_der[FDCPseudoD::dSddeltaU];
+        derGl_C[7] = -pseudo_der[FDCPseudoD::dSddeltaV];
+        derGl_C[8] = -pseudo_der[FDCPseudoD::dSddeltaPhiU];
+        derGl_C[9] = -pseudo_der[FDCPseudoD::dSddeltaPhiV];
+
+        label_C[6] = label_layer_offset + 101;
+        label_C[7] = label_layer_offset + 102;
+        label_C[8] = label_layer_offset + 103;
+        label_C[9] = label_layer_offset + 104;
+
+        // Strip Pitch Calibration
+        derGl_C[10] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[0];
+        derGl_C[11] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[1];
+        derGl_C[12] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[2];
+        derGl_C[13] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[3];
+        derGl_C[14] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[4];
+        derGl_C[15] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[5];
+        derGl_C[16] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[6];
+        derGl_C[17] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[7];
+        derGl_C[18] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[8];
+        derGl_C[19] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[9];
+
+        label_C[10] = label_layer_offset + 200;
+        label_C[11] = label_layer_offset + 201;
+        label_C[12] = label_layer_offset + 202;
+        label_C[13] = label_layer_offset + 203;
+        label_C[14] = label_layer_offset + 204;
+        label_C[15] = label_layer_offset + 205;
+        label_C[16] = label_layer_offset + 206;
+        label_C[17] = label_layer_offset + 207;
+        label_C[18] = label_layer_offset + 208;
+        label_C[19] = label_layer_offset + 209;
+
+        milleWriter->mille(NLC, derLc_C, NGL_C, derGl_C, label_C, resic, errc);
+      }
+
+      if (cdc_hit != nullptr) {
+        const DCDCWire *constWire = cdc_hit->wire;
+        DCDCWire *wire = const_cast<DCDCWire *>(constWire);
+
+        vector<double> wire_der = wire->GetCDCWireDerivatives();
+
+        const int NLC = 5;
+        const int NGL = 10;  // 11 if t0 is ON.
+        float derLc[NLC];
+        float derGl[NGL];
+        int label[NGL];
+
+        derLc[0] = der[CDCTrackD::dDOCAdS0];
+        derLc[1] = der[CDCTrackD::dDOCAdS1];
+        derLc[2] = der[CDCTrackD::dDOCAdS2];
+        derLc[3] = der[CDCTrackD::dDOCAdS3];
+        derLc[4] = der[CDCTrackD::dDOCAdS4];
+
+        if (isCDCOnly) {  // Global shifts will not affect residuals
+          derGl[0] = 0.0;
+          derGl[1] = 0.0;
+          derGl[2] = 0.0;
+          derGl[3] = 0.0;
+          derGl[4] = 0.0;
+          derGl[5] = 0.0;
+
+          label[0] = 1;
+          label[1] = 2;
+          label[2] = 3;
+          label[3] = 4;
+          label[4] = 5;
+          label[5] = 6;
+        } else {
+          derGl[0] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaX] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaX] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaX] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaX] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaX] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaX];
+
+          derGl[1] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaY] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaY] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaY] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaY] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaY] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaY];
+
+          derGl[2] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaZ] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaZ] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaZ] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaZ] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaZ] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaZ];
+
+          derGl[3] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaPhiX] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaPhiX] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaPhiX] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiX] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiX] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiX];
+
+          derGl[4] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaPhiY] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaPhiY] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaPhiY] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiY] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiY] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiY];
+
+          derGl[5] =
+              der[CDCTrackD::dDOCAdOriginX] *
+                  wire_der[CDCWireD::dOriginXddeltaPhiZ] +
+              der[CDCTrackD::dDOCAdOriginY] *
+                  wire_der[CDCWireD::dOriginYddeltaPhiZ] +
+              der[CDCTrackD::dDOCAdOriginZ] *
+                  wire_der[CDCWireD::dOriginZddeltaPhiZ] +
+              der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiZ] +
+              der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiZ] +
+              der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiZ];
+
+          label[0] = 1;
+          label[1] = 2;
+          label[2] = 3;
+          label[3] = 4;
+          label[4] = 5;
+          label[5] = 6;
+        }
+        derGl[6] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaXu] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaXu] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaXu] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaXu] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaXu] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaXu];
+
+        derGl[7] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaYu] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaYu] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaYu] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaYu] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaYu] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaYu];
+
+        derGl[8] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaXd] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaXd] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaXd] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaXd] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaXd] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaXd];
+
+        derGl[9] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaYd] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaYd] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaYd] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaYd] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaYd] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaYd];
+
+        label[6] = 1001 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[7] = 1002 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[8] = 1003 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[9] = 1004 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+
+        // derGl[10] = -der[CDCTrackD::dDdt0];
+        // label[10] = 16000 + straw_offset[wire->ring] + wire->straw;
+
+        milleWriter->mille(NLC, derLc, NGL, derGl, label, resi, err);
+      }
+    }
+    milleWriter->end();
+    japp->RootUnLock();
+  }
+
+  return NOERROR;
 }
 
-//------------------
-// erun
-//------------------
-jerror_t JEventProcessor_MilleFieldOn::erun(void)
-{
-   // This is called whenever the run number changes, before it is
-   // changed to give you a chance to clean up before processing
-   // events from the next run number.
-   return NOERROR;
+jerror_t JEventProcessor_MilleFieldOn::erun(void) {
+  // This is called whenever the run number changes, before it is
+  // changed to give you a chance to clean up before processing
+  // events from the next run number.
+  return NOERROR;
 }
 
-//------------------
-// fini
-//------------------
-jerror_t JEventProcessor_MilleFieldOn::fini(void)
-{
-   // Called before program exit after event processing is finished.
-   delete milleWriter;
-   return NOERROR;
+jerror_t JEventProcessor_MilleFieldOn::fini(void) {
+  // Called before program exit after event processing is finished.
+  delete milleWriter;
+  return NOERROR;
 }
-

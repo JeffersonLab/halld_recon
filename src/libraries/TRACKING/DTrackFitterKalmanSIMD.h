@@ -82,6 +82,12 @@ enum kalman_error_t{
   FIT_NOT_DONE,
 };
 
+enum find_doca_error_t{
+  DOCA_NO_BRENT,
+  DOCA_ENDPLATE,
+  USED_BRENT,
+  BRENT_FAILED,
+};
 
 typedef struct{
   DVector2 dir,origin;
@@ -187,10 +193,40 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddGEMHit(const DGEMPoint *gemhit);
 
   jerror_t KalmanLoop(void);
+  virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
+				       const DMatrix5x1 &Sstart,DMatrix5x5 &C,
+					DMatrix5x1 &S,
+				       double &chisq,unsigned int &numdof);
   virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,
 				       double &chisq,unsigned int &numdof);
-  virtual jerror_t SmoothForward(vector<pull_t>&mypulls);   
+  find_doca_error_t FindDoca(const DKalmanSIMDCDCHit_t *hit,
+			     const DKalmanForwardTrajectory_t &traj,
+			     double step1,double step2,
+			     DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C,
+			     double &dx,double &dy,double &dz,
+			     bool do_reverse=false);
+  void StepBack(double dedx,double newz,double z,
+		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C);
+  void FindSag(double dx,double dy, double zlocal,const DCDCWire *mywire,
+               double &delta,double &dphi) const;
+  void SwimToEndplate(double z,const DKalmanForwardTrajectory_t &traj,
+		      DMatrix5x1 &S);
+  void FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit_t *hit,
+				   const DMatrix5x1 &S,double &upred,
+				   double &vpred,double &doca,double &cosalpha,
+				   double &lorentz_factor,DMatrix5x2 &H_T);
+  void UpdateSandCMultiHit(const DKalmanForwardTrajectory_t &traj,
+			   double upred,double vpred,double doca,
+			   double cosalpha,double lorentz_factor,DMatrix2x2 &V,
+			   DMatrix2x1 &Mdiff,DMatrix2x5 &H,
+			   const DMatrix5x2 &H_T,DMatrix5x1 &S,DMatrix5x5 &C,
+			   double fdc_chi2cut,bool skip_plane,double &chisq,
+			   unsigned int &numdof,double fdc_anneal_factor=1.);
+
+  virtual jerror_t SmoothForward(vector<pull_t>&mypulls);
+  jerror_t ExtrapolateToInnerDetectors();  
+  jerror_t ExtrapolateToOuterDetectors(const DMatrix5x1 &S0);  
   virtual jerror_t ExtrapolateForwardToOtherDetectors(void);  
   jerror_t ExtrapolateCentralToOtherDetectors(void);
 
@@ -232,6 +268,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     good_hit,
     bad_hit,
     late_hit,
+    trd_hit,
+    gem_hit,
   };
   enum fit_region{
     kForward,
@@ -496,7 +534,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool USE_PASS1_TIME_MODE;
   int RING_TO_SKIP,PLANE_TO_SKIP;
   double PHOTON_ENERGY_CUTOFF;
-  bool USE_FDC_DRIFT_TIMES;
+  bool USE_FDC_DRIFT_TIMES,USE_TRD_DRIFT_TIMES;
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 

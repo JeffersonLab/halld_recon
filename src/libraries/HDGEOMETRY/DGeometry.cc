@@ -295,6 +295,47 @@ jerror_t DGeometry::FindMatKalman(const DVector3 &pos,const DVector3 &mom,
 return RESOURCE_UNAVAILABLE;
 }
 
+jerror_t DGeometry::FindMatKalman(const DVector3 &pos,const DVector3 &mom,
+				  double &KrhoZ_overA, 
+				  double &rhoZ_overA, 
+				  double &LnI,double &Z,
+				  unsigned int &last_index,
+				  double *s_to_boundary) const
+{
+//	ReadMaterialMaps();
+
+  //last_index=0;
+  for(unsigned int i=last_index; i<materialmaps.size(); i++){
+    jerror_t err = materialmaps[i]->FindMatKalman(pos,KrhoZ_overA,
+						  rhoZ_overA,LnI,Z);
+    if(err==NOERROR){
+      if(i==materialmaps.size()-1) last_index=0;
+      else last_index=i;
+      if(s_to_boundary==NULL)return NOERROR;	// User doesn't want distance to boundary
+
+      *s_to_boundary = 1.0E6;
+      // If we are in the main mother volume, search through all the maps for
+      // the nearest boundary
+      if(last_index==0){
+	for(unsigned int j=0; j<materialmaps.size();j++){
+	  double s = materialmaps[j]->EstimatedDistanceToBoundary(pos, mom);
+	  if(s<*s_to_boundary){
+	    *s_to_boundary = s;
+	  }
+	}
+      }
+      else{
+	// otherwise, we found the material map containing this point. 
+	double s = materialmaps[last_index]->EstimatedDistanceToBoundary(pos, mom);
+	if(s<*s_to_boundary)*s_to_boundary = s;
+      }
+      return NOERROR;
+    }
+  }
+       
+return RESOURCE_UNAVAILABLE;
+}
+
 //---------------------------------
 jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
 				  double &KrhoZ_overA, 
@@ -320,6 +361,33 @@ jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
        
   return RESOURCE_UNAVAILABLE;
 }
+
+//---------------------------------
+// Get material properties needed for dEdx
+jerror_t DGeometry::FindMatKalman(const DVector3 &pos,
+				  double &KrhoZ_overA, 
+				  double &rhoZ_overA, 
+				  double &LnI, double &Z,
+				  unsigned int &last_index) const
+{
+//	ReadMaterialMaps();
+
+  //last_index=0;
+  for(unsigned int i=last_index; i<materialmaps.size(); i++){
+    jerror_t err = materialmaps[i]->FindMatKalman(pos,KrhoZ_overA,
+						  rhoZ_overA,LnI,Z);
+    if(err==NOERROR){
+      if(i==materialmaps.size()-1) last_index=0;
+      else last_index=i;
+      return err;
+    }
+  }
+       
+  return RESOURCE_UNAVAILABLE;
+}
+
+
+
 
 //---------------------------------
 // FindMat
@@ -1729,6 +1797,40 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
       return true;
    }
 }
+
+
+bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
+  vector<double> ForwardEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z", ForwardEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ForwardEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ForwardEMcalpos[0],y=ForwardEMcalpos[1],z=ForwardEMcalpos[2];
+    _DBG_ << "FCAL position: (x,y,z)=(" << x <<"," << y << "," << z << ")"
+	  <<endl;
+    return true;
+  }
+}
+
+bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
+  vector<double> ComptonEMcalpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+  
+  if(!good){
+    _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+    x=0.,y=0.,z=0.;
+    return false;
+  }else{
+    x=ComptonEMcalpos[0],y=ComptonEMcalpos[1],z=ComptonEMcalpos[2]; 
+    _DBG_ << "CCAL position: (x,y,z)=(" << ComptonEMcalpos[0] <<","
+	  << ComptonEMcalpos[1]<<","<<ComptonEMcalpos[2]<< ")" << endl;
+    return true;
+  }
+}
+
 //---------------------------------
 // GetDIRCZ
 //---------------------------------

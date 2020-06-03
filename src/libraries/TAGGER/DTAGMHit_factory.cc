@@ -71,7 +71,7 @@ jerror_t DTAGMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	for(uint32_t i = 0; i < hits.size(); ++i)
 	{
-		const DTAGMHit *hit_i = hits[i];
+		DTAGMHit *hit_i = const_cast<DTAGMHit*>(hits[i]);
 
 		if (hit_i->row > 0 || !MERGE_HITS)
 		{
@@ -95,6 +95,7 @@ jerror_t DTAGMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 			if (abs(colDiff) == 1 && fabs(deltaT) <= DELTA_T_CLUSTER_MAX)
 			{
+				hit_i->AddAssociatedObject(hit_j);
 				locHitIndexUsedSoFar.insert(j);
 				break;
 			}

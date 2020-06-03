@@ -74,7 +74,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 	
 		double m_zTarget;
 		double m_CCALfront;
-		
+		double m_CCALdX,m_CCALdY;	
 		
 		
 		//-------------------  Nonlinearity & Timewalk Parameters -------------------//
@@ -93,8 +93,8 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		//-----------------   Shower Profile Data & Channel Status  -----------------//
 		
-		double acell[501][501] = { { {0.} } };
-		double  ad2c[501][501] = { { {0.} } };
+		double acell[501][501] = { {0.} };
+		double  ad2c[501][501] = { {0.} };
 		
 		int stat_ch[MROW][MCOL];	
 		
@@ -173,7 +173,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
 		
 		
 		
-		
+		int VERBOSE;
 };
 
 #endif // _DCCALShower_factory_

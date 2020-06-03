@@ -2877,7 +2877,9 @@ inline static Particle_t IDTrack(float locCharge, float locMass)
 {
         float locMassTolerance = 0.010;
         if (locCharge > 0.1) // Positive particles
-        {
+        { 
+	  if (fabs(locMass - ParticleMass(Triton)) < locMassTolerance) return Triton;
+                if (fabs(locMass - ParticleMass(Deuteron)) < locMassTolerance) return Deuteron;
                 if (fabs(locMass - ParticleMass(Proton)) < locMassTolerance) return Proton;
                 if (fabs(locMass - ParticleMass(PiPlus)) < locMassTolerance) return PiPlus;
                 if (fabs(locMass - ParticleMass(KPlus)) < locMassTolerance) return KPlus;

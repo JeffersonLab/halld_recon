@@ -12,6 +12,8 @@
 
 #include <DANA/DApplication.h>
 
+#include <DIRC/DDIRCGeometry.h>
+
 #include "TROOT.h"
 #include "TVector3.h"
 #include "TFile.h"
@@ -35,9 +37,9 @@ private:
 
 	pthread_mutex_t mutex;
 
-	vector<TVector3> lutNodeAngle[48][6912];
-	vector<Float_t> lutNodeTime[48][6912];
-	vector<Long64_t> lutNodePath[48][6912];
+	vector<TVector3> lutNodeAngle[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels];
+	vector<Float_t> lutNodeTime[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels];
+	vector<Long64_t> lutNodePath[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels];
 
 protected:
 	JCalibration *jcalib;

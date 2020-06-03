@@ -1,7 +1,38 @@
+//
+// Guidance: --------------------------------------------
+//
+// All plots should have a band aligned at zero, and it
+// should be the strongest band, though it can take 
+// a large amount of data for this to be clear.
+//
+// Note that the TAGH plots can be a little ratty, as
+// the timing calibration depends strongly on rate.
+// For the TAGM 2D plot, there are four apparent gaps in 
+// the distribution, they correspond to the columns which 
+// are individually read out, and can be ignored.  Sometimes
+// the main peak for a channel is in a different band than
+// the main band, this is corrected for offline.
+// 
+//
+// If you have concerns about the values in the table or
+// any of the plots looking significantly different than
+// the reference, please contact one of:
+//
+//  Run Coordinator:  (757) 383-5542
+//
+//  Sean Dobbs:       (703) 887-1776 (cell)
+//                    (850) 645-3812 (office)
+//
+// End Guidance: ----------------------------------------
+//
 // hnamepath: /HLDetectorTiming/TRACKING/TAGM - RFBunch Time
 // hnamepath: /HLDetectorTiming/TRACKING/TAGH - RFBunch Time
 // hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch Time
 // hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch 1D Time
+
+// e-mail: aaustreg@jlab.org
+// e-mail: sdobbs@jlab.org
+// e-mail: tbritton@jlab.org
 
 {
 	//Goto Path

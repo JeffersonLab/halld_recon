@@ -11,12 +11,10 @@
 #include <JANA/JEventProcessor.h>
 
 #include <DAQ/Df250WindowRawData.h>
-//#include <TTree.h>
-
-#include "PAIR_SPECTROMETER/DPSGeometry.h"
 #include "ANALYSIS/DTreeInterface.h"
-#include "DAQ/DBeamCurrent.h"
-#include "DAQ/DBeamCurrent_factory.h"
+#include <TPOL/DTPOLSectorDigiHit.h>
+#include <TPOL/DTPOLRingDigiHit.h>
+#include <TPOL/DTPOLHit.h>
 
 class JEventProcessor_TPOL_tree:public jana::JEventProcessor{
 public:
@@ -24,9 +22,13 @@ public:
     ~JEventProcessor_TPOL_tree();
     const char* className(void){return "JEventProcessor_TPOL_tree";}
 
-    int GetSector(int slot,int channel);
-    double GetPhi(int sector);
-    double GetPulseTime(const vector<uint16_t> waveform,double w_min,double w_max,double minpeakheight);
+    unsigned int count;
+    double GetPhi(unsigned int sector);
+    //bool DTPOLSectorHit_fadc_cmp(const DTPOLSectorDigiHit *a,const DTPOLSectorDigiHit *b);
+    //bool DTPOLRingHit_fadc_cmp(const DTPOLRingDigiHit *a,const DTPOLRingDigiHit *b);
+    
+
+    static const UInt_t ntag_max = 1000000;
 
 private:
     jerror_t init(void); ///< Called once at program start.
@@ -35,18 +37,9 @@ private:
     jerror_t erun(void); ///< Called everytime run number changes, provided brun has been called.
     jerror_t fini(void); ///< Called after last event of last event source has been processed.
 
-    clock_t t;
-
-    DBeamCurrent_factory *dBeamCurrentFactory;
-    //double dBeamBunchPeriod;
-
     DTreeInterface* dTreeInterface;
-    static thread_local DTreeFillData dTreeFillData;
-
-    int geomModuleColumn[8][2] = {{110, 145}, {90, 115}, {73, 93}, {56, 76}, {40, 60}, {24, 45}, {8, 28}, {0, 12}};
-
-    unsigned int count;
-
+    //static thread_local 
+    DTreeFillData dTreeFillData;
 };
 
 #endif // _JEventProcessor_TPOL_tree_

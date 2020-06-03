@@ -16,7 +16,7 @@ Additionally, making symlinks to the scripts will also make life easier.
 
 ln -s $HALLD_RECON_HOME/src/plugins/Calibration/CDC_TimeToDistance/FitScripts/run.py run.py
 
-ln -s $HALLD_RECON_HOME/src/plugins/Calibration/CDC_TimeToDistance/FitScripts/FitTimeToDistance FitTimeToDistance.C
+ln -s $HALLD_RECON_HOME/src/plugins/Calibration/CDC_TimeToDistance/FitScripts/FitTimeToDistance.C FitTimeToDistance.C
 
 ln -s $HALLD_RECON_HOME/src/plugins/Calibration/CDC_TimeToDistance/FitScripts/display.py display.py
 

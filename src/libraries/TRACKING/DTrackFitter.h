@@ -120,6 +120,7 @@ class DTrackFitter:public jana::JObject{
 		    double tcorr; // drift time with correction for B
 		    double resic; // residual for FDC cathode measuremtns
 		    double errc;
+		    int left_right;  // left-right info. of the wire plane (-1: left or +1: right)
           vector<double> trackDerivatives;
           inline void AddTrackDerivatives(vector<double> d){ trackDerivatives = d;}
              
@@ -144,7 +145,8 @@ class DTrackFitter:public jana::JObject{
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}
 		const vector<const DFDCPseudo*>&   GetFDCFitHits(void) const {return fdchits_used_in_fit;}
-		void ClearExtrapolations(void){
+		void ClearExtrapolations(void){	 
+		  extrapolations[SYS_NULL].clear();
 		  extrapolations[SYS_TOF].clear();
 		  extrapolations[SYS_BCAL].clear();
 		  extrapolations[SYS_FCAL].clear();

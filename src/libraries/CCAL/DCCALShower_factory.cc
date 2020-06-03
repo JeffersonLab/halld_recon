@@ -10,7 +10,7 @@
 
 
 static mutex CCAL_MUTEX;
-static bool CCAL_PROFILE_LOADED = false;
+//static bool CCAL_PROFILE_LOADED = false;
 
 
 //==========================================================
@@ -57,7 +57,9 @@ DCCALShower_factory::DCCALShower_factory()
 	gPARMS->SetDefaultParameter( "CCAL:CCAL_RADIATION_LENGTH", CCAL_RADIATION_LENGTH );
 	gPARMS->SetDefaultParameter( "CCAL:CCAL_CRITICAL_ENERGY", CCAL_CRITICAL_ENERGY );
 	gPARMS->SetDefaultParameter( "CCAL:LOG_POS_CONST", LOG_POS_CONST );
-	
+
+	VERBOSE = 0;              ///< >0 once off info ; >2 event by event ; >3 everything
+	gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
 }
 
 
@@ -77,10 +79,10 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	
 	if (geom) {
       	  geom->GetTargetZ(m_zTarget);
-      	  geom->GetCCALZ(m_CCALfront);
+      	  geom->GetCCALPosition(m_CCALdX,m_CCALdY,m_CCALfront);
     	}
     	else{
-      	  cerr << "No geometry accessbile." << endl;
+      	  jerr << "No geometry accessible." << endl;
       	  return RESOURCE_UNAVAILABLE;
     	}
 	
@@ -124,7 +126,7 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
 	
 	ifstream ccal_profile(ccal_profile_file.c_str());
 	for(int i=0; i<=500; i++) {
-		for(int j=0; j<=i; j++) {
+	     for(int j=0; j<=i; j++) {
 			int id1, id2;
 			double fcell_hyc, fd2c;
 			
@@ -315,7 +317,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  
 	  /*-------------     call to island     -------------*/
 	  	  
-	  vector< gamma_t > gammas; // Output of main_island (holds reconstructed photons)
+	  vector< gamma_t > gammas; gammas.clear();// Output of main_island (holds reconstructed photons)
 	  main_island( ia, id, gammas );
 	
 	
@@ -344,10 +346,10 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  shower->E        =   ccalClusters[k].E;
 	  shower->Esum     =   ccalClusters[k].Esum;
 	  
-	  shower->x        =   ccalClusters[k].x;
-	  shower->y        =   ccalClusters[k].y;
-	  shower->x1       =   ccalClusters[k].x1;
-	  shower->y1       =   ccalClusters[k].y1;
+	  shower->x        =   ccalClusters[k].x+m_CCALdX;
+	  shower->y        =   ccalClusters[k].y+m_CCALdY;
+	  shower->x1       =   ccalClusters[k].x1+m_CCALdX;
+	  shower->y1       =   ccalClusters[k].y1+m_CCALdY;
 	  shower->z        =   m_CCALfront;
 	  
 	  shower->chi2     =   ccalClusters[k].chi2;
@@ -364,7 +366,27 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  int showTypeVal     = (ccalClusters[k].type)/10;	  
 	  shower->ClusterType = static_cast<ClusterType_t>( showTypeVal/2 );
 	  shower->PeakType    = static_cast<PeakType_t>( showTypeVal%2 );
-	  	  
+	  //shower->ExyztCovariance(i, j)
+	  float xerr = 0.1016;// / sqrt(ccalClusters[k].E) + 0.2219; // HARD CODED VALUE!!!!   
+	  float yerr = 0.1016;// / sqrt(ccalClusters[k].E) + 0.2219; // HARD CODED VALUE!!!!   
+	  float zerr = 2.5; // HARD CODED VALUE!!!!   
+	  float terr = 0.2; // HARD CODED VALUE!!!!   
+	  float eerr = 0.5;//pow(ccalClusters[k].E, 2) * (0.01586 / ccalClusters[k].E + 0.0002342 / pow(ccalClusters[k].E, 2) + 1.696e-6); // HARD CODED VALUE!!!!   
+	  //copy xyz errors into covariance matrix
+	  shower->ExyztCovariance.ResizeTo(5,5);
+	  for (int col = 0; col < 5; col ++) {
+	    for (int row = 0; row < 5; row ++) {
+	      if (col != row) shower->ExyztCovariance[col][row] = 0;
+	    }
+	  }
+	  shower->ExyztCovariance[0][0] = pow(xerr, 2);
+	  shower->ExyztCovariance[1][1] = pow(yerr, 2);
+	  shower->ExyztCovariance[2][2] = pow(zerr, 2);
+	  shower->ExyztCovariance[3][3] = pow(terr, 2);
+	  shower->ExyztCovariance[4][4] = pow(eerr, 2);
+	  
+	  if (VERBOSE>2) {printf("(E,x,y,z,t)    "); shower->ExyztCovariance.Print(); }
+
 	  for( int icell = 0; icell < ccalClusters[k].nhits; icell++ ) {
 	    
 	    int hitID   = clusterStorage[k].id[icell];
@@ -2276,7 +2298,8 @@ double DCCALShower_factory::d2c( double dx, double dy )
 	i = int(ax);
 	j = int(ay);
 	
-	if( i < 500. && j < 500. ) {
+	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
+	//if( i < 500. && j < 500. ) {
 	
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
@@ -2303,11 +2326,11 @@ double DCCALShower_factory::cell_hyc( double dx, double dy )
 	i = static_cast<int>(ax);
 	j = static_cast<int>(ay);
 	
-	if( i < 500. && j < 500. ) {
+	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
 	
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
-	  
+	  //std::cout << "i " << i << " j " << j << " wx " << wx << " wy " << wy << std::endl;
 	  cell_hyc = acell[i][j]     * (1.-wx) * (1.-wy) + 
 	  	     acell[i+1][j]   *     wx  * (1.-wy) + 
 		     acell[i][j+1]   * (1.-wx) *     wy  +

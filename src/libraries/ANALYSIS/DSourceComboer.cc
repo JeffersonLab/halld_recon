@@ -1125,8 +1125,10 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 {
 	//check if it's actually a new event
 	auto locEventNumber = locEventLoop->GetJEvent().GetEventNumber();
-	if(locEventNumber == dEventNumber)
+	if(locEventNumber == dEventNumber) {
+        jout << "WARNING: Calling DSourceComboer::Reset_NewEvent() with repeated run number: " << locEventNumber << endl;
 		return; //nope
+    }
 	dEventNumber = locEventNumber;
 	if(dDebugLevel >= 5) //for the last event
 	{
@@ -1570,6 +1572,8 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 		auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
 		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
 		cout << endl << "Comboing neutrals, z-independent, #FCAL/BCAL showers: " << locNumFCALShowers << "/" << locNumDetectedShowers - locNumFCALShowers << endl;
+		//auto locNumCCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
+		//cout << endl << "Comboing neutrals, z-independent, #CCAL/BCAL showers: " << locNumCCALShowers << "/" << locNumDetectedShowers - locNumCCALShowers << endl;
 	}
 
 	if(dDebugLevel >= 5)

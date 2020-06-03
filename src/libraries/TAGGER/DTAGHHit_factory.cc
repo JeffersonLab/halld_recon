@@ -100,6 +100,7 @@ jerror_t DTAGHHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
             if (d > DELTA_ID_DOUBLES_MAX) break;
 
             if (IsDoubleHit(hit2->t-hit1->t)) {
+                hit1->AddAssociatedObject(hit2);
                 hit2->is_double = true;
                 hit1->is_double = true;
             }

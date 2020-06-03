@@ -47,10 +47,13 @@ class DVertex_factory : public jana::JFactory<DVertex>
 
 		int dKinFitDebugLevel;
 		bool dNoKinematicFitFlag;
+		bool dForceTargetCenter;
 		double dTargetZCenter;
 		double dTargetLength;
 		double dTargetRadius;
 		double dMinTrackingFOM;
+		double m_beamSpotX;
+		double m_beamSpotY;
 };
 
 #endif // _DVertex_factory_

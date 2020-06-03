@@ -30,6 +30,9 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 
 	DIRC_FILL_BAR_MAP = false;
 	gPARMS->SetDefaultParameter("DIRC:FILL_BAR_MAP",DIRC_FILL_BAR_MAP);
+
+	//DIRC_FILL_PIXEL_MAP = false;
+	//gPARMS->SetDefaultParameter("DIRC:FILL_PIXEL_MAP",DIRC_FILL_PIXEL_MAP);
 	
 	Run_Update(locEventLoop);
 
@@ -58,15 +61,21 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		hExtrapolatedBarHitXY_PreCut = GetOrCreate_Histogram<TH2I>(Form("hExtrapolatedBarHitXY_PreCut_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
 		hExtrapolatedBarHitXY = GetOrCreate_Histogram<TH2I>(Form("hExtrapolatedBarHitXY_%s",locParticleName.data()), "; Bar Hit X (cm); Bar Hit Y (cm)", 200, -100, 100, 200, -100, 100);
 
-		hDiff = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-20,20);
+		hDiff = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-10,10);
+		hDiffDirect = GetOrCreate_Histogram<TH1I>(Form("hDiffDirect_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-10,10);
+		hDiffReflected = GetOrCreate_Histogram<TH1I>(Form("hDiffReflected_%s",locParticleName.data()), Form("; %s t_{calc}-t_{measured} [ns]; entries [#]", locParticleROOTName.data()), 400,-10,10);
 		hNphC = GetOrCreate_Histogram<TH1I>(Form("hNphC_%s",locParticleName.data()), Form("# photons; %s # photons", locParticleROOTName.data()), 150, 0, 150);
 		hThetaC = GetOrCreate_Histogram<TH1I>(Form("hThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #theta_{C} [rad]", locParticleROOTName.data()), 250, 0.6, 1.0);
 		hDeltaThetaC = GetOrCreate_Histogram<TH1I>(Form("hDeltaThetaC_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
+		hDeltaThetaCDirect = GetOrCreate_Histogram<TH1I>(Form("hDeltaThetaCDirect_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
+		hDeltaThetaCReflected = GetOrCreate_Histogram<TH1I>(Form("hDeltaThetaCReflected_%s",locParticleName.data()), Form("cherenkov angle; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 200,-0.2,0.2);
 		hLikelihood = GetOrCreate_Histogram<TH1I>(Form("hLikelihood_%s",locParticleName.data()), Form("; %s -lnL; entries [#]", locParticleROOTName.data()),1000,0.,1000.);
 		hLikelihoodDiff = GetOrCreate_Histogram<TH1I>(Form("hLikelihoodDiff_%s",locParticleName.data()), Form("; %s;entries [#]", locLikelihoodName.data()),100,-200.,200.);
 		
 		hThetaCVsP = GetOrCreate_Histogram<TH2I>(Form("hThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 250, 0.6, 1.0);
 		hDeltaThetaCVsP = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
+		hDeltaThetaCVsPDirect = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsPDirect_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
+		hDeltaThetaCVsPReflected = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsPReflected_%s",locParticleName.data()),  Form("cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 120, 0.0, 12.0, 200,-0.2,0.2);
 		hDeltaThetaCVsChannel = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsChannel_%s",locParticleName.data()),  Form("cherenkov angle vs. channel; channel ID; %s #Delta#theta_{C} [rad]", locParticleROOTName.data()), 6912, 0, 6912, 200,-0.2,0.2);
 
 		hLikelihoodDiffVsP = GetOrCreate_Histogram<TH2I>(Form("hLikelihoodDiffVsP_%s",locParticleName.data()),  Form("; p (GeV/c); %s", locLikelihoodName.data()), 120, 0.0, 12.0, 100, -200, 200);
@@ -75,12 +84,18 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		// Map of histograms for every bar, binned in x position
 		if(DIRC_FILL_BAR_MAP) {
 
-			for(int locBar=0; locBar<48; locBar++) {
+			for(int locBar=0; locBar<DDIRCGeometry::kBars; locBar++) {
 				
 				CreateAndChangeTo_Directory(Form("Bar %d", locBar), Form("Bar %d", locBar));
 				double bar_y = dDIRCGeometry->GetBarY(locBar);
 				
 				hDeltaThetaCVsChannelMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsChannel_%s_%d",locParticleName.data(),locBar),  Form("cherenkov angle vs. channel; channel ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar), 6912, 0, 6912, 200,-0.2,0.2);
+				hDeltaThetaCDirectVsChannelMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCDirectVsChannel_%s_%d",locParticleName.data(),locBar),  Form("direct cherenkov angle vs. channel; channel ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar), 6912, 0, 6912, 200,-0.2,0.2);
+				hDeltaThetaCReflectedVsChannelMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCReflectedVsChannel_%s_%d",locParticleName.data(),locBar),  Form("reflected cherenkov angle vs. channel; channel ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar), 6912, 0, 6912, 200,-0.2,0.2);
+				hDeltaThetaCDirectVsPMTMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCDirectVsPMT_%s_%d",locParticleName.data(),locBar),  Form("direct cherenkov angle vs. PMT; PMT ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar),DDIRCGeometry::kPMTs, 0, DDIRCGeometry::kPMTs, 200,-0.2,0.2);
+				hDeltaThetaCReflectedVsPMTMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCReflectedVsPMT_%s_%d",locParticleName.data(),locBar),  Form("reflected cherenkov angle vs. PMT; PMT ID; %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar),DDIRCGeometry::kPMTs, 0, DDIRCGeometry::kPMTs, 200,-0.2,0.2);
+
+				hDeltaThetaCVsDeltaYMap[locBar] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsDeltaYBar_%s_%d",locParticleName.data(),locBar),  Form("cherenkov angle vs. #Delta Y; #Delta Y (cm); %s Bar %d #Delta#theta_{C} [rad]", locParticleROOTName.data(),locBar), 100,-2,2, 200,-0.2,0.2); 
 
 				for(int locXbin=0; locXbin<40; locXbin++) {
 					
@@ -93,22 +108,24 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 						continue;
 
 					hDeltaTOF[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaTOF_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s TOF #Delta x [cm]; %s TOF #Delta y [cm]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data(),locParticleROOTName.data()), 40,-10,10,40,-10,10);
-					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,-20,20);
+					hDiffMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiff_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,-10,10);
+					hDiffMapDirect[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiffDirect_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,-10,10);
+					hDiffMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hDiffReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{calc}-t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,-10,10);
 					hHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,150);
 					hNphCMap[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphC_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
-					hNphCMapSlot4[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphCSlot4_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
-					hNphCMapSlot5[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hNphCSlot5_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f] # photons; %s # photons", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 80, 0, 80);
 					
 					hThetaCVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hThetaCVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 250,0.6,1.0);
-					hDeltaThetaCVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 60,-0.15,0.15);
-					hReactionLikelihoodDiffVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hReactionLikelihoodDiffVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f]; p (GeV/c); %s", locBar,xbin_min,xbin_max,locLikelihoodName.data()), 60, 0.0, 12.0, 50, -200, 200);
-					hPixelHitMap3D[locBar][locXbin] = GetOrCreate_Histogram<TH3S>(Form("hPixelHit3D_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns; hit time", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5, 50, 0, 100);
-					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
-					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
+					hDeltaThetaCVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 300,-0.15,0.15);
+					hDeltaThetaCVsPMapDirect[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCDirectVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 300,-0.15,0.15);
+					hDeltaThetaCVsPMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hDeltaThetaCReflectedVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f] cherenkov angle vs. momentum; p (GeV/c); %s #Delta#theta_{C} [rad]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 60, 0.0, 12.0, 300,-0.15,0.15);
+					hReactionLikelihoodDiffVsPMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hReactionLikelihoodDiffVsP_%s_%d_%d",locParticleName.data(),locBar,locXbin),  Form("Bar %d, xbin [%0.0f,%0.0f]; p (GeV/c); %s", locBar,xbin_min,xbin_max,locLikelihoodName.data()), 60, 0.0, 12.0, 100, -100, 100);
+					//hPixelHitMap3D[locBar][locXbin] = GetOrCreate_Histogram<TH3S>(Form("hPixelHit3D_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns; hit time", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5, 50, 0, 100);
+					hPixelHitMap[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+					hPixelHitMapReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
 
 					hHitTimeMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH1I>(Form("hHitTimeMapAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; %s t_{measured} [ns]; entries [#]", locBar,xbin_min,xbin_max,locParticleROOTName.data()), 100,0,150);
-					hPixelHitMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
-					hPixelHitMapAllReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAllReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, 48, -0.5, 47.5);
+					//hPixelHitMapAll[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAll_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+					//hPixelHitMapAllReflected[locBar][locXbin] = GetOrCreate_Histogram<TH2S>(Form("hPixelHitAllReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
 					//hPixelHitTimeMap[locBar][locXbin] = GetOrCreate_Histogram<TH2I>(Form("hPixelHitTime_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; Pixel Hit Channel; Pixel Hit t [ns]", locBar,xbin_min,xbin_max), 6912, 0, 6912, 50, 0, 100);
 				}
 				
@@ -211,6 +228,9 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 	
 		// get binning for histograms
 		int locBar = dDIRCGeometry->GetBar(posInBar.Y());
+		//if(fabs(posInBar.Y() - dDIRCGeometry->GetBarY(locBar)) > 1.0)
+		//    return true;
+
 		int locXbin = (int)(posInBar.X()/5.0) + 19;
 		
 		// check that histogram index exists
@@ -230,16 +250,14 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
 		locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
 		map<Particle_t, double> logLikelihoodSum;
-
-		int locNPhCSlot4 = 0;
-		int locNPhCSlot5 = 0;
-		
+		  
 		// loop over associated hits for LUT diagnostic plots
 		for(uint loc_i=0; loc_i<locDIRCPmtHits.size(); loc_i++) {
-			vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
+		        bool locIsReflected = false;
+			vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(locDIRCPmtHits[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, locIsReflected, logLikelihoodSum);
 			double locHitTime = locDIRCPmtHits[loc_i]->t - locExtrapolatedTime;
 			int locChannel = locDIRCPmtHits[loc_i]->ch;
-			if(locChannel >= 108*64) locChannel -= 108*64;
+			if(locChannel >= DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels) locChannel -= DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels;
 
 			// fill PMT hits without any association cuts
 			Lock_Action(); //ACQUIRE ROOT LOCK!!
@@ -251,22 +269,21 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 			// format final pixel x' and y' axes for view from behind PMTs looking downstream
 			int pixel_row = dDIRCGeometry->GetPixelRow(locChannel);
 			int pixel_col = dDIRCGeometry->GetPixelColumn(locChannel);
+			int pmt_id = dDIRCGeometry->GetPmtID(locChannel);
 
 			// fill histograms for candidate photons in timing cut
 			if(locHitTime > 0 && locHitTime < 150.0) {
-				if((pixel_row < 64 && pixel_col < 24) || (pixel_row < 32 && pixel_col > 23))
-					locNPhCSlot4++;
-				else 
-					locNPhCSlot5++;
 
 				Lock_Action(); //ACQUIRE ROOT LOCK!!
 				if(DIRC_FILL_BAR_MAP && locP > 4.) {
-					//hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
+				  /*
+					hPixelHitTimeMap[locBar][locXbin]->Fill(locChannel, locHitTime);
 					hPixelHitMap3D[locBar][locXbin]->Fill(pixel_row, pixel_col, locHitTime);
 					if(locHitTime < 38.)
 						hPixelHitMapAll[locBar][locXbin]->Fill(pixel_row, pixel_col);
 					else
 						hPixelHitMapAllReflected[locBar][locXbin]->Fill(pixel_row, pixel_col);
+				  */
 				}
 				Unlock_Action(); //RELEASE ROOT LOCK!!
 				
@@ -283,25 +300,59 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 					if(fabs(locThetaC-locExpectedThetaC)<0.02) {	
 						Lock_Action(); //ACQUIRE ROOT LOCK!!
 						hDiff->Fill(locDeltaT);
+						if(locIsReflected) hDiffReflected->Fill(locDeltaT);
+						else hDiffDirect->Fill(locDeltaT);
+						
 						if(DIRC_FILL_BAR_MAP) {
-							hDiffMap[locBar][locXbin]->Fill(locDeltaT);
+						        hDiffMap[locBar][locXbin]->Fill(locDeltaT);
+							if(locIsReflected) hDiffMapReflected[locBar][locXbin]->Fill(locDeltaT);
+							else hDiffMapDirect[locBar][locXbin]->Fill(locDeltaT);
 							hHitTimeMap[locBar][locXbin]->Fill(locHitTime);
 						}
 						Unlock_Action(); //RELEASE ROOT LOCK!!
 					}					
 
 					// fill histograms for candidate photons in timing cut
-					if(fabs(locDeltaT) < 5.0) {
+					if(fabs(locDeltaT) < 6.0) {
 						Lock_Action(); //ACQUIRE ROOT LOCK!!
 						hThetaC->Fill(locThetaC);
 						hDeltaThetaC->Fill(locThetaC-locExpectedThetaC);
 						hThetaCVsP->Fill(momInBar.Mag(), locThetaC);
 						hDeltaThetaCVsP->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						if(locIsReflected) {
+						  double weight = 1;
+						  if(fabs(locDeltaT) > 3.0) weight = -1;
+						  hDeltaThetaCReflected->Fill(locThetaC-locExpectedThetaC,weight);
+						  hDeltaThetaCVsPReflected->Fill(momInBar.Mag(),locThetaC-locExpectedThetaC);
+						}
+						else {
+						  double weight = 1;
+						  if(fabs(locDeltaT) > 2.0) weight = -1;
+						  if(fabs(locDeltaT) > 4.0) weight = 0;
+						  hDeltaThetaCDirect->Fill(locThetaC-locExpectedThetaC,weight);
+						  hDeltaThetaCVsPDirect->Fill(momInBar.Mag(),locThetaC-locExpectedThetaC);
+						}
 						hDeltaThetaCVsChannel->Fill(locChannel, locThetaC-locExpectedThetaC);
 						
 						if(DIRC_FILL_BAR_MAP) {
 						  hDeltaThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC);
+						  if(locIsReflected) {
+						    double weight = 1;
+						    if(fabs(locDeltaT) > 3.0) weight = -1;
+						    hDeltaThetaCVsPMapReflected[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC, weight);
+						    hDeltaThetaCReflectedVsChannelMap[locBar]->Fill(locChannel, locThetaC-locExpectedThetaC, weight);
+						    hDeltaThetaCReflectedVsPMTMap[locBar]->Fill(pmt_id, locThetaC-locExpectedThetaC, weight);
+						  }
+						  else {
+						    double weight = 1;
+						    if(fabs(locDeltaT) > 2.0) weight = -1;
+						    if(fabs(locDeltaT) > 4.0) weight = 0;
+						    hDeltaThetaCVsPMapDirect[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC-locExpectedThetaC, weight);
+						    hDeltaThetaCDirectVsChannelMap[locBar]->Fill(locChannel, locThetaC-locExpectedThetaC, weight);
+						    hDeltaThetaCDirectVsPMTMap[locBar]->Fill(pmt_id, locThetaC-locExpectedThetaC, weight);
+						  }
 						  hDeltaThetaCVsChannelMap[locBar]->Fill(locChannel, locThetaC-locExpectedThetaC);
+						  hDeltaThetaCVsDeltaYMap[locBar]->Fill(posInBar.Y() - dDIRCGeometry->GetBarY(locBar), locThetaC-locExpectedThetaC);
 						  hThetaCVsPMap[locBar][locXbin]->Fill(momInBar.Mag(), locThetaC);
 						}
 						Unlock_Action(); //RELEASE ROOT LOCK!!
@@ -329,9 +380,7 @@ bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, cons
 		hNphC->Fill(locDIRCMatchParams->dNPhotons);
 		//hThetaCVsP->Fill(momInBar.Mag(), locDIRCMatchParams->dThetaC); 
 		if(DIRC_FILL_BAR_MAP) {
-			hNphCMap[locBar][locXbin]->Fill(locDIRCMatchParams->dNPhotons);
-			hNphCMapSlot4[locBar][locXbin]->Fill(locNPhCSlot4);
-			hNphCMapSlot5[locBar][locXbin]->Fill(locNPhCSlot5);
+		  hNphCMap[locBar][locXbin]->Fill(locDIRCMatchParams->dNPhotons);
 		}
 		
 		// for likelihood and difference for given track mass hypothesis

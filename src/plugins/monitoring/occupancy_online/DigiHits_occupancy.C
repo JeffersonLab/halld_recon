@@ -161,6 +161,7 @@
 			}
 		}
 		
+#ifdef ROOTSPY_MACROS
 		// ------ The following is used by RSTimeSeries --------
 		if(digihits_trig4->Integral()>100000){
 			if(unix_time!=0.0) ss<<" "<<(uint64_t)(unix_time*1.0E9);  // time is in units of ns
@@ -169,6 +170,7 @@
 			// Optionally reset the histogram so next fit is independent of this one
 			if(rs_GetFlag("RESET_AFTER_FIT")) rs_ResetHisto("/occupancy/digihits_trig4");
 		}
+#endif
 		
 	}	
 
@@ -261,6 +263,7 @@
 			}
 		}
 		
+#ifdef ROOTSPY_MACROS
 		// ------ The following is used by RSTimeSeries --------
 		Nevents = digihits_trig1->Integral();
 		if(Nevents>100000){
@@ -270,6 +273,7 @@
 			// Optionally reset the histogram so next fit is independent of this one
 			if(rs_GetFlag("RESET_AFTER_FIT")) rs_ResetHisto("/occupancy/digihits_trig1");
 		}
+#endif
 	}
 
 #ifdef ROOTSPY_MACROS

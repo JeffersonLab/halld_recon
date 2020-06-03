@@ -1,17 +1,17 @@
-// hnamepath: /ccal/clusN
-// hnamepath: /ccal/clusE
-// hnamepath: /ccal/clusETot
-// hnamepath: /ccal/clusT
+// hnamepath: /ccal/showN
+// hnamepath: /ccal/showE
+// hnamepath: /ccal/showETot
+// hnamepath: /ccal/showT
 
 {
 
   TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("ccal");
   if(dir) dir->cd();
 
-  TH1I* clusN    = (TH1I*)gDirectory->FindObjectAny( "clusN" );
-  TH1I* clusE    = (TH1I*)gDirectory->FindObjectAny( "clusE" );
-  TH1I* clusETot = (TH1I*)gDirectory->FindObjectAny( "clusETot" );
-  TH1I* clusT    = (TH1I*)gDirectory->FindObjectAny( "clusT" );
+  TH1I* showN    = (TH1I*)gDirectory->FindObjectAny( "showN" );
+  TH1I* showE    = (TH1I*)gDirectory->FindObjectAny( "showE" );
+  TH1I* showETot = (TH1I*)gDirectory->FindObjectAny( "showETot" );
+  TH1I* showT    = (TH1I*)gDirectory->FindObjectAny( "showT" );
  
   if(gPad == NULL){
 
@@ -25,39 +25,39 @@
   TCanvas* c1 = gPad->GetCanvas();
   c1->Divide( 2, 2 );
 
-  if( clusN ){
+  if( showN ){
 
-    clusN->SetStats( 0 );
-    clusN->SetFillColor( kCyan-10 );
+    showN->SetStats( 0 );
+    showN->SetFillColor( kCyan-10 );
     c1->cd( 1 );
-    clusN->Draw();
+    showN->Draw();
   }
   
-  if( clusE ){
+  if( showE ){
 
-    clusE->SetStats( 0 );
-    clusE->SetFillColor( kCyan-10 );
-    clusE->GetXaxis()->SetRangeUser(0,12000);
+    showE->SetStats( 0 );
+    showE->SetFillColor( kCyan-10 );
+    showE->GetXaxis()->SetRangeUser(0,12000);
     c1->cd( 2 );
-    clusE->Draw();
+    showE->Draw();
   }
 
-  if( clusETot ){
+  if( showETot ){
 
-    clusETot->SetStats( 0 );
-    clusETot->SetFillColor( kCyan-10 );
-    clusETot->GetXaxis()->SetRangeUser(0,12000);
+    showETot->SetStats( 0 );
+    showETot->SetFillColor( kCyan-10 );
+    showETot->GetXaxis()->SetRangeUser(0,12000);
     c1->cd( 4 );
-    clusETot->Draw();
+    showETot->Draw();
   }
 
-  if( clusT ){
+  if( showT ){
 
-    clusT->SetStats( 0 );
-    clusT->SetFillColor( kCyan-10 );
-    clusT->GetXaxis()->SetRangeUser(-100,300);
+    showT->SetStats( 0 );
+    showT->SetFillColor( kCyan-10 );
+    showT->GetXaxis()->SetRangeUser(-100,300);
     c1->cd( 3 );
-    clusT->Draw();
+    showT->Draw();
   }
 
 }

@@ -20,6 +20,7 @@
 #include <START_COUNTER/DSCHit.h>
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMHit.h>
+#include <TPOL/DTPOLHit.h>
 #include <RF/DRFTDCDigiTime.h>
 #include <RF/DRFTime_factory.h>
 #include <PID/DEventRFBunch.h>

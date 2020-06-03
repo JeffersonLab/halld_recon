@@ -28,7 +28,7 @@ using namespace std;
 #include <TTree.h>
 #include <TH1F.h>
 #include <TH2F.h>
-
+#include <TMath.h>
 #include <math.h>
 
 #define MaxHits 100
@@ -41,6 +41,7 @@ class JEventProcessor_TOF_calib:public jana::JEventProcessor{
 
   int first;
   int RunNumber;
+  int ThreadCounter;
 
   float TDCTLOC;
   float ADCTLOC;
