@@ -13,6 +13,7 @@ using namespace jana;
 
 #include <DAQ/DL1Info.h>
 #include <DAQ/DCODAEventInfo.h>
+#include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DCODAControlEvent.h>
 
 
@@ -57,6 +58,9 @@ jerror_t JEventProcessor_syncskim::init(void)
 {
 	bool SYNCSKIM_FAST = false;
 	gPARMS->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
+
+	SYNCSKIM_ROCID = 34;
+	gPARMS->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
 
 	// The default behavior here has changed.
 	// It used to be that these settings were always made and there
@@ -126,14 +130,27 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		last_control_event_t = (double) controlevents[0]->unix_time;
 		last_physics_event_t = 0.0;
 	}
-	
+
 	vector<const DCODAEventInfo*> codainfos;
 	loop->Get(codainfos);
 	if(codainfos.empty()) return NOERROR;
 	const DCODAEventInfo *codainfo = codainfos[0];
+
+	uint64_t mytimestamp = 0.0;
+	if( SYNCSKIM_ROCID == 0 ){
+		mytimestamp = codainfo->avg_timestamp;
+	}else{
+		vector<const DCODAROCInfo*> codarocinfos;
+		loop->Get(codarocinfos);
+		if(codarocinfos.empty()) return NOERROR;
+		for( auto codarocinfo : codarocinfos ){
+			if( codarocinfo->rocid == SYNCSKIM_ROCID ) mytimestamp = codarocinfo->timestamp;
+		}
+	}
+	if( mytimestamp == 0.0 ) return NOERROR;
 	
 	if( (last_control_event_t!=0.0) && (last_physics_event_t==0.0) ){
-		last_physics_event_t = (double)codainfo->avg_timestamp / 250.0E6;
+		last_physics_event_t = (double)mytimestamp / 250.0E6;
 	}
 
 	vector<const DL1Info*> l1infos;
