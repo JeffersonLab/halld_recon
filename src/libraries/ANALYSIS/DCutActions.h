@@ -61,6 +61,9 @@ DCutAction_PIDDeltaT
 DCutAction_PIDTimingBeta
 DCutAction_NoPIDHit
 
+DCutAction_FlightDistance
+DCutAction_FlightSignificance
+
 DCutAction_OneVertexKinFit
 */
 
@@ -746,6 +749,54 @@ class DCutAction_OneVertexKinFit : public DAnalysisAction
 		TH1I* dHist_VertexZ;
 		TH2I* dHist_VertexYVsX;
 };
+
+class DCutAction_FlightDistance : public DAnalysisAction
+{
+	//if dPID = Unknown, apply cut to all relevant PIDs
+
+	public:
+
+		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Cut_FlightDistance", locUseKinFitResultsFlag, locActionUniqueString),
+		dMinFlightDistance(locMinFlightDistance), dPID(locPID) {}
+
+		void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+		string Get_ActionName(void) const;
+
+	private:
+
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		double dMinFlightDistance;
+		Particle_t dPID;
+		DetectorSystem_t dSystem;
+};
+
+class DCutAction_FlightSignificance : public DAnalysisAction
+{
+	//if dPID = Unknown, apply cut to all relevant PIDs
+
+	public:
+
+		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Cut_FlightSignificance", locUseKinFitResultsFlag, locActionUniqueString),
+		dMinFlightSignificance(locMinFlightSignificance), dPID(locPID) {}
+
+		void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+		string Get_ActionName(void) const;
+
+	private:
+
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		double dMinFlightSignificance;
+		Particle_t dPID;
+		DetectorSystem_t dSystem;
+};
+
+
 
 #endif // _DCutActions_
 

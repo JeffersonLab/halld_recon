@@ -491,14 +491,16 @@ bool DHistogramAction_PID::Perform_Action(JEventLoop* locEventLoop, const DParti
 				continue; //previously histogrammed
 
 			dPreviouslyHistogrammedParticles.insert(locHistInfo);
-			if(ParticleCharge(locParticles[loc_j]->PID()) != 0) //charged
-				Fill_ChargedHists(static_cast<const DChargedTrackHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
-			else //neutral
-				Fill_NeutralHists(static_cast<const DNeutralParticleHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+			if(Is_FinalStateParticle(locParticles[loc_j]->PID())) { 
+				if(ParticleCharge(locParticles[loc_j]->PID()) != 0) //charged
+					Fill_ChargedHists(static_cast<const DChargedTrackHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+				else //neutral
+					Fill_NeutralHists(static_cast<const DNeutralParticleHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+			}
 		}
 
 		// fill info on decaying particles, which is on the particle combo step level
-		if(!Is_FinalStateParticle(locParticleComboStep->Get_InitialParticle()->PID())) {  // decaying particles
+		if(((locParticleComboStep->Get_InitialParticle()!=nullptr) && !Is_FinalStateParticle(locParticleComboStep->Get_InitialParticle()->PID()))) {  // decaying particles
 			// FOR NOW: we only calculate these displaced vertex quantities if a kinematic fit 
 			// was performed where the vertex is constrained
 			// TODO: Cleverly handle the other cases
