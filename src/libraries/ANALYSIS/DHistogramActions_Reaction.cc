@@ -1480,6 +1480,10 @@ void DHistogramAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -1524,15 +1528,37 @@ bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, co
 		//don't break: e.g. if multiple pi0's, histogram invariant mass of each one
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(locDeltaTRF > 2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
-			dHist_InvariantMass->Fill(locMassesToFill[loc_i]);
-		for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
-			dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i]);
+		if(dSubtractAccidentals) {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_InvariantMass->Fill(locMassesToFill[loc_i], locWeight);
+			for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
+				dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i], locWeight);
+		} else {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_InvariantMass->Fill(locMassesToFill[loc_i]);
+			for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
+				dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i]);
+		}
 	}
 	Unlock_Action();
 
@@ -1611,6 +1637,7 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 		locMassesToFill.push_back(pair<double, double>(locMissingP4.M(), locMissingP4.P()));
 	}
 	
+	// calculate accidental scaling factor (if needed)
 	double locWeight = 1.;
 	if(dSubtractAccidentals) {
 		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
@@ -1692,6 +1719,10 @@ void DHistogramAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -1717,6 +1748,21 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 		locMassesToFill.push_back(pair<double, double>(locMissingP4.M2(), locMissingP4.P()));
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(locDeltaTRF > 2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
@@ -1724,9 +1770,15 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 	{
 		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
 		{
-			dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first);
-			dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
-			dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			if(dSubtractAccidentals) {
+				dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first, locWeight);
+			} else {
+				dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first);
+				dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
+				dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			}
 		}
 	}
 	Unlock_Action();
@@ -1768,6 +1820,10 @@ void DHistogramAction_2DInvariantMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_2DInvariantMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -1812,13 +1868,33 @@ bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, 
 		}
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(locDeltaTRF > 2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
-			dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second);
+		if(dSubtractAccidentals) {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second, locWeight);
+		} else {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second);
+		}
 	}
 	Unlock_Action();
 
