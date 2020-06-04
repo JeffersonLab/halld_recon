@@ -504,11 +504,11 @@ bool DHistogramAction_PID::Perform_Action(JEventLoop* locEventLoop, const DParti
 			// FOR NOW: we only calculate these displaced vertex quantities if a kinematic fit 
 			// was performed where the vertex is constrained
 			// TODO: Cleverly handle the other cases
-	
+
 			// pull out information related to the kinematic fit
 			if( !Get_UseKinFitResultsFlag() ) continue; 
 			if( locReactionVertexInfo == nullptr ) continue; 
-		
+
 			// extract the info about the vertex, to make sure that the information that we 
 			// need to calculate displaced vertices is there
 			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
@@ -1582,6 +1582,10 @@ void DHistogramAction_MissingMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
 }
 
@@ -1606,6 +1610,20 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 
 		locMassesToFill.push_back(pair<double, double>(locMissingP4.M(), locMissingP4.P()));
 	}
+	
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(locDeltaTRF > 2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -1614,9 +1632,16 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 	{
 		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
 		{
-			dHist_MissingMass->Fill(locMassesToFill[loc_i].first);
-			dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
-			dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			// only fill histograms with weights if needed, to avoid complications
+			if(dSubtractAccidentals) {
+				dHist_MissingMass->Fill(locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first, locWeight);
+			} else {
+				dHist_MissingMass->Fill(locMassesToFill[loc_i].first);
+				dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
+				dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			}
 		}
 	}
 	Unlock_Action();

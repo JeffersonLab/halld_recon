@@ -338,11 +338,11 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 class DHistogramAction_MissingMass : public DAnalysisAction
 {
 	public:
-		DHistogramAction_MissingMass(const DReaction* locReaction, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "") :
+		DHistogramAction_MissingMass(const DReaction* locReaction, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "", bool locSubtractAccidentals = false) :
 		DAnalysisAction(locReaction, "Hist_MissingMass", locUseKinFitResultsFlag, locActionUniqueString),
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dMissingMassOffOfStepIndex(0),
 		dMissingMassOffOfPIDs(deque<Particle_t>()), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dNum2DMissPBins(450),
-		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0)
+		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0), dSubtractAccidentals(locSubtractAccidentals)
 		{
 			dAnalysisUtilities = NULL;
 		}
@@ -360,20 +360,20 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 		//But:
 		//locMissingMassOffOfStepIndex = 0, locMissingMassOffOfPIDs = K+
 		//Then: Will histogram only missing-mass: g, p -> K+_1, (X)    and NOT K+_2!!!
-		DHistogramAction_MissingMass(const DReaction* locReaction, int locMissingMassOffOfStepIndex, deque<Particle_t> locMissingMassOffOfPIDs, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "") :
+		DHistogramAction_MissingMass(const DReaction* locReaction, int locMissingMassOffOfStepIndex, deque<Particle_t> locMissingMassOffOfPIDs, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "", bool locSubtractAccidentals = false) :
 		DAnalysisAction(locReaction, "Hist_MissingMass", locUseKinFitResultsFlag, locActionUniqueString),
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dMissingMassOffOfStepIndex(locMissingMassOffOfStepIndex),
 		dMissingMassOffOfPIDs(locMissingMassOffOfPIDs), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dNum2DMissPBins(450),
-		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0)
+		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0), dSubtractAccidentals(locSubtractAccidentals)
 		{
 			dAnalysisUtilities = NULL;
 		}
 
-		DHistogramAction_MissingMass(const DReaction* locReaction, int locMissingMassOffOfStepIndex, Particle_t locMissingMassOffOfPID, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "") :
+		DHistogramAction_MissingMass(const DReaction* locReaction, int locMissingMassOffOfStepIndex, Particle_t locMissingMassOffOfPID, bool locUseKinFitResultsFlag, unsigned int locNumMassBins, double locMinMass, double locMaxMass, string locActionUniqueString = "", bool locSubtractAccidentals = false) :
 		DAnalysisAction(locReaction, "Hist_MissingMass", locUseKinFitResultsFlag, locActionUniqueString),
 		dNumMassBins(locNumMassBins), dMinMass(locMinMass), dMaxMass(locMaxMass), dMissingMassOffOfStepIndex(locMissingMassOffOfStepIndex), 
 		dMissingMassOffOfPIDs(deque<Particle_t>(1, locMissingMassOffOfPID)), dNum2DMassBins(locNumMassBins/2), dNum2DBeamEBins(600), dNum2DMissPBins(450),
-		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0)
+		dMinBeamE(0.0), dMaxBeamE(12.0), dMinMissP(0.0), dMaxMissP(9.0), dSubtractAccidentals(locSubtractAccidentals)
 		{
 			dAnalysisUtilities = NULL;
 		}
@@ -397,6 +397,9 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 	public:
 		unsigned int dNum2DMassBins, dNum2DBeamEBins, dNum2DMissPBins;
 		double dMinBeamE, dMaxBeamE, dMinMissP, dMaxMissP;
+
+		bool dSubtractAccidentals;
+		double dTargetZCenter;
 
 	private:
 		TH1I* dHist_MissingMass;
