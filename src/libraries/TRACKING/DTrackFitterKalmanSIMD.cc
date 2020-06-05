@@ -27,6 +27,9 @@
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
 
+// Only print messages for one thread whenever run number change
+static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+static set<int> runs_announced;
 
 // Local boolean routines for sorting
 //bool static DKalmanSIMDHit_cmp(DKalmanSIMDHit_t *a, DKalmanSIMDHit_t *b){
@@ -292,7 +295,17 @@ double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz) const {
 DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(loop){
    FactorForSenseOfRotation=(bfield->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
-   // Some useful values
+   // keep track of which runs we print out messages for
+   int32_t runnumber = loop->GetJEvent().GetRunNumber();
+   pthread_mutex_lock(&print_mutex);
+   bool print_messages = false;
+   if(runs_announced.find(runnumber) == runs_announced.end()){
+	  print_messages = true;
+	  runs_announced.insert(runnumber);
+   }
+   pthread_mutex_unlock(&print_mutex);
+
+  // Some useful values
    two_m_e=2.*ELECTRON_MASS;
    m_e_sq=ELECTRON_MASS*ELECTRON_MASS;
 
@@ -647,9 +660,11 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    jcalib->Get("PHOTON_BEAM/beam_spot",beam_vals);
    beam_center.Set(beam_vals["x"],beam_vals["y"]); 
    beam_dir.Set(beam_vals["dxdz"],beam_vals["dydz"]);
-   jout << " Beam spot: x=" << beam_center.X() << " y=" << beam_center.Y()
-	<< " z=" << beam_vals["z"]
-	<< " dx/dz=" << beam_dir.X() << " dy/dz=" << beam_dir.Y() << endl;
+
+   if(print_messages)
+	   jout << " Beam spot: x=" << beam_center.X() << " y=" << beam_center.Y()
+			<< " z=" << beam_vals["z"]
+			<< " dx/dz=" << beam_dir.X() << " dy/dz=" << beam_dir.Y() << endl;
    beam_z0=beam_vals["z"];
    
    // Inform user of some configuration settings
