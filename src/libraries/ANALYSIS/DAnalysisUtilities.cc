@@ -982,7 +982,7 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 		locEnergy_UnusedShowers += locUnusedNeutralShower->dEnergy;
 		locNumber_UnusedShowers++;
 
-		if(locUnusedNeutralShower->dQuality < 0.5) {
+		if(locUnusedNeutralShower->dQuality > 0.5) {
 			locEnergy_UnusedShowers_Quality += locUnusedNeutralShower->dEnergy;
 	                locNumber_UnusedShowers_Quality++;
 		}
