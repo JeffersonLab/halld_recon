@@ -17,7 +17,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	DReaction* locReaction = NULL; //create with a unique name for each DReaction object. CANNOT (!) be "Thrown"
 
 	double locMinKinFitFOM = 1e-4;
-	gPARMS->DefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
+	gPARMS->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
