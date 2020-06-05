@@ -70,6 +70,31 @@ vector<Particle_t> DReaction::Get_MissingPIDs(int locStepIndex, Charge_t locChar
 	return locFinalPIDs;
 }
 
+vector<Particle_t> DReaction::Get_DecayingPIDs(int locStepIndex, Charge_t locCharge, bool locIncludeDuplicatesFlag) const
+{
+	vector<Particle_t> locFinalPIDs;
+	for(size_t locLoopStepIndex = 0; locLoopStepIndex < dReactionSteps.size(); ++locLoopStepIndex)
+	{
+		if((locStepIndex != -1) && (int(locLoopStepIndex) != locStepIndex))
+			continue;
+
+		auto locStep = dReactionSteps[locLoopStepIndex];
+		for(size_t locPIDIndex = 0; locPIDIndex < locStep->Get_NumFinalPIDs(); ++locPIDIndex)
+		{
+			Particle_t locPID = locStep->Get_FinalPID(locPIDIndex);
+			if(Is_CorrectCharge(locPID, locCharge) && IsDetachedVertex(locPID) && !Is_FinalStateParticle(locPID))
+				locFinalPIDs.push_back(locPID);
+		}
+	}
+
+	if(!locIncludeDuplicatesFlag)
+	{
+		std::sort(locFinalPIDs.begin(), locFinalPIDs.end()); //must sort first or else std::unique won't do what we want!
+		locFinalPIDs.erase(std::unique(locFinalPIDs.begin(), locFinalPIDs.end()), locFinalPIDs.end());
+	}
+	return locFinalPIDs;
+}
+
 void DReaction::Set_MaxPhotonRFDeltaT(double locMaxPhotonRFDeltaT)
 {
 	cout << "WARNING: USING DReaction::Set_MaxPhotonRFDeltaT() IS DEPRECATED. PLEASE SWITCH TO Set_NumPlusMinusRFBunches()." << endl;

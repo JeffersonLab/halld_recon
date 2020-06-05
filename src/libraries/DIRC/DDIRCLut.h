@@ -37,8 +37,8 @@ public:
 	bool brun(JEventLoop *loop);
 	bool CreateDebugHistograms();
 	bool CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<const DDIRCPmtHit*> locDIRCHits, double locFlightTime, double locMass, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams) const;
-	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
-	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const;
+	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const;
+	vector<pair<double,double>> CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum) const;
 	double CalcLikelihood(double locExpectedThetaC, double locThetaC) const;
 	double CalcAngle(double locP, double locMass) const;
 	map<Particle_t, double> CalcExpectedAngles(double locP) const;
@@ -52,13 +52,15 @@ private:
 	bool DIRC_TRUTH_BARHIT;
 	bool DIRC_TRUTH_PIXELTIME;
 	bool DIRC_ROTATE_TRACK;
+	bool DIRC_THETAC_OFFSET;
 
 	double DIRC_CUT_TDIFFD;
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
 
-	double dRotationX[48], dRotationY[48], dRotationZ[48];
+	double dThetaCOffset[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs]; 
+	double dRotationX[DDIRCGeometry::kBars], dRotationY[DDIRCGeometry::kBars], dRotationZ[DDIRCGeometry::kBars];
 
 	int dMaxChannels;
 	double dCriticalAngle, dIndex;
@@ -68,6 +70,7 @@ private:
 	deque<Particle_t> dFinalStatePIDs;
 	map<Particle_t, TH1I*> hDeltaThetaC;
 	map<Particle_t, TH2I*> hDeltaThetaC_Pixel;
+
 };
 
 #endif // _DDIRCLut_

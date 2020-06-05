@@ -25,17 +25,25 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
-   ifs = new std::ifstream(source_name);
-   if (ifs && ifs->is_open()) {
-      // hddm_r::istream constructor can throw a std::runtime_error
-      // which is not being caught here -- policy question in JANA:
-      // who catches the exceptions, top-level user code or here?
-      fin = new hddm_r::istream(*ifs);
+   ifs = new ifstream(source_name);
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
+      std::string head;
+      std::getline(sbuf, head);
+      std::string expected = " class=\"r\" ";
+      if (head.find(expected) == head.npos) {
+         std::string msg("Unexpected header found in input REST stream: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
    }
-   else {
-      // One might want to throw an exception or report an error here.
-      fin = NULL;
-   }
+
+   fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
@@ -116,12 +124,14 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
 
    hddm_r::HDDM *record = new hddm_r::HDDM();
    try{
-      if (! (*fin >> *record)) {
-         delete fin;
-         fin = NULL;
-         delete ifs;
-         ifs = NULL;
-	     return NO_MORE_EVENTS_IN_SOURCE;
+      while (record->getReconstructedPhysicsEvents().size() == 0) {
+         if (! (*fin >> *record)) {
+            delete fin;
+            fin = NULL;
+            delete ifs;
+            ifs = NULL;
+	        return NO_MORE_EVENTS_IN_SOURCE;
+         }
       }
    }catch(std::runtime_error &e){
       cerr << "Exception caught while trying to read REST file!" << endl;
@@ -164,12 +174,15 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
              gPARMS->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
          }
 
-         if (! (*fin >> *record)) {
-            delete fin;
-            fin = NULL;
-            delete ifs;
-            ifs = NULL;
-	        return NO_MORE_EVENTS_IN_SOURCE;
+         record->clear();
+         while (record->getReconstructedPhysicsEvents().size() == 0) {
+            if (! (*fin >> *record)) {
+               delete fin;
+               fin = NULL;
+               delete ifs;
+               ifs = NULL;
+	           return NO_MORE_EVENTS_IN_SOURCE;
+            }
          }
 
          continue;
@@ -237,7 +250,11 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 		DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
 		double locTargetCenterZ = 0.0;
 		locGeometry->GetTargetZ(locTargetCenterZ);
-
+		
+		map<string, double> beam_vals;
+		if (locEventLoop->GetCalib("PHOTON_BEAM/beam_spot",beam_vals))
+		  throw JException("Could not load CCDB table: PHOTON_BEAM/beam_spot");
+	
 		vector<double> locBeamPeriodVector;
 		if(locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
 			throw JException("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
@@ -259,6 +276,21 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 			dTargetCenterZMap[locRunNumber] = locTargetCenterZ;
 			dBeamBunchPeriodMap[locRunNumber] = locBeamBunchPeriod;
 			dDIRCChannelStatusMap[locRunNumber] = locDIRCChannelStatus;
+
+			dBeamCenterMap[locRunNumber].Set(beam_vals["x"],
+							 beam_vals["y"]);
+			dBeamDirMap[locRunNumber].Set(beam_vals["dxdz"],
+						      beam_vals["dydz"]);
+			dBeamZ0Map[locRunNumber]=beam_vals["z"];
+			
+			jout << "Run " << locRunNumber << " beam spot:"
+			     << " x=" << dBeamCenterMap[locRunNumber].X()
+			     << " y=" << dBeamCenterMap[locRunNumber].Y()
+			     << " z=" << dBeamZ0Map[locRunNumber]
+			     << " dx/dz=" << dBeamDirMap[locRunNumber].X() 
+			     << " dy/dz=" << dBeamDirMap[locRunNumber].Y() 
+			     << endl;
+
 		}
 		UnlockRead();
 		
@@ -338,7 +370,6 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
    }
-
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -1090,6 +1121,18 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    if (factory==NULL) {
       return OBJECT_NOT_AVAILABLE;
    }
+   
+   int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
+   DVector2 locBeamCenter,locBeamDir;
+   double locBeamZ0=0.;
+   LockRead();
+   {
+     locBeamCenter = dBeamCenterMap[locRunNumber]; 
+     locBeamDir = dBeamDirMap[locRunNumber];
+     locBeamZ0 = dBeamZ0Map[locRunNumber];
+   }
+   UnlockRead();
+
    string tag = (factory->Tag())? factory->Tag() : "";
 
    vector<DTrackTimeBased*> data;
@@ -1138,15 +1181,17 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 
       // Convert from cartesian coordinates to the 5x1 state vector corresponding to the tracking error matrix.
       double vect[5];
+      DVector2 beam_pos=locBeamCenter+(track_pos.Z()-locBeamZ0)*locBeamDir;
+      DVector2 diff(track_pos.X()-beam_pos.X(),track_pos.Y()-beam_pos.Y());
       vect[2]=tan(M_PI_2 - track_mom.Theta());
       vect[1]=track_mom.Phi();
       double sinphi=sin(vect[1]);
       double cosphi=cos(vect[1]);
       vect[0]=tra->charge()/track_mom.Perp();
       vect[4]=track_pos.Z();
-      vect[3]=track_pos.Perp();
+      vect[3]=diff.Mod();
 
-      if ((track_pos.X() > 0 && sinphi>0) || (track_pos.Y() <0 && cosphi>0) || (track_pos.Y() >0 && cosphi<0) || (track_pos.X() <0 && sinphi<0))
+      if ((diff.X() > 0 && sinphi>0) || (diff.Y() <0 && cosphi>0) || (diff.Y() >0 && cosphi<0) || (diff.X() <0 && sinphi<0))
         vect[3] *= -1.; 
       tra->setTrackingStateVector(vect[0], vect[1], vect[2], vect[3], vect[4]);
 
@@ -1157,7 +1202,25 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
-		// Hit layers
+      // Track parameters at exit of tracking volume
+      const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
+      hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	
+      if (locExitParamsIterator!=locExitParamsList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_NULL,myvector);
+	
+	for(; locExitParamsIterator != locExitParamsList.end(); ++locExitParamsIterator){
+	  DVector3 pos(locExitParamsIterator->getX1(),
+		       locExitParamsIterator->getY1(),
+		       locExitParamsIterator->getZ1());
+	  DVector3 mom(locExitParamsIterator->getPx1(),
+		     locExitParamsIterator->getPy1(),
+		       locExitParamsIterator->getPz1());
+	  tra->extrapolations[SYS_NULL].push_back(DTrackFitter::Extrapolation_t(pos,mom,locExitParamsIterator->getT1(),0.));
+	}
+      }
+      // Hit layers
       const hddm_r::ExpectedhitsList& locExpectedhitsList = iter->getExpectedhitses();
 	   hddm_r::ExpectedhitsList::iterator locExpectedhitsIterator = locExpectedhitsList.begin();
 		if(locExpectedhitsIterator == locExpectedhitsList.end())
@@ -1348,7 +1411,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
-	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
+	      if(locTrackIndex >= locTrackTimeBasedVector.size()) continue;
 
 	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
 	      if( !locTrackTimeBased ) continue;

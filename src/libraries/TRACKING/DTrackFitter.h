@@ -145,7 +145,8 @@ class DTrackFitter:public jana::JObject{
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}
 		const vector<const DFDCPseudo*>&   GetFDCFitHits(void) const {return fdchits_used_in_fit;}
-		void ClearExtrapolations(void){
+		void ClearExtrapolations(void){	 
+		  extrapolations[SYS_NULL].clear();
 		  extrapolations[SYS_TOF].clear();
 		  extrapolations[SYS_BCAL].clear();
 		  extrapolations[SYS_FCAL].clear();

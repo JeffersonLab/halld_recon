@@ -13,6 +13,7 @@ using namespace jana;
 
 #include <DAQ/DL1Info.h>
 #include <DAQ/DCODAEventInfo.h>
+#include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DCODAControlEvent.h>
 
 
@@ -55,23 +56,39 @@ JEventProcessor_syncskim::~JEventProcessor_syncskim()
 //------------------
 jerror_t JEventProcessor_syncskim::init(void)
 {
+	bool SYNCSKIM_FAST = false;
+	gPARMS->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
+
+	SYNCSKIM_ROCID = 34;
+	gPARMS->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
+
+	// The default behavior here has changed.
+	// It used to be that these settings were always made and there
+	// was no option to turn them off. In order to make this 
+	// friendlier with the monitoring runs which this will soon
+	// be included with, the option was added and the adjustment
+	// of these setting disabled by default.
+	// 4/17/2020 D.L.
+	if(SYNCSKIM_FAST){
+		gPARMS->SetParameter("EVIO:LINK",              false); 
+		gPARMS->SetParameter("EVIO:LINK_BORCONFIG",    false); 
+		gPARMS->SetParameter("EVIO:PARSE_F250",        false); 
+		gPARMS->SetParameter("EVIO:PARSE_F125",        false); 
+		gPARMS->SetParameter("EVIO:PARSE_F1TDC",       false); 
+		gPARMS->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
+		gPARMS->SetParameter("EVIO:PARSE_CONFIG",      false); 
+		gPARMS->SetParameter("EVIO:PARSE_BOR",         false); 
+		gPARMS->SetParameter("EVIO:PARSE_EPICS",       false); 
+		gPARMS->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
+		//gPARMS->SetParameter("EVIO:PARSE_TRIGGER",     false);
+		gPARMS->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
+		gPARMS->SetParameter("EVIO:F250_EMULATION_MODE", 0);
+		gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
+	}
 	
-	gPARMS->SetParameter("EVIO:LINK",              false); 
-	gPARMS->SetParameter("EVIO:LINK_BORCONFIG",    false); 
-	gPARMS->SetParameter("EVIO:PARSE_F250",        false); 
-	gPARMS->SetParameter("EVIO:PARSE_F125",        false); 
-	gPARMS->SetParameter("EVIO:PARSE_F1TDC",       false); 
-	gPARMS->SetParameter("EVIO:PARSE_CAEN1290TDC", false); 
-	gPARMS->SetParameter("EVIO:PARSE_CONFIG",      false); 
-	gPARMS->SetParameter("EVIO:PARSE_BOR",         false); 
-	gPARMS->SetParameter("EVIO:PARSE_EPICS",       false); 
-	gPARMS->SetParameter("EVIO:PARSE_EVENTTAG",    false); 
-	//gPARMS->SetParameter("EVIO:PARSE_TRIGGER",     false);
-	gPARMS->SetParameter("EVIO:APPLY_TRANSLATION_TABLE", false);
-	gPARMS->SetParameter("EVIO:F250_EMULATION_MODE", 0);
-	gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
+	file = new TFile("syncskim.root", "RECREATE");
 	
-	tree = new TTree("T", "Sync Events Tree");
+	tree = new TTree("synctree", "Sync Events Tree");
 	tree->Branch("run_number",    &synevt.run_number,    "run_number/i"    );
 	tree->Branch("run_type",      &synevt.run_type,      "run_type/i"      );
 	tree->Branch("event_number",  &synevt.event_number,  "event_number/l"  );
@@ -113,14 +130,27 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		last_control_event_t = (double) controlevents[0]->unix_time;
 		last_physics_event_t = 0.0;
 	}
-	
+
 	vector<const DCODAEventInfo*> codainfos;
 	loop->Get(codainfos);
 	if(codainfos.empty()) return NOERROR;
 	const DCODAEventInfo *codainfo = codainfos[0];
+
+	uint64_t mytimestamp = 0.0;
+	if( SYNCSKIM_ROCID == 0 ){
+		mytimestamp = codainfo->avg_timestamp;
+	}else{
+		vector<const DCODAROCInfo*> codarocinfos;
+		loop->Get(codarocinfos);
+		if(codarocinfos.empty()) return NOERROR;
+		for( auto codarocinfo : codarocinfos ){
+			if( codarocinfo->rocid == SYNCSKIM_ROCID ) mytimestamp = codarocinfo->timestamp;
+		}
+	}
+	if( mytimestamp == 0.0 ) return NOERROR;
 	
 	if( (last_control_event_t!=0.0) && (last_physics_event_t==0.0) ){
-		last_physics_event_t = (double)codainfo->avg_timestamp / 250.0E6;
+		last_physics_event_t = (double)mytimestamp / 250.0E6;
 	}
 
 	vector<const DL1Info*> l1infos;
@@ -185,6 +215,11 @@ jerror_t JEventProcessor_syncskim::erun(void)
 //------------------
 jerror_t JEventProcessor_syncskim::fini(void)
 {
+	if( file ){
+		file->Write();
+		file->Close();
+		delete file;
+	}
 
 	double m = (sum_n*sum_xy - sum_x*sum_y)/(sum_n*sum_x2 - sum_x*sum_x);
 	double b = (sum_y*sum_x2 - sum_x*sum_xy)/(sum_n*sum_x2 - sum_x*sum_x);
