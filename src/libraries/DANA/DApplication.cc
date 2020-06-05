@@ -246,12 +246,15 @@ DGeometry* DApplication::GetDGeometry(unsigned int run_number)
 	// built on a JGeometryFile object. If so, simply return it under the
 	// assumption we are still doing development with simulated data and
 	// a single set of geometry files.
-	Lock();
-	if(geometries.size()==1 && string("JGeometryXML")==geometries[0]->GetJGeometry()->className()){
-		Unlock();
-		return geometries[0];
-	}
-	Unlock();
+	//
+	// This isn't a good assumption anymore, disabling... [sdobbs, 1 June 2020]
+	//
+	//Lock();
+	//if(geometries.size()==1 && string("JGeometryXML")==geometries[0]->GetJGeometry()->className()){
+	//	Unlock();
+	//	return geometries[0];
+	//}
+	//Unlock();
 	
 	// First, get the JGeometry object using our JApplication
 	// base class. Then, use that to find the correct DGeometry
