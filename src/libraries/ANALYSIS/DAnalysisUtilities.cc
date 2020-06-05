@@ -955,7 +955,7 @@ DLorentzVector DAnalysisUtilities::Calc_FinalStateP4(const DReaction* locReactio
 	return locFinalStateP4;
 }
 
-int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers) const
+int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const
 {
 	DVector3 locVertex(0.0, 0.0, dTargetZCenter);
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
@@ -964,8 +964,10 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 	vector<const DNeutralShower*> locUnusedNeutralShowers;
 	Get_UnusedNeutralShowers(locEventLoop, locParticleCombo, locUnusedNeutralShowers);
 	
-	locEnergy_UnusedShowers = 0.; 
 	int locNumber_UnusedShowers = 0;
+	locEnergy_UnusedShowers = 0.;
+	locEnergy_UnusedShowers_Quality = 0.; 
+	locNumber_UnusedShowers_Quality = 0;
 	for(size_t loc_i = 0; loc_i < locUnusedNeutralShowers.size(); ++loc_i) {
 		const DNeutralShower* locUnusedNeutralShower = locUnusedNeutralShowers[loc_i];
 
@@ -979,6 +981,11 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 
 		locEnergy_UnusedShowers += locUnusedNeutralShower->dEnergy;
 		locNumber_UnusedShowers++;
+
+		if(locUnusedNeutralShower->dQuality > 0.5) {
+			locEnergy_UnusedShowers_Quality += locUnusedNeutralShower->dEnergy;
+	                locNumber_UnusedShowers_Quality++;
+		}
 	}
 	
 	return locNumber_UnusedShowers;
