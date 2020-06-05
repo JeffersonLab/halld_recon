@@ -285,10 +285,10 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 		Double_t inv_mass = ptot.M();
 
 		//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidate |= ( (E1 > MIN_MASS) && (E2 > MAX_MASS) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) );
+        Candidate |= ( (E1 > MIN_E) && (E2 > MIN_E) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) );
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-        if( (E1 > MIN_MASS) && (E2 > MAX_MASS) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
+        if( (E1 > MIN_E) && (E2 > MIN_E) && (fabs(t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
                 locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
             if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
