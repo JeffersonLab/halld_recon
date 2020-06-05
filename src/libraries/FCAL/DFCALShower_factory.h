@@ -38,6 +38,9 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
 				     double &Ecorrected,
 				     DVector3 &pos_corrected, double &errZ,
 				     const DVector3 *aVertex);
+  
+  void GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, 
+  				     double Egamma, const DVector3 *aVertex  );
 
   unsigned int getMaxHit( const vector< const DFCALHit* >& hitVec ) const;
 
@@ -84,6 +87,8 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   int VERBOSE;
   string COVARIANCEFILENAME;
   TH2F *CovarianceLookupTable[5][5];
+  
+  double log_position_const;
 };
 
 
