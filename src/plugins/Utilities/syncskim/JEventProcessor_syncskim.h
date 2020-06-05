@@ -25,6 +25,8 @@ class JEventProcessor_syncskim:public jana::JEventProcessor{
 		SyncEvent synevt;
 		TFile *file;
 		TTree *tree;
+		
+		uint32_t SYNCSKIM_ROCID;
 
 		// Values to do linear regression to find slope and intercept correlating
 		// 250MHz clock time to unix timestamp
