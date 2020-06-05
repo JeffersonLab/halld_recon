@@ -328,6 +328,7 @@ class DHistogramAction_InvariantMass : public DAnalysisAction
 
 		bool dSubtractAccidentals;
 		double dTargetZCenter;
+		double dBeamBunchPeriod;
 
 	private:
 		const DAnalysisUtilities* dAnalysisUtilities = nullptr;
@@ -403,6 +404,7 @@ class DHistogramAction_MissingMass : public DAnalysisAction
 
 		bool dSubtractAccidentals;
 		double dTargetZCenter;
+		double dBeamBunchPeriod;
 
 	private:
 		TH1I* dHist_MissingMass;
@@ -478,6 +480,7 @@ class DHistogramAction_MissingMassSquared : public DAnalysisAction
 
 		bool dSubtractAccidentals;
 		double dTargetZCenter;
+		double dBeamBunchPeriod;
 
 	private:
 		TH1I* dHist_MissingMassSquared;
@@ -514,6 +517,7 @@ class DHistogramAction_2DInvariantMass : public DAnalysisAction
 
 		bool dSubtractAccidentals;
 		double dTargetZCenter;
+		double dBeamBunchPeriod;
 
 		const DAnalysisUtilities* dAnalysisUtilities;
 		TH2I* dHist_2DInvaraintMass;

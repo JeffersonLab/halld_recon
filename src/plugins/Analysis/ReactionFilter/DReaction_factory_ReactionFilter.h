@@ -34,6 +34,7 @@ class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
 			SetFactoryFlag(PERSISTANT);
 			
 			gPARMS->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
+			gPARMS->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
 
 		}
 		const char* Tag(void){return "ReactionFilter";}
@@ -69,6 +70,7 @@ class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks
 		
 		double dKinFitChiSqCut = -1.;
+		double dFlightSignificanceCut = -1.;
 
 };
 

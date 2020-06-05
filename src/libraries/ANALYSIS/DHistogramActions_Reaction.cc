@@ -1485,6 +1485,11 @@ void DHistogramAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1538,7 +1543,7 @@ bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, co
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > 2.)
+			if(locDeltaTRF > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1613,6 +1618,11 @@ void DHistogramAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1647,7 +1657,7 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > 2.)
+			if(locDeltaTRF > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1724,6 +1734,11 @@ void DHistogramAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1758,7 +1773,7 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > 2.)
+			if(locDeltaTRF > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1825,6 +1840,11 @@ void DHistogramAction_2DInvariantMass::Run_Update(JEventLoop* locEventLoop)
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1878,7 +1898,7 @@ bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, 
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > 2.)
+			if(locDeltaTRF > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}

@@ -191,7 +191,17 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 			_data.push_back(locReaction); //Register the DReaction with the factory
 			continue;
 		}
-
+		
+		// OTHER OPTIONAL CUTS
+		if(dFlightSignificanceCut>0.) {
+			auto locDecayingPIDs = locReaction->Get_DecayingPIDs();
+			for(auto locPID : locDecayingPIDs) {
+				stringstream ss;
+				ss << "FltDist" << dFlightSignificanceCut << "Cut_" << locPID;
+				locReaction->Add_AnalysisAction(new DCutAction_FlightSignificance(locReaction, true, dFlightSignificanceCut, locPID, ss.str()));
+			}
+		}
+		
 		// KINEMATIC FIT
 		locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
 		if(dKinFitChiSqCut > 0.)
