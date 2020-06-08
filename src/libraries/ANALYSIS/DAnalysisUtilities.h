@@ -120,7 +120,7 @@ class DAnalysisUtilities : public JObject
 		DLorentzVector Calc_FinalStateP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, size_t locStepIndex, set<size_t> locToIncludeIndices, bool locUseKinFitDataFlag) const;
 		DLorentzVector Calc_FinalStateP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, size_t locStepIndex, set<size_t> locToIncludeIndices, set<pair<const JObject*, unsigned int> >& locSourceObjects, bool locUseKinFitDataFlag) const;
 
-		int Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers) const;
+		int Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const;
 		int Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const;
 
 		// These routines use the MEAURED particle data.  For the kinfit-data result, just use the error matrix from the missing particle

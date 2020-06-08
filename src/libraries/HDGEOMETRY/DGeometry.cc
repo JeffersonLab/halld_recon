@@ -1771,7 +1771,8 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
    bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
 
    if(!good){
-      _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
+      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       z_ccal = 1279.376;   
       return false;
    }else{
@@ -1809,8 +1810,7 @@ bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
     return false;
   }else{
     x=ForwardEMcalpos[0],y=ForwardEMcalpos[1],z=ForwardEMcalpos[2];
-    _DBG_ << "FCAL position: (x,y,z)=(" << x <<"," << y << "," << z << ")"
-	  <<endl;
+    //_DBG_ << "FCAL position: (x,y,z)=(" << x <<"," << y << "," << z << ")"<<endl;
     return true;
   }
 }
@@ -1820,13 +1820,13 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
   
   if(!good){
-    _DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
+    //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
     x=0.,y=0.,z=0.;
     return false;
   }else{
     x=ComptonEMcalpos[0],y=ComptonEMcalpos[1],z=ComptonEMcalpos[2]; 
-    _DBG_ << "CCAL position: (x,y,z)=(" << ComptonEMcalpos[0] <<","
-	  << ComptonEMcalpos[1]<<","<<ComptonEMcalpos[2]<< ")" << endl;
+    //_DBG_ << "CCAL position: (x,y,z)=(" << ComptonEMcalpos[0] <<","
+	// << ComptonEMcalpos[1]<<","<<ComptonEMcalpos[2]<< ")" << endl;
     return true;
   }
 }
@@ -1840,7 +1840,7 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
   bool good = Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z",dirc_face);
 
   if(!good){
-    _DBG_<<"Unable to retrieve DIRC position."<<endl;
+    //_DBG_<<"Unable to retrieve DIRC position."<<endl;
     z_dirc=0.0;
     return false;
   }
@@ -1852,7 +1852,7 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
     Get("//composition[@name='DIRC']/posXYZ[@volume='DRCC']/@X_Y_Z", dirc_shift);
     z_dirc=dirc_face[2]+dirc_plane[2]+dirc_shift[2] + 0.8625; // last shift is the average center of quartz bar (585.862)
 
-    jout << "DIRC z position = " << z_dirc << " cm." << endl;
+    //jout << "DIRC z position = " << z_dirc << " cm." << endl;
     return true;
   }
 }
@@ -1866,7 +1866,7 @@ bool DGeometry::GetTRDZ(vector<double> &z_trd) const
    bool good = Get("//section/composition/posXYZ[@volume='TRDGEM']/@X_Y_Z",trd_origin);
    
    if(!good){
-     _DBG_<<"Unable to retrieve TRD position."<<endl;
+     //_DBG_<<"Unable to retrieve TRD position."<<endl;
      return false;
    }
    else{ 

@@ -796,6 +796,8 @@ void DEventWriterROOT::Create_Branches_Combo(DTreeBranchRegister& locBranchRegis
 	}
 	locBranchRegister.Register_FundamentalArray<UChar_t>("NumUnusedShowers", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("Energy_UnusedShowers", locNumComboString, dInitNumComboArraySize);
+	locBranchRegister.Register_FundamentalArray<UChar_t>("NumUnusedShowers_Quality", locNumComboString, dInitNumComboArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>("Energy_UnusedShowers_Quality", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("SumPMag_UnusedTracks", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_ClonesArray<TVector3>("SumP3_UnusedTracks", dInitNumComboArraySize);
 
@@ -1223,9 +1225,13 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		
 		//ENERGY OF UNUSED SHOWERS (access to event loop required)
 		double locEnergy_UnusedShowers = 0.;
-		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers);
+		double locEnergy_UnusedShowers_Quality = 0.;
+		int locNumber_UnusedShowers_Quality = 0;
+		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers, locNumber_UnusedShowers_Quality, locEnergy_UnusedShowers_Quality);
 		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers", locNumber_UnusedShowers, loc_i);
 		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers", locEnergy_UnusedShowers, loc_i);
+		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers_Quality", locNumber_UnusedShowers_Quality, loc_i);
+		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers_Quality", locEnergy_UnusedShowers_Quality, loc_i);
 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
 		double locSumPMag_UnusedTracks = 0;
