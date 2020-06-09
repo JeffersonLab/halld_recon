@@ -79,6 +79,10 @@ DFCALShower_factory::DFCALShower_factory()
   COVARIANCEFILENAME = "";  ///<  Setting the filename will take precidence over the CCDB.  Files must end in ij.txt, where i and j are integers corresponding to the element of the matrix
   gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
   gPARMS->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
+  
+  
+  log_position_const = 4.2;
+  gPARMS->SetDefaultParameter("FCAL:log_position_const", log_position_const);
 
 }
 
@@ -247,6 +251,9 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     int ring_nb = (int) (radius / (5 * k_cm));
     GetCorrectedEnergyAndPosition( cluster, ring_nb , Ecorrected, pos_corrected, errZ, &vertex);
     
+    DVector3 pos_log;
+    GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
+    
     if (Ecorrected>0.){		
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
@@ -262,12 +269,16 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       // apply global offsets in x and y
       pos_corrected.SetX(pos_corrected.X()+m_FCALdX);
       pos_corrected.SetY(pos_corrected.Y()+m_FCALdY);
+      
+      pos_log.SetX(pos_log.X()+m_FCALdX);
+      pos_log.SetY(pos_log.Y()+m_FCALdY);
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;
       
       shower->setEnergy( Ecorrected );
-      shower->setPosition( pos_corrected );   
+      shower->setPosition( pos_corrected );
+      shower->setPosition_log( pos_log ); 
       shower->setTime ( cTime );
       FillCovarianceMatrix( shower );
 
@@ -788,3 +799,96 @@ DFCALShower_factory::filterWireBasedTracks( vector< const DTrackWireBased* >& wb
   
   return finalTracks;
 }
+
+
+void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, double Egamma, const DVector3 *vertex )
+{
+  
+  DVector3  posInCal = cluster->getCentroid();
+  
+  const vector< DFCALCluster::DFCALClusterHit_t > locHitVector = cluster->GetHits();
+  
+  int loc_nhits = (int)locHitVector.size();
+  if( loc_nhits < 1 ) {
+  	pos_log = posInCal;
+	return;
+  }
+  
+  //------   Loop over hits   ------//
+  
+  double sW    =  0.0;
+  double xpos  =  0.0;
+  double ypos  =  0.0;
+  double W;
+  
+  double ecluster = cluster->getEnergy();
+  
+  for( int ih = 0; ih < loc_nhits; ih++ ) {
+  	
+	DFCALCluster::DFCALClusterHit_t locHit = locHitVector[ih];
+	
+	double xcell = locHit.x;
+	double ycell = locHit.y;
+	double ecell = locHit.E;
+	
+	W  =  log_position_const + log( ecell / ecluster );
+	if( W > 0. ) {
+		sW    +=  W;
+		xpos  +=  xcell * W;
+		ypos  +=  ycell * W;
+	}
+	
+  }
+  
+  double x1, y1;
+  if( sW ) {
+  	x1  =  xpos / sW;
+	y1  =  ypos / sW;
+  } else {
+  	cout << "\nBad Cluster Logged in DFCALShower_factory::GetLogWeightedPosition" << endl;
+	x1  =  0.;
+	y1  =  0.;
+  }
+  
+  
+  // Shower Depth Corrections (copied from GetCorrectedEnergyAndPosition function)
+   
+  if ( Egamma > 0 ) { 
+    float dxV   = x1 - vertex->X();
+    float dyV   = y1 - vertex->Y();
+    float  zV   = vertex->Z();
+    
+    double z0   = m_FCALfront - zV;
+    double zMax = FCAL_RADIATION_LENGTH*(FCAL_SHOWER_OFFSET 
+					 + log(Egamma/FCAL_CRITICAL_ENERGY));
+    
+    double zed  = z0;
+    double zed1 = z0 + zMax;
+    
+    double r0 = sqrt( dxV*dxV + dyV*dyV );
+    
+    int niter;
+    for ( niter=0; niter<100; niter++) {
+      double tt = r0/zed1;
+      zed = z0 + zMax/sqrt( 1 + tt*tt );
+      if ( fabs( (zed-zed1) ) < 0.001) {
+	break;
+      }
+      zed1 = zed;
+    }
+    
+    posInCal.SetZ( zed + zV );
+  }
+  
+  posInCal.SetX( x1 );
+  posInCal.SetY( y1 );
+  
+  
+  pos_log = posInCal;
+  
+  
+  return;
+  
+}
+
+
