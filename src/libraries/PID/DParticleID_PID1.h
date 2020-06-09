@@ -45,10 +45,12 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> dEOverPMeanParams_BCAL;
 	vector<float> dEOverPMeanParams_FCAL;
 
+	vector<float> ddEdxSigmaParams_FDC_N_dependence;
 	vector<float> ddEdxSigmaParams_FDC_Proton;
 	vector<float> ddEdxSigmaParams_FDC_KPlus;
 	vector<float> ddEdxSigmaParams_FDC_PiPlus;
 	vector<float> ddEdxSigmaParams_FDC_Electron;
+	vector<float> ddEdxSigmaParams_CDC_N_dependence;
 	vector<float> ddEdxSigmaParams_CDC_Proton;
 	vector<float> ddEdxSigmaParams_CDC_KPlus;
 	vector<float> ddEdxSigmaParams_CDC_PiPlus;
