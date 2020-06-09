@@ -217,6 +217,8 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		TH2I* dHist_BCALShowerPhiVsZ = nullptr;
 
 		TH1I* dHist_TOFPointEnergy = nullptr;
+		TH1I* dHist_TOFPointEnergyP1 = nullptr;
+		TH1I* dHist_TOFPointEnergyP2 = nullptr;
 		TH2I* dHist_TOFPointYVsX = nullptr;
 
 		TH1I* dHist_SCHitSector = nullptr;
