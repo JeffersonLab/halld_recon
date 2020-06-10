@@ -435,7 +435,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       locMatchdE1 = loctofhit->dE * corr;
       //cout<<"Vertical: dE1 "<<locMatchdE1<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
     }
-  else
+  else if(locTOFSpacetimeHit_Vertical->dPositionWellDefinedFlag)
     {
       //the horizontal position from the horizontal paddle is not well defined
       locMatchX = locTOFSpacetimeHit_Vertical->x;
@@ -460,6 +460,9 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       //cout<<"Horizontal: dE2 "<<locMatchdE2<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
 
     }
+  else {
+    return;
+  }
   
   DTOFPoint* locTOFPoint = new DTOFPoint;
   locTOFPoint->AddAssociatedObject(locTOFHit_Horizontal);
