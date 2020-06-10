@@ -1454,6 +1454,8 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
 
 inline static unsigned short int IsFixedMass(Particle_t p)
 {
+    return 1;    // HACK
+
   switch (p)
   {
   case Gamma:		return 1;
