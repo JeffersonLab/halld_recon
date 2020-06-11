@@ -514,6 +514,14 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
       //Status: 0 if no hit (or none above threshold), 1 if only North hit above threshold, 2 if only South hit above threshold, 3 if both hits above threshold
       locTOFPoint->dHorizontalBarStatus = locIsHorizontalBarFlag ? 3 : 0;
       locTOFPoint->dVerticalBarStatus = locIsHorizontalBarFlag ? 0 : 3;
+
+      if (locTOFPoint->dHorizontalBar){
+	locTOFPoint->dE2 = locPaddleHit->dE;
+	locTOFPoint->dE1 = 0.;
+      } else{
+	locTOFPoint->dE2 = 0.;
+	locTOFPoint->dE1 = locPaddleHit->dE;
+      }
       
       _data.push_back(locTOFPoint);
     }
@@ -546,6 +554,9 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
       float locEnergy = locNorthAboveThresholdFlag ? locPaddleHit->E_north : locPaddleHit->E_south;
       locEnergy *= exp(locDeltaXToMidPoint/ATTEN_LENGTH);
       locTOFPoint->dE = locEnergy;
+
+      // IGNORE NOW
+      return;
       
       _data.push_back(locTOFPoint);
     }
