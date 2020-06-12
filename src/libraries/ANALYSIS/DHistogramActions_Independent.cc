@@ -345,6 +345,10 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		//TOF
 		locHistName = "TOFPointEnergy";
 		dHist_TOFPointEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
+		locHistName = "TOFPointEnergyP1";
+		dHist_TOFPointEnergyP1 = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy Plane 1 (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
+		locHistName = "TOFPointEnergyP2";
+		dHist_TOFPointEnergyP2 = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy Plane 2 (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
 		locHistName = "TOFPointYVsX";
 		dHist_TOFPointYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";TOF Point X (cm);TOF Point Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
 
@@ -624,6 +628,8 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 		for(size_t loc_i = 0; loc_i < locTOFPoints.size(); ++loc_i)
 		{
 			dHist_TOFPointEnergy->Fill(locTOFPoints[loc_i]->dE*1.0E3);
+			dHist_TOFPointEnergyP1->Fill(locTOFPoints[loc_i]->dE1*1.0E3);
+			dHist_TOFPointEnergyP2->Fill(locTOFPoints[loc_i]->dE2*1.0E3);
 			dHist_TOFPointYVsX->Fill(locTOFPoints[loc_i]->pos.X(), locTOFPoints[loc_i]->pos.Y());
 		}
 
