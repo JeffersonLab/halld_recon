@@ -10,7 +10,6 @@
 
 #include <JANA/JFactory.h>
 #include <PID/DNeutralParticle.h>
-#include <PID/DNeutralParticle.h>
 #include <PID/DNeutralShower.h>
 
 using namespace std;

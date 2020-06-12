@@ -53,24 +53,40 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 
 	vector<const DNeutralShower*> locNeutralShowers;
 	locEventLoop->Get(locNeutralShowers, "PreSelect");
+	vector<const DNeutralShower*> locHadronNeutralShowers;
+	locEventLoop->Get(locHadronNeutralShowers, "HadronPreSelect");
 
+	// 
 	set<const DNeutralShower*> locNeutralShowerSet;
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
 		locNeutralShowerSet.insert(locNeutralShowers[loc_i]);
+	set<const DNeutralShower*> locHadronNeutralShowersSet;
+	for(size_t loc_i = 0; loc_i < locHadronNeutralShowers.size(); ++loc_i)
+		locHadronNeutralShowersSet.insert(locHadronNeutralShowers[loc_i]);
 
+	// apply PreSelect selections on neutral particles
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
 		 DNeutralParticle* locNeutralParticle_PreSelected = new DNeutralParticle(*locNeutralParticles[loc_i]);
 	
-		//if neutral shower was good, keep particle, else ignore it
-		if(locNeutralShowerSet.find(locNeutralParticle_PreSelected->dNeutralShower) == locNeutralShowerSet.end())
-			continue;
-		
 		// make extra selections for particular hypotheses
 		auto locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.begin();
 		while( locHypothesisItr != locNeutralParticle_PreSelected->dNeutralParticleHypotheses.end()) {
-			// extra selections for neutrons
-			if((*locHypothesisItr)->PID() == Neutron) {
+
+			if((*locHypothesisItr)->PID() == Gamma) {
+				//if neutral shower was good, keep hypothesis, else ignore it
+				if(locNeutralShowerSet.find(locNeutralParticle_PreSelected->dNeutralShower) == locNeutralShowerSet.end()) {
+					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
+					continue;
+				}
+				
+			} else if((*locHypothesisItr)->PID() == Neutron) {
+				//if neutral shower was good, keep hypothesis, else ignore it
+				if(locHadronNeutralShowersSet.find(locNeutralParticle_PreSelected->dNeutralShower) == locHadronNeutralShowersSet.end()) {
+					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
+					continue;
+				}
+				// allow for a LOOSE beta cut
 				if((*locHypothesisItr)->measuredBeta() > dMaxNeutronBeta) {
 					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
 					continue;
@@ -80,8 +96,9 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 			locHypothesisItr++;   // move to next element
 		}
 		
-		// keep the shower
-		_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
+		// keep the particle if any of the hypotheses survive
+		if(locNeutralParticle_PreSelected->dNeutralParticleHypotheses.size() > 0)
+			_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
 	}
 
 	dCreated = _data;
