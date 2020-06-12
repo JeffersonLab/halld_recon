@@ -13,15 +13,17 @@
 jerror_t DNeutralParticle_factory_PreSelect::init(void)
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
-		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
+	//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
 	SetFactoryFlag(NOT_OBJECT_OWNER);
+	dResourcePool_NeutralParticle = new DResourcePool<DNeutralParticle>();
+	dResourcePool_NeutralParticle->Set_ControlParams(50, 20, 400, 4000, 0);
 
 	// default selections
-	// NOTE: disabling this for now, will try to handle all event selections in ANALYSIS library
-	// since beta depends on the vertex.  If we go back and try to do some loose preselections here,
-	// then we'll want to not just copy pointers, but manage our own memory so that we can 
-	// decide if we want to keep one hypothesis but not the other
-	//dMaxNeutronBeta = 0.9;
+	// allow for the application of a beta cut for neutrons to reduce combinations
+	// but this should be LOOSE since the velocity calculation depends strongly on
+	// the exact vertex, and at this point we don't know that so have to assume
+	// the center of the target as a default
+	dMaxNeutronBeta = 1.0;   // don't throw anything away by default
 
 	return NOERROR;
 }
@@ -31,7 +33,7 @@ jerror_t DNeutralParticle_factory_PreSelect::init(void)
 //------------------
 jerror_t DNeutralParticle_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
 {
-	//gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   
+	gPARMS->SetDefaultParameter("PRESELECT:MAX_NEUTRON_BETA", dMaxNeutronBeta);   
 
 	return NOERROR;
 }
@@ -42,6 +44,8 @@ jerror_t DNeutralParticle_factory_PreSelect::brun(jana::JEventLoop *locEventLoop
 jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
 {
 	//Clear objects from last event
+	dResourcePool_NeutralParticle->Recycle(dCreated);
+	dCreated.clear();
 	_data.clear();
 
 	vector<const DNeutralParticle*> locNeutralParticles;
@@ -56,20 +60,31 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
+		 DNeutralParticle* locNeutralParticle_PreSelected = new DNeutralParticle(*locNeutralParticles[loc_i]);
+	
 		//if neutral shower was good, keep particle, else ignore it
-		if(locNeutralShowerSet.find(locNeutralParticles[loc_i]->dNeutralShower) == locNeutralShowerSet.end())
+		if(locNeutralShowerSet.find(locNeutralParticle_PreSelected->dNeutralShower) == locNeutralShowerSet.end())
 			continue;
 		
-		// extra selections for neutrons
-		//if(locNeutralParticles[loc_i]->Get_PID() == Neutron) {
-		//	if(locNeutralParticles[loc_i]->measuredBeta() > dMaxNeutronBeta)
-		//		continue;
-		//}
+		// make extra selections for particular hypotheses
+		auto locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.begin();
+		while( locHypothesisItr != locNeutralParticle_PreSelected->dNeutralParticleHypotheses.end()) {
+			// extra selections for neutrons
+			if((*locHypothesisItr)->PID() == Neutron) {
+				if((*locHypothesisItr)->measuredBeta() > dMaxNeutronBeta) {
+					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
+					continue;
+				}
+			}
+			
+			locHypothesisItr++;   // move to next element
+		}
 		
 		// keep the shower
-		_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticles[loc_i]));
+		_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
 	}
 
+	dCreated = _data;
 	return NOERROR;
 }
 
@@ -86,6 +101,11 @@ jerror_t DNeutralParticle_factory_PreSelect::erun(void)
 //------------------
 jerror_t DNeutralParticle_factory_PreSelect::fini(void)
 {
+	for(auto locHypo : _data)
+		Recycle_Hypothesis(locHypo);
+	_data.clear();
+	delete dResourcePool_NeutralParticle;
+
 	return NOERROR;
 }
 
