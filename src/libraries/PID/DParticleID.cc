@@ -998,8 +998,8 @@ bool DParticleID::Distance_ToTrack(const DReferenceTrajectory* rt, const DTOFPoi
 	locTOFHitMatchParams->dHitTime = locHitTime;
 	locTOFHitMatchParams->dHitTimeVariance = locHitTimeVariance;
 	locTOFHitMatchParams->dHitEnergy = locHitEnergy;
-
-	locTOFHitMatchParams->dEdx = locHitEnergy/dx;
+	locTOFHitMatchParams->dEdx1 = locTOFPoint->dE1/dx;
+	locTOFHitMatchParams->dEdx2 = locTOFPoint->dE2/dx;
 	locTOFHitMatchParams->dFlightTime = locFlightTime;
 	locTOFHitMatchParams->dFlightTimeVariance = locFlightTimeVariance;
 	locTOFHitMatchParams->dPathLength = locPathLength;
@@ -1297,8 +1297,8 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&e
 	locTOFHitMatchParams->dHitTime = locHitTime;
 	locTOFHitMatchParams->dHitTimeVariance = locHitTimeVariance;
 	locTOFHitMatchParams->dHitEnergy = locHitEnergy;
-
-	locTOFHitMatchParams->dEdx = locHitEnergy/dx;
+	locTOFHitMatchParams->dEdx1 = locTOFPoint->dE1/dx;
+	locTOFHitMatchParams->dEdx2 = locTOFPoint->dE2/dx;
 	locTOFHitMatchParams->dFlightTime = locFlightTime;
 	locTOFHitMatchParams->dFlightTimeVariance = locFlightTimeVariance;
 	locTOFHitMatchParams->dPathLength = locPathLength;
