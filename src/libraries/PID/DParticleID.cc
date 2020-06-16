@@ -3301,7 +3301,7 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	const DTrackTimeBased *track=locChargedTrackHypothesis->Get_TrackTimeBased();
 	double p=track->momentum().Mag();
 
-	// Add dEdx from SC for protons/antiprotons
+	// Add dEdx from SC and/or TOF for protons/antiprotons
 	if (locChargedTrackHypothesis->PID()==Proton
 	    || locChargedTrackHypothesis->PID()==AntiProton){
 	   shared_ptr<const DSCHitMatchParams>scparms=locChargedTrackHypothesis->Get_SCHitMatchParams();
@@ -3312,6 +3312,23 @@ void DParticleID::Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHyp
 	     double chisq=diff*diff/(sigma*sigma);
 	     locChiSq_Total+=chisq;
 	     locNDF_Total+=1;
+	   }
+	   shared_ptr<const DTOFHitMatchParams>tofparms=locChargedTrackHypothesis->Get_TOFHitMatchParams();
+	   if (tofparms!=NULL){
+	     double beta=p/track->energy();
+	     double mean=GetProtondEdxMean_TOF(beta);
+	     double sigma=GetProtondEdxSigma_TOF(beta);
+	     double diff=0.;
+	     if (tofparms->dEdx1>0.){
+	       diff=tofparms->dEdx1-mean;
+	       locChiSq_Total+=diff*diff/(sigma*sigma);
+	       locNDF_Total+=1;
+	     } 
+	     if (tofparms->dEdx2>0.){
+	       diff=tofparms->dEdx2-mean;
+	       locChiSq_Total+=diff*diff/(sigma*sigma);
+	       locNDF_Total+=1;
+	     }
 	   }
 	}
 	// Add E/p for electrons/positrons

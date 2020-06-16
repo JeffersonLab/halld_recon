@@ -60,12 +60,14 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     map<string,double> &row = vals[0];
     ddEdxSigmaParams_CDC_N_dependence.push_back(row["p1"]);
     ddEdxSigmaParams_CDC_N_dependence.push_back(row["p2"]); 
-    ddEdxSigmaParams_CDC_N_dependence.push_back(row["p3"]); 
+    ddEdxSigmaParams_CDC_N_dependence.push_back(row["p3"]);
+    /*
     cout << "CDC dEdx N dependence:";
     for (unsigned int i=0;i<ddEdxSigmaParams_CDC_N_dependence.size();i++){
       cout << " " << ddEdxSigmaParams_CDC_N_dependence[i];
     }
     cout<< endl;
+    */
   }
   if (jcalib->Get("CDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
@@ -141,11 +143,13 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_FDC_N_dependence.push_back(row["p1"]);
     ddEdxSigmaParams_FDC_N_dependence.push_back(row["p2"]); 
     ddEdxSigmaParams_FDC_N_dependence.push_back(row["p3"]);
+    /*
     cout << "FDC dEdx N dependence:";
     for (unsigned int i=0;i<ddEdxSigmaParams_FDC_N_dependence.size();i++){
       cout << " " << ddEdxSigmaParams_FDC_N_dependence[i];
     }
     cout<< endl;
+    */
   }
   if (jcalib->Get("FDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
@@ -188,6 +192,21 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
     ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
   }
+  if (jcalib->Get("TOF/dEdxProtonMean",vals)==false){ 
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_TOF_Proton.push_back(row["m1"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m2"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m3"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m4"]);
+  } 
+  if (jcalib->Get("TOF/dEdxProtonSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s1"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s2"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s3"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s4"]);
+  }
+
 
   loop->GetSingle(dTOFGeometry);
   string locTOFTimeSigmasTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/TimeSigmas";
@@ -365,6 +384,14 @@ double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
   return mean;
 }
 
+double DParticleID_PID1::GetProtondEdxMean_TOF(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdx(locBetaGammaValue, ddEdxMeanParams_TOF_Proton);  
+}
+double DParticleID_PID1::GetProtondEdxSigma_TOF(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_TOF_Proton);  
+}
 
 double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
