@@ -15,6 +15,8 @@ jerror_t DChargedTrack_factory_PreSelect::init(void)
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
 	SetFactoryFlag(NOT_OBJECT_OWNER);
+	dResourcePool_ChargedTrack = new DResourcePool<DChargedTrack>();
+	dResourcePool_ChargedTrack->Set_ControlParams(50, 20, 400, 4000, 0);
 
 	dMinTrackingFOM = -1.0;
 	dHasDetectorMatchFlag = true; //require tracks to have a detector match
@@ -39,6 +41,8 @@ jerror_t DChargedTrack_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, i
 jerror_t DChargedTrack_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
 {
 	//Clear objects from last event
+	dResourcePool_ChargedTrack->Recycle(dCreated);
+	dCreated.clear();
 	_data.clear();
 
 	vector<const DChargedTrack*> locChargedTracks;
@@ -50,18 +54,31 @@ jerror_t DChargedTrack_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, u
 	//cut on min-tracking-FOM and has-detector-match
 	for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
 	{
-		for(auto& locChargedHypo : locChargedTracks[loc_i]->dChargedTrackHypotheses)
-		{
-			if(!Cut_TrackingFOM(locChargedHypo))
-				continue;
-			if(!Cut_HasDetectorMatch(locChargedHypo, locDetectorMatches))
-				continue;
+		DChargedTrack* locChargedTrack_PreSelected = new DChargedTrack(*locChargedTracks[loc_i]);
+		
+		// get rid of hypotheses which don't pass the preselect cuts
+		auto locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.begin();
+		while( locHypothesisItr != locChargedTrack_PreSelected->dChargedTrackHypotheses.end()) {
 
-			_data.push_back(const_cast<DChargedTrack*>(locChargedTracks[loc_i])); //don't cut: copy it
-			break;
+			if(!Cut_TrackingFOM(*locHypothesisItr)) {
+				locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.erase(locHypothesisItr);  // delete and move to next
+				continue;
+			}
+			if(!Cut_HasDetectorMatch(*locHypothesisItr, locDetectorMatches)) {
+				locHypothesisItr = locChargedTrack_PreSelected->dChargedTrackHypotheses.erase(locHypothesisItr);  // delete and move to next
+				continue;
+			}
+			
+			locHypothesisItr++;   // move to next element
 		}
+
+		// keep the particle if any of the hypotheses survive
+		if(locChargedTrack_PreSelected->dChargedTrackHypotheses.size() > 0)
+			_data.push_back(const_cast<DChargedTrack*>(locChargedTrack_PreSelected));
+
 	}
 
+	dCreated = _data;
 	return NOERROR;
 }
 
@@ -93,6 +110,10 @@ jerror_t DChargedTrack_factory_PreSelect::erun(void)
 //------------------
 jerror_t DChargedTrack_factory_PreSelect::fini(void)
 {
+	for(auto locHypo : _data)
+		Recycle_Hypothesis(locHypo);
+	_data.clear();
+	delete dResourcePool_ChargedTrack;
 	return NOERROR;
 }
 
