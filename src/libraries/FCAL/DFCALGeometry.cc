@@ -15,7 +15,7 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry() : 
+DFCALGeometry::DFCALGeometry(int insert_row_size) : 
 m_numActiveBlocks( 0 )
 {
 	double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
@@ -50,35 +50,63 @@ m_numActiveBlocks( 0 )
 			}
 		}
 	}
+	if (insert_row_size>0){
+	  m_insertRowSize=insert_row_size;
+	  m_insertSize=insertBlockSize()*double(insert_row_size/2);
+	  innerRadius=insertBlockSize()*sqrt(2.);
+	  m_insertMidBlock=(insert_row_size-1)/2;
+	  for( int row = 0; row < insert_row_size; row++ ){
+	    for( int col = 0; col < insert_row_size; col++ ){
+	      
+	      // transform to beam axis
+	      int row_index=row+kBlocksTall;
+	      int col_index=col+kBlocksWide;
+	      m_positionOnFace[row_index][col_index] = 
+		DVector2(  ( col - m_insertMidBlock +0.5) * insertBlockSize(),
+			   ( row - m_insertMidBlock +0.5) * insertBlockSize() );
+	      m_positionOnFace[row_index][col_index].Print();
+	      
+	      double thisRadius = m_positionOnFace[row_index][col_index].Mod();
+			
+	      if( thisRadius > innerRadius ){
+		m_activeBlock[row_index][col_index] = true;
+				
+		// build the "channel map"
+		m_channelNumber[row][col] = m_numActiveBlocks;
+		m_row[m_numActiveBlocks] = row_index;
+		m_column[m_numActiveBlocks] = col_index;
+
+		m_numActiveBlocks++;
+	      }
+	      else{
+		m_activeBlock[row_index][col_index] = false;
+	      }
+	    }
+	  }
+	}
 }
 
 bool
 DFCALGeometry::isBlockActive( int row, int column ) const
 {
-	// I'm inserting these lines to effectively disable the
-	// two assert calls below. They are causing all programs
-	// (hd_dump, hdview) to exit, even when I'm not interested
-	// in the FCAL. This does not fix the underlying problem
-	// of why we're getting invalid row/column values.
-	// 12/13/05  DL
-	if( row < 0 ||  row >= kBlocksTall )return false;
-	if( column < 0 ||  column >= kBlocksWide )return false;
-
-	// assert(    row >= 0 &&    row < kBlocksTall );
-	// assert( column >= 0 && column < kBlocksWide );
-	
 	return m_activeBlock[row][column];	
 }
 
 int
-DFCALGeometry::row( float y ) const 
+DFCALGeometry::row( float y, bool in_insert ) const 
 {	
+  if (in_insert){
+    return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
+  }
 	return static_cast<int>( y / blockSize() + kMidBlock + 0.5);
 }
 
 int
-DFCALGeometry::column( float x ) const 
+DFCALGeometry::column( float x, bool in_insert ) const 
 {	
+  if (in_insert){
+    return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
+  }
 	return static_cast<int>( x / blockSize() + kMidBlock + 0.5);
 }
 

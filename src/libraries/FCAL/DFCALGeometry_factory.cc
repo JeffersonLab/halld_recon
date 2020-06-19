@@ -9,6 +9,7 @@
 
 #include "DFCALGeometry_factory.h"
 #include "DFCALGeometry.h"
+#include <HDGEOMETRY/DGeometry.h>
 
 //------------------
 // brun
@@ -17,8 +18,15 @@ jerror_t DFCALGeometry_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
 	assert( _data.size() == 0 );
 
+	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+	const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  
+	// Check for presence of PbWO4 insert
+	int insert_row_size=0;
+	geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+
 	flags = PERSISTANT;
-	_data.push_back( new DFCALGeometry() );
+	_data.push_back( new DFCALGeometry(insert_row_size) );
 	
 	return NOERROR;
 }
