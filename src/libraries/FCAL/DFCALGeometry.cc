@@ -15,75 +15,80 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(int insert_row_size) : 
+DFCALGeometry::DFCALGeometry(const DGeometry *geom) : 
 m_numActiveBlocks( 0 )
 {
-	double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
+  double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
+  
+  // inflate the innner radius by 1% to for "safe" comparison
+  innerRadius *= 1.01;
+  
+  // Check for presence of PbWO4 insert
+  int insert_row_size=0;
+  geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+  m_insertSize=insertBlockSize()*double(insert_row_size/2);
+  
+  // Initilize the list of active blocks to false, to be adjusted for the
+  // actual geometry below.
+  for( int row = 0; row < 2*kBlocksTall; row++ ){
+    for( int col = 0; col < 2*kBlocksWide; col++ ){	
+      m_activeBlock[row][col] = false;
+    }
+  }
+  // Now fill in the data for the actual geometry
+  for( int row = 0; row < kBlocksTall; row++ ){
+    for( int col = 0; col < kBlocksWide; col++ ){
+			
+      // transform to beam axis
+      m_positionOnFace[row][col] = 
+	DVector2(  ( col - kMidBlock ) * blockSize(),
+		   ( row - kMidBlock ) * blockSize() );
+      
+      double thisRadius = m_positionOnFace[row][col].Mod();
+			
+      if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) 
+	  && (fabs(m_positionOnFace[row][col].X())>m_insertSize || 
+	      fabs(m_positionOnFace[row][col].Y())>m_insertSize) 
+	  ){
 
-	// inflate the innner radius by 1% to for "safe" comparison
-	innerRadius *= 1.01;
+	m_activeBlock[row][col] = true;
 	
-	for( int row = 0; row < kBlocksTall; row++ ){
-		for( int col = 0; col < kBlocksWide; col++ ){
-			
-			// transform to beam axis
-			m_positionOnFace[row][col] = 
-			   DVector2(  ( col - kMidBlock ) * blockSize(),
-					     ( row - kMidBlock ) * blockSize() );
-			
-			double thisRadius = m_positionOnFace[row][col].Mod();
-			
-			if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) ){
-
-				m_activeBlock[row][col] = true;
-				
-				// build the "channel map"
-				m_channelNumber[row][col] = m_numActiveBlocks;
-				m_row[m_numActiveBlocks] = row;
-				m_column[m_numActiveBlocks] = col;
-
-				m_numActiveBlocks++;
-			}
-			else{
-				
-				m_activeBlock[row][col] = false;
-			}
-		}
-	}
-	if (insert_row_size>0){
-	  m_insertRowSize=insert_row_size;
-	  m_insertSize=insertBlockSize()*double(insert_row_size/2);
-	  innerRadius=insertBlockSize()*sqrt(2.);
-	  m_insertMidBlock=(insert_row_size-1)/2;
-	  for( int row = 0; row < insert_row_size; row++ ){
-	    for( int col = 0; col < insert_row_size; col++ ){
+	// build the "channel map"
+	m_channelNumber[row][col] = m_numActiveBlocks;
+	m_row[m_numActiveBlocks] = row;
+	m_column[m_numActiveBlocks] = col;
+	
+	m_numActiveBlocks++;
+      }
+    }
+  }
+  if (insert_row_size>0){
+    m_insertMidBlock=(insert_row_size-1)/2;
+    for( int row = 0; row < insert_row_size; row++ ){
+      for( int col = 0; col < insert_row_size; col++ ){
+	
+	// transform to beam axis
+	int row_index=row+kBlocksTall;
+	int col_index=col+kBlocksWide;
+	m_positionOnFace[row_index][col_index] = 
+	DVector2(  ( col - m_insertMidBlock -0.5) * insertBlockSize(),
+		   ( row - m_insertMidBlock -0.5) * insertBlockSize() );
 	      
-	      // transform to beam axis
-	      int row_index=row+kBlocksTall;
-	      int col_index=col+kBlocksWide;
-	      m_positionOnFace[row_index][col_index] = 
-		DVector2(  ( col - m_insertMidBlock +0.5) * insertBlockSize(),
-			   ( row - m_insertMidBlock +0.5) * insertBlockSize() );
-	      m_positionOnFace[row_index][col_index].Print();
-	      
-	      double thisRadius = m_positionOnFace[row_index][col_index].Mod();
-			
-	      if( thisRadius > innerRadius ){
-		m_activeBlock[row_index][col_index] = true;
-				
-		// build the "channel map"
-		m_channelNumber[row][col] = m_numActiveBlocks;
-		m_row[m_numActiveBlocks] = row_index;
-		m_column[m_numActiveBlocks] = col_index;
-
-		m_numActiveBlocks++;
-	      }
-	      else{
-		m_activeBlock[row_index][col_index] = false;
-	      }
-	    }
-	  }
+	if( fabs(m_positionOnFace[row_index][col_index].X())>insertBlockSize()
+	    || fabs(m_positionOnFace[row_index][col_index].Y())>insertBlockSize()
+	    ){
+	  m_activeBlock[row_index][col_index] = true;
+	  
+	  // build the "channel map"
+	  m_channelNumber[row_index][col_index] = m_numActiveBlocks;
+	  m_row[m_numActiveBlocks] = row_index;
+	  m_column[m_numActiveBlocks] = col_index;
+	  
+	  m_numActiveBlocks++;
 	}
+      }
+    }
+  }
 }
 
 bool

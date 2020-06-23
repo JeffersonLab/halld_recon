@@ -14,6 +14,7 @@ using namespace jana;
 
 #include "DVector2.h"
 #include "units.h"
+#include <HDGEOMETRY/DGeometry.h>
 
 class DFCALGeometry : public JObject {
 
@@ -31,7 +32,7 @@ public:
 	
 	JOBJECT_PUBLIC(DFCALGeometry);
 
-	DFCALGeometry(int insert_row_size);
+	DFCALGeometry(const DGeometry *geom);
 	~DFCALGeometry(){}
 
 	// these numbers are fixed for the FCAL as constructed
@@ -55,11 +56,13 @@ public:
 	//        static double fcalMidplane() { return fcalFaceZ() + 0.5 * blockLength() ; } 
 	
 	bool isBlockActive( int row, int column ) const;
+	bool isInsertBlock(int row,int column) const;
 	int  numActiveBlocks() const { return m_numActiveBlocks; }
 
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
+	double insertSize() const {return m_insertSize;}
 	
 	int channel( int row, int column ) const;
 

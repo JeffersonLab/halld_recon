@@ -21,12 +21,8 @@ jerror_t DFCALGeometry_factory::brun(JEventLoop *loop, int32_t runnumber)
 	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
 	const DGeometry *geom = dapp->GetDGeometry(runnumber);
   
-	// Check for presence of PbWO4 insert
-	int insert_row_size=0;
-	geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
-
 	flags = PERSISTANT;
-	_data.push_back( new DFCALGeometry(insert_row_size) );
+	_data.push_back( new DFCALGeometry(geom) );
 	
 	return NOERROR;
 }
