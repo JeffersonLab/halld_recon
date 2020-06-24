@@ -35,9 +35,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-DFCALGeometry fcalgeom;
-
-
 static TH1I* h1_stats = NULL;
 static TH1I* h1_deltaX = NULL;
 static TH1I* h1_deltaY = NULL;
@@ -320,6 +317,13 @@ jerror_t DEventProcessor_fcal_charged::evnt(jana::JEventLoop* locEventLoop, int 
 	vector<const DChargedTrack*> locChargedTrack;
 	locEventLoop->Get(locChargedTrack);
 
+	const DFCALGeometry *fcalgeom=NULL;
+	locEventLoop->GetSingle(fcalgeom);
+	if (fcalgeom==NULL){
+	  jerr << "FCAL geometry not found!" << endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
+
 	DVector3 trkpos(0.0,0.0,0.0);
 	DVector3 proj_mom(0.0,0.0,0.0);
 	DVector3 trkpos_tof(0.0,0.0,0.0);
@@ -404,8 +408,8 @@ jerror_t DEventProcessor_fcal_charged::evnt(jana::JEventLoop* locEventLoop, int 
 	    // double yfcal_back = trkpos.Y() + proj_mom.Y()*Lfcal/proj_mom.Z();
 	    double trkposX = trkpos.X();
 	    double trkposY = trkpos.Y();
-	    int trkrow = fcalgeom.row((float)trkposY);
-	    int trkcol = fcalgeom.column((float)trkposX);
+	    int trkrow = fcalgeom->row((float)trkposY);
+	    int trkcol = fcalgeom->column((float)trkposX);
 	    double dX_tof = 10000;
 	    double dY_tof = 10000;
 	    double dR_tof = 10000;
