@@ -120,7 +120,11 @@ DFCALGeometry::positionOnFace( int row, int column ) const
 { 
   //	assert(    row >= 0 &&    row < kBlocksTall );
   //	assert( column >= 0 && column < kBlocksWide );
-	
+  // Check for insert blocks
+  if (row>=100&&column>=100){
+    row-=100-kBlocksTall;
+    column-=100-kBlocksWide;
+  }
 	return m_positionOnFace[row][column]; 
 }
 
@@ -135,6 +139,11 @@ DFCALGeometry::positionOnFace( int channel ) const
 int
 DFCALGeometry::channel( int row, int column ) const
 {
+  // Check for insert blocks
+  if (row>=100&&column>=100){
+    row-=100-kBlocksTall;
+    column-=100-kBlocksWide;
+  }
 	if( isBlockActive( row, column ) ){
 		
 		return m_channelNumber[row][column]; 
