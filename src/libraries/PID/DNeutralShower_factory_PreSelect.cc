@@ -111,6 +111,12 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 					jerr << "In DNeutralShower_factory_PreSelect::evnt(), no FCAL Geometry???" << endl;
 				int row = dFCALGeometry->row((float)locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
 				int col = dFCALGeometry->column((float)locNeutralShowers[loc_i]->dSpacetimeVertex.X());
+				
+				// make sure that this is a valid block - if not (e.g. in the beamhole)
+				// we should reject such a shower
+				if(!dFCALGeometry->isBlockActive(row, col))
+					continue;
+					
 				int channel = dFCALGeometry->channel(row,col);
 
 				// is the center of shower in one of the channels outside of our fiducial cut?
