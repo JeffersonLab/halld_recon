@@ -75,6 +75,8 @@ jerror_t DChargedTrack_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, u
 		// keep the particle if any of the hypotheses survive
 		if(locChargedTrack_PreSelected->dChargedTrackHypotheses.size() > 0)
 			_data.push_back(const_cast<DChargedTrack*>(locChargedTrack_PreSelected));
+		else
+			delete locChargedTrack_PreSelected;
 
 	}
 

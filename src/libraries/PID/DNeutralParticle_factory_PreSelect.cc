@@ -86,6 +86,7 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
 					continue;
 				}
+
 				// allow for a LOOSE beta cut
 				if((*locHypothesisItr)->measuredBeta() > dMaxNeutronBeta) {
 					locHypothesisItr = locNeutralParticle_PreSelected->dNeutralParticleHypotheses.erase(locHypothesisItr);  // delete and move to next
@@ -99,6 +100,8 @@ jerror_t DNeutralParticle_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop
 		// keep the particle if any of the hypotheses survive
 		if(locNeutralParticle_PreSelected->dNeutralParticleHypotheses.size() > 0)
 			_data.push_back(const_cast<DNeutralParticle*>(locNeutralParticle_PreSelected));
+		else 
+			delete locNeutralParticle_PreSelected;
 	}
 
 	dCreated = _data;

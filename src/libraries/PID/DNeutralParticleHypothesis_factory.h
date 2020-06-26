@@ -48,7 +48,6 @@ class DNeutralParticleHypothesis_factory : public jana::JFactory<DNeutralParticl
 		double dTargetCenterZ;
 		const DParticleID* dParticleID = nullptr;
 
-
 		//RESOURCE POOL
 		vector<DNeutralParticleHypothesis*> dCreated;
 		DResourcePool<DNeutralParticleHypothesis>* dResourcePool_NeutralParticleHypothesis = nullptr;
