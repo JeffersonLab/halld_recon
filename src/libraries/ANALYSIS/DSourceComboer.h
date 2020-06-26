@@ -37,6 +37,10 @@
 #include "ANALYSIS/DSourceComboTimeHandler.h"
 #include "ANALYSIS/DParticleComboCreator.h"
 
+
+#include "PID/DNeutralParticleHypothesis.h"
+
+
 using namespace std;
 using namespace jana;
 
@@ -234,6 +238,7 @@ class DSourceComboer : public JObject
 		//CONTROL INFORMATION
 		uint64_t dEventNumber = 0; //re-setup on new events
 		string dShowerSelectionTag = "PreSelect";
+		string dHadronShowerSelectionTag = "HadronPreSelect";
 		int dDebugLevel = 0;
 		bool dPrintCutFlag = false;
 
@@ -280,6 +285,7 @@ class DSourceComboer : public JObject
 		size_t dNumChargedTracks;
 		map<bool, vector<const JObject*>> dTracksByCharge; //true/false: positive/negative
 		unordered_map<signed char, DPhotonShowersByBeamBunch> dShowersByBeamBunchByZBin; //char: zbin //for all showers: unknown z-bin, {} RF bunch
+		vector<const JObject*> dNeutralHadronShowers;
 
 		//SOURCE COMBOS //vector: z-bin //if attempted and all failed, DSourceCombosByUse_Large vector will be empty
 		size_t dInitialComboVectorCapacity = 100;

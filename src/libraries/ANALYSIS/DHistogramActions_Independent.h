@@ -695,7 +695,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -708,7 +708,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -721,7 +721,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -756,6 +756,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		map<Particle_t, TH1I*> dHistMap_VertexZ;
 		map<Particle_t, TH2I*> dHistMap_VertexYVsX;
 		map<Particle_t, TH1I*> dHistMap_VertexT;
+		map<Particle_t, TH1I*> dHistMap_ShowerE;
 };
 
 class DHistogramAction_TrackShowerErrors : public DAnalysisAction
@@ -769,6 +770,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 
@@ -780,6 +782,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 
@@ -791,6 +794,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 

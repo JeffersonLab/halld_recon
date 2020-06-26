@@ -1272,6 +1272,7 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	dTracksByPID.clear();
 	dTracksByCharge.clear();
 	dShowersByBeamBunchByZBin.clear();
+	dNeutralHadronShowers.clear();
 
 	//RECYCLE THE DSOURCECOMBO OBJECTS
 	dResourcePool_SourceCombo.Recycle(dCreatedCombos);
@@ -1308,10 +1309,10 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	const DDetectorMatches* locDetectorMatches = nullptr;
 	locEventLoop->GetSingle(locDetectorMatches, "Combo");
 
-//COMPARE:
-const DVertex* locVertex = nullptr;
-locEventLoop->GetSingle(locVertex);
-dSourceComboVertexer->Set_Vertex(locVertex);
+	//COMPARE:
+	const DVertex* locVertex = nullptr;
+	locEventLoop->GetSingle(locVertex);
+	dSourceComboVertexer->Set_Vertex(locVertex);
 
     vector<const DESSkimData*> locESSkimDataVector;
     locEventLoop->Get(locESSkimDataVector);
@@ -1329,7 +1330,15 @@ dSourceComboVertexer->Set_Vertex(locVertex);
 		for(auto& locBunchPair : locShowerByBunchMap)
 			Build_ParticleIndices(Gamma, locBunchPair.first, locBunchPair.second, locZBinPair.first);
 	}
-
+	
+	// handle showers from neutral hadrons differently to allow for different selections to be applied
+	vector<const DNeutralShower*> locNeutralHadronShowers;
+	locEventLoop->Get(locNeutralHadronShowers, dHadronShowerSelectionTag.c_str());
+	
+	for(auto &locHadronShower : locNeutralHadronShowers) {
+		dNeutralHadronShowers.push_back(static_cast<const JObject*>(locHadronShower));
+	}
+		
 	//SETUP BEAM PARTICLES
 	dSourceComboTimeHandler->Set_BeamParticles(locBeamPhotons);
 
@@ -3264,6 +3273,18 @@ void DSourceComboer::Create_Combo_OneParticle(const DSourceComboUse& locComboUse
 			for(decltype(locNumTabs) locTabNum = 0; locTabNum < locNumTabs; ++locTabNum) cout << "\t";
 			cout << "CREATED COMBO:" << endl;
 			DAnalysis::Print_SourceCombo(locCombo, locNumTabs);
+			/*
+			if(locPID == Neutron) {
+				// TEMP
+				for(decltype(locNumTabs) locTabNum = 0; locTabNum < locNumTabs; ++locTabNum) cout << "\t";
+				cout << " Neutron energy = " ;
+				auto locNeutralShower = dynamic_cast<const DNeutralShower *>(locParticle);
+				if( locNeutralShower == nullptr )
+					cout << "FAILED" << endl;
+				else 
+					cout << locNeutralShower->dEnergy << endl;
+			}
+			*/
 		}
 
 		locSourceCombosByUseSoFar[locComboUseToCreate]->push_back(locCombo); //save it //in creation order
@@ -3735,9 +3756,12 @@ const vector<const JObject*>& DSourceComboer::Get_ParticlesForComboing(Particle_
 
 	if(ParticleCharge(locPID) != 0) //charged tracks
 		return dTracksByPID[locPID]; //rf bunch & vertex-z are irrelevant
-	else if(locPID != Gamma) //massive neutrals
-		return dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}]; //all neutrals: cannot do PID at all, and cannot do mass cuts until a specific vertex is chosen, so vertex-z doesn't matter
-
+	else if(locPID != Gamma)  {   //massive neutrals
+		//return dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}]; //all neutrals: cannot do PID at all, and cannot do mass cuts until a specific vertex is chosen, so vertex-z doesn't matter
+		// massive neutral particles could be any showers, so we keep a list which can have different selections applied
+		return dNeutralHadronShowers;
+	}
+	
 	if(locComboingStage == d_MixedStage_ZIndependent) //fcal
 	{
 		locVertexZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
