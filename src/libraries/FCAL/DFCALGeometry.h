@@ -62,8 +62,11 @@ public:
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
+	double fcalFrontZ() const {return m_FCALfront;}
+	double insertFrontZ() const {return m_insertFront;}
 	double insertSize() const {return m_insertSize;}
-	
+
+	bool inInsert(int channel) const;
 	int channel( int row, int column ) const;
 
 	int row   ( int channel ) const { return m_row[channel];    }
@@ -92,6 +95,10 @@ public:
 	int    m_numActiveBlocks;
 	int m_insertRowSize=0,m_insertMidBlock=0;
 	double m_insertSize=0.;
+	
+	// global offsets
+	double m_FCALdX,m_FCALdY,m_FCALfront,m_insertFront;
+	
 
  private:
 	DFCALGeometry(){};// force use of constructor with arguments.

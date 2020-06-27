@@ -132,15 +132,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     
   if (geom) {
     geom->GetTargetZ(m_zTarget);
-    geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
-
-    vector<double>block;
-    geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
-    double back=m_FCALfront+block[2];
-    geom->Get("//box[@name='LTB1']/@X_Y_Z",block);
-    m_insertFront=0.5*(back+m_FCALfront-block[2]);
-
-   }
+  }
   else{
       
     cerr << "No geometry accessible." << endl;
@@ -264,16 +256,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     // energy weighted time provides better resolution:
     double cTime = cluster->getTimeEWeight();
   
-    double zback=m_FCALfront + DFCALGeometry::blockLength();
+    double zback=fcalGeom.fcalFrontZ() + fcalGeom.blockLength();
     double c_effective=FCAL_C_EFFECTIVE;
     
     int channel = cluster->getChannelEmax();
     DVector2 pos=fcalGeom.positionOnFace(channel);
     // Check if the cluster is in the insert
-    bool in_insert=false;
-    if (fabs(fcalGeom.positionOnFace(channel).X())<fcalGeom.insertSize()
-	&& fabs(fcalGeom.positionOnFace(channel).Y())<fcalGeom.insertSize()){
-      zback=m_insertFront + fcalGeom.insertBlockLength();
+    bool in_insert=fcalGeom.inInsert(channel);
+    if (in_insert){
+      zback=fcalGeom.insertFrontZ() + fcalGeom.insertBlockLength();
       c_effective=INSERT_C_EFFECTIVE;
       in_insert=true;
     }
@@ -300,13 +291,6 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       //Apply time-walk correction/global timing offset
       cTime += ( timeConst0  +  timeConst1 * Ecorrected  +  timeConst2 * TMath::Power( Ecorrected, 2 ) +
 		 timeConst3 * TMath::Power( Ecorrected, 3 )  +  timeConst4 * TMath::Power( Ecorrected, 4 ) );
-
-      // apply global offsets in x and y
-      pos_corrected.SetX(pos_corrected.X()+m_FCALdX);
-      pos_corrected.SetY(pos_corrected.Y()+m_FCALdY);
-      
-      pos_log.SetX(pos_log.X()+m_FCALdX);
-      pos_log.SetY(pos_log.Y()+m_FCALdY);
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;

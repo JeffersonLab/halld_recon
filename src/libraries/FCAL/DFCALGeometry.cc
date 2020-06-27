@@ -27,6 +27,16 @@ m_numActiveBlocks( 0 )
   int insert_row_size=0;
   geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
   m_insertSize=insertBlockSize()*double(insert_row_size/2);
+
+  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+  DVector2 XY0(m_FCALdX,m_FCALdY);
+  
+  vector<double>block;
+  geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
+  double back=m_FCALfront+block[2];
+  geom->Get("//box[@name='LTB1']/@X_Y_Z",block);
+  m_insertFront=0.5*(back+m_FCALfront-block[2]);
+  
   
   // Initilize the list of active blocks to false, to be adjusted for the
   // actual geometry below.
@@ -42,7 +52,7 @@ m_numActiveBlocks( 0 )
       // transform to beam axis
       m_positionOnFace[row][col] = 
 	DVector2(  ( col - kMidBlock ) * blockSize(),
-		   ( row - kMidBlock ) * blockSize() );
+		   ( row - kMidBlock ) * blockSize());
       
       double thisRadius = m_positionOnFace[row][col].Mod();
 			
@@ -52,7 +62,8 @@ m_numActiveBlocks( 0 )
 	  ){
 
 	m_activeBlock[row][col] = true;
-	
+	m_positionOnFace[row][col]+=XY0; // add FCAL offsets
+
 	// build the "channel map"
 	m_channelNumber[row][col] = m_numActiveBlocks;
 	m_row[m_numActiveBlocks] = row;
@@ -78,6 +89,7 @@ m_numActiveBlocks( 0 )
 	    || fabs(m_positionOnFace[row_index][col_index].Y())>insertBlockSize()
 	    ){
 	  m_activeBlock[row_index][col_index] = true;
+	  m_positionOnFace[row_index][col_index]+=XY0; // add FCAL offsets
 	  
 	  // build the "channel map"
 	  m_channelNumber[row_index][col_index] = m_numActiveBlocks;
@@ -94,12 +106,19 @@ m_numActiveBlocks( 0 )
 bool
 DFCALGeometry::isBlockActive( int row, int column ) const
 {
+   if (row>=100&&column>=100){
+    row-=100-kBlocksTall;
+    column-=100-kBlocksWide;
+  }
+
 	return m_activeBlock[row][column];	
 }
 
 int
 DFCALGeometry::row( float y, bool in_insert ) const 
 {	
+  y-=m_FCALdY;
+
   if (in_insert){
     return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
   }
@@ -109,6 +128,8 @@ DFCALGeometry::row( float y, bool in_insert ) const
 int
 DFCALGeometry::column( float x, bool in_insert ) const 
 {	
+  x-=m_FCALdX;
+  
   if (in_insert){
     return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
   }
@@ -154,4 +175,12 @@ DFCALGeometry::channel( int row, int column ) const
 	       << row << " column " <<  column << endl;
 		return -1;
 	}
+}
+
+bool DFCALGeometry::inInsert(int channel) const{
+  if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
+      && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
+    return true;
+  }
+  return false;
 }
