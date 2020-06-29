@@ -2510,11 +2510,9 @@ TPolyLine* hdv_mainframe::GetFCALPolyLine(int channel)
 //-------------------
 // GetFCALPolyLine
 //-------------------
-TPolyLine* hdv_mainframe::GetFCALPolyLine(float x, float y)
+TPolyLine* hdv_mainframe::GetFCALPolyLine(int row, int column)
 {
 	if(!fcalgeom)return NULL;
-	int row = fcalgeom->row(y);
-	int column = fcalgeom->column(x);
 	return GetFCALPolyLine(fcalgeom->channel(row, column));
 }
 
