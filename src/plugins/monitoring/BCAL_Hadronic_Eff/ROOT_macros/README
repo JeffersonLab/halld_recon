@@ -1,0 +1,17 @@
+Steps to extract the BCAL Hadronic Efficiencies:
+
+0. Generate the root trees using the BCAL_Hadronic_Eff plugin. This is usually completed as part of the routine GlueX monitoring launches.
+   The output trees are located in files such as /cache/halld/offline_monitoring/RunPeriod-2019-11/ver12/tree_bcal_hadronic_eff/merged/tree_*.root
+
+1. Run python script Read_bcal_hadronic_eff2.py. Edit the file as needed to point to the correct directories.
+   Create directories with the names of 'root', 'dat' and 'pdf'
+   This script iteratively executes the Read_bcal_hadronic_eff2.C script on each of the root trees.
+   The ROOT output files will be placed in the 'root/' subdirectory.
+   Summaries of the efficiencies are stored in the 'dat/' subdirectory. These will be used later for plotting summaries
+   Output plots with details of the efficiency systematics are placed in the 'pdf/' subdirectory. These can be checked for problem. 
+
+2. Run python script plot_bcal_hadronic_eff.py. Edit the file as needed to point to the correct directories.
+   The output of this script is just a file called plot_bcal_hadronic_eff.list, which contains the list of run numbers obtained from the 'dat' subdirectory.
+
+3. Run the ROOT script plot_bcal_hadronic_eff.C, Edit as needed to produce useful output.
+   The output of this script is the file bcal_hadronic_eff.pdf file with various plots of efficiency vs run number. 

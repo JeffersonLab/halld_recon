@@ -9,15 +9,17 @@ void plot_bcal_hadronic_eff(void)
 gROOT->Reset();
 //TTree *Bfield = (TTree *) gROOT->FindObject("Bfield");
 gStyle->SetPalette(1,0);
-gStyle->SetOptStat(kFALSE);
+// gStyle->SetOptStat(kFALSE);
 // gStyle->SetOptStat(11111111);
+gStyle->SetOptFit(111111);
+
 gStyle->SetPadRightMargin(0.15);
 gStyle->SetPadLeftMargin(0.15);
 gStyle->SetPadBottomMargin(0.15);
 //
 
    char string[256];
-    Int_t const maxruns=100;
+    Int_t const maxruns=1000;
     
     /*vector <float> eff_up1(maxruns,0.);
     vector <float> eff_up2(maxruns,0.);
@@ -139,6 +141,12 @@ gStyle->SetPadBottomMargin(0.15);
        ndx++;
    }
 
+
+   if (nruns > maxruns) {
+     cout << "*** plot_bcal_hadronic_eff ***nruns=" << nruns << " maxruns=" << maxruns << endl;
+     exit(1);
+   }
+
     
     Int_t layer;
     Int_t coinc_cut=3;     // nominal is 3
@@ -150,7 +158,8 @@ gStyle->SetPadBottomMargin(0.15);
     
     for (layer=1; layer<5; layer++) {
     
-    datfile = "dat/R0"+runs[jrun]+"_layer"+TString::Itoa(layer,10)+"_cut"+TString::Itoa(coinc_cut,10)+".dat";
+      datfile = "dat/R0"+runs[jrun]+"_layer"+TString::Itoa(layer,10)+"_cut"+TString::Itoa(coinc_cut,10)+".dat";
+      // datfile = "dat/R"+runs[jrun]+"_layer"+TString::Itoa(layer,10)+"_cut"+TString::Itoa(coinc_cut,10)+".dat";
     
     cout << "Opening file: " << datfile.Data() << endl;
 
@@ -220,7 +229,9 @@ gStyle->SetPadBottomMargin(0.15);
     cout << " nruns=" << nruns << endl;
 
     for (j=0; j<nruns; j++) {
-      cout << "j=" << j << " runnum=" << runnum[j] << " eff=" << eff_up1[j] << " " << eff_up2[j] << " " << eff_up3[j] << " " << eff_up4[j] <<  endl;
+      // cout << "j=" << j << " runnum=" << runnum[j] << " eff up   =" << eff_up1[j] << " " << eff_up2[j] << " " << eff_up3[j] << " " << eff_up4[j] <<  endl;
+      // cout << "j=" << j << " runnum=" << runnum[j] << " eff downn=" << eff_down1[j] << " " << eff_down2[j] << " " << eff_down3[j] << " " << eff_down4[j] <<  endl;
+      cout << "j=" << j << " runnum=" << runnum[j] << " eff diff =" << eff_up1[j]-eff_down1[j] << " " << eff_up2[j]-eff_down2[j] << " " << eff_up3[j]-eff_down3[j] << " " << eff_up4[j]-eff_down4[j] <<  endl;
     }
     
     TGraph *gr_eff_up1 = new TGraph(nruns,runnum,eff_up1);
@@ -235,8 +246,9 @@ gStyle->SetPadBottomMargin(0.15);
     
     
     TCanvas *c0 = new TCanvas("c0", "c0",200,10,1000,700);
-    gPad->SetGridx();
-    gPad->SetGridy();
+    c0->SetGridx();
+    c0->SetGridy();
+
 
     ymin = 0.4;
     ymax = 1.0;
@@ -265,18 +277,58 @@ gStyle->SetPadBottomMargin(0.15);
     gr_eff_up4->Draw("psame");
     
     TLegend *leg = new TLegend(0.65,0.45,0.8,0.6);
-    leg->AddEntry(gr_eff_up1,"Layer 1","p");
-    leg->AddEntry(gr_eff_up2,"Layer 2","p");
-    leg->AddEntry(gr_eff_up3,"Layer 3","p");
-    leg->AddEntry(gr_eff_up4,"Layer 4","p");
+    leg->AddEntry(gr_eff_up1,"Up Layer 1","p");
+    leg->AddEntry(gr_eff_up2,"Up Layer 2","p");
+    leg->AddEntry(gr_eff_up3,"Up Layer 3","p");
+    leg->AddEntry(gr_eff_up4,"Up Layer 4","p");
     leg->Draw();
+
+    
+    TCanvas *c20 = new TCanvas("c20", "c20",200,10,1000,700);
+    c20->SetGridx();
+    c20->SetGridy();
+
+
+    ymin = 0.4;
+    ymax = 1.0;
+       
+    gr_eff_down1->SetTitle("");
+    // gr_eff_down1->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_down1->GetYaxis()->SetRangeUser(ymin,ymax);
+    gr_eff_down1->GetXaxis()->SetTitleSize(0.05);
+    gr_eff_down1->GetYaxis()->SetTitleSize(0.05);
+    gr_eff_down1->GetYaxis()->SetTitle("Efficiency");
+    gr_eff_down1->GetXaxis()->SetTitle("Run Number");
+    gr_eff_down1->SetMarkerColor(4);
+    gr_eff_down1->SetMarkerStyle(20);
+    gr_eff_down1->Draw("Ap");
+    
+    gr_eff_down2->SetMarkerColor(2);
+    gr_eff_down2->SetMarkerStyle(20);
+    gr_eff_down2->Draw("psame");
+    
+    gr_eff_down3->SetMarkerColor(1);
+    gr_eff_down3->SetMarkerStyle(20);
+    gr_eff_down3->Draw("psame");
+    
+    gr_eff_down4->SetMarkerColor(3);
+    gr_eff_down4->SetMarkerStyle(20);
+    gr_eff_down4->Draw("psame");
+    
+    TLegend *leg20 = new TLegend(0.65,0.45,0.8,0.6);
+    leg20->AddEntry(gr_eff_down1,"Down Layer 1","p");
+    leg20->AddEntry(gr_eff_down2,"Down Layer 2","p");
+    leg20->AddEntry(gr_eff_down3,"Down Layer 3","p");
+    leg20->AddEntry(gr_eff_down4,"Down Layer 4","p");
+    leg20->Draw();
+    
     
     
     TCanvas *c1 = new TCanvas("c1", "c1",200,10,1000,700);
     
     TGraph *gr_eff_up1_copy = (TGraph*)gr_eff_up1->Clone("gr_eff_up1_copy");
-    gPad->SetGridx();
-    gPad->SetGridy();
+    c1->SetGridx();
+    c1->SetGridy();
 
     // 2017 ranges    
     // xmin = 10000;
@@ -284,8 +336,13 @@ gStyle->SetPadBottomMargin(0.15);
 
     // 2018 ranges    
     xmin = 40600;
-    // xmax = 41700;
-    xmax = 42500;
+    xmax = 41700;
+    ymin = 0.9;
+    ymax = 1.0;
+
+    // 2019 ranges    
+    xmin = 71300;
+    xmax = 72500;
     ymin = 0.9;
     ymax = 1.0;
     
@@ -299,10 +356,10 @@ gStyle->SetPadBottomMargin(0.15);
     gr_eff_up4->Draw("psame");
 
     TLegend *leg1 = new TLegend(0.7,0.75,0.85,0.9);
-    leg1->AddEntry(gr_eff_up1,"Layer 1","p");
-    leg1->AddEntry(gr_eff_up2,"Layer 2","p");
-    leg1->AddEntry(gr_eff_up3,"Layer 3","p");
-    leg1->AddEntry(gr_eff_up4,"Layer 4","p");
+    leg1->AddEntry(gr_eff_up1,"Up Layer 1","p");
+    leg1->AddEntry(gr_eff_up2,"Up Layer 2","p");
+    leg1->AddEntry(gr_eff_up3,"Up Layer 3","p");
+    leg1->AddEntry(gr_eff_up4,"UP Layer 4","p");
     leg1->Draw();
     
     
@@ -317,8 +374,182 @@ gStyle->SetPadBottomMargin(0.15);
     t1->Draw();
 
     linea = new TLine(40700,0.95,41700,0.95);
+
     // linea->Draw();
+
+
+   
     
+    TCanvas *c21 = new TCanvas("c21", "c21",200,10,1000,700);
+    
+    TGraph *gr_eff_down1_copy = (TGraph*)gr_eff_down1->Clone("gr_eff_down1_copy");
+    c21->SetGridx();
+    c21->SetGridy();
+
+    // 2017 ranges    
+    // xmin = 10000;
+    // xmax = 12000;
+
+    // 2018 ranges    
+    xmin = 40600;
+    xmax = 41700;
+    ymin = 0.9;
+    ymax = 1.0;
+
+    // 2019 ranges    
+    xmin = 71300;
+    xmax = 72500;
+    ymin = 0.9;
+    ymax = 1.0;
+    
+    gr_eff_down1_copy->GetYaxis()->SetRangeUser(0.9,1.0);
+    gr_eff_down1_copy->GetXaxis()->SetRangeUser(xmin,xmax);
+    // gr_eff_down1_copy->GetXaxis()->SetRangeUser(30200,31050);
+    
+    gr_eff_down1_copy->Draw("Ap");
+    gr_eff_down2->Draw("psame");
+    gr_eff_down3->Draw("psame");
+    gr_eff_down4->Draw("psame");
+
+    TLegend *leg21 = new TLegend(0.7,0.75,0.85,0.9);
+    leg21->AddEntry(gr_eff_down1,"Down Layer 1","p");
+    leg21->AddEntry(gr_eff_down2,"Down Layer 2","p");
+    leg21->AddEntry(gr_eff_down3,"Down Layer 3","p");
+    leg21->AddEntry(gr_eff_down4,"Dowb Layer 4","p");
+    leg21->Draw();
+    
+    
+    /*TLine *linea = new TLine(41200,ymin,41200,ymax);
+    linea->SetLineWidth(2);
+    linea->Draw();
+    
+    TLatex *t1 = new TLatex(40900,1.001,"ver07");    // t1->SetNDC();
+    t1->SetTextSize(0.03);
+    t1->Draw();
+    t1->DrawLatex(41400,1.001,"ver11");
+    t1->Draw();*/
+    
+
+
+    TCanvas *c11 = new TCanvas("c11", "c11",200,10,1000,1000);
+    
+    TGraph *gr_eff_up1_copy2 = (TGraph*)gr_eff_up1->Clone("gr_eff_up1_copy2");
+    c11->Divide(1,3);
+
+    c11->cd(1);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_up1_copy2->GetYaxis()->SetRangeUser(0.925,0.945);
+    gr_eff_up1_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_up1_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_up1_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_up1_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_up1_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_up1_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_up1_copy2->Fit("pol1");
+    gr_eff_up1_copy2->Draw("Ap");
+
+    TLegend *leg11 = new TLegend(0.2,0.75,0.35,0.9);
+    leg11->AddEntry(gr_eff_up1_copy2,"Up Layer 1","p");
+    leg11->Draw();
+
+    TGraph *gr_eff_up2_copy2 = (TGraph*)gr_eff_up2->Clone("gr_eff_up2_copy2");
+    c11->cd(2);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_up2_copy2->GetYaxis()->SetRangeUser(0.955,0.975);
+    gr_eff_up2_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_up2_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_up2_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_up2_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_up2_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_up2_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_up2_copy2->Fit("pol1");
+    gr_eff_up2_copy2->Draw("Ap");
+
+    TLegend *leg12 = new TLegend(0.2,0.75,0.35,0.9);
+    leg12->AddEntry(gr_eff_up2_copy2,"Up Layer 2","p");
+    leg12->Draw();
+
+    TGraph *gr_eff_up3_copy2 = (TGraph*)gr_eff_up3->Clone("gr_eff_up3_copy2");
+    c11->cd(3);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_up3_copy2->GetYaxis()->SetRangeUser(0.95,0.97);
+    gr_eff_up3_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_up3_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_up3_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_up3_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_up3_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_up3_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_up3_copy2->Fit("pol1");
+    gr_eff_up3_copy2->Draw("Ap");
+
+    TLegend *leg13 = new TLegend(0.2,0.75,0.35,0.9);
+    leg13->AddEntry(gr_eff_up3_copy2,"Up Layer 3","p");
+    leg13->Draw();
+
+
+    TCanvas *c22 = new TCanvas("c22", "c22",200,10,1000,1000);
+    
+    TGraph *gr_eff_down1_copy2 = (TGraph*)gr_eff_down1->Clone("gr_eff_down1_copy2");
+    c22->Divide(1,3);
+
+    c22->cd(1);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_down1_copy2->GetYaxis()->SetRangeUser(0.925,0.945);
+    gr_eff_down1_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_down1_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_down1_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_down1_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_down1_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_down1_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_down1_copy2->Fit("pol1");
+    gr_eff_down1_copy2->Draw("Ap");
+
+    TLegend *leg22a = new TLegend(0.2,0.75,0.35,0.9);
+    leg22a->AddEntry(gr_eff_down1_copy2,"Down Layer 1","p");
+    leg22a->Draw();
+
+    TGraph *gr_eff_down2_copy2 = (TGraph*)gr_eff_down2->Clone("gr_eff_down2_copy2");
+    c22->cd(2);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_down2_copy2->GetYaxis()->SetRangeUser(0.955,0.975);
+    gr_eff_down2_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_down2_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_down2_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_down2_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_down2_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_down2_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_down2_copy2->Fit("pol1");
+    gr_eff_down2_copy2->Draw("Ap");
+
+    TLegend *leg22b = new TLegend(0.2,0.75,0.35,0.9);
+    leg22b->AddEntry(gr_eff_down2_copy2,"Down Layer 2","p");
+    leg22b->Draw();
+
+    TGraph *gr_eff_down3_copy2 = (TGraph*)gr_eff_down3->Clone("gr_eff_down3_copy2");
+    c22->cd(3);
+    gPad->SetGridx();
+    gPad->SetGridy();
+    gr_eff_down3_copy2->GetYaxis()->SetRangeUser(0.95,0.97);
+    gr_eff_down3_copy2->GetXaxis()->SetRangeUser(xmin,xmax);
+    gr_eff_down3_copy2->GetXaxis()->SetTitleSize(0.07);
+    gr_eff_down3_copy2->GetYaxis()->SetTitleSize(0.07);
+    gr_eff_down3_copy2->GetXaxis()->SetLabelSize(0.07);
+    gr_eff_down3_copy2->GetYaxis()->SetLabelSize(0.07);
+    gr_eff_down3_copy2->GetYaxis()->SetNdivisions(505);
+    gr_eff_down3_copy2->Fit("pol1");
+    gr_eff_down3_copy2->Draw("Ap");
+
+    TLegend *leg22c = new TLegend(0.2,0.75,0.35,0.9);
+    leg22c->AddEntry(gr_eff_down3_copy2,"Down Layer 3","p");
+    leg22c->Draw();
+
+
+
 
     /* 2016 ranges
 
@@ -350,8 +581,11 @@ gStyle->SetPadBottomMargin(0.15);
     t1->DrawLatex(10495,1.001,"2016");*/
     
     c0->SaveAs("plot_bcal_hadronic_eff.pdf(");
-    c1->SaveAs("plot_bcal_hadronic_eff.pdf)");
-    //c2->SaveAs("plot_bcal_hadronic_eff.pdf)");
+    c1->SaveAs("plot_bcal_hadronic_eff.pdf");
+    c11->SaveAs("plot_bcal_hadronic_eff.pdf");
+    c20->SaveAs("plot_bcal_hadronic_eff.pdf");
+    c21->SaveAs("plot_bcal_hadronic_eff.pdf");
+    c22->SaveAs("plot_bcal_hadronic_eff.pdf)");
     
 }
 
