@@ -283,6 +283,10 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	if(dDebugLevel > 0)
 		cout << "Analyze event: " << eventnumber << endl;
 
+	//CHECK EVENT TYPE
+	if(!locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT))
+		return NOERROR;
+
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
 	locEventLoop->GetSingle(locTrigger);
