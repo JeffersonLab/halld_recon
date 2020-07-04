@@ -104,6 +104,10 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	SYSTEMS_TO_PARSE = "";
 	SYSTEMS_TO_PARSE_FORCE = 0;
 	BLOCKS_TO_SKIP = 0;
+    PHYSICS_BLOCKS_TO_SKIP = 0;
+    PHYSICS_BLOCKS_SKIPPED = 0;
+    PHYSICS_BLOCKS_TO_KEEP = 0;
+    PHYSICS_BLOCKS_KEPT = 0;
 
 	gPARMS->SetDefaultParameter("EVIO:VERBOSE", VERBOSE, "Set verbosity level for processing and debugging statements while parsing. 0=no debugging messages. 10=all messages");
 	gPARMS->SetDefaultParameter("ET:VERBOSE", VERBOSE_ET, "Set verbosity level for processing and debugging statements while reading from ET. 0=no debugging messages. 10=all messages");
@@ -152,6 +156,8 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
          "when EVIO:SYSTEMS_TO_PARSE is set. 0=Treat as error, 1=Use CCDB, 2=Use hardcoded");
 
 	gPARMS->SetDefaultParameter("EVIO:BLOCKS_TO_SKIP", BLOCKS_TO_SKIP, "Number of EVIO blocks to skip parsing at start of file (typically 1 block=40 events)");
+    gPARMS->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_SKIP", PHYSICS_BLOCKS_TO_SKIP, "Number of Physics EVIO blocks to skip parsing at start of file (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
+    gPARMS->SetDefaultParameter("EVIO:PHYSICS_BLOCKS_TO_KEEP", PHYSICS_BLOCKS_TO_KEEP, "Number of Physics EVIO blocks to process, after any skipped if EVIO:PHYSICS_BLOCKS_TO_SKIP is > 0. (typically 1 block=40 events). n.b. BOR, EPICS, and Control events will still be processed.");
 
 	if(gPARMS->Exists("RECORD_CALL_STACK")) gPARMS->GetParameter("RECORD_CALL_STACK", RECORD_CALL_STACK);
 
@@ -405,6 +411,31 @@ void JEventSource_EVIOpp::Dispatcher(void)
 				break;
 			}else{
 				// HDEVIO_OK
+
+				// skip some physics blocks if specified by user
+				if(PHYSICS_BLOCKS_SKIPPED < PHYSICS_BLOCKS_TO_SKIP){
+				    if( hdevio->GetCurrentBlockType() == HDEVIO::kBT_PHYSICS ){
+                        PHYSICS_BLOCKS_SKIPPED++;
+                        // buff is not byte swapped so number of events should be first
+                        // byte of second word
+                        uint32_t M = (buff[1]>>24);
+                        Nevents_read += M;  // This does not seem to change what is written in the standard JANA ticker (?)
+                        continue;
+				    }
+				}
+
+                // quit after a fixed number of physics blocks if specified by user
+				if( PHYSICS_BLOCKS_TO_KEEP > 0 ){
+                    if( hdevio->GetCurrentBlockType() == HDEVIO::kBT_PHYSICS ){
+                        PHYSICS_BLOCKS_KEPT++;
+ 				        if(PHYSICS_BLOCKS_KEPT > PHYSICS_BLOCKS_TO_KEEP) {
+                            // We've already processed the max number of physics blocks requested
+                            // by the user. Break outer loop signifying we are out of events.
+                            break;
+                        }
+ 				    }
+				}
+
 				swap_needed = hdevio->swap_needed;
 			}
 		}else{

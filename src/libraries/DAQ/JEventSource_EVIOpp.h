@@ -146,6 +146,10 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		std::chrono::high_resolution_clock::time_point tend;
 
 		uint32_t BLOCKS_TO_SKIP;
+		uint32_t PHYSICS_BLOCKS_TO_SKIP;
+		uint32_t PHYSICS_BLOCKS_SKIPPED;
+        uint32_t PHYSICS_BLOCKS_TO_KEEP;
+        uint32_t PHYSICS_BLOCKS_KEPT;
 		uint32_t MAX_PARSED_EVENTS;
 		mutex PARSED_EVENTS_MUTEX;
 		condition_variable PARSED_EVENTS_CV;

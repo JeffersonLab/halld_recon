@@ -218,6 +218,8 @@ class HDEVIO{
 		uint32_t SetEventMask(uint32_t mask);
 		uint32_t SetEventMask(string types_str);
 		uint32_t AddToEventMask(string type_str);
+		BLOCKTYPE GetCurrentBlockType(void); // from last read block
+        uint64_t  GetCurrentBlockNevents(void); // from last read block
 		vector<EVIOBlockRecord>& GetEVIOBlockRecords(void);
 		
 	protected:
