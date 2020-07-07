@@ -427,7 +427,9 @@ jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHi
 
 jerror_t DParticleID_PID1::GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const
 {
-  double Nscale=3.1*pow(double(locNumHitsUsedFordEdx),-0.67)+0.06;
+  double Nscale=ddEdxSigmaParams_CDC_N_dependence[0]
+    *pow(double(locNumHitsUsedFordEdx),ddEdxSigmaParams_CDC_N_dependence[1])
+    +ddEdxSigmaParams_CDC_N_dependence[2];
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
   if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
     locSigmadEdx = Nscale*Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_CDC_Electron)/1000000.0;
