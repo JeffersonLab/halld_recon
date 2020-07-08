@@ -63,10 +63,11 @@ class DFCALShowerMatchParams
 
 class DTOFHitMatchParams
 {
-	public:
-		DTOFHitMatchParams(void) : dTOFPoint(NULL),
-		dHitTime(0.0), dHitTimeVariance(0.0), dHitEnergy(0.0), dEdx(0.0), dFlightTime(0.0), dFlightTimeVariance(0.0), 
-		dPathLength(0.0), dDeltaXToHit(0.0), dDeltaYToHit(0.0){}
+ public:
+ DTOFHitMatchParams(void) : dTOFPoint(NULL),
+    dHitTime(0.0), dHitTimeVariance(0.0), dHitEnergy(0.0), dEdx(0.0),
+    dEdx1(0.0), dEdx2(0.0), dFlightTime(0.0), dFlightTimeVariance(0.0), 
+    dPathLength(0.0), dDeltaXToHit(0.0), dDeltaYToHit(0.0){}
 
 		const DTOFPoint* dTOFPoint;
 
@@ -75,6 +76,8 @@ class DTOFHitMatchParams
 		double dHitEnergy; //This can be different from DTOFPoint::dE, if the DTOFPoint was (e.g.) an unmatched, single-ended paddle
 
 		double dEdx; //dE/dx; dE: the energy lost by the track, dx: the distance the track traveled through the detector system (dHitEnergy/dEdx)
+		double dEdx1; // dE/dx for plane 1
+		double dEdx2; // dE/dx for plane 2
 		double dFlightTime; //flight time from DKinematicData::position() to the hit
 		double dFlightTimeVariance;
 		double dPathLength; //path length from DKinematicData::position() to the hit

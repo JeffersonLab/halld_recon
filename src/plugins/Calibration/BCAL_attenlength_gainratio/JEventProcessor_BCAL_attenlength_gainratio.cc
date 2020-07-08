@@ -454,7 +454,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::fini(void)
 
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-    SortDirectories();
+    //SortDirectories();    // THIS CRASHES SOMETIMES, SHOULD FIGURE OUT WHY
 
 	return NOERROR;
 }

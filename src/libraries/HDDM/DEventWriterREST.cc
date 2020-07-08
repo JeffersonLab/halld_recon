@@ -349,6 +349,10 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		int locStatus = tofpoints[i]->dHorizontalBar + 45*tofpoints[i]->dVerticalBar;
 		locStatus += 45*45*tofpoints[i]->dHorizontalBarStatus + 45*45*4*tofpoints[i]->dVerticalBarStatus;
 		tofstatus().setStatus(locStatus);
+		// Energy deposition for each plane
+		hddm_r::TofEnergyDepositionList tofEnergyDeposition = tof().addTofEnergyDepositions(1);
+		tofEnergyDeposition().setDE1(tofpoints[i]->dE1);
+		tofEnergyDeposition().setDE2(tofpoints[i]->dE2);
 	}
 
 	// push any DSCHit objects to the output record
@@ -555,6 +559,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 				tofList().setDeltax(locTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
 				tofList().setDeltay(locTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
+				// dEdx for each plane
+				hddm_r::TofDedxList tofDedx = tofList().addTofDedxs(1);
+				tofDedx().setDEdx1(locTOFHitMatchParamsVector[loc_k]->dEdx1);
+				tofDedx().setDEdx2(locTOFHitMatchParamsVector[loc_k]->dEdx2);
+
 			}
 
 			vector<shared_ptr<const DSCHitMatchParams>> locSCHitMatchParamsVector;

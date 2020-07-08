@@ -55,6 +55,19 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_CDC_Electron.push_back(row["s2"]);
     ddEdxSigmaParams_CDC_Electron.push_back(row["s3"]);
     ddEdxSigmaParams_CDC_Electron.push_back(row["s4"]);
+  } 
+  if (jcalib->Get("CDC/dEdxNdep",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_CDC_N_dependence.push_back(row["p1"]);
+    ddEdxSigmaParams_CDC_N_dependence.push_back(row["p2"]); 
+    ddEdxSigmaParams_CDC_N_dependence.push_back(row["p3"]);
+    /*
+    cout << "CDC dEdx N dependence:";
+    for (unsigned int i=0;i<ddEdxSigmaParams_CDC_N_dependence.size();i++){
+      cout << " " << ddEdxSigmaParams_CDC_N_dependence[i];
+    }
+    cout<< endl;
+    */
   }
   if (jcalib->Get("CDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
@@ -125,6 +138,19 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_FDC_Electron.push_back(row["s3"]);
     ddEdxSigmaParams_FDC_Electron.push_back(row["s4"]);
   }
+  if (jcalib->Get("FDC/dEdxNdep",vals)==false){
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_FDC_N_dependence.push_back(row["p1"]);
+    ddEdxSigmaParams_FDC_N_dependence.push_back(row["p2"]); 
+    ddEdxSigmaParams_FDC_N_dependence.push_back(row["p3"]);
+    /*
+    cout << "FDC dEdx N dependence:";
+    for (unsigned int i=0;i<ddEdxSigmaParams_FDC_N_dependence.size();i++){
+      cout << " " << ddEdxSigmaParams_FDC_N_dependence[i];
+    }
+    cout<< endl;
+    */
+  }
   if (jcalib->Get("FDC/dEdxSigma",vals)==false){
     for(unsigned int i=0; i<vals.size(); i++){
       map<string,double> &row = vals[i];
@@ -166,6 +192,21 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
     ddEdxSigmaParams_SC_Proton.push_back(row["s3"]);
     ddEdxSigmaParams_SC_Proton.push_back(row["s4"]);
   }
+  if (jcalib->Get("TOF/dEdxProtonMean",vals)==false){ 
+    map<string,double> &row = vals[0];
+    ddEdxMeanParams_TOF_Proton.push_back(row["m1"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m2"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m3"]);
+    ddEdxMeanParams_TOF_Proton.push_back(row["m4"]);
+  } 
+  if (jcalib->Get("TOF/dEdxProtonSigma",vals)==false){  
+    map<string,double> &row = vals[0];
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s1"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s2"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s3"]);
+    ddEdxSigmaParams_TOF_Proton.push_back(row["s4"]);
+  }
+
 
   loop->GetSingle(dTOFGeometry);
   string locTOFTimeSigmasTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/TimeSigmas";
@@ -343,6 +384,14 @@ double DParticleID_PID1::GetEOverPSigma(DetectorSystem_t detector,
   return mean;
 }
 
+double DParticleID_PID1::GetProtondEdxMean_TOF(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdx(locBetaGammaValue, ddEdxMeanParams_TOF_Proton);  
+}
+double DParticleID_PID1::GetProtondEdxSigma_TOF(double locBeta) const{
+  double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
+  return 0.001*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_TOF_Proton);  
+}
 
 double DParticleID_PID1::GetProtondEdxMean_SC(double locBeta) const{
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
@@ -378,21 +427,24 @@ jerror_t DParticleID_PID1::GetdEdxMean_CDC(double locBeta, unsigned int locNumHi
 
 jerror_t DParticleID_PID1::GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const
 {
+  double Nscale=ddEdxSigmaParams_CDC_N_dependence[0]
+    *pow(double(locNumHitsUsedFordEdx),ddEdxSigmaParams_CDC_N_dependence[1])
+    +ddEdxSigmaParams_CDC_N_dependence[2];
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
   if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
-    locSigmadEdx = Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_CDC_Electron)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_CDC_Electron)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_Proton)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_Proton)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == KPlus) || (locPIDHypothesis == KMinus)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_KPlus)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_KPlus)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == PiPlus) || (locPIDHypothesis == PiMinus)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_PiPlus)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_CDC_PiPlus)/1000000.0;
     return NOERROR;
   }
   
@@ -424,21 +476,24 @@ jerror_t DParticleID_PID1::GetdEdxMean_FDC(double locBeta, unsigned int locNumHi
 
 jerror_t DParticleID_PID1::GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const
 {
+  double Nscale=ddEdxSigmaParams_FDC_N_dependence[0]
+    *pow(double(locNumHitsUsedFordEdx),ddEdxSigmaParams_FDC_N_dependence[1])
+    +ddEdxSigmaParams_FDC_N_dependence[2];
   double locBetaGammaValue = locBeta/sqrt(1.0 - locBeta*locBeta);
   if((locPIDHypothesis == Electron) || (locPIDHypothesis == Positron)){
-    locSigmadEdx = Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_FDC_Electron)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdx(locBetaGammaValue, ddEdxSigmaParams_FDC_Electron)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == Proton) || (locPIDHypothesis == AntiProton)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_Proton)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_Proton)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == KPlus) || (locPIDHypothesis == KMinus)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_KPlus)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_KPlus)/1000000.0;
     return NOERROR;
   }
   if((locPIDHypothesis == PiPlus) || (locPIDHypothesis == PiMinus)){
-    locSigmadEdx = Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_PiPlus)/1000000.0;
+    locSigmadEdx = Nscale*Function_dEdxSigma(locBetaGammaValue, ddEdxSigmaParams_FDC_PiPlus)/1000000.0;
     return NOERROR;
   }
 
