@@ -202,8 +202,8 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   //  runnumber = 30942;
 
   if(use_rcdb == 1){
-    status = Read_RCDB(runnumber);
-    PrintTriggers();
+    status = Read_RCDB(runnumber, print_messages);
+    if(print_messages) PrintTriggers();
   }
 
   
@@ -218,8 +218,9 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     trig_tmp.gtp.en_thr    =  FCAL_BCAL_EN;
     trig_tmp.gtp.fcal_min  =  200;
     triggers_enabled.push_back(trig_tmp);
-
-    cout << " Do not use RCDB for the trigger simulation. Default (spring 2017) trigger settings are used " << endl;
+	
+	if(print_messages) 
+	    cout << " Do not use RCDB for the trigger simulation. Default (spring 2017) trigger settings are used " << endl;
   }
 
 
@@ -645,7 +646,8 @@ jerror_t DL1MCTrigger_factory::fini(void)
 // Read RCDB 
 //*********************
 
-int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber){
+int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
+{
 
 #if HAVE_RCDB
 
@@ -904,7 +906,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber){
 	    }
 	    
 	    catch(...){
-	      cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
+	      if(print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
 		" Channel = " << ch << endl;
 	      continue;
 	    }
