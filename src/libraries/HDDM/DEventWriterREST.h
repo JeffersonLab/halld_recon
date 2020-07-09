@@ -27,6 +27,7 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 #include "DIRC/DDIRCPmtHit.h"
+#include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
 
 using namespace std;
