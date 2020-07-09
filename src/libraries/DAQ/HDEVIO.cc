@@ -749,7 +749,7 @@ HDEVIO::BLOCKTYPE HDEVIO::GetCurrentBlockType(void)
 //------------------------
 uint64_t HDEVIO::GetCurrentBlockNevents(void)
 {
-    return NB_block_record.block_type;
+    return NB_block_record.evio_events.size();
 }
 //------------------------
 // GetEVIOBlockRecords
@@ -974,7 +974,8 @@ void HDEVIO::MapEvents(BLOCKHEADER_t &bh, EVIOBlockRecord &br)
 			case 0x0070: er.event_type = kBT_BOR;        break;
 			case 0xFF50:
 			case 0xFF51:
-			case 0xFF70:
+			case 0xFF70:  // SEB
+			case 0xFF78:  // SEB w/ sync
 				er.event_type = kBT_PHYSICS;
 				er.first_event  = eh->physics.first_event_lo;
 				er.first_event += ((uint64_t)eh->physics.first_event_hi)<<32;
