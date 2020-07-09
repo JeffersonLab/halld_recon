@@ -734,29 +734,45 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
       tofpoint->tErr = iter->getTerr();
 
       //Status
-		const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
-	   hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
-		if(locStatusIterator == locTofStatusList.end())
-		{
-			tofpoint->dHorizontalBar = 0;
-			tofpoint->dVerticalBar = 0;
-			tofpoint->dHorizontalBarStatus = 3;
-			tofpoint->dVerticalBarStatus = 3;
-		}
-		else //should only be 1
-		{
-			for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
-			{
-				int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
-				tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
-				locStatus %= 45*45*4; //Assume compiler optimizes multiplication
-				tofpoint->dHorizontalBarStatus = locStatus/(45*45);
-				locStatus %= 45*45;
-				tofpoint->dVerticalBar = locStatus/45;
-				tofpoint->dHorizontalBar = locStatus % 45;
-			}
-		}
-
+      const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
+      hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
+      if(locStatusIterator == locTofStatusList.end())
+	{
+	  tofpoint->dHorizontalBar = 0;
+	  tofpoint->dVerticalBar = 0;
+	  tofpoint->dHorizontalBarStatus = 3;
+	  tofpoint->dVerticalBarStatus = 3;
+	}
+      else //should only be 1
+	{
+	  for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
+	    {
+	      int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
+	      tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
+	      locStatus %= 45*45*4; //Assume compiler optimizes multiplication
+	      tofpoint->dHorizontalBarStatus = locStatus/(45*45);
+	      locStatus %= 45*45;
+	      tofpoint->dVerticalBar = locStatus/45;
+	      tofpoint->dHorizontalBar = locStatus % 45;
+	    }
+	}
+      // Energy deposition
+      const hddm_r::TofEnergyDepositionList& locTofEnergyDepositionList = iter->getTofEnergyDepositions();
+      hddm_r::TofEnergyDepositionList::iterator locEnergyDepositionIterator = locTofEnergyDepositionList.begin();
+      if(locEnergyDepositionIterator == locTofEnergyDepositionList.end())
+	{
+	  tofpoint->dE1 = 0.;
+	  tofpoint->dE2 = 0.;
+	}
+      else //should only be 1
+	{
+	  for(; locEnergyDepositionIterator != locTofEnergyDepositionList.end(); ++locEnergyDepositionIterator)
+	    {
+	      tofpoint->dE1 = locEnergyDepositionIterator->getDE1();
+	      tofpoint->dE2 = locEnergyDepositionIterator->getDE2();
+	    }
+	}
+      
       data.push_back(tofpoint);
    }
 
@@ -1534,6 +1550,24 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locTOFHitMatchParams->dDeltaYToHit = tofIter->getDeltay();
 
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locTOFPoints[locHitIndex], std::const_pointer_cast<const DTOFHitMatchParams>(locTOFHitMatchParams));
+	 
+	 // dE/dx per plane
+	 const hddm_r::TofDedxList& locTofDedxList = tofIter->getTofDedxs();
+	 hddm_r::TofDedxList::iterator locTofDedxIterator = locTofDedxList.begin();
+	 if(locTofDedxIterator == locTofDedxList.end())
+	   {
+	     locTOFHitMatchParams->dEdx1 = 0.;
+	     locTOFHitMatchParams->dEdx2 = 0.;
+	   }
+	 else //should only be 1
+	   {
+	     for(; locTofDedxIterator != locTofDedxList.end(); ++locTofDedxIterator)
+	       {
+		 locTOFHitMatchParams->dEdx1 = locTofDedxIterator->getDEdx1();
+		 locTOFHitMatchParams->dEdx2 = locTofDedxIterator->getDEdx2();
+	       }
+	   }
+	 
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();
