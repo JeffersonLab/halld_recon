@@ -63,6 +63,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	
 	// Define base set of status bits
 	if(japp) DStatusBits::SetStatusBitDescriptions(japp);
+	dapp = dynamic_cast<DApplication*>(japp);
 
 	// Get configuration parameters
 	VERBOSE = 0;
@@ -419,9 +420,18 @@ void JEventSource_EVIOpp::Dispatcher(void)
                         // buff is not byte swapped so number of events should be first
                         // byte of second word
                         uint32_t M = (buff[1]>>24);
-                        Nevents_read += M;  // This does not seem to change what is written in the standard JANA ticker (?)
-                        continue;
-				    }
+                        Nevents_read += M;  // (this is never really used)
+								if(dapp) dapp->AddNEventsRead( M ); // This is so the JANA ticker will reflect how many events were actually read
+								
+								if(PHYSICS_BLOCKS_SKIPPED<3){
+									_DBG_<<"hdevio->GetCurrentBlockType() = " << hdevio->GetCurrentBlockType() << endl;
+									DumpBinary(buff, nullptr, 8);
+								}
+								continue;
+					 }else{
+					 	_DBG_<<"hdevio->GetCurrentBlockType() = " << hdevio->GetCurrentBlockType() << endl;
+						DumpBinary(buff, nullptr, 8);
+					 }
 				}
 
                 // quit after a fixed number of physics blocks if specified by user
@@ -1243,4 +1253,54 @@ void JEventSource_EVIOpp::AddEmulatedObjectsToCallStack(JEventLoop *loop, string
 	cs.caller_name = "<ignore>";
 	cs.data_source = JEventLoop::DATA_FROM_FACTORY;
 	loop->AddToCallStack(cs);
+}
+
+//----------------
+// DumpBinary
+//----------------
+void JEventSource_EVIOpp::DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords, const uint32_t *imark)
+{
+    /// This is used for debugging. It will print to the screen the words
+    /// starting at the address given by iptr and ending just before iend
+    /// or for MaxWords words, whichever comes first. If iend is NULL,
+    /// then MaxWords will be printed. If MaxWords is zero then it is ignored
+    /// and only iend is checked. If both iend==NULL and MaxWords==0, then
+    /// only the word at iptr is printed.
+
+    cout << "Dumping binary: istart=" << hex << iptr << " iend=" << iend << " MaxWords=" << dec << MaxWords << endl;
+
+    if(iend==NULL && MaxWords==0) MaxWords=1;
+    if(MaxWords==0) MaxWords = (uint32_t)0xffffffff;
+
+    uint32_t Nwords=0;
+    while(iptr!=iend && Nwords<MaxWords){
+
+        // line1 is hex and line2 is decimal
+        stringstream line1, line2;
+
+        // print words in columns 8 words wide. First part is
+        // reserved for word number
+        uint32_t Ncols = 8;
+        line1 << setw(5) << Nwords;
+        line2 << string(5, ' ');
+
+        // Loop over columns
+        for(uint32_t i=0; i<Ncols; i++, iptr++, Nwords++){
+
+            if(iptr == iend) break;
+            if(Nwords>=MaxWords) break;
+
+            stringstream iptr_hex;
+            iptr_hex << hex << "0x" << *iptr;
+
+            string mark = (iptr==imark ? "*":" ");
+
+            line1 << setw(12) << iptr_hex.str() << mark;
+            line2 << setw(12) << *iptr << mark;
+        }
+
+        cout << line1.str() << endl;
+        cout << line2.str() << endl;
+        cout << endl;
+    }
 }
