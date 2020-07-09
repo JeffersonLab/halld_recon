@@ -82,8 +82,16 @@ class DParticleID:public jana::JObject
 		jerror_t CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const vector<dedx_t>& locdEdxHits_CDC, const vector<dedx_t>& locdEdxHits_FDC, double& locdEdx_FDC, double& locdx_FDC, double& locdEdx_CDC, double& locdEdx_CDC_amp,double& locdx_CDC, double& locdx_CDC_amp, unsigned int& locNumHitsUsedFordEdx_FDC, unsigned int& locNumHitsUsedFordEdx_CDC) const;
 
 		jerror_t CalcdEdxHit(const DVector3 &mom, const DVector3 &pos, const DCDCTrackHit *hit, dedx_t &dedx) const;
+		jerror_t CalcdEdxHit(double q,
+				     const DTrackFitter::Extrapolation_t &extrap,
+				     const DCDCTrackHit *hit,
+				     dedx_t &dedx) const;
 		double CalcdXHit(const DVector3 &mom,const DVector3 &pos,
 				 const DCoordinateSystem *wire) const;
+		double CalcdXHit(double two_kappa_s,const DVector3 &mom,
+				 const DVector3 &pos,
+				 const DCDCWire *wire) const;
+		void CorrectCDCdE(double d,dedx_t &dedx) const;
 		jerror_t GroupTracks(vector<const DTrackTimeBased *> &tracks, vector<vector<const DTrackTimeBased*> >&grouped_tracks) const;
 
 		void GetScintMPdEandSigma(double p,double M,double x,double &most_prob_dE, double &sigma_dE) const;
@@ -306,12 +314,17 @@ class DParticleID:public jana::JObject
 		// time cut for cdc hits
 		double CDC_TIME_CUT_FOR_DEDX;
 
+		// CDC sag parameters
+		vector<vector<double> >max_sag;
+		vector<vector<double> >sag_phi_offset;
+		
 		double dTargetZCenter;
 
 		const DTrackFinder *finder;
 		const DTrackFitter *fitter;
 		DTOFPoint_factory* dTOFPointFactory;
-		
+		const DMagneticFieldMap *bfield;
+
 		// DIRC LUT
 		const DDIRCLut* dDIRCLut;
 

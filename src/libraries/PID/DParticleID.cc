@@ -34,13 +34,12 @@ DParticleID::DParticleID(JEventLoop *loop)
 {
   dSCdphi=12.0*M_PI/180.;  // 12 degrees
 
-	C_EFFECTIVE = 15.0;
-	ATTEN_LENGTH = 150.0;
-	OUT_OF_TIME_CUT = 35.0; // Changed 200 -> 35 ns, March 2016
-    gPARMS->SetDefaultParameter("PID:OUT_OF_TIME_CUT",OUT_OF_TIME_CUT);	
-    CDC_TIME_CUT_FOR_DEDX = 1000.0; 
-    gPARMS->SetDefaultParameter("PID:CDC_TIME_CUT_FOR_DEDX",CDC_TIME_CUT_FOR_DEDX);
-
+  C_EFFECTIVE = 15.0;
+  ATTEN_LENGTH = 150.0;
+  OUT_OF_TIME_CUT = 35.0; // Changed 200 -> 35 ns, March 2016
+  gPARMS->SetDefaultParameter("PID:OUT_OF_TIME_CUT",OUT_OF_TIME_CUT);	
+  CDC_TIME_CUT_FOR_DEDX = 1000.0; 
+  gPARMS->SetDefaultParameter("PID:CDC_TIME_CUT_FOR_DEDX",CDC_TIME_CUT_FOR_DEDX);
 
   DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   if(!dapp){
@@ -48,7 +47,8 @@ DParticleID::DParticleID(JEventLoop *loop)
 		return;
   }
 
-  const DRootGeom *RootGeom = dapp->GetRootGeom(loop->GetJEvent().GetRunNumber());
+  unsigned int run_number = (loop->GetJEvent()).GetRunNumber();
+  const DRootGeom *RootGeom = dapp->GetRootGeom(run_number);
   // Get material properties for chamber gas
   double rho_Z_over_A_LnI=0,radlen=0;
   RootGeom->FindMat("CDchamberGas", dRhoZoverA_CDC, rho_Z_over_A_LnI, radlen);
@@ -58,118 +58,121 @@ DParticleID::DParticleID(JEventLoop *loop)
   RootGeom->FindMat("FDchamberGas", dRhoZoverA_FDC, rho_Z_over_A_LnI, radlen);
   dLnI_FDC = rho_Z_over_A_LnI/dRhoZoverA_FDC;
   dKRhoZoverA_FDC = 0.1535E-3*dRhoZoverA_FDC;
-
+  
   RootGeom->FindMat("Scintillator", dRhoZoverA_Scint, rho_Z_over_A_LnI, radlen);
   dLnI_Scint = rho_Z_over_A_LnI/dRhoZoverA_Scint;
   dKRhoZoverA_Scint = 0.1535E-3*dRhoZoverA_Scint;
-
+  
   // Get the geometry
-  DGeometry* locGeometry = dapp->GetDGeometry(loop->GetJEvent().GetRunNumber());
+  DGeometry* locGeometry = dapp->GetDGeometry(run_number);
+   
+  // Get bfield
+  bfield = dapp->GetBfield(run_number); 
 
   // Get z position of face of FCAL
   locGeometry->GetFCALZ(dFCALz);
-
-	// Get start counter geometry;
-	uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
-	if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
+  
+  // Get start counter geometry;
+  uint MAX_SC_SECTORS = 0;    // keep track of the number of sectors
+  if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
+    {
+      dSCphi0=sc_pos[0][0].Phi();
+      //sc_leg_tcor = -sc_pos[0][0].z()/C_EFFECTIVE;
+      double theta = sc_norm[0][sc_norm[0].size() - 2].Theta();
+      sc_angle_cor = 1./cos(M_PI_2 - theta);
+      
+      // Create vector of direction vectors in scintillator planes
+      for (int i=0;i<30;i++)
 	{
-		dSCphi0=sc_pos[0][0].Phi();
-		//sc_leg_tcor = -sc_pos[0][0].z()/C_EFFECTIVE;
-		double theta = sc_norm[0][sc_norm[0].size() - 2].Theta();
-		sc_angle_cor = 1./cos(M_PI_2 - theta);
-
-		// Create vector of direction vectors in scintillator planes
-		for (int i=0;i<30;i++)
-		{
-			vector<DVector3> temp;
-			for (unsigned int j = 0; j < sc_pos[i].size() - 1; ++j)
-			{
-				double dx = sc_pos[i][j + 1].x() - sc_pos[i][j].x();
-				double dy = sc_pos[i][j + 1].y() - sc_pos[i][j].y();
-				double dz = sc_pos[i][j + 1].z() - sc_pos[i][j].z();
-				temp.push_back(DVector3(dx/dz,dy/dz,1.));
-			}
-			sc_dir.push_back(temp);
-		}
-	  START_EXIST = true;      // Found Start Counter
-	  MAX_SC_SECTORS = sc_pos.size();
+	  vector<DVector3> temp;
+	  for (unsigned int j = 0; j < sc_pos[i].size() - 1; ++j)
+	    {
+	      double dx = sc_pos[i][j + 1].x() - sc_pos[i][j].x();
+	      double dy = sc_pos[i][j + 1].y() - sc_pos[i][j].y();
+	      double dz = sc_pos[i][j + 1].z() - sc_pos[i][j].z();
+	      temp.push_back(DVector3(dx/dz,dy/dz,1.));
+	    }
+	  sc_dir.push_back(temp);
 	}
-	else {
-	  START_EXIST = false;      // no Start Counter found
-	}
-
-
-	//IF YOU CHANGE THESE, PLEASE (!!) UPDATE THE CUT LINES DRAWN FOR THE MONITORING IN:
-	// src/plugins/Analysis/monitoring_hists/HistMacro_Matching_*.C
-
-	FCAL_CUT_PAR1=2.75;
-	gPARMS->SetDefaultParameter("FCAL:CUT_PAR1",FCAL_CUT_PAR1);
-
-	FCAL_CUT_PAR2=0.5;
-	gPARMS->SetDefaultParameter("FCAL:CUT_PAR2",FCAL_CUT_PAR2);
-	
-	FCAL_CUT_PAR3=0.002;
-	gPARMS->SetDefaultParameter("FCAL:CUT_PAR3",FCAL_CUT_PAR3);
-
-	TOF_CUT_PAR1 = 1.1;
-	gPARMS->SetDefaultParameter("TOF:CUT_PAR1",TOF_CUT_PAR1);
-
-	TOF_CUT_PAR2 = 1.5;
-	gPARMS->SetDefaultParameter("TOF:CUT_PAR2",TOF_CUT_PAR2);
-
-	TOF_CUT_PAR3 = 6.15;
-	gPARMS->SetDefaultParameter("TOF:CUT_PAR3",TOF_CUT_PAR3);
-
-	TOF_CUT_PAR4 = 0.005;
-	gPARMS->SetDefaultParameter("TOF:CUT_PAR4",TOF_CUT_PAR4);
-
-	BCAL_Z_CUT = 30.0;
-	gPARMS->SetDefaultParameter("BCAL:Z_CUT",BCAL_Z_CUT);
-
-	BCAL_PHI_CUT_PAR1 = 3.0;
-	gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR1",BCAL_PHI_CUT_PAR1);
-
-	BCAL_PHI_CUT_PAR2 = 24.0;
-	gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR2",BCAL_PHI_CUT_PAR2);
-
-	BCAL_PHI_CUT_PAR3 = 0.8;
-	gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR3",BCAL_PHI_CUT_PAR3);
-
-	double locSCCutPar = 8.0;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR1",locSCCutPar);
-	dSCCutPars_TimeBased.push_back(locSCCutPar);
-
-	locSCCutPar = 0.5;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR2",locSCCutPar);
-	dSCCutPars_TimeBased.push_back(locSCCutPar);
-
-	locSCCutPar = 0.1;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR3",locSCCutPar);
-	dSCCutPars_TimeBased.push_back(locSCCutPar);
-
-	locSCCutPar = 60.0;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR4",locSCCutPar);
-	dSCCutPars_TimeBased.push_back(locSCCutPar);
-
-	locSCCutPar = 10.0;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR1_WB",locSCCutPar);
-	dSCCutPars_WireBased.push_back(locSCCutPar);
-
-	locSCCutPar = 0.5;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR2_WB",locSCCutPar);
-	dSCCutPars_WireBased.push_back(locSCCutPar);
-
-	locSCCutPar = 0.1;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR3_WB",locSCCutPar);
-	dSCCutPars_WireBased.push_back(locSCCutPar);
-
-	locSCCutPar = 60.0;
-	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR4_WB",locSCCutPar);
-	dSCCutPars_WireBased.push_back(locSCCutPar);
-
-	dTargetZCenter = 0.0;
-	locGeometry->GetTargetZ(dTargetZCenter);
-
+      START_EXIST = true;      // Found Start Counter
+      MAX_SC_SECTORS = sc_pos.size();
+    }
+  else {
+    START_EXIST = false;      // no Start Counter found
+  }
+  
+  
+  //IF YOU CHANGE THESE, PLEASE (!!) UPDATE THE CUT LINES DRAWN FOR THE MONITORING IN:
+  // src/plugins/Analysis/monitoring_hists/HistMacro_Matching_*.C
+  
+  FCAL_CUT_PAR1=2.75;
+  gPARMS->SetDefaultParameter("FCAL:CUT_PAR1",FCAL_CUT_PAR1);
+  
+  FCAL_CUT_PAR2=0.5;
+  gPARMS->SetDefaultParameter("FCAL:CUT_PAR2",FCAL_CUT_PAR2);
+  
+  FCAL_CUT_PAR3=0.002;
+  gPARMS->SetDefaultParameter("FCAL:CUT_PAR3",FCAL_CUT_PAR3);
+  
+  TOF_CUT_PAR1 = 1.1;
+  gPARMS->SetDefaultParameter("TOF:CUT_PAR1",TOF_CUT_PAR1);
+  
+  TOF_CUT_PAR2 = 1.5;
+  gPARMS->SetDefaultParameter("TOF:CUT_PAR2",TOF_CUT_PAR2);
+  
+  TOF_CUT_PAR3 = 6.15;
+  gPARMS->SetDefaultParameter("TOF:CUT_PAR3",TOF_CUT_PAR3);
+  
+  TOF_CUT_PAR4 = 0.005;
+  gPARMS->SetDefaultParameter("TOF:CUT_PAR4",TOF_CUT_PAR4);
+  
+  BCAL_Z_CUT = 30.0;
+  gPARMS->SetDefaultParameter("BCAL:Z_CUT",BCAL_Z_CUT);
+  
+  BCAL_PHI_CUT_PAR1 = 3.0;
+  gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR1",BCAL_PHI_CUT_PAR1);
+  
+  BCAL_PHI_CUT_PAR2 = 24.0;
+  gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR2",BCAL_PHI_CUT_PAR2);
+  
+  BCAL_PHI_CUT_PAR3 = 0.8;
+  gPARMS->SetDefaultParameter("BCAL:PHI_CUT_PAR3",BCAL_PHI_CUT_PAR3);
+  
+  double locSCCutPar = 8.0;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR1",locSCCutPar);
+  dSCCutPars_TimeBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 0.5;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR2",locSCCutPar);
+  dSCCutPars_TimeBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 0.1;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR3",locSCCutPar);
+  dSCCutPars_TimeBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 60.0;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR4",locSCCutPar);
+  dSCCutPars_TimeBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 10.0;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR1_WB",locSCCutPar);
+  dSCCutPars_WireBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 0.5;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR2_WB",locSCCutPar);
+  dSCCutPars_WireBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 0.1;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR3_WB",locSCCutPar);
+  dSCCutPars_WireBased.push_back(locSCCutPar);
+  
+  locSCCutPar = 60.0;
+  gPARMS->SetDefaultParameter("SC:SC_CUT_PAR4_WB",locSCCutPar);
+  dSCCutPars_WireBased.push_back(locSCCutPar);
+  
+  dTargetZCenter = 0.0;
+  locGeometry->GetTargetZ(dTargetZCenter);
+  
   
   // Track finder helper class
   vector<const DTrackFinder *> finders;
@@ -201,111 +204,140 @@ DParticleID::DParticleID(JEventLoop *loop)
   // FCAL geometry
   loop->GetSingle(dFCALGeometry);
 
-	//TOF calibration constants & geometry
-	loop->GetSingle(dTOFGeometry);
-	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
-	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
-	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
-
-	string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
-	if(loop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
-		jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
-
-	map<string, double> tofparms;
-	string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
- 	loop->GetCalib(locTOFParmsTable.c_str(), tofparms);   
-	TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
-	TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
-	//TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
-
-	// Start counter calibration constants
-	// vector<map<string,double> > tvals;
-	vector< vector<double> > pt_vals;
-	vector<map<string,double> > attn_vals;
-
-	// if(loop->GetCalib("/START_COUNTER/propagation_speed",tvals))
-	//   jout << "Error loading /START_COUNTER/propagation_speed !" << endl;
-	// else{
-	//   for(unsigned int i=0; i<tvals.size(); i++){
-        //     map<string, double> &row = tvals[i];
-	//     sc_veff[SC_STRAIGHT].push_back(row["SC_STRAIGHT_PROPAGATION_B"]);
-	//     sc_veff[SC_BEND].push_back(row["SC_BEND_PROPAGATION_B"]);
-	//     sc_veff[SC_NOSE].push_back(row["SC_NOSE_PROPAGATION_B"]);
-	//   }
-	// }
-
-	// Individual propagation speed calibrations (beam data)
-	if(loop->GetCalib("/START_COUNTER/propagation_time_corr", pt_vals))
-	  jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
-	else
-	  {
-	    for(unsigned int i = 0; i < pt_vals.size(); i++)
-	      {
-		// Functional form is: A + B*x
-              //map<string, double> &row = pt_vals[i];
-		sc_pt_yint[SC_STRAIGHT].push_back(pt_vals[i][0]);
-		sc_pt_yint[SC_BEND].push_back(pt_vals[i][2]);
-		sc_pt_yint[SC_NOSE].push_back(pt_vals[i][4]);
-		    
-		sc_pt_slope[SC_STRAIGHT].push_back(pt_vals[i][1]);
-		sc_pt_slope[SC_BEND].push_back(pt_vals[i][3]);
-		sc_pt_slope[SC_NOSE].push_back(pt_vals[i][5]);
-	      }
-	  }
-
-	// Individual attenuation calibrations (FIU bench mark data) 
-	if(loop->GetCalib("START_COUNTER/attenuation_factor", attn_vals))
-	  jout << "Error in loading START_COUNTER/attenuation_factor !" << endl;
-	else
-	  {
-	    for(unsigned int i = 0; i < attn_vals.size(); i++)
-	      {
-		// Functional form is: A*exp(B*x) + C
-		map<string, double> &row = attn_vals[i];
-		sc_attn_A[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_A"]);
-		sc_attn_A[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_A"]); 
-
-		sc_attn_B[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_B"]);
-		sc_attn_B[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_B"]); 
-
-		sc_attn_C[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_C"]);
-		sc_attn_C[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_C"]); 
-	      }
-	  }
-
-    // Start counter individual paddle resolutions
-    vector< vector<double> > sc_paddle_resolution_params;
-    if(loop->GetCalib("START_COUNTER/TRvsPL", sc_paddle_resolution_params))
-        jout << "Error in loading START_COUNTER/TRvsPL !" << endl;
-	else {
-        if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
-            jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl
-                 << "  loaded = " << sc_paddle_resolution_params.size()
-                 << "  expected = " << MAX_SC_SECTORS << endl;
-
-        for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
-            SC_SECTION1_P0.push_back( sc_paddle_resolution_params[i][0] ); 
-            SC_SECTION1_P1.push_back( sc_paddle_resolution_params[i][1] );
-            SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][2] );
-            SC_SECTION2_P0.push_back( sc_paddle_resolution_params[i][3] ); 
-            SC_SECTION2_P1.push_back( sc_paddle_resolution_params[i][4] );
-            SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][5] );
-            SC_SECTION3_P0.push_back( sc_paddle_resolution_params[i][6] ); 
-            SC_SECTION3_P1.push_back( sc_paddle_resolution_params[i][7] );
-            SC_BOUNDARY3.push_back( sc_paddle_resolution_params[i][8] );
-            SC_SECTION4_P0.push_back( sc_paddle_resolution_params[i][9] ); 
-            SC_SECTION4_P1.push_back( sc_paddle_resolution_params[i][10] );
-        }
+  //TOF calibration constants & geometry
+  loop->GetSingle(dTOFGeometry);
+  dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
+  double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
+  ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
+  
+  string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+  if(loop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+    jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
+  
+  map<string, double> tofparms;
+  string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+  loop->GetCalib(locTOFParmsTable.c_str(), tofparms);   
+  TOF_ATTEN_LENGTH = tofparms["TOF_ATTEN_LENGTH"];
+  TOF_E_THRESHOLD = tofparms["TOF_E_THRESHOLD"];
+  //TOF_HALFPADDLE = tofparms["TOF_HALFPADDLE"];   // REPLACE?  NOT USED?
+  
+  // Start counter calibration constants
+  vector<map<string,double> > tvals;
+  vector< vector<double> > pt_vals;
+  vector<map<string,double> > attn_vals;
+  
+  // if(loop->GetCalib("/START_COUNTER/propagation_speed",tvals))
+  //   jout << "Error loading /START_COUNTER/propagation_speed !" << endl;
+  // else{
+  //   for(unsigned int i=0; i<tvals.size(); i++){
+  //     map<string, double> &row = tvals[i];
+  //     sc_veff[SC_STRAIGHT].push_back(row["SC_STRAIGHT_PROPAGATION_B"]);
+  //     sc_veff[SC_BEND].push_back(row["SC_BEND_PROPAGATION_B"]);
+  //     sc_veff[SC_NOSE].push_back(row["SC_NOSE_PROPAGATION_B"]);
+  //   }
+  // }
+  
+  // Individual propagation speed calibrations (beam data)
+  if(loop->GetCalib("/START_COUNTER/propagation_time_corr", pt_vals))
+    jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
+  else
+    {
+      for(unsigned int i = 0; i < pt_vals.size(); i++)
+	{
+	  // Functional form is: A + B*x
+	  //map<string, double> &row = pt_vals[i];
+	  sc_pt_yint[SC_STRAIGHT].push_back(pt_vals[i][0]);
+	  sc_pt_yint[SC_BEND].push_back(pt_vals[i][2]);
+	  sc_pt_yint[SC_NOSE].push_back(pt_vals[i][4]);
+	  
+	  sc_pt_slope[SC_STRAIGHT].push_back(pt_vals[i][1]);
+	  sc_pt_slope[SC_BEND].push_back(pt_vals[i][3]);
+	  sc_pt_slope[SC_NOSE].push_back(pt_vals[i][5]);
+	}
     }
+  
+  // Individual attenuation calibrations (FIU bench mark data) 
+  if(loop->GetCalib("START_COUNTER/attenuation_factor", attn_vals))
+    jout << "Error in loading START_COUNTER/attenuation_factor !" << endl;
+  else
+    {
+      for(unsigned int i = 0; i < attn_vals.size(); i++)
+	{
+	  // Functional form is: A*exp(B*x) + C
+	  map<string, double> &row = attn_vals[i];
+	  sc_attn_A[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_A"]);
+	  sc_attn_A[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_A"]); 
 
-	//be sure that DRFTime_factory::init() and brun() are called
-	vector<const DTOFPoint*> locTOFPoints;
-	loop->Get(locTOFPoints);
+	  sc_attn_B[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_B"]);
+	  sc_attn_B[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_B"]); 
+	  
+	  sc_attn_C[SC_STRAIGHT_ATTN].push_back(row["SC_STRAIGHT_ATTENUATION_C"]);
+	  sc_attn_C[SC_BENDNOSE_ATTN].push_back(row["SC_BENDNOSE_ATTENUATION_C"]); 
+	}
+    }
+  
+  // Start counter individual paddle resolutions
+  vector< vector<double> > sc_paddle_resolution_params;
+  if(loop->GetCalib("START_COUNTER/TRvsPL", sc_paddle_resolution_params))
+    jout << "Error in loading START_COUNTER/TRvsPL !" << endl;
+  else {
+    if(sc_paddle_resolution_params.size() != MAX_SC_SECTORS)
+      jerr << "Start counter paddle resolutions table has wrong number of entries:" << endl
+	   << "  loaded = " << sc_paddle_resolution_params.size()
+                 << "  expected = " << MAX_SC_SECTORS << endl;
+    
+    for(int i=0; i<(int)MAX_SC_SECTORS; i++) {
+      SC_SECTION1_P0.push_back( sc_paddle_resolution_params[i][0] ); 
+      SC_SECTION1_P1.push_back( sc_paddle_resolution_params[i][1] );
+      SC_BOUNDARY1.push_back( sc_paddle_resolution_params[i][2] );
+      SC_SECTION2_P0.push_back( sc_paddle_resolution_params[i][3] ); 
+      SC_SECTION2_P1.push_back( sc_paddle_resolution_params[i][4] );
+      SC_BOUNDARY2.push_back( sc_paddle_resolution_params[i][5] );
+      SC_SECTION3_P0.push_back( sc_paddle_resolution_params[i][6] ); 
+      SC_SECTION3_P1.push_back( sc_paddle_resolution_params[i][7] );
+      SC_BOUNDARY3.push_back( sc_paddle_resolution_params[i][8] );
+      SC_SECTION4_P0.push_back( sc_paddle_resolution_params[i][9] ); 
+      SC_SECTION4_P1.push_back( sc_paddle_resolution_params[i][10] );
+    }
+  }
+  
+  //be sure that DRFTime_factory::init() and brun() are called
+  vector<const DTOFPoint*> locTOFPoints;
+  loop->Get(locTOFPoints);
+  
+  dTOFPointFactory = static_cast<DTOFPoint_factory*>(loop->GetFactory("DTOFPoint"));
+  
+  // Initialize DIRC LUT
+  loop->GetSingle(dDIRCLut);
 
-	dTOFPointFactory = static_cast<DTOFPoint_factory*>(loop->GetFactory("DTOFPoint"));
-	
-	// Initialize DIRC LUT
-	loop->GetSingle(dDIRCLut);
+  // CDC straw sag parameters  
+  JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+   int straw_number[28]={42,42,54,54,66,66,80,80,93,93,106,106,
+      123,123,135,135,146,146,158,158,170,170,
+      182,182,197,197,209,209};
+   max_sag.clear();
+   sag_phi_offset.clear();
+   int straw_count=0,ring_count=0;
+   if (jcalib->Get("CDC/sag_parameters", tvals)==false){
+      vector<double>temp,temp2;
+      for(unsigned int i=0; i<tvals.size(); i++){
+         map<string, double> &row = tvals[i];
+
+         temp.push_back(row["offset"]);
+         temp2.push_back(row["phi"]);
+
+         straw_count++;
+         if (straw_count==straw_number[ring_count]){
+            max_sag.push_back(temp);
+            sag_phi_offset.push_back(temp2);
+            temp.clear();
+            temp2.clear();
+            straw_count=0;
+            ring_count++;
+         }
+      }
+   }
+
 }
 
 // Group fitted tracks according to candidate id
@@ -343,7 +375,8 @@ jerror_t DParticleID::GroupTracks(vector<const DTrackTimeBased *> &tracks,
 // on the track. Returns a list of dE and dx pairs with the momentum at the 
 // hit.
 jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>& dEdxHits_CDC,vector<dedx_t>& dEdxHits_FDC) const{
- 
+  // charge
+  double q=track->charge();
 
   // Position and momentum
   DVector3 pos,mom;
@@ -365,6 +398,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       if (cdchits[i]->dE <= 0.0) continue; // pedestal > signal
       
       double doca2_old=1e6;
+      unsigned int doca_index=0;
       for (unsigned int j=0;j<cdc_extrapolations.size();j++){
 	double z=cdc_extrapolations[j].position.z();
 	DVector3 wirepos=cdchits[i]->wire->origin
@@ -372,9 +406,9 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 	  *cdchits[i]->wire->udir;
 	double doca2=(wirepos-cdc_extrapolations[j].position).Mag2();
 	if (doca2>doca2_old){
-	  unsigned int index=j-1;
-	  mom=cdc_extrapolations[index].momentum;
-	  pos=cdc_extrapolations[index].position;
+	  doca_index=j-1;
+	  mom=cdc_extrapolations[doca_index].momentum;
+	  pos=cdc_extrapolations[doca_index].position;
 	  //tflight=cdc_extrapolations[index].t;
 	  break;
 	}
@@ -387,7 +421,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
 
       // Create the dE,dx pair from the position and momentum using a helical approximation for the path 
       // in the straw and keep track of the momentum in the active region of the detector
-      if (CalcdEdxHit(mom,pos,cdchits[i],de_and_dx)==NOERROR){
+      if (CalcdEdxHit(q,cdc_extrapolations[doca_index],cdchits[i],de_and_dx)
+	  ==NOERROR){
 	dEdxHits_CDC.push_back(de_and_dx);
       }
     }
@@ -491,6 +526,75 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 	return NOERROR;
 }
 
+jerror_t DParticleID::CalcdEdxHit(double q,
+				  const DTrackFitter::Extrapolation_t &extrap,
+				  const DCDCTrackHit *hit,
+				  dedx_t &dedx) const {
+  DVector3 mom=extrap.momentum;
+  DVector3 pos=extrap.position;
+  double two_kappa_s=-0.003*q*fabs(bfield->GetBz(pos.x(),pos.y(),pos.z()))*extrap.s/mom.Mag();
+  double dx=CalcdXHit(two_kappa_s,mom,pos,hit->wire);
+
+  if ((dx>0.) && (hit->dist >0.)  // cannot cope w -ve doca
+      && (hit->dist < CDC_GAIN_DOCA_PARS[0])){    
+    // arc length and energy deposition
+    dedx.dx=dx;
+    dedx.dE=hit->dE; //GeV
+    dedx.dE_amp=hit->dE_amp;
+    dedx.p=mom.Mag();
+    
+    CorrectCDCdE(hit->dist,dedx);
+
+    dedx.dEdx=dedx.dE/dx;
+    dedx.dEdx_amp=dedx.dE_amp/dx;
+    
+    return NOERROR;
+  }
+  
+  return VALUE_OUT_OF_RANGE;
+}
+
+// Correct CDC energy loss for drift-distance dependence
+void DParticleID::CorrectCDCdE(double d,dedx_t &dedx) const {  
+  // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
+  // dmax dcorr goodp0 goodp1 thisp0 thisp1
+  // 0: dmax ignore hits outside this doca
+  // 1: dcorr do not correct hits within this doca
+  // 2: goodp0 par0 for good reference run
+  // 3: goodp1 par1 for good reference run 
+  // 4: thisp0  par0 for this run
+  // 5: thisp1  par1 for this run
+
+  double reference=0.,this_run=0.; 
+  double dmax = CDC_GAIN_DOCA_PARS[0];
+  double dmin = CDC_GAIN_DOCA_PARS[1];
+
+  // Amplitude correction
+  if (d > dmin) {
+    reference = CDC_GAIN_DOCA_PARS[2] + d*CDC_GAIN_DOCA_PARS[3];
+    this_run = CDC_GAIN_DOCA_PARS[4] + d*CDC_GAIN_DOCA_PARS[5];
+    dedx.dE_amp = dedx.dE_amp * reference/this_run;
+  }
+ 
+  // integral correction
+  if (d < dmin) {
+    reference = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - d);
+    reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
+
+    this_run = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - d);
+    this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax))
+      * (dmax - dmin);   
+  } else { 
+    reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(d+dmax)) * (dmax - d);
+    this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(d+dmax)) * (dmax - d);
+    
+  }
+  
+  dedx.dE = dedx.dE * reference/this_run;
+}
+
+
+
 // Calculate the path length for a single hit in a straw and return ds and the 
 // energy deposition in the straw.  It returns dE as the first element in the 
 // dedx pair and ds as the second element in the dedx pair.
@@ -499,70 +603,86 @@ jerror_t DParticleID::CalcdEdxHit(const DVector3 &mom,
 				  const DCDCTrackHit *hit,
 				  dedx_t &dedx) const{
   if (hit==NULL || hit->wire==NULL) return RESOURCE_UNAVAILABLE;
- 
+
   double dx=CalcdXHit(mom,pos,hit->wire);
 
-  if ((dx>0.) && (hit->dist >0.)){     // cannot cope w -ve doca
+  if ((dx>0.) && (hit->dist >0.) 
+      && (hit->dist < CDC_GAIN_DOCA_PARS[0])){     // cannot cope w -ve doca
 
     // arc length and energy deposition
+    dedx.dx=dx;
+    dedx.dE=hit->dE; //GeV
+    dedx.dE_amp=hit->dE_amp;
+    dedx.p=mom.Mag();
+    
+    CorrectCDCdE(hit->dist,dedx);
 
-    // CDC/gain_doca_correction contains CDC_GAIN_DOCA_PARS 
-    // dmax dcorr goodp0 goodp1 thisp0 thisp1
-    // 0: dmax ignore hits outside this doca
-    // 1: dcorr do not correct hits within this doca
-    // 2: goodp0 par0 for good reference run
-    // 3: goodp1 par1 for good reference run 
-    // 4: thisp0  par0 for this run
-    // 5: thisp1  par1 for this run
-
-
-    if (hit->dist < CDC_GAIN_DOCA_PARS[0]) {
-
-      dedx.dx=dx;
-      dedx.dE=hit->dE; //GeV
-      dedx.dE_amp=hit->dE_amp;
-      dedx.p=mom.Mag();
-
-      if (hit->dist > CDC_GAIN_DOCA_PARS[1]) {
-	double reference = CDC_GAIN_DOCA_PARS[2] + hit->dist*CDC_GAIN_DOCA_PARS[3];
-        double this_run = CDC_GAIN_DOCA_PARS[4] + hit->dist*CDC_GAIN_DOCA_PARS[5];
-        dedx.dE_amp = dedx.dE_amp * reference/this_run;
-      }
-
-
-  // integral correction
-
-      double dmax = CDC_GAIN_DOCA_PARS[0];
-      double dmin = CDC_GAIN_DOCA_PARS[1];
-
-      double reference;
-      double this_run;
-
-      if (hit->dist < dmin) {
-
-	  reference    = (CDC_GAIN_DOCA_PARS[2] + CDC_GAIN_DOCA_PARS[3]*dmin) * (dmin - hit->dist);
-	  reference += (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(dmin+dmax)) * (dmax - dmin);
-
-	  this_run    = (CDC_GAIN_DOCA_PARS[4] + CDC_GAIN_DOCA_PARS[5]*dmin) * (dmin - hit->dist);
-	  this_run += (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(dmin+dmax)) * (dmax - dmin);
-
-      } else { 
-
-	  reference = (CDC_GAIN_DOCA_PARS[2] + 0.5*CDC_GAIN_DOCA_PARS[3]*(hit->dist+dmax)) * (dmax - hit->dist);
-	  this_run   = (CDC_GAIN_DOCA_PARS[4] + 0.5*CDC_GAIN_DOCA_PARS[5]*(hit->dist+dmax)) * (dmax - hit->dist);
-
-      }
-
-      dedx.dE = dedx.dE * reference/this_run;
-
-      dedx.dEdx=dedx.dE/dx;
-      dedx.dEdx_amp=dedx.dE_amp/dx;
-
-      return NOERROR;
-    }
+    dedx.dEdx=dedx.dE/dx;
+    dedx.dEdx_amp=dedx.dE_amp/dx;
+    
+    return NOERROR;
   }
   
   return VALUE_OUT_OF_RANGE;
+}
+
+
+// Calculate the path length for a single hit in a straw.
+double DParticleID::CalcdXHit(double two_kappa_s,const DVector3 &mom,
+			      const DVector3 &pos,
+			      const DCDCWire *wire) const{
+  if (wire==NULL) return -1.; // should not get here
+  
+  // Track direction parameters
+  double phi=mom.Phi();
+  double lambda=M_PI_2-mom.Theta();
+  double cosphi=cos(phi);
+  double sinphi=sin(phi);
+  double tanl=tan(lambda);
+  
+  //Position relative to wire origin
+  double dz=pos.z()-wire->origin.z();
+  double dx=pos.x()-wire->origin.x();
+  double dy=pos.y()-wire->origin.y();
+
+  double ux=wire->udir.x();
+  double uy=wire->udir.y();
+  double uz=wire->udir.z();
+  dx-=(ux/uz)*dz;
+  dy-=(uy/uz)*dz;
+
+  int ring_index=wire->ring-1;
+  int straw_index=wire->straw-1;
+  double sag_x=max_sag[ring_index][straw_index]*cos(sag_phi_offset[ring_index][straw_index]);
+  double sag_y=max_sag[ring_index][straw_index]*sin(sag_phi_offset[ring_index][straw_index]);
+  const double L=150.;
+  double factor=8.*dz/(L*L);
+  double factor2=1.-4.*dz*dz/(L*L);
+  
+  double cos2ks=cos(two_kappa_s);
+  double sin2ks=sin(two_kappa_s);
+  double D_=sinphi*cos2ks+cosphi*sin2ks+tanl*(factor*sag_y-uy/uz);
+  double C_=cosphi*cos2ks-sinphi*sin2ks+tanl*(factor*sag_x-ux/uz);
+  double A_=dx-sag_x*factor2;
+  double B_=dy-sag_y*factor2;
+  double b_=2.*A_*C_+2.*B_*D_;
+  double a_=D_*D_+C_*C_;
+  // square of straw radius
+  double rs2=0.776*0.776;
+  double c_=A_*A_+B_*B_-rs2;
+  double temp=b_*b_-4.*a_*c_;
+
+  if (temp>0){
+    double cosl=fabs(cos(lambda));
+    //    double gas_density=0.0018;
+
+    // arc length and energy deposition
+    //dedx.second=gas_density*sqrt(temp)/a/cosl; // g/cm^2
+    return sqrt(temp)/a_/cosl;
+  }
+  
+  return -1.;
+
 }
 
 
@@ -608,6 +728,7 @@ double DParticleID::CalcdXHit(const DVector3 &mom,
   
   // Check for valid arc length and compute dEdx
   double temp=b*b-4.*a*c;
+
   if (temp>0){
     double cosl=fabs(cos(lambda));
     //    double gas_density=0.0018;
