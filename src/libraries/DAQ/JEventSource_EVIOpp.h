@@ -27,6 +27,7 @@
 #include <DAQ/Df250EmulatorAlgorithm.h>
 #include <DAQ/Df125EmulatorAlgorithm.h>
 
+#include <DANA/DApplication.h>
 #include <DANA/DStatusBits.h>
 
 /// How this Event Source Works
@@ -138,14 +139,20 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		               void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
 		               void AddROCIDtoParseList(uint32_t rocid){ ROCIDS_TO_PARSE.insert(rocid); }
 		      set<uint32_t> GetROCIDParseList(uint32_t rocid){ return ROCIDS_TO_PARSE; }
+		               void DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords=0, const uint32_t *imark=NULL);
 
-		
+
+		DApplication *dapp = NULL;
 		bool DONE;
 		bool DISPATCHER_END;
 		std::chrono::high_resolution_clock::time_point tstart;
 		std::chrono::high_resolution_clock::time_point tend;
 
 		uint32_t BLOCKS_TO_SKIP;
+		uint32_t PHYSICS_BLOCKS_TO_SKIP;
+		uint32_t PHYSICS_BLOCKS_SKIPPED;
+        uint32_t PHYSICS_BLOCKS_TO_KEEP;
+        uint32_t PHYSICS_BLOCKS_KEPT;
 		uint32_t MAX_PARSED_EVENTS;
 		mutex PARSED_EVENTS_MUTEX;
 		condition_variable PARSED_EVENTS_CV;
