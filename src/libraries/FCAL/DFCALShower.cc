@@ -7,6 +7,7 @@ DFCALShower::DFCALShower():ExyztCovariance(5)
   fEnergy = 0.;
   fTime = 0.;
   fPosition.SetXYZ(0., 0., 0.);
+  fPosition_log.SetXYZ(0., 0., 0.);
   fTimeTr = 1E3;
   fDocaTr = 1E3;
   fSumU = 0;
@@ -35,6 +36,11 @@ void DFCALShower::setTime(const double time)
 void DFCALShower::setPosition(const DVector3& aPosition ) 
 {
   fPosition = aPosition;
+}
+
+void DFCALShower::setPosition_log(const DVector3& aPosition_log ) 
+{
+  fPosition_log = aPosition_log;
 }
 
 void DFCALShower::setDocaTrack( const double docaTrack ){ fDocaTr = docaTrack; }

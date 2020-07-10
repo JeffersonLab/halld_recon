@@ -13,15 +13,20 @@ import os
 from os.path import isfile, join
 
 runlist = []
+RunPeriod = "RunPeriod-2019-11"
+version = "ver12"
 
-minrunno = 40000
-maxrunno = 45000
+minrunno = 71350
+maxrunno = 71591
 maxruns = 20
 minfiles = 1
 maxfiles = 100
 
+indir = '/work/halld/home/elton/BCAL_Hadronic_Eff/'+RunPeriod+'/'+version+'/dat'
+print " Input directory=",indir
 
-filelist = sorted(os.listdir("/work/halld/home/elton/BCAL_Hadronic_Eff_2018/prod_ver01/dat"))
+
+filelist = sorted(os.listdir(indir))
 
 for file in filelist:
     if ("layer1" in file and ".dat" in file):
