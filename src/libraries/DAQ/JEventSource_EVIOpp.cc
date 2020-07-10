@@ -422,15 +422,7 @@ void JEventSource_EVIOpp::Dispatcher(void)
                         uint32_t M = (buff[1]>>24);
                         Nevents_read += M;  // (this is never really used)
 								if(dapp) dapp->AddNEventsRead( M ); // This is so the JANA ticker will reflect how many events were actually read
-								
-								if(PHYSICS_BLOCKS_SKIPPED<3){
-									_DBG_<<"hdevio->GetCurrentBlockType() = " << hdevio->GetCurrentBlockType() << endl;
-									DumpBinary(buff, nullptr, 8);
-								}
 								continue;
-					 }else{
-					 	_DBG_<<"hdevio->GetCurrentBlockType() = " << hdevio->GetCurrentBlockType() << endl;
-						DumpBinary(buff, nullptr, 8);
 					 }
 				}
 
