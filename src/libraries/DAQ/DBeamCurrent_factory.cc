@@ -14,6 +14,7 @@
 using namespace std;
 
 #include <DAQ/DCODAEventInfo.h>
+#include <DAQ/DCODAROCInfo.h>
 #include "DBeamCurrent_factory.h"
 using namespace jana;
 
