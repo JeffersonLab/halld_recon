@@ -25,6 +25,7 @@ class DBeamCurrent_factory:public jana::JFactory<DBeamCurrent>{
 
 		double BEAM_ON_MIN_nA;
 		double BEAM_TRIP_MIN_T;
+		int    SYNCSKIM_ROCID;
 
 		vector<Boundary> boundaries; // key=time  val=Ibeam
 		vector<double> trip;
