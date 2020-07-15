@@ -370,6 +370,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
    }
+   if (dataClassName =="DEventHitStatistics") {
+      return Extract_DEventHitStatistics(record,
+                     dynamic_cast<JFactory<DEventHitStatistics>*>(factory));
+   }
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -1703,6 +1707,52 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
       hit->setTOT(iter->getTot());
 
       data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+   
+   return NOERROR;
+}
+
+//----------------------------
+// Extract_DEventHitStatistics
+//----------------------------
+jerror_t DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
+                                   JFactory<DEventHitStatistics>* factory)
+{
+   /// Copies the data from the hitStatistics hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DEventHitStatistics*> data;
+
+   hddm_r::HitStatisticsList slist = (hddm_r::HitStatisticsList)record->getHitStatisticses();
+   if (slist.size() != 0 && slist().getJtag() == tag) {
+      DEventHitStatistics *stats = new DEventHitStatistics;
+      hddm_r::StartCountersList starts = slist().getStartCounterses();
+      stats->start_counters = (starts.size() > 0)? starts().getCount() : 0;
+      hddm_r::CdcStrawsList straws = slist().getCdcStrawses();
+      stats->cdc_straws = (straws.size() > 0)? straws().getCount() : 0;
+      hddm_r::FdcPseudosList pseudos = slist().getFdcPseudoses();
+      stats->fdc_pseudos = (pseudos.size() > 0)? pseudos().getCount() : 0;
+      hddm_r::BcalCellsList cells = slist().getBcalCellses();
+      stats->bcal_cells = (cells.size() > 0)? cells().getCount() : 0;
+      hddm_r::FcalBlocksList blocks = slist().getFcalBlockses();
+      stats->fcal_blocks = (blocks.size() > 0)? blocks().getCount() : 0;
+      hddm_r::CcalBlocksList bloccs = slist().getCcalBlockses();
+      stats->ccal_blocks = (bloccs.size() > 0)? bloccs().getCount() : 0;
+      hddm_r::TofPaddlesList paddles = slist().getTofPaddleses();
+      stats->tof_paddles = (paddles.size() > 0)? paddles().getCount() : 0;
+      hddm_r::DircPMTsList pmts = slist().getDircPMTses();
+      stats->dirc_PMTs = (pmts.size() > 0)? pmts().getCount() : 0;
+
+      data.push_back(stats);
    }
 
    // Copy into factory
