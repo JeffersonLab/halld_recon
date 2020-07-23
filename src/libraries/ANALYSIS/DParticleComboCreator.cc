@@ -320,7 +320,7 @@ const DChargedTrackHypothesis* DParticleComboCreator::Create_ChargedHypo(const D
 	auto locOrigHypo = locChargedTrack->Get_Hypothesis(locPID);
 	auto locNewHypo = dChargedTrackHypothesisFactory->Get_Resource();
 	dCreated_ChargedHypo.push_back(locNewHypo);
-	locNewHypo->Share_FromInput(locOrigHypo, true, false, true); //share all but timing info
+	locNewHypo->Share_FromInput(locOrigHypo, true, false, true, true); //share all but timing info
 
 	auto locTrackPOCAX4 = dSourceComboTimeHandler->Get_ChargedPOCAToVertexX4(locOrigHypo, locIsProductionVertex, locReactionFullCombo, locVertexPrimaryFullCombo, locBeamParticle, false, locVertex);
 	locNewHypo->Set_TimeAtPOCAToVertex(locTrackPOCAX4.T());
@@ -691,12 +691,12 @@ const DChargedTrackHypothesis* DParticleComboCreator::Create_ChargedHypo_KinFit(
 	//therefore, just use measured timing info (pre-kinfit)
 	if(locKinFitParticle->Get_CommonTParamIndex() >= 0)
 	{
-		locNewHypo->Share_FromInput(locOrigHypo, true, true, false); //share all but kinematics
+	  locNewHypo->Share_FromInput(locOrigHypo, true, true, true, false); //share all but kinematics
 		return locNewHypo;
 	}
 
 	//only share tracking info (not timing or kinematics)
-	locNewHypo->Share_FromInput(locOrigHypo, true, false, false);
+	locNewHypo->Share_FromInput(locOrigHypo, true, false, false, false);
 
 	//update timing info
 	if(locKinFitParticle->Get_CommonVxParamIndex() >= 0) //a vertex was fit

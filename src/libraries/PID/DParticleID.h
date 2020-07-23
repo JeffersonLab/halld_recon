@@ -94,6 +94,8 @@ class DParticleID:public jana::JObject
 		virtual jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
 		virtual jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
 		virtual jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual double GetProtondEdxMean_TOF(double locBeta) const=0;
+		virtual double GetProtondEdxSigma_TOF(double locBeta) const=0;
 		virtual double GetProtondEdxMean_SC(double locBeta) const=0;
 		virtual double GetProtondEdxSigma_SC(double locBeta) const=0;
 		virtual double GetTimeVariance(DetectorSystem_t detector,
