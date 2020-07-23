@@ -104,6 +104,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
 	locEventLoop->Get(locDIRCPmtHits);
 
+	std::vector<const DEventHitStatistics*> hitStats;
+	locEventLoop->Get(hitStats);
+
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
 
@@ -470,6 +473,26 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		  }
 		}
 		
+	}
+
+	// push any DEventHitStatistics objects to the output record
+	if (hitStats.size() > 0)
+	{
+		hddm_r::HitStatisticsList stats = res().addHitStatisticses(1);
+		hddm_r::StartCountersList starts = stats().addStartCounterses(1);
+		starts().setCount(hitStats[0]->start_counters);
+		hddm_r::CdcStrawsList straws = stats().addCdcStrawses(1);
+		straws().setCount(hitStats[0]->cdc_straws);
+		hddm_r::FdcPseudosList pseudos = stats().addFdcPseudoses(1);
+		pseudos().setCount(hitStats[0]->fdc_pseudos);
+		hddm_r::BcalCellsList cells = stats().addBcalCellses(1);
+		cells().setCount(hitStats[0]->bcal_cells);
+		hddm_r::FcalBlocksList blocks = stats().addFcalBlockses(1);
+		blocks().setCount(hitStats[0]->fcal_blocks);
+		hddm_r::CcalBlocksList bloccs = stats().addCcalBlockses(1);
+		bloccs().setCount(hitStats[0]->ccal_blocks);
+		hddm_r::DircPMTsList pmts = stats().addDircPMTses(1);
+		pmts().setCount(hitStats[0]->dirc_PMTs);
 	}
 
 	// push any DTrigger objects to the output record

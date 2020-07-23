@@ -35,6 +35,7 @@ static TH1I *psflux_num_events;
 static TH1F *hFiducialTime;
 static TH1I *hBeamCurrentTime;
 static TH1I *hBeamCurrentTimeFiducial;
+static TH1I *hBeamCurrentTimeFiducialCut;
 static TH2I *hPS_tdiffVsE;
 static TH2I *hPSC_tdiffVsE;
 static TH2I *hPSPSC_tdiffVsE;
@@ -116,8 +117,9 @@ jerror_t JEventProcessor_PS_flux::init(void)
     // book hists
     psflux_num_events = new TH1I("psflux_num_events","PS flux number of events",3,0.5,3.5);
     hFiducialTime = new TH1F("fiducialTime", "Fiducial time", 1, 0, 1);
-    hBeamCurrentTime = new TH1I("beamCurrentTime", "; Event time from DBeamCurrent for all events (seconds)", 1000, 0, 500);
-    hBeamCurrentTimeFiducial = new TH1I("beamCurrentTimeFiducial", "; Event time from DBeamCurrent for fiducial events (seconds)", 1000, 0, 500);
+    hBeamCurrentTime = new TH1I("beamCurrentTime", "; Event time from DBeamCurrent for all events (seconds)", 14400, 0, 14400);
+    hBeamCurrentTimeFiducial = new TH1I("beamCurrentTimeFiducial", "; Fiducial flag for event time from DBeamCurrent (seconds)", 14400, 0, 14400);
+    hBeamCurrentTimeFiducialCut = new TH1I("beamCurrentTimeFiducialCut", "; Event time from DBeamCurrent for fiducial events (seconds)", 14400, 0, 14400);
 
     //
     gDirectory->mkdir("PSC_PS")->cd();
@@ -323,6 +325,7 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    if(beamCurrent[0]->is_fiducial) {
 	    	    int timeBin = hBeamCurrentTimeFiducial->FindBin(beamCurrent[0]->t);
 		    hBeamCurrentTimeFiducial->SetBinContent(timeBin, 1);
+			 hBeamCurrentTimeFiducialCut->Fill(beamCurrent[0]->t);
   	    }
     }
 
