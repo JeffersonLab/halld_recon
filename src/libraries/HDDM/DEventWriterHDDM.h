@@ -11,6 +11,7 @@
 #include <CDC/DCDCHit.h>
 #include <TOF/DTOFHit.h>
 #include <FCAL/DFCALHit.h>
+#include <CCAL/DCCALHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
 #include <START_COUNTER/DSCHit.h>
