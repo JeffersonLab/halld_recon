@@ -643,7 +643,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
           }
 
 	    locdEdx_CDC_amp *= dedxcf;
-            locdEdx_CDC *= dedxcf;    // try this for integral too
+	    //            locdEdx_CDC *= dedxcf;    // try this for integral too
 	    
 	}
 
