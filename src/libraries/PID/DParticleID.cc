@@ -8,6 +8,8 @@
 #include "DParticleID.h"
 #include "START_COUNTER/DSCHit_factory.h"
 
+static mutex CDC_MUTEX;    
+
 #ifndef M_TWO_PI
 #define M_TWO_PI 6.28318530717958647692
 #endif
@@ -198,9 +200,49 @@ DParticleID::DParticleID(JEventLoop *loop)
 		jout << "Error loading CDC/gain_doca_correction !" << endl;
 
 
-  // CDC dE/dx correction with theta
 
-  FILE *dedxfile = fopen("dedx_corrections_116_101.txt","r");
+  // CDC dE/dx correction with theta
+		
+  std::unique_lock<std::mutex> lck(CDC_MUTEX);
+
+  bool print_messages=1;
+	
+  string dedx_theta_correction_file;
+  gPARMS->SetDefaultParameter("CDC_DEDX_THETA_FILE", dedx_theta_correction_file,
+		"CDC dedx theta correction data file name");
+	
+	// follow similar procedure as other resources (DMagneticFieldMapFineMesh)
+	
+  map< string,string > dedx_theta_file_name;
+  JCalibration *jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
+	
+  jout << loop->GetJEvent().GetRunNumber() << endl;
+
+
+  if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
+    jout << "Can't find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!"
+    << endl;
+	
+  } else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end() 
+		&& dedx_theta_file_name["file_name"] != "None" ) {
+
+    JResourceManager *jresman = dapp->GetJResourceManager(loop->GetJEvent().GetRunNumber());
+    dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
+
+    jout << "Looking for " << dedx_theta_correction_file << endl;
+
+  }
+	
+  if(print_messages) jout<<"Reading CDC dedx theta correction data from "<<dedx_theta_correction_file<<" ..."<<endl;
+  	
+  // check to see if we actually have a file
+  if(dedx_theta_correction_file.empty()) {
+    if(print_messages) jerr << "Empty file..." << endl;
+    _DBG_<<"Cannot read CDC dedx theta correction file" << endl;
+    return; // RESOURCE_UNAVAILABLE;
+  }
+	
+  FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
   fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
   fscanf(dedxfile,"%lf min theta\n",&cdc_min_theta);
   fscanf(dedxfile,"%lf max theta\n",&cdc_max_theta);
@@ -215,14 +257,8 @@ DParticleID::DParticleID(JEventLoop *loop)
   vector<double> dedx_cf_alltheta;
   double dedx_cf;
 
-  /*           vector<vector<double>>CDC_DEDX_CORRECTION;
-                double cdc_min_theta, cdc_max_theta;
-                double cdc_min_dedx, cdc_max_dedx;
-                double cdc_theta_step, cdc_dedx_step; 
-                int cdc_npoints_theta, cdc_npoints_dedx;
-  */
+  // Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
   
-  // NSJ  this is intended to read the scaling factors into CDC_DEDX_CORRECTION[dedx][theta];
   for (int ii =0; ii<cdc_npoints_dedx; ii++) {
     for (int jj=0; jj<cdc_npoints_theta; jj++) {
       fscanf(dedxfile,"%lf\n",&dedx_cf);
@@ -233,7 +269,10 @@ DParticleID::DParticleID(JEventLoop *loop)
   }
   fclose(dedxfile);
 
- 
+
+	
+  lck.unlock();
+	 
 
 
   // FCAL geometry
@@ -631,7 +670,8 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 
 	  //	  // cout << theta_deg << " " << thisdedx << " " << CDC_DEDX_CORRECTION[dedxbin1][thetabin1] << endl;
 	    locdEdx_CDC_amp *= dedxcf;
-	  
+            locdEdx_CDC *= dedxcf;    // try this for integral too
+	    
 	}
 
 
