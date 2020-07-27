@@ -67,6 +67,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	vector<const DCDCHit*> CDCHits;
 	vector<const DTOFHit*> TOFHits;
 	vector<const DFCALHit*> FCALHits;
+	vector<const DCCALHit*> CCALHits;
 	vector<const DSCHit*> SCHits;
 	vector<const DBCALDigiHit*> BCALDigiHits;
 	vector<const DBCALTDCDigiHit*> BCALTDCDigiHits;
@@ -83,6 +84,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(FDCHits, FDC_TAG.c_str());
 	locEventLoop->Get(TOFHits);
 	locEventLoop->Get(FCALHits);
+	locEventLoop->Get(CCALHits);
 	locEventLoop->Get(BCALDigiHits);
 	locEventLoop->Get(BCALTDCDigiHits);
 	locEventLoop->Get(SCHits);
@@ -94,7 +96,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(RFtimes);
 	locEventLoop->Get(DIRCPmtHits);
 
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0))
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0))
 	{
 		return false;
 	}
@@ -589,6 +591,49 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	}
 
 
+
+	//========================================CCAL=========================================================
+
+	for(uint i=0; i<CCALHits.size(); ++i)
+	  {
+	    if(i == 0)
+	      {
+			hitv->addComptonEMcals();
+		}
+		bool found = false;
+		//CCAL only has one hit per block per event so we need not search
+		hddm_s::CcalBlockList* CCAL_BlockList = &hitv->getComptonEMcal().getCcalBlocks();
+		hddm_s::CcalBlockList::iterator CCAL_BlockIterator = CCAL_BlockList->begin();
+
+		for(CCAL_BlockIterator = CCAL_BlockList->begin(); CCAL_BlockIterator != CCAL_BlockList->end(); CCAL_BlockIterator++)
+				{
+					if(CCALHits[i]->row==CCAL_BlockIterator->getRow() && CCALHits[i]->column==CCAL_BlockIterator->getColumn())
+					{
+						found=true;
+						break;
+					}
+				}
+
+		if(found==false)
+		{
+			hitv->getComptonEMcal().addCcalBlocks();
+			CCAL_BlockIterator=CCAL_BlockList->end()-1;
+			CCAL_BlockIterator->setColumn(CCALHits[i]->column);
+			CCAL_BlockIterator->setRow(CCALHits[i]->row);            
+		}
+
+
+		CCAL_BlockIterator->addCcalHits();
+		hddm_s::CcalHitList* CCAL_HitList = &CCAL_BlockIterator->getCcalHits();
+		hddm_s::CcalHitList::iterator CCAL_HitIterator = CCAL_HitList->end()-1;
+		CCAL_HitIterator->setT(CCALHits[i]->t);
+		CCAL_HitIterator->setE(CCALHits[i]->E);
+
+
+	}
+
+
+
   //=============================================TOF=====================================================
 
 	for(uint i=0; i<TOFHits.size(); ++i)
@@ -713,6 +758,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	CDCHits.clear();
 	TOFHits.clear();
 	FCALHits.clear();
+	CCALHits.clear();
 	SCHits.clear();
 	BCALDigiHits.clear();
 	BCALTDCDigiHits.clear();

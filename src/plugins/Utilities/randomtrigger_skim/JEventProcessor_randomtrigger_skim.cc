@@ -21,6 +21,8 @@ extern "C" {
    }
 } // "extern C"
 
+static bool use_beam_fiducial = true;
+
 
 // variables to control which triggers get read out
 
@@ -29,6 +31,15 @@ extern "C" {
 //-------------------------------
 jerror_t JEventProcessor_randomtrigger_skim::init(void)
 {
+
+    int use_beam_fiducial_toggle = 1;
+
+    gPARMS->SetDefaultParameter("RANDSKIM:USEBEAM",use_beam_fiducial , "Use beam fiducials");
+
+    if(use_beam_fiducial_toggle == 0)
+      use_beam_fiducial = false;
+
+
     return NOERROR;
 }
 
@@ -79,14 +90,17 @@ jerror_t JEventProcessor_randomtrigger_skim::evnt(JEventLoop *locEventLoop, uint
     if(!is_random_trigger)
         return NOERROR;
     
-    // make sure we can perform a fiducial beam current cut
-    if(beamCurrent.empty())
+    if(use_beam_fiducial){
+      // make sure we can perform a fiducial beam current cut
+      if(beamCurrent.empty())
         return NOERROR;
-
-    // make sure the beam is on
-    if(!beamCurrent[0]->is_fiducial)
+      
+      // make sure the beam is on
+      if(!beamCurrent[0]->is_fiducial)
         return NOERROR;
+    }
         
+
 
     // Save events to skim file
     locEventWriterHDDMVector[0]->Write_HDDMEvent(locEventLoop, "random"); 
