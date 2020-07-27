@@ -555,7 +555,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 
 
 
-          // NSJ  PUT dE/dx THETA CORRECTION HERE  - for amplitude only. to start with.
+          // NSJ  dE/dx theta correction   - for amplitude only. to start with.
 	  /*
                 double cdc_min_theta, cdc_max_theta;
                 double cdc_min_dedx, cdc_max_dedx;
@@ -591,17 +591,11 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             dedxbin2 = dedxbin1 + 1;
           }
 
-
-          // cout << "\ntheta " << theta_deg << " thetabin1 " << thetabin1 << " thetabin2 " << thetabin2 <<  " dedx " << thisdedx << " dedxbin1 " << dedxbin1 << " dedxbin2 " << dedxbin2 << endl;
-
-
           double dedxcf;
 
           if ((thetabin1 == thetabin2) && (dedxbin1 == dedxbin2)) {
 
             dedxcf = CDC_DEDX_CORRECTION[dedxbin1][thetabin1];
-
-	    // cout << "dedxcf " << dedxcf << endl;
 
 	  } else if (thetabin1 == thetabin2) {  // interp dedx only
 
@@ -611,11 +605,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             double dedx1 = cdc_min_dedx + dedxbin1*cdc_dedx_step;
             double dedx2 = dedx1 + cdc_dedx_step;
 
-            // cout << "interp between dedx1 " << dedx1 << " cf " << cf1 << " and dedx2 " << dedx2 << " cf " << cf2 << endl;
-
             dedxcf = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
-
-	    // cout << "dedxcf " << dedxcf << endl;
 
 	  } else if (dedxbin1 == dedxbin2) {  // interp theta only
 
@@ -625,11 +615,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             double theta1 = cdc_min_theta + thetabin1*cdc_theta_step;
             double theta2 = theta1 + cdc_theta_step;
 
-            // cout << "interp between theta1 " << theta1 << " cf " << cf1 << " and theta2 " << theta2 << " cf " << cf2 << endl;
-
             dedxcf = cf1 + (theta_deg - theta1)*(cf2 - cf1)/(theta2-theta1);
-
-	    // cout << "dedxcf " << dedxcf << endl;
 
           } else {
 
@@ -639,11 +625,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             double dedx1 = cdc_min_dedx + dedxbin1*cdc_dedx_step;
             double dedx2 = dedx1 + cdc_dedx_step;
 
-            // cout << "interp between dedx1 " << dedx1 << " cf " << cf1 << " and dedx2 " << dedx2 << " cf " << cf2 << endl;
-
             double cf3 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
-
-	    // cout << "dedxcf3" << cf3 << endl;
 
             cf1 = CDC_DEDX_CORRECTION[dedxbin1][thetabin2];
             cf2 = CDC_DEDX_CORRECTION[dedxbin2][thetabin2];
@@ -651,24 +633,15 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             dedx1 = cdc_min_dedx + dedxbin1*cdc_dedx_step;
             dedx2 = dedx1 + cdc_dedx_step;
 
-            // cout << "interp between dedx1 " << dedx1 << " cf " << cf1 << " and dedx2 " << dedx2 << " cf " << cf2 << endl;
-
             double cf4 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
-
-	    // cout << "dedxcf4 " << cf4 << endl;
 
             double theta1 = cdc_min_theta + thetabin1*cdc_theta_step;
             double theta2 = theta1 + cdc_theta_step;
 
-            // cout << "interp between theta1 " << theta1 << " cf " << cf3 << " and theta2 " << theta2 << " cf " << cf4 << endl;
-
             dedxcf = cf3 + (theta_deg - theta1)*(cf4 - cf3)/(theta2-theta1);
-
-	    // cout << "dedxcf " << dedxcf << endl;
 
           }
 
-	  //	  // cout << theta_deg << " " << thisdedx << " " << CDC_DEDX_CORRECTION[dedxbin1][thetabin1] << endl;
 	    locdEdx_CDC_amp *= dedxcf;
             locdEdx_CDC *= dedxcf;    // try this for integral too
 	    
