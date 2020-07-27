@@ -530,7 +530,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 	locdEdx_CDC = 0.0;
 	locdEdx_CDC_amp = 0.0;
 
-	locNumHitsUsedFordEdx_CDC = locdEdxHits_CDC.size();  //*4/5;   // no truncation
+	locNumHitsUsedFordEdx_CDC = locdEdxHits_CDC.size()*4/5;  
         
 	if(locNumHitsUsedFordEdx_CDC > 0)
 	{
