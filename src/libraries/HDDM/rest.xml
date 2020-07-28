@@ -74,6 +74,10 @@
               lunit="cm" dEdx_unit="GeV/cm">
 	<CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
       </dEdxDC>
+      <exitParams maxOccurs="1" minOccurs="0" 
+		  x1="float" y1="float" z1="float"
+                  px1="float" py1="float" pz1="float"
+                  t1="float" punit="GeV/c" lunit="cm" tunit="ns"/>
     </chargedTrack>
     <startHit maxOccurs="unbounded" minOccurs="0" jtag="string"
               sector="int" t="float" dE="float"
@@ -88,6 +92,7 @@
          Note that if it's a single-ended bar, the status cannot be 3. 
       -->
       <tofStatus maxOccurs="1" minOccurs="0" status="int"/>
+      <tofEnergyDeposition maxOccurs="1" minOccurs="0" dE1="float" dE2="float"/>
     </tofPoint>
     <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
     <RFtime minOccurs="0" jtag="string"
@@ -120,7 +125,9 @@
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
                 deltax="float" deltay="float" pathlength="float" tflight="float" tflightvar="float"
-                tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
+                tunit="ns" lunit="cm" dEdx_unit="GeV/cm">
+	<tofDedx maxOccurs="1" minOccurs="0" dEdx1="float" dEdx2="float"/>
+      </tofMatchParams>
       <scMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
@@ -142,5 +149,15 @@
                 punit="GeV/c" tunit="ns"/>
     </detectorMatches>
 
+    <hitStatistics minOccurs="0" jtag="string">
+        <startCounters minOccurs="0" count="int"/>
+        <cdcStraws minOccurs="0" count="int"/>
+        <fdcPseudos minOccurs="0" count="int"/>
+        <bcalCells minOccurs="0" count="int"/>
+        <fcalBlocks minOccurs="0" count="int"/>
+        <tofPaddles minOccurs="0" count="int"/>
+        <ccalBlocks minOccurs="0" count="int"/>
+        <dircPMTs minOccurs="0" count="int"/>
+    </hitStatistics>
   </reconstructedPhysicsEvent>
 </HDDM>

@@ -29,11 +29,26 @@ const double DTAGMGeometry::kFiberWidth = 0.2; // cm
 const double DTAGMGeometry::kFiberLength = 2.0; // cm
 
 
+// Only print messages for one thread whenever run number change
+static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+static set<int> runs_announced;
+    
+
 //---------------------------------
 // DTAGMGeometry    (Constructor)
 //---------------------------------
 DTAGMGeometry::DTAGMGeometry(JEventLoop *loop)
 {
+   // keep track of which runs we print out messages for
+   int32_t runnumber = loop->GetJEvent().GetRunNumber();
+   pthread_mutex_lock(&print_mutex);
+   bool print_messages = false;
+   if(runs_announced.find(runnumber) == runs_announced.end()){
+	  print_messages = true;
+	  runs_announced.insert(runnumber);
+   }
+   pthread_mutex_unlock(&print_mutex);
+
    /* read tagger set endpoint energy from calibdb */
    std::map<string,double> result1;
    loop->GetCalib("/PHOTON_BEAM/endpoint_energy", result1);
@@ -87,7 +102,8 @@ DTAGMGeometry::DTAGMGeometry(JEventLoop *loop)
        
        m_endpoint_energy_calib_GeV  = result3["TAGGER_CALIB_ENERGY"];       
 
-       printf(" Correct Beam Photon Energy  (TAGM)   %f \n\n", m_endpoint_energy_calib_GeV);
+       if(print_messages)
+	 jout << " Correct Beam Photon Energy (TAGM) = " << m_endpoint_energy_calib_GeV << " (GeV)" << std::endl;
 
      }
    }

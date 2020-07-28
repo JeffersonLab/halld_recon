@@ -66,10 +66,27 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
 {
    /// Constructor for DEventSourceHDDM object
    ifs = new ifstream(source_name);
-   if (ifs->is_open())
-      fin = new hddm_s::istream(*ifs);
-   else
-      fin = NULL;
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
+      std::string head;
+      std::getline(sbuf, head);
+      std::string expected = " class=\"s\" ";
+      std::string also_supported = " class=\"mc_s\" ";
+      if (head.find(expected) == head.npos && 
+          head.find(also_supported) == head.npos)
+      {
+         std::string msg("Unexpected header found in input HDDM stream: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
+   }
+
+   fin = new hddm_s::istream(*ifs);
    initialized = false;
    dapp = NULL;
    bfield = NULL;
@@ -120,23 +137,27 @@ jerror_t DEventSourceHDDM::GetEvent(JEvent &event)
    }
    
    hddm_s::HDDM *record = new hddm_s::HDDM();
-   if (! (*fin >> *record)) {
-      delete fin;
-      fin = NULL;
-      delete ifs;
-      ifs = NULL;
-      return NO_MORE_EVENTS_IN_SOURCE;
+   while (record->getPhysicsEvents().size() == 0) {
+      if (! (*fin >> *record)) {
+         delete fin;
+         fin = NULL;
+         delete ifs;
+         ifs = NULL;
+         return NO_MORE_EVENTS_IN_SOURCE;
+      }
    }
 
    ++Nevents_read;
 
    int event_number = -1;
    int run_number = -1;
-   
-   // Get event/run numbers from HDDM
-   hddm_s::PhysicsEvent &pe = record->getPhysicsEvent(0);
-   event_number = pe.getEventNo();
-   run_number = pe.getRunNo();
+
+   if(!record->getPhysicsEvents().empty()) {
+       // Get event/run numbers from HDDM
+       hddm_s::PhysicsEvent &pe = record->getPhysicsEvent(0);
+       event_number = pe.getEventNo();
+       run_number = pe.getRunNo();
+   }
 
    // Copy the reference info into the JEvent object
    event.SetJEventSource(this);

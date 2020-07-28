@@ -26,8 +26,11 @@ using namespace jana;
 DFCALShower_factory::DFCALShower_factory()
 {
   // should we use CCDB constants?
-  LOAD_CCDB_CONSTANTS = 1.;
-  gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_CCDB_CONSTANTS);
+  LOAD_NONLIN_CCDB = 1.;
+  LOAD_TIMING_CCDB = 1.;
+  // 29/03/2020 ijaegle@jlab.org decouple non linear and timing correction
+  gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
+  gPARMS->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
 
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
@@ -42,7 +45,7 @@ DFCALShower_factory::DFCALShower_factory()
   expfit_param1 = 0;
   expfit_param2 = 0;
   expfit_param3 = 0;
-	
+
   timeConst0 = 0;
   timeConst1 = 0; 
   timeConst2 = 0;
@@ -76,6 +79,10 @@ DFCALShower_factory::DFCALShower_factory()
   COVARIANCEFILENAME = "";  ///<  Setting the filename will take precidence over the CCDB.  Files must end in ij.txt, where i and j are integers corresponding to the element of the matrix
   gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
   gPARMS->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
+  
+  
+  log_position_const = 4.2;
+  gPARMS->SetDefaultParameter("FCAL:log_position_const", log_position_const);
 
 }
 
@@ -104,7 +111,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   } else {
     jerr<<"Unable to get FCAL_C_EFFECTIVE from FCAL/fcal_parms in Calib database!"<<endl;
   }
-  
+
   DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   const DGeometry *geom = dapp->GetDGeometry(runnumber);
     
@@ -117,10 +124,15 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     cerr << "No geometry accessible." << endl;
     return RESOURCE_UNAVAILABLE;
   }
-
+  // 29/03/2020 ijaegle@jlab.org add x,y
+  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+  std::map<string, float> beam_spot;
+  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+  
   // by default, load non-linear shower corrections from the CCDB
   // but allow these to be overridden by command line parameters
-  if(LOAD_CCDB_CONSTANTS > 0.1) {
+  energy_dependence_correction_vs_ring.clear();
+  if(LOAD_NONLIN_CCDB > 0.1) {
     map<string, double> shower_calib_piecewise;
     loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
     cutoff_energy = shower_calib_piecewise["cutoff_energy"];
@@ -129,6 +141,8 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     expfit_param1 = shower_calib_piecewise["expfit_param1"];
     expfit_param2 = shower_calib_piecewise["expfit_param2"];
     expfit_param3 = shower_calib_piecewise["expfit_param3"];
+    m_beamSpotX = 0;
+    m_beamSpotY = 0;
 
     if(debug_level>0) {
       jout << "cutoff_energy = " << cutoff_energy << endl;
@@ -137,12 +151,26 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
       jout << "expfit_param1 = " << expfit_param1 << endl;
       jout << "expfit_param2 = " << expfit_param2<< endl;
       jout << "expfit_param3 = " << expfit_param3 << endl;
-
+    }
+    loop->GetCalib("FCAL/energy_dependence_correction_vs_ring", energy_dependence_correction_vs_ring);
+    if (energy_dependence_correction_vs_ring.size() > 0 && energy_dependence_correction_vs_ring[0][0] != 0) {
+      m_beamSpotX = beam_spot.at("x");
+      m_beamSpotY = beam_spot.at("y");
+      if (debug_level > 0) {
+	TString str_coef[] = {"A", "B", "C", "D", "E", "F"};
+	for (int i = 0; i < 24; i ++) {
+	  //for (int j = 0; j < 6; j ++) {
+	  for (int j = 0; j < 3; j ++) {
+	    jout << "Ring # " << i << Form(" %s", str_coef[j].Data()) << energy_dependence_correction_vs_ring[i][j]; 
+	  }
+	  jout << endl;
+	}
+      }
     }
   }
-
-  // Get timing correction polynomial, J. Mirabelli 10/31/17
-  if(LOAD_CCDB_CONSTANTS > 0.1) {
+  
+  if (LOAD_TIMING_CCDB > 0.1) {
+    // Get timing correction polynomial, J. Mirabelli 10/31/17
     map<string,double> timing_correction;
     loop->GetCalib("FCAL/shower_timing_correction", timing_correction); 
     timeConst0 = timing_correction["P0"];
@@ -152,19 +180,14 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     timeConst4 = timing_correction["P4"];
 
     if(debug_level>0) {
-
       jout << "timeConst0 = " << timeConst0 << endl;
       jout << "timeConst1 = " << timeConst1 << endl;
       jout << "timeConst2 = " << timeConst2 << endl;
       jout << "timeConst3 = " << timeConst3 << endl;
       jout << "timeConst4 = " << timeConst4 << endl;
     }
-
   }
-
-	
-
-
+  
   jerror_t result = LoadCovarianceLookupTables(eventLoop);
   if (result!=NOERROR) return result;
 
@@ -192,9 +215,16 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   vector<const DFCALCluster*> fcalClusters;
   eventLoop->Get(fcalClusters);
   if(fcalClusters.size()<1)return NOERROR;
+
+  vector<const DFCALGeometry*> fcalGeomVect;
+  eventLoop->Get( fcalGeomVect );
+  if (fcalGeomVect.size() < 1)
+    return OBJECT_NOT_AVAILABLE;
+  const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
  
   // Use the center of the target as an approximation for the vertex position
-  DVector3 vertex(0.0, 0.0, m_zTarget);
+  // 29/03/2020 ijaegle@jlab.org add beam center in x,y
+  DVector3 vertex(m_beamSpotX, m_beamSpotY, m_zTarget);
   
   vector< const DTrackWireBased* > allWBTracks;
   eventLoop->Get( allWBTracks );
@@ -206,7 +236,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   for( vector< const DFCALCluster* >::const_iterator clItr = fcalClusters.begin();
        clItr != fcalClusters.end();  ++clItr ){
     const DFCALCluster* cluster=*clItr;
-
+    
     // energy weighted time provides better resolution:
     double cTime = cluster->getTimeEWeight();
 
@@ -215,8 +245,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     // Get corrected energy, position, and errZ
     double Ecorrected;
     DVector3 pos_corrected;
-    GetCorrectedEnergyAndPosition( cluster , Ecorrected, pos_corrected, errZ, &vertex);
-
+    
+    int channel = cluster->getChannelEmax();
+    double radius = fcalGeom.positionOnFace(channel).Mod();
+    int ring_nb = (int) (radius / (5 * k_cm));
+    GetCorrectedEnergyAndPosition( cluster, ring_nb , Ecorrected, pos_corrected, errZ, &vertex);
+    
+    DVector3 pos_log;
+    GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
+    
     if (Ecorrected>0.){		
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
@@ -232,12 +269,16 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       // apply global offsets in x and y
       pos_corrected.SetX(pos_corrected.X()+m_FCALdX);
       pos_corrected.SetY(pos_corrected.Y()+m_FCALdY);
+      
+      pos_log.SetX(pos_log.X()+m_FCALdX);
+      pos_log.SetY(pos_log.Y()+m_FCALdY);
 
       // Make the DFCALShower object
       DFCALShower* shower = new DFCALShower;
       
       shower->setEnergy( Ecorrected );
-      shower->setPosition( pos_corrected );   
+      shower->setPosition( pos_corrected );
+      shower->setPosition_log( pos_log ); 
       shower->setTime ( cTime );
       FillCovarianceMatrix( shower );
 
@@ -330,7 +371,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 //
 // Non-linear and depth corrections should be fixed within DFCALShower member functions
 //--------------------------------
-void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, double &Ecorrected, DVector3 &pos_corrected, double &errZ, const DVector3 *vertex)
+void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb, double &Ecorrected, DVector3 &pos_corrected, double &errZ, const DVector3 *vertex)
 {
   // Non-linear energy correction are done here
   //int MAXITER = 1000;
@@ -338,36 +379,86 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   DVector3  posInCal = cluster->getCentroid();
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
-
+  int channel = cluster->getChannelEmax();
   double Eclust = cluster->getEnergy();
   
-  double Ecutoff = cutoff_energy;
-  double A  = linfit_slope;
-  double B  = linfit_intercept;
-  double C  = expfit_param1;
-  double D  = expfit_param2;
-  double E  = expfit_param3;
+  double Ecutoff = 0;
+  double A = 0;
+  double B = 0;
+  double C = 0;
+  double D = 0;
+  double E = 0;
+  double F = 0;
+  int ring_region = -1;
+  if (0 <= ring_nb && ring_nb <= 2)
+    ring_region = 0;
+  else if (3 <= ring_nb && ring_nb <= 4)
+    ring_region = 1;
+  else if (ring_nb == 5)
+    ring_region = 2;
+  else if (6 <= ring_nb && ring_nb <= 7)
+    ring_region = 3;
+  else if (8 <= ring_nb && ring_nb <= 9)
+    ring_region = 4;
+  else if (10 <= ring_nb && ring_nb <= 11)
+    ring_region = 5;
+  else if (12 <= ring_nb && ring_nb <= 17)
+    ring_region = 6;
+  else if (18 <= ring_nb && ring_nb <= 20)
+    ring_region = 7;
+  else if (21 <= ring_nb && ring_nb <= 23)
+    ring_region = 8;
 
-	 
-  double Egamma = 0.;
+  double Egamma = Eclust;
+  Ecorrected = 0;
   
-  // 06/02/2016 Shower Non-linearity Correction by Adesh. 
+  // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
+  if (LOAD_NONLIN_CCDB > 0.1) {
+    
+    // Method I: IU way, one overall correction
+    Egamma = 0;
+    Ecutoff = cutoff_energy;
+    A = linfit_slope;
+    B = linfit_intercept;
+    C = expfit_param1;
+    D = expfit_param2;
+    E = expfit_param3;
+    // 06/02/2016 Shower Non-linearity Correction by Adesh. 
+    // 29/03/2020 ijaegle@jlab.org the linear part correction is applied in (some) data/sim. backward comptability?
+    if ( Eclust <= Ecutoff ) { 
+      
+      Egamma = Eclust / (A * Eclust + B); // Linear part
+      
+    } else
+      // 29/03/2020 ijaegle@jlab.org this correction is always applied if all C=2 & D=E=0 then Egamma = Eclust
+      if ( Eclust > Ecutoff ) { 
+	
+	Egamma = Eclust / (C - exp(-D * Eclust + E)); // Non-linear part
+	
+      }
+    // 29/03/2020 ijaegle@jlab.org if all C=D=E=0 by mistake then Egamma = - Eclust
+    // End Correction method I 
   
-  if ( Eclust <= Ecutoff ) { 
-  
-    Egamma = Eclust/(A*Eclust + B); // Linear part
-  
+    // Method II: PRIMEXD way, correction per ring
+    if (C == 2 && D == 0 && E == 0 && energy_dependence_correction_vs_ring.size() > 0 && ring_region != -1) {
+      
+      Egamma = 0;
+      A = energy_dependence_correction_vs_ring[ring_region][0];
+      B = energy_dependence_correction_vs_ring[ring_region][1];
+      C = energy_dependence_correction_vs_ring[ring_region][2];
+      //D = energy_dependence_correction_vs_ring[ring_nb][3];
+      //E = energy_dependence_correction_vs_ring[ring_nb][4];
+      //F = energy_dependence_correction_vs_ring[ring_nb][5];
+      //Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2) + D * pow(Eclust, 3) + E * pow(Eclust, 4) + F * pow(Eclust, 5)); 
+      //Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
+      Egamma = Eclust / (A - exp(-B * Eclust + C)); 
+    }
+    // End Correction method II  
   }
+  //End energy dependence correction
   
-  if ( Eclust > Ecutoff ) { 
+  if (Egamma <= 0 && Eclust > 0) Egamma = Eclust; 
   
-    Egamma = Eclust/(C - exp(-D*Eclust+ E)); // Non-linear part
-  
-  }
-  
-  // End Correction  
-  
-
   // then depth corrections 
   if ( Egamma > 0 ) { 
     float dxV = x0-vertex->X();
@@ -377,6 +468,7 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
     double z0 = m_FCALfront - zV;
     double zMax = FCAL_RADIATION_LENGTH*(FCAL_SHOWER_OFFSET 
 					 + log(Egamma/FCAL_CRITICAL_ENERGY));
+
     double zed = z0;
     double zed1 = z0 + zMax;
 
@@ -398,6 +490,7 @@ void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* clus
   
   Ecorrected = Egamma;
   pos_corrected = posInCal;
+ 
 }
 
 
@@ -706,3 +799,96 @@ DFCALShower_factory::filterWireBasedTracks( vector< const DTrackWireBased* >& wb
   
   return finalTracks;
 }
+
+
+void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, double Egamma, const DVector3 *vertex )
+{
+  
+  DVector3  posInCal = cluster->getCentroid();
+  
+  const vector< DFCALCluster::DFCALClusterHit_t > locHitVector = cluster->GetHits();
+  
+  int loc_nhits = (int)locHitVector.size();
+  if( loc_nhits < 1 ) {
+  	pos_log = posInCal;
+	return;
+  }
+  
+  //------   Loop over hits   ------//
+  
+  double sW    =  0.0;
+  double xpos  =  0.0;
+  double ypos  =  0.0;
+  double W;
+  
+  double ecluster = cluster->getEnergy();
+  
+  for( int ih = 0; ih < loc_nhits; ih++ ) {
+  	
+	DFCALCluster::DFCALClusterHit_t locHit = locHitVector[ih];
+	
+	double xcell = locHit.x;
+	double ycell = locHit.y;
+	double ecell = locHit.E;
+	
+	W  =  log_position_const + log( ecell / ecluster );
+	if( W > 0. ) {
+		sW    +=  W;
+		xpos  +=  xcell * W;
+		ypos  +=  ycell * W;
+	}
+	
+  }
+  
+  double x1, y1;
+  if( sW ) {
+  	x1  =  xpos / sW;
+	y1  =  ypos / sW;
+  } else {
+  	cout << "\nBad Cluster Logged in DFCALShower_factory::GetLogWeightedPosition" << endl;
+	x1  =  0.;
+	y1  =  0.;
+  }
+  
+  
+  // Shower Depth Corrections (copied from GetCorrectedEnergyAndPosition function)
+   
+  if ( Egamma > 0 ) { 
+    float dxV   = x1 - vertex->X();
+    float dyV   = y1 - vertex->Y();
+    float  zV   = vertex->Z();
+    
+    double z0   = m_FCALfront - zV;
+    double zMax = FCAL_RADIATION_LENGTH*(FCAL_SHOWER_OFFSET 
+					 + log(Egamma/FCAL_CRITICAL_ENERGY));
+    
+    double zed  = z0;
+    double zed1 = z0 + zMax;
+    
+    double r0 = sqrt( dxV*dxV + dyV*dyV );
+    
+    int niter;
+    for ( niter=0; niter<100; niter++) {
+      double tt = r0/zed1;
+      zed = z0 + zMax/sqrt( 1 + tt*tt );
+      if ( fabs( (zed-zed1) ) < 0.001) {
+	break;
+      }
+      zed1 = zed;
+    }
+    
+    posInCal.SetZ( zed + zV );
+  }
+  
+  posInCal.SetX( x1 );
+  posInCal.SetY( y1 );
+  
+  
+  pos_log = posInCal;
+  
+  
+  return;
+  
+}
+
+

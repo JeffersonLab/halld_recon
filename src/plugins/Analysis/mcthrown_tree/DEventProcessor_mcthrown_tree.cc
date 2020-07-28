@@ -30,6 +30,7 @@ jerror_t DEventProcessor_mcthrown_tree::init(void)
 {
 	// require tagger hit for MCGEN beam photon by default to write event to TTree
 	dTagCheck = true;
+	numgoodevents=0;
 	gPARMS->SetDefaultParameter("MCTHROWN:TAGCHECK", dTagCheck);
 
 	return NOERROR;
@@ -62,6 +63,25 @@ jerror_t DEventProcessor_mcthrown_tree::evnt(JEventLoop *locEventLoop, uint64_t 
 		return NOERROR;
 
 	locEventWriterROOT->Fill_ThrownTree(locEventLoop);
+	numgoodevents++;
+
+	return NOERROR;
+}
+
+
+//------------------
+// fini
+//------------------
+jerror_t DEventProcessor_mcthrown_tree::fini(void)
+{
+	// Called before program exit after event processing is finished.
+	if (numgoodevents==0) {
+		jerr << " mcthrown_tree\n";
+		jerr << "\tThe thrown tree has no events.\n";
+		jerr << "\tThe default behavior of the mcthrown_tree plugin is to require a tagged photon.\n";
+		jerr << "\tIf the input file is directly from a generator, this requirement can be disabled\n";
+		jerr << "\tby using -PMCTHROWN:TAGCHECK=0\n";
+	}
 
 	return NOERROR;
 }

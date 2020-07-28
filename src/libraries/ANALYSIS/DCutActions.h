@@ -45,6 +45,7 @@ DCutAction_ProductionVertexZ
 DCutAction_AllVertexZ
 DCutAction_MaxTrackDOCA
 DCutAction_KinFitFOM
+DCutAction_KinFitChiSq
 
 DCutAction_MissingMass
 DCutAction_MissingMassSquared
@@ -59,6 +60,9 @@ DCutAction_TrackFCALShowerEOverP
 DCutAction_PIDDeltaT
 DCutAction_PIDTimingBeta
 DCutAction_NoPIDHit
+
+DCutAction_FlightDistance
+DCutAction_FlightSignificance
 
 DCutAction_OneVertexKinFit
 */
@@ -357,6 +361,23 @@ class DCutAction_KinFitFOM : public DAnalysisAction
 
 		const string dKinFitName;
 		double dMinimumConfidenceLevel;
+};
+
+class DCutAction_KinFitChiSq : public DAnalysisAction
+{
+	public:
+		DCutAction_KinFitChiSq(const DReaction* locReaction, double locMaximumChiSq, string locActionUniqueString = "") : 
+		DAnalysisAction(locReaction, "Cut_KinFitFOM", true, locActionUniqueString), dMaximumChiSq(locMaximumChiSq){}
+
+		string Get_ActionName(void) const;
+		inline void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		const string dKinFitName;
+		double dMaximumChiSq;
 };
 
 class DCutAction_MissingMass : public DAnalysisAction
@@ -728,6 +749,54 @@ class DCutAction_OneVertexKinFit : public DAnalysisAction
 		TH1I* dHist_VertexZ;
 		TH2I* dHist_VertexYVsX;
 };
+
+class DCutAction_FlightDistance : public DAnalysisAction
+{
+	//if dPID = Unknown, apply cut to all relevant PIDs
+
+	public:
+
+		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Cut_FlightDistance", locUseKinFitResultsFlag, locActionUniqueString),
+		dMinFlightDistance(locMinFlightDistance), dPID(locPID) {}
+
+		void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+		string Get_ActionName(void) const;
+
+	private:
+
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		double dMinFlightDistance;
+		Particle_t dPID;
+		DetectorSystem_t dSystem;
+};
+
+class DCutAction_FlightSignificance : public DAnalysisAction
+{
+	//if dPID = Unknown, apply cut to all relevant PIDs
+
+	public:
+
+		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Cut_FlightSignificance", locUseKinFitResultsFlag, locActionUniqueString),
+		dMinFlightSignificance(locMinFlightSignificance), dPID(locPID) {}
+
+		void Initialize(JEventLoop* locEventLoop){}
+		void Run_Update(JEventLoop* locEventLoop){}
+		string Get_ActionName(void) const;
+
+	private:
+
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		double dMinFlightSignificance;
+		Particle_t dPID;
+		DetectorSystem_t dSystem;
+};
+
+
 
 #endif // _DCutActions_
 

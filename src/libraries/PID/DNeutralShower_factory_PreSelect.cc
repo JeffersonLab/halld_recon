@@ -22,6 +22,8 @@ jerror_t DNeutralShower_factory_PreSelect::init(void)
 	dMinBCALNcell = 2;
 	dMaxFCALR = 105.5;
 	dMaxBCALZ = 393.0;
+	dMinBCALShowerQuality = 0.;
+	dMinFCALShowerQuality = 0.;
 	
 	dFCALInnerRingCut = true;
 	
@@ -40,6 +42,8 @@ jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, 
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_R", dMaxFCALR);
 	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_Z", dMaxBCALZ);
 	gPARMS->SetDefaultParameter("PRESELECT:FCAL_INNER_CUT", dFCALInnerRingCut);
+	gPARMS->SetDefaultParameter("PRESELECT:MIN_BCAL_SHOWER_QUALITY", dMinBCALShowerQuality);
+	gPARMS->SetDefaultParameter("PRESELECT:MIN_FCAL_SHOWER_QUALITY", dMinFCALShowerQuality);
 
 	// get FCAL Geometry object
 	vector< const DFCALGeometry * > fcalGeomVec;
@@ -89,9 +93,11 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 	//Cut on shower energy, BCAL cells, fiducial regions
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
 	{
-		if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_FCAL)
+		if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_FCAL)  // FCAL selections
 		{
 			if(locNeutralShowers[loc_i]->dEnergy < dMinFCALE) 
+				continue;
+			if(locNeutralShowers[loc_i]->dQuality < dMinFCALShowerQuality) 
 				continue;
 
 			// Fiducial cut: reject showers whose center is in the outer range of the FCAL,
@@ -105,6 +111,12 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 					jerr << "In DNeutralShower_factory_PreSelect::evnt(), no FCAL Geometry???" << endl;
 				int row = dFCALGeometry->row((float)locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
 				int col = dFCALGeometry->column((float)locNeutralShowers[loc_i]->dSpacetimeVertex.X());
+				
+				// make sure that this is a valid block - if not (e.g. in the beamhole)
+				// we should reject such a shower
+				if(!dFCALGeometry->isBlockActive(row, col))
+					continue;
+					
 				int channel = dFCALGeometry->channel(row,col);
 
 				// is the center of shower in one of the channels outside of our fiducial cut?
@@ -114,10 +126,13 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
                 }
 			}
 		}
-		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)
+		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_BCAL)  // BCAL selections
 		  {
 			if(locNeutralShowers[loc_i]->dEnergy < dMinBCALE)
 				continue;
+			if(locNeutralShowers[loc_i]->dQuality < dMinBCALShowerQuality) 
+				continue;
+
 			// Fiducial cut: reject showers too close to the downstream face of the BCAL 
 			if(locNeutralShowers[loc_i]->dSpacetimeVertex.Z() > dMaxBCALZ)
 				continue;
@@ -127,7 +142,7 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 			if(locBCALShower->N_cell < dMinBCALNcell)
 				continue;
 		  }
-		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_CCAL)
+		else if(locNeutralShowers[loc_i]->dDetectorSystem == SYS_CCAL)  // CCAL selections
 		  {
 			if(locNeutralShowers[loc_i]->dEnergy < dMinCCALE)
 				continue;

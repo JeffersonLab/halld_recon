@@ -1132,7 +1132,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 		  		// loop over associated hits for LUT diagnostic plots
 		  		for(uint loc_i=0; loc_i<dircPmtHitVector.size(); loc_i++) {
-			  		vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(dircPmtHitVector[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum);
+				        bool locIsReflected = false;
+			  		vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(dircPmtHitVector[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, locIsReflected, logLikelihoodSum);
 			  		double locHitTime = dircPmtHitVector[loc_i]->t - locExtrapolatedTime;
 			  		int locChannel = dircPmtHitVector[loc_i]->ch%dMaxDIRCChannels;
 

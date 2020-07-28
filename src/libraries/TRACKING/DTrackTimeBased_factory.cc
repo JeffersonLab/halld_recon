@@ -1042,6 +1042,8 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
       timebased_track->IsSmoothed = fitter->GetIsSmoothed();  
       *static_cast<DTrackingData*>(timebased_track) = fitter->GetFitParameters();
       timebased_track->flags=DTrackTimeBased::FLAG__GOODFIT;
+      
+      timebased_track->setTime(timebased_track->start_times[0].t0);
 
       // Add hits used as associated objects
       const vector<const DCDCTrackHit*> &cdchits = fitter->GetCDCFitHits();

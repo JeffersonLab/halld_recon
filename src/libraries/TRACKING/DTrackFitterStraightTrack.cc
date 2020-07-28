@@ -250,10 +250,18 @@ inline double DTrackFitterStraightTrack::CDCDriftVariance(double t) const {
    return sigma*sigma;
 }
 
-// Convert time to distance for the cdc
-double DTrackFitterStraightTrack::CDCDriftDistance(double dphi,double delta,
-						   double t) const{
-  double d=0.;
+// Convert time to distance for the cdc.  Also returns the variance in d.
+void DTrackFitterStraightTrack::CDCDriftParameters(double dphi,double delta,
+						   double t, double &d, 
+						   double &V) const{
+  
+// NSJ 26 May 2020 included long side a3, b3 and short side c1, c2, c3
+// Previously these parameters were not used (0 in ccdb) for production runs
+// except intensity scan run 72312 by accident 5 May 2020, superseded 8 May.
+// They were used in 2015 for runs 0-3050.
+
+d=0.; 
+  double dd_dt=0;
   if (t>0){
     double f_0=0.;
     double f_delta=0.;
@@ -261,8 +269,10 @@ double DTrackFitterStraightTrack::CDCDriftDistance(double dphi,double delta,
     if (delta>0){
       double a1=long_drift_func[0][0];
       double a2=long_drift_func[0][1];
+      double a3=long_drift_func[0][2];
       double b1=long_drift_func[1][0];
       double b2=long_drift_func[1][1];
+      double b3=long_drift_func[1][2];
       double c1=long_drift_func[2][0];
       double c2=long_drift_func[2][1];
       double c3=long_drift_func[2][2];
@@ -272,13 +282,22 @@ double DTrackFitterStraightTrack::CDCDriftDistance(double dphi,double delta,
       double sqrt_t=sqrt(my_t);
       double t3=my_t*my_t*my_t;
       double delta_mag=fabs(delta);
-      f_delta=(a1+a2*delta_mag)*sqrt_t+(b1+b2*delta_mag)*my_t
-	+(c1+c2*delta_mag+c3*delta*delta)*t3;
+
+      double delta_sq=delta*delta;
+      double a=a1+a2*delta_mag+a3*delta_sq;
+      double b=b1+b2*delta_mag+b3*delta_sq;
+      double c=c1+c2*delta_mag+c3*delta_sq;
+
+      f_delta=a*sqrt_t+b*my_t+c*t3;
       f_0=a1*sqrt_t+b1*my_t+c1*t3;
+
+      dd_dt=0.001*(0.5*a/sqrt_t+b+3.*c*my_t*my_t);
+
       }
     else{
       double my_t=0.001*t;
       double sqrt_t=sqrt(my_t);
+      double t3=my_t*my_t*my_t;
       double delta_mag=fabs(delta);
       
       // use "short side" functional form
@@ -288,19 +307,26 @@ double DTrackFitterStraightTrack::CDCDriftDistance(double dphi,double delta,
       double b1=short_drift_func[1][0];
       double b2=short_drift_func[1][1];
       double b3=short_drift_func[1][2];
-      
+      double c1=short_drift_func[2][0];
+      double c2=short_drift_func[2][1];
+      double c3=short_drift_func[2][2];
+
       double delta_sq=delta*delta;
-      f_delta= (a1+a2*delta_mag+a3*delta_sq)*sqrt_t
-	+(b1+b2*delta_mag+b3*delta_sq)*my_t;
-      f_0=a1*sqrt_t+b1*my_t;
+      double a=a1+a2*delta_mag+a3*delta_sq;
+      double b=b1+b2*delta_mag+b3*delta_sq;
+      double c=c1+c2*delta_mag+c3*delta_sq;
+
+      f_delta=a*sqrt_t+b*my_t+c*t3;
+      f_0=a1*sqrt_t+b1*my_t+c1*t3;
+
+      dd_dt=0.001*(0.5*a/sqrt_t+b+3.*c*my_t*my_t);
+      
     }
     
     unsigned int max_index=cdc_drift_table.size()-1;
     if (t>cdc_drift_table[max_index]){
       //_DBG_ << "t: " << t <<" d " << f_delta <<endl;
       d=f_delta;
-      
-      return d;
     }
     
     // Drift time is within range of table -- interpolate...
@@ -317,7 +343,8 @@ double DTrackFitterStraightTrack::CDCDriftDistance(double dphi,double delta,
     }
     d=f_delta*(d_0/f_0*P+1.-P);
   }
-  return d;
+  double VarMs=0.001; // kludge for material effects
+  V=CDCDriftVariance(t)+mVarT0*dd_dt*dd_dt+VarMs;
 }
 
 // Perform the Kalman Filter for the current set of cdc hits
@@ -416,13 +443,10 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
       diff+=s*tdir-t*wdir;
       double d=diff.Mag()+d_EPS; // prevent division by zero
        
-      // The next measurement and its variance
+      // The next measurement
+      double dmeas=0.39,delta=0.;
       double tdrift=cdchits[cdc_index]->tdrift-trajectory[k].t;
-      double dmeas=0.39; 
-      double delta=0.0;
       if (fit_type==kTimeBased){
-	V=CDCDriftVariance(tdrift);	
-	
 	double phi_d=diff.Phi();
 	double dphi=phi_d-origin.Phi();  
 	while (dphi>M_PI) dphi-=2*M_PI;
@@ -431,11 +455,11 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	int ring_index=cdchits[cdc_index]->wire->ring-1;
 	int straw_index=cdchits[cdc_index]->wire->straw-1;
 	double dz=t*wdir.z();
-	delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
+	double delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
 	  *cos(phi_d+sag_phi_offset[ring_index][straw_index]);
-	dmeas=CDCDriftDistance(dphi,delta,tdrift);
+	CDCDriftParameters(dphi,delta,tdrift,dmeas,V);
       }
-      
+
       // residual
       double res=dmeas-d;
       if (VERBOSE>5) jout << " Residual " << res << endl;
@@ -859,6 +883,27 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   // Starting z-position and time
   double z=input_pos.z();
   double t0=input_params.t0();
+  // Variance in start time
+  switch(input_params.t0_detector()){
+  case SYS_TOF:
+    mVarT0=0.01;
+    break;
+  case SYS_CDC:
+    mVarT0=25.;
+    break;
+  case SYS_FDC:
+    mVarT0=25.;
+    break;
+  case SYS_BCAL:
+    mVarT0=0.25;
+    break;
+  case SYS_START:
+    mVarT0=0.09;
+    break;
+  default:
+    mVarT0=0.;
+    break;
+  }
 
   // Chisq and ndof
   chisq=1e16;
@@ -1261,7 +1306,8 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
   DMatrix2x4 H;  // Track projection matrix
   DMatrix4x2 H_T; // Transpose of track projection matrix 
   DMatrix4x2 K;  // Kalman gain matrix
-  DMatrix2x2 V(0.0833,0.,0.,0.000256);  // Measurement variance 
+  double VarMs=0.001; // kludge for material
+  DMatrix2x2 V(0.0833,0.,0.,0.000256+VarMs);  // Measurement variance 
   DMatrix2x2 Vtemp,InvV;
   DMatrix2x1 Mdiff;
   DMatrix4x4 I; // identity matrix
@@ -1376,9 +1422,8 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	double drift=0.; // assume hit at wire position
 	if (fit_type==kTimeBased){
 	  double drift_time=fdchits[my_id]->time-trajectory[k].t; 
-	  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);
-	  
-	  V(0,0)=fdc_drift_variance(drift_time);
+	  drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time);	 
+	  V(0,0)=fdc_drift_variance(drift_time)+VarMs;
 	}
 	Mdiff(0)=drift-doca;
 	Mdiff(1)=v-vpred;
@@ -1486,22 +1531,23 @@ jerror_t DTrackFitterStraightTrack::KalmanFilter(DMatrix4x1 &S,DMatrix4x4 &C,
 	diff+=s*tdir-t*wdir;
 	double d=diff.Mag()+d_EPS; // prevent division by zero
 	
-	// The next measurement and its variance
-	double tdrift=cdchits[cdc_index]->tdrift-trajectory[k].t;
-	V_CDC=CDCDriftVariance(tdrift);
-	
-	double phi_d=diff.Phi();
-	double dphi=phi_d-origin.Phi();
-	while (dphi>M_PI) dphi-=2*M_PI;
-	while (dphi<-M_PI) dphi+=2*M_PI;
-	
-	int ring_index=cdchits[cdc_index]->wire->ring-1;
-	int straw_index=cdchits[cdc_index]->wire->straw-1;
-	double dz=t*wdir.z();
-	double delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
-	  *cos(phi_d+sag_phi_offset[ring_index][straw_index]);
-	double dmeas=CDCDriftDistance(dphi,delta,tdrift);
-	
+	// The next measurement	
+	double dmeas=0.39,delta=0.;  
+	double tdrift=cdchits[cdc_index]->tdrift-trajectory[k].t;	 
+	if (fit_type==kTimeBased){	 
+	  double phi_d=diff.Phi();
+	  double dphi=phi_d-origin.Phi();
+	  while (dphi>M_PI) dphi-=2*M_PI;
+	  while (dphi<-M_PI) dphi+=2*M_PI;
+	  
+	  int ring_index=cdchits[cdc_index]->wire->ring-1;
+	  int straw_index=cdchits[cdc_index]->wire->straw-1;
+	  double dz=t*wdir.z();
+	  double delta=max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
+	    *cos(phi_d+sag_phi_offset[ring_index][straw_index]);
+	  CDCDriftParameters(dphi,delta,tdrift,dmeas,V_CDC);
+	}
+
 	// residual
 	double res=dmeas-d;
 	if (VERBOSE>5) jout << " Residual " << res << endl;
@@ -2064,55 +2110,68 @@ DTrackFitterStraightTrack::Get7x7ErrorMatrix(TMatrixFSym C,DMatrix4x1 &S,double 
 // Routine to get extrapolations to other detectors
 void DTrackFitterStraightTrack::GetExtrapolations(const DVector3 &pos0,
 						  const DVector3 &dir){
-  double z0=pos0.z();
-  double uz=dir.z();
+  double x0=pos0.x(),y0=pos0.y(),z0=pos0.z();
   double s=0.,t=0.;
   DVector3 pos(0,0,0);
   DVector3 diff(0,0,0);
   ClearExtrapolations();
 
-  // Extrapolate to Start Counter and BCAL
-  double R=pos0.Perp();
   double z=z0;
-  while (R<89.0 && z>17. && z<410.){
-    diff+=(1./dir.z())*dir;
-    pos=pos0+diff;
-    R=pos.Perp();
+  double dz=0.1;
+  double uz=dir.z();
+  double ux=dir.x()/uz,ux2=ux*ux;
+  double uy=dir.y()/uz,uy2=uy*uy;
+
+  // Extrapolate to start counter
+  double Rd=SC_BARREL_R;
+  double A=ux*x0 + uy*y0;
+  double B=uy2*(Rd - x0)*(Rd + x0) + 2*ux*uy*x0*y0 + ux2*(Rd - y0)*(Rd + y0);
+  double C=ux2 + uy2;
+  if (sc_pos.empty()==false && z<SC_END_NOSE_Z && B>0){
+    dz=-(A-sqrt(B))/C;
+    pos=pos0+(dz/uz)*dir;
     z=pos.z();
-    s=diff.Mag();
-    t=s/29.98;
-    //	   printf("R %f z %f\n",R,z);
-    // start counter
-    if (sc_pos.empty()==false && R<SC_BARREL_R && z<SC_END_NOSE_Z){
+    bool done=(z<sc_pos[0][0].z()||z>SC_END_NOSE_Z);
+    while(!done){
       double d_old=1000.,d=1000.;
       unsigned int index=0;
+     
       for (unsigned int m=0;m<12;m++){
 	double dphi=pos.Phi()-SC_PHI_SECTOR1;
 	if (dphi<0) dphi+=2.*M_PI;
 	index=int(floor(dphi/(2.*M_PI/30.)));
 	if (index>29) index=0;
 	d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-	if (d*d_old<0){ // break if we cross the current plane  
-	  // Find the new distance to the start counter (which could 
-	  // now be to a plane in the one adjacent to the one before the
-	  // step...)
-	  int count=0;
-	  while (fabs(d)>0.05 && count<20){ 
-	    // Find the index for the nearest start counter paddle
-	    double dphi=pos.Phi()-SC_PHI_SECTOR1;
-	    if (dphi<0) dphi+=2.*M_PI;
-	    index=int(floor(dphi/(2.*M_PI/30.)));
-	    d=sc_norm[index][m].Dot(pos-sc_pos[index][m]);
-	    pos+=d*dir;
-	    count++;
-	  }
+	if (d*d_old<0){ // break if we cross the current plane
+	  pos+=d*dir;
+	  s=(pos-pos0).Mag();
+	  t=s/29.98;
 	  extrapolations[SYS_START].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
+	  done=true;
 	  break;
 	}
 	d_old=d;
       }
+      pos-=(0.1/uz)*dir;
+      z=pos.z();
     }
-    if (R>64.){	 
+  }
+  // Extrapolate to BCAL
+  Rd=65.; // approximate BCAL inner radius
+  B=uy2*(Rd - x0)*(Rd + x0) + 2*ux*uy*x0*y0 + ux2*(Rd - y0)*(Rd + y0);
+  if (B>0){
+    diff=-(A-sqrt(B))/(C*uz)*dir;
+    s=diff.Mag();
+    t=s/29.98;
+    pos=pos0+diff;
+    extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s)); 
+    Rd=89.; // approximate BCAL outer radius
+    B=uy2*(Rd - x0)*(Rd + x0) + 2*ux*uy*x0*y0 + ux2*(Rd - y0)*(Rd + y0);
+    if (B>0){
+      diff=-(A-sqrt(B))/(C*uz)*dir;
+      s=diff.Mag();
+      t=s/29.98;
+      pos=pos0+diff;
       extrapolations[SYS_BCAL].push_back(DTrackFitter::Extrapolation_t(pos,dir,t,s));
     }
   }

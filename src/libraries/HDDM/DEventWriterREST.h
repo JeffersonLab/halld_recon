@@ -27,6 +27,7 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 #include "DIRC/DDIRCPmtHit.h"
+#include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
 
 using namespace std;
@@ -57,6 +58,7 @@ class DEventWriterREST : public JObject
 		bool HDDM_USE_INTEGRITY_CHECKS;
 		bool REST_WRITE_DIRC_HITS;
 		bool REST_WRITE_CCAL_SHOWERS;
+		bool REST_WRITE_TRACK_EXIT_PARAMS;
 
         // metadata to save in the REST file
         // these should be consistent during program execution

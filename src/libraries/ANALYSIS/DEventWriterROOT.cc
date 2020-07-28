@@ -648,6 +648,9 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Measured"), dInitNumTrackArraySize);
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), dInitNumTrackArraySize);
 
+	// Global PID
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locArraySizeString, dInitNumTrackArraySize);
+
 	//TRACKING INFO
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Tracking"), locArraySizeString, dInitNumTrackArraySize);
@@ -793,6 +796,8 @@ void DEventWriterROOT::Create_Branches_Combo(DTreeBranchRegister& locBranchRegis
 	}
 	locBranchRegister.Register_FundamentalArray<UChar_t>("NumUnusedShowers", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("Energy_UnusedShowers", locNumComboString, dInitNumComboArraySize);
+	locBranchRegister.Register_FundamentalArray<UChar_t>("NumUnusedShowers_Quality", locNumComboString, dInitNumComboArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>("Energy_UnusedShowers_Quality", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>("SumPMag_UnusedTracks", locNumComboString, dInitNumComboArraySize);
 	locBranchRegister.Register_ClonesArray<TVector3>("SumP3_UnusedTracks", dInitNumComboArraySize);
 
@@ -1220,9 +1225,13 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		
 		//ENERGY OF UNUSED SHOWERS (access to event loop required)
 		double locEnergy_UnusedShowers = 0.;
-		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers);
+		double locEnergy_UnusedShowers_Quality = 0.;
+		int locNumber_UnusedShowers_Quality = 0;
+		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers, locNumber_UnusedShowers_Quality, locEnergy_UnusedShowers_Quality);
 		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers", locNumber_UnusedShowers, loc_i);
 		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers", locEnergy_UnusedShowers, loc_i);
+		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers_Quality", locNumber_UnusedShowers_Quality, loc_i);
+		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers_Quality", locEnergy_UnusedShowers_Quality, loc_i);
 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
 		double locSumPMag_UnusedTracks = 0;
@@ -1515,7 +1524,9 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	//MATCHING
 	if(locMCThrownMatching != NULL)
 	{
-		Bool_t locIsGeneratorFlag = (locMCThrownMatching->Get_TaggedMCGENBeamPhoton() == locBeamPhoton) ? kTRUE : kFALSE;
+	        // Tag the thrown beam photon by comparing energy, time and counter
+	        const DBeamPhoton* locBeamPhotonTaggedMCGEN = locMCThrownMatching->Get_TaggedMCGENBeamPhoton();
+		Bool_t locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
 		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);
 	}
 
@@ -1575,6 +1586,9 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	DLorentzVector locDP4 = locChargedTrackHypothesis->lorentzMomentum();
 	TLorentzVector locP4_Measured(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
+
+	// Global PID
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locChargedTrackHypothesis->Get_FOM(), locArrayIndex);
 
 	//TRACKING INFO
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locTrackTimeBased->Ndof, locArrayIndex);

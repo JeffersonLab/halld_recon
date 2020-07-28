@@ -8,7 +8,8 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 
 	Run_Update(locEventLoop);
 
-	auto locDesiredPIDs = Get_Reaction()->Get_FinalPIDs(-1, false, false, d_AllCharges, false);
+	//auto locDesiredPIDs = Get_Reaction()->Get_FinalPIDs(-1, false, false, d_AllCharges, false);
+	auto locDesiredPIDs = Get_Reaction()->Get_FinalPIDs(-1, false, true, d_AllCharges, false);
 
 	vector<const DMCThrown*> locMCThrowns;
 	locEventLoop->Get(locMCThrowns);
@@ -25,7 +26,7 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 			locParticleROOTName = ParticleName_ROOT(locPID);
 			CreateAndChangeTo_Directory(locParticleName, locParticleName);
 
-			if(ParticleCharge(locPID) == 0)
+			if(ParticleCharge(locPID) == 0 && Is_FinalStateParticle(locPID))
 			{
 				//BCAL
 				CreateAndChangeTo_Directory("BCAL", "BCAL");
@@ -385,7 +386,7 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 			}
 
 			//no FOM for massive neutrals
-			if((ParticleCharge(locPID) != 0) || (locPID == Gamma))
+			if((ParticleCharge(locPID) != 0 && Is_FinalStateParticle(locPID)) || (locPID == Gamma))
 			{
 				// Overall Confidence Level
 				locHistName = "PIDConfidenceLevel";
@@ -397,6 +398,43 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistTitle = locParticleROOTName + string(", PID FOM = NaN;#theta#circ;p (GeV/c)");
 				dHistMap_PVsTheta_NaNPIDFOM[locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DThetaBins, dMinTheta, dMaxTheta, dNum2DPBins, dMinP, dMaxP);
 			}
+
+			// look at decaying particles
+			if(!Is_FinalStateParticle(locPID))
+			{			
+				// Flight Distance
+				locHistName = "FlightDistance";
+				locHistTitle = locParticleROOTName + string(" Flight Distance;Flight Distance (cm)");
+				dHistMap_FlightDistance[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFlightDistanceBins, 0.0, dMaxFlightDistance);
+
+				// Flight Distance Vs P
+				locHistName = "FlightDistanceVsP";
+				locHistTitle = locParticleROOTName + string(" Flight Distance;Flight Distance (cm);p (GeV/c)");
+				dHistMap_FlightDistanceVsP[locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFlightDistanceBins, 0.0, dMaxFlightDistance, dNum2DPBins, dMinP, dMaxP);
+
+				// Flight Distance Vs Theta
+				locHistName = "FlightDistanceVsTheta";
+				locHistTitle = locParticleROOTName + string(" Flight Distance;Flight Distance (cm);#theta#circ");
+				dHistMap_FlightDistanceVsTheta[locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFlightDistanceBins, 0.0, dMaxFlightDistance, dNum2DThetaBins, dMinTheta, dMaxTheta);
+
+
+				// Flight Distance
+				locHistName = "FlightSignificance";
+				locHistTitle = locParticleROOTName + string(" Flight Significance;Flight Significance (#sigma)");
+				dHistMap_FlightSignificance[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumFlightSignificanceBins, 0.0, dMaxFlightSignificance);
+
+				// Flight Distance Vs P
+				locHistName = "FlightSignificanceVsP";
+				locHistTitle = locParticleROOTName + string(" Flight Significance;Flight Significance (#sigma);p (GeV/c)");
+				dHistMap_FlightSignificanceVsP[locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFlightSignificanceBins, 0.0, dMaxFlightSignificance, dNum2DPBins, dMinP, dMaxP);
+
+				// Flight Distance Vs Theta
+				locHistName = "FlightSignificanceVsTheta";
+				locHistTitle = locParticleROOTName + string(" Flight Significance;Flight Significance (#sigma);#theta#circ");
+				dHistMap_FlightSignificanceVsTheta[locPID] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNumFlightSignificanceBins, 0.0, dMaxFlightSignificance, dNum2DThetaBins, dMinTheta, dMaxTheta);
+
+			}
+
 
 			gDirectory->cd("..");
 		} //end of PID loop
@@ -427,8 +465,21 @@ bool DHistogramAction_PID::Perform_Action(JEventLoop* locEventLoop, const DParti
 
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 
+	vector<const DReactionVertexInfo*> locVertexInfos;
+	locEventLoop->Get(locVertexInfos);
+	
+	// figure out what the right DReactionVertexInfo is
+	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
+	for(auto& locVertexInfo : locVertexInfos) {
+		auto locVertexReactions = locVertexInfo->Get_Reactions();
+		if(find(locVertexReactions.begin(), locVertexReactions.end(), Get_Reaction()) != locVertexReactions.end()) {
+			locReactionVertexInfo = locVertexInfo;
+			break;
+		}
+	}
+
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
-	{
+	{	
 		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
 		auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
@@ -440,15 +491,69 @@ bool DHistogramAction_PID::Perform_Action(JEventLoop* locEventLoop, const DParti
 				continue; //previously histogrammed
 
 			dPreviouslyHistogrammedParticles.insert(locHistInfo);
-			if(ParticleCharge(locParticles[loc_j]->PID()) != 0) //charged
-				Fill_ChargedHists(static_cast<const DChargedTrackHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
-			else //neutral
-				Fill_NeutralHists(static_cast<const DNeutralParticleHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+			if(Is_FinalStateParticle(locParticles[loc_j]->PID())) { 
+				if(ParticleCharge(locParticles[loc_j]->PID()) != 0) //charged
+					Fill_ChargedHists(static_cast<const DChargedTrackHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+				else //neutral
+					Fill_NeutralHists(static_cast<const DNeutralParticleHypothesis*>(locParticles[loc_j]), locMCThrownMatching, locEventRFBunch);
+			}
 		}
+
+		// fill info on decaying particles, which is on the particle combo step level
+		if(((locParticleComboStep->Get_InitialParticle()!=nullptr) && !Is_FinalStateParticle(locParticleComboStep->Get_InitialParticle()->PID()))) {  // decaying particles
+			// FOR NOW: we only calculate these displaced vertex quantities if a kinematic fit 
+			// was performed where the vertex is constrained
+			// TODO: Cleverly handle the other cases
+
+			// pull out information related to the kinematic fit
+			if( !Get_UseKinFitResultsFlag() ) continue; 
+			if( locReactionVertexInfo == nullptr ) continue; 
+
+			// extract the info about the vertex, to make sure that the information that we 
+			// need to calculate displaced vertices is there
+			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
+
+			Fill_DecayingHists(locParticleComboStep->Get_InitialParticle(), locParticleComboStep->Get_InitialKinFitParticle(), locStepVertexInfo);
+		}
+		
 	}
 
 	return true;
 }
+
+void DHistogramAction_PID::Fill_DecayingHists(const DKinematicData *locInitialParticle, std::shared_ptr<const DKinFitParticle> locKinFitParticle, const DReactionStepVertexInfo *locStepVertexInfo)
+{
+	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
+
+	//Particle_t locPID = static_cast<Particle_t>(locKinFitParticle->Get_PID());
+	//double locP = locKinFitParticle->Get_Momentum().Mag();
+	//double locTheta = locKinFitParticle->Get_Momentum().Theta()*180.0/TMath::Pi();
+	Particle_t locPID = locInitialParticle->PID();
+	double locP = locInitialParticle->momentum().Mag();
+	double locTheta = locInitialParticle->momentum().Theta()*180.0/TMath::Pi();
+
+	// comment
+	auto locParentVertexInfo = locStepVertexInfo->Get_ParentVertexInfo();
+	auto locVertexKinFitFlag = ((locKinFitType != d_P4Fit) && (locKinFitType != d_NoFit));
+
+	if(IsDetachedVertex(locPID) && locVertexKinFitFlag && (locParentVertexInfo != nullptr) && locStepVertexInfo->Get_FittableVertexFlag() && locParentVertexInfo->Get_FittableVertexFlag())
+	{
+		auto locPathLength = locKinFitParticle->Get_PathLength();
+		auto locPathLengthSigma = locKinFitParticle->Get_PathLengthUncertainty();
+		double locPathLengthSignificance = locPathLength / locPathLengthSigma;
+
+		dHistMap_FlightDistance[locPID]->Fill(locPathLength);
+		dHistMap_FlightDistanceVsP[locPID]->Fill(locPathLength, locP);
+		dHistMap_FlightDistanceVsTheta[locPID]->Fill(locPathLength, locTheta);
+
+		dHistMap_FlightSignificance[locPID]->Fill(locPathLengthSignificance);
+		dHistMap_FlightSignificanceVsP[locPID]->Fill(locPathLengthSignificance, locP);
+		dHistMap_FlightSignificanceVsTheta[locPID]->Fill(locPathLengthSignificance, locTheta);
+
+	}
+
+}
+
 
 void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrownMatching* locMCThrownMatching, const DEventRFBunch* locEventRFBunch)
 {
@@ -1375,7 +1480,16 @@ void DHistogramAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1419,15 +1533,37 @@ bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, co
 		//don't break: e.g. if multiple pi0's, histogram invariant mass of each one
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
-			dHist_InvariantMass->Fill(locMassesToFill[loc_i]);
-		for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
-			dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i]);
+		if(dSubtractAccidentals) {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_InvariantMass->Fill(locMassesToFill[loc_i], locWeight);
+			for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
+				dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i], locWeight);
+		} else {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_InvariantMass->Fill(locMassesToFill[loc_i]);
+			for(size_t loc_i = 0; loc_i < loc2DMassesToFill.size(); ++loc_i)
+				dHist_InvariantMassVsBeamE->Fill(locBeam->energy(), loc2DMassesToFill[loc_i]);
+		}
 	}
 	Unlock_Action();
 
@@ -1477,7 +1613,16 @@ void DHistogramAction_MissingMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1501,6 +1646,21 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 
 		locMassesToFill.push_back(pair<double, double>(locMissingP4.M(), locMissingP4.P()));
 	}
+	
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -1509,9 +1669,16 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 	{
 		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
 		{
-			dHist_MissingMass->Fill(locMassesToFill[loc_i].first);
-			dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
-			dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			// only fill histograms with weights if needed, to avoid complications
+			if(dSubtractAccidentals) {
+				dHist_MissingMass->Fill(locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first, locWeight);
+			} else {
+				dHist_MissingMass->Fill(locMassesToFill[loc_i].first);
+				dHist_MissingMassVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
+				dHist_MissingMassVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			}
 		}
 	}
 	Unlock_Action();
@@ -1562,7 +1729,16 @@ void DHistogramAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1587,6 +1763,21 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 		locMassesToFill.push_back(pair<double, double>(locMissingP4.M2(), locMissingP4.P()));
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
@@ -1594,9 +1785,15 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 	{
 		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
 		{
-			dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first);
-			dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
-			dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			if(dSubtractAccidentals) {
+				dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first, locWeight);
+				dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first, locWeight);
+			} else {
+				dHist_MissingMassSquared->Fill(locMassesToFill[loc_i].first);
+				dHist_MissingMassSquaredVsBeamE->Fill(locBeamEnergy, locMassesToFill[loc_i].first);
+				dHist_MissingMassSquaredVsMissingP->Fill(locMassesToFill[loc_i].second, locMassesToFill[loc_i].first);
+			}
 		}
 	}
 	Unlock_Action();
@@ -1638,7 +1835,16 @@ void DHistogramAction_2DInvariantMass::Initialize(JEventLoop* locEventLoop)
 
 void DHistogramAction_2DInvariantMass::Run_Update(JEventLoop* locEventLoop)
 {
+	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	locGeometry->GetTargetZ(dTargetZCenter);
+
 	locEventLoop->GetSingle(dAnalysisUtilities);
+
+	//BEAM BUNCH PERIOD
+	vector<double> locBeamPeriodVector;
+	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
 bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
@@ -1682,13 +1888,33 @@ bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, 
 		}
 	}
 
+	// calculate accidental scaling factor (if needed)
+	double locWeight = 1.;
+	if(dSubtractAccidentals) {
+		auto locIsFirstStepBeam = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
+		if(locIsFirstStepBeam) {
+			const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
+			const DKinematicData* locBeamParticle = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle();
+			
+			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
+
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
+				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
+		}
+	}
+
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action();
 	{
-		for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
-			dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second);
+		if(dSubtractAccidentals) {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second, locWeight);
+		} else {
+			for(size_t loc_i = 0; loc_i < locMassesToFill.size(); ++loc_i)
+				dHist_2DInvaraintMass->Fill(locMassesToFill[loc_i].first, locMassesToFill[loc_i].second);
+		}
 	}
 	Unlock_Action();
 
@@ -1836,6 +2062,13 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 		locHistTitle << "Kinematic Fit Constraints: " << locConstraintString << ";Confidence Level (" << locNumConstraints;
 		locHistTitle << " Constraints, " << locNumUnknowns << " Unknowns: " << locNDF << "-C Fit);# Combos";
 		dHist_ConfidenceLevel = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle.str(), dNumConfidenceLevelBins, 0.0, 1.0);
+
+		// Reduced chi^2 (chi^2/# d.o.f.)
+		locHistName = "ChiSq";
+		locHistTitle.str("");   // clear the ostringstream
+		locHistTitle << "Kinematic Fit Constraints: " << locConstraintString << "; #chi^{2}/# d.o.f. (" << locNumConstraints;
+		locHistTitle << " Constraints, " << locNumUnknowns << " Unknowns: " << locNDF << "-C Fit);# Combos";
+		dHist_ChiSq = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle.str(), dNumChiSqBins, 0.0, dMaxChiSq);
 
 		//beam (pulls & conlev)
 		Particle_t locInitialPID = Get_Reaction()->Get_ReactionStep(0)->Get_InitialPID();
@@ -2171,6 +2404,9 @@ bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, co
 
 	// Get Confidence Level
 	double locConfidenceLevel = locKinFitResults->Get_ConfidenceLevel();
+	
+	// Get reduced chi^2
+	double locChiSq = locKinFitResults->Get_ChiSq()/locKinFitResults->Get_NDF() ;
 
 	// Get Pulls
 	map<const JObject*, map<DKinFitPullType, double> > locPulls; //DKinematicData is the MEASURED particle
@@ -2185,7 +2421,8 @@ bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, co
 	Lock_Action();
 	{
 		dHist_ConfidenceLevel->Fill(locConfidenceLevel);
-
+		dHist_ChiSq->Fill(locChiSq);
+		
 		// beam
 		if(locBeamFlag)
 		{

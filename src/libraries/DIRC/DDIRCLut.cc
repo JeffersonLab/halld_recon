@@ -26,9 +26,9 @@ DDIRCLut::DDIRCLut()
 	gPARMS->SetDefaultParameter("DIRC:TRUTH_PIXELTIME",DIRC_TRUTH_PIXELTIME);
 
 	// timing cuts for photons
-	DIRC_CUT_TDIFFD = 3; // direct cut in ns
+	DIRC_CUT_TDIFFD = 2; // direct cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFD",DIRC_CUT_TDIFFD);
-	DIRC_CUT_TDIFFR = 4; // reflected cut in ns
+	DIRC_CUT_TDIFFR = 3; // reflected cut in ns
 	gPARMS->SetDefaultParameter("DIRC:CUT_TDIFFR",DIRC_CUT_TDIFFR);
 
 	// Gives DeltaT = 0, but shouldn't it be v=20.3767 [cm/ns] for 1.47125
@@ -43,13 +43,17 @@ DDIRCLut::DDIRCLut()
 	DIRC_ROTATE_TRACK = false;
 	gPARMS->SetDefaultParameter("DIRC:ROTATE_TRACK",DIRC_ROTATE_TRACK);
 
+	// Rotate tracks angle based on bar box survey data
+	DIRC_THETAC_OFFSET = true;
+	gPARMS->SetDefaultParameter("DIRC:THETAC_OFFSET",DIRC_THETAC_OFFSET);
+
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
 	dFinalStatePIDs.push_back(PiPlus);
 	dFinalStatePIDs.push_back(KPlus);
 	dFinalStatePIDs.push_back(Proton);
 
-	dMaxChannels = 108*64;
+	dMaxChannels = DDIRCGeometry::kPMTs*DDIRCGeometry::kPixels;
 
 	dCriticalAngle = asin(1.00028/1.47125); // n_quarzt = 1.47125; //(1.47125 <==> 390nm)
 	dIndex = 1.473;
@@ -68,16 +72,27 @@ bool DDIRCLut::brun(JEventLoop *loop) {
         loop->Get(locDIRCGeometry);
         dDIRCGeometry = locDIRCGeometry[0];
 
-	// rotation angles for bar boxes (reverse sign from survey)
-	for(int i=0; i<12; i++) {
-	  dRotationX[i] = -0.2134*TMath::DegToRad(); // +pitch // -0.00219;
-	  dRotationY[i] =  0.0963*TMath::DegToRad(); // -yaw   //  0.00181
-	  dRotationZ[i] = -0.0355*TMath::DegToRad(); // -roll  // -0.00062;
+	// get cherenkov angle corrections from CCDB
+	vector <double> thetac_offsets_bar(5184);
+	if(loop->GetCalib("/DIRC/thetac_offsets_bar", thetac_offsets_bar)) 
+	  jout << "Can't find requested /DIRC/thetac_offsets_bar in CCDB for this run!" << endl;
+	
+	for(int ibar=0; ibar<DDIRCGeometry::kBars; ibar++) {
+	  for(int ipmt=0; ipmt<DDIRCGeometry::kPMTs; ipmt++) {
+	    int index = ipmt + ibar*DDIRCGeometry::kPMTs;
+	    dThetaCOffset[ibar][ipmt] = thetac_offsets_bar.at(index);
+	  }
 	}
-	for(int i=12; i<24; i++) {
-	  dRotationX[i] = -0.0791*TMath::DegToRad(); // +pitch // -0.00138;
-	  dRotationY[i] =  0.1003*TMath::DegToRad(); // -yaw   //  0.00175;
-	  dRotationZ[i] = -0.0381*TMath::DegToRad(); // -roll  // -0.00066;
+
+	// get track rotation corrections from CCDB
+	vector< map<string, double> > bar_rotation(DDIRCGeometry::kBars);
+	if(loop->GetCalib("/DIRC/bar_rotation", bar_rotation)) 
+	  jout << "Can't find requested /DIRC/bar_rotation in CCDB for this run!" << endl;
+	
+	for(int ibar=0; ibar<DDIRCGeometry::kBars; ibar++) {
+	    dRotationX[ibar] = bar_rotation[ibar].at("rotationX")*TMath::DegToRad();
+	    dRotationY[ibar] = bar_rotation[ibar].at("rotationY")*TMath::DegToRad();
+	    dRotationZ[ibar] = bar_rotation[ibar].at("rotationZ")*TMath::DegToRad();
 	}
 
 	return true;
@@ -188,13 +203,13 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 
 		const DDIRCPmtHit* locDIRCHit = locDIRCHits[loc_i];
 		bool locIsGood = false;
-		CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locHypothesisPID, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, locIsGood);
+		bool locIsReflected = false;
+		CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locHypothesisPID, locIsReflected, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, locIsGood);
 		if(locIsGood) {
 			// count good photons and add hits to associated objects
 			nPhotons++;
 			locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHit);
 		} 
-
 	}// end loop over hits
 		
 	if(DIRC_DEBUG_HISTS) {
@@ -223,7 +238,7 @@ bool DDIRCLut::CalcLUT(TVector3 locProjPos, TVector3 locProjMom, const vector<co
 	return true;
 }
 
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum, int &nPhotonsThetaC, double &meanThetaC, double &meanDeltaT, bool &isGood) const
 {	
 	// initialize photon pairs for time and thetaC
 	pair<double, double> locDIRCPhoton(-999., -999.);
@@ -249,10 +264,9 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	if((box == 0 && channel < dMaxChannels) || (box == 1 && channel >= dMaxChannels)) 
 		return locDIRCPhotons;
 
-	int pmt = channel/64;
 	double rotX = 0, rotY = 0, rotZ=0;
 	int xbin = (int)(posInBar.X()/5.0) + 19;
-	if(bar>=0 && bar<=23 && xbin>=0 && xbin<=39) {
+	if(bar>=0 && bar<=47 && xbin>=0 && xbin<=39) {
 	  rotX = dRotationX[bar];
 	  rotY = dRotationY[bar];
 	  rotZ = dRotationZ[bar];
@@ -284,6 +298,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 		
 	// check for pixel before going through loop
 	int box_channel = channel%dMaxChannels;
+	int box_pmt = box_channel/DDIRCGeometry::kPixels;
 	if(dDIRCLutReader->GetLutPixelAngleSize(bar, box_channel) == 0) 
 		return locDIRCPhotons;
 	
@@ -319,7 +334,11 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				  trackMom.RotateY(rotY);
 				  trackMom.RotateZ(rotZ);
 				}
-				tangle = trackMom.Angle(dir); 
+				tangle = trackMom.Angle(dir);
+ 
+				if(DIRC_THETAC_OFFSET) { // ad-hoc correction per-PMT
+				  tangle -= dThetaCOffset[bar][box_pmt];
+				}
 
 				luttheta = dir.Angle(TVector3(-1,0,0));
 				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
@@ -367,6 +386,8 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				// remove photon candidates not used in likelihood
 				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.03) continue;
 				
+				isReflected = r;
+
 				// save good photons to matched list
 				isGood = true;
 				
@@ -376,6 +397,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				// calculate average ThetaC and DeltaT
 				meanThetaC += tangle;
 				meanDeltaT += locDeltaT;
+				
 				
 				// calculate likelihood for each mass hypothesis
 				for(uint loc_j = 0; loc_j<dFinalStatePIDs.size(); loc_j++) {
@@ -390,12 +412,12 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 }
 
 // overloaded function when calculating outside LUT factory
-vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, map<Particle_t, double> &logLikelihoodSum) const
+vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, double locFlightTime, TVector3 posInBar, TVector3 momInBar, map<Particle_t, double> locExpectedAngle, double locAngle, Particle_t locPID, bool &isReflected, map<Particle_t, double> &logLikelihoodSum) const
 {
 	int nPhotonsThetaC=0;
 	double meanThetaC=0.0, meanDeltaT=0.0;
 	bool isGood=false;
-	return CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, isGood);
+	return CalcPhoton(locDIRCHit, locFlightTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, isReflected, logLikelihoodSum, nPhotonsThetaC, meanThetaC, meanDeltaT, isGood);
 }
 
 double DDIRCLut::CalcLikelihood(double locExpectedThetaC, double locThetaC) const {

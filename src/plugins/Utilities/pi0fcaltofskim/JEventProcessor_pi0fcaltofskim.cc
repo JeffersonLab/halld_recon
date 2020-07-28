@@ -25,6 +25,7 @@ using namespace jana;
 #include "HDDM/DEventWriterHDDM.h"
 #include <HDGEOMETRY/DGeometry.h>
 #include <TOF/DTOFPoint.h>
+#include "TRIGGER/DL1Trigger.h"
 
 #include "GlueX.h"
 #include <vector>
@@ -153,9 +154,13 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
   vector< const DFCALShower* > locFCALShowers;
   vector< const DVertex* > kinfitVertex;
   vector<const DTOFPoint*> tof_points;
+  vector< const DBeamPhoton* > locBeamPhotons;
+  vector<const DL1Trigger *> locL1Triggers;
+
   loop->Get(locFCALShowers);
   loop->Get(kinfitVertex);
   loop->Get(tof_points);
+  loop->Get(locL1Triggers);
   
   vector< const DTrackTimeBased* > locTrackTimeBased;
   loop->Get(locTrackTimeBased);
@@ -209,7 +214,13 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
   if(locEventRFBunches.size() > 0) {
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
-  
+  for (unsigned int i = 0 ; i < locBeamPhotons.size(); i++) {
+    locObjectsToSave.push_back(static_cast<const JObject *>(locBeamPhotons[i]));
+  }  
+  for (unsigned int i = 0 ; i < locL1Triggers.size(); i++) {
+    locObjectsToSave.push_back(static_cast<const JObject *>(locL1Triggers[i]));
+  }
+    
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
  // Double_t radius = 0;

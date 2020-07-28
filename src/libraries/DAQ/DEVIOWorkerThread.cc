@@ -1394,6 +1394,8 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 {
 	if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
 
+	int continue_on_format_error = false;
+
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
 	
@@ -1512,7 +1514,12 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						if( (*iptr>>30) != 0x01) {
 							jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
 							DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
-							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+							if (continue_on_format_error) {
+								iptr = iend;
+								return;
+							}
+							else
+								throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
 						}
  
 						// from word 2
@@ -1526,7 +1533,12 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						iptr++;
 						if( (*iptr>>30) != 0x00){
 							DumpBinary(istart_pulse_data, iend, 128, iptr);
-							throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
+							if (continue_on_format_error) {
+								iptr = iend;
+								return;
+							}
+							else
+								throw JException("Bad f250 Pulse Data!", __FILE__, __LINE__);
 						}
  
 						// from word 3
@@ -1537,6 +1549,18 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 						bool     QF_vpeak_not_found        = (*iptr>>1 ) & 0x01;
 						bool     QF_bad_pedestal           = (*iptr>>0 ) & 0x01;
 						if(VERBOSE>7) cout << "      FADC250 Pulse Data word 3(0x"<<hex<<*iptr<<dec<<")  course_time="<<course_time<<" fine_time="<<fine_time<<" pulse_peak="<<pulse_peak<<endl;
+
+						// FIRMWARE BUG: If pulse integral was zero, this is an invalid bad pulse;
+						// skip over bogus repeated pulse time repeats, and ignore it altogether.
+						// March 18, 2020 -rtj-
+						if (integral == 0 && *iptr == *(iptr + 1)) {
+							while (*(iptr + 1) == *iptr) {
+								++iptr;
+							}
+							jerr << "Bug #1: bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
+							continue_on_format_error = true;
+							break;
+						}
 
 						if( pe ) {
 							pe->NEW_Df250PulseData(rocid, slot, channel, itrigger
@@ -1579,10 +1603,17 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
             case 14: // Data not valid (empty module)
             case 15: // Filler (non-data) word
             	if(VERBOSE>7) cout << "      FADC250 Event Trailer, Data not Valid, or Filler word ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					break;
-				default:
- 					if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
-					throw JExceptionDataFormat("Unexpected word type in fADC125 block!", __FILE__, __LINE__);
+				break;
+			default:
+ 				if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+ 				if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
+				jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+				if (continue_on_format_error) {
+					iptr = iend;
+					return;
+				}
+				else
+					throw JExceptionDataFormat("Unexpected word type in fADC250 block!", __FILE__, __LINE__);
         }
     }
 

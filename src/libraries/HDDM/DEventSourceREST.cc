@@ -25,17 +25,25 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
-   ifs = new std::ifstream(source_name);
-   if (ifs && ifs->is_open()) {
-      // hddm_r::istream constructor can throw a std::runtime_error
-      // which is not being caught here -- policy question in JANA:
-      // who catches the exceptions, top-level user code or here?
-      fin = new hddm_r::istream(*ifs);
+   ifs = new ifstream(source_name);
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
+      std::string head;
+      std::getline(sbuf, head);
+      std::string expected = " class=\"r\" ";
+      if (head.find(expected) == head.npos) {
+         std::string msg("Unexpected header found in input REST stream: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
    }
-   else {
-      // One might want to throw an exception or report an error here.
-      fin = NULL;
-   }
+
+   fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
@@ -116,12 +124,14 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
 
    hddm_r::HDDM *record = new hddm_r::HDDM();
    try{
-      if (! (*fin >> *record)) {
-         delete fin;
-         fin = NULL;
-         delete ifs;
-         ifs = NULL;
-	     return NO_MORE_EVENTS_IN_SOURCE;
+      while (record->getReconstructedPhysicsEvents().size() == 0) {
+         if (! (*fin >> *record)) {
+            delete fin;
+            fin = NULL;
+            delete ifs;
+            ifs = NULL;
+	        return NO_MORE_EVENTS_IN_SOURCE;
+         }
       }
    }catch(std::runtime_error &e){
       cerr << "Exception caught while trying to read REST file!" << endl;
@@ -164,12 +174,15 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
              gPARMS->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
          }
 
-         if (! (*fin >> *record)) {
-            delete fin;
-            fin = NULL;
-            delete ifs;
-            ifs = NULL;
-	        return NO_MORE_EVENTS_IN_SOURCE;
+         record->clear();
+         while (record->getReconstructedPhysicsEvents().size() == 0) {
+            if (! (*fin >> *record)) {
+               delete fin;
+               fin = NULL;
+               delete ifs;
+               ifs = NULL;
+	           return NO_MORE_EVENTS_IN_SOURCE;
+            }
          }
 
          continue;
@@ -237,7 +250,11 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 		DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
 		double locTargetCenterZ = 0.0;
 		locGeometry->GetTargetZ(locTargetCenterZ);
-
+		
+		map<string, double> beam_vals;
+		if (locEventLoop->GetCalib("PHOTON_BEAM/beam_spot",beam_vals))
+		  throw JException("Could not load CCDB table: PHOTON_BEAM/beam_spot");
+	
 		vector<double> locBeamPeriodVector;
 		if(locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
 			throw JException("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
@@ -259,6 +276,21 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 			dTargetCenterZMap[locRunNumber] = locTargetCenterZ;
 			dBeamBunchPeriodMap[locRunNumber] = locBeamBunchPeriod;
 			dDIRCChannelStatusMap[locRunNumber] = locDIRCChannelStatus;
+
+			dBeamCenterMap[locRunNumber].Set(beam_vals["x"],
+							 beam_vals["y"]);
+			dBeamDirMap[locRunNumber].Set(beam_vals["dxdz"],
+						      beam_vals["dydz"]);
+			dBeamZ0Map[locRunNumber]=beam_vals["z"];
+			
+			jout << "Run " << locRunNumber << " beam spot:"
+			     << " x=" << dBeamCenterMap[locRunNumber].X()
+			     << " y=" << dBeamCenterMap[locRunNumber].Y()
+			     << " z=" << dBeamZ0Map[locRunNumber]
+			     << " dx/dz=" << dBeamDirMap[locRunNumber].X() 
+			     << " dy/dz=" << dBeamDirMap[locRunNumber].Y() 
+			     << endl;
+
 		}
 		UnlockRead();
 		
@@ -338,7 +370,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
    }
-
+   if (dataClassName =="DEventHitStatistics") {
+      return Extract_DEventHitStatistics(record,
+                     dynamic_cast<JFactory<DEventHitStatistics>*>(factory));
+   }
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -703,29 +738,45 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
       tofpoint->tErr = iter->getTerr();
 
       //Status
-		const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
-	   hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
-		if(locStatusIterator == locTofStatusList.end())
-		{
-			tofpoint->dHorizontalBar = 0;
-			tofpoint->dVerticalBar = 0;
-			tofpoint->dHorizontalBarStatus = 3;
-			tofpoint->dVerticalBarStatus = 3;
-		}
-		else //should only be 1
-		{
-			for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
-			{
-				int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
-				tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
-				locStatus %= 45*45*4; //Assume compiler optimizes multiplication
-				tofpoint->dHorizontalBarStatus = locStatus/(45*45);
-				locStatus %= 45*45;
-				tofpoint->dVerticalBar = locStatus/45;
-				tofpoint->dHorizontalBar = locStatus % 45;
-			}
-		}
-
+      const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
+      hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
+      if(locStatusIterator == locTofStatusList.end())
+	{
+	  tofpoint->dHorizontalBar = 0;
+	  tofpoint->dVerticalBar = 0;
+	  tofpoint->dHorizontalBarStatus = 3;
+	  tofpoint->dVerticalBarStatus = 3;
+	}
+      else //should only be 1
+	{
+	  for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
+	    {
+	      int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
+	      tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
+	      locStatus %= 45*45*4; //Assume compiler optimizes multiplication
+	      tofpoint->dHorizontalBarStatus = locStatus/(45*45);
+	      locStatus %= 45*45;
+	      tofpoint->dVerticalBar = locStatus/45;
+	      tofpoint->dHorizontalBar = locStatus % 45;
+	    }
+	}
+      // Energy deposition
+      const hddm_r::TofEnergyDepositionList& locTofEnergyDepositionList = iter->getTofEnergyDepositions();
+      hddm_r::TofEnergyDepositionList::iterator locEnergyDepositionIterator = locTofEnergyDepositionList.begin();
+      if(locEnergyDepositionIterator == locTofEnergyDepositionList.end())
+	{
+	  tofpoint->dE1 = 0.;
+	  tofpoint->dE2 = 0.;
+	}
+      else //should only be 1
+	{
+	  for(; locEnergyDepositionIterator != locTofEnergyDepositionList.end(); ++locEnergyDepositionIterator)
+	    {
+	      tofpoint->dE1 = locEnergyDepositionIterator->getDE1();
+	      tofpoint->dE2 = locEnergyDepositionIterator->getDE2();
+	    }
+	}
+      
       data.push_back(tofpoint);
    }
 
@@ -1090,6 +1141,18 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    if (factory==NULL) {
       return OBJECT_NOT_AVAILABLE;
    }
+   
+   int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
+   DVector2 locBeamCenter,locBeamDir;
+   double locBeamZ0=0.;
+   LockRead();
+   {
+     locBeamCenter = dBeamCenterMap[locRunNumber]; 
+     locBeamDir = dBeamDirMap[locRunNumber];
+     locBeamZ0 = dBeamZ0Map[locRunNumber];
+   }
+   UnlockRead();
+
    string tag = (factory->Tag())? factory->Tag() : "";
 
    vector<DTrackTimeBased*> data;
@@ -1138,15 +1201,17 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 
       // Convert from cartesian coordinates to the 5x1 state vector corresponding to the tracking error matrix.
       double vect[5];
+      DVector2 beam_pos=locBeamCenter+(track_pos.Z()-locBeamZ0)*locBeamDir;
+      DVector2 diff(track_pos.X()-beam_pos.X(),track_pos.Y()-beam_pos.Y());
       vect[2]=tan(M_PI_2 - track_mom.Theta());
       vect[1]=track_mom.Phi();
       double sinphi=sin(vect[1]);
       double cosphi=cos(vect[1]);
       vect[0]=tra->charge()/track_mom.Perp();
       vect[4]=track_pos.Z();
-      vect[3]=track_pos.Perp();
+      vect[3]=diff.Mod();
 
-      if ((track_pos.X() > 0 && sinphi>0) || (track_pos.Y() <0 && cosphi>0) || (track_pos.Y() >0 && cosphi<0) || (track_pos.X() <0 && sinphi<0))
+      if ((diff.X() > 0 && sinphi>0) || (diff.Y() <0 && cosphi>0) || (diff.Y() >0 && cosphi<0) || (diff.X() <0 && sinphi<0))
         vect[3] *= -1.; 
       tra->setTrackingStateVector(vect[0], vect[1], vect[2], vect[3], vect[4]);
 
@@ -1157,7 +1222,25 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
-		// Hit layers
+      // Track parameters at exit of tracking volume
+      const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
+      hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	
+      if (locExitParamsIterator!=locExitParamsList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_NULL,myvector);
+	
+	for(; locExitParamsIterator != locExitParamsList.end(); ++locExitParamsIterator){
+	  DVector3 pos(locExitParamsIterator->getX1(),
+		       locExitParamsIterator->getY1(),
+		       locExitParamsIterator->getZ1());
+	  DVector3 mom(locExitParamsIterator->getPx1(),
+		     locExitParamsIterator->getPy1(),
+		       locExitParamsIterator->getPz1());
+	  tra->extrapolations[SYS_NULL].push_back(DTrackFitter::Extrapolation_t(pos,mom,locExitParamsIterator->getT1(),0.));
+	}
+      }
+      // Hit layers
       const hddm_r::ExpectedhitsList& locExpectedhitsList = iter->getExpectedhitses();
 	   hddm_r::ExpectedhitsList::iterator locExpectedhitsIterator = locExpectedhitsList.begin();
 		if(locExpectedhitsIterator == locExpectedhitsList.end())
@@ -1348,7 +1431,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
       for(; dircIter != dircList.end(); ++dircIter)
       {
 	      size_t locTrackIndex = dircIter->getTrack();
-	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
+	      if(locTrackIndex >= locTrackTimeBasedVector.size()) continue;
 
 	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
 	      if( !locTrackTimeBased ) continue;
@@ -1471,6 +1554,24 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locTOFHitMatchParams->dDeltaYToHit = tofIter->getDeltay();
 
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locTOFPoints[locHitIndex], std::const_pointer_cast<const DTOFHitMatchParams>(locTOFHitMatchParams));
+	 
+	 // dE/dx per plane
+	 const hddm_r::TofDedxList& locTofDedxList = tofIter->getTofDedxs();
+	 hddm_r::TofDedxList::iterator locTofDedxIterator = locTofDedxList.begin();
+	 if(locTofDedxIterator == locTofDedxList.end())
+	   {
+	     locTOFHitMatchParams->dEdx1 = 0.;
+	     locTOFHitMatchParams->dEdx2 = 0.;
+	   }
+	 else //should only be 1
+	   {
+	     for(; locTofDedxIterator != locTofDedxList.end(); ++locTofDedxIterator)
+	       {
+		 locTOFHitMatchParams->dEdx1 = locTofDedxIterator->getDEdx1();
+		 locTOFHitMatchParams->dEdx2 = locTofDedxIterator->getDEdx2();
+	       }
+	   }
+	 
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();
@@ -1606,6 +1707,52 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
       hit->setTOT(iter->getTot());
 
       data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+   
+   return NOERROR;
+}
+
+//----------------------------
+// Extract_DEventHitStatistics
+//----------------------------
+jerror_t DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
+                                   JFactory<DEventHitStatistics>* factory)
+{
+   /// Copies the data from the hitStatistics hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DEventHitStatistics*> data;
+
+   hddm_r::HitStatisticsList slist = (hddm_r::HitStatisticsList)record->getHitStatisticses();
+   if (slist.size() != 0 && slist().getJtag() == tag) {
+      DEventHitStatistics *stats = new DEventHitStatistics;
+      hddm_r::StartCountersList starts = slist().getStartCounterses();
+      stats->start_counters = (starts.size() > 0)? starts().getCount() : 0;
+      hddm_r::CdcStrawsList straws = slist().getCdcStrawses();
+      stats->cdc_straws = (straws.size() > 0)? straws().getCount() : 0;
+      hddm_r::FdcPseudosList pseudos = slist().getFdcPseudoses();
+      stats->fdc_pseudos = (pseudos.size() > 0)? pseudos().getCount() : 0;
+      hddm_r::BcalCellsList cells = slist().getBcalCellses();
+      stats->bcal_cells = (cells.size() > 0)? cells().getCount() : 0;
+      hddm_r::FcalBlocksList blocks = slist().getFcalBlockses();
+      stats->fcal_blocks = (blocks.size() > 0)? blocks().getCount() : 0;
+      hddm_r::CcalBlocksList bloccs = slist().getCcalBlockses();
+      stats->ccal_blocks = (bloccs.size() > 0)? bloccs().getCount() : 0;
+      hddm_r::TofPaddlesList paddles = slist().getTofPaddleses();
+      stats->tof_paddles = (paddles.size() > 0)? paddles().getCount() : 0;
+      hddm_r::DircPMTsList pmts = slist().getDircPMTses();
+      stats->dirc_PMTs = (pmts.size() > 0)? pmts().getCount() : 0;
+
+      data.push_back(stats);
    }
 
    // Copy into factory
