@@ -15,9 +15,7 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(const DGeometry *geom) : 
-m_numActiveBlocks( 0 )
-{
+DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
   
   // inflate the innner radius by 1% to for "safe" comparison
@@ -45,7 +43,9 @@ m_numActiveBlocks( 0 )
       m_activeBlock[row][col] = false;
     }
   }
+
   // Now fill in the data for the actual geometry
+  unsigned int ch=0;
   for( int row = 0; row < kBlocksTall; row++ ){
     for( int col = 0; col < kBlocksWide; col++ ){
 			
@@ -56,23 +56,25 @@ m_numActiveBlocks( 0 )
       
       double thisRadius = m_positionOnFace[row][col].Mod();
 			
-      if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) 
-	  && (fabs(m_positionOnFace[row][col].X())>m_insertSize || 
-	      fabs(m_positionOnFace[row][col].Y())>m_insertSize) 
+      if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) 	 
 	  ){
-
-	m_activeBlock[row][col] = true;
-	m_positionOnFace[row][col]+=XY0; // add FCAL offsets
-
+	// Carve out region for insert, if present.  For back compatibility
+	// we set these blocks as inactive but maintain the length of the array
+	if (fabs(m_positionOnFace[row][col].X())>m_insertSize || 
+	    fabs(m_positionOnFace[row][col].Y())>m_insertSize){ 
+	  m_activeBlock[row][col] = true;
+	  m_positionOnFace[row][col]+=XY0; // add FCAL offsets
+	}
 	// build the "channel map"
-	m_channelNumber[row][col] = m_numActiveBlocks;
-	m_row[m_numActiveBlocks] = row;
-	m_column[m_numActiveBlocks] = col;
+	m_channelNumber[row][col] = ch;
+	m_row[ch] = row;
+	m_column[ch] = col;
 	
-	m_numActiveBlocks++;
+	ch++;
       }
     }
   }
+ 
   if (insert_row_size>0){
     m_insertMidBlock=(insert_row_size-1)/2;
     for( int row = 0; row < insert_row_size; row++ ){
@@ -92,15 +94,16 @@ m_numActiveBlocks( 0 )
 	  m_positionOnFace[row_index][col_index]+=XY0; // add FCAL offsets
 	  
 	  // build the "channel map"
-	  m_channelNumber[row_index][col_index] = m_numActiveBlocks;
-	  m_row[m_numActiveBlocks] = row_index;
-	  m_column[m_numActiveBlocks] = col_index;
+	  m_channelNumber[row_index][col_index] = ch;
+	  m_row[ch] = row_index;
+	  m_column[ch] = col_index;
 	  
-	  m_numActiveBlocks++;
+	  ch++;
 	}
       }
     }
   }
+  m_numChannels=ch;
 }
 
 bool
@@ -146,15 +149,13 @@ DFCALGeometry::positionOnFace( int row, int column ) const
     row-=100-kBlocksTall;
     column-=100-kBlocksWide;
   }
-	return m_positionOnFace[row][column]; 
+  return m_positionOnFace[row][column]; 
 }
 
 DVector2
 DFCALGeometry::positionOnFace( int channel ) const
 {
-	assert( channel >= 0 && channel < m_numActiveBlocks );
-	
-	return positionOnFace( m_row[channel], m_column[channel] );
+  return positionOnFace( m_row[channel], m_column[channel] );
 }
 
 int

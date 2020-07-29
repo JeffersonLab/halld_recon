@@ -56,9 +56,11 @@ public:
 	//        static double fcalMidplane() { return fcalFaceZ() + 0.5 * blockLength() ; } 
 	
 	bool isBlockActive( int row, int column ) const;
+	bool isBlockActive(int channel) const {
+	  return isBlockActive(row(channel),column(channel));
+	}
 	bool isInsertBlock(int row,int column) const;
-	int  numActiveBlocks() const { return m_numActiveBlocks; }
-
+	unsigned int numChannels() const {return m_numChannels;}
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
@@ -91,8 +93,8 @@ public:
 	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
 	int    m_row[kMaxChannels];
 	int    m_column[kMaxChannels];
-	
-	int    m_numActiveBlocks;
+	int m_numChannels;
+
 	int m_insertRowSize=0,m_insertMidBlock=0;
 	double m_insertSize=0.;
 	
