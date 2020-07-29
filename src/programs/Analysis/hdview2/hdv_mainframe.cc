@@ -1639,7 +1639,8 @@ void hdv_mainframe::DrawDetectorsXY(void)
 
 		fcalblocks.clear();
 		if(GetCheckButton("fcal")){
-		  for(int chan=0; chan<fcalgeom->numActiveBlocks(); chan++){ 
+		  for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){
+		    if (fcalgeom->isBlockActive(chan)==false) continue;
 		    DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
 		    double x[5], y[5];
@@ -2018,7 +2019,8 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  shift[7].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space	  
 		}
 		fcalblocks.clear();
-		for(int chan=0; chan<fcalgeom->numActiveBlocks(); chan++){  
+		for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){ 
+		  if (fcalgeom->isBlockActive(chan)==false) continue;
 		  DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
 		  double r[4], phi[4];
