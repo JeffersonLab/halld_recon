@@ -96,9 +96,8 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// try clusterizing if more than 250 hits in FCAL
 	if(fcalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
-	vector<const DFCALGeometry*> geomVec;
-	eventLoop->Get(geomVec);
-	const DFCALGeometry& fcalGeom = *(geomVec[0]);
+	const DFCALGeometry* fcalGeom=NULL;
+	eventLoop->GetSingle(fcalGeom);
 
 	// Sort hits by energy
 	sort(fcalhits.begin(), fcalhits.end(), FCALHitsSort_C);
@@ -113,7 +112,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                                                      hit != fcalhits.end(); hit++ ) {
            if ( (**hit).E <  1e-6 ) continue;
            hits->hit[nhits].id = (**hit).id;
-	   hits->hit[nhits].ch = fcalGeom.channel( (**hit).row, (**hit).column );
+	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
            hits->hit[nhits].y = (**hit).y;
            hits->hit[nhits].E = (**hit).E; 
@@ -147,7 +146,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	   bool something_changed = false;
 	   for ( unsigned int c = 0; c < clusterCount; c++ ) {
               //cout << " --------- Update iteration " << iter << endl;
-	     something_changed |= clusterList[c]->update( hits, fcalFaceZ_TargetIsZeq0 );
+	     something_changed |= clusterList[c]->update( hits, fcalFaceZ_TargetIsZeq0, fcalGeom );
            }
       	   if (something_changed) {
               for ( unsigned int c = 0; c < clusterCount; c++ ) {
@@ -178,7 +177,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		 clusterList[clusterCount] = new DFCALCluster( hits->nhits );
                  hitUsed[ih] = -1;
 		 clusterList[clusterCount]->addHit(ih,1.);
-		 clusterList[clusterCount]->update( hits, fcalFaceZ_TargetIsZeq0 );
+		 clusterList[clusterCount]->update( hits, fcalFaceZ_TargetIsZeq0, fcalGeom );
 		 ++clusterCount;
 	      }
 	      else if (iter > 0) {
