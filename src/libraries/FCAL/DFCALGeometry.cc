@@ -15,127 +15,70 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(const DGeometry *geom){
-  double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
-  
-  // inflate the innner radius by 1% to for "safe" comparison
-  innerRadius *= 1.01;
-  
-  // Check for presence of PbWO4 insert
-  int insert_row_size=0;
-  geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
-  m_insertSize=insertBlockSize()*double(insert_row_size/2);
+DFCALGeometry::DFCALGeometry() : 
+m_numActiveBlocks( 0 )
+{
+	double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
 
-  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
-  DVector2 XY0(m_FCALdX,m_FCALdY);
-  
-  vector<double>block;
-  geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
-  double back=m_FCALfront+block[2];
-  geom->Get("//box[@name='LTB1']/@X_Y_Z",block);
-  m_insertFront=0.5*(back+m_FCALfront-block[2]);
-  
-  
-  // Initilize the list of active blocks to false, to be adjusted for the
-  // actual geometry below.
-  for( int row = 0; row < 2*kBlocksTall; row++ ){
-    for( int col = 0; col < 2*kBlocksWide; col++ ){	
-      m_activeBlock[row][col] = false;
-    }
-  }
+	// inflate the innner radius by 1% to for "safe" comparison
+	innerRadius *= 1.01;
+	
+	for( int row = 0; row < kBlocksTall; row++ ){
+		for( int col = 0; col < kBlocksWide; col++ ){
+			
+			// transform to beam axis
+			m_positionOnFace[row][col] = 
+			   DVector2(  ( col - kMidBlock ) * blockSize(),
+					     ( row - kMidBlock ) * blockSize() );
+			
+			double thisRadius = m_positionOnFace[row][col].Mod();
+			
+			if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) ){
 
-  // Now fill in the data for the actual geometry
-  unsigned int ch=0;
-  for( int row = 0; row < kBlocksTall; row++ ){
-    for( int col = 0; col < kBlocksWide; col++ ){
-			
-      // transform to beam axis
-      m_positionOnFace[row][col] = 
-	DVector2(  ( col - kMidBlock ) * blockSize(),
-		   ( row - kMidBlock ) * blockSize());
-      
-      double thisRadius = m_positionOnFace[row][col].Mod();
-			
-      if( ( thisRadius < radius() ) && ( thisRadius > innerRadius ) 	 
-	  ){
-	// Carve out region for insert, if present.  For back compatibility
-	// we set these blocks as inactive but maintain the length of the array
-	if (fabs(m_positionOnFace[row][col].X())>m_insertSize || 
-	    fabs(m_positionOnFace[row][col].Y())>m_insertSize){ 
-	  m_activeBlock[row][col] = true;
-	  m_positionOnFace[row][col]+=XY0; // add FCAL offsets
+				m_activeBlock[row][col] = true;
+				
+				// build the "channel map"
+				m_channelNumber[row][col] = m_numActiveBlocks;
+				m_row[m_numActiveBlocks] = row;
+				m_column[m_numActiveBlocks] = col;
+
+				m_numActiveBlocks++;
+			}
+			else{
+				
+				m_activeBlock[row][col] = false;
+			}
+		}
 	}
-	// build the "channel map"
-	m_channelNumber[row][col] = ch;
-	m_row[ch] = row;
-	m_column[ch] = col;
-	
-	ch++;
-      }
-    }
-  }
- 
-  if (insert_row_size>0){
-    m_insertMidBlock=(insert_row_size-1)/2;
-    for( int row = 0; row < insert_row_size; row++ ){
-      for( int col = 0; col < insert_row_size; col++ ){
-	
-	// transform to beam axis
-	int row_index=row+kBlocksTall;
-	int col_index=col+kBlocksWide;
-	m_positionOnFace[row_index][col_index] = 
-	DVector2(  ( col - m_insertMidBlock -0.5) * insertBlockSize(),
-		   ( row - m_insertMidBlock -0.5) * insertBlockSize() );
-	      
-	if( fabs(m_positionOnFace[row_index][col_index].X())>insertBlockSize()
-	    || fabs(m_positionOnFace[row_index][col_index].Y())>insertBlockSize()
-	    ){
-	  m_activeBlock[row_index][col_index] = true;
-	  m_positionOnFace[row_index][col_index]+=XY0; // add FCAL offsets
-	  
-	  // build the "channel map"
-	  m_channelNumber[row_index][col_index] = ch;
-	  m_row[ch] = row_index;
-	  m_column[ch] = col_index;
-	  
-	  ch++;
-	}
-      }
-    }
-  }
-  m_numChannels=ch;
 }
 
 bool
 DFCALGeometry::isBlockActive( int row, int column ) const
 {
-   if (row>=100&&column>=100){
-    row-=100-kBlocksTall;
-    column-=100-kBlocksWide;
-  }
+	// I'm inserting these lines to effectively disable the
+	// two assert calls below. They are causing all programs
+	// (hd_dump, hdview) to exit, even when I'm not interested
+	// in the FCAL. This does not fix the underlying problem
+	// of why we're getting invalid row/column values.
+	// 12/13/05  DL
+	if( row < 0 ||  row >= kBlocksTall )return false;
+	if( column < 0 ||  column >= kBlocksWide )return false;
 
+	// assert(    row >= 0 &&    row < kBlocksTall );
+	// assert( column >= 0 && column < kBlocksWide );
+	
 	return m_activeBlock[row][column];	
 }
 
 int
-DFCALGeometry::row( float y, bool in_insert ) const 
+DFCALGeometry::row( float y ) const 
 {	
-  y-=m_FCALdY;
-
-  if (in_insert){
-    return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
-  }
 	return static_cast<int>( y / blockSize() + kMidBlock + 0.5);
 }
 
 int
-DFCALGeometry::column( float x, bool in_insert ) const 
+DFCALGeometry::column( float x ) const 
 {	
-  x-=m_FCALdX;
-  
-  if (in_insert){
-    return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
-  }
 	return static_cast<int>( x / blockSize() + kMidBlock + 0.5);
 }
 
@@ -144,28 +87,21 @@ DFCALGeometry::positionOnFace( int row, int column ) const
 { 
   //	assert(    row >= 0 &&    row < kBlocksTall );
   //	assert( column >= 0 && column < kBlocksWide );
-  // Check for insert blocks
-  if (row>=100&&column>=100){
-    row-=100-kBlocksTall;
-    column-=100-kBlocksWide;
-  }
-  return m_positionOnFace[row][column]; 
+	
+	return m_positionOnFace[row][column]; 
 }
 
 DVector2
 DFCALGeometry::positionOnFace( int channel ) const
 {
-  return positionOnFace( m_row[channel], m_column[channel] );
+	assert( channel >= 0 && channel < m_numActiveBlocks );
+	
+	return positionOnFace( m_row[channel], m_column[channel] );
 }
 
 int
 DFCALGeometry::channel( int row, int column ) const
 {
-  // Check for insert blocks
-  if (row>=100&&column>=100){
-    row-=100-kBlocksTall;
-    column-=100-kBlocksWide;
-  }
 	if( isBlockActive( row, column ) ){
 		
 		return m_channelNumber[row][column]; 
@@ -176,12 +112,4 @@ DFCALGeometry::channel( int row, int column ) const
 	       << row << " column " <<  column << endl;
 		return -1;
 	}
-}
-
-bool DFCALGeometry::inInsert(int channel) const{
-  if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
-      && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
-    return true;
-  }
-  return false;
 }

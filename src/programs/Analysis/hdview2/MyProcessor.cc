@@ -614,7 +614,7 @@ void MyProcessor::FillGraphics(void)
 	  
 	  for(unsigned int i=0; i<fcalhits.size(); i++){
 	    const DFCALHit *hit = fcalhits[i];
-	    TPolyLine *poly = hdvmf->GetFCALPolyLine(hit->row, hit->column);
+	    TPolyLine *poly = hdvmf->GetFCALPolyLine(hit->x, hit->y);
 	    if(!poly)continue;
 	    
 #if 0			

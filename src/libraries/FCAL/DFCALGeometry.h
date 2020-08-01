@@ -14,7 +14,6 @@ using namespace jana;
 
 #include "DVector2.h"
 #include "units.h"
-#include <HDGEOMETRY/DGeometry.h>
 
 class DFCALGeometry : public JObject {
 
@@ -32,7 +31,7 @@ public:
 	
 	JOBJECT_PUBLIC(DFCALGeometry);
 
-	DFCALGeometry(const DGeometry *geom);
+	DFCALGeometry();
 	~DFCALGeometry(){}
 
 	// these numbers are fixed for the FCAL as constructed
@@ -42,41 +41,32 @@ public:
 
 	enum { kBlocksWide = 59 };
 	enum { kBlocksTall = 59 };
-	enum { kMaxChannels = 4* kBlocksWide * kBlocksTall };
+	enum { kMaxChannels = kBlocksWide * kBlocksTall };
 	enum { kMidBlock = ( kBlocksWide - 1 ) / 2 };
 	enum { kBeamHoleSize = 3 };
 
 	static double blockSize()  { return 4.0157*k_cm; }
-	static double insertBlockSize()  { return 2.09*k_cm; }
 	static double radius()  { return 1.20471*k_m; }
 	static double blockLength()  { return 45.0*k_cm; }
-	static double insertBlockLength()  { return 20.0*k_cm; }
 	//	static double fcalFaceZ()  { return 625.3*k_cm; }
 
 	//        static double fcalMidplane() { return fcalFaceZ() + 0.5 * blockLength() ; } 
 	
 	bool isBlockActive( int row, int column ) const;
-	bool isBlockActive(int channel) const {
-	  return isBlockActive(row(channel),column(channel));
-	}
-	bool isInsertBlock(int row,int column) const;
-	unsigned int numChannels() const {return m_numChannels;}
+	int  numActiveBlocks() const { return m_numActiveBlocks; }
+
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
-	double fcalFrontZ() const {return m_FCALfront;}
-	double insertFrontZ() const {return m_insertFront;}
-	double insertSize() const {return m_insertSize;}
-
-	bool inInsert(int channel) const;
+	
 	int channel( int row, int column ) const;
 
 	int row   ( int channel ) const { return m_row[channel];    }
 	int column( int channel ) const { return m_column[channel]; }
 	
 	// get row and column from x and y positions
-	int row   ( float y, bool in_insert=false ) const;
-	int column( float x, bool in_insert=false ) const;
+	int row   ( float y ) const;
+	int column( float x ) const;
 
 	void toStrings(vector<pair<string,string> > &items) const {
 	  AddString(items, "kBlocksWide", "%d", (int)kBlocksWide);
@@ -85,26 +75,16 @@ public:
 	  AddString(items, "kBeamHoleSize", "%2.3f", (int)kBeamHoleSize);
 	}
 	
+private:
 
- protected:
-	bool   m_activeBlock[2*kBlocksTall][2*kBlocksWide];
-	DVector2 m_positionOnFace[2*kBlocksTall][2*kBlocksWide];
+	bool   m_activeBlock[kBlocksTall][kBlocksWide];
+	DVector2 m_positionOnFace[kBlocksTall][kBlocksWide];
 
-	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
+	int    m_channelNumber[kBlocksTall][kBlocksWide];
 	int    m_row[kMaxChannels];
 	int    m_column[kMaxChannels];
-	int m_numChannels;
-
-	int m_insertRowSize=0,m_insertMidBlock=0;
-	double m_insertSize=0.;
 	
-	// global offsets
-	double m_FCALdX,m_FCALdY,m_FCALfront,m_insertFront;
-	
-
- private:
-	DFCALGeometry(){};// force use of constructor with arguments.
-	
+	int    m_numActiveBlocks;
 };
 
 #endif // _DFCALGeometry_

@@ -250,11 +250,8 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     if(debug){
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
-	int col = fcalGeom.column(ch);	
-	// Sanity check for regular FCAL (row,col) ranges (anticipating 
-	// future upgrade to FCAL to include insert)
-	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
-	   && col<DFCALGeometry::kBlocksWide){
+	int col = fcalGeom.column(ch);
+	if(fcalGeom.isBlockActive(row,col)){
 	  hfcal_gains->Fill(fcal_gains[row][col]);
 	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
 	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
@@ -281,10 +278,7 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
 	int col = fcalGeom.column(ch);
-	// Sanity check for regular FCAL (row,col) ranges (anticipating 
-	// future upgrade to FCAL to include insert)
-	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
-	   && col<DFCALGeometry::kBlocksWide){
+	if(fcalGeom.isBlockActive(row,col)){
 	  hfcal_ped->Fill(fcal_pedestals[row][col]);
 	}
       }	
@@ -410,9 +404,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	    double fcal_adc_en  = fcal_tmp.energy*FCAL_ADC_PER_MEV*1000;
 	    
-	    // Account for gain fluctuations
-	    if(simu_gain_fcal && row<DFCALGeometry::kBlocksTall
-	       && col<DFCALGeometry::kBlocksWide){
+	    // Account for gain fluctuations 
+	    if(simu_gain_fcal){
 	      
 	      double gain  =  fcal_gains[row][col];	  
 	      
@@ -460,11 +453,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	  for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++){
 	    int row     = fcal_merged_hits[ii].row;
 	    int column  = fcal_merged_hits[ii].column;
-	    double pedestal = 100.0;
-	    if (row<DFCALGeometry::kBlocksTall
-		&& column<DFCALGeometry::kBlocksWide){
-	      pedestal=fcal_pedestals[row][column];
-	    }
+	    double pedestal =  fcal_pedestals[row][column];	    
 	    AddBaseline(fcal_merged_hits[ii].adc_en, pedestal, gDRandom);       
 	  }
 	}
@@ -1395,9 +1384,33 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
+  
+  char str[256];
+  
+  if (fcalGeom.numActiveBlocks() != FCAL_MAX_CHANNELS) {
+    sprintf(str, "FCAL geometry is wrong size! channels=%d (should be %d)", 
+	    fcalGeom.numActiveBlocks(), FCAL_MAX_CHANNELS);
+    throw JException(str);
+  }
+  
+  
   for (int ch = 0; ch < static_cast<int>(fcal_const_ch.size()); ch++) {
+    
+    // make sure that we don't try to load info for channels that don't exist
+    if (ch == fcalGeom.numActiveBlocks())
+      break;
+    
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
+    
+    // results from DFCALGeometry should be self consistent, but add in some
+    // sanity checking just to be sure
+    if (fcalGeom.isBlockActive(row,col) == false) {
+      sprintf(str, "DL1MCTrigger: Loading FCAL constant for inactive channel!  "
+	      "row=%d, col=%d", row, col);
+      throw JException(str);
+    }    
+    
     table[row][col] = fcal_const_ch[ch];
   }
   

@@ -9,7 +9,6 @@
 
 #include "DFCALGeometry_factory.h"
 #include "DFCALGeometry.h"
-#include <HDGEOMETRY/DGeometry.h>
 
 //------------------
 // brun
@@ -18,11 +17,8 @@ jerror_t DFCALGeometry_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
 	assert( _data.size() == 0 );
 
-	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	const DGeometry *geom = dapp->GetDGeometry(runnumber);
-  
 	flags = PERSISTANT;
-	_data.push_back( new DFCALGeometry(geom) );
+	_data.push_back( new DFCALGeometry() );
 	
 	return NOERROR;
 }

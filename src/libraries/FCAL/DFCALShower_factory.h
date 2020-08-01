@@ -37,8 +37,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   void GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb,
 				     double &Ecorrected,
 				     DVector3 &pos_corrected, double &errZ,
-				     const DVector3 *aVertex,
-				     bool in_insert=false);
+				     const DVector3 *aVertex);
   
   void GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, 
   				     double Egamma, const DVector3 *aVertex  );
@@ -84,15 +83,6 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double FCAL_CRITICAL_ENERGY;
   double FCAL_SHOWER_OFFSET;
   double FCAL_C_EFFECTIVE;
-
-  // parameters for insert
-  double INSERT_PAR1,INSERT_PAR2,INSERT_PAR3,INSERT_PAR4;
-  double INSERT_RADIATION_LENGTH;
-  double INSERT_CRITICAL_ENERGY;
-  double INSERT_SHOWER_OFFSET;
-  double INSERT_C_EFFECTIVE;
-  double m_insertFront;
-
 
   int VERBOSE;
   string COVARIANCEFILENAME;

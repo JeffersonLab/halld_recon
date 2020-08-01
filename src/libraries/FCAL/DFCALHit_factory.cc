@@ -270,10 +270,40 @@ void DFCALHit_factory::FillCalibTable( fcal_digi_constants_t &table,
         const vector<double> &raw_table, 
         const DFCALGeometry &fcalGeom)
 {
+    char str[256];
+
+    // sanity check that we have the right geometry
+    // (deprecate this?) 
+    if (fcalGeom.numActiveBlocks() != FCAL_MAX_CHANNELS) {
+        sprintf(str, "FCAL geometry is wrong size! channels=%d (should be %d)", 
+                fcalGeom.numActiveBlocks(), FCAL_MAX_CHANNELS);
+        throw JException(str);
+    }
+
+    // check to see if the table is the right size
+    if ( fcalGeom.numActiveBlocks() != static_cast<int>(raw_table.size()) ) {
+        sprintf(str, "FCAL constant table is wrong size! channels=%d (should be %d)", 
+                fcalGeom.numActiveBlocks(), static_cast<int>(raw_table.size()));
+        throw JException(str);
+    }
+
     for (int channel=0; channel < static_cast<int>(raw_table.size()); channel++)
     {
+        // make sure that we don't try to load info for channels that don't exist
+        if (channel == fcalGeom.numActiveBlocks())
+            break;
+
         int row = fcalGeom.row(channel);
         int col = fcalGeom.column(channel);
+
+        // results from DFCALGeometry should be self consistent, but add in some
+        // sanity checking just to be sure
+        if (fcalGeom.isBlockActive(row,col) == false) {
+            sprintf(str, "Loading FCAL constant for inactive channel!  "
+                    "row=%d, col=%d", row, col);
+            throw JException(str);
+        }
+
         table[row][col] = raw_table[channel];
     }
 }
