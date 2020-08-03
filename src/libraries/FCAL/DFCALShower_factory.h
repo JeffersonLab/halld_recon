@@ -93,6 +93,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double INSERT_C_EFFECTIVE;
   double m_insertFront;
 
+  const DFCALGeometry *fcalGeom=NULL;
 
   int VERBOSE;
   string COVARIANCEFILENAME;
