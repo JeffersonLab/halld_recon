@@ -132,6 +132,9 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     
   if (geom) {
     geom->GetTargetZ(m_zTarget);
+    loop->GetSingle(fcalGeom);  
+    m_FCALfront=fcalGeom->fcalFrontZ(); 
+    m_insertFront=fcalGeom->insertFrontZ();
   }
   else{
       
@@ -231,12 +234,6 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   vector<const DFCALCluster*> fcalClusters;
   eventLoop->Get(fcalClusters);
   if(fcalClusters.size()<1)return NOERROR;
-
-  vector<const DFCALGeometry*> fcalGeomVect;
-  eventLoop->Get( fcalGeomVect );
-  if (fcalGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
-  const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
  
   // Use the center of the target as an approximation for the vertex position
   // 29/03/2020 ijaegle@jlab.org add beam center in x,y
@@ -256,15 +253,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     // energy weighted time provides better resolution:
     double cTime = cluster->getTimeEWeight();
   
-    double zback=fcalGeom.fcalFrontZ() + fcalGeom.blockLength();
+    double zback=m_FCALfront + fcalGeom->blockLength();
     double c_effective=FCAL_C_EFFECTIVE;
     
     int channel = cluster->getChannelEmax();
-    DVector2 pos=fcalGeom.positionOnFace(channel);
+    DVector2 pos=fcalGeom->positionOnFace(channel);
     // Check if the cluster is in the insert
-    bool in_insert=fcalGeom.inInsert(channel);
+    bool in_insert=fcalGeom->inInsert(channel);
     if (in_insert){
-      zback=fcalGeom.insertFrontZ() + fcalGeom.insertBlockLength();
+      zback=m_insertFront + fcalGeom->insertBlockLength();
       c_effective=INSERT_C_EFFECTIVE;
       in_insert=true;
     }
