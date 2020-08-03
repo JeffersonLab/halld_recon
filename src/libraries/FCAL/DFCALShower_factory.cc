@@ -237,6 +237,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   if (fcalGeomVect.size() < 1)
     return OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
+  m_FCALfront=fcalGeom.fcalFrontZ();
  
   // Use the center of the target as an approximation for the vertex position
   // 29/03/2020 ijaegle@jlab.org add beam center in x,y
