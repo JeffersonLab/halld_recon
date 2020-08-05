@@ -73,6 +73,9 @@ jerror_t MyProcessor::brun(JEventLoop *eventLoop, int32_t runnumber)
 		tosummarize.insert("DMCThrown");
 		tosummarize.insert("DMCTrajectoryPoint");
 		tosummarize.insert("DMCReaction");
+
+        tosummarize.insert("DTrigger");
+        tosummarize.insert("DEventHitStatistics");
 		
 	}else{
 		// make sure factories exist for all requested data types

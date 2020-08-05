@@ -149,5 +149,15 @@
                 punit="GeV/c" tunit="ns"/>
     </detectorMatches>
 
+    <hitStatistics minOccurs="0" jtag="string">
+        <startCounters minOccurs="0" count="int"/>
+        <cdcStraws minOccurs="0" count="int"/>
+        <fdcPseudos minOccurs="0" count="int"/>
+        <bcalCells minOccurs="0" count="int"/>
+        <fcalBlocks minOccurs="0" count="int"/>
+        <tofPaddles minOccurs="0" count="int"/>
+        <ccalBlocks minOccurs="0" count="int"/>
+        <dircPMTs minOccurs="0" count="int"/>
+    </hitStatistics>
   </reconstructedPhysicsEvent>
 </HDDM>

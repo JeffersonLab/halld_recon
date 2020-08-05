@@ -269,11 +269,13 @@
 
 		// FCAL LED: FP Bit 3
 		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
+
+                // Don't currently fill this bits.
 		// BCAL LED: FP Bit 9
-		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+                //		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
 		locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
 		// BCAL LED: FP Bit 10
-		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
+                //		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
 		// Random Trigger: FP Bit 12
 		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
 		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
