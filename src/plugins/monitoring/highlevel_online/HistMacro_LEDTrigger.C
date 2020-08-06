@@ -34,7 +34,7 @@
 		
 		
 		const int bin_number = 8;
-		const char *bin_label[bin_number] = { "FCal LED (3)","BCAL 1200Hits", "BCal LED (9)", "pseudoTrig(9)","BCal LED (10)", "pseudoTrig(10)","Random (12)", "DIRC LED (15)"};
+		const char *bin_label[bin_number] = { "FCal LED (3)","BCAL 1200Hits", "BCal LED UP(9)", "pseudoTrig UP(9)","BCal LED DN(10)", "pseudoTrig DN(10)","Random (12)", "DIRC LED (15)"};
 		TH1I *locHist_Trigger_pseudo = new TH1I("locHist_Trigger_pseudo", "L1 Front Panel Trigger Bits", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
 	
@@ -46,13 +46,13 @@
 		locHist_Trigger_FP->Fill(0., locHist_L1bits_fp->GetBinContent(3));
                 //BCAL:1200 hits
                 locHist_Trigger_FP->Fill(1., locHist_L1bits_fp_twelvehundhits->GetBinContent(1));
-		// BCAL LED: FP Bit 9
+		// BCAL LED Upstream: FP Bit 9
 		locHist_Trigger_FP->Fill(2., locHist_L1bits_fp->GetBinContent(9));
-                // BCAL LED: pseudo Trigger 9
+                // BCAL LED Upstream: pseudo Trigger 9
 		locHist_Trigger_pseudo->Fill(3., locHist_L1bits_fp_twelvehundhits->GetBinContent(3));
-		// BCAL LED: FP Bit 10
+		// BCAL LED Downstream: FP Bit 10
 		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(10));
-                // BCAL LED: pseudo Trigger 10
+                // BCAL LED Downstream: pseudo Trigger 10
 		locHist_Trigger_pseudo->Fill(5., locHist_L1bits_fp_twelvehundhits->GetBinContent(5));
 		// Random Trigger: FP Bit 12
 		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
