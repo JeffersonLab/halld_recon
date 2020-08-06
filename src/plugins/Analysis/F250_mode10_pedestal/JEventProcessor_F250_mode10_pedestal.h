@@ -22,18 +22,21 @@ class JEventProcessor_F250_mode10_pedestal:public jana::JEventProcessor{
 		static const int highslotnum=21;
 		static const int highchannum=16;
 		// root hist pointers
-		TH1I *samples_meansub[highcratenum][highslotnum][highchannum];  /// find the mean in window and them subtract from all samples
+		TH1I *samples_meansub[highcratenum][highslotnum][highchannum];   /// find the mean in window and them subtract from all samples
 		TH1I *samplesum_pedsub[highcratenum][highslotnum][highchannum];  /// measure the pedestal, subtract and then sum the samples
 		TH1I *samplesum[highcratenum][highslotnum][highchannum];         /// just sum the samples
+		TH1I *windowSigma[highcratenum][highslotnum][highchannum];       /// For each window find the Sigma of the samples
 		//TH1I *samples_mean[highcratenum][highslotnum][highchannum];
 		TProfile2D *mean_crates[highcratenum];
 		TH2D *samples_rms_summary[highcratenum];
 		TH2D *samplesum_pedsub_rms_summary[highcratenum];
 		TH2D *samplesum_rms_summary[highcratenum];
+		TProfile2D *windowSigma_crate[highcratenum];
 
 
 	private:
 		uint32_t NSA_NSB;
+		int      debug;
 
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
