@@ -16,8 +16,11 @@ using namespace std;
 #include <JANA/JFactory.h>
 using namespace jana;
 
+#include <FCAL/DFCALGeometry.h>
+
 #define FCAL_USER_HITS_MAX 2800
 #define MOLIERE_RADIUS 3.696
+#define PbWO4_MOLIERE_RADIUS 2.2
 #define MAX_SHOWER_RADIUS 25
 
 class DFCALCluster : public JObject {
@@ -78,7 +81,8 @@ class DFCALCluster : public JObject {
    int getHits() const; // get number of hits owned by a cluster
    int addHit(const int ihit, const double frac);
    void resetClusterHits();
-   bool update( const userhits_t* const hitList, double fcalFaceZ );
+   bool update( const userhits_t* const hitList, double fcalFaceZ,
+		const DFCALGeometry *fcalgeom );
 
 // get hits that form a cluster after clustering is finished
    inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
@@ -97,7 +101,8 @@ class DFCALCluster : public JObject {
    void shower_profile( const userhits_t* const hitList, 
                         const int ihit,
                         double& Eallowed, double& Eexpected, 
-			double fcalMidplaneZ ) const ;
+			double fcalMidplaneZ, 
+			const DFCALGeometry *fcalgeom ) const ;
 
    // internal parsers of properties for a hit belonging to a cluster 
    oid_t  getHitID( const userhits_t* const hitList, const int ihit) const;

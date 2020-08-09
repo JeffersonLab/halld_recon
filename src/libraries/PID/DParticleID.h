@@ -52,6 +52,8 @@
 
 #include <TMath.h>
 
+#include <mutex>
+
 class DTrackTimeBased;
 
 class DParticleID:public jana::JObject
@@ -252,6 +254,14 @@ class DParticleID:public jana::JObject
 		double OUT_OF_TIME_CUT; //for all matches
 
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
+
+                // Correct CDC dE/dx for variation w theta (space-charge & saturation)
+                vector<vector<double>>CDC_DEDX_CORRECTION;
+                double cdc_min_theta, cdc_max_theta;
+                double cdc_min_dedx, cdc_max_dedx;
+                double cdc_theta_step, cdc_dedx_step; 
+                int cdc_npoints_theta, cdc_npoints_dedx;
+
 
         // Start counter resolution parameters
         vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
