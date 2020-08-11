@@ -173,6 +173,10 @@ class DGeometry{
       bool GetFCALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
+      bool GetFCALInsertRowSize(int &insert_row_size) const;
+      bool GetFCALBlockSize(vector<double> &block) const;
+      bool GetFCALInsertBlockSize(vector<double> &block) const;
+
       bool GetStartCounterGeom(vector<vector<DVector3> >&pos,
             vector<vector<DVector3> >&norm) const; // < vectors containing positions and norm 3-vectors for start counter 
       // There are 30 sets of positions (pos) of points along the 
@@ -184,7 +188,6 @@ class DGeometry{
       // for this paddle is at pos[0][pos[0].size()-1].  The bend
       // region is modeled by many closely-spaced points starting 
       // after pos[0][1].
-
 
       vector<DMaterialMap*> GetMaterialMapVector(void) const;
 
