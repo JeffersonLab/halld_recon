@@ -9,6 +9,7 @@
 #include "START_COUNTER/DSCHit_factory.h"
 
 static mutex CDC_MUTEX;    
+static set<int> runs_announced;
 
 #ifndef M_TWO_PI
 #define M_TWO_PI 6.28318530717958647692
@@ -205,8 +206,13 @@ DParticleID::DParticleID(JEventLoop *loop)
 		
   std::unique_lock<std::mutex> lck(CDC_MUTEX);
 
-  bool print_messages=1;
-	
+  bool print_messages = false;
+  int32_t runnumber = loop->GetJEvent().GetRunNumber();
+  if(runs_announced.find(runnumber) == runs_announced.end()){
+    print_messages = true;
+    runs_announced.insert(runnumber);
+  }
+
   string dedx_theta_correction_file;
   gPARMS->SetDefaultParameter("CDC_DEDX_THETA_FILE", dedx_theta_correction_file,
 		"CDC dedx theta correction data file name");
@@ -216,9 +222,6 @@ DParticleID::DParticleID(JEventLoop *loop)
   map< string,string > dedx_theta_file_name;
   JCalibration *jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
 	
-  jout << loop->GetJEvent().GetRunNumber() << endl;
-
-
   if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
     jout << "Can't find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!"
     << endl;
@@ -229,7 +232,7 @@ DParticleID::DParticleID(JEventLoop *loop)
     JResourceManager *jresman = dapp->GetJResourceManager(loop->GetJEvent().GetRunNumber());
     dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
 
-    jout << "Looking for " << dedx_theta_correction_file << endl;
+    if(print_messages)  jout << "Looking for " << dedx_theta_correction_file << endl;
 
   }
 	
@@ -237,8 +240,10 @@ DParticleID::DParticleID(JEventLoop *loop)
   	
   // check to see if we actually have a file
   if(dedx_theta_correction_file.empty()) {
-    if(print_messages) jerr << "Empty file..." << endl;
-    _DBG_<<"Cannot read CDC dedx theta correction file" << endl;
+    if(print_messages) {
+    	jerr << "Empty file..." << endl;
+    	_DBG_<<"Cannot read CDC dedx theta correction file" << endl;
+    }
     return; // RESOURCE_UNAVAILABLE;
   }
 	
