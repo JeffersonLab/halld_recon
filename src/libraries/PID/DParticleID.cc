@@ -231,7 +231,7 @@ DParticleID::DParticleID(JEventLoop *loop)
   JCalibration *jcalib = dapp->GetJCalibration(loop->GetJEvent().GetRunNumber());
 	
   if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
-    jout << "Can't find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!"
+    if(print_messages) jout << "Can't find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!"
     << endl;
 	
   } else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end() 
