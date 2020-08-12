@@ -210,6 +210,10 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   }
 
 
+  if(hits.size() > 500) {  // HACK
+      return NOERROR;                                                                                                                                                                                   
+  }
+
   eventLoop->Get( geomVec );
   eventLoop->Get( digiHits );
   eventLoop->Get( hits );
@@ -281,6 +285,8 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 
   for( vector< const DFCALHit* >::const_iterator hit_itr = hits.begin();
        hit_itr != hits.end(); ++hit_itr ){
+
+      if((**hit_itr).E < 0.1) continue;
 
     hitETot += (**hit_itr).E;
     hitEwtT += (**hit_itr).E * (**hit_itr).t;
@@ -421,6 +427,8 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   m_hitN->Fill( hits.size() );
   for( vector< const DFCALHit* >::const_iterator hit_itr = hits.begin();
        hit_itr != hits.end(); ++hit_itr ){
+
+      if((**hit_itr).E < 0.1) continue;
 
     const DFCALHit& hit = (**hit_itr);
 
