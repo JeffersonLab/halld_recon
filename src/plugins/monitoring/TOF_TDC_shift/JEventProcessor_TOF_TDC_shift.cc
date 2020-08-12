@@ -119,7 +119,7 @@ jerror_t JEventProcessor_TOF_TDC_shift::evnt(JEventLoop *eventLoop, uint64_t eve
       hrocTimeRemainder_AdcTdcTimeDiff_corrected->Fill(diff, TriggerBIT);
   }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   return NOERROR;
 }
@@ -141,6 +141,10 @@ jerror_t JEventProcessor_TOF_TDC_shift::fini(void) {
   char hname[200];
   Double_t min = +99999;
   Int_t shift = -1;
+
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
+  TDirectory *main = gDirectory;
   filedir->cd();
   gDirectory->cd("TOF_TDC_shift");
 
@@ -183,7 +187,11 @@ jerror_t JEventProcessor_TOF_TDC_shift::fini(void) {
   //if(!(shift == 1 || shift == 3 || shift == 5)) shift = -1;
 
   OUTPUT << shift << endl;
-  filedir->cd();
+  //filedir->cd();
+  main->cd();
+
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
   // Called before program exit after event processing is finished.
   return NOERROR;
 }

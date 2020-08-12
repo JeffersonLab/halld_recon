@@ -10,6 +10,9 @@
 #include "TOF/DTOFGeometry.h"
 using namespace jana;
 
+#include <thread>
+#include <mutex>
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
@@ -75,7 +78,7 @@ jerror_t JEventProcessor_TOF_calib::init(void)
                               "Defin location of TOF ADC time-peak in Raw histogram");
 
 
-  first = 1;
+  //first = 1;
   //MakeHistograms();
 
   return NOERROR;
@@ -605,6 +608,7 @@ jerror_t JEventProcessor_TOF_calib::WriteRootFile(void){
 
   ROOTFile->cd();
   ROOTFile->Close();
+  
   top->cd();
 
   return NOERROR;
@@ -620,11 +624,14 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
   cout<<endl;
   */
 
-  if (first){
+  //if (first){
 
     //cout<<"SETUP HISTOGRAMS AND TREE FOR RUN "<<RunNumber<<flush<<endl;
 
-    first = 0;
+    //first = 0;
+  std::once_flag flag;
+  std::call_once(flag, [&](){
+    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     TDirectory *top = gDirectory;
 
@@ -684,7 +691,9 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
     t3->Branch("TDCST",TDCST,"TDCST[NsinglesT]/F");
 
     top->cd();
-  }
+
+    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  });
 
   return NOERROR;
 }
