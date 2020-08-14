@@ -72,6 +72,19 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
 		
 		locTrigger->Set_L1FrontPanelTriggerBits(locFpTrigMask);
 
+        // use realistic trigger simulation to calculate what the BCAL & FCAL energies
+        // used in the trigger decision were - hopefully this is good enough
+        // eventually we'll get the values directly from the firmware
+        vector<const DL1MCTrigger*> locMCTriggers;
+        locEventLoop->Get(locMCTriggers);
+        const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
+
+        if(locMCTrigger != NULL)
+        {
+            locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
+            locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+        }
+
 	}
 	else 
     {
@@ -90,12 +103,19 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         vector<const DL1MCTrigger*> locMCTriggers;
         locEventLoop->Get(locMCTriggers);
         const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
+	
+		cout << locMCTriggers.size() << endl;
 
         if(locMCTrigger != NULL)
         {
+        	cout << locMCTrigger->trig_mask << " " << locMCTrigger->fcal_gtp_en << " " << locMCTrigger->bcal_gtp_en << endl;
+        
             //IS MC DATA: USE SIMULATED TRIGGER INFORMATION IF AVAILABLE
             locTrigger->Set_L1TriggerBits(locMCTrigger->trig_mask);
             locTrigger->Set_L1FrontPanelTriggerBits(0);
+            locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
+            locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+
         }
         else 
         {
