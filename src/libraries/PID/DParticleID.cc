@@ -243,20 +243,18 @@ DParticleID::DParticleID(JEventLoop *loop)
       JResourceManager *jresman = dapp->GetJResourceManager(loop->GetJEvent().GetRunNumber());
       dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
 
-      if(print_messages)  jout << "Looking for " << dedx_theta_correction_file << endl;
-
     }
-	
-    if(print_messages) jout<<"Reading CDC dedx theta correction data from "<<dedx_theta_correction_file<<" ..."<<endl;
-  	
-    // check to see if we actually have a file
+
+    // check to see if we actually have a filename
     if(dedx_theta_correction_file.empty()) {
       if(print_messages) {
-      	jerr << "... empty file" << endl;
-      	jerr <<"Cannot read CDC dedx theta correction file" << endl;
+      	jerr <<"Cannot read CDC dedx theta correction filename from CCDB" << endl;
       }
       exit(-1); // RESOURCE_UNAVAILABLE;
     }
+
+    if(print_messages) jout<<"Reading CDC dedx theta correction data from "<<dedx_theta_correction_file<<" ..."<<endl;
+  	
 	
     FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
     fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
