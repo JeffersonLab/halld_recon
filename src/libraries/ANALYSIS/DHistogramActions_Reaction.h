@@ -73,6 +73,7 @@ REACTION-BASED ACTIONS:
 	DHistogramAction_2DInvariantMass
 	DHistogramAction_Dalitz
 	DHistogramAction_MissingTransverseMomentum
+	DHistogramAction_ReactionTriggerStudies
 */
 
 class DHistogramAction_PID : public DAnalysisAction
@@ -646,5 +647,31 @@ class DHistogramAction_MissingTransverseMomentum : public DAnalysisAction
 
 		set<set<pair<const JObject*, unsigned int> > > dPreviousSourceObjects;
 };
+
+
+class DHistogramAction_ReactionTriggerStudies : public DAnalysisAction
+{
+	public:
+		DHistogramAction_ReactionTriggerStudies(const DReaction* locReaction, bool locUseKinFitResultsFlag, unsigned int locBCALBins = 240, unsigned int locFCALBins = 240, double locMaxBCALEnergy = 12.0, double locMaxFCALEnergy = 12.0, string locActionUniqueString = "") :
+		DAnalysisAction(locReaction, "Hist_ReactionTriggerStudies", locUseKinFitResultsFlag, locActionUniqueString),
+		dBCALBins(locBCALBins), dFCALBins(locFCALBins), dMaxBCALEnergy(locMaxBCALEnergy), dMaxFCALEnergy(locMaxFCALEnergy)  {}
+	
+
+		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop) {}
+		void Reset_NewEvent(void) {}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+
+		unsigned int dBCALBins, dFCALBins;
+		double dMaxBCALEnergy;
+		double dMaxFCALEnergy;
+
+		TH2D* dHist_Trigger_FCALBCAL_Energy = nullptr;
+
+		set< uint64_t > dFilledEvents;
+};
+
 
 #endif // _DHistogramActions_Reaction_

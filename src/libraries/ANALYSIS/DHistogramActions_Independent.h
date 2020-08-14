@@ -70,6 +70,8 @@
 #include "ANALYSIS/DCutActions.h"
 #include "ANALYSIS/DSourceCombo.h"
 
+#include "TRIGGER/DTrigger.h"
+
 using namespace std;
 using namespace jana;
 
@@ -89,6 +91,7 @@ REACTION-INDEPENDENT ACTIONS:
 	DHistogramAction_Reconstruction
 	DHistogramAction_NumReconstructedObjects
 	DHistogramAction_TrackShowerErrors
+	DHistogramAction_TriggerStudies
 */
 
 class DHistogramAction_ObjectMemory : public DAnalysisAction
@@ -977,6 +980,34 @@ class DHistogramAction_TrackMultiplicity : public DAnalysisAction
 
 		TH2D* dHist_NumReconstructedParticles = nullptr;
 		TH2D* dHist_NumGoodReconstructedParticles = nullptr;
+};
+
+class DHistogramAction_TriggerStudies : public DAnalysisAction
+{
+	public:
+		DHistogramAction_TriggerStudies(const DReaction* locReaction, string locActionUniqueString = "") : 
+		DAnalysisAction(locReaction, "Hist_TriggerStudies", false, locActionUniqueString),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+
+		DHistogramAction_TriggerStudies(string locActionUniqueString) : 
+		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+			
+		DHistogramAction_TriggerStudies(void) : 
+		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+
+		int dBCALBins, dFCALBins;
+		double dMaxBCALEnergy;
+		double dMaxFCALEnergy;
+
+		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+
+		TH2D* dHist_Trigger_FCALBCAL_Energy = nullptr;
 };
 
 #endif // _DHistogramActions_Independent_

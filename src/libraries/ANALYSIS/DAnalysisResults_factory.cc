@@ -208,11 +208,18 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 			if(loc1DHist == NULL)
 			{
 				locHistTitle = locReactionName + string(";;# Events Survived Action");
-				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2, -0.5, locActionNames.size() + 2.0 - 0.5); //+2 for input & # tracks
+				//cout << "HI" << endl;
+				//cout << locActionNames.size() << " " << 2 << " " << (int)dIsMCFlag << " " << (locActionNames.size() + 2 + (int)dIsMCFlag) << endl;
+				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5); //+2 for input & # tracks
 				loc1DHist->GetXaxis()->SetBinLabel(1, "Input"); // a new event
-				loc1DHist->GetXaxis()->SetBinLabel(2, "Has Particle Combos"); // at least one DParticleCombo object before any actions
+				int locStartIndex = 0;
+				if(dIsMCFlag) {
+					loc1DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
+					locStartIndex = 1;
+				}
+				loc1DHist->GetXaxis()->SetBinLabel(locStartIndex + 2, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 				for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
-					loc1DHist->GetXaxis()->SetBinLabel(3 + loc_j, locActionNames[loc_j].c_str());
+					loc1DHist->GetXaxis()->SetBinLabel(locStartIndex + 3 + loc_j, locActionNames[loc_j].c_str());
 			}
 			dHistMap_NumEventsSurvivedAction_All[locReaction] = loc1DHist;
 
@@ -283,6 +290,20 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	if(dDebugLevel > 0)
 		cout << "Analyze event: " << eventnumber << endl;
 
+	// GET REACTION LIST
+	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+
+	// Count MC events differently - we want to keep track of the number of events which pass trigger requirements 
+	int locStartIndex = 0;
+	if(dIsMCFlag) {
+		japp->WriteLock("DAnalysisResults");
+		{
+			for(auto & locReaction : locReactions )
+				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
+		}
+		locStartIndex = 1;
+	}
+
 	//CHECK EVENT TYPE
 	if(!locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT))
 		return NOERROR;
@@ -304,7 +325,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 		decltype(dCreatedKinFitResults)().swap(dCreatedKinFitResults); //should have been reset by recycler, but just in case
 	}
 
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	//auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
 	if(dDebugLevel > 0)
 		cout << "# DReactions: " << locReactions.size() << endl;
 
@@ -376,7 +397,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			//FILL HISTOGRAMS
 			japp->WriteLock("DAnalysisResults");
 			{
-				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(0); //initial: a new event
+				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
 				if(locNumCombosSurvived[0] > 0)
 					dHistMap_NumParticleCombos[locReaction]->Fill(locNumCombosSurvived[0]);
 				for(size_t loc_j = 0; loc_j < locNumCombosSurvived.size(); ++loc_j)
@@ -386,7 +407,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 					if(dHistMap_NumCombosSurvivedAction[locReaction]->GetYaxis()->FindBin(locNumCombosSurvived[loc_j]) <= dHistMap_NumCombosSurvivedAction[locReaction]->GetNbinsY())
 						dHistMap_NumCombosSurvivedAction[locReaction]->Fill(loc_j, locNumCombosSurvived[loc_j]);
 					if(locNumCombosSurvived[loc_j] > 0)
-						dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(loc_j + 1); //+1 because 0 is initial (no cuts at all)
+						dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex + loc_j + 1); //+1 because 0 is initial (no cuts at all)
 
 					auto locBinContent = dHistMap_NumCombosSurvivedAction1D[locReaction]->GetBinContent(loc_j + 1) + locNumCombosSurvived[loc_j];
 					dHistMap_NumCombosSurvivedAction1D[locReaction]->SetBinContent(loc_j + 1, locBinContent);

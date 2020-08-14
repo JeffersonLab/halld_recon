@@ -2619,3 +2619,55 @@ bool DHistogramAction_MissingTransverseMomentum::Perform_Action(JEventLoop* locE
 	return true;
 }
 
+
+void DHistogramAction_ReactionTriggerStudies::Initialize(JEventLoop* locEventLoop)
+{
+	string locHistName, locHistTitle;
+
+	//Run_Update(locEventLoop);
+
+	//CREATE THE HISTOGRAMS
+	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
+	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	{
+		CreateAndChangeTo_ActionDirectory();
+
+		locHistName = "Trigger_BCALFCAL_Energy";
+		ostringstream locStream;
+		locHistTitle = string(";GTP FCAL Energy [GeV] / 5 MeV;GTP BCAL Energy [GeV] / 5 MeV");
+		dHist_Trigger_FCALBCAL_Energy = GetOrCreate_Histogram<TH2D>(locHistName, locHistTitle, dFCALBins, 0., dMaxFCALEnergy, dBCALBins, 0., dMaxBCALEnergy);
+
+		//Return to the base directory
+		ChangeTo_BaseDirectory();
+	}
+	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+bool DHistogramAction_ReactionTriggerStudies::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+
+	uint64_t locEventNumber = locEventLoop->GetJEvent().GetEventNumber();
+	if(dFilledEvents.find(locEventNumber) != dFilledEvents.end())
+		return true;  //dupe: already histed!
+	dFilledEvents.insert(locEventNumber);
+
+
+	//CHECK TRIGGER TYPE
+	const DTrigger* locTrigger = NULL;
+	locEventLoop->GetSingle(locTrigger);
+	if(locTrigger == nullptr)
+		return true;
+
+
+	//FILL HISTOGRAMS
+	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
+	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
+	Lock_Action();
+	{
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+	}
+	Unlock_Action();
+
+	return true;
+}
+
