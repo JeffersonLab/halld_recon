@@ -39,7 +39,6 @@ class JEventProcessor_TOF_calib:public jana::JEventProcessor{
   ~JEventProcessor_TOF_calib();
   const char* className(void){return "JEventProcessor_TOF_calib";}
 
-  int first;
   int RunNumber;
   int ThreadCounter;
 
