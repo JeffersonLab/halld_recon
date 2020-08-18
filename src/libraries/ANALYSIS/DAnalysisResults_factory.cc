@@ -208,8 +208,6 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 			if(loc1DHist == NULL)
 			{
 				locHistTitle = locReactionName + string(";;# Events Survived Action");
-				//cout << "HI" << endl;
-				//cout << locActionNames.size() << " " << 2 << " " << (int)dIsMCFlag << " " << (locActionNames.size() + 2 + (int)dIsMCFlag) << endl;
 				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5); //+2 for input & # tracks
 				loc1DHist->GetXaxis()->SetBinLabel(1, "Input"); // a new event
 				int locStartIndex = 0;
