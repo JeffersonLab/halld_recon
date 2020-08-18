@@ -104,12 +104,8 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         locEventLoop->Get(locMCTriggers);
         const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 	
-		cout << locMCTriggers.size() << endl;
-
         if(locMCTrigger != NULL)
-        {
-        	cout << locMCTrigger->trig_mask << " " << locMCTrigger->fcal_gtp_en << " " << locMCTrigger->bcal_gtp_en << endl;
-        
+        {        
             //IS MC DATA: USE SIMULATED TRIGGER INFORMATION IF AVAILABLE
             locTrigger->Set_L1TriggerBits(locMCTrigger->trig_mask);
             locTrigger->Set_L1FrontPanelTriggerBits(0);

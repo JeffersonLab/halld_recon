@@ -849,6 +849,19 @@ jerror_t DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactory<DTrig
 		DTrigger *locTrigger = new DTrigger();
 		locTrigger->Set_L1TriggerBits(Convert_SignedIntToUnsigned(iter->getL1_trig_bits()));
 		locTrigger->Set_L1FrontPanelTriggerBits(Convert_SignedIntToUnsigned(iter->getL1_fp_trig_bits()));
+		
+		const hddm_r::TriggerEnergySumsList& locTriggerEnergySumsList = iter->getTriggerEnergySumses();
+		hddm_r::TriggerEnergySumsList::iterator locTriggerEnergySumsIterator = locTriggerEnergySumsList.begin();
+		if(locTriggerEnergySumsIterator == locTriggerEnergySumsList.end()) {
+			locTrigger->Set_GTP_BCALEnergy(0);
+			locTrigger->Set_GTP_FCALEnergy(0);
+		} else { //should only be 1
+			for(; locTriggerEnergySumsIterator != locTriggerEnergySumsList.end(); ++locTriggerEnergySumsIterator) {
+				locTrigger->Set_GTP_BCALEnergy(locTriggerEnergySumsIterator->getBCALEnergySum());
+				locTrigger->Set_GTP_FCALEnergy(locTriggerEnergySumsIterator->getFCALEnergySum());
+			}
+		}
+		
 		data.push_back(locTrigger);
 	}
 
