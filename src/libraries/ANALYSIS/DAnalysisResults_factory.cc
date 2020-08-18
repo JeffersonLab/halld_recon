@@ -223,6 +223,22 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 
 			if(dIsMCFlag)
 			{
+				// only look at these as a function of beam energy for MC events, since that's the only time that
+				// we can get an unambiguous beam energy determination for the event
+				locHistName = "NumEventsSurvivedAction_BeamE";
+				loc2DHist = static_cast<TH2D*>(locDirectoryFile->Get(locHistName.c_str()));
+				if(loc2DHist == NULL)
+				{
+					locHistTitle = locReactionName + string(";;# Events Survived Action");
+					loc2DHist = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5,  30, 6., 12.); //+2 for input & # tracks
+					loc2DHist->GetXaxis()->SetBinLabel(1, "Input"); // a new event
+					loc2DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
+					loc2DHist->GetXaxis()->SetBinLabel(3, "Has Particle Combos"); // at least one DParticleCombo object before any actions
+					for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
+						loc2DHist->GetXaxis()->SetBinLabel(4 + loc_j, locActionNames[loc_j].c_str());
+				}
+				dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction] = loc2DHist;
+			
 				locHistName = "NumEventsWhereTrueComboSurvivedAction";
 				loc1DHist = static_cast<TH1D*>(locDirectoryFile->Get(locHistName.c_str()));
 				if(loc1DHist == NULL)
@@ -230,10 +246,24 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 					locHistTitle = locReactionName + string(";;# Events Where True Combo Survived Action");
 					loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5); //+1 for # tracks
 					loc1DHist->GetXaxis()->SetBinLabel(1, "Has Particle Combos"); // at least one DParticleCombo object before any actions
+					loc1DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
 					for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
-						loc1DHist->GetXaxis()->SetBinLabel(2 + loc_j, locActionNames[loc_j].c_str());
+						loc1DHist->GetXaxis()->SetBinLabel(3 + loc_j, locActionNames[loc_j].c_str());
 				}
 				dHistMap_NumEventsWhereTrueComboSurvivedAction[locReaction] = loc1DHist;
+				
+				locHistName = "NumEventsWhereTrueComboSurvivedAction_BeamE";
+				loc2DHist = static_cast<TH2D*>(locDirectoryFile->Get(locHistName.c_str()));
+				if(loc2DHist == NULL)
+				{
+					locHistTitle = locReactionName + string(";;# Events Where True Combo Survived Action");
+					loc2DHist = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5, 30, 6., 12.); //+1 for # tracks
+					loc2DHist->GetXaxis()->SetBinLabel(1, "Has Particle Combos"); // at least one DParticleCombo object before any actions
+					loc2DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
+					for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
+						loc2DHist->GetXaxis()->SetBinLabel(3 + loc_j, locActionNames[loc_j].c_str());
+				}
+				dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction] = loc2DHist;
 			}
 
 			locHistName = "NumCombosSurvivedAction";
@@ -293,12 +323,26 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 
 	// Count MC events differently - we want to keep track of the number of events which pass trigger requirements 
 	int locStartIndex = 0;
+	double locTrueBeamE = -1.;   // we want to fill some MC histograms as a function of beam energy, for trigger studies
 	if(dIsMCFlag) {
+		const DBeamPhoton *locBeamPhoton = nullptr;
+		locEventLoop->GetSingle(locBeamPhoton, "TAGGEDMCGEN");
+		if(locBeamPhoton != nullptr) 
+			locTrueBeamE = locBeamPhoton->energy();
+
 		japp->WriteLock("DAnalysisResults");
 		{
-			for(auto & locReaction : locReactions )
+			for(auto & locReaction : locReactions ) {
 				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
+		
+				if(locTrueBeamE > 0.) {
+					int locYBin = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+					auto locBinContent = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetBinContent(locStartIndex+1, locYBin); // 2D indexing with labels is different than 1D indexing?
+					dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->SetBinContent(locStartIndex+1, locYBin, locBinContent + 1);
+				}
+			}
 		}
+		
 		locStartIndex = 1;
 	}
 
@@ -309,7 +353,10 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
 	locEventLoop->GetSingle(locTrigger);
-	if(!locTrigger->Get_IsPhysicsEvent())
+	bool locIsPhysics = locTrigger->Get_IsPhysicsEvent();
+	// if we're dealing with MC events, let the non-trigger events come through so that we can
+	// see how many pass the trigger
+	if(!dIsMCFlag && !locIsPhysics)    
 		return NOERROR;
 
 	//RESET
@@ -349,6 +396,19 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			//FIND TRUE COMBO (IF MC)
 			auto locTrueParticleCombo = Find_TrueCombo(locEventLoop, locReaction, locCombos);
 			int locLastActionTrueComboSurvives = (locTrueParticleCombo != nullptr) ? -1 : -2; //-1/-2: combo does/does-not exist
+
+			// for MC events, count events which have a combo but did not pass the trigger
+			if(locTrueParticleCombo != nullptr) {
+				dHistMap_NumEventsWhereTrueComboSurvivedAction[locReaction]->Fill(0);
+				if(locTrueBeamE > 0.) {
+					int locYBin = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+					auto locBinContent = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetBinContent(0, locYBin);
+					dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->SetBinContent(0, locYBin, locBinContent + 1);
+				}
+			}
+			if(dIsMCFlag && !locIsPhysics) {
+				continue;
+			}
 
 			//MAKE RESULTS OBJECT
 			auto locAnalysisResults = new DAnalysisResults();
@@ -396,6 +456,11 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			japp->WriteLock("DAnalysisResults");
 			{
 				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
+				if(locTrueBeamE > 0.) {
+					int locYBin = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+					auto locBinContent = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetBinContent(locStartIndex + 1, locYBin);
+					dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->SetBinContent(locStartIndex + 1, locYBin, locBinContent + 1);
+				}
 				if(locNumCombosSurvived[0] > 0)
 					dHistMap_NumParticleCombos[locReaction]->Fill(locNumCombosSurvived[0]);
 				for(size_t loc_j = 0; loc_j < locNumCombosSurvived.size(); ++loc_j)
@@ -404,16 +469,28 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 						break;
 					if(dHistMap_NumCombosSurvivedAction[locReaction]->GetYaxis()->FindBin(locNumCombosSurvived[loc_j]) <= dHistMap_NumCombosSurvivedAction[locReaction]->GetNbinsY())
 						dHistMap_NumCombosSurvivedAction[locReaction]->Fill(loc_j, locNumCombosSurvived[loc_j]);
-					if(locNumCombosSurvived[loc_j] > 0)
+					if(locNumCombosSurvived[loc_j] > 0) {
 						dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex + loc_j + 1); //+1 because 0 is initial (no cuts at all)
+						if(locTrueBeamE > 0.) {
+							int locYBin = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+							auto locBinContent = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetBinContent(locStartIndex + loc_j + 2, locYBin);
+							dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->SetBinContent(locStartIndex + loc_j + 2, locYBin, locBinContent + 1);
+						}
+					}
 
 					auto locBinContent = dHistMap_NumCombosSurvivedAction1D[locReaction]->GetBinContent(loc_j + 1) + locNumCombosSurvived[loc_j];
 					dHistMap_NumCombosSurvivedAction1D[locReaction]->SetBinContent(loc_j + 1, locBinContent);
 				}
 				if(dIsMCFlag)
 				{
-					for(int loc_j = -1; loc_j <= locLastActionTrueComboSurvives; ++loc_j) //-1/-2: combo does/does-not exist
-						dHistMap_NumEventsWhereTrueComboSurvivedAction[locReaction]->Fill(loc_j + 1);
+					for(int loc_j = -1; loc_j <= locLastActionTrueComboSurvives; ++loc_j)  { //-1/-2: combo does/does-not exist
+						dHistMap_NumEventsWhereTrueComboSurvivedAction[locReaction]->Fill(loc_j + 2);
+						if(locTrueBeamE > 0.) {
+							int locYBin = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+							auto locBinContent = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetBinContent(loc_j + 2, locYBin);
+							dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->SetBinContent(loc_j + 2, locYBin, locBinContent + 1);
+						}
+					}
 				}
 			}
 			japp->Unlock("DAnalysisResults");
