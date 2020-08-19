@@ -45,7 +45,8 @@ def main():
 		h = rootfile.Get(base+str(i))
 		h.Write()
 		p = tw_corr(h,0,i,newV, offsets, offsets_ind, run)
-		p.Write()
+                if p is not None:
+                        p.Write()
 
 	outfile.Close()
 
@@ -64,7 +65,22 @@ def tw_corr(h,row,col,newV, offsets, offsets_ind, run):
 	xbins = h.GetXaxis().GetNbins()
 	hnew = h.Clone()
 	hnew.Reset()
-	dtmean = GetMean(h)
+        try:
+                dtmean = GetMean(h)
+        except:
+                # if there's no data, bail
+		c0 = 1
+		c1 = -1
+		c2 = 0
+		c3 = 0
+		dtmean = 0
+
+                # Write constants to file
+                file1.write(str(row) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
+                            str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
+                file1.close()
+                return None
+
 	ymax = h.GetYaxis().FindBin(dtmean + 15.0)
 	ymin = h.GetYaxis().FindBin(dtmean - 5.0)
 	for i in range(1,xbins+1):
@@ -78,7 +94,22 @@ def tw_corr(h,row,col,newV, offsets, offsets_ind, run):
 				hnew.Fill(x, y)
 
 	# Find the reference time difference
-	dtmean = GetMean(hnew)
+        try:
+                dtmean = GetMean(hnew)
+        except:
+                # if there's no data, bail
+		c0 = 1
+		c1 = -1
+		c2 = 0
+		c3 = 0
+		dtmean = 0
+
+                # Write constants to file
+                file1.write(str(row) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
+                            str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
+                file1.close()
+                return None
+
 	ymax = h.GetYaxis().FindBin(dtmean + 15.0)
 	ymin = h.GetYaxis().FindBin(dtmean - 5.0)
 
