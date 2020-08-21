@@ -23,6 +23,7 @@
 
 #include "TRACKING/DMCThrown.h"
 #include "TRIGGER/DTrigger.h"
+#include "PID/DBeamPhoton.h"
 
 #include "KINFITTER/DKinFitter.h"
 #include "ANALYSIS/DKinFitResults.h"
@@ -91,7 +92,9 @@ class DAnalysisResults_factory : public jana::JFactory<DAnalysisResults>
 
 		unordered_map<const DReaction*, TH1*> dHistMap_NumParticleCombos;
 		unordered_map<const DReaction*, TH1*> dHistMap_NumEventsSurvivedAction_All;
+		unordered_map<const DReaction*, TH1*> dHistMap_NumEventsSurvivedAction_All_BeamE;
 		unordered_map<const DReaction*, TH1*> dHistMap_NumEventsWhereTrueComboSurvivedAction;
+		unordered_map<const DReaction*, TH2*> dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE;
 		unordered_map<const DReaction*, TH2*> dHistMap_NumCombosSurvivedAction;
 		unordered_map<const DReaction*, TH1*> dHistMap_NumCombosSurvivedAction1D;
 };

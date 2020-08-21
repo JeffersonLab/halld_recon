@@ -1526,7 +1526,9 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	{
 	        // Tag the thrown beam photon by comparing energy, time and counter
 	        const DBeamPhoton* locBeamPhotonTaggedMCGEN = locMCThrownMatching->Get_TaggedMCGENBeamPhoton();
-		Bool_t locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
+		Bool_t locIsGeneratorFlag = kFALSE;
+		if (locBeamPhotonTaggedMCGEN != NULL)
+		  locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
 		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);
 	}
 

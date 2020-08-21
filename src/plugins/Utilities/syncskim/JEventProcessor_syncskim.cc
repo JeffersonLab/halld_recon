@@ -90,6 +90,8 @@ jerror_t JEventProcessor_syncskim::init(void)
 	
 	japp->RootWriteLock();
 
+    TDirectory *main = gDirectory;
+
 	file = new TFile("syncskim.root", "RECREATE");
 	
 	tree = new TTree("synctree", "Sync Events Tree");
@@ -124,6 +126,8 @@ jerror_t JEventProcessor_syncskim::init(void)
 	convparms.last_event_number  = 0;
 	convparms.tics_per_sec       = 0;
 	convparms.unix_start_time    = 0;
+	
+	main->cd();
 	
 	japp->RootUnLock();
 
