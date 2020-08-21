@@ -218,7 +218,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 				Add_MassHistograms(locReaction, true, "PostKinFit_KinFit"); //true: kinfit
 		}
 
-		// KINEMATICS
+		// KINEMATICS & OTHER INFO
 		locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, true));
 
 		_data.push_back(locReaction); //Register the DReaction with the factory
