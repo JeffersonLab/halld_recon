@@ -48,20 +48,19 @@ DParticleID::DParticleID(JEventLoop *loop)
 		return;
   }
 
-  const DRootGeom *RootGeom = dapp->GetRootGeom(loop->GetJEvent().GetRunNumber());
   // Get material properties for chamber gas
   double rho_Z_over_A_LnI=0,radlen=0;
-  RootGeom->FindMat("CDchamberGas", dRhoZoverA_CDC, rho_Z_over_A_LnI, radlen);
-  dLnI_CDC = rho_Z_over_A_LnI/dRhoZoverA_CDC;
-  dKRhoZoverA_CDC = 0.1535E-3*dRhoZoverA_CDC;
+  //RootGeom->FindMat("CDchamberGas", dRhoZoverA_CDC, rho_Z_over_A_LnI, radlen);
+  dLnI_CDC = 1.0;
+  dKRhoZoverA_CDC = 0.1535E-3*1.0;
 
-  RootGeom->FindMat("FDchamberGas", dRhoZoverA_FDC, rho_Z_over_A_LnI, radlen);
-  dLnI_FDC = rho_Z_over_A_LnI/dRhoZoverA_FDC;
-  dKRhoZoverA_FDC = 0.1535E-3*dRhoZoverA_FDC;
+  //RootGeom->FindMat("FDchamberGas", dRhoZoverA_FDC, rho_Z_over_A_LnI, radlen);
+  dLnI_FDC = 1.0;
+  dKRhoZoverA_FDC = 0.1535E-3*1.0;
 
-  RootGeom->FindMat("Scintillator", dRhoZoverA_Scint, rho_Z_over_A_LnI, radlen);
-  dLnI_Scint = rho_Z_over_A_LnI/dRhoZoverA_Scint;
-  dKRhoZoverA_Scint = 0.1535E-3*dRhoZoverA_Scint;
+  //RootGeom->FindMat("Scintillator", dRhoZoverA_Scint, rho_Z_over_A_LnI, radlen);
+  dLnI_Scint = 1.0;
+  dKRhoZoverA_Scint = 0.1535E-3*1.0;
 
   // Get the geometry
   DGeometry* locGeometry = dapp->GetDGeometry(loop->GetJEvent().GetRunNumber());

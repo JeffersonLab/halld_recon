@@ -18,7 +18,6 @@ using namespace std;
 #include "DTrackCandidate.h"
 #include "DMagneticFieldStepper.h"
 #include <TMatrix.h>
-#include "HDGEOMETRY/DRootGeom.h"
 #define ONE_THIRD 0.33333333333333333
 #define TWO_THIRD 0.66666666666666667
 #define EPS 1e-8
@@ -44,7 +43,6 @@ DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
 	this->mass = 0.13957; // assume pion mass until otherwise specified
 	this->mass_sq=this->mass*this->mass;
 	this->hit_cdc_endplate = false;
-	this->RootGeom=NULL;
 	this->geom = NULL;
 	this->ploss_direction = kForward;
 	this->check_material_boundaries = true;
@@ -106,7 +104,6 @@ DReferenceTrajectory::DReferenceTrajectory(const DReferenceTrajectory& rt)
 	this->last_phi = rt.last_phi;
 	this->last_dist_along_wire = rt.last_dist_along_wire;
 	this->last_dz_dphi = rt.last_dz_dphi;
-	this->RootGeom = rt.RootGeom;
 	this->geom = rt.geom;
 	this->dist_to_rt_depth = 0;
 	this->mass = rt.GetMass();
@@ -169,7 +166,6 @@ DReferenceTrajectory& DReferenceTrajectory::operator=(const DReferenceTrajectory
 	this->last_phi = rt.last_phi;
 	this->last_dist_along_wire = rt.last_dist_along_wire;
 	this->last_dz_dphi = rt.last_dz_dphi;
-	this->RootGeom = rt.RootGeom;
 	this->geom = rt.geom;
 	this->dist_to_rt_depth = rt.dist_to_rt_depth;
 	this->mass = rt.GetMass();
@@ -485,23 +481,13 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
     // If both are non-NULL, then use RootGeom
     double dP = 0.0;
     double dP_dx=0.0;
-    if(RootGeom || geom){
+    if(geom){
       double KrhoZ_overA=0.0;
       double rhoZ_overA=0.0;
       double LogI=0.0;
       double X0=0.0;
       jerror_t err;
-      if(RootGeom){
-	double rhoZ_overA,rhoZ_overA_logI;
-	err = RootGeom->FindMatLL(swim_step->origin,
-				  rhoZ_overA, 
-				  rhoZ_overA_logI, 
-				  X0);
-	KrhoZ_overA=0.1535e-3*rhoZ_overA;
-	LogI=rhoZ_overA_logI/rhoZ_overA;
-      }else{
-	err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
-      }
+      err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
       if(err == NOERROR){
 	if(X0>0.0){
 	  double p=sqrt(p_sq);
@@ -702,36 +688,26 @@ void DReferenceTrajectory::Swim(const DVector3 &pos, const DVector3 &mom, double
 		double dP = 0.0;
 		double dP_dx=0.0;
 		double s_to_boundary=1.0E6; // initialize to "infinity" in case we don't set this below
-		if(RootGeom || geom){
+		if(geom){
 			double KrhoZ_overA=0.0;
 			double rhoZ_overA=0.0;
 			double LogI=0.0;
 			double X0=0.0;
 			jerror_t err;
-			if(RootGeom){
-			  double rhoZ_overA,rhoZ_overA_logI;
-			  err = RootGeom->FindMatLL(swim_step->origin,
-						    rhoZ_overA, 
-						    rhoZ_overA_logI, 
-						    X0);
-			  KrhoZ_overA=0.1535e-3*rhoZ_overA;
-			  LogI=rhoZ_overA_logI/rhoZ_overA;
+			if(check_material_boundaries){
+			  err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0, &s_to_boundary);
 			}else{
-				if(check_material_boundaries){
-					err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0, &s_to_boundary);
-				}else{
-					err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
-				}
-				
-				// Check if we hit the CDC endplate
-				//double z = swim_step->origin.Z();
-				//if(z>=cdc_endplate_zmin && z<=cdc_endplate_zmax){
-				// double r = swim_step->origin.Perp();
-				// if(r>=cdc_endplate_rmin && r<=cdc_endplate_rmax){
-				// hit_cdc_endplate = true;
-				//}
-				//}
+			  err = geom->FindMatALT1(swim_step->origin, swim_step->mom, KrhoZ_overA, rhoZ_overA,LogI, X0);
 			}
+				
+			// Check if we hit the CDC endplate
+			//double z = swim_step->origin.Z();
+			//if(z>=cdc_endplate_zmin && z<=cdc_endplate_zmax){
+			// double r = swim_step->origin.Perp();
+			// if(r>=cdc_endplate_rmin && r<=cdc_endplate_rmax){
+			// hit_cdc_endplate = true;
+			//}
+			//}
 
 			if(err == NOERROR){
 			  if(X0>0.0){

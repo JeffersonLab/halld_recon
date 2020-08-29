@@ -27,7 +27,6 @@ using std::vector;
 
 class DMagneticFieldMap;
 class DTrackCandidate;
-class DRootGeom;
 
 class DReferenceTrajectory{
 	
@@ -136,9 +135,7 @@ class DReferenceTrajectory{
 
 		double GetLastDistAlongWire(void) const {return last_dist_along_wire;}
 		void SetStepSize(double step_size){this->step_size=step_size;}
-		void SetDRootGeom(const DRootGeom *RootGeom){this->RootGeom = RootGeom;}
 		void SetDGeometry(const DGeometry *geom){this->geom = geom;}
-		const DRootGeom* GetDRootGeom(void) const {return RootGeom;}
 		const DGeometry* GetDGeometry(void) const {return geom;}
 		const DMagneticFieldMap* GetBfield(void) const {return bfield;}
 		double GetMass(void) const {return mass;}
@@ -207,7 +204,6 @@ class DReferenceTrajectory{
 		int dist_to_rt_depth;
 		double step_size;
 		const DMagneticFieldMap *bfield;
-		const DRootGeom *RootGeom;
 		const DGeometry *geom;
 		direction_t ploss_direction;
 		bool check_material_boundaries;

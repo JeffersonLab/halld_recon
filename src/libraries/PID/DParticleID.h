@@ -18,7 +18,6 @@
 #include <JANA/JFactory.h>
 
 #include <DVector3.h>
-#include "HDGEOMETRY/DRootGeom.h"
 #include <TRACKING/DTrackTimeBased_factory.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>

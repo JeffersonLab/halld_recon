@@ -27,7 +27,6 @@ class DMagneticFieldMap;
 class DLorentzDeflections;
 class DGeometry;
 //class DMaterialMap;
-class DRootGeom;
 class DDIRCLutReader;
 
 class DApplication:public JApplication{
@@ -47,7 +46,6 @@ class DApplication:public JApplication{
 		DMagneticFieldMap* GetBfield(unsigned int run_number=1);
 		DLorentzDeflections *GetLorentzDeflections(unsigned int run_number=1);
 		DGeometry* GetDGeometry(unsigned int run_number);
-		DRootGeom *GetRootGeom(unsigned int run_number);
 		void CopySQLiteToLocalDisk(void);
 		DDIRCLutReader *GetDIRCLut(unsigned int run_number);
 		
@@ -77,7 +75,6 @@ class DApplication:public JApplication{
 		DLorentzDeflections *lorentz_def;
 		JEventSourceGenerator *event_source_generator;
 		JFactoryGenerator *factory_generator;
-	 	DRootGeom *RootGeom;	
 		vector<DGeometry*> geometries;
 		DDIRCLutReader *dircLut;
 

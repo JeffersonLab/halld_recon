@@ -30,7 +30,6 @@ using std::string;
 #include <HDGEOMETRY/DMagneticFieldMapSpoiled.h>
 #include <HDGEOMETRY/DMagneticFieldMapParameterized.h>
 #include <HDGEOMETRY/DLorentzMapCalibDB.h>
-#include <HDGEOMETRY/DRootGeom.h>
 #include "DFactoryGenerator.h"
 
 #include "DANARootErrorHandler.h"
@@ -69,7 +68,6 @@ DApplication::DApplication(int narg, char* argv[]):JApplication(narg, argv)
 	// Initialize pointers to NULL. Objects will be instantiated as needed
 	bfield = NULL;
 	lorentz_def = NULL;
-	RootGeom = NULL;
 	dircLut = NULL;
 	
 	// Since we defer reading in some tables until they are requested
@@ -404,28 +402,6 @@ DLorentzDeflections* DApplication::GetLorentzDeflections(unsigned int run_number
 	pthread_mutex_unlock(&mutex);
 	
 	return lorentz_def;
-}
-
-//---------------------------------
-// GetRootGeom
-//---------------------------------
-DRootGeom* DApplication::GetRootGeom(unsigned int run_number)
-{
-	pthread_mutex_lock(&mutex);
-
-	// If field map already exists, return it immediately
-	if(RootGeom){
-		pthread_mutex_unlock(&mutex);
-		return RootGeom;
-	}
-	
-	// Create map of material properties
-	//material = new DMaterialMapCalibDB(this);
-	RootGeom = new DRootGeom(this, run_number);
-
-	pthread_mutex_unlock(&mutex);
-	
-	return RootGeom;
 }
 
 //---------------------------------

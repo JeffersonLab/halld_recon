@@ -11,7 +11,6 @@
 
 #include "DTrackFitter.h"
 #include "PID/DParticleID.h"
-#include "HDGEOMETRY/DRootGeom.h"
 using namespace jana;
 
 // hi-res timers for profiling
@@ -48,12 +47,8 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	bfield = dapp->GetBfield(run_number); 
 	geom = dapp->GetDGeometry(run_number);
 
-	RootGeom=NULL;
 	MATERIAL_MAP_MODEL = "DGeometry";
 	gPARMS->SetDefaultParameter("TRKFIT:MATERIAL_MAP_MODEL",MATERIAL_MAP_MODEL);
-	if(MATERIAL_MAP_MODEL=="DRootGeom"){
-	  RootGeom = dapp->GetRootGeom(run_number);
-	}
 	// Create the extrapolation vectors
 	vector<Extrapolation_t>myvector;
 	extrapolations.emplace(SYS_BCAL,myvector);

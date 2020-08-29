@@ -17,11 +17,6 @@ sbms.AddDANA(env)
 # file using a different CXXFLAGS definition. Remove
 # the following three lines to revert to the old 
 # behavior.
-if env['COMPILER'] == 'gcc':
-	env.AppendUnique(IGNORE_SOURCES=['DRootGeom.cc'])
-	cxxflags = '%s -fvar-tracking-assignments-toggle' % env['CXXFLAGS']
-	env.AppendUnique(MISC_OBJECTS=[env.Object('DRootGeom.cc', CXXFLAGS=cxxflags)])
-
 
 sbms.library(env)
 
