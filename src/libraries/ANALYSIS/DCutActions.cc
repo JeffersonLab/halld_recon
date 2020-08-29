@@ -1276,9 +1276,6 @@ bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const D
 			// extract the info about the vertex, to make sure that the information that we 
 			// need to calculate displaced vertices is there
 			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
-
-			auto locParentVertexInfo = locStepVertexInfo->Get_ParentVertexInfo();
-			auto locVertexKinFitFlag = ((locKinFitType != d_P4Fit) && (locKinFitType != d_NoFit));
 			
 			auto locPathLength = locKinFitParticle->Get_PathLength();
 			
@@ -1347,9 +1344,6 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 			// need to calculate displaced vertices is there
 			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
 
-			auto locParentVertexInfo = locStepVertexInfo->Get_ParentVertexInfo();
-			auto locVertexKinFitFlag = ((locKinFitType != d_P4Fit) && (locKinFitType != d_NoFit));
-			
 			auto locPathLength = locKinFitParticle->Get_PathLength();
 			auto locPathLengthSigma = locKinFitParticle->Get_PathLengthUncertainty();
 			double locPathLengthSignificance = locPathLength / locPathLengthSigma;
