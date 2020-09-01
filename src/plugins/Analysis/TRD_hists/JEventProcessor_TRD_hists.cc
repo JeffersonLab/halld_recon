@@ -40,6 +40,7 @@ static TH1I *num_tracks;
 
 static TH2I *hWireTRDPoint_TrackX, *hWireTRDPoint_TrackY;
 static TH2I *hGEMTRDHit_TrackX, *hGEMTRDHit_TrackY, *hGEMTRDHit_DeltaXY;
+static TH2I *hPadGEMPoint_TrackX, *hPadGEMPoint_TrackY, *hPadGEMPoint_DeltaXY;
 static TH2I *hWireTRDPoint_DeltaXY, *hWireTRDPoint_DeltaXY_Pos, *hWireTRDPoint_DeltaXY_Neg;
 static TH2I *hGEMTRDHit_DeltaX_T;
 static TH1I *hWireTRDPoint_Time;
@@ -103,6 +104,11 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     hGEMTRDHit_TrackY = new TH2I("GEMTRDHit_TrackY","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
     hGEMTRDHit_DeltaXY = new TH2I("GEMTRDHit_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
     hGEMTRDHit_DeltaX_T = new TH2I("GEMTRDHit_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+
+    // Pad GEM
+    hPadGEMPoint_TrackX = new TH2I("PadGEMPoint_TrackX","; Pad GEM X; Extrapolated track X",200,-55,55,200,-55,55);
+    hPadGEMPoint_TrackY = new TH2I("PadGEMPoint_TrackY","; Pad GEM Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hPadGEMPoint_DeltaXY = new TH2I("PadGEMPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
 
     // GEM SRS
     for(int i=0; i<5; i++) {
@@ -195,6 +201,9 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     vector<const DGEMPoint*> gem_points;
     eventLoop->Get(gem_points);
 
+    vector<const DGEMPoint*> padgem_points;
+    eventLoop->Get(padgem_points,"PAD");
+
     vector<const DTrackWireBased*> straight_tracks;
     vector<const DTrackTimeBased*> tracks;
     if (dIsNoFieldFlag)
@@ -272,6 +281,20 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 						    hGEMTRDHit_DeltaX_T->Fill(locDeltaX, hit->t);
 					    }
 				    }
+			    }
+		    }
+
+		    // correlate wire TRD with extrapolated tracks
+		    for (const auto& point : padgem_points) {
+
+			    if(point->detector == 1 && fabs(extrapolation.position.Z() - 470.7) < 5. ) { 
+				    
+				    hPadGEMPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				    hPadGEMPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				    
+				    double locDeltaX = point->x - extrapolation.position.X();
+				    double locDeltaY = point->y - extrapolation.position.Y();
+				    hPadGEMPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
 			    }
 		    }
 

@@ -15,6 +15,7 @@ using namespace jana;
 #include <TRD/DTRDStripCluster.h>
 #include <TRD/DTRDPoint.h>
 
+#include <DAQ/Df125FDCPulse.h>
 #include <DAQ/DGEMSRSWindowRawData.h>
 #include <TRD/DGEMDigiWindowRawData.h>
 #include <TRD/DGEMHit.h>
@@ -65,6 +66,10 @@ static TH2I *hWire_PadGEMX;
 static TH2I *hStrip_PadGEMY;
 static TH2I *hWire_GEMSRSXstrip[5], *hStrip_GEMSRSYstrip[5];
 static TH2I *hStrip_GEMSRSY[5], *hWire_GEMSRSX[5];
+static TH2I *hWire_GEMTRDXchan[11];
+
+static TH2I *hPadGEM_WireTRDX, *hPadGEM_WireTRDY, *hPadGEM_WireTRD_DeltaXY;
+static TH2I *hPadGEM_GEMTRDX, *hPadGEM_GEMTRDY, *hPadGEM_GEMTRD_DeltaXY;
 
 //----------------------------------------------------------------------------------
 
@@ -157,7 +162,7 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     hWireTRDPointAmp_DeltaT = new TH2I("WireTRDPointAmp_DeltaT", "Wire TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
     hGEMTRDPointAmp_DeltaT = new TH2I("GEMTRDPointAmp_DeltaT", "GEM TRD Point amplitude vs #Delta t; #Delta t (ns); Pulse Amplitude", 100, -100, 100, 100, 0, 4000);
     hWireTRDPoint_WireStrip = new TH2I("WireTRDPoint_WireStrip", "Wire TRD Point Strip (Y) vx Wire (X); X - Wire # ; Y - Strip #", NTRDwires, -0.5, -0.5+NTRDwires, NTRDwires, -0.5, -0.5+NTRDwires);
-    hGEMTRDPoint_XY = new TH2I("GEMTRDPoint_XY", "GEM TRD Point Y vx X; X (cm); Y (cm)", 100, 0., 10., 100, 0., 10.);
+    hGEMTRDPoint_XY = new TH2I("GEMTRDPoint_XY", "GEM TRD Point Y vx X; X (cm); Y (cm)", 100, -10., 10., 100, -90., -40.);
     hGEMTRDPoint_StripCorr = new TH2I("GEMTRDPoint_StripCorr", "GEM TRD Point Strip (Y) vx (X); X - Strip # ; Y - Strip #", NGEMstrips, -0.5, -0.5+NGEMstrips, NGEMstrips, -0.5, -0.5+NGEMstrips);
 
     // GEM SRS plane correlations
@@ -168,19 +173,31 @@ jerror_t JEventProcessor_TRD_online::init(void) {
     hGEMSRSClusterAmpCorr = new TH2I("GEMSRSClusterAmpCorr", "GEM SRS Cluster amplitude vs Max strip amplitude; Cluster amplitude; Max Strip Amplitude", 100, 0, 10000, 100, 0, 10000);
     
     // Wire TRD - GEM TRD correlations
-    hWire_GEMTRDX = new TH2I("Wire_GEMTRDX", "GEM TRD X position vs TRD wire # ; TRD wire # ; GEM TRD X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
+    hWire_GEMTRDX = new TH2I("Wire_GEMTRDX", "GEM TRD X position vs TRD wire # ; TRD wire # ; GEM TRD X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., -10., 10.);
     hWire_GEMTRDXstrip = new TH2I("Wire_GEMTRDXstrip", "GEM TRD X strip vs TRD wire # ; TRD wire # ; GEM TRD X strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
     hWire_GEMTRDX_DeltaT = new TH2I("Wire_GEMTRDX_DeltaT", "GEM TRD X Amplitude vs #Delta t ; #Delta t (ns) ; GEM TRD X Amplitude", 500, -500, 500, 100, 0, 10000);
     hWireTRDX_Time = new TH1I("WireTRDX_Time", "Wire TRD X Time ; t (ns)", 1000, 0, 1000);
     hGEMTRDX_Time = new TH1I("GEMTRDX_Time", "GEM TRD X Time ; t (ns)", 1000, 0, 1000);
 
-    hStrip_GEMTRDY = new TH2I("Strip_GEMTRDY", "GEM TRD Y position vs TRD strip # ; TRD strip # ; GEM TRD Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
+    hStrip_GEMTRDY = new TH2I("Strip_GEMTRDY", "GEM TRD Y position vs TRD strip # ; TRD strip # ; GEM TRD Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100, -90., -40.);
     hStrip_GEMTRDYstrip = new TH2I("Strip_GEMTRDYstrip", "GEM TRD Y strip vs TRD strip # ; TRD strip # ; GEM TRD Y strip #", NTRDwires, -0.5, -0.5+NTRDwires, NGEMstrips, -0.5, -0.5+NGEMstrips);
 
-    // Wire TRD - Pad GEM correlations 
-    hWire_PadGEMX = new TH2I("Wire_PadGEMX", "Pad GEM X position vs TRD wire # ; TRD wire # ; Pad GEM X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
-    hStrip_PadGEMY = new TH2I("Strip_PadGEMY", "Pad GEM Y position vs TRD strip # ; TRD strip # ; Pad GEM Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 100., 0., 10.5);
+    for(int i=0; i<11; i++) {
+	    hWire_GEMTRDXchan[i] = new TH2I(Form("Wire_GEMTRDXchan_slot%d",i), "GEM TRD X channel vs TRD wire # ; TRD wire # ; GEM TRD X channel #", NTRDwires, -0.5, -0.5+NTRDwires, 72, 0, 72);
+    }
 
+    // Wire TRD - Pad GEM correlations 
+    hWire_PadGEMX = new TH2I("Wire_PadGEMX", "Pad GEM X position vs TRD wire # ; TRD wire # ; Pad GEM X (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 10, 0, 10);
+    hStrip_PadGEMY = new TH2I("Strip_PadGEMY", "Pad GEM Y position vs TRD strip # ; TRD strip # ; Pad GEM Y (cm)", NTRDwires, -0.5, -0.5+NTRDwires, 10, 0, 10);
+
+    // Pad GEM correlations with Wire and GEM TRD
+    hPadGEM_WireTRDX = new TH2I("PadGEM_WireTRDX", "Wire TRD X vs Pad GEM X; Pad GEM X (cm); Wire TRD X (cm)", 10, 0, 10, 100, -10., 10.);
+    hPadGEM_WireTRDY = new TH2I("PadGEM_WireTRDY", "Wire TRD Y vs Pad GEM Y; Pad GEM Y (cm); Wire TRD Y (cm)", 10, 0, 10, 100, -90., -40.);
+    hPadGEM_WireTRD_DeltaXY = new TH2I("PadGEM_WireTRD_DeltaXY", "Position difference Pad GEM - Wire TRD Y vs X; #Delta X (cm); #Delta Y (cm)", 100, -25, 25, 100., -25, 25);
+    hPadGEM_GEMTRDX = new TH2I("PadGEM_GEMTRDX", "GEM TRD X vs Pad GEM X; Pad GEM X (cm); GEM TRD X (cm)", 10, 0, 10, 100., -10., 10.);
+    hPadGEM_GEMTRDY = new TH2I("PadGEM_GEMTRDY", "GEM TRD Y vs Pad GEM Y; Pad GEM Y (cm); GEM TRD Y (cm)", 10, 0, 10, 100, -90., -40.);
+    hPadGEM_GEMTRD_DeltaXY = new TH2I("PadGEM_GEMTRD_DeltaXY", "Position difference Pad GEM - GEM TRD Y vs X; #Delta X (cm); #Delta Y (cm)", 100, -25, 25, 100, -25, 25);
+    
     for(int i=0; i<5; i++) {
 	    hWire_GEMSRSXstrip[i] = new TH2I(Form("Wire_GEMSRSXstrip_%d",i), Form("Package %d: GEM SRS X strip vs TRD wire # ; TRD wire # ; GEM SRS X strip #",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
 	    hStrip_GEMSRSYstrip[i] = new TH2I(Form("Strip_GEMSRSYstrip_%d",i), Form("Package %d GEM SRS Y strip vs TRD strip # ; TRD strip # ; GEM SRS Y stip",i), NTRDwires, -0.5, -0.5+NTRDwires, 256, -0.5, -0.5+NGEMstrips);
@@ -428,9 +445,19 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 		    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
 		    hGEMTRDX_Time->Fill(gemtrd_hit->t);
 		    hWireTRDX_Time->Fill(hit->t);
-		    
-		    //if(fabs(locDeltaT) < 100.)
-		    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
+
+		    const DTRDDigiHit *gemtrd_digihit;
+		    gemtrd_hit->GetSingle(gemtrd_digihit);
+		    const Df125FDCPulse *gemtrd_pulse;
+		    gemtrd_digihit->GetSingle(gemtrd_pulse);
+		    int slot = gemtrd_pulse->slot;
+		    int channel = gemtrd_pulse->channel;
+
+		    // some rough time matching of hits
+		    if(locDeltaT > 0 && locDeltaT < 300) {
+			    hWire_GEMTRDXstrip->Fill(wire, gemtrd_hit->strip);
+			    hWire_GEMTRDXchan[slot]->Fill(wire, channel);
+		    }
 	    }
 
 	    // Pad GEM hits
@@ -447,7 +474,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 	    // GEM SRS points
 	    for (const auto& point : gem_points) {
-		    ///if(point->y < 7)
 		    hWire_GEMSRSX[point->detector]->Fill(wire, point->x);
 	    }
     }
@@ -470,7 +496,6 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 		    if(gemtrd_hit->plane != 3 && gemtrd_hit->plane != 6) continue; 
 		    double locDeltaT = gemtrd_hit->t - hit->t;
 		    
-		    //if(fabs(locDeltaT) < 100.)
 		    hStrip_GEMTRDYstrip->Fill(strip, gemtrd_hit->strip);
 	    }
 
@@ -490,6 +515,27 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    for (const auto& point : gem_points) {
 		    hStrip_GEMSRSY[point->detector]->Fill(strip, point->y);
 	    }
+    }
+
+    // Pad GEM Point correlations
+    for (const auto& padgem_point : padgem_points) {
+	    if(padgem_point->detector != 1) continue;
+
+	    // Wire and GEM TRD points
+	    for (const auto& point : points) {
+		    if(point->detector == 2) { // Wire TRD
+			    hPadGEM_WireTRDX->Fill(padgem_point->x, point->x);
+			    hPadGEM_WireTRDY->Fill(padgem_point->y, point->y);
+			    hPadGEM_WireTRD_DeltaXY->Fill(padgem_point->x-point->x, padgem_point->y-point->y);
+		    }
+		    else if(point->detector == 3) { // GEM TRD
+			    hPadGEM_GEMTRDX->Fill(padgem_point->x, point->x);
+			    hPadGEM_GEMTRDY->Fill(padgem_point->y, point->y);
+			    hPadGEM_GEMTRD_DeltaXY->Fill(padgem_point->x-point->x, padgem_point->y-point->y);
+		    }	    
+	    }
+
+	    
     }
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
