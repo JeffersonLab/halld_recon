@@ -38,8 +38,8 @@ jerror_t DPadGEMPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   dgeom->GetTRDZ(dTRDz);
   
   // Get TRD geometry (needs to come from geometry file or CCDB?)
-  X0 = 0.0; // -5.0;
-  Y0 = 0.0; // -80.0;
+  X0 = 0.0;
+  Y0 = 0.0;
   pitch = 1.0;  // 10 mm
 
   return NOERROR;
@@ -51,7 +51,7 @@ jerror_t DPadGEMPoint_factory::erun(void){
 }
 ///
 /// DPadGEMPoint_factory::evnt():
-/// this is the place that produces points from wire hits and GEM strips
+/// this is the place that produces points from GEM pads
 ///
 jerror_t DPadGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 

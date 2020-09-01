@@ -55,6 +55,12 @@ jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 	  wireX0 = -11.8;
 	  gemX0 = -5.0;
   }
+  if(runnumber > 72645) {
+	  wireX0 = -11.8;
+	  stripY0 = -80.0;
+	  gemX0 = -5.0;
+	  gemY0 = -80.0;
+  }
 
   // Some parameters for defining wire and strip X/Y matching
   wire_time_max = 50;
@@ -95,9 +101,9 @@ jerror_t DTRDPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 	for (unsigned int i=0; i < stripClus.size(); i++) {
 		if (stripClus[i]->plane == 1 || stripClus[i]->plane == 5)
 			stripClusY.push_back(stripClus[i]);
-		else if (stripClus[i]->plane == 2 || stripClus[i]->plane == 6)
+		else if (stripClus[i]->plane == 2 || stripClus[i]->plane == 7)
 			gemClusX.push_back(stripClus[i]);
-		else if (stripClus[i]->plane == 3 || stripClus[i]->plane == 7)
+		else if (stripClus[i]->plane == 3 || stripClus[i]->plane == 6)
 			gemClusY.push_back(stripClus[i]);
 	}
 	
@@ -207,9 +213,9 @@ double DTRDPoint_factory::calcClusterPosition(const DTRDStripCluster *clus)
 		pulseHeightSum += hit->pulse_height;
 		if(hit->plane == 1 || hit->plane == 5) // Wire TRD strip
 			meanPosition += (stripY0 + hit->strip * stripY_pitch)* hit->pulse_height;
-		else if(hit->plane == 2 || hit->plane == 6) // GEM TRD X strip
+		else if(hit->plane == 2 || hit->plane == 7) // GEM TRD X strip
 			meanPosition += (gemX0 + hit->strip * gem_pitch)* hit->pulse_height;
-		else if(hit->plane == 3 || hit->plane == 7) // GEM TRD Y strip
+		else if(hit->plane == 3 || hit->plane == 6) // GEM TRD Y strip
 			meanPosition += (gemY0 + hit->strip * gem_pitch)* hit->pulse_height;
 	}
 	

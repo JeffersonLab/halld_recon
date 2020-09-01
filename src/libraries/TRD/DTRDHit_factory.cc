@@ -90,8 +90,8 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    double pulse_height = digihit->pulse_peak - digihit->pedestal;
 
 	    // mask noisy wires for now
-	    if(digihit->plane == 4)
-		    if(digihit->strip == 0 || digihit->strip == 11 || digihit->strip == 12 || digihit->strip == 23) continue;
+	    //if(digihit->plane == 4)
+	    //	    if(digihit->strip == 0 || digihit->strip == 11 || digihit->strip == 12 || digihit->strip == 23) continue;
 
 	    // separate theresholds for Wire and GEM TRD
 	    if((digihit->plane == 3 || digihit->plane == 4 || digihit->plane == 5 || digihit->plane == 0 || digihit->plane == 1) && pulse_height < 250) continue;
