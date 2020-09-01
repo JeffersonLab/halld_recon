@@ -60,7 +60,7 @@ jerror_t DTRDStripCluster_factory::init(void){
 ///
 jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
 	vector<const DTRDHit*> allHits;
-	vector<const DTRDHit*> planeHits[3];
+	vector<const DTRDHit*> planeHits[4];
 	vector<vector<const DTRDHit*> >thisLayer;
 	
 	eventLoop->Get(allHits);
@@ -71,14 +71,14 @@ jerror_t DTRDStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 		
 		// Sift through all hits and select out X and Y hits.
 		for (vector<const DTRDHit*>::iterator i = allHits.begin(); i != allHits.end(); ++i){
-			if ((*i)->plane == 0 || (*i)->plane == 4) continue;
+			if ((*i)->plane == 0 || (*i)->plane == 3 || (*i)->plane == 4) continue;
 			int stripPlane = (*i)->plane - 1;
 			if(stripPlane > 2) stripPlane -= 3;
 			planeHits[stripPlane].push_back(*i);
 		} 
 
 		// Plane by plane, create clusters of strips
-		for(uint iplane = 0; iplane < 3; iplane++) {
+		for(uint iplane = 0; iplane < 4; iplane++) {
 			if (planeHits[iplane].size()>0){
 				thisLayer.clear();
 				vector<const DTRDHit*>::iterator i = planeHits[iplane].begin();	      

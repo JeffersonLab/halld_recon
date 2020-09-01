@@ -16,7 +16,7 @@ using namespace jana;
 #include "DTRDPoint_factory.h"
 #include "DGEMStripCluster_factory.h"
 #include "DGEMPoint_factory.h"
-
+#include "DPadGEMPoint_factory.h"
 
 jerror_t TRD_init(JEventLoop *loop) {
 
@@ -30,6 +30,7 @@ jerror_t TRD_init(JEventLoop *loop) {
 	loop->AddFactory(new DTRDPoint_factory());
 	loop->AddFactory(new DGEMStripCluster_factory());
 	loop->AddFactory(new DGEMPoint_factory());
+	loop->AddFactory(new DPadGEMPoint_factory);
 
 	//loop->AddFactory(new DTRDGeometry_factory());
 	//loop->AddFactory(new JFactory<DTRDTruthGEMHit>());
