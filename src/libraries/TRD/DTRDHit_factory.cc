@@ -56,7 +56,7 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	if (eventLoop->GetCalib("/TRD/Wire/timing_offsets", time_offsets[0]))
 	jout << "Error loading /TRD/Wire/timing_offsets !" << endl;
 	*/
-	for (unsigned int i=0;i<7;i++){
+	for (unsigned int i=0;i<8;i++){
 	  t_base[i]=-900.;
 	}
 
