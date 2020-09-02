@@ -69,8 +69,8 @@ jerror_t DPadGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 		
 		// save new point
 		DGEMPoint* newPoint = new DGEMPoint;     
-		newPoint->x = X0 + hits[i]->strip/10 * pitch;
-		newPoint->y = Y0 + hits[i]->strip%10 * pitch;;
+		newPoint->x = X0 + hits[i]->strip%10 * pitch;
+		newPoint->y = Y0 + hits[i]->strip/10 * pitch;;
 		newPoint->t_x = hits[i]->t;
 		newPoint->t_y = hits[i]->t;
 		newPoint->time = hits[i]->t;

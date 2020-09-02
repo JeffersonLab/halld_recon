@@ -18,7 +18,7 @@ using namespace jana;
 /// 
 class DPadGEMPoint_factory : public JFactory<DGEMPoint> {
 	public:
-		const char* Tag(void){return "PAD";}
+                const char* Tag(void){return "PAD";}
 
 	        DPadGEMPoint_factory(){};
 		~DPadGEMPoint_factory(){};					
