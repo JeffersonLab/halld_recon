@@ -118,28 +118,28 @@ jerror_t JEventProcessor_TRD_online::init(void) {
 	    if(i<2) { // Wire TRD
 		    hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_WirePlane%d", i),Form("Plane %d TRD Wire hit occupancy;strip;raw hits / counter",i),NTRDwires,-0.5,-0.5+NTRDwires);
 		    hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_WirePlane%d", i),Form("Plane %d TRD Wire quality factor;quality factor;raw hits",i),4,-0.5,3.5);
-		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse peak vs. strip;strip;pulse peak",i),NTRDwires,-0.5,-0.5+NTRDwires,410,0.0,4100.0);
+		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse peak vs. strip;strip;pulse peak",i),NTRDwires,-0.5,-0.5+NTRDwires,100,0.0,4100.0);
 		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,5000.0);
 		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_WirePlane%d", i),Form("Plane %d TRD Wire pulse time;pulse time [ns];raw hits / 2 ns",i),2500,0.0,5000.0);
-		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse time vs. strip;strip;pulse time [ns]",i),NTRDwires,-0.5,-0.5+NTRDwires,200,0.0,1000.0);
+		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_WirePlane%d", i),Form("Plane %d TRD Wire pulse time vs. strip;strip;pulse time [ns]",i),NTRDwires,-0.5,-0.5+NTRDwires,100,0.0,1000.0);
 		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_WirePlane%d", i),Form("Plane %d TRD Wire time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,1000.0);
 	    }
 	    else if(i<4) { // GEM TRD
 		    hDigiHit_Occupancy[i] = new TH1I(Form("DigiHit_Occupancy_GEMPlane%d", i),Form("Plane %d TRD GEM hit occupancy;strip;raw hits / counter",i),NTRDstrips,-0.5,-0.5+NTRDstrips);
 		    hDigiHit_QualityFactor[i] = new TH1I(Form("DigiHit_QualityFactor_GEMPlane%d", i),Form("Plane %d TRD GEM hit quality factor;quality factor;raw hits",i),4,-0.5,3.5);
-		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse peak vs. strip;strip;pulse peak",i),NTRDstrips,-0.5,-0.5+NTRDstrips,410,0.0,4100.0);
+		    hDigiHit_PeakVsStrip[i] = new TH2I(Form("DigiHit_PeakVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse peak vs. strip;strip;pulse peak",i),NTRDstrips,-0.5,-0.5+NTRDstrips,100,0.0,4100.0);
 		    hDigiHit_PulseTime[i] = new TH1I(Form("DigiHit_PulseTime_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [62.5 ps];raw hits",i),1000,0.0,5000.0);
 		    hDigiHit_Time[i] = new TH1I(Form("DigiHit_Time_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time;pulse time [ns];raw hits / 2 ns",i),2500,0.0,5000.0);
-		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,200,0.0,1000.0);
+		    hDigiHit_TimeVsStrip[i] = new TH2I(Form("DigiHit_TimeVsStrip_GEMPlane%d", i),Form("Plane %d TRD GEM pulse time vs. strip;strip;pulse time [ns]",i),NTRDstrips,-0.5,-0.5+NTRDstrips,100,0.0,1000.0);
 		    hDigiHit_TimeVsPeak[i] = new TH2I(Form("DigiHit_TimeVsPeak_GEMPlane%d", i),Form("Plane %d TRD GEM time vs. peak;pulse peak;time [ns]",i),410,0.0,4100.0,200,0.0,1000.0);
 	    }
 	    else {
 		   hDigiHit_Occupancy[i] = new TH1I("DigiHit_Occupancy_PadGEM","GEM pad hit occupancy;pad;raw hits / counter",NGEMpads,-0.5,-0.5+NGEMpads);
                     hDigiHit_QualityFactor[i] = new TH1I("DigiHit_QualityFactor_PadGEM","GEM pad quality factor;quality factor;raw hits",4,-0.5,3.5);
-                    hDigiHit_PeakVsStrip[i] = new TH2I("DigiHit_PeakVsPad_PadGEM","GEM pad pulse peak vs. strip;strip;pulse peak",NGEMpads,-0.5,-0.5+NGEMpads,410,0.0,4100.0);
+                    hDigiHit_PeakVsStrip[i] = new TH2I("DigiHit_PeakVsPad_PadGEM","GEM pad pulse peak vs. strip;strip;pulse peak",NGEMpads,-0.5,-0.5+NGEMpads,100,0.0,4100.0);
                     hDigiHit_PulseTime[i] = new TH1I("DigiHit_PulseTime_PadGEM","GEM pad pulse time;pulse time [62.5 ps];raw hits",1000,0.0,5000.0);
                     hDigiHit_Time[i] = new TH1I("DigiHit_Time_PadGEM","GEM pad pulse time;pulse time [ns];raw hits / 2 ns",2500,0.0,5000.0);
-                    hDigiHit_TimeVsStrip[i] = new TH2I("DigiHit_TimeVsPad_PadGEM","GEM pad pulse time vs. pad;pad;pulse time [ns]",NGEMpads,-0.5,-0.5+NGEMpads,200,0.0,1000.0);
+                    hDigiHit_TimeVsStrip[i] = new TH2I("DigiHit_TimeVsPad_PadGEM","GEM pad pulse time vs. pad;pad;pulse time [ns]",NGEMpads,-0.5,-0.5+NGEMpads,100,0.0,1000.0);
                     hDigiHit_TimeVsPeak[i] = new TH2I("DigiHit_TimeVsPeak_PadGEM","GEM pad time vs. peak;pulse peak;time [ns]",410,0.0,4100.0,200,0.0,1000.0);
 	    }
     }
@@ -364,10 +364,10 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
     // GEM TRD hits correlation in XY plane
     for (const auto& hit : hits) {
-	    if(hit->plane != 7) continue;
+	    if(hit->plane != 6) continue;
 
 	    for (const auto& hit_strip : hits) {
-		    if(hit_strip->plane != 6) continue;
+		    if(hit_strip->plane != 7) continue;
 		    
 		    hGEMTRDPoint_StripCorr->Fill(hit->strip, hit_strip->strip);
 	    }
@@ -439,7 +439,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 	    
 	    // GEM TRD hits
 	    for (const auto& gemtrd_hit : hits) {
-		    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 7) continue; 
+		    if(gemtrd_hit->plane != 2 && gemtrd_hit->plane != 6) continue; 
 		    double locDeltaT = gemtrd_hit->t - hit->t;
 		    
 		    hWire_GEMTRDX_DeltaT->Fill(locDeltaT, gemtrd_hit->pulse_height);
@@ -493,7 +493,7 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 	    // GEM TRD hits
 	    for (const auto& gemtrd_hit : hits) {
-		    if(gemtrd_hit->plane != 3 && gemtrd_hit->plane != 6) continue; 
+		    if(gemtrd_hit->plane != 3 && gemtrd_hit->plane != 7) continue; 
 		    double locDeltaT = gemtrd_hit->t - hit->t;
 		    
 		    hStrip_GEMTRDYstrip->Fill(strip, gemtrd_hit->strip);

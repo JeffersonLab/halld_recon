@@ -11,7 +11,7 @@
 // hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_WirePlane1
 // hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_GEMPlane2
 // hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_GEMPlane3
-// hnamepath: /TRD/DigiHit/DigiHit_TimeVsStrip_PadGEM
+// hnamepath: /TRD/DigiHit/DigiHit_TimeVsPad_PadGEM
 
 {
     TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("TRD/DigiHit");

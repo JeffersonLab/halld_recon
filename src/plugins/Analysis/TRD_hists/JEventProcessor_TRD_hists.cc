@@ -107,7 +107,7 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
 
     // Pad GEM
     hPadGEMPoint_TrackX = new TH2I("PadGEMPoint_TrackX","; Pad GEM X; Extrapolated track X",200,-55,55,200,-55,55);
-    hPadGEMPoint_TrackY = new TH2I("PadGEMPoint_TrackY","; Pad GEM Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hPadGEMPoint_TrackY = new TH2I("PadGEMPoint_TrackY","; Pad GEM Y; Extrapolated track Y",200,-75,-55,200,-75,-55);
     hPadGEMPoint_DeltaXY = new TH2I("PadGEMPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
 
     // GEM SRS
@@ -240,7 +240,7 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 		    // correlate wire TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+			    if(point->detector == 2 && fabs(extrapolation.position.Z() - 532.5) < 5.) { 
 
 				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
 				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
@@ -258,10 +258,10 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 		    // correlate GEM TRD with extrapolated tracks
 		    for (const auto& hit : hits) {
-			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 570.7) < 5.) {
+			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 560.8) < 5.) {
 
 				    for (const auto& gem_hit : gem_hits) {
-					    if(gem_hit->plane == 7 && fabs(extrapolation.position.Z() - 570.7) < 5.) {		    
+					    if(gem_hit->plane == 7 && fabs(extrapolation.position.Z() - 560.7) < 5.) {		    
 						    // only look at tracks with good wire hit
 						    if(!goodTrack) continue;
 
@@ -287,13 +287,15 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 		    // correlate wire TRD with extrapolated tracks
 		    for (const auto& point : padgem_points) {
 
-			    if(point->detector == 1 && fabs(extrapolation.position.Z() - 470.7) < 5. ) { 
+			    if(point->detector == 1 && fabs(extrapolation.position.Z() - 458.5) < 5. ) { 
 				    
-				    hPadGEMPoint_TrackX->Fill(point->x, extrapolation.position.X());
-				    hPadGEMPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+                                    double x = point->x - 5.0;
+                                    double y = point->y - 63.93 - 5.0;
+				    hPadGEMPoint_TrackX->Fill(x, extrapolation.position.X());
+				    hPadGEMPoint_TrackY->Fill(y, extrapolation.position.Y());
 				    
-				    double locDeltaX = point->x - extrapolation.position.X();
-				    double locDeltaY = point->y - extrapolation.position.Y();
+				    double locDeltaX = x - extrapolation.position.X();
+				    double locDeltaY = y - extrapolation.position.Y();
 				    hPadGEMPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
 			    }
 		    }
