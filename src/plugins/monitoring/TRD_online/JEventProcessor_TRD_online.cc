@@ -462,8 +462,12 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 	    // Pad GEM hits
 	    for (const auto& padgem_point : padgem_points) {
-		    if(padgem_point->detector == 1)
-			    hWire_PadGEMX->Fill(wire, padgem_point->x);
+		    if(padgem_point->detector != 1) 
+			    continue;
+
+		    const DTRDHit *padgem_hit;
+		    padgem_point->GetSingle(padgem_hit);
+		    hWire_PadGEMX->Fill(wire, (padgem_hit->strip-4)%10);
 	    }
 
 	    // GEM SRS hit
@@ -501,8 +505,12 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 	    // Pad GEM hits
 	    for (const auto& padgem_point : padgem_points) {
-		    if(padgem_point->detector == 1)
-			    hStrip_PadGEMY->Fill(strip, padgem_point->y);
+		    if(padgem_point->detector != 1) 
+			    continue;
+
+		    const DTRDHit *padgem_hit;
+		    padgem_point->GetSingle(padgem_hit);
+		    hStrip_PadGEMY->Fill(strip, padgem_hit->strip/10);
 	    }
 	    
 	    // GEM SRS hit
@@ -521,16 +529,19 @@ jerror_t JEventProcessor_TRD_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     for (const auto& padgem_point : padgem_points) {
 	    if(padgem_point->detector != 1) continue;
 
+	    const DTRDHit *padgem_hit;
+	    padgem_point->GetSingle(padgem_hit);
+
 	    // Wire and GEM TRD points
 	    for (const auto& point : points) {
 		    if(point->detector == 2) { // Wire TRD
-			    hPadGEM_WireTRDX->Fill(padgem_point->x, point->x);
-			    hPadGEM_WireTRDY->Fill(padgem_point->y, point->y);
+			    hPadGEM_WireTRDX->Fill((padgem_hit->strip-4)%10, point->x);
+			    hPadGEM_WireTRDY->Fill(padgem_hit->strip/10, point->y);
 			    hPadGEM_WireTRD_DeltaXY->Fill(padgem_point->x-point->x, padgem_point->y-point->y);
 		    }
 		    else if(point->detector == 3) { // GEM TRD
-			    hPadGEM_GEMTRDX->Fill(padgem_point->x, point->x);
-			    hPadGEM_GEMTRDY->Fill(padgem_point->y, point->y);
+			    hPadGEM_GEMTRDX->Fill((padgem_hit->strip-4)%10, point->x);
+			    hPadGEM_GEMTRDY->Fill(padgem_hit->strip/10, point->y);
 			    hPadGEM_GEMTRD_DeltaXY->Fill(padgem_point->x-point->x, padgem_point->y-point->y);
 		    }	    
 	    }

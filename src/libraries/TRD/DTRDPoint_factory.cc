@@ -57,9 +57,9 @@ jerror_t DTRDPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   }
   if(runnumber > 72645) {
 	  wireX0 = -11.8;
-	  stripY0 = -80. - 5.0;
-	  gemX0 = -5.0;
-	  gemY0 = -81.2 - 5.0;
+	  stripY0 = -82.6;
+	  gemX0 = -4.6;
+	  gemY0 = -77.08;
   }
 
   // Some parameters for defining wire and strip X/Y matching
@@ -216,7 +216,7 @@ double DTRDPoint_factory::calcClusterPosition(const DTRDStripCluster *clus)
 		else if(hit->plane == 2 || hit->plane == 6) // GEM TRD X strip
 			meanPosition += (gemX0 + hit->strip * gem_pitch)* hit->pulse_height;
 		else if(hit->plane == 3 || hit->plane == 7) // GEM TRD Y strip
-			meanPosition += (gemY0 + hit->strip * gem_pitch)* hit->pulse_height;
+			meanPosition += (gemY0 - hit->strip * gem_pitch)* hit->pulse_height;
 	}
 	
 	return meanPosition/pulseHeightSum;

@@ -40,7 +40,9 @@ static TH1I *num_tracks;
 
 static TH2I *hWireTRDPoint_TrackX, *hWireTRDPoint_TrackY;
 static TH2I *hGEMTRDHit_TrackX, *hGEMTRDHit_TrackY, *hGEMTRDHit_DeltaXY;
+static TH2I *hGEMTRDPoint_TrackX, *hGEMTRDPoint_TrackY, *hGEMTRDPoint_DeltaXY;
 static TH2I *hPadGEMPoint_TrackX, *hPadGEMPoint_TrackY, *hPadGEMPoint_DeltaXY;
+static TH2I *hPadGEMPointStrip_TrackX, *hPadGEMPointStrip_TrackY;
 static TH2I *hWireTRDPoint_DeltaXY, *hWireTRDPoint_DeltaXY_Pos, *hWireTRDPoint_DeltaXY_Neg;
 static TH2I *hGEMTRDHit_DeltaX_T;
 static TH1I *hWireTRDPoint_Time;
@@ -97,18 +99,25 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
     hWireTRDPoint_DeltaXY = new TH2I("WireTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
     hWireTRDPoint_DeltaXY_Pos = new TH2I("WireTRDPoint_DeltaXY_Pos","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
     hWireTRDPoint_DeltaXY_Neg = new TH2I("WireTRDPoint_DeltaXY_Neg","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hWireTRDPoint_Time = new TH1I("WireTRDPoint_Time","; hit time",1000,0,1000);
+    hWireTRDPoint_Time = new TH1I("WireTRDPoint_Time","; hit time",100,0,1000);
+
+    // GEM TRD Point
+    hGEMTRDPoint_TrackX = new TH2I("GEMTRDPoint_TrackX","; GEM TRD X (cm); Extrapolated track X (cm)",200,-55,55,200,-55,55);
+    hGEMTRDPoint_TrackY = new TH2I("GEMTRDPoint_TrackY","; GEM TRD Y (cm); Extrapolated track Y (cm)",200,-105,-55,200,-105,-55);
+    hGEMTRDPoint_DeltaXY = new TH2I("GEMTRDPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
 
     // GEM TRD
-    hGEMTRDHit_TrackX = new TH2I("GEMTRDHit_TrackX","; GEM TRD X; Extrapolated track X",200,-55,55,200,-55,55);
-    hGEMTRDHit_TrackY = new TH2I("GEMTRDHit_TrackY","; GEM TRD Y; Extrapolated track Y",200,-85,-65,200,-85,-65);
+    hGEMTRDHit_TrackX = new TH2I("GEMTRDHit_TrackX","; GEM TRD X; Extrapolated track X",100,-10,10,100,-10,10);
+    hGEMTRDHit_TrackY = new TH2I("GEMTRDHit_TrackY","; GEM TRD Y; Extrapolated track Y",100,-85,-65,100,-85,-65);
     hGEMTRDHit_DeltaXY = new TH2I("GEMTRDHit_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
-    hGEMTRDHit_DeltaX_T = new TH2I("GEMTRDHit_DeltaX_T","; #Delta X; hit time",1000,-20,20,1000,0,1000);
+    hGEMTRDHit_DeltaX_T = new TH2I("GEMTRDHit_DeltaX_T","; #Delta X; hit time",1000,-20,20,100,0,1000);
 
     // Pad GEM
-    hPadGEMPoint_TrackX = new TH2I("PadGEMPoint_TrackX","; Pad GEM X; Extrapolated track X",200,-55,55,200,-55,55);
-    hPadGEMPoint_TrackY = new TH2I("PadGEMPoint_TrackY","; Pad GEM Y; Extrapolated track Y",200,-75,-55,200,-75,-55);
+    hPadGEMPoint_TrackX = new TH2I("PadGEMPoint_TrackX","; Pad GEM X; Extrapolated track X",20,-10,10,100,-10,10);
+    hPadGEMPoint_TrackY = new TH2I("PadGEMPoint_TrackY","; Pad GEM Y; Extrapolated track Y",20,-75,-55,100,-75,-55);
     hPadGEMPoint_DeltaXY = new TH2I("PadGEMPoint_DeltaXY","; #Delta X (cm); #Delta Y (cm)",100,-5,5,100,-5,5);
+    hPadGEMPointStrip_TrackX = new TH2I("PadGEMPointStrip_TrackX","; Pad GEM strip; Extrapolated track X",100,0,100,100,-10,10);
+    hPadGEMPointStrip_TrackY = new TH2I("PadGEMPointStrip_TrackY","; Pad GEM strip; Extrapolated track Y",100,0,100,100,-75,-55);
 
     // GEM SRS
     for(int i=0; i<5; i++) {
@@ -256,6 +265,20 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 			    }
 		    }
 
+		    // correlate GEM TRD points with extrapolated tracks
+		    for (const auto& point : points) {
+
+			    if(point->detector == 3 && fabs(extrapolation.position.Z() - 560.8) < 5.) { 
+
+				    hGEMTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				    hGEMTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				    
+				    double locDeltaX = point->x - extrapolation.position.X();
+				    double locDeltaY = point->y - extrapolation.position.Y();
+				    hGEMTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+			    }
+		    }
+
 		    // correlate GEM TRD with extrapolated tracks
 		    for (const auto& hit : hits) {
 			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 560.8) < 5.) {
@@ -284,16 +307,21 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 			    }
 		    }
 
-		    // correlate wire TRD with extrapolated tracks
+		    // correlate Pad GEM with extrapolated tracks
 		    for (const auto& point : padgem_points) {
 
 			    if(point->detector == 1 && fabs(extrapolation.position.Z() - 458.5) < 5. ) { 
-				    
-                                    double x = point->x - 5.0;
-                                    double y = point->y - 63.93 - 5.0;
+				   
+				    const DTRDHit *padgem_hit;
+				    point->GetSingle(padgem_hit);
+				    hPadGEMPointStrip_TrackX->Fill(padgem_hit->strip, extrapolation.position.X());
+				    hPadGEMPointStrip_TrackY->Fill(padgem_hit->strip, extrapolation.position.Y());
+ 
+                                    double x = point->x;
+                                    double y = point->y;
 				    hPadGEMPoint_TrackX->Fill(x, extrapolation.position.X());
 				    hPadGEMPoint_TrackY->Fill(y, extrapolation.position.Y());
-				    
+				    				   
 				    double locDeltaX = x - extrapolation.position.X();
 				    double locDeltaY = y - extrapolation.position.Y();
 				    hPadGEMPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
@@ -330,7 +358,7 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 		    // correlate wire TRD with extrapolated tracks
 		    for (const auto& point : points) {
 
-			    if(point->detector == 0 && fabs(extrapolation.position.Z() - 548.8) < 5.) { 
+			    if(point->detector == 2 && fabs(extrapolation.position.Z() - 532.5) < 5.) { 
 
 				    hWireTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
 				    hWireTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
@@ -350,7 +378,7 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 		    // correlate GEM TRD with extrapolated tracks
 		    for (const auto& hit : hits) {
-			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 570.7) < 5.) {
+			    if(hit->plane == 6 && fabs(extrapolation.position.Z() - 560.8) < 5.) {
 
 				    // only look at tracks with good wire hit
 				    if(!goodTrack) continue;
@@ -360,6 +388,36 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 				    
 				    double locDeltaX = locStripX - extrapolation.position.X();
 				    hGEMTRDHit_DeltaX_T->Fill(locDeltaX, hit->t);
+			    }
+		    }
+
+		    // correlate GEM TRD points with extrapolated tracks
+		    for (const auto& point : points) {
+
+			    if(point->detector == 3 && fabs(extrapolation.position.Z() - 560.8) < 5.) { 
+
+				    hGEMTRDPoint_TrackX->Fill(point->x, extrapolation.position.X());
+				    hGEMTRDPoint_TrackY->Fill(point->y, extrapolation.position.Y());
+				    
+				    double locDeltaX = point->x - extrapolation.position.X();
+				    double locDeltaY = point->y - extrapolation.position.Y();
+				    hGEMTRDPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
+			    }
+		    }
+
+		    // correlate Pad GEM with extrapolated tracks
+		    for (const auto& point : padgem_points) {
+
+			    if(point->detector == 1 && fabs(extrapolation.position.Z() - 458.5) < 5. ) { 
+				    
+                                    double x = point->x;
+                                    double y = point->y;
+				    hPadGEMPoint_TrackX->Fill(x, extrapolation.position.X());
+				    hPadGEMPoint_TrackY->Fill(y, extrapolation.position.Y());
+				    
+				    double locDeltaX = x - extrapolation.position.X();
+				    double locDeltaY = y - extrapolation.position.Y();
+				    hPadGEMPoint_DeltaXY->Fill(locDeltaX, locDeltaY);
 			    }
 		    }
 

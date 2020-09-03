@@ -38,8 +38,8 @@ jerror_t DPadGEMPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   dgeom->GetTRDZ(dTRDz);
   
   // Get TRD geometry (needs to come from geometry file or CCDB?)
-  X0 = 0.0;
-  Y0 = 0.0;
+  X0 = 2.37;
+  Y0 = -63.93 - 5.0;
   pitch = 1.0;  // 10 mm
 
   return NOERROR;
@@ -66,11 +66,11 @@ jerror_t DPadGEMPoint_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 	for(uint i=0; i<hits.size(); i++){
 	
 		if (hits[i]->plane != 3) continue;
-		
+
 		// save new point
 		DGEMPoint* newPoint = new DGEMPoint;     
-		newPoint->x = X0 + hits[i]->strip%10 * pitch;
-		newPoint->y = Y0 + hits[i]->strip/10 * pitch;;
+		newPoint->x = X0 - (hits[i]->strip-4)%10 * pitch;
+		newPoint->y = Y0 + hits[i]->strip/10 * pitch;
 		newPoint->t_x = hits[i]->t;
 		newPoint->t_y = hits[i]->t;
 		newPoint->time = hits[i]->t;
