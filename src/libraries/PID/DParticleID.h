@@ -323,6 +323,9 @@ class DParticleID:public jana::JObject
 		double ONESIDED_PADDLE_MIDPOINT_MAG; //+/- this number for North/South
 		// time cut for cdc hits
 		double CDC_TIME_CUT_FOR_DEDX;
+        
+                bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta
+                bool CDC_TRUNCATE_DEDX;            // dE/dx truncation: ignore hits with highest dE
 
 		// CDC sag parameters
 		vector<vector<double> >max_sag;

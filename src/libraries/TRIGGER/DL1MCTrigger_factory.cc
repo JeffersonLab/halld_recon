@@ -8,6 +8,7 @@ using namespace std;
 #include <JANA/JApplication.h>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
+#include <DANA/DStatusBits.h>
 
 #include <HDDM/DEventSourceHDDM.h>
 
@@ -20,7 +21,7 @@ using namespace jana;
 #include "RCDB/ConfigParser.h"
 #endif
 
-
+static bool print_data_message = true;
 
 //------------------
 // init
@@ -348,20 +349,33 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	loop->Get(fcal_hits);
 	loop->Get(bcal_hits);
 
-
-	// Initialize random number generator
-	// Read seeds from hddm file
-	// Generate seeds according to the event number if they are not stored in hddm
-	// The proceedure is consistent with the mcsmear
-
-	UInt_t seed1 = 0;
-	UInt_t seed2 = 0;
-	UInt_t seed3 = 0;
-	
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
-	GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+
+	// This is temporary, to allow this simulation to be run on data
+	// to help out with trigger efficiency studies - sdobbs (Aug. 26, 2020)
+	if( loop->GetJEvent().GetStatusBit(kSTATUS_EVIO) ){
+		if(print_data_message) {
+			jout << "WARNING: Running L1 trigger simulation on EVIO data" << endl; 
+			print_data_message = false;
+		}
 	
-	gDRandom.SetSeeds(seed1, seed2, seed3);
+		// for data, don't add in baseline shifts, since they already exist
+		simu_baseline_fcal = 0;
+		simu_baseline_bcal = 0;
+	} else {
+		// Initialize random number generator
+		// Read seeds from hddm file
+		// Generate seeds according to the event number if they are not stored in hddm
+		// The proceedure is consistent with the mcsmear
+
+		UInt_t seed1 = 0;
+		UInt_t seed2 = 0;
+		UInt_t seed3 = 0;
+	
+		GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+	
+		gDRandom.SetSeeds(seed1, seed2, seed3);
+	}
 	
 	//	cout << endl;
 	//	cout << " Event = " << eventnumber << endl;
@@ -1400,7 +1414,7 @@ void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<d
     int col = fcalGeom.column(ch);
     table[row][col] = fcal_const_ch[ch];
   }
-  
+  	
 }
 
 void DL1MCTrigger_factory::Digitize(double adc_amp[sample], int adc_count[sample]){

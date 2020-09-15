@@ -53,7 +53,7 @@
 		// BCAL LED Downstream: FP Bit 10
 		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(10));
                 // BCAL LED Downstream: pseudo Trigger 10
-		locHist_Trigger_pseudo->Fill(5., locHist_L1bits_fp_twelvehundhits->GetBinContent(5));
+		locHist_Trigger_pseudo->Fill(5., locHist_L1bits_fp_twelvehundhits->GetBinContent(4));
 		// Random Trigger: FP Bit 12
 		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
 		// DIRC LED: FP Bit 15

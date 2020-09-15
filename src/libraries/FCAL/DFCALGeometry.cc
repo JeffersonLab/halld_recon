@@ -23,18 +23,17 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   
   // Check for presence of PbWO4 insert
   int insert_row_size=0;
-  geom->Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+  geom->GetFCALInsertRowSize(insert_row_size);
   m_insertSize=insertBlockSize()*double(insert_row_size/2);
 
   geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
   DVector2 XY0(m_FCALdX,m_FCALdY);
-  
+
   vector<double>block;
-  geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
+  geom->GetFCALBlockSize(block);
   double back=m_FCALfront+block[2];
-  geom->Get("//box[@name='LTB1']/@X_Y_Z",block);
+  geom->GetFCALInsertBlockSize(block);
   m_insertFront=0.5*(back+m_FCALfront-block[2]);
-  
   
   // Initilize the list of active blocks to false, to be adjusted for the
   // actual geometry below.

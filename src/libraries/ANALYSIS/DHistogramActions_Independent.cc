@@ -3973,3 +3973,53 @@ bool DHistogramAction_TrackMultiplicity::Perform_Action(JEventLoop* locEventLoop
 	return true;
 }
 
+// DHistogramAction_TriggerStudies
+// dHist_Trigger_FCALBCAL_Energy
+
+void DHistogramAction_TriggerStudies::Initialize(JEventLoop* locEventLoop)
+{
+
+	//CREATE THE HISTOGRAMS
+	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
+	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	{
+		CreateAndChangeTo_ActionDirectory();
+
+		string locHistName("Trigger_BCALFCAL_Energy");
+		if(gDirectory->Get(locHistName.c_str()) != NULL) //already created by another thread, or directory name is duplicate (e.g. two identical steps)
+			dHist_Trigger_FCALBCAL_Energy = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
+		else
+		{
+			dHist_Trigger_FCALBCAL_Energy = new TH2D("Trigger_BCALFCAL_Energy", ";GTP FCAL Energy [GeV] / 5 MeV;GTP BCAL Energy [GeV] / 5 MeV", dFCALBins, 0, dMaxFCALEnergy, dBCALBins, 0, dMaxBCALEnergy);
+		}
+
+		//Return to the base directory
+		ChangeTo_BaseDirectory();
+	}
+	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	if(Get_CalledPriorWithComboFlag())
+		return true; //else double-counting!
+
+	//CHECK TRIGGER TYPE
+	const DTrigger* locTrigger = NULL;
+	locEventLoop->GetSingle(locTrigger);
+	if(locTrigger == nullptr)
+		return true;
+
+
+	//FILL HISTOGRAMS
+	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
+	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
+	Lock_Action();
+	{
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
+	}
+	Unlock_Action();
+
+	return true;
+}
+
