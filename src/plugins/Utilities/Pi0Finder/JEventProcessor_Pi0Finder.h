@@ -29,23 +29,23 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   const char* className(void){return "JEventProcessor_Pi0Finder";}
 
  private:
-  jerror_t init(void);                                          ///< Called once at program start.
-  jerror_t brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber);  ///< Called every time a new run number is detected.
-  jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);       ///< Called every event.
-  jerror_t erun(void);                                          ///< Called every time run number changes, provided brun has been called.
-  jerror_t fini(void);                                          ///< Called after last event of last event source has been processed.
+  jerror_t init(void);						///< Called once at program start.
+  jerror_t brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber);	///< Called every time a new run number is detected.
+  jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
+  jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
+  jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
   vector< const DTrackWireBased* > filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
-
+  
   //For non-custom reaction-independent histograms, it is recommended that you simultaneously run the monitoring_hists plugin instead of defining them here
 
   DFCALGeometry m_fcalGeom;
-
+  
   double m_zTarget;
   double m_FCALUpstream;
 
   TTree* m_tree;
-
+  
   float m_xL;
   float m_yL;
   float m_zL;
@@ -54,7 +54,7 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   float m_yH;
   float m_zH;
   float m_eH;
-
+ 
 //-------------
   int m_nHitsH;
   float m_sumUShH;
@@ -84,6 +84,7 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   float m_asymUVShL;
   float m_speedShL;
   float m_dtTrShL;
+
   float m_disShL;
   float m_dtShL;
   float m_tTrL;
@@ -95,8 +96,9 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
 
   float m_qualL;
   float m_qualH;
-
+  
   float m_invM;
   int m_nTrk;
 };
 #endif // _JEventProcessor_Pi0Finder_
+
