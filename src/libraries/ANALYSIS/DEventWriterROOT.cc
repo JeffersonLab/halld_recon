@@ -1012,7 +1012,7 @@ void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranch
     setPullFlag(locReaction,STORE_PULL_INFO);
         
     //Get Pulls for the beam:
-    Particle_t beamPID = locReaction->Get_ReactionStep(0)->Get_InitialPID();
+    //Particle_t beamPID = locReaction->Get_ReactionStep(0)->Get_InitialPID();
     
     string particleCovM = "numEntries_ParticleErrM";
     string showerCovM = "numEntries_ShowerErrM";
@@ -2394,7 +2394,7 @@ string DEventWriterROOT::assignName(Particle_t someParticle, map<Particle_t,int>
         ostringstream convert;
         convert << index;
         addName = convert.str();
-        if(EnumString(someParticle) == "Gamma") {
+        if(strcmp(EnumString(someParticle),"Gamma")==0) {
             myName = "Photon" + addName;
         } else {
         	myName = EnumString(someParticle) + addName;
@@ -2590,6 +2590,45 @@ double DEventWriterROOT::getDiffSquaredErrP_Component(double yourRecComponent,do
     }
     
     return error_component;
+}
+
+// Get the difference in pull errors for the position
+vector< vector<double> > DEventWriterROOT::getSquaredErrX(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const{
+    
+    double x_pull = yourPullsMap.find(d_XxPull)->second;
+    double y_pull = yourPullsMap.find(d_XyPull)->second;
+    
+    double x_rec = particle->x();
+    double x_fit = particleFit->x();
+    
+    double y_rec = particle->y();
+    double y_fit = particleFit->y();
+    
+    double error_x = getDiffSquaredErrP_Component(x_rec,x_fit,x_pull);
+    double error_y = getDiffSquaredErrP_Component(y_rec,y_fit,y_pull);
+    
+    const TMatrixTSym<float> errMatrix = *( particle->errorMatrix() ); //--> Reconstructed errors!
+    double error_x_rec = errMatrix[3][3];
+    double error_y_rec = errMatrix[4][4];
+    
+    double error_x_fit = error_x_rec - error_x;
+    double error_y_fit = error_y_rec - error_y;
+    
+    vector <double> xComponent;
+    vector <double> yComponent;
+    
+    xComponent.push_back(error_x_rec);
+    xComponent.push_back(error_x_fit);
+    
+    yComponent.push_back(error_y_rec);
+    yComponent.push_back(error_y_fit);
+    
+    vector < vector<double> > myErrors;
+    myErrors.push_back(xComponent);
+    myErrors.push_back(yComponent);
+   
+    return myErrors;
+
 }
 
 //Get the difference in pull errors for the momentum
@@ -2799,7 +2838,7 @@ double DEventWriterROOT::getQPTPull(const DKinematicData* particle, const DKinem
         double pull_norm = dqpt_rec-dqpt_fit;
         //---------------------------
         if(pull_norm > 0.0){
-            myPTPull = (qpt_rec-qpt_fit)/pull_norm;
+	  myPTPull = (qpt_rec-qpt_fit)/sqrt(pull_norm);
         }
         //---------------------------
     }
@@ -2809,11 +2848,51 @@ double DEventWriterROOT::getQPTPull(const DKinematicData* particle, const DKinem
     return myPTPull;
 }
 
+//4.) D:
+//Get the error of D:
+double DEventWriterROOT::getDError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const
+{
+
+  double myDsq=particle->position().Perp2()+1e-8;
+  double myx=particle->x();
+  double myy=particle->y();
+
+  double myVarX=yourErrorMatrix[0][isFitted];
+  double myVarY=yourErrorMatrix[1][isFitted];
+  double myDError=(myx*myx*myVarX+myy*myy*myVarY)/myDsq;
+
+  return myDError;
+}
+
+//Go for the pull itself:
+double DEventWriterROOT::getDPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const
+{
+  double myDPull=-100.0;
+  
+  //Reconstructed values:
+  double D_rec=particle->position().Perp();
+  double dD_rec=getDError(particle,yourErrorMatrix,0);
+
+  //Fitted values:
+  double D_fit=particleFit->position().Perp();
+  double dD_fit=getDError(particle,yourErrorMatrix,1);
+
+  double pull_norm = dD_rec-dD_fit;
+  //---------------------------
+  if(pull_norm > 0.0){
+    myDPull = (D_rec-D_fit) / sqrt(pull_norm);
+  }
+  //---------------------------
+    
+  return myDPull;
+}
+
 //Create a vector containing all pulls:
 vector<double> DEventWriterROOT::collectTrackingPulls(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const
 {
     //1.) Get the pre-and post-fit errors:
     vector< vector<double> > myErrors = getSquaredErrP(particle,particleFit,yourPullsMap);
+    vector< vector<double> > myXErrors = getSquaredErrX(particle,particleFit,yourPullsMap);
     
     //2.) Calculate the pulls:
     //2.1.) q/pt:
@@ -2822,12 +2901,15 @@ vector<double> DEventWriterROOT::collectTrackingPulls(const DKinematicData* part
     double phi_pull = getPhiPull(particle,particleFit,myErrors);
     //2.3.) tan(lambda):
     double tanLambda_pull = getTanLambdaPull(particle,particleFit,myErrors);
+    //2.4.) D
+    double D_pull = getDPull(particle,particleFit,myXErrors);
     
     //3.) Store everything into a vector:
     vector<double> myTrackingPulls;
     myTrackingPulls.push_back(qpt_pull);
     myTrackingPulls.push_back(phi_pull);
     myTrackingPulls.push_back(tanLambda_pull);
+    myTrackingPulls.push_back(D_pull);
     
     return myTrackingPulls;
 }
@@ -2843,6 +2925,7 @@ void DEventWriterROOT::fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,
         locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "QPt_Pull"),myTrackingPulls[0],yourIndex);
         locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Phi_Pull"),myTrackingPulls[1],yourIndex);
         locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "tanLambda_Pull"),myTrackingPulls[2],yourIndex);
+	locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "D_Pull"),myTrackingPulls[3],yourIndex);
     }
 }
 

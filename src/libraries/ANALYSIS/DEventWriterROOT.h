@@ -214,7 +214,11 @@ class DEventWriterROOT : public JObject
 		 //Fill tree for 5x5-Matrices (showers):
 		void fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower) const;
 	
-		//GET TRACKING PULLS FROM KINEMATIC FITTER:q/pt, phi, tan(lambda), z, D (<-- this one has not been implemented yet)
+		//GET TRACKING PULLS FROM KINEMATIC FITTER:q/pt, phi, tan(lambda), z, D
+			
+		//Get the difference in pull errors for the position
+		vector< vector<double> > getSquaredErrX(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const;
+
 		//Get the difference in pull errors for the momentum
 		vector< vector<double> > getSquaredErrP(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const;
 
@@ -245,7 +249,13 @@ class DEventWriterROOT : public JObject
 		//Get the pull:
 		double getQPTPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const;
 
-		//Collect the trakcing pulls at once:
+		//Calulate the D pull
+		//Get the error for D:
+		double getDError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const;
+		//Get pull:
+		double getDPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const;
+
+		//Collect the tracking pulls at once:
 		vector<double> collectTrackingPulls(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const;
 
 		//Fill the tracking pulls into the tree:
