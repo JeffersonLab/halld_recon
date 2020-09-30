@@ -2445,6 +2445,7 @@ void DEventWriterROOT::setTreePullBranches(DTreeBranchRegister& locBranchRegiste
         locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"QPt_Pull"),locArraySizeString, yourNCombos);
         locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Phi_Pull"),locArraySizeString, yourNCombos);
         locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"tanLambda_Pull"),locArraySizeString, yourNCombos);
+	locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"D_Pull"),locArraySizeString, yourNCombos);
       
     }else if(yourFitType == d_P4AndVertexFit){
         //------------------------------------------------------------
@@ -2466,6 +2467,7 @@ void DEventWriterROOT::setTreePullBranches(DTreeBranchRegister& locBranchRegiste
             locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"QPt_Pull"),locArraySizeString, yourNCombos);
             locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Phi_Pull"),locArraySizeString, yourNCombos);
             locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"tanLambda_Pull"),locArraySizeString, yourNCombos);
+	    locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"D_Pull"),locArraySizeString, yourNCombos);
         }
         //------------------------------------------------------------
     }else if(yourFitType == d_VertexFit && !isNeutral){
@@ -2871,10 +2873,26 @@ double DEventWriterROOT::getDPull(const DKinematicData* particle, const DKinemat
   
   //Reconstructed values:
   double D_rec=particle->position().Perp();
+  double dx_rec=particle->x();
+  double dy_rec=particle->y();
+  double phi_rec=particle->momentum().Phi();
+  double cosphi_rec=cos(phi_rec);
+  double sinphi_rec=sin(phi_rec);
+  if ((dx_rec>0.0 && sinphi_rec>0.0) || (dy_rec<0.0 && cosphi_rec>0.0)
+      || (dy_rec>0.0 && cosphi_rec<0.0) || (dx_rec<0.0 && sinphi_rec<0.0))
+    D_rec*=-1.;
   double dD_rec=getDError(particle,yourErrorMatrix,0);
-
+  
   //Fitted values:
   double D_fit=particleFit->position().Perp();
+  double dx_fit=particleFit->x();
+  double dy_fit=particleFit->y();
+  double phi_fit=particleFit->momentum().Phi();
+  double cosphi_fit=cos(phi_fit);
+  double sinphi_fit=sin(phi_fit);
+  if ((dx_fit>0.0 && sinphi_fit>0.0) || (dy_fit<0.0 && cosphi_fit>0.0)
+      || (dy_fit>0.0 && cosphi_fit<0.0) || (dx_fit<0.0 && sinphi_fit<0.0))
+    D_fit*=-1.;
   double dD_fit=getDError(particle,yourErrorMatrix,1);
 
   double pull_norm = dD_rec-dD_fit;
