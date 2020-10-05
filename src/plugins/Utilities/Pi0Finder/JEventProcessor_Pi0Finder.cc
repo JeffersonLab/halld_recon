@@ -113,7 +113,7 @@ jerror_t JEventProcessor_Pi0Finder::init(void)
 	treeBranchRegister.Register_Single<Float_t>("qualL");
 	treeBranchRegister.Register_Single<Float_t>("qualH");
 	treeBranchRegister.Register_Single<Float_t>("invM");
-	//treeBranchRegister.Register_Single<Int_t>("nTrk");
+	treeBranchRegister.Register_Single<Int_t>("nTrk");
 
 	dTreeInterface->Create_Branches(treeBranchRegister);
 	//----------------------------------
@@ -163,6 +163,11 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 	vector<const DFCALCluster*> fcalClusters;
 	loop->Get(fcalClusters);
 
+	vector<const DChargedTrack*> chargedTracks;
+        loop->Get( chargedTracks );
+
+        dTreeFillData.Fill_Single<Int_t>("nTrk", chargedTracks.size());
+	
 
 	map< const DFCALShower*, double > showerQualityMap;
 	vector< const DNeutralShower* > neutralShowers;
