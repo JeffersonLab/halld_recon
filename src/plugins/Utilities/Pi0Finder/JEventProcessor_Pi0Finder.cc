@@ -157,33 +157,11 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 	vector<const DFCALShower*> showerVector;
 	loop->Get( showerVector );
 
-	vector< const DTrackTimeBased* > allTBTracks;
-	loop->Get( allTBTracks );
-
 	vector<const DEventRFBunch*> eventRFBunches;
 	loop->Get( eventRFBunches );
 
-
-	vector< const DTrackWireBased* > allWBTracks;
-	loop->Get( allWBTracks );	
-	vector< const DTrackWireBased* > wbTracks = filterWireBasedTracks( allWBTracks );
-
-	dTreeFillData.Fill_Single<Int_t>("nTrk", wbTracks.size());
-
 	vector<const DFCALCluster*> fcalClusters;
 	loop->Get(fcalClusters);
-
-	//	vector<const DParticleCombo*> partCombo;
-
-	//	loop->Get(partCombo);
-
-	//
-	//	const DParticleComboStep* initialStep = partCombo->Get_ParticleComboStep( 0 );
-
-	//	DLorentzVector beam = initialStep->Get_InitialParticle_Measured()->lorentzMomentum();
-	//TLorentzVector locBeamP4 = dComboBeamWrapper->Get_P4();
-
-	//	m_beamE = beam.E();
 
 
 	map< const DFCALShower*, double > showerQualityMap;
@@ -403,54 +381,4 @@ jerror_t JEventProcessor_Pi0Finder::fini(void)
 	delete dTreeInterface;
 
 	return NOERROR;
-}
-
-
-vector< const DTrackWireBased* >
-JEventProcessor_Pi0Finder::filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const {
-
-	vector< const DTrackWireBased* > finalTracks;
-	map< unsigned int, vector< const DTrackWireBased* > > sortedTracks;
-
-	// first sort the wire based tracks into lists with a common candidate id
-	// this means that they all come from the same track in the detector
-
-	for( unsigned int i = 0; i < wbTracks.size(); ++i ){
-
-		unsigned int id = wbTracks[i]->candidateid;
-
-		if( sortedTracks.find( id ) == sortedTracks.end() ){
-
-			sortedTracks[id] = vector< const DTrackWireBased* >();
-		}
-
-		sortedTracks[id].push_back( wbTracks[i] );
-	}
-
-	// now loop through that list of unique tracks and for each set
-	// of wire based tracks, choose the one with the highest FOM
-	// (this is choosing among different particle hypotheses)
-
-	for( map< unsigned int, vector< const DTrackWireBased* > >::const_iterator
-			anId = sortedTracks.begin();
-			anId != sortedTracks.end(); ++anId ){
-
-		double maxFOM = 0;
-		unsigned int bestIndex = 0;
-
-		for( unsigned int i = 0; i < anId->second.size(); ++i ){
-
-			if( anId->second[i]->Ndof < 15 ) continue;
-
-			if( anId->second[i]->FOM > maxFOM ){
-
-				maxFOM = anId->second[i]->FOM;
-				bestIndex = i;
-			}
-		}
-
-		finalTracks.push_back( anId->second[bestIndex] );
-	}
-
-	return finalTracks;
 }
