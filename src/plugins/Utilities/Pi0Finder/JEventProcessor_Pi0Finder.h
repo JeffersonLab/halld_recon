@@ -14,6 +14,7 @@
 #include <HDDM/DEventWriterREST.h>
 #include <ANALYSIS/DHistogramActions.h>
 #include <FCAL/DFCALGeometry.h>
+#include "ANALYSIS/DTreeInterface.h"
 
 using namespace jana;
 using namespace std;
@@ -39,66 +40,70 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   
   //For non-custom reaction-independent histograms, it is recommended that you simultaneously run the monitoring_hists plugin instead of defining them here
 
-  DFCALGeometry m_fcalGeom;
+//  DFCALGeometry m_fcalGeom;
   
   double m_zTarget;
   double m_FCALUpstream;
 
-  TTree* m_tree;
+//  TTree* m_tree;
   
-  float m_xL;
-  float m_yL;
-  float m_zL;
-  float m_eL;
-  float m_xH;
-  float m_yH;
-  float m_zH;
-  float m_eH;
+  float xL;
+  float yL;
+  float zL;
+  float eL;
+  float xH;
+  float yH;
+  float zH;
+  float eH;
  
 //-------------
-  int m_nHitsH;
-  float m_sumUShH;
-  float m_sumVShH;
-  float m_e1e9ShH;
-  float m_e9e25ShH;
-  float m_asymUVShH;
-  float m_speedShH;
-  float m_dtTrShH;
+  int nHitsH;
+  float sumUShH;
+  float sumVShH;
+  float e1e9ShH;
+  float e9e25ShH;
+  float asymUVShH;
+  float speedShH;
+  float dtTrShH;
 
-  float m_t0RF;
-  float m_disShH;
-  float m_dtShH;
-  float m_tTrH;
-  float m_tShH;
+  float t0RF;
+  float disShH;
+  float dtShH;
+  float tTrH;
+  float tShH;
 
 
-  float m_beamE;
-  int m_typeShL;
-  int m_typeShH;
+  float beamE;
+  int typeShL;
+  int typeShH;
 
-  int m_nHitsL;
-  float m_sumUShL;
-  float m_sumVShL;
-  float m_e1e9ShL;
-  float m_e9e25ShL;
-  float m_asymUVShL;
-  float m_speedShL;
-  float m_dtTrShL;
+  int nHitsL;
+  float sumUShL;
+  float sumVShL;
+  float e1e9ShL;
+  float e9e25ShL;
+  float asymUVShL;
+  float speedShL;
+  float dtTrShL;
 
-  float m_disShL;
-  float m_dtShL;
-  float m_tTrL;
-  float m_tShL;
-  float m_eHitL;
-  float m_eHitH;
+  float disShL;
+  float dtShL;
+  float tTrL;
+  float tShL;
+  float eHitL;
+  float eHitH;
 //-------------
 
 
-  float m_qualL;
-  float m_qualH;
+  float qualL;
+  float qualH;
   
-  float m_invM;
-  int m_nTrk;
+  float invM;
+  int nTrk;
+
+DTreeInterface* dTreeInterface;
+static thread_local DTreeFillData dTreeFillData;
+
 };
 #endif // _JEventProcessor_Pi0Finder_
 

@@ -46,7 +46,7 @@ extern "C"
 
 	}
 } // "C"
-
+thread_local DTreeFillData JEventProcessor_Pi0Finder::dTreeFillData;
 //------------------
 // init
 //------------------
@@ -56,67 +56,68 @@ jerror_t JEventProcessor_Pi0Finder::init(void)
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 
-	japp->RootWriteLock();
+	//	japp->RootWriteLock();
 
+	dTreeInterface = DTreeInterface::Create_DTreeInterface("fcalPi0", "tree_fcalPi0.root");
 
+	DTreeBranchRegister treeBranchRegister;
 
-	m_tree = new TTree( "fcalPi0", "Showers" );
+	treeBranchRegister.Register_Single<Float_t>("xL");
+	treeBranchRegister.Register_Single<Float_t>("yL");
+	treeBranchRegister.Register_Single<Float_t>("zL");
+	treeBranchRegister.Register_Single<Float_t>("eL");
 
-	m_tree->Branch( "xL", &m_xL, "xL/F" );
-	m_tree->Branch( "yL", &m_yL, "yL/F" );
-	m_tree->Branch( "zL", &m_zL, "zL/F" );
-	m_tree->Branch( "eL", &m_eL, "eL/F" );
+	treeBranchRegister.Register_Single<Float_t>("xH");
+	treeBranchRegister.Register_Single<Float_t>("yH");
+	treeBranchRegister.Register_Single<Float_t>("zH");
+	treeBranchRegister.Register_Single<Float_t>("eH");
 
-	m_tree->Branch( "xH", &m_xH, "xH/F" );
-	m_tree->Branch( "yH", &m_yH, "yH/F" );
-	m_tree->Branch( "zH", &m_zH, "zH/F" );
-	m_tree->Branch( "eH", &m_eH, "eH/F" );
+	treeBranchRegister.Register_Single<Int_t>("typeShL");
+	treeBranchRegister.Register_Single<Int_t>("typeShH");
+
+	treeBranchRegister.Register_Single<Float_t>("dtShL");
+	treeBranchRegister.Register_Single<Float_t>("tTrL");
+	treeBranchRegister.Register_Single<Float_t>("tShL");
+	treeBranchRegister.Register_Single<Float_t>("disShL");
+
+	treeBranchRegister.Register_Single<Float_t>("dtShH");
+	treeBranchRegister.Register_Single<Float_t>("tTrH");
+	treeBranchRegister.Register_Single<Float_t>("tShH");
+	treeBranchRegister.Register_Single<Float_t>("disShH");
+
+	treeBranchRegister.Register_Single<Float_t>("t0RF");
 	//----------------------------------
-	m_tree->Branch( "typeShL", &m_typeShL, "typeShL/I" ); 
-	m_tree->Branch("dtShL", &m_dtShL, "dtShL/F");
-	m_tree->Branch("tTrL", &m_tTrL, "tTrL/F");
-	m_tree->Branch("tShL", &m_tShL, "tShL/F");
-	m_tree->Branch("disShL", &m_disShL, "disShL/F");
 
-	m_tree->Branch( "speedShL", &m_speedShL, "speedShL/F" );
-	m_tree->Branch( "e1e9ShL", &m_e1e9ShL, "e1e9ShL/F" );
-	m_tree->Branch( "e9e25ShL", &m_e9e25ShL, "e9e25ShL/F" );
-	m_tree->Branch( "sumUShL", &m_sumUShL, "sumUShL/F" );
-	m_tree->Branch( "sumVShL", &m_sumVShL, "sumVShL/F" );
-	m_tree->Branch( "asymUVShL", &m_asymUVShL, "asymUVShL/F" );
-	m_tree->Branch( "nHitsL", &m_nHitsL, "nHitsL/I" );
-	m_tree->Branch( "dtTrShL", &m_dtTrShL, "dtTrShL/F");
+	treeBranchRegister.Register_Single<Float_t>("speedShL");
+	treeBranchRegister.Register_Single<Float_t>("e1e9ShL");
+	treeBranchRegister.Register_Single<Float_t>("e9e25ShL");
+	treeBranchRegister.Register_Single<Float_t>("sumUShL");
+	treeBranchRegister.Register_Single<Float_t>("sumVShL");
+	treeBranchRegister.Register_Single<Float_t>("asymUVShL");
+	treeBranchRegister.Register_Single<Int_t>("nHitsL");
+	treeBranchRegister.Register_Single<Float_t>("dtTrShL");
 
-	//	m_tree->Branch( "eHitL", &m_eHitL, "eHitL/F");
-	//	m_tree->Branch( "eHitH", &m_eHitH, "eHitH/F");
 
-	//	m_tree->Branch( "beamE", &m_beamE, "beamE/F");
+	treeBranchRegister.Register_Single<Float_t>("speedShH");
+	treeBranchRegister.Register_Single<Float_t>("e1e9ShH");
+	treeBranchRegister.Register_Single<Float_t>("e9e25ShH");
+	treeBranchRegister.Register_Single<Float_t>("sumUShH");
+	treeBranchRegister.Register_Single<Float_t>("sumVShH");
+	treeBranchRegister.Register_Single<Float_t>("asymUVShH");
+	treeBranchRegister.Register_Single<Int_t>("nHitsH");
+	treeBranchRegister.Register_Single<Float_t>("dtTrShH");
+	treeBranchRegister.Register_Single<Float_t>( "beamE");
 	//
 
 
-	m_tree->Branch("t0RF", &m_t0RF, "t0RF/F");
-	m_tree->Branch( "typeShH", &m_typeShH, "typeShH/I" );
-	m_tree->Branch("dtShH", &m_dtShH, "dtShH/F");
-	m_tree->Branch("tTrH", &m_tTrH, "tTrH/F");
-	m_tree->Branch("tShH", &m_tShH, "tShH/F");
-	m_tree->Branch("disShH", &m_disShH, "disShH/F");
+	treeBranchRegister.Register_Single<Float_t>("qualL");
+	treeBranchRegister.Register_Single<Float_t>("qualH");
+	treeBranchRegister.Register_Single<Float_t>("invM");
+	treeBranchRegister.Register_Single<Int_t>("nTrk");
 
-	m_tree->Branch( "speedShH", &m_speedShH, "speedShH/F" );
-	m_tree->Branch( "dtTrShH", &m_dtTrShH, "dtTrShH/F");
-	m_tree->Branch( "e1e9ShH", &m_e1e9ShH, "e1e9ShH/F" );
-	m_tree->Branch( "e9e25ShH", &m_e9e25ShH, "e9e25ShH/F" );
-	m_tree->Branch( "sumUShH", &m_sumUShH, "sumUShH/F" );
-	m_tree->Branch( "sumVShH", &m_sumVShH, "sumVShH/F" );
-	m_tree->Branch( "asymUVShH", &m_asymUVShH, "asymUVShH/F" );
-	m_tree->Branch( "nHitsH", &m_nHitsH, "nHitsH/I" );
+	dTreeInterface->Create_Branches(treeBranchRegister);
 	//----------------------------------
-	m_tree->Branch( "qualL", &m_qualL, "qualL/F" );
-	m_tree->Branch( "qualH", &m_qualH, "qualH/F" );
-
-	m_tree->Branch( "invM", &m_invM, "invM/F" );
-	m_tree->Branch( "nTrk", &m_nTrk, "nTrk/I" );
-
-	japp->RootUnLock();
+	//	japp->RootUnLock();
 
 	return NOERROR;
 }
@@ -162,10 +163,12 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 	vector<const DEventRFBunch*> eventRFBunches;
 	loop->Get( eventRFBunches );
 
+
 	vector< const DTrackWireBased* > allWBTracks;
-	loop->Get( allWBTracks );
+	loop->Get( allWBTracks );	
 	vector< const DTrackWireBased* > wbTracks = filterWireBasedTracks( allWBTracks );
 
+	dTreeFillData.Fill_Single<Int_t>("nTrk", wbTracks.size());
 
 	vector<const DFCALCluster*> fcalClusters;
 	loop->Get(fcalClusters);
@@ -214,7 +217,7 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 		const DParticleComboStep* initialStep = combo->Get_ParticleComboStep( 0 );
 		DLorentzVector beam = initialStep->Get_InitialParticle_Measured()->lorentzMomentum();
 
-		m_beamE = beam.E();
+		dTreeFillData.Fill_Single<Float_t>("beamE", beam.E());
 
 		map<const DFCALShower*, int> showerMatchIndex;
 		map<const DFCALShower*, const DKinematicData*> showerMatchTrack;
@@ -251,90 +254,15 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 
 
 
-
-		// entering the tree-filling, thread-unsafe, region...
-
-
-		/*	for( vector< const DFCALCluster* >::const_iterator clItr = fcalClusters.begin();
-			clItr != fcalClusters.end();  ++clItr ){
-			const DFCALCluster* cluster=*clItr;
-
-			vector< const DFCALHit* > hitVec;
-			cluster->Get( hitVec );
-
-			for( vector< const DFCALHit* >::const_iterator hit = hitVec.begin();
-			hit != hitVec.end(); ++hit ){
-
-			m_eHitL = (**hit).E;
-
-			}
-
-
-
-			}*/
-
-
-
-
-
-
-
 		DVector3 targetCenter( 0, 0, m_zTarget ); 
-		m_nTrk = wbTracks.size();
-		japp->RootFillLock(this);  
 
 
-		for( size_t iSh = 0; iSh < fcalClusters.size(); ++iSh ){
-			for( size_t jSh = iSh+1; jSh < fcalClusters.size(); ++jSh ){
-
-
-
-
-
-
-				const DFCALCluster* shL = ( fcalClusters[iSh]->getEnergy() >
-						fcalClusters[jSh]->getEnergy() ?
-						fcalClusters[jSh] : fcalClusters[iSh] );
-
-				const DFCALCluster* shH = ( fcalClusters[iSh]->getEnergy() <
-						fcalClusters[jSh]->getEnergy() ?
-						fcalClusters[jSh] : fcalClusters[iSh] );
-
-
-
-
-
-				/*	vector< const DFCALHit* > hitVec;
-					shL->Get( hitVec );
-
-					for( vector< const DFCALHit* >::const_iterator hit = hitVec.begin();
-					hit != hitVec.end(); ++hit ){
-
-					m_eHitL = (**hit).E;
-
-					}
-
-					vector< const DFCALHit* > hitVecH;
-					shH->Get(hitVecH);
-					for( vector< const DFCALHit* >::const_iterator hit = hitVecH.begin();
-					hit != hitVecH.end(); ++hit){
-
-
-
-					m_eHitH = (**hit).E;
-					}
-					*/
-					} 
-
-
-		}
+		dTreeFillData.Fill_Single<Float_t>("t0RF", eventRFBunches[0]->dTime);
+		t0RF = eventRFBunches[0]->dTime;
 
 
 		for( size_t iSh = 0; iSh < showerVector.size(); ++iSh ){
 			for( size_t jSh = iSh+1; jSh < showerVector.size(); ++jSh ){
-
-
-
 
 
 
@@ -348,88 +276,105 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 
 				DVector3 posL = shL->getPosition();
 				posL.SetZ( posL.Z() - m_zTarget );
-				m_xL = posL.X();
-				m_yL = posL.Y();
-				m_zL = posL.Z();
-				m_eL = shL->getEnergy();
-				m_qualL = showerQualityMap[shL];
-				posL.SetMag( m_eL );
-				DLorentzVector p4L( posL, m_eL );
+				dTreeFillData.Fill_Single<Float_t>("xL", posL.X());
+				dTreeFillData.Fill_Single<Float_t>("yL", posL.Y());
+				dTreeFillData.Fill_Single<Float_t>("zL", posL.Z());
+				dTreeFillData.Fill_Single<Float_t>("eL", shL->getEnergy());
+				dTreeFillData.Fill_Single<Float_t>("qualL", showerQualityMap[shL]);
+				eL = shL->getEnergy();
+				posL.SetMag( eL );
+				DLorentzVector p4L( posL, eL );
 				//--------------------
 
-				m_t0RF = eventRFBunches[0]->dTime;
+				dTreeFillData.Fill_Single<Float_t>("disShL", ( shL->getPosition() - targetCenter ).Mag());
+				disShL =  ( shL->getPosition() - targetCenter ).Mag();
+				dTreeFillData.Fill_Single<Float_t>("dtShL", shL->getTime() - t0RF);
+				dtShL = shL->getTime() - t0RF;
+				dTreeFillData.Fill_Single<Float_t>("speedShL", disShL/dtShL);
+
+				dTreeFillData.Fill_Single<Float_t>("e1e9ShL", shL->getE1E9());
+				dTreeFillData.Fill_Single<Float_t>("e9e25ShL", shL->getE9E25());
+				dTreeFillData.Fill_Single<Float_t>("sumUShL", shL->getSumU());
+				dTreeFillData.Fill_Single<Float_t>("sumVShL", shL->getSumV());
+
+				sumUShL = shL->getSumU();
+				sumVShL = shL->getSumV();
+
+				dTreeFillData.Fill_Single<Float_t>("asymUVShL", ( sumUShL - sumVShL ) / ( sumUShL + sumVShL ));
+				dTreeFillData.Fill_Single<Int_t>("nHitsL", shL->getNumBlocks());
+				dTreeFillData.Fill_Single<Float_t>("tTrL", shL->getTimeTrack());
+				dTreeFillData.Fill_Single<Float_t>("tShL", shL->getTime());
+				tTrL = shL->getTimeTrack();
+				tShL = shL->getTime();
+				dTreeFillData.Fill_Single<Float_t>("dtTrShL", dtShL - tTrL -0.3);
 
 
-				m_disShL = ( shL->getPosition() - targetCenter ).Mag();
-				m_dtShL = shL->getTime() - m_t0RF;
-				m_speedShL = m_disShL/m_dtShL;
+				dTreeFillData.Fill_Single<Float_t>("disShH", ( shH->getPosition() - targetCenter ).Mag());
+				disShH =( shH->getPosition() - targetCenter ).Mag(); 
+				dTreeFillData.Fill_Single<Float_t>("dtShH", shH->getTime() - t0RF);
+				dtShH =  shH->getTime() - t0RF;
+				dTreeFillData.Fill_Single<Float_t>("speedShH", disShH/dtShH);
 
-				m_e1e9ShL = shL->getE1E9();
-				m_e9e25ShL = shL->getE9E25();
-				m_sumUShL = shL->getSumU();
-				m_sumVShL = shL->getSumV();
-				m_asymUVShL = ( m_sumUShL - m_sumVShL ) / ( m_sumUShL + m_sumVShL );
-				m_nHitsL = shL->getNumBlocks();
-				m_tTrL = shL->getTimeTrack();
-				m_tShL = shL->getTime();
-				m_dtTrShL = m_dtShL - m_tTrL -0.3;
+				dTreeFillData.Fill_Single<Float_t>("e1e9ShH", shH->getE1E9());
+				dTreeFillData.Fill_Single<Float_t>("e9e25ShH", shH->getE9E25());
+				dTreeFillData.Fill_Single<Float_t>("sumUShH", shH->getSumU());
+				dTreeFillData.Fill_Single<Float_t>("sumVShH", shH->getSumV());
 
+				sumUShH = shH->getSumU();
+				sumVShH = shH->getSumV();
 
+				dTreeFillData.Fill_Single<Float_t>("asymUVShH", ( sumUShH - sumVShH ) / ( sumUShH + sumVShH ));
+				dTreeFillData.Fill_Single<Int_t>("nHitsH", shH->getNumBlocks());
+				dTreeFillData.Fill_Single<Float_t>("tTrH", shH->getTimeTrack());
+				dTreeFillData.Fill_Single<Float_t>("tShH", shH->getTime());
 
-				m_disShH = ( shH->getPosition() - targetCenter ).Mag();
-				m_dtShH = shH->getTime() - m_t0RF;
-				m_speedShH = m_disShH/m_dtShH;
-
-				m_e1e9ShH = shH->getE1E9();
-				m_e9e25ShH = shH->getE9E25();
-				m_sumUShH = shH->getSumU();
-				m_sumVShH = shH->getSumV();
-				m_asymUVShH = ( m_sumUShH - m_sumVShH ) / ( m_sumUShH + m_sumVShH );
-				m_nHitsH = shH->getNumBlocks();
-				m_tTrH = shH->getTimeTrack();
-				m_tShH = shH->getTime();
-				m_dtTrShH = m_dtShH - m_tTrH - 0.3;
+				tTrH = shH->getTimeTrack();
+				tShH = shH->getTime();
+				dTreeFillData.Fill_Single<Float_t>("dtTrShH", dtShH - tTrH - 0.3);
 				//--------------------
 				if( showerMatchIndex.find(shL) != showerMatchIndex.end()){
-					m_typeShL =1;
+					typeShL =1;
 				}
 				else if( find(pi0Showers.begin(), pi0Showers.end(), shL) !=pi0Showers.end()){
-					m_typeShL=0;
+					typeShL=0;
 				}
 				else{
-					m_typeShL=2;
+					typeShL=2;
 				}
 
-
-
+				dTreeFillData.Fill_Single<Int_t>("typeShL", typeShL);			
 
 				if( showerMatchIndex.find(shH) != showerMatchIndex.end()){
-					m_typeShH =1;
+					typeShH =1;
 				}
 				else if( find(pi0Showers.begin(), pi0Showers.end(), shH) !=pi0Showers.end()){
-					m_typeShH=0;
+					typeShH=0;
 				}
 				else{
-					m_typeShH=2;
+					typeShH=2;
 				}
+
+				dTreeFillData.Fill_Single<Int_t>("typeShH", typeShH);			
 
 				DVector3 posH = shH->getPosition();
 				posH.SetZ( posH.Z() - m_zTarget );
-				m_xH = posH.X();
-				m_yH = posH.Y();
-				m_zH = posH.Z();
-				m_eH = shH->getEnergy();
-				m_qualH = showerQualityMap[shH];
-				posH.SetMag( m_eH );
-				DLorentzVector p4H( posH, m_eH );
+				dTreeFillData.Fill_Single<Float_t>("xH", posH.X());
+				dTreeFillData.Fill_Single<Float_t>("yH", posH.Y());
+				dTreeFillData.Fill_Single<Float_t>("zH", posH.Z());
+				dTreeFillData.Fill_Single<Float_t>("eH", shH->getEnergy());
+				dTreeFillData.Fill_Single<Float_t>("qualH", showerQualityMap[shH]);
+				eH = shH->getEnergy();
+				posH.SetMag( eH );
+				DLorentzVector p4H( posH, eH );
 
-				m_invM = ( p4L + p4H ).M();
+				dTreeFillData.Fill_Single<Float_t>("invM", ( p4L + p4H ).M());
 
-				m_tree->Fill();
+				dTreeInterface->Fill(dTreeFillData);
+				//	m_tree->Fill();
 			}
 		}
 
-		japp->RootFillUnLock(this);
+		//	japp->RootFillUnLock(this);
 
 	}
 	return NOERROR;
@@ -452,9 +397,11 @@ jerror_t JEventProcessor_Pi0Finder::erun(void)
 jerror_t JEventProcessor_Pi0Finder::fini(void)
 {
 	// Called before program exit after event processing is finished.
-	japp->RootWriteLock();
-	m_tree->Write();
-	japp->RootUnLock();
+	//japp->RootWriteLock();
+	//m_tree->Write();
+	//japp->RootUnLock();
+	delete dTreeInterface;
+
 	return NOERROR;
 }
 
