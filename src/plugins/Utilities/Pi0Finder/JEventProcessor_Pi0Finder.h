@@ -36,8 +36,6 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-  vector< const DTrackWireBased* > filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
-  
   //For non-custom reaction-independent histograms, it is recommended that you simultaneously run the monitoring_hists plugin instead of defining them here
 
 //  DFCALGeometry m_fcalGeom;
@@ -99,7 +97,7 @@ class JEventProcessor_Pi0Finder : public jana::JEventProcessor
   float qualH;
   
   float invM;
-  int nTrk;
+ // int nTrk;
 
 DTreeInterface* dTreeInterface;
 static thread_local DTreeFillData dTreeFillData;
