@@ -113,7 +113,7 @@ jerror_t JEventProcessor_Pi0Finder::init(void)
 	treeBranchRegister.Register_Single<Float_t>("qualL");
 	treeBranchRegister.Register_Single<Float_t>("qualH");
 	treeBranchRegister.Register_Single<Float_t>("invM");
-	treeBranchRegister.Register_Single<Int_t>("nTrk");
+	//treeBranchRegister.Register_Single<Int_t>("nTrk");
 
 	dTreeInterface->Create_Branches(treeBranchRegister);
 	//----------------------------------
