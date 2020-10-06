@@ -2226,7 +2226,8 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(primex_target_exists) {
 
      z_target = xyz_BETG[2] + xyz_target[2] + xyz_detector[2];
-     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
+
+     //     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
      
      jgeom->SetVerbose(1);   // reenable error messages
      return true;
