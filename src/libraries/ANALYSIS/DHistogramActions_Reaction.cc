@@ -2014,6 +2014,8 @@ bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DPa
 
 void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 {
+        gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", dHistDependenceFlag);
+
 	auto locReaction = Get_Reaction();
 	DKinFitType locKinFitType = locReaction->Get_KinFitType();
 	if(locKinFitType == d_NoFit)
