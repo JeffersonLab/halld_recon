@@ -336,26 +336,6 @@ int main(int argC, char* argV[])
    "#include <H5Spublic.h>\n"
    "#include <H5Dpublic.h>\n"
    "#include <H5LTpublic.h>\n"
-   "\n"
-   "#define HDF5_CHUNK_SIZE 100\n"
-   "// gzip compression (default)\n"
-   "//#define HDF5_GZIP_COMPRESSION 1\n"
-   "// bzip2 lossless compression used by PyTables\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)307\n"
-   "// Blosc lossless compression used by PyTables\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32001\n"
-   "// bitshuffle shuffle filter at bit level instead of byte level\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32008\n"
-   "// JPEG-XR compression filter used in jpeg images\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32007\n"
-   "// LZ4 fast lossless compression algorithm\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32004\n"
-   "// LZF fast lossless compression used by H5Py project\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32000\n"
-   "// modified LZMA compression filter (MAFISC)\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32002\n"
-   "// zfp rate, accuracy, or precision bounded compression for arrays of floats\n"
-   "//#define HDF5_PLUGIN_FILTER (H5Z_filter_t)32013\n"
    "#endif\n"
    "\n"
    "#define MY_SETUP thread_private_data *my_private = lookup_private_data();\n"
@@ -385,6 +365,28 @@ int main(int argC, char* argV[])
    "   k_hddm_anyURI,\n"
    "   k_hddm_Particle_t\n"
    "};\n"
+   "\n"
+   "#ifdef HDF5_SUPPORT\n"
+   "#define HDF5_DEFAULT_CHUNK_SIZE 100\n"
+   "// gzip standard compression provided by hdf5\n"
+   "const H5Z_filter_t k_hdf5_gzip_filter(H5Z_FILTER_DEFLATE);\n"
+   "// bzip2 lossless compression used by PyTables\n"
+   "const H5Z_filter_t k_hdf5_bzip2_plugin(307);\n"
+   "// Blosc lossless compression used by PyTables\n"
+   "const H5Z_filter_t k_hdf5_blosc_plugin(32001);\n"
+   "// bitshuffle shuffle filter at bit level instead of byte level\n"
+   "const H5Z_filter_t k_hdf5_bshuf_plugin(32008);\n"
+   "// JPEG-XR compression filter used in jpeg images\n"
+   "const H5Z_filter_t k_hdf5_jpeg_plugin(32007);\n"
+   "// LZ4 fast lossless compression algorithm\n"
+   "const H5Z_filter_t k_hdf5_lz4_plugin(32004);\n"
+   "// LZF fast lossless compression used by H5Py project\n"
+   "const H5Z_filter_t k_hdf5_lzf_plugin(32000);\n"
+   "// modified LZMA compression filter (MAFISC)\n"
+   "const H5Z_filter_t k_hdf5_lzma_plugin(32002);\n"
+   "// zfp rate, accuracy, or precision bounded compression for arrays of floats\n"
+   "const H5Z_filter_t k_hdf5_zfp_plugin(32013);\n"
+   "#endif\n"
    "\n"
    "class HDDM;\n"
    "class istream;\n"
@@ -909,14 +911,14 @@ int main(int argC, char* argV[])
    "   void debug_print() {\n"
    "      std::cout << \"HDDM_ElementList<T> contents printout:\"\n"
    "                << std::endl\n"
-   "                << \"    this     = \" << &*this << std::endl\n"
-   "                << \"    m_parent = \" << m_parent << std::endl\n"
-   "                << \"    m_host   = \" << m_parent << std::endl\n"
-   "                << \"    m_size   = \" << m_size << std::endl\n"
-   "                << \"    m_ref    = \" << m_ref << std::endl\n"
+   "                << \"    this         = \" << &*this << std::endl\n"
+   "                << \"    m_parent     = \" << m_parent << std::endl\n"
+   "                << \"    m_host_plist = \" << m_host_plist << std::endl\n"
+   "                << \"    m_size       = \" << m_size << std::endl\n"
+   "                << \"    m_ref        = \" << m_ref << std::endl\n"
    "                << \"    m_first_iter = \" << m_first_iter.address()\n"
    "                << std::endl\n"
-   "                << \"    m_last_iter = \" << m_last_iter.address()\n"
+   "                << \"    m_last_iter  = \" << m_last_iter.address()\n"
    "                << std::endl;\n"
    "   }\n"
    "\n"
@@ -1073,7 +1075,9 @@ int main(int argC, char* argV[])
    "         iter->m_parent = parent;\n"
    "         iter->m_host = host;\n"
    "      }\n"
-   "      --m_last_iter;\n"
+   "      if (m_size) {\n"
+   "         --m_last_iter;\n"
+   "      }\n"
    "   }\n"
    "   void deflate() {\n"
    "      iterator iter = m_host_plist->begin();\n"
@@ -2449,6 +2453,20 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << std::endl
             << "   static herr_t hdf5FileClose(hid_t file_id);"
             << std::endl
+            << "   static herr_t hdf5FileStamp(hid_t file_id, char **tags=0);"
+            << std::endl
+            << "   static herr_t hdf5FileCheck(hid_t file_id, char **tags=0);"
+            << std::endl
+            << "   static herr_t hdf5SetChunksize(hid_t file_id, int chunksize);"
+            << std::endl
+            << "   static int hdf5GetChunksize(hid_t file_id);"
+            << std::endl
+            << "   static herr_t hdf5SetFilters(hid_t file_id,"
+            << " std::vector<H5Z_filter_t> &filters);"
+            << std::endl
+            << "   static herr_t hdf5GetFilters(hid_t file_id,"
+            << " std::vector<H5Z_filter_t> &filters);"
+            << std::endl
             << " private:" << std::endl
             << "   static std::map<std::string, hid_t> s_hdf5_datatype;"
             << std::endl
@@ -2479,7 +2497,6 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << "   hsize_t m_hdf5_record_extent;" << std::endl
             << "   std::vector<std::string*> m_hdf5_strings;"
             << std::endl
-            << "   char *my_docstring;" << std::endl
             << "#endif" << std::endl;
    }
    hFile << "};" << std::endl << std::endl;
@@ -3401,6 +3418,96 @@ void CodeBuilder::writeClassimp(DOMElement* el)
          << "}" << std::endl;
 
    if (tagS == "HDDM") {
+      cFile << "herr_t " << tagS.simpleType()
+            << "::hdf5FileStamp(hid_t file_id, char **tags)" << std::endl
+            << "{" << std::endl
+            << "   std::string stamp(DocumentString());" << std::endl
+            << "   while (tags != 0) {" << std::endl
+            << "      stamp += \"<stamptag>\";" << std::endl
+            << "      stamp += *tags;" << std::endl
+            << "      stamp += \"</stamptag>\\n\";" << std::endl
+            << "   }" << std::endl
+            << "   hid_t stamp_tid = H5Tcopy(H5T_C_S1);" << std::endl
+            << "   H5Tset_size(stamp_tid, H5T_VARIABLE);" << std::endl
+            << "   hsize_t dims[1] = {1};" << std::endl
+            << "   hsize_t maxdims[1] = {1};" << std::endl
+            << "   hid_t stamp_sid = H5Screate_simple(1, dims, maxdims);"
+            << std::endl
+            << "   char *pstamp = (char*)stamp.c_str();"
+            << std::endl
+            << "   hid_t stamp_id = H5Dcreate(file_id, \"HDDMstamp\","
+            << std::endl
+            << "                              stamp_tid, stamp_sid,"
+            << std::endl
+            << "                              H5P_DEFAULT, H5P_DEFAULT,"
+            << std::endl
+            << "                              H5P_DEFAULT);"
+            << std::endl
+            << "   herr_t res = H5Dwrite(stamp_id, stamp_tid,"
+            << std::endl
+            << "                         H5S_ALL, H5S_ALL,"
+            << std::endl
+            << "                         H5P_DEFAULT, &pstamp);"
+            << std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType()
+            << "::hdf5FileCheck(hid_t file_id, char **tags)" << std::endl
+            << "{" << std::endl
+            << "   char *pstamp;" << std::endl
+            << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
+            << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
+            << std::endl
+            << "   herr_t res = H5Dread(stamp_id, stamp_tid," << std::endl
+            << "                        H5S_ALL, H5S_ALL," << std::endl
+            << "                        H5P_DEFAULT, &pstamp);" << std::endl
+            << "   std::string sstamp(pstamp);" << std::endl
+            << "   H5Dvlen_reclaim(stamp_tid, stamp_sid," << std::endl
+            << "                   H5P_DEFAULT, &pstamp);" << std::endl
+            << "   if (sstamp.find(DocumentString()) != 0) {" << std::endl
+            << "      throw std::runtime_error(\"hddm_" 
+            << classPrefix << "::hdf5FileCheck - \"" << std::endl
+            << "                  \"HDF5 input record format mismatch!\");"
+            << std::endl
+            << "   }" << std::endl
+            << "   while (tags != 0) {" << std::endl
+            << "      std::string stag(\"<stamptag>\");" << std::endl
+            << "      stag += *tags;" << std::endl
+            << "      stag += \"</stamptag>\";" << std::endl
+            << "      if (sstamp.find(stag) == sstamp.npos) {" << std::endl
+            << "         throw std::runtime_error(\"hddm_" 
+            << classPrefix << "::hdf5FileCheck - \"" << std::endl
+            << "                  \"HDF5 input record tag is missing!\");"
+            << std::endl
+            << "      }" << std::endl
+            << "   }" <<std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5SetChunksize"
+            << "(hid_t file_id, int chunksize)" << std::endl
+            << "{" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
+      cFile << "int " << tagS.simpleType() << "::hdf5GetChunksize"
+            << "(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5SetFilters"
+            << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
+            << std::endl
+            << "{" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5GetFilters"
+            << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
+            << std::endl
+            << "{" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5FileWrite(hid_t file_id)"
             << std::endl
             << "{" << std::endl
@@ -3437,7 +3544,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   hid_t chunking_id;" << std::endl
             << "   if (s_hdf5_chunking.find(file_id)"
             << " == s_hdf5_chunking.end()) {" << std::endl
-            << "       hsize_t chunks[1] = {HDF5_CHUNK_SIZE};" << std::endl
+            << "       hsize_t chunks[1] = {HDF5_DEFAULT_CHUNK_SIZE};" << std::endl
             << "       chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
             << std::endl
             << "       H5Pset_chunk(chunking_id, 1, chunks);" << std::endl
@@ -3630,7 +3737,6 @@ cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << 
          if (dnameS != "HDDM") {
             cFile << "   if ((len = m_hdf5_record.vl_" << dnameS << ".len)"
                   << " > 0) {" << std::endl
-                  << std::endl
                   << "      " << dnameS.simpleType() << " *p ="
                   << "(" << dnameS.simpleType() << "*)"
                   << "m_hdf5_record.vl_" << dnameS << ".p;" << std::endl
@@ -3661,14 +3767,18 @@ cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << 
       cFile << "hid_t " << tagS.simpleType() << "::hdf5FileCreate("
             << "std::string name, unsigned int flags)" << std::endl
             << "{" << std::endl
-            << "   return H5Fcreate(name.c_str(), flags,"
+            << "   hid_t file_id = H5Fcreate(name.c_str(), flags,"
             << " H5P_DEFAULT, H5P_DEFAULT);" << std::endl
+            << "   hdf5FileStamp(file_id);" << std::endl
+            << "   return file_id;" << std::endl
             << "}" << std::endl;
       cFile << "hid_t " << tagS.simpleType() << "::hdf5FileOpen("
             << "std::string name, unsigned int flags)" << std::endl
             << "{" << std::endl
-            << "   return H5Fopen(name.c_str(), flags, H5P_DEFAULT);"
+            << "   hid_t file_id = H5Fopen(name.c_str(), flags, H5P_DEFAULT);"
             << std::endl
+            << "   hdf5FileCheck(file_id);" << std::endl
+            << "   return file_id;" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5FileClose("
             << "hid_t file_id)" << std::endl
@@ -3724,7 +3834,8 @@ cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << 
       XtString typeS(el->getAttribute(X(attrS)));
       if (typeS == "string" || typeS == "anyURI")
       {
-         cFile << "   if (mx_" << attrS << " != 0) {" << std::endl
+         cFile << "   new(&m_" << attrS << ") std::string();" << std::endl
+               << "   if (mx_" << attrS << " != 0) {" << std::endl
                << "      m_" << attrS << " = mx_" << attrS << ";"
                << std::endl
                << "      m_host->m_hdf5_strings.push_back"
@@ -3738,8 +3849,7 @@ cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << 
       XtString cnameS(childEl->getTagName());
       XtString repS(childEl->getAttribute(X("maxOccurs")));
       int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
-      cFile << "   if (m_"  << cnameS << ((rep > 1)? "_list" : "_link")
-            << ".size() > 0) {" << std::endl
+      cFile << "   {" << std::endl
             << "      std::list<" << cnameS.simpleType() << "*> *host_plist ="
             << " &m_host->m_" << cnameS << "_plist;" << std::endl
             << "      m_"  << cnameS << ((rep > 1)? "_list" : "_link")
@@ -3830,7 +3940,7 @@ cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << 
                   << "m_" << cnameS << "_plist.end());" << std::endl
                   << "}" << std::endl << std::endl;
          }
-         else if (cnameS != "HDDM")
+         if (cnameS != "HDDM")
          {
             cFile << std::endl
                   << "void debug_print(" << cnameS.listType() << " &list) {"
