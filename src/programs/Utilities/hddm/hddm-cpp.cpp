@@ -3730,7 +3730,6 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "                        H5P_DEFAULT, &m_hdf5_record);"
             << std::endl
             << "   int len;" << std::endl;
-cFile << "std::cout << \"reading at record_offset \" << m_hdf5_record_offset << std::endl;" << std::endl;
       for (piter = parents.begin(); piter != parents.end(); ++piter)
       {
          XtString dnameS(piter->first);
