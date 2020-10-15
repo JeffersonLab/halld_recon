@@ -370,6 +370,8 @@ int main(int argC, char* argV[])
    "#define HDF5_DEFAULT_CHUNK_SIZE 100\n"
    "// gzip standard compression provided by hdf5\n"
    "const H5Z_filter_t k_hdf5_gzip_filter(H5Z_FILTER_DEFLATE);\n"
+   "// szip standard compression provided by hdf5\n"
+   "const H5Z_filter_t k_hdf5_szip_filter(H5Z_FILTER_SZIP);\n"
    "// bzip2 lossless compression used by PyTables\n"
    "const H5Z_filter_t k_hdf5_bzip2_plugin(307);\n"
    "// Blosc lossless compression used by PyTables\n"
@@ -2457,9 +2459,10 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << std::endl
             << "   static herr_t hdf5FileCheck(hid_t file_id, char **tags=0);"
             << std::endl
-            << "   static herr_t hdf5SetChunksize(hid_t file_id, int chunksize);"
+            << "   static herr_t hdf5SetChunksize(hid_t file_id,"
+            << " hsize_t chunksize);"
             << std::endl
-            << "   static int hdf5GetChunksize(hid_t file_id);"
+            << "   static hsize_t hdf5GetChunksize(hid_t file_id);"
             << std::endl
             << "   static herr_t hdf5SetFilters(hid_t file_id,"
             << " std::vector<H5Z_filter_t> &filters);"
@@ -3487,25 +3490,106 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   return res;" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5SetChunksize"
-            << "(hid_t file_id, int chunksize)" << std::endl
+            << "(hid_t file_id, hsize_t chunksize)" << std::endl
             << "{" << std::endl
-            << "   return 0;" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
+            << "   }" << std::endl
+            << "   hsize_t chunks[1] = {chunksize};" << std::endl
+            << "   return H5Pset_chunk(chunking_id, 1, chunks);" << std::endl
             << "}" << std::endl;
-      cFile << "int " << tagS.simpleType() << "::hdf5GetChunksize"
+      cFile << "hsize_t " << tagS.simpleType() << "::hdf5GetChunksize"
             << "(hid_t file_id)" << std::endl
             << "{" << std::endl
-            << "   return 0;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      return HDF5_DEFAULT_CHUNK_SIZE;" << std::endl
+            << "   }" << std::endl
+            << "   hid_t chunking_id = s_hdf5_chunking[file_id];"
+            << std::endl
+            << "   hsize_t dims[1];" << std::endl
+            << "   H5Pget_chunk(chunking_id, 1, dims);" << std::endl
+            << "   return dims[0];" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5SetFilters"
             << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
             << std::endl
             << "{" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
+            << "   }" << std::endl
+            << "   for (auto filter : filters) {" << std::endl
+<< "std::cout << \" known filters are H5Z_FILTER_DEFLATE=\" << H5Z_FILTER_DEFLATE << \", H5Z_FILTER_SZIP=\" << H5Z_FILTER_SZIP << \"...\" << std::endl;" << std::endl
+            << "      if (filter == H5Z_FILTER_DEFLATE) {" << std::endl
+            << "         H5Pset_deflate(chunking_id, 9);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SZIP) {" << std::endl
+            << "         H5Pset_szip(chunking_id, H5_SZIP_NN_OPTION_MASK, 8);"
+            << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SHUFFLE) {" << std::endl
+            << "         H5Pset_shuffle(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SCALEOFFSET) {" << std::endl
+            << "         H5Pset_scaleoffset(chunking_id, H5Z_SO_INT," << std::endl
+            << "                            H5Z_SO_INT_MINBITS_DEFAULT);"
+            << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_NBIT) {" << std::endl
+            << "         H5Pset_nbit(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_FLETCHER32) {" << std::endl
+            << "         H5Pset_fletcher32(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else {" << std::endl
+            << "         unsigned int cd_values[] = {6};" << std::endl
+            << "         H5Pset_filter(chunking_id, filter," << std::endl
+            << "                       H5Z_FLAG_MANDATORY, (size_t)1, cd_values);"
+            << "      }" << std::endl
+            << std::endl
+            << "   }" << std::endl
             << "   return 0;" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5GetFilters"
             << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
             << std::endl
             << "{" << std::endl
+            << "   filters.clear();" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      return 0;" << std::endl
+            << "   }" << std::endl
+            << "   hid_t chunking_id = s_hdf5_chunking[file_id];"
+            << std::endl
+            << "   for (int i=0; i < H5Pget_nfilters(chunking_id); ++i) {"
+            << std::endl
+            << "      unsigned int flags;" << std::endl
+            << "      size_t cd_nelmts = 9;" << std::endl
+            << "      unsigned int cd_values[9];" << std::endl
+            << "      size_t namelen = 99;" << std::endl
+            << "      char name[99];" << std::endl
+            << "      unsigned int filter_config;" << std::endl
+            << "      filters.push_back(H5Pget_filter2(chunking_id, i,"
+            << std::endl
+            << "                        &flags, &cd_nelmts, cd_values,"
+            << std::endl
+            << "                        namelen, name, &filter_config));"
+            << std::endl
+            << "   }" << std::endl
             << "   return 0;" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5FileWrite(hid_t file_id)"
@@ -3544,24 +3628,10 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   hid_t chunking_id;" << std::endl
             << "   if (s_hdf5_chunking.find(file_id)"
             << " == s_hdf5_chunking.end()) {" << std::endl
-            << "       hsize_t chunks[1] = {HDF5_DEFAULT_CHUNK_SIZE};" << std::endl
-            << "       chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
+            << "      hdf5SetChunksize(file_id, HDF5_DEFAULT_CHUNK_SIZE);"
             << std::endl
-            << "       H5Pset_chunk(chunking_id, 1, chunks);" << std::endl
-            << "#ifdef HDF5_PLUGIN_FILTER" << std::endl
-            << "       unsigned int cd_values[] = {6};" << std::endl
-            << "       H5Pset_filter(chunking_id, HDF5_PLUGIN_FILTER,"
-            << std::endl
-            << "                     H5Z_FLAG_MANDATORY, (size_t)1, cd_values);"
-            << std::endl
-            << "#elif HDF5_GZIP_COMPRESSION" << std::endl
-            << "       H5Pset_deflate(chunking_id, 6);" << std::endl
-            << "#endif" << std::endl
-            << "       s_hdf5_chunking[file_id] = chunking_id;" << std::endl
             << "   }" << std::endl
-            << "   else {\n" << std::endl
-            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
-            << "   }" << std::endl
+            << "   chunking_id = s_hdf5_chunking[file_id];" << std::endl
             << "   hid_t memoryspace_id;" << std::endl
             << "   if (s_hdf5_memoryspace.find(\"HDDM\")"
             << " == s_hdf5_memoryspace.end()) {" << std::endl
@@ -3601,9 +3671,9 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "                               H5P_DEFAULT);"
             << std::endl
-            << "      s_hdf5_dataset[file_id] = eventdata_id;"
-            << "      m_hdf5_record_extent = 0;"
-            << "      m_hdf5_record_offset = 0;"
+            << "      s_hdf5_dataset[file_id] = eventdata_id;" << std::endl
+            << "      m_hdf5_record_extent = 0;" << std::endl
+            << "      m_hdf5_record_offset = 0;" << std::endl
             << std::endl
             << "   }" << std::endl
             << "   else {" << std::endl
@@ -3679,6 +3749,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "   }" << std::endl
             << "   hid_t eventdata_id;" << std::endl
+            << "   hid_t chunking_id;" << std::endl
             << "   if (s_hdf5_dataset.find(file_id)"
             << " == s_hdf5_dataset.end()) {" << std::endl
             << std::endl
@@ -3686,11 +3757,15 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "                               H5P_DEFAULT);"
             << std::endl
+            << "      chunking_id = H5Dget_create_plist(eventdata_id);"
+            << std::endl
             << "      s_hdf5_dataset[file_id] = eventdata_id;"
+            << "      s_hdf5_chunking[file_id] = chunking_id;"
             << std::endl
             << "   }" << std::endl
             << "   else {" << std::endl
             << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      chunking_id = s_hdf5_chunking[file_id];"
             << std::endl
             << "   }" << std::endl
             << "   hid_t eventspace_id;" << std::endl
@@ -3754,7 +3829,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
          XtString repS(childEl->getAttribute(X("maxOccurs")));
          int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
          cFile << "   new(&m_" << cnameS << ((rep > 1)? "_list)" : "_link)")
-               << " " << cnameS.listType()
+               << " " << ((rep > 1)? cnameS.listType() : cnameS.linkType())
                << "(&m_" << cnameS << "_plist," << std::endl
                << "            m_" << cnameS << "_plist.begin()," << std::endl
                << "            m_" << cnameS << "_plist.end()," << std::endl
