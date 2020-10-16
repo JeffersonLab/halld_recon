@@ -37,7 +37,7 @@ def library(env, libname=''):
 
 	# Library name comes from directory name
 	if libname=='':
-		libname = os.path.split(os.getcwdu())[1]
+		libname = os.path.split(os.getcwd())[1]
 
 	env.PrependUnique(CPPPATH = ['.'])
 
@@ -86,7 +86,7 @@ def executable(env, exename=''):
 
 	# Executable name comes from directory name
 	if exename=='':
-		exename = os.path.split(os.getcwdu())[1]
+		exename = os.path.split(os.getcwd())[1]
 
 	env.PrependUnique(CPPPATH = ['.'])
 
@@ -226,7 +226,7 @@ def executables(env):
 	# filename of the source file defining "main()"
 	main_sources = []
 	common_sources = []
-	curpath = os.getcwdu()
+	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	os.chdir(srcpath)
 	files = glob.glob('*.c') + glob.glob('*.cc') + glob.glob('*.cpp')
@@ -283,7 +283,7 @@ def plugin(env, pluginname=''):
 
 	# Library name comes from directory name
 	if pluginname=='':
-		pluginname = os.path.split(os.getcwdu())[1]
+		pluginname = os.path.split(os.getcwd())[1]
 
 	env.PrependUnique(CPPPATH = ['.'])
 
@@ -354,7 +354,7 @@ def swig_library(env, libname, srcs):
 	import distutils.sysconfig
 	so_ext = ".so"
 	env.AppendUnique(CPPPATH = [distutils.sysconfig.get_python_inc()])
-	env.AppendUnique(SWIGFLAGS = ["-I"+os.getcwdu()])
+	env.AppendUnique(SWIGFLAGS = ["-I"+os.getcwd()])
 
 	# use LoadableModule() to build the python module, since that properly supports OS X 
 	mylib = env.LoadableModule(libname, srcs,
@@ -900,7 +900,7 @@ def AddROOT(env):
 	# directory, we must temporarily cd into that to look for headers that
 	# we wish to generate dictionaries for. (This took a long time to figure
 	# out!)
-	curpath = os.getcwdu()
+	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
 		print("---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath)
@@ -987,7 +987,7 @@ def AddROOTSpyMacros(env):
 	env.Append(BUILDERS = {'ROOTSpyMacro' : bld})
 
 	# Find all macro files and schedule them to be converted using the above builder
-	curpath = os.getcwdu()
+	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
 		print("---- Looking for ROOT macro files (*.C) in: %s" % srcpath)
@@ -1049,7 +1049,7 @@ def AddCUDA(env):
 		env.AppendUnique(CXXFLAGS=['-DGPU_ACCELERATION'])
 		
 		# Temporarily change to source directory and add all .cu files
-		curpath = os.getcwdu()
+		curpath = os.getcwd()
 		srcpath = env.Dir('.').srcnode().abspath
 		os.chdir(srcpath)
 		for f in glob.glob('*.cu'):
@@ -1077,7 +1077,7 @@ def AddAmpTools(env):
 		print('is not set. Expect to see an error message below....')
 		print('')
 	else:
-		env.AppendUnique(CUDAFLAGS=['-I%s -I%s/src/libraries' % (AMPTOOLS, os.getenv('HALLD_RECON_HOME',os.getcwdu()))])
+		env.AppendUnique(CUDAFLAGS=['-I%s -I%s/src/libraries' % (AMPTOOLS, os.getenv('HALLD_RECON_HOME',os.getcwd()))])
 		AddCUDA(env)
 		AMPTOOLS_CPPPATH = "%s" % (AMPTOOLS)
 		AMPTOOLS_LIBPATH = "%s/lib" % (AMPTOOLS)
