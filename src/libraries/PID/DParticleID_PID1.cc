@@ -276,7 +276,42 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
 	break;
       }
     }
-  } 
+  }
+  
+   if (jcalib->Get("BCAL/TimeMeans",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeMeanParams_BCAL_Positron.push_back(row["m1"]);
+	dTimeMeanParams_BCAL_Positron.push_back(row["m2"]);
+	dTimeMeanParams_BCAL_Positron.push_back(row["m3"]);
+	dTimeMeanParams_BCAL_Positron.push_back(row["m4"]);
+	break;
+      case 8:
+	dTimeMeanParams_BCAL_PiPlus.push_back(row["m1"]);
+	dTimeMeanParams_BCAL_PiPlus.push_back(row["m2"]);
+	dTimeMeanParams_BCAL_PiPlus.push_back(row["m3"]);
+	dTimeMeanParams_BCAL_PiPlus.push_back(row["m4"]);
+	break;
+      case 11:
+	dTimeMeanParams_BCAL_KPlus.push_back(row["m1"]);
+	dTimeMeanParams_BCAL_KPlus.push_back(row["m2"]);
+	dTimeMeanParams_BCAL_KPlus.push_back(row["m3"]);
+	dTimeMeanParams_BCAL_KPlus.push_back(row["m4"]);
+	break;
+      case 14:
+	dTimeMeanParams_BCAL_Proton.push_back(row["m1"]);
+	dTimeMeanParams_BCAL_Proton.push_back(row["m2"]);
+	dTimeMeanParams_BCAL_Proton.push_back(row["m3"]);
+	dTimeMeanParams_BCAL_Proton.push_back(row["m4"]);
+	break;
+      default:
+	break;
+      }
+    }
+  }
+
   
   if (jcalib->Get("BCAL/EOverPSigma",vals)==false){  
     map<string,double> &row = vals[0];
@@ -338,6 +373,41 @@ DParticleID_PID1::DParticleID_PID1(JEventLoop *loop):DParticleID(loop)
       }
     }
   }
+  
+  if (jcalib->Get("FCAL/TimeMeans",vals)==false){ 
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      switch(int(row["PID"])){  
+      case 2:
+	dTimeMeanParams_FCAL_Positron.push_back(row["m1"]);
+	dTimeMeanParams_FCAL_Positron.push_back(row["m2"]);
+	dTimeMeanParams_FCAL_Positron.push_back(row["m3"]);
+	dTimeMeanParams_FCAL_Positron.push_back(row["m4"]);
+	break;
+      case 8:
+	dTimeMeanParams_FCAL_PiPlus.push_back(row["m1"]);
+	dTimeMeanParams_FCAL_PiPlus.push_back(row["m2"]);
+	dTimeMeanParams_FCAL_PiPlus.push_back(row["m3"]);
+	dTimeMeanParams_FCAL_PiPlus.push_back(row["m4"]);
+	break;
+      case 11:
+	dTimeMeanParams_FCAL_KPlus.push_back(row["m1"]);
+	dTimeMeanParams_FCAL_KPlus.push_back(row["m2"]);
+	dTimeMeanParams_FCAL_KPlus.push_back(row["m3"]);
+	dTimeMeanParams_FCAL_KPlus.push_back(row["m4"]);
+	break;
+      case 14:
+	dTimeMeanParams_FCAL_Proton.push_back(row["m1"]);
+	dTimeMeanParams_FCAL_Proton.push_back(row["m2"]);
+	dTimeMeanParams_FCAL_Proton.push_back(row["m3"]);
+	dTimeMeanParams_FCAL_Proton.push_back(row["m4"]);
+	break;
+      default:
+	break;
+      }
+      
+    }
+ }
 }
 
 //---------------------------------
@@ -656,6 +726,86 @@ double DParticleID_PID1::GetTimeVariance(DetectorSystem_t detector,Particle_t pa
   }
 
   return locSigma*locSigma;	  
+}
+  
+double DParticleID_PID1::GetTimeMean(DetectorSystem_t detector,Particle_t particle,double p) const {
+  double locMean=0.;
+
+  if (particle==Electron || particle==Positron){
+    switch(detector){
+    case SYS_BCAL:
+      locMean=dTimeMeanParams_BCAL_Positron[0]/(p*p) 
+	+ dTimeMeanParams_BCAL_Positron[1]/p
+	+ dTimeMeanParams_BCAL_Positron[2]
+	+ dTimeMeanParams_BCAL_Positron[3]*p;
+      break;  
+    case SYS_FCAL:
+      locMean=dTimeMeanParams_FCAL_Positron[0]/(p*p) 
+	+ dTimeMeanParams_FCAL_Positron[1]/p
+	+ dTimeMeanParams_FCAL_Positron[2]
+	+ dTimeMeanParams_FCAL_Positron[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+  else if (particle==PiPlus || particle==PiMinus){
+    switch(detector){
+    case SYS_BCAL:
+      locMean=dTimeMeanParams_BCAL_PiPlus[0]/(p*p) 
+	+ dTimeMeanParams_BCAL_PiPlus[1]/p
+	+ dTimeMeanParams_BCAL_PiPlus[2]
+	+ dTimeMeanParams_BCAL_PiPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locMean=dTimeMeanParams_FCAL_PiPlus[0]/(p*p) 
+	+ dTimeMeanParams_FCAL_PiPlus[1]/p
+	+ dTimeMeanParams_FCAL_PiPlus[2]
+	+ dTimeMeanParams_FCAL_PiPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  } 
+  else if (particle==KPlus || particle==KMinus){
+    switch(detector){
+    case SYS_BCAL:
+      locMean=dTimeMeanParams_BCAL_KPlus[0]/(p*p) 
+	+ dTimeMeanParams_BCAL_KPlus[1]/p
+	+ dTimeMeanParams_BCAL_KPlus[2]
+	+ dTimeMeanParams_BCAL_KPlus[3]*p;
+      break;  
+    case SYS_FCAL:
+      locMean=dTimeMeanParams_FCAL_KPlus[0]/(p*p) 
+	+ dTimeMeanParams_FCAL_KPlus[1]/p
+	+ dTimeMeanParams_FCAL_KPlus[2]
+	+ dTimeMeanParams_FCAL_KPlus[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+ else if (particle==Proton || particle==AntiProton){
+    switch(detector){
+    case SYS_BCAL:
+      locMean=dTimeMeanParams_BCAL_Proton[0]/(p*p) 
+	+ dTimeMeanParams_BCAL_Proton[1]/p
+	+ dTimeMeanParams_BCAL_Proton[2]
+	+ dTimeMeanParams_BCAL_Proton[3]*p;
+      break;  
+    case SYS_FCAL:
+      locMean=dTimeMeanParams_FCAL_Proton[0]/(p*p) 
+	+ dTimeMeanParams_FCAL_Proton[1]/p
+	+ dTimeMeanParams_FCAL_Proton[2]
+	+ dTimeMeanParams_FCAL_Proton[3]*p;
+      break;
+    default:
+      break;    
+    }
+  }
+
+
+  return locMean;
 }
   
 

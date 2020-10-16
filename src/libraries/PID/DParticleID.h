@@ -103,6 +103,9 @@ class DParticleID:public jana::JObject
 		virtual double GetTimeVariance(DetectorSystem_t detector,
 					       Particle_t particle,
 					       double p) const=0;
+		virtual double GetTimeMean(DetectorSystem_t detector,
+					       Particle_t particle,
+					       double p) const=0;
 		virtual double GetEOverPMean(DetectorSystem_t detector,
 					     double p) const=0;
 		virtual double GetEOverPSigma(DetectorSystem_t detector,
