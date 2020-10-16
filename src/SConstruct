@@ -15,7 +15,7 @@ import subprocess
 import glob
 
 # Add SBMS directory to PYTHONPATH
-sbmsdir = "%s/SBMS" % (os.getcwdu())
+sbmsdir = "%s/SBMS" % (os.getcwd())
 sys.path.append(sbmsdir)
 
 import sbms
