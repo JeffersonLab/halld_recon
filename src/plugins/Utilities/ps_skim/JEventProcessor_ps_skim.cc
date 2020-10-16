@@ -87,12 +87,16 @@ jerror_t JEventProcessor_ps_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
         trig_mask = 0;
         fp_trig_mask = 0;
     }
-    int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
+    
+    
     // skim PS triggers
-    if (trig_bits==8) {
-        locEventWriterEVIO->Write_EVIOEvent(loop, "ps");
-        return NOERROR;
+    int trig_bit = (trig_mask & (1 << 3)) ? 1 : 0;
+
+    if (trig_bit) {
+      locEventWriterEVIO->Write_EVIOEvent(loop, "ps");
+      return NOERROR;
     }
+    
     return NOERROR;
 }
 
