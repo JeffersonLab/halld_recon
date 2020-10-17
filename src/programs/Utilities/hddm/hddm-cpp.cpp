@@ -639,7 +639,8 @@ int main(int argC, char* argV[])
    "\n"
    "class HDDM_Element: public streamable {\n"
    " public:\n"
-   "   ~HDDM_Element() {}\n"
+   "   virtual ~HDDM_Element() {}\n"
+   "   virtual void clear() {}\n"
    "   virtual const void *getAttribute(const std::string &name,\n"
    "                                    hddm_type *atype=0) const {\n"
    "      return 0;\n"
@@ -2445,8 +2446,10 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << "   void hdf5DataUnpack();" << std::endl
             << "   hid_t hdf5Datatype(int inmemory=0, int verbose=0);"
             << std::endl
-            << "   herr_t hdf5FileWrite(hid_t file_id);" << std::endl
-            << "   herr_t hdf5FileRead(hid_t file_id);" << std::endl
+            << "   herr_t hdf5FileWrite(hid_t file_id, long int entry=-1);"
+            << std::endl
+            << "   herr_t hdf5FileRead(hid_t file_id, long int entry=-1);"
+            << std::endl
             << "   static hid_t"
             << " hdf5FileCreate(std::string name, unsigned int flags);"
             << std::endl
@@ -2458,6 +2461,10 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << "   static herr_t hdf5FileStamp(hid_t file_id, char **tags=0);"
             << std::endl
             << "   static herr_t hdf5FileCheck(hid_t file_id, char **tags=0);"
+            << std::endl
+            << "   static std::string hdf5DocumentString(hid_t file_id);"
+            << std::endl
+            << "   static long int hdf5GetEntries(hid_t file_id);"
             << std::endl
             << "   static herr_t hdf5SetChunksize(hid_t file_id,"
             << " hsize_t chunksize);"
@@ -3425,10 +3432,11 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "::hdf5FileStamp(hid_t file_id, char **tags)" << std::endl
             << "{" << std::endl
             << "   std::string stamp(DocumentString());" << std::endl
-            << "   while (tags != 0) {" << std::endl
+            << "   while (tags != 0 && *tags != 0) {" << std::endl
             << "      stamp += \"<stamptag>\";" << std::endl
             << "      stamp += *tags;" << std::endl
             << "      stamp += \"</stamptag>\\n\";" << std::endl
+            << "      ++tags;" << std::endl
             << "   }" << std::endl
             << "   hid_t stamp_tid = H5Tcopy(H5T_C_S1);" << std::endl
             << "   H5Tset_size(stamp_tid, H5T_VARIABLE);" << std::endl
@@ -3438,14 +3446,22 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "   char *pstamp = (char*)stamp.c_str();"
             << std::endl
-            << "   hid_t stamp_id = H5Dcreate(file_id, \"HDDMstamp\","
+            << "   hid_t stamp_id ="
+            << " H5Lexists(file_id, \"HDDMstamp\", H5P_DEFAULT);" << std::endl
+            << "   if (stamp_id > 0) {" << std::endl
+            << "      stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      stamp_id = H5Dcreate(file_id, \"HDDMstamp\","
             << std::endl
-            << "                              stamp_tid, stamp_sid,"
+            << "                           stamp_tid, stamp_sid,"
             << std::endl
-            << "                              H5P_DEFAULT, H5P_DEFAULT,"
+            << "                           H5P_DEFAULT, H5P_DEFAULT,"
             << std::endl
-            << "                              H5P_DEFAULT);"
+            << "                           H5P_DEFAULT);"
             << std::endl
+            << "   }" << std::endl
             << "   herr_t res = H5Dwrite(stamp_id, stamp_tid,"
             << std::endl
             << "                         H5S_ALL, H5S_ALL,"
@@ -3476,7 +3492,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "                  \"HDF5 input record format mismatch!\");"
             << std::endl
             << "   }" << std::endl
-            << "   while (tags != 0) {" << std::endl
+            << "   while (tags != 0 && *tags != 0) {" << std::endl
             << "      std::string stag(\"<stamptag>\");" << std::endl
             << "      stag += *tags;" << std::endl
             << "      stag += \"</stamptag>\";" << std::endl
@@ -3486,8 +3502,65 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "                  \"HDF5 input record tag is missing!\");"
             << std::endl
             << "      }" << std::endl
+            << "      ++tags;" << std::endl
             << "   }" <<std::endl
+            << "   H5Dclose(stamp_id);" << std::endl
             << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "std::string " << tagS.simpleType()
+            << "::hdf5DocumentString(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   char *pstamp;" << std::endl
+            << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
+            << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
+            << std::endl
+            << "   H5Dread(stamp_id, stamp_tid," << std::endl
+            << "           H5S_ALL, H5S_ALL, H5P_DEFAULT, &pstamp);"
+            << std::endl
+            << "   std::string sstamp(pstamp);" << std::endl
+            << "   H5Dvlen_reclaim(stamp_tid, stamp_sid," << std::endl
+            << "                   H5P_DEFAULT, &pstamp);" << std::endl
+            << "   H5Dclose(stamp_id);" << std::endl
+            << "   return sstamp;" << std::endl
+            << "}" << std::endl;
+      cFile << "long int " << tagS.simpleType()
+            << "::hdf5GetEntries(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   hid_t eventspace_id;" << std::endl
+            << "   hid_t eventdata_id;" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_dataset.find(file_id)"
+            << " == s_hdf5_dataset.end()) {" << std::endl
+            << std::endl
+            << "      eventdata_id = H5Dopen(file_id, \"/events\","
+            << std::endl
+            << "                               H5P_DEFAULT);"
+            << std::endl
+            << "      chunking_id = H5Dget_create_plist(eventdata_id);"
+            << std::endl
+            << "      eventspace_id = H5Dget_space(eventdata_id);"
+            << std::endl
+            << "      s_hdf5_dataset[file_id] = eventdata_id;"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;"
+            << std::endl
+            << "      s_hdf5_dataspace[file_id] = eventspace_id;"
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      chunking_id = s_hdf5_chunking[file_id];"
+            << "      eventspace_id = s_hdf5_dataspace[file_id];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hsize_t dims;" << std::endl
+            << "   hsize_t maxdims;" << std::endl
+            << "   H5Sget_simple_extent_dims(eventspace_id, &dims, &maxdims);"
+            << std::endl
+            << "   return dims;" << std::endl
             << "}" << std::endl;
       cFile << "herr_t " << tagS.simpleType() << "::hdf5SetChunksize"
             << "(hid_t file_id, hsize_t chunksize)" << std::endl
@@ -3592,8 +3665,8 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   }" << std::endl
             << "   return 0;" << std::endl
             << "}" << std::endl;
-      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileWrite(hid_t file_id)"
-            << std::endl
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileWrite"
+            << "(hid_t file_id, long int entry)" << std::endl
             << "{" << std::endl
             << "   hdf5_record_t hdf5_record;" << std::endl
             << "   int size;\n" << std::endl
@@ -3684,12 +3757,13 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "      H5Sget_select_bounds(eventspace_id,"
             << " &m_hdf5_record_offset, &maxdims);" << std::endl
             << "      ++m_hdf5_record_offset;" << std::endl
-            << std::endl
             << "   }" << std::endl
-
+            << "   if (entry >= 0) {" << std::endl
+            << "      m_hdf5_record_offset = entry;" << std::endl
+            << "   }" << std::endl
             << "   if (m_hdf5_record_offset >= m_hdf5_record_extent) {"
             << std::endl
-            << "      m_hdf5_record_extent++;"
+            << "      m_hdf5_record_extent = m_hdf5_record_offset + 1;"
             << std::endl
             << "      H5Dset_extent(eventdata_id, &m_hdf5_record_extent);"
             << std::endl
@@ -3729,8 +3803,8 @@ void CodeBuilder::writeClassimp(DOMElement* el)
       }
       cFile << "   return res;" << std::endl
             << "}" << std::endl;
-      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileRead(hid_t file_id)"
-            << std::endl
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileRead"
+            << "(hid_t file_id, long int entry)" << std::endl
             << "{" << std::endl
             << "   clear();" << std::endl
             << "   hid_t memorytype_id = hdf5Datatype(1);" << std::endl
@@ -3787,6 +3861,9 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "      H5Sget_select_bounds(eventspace_id,"
             << " &m_hdf5_record_offset, &maxdims);" << std::endl
             << "      ++m_hdf5_record_offset;" << std::endl
+            << "   }" << std::endl
+            << "   if (entry >= 0) {" << std::endl
+            << "      m_hdf5_record_offset = entry;" << std::endl
             << "   }" << std::endl
             << "   if (m_hdf5_record_offset >= m_hdf5_record_extent)"
             << std::endl
