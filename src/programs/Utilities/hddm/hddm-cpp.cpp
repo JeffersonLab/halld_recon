@@ -792,7 +792,6 @@ int main(int argC, char* argV[])
    "       : std::list<T*>::const_iterator(src) {}\n"
    "\n"
    "      const T *operator->() const { \n"
-   "         std::cout << \"arrow operator has been called on a HDDM_ElementList iterator that currently points at address \" << address() << std::endl;\n"
    "         return *(typename std::list<T*>::const_iterator)(*this);\n"
    "      }\n"
    "\n"
@@ -904,9 +903,9 @@ int main(int argC, char* argV[])
    "      int n2 = (last < 0)? last + m_size + 1 : last + 1;\n"
    "      int count = n2 - n1;\n"
    "      iterator iter_begin;\n"
-   "      if (first > 0)\n"
+   "      if (first >= 0)\n"
    "         iter_begin = begin() + first;\n"
-   "      else if (first < 0)\n"
+   "      else\n"
    "         iter_begin = end() + first;\n"
    "      iterator iter_end(iter_begin + count);\n"
    "      return HDDM_ElementList(m_host_plist, iter_begin, iter_end);\n"
@@ -3532,10 +3531,15 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   hid_t eventspace_id;" << std::endl
             << "   hid_t eventdata_id;" << std::endl
             << "   hid_t chunking_id;" << std::endl
+            << "   htri_t exists ="
+            << "   H5Lexists(file_id, \"HDDMevents\", H5P_DEFAULT);"
+            << std::endl
+            << "   if (exists <= 0)" << std::endl
+            << "      return exists;" << std::endl
             << "   if (s_hdf5_dataset.find(file_id)"
             << " == s_hdf5_dataset.end()) {" << std::endl
             << std::endl
-            << "      eventdata_id = H5Dopen(file_id, \"/events\","
+            << "      eventdata_id = H5Dopen(file_id, \"HDDMevents\","
             << std::endl
             << "                               H5P_DEFAULT);"
             << std::endl
@@ -3606,7 +3610,6 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
             << "   }" << std::endl
             << "   for (auto filter : filters) {" << std::endl
-<< "std::cout << \" known filters are H5Z_FILTER_DEFLATE=\" << H5Z_FILTER_DEFLATE << \", H5Z_FILTER_SZIP=\" << H5Z_FILTER_SZIP << \"...\" << std::endl;" << std::endl
             << "      if (filter == H5Z_FILTER_DEFLATE) {" << std::endl
             << "         H5Pset_deflate(chunking_id, 9);" << std::endl
             << "      }" << std::endl
@@ -3736,7 +3739,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   if (s_hdf5_dataset.find(file_id)"
             << " == s_hdf5_dataset.end()) {" << std::endl
             << std::endl
-            << "      eventdata_id = H5Dcreate(file_id, \"/events\","
+            << "      eventdata_id = H5Dcreate(file_id, \"HDDMevents\","
             << std::endl
             << "                               eventtype_id, eventspace_id,"
             << std::endl
@@ -3827,7 +3830,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   if (s_hdf5_dataset.find(file_id)"
             << " == s_hdf5_dataset.end()) {" << std::endl
             << std::endl
-            << "      eventdata_id = H5Dopen(file_id, \"/events\","
+            << "      eventdata_id = H5Dopen(file_id, \"HDDMevents\","
             << std::endl
             << "                               H5P_DEFAULT);"
             << std::endl
