@@ -1,0 +1,14 @@
+#
+# Runs from an e-mail sent by Naomi on 2020-09-02
+#
+#/work/halld/online_monitoring/root/RunPeriod-2018-08/hdmon_online051689_backup.root
+/work/halld/online_monitoring/root/RunPeriod-2018-08/hdmon_online051683_backup.root
+/work/halld/online_monitoring/root/hdmon_online072630.root
+/work/halld/online_monitoring/root/hdmon_online071350_backup.root
+/work/halld/online_monitoring/root/hdmon_online071464_backup.root
+/work/halld/online_monitoring/root/hdmon_online071500_backup.root
+/work/halld/online_monitoring/root/hdmon_online071592_backup.root
+/work/halld/online_monitoring/root/hdmon_online071695_backup.root
+/work/halld/online_monitoring/root/hdmon_online071660_backup.root
+/work/halld/online_monitoring/root/RunPeriod-2019-01/hdmon_online061793_backup.root
+
