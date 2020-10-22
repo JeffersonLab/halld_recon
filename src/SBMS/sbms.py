@@ -166,13 +166,14 @@ def python_so_module(env, modname):
 
 	# Build the module as a shared library
 	# using the distutils setup.py mechanism.
+	pythoncommand = env['PYTHONCOMMAND']==0:
 	if env['SHOWBUILD']==0:
-		setup_py_action = SCons.Script.Action('python $SOURCE build -b ' +
+		setup_py_action = SCons.Script.Action(pythoncommand + ' $SOURCE build -b ' +
 											  'build_' +  modname + 
 											  ' > /dev/null',
 											  'PYMODBUILD [$SOURCE]')
 	else:
-		setup_py_action = SCons.Script.Action('python $SOURCE build -b ' +
+		setup_py_action = SCons.Script.Action(pythoncommand + ' $SOURCE build -b ' +
 											  'build_' +  modname)
 	setup_py_builder = SCons.Script.Builder(action = setup_py_action)
 	env.Append(BUILDERS = {'PYMODBUILD' : setup_py_builder})
@@ -183,7 +184,7 @@ def python_so_module(env, modname):
 	# Spawn another python shell for that.
 	global EXT_SUFFIX
 	if EXT_SUFFIX == 0:
-		req = subprocess.Popen(['python', '-c', 
+		req = subprocess.Popen([pythoncommand, '-c', 
 						'from distutils import sysconfig;' +
 						'print(sysconfig.get_config_var("EXT_SUFFIX"))'],
 						stdout=subprocess.PIPE)

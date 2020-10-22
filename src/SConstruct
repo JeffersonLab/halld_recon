@@ -27,6 +27,7 @@ OPTIMIZATION = ARGUMENTS.get('OPTIMIZATION', 2)
 DEBUG = ARGUMENTS.get('DEBUG', 1)
 PROFILE = ARGUMENTS.get('PROFILE', 0)
 BUILDSWIG = ARGUMENTS.get('BUILDSWIG', 0)
+PYTHONCOMMAND = ARGUMENTS.get('PYTHONCOMMAND', 'python')
 
 # Get platform-specific name
 osname = os.getenv('BMS_OSNAME', 'build')
@@ -66,7 +67,8 @@ env.Replace(INSTALLDIR    = installdir,
 				OPTIMIZATION  = OPTIMIZATION,
 				DEBUG         = DEBUG,
 				BUILDSWIG     = BUILDSWIG,
-		  		COMMAND_LINE_TARGETS = COMMAND_LINE_TARGETS)
+		  		COMMAND_LINE_TARGETS = COMMAND_LINE_TARGETS,
+		  		PYTHONCOMMAND = PYTHONCOMMAND)
 
 # Use terse output unless otherwise specified
 if SHOWBUILD==0:
