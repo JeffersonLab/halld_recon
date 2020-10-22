@@ -166,7 +166,7 @@ def python_so_module(env, modname):
 
 	# Build the module as a shared library
 	# using the distutils setup.py mechanism.
-	pythoncommand = env['PYTHONCOMMAND']==0:
+	pythoncommand = env['PYTHONCOMMAND']
 	if env['SHOWBUILD']==0:
 		setup_py_action = SCons.Script.Action(pythoncommand + ' $SOURCE build -b ' +
 											  'build_' +  modname + 
