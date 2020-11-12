@@ -610,7 +610,7 @@ def AddHDDM(env):
 	env.AppendUnique(LIBS = 'HDDM')
 	env.PrependUnique(OPTIONAL_PLUGIN_LIBS = 'HDDM')
 	Add_xstream(env)
-	#Add_HDF5(env)
+	Add_HDF5(env)
 
 ##################################
 # MYSQL
@@ -661,15 +661,15 @@ def Add_xstream(env):
 # HDF5
 ##################################
 def Add_HDF5(env):
-    hdf5_root = os.getenv('HDF5ROOT')
-    if (hdf5_root != None) :
-        HDF5_CPPPATH = ["%s/include" % (hdf5_root)]
-        env.AppendUnique(CPPPATH = HDF5_CPPPATH)
-        HDF5_LIBPATH = ["%s/lib" % (hdf5_root)]
-        env.AppendUnique(LIBPATH = HDF5_LIBPATH)
-        env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
-        env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
-        env.AppendUnique(CXXFLAGS = ['-DHDF5_SUPPORT'])
+	hdf5_root = os.getenv('HDF5ROOT')
+	if (hdf5_root != None) :
+		HDF5_CPPPATH = ["%s/include" % (hdf5_root)]
+		env.AppendUnique(CPPPATH = HDF5_CPPPATH)
+		HDF5_LIBPATH = ["%s/lib" % (hdf5_root)]
+		env.AppendUnique(LIBPATH = HDF5_LIBPATH)
+		env.AppendUnique(LIBS=['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(OPTIONAL_PLUGIN_LIBS = ['hdf5_cpp', 'hdf5_hl', 'hdf5', 'sz', 'z', 'dl'])
+		env.AppendUnique(CXXFLAGS = ['-DHDF5_SUPPORT'])
 
 ##################################
 # CCDB
