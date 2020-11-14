@@ -51,6 +51,10 @@ class JEventProcessor_FCAL_Pi0TOF:public jana::JEventProcessor{
                 double m_beamSpotY;
                 double m_targetZ;
 
+		int DO_METHOD;
+		int USE_TRACKS;
+
+
       TProfile *hCurrentGainConstants;
 };
 
