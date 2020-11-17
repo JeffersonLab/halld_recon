@@ -40,12 +40,14 @@ class DNeutralShower_factory_PreSelect : public jana::JFactory<DNeutralShower>
 		//Command-line values will override these
         double dMinFCALE; //PRESELECT:MIN_FCAL_E 
         double dMinBCALE; //PRESELECT:MIN_BCAL_E 
-	double dMinCCALE; //PRESELECT:MIN_CCAL_E 
-		double dMinBCALNcell; //PRESELECT:MIN_BCAL_NCELL
+        double dMinCCALE; //PRESELECT:MIN_CCAL_E 
+        double dMinBCALNcell; //PRESELECT:MIN_BCAL_NCELL
         double dMaxFCALR; //PRESELECT:MIN_FCAL_R
         double dMaxBCALZ; //PRESELECT:MIN_BCAL_Z
         double dFCALInnerRingCut; //PRESELECT:FCAL_INNER_CUT
-        
+        double dMinBCALShowerQuality; //PRESELECT:MIN_BCAL_SHOWER_QUALITY 
+        double dMinFCALShowerQuality; //PRESELECT:MIN_FCAL_SHOWER_QUALITY 
+       
         vector< int > dFCALInnerChannels;
 };
 

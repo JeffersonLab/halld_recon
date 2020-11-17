@@ -10,6 +10,9 @@
 #include "TOF/DTOFGeometry.h"
 using namespace jana;
 
+#include <thread>
+#include <mutex>
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
@@ -74,8 +77,9 @@ jerror_t JEventProcessor_TOF_calib::init(void)
   gPARMS->SetDefaultParameter("TOFCALIB:ADCTPEAK",ADCTLOC,
                               "Defin location of TOF ADC time-peak in Raw histogram");
 
-
-  first = 1;
+  // move histogram creation to brun() for potential run dependence, since the tree is initialized there
+  // probably we should separate the histogram and tree logic, and use a DTreeInterface class
+  // but this is left for later work - sdobbs, 8/17/2020
   //MakeHistograms();
 
   return NOERROR;
@@ -605,6 +609,7 @@ jerror_t JEventProcessor_TOF_calib::WriteRootFile(void){
 
   ROOTFile->cd();
   ROOTFile->Close();
+  
   top->cd();
 
   return NOERROR;
@@ -614,17 +619,18 @@ jerror_t JEventProcessor_TOF_calib::WriteRootFile(void){
 jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
 
 	//NO LOCKS: CALLED IN init(): GUARANTEED TO BE SINGLE-THREADED
+        // (not really currently true)
   /*
   cout<<endl;
   cout<<"CALL MakeHistograms for TOF_calib!!!! "<<endl;
   cout<<endl;
   */
 
-  if (first){
-
     //cout<<"SETUP HISTOGRAMS AND TREE FOR RUN "<<RunNumber<<flush<<endl;
 
-    first = 0;
+  std::once_flag flag;
+  std::call_once(flag, [&](){
+    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     TDirectory *top = gDirectory;
 
@@ -637,13 +643,13 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
     ROOTFile->cd("TOFcalib");
 
 
-    TOFTDCtime = new TH2F("TOFTDCtime","TOF CAEN TDC times", 8000, 0., 4000., 176, 0., 176.);
-    TOFADCtime = new TH2F("TOFADCtime","TOF ADC times", 800, 0., 400., 176, 0., 176.);
+    TOFTDCtime = new TH2F("TOFTDCtime","TOF CAEN TDC times", 8000, 0., 4000., 200, 0., 200.);
+    TOFADCtime = new TH2F("TOFADCtime","TOF ADC times", 800, 0., 400., 200, 0., 200.);
 
     TOFEnergy = new TH2F("TOFEnergy","TOF Energy Integral (no ped subraction)",
-			 176, 0., 176., 100, 0., 20000.);
-    TOFPeak = new TH2F("TOFPeak","TOF Peak Amplitude",176, 0., 176., 100, 0., 4100.);
-    TOFPedestal = new TH2F("TOFPedestal","TOF Pedestal",176, 0., 176., 300, 0., 600.);
+			 200, 0., 200., 100, 0., 20000.);
+    TOFPeak = new TH2F("TOFPeak","TOF Peak Amplitude",200, 0., 200., 100, 0., 4100.);
+    TOFPedestal = new TH2F("TOFPedestal","TOF Pedestal",200, 0., 200., 300, 0., 600.);
 
 
     t3 = new TTree("t3","TOF Hits");
@@ -684,7 +690,9 @@ jerror_t JEventProcessor_TOF_calib::MakeHistograms(void){
     t3->Branch("TDCST",TDCST,"TDCST[NsinglesT]/F");
 
     top->cd();
-  }
+
+    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  });
 
   return NOERROR;
 }

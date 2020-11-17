@@ -5,6 +5,10 @@ static bool FCAL_VERBOSE_OUTPUT = false;
 static bool CCAL_VERBOSE_OUTPUT = false;
 static bool DIRC_OUTPUT = true;
 
+static bool STORE_PULL_INFO = false;
+static bool STORE_ERROR_MATRIX_INFO = false;
+
+
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
 	dInitNumThrownArraySize = 20;
@@ -183,6 +187,9 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop*
 	locBranchRegister.Register_Single<UChar_t>("NumUnusedTracks");
 	Create_Branches_Combo(locBranchRegister, locReaction, locIsMCDataFlag, locPositionToNameMap);
 
+	//Kinematic fit data (pulls and covariance matrices)
+	Create_Branches_KinFitData(locBranchRegister, locEventLoop, locReaction, locIsMCDataFlag);
+
 	//Custom branches
 	Create_CustomBranches_DataTree(locBranchRegister, locEventLoop, locReaction, locIsMCDataFlag);
 
@@ -262,6 +269,10 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		gPARMS->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT);
 	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
 		gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT);
+	if(gPARMS->Exists("ANALYSIS:STORE_PULL_INFO"))
+	    gPARMS->GetParameter("ANALYSIS:STORE_PULL_INFO",STORE_PULL_INFO);
+	if(gPARMS->Exists("ANALYSIS:STORE_ERROR_MATRIX_INFO"))
+    	gPARMS->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO);
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -648,6 +659,9 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Measured"), dInitNumTrackArraySize);
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), dInitNumTrackArraySize);
 
+	// Global PID
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locArraySizeString, dInitNumTrackArraySize);
+
 	//TRACKING INFO
 	locBranchRegister.Register_FundamentalArray<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Tracking"), locArraySizeString, dInitNumTrackArraySize);
@@ -936,6 +950,121 @@ void DEventWriterROOT::Create_Branches_ComboNeutral(DTreeBranchRegister& locBran
 		if(locKinFitType != d_P4Fit)
 			locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_KinFit"), dInitNumComboArraySize);
 	}
+}
+
+void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, JEventLoop* locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const
+{
+
+	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
+		return;
+    
+    //Get the fit-type (P4, P4 + Vertex, and Vertex-only)
+    DKinFitType kfitType = locReaction->Get_KinFitType();
+    
+    vector<Particle_t> finalchargedPIDs,finalneutralPIDs;
+    size_t nReactionSteps = locReaction->Get_NumReactionSteps();
+    int nFinalChargedParticles,nFinalNeutralParticles;
+    
+    vector<string> pidVector = getPIDinReaction(locReaction);
+    map<Particle_t,int> assignMap = getNameForParticle(locReaction,pidVector);
+     
+    //Check, if at least two charged particles are present in the final state: (important for vertex-fit)
+    int sumAllChargedParticles = 0;
+    int sumAllNeutralParticles = 0;
+    //First, check how many neutral/charged particles are in the final stage
+    //The pull-information is avaiablable for certain particle combinations (charged + neutral) only:
+    //----------------------------------------------------------------------------------------------
+    for(size_t loc_i=0;loc_i<nReactionSteps;loc_i++){
+        
+        //Charged Particles:
+        finalchargedPIDs = locReaction->Get_ReactionStep(loc_i)->Get_FinalPIDs(true,d_Charged,true);
+        nFinalChargedParticles = finalchargedPIDs.size();
+        sumAllChargedParticles += nFinalChargedParticles;
+        
+         //Neutral Particles:
+        finalneutralPIDs = locReaction->Get_ReactionStep(loc_i)->Get_FinalPIDs(true,d_Neutral,true);
+        nFinalNeutralParticles = finalneutralPIDs.size();
+        sumAllNeutralParticles += nFinalNeutralParticles;
+    }
+    //----------------------------------------------------------------------------------------------
+    
+    if(sumAllChargedParticles == 1 && (kfitType == d_VertexFit || kfitType == d_P4AndVertexFit)){
+        STORE_PULL_INFO = false;
+        jout <<"  "<< endl;
+        jout <<">>> WARNING: Only one charged track in the final state! No vertex fit possible! No pulls will be stored... <<<"<< endl;
+        jout <<"  "<< endl;
+    }
+    
+    if(sumAllNeutralParticles > 0 && kfitType == d_VertexFit){
+        STORE_PULL_INFO = false;
+        jout <<"  "<< endl;
+        jout <<">>> WARNING: Neutral particles involved in pure vertex fit! No pulls will be stored... <<<"<< endl;
+        jout <<"  "<< endl;
+    }
+    
+    if(kfitType == d_NoFit){
+		STORE_PULL_INFO = false;
+        jout <<"  "<< endl;
+        jout <<">>> WARNING: No fit specified! No pulls will be stored... <<<"<< endl;
+        jout <<"  "<< endl;
+	}
+
+    setPullFlag(locReaction,STORE_PULL_INFO);
+        
+    //Get Pulls for the beam:
+    //Particle_t beamPID = locReaction->Get_ReactionStep(0)->Get_InitialPID();
+    
+    string particleCovM = "numEntries_ParticleErrM";
+    string showerCovM = "numEntries_ShowerErrM";
+    string decayCovM = "numEntries_DecayErrM";
+    if(STORE_ERROR_MATRIX_INFO){
+       locBranchRegister.Register_Single<Int_t>(particleCovM);
+       locBranchRegister.Register_Single<Int_t>(showerCovM); 
+    }
+    
+    //Set the branches for the beam photon:
+    if(STORE_PULL_INFO) 
+    	setTreePullBranches(locBranchRegister,"ComboBeam",kfitType,dInitNumComboArraySize,true);
+    if(STORE_ERROR_MATRIX_INFO) 
+    	locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName("ComboBeam","ErrMatrix"),particleCovM,nEntriesParticleCov);
+		
+    //----------------------------------------------------------------------------------------------
+    for(size_t loc_i=0;loc_i<nReactionSteps;loc_i++){
+        
+        //Charged Particles:
+        finalchargedPIDs = locReaction->Get_ReactionStep(loc_i)->Get_FinalPIDs(true,d_Charged,true);
+        nFinalChargedParticles = finalchargedPIDs.size();
+        //----------------------------------------------------------------------------------------------
+        for(int loc_j=0;loc_j<nFinalChargedParticles;loc_j++){
+            //Define branches for final charged particles:
+            string branchName = assignName(finalchargedPIDs.at(loc_j),assignMap);
+            assignMap[finalchargedPIDs.at(loc_j)]--;
+            if(branchName != "nada"){
+                  if(STORE_PULL_INFO) setTreePullBranches(locBranchRegister,branchName,kfitType,dInitNumComboArraySize,false);
+                  if(STORE_ERROR_MATRIX_INFO) locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName(branchName,"ErrMatrix"),particleCovM,nEntriesParticleCov);
+            }
+        }
+        //----------------------------------------------------------------------------------------------
+        
+        //Neutral Particles:
+        finalneutralPIDs = locReaction->Get_ReactionStep(loc_i)->Get_FinalPIDs(true,d_Neutral,true);
+        nFinalNeutralParticles = finalneutralPIDs.size();
+        //----------------------------------------------------------------------------------------------
+        for(int loc_j=0;loc_j<nFinalNeutralParticles;loc_j++){
+            //Define branches for final neutral particles:
+            string branchName = assignName(finalneutralPIDs.at(loc_j),assignMap);
+            assignMap[finalneutralPIDs.at(loc_j)]--;
+            if(branchName != "nada"){
+                if(STORE_PULL_INFO) setTreePullBranches(locBranchRegister,branchName,kfitType,dInitNumComboArraySize,true);
+                if(finalneutralPIDs.at(loc_j) == Gamma && STORE_ERROR_MATRIX_INFO) locBranchRegister.Register_FundamentalArray< Float_t >(Build_BranchName(branchName,"ErrMatrix"),showerCovM,nEntriesShowerCov);
+            } 
+         }
+        //----------------------------------------------------------------------------------------------
+     }
+    //----------------------------------------------------------------------------------------------
+    
+    assignMap.clear();
+    abundanceMap.clear();
 }
 
 void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
@@ -1244,6 +1373,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		}
 	}
 
+	//Kinematic fit data (pulls and covariance matrices)
+	Fill_KinFitData(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
+
 	//CUSTOM
 	Fill_CustomBranches_DataTree(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
 
@@ -1521,7 +1653,11 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	//MATCHING
 	if(locMCThrownMatching != NULL)
 	{
-		Bool_t locIsGeneratorFlag = (locMCThrownMatching->Get_TaggedMCGENBeamPhoton() == locBeamPhoton) ? kTRUE : kFALSE;
+	        // Tag the thrown beam photon by comparing energy, time and counter
+	        const DBeamPhoton* locBeamPhotonTaggedMCGEN = locMCThrownMatching->Get_TaggedMCGENBeamPhoton();
+		Bool_t locIsGeneratorFlag = kFALSE;
+		if (locBeamPhotonTaggedMCGEN != NULL)
+		  locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
 		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);
 	}
 
@@ -1581,6 +1717,9 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	DLorentzVector locDP4 = locChargedTrackHypothesis->lorentzMomentum();
 	TLorentzVector locP4_Measured(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
+
+	// Global PID
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PIDFOM"), locChargedTrackHypothesis->Get_FOM(), locArrayIndex);
 
 	//TRACKING INFO
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Tracking"), locTrackTimeBased->Ndof, locArrayIndex);
@@ -2097,5 +2236,714 @@ void DEventWriterROOT::Fill_ComboNeutralData(DTreeFillData* locTreeFillData, uns
 		TLorentzVector locP4_KinFit(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 		locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_KinFit"), locP4_KinFit, locComboIndex);
 	}
+}
+
+void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoop* locEventLoop, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
+		const DMCThrownMatching* locMCThrownMatching, const DDetectorMatches* locDetectorMatches,
+		const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
+		const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const
+{
+	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
+		return;
+
+	if(STORE_ERROR_MATRIX_INFO){
+	  locTreeFillData->Fill_Single<Int_t>("numEntries_ParticleErrM", nEntriesParticleCov);
+	  locTreeFillData->Fill_Single<Int_t>("numEntries_ShowerErrM", nEntriesShowerCov);
+	}
+    bool writeOutPulls = getPullFlag( locReaction );
+        
+    //Retreive and fill pull-information:
+    //######################################################################################################################
+    DKinFitType kfitType = locReaction->Get_KinFitType();
+    
+    //Now fill the pulls for all particles:
+    int nParticleCombos = locParticleCombos.size();
+    int nMeasuredFinalParticles;
+    double currentCharge;
+    Particle_t currentPID;
+        
+    //----------------------------------------------------------------------------
+    for(int iPC=0;iPC<nParticleCombos;iPC++){
+        Get_PullsFromFit(locParticleCombos.at(iPC));
+        
+        vector<string> pidVector = getPIDinReaction(locReaction);
+        map<Particle_t,int> assignMap = getNameForParticle(locReaction,pidVector);
+        
+        
+        //Look at beam photons:
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        const DParticleComboStep* locParticleComboStep = locParticleCombos[iPC]->Get_ParticleComboStep(0);
+        const DKinematicData* beamPhoton = locParticleComboStep->Get_InitialParticle_Measured();
+        
+        if(kfitType == d_P4Fit || kfitType == d_P4AndVertexFit){
+		  if(writeOutPulls){	
+             map<DKinFitPullType, double> someBeamMap = getPulls(beamPhoton,NULL,kfitType);
+             fillTreePullBranches(locTreeFillData,"ComboBeam",kfitType,someBeamMap,iPC,true);
+             someBeamMap.clear();
+	      }
+	    }
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        
+        //Look at the decay products:
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        vector<const DKinematicData*> finalParticlesMeasured = locParticleCombos.at(iPC)->Get_FinalParticles_Measured(locReaction, d_AllCharges);
+        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction, d_AllCharges);
+        
+        vector<const JObject*> finalParticleObjects = locParticleCombos.at(iPC)->Get_FinalParticle_SourceObjects(d_AllCharges);
+        nMeasuredFinalParticles = finalParticlesMeasured.size();
+        
+        //----------------------------------------------------------------------------
+        for(int iFP=0;iFP<nMeasuredFinalParticles;iFP++){
+            const DKinematicData* part = finalParticlesMeasured.at(iFP);
+            const DKinematicData* partFit = finalParticles.at(iFP);
+            const  DNeutralShower* sh = dynamic_cast<const DNeutralShower*>(finalParticleObjects.at(iFP));
+            bool isNeutral = false;
+            
+            map<DKinFitPullType, double>  someMap;
+            if(writeOutPulls) someMap = getPulls(part,sh,kfitType);
+            //-----------------------------------------------------
+            if(sh == NULL){
+				currentCharge = part->charge();
+                currentPID = part->PID();
+			}else{
+				currentCharge = 0.0;
+                currentPID = Gamma;
+		    }
+            
+            if(currentCharge == 0) isNeutral = true;
+            //-----------------------------------------------------
+            
+            string branchName = assignName(currentPID,assignMap);
+            assignMap[currentPID]--;
+            //-----------------------------------------------------
+            if(branchName != "nada"){
+                if(STORE_PULL_INFO){
+                    fillTreePullBranches(locTreeFillData,branchName,kfitType,someMap,iPC,isNeutral);
+                    fillTreeTrackPullBranches(locTreeFillData,branchName,kfitType,someMap,iPC,isNeutral,part,partFit);
+                }
+                if(STORE_ERROR_MATRIX_INFO)
+                	fillTreeErrMBranches(locTreeFillData,branchName,kfitType,part,sh,isNeutral);
+            }
+            //-----------------------------------------------------
+            if(STORE_PULL_INFO) someMap.clear();
+		  }
+        //----------------------------------------------------------------------------
+        //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        
+        myPullsMap.clear();
+        assignMap.clear();
+        abundanceMap.clear();
+        
+    }
+
+}
+
+
+//I guess this is the most clumsiest way of assigning a few names to a tree-branch, but it is doing what it is supposed to do...
+//*************************************************************************************************************************************
+vector<string> DEventWriterROOT::getPIDinReaction(const DReaction* locReaction)const
+{
+    vector <string> myVector;
+    vector<Particle_t> particle = locReaction->Get_FinalPIDs(-1,false,false,d_AllCharges,true);
+    int nParticleIDs = particle.size();
+    //----------------------------------------------------
+    for(int k=0;k<nParticleIDs;k++){
+        myVector.push_back(EnumString(particle.at(k)));
+    }
+    //----------------------------------------------------
+    return myVector;
+}
+
+map<Particle_t, int> DEventWriterROOT::getNameForParticle(const DReaction* someReaction, vector<string> someVector)const
+{
+    map <Particle_t,int> myMap;
+    vector<Particle_t> particle = someReaction->Get_FinalPIDs(-1,false,false,d_AllCharges,true);
+    int nParticleIDs = particle.size();
+    int currentCounter = 0;
+    int nEl = someVector.size();
+    //----------------------------------------------------
+    for(int k=0;k<nParticleIDs;k++){
+        currentCounter = 0;
+        
+        //----------------------------------------------------
+        for(int j=0;j<nEl;j++){
+            if(EnumString(particle.at(k)) == someVector.at(j)){
+                currentCounter++;
+                someVector.at(j) = "";
+            }
+        }
+        //----------------------------------------------------
+        if(currentCounter > 0){
+            abundanceMap[particle.at(k)] = currentCounter;
+            myMap[particle.at(k)] = currentCounter;
+        }
+    }
+    //----------------------------------------------------
+    return myMap;
+}
+
+string DEventWriterROOT::assignName(Particle_t someParticle, map<Particle_t,int> someMap)const
+{
+    string myName = "nada";
+    int abundance = abundanceMap.find(someParticle)->second;
+    if(abundance == 1) {
+        myName = EnumString(someParticle);
+    } else if(abundance > 1) {
+        int index = abundance - someMap.find(someParticle)->second +1;
+        string addName;
+        ostringstream convert;
+        convert << index;
+        addName = convert.str();
+        if(strcmp(EnumString(someParticle),"Gamma")==0) {
+            myName = "Photon" + addName;
+        } else {
+        	myName = EnumString(someParticle) + addName;
+		}
+    }
+    
+    return myName;
+}
+
+void DEventWriterROOT::Get_PullsFromFit(const DParticleCombo* particleCombos) const
+{
+    const DKinFitResults* fitResults = particleCombos->Get_KinFitResults();
+    if(fitResults != NULL){
+        fitResults->Get_Pulls(myPullsMap);
+    }
+}
+
+map<DKinFitPullType, double> DEventWriterROOT::getPulls(const JObject* particle, const JObject* shower, DKinFitType yourFitType) const{
+	map<DKinFitPullType, double> myMap;
+
+	if(particle != NULL || shower != NULL) {
+	
+		   if(yourFitType == d_P4Fit || yourFitType == d_VertexFit) {
+		   myMap = myPullsMap.find(particle)->second;
+	   }else if(yourFitType == d_P4AndVertexFit ){ //Option noFit is not considered
+	       if(shower == NULL) {
+			   myMap = myPullsMap.find(particle)->second;
+		   } else myMap = myPullsMap.find(shower)->second; 	
+	   }
+    }
+	
+	return myMap;
+}
+
+
+//Get the pull-features:
+void DEventWriterROOT::setTreePullBranches(DTreeBranchRegister& locBranchRegister,string yourBranchName,DKinFitType yourFitType, int yourNCombos, bool isNeutral) const
+{
+    string locArraySizeString = "NumCombos";
+    
+    if(yourFitType == d_P4Fit){
+        //Regular Pulls:
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Px_Pull"),locArraySizeString, yourNCombos);
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Py_Pull"),locArraySizeString, yourNCombos);
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Pz_Pull"),locArraySizeString, yourNCombos);
+        
+        //Pulls used for tracking:
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"QPt_Pull"),locArraySizeString, yourNCombos);
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Phi_Pull"),locArraySizeString, yourNCombos);
+        locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"tanLambda_Pull"),locArraySizeString, yourNCombos);
+	locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"D_Pull"),locArraySizeString, yourNCombos);
+      
+    }else if(yourFitType == d_P4AndVertexFit){
+        //------------------------------------------------------------
+        if(isNeutral){
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"E_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xx_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xy_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xz_Pull"),locArraySizeString, yourNCombos);
+        }else{
+            //Regular Pulls:
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Px_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Py_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Pz_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xx_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xy_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xz_Pull"),locArraySizeString, yourNCombos);
+            
+            //Pulls used for tracking:
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"QPt_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Phi_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"tanLambda_Pull"),locArraySizeString, yourNCombos);
+	    locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"D_Pull"),locArraySizeString, yourNCombos);
+        }
+        //------------------------------------------------------------
+    }else if(yourFitType == d_VertexFit && !isNeutral){
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xx_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xy_Pull"),locArraySizeString, yourNCombos);
+            locBranchRegister.Register_FundamentalArray<Double_t>(Build_BranchName(yourBranchName,"Xz_Pull"),locArraySizeString, yourNCombos);
+    }
+}
+
+//Fill the tree branches:
+void DEventWriterROOT::fillTreePullBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType,map<DKinFitPullType, double> yourPullsMap, int yourIndex, bool isNeutral) const
+{
+    
+        if(yourFitType == d_P4Fit){
+            locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Px_Pull"), yourPullsMap.find(d_PxPull)->second,yourIndex);
+            locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Py_Pull"), yourPullsMap.find(d_PyPull)->second,yourIndex);
+            locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Pz_Pull"), yourPullsMap.find(d_PzPull)->second,yourIndex);
+    
+        }else if(yourFitType == d_P4AndVertexFit){
+           //------------------------------------------------------------
+           if(isNeutral){
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "E_Pull"), yourPullsMap.find(d_EPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xx_Pull"), yourPullsMap.find(d_XxPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xy_Pull"), yourPullsMap.find(d_XyPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xz_Pull"), yourPullsMap.find(d_XzPull)->second,yourIndex);
+           }else{
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Px_Pull"), yourPullsMap.find(d_PxPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Py_Pull"), yourPullsMap.find(d_PyPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Pz_Pull"), yourPullsMap.find(d_PzPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xx_Pull"), yourPullsMap.find(d_XxPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xy_Pull"), yourPullsMap.find(d_XyPull)->second,yourIndex);
+                locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xz_Pull"), yourPullsMap.find(d_XzPull)->second,yourIndex);
+           }
+           //------------------------------------------------------------
+        }else if(yourFitType == d_VertexFit && !isNeutral){
+               locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xx_Pull"), yourPullsMap.find(d_XxPull)->second,yourIndex);
+               locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xy_Pull"), yourPullsMap.find(d_XyPull)->second,yourIndex);
+               locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Xz_Pull"), yourPullsMap.find(d_XzPull)->second,yourIndex);
+        }
+}
+
+//Make sure, the pull information is written out, when available
+void DEventWriterROOT::setPullFlag(const DReaction* currentReaction, bool myFlag) const
+{
+    writePulls[currentReaction] = myFlag;
+}
+
+bool DEventWriterROOT::getPullFlag(const DReaction* currentReaction) const
+{
+    bool outFlag = writePulls.find(currentReaction)->second;
+    return outFlag;
+}
+
+//Now fill the individual elements of the error matrix to the tree:
+void DEventWriterROOT::fillTreeErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType, const DKinematicData* particle, const DNeutralShower* shower, bool isNeutral) const
+{
+    if(yourFitType == d_P4Fit) {
+		fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
+	} else if(yourFitType == d_P4AndVertexFit) {
+		if(isNeutral) {
+			fillTreeShowerErrMBranches(locTreeFillData,yourBranchName,shower);
+		} else {
+			fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
+		}
+	} else if(yourFitType == d_VertexFit && !isNeutral) {
+		fillTreeParticleErrMBranches(locTreeFillData,yourBranchName,particle);
+	}     	
+}
+
+//Fill the 7x7 error matrix elements:
+void DEventWriterROOT::fillTreeParticleErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DKinematicData* particle) const
+{
+	if(particle != NULL){	
+	   const TMatrixTSym<float> errMatrix = *( particle->errorMatrix() );
+	
+	   int mIndex = 0;
+	   float matrixEl = 0.0;
+	   for(int row=0;row<7;row++){
+		   for(int col=0;col<7;col++){
+			    if(col >= row){
+					matrixEl = errMatrix[row][col];
+					locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"),matrixEl,mIndex);
+					mIndex++;
+				}
+		   }
+	   }
+
+    }
+}
+
+//Fill the 5x5 error matrix elements:
+void DEventWriterROOT::fillTreeShowerErrMBranches(DTreeFillData* locTreeFillData,string yourBranchName, const DNeutralShower* shower) const
+{
+	if(shower != NULL){
+	   const TMatrixTSym <float> errMatrix = *( shower->dCovarianceMatrix );
+	   float matrixEl = 0.0;
+	   
+	   int mIndex = 0;
+	   for(int row=0;row<5;row++){
+		   for(int col=0;col<5;col++){
+			    if(col >= row){
+				   matrixEl = errMatrix[row][col];
+			       locTreeFillData->Fill_Array<Float_t>(Build_BranchName(yourBranchName, "ErrMatrix"),matrixEl,mIndex);
+				   mIndex++;
+				}
+		   }
+	   }
+
+    }
+}
+
+//GET THE TRACKING PULLS:
+
+//Get the difference in pull errors for one momentum component:
+double DEventWriterROOT::getDiffSquaredErrP_Component(double yourRecComponent,double yourFitComponent,double yourPull) const
+{
+    double diff = yourRecComponent - yourFitComponent;
+    double error_component = 0.0;
+    
+    if(diff != 0.0 && yourPull != 0.0){
+        error_component = diff*diff / (yourPull*yourPull);
+    }
+    
+    return error_component;
+}
+
+// Get the difference in pull errors for the position
+vector< vector<double> > DEventWriterROOT::getSquaredErrX(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const{
+    
+    double x_pull = yourPullsMap.find(d_XxPull)->second;
+    double y_pull = yourPullsMap.find(d_XyPull)->second;
+    
+    double x_rec = particle->x();
+    double x_fit = particleFit->x();
+    
+    double y_rec = particle->y();
+    double y_fit = particleFit->y();
+    
+    double error_x = getDiffSquaredErrP_Component(x_rec,x_fit,x_pull);
+    double error_y = getDiffSquaredErrP_Component(y_rec,y_fit,y_pull);
+    
+    const TMatrixTSym<float> errMatrix = *( particle->errorMatrix() ); //--> Reconstructed errors!
+    double error_x_rec = errMatrix[3][3];
+    double error_y_rec = errMatrix[4][4];
+    
+    double error_x_fit = error_x_rec - error_x;
+    double error_y_fit = error_y_rec - error_y;
+    
+    vector <double> xComponent;
+    vector <double> yComponent;
+    
+    xComponent.push_back(error_x_rec);
+    xComponent.push_back(error_x_fit);
+    
+    yComponent.push_back(error_y_rec);
+    yComponent.push_back(error_y_fit);
+    
+    vector < vector<double> > myErrors;
+    myErrors.push_back(xComponent);
+    myErrors.push_back(yComponent);
+   
+    return myErrors;
+
+}
+
+//Get the difference in pull errors for the momentum
+vector< vector<double> > DEventWriterROOT::getSquaredErrP(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const
+{
+    
+    double px_pull = yourPullsMap.find(d_PxPull)->second;
+    double py_pull = yourPullsMap.find(d_PyPull)->second;
+    double pz_pull = yourPullsMap.find(d_PzPull)->second;
+    
+    double px_rec = particle->px();
+    double px_fit = particleFit->px();
+    
+    double py_rec = particle->py();
+    double py_fit = particleFit->py();
+    
+    double pz_rec = particle->pz();
+    double pz_fit = particleFit->pz();
+    
+    double error_x = getDiffSquaredErrP_Component(px_rec,px_fit,px_pull);
+    double error_y = getDiffSquaredErrP_Component(py_rec,py_fit,py_pull);
+    double error_z = getDiffSquaredErrP_Component(pz_rec,pz_fit,pz_pull);
+    
+    const TMatrixTSym<float> errMatrix = *( particle->errorMatrix() ); //--> Reconstructed errors!
+    double error_x_rec = errMatrix[0][0];
+    double error_y_rec = errMatrix[1][1];
+    double error_z_rec = errMatrix[2][2];
+    
+    double error_x_fit = error_x_rec - error_x;
+    double error_y_fit = error_y_rec - error_y;
+    double error_z_fit = error_z_rec - error_z;
+    
+    vector <double> xComponent;
+    vector <double> yComponent;
+    vector <double> zComponent;
+    
+    xComponent.push_back(error_x_rec);
+    xComponent.push_back(error_x_fit);
+    
+    yComponent.push_back(error_y_rec);
+    yComponent.push_back(error_y_fit);
+    
+    zComponent.push_back(error_z_rec);
+    zComponent.push_back(error_z_fit);
+    
+    vector < vector<double> > myErrors;
+    myErrors.push_back(xComponent);
+    myErrors.push_back(yComponent);
+    myErrors.push_back(zComponent);
+   
+    return myErrors;
+}
+
+//1.) Start with phi:
+//Calculate the error for one state (fitted,reconstructed):
+double DEventWriterROOT::getPhiError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const
+{
+    double myPhiError = 0.0;
+    double myPx = particle->px();
+    double myPy = particle->py();
+    
+    //Phi = artan(Px/Py) --> caclulate derivatives from this...
+    if(myPy != 0.0){
+        
+        double myDPx = yourErrorMatrix[0][isFitted];
+        double myDPy = yourErrorMatrix[1][isFitted];
+        
+        double arg = myPx / myPy;
+        double factor1 = 1.0 / pow( myPy*(1.0 + arg*arg), 2);
+        double factor2 = (myDPx + arg*arg*myDPy);
+        
+        myPhiError = factor1*factor2;
+    }
+    
+    return myPhiError;
+}
+
+
+//Now calculate the pull:
+double DEventWriterROOT::getPhiPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const
+{
+    double myPhiPull = -100.0;
+    
+    double phi_rec = ( particle->momentum() ).Phi();
+    double phi_fit = ( particleFit->momentum() ).Phi();
+    
+    double dPhi_rec = getPhiError(particle,yourErrorMatrix,0);
+    double dPhi_fit = getPhiError(particleFit,yourErrorMatrix,1);
+    
+    double pull_norm = dPhi_rec - dPhi_fit;
+    
+    if(pull_norm > 0.0){
+        myPhiPull = (phi_rec - phi_fit) / sqrt(pull_norm);
+    }
+    
+    return myPhiPull;
+}
+
+//2.) Tan(lambda):
+//Get the error of lambda:
+double DEventWriterROOT::getLambdaError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const
+{
+    double myTanLambdaError = 0.0;
+    //lambda = pi/2 - theta --> dlambda = dtheta...
+    
+    double myPx = particle->px();
+    double myPy = particle->py();
+    double myPz = particle->pz();
+    
+    double myDPx = yourErrorMatrix[0][isFitted];
+    double myDPy = yourErrorMatrix[1][isFitted];
+    double myDPz = yourErrorMatrix[2][isFitted];
+    
+    double r2 = myPx*myPx + myPy*myPy + myPz*myPz;
+    double lambda = 0.5*M_PI - ( particle->momentum() ).Theta();
+    //---------------------------
+    if(r2 > 0.0 && cos(lambda) != 0.0){
+        double r = sqrt(r2);
+        double factor1 = 1.0 / ( pow(r,6) * pow(cos(lambda),4) );
+        double sum1 = myPx*myPz;
+        double sum2 = myPy*myPz;
+        double sum3 = (r - myPz*myPz);
+        double factor2 = sum1*sum1*myDPx + sum2*sum2*myDPy + sum3*sum3*myDPz;
+        
+        myTanLambdaError = factor1*factor2;
+    }
+    //---------------------------
+    
+    
+    return myTanLambdaError;
+}
+
+
+//Go for the pull itself:
+double DEventWriterROOT::getTanLambdaPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const
+{
+    double myTanLambdaPull = -100.0;
+    
+    //Reconstructed values:
+    double lambda_rec = 0.5*M_PI - ( particle->momentum() ).Theta();
+    double tanLambda_rec = tan(lambda_rec);
+    double dtanLambda_rec = getLambdaError(particle,yourErrorMatrix,0);
+    
+    //Fitted values:
+    double lambda_fit = 0.5*M_PI - ( particleFit->momentum() ).Theta();
+    double tanLambda_fit = tan(lambda_fit);
+    double dtanLambda_fit = getLambdaError(particleFit,yourErrorMatrix,1);
+    
+    double pull_norm = dtanLambda_rec-dtanLambda_fit;
+    //---------------------------
+    if(pull_norm > 0.0){
+        myTanLambdaPull = (tanLambda_rec-tanLambda_fit) / sqrt(pull_norm);
+    }
+    //---------------------------
+    
+    return myTanLambdaPull;
+}
+
+//3.) q/pt:
+//Calculate error for 1/pt:
+double DEventWriterROOT::getQPTError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const
+{
+    double myQPTError = 0.0;
+    double myPx = particle->px();
+    double myPy = particle->py();
+    double r2 = myPx*myPx + myPy*myPy;
+    
+    double myDPx = yourErrorMatrix[0][isFitted];
+    double myDPy = yourErrorMatrix[1][isFitted];
+    //---------------------------
+    if(r2 > 0.0){
+        double q = particle->charge();
+        double factor1 = q*q / pow(r2,3);
+        double factor2 = (myPx*myPx*myDPx + myPy*myPy*myDPy);
+        
+        myQPTError = factor1*factor2;
+    }
+    //---------------------------
+    
+    return myQPTError;
+}
+
+
+//Get the pull:
+double DEventWriterROOT::getQPTPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const
+{
+    double myPTPull = -100.0;
+    
+    double particle_charge = particle->charge();
+    
+    double myPx_rec = particle->px();
+    double myPy_rec = particle->py();
+    double r_rec = myPx_rec*myPx_rec + myPy_rec*myPy_rec;
+    
+    double myPx_fit = particleFit->px();
+    double myPy_fit = particleFit->py();
+    double r_fit = myPx_fit*myPx_fit + myPy_fit*myPy_fit;
+    
+    //---------------------------
+    if(r_rec > 0.0 && r_fit > 0.0){
+        double qpt_rec = particle_charge/sqrt(r_rec);
+        double dqpt_rec = getQPTError(particle,yourErrorMatrix,0);
+        
+        double qpt_fit = particle_charge/sqrt(r_fit);
+        double dqpt_fit = getQPTError(particleFit,yourErrorMatrix,1);
+        
+        double pull_norm = dqpt_rec-dqpt_fit;
+        //---------------------------
+        if(pull_norm > 0.0){
+	  myPTPull = (qpt_rec-qpt_fit)/sqrt(pull_norm);
+        }
+        //---------------------------
+    }
+    //---------------------------
+    
+    
+    return myPTPull;
+}
+
+//4.) D:
+//Get the error of D:
+double DEventWriterROOT::getDError(const DKinematicData* particle, vector< vector<double> > yourErrorMatrix, int isFitted) const
+{
+
+  double myDsq=particle->position().Perp2()+1e-8;
+  double myx=particle->x();
+  double myy=particle->y();
+
+  double myVarX=yourErrorMatrix[0][isFitted];
+  double myVarY=yourErrorMatrix[1][isFitted];
+  double myDError=(myx*myx*myVarX+myy*myy*myVarY)/myDsq;
+
+  return myDError;
+}
+
+//Go for the pull itself:
+double DEventWriterROOT::getDPull(const DKinematicData* particle, const DKinematicData* particleFit, vector< vector<double> > yourErrorMatrix) const
+{
+  double myDPull=-100.0;
+  
+  //Reconstructed values:
+  double D_rec=particle->position().Perp();
+  double dx_rec=particle->x();
+  double dy_rec=particle->y();
+  double phi_rec=particle->momentum().Phi();
+  double cosphi_rec=cos(phi_rec);
+  double sinphi_rec=sin(phi_rec);
+  if ((dx_rec>0.0 && sinphi_rec>0.0) || (dy_rec<0.0 && cosphi_rec>0.0)
+      || (dy_rec>0.0 && cosphi_rec<0.0) || (dx_rec<0.0 && sinphi_rec<0.0))
+    D_rec*=-1.;
+  double dD_rec=getDError(particle,yourErrorMatrix,0);
+  
+  //Fitted values:
+  double D_fit=particleFit->position().Perp();
+  double dx_fit=particleFit->x();
+  double dy_fit=particleFit->y();
+  double phi_fit=particleFit->momentum().Phi();
+  double cosphi_fit=cos(phi_fit);
+  double sinphi_fit=sin(phi_fit);
+  if ((dx_fit>0.0 && sinphi_fit>0.0) || (dy_fit<0.0 && cosphi_fit>0.0)
+      || (dy_fit>0.0 && cosphi_fit<0.0) || (dx_fit<0.0 && sinphi_fit<0.0))
+    D_fit*=-1.;
+  double dD_fit=getDError(particle,yourErrorMatrix,1);
+
+  double pull_norm = dD_rec-dD_fit;
+  //---------------------------
+  if(pull_norm > 0.0){
+    myDPull = (D_rec-D_fit) / sqrt(pull_norm);
+  }
+  //---------------------------
+    
+  return myDPull;
+}
+
+//Create a vector containing all pulls:
+vector<double> DEventWriterROOT::collectTrackingPulls(const DKinematicData* particle, const DKinematicData* particleFit, map<DKinFitPullType, double> yourPullsMap) const
+{
+    //1.) Get the pre-and post-fit errors:
+    vector< vector<double> > myErrors = getSquaredErrP(particle,particleFit,yourPullsMap);
+    vector< vector<double> > myXErrors = getSquaredErrX(particle,particleFit,yourPullsMap);
+    
+    //2.) Calculate the pulls:
+    //2.1.) q/pt:
+    double qpt_pull = getQPTPull(particle,particleFit,myErrors);
+    //2.2.) phi:
+    double phi_pull = getPhiPull(particle,particleFit,myErrors);
+    //2.3.) tan(lambda):
+    double tanLambda_pull = getTanLambdaPull(particle,particleFit,myErrors);
+    //2.4.) D
+    double D_pull = getDPull(particle,particleFit,myXErrors);
+    
+    //3.) Store everything into a vector:
+    vector<double> myTrackingPulls;
+    myTrackingPulls.push_back(qpt_pull);
+    myTrackingPulls.push_back(phi_pull);
+    myTrackingPulls.push_back(tanLambda_pull);
+    myTrackingPulls.push_back(D_pull);
+    
+    return myTrackingPulls;
+}
+
+//Fill the tracking pulls:
+void DEventWriterROOT::fillTreeTrackPullBranches(DTreeFillData* locTreeFillData,string yourBranchName,DKinFitType yourFitType,map<DKinFitPullType, double> yourPullsMap, int yourIndex, bool isNeutral, const DKinematicData* particle, const DKinematicData* particleFit) const
+{
+    if( !isNeutral && (yourFitType == d_P4Fit || yourFitType == d_P4AndVertexFit) ){//Get the tracking pulls for charged tracks only...
+        //1.) Get the vector containing the tracking pulls:
+        vector<double> myTrackingPulls = collectTrackingPulls(particle,particleFit,yourPullsMap);
+        
+        //2.) Fill the pulls to the tree:
+        locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "QPt_Pull"),myTrackingPulls[0],yourIndex);
+        locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "Phi_Pull"),myTrackingPulls[1],yourIndex);
+        locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "tanLambda_Pull"),myTrackingPulls[2],yourIndex);
+	locTreeFillData->Fill_Array<Double_t>(Build_BranchName(yourBranchName, "D_Pull"),myTrackingPulls[3],yourIndex);
+    }
 }
 

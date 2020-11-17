@@ -113,7 +113,7 @@ void mergeTrees(const char* primaryFile, const char* primaryTree, const char* se
    vector<const char*> branches_secondary = getBranches(t_secondary);
 
    // get reaction names and set up arrays for new branches
-   UInt_t initArraySize = 100;
+   UInt_t initArraySize = 999;
    Float_t new_chisq[initArraySize];
    UInt_t new_ndf[initArraySize];
    string p(primaryTree);
@@ -143,7 +143,7 @@ void mergeTrees(const char* primaryFile, const char* primaryTree, const char* se
    TTreeReaderValue<ULong64_t> secondary_event(secondaryReader, "EventNumber");
    TTreeReaderArray<Int_t> secondary_ChargedHypoID(secondaryReader, "ChargedHypo__TrackID");
    TTreeReaderArray<Int_t> secondary_ChargedHypo__PID(secondaryReader, "ChargedHypo__PID");
-   TTreeReaderArray<Int_t> secondary_NeutralHypoID(primaryReader, "NeutralHypo__NeutralID");
+   TTreeReaderArray<Int_t> secondary_NeutralHypoID(secondaryReader, "NeutralHypo__NeutralID");
    TTreeReaderArray<Int_t> secondary_beam_ID(secondaryReader, "ComboBeam__BeamIndex");
 
    // The only branches that will vary are the Int arrays

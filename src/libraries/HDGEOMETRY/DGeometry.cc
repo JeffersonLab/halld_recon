@@ -1768,7 +1768,9 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 bool DGeometry::GetCCALZ(double &z_ccal) const
 {
    vector<double> ComptonEMcalpos;
-   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);\
+   jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
 	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
@@ -1800,7 +1802,11 @@ bool DGeometry::GetFCALZ(double &z_fcal) const
 }
 
 
-bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
+//---------------------------------
+// GetFCALPosition
+//---------------------------------
+bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const
+{
   vector<double> ForwardEMcalpos;
   bool good = Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z", ForwardEMcalpos);
   
@@ -1815,10 +1821,16 @@ bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const{
   }
 }
 
-bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
+//---------------------------------
+// GetCCALPosition
+//---------------------------------
+bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
+{
   vector<double> ComptonEMcalpos;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
-  
+  jgeom->SetVerbose(1);   // reenable error messages
+ 
   if(!good){
     //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;
     x=0.,y=0.,z=0.;
@@ -1832,12 +1844,69 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const{
 }
 
 //---------------------------------
+// GetFCALInsertRowSize
+//---------------------------------
+bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
+{
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+   bool good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+   jgeom->SetVerbose(1);   // reenable error messages
+
+   if(!good){
+	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
+      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
+      insert_row_size = 0;   
+      return false;
+   }else{
+      return true;
+   }
+}
+
+//---------------------------------
+// GetFCALBlockSize
+//---------------------------------
+bool DGeometry::GetFCALBlockSize(vector<double> &block) const
+{
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+   bool good = Get("//box[@name='LGBL']/@X_Y_Z",block);
+   jgeom->SetVerbose(1);   // reenable error messages
+
+   if(!good){
+	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
+      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
+      return false;
+   }else{
+      return true;
+   }
+}
+
+//---------------------------------
+// GetFCALInsertBlockSize
+//---------------------------------
+bool DGeometry::GetFCALInsertBlockSize(vector<double> &block) const
+{
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+   bool good = Get("//box[@name='LTB1']/@X_Y_Z",block);
+   jgeom->SetVerbose(1);   // reenable error messages
+
+   if(!good){
+	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
+      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
+      return false;
+   }else{
+      return true;
+   }
+}
+
+//---------------------------------
 // GetDIRCZ
 //---------------------------------
 bool DGeometry::GetDIRCZ(double &z_dirc) const
 {
   vector<double> dirc_face;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='DIRC']/@X_Y_Z",dirc_face);
+  jgeom->SetVerbose(1);   // reenable error messages
 
   if(!good){
     //_DBG_<<"Unable to retrieve DIRC position."<<endl;
@@ -1863,8 +1932,10 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
 bool DGeometry::GetTRDZ(vector<double> &z_trd) const
 {
    vector<double> trd_origin;
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
    bool good = Get("//section/composition/posXYZ[@volume='TRDGEM']/@X_Y_Z",trd_origin);
-   
+   jgeom->SetVerbose(1);   // reenable error messages
+
    if(!good){
      //_DBG_<<"Unable to retrieve TRD position."<<endl;
      return false;
@@ -1921,12 +1992,16 @@ bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
     if(!Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1)) return false; 
     int num_narrow_bars1 = 0;
     if(!Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1)) return false; 
-    int num_narrower_bars1 = 0;   // optional - added during upgrade
-    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_single_end_bars1 = 0;
     if(!Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1)) return false;
+
+    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    int num_narrower_bars1 = 0;   // optional - added during upgrade
+    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_narrower_bars2 = 0;   // optional  - added during upgrade
     Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
+    jgeom->SetVerbose(1);   // reenable error messages
+
     int num_narrow_bars2 = 0;
     if(!Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2)) return false;
     int num_bars2 = 0;
@@ -1992,12 +2067,16 @@ bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> 
     Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1); 
     int num_narrow_bars1 = 0;
     Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1); 
-    int num_narrower_bars1 = 0;
-    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_single_end_bars1 = 0;
     Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1); 
+
+    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    int num_narrower_bars1 = 0;
+    Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
     int num_narrower_bars2 = 0;
     Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
+    jgeom->SetVerbose(1);   // reenable error messages
+
     int num_narrow_bars2 = 0;
     Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2); 
     int num_bars2 = 0;
@@ -2108,6 +2187,8 @@ bool DGeometry::GetTargetZ(double &z_target) const
    // Default to nominal center of GlueX target
    z_target=65.;
 
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+
    // Check GlueX target is defined
    bool gluex_target_exists = true;
    vector<double> xyz_vessel;
@@ -2118,6 +2199,7 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(gluex_target_exists) gluex_target_exists = Get("//posXYZ[@volume='Target']/@X_Y_Z", xyz_detector);
    if(gluex_target_exists) {
       z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
+   	  jgeom->SetVerbose(1);   // reenable error messages
 	  return true;
    }
 
@@ -2131,6 +2213,7 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(cpp_target_exists) cpp_target_exists = Get("//composition/posXYZ[@volume='TargetCPP']/@X_Y_Z", xyz_TargetCPP);
    if(cpp_target_exists) {
       z_target = xyz_TGT0[2] + xyz_TARG[2] + xyz_TargetCPP[2];
+   	  jgeom->SetVerbose(1);   // reenable error messages
       return true;
    }
    
@@ -2143,9 +2226,10 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(primex_target_exists) {
 
      z_target = xyz_BETG[2] + xyz_target[2] + xyz_detector[2];
+
+     //     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
      
-     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
-     
+     jgeom->SetVerbose(1);   // reenable error messages
      return true;
    }
    
@@ -2154,6 +2238,7 @@ bool DGeometry::GetTargetZ(double &z_target) const
    jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " << 
      z_target << " cm" << endl;
 
+   jgeom->SetVerbose(1);   // reenable error messages
 
    return false;
 }
@@ -2163,8 +2248,10 @@ bool DGeometry::GetTargetZ(double &z_target) const
 //---------------------------------
 bool DGeometry::GetTargetLength(double &target_length) const
 {
+   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
    vector<double> zLength;
    bool good = Get("//section[@name='Target']/pcon[@name='LIH2']/real[@name='length']/[@value]", zLength);
+   jgeom->SetVerbose(1);   // reenable error messages
 
    target_length = good ? zLength[0]:0.0;
 
@@ -2174,7 +2261,8 @@ bool DGeometry::GetTargetLength(double &target_length) const
 // Get vectors of positions and norm vectors for start counter from XML
 bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 				    vector<vector<DVector3> >&norm
-				    ) const{
+				    ) const
+{
 				    
   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
 

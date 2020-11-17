@@ -435,7 +435,10 @@ bool HDEVIO::readSparse(uint32_t *user_buff, uint32_t user_buff_len, bool allow_
 		
 		EVIOEventRecord &er = sparse_block_iter->evio_events[sparse_event_idx];
 
-		uint32_t event_len = er.event_len;
+        // Copy event record type into block record as the type so calls to GetCurrentBlockType will be valid.
+        sparse_block_iter->block_type = er.event_type;
+
+        uint32_t event_len = er.event_len;
 		last_event_len = event_len;
 	
 		// Check if user buffer is big enough to hold block
@@ -583,6 +586,9 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 
 	// Grab next event record
 	EVIOEventRecord &er = br.evio_events.front();
+
+	// Copy event record type into block record as the type so calls to GetCurrentBlockType will be valid.
+	br.block_type = er.event_type;
 	
 	uint32_t event_len = er.event_len;
 	last_event_len = event_len;
@@ -717,6 +723,34 @@ uint32_t HDEVIO::AddToEventMask(string type_str)
 	return 0;
 }
 
+//------------------------
+// GetCurrentBlockType
+//
+// Returns the type of the current block. This will be the
+// one corresponding to the last call to something like
+// readNoFileBuff(). Note that the "block_type" field is
+// actually copied from the "event_type" field of the last
+// event presented from the block. I believe (though an not
+// 100% sure) that all events in a block are of the same type.
+// Even if that is true, it could change in the future. Thus,
+// we report the block type based on the event last given to
+// the caller.
+//------------------------
+HDEVIO::BLOCKTYPE HDEVIO::GetCurrentBlockType(void)
+{
+    return NB_block_record.block_type;
+}
+
+//------------------------
+// GetCurrentBlockNevents
+//
+// Returns the number of events in the current EVIO block.
+//
+//------------------------
+uint64_t HDEVIO::GetCurrentBlockNevents(void)
+{
+    return NB_block_record.evio_events.size();
+}
 //------------------------
 // GetEVIOBlockRecords
 //------------------------
@@ -940,7 +974,8 @@ void HDEVIO::MapEvents(BLOCKHEADER_t &bh, EVIOBlockRecord &br)
 			case 0x0070: er.event_type = kBT_BOR;        break;
 			case 0xFF50:
 			case 0xFF51:
-			case 0xFF70:
+			case 0xFF70:  // SEB
+			case 0xFF78:  // SEB w/ sync
 				er.event_type = kBT_PHYSICS;
 				er.first_event  = eh->physics.first_event_lo;
 				er.first_event += ((uint64_t)eh->physics.first_event_hi)<<32;

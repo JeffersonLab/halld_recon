@@ -1554,7 +1554,7 @@ bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, co
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > dBeamBunchPeriod/2.)
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1668,7 +1668,7 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > dBeamBunchPeriod/2.)
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1784,7 +1784,7 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > dBeamBunchPeriod/2.)
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -1909,7 +1909,7 @@ bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, 
 			
 			double locDeltaTRF = locBeamParticle->time() - (locEventRFBunch->dTime + (locBeamParticle->z() - dTargetZCenter)/29.9792458);
 
-			if(locDeltaTRF > dBeamBunchPeriod/2.)
+			if(fabs(locDeltaTRF) > dBeamBunchPeriod/2.)
 				locWeight = -1./(2.*Get_Reaction()->Get_NumPlusMinusRFBunches());
 		}
 	}
@@ -2025,6 +2025,8 @@ bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DPa
 
 void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 {
+        gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", dHistDependenceFlag);
+
 	auto locReaction = Get_Reaction();
 	DKinFitType locKinFitType = locReaction->Get_KinFitType();
 	if(locKinFitType == d_NoFit)

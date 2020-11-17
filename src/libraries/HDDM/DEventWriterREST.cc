@@ -104,6 +104,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
 	locEventLoop->Get(locDIRCPmtHits);
 
+	std::vector<const DEventHitStatistics*> hitStats;
+	locEventLoop->Get(hitStats);
+
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
 
@@ -349,6 +352,10 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		int locStatus = tofpoints[i]->dHorizontalBar + 45*tofpoints[i]->dVerticalBar;
 		locStatus += 45*45*tofpoints[i]->dHorizontalBarStatus + 45*45*4*tofpoints[i]->dVerticalBarStatus;
 		tofstatus().setStatus(locStatus);
+		// Energy deposition for each plane
+		hddm_r::TofEnergyDepositionList tofEnergyDeposition = tof().addTofEnergyDepositions(1);
+		tofEnergyDeposition().setDE1(tofpoints[i]->dE1);
+		tofEnergyDeposition().setDE2(tofpoints[i]->dE2);
 	}
 
 	// push any DSCHit objects to the output record
@@ -468,12 +475,38 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		
 	}
 
+	// push any DEventHitStatistics objects to the output record
+	if (hitStats.size() > 0)
+	{
+		hddm_r::HitStatisticsList stats = res().addHitStatisticses(1);
+		hddm_r::StartCountersList starts = stats().addStartCounterses(1);
+		starts().setCount(hitStats[0]->start_counters);
+		hddm_r::CdcStrawsList straws = stats().addCdcStrawses(1);
+		straws().setCount(hitStats[0]->cdc_straws);
+		hddm_r::FdcPseudosList pseudos = stats().addFdcPseudoses(1);
+		pseudos().setCount(hitStats[0]->fdc_pseudos);
+		hddm_r::BcalCellsList cells = stats().addBcalCellses(1);
+		cells().setCount(hitStats[0]->bcal_cells);
+		hddm_r::FcalBlocksList blocks = stats().addFcalBlockses(1);
+		blocks().setCount(hitStats[0]->fcal_blocks);
+		hddm_r::CcalBlocksList bloccs = stats().addCcalBlockses(1);
+		bloccs().setCount(hitStats[0]->ccal_blocks);
+		hddm_r::DircPMTsList pmts = stats().addDircPMTses(1);
+		pmts().setCount(hitStats[0]->dirc_PMTs);
+	}
+
 	// push any DTrigger objects to the output record
 	for (size_t i=0; i < locTriggers.size(); ++i)
 	{
 		hddm_r::TriggerList trigger = res().addTriggers(1);
 		trigger().setL1_trig_bits(Convert_UnsignedIntToSigned(locTriggers[i]->Get_L1TriggerBits()));
 		trigger().setL1_fp_trig_bits(Convert_UnsignedIntToSigned(locTriggers[i]->Get_L1FrontPanelTriggerBits()));
+		
+		// trigger energy sums
+		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
+		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
+		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+
 	}
 
 	// push any DDetectorMatches objects to the output record
@@ -555,6 +588,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 				tofList().setDeltax(locTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
 				tofList().setDeltay(locTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
+				// dEdx for each plane
+				hddm_r::TofDedxList tofDedx = tofList().addTofDedxs(1);
+				tofDedx().setDEdx1(locTOFHitMatchParamsVector[loc_k]->dEdx1);
+				tofDedx().setDEdx2(locTOFHitMatchParamsVector[loc_k]->dEdx2);
+
 			}
 
 			vector<shared_ptr<const DSCHitMatchParams>> locSCHitMatchParamsVector;

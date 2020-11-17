@@ -20,6 +20,8 @@ class DParticleID_PID1:public DParticleID{
 	jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const;
 	jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const;
 	jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const;
+	double GetProtondEdxMean_TOF(double locBeta) const;
+	double GetProtondEdxSigma_TOF(double locBeta) const;
 	double GetProtondEdxMean_SC(double locBeta) const;
 	double GetProtondEdxSigma_SC(double locBeta) const;
 	double GetEOverPMean(DetectorSystem_t detector,double p) const;
@@ -41,19 +43,23 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> ddEdxMeanParams_CDC_PiPlus;
 	vector<float> ddEdxMeanParams_CDC_Electron;
 	vector<float> ddEdxMeanParams_SC_Proton;
+	vector<float> ddEdxMeanParams_TOF_Proton;
 
 	vector<float> dEOverPMeanParams_BCAL;
 	vector<float> dEOverPMeanParams_FCAL;
 
+	vector<float> ddEdxSigmaParams_FDC_N_dependence;
 	vector<float> ddEdxSigmaParams_FDC_Proton;
 	vector<float> ddEdxSigmaParams_FDC_KPlus;
 	vector<float> ddEdxSigmaParams_FDC_PiPlus;
 	vector<float> ddEdxSigmaParams_FDC_Electron;
+	vector<float> ddEdxSigmaParams_CDC_N_dependence;
 	vector<float> ddEdxSigmaParams_CDC_Proton;
 	vector<float> ddEdxSigmaParams_CDC_KPlus;
 	vector<float> ddEdxSigmaParams_CDC_PiPlus;
 	vector<float> ddEdxSigmaParams_CDC_Electron;
 	vector<float> ddEdxSigmaParams_SC_Proton;
+	vector<float> ddEdxSigmaParams_TOF_Proton;
 
 	vector<float> dTimeSigmaParams_TOF_Proton;
 	vector<float> dTimeSigmaParams_TOF_KPlus;

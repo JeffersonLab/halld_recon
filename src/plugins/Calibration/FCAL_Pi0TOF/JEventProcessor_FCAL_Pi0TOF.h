@@ -25,6 +25,10 @@
 #include "DVector3.h"
 #include "PID/DVertex.h"
 
+#include "PID/DBeamPhoton.h"
+#include "PID/DEventRFBunch.h"
+#include "TRIGGER/DL1Trigger.h"
+
 using namespace std;
 
 class JEventProcessor_FCAL_Pi0TOF:public jana::JEventProcessor{

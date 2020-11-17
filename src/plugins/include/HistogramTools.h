@@ -8,6 +8,7 @@
 #include <TH1I.h>
 #include <TH2I.h>
 #include <TH3I.h>
+#include <TFile.h>
 #include <TProfile.h>
 #include <TProfile2D.h>
 #include <TDirectory.h>
@@ -669,6 +670,9 @@ void SortDirectories(){
    japp->RootWriteLock();
    for (unsigned int i=0; i < GetAllDirectories().size(); i++){
       if (GetAllDirectories()[i] == 0) continue;
+      // catch case where the directory sits in a separate file that is already closed
+      // note that if the file object has been deleted, then we are in trouble
+      if (GetAllDirectories()[i]->GetFile()->IsOpen() == kFALSE) continue;
       GetAllDirectories()[i]->GetList()->Sort();
    }
    japp->RootUnLock();

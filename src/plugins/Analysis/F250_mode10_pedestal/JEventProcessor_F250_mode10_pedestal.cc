@@ -35,9 +35,11 @@ JEventProcessor_F250_mode10_pedestal::JEventProcessor_F250_mode10_pedestal()
 {
 
 	NSA_NSB = 60;
+	debug=0;
 	
 	if(gPARMS){
-		gPARMS->SetDefaultParameter("F250_m8_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
+		gPARMS->SetDefaultParameter("F250_m10_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
+		gPARMS->SetDefaultParameter("F250_m10_ped:debug",   debug,   "Debug level");
 	}
 
 }
@@ -78,14 +80,17 @@ jerror_t JEventProcessor_F250_mode10_pedestal::init(void)
 
 	// set all the pointers to NULL
 	for (int i=0; i<highcratenum; i++) {
+		mean_crates[i] = NULL;
 		samples_rms_summary[i] = NULL;
+		samplesum_pedsub_rms_summary[i] = NULL;
 		samplesum_rms_summary[i] = NULL;
+		windowSigma_crate[i] = NULL;
 		for (int j=0; j<highslotnum; j++) {
 			for (int k=0; k<highchannum; k++) {
 				samples_meansub[i][j][k] = NULL;
 				samplesum_pedsub[i][j][k] = NULL;
 				samplesum[i][j][k] = NULL;
-				mean_crates[i] = NULL;
+				windowSigma[i][j][k] = NULL;
 			}
 		}
 	}
@@ -144,12 +149,20 @@ jerror_t JEventProcessor_F250_mode10_pedestal::evnt(JEventLoop *loop, uint64_t e
 
 		/// create histogram if necessary
 		char histname[255], histtitle[255];
+		if (windowSigma[rocid][slot][channel] == NULL) {
+			if (rocid > highcratenum || slot > highslotnum || channel > highchannum) {
+				printf ("(%i,%i,%i) is grater than (%i,%i,%i)\n",rocid,slot,channel,highcratenum,highslotnum,highchannum);
+				continue;
+			}
+			sprintf(histname,"windowSigma_%02i_%02i_%02i",rocid,slot,channel);
+			sprintf(histtitle,"Sigma of each window (%2i,%2i,%2i)",rocid,slot,channel);
+			windowSigma[rocid][slot][channel] = new TH1I(histname,histtitle,400,0.0,2.0);
+		}
 		if (samples_meansub[rocid][slot][channel] == NULL) {
 			if (rocid > highcratenum || slot > highslotnum || channel > highchannum) {
 				printf ("(%i,%i,%i) is grater than (%i,%i,%i)\n",rocid,slot,channel,highcratenum,highslotnum,highchannum);
 				continue;
 			}
-
 			float lowlimit=-7, highlimit=7;
 			// adjust limits to prevent binning effects
 			float difference = highlimit-lowlimit;
@@ -173,13 +186,7 @@ jerror_t JEventProcessor_F250_mode10_pedestal::evnt(JEventLoop *loop, uint64_t e
 			samplesum_pedsub[rocid][slot][channel] = new TH1I(histname,histtitle,numbins,lowlimit,highlimit);
 		}
 		if (samplesum[rocid][slot][channel] == NULL) {
-			float lowlimit, highlimit, difference;
 			int numbins;
-			// lowlimit=-250; highlimit=250;
-			// lowlimit+=100*nsa_nsb;
-			// highlimit+=100*nsa_nsb;
-			// difference = highlimit-lowlimit;
-			// numbins = difference;
 			numbins=1000;
 			// adjust limits to prevent binning effects
 			sprintf(histname,"samplesum_%02i_%02i_%02i",rocid,slot,channel);
@@ -192,13 +199,20 @@ jerror_t JEventProcessor_F250_mode10_pedestal::evnt(JEventLoop *loop, uint64_t e
 			mean_crates[rocid] = new TProfile2D(histname,histtitle,21,0.5,21.5,16,-0.5,15.5);
 			mean_crates[rocid]->SetStats(0);
 		}
-		/// loop over the samples to calculate mean
-		float total=0;
+		if (windowSigma_crate[rocid] == NULL) {
+			sprintf(histname,"windowSigma_crate%02i",rocid);
+			sprintf(histtitle,"Crate %i channel sigma;Slot;Channel",rocid);
+			windowSigma_crate[rocid] = new TProfile2D(histname,histtitle,21,0.5,21.5,16,-0.5,15.5);
+			windowSigma_crate[rocid]->SetStats(0);
+		}
+		/// loop over the samples to calculate mean, RMS and sigma
+		float total=0, sumofsquares=0;
 		int pedtotal=0, signaltotal=0;
 		int numsamps=0;
 		for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
 			if (samplesvector[c_samp]>0 && samplesvector[c_samp]<4096 ) {
 				total += samplesvector[c_samp];
+				sumofsquares += samplesvector[c_samp]*samplesvector[c_samp];
 				numsamps++;
 				if (c_samp<4) pedtotal += samplesvector[c_samp];
 				if (c_samp>=4 && c_samp<(4+NSA_NSB)) signaltotal += samplesvector[c_samp];
@@ -212,10 +226,18 @@ jerror_t JEventProcessor_F250_mode10_pedestal::evnt(JEventLoop *loop, uint64_t e
 
 		if (numsamps>0) {
 			float mean = total/numsamps;
+            float RMS = sqrt(sumofsquares/numsamps);
+            float sigma = sqrt(RMS*RMS-mean*mean);
+            if (debug>=2) if (rocid==31 && slot==3 && channel==0) printf("%5lu %2i %2i %2i  %8.0f %i mean %10f, RMS %10f, Sigma %f\n",
+                                                                         eventnumber,rocid,slot,channel,total,numsamps,mean,RMS, sigma);
+            windowSigma[rocid][slot][channel]->Fill(sigma);
 			mean_crates[rocid]->Fill(slot,channel,mean);
+			windowSigma_crate[rocid]->Fill(slot,channel,sigma);
 			for (uint16_t c_samp=0; c_samp<nsamples; c_samp++) {
 				if (samplesvector[c_samp]>0 && samplesvector[c_samp]<4096 ) {
-					samples_meansub[rocid][slot][channel]->Fill(samplesvector[c_samp]-mean);
+					float sampsubmean=samplesvector[c_samp]-mean;
+					samples_meansub[rocid][slot][channel]->Fill(sampsubmean);
+					if (debug>=3) if (rocid==31 && slot==3 && channel==0) printf("\t%3i %4i %f %f\n",c_samp,samplesvector[c_samp],mean,sampsubmean);
 				}
 			}
 		}
@@ -286,7 +308,7 @@ jerror_t JEventProcessor_F250_mode10_pedestal::fini(void)
 		if (samples_rms_summary[i]!=NULL) {
 			float min = samples_rms_summary[i]->GetMinimum(0.1);
 			float max = samples_rms_summary[i]->GetMaximum();
-			printf("%i min %f max %f\n",i,min,max);
+			printf("crate %i: RMS of channels:  min %f  max %f\n",i,min,max);
 			//samples_rms_summary[i]->SetMinimum(0.9);
 			//samples_rms_summary[i]->SetMaximum(1.7);
 		}

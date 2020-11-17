@@ -21,7 +21,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		//CONSTRUCTORS & OPERATORS
 		DChargedTrackHypothesis(void);
 		DChargedTrackHypothesis(const DChargedTrackHypothesis& locSourceData, bool locShareTrackingFlag = false,
-				bool locShareTimingFlag = false, bool locShareKinematicsFlag = false);
+				bool locShareTimingFlag = false, 
+					bool locShareEOverPFlg=false, bool locShareKinematicsFlag = false);
 		DChargedTrackHypothesis(const DTrackTimeBased* locSourceData);
 		DChargedTrackHypothesis& operator=(const DChargedTrackHypothesis& locSourceData);
 
@@ -29,13 +30,15 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Release(void);
 
 		//SHARE RESOURCES
-		void Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareKinematicsFlag);
+		void Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareEOverPFlag, bool locShareKinematicsFlag);
 
 		//GETTERS
 
 		//Tracking
 		unsigned int Get_NDF_DCdEdx(void) const{return dTrackingInfo->dNDF_DCdEdx;}
 		double Get_ChiSq_DCdEdx(void) const{return dTrackingInfo->dChiSq_DCdEdx;}
+		unsigned int Get_NDF_EoverP(void) const{return dEOverPInfo->dNDF_EoverP;}
+		double Get_ChiSq_EoverP(void) const{return dEOverPInfo->dChiSq_EoverP;}
 		const DTrackTimeBased* Get_TrackTimeBased(void) const{return dTrackingInfo->dTrackTimeBased;}
 
 		//Timing
@@ -76,6 +79,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		//Tracking
 		void Set_TrackTimeBased(const DTrackTimeBased* locTrackTimeBased){dTrackingInfo->dTrackTimeBased = locTrackTimeBased;}
 		void Set_ChiSq_DCdEdx(double locChiSq, unsigned int locNDF);
+		void Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF);
 
 		//Match params
 		void Set_SCHitMatchParams(shared_ptr<const DSCHitMatchParams> locMatchParams){dTrackingInfo->dSCHitMatchParams = locMatchParams;}
@@ -91,6 +95,7 @@ class DChargedTrackHypothesis : public DKinematicData
 			AddString(items, "Track_ChiSq", "%f", dTrackingInfo->dTrackTimeBased->chisq);
 			AddString(items, "dEdx_ChiSq", "%f", dTrackingInfo->dChiSq_DCdEdx);
 			AddString(items, "TOF_ChiSq", "%f", dTimingInfo->dChiSq_Timing);
+			AddString(items, "EOverP_ChiSq", "%f", dEOverPInfo->dChiSq_EoverP);
 			AddString(items, "PID_ChiSq", "%f", dTimingInfo->dChiSq);
 			AddString(items, "PID_FOM", "%f", dTimingInfo->dFOM);
 		}
@@ -126,6 +131,17 @@ class DChargedTrackHypothesis : public DKinematicData
 				double dTimeAtPOCAToVertex = 0.0;
 		};
 
+		class DEOverPInfo:public DResettable{
+		public:
+		  void Reset(void);
+		  void Release(void){};
+		  
+		  DetectorSystem_t dcal_detector = SYS_NULL;
+
+		  unsigned int dNDF_EoverP = 0;
+		  double dChiSq_EoverP = 0.0;
+		};
+
 		class DTrackingInfo : public DResettable
 		{
 			public:
@@ -134,6 +150,8 @@ class DChargedTrackHypothesis : public DKinematicData
 
 				unsigned int dNDF_DCdEdx = 0;
 				double dChiSq_DCdEdx = 0.0;
+				unsigned int dNDF_EoverP=0;
+				double dChiSq_EoverP=0.0;
 
 				const DTrackTimeBased* dTrackTimeBased = nullptr; //can get candidateid from here
 
@@ -149,19 +167,24 @@ class DChargedTrackHypothesis : public DKinematicData
 		//memory of object in shared_ptr is managed automatically: deleted automatically when no references are left
 		shared_ptr<DTimingInfo> dTimingInfo = nullptr;
 		shared_ptr<DTrackingInfo> dTrackingInfo = nullptr;
+		shared_ptr<DEOverPInfo> dEOverPInfo = nullptr;
 
 		//RESOURCE POOLS
 		static thread_local shared_ptr<DResourcePool<DTimingInfo>> dResourcePool_TimingInfo;
-		static thread_local shared_ptr<DResourcePool<DTrackingInfo>> dResourcePool_TrackingInfo;
+		static thread_local shared_ptr<DResourcePool<DTrackingInfo>> dResourcePool_TrackingInfo;	
+		static thread_local shared_ptr<DResourcePool<DEOverPInfo>> dResourcePool_EOverPInfo;
 };
 
 /************************************************************** CONSTRUCTORS & OPERATORS ***************************************************************/
 
 inline DChargedTrackHypothesis::DChargedTrackHypothesis(void) :
-dTimingInfo(dResourcePool_TimingInfo->Get_SharedResource()), dTrackingInfo(dResourcePool_TrackingInfo->Get_SharedResource()) {}
+			       dTimingInfo(dResourcePool_TimingInfo->Get_SharedResource()), 
+			       dTrackingInfo(dResourcePool_TrackingInfo->Get_SharedResource()),
+			       dEOverPInfo(dResourcePool_EOverPInfo->Get_SharedResource())	       
+{}
 
 inline DChargedTrackHypothesis::DChargedTrackHypothesis(const DChargedTrackHypothesis& locSourceData, bool locShareTrackingFlag,
-		bool locShareTimingFlag, bool locShareKinematicsFlag) : DKinematicData(locSourceData, locShareKinematicsFlag)
+							bool locShareTimingFlag, bool locShareEOverPFlag, bool locShareKinematicsFlag) : DKinematicData(locSourceData, locShareKinematicsFlag)
 {
 	//Default is NOT to share: create a new, independent copy of the input data (tracked separately from input so it can be modified)
 	if(locShareTrackingFlag)
@@ -179,6 +202,13 @@ inline DChargedTrackHypothesis::DChargedTrackHypothesis(const DChargedTrackHypot
 		dTimingInfo = dResourcePool_TimingInfo->Get_SharedResource();
 		*dTimingInfo = *(locSourceData.dTimingInfo);
 	}
+	if(locShareEOverPFlag)
+		dEOverPInfo = locSourceData.dEOverPInfo;
+	else
+	{
+		dEOverPInfo = dResourcePool_EOverPInfo->Get_SharedResource();
+		*dEOverPInfo = *(locSourceData.dEOverPInfo);
+	}
 }
 
 inline DChargedTrackHypothesis::DChargedTrackHypothesis(const DTrackTimeBased* locSourceData) :
@@ -187,6 +217,7 @@ inline DChargedTrackHypothesis::DChargedTrackHypothesis(const DTrackTimeBased* l
 	//Default is TO share kinematic data
 	dTrackingInfo = dResourcePool_TrackingInfo->Get_SharedResource();
 	dTimingInfo = dResourcePool_TimingInfo->Get_SharedResource();
+	dEOverPInfo = dResourcePool_EOverPInfo->Get_SharedResource();
 	dTrackingInfo->dTrackTimeBased = locSourceData;
 }
 
@@ -194,10 +225,14 @@ inline DChargedTrackHypothesis& DChargedTrackHypothesis::operator=(const DCharge
 {
 	//Replace current data with a new, independent copy of the input data: tracked separately from input so it can be modified
 	DKinematicData::operator=(locSourceData);
-	if((dTimingInfo == locSourceData.dTimingInfo) && (dTrackingInfo == locSourceData.dTrackingInfo))
+	if((dTimingInfo == locSourceData.dTimingInfo) 
+	   && (dTrackingInfo == locSourceData.dTrackingInfo)
+	   && (dEOverPInfo == locSourceData.dEOverPInfo))
 		return *this; //guard against self-assignment
 	dTimingInfo = dResourcePool_TimingInfo->Get_SharedResource();
 	*dTimingInfo = *(locSourceData.dTimingInfo);
+	dEOverPInfo = dResourcePool_EOverPInfo->Get_SharedResource();
+	*dEOverPInfo = *(locSourceData.dEOverPInfo);
 	dTrackingInfo = dResourcePool_TrackingInfo->Get_SharedResource();
 	*dTrackingInfo = *(locSourceData.dTrackingInfo);
 	return *this;
@@ -266,12 +301,14 @@ inline double DChargedTrackHypothesis::t1_err(void) const
 
 /********************************************************************** SETTERS ************************************************************************/
 
-inline void DChargedTrackHypothesis::Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareKinematicsFlag)
+inline void DChargedTrackHypothesis::Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareEOverPFlag, bool locShareKinematicsFlag)
 {
 	if(locShareTrackingFlag)
 		dTrackingInfo = const_cast<DChargedTrackHypothesis*>(locSourceData)->dTrackingInfo;
 	if(locShareTimingFlag)
 		dTimingInfo = const_cast<DChargedTrackHypothesis*>(locSourceData)->dTimingInfo;
+	if(locShareEOverPFlag)
+	  dEOverPInfo = const_cast<DChargedTrackHypothesis*>(locSourceData)->dEOverPInfo;
 	if(locShareKinematicsFlag)
 		Share_FromInput_Kinematics(static_cast<const DKinematicData*>(locSourceData));
 }
@@ -287,6 +324,13 @@ inline void DChargedTrackHypothesis::Set_ChiSq_Timing(double locChiSq, unsigned 
 {
 	dTimingInfo->dChiSq_Timing = locChiSq;
 	dTimingInfo->dNDF_Timing = locNDF;
+}
+
+inline void DChargedTrackHypothesis::Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF)
+{
+  dEOverPInfo->dcal_detector=detector;
+  dEOverPInfo->dChiSq_EoverP = locChiSq;
+  dEOverPInfo->dNDF_EoverP = locNDF;
 }
 
 inline void DChargedTrackHypothesis::Set_ChiSq_DCdEdx(double locChiSq, unsigned int locNDF)
@@ -307,6 +351,7 @@ inline void DChargedTrackHypothesis::Reset(void)
 	DKinematicData::Reset();
 	dTimingInfo = dResourcePool_TimingInfo->Get_SharedResource(); //not safe to reset individually, since you don't know what it's shared with
 	dTrackingInfo = dResourcePool_TrackingInfo->Get_SharedResource(); //not safe to reset individually, since you don't know what it's shared with
+	dEOverPInfo = dResourcePool_EOverPInfo->Get_SharedResource(); //not safe to reset individually, since you don't know what it's shared with
 }
 
 inline void DChargedTrackHypothesis::Release(void)
@@ -314,6 +359,7 @@ inline void DChargedTrackHypothesis::Release(void)
 	DKinematicData::Release();
 	dTimingInfo = nullptr;
 	dTrackingInfo = nullptr;
+	dEOverPInfo = nullptr;
 }
 
 inline void DChargedTrackHypothesis::DTimingInfo::Reset(void)
@@ -340,5 +386,14 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dFCALShowerMatchParams = nullptr;
 	dDIRCMatchParams = nullptr;
 }
+
+inline void DChargedTrackHypothesis::DEOverPInfo::Reset(void)
+{	
+  dcal_detector = SYS_NULL;
+  dNDF_EoverP=0;
+  dChiSq_EoverP=0.0;
+}
+
+
 
 #endif // _DChargedTrackHypothesis_

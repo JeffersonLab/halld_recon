@@ -92,12 +92,14 @@
          Note that if it's a single-ended bar, the status cannot be 3. 
       -->
       <tofStatus maxOccurs="1" minOccurs="0" status="int"/>
+      <tofEnergyDeposition maxOccurs="1" minOccurs="0" dE1="float" dE2="float"/>
     </tofPoint>
     <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
     <RFtime minOccurs="0" jtag="string"
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
 			 l1_trig_bits="int" l1_fp_trig_bits="int">
+ 	  <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
     </trigger>
 
     <detectorMatches minOccurs="1" maxOccurs="1" jtag="string">
@@ -124,7 +126,9 @@
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
                 deltax="float" deltay="float" pathlength="float" tflight="float" tflightvar="float"
-                tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
+                tunit="ns" lunit="cm" dEdx_unit="GeV/cm">
+	<tofDedx maxOccurs="1" minOccurs="0" dEdx1="float" dEdx2="float"/>
+      </tofMatchParams>
       <scMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
@@ -146,5 +150,15 @@
                 punit="GeV/c" tunit="ns"/>
     </detectorMatches>
 
+    <hitStatistics minOccurs="0" jtag="string">
+        <startCounters minOccurs="0" count="int"/>
+        <cdcStraws minOccurs="0" count="int"/>
+        <fdcPseudos minOccurs="0" count="int"/>
+        <bcalCells minOccurs="0" count="int"/>
+        <fcalBlocks minOccurs="0" count="int"/>
+        <tofPaddles minOccurs="0" count="int"/>
+        <ccalBlocks minOccurs="0" count="int"/>
+        <dircPMTs minOccurs="0" count="int"/>
+    </hitStatistics>
   </reconstructedPhysicsEvent>
 </HDDM>
