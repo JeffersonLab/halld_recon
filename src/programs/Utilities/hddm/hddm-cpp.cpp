@@ -12,6 +12,8 @@
  *           June 4, 2016     - added reposition support for random
  *                              access to hddm streams, including
  *                              compressed streams.
+ *           October 10, 2020 - introduced support for reading and
+ *                              writing of hddm streams to HDF5 files.
  *
  *
  *  Programmer's Notes:
@@ -309,6 +311,7 @@ int main(int argC, char* argV[])
    "#ifndef SAW_" << classPrefix << "_HDDM\n"
    "#define SAW_" << classPrefix << "_HDDM\n"
    "\n"
+   "#include <map>\n"
    "#include <list>\n"
    "#include <deque>\n"
    "#include <vector>\n"
@@ -324,6 +327,16 @@ int main(int argC, char* argV[])
    "#include <particleType.h>\n"
    "#include <pthread.h>\n"
    "#include <assert.h>\n"
+   "#include <climits>\n"
+   "\n"
+   "#ifdef HDF5_SUPPORT\n"
+   "#include <H5Fpublic.h>\n"
+   "#include <H5Tpublic.h>\n"
+   "#include <H5Ppublic.h>\n"
+   "#include <H5Spublic.h>\n"
+   "#include <H5Dpublic.h>\n"
+   "#include <H5LTpublic.h>\n"
+   "#endif\n"
    "\n"
    "#define MY_SETUP thread_private_data *my_private = lookup_private_data();\n"
    "#define MY(VAR) my_private->m_ ## VAR\n"
@@ -352,6 +365,30 @@ int main(int argC, char* argV[])
    "   k_hddm_anyURI,\n"
    "   k_hddm_Particle_t\n"
    "};\n"
+   "\n"
+   "#ifdef HDF5_SUPPORT\n"
+   "#define HDF5_DEFAULT_CHUNK_SIZE 100\n"
+   "// gzip standard compression provided by hdf5\n"
+   "const H5Z_filter_t k_hdf5_gzip_filter(H5Z_FILTER_DEFLATE);\n"
+   "// szip standard compression provided by hdf5\n"
+   "const H5Z_filter_t k_hdf5_szip_filter(H5Z_FILTER_SZIP);\n"
+   "// bzip2 lossless compression used by PyTables\n"
+   "const H5Z_filter_t k_hdf5_bzip2_plugin(307);\n"
+   "// Blosc lossless compression used by PyTables\n"
+   "const H5Z_filter_t k_hdf5_blosc_plugin(32001);\n"
+   "// bitshuffle shuffle filter at bit level instead of byte level\n"
+   "const H5Z_filter_t k_hdf5_bshuf_plugin(32008);\n"
+   "// JPEG-XR compression filter used in jpeg images\n"
+   "const H5Z_filter_t k_hdf5_jpeg_plugin(32007);\n"
+   "// LZ4 fast lossless compression algorithm\n"
+   "const H5Z_filter_t k_hdf5_lz4_plugin(32004);\n"
+   "// LZF fast lossless compression used by H5Py project\n"
+   "const H5Z_filter_t k_hdf5_lzf_plugin(32000);\n"
+   "// modified LZMA compression filter (MAFISC)\n"
+   "const H5Z_filter_t k_hdf5_lzma_plugin(32002);\n"
+   "// zfp rate, accuracy, or precision bounded compression for arrays of floats\n"
+   "const H5Z_filter_t k_hdf5_zfp_plugin(32013);\n"
+   "#endif\n"
    "\n"
    "class HDDM;\n"
    "class istream;\n"
@@ -602,7 +639,8 @@ int main(int argC, char* argV[])
    "\n"
    "class HDDM_Element: public streamable {\n"
    " public:\n"
-   "   ~HDDM_Element() {}\n"
+   "   virtual ~HDDM_Element() {}\n"
+   "   virtual void clear() {}\n"
    "   virtual const void *getAttribute(const std::string &name,\n"
    "                                    hddm_type *atype=0) const {\n"
    "      return 0;\n"
@@ -615,22 +653,26 @@ int main(int argC, char* argV[])
    "   }\n"
    "   friend class HDDM_ElementList<HDDM_Element>;\n"
    " protected:\n"
-   "   HDDM_Element() : m_parent(0), m_host(0) {}\n"
-   "   HDDM_Element(HDDM_Element *parent)\n"
+   "   HDDM_Element() : m_parent(0), m_host(0), m_owner(0) {}\n"
+   "   HDDM_Element(HDDM_Element *parent, int owner=0)\n"
    "    : m_parent(parent),\n"
-   "      m_host(parent->m_host)\n"
-   "    {}\n"
-   "   HDDM_Element(HDDM_Element &src)\n"
+   "      m_host((parent != 0)? parent->m_host : 0),\n"
+   "      m_owner(owner)\n"
+   "   {}\n"
+   "   HDDM_Element(const HDDM_Element &src)\n"
    "    : m_parent(src.m_parent),\n"
-   "      m_host(src.m_host)\n"
+   "      m_host(src.m_host),\n"
+   "      m_owner(0)\n"
    "   {}\n"
    "   HDDM_Element *m_parent;\n"
    "   HDDM *m_host;\n"
+   "   int m_owner;\n"
    "};\n"
    "\n"
    "template <class T>\n"
    "class HDDM_ElementList: public streamable {\n"
    " public:\n"
+   "   HDDM_ElementList() : m_host_plist(0), m_parent(0) {}\n"
    "   HDDM_ElementList(typename std::list<T*> *plist,\n"
    "                    typename std::list<T*>::iterator begin,\n"
    "                    typename std::list<T*>::iterator end,\n"
@@ -638,7 +680,8 @@ int main(int argC, char* argV[])
    "    : m_host_plist(plist),\n"
    "      m_first_iter(begin),\n"
    "      m_last_iter(end),\n"
-   "      m_parent(parent)\n"
+   "      m_parent(parent),\n"
+   "      m_ref(0)\n"
    "   {\n"
    "      for (m_size = 0; begin != end; ++m_size, ++begin) {}\n"
    "      if (m_size) {\n"
@@ -650,8 +693,9 @@ int main(int argC, char* argV[])
    "    : m_host_plist(src.m_host_plist),\n"
    "      m_first_iter(src.m_first_iter),\n"
    "      m_last_iter(src.m_last_iter),\n"
-   "      m_parent(0),\n"
-   "      m_size(src.m_size)\n"
+   "      m_parent(src.m_parent),\n"
+   "      m_size(src.m_size),\n"
+   "      m_ref(src.m_ref)\n"
    "   {}\n"
    "\n"
    "   bool empty() const { return (m_size == 0); }\n"
@@ -723,7 +767,7 @@ int main(int argC, char* argV[])
    "            return 0;\n"
    "         }\n"
    "         iterator iter2(iter);\n"
-   "         for (int n=1; n < m_size; ++n) {\n"
+   "         for (int n=1; n < INT_MAX; ++n) {\n"
    "            if (++iter == *this) {\n"
    "               return n;\n"
    "            }\n"
@@ -731,7 +775,10 @@ int main(int argC, char* argV[])
    "               return -n;\n"
    "            }\n"
    "         }\n"
-   "         return m_size;\n"
+   "         return INT_MAX;\n"
+   "      }\n"
+   "      void *address() const {\n"
+   "         return &*(typename std::list<T*>::iterator)(*this);\n"
    "      }\n"
    "   };\n"
    "\n"
@@ -797,6 +844,9 @@ int main(int argC, char* argV[])
    "         }\n"
    "         return m_size;\n"
    "      }\n"
+   "      void *address() const {\n"
+   "         return &*(typename std::list<T*>::iterator)(*this);\n"
+   "      }\n"
    "   };\n"
    "\n"
    "   iterator begin() const { return m_first_iter; }\n"
@@ -811,18 +861,18 @@ int main(int argC, char* argV[])
    "      iterator it = insert(start, count);\n"
    "      typename std::list<T*>::iterator iter(it);\n"
    "      for (int n=0; n<count; ++n, ++iter) {\n"
-   "         *iter = new T(m_parent);\n"
+   "         *iter = new T(m_parent, 1);\n"
    "      }\n"
    "      return HDDM_ElementList(m_host_plist, it, it+count, m_parent);\n"
    "   }\n"
    "\n"
    "   void del(int count=-1, int start=0) {\n"
+   "      if (m_size == 0 || count == 0) {\n"
+   "         return;\n"
+   "      }\n"
    "      if (m_parent == 0) {\n"
    "         throw std::runtime_error(\"HDDM_ElementList error - \"\n"
    "                                  \"attempt to delete from immutable list\");\n"
-   "      }\n"
-   "      if (m_size == 0 || count == 0) {\n"
-   "         return;\n"
    "      }\n"
    "      iterator iter_begin(begin());\n"
    "      iterator iter_end(end());\n"
@@ -840,7 +890,10 @@ int main(int argC, char* argV[])
    "      }\n"
    "      typename std::list<T*>::iterator iter;\n"
    "      for (iter = iter_begin; iter != iter_end; ++iter) {\n"
-   "         delete *iter;\n"
+   "         if ((*iter)->m_owner)\n"
+   "            delete *iter;\n"
+   "         else\n"
+   "            (*iter)->clear();\n"
    "      }\n"
    "      erase(start, count);\n"
    "   }\n"
@@ -850,12 +903,25 @@ int main(int argC, char* argV[])
    "      int n2 = (last < 0)? last + m_size + 1 : last + 1;\n"
    "      int count = n2 - n1;\n"
    "      iterator iter_begin;\n"
-   "      if (first > 0)\n"
+   "      if (first >= 0)\n"
    "         iter_begin = begin() + first;\n"
-   "      else if (first < 0)\n"
+   "      else\n"
    "         iter_begin = end() + first;\n"
    "      iterator iter_end(iter_begin + count);\n"
    "      return HDDM_ElementList(m_host_plist, iter_begin, iter_end);\n"
+   "   }\n"
+   "   void debug_print() {\n"
+   "      std::cout << \"HDDM_ElementList<T> contents printout:\"\n"
+   "                << std::endl\n"
+   "                << \"    this         = \" << &*this << std::endl\n"
+   "                << \"    m_parent     = \" << m_parent << std::endl\n"
+   "                << \"    m_host_plist = \" << m_host_plist << std::endl\n"
+   "                << \"    m_size       = \" << m_size << std::endl\n"
+   "                << \"    m_ref        = \" << m_ref << std::endl\n"
+   "                << \"    m_first_iter = \" << m_first_iter.address()\n"
+   "                << std::endl\n"
+   "                << \"    m_last_iter  = \" << m_last_iter.address()\n"
+   "                << std::endl;\n"
    "   }\n"
    "\n"
    "   void streamer(istream &istr) {\n"
@@ -899,8 +965,6 @@ int main(int argC, char* argV[])
    "   }\n"
    "\n"
    " private:\n"
-   "   HDDM_ElementList() {}\n"
-   "\n"
    "   iterator insert(int start, int count) {\n"
    "      if (m_size == 0) {\n"
    "         if (count > 0) {\n"
@@ -1001,21 +1065,45 @@ int main(int argC, char* argV[])
    "      }\n"
    "   }\n"
    "\n"
+   " public:\n"
+   "   void inflate(HDDM *host, std::list<T*> *host_plist, HDDM_Element *parent) {\n"
+   "      m_parent = parent;\n"
+   "      m_host_plist = host_plist;\n"
+   "      m_first_iter = m_host_plist->begin();\n"
+   "      m_first_iter += m_ref;\n"
+   "      m_last_iter = m_first_iter;\n"
+   "      m_last_iter += m_size;\n"
+   "      for (iterator iter = m_first_iter; iter != m_last_iter; ++iter) {\n"
+   "         iter->m_parent = parent;\n"
+   "         iter->m_host = host;\n"
+   "      }\n"
+   "      if (m_size) {\n"
+   "         --m_last_iter;\n"
+   "      }\n"
+   "   }\n"
+   "   void deflate() {\n"
+   "      iterator iter = m_host_plist->begin();\n"
+   "      for (m_ref=0; iter != m_first_iter; ++iter, ++m_ref) {}\n"
+   "   }\n"
+   "\n"
    " protected:\n"
    "   std::list<T*> *m_host_plist;\n"
    "   iterator m_first_iter;\n"
    "   iterator m_last_iter;\n"
    "   HDDM_Element *m_parent;\n"
+   " public:\n"
    "   int m_size;\n"
+   "   int m_ref;\n"
    "};\n"
    "\n"
    "template <class T>\n"
    "class HDDM_ElementLink: public HDDM_ElementList<T> {\n"
    " public:\n"
+   "   HDDM_ElementLink() {}\n"
    "   HDDM_ElementLink(typename std::list<T*> *plist,\n"
    "                    typename std::list<T*>::iterator begin,\n"
    "                    typename std::list<T*>::iterator end,\n"
-   "                    HDDM_Element *parent)\n"
+   "                    HDDM_Element *parent=0)\n"
    "    : HDDM_ElementList<T>(plist,begin,end,parent)\n"
    "   {}\n"
    "   HDDM_ElementLink(const HDDM_ElementList<T> &src)\n"
@@ -1032,10 +1120,14 @@ int main(int argC, char* argV[])
    "         HDDM_ElementList<T>::begin()->streamer(ostr);\n"
    "      }\n"
    "   }\n"
-   "\n"
-   " protected:\n"
-   "   HDDM_ElementLink() {}\n"
    "};\n"
+   "\n"
+   "#ifdef HDF5_SUPPORT\n"
+   "typedef struct {\n"
+   "   size_t len;\n"
+   "   void *p;\n"
+   "} hdf5_hvl_t;\n"
+   "#endif\n"
    "\n"
    ;
 
@@ -1470,6 +1562,7 @@ int main(int argC, char* argV[])
    "   MY(sbuf)->reset();\n"
    "   MY(sequencing) = 0;\n"
    "   MY(codon) = &MY(genome);\n"
+   "   record.clear();\n"
    "   *this >> (streamable&)record;\n"
    "   return *this;\n"
    "}\n"
@@ -1824,6 +1917,15 @@ int main(int argC, char* argV[])
    "   }\n"
    "   return chrom;\n"
    "}\n"
+   "\n"
+   "#ifdef HDF5_SUPPORT\n"
+   "std::map<std::string, hid_t> HDDM::s_hdf5_datatype;\n"
+   "std::map<std::string, hid_t> HDDM::s_hdf5_memorytype;\n"
+   "std::map<std::string, hid_t> HDDM::s_hdf5_memoryspace;\n"
+   "std::map<hid_t, hid_t> HDDM::s_hdf5_dataspace;\n"
+   "std::map<hid_t, hid_t> HDDM::s_hdf5_chunking;\n"
+   "std::map<hid_t, hid_t> HDDM::s_hdf5_dataset;\n"
+   "#endif\n"
    ;
 
    XMLPlatformUtils::Terminate();
@@ -2032,6 +2134,7 @@ void CodeBuilder::writeClassdef(DOMElement* el)
       hFile << "   HDDM();" << std::endl;
    }
    hFile << "   ~" << tagS.simpleType() << "();" << std::endl;
+   hFile << "   void clear();" << std::endl;
 
    std::map<XtString,XtString> attrList;
    DOMNamedNodeMap *myAttr = el->getAttributes();
@@ -2239,7 +2342,6 @@ void CodeBuilder::writeClassdef(DOMElement* el)
 
    if (tagS == "HDDM")
    {
-      hFile << "   void clear();" << std::endl;
       parentTable_t::iterator piter;
       for (piter = parents.begin(); piter != parents.end(); ++piter)
       {
@@ -2254,13 +2356,20 @@ void CodeBuilder::writeClassdef(DOMElement* el)
    }
    else
    {
+      hFile << "#ifdef HDF5_SUPPORT" << std::endl
+            << "   void hdf5DataPack();" << std::endl
+            << "   void hdf5DataUnpack();" << std::endl
+            << "   hid_t hdf5Datatype(int inmemory=0, int verbose=0);"
+            << std::endl
+            << "#endif" << std::endl;
       hFile << "   friend class HDDM_ElementList<"
             << tagS.simpleType() << ">;" << std::endl
             << "   friend class HDDM_ElementLink<"
-            << tagS.simpleType() << ">;" << std::endl;
-      hFile << " private:" << std::endl
-            << "   " << tagS.simpleType()
-            << "(HDDM_Element *parent=0);" << std::endl;
+            << tagS.simpleType() << ">;" << std::endl
+            << "   " << tagS.simpleType() << "() {}" << std::endl
+            << "   " << tagS.simpleType() 
+            << "(HDDM_Element *parent, int owner=0);" << std::endl;
+      hFile << " private:" << std::endl;
    }
 
    hFile << "   void streamer(istream &istr);" << std::endl
@@ -2293,10 +2402,12 @@ void CodeBuilder::writeClassdef(DOMElement* el)
       else if (typeS == "string")
       {
          hFile << "   std::string m_" << attrS << ";" << std::endl;
+         hFile << "   const char *mx_" << attrS << ";" << std::endl;
       }
       else if (typeS == "anyURI")
       {
          hFile << "   std::string m_" << attrS << ";" << std::endl;
+         hFile << "   const char *mx_" << attrS << ";" << std::endl;
       }
       else if (typeS == "Particle_t")
       {
@@ -2327,6 +2438,76 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << ((rep > 1)? "_list;" : "_link;") << std::endl;
    }
 
+   if (tagS == "HDDM") {
+      hFile << "#ifdef HDF5_SUPPORT" << std::endl
+            << " public:" << std::endl
+            << "   void hdf5DataPack();" << std::endl
+            << "   void hdf5DataUnpack();" << std::endl
+            << "   hid_t hdf5Datatype(int inmemory=0, int verbose=0);"
+            << std::endl
+            << "   herr_t hdf5FileWrite(hid_t file_id, long int entry=-1);"
+            << std::endl
+            << "   herr_t hdf5FileRead(hid_t file_id, long int entry=-1);"
+            << std::endl
+            << "   static hid_t"
+            << " hdf5FileCreate(std::string name, unsigned int flags);"
+            << std::endl
+            << "   static hid_t"
+            << " hdf5FileOpen(std::string name, unsigned int flags);"
+            << std::endl
+            << "   static herr_t hdf5FileClose(hid_t file_id);"
+            << std::endl
+            << "   static herr_t hdf5FileStamp(hid_t file_id, char **tags=0);"
+            << std::endl
+            << "   static herr_t hdf5FileCheck(hid_t file_id, char **tags=0);"
+            << std::endl
+            << "   static std::string hdf5DocumentString(hid_t file_id);"
+            << std::endl
+            << "   static long int hdf5GetEntries(hid_t file_id);"
+            << std::endl
+            << "   static herr_t hdf5SetChunksize(hid_t file_id,"
+            << " hsize_t chunksize);"
+            << std::endl
+            << "   static hsize_t hdf5GetChunksize(hid_t file_id);"
+            << std::endl
+            << "   static herr_t hdf5SetFilters(hid_t file_id,"
+            << " std::vector<H5Z_filter_t> &filters);"
+            << std::endl
+            << "   static herr_t hdf5GetFilters(hid_t file_id,"
+            << " std::vector<H5Z_filter_t> &filters);"
+            << std::endl
+            << " private:" << std::endl
+            << "   static std::map<std::string, hid_t> s_hdf5_datatype;"
+            << std::endl
+            << "   static std::map<std::string, hid_t> s_hdf5_memorytype;"
+            << std::endl
+            << "   static std::map<std::string, hid_t> s_hdf5_memoryspace;"
+            << std::endl
+            << "   static std::map<hid_t, hid_t> s_hdf5_dataspace;"
+            << std::endl
+            << "   static std::map<hid_t, hid_t> s_hdf5_chunking;"
+            << std::endl
+            << "   static std::map<hid_t, hid_t> s_hdf5_dataset;"
+            << std::endl
+            << "   typedef struct {" << std::endl;
+      parentTable_t::iterator piter;
+      for (piter = parents.begin(); piter != parents.end(); ++piter)
+      {
+         XtString dnameS(piter->first);
+         if (dnameS != "HDDM") {
+            hFile << "      hdf5_hvl_t vl_" << dnameS << ";" 
+                  << std::endl;
+         }
+      }
+      hFile << "   } hdf5_record_t;" << std::endl
+            << "   hdf5_record_t m_hdf5_record;" << std::endl
+            << "   hsize_t m_hdf5_record_offset;" << std::endl
+            << "   hsize_t m_hdf5_record_count;" << std::endl
+            << "   hsize_t m_hdf5_record_extent;" << std::endl
+            << "   std::vector<std::string*> m_hdf5_strings;"
+            << std::endl
+            << "#endif" << std::endl;
+   }
    hFile << "};" << std::endl << std::endl;
 
    if (tagS != "HDDM")
@@ -2406,8 +2587,9 @@ void CodeBuilder::writeClassimp(DOMElement* el)
    else
    {
       hFile << "inline " << tagS.simpleType() << "::"
-            << tagS.simpleType() << "(HDDM_Element *parent)" << std::endl
-            << " : HDDM_Element(parent)";
+            << tagS.simpleType() << "(HDDM_Element *parent, int owner)"
+            << std::endl
+            << " : HDDM_Element(parent, owner)";
    }
    DOMNamedNodeMap *myAttr = el->getAttributes();
    for (unsigned int n = 0; n < myAttr->getLength(); n++)
@@ -2498,6 +2680,11 @@ void CodeBuilder::writeClassimp(DOMElement* el)
    {
       hFile << std::endl << "{" << std::endl
             << "   m_host = this;" << std::endl
+            << "#ifdef HDF5_SUPPORT" << std::endl
+            << "   m_hdf5_record_offset = 0;" << std::endl
+            << "   m_hdf5_record_count = 0;" << std::endl
+            << "   m_hdf5_record_extent = 0;" << std::endl
+            << "#endif" << std::endl
             << "}" << std::endl << std::endl;
    }
    else
@@ -2506,18 +2693,29 @@ void CodeBuilder::writeClassimp(DOMElement* el)
    }
 
    hFile << "inline " << tagS.simpleType() << "::~"
-         << tagS.simpleType() << "() {"
-         << ((children[tagS].size())? "\n" : "");
-   for (citer = children[tagS].begin();
-        citer != children[tagS].end();
-        ++citer)
+         << tagS.simpleType() << "() {" << std::endl
+         << "   clear();" << std::endl
+         << "}" << std::endl;
+   if (tagS != "HDDM")
    {
-      DOMElement *childEl = (DOMElement*)(*citer);
-      XtString cnameS(childEl->getTagName());
-      hFile << "   delete" << cnameS.plural().simpleType()
-            << "();" << std::endl;
+      hFile << "inline void " << tagS.simpleType() 
+            << "::clear() {";
+      if (children[tagS].size() > 0) {
+         hFile << std::endl
+               << "   if (m_host != 0) {" << std::endl;
+         for (citer = children[tagS].begin();
+              citer != children[tagS].end();
+              ++citer)
+         {
+            DOMElement *childEl = (DOMElement*)(*citer);
+            XtString cnameS(childEl->getTagName());
+            hFile << "   delete" << cnameS.plural().simpleType()
+                  << "();" << std::endl;
+         }
+         hFile << "   }" << std::endl;
+      }
+      hFile << "}" << std::endl << std::endl;
    }
-   hFile << "}" << std::endl << std::endl;
 
    std::map<XtString,XtString> attrList;
    myAttr = el->getAttributes();
@@ -2823,7 +3021,21 @@ void CodeBuilder::writeClassimp(DOMElement* el)
          hFile << "   delete" << cnameS.simpleType().plural()
                << "();" << std::endl;
       }
-      hFile << "}" << std::endl << std::endl;
+      hFile << "#ifdef HDF5_SUPPORT" << std::endl
+            << "   if (m_hdf5_record_count > 0) {" << std::endl
+            << "      for (unsigned i=0; i < m_hdf5_strings.size(); ++i) {"
+            << std::endl
+            << "         m_hdf5_strings[i]->std::string::~string();"
+            << std::endl
+            << "      }" << std::endl
+            << "      m_hdf5_strings.clear();" << std::endl
+            << "      H5Dvlen_reclaim(s_hdf5_memorytype[\"HDDM\"]," << std::endl
+            << "                      s_hdf5_memoryspace[\"HDDM\"]," << std::endl
+            << "                      H5P_DEFAULT, &m_hdf5_record);" << std::endl
+            << "      m_hdf5_record_count = 0;" << std::endl
+            << "   }" << std::endl
+            << "#endif" << std::endl
+            << "}" << std::endl << std::endl;
    }
    hFile << "inline const void *" << tagS.simpleType()
          << "::getAttribute(const std::string &name,\n"
@@ -3072,6 +3284,744 @@ void CodeBuilder::writeClassimp(DOMElement* el)
    cFile << "   return ostr.str();" << std::endl
          << "}" << std::endl << std::endl;
 
+   cFile << "#ifdef HDF5_SUPPORT" << std::endl
+         << "hid_t " << tagS.simpleType()
+         << "::hdf5Datatype(int inmemory, int verbose)" << std::endl
+         << "{" << std::endl
+         << "   std::string tname(\"" << tagS << "\");" << std::endl
+         << "   if (inmemory) {" << std::endl
+         << "      if (HDDM::s_hdf5_memorytype.find(tname)"
+         << " != HDDM::s_hdf5_memorytype.end())" << std::endl
+         << "         return HDDM::s_hdf5_memorytype[tname];" << std::endl
+         << "   }" << std::endl
+         << "   else {" << std::endl
+         << "      if (HDDM::s_hdf5_datatype.find(tname)"
+         << " != HDDM::s_hdf5_datatype.end())" << std::endl
+         << "         return HDDM::s_hdf5_datatype[tname];" << std::endl
+         << "   }" << std::endl
+         << "   hid_t tid = H5Tcreate(H5T_COMPOUND, sizeof(*this));"
+         << std::endl
+         << "   hid_t vl_string_tid = H5Tcopy(H5T_C_S1);" << std::endl
+         << "   H5Tset_size(vl_string_tid, H5T_VARIABLE);" << std::endl;
+   if (tagS != "HDDM") {
+      for (unsigned int n = 0; n < myAttr->getLength(); n++)
+      {
+         XtString attrS(myAttr->item(n)->getNodeName());
+         XtString typeS(el->getAttribute(X(attrS)));
+         if (typeS == "int")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_INT : H5T_STD_I32LE));"
+                  << std::endl;
+         }
+         else if (typeS == "long")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_LONG : H5T_STD_I64LE));"
+                  << std::endl;
+         }
+         else if (typeS == "float")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_FLOAT : H5T_IEEE_F32LE));"
+                  << std::endl;
+         }
+         else if (typeS == "double")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_DOUBLE : H5T_IEEE_F64LE));"
+                  << std::endl;
+         }
+         else if (typeS == "boolean")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_INT : H5T_STD_I32LE));"
+                  << std::endl;
+         }
+         else if (typeS == "string")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&mx_" << attrS << " - (char*)this, "
+                  << "vl_string_tid);"
+                  << std::endl;
+         }
+         else if (typeS == "anyURI")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&mx_" << attrS << " - (char*)this, "
+                  << "vl_string_tid);"
+                  << std::endl;
+         }
+         else if (typeS == "Particle_t")
+         {
+            cFile << "   H5Tinsert(tid, \"" << attrS << "\", "
+                  << "(char*)&m_" << attrS << " - (char*)this, "
+                  << "((inmemory)? H5T_NATIVE_INT : H5T_STD_I32LE));"
+                  << std::endl;
+         }
+      }
+      for (citer = children[tagS].begin(); citer != children[tagS].end(); ++citer)
+      {
+         DOMElement *childEl = (DOMElement*)(*citer);
+         XtString cnameS(childEl->getTagName());
+         XtString repS(childEl->getAttribute(X("maxOccurs")));
+         int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
+         cFile << "   H5Tinsert(tid, \"" << cnameS.listType() << "_size\", "
+               << "(char*)&m_" << cnameS
+               << ((rep > 1)? "_list" : "_link") << ".m_size - (char*)this, "
+               << "((inmemory)? H5T_NATIVE_INT : H5T_STD_I16LE));"
+               << std::endl;
+         cFile << "   H5Tinsert(tid, \"" << cnameS.listType() << "_offset\", "
+               << "(char*)&m_" << cnameS
+               << ((rep > 1)? "_list" : "_link") << ".m_ref - (char*)this, "
+               << "((inmemory)? H5T_NATIVE_INT : H5T_STD_I16LE));"
+               << std::endl;
+      }
+   }
+   else {
+      cFile << "   hid_t vl_tid;" << std::endl;
+      parentTable_t::iterator piter;
+      for (piter = parents.begin(); piter != parents.end(); ++piter)
+      {
+         XtString dnameS(piter->first);
+         if (dnameS != "HDDM") {
+            cFile << "   " << dnameS.simpleType()
+                  << " l_" << dnameS << ";" << std::endl
+                  << "   vl_tid = H5Tvlen_create(l_" << dnameS
+                  << ".hdf5Datatype(inmemory));" << std::endl
+                  << "   H5Tinsert(tid, \"vl_" << dnameS << "\", "
+                  << "(char*)&m_hdf5_record.vl_" << dnameS
+                  << " - (char*)&m_hdf5_record, vl_tid);"
+                  << std::endl;
+         }
+      }
+      cFile << "   if (inmemory == 0)" << std::endl
+            << "      H5Tpack(tid);" << std::endl;
+   }
+   cFile << "   if (inmemory) {" << std::endl
+         << "      HDDM::s_hdf5_memorytype[\"" << tagS << "\"] = tid;"
+         << std::endl
+         << "   }" << std::endl
+         << "   else {" << std::endl
+         << "      HDDM::s_hdf5_datatype[\"" << tagS << "\"] = tid;" << std::endl
+         << "   }" << std::endl
+         << "   if (verbose) {" << std::endl
+         << "      size_t slen;" << std::endl
+         << "      H5LTdtype_to_text(tid, 0, H5LT_DDL, &slen);" << std::endl
+         << "      char *ddlstring = (char*)malloc(slen);" << std::endl
+         << "      H5LTdtype_to_text(tid, ddlstring, H5LT_DDL, &slen);" << std::endl
+         << "      if (inmemory)" << std::endl
+         << "         printf(\"=== in-memory datatype %ld for %s is:\\n %s\\n\","
+         << " tid, \"" << tagS << "\", ddlstring);" << std::endl
+         << "      else" << std::endl
+         << "         printf(\"=== on-disk datatype %ld for %s is:\\n %s\\n\","
+         << " tid, \"" << tagS << "\", ddlstring);" << std::endl
+         << "      free(ddlstring);" << std::endl
+         << "   }" << std::endl
+         << "   return tid;" << std::endl
+         << "}" << std::endl;
+
+   if (tagS == "HDDM") {
+      cFile << "herr_t " << tagS.simpleType()
+            << "::hdf5FileStamp(hid_t file_id, char **tags)" << std::endl
+            << "{" << std::endl
+            << "   std::string stamp(DocumentString());" << std::endl
+            << "   while (tags != 0 && *tags != 0) {" << std::endl
+            << "      stamp += \"<stamptag>\";" << std::endl
+            << "      stamp += *tags;" << std::endl
+            << "      stamp += \"</stamptag>\\n\";" << std::endl
+            << "      ++tags;" << std::endl
+            << "   }" << std::endl
+            << "   hid_t stamp_tid = H5Tcopy(H5T_C_S1);" << std::endl
+            << "   H5Tset_size(stamp_tid, H5T_VARIABLE);" << std::endl
+            << "   hsize_t dims[1] = {1};" << std::endl
+            << "   hsize_t maxdims[1] = {1};" << std::endl
+            << "   hid_t stamp_sid = H5Screate_simple(1, dims, maxdims);"
+            << std::endl
+            << "   char *pstamp = (char*)stamp.c_str();"
+            << std::endl
+            << "   hid_t stamp_id ="
+            << " H5Lexists(file_id, \"HDDMstamp\", H5P_DEFAULT);" << std::endl
+            << "   if (stamp_id > 0) {" << std::endl
+            << "      stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      stamp_id = H5Dcreate(file_id, \"HDDMstamp\","
+            << std::endl
+            << "                           stamp_tid, stamp_sid,"
+            << std::endl
+            << "                           H5P_DEFAULT, H5P_DEFAULT,"
+            << std::endl
+            << "                           H5P_DEFAULT);"
+            << std::endl
+            << "   }" << std::endl
+            << "   herr_t res = H5Dwrite(stamp_id, stamp_tid,"
+            << std::endl
+            << "                         H5S_ALL, H5S_ALL,"
+            << std::endl
+            << "                         H5P_DEFAULT, &pstamp);"
+            << std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType()
+            << "::hdf5FileCheck(hid_t file_id, char **tags)" << std::endl
+            << "{" << std::endl
+            << "   char *pstamp;" << std::endl
+            << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
+            << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
+            << std::endl
+            << "   herr_t res = H5Dread(stamp_id, stamp_tid," << std::endl
+            << "                        H5S_ALL, H5S_ALL," << std::endl
+            << "                        H5P_DEFAULT, &pstamp);" << std::endl
+            << "   std::string sstamp(pstamp);" << std::endl
+            << "   H5Dvlen_reclaim(stamp_tid, stamp_sid," << std::endl
+            << "                   H5P_DEFAULT, &pstamp);" << std::endl
+            << "   if (sstamp.find(DocumentString()) != 0) {" << std::endl
+            << "      throw std::runtime_error(\"hddm_" 
+            << classPrefix << "::hdf5FileCheck - \"" << std::endl
+            << "                  \"HDF5 input record format mismatch!\");"
+            << std::endl
+            << "   }" << std::endl
+            << "   while (tags != 0 && *tags != 0) {" << std::endl
+            << "      std::string stag(\"<stamptag>\");" << std::endl
+            << "      stag += *tags;" << std::endl
+            << "      stag += \"</stamptag>\";" << std::endl
+            << "      if (sstamp.find(stag) == sstamp.npos) {" << std::endl
+            << "         throw std::runtime_error(\"hddm_" 
+            << classPrefix << "::hdf5FileCheck - \"" << std::endl
+            << "                  \"HDF5 input record tag is missing!\");"
+            << std::endl
+            << "      }" << std::endl
+            << "      ++tags;" << std::endl
+            << "   }" <<std::endl
+            << "   H5Dclose(stamp_id);" << std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "std::string " << tagS.simpleType()
+            << "::hdf5DocumentString(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   char *pstamp;" << std::endl
+            << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
+            << " H5P_DEFAULT);" << std::endl
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
+            << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
+            << std::endl
+            << "   H5Dread(stamp_id, stamp_tid," << std::endl
+            << "           H5S_ALL, H5S_ALL, H5P_DEFAULT, &pstamp);"
+            << std::endl
+            << "   std::string sstamp(pstamp);" << std::endl
+            << "   H5Dvlen_reclaim(stamp_tid, stamp_sid," << std::endl
+            << "                   H5P_DEFAULT, &pstamp);" << std::endl
+            << "   H5Dclose(stamp_id);" << std::endl
+            << "   return sstamp;" << std::endl
+            << "}" << std::endl;
+      cFile << "long int " << tagS.simpleType()
+            << "::hdf5GetEntries(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   hid_t eventspace_id;" << std::endl
+            << "   hid_t eventdata_id;" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   htri_t exists ="
+            << "   H5Lexists(file_id, \"HDDMevents\", H5P_DEFAULT);"
+            << std::endl
+            << "   if (exists <= 0)" << std::endl
+            << "      return exists;" << std::endl
+            << "   if (s_hdf5_dataset.find(file_id)"
+            << " == s_hdf5_dataset.end()) {" << std::endl
+            << std::endl
+            << "      eventdata_id = H5Dopen(file_id, \"HDDMevents\","
+            << std::endl
+            << "                               H5P_DEFAULT);"
+            << std::endl
+            << "      chunking_id = H5Dget_create_plist(eventdata_id);"
+            << std::endl
+            << "      eventspace_id = H5Dget_space(eventdata_id);"
+            << std::endl
+            << "      s_hdf5_dataset[file_id] = eventdata_id;"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;"
+            << std::endl
+            << "      s_hdf5_dataspace[file_id] = eventspace_id;"
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      chunking_id = s_hdf5_chunking[file_id];"
+            << "      eventspace_id = s_hdf5_dataspace[file_id];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hsize_t dims;" << std::endl
+            << "   hsize_t maxdims;" << std::endl
+            << "   H5Sget_simple_extent_dims(eventspace_id, &dims, &maxdims);"
+            << std::endl
+            << "   return dims;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5SetChunksize"
+            << "(hid_t file_id, hsize_t chunksize)" << std::endl
+            << "{" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
+            << "   }" << std::endl
+            << "   hsize_t chunks[1] = {chunksize};" << std::endl
+            << "   return H5Pset_chunk(chunking_id, 1, chunks);" << std::endl
+            << "}" << std::endl;
+      cFile << "hsize_t " << tagS.simpleType() << "::hdf5GetChunksize"
+            << "(hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      return HDF5_DEFAULT_CHUNK_SIZE;" << std::endl
+            << "   }" << std::endl
+            << "   hid_t chunking_id = s_hdf5_chunking[file_id];"
+            << std::endl
+            << "   hsize_t dims[1];" << std::endl
+            << "   H5Pget_chunk(chunking_id, 1, dims);" << std::endl
+            << "   return dims[0];" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5SetFilters"
+            << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
+            << std::endl
+            << "{" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      chunking_id = H5Pcreate(H5P_DATASET_CREATE);"
+            << std::endl
+            << "      s_hdf5_chunking[file_id] = chunking_id;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
+            << "   }" << std::endl
+            << "   for (auto filter : filters) {" << std::endl
+            << "      if (filter == H5Z_FILTER_DEFLATE) {" << std::endl
+            << "         H5Pset_deflate(chunking_id, 9);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SZIP) {" << std::endl
+            << "         H5Pset_szip(chunking_id, H5_SZIP_NN_OPTION_MASK, 8);"
+            << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SHUFFLE) {" << std::endl
+            << "         H5Pset_shuffle(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_SCALEOFFSET) {" << std::endl
+            << "         H5Pset_scaleoffset(chunking_id, H5Z_SO_INT," << std::endl
+            << "                            H5Z_SO_INT_MINBITS_DEFAULT);"
+            << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_NBIT) {" << std::endl
+            << "         H5Pset_nbit(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else if (filter == H5Z_FILTER_FLETCHER32) {" << std::endl
+            << "         H5Pset_fletcher32(chunking_id);" << std::endl
+            << "      }" << std::endl
+            << "      else {" << std::endl
+            << "         unsigned int cd_values[] = {6};" << std::endl
+            << "         H5Pset_filter(chunking_id, filter," << std::endl
+            << "                       H5Z_FLAG_MANDATORY, (size_t)1, cd_values);"
+            << "      }" << std::endl
+            << std::endl
+            << "   }" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5GetFilters"
+            << "(hid_t file_id, std::vector<H5Z_filter_t> &filters)"
+            << std::endl
+            << "{" << std::endl
+            << "   filters.clear();" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      return 0;" << std::endl
+            << "   }" << std::endl
+            << "   hid_t chunking_id = s_hdf5_chunking[file_id];"
+            << std::endl
+            << "   for (int i=0; i < H5Pget_nfilters(chunking_id); ++i) {"
+            << std::endl
+            << "      unsigned int flags;" << std::endl
+            << "      size_t cd_nelmts = 9;" << std::endl
+            << "      unsigned int cd_values[9];" << std::endl
+            << "      size_t namelen = 99;" << std::endl
+            << "      char name[99];" << std::endl
+            << "      unsigned int filter_config;" << std::endl
+            << "      filters.push_back(H5Pget_filter2(chunking_id, i,"
+            << std::endl
+            << "                        &flags, &cd_nelmts, cd_values,"
+            << std::endl
+            << "                        namelen, name, &filter_config));"
+            << std::endl
+            << "   }" << std::endl
+            << "   return 0;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileWrite"
+            << "(hid_t file_id, long int entry)" << std::endl
+            << "{" << std::endl
+            << "   hdf5_record_t hdf5_record;" << std::endl
+            << "   int size;\n" << std::endl
+            << "   int len;\n" << std::endl;
+      parentTable_t::iterator piter;
+      for (piter = parents.begin(); piter != parents.end(); ++piter)
+      {
+         XtString dnameS(piter->first);
+         if (dnameS != "HDDM") {
+            cFile << "   if ((len = hdf5_record.vl_" << dnameS << ".len"
+                  << " = m_" << dnameS << "_plist.size()) > 0) {"
+                  << std::endl
+                  << "      size = sizeof(" << dnameS.simpleType() << ");"
+                  << std::endl
+                  << "      hdf5_record.vl_" << dnameS << ".p"
+                  << " = malloc(len * size);" << std::endl
+                  << "      std::list<" << dnameS.simpleType() << "*>"
+                  << "::iterator iter = m_" << dnameS << "_plist.begin();"
+                  << std::endl
+                  << "      " << dnameS.simpleType() << " *p = "
+                  << "(" << dnameS.simpleType() << "*)hdf5_record.vl_"
+                  << dnameS << ".p;" << std::endl
+                  << "      for (int i=0; i < len; ++i, ++iter) {" << std::endl
+                  << "         memcpy(p+i, *iter, size);" << std::endl
+                  << "         p[i].hdf5DataPack();" << std::endl
+                  << "      }" << std::endl
+                  << "   }" << std::endl;
+         }
+      }
+      cFile << "   hid_t eventtype_id = hdf5Datatype();" << std::endl
+            << "   hid_t memorytype_id = hdf5Datatype(1);" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id)"
+            << " == s_hdf5_chunking.end()) {" << std::endl
+            << "      hdf5SetChunksize(file_id, HDF5_DEFAULT_CHUNK_SIZE);"
+            << std::endl
+            << "   }" << std::endl
+            << "   chunking_id = s_hdf5_chunking[file_id];" << std::endl
+            << "   hid_t memoryspace_id;" << std::endl
+            << "   if (s_hdf5_memoryspace.find(\"HDDM\")"
+            << " == s_hdf5_memoryspace.end()) {" << std::endl
+            << "      hsize_t dims[1] = {1};" << std::endl
+            << "      hsize_t maxdims[1] = {H5S_UNLIMITED};" << std::endl
+            << "      memoryspace_id = H5Screate_simple(1, dims, maxdims);"
+            << std::endl
+            << "      s_hdf5_memoryspace[\"HDDM\"] = memoryspace_id;"
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      memoryspace_id = s_hdf5_memoryspace[\"HDDM\"];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hid_t eventspace_id;" << std::endl
+            << "   if (s_hdf5_dataspace.find(file_id)"
+            << " == s_hdf5_dataspace.end()) {" << std::endl
+            << "      hsize_t dims[1] = {1};" << std::endl
+            << "      hsize_t maxdims[1] = {H5S_UNLIMITED};" << std::endl
+            << "      eventspace_id = H5Screate_simple(1, dims, maxdims);"
+            << std::endl
+            << "      s_hdf5_dataspace[file_id] = eventspace_id;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventspace_id = HDDM::s_hdf5_dataspace[file_id];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hid_t eventdata_id;" << std::endl
+            << "   if (s_hdf5_dataset.find(file_id)"
+            << " == s_hdf5_dataset.end()) {" << std::endl
+            << std::endl
+            << "      eventdata_id = H5Dcreate(file_id, \"HDDMevents\","
+            << std::endl
+            << "                               eventtype_id, eventspace_id,"
+            << std::endl
+            << "                               H5P_DEFAULT, chunking_id,"
+            << std::endl
+            << "                               H5P_DEFAULT);"
+            << std::endl
+            << "      s_hdf5_dataset[file_id] = eventdata_id;" << std::endl
+            << "      m_hdf5_record_extent = 0;" << std::endl
+            << "      m_hdf5_record_offset = 0;" << std::endl
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      hsize_t maxdims;" << std::endl
+            << "      H5Sget_simple_extent_dims(eventspace_id,"
+            << " &m_hdf5_record_extent, &maxdims);" << std::endl
+            << "      H5Sget_select_bounds(eventspace_id,"
+            << " &m_hdf5_record_offset, &maxdims);" << std::endl
+            << "      ++m_hdf5_record_offset;" << std::endl
+            << "   }" << std::endl
+            << "   if (entry >= 0) {" << std::endl
+            << "      m_hdf5_record_offset = entry;" << std::endl
+            << "   }" << std::endl
+            << "   if (m_hdf5_record_offset >= m_hdf5_record_extent) {"
+            << std::endl
+            << "      m_hdf5_record_extent = m_hdf5_record_offset + 1;"
+            << std::endl
+            << "      H5Dset_extent(eventdata_id, &m_hdf5_record_extent);"
+            << std::endl
+            << "      H5Sclose(eventspace_id);"
+            << std::endl
+            << "      eventspace_id = H5Dget_space(eventdata_id);"
+            << std::endl 
+            << "      s_hdf5_dataspace[file_id] = eventspace_id;"
+            << std::endl 
+            << "   }"
+            << std::endl
+            << "   hsize_t hdf5_record_count = 1;"
+            << std::endl
+            << "   H5Sselect_hyperslab(eventspace_id, H5S_SELECT_SET,"
+            << std::endl
+            << "                       &m_hdf5_record_offset, NULL,"
+            << std::endl
+            << "                       &hdf5_record_count, NULL);"
+            << std::endl
+            << "   herr_t res = H5Dwrite(eventdata_id, memorytype_id,"
+            << std::endl
+            << "                         memoryspace_id, eventspace_id,"
+            << std::endl
+            << "                         H5P_DEFAULT, &hdf5_record);"
+            << std::endl;
+      for (piter = parents.begin(); piter != parents.end(); ++piter)
+      {
+         XtString dnameS(piter->first);
+         if (dnameS != "HDDM") {
+            cFile << "   if ((len = hdf5_record.vl_" << dnameS << ".len"
+                  << " = m_" << dnameS << "_plist.size()) > 0) {"
+                  << std::endl
+                  << "      free(hdf5_record.vl_" << dnameS << ".p);"
+                  << std::endl
+                  << "   }" << std::endl;
+         }
+      }
+      cFile << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileRead"
+            << "(hid_t file_id, long int entry)" << std::endl
+            << "{" << std::endl
+            << "   clear();" << std::endl
+            << "   hid_t memorytype_id = hdf5Datatype(1);" << std::endl
+            << "   hid_t memoryspace_id;" << std::endl
+            << "   if (s_hdf5_memoryspace.find(\"HDDM\")"
+            << " == s_hdf5_memoryspace.end()) {" << std::endl
+            << "      hsize_t dims[1] = {1};" << std::endl
+            << "      hsize_t maxdims[1] = {H5S_UNLIMITED};" << std::endl
+            << "      memoryspace_id = H5Screate_simple(1, dims, maxdims);"
+            << std::endl
+            << "      s_hdf5_memoryspace[\"HDDM\"] = memoryspace_id;"
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      memoryspace_id = s_hdf5_memoryspace[\"HDDM\"];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hid_t eventdata_id;" << std::endl
+            << "   hid_t chunking_id;" << std::endl
+            << "   if (s_hdf5_dataset.find(file_id)"
+            << " == s_hdf5_dataset.end()) {" << std::endl
+            << std::endl
+            << "      eventdata_id = H5Dopen(file_id, \"HDDMevents\","
+            << std::endl
+            << "                               H5P_DEFAULT);"
+            << std::endl
+            << "      chunking_id = H5Dget_create_plist(eventdata_id);"
+            << std::endl
+            << "      s_hdf5_dataset[file_id] = eventdata_id;"
+            << "      s_hdf5_chunking[file_id] = chunking_id;"
+            << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      chunking_id = s_hdf5_chunking[file_id];"
+            << std::endl
+            << "   }" << std::endl
+            << "   hid_t eventspace_id;" << std::endl
+            << "   if (s_hdf5_dataspace.find(file_id)"
+            << " == s_hdf5_dataspace.end()) {" << std::endl
+            << "      eventspace_id = H5Dget_space(eventdata_id);" << std::endl
+            << "      s_hdf5_dataspace[file_id] = eventspace_id;" << std::endl
+            << "      hsize_t maxdims;" << std::endl
+            << "      H5Sget_simple_extent_dims(eventspace_id,"
+            << " &m_hdf5_record_extent, &maxdims);" << std::endl
+            << "      m_hdf5_record_offset = 0;" << std::endl
+            << "   }" << std::endl
+            << "   else {" << std::endl
+            << "      eventspace_id = HDDM::s_hdf5_dataspace[file_id];"
+            << std::endl
+            << "      hsize_t maxdims;" << std::endl
+            << "      H5Sget_simple_extent_dims(eventspace_id,"
+            << " &m_hdf5_record_extent, &maxdims);" << std::endl
+            << "      H5Sget_select_bounds(eventspace_id,"
+            << " &m_hdf5_record_offset, &maxdims);" << std::endl
+            << "      ++m_hdf5_record_offset;" << std::endl
+            << "   }" << std::endl
+            << "   if (entry >= 0) {" << std::endl
+            << "      m_hdf5_record_offset = entry;" << std::endl
+            << "   }" << std::endl
+            << "   if (m_hdf5_record_offset >= m_hdf5_record_extent)"
+            << std::endl
+            << "      return -1;" << std::endl
+            << "   m_hdf5_record_count = 1;" << std::endl
+            << "   H5Sselect_hyperslab(eventspace_id, H5S_SELECT_SET,"
+            << std::endl
+            << "                       &m_hdf5_record_offset, NULL,"
+            << std::endl
+            << "                       &m_hdf5_record_count, NULL);"
+            << std::endl
+            << "   herr_t res = H5Dread(eventdata_id, memorytype_id,"
+            << std::endl
+            << "                        memoryspace_id, eventspace_id,"
+            << std::endl
+            << "                        H5P_DEFAULT, &m_hdf5_record);"
+            << std::endl
+            << "   int len;" << std::endl;
+      for (piter = parents.begin(); piter != parents.end(); ++piter)
+      {
+         XtString dnameS(piter->first);
+         if (dnameS != "HDDM") {
+            cFile << "   if ((len = m_hdf5_record.vl_" << dnameS << ".len)"
+                  << " > 0) {" << std::endl
+                  << "      " << dnameS.simpleType() << " *p ="
+                  << "(" << dnameS.simpleType() << "*)"
+                  << "m_hdf5_record.vl_" << dnameS << ".p;" << std::endl
+                  << "      for (int i=0; i < len; ++i ) {" << std::endl
+                  << "         m_" << dnameS << "_plist.push_back("
+                  << "new(p+i) " << dnameS.simpleType() << ");"
+                  << std::endl
+                  << "      }" << std::endl
+                  << "   }" << std::endl;
+         }
+      }
+      for (citer = children[tagS].begin(); citer != children[tagS].end(); ++citer)
+      {
+         DOMElement *childEl = (DOMElement*)(*citer);
+         XtString cnameS(childEl->getTagName());
+         XtString repS(childEl->getAttribute(X("maxOccurs")));
+         int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
+         cFile << "   new(&m_" << cnameS << ((rep > 1)? "_list)" : "_link)")
+               << " " << ((rep > 1)? cnameS.listType() : cnameS.linkType())
+               << "(&m_" << cnameS << "_plist," << std::endl
+               << "            m_" << cnameS << "_plist.begin()," << std::endl
+               << "            m_" << cnameS << "_plist.end()," << std::endl
+               << "            this);" << std::endl;
+      }
+      cFile << "   hdf5DataUnpack();" << std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl;
+      cFile << "hid_t " << tagS.simpleType() << "::hdf5FileCreate("
+            << "std::string name, unsigned int flags)" << std::endl
+            << "{" << std::endl
+            << "   hid_t file_id = H5Fcreate(name.c_str(), flags,"
+            << " H5P_DEFAULT, H5P_DEFAULT);" << std::endl
+            << "   hdf5FileStamp(file_id);" << std::endl
+            << "   return file_id;" << std::endl
+            << "}" << std::endl;
+      cFile << "hid_t " << tagS.simpleType() << "::hdf5FileOpen("
+            << "std::string name, unsigned int flags)" << std::endl
+            << "{" << std::endl
+            << "   hid_t file_id = H5Fopen(name.c_str(), flags, H5P_DEFAULT);"
+            << std::endl
+            << "   hdf5FileCheck(file_id);" << std::endl
+            << "   return file_id;" << std::endl
+            << "}" << std::endl;
+      cFile << "herr_t " << tagS.simpleType() << "::hdf5FileClose("
+            << "hid_t file_id)" << std::endl
+            << "{" << std::endl
+            << "   herr_t res = H5Fclose(file_id);" << std::endl
+            << "   if (HDDM::s_hdf5_dataspace.find(file_id) !="
+            << " HDDM::s_hdf5_dataspace.end()) {" << std::endl
+            << "        H5Sclose(s_hdf5_dataspace[file_id]);" << std::endl
+            << "        s_hdf5_dataspace.erase(file_id);" << std::endl
+            << "   }" << std::endl
+            << "   if (s_hdf5_chunking.find(file_id) !="
+            << " s_hdf5_chunking.end()) {" << std::endl
+            << "       H5Pclose(s_hdf5_chunking[file_id]);" << std::endl
+            << "       s_hdf5_chunking.erase(file_id);" << std::endl
+            << "   }" << std::endl
+            << "   if (s_hdf5_dataset.find(file_id) !="
+            << " s_hdf5_dataset.end()) {" << std::endl
+            << "       H5Dclose(s_hdf5_dataset[file_id]);" << std::endl
+            << "       s_hdf5_dataset.erase(file_id);" << std::endl
+            << "   }" << std::endl
+            << "   return res;" << std::endl
+            << "}" << std::endl << std::endl;
+   }
+   cFile << "void " << tagS.simpleType() << "::hdf5DataPack()"
+         << std::endl
+         << "{" << std::endl;
+   for (unsigned int n = 0; n < myAttr->getLength(); n++)
+   {
+      XtString attrS(myAttr->item(n)->getNodeName());
+      XtString typeS(el->getAttribute(X(attrS)));
+      if (typeS == "string" || typeS == "anyURI")
+      {
+         cFile << "   mx_" << attrS << " = m_" << attrS << ".c_str();"
+               << std::endl;
+      }
+   }
+   for (citer = children[tagS].begin(); citer != children[tagS].end(); ++citer)
+   {
+      DOMElement *childEl = (DOMElement*)(*citer);
+      XtString cnameS(childEl->getTagName());
+      XtString repS(childEl->getAttribute(X("maxOccurs")));
+      int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
+      cFile << "   m_"  << cnameS << ((rep > 1)? "_list" : "_link")
+            << ".deflate();" << std::endl;
+   }
+   cFile << "}" << std::endl;
+   cFile << "void " << tagS.simpleType() << "::hdf5DataUnpack()"
+         << std::endl
+         << "{" << std::endl;
+   for (unsigned int n = 0; n < myAttr->getLength(); n++)
+   {
+      XtString attrS(myAttr->item(n)->getNodeName());
+      XtString typeS(el->getAttribute(X(attrS)));
+      if (typeS == "string" || typeS == "anyURI")
+      {
+         cFile << "   new(&m_" << attrS << ") std::string();" << std::endl
+               << "   if (mx_" << attrS << " != 0) {" << std::endl
+               << "      m_" << attrS << " = mx_" << attrS << ";"
+               << std::endl
+               << "      m_host->m_hdf5_strings.push_back"
+               << "(&m_" << attrS << ");" << std::endl
+               << "   }" << std::endl;
+      }
+   }
+   for (citer = children[tagS].begin(); citer != children[tagS].end(); ++citer)
+   {
+      DOMElement *childEl = (DOMElement*)(*citer);
+      XtString cnameS(childEl->getTagName());
+      XtString repS(childEl->getAttribute(X("maxOccurs")));
+      int rep = (repS == "unbounded")? INT_MAX : atoi(S(repS));
+      cFile << "   {" << std::endl
+            << "      std::list<" << cnameS.simpleType() << "*> *host_plist ="
+            << " &m_host->m_" << cnameS << "_plist;" << std::endl
+            << "      m_"  << cnameS << ((rep > 1)? "_list" : "_link")
+            << ".inflate(m_host, host_plist, this);" << std::endl
+            << "      "  << cnameS.listType() << "::iterator iter;" << std::endl
+            << "      for (iter = m_" << cnameS << ((rep > 1)? "_list" : "_link")
+            << ".begin();" << std::endl
+            << "           iter != m_" << cnameS << ((rep > 1)? "_list" : "_link")
+            << ".end(); ++iter)" << std::endl
+            << "      {" << std::endl
+            << "         iter->hdf5DataUnpack();" << std::endl
+            << "      }" << std::endl
+            << "   }" << std::endl;
+   }
+   cFile << "}" << std::endl;
+
+   cFile << "#endif" << std::endl << std::endl;
+
    for (citer = children[tagS].begin(); citer != children[tagS].end(); ++citer)
    {
       DOMElement *childEl = (DOMElement*)(*citer);
@@ -3143,6 +4093,14 @@ void CodeBuilder::writeClassimp(DOMElement* el)
                   << "                   "
                   << "m_" << cnameS << "_plist.end());" << std::endl
                   << "}" << std::endl << std::endl;
+         }
+         if (cnameS != "HDDM")
+         {
+            cFile << std::endl
+                  << "void debug_print(" << cnameS.listType() << " &list) {"
+                  << std::endl
+                  << "   list.debug_print();" << std::endl
+                  << "}" << std::endl;
          }
       }
    }
