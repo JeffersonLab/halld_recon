@@ -19,7 +19,7 @@ jerror_t DNeutralShower_factory_HadronPreSelect::init(void)
 	dMinFCALE = 0.1;
 	dMinBCALE = 0.05;
 	dMinCCALE = 0.1;
-	dMinBCALNcell = 2;
+	dMinBCALNcell = 1;   // reduced from 2 cells for low energy neutrons
 	dMaxFCALR = 105.5;
 	dMaxBCALZ = 393.0;
 	
