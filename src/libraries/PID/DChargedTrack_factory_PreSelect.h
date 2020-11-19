@@ -12,6 +12,7 @@
 #include <PID/DChargedTrack.h>
 #include <PID/DChargedTrackHypothesis.h>
 #include <TRACKING/DTrackTimeBased.h>
+#include "DResourcePool.h"
 
 using namespace std;
 using namespace jana;
@@ -23,7 +24,23 @@ class DChargedTrack_factory_PreSelect : public jana::JFactory<DChargedTrack>
 		~DChargedTrack_factory_PreSelect(){};
 		const char* Tag(void){return "PreSelect";}
 
+		void Recycle_Hypotheses(vector<DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
+		void Recycle_Hypotheses(vector<const DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
+		void Recycle_Hypothesis(const DChargedTrack* locHypo){dResourcePool_ChargedTrack->Recycle(locHypo);}
+
+		size_t Get_NumObjectsAllThreads(void) const{return dResourcePool_ChargedTrack->Get_NumObjectsAllThreads();}
+		DChargedTrack* Get_Resource(void)
+		{
+			auto locHypo = dResourcePool_ChargedTrack->Get_Resource();
+			return locHypo;
+		}
+
+
 	private:
+		//RESOURCE POOL
+		vector<DChargedTrack*> dCreated;
+		DResourcePool<DChargedTrack>* dResourcePool_ChargedTrack = nullptr;
+
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
 		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.

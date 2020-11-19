@@ -11,6 +11,7 @@
 using namespace std;
 
 #include "DNeutralParticle_factory.h"
+#include "DResourcePool.h"
 using namespace jana;
 
 //------------------
