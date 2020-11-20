@@ -23,7 +23,7 @@ It also creates the following files:
 2. Copy gaincalibs.py and fit\_dedx.C into this directory
 3. Make a symbolic link from the launch results to a directory hists, eg
 ```sh
-ln -s /work/halld/data\_monitoring/RunPeriod-2019-11/mon\_ver23/rootfiles/ hists
+ln -s /work/halld/data_monitoring/RunPeriod-2019-11/mon_ver23/rootfiles/ hists
 ```
 4. Run the gaincalibs script, eg 
 ```sh
