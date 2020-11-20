@@ -21,16 +21,16 @@ It also creates the following files:
 
 1. Make a new directory and cd into it
 2. Copy gaincalibs.py and fit\_dedx.C into this directory
-1. Make a symbolic link from the launch results to a directory hists, eg
+3. Make a symbolic link from the launch results to a directory hists, eg
 ```sh
 ln -s /work/halld/data\_monitoring/RunPeriod-2019-11/mon\_ver23/rootfiles/ hists
 ```
-1. Run the gaincalibs script, eg 
+4. Run the gaincalibs script, eg 
 ```sh
 python gaincalibs.py
 ```
-1. Inspect the results in dedx\_peak\_scan.txt
-1. Load the new gain constants into ccdb:
+5. Inspect the results in dedx\_peak\_scan.txt
+6. Load the new gain constants into ccdb:
 ```sh
 chmod +x addtoccdb.sh
 ./addtoccdb.sh
