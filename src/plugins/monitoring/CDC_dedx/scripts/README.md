@@ -1,6 +1,7 @@
 # CDC dE/dx calibrations
 
-These use the histograms from the plugin CDC\_dedx.
+The histograms from the plugin CDC\_dedx are used to fine-tune the gain. 
+One evio file is sufficient.
 
 fit\_dedx.C fits gaussians to the dE/dx bands at 0.5 and 1.5 GeV/c
 gaincalibs.py runs fit\_dedx.C over all root files in the subdirectory hists.
@@ -25,7 +26,7 @@ It also creates the following files:
 ```sh
 ln -s /work/halld/data_monitoring/RunPeriod-2019-11/mon_ver23/rootfiles/ hists
 ```
-4. Run the gaincalibs script, eg 
+4. Run the gaincalibs script 
 ```sh
 python gaincalibs.py
 ```
