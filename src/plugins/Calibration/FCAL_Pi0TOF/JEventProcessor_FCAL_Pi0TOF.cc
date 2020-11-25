@@ -29,8 +29,9 @@ JEventProcessor_FCAL_Pi0TOF::JEventProcessor_FCAL_Pi0TOF()
   USE_TRACKS = 0;
 
   gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:DO_METOHD", DO_METHOD );
-  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:DO_METOHD", USE_TRACKS );
+  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:USE_TRACKS", USE_TRACKS );
   
+  cout <<"DO_METHOD " << DO_METHOD << " USE_TRACKS " << USE_TRACKS << endl;
 }
 
 //------------------
@@ -566,41 +567,41 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      
 	    }
 	    if (bo_5p){
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring1),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring2),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
 	    }
 	    if (bo_10p){
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring1),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring2),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
 	    }
 	    if (bo_20p){
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring1),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring2),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
 	    }
 	    if (bo_30p){
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring1),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring2),
 			      avgE, pi0Mass,
 			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 			      100, 0.0, 10.0, 500, 0.05, 0.7);
@@ -725,7 +726,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	  }
 	}
-	
+      
 	if (DO_METHOD == 1 || DO_METHOD == 2) {
 	  for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
 	    
@@ -1617,7 +1618,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 		}
 	      }
 	    }
-	  } 
+	  }
 	}
       }
     }
