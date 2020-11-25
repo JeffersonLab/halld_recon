@@ -26,3 +26,42 @@ root -b -q /CDC_amp_071344_merged.root $HALLD_RECON_HOME/src/plugins/Calibration
 ccdb add /CDC/wire_gains -r 71344- new_wiregains.txt
 ```
 
+
+
+# Labelling dead straws for MC
+
+This uses the histograms from the plugin CDC_amp.
+One evio file is sufficient.
+The scripts referred to here are in the subdirectory scripts.
+
+list\_dead\_straws.C looks through the histogram of tracked hits and compiles a list of straws for which the number of tracked hits is less than 1/4 of the average for their ring of straws.
+find\_dead\_straws.py runs list\_dead\_straws.C over all root files in the subdirectory hists.
+
+find\_dead\_straws.py can produce quite lengthy output, as list\_dead\_straws.C produces a report for each file examined. It creates files listing the straw efficiency (as 1 or 0) for the first run encountered and any later runs where the list of dead straws has changed, and a file containing the commands to add the lists to ccdb. These are:
+* eff\_tables Directory containing straw efficiency files
+* add\_files\_to\_ccdb.sh Script to add the tables to CCDB
+
+**To run the search process:**
+
+1. Make a new directory and cd into it
+2. Copy find\_dead\_straws.py and list\_dead\_straws.C into this directory
+3. Make a symbolic link from the launch results to a directory hists, eg
+```sh
+ln -s /work/halld/data_monitoring/RunPeriod-2019-11/mon_ver23/rootfiles/ hists
+```
+4. Run the find\_dead\_straws script 
+```sh
+python find_dead_straws.py > searchresults.txt
+```
+5. Look through the search results and/or check the output files, eg to list the number of bad straws reported each time:
+```sh
+grep -c 0 eff_tables/*  
+```
+6. Load the new gain constants into ccdb, eg
+```sh
+chmod +x add_files_to_ccdb.sh 
+./add_files_to_ccdb.sh 
+```
+
+
+
