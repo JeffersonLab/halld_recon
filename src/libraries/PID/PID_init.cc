@@ -17,6 +17,7 @@ using namespace jana;
 #include "DNeutralParticleHypothesis_factory.h"
 #include "DNeutralShower_factory.h"
 #include "DNeutralShower_factory_PreSelect.h"
+#include "DNeutralShower_factory_HadronPreSelect.h"
 #include "DVertex_factory.h"
 #include "DVertex_factory_THROWN.h"
 #include "DEventRFBunch_factory.h"
@@ -51,6 +52,7 @@ jerror_t PID_init(JEventLoop *loop)
 	loop->AddFactory(new DNeutralParticleHypothesis_factory);
 	loop->AddFactory(new DNeutralShower_factory);
 	loop->AddFactory(new DNeutralShower_factory_PreSelect);
+	loop->AddFactory(new DNeutralShower_factory_HadronPreSelect);
 	loop->AddFactory(new DVertex_factory);
 	loop->AddFactory(new DVertex_factory_THROWN);
 	loop->AddFactory(new DEventRFBunch_factory);
