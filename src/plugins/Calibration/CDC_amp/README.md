@@ -8,7 +8,7 @@ The root script CDC\_gains.C calculates the relative gain for each of the wires 
 
 The script can also be used to calculate the overall chamber gain for each run, before performing another calibration launch and fine-tuning the gain with the CDC\_dedx plugin, but this is no longer standard practice.
 
-gaincalibs.py creates the following files:
+CDC\_gains.C creates the following files:
 - cdc_amphistos.root Landau fit parameters for each straw
 - cdc_new_ascale.txt Overall chamber gain factor
 - cdc_new_wiregains.txt Gain factors for individual chamber wires
@@ -30,9 +30,8 @@ ccdb add /CDC/wire_gains -r 71344- new_wiregains.txt
 
 # Labelling dead straws for MC
 
-This uses the histograms from the plugin CDC_amp.
-One evio file is sufficient.
-The scripts referred to here are in the subdirectory scripts.
+This uses the histograms from the plugin CDC_amp.  One evio file is sufficient.
+The scripts referred to are in the subdirectory scripts_mc.
 
 list\_dead\_straws.C looks through the histogram of tracked hits and compiles a list of straws for which the number of tracked hits is less than 1/4 of the average for their ring of straws.
 find\_dead\_straws.py runs list\_dead\_straws.C over all root files in the subdirectory hists.
@@ -64,4 +63,28 @@ chmod +x add_files_to_ccdb.sh
 ```
 
 
+# Finding the hit thresholds 
 
+This requires the run configuration files, either in the RunLog tar file stored on tape with the evio files, or on the gluons, in /gluex/CALIB/ALL/fadc125/.
+The scripts are in the subdirectory scripts_mc.
+
+geth.C extracts the thresholds from the configuration files and writes them into a simple table suitable for CCDB.
+CDC\_straw\_numbers\_run\_3221.txt is a reference table used by geth.C
+
+geth.C creates the following file:
+- cdc_h.txt  This is a list of the thresholds, ordered by straw number
+
+
+**To extract the thresholds:**
+
+1. Make a new directory and cd into it
+2. Copy geth.C, CDC\_straw\_numbers\_run\_3221.txt and the configuration files into this directory.  
+3. Edit the configuration filename in the script, line 65.
+4. Run the script 
+```sh
+root -q geth.C 
+```
+5. Load the data into CCDB, eg
+```sh
+ccdb add /CDC/hit_thresholds -r 71860-72435 cdc_h.txt
+```
