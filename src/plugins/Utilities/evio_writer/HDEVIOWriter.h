@@ -58,6 +58,7 @@ class HDEVIOWriter{
 		uint32_t MAX_OUTPUT_BUFFER_SIZE; // in 32bit words in the EVIO block
 		uint32_t MAX_HOLD_TIME;          // in seconds
 		uint32_t NEVENTS_PER_BLOCK;
+        unsigned int THREAD_SLEEP_TIME;  // in microseconds
 		bool DEBUG_FILES;
 
 		deque< vector<uint32_t>* > output_deque;
