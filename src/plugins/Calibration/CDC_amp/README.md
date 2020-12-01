@@ -63,28 +63,22 @@ chmod +x add_files_to_ccdb.sh
 ```
 
 
-# Finding the hit thresholds 
+# Gain vs DOCA corrections.
 
-This requires the run configuration files, either in the RunLog tar file stored on tape with the evio files, or on the gluons, in /gluex/CALIB/ALL/fadc125/.
-The scripts are in the subdirectory scripts_mc.
+This procedure was developed for the spring 2018 runs when the gas supply to the CDC failed part way through the run period.  It is *not* in routine use.  
+It uses the output of the CDC\_amp plugin. Many evio files are required - it's best to use all of the files for each run.
+The script is in the subdirectory scripts.
 
-geth.C extracts the thresholds from the configuration files and writes them into a simple table suitable for CCDB.
-CDC\_straw\_numbers\_run\_3221.txt is a reference table used by geth.C
+get_gain_doca_params.C uses the histogram adoca_30 for tracks at theta=30degrees.
+It performs a linear fit to amplitude vs doca from 3mm out until the data become less predictable.  The parameters obtained populate the CCDB table /CDC/gain_doca_correction
 
-geth.C creates the following file:
-- cdc_h.txt  This is a list of the thresholds, ordered by straw number
+**To obtain the gain vs DOCA correction parameters:**
 
-
-**To extract the thresholds:**
-
-1. Make a new directory and cd into it
-2. Copy geth.C, CDC\_straw\_numbers\_run\_3221.txt and the configuration files into this directory.  
-3. Edit the configuration filename in the script, line 65.
-4. Run the script 
+1. Make subdirectories rootfiles, ccdb, mpv3mm and plots.
+2. Run the script, passing in the run number as an argument - this is used when creating the output files.
 ```sh
-root -q geth.C 
+root -q hd_root_072555.root "get_gain_doca_params.C(72555)"
 ```
-5. Load the data into CCDB, eg
-```sh
-ccdb add /CDC/hit_thresholds -r 71860-72435 cdc_h.txt
-```
+3. The files containing the parameters for CCDB should be in the ccdb directory and can be added using the script add_to_ccdb.sh generated in the previous step.
+
+
