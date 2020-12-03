@@ -1606,8 +1606,17 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				break;
 			default:
  				if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
- 				if(VERBOSE>7) cout << "      FADC250 unknown data type ("<<data_type<<")"<<" (0x"<<hex<<*iptr<<dec<<")"<<endl;
 				jerr << "FADC250 unknown data type (" << data_type << ") (0x" << hex << *iptr << dec << ")" << endl;
+                // make additional debugging output for special error types
+                if(data_type == 11) {
+                    cout << "          FADC slot mask = "<<" 0x"<<hex<<*(iptr+1)<<dec<<endl;
+                    cout << "          Token status = "<<" 0x"<<hex<<*(iptr+2)<<dec<<endl;
+                    cout << "          Bus error status = "<<" 0x"<<hex<<*(iptr+3)<<dec<<endl;
+                    if(pe) {
+                        cout << "          Associated with event number = "<<pe->event_number<<endl;
+                    }
+                }
+
 				if (continue_on_format_error) {
 					iptr = iend;
 					return;

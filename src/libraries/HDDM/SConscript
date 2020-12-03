@@ -78,7 +78,7 @@ def HDDM_C(target, source, env):
 
 	# Form command to be executed and execute it
 	cmd = [hddmc, '-o', target_base, str(source[0])]
-	if( int(env['SHOWBUILD']) > 0): print ' '.join(cmd)
+	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
 #---------------
@@ -97,13 +97,13 @@ def HDDM_CPP(target, source, env):
 
 	# Form command to be executed and execute it
 	cmd = [hddmcpp, '-o', target_base, str(source[0])]
-	if( int(env['SHOWBUILD']) > 0): print ' '.join(cmd)
+	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
 	# C++ interface must have source file names modified
 	# so as not to generate same .o filenames as their C counteparts
 	cmd = ['mv', '%s.cpp' % target_base, '%s++.cpp' % target_base]
-	if( int(env['SHOWBUILD']) > 0): print ' '.join(cmd)
+	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
 #---------------
@@ -119,7 +119,7 @@ def HDDM_PY(target, source, env):
 
 	# Form command to be executed and execute it
 	cmd = [hddmpy, '-o', target_base, str(source[0])]
-	if( int(env['SHOWBUILD']) > 0): print ' '.join(cmd)
+	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
     
 

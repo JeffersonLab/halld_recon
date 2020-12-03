@@ -138,7 +138,7 @@ class hdv_mainframe:public TGMainFrame {
 		const char* GetFactoryTag(string who);
 		void GetReconFactory(string &name, string &tag);
 		TPolyLine* GetFCALPolyLine(int channel);
-		TPolyLine* GetFCALPolyLine(float x, float y);
+		TPolyLine* GetFCALPolyLine(int row, int column);
 		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);

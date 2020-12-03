@@ -77,7 +77,10 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
       std::string head;
       std::getline(sbuf, head);
       std::string expected = " class=\"s\" ";
-      if (head.find(expected) == head.npos) {
+      std::string also_supported = " class=\"mc_s\" ";
+      if (head.find(expected) == head.npos && 
+          head.find(also_supported) == head.npos)
+      {
          std::string msg("Unexpected header found in input HDDM stream: ");
          throw std::runtime_error(msg + head + source_name);
       }

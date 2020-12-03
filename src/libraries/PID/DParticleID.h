@@ -52,6 +52,8 @@
 
 #include <TMath.h>
 
+#include <mutex>
+
 class DTrackTimeBased;
 
 class DParticleID:public jana::JObject
@@ -94,6 +96,8 @@ class DParticleID:public jana::JObject
 		virtual jerror_t GetdEdxSigma_CDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
 		virtual jerror_t GetdEdxMean_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locMeandEdx, Particle_t locPIDHypothesis) const=0;
 		virtual jerror_t GetdEdxSigma_FDC(double locBeta, unsigned int locNumHitsUsedFordEdx, double& locSigmadEdx, Particle_t locPIDHypothesis) const=0;
+		virtual double GetProtondEdxMean_TOF(double locBeta) const=0;
+		virtual double GetProtondEdxSigma_TOF(double locBeta) const=0;
 		virtual double GetProtondEdxMean_SC(double locBeta) const=0;
 		virtual double GetProtondEdxSigma_SC(double locBeta) const=0;
 		virtual double GetTimeVariance(DetectorSystem_t detector,
@@ -251,6 +255,14 @@ class DParticleID:public jana::JObject
 
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
 
+                // Correct CDC dE/dx for variation w theta (space-charge & saturation)
+                vector<vector<double>>CDC_DEDX_CORRECTION;
+                double cdc_min_theta, cdc_max_theta;
+                double cdc_min_dedx, cdc_max_dedx;
+                double cdc_theta_step, cdc_dedx_step; 
+                int cdc_npoints_theta, cdc_npoints_dedx;
+
+
         // Start counter resolution parameters
         vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
         vector<double> SC_SECTION1_P0, SC_SECTION1_P1;
@@ -303,6 +315,9 @@ class DParticleID:public jana::JObject
 		double ONESIDED_PADDLE_MIDPOINT_MAG; //+/- this number for North/South
 		// time cut for cdc hits
 		double CDC_TIME_CUT_FOR_DEDX;
+        
+                bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta
+                bool CDC_TRUNCATE_DEDX;            // dE/dx truncation: ignore hits with highest dE
 
 		double dTargetZCenter;
 

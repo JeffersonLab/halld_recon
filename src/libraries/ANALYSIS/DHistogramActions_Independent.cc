@@ -345,6 +345,10 @@ void DHistogramAction_Reconstruction::Initialize(JEventLoop* locEventLoop)
 		//TOF
 		locHistName = "TOFPointEnergy";
 		dHist_TOFPointEnergy = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
+		locHistName = "TOFPointEnergyP1";
+		dHist_TOFPointEnergyP1 = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy Plane 1 (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
+		locHistName = "TOFPointEnergyP2";
+		dHist_TOFPointEnergyP2 = GetOrCreate_Histogram<TH1I>(locHistName, ";TOF Point Energy Plane 2 (MeV)", dNumHitEnergyBins, dMinHitEnergy, dMaxHitEnergy);
 		locHistName = "TOFPointYVsX";
 		dHist_TOFPointYVsX = GetOrCreate_Histogram<TH2I>(locHistName, ";TOF Point X (cm);TOF Point Y (cm)", dNumFCALTOFXYBins, -130.0, 130.0, dNumFCALTOFXYBins, -130.0, 130.0);
 
@@ -624,6 +628,8 @@ bool DHistogramAction_Reconstruction::Perform_Action(JEventLoop* locEventLoop, c
 		for(size_t loc_i = 0; loc_i < locTOFPoints.size(); ++loc_i)
 		{
 			dHist_TOFPointEnergy->Fill(locTOFPoints[loc_i]->dE*1.0E3);
+			dHist_TOFPointEnergyP1->Fill(locTOFPoints[loc_i]->dE1*1.0E3);
+			dHist_TOFPointEnergyP2->Fill(locTOFPoints[loc_i]->dE2*1.0E3);
 			dHist_TOFPointYVsX->Fill(locTOFPoints[loc_i]->pos.X(), locTOFPoints[loc_i]->pos.Y());
 		}
 
@@ -2965,6 +2971,13 @@ void DHistogramAction_DetectedParticleKinematics::Initialize(JEventLoop* locEven
 			locHistTitle = locParticleROOTName + string(";Vertex-T (ns)");
 			dHistMap_VertexT[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumTBins, dMinT, dMaxT);
 
+			// histogram shower energy for massive neutrals reconstructed in the calorimeter
+			if(locPID == Neutron) {
+				locHistName = "ShowerE";
+				locHistTitle = locParticleROOTName + string(";Shower Energy (GeV)");
+				dHistMap_ShowerE[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+			}
+
 			gDirectory->cd("..");
 		}
 
@@ -3057,9 +3070,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
-		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_Hypothesis(Gamma);
-		if(locNeutralParticleHypothesis->Get_FOM() < dMinPIDFOM)
-			continue;
+		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_BestFOM();
 
 		Particle_t locPID = locNeutralParticleHypothesis->PID();
 		if(dHistMap_P.find(locPID) == dHistMap_P.end())
@@ -3072,6 +3083,8 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 
 		double locBeta_Timing = locNeutralParticleHypothesis->measuredBeta();
 		double locDeltaBeta = locBeta_Timing - locNeutralParticleHypothesis->lorentzMomentum().Beta();
+
+		double locShowerEnergy = locNeutralParticleHypothesis->Get_NeutralShower()->dEnergy;
 
 		//FILL HISTOGRAMS
 		//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -3088,6 +3101,10 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 			dHistMap_VertexZ[locPID]->Fill(locNeutralParticleHypothesis->position().Z());
 			dHistMap_VertexYVsX[locPID]->Fill(locNeutralParticleHypothesis->position().X(), locNeutralParticleHypothesis->position().Y());
 			dHistMap_VertexT[locPID]->Fill(locNeutralParticleHypothesis->time());
+			
+			if(locPID == Neutron) {
+				dHistMap_ShowerE[locPID]->Fill(locShowerEnergy);
+			}
 		}
 		Unlock_Action();
 	}
@@ -3359,7 +3376,10 @@ bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
+		// Only plotting photons for now, maybe we want to include neutrons at some point?
 		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_Hypothesis(Gamma);
+		if(locNeutralParticleHypothesis == nullptr)  // no photon hypothesis!
+			continue;
 		if(locNeutralParticleHypothesis->Get_FOM() < dMinPIDFOM)
 			continue;
 
@@ -3961,6 +3981,56 @@ bool DHistogramAction_TrackMultiplicity::Perform_Action(JEventLoop* locEventLoop
 		dHist_NumGoodReconstructedParticles->Fill(4.0, (Double_t)locNumGoodNegativeTracks);
 		for(size_t loc_i = 0; loc_i < dFinalStatePIDs.size(); ++loc_i)
 			dHist_NumGoodReconstructedParticles->Fill(5.0 + (Double_t)loc_i, (Double_t)locNumGoodTracksByPID[dFinalStatePIDs[loc_i]]);
+	}
+	Unlock_Action();
+
+	return true;
+}
+
+// DHistogramAction_TriggerStudies
+// dHist_Trigger_FCALBCAL_Energy
+
+void DHistogramAction_TriggerStudies::Initialize(JEventLoop* locEventLoop)
+{
+
+	//CREATE THE HISTOGRAMS
+	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
+	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	{
+		CreateAndChangeTo_ActionDirectory();
+
+		string locHistName("Trigger_BCALFCAL_Energy");
+		if(gDirectory->Get(locHistName.c_str()) != NULL) //already created by another thread, or directory name is duplicate (e.g. two identical steps)
+			dHist_Trigger_FCALBCAL_Energy = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
+		else
+		{
+			dHist_Trigger_FCALBCAL_Energy = new TH2D("Trigger_BCALFCAL_Energy", ";GTP FCAL Energy [GeV] / 5 MeV;GTP BCAL Energy [GeV] / 5 MeV", dFCALBins, 0, dMaxFCALEnergy, dBCALBins, 0, dMaxBCALEnergy);
+		}
+
+		//Return to the base directory
+		ChangeTo_BaseDirectory();
+	}
+	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+}
+
+bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	if(Get_CalledPriorWithComboFlag())
+		return true; //else double-counting!
+
+	//CHECK TRIGGER TYPE
+	const DTrigger* locTrigger = NULL;
+	locEventLoop->GetSingle(locTrigger);
+	if(locTrigger == nullptr)
+		return true;
+
+
+	//FILL HISTOGRAMS
+	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
+	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
+	Lock_Action();
+	{
+		dHist_Trigger_FCALBCAL_Energy->Fill(locTrigger->Get_GTP_FCALEnergy(), locTrigger->Get_GTP_BCALEnergy());
 	}
 	Unlock_Action();
 

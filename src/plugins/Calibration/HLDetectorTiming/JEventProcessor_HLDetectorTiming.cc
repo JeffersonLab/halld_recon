@@ -227,7 +227,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     }
 
    DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-   DGeometry* geom = app->GetDGeometry(loop->GetJEvent().GetRunNumber());
+   //   DGeometry* geom = app->GetDGeometry(loop->GetJEvent().GetRunNumber());
    // Check for magnetic field
    const DMagneticFieldMap *bfield=app->GetBfield(loop->GetJEvent().GetRunNumber());
    bool locIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
@@ -517,7 +517,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Per Channel Time",
                             fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t,
                             "FCAL Per Channel Hit time; channel; t [ns]",
-                            fcalGeom.numActiveBlocks(), 0.5, fcalGeom.numActiveBlocks() + 0.5, 250, -50, 50); 
+                            fcalGeom.numChannels(), 0.5, fcalGeom.numChannels() + 0.5, 250, -50, 50); 
         }
     }
 

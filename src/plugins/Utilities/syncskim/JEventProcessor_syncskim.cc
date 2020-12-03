@@ -8,11 +8,14 @@
 #include <limits>
 using namespace std;
 
+#include <TH1.h>
+
 #include "JEventProcessor_syncskim.h"
 using namespace jana;
 
 #include <DAQ/DL1Info.h>
 #include <DAQ/DCODAEventInfo.h>
+#include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DCODAControlEvent.h>
 
 
@@ -58,6 +61,9 @@ jerror_t JEventProcessor_syncskim::init(void)
 	bool SYNCSKIM_FAST = false;
 	gPARMS->SetDefaultParameter("SYNCSKIM:FAST", SYNCSKIM_FAST, "Set to non-zero to automatically turn off all parsing and emulation not needed by this plugin so it runs blindingly fast");
 
+	SYNCSKIM_ROCID = 34;
+	gPARMS->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
+
 	// The default behavior here has changed.
 	// It used to be that these settings were always made and there
 	// was no option to turn them off. In order to make this 
@@ -82,6 +88,10 @@ jerror_t JEventProcessor_syncskim::init(void)
 		gPARMS->SetParameter("EVIO:F125_EMULATION_MODE", 0);
 	}
 	
+	japp->RootWriteLock();
+
+    TDirectory *main = gDirectory;
+
 	file = new TFile("syncskim.root", "RECREATE");
 	
 	tree = new TTree("synctree", "Sync Events Tree");
@@ -103,6 +113,23 @@ jerror_t JEventProcessor_syncskim::init(void)
 	tree->Branch("gtp_rate",      &synevt.gtp_rate,      "gtp_rate[32]/i"  );
 	tree->Branch("fp_rate",       &synevt.fp_rate,       "fp_rate[16]/i"   );
 	tree->Print();
+
+	conversion_tree = new TTree("conversion_tree", "Parameters for CCDB to convert timestamps to unix time");
+	conversion_tree->Branch("run_number",         &convparms.run_number,         "run_number/i"         );
+	conversion_tree->Branch("first_event_number", &convparms.first_event_number, "first_event_number/l" );
+	conversion_tree->Branch("last_event_number",  &convparms.last_event_number,  "last_event_number/l"  );
+	conversion_tree->Branch("tics_per_sec",       &convparms.tics_per_sec,       "tics_per_sec/l"       );
+	conversion_tree->Branch("unix_start_time",    &convparms.unix_start_time,    "unix_start_time/l"    );
+	
+	convparms.run_number         = 0;
+	convparms.first_event_number = 0;
+	convparms.last_event_number  = 0;
+	convparms.tics_per_sec       = 0;
+	convparms.unix_start_time    = 0;
+	
+	main->cd();
+	
+	japp->RootUnLock();
 
 	return NOERROR;
 }
@@ -126,14 +153,30 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		last_control_event_t = (double) controlevents[0]->unix_time;
 		last_physics_event_t = 0.0;
 	}
-	
+
 	vector<const DCODAEventInfo*> codainfos;
 	loop->Get(codainfos);
 	if(codainfos.empty()) return NOERROR;
 	const DCODAEventInfo *codainfo = codainfos[0];
+
+	uint64_t mytimestamp = 0.0;
+	if( SYNCSKIM_ROCID == 0 ){
+		mytimestamp = codainfo->avg_timestamp;
+	}else{
+		vector<const DCODAROCInfo*> codarocinfos;
+		loop->Get(codarocinfos);
+		if(codarocinfos.empty()) return NOERROR;
+		for( auto codarocinfo : codarocinfos ){
+			if( codarocinfo->rocid == SYNCSKIM_ROCID ){
+				mytimestamp = codarocinfo->timestamp;
+				break;
+			}
+		}
+	}
+	if( mytimestamp == 0.0 ) return NOERROR;
 	
 	if( (last_control_event_t!=0.0) && (last_physics_event_t==0.0) ){
-		last_physics_event_t = (double)codainfo->avg_timestamp / 250.0E6;
+		last_physics_event_t = (double)mytimestamp / 250.0E6;
 	}
 
 	vector<const DL1Info*> l1infos;
@@ -151,7 +194,7 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		synevt.run_type      = codainfo->run_type;
 		synevt.event_number  = codainfo->event_number;
 		synevt.event_type    = codainfo->event_type;
-		synevt.avg_timestamp = codainfo->avg_timestamp;
+		synevt.avg_timestamp = mytimestamp;
 	
 		synevt.nsync       = l1info->nsync;
 		synevt.trig_number = l1info->trig_number;
@@ -169,6 +212,10 @@ jerror_t JEventProcessor_syncskim::evnt(JEventLoop *loop, uint64_t eventnumber)
 		}		
 		
 		tree->Fill();
+
+		convparms.run_number = synevt.run_number;
+		if( convparms.first_event_number == 0 ) convparms.first_event_number = codainfo->event_number;
+		convparms.last_event_number = codainfo->event_number;
 		
 		// scale and shift x/y values to make sure range of sum doesn't cut them off
 		double x = (double)synevt.avg_timestamp / 250.0E6;
@@ -198,11 +245,6 @@ jerror_t JEventProcessor_syncskim::erun(void)
 //------------------
 jerror_t JEventProcessor_syncskim::fini(void)
 {
-	if( file ){
-		file->Write();
-		file->Close();
-		delete file;
-	}
 
 	double m = (sum_n*sum_xy - sum_x*sum_y)/(sum_n*sum_x2 - sum_x*sum_x);
 	double b = (sum_y*sum_x2 - sum_x*sum_xy)/(sum_n*sum_x2 - sum_x*sum_x);
@@ -223,6 +265,21 @@ jerror_t JEventProcessor_syncskim::fini(void)
 	cout.precision(dbl::max_digits10);
 	
 	cout << endl << "timestamp to unix time conversion: tics_per_sec=" << one_over_m << " unix_start_time=" << b << endl << endl;
+
+	// Write results to ROOT file, flush it and close it
+	if( file ){
+		japp->RootWriteLock();
+		
+		convparms.tics_per_sec    = one_over_m;
+		convparms.unix_start_time = b;
+		conversion_tree->Fill();
+
+		file->Write();
+		file->Close();
+		delete file;
+		
+		japp->RootUnLock();
+	}
 
 	return NOERROR;
 }

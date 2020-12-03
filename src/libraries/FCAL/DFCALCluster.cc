@@ -105,7 +105,7 @@ void DFCALCluster::resetClusterHits()
 }
 
 bool DFCALCluster::update( const userhits_t* const hitList,
-			   double fcalFaceZ )
+			   double fcalFaceZ, const DFCALGeometry *fcalgeom )
 {
 
    double energy = 0;
@@ -254,7 +254,8 @@ bool DFCALCluster::update( const userhits_t* const hitList,
 
       for (int ih = 0; ih < hitList->nhits; ih++) {
 	shower_profile( hitList, ih,fEallowed[ih],fEexpected[ih],
-			fcalFaceZ+0.5*DFCALGeometry::blockLength());
+			fcalFaceZ+0.5*DFCALGeometry::blockLength(),
+			fcalgeom);
       }
    }
 
@@ -264,7 +265,7 @@ bool DFCALCluster::update( const userhits_t* const hitList,
 void DFCALCluster::shower_profile( const userhits_t* const hitList, 
                                    const int ihit,
                                    double& Eallowed, double& Eexpected,
-				   double fcalMidplaneZ) const
+				   double fcalMidplaneZ, const DFCALGeometry *fcalgeom) const
 {
 
    //std::cout << " Run profile for hit " << ihit; 
@@ -273,6 +274,12 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
       return;
    double x = hitList->hit[ihit].x;
    double y = hitList->hit[ihit].y;
+   double moliere_radius=MOLIERE_RADIUS;
+   double min_dist=fcalgeom->blockSize();
+   if (fabs(x)<fcalgeom->insertSize() && fabs(y)<fcalgeom->insertSize()){
+     moliere_radius=PbWO4_MOLIERE_RADIUS;
+     min_dist=fcalgeom->insertBlockSize();
+   }
    double dist = sqrt(SQR(x - fCentroid.x()) + SQR(y - fCentroid.y()));
    if (dist > MAX_SHOWER_RADIUS)
       return;
@@ -282,7 +289,7 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    double v0 = 0;
    double u = x*cos(phi) + y*sin(phi);
    double v =-x*sin(phi) + y*cos(phi);
-   double vVar = SQR(MOLIERE_RADIUS);
+   double vVar = SQR(moliere_radius);
    double uVar = vVar+SQR(SQR(8*theta));
    double vTail = 4.5+0.9*log(fEnergy+0.05);
    double uTail = vTail+SQR(10*theta);
@@ -291,7 +298,7 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    Eexpected = fEnergy*core;
    Eallowed = 2*fEmax*core + (0.2+0.5*log(fEmax+1.))*tail;
 
-   if ((dist <= 4.) && (Eallowed < fEmax) ) {
+   if ((dist <= min_dist) && (Eallowed < fEmax) ) {
       std::cerr << "Warning: FCAL cluster Eallowed value out of range!\n";
       Eallowed = fEmax;
    }

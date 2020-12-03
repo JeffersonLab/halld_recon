@@ -13,6 +13,8 @@
 #include <PID/DNeutralParticleHypothesis.h>
 #include <PID/DNeutralShower.h>
 #include <particleType.h>
+#include <sstream>
+
 
 using namespace std;
 
@@ -30,6 +32,12 @@ class DNeutralParticle : public jana::JObject
 		void toStrings(vector<pair<string,string> > &items) const
 		{
 			AddString(items, "Nhypotheses", "%d", dNeutralParticleHypotheses.size());
+			
+			stringstream ss;
+			for(auto hypos : dNeutralParticleHypotheses) {
+				ss << hypos->PID() << " ";
+			}
+			AddString(items, "Hypothesis List", "%s", ss.str().c_str());
 		}
 };
 

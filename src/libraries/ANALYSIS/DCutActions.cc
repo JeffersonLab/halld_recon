@@ -419,6 +419,21 @@ bool DCutAction_KinFitFOM::Perform_Action(JEventLoop* locEventLoop, const DParti
 	return (locKinFitResults->Get_ConfidenceLevel() > dMinimumConfidenceLevel);
 }
 
+string DCutAction_KinFitChiSq::Get_ActionName(void) const
+{
+	ostringstream locStream;
+	locStream << DAnalysisAction::Get_ActionName() << "_" << dMaximumChiSq;
+	return locStream.str();
+}
+
+bool DCutAction_KinFitChiSq::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
+	if(locKinFitResults == NULL)
+		return false;
+	return (locKinFitResults->Get_ChiSq()/locKinFitResults->Get_NDF() < dMaximumChiSq);
+}
+
 void DCutAction_BDTSignalCombo::Initialize(JEventLoop* locEventLoop)
 {
 	if(dCutAction_TrueBeamParticle == nullptr)
@@ -1206,6 +1221,144 @@ bool DCutAction_NoPIDHit::Perform_Action(JEventLoop* locEventLoop, const DPartic
 
 	return true;
 }
+
+string DCutAction_FlightDistance::Get_ActionName(void) const
+{
+	ostringstream locStream;
+	locStream << DAnalysisAction::Get_ActionName() << "_" << dPID << "_" << dMinFlightDistance;
+	return locStream.str();
+}
+
+bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	//if dPID = Unknown, apply cut to all PIDs
+	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
+
+	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
+	// is constrained in the fit
+	if(!Get_UseKinFitResultsFlag())  
+		return true;
+
+	vector<const DReactionVertexInfo*> locVertexInfos;
+	locEventLoop->Get(locVertexInfos);
+	
+	// figure out what the right DReactionVertexInfo is
+	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
+	for(auto& locVertexInfo : locVertexInfos) {
+		auto locVertexReactions = locVertexInfo->Get_Reactions();
+		if(find(locVertexReactions.begin(), locVertexReactions.end(), Get_Reaction()) != locVertexReactions.end()) {
+			locReactionVertexInfo = locVertexInfo;
+			break;
+		}
+	}
+
+	// check each individual decaying particle (if they exist)
+	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
+	{	
+		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
+		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
+
+		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+			continue;
+
+		// fill info on decaying particles, which is on the particle combo step level
+		if(((locParticleComboStep->Get_InitialParticle()!=nullptr) && !Is_FinalStateParticle(locParticleComboStep->Get_InitialParticle()->PID()))) {  // decaying particles
+			// FOR NOW: we only calculate these displaced vertex quantities if a kinematic fit 
+			// was performed where the vertex is constrained
+			// TODO: Cleverly handle the other cases
+	
+			// pull out information related to the kinematic fit
+			if( !Get_UseKinFitResultsFlag() ) continue; 
+			if( locReactionVertexInfo == nullptr ) continue; 
+			
+			auto locKinFitParticle = locParticleComboStep->Get_InitialKinFitParticle();
+		
+			// extract the info about the vertex, to make sure that the information that we 
+			// need to calculate displaced vertices is there
+			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
+			
+			auto locPathLength = locKinFitParticle->Get_PathLength();
+			
+			if(locPathLength < dMinFlightDistance)
+				return false;
+		}
+		
+	}
+
+	return true;
+}
+
+
+string DCutAction_FlightSignificance::Get_ActionName(void) const
+{
+	ostringstream locStream;
+	locStream << DAnalysisAction::Get_ActionName() << "_" << dPID << "_" << dMinFlightSignificance;
+	return locStream.str();
+}
+
+bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+{
+	//if dPID = Unknown, apply cut to all PIDs
+	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
+
+	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
+	// is constrained in the fit
+	if(!Get_UseKinFitResultsFlag())  
+		return true;
+
+	vector<const DReactionVertexInfo*> locVertexInfos;
+	locEventLoop->Get(locVertexInfos);
+	
+	// figure out what the right DReactionVertexInfo is
+	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
+	for(auto& locVertexInfo : locVertexInfos) {
+		auto locVertexReactions = locVertexInfo->Get_Reactions();
+		if(find(locVertexReactions.begin(), locVertexReactions.end(), Get_Reaction()) != locVertexReactions.end()) {
+			locReactionVertexInfo = locVertexInfo;
+			break;
+		}
+	}
+
+	// check each individual decaying particle (if they exist)
+	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
+	{	
+		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
+		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
+
+		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+			continue;
+
+		// fill info on decaying particles, which is on the particle combo step level
+		if(((locParticleComboStep->Get_InitialParticle()!=nullptr) && !Is_FinalStateParticle(locParticleComboStep->Get_InitialParticle()->PID()))) {  // decaying particles
+			// FOR NOW: we only calculate these displaced vertex quantities if a kinematic fit 
+			// was performed where the vertex is constrained
+			// TODO: Cleverly handle the other cases
+	
+			// pull out information related to the kinematic fit
+			if( !Get_UseKinFitResultsFlag() ) continue; 
+			if( locReactionVertexInfo == nullptr ) continue; 
+			
+			auto locKinFitParticle = locParticleComboStep->Get_InitialKinFitParticle();
+		
+			// extract the info about the vertex, to make sure that the information that we 
+			// need to calculate displaced vertices is there
+			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
+
+			auto locPathLength = locKinFitParticle->Get_PathLength();
+			auto locPathLengthSigma = locKinFitParticle->Get_PathLengthUncertainty();
+			double locPathLengthSignificance = locPathLength / locPathLengthSigma;
+	
+			if(locPathLengthSignificance < dMinFlightSignificance)
+				return false;
+
+		}
+		
+	}
+
+	return true;
+}
+
+
 
 void DCutAction_OneVertexKinFit::Initialize(JEventLoop* locEventLoop)
 {

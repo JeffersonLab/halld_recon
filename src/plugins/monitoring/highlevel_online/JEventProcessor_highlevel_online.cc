@@ -9,6 +9,7 @@ using namespace jana;
 #include <TOF/DTOFHit.h>
 #include <BCAL/DBCALUnifiedHit.h>
 #include <BCAL/DBCALHit.h>
+#include <BCAL/DBCALPoint.h>
 #include <RF/DRFTime.h>
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DCODAEventInfo.h>
@@ -409,6 +410,9 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
         vector<const DBCALHit*> locdbcalhits;
         locEventLoop->Get(locdbcalhits);
 
+        vector<const DBCALPoint*> locdbcalpoints;
+        locEventLoop->Get(locdbcalpoints);
+
 	vector<const DFCALDigiHit*> locFCALDigiHits;
 	locEventLoop->Get(locFCALDigiHits);
 
@@ -782,7 +786,17 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 			dHist_NumTriggers->SetTitle(locHistTitle.str().c_str());
 		}
 	}
-        // BCAL LED Pseudo Trigger(1200 hits in BCAL) //
+        // BCAL LED Pseudo Trigger(1200 hits in BCAL && energy conditions are satisfied) //
+       float Eus=0;
+       float Eds=0;
+     for(unsigned int i=0; i<locdbcalpoints.size(); i++) {
+         const DBCALPoint *point = locdbcalpoints[i];
+         float pointEus = point->E_US();
+               Eus=Eus+pointEus;                 
+         float pointEds = point->E_DS();
+               Eds=Eds+pointEds;            
+        }
+
         bool LED_US=0, LED_DS=0;
 
 	const DL1Trigger *trig = NULL;
@@ -804,25 +818,17 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 		}
             }
         int pseudo_triggerbit = 0;
-        //Fill histogram if fp LED trigger exists or number of BCAL hits is > 1200  	
+        //Fill pseudo triggerbit histogram if energy conditions are satisfied && number of BCAL hits is > 1200 && FP trigger fails 	
         if (locdbcalhits.size()>1200){
         pseudo_triggerbit = 7;
            }
-        if(LED_US){
-                pseudo_triggerbit = 8;
- 
-                if (locdbcalhits.size() >1200){
-                 pseudo_triggerbit=9;
-                 }
-            }
- 
-        if (LED_DS){
-                pseudo_triggerbit=10;
- 
-                if (locdbcalhits.size() >1200){
-                 pseudo_triggerbit=11;
-                 }
-           }
+        if(Eds>Eus && locdbcalhits.size()>1200. && LED_US==0 && LED_DS==0){
+        pseudo_triggerbit=9;//Upstream Pseudo triggerbit
+        }
+        if(Eus>Eds && locdbcalhits.size()>1200.&& LED_US==0 && LED_DS==0){
+        pseudo_triggerbit=10; //Downstream Pseudo triggerbit
+        }
+
        dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {

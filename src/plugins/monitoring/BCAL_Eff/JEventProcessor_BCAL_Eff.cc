@@ -107,12 +107,6 @@ extern "C"
 //------------------
 jerror_t JEventProcessor_BCAL_Eff::init(void)
 {
-	// First thread to get here makes all histograms. If one pointer is
-	// already not NULL, assume all histograms are defined and return now
-	if(h1_Num_matched_showers != NULL){
-		return NOERROR;
-	}
-	
 	//  ... create historgrams or trees ...
 
 	 //	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
@@ -696,7 +690,9 @@ jerror_t JEventProcessor_BCAL_Eff::erun(void)
 //------------------
 jerror_t JEventProcessor_BCAL_Eff::fini(void)
 {
-	// Called before program exit after event processing is finished.  
+  // Called before program exit after event processing is finished.  
+
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   h1eff_eff->Divide(h1eff_layer,h1eff_layertot,1,1,"B");
   h1eff2_eff2->Divide(h1eff2_layer,h1eff2_layertot,1,1,"B");
@@ -704,6 +700,8 @@ jerror_t JEventProcessor_BCAL_Eff::fini(void)
   h1eff_cellideff->Divide(h1eff_cellid,h1eff_cellidtot,1,1,"B");
   h1eff2_cellideff2->Divide(h1eff2_cellid,h1eff2_cellidtot,1,1,"B");
 
-	return NOERROR;
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+  return NOERROR;
 }
 
