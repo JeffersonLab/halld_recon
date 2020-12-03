@@ -1400,6 +1400,25 @@ bool DParticleID::ProjectTo_SC(const DReferenceTrajectory* rt, unsigned int locS
 }
 
 // The routines below use the extrapolations vector from the track
+bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA) const{
+  if (fabs(locFCALHit->t-extrapolation.t-locStartTime)>OUT_OF_TIME_CUT)
+    return false;
+
+  double dx=locFCALHit->x-extrapolation.position.x();
+  double dy=locFCALHit->y-extrapolation.position.y();
+  locDOCA=sqrt(dx*dx+dy*dy);
+
+  double p=extrapolation.momentum.Mag();
+  double theta=extrapolation.momentum.Theta()*180./M_PI;
+
+  if (locDOCA<(FCAL_CUT_PAR1+FCAL_CUT_PAR2/p)*(1.+FCAL_CUT_PAR3*theta*theta)){
+    cout << "x " << extrapolation.position.x() 
+	 << " y " << extrapolation.position.y()
+	 << " dr " << locDOCA << endl;
+    return true;
+  }
+  return false;
+}
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {

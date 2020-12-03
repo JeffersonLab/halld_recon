@@ -13,6 +13,7 @@
 #include <memory>
 #include <limits>
 #include <cmath>
+#include <algorithm>
 
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
@@ -25,6 +26,8 @@
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALCluster.h>
 #include <FCAL/DFCALShower.h>
+#include <FCAL/DFCALCluster.h>
+#include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry_factory.h>
 #include <TOF/DTOFPoint.h>
 #include <TOF/DTOFPaddleHit.h>
@@ -126,6 +129,7 @@ class DParticleID:public jana::JObject
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DBCALShower* locBCALShower, double locInputStartTime,shared_ptr<DBCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
+		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA) const;
 
 		/********************************************************** CUT MATCH DISTANCE **********************************************************/
 
