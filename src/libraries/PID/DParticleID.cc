@@ -1412,9 +1412,6 @@ bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extra
   double theta=extrapolation.momentum.Theta()*180./M_PI;
 
   if (locDOCA<(FCAL_CUT_PAR1+FCAL_CUT_PAR2/p)*(1.+FCAL_CUT_PAR3*theta*theta)){
-    cout << "x " << extrapolation.position.x() 
-	 << " y " << extrapolation.position.y()
-	 << " dr " << locDOCA << endl;
     return true;
   }
   return false;
@@ -2110,6 +2107,31 @@ shared_ptr<const DFCALShowerMatchParams> DParticleID::Get_BestFCALMatchParams(ve
 			continue;
 		locMinDistance = locShowerMatchParams[loc_i]->dDOCAToShower;
 		locBestMatchParams = locShowerMatchParams[loc_i];
+	}
+	return locBestMatchParams;
+}
+
+bool DParticleID::Get_BestFCALSingleHitMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALSingleHitMatchParams>& locBestMatchParams) const
+{
+	//choose the "best" shower to use for computing quantities
+	vector<shared_ptr<const DFCALSingleHitMatchParams> > locMatchParams;
+	if(!locDetectorMatches->Get_FCALSingleHitMatchParams(locTrack, locMatchParams))
+		return false;
+
+	locBestMatchParams = Get_BestFCALSingleHitMatchParams(locMatchParams);
+	return true;
+}
+
+shared_ptr<const DFCALSingleHitMatchParams> DParticleID::Get_BestFCALSingleHitMatchParams(vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const
+{
+	double locMinDistance = 9.9E9;
+	shared_ptr<const DFCALSingleHitMatchParams> locBestMatchParams;
+	for(size_t loc_i = 0; loc_i < locMatchParams.size(); ++loc_i)
+	{
+		if(locMatchParams[loc_i]->dDOCAToHit >= locMinDistance)
+			continue;
+		locMinDistance = locMatchParams[loc_i]->dDOCAToHit;
+		locBestMatchParams = locMatchParams[loc_i];
 	}
 	return locBestMatchParams;
 }
