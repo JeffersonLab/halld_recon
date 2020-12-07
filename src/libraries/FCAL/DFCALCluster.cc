@@ -9,7 +9,7 @@
 # define SQR(x) (x)*(x)
 #endif
 
-DFCALCluster::DFCALCluster( const int nhits )
+DFCALCluster::DFCALCluster( const int nhits=0 )
 {
    fEnergy = 0;
    fEmax = 0;
