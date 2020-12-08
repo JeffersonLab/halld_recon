@@ -963,6 +963,52 @@ jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
 }
 
 //-----------------------
+// Extract_DFCALHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
+					       JFactory<DFCALHit>* factory)
+{
+  /// Copies the data from the fcalShower hddm record. This is                                                      
+  /// call from JEventSourceREST::GetObjects. If factory is NULL, this                                              
+  /// returns OBJECT_NOT_AVAILABLE immediately.                                                                     
+
+  if (factory==NULL) {
+    return OBJECT_NOT_AVAILABLE;
+  }
+  string tag = (factory->Tag())? factory->Tag() : "";
+
+  vector<DFCALHit*> data;
+
+  // loop over fcal hit records                                                                                  
+  const hddm_r::FcalHitList &fcalHits =
+    record->getFcalHits();
+  hddm_r::FcalHitList::iterator iter;
+  for (iter = fcalHits.begin(); iter != fcalHits.end(); ++iter) {
+    if (iter->getJtag() != tag)
+      continue;
+
+    DFCALHit *fcalHit = new DFCALHit();
+
+    fcalHit->row =(iter->getRow());
+    fcalHit->column =(iter->getColumn());
+    fcalHit->x = (iter->getX());
+    fcalHit->y = (iter->getY());
+    fcalHit->E = (iter->getE());
+    fcalHit->t = (iter->getT());
+    fcalHit->intOverPeak = (iter->getIntOverPeak());
+    
+    data.push_back(fcalHit);
+  }
+
+  // Copy into factory                                                                                              
+  factory->CopyTo(data);
+
+  return NOERROR;
+}
+
+
+
+//-----------------------
 // Extract_DBCALShower
 //-----------------------
 jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,

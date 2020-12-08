@@ -26,6 +26,8 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
+#include <FCAL/DFCALHit.h>
+#include <FCAL/DFCALHit_factory.h>
 #include <CCAL/DCCALShower.h>
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALShower_factory_IU.h>
@@ -77,6 +79,8 @@ class DEventSourceREST:public JEventSource
                     JFactory<DTOFPoint>* factory);
    jerror_t Extract_DFCALShower(hddm_r::HDDM *record,
                     JFactory<DFCALShower>* factory);
+   jerror_t Extract_DFCALHit(hddm_r::HDDM *record,
+		    JFactory<DFCALHit>* factory);
    jerror_t Extract_DBCALShower(hddm_r::HDDM *record,
                     JFactory<DBCALShower>* factory);
    jerror_t Extract_DCCALShower(hddm_r::HDDM *record,
@@ -116,6 +120,7 @@ class DEventSourceREST:public JEventSource
 	map<unsigned int, double> dBeamZ0Map;
 
 	DFCALShower_factory *dFCALShowerFactory;
+	DFCALHit_factory *dFCALHitFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;
 
 	map<unsigned int, double> dTargetCenterZMap; //unsigned int is run number

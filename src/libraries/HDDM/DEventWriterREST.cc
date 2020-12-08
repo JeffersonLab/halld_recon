@@ -81,6 +81,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DFCALShower*> fcalshowers;
 	locEventLoop->Get(fcalshowers);
 
+	std::vector<const DFCALHit*> fcalhits;
+	locEventLoop->Get(fcalhits);
+
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
@@ -114,7 +117,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	bool locOutputDataPresentFlag = false;
 	if((!reactions.empty()) || (!locBeamPhotons.empty()) || (!tracks.empty()))
 		locOutputDataPresentFlag = true;
-	else if((!fcalshowers.empty()) || (!bcalshowers.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
+	else if((!fcalshowers.empty()) || (!bcalshowers.empty()) || (!fcalhits.empty()) || (!tofpoints.empty()) || (!starthits.empty()))
 		locOutputDataPresentFlag = true;
 	//don't need to check detector matches: no matches if none of the above objects
 	if(!locOutputDataPresentFlag)
@@ -265,7 +268,20 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	locFcalShowerNBlocksList().setNumBlocks(fcalshowers[i]->getNumBlocks());
 
     }
-            
+  
+  for (size_t i=0; i < fcalhits.size(); i++)
+    {
+      hddm_r::FcalHitList locFcalHitList = res().addFcalHits(1);
+      locFcalHitList().setX(fcalhits[i]->x);
+      locFcalHitList().setY(fcalhits[i]->y);
+      locFcalHitList().setE(fcalhits[i]->E);
+      locFcalHitList().setT(fcalhits[i]->t);
+      locFcalHitList().setRow(fcalhits[i]->row);
+      locFcalHitList().setColumn(fcalhits[i]->column);
+      locFcalHitList().setIntOverPeak(fcalhits[i]->intOverPeak);
+    }
+
+         
 
 	// push any DBCALShower objects to the output record
 	for (size_t i=0; i < bcalshowers.size(); i++)
