@@ -179,6 +179,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	clustersToKeep.push_back(ClusterInfo(row_index,col_index,E,x,y,t));
       }
     }
+    // Fit the data to find the best current guesses for the shower parameters
+    // for each peak within this group of FCAL hits.
+    FitPeaks(clusterCandidate,clustersToKeep);
 
     for (unsigned int k=0;k<clustersToKeep.size();k++){
       DFCALCluster *myCluster= new DFCALCluster(0);
@@ -301,3 +304,15 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
   }
 }
 
+
+void DFALCluster_factory_Island::FitPeaks(vector<const DFCALHit*>&hitList,
+					  vector<ClusterInfo>&clustersToKeep)
+  const {
+  
+  for (unsigned int i=0;i<hitList.size();i++){
+  
+  }
+
+
+}
+					  

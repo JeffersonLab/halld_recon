@@ -40,6 +40,8 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
+  void FitPeaks(vector<const DFCALHit*>&hitList,
+		vector<ClusterInfo>&clustersToKeep) const;
 
   double TIME_CUT;
   const DFCALGeometry *dFCALGeom=NULL;
