@@ -140,6 +140,7 @@ void InitPlugin(JApplication *app){
 jerror_t JEventProcessor_lumi_mon::init(void)
 {
   
+  TDirectory *main = gDirectory;
   TDirectory *dlumi_mon = gDirectory->mkdir("Lumi_mon");
   dlumi_mon->cd();
 
@@ -235,6 +236,8 @@ jerror_t JEventProcessor_lumi_mon::init(void)
   hdt_ps_rf       =   new TH1D("dt_ps_rf",   "dt_ps_rf",     6000, -30., 30.);
   hdt_tagm_rf     =   new TH1D("dt_tagm_rf", "dt_tagm_rf",   6000, -30., 30.);
   hdt_tagh_rf     =   new TH1D("dt_tagh_rf", "dt_tagh_rf",   6000, -30., 30.);
+
+  main->cd();
 
   return NOERROR;
 
