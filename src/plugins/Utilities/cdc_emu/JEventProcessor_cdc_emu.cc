@@ -543,7 +543,7 @@ jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
     const DCDCHit *hit = NULL;
     const DCDCDigiHit *digihit = NULL;
     const Df125CDCPulse *cp = NULL;
-    const Df125Config *cf = NULL;
+    //const Df125Config *cf = NULL;
     const Df125WindowRawData *wrd = NULL;
 
     for (id=0; id<nd; id++) {
