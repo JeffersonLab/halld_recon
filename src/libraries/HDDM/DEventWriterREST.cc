@@ -48,7 +48,7 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
-	REST_WRITE_CCAL_SHOWERS = false;
+	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
     CCDB_CONTEXT_STRING = "";
@@ -84,7 +84,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
-  std::vector<const DCCALShower*> ccalshowers;
+	std::vector<const DCCALShower*> ccalshowers;
 	if(REST_WRITE_CCAL_SHOWERS) {
 	    locEventLoop->Get(ccalshowers);
 	}
