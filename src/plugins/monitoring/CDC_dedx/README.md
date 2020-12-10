@@ -6,6 +6,7 @@ The scripts referred to here are in the subdirectory scripts.
 
 fit\_dedx.C fits gaussians to the dE/dx bands at 0.5 and 1.5 GeV/c
 gaincalibs.py runs fit\_dedx.C over all root files in the subdirectory hists.
+findoutliers.py scans the output file for dE/dx outliers
 
 gaincalibs.py creates the following directories, containing one file per run:
 - mip - mean dE/dx at 1.5 GeV/c
@@ -32,6 +33,9 @@ ln -s /work/halld/data_monitoring/RunPeriod-2019-11/mon_ver23/rootfiles/ hists
 python gaincalibs.py
 ```
 5. Inspect the results in dedx\_peak\_scan.txt
+```sh
+python findoutliers.py
+```
 6. Load the new gain constants into ccdb:
 ```sh
 chmod +x addtoccdb.sh

@@ -545,9 +545,9 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	auto locUnknownZBin = DSourceComboInfo::Get_VertexZIndex_Unknown();
 	for(const auto& locShower : locNeutralShowers)
 	{
-	        auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
-		if (locShower->dDetectorSystem == SYS_CCAL) locContainer = locCCALShowers;
-		locContainer.push_back(locShower);
+	  if (locShower->dDetectorSystem == SYS_BCAL) locBCALShowers.push_back(locShower);
+	  else if (locShower->dDetectorSystem == SYS_FCAL) locFCALShowers.push_back(locShower);
+	  else if (locShower->dDetectorSystem == SYS_CCAL) locCCALShowers.push_back(locShower);
 	}
 
 	//CALCULATE KINEMATICS
@@ -556,7 +556,7 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	for(const auto& locShower : locFCALShowers)
 		dPhotonKinematics[locFCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
-	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
+	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent(); // the same as locFCALZBin !!
 	for(const auto& locShower : locCCALShowers)
 		dPhotonKinematics[locCCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 

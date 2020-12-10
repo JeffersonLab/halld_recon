@@ -78,7 +78,8 @@ void WriteTimewalkFitResults(ofstream &fout, ofstream &fout_ccdb, ofstream &fout
     if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 15.0) {
      	fout_badchans << counter << endl;   
     }
-    if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 100.) {   // allow for bad fits to channels with hardware problems
+    //if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 100.) {   // allow for bad fits to channels with hardware problems
+    if (f.GetNDF() == 0 || f.GetChisquare()/f.GetNDF() > 1000.) {   // allow for bad fits to channels with hardware problems
         WriteNA(fout,fout_ccdb,counter);
         return;
     }
