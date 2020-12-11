@@ -44,6 +44,10 @@ class DDetectorMatches_factory_WireBased : public jana::JFactory<DDetectorMatche
 		void MatchToBCAL(const DParticleID* locParticleID, const DTrackWireBased* locTrackWireBased, const vector<const DBCALShower*>& locBCALShowers, DDetectorMatches* locDetectorMatches) const;
 		void MatchToFCAL(const DParticleID* locParticleID, const DTrackWireBased* locTrackWireBased, const vector<const DFCALShower*>& locFCALShowers, DDetectorMatches* locDetectorMatches) const;
 		void MatchToSC(const DParticleID* locParticleID, const DTrackWireBased* locTrackWireBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const;
+		void MatchToFCAL(const DParticleID* locParticleID,
+				 const DTrackWireBased *locTrackWireBased,
+				 vector<const DFCALHit *>&locSingleHits,
+				 DDetectorMatches* locDetectorMatches) const;
 
 		//matching showers to tracks routines
 		void MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackWireBased*>& locTrackWireBasedVector, DDetectorMatches* locDetectorMatches) const;
