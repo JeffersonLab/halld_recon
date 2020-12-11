@@ -188,6 +188,8 @@ jerror_t JEventProcessor_cdc_scan::init(void)
 
   tt = new TTree("TT","Trigger time");
 
+  ULong64_t tt_eventnum;
+  tt->Branch("eventnum",&tt_eventnum,"eventnum/l");
 
   uint32_t tt_rocid;
   tt->Branch("rocid",&tt_rocid,"rocid/i");
@@ -271,6 +273,10 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
+
+    ULong64_t tt_eventnum;
+    tt->SetBranchAddress("eventnum",&tt_eventnum);
+
     uint32_t tt_rocid;
     tt->SetBranchAddress("rocid",&tt_rocid);
 
@@ -282,6 +288,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     ULong64_t tt_time;
     tt->SetBranchAddress("time",&tt_time);
+
+    tt_eventnum = eventnumber;
 
     for (uint32_t i=0; i<ntt; i++) {
 
