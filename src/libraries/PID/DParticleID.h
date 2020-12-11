@@ -125,11 +125,13 @@ class DParticleID:public jana::JObject
 
 		double Distance_ToTrack(const DFCALShower *locFCALShower,
 					const DVector3 &locProjPos) const;
+		double Distance_ToTrack(const DFCALHit *locFCALHit,
+					const DVector3 &locProjPos) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DBCALShower* locBCALShower, double locInputStartTime,shared_ptr<DBCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
-		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA) const;
+		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const;
 
 		/********************************************************** CUT MATCH DISTANCE **********************************************************/
 
@@ -200,6 +202,9 @@ class DParticleID:public jana::JObject
 				   const vector<const DFCALShower*>& FCALShowers,
 				   double& StartTime) const;
 		bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
+				   const vector<const DFCALHit*>& FCALHits,
+				   double& StartTime) const;
+		bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
 				   const vector<const DSCHit*>& SCHits, 
 				   double& StartTime) const;
 		bool Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
@@ -241,6 +246,7 @@ class DParticleID:public jana::JObject
 					    const DVector3 &locProjPos) const;
 		
 		const DDIRCLut *Get_DIRCLut() const;
+		void GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,vector<const DFCALHit*>&locFCALHits,vector<const DFCALHit*>&singleHits) const;
 	
 
 	protected:
@@ -312,6 +318,9 @@ class DParticleID:public jana::JObject
 		// FCAL geometry
 		double dFCALz;
 		const DFCALGeometry *dFCALGeometry;
+
+		// FCAL calibration constants
+		double dFCALTimewalkPar1,dFCALTimewalkPar2;
 
 		// TOF calibration constants
 		// used to update hit energy & time when matching to un-matched, position-ill-defined bars
