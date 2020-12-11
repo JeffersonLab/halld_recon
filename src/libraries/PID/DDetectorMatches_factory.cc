@@ -85,27 +85,13 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 
 	// Try to find matches between tracks and single hits in FCAL
 	if (locFCALHits.size()>0){
-	  vector<JObject::oid_t>used_fcal_ids;	  
-	  for (size_t loc_j=0;loc_j<locFCALShowers.size();loc_j++){
-	    vector<const DFCALCluster*>clusters;
-	    locFCALShowers[loc_j]->Get(clusters);
-	    if (clusters.size()>0){
-	      vector<const DFCALHit*>fcal_hits_in_cluster;
-	      clusters[0]->Get(fcal_hits_in_cluster);
-	      for (size_t loc_i=0;loc_i<fcal_hits_in_cluster.size();loc_i++){
-		used_fcal_ids.push_back(fcal_hits_in_cluster[loc_i]->id);
-	      }
-	    }
-	  }
-	  for (size_t loc_i=0;loc_i<locFCALHits.size();loc_i++){
-	    if (find(used_fcal_ids.begin(),used_fcal_ids.end(),
-		     locFCALHits[loc_i]->id)!=used_fcal_ids.end()){
-	      continue;
-	    }
-	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
-	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
-			  locFCALHits[loc_i],locDetectorMatches);
-	    }
+	  vector<const DFCALHit*>locSingleHits;
+	  locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
+					   locSingleHits);
+	  
+	  for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	    MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			locSingleHits,locDetectorMatches);
 	  }	  
 	}
 
@@ -256,23 +242,27 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
 void 
 DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
 				      const DTrackTimeBased *locTrackTimeBased,
-				      const DFCALHit *locFCALHit,
+				      vector<const DFCALHit *>&locSingleHits,
 				      DDetectorMatches* locDetectorMatches) const {
   vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_FCAL);
   if (extrapolations.size()==0) return;
 
-  double locDOCA=0.;
-  if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),extrapolations[0],
-				      locFCALHit,locDOCA)){
-    shared_ptr<DFCALSingleHitMatchParams> locMatchParams=std::make_shared<DFCALSingleHitMatchParams>();
-    
-    locMatchParams->dEHit=locFCALHit->E;
-    locMatchParams->dTHit=locFCALHit->t;
-    locMatchParams->dFlightTime = extrapolations[0].t;
-    locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
-    locMatchParams->dPathLength = extrapolations[0].s;
-    locMatchParams->dDOCAToHit = locDOCA;
-    
-    locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DFCALSingleHitMatchParams> locMatchParams=std::make_shared<DFCALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
   }
 }
+

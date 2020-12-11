@@ -49,7 +49,7 @@ class DDetectorMatches_factory : public jana::JFactory<DDetectorMatches>
 
 		void MatchToFCAL(const DParticleID* locParticleID,
 				 const DTrackTimeBased *locTrackTimeBased,
-				 const DFCALHit *locFCALHit,
+				 vector<const DFCALHit *>&locSingleHits,
 				 DDetectorMatches* locDetectorMatches) const;
 
 		//matching showers to tracks routines
