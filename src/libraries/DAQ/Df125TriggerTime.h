@@ -19,10 +19,9 @@ class Df125TriggerTime:public DDAQAddress{
 	public:
 		JOBJECT_PUBLIC(Df125TriggerTime);
 
-		Df125TriggerTime():DDAQAddress(0, 0, 0),itrigger(0),time(0){}
+		Df125TriggerTime():DDAQAddress(0, 0, 0,0 ),time(0){}
 		Df125TriggerTime(uint32_t rocid, uint32_t slot, uint32_t itrigger, uint64_t time):DDAQAddress(rocid, slot, 0, itrigger),time(time){}
 		
-		uint32_t itrigger;       // from Event Header
 		uint64_t time;           // from Trigger Time words
 		
 	

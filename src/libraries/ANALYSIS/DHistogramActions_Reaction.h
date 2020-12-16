@@ -151,6 +151,7 @@ class DHistogramAction_PID : public DAnalysisAction
 		map<Particle_t, map<DetectorSystem_t, TH2I*> > dHistMap_TimeFOMVsP;
 
 		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_Beta; //for BCAL/FCAL/CCAL neutrals only
+		map<Particle_t, map<DetectorSystem_t, TH1I*> > dHistMap_CalE; //for BCAL/FCAL/CCAL neutrals only
 
 		map<Particle_t, TH1I*> dHistMap_PIDFOM; //overall
 
