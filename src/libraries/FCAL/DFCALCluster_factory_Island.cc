@@ -305,14 +305,69 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 }
 
 
-void DFALCluster_factory_Island::FitPeaks(vector<const DFCALHit*>&hitList,
+void DFCALCluster_factory_Island::FitPeaks(vector<const DFCALHit*>&hitList,
 					  vector<ClusterInfo>&clustersToKeep)
   const {
   
   for (unsigned int i=0;i<hitList.size();i++){
-  
+    double Ecalc=CalcClusterFunction(hitList[i],clustersToKeep);
+    double Ediff=hitList[i]->E-Ecalc;
+    cout << Ediff << endl;
   }
 
 
 }
-					  
+
+double DFCALCluster_factory_Island::CalcClusterDeriv(bool isXDeriv,
+						     const DFCALHit *hit,
+						     vector<ClusterInfo>&clustersToKeep) const {
+  double sign1[4]={1,1,-1,-1};
+  double sign2[4]={1,-1,-1,1};
+  double half_block=0.5*4.;
+  double b=0.125; // cm
+  double b2=b*b;
+  double f=0.;
+  for (unsigned int j=0;j<clustersToKeep.size();j++){
+    double dxc=hit->x-clustersToKeep[j].x;
+    double dyc=hit->y-clustersToKeep[j].y;
+    double Ec=clustersToKeep[j].E;
+    for (int i=0;i<4;i++){
+      double dx=dxc+sign1[i]*half_block;
+      double dy=dyc+sign2[i]*half_block;
+      double sign3=(i%2)?-1:1;
+      double dx2=dx*dx;
+      double dy2=dy*dy;
+      double temp=b2+dx2+dy2;
+      double factor=sign3*Ec*b/(2*M_PI)/sqrt(temp)/(b2*temp+dx2*dy2);
+      if (isXDeriv){
+	f-=factor*dy*(b2+dy2);
+      }
+      else {
+	f-=factor*dx*(b2+dx2);
+      }
+    }
+  }
+  return f;
+}
+		  
+
+double DFCALCluster_factory_Island::CalcClusterFunction(const DFCALHit *hit,
+							vector<ClusterInfo>&clustersToKeep) const {
+  double sign1[4]={1,1,-1,-1};
+  double sign2[4]={1,-1,-1,1};
+  double half_block=0.5*4.;
+  double b=0.125; // cm
+  double f=0.;
+  for (unsigned int j=0;j<clustersToKeep.size();j++){
+    double dxc=hit->x-clustersToKeep[j].x;
+    double dyc=hit->y-clustersToKeep[j].y;
+    double Ec=clustersToKeep[j].E;
+    for (int i=0;i<4;i++){
+      double dx=dxc+sign1[i]*half_block;
+      double dy=dyc+sign2[i]*half_block;
+      double sign3=(i%2)?-1:1;
+      f+=sign3*Ec/(2*M_PI)*atan(dx*dy/(b*sqrt(b*b+dx*dx+dy*dy)));
+    }
+  }
+  return f;
+}
