@@ -51,12 +51,14 @@ void WriteTAGHTDCOffsets(double *y, const int N, double &c1_tdc) {
     TString sep = "        ";
     for (int i = 0; i < N; i++) {
         double offset = y_ccdb[i] + y[i];
+	/*
         if (i == 0) c1_tdc = offset;
         if (y_ccdb[i] == 0.0 && y[i] == 0.0) {
             offset = 0.0;
         } else {
             offset -= c1_tdc;
         }
+	*/
         fout << i + 1 << sep << offset << endl;
     }
     fout.close();
@@ -71,12 +73,14 @@ void WriteTAGHADCOffsets(double *y_tdcadc, double *y, const int N, double &c1_ad
     TString sep = "        ";
     for (int i = 0; i < N; i++) {
         double offset = y_ccdb[i] + y[i] - y_tdcadc[i];
+	/*
         if (i == 0) c1_adc = offset;
         if (y_ccdb[i] == 0.0 && y[i] == 0.0) {
             offset = 0.0;
         } else {
             offset -= c1_adc;
         }
+	*/
         fout << i + 1 << sep << offset << endl;
     }
     fout.close();

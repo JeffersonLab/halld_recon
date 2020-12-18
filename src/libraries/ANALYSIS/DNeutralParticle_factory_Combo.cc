@@ -28,7 +28,7 @@ jerror_t DNeutralParticle_factory_Combo::brun(jana::JEventLoop *locEventLoop, in
 		auto locNeutralPIDs = locReactions[loc_i]->Get_FinalPIDs(-1, false, false, d_Neutral, false);
 		for(auto locPID : locNeutralPIDs)
 		{
-			if(locPID != Gamma) //already created by default!
+			if( (locPID != Gamma) && (locPID != Neutron) ) //already created by default!
 				dNeutralPIDs.insert(locPID);
 		}
 	}
@@ -73,6 +73,8 @@ jerror_t DNeutralParticle_factory_Combo::evnt(jana::JEventLoop *locEventLoop, ui
 		{
 			//create new DNeutralParticleHypothesis object
 			auto locNewHypothesis = dNeutralParticleHypothesisFactory->Create_DNeutralParticleHypothesis(locNeutralParticle->dNeutralShower, locPID, locEventRFBunch, locVertex->dSpacetimeVertex, &locVertex->dCovarianceMatrix);
+			if(locNewHypothesis == nullptr)
+				continue;
 			dCreatedHypotheses.push_back(locNewHypothesis);
 			locNewNeutralParticle->dNeutralParticleHypotheses.push_back(locNewHypothesis);
 		}

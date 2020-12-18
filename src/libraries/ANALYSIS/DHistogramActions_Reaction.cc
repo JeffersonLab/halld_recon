@@ -33,6 +33,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("BCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_BCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("BCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_BCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 
 				//FCAL
@@ -40,6 +43,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("FCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("FCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 
 				//CCAL
@@ -47,6 +53,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("CCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_CCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("CCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_CCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 			}
 
@@ -722,6 +731,7 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 	double locDeltaT = locNeutralParticleHypothesis->time() - locNeutralParticleHypothesis->t0();
 
 	double locP = locNeutralParticleHypothesis->momentum().Mag();
+	double locShowerE = locNeutralParticleHypothesis->Get_NeutralShower()->dEnergy;
 	double locMatchFOM = 0.0;
 	const DMCThrown* locMCThrown = (locMCThrownMatching != NULL) ? locMCThrownMatching->Get_MatchingMCThrown(locNeutralParticleHypothesis, locMatchFOM) : NULL;
 
@@ -738,6 +748,7 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 	{
 		//Beta (good for all PIDs)
 		dHistMap_Beta[locPID][locSystem]->Fill(locBeta_Timing);
+		dHistMap_CalE[locPID][locSystem]->Fill(locShowerE);
 		if(locPID != Gamma)
 		{
 			Unlock_Action();

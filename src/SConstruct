@@ -1,4 +1,14 @@
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
 
+from builtins import map
+from builtins import str
+from builtins import open
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
 import os
 import sys
 import subprocess
@@ -17,6 +27,7 @@ OPTIMIZATION = ARGUMENTS.get('OPTIMIZATION', 2)
 DEBUG = ARGUMENTS.get('DEBUG', 1)
 PROFILE = ARGUMENTS.get('PROFILE', 0)
 BUILDSWIG = ARGUMENTS.get('BUILDSWIG', 0)
+PYTHONCOMMAND = ARGUMENTS.get('PYTHONCOMMAND', 'python')
 
 # Get platform-specific name
 osname = os.getenv('BMS_OSNAME', 'build')
@@ -25,7 +36,8 @@ osname = os.getenv('BMS_OSNAME', 'build')
 if not os.getenv('HALLD_RECON_HOME'): os.environ['HALLD_RECON_HOME'] = Dir('#/..').abspath
 
 # Get architecture name
-arch = ROOT_CFLAGS = subprocess.Popen(["uname"], stdout=subprocess.PIPE).communicate()[0].strip()
+arch_out = ROOT_CFLAGS = subprocess.Popen(["uname"], stdout=subprocess.PIPE).communicate()[0].strip()
+arch = str(arch_out, 'utf-8')
 
 # Setup initial environment
 installdir = "#../%s" %(osname)
@@ -55,7 +67,8 @@ env.Replace(INSTALLDIR    = installdir,
 				OPTIMIZATION  = OPTIMIZATION,
 				DEBUG         = DEBUG,
 				BUILDSWIG     = BUILDSWIG,
-		  		COMMAND_LINE_TARGETS = COMMAND_LINE_TARGETS)
+		  		COMMAND_LINE_TARGETS = COMMAND_LINE_TARGETS,
+		  		PYTHONCOMMAND = PYTHONCOMMAND)
 
 # Use terse output unless otherwise specified
 if SHOWBUILD==0:
@@ -83,7 +96,8 @@ env.Replace( CXX = os.getenv('CXX', 'c++'),
 
 # Get compiler name
 compiler = 'unknown'
-compiler_string = subprocess.Popen([env['CC'],"-v"], stderr=subprocess.PIPE).communicate()[1]
+compiler_string_out = subprocess.Popen([env['CC'],"-v"], stderr=subprocess.PIPE).communicate()[1]
+compiler_string = str(compiler_string_out, 'utf-8')
 if 'clang' in compiler_string:
 	compiler = 'clang'
 if 'gcc' in compiler_string and 'clang' not in compiler_string:
@@ -138,7 +152,7 @@ SConscript(dirs=program_subdirs, variant_dir=".%s/plugins" % (osname), exports='
 env.Alias('install', installdir)
 
 # Create setenv if user explicitly specified "install" target
-build_targets = map(str,BUILD_TARGETS)
+build_targets = list(map(str,BUILD_TARGETS))
 if len(build_targets)>0 and not env.GetOption('clean'):
 	if 'install' in build_targets:
 		import sbms_setenv
