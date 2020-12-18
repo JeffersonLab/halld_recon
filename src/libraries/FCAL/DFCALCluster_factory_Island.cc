@@ -95,7 +95,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     // Handle cluster candidates containing more than 2 hits
     //--------------------------------------------------------------------------
     vector<const DFCALHit*>clusterCandidate=clusterCandidates[i];
-    vector<ClusterInfo>clustersToKeep;
+    vector<PeakInfo>peaks;
 
     unsigned int num_hits=clusterCandidate.size();
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
@@ -176,21 +176,21 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	x/=E;
 	y/=E;
 	t/=E;
-	clustersToKeep.push_back(ClusterInfo(row_index,col_index,E,x,y,t));
+	peaks.push_back(PeakInfo(row_index,col_index,E,x,y,t));
       }
     }
     // Fit the data to find the best current guesses for the shower parameters
     // for each peak within this group of FCAL hits.
-    FitPeaks(clusterCandidate,clustersToKeep);
+    FitPeaks(clusterCandidate,peaks);
 
-    for (unsigned int k=0;k<clustersToKeep.size();k++){
+    for (unsigned int k=0;k<peaks.size();k++){
       DFCALCluster *myCluster= new DFCALCluster(0);
       
-      myCluster->setEnergy(clustersToKeep[k].E);
-      myCluster->setTimeEWeight(clustersToKeep[k].t);
-      myCluster->setCentroid(clustersToKeep[k].x,clustersToKeep[k].y);
-      myCluster->setChannelEmax(dFCALGeom->channel(clustersToKeep[k].row_index+min_row,
-						   clustersToKeep[k].col_index+min_col));
+      myCluster->setEnergy(peaks[k].E);
+      myCluster->setTimeEWeight(peaks[k].t);
+      myCluster->setCentroid(peaks[k].x,peaks[k].y);
+      myCluster->setChannelEmax(dFCALGeom->channel(peaks[k].row_index+min_row,
+						   peaks[k].col_index+min_col));
       
       // For now attach all the hits in this hit group to each cluster
       for (unsigned int n=0;n<clusterCandidate.size();n++){
@@ -304,70 +304,120 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
   }
 }
 
-
+// Fit peaks within a cluster containing a list of hits contained in hitList
 void DFCALCluster_factory_Island::FitPeaks(vector<const DFCALHit*>&hitList,
-					  vector<ClusterInfo>&clustersToKeep)
-  const {
-  
-  for (unsigned int i=0;i<hitList.size();i++){
-    double Ecalc=CalcClusterFunction(hitList[i],clustersToKeep);
-    double Ediff=hitList[i]->E-Ecalc;
-    cout << Ediff << endl;
+					  vector<PeakInfo>&peaks) const {  
+  size_t nhits=hitList.size();
+  size_t npeaks=peaks.size();
+
+  TMatrixD W(nhits,nhits);  // Weights for each hit
+  for (unsigned int i=0;i<nhits;i++){
+    W(i,i)=1./(0.05*0.05*hitList[i]->E);
   }
 
+  // Iterate to find best shower energy and position
+  double chisq_old=1e6,chisq=0.;
+  for (unsigned int k=0;k<100;k++){
+    // Matrix of per-block differences between measured and calculated energies
+    TMatrixD dE(nhits,1);
+    // Matrix containing partical derivatives of the shower profile function
+    // with respect to the three parameters (E, xpeak, ypeak): Jacobian matrix
+    TMatrixD A(nhits,3*npeaks);
+    // Loop over all the hits to fill dE and A
+    for (unsigned int i=0;i<nhits;i++){
+      double Ecalc=0.;
+      for (unsigned int j=0;j<npeaks;j++){
+	PeakInfo myPeakInfo=peaks[j];
+	// Compute the Jacobian matrix elements
+	double df_dE=CalcClusterEDeriv(hitList[i],myPeakInfo);
+	double df_dxc=CalcClusterXYDeriv(true,hitList[i],myPeakInfo);
+	double df_dyc=CalcClusterXYDeriv(false,hitList[i],myPeakInfo);
+	
+	// Fill the Jacobian matrix
+	A(i,3*j+0)=df_dE;
+	A(i,3*j+1)=df_dxc;
+	A(i,3*j+2)=df_dyc;
 
+	Ecalc+=myPeakInfo.E*df_dE;
+      }
+      cout << "x " <<hitList[i]->x << " y " << hitList[i]->y << " E " << hitList[i]->E << " " << Ecalc << endl;
+      double Ediff=hitList[i]->E-Ecalc;
+      dE(i,0)=Ediff;
+    }
+    // Compute chi^2 for this iteration
+    chisq=0.;
+    for (unsigned int i=0;i<nhits;i++) chisq+=W(i,i)*dE(i,0)*dE(i,0);
+    cout << k << " chisq "<< chisq << " " << (chisq-chisq_old)/chisq_old <<endl;
+    if (fabs(chisq-chisq_old)/chisq_old<0.0001) break;
+    
+    // Determine the set of corrections needed to bring the computed shower 
+    // shape closer to the measurements
+    TMatrixD A_T(TMatrixD::kTransposed,A);
+    TMatrixD AT_A=A_T*W*A;
+    TMatrixD InvATA(TMatrixD::kInverted,AT_A);
+    // The function describing the cluster profile is rather nastily non-linear,
+    // so we perform a cut-down on the maximum shift vector.
+    TMatrixD dPar=0.1*(InvATA*A_T*W*dE);
+    
+    // Update the peak parameters
+    for (unsigned int i=0;i<npeaks;i++){
+      cout << peaks[i].E << " " << peaks[i].x
+	   << " " << peaks[i].y << endl;
+      peaks[i].E+=dPar(3*i+0,0);
+      peaks[i].x+=dPar(3*i+1,0);
+      peaks[i].y+=dPar(3*i+2,0);
+    }
+    chisq_old=chisq;
+  }
 }
 
-double DFCALCluster_factory_Island::CalcClusterDeriv(bool isXDeriv,
-						     const DFCALHit *hit,
-						     vector<ClusterInfo>&clustersToKeep) const {
+// Routine to compute the partial derivatives of the shower profile function 
+// with respect to the peak position parameters (xpeak,ypeak)
+double DFCALCluster_factory_Island::CalcClusterXYDeriv(bool isXDeriv,
+						       const DFCALHit *hit,
+						       const PeakInfo &myPeakInfo) const {
   double sign1[4]={1,1,-1,-1};
   double sign2[4]={1,-1,-1,1};
   double half_block=0.5*4.;
-  double b=0.125; // cm
+  double b=0.15; // cm
   double b2=b*b;
   double f=0.;
-  for (unsigned int j=0;j<clustersToKeep.size();j++){
-    double dxc=hit->x-clustersToKeep[j].x;
-    double dyc=hit->y-clustersToKeep[j].y;
-    double Ec=clustersToKeep[j].E;
-    for (int i=0;i<4;i++){
-      double dx=dxc+sign1[i]*half_block;
-      double dy=dyc+sign2[i]*half_block;
-      double sign3=(i%2)?-1:1;
-      double dx2=dx*dx;
-      double dy2=dy*dy;
-      double temp=b2+dx2+dy2;
-      double factor=sign3*Ec*b/(2*M_PI)/sqrt(temp)/(b2*temp+dx2*dy2);
-      if (isXDeriv){
-	f-=factor*dy*(b2+dy2);
-      }
-      else {
-	f-=factor*dx*(b2+dx2);
-      }
+  double dxc=hit->x-myPeakInfo.x;
+  double dyc=hit->y-myPeakInfo.y;
+  double Ec=myPeakInfo.E;
+  for (int i=0;i<4;i++){
+    double dx=dxc+sign1[i]*half_block;
+    double dy=dyc+sign2[i]*half_block;
+    double dx2=dx*dx;
+    double dy2=dy*dy;
+    double factor=sign1[i]*sign2[i]*Ec*b/(2*M_PI)/sqrt(b2*dx2+dy2);
+    if (isXDeriv){
+      f-=factor*dy/(b2+dx2);
+    }
+    else {
+      f-=factor*dx/(b2+dy2);
     }
   }
   return f;
 }
-		  
-
-double DFCALCluster_factory_Island::CalcClusterFunction(const DFCALHit *hit,
-							vector<ClusterInfo>&clustersToKeep) const {
+  
+// Shower profile function from Bland, et al., Instruments and Experimental 
+// Techniques, 2008, Vol. 51, No. 3, pp. 342-350, eq. 6.  Note that the 
+// normalization of this function in this equation does not appear to be 
+// correct (it's off by 1/sqrt(2pi)).
+double DFCALCluster_factory_Island::CalcClusterEDeriv(const DFCALHit *hit,
+						      const PeakInfo &myPeakInfo) const {
   double sign1[4]={1,1,-1,-1};
   double sign2[4]={1,-1,-1,1};
   double half_block=0.5*4.;
-  double b=0.125; // cm
+  double b=0.15; // cm
   double f=0.;
-  for (unsigned int j=0;j<clustersToKeep.size();j++){
-    double dxc=hit->x-clustersToKeep[j].x;
-    double dyc=hit->y-clustersToKeep[j].y;
-    double Ec=clustersToKeep[j].E;
-    for (int i=0;i<4;i++){
-      double dx=dxc+sign1[i]*half_block;
-      double dy=dyc+sign2[i]*half_block;
-      double sign3=(i%2)?-1:1;
-      f+=sign3*Ec/(2*M_PI)*atan(dx*dy/(b*sqrt(b*b+dx*dx+dy*dy)));
-    }
+  double dxc=hit->x-myPeakInfo.x;
+  double dyc=hit->y-myPeakInfo.y;
+  for (int i=0;i<4;i++){
+    double dx=dxc+sign1[i]*half_block;
+    double dy=dyc+sign2[i]*half_block;
+    f+=sign1[i]*sign2[i]/(2*M_PI)*atan(dx*dy/(b*sqrt(b*b+dx*dx+dy*dy)));
   }
   return f;
 }

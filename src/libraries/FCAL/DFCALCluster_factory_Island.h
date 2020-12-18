@@ -12,6 +12,7 @@
 #include "DFCALCluster.h"
 #include "DFCALGeometry.h"
 #include "DFCALHit.h"
+#include "TMatrixD.h"
 
 class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
  public:
@@ -20,9 +21,9 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   const char* Tag(void){return "Island";}
   
  private:
-  class ClusterInfo{
+  class PeakInfo{
   public:
-    ClusterInfo(int row_index,int col_index,double E,double x,double y,double t)
+    PeakInfo(int row_index,int col_index,double E,double x,double y,double t)
       :row_index(row_index),col_index(col_index),E(E),x(x),y(y),t(t){}
     int row_index;
     int col_index;
@@ -41,11 +42,11 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
   void FitPeaks(vector<const DFCALHit*>&hitList,
-		vector<ClusterInfo>&clustersToKeep) const;
-  double CalcClusterFunction(const DFCALHit *hit,
-			     vector<ClusterInfo>&clustersToKeep) const;
-  double CalcClusterDeriv(bool isXDeriv,const DFCALHit *hit,
-			  vector<ClusterInfo>&clustersToKeep) const;
+		vector<PeakInfo>&peaks) const;
+  double CalcClusterEDeriv(const DFCALHit *hit,
+			   const PeakInfo &myPeakInfo) const;
+  double CalcClusterXYDeriv(bool isXDeriv,const DFCALHit *hit,
+			    const PeakInfo &myPeakInfo) const;
 
   double TIME_CUT;
   const DFCALGeometry *dFCALGeom=NULL;
