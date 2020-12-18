@@ -399,7 +399,10 @@ DParticleID::DParticleID(JEventLoop *loop)
 
 	// FCAL timewalk parameters
 	dFCALTimewalkPar1=3.89677;
-	dFCALTimewalkPar2=1.22325;
+	dFCALTimewalkPar2=1.22325;	
+	// temporary command line arguments for testing time walk
+	gPARMS->SetDefaultParameter("FCAL:TIMEWALK1",dFCALTimewalkPar1);
+	gPARMS->SetDefaultParameter("FCAL:TIMEWALK2",dFCALTimewalkPar2);
 	
 }
 
@@ -3528,6 +3531,7 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
   if (locBcalParms!=NULL){
     double dt_bcal=locBcalParms->dBCALShower->t-locBcalParms->dFlightTime-locT0;
     double vart_bcal=GetTimeVariance(SYS_BCAL,locPID,locP);
+    dt_bcal-=GetTimeMean(SYS_BCAL,locPID,locP);
     locChiSq_sum+=(dt_bcal*dt_bcal)/vart_bcal;
     locNDF++;
   }
@@ -3535,6 +3539,15 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
   shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
   if (locFcalParms!=NULL){
     double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
+    dt_fcal-=GetTimeMean(SYS_FCAL,locPID,locP);
+    double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
+    locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
+    locNDF++;
+  }
+
+  shared_ptr<const DFCALSingleHitMatchParams>locFcalSingleHitParms=locChargedHypo->Get_FCALSingleHitMatchParams();
+  if (locFcalSingleHitParms!=NULL){
+    double dt_fcal=locFcalSingleHitParms->dTHit-locFcalSingleHitParms->dFlightTime-locT0;
     double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
     locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
     locNDF++;
