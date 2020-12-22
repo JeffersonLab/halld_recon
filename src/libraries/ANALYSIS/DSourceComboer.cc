@@ -1712,10 +1712,8 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 	if(dDebugLevel > 0)
 	{
 		auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
+		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size(); // Includes ComCal showers
 		cout << endl << "Comboing neutrals, z-independent, #FCAL/BCAL showers: " << locNumFCALShowers << "/" << locNumDetectedShowers - locNumFCALShowers << endl;
-		//auto locNumCCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
-		//cout << endl << "Comboing neutrals, z-independent, #CCAL/BCAL showers: " << locNumCCALShowers << "/" << locNumDetectedShowers - locNumCCALShowers << endl;
 	}
 
 	if(dDebugLevel >= 5)

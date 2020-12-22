@@ -92,7 +92,7 @@ jerror_t JEventProcessor_ps_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
     // skim PS triggers
     int trig_bit = (trig_mask & (1 << 3)) ? 1 : 0;
 
-    if (trig_bit) {
+    if (fp_trig_mask == 0 && trig_bit){
       locEventWriterEVIO->Write_EVIOEvent(loop, "ps");
       return NOERROR;
     }
