@@ -13,6 +13,8 @@
 #include "DFCALGeometry.h"
 #include "DFCALHit.h"
 #include "TMatrixD.h"
+#include "TH1D.h"
+#include "TH2D.h"
 
 class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
  public:
@@ -41,15 +43,19 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
-  void FitPeaks(vector<const DFCALHit*>&hitList,
-		vector<PeakInfo>&peaks) const;
-  double CalcClusterEDeriv(const DFCALHit *hit,
-			   const PeakInfo &myPeakInfo) const;
+  void FitPeaks(vector<const DFCALHit*>&hitList,vector<PeakInfo>&peaks,
+		PeakInfo &myPeak,double &chisq) const;
+  double CalcClusterEDeriv(const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,const DFCALHit *hit,
 			    const PeakInfo &myPeakInfo) const;
 
-  double TIME_CUT;
+  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_WIDTH_PARAMETER;
+  double MIN_CUTDOWN_FRACTION;
+  bool DEBUG_HISTS;
+
   const DFCALGeometry *dFCALGeom=NULL;
+  TH2D *HistdE;
+  TH1D *HistProb;
 };
 
 #endif // _DFCALCluster_factory_Island_
