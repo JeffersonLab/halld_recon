@@ -244,9 +244,14 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
    void Fill(double x, double y, int w=1) {
       fMother->GetXaxis()->SetLimits(fXlim[0], fXlim[1]);
       fMother->GetYaxis()->SetLimits(fYlim[0], fYlim[1]);
-      fMother->PutStats(&fStats.sumw);
-      fill(fMother->Fill(x,y),w);
-      fMother->GetStats(&fStats.sumw);
+      if (w != 0) {
+         fMother->PutStats(&fStats.sumw);
+         fill(fMother->Fill(x,y),w);
+         fMother->GetStats(&fStats.sumw);
+      }
+      else {
+         fill(fMother->Fill(x,y),w);
+      }
    }
    virtual void fill_bin(int bin, double w) {
       int ix, iy, iz;
@@ -260,10 +265,10 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
       fMother->PutStats(&fStats.sumw);
       return fMother->Write(name, option, bufsize);
    }
-   TH2I* operator=(const Compact_TH2I &src) {
+   TH2I* Clone(const char* newname) {
       fill_mother(fMother, fXlim, fYlim);
       fMother->PutStats(&fStats.sumw);
-      return (TH2I*)fMother->Clone();
+      return (TH2I*)fMother->Clone(newname);
    }
 
  protected:

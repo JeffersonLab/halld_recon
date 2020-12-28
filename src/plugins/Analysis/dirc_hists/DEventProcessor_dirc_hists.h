@@ -38,6 +38,9 @@ using namespace jana;
 #include <TROOT.h>
 #include <TClonesArray.h>
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 
 class DEventProcessor_dirc_hists: public JEventProcessor {
 
