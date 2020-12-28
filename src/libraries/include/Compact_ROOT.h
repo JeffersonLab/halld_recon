@@ -244,14 +244,11 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
    void Fill(double x, double y, int w=1) {
       fMother->GetXaxis()->SetLimits(fXlim[0], fXlim[1]);
       fMother->GetYaxis()->SetLimits(fYlim[0], fYlim[1]);
-      if (w != 0) {
-         fMother->PutStats(&fStats.sumw);
-         fill(fMother->Fill(x,y),w);
-         fMother->GetStats(&fStats.sumw);
-      }
-      else {
-         fill(fMother->Fill(x,y),w);
-      }
+      if (fStats.sumw == 0)
+         fStats.sumw = 1e-299;
+      fMother->PutStats(&fStats.sumw);
+      fill(fMother->Fill(x,y),w);
+      fMother->GetStats(&fStats.sumw);
    }
    virtual void fill_bin(int bin, double w) {
       int ix, iy, iz;
