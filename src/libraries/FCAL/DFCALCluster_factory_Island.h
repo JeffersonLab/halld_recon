@@ -25,14 +25,10 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
  private:
   class PeakInfo{
   public:
-    PeakInfo(int row_index,int col_index,double E,double x,double y,double t)
-      :row_index(row_index),col_index(col_index),E(E),x(x),y(y),t(t){}
-    int row_index;
-    int col_index;
+  PeakInfo(double E,double x,double y):E(E),x(x),y(y){}
     double E;
     double x;
     double y;
-    double t;
   };
   
   jerror_t init(void);						///< Called once at program start.
@@ -43,14 +39,18 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
-  void FitPeaks(vector<const DFCALHit*>&hitList,vector<PeakInfo>&peaks,
-		PeakInfo &myPeak,double &chisq) const;
+  void FitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hitList,
+		vector<PeakInfo>&peaks,PeakInfo &myPeak,double &chisq) const;
   double CalcClusterEDeriv(const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,const DFCALHit *hit,
 			    const PeakInfo &myPeakInfo) const;
+  void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
+		  vector<PeakInfo>&peaks,double &chisq) const;
 
-  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_WIDTH_PARAMETER;
-  double MIN_CUTDOWN_FRACTION;
+  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY;
+  double SHOWER_WIDTH_PARAMETER;
+  double INSERT_SHOWER_WIDTH_PARAMETER;
+  double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN;
   bool DEBUG_HISTS;
 
   const DFCALGeometry *dFCALGeom=NULL;
