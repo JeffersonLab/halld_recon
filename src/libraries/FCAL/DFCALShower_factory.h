@@ -80,6 +80,8 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double timeConst3;
   double timeConst4;
 
+  double posConst1,posConst2,posConst3;
+
   double FCAL_RADIATION_LENGTH;
   double FCAL_CRITICAL_ENERGY;
   double FCAL_SHOWER_OFFSET;
