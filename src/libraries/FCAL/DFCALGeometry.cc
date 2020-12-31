@@ -124,7 +124,10 @@ DFCALGeometry::row( float y, bool in_insert ) const
   if (in_insert){
     return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
   }
-	return static_cast<int>( y / blockSize() + kMidBlock + 0.5);
+  int my_row=static_cast<int>( y / blockSize() + kMidBlock + 0.5);
+  if (my_row<0) return -1;
+  if (my_row>=kBlocksTall) return -1;
+  return my_row;
 }
 
 int
@@ -135,7 +138,10 @@ DFCALGeometry::column( float x, bool in_insert ) const
   if (in_insert){
     return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
   }
-	return static_cast<int>( x / blockSize() + kMidBlock + 0.5);
+  int my_col=static_cast<int>( x / blockSize() + kMidBlock + 0.5);
+  if (my_col<0) return -1;
+  if (my_col>=kBlocksWide) return -1;
+  return my_col;
 }
 
 DVector2
@@ -182,5 +188,10 @@ bool DFCALGeometry::inInsert(int channel) const{
       && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
     return true;
   }
+  return false;
+}
+
+bool DFCALGeometry::isInsertBlock(int row,int column) const{
+  if (row>=100&&column>=100) return true;
   return false;
 }
