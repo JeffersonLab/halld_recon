@@ -630,7 +630,7 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
 
           if (CDC_CORRECT_DEDX_THETA) { 
 
-            // NSJ  dE/dx theta correction   - for amplitude only. to start with.
+            // NSJ  dE/dx theta correction 
   	    
             //    double cdc_min_theta, cdc_max_theta;
             //    double cdc_min_dedx, cdc_max_dedx;
@@ -718,8 +718,95 @@ jerror_t DParticleID::CalcDCdEdx(const DTrackTimeBased *locTrackTimeBased, const
             }
   
   	    locdEdx_CDC_amp *= dedxcf;
-  	    //            locdEdx_CDC *= dedxcf;    // try this for integral too
+
   	    
+            // Correction for dE/dx from integral
+
+	    //  double cdc_i_min_theta, cdc_i_max_theta;
+	    //   double cdc_i_min_dedx, cdc_i_max_dedx;
+	    //  double cdc_i_theta_step, cdc_i_dedx_step; 
+	    //  int cdc_i_npoints_theta, cdc_i_npoints_dedx;
+           
+            // The scaling factors are CDC_I_DEDX_CORRECTION[dedx][theta];
+
+            thisdedx = 1.0e6*locdEdx_CDC;
+
+            if (theta_deg <= cdc_i_min_theta) {
+              thetabin1 = 0;
+              thetabin2 = thetabin1;
+            } else if (theta_deg >= cdc_i_max_theta) { 
+              thetabin1 = cdc_i_npoints_theta - 1;
+              thetabin2 = thetabin1;
+            } else {
+              thetabin1 = (int)((theta_deg - cdc_i_min_theta)/cdc_i_theta_step);  
+              thetabin2 = thetabin1 + 1;  
+            }
+  
+            if (thisdedx <= cdc_i_min_dedx) {
+              dedxbin1 = 0;
+              dedxbin2 = dedxbin1;
+            } else if (thisdedx >= cdc_i_max_dedx) { 
+              dedxbin1 = cdc_i_npoints_dedx - 1;
+              dedxbin2 = dedxbin1;
+            } else {
+              dedxbin1 = (int)((thisdedx - cdc_i_min_dedx)/cdc_i_dedx_step);
+              dedxbin2 = dedxbin1 + 1;
+            }
+  
+  
+            if ((thetabin1 == thetabin2) && (dedxbin1 == dedxbin2)) {
+  
+              dedxcf = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin1];
+  
+  	    } else if (thetabin1 == thetabin2) {  // interp dedx only
+  
+              double cf1 = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin1];
+              double cf2 = CDC_I_DEDX_CORRECTION[dedxbin2][thetabin1];
+  
+              double dedx1 = cdc_i_min_dedx + dedxbin1*cdc_i_dedx_step;
+              double dedx2 = dedx1 + cdc_i_dedx_step;
+  
+              dedxcf = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+  
+  	    } else if (dedxbin1 == dedxbin2) {  // interp theta only
+  
+              double cf1 = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin1];
+              double cf2 = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin2];
+  
+              double theta1 = cdc_i_min_theta + thetabin1*cdc_i_theta_step;
+              double theta2 = theta1 + cdc_i_theta_step;
+  
+              dedxcf = cf1 + (theta_deg - theta1)*(cf2 - cf1)/(theta2-theta1);
+  
+            } else {
+  
+              double cf1 = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin1];
+              double cf2 = CDC_I_DEDX_CORRECTION[dedxbin2][thetabin1];
+  
+              double dedx1 = cdc_i_min_dedx + dedxbin1*cdc_i_dedx_step;
+              double dedx2 = dedx1 + cdc_i_dedx_step;
+  
+              double cf3 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+  
+              cf1 = CDC_I_DEDX_CORRECTION[dedxbin1][thetabin2];
+              cf2 = CDC_I_DEDX_CORRECTION[dedxbin2][thetabin2];
+  
+              dedx1 = cdc_i_min_dedx + dedxbin1*cdc_i_dedx_step;
+              dedx2 = dedx1 + cdc_i_dedx_step;
+  
+              double cf4 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+  
+              double theta1 = cdc_i_min_theta + thetabin1*cdc_i_theta_step;
+              double theta2 = theta1 + cdc_i_theta_step;
+  
+              dedxcf = cf3 + (theta_deg - theta1)*(cf4 - cf3)/(theta2-theta1);
+  
+            }
+  
+
+  	    locdEdx_CDC *= dedxcf;   
+
+
   	  } // end if (CDC_CORRECT_DEDX_THETA)  
         }  
 
