@@ -101,9 +101,15 @@ DFCALShower_factory::DFCALShower_factory()
   posConst1=0.1157;
   posConst2=0.005373;
   posConst3=-0.01449;
-  gPARMS->SetDefaultParameter("FCAL:POSITION_CORRECTION_P1", posConst1);
-  gPARMS->SetDefaultParameter("FCAL:POSITION_CORRECTION_P2", posConst2);
-  gPARMS->SetDefaultParameter("FCAL:POSITION_CORRECTION_P3", posConst3);
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P1", posConst1);
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P2", posConst2);
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P3", posConst3);
+  insertPosConst1=0.3474;
+  insertPosConst2=-0.007086;
+  insertPosConst3=-0.1585;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P1", insertPosConst1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P2", insertPosConst2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P3", insertPosConst3);
 
 
 }
@@ -429,8 +435,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   double dx2=dx*dx;
   double dy=posInCal.Y()-xyblock.Y();
   double dy2=dy*dy;
-  posInCal.SetX(posInCal.X()-dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2));
-  posInCal.SetY(posInCal.Y()-dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2));
+  if (fcalGeom->inInsert(channel)){
+      posInCal.SetX(posInCal.X()-dx*(dx2-d2/4.)*(insertPosConst1+insertPosConst2*dx+insertPosConst3*dx2));
+      posInCal.SetY(posInCal.Y()-dy*(dy2-d2/4.)*(insertPosConst1+insertPosConst2*dy+insertPosConst3*dy2));
+  }
+  else{
+    posInCal.SetX(posInCal.X()-dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2));
+    posInCal.SetY(posInCal.Y()-dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2));
+  }
+
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
   double Eclust = cluster->getEnergy();
