@@ -82,7 +82,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     if (clusterCandidates[i].size()==1) continue;
 
     // Mininum number of hits to make a shower = 2
-    if (clusterCandidates[i].size()<4){
+    if (clusterCandidates[i].size()==2){
       // Create a new DFCALCluster object and add it to the _data list
       DFCALCluster *myCluster= new DFCALCluster(0);
       vector<const DFCALHit*>clusterCandidate=clusterCandidates[i];
@@ -250,10 +250,14 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    
 	      chisq_old=chisq;
 	      FitPeaks(W,clusterHits,peaks,myPeak,chisq);
-	      // Check that the new peak position are still within the 
+	      // Check that the new peak positions are still within the 
 	      // fiducial area of the detector
-	      bool InFiducialArea=(dFCALGeom->row(myPeak.y,false)>=0
-				   && dFCALGeom->column(myPeak.x,false)>=0);
+	      bool InFiducialArea=dFCALGeom->isFiducial(myPeak.x,myPeak.y);
+	      for (unsigned int k=0;k<peaks.size();k++){
+		InFiducialArea=dFCALGeom->isFiducial(peaks[k].x,peaks[k].y)
+		  && InFiducialArea;
+		
+	      }
 	      if (InFiducialArea && chisq<chisq_old){
 		peaks.push_back(myPeak);
 	      }
@@ -500,7 +504,6 @@ void DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
   }
   chisq=chisq_new;
   
-  
   if (DEBUG_HISTS && nhits>3){
     HistProb->Fill(TMath::Prob(chisq_new,nhits-3.*peaks.size()));
     if (peaks.size()==1){
@@ -656,12 +659,11 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
     // Refit with the split peaks
     chisq_old=chisq;
     FitPeaks(W,hits,peaks,myNewPeak,chisq);
+
     // Check that the new peak positions are still within the fiducial area
     // of the detector
-    bool InFiducialArea=(dFCALGeom->row(peaks[i].y,false)>=0 
-			 && dFCALGeom->column(peaks[i].x,false)>=0
-			 && dFCALGeom->row(myNewPeak.y,false)>=0
-			 && dFCALGeom->column(myNewPeak.x,false)>=0);
+    bool InFiducialArea=dFCALGeom->isFiducial(peaks[i].x,peaks[i].y) 
+      && dFCALGeom->isFiducial(myNewPeak.x,myNewPeak.y);
     if (InFiducialArea && chisq+CHISQ_MARGIN<chisq_old){
       peaks.push_back(myNewPeak);
     }
