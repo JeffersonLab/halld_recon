@@ -183,6 +183,12 @@ DFCALGeometry::channel( int row, int column ) const
 	}
 }
 
+bool DFCALGeometry::isFiducial(double x,double y) const{
+  bool isInsert=(fabs(x-m_FCALdX)<m_insertSize&& fabs(y-m_FCALdY)<m_insertSize);
+  return (row(y,isInsert)>=0 && column(x,isInsert)>=0);
+}
+
+
 bool DFCALGeometry::inInsert(int channel) const{
   if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
       && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){

@@ -60,6 +60,7 @@ public:
 	  return isBlockActive(row(channel),column(channel));
 	}
 	bool isInsertBlock(int row,int column) const;
+	bool isFiducial(double x,double y) const;
 	unsigned int numChannels() const {return m_numChannels;}
 	
 	DVector2 positionOnFace( int row, int column ) const;
