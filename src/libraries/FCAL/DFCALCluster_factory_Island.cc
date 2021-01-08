@@ -249,15 +249,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      vector<PeakInfo>saved_peaks=peaks;
 	    
 	      chisq_old=chisq;
-	      FitPeaks(W,clusterHits,peaks,myPeak,chisq);
-	      // Check that the new peak positions are still within the 
-	      // fiducial area of the detector
-	      bool InFiducialArea=dFCALGeom->isFiducial(myPeak.x,myPeak.y);
-	      for (unsigned int k=0;k<peaks.size();k++){
-		InFiducialArea=dFCALGeom->isFiducial(peaks[k].x,peaks[k].y)
-		  && InFiducialArea;
-		
-	      }
+	      bool InFiducialArea=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
 	      if (InFiducialArea && chisq<chisq_old){
 		peaks.push_back(myPeak);
 	      }
@@ -419,7 +411,7 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 }
 
 // Fit peaks within a cluster containing a list of hits contained in hitList
-void DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
+bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
 					   vector<const DFCALHit*>&hitList,
 					   vector<PeakInfo>&peaks,
 					   PeakInfo &myNewPeak,double &chisq
@@ -503,6 +495,14 @@ void DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
     chisq_old=chisq_new;
   }
   chisq=chisq_new;
+
+  // Check that the new peak positions are still within the  fiducial area of
+  // the detector	     
+  bool InFiducialArea=dFCALGeom->isFiducial(myNewPeak.x,myNewPeak.y);
+  for (unsigned int k=0;k<peaks.size();k++){
+    InFiducialArea=dFCALGeom->isFiducial(peaks[k].x,peaks[k].y)
+      && InFiducialArea;   
+  }
   
   if (DEBUG_HISTS && nhits>3){
     HistProb->Fill(TMath::Prob(chisq_new,nhits-3.*peaks.size()));
@@ -513,6 +513,8 @@ void DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
       HistdE->Fill(E,E-Ecalc);
     }
   }
+
+  return InFiducialArea;
 }
 
 // Routine to compute the partial derivatives of the shower profile function 
@@ -658,12 +660,7 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
 
     // Refit with the split peaks
     chisq_old=chisq;
-    FitPeaks(W,hits,peaks,myNewPeak,chisq);
-
-    // Check that the new peak positions are still within the fiducial area
-    // of the detector
-    bool InFiducialArea=dFCALGeom->isFiducial(peaks[i].x,peaks[i].y) 
-      && dFCALGeom->isFiducial(myNewPeak.x,myNewPeak.y);
+    bool InFiducialArea=FitPeaks(W,hits,peaks,myNewPeak,chisq);
     if (InFiducialArea && chisq+CHISQ_MARGIN<chisq_old){
       peaks.push_back(myNewPeak);
     }
