@@ -121,11 +121,13 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
     // Create weight matrix for hits
     unsigned int num_hits=clusterHits.size();
-    TMatrixD W(num_hits,num_hits); 
+    TMatrixD W(num_hits,num_hits);
+    double Esum=0.;
     for (unsigned int i=0;i<num_hits;i++){
       double E=clusterHits[i]->E;
       double varE=0.001+0.001225*E+0.0009*E*E;
       W(i,i)=1./varE;
+      Esum+=E;
     }
 
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
@@ -273,29 +275,44 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       SplitPeaks(W,clusterHits,peaks,chisq);
     }
 
+    // Estimate fraction of "seen" energy for each peak and the time weighted
+    // according to the shower profile, and save the hit id corresponding to 
+    // the maximum for each peak
+    double fsum=0.;
+    vector<double>peak_fractions(peaks.size());
+    vector<unsigned int>shower_max_id(peaks.size());
+    vector<double>weighted_time(peaks.size());
     for (unsigned int k=0;k<peaks.size();k++){
-      DFCALCluster *myCluster= new DFCALCluster(0);
-      
-      // Find energy-weighted time and the channel corresponding to the peak
-      // position using the shower profile model
-      double t=0.,fsum=0.,fmax=0.;
+      double fpeak=0.,fmax=0.,t=0.;
       int jmax=0; // index correponding to maximum energy (at f=fmax)
       for (unsigned int j=0;j<clusterHits.size();j++){
 	double f=CalcClusterEDeriv(clusterHits[j],peaks[k]);
+	t+=f*clusterHits[j]->t;
+	fpeak+=f;
 	if (f>fmax){
 	  fmax=f;
 	  jmax=j;
 	}
-	fsum+=f;
-	t+=clusterHits[j]->t*f;
       }
-      t/=fsum;
+      t/=fpeak;
+
+      weighted_time[k]=t;
+      peak_fractions[k]=fpeak;
+      shower_max_id[k]=jmax;
+
+      fsum+=fpeak;
+    }
+
+    // Add the clusters to the output of the factory
+    for (unsigned int k=0;k<peaks.size();k++){
+      DFCALCluster *myCluster= new DFCALCluster(0);
       
-      myCluster->setEnergy(peaks[k].E);
-      myCluster->setTimeEWeight(t);
+      myCluster->setEnergy((peak_fractions[k]/fsum)*Esum);
+      myCluster->setTimeEWeight(weighted_time[k]);
       myCluster->setCentroid(peaks[k].x,peaks[k].y);
 
       // Find channel corresponding to peak position
+      unsigned int jmax= shower_max_id[k];
       myCluster->setChannelEmax(dFCALGeom->channel(clusterHits[jmax]->row,
 						   clusterHits[jmax]->column));
 
