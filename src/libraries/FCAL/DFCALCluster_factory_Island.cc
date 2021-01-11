@@ -305,22 +305,25 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
     // Add the clusters to the output of the factory
     for (unsigned int k=0;k<peaks.size();k++){
-      DFCALCluster *myCluster= new DFCALCluster(0);
-      
-      myCluster->setEnergy((peak_fractions[k]/fsum)*Esum);
-      myCluster->setTimeEWeight(weighted_time[k]);
-      myCluster->setCentroid(peaks[k].x,peaks[k].y);
+      double E=(peak_fractions[k]/fsum)*Esum;
+      if (E>MIN_CLUSTER_SEED_ENERGY){
+	DFCALCluster *myCluster= new DFCALCluster(0);
+	
+	myCluster->setEnergy(E);
+	myCluster->setTimeEWeight(weighted_time[k]);
+	myCluster->setCentroid(peaks[k].x,peaks[k].y);
 
-      // Find channel corresponding to peak position
-      unsigned int jmax= shower_max_id[k];
-      myCluster->setChannelEmax(dFCALGeom->channel(clusterHits[jmax]->row,
-						   clusterHits[jmax]->column));
-
-      // For now attach all the hits in this hit group to each cluster
-      for (unsigned int n=0;n<clusterHits.size();n++){
-	myCluster->AddAssociatedObject(clusterHits[n]);
+	// Find channel corresponding to peak position
+	unsigned int jmax= shower_max_id[k];
+	myCluster->setChannelEmax(dFCALGeom->channel(clusterHits[jmax]->row,
+						     clusterHits[jmax]->column));
+	
+	// For now attach all the hits in this hit group to each cluster
+	for (unsigned int n=0;n<clusterHits.size();n++){
+	  myCluster->AddAssociatedObject(clusterHits[n]);
+	}
+	_data.push_back(myCluster);
       }
-      _data.push_back(myCluster);
     }
   }
 
