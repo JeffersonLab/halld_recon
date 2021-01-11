@@ -61,9 +61,10 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double m_FCALdX,m_FCALdY;
   double m_beamSpotX;
   double m_beamSpotY;  
-  double LOAD_NONLIN_CCDB;
-  double LOAD_TIMING_CCDB; 
-  double LOAD_CCDB_CONSTANTS;
+  bool LOAD_NONLIN_CCDB;
+  bool LOAD_TIMING_CCDB; 
+  bool LOAD_CCDB_CONSTANTS;
+  bool USE_RING_E_CORRECTION;
   double SHOWER_ENERGY_THRESHOLD;
   double cutoff_energy;
   double linfit_slope;
