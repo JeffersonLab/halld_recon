@@ -26,14 +26,17 @@ jerror_t DFCALCluster_factory_Island::init(void)
   TIME_CUT=15.;
   gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
   
-  MIN_CLUSTER_SEED_ENERGY=0.035;
+  MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
 			      MIN_CLUSTER_SEED_ENERGY);
+  SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
+  gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
-  SHOWER_WIDTH_PARAMETER=0.8;
+
+  SHOWER_WIDTH_PARAMETER=0.625;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PARAMETER",
 			      SHOWER_WIDTH_PARAMETER);
-  INSERT_SHOWER_WIDTH_PARAMETER=0.35;
+  INSERT_SHOWER_WIDTH_PARAMETER=0.3;
   gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PARAMETER",
 			      INSERT_SHOWER_WIDTH_PARAMETER);
   MIN_CUTDOWN_FRACTION=0.25;
@@ -45,7 +48,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,100,-1,1);
+  HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,200,-0.5,0.5);
   HistProb=new TH1D("HistProb",";CL",100,0,1);
   
   return NOERROR;
@@ -57,6 +60,14 @@ jerror_t DFCALCluster_factory_Island::init(void)
 jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
   eventLoop->GetSingle(dFCALGeom);
+
+  insert_Eres[0]=0.0003;
+  insert_Eres[1]=0.00025;
+  insert_Eres[2]=4.4e-5;
+  Eres[0]=0.0005;
+  Eres[1]=0.001225;
+  Eres[2]=9.0e-4;
+
 
   return NOERROR;
 }
@@ -124,8 +135,15 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     TMatrixD W(num_hits,num_hits);
     double Esum=0.;
     for (unsigned int i=0;i<num_hits;i++){
-      double E=clusterHits[i]->E;
-      double varE=0.001+0.001225*E+0.0009*E*E;
+      const DFCALHit *hit=clusterHits[i];
+      double E=hit->E;
+      double varE=0.;
+      if (dFCALGeom->isInsertBlock(hit->row,hit->column)){
+	varE=insert_Eres[0]+insert_Eres[1]*E+insert_Eres[2]*E*E;
+      }
+      else{
+	varE=Eres[0]+Eres[1]*E+Eres[2]*E*E;
+      }
       W(i,i)=1./varE;
       Esum+=E;
     }
@@ -270,8 +288,19 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
       } // cut on minimum energy of central block
     }
+
+    if (DEBUG_HISTS&&num_hits>3&&peaks.size()==1){
+      HistProb->Fill(TMath::Prob(chisq,num_hits-3));
+
+      PeakInfo myPeakInfo=peaks[0];
+      for (unsigned int k=0;k<clusterHits.size();k++){
+	double Ecalc=0.,E=clusterHits[k]->E;
+	Ecalc+=myPeakInfo.E*CalcClusterEDeriv(clusterHits[k],myPeakInfo);
+	HistdE->Fill(E,E-Ecalc);
+      }
+    }
    
-    if (num_hits>3){
+    if (num_hits>3){    
       SplitPeaks(W,clusterHits,peaks,chisq);
     }
 
@@ -279,10 +308,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     // according to the shower profile, and save the hit id corresponding to 
     // the maximum for each peak
     double fsum=0.;
-    vector<double>peak_fractions(peaks.size());
-    vector<unsigned int>shower_max_id(peaks.size());
-    vector<double>weighted_time(peaks.size());
-    for (unsigned int k=0;k<peaks.size();k++){
+    size_t npeaks=peaks.size();
+    vector<double>peak_fractions(npeaks);
+    vector<unsigned int>shower_max_id(npeaks);
+    vector<double>weighted_time(npeaks);
+    for (unsigned int k=0;k<npeaks;k++){
       double fpeak=0.,fmax=0.,t=0.;
       int jmax=0; // index correponding to maximum energy (at f=fmax)
       for (unsigned int j=0;j<clusterHits.size();j++){
@@ -304,9 +334,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     }
 
     // Add the clusters to the output of the factory
-    for (unsigned int k=0;k<peaks.size();k++){
+    for (unsigned int k=0;k<npeaks;k++){
       double E=(peak_fractions[k]/fsum)*Esum;
-      if (E>MIN_CLUSTER_SEED_ENERGY){
+      if (E>SHOWER_ENERGY_THRESHOLD){
 	DFCALCluster *myCluster= new DFCALCluster(0);
 	
 	myCluster->setEnergy(E);
@@ -318,7 +348,6 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	myCluster->setChannelEmax(dFCALGeom->channel(clusterHits[jmax]->row,
 						     clusterHits[jmax]->column));
 	
-	// For now attach all the hits in this hit group to each cluster
 	for (unsigned int n=0;n<clusterHits.size();n++){
 	  myCluster->AddAssociatedObject(clusterHits[n]);
 	}
@@ -524,16 +553,6 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
       && InFiducialArea;   
   }
   
-  if (DEBUG_HISTS && nhits>3){
-    HistProb->Fill(TMath::Prob(chisq_new,nhits-3.*peaks.size()));
-    if (peaks.size()==1){
-      double Ecalc=0.,E=hitList[0]->E;
-      PeakInfo myPeakInfo=peaks[0];
-      Ecalc+=myPeakInfo.E*CalcClusterEDeriv(hitList[0],myPeakInfo);
-      HistdE->Fill(E,E-Ecalc);
-    }
-  }
-
   return InFiducialArea;
 }
 
@@ -657,8 +676,8 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
     double alpha_minus_factor=0.5*(1.-alpha);
     double E1=E0*alpha_plus_factor;
     double E2=E0*alpha_minus_factor;
-    if (E1<MIN_CLUSTER_SEED_ENERGY || E2<MIN_CLUSTER_SEED_ENERGY){
-      // Bail if either of the energies is below the cluster threshold
+    if (E1<SHOWER_ENERGY_THRESHOLD || E2<SHOWER_ENERGY_THRESHOLD){
+      // Bail if either of the energies is below the shower threshold
       continue;
     }
   

@@ -47,12 +47,14 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
 		  vector<PeakInfo>&peaks,double &chisq) const;
 
-  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY;
+  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
   double SHOWER_WIDTH_PARAMETER;
   double INSERT_SHOWER_WIDTH_PARAMETER;
   double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN;
   bool DEBUG_HISTS;
 
+  double insert_Eres[3],Eres[3];
+  
   const DFCALGeometry *dFCALGeom=NULL;
   TH2D *HistdE;
   TH1D *HistProb;
