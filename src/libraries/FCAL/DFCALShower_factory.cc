@@ -25,7 +25,7 @@ using namespace jana;
 //----------------
 DFCALShower_factory::DFCALShower_factory()
 {
-  debug_level=1;
+  //debug_level=1;
   // should we use CCDB constants?
   LOAD_NONLIN_CCDB = true;
   LOAD_TIMING_CCDB = true;
@@ -93,24 +93,24 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=1.345;
+  INSERT_PAR1=1.365;
   INSERT_PAR2=0.04;
-  INSERT_PAR3=1.16;
+  INSERT_PAR3=1.185;
   INSERT_PAR4=2.;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
-  posConst1=0.1157;
-  posConst2=0.005373;
-  posConst3=-0.01449;
+  posConst1=0.0147;
+  posConst2=6.587e-4;
+  posConst3=0.017265;
   gPARMS->SetDefaultParameter("FCAL:POS_CORR_P1", posConst1);
   gPARMS->SetDefaultParameter("FCAL:POS_CORR_P2", posConst2);
   gPARMS->SetDefaultParameter("FCAL:POS_CORR_P3", posConst3);
-  insertPosConst1=0.3474;
-  insertPosConst2=-0.007086;
-  insertPosConst3=-0.1585;
+  insertPosConst1=0.08699;
+  insertPosConst2=9.014e-3;
+  insertPosConst3=-0.1132;
   gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P1", insertPosConst1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P2", insertPosConst2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P3", insertPosConst3);
@@ -393,7 +393,8 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setNumBlocks( fcalHits.size() );
       
       double e9e25, e1e9;
-      getE1925FromHits( e1e9, e9e25, fcalHits, getMaxHit( fcalHits ) );
+      getE1925FromHits( e1e9, e9e25, fcalHits,
+			getMaxHit(cluster->getChannelEmax(),fcalHits) );
       shower->setE1E9( e1e9 );
       shower->setE9E25( e9e25 );
 
@@ -754,6 +755,22 @@ DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
 }
 
 unsigned int
+DFCALShower_factory::getMaxHit(int chan_Emax, const vector< const DFCALHit* >& hitVec ) const {
+  
+  unsigned int maxIndex = 0;
+  
+  for( vector< const DFCALHit* >::const_iterator hit = hitVec.begin();
+       hit != hitVec.end(); ++hit ){
+    if (fcalGeom->channel((**hit).row,(**hit).column)==chan_Emax){
+      maxIndex = hit - hitVec.begin();
+      break;
+    }
+  }
+  return maxIndex;
+}
+
+
+unsigned int
 DFCALShower_factory::getMaxHit( const vector< const DFCALHit* >& hitVec ) const {
   
   unsigned int maxIndex = 0;
@@ -821,7 +838,7 @@ DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh,
   double E25 = 0;
 
   const DFCALHit* maxHit = hits[maxIndex];
-  
+ 
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end(); ++hit ){
      
@@ -892,7 +909,8 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   DVector3  posInCal = cluster->getCentroid();
   
-  const vector< DFCALCluster::DFCALClusterHit_t > locHitVector = cluster->GetHits();
+  vector<const DFCALHit*> locHitVector;
+  cluster->Get(locHitVector);
   
   int loc_nhits = (int)locHitVector.size();
   if( loc_nhits < 1 ) {
@@ -911,11 +929,11 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   for( int ih = 0; ih < loc_nhits; ih++ ) {
   	
-	DFCALCluster::DFCALClusterHit_t locHit = locHitVector[ih];
+	const DFCALHit *locHit = locHitVector[ih];
 	
-	double xcell = locHit.x;
-	double ycell = locHit.y;
-	double ecell = locHit.E;
+	double xcell = locHit->x;
+	double ycell = locHit->y;
+	double ecell = locHit->E;
 	
 	W  =  log_position_const + log( ecell / ecluster );
 	if( W > 0. ) {
@@ -938,7 +956,7 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   
   // Shower Depth Corrections (copied from GetCorrectedEnergyAndPosition function)
-   
+
   if ( Egamma > 0 ) { 
     float dxV   = x1 - vertex->X();
     float dyV   = y1 - vertex->Y();

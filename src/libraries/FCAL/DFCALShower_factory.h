@@ -44,6 +44,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   				     double Egamma, const DVector3 *aVertex  );
 
   unsigned int getMaxHit( const vector< const DFCALHit* >& hitVec ) const;
+  unsigned int getMaxHit(int chan_Emax, const vector< const DFCALHit* >& hitVec ) const;
 
   void getUVFromHits( double& sumUSh, double& sumVSh, 
 		      const vector< const DFCALHit* >& hits,
