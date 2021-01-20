@@ -54,6 +54,8 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   bool DEBUG_HISTS;
 
   double insert_Eres[3],Eres[3];
+  double posConst1,posConst2,posConst3;
+  double insertPosConst1,insertPosConst2,insertPosConst3;
   
   const DFCALGeometry *dFCALGeom=NULL;
   TH2D *HistdE;

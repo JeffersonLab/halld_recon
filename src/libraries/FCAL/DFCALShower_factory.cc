@@ -102,20 +102,6 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
-  posConst1=0.0147;
-  posConst2=6.587e-4;
-  posConst3=0.017265;
-  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P1", posConst1);
-  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P2", posConst2);
-  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P3", posConst3);
-  insertPosConst1=0.08699;
-  insertPosConst2=9.014e-3;
-  insertPosConst3=-0.1132;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P1", insertPosConst1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P2", insertPosConst2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P3", insertPosConst3);
-
-
 }
 
 //------------------
@@ -429,26 +415,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   //int MAXITER = 1000;
 
   DVector3  posInCal = cluster->getCentroid();
-  int channel=cluster->getChannelEmax();
-  DVector2 xyblock=fcalGeom->positionOnFace(channel);
-  double d=fcalGeom->blockSize();
-  if (fcalGeom->inInsert(channel)){
-    d=fcalGeom->insertBlockSize();
-  }
-  double d2=d*d;
-  double dx=posInCal.X()-xyblock.X();
-  double dx2=dx*dx;
-  double dy=posInCal.Y()-xyblock.Y();
-  double dy2=dy*dy;
-  if (fcalGeom->inInsert(channel)){
-      posInCal.SetX(posInCal.X()-dx*(dx2-d2/4.)*(insertPosConst1+insertPosConst2*dx+insertPosConst3*dx2));
-      posInCal.SetY(posInCal.Y()-dy*(dy2-d2/4.)*(insertPosConst1+insertPosConst2*dy+insertPosConst3*dy2));
-  }
-  else{
-    posInCal.SetX(posInCal.X()-dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2));
-    posInCal.SetY(posInCal.Y()-dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2));
-  }
-
+ 
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
   double Eclust = cluster->getEnergy();

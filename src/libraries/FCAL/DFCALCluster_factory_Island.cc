@@ -68,6 +68,18 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
   Eres[1]=0.001225;
   Eres[2]=9.0e-4;
 
+  posConst1=0.0147;
+  posConst2=6.587e-4;
+  posConst3=0.017265;
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P1", posConst1);
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P2", posConst2);
+  gPARMS->SetDefaultParameter("FCAL:POS_CORR_P3", posConst3);
+  insertPosConst1=0.08699;
+  insertPosConst2=9.014e-3;
+  insertPosConst3=-0.1132;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P1", insertPosConst1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P2", insertPosConst2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_CORR_P3", insertPosConst3);
 
   return NOERROR;
 }
@@ -341,13 +353,34 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	
 	myCluster->setEnergy(E);
 	myCluster->setTimeEWeight(weighted_time[k]);
-	myCluster->setCentroid(peaks[k].x,peaks[k].y);
 
 	// Find channel corresponding to peak position
 	unsigned int jmax= shower_max_id[k];
-	myCluster->setChannelEmax(dFCALGeom->channel(clusterHits[jmax]->row,
-						     clusterHits[jmax]->column));
-	
+	int channel=dFCALGeom->channel(clusterHits[jmax]->row,
+				       clusterHits[jmax]->column);
+	myCluster->setChannelEmax(channel);
+
+	// apply S-curve correction
+	DVector2 xyblock=dFCALGeom->positionOnFace(channel);
+	double d=dFCALGeom->blockSize();
+	if (dFCALGeom->inInsert(channel)){
+	  d=dFCALGeom->insertBlockSize();
+	}
+	double d2=d*d;
+	double dx=peaks[k].x-xyblock.X();
+	double dx2=dx*dx;
+	double dy=peaks[k].y-xyblock.Y();
+	double dy2=dy*dy;
+	if (dFCALGeom->inInsert(channel)){
+	  peaks[k].x-=dx*(dx2-d2/4.)*(insertPosConst1+insertPosConst2*dx+insertPosConst3*dx2);
+	  peaks[k].y-=dy*(dy2-d2/4.)*(insertPosConst1+insertPosConst2*dy+insertPosConst3*dy2);
+	}
+	else{
+	  peaks[k].x-=dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2);
+	  peaks[k].y-=dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2);
+	}
+	myCluster->setCentroid(peaks[k].x,peaks[k].y);
+
 	for (unsigned int n=0;n<clusterHits.size();n++){
 	  myCluster->AddAssociatedObject(clusterHits[n]);
 	}
