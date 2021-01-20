@@ -429,8 +429,8 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
       double dt=clusterCandidate[0]->t-fcal_hits[i]->t;
       if (fabs(dt)>TIME_CUT) continue;
 
-      double drow=clusterCandidate[0]->row-fcal_hits[i]->row;
-      double dcol=clusterCandidate[0]->column-fcal_hits[i]->column;
+      int drow=clusterCandidate[0]->row-fcal_hits[i]->row;
+      int dcol=clusterCandidate[0]->column-fcal_hits[i]->column;
       if (abs(drow)<=1 && abs(dcol)<=1){
 	clusterCandidate.push_back(fcal_hits[i]);
 
@@ -458,6 +458,7 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
   // At this point we do not necessarily have complete clusters.
   // Merge cluster candidates that appear belong to a single cluster, again
   // looking for adjacent hits.
+  double borderCut=0.5*dFCALGeom->blockSize()+dFCALGeom->insertBlockSize();
   vector<vector<const DFCALHit*>>::iterator iter=clusterCandidates.begin();
   while (iter!=clusterCandidates.end()){
     bool matched=false;
@@ -465,12 +466,30 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
     for (;iter2!=clusterCandidates.end();iter2++){     
       for (unsigned int i=0;i<(*iter).size();i++){
 	for (unsigned int j=0;j<(*iter2).size();j++){
-	  double drow=(*iter)[i]->row-(*iter2)[j]->row;
-	  double dcol=(*iter)[i]->column-(*iter2)[j]->column;
 	  double dt=(*iter)[i]->t-(*iter2)[j]->t;
-	  if (abs(drow)<=1 && abs(dcol)<=1 && fabs(dt)<TIME_CUT){
+	  if (fabs(dt)>TIME_CUT) continue;
+
+	  int row1=(*iter)[i]->row;
+	  int col1=(*iter)[i]->column;
+	  int row2=(*iter2)[j]->row;
+	  int col2=(*iter2)[j]->column;
+
+	  if (abs(row1-row2)<=1 && abs(col1-col2)<=1){
 	    matched=true;
 	    break;
+	  }
+
+	  // look for adjacent clusters between the lead glass and the insert,
+	  // if present
+	  bool isInsert1=dFCALGeom->isInsertBlock(row1,col1);
+	  bool isInsert2=dFCALGeom->isInsertBlock(row2,col2);
+	  if ((isInsert1&&!isInsert2) || (isInsert2&&!isInsert1)){
+	    double dx=(*iter)[i]->x-(*iter2)[j]->x;
+	    double dy=(*iter)[i]->y-(*iter2)[j]->y;
+	    if (fabs(dx)<borderCut && fabs(dy)<borderCut){
+	      matched=true;
+	      break;
+	    }
 	  }
 	}
 	if (matched){
