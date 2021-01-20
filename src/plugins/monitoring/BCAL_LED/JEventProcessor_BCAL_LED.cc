@@ -935,9 +935,9 @@ jerror_t JEventProcessor_BCAL_LED::erun(void) {
 jerror_t JEventProcessor_BCAL_LED::fini(void) {
 	// Called before program exit after event processing is finished.
 
-	int quad_count_up = dHist_quad_occ_up->GetMaximum();
+//	int quad_count_up = dHist_quad_occ_up->GetMaximum();
 //	if (up_trigger_count > 0) dHist_quad_occ_up->Scale(1/up_trigger_count);
-	int quad_count_down = dHist_quad_occ_down->GetMaximum();
+//	int quad_count_down = dHist_quad_occ_down->GetMaximum();
 //	if (down_trigger_count > 0) dHist_quad_occ_down->Scale(1/down_trigger_count);
         //cout << "up/ trigger count =" <<  quad_count_up << "/"<< up_trigger_count << ", down = " << quad_count_down<< "/"<< down_trigger_count << endl;
 

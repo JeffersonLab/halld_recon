@@ -270,12 +270,19 @@ class DParticleID:public jana::JObject
 
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
 
-                // Correct CDC dE/dx for variation w theta (space-charge & saturation)
+                // Correct CDC dE/dx from amplitude for variation w theta (space-charge & saturation)
                 vector<vector<double>>CDC_DEDX_CORRECTION;
                 double cdc_min_theta, cdc_max_theta;
                 double cdc_min_dedx, cdc_max_dedx;
                 double cdc_theta_step, cdc_dedx_step; 
                 int cdc_npoints_theta, cdc_npoints_dedx;
+
+                // Correction for dE/dx from integral
+                vector<vector<double>>CDC_I_DEDX_CORRECTION;
+                double cdc_i_min_theta, cdc_i_max_theta;
+                double cdc_i_min_dedx, cdc_i_max_dedx;
+                double cdc_i_theta_step, cdc_i_dedx_step; 
+                int cdc_i_npoints_theta, cdc_i_npoints_dedx;
 
 
         // Start counter resolution parameters
