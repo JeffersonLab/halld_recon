@@ -55,25 +55,42 @@ jerror_t DNeutralShower_factory_PreSelect::brun(jana::JEventLoop *locEventLoop, 
 	}
   	dFCALGeometry = fcalGeomVec[0];		
 
-	// build list of channels in the inner ring.  Pick all channels which
-	// touch the beam hole (including corners!)
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 27 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 28 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 29 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 30 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 31 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 27 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 28 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 29 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 30 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 31 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 28, 27 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 27 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 27 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 28, 31 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 31 ) );
-	dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 31 ) );
-
+	if (dFCALGeometry->insertSize()>0){
+	  // build list of channels in the inner ring.  Pick all channels which
+	  // touch the beam hole (including corners!)
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 118 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 119 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 120 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 118, 121 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 119, 118 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 120, 118 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 119, 121 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 120, 121 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 118 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 119 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 120 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 121, 121 ) );
+	}
+	else{
+	  // build list of channels in the inner ring.  Pick all channels which
+	  // touch the beam hole (including corners!)
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 27 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 28 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 29 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 30 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 27, 31 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 27 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 28 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 29 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 30 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 31, 31 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 28, 27 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 27 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 27 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 28, 31 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 29, 31 ) );
+	  dFCALInnerChannels.push_back( dFCALGeometry->channel( 30, 31 ) );
+	}
 
 	return NOERROR;
 }
@@ -109,16 +126,9 @@ jerror_t DNeutralShower_factory_PreSelect::evnt(jana::JEventLoop *locEventLoop, 
 				// sanity check
 				if(dFCALGeometry == nullptr) 
 					jerr << "In DNeutralShower_factory_PreSelect::evnt(), no FCAL Geometry???" << endl;
-				int row = dFCALGeometry->row((float)locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
-				int col = dFCALGeometry->column((float)locNeutralShowers[loc_i]->dSpacetimeVertex.X());
 				
-				// make sure that this is a valid block - if not (e.g. in the beamhole)
-				// we should reject such a shower
-				if(!dFCALGeometry->isBlockActive(row, col))
-					continue;
-					
-				int channel = dFCALGeometry->channel(row,col);
-
+				int channel = dFCALGeometry->channel(locNeutralShowers[loc_i]->dSpacetimeVertex.X(),locNeutralShowers[loc_i]->dSpacetimeVertex.Y());
+			
 				// is the center of shower in one of the channels outside of our fiducial cut?
 				if( find(dFCALInnerChannels.begin(), dFCALInnerChannels.end(), channel) 
                     != dFCALInnerChannels.end() ) {
