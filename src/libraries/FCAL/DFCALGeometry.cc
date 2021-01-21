@@ -164,6 +164,12 @@ DFCALGeometry::positionOnFace( int channel ) const
 }
 
 int
+DFCALGeometry::channel(double x,double y) const {
+  bool isInsert=(fabs(x-m_FCALdX)<m_insertSize&& fabs(y-m_FCALdY)<m_insertSize);
+  return channel(row(y,isInsert),column(x,isInsert));
+}
+
+int
 DFCALGeometry::channel( int row, int column ) const
 {
   // Check for insert blocks

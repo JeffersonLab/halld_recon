@@ -71,6 +71,7 @@ public:
 
 	bool inInsert(int channel) const;
 	int channel( int row, int column ) const;
+	int channel(double x,double y) const;
 
 	int row   ( int channel ) const { return m_row[channel];    }
 	int column( int channel ) const { return m_column[channel]; }
