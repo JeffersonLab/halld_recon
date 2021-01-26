@@ -22,6 +22,7 @@ using namespace jana;
 #include "CDC/DCDCDigiHit.h"
 #include "DAQ/Df125WindowRawData.h"     
 #include "DAQ/Df125CDCPulse.h"
+#include "DAQ/Df125TriggerTime.h"
 #include "TRIGGER/DTrigger.h"
 
 
@@ -33,6 +34,7 @@ using namespace jana;
 static TTree *t = NULL;
 static TTree *p = NULL;
 static TTree *w = NULL;
+static TTree *tt = NULL;
 
 
 extern "C"{
@@ -71,7 +73,7 @@ jerror_t JEventProcessor_cdc_scan::init(void)
 
   const uint32_t NSAMPLES = 200;
 
-  SHORT_MODE = 1;    // suppresses use of window raw data and warnings if it's not found
+  SHORT_MODE = 1;    // suppresses use of window raw data and warnings if not found
 
   if (gPARMS) {
     gPARMS->SetDefaultParameter("CDC_SCAN:SHORT_MODE",SHORT_MODE,"Set to 0 to include window raw data");
@@ -81,7 +83,7 @@ jerror_t JEventProcessor_cdc_scan::init(void)
 
 
 
-  if (SHORT_MODE)  cout << "Suppressing WRD info\n";
+  if (SHORT_MODE)  cout << "\n cdc_scan: suppressing WRD info\n\n";
 
   t = new TTree("T","Event stats");
 
@@ -184,6 +186,22 @@ jerror_t JEventProcessor_cdc_scan::init(void)
   w->Branch("paired",&paired,"paired/O");
   
 
+  tt = new TTree("TT","Trigger time");
+
+  ULong64_t tt_eventnum;
+  tt->Branch("eventnum",&tt_eventnum,"eventnum/l");
+
+  uint32_t tt_rocid;
+  tt->Branch("rocid",&tt_rocid,"rocid/i");
+
+  uint32_t tt_slot;
+  tt->Branch("slot",&tt_slot,"slot/i");
+
+  uint32_t tt_itrigger;
+  tt->Branch("itrigger",&tt_itrigger,"itrigger/i");
+
+  uint64_t tt_time;
+  tt->Branch("time",&tt_time,"time/l");
 
   japp->RootUnLock();
 
@@ -223,7 +241,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   // Only look at physics triggers
 
- 
+  
   const DTrigger* locTrigger = NULL; 
   loop->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
@@ -233,7 +251,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
 
-  //  cout << "Event " << eventnumber << endl;
+  //   cout << "Event " << eventnumber << endl;
 
 
   // get raw data for cdc
@@ -243,8 +261,55 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const Df125WindowRawData*> wrdvector;
   loop->Get(wrdvector);
 
+  vector<const Df125TriggerTime*> ttvector;
+  loop->Get(ttvector);
+
   uint32_t nd = (uint32_t)digihits.size();
   uint32_t nw = (uint32_t)wrdvector.size();
+  uint32_t ntt = (uint32_t)ttvector.size();
+
+  
+  if (ntt > 0) { //   Df125TriggerTime 
+
+    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+
+
+    ULong64_t tt_eventnum;
+    tt->SetBranchAddress("eventnum",&tt_eventnum);
+
+    uint32_t tt_rocid;
+    tt->SetBranchAddress("rocid",&tt_rocid);
+
+    uint32_t tt_slot;
+    tt->SetBranchAddress("slot",&tt_slot);
+
+    uint32_t tt_itrigger;
+    tt->SetBranchAddress("itrigger",&tt_itrigger);
+
+    ULong64_t tt_time;
+    tt->SetBranchAddress("time",&tt_time);
+
+    tt_eventnum = eventnumber;
+
+    for (uint32_t i=0; i<ntt; i++) {
+
+      const Df125TriggerTime *thistt = ttvector[i];
+
+      if (thistt->rocid < 25 || thistt->rocid > 28) continue;   // skip FDC
+
+      //      cout << thistt->rocid << " " << thistt->slot << " " << thistt->itrigger << " " << thistt->time << endl;
+
+      tt_rocid = thistt->rocid;
+      tt_slot = thistt->slot;
+      tt_itrigger = (uint32_t)thistt->itrigger;
+      tt_time = thistt->time;
+
+      tt->Fill();
+    }
+    japp->RootUnLock();
+
+  }
+
 
   uint32_t nhits = nd;  
   if (nw>nd) nhits = nw;
@@ -579,6 +644,9 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
   }  // if (nhits)
+
+
+
 
   return NOERROR;
 

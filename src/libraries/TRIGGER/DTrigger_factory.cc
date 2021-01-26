@@ -90,7 +90,10 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
     {
         // IF TRIGGER INFO IS NOT IN THE DATA STREAM, LOAD TRIGGER SIMULATIONS LAZILY
         
-      // cerr << " event status = " << std::bitset<32>(locEventLoop->GetJEvent().GetStatus()) << endl;
+        locTrigger->Set_L1TriggerBits(0);
+        locTrigger->Set_L1FrontPanelTriggerBits(0); 
+
+        // cerr << " event status = " << std::bitset<32>(locEventLoop->GetJEvent().GetStatus()) << endl;
 
         // don't bother simulating the trigger for non-physics events
         // for now, just don't run this for EVIO (raw data) events
@@ -113,11 +116,6 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
             locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
 
         }
-        else 
-        {
-	  locTrigger->Set_L1TriggerBits(0);
-	  locTrigger->Set_L1FrontPanelTriggerBits(0); 
-	}
     }
 
 	//SET LEVEL-3 TRIGGER INFO HERE
