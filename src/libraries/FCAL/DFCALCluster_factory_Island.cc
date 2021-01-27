@@ -105,40 +105,48 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     if (clusterCandidates[i].size()==1) continue;
 
     // Mininum number of hits to make a shower = 2
-    if (clusterCandidates[i].size()==2){
+    if (clusterCandidates[i].size()<4){
       // Create a new DFCALCluster object and add it to the _data list
       DFCALCluster *myCluster= new DFCALCluster(0);
       vector<const DFCALHit*>clusterCandidate=clusterCandidates[i];
       
-      double E1=clusterCandidate[0]->E;
-      double E2=clusterCandidate[1]->E;
-      double Etot=E1+E2;
+      double Etot=0.,t=0,x=0,y=0;
+      for (unsigned int k=0;k<clusterCandidate.size();k++){
+	double E=clusterCandidate[k]->E;
+	Etot+=E;
+	t+=E*clusterCandidate[k]->t;
+	x+=E*clusterCandidate[k]->x;
+	y+=E*clusterCandidate[k]->y;
 
-      double t1=clusterCandidate[0]->t;
-      double t2=clusterCandidate[1]->t;
-
-      double x1=clusterCandidate[0]->x;
-      double x2=clusterCandidate[1]->x;
-      double y1=clusterCandidate[0]->y;
-      double y2=clusterCandidate[1]->y;
+	myCluster->AddAssociatedObject(clusterCandidate[k]);
+      }
+      x/=Etot;
+      y/=Etot;
+      t/=Etot;
 	
       myCluster->setEnergy(Etot);
-      myCluster->setTimeEWeight((t1*E1+t2*E2)/Etot);
-      myCluster->setCentroid((x1*E1+x2*E2)/Etot,(y1*E1+y2*E2)/Etot);
-      myCluster->setChannelEmax(dFCALGeom->channel(clusterCandidate[0]->row,
-						   clusterCandidate[0]->column));
+      myCluster->setTimeEWeight(t);
+     
+      int channel=dFCALGeom->channel(clusterCandidate[0]->row,
+				     clusterCandidate[0]->column);
+      myCluster->setChannelEmax(channel);
 
-      myCluster->AddAssociatedObject(clusterCandidate[0]);
-      myCluster->AddAssociatedObject(clusterCandidate[1]);
-
+      // apply S-curve correction
+      double d=dFCALGeom->blockSize();
+      if (dFCALGeom->inInsert(channel)){
+	d=dFCALGeom->insertBlockSize();
+      }
+      CorrectPosition(channel,d,x,y);
+      myCluster->setCentroid(x,y);
+      
       _data.push_back(myCluster);
 
       continue;
     }
-    
-    //--------------------------------------------------------------------------
-    // Handle cluster candidates containing more than 2 hits
-    //--------------------------------------------------------------------------
+
+    //------------------------------------------------------------------------
+    // Handle cluster candidates containing more than 3 hits
+    //------------------------------------------------------------------------
     vector<const DFCALHit*>clusterHits=clusterCandidates[i];
     vector<PeakInfo>peaks;
 
@@ -256,13 +264,19 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      if (nhits_in_peak>2){
 		// Save the current peak list
 		vector<PeakInfo>saved_peaks=peaks;
+		PeakInfo peak_guess=myPeak;
 		
 		chisq_old=chisq;
 		bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
 		if (good_fit && chisq<chisq_old){
 		  peaks.push_back(myPeak);
 		}
-		else {
+		else if (peaks.size()==0){
+		  // Always add the first peak, even if the fit failed.
+		  // Use the initial guess for the peak info.
+		  peaks.push_back(peak_guess);
+		}
+		else{
 		  // No improvement from adding the new peak. Restore the old
 		  // list
 		  peaks=saved_peaks;
@@ -334,24 +348,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	myCluster->setChannelEmax(channel);
 
 	// apply S-curve correction
-	DVector2 xyblock=dFCALGeom->positionOnFace(channel);
 	double d=dFCALGeom->blockSize();
 	if (dFCALGeom->inInsert(channel)){
 	  d=dFCALGeom->insertBlockSize();
 	}
-	double d2=d*d;
-	double dx=peaks[k].x-xyblock.X();
-	double dx2=dx*dx;
-	double dy=peaks[k].y-xyblock.Y();
-	double dy2=dy*dy;
-	if (dFCALGeom->inInsert(channel)){
-	  peaks[k].x-=dx*(dx2-d2/4.)*(insertPosConst1+insertPosConst2*dx+insertPosConst3*dx2);
-	  peaks[k].y-=dy*(dy2-d2/4.)*(insertPosConst1+insertPosConst2*dy+insertPosConst3*dy2);
-	}
-	else{
-	  peaks[k].x-=dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2);
-	  peaks[k].y-=dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2);
-	}
+	CorrectPosition(channel,d,peaks[k].x,peaks[k].y);
 	myCluster->setCentroid(peaks[k].x,peaks[k].y);
 
 	// Add hits to the cluster object as associated objects
@@ -516,13 +517,11 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
   for (unsigned int k=0;k<max_iter;k++){
     // Make sure the energy is positive!
     if (myNewPeak.E<0){
-      //_DBG_ << "Negative energy?" << endl;
       return false;
     }
     //Check that the new peak positions are still within the fiducial area of
     // the detector 
     if (dFCALGeom->isFiducial(myNewPeak.x,myNewPeak.y)==false){
-      //_DBG_ <<  "Bad position x,y: "<< myNewPeak.x <<","<<myNewPeak.y << endl;
       return false;
     }
 
@@ -539,14 +538,12 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
 	
 	// Make sure the energy is positive!
 	if (myPeakInfo.E<0){
-	  //_DBG_ << "Negative energy?" << endl;
 	  return false;
 	}
 
 	//Check that the new peak positions are still within the fiducial 
 	//area of the detector 
 	if (dFCALGeom->isFiducial(myPeakInfo.x,myPeakInfo.y)==false){
-	  // _DBG_ <<  "Bad position x,y: "<< myPeakInfo.x <<","<<myPeakInfo.y << endl;
 	  return false;
 	}
 
@@ -785,5 +782,24 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
       peaks=saved_peaks;
       chisq=chisq_old;
     }
+  }
+}
+
+// Apply "S-curve" correction to the peak position
+void DFCALCluster_factory_Island::CorrectPosition(int channel,double d,
+						  double &x,double &y) const{
+  DVector2 xyblock=dFCALGeom->positionOnFace(channel);
+  double d2=d*d;
+  double dx=x-xyblock.X();
+  double dx2=dx*dx;
+  double dy=y-xyblock.Y();
+  double dy2=dy*dy;
+  if (dFCALGeom->inInsert(channel)){
+    x-=dx*(dx2-d2/4.)*(insertPosConst1+insertPosConst2*dx+insertPosConst3*dx2);
+    y-=dy*(dy2-d2/4.)*(insertPosConst1+insertPosConst2*dy+insertPosConst3*dy2);
+  }
+  else{
+    x-=dx*(dx2-d2/4.)*(posConst1+posConst2*dx+posConst3*dx2);
+    y-=dy*(dy2-d2/4.)*(posConst1+posConst2*dy+posConst3*dy2);
   }
 }
