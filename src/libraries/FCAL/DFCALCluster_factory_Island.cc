@@ -342,6 +342,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    jmax=j;
 	  }
 	}
+
 	myCluster->setTimeEWeight(t/fsum);
 	int channel=dFCALGeom->channel(clusterHits[jmax]->row,
 				       clusterHits[jmax]->column);
@@ -362,8 +363,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	  else{
 	    // Output hits surrounding peak position
-	    double dx=clusterHits[j]->x-peaks[k].x;
-	    double dy=clusterHits[j]->y-peaks[k].y;
+	    double dx=clusterHits[j]->x-clusterHits[jmax]->x;
+	    double dy=clusterHits[j]->y-clusterHits[jmax]->y;
 	    double dcut=2.5*d;
 	    if (fabs(dx)<dcut && fabs(dy)<dcut){
 	      myCluster->AddAssociatedObject(clusterHits[j]);
