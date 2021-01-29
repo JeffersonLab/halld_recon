@@ -46,6 +46,7 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 			    const PeakInfo &myPeakInfo) const;
   void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
 		  vector<PeakInfo>&peaks,double &chisq) const;
+  void CorrectPosition(int channel,double d,double &x,double &y) const;
 
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
   double SHOWER_WIDTH_PARAMETER;
