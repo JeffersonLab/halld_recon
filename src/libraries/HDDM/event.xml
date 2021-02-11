@@ -223,13 +223,13 @@
         </fmwpcTruthPoint>
       </forwardMWPC>
       <CGEM minOccurs="0">
-        <CGem layer="int" maxOccurs="unbounded" minOccurs="0" hole="int">
-          <CGemTruthHit dE="float" dx="float" maxOccurs="unbounded" t="float"/>
-          <CGemHit dE="float" maxOccurs="unbounded" t="float"/>
-        </CGem>
-        <CGemTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+        <cgem layer="int" maxOccurs="unbounded" minOccurs="0" hole="int">
+          <CGEMTruthHit dE="float" dx="float" maxOccurs="unbounded" t="float"/>
+          <CGEMHit dE="float" maxOccurs="unbounded" t="float"/>
+        </cgem>
+        <CGEMTruthPoint E="float" dEdx="float" dradius="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>
-        </CGemTruthPoint>
+        </CGEMTruthPoint>
       </CGEM>
 
     </hitView>

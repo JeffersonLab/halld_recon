@@ -337,6 +337,10 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DPSCTruthHit(record, 
                      dynamic_cast<JFactory<DPSCTruthHit>*>(factory), tag);
 
+   if (dataClassName == "DCGEMTruthHit")
+      return Extract_DCGEMTruthHit(record, 
+                     dynamic_cast<JFactory<DCGEMTruthHit>*>(factory), tag);
+
    if (dataClassName == "DRFTime")
       return Extract_DRFTime(record, 
                      dynamic_cast<JFactory<DRFTime>*>(factory), loop);
@@ -2592,6 +2596,48 @@ jerror_t DEventSourceHDDM::Extract_DPSCTruthHit(hddm_s::HDDM *record,
 
    return NOERROR;
 }
+
+//------------------
+// Extract_DCGEMTruthHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DCGEMTruthHit(hddm_s::HDDM *record,
+						 JFactory<DCGEMTruthHit>* factory, string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+
+   vector<DCGEMTruthHit*> data;
+   //const hddm_s::CGEMGapList &tags = record->getMicroChannels();
+   const hddm_s::CGEMTruthPointList &points = record->getCGEMTruthPoints();
+   hddm_s::CGEMTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DCGEMTruthHit *hit = new DCGEMTruthHit;
+      hit->dEdx    = iter->getDEdx();
+      hit->primary = iter->getPrimary();
+      hit->ptype   = iter->getPtype();
+      hit->t       = iter->getT();
+      hit->x       = iter->getX();
+      hit->y       = iter->getY();
+      hit->z       = iter->getZ();
+      hit->track   = iter->getTrack();
+      //hit->column  = iter->getModule();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      hit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
 
 //------------------
 // Etract_DTPOLHit
