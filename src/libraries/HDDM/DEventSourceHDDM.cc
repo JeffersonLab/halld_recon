@@ -336,6 +336,10 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DPSCTruthHit")
       return Extract_DPSCTruthHit(record, 
                      dynamic_cast<JFactory<DPSCTruthHit>*>(factory), tag);
+   
+   if (dataClassName == "DCGEMHit")
+      return Extract_DCGEMHit(record,
+                     dynamic_cast<JFactory<DCGEMHit>*>(factory), tag);
 
    if (dataClassName == "DCGEMTruthHit")
       return Extract_DCGEMTruthHit(record, 
@@ -2596,6 +2600,41 @@ jerror_t DEventSourceHDDM::Extract_DPSCTruthHit(hddm_s::HDDM *record,
 
    return NOERROR;
 }
+
+
+//------------------
+// Extract_DCGEMHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DCGEMHit(hddm_s::HDDM *record,  JFactory<DCGEMHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL) return OBJECT_NOT_AVAILABLE;
+   if (tag != "") return OBJECT_NOT_AVAILABLE;
+
+   vector<DCGEMHit*> data;
+
+   const hddm_s::CGEMHitList &points = record->getCGEMHits();
+   hddm_s::CGEMHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DCGEMHit *hit = new DCGEMHit;
+      hit->layer = iter->getLayer();
+      hit->dE    = iter->getDE();
+      hit->t     = iter->getT();
+      hit->x     = iter->getX();
+      hit->y     = iter->getY();
+      hit->z     = iter->getZ();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
 
 //------------------
 // Extract_DCGEMTruthHit

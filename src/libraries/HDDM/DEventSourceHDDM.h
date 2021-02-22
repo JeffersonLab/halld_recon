@@ -74,7 +74,7 @@ using namespace std;
 #include "TPOL/DTPOLHit.h"
 #include "TPOL/DTPOLTruthHit.h"
 #include "CGEM/DCGEMTruthHit.h"
-//#include "CGEM/DCGEMHit.h"
+#include "CGEM/DCGEMHit.h"
 #include "DResourcePool.h"
 
 class DEventSourceHDDM:public JEventSource
