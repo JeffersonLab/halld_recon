@@ -8,30 +8,33 @@
 #ifndef _DCGEMHit_
 #define _DCGEMHit_
 
-#include <JANA/jerror.h>
+#include <JANA/JObject.h>
+#include <JANA/JFactory.h>
+using namespace jana;
 
 class DCGEMHit:public JObject{
-	public:
-		JOBJECT_PUBLIC(DCGEMHit);
+ 
+ public:
+  JOBJECT_PUBLIC(DCGEMHit);
 
-		int layer;   // 1-8
-		//int hole;    // 1-144
-		float dE;    // energy in GeV
-		float x;
-		float y;
-		float z;
-		float t;     // time in ns
-
-		void toStrings(vector<pair<string, string> >&items) const {
-			AddString(items, "layer", "%d", layer);
-			//AddString(items, "hole", "%d", hole);
-			AddString(items, "dE(keV)", "%3.1f", dE*1.0E6);
-			AddString(items, "t", "%3.3f", t);
-			AddString(items, "x", "%3.1f", x);
-			AddString(items, "y", "%3.1f", y);
-			AddString(items, "z", "%3.1f", z);
-		}
-
+  DCGEMHit(){}
+  
+  int layer;   // 1-8
+  float dE;    // energy in GeV
+  float x;
+  float y;
+  float z;
+  float t;     // time in ns
+  
+  void toStrings(vector<pair<string, string> >&items) const {
+    AddString(items, "layer", "%d", layer);
+    AddString(items, "dE(keV)", "%3.1f", dE*1.0E6);
+    AddString(items, "t", "%3.3f", t);
+    AddString(items, "x", "%3.1f", x);
+    AddString(items, "y", "%3.1f", y);
+    AddString(items, "z", "%3.1f", z);
+  }
+  
 };
 
 #endif // _DCGEMHit_

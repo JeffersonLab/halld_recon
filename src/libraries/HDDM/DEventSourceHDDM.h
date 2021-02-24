@@ -99,8 +99,8 @@ class DEventSourceHDDM:public JEventSource
       jerror_t GetCCALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetSCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetCGEMTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
-
-	   jerror_t Extract_DRFTime(hddm_s::HDDM *record, JFactory<DRFTime> *factory, JEventLoop* locEventLoop);
+      
+      jerror_t Extract_DRFTime(hddm_s::HDDM *record, JFactory<DRFTime> *factory, JEventLoop* locEventLoop);
       jerror_t Extract_DBCALTruthShower(hddm_s::HDDM *record, JFactory<DBCALTruthShower> *factory, string tag);
       jerror_t Extract_DBCALTruthCell(hddm_s::HDDM *record, JFactory<DBCALTruthCell> *factory, string tag);
       jerror_t Extract_DBCALSiPMHit(hddm_s::HDDM *record, JFactory<DBCALSiPMHit> *factory, string tag);
@@ -124,7 +124,7 @@ class DEventSourceHDDM:public JEventSource
 
       jerror_t Extract_DSCHit(hddm_s::HDDM *record,  JFactory<DSCHit> *factory, string tag);
       jerror_t Extract_DSCTruthHit(hddm_s::HDDM *record,  JFactory<DSCTruthHit> *factory, string tag);
-      jerror_t Extract_DCGEMTruthHit(hddm_s::HDDM *record,  JFactory<DCGEMTruthHit> *factory, string tag);
+      jerror_t Extract_DCGEMHit(hddm_s::HDDM *record,  JFactory<DCGEMHit> *factory, string tag);
 
       jerror_t Extract_DTrackTimeBased(hddm_s::HDDM *record,  JFactory<DTrackTimeBased> *factory, string tag, int32_t runnumber, JEventLoop* locEventLoop);
       string StringToTMatrixFSym(string &str_vals, TMatrixFSym* mat, int Nrows, int Ncols);

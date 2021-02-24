@@ -179,7 +179,7 @@
           <taggerHit maxOccurs="unbounded" minOccurs="0" npe="int" t="float" tADC="float"/>
           <taggerTruthHit maxOccurs="unbounded" minOccurs="0" bg="int" dE="float" E="float" t="float"/>
         </hodoChannel>
-      </tagger>
+     </tagger>
       <pairSpectrometerFine minOccurs="0">
         <psTile maxOccurs="unbounded" minOccurs="0" column="int" arm="int">
           <psHit dE="float" t="float" maxOccurs="unbounded"/>
@@ -223,11 +223,11 @@
         </fmwpcTruthPoint>
       </forwardMWPC>
       <CGEM minOccurs="0">
-        <cgem layer="int" maxOccurs="unbounded" minOccurs="0" hole="int">
-          <CGEMTruthHit dE="float" dx="float" maxOccurs="unbounded" t="float"/>
-          <CGEMHit dE="float" maxOccurs="unbounded" t="float" x="float" y="float" z="float"/>
-        </cgem>
-        <CGEMTruthPoint E="float" dEdx="float" dradius="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+        <cgemLayer layer="int" maxOccurs="unbounded" minOccurs="0">
+          <CGEMTruthHit  dE="float" dx="float" maxOccurs="unbounded" ptype="int" track="int" t="float" x="float" y="float" z="float"/>
+	  <CGEMHit dE="float" maxOccurs="unbounded" t="float" x="float" y="float" z="float"/>
+	</cgemLayer>
+	<CGEMTruthPoint E="float" dEdx="float" dradius="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>
         </CGEMTruthPoint>
       </CGEM>

@@ -339,11 +339,11 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    
    if (dataClassName == "DCGEMHit")
       return Extract_DCGEMHit(record,
-                     dynamic_cast<JFactory<DCGEMHit>*>(factory), tag);
+			      dynamic_cast<JFactory<DCGEMHit>*>(factory), tag);
 
-   if (dataClassName == "DCGEMTruthHit")
-      return Extract_DCGEMTruthHit(record, 
-                     dynamic_cast<JFactory<DCGEMTruthHit>*>(factory), tag);
+   //if (dataClassName == "DCGEMTruthHit")
+   //return Extract_DCGEMTruthHit(record, 
+   //dynamic_cast<JFactory<DCGEMTruthHit>*>(factory), tag);
 
    if (dataClassName == "DRFTime")
       return Extract_DRFTime(record, 
@@ -599,6 +599,7 @@ jerror_t DEventSourceHDDM::Extract_DMCTrackHit(hddm_s::HDDM *record,
    GetCherenkovTruthHits(record, data);
    GetFCALTruthHits(record, data);
    GetSCTruthHits(record, data);
+   GetCGEMTruthHits(record, data);
 
    // It has happened that some CDC hits have "nan" for the drift time
    // in a peculiar event Alex Somov came across. This ultimately caused
@@ -648,6 +649,37 @@ jerror_t DEventSourceHDDM::GetCDCTruthHits(hddm_s::HDDM *record,
       mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
       data.push_back(mctrackhit);
    }
+      
+   return NOERROR;
+}
+
+//-------------------
+// GetCGEMTruthHits
+//-------------------
+jerror_t DEventSourceHDDM::GetCGEMTruthHits(hddm_s::HDDM *record, 
+					    vector<DMCTrackHit*>& data)
+{
+  const hddm_s::CGEMTruthPointList &points = record->getCGEMTruthPoints();
+  hddm_s::CGEMTruthPointList::iterator iter;
+  for (iter = points.begin(); iter != points.end(); ++iter) {
+    float x = iter->getX();
+    float y = iter->getY();
+    DMCTrackHit *mctrackhit = new DMCTrackHit;
+    mctrackhit->r       = sqrt(x*x + y*y);
+    mctrackhit->phi     = atan2(y,x);
+    //mctrackhit->e       = iter->getDE();
+    //mctrackhit->t       = iter->getT();
+    //mctrackhit->x       = iter->getX();
+    //mctrackhit->y       = iter->getY();
+    mctrackhit->z       = iter->getZ();
+    mctrackhit->track   = iter->getTrack();
+    mctrackhit->primary = iter->getPrimary();
+    mctrackhit->ptype   = iter->getPtype();
+    mctrackhit->system  = SYS_CGEM;
+    const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+    mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+    data.push_back(mctrackhit);
+  }
       
    return NOERROR;
 }
@@ -2616,26 +2648,42 @@ jerror_t DEventSourceHDDM::Extract_DCGEMHit(hddm_s::HDDM *record,  JFactory<DCGE
 
    vector<DCGEMHit*> data;
 
-   const hddm_s::CGEMHitList &points = record->getCGEMHits();
-   hddm_s::CGEMHitList::iterator iter;
-   for (iter = points.begin(); iter != points.end(); ++iter) {
-      DCGEMHit *hit = new DCGEMHit;
-      hit->layer = iter->getLayer();
-      hit->dE    = iter->getDE();
-      hit->t     = iter->getT();
-      hit->x     = iter->getX();
-      hit->y     = iter->getY();
-      hit->z     = iter->getZ();
-      data.push_back(hit);
+   if (tag == "") {
+     const hddm_s::CGEMHitList &points = record->getCGEMHits();
+     hddm_s::CGEMHitList::iterator iter;
+     for (iter = points.begin(); iter != points.end(); ++iter) {
+       DCGEMHit *hit = new DCGEMHit;
+       hit->layer = iter->getLayer();
+       hit->dE    = iter->getDE();
+       hit->t     = iter->getT();
+       hit->x     = iter->getX();
+       hit->y     = iter->getY();
+       hit->z     = iter->getZ();
+       data.push_back(hit);
+     }
+   } else if (tag == "Truth") {
+      const hddm_s::CGEMTruthHitList &truthHits = record->getCGEMTruthHits();
+      hddm_s::CGEMTruthHitList::iterator iter;
+      for (iter = truthHits.begin(); iter != truthHits.end(); ++iter)
+      {
+         DCGEMHit *hit = new DCGEMHit;
+         hit->layer = iter->getLayer();
+	 hit->dE    = iter->getDE();
+	 hit->t     = iter->getT();
+	 hit->x     = iter->getX();
+	 hit->y     = iter->getY();
+	 hit->z     = iter->getZ();
+	 data.push_back(hit);
+      }
    }
-
+      
    // Copy into factory
    factory->CopyTo(data);
 
    return NOERROR;
 }
 
-
+/*
 //------------------
 // Extract_DCGEMTruthHit
 //------------------
@@ -2676,7 +2724,7 @@ jerror_t DEventSourceHDDM::Extract_DCGEMTruthHit(hddm_s::HDDM *record,
 
    return NOERROR;
 }
-
+*/
 
 //------------------
 // Etract_DTPOLHit

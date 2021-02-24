@@ -21,6 +21,7 @@
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMHit.h>
 #include <TPOL/DTPOLHit.h>
+#include <CGEM/DCGEMHit.h>
 #include <RF/DRFTime.h>
 #include <DIRC/DDIRCPmtHit.h>
 using namespace std;

@@ -15,7 +15,6 @@ class DCGEMTruthHit:public JObject{
 		JOBJECT_PUBLIC(DCGEMTruthHit);
 
 		int layer;   // 1-8
-		//int hole;    // 1-144
 		float dEdx;
 		bool primary;
 		int track;

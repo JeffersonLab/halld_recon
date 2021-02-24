@@ -79,6 +79,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	vector<const DTPOLHit*> TPOLHits;
 	vector<const DRFTime*> RFtimes;
 	vector<const DDIRCPmtHit*> DIRCPmtHits;
+	vector<const DCGEMHit*> CGEMHits;
 
 	locEventLoop->Get(CDCHits, CDC_TAG.c_str());	
 	locEventLoop->Get(FDCHits, FDC_TAG.c_str());
@@ -95,8 +96,9 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(TPOLHits);
 	locEventLoop->Get(RFtimes);
 	locEventLoop->Get(DIRCPmtHits);
+	locEventLoop->Get(CGEMHits);
 
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0))
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && CGEMHits.size()==uint(0))
 	{
 		return false;
 	}
@@ -705,6 +707,38 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
         cdcstrawhitit->getCdcHitQFs().begin()->setQF(CDCHits[i]->QF);
 	}
 
+
+	//===========================CGEM=============================================
+
+	for(uint i=0; i<CGEMHits.size(); ++i) {
+	  
+	  if(i == 0) {
+	    hitv->addCGEMs(); //if we have a hit then add the CGEM
+	  }
+	  //CGEM only has one hit per block per event so we need not search
+	  hitv->getCGEM().addCgemLayers();
+
+	  hddm_s::CgemLayerList* CGEM_LayerList = &hitv->getCGEM().getCgemLayers();
+	  hddm_s::CgemLayerList::iterator CGEM_LayerIterator = CGEM_LayerList->end()-1;
+	  CGEM_LayerIterator->setLayer(CGEMHits[i]->layer);
+	  	  
+	  CGEM_LayerIterator->addCGEMHits();
+	  hddm_s::CGEMHitList* cgemhitl = &CGEM_LayerIterator->getCGEMHits();
+	  hddm_s::CGEMHitList::iterator cgemhitit = cgemhitl->end()-1;
+	  //cgemhitit->setEnd(CGEMHits[i]->end);
+	  //cgemhitit->setLayer(CGEMHits[i]->layer);
+	  cgemhitit->setDE(CGEMHits[i]->dE);
+	  cgemhitit->setX(CGEMHits[i]->x);
+	  cgemhitit->setY(CGEMHits[i]->y);
+	  cgemhitit->setZ(CGEMHits[i]->z);
+	  cgemhitit->setT(CGEMHits[i]->t);
+	  //cgemhitit->addCgemDigihits();
+	  //cgemhitit->getCgemDigihits().begin()->setPeakAmp(CDCHits[i]->amp);
+	  //cgemhitit->addCgemHitQFs();
+	  //cgemhitit->getCdcHitQFs().begin()->setQF(CDCHits[i]->QF);
+	  
+	}
+
 	//========================================RFtime=======================================================
 
 	for(uint i=0; i<RFtimes.size(); ++i)
@@ -770,6 +804,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	TPOLHits.clear();
 	RFtimes.clear();
 	DIRCPmtHits.clear();
+	CGEMHits.clear();
 
 	return locWriteStatus;
 }
