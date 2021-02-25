@@ -733,7 +733,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	  cgemhitit->setZ(CGEMHits[i]->z);
 	  cgemhitit->setT(CGEMHits[i]->t);
 	  //cgemhitit->addCgemDigihits();
-	  //cgemhitit->getCgemDigihits().begin()->setPeakAmp(CDCHits[i]->amp);
+	  //cgemhitit->getCgemDigihits().begin()->setDE(CDCHits[i]->amp);
 	  //cgemhitit->addCgemHitQFs();
 	  //cgemhitit->getCdcHitQFs().begin()->setQF(CDCHits[i]->QF);
 	  
