@@ -2971,6 +2971,13 @@ void DHistogramAction_DetectedParticleKinematics::Initialize(JEventLoop* locEven
 			locHistTitle = locParticleROOTName + string(";Vertex-T (ns)");
 			dHistMap_VertexT[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumTBins, dMinT, dMaxT);
 
+			// histogram shower energy for massive neutrals reconstructed in the calorimeter
+			if(locPID == Neutron) {
+				locHistName = "ShowerE";
+				locHistTitle = locParticleROOTName + string(";Shower Energy (GeV)");
+				dHistMap_ShowerE[locPID] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumPBins, dMinP, dMaxP);
+			}
+
 			gDirectory->cd("..");
 		}
 
@@ -3063,9 +3070,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
-		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_Hypothesis(Gamma);
-		if(locNeutralParticleHypothesis->Get_FOM() < dMinPIDFOM)
-			continue;
+		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_BestFOM();
 
 		Particle_t locPID = locNeutralParticleHypothesis->PID();
 		if(dHistMap_P.find(locPID) == dHistMap_P.end())
@@ -3078,6 +3083,8 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 
 		double locBeta_Timing = locNeutralParticleHypothesis->measuredBeta();
 		double locDeltaBeta = locBeta_Timing - locNeutralParticleHypothesis->lorentzMomentum().Beta();
+
+		double locShowerEnergy = locNeutralParticleHypothesis->Get_NeutralShower()->dEnergy;
 
 		//FILL HISTOGRAMS
 		//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
@@ -3094,6 +3101,10 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 			dHistMap_VertexZ[locPID]->Fill(locNeutralParticleHypothesis->position().Z());
 			dHistMap_VertexYVsX[locPID]->Fill(locNeutralParticleHypothesis->position().X(), locNeutralParticleHypothesis->position().Y());
 			dHistMap_VertexT[locPID]->Fill(locNeutralParticleHypothesis->time());
+			
+			if(locPID == Neutron) {
+				dHistMap_ShowerE[locPID]->Fill(locShowerEnergy);
+			}
 		}
 		Unlock_Action();
 	}
@@ -3365,7 +3376,10 @@ bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop
 
 	for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 	{
+		// Only plotting photons for now, maybe we want to include neutrons at some point?
 		const DNeutralParticleHypothesis* locNeutralParticleHypothesis = locNeutralParticles[loc_i]->Get_Hypothesis(Gamma);
+		if(locNeutralParticleHypothesis == nullptr)  // no photon hypothesis!
+			continue;
 		if(locNeutralParticleHypothesis->Get_FOM() < dMinPIDFOM)
 			continue;
 

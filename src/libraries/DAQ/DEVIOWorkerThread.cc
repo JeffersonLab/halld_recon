@@ -1716,17 +1716,17 @@ void DEVIOWorkerThread::Parsef125Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 				pe = NULL;
 				break;
             case 2: // Event Header
-                //slot_event_header = (*iptr>>22) & 0x1F;
-                itrigger = (*iptr>>0) & 0x3FFFFFF;
+                                //slot_event_header = (*iptr>>22) & 0x1F;
+                                itrigger = (*iptr>>0) & 0xFFFF;
 				pe = *pe_iter++;
-                if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<" last_itrigger="<<last_itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
+                                if(VERBOSE>7) cout << "      FADC125 Event Header: itrigger="<<itrigger<<" last_itrigger="<<last_itrigger<<", rocid="<<rocid<<", slot="<<slot <<endl;
 				break;
             case 3: // Trigger Time
 				{
-					uint64_t t = ((*iptr)&0xFFFFFF)<<0;
+					uint64_t t = ((*iptr)&0xFFFFFF)<<24;
 					iptr++;
 					if(((*iptr>>31) & 0x1) == 0){
-						t += ((*iptr)&0xFFFFFF)<<24; // from word on the street: second trigger time word is optional!!??
+						t += ((*iptr)&0xFFFFFF)<<0;  
 					}else{
 						iptr--;
 					}

@@ -713,7 +713,7 @@ DLorentzVector DSourceComboP4Handler::Calc_MassiveNeutralP4(const DNeutralShower
 	locPath.SetMag(locPMag); //is now the momentum!
 
 	if(dDebugLevel >= 20)
-		cout << "Calc_MassiveNeutralP4: pid, mass, shower-z, vertex-z, path, shower t, rf t, delta-t, beta, pmag = " << locPID << ", " << locMass << ", " << locNeutralShower->dSpacetimeVertex.Vect().Z() << ", " << locVertex.Z() << ", " << locPathMag << ", " << locNeutralShower->dSpacetimeVertex.T() << ", " << locRFVertexTime << ", " << locDeltaT << ", " << locBeta << ", " << locPMag << endl;
+		cout << "Calc_MassiveNeutralP4: pid, mass, shower-z, vertex-z, path, shower t, rf t, delta-t, beta, pmag, shower E = " << locPID << ", " << locMass << ", " << locNeutralShower->dSpacetimeVertex.Vect().Z() << ", " << locVertex.Z() << ", " << locPathMag << ", " << locNeutralShower->dSpacetimeVertex.T() << ", " << locRFVertexTime << ", " << locDeltaT << ", " << locBeta << ", " << locPMag << ", " << locNeutralShower->dEnergy << endl;
 
 	auto locEnergy = sqrt(locPMag*locPMag + locMass*locMass);
 	return DLorentzVector(locPath, locEnergy);
