@@ -19,6 +19,7 @@ class DEventHitStatistics:public jana::JObject{
       int cdc_straws;
       int fdc_pseudos;
       int bcal_cells;
+      int cgem_layers;
       int fcal_blocks;
       int ccal_blocks;
       int tof_paddles;
@@ -27,6 +28,7 @@ class DEventHitStatistics:public jana::JObject{
       void toStrings(vector<pair<string,string> > &items) const {
         AddString(items, "start counter hits", "%d", start_counters);
         AddString(items, "cdc straw hits", "%d", cdc_straws);
+	AddString(items, "cgem layers hits", "%d", cgem_layers);
         AddString(items, "fdc pseudo-hits", "%d", fdc_pseudos);
         AddString(items, "bcal cells hit", "%d", bcal_cells);
         AddString(items, "fcal blocks hit", "%d", fcal_blocks);

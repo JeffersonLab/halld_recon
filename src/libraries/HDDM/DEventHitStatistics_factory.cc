@@ -15,6 +15,7 @@
 #include <BCAL/DBCALHit.h>
 #include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALHit.h>
+#include <CGEM/DCGEMHit.h>
 #include <TOF/DTOFPaddleHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 
@@ -66,6 +67,11 @@ jerror_t DEventHitStatistics_factory::evnt(JEventLoop *loop, uint64_t eventnumbe
        vector<const DFDCPseudo*> hits;
 	   loop->Get(hits);
        stats->fdc_pseudos = hits.size();
+    }
+    {
+       vector<const DCGEMHit*> hits;
+	   loop->Get(hits);
+       stats->cgem_layers = hits.size();
     }
     {
        vector<const DBCALHit*> hits;
