@@ -659,8 +659,8 @@ jerror_t DEventSourceHDDM::GetCDCTruthHits(hddm_s::HDDM *record,
 jerror_t DEventSourceHDDM::GetCGEMTruthHits(hddm_s::HDDM *record, 
 					    vector<DMCTrackHit*>& data)
 {
-  const hddm_s::CGEMTruthPointList &points = record->getCGEMTruthPoints();
-  hddm_s::CGEMTruthPointList::iterator iter;
+  const hddm_s::CgemTruthPointList &points = record->getCgemTruthPoints();
+  hddm_s::CgemTruthPointList::iterator iter;
   for (iter = points.begin(); iter != points.end(); ++iter) {
     float x = iter->getX();
     float y = iter->getY();
@@ -2649,8 +2649,8 @@ jerror_t DEventSourceHDDM::Extract_DCGEMHit(hddm_s::HDDM *record,  JFactory<DCGE
    vector<DCGEMHit*> data;
 
    if (tag == "") {
-     const hddm_s::CGEMHitList &points = record->getCGEMHits();
-     hddm_s::CGEMHitList::iterator iter;
+     const hddm_s::CgemHitList &points = record->getCgemHits();
+     hddm_s::CgemHitList::iterator iter;
      for (iter = points.begin(); iter != points.end(); ++iter) {
        DCGEMHit *hit = new DCGEMHit;
        hit->layer = iter->getLayer();
@@ -2662,8 +2662,8 @@ jerror_t DEventSourceHDDM::Extract_DCGEMHit(hddm_s::HDDM *record,  JFactory<DCGE
        data.push_back(hit);
      }
    } else if (tag == "Truth") {
-      const hddm_s::CGEMTruthHitList &truthHits = record->getCGEMTruthHits();
-      hddm_s::CGEMTruthHitList::iterator iter;
+      const hddm_s::CgemTruthHitList &truthHits = record->getCgemTruthHits();
+      hddm_s::CgemTruthHitList::iterator iter;
       for (iter = truthHits.begin(); iter != truthHits.end(); ++iter)
       {
          DCGEMHit *hit = new DCGEMHit;

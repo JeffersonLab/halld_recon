@@ -713,18 +713,18 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	for(uint i=0; i<CGEMHits.size(); ++i) {
 	  
 	  if(i == 0) {
-	    hitv->addCGEMs(); //if we have a hit then add the CGEM
+	    hitv->addCylindricalGEMs(); //if we have a hit then add the CGEM
 	  }
 	  //CGEM only has one hit per block per event so we need not search
-	  hitv->getCGEM().addCgemLayers();
+	  hitv->getCylindricalGEM().addCgemLayers();
 
-	  hddm_s::CgemLayerList* CGEM_LayerList = &hitv->getCGEM().getCgemLayers();
+	  hddm_s::CgemLayerList* CGEM_LayerList = &hitv->getCylindricalGEM().getCgemLayers();
 	  hddm_s::CgemLayerList::iterator CGEM_LayerIterator = CGEM_LayerList->end()-1;
 	  CGEM_LayerIterator->setLayer(CGEMHits[i]->layer);
 	  	  
-	  CGEM_LayerIterator->addCGEMHits();
-	  hddm_s::CGEMHitList* cgemhitl = &CGEM_LayerIterator->getCGEMHits();
-	  hddm_s::CGEMHitList::iterator cgemhitit = cgemhitl->end()-1;
+	  CGEM_LayerIterator->addCgemHits();
+	  hddm_s::CgemHitList* cgemhitl = &CGEM_LayerIterator->getCgemHits();
+	  hddm_s::CgemHitList::iterator cgemhitit = cgemhitl->end()-1;
 	  //cgemhitit->setEnd(CGEMHits[i]->end);
 	  //cgemhitit->setLayer(CGEMHits[i]->layer);
 	  cgemhitit->setDE(CGEMHits[i]->dE);

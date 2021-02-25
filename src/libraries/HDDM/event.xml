@@ -222,15 +222,15 @@
           <trackID minOccurs="0" itrack="int"/>
         </fmwpcTruthPoint>
       </forwardMWPC>
-      <CGEM minOccurs="0">
+      <cylindricalGEM minOccurs="0">
         <cgemLayer layer="int" maxOccurs="unbounded" minOccurs="0">
-          <CGEMTruthHit  dE="float" dx="float" maxOccurs="unbounded" ptype="int" track="int" t="float" x="float" y="float" z="float"/>
-	  <CGEMHit dE="float" maxOccurs="unbounded" t="float" x="float" y="float" z="float"/>
+          <cgemTruthHit  dE="float" dx="float" maxOccurs="unbounded" ptype="int" track="int" t="float" x="float" y="float" z="float"/>
+	  <cgemHit dE="float" maxOccurs="unbounded" t="float" x="float" y="float" z="float"/>
 	</cgemLayer>
-	<CGEMTruthPoint E="float" dEdx="float" dradius="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+	<cgemTruthPoint E="float" dEdx="float" dradius="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>
-        </CGEMTruthPoint>
-      </CGEM>
+        </cgemTruthPoint>
+      </cylindricalGEM>
 
     </hitView>
     <reconView minOccurs="0" version="1.0">
