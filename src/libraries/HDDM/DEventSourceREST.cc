@@ -581,10 +581,10 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
       hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
       taghGeom->E_to_counter(locTAGHiter->getE(), gamma->dCounter);
       if (locTaghChannelList.size() > 0) {
-         if (gamma->dCounter != locTaghChannelList().getColumn()) {
+         if (gamma->dCounter != locTaghChannelList().getCounter()) {
             std::cerr << "Error in DEventSourceREST - tagger microscope energy "
                          "lookup mismatch:" << std::endl
-                      << "   TAGM column = " << locTaghChannelList().getColumn()
+                      << "   TAGM column = " << locTaghChannelList().getCounter()
                       << std::endl
                       << "   Etag = " << locTAGHiter->getE()
                       << std::endl
