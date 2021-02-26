@@ -171,12 +171,16 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::TagmBeamPhotonList locTagmBeamPhotonList = res().addTagmBeamPhotons(1);
 			locTagmBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons[loc_i]->dSystem == SYS_TAGH)
 		{
 			hddm_r::TaghBeamPhotonList locTaghBeamPhotonList = res().addTaghBeamPhotons(1);
 			locTaghBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
 		}
 	}
 	for(size_t loc_i = 0; loc_i < locBeamPhotons_TAGGEDMCGEN.size(); ++loc_i)
@@ -187,6 +191,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTagmBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTagmBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons_TAGGEDMCGEN[loc_i]->dSystem == SYS_TAGH)
 		{
@@ -194,6 +200,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTaghBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTaghBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
 		}
 	}
 
@@ -396,6 +404,27 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			elo2().setDEdxCDCAmp(tracks[i]->ddEdx_CDC_amp);
 
 		}
+
+	}
+
+	// push any DEventHitStatistics objects to the output record
+	if (hitStats.size() > 0)
+	{
+		hddm_r::HitStatisticsList stats = res().addHitStatisticses(1);
+		hddm_r::StartCountersList starts = stats().addStartCounterses(1);
+		starts().setCount(hitStats[0]->start_counters);
+		hddm_r::CdcStrawsList straws = stats().addCdcStrawses(1);
+		straws().setCount(hitStats[0]->cdc_straws);
+		hddm_r::FdcPseudosList pseudos = stats().addFdcPseudoses(1);
+		pseudos().setCount(hitStats[0]->fdc_pseudos);
+		hddm_r::BcalCellsList cells = stats().addBcalCellses(1);
+		cells().setCount(hitStats[0]->bcal_cells);
+		hddm_r::FcalBlocksList blocks = stats().addFcalBlockses(1);
+		blocks().setCount(hitStats[0]->fcal_blocks);
+		hddm_r::CcalBlocksList bloccs = stats().addCcalBlockses(1);
+		bloccs().setCount(hitStats[0]->ccal_blocks);
+		hddm_r::DircPMTsList pmts = stats().addDircPMTses(1);
+		pmts().setCount(hitStats[0]->dirc_PMTs);
 	}
 
 	// push any DTrigger objects to the output record
