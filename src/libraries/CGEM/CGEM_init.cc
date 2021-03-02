@@ -10,14 +10,19 @@
 using namespace jana;
 
 #include "DCGEMHit.h"
+#include "DCGEMDigiHit.h"
+#include "DCGEMHit_factory.h"
 #include "DCGEMTruthHit.h"
 
 jerror_t CGEM_init(JEventLoop *loop) {
 
-	/// Create and register CGEM data factories
-	loop->AddFactory(new JFactory<DCGEMHit>());
-	loop->AddFactory(new JFactory<DCGEMTruthHit>());
+  /// Create and register CGEM data factories
+  loop->AddFactory(new JFactory<DCGEMTruthHit>());
+  loop->AddFactory(new JFactory<DCGEMDigiHit>());
+  loop->AddFactory(new JFactory<DCGEMHit>());
+  loop->AddFactory(new DCGEMHit_factory());
+  loop->AddFactory(new JFactory<DCGEMHit>("TRUTH"));
 
-	return NOERROR;
+  return NOERROR;
 }
 
