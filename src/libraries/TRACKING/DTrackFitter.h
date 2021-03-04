@@ -24,6 +24,7 @@
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRD/DTRDPoint.h>
 #include <TRD/DGEMPoint.h>
+#include <CGEM/DCGEMHit.h>
 
 using namespace std;
 
@@ -141,6 +142,8 @@ class DTrackFitter:public jana::JObject{
 		void AddHits(vector<const DTRDPoint*> trdhits);
 		void AddHit(const DGEMPoint* gemhit);
 		void AddHits(vector<const DGEMPoint*> gemhits);
+		void AddHit(const DCGEMHit* cgemhit);
+		void AddHits(vector<const DCGEMHit*> cgemhits);
 		const vector<const DCDCTrackHit*>& GetCDCInputHits(void) const {return cdchits;}
 		const vector<const DFDCPseudo*>&   GetFDCInputHits(void) const {return fdchits;}
 		const vector<const DCDCTrackHit*>& GetCDCFitHits(void) const {return cdchits_used_in_fit;}
@@ -155,6 +158,7 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_START].clear();
 		  extrapolations[SYS_DIRC].clear();
 		  extrapolations[SYS_TRD].clear();
+		  extrapolations[SYS_CGEM].clear();
 		};
 		
 		// Fit parameter accessor methods
@@ -234,6 +238,7 @@ class DTrackFitter:public jana::JObject{
 		vector<const DFDCPseudo*> fdchits;		//< Hits in the FDC
 		vector<const DTRDPoint*> trdhits;
 		vector<const DGEMPoint*> gemhits;
+		vector<const DCGEMHit*> cgemhits;
 
 	DTrackingData input_params;				//< Starting parameters for the fit
 		fit_type_t fit_type;							//< kWireBased or kTimeBased

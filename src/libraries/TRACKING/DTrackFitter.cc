@@ -64,6 +64,7 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations.emplace(SYS_START,myvector);
 	extrapolations.emplace(SYS_DIRC,myvector);
 	extrapolations.emplace(SYS_TRD,myvector);
+	extrapolations.emplace(SYS_CGEM,myvector);
 	extrapolations.emplace(SYS_NULL,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
@@ -74,6 +75,7 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations[SYS_START].reserve(1);
 	extrapolations[SYS_DIRC].reserve(1);
 	extrapolations[SYS_TRD].reserve(5);
+	extrapolations[SYS_CGEM].reserve(8);
 	extrapolations[SYS_NULL].reserve(1);
 	
 	pulls.reserve(30);
@@ -190,6 +192,23 @@ void DTrackFitter::AddHits(vector<const DGEMPoint*> gemhits)
   fit_status = kFitNotDone;
 }
 
+// AddHit
+//-------------------
+void DTrackFitter::AddHit(const DCGEMHit* cgemhit)
+{
+  cgemhits.push_back(cgemhit);
+  fit_status = kFitNotDone;
+}
+
+//-------------------
+// AddHits
+//-------------------
+void DTrackFitter::AddHits(vector<const DCGEMHit*> cgemhits)
+{
+  for(unsigned int i=0; i<cgemhits.size(); i++)this->cgemhits.push_back(cgemhits[i]);
+  fit_status = kFitNotDone;
+}
+
 
 //-------------------
 // FitTrack
@@ -265,10 +284,12 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   vector<const DFDCPseudo*> fdcpseudos;
   vector<const DTRDPoint *> trdhits_in;
   vector<const DGEMPoint *> gemhits_in;
+  vector<const DCGEMHit *> cgemhits_in;
   loop->Get(cdctrackhits);
   loop->Get(fdcpseudos);
   loop->Get(trdhits_in);
   loop->Get(gemhits_in);
+  loop->Get(cgemhits_in);
 
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
@@ -293,8 +314,12 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
       hitselector->GetTRDHits(extraps,trdhits_in,this);
     }
     if (gemhits_in.size()>0){
-      hitselector->GetGEMHits(extraps,gemhits_in,gemhits);
+      hitselector->GetGEMHits(extraps,gemhits_in,this);
     }
+  }
+  if (extrapolations.at(SYS_CGEM).size()>0&&cgemhits_in.size()>0){
+    vector<Extrapolation_t>extraps=extrapolations.at(SYS_CGEM);
+    hitselector->GetCGEMHits(extraps,cgemhits_in,this);
   }
   if (got_hits==false){
     return fit_status = kFitNotDone;

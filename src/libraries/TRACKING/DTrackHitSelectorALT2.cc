@@ -51,6 +51,12 @@ bool static DTrackHitSelector_trdhit_cmp(pair<double,const DTRDPoint *>a,
     return (a.second->detector>b.second->detector);
   return (a.first>b.first);
 }
+bool static DTrackHitSelector_cgemhit_cmp(pair<double,const DCGEMHit *>a,
+				      pair<double,const DCGEMHit *>b){
+  if (a.second->layer!=b.second->layer) 
+    return (a.second->layer>b.second->layer);
+  return (a.first>b.first);
+}
 
 bool static DTrackHitSelector_cdchit_in_cmp(const DCDCTrackHit *a, const DCDCTrackHit *b){
   if (a->wire->ring != b->wire->ring) return (a->wire->ring < b->wire->ring);
@@ -74,6 +80,7 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 	MIN_HIT_PROB_FDC = 0.01;
 	MIN_HIT_PROB_TRD = 0.01;
 	MIN_HIT_PROB_GEM = 0.01;
+	MIN_HIT_PROB_CGEM = 0.01;
 	MIN_FDC_SIGMA_ANODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_CATHODE_CANDIDATE = 0.1000;
 	MIN_FDC_SIGMA_ANODE_WIREBASED = 0.0100;
@@ -161,7 +168,7 @@ void DTrackHitSelectorALT2::GetTRDHits(const vector<DTrackFitter::Extrapolation_
 	double chisq=dx*dx/varx+dy*dy/vary;
 	// Use chi-sq probability function with Ndof=2 to calculate probability
 	double probability = TMath::Prob(chisq, 2); 
-	if(probability>=MIN_HIT_PROB_GEM){
+	if(probability>=MIN_HIT_PROB_TRD){
 	  pair<double,const DTRDPoint*>myhit;
 	  myhit.first=probability;
 	  myhit.second=hit;
@@ -221,6 +228,48 @@ void DTrackHitSelectorALT2::GetGEMHits(const vector<DTrackFitter::Extrapolation_
       gemhits_out.push_back(gemhits_tmp[i].second);   
     }
     old_layer=gemhits_tmp[i].second->detector;
+  }
+  
+}
+
+//---------------------------------
+// GetCGEMHits
+//---------------------------------
+void DTrackHitSelectorALT2::GetCGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCGEMHit*> &cgemhits_in, vector<const DCGEMHit*> &cgemhits_out) const {
+  // Vector of pairs storing the hit with the probability it is on the track
+  vector<pair<double,const DCGEMHit*> >cgemhits_tmp;
+
+  for (unsigned int k=0;k<extrapolations.size();k++){
+    DVector3 pos=extrapolations[k].position;
+    for (unsigned int j=0;j<cgemhits_in.size();j++){
+      const DCGEMHit *hit=cgemhits_in[j];
+      if (int(k+1)==hit->layer){
+	double dx=hit->x-pos.X();
+	double dy=hit->y-pos.Y();
+	double varx=1.,vary=1.;
+	double chisq=dx*dx/varx+dy*dy/vary;
+	// Use chi-sq probability function with Ndof=2 to calculate probability
+	double probability = TMath::Prob(chisq, 2);
+	if(probability>=MIN_HIT_PROB_CGEM){
+	  pair<double,const DCGEMHit*>myhit;
+	  myhit.first=probability;
+	  myhit.second=hit;
+	  cgemhits_tmp.push_back(myhit);
+	}
+      }
+    }
+
+  }
+  // Order according to layer number and probability,then put the hits in the 
+  // output list with the following algorithm:  put hits with the highest 
+  // probability in a given layer in the output list. 
+  sort(cgemhits_tmp.begin(),cgemhits_tmp.end(),DTrackHitSelector_cgemhit_cmp);
+  int old_layer=1000;
+  for (unsigned int i=0;i<cgemhits_tmp.size();i++){
+    if (cgemhits_tmp[i].second->layer!=old_layer){
+      cgemhits_out.push_back(cgemhits_tmp[i].second);   
+    }
+    old_layer=cgemhits_tmp[i].second->layer;
   }
   
 }

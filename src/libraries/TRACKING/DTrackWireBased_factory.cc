@@ -63,6 +63,14 @@ bool GEMSortByZincreasing(const DGEMPoint* const &hit1, const DGEMPoint* const &
 }
 
 //------------------
+// CGEMSortByRincreasing
+//------------------
+bool CGEMSortByRincreasing(const DCGEMHit* const &hit1, const DCGEMHit* const &hit2) {
+   return hit1->layer < hit2->layer;
+}
+
+
+//------------------
 // count_common_members
 //------------------
    template<typename T>

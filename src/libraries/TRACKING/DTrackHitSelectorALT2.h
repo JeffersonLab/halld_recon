@@ -27,6 +27,7 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 			const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const;
 	void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const;
 	void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const;
+	void GetCGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCGEMHit*> &cgemhits_in, vector<const DCGEMHit*> &cgemhits_out) const;
 
 	private:
 		const DMagneticFieldMap *bfield;
@@ -37,6 +38,7 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 		double MIN_HIT_PROB_FDC;
 		double MIN_HIT_PROB_GEM;
 		double MIN_HIT_PROB_TRD;
+		double MIN_HIT_PROB_CGEM;
 		double MIN_FDC_SIGMA_ANODE_CANDIDATE;
 		double MIN_FDC_SIGMA_CATHODE_CANDIDATE;
 		double MIN_FDC_SIGMA_ANODE_WIREBASED;

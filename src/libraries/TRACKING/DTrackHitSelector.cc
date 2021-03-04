@@ -19,6 +19,7 @@ extern bool CDCSortByRincreasing(const DCDCTrackHit* const &hit1, const DCDCTrac
 extern bool FDCSortByZincreasing(const DFDCPseudo* const &hit1, const DFDCPseudo* const &hit2);
 extern bool GEMSortByZincreasing(const DGEMPoint* const &hit1, const DGEMPoint* const &hit2);
 extern bool TRDSortByZincreasing(const DTRDPoint* const &hit1, const DTRDPoint* const &hit2);
+extern bool CGEMSortByRincreasing(const DCGEMHit* const &hit1, const DCGEMHit* const &hit2);
 
 //---------------------
 // DTrackHitSelector  (Constructor)
@@ -105,6 +106,20 @@ void DTrackHitSelector::GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &
   sort(gemhits_out.begin(), gemhits_out.end(), GEMSortByZincreasing);
   for(unsigned int i=0; i<gemhits_out.size(); i++)fitter->AddHit(gemhits_out[i]);
 }
+
+//---------------------
+// GetCGEMHits
+//---------------------
+void DTrackHitSelector::GetCGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCGEMHit*> &cgemhits_in, DTrackFitter *fitter) const
+{
+  /// Get all hits from the CGEM and add them to the specified DTrackFitter object
+
+  vector<const DCGEMHit*> cgemhits_out;
+  GetCGEMHits(extrapolations, cgemhits_in, cgemhits_out);
+  sort(cgemhits_out.begin(), cgemhits_out.end(), CGEMSortByRincreasing);
+  for(unsigned int i=0; i<cgemhits_out.size(); i++)fitter->AddHit(cgemhits_out[i]);
+}
+
 
 //---------------------
 // GetAllHits
