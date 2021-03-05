@@ -107,6 +107,11 @@ typedef struct{
 }DKalmanSIMDFDCHit_t;
 
 typedef struct{
+  double t,x,y,z;
+  double varx,vary,varz;
+}DKalmanCGEMHit_t;
+
+typedef struct{
   DMatrix5x5 J,Q,Ckk;
   DMatrix5x1 S,Skk;
   DVector2 xy;  
@@ -155,6 +160,10 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     for (unsigned int i=0;i<my_fdchits.size();i++){
       delete my_fdchits[i];
     }
+    for (unsigned int i=0;i<my_cgemhits.size();i++){
+      delete my_cgemhits[i];
+    }
+    my_cgemhits.clear();
     my_fdchits.clear();
     my_cdchits.clear();
     central_traj.clear();
@@ -191,6 +200,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddFDCHit(const DFDCPseudo *fdchit);
   void AddTRDHit(const DTRDPoint *trdhit);
   void AddGEMHit(const DGEMPoint *gemhit);
+  void AddCGEMHit(const DCGEMHit *cgemhit);
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
@@ -431,7 +441,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
  
   // list of hits on track
   vector<DKalmanSIMDCDCHit_t *>my_cdchits;
-  vector<DKalmanSIMDFDCHit_t *>my_fdchits;  
+  vector<DKalmanSIMDFDCHit_t *>my_fdchits;
+  vector<DKalmanCGEMHit_t *>my_cgemhits;
   
   // list of indices of hits used in the fit
   vector<unsigned int>used_fdc_indices;
@@ -538,8 +549,9 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
-  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
-  bool got_trd_gem_hits;
+  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS,USE_CGEM_HITS;
+  bool got_trd_gem_hits, got_cgem_hits;
+  
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;

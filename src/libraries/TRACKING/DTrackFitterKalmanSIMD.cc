@@ -411,7 +411,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
    USE_GEM_HITS=false;
    gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
-
+   USE_CGEM_HITS=false;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_CGEM_HITS",USE_CGEM_HITS);
 
    // Flag to enable calculation of alignment derivatives
    ALIGNMENT=false;
@@ -701,6 +702,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
 
 	my_fdchits.reserve(24);
 	my_cdchits.reserve(28);
+	my_cgemhits.reserve(3);
 	fdc_updates.reserve(24);
 	cdc_updates.reserve(28);
 	cdc_used_in_fit.reserve(28);
@@ -720,15 +722,20 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
    for (unsigned int i=0;i<my_fdchits.size();i++){
       delete my_fdchits[i];
    }
+   for (unsigned int i=0;i<my_cgemhits.size();i++){
+      delete my_cgemhits[i];
+   }
    central_traj.clear();
    forward_traj.clear();
    my_fdchits.clear();
    my_cdchits.clear();
+   my_cgemhits.clear();
    fdc_updates.clear();
    cdc_updates.clear();
    fdc_used_in_fit.clear();
    cdc_used_in_fit.clear();
    got_trd_gem_hits=false;
+   got_cgem_hits=false;
 
    cov.clear();
    fcov.clear();
@@ -811,6 +818,13 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
      if (gemhits.size()>0){
        //_DBG_ << " Got GEM" << endl;
        got_trd_gem_hits=true;
+     }
+   }
+   if (USE_CGEM_HITS){
+     for(unsigned int i=0; i<cgemhits.size(); i++)AddCGEMHit(cgemhits[i]);
+     if (cgemhits.size()>0){
+       //_DBG_ << " Got CGEM" <<  endl;
+       got_cgem_hits=true;
      }
    }
 
@@ -1133,6 +1147,20 @@ inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
   pos.SetXYZ(x_+beam_pos.X(),y_+beam_pos.Y(),z_);
 }
 
+// Add CGEM hits
+void DTrackFitterKalmanSIMD::AddCGEMHit(const DCGEMHit *cgemhit){
+  DKalmanCGEMHit_t *hit= new DKalmanCGEMHit_t;
+
+  hit->t=cgemhit->t;
+  hit->x=cgemhit->x;
+  hit->y=cgemhit->y;
+  hit->z=cgemhit->z;
+  hit->varx=0.0001;
+  hit->vary=0.0001;
+  hit->varz=0.0001;
+
+  my_cgemhits.push_back(hit);
+}
 // Add GEM points
 void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
   DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
