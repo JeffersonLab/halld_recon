@@ -11,7 +11,7 @@
 using namespace std;
 
 #include "CGEM/DCGEMHit_factory.h"
-#include "TTAB/DTTabUtilities.h"
+//#include "TTAB/DTTabUtilities.h"
 using namespace jana;
 
 //------------------
@@ -58,32 +58,32 @@ jerror_t DCGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// the precalibrated values directly into the _data vector.
     //char str[256];
 
-    const DTTabUtilities* locTTabUtilities = nullptr;
-    loop->GetSingle(locTTabUtilities);
+  //const DTTabUtilities* locTTabUtilities = nullptr;
+  //loop->GetSingle(locTTabUtilities);
 
-    vector<const DCGEMDigiHit*> digihits;
-    loop->Get(digihits);
-    for (unsigned int i=0; i < digihits.size(); i++) {
-
-      const DCGEMDigiHit *digihit = digihits[i];
-      // Build hit object
-      DCGEMHit *hit = new DCGEMHit;
-      hit->layer = digihit->layer;
-      hit->dE    = digihit->dE; 
-      hit->t     = digihit->t;
-      hit->x     = digihit->x;
-      hit->y     = digihit->y;
-      hit->z     = digihit->z;
-	        
-      // do some basic quality checks before creating the objects
-      //if( ( hit->dE > 0 ) ) {
-      hit->AddAssociatedObject(digihit);
-      _data.push_back(hit);
-      //} else {
-      //delete hit;
-      //}
-    }
-
+  vector<const DCGEMDigiHit*> digihits;
+  loop->Get(digihits);
+  for (unsigned int i=0; i < digihits.size(); i++) {
+    
+    const DCGEMDigiHit *digihit = digihits[i];
+    // Build hit object
+    DCGEMHit *hit = new DCGEMHit;
+    hit->layer = digihit->layer;
+    hit->dE    = digihit->dE; 
+    hit->t     = digihit->t;
+    hit->x     = digihit->x;
+    hit->y     = digihit->y;
+    hit->z     = digihit->z;
+    
+    // do some basic quality checks before creating the objects
+    //if( ( hit->dE > 0 ) ) {
+    hit->AddAssociatedObject(digihit);
+    _data.push_back(hit);
+    //} else {
+    //delete hit;
+    //}
+  }
+  
     return NOERROR;
 }
 
