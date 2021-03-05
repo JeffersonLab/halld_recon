@@ -2379,3 +2379,39 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
   return got_sc;
 }
 
+//---------------------------------
+// GetCGEMR
+//---------------------------------
+bool DGeometry::GetCGEMR(vector<double> &cgemR) const
+{
+  vector<double> Rio_Z;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//tubs[@name='Conv']/@Rio_Z",Rio_Z);
+  if (good){
+    cgemR.push_back(Rio_Z[0]);
+    Get("//tubs[@name='Tra1']/@Rio_Z",Rio_Z);
+    cgemR.push_back(Rio_Z[0]);
+    Get("//tubs[@name='Tra2']/@Rio_Z",Rio_Z);
+    cgemR.push_back(Rio_Z[0]);
+  }
+  
+  jgeom->SetVerbose(1);   // reenable error messages
+  return good;
+}
+//---------------------------------
+// GetCGEMR
+//---------------------------------
+bool DGeometry::GetCGEMZ(double &zmin,double &zmax) const
+{
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  vector<double> pos;
+  bool good = Get("//section/composition/posXYZ[@volume='CylindricalGEM']/@X_Y_Z",pos);
+  if (good){
+    vector<double> Rio_Z; 
+    Get("//tubs[@name='CGEM']/@Rio_Z",Rio_Z);
+    zmin=pos[2]-0.5*Rio_Z[2];
+    zmax=pos[2]+0.5*Rio_Z[2];
+  }
+  jgeom->SetVerbose(1);   // reenable error messages
+  return good;
+}
