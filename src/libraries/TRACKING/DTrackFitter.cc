@@ -107,6 +107,7 @@ void DTrackFitter::Reset(void)
 	fdchits.clear();
 	trdhits.clear();
 	gemhits.clear();
+	cgemhits.clear();
 	fit_type = kWireBased;
 	chisq = 1.0E6;
 	Ndof=0;
