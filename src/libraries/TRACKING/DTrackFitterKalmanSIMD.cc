@@ -377,6 +377,10 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    geom->GetFDCRmin(fdc_rmin_packages);
    geom->GetFDCRmax(fdc_rmax);
 
+   // Get CGEM geometry
+   geom->GetCGEMR(cgemR);
+   geom->GetCGEMZ(cgemZmin,cgemZmax);
+
    ADD_VERTEX_POINT=false; 
    gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
   
@@ -9091,6 +9095,38 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
       }
     }   
   }
+
+  
+  // Find extrapolations to CGEM layers
+  if (cgemR.size()>0){
+    unsigned int index=0;
+    double R_old=1000.;
+    for (unsigned int k=inner_index;k>index_beyond_start_counter;k--){
+      double z=forward_traj[k].z;
+      S=forward_traj[k].S;
+      
+      double R=sqrt(S(state_x)*S(state_x)+S(state_y)*S(state_y));
+      if (z>cgemZmin && z<cgemZmax && R>cgemR[index] && R_old<cgemR[index]){
+	index++;
+
+	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+	double tanl=1./sqrt(tsquare);
+	double cosl=cos(atan(tanl));
+	double pt=cosl/fabs(S(state_q_over_p));
+	double phi=atan2(S(state_ty),S(state_tx));
+	DVector3 position(S(state_x),S(state_y),z);
+	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	double t=forward_traj[k].t*TIME_UNIT_CONVERSION;
+	double s=forward_traj[k].s;
+	extrapolations[SYS_CGEM].push_back(Extrapolation_t(position,momentum,
+							   t,s,0.,0.));
+      }
+      if (index==cgemR.size()) break;
+      R_old=R;
+    }
+  }
+
+
   // Accumulate multiple-scattering terms for use in matching routines
   double s_theta_ms_sum=0.;
   double theta2ms_sum=0.;
@@ -9423,6 +9459,32 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	}  
 	break;
       }
+    }
+  }
+
+  // Find extrapolations to CGEM layers
+  if (cgemR.size()>0){
+    unsigned int index=0;
+    double R_old=1000.;
+    for (unsigned int k=inner_index;k>index_beyond_start_counter;k--){
+      S=central_traj[k].S;
+      xy=central_traj[k].xy;
+      double R=xy.Mod();
+      if (S(state_z)>cgemZmin && S(state_z)<cgemZmax && R>cgemR[index] && R_old<cgemR[index]){
+	index++;
+
+	double t=central_traj[k].t*TIME_UNIT_CONVERSION; // convert to ns
+	double s=central_traj[k].s;
+	double tanl=S(state_tanl);
+	double pt=1/fabs(S(state_q_over_pt));
+	double phi=S(state_phi); 
+	DVector3 position(xy.X(),xy.Y(),S(state_z));
+	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	extrapolations[SYS_CGEM].push_back(Extrapolation_t(position,momentum,
+							   t,s,0.,0.));
+      }
+      if (index==cgemR.size()) break;
+      R_old=R;
     }
   }
 
