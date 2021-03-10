@@ -432,6 +432,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void ComputeCDCDrift(double dphi,double delta,double t,double B,double &d, 
 		       double &V, double &tcorr);
   void TransformCovariance(DMatrix5x5 &C);
+  void ApplyCGEMHits(double z,const DKalmanCGEMHit_t *hit,DMatrix5x1 &S,DMatrix5x5 &C) const;
 
   //const DMagneticFieldMap *bfield; ///< pointer to magnetic field map
   //const DGeometry *geom;

@@ -4493,6 +4493,16 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     z0w=my_cdchits[cdc_index]->z0wire;
     wirepos=origin+(forward_traj[break_point_step_index].z-z0w)*dir;
   }
+
+  // cgem info
+  int cgem_index=0;
+  double cgem_old_doca2=0.;
+  if (got_cgem_hits){
+    cgem_index=my_cgemhits.size()-1;
+    double cgem_dx=S(state_x)-my_cgemhits[cgem_index]->x;
+    double cgem_dy=S(state_y)-my_cgemhits[cgem_index]->y;
+    cgem_old_doca2=cgem_dx*cgem_dx+cgem_dy*cgem_dy;
+  }
   
   S0_=(forward_traj[break_point_step_index].S);
 
@@ -4918,6 +4928,29 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
       }
       old_doca2=doca2;
     }
+
+    // Add contributions due go CGEM hits, if present
+    if (got_cgem_hits&&cgem_index>=0){
+      double R2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+      if (R2<endplate_r2min&&z>cgemZmin&&z<cgemZmax){
+	// new doca
+	double dx=my_cgemhits[cgem_index]->x-S(state_x);
+	double dy=my_cgemhits[cgem_index]->y-S(state_y);
+	double doca2=dx*dx+dy*dy;
+	if (doca2>cgem_old_doca2){
+	  ApplyCGEMHits(z,my_cgemhits[cgem_index],S,C);
+
+	  cgem_index--;
+	  if (cgem_index>=0){
+	    // new doca
+	    dx=S(state_x)-my_cgemhits[cgem_index]->x;
+	    dy=S(state_y)-my_cgemhits[cgem_index]->y;
+	    doca2=dx*dx+dy*dy;
+	  }
+	}
+	cgem_old_doca2=doca2;
+      }
+    }
   }
   // Save final z position
   z_=forward_traj[forward_traj.size()-1].z;
@@ -5112,7 +5145,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   DMatrix5x5 Ctest; // covariance matrix
   //DMatrix5x1 dS;  // perturbation in state vector
   double V=0.0507;
-  
+ 
   // set used_in_fit flags to false for cdc hits
   unsigned int num_cdc=cdc_used_in_fit.size();
   for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
@@ -5138,6 +5171,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   if (cdc_index<num_cdc-1){
     num_cdc=cdc_index+1;
   }
+  // cgem info
+  int cgem_index=0;
   
   if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
   
@@ -5151,6 +5186,13 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   double dx=S(state_x)-wirepos.X();
   double dy=S(state_y)-wirepos.Y();
   double doca2=0.,old_doca2=dx*dx+dy*dy;
+  double cgem_old_doca2=0.;
+  if (got_cgem_hits){
+    cgem_index=my_cgemhits.size()-1;
+    double cgem_dx=S(state_x)-my_cgemhits[cgem_index]->x;
+    double cgem_dy=S(state_y)-my_cgemhits[cgem_index]->y;
+    cgem_old_doca2=cgem_dx*cgem_dx+cgem_dy*cgem_dy;
+  }
   
   // loop over entries in the trajectory
   S0_=(forward_traj[break_point_step_index].S);
@@ -5404,6 +5446,30 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
       dy=S(state_y)-wirepos.Y();
       doca2=dx*dx+dy*dy;
     }
+
+    // Add contributions due go CGEM hits, if present
+    if (got_cgem_hits&&cgem_index>=0){
+      double R2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+      if (R2<endplate_r2min&&z>cgemZmin&&z<cgemZmax){
+	// new doca
+	dx=my_cgemhits[cgem_index]->x-S(state_x);
+	dy=my_cgemhits[cgem_index]->y-S(state_y);
+	doca2=dx*dx+dy*dy;
+	if (doca2>cgem_old_doca2){
+	  ApplyCGEMHits(z,my_cgemhits[cgem_index],S,C);
+
+	  cgem_index--;
+	  if (cgem_index>=0){
+	    // new doca
+	    dx=S(state_x)-my_cgemhits[cgem_index]->x;
+	    dy=S(state_y)-my_cgemhits[cgem_index]->y;
+	    doca2=dx*dx+dy*dy;
+	  }
+	}
+      }
+      cgem_old_doca2=doca2;
+    }
+
     old_doca2=doca2; 
   }
 
@@ -10451,4 +10517,38 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
   if (skip_plane==false){
     numdof+=2;
   }
+}
+
+// Adjust state vector and covariance matrix using CGEM hit info
+void DTrackFitterKalmanSIMD::ApplyCGEMHits(double z,const DKalmanCGEMHit_t *hit,
+					   DMatrix5x1 &S,DMatrix5x5 &C) const{
+  DMatrix3x1 M3diff; // difference between measurement and prediction 
+  DMatrix3x5 H3;  // Track projection matrix
+  DMatrix5x3 H3_T; // Transpose of track projection matrix 
+  DMatrix3x3 V3;  // Measurement covariance matrix
+  
+  M3diff(0)=hit->x-S(state_x);
+  M3diff(1)=hit->y-S(state_y);
+  M3diff(2)=hit->z-z;
+ 
+  V3(0,0)=hit->varx;
+  V3(1,1)=hit->vary;
+  V3(2,2)=hit->varz;
+	    
+  // Compute projection matrix
+  H3_T(state_x,0)=1.;
+  H3_T(state_y,1)=1.;
+  H3_T(state_x,2)=1./S(state_tx);
+  H3_T(state_y,2)=1./S(state_ty);
+  H3_T(state_tx,2)=-M3diff(0)/(S(state_tx)*S(state_tx));
+  H3_T(state_ty,2)=-M3diff(1)/(S(state_ty)*S(state_ty));
+  H3=Transpose(H3_T);
+ 
+  DMatrix3x3 V3temp=V3+H3*C*H3_T;
+  DMatrix3x3 InvV3=V3temp.Invert();
+	    
+  // Compute Kalman gain matrix and make adjustment to S and C for hit
+  DMatrix5x3 K3=C*H3_T*InvV3;
+  S+=K3*M3diff;
+  C=C.SubSym(K3*(H3*C));
 }
