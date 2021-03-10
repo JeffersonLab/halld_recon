@@ -28,6 +28,7 @@ class DTrackHitSelectorALT2:public DTrackHitSelector{
 	void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const;
 	void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const;
 	void GetCGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCGEMHit*> &cgemhits_in, vector<const DCGEMHit*> &cgemhits_out) const;
+	void GetCGEMHits(const DReferenceTrajectory *rt, const vector<const DCGEMHit*> &cgemhits_in, vector<const DCGEMHit*> &cgemhits_out) const;
 
 	private:
 		const DMagneticFieldMap *bfield;

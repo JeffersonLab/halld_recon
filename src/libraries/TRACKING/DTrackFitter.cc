@@ -411,8 +411,15 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
 	vector<const DFDCPseudo*> fdcpseudos;
 	loop->Get(cdctrackhits);
 	loop->Get(fdcpseudos);
+	
 	DTrackHitSelector::fit_type_t input_type = fit_type==kTimeBased ? DTrackHitSelector::kWireBased:DTrackHitSelector::kHelical;
 	hitselector->GetAllHits(input_type, rt, cdctrackhits, fdcpseudos, this,N);
+
+	vector<const DCGEMHit *> cgemhits_in;
+	loop->Get(cgemhits_in);
+	if (cgemhits_in.size()>0){
+	  hitselector->GetCGEMHits(rt,cgemhits_in,this);
+	}
 
 	// If the condition below is met, it seems that the track parameters 
 	// are inconsistent with the hits used to create the track candidate, 

@@ -275,6 +275,40 @@ void DTrackHitSelectorALT2::GetCGEMHits(const vector<DTrackFitter::Extrapolation
 }
 
 //---------------------------------
+// GetCGEMHits
+//---------------------------------
+void DTrackHitSelectorALT2::GetCGEMHits(const DReferenceTrajectory *rt, const vector<const DCGEMHit*> &cgemhits_in, vector<const DCGEMHit*> &cgemhits_out) const {
+  // Vector of pairs storing the hit with the probability it is on the track
+  vector<pair<double,const DCGEMHit*> >cgemhits_tmp;
+  for (unsigned int i=0;i<cgemhits_in.size();i++){
+    const DCGEMHit *hit=cgemhits_in[i];
+    double doca=rt->DistToRT(hit->x,hit->y,hit->z);
+    if(!isfinite(doca)) continue;
+
+    double var=1.;
+    double probability=TMath::Prob(doca*doca/var,1);
+    if(probability>=MIN_HIT_PROB_CGEM){
+      pair<double,const DCGEMHit*>myhit;
+      myhit.first=probability;
+      myhit.second=hit;
+      cgemhits_tmp.push_back(myhit);
+    }
+  }
+  
+  // Order according to layer number and probability,then put the hits in the 
+  // output list with the following algorithm:  put hits with the highest 
+  // probability in a given layer in the output list. 
+  sort(cgemhits_tmp.begin(),cgemhits_tmp.end(),DTrackHitSelector_cgemhit_cmp);
+  int old_layer=1000;
+  for (unsigned int i=0;i<cgemhits_tmp.size();i++){
+    if (cgemhits_tmp[i].second->layer!=old_layer){
+      cgemhits_out.push_back(cgemhits_tmp[i].second);   
+    }
+    old_layer=cgemhits_tmp[i].second->layer;
+  }
+}
+
+//---------------------------------
 // GetCDCHits
 //---------------------------------
 void DTrackHitSelectorALT2::GetCDCHits(double Bz,double q,

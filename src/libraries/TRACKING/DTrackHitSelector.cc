@@ -119,6 +119,18 @@ void DTrackHitSelector::GetCGEMHits(const vector<DTrackFitter::Extrapolation_t> 
   sort(cgemhits_out.begin(), cgemhits_out.end(), CGEMSortByRincreasing);
   for(unsigned int i=0; i<cgemhits_out.size(); i++)fitter->AddHit(cgemhits_out[i]);
 }
+//---------------------
+// GetCGEMHits
+//---------------------
+void DTrackHitSelector::GetCGEMHits(const DReferenceTrajectory *rt, const vector<const DCGEMHit*> &cgemhits_in, DTrackFitter *fitter) const
+{
+  /// Get all hits from the CGEM and add them to the specified DTrackFitter object
+
+  vector<const DCGEMHit*> cgemhits_out;
+  GetCGEMHits(rt, cgemhits_in, cgemhits_out);
+  sort(cgemhits_out.begin(), cgemhits_out.end(), CGEMSortByRincreasing);
+  for(unsigned int i=0; i<cgemhits_out.size(); i++)fitter->AddHit(cgemhits_out[i]);
+}
 
 
 //---------------------
