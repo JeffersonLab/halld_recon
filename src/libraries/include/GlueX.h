@@ -34,7 +34,7 @@ enum DetectorSystem_t{
      SYS_TPOL       = 0x10000,
      SYS_TAC	    = 0x20000,
      SYS_TRD        = 0x40000,
-     SYS_CGEM       = 0x60000
+     SYS_CGEM       = 0x80000
 };
 
 inline const char* SystemName(DetectorSystem_t sys)

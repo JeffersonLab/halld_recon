@@ -204,9 +204,11 @@ inline DMatrix4x4 operator*(const DMatrix4x2 &m1,
 
 #include "DMatrix5x1.h"
 #include "DMatrix5x2.h"
+#include "DMatrix5x3.h"
 #include "DMatrix5x5.h"
 #include "DMatrix2x5.h"
 #include "DMatrix1x5.h"
+#include "DMatrix3x5.h"
 
 #ifndef USE_SSE2
 
@@ -221,9 +223,14 @@ inline DMatrix4x4 operator*(const DMatrix4x1 &m1,const DMatrix1x4 &m2){
   return temp;
 }
 
+// Find the transpose of a 5x3 matrix
+inline DMatrix3x5 Transpose(const DMatrix5x3 &M){
+return DMatrix3x5(M(0,0),M(1,0),M(2,0),M(3,0),M(4,0),
+		    M(0,1),M(1,1),M(2,1),M(3,1),M(4,1),
+		    M(0,2),M(1,2),M(2,2),M(3,2),M(4,2));
+}
 
-
-// Find the tranpose of a 5x2 matrix
+// Find the transpose of a 5x2 matrix
 inline DMatrix2x5 Transpose(const DMatrix5x2 &M){
   return DMatrix2x5(M(0,0),M(1,0),M(2,0),M(3,0),M(4,0),
 		    M(0,1),M(1,1),M(2,1),M(3,1),M(4,1));
@@ -262,6 +269,21 @@ inline DMatrix5x5 operator*(const DMatrix5x2 &m1,const DMatrix2x5 &m2){
   return temp;
 
 }
+
+
+// Multiply a 5x3 matrix by a 3x5 matrix
+inline DMatrix5x5 operator*(const DMatrix5x3 &m1,const DMatrix3x5 &m2){
+  DMatrix5x5 temp;
+  for (unsigned int i=0;i<5;i++){
+    for (unsigned int j=0;j<5;j++){
+      temp(i,j)=m1(i,0)*m2(0,j)+m1(i,1)*m2(1,j)+m1(i,2)*m2(2,j);
+    }
+  }
+  return temp;
+
+}
+
+
 
 #else
 
