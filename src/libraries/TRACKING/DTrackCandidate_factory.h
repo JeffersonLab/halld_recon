@@ -133,6 +133,8 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   bool MakeCandidateFromMethod1(double theta,
 				vector<const DFDCSegment *>&segments,
 				const DTrackCandidate *cdccan);
+  void MatchAndFitWithCGEM(vector<const DCGEMHit*>&cgemhits,
+			   DTrackCandidate *candidate);
  
  private:
   const DMagneticFieldMap *bfield;
@@ -146,13 +148,14 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   vector<DTrackCandidate *>trackcandidates;
 
   int DEBUG_LEVEL,MIN_NUM_HITS;
-  bool DEBUG_HISTS;
+  bool DEBUG_HISTS,USE_CGEM_HITS;
   TH2F *match_dist,*match_dist_vs_p;
 //  TH2F *match_center_dist2;
 
   double FactorForSenseOfRotation;
   DVector3 cdc_endplate;
   double endplate_rmax;
+  double cgem_zmin,cgem_zmax;
   double TARGET_Z;
   int MAX_NUM_TRACK_CANDIDATES; //used to avoid memory spikes: if this # is exceeded, delete all tracks //to disable, set = -1!!
 

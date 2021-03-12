@@ -40,6 +40,7 @@ using namespace std;
 #include "DTrackCandidate_factory.h"
 #include "DTrackCandidate_factory_CDC.h"
 #include "START_COUNTER/DSCHit.h"
+#include <CGEM/DCGEMHit.h>
 #include "DANA/DApplication.h"
 #include <JANA/JCalibration.h>
 #include <TRACKING/DHoughFind.h>
@@ -151,6 +152,9 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   dgeom->GetCDCEndplate(endplate_z,endplate_dz,endplate_rmin,endplate_rmax);
   cdc_endplate.SetZ(endplate_z+endplate_dz);
 
+  // Get CGEM geometry
+  dgeom->GetCGEMZ(cgem_zmin,cgem_zmax);
+
   dParticleID = NULL;
   eventLoop->GetSingle(dParticleID);
 
@@ -205,6 +209,9 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   DEBUG_LEVEL=0;
   gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
 
+  USE_CGEM_HITS=false;
+  gPARMS->SetDefaultParameter("TRKFIT:USE_CGEM_HITS",USE_CGEM_HITS);
+
   return NOERROR;
 }
 
@@ -257,7 +264,12 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    // Start counter hits
   vector<const DSCHit *>schits;
   loop->Get(schits);
-
+  
+  // CGEM hits
+  vector<const DCGEMHit *>cgemhits;
+  if (USE_CGEM_HITS){
+    loop->Get(cgemhits);
+  }
 
   // Clear private vectors
   cdctrackcandidates.clear();
@@ -765,6 +777,15 @@ jerror_t DTrackCandidate_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
   } 
 
+  // Try to match to CGEM hits and if matched, try to refine the track candidate
+  // momentum and position parameters
+  if (cgemhits.size()>0){
+    for (unsigned int i=0;i<trackcandidates.size();i++){
+      DTrackCandidate *candidate=trackcandidates[i];
+      MatchAndFitWithCGEM(cgemhits,candidate);
+    }
+  }
+
   // Only output the candidates that have at least a minimum number of hits
   for (unsigned int i=0;i<trackcandidates.size();i++){
     DTrackCandidate *candidate=trackcandidates[i];
@@ -1201,7 +1222,8 @@ bool DTrackCandidate_factory::MakeCandidateFromMethod1(double theta,vector<const
   const DVector3 cdc_wire_origin=cdchits[0]->wire->origin;  
   if (cdc_wire_origin.x()*fdc_hit_pos.X()<0.
       || cdc_wire_origin.y()*fdc_hit_pos.Y()<0.){
-    if (DEBUG_LEVEL>0) _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
+    if (DEBUG_LEVEL>0)
+      _DBG_ << "Skipping match of potential back-to-back tracks." <<endl;
     return false; 
   }
   
@@ -3292,4 +3314,130 @@ bool DTrackCandidate_factory::CheckZPosition(const DTrackCandidate *fdccan)
   return (newz>0);
 }
 
+void DTrackCandidate_factory::MatchAndFitWithCGEM(vector<const DCGEMHit*>&cgemhits,DTrackCandidate *candidate){
+  // Check that we have CDC hits.  Only try to refit with CGEM hits if there 
+  // are CDC hits on the track.
+  vector<const DCDCTrackHit *>cdchits;
+  candidate->GetT(cdchits);
+  if (cdchits.size()==0) return;
+  
+  double xc=candidate->xc;
+  double yc=candidate->yc;
+  double rc=candidate->rc;
+  DVector3 pos=candidate->position();
+    
+  // Match CGEM hits to the track
+  vector<const DCGEMHit*>cgemhits_to_use;
+  for (unsigned int j=0;j<cgemhits.size();j++){
+    const DCGEMHit *hit=cgemhits[j];
+    double dxcheck=pos.x()-hit->x;
+    double dycheck=pos.y()-hit->y;
+    double drcheck=sqrt(dxcheck*dxcheck+dycheck*dycheck);
+    // Try to prevent connecting to cgem hits that would correspond to the 
+    // track crossing over the beam line
+    if (drcheck<pos.Perp()){
+      double dx=xc-hit->x;
+      double dy=yc-hit->y;
+      double dr=sqrt(dx*dx+dy*dy)-rc;
+      double var=1.;
+      double prob=TMath::Prob(dr*dr/var,1);
+      if (prob>0.01) cgemhits_to_use.push_back(hit);
+    }
+  }
+  if (cgemhits_to_use.size()>0){
+    stable_sort(cdchits.begin(),cdchits.end(),CDCHitSortByLayerincreasing);
+      
+    vector<const DFDCPseudo*>fdchits;
+    candidate->GetT(fdchits);
+    stable_sort(fdchits.begin(),fdchits.end(),FDCHitSortByLayerincreasing);
+	
+    // Redo circle fit with additional hits
+    DHelicalFit fit;
+    double Bz=0.;
+    unsigned int num_hits=0;
+    // Add the cgem hits to the list of hits to use in the fit
+    for (unsigned int k=0;k<cgemhits_to_use.size();k++){
+      const DCGEMHit *cgemhit=cgemhits_to_use[k];
+      double cov=0.01; 
+      //Covariance scaled up from expected variance to avoid giving too much 
+      // weight at this early stage...  
+      double x=cgemhit->x,y=cgemhit->y,z=cgemhit->z;
+      fit.AddHitXYZ(x,y,z,cov,cov,cov,true);
+      Bz+=bfield->GetBz(x,y,z);
+      num_hits++;
+    }
+    // Add the cdc axial wires to the list of hits to use in the fit 
+    for (unsigned int k=0;k<cdchits.size();k++){	
+      if (cdchits[k]->is_stereo==false){
+	double cov=0.213;  //guess
+	const DVector3 origin=cdchits[k]->wire->origin;
+	double x=origin.x(),y=origin.y(),z=origin.z();
+	fit.AddHitXYZ(x,y,z,cov,cov,0.,true);
+	Bz+=bfield->GetBz(x,y,z);
+	num_hits++;
+      }   
+    }
+    // Add the FDC hits and estimate Bz
+    for (unsigned int k=0;k<fdchits.size();k++){
+      const DFDCPseudo *fdchit=fdchits[k];
+      fit.AddHit(fdchit);
+      Bz+=bfield->GetBz(fdchit->xy.X(),fdchit->xy.Y(),
+			    fdchit->wire->origin.z());
+      num_hits++;
+    }	
+    Bz=fabs(Bz)/double(num_hits);
+	
+    // Fit the points to a circle
+    if (fit.FitCircleRiemann(candidate->rc)==NOERROR){
+      // Determine the polar angle, from the original candidate fit
+      double theta=candidate->momentum().Theta();
+      fit.tanl=tan(M_PI_2-theta);
+      
+      // Try to use cgem hits to improve estimate of tan(lambda)
+      if (cgemhits_to_use.size()>1){
+	unsigned int icgem=cgemhits_to_use.size()-1;
+	if (cgemhits_to_use[0]->layer!=cgemhits_to_use[icgem]->layer){
+	  double dx=cgemhits_to_use[0]->x-cgemhits_to_use[icgem]->x;
+	  double dy=cgemhits_to_use[0]->y-cgemhits_to_use[icgem]->y;
+	  double tworc=2.*fit.r0;
+	  double sperp=tworc*asin(sqrt(dx*dx+dy*dy)/tworc);
+	  fit.tanl+=(cgemhits_to_use[icgem]->z-cgemhits_to_use[0]->z)/sperp;
+	  fit.tanl/=2.;
+	}
+      }
+
+      if (candidate->position().z()>cgem_zmax && fit.tanl<0){
+	// Can't have a hit in the CGEM for this case, so something went
+	// wrong with the initial guesses! Maybe flipping the direction
+	// gives something more reasonable?
+	fit.tanl*=-1.;
+      }
+     
+      // Check that the new momentum estimate makes sense
+      double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+      if (p<10.){	  
+	// Find sense of rotation (proportional to the charge)
+	fit.GuessChargeFromCircleFit();
+	
+	// Use one of cgem hits to set position and momentum of this track 
+	// candidate
+	pos.SetXYZ(cgemhits_to_use[0]->x,cgemhits_to_use[0]->y,
+		   cgemhits_to_use[0]->z);	 
+	DVector3 mom;
+	GetPositionAndMomentum(fit,Bz,pos,mom);
+	
+	// Update the track candidate parameters
+	candidate->rc=fit.r0;
+	candidate->xc=fit.x0;
+	candidate->yc=fit.y0; 
+	candidate->chisq=fit.chisq;
+	candidate->Ndof=fit.ndof;
+	Particle_t locPID = (FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus;
+	candidate->setPID(locPID);
+	candidate->setMomentum(mom);
+	candidate->setPosition(pos);
+      }
+    } // circle fit
+  } // got matched cgem hits
+}
 
