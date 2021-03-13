@@ -50,7 +50,6 @@ static TH1I *hPseudoTime_accepted[25];
 static TH1I *hPullTime[25];
 static TH1I *hDeltaTime[25];
 
-//static TH2I *hWirePosition;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -174,9 +173,6 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
   }
 
-  // gDirectory->cd("/FDC_Efficiency");
-  // gDirectory->mkdir("Offline")->cd();
-  // hWirePosition = new TH2I("hWirePosition","WirePosition", 200, -50, 50, 200, -50, 50);
   main->cd();
 
   return NOERROR;
@@ -409,12 +405,8 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	DFDCWire * wire = wireByNumber[wireIndex]; 
 	double dz=wire->origin.z()-interPosition.z();
 	interPosition+=(dz/trackDirection.z())*trackDirection;
-	//double distanceToWire =  (interPosition-wire->origin).Perp();
-	DVector3 wireDir(sin(wire->angle), cos(wire->angle), 0.0);
-	double distanceToWire = ((interPosition-wire->origin).Cross(wireDir)).Mag();
-	// japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-	// hWirePosition->Fill(wire->origin.x(),wire->origin.y());
-	// japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
+	TVector3 perp = wire->udir.Cross(trackDirection).Unit();
+	double distanceToWire = fabs(perp * (interPosition - wire->origin));
 	bool expectHit = false;
 
 
