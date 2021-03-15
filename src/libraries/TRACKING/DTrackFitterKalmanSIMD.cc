@@ -1819,6 +1819,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForward(int length,int &i,
       forward_traj[my_i].rho_Z_over_A=temp.rho_Z_over_A;
       forward_traj[my_i].K_rho_Z_over_A=temp.K_rho_Z_over_A;
       forward_traj[my_i].LnI=temp.LnI;
+      forward_traj[my_i].Z=temp.Z;
       forward_traj[my_i].S=S;
    } 
    else{
@@ -2021,6 +2022,7 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
       temp.num_hits=0;
       temp.B=0.;
       temp.K_rho_Z_over_A=temp.rho_Z_over_A=temp.LnI=0.;
+      temp.Z=0.;
       temp.Q=Zero5x5; 
 
       // last S vector
