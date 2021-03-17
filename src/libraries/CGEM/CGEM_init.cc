@@ -19,6 +19,7 @@ jerror_t CGEM_init(JEventLoop *loop) {
   /// Create and register CGEM data factories
   loop->AddFactory(new JFactory<DCGEMDigiHit>());
   loop->AddFactory(new DCGEMHit_factory());
+  loop->AddFactory(new JFactory<DCGEMHit>());
   loop->AddFactory(new JFactory<DCGEMHit>("TRUTH"));
   loop->AddFactory(new JFactory<DCGEMTruthHit>());
   
