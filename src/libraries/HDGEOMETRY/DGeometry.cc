@@ -2386,12 +2386,12 @@ bool DGeometry::GetCGEMR(vector<double> &cgemR) const
 {
   vector<double> Rio_Z;
   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-  bool good = Get("//tubs[@name='Conv']/@Rio_Z",Rio_Z);
+  bool good = Get("//tubs[@name='Dri1']/@Rio_Z",Rio_Z);
   if (good){
     cgemR.push_back(Rio_Z[0]);
-    Get("//tubs[@name='Tra1']/@Rio_Z",Rio_Z);
+    Get("//tubs[@name='Dri2']/@Rio_Z",Rio_Z);
     cgemR.push_back(Rio_Z[0]);
-    Get("//tubs[@name='Tra2']/@Rio_Z",Rio_Z);
+    Get("//tubs[@name='Dri3']/@Rio_Z",Rio_Z);
     cgemR.push_back(Rio_Z[0]);
   }
   
