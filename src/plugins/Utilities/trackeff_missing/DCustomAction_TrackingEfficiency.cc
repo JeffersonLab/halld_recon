@@ -6,6 +6,7 @@
 //
 
 #include "DCustomAction_TrackingEfficiency.h"
+#include "TObjString.h"
 
 void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 {

@@ -11,6 +11,7 @@
 //  The photon beam energy E_gamma has to be computed as
 //  
 //     E_gamma = R * E_endpoint_calib  +  DE,  where
+//     DE = E_endpoint - E_endpoint_calib
 //
 // 
 
