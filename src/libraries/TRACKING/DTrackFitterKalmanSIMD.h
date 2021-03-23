@@ -68,6 +68,7 @@
 using namespace std;
 
 enum kalman_error_t{
+  APPLIED_HIT,
   FIT_SUCCEEDED,
   BREAK_POINT_FOUND,
   PRUNED_TOO_MANY_HITS,
@@ -207,7 +208,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 				       const DMatrix5x1 &Sstart,DMatrix5x5 &C,
 					DMatrix5x1 &S,
 				       double &chisq,unsigned int &numdof);
-  virtual kalman_error_t KalmanForward(double fdc_anneal,double cdc_anneal,
+  virtual kalman_error_t KalmanForward(double fdc_anneal,
 				       DMatrix5x1 &S,DMatrix5x5 &C,
 				       double &chisq,unsigned int &numdof);
   find_doca_error_t FindDoca(const DKalmanSIMDCDCHit_t *hit,
@@ -218,6 +219,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 			     bool do_reverse=false);
   void StepBack(double dedx,double newz,double z,
 		DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C);
+  void StepForward(double dedx,double z,double dz,DMatrix5x1 &S0,DMatrix5x5 &C);
   void FindSag(double dx,double dy, double zlocal,const DCDCWire *mywire,
                double &delta,double &dphi) const;
   void SwimToEndplate(double z,const DKalmanForwardTrajectory_t &traj,
@@ -272,6 +274,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double GetFDCDriftDistance(double time, double Bz) const {
     return fdc_drift_distance(time, Bz);
   }
+  void CheckKink(kalman_error_t &error);
 
  protected:
   enum hit_status{
@@ -432,7 +435,11 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void ComputeCDCDrift(double dphi,double delta,double t,double B,double &d, 
 		       double &V, double &tcorr);
   void TransformCovariance(DMatrix5x5 &C);
-  void ApplyCGEMHits(double z,const DKalmanCGEMHit_t *hit,DMatrix5x1 &S,DMatrix5x5 &C) const;
+  void ApplyCGEMHits(double dedx,double z,const DKalmanCGEMHit_t *hit,DMatrix5x1 &S0,DMatrix5x1 &S,DMatrix5x5 &C,double &chisq,unsigned int &ndof);
+  void ApplyCGEMHits(double dedx,const DKalmanCentralTrajectory_t &traj,
+		     const DKalmanCGEMHit_t *hit,DVector2 &xy,DMatrix5x1 &S0,
+		     DMatrix5x1 &S,DMatrix5x5 &C,double &chisq,
+		     unsigned int &ndof);
 
   //const DMagneticFieldMap *bfield; ///< pointer to magnetic field map
   //const DGeometry *geom;
@@ -555,7 +562,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
 
   // Maximum number of sigma's away from the predicted position to include hit
-  double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT;
+  double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT,NUM_CGEM_SIGMA_CUT;
 
   // Parameters for annealing scheme
   double ANNEAL_POW_CONST,ANNEAL_SCALE;
