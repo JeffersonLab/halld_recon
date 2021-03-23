@@ -223,6 +223,11 @@ inline DMatrix4x4 operator*(const DMatrix4x1 &m1,const DMatrix1x4 &m2){
   return temp;
 }
 
+// Find the transpose of a 3x1 matrix
+inline DMatrix1x3 Transpose(const DMatrix3x1 &M){
+  return DMatrix1x3(M(0),M(1),M(2));
+}
+
 // Find the transpose of a 5x3 matrix
 inline DMatrix3x5 Transpose(const DMatrix5x3 &M){
 return DMatrix3x5(M(0,0),M(1,0),M(2,0),M(3,0),M(4,0),
