@@ -126,6 +126,10 @@
                 track="int" shower="int"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
                 tunit="ns" lunit="cm"/>
+      <fcalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" ehit="float" thit="float"
+                dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
+                tunit="ns" lunit="cm"/>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"

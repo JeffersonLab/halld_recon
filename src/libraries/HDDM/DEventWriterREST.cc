@@ -572,6 +572,22 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				fcalList().setTflightvar(locFCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
 			}
 
+			vector<shared_ptr<const DFCALSingleHitMatchParams>> locFCALSingleHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_FCALSingleHitMatchParams(tracks[loc_j], locFCALSingleHitMatchParamsVector);
+			for (size_t loc_k = 0; loc_k < locFCALSingleHitMatchParamsVector.size(); ++loc_k)
+			{
+				hddm_r::FcalSingleHitMatchParamsList fcalSingleHitList = matches().addFcalSingleHitMatchParamses(1);
+				fcalSingleHitList().setTrack(loc_j);
+
+				fcalSingleHitList().setEhit(locFCALSingleHitMatchParamsVector[loc_k]->dEHit);
+				fcalSingleHitList().setThit(locFCALSingleHitMatchParamsVector[loc_k]->dTHit);
+				fcalSingleHitList().setDoca(locFCALSingleHitMatchParamsVector[loc_k]->dDOCAToHit);
+				fcalSingleHitList().setDx(locFCALSingleHitMatchParamsVector[loc_k]->dx);
+				fcalSingleHitList().setPathlength(locFCALSingleHitMatchParamsVector[loc_k]->dPathLength);
+				fcalSingleHitList().setTflight(locFCALSingleHitMatchParamsVector[loc_k]->dFlightTime);
+				fcalSingleHitList().setTflightvar(locFCALSingleHitMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+
 			vector<shared_ptr<const DTOFHitMatchParams>> locTOFHitMatchParamsVector;
 			locDetectorMatches[loc_i]->Get_TOFMatchParams(tracks[loc_j], locTOFHitMatchParamsVector);
 			for(size_t loc_k = 0; loc_k < locTOFHitMatchParamsVector.size(); ++loc_k)

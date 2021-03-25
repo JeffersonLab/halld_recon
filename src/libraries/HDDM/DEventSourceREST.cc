@@ -1554,6 +1554,25 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locFCALShowers[locShowerIndex], std::const_pointer_cast<const DFCALShowerMatchParams>(locShowerMatchParams));
       }
 
+      const hddm_r::FcalSingleHitMatchParamsList &fcalSingleHitList = iter->getFcalSingleHitMatchParamses();
+      hddm_r::FcalSingleHitMatchParamsList::iterator fcalSingleHitIter = fcalSingleHitList.begin();
+      for(; fcalSingleHitIter != fcalSingleHitList.end(); ++fcalSingleHitIter)
+      {
+         size_t locTrackIndex = fcalSingleHitIter->getTrack();
+
+         auto locSingleHitMatchParams = std::make_shared<DFCALSingleHitMatchParams>();
+         locSingleHitMatchParams->dEHit = fcalSingleHitIter->getEhit();
+	 locSingleHitMatchParams->dTHit = fcalSingleHitIter->getThit();
+         locSingleHitMatchParams->dx = fcalSingleHitIter->getDx();
+         locSingleHitMatchParams->dFlightTime = fcalSingleHitIter->getTflight();
+         locSingleHitMatchParams->dFlightTimeVariance = fcalSingleHitIter->getTflightvar();
+         locSingleHitMatchParams->dPathLength = fcalSingleHitIter->getPathlength();
+         locSingleHitMatchParams->dDOCAToHit = fcalSingleHitIter->getDoca();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex],std::const_pointer_cast<const DFCALSingleHitMatchParams>(locSingleHitMatchParams));
+      }
+
+
       const hddm_r::ScMatchParamsList &scList = iter->getScMatchParamses();
       hddm_r::ScMatchParamsList::iterator scIter = scList.begin();
       for(; scIter != scList.end(); ++scIter)
