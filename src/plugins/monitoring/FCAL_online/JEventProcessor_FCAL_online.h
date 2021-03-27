@@ -18,6 +18,9 @@ class TH1F;
 class TProfile;
 class TProfile2D;
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 class JEventProcessor_FCAL_online:public jana::JEventProcessor{
  public:
   JEventProcessor_FCAL_online();

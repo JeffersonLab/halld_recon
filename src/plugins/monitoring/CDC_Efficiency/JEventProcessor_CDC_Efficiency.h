@@ -21,6 +21,9 @@ using namespace std;
 #include <TH3.h>
 #include <TMath.h>
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include <JANA/JFactory.h>
 #include <JANA/JEventProcessor.h>
 #include <JANA/JEventLoop.h>

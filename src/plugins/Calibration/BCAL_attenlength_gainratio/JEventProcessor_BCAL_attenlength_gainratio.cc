@@ -18,6 +18,7 @@ using namespace jana;
 #include <TStyle.h>
 #include <TF1.h>
 
+#undef TH2I
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
