@@ -17,7 +17,7 @@ static TH2D *fdc_pseudo_measured_cell[25]; //Filled with total actually detected
 static TH2D *fdc_pseudo_expected_cell[25]; // Contains total number of expected hits by DOCA
 
 //For extraction of magnetic field slope, split the detectors into bins in radius
-const unsigned int rad = 1; // 1, 5 or 9
+const unsigned int rad = 9; // 1, 5 or 9
 
 static TH1I *hChi2OverNDF;
 static TH1I *hChi2OverNDF_accepted;
@@ -49,6 +49,7 @@ static TH1I *hPseudoTime[25];
 static TH1I *hPseudoTime_accepted[25];
 static TH1I *hPullTime[25];
 static TH1I *hDeltaTime[25];
+
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -295,6 +296,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     double theta_deg = thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg();
     double phi_deg = thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg();
     double tmom = thisTimeBasedTrack->pmag();
+    //double charge = thisTimeBasedTrack->charge();
     
     // Fill Histograms for all Tracks    
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -316,7 +318,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     if(!dIsNoFieldFlag){ // Quality cuts for Field on runs.
       if(tmom < 0.6)
        	continue; // Cut on the reconstructed momentum below 600MeV, no curlers
-      
+      // if(charge > 0)
+      //  	continue; // Cut negative tracks
+            
       // TRY TO IMPROVE RECONSTUCTION FOR LOW MOMENTA WITH CDC INFO, DISABLED
       // Tuned on 1345A data, not tuned for 1200A
       // if (tmom < 1.2 && rings < 12)
@@ -332,12 +336,14 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       
       
       if(!detMatches->Get_SCMatchParams(thisTimeBasedTrack, SCMatches)) {
-	continue; // At least one match to the Start Counter
+      	continue; // At least one match to the Start Counter
       }
       
-      if(!detMatches->Get_TOFMatchParams(thisTimeBasedTrack, TOFMatches) && !detMatches->Get_BCALMatchParams(thisTimeBasedTrack,BCALMatches)) {
-      	continue; // At least one match either to the Time-Of-Flight (forward) OR the BCAL (large angles)
-      }
+      if(!detMatches->Get_TOFMatchParams(thisTimeBasedTrack, TOFMatches) && 
+	 !detMatches->Get_BCALMatchParams(thisTimeBasedTrack,BCALMatches))
+	{
+	  continue; // At least one match either to the Time-Of-Flight (forward) OR the BCAL (large angles)
+	}
     }
     else return NOERROR; // Field off not supported for now !!
     
@@ -399,8 +405,10 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	DFDCWire * wire = wireByNumber[wireIndex]; 
 	double dz=wire->origin.z()-interPosition.z();
 	interPosition+=(dz/trackDirection.z())*trackDirection;
-	double distanceToWire =  (interPosition-wire->origin).Perp();
+	TVector3 perp = wire->udir.Cross(trackDirection).Unit();
+	double distanceToWire = fabs(perp * (interPosition - wire->origin));
 	bool expectHit = false;
+
 
 	// starting from here, only histograms with distance to wire < 0.5, maybe change later
 	if (distanceToWire < 0.5 )
@@ -425,7 +433,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 
 	  
 	if (expectHit && fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs DOCA", distanceToWire, "Expected Hits", 100, 0 , 0.5);
+	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs DOCA", distanceToWire, "Expected Hits", 100, 0 , 0.75);
 	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Expected Hits", 100, 0 , 1.0);
 	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs theta", theta_deg, "Expected Hits", 100, 0, 180);
 	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
@@ -442,7 +450,8 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	  }
 	  
 	  // look in the presorted FDC Hits for a match
-	  if(!locSortedFDCHits[cellNum][wireNum].empty() || !locSortedFDCHits[cellNum][wireNum-1].empty() || !locSortedFDCHits[cellNum][wireNum+1].empty()){
+	  if(!locSortedFDCHits[cellNum][wireNum].empty()){
+	    // || !locSortedFDCHits[cellNum][wireNum-1].empty() || !locSortedFDCHits[cellNum][wireNum+1].empty()){
 	    // Look not only in one wire, but also in adjacent ones (?)
 	    // This can remove the dependence on the track error
 
@@ -458,7 +467,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	      }
 	    }
 	    	    
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.5);
+	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.75);
 	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
 	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs theta", theta_deg, "Measured Hits", 100, 0, 180);
 	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
