@@ -15,6 +15,9 @@
 #include "TH1I.h"
 #include "TH2I.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include <JANA/JEventProcessor.h>
 
 #include "ANALYSIS/DTreeInterface.h"

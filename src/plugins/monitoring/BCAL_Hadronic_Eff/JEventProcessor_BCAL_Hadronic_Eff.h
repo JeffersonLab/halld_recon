@@ -12,6 +12,9 @@
 #include "TH1I.h"
 #include "TH2I.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALUnifiedHit.h"

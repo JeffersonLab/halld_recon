@@ -13,6 +13,9 @@
 
 #include "TH2I.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include "JANA/JEventLoop.h"
 #include "JANA/JApplication.h"
 

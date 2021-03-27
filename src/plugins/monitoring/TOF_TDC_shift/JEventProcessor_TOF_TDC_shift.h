@@ -14,6 +14,9 @@
 #include <TH2I.h>
 #include "TTree.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 using namespace std;
 
 class JEventProcessor_TOF_TDC_shift:public jana::JEventProcessor{

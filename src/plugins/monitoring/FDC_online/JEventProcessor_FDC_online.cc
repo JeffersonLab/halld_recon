@@ -27,6 +27,9 @@ using namespace jana;
 #include <TH2.h>
 #include <TH1.h>
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #define PI 3.14159265
 #define TDC_v3BIN_SIZE       0.1118   // ns/LSB
 //#define TDC_v3BIN_SIZE       1.   // ns/LSB

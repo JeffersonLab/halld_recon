@@ -34,6 +34,9 @@
 #include <TProfile.h>
 #include <TProfile2D.h>
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 using namespace std;
 using namespace jana;
 

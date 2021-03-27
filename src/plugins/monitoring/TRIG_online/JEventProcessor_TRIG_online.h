@@ -13,6 +13,9 @@
 #include "TH1I.h"
 #include "TH2I.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include <JANA/JEventProcessor.h>
 
 class JEventProcessor_TRIG_online:public jana::JEventProcessor{

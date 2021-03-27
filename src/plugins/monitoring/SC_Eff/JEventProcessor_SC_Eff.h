@@ -12,6 +12,9 @@
 #include "TH1I.h"
 #include "TH2I.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include "START_COUNTER/DSCHit.h"
 #include "TRIGGER/DTrigger.h"
 #include "TRACKING/DTrackTimeBased.h"

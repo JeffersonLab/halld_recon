@@ -17,6 +17,9 @@
 #include "TH2D.h"
 #include "TTree.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include "JANA/JEventLoop.h"
 #include "particleType.h"
 

@@ -13,6 +13,9 @@
 #include "TFile.h"
 #include "TDirectoryFile.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 #include "particleType.h"
 #include "DLorentzVector.h"
 #include "PID/DKinematicData.h"
