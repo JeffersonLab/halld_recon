@@ -468,7 +468,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 					{
 						auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 						locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - All RFs}");
-						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = dynamic_cast<TH2*>(new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0));
+						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
 					}
 					else
 						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -482,7 +482,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 				{
 					auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 					locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - Best RF}");
-					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = dynamic_cast<TH2*>(new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0));
+					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
 				}
 				else
 					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -496,7 +496,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 		string locHistName = "BeamRFDeltaTVsBeamE";
 		auto locHist = gDirectory->Get(locHistName.c_str());
 		if(locHist == nullptr)
-			dHist_BeamRFDeltaTVsBeamE = dynamic_cast<TH2*>(new TH2I(locHistName.c_str(), ";Beam Energy;#Deltat_{Beam - RF}", 400, 0.0, 12.0, 3600, -18.0, 18.0));
+			dHist_BeamRFDeltaTVsBeamE = (TH2*)new TH2I(locHistName.c_str(), ";Beam Energy;#Deltat_{Beam - RF}", 400, 0.0, 12.0, 3600, -18.0, 18.0);
 		else
 			dHist_BeamRFDeltaTVsBeamE = static_cast<TH2*>(locHist);
 

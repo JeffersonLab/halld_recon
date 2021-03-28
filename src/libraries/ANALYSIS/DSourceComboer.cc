@@ -731,7 +731,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				{
 					string locUnits = ((locSystem == SYS_CDC) || (locSystem == SYS_FDC)) ? "(keV/cm)" : "(MeV/cm)";
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);dE/dX ") + locUnits;
-					dHistMap_dEdx[locPID][locSystem] = dynamic_cast<TH2*>(new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0));
+					dHistMap_dEdx[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0);
 				}
 				else
 					dHistMap_dEdx[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -744,7 +744,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				if(locHist == nullptr)
 				{
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);E_{Shower}/p_{Track} (c)");
-					dHistMap_EOverP[locPID][locSystem] = dynamic_cast<TH2*>(new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0));
+					dHistMap_EOverP[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0);
 				}
 				else
 					dHistMap_EOverP[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -769,7 +769,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Events Survived Stage");
-				dNumEventsSurvivedStageMap[locReaction] = dynamic_cast<TH2*>(new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5));
+				dNumEventsSurvivedStageMap[locReaction] = (TH2*)new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Event.size(); ++loc_i)
 					dNumEventsSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Event[loc_i].c_str());
 			}
@@ -781,7 +781,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStageMap[locReaction] = dynamic_cast<TH2*>(new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5));
+				dNumCombosSurvivedStageMap[locReaction] = (TH2*)new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}
@@ -793,7 +793,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStage2DMap[locReaction] = dynamic_cast<TH2*>(new TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000));
+				dNumCombosSurvivedStage2DMap[locReaction] = (TH2*)new TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStage2DMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}

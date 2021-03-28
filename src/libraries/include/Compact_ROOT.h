@@ -344,6 +344,21 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
       return fMother->ProjectionY(name, firstybin, lastybin, option);
    }
 
+   static TClass *Class() {
+      static TClass myclass("Compact_TH2I");
+      return &myclass;
+   }
+   TClass *IsA() {
+      return Class();
+   }
+   bool InheritsFrom(const char *name) {
+      if (strstr(name, "Compact_TH2I") == 0)
+         return true;
+      else if (strstr(name, "TH2I") == 0)
+         return true;
+      return TNamed::InheritsFrom(name);
+   }
+
  protected:
    Compact_TH2I() {}
 

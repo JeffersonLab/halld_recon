@@ -16,6 +16,9 @@
 #include "ANALYSIS/DReaction.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
 
+#include <Compact_ROOT.h>
+#define TH2I Compact_TH2I
+
 using namespace std;
 using namespace jana;
 using namespace DAnalysis;
@@ -305,7 +308,7 @@ template <typename DHistType> inline bool DAnalysisAction::Check_IsValidTH3(stri
 	const char* locBadTypeName = "TH3";
 	if((!DHistType::Class()->InheritsFrom("TH3")) || (string(locTypeName) == string(locBadTypeName)))
 	{
-		cout << "ERROR, WRONG CLASS TYPE IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
+		cout << "ERROR, WRONG CLASS TYPE " << locTypeName << " not TH3 IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
 		return false;
 	}
 	return true;
@@ -315,9 +318,12 @@ template <typename DHistType> inline bool DAnalysisAction::Check_IsValidTH2(stri
 {
 	const char* locTypeName = DHistType::Class()->GetName();
 	const char* locBadTypeName = "TH2";
+	if(DHistType::Class()->InheritsFrom("Compact_TH2I")) {
+        return true;
+    }
 	if((!DHistType::Class()->InheritsFrom("TH2")) || (string(locTypeName) == string(locBadTypeName)) || DHistType::Class()->InheritsFrom("TH3"))
 	{
-		cout << "ERROR, WRONG CLASS TYPE IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
+		cout << "ERROR, WRONG CLASS TYPE " << locTypeName << " not TH2 IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
 		return false;
 	}
 	return true;
@@ -329,7 +335,7 @@ template <typename DHistType> inline bool DAnalysisAction::Check_IsValidTH1(stri
 	const char* locBadTypeName = "TH1";
 	if((!DHistType::Class()->InheritsFrom("TH1")) || (string(locTypeName) == string(locBadTypeName)) || DHistType::Class()->InheritsFrom("TH2") || DHistType::Class()->InheritsFrom("TH3"))
 	{
-		cout << "ERROR, WRONG CLASS TYPE IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
+		cout << "ERROR, WRONG CLASS TYPE " << locTypeName << " not TH1 IN GetOrCreate_Histogram for HISTOGRAM " << locHistName << ". HISTOGRAM NOT CREATED." << endl;
 		return false;
 	}
 	return true;
