@@ -480,7 +480,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString_High = locSystemStringMap[locSystemPair.first].second;
 
 			//Create TF1 low-side, Set cut values
-			auto locFunc_Low = new TF1("df_dEdxCut_Low", locCutFuncString_Low.c_str(), 0.0, 12.0);
+			auto locFunc_Low = new TF1("df_dEdxCut_Low", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, low-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_Low;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].first = locFunc_Low;
@@ -494,7 +494,7 @@ void DSourceComboer::Create_CutFunctions(void)
 				jout << endl;
 
 			//Create TF1 high-side, Set cut values
-			auto locFunc_High = new TF1("df_dEdxCut_High", locCutFuncString_High.c_str(), 0.0, 12.0);
+			auto locFunc_High = new TF1("df_dEdxCut_High", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, High-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_High;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].second = locFunc_High;
@@ -526,7 +526,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_EOverPCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_EOverPCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "E/p Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dEOverPCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -558,7 +558,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_BetaCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_BetaCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "Beta Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dBetaCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
