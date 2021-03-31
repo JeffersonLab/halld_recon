@@ -480,7 +480,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString_High = locSystemStringMap[locSystemPair.first].second;
 
 			//Create TF1 low-side, Set cut values
-			auto locFunc_Low = new TF1("df_dEdxCut_Low", locCutFuncString_Low.c_str(), 0.0, 12.0);
+			auto locFunc_Low = new TF1("df_dEdxCut_Low", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, low-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_Low;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].first = locFunc_Low;
@@ -494,7 +494,7 @@ void DSourceComboer::Create_CutFunctions(void)
 				jout << endl;
 
 			//Create TF1 high-side, Set cut values
-			auto locFunc_High = new TF1("df_dEdxCut_High", locCutFuncString_High.c_str(), 0.0, 12.0);
+			auto locFunc_High = new TF1("df_dEdxCut_High", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, High-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_High;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].second = locFunc_High;
@@ -526,7 +526,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_EOverPCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_EOverPCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "E/p Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dEOverPCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -558,7 +558,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_BetaCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_BetaCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "Beta Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dBetaCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -731,7 +731,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				{
 					string locUnits = ((locSystem == SYS_CDC) || (locSystem == SYS_FDC)) ? "(keV/cm)" : "(MeV/cm)";
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);dE/dX ") + locUnits;
-					dHistMap_dEdx[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0);
+					dHistMap_dEdx[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0);
 				}
 				else
 					dHistMap_dEdx[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -744,7 +744,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				if(locHist == nullptr)
 				{
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);E_{Shower}/p_{Track} (c)");
-					dHistMap_EOverP[locPID][locSystem] = (TH2*)new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0);
+					dHistMap_EOverP[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0);
 				}
 				else
 					dHistMap_EOverP[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -769,7 +769,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Events Survived Stage");
-				dNumEventsSurvivedStageMap[locReaction] = (TH2*)new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5);
+				dNumEventsSurvivedStageMap[locReaction] = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Event.size(); ++loc_i)
 					dNumEventsSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Event[loc_i].c_str());
 			}
@@ -781,7 +781,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStageMap[locReaction] = (TH2*)new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5);
+				dNumCombosSurvivedStageMap[locReaction] = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}
@@ -793,7 +793,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStage2DMap[locReaction] = (TH2*)new TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000);
+				dNumCombosSurvivedStage2DMap[locReaction] = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000);
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStage2DMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}

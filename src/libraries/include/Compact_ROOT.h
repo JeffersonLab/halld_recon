@@ -38,6 +38,7 @@
 #ifndef _CompactRoot_h
 #define _CompactRoot_h
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -49,35 +50,19 @@
 // Base class for CompactRoot objects
 
 template <class TH, class T>
-class Compact_TH : public TNamed {
+class Compact_TH : public TH {
  protected:
-   Compact_TH() {}
-   bool fSumw2;
-   TDirectory *fDirectory;
    std::map<T, std::vector<unsigned char> > fDataByte;
    std::map<T, std::vector<unsigned short> > fDataShort;
    std::map<T, std::vector<unsigned int> > fDataInt;
    std::map<T, std::vector<unsigned long> > fDataLong;
 
  public:
-   Compact_TH(std::string name, std::string title)
-    : TNamed(name.c_str(), title.c_str()),
-      fSumw2(TH1::GetDefaultSumw2()),
-      fDirectory(0)
-   {
-      if (TH1::AddDirectoryStatus()) {
-         fDirectory = gDirectory;
-         if (fDirectory) {
-            fDirectory->Append(this,kTRUE);
-         }
-      }
-   }
-   virtual ~Compact_TH() {
-      if (fDirectory)
-         fDirectory->Remove(this);
-   }
-   void Sumw2(bool flag=true) {
-      fSumw2 = flag;
+   Compact_TH() {}
+   Compact_TH(std::string &name, std::string &title) {
+      TH::SetName(name.c_str());
+      TH::SetTitle(title.c_str());
+      TH::SetDirectory(0);
    }
    static std::map<TH*, T> &get_mothers() {
       static std::map<TH*, T> mothers;
@@ -155,22 +140,26 @@ class Compact_TH : public TNamed {
       mothers[mother] = 1;
       return mother;
    }
-   void fill_mother(TH* mother, TAxis &xaxis) {
-      mother->SetName(fName);
-      mother->SetTitle(fTitle);
+   void fill_mother(TH* mother, TString name, TString title, TAxis &xaxis) {
+      mother->SetName(name);
+      mother->SetTitle(title);
       mother->GetXaxis()->Copy(xaxis);
       replay(mother);
    }
-   void fill_mother(TH* mother, TAxis &xaxis, TAxis &yaxis) {
-      mother->SetName(fName);
-      mother->SetTitle(fTitle);
+   void fill_mother(TH* mother, TString name, TString title, 
+                    TAxis &xaxis, TAxis &yaxis)
+   {
+      mother->SetName(name);
+      mother->SetTitle(title);
       mother->GetXaxis()->Copy(xaxis);
       mother->GetYaxis()->Copy(yaxis);
       replay(mother);
    }
-   void fill_mother(TH* mother, TAxis &xaxis, TAxis &yaxis, TAxis &zaxis) {
-      mother->SetName(fName);
-      mother->SetTitle(fTitle);
+   void fill_mother(TH* mother, TString name, TString title,
+                    TAxis &xaxis, TAxis &yaxis, TAxis &zaxis)
+   {
+      mother->SetName(name);
+      mother->SetTitle(title);
       mother->GetXaxis()->Copy(xaxis);
       mother->GetYaxis()->Copy(yaxis);
       mother->GetZaxis()->Copy(zaxis);
@@ -218,7 +207,6 @@ class Compact_TH : public TNamed {
    }
    virtual void fill_bin(int bin, double w) = 0;
    void replay(TH* mother) {
-      mother->Sumw2(fSumw2);
       mother->Reset();
       for (auto ib : fDataByte) {
          for (int i=0; i < ib.second.size(); ++i) {
@@ -269,14 +257,17 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
    {
       fMother = find_mother(name, title, nbinsx, nbinsy);
    }
-
    virtual ~Compact_TH2I() {
       std::map<TH2I*, int> &mothers = get_mothers();
       if (--mothers[fMother] == 0) {
          mothers.erase(fMother);
          delete fMother;
+         fMother = 0;
       }
    }
+   // Only the following public methods are known to work;
+   // Other methods of the base class may work, but it is
+   // up to the user to determine what they might do.
    void Fill(double x, double y, int w=1) {
       fMother->GetXaxis()->Copy(fXaxis);
       fMother->GetYaxis()->Copy(fYaxis);
@@ -294,12 +285,16 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
       fMother->Fill(x,y,w);
    }
    virtual int Write(const char *name=0, int option=0, int bufsize=0) {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       fMother->PutStats(&fStats.sumw);
       return fMother->Write(name, option, bufsize);
    }
    TObject* Clone(const char* newname) {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       fMother->PutStats(&fStats.sumw);
       return (TH2I*)fMother->Clone(newname);
    }
@@ -314,17 +309,22 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
    virtual void LabelsOption(Option_t *option="h") {
       fXaxis.LabelsOption(option);
    }
-
    virtual int GetBinContent(unsigned int bin) {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       return fMother->GetBinContent(bin);
    }
    virtual int GetBinContent(unsigned int binx, unsigned int biny) {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       return fMother->GetBinContent(binx, biny);
    }
    virtual void SetBinContent(unsigned int bin, double val) {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       if (fMother->GetBinContent(bin) != 0) {
          clear_bin(bin);
       }
@@ -336,12 +336,28 @@ class Compact_TH2I : public Compact_TH<TH2I, int> {
       SetBinContent(fMother->GetBin(binx, biny), val);
    }
    TH1D *ProjectionX(const char *name="_px", int firstybin=0, int lastybin=-1, Option_t *option="") {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       return fMother->ProjectionX(name, firstybin, lastybin, option);
    }
    TH1D *ProjectionY(const char *name="_py", int firstybin=0, int lastybin=-1, Option_t *option="") {
-      fill_mother(fMother, fXaxis, fYaxis);
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
       return fMother->ProjectionY(name, firstybin, lastybin, option);
+   }
+   virtual void Draw(Option_t *option="") {
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
+      TH2I::Draw(option);
+   }
+   virtual Double_t *GetIntegral() {
+      fMother->Reset();
+      fMother->Sumw2(GetSumw2N()>0);
+      fill_mother(fMother, fName, fTitle, fXaxis, fYaxis);
+      return fMother->GetIntegral();
    }
 
    static TClass *Class() {
