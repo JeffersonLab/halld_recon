@@ -466,6 +466,11 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    gPARMS->SetDefaultParameter("KALMAN:NUM_CGEM_SIGMA_CUT",NUM_CGEM_SIGMA_CUT,
          "maximum distance in number of sigmas away from projection to accept fdc hit"); 
 
+   CGEM_XY_SIGMA=0.01;
+   CGEM_Z_SIGMA=0.01;
+   gPARMS->SetDefaultParameter("KALMAN:CGEM_XY_SIGMA",CGEM_XY_SIGMA);
+   gPARMS->SetDefaultParameter("KALMAN:CGEM_Z_SIGMA",CGEM_Z_SIGMA);
+
    ANNEAL_SCALE=9.0;
    ANNEAL_POW_CONST=1.5;
    gPARMS->SetDefaultParameter("KALMAN:ANNEAL_SCALE",ANNEAL_SCALE,
@@ -1158,9 +1163,9 @@ void DTrackFitterKalmanSIMD::AddCGEMHit(const DCGEMHit *cgemhit){
   hit->x=cgemhit->x;
   hit->y=cgemhit->y;
   hit->z=cgemhit->z;
-  hit->varx=0.0001;
-  hit->vary=0.0001;
-  hit->varz=0.0001;
+  hit->varx=CGEM_XY_SIGMA*CGEM_XY_SIGMA;
+  hit->vary=CGEM_XY_SIGMA*CGEM_XY_SIGMA;
+  hit->varz=CGEM_Z_SIGMA*CGEM_Z_SIGMA;
 
   my_cgemhits.push_back(hit);
 }

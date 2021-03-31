@@ -559,7 +559,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 
   bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS,USE_CGEM_HITS;
   bool got_trd_gem_hits, got_cgem_hits;
-  
+  double CGEM_XY_SIGMA,CGEM_Z_SIGMA; 
 
   // Maximum number of sigma's away from the predicted position to include hit
   double NUM_CDC_SIGMA_CUT,NUM_FDC_SIGMA_CUT,NUM_CGEM_SIGMA_CUT;
