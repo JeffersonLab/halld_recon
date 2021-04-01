@@ -40,6 +40,7 @@ template<typename BASE_FACTORY = DTACHit_factory,
 class DRebuildFromRawFADC_factory: public BASE_FACTORY {
 protected:
 	BUILDER* hitBuilder = nullptr;
+	std::string fTag;
 //	std::set<const Df250WindowRawData*> rawDataPtrSet;
 
 //	virtual jerror_t rebuildHit(jana::JEventLoop *eventLoop,
@@ -51,7 +52,8 @@ public:
 			BASE_FACTORY() {
 	}
 	virtual const char* Tag() {
-		return (std::string(BASE_FACTORY::Tag()) + BUILDER::getTagString()).c_str();
+		fTag = std::string(BASE_FACTORY::Tag()) + BUILDER::getTagString();
+		return fTag.c_str();
 	}
 	virtual ~DRebuildFromRawFADC_factory() {
 	}
