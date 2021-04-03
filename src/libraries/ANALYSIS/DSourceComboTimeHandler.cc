@@ -1125,10 +1125,13 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 
 					//get the timing at the POCA to the vertex (computed previously!)
 					auto locPOCAPair = std::make_pair(locChargedHypo, dSourceComboVertexer->Get_ConstrainingParticles_NoBeam(locIsProductionVertex, locVertexPrimaryFullCombo, false));
-					auto locVertexTime = dChargedParticlePOCAToVertexX4.find(locPOCAPair)->second.T();
-					auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
-					locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
-					locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    auto locPOCAVertex = dChargedParticlePOCAToVertexX4.find(locPOCAPair);
+                    if (locPOCAVertex != dChargedParticlePOCAToVertexX4.end()) {
+					   auto locVertexTime = locPOCAVertex->second.T();
+					   auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
+					   locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
+					   locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    }
 				}
 			}
 			if(dDebugLevel >= 10)
