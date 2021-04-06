@@ -274,7 +274,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   double GetFDCDriftDistance(double time, double Bz) const {
     return fdc_drift_distance(time, Bz);
   }
-  void CheckKink(kalman_error_t &error);
 
  protected:
   enum hit_status{

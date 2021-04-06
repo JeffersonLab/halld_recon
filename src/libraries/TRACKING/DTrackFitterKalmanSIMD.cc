@@ -4492,6 +4492,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   double fdc_chi2cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
   
   unsigned int num_fdc_hits=break_point_fdc_index+1;
+  unsigned int max_num_fdc_used_in_fit=num_fdc_hits;
   unsigned int num_cdc_hits=my_cdchits.size(); 
   
   if (num_fdc_hits+num_cdc_hits<MIN_HITS_FOR_REFIT){
@@ -4827,12 +4828,25 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   }
   
   if (!S.IsFinite()) return FIT_FAILED;
+
+  // Check to see if we pruned too many hits
+  unsigned int num_good=0; 
+  for (unsigned int j=0;j<max_num_fdc_used_in_fit;j++){
+    if (fdc_used_in_fit[j]) num_good++;
+  }
+  if (double(num_good)/double(max_num_fdc_used_in_fit)<MINIMUM_HIT_FRACTION){
+    unsigned int new_index=(3*max_num_fdc_used_in_fit)/4;
+    if (new_index>=MIN_HITS_FOR_REFIT-1){
+      break_point_fdc_index=new_index;
+    }
+    else{
+      break_point_fdc_index=MIN_HITS_FOR_REFIT-1;
+    }
+    return PRUNED_TOO_MANY_HITS;
+  }
   
   // Check if we have a kink in the track
-  if (break_point_fdc_index>2){
-    if (break_point_fdc_index<num_fdc/2){
-      break_point_fdc_index=(3*num_fdc)/4;
-    }
+  if (break_point_fdc_index>0){
     if (break_point_fdc_index<MIN_HITS_FOR_REFIT-1){
       break_point_fdc_index=MIN_HITS_FOR_REFIT-1;
     }
@@ -4860,7 +4874,10 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   DMatrix5x5 Ctest; // covariance matrix
   //DMatrix5x1 dS;  // perturbation in state vector
   double V=0.0507;
- 
+
+  // number of fdc hits 
+  unsigned int num_fdc=my_fdchits.size();
+
   // set used_in_fit flags to false for cdc hits
   unsigned int num_cdc=cdc_used_in_fit.size();
   for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
@@ -4880,13 +4897,19 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   
   // wire information  
   unsigned int cdc_index=break_point_cdc_index;
-  if (cdc_index<num_cdc-1){
-    num_cdc=cdc_index+1;
+  unsigned int max_num_cdc_used_in_fit=cdc_index+1;
+  if (num_fdc>0){
+    cdc_index=num_cdc-1;
+    max_num_cdc_used_in_fit=num_cdc;
   }
   // cgem info
   int cgem_index=0;
-  
-  //  if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
+
+  unsigned int max_num_fdc_used_in_fit=0;
+  if (num_fdc>0){
+    max_num_fdc_used_in_fit=break_point_fdc_index+1;
+  }
+  if (max_num_cdc_used_in_fit+max_num_fdc_used_in_fit<MIN_HITS_FOR_REFIT) chi2cut=BIG;
   
   DVector2 origin=my_cdchits[cdc_index]->origin;
   double z0w=my_cdchits[cdc_index]->z0wire;
@@ -5225,24 +5248,54 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
       return MOMENTUM_OUT_OF_RANGE;
    }
 
-   // Check if we have a kink in the track or threw away too many cdc hits
-   if (fdc_used_in_fit.size()==0){
-     if (num_cdc>=MIN_HITS_FOR_REFIT){
-       if (break_point_cdc_index>1){
-	 if (break_point_cdc_index<num_cdc/2){
-	   break_point_cdc_index=(3*num_cdc)/4;
-         }
-	 return BREAK_POINT_FOUND;
+   // Check to see if we pruned too many hits
+   unsigned int num_good=0;
+   unsigned int num_hits=max_num_fdc_used_in_fit+max_num_cdc_used_in_fit;
+   for (unsigned int j=0;j<max_num_fdc_used_in_fit;j++){
+     if (fdc_used_in_fit[j]) num_good++;
+   }
+   for (unsigned int j=0;j<max_num_cdc_used_in_fit;j++){
+     if (cdc_used_in_fit[j]) num_good++;
+   }
+   if (double(num_good)/double(num_hits)<MINIMUM_HIT_FRACTION){
+     if (num_fdc>0){
+       unsigned int new_index=(3*max_num_fdc_used_in_fit)/4;
+       if (new_index+max_num_cdc_used_in_fit>=MIN_HITS_FOR_REFIT-1){
+	 break_point_fdc_index=new_index;
        }
-       
-       unsigned int num_good=0; 
-       for (unsigned int j=0;j<num_cdc;j++){
-	 if (cdc_used_in_fit[j]) num_good++;
+       else {
+	 new_index=MIN_HITS_FOR_REFIT-max_num_cdc_used_in_fit;
+	 if (new_index>=max_num_fdc_used_in_fit){
+	   new_index=max_num_fdc_used_in_fit-1;
+	 }
        }
-       if (double(num_good)/double(num_cdc)<MINIMUM_HIT_FRACTION){
-	 return PRUNED_TOO_MANY_HITS;
+     } else {
+       unsigned int new_index=(3*max_num_cdc_used_in_fit)/4;
+       if (new_index>=MIN_HITS_FOR_REFIT-1){
+	 break_point_cdc_index=new_index;
+       }
+       else {
+	 break_point_cdc_index=MIN_HITS_FOR_REFIT-1;
        }
      }
+ 
+     return PRUNED_TOO_MANY_HITS;
+   }
+   
+   // Check if we have a kink in the track
+   if (fdc_used_in_fit.size()==0){
+     if (break_point_cdc_index>0){
+       if (break_point_cdc_index<MIN_HITS_FOR_REFIT-1){
+	 break_point_cdc_index=MIN_HITS_FOR_REFIT-1;
+       }
+       return BREAK_POINT_FOUND;
+     }
+   }
+   else if (break_point_fdc_index>0){
+     if (break_point_fdc_index+num_cdc<MIN_HITS_FOR_REFIT){ 
+       break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
+     }
+     return BREAK_POINT_FOUND;
    }
 
    return FIT_SUCCEEDED;
@@ -6322,11 +6375,6 @@ DTrackFitterKalmanSIMD::RecoverBrokenForwardTracks(double fdc_anneal,
       }
       if (refit_ndf>5){
 	refit_ndf-=5; // take into account number of parameters in the fit
-
-	// Check if we have a kink in the track or threw away too many hits
-	if (refit_error==FIT_SUCCEEDED){
-	  CheckKink(refit_error);
-	}
       }
       else {
 	//_DBG_ << "Pruned too many hits!" <<endl;
@@ -6456,11 +6504,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       }
       if (my_ndf>5){
 	my_ndf-=5; // take into account number of parameters in the fit
-	
-	// Check if we have a kink in the track or threw away too many hits
-	if (error==FIT_SUCCEEDED){
-	  CheckKink(error);
-	}
       }
       else {
 	//_DBG_ << "Pruned too many hits!" <<endl;
@@ -6499,12 +6542,16 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	unsigned int temp_ndf=my_ndf;
 	double temp_chi2=chisq;
 	double x=x_,y=y_,z=z_;
+	unsigned int temp_cdc_break_index=break_point_cdc_index;
+	unsigned int temp_fdc_break_index=break_point_fdc_index;
 
 	kalman_error_t refit_error=RecoverBrokenForwardTracks(fdc_anneal,
 							      cdc_anneal,
 							      S,C,C0,chisq,
 							      my_ndf);
 	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	  break_point_cdc_index=temp_cdc_break_index;
+	  break_point_fdc_index=temp_fdc_break_index;
 	  fdc_anneal=1000.;
 	  cdc_anneal=1000.;
 	  refit_error=RecoverBrokenForwardTracks(fdc_anneal,
@@ -10491,62 +10538,3 @@ void DTrackFitterKalmanSIMD::StepForward(double dedx,double z, double dz,
   }
 }
 
-// Check if we have a kink in the track or threw away too many hits
-void DTrackFitterKalmanSIMD::CheckKink(kalman_error_t &error){
-  unsigned int num_fdc=fdc_used_in_fit.size();
-  unsigned int num_cdc=cdc_used_in_fit.size();
-
-  if (num_cdc>0 && break_point_fdc_index>0 && break_point_cdc_index>2){ 
-    if (break_point_fdc_index+num_cdc<MIN_HITS_FOR_REFIT){    
-      unsigned int new_index=(3*num_fdc)/4;
-      if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-	break_point_fdc_index=new_index;
-      }
-      else{
-	break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-      }
-    }
-    //_DBG_ << endl;
-    error=BREAK_POINT_FOUND;
-    return;
-  }
-
-  if (num_cdc>5 && break_point_cdc_index>2){
-    //_DBG_ << endl;  
-    unsigned int new_index=3*(num_fdc)/4;
-    if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-      break_point_fdc_index=new_index;
-    }
-    else{
-      break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-    }
-    error=BREAK_POINT_FOUND;
-    return;
-  }
-
-  unsigned int num_good=0; 
-  unsigned int num_hits=num_cdc+num_fdc;
-  for (unsigned int j=0;j<num_cdc;j++){
-    if (cdc_used_in_fit[j]) num_good++;
-  }
-  for (unsigned int j=0;j<num_fdc;j++){
-    if (fdc_used_in_fit[j]) num_good++;
-  }
-  if (double(num_good)/double(num_hits)<MINIMUM_HIT_FRACTION){
-    //_DBG_ <<endl;
-    if (num_cdc==0){
-      unsigned int new_index=(3*num_fdc)/4;
-      break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
-    }
-    else{
-      unsigned int new_index=(3*num_fdc)/4;
-      if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-	break_point_fdc_index=new_index;
-      }
-      else{
-	break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-      }
-    }
-    error=PRUNED_TOO_MANY_HITS;
-  }
-}
