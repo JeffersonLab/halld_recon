@@ -6509,7 +6509,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	//_DBG_ << "Pruned too many hits!" <<endl;
 	chisq=-1.;
 	my_ndf=0;
-	 
 	if (num_cdchits==0){
 	  unsigned int new_index=(3*num_fdchits)/4;
 	  break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
@@ -6544,12 +6543,12 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	double x=x_,y=y_,z=z_;
 	unsigned int temp_cdc_break_index=break_point_cdc_index;
 	unsigned int temp_fdc_break_index=break_point_fdc_index;
-
+	
 	kalman_error_t refit_error=RecoverBrokenForwardTracks(fdc_anneal,
 							      cdc_anneal,
 							      S,C,C0,chisq,
 							      my_ndf);
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if (refit_error!=FIT_SUCCEEDED){
 	  break_point_cdc_index=temp_cdc_break_index;
 	  break_point_fdc_index=temp_fdc_break_index;
 	  fdc_anneal=1000.;
@@ -6558,7 +6557,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 						 cdc_anneal,
 						 S,C,C0,chisq,
 						 my_ndf);
-	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 	if (refit_error!=FIT_SUCCEEDED){
@@ -6575,6 +6573,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	}
 	else error=FIT_SUCCEEDED;
       }
+   
       if ((error==POSITION_OUT_OF_RANGE || error==MOMENTUM_OUT_OF_RANGE)
 	  && iter==0){ 
 	return FIT_FAILED;
@@ -6715,8 +6714,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	 extrapolated=true;
       }
       else{
-         //_DBG_ << endl;
-         z_=ztemp;
+	z_=ztemp;
       }
    }
 
@@ -6882,12 +6880,12 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	  break_point_cdc_index=(new_index>min_cdc_index_for_refit)?new_index:min_cdc_index_for_refit;
 	  // anneal_factor*=10.;
 	}
-	
+	unsigned int temp_cdc_break_index=break_point_cdc_index;
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if (refit_error!=FIT_SUCCEEDED){  
 	  anneal_factor=1000.;
+	  break_point_cdc_index=temp_cdc_break_index;
 	  refit_error=RecoverBrokenTracks(anneal_factor,S,C,C0,chisq,my_ndf);
-	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 	  
@@ -7034,8 +7032,17 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    double dy=Slast(state_y)-beam_pos.Y();
    bool extrapolated=false;
    if (sqrt(dx*dx+dy*dy)>EPS2){
-     if (ExtrapolateToVertex(Slast,Clast)!=NOERROR) return EXTRAPOLATION_FAILED;
-     extrapolated=true;
+     DMatrix5x5 Ctemp=Clast;
+     DMatrix5x1 Stemp=Slast; 
+     double ztemp=z_;
+     if (ExtrapolateToVertex(Stemp,Ctemp)==NOERROR){
+         Clast=Ctemp;
+         Slast=Stemp;
+	 extrapolated=true;
+     }
+     else{
+       z_=ztemp;
+     }
    }
 
    // Final momentum, positions and tangents
@@ -7193,11 +7200,12 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
 	  //_DBG_ << "Prune" << endl;	  
 	}
 
+	unsigned int temp_cdc_break_index=break_point_cdc_index;
 	kalman_error_t refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
-	if (fit_type==kTimeBased && refit_error!=FIT_SUCCEEDED){
+	if (refit_error!=FIT_SUCCEEDED){ 
+	  break_point_cdc_index=temp_cdc_break_index;
 	  anneal_factor=1000.;
 	  refit_error=RecoverBrokenTracks(anneal_factor,Sc,Cc,C0,pos,chisq,my_ndf);  
-	  //chisq=1e6;
 	  did_second_refit=true;
 	}
 
@@ -7272,9 +7280,9 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    // Extrapolate to the point of closest approach to the beam line
    DVector2 beam_pos=beam_center+(Sclast(state_z)-beam_z0)*beam_dir;
    bool extrapolated=false;
-   if ((last_pos-beam_pos).Mod()>EPS2){ // in cm
-      if (ExtrapolateToVertex(last_pos,Sclast,Cclast)!=NOERROR) return EXTRAPOLATION_FAILED; 
-      extrapolated=true;
+   if ((last_pos-beam_pos).Mod()>EPS2){ // in cm 
+     if (ExtrapolateToVertex(last_pos,Sclast,Cclast)!=NOERROR) return EXTRAPOLATION_FAILED; 
+     extrapolated=true;
    }
 
    // output lists of hits used in the fit 
