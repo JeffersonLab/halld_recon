@@ -758,10 +758,11 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
 
   }
 
-  // if the fit returns chisq=-1, something went terribly wrong.  We may still 
+  // if the fit returns chisq=-1, something went terribly wrong.  
+  // The time-based fit can fail for several reasons.  We may still 
   // have a usable track from the wire-based pass.  In this case set 
   // kFitNoImprovement so we can save the wire-based results.
-  if (fitter->GetChisq()<0){
+  if (fitter->GetChisq()<0 || status!=DTrackFitter::kFitSuccess){
     status=DTrackFitter::kFitNoImprovement;
   }
   
@@ -1028,10 +1029,39 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
     if(q != fitter->GetFitParameters().charge())
         status=DTrackFitter::kFitFailed; 
 
-    // if we can't refit the track, it is likely of poor quality, so stop here and do not add the hypothesis
+    // if we can't refit the track, try to go back to a hit-based track 
+    // and use the hits that were associated with this track
     if(status == DTrackFitter::kFitFailed) {
-        delete timebased_track;
-        return;
+      fitter->Reset();
+      fitter->SetFitType(DTrackFitter::kTimeBased);	
+      
+      const DTrackWireBased *hb_track=NULL;
+      int max_ndf=0;
+      for (unsigned int i=0;i<wire_based_track.size();i++){
+	if (wire_based_track[i]->Ndof>max_ndf){
+	  max_ndf=wire_based_track[i]->Ndof;
+	  hb_track=wire_based_track[i];
+	}
+      }
+
+      // Get the hits used in the fit  
+      vector<const DCDCTrackHit *>mycdchits;
+      hb_track->GetT(mycdchits);
+      vector<const DFDCPseudo *>myfdchits;
+      hb_track->GetT(myfdchits);
+
+      fitter->AddHits(myfdchits);
+      fitter->AddHits(mycdchits);
+      
+      status=fitter->FitTrack(hb_track->position(),hb_track->momentum(),
+			      hb_track->charge(),my_mass,mStartTime,mStartDetector);
+
+      // If the fit failed again, or something funny happened, bail...
+      if (status!=DTrackFitter::kFitSuccess || fitter->GetChisq()<0 
+	  || q != fitter->GetFitParameters().charge()){
+	delete timebased_track;
+	return;
+      }
     }
 
     if (status==DTrackFitter::kFitSuccess){
