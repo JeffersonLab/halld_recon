@@ -70,6 +70,8 @@
 #include "ANALYSIS/DCutActions.h"
 #include "ANALYSIS/DSourceCombo.h"
 
+#include "TRIGGER/DTrigger.h"
+
 using namespace std;
 using namespace jana;
 
@@ -89,6 +91,7 @@ REACTION-INDEPENDENT ACTIONS:
 	DHistogramAction_Reconstruction
 	DHistogramAction_NumReconstructedObjects
 	DHistogramAction_TrackShowerErrors
+	DHistogramAction_TriggerStudies
 */
 
 class DHistogramAction_ObjectMemory : public DAnalysisAction
@@ -217,6 +220,8 @@ class DHistogramAction_Reconstruction : public DAnalysisAction
 		TH2I* dHist_BCALShowerPhiVsZ = nullptr;
 
 		TH1I* dHist_TOFPointEnergy = nullptr;
+		TH1I* dHist_TOFPointEnergyP1 = nullptr;
+		TH1I* dHist_TOFPointEnergyP2 = nullptr;
 		TH2I* dHist_TOFPointYVsX = nullptr;
 
 		TH1I* dHist_SCHitSector = nullptr;
@@ -695,7 +700,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -708,7 +713,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -721,7 +726,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		dMinVertexXY(-10.0), dMaxVertexXY(10.0), dMinBeta(-0.2), dMaxBeta(1.2), dMinDeltaBeta(-1.0), dMaxDeltaBeta(1.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
-			dFinalStatePIDs.push_back(Gamma);
+			dFinalStatePIDs.push_back(Gamma);  dFinalStatePIDs.push_back(Neutron);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(KPlus);  dFinalStatePIDs.push_back(Proton);
 			dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(KMinus);
 		}
@@ -756,6 +761,7 @@ class DHistogramAction_DetectedParticleKinematics : public DAnalysisAction
 		map<Particle_t, TH1I*> dHistMap_VertexZ;
 		map<Particle_t, TH2I*> dHistMap_VertexYVsX;
 		map<Particle_t, TH1I*> dHistMap_VertexT;
+		map<Particle_t, TH1I*> dHistMap_ShowerE;
 };
 
 class DHistogramAction_TrackShowerErrors : public DAnalysisAction
@@ -769,6 +775,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 
@@ -780,6 +787,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 
@@ -791,6 +799,7 @@ class DHistogramAction_TrackShowerErrors : public DAnalysisAction
 		dMaxPxyError(0.1), dMaxPzError(0.5), dMaxXYError(1.5), dMaxZError(10.0), dMaxShowerZError(15.0), dMaxEError(0.5), dMaxTError(2.0),
 		dTrackSelectionTag("NotATag"), dShowerSelectionTag("NotATag")
 		{
+			dFinalStatePIDs.push_back(Gamma);
 			dFinalStatePIDs.push_back(PiPlus);  dFinalStatePIDs.push_back(PiMinus);  dFinalStatePIDs.push_back(Proton);
 		}
 
@@ -975,6 +984,34 @@ class DHistogramAction_TrackMultiplicity : public DAnalysisAction
 
 		TH2D* dHist_NumReconstructedParticles = nullptr;
 		TH2D* dHist_NumGoodReconstructedParticles = nullptr;
+};
+
+class DHistogramAction_TriggerStudies : public DAnalysisAction
+{
+	public:
+		DHistogramAction_TriggerStudies(const DReaction* locReaction, string locActionUniqueString = "") : 
+		DAnalysisAction(locReaction, "Hist_TriggerStudies", false, locActionUniqueString),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+
+		DHistogramAction_TriggerStudies(string locActionUniqueString) : 
+		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+			
+		DHistogramAction_TriggerStudies(void) : 
+		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+
+		int dBCALBins, dFCALBins;
+		double dMaxBCALEnergy;
+		double dMaxFCALEnergy;
+
+		void Initialize(JEventLoop* locEventLoop);
+		void Run_Update(JEventLoop* locEventLoop){}
+
+	private:
+		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+
+		TH2D* dHist_Trigger_FCALBCAL_Energy = nullptr;
 };
 
 #endif // _DHistogramActions_Independent_

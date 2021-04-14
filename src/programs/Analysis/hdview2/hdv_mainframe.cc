@@ -82,11 +82,7 @@ static float FDC_Rmax = 48.5;
 static float TARGET_Zmid = 65.0;
 static float TARGET_Zlen = 30.0;
 
-// The DFCALGeometry object is not really available at the time we need it
-// when the program first starts. Create one of our own here.
-static DFCALGeometry *fcalgeom = new DFCALGeometry;
-// ditto for DTOFGeometry
-//static DTOFGeometry *tofgeom = new DTOFGeometry;
+static DFCALGeometry *fcalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
 
 static vector<vector <DFDCWire *> >fdcwires;
@@ -101,6 +97,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   const DGeometry *dgeom  = dapp->GetDGeometry(RUNNUMBER);
   
   tofgeom = new DTOFGeometry(dgeom);
+  fcalgeom= new DFCALGeometry(dgeom);
   
   dgeom->GetFDCWires(fdcwires);
   
@@ -1626,34 +1623,50 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		// corners. This makes it easier to represent each corner as a vector
 		// in lab coordinate which we can extract r, phi from.
 		double blocksize = fcalgeom->blockSize();
-		DVector2 shift[4];
+		DVector2 shift[8];
 		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
+		double insertSize=fcalgeom->insertSize();
+		if (insertSize>0){
+		  blocksize=fcalgeom->insertBlockSize();
+		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
+		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
+		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
+		  shift[7].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space	  
+		}
+
 		fcalblocks.clear();
-
 		if(GetCheckButton("fcal")){
-		  for(int chan=0; chan<DFCALGeometry::kMaxChannels; chan++){
-				int row = fcalgeom->row(chan);
-				int col = fcalgeom->column(chan);
-				if(!fcalgeom->isBlockActive(row, col))continue;
-				double x[5], y[5];
-				for(int i=0; i<4; i++){
-					DVector2 pos = shift[i] + fcalgeom->positionOnFace(chan);
-					x[i] = pos.X();
-					y[i] = pos.Y();
-				}
-				x[4] = x[0];
-				y[4] = y[0];
-				
-				TPolyLine *poly = new TPolyLine(5, x, y);
-				poly->SetFillColor(0);
-				poly->SetLineColor(kBlack);
-				graphics_endB.push_back(poly);
+		  for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){
+		    if (fcalgeom->isBlockActive(chan)==false) continue;
+		    DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
-				fcalblocks[chan] = poly; // record so we can set the color later
-			}
+		    double x[5], y[5];
+		    for(int i=0; i<4; i++){
+		      DVector2 pos = fcalBlockPos;
+		      if (insertSize>0 
+			  && fabs(pos.X())<insertSize
+			  && fabs(pos.Y())<insertSize){
+			pos+=shift[i+4];
+		      }
+		      else{
+			pos+=shift[i];
+		      }
+		      x[i] = pos.X();
+		      y[i] = pos.Y();
+		    }
+		    x[4] = x[0];
+		    y[4] = y[0];
+				
+		    TPolyLine *poly = new TPolyLine(5, x, y);
+		    poly->SetFillColor(0);
+		    poly->SetLineColor(kBlack);
+		    graphics_endB.push_back(poly);
+		    
+		    fcalblocks[chan] = poly; // record so we can set the color later
+		  }
 		}
 
 		// ----- CCAL ------
@@ -1991,29 +2004,46 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		// corners. This makes it easier to represent each corner as a vector
 		// in lab corrdinate whch we can extract r, phi from.
 		double blocksize = fcalgeom->blockSize();
-		DVector2 shift[4];
+		DVector2 shift[8];
 		shift[0].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
 		shift[1].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
 		shift[2].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
 		shift[3].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space
+	
+		double insertSize=fcalgeom->insertSize();
+		if (insertSize>0){
+		  blocksize=fcalgeom->insertBlockSize();
+		  shift[4].Set(-blocksize/2, -blocksize/2);  // these are ordered such that they
+		  shift[5].Set(-blocksize/2, +blocksize/2);  // go in a clockwise manner. This
+		  shift[6].Set(+blocksize/2, +blocksize/2);  // ensures the r/phi cooridinates also
+		  shift[7].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space	  
+		}
 		fcalblocks.clear();
-		for(int chan=0; chan<DFCALGeometry::kMaxChannels; chan++){
-			int row = fcalgeom->row(chan);
-			int col = fcalgeom->column(chan);
-			if(!fcalgeom->isBlockActive(row, col))continue;
-			double r[4], phi[4];
-			for(int i=0; i<4; i++){
-				DVector2 pos = shift[i] + fcalgeom->positionOnFace(chan);
-				r[i] = pos.Mod();
-				phi[i] = pos.Phi_0_2pi(pos.Phi());
-			}
-			
-			TPolyLine *poly = new TPolyLine(4, phi, r);
-			poly->SetFillColor(18);
-			poly->SetLineColor(kBlack);
-			graphics_endB.push_back(poly);
-			
-			fcalblocks[chan] = poly; // record so we can set the color later
+		for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){ 
+		  if (fcalgeom->isBlockActive(chan)==false) continue;
+		  DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
+
+		  double r[4], phi[4];
+		  for(int i=0; i<4; i++){
+		    DVector2 pos = fcalBlockPos; 
+		    if (insertSize>0 
+			  && fabs(pos.X())<insertSize
+			  && fabs(pos.Y())<insertSize){
+		      pos+=shift[i+4];
+		    }
+		    else{
+		      pos+=shift[i];
+		    }
+		    r[i] = pos.Mod();
+		    phi[i] = pos.Phi_0_2pi(pos.Phi());
+		  }
+		  
+		  TPolyLine *poly = new TPolyLine(4, phi, r);
+		  poly->SetFillColor(18);
+		  poly->SetLineColor(kBlack);
+		  graphics_endB.push_back(poly);
+		  
+		  fcalblocks[chan] = poly; // record so we can set the color later
 		}
 	}
 
@@ -2482,11 +2512,9 @@ TPolyLine* hdv_mainframe::GetFCALPolyLine(int channel)
 //-------------------
 // GetFCALPolyLine
 //-------------------
-TPolyLine* hdv_mainframe::GetFCALPolyLine(float x, float y)
+TPolyLine* hdv_mainframe::GetFCALPolyLine(int row, int column)
 {
 	if(!fcalgeom)return NULL;
-	int row = fcalgeom->row(y);
-	int column = fcalgeom->column(x);
 	return GetFCALPolyLine(fcalgeom->channel(row, column));
 }
 

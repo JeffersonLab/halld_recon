@@ -8,6 +8,7 @@ using namespace std;
 #include <JANA/JApplication.h>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
+#include <DANA/DStatusBits.h>
 
 #include <HDDM/DEventSourceHDDM.h>
 
@@ -20,7 +21,7 @@ using namespace jana;
 #include "RCDB/ConfigParser.h"
 #endif
 
-
+static bool print_data_message = true;
 
 //------------------
 // init
@@ -188,7 +189,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
 
   if(getenv("JANA_CALIB_CONTEXT") != NULL ){ 
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
-    if(JANA_CALIB_CONTEXT.find("mc_generic") != string::npos){
+    cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
+    if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
+	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
+      cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
@@ -198,12 +202,15 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       simu_gain_bcal = 0;
     }
   }
+  else {
+      cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
+  }
 
   //  runnumber = 30942;
 
   if(use_rcdb == 1){
-    status = Read_RCDB(runnumber);
-    PrintTriggers();
+    status = Read_RCDB(runnumber, print_messages);
+    if(print_messages) PrintTriggers();
   }
 
   
@@ -218,8 +225,9 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     trig_tmp.gtp.en_thr    =  FCAL_BCAL_EN;
     trig_tmp.gtp.fcal_min  =  200;
     triggers_enabled.push_back(trig_tmp);
-
-    cout << " Do not use RCDB for the trigger simulation. Default (spring 2017) trigger settings are used " << endl;
+	
+	if(print_messages) 
+	    cout << " Do not use RCDB for the trigger simulation. Default (spring 2017) trigger settings are used " << endl;
   }
 
 
@@ -249,8 +257,11 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     if(debug){
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
-	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
+	int col = fcalGeom.column(ch);	
+	// Sanity check for regular FCAL (row,col) ranges (anticipating 
+	// future upgrade to FCAL to include insert)
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
 	  hfcal_gains->Fill(fcal_gains[row][col]);
 	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
 	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
@@ -277,7 +288,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
 	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
+	// Sanity check for regular FCAL (row,col) ranges (anticipating 
+	// future upgrade to FCAL to include insert)
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
 	  hfcal_ped->Fill(fcal_pedestals[row][col]);
 	}
       }	
@@ -341,20 +355,33 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	loop->Get(fcal_hits);
 	loop->Get(bcal_hits);
 
-
-	// Initialize random number generator
-	// Read seeds from hddm file
-	// Generate seeds according to the event number if they are not stored in hddm
-	// The proceedure is consistent with the mcsmear
-
-	UInt_t seed1 = 0;
-	UInt_t seed2 = 0;
-	UInt_t seed3 = 0;
-	
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
-	GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+
+	// This is temporary, to allow this simulation to be run on data
+	// to help out with trigger efficiency studies - sdobbs (Aug. 26, 2020)
+	if( loop->GetJEvent().GetStatusBit(kSTATUS_EVIO) ){
+		if(print_data_message) {
+			jout << "WARNING: Running L1 trigger simulation on EVIO data" << endl; 
+			print_data_message = false;
+		}
 	
-	gDRandom.SetSeeds(seed1, seed2, seed3);
+		// for data, don't add in baseline shifts, since they already exist
+		simu_baseline_fcal = 0;
+		simu_baseline_bcal = 0;
+	} else {
+		// Initialize random number generator
+		// Read seeds from hddm file
+		// Generate seeds according to the event number if they are not stored in hddm
+		// The proceedure is consistent with the mcsmear
+
+		UInt_t seed1 = 0;
+		UInt_t seed2 = 0;
+		UInt_t seed3 = 0;
+	
+		GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+	
+		gDRandom.SetSeeds(seed1, seed2, seed3);
+	}
 	
 	//	cout << endl;
 	//	cout << " Event = " << eventnumber << endl;
@@ -392,6 +419,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    fcal_hit_en += fcal_hits[ii]->E;
 	    
 	    fcal_signal fcal_tmp;
+	    fcal_tmp.merged = 0;
 	    
 	    fcal_tmp.row     = row;
 	    fcal_tmp.column  = col;
@@ -403,8 +431,9 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	    double fcal_adc_en  = fcal_tmp.energy*FCAL_ADC_PER_MEV*1000;
 	    
-	    // Account for gain fluctuations 
-	    if(simu_gain_fcal){
+	    // Account for gain fluctuations
+	    if(simu_gain_fcal && row<DFCALGeometry::kBlocksTall
+	       && col<DFCALGeometry::kBlocksWide){
 	      
 	      double gain  =  fcal_gains[row][col];	  
 	      
@@ -452,7 +481,11 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	  for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++){
 	    int row     = fcal_merged_hits[ii].row;
 	    int column  = fcal_merged_hits[ii].column;
-	    double pedestal =  fcal_pedestals[row][column];	    
+	    double pedestal = 100.0;
+	    if (row<DFCALGeometry::kBlocksTall
+		&& column<DFCALGeometry::kBlocksWide){
+	      pedestal=fcal_pedestals[row][column];
+	    }
 	    AddBaseline(fcal_merged_hits[ii].adc_en, pedestal, gDRandom);       
 	  }
 	}
@@ -511,6 +544,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    bcal_hit_en += bcal_hits[ii]->E;
 	    
 	    bcal_signal bcal_tmp;	    
+	    bcal_tmp.merged  = 0;
 	    bcal_tmp.module  = module;
 	    bcal_tmp.layer   = layer;
   	    bcal_tmp.sector  = sector;
@@ -645,7 +679,8 @@ jerror_t DL1MCTrigger_factory::fini(void)
 // Read RCDB 
 //*********************
 
-int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber){
+int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
+{
 
 #if HAVE_RCDB
 
@@ -904,7 +939,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber){
 	    }
 	    
 	    catch(...){
-	      cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
+	      if(print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
 		" Channel = " << ch << endl;
 	      continue;
 	    }
@@ -1382,36 +1417,12 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
-  
-  char str[256];
-  
-  if (fcalGeom.numActiveBlocks() != FCAL_MAX_CHANNELS) {
-    sprintf(str, "FCAL geometry is wrong size! channels=%d (should be %d)", 
-	    fcalGeom.numActiveBlocks(), FCAL_MAX_CHANNELS);
-    throw JException(str);
-  }
-  
-  
   for (int ch = 0; ch < static_cast<int>(fcal_const_ch.size()); ch++) {
-    
-    // make sure that we don't try to load info for channels that don't exist
-    if (ch == fcalGeom.numActiveBlocks())
-      break;
-    
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
-    
-    // results from DFCALGeometry should be self consistent, but add in some
-    // sanity checking just to be sure
-    if (fcalGeom.isBlockActive(row,col) == false) {
-      sprintf(str, "DL1MCTrigger: Loading FCAL constant for inactive channel!  "
-	      "row=%d, col=%d", row, col);
-      throw JException(str);
-    }    
-    
     table[row][col] = fcal_const_ch[ch];
   }
-  
+  	
 }
 
 void DL1MCTrigger_factory::Digitize(double adc_amp[sample], int adc_count[sample]){

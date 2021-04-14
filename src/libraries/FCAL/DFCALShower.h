@@ -31,6 +31,7 @@ class DFCALShower:public JObject{
   //  for the depth correction, the default vertex is in the target center
   DVector3 getPosition() const; 
   DVector3 getPositionError() const;
+  DVector3 getPosition_log() const;
   double getEnergy() const;  
   double getTime() const;
   double getDocaTrack() const;
@@ -42,7 +43,8 @@ class DFCALShower:public JObject{
   int getNumBlocks() const;
 
   // set shower information
-  void setPosition( const DVector3& aPosition );  
+  void setPosition( const DVector3& aPosition );
+  void setPosition_log( const DVector3& aPosition_log );
   void setEnergy( const double energy );  
   void setTime( const double time );
   void setDocaTrack( const double docaTrack );
@@ -138,6 +140,7 @@ class DFCALShower:public JObject{
   double fEnergy; 
   double fTime; 
   DVector3 fPosition;        // Shower position in the FCAL
+  DVector3 fPosition_log;    // log-weighted shower position
   double fTimeTr;
   double fDocaTr;
   double fSumU;
@@ -151,6 +154,11 @@ class DFCALShower:public JObject{
 inline DVector3 DFCALShower::getPosition() const
 {
   return fPosition;
+}
+
+inline DVector3 DFCALShower::getPosition_log() const
+{
+  return fPosition_log;
 }
 
 inline double DFCALShower::getEnergy() const

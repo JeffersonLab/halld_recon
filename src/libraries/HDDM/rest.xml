@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="iso-8859-1" standalone="no" ?>
-<HDDM xmlns="http://www.gluex.org/hddm" class="r" version="1.1.0">
+<HDDM xmlns="http://www.gluex.org/hddm" class="r" version="1.1.1">
 
   <reconstructedPhysicsEvent eventNo="long" runNo="int">
     <comment minOccurs="0" maxOccurs="unbounded" text="string"/>
@@ -18,9 +18,13 @@
       </vertex>
     </reaction>
     <tagmBeamPhoton maxOccurs="unbounded" minOccurs="0" jtag="string"
-                t="float" E="float" tunit="ns" Eunit="GeV"/>
+                t="float" E="float" tunit="ns" Eunit="GeV">
+      <tagmChannel minOccurs="0" column="int"/>
+    </tagmBeamPhoton>
     <taghBeamPhoton maxOccurs="unbounded" minOccurs="0" jtag="string"
-                t="float" E="float" tunit="ns" Eunit="GeV"/>
+                t="float" E="float" tunit="ns" Eunit="GeV">
+      <taghChannel minOccurs="0" counter="int"/>
+    </taghBeamPhoton>
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 xerr="float" yerr="float" zerr="float" terr="float" Eerr="float"
@@ -74,6 +78,10 @@
               lunit="cm" dEdx_unit="GeV/cm">
 	<CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
       </dEdxDC>
+      <exitParams maxOccurs="1" minOccurs="0" 
+		  x1="float" y1="float" z1="float"
+                  px1="float" py1="float" pz1="float"
+                  t1="float" punit="GeV/c" lunit="cm" tunit="ns"/>
     </chargedTrack>
     <startHit maxOccurs="unbounded" minOccurs="0" jtag="string"
               sector="int" t="float" dE="float"
@@ -88,12 +96,14 @@
          Note that if it's a single-ended bar, the status cannot be 3. 
       -->
       <tofStatus maxOccurs="1" minOccurs="0" status="int"/>
+      <tofEnergyDeposition maxOccurs="1" minOccurs="0" dE1="float" dE2="float"/>
     </tofPoint>
     <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
     <RFtime minOccurs="0" jtag="string"
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
 			 l1_trig_bits="int" l1_fp_trig_bits="int">
+ 	  <triggerEnergySums BCALEnergySum="float" FCALEnergySum="float" minOccurs="0"/>
     </trigger>
 
     <detectorMatches minOccurs="1" maxOccurs="1" jtag="string">
@@ -120,7 +130,9 @@
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
                 deltax="float" deltay="float" pathlength="float" tflight="float" tflightvar="float"
-                tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
+                tunit="ns" lunit="cm" dEdx_unit="GeV/cm">
+	<tofDedx maxOccurs="1" minOccurs="0" dEdx1="float" dEdx2="float"/>
+      </tofMatchParams>
       <scMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
@@ -142,5 +154,15 @@
                 punit="GeV/c" tunit="ns"/>
     </detectorMatches>
 
+    <hitStatistics minOccurs="0" jtag="string">
+        <startCounters minOccurs="0" count="int"/>
+        <cdcStraws minOccurs="0" count="int"/>
+        <fdcPseudos minOccurs="0" count="int"/>
+        <bcalCells minOccurs="0" count="int"/>
+        <fcalBlocks minOccurs="0" count="int"/>
+        <tofPaddles minOccurs="0" count="int"/>
+        <ccalBlocks minOccurs="0" count="int"/>
+        <dircPMTs minOccurs="0" count="int"/>
+    </hitStatistics>
   </reconstructedPhysicsEvent>
 </HDDM>

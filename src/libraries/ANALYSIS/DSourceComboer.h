@@ -37,6 +37,10 @@
 #include "ANALYSIS/DSourceComboTimeHandler.h"
 #include "ANALYSIS/DParticleComboCreator.h"
 
+
+#include "PID/DNeutralParticleHypothesis.h"
+
+
 using namespace std;
 using namespace jana;
 
@@ -133,6 +137,7 @@ class DSourceComboer : public JObject
 		void Define_DefaultCuts(void);
 		void Get_CommandLineCuts_dEdx(void);
 		void Get_CommandLineCuts_EOverP(void);
+		void Get_CommandLineCuts_Beta(void);
 		void Create_CutFunctions(void);
 		void Setup_NeutralShowers(JEventLoop* locEventLoop);
 		void Recycle_Vectors(void);
@@ -146,6 +151,8 @@ class DSourceComboer : public JObject
 		bool Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locHypo);
 		bool Cut_dEdx(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locdEdx);
 		bool Cut_EOverP(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locEOverP);
+		bool Cut_Beta(const DNeutralParticleHypothesis* locNeutralParticleHypothesis);
+		bool Cut_Beta(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locBeta);
 		void Fill_CutHistograms(void);
 		void Fill_SurvivalHistograms(void);
 
@@ -231,6 +238,7 @@ class DSourceComboer : public JObject
 		//CONTROL INFORMATION
 		uint64_t dEventNumber = 0; //re-setup on new events
 		string dShowerSelectionTag = "PreSelect";
+		string dHadronShowerSelectionTag = "HadronPreSelect";
 		int dDebugLevel = 0;
 		bool dPrintCutFlag = false;
 
@@ -277,6 +285,7 @@ class DSourceComboer : public JObject
 		size_t dNumChargedTracks;
 		map<bool, vector<const JObject*>> dTracksByCharge; //true/false: positive/negative
 		unordered_map<signed char, DPhotonShowersByBeamBunch> dShowersByBeamBunchByZBin; //char: zbin //for all showers: unknown z-bin, {} RF bunch
+		vector<const JObject*> dNeutralHadronShowers;
 
 		//SOURCE COMBOS //vector: z-bin //if attempted and all failed, DSourceCombosByUse_Large vector will be empty
 		size_t dInitialComboVectorCapacity = 100;
@@ -328,6 +337,13 @@ class DSourceComboer : public JObject
 		map<Particle_t, map<DetectorSystem_t, TF1*>> dEOverPCutMap; //if lepton, select above function, else select below
 		map<Particle_t, map<DetectorSystem_t, vector<pair<double, double>>>> dEOverPValueMap; //pair: first is p, 2nd is E/p
 		map<Particle_t, map<DetectorSystem_t, TH2*>> dHistMap_EOverP;
+
+		//beta
+		map<Particle_t, map<DetectorSystem_t, string>> dBetaCuts_TF1FunctionStrings;
+		map<Particle_t, map<DetectorSystem_t, vector<double>>> dBetaCuts_TF1Params;
+		map<Particle_t, map<DetectorSystem_t, TF1*>> dBetaCutMap; //if lepton, select above function, else select below
+		map<Particle_t, map<DetectorSystem_t, vector<pair<double, double>>>> dBetaValueMap; //pair: first is p, 2nd is E/p
+		map<Particle_t, map<DetectorSystem_t, TH2*>> dHistMap_Beta;
 };
 
 /*********************************************************** INLINE MEMBER FUNCTION DEFINITIONS ************************************************************/
@@ -481,7 +497,7 @@ inline bool DSourceComboer::Get_IsComboingZIndependent(const JObject* locObject,
 		return true;
 
 	auto locNeutralShower = static_cast<const DNeutralShower*>(locObject);
-	return (locNeutralShower->dDetectorSystem == SYS_FCAL);
+	return (locNeutralShower->dDetectorSystem == SYS_FCAL || locNeutralShower->dDetectorSystem == SYS_CCAL);
 }
 
 inline DSourceCombosByUse_Large& DSourceComboer::Get_CombosSoFar(ComboingStage_t locComboingStage, Charge_t locChargeContent_SearchForUse, const DSourceCombo* locChargedCombo)
@@ -528,6 +544,16 @@ inline bool DSourceComboer::Cut_EOverP(Particle_t locPID, DetectorSystem_t locSy
 
 	auto locCutFunc = dEOverPCutMap[locPID][locSystem];
 	return (((locPID == Electron) || (locPID == Positron)) == (locEOverP >= locCutFunc->Eval(locP)));
+}
+
+inline bool DSourceComboer::Cut_Beta(Particle_t locPID, DetectorSystem_t locSystem, double locP, double locBeta)
+{
+	dBetaValueMap[locPID][locSystem].emplace_back(locP, locBeta);
+	if(dBetaCutMap[locPID].find(locSystem) == dBetaCutMap[locPID].end())
+		return true;
+
+	auto locCutFunc = dBetaCutMap[locPID][locSystem];
+	return ((locPID == Gamma) == (locBeta >= locCutFunc->Eval(locP)));
 }
 
 inline DSourceComboer::~DSourceComboer(void)

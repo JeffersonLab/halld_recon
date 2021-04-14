@@ -1,0 +1,3 @@
+This is a plugin for checking the ML algorithm used in the FCAL. 
+
+It finds pi0's in omega decays and writes all machine learning variables used in the algorithm to the tree.

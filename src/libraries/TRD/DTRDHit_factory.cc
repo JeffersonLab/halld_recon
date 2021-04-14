@@ -56,6 +56,9 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	if (eventLoop->GetCalib("/TRD/Wire/timing_offsets", time_offsets[0]))
 	jout << "Error loading /TRD/Wire/timing_offsets !" << endl;
 	*/
+	for (unsigned int i=0;i<7;i++){
+	  t_base[i]=-900.;
+	}
 
 	pulse_peak_threshold = 200;
 
@@ -105,7 +108,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    hit->strip = digihit->strip;
  
 	    // Apply calibration constants
-	    hit->t = T;
+	    hit->t = T+t_base[digihit->plane];
 	    //hit->t = hit->t + t_base[plane] - time_offsets[plane][strip];
 
 	    hit->AddAssociatedObject(digihit);

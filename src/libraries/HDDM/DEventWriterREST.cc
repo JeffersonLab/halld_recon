@@ -1,7 +1,9 @@
+
 #include "DEventWriterREST.h"
 
 #include <DANA/DApplication.h>
 #include <JANA/JCalibration.h>
+#include <TRACKING/DTrackFitter.h>
 
 int& DEventWriterREST::Get_NumEventWriterThreads(void) const
 {
@@ -26,6 +28,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	}
 	japp->Unlock("RESTWriter");
 	
+	REST_WRITE_TRACK_EXIT_PARAMS=true;
+	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
+
 	HDDM_USE_COMPRESSION = true;
 	string locCompressionString = "Turn on/off compression of the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
 	gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
@@ -43,7 +48,7 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
-	REST_WRITE_CCAL_SHOWERS = false;
+	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
     CCDB_CONTEXT_STRING = "";
@@ -79,7 +84,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
-  std::vector<const DCCALShower*> ccalshowers;
+	std::vector<const DCCALShower*> ccalshowers;
 	if(REST_WRITE_CCAL_SHOWERS) {
 	    locEventLoop->Get(ccalshowers);
 	}
@@ -98,6 +103,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
 	locEventLoop->Get(locDIRCPmtHits);
+
+	std::vector<const DEventHitStatistics*> hitStats;
+	locEventLoop->Get(hitStats);
 
 	std::vector<const DTrigger*> locTriggers;
 	locEventLoop->Get(locTriggers);
@@ -185,12 +193,16 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::TagmBeamPhotonList locTagmBeamPhotonList = res().addTagmBeamPhotons(1);
 			locTagmBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons[loc_i]->dSystem == SYS_TAGH)
 		{
 			hddm_r::TaghBeamPhotonList locTaghBeamPhotonList = res().addTaghBeamPhotons(1);
 			locTaghBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
 		}
 	}
 	for(size_t loc_i = 0; loc_i < locBeamPhotons_TAGGEDMCGEN.size(); ++loc_i)
@@ -201,6 +213,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTagmBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTagmBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons_TAGGEDMCGEN[loc_i]->dSystem == SYS_TAGH)
 		{
@@ -208,6 +222,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTaghBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTaghBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
 		}
 	}
 
@@ -344,6 +360,10 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		int locStatus = tofpoints[i]->dHorizontalBar + 45*tofpoints[i]->dVerticalBar;
 		locStatus += 45*45*tofpoints[i]->dHorizontalBarStatus + 45*45*4*tofpoints[i]->dVerticalBarStatus;
 		tofstatus().setStatus(locStatus);
+		// Energy deposition for each plane
+		hddm_r::TofEnergyDepositionList tofEnergyDeposition = tof().addTofEnergyDepositions(1);
+		tofEnergyDeposition().setDE1(tofpoints[i]->dE1);
+		tofEnergyDeposition().setDE2(tofpoints[i]->dE2);
 	}
 
 	// push any DSCHit objects to the output record
@@ -369,6 +389,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	// push any DTrackTimeBased objects to the output record
 	for (size_t i=0; i < tracks.size(); ++i)
 	{
+	
+
 		hddm_r::ChargedTrackList tra = res().addChargedTracks(1);
 		tra().setCandidateId(tracks[i]->candidateid);
 		tra().setPtype(tracks[i]->PID());
@@ -443,6 +465,44 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			elo2().setDEdxCDCAmp(tracks[i]->ddEdx_CDC_amp);
 
 		}
+		if (REST_WRITE_TRACK_EXIT_PARAMS){
+		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
+		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
+		    if (extraps.size()>0){
+		      hddm_r::ExitParamsList locExitParams = tra().addExitParamses(1);
+		      DVector3 pos=extraps[0].position;
+		      DVector3 mom=extraps[0].momentum;
+		      locExitParams().setX1(pos.X());
+		      locExitParams().setY1(pos.Y());
+		      locExitParams().setZ1(pos.Z()); 
+		      locExitParams().setPx1(mom.X());
+		      locExitParams().setPy1(mom.Y());
+		      locExitParams().setPz1(mom.Z());
+		      locExitParams().setT1(extraps[0].t);
+		    }
+		  }
+		}
+		
+	}
+
+	// push any DEventHitStatistics objects to the output record
+	if (hitStats.size() > 0)
+	{
+		hddm_r::HitStatisticsList stats = res().addHitStatisticses(1);
+		hddm_r::StartCountersList starts = stats().addStartCounterses(1);
+		starts().setCount(hitStats[0]->start_counters);
+		hddm_r::CdcStrawsList straws = stats().addCdcStrawses(1);
+		straws().setCount(hitStats[0]->cdc_straws);
+		hddm_r::FdcPseudosList pseudos = stats().addFdcPseudoses(1);
+		pseudos().setCount(hitStats[0]->fdc_pseudos);
+		hddm_r::BcalCellsList cells = stats().addBcalCellses(1);
+		cells().setCount(hitStats[0]->bcal_cells);
+		hddm_r::FcalBlocksList blocks = stats().addFcalBlockses(1);
+		blocks().setCount(hitStats[0]->fcal_blocks);
+		hddm_r::CcalBlocksList bloccs = stats().addCcalBlockses(1);
+		bloccs().setCount(hitStats[0]->ccal_blocks);
+		hddm_r::DircPMTsList pmts = stats().addDircPMTses(1);
+		pmts().setCount(hitStats[0]->dirc_PMTs);
 	}
 
 	// push any DTrigger objects to the output record
@@ -451,6 +511,12 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		hddm_r::TriggerList trigger = res().addTriggers(1);
 		trigger().setL1_trig_bits(Convert_UnsignedIntToSigned(locTriggers[i]->Get_L1TriggerBits()));
 		trigger().setL1_fp_trig_bits(Convert_UnsignedIntToSigned(locTriggers[i]->Get_L1FrontPanelTriggerBits()));
+		
+		// trigger energy sums
+		hddm_r::TriggerEnergySumsList triggerEnergySum = trigger().addTriggerEnergySumses(1);
+		triggerEnergySum().setBCALEnergySum(locTriggers[i]->Get_GTP_BCALEnergy());
+		triggerEnergySum().setFCALEnergySum(locTriggers[i]->Get_GTP_FCALEnergy());
+
 	}
 
 	// push any DDetectorMatches objects to the output record
@@ -532,6 +598,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 				tofList().setDeltax(locTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
 				tofList().setDeltay(locTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
+				// dEdx for each plane
+				hddm_r::TofDedxList tofDedx = tofList().addTofDedxs(1);
+				tofDedx().setDEdx1(locTOFHitMatchParamsVector[loc_k]->dEdx1);
+				tofDedx().setDEdx2(locTOFHitMatchParamsVector[loc_k]->dEdx2);
+
 			}
 
 			vector<shared_ptr<const DSCHitMatchParams>> locSCHitMatchParamsVector;

@@ -32,6 +32,10 @@ class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
 		{
 			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event. 
 			SetFactoryFlag(PERSISTANT);
+			
+			gPARMS->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
+			gPARMS->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
+
 		}
 		const char* Tag(void){return "ReactionFilter";}
 
@@ -64,6 +68,10 @@ class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
 		DSourceComboP4Handler* dSourceComboP4Handler = nullptr;
 		DSourceComboTimeHandler* dSourceComboTimeHandler = nullptr;
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks
+		
+		double dKinFitChiSqCut = -1.;
+		double dFlightSignificanceCut = -1.;
+
 };
 
 #endif // _DReaction_factory_ReactionFilter_

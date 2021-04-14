@@ -47,6 +47,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH2I* dHist_BCALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
+                TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
 
 		TH2I* dHist_NumHighLevelObjects;
 

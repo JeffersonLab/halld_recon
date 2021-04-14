@@ -88,6 +88,7 @@ class DReaction : public JObject
 		vector<Particle_t> Get_FinalPIDs(int locStepIndex = -1, bool locIncludeMissingFlag = true, bool locIncludeDecayingFlag = true,
 		Charge_t locCharge = d_AllCharges, bool locIncludeDuplicatesFlag = true) const;
 		vector<Particle_t> Get_MissingPIDs(int locStepIndex = -1, Charge_t locCharge = d_AllCharges, bool locIncludeDuplicatesFlag = true) const;
+		vector<Particle_t> Get_DecayingPIDs(int locStepIndex = -1, Charge_t locCharge = d_AllCharges, bool locIncludeDuplicatesFlag = true) const;
 
 		// GET ANALYSIS ACTIONS:
 		size_t Get_NumAnalysisActions(void) const{return dAnalysisActions.size();}

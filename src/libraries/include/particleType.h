@@ -1987,8 +1987,8 @@ inline static double ParticleMass(Particle_t p)
   case D0:              return 1.86484;
   case AntiD0:          return 1.86484;
   case DPlus:           return 1.86961;
-  case Dstar0:          return 2.01026;
-  case DstarPlus:       return 2.00696;
+  case Dstar0:          return 2.00685;
+  case DstarPlus:       return 2.01026;
   case Lambda_c:        return 2.28646;
   default:
     fprintf(stderr,"ParticleMass: Error: Unknown particle type %d,",p);

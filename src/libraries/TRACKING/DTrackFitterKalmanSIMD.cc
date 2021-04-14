@@ -27,6 +27,9 @@
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
 
+// Only print messages for one thread whenever run number change
+static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+static set<int> runs_announced;
 
 // Local boolean routines for sorting
 //bool static DKalmanSIMDHit_cmp(DKalmanSIMDHit_t *a, DKalmanSIMDHit_t *b){
@@ -127,8 +130,8 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
    //V=0.0507; // initialize with (cell size)/12.
    tcorr = t; // Need this value even when t is negative for calibration
    if (t>0){
-      //double dtc =(CDC_DRIFT_BSCALE_PAR1 + CDC_DRIFT_BSCALE_PAR2 * B)* t;
-      //tcorr=t-dtc;
+     double dtc =(CDC_DRIFT_BSCALE_PAR1 + CDC_DRIFT_BSCALE_PAR2 * B)* t;
+     tcorr=t-dtc;
 
       //      CDC_RES_PAR2=0.005;
       double sigma=CDC_RES_PAR1/(tcorr+1.) + CDC_RES_PAR2 + CDC_RES_PAR3*tcorr;
@@ -140,16 +143,23 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
       // Derivative of d with respect to t, needed to add t0 variance 
       // dependence to sigma
       double dd_dt=0;
-      // Scale factor to account for affect of B-field on maximum drift time
-      double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
-      tcorr=t*Bscale;
+      // Scale factor to account for effect of B-field on maximum drift time
+      //double Bscale=long_drift_Bscale_par1+long_drift_Bscale_par2*B;
+      // tcorr=t*Bscale;
+
+      // NSJ 26 May 2020 included long side a3, b3 and short side c1, c2, c3
+      // Previously these parameters were not used (0 in ccdb) for production runs
+      // except intensity scan run 72312 by accident 5 May 2020, superseded 8 May.
+      // They were used in 2015 for runs 0-3050.
 
       //	if (delta>0)
       if (delta>-EPS2){
          double a1=long_drift_func[0][0];
          double a2=long_drift_func[0][1];
+         double a3=long_drift_func[0][2];
          double b1=long_drift_func[1][0];
          double b2=long_drift_func[1][1];
+         double b3=long_drift_func[1][2];
          double c1=long_drift_func[2][0];
          double c2=long_drift_func[2][1];
          double c3=long_drift_func[2][2];
@@ -159,9 +169,12 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
          double sqrt_t=sqrt(my_t);
          double t3=my_t*my_t*my_t;
          double delta_mag=fabs(delta);
-         double a=a1+a2*delta_mag;
-         double b=b1+b2*delta_mag;
-         double c=c1+c2*delta_mag+c3*delta*delta;
+
+         double delta_sq=delta*delta;
+         double a=a1+a2*delta_mag+a3*delta_sq;
+         double b=b1+b2*delta_mag+b3*delta_sq;
+         double c=c1+c2*delta_mag+c3*delta_sq;
+
          f_delta=a*sqrt_t+b*my_t+c*t3;
          f_0=a1*sqrt_t+b1*my_t+c1*t3;
 
@@ -170,6 +183,7 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
       else{
          double my_t=0.001*tcorr;
          double sqrt_t=sqrt(my_t);
+         double t3=my_t*my_t*my_t;
          double delta_mag=fabs(delta);
 
          // use "short side" functional form
@@ -179,14 +193,20 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
          double b1=short_drift_func[1][0];
          double b2=short_drift_func[1][1];
          double b3=short_drift_func[1][2];
+         double c1=short_drift_func[2][0];
+         double c2=short_drift_func[2][1];
+         double c3=short_drift_func[2][2];
 
          double delta_sq=delta*delta;
          double a=a1+a2*delta_mag+a3*delta_sq;
          double b=b1+b2*delta_mag+b3*delta_sq;
-         f_delta=a*sqrt_t+b*my_t;
-         f_0=a1*sqrt_t+b1*my_t;
+         double c=c1+c2*delta_mag+c3*delta_sq;
 
-         dd_dt=0.001*(0.5*a/sqrt_t+b);
+         f_delta=a*sqrt_t+b*my_t+c*t3;
+         f_0=a1*sqrt_t+b1*my_t+c1*t3;
+
+         dd_dt=0.001*(0.5*a/sqrt_t+b+3.*c*my_t*my_t);
+
       }
 
       unsigned int max_index=cdc_drift_table.size()-1;
@@ -275,7 +295,17 @@ double DTrackFitterKalmanSIMD::fdc_drift_distance(double time,double Bz) const {
 DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(loop){
    FactorForSenseOfRotation=(bfield->GetBz(0.,0.,65.)>0.)?-1.:1.;
 
-   // Some useful values
+   // keep track of which runs we print out messages for
+   int32_t runnumber = loop->GetJEvent().GetRunNumber();
+   pthread_mutex_lock(&print_mutex);
+   bool print_messages = false;
+   if(runs_announced.find(runnumber) == runs_announced.end()){
+	  print_messages = true;
+	  runs_announced.insert(runnumber);
+   }
+   pthread_mutex_unlock(&print_mutex);
+
+  // Some useful values
    two_m_e=2.*ELECTRON_MASS;
    m_e_sq=ELECTRON_MASS*ELECTRON_MASS;
 
@@ -308,6 +338,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
+
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
 	      tof_face);
@@ -371,7 +402,9 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    USE_CDC_HITS=true;
    gPARMS->SetDefaultParameter("TRKFIT:USE_CDC_HITS",USE_CDC_HITS); 
    USE_TRD_HITS=false;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS);
+   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_HITS",USE_TRD_HITS); 
+   USE_TRD_DRIFT_TIMES=true;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
    USE_GEM_HITS=false;
    gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
 
@@ -627,9 +660,11 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    jcalib->Get("PHOTON_BEAM/beam_spot",beam_vals);
    beam_center.Set(beam_vals["x"],beam_vals["y"]); 
    beam_dir.Set(beam_vals["dxdz"],beam_vals["dydz"]);
-   jout << " Beam spot: x=" << beam_center.X() << " y=" << beam_center.Y()
-	<< " z=" << beam_vals["z"]
-	<< " dx/dz=" << beam_dir.X() << " dy/dz=" << beam_dir.Y() << endl;
+
+   if(print_messages)
+	   jout << " Beam spot: x=" << beam_center.X() << " y=" << beam_center.Y()
+			<< " z=" << beam_vals["z"]
+			<< " dx/dz=" << beam_dir.X() << " dy/dz=" << beam_dir.Y() << endl;
    beam_z0=beam_vals["z"];
    
    // Inform user of some configuration settings
@@ -834,7 +869,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
       }
    }
    if (num_good_cdchits==0 && num_good_fdchits<4) return kFitNotDone;
-   if(num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
+   if (num_good_cdchits+num_good_fdchits < 6) return kFitNotDone;
 
    // Create vectors of updates (from hits) to S and C
    if (my_cdchits.size()>0){
@@ -1090,7 +1125,8 @@ inline void DTrackFitterKalmanSIMD::GetMomentum(DVector3 &mom){
 
 // Return the "vertex" position (position at which track crosses beam line)
 inline void DTrackFitterKalmanSIMD::GetPosition(DVector3 &pos){
-   pos.SetXYZ(x_,y_,z_);
+  DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+  pos.SetXYZ(x_+beam_pos.X(),y_+beam_pos.Y(),z_);
 }
 
 // Add GEM points
@@ -1113,6 +1149,7 @@ void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
   hit->phiZ=0.;
   hit->nr=0.;
   hit->nz=0.;
+  hit->status=gem_hit;
   hit->hit=NULL;
 
   my_fdchits.push_back(hit);
@@ -1140,6 +1177,7 @@ void DTrackFitterKalmanSIMD::AddTRDHit(const DTRDPoint *trdhit){
   hit->phiZ=0.;
   hit->nr=0.;
   hit->nz=0.;
+  hit->status=trd_hit;
   hit->hit=NULL;
 
   my_fdchits.push_back(hit);
@@ -1781,6 +1819,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForward(int length,int &i,
       forward_traj[my_i].rho_Z_over_A=temp.rho_Z_over_A;
       forward_traj[my_i].K_rho_Z_over_A=temp.K_rho_Z_over_A;
       forward_traj[my_i].LnI=temp.LnI;
+      forward_traj[my_i].Z=temp.Z;
       forward_traj[my_i].S=S;
    } 
    else{
@@ -1983,6 +2022,7 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
       temp.num_hits=0;
       temp.B=0.;
       temp.K_rho_Z_over_A=temp.rho_Z_over_A=temp.LnI=0.;
+      temp.Z=0.;
       temp.Q=Zero5x5; 
 
       // last S vector
@@ -4356,1045 +4396,670 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 						     DMatrix5x5 &C,
 						     double &chisq, 
 						     unsigned int &numdof){
-   DMatrix2x1 Mdiff; // difference between measurement and prediction 
-   DMatrix2x5 H;  // Track projection matrix
-   DMatrix5x2 H_T; // Transpose of track projection matrix 
-   DMatrix1x5 Hc;  // Track projection matrix for cdc hits
-   DMatrix5x1 Hc_T; // Transpose of track projection matrix for cdc hits
-   DMatrix5x5 J;  // State vector Jacobian matrix
-   //DMatrix5x5 J_T; // transpose of this matrix
-   DMatrix5x5 Q;  // Process noise covariance matrix
-   DMatrix5x2 K;  // Kalman gain matrix
-   DMatrix5x1 Kc;  // Kalman gain matrix for cdc hits
-   DMatrix2x2 V(0.0833,0.,0.,FDC_CATHODE_VARIANCE);  // Measurement covariance matrix
-   DMatrix2x1 R;  // Filtered residual
-   DMatrix2x2 RC;  // Covariance of filtered residual
-   DMatrix5x1 S0,S0_; //State vector 
-   DMatrix5x5 Ctest; // Covariance matrix
-   DMatrix2x2 InvV; // Inverse of error matrix
-
-   double Vc=0.0507;
-
-   // Vectors for cdc wires
-   DVector2 origin,dir,wirepos;
-   double z0w=0.; // origin in z for wire
-
-   // Set used_in_fit flags to false for fdc and cdc hits
-   unsigned int num_cdc=cdc_used_in_fit.size();
-   unsigned int num_fdc=fdc_used_in_fit.size();
-   for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
-   for (unsigned int i=0;i<num_fdc;i++) fdc_used_in_fit[i]=false;
-   for (unsigned int i=0;i<forward_traj.size();i++){
+  DMatrix2x1 Mdiff; // difference between measurement and prediction 
+  DMatrix2x5 H;  // Track projection matrix
+  DMatrix5x2 H_T; // Transpose of track projection matrix 
+  DMatrix1x5 Hc;  // Track projection matrix for cdc hits
+  DMatrix5x1 Hc_T; // Transpose of track projection matrix for cdc hits
+  DMatrix5x5 J;  // State vector Jacobian matrix
+  //DMatrix5x5 J_T; // transpose of this matrix
+  DMatrix5x5 Q;  // Process noise covariance matrix
+  DMatrix5x2 K;  // Kalman gain matrix
+  DMatrix5x1 Kc;  // Kalman gain matrix for cdc hits
+  DMatrix2x2 V(0.0833,0.,0.,FDC_CATHODE_VARIANCE);  // Measurement covariance matrix
+  DMatrix2x1 R;  // Filtered residual
+  DMatrix2x2 RC;  // Covariance of filtered residual
+  DMatrix5x1 S0,S0_; //State vector 
+  DMatrix5x5 Ctest; // Covariance matrix
+  DMatrix2x2 InvV; // Inverse of error matrix
+  
+  double Vc=0.0507;
+  
+  // Vectors for cdc wires
+  DVector2 origin,dir,wirepos;
+  double z0w=0.; // origin in z for wire
+  
+  // Set used_in_fit flags to false for fdc and cdc hits
+  unsigned int num_cdc=cdc_used_in_fit.size();
+  unsigned int num_fdc=fdc_used_in_fit.size();
+  for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
+  for (unsigned int i=0;i<num_fdc;i++) fdc_used_in_fit[i]=false;
+  for (unsigned int i=0;i<forward_traj.size();i++){
       if (forward_traj[i].h_id>999)
-         forward_traj[i].h_id=0;
-   }
+	forward_traj[i].h_id=0;
+  }
+  
+  // Save the starting values for C and S in the deque
+  forward_traj[break_point_step_index].Skk=S;
+  forward_traj[break_point_step_index].Ckk=C;
+  
+  // Initialize chi squared
+  chisq=0;
+  
+  // Initialize number of degrees of freedom
+  numdof=0;
 
-   // Save the starting values for C and S in the deque
-   forward_traj[break_point_step_index].Skk=S;
-   forward_traj[break_point_step_index].Ckk=C;
+  double fdc_chi2cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
+  double cdc_chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
+  
+  unsigned int num_fdc_hits=break_point_fdc_index+1;
+  unsigned int max_num_fdc_used_in_fit=num_fdc_hits;
+  unsigned int num_cdc_hits=my_cdchits.size(); 
+  unsigned int cdc_index=0;
+  if (num_cdc_hits>0) cdc_index=num_cdc_hits-1;
+  bool more_cdc_measurements=(num_cdc_hits>0);
+  double old_doca2=1e6;
+  
+  if (num_fdc_hits+num_cdc_hits<MIN_HITS_FOR_REFIT){
+    cdc_chi2cut=BIG;
+    fdc_chi2cut=BIG;
+  }
+  
+  if (more_cdc_measurements){
+    origin=my_cdchits[cdc_index]->origin;  
+    dir=my_cdchits[cdc_index]->dir;   
+    z0w=my_cdchits[cdc_index]->z0wire;
+    wirepos=origin+(forward_traj[break_point_step_index].z-z0w)*dir;
+  }
+  
+  S0_=(forward_traj[break_point_step_index].S);
 
-   // Initialize chi squared
-   chisq=0;
+  if (DEBUG_LEVEL > 25){
+    jout << "Entering DTrackFitterKalmanSIMD::KalmanForward ================================" << endl;
+    jout << " We have the following starting parameters for our fit. S = State vector, C = Covariance matrix" << endl;
+    S.Print();
+    C.Print();
+    jout << setprecision(6); 
+    jout << " There are " << num_cdc <<  " CDC Updates and " << num_fdc << " FDC Updates on this track" << endl;
+    jout << " There are " << num_cdc_hits << " CDC Hits and " << num_fdc_hits << " FDC Hits on this track" << endl;
+    jout << " With NUM_FDC_SIGMA_CUT = " << NUM_FDC_SIGMA_CUT << " and NUM_CDC_SIGMA_CUT = " << NUM_CDC_SIGMA_CUT << endl;
+    jout << "      fdc_anneal_factor = " << fdc_anneal_factor << "     cdc_anneal_factor = " << cdc_anneal_factor << endl;
+    jout << " yields     fdc_chi2cut = " << fdc_chi2cut       << "           cdc_chi2cut = " << cdc_chi2cut       << endl; 
+    jout << " Starting from break_point_step_index " << break_point_step_index << endl;
+    jout << " S0_ which is the state vector of the reference trajectory at the break point step:" << endl;
+    S0_.Print();
+    jout << " ===== Beginning pass over reference trajectory ======== " << endl;
+  }
+  
+  for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
+    unsigned int k_minus_1=k-1;
+    
+    // Check that C matrix is positive definite
+    if (!C.IsPosDef()){
+      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+      return BROKEN_COVARIANCE_MATRIX;
+    }
+    
+    // Get the state vector, jacobian matrix, and multiple scattering matrix 
+    // from reference trajectory
+    S0=(forward_traj[k].S);
+    J=(forward_traj[k].J);
+    Q=(forward_traj[k].Q);
+    
+    // State S is perturbation about a seed S0
+    //dS=S-S0_;
+    
+    // Update the actual state vector and covariance matrix
+    S=S0+J*(S-S0_);
+    
+    // Bail if the momentum has dropped below some minimum
+    if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX){
+      if (DEBUG_LEVEL>2)
+	{
+	  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p)) << endl;
+	}
+      break_point_fdc_index=(3*num_fdc)/4;
+      return MOMENTUM_OUT_OF_RANGE;
+      }
+    
 
-   // Initialize number of degrees of freedom
-   numdof=0;
-
-   double fdc_chi2cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
-   double cdc_chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
-
-   unsigned int num_fdc_hits=break_point_fdc_index+1;
-   unsigned int max_num_fdc_used_in_fit=num_fdc_hits;
-   unsigned int num_cdc_hits=my_cdchits.size(); 
-   unsigned int cdc_index=0;
-   if (num_cdc_hits>0) cdc_index=num_cdc_hits-1;
-   bool more_cdc_measurements=(num_cdc_hits>0);
-   double old_doca2=1e6;
-
-   if (num_fdc_hits+num_cdc_hits<MIN_HITS_FOR_REFIT){
-      cdc_chi2cut=BIG;
-      fdc_chi2cut=BIG;
-   }
-
-   if (more_cdc_measurements){
-      origin=my_cdchits[cdc_index]->origin;  
-      dir=my_cdchits[cdc_index]->dir;   
-      z0w=my_cdchits[cdc_index]->z0wire;
-      wirepos=origin+(forward_traj[break_point_step_index].z-z0w)*dir;
-   }
-
-   S0_=(forward_traj[break_point_step_index].S);
-
-   if (DEBUG_LEVEL > 25){
-      jout << "Entering DTrackFitterKalmanSIMD::KalmanForward ================================" << endl;
-      jout << " We have the following starting parameters for our fit. S = State vector, C = Covariance matrix" << endl;
+    //C=J*(C*J_T)+Q;   
+    //C=Q.AddSym(C.SandwichMultiply(J));
+    C=Q.AddSym(J*C*J.Transpose());
+    
+    // Save the current state and covariance matrix in the deque
+    forward_traj[k].Skk=S;
+    forward_traj[k].Ckk=C;
+    
+    // Save the current state of the reference trajectory
+    S0_=S0;
+    
+    // Z position along the trajectory 
+    double z=forward_traj[k].z;
+    
+    if (DEBUG_LEVEL > 25){
+      jout << " At reference trajectory index " << k << " at z=" << z << endl;
+      jout << " The State vector from the reference trajectory" << endl;
+      S0.Print();
+      jout << " The Jacobian matrix " << endl;
+      J.Print();
+      jout << " The Q matrix "<< endl;
+      Q.Print();
+      jout << " The updated State vector S=S0+J*(S-S0_)" << endl;
       S.Print();
+      jout << " The updated Covariance matrix C=J*(C*J_T)+Q;" << endl;
       C.Print();
-      jout << setprecision(6); 
-      jout << " There are " << num_cdc <<  " CDC Updates and " << num_fdc << " FDC Updates on this track" << endl;
-      jout << " There are " << num_cdc_hits << " CDC Hits and " << num_fdc_hits << " FDC Hits on this track" << endl;
-      jout << " With NUM_FDC_SIGMA_CUT = " << NUM_FDC_SIGMA_CUT << " and NUM_CDC_SIGMA_CUT = " << NUM_CDC_SIGMA_CUT << endl;
-      jout << "      fdc_anneal_factor = " << fdc_anneal_factor << "     cdc_anneal_factor = " << cdc_anneal_factor << endl;
-      jout << " yields     fdc_chi2cut = " << fdc_chi2cut       << "           cdc_chi2cut = " << cdc_chi2cut       << endl; 
-      jout << " Starting from break_point_step_index " << break_point_step_index << endl;
-      jout << " S0_ which is the state vector of the reference trajectory at the break point step:" << endl;
-      S0_.Print();
-      jout << " ===== Beginning pass over reference trajectory ======== " << endl;
-   }
+    }
+    
+    // Add the hit
+    if (num_fdc_hits>0){
+      if (forward_traj[k].h_id>0 && forward_traj[k].h_id<1000){
+	unsigned int id=forward_traj[k].h_id-1; 
+	// Check if this is a plane we want to skip in the fit (we still want
+	// to store track and hit info at this plane, however).
+	bool skip_plane=(my_fdchits[id]->hit!=NULL
+			 &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+	double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+	FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
+				    lorentz_factor,H_T);
+	// Matrix transpose H_T -> H
+	H=Transpose(H_T);
+	
+	// Variance in coordinate transverse to wire
+	V(0,0)=my_fdchits[id]->uvar;
+	if (my_fdchits[id]->hit==NULL&&my_fdchits[id]->status!=trd_hit){
+	  V(0,0)*=fdc_anneal_factor;
+	}
+	
+	// Variance in coordinate along wire
+	V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
 
-   for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
-      unsigned int k_minus_1=k-1;
+	// Residual for coordinate along wire
+	Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
+       
+	// Residual for coordinate transverse to wire
+	Mdiff(0)=-doca;
+	double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
+	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
+	  if (my_fdchits[id]->hit!=NULL){
+	    double drift=(doca>0.0?1.:-1.)
+	      *fdc_drift_distance(drift_time,forward_traj[k].B);
+	    Mdiff(0)+=drift;
+ 
+	    // Variance in drift distance
+	    V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;	
+	  }
+	  else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
+	    double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	    Mdiff(0)+=drift;
 
-      // Check that C matrix is positive definite
-      if (!C.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
-      }
+	    // Variance in drift distance
+	    V(0,0)=0.05*0.05*fdc_anneal_factor;
+	  }
+	}
+	// Check to see if we have multiple hits in the same plane
+	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
+	  UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
+			      lorentz_factor,V,Mdiff,H,H_T,S,C,
+			      fdc_chi2cut,skip_plane,chisq,numdof,
+			      fdc_anneal_factor);
+	}
+	else{
+	  if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
 
-      // Get the state vector, jacobian matrix, and multiple scattering matrix 
-      // from reference trajectory
-      S0=(forward_traj[k].S);
-      J=(forward_traj[k].J);
-      Q=(forward_traj[k].Q);
+	  // Variance for this hit
+	  DMatrix2x2 Vtemp=V+H*C*H_T;
+	  InvV=Vtemp.Invert();
+	  
+	  // Check if this hit is an outlier
+	  double chi2_hit=Vtemp.Chi2(Mdiff);
+	  if (chi2_hit<fdc_chi2cut){
+	    // Compute Kalman gain matrix
+	    K=C*H_T*InvV;
 
-      // State S is perturbation about a seed S0
-      //dS=S-S0_;
-
-      // Update the actual state vector and covariance matrix
-      S=S0+J*(S-S0_);
-
-      // Bail if the momentum has dropped below some minimum
-      if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX){
-         if (DEBUG_LEVEL>2)
-         {
-            _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p)) << endl;
-         }
-         break_point_fdc_index=(3*num_fdc)/4;
-         return MOMENTUM_OUT_OF_RANGE;
-      }
-
-
-      //C=J*(C*J_T)+Q;   
-      //C=Q.AddSym(C.SandwichMultiply(J));
-      C=Q.AddSym(J*C*J.Transpose());
-
-      // Save the current state and covariance matrix in the deque
-      forward_traj[k].Skk=S;
-      forward_traj[k].Ckk=C;
-
-      // Save the current state of the reference trajectory
-      S0_=S0;
-
-      // Z position along the trajectory 
-      double z=forward_traj[k].z;
-
-      if (DEBUG_LEVEL > 25){
-         jout << " At reference trajectory index " << k << " at z=" << z << endl;
-         jout << " The State vector from the reference trajectory" << endl;
-         S0.Print();
-         jout << " The Jacobian matrix " << endl;
-         J.Print();
-         jout << " The Q matrix "<< endl;
-         Q.Print();
-         jout << " The updated State vector S=S0+J*(S-S0_)" << endl;
-         S.Print();
-         jout << " The updated Covariance matrix C=J*(C*J_T)+Q;" << endl;
-         C.Print();
-      }
-
-      // Add the hit
-      if (num_fdc_hits>0){
-         if (forward_traj[k].h_id>0 && forward_traj[k].h_id<1000){
-            unsigned int id=forward_traj[k].h_id-1;
-
-            // Make the small alignment rotations
-            // Use small-angle form.
-
-            // Position and direction from state vector
-            double x=S(state_x) + my_fdchits[id]->phiZ*S(state_y);
-            double y=S(state_y) - my_fdchits[id]->phiZ*S(state_x);
-	    double tx = (S(state_tx) + my_fdchits[id]->phiZ*S(state_ty) - my_fdchits[id]->phiY) ;
-            double ty = (S(state_ty) - my_fdchits[id]->phiZ*S(state_tx) + my_fdchits[id]->phiX) ;
-
-            double cosa=my_fdchits[id]->cosa;
-            double sina=my_fdchits[id]->sina;
-            double u=my_fdchits[id]->uwire;
-            double v=my_fdchits[id]->vstrip;
-
-            // Projected position along the wire without doca-dependent corrections
-            double vpred_uncorrected=x*sina+y*cosa;
-
-            // Projected postion in the plane of the wires transverse to the wires
-            double upred=x*cosa-y*sina;
-
-            // Direction tangent in the u-z plane
-            double tu=tx*cosa-ty*sina;
-            double alpha=atan(tu);
-            double cosalpha=cos(alpha);
-            double cosalpha2=cosalpha*cosalpha;
-            double sinalpha=sin(alpha);
-
-            // (signed) distance of closest approach to wire
-            double du=upred-u;
-            double doca=du*cosalpha;
-
-            // Correction for lorentz effect
-            double nz=my_fdchits[id]->nz;
-            double nr=my_fdchits[id]->nr;
-            double nz_sinalpha_plus_nr_cosalpha=nz*sinalpha+nr*cosalpha;
-
-	    // Variance in coordinate transverse to wire
-	    V(0,0)=my_fdchits[id]->uvar;
+	    if (skip_plane==false){
+	      // Update the state vector 
+	      S+=K*Mdiff;
+	      
+	      // Update state vector covariance matrix
+	      //C=C-K*(H*C);    
+	      C=C.SubSym(K*(H*C));
+	      
+	      if (DEBUG_LEVEL > 25) {
+		jout << "S Update: " << endl; S.Print();
+		jout << "C Uodate: " << endl; C.Print();
+	      }
+	    }
 	    
-            // Variance in coordinate along wire
-            V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
-
-            // Difference between measurement and projection
-            double tv=tx*sina+ty*cosa;
-            Mdiff(1)=v-(vpred_uncorrected+doca*(nz_sinalpha_plus_nr_cosalpha
-                     -tv*sinalpha
-                     ));
-            Mdiff(0)=-doca;
-
-            if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
-               double drift_time=my_fdchits[id]->t-mT0
-                  -forward_traj[k].t*TIME_UNIT_CONVERSION;
-               //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
-               double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
-
-               Mdiff(0)=drift-doca;
-
-               // Variance in drift distance
-	       if (my_fdchits[id]->hit!=NULL){
-		 V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
-	       }
-            }
-
-            // To transform from (x,y) to (u,v), need to do a rotation:
-            //   u = x*cosa-y*sina
-            //   v = y*cosa+x*sina
-            double temp2=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
-            H_T(state_x,1)=sina+cosa*cosalpha*temp2;	
-            H_T(state_y,1)=cosa-sina*cosalpha*temp2;	
-
-            double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
-            double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
-            double doca_cosalpha=doca*cosalpha;
-            double temp=doca_cosalpha*fac;	
-            H_T(state_tx,1)=cosa*temp
-               -doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
-               ;
-            H_T(state_ty,1)=-sina*temp
-               -doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
-               ;
-
-            H_T(state_x,0)=cosa*cosalpha;
-            H_T(state_y,0)=-sina*cosalpha;
-            double one_plus_tu2=1.+tu*tu;
-            double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-            H_T(state_ty,0)=sina*factor;
-            H_T(state_tx,0)=-cosa*factor;
-
-            // Matrix transpose H_T -> H
-            H=Transpose(H_T);
-
-            // Check to see if we have multiple hits in the same plane
-            if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){ 
-               // If we do have multiple hits, then all of the hits within some
-               // validation region are included with weights determined by how
-               // close the hits are to the track projection of the state to the
-               // "hit space".
-               vector<DMatrix5x2> Klist;
-               vector<DMatrix2x1> Mlist;
-               vector<DMatrix2x5> Hlist;
-               vector<DMatrix5x2> HTlist;
-               vector<DMatrix2x2> Vlist;
-               vector<double>probs;
-               vector<unsigned int>used_ids;
-
-               // Deal with the first hit:
-               //double Vtemp=V+H*C*H_T;
-               DMatrix2x2 Vtemp=V+H*C*H_T;
-               InvV=Vtemp.Invert();
-
-               //probability
-               double chi2_hit=Vtemp.Chi2(Mdiff);
-               double prob_hit=exp(-0.5*chi2_hit)
-                  /(M_TWO_PI*sqrt(Vtemp.Determinant()));
-
-               if (DEBUG_LEVEL > 25) jout << " == There are multiple (" << forward_traj[k].num_hits << ") FDC hits" << endl;
-
-               // Cut out outliers
-               if (chi2_hit<fdc_chi2cut && my_fdchits[id]->status==good_hit){
-                  probs.push_back(prob_hit);
-                  Vlist.push_back(V);
-                  Hlist.push_back(H);
-                  HTlist.push_back(H_T);
-                  Mlist.push_back(Mdiff);
-                  Klist.push_back(C*H_T*InvV); // Kalman gain
-
-                  used_ids.push_back(id);
-                  fdc_used_in_fit[id]=true;
-               }
-
-               // loop over the remaining hits
-               for (unsigned int m=1;m<forward_traj[k].num_hits;m++){
-                  unsigned int my_id=id-m;
-                  if (my_fdchits[my_id]->status==good_hit){
-                     u=my_fdchits[my_id]->uwire;
-                     v=my_fdchits[my_id]->vstrip;
-		     
-                     // Doca to this wire
-                     du=upred-u;
-                     doca=du*cosalpha;
-
-                     // variance for coordinate along the wire
-                     V(1,1)=my_fdchits[my_id]->vvar;
-
-                     // Difference between measurement and projection
-                     Mdiff(1)=v-(vpred_uncorrected+doca*(nz_sinalpha_plus_nr_cosalpha
-                              -tv*sinalpha
-                              ));
-                     Mdiff(0)=-doca;
-                     if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
-                        double drift_time=my_fdchits[id]->t-mT0
-                           -forward_traj[k].t*TIME_UNIT_CONVERSION;
-                        //double drift=DRIFT_SPEED*drift_time*(du>0?1.:-1.); 
-                        double drift=(du>0.0?1.:-1.)*fdc_drift_distance(drift_time,forward_traj[k].B);
-
-                        Mdiff(0)=drift-doca;
-
-                        // Variance in drift distance
-                        V(0,0)=fdc_drift_variance(drift_time);
-
-                     }
-
-                     // Update the terms in H/H_T that depend on the particular hit    
-                     doca_cosalpha=doca*cosalpha;
-                     temp=doca_cosalpha*fac;	
-                     H_T(state_tx,1)=cosa*temp	 
-                        -doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
-                        ;
-                     H_T(state_ty,1)=-sina*temp
-                        -doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
-                        ;
-                     factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-                     H_T(state_ty,0)=sina*factor;	     
-                     H_T(state_tx,0)=-cosa*factor;   
-
-                     // Matrix transpose H_T -> H
-                     H(1,state_tx)=H_T(state_tx,1);
-                     H(1,state_ty)=H_T(state_ty,1);
-                     H(0,state_ty)=H_T(state_ty,0);
-                     H(0,state_tx)=H_T(state_tx,0);
-
-                     // Calculate the kalman gain for this hit 
-                     ///Vtemp=V+H*C*H_T;
-                     Vtemp=V+H*C*H_T;
-                     InvV=Vtemp.Invert();
-
-                     // probability
-                     double chi2_hit=Vtemp.Chi2(Mdiff);
-                     double prob_hit=exp(-0.5*chi2_hit)
-                        /(M_TWO_PI*sqrt(Vtemp.Determinant()));
-
-                     // Cut out outliers
-                     if(chi2_hit<fdc_chi2cut){	      
-                        probs.push_back(prob_hit);	
-                        Mlist.push_back(Mdiff);
-                        Vlist.push_back(V);
-                        Hlist.push_back(H);   
-                        HTlist.push_back(H_T);
-                        Klist.push_back(C*H_T*InvV);	  
-
-                        used_ids.push_back(my_id);
-                        fdc_used_in_fit[my_id]=true;
-
-                     }
-                  }
-               }
-               double prob_tot=1e-100;
-               for (unsigned int m=0;m<probs.size();m++){
-                  prob_tot+=probs[m];
-               }
-
-               // Adjust the state vector and the covariance using the hit 
-               //information
-               bool skip_plane=(my_fdchits[id]->hit!=NULL && my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
-               if (skip_plane==false){
-                  DMatrix5x5 sum=I5x5;
-                  DMatrix5x5 sum2;
-                  for (unsigned int m=0;m<Klist.size();m++){
-                     double my_prob=probs[m]/prob_tot;
-                     S+=my_prob*(Klist[m]*Mlist[m]);
-                     sum-=my_prob*(Klist[m]*Hlist[m]);
-                     sum2+=(my_prob*my_prob)*(Klist[m]*Vlist[m]*Transpose(Klist[m]));
-
-                     // Update chi2
-                     DMatrix2x2 HK=Hlist[m]*Klist[m];
-                     R=Mlist[m]-HK*Mlist[m];
-                     RC=Vlist[m]-HK*Vlist[m];
-                     chisq+=my_prob*RC.Chi2(R);
-
-                     unsigned int my_id=used_ids[m];  
-                     fdc_updates[my_id].V=RC;
-
-                     if (DEBUG_LEVEL > 25) {
-                        jout << " Adjusting state vector for FDC hit " << m << " with prob " << my_prob << " S:" << endl;
-                        S.Print();
-                     }
-                  }
-		  // C=C.SandwichMultiply(sum)+sum2;  
-		  C=sum2.AddSym(sum*C*sum.Transpose());
-
-                  if (DEBUG_LEVEL > 25) { jout << " C: " << endl; C.Print();}
-               }
-
-               for (unsigned int m=0;m<Hlist.size();m++){
-                  unsigned int my_id=used_ids[m];  
-                  fdc_updates[my_id].S=S;
-                  fdc_updates[my_id].C=C; 
-                  fdc_updates[my_id].tdrift
-                     =my_fdchits[my_id]->t-forward_traj[k].t*TIME_UNIT_CONVERSION-mT0;
-                  fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift; // temporary!
-                  fdc_updates[my_id].doca=doca;
-
-                  if (skip_plane){
-                     fdc_updates[my_id].V=Vlist[m];
-                  }
-               }
-
-               // update number of degrees of freedom
-               if (skip_plane==false){
-                  numdof+=2;
-               }
-            }
-            else{
-               if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
-
-               // Variance for this hit
-               DMatrix2x2 Vtemp=V+H*C*H_T;
-               InvV=Vtemp.Invert();
-
-               // Check if this hit is an outlier
-               double chi2_hit=Vtemp.Chi2(Mdiff);
-               if (chi2_hit<fdc_chi2cut){
-                  // Compute Kalman gain matrix
-                  K=C*H_T*InvV;
-
-                  bool skip_plane=(my_fdchits[id]->hit!=NULL
-				   &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
-                  if (skip_plane==false){
-                     // Update the state vector 
-                     S+=K*Mdiff;
-
-                     // Update state vector covariance matrix
-                     //C=C-K*(H*C);    
-                     C=C.SubSym(K*(H*C));
-
-                     if (DEBUG_LEVEL > 25) {
-                        jout << "S Update: " << endl; S.Print();
-                        jout << "C Uodate: " << endl; C.Print();
-                     }
-                  }
-
-                  // Store the "improved" values for the state vector and covariance
-                  fdc_updates[id].S=S;
-                  fdc_updates[id].C=C;
-                  fdc_updates[id].tdrift
-                     =my_fdchits[id]->t-forward_traj[k].t*TIME_UNIT_CONVERSION-mT0;
-                  fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-                  fdc_updates[id].doca=doca;
-                  fdc_used_in_fit[id]=true;
-
-                  if (skip_plane==false){  
-                     // Filtered residual and covariance of filtered residual
-                     R=Mdiff-H*K*Mdiff;   
-                     RC=V-H*(C*H_T);
-
-                     fdc_updates[id].V=RC;
-
-                     // Update chi2 for this segment
-                     chisq+=RC.Chi2(R);
-
-                     // update number of degrees of freedom
-                     numdof+=2;
-
-
-                     if (DEBUG_LEVEL>20)
-                     {
-                        printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
-                              id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
-                              sqrt(V(1,1)),RC.Chi2(R),
-                              forward_traj[k].z);
-
-                     }
-                  }
-                  else{
-                     fdc_updates[id].V=V;
-                  }
+	    // Store the "improved" values for the state vector and covariance
+	    fdc_updates[id].S=S;
+	    fdc_updates[id].C=C;
+	    fdc_updates[id].tdrift=drift_time;
+	    fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
+	    fdc_updates[id].doca=doca;
+	    fdc_used_in_fit[id]=true;
+	    
+	    if (skip_plane==false){  
+	      // Filtered residual and covariance of filtered residual
+	      R=Mdiff-H*K*Mdiff;   
+	      RC=V-H*(C*H_T);
+	      
+	      fdc_updates[id].V=RC;
+	      
+	      // Update chi2 for this segment
+	      chisq+=RC.Chi2(R);
+	      
+	      // update number of degrees of freedom
+	      numdof+=2;
+	      
+	      if (DEBUG_LEVEL>20)
+		{
+		  printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
+			 id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
+			 sqrt(V(1,1)),RC.Chi2(R),
+			 forward_traj[k].z);
 		  
-                  break_point_fdc_index=id;
-                  break_point_step_index=k;		 
-               }
-            }
-            if (num_fdc_hits>=forward_traj[k].num_hits)
-               num_fdc_hits-=forward_traj[k].num_hits;
-         }
+		}
+	    }
+	    else{
+	      fdc_updates[id].V=V;
+	    }
+	    
+	    break_point_fdc_index=id;
+	    break_point_step_index=k;
+	  }
+	}
+	if (num_fdc_hits>=forward_traj[k].num_hits)
+	  num_fdc_hits-=forward_traj[k].num_hits;
       }
-      else if (more_cdc_measurements /* && z<endplate_z*/){   
-         // new wire position
-         wirepos=origin;
-         wirepos+=(z-z0w)*dir;
+    }
+    else if (more_cdc_measurements /* && z<endplate_z*/){   
+      // new wire position
+      wirepos=origin;
+      wirepos+=(z-z0w)*dir;
 
-         // doca variables
-         double dx=S(state_x)-wirepos.X();
-         double dy=S(state_y)-wirepos.Y();
-         double doca2=dx*dx+dy*dy;
+      // doca variables
+      double dx=S(state_x)-wirepos.X();
+      double dy=S(state_y)-wirepos.Y();
+      double doca2=dx*dx+dy*dy;
+      
+      // Check if the doca is no longer decreasing
+      if (doca2>old_doca2){
+	if(my_cdchits[cdc_index]->status==good_hit){
+	  find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
+	  double newz=endplate_z;
+	  double dz=newz-z;
+	  // Sometimes the true doca would correspond to the case where the 
+	  // wire would need to extend beyond the physical volume of the straw. 
+	  // In this case, find the doca at the cdc endplate.
+	  if (z>endplate_z){
+	    swimmed_to_doca=DOCA_ENDPLATE;
+	    SwimToEndplate(z,forward_traj[k],S);
 
-         // Check if the doca is no longer decreasing
-         if (doca2>old_doca2 /* && z<endplate_z */){
-            if(my_cdchits[cdc_index]->status==good_hit){
-               double newz=z;
+	    // wire position at the endplate
+	    wirepos=origin;
+	    wirepos+=(endplate_z-z0w)*dir;
+	    
+	    dx=S(state_x)-wirepos.X();
+	    dy=S(state_y)-wirepos.Y();
+	  }
+	  else{
+	    // Find the true doca to the wire.  If we had to use Brent's 
+	    // algorithm, the routine returns true.
+	    double step1=mStepSizeZ;
+	    double step2=mStepSizeZ;
+	    if (k>=2){
+	      step1=-forward_traj[k].z+forward_traj[k_minus_1].z;
+	      step2=-forward_traj[k_minus_1].z+forward_traj[k-2].z;
+	    }
+	    swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
+				     step1,step2,S0,S,C,dx,dy,dz);  
+	    if (swimmed_to_doca==BRENT_FAILED){
+	      //break_point_fdc_index=(3*num_fdc)/4;
+	      return MOMENTUM_OUT_OF_RANGE;
+	    }
 
-               // energy loss 
-               double dedx=0.;
+	    newz=forward_traj[k].z+dz;
+	  }
+	  double cosstereo=my_cdchits[cdc_index]->cosstereo;
+	  double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+	  
+	  // Track projection
+	  double cosstereo2_over_d=cosstereo*cosstereo/d;
+	  Hc_T(state_x)=dx*cosstereo2_over_d; 
+	  Hc(state_x)=Hc_T(state_x);
+	  Hc_T(state_y)=dy*cosstereo2_over_d;	  
+	  Hc(state_y)=Hc_T(state_y);
+	  if (swimmed_to_doca==DOCA_NO_BRENT){
+	    Hc_T(state_ty)=Hc_T(state_y)*dz;
+	    Hc(state_ty)=Hc_T(state_ty);	  
+	    Hc_T(state_tx)=Hc_T(state_x)*dz;
+	    Hc(state_tx)=Hc_T(state_tx);
+	  }
+	  else{
+	    Hc_T(state_ty)=0.;
+	    Hc(state_ty)=0.;
+	    Hc_T(state_tx)=0.;
+	    Hc(state_tx)=0.;
+	  }
+	      
+	  //H.Print();
+	  
+	  // The next measurement
+	  double dm=0.39,tdrift=0.,tcorr=0.,dDdt0=0.;
+	  if (fit_type==kTimeBased){
+	    // Find offset of wire with respect to the center of the
+	    // straw at this z position
+	    double delta=0,dphi=0.;
+	    FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
 
-               // track direction variables
-               double tx=S(state_tx);
-               double ty=S(state_ty);	
-               double tanl=1./sqrt(tx*tx+ty*ty);
-               double sinl=sin(atan(tanl));
+	    // Find drift time and distance	    
+	    tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	      -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
+	    double B=forward_traj[k_minus_1].B;
+	    ComputeCDCDrift(dphi,delta,tdrift,B,dm,Vc,tcorr);
+	    Vc*=cdc_anneal_factor;
+	    if (ALIGNMENT_FORWARD){
+	      double myV=0.;
+	      double mytcorr=0.;
+	      double d_shifted;
+	      double dt=5.0;
+	      // Dont compute this for negative drift times
+	      if (tdrift < 0.) d_shifted = dm;
+	      else ComputeCDCDrift(dphi,delta,tdrift+dt,B,d_shifted,myV,mytcorr);
+	      dDdt0=(d_shifted-dm)/dt;
+	    }
+	    
+	    if (max_num_fdc_used_in_fit>4)
+	      {
+		Vc*=CDC_VAR_SCALE_FACTOR;  //de-weight CDC hits 
+	      }
+	    //_DBG_ << "t " << tdrift << " d " << d << " delta " << delta << " dphi " << atan2(dy,dx)-mywire->origin.Phi() << endl;
+	    
+	    //_DBG_ << tcorr << " " << dphi << " " << dm << endl;
+	  }
+	  
+	  // Residual
+	  double res=dm-d;
+	  
+	  // inverse variance including prediction
+	  //double InvV1=1./(Vc+H*(C*H_T));
+	  //double Vproj=C.SandwichMultiply(Hc_T);
+	  double Vproj=Hc*C*Hc_T;
+	  double InvV1=1./(Vc+Vproj);
+	  if (InvV1<0.){
+	    if (DEBUG_LEVEL>0)
+	      _DBG_ << "Negative variance???" << endl;
+	    return NEGATIVE_VARIANCE;
+	  }
 
-               // Wire direction variables
-               double ux=dir.X();
-               double uy=dir.Y();
-               // Variables relating wire direction and track direction
-               double my_ux=tx-ux;
-               double my_uy=ty-uy;
-               double denom=my_ux*my_ux+my_uy*my_uy;
-               double dz=0.;
+	  // Check if this hit is an outlier
+	  double chi2_hit=res*res*InvV1;
+	  if (chi2_hit<cdc_chi2cut){
+	    // Compute KalmanSIMD gain matrix
+	    Kc=InvV1*(C*Hc_T);
+	    
+	    // Update state vector covariance matrix
+	    //C=C-K*(H*C);    
+	    Ctest=C.SubSym(Kc*(Hc*C));
+	    //Ctest=C.SandwichMultiply(I5x5-K*H)+Vc*MultiplyTranspose(K);	 
+	    // Check that Ctest is positive definite
+	    if (!Ctest.IsPosDef()){
+	      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	      return BROKEN_COVARIANCE_MATRIX;
+	    }
+	    bool skip_ring
+	      =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
+	    // update covariance matrix and state vector
+	    if (my_cdchits[cdc_index]->hit->wire->ring!=RING_TO_SKIP && tdrift >= CDC_T_DRIFT_MIN){
+	      C=Ctest;
+	      S+=res*Kc;
+	      
+	      if (DEBUG_LEVEL > 25) {
+		jout << " == Adding CDC Hit in Ring " << my_cdchits[cdc_index]->hit->wire->ring << endl;
+		jout << " New S: " << endl; S.Print();
+		jout << " New C: " << endl; C.Print();
+	      }
+	    }
+	    
+	    // Flag the place along the reference trajectory with hit id
+	    forward_traj[k].h_id=1000+cdc_index;
+	    
+	    // Store updated info related to this hit
+	    double scale=(skip_ring)?1.:(1.-Hc*Kc); 
+	    cdc_updates[cdc_index].tdrift=tdrift;
+	    cdc_updates[cdc_index].tcorr=tcorr;
+	    cdc_updates[cdc_index].variance=Vc;
+	    cdc_updates[cdc_index].doca=dm;
+	    cdc_updates[cdc_index].dDdt0=dDdt0;
+	    cdc_used_in_fit[cdc_index]=true;
+	    if(tdrift < CDC_T_DRIFT_MIN){
+	      //_DBG_ << tdrift << endl;
+	      cdc_used_in_fit[cdc_index]=false;
+	    }
+	    
+	    // Update chi2 and number of degrees of freedom for this hit
+	    if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
+	      chisq+=scale*res*res/Vc;
+	      numdof++;
+	    }
+	    
+	    if (DEBUG_LEVEL>10)
+	      jout << "Ring " <<  my_cdchits[cdc_index]->hit->wire->ring
+		   << " Straw " <<  my_cdchits[cdc_index]->hit->wire->straw
+		   << " Pred " << d << " Meas " << dm
+		   << " Sigma meas " << sqrt(Vc)
+		   << " t " << tcorr
+		   << " Chi2 " << (1.-Hc*Kc)*res*res/Vc << endl;
+	    
+	    break_point_cdc_index=cdc_index;
+	    break_point_step_index=k_minus_1;
+	    
+	  }
+	  
+	  // If we had to use Brent's algorithm to find the true doca or the 
+	  // doca to the line corresponding to the wire is downstream of the 
+	  // cdc endplate, we need to swim the state vector and covariance 
+	  // matrix back to the appropriate position along the reference 
+	  // trajectory.
+	  if (swimmed_to_doca!=DOCA_NO_BRENT){
+	    double dedx=0.;
+	    if (CORRECT_FOR_ELOSS){
+	      dedx=GetdEdx(S(state_q_over_p),
+			   forward_traj[k].K_rho_Z_over_A,
+			   forward_traj[k].rho_Z_over_A,
+			   forward_traj[k].LnI,forward_traj[k].Z);
+	    }
+	    StepBack(dedx,newz,forward_traj[k].z,S0,S,C);
+	  }
+	
+	  cdc_updates[cdc_index].S=S;
+	  cdc_updates[cdc_index].C=C;	  
+	}
 
-
-               // variables for dealing with propagation of S and C if we 
-               // need to use Brent's algorithm to find the doca to the wire
-               int num_steps=0;
-               double dz3=0.;
-               double my_dz=0.;
-
-               // if the path length increment is small relative to the radius 
-               // of curvature, use a linear approximation to find dz	
-               bool do_brent=false;
-               double step1=mStepSizeZ;
-               double step2=mStepSizeZ;
-               if (k>=2){
-                  step1=-forward_traj[k].z+forward_traj[k_minus_1].z;
-                  step2=-forward_traj[k_minus_1].z+forward_traj[k-2].z;
-               }
-               //printf("step1 %f step 2 %f \n",step1,step2);
-               double two_step=step1+step2;
-               if (fabs(qBr2p*S(state_q_over_p)
-                        *bfield->GetBz(S(state_x),S(state_y),z)
-                        *two_step/sinl)<0.05
-                     && denom>EPS)
-               {
-                  double dzw=z-z0w;
-                  dz=-((S(state_x)-origin.X()-ux*dzw)*my_ux
-                        +(S(state_y)-origin.Y()-uy*dzw)*my_uy)/denom;
-
-                  if (fabs(dz)>two_step || dz<0){
-                     do_brent=true;
-                  }
-                  else{
-                     newz=z+dz;
-                     // Check for exiting the straw
-                     if (newz>endplate_z){
-                        dz=endplate_z-z;
-                     }
-                  }
-               }
-               else do_brent=true;
-               if (do_brent){
-                  if (CORRECT_FOR_ELOSS){
-                     dedx=GetdEdx(S(state_q_over_p), 
-                           forward_traj[k].K_rho_Z_over_A,
-                           forward_traj[k].rho_Z_over_A,
-                           forward_traj[k].LnI,forward_traj[k].Z);
-                  }
-
-                  // We have bracketed the minimum doca:  use Brent's agorithm
-                  if (BrentForward(z,dedx,z0w,origin,dir,S,dz)!=NOERROR){
-                     break_point_fdc_index=(3*num_fdc)/4;
-                     return MOMENTUM_OUT_OF_RANGE;
-                  }
-
-                  // Step the state and covariance through the field
-                  if (fabs(dz)>mStepSizeZ){
-                     my_dz=(dz>0?1.0:-1.)*mStepSizeZ;
-                     num_steps=int(fabs(dz/my_dz));
-                     dz3=dz-num_steps*my_dz;
-
-                     double my_z=z;
-                     for (int m=0;m<num_steps;m++){
-                        newz=my_z+my_dz;
-
-                        // Step current state by my_dz
-                        //Step(z,newz,dedx,S);
-
-                        // propagate error matrix to z-position of hit
-                        StepJacobian(my_z,newz,S0,dedx,J);
-                        C=J*C*J.Transpose();
-                        //C=C.SandwichMultiply(J);
-
-                        // Step reference trajectory by my_dz
-                        Step(my_z,newz,dedx,S0); 
-
-                        my_z=newz;
-                     }
-
-                     newz=my_z+dz3;
-
-                     // Step current state by dz3
-                     //Step(my_z,newz,dedx,S);	  
-
-                     // propagate error matrix to z-position of hit
-                     StepJacobian(my_z,newz,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step reference trajectory by dz3
-                     Step(my_z,newz,dedx,S0); 	    
-                  }
-                  else{
-                     newz = z + dz;
-
-                     // Step current state by dz
-                     //Step(z,newz,dedx,S);
-
-                     // propagate error matrix to z-position of hit
-                     StepJacobian(z,newz,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step reference trajectory by dz
-                     Step(z,newz,dedx,S0); 
-                  }
-               }
-
-               // Wire position at current z
-               wirepos=origin;
-               wirepos+=(newz-z0w)*dir;
-
-               double xw=wirepos.X();
-               double yw=wirepos.Y();
-
-               // predicted doca taking into account the orientation of the wire
-               if (do_brent==false){
-                  // In this case we did not have to swim to find the doca and 
-                  // the transformation from the state vector space to the 
-                  // measurement space is straight-forward.
-                  dy=S(state_y)+S(state_ty)*dz-yw;
-                  dx=S(state_x)+S(state_tx)*dz-xw;   
-               }
-               else{ 
-                  // In this case we swam the state vector to the position of 
-                  // the doca
-                  dy=S(state_y)-yw;
-                  dx=S(state_x)-xw; 
-               }
-               double cosstereo=my_cdchits[cdc_index]->cosstereo;
-               double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
-
-               // Track projection
-               double cosstereo2_over_d=cosstereo*cosstereo/d;
-               Hc_T(state_x)=dx*cosstereo2_over_d; 
-               Hc(state_x)=Hc_T(state_x);
-               Hc_T(state_y)=dy*cosstereo2_over_d;	  
-               Hc(state_y)=Hc_T(state_y);
-               if (do_brent==false){
-                  Hc_T(state_ty)=Hc_T(state_y)*dz;
-                  Hc(state_ty)=Hc_T(state_ty);	  
-                  Hc_T(state_tx)=Hc_T(state_x)*dz;
-                  Hc(state_tx)=Hc_T(state_tx);
-               }
-               else{
-                  Hc_T(state_ty)=0.;
-                  Hc(state_ty)=0.;
-                  Hc_T(state_tx)=0.;
-                  Hc(state_tx)=0.;
-               }
-
-               //H.Print();
-
-               // The next measurement
-               double dm=0.39,tdrift=0.,tcorr=0.,dDdt0=0.;
-               if (fit_type==kTimeBased)
-               {
-                  // Find offset of wire with respect to the center of the
-                  // straw at this z position
-                  const DCDCWire *mywire=my_cdchits[cdc_index]->hit->wire;
-                  int ring_index=mywire->ring-1;
-                  int straw_index=mywire->straw-1;
-                  double dz=newz-z0w;
-                  double phi_d=atan2(dy,dx);
-                  double delta
-                     =max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
-                     *cos(phi_d + sag_phi_offset[ring_index][straw_index]);
-                  double dphi=phi_d-mywire->origin.Phi();
-                  while (dphi>M_PI) dphi-=2*M_PI;
-                  while (dphi<-M_PI) dphi+=2*M_PI;
-                  if (mywire->origin.Y()<0) dphi*=-1.;
-
-                  tdrift=my_cdchits[cdc_index]->tdrift-mT0
-                     -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
-                  double B=forward_traj[k_minus_1].B;
-                  ComputeCDCDrift(dphi,delta,tdrift,B,dm,Vc,tcorr);
-		  Vc*=cdc_anneal_factor;
-                  if (ALIGNMENT_FORWARD){
-                     double myV=0.;
-                     double mytcorr=0.;
-                     double d_shifted;
-                     double dt=5.0;
-                     // Dont compute this for negative drift times
-                     if (tdrift < 0.) d_shifted = dm;
-                     else ComputeCDCDrift(dphi,delta,tdrift+dt,B,d_shifted,myV,mytcorr);
-                     dDdt0=(d_shifted-dm)/dt;
-                  }
-
-		  if (max_num_fdc_used_in_fit>4)
-		    {
-		    Vc*=CDC_VAR_SCALE_FACTOR;  //de-weight CDC hits 
-		  }
-                  //_DBG_ << "t " << tdrift << " d " << d << " delta " << delta << " dphi " << atan2(dy,dx)-mywire->origin.Phi() << endl;
-
-                  //_DBG_ << tcorr << " " << dphi << " " << dm << endl;
-               }
-
-               // Residual
-               double res=dm-d;
-
-               // inverse variance including prediction
-               //double InvV1=1./(Vc+H*(C*H_T));
-               //double Vproj=C.SandwichMultiply(Hc_T);
-	       double Vproj=Hc*C*Hc_T;
-               double InvV1=1./(Vc+Vproj);
-               if (InvV1<0.){
-                  if (DEBUG_LEVEL>0)
-                     _DBG_ << "Negative variance???" << endl;
-                  return NEGATIVE_VARIANCE;
-               }
-
-               // Check if this hit is an outlier
-               double chi2_hit=res*res*InvV1;
-               if (chi2_hit<cdc_chi2cut){
-                  // Compute KalmanSIMD gain matrix
-                  Kc=InvV1*(C*Hc_T);
-
-
-                  // Update state vector covariance matrix
-                  //C=C-K*(H*C);    
-                  Ctest=C.SubSym(Kc*(Hc*C));
-                  //Ctest=C.SandwichMultiply(I5x5-K*H)+Vc*MultiplyTranspose(K);	 
-                  // Check that Ctest is positive definite
-                  if (!Ctest.IsPosDef()){
-                     if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-                     return BROKEN_COVARIANCE_MATRIX;
-                  }
-                  bool skip_ring
-                     =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
-                  // update covariance matrix and state vector
-                  if (my_cdchits[cdc_index]->hit->wire->ring!=RING_TO_SKIP && tdrift >= CDC_T_DRIFT_MIN){
-                     C=Ctest;
-                     S+=res*Kc;
-
-                     if (DEBUG_LEVEL > 25) {
-                        jout << " == Adding CDC Hit in Ring " << my_cdchits[cdc_index]->hit->wire->ring << endl;
-                        jout << " New S: " << endl; S.Print();
-                        jout << " New C: " << endl; C.Print();
-                     }
-                  }
-
-                  // Flag the place along the reference trajectory with hit id
-                  forward_traj[k].h_id=1000+cdc_index;
-
-                  // Store updated info related to this hit
-                  double scale=(skip_ring)?1.:(1.-Hc*Kc); 
-                  cdc_updates[cdc_index].tdrift=tdrift;
-                  cdc_updates[cdc_index].tcorr=tcorr;
-                  cdc_updates[cdc_index].variance=Vc;
-                  cdc_updates[cdc_index].doca=dm;
-                  cdc_updates[cdc_index].dDdt0=dDdt0;
-                  cdc_used_in_fit[cdc_index]=true;
-                  if(tdrift < CDC_T_DRIFT_MIN){
-                     //_DBG_ << tdrift << endl;
-                     cdc_used_in_fit[cdc_index]=false;
-                  }
-
-                  // Update chi2 and number of degrees of freedom for this hit
-                  if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
-                     chisq+=scale*res*res/Vc;
-                     numdof++;
-                  }
-
-                  if (DEBUG_LEVEL>10)
-                     jout << "Ring " <<  my_cdchits[cdc_index]->hit->wire->ring
-                        << " Straw " <<  my_cdchits[cdc_index]->hit->wire->straw
-                        << " Pred " << d << " Meas " << dm
-                        << " Sigma meas " << sqrt(Vc)
-                        << " t " << tcorr
-                        << " Chi2 " << (1.-Hc*Kc)*res*res/Vc << endl;
-
-                  break_point_cdc_index=cdc_index;
-                  break_point_step_index=k_minus_1;
-
-               }
-
-               // If we had to use Brent's algorithm to find the true doca, 
-               // we need to swim the state vector and covariance matrix back to 
-               // the appropriate position along the reference trajectory.
-               if (do_brent){
-                  if (num_steps==0){
-                     // Step C back to the z-position on the reference trajectory
-                     StepJacobian(newz,z,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step S to current position on the reference trajectory
-                     Step(newz,z,dedx,S);
-
-                     // Step S0 to current position on the reference trajectory
-                     Step(newz,z,dedx,S0);
-                  }
-                  else{
-                     double my_z=newz;
-                     for (int m=0;m<num_steps;m++){
-                        z=my_z-my_dz;
-
-                        // Step C along z
-                        StepJacobian(my_z,z,S0,dedx,J);
-                        C=J*C*J.Transpose();
-                        //C=C.SandwichMultiply(J);
-
-                        // Step S along z
-                        Step(my_z,z,dedx,S); 
-
-                        // Step S0 along z
-                        Step(my_z,z,dedx,S0);
-
-                        my_z=z;
-                     }
-                     z=my_z-dz3;
-
-                     // Step C back to the z-position on the reference trajectory
-                     StepJacobian(my_z,z,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step S to current position on the reference trajectory
-                     Step(my_z,z,dedx,S);
-
-                     // Step S to current position on the reference trajectory
-                     Step(my_z,z,dedx,S0);
-                  }
-               }
-               cdc_updates[cdc_index].S=S;
-               cdc_updates[cdc_index].C=C;	  
-            }
-
-            // new wire origin and direction
-            if (cdc_index>0){
-               cdc_index--;
-               origin=my_cdchits[cdc_index]->origin;
-               z0w=my_cdchits[cdc_index]->z0wire;
-               dir=my_cdchits[cdc_index]->dir;
-            }
-            else more_cdc_measurements=false;
-
-            // Update the wire position
-            wirepos=origin+(z-z0w)*dir;
-
-            // new doca
-            dx=S(state_x)-wirepos.X();
-            dy=S(state_y)-wirepos.Y();
-            doca2=dx*dx+dy*dy;
-         }
-         old_doca2=doca2;
+	// new wire origin and direction
+	if (cdc_index>0){
+	  cdc_index--;
+	  origin=my_cdchits[cdc_index]->origin;
+	  z0w=my_cdchits[cdc_index]->z0wire;
+	  dir=my_cdchits[cdc_index]->dir;
+	}
+	else more_cdc_measurements=false;
+	
+	// Update the wire position
+	wirepos=origin+(z-z0w)*dir;
+	
+	// new doca
+	dx=S(state_x)-wirepos.X();
+	dy=S(state_y)-wirepos.Y();
+	doca2=dx*dx+dy*dy;
       }
-   }
-   // Save final z position
-   z_=forward_traj[forward_traj.size()-1].z;
-
-   // The following code segment addes a fake point at a well-defined z position
-   // that would correspond to a thin foil target.  It should not be turned on
-   // for an extended target.
-   if (ADD_VERTEX_POINT){
-      double dz_to_target=TARGET_Z-z_;
-      double my_dz=mStepSizeZ*(dz_to_target>0?1.:-1.);
-      int num_steps=int(fabs(dz_to_target/my_dz));
-
-      for (int k=0;k<num_steps;k++){
-         double newz=z_+my_dz;
-         // Step C along z
-         StepJacobian(z_,newz,S,0.,J);
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
-
-         // Step S along z
-         Step(z_,newz,0.,S);
-
-         z_=newz;
-      }
-
+      old_doca2=doca2;
+    }
+  }
+  // Save final z position
+  z_=forward_traj[forward_traj.size()-1].z;
+  
+  // The following code segment addes a fake point at a well-defined z position
+  // that would correspond to a thin foil target.  It should not be turned on
+  // for an extended target.
+  if (ADD_VERTEX_POINT){
+    double dz_to_target=TARGET_Z-z_;
+    double my_dz=mStepSizeZ*(dz_to_target>0?1.:-1.);
+    int num_steps=int(fabs(dz_to_target/my_dz));
+    
+    for (int k=0;k<num_steps;k++){
+      double newz=z_+my_dz;
       // Step C along z
-      StepJacobian(z_,TARGET_Z,S,0.,J);
+      StepJacobian(z_,newz,S,0.,J);
       C=J*C*J.Transpose();
       //C=C.SandwichMultiply(J);
-
+      
       // Step S along z
-      Step(z_,TARGET_Z,0.,S);
-
-      z_=TARGET_Z;
-
-      // predicted doca taking into account the orientation of the wire
-      double dy=S(state_y);
-      double dx=S(state_x);      
-      double d=sqrt(dx*dx+dy*dy);
-
-      // Track projection
-      double one_over_d=1./d;
-      Hc_T(state_x)=dx*one_over_d; 
-      Hc(state_x)=Hc_T(state_x);
-      Hc_T(state_y)=dy*one_over_d;	  
-      Hc(state_y)=Hc_T(state_y);
-
-      // Variance of target point
-      // Variance is for average beam spot size assuming triangular distribution
-      // out to 2.2 mm from the beam line.
-      //   sigma_r = 2.2 mm/ sqrt(18)
-      Vc=0.002689;
-
-      // inverse variance including prediction
-      double InvV1=1./(Vc+Hc*(C*Hc_T));
-      //double InvV1=1./(Vc+C.SandwichMultiply(H_T));
-      if (InvV1<0.){
-         if (DEBUG_LEVEL>0)
-            _DBG_ << "Negative variance???" << endl;
-         return NEGATIVE_VARIANCE;
-      }
-      // Compute KalmanSIMD gain matrix
-      Kc=InvV1*(C*Hc_T);
-
-      // Update the state vector with the target point
-      // "Measurement" is average of expected beam spot size
-      double res=0.1466666667-d;
-      S+=res*Kc;  
-      // Update state vector covariance matrix
-      //C=C-K*(H*C);    
-      C=C.SubSym(Kc*(Hc*C));
-
-      // Update chi2 for this segment
-      chisq+=(1.-Hc*Kc)*res*res/Vc;
-      numdof++;
-   }
-
-   // Check that there were enough hits to make this a valid fit
-   if (numdof<6){
-      chisq=-1.;
-      numdof=0;
-
-      if (num_cdc==0){
-         unsigned int new_index=(3*num_fdc)/4;
-         break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
-      }
-      else{
-	unsigned int new_index=(3*num_fdc)/4;
-         if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-            break_point_fdc_index=new_index;
-         }
-         else{
-            break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-         }
-      }
-      return PRUNED_TOO_MANY_HITS;
-   }
-
-   //  chisq*=anneal_factor;
-   numdof-=5;
-
-   // Final positions in x and y for this leg
-   x_=S(state_x);
-   y_=S(state_y);
-
-   if (DEBUG_LEVEL>1){
-      cout << "Position after forward filter: " << x_ << ", " << y_ << ", " << z_ <<endl;
-      cout << "Momentum " << 1./S(state_q_over_p) <<endl;
-   }
-
-   if (!S.IsFinite()) return FIT_FAILED;
+      Step(z_,newz,0.,S);
+      
+      z_=newz;
+    }
+    
+    // Step C along z
+    StepJacobian(z_,TARGET_Z,S,0.,J);
+    C=J*C*J.Transpose();
+    //C=C.SandwichMultiply(J);
+    
+    // Step S along z
+    Step(z_,TARGET_Z,0.,S);
+    
+    z_=TARGET_Z;
+    
+    // predicted doca taking into account the orientation of the wire
+    double dy=S(state_y);
+    double dx=S(state_x);      
+    double d=sqrt(dx*dx+dy*dy);
+    
+    // Track projection
+    double one_over_d=1./d;
+    Hc_T(state_x)=dx*one_over_d; 
+    Hc(state_x)=Hc_T(state_x);
+    Hc_T(state_y)=dy*one_over_d;	  
+    Hc(state_y)=Hc_T(state_y);
+    
+    // Variance of target point
+    // Variance is for average beam spot size assuming triangular distribution
+    // out to 2.2 mm from the beam line.
+    //   sigma_r = 2.2 mm/ sqrt(18)
+    Vc=0.002689;
+    
+    // inverse variance including prediction
+    double InvV1=1./(Vc+Hc*(C*Hc_T));
+    //double InvV1=1./(Vc+C.SandwichMultiply(H_T));
+    if (InvV1<0.){
+      if (DEBUG_LEVEL>0)
+	_DBG_ << "Negative variance???" << endl;
+      return NEGATIVE_VARIANCE;
+    }
+    // Compute KalmanSIMD gain matrix
+    Kc=InvV1*(C*Hc_T);
+    
+    // Update the state vector with the target point
+    // "Measurement" is average of expected beam spot size
+    double res=0.1466666667-d;
+    S+=res*Kc;  
+    // Update state vector covariance matrix
+    //C=C-K*(H*C);    
+    C=C.SubSym(Kc*(Hc*C));
+    
+    // Update chi2 for this segment
+    chisq+=(1.-Hc*Kc)*res*res/Vc;
+    numdof++;
+  }
   
-   // Check if we have a kink in the track or threw away too many hits
-   if (num_cdc>0 && break_point_fdc_index>0 && break_point_cdc_index>2){ 
-      if (break_point_fdc_index+num_cdc<MIN_HITS_FOR_REFIT){
-         //_DBG_ << endl;
-	unsigned int new_index=(3*num_fdc)/4;
-         if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-            break_point_fdc_index=new_index;
-         }
-         else{
-            break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-         }
-      }
-      return BREAK_POINT_FOUND;
-   }
-   if (num_cdc==0 && break_point_fdc_index>2){
-      //_DBG_ << endl;
-      if (break_point_fdc_index<num_fdc/2){
-         break_point_fdc_index=(3*num_fdc)/4;
-      }
-      if (break_point_fdc_index<MIN_HITS_FOR_REFIT-1){
-         break_point_fdc_index=MIN_HITS_FOR_REFIT-1;
-      }
-      return BREAK_POINT_FOUND;
-   }
-   if (num_cdc>5 && break_point_cdc_index>2){
-      //_DBG_ << endl;  
-     unsigned int new_index=3*(num_fdc)/4;
+  // Check that there were enough hits to make this a valid fit
+  if (numdof<6){
+    chisq=-1.;
+    numdof=0;
+    
+    if (num_cdc==0){
+      unsigned int new_index=(3*num_fdc)/4;
+      break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
+    }
+    else{
+      unsigned int new_index=(3*num_fdc)/4;
       if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
-         break_point_fdc_index=new_index;
+	break_point_fdc_index=new_index;
       }
       else{
-         break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
+	break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
       }
-      return BREAK_POINT_FOUND;
-   }
-   unsigned int num_good=0; 
-   unsigned int num_hits=num_cdc+max_num_fdc_used_in_fit;
-   for (unsigned int j=0;j<num_cdc;j++){
-      if (cdc_used_in_fit[j]) num_good++;
-   }
-   for (unsigned int j=0;j<num_fdc;j++){
-      if (fdc_used_in_fit[j]) num_good++;
-   }
-   if (double(num_good)/double(num_hits)<MINIMUM_HIT_FRACTION){
-      //_DBG_ <<endl;
-      if (num_cdc==0){
-         unsigned int new_index=(3*num_fdc)/4;
-         break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
+    }
+    return PRUNED_TOO_MANY_HITS;
+  }
+  
+  //  chisq*=anneal_factor;
+  numdof-=5;
+  
+  // Final positions in x and y for this leg
+  x_=S(state_x);
+  y_=S(state_y);
+  
+  if (DEBUG_LEVEL>1){
+    cout << "Position after forward filter: " << x_ << ", " << y_ << ", " << z_ <<endl;
+    cout << "Momentum " << 1./S(state_q_over_p) <<endl;
+  }
+  
+  if (!S.IsFinite()) return FIT_FAILED;
+  
+  // Check if we have a kink in the track or threw away too many hits
+  if (num_cdc>0 && break_point_fdc_index>0 && break_point_cdc_index>2){ 
+    if (break_point_fdc_index+num_cdc<MIN_HITS_FOR_REFIT){
+      //_DBG_ << endl;
+      unsigned int new_index=(3*num_fdc)/4;
+      if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
+	break_point_fdc_index=new_index;
       }
       else{
-	unsigned int new_index=(3*num_fdc)/4;
-         if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
+	break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
+      }
+    }
+    return BREAK_POINT_FOUND;
+  }
+  if (num_cdc==0 && break_point_fdc_index>2){
+    //_DBG_ << endl;
+    if (break_point_fdc_index<num_fdc/2){
+      break_point_fdc_index=(3*num_fdc)/4;
+    }
+    if (break_point_fdc_index<MIN_HITS_FOR_REFIT-1){
+      break_point_fdc_index=MIN_HITS_FOR_REFIT-1;
+    }
+    return BREAK_POINT_FOUND;
+  }
+  if (num_cdc>5 && break_point_cdc_index>2){
+    //_DBG_ << endl;  
+    unsigned int new_index=3*(num_fdc)/4;
+    if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
+      break_point_fdc_index=new_index;
+    }
+    else{
+      break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
+    }
+    return BREAK_POINT_FOUND;
+  }
+  unsigned int num_good=0; 
+  unsigned int num_hits=num_cdc+max_num_fdc_used_in_fit;
+  for (unsigned int j=0;j<num_cdc;j++){
+    if (cdc_used_in_fit[j]) num_good++;
+  }
+  for (unsigned int j=0;j<num_fdc;j++){
+    if (fdc_used_in_fit[j]) num_good++;
+  }
+  if (double(num_good)/double(num_hits)<MINIMUM_HIT_FRACTION){
+    //_DBG_ <<endl;
+    if (num_cdc==0){
+      unsigned int new_index=(3*num_fdc)/4;
+      break_point_fdc_index=(new_index>=MIN_HITS_FOR_REFIT)?new_index:(MIN_HITS_FOR_REFIT-1);
+    }
+    else{
+      unsigned int new_index=(3*num_fdc)/4;
+      if (new_index+num_cdc>=MIN_HITS_FOR_REFIT){
             break_point_fdc_index=new_index;
-         }
-         else{
-            break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
-         }
       }
-      return PRUNED_TOO_MANY_HITS;
-   }
-
-   return FIT_SUCCEEDED;
-
-
+      else{
+	break_point_fdc_index=MIN_HITS_FOR_REFIT-num_cdc;
+      }
+    }
+    return PRUNED_TOO_MANY_HITS;
+  }
+  
+  return FIT_SUCCEEDED;
 }
 
 
@@ -5405,492 +5070,310 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 							DMatrix5x5 &C,
 							double &chisq,
 							unsigned int &numdof){
-   DMatrix1x5 H;  // Track projection matrix
-   DMatrix5x1 H_T; // Transpose of track projection matrix
-   DMatrix5x5 J;  // State vector Jacobian matrix
-   //DMatrix5x5 J_T; // transpose of this matrix
-   DMatrix5x5 Q;  // Process noise covariance matrix
-   DMatrix5x1 K;  // KalmanSIMD gain matrix
-   DMatrix5x1 S0,S0_,Stest; //State vector
-   DMatrix5x5 Ctest; // covariance matrix
-   //DMatrix5x1 dS;  // perturbation in state vector
-   double V=0.0507;
+  DMatrix1x5 H;  // Track projection matrix
+  DMatrix5x1 H_T; // Transpose of track projection matrix
+  DMatrix5x5 J;  // State vector Jacobian matrix
+  //DMatrix5x5 J_T; // transpose of this matrix
+  DMatrix5x5 Q;  // Process noise covariance matrix
+  DMatrix5x1 K;  // KalmanSIMD gain matrix
+  DMatrix5x1 S0,S0_,Stest; //State vector
+  DMatrix5x5 Ctest; // covariance matrix
+  //DMatrix5x1 dS;  // perturbation in state vector
+  double V=0.0507;
+  
+  // set used_in_fit flags to false for cdc hits
+  unsigned int num_cdc=cdc_used_in_fit.size();
+  for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
+  for (unsigned int i=0;i<forward_traj.size();i++){
+    forward_traj[i].h_id=0;
+  }
+  
+  // initialize chi2 info
+  chisq=0.;
+  numdof=0;
 
-   // set used_in_fit flags to false for cdc hits
-   unsigned int num_cdc=cdc_used_in_fit.size();
-   for (unsigned int i=0;i<num_cdc;i++) cdc_used_in_fit[i]=false;
-   for (unsigned int i=0;i<forward_traj.size();i++){
-      forward_traj[i].h_id=0;
-   }
-
-   // initialize chi2 info
-   chisq=0.;
-   numdof=0;
-
-   double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
-
-   // Save the starting values for C and S in the deque
-   forward_traj[break_point_step_index].Skk=S;
-   forward_traj[break_point_step_index].Ckk=C;
-
-   // z-position
-   double z=forward_traj[break_point_step_index].z;
-
-   // Step size variables
-   double step1=mStepSizeZ;
-   double step2=mStepSizeZ;
-
-   // wire information  
-   unsigned int cdc_index=break_point_cdc_index;
-   if (cdc_index<num_cdc-1){
-     num_cdc=cdc_index+1;
-   }
-
-   if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
-
-   DVector2 origin=my_cdchits[cdc_index]->origin;
-   double z0w=my_cdchits[cdc_index]->z0wire;
-   DVector2 dir=my_cdchits[cdc_index]->dir;
-   DVector2 wirepos=origin+(z-z0w)*dir;
-   bool more_measurements=true;
-
-   // doca variables
-   double dx=S(state_x)-wirepos.X();
-   double dy=S(state_y)-wirepos.Y();
-   double doca2=0.,old_doca2=dx*dx+dy*dy;
-
-   // loop over entries in the trajectory
-   S0_=(forward_traj[break_point_step_index].S);
-   for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
-      unsigned int k_minus_1=k-1;
-
-      // Check that C matrix is positive definite
-      if (!C.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
-      }
-
-      z=forward_traj[k].z;
-
-      // Get the state vector, jacobian matrix, and multiple scattering matrix 
-      // from reference trajectory
-      S0=(forward_traj[k].S);
-      J=(forward_traj[k].J);
-      Q=(forward_traj[k].Q);
-
-      // State S is perturbation about a seed S0
-      //dS=S-S0_;
-      /*
-         dS.Print();
-         J.Print();
-         */
-
-      // Update the actual state vector and covariance matrix
-      S=S0+J*(S-S0_);
-
-      // Bail if the position is grossly outside of the tracking volume
-      if (S(state_x)*S(state_x)+S(state_y)*S(state_y)>R2_MAX){
-         if (DEBUG_LEVEL>2)
-         {
-            _DBG_<< "Went outside of tracking volume at x=" << S(state_x)
+  double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
+  
+  // Save the starting values for C and S in the deque
+  forward_traj[break_point_step_index].Skk=S;
+  forward_traj[break_point_step_index].Ckk=C;
+  
+  // z-position
+  double z=forward_traj[break_point_step_index].z;
+  
+  // wire information  
+  unsigned int cdc_index=break_point_cdc_index;
+  if (cdc_index<num_cdc-1){
+    num_cdc=cdc_index+1;
+  }
+  
+  if (num_cdc<MIN_HITS_FOR_REFIT) chi2cut=BIG;
+  
+  DVector2 origin=my_cdchits[cdc_index]->origin;
+  double z0w=my_cdchits[cdc_index]->z0wire;
+  DVector2 dir=my_cdchits[cdc_index]->dir;
+  DVector2 wirepos=origin+(z-z0w)*dir;
+  bool more_measurements=true;
+  
+  // doca variables
+  double dx=S(state_x)-wirepos.X();
+  double dy=S(state_y)-wirepos.Y();
+  double doca2=0.,old_doca2=dx*dx+dy*dy;
+  
+  // loop over entries in the trajectory
+  S0_=(forward_traj[break_point_step_index].S);
+  for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
+    unsigned int k_minus_1=k-1;
+    
+    // Check that C matrix is positive definite
+    if (!C.IsPosDef()){
+      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+      return BROKEN_COVARIANCE_MATRIX;
+    }
+    
+    z=forward_traj[k].z;
+    
+    // Get the state vector, jacobian matrix, and multiple scattering matrix 
+    // from reference trajectory
+    S0=(forward_traj[k].S);
+    J=(forward_traj[k].J);
+    Q=(forward_traj[k].Q);
+    
+    // Update the actual state vector and covariance matrix
+    S=S0+J*(S-S0_);
+    
+    // Bail if the position is grossly outside of the tracking volume
+    if (S(state_x)*S(state_x)+S(state_y)*S(state_y)>R2_MAX){
+      if (DEBUG_LEVEL>2)
+	{
+	  _DBG_<< "Went outside of tracking volume at x=" << S(state_x)
                << " y=" << S(state_y) <<" z="<<z<<endl;
-         }
-         return POSITION_OUT_OF_RANGE;
+	}
+      return POSITION_OUT_OF_RANGE;
+    }
+    // Bail if the momentum has dropped below some minimum
+    if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX){
+      if (DEBUG_LEVEL>2)
+	{
+	  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p)) << endl;
+	}
+      return MOMENTUM_OUT_OF_RANGE;
+    }
+   
+    //C=J*(C*J_T)+Q;   
+    C=Q.AddSym(J*C*J.Transpose());
+    //C=Q.AddSym(C.SandwichMultiply(J));
+    
+    // Save the current state of the reference trajectory
+    S0_=S0;
+    
+    // new wire position
+    wirepos=origin;
+    wirepos+=(z-z0w)*dir;
+    
+    // new doca
+    dx=S(state_x)-wirepos.X();
+    dy=S(state_y)-wirepos.Y();
+    doca2=dx*dx+dy*dy;
+
+    // Save the current state and covariance matrix in the deque
+    if (fit_type==kTimeBased){
+      forward_traj[k].Skk=S;
+      forward_traj[k].Ckk=C;
+    }
+    
+    // Check if the doca is no longer decreasing
+    if (more_measurements && doca2>old_doca2/* && z<endplate_z_downstream*/){
+      if (my_cdchits[cdc_index]->status==good_hit){
+	find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
+	double newz=endplate_z;
+	double dz=newz-z;
+	// Sometimes the true doca would correspond to the case where the 
+	// wire would need to extend beyond the physical volume of the straw. 
+	// In this case, find the doca at the cdc endplate.
+	if (z>endplate_z){
+	  swimmed_to_doca=DOCA_ENDPLATE;
+	  SwimToEndplate(z,forward_traj[k],S);
+	  
+	  // wire position at the endplate
+	  wirepos=origin;
+	  wirepos+=(endplate_z-z0w)*dir;
+	  
+	  dx=S(state_x)-wirepos.X();
+	  dy=S(state_y)-wirepos.Y();
+	}
+	else{
+	  // Find the true doca to the wire.  If we had to use Brent's 
+	  // algorithm, the routine returns USED_BRENT
+	  double step1=mStepSizeZ;
+	  double step2=mStepSizeZ;
+	  if (k>=2){
+	    step1=-forward_traj[k].z+forward_traj[k_minus_1].z;
+	    step2=-forward_traj[k_minus_1].z+forward_traj[k-2].z;
+	  }
+	  swimmed_to_doca=FindDoca(my_cdchits[cdc_index],forward_traj[k],
+				   step1,step2,S0,S,C,dx,dy,dz);
+	  if (swimmed_to_doca==BRENT_FAILED){
+	    break_point_cdc_index=(3*num_cdc)/4;
+	    return MOMENTUM_OUT_OF_RANGE;
+	  }
+	  newz=forward_traj[k].z+dz;
+	}
+	double cosstereo=my_cdchits[cdc_index]->cosstereo;
+	double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+	
+	// Track projection
+	double cosstereo2_over_d=cosstereo*cosstereo/d;
+	H_T(state_x)=dx*cosstereo2_over_d; 
+	H(state_x)=H_T(state_x);
+	H_T(state_y)=dy*cosstereo2_over_d;	  
+	H(state_y)=H_T(state_y);
+	if (swimmed_to_doca==DOCA_NO_BRENT){
+	  H_T(state_ty)=H_T(state_y)*dz;
+	  H(state_ty)=H_T(state_ty);	  
+	  H_T(state_tx)=H_T(state_x)*dz;
+	  H(state_tx)=H_T(state_tx);
+	}
+	else{
+	  H_T(state_ty)=0.;
+	  H(state_ty)=0.;
+	  H_T(state_tx)=0.;
+	  H(state_tx)=0.;
+	}
+	
+	// The next measurement
+	double dm=0.39,tdrift=0.,tcorr=0.,dDdt0=0.;
+	if (fit_type==kTimeBased || USE_PASS1_TIME_MODE){
+	  // Find offset of wire with respect to the center of the
+	  // straw at this z position
+	  double delta=0,dphi=0.;
+	  FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+	  // Find drift time and distance
+	  tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	    -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
+	  double B=forward_traj[k_minus_1].B;
+	  ComputeCDCDrift(dphi,delta,tdrift,B,dm,V,tcorr);
+	  V*=anneal;
+	  if (ALIGNMENT_FORWARD){
+	    double myV=0.;
+	    double mytcorr=0.;
+	    double d_shifted;
+	    double dt=2.0;
+	    if (tdrift < 0.) d_shifted = dm;
+	    else ComputeCDCDrift(dphi,delta,tdrift+dt,B,d_shifted,myV,mytcorr);
+	    dDdt0=(d_shifted-dm)/dt;
+	  }
+	  //_DBG_ << tcorr << " " << dphi << " " << dm << endl;
+	  
+	}
+	// residual
+	double res=dm-d;
+	
+	// inverse of variance including prediction
+	double Vproj=H*C*H_T;
+	double InvV=1./(V+Vproj);
+	if (InvV<0.){
+	  if (DEBUG_LEVEL>0)
+	    _DBG_ << "Negative variance???" << endl;
+	  break_point_cdc_index=(3*num_cdc)/4;
+	  return NEGATIVE_VARIANCE;
+	}
+	
+	// Check how far this hit is from the expected position
+	double chi2check=res*res*InvV;
+	if (chi2check<chi2cut){	  
+	  // Compute KalmanSIMD gain matrix
+	  K=InvV*(C*H_T);
+	  
+	  // Update state vector covariance matrix
+	  Ctest=C.SubSym(K*(H*C));
+	  // Joseph form
+	  // C = (I-KH)C(I-KH)^T + KVK^T
+	  //Ctest=C.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
+	  // Check that Ctest is positive definite
+	  if (!Ctest.IsPosDef()){
+	    if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	    return BROKEN_COVARIANCE_MATRIX;
+	  }
+	  
+	  bool skip_ring
+	    =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
+	  // update covariance matrix and state vector
+	  if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
+	    C=Ctest;		       
+	    S+=res*K;
+	  }
+	  // Mark point on ref trajectory with a hit id for the straw
+	  forward_traj[k].h_id=cdc_index+1000;
+	  
+	  // Store some updated values related to the hit
+	  double scale=(skip_ring)?1.:(1.-H*K);
+	  cdc_updates[cdc_index].tcorr=tcorr;
+	  cdc_updates[cdc_index].tdrift=tdrift;
+	  cdc_updates[cdc_index].doca=dm;
+	  cdc_updates[cdc_index].variance=V;
+	  cdc_updates[cdc_index].dDdt0=dDdt0;
+	  cdc_used_in_fit[cdc_index]=true;
+	  if(tdrift < CDC_T_DRIFT_MIN) cdc_used_in_fit[cdc_index]=false;
+	  
+	  // Update chi2 for this segment
+	  if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
+	    chisq+=scale*res*res/V;
+	    numdof++;	
+	  }
+	  break_point_cdc_index=cdc_index;
+	  break_point_step_index=k_minus_1;
+	  
+	  if (DEBUG_LEVEL>9)
+	    printf("Ring %d straw %d pred %f meas %f chi2 %f useBrent %i \n",
+		   my_cdchits[cdc_index]->hit->wire->ring,
+		   my_cdchits[cdc_index]->hit->wire->straw,
+		   d,dm,(1.-H*K)*res*res/V,swimmed_to_doca);
+	  
+	}
+	
+	// If we had to use Brent's algorithm to find the true doca or the 
+	// doca to the line corresponding to the wire is downstream of the 
+	// cdc endplate, we need to swim the state vector and covariance 
+	// matrix back to the appropriate position along the reference 
+	// trajectory.
+	if (swimmed_to_doca!=DOCA_NO_BRENT){
+	  double dedx=0.;
+	  if (CORRECT_FOR_ELOSS){
+	    dedx=GetdEdx(S(state_q_over_p),
+			 forward_traj[k].K_rho_Z_over_A,
+			 forward_traj[k].rho_Z_over_A,
+			 forward_traj[k].LnI,forward_traj[k].Z);
+	  }
+	  StepBack(dedx,newz,forward_traj[k].z,S0,S,C);
+	}
+	
+	cdc_updates[cdc_index].S=S;
+	cdc_updates[cdc_index].C=C;	
       }
-      // Bail if the momentum has dropped below some minimum
-      if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX){
-         if (DEBUG_LEVEL>2)
-         {
-            _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p)) << endl;
-         }
-         return MOMENTUM_OUT_OF_RANGE;
+      
+      // new wire origin and direction
+      if (cdc_index>0){
+	cdc_index--;
+	origin=my_cdchits[cdc_index]->origin;
+	z0w=my_cdchits[cdc_index]->z0wire;
+	dir=my_cdchits[cdc_index]->dir;
       }
-
-
-
-      //C=J*(C*J_T)+Q;   
-      C=Q.AddSym(J*C*J.Transpose());
-      //C=Q.AddSym(C.SandwichMultiply(J));
-
-      // Save the current state of the reference trajectory
-      S0_=S0;
-
-      // new wire position
+      else{
+	more_measurements=false;
+      }
+      
+      // Update the wire position
       wirepos=origin;
       wirepos+=(z-z0w)*dir;
-
+      
       // new doca
       dx=S(state_x)-wirepos.X();
       dy=S(state_y)-wirepos.Y();
       doca2=dx*dx+dy*dy;
-
-      // Save the current state and covariance matrix in the deque
-      if (fit_type==kTimeBased){
-         forward_traj[k].Skk=S;
-         forward_traj[k].Ckk=C;
-      }
-
-      // Check if the doca is no longer decreasing
-      if (more_measurements && doca2>old_doca2 && z<endplate_z_downstream){	
-         if (my_cdchits[cdc_index]->status==good_hit){
-            double dz=0.,newz=z;
-
-            // energy loss 
-            double dedx=0.;
-
-            // Last 2 step sizes
-            if (k>=2){
-               double z1=forward_traj[k_minus_1].z;
-               step1=-forward_traj[k].z+z1;
-               step2=-z1+forward_traj[k-2].z;
-            }
-
-            // Track direction variables
-            double tx=S(state_tx);
-            double ty=S(state_ty);	
-            double tanl=1./sqrt(tx*tx+ty*ty);
-            double sinl=sin(atan(tanl));
-
-            // Wire direction variables
-            double ux=dir.X();
-            double uy=dir.Y();
-            // Variables relating wire direction and track direction
-            double my_ux=tx-ux;
-            double my_uy=ty-uy;
-            double denom=my_ux*my_ux+my_uy*my_uy;
-
-            // variables for dealing with propagation of S and C if we 
-            // need to use Brent's algorithm to find the doca to the wire
-            int num_steps=0;
-            double dz3=0.;
-            double my_dz=0.;
-
-            // if the path length increment is small relative to the radius 
-            // of curvature, use a linear approximation to find dz	
-            bool do_brent=false;
-            //printf("step1 %f step 2 %f \n",step1,step2);
-            double two_step=step1+step2;
-            if (fabs(qBr2p*S(state_q_over_p)
-                     //*bfield->GetBz(S(state_x),S(state_y),z)
-                     *forward_traj[k].B
-                     *two_step/sinl)<0.05
-                  && denom>EPS){
-               double dzw=z-z0w;
-               dz=-((S(state_x)-origin.X()-ux*dzw)*my_ux
-                     +(S(state_y)-origin.Y()-uy*dzw)*my_uy)/denom;
-
-               if (fabs(dz)>two_step || dz<0.0){
-                  do_brent=true;
-               }
-               else{
-                  newz=z+dz;
-                  // Check for exiting the straw
-                  if (newz>endplate_z){
-                     dz=endplate_z-z;
-                  }
-               }
-            }
-            else{
-               do_brent=true;
-            }
-            if (do_brent){
-               if (CORRECT_FOR_ELOSS){
-                  dedx=GetdEdx(S(state_q_over_p), 
-                        forward_traj[k].K_rho_Z_over_A,
-                        forward_traj[k].rho_Z_over_A,
-                        forward_traj[k].LnI,forward_traj[k].Z);
-               }
-
-               // We have bracketed the minimum doca:  use Brent's agorithm
-               if (BrentForward(z,dedx,z0w,origin,dir,S,dz)
-                     !=NOERROR){
-                  return MOMENTUM_OUT_OF_RANGE;
-               }
-
-               // Step the state and covariance through the field	  
-               if (fabs(dz)>mStepSizeZ){
-                  my_dz=(dz>0.0?1.0:-1.)*mStepSizeZ;
-                  num_steps=int(fabs(dz/my_dz));
-                  dz3=dz-num_steps*my_dz;
-
-                  double my_z=z;
-                  for (int m=0;m<num_steps;m++){
-                     newz=my_z+my_dz;
-
-                     // Step current state by my_dz
-                     // Step(z,newz,dedx,S);
-
-                     // propagate error matrix to z-position of hit
-                     StepJacobian(my_z,newz,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step reference trajectory by my_dz
-                     Step(my_z,newz,dedx,S0); 
-
-                     my_z=newz;
-                  }
-
-                  newz=my_z+dz3;
-
-                  // Step current state by dz3
-                  //Step(my_z,newz,dedx,S);
-
-                  // propagate error matrix to z-position of hit
-                  StepJacobian(my_z,newz,S0,dedx,J);
-                  C=J*C*J.Transpose();
-                  //C=C.SandwichMultiply(J);	  
-
-                  // Step reference trajectory by dz3
-                  Step(my_z,newz,dedx,S0); 
-               }
-               else{
-                  newz = z + dz;
-                  // Step current state by dz
-                  //Step(z,newz,dedx,S);
-
-                  // propagate error matrix to z-position of hit
-                  StepJacobian(z,newz,S0,dedx,J);
-                  C=J*C*J.Transpose();
-                  //C=C.SandwichMultiply(J);  
-
-                  // Step reference trajectory by dz
-                  Step(z,newz,dedx,S0); 
-               }
-            }
-
-            // Wire position at current z
-            wirepos=origin;
-            wirepos+=(newz-z0w)*dir;
-
-            double xw=wirepos.X();
-            double yw=wirepos.Y();
-
-            // predicted doca taking into account the orientation of the wire
-            if (do_brent==false){
-               // In this case we did not have to swim to find the doca and 
-               // the transformation from the state vector space to the 
-               // measurement space is straight-forward.
-               dy=S(state_y)+S(state_ty)*dz-yw;
-               dx=S(state_x)+S(state_tx)*dz-xw;      
-            }
-            else{
-               // In this case we swam the state vector to the position of 
-               // the doca
-               dy=S(state_y)-yw;
-               dx=S(state_x)-xw;
-            }
-            double cosstereo=my_cdchits[cdc_index]->cosstereo;
-            double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
-
-            //printf("z %f d %f z-1 %f\n",newz,d,forward_traj[k_minus_1].z);
-
-            // Track projection
-            double cosstereo2_over_d=cosstereo*cosstereo/d;
-            H_T(state_x)=dx*cosstereo2_over_d;
-            H(state_x)=H_T(state_x);
-            H_T(state_y)=dy*cosstereo2_over_d;
-            H(state_y)=H_T(state_y);
-            if (do_brent==false){
-               H_T(state_ty)=H_T(state_y)*dz;
-               H(state_ty)=H_T(state_ty);	  
-               H_T(state_tx)=H_T(state_x)*dz;
-               H(state_tx)=H_T(state_tx);
-            }
-            else{
-               H_T(state_ty)=0.;
-               H(state_ty)=0.;
-               H_T(state_tx)=0.;
-               H(state_tx)=0.;
-            }
-
-            //H.Print();
-
-            // The next measurement
-            double dm=0.39,tdrift=0.,tcorr=0.,dDdt0=0.;
-            if (fit_type==kTimeBased || USE_PASS1_TIME_MODE){
-               // Find offset of wire with respect to the center of the
-               // straw at this z position
-               const DCDCWire *mywire=my_cdchits[cdc_index]->hit->wire;
-               int ring_index=mywire->ring-1;
-               int straw_index=mywire->straw-1;
-               double dz=newz-z0w;
-               double phi_d=atan2(dy,dx);
-               double delta
-                  =max_sag[ring_index][straw_index]*(1.-dz*dz/5625.)
-                  *cos(phi_d + sag_phi_offset[ring_index][straw_index]);
-               double dphi=phi_d-mywire->origin.Phi();
-               while (dphi>M_PI) dphi-=2*M_PI;
-               while (dphi<-M_PI) dphi+=2*M_PI;
-               if (mywire->origin.Y()<0) dphi*=-1.;
-
-               tdrift=my_cdchits[cdc_index]->tdrift-mT0
-                  -forward_traj[k_minus_1].t*TIME_UNIT_CONVERSION;
-               double B=forward_traj[k_minus_1].B;
-               ComputeCDCDrift(dphi,delta,tdrift,B,dm,V,tcorr);
-	       V*=anneal;
-               if (ALIGNMENT_FORWARD){
-                  double myV=0.;
-                  double mytcorr=0.;
-                  double d_shifted;
-                  double dt=2.0;
-                  if (tdrift < 0.) d_shifted = dm;
-                  else ComputeCDCDrift(dphi,delta,tdrift+dt,B,d_shifted,myV,mytcorr);
-                  dDdt0=(d_shifted-dm)/dt;
-               }
-               //_DBG_ << tcorr << " " << dphi << " " << dm << endl;
-
-            }
-            // residual
-            double res=dm-d;
-
-            // inverse of variance including prediction
-            //InvV=1./(V+H*(C*H_T));
-            //double Vproj=C.SandwichMultiply(H_T);
-	    double Vproj=H*C*H_T;
-            double InvV=1./(V+Vproj);
-            if (InvV<0.){
-               if (DEBUG_LEVEL>0)
-                  _DBG_ << "Negative variance???" << endl;
-               break_point_cdc_index=(3*num_cdc)/4;
-               return NEGATIVE_VARIANCE;
-            }
-
-            // Check how far this hit is from the expected position
-            double chi2check=res*res*InvV;
-	    if (chi2check<chi2cut/*&&dm>0.*/)
-	      {	  
-               // Compute KalmanSIMD gain matrix
-               K=InvV*(C*H_T);
-
-               // Update state vector covariance matrix
-               Ctest=C.SubSym(K*(H*C));
-               // Joseph form
-               // C = (I-KH)C(I-KH)^T + KVK^T
-               //Ctest=C.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
-               // Check that Ctest is positive definite
-               if (!Ctest.IsPosDef()){
-                  if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-                  return BROKEN_COVARIANCE_MATRIX;
-               }
-
-               bool skip_ring
-                  =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
-               // update covariance matrix and state vector
-               if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
-                  C=Ctest;		       
-                  S+=res*K;
-               }
-               // Mark point on ref trajectory with a hit id for the straw
-               forward_traj[k].h_id=cdc_index+1000;
-
-               // Store some updated values related to the hit
-               double scale=(skip_ring)?1.:(1.-H*K);
-               cdc_updates[cdc_index].tcorr=tcorr;
-               cdc_updates[cdc_index].tdrift=tdrift;
-               cdc_updates[cdc_index].doca=dm;
-               cdc_updates[cdc_index].variance=V;
-               cdc_updates[cdc_index].dDdt0=dDdt0;
-               cdc_used_in_fit[cdc_index]=true;
-               if(tdrift < CDC_T_DRIFT_MIN) cdc_used_in_fit[cdc_index]=false;
-
-               // Update chi2 for this segment
-               if (skip_ring==false && tdrift >= CDC_T_DRIFT_MIN){
-                  chisq+=scale*res*res/V;
-                  numdof++;	
-               }
-               break_point_cdc_index=cdc_index;
-               break_point_step_index=k_minus_1;
-
-               if (DEBUG_LEVEL>9)
-                  printf("Ring %d straw %d pred %f meas %f chi2 %f useBrent %i \n",
-                        my_cdchits[cdc_index]->hit->wire->ring,
-                        my_cdchits[cdc_index]->hit->wire->straw,
-                        d,dm,(1.-H*K)*res*res/V,do_brent);
-
-            }
-
-            // If we had to use Brent's algorithm to find the true doca, 
-            // we need to swim the state vector and covariance matrix back 
-            // to the appropriate position along the reference trajectory.
-            if (do_brent){
-               if (num_steps==0){
-                  // Step C back to the z-position on the reference trajectory
-                  StepJacobian(newz,z,S0,dedx,J);
-                  C=J*C*J.Transpose();
-                  //C=C.SandwichMultiply(J);
-
-                  // Step S to current position on the reference trajectory=
-                  Step(newz,z,dedx,S);
-
-                  // Step S0 to current position on the reference trajectory=
-                  Step(newz,z,dedx,S0);
-               }
-               else{
-                  double my_z=newz;
-                  for (int m=0;m<num_steps;m++){
-                     z=my_z-my_dz;
-
-                     // Step C along z
-                     StepJacobian(my_z,z,S0,dedx,J);
-                     C=J*C*J.Transpose();
-                     //C=C.SandwichMultiply(J);
-
-                     // Step S along z
-                     Step(my_z,z,dedx,S);
-
-                     // Step S0 along z
-                     Step(my_z,z,dedx,S0);
-
-                     my_z=z;
-                  }
-                  z=my_z-dz3;
-
-                  // Step C back to the z-position on the reference trajectory
-                  StepJacobian(my_z,z,S0,dedx,J);
-                  C=J*C*J.Transpose();
-                  //C=C.SandwichMultiply(J);
-
-                  // Step S to current position on the reference trajectory
-                  Step(my_z,z,dedx,S);
-
-                  // Step S0 to current position on the reference trajectory
-                  Step(my_z,z,dedx,S0);
-
-               }
-            }
-            cdc_updates[cdc_index].S=S;
-            cdc_updates[cdc_index].C=C;	
-         }
-         else {
-            if (cdc_index>0) cdc_index--;
-            else cdc_index=0;
-
-         }
-
-         // new wire origin and direction
-         if (cdc_index>0){
-            cdc_index--;
-            origin=my_cdchits[cdc_index]->origin;
-            z0w=my_cdchits[cdc_index]->z0wire;
-            dir=my_cdchits[cdc_index]->dir;
-         }
-         else{
-            more_measurements=false;
-         }
-
-         // Update the wire position
-         wirepos=origin;
-         wirepos+=(z-z0w)*dir;
-
-         // new doca
-         dx=S(state_x)-wirepos.X();
-         dy=S(state_y)-wirepos.Y();
-         doca2=dx*dx+dy*dy;
-      }
-      old_doca2=doca2;
-
-   }
+    }
+    old_doca2=doca2; 
+  }
 
    // Check that there were enough hits to make this a valid fit
    if (numdof<6){
@@ -7194,7 +6677,7 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
      if (SmoothForward(forward_pulls) == NOERROR){
        IsSmoothed = true;
        pulls.assign(forward_pulls.begin(),forward_pulls.end());
-     }
+     }   
    }
 
    // total chisq and ndf
@@ -7219,24 +6702,82 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 
    // fill vector of extrapolations
    ClearExtrapolations();
-   ExtrapolateForwardToOtherDetectors(); 
-   if (extrapolations.at(SYS_BCAL).size()==1){
-     // There needs to be some steps inside the the volume of the BCAL for 
-     // the extrapolation to be useful.  If this is not the case, clear 
-     // the extrolation vector.
-     extrapolations[SYS_BCAL].clear();
+   if (forward_traj.size()>1){
+     ExtrapolateToInnerDetectors();
+     if (fit_type==kTimeBased){
+       double reverse_chisq=1e16,reverse_chisq_old=1e16;
+       unsigned int reverse_ndf=0,reverse_ndf_old=0;
+
+       // Run the Kalman filter in the reverse direction, to get the best guess
+       // for the state vector at the last FDC point on the track
+       DMatrix5x5 CReverse=C;
+       DMatrix5x1 SReverse=S,SDownstream,SBest;
+       kalman_error_t reverse_error=FIT_NOT_DONE;
+       for (int iter=0;iter<20;iter++){
+	 reverse_chisq_old=reverse_chisq;
+	 reverse_ndf_old=reverse_ndf;
+	 SBest=SDownstream;
+	 reverse_error=KalmanReverse(fdc_anneal,cdc_anneal,SReverse,CReverse,
+				     SDownstream,reverse_chisq,reverse_ndf);
+	 if (reverse_error!=FIT_SUCCEEDED) break;
+
+	 SReverse=SDownstream;
+	 for (unsigned int k=0;k<forward_traj.size()-1;k++){
+	   // Get dEdx for the upcoming step
+	   double dEdx=0.;
+	   if (CORRECT_FOR_ELOSS){
+	     dEdx=GetdEdx(SReverse(state_q_over_p),
+			  forward_traj[k].K_rho_Z_over_A,
+			  forward_traj[k].rho_Z_over_A,
+			  forward_traj[k].LnI,forward_traj[k].Z); 
+	   }
+	   // Step through field
+	   DMatrix5x5 J;
+	   double z=forward_traj[k].z;
+	   double newz=forward_traj[k+1].z;
+	   StepJacobian(z,newz,SReverse,dEdx,J);
+	   Step(z,newz,dEdx,SReverse);
+	   
+	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	 }
+
+	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
+	 double reduced_chisq_old=reverse_chisq_old/double(reverse_ndf_old);
+	 if (reduced_chisq>reduced_chisq_old
+	     || fabs(reduced_chisq-reduced_chisq_old)<0.01) break;
+       }
+
+       if (reverse_error!=FIT_SUCCEEDED){
+	 ExtrapolateToOuterDetectors(forward_traj[0].S);
+       }
+       else{
+	 ExtrapolateToOuterDetectors(SBest);
+       }
+     }
+     else{
+       ExtrapolateToOuterDetectors(forward_traj[0].S);
+     }
+     if (extrapolations.at(SYS_BCAL).size()==1){
+       // There needs to be some steps inside the the volume of the BCAL for 
+       // the extrapolation to be useful.  If this is not the case, clear 
+       // the extrolation vector.
+       extrapolations[SYS_BCAL].clear();
+     }
    }
-   
    // Extrapolate to the point of closest approach to the beam line
    z_=last_z;
-   if (sqrt(Slast(state_x)*Slast(state_x)+Slast(state_y)*Slast(state_y))
-         >EPS2){  
+   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   double dx=Slast(state_x)-beam_pos.X();
+   double dy=Slast(state_y)-beam_pos.Y();
+   bool extrapolated=false;
+   if (sqrt(dx*dx+dy*dy)>EPS2){  
       DMatrix5x5 Ctemp=Clast;
       DMatrix5x1 Stemp=Slast; 
       double ztemp=z_;
       if (ExtrapolateToVertex(Stemp,Ctemp)==NOERROR){
          Clast=Ctemp;
          Slast=Stemp;
+	 extrapolated=true;
       }
       else{
          //_DBG_ << endl;
@@ -7256,9 +6797,11 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
    q_over_pt_=q_over_p_/cosl;
    phi_=atan2(ty_,tx_);
    if (FORWARD_PARMS_COV==false){
-     DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
-     double dx=x_-beam_pos.X();
-     double dy=y_-beam_pos.Y();
+     if (extrapolated){
+       beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+       dx=x_-beam_pos.X();
+       dy=y_-beam_pos.Y();
+     }
      D_=sqrt(dx*dx+dy*dy)+EPS;
      x_ = dx; y_ = dy;
      double cosphi=cos(phi_);
@@ -7474,7 +7017,62 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 
    // Fill extrapolation vector
    ClearExtrapolations();
-   ExtrapolateForwardToOtherDetectors();  
+   if (forward_traj.size()>1){
+     if (fit_type==kWireBased){
+     ExtrapolateForwardToOtherDetectors();
+     }
+     else{
+       ExtrapolateToInnerDetectors();
+
+       double reverse_chisq=1e16,reverse_chisq_old=1e16;
+       unsigned int reverse_ndf=0,reverse_ndf_old=0;
+
+       // Run the Kalman filter in the reverse direction, to get the best guess
+       // for the state vector at the last FDC point on the track
+       DMatrix5x5 CReverse=C;
+       DMatrix5x1 SReverse=S,SDownstream,SBest;
+       kalman_error_t reverse_error=FIT_NOT_DONE;
+       for (int iter=0;iter<20;iter++){
+	 reverse_chisq_old=reverse_chisq;
+	 reverse_ndf_old=reverse_ndf;
+	 SBest=SDownstream;
+	 reverse_error=KalmanReverse(0.,anneal_factor,SReverse,CReverse,
+				     SDownstream,reverse_chisq,reverse_ndf);
+	 if (reverse_error!=FIT_SUCCEEDED) break;
+	 
+	 SReverse=SDownstream;
+	 for (unsigned int k=0;k<forward_traj.size()-1;k++){
+	   // Get dEdx for the upcoming step
+	   double dEdx=0.;
+	   if (CORRECT_FOR_ELOSS){
+	     dEdx=GetdEdx(SReverse(state_q_over_p),
+			  forward_traj[k].K_rho_Z_over_A,
+			  forward_traj[k].rho_Z_over_A,
+			  forward_traj[k].LnI,forward_traj[k].Z); 
+	   }
+	   // Step through field
+	   DMatrix5x5 J;
+	   double z=forward_traj[k].z;
+	   double newz=forward_traj[k+1].z;
+	   StepJacobian(z,newz,SReverse,dEdx,J);
+	   Step(z,newz,dEdx,SReverse);
+	   
+	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	 }
+	 
+	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
+	 double reduced_chisq_old=reverse_chisq_old/double(reverse_ndf_old);
+	 if (reduced_chisq>reduced_chisq_old
+	     || fabs(reduced_chisq-reduced_chisq_old)<0.01) break;
+       }
+       if (reverse_error!=FIT_SUCCEEDED){
+	 ExtrapolateToOuterDetectors(forward_traj[0].S);
+       }
+       else{
+	 ExtrapolateToOuterDetectors(SBest);
+       }
+     }
+   }
    if (extrapolations.at(SYS_BCAL).size()==1){
      // There needs to be some steps inside the the volume of the BCAL for 
      // the extrapolation to be useful.  If this is not the case, clear 
@@ -7484,9 +7082,14 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 
    // Extrapolate to the point of closest approach to the beam line
    z_=zlast;
-   if (sqrt(Slast(state_x)*Slast(state_x)+Slast(state_y)*Slast(state_y))
-         >EPS2) 
-      if (ExtrapolateToVertex(Slast,Clast)!=NOERROR) return EXTRAPOLATION_FAILED;
+   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   double dx=Slast(state_x)-beam_pos.X();
+   double dy=Slast(state_y)-beam_pos.Y();
+   bool extrapolated=false;
+   if (sqrt(dx*dx+dy*dy)>EPS2){
+     if (ExtrapolateToVertex(Slast,Clast)!=NOERROR) return EXTRAPOLATION_FAILED;
+     extrapolated=true;
+   }
 
    // Final momentum, positions and tangents
    x_=Slast(state_x), y_=Slast(state_y);
@@ -7500,9 +7103,11 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
    q_over_pt_=q_over_p_/cosl;
    phi_=atan2(ty_,tx_);
    if (FORWARD_PARMS_COV==false){
-     DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
-     double dx=x_-beam_pos.X();
-     double dy=y_-beam_pos.Y();
+     if (extrapolated){
+       beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+       dx=x_-beam_pos.X();
+       dy=y_-beam_pos.Y();
+     }
      D_=sqrt(dx*dx+dy*dy)+EPS;
      x_ = dx; y_ = dy;
      double cosphi=cos(phi_);
@@ -7716,8 +7321,13 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
      // the extrolation vector.
      extrapolations[SYS_BCAL].clear();
    }
-   if (last_pos.Mod()>0.001){ // in cm
+
+   // Extrapolate to the point of closest approach to the beam line
+   DVector2 beam_pos=beam_center+(Sclast(state_z)-beam_z0)*beam_dir;
+   bool extrapolated=false;
+   if ((last_pos-beam_pos).Mod()>EPS2){ // in cm
       if (ExtrapolateToVertex(last_pos,Sclast,Cclast)!=NOERROR) return EXTRAPOLATION_FAILED; 
+      extrapolated=true;
    }
 
    // output lists of hits used in the fit 
@@ -7738,7 +7348,9 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
    y_=last_pos.Y();
    z_=Sclast(state_z);  
    // Find the (signed) distance of closest approach to the beam line
-   DVector2 beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   if (extrapolated){
+     beam_pos=beam_center+(z_-beam_z0)*beam_dir;
+   }
    double dx=x_-beam_pos.X();
    double dy=y_-beam_pos.Y();
    D_=sqrt(dx*dx+dy*dy)+EPS;
@@ -9167,11 +8779,219 @@ jerror_t DTrackFitterKalmanSIMD::BrentCentral(double dedx, DVector2 &xy, const d
    return NOERROR;
 }
 
-// Routine to find intersections with surfaces useful at a later stage for track
-// matching
-jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
-  if (forward_traj.size()<2) return RESOURCE_UNAVAILABLE;
+// Find extrapolations to detectors outside of the tracking volume
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S0){
+  DMatrix5x1 S=S0;
+  // Energy loss
+  double dEdx=0.;
+  
+  // material properties
+  double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
 
+  // Position variables
+  double z=forward_traj[0].z;
+  double newz=z,dz=0.;
+
+  // Current time and path length
+  double t=forward_traj[0].t;
+  double s=forward_traj[0].s;
+
+  // Store the position and momentum at the exit to the tracking volume
+  double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+  double tanl=1./sqrt(tsquare);
+  double cosl=cos(atan(tanl));
+  double pt=cosl/fabs(S(state_q_over_p));
+  double phi=atan2(S(state_ty),S(state_tx));
+  DVector3 position(S(state_x),S(state_y),z);
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION,
+						     s));
+
+  // Loop to propagate track to outer detectors
+  const double z_outer_max=650.;
+  const double x_max=130.;
+  const double y_max=130.;
+  bool hit_tof=false; 
+  bool hit_dirc=false;
+  unsigned int trd_index=0;
+  while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
+	 && fabs(S(state_y))<y_max){   
+    // Bail if the momentum has dropped below some minimum
+    if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
+      if (DEBUG_LEVEL>2)
+	{
+	  _DBG_ << "Bailing: P = " << 1./fabs(S(state_q_over_p))
+		<< endl;
+	}
+      return VALUE_OUT_OF_RANGE;
+    }
+
+    // Check if we have passed into the BCAL
+    double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+    if (r2>89.*89. && z<400.) return VALUE_OUT_OF_RANGE;
+    if (r2>64.9*64.9 && r2<89.*89.){
+      if (extrapolations.at(SYS_BCAL).size()>299){
+	return VALUE_OUT_OF_RANGE;
+      }
+      if (z<406.){
+	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+	double tanl=1./sqrt(tsquare);
+	double cosl=cos(atan(tanl));
+	double pt=cosl/fabs(S(state_q_over_p));
+	double phi=atan2(S(state_ty),S(state_tx));
+	DVector3 position(S(state_x),S(state_y),z);
+	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
+							   t*TIME_UNIT_CONVERSION,s));
+      }
+      else if (extrapolations.at(SYS_BCAL).size()<5){
+	// There needs to be some steps inside the the volume of the BCAL for 
+	// the extrapolation to be useful.  If this is not the case, clear 
+	// the extrapolation vector.
+	extrapolations[SYS_BCAL].clear();
+      }
+    }    
+   
+    // Relationship between arc length and z
+    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)
+			   +S(state_ty)*S(state_ty));
+    
+    // get material properties from the Root Geometry
+    DVector3 pos(S(state_x),S(state_y),z); 
+    DVector3 dir(S(state_tx),S(state_ty),1.);
+    double s_to_boundary=0.;
+    if (geom->FindMatKalman(pos,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
+			    last_material_map,&s_to_boundary)
+	  !=NOERROR){
+      if (DEBUG_LEVEL>0)
+	{
+	_DBG_ << "Material error in ExtrapolateForwardToOuterDetectors!"<< endl;
+	_DBG_ << " Position (x,y,z)=("<<pos.x()<<","<<pos.y()<<","<<pos.z()<<")"
+	      <<endl;
+      }
+      return VALUE_OUT_OF_RANGE;
+    }
+    
+    // Get dEdx for the upcoming step
+    if (CORRECT_FOR_ELOSS){
+      dEdx=GetdEdx(S(state_q_over_p),K_rho_Z_over_A,rho_Z_over_A,LnI,Z); 
+    }
+    
+    // Adjust the step size 
+    double ds=mStepSizeS;
+    if (fabs(dEdx)>EPS){     
+      ds=DE_PER_STEP/fabs(dEdx);
+    }
+    if (ds>mStepSizeS) ds=mStepSizeS;
+    if (s_to_boundary<ds) ds=s_to_boundary;
+    if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
+    if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
+    dz=ds*dz_ds;
+    newz=z+dz;
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      newz=dTRDz_vec[trd_index]+EPS;
+      ds=(newz-z)/dz_ds;   
+    }
+    if (hit_tof==false && newz>dTOFz){
+      newz=dTOFz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (hit_dirc==false && newz>dDIRCz){
+      newz=dDIRCz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (newz>dFCALz){
+      newz=dFCALz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    s+=ds;
+
+    // Flight time
+    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+    double one_over_beta2=1.+mass2*q_over_p_sq;
+    if (one_over_beta2>BIG) one_over_beta2=BIG;
+    t+=ds*sqrt(one_over_beta2); // in units where c=1
+
+    // Step through field
+    Step(z,newz,dEdx,S); 
+    z=newz;
+
+    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      //position.Print();
+      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s));
+      trd_index++;
+    }
+    if (hit_dirc==false && newz>dDIRCz){
+      hit_dirc=true;
+
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_DIRC].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s));
+    }  
+    if (hit_tof==false && newz>dTOFz){
+      hit_tof=true;
+
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
+							t*TIME_UNIT_CONVERSION,s)); 
+    }  
+    if (newz>dFCALz){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
+					    t*TIME_UNIT_CONVERSION,s)); 
+
+      // add another extrapolation point at downstream end of FCAL
+      double zend=newz+45.;
+      Step(newz,zend,dEdx,S); 
+      ds=(zend-newz)/dz_ds;
+      t+=ds*sqrt(one_over_beta2); // in units where c=1 
+      s+=ds;
+      tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      tanl=1./sqrt(tsquare); 
+      cosl=cos(atan(tanl));
+      pt=cosl/fabs(S(state_q_over_p));
+      phi=atan2(S(state_ty),S(state_tx));
+      position.SetXYZ(S(state_x),S(state_y),zend);
+      momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
+					    t*TIME_UNIT_CONVERSION,s)); 
+
+      return NOERROR;
+    }
+  }
+  return NOERROR;
+}
+
+// Find extrapolations to detector layers within the tracking volume and 
+// inward (toward the target).
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
   // First deal with start counter.  Only do this if the track has a chance
   // to intersect with the start counter volume.
   unsigned int inner_index=forward_traj.size()-1; 
@@ -9333,10 +9153,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 
     }
     else{ // extrapolations in FDC region
-      if (fdc_plane==24){
-	break;	
-      }
-    
       // output step near wire plane  
       if (z>fdc_z_wires[fdc_plane]-0.25){	
 	double dz=z-fdc_z_wires[fdc_plane];
@@ -9354,49 +9170,42 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 	extrapolations[SYS_FDC].push_back(Extrapolation_t(position,momentum,
 						t*TIME_UNIT_CONVERSION,s,
 						s_theta_ms_sum,theta2ms_sum));
-
+	if (fdc_plane==23){
+	  return NOERROR;	
+	}
+	
 	fdc_plane++;
       }
-      
     }
-
   }
   
 
-  //--------------------------------
-  // Next swim to outer detectors...
-  //--------------------------------
-  DMatrix5x5 Q;  // multiple scattering matrix
-
-  // Direction and origin of beam line
-  DVector2 dir;
-  DVector2 origin;
-
-  // Energy loss
-  double dEdx=0.;
+  //--------------------------------------------------------------------------
+  // The following code continues the extrapolations to wire planes that were
+  // not included in the forward trajectory
+  //--------------------------------------------------------------------------
   
-  // material properties
+  // Material properties
   double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
   double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
 
+  // Energy loss
+  double dEdx=0.;
+
+  // multiple scattering matrix
+  DMatrix5x5 Q; 
+  
   // Position variables
-  double z=forward_traj[0].z;
-  double newz=z,dz=0.;
   S=forward_traj[0].S;
+  double z=forward_traj[0].z,newz=z,dz=0.; 
 
   // Current time and path length
   double t=forward_traj[0].t;
   double s=forward_traj[0].s;
-  
-  // Loop to propagate track to outer detectors
-  const double z_outer_max=650.;
-  const double x_max=130.;
-  const double y_max=130.;
-  bool hit_tof=false; 
-  bool hit_dirc=false;
-  unsigned int trd_index=0;
-  while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
-	 && fabs(S(state_y))<y_max){   
+
+  // Find intersection points to FDC planes beyond the exent of the forward
+  // trajectory.
+  while (z>Z_MIN && z<fdc_z_wires[23]+1. && fdc_plane<24){
     // Bail if the momentum has dropped below some minimum
     if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
       if (DEBUG_LEVEL>2)
@@ -9406,39 +9215,12 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 	}
       return VALUE_OUT_OF_RANGE;
     }
-
-    // Check if we have passed into the BCAL
-    double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
-    if (r2>89.*89. && z<400.) return VALUE_OUT_OF_RANGE;
-    if (r2>64.9*64.9 && r2<89.*89.){
-      if (extrapolations.at(SYS_BCAL).size()>299){
-	return VALUE_OUT_OF_RANGE;
-      }
-      if (z<406.){
-	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-	double tanl=1./sqrt(tsquare);
-	double cosl=cos(atan(tanl));
-	double pt=cosl/fabs(S(state_q_over_p));
-	double phi=atan2(S(state_ty),S(state_tx));
-	DVector3 position(S(state_x),S(state_y),z);
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
-							   t*TIME_UNIT_CONVERSION,s));
-      }
-      else if (extrapolations.at(SYS_BCAL).size()<5){
-	// There needs to be some steps inside the the volume of the BCAL for 
-	// the extrapolation to be useful.  If this is not the case, clear 
-	// the extrapolation vector.
-	extrapolations[SYS_BCAL].clear();
-      }
-    }    
-   
-    // Relationship between arc length and z
-    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)
-			   +S(state_ty)*S(state_ty));
-    
-    // get material properties from the Root Geometry
+  
+    // Current position
     DVector3 pos(S(state_x),S(state_y),z); 
+    if (pos.Perp()>50.) break;
+
+    // get material properties from the Root Geometry
     DVector3 dir(S(state_tx),S(state_ty),1.);
     double s_to_boundary=0.;
     if (geom->FindMatKalman(pos,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
@@ -9458,6 +9240,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
     if (CORRECT_FOR_ELOSS){
       dEdx=GetdEdx(S(state_q_over_p),K_rho_Z_over_A,rho_Z_over_A,LnI,Z); 
     }
+ 
+    // Relationship between arc length and z
+    double dz_ds=1./sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
     
     // Adjust the step size 
     double ds=mStepSizeS;
@@ -9467,25 +9252,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
     if (ds>mStepSizeS) ds=mStepSizeS;
     if (s_to_boundary<ds) ds=s_to_boundary;
     if (ds<MIN_STEP_SIZE) ds=MIN_STEP_SIZE;
-    if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      newz=dTRDz_vec[trd_index]+EPS;
-      ds=(newz-z)/dz_ds;   
-    }
-    if (hit_tof==false && newz>dTOFz){
-      newz=dTOFz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
-    if (hit_dirc==false && newz>dDIRCz){
-      newz=dDIRCz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
-    if (newz>dFCALz){
-      newz=dFCALz+EPS;
-      ds=(newz-z)/dz_ds;
-    }
+
     bool got_fdc_hit=false;
     if (fdc_plane<24 && newz>fdc_z_wires[fdc_plane]){
       newz=fdc_z_wires[fdc_plane];
@@ -9524,77 +9293,29 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
 						s_theta_ms_sum,theta2ms_sum));
 
       fdc_plane++;
-    }        
-    if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      //position.Print();
-      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-      trd_index++;
-    }
-    if (hit_dirc==false && newz>dDIRCz){
-      hit_dirc=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_DIRC].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-    }  
-    if (hit_tof==false && newz>dTOFz){
-      hit_tof=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
-    }  
-    if (newz>dFCALz){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
-
-      // add another extrapolation point at downstream end of FCAL
-      double zend=newz+45.;
-      Step(newz,zend,dEdx,S); 
-      ds=(zend-newz)/dz_ds;
-      t+=ds*sqrt(one_over_beta2); // in units where c=1 
-      s+=ds;
-      tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      tanl=1./sqrt(tsquare); 
-      cosl=cos(atan(tanl));
-      pt=cosl/fabs(S(state_q_over_p));
-      phi=atan2(S(state_ty),S(state_tx));
-      position.SetXYZ(S(state_x),S(state_y),zend);
-      momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
-
-      return NOERROR;
-    }
+    }          
   }
+  
   return NOERROR;
+}
+
+// Routine to find intersections with surfaces useful at a later stage for track
+// matching
+jerror_t DTrackFitterKalmanSIMD::ExtrapolateForwardToOtherDetectors(){
+  if (forward_traj.size()<2) return RESOURCE_UNAVAILABLE;
+  //--------------------------------
+  // First swim to Start counter and CDC/FDC layers
+  //--------------------------------
+  jerror_t error=ExtrapolateToInnerDetectors();
+
+  //--------------------------------
+  // Next swim to outer detectors...
+  //--------------------------------
+  if (error==NOERROR){
+    return ExtrapolateToOuterDetectors(forward_traj[0].S);
+  }
+  
+  return error;
 }
 
 // Routine to find intersections with surfaces useful at a later stage for track
@@ -9751,26 +9472,29 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
       
     }
   }
+  // Save the extrapolatoin at the exit of the tracking volume
+  S=central_traj[0].S;
+  xy=central_traj[0].xy;
+  double t=central_traj[0].t;
+  double s=central_traj[0].s;
+  double tanl=S(state_tanl);
+  double pt=1/fabs(S(state_q_over_pt));
+  double phi=S(state_phi); 
+  DVector3 position(xy.X(),xy.Y(),S(state_z));
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
+  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION
+						     ,s));
 
   //------------------------------
   // Next swim to outer detectors
-  //------------------------------
-  S=central_traj[0].S;
- 
+  //------------------------------ 
   // Position and step variables 
-  xy=central_traj[0].xy;
   double r2=xy.Mod2();
   double ds=mStepSizeS; // step along path in cm
   
   // Energy loss
   double dedx=0.;
-  
-  // Current time and path length
-  double t=central_traj[0].t;
-  double s=central_traj[0].s;
-
-  // Matrix for multiple scattering covariance terms
-  DMatrix5x5 Q;
 
   // Track propagation loop
   //if (false)
@@ -9788,12 +9512,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
     
     // get material properties from the Root Geometry
     double rho_Z_over_A=0.,LnI=0.,K_rho_Z_over_A=0.,Z=0.;
-    double chi2c_factor=0.,chi2a_factor=0.,chi2a_corr=0.;
     DVector3 pos3d(xy.X(),xy.Y(),S(state_z));
     double s_to_boundary=0.;
     DVector3 dir(cos(S(state_phi)),sin(S(state_phi)),S(state_tanl));
     if (geom->FindMatKalman(pos3d,dir,K_rho_Z_over_A,rho_Z_over_A,LnI,Z,
-			    chi2c_factor,chi2a_factor,chi2a_corr,
 			    last_material_map,&s_to_boundary)
 	!=NOERROR){
       _DBG_ << "Material error in ExtrapolateToVertex! " << endl;
@@ -9824,13 +9546,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
     double one_over_beta2=1.+mass2*q_over_p_sq;
     if (one_over_beta2>BIG) one_over_beta2=BIG;
     t+=ds*sqrt(one_over_beta2); // in units where c=1
-    
-    // Multiple scattering
-    GetProcessNoiseCentral(ds,chi2c_factor,chi2a_factor,chi2a_corr,S,Q);
-   
-    double ds_theta_ms_sq=3.*fabs(Q(state_D,state_D));
-    s_theta_ms_sum+=sqrt(fabs(Q(state_D,state_D)));
-    theta2ms_sum+=ds_theta_ms_sq/(ds*ds);
 
     // Propagate the state through the field
     Step(xy,ds,S,dedx);
@@ -9842,11 +9557,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	return VALUE_OUT_OF_RANGE;
       }
       if (S(state_z)<406.&&S(state_z)>17.0){
-	double tanl=S(state_tanl);
-	double pt=1/fabs(S(state_q_over_pt));
-	double phi=S(state_phi);
-	DVector3 position(xy.X(),xy.Y(),S(state_z));   
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+	tanl=S(state_tanl);
+	pt=1/fabs(S(state_q_over_pt));
+	phi=S(state_phi);
+	position.SetXYZ(xy.X(),xy.Y(),S(state_z));   
+	momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
 	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
 							   t*TIME_UNIT_CONVERSION,s));
       }
@@ -9864,4 +9579,786 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 
 /*---------------------------------------------------------------------------*/
 
+// Kalman engine for forward tracks, propagating from near the beam line to 
+// the outermost hits (opposite to regular direction).
+kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
+						     double cdc_anneal_factor,
+						     const DMatrix5x1 &Sstart, 
+						     DMatrix5x5 &C,
+						     DMatrix5x1 &S,
+						     double &chisq, 
+						     unsigned int &numdof){
+   DMatrix2x1 Mdiff; // difference between measurement and prediction 
+   DMatrix2x5 H;  // Track projection matrix
+   DMatrix5x2 H_T; // Transpose of track projection matrix 
+   DMatrix1x5 Hc;  // Track projection matrix for cdc hits
+   DMatrix5x1 Hc_T; // Transpose of track projection matrix for cdc hits
+   DMatrix5x5 J;  // State vector Jacobian matrix
+   //DMatrix5x5 J_T; // transpose of this matrix
+   DMatrix5x5 Q;  // Process noise covariance matrix
+   DMatrix5x2 K;  // Kalman gain matrix
+   DMatrix5x1 Kc;  // Kalman gain matrix for cdc hits
+   DMatrix2x2 V(0.0833,0.,0.,FDC_CATHODE_VARIANCE);  // Measurement covariance matrix
+   DMatrix5x1 S0,S0_; //State vector 
+   DMatrix5x5 Ctest; // Covariance matrix
 
+   double Vc=0.0507;
+
+   unsigned int cdc_index=0;
+   unsigned int num_cdc_hits=my_cdchits.size();
+   bool more_cdc_measurements=(num_cdc_hits>0);
+   double old_doca2=1e6;
+
+   // Initialize chi squared
+   chisq=0;
+   
+   // Initialize number of degrees of freedom
+   numdof=0;
+
+   // Cuts for pruning hits
+   double fdc_chi2cut=NUM_FDC_SIGMA_CUT*NUM_FDC_SIGMA_CUT;
+   double cdc_chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
+   
+   // Vectors for cdc wires
+   DVector2 origin,dir,wirepos;
+   double z0w=0.; // origin in z for wire
+   
+   deque<DKalmanForwardTrajectory_t>::reverse_iterator rit = forward_traj.rbegin();
+   S0_=(*rit).S;
+   S=Sstart;
+   
+   if (more_cdc_measurements){
+     origin=my_cdchits[0]->origin;  
+     dir=my_cdchits[0]->dir;   
+     z0w=my_cdchits[0]->z0wire;
+     wirepos=origin+((*rit).z-z0w)*dir;
+   }
+
+   for (rit=forward_traj.rbegin()+1;rit!=forward_traj.rend();++rit){
+     // Get the state vector, jacobian matrix, and multiple scattering matrix 
+      // from reference trajectory
+     S0=(*rit).S;
+     J=2.*I5x5-(*rit).J; // We only want to change the signs of the parts that depend on dz ...
+     Q=(*rit).Q;
+     
+     // Check that the position is within the tracking volume!
+     if (S(state_x)*S(state_x)+S(state_y)*S(state_y)>65.*65.){
+       return POSITION_OUT_OF_RANGE;
+     }
+     // Update the actual state vector and covariance matrix
+     S=S0+J*(S-S0_);
+     C=Q.AddSym(J*C*J.Transpose());
+     //C.Print();
+     
+     // Save the current state of the reference trajectory
+     S0_=S0;
+
+     // Z position along the trajectory 
+     double z=(*rit).z;
+
+     if (more_cdc_measurements){
+       // new wire position
+       wirepos=origin;
+       wirepos+=(z-z0w)*dir;
+       
+       // doca variables
+       double dx=S(state_x)-wirepos.X();
+       double dy=S(state_y)-wirepos.Y();
+       double doca2=dx*dx+dy*dy;
+      
+       if (doca2>old_doca2){
+	 if(my_cdchits[cdc_index]->status==good_hit){
+	   find_doca_error_t swimmed_to_doca=DOCA_NO_BRENT;
+	   double newz=endplate_z;
+	   double dz=newz-z;
+	   // Sometimes the true doca would correspond to the case where the 
+	   // wire would need to extend beyond the physical volume of the straw. 
+	   // In this case, find the doca at the cdc endplate.
+	   if (z>endplate_z){
+	     swimmed_to_doca=DOCA_ENDPLATE;
+	     SwimToEndplate(z,*rit,S);
+	     
+	     // wire position at the endplate
+	     wirepos=origin;
+	     wirepos+=(endplate_z-z0w)*dir;
+	     
+	     dx=S(state_x)-wirepos.X();
+	     dy=S(state_y)-wirepos.Y();
+	   }
+	   else{
+	     // Find the true doca to the wire.  If we had to use Brent's 
+	     // algorithm, the routine returns USED_BRENT
+	     swimmed_to_doca=FindDoca(my_cdchits[cdc_index],*rit,mStepSizeZ,
+				      mStepSizeZ,S0,S,C,dx,dy,dz,true);
+	     if (swimmed_to_doca==BRENT_FAILED){
+	       //_DBG_ << "Brent's algorithm failed" <<endl;
+	       return MOMENTUM_OUT_OF_RANGE;
+	     }
+
+	     newz=z+dz;
+	   }
+	   double cosstereo=my_cdchits[cdc_index]->cosstereo;
+	   double d=sqrt(dx*dx+dy*dy)*cosstereo+EPS;
+	   
+	   // Track projection
+	   double cosstereo2_over_d=cosstereo*cosstereo/d;
+	   Hc_T(state_x)=dx*cosstereo2_over_d; 
+	   Hc(state_x)=Hc_T(state_x);
+	   Hc_T(state_y)=dy*cosstereo2_over_d;	  
+	   Hc(state_y)=Hc_T(state_y);
+	   if (swimmed_to_doca==DOCA_NO_BRENT){
+	     Hc_T(state_ty)=Hc_T(state_y)*dz;
+	     Hc(state_ty)=Hc_T(state_ty);	  
+	     Hc_T(state_tx)=Hc_T(state_x)*dz;
+	     Hc(state_tx)=Hc_T(state_tx);
+	   }
+	   else{
+	     Hc_T(state_ty)=0.;
+	     Hc(state_ty)=0.;
+	     Hc_T(state_tx)=0.;
+	     Hc(state_tx)=0.;
+	   }
+	   // Find offset of wire with respect to the center of the
+	   // straw at this z position
+	   double delta=0.,dphi=0.;
+	   FindSag(dx,dy,newz-z0w,my_cdchits[cdc_index]->hit->wire,delta,dphi);
+	   
+	   // Find drift time and distance	    
+	   double tdrift=my_cdchits[cdc_index]->tdrift-mT0
+	     -(*rit).t*TIME_UNIT_CONVERSION;
+	   double tcorr=0.,dmeas=0.;
+	   double B=(*rit).B;
+	   ComputeCDCDrift(dphi,delta,tdrift,B,dmeas,Vc,tcorr);
+	   
+	   // Residual
+	   double res=dmeas-d;
+	   
+	   // inverse variance including prediction
+	   double Vproj=Hc*C*Hc_T;	   
+	   double InvV1=1./(Vc+Vproj);
+
+	   // Check if this hit is an outlier
+	   double chi2_hit=res*res*InvV1;
+	   if (chi2_hit<cdc_chi2cut){
+	     // Compute KalmanSIMD gain matrix
+	     Kc=InvV1*(C*Hc_T);
+	   
+	     // Update state vector covariance matrix
+	     //C=C-K*(H*C);    
+	     Ctest=C.SubSym(Kc*(Hc*C));
+	     
+	     if (!Ctest.IsPosDef()){
+	       if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	     }
+	     
+	     if (tdrift >= CDC_T_DRIFT_MIN){
+	       C=Ctest;
+	       S+=res*Kc;
+	       
+	       chisq+=(1.-Hc*Kc)*res*res/Vc;
+	       numdof++;
+	     }
+	   }
+	   
+	   // If we had to use Brent's algorithm to find the true doca or the 
+	   // doca to the line corresponding to the wire is downstream of the 
+	   // cdc endplate, we need to swim the state vector and covariance 
+	   // matrix back to the appropriate position along the reference 
+	   // trajectory.
+	   if (swimmed_to_doca!=DOCA_NO_BRENT){
+	     double dedx=0.;
+	     if (CORRECT_FOR_ELOSS){
+	       dedx=GetdEdx(S(state_q_over_p),(*rit).K_rho_Z_over_A,
+			    (*rit).rho_Z_over_A,(*rit).LnI,(*rit).Z);
+	     }
+	     StepBack(dedx,newz,z,S0,S,C);
+	   }
+	 }
+	   
+	 // new wire origin and direction
+	 if (cdc_index<num_cdc_hits-1){
+	   cdc_index++;
+	   origin=my_cdchits[cdc_index]->origin;
+	   z0w=my_cdchits[cdc_index]->z0wire;
+	   dir=my_cdchits[cdc_index]->dir;
+	 }
+	 else more_cdc_measurements=false;
+	 
+	 // Update the wire position
+	 wirepos=origin+(z-z0w)*dir;
+	 
+	 // new doca
+	 dx=S(state_x)-wirepos.X();
+	 dy=S(state_y)-wirepos.Y();
+	 doca2=dx*dx+dy*dy;
+       }
+       old_doca2=doca2; 
+     }
+     if ((*rit).h_id>0&&(*rit).h_id<1000){
+       unsigned int id=(*rit).h_id-1;
+       
+       // Variance in coordinate transverse to wire
+       V(0,0)=my_fdchits[id]->uvar;
+       
+       // Variance in coordinate along wire
+       V(1,1)=my_fdchits[id]->vvar;
+	   
+       double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+       FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
+				   lorentz_factor,H_T);
+       // Matrix transpose H_T -> H
+       H=Transpose(H_T);
+       
+   
+       DMatrix2x2 Vtemp=V+H*C*H_T;
+   
+       // Residual for coordinate along wire
+       Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
+
+       // Residual for coordinate transverse to wire
+       double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
+       if (my_fdchits[id]->hit!=NULL){
+	 double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
+	 Mdiff(0)=drift-doca;
+ 
+	 // Variance in drift distance
+	 V(0,0)=fdc_drift_variance(drift_time);	
+       }
+       else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
+	 double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	 Mdiff(0)=drift-doca;
+
+	 // Variance in drift distance
+	 V(0,0)=0.05*0.05;
+       }
+       if ((*rit).num_hits==1){  
+	 // Add contribution of track covariance from state vector propagation
+	 // to measurement errors
+	 DMatrix2x2 Vtemp=V+H*C*H_T;
+	 double chi2_hit=Vtemp.Chi2(Mdiff); 
+	 if (chi2_hit<fdc_chi2cut){  
+	   // Compute Kalman gain matrix
+	   DMatrix2x2 InvV=Vtemp.Invert();
+	   DMatrix5x2 K=C*H_T*InvV;
+	   
+	   // Update the state vector 
+	   S+=K*Mdiff;
+	   
+	   // Update state vector covariance matrix
+	   //C=C-K*(H*C);    
+	   C=C.SubSym(K*(H*C));
+	   
+	   if (DEBUG_LEVEL > 35) {
+	     jout << "S Update: " << endl; S.Print();
+	     jout << "C Update: " << endl; C.Print();
+	   }
+	   
+	   // Filtered residual and covariance of filtered residual
+	   DMatrix2x1 R=Mdiff-H*K*Mdiff;   
+	   DMatrix2x2 RC=V-H*(C*H_T);
+	   
+	   // Update chi2 for this segment
+	   chisq+=RC.Chi2(R);
+	   
+	   if (DEBUG_LEVEL>30)
+	   {
+	     printf("hit %d p %5.2f dm %5.4f %5.4f sig %5.4f %5.4f chi2 %5.2f\n",
+		    id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
+		    sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
+	   }
+	   
+	   numdof+=2;
+	 }
+       }
+       // Handle the case where there are multiple adjacent hits in the plane
+       else {
+	 UpdateSandCMultiHit(*rit,upred,vpred,doca,cosalpha,lorentz_factor,V,
+			     Mdiff,H,H_T,S,C,fdc_chi2cut,false,chisq,numdof);
+       }
+     }
+   
+     //printf("chisq %f ndof %d prob %f\n",chisq,numdof,TMath::Prob(chisq,numdof));
+   }
+
+   return FIT_SUCCEEDED;
+}
+
+// Finds the distance of closest approach between a CDC wire and the trajectory
+// of the track and updates the state vector and covariance matrix at this point.
+find_doca_error_t 
+DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
+				 const DKalmanForwardTrajectory_t &traj,
+				 double step1,double step2,
+				 DMatrix5x1 &S0,DMatrix5x1 &S,
+				 DMatrix5x5 &C,
+				 double &dx,double &dy,double &dz,
+				 bool do_reverse){
+  double z=traj.z,newz=z;
+  DMatrix5x5 J;
+
+  // wire position and direction
+  DVector2 origin=hit->origin;
+  double z0w=hit->z0wire;
+  DVector2 dir=hit->dir;
+  
+  // energy loss 
+  double dedx=0.;
+  
+  // track direction variables
+  double tx=S(state_tx);
+  double ty=S(state_ty);	
+  double tanl=1./sqrt(tx*tx+ty*ty);
+  double sinl=sin(atan(tanl));
+
+  // Wire direction variables
+  double ux=dir.X();
+  double uy=dir.Y();
+  // Variables relating wire direction and track direction
+  double my_ux=tx-ux;
+  double my_uy=ty-uy;
+  double denom=my_ux*my_ux+my_uy*my_uy;
+
+  // variables for dealing with propagation of S and C if we 
+  // need to use Brent's algorithm to find the doca to the wire
+  int num_steps=0;
+  double my_dz=0.;
+
+  // if the path length increment is small relative to the radius 
+  // of curvature, use a linear approximation to find dz	
+  bool do_brent=false;
+  double sign=do_reverse?-1.:1.;
+  double two_step=sign*(step1+step2);
+  if (fabs(qBr2p*S(state_q_over_p)
+	   *bfield->GetBz(S(state_x),S(state_y),z)
+	   *two_step/sinl)<0.05
+      && denom>EPS){
+    double dzw=z-z0w;
+    dz=-((S(state_x)-origin.X()-ux*dzw)*my_ux
+	 +(S(state_y)-origin.Y()-uy*dzw)*my_uy)/denom;
+    if (fabs(dz)>fabs(two_step) || sign*dz<0){
+      do_brent=true;
+    }
+    else{
+      newz=z+dz;
+      // Check for exiting the straw
+      if (newz>endplate_z){
+	dz=endplate_z-z;
+      }
+    }
+  }
+  else do_brent=true;
+  if (do_brent){
+    if (CORRECT_FOR_ELOSS){
+      dedx=GetdEdx(S(state_q_over_p),traj.K_rho_Z_over_A,traj.rho_Z_over_A,
+		   traj.LnI,traj.Z);
+    }
+    
+    // We have bracketed the minimum doca:  use Brent's agorithm
+    if (BrentForward(z,dedx,z0w,origin,dir,S,dz)!=NOERROR){
+      return BRENT_FAILED;
+    }
+    // Step the state and covariance through the field
+    if (fabs(dz)>mStepSizeZ){
+      my_dz=(dz>0?1.0:-1.)*mStepSizeZ;
+      num_steps=int(fabs(dz/my_dz));
+      double dz3=dz-num_steps*my_dz;
+
+      double my_z=z;
+      for (int m=0;m<num_steps;m++){
+	newz=my_z+my_dz;
+
+	// propagate error matrix to z-position of hit
+	StepJacobian(my_z,newz,S0,dedx,J);
+	C=J*C*J.Transpose();
+	//C=C.SandwichMultiply(J);
+	
+	// Step reference trajectory by my_dz
+	Step(my_z,newz,dedx,S0); 
+	
+	my_z=newz;
+      }
+      
+      newz=my_z+dz3;
+      // propagate error matrix to z-position of hit
+      StepJacobian(my_z,newz,S0,dedx,J);
+      C=J*C*J.Transpose();
+      //C=C.SandwichMultiply(J);
+
+      // Step reference trajectory by dz3
+      Step(my_z,newz,dedx,S0); 	    
+    }
+    else{
+      newz = z + dz;
+      
+      // propagate error matrix to z-position of hit
+      StepJacobian(z,newz,S0,dedx,J);
+      C=J*C*J.Transpose();
+      //C=C.SandwichMultiply(J);
+      
+      // Step reference trajectory by dz
+      Step(z,newz,dedx,S0); 
+    }
+  }
+  
+  // Wire position at current z
+  DVector2 wirepos=origin;
+  wirepos+=(newz-z0w)*dir;
+ 
+  double xw=wirepos.X();
+  double yw=wirepos.Y();
+  
+  // predicted doca taking into account the orientation of the wire
+  if (do_brent==false){
+    // In this case we did not have to swim to find the doca and 
+    // the transformation from the state vector space to the 
+    // measurement space is straight-forward.
+    dy=S(state_y)+S(state_ty)*dz-yw;
+    dx=S(state_x)+S(state_tx)*dz-xw;   
+  }
+  else{ 
+    // In this case we swam the state vector to the position of the doca
+    dy=S(state_y)-yw;
+    dx=S(state_x)-xw; 
+  }
+
+  if (do_brent) return USED_BRENT;
+  return DOCA_NO_BRENT;
+}
+
+// Swim along a trajectory to the z-position z.
+void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
+				      DMatrix5x1 &S0,DMatrix5x1 &S,
+				      DMatrix5x5 &C){
+  double dz=newz-z;
+  DMatrix5x5 J;
+  int num_steps=int(fabs(dz/mStepSizeZ));
+  if (num_steps==0){
+    // Step C back to the z-position on the reference trajectory
+    StepJacobian(newz,z,S0,dedx,J);
+    C=J*C*J.Transpose();
+    //C=C.SandwichMultiply(J);
+
+    // Step S to current position on the reference trajectory
+    Step(newz,z,dedx,S);
+    
+    // Step S0 to current position on the reference trajectory
+    Step(newz,z,dedx,S0);
+  }
+  else{
+    double my_z=newz; 
+    double my_dz=(dz>0.0?1.0:-1.)*mStepSizeZ;
+    double dz3=dz-num_steps*my_dz;
+    for (int m=0;m<num_steps;m++){
+      z=my_z-my_dz;
+      
+      // Step C along z
+      StepJacobian(my_z,z,S0,dedx,J);
+      C=J*C*J.Transpose();
+      //C=C.SandwichMultiply(J);
+      
+      // Step S along z
+      Step(my_z,z,dedx,S); 
+      
+      // Step S0 along z
+      Step(my_z,z,dedx,S0);
+      
+      my_z=z;
+    }
+    z=my_z-dz3;
+    
+    // Step C back to the z-position on the reference trajectory
+    StepJacobian(my_z,z,S0,dedx,J);
+    C=J*C*J.Transpose();
+    //C=C.SandwichMultiply(J);
+
+    // Step S to current position on the reference trajectory
+    Step(my_z,z,dedx,S);
+    
+    // Step S0 to current position on the reference trajectory
+    Step(my_z,z,dedx,S0);
+  }
+}
+
+// Swim a track to the CDC endplate given starting z position
+void DTrackFitterKalmanSIMD::SwimToEndplate(double z,
+					    const DKalmanForwardTrajectory_t &traj,
+					    DMatrix5x1 &S){
+  double dedx=0.;
+  if (CORRECT_FOR_ELOSS){
+    dedx=GetdEdx(S(state_q_over_p),traj.K_rho_Z_over_A,traj.rho_Z_over_A,
+		 traj.LnI,traj.Z);
+  }
+  double my_z=z;
+  int num_steps=int(fabs((endplate_z-z)/mStepSizeZ));
+  for (int m=0;m<num_steps;m++){
+    my_z=z-mStepSizeZ;
+    Step(z,my_z,dedx,S);
+    z=my_z;
+  }
+  Step(z,endplate_z,dedx,S);
+}
+
+// Find the sag parameters (delta,dphi) for the given straw at the local z 
+// position
+void DTrackFitterKalmanSIMD::FindSag(double dx,double dy, double zlocal,
+				     const DCDCWire *mywire,double &delta,
+				     double &dphi) const{
+  int ring_index=mywire->ring-1;
+  int straw_index=mywire->straw-1;
+  double phi_d=atan2(dy,dx);
+  delta=max_sag[ring_index][straw_index]*(1.-zlocal*zlocal/5625.)
+    *cos(phi_d + sag_phi_offset[ring_index][straw_index]);
+
+  dphi=phi_d-mywire->origin.Phi();
+  while (dphi>M_PI) dphi-=2*M_PI;
+  while (dphi<-M_PI) dphi+=2*M_PI;
+  if (mywire->origin.Y()<0) dphi*=-1.;
+}
+
+void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit_t *hit,
+							 const DMatrix5x1 &S,
+							 double &upred,
+							 double &vpred,
+							 double &doca,
+							 double &cosalpha,
+							 double &lorentz_factor,
+							 DMatrix5x2 &H_T){
+  // Make the small alignment rotations
+  // Use small-angle form.
+  
+  // Position and direction from state vector
+  double x=S(state_x) + hit->phiZ*S(state_y);
+  double y=S(state_y) - hit->phiZ*S(state_x);
+  double tx =S(state_tx) + hit->phiZ*S(state_ty) - hit->phiY;
+  double ty =S(state_ty) - hit->phiZ*S(state_tx) + hit->phiX;
+
+  // Plane orientation and measurements
+  double cosa=hit->cosa;
+  double sina=hit->sina;
+  double u=hit->uwire; 
+
+  // Projected coordinate along wire
+  vpred=x*sina+y*cosa;
+
+  // Direction tangent in the u-z plane
+  double tu=tx*cosa-ty*sina;
+  double tv=tx*sina+ty*cosa;
+  double alpha=atan(tu);
+  cosalpha=cos(alpha);
+  double cosalpha2=cosalpha*cosalpha;
+  double sinalpha=sin(alpha);
+  
+  // (signed) distance of closest approach to wire
+  upred=x*cosa-y*sina;
+  if (hit->status==gem_hit){
+    doca=upred-u;
+  }
+  else{
+    doca=(upred-u)*cosalpha;
+  }
+
+  // Correction for lorentz effect
+  double nz=hit->nz;
+  double nr=hit->nr;
+  double nz_sinalpha_plus_nr_cosalpha=nz*sinalpha+nr*cosalpha;
+  lorentz_factor=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
+
+  // To transform from (x,y) to (u,v), need to do a rotation:
+  //   u = x*cosa-y*sina
+  //   v = y*cosa+x*sina
+  if (hit->status!=gem_hit){
+    H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
+    H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
+    
+    double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
+    double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
+    double doca_cosalpha=doca*cosalpha;
+    double temp=doca_cosalpha*fac;	
+    H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
+    H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+  
+    H_T(state_x,0)=cosa*cosalpha;
+    H_T(state_y,0)=-sina*cosalpha;
+    
+    double factor=doca*tu*cosalpha2;
+    H_T(state_ty,0)=sina*factor;
+    H_T(state_tx,0)=-cosa*factor; 
+  }
+  else{  
+    H_T(state_x,1)=sina;
+    H_T(state_y,1)=cosa;    
+    H_T(state_x,0)=cosa;
+    H_T(state_y,0)=-sina;
+  }
+}
+
+// Update S and C using all the good adjacent hits in a particular FDC plane
+void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_t &traj,
+						 double upred,double vpred,
+						 double doca,double cosalpha,
+						 double lorentz_factor,
+						 DMatrix2x2 &V,
+						 DMatrix2x1 &Mdiff,
+						 DMatrix2x5 &H,
+						 const DMatrix5x2 &H_T,
+						 DMatrix5x1 &S,DMatrix5x5 &C,
+						 double fdc_chi2cut,
+						 bool skip_plane,double &chisq,
+						 unsigned int &numdof,
+						 double fdc_anneal_factor){
+  // If we do have multiple hits, then all of the hits within some
+  // validation region are included with weights determined by how
+  // close the hits are to the track projection of the state to the
+  // "hit space".
+  vector<DMatrix5x2> Klist;
+  vector<DMatrix2x1> Mlist;
+  vector<DMatrix2x5> Hlist;
+  vector<DMatrix5x2> HTlist;
+  vector<DMatrix2x2> Vlist;
+  vector<double>probs;
+  vector<unsigned int>used_ids;
+  
+  // use a Gaussian model for the probability for the hit
+  DMatrix2x2 Vtemp=V+H*C*H_T;
+  double chi2_hit=Vtemp.Chi2(Mdiff);
+  double prob_hit=0.;
+  
+  // Add the first hit to the list, cutting out outliers
+  unsigned int id=traj.h_id-1;
+  if (chi2_hit<fdc_chi2cut && my_fdchits[id]->status==good_hit){
+    DMatrix2x2 InvV=Vtemp.Invert();
+
+    prob_hit=exp(-0.5*chi2_hit)/(M_TWO_PI*sqrt(Vtemp.Determinant()));
+    probs.push_back(prob_hit);
+    Vlist.push_back(V);
+    Hlist.push_back(H);
+    HTlist.push_back(H_T);
+    Mlist.push_back(Mdiff);
+    Klist.push_back(C*H_T*InvV); // Kalman gain
+    
+    used_ids.push_back(id);
+    fdc_used_in_fit[id]=true;
+  }
+  // loop over the remaining hits
+  for (unsigned int m=1;m<traj.num_hits;m++){
+    unsigned int my_id=id-m;
+    if (my_fdchits[my_id]->status==good_hit){
+      double u=my_fdchits[my_id]->uwire;
+      double v=my_fdchits[my_id]->vstrip;
+      
+      // Doca to this wire
+      double mydoca=(upred-u)*cosalpha;
+      
+      // variance for coordinate along the wire
+      V(1,1)=my_fdchits[my_id]->vvar*fdc_anneal_factor;
+      
+      // Difference between measurement and projection
+      Mdiff(1)=v-(vpred+mydoca*lorentz_factor);
+      Mdiff(0)=-mydoca;
+      if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){
+	double drift_time=my_fdchits[my_id]->t-mT0-traj.t*TIME_UNIT_CONVERSION;
+	double sign=(doca>0.0)?1.:-1.;
+	if (my_fdchits[my_id]->hit!=NULL){
+	  double drift=sign*fdc_drift_distance(drift_time,traj.B); 
+	  Mdiff(0)+=drift;
+		  
+	  // Variance in drift distance
+	  V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;
+	}
+	else if (USE_TRD_DRIFT_TIMES&&my_fdchits[my_id]->status==trd_hit){ 
+	  double drift = sign*0.1*pow(drift_time/8./0.91,1./1.556);
+	  Mdiff(0)+=drift;
+	  V(0,0)=0.05*0.05;
+	}
+	
+	// H_T contains terms that are proportional to doca, so we only need
+	// to scale the appropriate elements for the current hit.
+	if (fabs(doca)<EPS){
+	  doca=(doca>0)?EPS:-EPS;
+	}
+	double doca_ratio=mydoca/doca;
+	DMatrix5x2 H_T_temp=H_T;
+	H_T_temp(state_tx,1)*=doca_ratio;
+	H_T_temp(state_ty,1)*=doca_ratio;
+	H_T_temp(state_tx,0)*=doca_ratio;
+	H_T_temp(state_ty,0)*=doca_ratio;
+	H=Transpose(H_T_temp);
+
+	// Update error matrix with state vector propagation covariance contrib.
+	Vtemp=V+H*C*H_T_temp;
+	// Cut out outliers and compute probability
+	chi2_hit=Vtemp.Chi2(Mdiff);
+	if (chi2_hit<fdc_chi2cut){
+	  DMatrix2x2 InvV=Vtemp.Invert();
+
+	  prob_hit=exp(-0.5*chi2_hit)/(M_TWO_PI*sqrt(Vtemp.Determinant()));
+	  probs.push_back(prob_hit);	
+	  Mlist.push_back(Mdiff);
+	  Vlist.push_back(V);
+	  Hlist.push_back(H);   
+	  HTlist.push_back(H_T_temp);
+	  Klist.push_back(C*H_T_temp*InvV);	  
+	  
+	  used_ids.push_back(my_id);
+	  fdc_used_in_fit[my_id]=true; 
+	  
+	  // Add some hit info to the update vector for this plane 
+	  fdc_updates[my_id].tdrift=drift_time;
+	  fdc_updates[my_id].tcorr=fdc_updates[my_id].tdrift;
+	  fdc_updates[my_id].doca=mydoca;
+	}
+      }
+    } // check that the hit is "good"
+  } // loop over remaining hits
+  if (probs.size()==0) return;
+
+  double prob_tot=probs[0];
+  for (unsigned int m=1;m<probs.size();m++){
+    prob_tot+=probs[m];
+  }
+
+  if (skip_plane==false){
+    DMatrix5x5 sum=I5x5;
+    DMatrix5x5 sum2;
+    for (unsigned int m=0;m<Klist.size();m++){
+      double my_prob=probs[m]/prob_tot;
+      S+=my_prob*(Klist[m]*Mlist[m]);
+      sum-=my_prob*(Klist[m]*Hlist[m]);
+      sum2+=(my_prob*my_prob)*(Klist[m]*Vlist[m]*Transpose(Klist[m]));
+      
+      // Update chi2
+      DMatrix2x2 HK=Hlist[m]*Klist[m];
+      DMatrix2x1 R=Mlist[m]-HK*Mlist[m];
+      DMatrix2x2 RC=Vlist[m]-HK*Vlist[m];
+      chisq+=my_prob*RC.Chi2(R);
+      
+      unsigned int my_id=used_ids[m];  
+      fdc_updates[my_id].V=RC;
+      
+      if (DEBUG_LEVEL > 25) 
+	{
+	  jout << " Adjusting state vector for FDC hit " << m << " with prob " << my_prob << " S:" << endl;
+	S.Print();
+	}
+    }
+    // Update the covariance matrix C
+    C=sum2.AddSym(sum*C*sum.Transpose());
+	    
+    if (DEBUG_LEVEL > 25) 
+      { jout << " C: " << endl; C.Print();}
+  }
+  
+  // Save some information about the track at this plane in the update vector
+  for (unsigned int m=0;m<Hlist.size();m++){
+    unsigned int my_id=used_ids[m];  
+    fdc_updates[my_id].S=S;
+    fdc_updates[my_id].C=C; 
+    if (skip_plane){
+      fdc_updates[my_id].V=Vlist[m];
+    }
+  }
+  // update number of degrees of freedom
+  if (skip_plane==false){
+    numdof+=2;
+  }
+}

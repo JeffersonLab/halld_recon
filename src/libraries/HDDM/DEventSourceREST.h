@@ -39,6 +39,7 @@
 #include <PID/DParticleID.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
+#include <HDDM/DEventHitStatistics.h>
 #include "DResourcePool.h"
 
 #include <TMatrixF.h>
@@ -92,6 +93,8 @@ class DEventSourceREST:public JEventSource
 #endif
    jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
                     JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
+   jerror_t Extract_DEventHitStatistics(hddm_r::HDDM *record,
+                    JFactory<DEventHitStatistics> *factory);
 
    void Get7x7ErrorMatrix(double mass, const double vec[5], const TMatrixFSym* C5x5, TMatrixFSym* loc7x7ErrorMatrix);
  private:
@@ -108,6 +111,9 @@ class DEventSourceREST:public JEventSource
 	int dDIRCMaxChannels;
 	enum dirc_status_state {GOOD, BAD, NOISY};
 	map<unsigned int, vector<vector<int>>> dDIRCChannelStatusMap; //unsigned int is run number
+	
+	map<unsigned int, DVector2> dBeamCenterMap,dBeamDirMap;
+	map<unsigned int, double> dBeamZ0Map;
 
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;

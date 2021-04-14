@@ -60,6 +60,16 @@ class DApplication:public JApplication{
 		pthread_rwlock_t* GetRootFillLock( JEventProcessor *proc ) {
 			return root_fill_rw_lock.count( proc ) == 0 ? nullptr : root_fill_rw_lock[proc];
 		}
+		
+		// Theses methods allow setting of the JApplication protected
+		// members that are used to keep track of events read and processed.
+		// This is done here since changing the JANA source would require
+		// time to propagate whereas this is motivated by changes to
+		// JEventSourceEVIOpp and can be propagated with those much easier.
+		void SetNEventsRead( uint64_t newval ){ NEvents_read = newval; }
+		void SetNEventsProcessed( uint64_t newval ){ NEvents = newval; }
+		void AddNEventsRead( uint64_t newval ){ NEvents_read += newval; }
+		void AddNEventsProcessed( uint64_t newval ){ NEvents += newval; }
 
 	protected:
 	

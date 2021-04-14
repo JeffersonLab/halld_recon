@@ -135,7 +135,12 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 	vector<const DFCALHit*> fcalhits;
 	locEventLoop->Get(bcalpoints);
 	locEventLoop->Get(fcalhits);
-	DFCALGeometry fcalgeom;
+	const DFCALGeometry *fcalgeom=NULL;
+	locEventLoop->GetSingle(fcalgeom);
+	if (fcalgeom==NULL){
+	  jerr << "FCAL geometry not found!" << endl;
+	  return RESOURCE_UNAVAILABLE;
+	}
 
 	bool isPhysics = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT);
 	if(!isPhysics)
@@ -176,7 +181,7 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 	  int rowhit = fcalhits[jj]->row;
 	  int columnhit = fcalhits[jj]->column;
 	  // printf (" Event=%d, jj=%d, rowhit=%d, columnhit=%d\n",(int)locEventNumber,jj,rowhit,columnhit);
-	  DVector2 pos = fcalgeom.positionOnFace(rowhit,columnhit);
+	  DVector2 pos = fcalgeom->positionOnFace(rowhit,columnhit);
 	  double r = sqrt(pos.X()*pos.X() + pos.Y()*pos.Y());
 	  if (r <= rmin) continue;    // keep only hits that are outside a minimum radius
 

@@ -254,7 +254,7 @@
 		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
 		// helper histograms for the individual columns
 		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
+		// TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
 		for (int i=1; i <= bin_number; i++)
 		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
@@ -269,11 +269,14 @@
 
 		// FCAL LED: FP Bit 3
 		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
+
+                // Don't fill these bits.
 		// BCAL LED: FP Bit 9
-		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
-		locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+                // locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+		// locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
 		// BCAL LED: FP Bit 10
-		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
+                // locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
+
 		// Random Trigger: FP Bit 12
 		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
 		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
@@ -290,7 +293,7 @@
 
 		locHist_Trigger_FP->SetFillColor(kRed-4);
 		locHist_Trigger_FP->Draw("hist same");
-		locHist_Trigger_alt2->Draw("hist same");
+		// locHist_Trigger_alt2->Draw("hist same");
 		locHist_Trigger_alt3->Draw("hist same");
 
 		gPad->SetBottomMargin(0.25);

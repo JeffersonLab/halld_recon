@@ -23,8 +23,11 @@ class DBeamCurrent_factory:public jana::JFactory<DBeamCurrent>{
 			double t_trip_next; // time relative to this boundary of next beam trip
 		}Boundary;
 
+		double BEAM_ON_MIN_PSCOUNTS;
+		bool USE_EPICS_FOR_BEAM_ON;
 		double BEAM_ON_MIN_nA;
 		double BEAM_TRIP_MIN_T;
+		uint32_t SYNCSKIM_ROCID;
 
 		vector<Boundary> boundaries; // key=time  val=Ibeam
 		vector<double> trip;

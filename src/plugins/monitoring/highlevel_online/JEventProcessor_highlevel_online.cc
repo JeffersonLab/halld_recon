@@ -8,6 +8,8 @@ using namespace jana;
 #include <TAGGER/DTAGHHit.h>
 #include <TOF/DTOFHit.h>
 #include <BCAL/DBCALUnifiedHit.h>
+#include <BCAL/DBCALHit.h>
+#include <BCAL/DBCALPoint.h>
 #include <RF/DRFTime.h>
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DCODAEventInfo.h>
@@ -224,7 +226,8 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	
 	dHist_L1bits_gtp = new TH1I("L1bits_gtp", "L1 trig bits from GTP;Trig. bit (1-32)", 34, 0.5, 34.5);
 	dHist_L1bits_fp  = new TH1I("L1bits_fp", "L1 trig bits from FP;Trig. bit (1-32)", 32, 0.5, 32.5);
-
+        // BCAL LED Pseudo Trigger(1200 hits in BCAL) //
+        dHist_L1bits_fp_twelvehundhits  = new TH1I("L1bits_fp_twelvehundhits", "Pseudo-trig bits (FP or >1200 hits);Trig. bit (1-32)", 5, 6.5, 11.5);
 	/****************************************************** NUM RECONSTRUCTED OBJECTS *****************************************************/
 
 	//2D Summary
@@ -402,6 +405,13 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 
 	vector<const DBCALDigiHit*> locBCALDigiHits;
 	locEventLoop->Get(locBCALDigiHits);
+        
+        // BCAL LED Pseudo Trigger//
+        vector<const DBCALHit*> locdbcalhits;
+        locEventLoop->Get(locdbcalhits);
+
+        vector<const DBCALPoint*> locdbcalpoints;
+        locEventLoop->Get(locdbcalpoints);
 
 	vector<const DFCALDigiHit*> locFCALDigiHits;
 	locEventLoop->Get(locFCALDigiHits);
@@ -776,7 +786,50 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 			dHist_NumTriggers->SetTitle(locHistTitle.str().c_str());
 		}
 	}
+        // BCAL LED Pseudo Trigger(1200 hits in BCAL && energy conditions are satisfied) //
+       float Eus=0;
+       float Eds=0;
+     for(unsigned int i=0; i<locdbcalpoints.size(); i++) {
+         const DBCALPoint *point = locdbcalpoints[i];
+         float pointEus = point->E_US();
+               Eus=Eus+pointEus;                 
+         float pointEds = point->E_DS();
+               Eds=Eds+pointEds;            
+        }
 
+        bool LED_US=0, LED_DS=0;
+
+	const DL1Trigger *trig = NULL;
+	try {
+		locEventLoop->GetSingle(trig);
+	} catch (...) {}
+	if (trig) {
+        	if (trig->fp_trig_mask & 0x100){//bit=9
+			// Upstream LED trigger fired
+			//trigUS++;
+			LED_US=1;
+			
+		}
+		if (trig->fp_trig_mask & 0x200){//bit=10
+			// Downstream LED trigger fired
+			//trigDS++;
+			LED_DS=1;
+		
+		}
+            }
+        int pseudo_triggerbit = 0;
+        //Fill pseudo triggerbit histogram if energy conditions are satisfied && number of BCAL hits is > 1200 && FP trigger fails 	
+        if (locdbcalhits.size()>1200){
+        pseudo_triggerbit = 7;
+           }
+        if(Eds>Eus && locdbcalhits.size()>1200. && LED_US==0 && LED_DS==0){
+        pseudo_triggerbit=9;//Upstream Pseudo triggerbit
+        }
+        if(Eus>Eds && locdbcalhits.size()>1200.&& LED_US==0 && LED_DS==0){
+        pseudo_triggerbit=10; //Downstream Pseudo triggerbit
+        }
+
+       dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {
         japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK

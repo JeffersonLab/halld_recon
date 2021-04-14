@@ -96,7 +96,12 @@ class DGeometry{
             double &chi2a_factor,
             double &chi2a_factor2,
             unsigned int &last_index,
-            double *s_to_boundary=NULL) const;
+            double *s_to_boundary=NULL) const; 
+      jerror_t FindMatKalman(const DVector3 &pos,const DVector3 &mom,
+			     double &KrhoZ_overA,
+			     double &rhoZ_overA,double &LnI,double &Z,
+			     unsigned int &last_index,
+			     double *s_to_boundary=NULL) const;
       jerror_t FindMatKalman(const DVector3 &pos,
             double &KrhoZ_overA,
             double &rhoZ_overA,double &LnI,
@@ -104,7 +109,11 @@ class DGeometry{
             double &chi2c_factor,
             double &chi2a_factor,
             double &chi2a_factor2,
-            unsigned int &last_index) const;
+            unsigned int &last_index) const; 
+      jerror_t FindMatKalman(const DVector3 &pos,
+            double &KrhoZ_overA,
+            double &rhoZ_overA,double &LnI,
+            double &Z,unsigned int &last_index) const;
 
       const DMaterialMap::MaterialNode* FindMatNode(DVector3 &pos) const;
       const DMaterialMap* FindDMaterialMap(DVector3 &pos) const;
@@ -164,6 +173,10 @@ class DGeometry{
       bool GetFCALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
+      bool GetFCALInsertRowSize(int &insert_row_size) const;
+      bool GetFCALBlockSize(vector<double> &block) const;
+      bool GetFCALInsertBlockSize(vector<double> &block) const;
+
       bool GetStartCounterGeom(vector<vector<DVector3> >&pos,
             vector<vector<DVector3> >&norm) const; // < vectors containing positions and norm 3-vectors for start counter 
       // There are 30 sets of positions (pos) of points along the 
@@ -175,7 +188,6 @@ class DGeometry{
       // for this paddle is at pos[0][pos[0].size()-1].  The bend
       // region is modeled by many closely-spaced points starting 
       // after pos[0][1].
-
 
       vector<DMaterialMap*> GetMaterialMapVector(void) const;
 

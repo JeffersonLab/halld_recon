@@ -166,6 +166,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 	//INIT
 	dSourceComboP4Handler = new DSourceComboP4Handler(nullptr, false);
 	dSourceComboTimeHandler = new DSourceComboTimeHandler(nullptr, nullptr, nullptr);
+	
 
 	auto locInputTuple = Parse_Input();
 	auto locReactions = Create_Reactions(locInputTuple);
@@ -190,9 +191,21 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 			_data.push_back(locReaction); //Register the DReaction with the factory
 			continue;
 		}
-
+		
+		// OTHER OPTIONAL CUTS
+		if(dFlightSignificanceCut>0.) {
+			auto locDecayingPIDs = locReaction->Get_DecayingPIDs();
+			for(auto locPID : locDecayingPIDs) {
+				stringstream ss;
+				ss << "FltDist" << dFlightSignificanceCut << "Cut_" << locPID;
+				locReaction->Add_AnalysisAction(new DCutAction_FlightSignificance(locReaction, true, dFlightSignificanceCut, locPID, ss.str()));
+			}
+		}
+		
 		// KINEMATIC FIT
 		locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+		if(dKinFitChiSqCut > 0.)
+			locReaction->Add_AnalysisAction(new DCutAction_KinFitChiSq(locReaction, dKinFitChiSqCut));
 
 		//POST-KINFIT PID CUTS
 		Add_PostKinfitTimingCuts(locReaction);
@@ -205,7 +218,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 				Add_MassHistograms(locReaction, true, "PostKinFit_KinFit"); //true: kinfit
 		}
 
-		// KINEMATICS
+		// KINEMATICS & OTHER INFO
 		locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, true));
 
 		_data.push_back(locReaction); //Register the DReaction with the factory

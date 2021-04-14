@@ -12,8 +12,10 @@
 
 #include <JANA/JEventProcessor.h>
 
+#include <TFile.h>
 #include <TTree.h>
 #include <SyncEvent.h>
+#include <ConversionParms.h>
 
 class JEventProcessor_syncskim:public jana::JEventProcessor{
 	public:
@@ -22,7 +24,12 @@ class JEventProcessor_syncskim:public jana::JEventProcessor{
 		const char* className(void){return "JEventProcessor_syncskim";}
 
 		SyncEvent synevt;
+		ConversionParms convparms;
+		TFile *file;
 		TTree *tree;
+		TTree *conversion_tree;
+		
+		uint32_t SYNCSKIM_ROCID;
 
 		// Values to do linear regression to find slope and intercept correlating
 		// 250MHz clock time to unix timestamp

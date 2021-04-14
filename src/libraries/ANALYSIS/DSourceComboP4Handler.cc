@@ -441,7 +441,7 @@ void DSourceComboP4Handler::Create_CutFunctions(void)
 		//These functions can have the same name because we are no longer adding them to the global ROOT list of functions
 
 		//low-side
-		auto locFunc_Low = new TF1("df_MissingMassSquaredCut", locCutFuncString_Low.c_str(), 0.0, 12.0);
+		auto locFunc_Low = new TF1("df_MissingMassSquaredCut", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 		if(dPrintCutFlag)
 			jout << "Missing Mass Squared Cut, Low-side: PID, func form, params: " << ParticleType(locPIDPair.first) << ", " << locCutFuncString_Low;
 		for(size_t loc_i = 0; loc_i < locParamVector_Low.size(); ++loc_i)
@@ -454,7 +454,7 @@ void DSourceComboP4Handler::Create_CutFunctions(void)
 			jout << endl;
 
 		//High-side
-		auto locFunc_High = new TF1("df_MissingMassSquaredCut", locCutFuncString_High.c_str(), 0.0, 12.0);
+		auto locFunc_High = new TF1("df_MissingMassSquaredCut", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 		if(dPrintCutFlag)
 			jout << "Missing Mass Squared Cut, High-side: PID, func form, params: " << ParticleType(locPIDPair.first) << ", " << locCutFuncString_High;
 		for(size_t loc_i = 0; loc_i < locParamVector_High.size(); ++loc_i)
@@ -475,7 +475,7 @@ void DSourceComboP4Handler::Create_CutFunctions(void)
 	auto locCutFuncString_High = dMissingEnergyCuts_TF1FunctionStrings.second; //default if nothing special specified
 
 	//low-side
-	auto locFunc_Low = new TF1("df_MissingBeamEnergyCut", locCutFuncString_Low.c_str(), 0.0, 12.0);
+	auto locFunc_Low = new TF1("df_MissingBeamEnergyCut", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 	if(dPrintCutFlag)
 		jout << "Missing Energy Cut (none-missing only), Low-side: func form, params: " << locCutFuncString_Low;
 	for(size_t loc_i = 0; loc_i < dMissingEnergyCuts_TF1Params.first.size(); ++loc_i)
@@ -488,7 +488,7 @@ void DSourceComboP4Handler::Create_CutFunctions(void)
 		jout << endl;
 
 	//High-side
-	auto locFunc_High = new TF1("df_MissingBeamEnergyCut", locCutFuncString_High.c_str(), 0.0, 12.0);
+	auto locFunc_High = new TF1("df_MissingBeamEnergyCut", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 	if(dPrintCutFlag)
 		jout << "Missing Energy Cut (none-missing only), High-side: func form, params: " << locCutFuncString_High;
 	for(size_t loc_i = 0; loc_i < dMissingEnergyCuts_TF1Params.second.size(); ++loc_i)
@@ -713,7 +713,7 @@ DLorentzVector DSourceComboP4Handler::Calc_MassiveNeutralP4(const DNeutralShower
 	locPath.SetMag(locPMag); //is now the momentum!
 
 	if(dDebugLevel >= 20)
-		cout << "Calc_MassiveNeutralP4: pid, mass, shower-z, vertex-z, path, shower t, rf t, delta-t, beta, pmag = " << locPID << ", " << locMass << ", " << locNeutralShower->dSpacetimeVertex.Vect().Z() << ", " << locVertex.Z() << ", " << locPathMag << ", " << locNeutralShower->dSpacetimeVertex.T() << ", " << locRFVertexTime << ", " << locDeltaT << ", " << locBeta << ", " << locPMag << endl;
+		cout << "Calc_MassiveNeutralP4: pid, mass, shower-z, vertex-z, path, shower t, rf t, delta-t, beta, pmag, shower E = " << locPID << ", " << locMass << ", " << locNeutralShower->dSpacetimeVertex.Vect().Z() << ", " << locVertex.Z() << ", " << locPathMag << ", " << locNeutralShower->dSpacetimeVertex.T() << ", " << locRFVertexTime << ", " << locDeltaT << ", " << locBeta << ", " << locPMag << ", " << locNeutralShower->dEnergy << endl;
 
 	auto locEnergy = sqrt(locPMag*locPMag + locMass*locMass);
 	return DLorentzVector(locPath, locEnergy);
