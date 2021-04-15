@@ -82,6 +82,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_TrackTimeBased(const DTrackTimeBased* locTrackTimeBased){dTrackingInfo->dTrackTimeBased = locTrackTimeBased;}
 		void Set_ChiSq_DCdEdx(double locChiSq, unsigned int locNDF);
 		void Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF);
+		void Set_dEdx_CDC_amp(double locCDCdEdx_amp);
+		void Set_dEdx_CDC_int(double locCDCdEdx_int);
 
 		//Match params
 		void Set_SCHitMatchParams(shared_ptr<const DSCHitMatchParams> locMatchParams){dTrackingInfo->dSCHitMatchParams = locMatchParams;}
@@ -342,6 +344,16 @@ inline void DChargedTrackHypothesis::Set_ChiSq_DCdEdx(double locChiSq, unsigned 
 {
 	dTrackingInfo->dChiSq_DCdEdx = locChiSq;
 	dTrackingInfo->dNDF_DCdEdx = locNDF;
+}
+
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_amp(double locCDCdEdx_amp)
+{
+	dTrackingInfo->ddEdx_CDC_amp = locCDCdEdx_amp;
+}
+
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_int(double locCDCdEdx_int)
+{
+	dTrackingInfo->ddEdx_CDC_int = locCDCdEdx_int;
 }
 
 inline void DChargedTrackHypothesis::Set_ChiSq_Overall(double locChiSq, unsigned int locNDF, double locFOM)

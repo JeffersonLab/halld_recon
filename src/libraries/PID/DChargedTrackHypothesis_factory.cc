@@ -178,6 +178,10 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 
 	locChargedTrackHypothesis->setErrorMatrix(locCovarianceMatrix);
 
+	//CDC dEdx (so far without correction)
+	locChargedTrackHypothesis->Set_dEdx_CDC_amp(locTrackTimeBased->ddEdx_CDC_amp);
+	locChargedTrackHypothesis->Set_dEdx_CDC_int(locTrackTimeBased->ddEdx_CDC);
+
 	//Calculate PID ChiSq, NDF, FOM
 	locChargedTrackHypothesis->Set_TimeAtPOCAToVertex(locChargedTrackHypothesis->time());
 	dPIDAlgorithm->Calc_ChargedPIDFOM(locChargedTrackHypothesis);
