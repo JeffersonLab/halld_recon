@@ -492,7 +492,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
  
 
   // Position and momentum
-  DVector3 pos,mom;
+  //DVector3 pos,mom;
   // flight time and t0 for the event
   //double tflight=0.;
   //double t0=track->t0();
@@ -510,6 +510,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
     for (unsigned int i=0;i<cdchits.size();i++){ 
       if (cdchits[i]->dE <= 0.0) continue; // pedestal > signal
       
+      DVector3 pos,mom;
       double doca2_old=1e6;
       for (unsigned int j=0;j<cdc_extrapolations.size();j++){
 	double z=cdc_extrapolations[j].position.z();
@@ -552,7 +553,7 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
       for (unsigned int j=0;j<fdc_extrapolations.size();j++){
 	double z=fdc_extrapolations[j].position.z();
 	if (fabs(z-fdchits[i]->wire->origin.z())<0.5){
-	  mom=fdc_extrapolations[j].momentum;
+	  DVector3 mom(fdc_extrapolations[j].momentum);
 	  double gas_thickness = 1.0; // cm
 	  dEdxHits_FDC.push_back(dedx_t(fdchits[i]->dE,fdchits[i]->dE_amp,
 					gas_thickness/cos(mom.Theta()), 
