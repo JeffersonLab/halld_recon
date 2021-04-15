@@ -1,3 +1,12 @@
+#include "dilog.h"
+#include <sstream>
+#include <TH1I.h>
+#include <TH2I.h>
+extern std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH1I(N,T,NX,X1,X2) (TH1I*)(dilog_handle = new TH1I(N,T,NX,X1,X2))
+#define new_TH2I(N,T,NX,X1,X2,NY,Y1,Y2) (TH2I*)(dilog_handle = new TH2I(N,T,NX,X1,X2,NY,Y1,Y2))
+
 #include "ANALYSIS/DHistogramActions.h"
 
 void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
@@ -25,6 +34,7 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 			locParticleName = ParticleType(locPID);
 			locParticleROOTName = ParticleName_ROOT(locPID);
 			CreateAndChangeTo_Directory(locParticleName, locParticleName);
+dilog::block dilog_pid(dilog_eventNo.str(), "pid " + locParticleName);
 
 			if(ParticleCharge(locPID) == 0 && Is_FinalStateParticle(locPID))
 			{
@@ -356,19 +366,23 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				
 				locHistName = string("NumPhotons_") + locParticleName;
 				locHistTitle = locParticleROOTName + string("; DIRC NumPhotons");
-				dHistMap_NumPhotons_DIRC[locPID] = new TH1I(locHistName.c_str(), locHistTitle.c_str(), dDIRCNumPhotonsBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons);
+				dHistMap_NumPhotons_DIRC[locPID] = new_TH1I(locHistName.c_str(), locHistTitle.c_str(), dDIRCNumPhotonsBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				
 				locHistName = string("ThetaCVsP_") + locParticleName;
 				locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC #theta_{C}");
-				dHistMap_ThetaCVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCThetaCBins, dDIRCMinThetaC, dDIRCMaxThetaC);
+				dHistMap_ThetaCVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCThetaCBins, dDIRCMinThetaC, dDIRCMaxThetaC);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				
 				locHistName = string("Ldiff_kpiVsP_") + locParticleName;
 				locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC L_{K}-L_{#pi}");
-				dHistMap_Ldiff_kpiVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+				dHistMap_Ldiff_kpiVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				
 				locHistName = string("Ldiff_pkVsP_") + locParticleName;
 				locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC L_{p}-L_{K}");
-				dHistMap_Ldiff_pkVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+				dHistMap_Ldiff_pkVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 				gDirectory->cd("..");
 			} //end of charged

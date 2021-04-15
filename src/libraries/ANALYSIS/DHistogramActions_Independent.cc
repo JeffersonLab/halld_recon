@@ -1,3 +1,15 @@
+#include "dilog.h"
+#include <sstream>
+#include <TH1F.h>
+#include <TH1I.h>
+#include <TH2I.h>
+#include <TH2D.h>
+extern std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH1F(N,T,NX,X1,X2) (TH1F*)(dilog_handle = new TH1F(N,T,NX,X1,X2))
+#define new_TH1I(N,T,NX,X1,X2) (TH1I*)(dilog_handle = new TH1I(N,T,NX,X1,X2))
+#define new_TH2I(N,T,NX,X1,X2,NY,Y1,Y2) (TH2I*)(dilog_handle = new TH2I(N,T,NX,X1,X2,NY,Y1,Y2))
+#define new_TH2D(N,T,NX,X1,X2,NY,Y1,Y2) (TH2D*)(dilog_handle = new TH2D(N,T,NX,X1,X2,NY,Y1,Y2))
 
 #include <unistd.h>
 
@@ -19,8 +31,10 @@ void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 	{
 		CreateAndChangeTo_ActionDirectory();
 
-		dVirtualMemoryVsEventNumber = new TH1F("VirtualMemoryVsEventNumber", ";Event Counter;Virtual Memory (MB)", dMaxNumEvents, 0.5, (double)dMaxNumEvents + 0.5);
-		dResidentMemoryVsEventNumber = new TH1F("ResidentMemoryVsEventNumber", ";Event Counter;Resident Memory (MB)", dMaxNumEvents, 0.5, (double)dMaxNumEvents + 0.5);
+		dVirtualMemoryVsEventNumber = new_TH1F("VirtualMemoryVsEventNumber", ";Event Counter;Virtual Memory (MB)", dMaxNumEvents, 0.5, (double)dMaxNumEvents + 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH1F at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
+		dResidentMemoryVsEventNumber = new_TH1F("ResidentMemoryVsEventNumber", ";Event Counter;Resident Memory (MB)", dMaxNumEvents, 0.5, (double)dMaxNumEvents + 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH1F at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 		// Total Memory
 		string locHistName = "TotalMemory";
@@ -1859,6 +1873,7 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 			Particle_t locPID = dFinalStatePIDs[loc_i];
 			string locParticleName = ParticleType(locPID);
 			string locParticleROOTName = ParticleName_ROOT(locPID);
+dilog::block dilog_pid(dilog_eventNo.str(), "pid " + locParticleName);
 
 			//SC
 			CreateAndChangeTo_Directory("SC", "SC");
@@ -2021,19 +2036,23 @@ void DHistogramAction_DetectorPID::Initialize(JEventLoop* locEventLoop)
 			
 			locHistName = string("NumPhotons_") + locParticleName;
 			locHistTitle = locParticleROOTName + string("; DIRC NumPhotons");
-			dHistMap_NumPhotons_DIRC[locPID] = new TH1I(locHistName.c_str(), locHistTitle.c_str(), dDIRCNumPhotonsBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons);
+			dHistMap_NumPhotons_DIRC[locPID] = new_TH1I(locHistName.c_str(), locHistTitle.c_str(), dDIRCNumPhotonsBins, dDIRCMinNumPhotons, dDIRCMaxNumPhotons);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			
 			locHistName = string("ThetaCVsP_") + locParticleName;
 			locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC #theta_{C}");
-			dHistMap_ThetaCVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCThetaCBins, dDIRCMinThetaC, dDIRCMaxThetaC);
+			dHistMap_ThetaCVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCThetaCBins, dDIRCMinThetaC, dDIRCMaxThetaC);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			
 			locHistName = string("Ldiff_kpiVsP_") + locParticleName;
 			locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC L_{K}-L_{#pi}");
-			dHistMap_Ldiff_kpiVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+			dHistMap_Ldiff_kpiVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 			locHistName = string("Ldiff_pkVsP_") + locParticleName;
 			locHistTitle = locParticleROOTName + string("; Momentum (GeV); DIRC L_{p}-L_{K}");
-			dHistMap_Ldiff_pkVsP_DIRC[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+			dHistMap_Ldiff_pkVsP_DIRC[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), dNum2DPBins, dMinP, dMaxP, dDIRCLikelihoodBins, -1*dDIRCMaxLikelihood, dDIRCMaxLikelihood);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 			gDirectory->cd("..");
 		}
@@ -3446,7 +3465,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumHighLevelObjects = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
 		else
 		{
-			dHist_NumHighLevelObjects = new TH2D(locHistName.c_str(), ";;# Objects / Event", 14, 0.5, 14.5, dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+			dHist_NumHighLevelObjects = new_TH2D(locHistName.c_str(), ";;# Objects / Event", 14, 0.5, 14.5, dMaxNumObjects + 1, -0.5, (float)dMaxNumObjects + 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(1, "DRFTime");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(2, "DSCHit");
 			dHist_NumHighLevelObjects->GetXaxis()->SetBinLabel(3, "DTOFPoint");
@@ -3834,7 +3854,8 @@ void DHistogramAction_TrackMultiplicity::Initialize(JEventLoop* locEventLoop)
 			dHist_NumReconstructedParticles = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
 		else
 		{
-			dHist_NumReconstructedParticles = new TH2D("NumReconstructedParticles", ";Particle Type;Num Particles / Event", 5 + dFinalStatePIDs.size(), -0.5, 4.5 + dFinalStatePIDs.size(), dMaxNumTracks + 1, -0.5, (float)dMaxNumTracks + 0.5);
+			dHist_NumReconstructedParticles = new_TH2D("NumReconstructedParticles", ";Particle Type;Num Particles / Event", 5 + dFinalStatePIDs.size(), -0.5, 4.5 + dFinalStatePIDs.size(), dMaxNumTracks + 1, -0.5, (float)dMaxNumTracks + 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			dHist_NumReconstructedParticles->GetXaxis()->SetBinLabel(1, "# Total");
 			dHist_NumReconstructedParticles->GetXaxis()->SetBinLabel(2, "# q != 0");
 			dHist_NumReconstructedParticles->GetXaxis()->SetBinLabel(3, "# q = 0");
@@ -3852,7 +3873,8 @@ void DHistogramAction_TrackMultiplicity::Initialize(JEventLoop* locEventLoop)
 			dHist_NumGoodReconstructedParticles = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
 		else
 		{
-			dHist_NumGoodReconstructedParticles = new TH2D("NumGoodReconstructedParticles", ";Particle Type;Num Particles / Event", 5 + dFinalStatePIDs.size(), -0.5, 4.5 + dFinalStatePIDs.size(), dMaxNumTracks + 1, -0.5, (float)dMaxNumTracks + 0.5);
+			dHist_NumGoodReconstructedParticles = new_TH2D("NumGoodReconstructedParticles", ";Particle Type;Num Particles / Event", 5 + dFinalStatePIDs.size(), -0.5, 4.5 + dFinalStatePIDs.size(), dMaxNumTracks + 1, -0.5, (float)dMaxNumTracks + 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			dHist_NumGoodReconstructedParticles->GetXaxis()->SetBinLabel(1, "# Total");
 			dHist_NumGoodReconstructedParticles->GetXaxis()->SetBinLabel(2, "# q != 0");
 			dHist_NumGoodReconstructedParticles->GetXaxis()->SetBinLabel(3, "# q = 0");
@@ -4004,7 +4026,8 @@ void DHistogramAction_TriggerStudies::Initialize(JEventLoop* locEventLoop)
 			dHist_Trigger_FCALBCAL_Energy = static_cast<TH2D*>(gDirectory->Get(locHistName.c_str()));
 		else
 		{
-			dHist_Trigger_FCALBCAL_Energy = new TH2D("Trigger_BCALFCAL_Energy", ";GTP FCAL Energy [GeV] / 5 MeV;GTP BCAL Energy [GeV] / 5 MeV", dFCALBins, 0, dMaxFCALEnergy, dBCALBins, 0, dMaxBCALEnergy);
+			dHist_Trigger_FCALBCAL_Energy = new_TH2D("Trigger_BCALFCAL_Energy", ";GTP FCAL Energy [GeV] / 5 MeV;GTP BCAL Energy [GeV] / 5 MeV", dFCALBins, 0, dMaxFCALEnergy, dBCALBins, 0, dMaxBCALEnergy);
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 		}
 
 		//Return to the base directory

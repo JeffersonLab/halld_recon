@@ -9,6 +9,17 @@
 #include "vt_user.h"
 #endif
 
+#include "dilog.h"
+#include <sstream>
+#include <TH1D.h>
+#include <TH2D.h>
+extern std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH1D(N,T,NX,X1,X2) (TH1D*)(dilog_handle = new TH1D(N,T,NX,X1,X2))
+#define new_TH1D_4(N,T,NX,XB) (TH1D*)(dilog_handle = new TH1D(N,T,NX,XB))
+#define new_TH2D(N,T,NX,X1,X2,NY,Y1,Y2) (TH2D*)(dilog_handle = new TH2D(N,T,NX,X1,X2,NY,Y1,Y2))
+#define new_TH2D_7(N,T,NX,X1,X2,NY,YB) (TH2D*)(dilog_handle = new TH2D(N,T,NX,X1,X2,NY,YB))
+
 #include "DAnalysisResults_factory.h"
 
 //------------------
@@ -162,6 +173,7 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 			auto locActions = locReaction->Get_AnalysisActions();
 			auto locKinFitType = locReaction->Get_KinFitType();
 
+dilog::block(dilog_eventNo.str(), "reaction " + locReactionName);
 			//Get names for histograms
 			vector<string> locActionNames;
 			bool locPreKinFitFlag = true;
@@ -198,7 +210,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 				}
 				locBinArray[54] = 1.0E6;
 				locHistTitle = locReactionName + string(";# Particle Combinations;# Events");
-				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), 54, locBinArray);
+				loc1DHist = new_TH1D_4(locHistName.c_str(), locHistTitle.c_str(), 54, locBinArray);
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				delete[] locBinArray;
 			}
 			dHistMap_NumParticleCombos[locReaction] = loc1DHist;
@@ -208,7 +221,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 			if(loc1DHist == NULL)
 			{
 				locHistTitle = locReactionName + string(";;# Events Survived Action");
-				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5); //+2 for input & # tracks
+				loc1DHist = new_TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5); //+2 for input & # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				loc1DHist->GetXaxis()->SetBinLabel(1, "Input"); // a new event
 				loc1DHist->GetXaxis()->SetBinLabel(2, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 				int locStartIndex = 0;
@@ -230,7 +244,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 				if(loc2DHist == NULL)
 				{
 					locHistTitle = locReactionName + string(";;# Events Survived Action");
-					loc2DHist = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5,  30, 6., 12.); //+2 for input & # tracks
+					loc2DHist = new_TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 2 + (int)dIsMCFlag, -0.5, locActionNames.size() + 2 + (int)dIsMCFlag + .0 - 0.5,  30, 6., 12.); //+2 for input & # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 					loc2DHist->GetXaxis()->SetBinLabel(1, "Input"); // a new event
 					loc2DHist->GetXaxis()->SetBinLabel(2, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 					loc2DHist->GetXaxis()->SetBinLabel(3, "Passed Physics Trigger"); // satisfied physics trigger requirements
@@ -244,7 +259,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 				if(loc1DHist == NULL)
 				{
 					locHistTitle = locReactionName + string(";;# Events Where True Combo Survived Action");
-					loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5); //+1 for # tracks
+					loc1DHist = new_TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5); //+1 for # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 					loc1DHist->GetXaxis()->SetBinLabel(1, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 					loc1DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
 					for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
@@ -257,7 +273,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 				if(loc2DHist == NULL)
 				{
 					locHistTitle = locReactionName + string(";;# Events Where True Combo Survived Action");
-					loc2DHist = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5, 30, 6., 12.); //+1 for # tracks
+					loc2DHist = new_TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1.0 - 0.5, 30, 6., 12.); //+1 for # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 					loc2DHist->GetXaxis()->SetBinLabel(1, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 					loc2DHist->GetXaxis()->SetBinLabel(2, "Passed Physics Trigger"); // satisfied physics trigger requirements
 					for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
@@ -279,7 +296,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 				locBinArray[54] = 1.0E6;
 
 				locHistTitle = locReactionName + string(";;# Particle Combos Survived Action");
-				loc2DHist = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1 - 0.5, 54, locBinArray); //+1 for # tracks
+				loc2DHist = new_TH2D_7(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1 - 0.5, 54, locBinArray); //+1 for # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				delete[] locBinArray;
 				loc2DHist->GetXaxis()->SetBinLabel(1, "Has Particle Combos"); // at least one DParticleCombo object before any actions
 				for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
@@ -292,7 +310,8 @@ void DAnalysisResults_factory::Make_ControlHistograms(vector<const DReaction*>& 
 			if(loc1DHist == NULL)
 			{
 				locHistTitle = locReactionName + string(";;# Particle Combos Survived Action");
-				loc1DHist = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1 - 0.5); //+1 for # tracks
+				loc1DHist = new_TH1D(locHistName.c_str(), locHistTitle.c_str(), locActionNames.size() + 1, -0.5, locActionNames.size() + 1 - 0.5); //+1 for # tracks
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				loc1DHist->GetXaxis()->SetBinLabel(1, "Combos Constructed"); // at least one DParticleCombo object before any actions
 				for(size_t loc_j = 0; loc_j < locActionNames.size(); ++loc_j)
 					loc1DHist->GetXaxis()->SetBinLabel(2 + loc_j, locActionNames[loc_j].c_str());

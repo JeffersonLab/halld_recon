@@ -39,7 +39,7 @@ class DSourceComboTimeHandler
 	public:
 		DSourceComboTimeHandler(void) = delete;
 		DSourceComboTimeHandler(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer);
-		~DSourceComboTimeHandler(void){Fill_Histograms();}
+		~DSourceComboTimeHandler(void) {}
 		void Set_RunDependent_Data(JEventLoop *locEventLoop);
 
 		//SETUP

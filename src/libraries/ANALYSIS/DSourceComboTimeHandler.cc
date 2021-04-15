@@ -1,3 +1,10 @@
+#include "dilog.h"
+#include <sstream>
+#include <TH1D.h>
+extern std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH2I(N,T,NX,X1,X2,NY,Y1,Y2) (TH2I*)(dilog_handle = new TH2I(N,T,NX,X1,X2,NY,Y1,Y2))
+
 #include "ANALYSIS/DSourceComboTimeHandler.h"
 #include "ANALYSIS/DSourceComboer.h"
 #include "ANALYSIS/DSourceComboVertexer.h"
@@ -303,6 +310,7 @@ void DSourceComboTimeHandler::Create_CutFunctions(void)
 	//No idea why this lock is necessary, but it crashes without it.  Stupid ROOT. 
 	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
+dilog::block dilog_combo(dilog_eventNo.str(), "create_cuts");
 	for(auto& locPIDPair : dPIDTimingCuts_TF1Params)
 	{
 		auto& locSystemMap = locPIDPair.second;
@@ -450,6 +458,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 		for(auto locPID : locPIDs)
 		{
 			auto locPIDString = string((locPID != Unknown) ? ParticleType(locPID) : "Photons_PreVertex");
+dilog::block dilog_pid(dilog_eventNo.str(), "pid " + locPIDString);
 
 			locDirName = locPIDString;
 			locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
@@ -462,13 +471,15 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 			{
 				if(locPID != Gamma)
 				{
+dilog::block dilog_sys(dilog_eventNo.str(), "system " + string(SystemName(locSystem)));
 					auto locHistName = string("All_RFDeltaTVsP_") + string(SystemName(locSystem));
 					auto locHist = gDirectory->Get(locHistName.c_str());
 					if(locHist == nullptr)
 					{
 						auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 						locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - All RFs}");
-						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
+						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 					}
 					else
 						dHistMap_RFDeltaTVsP_AllRFs[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -482,7 +493,8 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 				{
 					auto locHistTitle = string((locPID != Unknown) ? ParticleName_ROOT(locPID) : "Photons_PreVertex");
 					locHistTitle += string(" Candidates, ") + string(SystemName(locSystem)) + string(";p (GeV/c);#Deltat_{Particle - Best RF}");
-					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
+					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 1400, -7.0, 7.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				}
 				else
 					dHistMap_RFDeltaTVsP_BestRF[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -495,8 +507,10 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 		//Beam-RF delta-t
 		string locHistName = "BeamRFDeltaTVsBeamE";
 		auto locHist = gDirectory->Get(locHistName.c_str());
-		if(locHist == nullptr)
-			dHist_BeamRFDeltaTVsBeamE = new TH2I(locHistName.c_str(), ";Beam Energy;#Deltat_{Beam - RF}", 400, 0.0, 12.0, 3600, -18.0, 18.0);
+		if(locHist == nullptr) {
+			dHist_BeamRFDeltaTVsBeamE = new_TH2I(locHistName.c_str(), ";Beam Energy;#Deltat_{Beam - RF}", 400, 0.0, 12.0, 3600, -18.0, 18.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
+        }
 		else
 			dHist_BeamRFDeltaTVsBeamE = static_cast<TH2*>(locHist);
 
@@ -570,19 +584,28 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 
 	//DETERMINE WHICH RF BUNCHES ARE VALID
 	//FCAL: at target center
-	for(const auto& locShower : locFCALShowers)
+	for(const auto& locShower : locFCALShowers) {
+dilog::block dilog_combo(dilog_eventNo.str(), "fcal_shower");
+dilog::get(dilog_eventNo.str()).printf("calling Calc_PhotonBeamBunchShifts with zbin %d", int(locFCALZBin));
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locFCALZBin][locShower], dInitialEventRFBunch->dTime, locFCALZBin);
+    }
 	
-	for(const auto& locShower : locCCALShowers)
+	for(const auto& locShower : locCCALShowers) {
+dilog::block dilog_combo(dilog_eventNo.str(), "ccal_shower");
+dilog::get(dilog_eventNo.str()).printf("calling Calc_PhotonBeamBunchShifts with zbin %d", int(locCCALZBin));
 		Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[locCCALZBin][locShower], dInitialEventRFBunch->dTime, locCCALZBin);
+    }
 
 	//BCAL + FCAL: in vertex-z bins
 	for(size_t loc_i = 0; loc_i < dNumPhotonVertexZBins; ++loc_i)
 	{
 		//propagate RF time to vertex position
 		double locPropagatedRFTime = dInitialEventRFBunch->dTime + (Get_PhotonVertexZBinCenter(loc_i) - dTargetCenter.Z())/SPEED_OF_LIGHT;
-		for(const auto& locShower : locBCALShowers)
+		for(const auto& locShower : locBCALShowers) {
+dilog::block dilog_combo(dilog_eventNo.str(), "bcal_shower");
+dilog::get(dilog_eventNo.str()).printf("calling Calc_PhotonBeamBunchShifts with zbin %d", int(loc_i));
 			Calc_PhotonBeamBunchShifts(locShower, dPhotonKinematics[loc_i][locShower], locPropagatedRFTime, loc_i);
+        }
 	}
 
 	//sort the by-bunch-by-zbin shower vectors (will do unions later), and remove duplicate BCAL entries in the z-unknown vector
@@ -678,6 +701,7 @@ void DSourceComboTimeHandler::Calc_PhotonBeamBunchShifts(const DNeutralShower* l
 
 vector<int> DSourceComboTimeHandler::Calc_BeamBunchShifts(double locVertexTime, double locOrigRFBunchPropagatedTime, double locDeltaTCut, bool locIncludeDecayTimeOffset, Particle_t locPID, DetectorSystem_t locSystem, double locP)
 {
+dilog::block dilog_combo(dilog_eventNo.str(), "beam_bunch_shifts");
 	if(dDebugLevel >= 10)
 		cout << "DSourceComboTimeHandler::Calc_BeamBunchShifts(): PID, system, period, orig rf time, particle vertex time, orig prop rf time, delta-t cut, include offset: " << locPID << ", " << SystemName(locSystem) << ", " << dBeamBunchPeriod << ", " << dInitialEventRFBunch->dTime << ", " << locVertexTime << ", " << locOrigRFBunchPropagatedTime << ", " << locDeltaTCut << ", " << locIncludeDecayTimeOffset << endl;
 	auto locOrigNumShifts = Calc_RFBunchShift(locOrigRFBunchPropagatedTime, locVertexTime); //get best shift
@@ -810,6 +834,8 @@ bool DSourceComboTimeHandler::Select_RFBunches_Charged(const DReactionVertexInfo
 		auto locChargedParticles = DAnalysis::Get_SourceParticles_ThisVertex(locVertexPrimaryCombo);
 		for(const auto& locParticlePair : locChargedParticles)
 		{
+dilog::block dilog_charged(dilog_eventNo.str(), "build_rf_charged");
+dilog::get(dilog_eventNo.str()).printf("calling GetRFBunches_ChargedTrack on pid %d", (int)locParticlePair.first);
 			auto locChargedHypo = static_cast<const DChargedTrack*>(locParticlePair.second)->Get_Hypothesis(locParticlePair.first);
 			vector<int> locParticleRFBunches;
 			if(!Get_RFBunches_ChargedTrack(locChargedHypo, locIsProductionVertex, locVertexPrimaryCombo, locIsCombo2ndVertex, locVertex, locPropagatedRFTime, locOnlyTrackFlag, !locIsProductionVertex, locParticleRFBunches))
@@ -1375,6 +1401,11 @@ bool DSourceComboTimeHandler::Cut_Timing_MissingMassVertices(const DReactionVert
 
 void DSourceComboTimeHandler::Fill_Histograms(void)
 {
+static std::string last_event;
+if (last_event == dilog_eventNo.str())
+   dilog_eventNo.str("event_XXX");
+else
+   last_event = dilog_eventNo.str();
 	japp->WriteLock("DSourceComboTimeHandler");
 	{
 		for(auto& locDeltaTPair : dBeamRFDeltaTs)
@@ -1402,15 +1433,21 @@ void DSourceComboTimeHandler::Fill_Histograms(void)
 			auto locPIDIterator = dHistMap_RFDeltaTVsP_AllRFs.find(locPIDPair.first);
 			if(locPIDIterator == dHistMap_RFDeltaTVsP_AllRFs.end())
 				continue;
+dilog::block dilog_pid(dilog_eventNo.str(), "pid");
 			for(auto& locSystemPair : locPIDPair.second)
 			{
 				auto locSystemIterator = locPIDIterator->second.find(locSystemPair.first);
 				if(locSystemIterator == locPIDIterator->second.end())
 					continue;
 
+dilog::block dilog_sys(dilog_eventNo.str(), "sys");
 				auto& locAllHist = locSystemIterator->second;
-				for(auto& locVectorPair : locSystemPair.second) //best vector
+dilog::get(dilog_eventNo.str()).printf("loop over dAllRFDeltaTs vector has %d elements", locSystemPair.second.size());
+				for(auto& locVectorPair : locSystemPair.second) {//best vector
+dilog::block dilog_sys(dilog_eventNo.str(), "RF");
+dilog::get(dilog_eventNo.str()).printf("dHistMap_RFDeltaTVsP_AllRFs[%s][%s]=%f",ParticleType(locPIDPair.first),SystemName(locSystemPair.first),locVectorPair.second);
 					locAllHist->Fill(locVectorPair.first, locVectorPair.second);
+                }
 			}
 		}
 	}

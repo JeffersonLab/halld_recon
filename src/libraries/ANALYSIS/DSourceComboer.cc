@@ -1,3 +1,14 @@
+#include "dilog.h"
+#include <sstream>
+#include <TH1D.h>
+#include <TH2I.h>
+#include <TH2D.h>
+std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH2I(N,T,NX,X1,X2,NY,Y1,Y2) (TH2I*)(dilog_handle = new TH2I(N,T,NX,X1,X2,NY,Y1,Y2))
+#define new_TH1D(N,T,NX,X1,X2) (TH1D*)(dilog_handle = new TH1D(N,T,NX,X1,X2))
+#define new_TH2D(N,T,NX,X1,X2,NY,Y1,Y2) (TH2D*)(dilog_handle = new TH2D(N,T,NX,X1,X2,NY,Y1,Y2))
+
 #include "ANALYSIS/DSourceComboer.h"
 #include "ANALYSIS/DSourceComboVertexer.h"
 #include "ANALYSIS/DSourceComboTimeHandler.h"
@@ -731,7 +742,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				{
 					string locUnits = ((locSystem == SYS_CDC) || (locSystem == SYS_FDC)) ? "(keV/cm)" : "(MeV/cm)";
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);dE/dX ") + locUnits;
-					dHistMap_dEdx[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0);
+					dHistMap_dEdx[locPID][locSystem] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 25.0);
 				}
 				else
 					dHistMap_dEdx[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -744,7 +755,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 				if(locHist == nullptr)
 				{
 					string locHistTitle = ParticleName_ROOT(locPID) + string(", ") + string(SystemName(locSystem)) + string(";p (GeV/c);E_{Shower}/p_{Track} (c)");
-					dHistMap_EOverP[locPID][locSystem] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0);
+					dHistMap_EOverP[locPID][locSystem] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 400, 0.0, 12.0, 400, 0.0, 4.0);
 				}
 				else
 					dHistMap_EOverP[locPID][locSystem] = static_cast<TH2*>(locHist);
@@ -757,6 +768,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 		for(auto locReaction : locReactions)
 		{
 			string locReactionName = locReaction->Get_ReactionName();
+dilog::block dilog_rea(dilog_eventNo.str(), "reaction " + locReactionName);
 
 			locDirName = locReactionName;
 			locDirectoryFile = static_cast<TDirectoryFile*>(gDirectory->GetDirectory(locDirName.c_str()));
@@ -769,7 +781,8 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Events Survived Stage");
-				dNumEventsSurvivedStageMap[locReaction] = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5);
+				dNumEventsSurvivedStageMap[locReaction] = new_TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Event.size(), -0.5, locBuildStages_Event.size() - 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				for(size_t loc_i = 0; loc_i < locBuildStages_Event.size(); ++loc_i)
 					dNumEventsSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Event[loc_i].c_str());
 			}
@@ -781,7 +794,8 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStageMap[locReaction] = new TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5);
+				dNumCombosSurvivedStageMap[locReaction] = new_TH1D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5);
+dilog::get(dilog_eventNo.str()).printf("new TH1D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStageMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}
@@ -793,7 +807,8 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 			if(locHist == nullptr)
 			{
 				string locHistTitle = locReactionName + string(";;# Combos Survived Stage");
-				dNumCombosSurvivedStage2DMap[locReaction] = new TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000);
+				dNumCombosSurvivedStage2DMap[locReaction] = new_TH2D(locHistName.c_str(), locHistTitle.c_str(), locBuildStages_Combo.size(), -0.5, locBuildStages_Combo.size() - 0.5, 1000, 0, 1000);
+dilog::get(dilog_eventNo.str()).printf("new TH2D at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 				for(size_t loc_i = 0; loc_i < locBuildStages_Combo.size(); ++loc_i)
 					dNumCombosSurvivedStage2DMap[locReaction]->GetXaxis()->SetBinLabel(loc_i + 1, locBuildStages_Combo[loc_i].c_str());
 			}
@@ -1651,11 +1666,13 @@ DCombosByReaction DSourceComboer::Build_ParticleCombos(const DReactionVertexInfo
 	//loop over primary vertex combos //each contains decay combos except when dangling
 	for(const auto& locReactionChargedCombo : locReactionChargedCombos)
 	{
+dilog::block dilog_combo(dilog_eventNo.str(), "build_combo_charged");
 		//Calc all the vertex positions and time offsets for the vertices for these combos (where possible without beam energy)
 		dSourceComboVertexer->Calc_VertexTimeOffsets_WithCharged(locReactionVertexInfo, locReactionChargedCombo);
 
 		//For the charged tracks, apply timing cuts to determine which RF bunches are possible
 		vector<int> locBeamBunches_Charged;
+dilog::get(dilog_eventNo.str()).printf("calling Select_RFBunches_Charged, one of %d", locReactionChargedCombos.size());
 		if(!dSourceComboTimeHandler->Select_RFBunches_Charged(locReactionVertexInfo, locReactionChargedCombo, locBeamBunches_Charged))
 			continue; //failed PID timing cuts!
 		for(auto& locReaction : locReactions)
@@ -1762,6 +1779,7 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 	//loop over full combos
 	for(const auto& locReactionFullCombo : locReactionFullCombos)
 	{
+dilog::block dilog_combo(dilog_eventNo.str(), "build_combo_full");
 		//get common RF bunches between charged & neutral
 		auto locNeutralRFBunches = dValidRFBunches_ByCombo[std::make_pair(locReactionFullCombo, DSourceComboInfo::Get_VertexZIndex_ZIndependent())];
 		auto locValidRFBunches = dSourceComboTimeHandler->Get_CommonRFBunches(locBeamBunches_Charged, locNeutralRFBunches);
@@ -1780,6 +1798,7 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 
 			//Now further select rf bunches, using tracks at the vertices we just found, and BCAL photon showers at any vertex
 			//this also does PID cuts of photons at charged vertices while we're at it
+dilog::get(dilog_eventNo.str()).printf("calling Select_RFBunches_PhotonVertices, one of %d", locReactionFullCombos.size());
 			if(!dSourceComboTimeHandler->Select_RFBunches_PhotonVertices(locReactionVertexInfo, locReactionFullCombo, locValidRFBunches))
 			{
 				if(dDebugLevel > 0)
@@ -1792,6 +1811,7 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 			//if no valid RF bunches, but still haven't cut: none of the charged tracks are at known vertices: select RF bunches with charged only
 			if(locValidRFBunches.empty()) //e.g. g, p -> K0, Sigma+   K0 -> pi+, (pi-)
 			{
+dilog::get(dilog_eventNo.str()).printf("calling Select_RFBunches_AllVerticesUnknown, one of %d", locReactionFullCombos.size());
 				if(!dSourceComboTimeHandler->Select_RFBunches_AllVerticesUnknown(locReactionVertexInfo, locReactionFullCombo, d_Charged, locValidRFBunches))
 					continue; //failed PID timing cuts!
 			}
@@ -1801,6 +1821,7 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 		else //fully neutral, so no known vertices, target center was chosen as vertex for comboing showers //e.g. g, p -> pi0, (p)
 		{
 			//we will never have a vertex, so do PID cuts for ALL photons using target center to select possible RF bunches
+dilog::get(dilog_eventNo.str()).printf("calling Select_RFBunches_AllVerticesUnknown, one of %d", locReactionFullCombos.size());
 			if(!dSourceComboTimeHandler->Select_RFBunches_AllVerticesUnknown(locReactionVertexInfo, locReactionFullCombo, d_Neutral, locValidRFBunches))
 				continue; //failed PID timing cuts!
 			for(auto& locReaction : locReactions)

@@ -1,3 +1,12 @@
+#include "dilog.h"
+#include <sstream>
+#include <TH1I.h>
+#include <TH2I.h>
+extern std::stringstream dilog_eventNo;
+static TH1 *dilog_handle;
+#define new_TH1I(N,T,NX,X1,X2) (TH1I*)(dilog_handle = new TH1I(N,T,NX,X1,X2))
+#define new_TH2I(N,T,NX,X1,X2,NY,Y1,Y2) (TH2I*)(dilog_handle = new TH2I(N,T,NX,X1,X2,NY,Y1,Y2))
+
 #include "ANALYSIS/DSourceComboP4Handler.h"
 #include "ANALYSIS/DSourceComboer.h"
 
@@ -549,27 +558,33 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 		{
 			string locHistName = "InvariantMass_2Gamma_BCAL";
 			auto locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_BCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_BCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";BCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 			locHistName = "InvariantMass_2Gamma_FCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_FCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_FCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";FCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			
 			locHistName = "InvariantMass_2Gamma_CCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_CCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_CCAL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 			locHistName = "InvariantMass_2Gamma_BCALFCALCCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_NULL] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";BCAL/FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			/*
 			locHistName = "InvariantMass_2Gamma_BCALCCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_NULL+1] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";BCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_NULL+1] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";BCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 
 			locHistName = "InvariantMass_2Gamma_FCALCCAL";
 			locHist = gDirectory->Get(locHistName.c_str());
-			dHistMap_2GammaMass[SYS_NULL+2] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new TH1I(locHistName.c_str(), ";FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+			dHistMap_2GammaMass[SYS_NULL+2] = (locHist != nullptr) ? static_cast<TH1*>(locHist) : new_TH1I(locHistName.c_str(), ";FCAL/CCAL 2#gamma Invariant Mass (GeV/c^{2})", 2000, 0.0, 2.0);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			*/
 		}
 
@@ -577,6 +592,7 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 		for(const auto& locPIDPair : dInvariantMassCuts)
 		{
 			auto locPID = locPIDPair.first;
+dilog::block dilog_cut(dilog_eventNo.str(), string("pid ") + ParticleType(locPID));
 			auto& locMassPair = locPIDPair.second;
 			string locHistName = string("InvariantMass_") + ParticleType(locPID);
 			auto locHist = gDirectory->Get(locHistName.c_str());
@@ -588,7 +604,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 					locMinMass = 0.0;
 				auto locMaxMass = locMassPair.second + 0.2;
 				auto locNumBins = 1000.0*(locMaxMass - locMinMass);
-				dHistMap_InvariantMass[locPID] = new TH1I(locHistName.c_str(), locHistTitle.c_str(), locNumBins, locMinMass, locMaxMass);
+				dHistMap_InvariantMass[locPID] = new_TH1I(locHistName.c_str(), locHistTitle.c_str(), locNumBins, locMinMass, locMaxMass);
+dilog::get(dilog_eventNo.str()).printf("new TH1I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHistMap_InvariantMass[locPID] = static_cast<TH1*>(locHist);
@@ -605,6 +622,7 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 		for(const auto& locPIDPair : dMissingMassSquaredCuts)
 		{
 			auto locPID = locPIDPair.first;
+dilog::block dilog_cut(dilog_eventNo.str(), string("pid ") + ParticleType(locPID));
 			auto& locMassPair = locPIDPair.second;
 			string locHistName = string("MissingMassVsBeamEnergy_") + ((locPID != Unknown) ? ParticleType(locPID) : "None");
 			auto locHist = gDirectory->Get(locHistName.c_str());
@@ -614,7 +632,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 				auto locMinMass = locMassPair.first->Eval(12.0) - 0.2; //assume widest at highest energy
 				auto locMaxMass = locMassPair.second->Eval(12.0) + 0.2;
 				auto locNumBins = 1000.0*(locMaxMass - locMinMass);
-				dHistMap_MissingMassSquaredVsBeamEnergy[locPID] = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, locNumBins, locMinMass, locMaxMass);
+				dHistMap_MissingMassSquaredVsBeamEnergy[locPID] = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, locNumBins, locMinMass, locMaxMass);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHistMap_MissingMassSquaredVsBeamEnergy[locPID] = static_cast<TH2*>(locHist);
@@ -627,7 +646,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			if(locHist == nullptr)
 			{
 				string locHistTitle = string("None Missing: From All Production Mechanisms;Beam Energy (GeV); Missing E (GeV)");
-				dHist_NoneMissing_MissingEVsBeamEnergy_PreMissMassSqCut = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, 1200, -6.0, 6.0);
+				dHist_NoneMissing_MissingEVsBeamEnergy_PreMissMassSqCut = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, 1200, -6.0, 6.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHist_NoneMissing_MissingEVsBeamEnergy_PreMissMassSqCut = static_cast<TH2*>(locHist);
@@ -637,7 +657,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			if(locHist == nullptr)
 			{
 				string locHistTitle = string("None Missing: From All Production Mechanisms;Beam Energy (GeV); Missing E (GeV)");
-				dHist_NoneMissing_MissingEVsBeamEnergy_PostMissMassSqCut = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, 1200, -6.0, 6.0);
+				dHist_NoneMissing_MissingEVsBeamEnergy_PostMissMassSqCut = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 600, 0.0, 12.0, 1200, -6.0, 6.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHist_NoneMissing_MissingEVsBeamEnergy_PostMissMassSqCut = static_cast<TH2*>(locHist);
@@ -650,7 +671,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			if(locHist == nullptr)
 			{
 				string locHistTitle = string("None Missing: From All Production Mechanisms; Missing E (GeV); Missing Transverse Momentum (GeV/c)");
-				dHist_NoneMissing_MissingPtVsMissingE_PreMissMassSqCut = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 1200, -6.0, 6.0, 800, 0.0, 4.0);
+				dHist_NoneMissing_MissingPtVsMissingE_PreMissMassSqCut = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 1200, -6.0, 6.0, 800, 0.0, 4.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHist_NoneMissing_MissingPtVsMissingE_PreMissMassSqCut = static_cast<TH2*>(locHist);
@@ -660,7 +682,8 @@ DSourceComboP4Handler::DSourceComboP4Handler(DSourceComboer* locSourceComboer, b
 			if(locHist == nullptr)
 			{
 				string locHistTitle = string("None Missing: From All Production Mechanisms; Missing E (GeV); Missing Transverse Momentum (GeV/c)");
-				dHist_NoneMissing_MissingPtVsMissingE_PostMissMassSqCut = new TH2I(locHistName.c_str(), locHistTitle.c_str(), 1200, -6.0, 6.0, 600, 0.0, 3.0);
+				dHist_NoneMissing_MissingPtVsMissingE_PostMissMassSqCut = new_TH2I(locHistName.c_str(), locHistTitle.c_str(), 1200, -6.0, 6.0, 600, 0.0, 3.0);
+dilog::get(dilog_eventNo.str()).printf("new TH2I at %s/%s", dilog_handle->GetDirectory()->GetPath(), dilog_handle->GetName());
 			}
 			else
 				dHist_NoneMissing_MissingPtVsMissingE_PostMissMassSqCut = static_cast<TH2*>(locHist);

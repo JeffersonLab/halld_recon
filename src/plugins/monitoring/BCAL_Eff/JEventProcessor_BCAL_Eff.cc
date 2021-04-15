@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "dilog.h"
+#include <sstream>
+extern std::stringstream dilog_eventNo;
 
 
 		static TH1I* h1_Num_matched_showers = NULL;
@@ -508,12 +511,15 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	    Int_t numpoints_per_shower = points.size();
 	    h1pt_Num_points->Fill(numpoints_per_shower);
 
+dilog::block dlog_show(dilog_eventNo.str(), "bcal_eff.shower");
+
 	    // initialize hit variables
 	    Int_t pointlayer1=0;
 	    Int_t pointlayer2=0;
 	    Int_t pointlayer3=0;
 	    Int_t pointlayer4=0;
 	    Int_t module_ndx=0;    // use one of the modules in shower as index
+	    Double_t module_E=0;   // take the one with the largest energy
 	    for (int jj=0; jj<numpoints_per_shower; jj++) {
 
 	       int module = points[jj]->module(); 
@@ -547,18 +553,24 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	         if (module == matchedShowers_modules[jjj]) module_in_list = true; 
 	       }
 	       if (!module_in_list) matchedShowers_modules.push_back(module);
-	       module_ndx = module;
+	       if (module_E < energy) {
+	         module_ndx = module;
+	         module_E = energy;
+	       }
 
             }
 
 	    // fill efficiency histograms, once per shower
+dilog::block dilog_point(dilog_eventNo.str(), "bcal_eff.showpoint");
 
 	    if (pointlayer2 + pointlayer3 + pointlayer4 > 0) {
 	      h1eff_layertot->Fill(1);
 	      h1eff_layer->Fill(pointlayer1);
 	      int cellid = (module_ndx-1)*4 + 1;
 	      h1eff_cellidtot->Fill(cellid);
+dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellidtot with %d\n", cellid);
 	      if (pointlayer1>0) h1eff_cellid->Fill(cellid);
+if (pointlayer1>0) dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellid with %d\n", cellid);
 	    }
 
 	    if (pointlayer3 + pointlayer4 > 0) {
@@ -566,14 +578,18 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	      h1eff_layer->Fill(pointlayer2);
 	      int cellid = (module_ndx-1)*4 + 2;
 	      h1eff_cellidtot->Fill(cellid);
+dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellidtot with %d\n", cellid);
 	      if (pointlayer2>0) h1eff_cellid->Fill(cellid);
+if (pointlayer2>0) dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellid with %d\n", cellid);
 	    }
 	    if (pointlayer4 > 0) {
 	      h1eff_layertot->Fill(3);
 	      h1eff_layer->Fill(pointlayer3);
 	      int cellid = (module_ndx-1)*4 + 3;
 	      h1eff_cellidtot->Fill(cellid);
+dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellidtot with %d\n", cellid);
 	      if (pointlayer3>0) h1eff_cellid->Fill(cellid);
+if (pointlayer3>0) dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellid with %d\n", cellid);
 	    }
 
 	    if (pointlayer1 + pointlayer2 + pointlayer3 > 3) {
@@ -581,7 +597,9 @@ jerror_t JEventProcessor_BCAL_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t
 	      h1eff_layer->Fill(pointlayer4);
 	      int cellid = (module_ndx-1)*4 + 4;
 	      h1eff_cellidtot->Fill(cellid);
+dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellidtot with %d\n", cellid);
 	    if (pointlayer4>0) h1eff_cellid->Fill(cellid);
+if (pointlayer4>0) dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellid with %d\n", cellid);
 	    }
 	    
 

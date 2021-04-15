@@ -15,6 +15,9 @@ using namespace std;
 
 #include "MyProcessor.h"
 
+#include <sstream>
+extern std::stringstream dilog_eventNo;
+
 vector<string> toprint;
 bool ACTIVATE_ALL=false;
 
@@ -136,11 +139,19 @@ jerror_t MyProcessor::brun(JEventLoop *eventLoop, int32_t runnumber)
 	return NOERROR;
 }
 
+#include <mutex>
+
 //------------------------------------------------------------------
 // evnt   -Fill tree here
 //------------------------------------------------------------------
 jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 {
+std::mutex locMutex;
+unique_lock<std::mutex> lck(locMutex);
+
+dilog_eventNo.str("");
+dilog_eventNo << "event_" << eventnumber;
+try {
 	// Loop over factories explicitly mentioned on command line
 	for(unsigned int i=0;i<toprint.size();i++){
 		string name =fac_info[i].dataClassName;
@@ -155,6 +166,10 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 			}
 		}
 	}
+}
+catch (std::runtime_error &e) {
+   std::cerr << "dilog exception: " << e.what() << std::endl;
+}
 	return NOERROR;
 }
 

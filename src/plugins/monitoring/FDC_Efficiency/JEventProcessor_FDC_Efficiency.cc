@@ -5,6 +5,10 @@
 // Creator: aaustreg
 //
 
+#include "dilog.h"
+#include <sstream>
+extern std::stringstream dilog_eventNo;
+
 #include "JEventProcessor_FDC_Efficiency.h"
 using namespace jana;
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
@@ -261,6 +265,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
   loop->Get(chargedTrackVector);
 
   for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
+dilog::block dilog_track(dilog_eventNo.str(), "track");
 
     const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
 
@@ -365,6 +370,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     
     // Loop over cells (24)
     for (unsigned int cellIndex = 0; cellIndex < fdcwires.size(); cellIndex ++){
+dilog::block dilog_track(dilog_eventNo.str(), "cell");
       unsigned int cellNum = cellIndex +1;
       vector< DFDCWire * > wireByNumber = fdcwires[cellIndex];
 
@@ -498,6 +504,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       	// loop over the FDC Pseudo Hits in that cell to look for a match
 	for(set<const DFDCPseudo*>::iterator locIterator = locPlanePseudos.begin();  locIterator !=  locPlanePseudos.end(); ++locIterator)
 	  {
+dilog::block dilog_pseudo(dilog_eventNo.str(), "pseudo");
 	    const DFDCPseudo * locPseudo = * locIterator;
 	    if (locPseudo == NULL) continue;
 
@@ -526,7 +533,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	      hPseudoResUvsV[cellNum][radius]->Fill(residualU, residualV);
 	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	    
-	    if (foundPseudo) continue; 
+//	    if (foundPseudo) continue; 
 	    // to avoid double conting
 	    	    
 	    //if (residualR < 1.6){ // = 5 sigma in x and in y
@@ -538,8 +545,11 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 		fdc_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
 		hPseudoTime_accepted[cellNum]->Fill(locPseudo->time);
+dilog::get(dilog_eventNo.str()).printf("hPseudoTime_accepted filled with %f\n", locPseudo->time);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_u);
+dilog::get(dilog_eventNo.str()).printf("hCathodeTime_accepted filled with %f\n", locPseudo->t_u);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_v);
+dilog::get(dilog_eventNo.str()).printf("hCathodeTime_accepted filled with %f\n", locPseudo->t_v);
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_u);
 		hDeltaTime[cellNum]->Fill(locPseudo->time - locPseudo->t_v);
 		hPseudoResVsT[cellNum]->Fill(residualU, locPseudo->time);
