@@ -46,7 +46,32 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	locEventLoop->GetSingle(dPIDAlgorithm);
 
 	// load CDC dEdx correction table
-	FILE *dedxfile = fopen("/u/group/halld/www/halldweb/html/resources/CDC/dedx/dedx_amp_corr_9October2020.txt","r");
+	DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	if(!dapp){
+	  _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
+	  return NOERROR;
+	}
+
+	string dedx_theta_correction_file;
+	map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
+	JCalibration *jcalib = dapp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
+	if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
+	  jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
+	  exit(-1);
+	}
+	else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
+		 && dedx_theta_file_name["file_name"] != "None" ) {
+	  JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	  dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
+	}
+
+	// check to see if we actually have a filename
+	if(dedx_theta_correction_file.empty()) {
+	  jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
+	  exit(-1); // RESOURCE_UNAVAILABLE;
+	}
+
+	FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
 	fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
 	fscanf(dedxfile,"%f min theta\n",&cdc_min_theta);
 	fscanf(dedxfile,"%f max theta\n",&cdc_max_theta);
