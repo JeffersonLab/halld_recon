@@ -62,6 +62,14 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
 			delete dResourcePool_ChargedTrackHypothesis;
 			return NOERROR;
 		}
+
+		// CDC space charge correction for dEdx
+		vector<vector<Float_t>>CDC_DEDX_AMP_CORRECTION;
+		Float_t cdc_min_theta, cdc_max_theta;
+		Float_t cdc_min_dedx, cdc_max_dedx;
+		Float_t cdc_theta_step, cdc_dedx_step;
+		Int_t cdc_npoints_theta, cdc_npoints_dedx;
+		Float_t Correct_CDC_dEdx_amp(Float_t theta_deg, Float_t thisdedx);
 };
 
 #endif // _DChargedTrackHypothesis_factory_
