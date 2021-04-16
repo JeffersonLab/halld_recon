@@ -338,6 +338,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
+   geom->GetFMWPCZ(dFMWPCz);
+   geom->GetFMWPCSize(dFMWPCsize);
 
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
@@ -8809,11 +8811,13 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 						     s));
 
   // Loop to propagate track to outer detectors
-  const double z_outer_max=650.;
+  const double z_outer_max=1000.;
   const double x_max=130.;
   const double y_max=130.;
   bool hit_tof=false; 
   bool hit_dirc=false;
+  bool hit_fcal=false;
+  bool got_fmwpc=(dFMWPCz>0)?true:false;
   unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
 	 && fabs(S(state_y))<y_max){   
@@ -8901,8 +8905,12 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dDIRCz+EPS;
       ds=(newz-z)/dz_ds;
     }
-    if (newz>dFCALz){
+    if (hit_fcal==false && newz>dFCALz){
       newz=dFCALz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (got_fmwpc&&newz>dFMWPCz){
+      newz=dFMWPCz+EPS;
       ds=(newz-z)/dz_ds;
     }
     s+=ds;
@@ -8956,7 +8964,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
 							t*TIME_UNIT_CONVERSION,s)); 
     }  
-    if (newz>dFCALz){
+
+    if (hit_fcal==false && newz>dFCALz){
+      hit_fcal=true;
+      
       double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
       double tanl=1./sqrt(tsquare);
       double cosl=cos(atan(tanl));
@@ -8981,11 +8992,30 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       position.SetXYZ(S(state_x),S(state_y),zend);
       momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
       extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
+					    t*TIME_UNIT_CONVERSION,s));
 
+      if (got_fmwpc==false) return NOERROR;
+    }
+    
+    // Deal with muon detector
+    if (hit_fcal==true 
+	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
+      return NOERROR;
+    }
+    if (newz>dFMWPCz){
+      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+      double tanl=1./sqrt(tsquare);
+      double cosl=cos(atan(tanl));
+      double pt=cosl/fabs(S(state_q_over_p));
+      double phi=atan2(S(state_ty),S(state_tx));
+      DVector3 position(S(state_x),S(state_y),z);
+      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+      extrapolations[SYS_FMWPC].push_back(Extrapolation_t(position,momentum,
+							  t*TIME_UNIT_CONVERSION,s));
       return NOERROR;
     }
   }
+
   return NOERROR;
 }
 
