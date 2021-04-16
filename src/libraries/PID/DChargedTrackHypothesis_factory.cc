@@ -52,7 +52,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	  return NOERROR;
 	}
 
-	string dedx_theta_correction_file;
+	string dedx_theta_correction_file, dedx_i_theta_correction_file;
 	map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
 	JCalibration *jcalib = dapp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
 	if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
@@ -95,6 +95,50 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	  }
 	  CDC_DEDX_AMP_CORRECTION.push_back(dedx_cf_alltheta);
 	  dedx_cf_alltheta.clear();
+	}
+	fclose(dedxfile);
+
+	// repeat for dedx from integral
+	if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
+	  jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
+	  exit(-1);
+	}
+	else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
+		&& dedx_i_theta_file_name["file_name"] != "None" ) {
+	  JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	  dedx_i_theta_correction_file = jresman->GetResource(dedx_i_theta_file_name["file_name"]);
+	}
+
+	// check to see if we actually have a filename
+	if(dedx_i_theta_correction_file.empty()) {
+	  jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
+	  exit(-1); // RESOURCE_UNAVAILABLE;
+	}
+
+	dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
+	fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta_int);
+	fscanf(dedxfile,"%f min theta\n",&cdc_min_theta_int);
+	fscanf(dedxfile,"%f max theta\n",&cdc_max_theta_int);
+	fscanf(dedxfile,"%f theta step\n",&cdc_theta_step_int);
+
+	fscanf(dedxfile,"%i values of dedx\n",&cdc_npoints_dedx_int);
+	fscanf(dedxfile,"%f min dedx\n",&cdc_min_dedx_int);
+	fscanf(dedxfile,"%f max dedx\n",&cdc_max_dedx_int);
+	fscanf(dedxfile,"%f dedx step\n",&cdc_dedx_step_int);
+	fscanf(dedxfile,"\n");
+
+	vector<Float_t> dedx_int_cf_alltheta;
+	Float_t dedx_int_cf;
+
+	// Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
+
+	for (Int_t ii =0; ii<cdc_npoints_dedx_int; ii++) {
+	  for (Int_t jj=0; jj<cdc_npoints_theta_int; jj++) {
+	    fscanf(dedxfile,"%f\n",&dedx_int_cf);
+	    dedx_int_cf_alltheta.push_back(dedx_int_cf);
+	  }
+	  CDC_DEDX_INT_CORRECTION.push_back(dedx_int_cf_alltheta);
+	  dedx_int_cf_alltheta.clear();
 	}
 	fclose(dedxfile);
 
@@ -233,14 +277,21 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	locChargedTrackHypothesis->setErrorMatrix(locCovarianceMatrix);
 
 	//CDC dEdx (correction for amplitude value)
-	Float_t locCorrectionFactor = 1.;
+	Float_t locCorrectionFactor_amp = 1.;
 	double locCDCdEdx_amp = locTrackTimeBased->ddEdx_CDC_amp;
 	if (locCDCdEdx_amp > 0){
 	  Float_t locTheta_deg = 180.0/M_PI * locChargedTrackHypothesis->momentum().Theta();
-	  locCorrectionFactor = Correct_CDC_dEdx_amp(locTheta_deg, locCDCdEdx_amp);
+	  locCorrectionFactor_amp = Correct_CDC_dEdx_amp(locTheta_deg, locCDCdEdx_amp);
 	}
-	locChargedTrackHypothesis->Set_dEdx_CDC_amp(locCDCdEdx_amp*locCorrectionFactor);
-	locChargedTrackHypothesis->Set_dEdx_CDC_int(locTrackTimeBased->ddEdx_CDC);
+	locChargedTrackHypothesis->Set_dEdx_CDC_amp(locCDCdEdx_amp*locCorrectionFactor_amp);
+
+	Float_t locCorrectionFactor_int = 1.;
+	double locCDCdEdx_int = locTrackTimeBased->ddEdx_CDC;
+	if (locCDCdEdx_int > 0){
+	  Float_t locTheta_deg = 180.0/M_PI * locChargedTrackHypothesis->momentum().Theta();
+	  locCorrectionFactor_int = Correct_CDC_dEdx_int(locTheta_deg, locCDCdEdx_int);
+	}
+	locChargedTrackHypothesis->Set_dEdx_CDC_int(locCDCdEdx_int*locCorrectionFactor_int);
 
 	//Calculate PID ChiSq, NDF, FOM
 	locChargedTrackHypothesis->Set_TimeAtPOCAToVertex(locChargedTrackHypothesis->time());
@@ -415,6 +466,85 @@ Float_t DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(Float_t theta_deg,
 
     Float_t theta1 = cdc_min_theta + thetabin1*cdc_theta_step;
     Float_t theta2 = theta1 + cdc_theta_step;
+
+    dedxcf = cf3 + (theta_deg - theta1)*(cf4 - cf3)/(theta2-theta1);
+
+  }
+
+  return dedxcf;
+}
+
+Float_t DChargedTrackHypothesis_factory::Correct_CDC_dEdx_int(Float_t theta_deg, Float_t thisdedx){
+  Int_t thetabin1, thetabin2, dedxbin1, dedxbin2;
+
+  if (theta_deg <= cdc_min_theta_int) {
+    thetabin1 = 0;
+    thetabin2 = thetabin1;
+  } else if (theta_deg >= cdc_max_theta_int) {
+    thetabin1 = cdc_npoints_theta_int - 1;
+    thetabin2 = thetabin1;
+  } else {
+    thetabin1 = (Int_t)((theta_deg - cdc_min_theta_int)/cdc_theta_step_int);
+    thetabin2 = thetabin1 + 1;
+  }
+
+  if (thisdedx <= cdc_min_dedx_int) {
+    dedxbin1 = 0;
+    dedxbin2 = dedxbin1;
+  } else if (thisdedx >= cdc_max_dedx_int) {
+    dedxbin1 = cdc_npoints_dedx_int - 1;
+    dedxbin2 = dedxbin1;
+  } else {
+    dedxbin1 = (Int_t)((thisdedx - cdc_min_dedx_int)/cdc_dedx_step_int);
+    dedxbin2 = dedxbin1 + 1;
+  }
+
+  Float_t dedxcf;
+
+  if ((thetabin1 == thetabin2) && (dedxbin1 == dedxbin2)) {
+
+    dedxcf = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin1];
+
+  } else if (thetabin1 == thetabin2) {  // interp dedx only
+
+    Float_t cf1 = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin1];
+    Float_t cf2 = CDC_DEDX_INT_CORRECTION[dedxbin2][thetabin1];
+
+    Float_t dedx1 = cdc_min_dedx_int + dedxbin1*cdc_dedx_step_int;
+    Float_t dedx2 = dedx1 + cdc_dedx_step_int;
+
+    dedxcf = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+
+  } else if (dedxbin1 == dedxbin2) {  // interp theta only
+
+    Float_t cf1 = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin1];
+    Float_t cf2 = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin2];
+
+    Float_t theta1 = cdc_min_theta_int + thetabin1*cdc_theta_step_int;
+    Float_t theta2 = theta1 + cdc_theta_step_int;
+
+    dedxcf = cf1 + (theta_deg - theta1)*(cf2 - cf1)/(theta2-theta1);
+
+  } else {
+
+    Float_t cf1 = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin1];
+    Float_t cf2 = CDC_DEDX_INT_CORRECTION[dedxbin2][thetabin1];
+
+    Float_t dedx1 = cdc_min_dedx_int + dedxbin1*cdc_dedx_step_int;
+    Float_t dedx2 = dedx1 + cdc_dedx_step_int;
+
+    Float_t cf3 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+
+    cf1 = CDC_DEDX_INT_CORRECTION[dedxbin1][thetabin2];
+    cf2 = CDC_DEDX_INT_CORRECTION[dedxbin2][thetabin2];
+
+    dedx1 = cdc_min_dedx_int + dedxbin1*cdc_dedx_step_int;
+    dedx2 = dedx1 + cdc_dedx_step_int;
+
+    Float_t cf4 = cf1 + (thisdedx - dedx1)*(cf2 - cf1)/(dedx2-dedx1);
+
+    Float_t theta1 = cdc_min_theta_int + thetabin1*cdc_theta_step_int;
+    Float_t theta2 = theta1 + cdc_theta_step_int;
 
     dedxcf = cf3 + (theta_deg - theta1)*(cf4 - cf3)/(theta2-theta1);
 

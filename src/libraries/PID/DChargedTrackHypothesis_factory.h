@@ -70,6 +70,14 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
 		Float_t cdc_theta_step, cdc_dedx_step;
 		Int_t cdc_npoints_theta, cdc_npoints_dedx;
 		Float_t Correct_CDC_dEdx_amp(Float_t theta_deg, Float_t thisdedx);
+
+                // Correction for dE/dx from integral
+		vector<vector<Float_t>>CDC_DEDX_INT_CORRECTION;
+		Float_t cdc_min_theta_int, cdc_max_theta_int;
+		Float_t cdc_min_dedx_int, cdc_max_dedx_int;
+		Float_t cdc_theta_step_int, cdc_dedx_step_int;
+		Int_t cdc_npoints_theta_int, cdc_npoints_dedx_int;
+		Float_t Correct_CDC_dEdx_int(Float_t theta_deg, Float_t thisdedx);
 };
 
 #endif // _DChargedTrackHypothesis_factory_
