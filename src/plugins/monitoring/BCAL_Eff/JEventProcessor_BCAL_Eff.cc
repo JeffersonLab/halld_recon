@@ -561,6 +561,7 @@ dilog::block dlog_show(dilog_eventNo.str(), "bcal_eff.shower");
             }
 
 	    // fill efficiency histograms, once per shower
+{
 dilog::block dilog_point(dilog_eventNo.str(), "bcal_eff.showpoint");
 
 	    if (pointlayer2 + pointlayer3 + pointlayer4 > 0) {
@@ -601,6 +602,7 @@ dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellidtot with %d\n", cellid)
 	    if (pointlayer4>0) h1eff_cellid->Fill(cellid);
 if (pointlayer4>0) dilog::get(dilog_eventNo.str()).printf("fill h1eff_cellid with %d\n", cellid);
 	    }
+}
 	    
 
 
