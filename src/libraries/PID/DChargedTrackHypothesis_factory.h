@@ -66,20 +66,20 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
                 bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta
 
 		// CDC space charge correction for dEdx
-		vector<vector<Float_t>>CDC_DEDX_AMP_CORRECTION;
-		Float_t cdc_min_theta, cdc_max_theta;
-		Float_t cdc_min_dedx, cdc_max_dedx;
-		Float_t cdc_theta_step, cdc_dedx_step;
-		Int_t cdc_npoints_theta, cdc_npoints_dedx;
-		Float_t Correct_CDC_dEdx_amp(Float_t theta_deg, Float_t thisdedx);
+		vector<vector<double>>CDC_DEDX_AMP_CORRECTION;
+		double cdc_min_theta, cdc_max_theta;
+		double cdc_min_dedx, cdc_max_dedx;
+		double cdc_theta_step, cdc_dedx_step;
+		int cdc_npoints_theta, cdc_npoints_dedx;
+		double Correct_CDC_dEdx_amp(double theta_deg, double thisdedx);
 
                 // Correction for dE/dx from integral
-		vector<vector<Float_t>>CDC_DEDX_INT_CORRECTION;
-		Float_t cdc_min_theta_int, cdc_max_theta_int;
-		Float_t cdc_min_dedx_int, cdc_max_dedx_int;
-		Float_t cdc_theta_step_int, cdc_dedx_step_int;
-		Int_t cdc_npoints_theta_int, cdc_npoints_dedx_int;
-		Float_t Correct_CDC_dEdx_int(Float_t theta_deg, Float_t thisdedx);
+		vector<vector<double>>CDC_DEDX_INT_CORRECTION;
+		double cdc_min_theta_int, cdc_max_theta_int;
+		double cdc_min_dedx_int, cdc_max_dedx_int;
+		double cdc_theta_step_int, cdc_dedx_step_int;
+		int cdc_npoints_theta_int, cdc_npoints_dedx_int;
+		double Correct_CDC_dEdx_int(double theta_deg, double thisdedx);
 };
 
 #endif // _DChargedTrackHypothesis_factory_
