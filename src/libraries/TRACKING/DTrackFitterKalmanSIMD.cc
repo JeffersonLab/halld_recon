@@ -338,7 +338,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz); 
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
-   geom->GetFMWPCZ(dFMWPCz);
+   geom->GetFMWPCZ_vec(dFMWPCz_vec);
    geom->GetFMWPCSize(dFMWPCsize);
 
    vector<double>tof_face;
@@ -8817,7 +8817,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
-  bool got_fmwpc=(dFMWPCz>0)?true:false;
+  bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
+  unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
 	 && fabs(S(state_y))<y_max){   
@@ -8909,8 +8910,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dFCALz+EPS;
       ds=(newz-z)/dz_ds;
     }
-    if (got_fmwpc&&newz>dFMWPCz){
-      newz=dFMWPCz+EPS;
+    if (got_fmwpc&&newz>dFMWPCz_vec[fmwpc_index]){
+      newz=dFMWPCz_vec[fmwpc_index]+EPS;
       ds=(newz-z)/dz_ds;
     }
     s+=ds;
@@ -9002,7 +9003,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
-    if (newz>dFMWPCz){
+    if (newz>dFMWPCz_vec[fmwpc_index]){
       double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
       double tanl=1./sqrt(tsquare);
       double cosl=cos(atan(tanl));
@@ -9012,7 +9013,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
       extrapolations[SYS_FMWPC].push_back(Extrapolation_t(position,momentum,
 							  t*TIME_UNIT_CONVERSION,s));
-      return NOERROR;
+      fmwpc_index++;
+      if (fmwpc_index>5) return NOERROR;
     }
   }
 
