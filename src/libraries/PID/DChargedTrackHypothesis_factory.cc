@@ -54,26 +54,26 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	   DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	   if(!dapp){
 	     _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-	     return NOERROR;
+	     return RESOURCE_UNAVAILABLE;
 	   }
 
 	   string dedx_theta_correction_file, dedx_i_theta_correction_file;
 	    map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
-	  JCalibration *jcalib = dapp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
+	  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
 	  if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
-	    exit(-1);
+	    return RESOURCE_UNAVAILABLE;
 	  }
 	 else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
 		  && dedx_theta_file_name["file_name"] != "None" ) {
-	   JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	   JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
 	   dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
 	 }
 
 	 // check to see if we actually have a filename
 	 if(dedx_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
-	   exit(-1); // RESOURCE_UNAVAILABLE;
+	   return RESOURCE_UNAVAILABLE;
 	 }
 
 	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
@@ -106,18 +106,18 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 // repeat for dedx from integral
 	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
 	   jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
-	   exit(-1);
+	   return RESOURCE_UNAVAILABLE;
 	 }
 	 else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
 		 && dedx_i_theta_file_name["file_name"] != "None" ) {
-	   JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	   JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
 	   dedx_i_theta_correction_file = jresman->GetResource(dedx_i_theta_file_name["file_name"]);
 	 }
 
 	 // check to see if we actually have a filename
 	 if(dedx_i_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
-	   exit(-1); // RESOURCE_UNAVAILABLE;
+	   return RESOURCE_UNAVAILABLE;
 	 }
 
 	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
