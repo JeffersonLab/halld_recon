@@ -71,6 +71,8 @@ jerror_t JEventProcessor_dedx_tree::init(void)
     locTreeBranchRegister.Register_Single<Double_t>("p"); 
     locTreeBranchRegister.Register_Single<Double_t>("dedx"); 
     locTreeBranchRegister.Register_Single<Double_t>("dedx_int"); 
+    locTreeBranchRegister.Register_Single<Double_t>("dedx_corr");
+    locTreeBranchRegister.Register_Single<Double_t>("dedx_int_corr");
 
     //REGISTER BRANCHES
     dTreeInterface->Create_Branches(locTreeBranchRegister);
@@ -154,6 +156,8 @@ jerror_t JEventProcessor_dedx_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       double dedx = 1.0e6*track->ddEdx_CDC_amp;
       double dedxfromintegral = 1.0e6*track->ddEdx_CDC;
+      double dedx_corr = 1.0e6*hyp->Get_dEdx_CDC_amp();
+      double dedxfromintegral_corr = 1.0e6*hyp->Get_dEdx_CDC_int();
 
       dTreeFillData.Fill_Single<Double_t>("x",x); 
       dTreeFillData.Fill_Single<Double_t>("y",y); 
@@ -166,6 +170,8 @@ jerror_t JEventProcessor_dedx_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
       dTreeFillData.Fill_Single<Double_t>("p",p); 
       dTreeFillData.Fill_Single<Double_t>("dedx",dedx); 
       dTreeFillData.Fill_Single<Double_t>("dedx_int",dedxfromintegral); 
+      dTreeFillData.Fill_Single<Double_t>("dedx_corr",dedx_corr);
+      dTreeFillData.Fill_Single<Double_t>("dedx_int_corr",dedxfromintegral_corr);
 
        //FILL TTREE
        dTreeInterface->Fill(dTreeFillData);
