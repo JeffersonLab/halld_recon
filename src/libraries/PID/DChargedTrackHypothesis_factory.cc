@@ -35,6 +35,10 @@ jerror_t DChargedTrackHypothesis_factory::init(void)
 	dResourcePool_ChargedTrackHypothesis->Set_ControlParams(30, 20, 200, 2000, 0);
 	dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
 	dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
+
+	CDC_CORRECT_DEDX_THETA = true;
+	gPARMS->SetDefaultParameter("PID:CDC_CORRECT_DEDX_THETA",CDC_CORRECT_DEDX_THETA);
+	
 	return NOERROR;
 }
 
@@ -45,102 +49,104 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 {
 	locEventLoop->GetSingle(dPIDAlgorithm);
 
-	// load CDC dEdx correction table
-	DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	if(!dapp){
-	  _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-	  return NOERROR;
-	}
+	if (CDC_CORRECT_DEDX_THETA){
+	   // load CDC dEdx correction table
+	   DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+	   if(!dapp){
+	     _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
+	     return NOERROR;
+	   }
 
-	string dedx_theta_correction_file, dedx_i_theta_correction_file;
-	map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
-	JCalibration *jcalib = dapp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
-	if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
-	  jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
-	  exit(-1);
-	}
-	else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
-		 && dedx_theta_file_name["file_name"] != "None" ) {
-	  JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
-	  dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
-	}
-
-	// check to see if we actually have a filename
-	if(dedx_theta_correction_file.empty()) {
-	  jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
-	  exit(-1); // RESOURCE_UNAVAILABLE;
-	}
-
-	FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
-	fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
-	fscanf(dedxfile,"%f min theta\n",&cdc_min_theta);
-	fscanf(dedxfile,"%f max theta\n",&cdc_max_theta);
-	fscanf(dedxfile,"%f theta step\n",&cdc_theta_step);
-
-	fscanf(dedxfile,"%i values of dedx\n",&cdc_npoints_dedx);
-	fscanf(dedxfile,"%f min dedx\n",&cdc_min_dedx);
-	fscanf(dedxfile,"%f max dedx\n",&cdc_max_dedx);
-	fscanf(dedxfile,"%f dedx step\n",&cdc_dedx_step);
-	fscanf(dedxfile,"\n");
-
-	vector<Float_t> dedx_cf_alltheta;
-	Float_t dedx_cf;
-
-	// Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
-
-	for (Int_t ii =0; ii<cdc_npoints_dedx; ii++) {
-	  for (Int_t jj=0; jj<cdc_npoints_theta; jj++) {
-	    fscanf(dedxfile,"%f\n",&dedx_cf);
-	    dedx_cf_alltheta.push_back(dedx_cf);
+	   string dedx_theta_correction_file, dedx_i_theta_correction_file;
+	    map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
+	  JCalibration *jcalib = dapp->GetJCalibration(locEventLoop->GetJEvent().GetRunNumber());
+	  if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
+	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
+	    exit(-1);
 	  }
-	  CDC_DEDX_AMP_CORRECTION.push_back(dedx_cf_alltheta);
-	  dedx_cf_alltheta.clear();
+	 else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
+		  && dedx_theta_file_name["file_name"] != "None" ) {
+	   JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	   dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
+	 }
+
+	 // check to see if we actually have a filename
+	 if(dedx_theta_correction_file.empty()) {
+	   jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
+	   exit(-1); // RESOURCE_UNAVAILABLE;
+	 }
+
+	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
+	 fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
+	 fscanf(dedxfile,"%f min theta\n",&cdc_min_theta);
+	 fscanf(dedxfile,"%f max theta\n",&cdc_max_theta);
+	 fscanf(dedxfile,"%f theta step\n",&cdc_theta_step);
+
+	 fscanf(dedxfile,"%i values of dedx\n",&cdc_npoints_dedx);
+	 fscanf(dedxfile,"%f min dedx\n",&cdc_min_dedx);
+	 fscanf(dedxfile,"%f max dedx\n",&cdc_max_dedx);
+	 fscanf(dedxfile,"%f dedx step\n",&cdc_dedx_step);
+	 fscanf(dedxfile,"\n");
+
+	 vector<Float_t> dedx_cf_alltheta;
+	 Float_t dedx_cf;
+
+	 // Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
+
+	 for (Int_t ii =0; ii<cdc_npoints_dedx; ii++) {
+	   for (Int_t jj=0; jj<cdc_npoints_theta; jj++) {
+	     fscanf(dedxfile,"%f\n",&dedx_cf);
+	     dedx_cf_alltheta.push_back(dedx_cf);
+	   }
+	   CDC_DEDX_AMP_CORRECTION.push_back(dedx_cf_alltheta);
+	   dedx_cf_alltheta.clear();
+	 }
+	 fclose(dedxfile);
+
+	 // repeat for dedx from integral
+	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
+	   jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
+	   exit(-1);
+	 }
+	 else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
+		 && dedx_i_theta_file_name["file_name"] != "None" ) {
+	   JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
+	   dedx_i_theta_correction_file = jresman->GetResource(dedx_i_theta_file_name["file_name"]);
+	 }
+
+	 // check to see if we actually have a filename
+	 if(dedx_i_theta_correction_file.empty()) {
+	   jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
+	   exit(-1); // RESOURCE_UNAVAILABLE;
+	 }
+
+	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
+	 fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta_int);
+	 fscanf(dedxfile,"%f min theta\n",&cdc_min_theta_int);
+	 fscanf(dedxfile,"%f max theta\n",&cdc_max_theta_int);
+	 fscanf(dedxfile,"%f theta step\n",&cdc_theta_step_int);
+
+	 fscanf(dedxfile,"%i values of dedx\n",&cdc_npoints_dedx_int);
+	 fscanf(dedxfile,"%f min dedx\n",&cdc_min_dedx_int);
+	 fscanf(dedxfile,"%f max dedx\n",&cdc_max_dedx_int);
+	 fscanf(dedxfile,"%f dedx step\n",&cdc_dedx_step_int);
+	 fscanf(dedxfile,"\n");
+
+	 vector<Float_t> dedx_int_cf_alltheta;
+	 Float_t dedx_int_cf;
+
+	 // Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
+
+	 for (Int_t ii =0; ii<cdc_npoints_dedx_int; ii++) {
+	   for (Int_t jj=0; jj<cdc_npoints_theta_int; jj++) {
+	     fscanf(dedxfile,"%f\n",&dedx_int_cf);
+	     dedx_int_cf_alltheta.push_back(dedx_int_cf);
+	   }
+	   CDC_DEDX_INT_CORRECTION.push_back(dedx_int_cf_alltheta);
+	   dedx_int_cf_alltheta.clear();
+	 }
+	 fclose(dedxfile);
 	}
-	fclose(dedxfile);
-
-	// repeat for dedx from integral
-	if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
-	  jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
-	  exit(-1);
-	}
-	else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
-		&& dedx_i_theta_file_name["file_name"] != "None" ) {
-	  JResourceManager *jresman = dapp->GetJResourceManager(locEventLoop->GetJEvent().GetRunNumber());
-	  dedx_i_theta_correction_file = jresman->GetResource(dedx_i_theta_file_name["file_name"]);
-	}
-
-	// check to see if we actually have a filename
-	if(dedx_i_theta_correction_file.empty()) {
-	  jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
-	  exit(-1); // RESOURCE_UNAVAILABLE;
-	}
-
-	dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
-	fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta_int);
-	fscanf(dedxfile,"%f min theta\n",&cdc_min_theta_int);
-	fscanf(dedxfile,"%f max theta\n",&cdc_max_theta_int);
-	fscanf(dedxfile,"%f theta step\n",&cdc_theta_step_int);
-
-	fscanf(dedxfile,"%i values of dedx\n",&cdc_npoints_dedx_int);
-	fscanf(dedxfile,"%f min dedx\n",&cdc_min_dedx_int);
-	fscanf(dedxfile,"%f max dedx\n",&cdc_max_dedx_int);
-	fscanf(dedxfile,"%f dedx step\n",&cdc_dedx_step_int);
-	fscanf(dedxfile,"\n");
-
-	vector<Float_t> dedx_int_cf_alltheta;
-	Float_t dedx_int_cf;
-
-	// Store the scaling factors in vector<vector<double>>CDC_DEDX_CORRECTION;
-
-	for (Int_t ii =0; ii<cdc_npoints_dedx_int; ii++) {
-	  for (Int_t jj=0; jj<cdc_npoints_theta_int; jj++) {
-	    fscanf(dedxfile,"%f\n",&dedx_int_cf);
-	    dedx_int_cf_alltheta.push_back(dedx_int_cf);
-	  }
-	  CDC_DEDX_INT_CORRECTION.push_back(dedx_int_cf_alltheta);
-	  dedx_int_cf_alltheta.clear();
-	}
-	fclose(dedxfile);
 
  	return NOERROR;
 }
@@ -279,7 +285,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	//CDC dEdx (correction for amplitude value)
 	Float_t locCorrectionFactor_amp = 1.;
 	double locCDCdEdx_amp = locTrackTimeBased->ddEdx_CDC_amp;
-	if (locCDCdEdx_amp > 0){
+	if (CDC_CORRECT_DEDX_THETA && locCDCdEdx_amp > 0){
 	  Float_t locTheta_deg = 180.0/M_PI * locChargedTrackHypothesis->momentum().Theta();
 	  locCorrectionFactor_amp = Correct_CDC_dEdx_amp(locTheta_deg, locCDCdEdx_amp);
 	}
@@ -288,7 +294,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	//CDC dEdx (correction for integral value)
 	Float_t locCorrectionFactor_int = 1.;
 	double locCDCdEdx_int = locTrackTimeBased->ddEdx_CDC;
-	if (locCDCdEdx_int > 0){
+	if (CDC_CORRECT_DEDX_THETA && locCDCdEdx_int > 0){
 	  Float_t locTheta_deg = 180.0/M_PI * locChargedTrackHypothesis->momentum().Theta();
 	  locCorrectionFactor_int = Correct_CDC_dEdx_int(locTheta_deg, locCDCdEdx_int);
 	}

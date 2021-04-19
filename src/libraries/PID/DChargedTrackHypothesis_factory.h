@@ -63,6 +63,8 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
 			return NOERROR;
 		}
 
+                bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta
+
 		// CDC space charge correction for dEdx
 		vector<vector<Float_t>>CDC_DEDX_AMP_CORRECTION;
 		Float_t cdc_min_theta, cdc_max_theta;

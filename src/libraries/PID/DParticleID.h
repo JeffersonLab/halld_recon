@@ -255,27 +255,12 @@ class DParticleID:public jana::JObject
 
                 vector<double> CDC_GAIN_DOCA_PARS;  // params to correct for gas deterioration spring 2018
 
-                // Correct CDC dE/dx from amplitude for variation w theta (space-charge & saturation)
-                vector<vector<double>>CDC_DEDX_CORRECTION;
-                double cdc_min_theta, cdc_max_theta;
-                double cdc_min_dedx, cdc_max_dedx;
-                double cdc_theta_step, cdc_dedx_step; 
-                int cdc_npoints_theta, cdc_npoints_dedx;
-
-                // Correction for dE/dx from integral
-                vector<vector<double>>CDC_I_DEDX_CORRECTION;
-                double cdc_i_min_theta, cdc_i_max_theta;
-                double cdc_i_min_dedx, cdc_i_max_dedx;
-                double cdc_i_theta_step, cdc_i_dedx_step; 
-                int cdc_i_npoints_theta, cdc_i_npoints_dedx;
-
-
-        // Start counter resolution parameters
-        vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
-        vector<double> SC_SECTION1_P0, SC_SECTION1_P1;
-        vector<double> SC_SECTION2_P0, SC_SECTION2_P1;
-        vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
-        vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
+		// Start counter resolution parameters
+		vector<double> SC_BOUNDARY1, SC_BOUNDARY2, SC_BOUNDARY3;
+		vector<double> SC_SECTION1_P0, SC_SECTION1_P1;
+		vector<double> SC_SECTION2_P0, SC_SECTION2_P1;
+		vector<double> SC_SECTION3_P0, SC_SECTION3_P1;
+		vector<double> SC_SECTION4_P0, SC_SECTION4_P1;
 
 		// define bool in case there is no Start Counter in geometry (e.g. CPP)
 		bool START_EXIST = true;
@@ -323,7 +308,6 @@ class DParticleID:public jana::JObject
 		// time cut for cdc hits
 		double CDC_TIME_CUT_FOR_DEDX;
         
-                bool CDC_CORRECT_DEDX_THETA;   // use the correction for dE/dx with theta
                 bool CDC_TRUNCATE_DEDX;            // dE/dx truncation: ignore hits with highest dE
 
 		double dTargetZCenter;
