@@ -724,6 +724,8 @@ dilog::block dilog_combo(dilog_eventNo.str(), "beam_bunch_shifts");
 	auto locDeltaT = locVertexTime - (locOrigRFBunchPropagatedTime + locNumShifts*dBeamBunchPeriod);
 	if(dDebugLevel >= 20)
 		cout << "num shifts, delta-t = " << locNumShifts << ", " << locDeltaT << endl;
+//dilog::get(dilog_eventNo.str()).printf("pushing deltaT=%f on dAllRFDeltaTs[%s][%s]", locDeltaT, ParticleType(locPID), SystemName(locSystem));
+int count=1;
 	dAllRFDeltaTs[locPID][locSystem].push_back(std::make_pair(locP, locDeltaT));
 	while(((locDeltaT >= locMinDeltaT) && (locDeltaT < locMaxDeltaT)) || (locOrigNumShifts == locNumShifts)) //extra condition for histogramming purposes only
 	{
@@ -737,14 +739,19 @@ dilog::block dilog_combo(dilog_eventNo.str(), "beam_bunch_shifts");
 		locDeltaT = locVertexTime - (locOrigRFBunchPropagatedTime + locNumShifts*dBeamBunchPeriod);
 		if(dDebugLevel >= 20)
 			cout << "num shifts, delta-t = " << locNumShifts << ", " << locDeltaT << endl;
+//dilog::get(dilog_eventNo.str()).printf("pushing deltaT=%f on dAllRFDeltaTs[%s][%s]", locDeltaT, ParticleType(locPID), SystemName(locSystem));
+++count;
 		dAllRFDeltaTs[locPID][locSystem].push_back(std::make_pair(locP, locDeltaT));
 	}
+dilog::get(dilog_eventNo.str()).printf("just pushed %d deltaT values onto dAllRFDeltaTs[%s][%s]", count, ParticleType(locPID), SystemName(locSystem));
 
 	//now loop down in n-shifts
 	locNumShifts = locOrigNumShifts - 1;
 	locDeltaT = locVertexTime - (locOrigRFBunchPropagatedTime + locNumShifts*dBeamBunchPeriod);
 	if(dDebugLevel >= 20)
 		cout << "num shifts, delta-t = " << locNumShifts << ", " << locDeltaT << endl;
+//dilog::get(dilog_eventNo.str()).printf("pushing deltaT=%f on dAllRFDeltaTs[%s][%s]", locDeltaT, ParticleType(locPID), SystemName(locSystem));
+count=1;
 	dAllRFDeltaTs[locPID][locSystem].push_back(std::make_pair(locP, locDeltaT));
 	while((locDeltaT >= locMinDeltaT) && (locDeltaT < locMaxDeltaT))
 	{
@@ -755,8 +762,11 @@ dilog::block dilog_combo(dilog_eventNo.str(), "beam_bunch_shifts");
 		locDeltaT = locVertexTime - (locOrigRFBunchPropagatedTime + locNumShifts*dBeamBunchPeriod);
 		if(dDebugLevel >= 20)
 			cout << "num shifts, delta-t = " << locNumShifts << ", " << locDeltaT << endl;
+//dilog::get(dilog_eventNo.str()).printf("pushing deltaT=%f on dAllRFDeltaTs[%s][%s]", locDeltaT, ParticleType(locPID), SystemName(locSystem));
+++count;
 		dAllRFDeltaTs[locPID][locSystem].push_back(std::make_pair(locP, locDeltaT));
 	}
+dilog::get(dilog_eventNo.str()).printf("just pushed %d more deltaT values onto dAllRFDeltaTs[%s][%s]", count, ParticleType(locPID), SystemName(locSystem));
 
 	std::sort(locRFShifts.begin(), locRFShifts.end());
 	return locRFShifts;
@@ -1442,7 +1452,7 @@ dilog::block dilog_pid(dilog_eventNo.str(), "pid");
 
 dilog::block dilog_sys(dilog_eventNo.str(), "sys");
 				auto& locAllHist = locSystemIterator->second;
-dilog::get(dilog_eventNo.str()).printf("loop over dAllRFDeltaTs vector has %d elements", locSystemPair.second.size());
+dilog::get(dilog_eventNo.str()).printf("loop over dAllRFDeltaTs[%s][%s] vector has %d elements", ParticleType(locPIDPair.first),SystemName(locSystemPair.first), locSystemPair.second.size());
 				for(auto& locVectorPair : locSystemPair.second) {//best vector
 dilog::block dilog_sys(dilog_eventNo.str(), "RF");
 dilog::get(dilog_eventNo.str()).printf("dHistMap_RFDeltaTVsP_AllRFs[%s][%s]=%f",ParticleType(locPIDPair.first),SystemName(locSystemPair.first),locVectorPair.second);
