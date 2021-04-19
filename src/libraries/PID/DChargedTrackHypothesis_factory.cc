@@ -285,6 +285,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	}
 	locChargedTrackHypothesis->Set_dEdx_CDC_amp(locCDCdEdx_amp*locCorrectionFactor_amp);
 
+	//CDC dEdx (correction for integral value)
 	Float_t locCorrectionFactor_int = 1.;
 	double locCDCdEdx_int = locTrackTimeBased->ddEdx_CDC;
 	if (locCDCdEdx_int > 0){
