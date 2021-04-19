@@ -161,7 +161,7 @@ class DGeometry{
       bool GetCCALZ(double &z_ccal) const; /// z-location of front face of CCAL in cm
 
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
-      bool GetFMWPCZ(double &z_fmwpc) const; ///< z-location of first (upstream) chamber of FMWPC in cm
+      bool GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const; ///< z-locations of chamber of FMWPC in cm
       bool GetFMWPCSize(double &xy_fmwpc) const; /// maximum x or y extent of FMWPC in cm
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm

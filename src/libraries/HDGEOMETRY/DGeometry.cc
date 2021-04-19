@@ -1786,19 +1786,28 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
 //---------------------------------
 // GetFMWPCZ
 //---------------------------------
-bool DGeometry::GetFMWPCZ(double &z_fmwpc) const
+bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 {
   vector<double> ForwardMWPCpos;
   bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
   if (!good){  
     //_DBG_<<"Unable to retrieve ForwardMWPC position."<<endl;
-    z_fmwpc=0.0;
     return false;
   }
 
   vector<double>CPPChamberPos;
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='1']", CPPChamberPos);
-  z_fmwpc=ForwardMWPCpos[2]+CPPChamberPos[2];
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='2']", CPPChamberPos);
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]); 
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='3']", CPPChamberPos);
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='4']", CPPChamberPos);
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='5']", CPPChamberPos);
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='6']", CPPChamberPos);
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
  
   return true;
 }
