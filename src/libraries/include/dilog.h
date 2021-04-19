@@ -477,14 +477,14 @@ class dilog {
                   binner = dlog.fBlocks[path];
                   binner->parent = this;
                   binner->ireplay = ++dlog.fReplay;
-                  trace *t = new trace(*this, "replay", "enter");
+                  trace *t = new trace(*this, "replay", "child.enter");
                   binner->enter();
                   delete t;
                   if (dlog.fError.size() > 0) {
                      dlog.fError = "dilog::block::replay error: " + dlog.fError;
                      return false;
                   }
-                  t = new trace(*this, "replay", "replay2");
+                  t = new trace(*this, "replay", "child.replay");
                   binner->replay();
                   delete t;
                   if (dlog.fError.size() > 0) {
@@ -492,7 +492,7 @@ class dilog {
                      return false;
                   }
                   if (dlog.fReplay < dlog.fRecord.size()) {
-                     t = new trace(*this, "replay", "exit");
+                     t = new trace(*this, "replay", "child.exit");
                      binner->exit();
                      delete t;
                      if (dlog.fError.size() > 0) {
@@ -606,10 +606,12 @@ class dilog {
       }
 
       ~trace() {
+         dilog &dlog = dilog::get(channel, false);
          tracefile() << "[" << target->traces.size() << "] "
                      << target->getPath() << "." << caller << " << " << callee
-                     << " at line " << lineno << " with replay=" << replay
-                     << std::endl;
+                     << " at line " << lineno << "=>" << dlog.fLineno
+                     << " with replay=" << replay << "=>" << dlog.fReplay
+                     << "/" << dlog.fRecord.size() << std::endl;
          if (this == target->traces.top()) {
             target->traces.pop();
          }
