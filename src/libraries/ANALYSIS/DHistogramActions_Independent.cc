@@ -2220,17 +2220,17 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 
 			if(locTrackTimeBased->dNumHitsUsedFordEdx_CDC > 0)
 			{
-				dHistMap_dEdXVsP[SYS_CDC][locCharge]->Fill(locP, locTrackTimeBased->ddEdx_CDC*1.0E6);
-				dHistMap_dEdXVsP[SYS_CDC_AMP][locCharge]->Fill(locP, locTrackTimeBased->ddEdx_CDC_amp*1.0E6);
+			        dHistMap_dEdXVsP[SYS_CDC][locCharge]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_int()*1.0E6);
+				dHistMap_dEdXVsP[SYS_CDC_AMP][locCharge]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6);
 				if(dHistMap_DeltadEdXVsP[SYS_CDC].find(locPID) != dHistMap_DeltadEdXVsP[SYS_CDC].end())
 				{
 					double locProbabledEdx = locParticleID->GetMostProbabledEdx_DC(locP, locChargedTrackHypothesis->mass(), locTrackTimeBased->ddx_CDC, true);
-					dHistMap_DeltadEdXVsP[SYS_CDC][locPID]->Fill(locP, (locTrackTimeBased->ddEdx_CDC - locProbabledEdx)*1.0E6);
+					dHistMap_DeltadEdXVsP[SYS_CDC][locPID]->Fill(locP, (locChargedTrackHypothesis->Get_dEdx_CDC_int() - locProbabledEdx)*1.0E6);
 				}
 				if(dHistMap_DeltadEdXVsP[SYS_CDC_AMP].find(locPID) != dHistMap_DeltadEdXVsP[SYS_CDC_AMP].end())
 				{
 					double locProbabledEdx = locParticleID->GetMostProbabledEdx_DC(locP, locChargedTrackHypothesis->mass(), locTrackTimeBased->ddx_CDC_amp, true);
-					dHistMap_DeltadEdXVsP[SYS_CDC_AMP][locPID]->Fill(locP, (locTrackTimeBased->ddEdx_CDC_amp - locProbabledEdx)*1.0E6);
+					dHistMap_DeltadEdXVsP[SYS_CDC_AMP][locPID]->Fill(locP, (locChargedTrackHypothesis->Get_dEdx_CDC_amp() - locProbabledEdx)*1.0E6);
 				}
 			}
 			if(locTrackTimeBased->dNumHitsUsedFordEdx_FDC > 0)

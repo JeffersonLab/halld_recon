@@ -520,7 +520,7 @@ jerror_t DParticleID_PID1::CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTr
 	
 	// Get the dEdx values for each detector group
 	double locDCdEdx_FDC=locTrackTimeBased->ddEdx_FDC;
-	double locDCdEdx_CDC=locTrackTimeBased->ddEdx_CDC_amp;
+	double locDCdEdx_CDC=locChargedTrackHypothesis->Get_dEdx_CDC_amp(); //use space-charge corrected value
 
 	double locMeandEdx_FDC, locMeandEdx_CDC, locSigmadEdx_FDC, locSigmadEdx_CDC;
 	double locDeltadEdx_CDC = 0.0, locDeltadEdx_FDC = 0.0;
