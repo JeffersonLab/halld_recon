@@ -9003,7 +9003,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
-    if (newz>dFMWPCz_vec[fmwpc_index]){
+    if (got_fmwpc && newz>dFMWPCz_vec[fmwpc_index]){
       double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
       double tanl=1./sqrt(tsquare);
       double cosl=cos(atan(tanl));
