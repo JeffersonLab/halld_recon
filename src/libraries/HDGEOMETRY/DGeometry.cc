@@ -1813,12 +1813,12 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 }
 
 //---------------------------------
-// GetFMWPCSize
+// GetFMWPCSize -- use the dimensions of the frame
 //---------------------------------
 bool DGeometry::GetFMWPCSize(double &xy_fmwpc) const
 {
   vector<double> ForwardMWPCdimensions;
-  bool good = Get("//section[@name='ForwardMWPC']/box[@name='MWPC']/@X_Y_Z", ForwardMWPCdimensions);
+  bool good = Get("//section[@name='ForwardMWPC']/box[@name='CPPF']/@X_Y_Z", ForwardMWPCdimensions);
   if (!good){  
     xy_fmwpc=0.0;
     return false;
@@ -1854,7 +1854,7 @@ bool DGeometry::GetFCALPosition(double &x,double &y,double &z) const
 {
   vector<double> ForwardEMcalpos;
   bool good = Get("//section/composition/posXYZ[@volume='ForwardEMcal']/@X_Y_Z", ForwardEMcalpos);
-  
+
   if(!good){
     _DBG_<<"Unable to retrieve ForwardEMcal position."<<endl;
     x=0.,y=0.,z=0.;
