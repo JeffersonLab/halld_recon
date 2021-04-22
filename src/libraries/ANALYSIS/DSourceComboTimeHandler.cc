@@ -323,7 +323,7 @@ void DSourceComboTimeHandler::Create_CutFunctions(void)
 
 			//Create TF1, Set cut values
 			//These functions can have the same name because we are no longer adding them to the global ROOT list of functions
-			auto locFunc = new TF1("df_TimeCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_TimeCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "Time Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dPIDTimingCuts[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -1125,10 +1125,13 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 
 					//get the timing at the POCA to the vertex (computed previously!)
 					auto locPOCAPair = std::make_pair(locChargedHypo, dSourceComboVertexer->Get_ConstrainingParticles_NoBeam(locIsProductionVertex, locVertexPrimaryFullCombo, false));
-					auto locVertexTime = dChargedParticlePOCAToVertexX4.find(locPOCAPair)->second.T();
-					auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
-					locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
-					locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    auto locPOCAVertex = dChargedParticlePOCAToVertexX4.find(locPOCAPair);
+                    if (locPOCAVertex != dChargedParticlePOCAToVertexX4.end()) {
+					   auto locVertexTime = locPOCAVertex->second.T();
+					   auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
+					   locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
+					   locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    }
 				}
 			}
 			if(dDebugLevel >= 10)

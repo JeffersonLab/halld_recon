@@ -671,13 +671,13 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 		//CDC dE/dx
 		if(locTrackTimeBased->dNumHitsUsedFordEdx_CDC > 0)
 		{
-			dHistMap_dEdXVsP[locPID][SYS_CDC]->Fill(locP, locTrackTimeBased->ddEdx_CDC*1.0E6);
-			dHistMap_dEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, locTrackTimeBased->ddEdx_CDC_amp*1.0E6);
+		        dHistMap_dEdXVsP[locPID][SYS_CDC]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_int()*1.0E6);
+			dHistMap_dEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6);
 
 			double locProbabledEdx = dParticleID->GetMostProbabledEdx_DC(locP, locChargedTrackHypothesis->mass(), locTrackTimeBased->ddx_CDC, true);
-			double locDeltadEdx = locTrackTimeBased->ddEdx_CDC - locProbabledEdx;
+			double locDeltadEdx = locChargedTrackHypothesis->Get_dEdx_CDC_int() - locProbabledEdx;
 			dHistMap_DeltadEdXVsP[locPID][SYS_CDC]->Fill(locP, 1.0E6*locDeltadEdx);
-			double locDeltadEdx_amp = locTrackTimeBased->ddEdx_CDC_amp - locProbabledEdx;
+			double locDeltadEdx_amp = locChargedTrackHypothesis->Get_dEdx_CDC_amp() - locProbabledEdx;
 			dHistMap_DeltadEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, 1.0E6*locDeltadEdx_amp);
 
 			double locMeandx = locTrackTimeBased->ddx_CDC/locTrackTimeBased->dNumHitsUsedFordEdx_CDC;
