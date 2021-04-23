@@ -39,6 +39,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		double Get_ChiSq_DCdEdx(void) const{return dTrackingInfo->dChiSq_DCdEdx;}
 		unsigned int Get_NDF_EoverP(void) const{return dEOverPInfo->dNDF_EoverP;}
 		double Get_ChiSq_EoverP(void) const{return dEOverPInfo->dChiSq_EoverP;}
+		double Get_dEdx_CDC_amp(void) const{return dTrackingInfo->ddEdx_CDC_amp;}
+		double Get_dEdx_CDC_int(void) const{return dTrackingInfo->ddEdx_CDC_int;}
 		const DTrackTimeBased* Get_TrackTimeBased(void) const{return dTrackingInfo->dTrackTimeBased;}
 
 		//Timing
@@ -80,6 +82,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_TrackTimeBased(const DTrackTimeBased* locTrackTimeBased){dTrackingInfo->dTrackTimeBased = locTrackTimeBased;}
 		void Set_ChiSq_DCdEdx(double locChiSq, unsigned int locNDF);
 		void Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF);
+		void Set_dEdx_CDC_amp(double locCDCdEdx_amp);
+		void Set_dEdx_CDC_int(double locCDCdEdx_int);
 
 		//Match params
 		void Set_SCHitMatchParams(shared_ptr<const DSCHitMatchParams> locMatchParams){dTrackingInfo->dSCHitMatchParams = locMatchParams;}
@@ -152,6 +156,9 @@ class DChargedTrackHypothesis : public DKinematicData
 				double dChiSq_DCdEdx = 0.0;
 				unsigned int dNDF_EoverP=0;
 				double dChiSq_EoverP=0.0;
+
+				double ddEdx_CDC_amp=0.0;
+				double ddEdx_CDC_int=0.0;
 
 				const DTrackTimeBased* dTrackTimeBased = nullptr; //can get candidateid from here
 
@@ -339,6 +346,16 @@ inline void DChargedTrackHypothesis::Set_ChiSq_DCdEdx(double locChiSq, unsigned 
 	dTrackingInfo->dNDF_DCdEdx = locNDF;
 }
 
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_amp(double locCDCdEdx_amp)
+{
+	dTrackingInfo->ddEdx_CDC_amp = locCDCdEdx_amp;
+}
+
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_int(double locCDCdEdx_int)
+{
+	dTrackingInfo->ddEdx_CDC_int = locCDCdEdx_int;
+}
+
 inline void DChargedTrackHypothesis::Set_ChiSq_Overall(double locChiSq, unsigned int locNDF, double locFOM)
 {
 	dTimingInfo->dChiSq = locChiSq;
@@ -379,6 +396,8 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 {
 	dNDF_DCdEdx = 0;
 	dChiSq_DCdEdx = 0.0;
+	ddEdx_CDC_amp = 0.0;
+	ddEdx_CDC_int = 0.0;
 	dTrackTimeBased = nullptr;
 	dSCHitMatchParams = nullptr;
 	dTOFHitMatchParams = nullptr;

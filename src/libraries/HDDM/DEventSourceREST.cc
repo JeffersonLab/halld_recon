@@ -607,8 +607,23 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 	      locCovarianceMatrix->Zero();
 		gamma->setErrorMatrix(locCovarianceMatrix);
 
-        tagmGeom->E_to_column(locTAGMiter->getE(), gamma->dCounter);
-		dbeam_photons.push_back(gamma);
+      hddm_r::TagmChannelList &locTagmChannelList = locTAGMiter->getTagmChannels();
+      if (!tagmGeom->E_to_column(locTAGMiter->getE(), gamma->dCounter))
+         gamma->dCounter = 0;
+      if (locTagmChannelList.size() > 0) {
+         if ((int)gamma->dCounter != locTagmChannelList().getColumn()) {
+            std::cerr << "Error in DEventSourceREST - tagger microscope energy "
+                         "lookup mismatch:" << std::endl
+                      << "   TAGM column = " << locTagmChannelList().getColumn()
+                      << std::endl
+                      << "   Etag = " << locTAGMiter->getE()
+                      << std::endl
+                      << "   lookup finds TAGM column = " << gamma->dCounter
+                      << std::endl;
+            exit(17);
+         }
+      }
+      dbeam_photons.push_back(gamma);
    }
 
    const hddm_r::TaghBeamPhotonList &locTaghBeamPhotonList = record->getTaghBeamPhotons();
@@ -632,8 +647,23 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 	      locCovarianceMatrix->Zero();
 		gamma->setErrorMatrix(locCovarianceMatrix);
 
-		taghGeom->E_to_counter(locTAGHiter->getE(), gamma->dCounter);
-		dbeam_photons.push_back(gamma);
+      hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
+      if (!taghGeom->E_to_counter(locTAGHiter->getE(), gamma->dCounter))
+         gamma->dCounter = 0;
+      if (locTaghChannelList.size() > 0) {
+         if ((int)gamma->dCounter != locTaghChannelList().getCounter()) {
+            std::cerr << "Error in DEventSourceREST - tagger hodoscope energy "
+                         "lookup mismatch:" << std::endl
+                      << "   TAGH column = " << locTaghChannelList().getCounter()
+                      << std::endl
+                      << "   Etag = " << locTAGHiter->getE()
+                      << std::endl
+                      << "   lookup finds TAGH column = " << gamma->dCounter
+                      << std::endl;
+            exit(17);
+         }
+      }
+      dbeam_photons.push_back(gamma);
    }
 
 	if((tag == "TAGGEDMCGEN") && dbeam_photons.empty())

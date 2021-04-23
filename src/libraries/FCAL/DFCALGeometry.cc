@@ -111,9 +111,11 @@ DFCALGeometry::isBlockActive( int row, int column ) const
    if (row>=100&&column>=100){
     row-=100-kBlocksTall;
     column-=100-kBlocksWide;
-  }
-
+   }
+   if (row >= 0 && row < 2*kBlocksWide && column >= 0 && column < 2*kBlocksWide) {
 	return m_activeBlock[row][column];	
+   }
+   return false;
 }
 
 int
