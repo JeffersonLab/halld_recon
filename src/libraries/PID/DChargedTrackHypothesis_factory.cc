@@ -76,6 +76,13 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	   return RESOURCE_UNAVAILABLE;
 	 }
 
+         // get overall scaling factor 
+	 double dedx_amp_scale;
+	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_scale", dedx_amp_scale) ) {
+	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_scale in CCDB for this run!" << endl;
+	    return RESOURCE_UNAVAILABLE;
+	 }
+
 	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
 	 fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta);
 	 fscanf(dedxfile,"%lf min theta\n",&cdc_min_theta);
@@ -96,7 +103,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 for (int ii =0; ii<cdc_npoints_dedx; ii++) {
 	   for (int jj=0; jj<cdc_npoints_theta; jj++) {
 	     fscanf(dedxfile,"%lf\n",&dedx_cf);
-	     dedx_cf_alltheta.push_back(dedx_cf);
+	     dedx_cf_alltheta.push_back(dedx_cf*dedx_amp_scale);
 	   }
 	   CDC_DEDX_AMP_CORRECTION.push_back(dedx_cf_alltheta);
 	   dedx_cf_alltheta.clear();
@@ -120,6 +127,13 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	   return RESOURCE_UNAVAILABLE;
 	 }
 
+         // get overall scaling factor 
+	 double dedx_int_scale;
+	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_scale", dedx_int_scale) ) {
+	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_scale in CCDB for this run!" << endl;
+	    return RESOURCE_UNAVAILABLE;
+	 }
+
 	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
 	 fscanf(dedxfile,"%i values of theta\n",&cdc_npoints_theta_int);
 	 fscanf(dedxfile,"%lf min theta\n",&cdc_min_theta_int);
@@ -140,7 +154,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 for (int ii =0; ii<cdc_npoints_dedx_int; ii++) {
 	   for (int jj=0; jj<cdc_npoints_theta_int; jj++) {
 	     fscanf(dedxfile,"%lf\n",&dedx_int_cf);
-	     dedx_int_cf_alltheta.push_back(dedx_int_cf);
+	     dedx_int_cf_alltheta.push_back(dedx_int_cf*dedx_int_scale);
 	   }
 	   CDC_DEDX_INT_CORRECTION.push_back(dedx_int_cf_alltheta);
 	   dedx_int_cf_alltheta.clear();
