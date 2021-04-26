@@ -337,7 +337,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  t+=f*clusterHits[j]->t;
 	  fsum+=f;
 
-	  if (f>fmax){
+	  if (dFCALGeom->isBlockActive(clusterHits[j]->row,
+				       clusterHits[j]->column)
+	      && f>fmax){
 	    fmax=f;
 	    jmax=j;
 	  }
