@@ -146,7 +146,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].first = "[0]"; //low bound
 	ddEdxCuts_TF1Params[KPlus][SYS_CDC].first = {-9.9E9};
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].second = "exp(-1.0*[0]*x + [1]) + [2]"; //high bound
-	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {7.0, 3.0, 6.2};
+	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {8.0, 4.7, 5.5};
 
 	//CDC e-
 	ddEdxCuts_TF1FunctionStrings[Electron][SYS_CDC].first = "[0]"; //low bound
