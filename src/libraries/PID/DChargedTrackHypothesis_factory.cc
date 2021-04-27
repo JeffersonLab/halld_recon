@@ -77,10 +77,18 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 }
 
          // get overall scaling factor 
-	 double dedx_amp_scale;
-	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_scale", dedx_amp_scale) ) {
+	 map<string,string> scale_factors;
+	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_scale", scale_factors) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_scale in CCDB for this run!" << endl;
 	    return RESOURCE_UNAVAILABLE;
+	 }
+
+         double dedx_amp_scale = 1.0; 
+         if (scale_factors.find("amp_scale") != scale_factors.end()) {
+           dedx_amp_scale = (double)scale_factors["amp_scale"];
+         } else {
+           jerr << "Unable to get amp_scale from /CDC/dedx_amp_scale !" << endl;
+	   return RESOURCE_UNAVAILABLE;
 	 }
 
 	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
@@ -127,11 +135,19 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	   return RESOURCE_UNAVAILABLE;
 	 }
 
+	 
          // get overall scaling factor 
-	 double dedx_int_scale;
-	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_scale", dedx_int_scale) ) {
+	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_scale", scale_factors) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_scale in CCDB for this run!" << endl;
 	    return RESOURCE_UNAVAILABLE;
+	 }
+
+         double dedx_int_scale = 1.0;
+	 if (scale_factors.find("int_scale") != scale_factors.end()) {
+           dedx_int_scale = scale_factors["int_scale"];
+         } else {
+           jerr << "Unable to get int_scale from /CDC/dedx_int_scale !" << endl;
+	   return RESOURCE_UNAVAILABLE;
 	 }
 
 	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
