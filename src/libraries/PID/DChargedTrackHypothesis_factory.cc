@@ -58,22 +58,37 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	   }
 
 	   string dedx_theta_correction_file, dedx_i_theta_correction_file;
-	    map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
-	  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-	  if( jcalib->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
+	   map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
+
+	  if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
 	    return RESOURCE_UNAVAILABLE;
 	  }
-	 else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
+	  else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
 		  && dedx_theta_file_name["file_name"] != "None" ) {
-	   JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
-	   dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
-	 }
+	    JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
+	    dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
+	  }
 
 	 // check to see if we actually have a filename
 	 if(dedx_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
 	   return RESOURCE_UNAVAILABLE;
+	 }
+
+         // get overall scaling factor 
+	 map<string,double> scale_factors;
+	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_amp_scale", scale_factors) ) {
+	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_scale in CCDB for this run!" << endl;
+	    return RESOURCE_UNAVAILABLE;
+	 }
+
+         double dedx_amp_scale = 1.0; 
+         if (scale_factors.find("amp_scale") != scale_factors.end()) {
+           dedx_amp_scale = scale_factors["amp_scale"];
+         } else {
+           jerr << "Unable to get amp_scale from /CDC/dedx_amp_scale !" << endl;
+           return RESOURCE_UNAVAILABLE;
 	 }
 
 	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
@@ -96,7 +111,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 for (int ii =0; ii<cdc_npoints_dedx; ii++) {
 	   for (int jj=0; jj<cdc_npoints_theta; jj++) {
 	     fscanf(dedxfile,"%lf\n",&dedx_cf);
-	     dedx_cf_alltheta.push_back(dedx_cf);
+	     dedx_cf_alltheta.push_back(dedx_cf*dedx_amp_scale);
 	   }
 	   CDC_DEDX_AMP_CORRECTION.push_back(dedx_cf_alltheta);
 	   dedx_cf_alltheta.clear();
@@ -104,7 +119,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 fclose(dedxfile);
 
 	 // repeat for dedx from integral
-	 if( jcalib->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
+	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
 	   jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
 	   return RESOURCE_UNAVAILABLE;
 	 }
@@ -118,6 +133,21 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 if(dedx_i_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
 	   return RESOURCE_UNAVAILABLE;
+	 }
+
+	 
+         // get overall scaling factor 
+	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_int_scale", scale_factors) ) {
+           jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_scale in CCDB for this run!" << endl;
+           return RESOURCE_UNAVAILABLE;
+	 }
+
+         double dedx_int_scale = 1.0;
+	 if (scale_factors.find("int_scale") != scale_factors.end()) {
+           dedx_int_scale = scale_factors["int_scale"];
+         } else {
+           jerr << "Unable to get int_scale from /CDC/dedx_int_scale !" << endl;
+           return RESOURCE_UNAVAILABLE;
 	 }
 
 	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
@@ -140,7 +170,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 for (int ii =0; ii<cdc_npoints_dedx_int; ii++) {
 	   for (int jj=0; jj<cdc_npoints_theta_int; jj++) {
 	     fscanf(dedxfile,"%lf\n",&dedx_int_cf);
-	     dedx_int_cf_alltheta.push_back(dedx_int_cf);
+	     dedx_int_cf_alltheta.push_back(dedx_int_cf*dedx_int_scale);
 	   }
 	   CDC_DEDX_INT_CORRECTION.push_back(dedx_int_cf_alltheta);
 	   dedx_int_cf_alltheta.clear();
@@ -405,6 +435,8 @@ void DChargedTrackHypothesis_factory::Add_TimeToTrackingMatrix(DChargedTrackHypo
 double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
 
+  thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm
+
   if (theta_deg <= cdc_min_theta) {
     thetabin1 = 0;
     thetabin2 = thetabin1;
@@ -483,6 +515,8 @@ double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, d
 
 double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_int(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
+
+  thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm
 
   if (theta_deg <= cdc_min_theta_int) {
     thetabin1 = 0;
