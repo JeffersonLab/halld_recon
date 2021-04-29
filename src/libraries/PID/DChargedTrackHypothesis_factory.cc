@@ -435,6 +435,8 @@ void DChargedTrackHypothesis_factory::Add_TimeToTrackingMatrix(DChargedTrackHypo
 double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
 
+  thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm
+
   if (theta_deg <= cdc_min_theta) {
     thetabin1 = 0;
     thetabin2 = thetabin1;
@@ -513,6 +515,8 @@ double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, d
 
 double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_int(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
+
+  thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm
 
   if (theta_deg <= cdc_min_theta_int) {
     thetabin1 = 0;
