@@ -22,15 +22,18 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   ~DFCALCluster_factory_Island(){};
   const char* Tag(void){return "Island";}
   
- private:
   class PeakInfo{
   public:
-  PeakInfo(double E,double x,double y):E(E),x(x),y(y){}
+  PeakInfo(double E,double x,double y,int ic,int ir,int nhits):E(E),x(x),y(y),ic(ic),ir(ir),nhits(nhits){}
     double E;
     double x;
     double y;
-  };
+    int ic;
+    int ir;
+    int nhits;
+  }; 
   
+ private: 
   jerror_t init(void);						///< Called once at program start.
   jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
   jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
@@ -46,17 +49,16 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 			    const PeakInfo &myPeakInfo) const;
   void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
 		  vector<PeakInfo>&peaks,double &chisq) const;
-  void CorrectPosition(int channel,double d,double &x,double &y) const;
-
+  bool CheckPeak(const vector<PeakInfo>&peaks,const PeakInfo &myNewPeak) const;
+ 
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
   double SHOWER_WIDTH_PARAMETER;
   double INSERT_SHOWER_WIDTH_PARAMETER;
-  double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN;
+  double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN,MASS_CUT;
   bool DEBUG_HISTS;
 
-  double insert_Eres[3],Eres[3];
-  double posConst1,posConst2,posConst3;
-  double insertPosConst1,insertPosConst2,insertPosConst3;
+  double m_insert_Eres[3],m_Eres[3];
+  double m_zdiff;
   
   const DFCALGeometry *dFCALGeom=NULL;
   TH2D *HistdE;
