@@ -39,7 +39,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   SHOWER_WIDTH_PARAMETER=0.675;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PARAMETER",
 			      SHOWER_WIDTH_PARAMETER);
-  INSERT_SHOWER_WIDTH_PARAMETER=0.3;
+  INSERT_SHOWER_WIDTH_PARAMETER=0.315;
   gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PARAMETER",
 			      INSERT_SHOWER_WIDTH_PARAMETER);
   MIN_CUTDOWN_FRACTION=0.25;
@@ -52,7 +52,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=0.00018;
+  MASS_CUT=0.001;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,200,-0.5,0.5);
