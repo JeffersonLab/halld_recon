@@ -93,15 +93,25 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=1.365;
-  INSERT_PAR2=0.04;
-  INSERT_PAR3=1.185;
-  INSERT_PAR4=2.;
+  INSERT_PAR1=0.276;
+  INSERT_PAR2=0.374;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
+  INSERT_POS_RES1=0.155;
+  INSERT_POS_RES2=1.1425;
+  // For Island algorithm:
+  // INSERT_POS_RES1=0.19;
+  // INSERT_POS_RES2=0.054;
+  INSERT_E_VAR1=0.0011;
+  INSERT_E_VAR2=8.5e-5;
+  INSERT_E_VAR3=3.55e-5;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
+ 
 }
 
 //------------------
@@ -304,13 +314,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	FillCovarianceMatrix( shower );
       }
       else{
-	// Some guesses for insert resolution, currently hard-coded...
-	double sigx=0.1016/sqrt(Ecorrected)+0.2219;
+	// Some guesses for insert resolution
+	double sigx=INSERT_POS_RES1/sqrt(Ecorrected)+INSERT_POS_RES2;
 	shower->ExyztCovariance(1,1)=sigx*sigx;
 	shower->ExyztCovariance(2,2)=sigx*sigx;
-	shower->ExyztCovariance(0,0)=Ecorrected*Ecorrected*(0.01586/Ecorrected
-							    +0.0002342/(Ecorrected*Ecorrected)
-							    +1.695e-6);
+	shower->ExyztCovariance(0,0)
+	  =Ecorrected*Ecorrected*(INSERT_E_VAR1/Ecorrected
+				  + INSERT_E_VAR2/(Ecorrected*Ecorrected)
+				  + INSERT_E_VAR3);
 	for (unsigned int i=0;i<5;i++){
 	  for(unsigned int j=0;j<5;j++){
 	    if (i!=j) shower->ExyztCovariance(i,j)=0.;
@@ -442,14 +453,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     critical_energy=INSERT_CRITICAL_ENERGY;
     zfront=m_insertFront;
 
-    A=INSERT_PAR1;
-    B=INSERT_PAR2;
-    C=INSERT_PAR3;
-    D=INSERT_PAR4;
-    if (Eclust<D){
-      Egamma=A*Eclust/(1.+B*Eclust);
-    }
-    else Egamma=A*D/(1.+D*B)+C*(Eclust-D);
+    Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
   }
   else{
      // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
