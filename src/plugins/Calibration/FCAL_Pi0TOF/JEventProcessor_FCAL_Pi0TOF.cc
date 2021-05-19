@@ -133,8 +133,10 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   loop->Get(locEventRFBunches);
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
   
+  /* unused variables
   uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
   uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
+  */
   
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
@@ -615,7 +617,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	}
 	
-	for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
+	for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
 
 	  const DBeamPhoton *ebeam = locBeamPhotons[k]; 
 	  //double eb = ebeam->lorentzMomentum().E();
