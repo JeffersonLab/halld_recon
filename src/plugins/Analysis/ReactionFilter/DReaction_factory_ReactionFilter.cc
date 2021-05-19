@@ -271,6 +271,8 @@ vector<DReaction*> DReaction_factory_ReactionFilter::Create_Reactions(const map<
 {
 	//loop through channels, setting up the reactions
 	vector<DReaction*> locReactions;
+	static pthread_mutex_t reaction_mutex = PTHREAD_MUTEX_INITIALIZER;
+	static set<string> PrintReaction;
 	for(auto& locReactionPair : locInputStrings)
 	{
 		auto& locNameString = std::get<0>(locReactionPair.second);
@@ -304,7 +306,6 @@ vector<DReaction*> DReaction_factory_ReactionFilter::Create_Reactions(const map<
 				continue;
 			}
 			locDecayStepTuples.push_back(locDecayStepTuple);
-
 			//expand name if needed
 			if(locNameString == "")
 				locReactionName += string("__") + Create_StepNameString(locDecayStepTuple, false);
@@ -327,10 +328,17 @@ vector<DReaction*> DReaction_factory_ReactionFilter::Create_Reactions(const map<
 		//Set flags
 		Set_Flags(locReaction, locFlagString);
 
-		//save reaction
-		cout << "ReactionFilter: Reaction: " << locReactionName << endl;
-		DAnalysis::Print_Reaction(locReaction);
+		//print reaction only once
+		pthread_mutex_lock(&reaction_mutex);
+		if (PrintReaction.find(locReactionName) == PrintReaction.end())
+		  {
+		    cout << "ReactionFilter: Reaction: " << locReactionName << endl;
+		    DAnalysis::Print_Reaction(locReaction);
+		    PrintReaction.insert(locReactionName);
+		  }
+		pthread_mutex_unlock(&reaction_mutex);
 
+		//save reaction
 		locReactions.push_back(locReaction);
 	}
 

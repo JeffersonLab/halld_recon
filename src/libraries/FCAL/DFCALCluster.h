@@ -59,6 +59,11 @@ class DFCALCluster : public JObject {
 
    void saveHits( const userhits_t* const hit );
 
+   void setTimeEWeight(double myTimeEWeight){fTimeEWeight=myTimeEWeight;};
+   void setEnergy(double myEnergy){fEnergy=myEnergy;};
+   void setChannelEmax(int myChannelEmax){fChannelEmax=myChannelEmax;};
+   void setCentroid(double myX,double myY){fCentroid.SetXYZ(myX,myY,0.);};
+
    double getEexpected(const int ihit) const;
    double getEallowed(const int ihit) const;
    double getEnergy() const;
