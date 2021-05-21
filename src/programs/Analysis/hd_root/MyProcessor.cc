@@ -15,6 +15,7 @@ using namespace std;
 
 #include "MyProcessor.h"
 
+#include <dilog.h>
 #include <sstream>
 extern std::stringstream dilog_eventNo;
 
@@ -151,6 +152,12 @@ unique_lock<std::mutex> lck(locMutex);
 
 dilog_eventNo.str("");
 dilog_eventNo << "event_" << eventnumber;
+static dilog *dilog_channel = 0;
+if (dilog_channel) {
+   delete dilog_channel;
+}
+dilog_channel = &dilog::get(dilog_eventNo.str());
+
 try {
 	// Loop over factories explicitly mentioned on command line
 	for(unsigned int i=0;i<toprint.size();i++){
