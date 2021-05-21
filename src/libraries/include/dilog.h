@@ -467,6 +467,9 @@ class dilog {
          // return true, or else to die trying.
  
          dilog &dlog = dilog::get(chan, false);
+         if (!dlog.fReplay) {
+            return true;
+         }
          std::string mexpected;
          for (; dlog.fReplay < dlog.fRecord.size(); ++dlog.fReplay) {
             mexpected = dlog.fRecord[dlog.fReplay];
@@ -491,6 +494,8 @@ class dilog {
                      dlog.fError = "dilog::block::replay error: " + dlog.fError;
                      return false;
                   }
+                  if (!dlog.fReplay)
+                     break;
                   if (dlog.fReplay < dlog.fRecord.size()) {
                      t = new trace(*this, "replay", "child.exit");
                      binner->exit();
@@ -500,6 +505,8 @@ class dilog {
                         return false;
                      }
                   }
+                  if (!dlog.fReplay)
+                     break;
                }
                else {
                   dlog.fError = "dilog::block::replay error: "
@@ -598,22 +605,26 @@ class dilog {
          dilog &dlog = dilog::get(channel, false);
          lineno = dlog.fLineno;
          replay = dlog.fReplay;
-         tracefile() << "[" << target->traces.size() << "] "
+         tracefile() << "[" << fullstack().size() << "." 
+                     << target->traces.size() << "] "
                      << target->getPath() << "." << caller << " >> " << callee
                      << " at line " << lineno << " with replay=" << replay
                      << std::endl;
          target->traces.push(this);
+         pushstack(this);
       }
 
       ~trace() {
          dilog &dlog = dilog::get(channel, false);
-         tracefile() << "[" << target->traces.size() << "] "
+         tracefile() << "[" << fullstack().size() << "." 
+                     << target->traces.size() << "] "
                      << target->getPath() << "." << caller << " << " << callee
                      << " at line " << lineno << "=>" << dlog.fLineno
                      << " with replay=" << replay << "=>" << dlog.fReplay
                      << "/" << dlog.fRecord.size() << std::endl;
          if (this == target->traces.top()) {
             target->traces.pop();
+            popstack(this);
          }
          else {
             std::cerr << "dilog::trace destructor error: "
@@ -634,8 +645,84 @@ class dilog {
             return std::cerr;
       }
 
+    protected:
+      void pushstack(trace *item) {
+         fullstack().push(item);
+      }
+      void popstack(trace *item) {
+         trace *top = fullstack().top();
+         if (item != top) {
+            std::cerr << "dilog::trace::popstack error: "
+                      << "call trace ordering error." << std::endl
+                      << "This indicates an algorithm bug internal to "
+                      << "the dilog class, please report to the package "
+                      << "maintaniners." << std::endl;
+         }
+         fullstack().pop();
+      }
+      std::stack<trace*>& fullstack() {
+         static std::stack<trace*> stack;
+         return stack;
+      }
+
       friend class block;
    };
+
+   dilog(const std::string& channel)
+    : fLineno(0), fChannel(channel), fReplay(0)
+   {
+      std::string fname(channel);
+      fname += ".dilog";
+      fReading = new std::ifstream(fname.c_str());
+      if (fReading->good()) {
+         fWriting = 0;
+         fLogging = new std::ofstream((fname + "2").c_str());
+         if (!fLogging->good()) {
+            fError = "dilog constructor error - unable to open "
+                     "output dilog2 file, this is a fatal error.";
+         }
+      }
+      else {
+         fReading = 0;
+         fLogging = 0;
+         fWriting = new std::ofstream(fname.c_str());
+         if (!fWriting->good()) {
+            fError = "dilog constructor error - unable to open "
+                     "output dilog file, this is a fatal error.";
+         }
+      }
+      static std::mutex mutex;
+      std::lock_guard<std::mutex> guard(mutex);
+      dilogs_map_t &dilogs = get_map();
+      std::thread::id tid = std::this_thread::get_id();
+      if (dilogs.find(channel) == dilogs.end()) {
+         dilogs[channel] = this;
+         fThread_id = tid;
+      }
+      else {
+        fError = "dilog constructor error - channel name collision, "
+                  "duplicated open on channel ";
+        fError += channel;
+        std::cerr << fError << std::endl;
+      }
+      block *bot = new block;
+      bot->chan = channel;
+      fBlocks[channel] = bot;
+      fBlock = bot;
+   }
+
+   ~dilog() {
+      static std::mutex mutex;
+      std::lock_guard<std::mutex> guard(mutex);
+      dilogs_map_t &dilogs = get_map();
+      dilogs.erase(fChannel);
+      if (fReading)
+         delete fReading;
+      if (fWriting)
+         delete fWriting;
+      if (fLogging)
+         delete fLogging;
+   }
 
    static dilog &get(const std::string &channel, bool threadsafe=true)
    {
@@ -658,11 +745,10 @@ class dilog {
       static std::mutex mutex;
       std::lock_guard<std::mutex> guard(mutex);
       dilogs_map_t &dilogs = get_map();
-      std::thread::id tid = std::this_thread::get_id();
       if (dilogs.find(channel) == dilogs.end()) {
          dilogs[channel] = new dilog(channel);
-         dilogs[channel]->fThread_id = tid;
       }
+      std::thread::id tid = std::this_thread::get_id();
       if (threadsafe && dilogs[channel]->fThread_id != tid) {
          dilogs[channel]->fError = "dilog::get error: access to channel"
                                    " \"" + channel + "\" attempted"
@@ -729,40 +815,11 @@ class dilog {
 
  protected:
    dilog() = delete;
-   dilog(const std::string& channel)
-    : fLineno(0), fChannel(channel), fReplay(0)
-   {
-      std::string fname(channel);
-      fname += ".dilog";
-      fReading = new std::ifstream(fname.c_str());
-      if (fReading->good()) {
-         fWriting = 0;
-         fLogging = new std::ofstream((fname + "2").c_str());
-      }
-      else {
-         fReading = 0;
-         fLogging = 0;
-         fWriting = new std::ofstream(fname.c_str());
-      }
-      block *bot = new block;
-      bot->chan = channel;
-      fBlocks[channel] = bot;
-      fBlock = bot;
-   }
-
-   ~dilog() {
-      if (fReading)
-         delete fReading;
-      if (fWriting)
-         delete fWriting;
-      if (fLogging)
-         delete fLogging;
-   }
 
    void check_message(const std::string message)
    {
     // Validate printf message against the next content found in the input
-    // file, and report a fatail error if the match fails.
+    // file, and report a fatal error if the match fails.
  
       size_t nl;
       std::string msg(message);
@@ -778,6 +835,7 @@ class dilog {
             return;
          }
          else {
+            trace t(*fBlock, "check_message", "next");
             if (fBlock->next(nextmsg)) {
                continue;
             }
@@ -834,7 +892,9 @@ class dilog {
    void logger(std::string line)
    {
       if (fLogging) {
-         *fLogging << line << " at line " << fLineno << std::endl;
+         *fLogging << line << " at line " << fLineno
+                   << ", step " << fRecord.size() - 1
+                   << std::endl;
       }
    }
 
