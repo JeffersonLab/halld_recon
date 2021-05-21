@@ -792,6 +792,39 @@ double DSourceComboTimeHandler::Calc_MaxDeltaTError(const DNeutralShower* locNeu
 
 bool DSourceComboTimeHandler::Select_RFBunches_Charged(const DReactionVertexInfo* locReactionVertexInfo, const DSourceCombo* locReactionChargedCombo, vector<int>& locValidRFBunches)
 {
+
+dilog::get(dilog_eventNo.str()).printf("Entry to Select_RFBunches_Charged the the following locReactionChargedCombo:");
+for (auto combopair : locReactionChargedCombo->Get_SourceParticles()) {
+  dilog::block combo_pair_print(dilog_eventNo.str(), "combo_pair_print");
+  const DChargedTrack *charged = dynamic_cast<const DChargedTrack*>(combopair.second);
+  const DNeutralShower *neutral = dynamic_cast<const DNeutralShower*>(combopair.second);
+  if (charged) {
+    dilog::get(dilog_eventNo.str()).printf("* charged %s:", ParticleType(combopair.first));
+    const DChargedTrackHypothesis *chypo = charged->Get_Hypothesis(combopair.first);
+    std::vector<std::pair<std::string, std::string> > items;
+    chypo->toStrings(items);
+    for (auto keyval : items) {
+      if (keyval.first == "candidate")
+         continue;
+      dilog::get(dilog_eventNo.str()).printf("*   %s: %s",keyval.first.c_str(),keyval.second.c_str());
+    }
+  }
+  else if (neutral) {
+    dilog::get(dilog_eventNo.str()).printf("* neutral %s:", ParticleType(combopair.first));
+    std::vector<std::pair<std::string, std::string> > items;
+    neutral->toStrings(items);
+    for (auto keyval : items) {
+      if (keyval.first == "candidate")
+         continue;
+      dilog::get(dilog_eventNo.str()).printf("*   %s: %s",keyval.first.c_str(),keyval.second.c_str());
+    }
+  }
+  else {
+    dilog::get(dilog_eventNo.str()).printf("* neither charged nor neutral, what is this???");
+  }
+}
+
+
 	if(dDebugLevel >= 10)
 		cout << "DSourceComboTimeHandler::Select_RFBunches_Charged()" << endl;
 	auto locRFIterator = dChargedComboRFBunches.find(locReactionChargedCombo);
@@ -815,6 +848,7 @@ bool DSourceComboTimeHandler::Select_RFBunches_Charged(const DReactionVertexInfo
 
 	for(const auto& locStepVertexInfo : locReactionVertexInfo->Get_StepVertexInfos())
 	{
+dilog::block dilog_vertex_charged(dilog_eventNo.str(), "build_rf_vertex_charged");
 		if(dDebugLevel >= 20)
 			cout << "step: " << locStepVertexInfo->Get_StepIndices().front() << endl;
 
@@ -840,13 +874,20 @@ bool DSourceComboTimeHandler::Select_RFBunches_Charged(const DReactionVertexInfo
 		if(dDebugLevel >= 20)
 			cout << "primary vertex z, targ z, init rf time, time offset, prop time = " << locPrimaryVertexZ << ", " << dTargetCenter.Z() << ", " << dInitialEventRFBunch->dTime << ", " << locTimeOffset << ", " << locPropagatedRFTime << endl;
 
+dilog::get(dilog_eventNo.str()).printf("Select_RFBunches_Charged reports primary vertex z=%f, targ z=%f, init rf time=%f, time offset=%f, prop time=%f",locPrimaryVertexZ,dTargetCenter.Z(),dInitialEventRFBunch->dTime,locTimeOffset,locPropagatedRFTime);
 		//loop over charged particles
 		auto locChargedParticles = DAnalysis::Get_SourceParticles_ThisVertex(locVertexPrimaryCombo);
 		for(const auto& locParticlePair : locChargedParticles)
 		{
 dilog::block dilog_charged(dilog_eventNo.str(), "build_rf_charged");
-dilog::get(dilog_eventNo.str()).printf("calling GetRFBunches_ChargedTrack on pid %d", (int)locParticlePair.first);
 			auto locChargedHypo = static_cast<const DChargedTrack*>(locParticlePair.second)->Get_Hypothesis(locParticlePair.first);
+dilog::get(dilog_eventNo.str()).printf("calling GetRFBunches_ChargedTrack on particle %s, system %s, vertexTime=%f, propagatedRFTime=%f, momentum=%f",
+ParticleType(locParticlePair.first),
+SystemName(locChargedHypo->t1_detector()),
+Get_ChargedPOCAToVertexX4(locChargedHypo,locIsProductionVertex,nullptr,locVertexPrimaryCombo,nullptr,locIsCombo2ndVertex,locVertex).T(),
+(locChargedHypo->position().Z() - locVertex.Z())/SPEED_OF_LIGHT,
+locChargedHypo->momentum().Mag()
+);
 			vector<int> locParticleRFBunches;
 			if(!Get_RFBunches_ChargedTrack(locChargedHypo, locIsProductionVertex, locVertexPrimaryCombo, locIsCombo2ndVertex, locVertex, locPropagatedRFTime, locOnlyTrackFlag, !locIsProductionVertex, locParticleRFBunches))
 			{
@@ -860,7 +901,8 @@ dilog::get(dilog_eventNo.str()).printf("calling GetRFBunches_ChargedTrack on pid
 			if(locParticleRFBunches.empty())
 			{
 				dChargedComboRFBunches.emplace(locReactionChargedCombo, std::make_pair(false, vector<int>{}));
-				return false;
+//dilog::get(dilog_eventNo.str()).printf("Select_RFBunches_Charged tried to return early, return blocked!");
+//				return false;
 			}
 
 			locValidRFBunches = Get_CommonRFBunches(locValidRFBunches, locParticleRFBunches);
@@ -869,7 +911,8 @@ dilog::get(dilog_eventNo.str()).printf("calling GetRFBunches_ChargedTrack on pid
 			if(locValidRFBunches.empty())
 			{
 				dChargedComboRFBunches.emplace(locReactionChargedCombo, std::make_pair(false, vector<int>{}));
-				return false;
+//dilog::get(dilog_eventNo.str()).printf("Select_RFBunches_Charged tried to return early 2, return blocked!");
+//				return false;
 			}
 		}
 	}
@@ -1512,6 +1555,7 @@ bool DSourceComboTimeHandler::Get_RFBunches_ChargedTrack(const DChargedTrackHypo
 			cout << "charged track z, new track vert time, new prop rf time: " << locHypothesis->position().Z() << ", " << locVertexTime << ", " << locPropagatedRFTime << endl;
 	}
 
+dilog::get(dilog_eventNo.str()).printf("Get_RFBunches_ChargedTrack called on particle %s, system %s, vertexTime=%f, propagatedRFTime=%f, momentum=%f",ParticleType(locPID),SystemName(locSystem),locVertexTime,locPropagatedRFTime,locP);
 	locRFBunches = Calc_BeamBunchShifts(locVertexTime, locPropagatedRFTime, locDeltaTCut, false, locPID, locSystem, locP);
 	return (locCutFunc != nullptr);
 }
