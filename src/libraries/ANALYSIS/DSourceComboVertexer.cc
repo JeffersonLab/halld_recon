@@ -315,6 +315,10 @@ void DSourceComboVertexer::Calc_VertexTimeOffsets_WithBeam(const DReactionVertex
 		auto locVertex = Calc_Vertex(locIsProductionVertexFlag, locChargedSourceParticles, locDecayingParticles, locVertexParticles);
 		dConstrainingParticlesByCombo.emplace(locFullComboProductionTuple, locVertexParticles);
 
+		//neither decaying particle is fully contrained
+		if (locDecayingParticles.size() == 0)
+		  continue;
+
 		//CALC AND STORE TIME OFFSET
 		auto locFullReactionTuple_TimeOffset = std::make_tuple(true, locReactionFullCombo, locBeamParticle);
 
