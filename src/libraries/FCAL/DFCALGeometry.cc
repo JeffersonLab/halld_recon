@@ -185,8 +185,8 @@ DFCALGeometry::channel( int row, int column ) const
 	}
 	else{
 		
-	  cerr << "ERROR: request for channel number of inactive block!  row " 
-	       << row << " column " <<  column << endl;
+	  // cerr << "ERROR: request for channel number of inactive block!  row "
+	  //      << row << " column " <<  column << endl;
 		return -1;
 	}
 }

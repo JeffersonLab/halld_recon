@@ -144,8 +144,13 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	dInvariantMassCuts.emplace(Sigma0, std::make_pair(1.1, 1.3));
 	dInvariantMassCuts.emplace(SigmaPlus, dInvariantMassCuts[Sigma0]);
 	dInvariantMassCuts.emplace(SigmaMinus, dInvariantMassCuts[Sigma0]);
+	dInvariantMassCuts.emplace(AntiSigma0, dInvariantMassCuts[Sigma0]);
+	dInvariantMassCuts.emplace(AntiSigmaPlus, dInvariantMassCuts[Sigma0]);
+	dInvariantMassCuts.emplace(AntiSigmaMinus, dInvariantMassCuts[Sigma0]);
 	dInvariantMassCuts.emplace(XiMinus, std::make_pair(1.1, 1.5));
 	dInvariantMassCuts.emplace(Xi0, dInvariantMassCuts[XiMinus]);
+	dInvariantMassCuts.emplace(AntiXi0, dInvariantMassCuts[XiMinus]);
+	dInvariantMassCuts.emplace(AntiXiPlus, dInvariantMassCuts[XiMinus]);
 	dInvariantMassCuts.emplace(OmegaMinus, std::make_pair(1.32, 2.22));
 	dInvariantMassCuts.emplace(Lambda_c, std::make_pair(2.0, 2.6));
 
