@@ -55,7 +55,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   MASS_CUT=0.001;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
-  HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,200,-0.5,0.5);
+  HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
   HistProb=new TH1D("HistProb",";CL",100,0,1);
   
   return NOERROR;
@@ -260,10 +260,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// Save the current peak list
 	vector<PeakInfo>saved_peaks=peaks;
 	PeakInfo peak_guess=myPeak;
-	if (myPeak.nhits<3){  // Too few hits to perform fit!
-	  peaks.push_back(myPeak);
-	}
-	else {
+	if (myPeak.nhits>2){
 	  // Fit the data to find the best current guesses for the shower 
 	  // parameters for each peak within this group of FCAL hits.	  
 	  chisq_old=chisq;
