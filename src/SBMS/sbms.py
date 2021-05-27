@@ -1,14 +1,3 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import unicode_literals
-
-from builtins import open
-from builtins import filter
-from builtins import int
-from builtins import str
-from future import standard_library
-standard_library.install_aliases()
 import os
 import subprocess
 import SCons
@@ -44,14 +33,14 @@ def library(env, libname=''):
 	# Add C/C++, and FORTRAN targets
 	env.AppendUnique(ALL_SOURCES = env.Glob('*.c'))
 	#env.AppendUnique(ALL_SOURCES = env.Glob('*.cc'))
-	env.AppendUnique(ALL_SOURCES = list(filter(IsNotSWIGWrapper,env.Glob('*.cc'))))
+	env.AppendUnique(ALL_SOURCES = filter(IsNotSWIGWrapper,env.Glob('*.cc')))
 	env.AppendUnique(ALL_SOURCES = env.Glob('*.cpp'))
 	env.AppendUnique(ALL_SOURCES = env.Glob('*.F'))
 	env.AppendUnique(ALL_SOURCES = env.Glob('*.f90'))
 
 	sources = env['ALL_SOURCES']
 	objects = env['MISC_OBJECTS']
-	if 'IGNORE_SOURCES' in list(env.Dictionary().keys()):
+	if 'IGNORE_SOURCES' in env.Dictionary().keys():
 		ignore  = env['IGNORE_SOURCES']
 		sources = [s for s in env['ALL_SOURCES'] if s.name not in ignore]		
 
@@ -100,7 +89,7 @@ def executable(env, exename=''):
 	ReorderCommonLibraries(env)
 
 	sources = env['ALL_SOURCES']
-	if 'IGNORE_SOURCES' in list(env.Dictionary().keys()):
+	if 'IGNORE_SOURCES' in env.Dictionary().keys():
 		ignore  = env['IGNORE_SOURCES']
 		sources = [s for s in env['ALL_SOURCES'] if s.name not in ignore]		
 
@@ -186,9 +175,9 @@ def python_so_module(env, modname):
 	if EXT_SUFFIX == 0:
 		req = subprocess.Popen([pythoncommand, '-c', 
 						'from distutils import sysconfig;' +
-						'print(sysconfig.get_config_var("EXT_SUFFIX"))'],
+						'print sysconfig.get_config_var("EXT_SUFFIX")'],
 						stdout=subprocess.PIPE)
-		EXT_SUFFIX = str(req.communicate()[0].rstrip(), 'utf-8')
+		EXT_SUFFIX = req.communicate()[0].rstrip()
 	if EXT_SUFFIX == "None":
 		mymod = modname + '.so'
 		moduledir = env.subst('$PYTHON2DIR')
@@ -251,7 +240,7 @@ def executables(env):
 
 	common_sources.extend(env['ALL_SOURCES'])
 
-	if 'IGNORE_SOURCES' in list(env.Dictionary().keys()):
+	if 'IGNORE_SOURCES' in env.Dictionary().keys():
 		ignore  = env['IGNORE_SOURCES']
 		main_sources   = [s for s in main_sources   if s.name not in ignore]		
 		common_sources = [s for s in common_sources if s.name not in ignore]		
@@ -297,12 +286,12 @@ def plugin(env, pluginname=''):
         #print str([x.rstr() for x in env.Glob('*.cc')])
 
 	sources = env['ALL_SOURCES']
-	if 'IGNORE_SOURCES' in list(env.Dictionary().keys()):
+	if 'IGNORE_SOURCES' in env.Dictionary().keys():
 		ignore  = env['IGNORE_SOURCES']
 		sources = [s for s in env['ALL_SOURCES'] if s.name not in ignore]		
 
 	# Strip out libs that don't need to be linked in plugin
-	if 'OPTIONAL_PLUGIN_LIBS' in list(env.Dictionary().keys()) :
+	if 'OPTIONAL_PLUGIN_LIBS' in env.Dictionary().keys() :
 		REDUCED_LIBS = [s for s in env['LIBS'] if s not in env['OPTIONAL_PLUGIN_LIBS'] ]
 		env.Replace(LIBS=REDUCED_LIBS)
 
@@ -494,17 +483,17 @@ def ApplyPlatformSpecificSettings(env, platform):
 
 	modname = "sbms_%s" % platform
 	if (int(env['SHOWBUILD']) > 0):
-		print("looking for %s.py" % modname)
+		print "looking for %s.py" % modname
 	try:
 		InitENV = getattr(__import__(modname), "InitENV")
 
 		# Run the InitENV function (if found)
 		if(InitENV != None):
-			print("sbms : Applying settings for platform %s" % platform)
+			print "sbms : Applying settings for platform %s" % platform
 			InitENV(env)
 
 	except ImportError as e:
-		if (int(env['SHOWBUILD']) > 0): print("%s" % e)
+		if (int(env['SHOWBUILD']) > 0): print "%s" % e
 		pass
 
 
@@ -587,8 +576,8 @@ def AddJANA(env):
 
 	# Only run jana-config the first time through
 	if "JANA_CFLAGS" not in AddJANA.__dict__:
-		AddJANA.JANA_CFLAGS = str(subprocess.Popen(["%s/bin/jana-config" % jana_home,"--jana-only","--cflags"], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
-		AddJANA.JANA_LINKFLAGS = str(subprocess.Popen(["%s/bin/jana-config" % jana_home,"--jana-only","--libs"], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
+		AddJANA.JANA_CFLAGS = subprocess.Popen(["%s/bin/jana-config" % jana_home,"--jana-only","--cflags"], stdout=subprocess.PIPE).communicate()[0]
+		AddJANA.JANA_LINKFLAGS = subprocess.Popen(["%s/bin/jana-config" % jana_home,"--jana-only","--libs"], stdout=subprocess.PIPE).communicate()[0]
 
 	AddCompileFlags(env, AddJANA.JANA_CFLAGS)
 	AddLinkFlags(env, AddJANA.JANA_LINKFLAGS)
@@ -619,8 +608,8 @@ def AddMySQL(env):
 
 	# Only run mysql_config the first time through
 	if "MYSQL_CFLAGS" not in AddMySQL.__dict__:
-		AddMySQL.MYSQL_CFLAGS = str(subprocess.Popen(["mysql_config","--cflags"], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
-		AddMySQL.MYSQL_LINKFLAGS = str(subprocess.Popen(["mysql_config","--libs"], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
+		AddMySQL.MYSQL_CFLAGS = subprocess.Popen(["mysql_config","--cflags"], stdout=subprocess.PIPE).communicate()[0]
+		AddMySQL.MYSQL_LINKFLAGS = subprocess.Popen(["mysql_config","--libs"], stdout=subprocess.PIPE).communicate()[0]
 	AddCompileFlags(env, AddMySQL.MYSQL_CFLAGS)
 	AddLinkFlags(env, AddMySQL.MYSQL_LINKFLAGS)
 
@@ -852,15 +841,15 @@ def AddROOT(env):
 
 	rootsys = os.getenv('ROOTSYS', '/usr/local/root/PRO')
 	if not os.path.isdir(rootsys):
-		print('ROOTSYS not defined or points to a non-existant directory!')
+		print 'ROOTSYS not defined or points to a non-existant directory!'
 		sys.exit(-1)
 
 	# Only root-config the first time through
 	if "ROOT_CFLAGS" not in AddROOT.__dict__:
-		AddROOT.ROOT_CFLAGS    = str(subprocess.Popen(["%s/bin/root-config" % rootsys, "--cflags"], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
-		AddROOT.ROOT_LINKFLAGS = str(subprocess.Popen(["%s/bin/root-config" % rootsys, "--glibs" ], stdout=subprocess.PIPE).communicate()[0], 'utf-8')
+		AddROOT.ROOT_CFLAGS    = subprocess.Popen(["%s/bin/root-config" % rootsys, "--cflags"], stdout=subprocess.PIPE).communicate()[0]
+		AddROOT.ROOT_LINKFLAGS = subprocess.Popen(["%s/bin/root-config" % rootsys, "--glibs" ], stdout=subprocess.PIPE).communicate()[0]
 		has_tmva_out = subprocess.Popen(["%s/bin/root-config" % rootsys, "--has-tmva" ], stdout=subprocess.PIPE).communicate()[0]
-		has_tmva = str(has_tmva_out, 'utf-8')
+		has_tmva = has_tmva_out
 		if 'yes' in has_tmva:
 			AddROOT.ROOT_CFLAGS    += ' -DHAVE_TMVA=1'
 			AddROOT.ROOT_LINKFLAGS += ' -lTMVA'
@@ -901,7 +890,7 @@ def AddROOT(env):
 	elif os.path.exists(rootcintpath):
 		bld = SCons.Script.Builder(action = rootcintaction, suffix='_Dict.cc', src_suffix='.h')
 	else:
-		print('Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.')
+		print 'Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.'
 		return
 
 	env.Append(BUILDERS = {'ROOTDict' : bld})
@@ -918,13 +907,13 @@ def AddROOT(env):
 	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
-		print("---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath)
+		print "---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath
 	os.chdir(srcpath)
 	for f in glob.glob('*.[h|hh|hpp]'):
 		if 'ClassDef' in open(f).read():
 			env.AppendUnique(ALL_SOURCES = env.ROOTDict(f))
 			if(int(env['SHOWBUILD'])>1):
-				print("       ROOT dictionary for %s" % f)
+				print "       ROOT dictionary for %s" % f
 	os.chdir(curpath)
 
 
@@ -1005,11 +994,11 @@ def AddROOTSpyMacros(env):
 	curpath = os.getcwd()
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
-		print("---- Looking for ROOT macro files (*.C) in: %s" % srcpath)
+		print "---- Looking for ROOT macro files (*.C) in: %s" % srcpath
 	os.chdir(srcpath)
 	for f in glob.glob('*.C'):
 		env.AppendUnique(ALL_SOURCES = env.ROOTSpyMacro(f))
-		if(int(env['SHOWBUILD'])>1) : print("       ROOTSpy Macro for %s" % f)
+		if(int(env['SHOWBUILD'])>1) : print "       ROOTSpy Macro for %s" % f
 
 	os.chdir(curpath)
 
@@ -1024,8 +1013,8 @@ def AddSWIG(env):
 	if ProgramExists("swig"):
 		env.AppendUnique(SWIG_EXISTS = "1")
 		if not env['BUILDSWIG'] or int(env['BUILDSWIG']) != 1:
-			print('-- NOTE: swig exists but will not be used unless you  --')
-			print('--       add "BUILDSWIG=1" to the scons command line. --')
+			print '-- NOTE: swig exists but will not be used unless you  --'
+			print '--       add "BUILDSWIG=1" to the scons command line. --'
 	else:
 		env.AppendUnique(SWIG_EXISTS = "0")
 	# TEMPORARILY DISABLE
@@ -1068,7 +1057,7 @@ def AddCUDA(env):
 		srcpath = env.Dir('.').srcnode().abspath
 		os.chdir(srcpath)
 		for f in glob.glob('*.cu'):
-			if env['SHOWBUILD']>0 : print('Adding %s' % f)
+			if env['SHOWBUILD']>0 : print 'Adding %s' % f
 			env.AppendUnique(MISC_OBJECTS = env.CUDA(f))
 		os.chdir(curpath)
 
@@ -1087,10 +1076,10 @@ def AddAmpTools(env):
 	# printed and env left unchanged.
 	AMPTOOLS = os.getenv('AMPTOOLS')
 	if AMPTOOLS==None:
-		print('')
-		print('AmpTools is being requested but the AMPTOOLS environment variable')
-		print('is not set. Expect to see an error message below....')
-		print('')
+		print ''
+		print 'AmpTools is being requested but the AMPTOOLS environment variable'
+		print 'is not set. Expect to see an error message below....'
+		print ''
 	else:
 		env.AppendUnique(CUDAFLAGS=['-I%s -I%s/src/libraries' % (AMPTOOLS, os.getenv('HALLD_RECON_HOME',os.getcwd()))])
 		AddCUDA(env)
@@ -1099,7 +1088,7 @@ def AddAmpTools(env):
 		AMPTOOLS_LIBS = 'AmpTools'
 		if os.getenv('CUDA')!=None and os.path.exists('%s/lib/libAmpTools_GPU.a' % AMPTOOLS):
 			AMPTOOLS_LIBS = 'AmpTools_GPU'
-			print('Using GPU enabled AMPTOOLS library')
+			print 'Using GPU enabled AMPTOOLS library'
 
 		env.AppendUnique(CPPPATH = AMPTOOLS_CPPPATH)
 		env.AppendUnique(LIBPATH = AMPTOOLS_LIBPATH)
