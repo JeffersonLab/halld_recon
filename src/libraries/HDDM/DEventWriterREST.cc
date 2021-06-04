@@ -192,7 +192,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTagmBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
 			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
-			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
+			locTagmChannelList().setColumn(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons_TAGGEDMCGEN[loc_i]->dSystem == SYS_TAGH)
 		{
@@ -201,7 +201,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTaghBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
 			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
-			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
+			locTaghChannelList().setCounter(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 	}
 
