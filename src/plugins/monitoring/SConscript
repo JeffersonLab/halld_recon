@@ -60,6 +60,7 @@ subdirs = [
 'lumi_mon',
 'scaler_primex'
 ,'cppFMWPC'
+,'cppFMWPC_ana'
 
 ]
 
