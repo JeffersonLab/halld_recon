@@ -1,4 +1,3 @@
-
 #ifndef _DEventWriterEVIO_
 #define _DEventWriterEVIO_
 
@@ -8,6 +7,7 @@
 
 #include <JANA/JObject.h>
 #include <JANA/JEventLoop.h>
+#include <JANA/JEventSource.h>
 #include <JANA/JApplication.h>
 
 #include <DAQ/JEventSource_EVIO.h>
@@ -70,7 +70,8 @@ class DEventWriterEVIO : public JObject
 		bool COMPACT;
 		bool PREFER_EMULATED;
 		bool DEBUG_FILES;
-
+        bool CLOSE_FILES;
+        
 	protected:
 		bool Open_OutputFile(JEventLoop* locEventLoop, string locOutputFileName) const;
 		
