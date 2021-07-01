@@ -60,7 +60,7 @@ class DEventWriterEVIO : public JObject
 		bool Write_EVIOBuffer(JEventLoop* locEventLoop, uint32_t *locOutputBuffer, uint32_t locOutputBufferSize, string locOutputFileNameSubString) const;
 
 		string Get_OutputFileName(JEventLoop* locEventLoop, string locOutputFileNameSubString) const;
-        void SetDetectorsToWriteOut(string detector_list, string locOutputFileNameSubString) const;
+        void SetDetectorsToWriteOut(JEventLoop* locEventLoop, string detector_list, string locOutputFileNameSubString) const;
 
         bool Is_MergingFiles() const { return dMergeFiles; }
         void Set_MergeFiles(bool in_flag) { dMergeFiles = in_flag; }
