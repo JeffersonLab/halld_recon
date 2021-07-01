@@ -335,12 +335,19 @@ bool DEventWriterEVIO::Open_OutputFile(JEventLoop* locEventLoop, string locOutpu
         if(currentEventSource != locEventSource) {
             currentEventSource = locEventSource;
 
+            // first clear all of the objects being referenced
             for( auto entry : Get_EVIOOutputters() )
                 delete entry.second;
             for( auto entry : Get_EVIOBufferWriters() )
                 delete entry.second;
+            // and close the threads so that they don't use extra CPU with their idle spin-locks
             for( auto entry : Get_EVIOOutputThreads() )
                 pthread_cancel(entry.second);
+
+            // now clear all of the entries in these maps
+            Get_EVIOOutputters().clear();
+            Get_EVIOBufferWriters().clear();
+            Get_EVIOOutputThreads().clear();
         }
 
     }
