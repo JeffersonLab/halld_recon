@@ -42,7 +42,7 @@ class hdv_endviewBframe:public TGMainFrame {
 		void DoDismiss(void);
 
 		void SetRange(double xlo, double ylo, double xhi, double yhi);
-		void DrawObjects(vector<TObject*> &graphics_endB);
+		void DrawObjects(std::vector<TObject*> &graphics_endB);
 		
 	private:
 	
