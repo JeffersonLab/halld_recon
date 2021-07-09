@@ -10,6 +10,8 @@
 
 #include "FCAL/DFCALGeometry.h"
 #include <FCAL/DFCALHit.h>
+#include <TOF/DTOFHit.h>
+#include <TOF/DTOFGeometry.h>
 
 #include <BCAL/DBCALHit.h>
 
@@ -172,6 +174,8 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		int    ST_NSB;
 		int    ST_WINDOW;
 		int    ST_NHIT;
+
+		int TOF_WINDOW;
 		
 		int BCAL_OFFSET;
 		
@@ -220,6 +224,7 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 
 		void GetSeeds(JEventLoop *loop,  uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3);
+		bool TOFTrigger(vector<const DTOFHit*>&tof_hits) const;
 
 		TH1F *hfcal_gains;
 		TH2F *hfcal_gains2;
@@ -227,6 +232,9 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 		int debug;
 		
+		int TOF_NUM_BARS,TOF_THRESHOLD;
+		vector<double>TOF_adc2E;
+		const DTOFGeometry *TOFGeom=NULL;
 };
 
 #endif // _DL1MCTrigger_factory_

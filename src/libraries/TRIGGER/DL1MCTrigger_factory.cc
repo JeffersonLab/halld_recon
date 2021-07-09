@@ -22,6 +22,9 @@ using namespace jana;
 #endif
 
 static bool print_data_message = true;
+bool DTOFHit_time_cmp(const DTOFHit *a,const DTOFHit *b){
+  return a->t_fADC<b->t_fADC;
+}
 
 //------------------
 // init
@@ -67,10 +70,12 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   BCAL_OFFSET      =  2;
 
+  TOF_WINDOW       =  20;
+  TOF_THRESHOLD = 200; // Needs to be determined...
+
   SIMU_BASELINE = 1;
   SIMU_GAIN = 1;
   
-
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
 
@@ -316,6 +321,24 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     }
   }
 
+  // Get the TOF geometry and retrieve calibration constants from ccdb
+  eventLoop->GetSingle(TOFGeom);
+  if (TOFGeom!=NULL){
+    int TOF_NUM_PLANES = TOFGeom->Get_NPlanes();
+    TOF_NUM_BARS = TOFGeom->Get_NBars();
+    cout << TOF_NUM_BARS << endl;
+    
+    string locTOFADC2ETable = TOFGeom->Get_CCDB_DirectoryName() + "/adc2E";
+    vector<double> raw_adc2E;
+    if(eventLoop->GetCalib(locTOFADC2ETable.c_str(), raw_adc2E))
+      jout << "Error loading " << locTOFADC2ETable << " !" << endl;
+    
+    // make sure we have one entry per channel
+    TOF_adc2E.resize(TOF_NUM_PLANES*TOF_NUM_BARS*2);
+    for (unsigned int n=0; n<raw_adc2E.size(); n++){
+      TOF_adc2E[n] = raw_adc2E[n];
+    }
+  }
 
   return NOERROR;
 }
@@ -332,7 +355,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 		return NOERROR;
         }
 
-        int l1_found = 1;  
+        int l1_found = 0;  
 
 	int status = 0;
 
@@ -351,9 +374,11 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
         vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
+	vector<const DTOFHit*>   tof_hits;
 
 	loop->Get(fcal_hits);
 	loop->Get(bcal_hits);
+	loop->Get(tof_hits);
 
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
 
@@ -625,8 +650,11 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	status = GTP(2);
 
 	// Search for triggers
-
 	l1_found = FindTriggers(trigger);
+	if (TOFTrigger(tof_hits)){
+	  trigger->trig_mask|=0x20;
+	  l1_found=1;
+	}
 	
 	if(l1_found){
 	  
@@ -652,7 +680,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	  
 	  _data.push_back(trigger);	 
 	  
-	} else{
+	} else {	  
+
 	  delete trigger;
 	}
 	
@@ -1330,9 +1359,9 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
   
   int trig_found = 0;
   
+
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
-    
     if(triggers_enabled[ii].bit == 0){    // Main production trigger found
       
       int gtp_energy  = 0;
@@ -1506,4 +1535,146 @@ void DL1MCTrigger_factory::GetSeeds(JEventLoop *loop, uint64_t eventnumber, UInt
       
     }  // Record doesn't exist
   }    // Not an HDDM file
+}
+
+// Emulate the TOF trigger
+bool DL1MCTrigger_factory::TOFTrigger(vector<const DTOFHit*>&tof_hits) const {
+  if (TOFGeom==NULL) return false;
+  if (tof_hits.size()<4) return false;
+
+  // sort TOF hits by time
+  sort(tof_hits.begin(),tof_hits.end(),DTOFHit_time_cmp);
+
+  // Group hits by proximity in time, subject to window size TOF_WINDOW
+  vector<vector<const DTOFHit *>> groups;
+  vector<const DTOFHit *>group;
+  group.push_back(tof_hits[0]);
+  double first_time=tof_hits[0]->t_fADC;
+  for (unsigned int i=1;i<tof_hits.size();i++){
+    const DTOFHit *hit=tof_hits[i];
+    if (fabs(hit->t_fADC-first_time)<TOF_WINDOW){
+      group.push_back(hit);
+    }
+    else{
+      groups.push_back(group);	
+      group.clear();
+      group.push_back(hit);
+      first_time=hit->t_fADC;
+    }
+  }
+  groups.push_back(group);
+  
+  int first_short_bar=TOFGeom->Get_FirstShortBar();
+  int last_short_bar=TOFGeom->Get_LastShortBar();
+  // Loop over groups looking for trigger pattern
+  for (unsigned int j=0;j<groups.size();j++){
+    vector<const DTOFHit*>hhitsL,hhitsR;
+    vector<const DTOFHit*>vhitsL,vhitsR;
+    unsigned int cpp_bits=0;
+    for (unsigned int i=0;i<groups[j].size();i++){
+      const DTOFHit *hit=groups[j][i];
+      int id=2*TOF_NUM_BARS*hit->plane + TOF_NUM_BARS*hit->end + hit->bar-1;
+      double threshold=TOF_THRESHOLD*TOF_adc2E[id];
+
+      if (hit->dE>threshold){
+	if (hit->plane==0){ //Vertical plane
+	  if (TOFGeom->Is_ShortBar(hit->bar)){
+	    cpp_bits|=(1<<(2*(hit->bar-first_short_bar)+hit->end+3));
+	  }
+	  else {	    
+	    if (hit->end){
+	      vhitsR.push_back(hit);
+	    }
+	    else{
+	      vhitsL.push_back(hit);
+	    }
+	  }
+	}
+	else{ // Horizontal plane
+	  if (TOFGeom->Is_ShortBar(hit->bar)){
+	    cpp_bits|=(1<<(2*(hit->bar-first_short_bar)+hit->end+19));
+	  }
+	  else{
+	    if (hit->end){
+	      hhitsR.push_back(hit);
+	    }
+	    else{
+	      hhitsL.push_back(hit);
+	    }
+	  }
+	}
+      } // apply threshold
+    } // loop over groups of tof hits
+    // Handle double-ended paddles
+    if (vhitsL.size()>0&&vhitsR.size()>0){
+      for (unsigned int i=0;i<vhitsL.size();i++){
+	const DTOFHit *lhit=vhitsL[i];
+	for (unsigned int j=0;j<vhitsR.size();j++){
+	  const DTOFHit *rhit=vhitsR[j];
+	  if (lhit->bar==rhit->bar){
+	    if (lhit->bar<first_short_bar-2){
+	      cpp_bits|=1;
+	    }
+	    else if (lhit->bar<first_short_bar-1){
+	      cpp_bits|=2;
+	    }
+	    else if (lhit->bar<first_short_bar){
+	      cpp_bits|=4;
+	    }  
+	    else if (lhit->bar>last_short_bar+2){
+	      cpp_bits|=1<<9;
+	    }
+	    else if (lhit->bar<last_short_bar+1){
+	      cpp_bits|=1<<8;
+	    }
+	    else if (lhit->bar>last_short_bar){
+	      cpp_bits|=1<<7;
+	    }
+	  }
+	}
+      }
+    }
+    if (hhitsL.size()>0&&hhitsR.size()>0){
+      for (unsigned int i=0;i<hhitsL.size();i++){
+	const DTOFHit *lhit=hhitsL[i];
+	for (unsigned int j=0;j<hhitsR.size();j++){
+	  const DTOFHit *rhit=hhitsR[j];
+	  if (lhit->bar==rhit->bar){
+	    if (lhit->bar<first_short_bar-2){
+	      cpp_bits|=1<<16;
+	    }
+	    else if (lhit->bar<first_short_bar-1){
+	      cpp_bits|=1<<17;
+	    }
+	    else if (lhit->bar<first_short_bar){
+	      cpp_bits|=1<<18;
+	    }  
+	    else if (lhit->bar>last_short_bar+2){
+	      cpp_bits|=1<<25;
+	    }
+	    else if (lhit->bar<last_short_bar+1){
+	      cpp_bits|=1<<24;
+	    }
+	    else if (lhit->bar>last_short_bar){
+	      cpp_bits|=1<<23;
+	    }
+	  }
+	}
+      }
+    } // horizontal hits
+    
+    // For now count the number of non-zero bits in each plane
+    int num1=0,num2=0;
+    for (unsigned int i=0;i<16;i++){
+      num1+=((cpp_bits&(1<<i))>0)?1:0;
+    }
+    for (unsigned int i=16;i<32;i++){
+      num2+=((cpp_bits&(1<<i))>0)?1:0;
+    }
+    if (num1>1 && num2>1){
+      return true;
+    }  
+  }// loop over groups of tof hits
+
+  return false;
 }
