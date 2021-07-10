@@ -52,7 +52,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=0.001;
+  MASS_CUT=0.0001;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
