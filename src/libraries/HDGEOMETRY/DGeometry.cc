@@ -1151,9 +1151,17 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    if(!GetFDCZ(z_wires)) return false;
    if(!GetFDCStereo(stereo_angles)) return false;
 
+   // Get FDC rotation angles
+   vector<double>rot_angles;
+   Get("//posXYZ[@volume='ForwardDC']/@rot", rot_angles);
+   double ThetaXglobal=rot_angles[0]*M_PI/180.;
+   double ThetaYglobal=rot_angles[1]*M_PI/180.;
+   double ThetaZglobal=rot_angles[2]*M_PI/180.; 
+
+   cout << ThetaXglobal << " " << ThetaYglobal << " " << ThetaZglobal << endl;
+
    // Get package rotation angles
    double ThetaX[4],ThetaY[4],ThetaZ[4];
-   vector<double>rot_angles;
    Get("//posXYZ[@volume='forwardDC_package_1']/@rot", rot_angles);
    ThetaX[0]=rot_angles[0]*M_PI/180.;
    ThetaY[0]=rot_angles[1]*M_PI/180.;
@@ -1224,14 +1232,44 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
       }
    }
 
+   vector<double>xshifts,yshifts;
+   if (jcalib->Get("FDC/cell_offsets",vals)==false){
+     for(unsigned int i=0; i<vals.size(); i++){
+       map<string,double> &row = vals[i];
+       
+       // Get the offsets from the calibration database 
+       xshifts.push_back(row["xshift"]);
+       yshifts.push_back(row["yshift"]);
+     }
+   }
+   
    // Generate the vector of wire plane parameters
    for(int i=0; i<FDC_NUM_LAYERS; i++){
+      unsigned int pack_id=i/6;
       double angle=-stereo_angles[i]*M_PI/180.+fdc_wire_offsets[i].dphi;
+
+      // Create a vector in the plane of the wires and tilt the plane by the 
+      // alignment angles
+      DVector3 udir(0.,1.,0.);
+      double dThetaX=ThetaXglobal+ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX;
+      double dThetaY=ThetaYglobal+ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY;
+      double dThetaZ=ThetaZglobal+ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ;
+      udir.RotateX(dThetaX);
+      udir.RotateY(dThetaY);
+      udir.RotateZ(dThetaZ);
+      // Create the normal vector to the plane of the wires
+      DVector3 sdir=udir;  
+      sdir.RotateX(M_PI_2);
+      // Find the wire direction for each plane by rotating by the macroscopic 
+      // angle of the wires (0,+-60 degrees)
+      udir.Rotate(-angle,sdir);
+
+      DVector3 globalOffsets(dX[pack_id],dY[pack_id],
+			     z_wires[i]+fdc_wire_offsets[i].dz);
 
       vector<DFDCWire *>temp;
       for(int j=0; j<WIRES_PER_PLANE; j++){
-         unsigned int pack_id=i/6;
-
+  
          DFDCWire *w = new DFDCWire;
          w->layer = i+1;
          w->wire = j+1;
@@ -1245,13 +1283,8 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
          // Note that the FDC measures "angle" such that angle=0
          // corresponds to the anode wire in the vertical direction
          // (i.e. at phi=90 degrees).
-         float x = u*sin(angle + M_PI/2.0);
-         float y = u*cos(angle + M_PI/2.0);
-         w->origin.SetXYZ(x,y,0.);
-         w->origin.RotateX(ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX);
-         w->origin.RotateY(ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY);
-         w->origin.RotateZ(ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ);
-         DVector3 globalOffsets(dX[pack_id],dY[pack_id],z_wires[i]+fdc_wire_offsets[i].dz);
+  	 w->origin.SetXYZ(xshifts[i]+u,yshifts[i],0.);
+	 w->origin.Rotate(-angle,sdir);
          w->origin+=globalOffsets;
 
          // Length of wire is set by active radius
@@ -1259,19 +1292,10 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
 
          // Set directions of wire's coordinate system with "udir"
          // along wire.
-         w->udir.SetXYZ(sin(angle),cos(angle),0.0);
-         w->udir.RotateX(ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX);
-         w->udir.RotateY(ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY);
-         w->udir.RotateZ(ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ);
-         w->angles.SetXYZ(ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX,
-               ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY,
-               ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ);
-         w->u+=dX[pack_id]*w->udir.y()-dY[pack_id]*w->udir.x();
+         w->udir=udir;
 
-         // "s" points in direction from beamline to midpoint of
-         // wire. This happens to be the same direction as "origin"
-         w->sdir = w->origin;
-         w->sdir.SetMag(1.0);
+         w->angles.SetXYZ(dThetaX,dThetaY,dThetaZ);
+         w->u+=dX[pack_id]*w->udir.y()-dY[pack_id]*w->udir.x();
 
          w->tdir = w->udir.Cross(w->sdir);
          w->tdir.SetMag(1.0); // This isn't really needed
