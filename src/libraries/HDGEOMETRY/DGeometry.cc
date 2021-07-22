@@ -1158,8 +1158,6 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    double ThetaYglobal=rot_angles[1]*M_PI/180.;
    double ThetaZglobal=rot_angles[2]*M_PI/180.; 
 
-   cout << ThetaXglobal << " " << ThetaYglobal << " " << ThetaZglobal << endl;
-
    // Get package rotation angles
    double ThetaX[4],ThetaY[4],ThetaZ[4];
    Get("//posXYZ[@volume='forwardDC_package_1']/@rot", rot_angles);
