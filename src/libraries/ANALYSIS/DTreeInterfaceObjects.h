@@ -27,8 +27,8 @@ class DTreeTypeChecker
 				std::is_same<Short_t, DType>::value || std::is_same<UShort_t, DType>::value || std::is_same<Int_t, DType>::value ||
 				std::is_same<UInt_t, DType>::value || std::is_same<Float_t, DType>::value || std::is_same<Double_t, DType>::value ||
 				std::is_same<Long64_t, DType>::value || std::is_same<ULong64_t, DType>::value || std::is_same<Bool_t, DType>::value ||
-				std::is_same<TVector2, DType>::value || std::is_same<TVector3, DType>::value || std::is_same<TLorentzVector, DType>::value,
-				"DTreeTypeChecker ERROR: TYPE IS NOT SUPPORTED.");
+				std::is_same<TVector2, DType>::value || std::is_same<TVector3, DType>::value || std::is_same<TLorentzVector, DType>::value ||
+				std::is_same<TString, DType>::value, "DTreeTypeChecker ERROR: TYPE IS NOT SUPPORTED.");
 		}
 
 		template <typename DType> static void Is_Fundamental(void)

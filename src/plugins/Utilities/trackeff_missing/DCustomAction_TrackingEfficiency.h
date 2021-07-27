@@ -10,6 +10,7 @@
 
 #include <string>
 #include <iostream>
+#include <set>
 
 #include "JANA/JEventLoop.h"
 #include "JANA/JApplication.h"
@@ -54,6 +55,9 @@ class DCustomAction_TrackingEfficiency : public DAnalysisAction
 
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
 		double Calc_MatchFOM(const DVector3& locDeltaP3, TMatrixDSym locInverse3x3Matrix) const;
+		map<Particle_t, UInt_t> Get_NumFinalStateThrown(const vector<const DMCThrown*>& locMCThrowns) const;
+		set<Particle_t> Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const;
+		TString Get_ThrownTopologyString(JEventLoop* locEventLoop) const;
 
 		Particle_t dMissingPID;
 

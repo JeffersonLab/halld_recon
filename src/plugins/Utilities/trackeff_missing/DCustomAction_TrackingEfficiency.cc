@@ -8,6 +8,105 @@
 #include "DCustomAction_TrackingEfficiency.h"
 #include "TObjString.h"
 
+#include <TRACKING/DMCThrown.h>
+
+// these next three functions are basically taken from the DSelector library for the sake of consistency
+map<Particle_t, UInt_t> DCustomAction_TrackingEfficiency::Get_NumFinalStateThrown(const vector<const DMCThrown*>& locMCThrowns) const
+{
+	//the # of thrown final-state particles (+ pi0) of each type (multiplexed in base 10)
+	map<Particle_t, UInt_t> locNumFinalStateThrown;
+	
+	for(auto &thrown : locMCThrowns) {
+		Particle_t locPID = thrown->PID();
+		if( locNumFinalStateThrown.find(locPID) == locNumFinalStateThrown.end() ) {
+			locNumFinalStateThrown[locPID] = 1;
+		} else {
+			locNumFinalStateThrown[locPID]++;
+		}
+	}
+
+	return locNumFinalStateThrown;
+}
+
+set<Particle_t> DCustomAction_TrackingEfficiency::Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const
+{
+/*
+	//the types of the thrown decaying particles in the event 
+	//not the quantity of each, just whether or not they were present (1 or 0)
+	vector<Particle_t> locDecayingThrown;
+
+	for(auto &thrown : locMCThrowns) {
+		Particle_t locPID = thrown->PID();
+		if( find(locDecayingThrown.begin(), locDecayingThrown.end(), locPID) == locDecayingThrown.end() ) {
+			locDecayingThrown.push_back(locPID);
+		} 
+	}
+*/
+	set<Particle_t> locDecayingThrown;
+
+	for(auto &thrown : locMCThrowns) {
+		Particle_t locPID = thrown->PID();
+		locDecayingThrown.insert(locPID);
+	}
+
+	return locDecayingThrown;
+}
+
+
+TString DCustomAction_TrackingEfficiency::Get_ThrownTopologyString(JEventLoop* locEventLoop) const
+{
+	TString locReactionName;
+	int locNumPi0s = 0;
+
+	vector<const DMCThrown*> locMCThrowns_FinalState;
+	locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
+
+	vector<const DMCThrown*> locMCThrowns_Decaying;
+	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+
+	// Get final state particles and multiplicity
+	map<Particle_t, UInt_t> locNumFinalStateThrown = Get_NumFinalStateThrown(locMCThrowns_FinalState);
+	for(auto const& locParticle : locNumFinalStateThrown) {
+		Particle_t locPID = locParticle.first; 
+		int locNumParticles = locParticle.second;
+		if(locNumParticles > 0) {
+			// List pi0s with decaying particles, since all final state photons are given
+			if(locPID == Pi0) {
+				locNumPi0s = locNumParticles;
+				continue;
+			}
+
+			if(locNumParticles > 1) locReactionName += locNumParticles;
+			locReactionName += ParticleName_ROOT(locPID);
+		}
+	}
+
+	// Get list of decaying particles (if they exist)
+	set<Particle_t> locThrownDecayingPIDs = Get_ThrownDecayingPIDs(locMCThrowns_Decaying);
+	if(locThrownDecayingPIDs.size() > 0 || locNumPi0s > 0) {
+		locReactionName += "[";
+		if(locNumPi0s == 1) locReactionName += "#pi^{0}";
+		else if(locNumPi0s > 1) {
+			locReactionName += locNumPi0s;
+			locReactionName += "#pi^{0}";
+		}
+					  
+		// add comma if previous decaying particle exists
+		bool locAddComma = false; 
+		if(locNumPi0s > 0) locAddComma = true;
+
+		for(auto locPID : locThrownDecayingPIDs ) {
+			//Particle_t locPID = locThrownDecayingPIDs[i]; 
+			if(locAddComma) locReactionName += ",";
+			locReactionName += ParticleName_ROOT(locPID);
+			locAddComma = true;
+		}
+		locReactionName += "]";
+	}
+
+	return locReactionName;
+}
+
 void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 {
 	//Optional: Create histograms and/or modify member variables.
@@ -55,6 +154,7 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	locBranchRegister.Register_Single<Float_t>("KinFitChiSq"); //is -1 if no kinfit or failed to converge
 	locBranchRegister.Register_Single<UInt_t>("KinFitNDF"); //is 0 if no kinfit or failed to converged 
 	locBranchRegister.Register_Single<TVector3>("MissingP3"); //is kinfit if kinfit (& converged)
+	locBranchRegister.Register_Single<TString>("ThrownTopologyString");
 
 	//MISSING P3 ERROR MATRIX //is kinfit if kinfit (& converged)
 	locBranchRegister.Register_Single<Float_t>("MissingP3_CovPxPx");
@@ -146,6 +246,7 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	
 	double locVertexZ = locParticleCombo->Get_EventVertex().Z();
 	double locBeamRFDeltaT = locBeamParticle->time() - locEventRFBunch->dTime;
+	TString locThrownTopologyString = Get_ThrownTopologyString(locEventLoop);
 
 	//get number of extra tracks that have at least 10 hits
 	size_t locNumExtraTracks = 0;
@@ -165,6 +266,7 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	dTreeFillData.Fill_Single<Float_t>("BeamRFDeltaT", locBeamRFDeltaT);
 	dTreeFillData.Fill_Single<UChar_t>("NumExtraTracks", (UChar_t)locNumExtraTracks);
 	dTreeFillData.Fill_Single<Float_t>("MissingMassSquared", locMeasuredMissingP4.M2());
+	dTreeFillData.Fill_Single<TString>("ThrownTopologyString", locThrownTopologyString);
 	dTreeFillData.Fill_Single<Float_t>("ComboVertexZ", locVertexZ);
 	if(locKinFitResults == NULL) //is true if no kinfit or failed to converged
 	{
