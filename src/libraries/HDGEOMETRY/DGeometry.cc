@@ -701,7 +701,7 @@ bool DGeometry::GetCDCStereoWires(unsigned int ring,unsigned int ncopy,
      // to the midpoint of the wire.
      udir.SetXYZ(0.0, 0.0,1.0);	
      udir.RotateX(stereo);	
-     udir.RotateZ(phi);     
+     udir.RotateZ(phi);
 
      // Apply offsets in x and y
      double half_dz=0.5*dz;
@@ -716,11 +716,6 @@ bool DGeometry::GetCDCStereoWires(unsigned int ring,unsigned int ncopy,
            y0-half_dz*uy+cdc_offsets[ringid][i].dy_u,
            zcenter-half_dz);
      w->origin=0.5*(upstream+downstream);
-     w->origin.RotateX(rot_angles[0]);
-     w->origin.RotateY(rot_angles[1]);
-     w->origin.RotateZ(rot_angles[2]);
-
-     w->phi=w->origin.Phi();
 
      // Wire direction
      w->udir=downstream-upstream;
@@ -733,11 +728,7 @@ bool DGeometry::GetCDCStereoWires(unsigned int ring,unsigned int ncopy,
 
      w->udir.SetMag(1.);
      w->stereo=stereo_sign*w->udir.Angle(DVector3(0.,0.,1.));
-     // other directions for our wire coordinate system
-     w->sdir=w->origin;
-     w->sdir.SetMag(1.);
-     w->tdir = w->udir.Cross(w->sdir);
-
+ 
      // Some values needed for alignment derivatives
      w->x0=dx; w->y0=dy; w->z0=zcenter;
      w->phiX=rot_angles[0]; w->phiY=rot_angles[1]; w->phiZ=rot_angles[2];
@@ -797,10 +788,6 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
             y0+cdc_offsets[ringid][i].dy_u,
             zcenter-half_dz);
       w->origin=0.5*(upstream+downstream);
-      w->origin.RotateX(rot_angles[0]);
-      w->origin.RotateY(rot_angles[1]);
-      w->origin.RotateZ(rot_angles[2]);
-      w->phi=w->origin.Phi();
 
       // Here, we need to define a coordinate system for the wire
       // in which the wire runs along one axis. We call the directions
@@ -819,10 +806,6 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
       w->udir.SetMag(1.);
 
       w->stereo=w->udir.Angle(DVector3(0.,0.,1.));
-      // other directions for our wire coordinate system
-      w->sdir=w->origin;
-      w->sdir.SetMag(1.);
-      w->tdir = w->udir.Cross(w->sdir);
 
       // Some values needed for alignment derivatives
       w->x0=dx; w->y0=dy; w->z0=zcenter;
@@ -985,6 +968,21 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
       for (unsigned int j=0;j<cdcwires[i].size();j++){
          DCDCWire *w=cdcwires[i][j];
          w->L=L/cos(w->stereo);
+
+	 // Make a global rotation to find the position of each wire center
+	 DVector3 pos=w->origin;
+	 pos.RotateX(dPhiX);
+	 pos.RotateY(dPhiY);
+	 pos.RotateZ(dPhiZ);
+	 // The origin of the CDC in the xml is defined to be at the upstream
+	 // end.
+	 pos.SetZ(pos.z()-cdc_origin[2]);
+	 pos.RotateX(rot_angles[0]-dPhiX);
+	 pos.RotateY(rot_angles[1]-dPhiY);
+	 pos.RotateZ(rot_angles[2]-dPhiZ);
+	 pos.SetZ(pos.z()+cdc_origin[2]);
+	 w->origin=pos;
+	 w->phi=pos.Phi();
 
          // With the addition of close-packed stereo wires, the vector connecting
          // the center of the wire to the beamline ("s" direction) is not necessarily
@@ -1176,6 +1174,13 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    ThetaX[3]=rot_angles[0]*M_PI/180.;
    ThetaY[3]=rot_angles[1]*M_PI/180.;
    ThetaZ[3]=rot_angles[2]*M_PI/180.;
+
+   // Get global offsets
+   vector<double>global_pos;
+   Get("//posXYZ[@volume='ForwardDC']/@X_Y_Z", global_pos);
+   DVector3 globalOffset(global_pos[0],global_pos[1],0.);
+   globalOffset.Print();
+
    // Get package offsets
    double dX[4],dY[4];
    vector<double>offsets;
@@ -1249,22 +1254,32 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
       // Create a vector in the plane of the wires and tilt the plane by the 
       // alignment angles
       DVector3 udir(0.,1.,0.);
-      double dThetaX=ThetaXglobal+ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX;
-      double dThetaY=ThetaYglobal+ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY;
-      double dThetaZ=ThetaZglobal+ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ;
+      double dThetaX=ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX;
+      double dThetaY=ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY;
+      double dThetaZ=ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ;
       udir.RotateX(dThetaX);
       udir.RotateY(dThetaY);
       udir.RotateZ(dThetaZ);
+
       // Create the normal vector to the plane of the wires
       DVector3 sdir=udir;  
       sdir.RotateX(M_PI_2);
+      sdir.RotateX(ThetaXglobal);
+      sdir.RotateY(ThetaYglobal);
+      sdir.RotateZ(ThetaZglobal);
+
       // Find the wire direction for each plane by rotating by the macroscopic 
       // angle of the wires (0,+-60 degrees)
       udir.Rotate(-angle,sdir);
 
       DVector3 globalOffsets(dX[pack_id],dY[pack_id],
-			     z_wires[i]+fdc_wire_offsets[i].dz);
-
+			     z_wires[i]+fdc_wire_offsets[i].dz-z_wires[0]);
+      globalOffsets.RotateX(ThetaXglobal);
+      globalOffsets.RotateY(ThetaYglobal);
+      globalOffsets.RotateZ(ThetaZglobal);
+      globalOffsets+=globalOffset;
+      globalOffsets.SetZ(globalOffsets.z()+z_wires[0]);
+   
       vector<DFDCWire *>temp;
       for(int j=0; j<WIRES_PER_PLANE; j++){
   
@@ -1293,7 +1308,7 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
          w->udir=udir;
 
          w->angles.SetXYZ(dThetaX,dThetaY,dThetaZ);
-         w->u+=dX[pack_id]*w->udir.y()-dY[pack_id]*w->udir.x();
+         //w->u+=dX[pack_id]*w->udir.y()-dY[pack_id]*w->udir.x();
 
          w->tdir = w->udir.Cross(w->sdir);
          w->tdir.SetMag(1.0); // This isn't really needed
