@@ -1179,7 +1179,6 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    vector<double>global_pos;
    Get("//posXYZ[@volume='ForwardDC']/@X_Y_Z", global_pos);
    DVector3 globalOffset(global_pos[0],global_pos[1],0.);
-   globalOffset.Print();
 
    // Get package offsets
    double dX[4],dY[4];
