@@ -137,6 +137,13 @@ jerror_t DL1MCTrigger_factory::init(void)
   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
 
+  MIN_TOF_BITS_LOW=2;
+  MIN_TOF_BITS_HIGH=2;
+  gPARMS->SetDefaultParameter("TRIG:MIN_TOF_BITS_LOW", MIN_TOF_BITS_LOW,
+			      "Minumum number of bits in trigger for one of the tof planes");
+  gPARMS->SetDefaultParameter("TRIG:MIN_TOF_BITS_HIGH", MIN_TOF_BITS_HIGH,
+			      "Minumum number of bits in trigger for the other tof plane");
+
 
   BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
 
@@ -1671,7 +1678,9 @@ bool DL1MCTrigger_factory::TOFTrigger(vector<const DTOFHit*>&tof_hits) const {
     for (unsigned int i=16;i<32;i++){
       num2+=((cpp_bits&(1<<i))>0)?1:0;
     }
-    if (num1>1 && num2>1){
+    if ((num1>=MIN_TOF_BITS_LOW && num2>=MIN_TOF_BITS_HIGH)
+	|| (num1>=MIN_TOF_BITS_LOW && num2>=MIN_TOF_BITS_HIGH)
+	){
       return true;
     }  
   }// loop over groups of tof hits
