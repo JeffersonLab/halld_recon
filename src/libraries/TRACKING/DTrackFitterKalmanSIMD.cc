@@ -378,6 +378,17 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    fdc_package_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
    geom->GetFDCRmin(fdc_rmin_packages);
    geom->GetFDCRmax(fdc_rmax);
+   
+   // Find the centers of each wire plane in the lab frame
+   vector<vector<DFDCWire*>>fdcwires;
+   geom->GetFDCWires(fdcwires);
+   for (unsigned int i=0;i<fdcwires.size();i++){
+     fdc_x0.push_back(0.5*(fdcwires[i][47]->origin.x()
+			   +fdcwires[i][48]->origin.x()));
+     fdc_y0.push_back(0.5*(fdcwires[i][47]->origin.y()
+			   +fdcwires[i][48]->origin.y()));
+   }
+
 
    ADD_VERTEX_POINT=false; 
    gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
@@ -7456,8 +7467,11 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
 
                // Position and direction from state vector with small angle
 	       // alignment correction
-               double x=Ss(state_x) + my_fdchits[id]->phiZ*Ss(state_y);
-               double y=Ss(state_y) - my_fdchits[id]->phiZ*Ss(state_x);
+	       unsigned int layer_index=my_fdchits[id]->hit->wire->layer-1;
+               double x=Ss(state_x) + my_fdchits[id]->phiZ*Ss(state_y)
+		 - fdc_x0[layer_index];
+               double y=Ss(state_y) - my_fdchits[id]->phiZ*Ss(state_x)
+		 - fdc_y0[layer_index];
                double tx=Ss(state_tx)+ my_fdchits[id]->phiZ*Ss(state_ty) 
 		 - my_fdchits[id]->phiY;
                double ty=Ss(state_ty) - my_fdchits[id]->phiZ*Ss(state_tx) 
@@ -7512,25 +7526,28 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                // Compute projection matrix and find the variance for the residual
                DMatrix5x2 H_T;
                double temp2=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
-               H_T(state_x,1)=sina+cosa*cosalpha*temp2;
-               H_T(state_y,1)=cosa-sina*cosalpha*temp2;
+	       double temp_cosa=cosa+my_fdchits[id]->phiZ*sina;
+	       double temp_sina=sina-my_fdchits[id]->phiZ*cosa;
+
+	       H_T(state_x,1)=temp_sina+temp_cosa*cosalpha*temp2;
+               H_T(state_y,1)=temp_cosa-temp_sina*cosalpha*temp2;
 
                double cos2_minus_sin2=cosalpha*cosalpha-sinalpha*sinalpha;
                double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
                double doca_cosalpha=doca*cosalpha;
                double temp=doca_cosalpha*fac;
-               H_T(state_tx,1)=cosa*temp
-                  -doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
+               H_T(state_tx,1)=temp_cosa*temp
+                  -doca_cosalpha*(tu*temp_sina+tv*temp_cosa*cos2_minus_sin2)
                   ;
-               H_T(state_ty,1)=-sina*temp
-                  -doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
+               H_T(state_ty,1)=-temp_sina*temp
+                  -doca_cosalpha*(tu*temp_cosa-tv*temp_sina*cos2_minus_sin2)
                   ;
 
-               H_T(state_x,0)=cosa*cosalpha;
-               H_T(state_y,0)=-sina*cosalpha;
+               H_T(state_x,0)=temp_cosa*cosalpha;
+               H_T(state_y,0)=-temp_sina*cosalpha;
                double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-               H_T(state_ty,0)=sina*factor;
-               H_T(state_tx,0)=-cosa*factor;
+               H_T(state_ty,0)=temp_sina*factor;
+               H_T(state_tx,0)=-temp_cosa*factor;
 
                // Matrix transpose H_T -> H
                DMatrix2x5 H=Transpose(H_T);
@@ -10159,8 +10176,9 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // Use small-angle form.
   
   // Position and direction from state vector
-  double x=S(state_x) + hit->phiZ*S(state_y);
-  double y=S(state_y) - hit->phiZ*S(state_x);
+  unsigned int layer_index=hit->hit->wire->layer-1;
+  double x=S(state_x) + hit->phiZ*S(state_y) - fdc_x0[layer_index];
+  double y=S(state_y) - hit->phiZ*S(state_x) - fdc_y0[layer_index];
   double tx =S(state_tx) + hit->phiZ*S(state_ty) - hit->phiY;
   double ty =S(state_ty) - hit->phiZ*S(state_tx) + hit->phiX;
 
@@ -10198,29 +10216,31 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // To transform from (x,y) to (u,v), need to do a rotation:
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
+  double temp_cosa=cosa+hit->phiZ*sina;
+  double temp_sina=sina-hit->phiZ*cosa;
   if (hit->status!=gem_hit){
-    H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
-    H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
+    H_T(state_x,1)=temp_sina+temp_cosa*cosalpha*lorentz_factor;	
+    H_T(state_y,1)=temp_cosa-temp_sina*cosalpha*lorentz_factor;
     
     double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
     double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
     double doca_cosalpha=doca*cosalpha;
     double temp=doca_cosalpha*fac;	
-    H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
-    H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+    H_T(state_tx,1)=temp_cosa*temp-doca_cosalpha*(tu*temp_sina+tv*temp_cosa*cos2_minus_sin2);
+    H_T(state_ty,1)=-temp_sina*temp-doca_cosalpha*(tu*temp_cosa-tv*temp_sina*cos2_minus_sin2);
   
-    H_T(state_x,0)=cosa*cosalpha;
-    H_T(state_y,0)=-sina*cosalpha;
+    H_T(state_x,0)=temp_cosa*cosalpha;
+    H_T(state_y,0)=-temp_sina*cosalpha;
     
     double factor=doca*tu*cosalpha2;
-    H_T(state_ty,0)=sina*factor;
-    H_T(state_tx,0)=-cosa*factor; 
+    H_T(state_ty,0)=temp_sina*factor;
+    H_T(state_tx,0)=-temp_cosa*factor; 
   }
   else{  
-    H_T(state_x,1)=sina;
-    H_T(state_y,1)=cosa;    
-    H_T(state_x,0)=cosa;
-    H_T(state_y,0)=-sina;
+    H_T(state_x,1)=temp_sina;
+    H_T(state_y,1)=temp_cosa;    
+    H_T(state_x,0)=temp_cosa;
+    H_T(state_y,0)=-temp_sina;
   }
 }
 

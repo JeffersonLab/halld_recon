@@ -583,7 +583,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   DMatrix5x1 Zero5x1;
   
   // FDC wire info
-  vector<double>fdc_z_wires;
+  vector<double>fdc_z_wires,fdc_x0,fdc_y0;
   double fdc_package_size;
   double fdc_rmax;
   vector<double> fdc_rmin_packages;
