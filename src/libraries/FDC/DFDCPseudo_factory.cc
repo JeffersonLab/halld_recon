@@ -612,7 +612,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     double sinangle=newPseu->wire->udir(0);
                     double cosangle=newPseu->wire->udir(1); 
                     unsigned int pack_id=(layer-1)/6;
-                    newPseu->s+=dY[pack_id]*cosangle+dX[pack_id]*sinangle; 
+                    //newPseu->s+=dY[pack_id]*cosangle+dX[pack_id]*sinangle; 
 
                     newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle,
                           -(newPseu->w)*sinangle+(newPseu->s)*cosangle);
