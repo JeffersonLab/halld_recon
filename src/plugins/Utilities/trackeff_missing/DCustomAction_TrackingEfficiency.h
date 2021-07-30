@@ -18,8 +18,10 @@
 #include "DANA/DStatusBits.h"
 #include "BCAL/DBCALShower.h"
 #include "TRACKING/DTrackTimeBased.h"
+#include "TRACKING/DMCThrown.h"
 #include "PID/DParticleID.h"
 #include "PID/DDetectorMatches.h"
+#include "PID/DMCReaction.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
 #include "ANALYSIS/DReaction.h"
@@ -56,7 +58,7 @@ class DCustomAction_TrackingEfficiency : public DAnalysisAction
 		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
 		double Calc_MatchFOM(const DVector3& locDeltaP3, TMatrixDSym locInverse3x3Matrix) const;
 		map<Particle_t, UInt_t> Get_NumFinalStateThrown(const vector<const DMCThrown*>& locMCThrowns) const;
-		set<Particle_t> Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const;
+		vector<UInt_t> Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const;
 		TString Get_ThrownTopologyString(JEventLoop* locEventLoop) const;
 
 		Particle_t dMissingPID;

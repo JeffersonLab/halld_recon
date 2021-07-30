@@ -10,6 +10,9 @@
 
 #include <TRACKING/DMCThrown.h>
 
+static int dInitNumThrownArraySize = 20;
+
+
 // these next three functions are basically taken from the DSelector library for the sake of consistency
 map<Particle_t, UInt_t> DCustomAction_TrackingEfficiency::Get_NumFinalStateThrown(const vector<const DMCThrown*>& locMCThrowns) const
 {
@@ -28,7 +31,7 @@ map<Particle_t, UInt_t> DCustomAction_TrackingEfficiency::Get_NumFinalStateThrow
 	return locNumFinalStateThrown;
 }
 
-set<Particle_t> DCustomAction_TrackingEfficiency::Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const
+vector<UInt_t> DCustomAction_TrackingEfficiency::Get_ThrownDecayingPIDs(const vector<const DMCThrown*>& locMCThrowns) const
 {
 /*
 	//the types of the thrown decaying particles in the event 
@@ -42,14 +45,19 @@ set<Particle_t> DCustomAction_TrackingEfficiency::Get_ThrownDecayingPIDs(const v
 		} 
 	}
 */
+	// use a set so we don't have to worry about multiples
 	set<Particle_t> locDecayingThrown;
 
 	for(auto &thrown : locMCThrowns) {
 		Particle_t locPID = thrown->PID();
 		locDecayingThrown.insert(locPID);
 	}
+	
+	// switch to a vector so we can do things like saving this info in ROOT trees
+	vector<UInt_t> locDecayingThrownVec;
+	std::copy(locDecayingThrown.begin(), locDecayingThrown.end(), std::back_inserter(locDecayingThrownVec));
 
-	return locDecayingThrown;
+	return locDecayingThrownVec;
 }
 
 
@@ -80,9 +88,9 @@ TString DCustomAction_TrackingEfficiency::Get_ThrownTopologyString(JEventLoop* l
 			locReactionName += ParticleName_ROOT(locPID);
 		}
 	}
-
+/*
 	// Get list of decaying particles (if they exist)
-	set<Particle_t> locThrownDecayingPIDs = Get_ThrownDecayingPIDs(locMCThrowns_Decaying);
+	vector<UInt_t> locThrownDecayingPIDs = Get_ThrownDecayingPIDs(locMCThrowns_Decaying);
 	if(locThrownDecayingPIDs.size() > 0 || locNumPi0s > 0) {
 		locReactionName += "[";
 		if(locNumPi0s == 1) locReactionName += "#pi^{0}";
@@ -103,7 +111,7 @@ TString DCustomAction_TrackingEfficiency::Get_ThrownTopologyString(JEventLoop* l
 		}
 		locReactionName += "]";
 	}
-
+*/
 	return locReactionName;
 }
 
@@ -112,6 +120,10 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time. 
+
+	vector<const DMCThrown*> locMCThrowns;
+	locEventLoop->Get(locMCThrowns);
+	bool locIsMC = locMCThrowns.size() > 0;
 
 	const DReaction* locReaction = Get_Reaction();
 
@@ -154,7 +166,19 @@ void DCustomAction_TrackingEfficiency::Initialize(JEventLoop* locEventLoop)
 	locBranchRegister.Register_Single<Float_t>("KinFitChiSq"); //is -1 if no kinfit or failed to converge
 	locBranchRegister.Register_Single<UInt_t>("KinFitNDF"); //is 0 if no kinfit or failed to converged 
 	locBranchRegister.Register_Single<TVector3>("MissingP3"); //is kinfit if kinfit (& converged)
-	locBranchRegister.Register_Single<TString>("ThrownTopologyString");
+
+	if(locIsMC) {
+		// Thrown info
+		locBranchRegister.Register_Single<TLorentzVector>("ThrownBeam_X4"); //reported at target center
+		locBranchRegister.Register_Single<TLorentzVector>("ThrownBeam_P4");
+		locBranchRegister.Register_Single<Float_t>("ThrownBeam_GeneratedEnergy");
+		//locBranchRegister.Register_FundamentalArray<UInt_t>("ThrownDecayingPIDs");
+
+		locBranchRegister.Register_Single<UInt_t>("NumThrown");
+		locBranchRegister.Register_FundamentalArray<Int_t>("Thrown_PID", "NumThrown", dInitNumThrownArraySize);
+		locBranchRegister.Register_ClonesArray<TLorentzVector>("Thrown_X4", dInitNumThrownArraySize);
+		locBranchRegister.Register_ClonesArray<TLorentzVector>("Thrown_P4", dInitNumThrownArraySize);
+	}
 
 	//MISSING P3 ERROR MATRIX //is kinfit if kinfit (& converged)
 	locBranchRegister.Register_Single<Float_t>("MissingP3_CovPxPx");
@@ -194,6 +218,10 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	//Write custom code to perform an action on the INPUT DParticleCombo (DParticleCombo)
 	//NEVER: Grab DParticleCombo or DAnalysisResults objects (of any tag!) from the JEventLoop within this function
 	//NEVER: Grab objects that are created post-kinfit (e.g. DKinFitResults, etc.) from the JEventLoop if Get_UseKinFitResultsFlag() == false: CAN CAUSE INFINITE DEPENDENCY LOOP
+
+	vector<const DMCThrown*> locMCThrowns;
+	locEventLoop->Get(locMCThrowns);
+	bool locIsMC = locMCThrowns.size() > 0;
 
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches);
@@ -246,7 +274,23 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	
 	double locVertexZ = locParticleCombo->Get_EventVertex().Z();
 	double locBeamRFDeltaT = locBeamParticle->time() - locEventRFBunch->dTime;
-	TString locThrownTopologyString = Get_ThrownTopologyString(locEventLoop);
+	
+	vector<const DMCThrown*> locMCThrowns_FinalState;
+	vector<const DMCThrown*> locMCThrowns_Decaying;
+	vector<UInt_t> locDecayingPIDs;
+	vector<const DBeamPhoton*> locMCGenBeams;
+	vector<const DBeamPhoton*> locTaggedMCGenBeams;
+	if(locIsMC) {
+		// thrown data
+		//TString locThrownTopologyString = Get_ThrownTopologyString(locEventLoop);
+		locEventLoop->Get(locMCGenBeams, "MCGEN");
+		locEventLoop->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
+
+		locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
+		locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+		//locDecayingPIDs = Get_ThrownDecayingPIDs(locMCThrowns_Decaying);
+	}
+	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
 	//get number of extra tracks that have at least 10 hits
 	size_t locNumExtraTracks = 0;
@@ -266,7 +310,6 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	dTreeFillData.Fill_Single<Float_t>("BeamRFDeltaT", locBeamRFDeltaT);
 	dTreeFillData.Fill_Single<UChar_t>("NumExtraTracks", (UChar_t)locNumExtraTracks);
 	dTreeFillData.Fill_Single<Float_t>("MissingMassSquared", locMeasuredMissingP4.M2());
-	dTreeFillData.Fill_Single<TString>("ThrownTopologyString", locThrownTopologyString);
 	dTreeFillData.Fill_Single<Float_t>("ComboVertexZ", locVertexZ);
 	if(locKinFitResults == NULL) //is true if no kinfit or failed to converged
 	{
@@ -280,6 +323,40 @@ bool DCustomAction_TrackingEfficiency::Perform_Action(JEventLoop* locEventLoop, 
 	}
 	TVector3 locTMissingP3(locMissingP3.Px(), locMissingP3.Py(), locMissingP3.Pz());
 	dTreeFillData.Fill_Single<TVector3>("MissingP3", locTMissingP3); //is kinfit if kinfit
+
+	if(locIsMC) {
+
+		//FILL THROWN INFO		
+		const DMCReaction* locMCReaction = NULL;
+		locEventLoop->GetSingle(locMCReaction);
+		dTreeFillData.Fill_Single<Float_t>("ThrownBeam_GeneratedEnergy", locMCReaction->beam.energy());
+
+		DVector3 locThrownBeamX3 = locMCReaction->beam.position();
+		TLorentzVector locThrownBeamTX4(locThrownBeamX3.X(), locThrownBeamX3.Y(), locThrownBeamX3.Z(), locMCReaction->beam.time());
+		dTreeFillData.Fill_Single<TLorentzVector>("ThrownBeam_X4", locThrownBeamTX4);
+
+		DLorentzVector locThrownBeamP4 = locTaggedMCGenBeam->lorentzMomentum();
+		TLorentzVector locThrownBeamTP4(locThrownBeamP4.Px(), locThrownBeamP4.Py(), locThrownBeamP4.Pz(), locThrownBeamP4.E());
+		dTreeFillData.Fill_Single<TLorentzVector>("ThrownBeam_P4", locThrownBeamTP4);
+
+		
+		//for(int locArrayIndex=0; locArrayIndex<locDecayingPIDs.size(); locArrayIndex++)
+		//	dTreeFillData.Fill_Array<UInt_t>("ThrownDecayingPIDs", locDecayingPIDs[locArrayIndex], locArrayIndex);
+		dTreeFillData.Fill_Single<UInt_t>("NumThrown", locMCThrowns_FinalState.size());
+		for(int locArrayIndex=0; locArrayIndex<locMCThrowns_FinalState.size(); locArrayIndex++) {
+			TLorentzVector locX4_Thrown(locMCThrowns_FinalState[locArrayIndex]->position().X(), 
+										locMCThrowns_FinalState[locArrayIndex]->position().Y(), 
+										locMCThrowns_FinalState[locArrayIndex]->position().Z(), 
+										locMCThrowns_FinalState[locArrayIndex]->time());
+			dTreeFillData.Fill_Array<TLorentzVector>("Thrown_X4", locX4_Thrown, locArrayIndex);
+			TLorentzVector locP4_Thrown(locMCThrowns_FinalState[locArrayIndex]->momentum().X(), 
+										locMCThrowns_FinalState[locArrayIndex]->momentum().Y(), 
+										locMCThrowns_FinalState[locArrayIndex]->momentum().Z(), 
+										locMCThrowns_FinalState[locArrayIndex]->energy());
+			dTreeFillData.Fill_Array<TLorentzVector>("Thrown_P4", locP4_Thrown, locArrayIndex);
+		}
+		
+	}
 
 	//MISSING P3 ERROR MATRIX //is kinfit if kinfit (& converged)
 	dTreeFillData.Fill_Single<Float_t>("MissingP3_CovPxPx", locMissingCovarianceMatrix(0, 0));
