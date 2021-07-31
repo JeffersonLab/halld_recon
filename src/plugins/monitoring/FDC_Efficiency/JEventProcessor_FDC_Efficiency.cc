@@ -98,8 +98,8 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_pseudo_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_pseudo_expected_cell[%d]", icell+1);
-    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -50, 50, 100, -50, 50);
-    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -50, 50, 100, -50, 50);
+    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 500, -50, 50, 500, -50, 50);
+    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 500, -50, 50, 500, -50, 50);
 
   }	
 
@@ -373,6 +373,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       if (packageHit[cellIndex / 6] < minCells /*&& cells < 12*/) continue;
 
       // Interpolate track to layer
+      //cout << cellIndex << " " << fdcz[cellIndex] << endl;
       DVector3 plane_origin(0.0, 0.0, fdcz[cellIndex]);
       DVector3 plane_normal(0.0, 0.0, 1.0);
       DVector3 interPosition,trackDirection;
@@ -398,8 +399,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	unsigned int wireNum = wireIndex+1;
 	DFDCWire * wire = wireByNumber[wireIndex]; 
 	double dz=wire->origin.z()-interPosition.z();
-	interPosition+=(dz/trackDirection.z())*trackDirection;
-	double distanceToWire =  (interPosition-wire->origin).Perp();
+	DVector3 trackPosition = interPosition + (dz/trackDirection.z())*trackDirection;
+	TVector3 perp = wire->udir.Cross(trackDirection).Unit();
+	double distanceToWire = fabs(perp * (trackPosition - wire->origin));
 	bool expectHit = false;
 
 	// starting from here, only histograms with distance to wire < 0.5, maybe change later
@@ -442,7 +444,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	  }
 	  
 	  // look in the presorted FDC Hits for a match
-	  if(!locSortedFDCHits[cellNum][wireNum].empty() || !locSortedFDCHits[cellNum][wireNum-1].empty() || !locSortedFDCHits[cellNum][wireNum+1].empty()){
+	  if(!locSortedFDCHits[cellNum][wireNum].empty()){// || !locSortedFDCHits[cellNum][wireNum-1].empty() || !locSortedFDCHits[cellNum][wireNum+1].empty()){
 	    // Look not only in one wire, but also in adjacent ones (?)
 	    // This can remove the dependence on the track error
 
