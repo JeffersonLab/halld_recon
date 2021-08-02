@@ -991,7 +991,7 @@ bool DCutAction_dEdx::Cut_dEdx(const DChargedTrackHypothesis* locChargedTrackHyp
 		return true;
 
 	auto locP = locTrackTimeBased->momentum().Mag();
-	auto locdEdx = locTrackTimeBased->ddEdx_CDC_amp*1.0E6;
+	auto locdEdx = locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6;
 
 	return ((locdEdx >= locCutPair.first->Eval(locP)) && (locdEdx <= locCutPair.second->Eval(locP)));
 }
@@ -1232,7 +1232,7 @@ string DCutAction_FlightDistance::Get_ActionName(void) const
 bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
 	//if dPID = Unknown, apply cut to all PIDs
-	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
+  // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
 	// is constrained in the fit
@@ -1275,7 +1275,7 @@ bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const D
 		
 			// extract the info about the vertex, to make sure that the information that we 
 			// need to calculate displaced vertices is there
-			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
+			// unused variable			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
 			
 			auto locPathLength = locKinFitParticle->Get_PathLength();
 			
@@ -1299,7 +1299,7 @@ string DCutAction_FlightSignificance::Get_ActionName(void) const
 bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
 	//if dPID = Unknown, apply cut to all PIDs
-	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
+  // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
 	// is constrained in the fit
@@ -1342,7 +1342,7 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 		
 			// extract the info about the vertex, to make sure that the information that we 
 			// need to calculate displaced vertices is there
-			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
+			// unused variable			auto locStepVertexInfo = locReactionVertexInfo->Get_StepVertexInfo(loc_i);
 
 			auto locPathLength = locKinFitParticle->Get_PathLength();
 			auto locPathLengthSigma = locKinFitParticle->Get_PathLengthUncertainty();

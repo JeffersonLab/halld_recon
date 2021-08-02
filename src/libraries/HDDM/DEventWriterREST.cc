@@ -48,7 +48,7 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
-	REST_WRITE_CCAL_SHOWERS = false;
+	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
     CCDB_CONTEXT_STRING = "";
@@ -84,7 +84,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
 
-  std::vector<const DCCALShower*> ccalshowers;
+	std::vector<const DCCALShower*> ccalshowers;
 	if(REST_WRITE_CCAL_SHOWERS) {
 	    locEventLoop->Get(ccalshowers);
 	}
@@ -193,12 +193,16 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::TagmBeamPhotonList locTagmBeamPhotonList = res().addTagmBeamPhotons(1);
 			locTagmBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons[loc_i]->dSystem == SYS_TAGH)
 		{
 			hddm_r::TaghBeamPhotonList locTaghBeamPhotonList = res().addTaghBeamPhotons(1);
 			locTaghBeamPhotonList().setT(locBeamPhotons[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons[loc_i]->dCounter);
 		}
 	}
 	for(size_t loc_i = 0; loc_i < locBeamPhotons_TAGGEDMCGEN.size(); ++loc_i)
@@ -209,6 +213,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTagmBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTagmBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTagmBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TagmChannelList locTagmChannelList = locTagmBeamPhotonList().addTagmChannels(1);
+			locTagmChannelList().setColumn(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 		else if(locBeamPhotons_TAGGEDMCGEN[loc_i]->dSystem == SYS_TAGH)
 		{
@@ -216,6 +222,8 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			locTaghBeamPhotonList().setJtag("TAGGEDMCGEN");
 			locTaghBeamPhotonList().setT(locBeamPhotons_TAGGEDMCGEN[loc_i]->time());
 			locTaghBeamPhotonList().setE(locBeamPhotons_TAGGEDMCGEN[loc_i]->energy());
+			hddm_r::TaghChannelList locTaghChannelList = locTaghBeamPhotonList().addTaghChannels(1);
+			locTaghChannelList().setCounter(locBeamPhotons_TAGGEDMCGEN[loc_i]->dCounter);
 		}
 	}
 
@@ -458,18 +466,20 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 		}
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
-		  vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
-		  if (extraps.size()>0){
-		    hddm_r::ExitParamsList locExitParams = tra().addExitParamses(1);
-		    DVector3 pos=extraps[0].position;
-		    DVector3 mom=extraps[0].momentum;
-		    locExitParams().setX1(pos.X());
-		    locExitParams().setY1(pos.Y());
-		    locExitParams().setZ1(pos.Z()); 
-		    locExitParams().setPx1(mom.X());
-		    locExitParams().setPy1(mom.Y());
-		    locExitParams().setPz1(mom.Z());
-		    locExitParams().setT1(extraps[0].t);
+		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
+		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
+		    if (extraps.size()>0){
+		      hddm_r::ExitParamsList locExitParams = tra().addExitParamses(1);
+		      DVector3 pos=extraps[0].position;
+		      DVector3 mom=extraps[0].momentum;
+		      locExitParams().setX1(pos.X());
+		      locExitParams().setY1(pos.Y());
+		      locExitParams().setZ1(pos.Z()); 
+		      locExitParams().setPx1(mom.X());
+		      locExitParams().setPy1(mom.Y());
+		      locExitParams().setPz1(mom.Z());
+		      locExitParams().setT1(extraps[0].t);
+		    }
 		  }
 		}
 		

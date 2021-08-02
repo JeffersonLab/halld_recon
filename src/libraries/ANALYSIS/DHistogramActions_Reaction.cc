@@ -33,6 +33,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("BCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_BCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("BCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_BCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 
 				//FCAL
@@ -40,6 +43,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("FCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("FCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_FCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 
 				//CCAL
@@ -47,6 +53,9 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 				locHistName = "Beta";
 				locHistTitle =  string("CCAL ") + locParticleROOTName + string(" Candidates;#beta");
 				dHistMap_Beta[locPID][SYS_CCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, dNumBetaBins, dMinBeta, dMaxBeta);
+				locHistName = "Shower_Energy";
+				locHistTitle =  string("CCAL ") + locParticleROOTName + string(" Candidates;Shower Energy (GeV)");
+				dHistMap_CalE[locPID][SYS_CCAL] = GetOrCreate_Histogram<TH1I>(locHistName, locHistTitle, 200, 0, 1.);
 				gDirectory->cd("..");
 			}
 
@@ -662,13 +671,13 @@ void DHistogramAction_PID::Fill_ChargedHists(const DChargedTrackHypothesis* locC
 		//CDC dE/dx
 		if(locTrackTimeBased->dNumHitsUsedFordEdx_CDC > 0)
 		{
-			dHistMap_dEdXVsP[locPID][SYS_CDC]->Fill(locP, locTrackTimeBased->ddEdx_CDC*1.0E6);
-			dHistMap_dEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, locTrackTimeBased->ddEdx_CDC_amp*1.0E6);
+		        dHistMap_dEdXVsP[locPID][SYS_CDC]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_int()*1.0E6);
+			dHistMap_dEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6);
 
 			double locProbabledEdx = dParticleID->GetMostProbabledEdx_DC(locP, locChargedTrackHypothesis->mass(), locTrackTimeBased->ddx_CDC, true);
-			double locDeltadEdx = locTrackTimeBased->ddEdx_CDC - locProbabledEdx;
+			double locDeltadEdx = locChargedTrackHypothesis->Get_dEdx_CDC_int() - locProbabledEdx;
 			dHistMap_DeltadEdXVsP[locPID][SYS_CDC]->Fill(locP, 1.0E6*locDeltadEdx);
-			double locDeltadEdx_amp = locTrackTimeBased->ddEdx_CDC_amp - locProbabledEdx;
+			double locDeltadEdx_amp = locChargedTrackHypothesis->Get_dEdx_CDC_amp() - locProbabledEdx;
 			dHistMap_DeltadEdXVsP[locPID][SYS_CDC_AMP]->Fill(locP, 1.0E6*locDeltadEdx_amp);
 
 			double locMeandx = locTrackTimeBased->ddx_CDC/locTrackTimeBased->dNumHitsUsedFordEdx_CDC;
@@ -722,6 +731,7 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 	double locDeltaT = locNeutralParticleHypothesis->time() - locNeutralParticleHypothesis->t0();
 
 	double locP = locNeutralParticleHypothesis->momentum().Mag();
+	double locShowerE = locNeutralParticleHypothesis->Get_NeutralShower()->dEnergy;
 	double locMatchFOM = 0.0;
 	const DMCThrown* locMCThrown = (locMCThrownMatching != NULL) ? locMCThrownMatching->Get_MatchingMCThrown(locNeutralParticleHypothesis, locMatchFOM) : NULL;
 
@@ -738,6 +748,7 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 	{
 		//Beta (good for all PIDs)
 		dHistMap_Beta[locPID][locSystem]->Fill(locBeta_Timing);
+		dHistMap_CalE[locPID][locSystem]->Fill(locShowerE);
 		if(locPID != Gamma)
 		{
 			Unlock_Action();
@@ -2014,6 +2025,8 @@ bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DPa
 
 void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 {
+        gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", dHistDependenceFlag);
+
 	auto locReaction = Get_Reaction();
 	DKinFitType locKinFitType = locReaction->Get_KinFitType();
 	if(locKinFitType == d_NoFit)

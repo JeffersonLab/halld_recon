@@ -18,6 +18,7 @@ optdirs = ['hdfast_parse', 'hddm2root', 'dumpwires']
 optdirs.extend(['evio_merge_events', 'evio_merge_files', 'evio_cull_events', 'evio_check'])
 optdirs.extend(['mkMaterialMap','material2root','hddm_select_events'])
 optdirs.extend(['bfield2root', 'dumpwires','hd_geom_query'])
+optdirs.extend(['hd_rsai_gen', 'hd_hydra_cdc_gen'])
 sbms.OptionallyBuild(env, optdirs)
 
 

@@ -6,10 +6,13 @@ Import('*')
 # Default targets (always built)
 subdirs = ['danarest', 'evio_writer', 'evio-hddm']
 subdirs.extend(['2trackskim', 'pi0bcalskim', 'pi0fcalskim', 'twogamma_fcal_skim', 'run_summary', 'track_skimmer', 'trackeff_missing','ps_skim', 'trigger_skims', 'bigevents_skim', 'coherent_peak_skim','exclusivepi0skim','randomtrigger_skim','pi0fcaltofskim','single_neutral_skim','compton_neutral_skim','eta2g_primexd_skim','eta6g_primexd_skim','etapi0_primexd_skim', 'cdcbcal_skim'])
-subdirs.extend(['EventTagPi0','es_test','omega_skim','cal_high_energy_skim', 'syncskim'])
+
+subdirs.extend(['Pi0Finder', 'EventTagPi0','es_test','omega_skim','cal_high_energy_skim', 'syncskim', 'dedx_tree'])
+
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
 # Optional targets
 optdirs = ['danahddm', 'dumpcandidates', 'dumpthrowns', 'l3bdt']
 optdirs.extend(['merge_rawevents', 'syncskim', 'DAQ', 'TTab', 'rawevent'])
+optdirs.extend(['cdc_emu', 'cdc_scan'])
 sbms.OptionallyBuild(env, optdirs)

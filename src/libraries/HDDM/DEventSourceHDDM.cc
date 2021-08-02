@@ -73,9 +73,7 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
        public: char *pub_gptr() {return gptr();}
       };
       void *buf = (void*)ifs->rdbuf();
-      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
-      std::string head;
-      std::getline(sbuf, head);
+      std::string head(((nonstd_streambuf*)buf)->pub_gptr(), 30);
       std::string expected = " class=\"s\" ";
       std::string also_supported = " class=\"mc_s\" ";
       if (head.find(expected) == head.npos && 

@@ -18,9 +18,13 @@
       </vertex>
     </reaction>
     <tagmBeamPhoton maxOccurs="unbounded" minOccurs="0" jtag="string"
-                t="float" E="float" tunit="ns" Eunit="GeV"/>
+                t="float" E="float" tunit="ns" Eunit="GeV">
+      <tagmChannel minOccurs="0" column="int"/>
+    </tagmBeamPhoton>
     <taghBeamPhoton maxOccurs="unbounded" minOccurs="0" jtag="string"
-                t="float" E="float" tunit="ns" Eunit="GeV"/>
+                t="float" E="float" tunit="ns" Eunit="GeV">
+      <taghChannel minOccurs="0" counter="int"/>
+    </taghBeamPhoton>
     <fcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 xerr="float" yerr="float" zerr="float" terr="float" Eerr="float"

@@ -146,7 +146,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].first = "[0]"; //low bound
 	ddEdxCuts_TF1Params[KPlus][SYS_CDC].first = {-9.9E9};
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].second = "exp(-1.0*[0]*x + [1]) + [2]"; //high bound
-	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {7.0, 3.0, 6.2};
+	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {8.0, 4.7, 5.5};
 
 	//CDC e-
 	ddEdxCuts_TF1FunctionStrings[Electron][SYS_CDC].first = "[0]"; //low bound
@@ -205,6 +205,17 @@ void DSourceComboer::Define_DefaultCuts(void)
 	//mu+
 	dEOverPCuts_TF1FunctionStrings.emplace(MuonPlus, dEOverPCuts_TF1FunctionStrings[MuonMinus]);
 	dEOverPCuts_TF1Params.emplace(MuonPlus, dEOverPCuts_TF1Params[MuonMinus]);
+
+	//DEFINE DEFAULT beta CUTS, for neutrons cut everything above
+	//n FCAL
+	dBetaCuts_TF1FunctionStrings[Neutron][SYS_FCAL] = "[0]";
+	dBetaCuts_TF1Params[Neutron][SYS_FCAL] = {0.9};
+
+	//n BCAL
+	dBetaCuts_TF1FunctionStrings[Neutron][SYS_BCAL] = "[0]";
+	dBetaCuts_TF1Params[Neutron][SYS_BCAL] = {0.9};
+
+
 	
 }
 
@@ -369,6 +380,79 @@ void DSourceComboer::Get_CommandLineCuts_EOverP(void)
 	}
 }
 
+void DSourceComboer::Get_CommandLineCuts_Beta(void)
+{
+	//PARAM EXAMPLES:
+	//COMBO_BETA:13_32_FUNC="[0] + [1]*x"   //Cut neutrons (13) in the FCAL (32) according to the functional form //x = track momentum
+	//COMBO_BETA:13_32=0.75_0.5             //Cut protons (13) in the FCAL (32) with the following parameters
+
+	map<string, string> locParameterMap; //parameter key - filter, value
+	gPARMS->GetParameters(locParameterMap, "COMBO_BETA:"); //gets all parameters with this filter at the beginning of the key
+	for(auto locParamPair : locParameterMap)
+	{
+		if(dDebugLevel)
+			cout << "param pair: " << locParamPair.first << ", " << locParamPair.second << endl;
+
+		//Figure out which particle was specified
+		auto locUnderscoreIndex = locParamPair.first.find('_');
+		auto locParticleString = locParamPair.first.substr(0, locUnderscoreIndex);
+		istringstream locPIDtream(locParticleString);
+		int locPIDInt;
+		locPIDtream >> locPIDInt;
+		if(locPIDtream.fail())
+			continue;
+		Particle_t locPID = (Particle_t)locPIDInt;
+
+		//Figure out which detector was specified
+		auto locFuncIndex = locParamPair.first.find("_FUNC");
+		auto locDetectorString = locParamPair.first.substr(locUnderscoreIndex + 1, locFuncIndex);
+		istringstream locDetectorStream(locDetectorString);
+		int locSystemInt;
+		locDetectorStream >> locSystemInt;
+		if(locDetectorStream.fail())
+			continue;
+		DetectorSystem_t locSystem = (DetectorSystem_t)locSystemInt;
+
+		if(dDebugLevel)
+			cout << "Beta cut: pid, detector = " << locPID << ", " << locSystem << endl;
+
+		//get the parameter, with hack so that don't get warning message about no default
+		string locKeyValue;
+		string locFullParamName = string("COMBO_BETA:") + locParamPair.first; //have to add back on the filter
+		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+
+		//If functional form, save it and continue
+		if(locFuncIndex != string::npos)
+		{
+			dBetaCuts_TF1FunctionStrings[locPID][locSystem] = locKeyValue;
+			continue;
+		}
+
+		//is cut parameters: extract and save
+		//CUT PARAMETERS SHOULD BE SEPARATED BY SPACES
+		dBetaCuts_TF1Params[locPID][locSystem].clear(); //get rid of previous cut values
+		while(true)
+		{
+			auto locUnderscoreIndex = locKeyValue.find('_');
+			auto locValueString = locKeyValue.substr(0, locUnderscoreIndex);
+
+			istringstream locValuetream(locValueString);
+			double locParameter;
+			locValuetream >> locParameter;
+			if(locValuetream.fail())
+				continue; //must be for a different use
+			if(dDebugLevel)
+				cout << "param: " << locParameter << endl;
+
+			//save locParameter and truncate locKeyValue (or break if done)
+			dBetaCuts_TF1Params[locPID][locSystem].push_back(locParameter);
+			if(locUnderscoreIndex == string::npos)
+				break;
+			locKeyValue = locKeyValue.substr(locUnderscoreIndex + 1);
+		}
+	}
+}
+
 void DSourceComboer::Create_CutFunctions(void)
 {
 	//No idea why this lock is necessary, but it crashes without it.  Stupid ROOT. 
@@ -396,7 +480,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString_High = locSystemStringMap[locSystemPair.first].second;
 
 			//Create TF1 low-side, Set cut values
-			auto locFunc_Low = new TF1("df_dEdxCut_Low", locCutFuncString_Low.c_str(), 0.0, 12.0);
+			auto locFunc_Low = new TF1("df_dEdxCut_Low", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, low-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_Low;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].first = locFunc_Low;
@@ -410,7 +494,7 @@ void DSourceComboer::Create_CutFunctions(void)
 				jout << endl;
 
 			//Create TF1 high-side, Set cut values
-			auto locFunc_High = new TF1("df_dEdxCut_High", locCutFuncString_High.c_str(), 0.0, 12.0);
+			auto locFunc_High = new TF1("df_dEdxCut_High", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, High-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_High;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].second = locFunc_High;
@@ -442,10 +526,42 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_EOverPCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_EOverPCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "E/p Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dEOverPCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
+			for(size_t loc_i = 0; loc_i < locParamVector.size(); ++loc_i)
+			{
+				locFunc->SetParameter(loc_i, locParamVector[loc_i]);
+				if(dPrintCutFlag)
+					jout << ", " << locParamVector[loc_i];
+			}
+			if(dPrintCutFlag)
+				jout << endl;
+		}
+	}
+
+	//Beta
+	for(auto& locPIDPair : dBetaCuts_TF1Params)
+	{
+		auto& locSystemMap = locPIDPair.second;
+		for(auto& locSystemPair : locSystemMap)
+		{
+			auto& locParamVector = locSystemPair.second;
+
+			//Get cut strings
+			if(dBetaCuts_TF1FunctionStrings.find(locPIDPair.first) == dBetaCuts_TF1FunctionStrings.end())
+				continue;
+			auto locSystemStringMap = dBetaCuts_TF1FunctionStrings[locPIDPair.first];
+			if(locSystemStringMap.find(locSystemPair.first) == locSystemStringMap.end())
+				continue;
+			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
+
+			//Create TF1, Set cut values
+			auto locFunc = new TF1("df_BetaCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
+			if(dPrintCutFlag)
+				jout << "Beta Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
+			dBetaCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
 			for(size_t loc_i = 0; loc_i < locParamVector.size(); ++loc_i)
 			{
 				locFunc->SetParameter(loc_i, locParamVector[loc_i]);
@@ -499,6 +615,7 @@ DSourceComboer::DSourceComboer(JEventLoop* locEventLoop)
 	Define_DefaultCuts();
 	Get_CommandLineCuts_dEdx();
 	Get_CommandLineCuts_EOverP();
+	Get_CommandLineCuts_Beta();
 	Create_CutFunctions();
 
 	//GET THE REACTIONS
@@ -1155,6 +1272,7 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	dTracksByPID.clear();
 	dTracksByCharge.clear();
 	dShowersByBeamBunchByZBin.clear();
+	dNeutralHadronShowers.clear();
 
 	//RECYCLE THE DSOURCECOMBO OBJECTS
 	dResourcePool_SourceCombo.Recycle(dCreatedCombos);
@@ -1191,10 +1309,10 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	const DDetectorMatches* locDetectorMatches = nullptr;
 	locEventLoop->GetSingle(locDetectorMatches, "Combo");
 
-//COMPARE:
-const DVertex* locVertex = nullptr;
-locEventLoop->GetSingle(locVertex);
-dSourceComboVertexer->Set_Vertex(locVertex);
+	//COMPARE:
+	const DVertex* locVertex = nullptr;
+	locEventLoop->GetSingle(locVertex);
+	dSourceComboVertexer->Set_Vertex(locVertex);
 
     vector<const DESSkimData*> locESSkimDataVector;
     locEventLoop->Get(locESSkimDataVector);
@@ -1212,7 +1330,15 @@ dSourceComboVertexer->Set_Vertex(locVertex);
 		for(auto& locBunchPair : locShowerByBunchMap)
 			Build_ParticleIndices(Gamma, locBunchPair.first, locBunchPair.second, locZBinPair.first);
 	}
-
+	
+	// handle showers from neutral hadrons differently to allow for different selections to be applied
+	vector<const DNeutralShower*> locNeutralHadronShowers;
+	locEventLoop->Get(locNeutralHadronShowers, dHadronShowerSelectionTag.c_str());
+	
+	for(auto &locHadronShower : locNeutralHadronShowers) {
+		dNeutralHadronShowers.push_back(static_cast<const JObject*>(locHadronShower));
+	}
+		
 	//SETUP BEAM PARTICLES
 	dSourceComboTimeHandler->Set_BeamParticles(locBeamPhotons);
 
@@ -1279,10 +1405,10 @@ bool DSourceComboer::Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locCharged
 	bool locPassedCutFlag = true;
 
 	//CDC dE/dx
-//cout << "PID, p, dedx, #hits = " << locPID << ", " << locP << ", " << locTrackTimeBased->ddEdx_CDC*1.0E6 << ", " << locTrackTimeBased->dNumHitsUsedFordEdx_CDC << endl;
+//cout << "PID, p, dedx, #hits = " << locPID << ", " << locP << ", " << locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6 << ", " << locTrackTimeBased->dNumHitsUsedFordEdx_CDC << endl;
 	if(locTrackTimeBased->dNumHitsUsedFordEdx_CDC > 0)
 	{
-		auto locdEdx = locTrackTimeBased->ddEdx_CDC_amp*1.0E6;
+	        auto locdEdx = locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6;
 		if(!Cut_dEdx(locPID, SYS_CDC, locP, locdEdx))
 			locPassedCutFlag = false;
 	}
@@ -1340,6 +1466,22 @@ bool DSourceComboer::Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locCharged
 			locPassedCutFlag = false;
 	}
 
+	return locPassedCutFlag;
+}
+
+bool DSourceComboer::Cut_Beta(const DNeutralParticleHypothesis* locNeutralParticleHypothesis)
+{
+	auto locPID = locNeutralParticleHypothesis->PID();
+	auto locBeta = locNeutralParticleHypothesis->measuredBeta();
+	auto locP = locNeutralParticleHypothesis->momentum().Mag();
+	bool locPassedCutFlag = true;
+	//cout << "PID " << locPID << " Momentum " << locP << endl;
+
+	//BCAL beta
+	auto locDetectorSystem = locNeutralParticleHypothesis->t1_detector();
+	if(!Cut_Beta(locPID, locDetectorSystem, locP, locBeta))
+	  locPassedCutFlag = false;
+  
 	return locPassedCutFlag;
 }
 
@@ -1570,10 +1712,8 @@ void DSourceComboer::Combo_WithNeutralsAndBeam(const vector<const DReaction*>& l
 	if(dDebugLevel > 0)
 	{
 		auto locNumDetectedShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}].size();
-		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
+		auto locNumFCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size(); // Includes ComCal showers
 		cout << endl << "Comboing neutrals, z-independent, #FCAL/BCAL showers: " << locNumFCALShowers << "/" << locNumDetectedShowers - locNumFCALShowers << endl;
-		//auto locNumCCALShowers = dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_ZIndependent()][{}].size();
-		//cout << endl << "Comboing neutrals, z-independent, #CCAL/BCAL showers: " << locNumCCALShowers << "/" << locNumDetectedShowers - locNumCCALShowers << endl;
 	}
 
 	if(dDebugLevel >= 5)
@@ -3131,6 +3271,18 @@ void DSourceComboer::Create_Combo_OneParticle(const DSourceComboUse& locComboUse
 			for(decltype(locNumTabs) locTabNum = 0; locTabNum < locNumTabs; ++locTabNum) cout << "\t";
 			cout << "CREATED COMBO:" << endl;
 			DAnalysis::Print_SourceCombo(locCombo, locNumTabs);
+			/*
+			if(locPID == Neutron) {
+				// TEMP
+				for(decltype(locNumTabs) locTabNum = 0; locTabNum < locNumTabs; ++locTabNum) cout << "\t";
+				cout << " Neutron energy = " ;
+				auto locNeutralShower = dynamic_cast<const DNeutralShower *>(locParticle);
+				if( locNeutralShower == nullptr )
+					cout << "FAILED" << endl;
+				else 
+					cout << locNeutralShower->dEnergy << endl;
+			}
+			*/
 		}
 
 		locSourceCombosByUseSoFar[locComboUseToCreate]->push_back(locCombo); //save it //in creation order
@@ -3602,9 +3754,12 @@ const vector<const JObject*>& DSourceComboer::Get_ParticlesForComboing(Particle_
 
 	if(ParticleCharge(locPID) != 0) //charged tracks
 		return dTracksByPID[locPID]; //rf bunch & vertex-z are irrelevant
-	else if(locPID != Gamma) //massive neutrals
-		return dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}]; //all neutrals: cannot do PID at all, and cannot do mass cuts until a specific vertex is chosen, so vertex-z doesn't matter
-
+	else if(locPID != Gamma)  {   //massive neutrals
+		//return dShowersByBeamBunchByZBin[DSourceComboInfo::Get_VertexZIndex_Unknown()][{}]; //all neutrals: cannot do PID at all, and cannot do mass cuts until a specific vertex is chosen, so vertex-z doesn't matter
+		// massive neutral particles could be any showers, so we keep a list which can have different selections applied
+		return dNeutralHadronShowers;
+	}
+	
 	if(locComboingStage == d_MixedStage_ZIndependent) //fcal
 	{
 		locVertexZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();

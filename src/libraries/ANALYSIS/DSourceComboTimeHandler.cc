@@ -323,7 +323,7 @@ void DSourceComboTimeHandler::Create_CutFunctions(void)
 
 			//Create TF1, Set cut values
 			//These functions can have the same name because we are no longer adding them to the global ROOT list of functions
-			auto locFunc = new TF1("df_TimeCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_TimeCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "Time Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dPIDTimingCuts[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -545,9 +545,9 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	auto locUnknownZBin = DSourceComboInfo::Get_VertexZIndex_Unknown();
 	for(const auto& locShower : locNeutralShowers)
 	{
-	        auto& locContainer = (locShower->dDetectorSystem == SYS_BCAL) ? locBCALShowers : locFCALShowers;
-		if (locShower->dDetectorSystem == SYS_CCAL) locContainer = locCCALShowers;
-		locContainer.push_back(locShower);
+	  if (locShower->dDetectorSystem == SYS_BCAL) locBCALShowers.push_back(locShower);
+	  else if (locShower->dDetectorSystem == SYS_FCAL) locFCALShowers.push_back(locShower);
+	  else if (locShower->dDetectorSystem == SYS_CCAL) locCCALShowers.push_back(locShower);
 	}
 
 	//CALCULATE KINEMATICS
@@ -556,7 +556,7 @@ void DSourceComboTimeHandler::Setup(const vector<const DNeutralShower*>& locNeut
 	for(const auto& locShower : locFCALShowers)
 		dPhotonKinematics[locFCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
-	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent();
+	auto locCCALZBin = DSourceComboInfo::Get_VertexZIndex_ZIndependent(); // the same as locFCALZBin !!
 	for(const auto& locShower : locCCALShowers)
 		dPhotonKinematics[locCCALZBin].emplace(locShower, Create_KinematicData_Photon(locShower, dTargetCenter));
 
@@ -1125,10 +1125,13 @@ int DSourceComboTimeHandler::Select_RFBunch_Full(const DReactionVertexInfo* locR
 
 					//get the timing at the POCA to the vertex (computed previously!)
 					auto locPOCAPair = std::make_pair(locChargedHypo, dSourceComboVertexer->Get_ConstrainingParticles_NoBeam(locIsProductionVertex, locVertexPrimaryFullCombo, false));
-					auto locVertexTime = dChargedParticlePOCAToVertexX4.find(locPOCAPair)->second.T();
-					auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
-					locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
-					locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    auto locPOCAVertex = dChargedParticlePOCAToVertexX4.find(locPOCAPair);
+                    if (locPOCAVertex != dChargedParticlePOCAToVertexX4.end()) {
+					   auto locVertexTime = locPOCAVertex->second.T();
+					   auto locRFDeltaTPair = Calc_RFDeltaTChiSq(locChargedHypo, locVertexTime, locPropagatedRFTime);
+					   locChiSqByRFBunch[locRFBunch] += locRFDeltaTPair.second;
+					   locRFDeltaTsForHisting[locRFBunch][locPID][locChargedHypo->t1_detector()].emplace_back(locChargedHypo->momentum().Mag(), locRFDeltaTPair.first);
+                    }
 				}
 			}
 			if(dDebugLevel >= 10)

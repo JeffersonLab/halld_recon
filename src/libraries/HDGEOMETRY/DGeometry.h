@@ -161,6 +161,8 @@ class DGeometry{
       bool GetCCALZ(double &z_ccal) const; /// z-location of front face of CCAL in cm
 
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
+      bool GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const; ///< z-locations of chamber of FMWPC in cm
+      bool GetFMWPCSize(double &xy_fmwpc) const; /// maximum x or y extent of FMWPC in cm
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
 	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;
@@ -173,6 +175,10 @@ class DGeometry{
       bool GetFCALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
+      bool GetFCALInsertRowSize(int &insert_row_size) const;
+      bool GetFCALBlockSize(vector<double> &block) const;
+      bool GetFCALInsertBlockSize(vector<double> &block) const;
+
       bool GetStartCounterGeom(vector<vector<DVector3> >&pos,
             vector<vector<DVector3> >&norm) const; // < vectors containing positions and norm 3-vectors for start counter 
       // There are 30 sets of positions (pos) of points along the 
@@ -184,7 +190,6 @@ class DGeometry{
       // for this paddle is at pos[0][pos[0].size()-1].  The bend
       // region is modeled by many closely-spaced points starting 
       // after pos[0][1].
-
 
       vector<DMaterialMap*> GetMaterialMapVector(void) const;
 

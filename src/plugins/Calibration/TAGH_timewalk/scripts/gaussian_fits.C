@@ -36,10 +36,11 @@ void WriteGaussianFitResults(ofstream &fout, TH1 *h, int counter, int ph_bin) {
     RooDataHist data("data","data",RooArgList(x),h);
     // model: add a narrow and wide gaussian with same mean
     RooRealVar mean("mean","mean",mode,xlow,xhigh);
+    RooRealVar mean2("mean2","mean2",mode,xlow,xhigh);
     RooRealVar sigma1("sigma1","sigma1",0.2,0.01,0.4);//0.01,0.6
     RooGaussian gauss1("gauss1","gauss1",x,mean,sigma1);
     RooRealVar sigma2("sigma2","sigma2",0.7,0.3,3.0);//0.3,2.5
-    RooGaussian gauss2("gauss2","gauss2",x,mean,sigma2);
+    RooGaussian gauss2("gauss2","gauss2",x,mean2,sigma2);
     // f1: fraction of entries in first gaussian
     RooRealVar f1("f1","f1",0.75,0.01,1.);
     RooAddPdf doubleGauss("doubleGauss","doubleGauss",RooArgList(gauss1,gauss2),RooArgList(f1));

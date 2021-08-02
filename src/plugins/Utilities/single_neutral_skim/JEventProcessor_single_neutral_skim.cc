@@ -254,8 +254,10 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double y1 = locFCALShowers[i]->getPosition().Y() - kinfitVertexY;
       double z1 = locFCALShowers[i]->getPosition().Z() - kinfitVertexZ;
       DVector3 vertex1(x1, y1, z1);
-      double r1 = vertex1.Mag();
-      double t1 = locFCALShowers[i]->getTime() - (r1 / TMath::C() * 1e7);
+      // r1 unused: commented out
+      //      double r1 = vertex1.Mag();
+      // t1 unused: commented out
+      //      double t1 = locFCALShowers[i]->getTime() - (r1 / TMath::C() * 1e7);
       
       double p1 = e1;
       double px1 = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
@@ -265,7 +267,8 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double theta1 = Photon1Vec.Theta() * TMath::RadToDeg();
       for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
 	double eb = locBeamPhotons[k]->lorentzMomentum().E();
-	double tb = locBeamPhotons[k]->time();
+	// tb unused: commented out
+	//	double tb = locBeamPhotons[k]->time();
 	TLorentzVector PhotonBeam4Vec(0,0,eb,eb);
 	TLorentzVector Dark4Vec = Photon1Vec - (PhotonBeam4Vec + Target4Vec);
 	double M2 = Dark4Vec.M2();
@@ -278,8 +281,10 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double y1 = locCCALShowers[i]->y - kinfitVertexY;
       double z1 = locCCALShowers[i]->z - kinfitVertexZ;
       DVector3 vertex1(x1, y1, z1);
-      double r1 = vertex1.Mag();
-      double t1 = locCCALShowers[i]->time - (r1 / TMath::C() * 1e7);
+      // r1 unused: commented out
+      //      double r1 = vertex1.Mag();
+      // t1 unused: commented out
+      //      double t1 = locCCALShowers[i]->time - (r1 / TMath::C() * 1e7);
       
       double p1 = e1;
       double px1 = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
@@ -289,7 +294,8 @@ jerror_t JEventProcessor_single_neutral_skim::evnt(JEventLoop *loop, uint64_t ev
       double theta1 = Photon1Vec.Theta() * TMath::RadToDeg();
       for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
 	double eb = locBeamPhotons[k]->lorentzMomentum().E();
-	double tb = locBeamPhotons[k]->time();
+	// tb unused: commented out
+	//	double tb = locBeamPhotons[k]->time();
 	TLorentzVector PhotonBeam4Vec(0,0,eb,eb);
 	TLorentzVector Dark4Vec = Photon1Vec - (PhotonBeam4Vec + Target4Vec);
 	double M2 = Dark4Vec.M2();

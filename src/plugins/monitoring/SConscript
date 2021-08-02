@@ -56,7 +56,11 @@ subdirs = [
 'DIRC_online',
 'TRD_online',
 'RSAI_KO',
-'BEAM_online'
+'BEAM_online',
+'lumi_mon',
+'scaler_primex'
+,'cppFMWPC'
+
 ]
 
 #'L3_online',

@@ -324,29 +324,12 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	// Count MC events differently - we want to keep track of the number of events which pass trigger requirements 
 	int locStartIndex = 0;
 	double locTrueBeamE = -1.;   // we want to fill some MC histograms as a function of beam energy, for trigger studies
+
 	if(dIsMCFlag) {
 		const DBeamPhoton *locBeamPhoton = nullptr;
-		locEventLoop->GetSingle(locBeamPhoton, "TAGGEDMCGEN");
+		locEventLoop->GetSingle(locBeamPhoton, "MCGEN");
 		if(locBeamPhoton != nullptr) 
 			locTrueBeamE = locBeamPhoton->energy();
-
-/*
-		japp->WriteLock("DAnalysisResults");
-		{
-			for(auto & locReaction : locReactions ) {
-				dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex); //initial: a new event
-		
-				if(locTrueBeamE > 0.) {
-					int locYBin = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
-					auto locBinContent = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetBinContent(locStartIndex+1, locYBin); // 2D indexing with labels is different than 1D indexing?
-					dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->SetBinContent(locStartIndex+1, locYBin, locBinContent + 1);
-				}
-			}
-		}
-		japp->Unlock("DAnalysisResults");
-
-		locStartIndex = 1;
-*/
 	}
 
 	//CHECK EVENT TYPE
@@ -405,6 +388,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 				dHistMap_NumEventsWhereTrueComboSurvivedAction[locReaction]->Fill(0);
 				if(locTrueBeamE > 0.) {
 					int locYBin = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+
 					auto locBinContent = dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->GetBinContent(0, locYBin);
 					dHistMap_NumEventsWhereTrueComboSurvivedAction_BeamE[locReaction]->SetBinContent(0, locYBin, locBinContent + 1);
 				}
@@ -477,6 +461,8 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 						dHistMap_NumEventsSurvivedAction_All[locReaction]->Fill(locStartIndex + loc_j + 1); //+1 because 0 is initial (no cuts at all)
 						if(locTrueBeamE > 0.) {
 							int locYBin = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetYaxis()->FindBin(locTrueBeamE);
+							// note that the bin counting is different for the 1D and 2D histograms, since the 1D histograms have text labels
+							// which are sort of a special case, while the 2D histograms are the normal type
 							auto locBinContent = dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->GetBinContent(locStartIndex + loc_j + 2, locYBin);
 							dHistMap_NumEventsSurvivedAction_All_BeamE[locReaction]->SetBinContent(locStartIndex + loc_j + 2, locYBin, locBinContent + 1);
 						}
