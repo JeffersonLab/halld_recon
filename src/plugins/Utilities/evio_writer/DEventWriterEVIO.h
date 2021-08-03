@@ -1,4 +1,3 @@
-
 #ifndef _DEventWriterEVIO_
 #define _DEventWriterEVIO_
 
@@ -8,6 +7,7 @@
 
 #include <JANA/JObject.h>
 #include <JANA/JEventLoop.h>
+#include <JANA/JEventSource.h>
 #include <JANA/JApplication.h>
 
 #include <DAQ/JEventSource_EVIO.h>
@@ -60,7 +60,7 @@ class DEventWriterEVIO : public JObject
 		bool Write_EVIOBuffer(JEventLoop* locEventLoop, uint32_t *locOutputBuffer, uint32_t locOutputBufferSize, string locOutputFileNameSubString) const;
 
 		string Get_OutputFileName(JEventLoop* locEventLoop, string locOutputFileNameSubString) const;
-        void SetDetectorsToWriteOut(string detector_list, string locOutputFileNameSubString) const;
+        void SetDetectorsToWriteOut(JEventLoop* locEventLoop, string detector_list, string locOutputFileNameSubString) const;
 
         bool Is_MergingFiles() const { return dMergeFiles; }
         void Set_MergeFiles(bool in_flag) { dMergeFiles = in_flag; }
@@ -70,7 +70,8 @@ class DEventWriterEVIO : public JObject
 		bool COMPACT;
 		bool PREFER_EMULATED;
 		bool DEBUG_FILES;
-
+        bool CLOSE_FILES;
+        
 	protected:
 		bool Open_OutputFile(JEventLoop* locEventLoop, string locOutputFileName) const;
 		
