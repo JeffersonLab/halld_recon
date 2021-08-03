@@ -645,12 +645,9 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 				    << locTAGMiter->getE() << std::endl;
 		}
 		
-		// this shouldn't happen
-		//if(column == -1) {
+		// sometimes the simulation will set photons that miss the tagger counters to have a column of zero - skip these
 		if(column == 0) {
-			std::cerr << "Error in DEventSourceREST - TAGM column incorrectly set!"
-					  << std::endl;
-			exit(18);
+			continue;
 		}
 
 		double Elo = tagmGeom->getElow(column);
@@ -709,14 +706,10 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 				    << locTAGHiter->getE() << std::endl;
 		}
 
-		// this shouldn't happen
-		//if(counter == -1) {
+		// sometimes the simulation will set photons that miss the tagger counters to have a column of zero - skip these
 		if(counter == 0) {
-			std::cerr << "Error in DEventSourceREST - TAGH counter incorrectly set!"
-					  << std::endl;
-			exit(18);
+			continue;
 		}
-
 
 		DVector3 mom(0.0, 0.0, locTAGHiter->getE());
 		gamma->setPID(Gamma);
