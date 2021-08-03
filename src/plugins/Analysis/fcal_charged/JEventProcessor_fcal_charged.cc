@@ -109,12 +109,14 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
 
   Double_t pthrown=0;
   locEventLoop->Get(mcthrowns);
-  unsigned int kmax= mcthrowns.size() <=1? mcthrowns.size(): 1 ;    // assumes that the original particle is first in list
+  // unsigned int kmax= mcthrowns.size() <=1? mcthrowns.size(): 1 ;    // assumes that the original particle is first in list
+  unsigned int kmax= mcthrowns.size();    // assumes that the original particle is first in list
 
   for (unsigned int k=0; k<kmax;k++){
     //cout << endl << " cppFMWPC testing output " << endl;
     mcthrown = mcthrowns[k];
-    if (mcthrown->charge() !=0 && mcthrown->z()<2 && mcthrown->time()<5 && mcthrown->parentid==0) {
+    // if (mcthrown->charge() !=0 && mcthrown->z()<2 && mcthrown->time()<5 && mcthrown->parentid==0) {
+    if (mcthrown->charge() !=0 && mcthrown->z()<2) {
       pthrown = mcthrown->momentum().Mag();
       cout << endl << " Event=" << eventnumber << " k=" << k << " pthrown= " <<  pthrown << " charge=" << mcthrown->charge() << " size=" << mcthrowns.size() << " z=" << mcthrown->z() << " time=" << mcthrown->time() << " parentid=" << mcthrown->parentid << " GEANT PID=" << mcthrown->PID()  << " mass=" << mcthrown->mass() <<  endl;
     }
@@ -153,7 +155,7 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
     // locTrackTimeBased->setPID (mcthrown->PID()); // Extrapolate using generated particle ID. Propagation through FCAL makes a big difference
     cout << "TrackTimeBased Event=" << eventnumber << " ncharged=" << locChargedTrack.size() << " k=" << k << " p =" << p << " q=" << q << " mass=" << trmass <<  " set to " << locTrackTimeBased->mass() << endl;
     if (locTrackTimeBased->GetProjection(SYS_FCAL,trkpos_fcal,&proj_mom_fcal,&t_fcal)) {
-      cout << " Extrapolation fcal x=" << trkpos_fcal.X() << " fcal y=" <<  trkpos_fcal.Y() << " fcal z=" <<  trkpos_fcal.Z() << " fcal t=" << t_fcal << endl;
+      cout << " Extrapolation fcal x=" << trkpos_fcal.X() << " fcal y=" <<  trkpos_fcal.Y() << " fcal z=" <<  trkpos_fcal.Z() << " px=" << proj_mom_fcal.X() << " fcal py=" <<  proj_mom_fcal.Y() << " fcal pz=" <<  proj_mom_fcal.Z() << " fcal p=" << proj_mom_fcal.Mag() <<" fcal t=" << t_fcal << endl;
     }
     if (locTrackTimeBased->GetProjection(SYS_FMWPC,trkpos_fmwpc,&proj_mom_fmwpc,&t_fmwpc)) {
       cout << " Extrapolation fmwpc x=" << trkpos_fmwpc.X() << " fmwpc y=" <<  trkpos_fmwpc.Y() << " fmwpc z=" <<  trkpos_fmwpc.Z() << " px=" << proj_mom_fmwpc.X() << " fmwpc py=" <<  proj_mom_fmwpc.Y() << " fmwpc pz=" <<  proj_mom_fmwpc.Z() << " fmwpc p=" << proj_mom_fmwpc.Mag() << " fmwpc t=" << t_fmwpc << endl;
