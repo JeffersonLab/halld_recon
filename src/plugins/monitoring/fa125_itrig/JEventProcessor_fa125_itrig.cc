@@ -32,10 +32,13 @@ using namespace jana;
 #include <TTree.h>
 #include <TBranch.h>
 
+#include <TDirectory.h>
+#include <TH2.h>
+
 
 static TTree *tree = NULL;
 
-
+static TH2I *hdiffs=NULL;
 
 
 extern "C"{
@@ -97,6 +100,17 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
   int tdiff;
   tree->Branch("tdiff",&tdiff,"tdiff/I");
 
+
+
+
+  // create root folder for cdc and cd to it, store main dir
+  TDirectory *main = gDirectory;
+  gDirectory->mkdir("fa125_itrig")->cd();
+
+  hdiffs = new TH2I("errcount","Count of eventnum - itrigger differences; roc ; slot", 15, 0, 15, 13, 1, 13);
+
+  main->cd();
+
   japp->RootUnLock();
 
 
@@ -133,6 +147,36 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
 
 
   //  printf("\nEvent %i\n\n",(int)eventnumber);
+
+
+  int rocmap[70] = {0};    // rocmap[rocid] = bin number for roc rocid in histogram
+  int labels[70];
+  int nbins;
+
+  for (int i=25; i<29; i++) {
+    int x = i-24;           // CDC, bins 1 to 4
+    rocmap[i] = x;
+    labels[x] = i;         // histo label
+  }
+
+  for (int i=52; i<54; i++) {
+    int x = i-46;           // FDC, bins 6-7
+    rocmap[i] = x;
+    labels[x] = i;         // histo label
+  }
+
+  for (int i=55; i<63; i++) {
+    int x = i-47;           // FDC, bins 8+
+    rocmap[i] = x;
+    labels[x] = i;         // histo label
+    nbins = x;
+  }
+
+  //  for (int i=52; i<63; i++) rocmap[i] = i-46;   // FDC, bins 5+
+  //51-64. 51,54,63 and 64 are TDCs.
+
+  for (int i=1;i<=nbins;i++) if (labels[i]>0) hdiffs->GetXaxis()->SetBinLabel(i,Form("%i",labels[i]));
+
 
   vector<const DCODAEventInfo*> info;
 
@@ -202,6 +246,8 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
       japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
       tree->Fill();
+
+      if (tdiff) hdiffs->Fill(rocmap[rocid],slot,1);   // increment histo by 1 for any magnitude difference 
 
       japp->RootUnLock();
 
