@@ -145,10 +145,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   loop->Get(locEventRFBunches);
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
   
-  /* unused variables
   uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
   uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
-  */
   
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
@@ -783,32 +781,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 	//}
 	
-<<<<<<< HEAD
 	if (DO_METHOD == 1 || DO_METHOD == 2) {
 	  for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
-=======
-	for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
-
-	  const DBeamPhoton *ebeam = locBeamPhotons[k]; 
-	  //double eb = ebeam->lorentzMomentum().E();
-	  double tb = ebeam->time();
-	  double zb = ebeam->position().Z();
-	  
-	  double locDeltaTRF = tb - (locRFTime + (zb - m_targetZ) / 29.9792458);
-	  Fill1DHistogram("FCAL_Pi0TOF","","TaggerTiming1", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
-	  //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t1 - t2, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
-	  //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t2 - t1, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
-	  double weight = 0;
-	  if (fabs(locDeltaTRF) <= 2.004) {
-	    weight = 1;
-	  } else if ( ( -(2.004 + 3.0 * 4.008) <= locDeltaTRF && locDeltaTRF <= -(2.004 + 4.008) ) || 
-		      ( (2.004 + 4.008) <= locDeltaTRF && locDeltaTRF <= (2.004 + 3.0 * 4.008) ) ) {
-	    weight = -0.25;
-	  } else {
-	    continue;
-	  }
-	  if (tof_match1 == 0 && tof_match2 == 0) {
->>>>>>> master
 	    
 	    const DBeamPhoton *ebeam = locBeamPhotons[k]; 
 	    //double eb = ebeam->lorentzMomentum().E();
