@@ -189,7 +189,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
 
   if(getenv("JANA_CALIB_CONTEXT") != NULL ){ 
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
-    if(JANA_CALIB_CONTEXT.find("mc_generic") != string::npos){
+    cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
+    if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
+	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
+      cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
@@ -198,6 +201,9 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       simu_gain_fcal = 0;
       simu_gain_bcal = 0;
     }
+  }
+  else {
+      cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
   }
 
   //  runnumber = 30942;
@@ -413,6 +419,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    fcal_hit_en += fcal_hits[ii]->E;
 	    
 	    fcal_signal fcal_tmp;
+	    fcal_tmp.merged = 0;
 	    
 	    fcal_tmp.row     = row;
 	    fcal_tmp.column  = col;
@@ -537,6 +544,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    bcal_hit_en += bcal_hits[ii]->E;
 	    
 	    bcal_signal bcal_tmp;	    
+	    bcal_tmp.merged  = 0;
 	    bcal_tmp.module  = module;
 	    bcal_tmp.layer   = layer;
   	    bcal_tmp.sector  = sector;

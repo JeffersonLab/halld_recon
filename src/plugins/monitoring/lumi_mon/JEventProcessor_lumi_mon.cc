@@ -80,6 +80,9 @@ static TH1D *hpsc_dt;
 static TH2D *hps_hit_time_a;
 static TH2D *hps_hit_time_b;
 
+static TH2D *hps_hit_time_rf_a;
+static TH2D *hps_hit_time_rf_b;
+
 static TH2D *hpsc_adc_time_a;
 static TH2D *hpsc_adc_time_b;
 
@@ -89,12 +92,18 @@ static TH2D *hpsc_tdc_time_b;
 static TH2D *hpsc_t_time_a;
 static TH2D *hpsc_t_time_b;
 
+static TH2D *hpsc_t_time_rf_a;
+static TH2D *hpsc_t_time_rf_b;
+
 static TH2D *htagh_hit_adc_time; 
 static TH2D *htagh_hit_tdc_time;
 static TH2D *htagh_hit_t_time;
+static TH2D *htagh_hit_rf;
+
 static TH2D *htagm_hit_adc_time;
 static TH2D *htagm_hit_tdc_time;
 static TH2D *htagm_hit_t_time;
+static TH2D *htagm_hit_rf;
 
 static TH1F *hps_hit_time_all_a;
 static TH1F *hps_hit_time_all_b;
@@ -140,6 +149,7 @@ void InitPlugin(JApplication *app){
 jerror_t JEventProcessor_lumi_mon::init(void)
 {
   
+  TDirectory *main = gDirectory;
   TDirectory *dlumi_mon = gDirectory->mkdir("Lumi_mon");
   dlumi_mon->cd();
 
@@ -192,6 +202,9 @@ jerror_t JEventProcessor_lumi_mon::init(void)
   hps_hit_time_a   =   new TH2D("ps_hit_time_a","ps_hit_time_a", 146, -0.5, 145.5,800,-200.,200.);
   hps_hit_time_b   =   new TH2D("ps_hit_time_b","ps_hit_time_b", 146, -0.5, 145.5,800,-200.,200.);
 
+  hps_hit_time_rf_a   =   new TH2D("ps_hit_time_rf_a","ps_hit_time_rf_a", 146, -0.5, 145.5,800,-50.,50.);
+  hps_hit_time_rf_b   =   new TH2D("ps_hit_time_rf_b","ps_hit_time_rf_b", 146, -0.5, 145.5,800,-50.,50.);
+
   hps_hit_time_all_a = new TH1F("ps_hit_time_all_a","ps_hit_time_all_a", 800,-200.,200.);
   hps_hit_time_all_b = new TH1F("ps_hit_time_all_b","ps_hit_time_all_b", 800,-200.,200.);
 
@@ -205,6 +218,11 @@ jerror_t JEventProcessor_lumi_mon::init(void)
   hpsc_t_time_a   =   new TH2D("psc_t_time_a","psc_t_time_a", 10, -0.5, 9.5,800,-200.,200.);
   hpsc_t_time_b   =   new TH2D("psc_t_time_b","psc_t_time_b", 10, -0.5, 9.5,800,-200.,200.);
 
+
+  hpsc_t_time_rf_a   =   new TH2D("psc_t_time_rf_a","psc_t_time_rf_a", 10, -0.5, 9.5,1600,-50.,50.);
+  hpsc_t_time_rf_b   =   new TH2D("psc_t_time_rf_b","psc_t_time_rf_b", 10, -0.5, 9.5,1600,-50.,50.);
+
+
   hpsc_adc_time_all_a = new TH1F("psc_adc_time_all_a","psc_adc_time_all_a", 800,-200.,200.);
   hpsc_adc_time_all_b = new TH1F("psc_adc_time_all_b","psc_adc_time_all_b", 800,-200.,200.);
 
@@ -215,17 +233,19 @@ jerror_t JEventProcessor_lumi_mon::init(void)
   hpsc_t_time_all_b = new TH1F("psc_t_time_all_b","psc_t_time_all_b", 800,-200.,200.);
 
 
-  htagh_hit_adc_time = new TH2D("tagh_time_adc","tagh_time_adc", 300, -0.5, 299.5,800,-200.,200.);
-  htagh_hit_tdc_time = new TH2D("tagh_time_tdc","tagh_time_tdc", 300, -0.5, 299.5,800,-200.,200.);
-  htagh_hit_t_time  = new TH2D("tagh_time_t", "tagh_time_t",  300, -0.5, 299.5,800,-200.,200.);
+  htagh_hit_adc_time  =  new TH2D("tagh_time_adc","tagh_time_adc", 300, -0.5, 299.5,800,-200.,200.);
+  htagh_hit_tdc_time  =  new TH2D("tagh_time_tdc","tagh_time_tdc", 300, -0.5, 299.5,800,-200.,200.);
+  htagh_hit_t_time    =  new TH2D("tagh_time_t", "tagh_time_t",  300, -0.5, 299.5,800,-200.,200.);
+  htagh_hit_rf            = new TH2D("tagh_time_rf", "tagh_time_rf",  300, -0.5, 299.5,1600,-50.,50.);
 
   htagh_hit_adc_time_all  = new TH1F("tagh_hit_adc_time_all","tagh_hit_adc_time_all", 800,-200.,200.);
   htagh_hit_tdc_time_all  = new TH1F("tagh_hit_tdc_time_all","tagh_hit_tdc_time_all", 800,-200.,200.);
-  htagh_hit_t_time_all   = new TH1F("tagh_hit_t_time_all", "tagh_hit_t_time_all",  800,-200.,200.);
+  htagh_hit_t_time_all    = new TH1F("tagh_hit_t_time_all", "tagh_hit_t_time_all",  800,-200.,200.);
 
-  htagm_hit_adc_time = new TH2D("tagm_time_adc","tagm_time_adc", 200, -0.5, 199.5,800,-200.,200.);
-  htagm_hit_tdc_time = new TH2D("tagm_time_tdc","tagm_time_tdc", 200, -0.5, 199.5,800,-200.,200.);
-  htagm_hit_t_time  = new TH2D("tagm_time_t","tagm_time_t",   200, -0.5, 199.5,800,-200.,200.);
+  htagm_hit_adc_time  = new TH2D("tagm_time_adc","tagm_time_adc", 200, -0.5, 199.5,800,-200.,200.);
+  htagm_hit_tdc_time  = new TH2D("tagm_time_tdc","tagm_time_tdc", 200, -0.5, 199.5,800,-200.,200.);
+  htagm_hit_t_time    = new TH2D("tagm_time_t","tagm_time_t",   200, -0.5, 199.5,800,-200.,200.);
+  htagm_hit_rf        = new TH2D("tagm_time_rf","tagm_time_rf",   200, -0.5, 199.5,1600,-50.,50.);
 
   htagm_hit_adc_time_all  = new TH1F("tagm_hit_adc_time_all", "tagm_hit_adc_time_all", 800,-200.,200.);
   htagm_hit_tdc_time_all  = new TH1F("tagm_hit_tdc_time_all", "tagm_hit_tdc_time_all", 800,-200.,200.);
@@ -235,6 +255,8 @@ jerror_t JEventProcessor_lumi_mon::init(void)
   hdt_ps_rf       =   new TH1D("dt_ps_rf",   "dt_ps_rf",     6000, -30., 30.);
   hdt_tagm_rf     =   new TH1D("dt_tagm_rf", "dt_tagm_rf",   6000, -30., 30.);
   hdt_tagh_rf     =   new TH1D("dt_tagh_rf", "dt_tagh_rf",   6000, -30., 30.);
+
+  main->cd();
 
   return NOERROR;
 
@@ -444,10 +466,12 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  if(arm == 0){
 	    hps_hit_time_a->Fill(float(column),time);
 	    hps_hit_time_all_a->Fill(time);
+	    hps_hit_time_rf_a->Fill(float(column),time - rf_psc);
 	  }
 	  if(arm == 1){
 	    hps_hit_time_b->Fill(float(column),time);
 	    hps_hit_time_all_b->Fill(time);
+            hps_hit_time_rf_b->Fill(float(column),time - rf_psc);	    
 	  }
         }
 
@@ -465,6 +489,7 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    hpsc_tdc_time_a->Fill(float(column),time_tdc);
 	    hpsc_tdc_time_all_a->Fill(time_tdc);
 	    hpsc_t_time_a->Fill(float(column),time);
+	    hpsc_t_time_rf_a->Fill(float(column),time - rf_psc);
 	    hpsc_t_time_all_a->Fill(time);
 	  }
 	  if(arm == 1){
@@ -473,6 +498,7 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    hpsc_tdc_time_b->Fill(float(column),time_tdc);
 	    hpsc_tdc_time_all_b->Fill(time_tdc);
 	    hpsc_t_time_b->Fill(float(column),time);
+            hpsc_t_time_rf_b->Fill(float(column),time - rf_psc);
 	    hpsc_t_time_all_b->Fill(time);
 	  }
         }
@@ -510,7 +536,8 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
 		hdt_tagh_rf->Fill(beam_ph[ii]->time() - rf_psc);
-		
+		htagh_hit_rf->Fill(float(counter_id),beam_ph[ii]->time() - rf_psc);
+			       
 		tagh_tmp.push_back(counter_id);
 		
 		nhit_tagh++;
@@ -523,10 +550,11 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 		hdt_tagm_ps1->Fill(dt1);
 		
 		tagm_ps_psc_time1->Fill(float(counter_id),dt);
-		tagm_ps_psc_time20->Fill(float(counter_id),dt);
+		tagm_ps_psc_time20->Fill(float(counter_id),dt1);
 
 		hdt_tagm_rf->Fill(beam_ph[ii]->time() - rf_psc);
-		
+		htagm_hit_rf->Fill(float(counter_id),beam_ph[ii]->time() - rf_psc);
+
 		tagm_tmp.push_back(counter_id);
 		tagm_tmp_time.push_back(beam_ph[ii]->time());
 		

@@ -1,6 +1,6 @@
 
 
-void find_dead_straws(void) {
+void list_dead_straws(int verbose=1) {
 
   // run this on CDC_amp output root file containing histo attn
 
@@ -14,8 +14,8 @@ void find_dead_straws(void) {
   if (!fmain) return;
   fmain->cd();
  
-  TH2I *anhisto = (TH2I*)fmain->Get("attn");
-  if (!anhisto) printf("Cannot find histo attn\n");
+  TH2I *anhisto = (TH2I*)fmain->Get("an30_100ns");
+  if (!anhisto) printf("Cannot find histo an30_100ns\n");
   if (!anhisto) return;
 
 
@@ -45,8 +45,9 @@ void find_dead_straws(void) {
 
    for (int j=Nfirst; j<Nfirst+Nstraws[i]; j++) {   
      // if (j==Nfirst) cout << "Start with straw " << j+1 << "End with straw " << Nfirst+Nstraws[i] << endl;
+      int straw = j+1;
 
-      ahisto = anhisto->ProjectionY(Form("a[%i]",i), j+2, j+2);  //straw 1 is in bin 2
+      ahisto = anhisto->ProjectionY(Form("a[%i]",i), straw+1, straw+1);  //straw 1 is in bin 2
 
       double a_n = ahisto->GetEntries();
 
@@ -54,7 +55,16 @@ void find_dead_straws(void) {
 
       if (a_n < 0.25 * mean_n) eff = 0;
 
-      if (!eff) printf("n=%i counts %.0f mean for ring is %i\n",j+1,a_n,mean_n);
+
+      int disconnected=0;
+
+      if (straw==709||straw==2384) disconnected=1;
+      if (straw==244) disconnected=1;  // not disconnected but problematic & given a huge threshold
+      if (verbose && !eff && !disconnected) {
+
+	printf("n=%4i  counts %.0f mean for ring is %i\n",straw,a_n,mean_n);
+
+      }
 
       fprintf(outfile,"%i\n",eff);
 

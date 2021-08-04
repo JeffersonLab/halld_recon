@@ -59,6 +59,7 @@ subdirs = [
 'BEAM_online',
 'lumi_mon',
 'scaler_primex'
+,'cppFMWPC'
 
 ]
 

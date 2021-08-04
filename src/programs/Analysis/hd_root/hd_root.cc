@@ -7,6 +7,7 @@
 #include <dlfcn.h>
 
 #include <TFile.h>
+#include <TSystem.h>
 
 #include "MyProcessor.h"
 #include "DANA/DApplication.h"
@@ -57,8 +58,9 @@ int main(int narg, char *argv[])
 void ParseCommandLineArguments(int &narg, char *argv[])
 {
 	if(narg==1)Usage();
-	
+
 	for(int i=1;i<narg;i++){
+
 		if(argv[i][0] != '-')continue;
 		switch(argv[i][1]){
 			case 'h':
@@ -84,6 +86,21 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 				break;
 		}
 	}
+
+
+        // Check that at least one input file exists
+        int nfound=0;
+	for(int i=1;i<narg;i++){
+	  if(argv[i][0] == '-')continue; 
+          if (gSystem->AccessPathName(argv[i])) {
+	      cerr << "File not found: " << argv[i] << endl;
+          } else {
+	      nfound++;
+          }             
+        }
+
+        if (!nfound) exit(-1); 
+
 }
 
 //-----------

@@ -111,9 +111,11 @@ DFCALGeometry::isBlockActive( int row, int column ) const
    if (row>=100&&column>=100){
     row-=100-kBlocksTall;
     column-=100-kBlocksWide;
-  }
-
+   }
+   if (row >= 0 && row < 2*kBlocksWide && column >= 0 && column < 2*kBlocksWide) {
 	return m_activeBlock[row][column];	
+   }
+   return false;
 }
 
 int
@@ -124,7 +126,10 @@ DFCALGeometry::row( float y, bool in_insert ) const
   if (in_insert){
     return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
   }
-	return static_cast<int>( y / blockSize() + kMidBlock + 0.5);
+  int my_row=static_cast<int>( y / blockSize() + kMidBlock + 0.5);
+  if (my_row<0) return -1;
+  if (my_row>=kBlocksTall) return -1;
+  return my_row;
 }
 
 int
@@ -135,7 +140,10 @@ DFCALGeometry::column( float x, bool in_insert ) const
   if (in_insert){
     return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
   }
-	return static_cast<int>( x / blockSize() + kMidBlock + 0.5);
+  int my_col=static_cast<int>( x / blockSize() + kMidBlock + 0.5);
+  if (my_col<0) return -1;
+  if (my_col>=kBlocksWide) return -1;
+  return my_col;
 }
 
 DVector2
@@ -158,6 +166,12 @@ DFCALGeometry::positionOnFace( int channel ) const
 }
 
 int
+DFCALGeometry::channel(double x,double y) const {
+  bool isInsert=(fabs(x-m_FCALdX)<m_insertSize&& fabs(y-m_FCALdY)<m_insertSize);
+  return channel(row(y,isInsert),column(x,isInsert));
+}
+
+int
 DFCALGeometry::channel( int row, int column ) const
 {
   // Check for insert blocks
@@ -171,16 +185,27 @@ DFCALGeometry::channel( int row, int column ) const
 	}
 	else{
 		
-	  cerr << "ERROR: request for channel number of inactive block!  row " 
-	       << row << " column " <<  column << endl;
+	  // cerr << "ERROR: request for channel number of inactive block!  row "
+	  //      << row << " column " <<  column << endl;
 		return -1;
 	}
 }
+
+bool DFCALGeometry::isFiducial(double x,double y) const{
+  bool isInsert=(fabs(x-m_FCALdX)<m_insertSize&& fabs(y-m_FCALdY)<m_insertSize);
+  return (row(y,isInsert)>=0 && column(x,isInsert)>=0);
+}
+
 
 bool DFCALGeometry::inInsert(int channel) const{
   if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
       && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
     return true;
   }
+  return false;
+}
+
+bool DFCALGeometry::isInsertBlock(int row,int column) const{
+  if (row>=100&&column>=100) return true;
   return false;
 }
