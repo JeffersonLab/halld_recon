@@ -23,6 +23,7 @@ using namespace jana;
 
 #include <particleType.h>
 #include <DVector3.h>
+#include <DVector2.h>
 #include "DMaterial.h"
 #include "DMaterialMap.h"
 using namespace jana;
@@ -122,6 +123,13 @@ class DGeometry{
       const DMaterial* GetDMaterial(string name) const;
 
       bool GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const;
+      bool GetFDC_XML(DVector3 &global_rotation,DVector3 &global_offset,
+		      vector<DVector3>&package_rotations,
+		      vector<DVector2>&package_offsets) const;
+      bool GetFDC_CCDB(vector<fdc_wire_offset_t>&fdc_wire_offsets,
+		       vector<fdc_wire_rotation_t>&fdc_wire_rotations,
+		       vector<double>&xshifts,vector<double>&yshifts) const;
+      bool GetFDCPlaneXYZs(vector<DVector3>&planeXYZ) const;
       bool GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const;
       bool GetFDCZ(vector<double> &z_wires) const; ///< z-locations for each of the FDC wire planes in cm
       bool GetFDCStereo(vector<double> &stereo_angles) const; ///< stereo angles of each of the FDC wire layers

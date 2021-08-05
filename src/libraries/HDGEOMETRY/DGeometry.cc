@@ -1139,6 +1139,182 @@ bool DGeometry::GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const
 }
 
 //---------------------------------
+// Get info on rotations and offsets from XML for FDC
+//---------------------------------
+bool DGeometry::GetFDC_XML(DVector3 &global_rotation,DVector3 &global_offset,
+			   vector<DVector3>&package_rotations,
+			   vector<DVector2>&package_offsets) const {
+  
+  // Get FDC global rotation angles
+  vector<double>rot_angles;
+  Get("//posXYZ[@volume='ForwardDC']/@rot", rot_angles);
+  global_rotation.SetXYZ(rot_angles[0]*M_PI/180.,rot_angles[1]*M_PI/180.,
+			 rot_angles[2]*M_PI/180.); 
+  
+  // Get package rotation angles
+  Get("//posXYZ[@volume='forwardDC_package_1']/@rot", rot_angles);
+  package_rotations.push_back(DVector3(rot_angles[0]*M_PI/180.,
+				       rot_angles[1]*M_PI/180.,
+				       rot_angles[2]*M_PI/180.)); 
+  Get("//posXYZ[@volume='forwardDC_package_2']/@rot", rot_angles);
+  package_rotations.push_back(DVector3(rot_angles[0]*M_PI/180.,
+				       rot_angles[1]*M_PI/180.,
+				       rot_angles[2]*M_PI/180.));  
+  Get("//posXYZ[@volume='forwardDC_package_3']/@rot", rot_angles);
+  package_rotations.push_back(DVector3(rot_angles[0]*M_PI/180.,
+				       rot_angles[1]*M_PI/180.,
+				       rot_angles[2]*M_PI/180.)); 
+  Get("//posXYZ[@volume='forwardDC_package_4']/@rot", rot_angles);
+  package_rotations.push_back(DVector3(rot_angles[0]*M_PI/180.,
+				       rot_angles[1]*M_PI/180.,
+				       rot_angles[2]*M_PI/180.));
+
+  // Get global offset
+  vector<double>global_pos;
+  Get("//posXYZ[@volume='ForwardDC']/@X_Y_Z", global_pos);
+  global_offset.SetXYZ(global_pos[0],global_pos[1],0.);
+
+  // Get package offsets
+  vector<double>offsets;
+  Get("//posXYZ[@volume='forwardDC_package_1']/@X_Y_Z",offsets);
+  package_offsets.push_back(DVector2(offsets[0],offsets[1]));
+  Get("//posXYZ[@volume='forwardDC_package_2']/@X_Y_Z",offsets);
+  package_offsets.push_back(DVector2(offsets[0],offsets[1])); 
+  Get("//posXYZ[@volume='forwardDC_package_3']/@X_Y_Z",offsets);
+  package_offsets.push_back(DVector2(offsets[0],offsets[1]));
+  Get("//posXYZ[@volume='forwardDC_package_4']/@X_Y_Z",offsets);
+  package_offsets.push_back(DVector2(offsets[0],offsets[1]));
+
+  return true;
+}
+
+//-----------------------------
+// Get the centers of each of the FDC wire planes in the global coordinate 
+// system.
+//-----------------------------
+bool DGeometry::GetFDCPlaneXYZs(vector<DVector3>&planeXYZ) const {
+  // Get geometrical information from database
+  vector<double>z_wires;
+  vector<double>stereo_angles;
+  
+  if(!GetFDCZ(z_wires)) return false;
+  if(!GetFDCStereo(stereo_angles)) return false;
+  
+  // Get rotation and offset parameters from XML
+  DVector3 globalRotation,globalOffset;
+  vector<DVector3>packageRotations;
+  vector<DVector2>packageOffsets;
+  GetFDC_XML(globalRotation,globalOffset,packageRotations,packageOffsets);
+  double ThetaXglobal=globalRotation.x();
+  double ThetaYglobal=globalRotation.y();
+  double ThetaZglobal=globalRotation.z();
+  
+  // Get offsets tweaking nominal geometry from calibration database
+  vector<fdc_wire_offset_t>fdc_wire_offsets;
+  vector<fdc_wire_rotation_t>fdc_wire_rotations;
+  vector<double>xshifts,yshifts;
+  GetFDC_CCDB(fdc_wire_offsets,fdc_wire_rotations,xshifts,yshifts);
+   
+  // Generate the vector of wire plane parameters
+  for(int i=0; i<FDC_NUM_LAYERS; i++){
+    unsigned int pack_id=i/6;
+    double angle=-stereo_angles[i]*M_PI/180.+fdc_wire_offsets[i].dphi;
+    
+    // Create a vector in the plane of the wires and tilt the plane by the 
+    // alignment angles
+    DVector3 udir(0.,1.,0.);
+    double dThetaX=packageRotations[pack_id].x()+fdc_wire_rotations[i].dPhiX;
+    double dThetaY=packageRotations[pack_id].y()+fdc_wire_rotations[i].dPhiY;
+    double dThetaZ=packageRotations[pack_id].z()+fdc_wire_rotations[i].dPhiZ;
+    udir.RotateX(dThetaX);
+    udir.RotateY(dThetaY);
+    udir.RotateZ(dThetaZ);
+     
+    // Create the normal vector to the plane of the wires
+    DVector3 sdir=udir;  
+    sdir.RotateX(M_PI_2);
+    sdir.RotateX(ThetaXglobal);
+    sdir.RotateY(ThetaYglobal);
+    sdir.RotateZ(ThetaZglobal);
+    
+    DVector3 globalOffsets(packageOffsets[pack_id].X(),
+			   packageOffsets[pack_id].Y(),
+			   z_wires[i]+fdc_wire_offsets[i].dz-z_wires[0]);
+    globalOffsets.RotateX(ThetaXglobal);
+    globalOffsets.RotateY(ThetaYglobal);
+    globalOffsets.RotateZ(ThetaZglobal);
+    globalOffsets+=globalOffset;
+    globalOffsets.SetZ(globalOffsets.z()+z_wires[0]);
+    
+    DVector3 thisPlaneXYZ(xshifts[i],yshifts[i],0.);
+    thisPlaneXYZ.Rotate(-angle,sdir);
+    thisPlaneXYZ+=globalOffsets;
+    planeXYZ.push_back(thisPlaneXYZ);
+  }
+
+  return true;
+}
+
+//---------------------------------
+// Get rotation and offset parameters for the FDC from the CCDB
+//---------------------------------
+bool DGeometry::GetFDC_CCDB(vector<fdc_wire_offset_t>&fdc_wire_offsets,
+			    vector<fdc_wire_rotation_t>&fdc_wire_rotations,
+			    vector<double>&xshifts,vector<double>&yshifts)
+  const {
+  JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+  vector<map<string,double> >vals;
+  
+  if (jcalib->Get("FDC/wire_alignment",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+
+      // Get the offsets from the calibration database 
+      fdc_wire_offset_t temp;
+      temp.du=row["dU"];
+      //temp.du=0.;
+      
+      temp.dphi=row["dPhi"];
+      //temp.dphi=0.;
+      
+      temp.dz=row["dZ"];
+      //  temp.dz=0.;
+      
+      fdc_wire_offsets.push_back(temp);
+    }
+  }
+  else return false;
+  
+  if (jcalib->Get("FDC/cell_rotations",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      
+      // Get the offsets from the calibration database
+      fdc_wire_rotation_t temp;
+      temp.dPhiX=row["dPhiX"];
+      temp.dPhiY=row["dPhiY"];
+      temp.dPhiZ=row["dPhiZ"];
+      
+      fdc_wire_rotations.push_back(temp);
+    }
+  }
+  else return false;
+  
+  if (jcalib->Get("FDC/cell_offsets",vals)==false){
+    for(unsigned int i=0; i<vals.size(); i++){
+      map<string,double> &row = vals[i];
+      
+      // Get the offsets from the calibration database 
+      xshifts.push_back(row["xshift"]);
+      yshifts.push_back(row["yshift"]);
+    }
+  }
+  else return false;
+
+  return true;
+}
+
+//---------------------------------
 // GetFDCWires
 //---------------------------------
 bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
@@ -1149,101 +1325,20 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    if(!GetFDCZ(z_wires)) return false;
    if(!GetFDCStereo(stereo_angles)) return false;
 
-   // Get FDC rotation angles
-   vector<double>rot_angles;
-   Get("//posXYZ[@volume='ForwardDC']/@rot", rot_angles);
-   double ThetaXglobal=rot_angles[0]*M_PI/180.;
-   double ThetaYglobal=rot_angles[1]*M_PI/180.;
-   double ThetaZglobal=rot_angles[2]*M_PI/180.; 
-
-   // Get package rotation angles
-   double ThetaX[4],ThetaY[4],ThetaZ[4];
-   Get("//posXYZ[@volume='forwardDC_package_1']/@rot", rot_angles);
-   ThetaX[0]=rot_angles[0]*M_PI/180.;
-   ThetaY[0]=rot_angles[1]*M_PI/180.;
-   ThetaZ[0]=rot_angles[2]*M_PI/180.; 
-   Get("//posXYZ[@volume='forwardDC_package_2']/@rot", rot_angles);
-   ThetaX[1]=rot_angles[0]*M_PI/180.;
-   ThetaY[1]=rot_angles[1]*M_PI/180.;
-   ThetaZ[1]=rot_angles[2]*M_PI/180.;  
-   Get("//posXYZ[@volume='forwardDC_package_3']/@rot", rot_angles);
-   ThetaX[2]=rot_angles[0]*M_PI/180.;
-   ThetaY[2]=rot_angles[1]*M_PI/180.;
-   ThetaZ[2]=rot_angles[2]*M_PI/180.; 
-   Get("//posXYZ[@volume='forwardDC_package_4']/@rot", rot_angles);
-   ThetaX[3]=rot_angles[0]*M_PI/180.;
-   ThetaY[3]=rot_angles[1]*M_PI/180.;
-   ThetaZ[3]=rot_angles[2]*M_PI/180.;
-
-   // Get global offsets
-   vector<double>global_pos;
-   Get("//posXYZ[@volume='ForwardDC']/@X_Y_Z", global_pos);
-   DVector3 globalOffset(global_pos[0],global_pos[1],0.);
-
-   // Get package offsets
-   double dX[4],dY[4];
-   vector<double>offsets;
-   Get("//posXYZ[@volume='forwardDC_package_1']/@X_Y_Z",offsets);
-   dX[0]=offsets[0];
-   dY[0]=offsets[1];
-   Get("//posXYZ[@volume='forwardDC_package_2']/@X_Y_Z",offsets);
-   dX[1]=offsets[0];
-   dY[1]=offsets[1]; 
-   Get("//posXYZ[@volume='forwardDC_package_3']/@X_Y_Z",offsets);
-   dX[2]=offsets[0];
-   dY[2]=offsets[1];
-   Get("//posXYZ[@volume='forwardDC_package_4']/@X_Y_Z",offsets);
-   dX[3]=offsets[0];
-   dY[3]=offsets[1];
-
+   // Get rotation and offset parameters from XML
+   DVector3 globalRotation,globalOffset;
+   vector<DVector3>packageRotations;
+   vector<DVector2>packageOffsets;
+   GetFDC_XML(globalRotation,globalOffset,packageRotations,packageOffsets);
+   double ThetaXglobal=globalRotation.x();
+   double ThetaYglobal=globalRotation.y();
+   double ThetaZglobal=globalRotation.z();
+  
    // Get offsets tweaking nominal geometry from calibration database
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
-   vector<map<string,double> >vals;
    vector<fdc_wire_offset_t>fdc_wire_offsets;
-   if (jcalib->Get("FDC/wire_alignment",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-
-         // Get the offsets from the calibration database 
-         fdc_wire_offset_t temp;
-         temp.du=row["dU"];
-         //temp.du=0.;
-
-         temp.dphi=row["dPhi"];
-         //temp.dphi=0.;
-
-         temp.dz=row["dZ"];
-         //  temp.dz=0.;
-
-         fdc_wire_offsets.push_back(temp);
-      }
-   }
-
    vector<fdc_wire_rotation_t>fdc_wire_rotations;
-   if (jcalib->Get("FDC/cell_rotations",vals)==false){
-      for(unsigned int i=0; i<vals.size(); i++){
-         map<string,double> &row = vals[i];
-
-         // Get the offsets from the calibration database
-         fdc_wire_rotation_t temp;
-         temp.dPhiX=row["dPhiX"];
-         temp.dPhiY=row["dPhiY"];
-         temp.dPhiZ=row["dPhiZ"];
-
-         fdc_wire_rotations.push_back(temp);
-      }
-   }
-
    vector<double>xshifts,yshifts;
-   if (jcalib->Get("FDC/cell_offsets",vals)==false){
-     for(unsigned int i=0; i<vals.size(); i++){
-       map<string,double> &row = vals[i];
-       
-       // Get the offsets from the calibration database 
-       xshifts.push_back(row["xshift"]);
-       yshifts.push_back(row["yshift"]);
-     }
-   }
+   GetFDC_CCDB(fdc_wire_offsets,fdc_wire_rotations,xshifts,yshifts);
    
    // Generate the vector of wire plane parameters
    for(int i=0; i<FDC_NUM_LAYERS; i++){
@@ -1253,9 +1348,9 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
       // Create a vector in the plane of the wires and tilt the plane by the 
       // alignment angles
       DVector3 udir(0.,1.,0.);
-      double dThetaX=ThetaX[pack_id]+fdc_wire_rotations[i].dPhiX;
-      double dThetaY=ThetaY[pack_id]+fdc_wire_rotations[i].dPhiY;
-      double dThetaZ=ThetaZ[pack_id]+fdc_wire_rotations[i].dPhiZ;
+      double dThetaX=packageRotations[pack_id].x()+fdc_wire_rotations[i].dPhiX;
+      double dThetaY=packageRotations[pack_id].y()+fdc_wire_rotations[i].dPhiY;
+      double dThetaZ=packageRotations[pack_id].z()+fdc_wire_rotations[i].dPhiZ;
       udir.RotateX(dThetaX);
       udir.RotateY(dThetaY);
       udir.RotateZ(dThetaZ);
@@ -1271,7 +1366,8 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
       // angle of the wires (0,+-60 degrees)
       udir.Rotate(-angle,sdir);
 
-      DVector3 globalOffsets(dX[pack_id],dY[pack_id],
+      DVector3 globalOffsets(packageOffsets[pack_id].X(),
+			     packageOffsets[pack_id].Y(),
 			     z_wires[i]+fdc_wire_offsets[i].dz-z_wires[0]);
       globalOffsets.RotateX(ThetaXglobal);
       globalOffsets.RotateY(ThetaYglobal);
