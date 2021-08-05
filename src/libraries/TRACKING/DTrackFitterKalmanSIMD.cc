@@ -370,26 +370,21 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
      SC_BARREL_R2=sc_pos[0][0].Perp2();
      SC_PHI_SECTOR1=sc_pos[0][0].Phi();
    }
-
-   // Get z positions of fdc wire planes
-   geom->GetFDCZ(fdc_z_wires);
-   // for now, assume the z extent of a package is the difference between the positions
-   // of the two wire planes.  save half of this distance
-   fdc_package_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
+ 
+   // Find the centers of each wire plane in the lab frame
+   vector<DVector3>planeXYZ;
+   geom->GetFDCPlaneXYZs(planeXYZ);
+   for (unsigned int i=0;i<planeXYZ.size();i++){
+     fdc_x0.push_back(planeXYZ[i].x());
+     fdc_y0.push_back(planeXYZ[i].y());
+     fdc_z_wires.push_back(planeXYZ[i].z());
+   }
+   // for now, assume the z extent of a cell is the difference between the 
+   // positions of two adjacent wire planes.  save half of this distance
+   fdc_cell_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
    geom->GetFDCRmin(fdc_rmin_packages);
    geom->GetFDCRmax(fdc_rmax);
    
-   // Find the centers of each wire plane in the lab frame
-   vector<vector<DFDCWire*>>fdcwires;
-   geom->GetFDCWires(fdcwires);
-   for (unsigned int i=0;i<fdcwires.size();i++){
-     fdc_x0.push_back(0.5*(fdcwires[i][47]->origin.x()
-			   +fdcwires[i][48]->origin.x()));
-     fdc_y0.push_back(0.5*(fdcwires[i][47]->origin.y()
-			   +fdcwires[i][48]->origin.y()));
-   }
-
-
    ADD_VERTEX_POINT=false; 
    gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
   
@@ -1087,10 +1082,10 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 		double z = extrapolations[SYS_FDC][i].position.Z();
 		double r = extrapolations[SYS_FDC][i].position.Perp();
 
-		// see if we're in the "sensitive area" of a package
+		// see if we're in the "sensitive area" of a cell
 		for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
 			int package = plane/6;
-			if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
+			if(fabs(z-fdc_z_wires[plane]) < fdc_cell_size) {
 				if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
 					expected_hit_fdc_planes.insert(plane);
 				}
@@ -4053,8 +4048,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
 
       // Check that C matrix is positive definite
       if (!Cc.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
+	if (DEBUG_LEVEL>0)
+	  _DBG_ << "Broken covariance matrix!" <<endl;
+	return BROKEN_COVARIANCE_MATRIX;
       }
 
       // Get the state vector, jacobian matrix, and multiple scattering matrix 
@@ -4277,8 +4273,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
                //Ctest=Cc.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
                // Check that Ctest is positive definite
                if (!Ctest.IsPosDef()){
-                  if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-                  return BROKEN_COVARIANCE_MATRIX;
+		 if (DEBUG_LEVEL>0) 
+		   _DBG_ << "Broken covariance matrix!" <<endl;
+		 return BROKEN_COVARIANCE_MATRIX;
                }
                bool skip_ring
                   =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
@@ -4499,7 +4496,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     
     // Check that C matrix is positive definite
     if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+      if (DEBUG_LEVEL>0)
+	_DBG_ << "Broken covariance matrix!" <<endl;
       return BROKEN_COVARIANCE_MATRIX;
     }
     
@@ -4808,7 +4806,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    //Ctest=C.SandwichMultiply(I5x5-K*H)+Vc*MultiplyTranspose(K);	 
 	    // Check that Ctest is positive definite
 	    if (!Ctest.IsPosDef()){
-	      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	      if (DEBUG_LEVEL>0)
+		_DBG_ << "Broken covariance matrix!" <<endl;
 	      return BROKEN_COVARIANCE_MATRIX;
 	    }
 	    bool skip_ring
@@ -5140,7 +5139,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
     
     // Check that C matrix is positive definite
     if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+      if (DEBUG_LEVEL>0) 
+	_DBG_ << "Broken covariance matrix!" <<endl;
       return BROKEN_COVARIANCE_MATRIX;
     }
     
@@ -5305,7 +5305,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	  //Ctest=C.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
 	  // Check that Ctest is positive definite
 	  if (!Ctest.IsPosDef()){
-	    if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	    if (DEBUG_LEVEL>0) 
+	      _DBG_ << "Broken covariance matrix!" <<endl;
 	    return BROKEN_COVARIANCE_MATRIX;
 	  }
 	  
@@ -7460,7 +7461,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                dC=A*(Cs-C)*A.Transpose();
                Cs=fdc_updates[id].C+dC;
                if (!Cs.IsPosDef()){
-                  if (DEBUG_LEVEL>1)
+		 if (DEBUG_LEVEL>1)
                      _DBG_ << "Covariance Matrix not PosDef..." << endl;
                   return VALUE_OUT_OF_RANGE;
                }
@@ -7723,7 +7724,7 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                Ss=cdc_updates[id].S+A*(Ss-S);
                Cs=cdc_updates[id].C+A*(Cs-C)*A.Transpose();
                if (!Cs.IsPosDef()){
-                  if (DEBUG_LEVEL>1)
+		 if (DEBUG_LEVEL>1)
                      _DBG_ << "Covariance Matrix not PosDef..." << endl;
                   return VALUE_OUT_OF_RANGE;
                } 
@@ -8204,7 +8205,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForwardCDC(vector<pull_t>&cdc_pulls){
             Cs=cdc_updates[cdc_index].C+A*(Cs-C)*A.Transpose();
 
             if (!Cs.IsPosDef()){
-               if (DEBUG_LEVEL>5){
+	      if (DEBUG_LEVEL>5)
+		 {
                   _DBG_ << "Covariance Matrix not Pos Def..." << endl;
                   _DBG_ << " cdc_updates[cdc_index].C A C_ Cs " << endl;
                   cdc_updates[cdc_index].C.Print();
@@ -9797,7 +9799,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	     Ctest=C.SubSym(Kc*(Hc*C));
 	     
 	     if (!Ctest.IsPosDef()){
-	       if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	       if (DEBUG_LEVEL>0) 
+		 _DBG_ << "Broken covariance matrix!" <<endl;
 	     }
 	     
 	     if (tdrift >= CDC_T_DRIFT_MIN){
