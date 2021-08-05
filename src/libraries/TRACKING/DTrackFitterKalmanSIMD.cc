@@ -4046,13 +4046,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    for (unsigned int k=break_point_step_index+1;k<central_traj.size();k++){
       unsigned int k_minus_1=k-1;
 
-      // Check that C matrix is positive definite
-      if (!Cc.IsPosDef()){
-	if (DEBUG_LEVEL>0)
-	  _DBG_ << "Broken covariance matrix!" <<endl;
-	return BROKEN_COVARIANCE_MATRIX;
-      }
-
       // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
       S0=central_traj[k].S;
@@ -4493,13 +4486,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0)
-	_DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
     // from reference trajectory
@@ -5136,13 +5122,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   S0_=(forward_traj[break_point_step_index].S);
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) 
-	_DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
     
     z=forward_traj[k].z;
     
@@ -7462,8 +7441,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                Cs=fdc_updates[id].C+dC;
                if (!Cs.IsPosDef()){
 		 if (DEBUG_LEVEL>1)
-                     _DBG_ << "Covariance Matrix not PosDef..." << endl;
-                  return VALUE_OUT_OF_RANGE;
+		   _DBG_ << "Covariance Matrix not PosDef..." << endl;
+		 return VALUE_OUT_OF_RANGE;
                }
 
                // Position and direction from state vector with small angle
@@ -7725,8 +7704,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                Cs=cdc_updates[id].C+A*(Cs-C)*A.Transpose();
                if (!Cs.IsPosDef()){
 		 if (DEBUG_LEVEL>1)
-                     _DBG_ << "Covariance Matrix not PosDef..." << endl;
-                  return VALUE_OUT_OF_RANGE;
+		   _DBG_ << "Covariance Matrix not PosDef..." << endl;
+		 return VALUE_OUT_OF_RANGE;
                } 
                if (!Ss.IsFinite()){
                   if (DEBUG_LEVEL>5) _DBG_ << "Invalid values for smoothed parameters..." << endl;
@@ -7794,11 +7773,11 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                return VALUE_OUT_OF_RANGE;
             }
             if (!Cs.IsPosDef()){
-               if (DEBUG_LEVEL>5){
-		 _DBG_ << "Covariance Matrix not PosDef... Ckk dC A" << endl;
-		 cdc_updates[id].C.Print(); dC.Print(); A.Print();
-               }
-               return VALUE_OUT_OF_RANGE;
+	      if (DEBUG_LEVEL>5){
+		_DBG_ << "Covariance Matrix not PosDef... Ckk dC A" << endl;
+		cdc_updates[id].C.Print(); dC.Print(); A.Print();
+	      }
+	      return VALUE_OUT_OF_RANGE;
             }
 
             // Get estimate for energy loss 
@@ -8206,9 +8185,9 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForwardCDC(vector<pull_t>&cdc_pulls){
 
             if (!Cs.IsPosDef()){
 	      if (DEBUG_LEVEL>5)
-		 {
-                  _DBG_ << "Covariance Matrix not Pos Def..." << endl;
-                  _DBG_ << " cdc_updates[cdc_index].C A C_ Cs " << endl;
+		{
+		  _DBG_ << "Covariance Matrix not Pos Def..." << endl;
+		  _DBG_ << " cdc_updates[cdc_index].C A C_ Cs " << endl;
                   cdc_updates[cdc_index].C.Print();
                   A.Print();
                   C.Print();
@@ -9801,6 +9780,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	     if (!Ctest.IsPosDef()){
 	       if (DEBUG_LEVEL>0) 
 		 _DBG_ << "Broken covariance matrix!" <<endl;
+	       return BROKEN_COVARIANCE_MATRIX;
 	     }
 	     
 	     if (tdrift >= CDC_T_DRIFT_MIN){
