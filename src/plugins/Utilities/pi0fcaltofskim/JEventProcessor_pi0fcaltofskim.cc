@@ -52,32 +52,39 @@ JEventProcessor_pi0fcaltofskim::JEventProcessor_pi0fcaltofskim()
 
   WRITE_EVIO = 1;
   WRITE_HDDM = 0;
+  
+  TURN_OFF_TRACK_MATCH = 0;
+  SAVE_BEAM_PHOTON = 0;
+  SAVE_TOF_POINT = 0;
+  GET_IP = 0;
+  SAVE_L1_TRIGGER = 0;
 
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:WRITE_EVIO", WRITE_EVIO );
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:WRITE_HDDM", WRITE_HDDM );
-
-
-/*
-  MIN_MASS   = 0.03; // GeV
-  MAX_MASS   = 0.30; // GeV
-  MIN_E      =  1.0; // GeV (photon energy cut)
-  MIN_R      =   20; // cm  (cluster distance to beam line)
-  MAX_DT     =   10; // ns  (cluster time diff. cut)
-  MAX_ETOT   =   12; // GeV (max total FCAL energy)
-  MIN_BLOCKS =    2; // minumum blocks per cluster
-
-  WRITE_ROOT = 0;
-  WRITE_EVIO = 1;
-
+  
+  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:TURN_OFF_TRACK_MATCH", TURN_OFF_TRACK_MATCH );
+  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:SAVE_BEAM_PHOTON", SAVE_BEAM_PHOTON );
+  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:SAVE_TOF", SAVE_TOF_POINT );
+  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:GET_IP", GET_IP );
+  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:SAVE_L1_TRIGGER", SAVE_L1_TRIGGER );
+  
+  MIN_MASS   = 0.02; // GeV
+  MAX_MASS   = 1.2; // GeV
+  MIN_E      =  0.1; // GeV (photon energy cut)
+  //MIN_R      =   20; // cm  (cluster distance to beam line)
+  MAX_DT     =   25; // ns  (cluster time diff. cut)
+  //MAX_ETOT   =   12; // GeV (max total FCAL energy)
+  //MIN_BLOCKS =    2; // minumum blocks per cluster
+  
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_MASS", MIN_MASS );
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MAX_MASS", MAX_MASS );
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_E", MIN_E );                
-  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_R", MIN_R );
+  //gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_R", MIN_R );
   gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MAX_DT", MAX_DT );
-  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MAX_ETOT", MAX_ETOT );
-  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_BLOCKS", MIN_BLOCKS );
-  gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:WRITE_ROOT", WRITE_ROOT );
-  */
+  //gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MAX_ETOT", MAX_ETOT );
+  //gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:MIN_BLOCKS", MIN_BLOCKS );
+  //gPARMS->SetDefaultParameter( "PI0FCALTOFSKIM:WRITE_ROOT", WRITE_ROOT );
+
 }
 
 //------------------
@@ -153,53 +160,61 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
  
   vector< const DFCALShower* > locFCALShowers;
   vector< const DVertex* > kinfitVertex;
-  vector<const DTOFPoint*> tof_points;
+  vector<const DTOFPoint*> locTofPoints;
   vector< const DBeamPhoton* > locBeamPhotons;
   vector<const DL1Trigger *> locL1Triggers;
+  vector<const DEventRFBunch*> locEventRFBunches;
 
   loop->Get(locFCALShowers);
   loop->Get(kinfitVertex);
-  loop->Get(tof_points);
-  loop->Get(locL1Triggers);
-  
+  loop->Get(locEventRFBunches);
+  if (SAVE_TOF_POINT == 1)
+    loop->Get(locTofPoints);
+  if (SAVE_L1_TRIGGER == 1)
+    loop->Get(locL1Triggers);
+  if (SAVE_BEAM_PHOTON == 1)
+    loop->Get(locBeamPhotons);
+
   vector< const DTrackTimeBased* > locTrackTimeBased;
   loop->Get(locTrackTimeBased);
 
   vector < const DFCALShower * > matchedShowers;
 
-	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	loop->GetSingle(locEventWriterEVIO);
+  const DEventWriterEVIO* locEventWriterEVIO = NULL;
+  loop->GetSingle(locEventWriterEVIO);
 
   // always write out BOR events
   if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
-      //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim" );
-      return NOERROR;
+    //jout << "Found BOR!" << endl;
+    locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim" );
+    return NOERROR;
   }
-
   // write out the first few EPICS events to save run number & other meta info
   if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
-      //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim" );
-      num_epics_events++;
-      return NOERROR;
+    //jout << "Found EPICS!" << endl;
+    locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim" );
+    num_epics_events++;
+    return NOERROR;
   }
-
-  
+    
   vector< const JObject* > locObjectsToSave;  
 
   bool Candidate = false;
   
   DVector3 vertex;
   vertex.SetXYZ(m_beamSpotX, m_beamSpotY, m_targetZ);
-  for (unsigned int i = 0 ; i < tof_points.size(); i++) {
-    locObjectsToSave.push_back(static_cast<const JObject *>(tof_points[i]));
-  }
-    
+      
   //Use kinfit when available
   double kinfitVertexX = m_beamSpotX;
   double kinfitVertexY = m_beamSpotY;
   double kinfitVertexZ = m_targetZ;
+  
+  if (GET_IP == 0) {
+    kinfitVertexX = 0.0;
+    kinfitVertexY = 0.0;
+    kinfitVertexZ = 0.0;
+  }
+  
   for (unsigned int i = 0 ; i < kinfitVertex.size(); i++) {
     if(i==0)
       locObjectsToSave.push_back(static_cast<const JObject *>(kinfitVertex[0]));
@@ -208,74 +223,80 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
     kinfitVertexY = kinfitVertex[i]->dSpacetimeVertex.Y();
     kinfitVertexZ = kinfitVertex[i]->dSpacetimeVertex.Z();
   }
-  
-  vector<const DEventRFBunch*> locEventRFBunches;
-  loop->Get(locEventRFBunches);
+    
   if(locEventRFBunches.size() > 0) {
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
-  for (unsigned int i = 0 ; i < locBeamPhotons.size(); i++) {
-    locObjectsToSave.push_back(static_cast<const JObject *>(locBeamPhotons[i]));
-  }  
-  for (unsigned int i = 0 ; i < locL1Triggers.size(); i++) {
-    locObjectsToSave.push_back(static_cast<const JObject *>(locL1Triggers[i]));
-  }
-    
+  if (SAVE_BEAM_PHOTON == 1)
+    for (unsigned int i = 0 ; i < locBeamPhotons.size(); i++) {
+      locObjectsToSave.push_back(static_cast<const JObject *>(locBeamPhotons[i]));
+    }
+  if (SAVE_L1_TRIGGER == 1)
+    for (unsigned int i = 0 ; i < locL1Triggers.size(); i++) {
+      locObjectsToSave.push_back(static_cast<const JObject *>(locL1Triggers[i]));
+    }
+  if (SAVE_TOF_POINT == 1)
+    for (unsigned int i = 0 ; i < locTofPoints.size(); i++) {
+      locObjectsToSave.push_back(static_cast<const JObject *>(locTofPoints[i]));
+    }
+  
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
- // Double_t radius = 0;
+  // Double_t radius = 0;
   //japp->RootWriteLock();
   //Double_t p;
-  for (unsigned int i=0; i < locTrackTimeBased.size() ; ++i){
-    vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
-    if (extrapolations.size()==0) continue;
-
-    for (unsigned int j=0; j< locFCALShowers.size(); ++j){
-
-      Double_t x = locFCALShowers[j]->getPosition().X();
-      Double_t y = locFCALShowers[j]->getPosition().Y();
-   //    Double_t z = locFCALShowers[j]->getPosition().Z() ;
- //cout << "Z: " << z << endl;
-      //DVector3 pos_FCAL(x,y,625.406);
-      //for LH2 target
-      //DVector3 pos_FCAL(0,0,625.406);
+  if (TURN_OFF_TRACK_MATCH == 0)
+    for (unsigned int i=0; i < locTrackTimeBased.size() ; ++i){
+      vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
+      if (extrapolations.size()==0) continue;
       
-      DVector3 pos_FCAL(0,0,638);
-      //at the end of the start counter; use this fall for fall '15 data
-      // DVector3 pos_FCAL(0,0,692);
-         //DVector3 pos_FCAL(0.0,0.0,650);
-      //std::cout<<"i: "<< i<< " j: "<< j << " z: "<<z<< endl;
-      // if (locTrackTimeBased[i]->rt->GetIntersectionWithPlane(pos_FCAL,norm,pos,mom)==NOERROR)
-      pos=extrapolations[0].position;
-
-      // Double_t dX= TMath::Abs(pos.X() - x);
-      // Double_t dY= TMath::Abs(pos.Y() - y);
-      // Double_t dZ= TMath::Abs(pos.Z() - z);
-      Double_t trkmass = locTrackTimeBased[i]->mass();
-      Double_t FOM = TMath::Prob(locTrackTimeBased[i]->chisq, locTrackTimeBased[i]->Ndof);
-      // radius = sqrt(pos.X()*pos.X() + pos.Y()*pos.Y());
-      //  Double_t Eshwr = locFCALShowers[j]->getEnergy();
-      //  p = locTrackTimeBased[i]->momentum().Mag();
-      // cout<<"p: "<<p<<endl;
-      // Double_t dZ = TMath::Abs(pos.Z() - z);
-      Double_t dRho = sqrt(((pos.X() - x)*(pos.X() - x)) + ((pos.Y() - y)* (pos.Y() - y)));
-      // std::cout<<"i: "<< i<< " j: "<< j << " dRho " <<dRho << endl;
-      //if(dX < 20 && dY < 20 && trkmass < 0.15 && dRho < 50 && FOM > 0.01) {  
-      if(trkmass < 0.15 && dRho < 5 && FOM > 0.01 ) {  
-	matchedShowers.push_back(locFCALShowers[j]);
-	// matchedTracks.push_back(locTrackTimeBased[i]);
-	//  printf ("Matched event=%d, i=%d, j=%d, p=%f, Ztrk=%f Zshr=%f, Xtrk=%f, Xshr=%f, Ytrk=%f, Yshr=%f\n",locEventNumber,i,j,p,
-	//  pos.Z(),z,pos.X(),x,pos.Y(),y);
-	//  break;
+      for (unsigned int j=0; j< locFCALShowers.size(); ++j){
+	
+	Double_t x = locFCALShowers[j]->getPosition().X();
+	Double_t y = locFCALShowers[j]->getPosition().Y();
+	//    Double_t z = locFCALShowers[j]->getPosition().Z() ;
+	//cout << "Z: " << z << endl;
+	//DVector3 pos_FCAL(x,y,625.406);
+	//for LH2 target
+	//DVector3 pos_FCAL(0,0,625.406);
+	
+	DVector3 pos_FCAL(0,0,638);
+	//at the end of the start counter; use this fall for fall '15 data
+	// DVector3 pos_FCAL(0,0,692);
+	//DVector3 pos_FCAL(0.0,0.0,650);
+	//std::cout<<"i: "<< i<< " j: "<< j << " z: "<<z<< endl;
+	// if (locTrackTimeBased[i]->rt->GetIntersectionWithPlane(pos_FCAL,norm,pos,mom)==NOERROR)
+	pos=extrapolations[0].position;
+	
+	// Double_t dX= TMath::Abs(pos.X() - x);
+	// Double_t dY= TMath::Abs(pos.Y() - y);
+	// Double_t dZ= TMath::Abs(pos.Z() - z);
+	Double_t trkmass = locTrackTimeBased[i]->mass();
+	Double_t FOM = TMath::Prob(locTrackTimeBased[i]->chisq, locTrackTimeBased[i]->Ndof);
+	// radius = sqrt(pos.X()*pos.X() + pos.Y()*pos.Y());
+	//  Double_t Eshwr = locFCALShowers[j]->getEnergy();
+	//  p = locTrackTimeBased[i]->momentum().Mag();
+	// cout<<"p: "<<p<<endl;
+	// Double_t dZ = TMath::Abs(pos.Z() - z);
+	Double_t dRho = sqrt(((pos.X() - x)*(pos.X() - x)) + ((pos.Y() - y)* (pos.Y() - y)));
+	// std::cout<<"i: "<< i<< " j: "<< j << " dRho " <<dRho << endl;
+	//if(dX < 20 && dY < 20 && trkmass < 0.15 && dRho < 50 && FOM > 0.01) {  
+	if(trkmass < 0.15 && dRho < 5 && FOM > 0.01 ) {  
+	  matchedShowers.push_back(locFCALShowers[j]);
+	  // matchedTracks.push_back(locTrackTimeBased[i]);
+	  //  printf ("Matched event=%d, i=%d, j=%d, p=%f, Ztrk=%f Zshr=%f, Xtrk=%f, Xshr=%f, Ytrk=%f, Yshr=%f\n",locEventNumber,i,j,p,
+	  //  pos.Z(),z,pos.X(),x,pos.Y(),y);
+	  //  break;
+	  
+	}
 	
       }
-
     }
-  }
-   
+  
   for(unsigned int i=0; i<locFCALShowers.size(); i++)
     {
-      if (find(matchedShowers.begin(), matchedShowers.end(),locFCALShowers[i]) != matchedShowers.end()) continue;
+      if (TURN_OFF_TRACK_MATCH == 0)
+	if (find(matchedShowers.begin(), matchedShowers.end(),locFCALShowers[i]) != matchedShowers.end()) continue;
      
       const DFCALShower *s1 = locFCALShowers[i];
      
@@ -293,7 +314,8 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
       for(unsigned int j=i+1; j<locFCALShowers.size(); j++)
       {
 	const DFCALShower *s2 = locFCALShowers[j];
-	if (find(matchedShowers.begin(), matchedShowers.end(),s2) != matchedShowers.end()) continue;
+	if (TURN_OFF_TRACK_MATCH == 0)
+	  if (find(matchedShowers.begin(), matchedShowers.end(),s2) != matchedShowers.end()) continue;
 	
 	vector<const DFCALCluster*> associated_clusters2;
 	s2->Get(associated_clusters2);
@@ -308,23 +330,23 @@ jerror_t JEventProcessor_pi0fcaltofskim::evnt(JEventLoop *loop, uint64_t eventnu
 	TLorentzVector ptot = sh1_p+sh2_p;
 	Double_t inv_mass = ptot.M();
 
-    //Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-        Candidate |= (E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass<1.2) ) ;
+	//Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
+        Candidate |= (E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) ;
 
         //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-        if(E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass<1.2) ) {
-	    if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
-	      locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
-            if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
-	      locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[j]));
+        if(E1 > MIN_E && E2 > MIN_E && (fabs (t1-t2) < MAX_DT) && (inv_mass>MIN_MASS) && (inv_mass<MAX_MASS) ) {
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
+	    locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
+	    locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[j]));
         }
       }
     }		
- 
- if( Candidate ){
-
+  
+  if( Candidate ){
+    
     if( WRITE_EVIO ){
-        locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcaltofskim", locObjectsToSave );
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;

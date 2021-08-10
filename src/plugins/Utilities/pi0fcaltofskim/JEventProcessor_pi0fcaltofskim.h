@@ -42,6 +42,12 @@ class JEventProcessor_pi0fcaltofskim:public jana::JEventProcessor{
   double MAX_ETOT;
   int    MIN_BLOCKS;
 
+  int TURN_OFF_TRACK_MATCH;
+  int SAVE_BEAM_PHOTON;
+  int SAVE_TOF_POINT;
+  int GET_IP;
+  int SAVE_L1_TRIGGER;
+
   int WRITE_ROOT;
   int WRITE_EVIO;
   int WRITE_HDDM;
