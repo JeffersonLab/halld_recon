@@ -10,6 +10,8 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TROOT.h"
+#include "TMap.h"
+#include "TObjString.h"
 
 #include "JANA/JApplication.h"
 #include "JANA/JObject.h"
