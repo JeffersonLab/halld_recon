@@ -120,7 +120,7 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		vector<double>xshifts;
 		vector<double>yshifts;
 
-		double dX[4],dY[4];
+	        vector<double>fdc_x0,fdc_y0;
 
 		double ROUT_FIDUCIAL,RIN_FIDUCIAL;
 		double r2_out,r2_in;
