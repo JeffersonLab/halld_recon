@@ -1214,7 +1214,7 @@ bool DGeometry::GetFDCPlaneXYZs(vector<DVector3>&planeXYZ) const {
   vector<fdc_wire_rotation_t>fdc_wire_rotations;
   vector<double>xshifts,yshifts;
   GetFDC_CCDB(fdc_wire_offsets,fdc_wire_rotations,xshifts,yshifts);
-   
+  
   // Generate the vector of wire plane parameters
   for(int i=0; i<FDC_NUM_LAYERS; i++){
     unsigned int pack_id=i/6;
@@ -1406,7 +1406,7 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
          //w->u+=dX[pack_id]*w->udir.y()-dY[pack_id]*w->udir.x();
 
          w->tdir = w->udir.Cross(w->sdir);
-         w->tdir.SetMag(1.0); // This isn't really needed
+
          temp.push_back(w);
       }
       fdcwires.push_back(temp);
