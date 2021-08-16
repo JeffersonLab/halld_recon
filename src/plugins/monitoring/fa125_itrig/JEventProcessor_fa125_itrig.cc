@@ -24,14 +24,18 @@ using namespace jana;
 
 #include <stdint.h>
 #include <vector>
+#include <bitset>
 
 #include "DAQ/Df125TriggerTime.h"
 #include "DAQ/DCODAEventInfo.h"
 
 #include <TDirectory.h>
+#include <TH1.h>
 #include <TH2.h>
 #include <TTree.h>
 #include <TBranch.h>
+#include <TMath.h>
+#include <TBits.h>
 
 static TH2I *hdiffs=NULL;
 
@@ -84,7 +88,7 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
   TDirectory *main = gDirectory;
   gDirectory->mkdir("fa125_itrig")->cd();
 
-  hdiffs = new TH2I("errcount","Count of eventnum - itrigger differences; roc ; slot", 15, 1, 16, 17, 3, 20);
+  hdiffs = new TH2I("errcount","Count of fa125 itrigger time errors; roc ; slot", 15, 1, 16, 17, 3, 20);
 
   if (MAKE_TREE) {
     tree = new TTree("T","Df125 trigger times");
@@ -109,6 +113,10 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
   
     int tdiff;
     tree->Branch("tdiff",&tdiff,"tdiff/I");
+
+    int itrigdiff;
+    tree->Branch("itrigdiff",&itrigdiff,"itrigdiff/I");
+
   }
 
   main->cd();
@@ -185,14 +193,14 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
   vector<const Df125TriggerTime*> ttvector;
   loop->Get(ttvector); 
 
-  uint32_t nd = (uint32_t)ttvector.size();
+  int nd = (int)ttvector.size();
 
   if (nd) {
 
     ULong64_t eventnum = (ULong64_t)eventnumber;
     ULong64_t ttime; //trigger time
     uint32_t rocid, slot, itrigger;
-    int tdiff;
+    int tdiff, itrigdiff;
         
     if (MAKE_TREE) {
 
@@ -203,11 +211,52 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
       tree->SetBranchAddress("slot",&slot);
       tree->SetBranchAddress("itrigger",&itrigger);
       tree->SetBranchAddress("tdiff",&tdiff);
+      tree->SetBranchAddress("itrigdiff",&itrigdiff);
     }
   
     const Df125TriggerTime *tt = NULL;
 
-    for (uint32_t i=0; i<nd; i++) {
+    // assume several trigger times are reported, find out which is the most popular 
+
+    ULong64_t ttimes[255] = {0};  // 15 rocs*17slots=255
+
+    // load times into array 
+    for (int i=0; i<nd; i++) {
+
+      tt = ttvector[i];  
+ 
+      if (!tt) continue;
+
+      ttimes[i] = (ULong64_t)tt->time;
+
+    }  // for each Df125TriggerTime
+
+
+    int order[255] = {0};
+
+    TMath::Sort(nd,ttimes,order,1);  // sort the array, largest first
+
+    // count the unique ttimes
+    ULong64_t unique_times[255] = {0}; 
+    int count[255] = {0};
+    int nunique = 0;
+
+    for (int i=0; i<nd; i++) {
+      if (ttimes[order[i]] == unique_times[nunique-1]) { 
+        count[nunique-1]++;
+      } else {
+        unique_times[nunique] = ttimes[order[i]];
+        count[nunique]++;
+	nunique++;
+      }
+    }
+
+    // find the most popular time.  If the top 2 are equally popular, just take the first.
+    TMath::Sort(nunique,count,order,1);
+
+    ULong64_t most_popular_time = unique_times[order[0]];
+
+    for (int i=0; i<nd; i++) {
 
       tt = ttvector[i];  
  
@@ -219,17 +268,57 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
       slot = tt->slot;
       itrigger = tt->itrigger;
 
-      tdiff =  (eventnum & 0xFFFF) - itrigger;
+      itrigdiff =  (eventnum & 0xFFFF) - itrigger;
+
+      tdiff = most_popular_time - ttime;
+
+      // count the bits differing between ttime and most popular time
+      // ttime often differs by 1 between L and R halves of the crate 
+      // single bit differences in more significant bits happen infrequently when other output is ok
+
+      ULong64_t posdiff;
+
+      if (ttime > most_popular_time) {
+        posdiff = ttime - most_popular_time;
+      } else {
+        posdiff = most_popular_time - ttime;
+      }
+
+      UInt_t diffcount_ttime = 0;
+
+      while (posdiff>0) {
+        if (posdiff&1) diffcount_ttime++;
+        posdiff = posdiff>>1;
+      }
+
+      // count the bits differing between itrigger and lowest 16 bits of eventnumber
+      // single bit differences are fairly common
+      
+      if ((eventnum & 0xFFFF) - itrigger > 0) {
+        posdiff = (ULong64_t)((eventnum & 0xFFFF) - itrigger);
+      } else {
+        posdiff = (ULong64_t)(itrigger - (eventnum & 0xFFFF));
+      }
+
+      UInt_t diffcount_itrig = 0;
+
+      while (posdiff>0) {
+        if (posdiff&1) diffcount_itrig++;
+        posdiff = posdiff>>1;
+      }
 
       japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
-      if (tdiff) hdiffs->Fill(rocmap[rocid],slot,1);   // increment histo by 1 for any magnitude difference 
+      // increment monitoring histo when trigger time and itrigger are both off by more than 1 bit
+
+      if ( diffcount_ttime>1 && diffcount_itrig>1 ) hdiffs->Fill(rocmap[rocid],slot,1);  
 
       if (MAKE_TREE) tree->Fill();
 
       japp->RootUnLock();
 
     }  // for each Df125TriggerTime
+
 
   }  // if (nd)  
 

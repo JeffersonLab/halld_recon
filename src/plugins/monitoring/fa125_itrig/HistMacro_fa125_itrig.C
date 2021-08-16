@@ -19,6 +19,7 @@
 
 	//Draw
 	locCanvas->cd();
+        gStyle->SetPalette(kCool);
         gStyle->SetOptStat(0);
         gStyle->SetGridStyle(1);
 	gPad->SetTicks();
@@ -33,7 +34,7 @@
 		locHist->GetYaxis()->SetLabelSize(0.035);
 		locHist->GetYaxis()->SetNdivisions(17);
 		locHist->GetYaxis()->CenterLabels(1);
-		locHist->Draw("colz2");
+		locHist->Draw("colz");  // don't use colz2, it is buggy in -b mode
 	}
 
 
