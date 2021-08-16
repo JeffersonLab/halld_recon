@@ -36,7 +36,7 @@
 	{
 		TH1I* locHist = locHist_FDCRF_SelfDeltaT;
 		locHist->SetTitle("RF FDC Self timing");
-		locHist->GetXaxis()->Rebin(14);
+		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
@@ -53,7 +53,7 @@
 	{
 		TH1I* locHist = locHist_TOFRF_SelfDeltaT;
 		locHist->SetTitle("RF TOF Self timing");
-		locHist->GetXaxis()->Rebin(12);
+		locHist->Rebin(12);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
@@ -70,7 +70,7 @@
 	{
 		TH1I* locHist = locHist_TAGHRF_SelfDeltaT;
 		locHist->SetTitle("RF TAGH Self timing");
-		locHist->GetXaxis()->Rebin(14);
+		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
@@ -87,7 +87,7 @@
 	{
 		TH1I* locHist = locHist_PSCRF_SelfDeltaT;
 		locHist->SetTitle("RF PSC Self timing");
-		locHist->GetXaxis()->Rebin(14);
+		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
 		locHist->GetYaxis()->SetTitleSize(0.05);
