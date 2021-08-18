@@ -30,6 +30,9 @@ jerror_t DFCALCluster_factory_Island::init(void)
   TIME_CUT=15.;
   gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
   
+  MAX_HITS_FOR_CLUSTERING = 250;  
+  gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+
   MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
 			      MIN_CLUSTER_SEED_ENERGY);
@@ -52,7 +55,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=0.0001;
+  MASS_CUT=0.0004;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
@@ -92,7 +95,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
   vector<const DFCALHit*>fcal_hits;
   loop->Get(fcal_hits);
   if (fcal_hits.size()==0) return OBJECT_NOT_AVAILABLE;
-  
+
+  // LED events will have hits in nearly every channel. Do NOT
+  // try clusterizing if more than 250 hits in FCAL
+  if(fcal_hits.size() > MAX_HITS_FOR_CLUSTERING) return VALUE_OUT_OF_RANGE;
+    
   // Sort the hits according to energy.
   stable_sort(fcal_hits.begin(),fcal_hits.end(),FCALHit_E_cmp);
   

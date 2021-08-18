@@ -56,6 +56,7 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   double INSERT_SHOWER_WIDTH_PARAMETER;
   double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN,MASS_CUT;
   bool DEBUG_HISTS;
+  int MAX_HITS_FOR_CLUSTERING;
 
   double m_insert_Eres[3],m_Eres[3];
   double m_zdiff;
