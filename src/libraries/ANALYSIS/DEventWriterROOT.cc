@@ -8,7 +8,7 @@ static bool DIRC_OUTPUT = true;
 
 static bool STORE_PULL_INFO = false;
 static bool STORE_ERROR_MATRIX_INFO = false;
-
+static bool STORE_MC_TRAJECTORIES = false;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
@@ -261,19 +261,21 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 	if(REST_JANA_CALIB_CONTEXT != "")
 		locMiscInfoMap->Add(new TObjString("REST:JANACALIBCONTEXT"), new TObjString(REST_JANA_CALIB_CONTEXT.c_str()));
 
-	
+	// Note: adding these parameters (e.g. in hd_root) will create warnings with "<-- NO DEFAULT! (TYPO?)". Safe to ignore these.
 	if(gPARMS->Exists("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT"))
-		gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT);
+		{gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT set to " << BCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
-		gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT);
+		{gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT set to " << FCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT"))
-		gPARMS->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT);
+		{gPARMS->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT set to " << CCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
-		gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT);
+		{gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT); cout << "ANALYSIS:DIRC_ROOT_OUTPUT set to " << DIRC_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:STORE_PULL_INFO"))
-	    gPARMS->GetParameter("ANALYSIS:STORE_PULL_INFO",STORE_PULL_INFO);
+	    {gPARMS->GetParameter("ANALYSIS:STORE_PULL_INFO",STORE_PULL_INFO); cout << "ANALYSIS:STORE_PULL_INFO set to " << STORE_PULL_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:STORE_ERROR_MATRIX_INFO"))
-    	gPARMS->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO);
+    	{gPARMS->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO); cout << "ANALYSIS:STORE_ERROR_MATRIX_INFO set to " << STORE_ERROR_MATRIX_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(gPARMS->Exists("ANALYSIS:STORE_MC_TRAJECTORIES")) 
+		{gPARMS->GetParameter("ANALYSIS:STORE_MC_TRAJECTORIES",STORE_MC_TRAJECTORIES); cout << "ANALYSIS:STORE_MC_TRAJECTORIES set to " << STORE_MC_TRAJECTORIES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -624,6 +626,17 @@ void DEventWriterROOT::Create_Branches_ThrownParticles(DTreeBranchRegister& locB
 	//KINEMATICS: THROWN //at the production vertex
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4"), dInitNumThrownArraySize);
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4"), dInitNumThrownArraySize);
+
+	if(STORE_MC_TRAJECTORIES) {
+		// Particles at point of creation (i.e. birth)
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajBirth"), locArraySizeString, dInitNumThrownArraySize);
+		locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajBirth"), dInitNumThrownArraySize);
+		locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_trajBirth"), dInitNumThrownArraySize);
+		// Particles at point of interaction (sometimes called "death", but this may be misleading for tracks: they can survive interactions)
+		locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajDeath"), locArraySizeString, dInitNumThrownArraySize);
+		locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajDeath"), dInitNumThrownArraySize);
+		// we skip P4 of particle at death, as DMCTrajectoryPoints just saves (0,0,0,0) which isn't particularly enlightening
+	}
 }
 
 void DEventWriterROOT::Create_Branches_Beam(DTreeBranchRegister& locBranchRegister, bool locIsMCDataFlag) const
@@ -1092,6 +1105,9 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	vector<const DBeamPhoton*> locMCGenBeams;
 	locEventLoop->Get(locMCGenBeams, "MCGEN");
 
+	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
+	locEventLoop->Get(locDMCTrajectoryPoints);
+
 	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
 	japp->RootWriteLock();
@@ -1101,7 +1117,7 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
 
 	//throwns
-	Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying);
+	Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
 
 	//Custom Branches
 	Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEventLoop, locMCReaction, locMCThrownsToSave);
@@ -1189,6 +1205,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	vector<const DBeamPhoton*> locMCGenBeams;
 	locEventLoop->Get(locMCGenBeams, "MCGEN");
+
+	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
+	locEventLoop->Get(locDMCTrajectoryPoints);
 
    const DBeamPhoton* locTaggedMCGenBeam = nullptr;
 
@@ -1315,7 +1334,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	//THROWN INFORMATION
 	if(locMCReaction != NULL)
 	{
-		Fill_ThrownInfo(locTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locMCThrownMatching);
+		Fill_ThrownInfo(locTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints, locMCThrownMatching);
 		locTreeFillData->Fill_Single<Bool_t>("IsThrownTopology", locIsThrownTopologyFlag);
 	}
 
@@ -1568,7 +1587,7 @@ void DEventWriterROOT::Group_ThrownParticles(const vector<const DMCThrown*>& loc
 		locThrownIndexMap[locMCThrownsToSave[loc_i]] = loc_i;
 }
 
-void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMCReaction* locMCReaction, const DBeamPhoton* locTaggedMCGenBeam, const vector<const DMCThrown*>& locMCThrowns, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying, const DMCThrownMatching* locMCThrownMatching) const
+void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMCReaction* locMCReaction, const DBeamPhoton* locTaggedMCGenBeam, const vector<const DMCThrown*>& locMCThrowns, const map<const DMCThrown*, unsigned int>& locThrownIndexMap,  ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying,  const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints, const DMCThrownMatching* locMCThrownMatching) const
 {
 	//THIS MUST BE CALLED FROM WITHIN A LOCK, SO DO NOT PASS IN JEVENTLOOP! //TOO TEMPTING TO DO SOMETHING BAD
 
@@ -1595,6 +1614,8 @@ void DEventWriterROOT::Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMC
 	//PID INFO
 	locTreeFillData->Fill_Single<ULong64_t>("NumPIDThrown_FinalState", locNumPIDThrown_FinalState);
 	locTreeFillData->Fill_Single<ULong64_t>("PIDThrown_Decaying", locPIDThrown_Decaying);
+    
+	if(STORE_MC_TRAJECTORIES && locDMCTrajectoryPoints.size()>=1) Fill_ThrownParticleTrajectoryInfo(locTreeFillData, locDMCTrajectoryPoints);
 }
 
 void DEventWriterROOT::Fill_ThrownParticleData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DMCThrown* locMCThrown, const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DMCThrownMatching* locMCThrownMatching) const
@@ -1642,6 +1663,37 @@ void DEventWriterROOT::Fill_ThrownParticleData(DTreeFillData* locTreeFillData, u
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4"), locX4_Thrown, locArrayIndex);
 	TLorentzVector locP4_Thrown(locMCThrown->momentum().X(), locMCThrown->momentum().Y(), locMCThrown->momentum().Z(), locMCThrown->energy());
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4"), locP4_Thrown, locArrayIndex);
+}
+
+void DEventWriterROOT::Fill_ThrownParticleTrajectoryInfo(DTreeFillData* locTreeFillData, const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints) const {
+
+	string locParticleBranchName = "Thrown";
+    Int_t all_index  =0;
+	Int_t birth_index=0;
+	Int_t death_index=0;
+
+    // Array has to be reversed to match thrown tree ordering elsewhere
+	for(int loc_i = locDMCTrajectoryPoints.size()-1; loc_i>=0; loc_i--) {
+		Int_t PID = locDMCTrajectoryPoints[loc_i]->part;
+		TLorentzVector traj_x4 = TLorentzVector(locDMCTrajectoryPoints[loc_i]->x,locDMCTrajectoryPoints[loc_i]->y,locDMCTrajectoryPoints[loc_i]->z,locDMCTrajectoryPoints[loc_i]->t);
+		TLorentzVector traj_p4 = TLorentzVector(locDMCTrajectoryPoints[loc_i]->px,locDMCTrajectoryPoints[loc_i]->py,locDMCTrajectoryPoints[loc_i]->pz,locDMCTrajectoryPoints[loc_i]->E);
+		if(all_index%2==1) { // Odd indices: birth
+			if(locDMCTrajectoryPoints[loc_i]->step > 0.0001) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
+			locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajBirth"),PID,birth_index);
+			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajBirth"),traj_x4,birth_index);
+			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_trajBirth"),traj_p4,birth_index);
+			birth_index++;
+		}
+		if(all_index%2==0) { // Even indices: death
+			if(locDMCTrajectoryPoints[loc_i]->step < 0.0001) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
+			locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajDeath"),PID,death_index);
+			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajDeath"),traj_x4,death_index);
+			// locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_trajDeath"),traj_x4,death_index); //not useful
+			death_index++;
+		}
+        all_index++;
+	}
+
 }
 
 void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const

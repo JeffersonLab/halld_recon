@@ -25,7 +25,19 @@ extern "C"{
 //------------------
 JEventProcessor_FCAL_Pi0TOF::JEventProcessor_FCAL_Pi0TOF()
 {
+  DO_METHOD = 0;
+  USE_TRACKS = 0;
 
+  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:DO_METH0D", DO_METHOD );
+  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:USE_TRACKS", USE_TRACKS );
+
+  m_time_FCALRF_cut = 3.0;
+  m_time_FCALFCAL_cut = 5.0;
+  
+  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:time_FCALRF_cut", m_time_FCALRF_cut );
+  gPARMS->SetDefaultParameter( "FCAL_Pi0TOF:time_FCALFCAL_cut", m_time_FCALFCAL_cut );
+  
+  cout <<"DO_METHOD " << DO_METHOD << " USE_TRACKS " << USE_TRACKS << endl;
 }
 
 //------------------
@@ -43,8 +55,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::init(void)
 {
   // This is called once at program startup. 
 
-  gDirectory->mkdir("FCAL_Pi0TOF");
-  gDirectory->cd("FCAL_Pi0TOF");
+  gDirectory->mkdir("FCAL_Pi0");
+  gDirectory->cd("FCAL_Pi0");
   hCurrentGainConstants = new TProfile("CurrentGainConstants", "Current Gain Constants", 2800, -0.5, 2799.5);
   gDirectory->cd("..");
 
@@ -133,10 +145,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   loop->Get(locEventRFBunches);
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
   
-  /* unused variables
   uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
   uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
-  */
   
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
@@ -158,17 +168,21 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   double kinfitVertexX = m_beamSpotX;
   double kinfitVertexY = m_beamSpotY;
   double kinfitVertexZ = m_targetZ;
+  
   vector< const JObject* > locObjectsToSave;
-  for (unsigned int i = 0 ; i < kinfitVertex.size(); i++) {
-    kinfitVertexX = kinfitVertex[i]->dSpacetimeVertex.X();
-    kinfitVertexY = kinfitVertex[i]->dSpacetimeVertex.Y();
-    kinfitVertexZ = kinfitVertex[i]->dSpacetimeVertex.Z();
+  if (USE_TRACKS == 0) {
+    for (unsigned int i = 0 ; i < kinfitVertex.size(); i++) {
+      kinfitVertexX = kinfitVertex[i]->dSpacetimeVertex.X();
+      kinfitVertexY = kinfitVertex[i]->dSpacetimeVertex.Y();
+      kinfitVertexZ = kinfitVertex[i]->dSpacetimeVertex.Z();
+    }
   }
   
   for (unsigned int i = 0; i < neutralParticleVector.size(); i++){
     const DNeutralParticleHypothesis *photon1 = neutralParticleVector[i]->Get_Hypothesis(Gamma);
-    bool bo_pho1 = true;
-    if(photon1 == nullptr) bo_pho1 = false;
+    //bool bo_pho1 = true;
+    //if( photon1 == nullptr && (USE_TRACKS == 0 || USE_TRACKS == 2)) bo_pho1 = false;
+    if( photon1 == nullptr && (USE_TRACKS == 0 || USE_TRACKS == 2)) continue;
     // Go into the FCAL shower and find the largest energy deposition
     const DNeutralShower *shower1 = photon1->Get_NeutralShower();
     if(shower1->dDetectorSystem != SYS_FCAL) continue;
@@ -195,6 +209,16 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     int rings1 = (int) (radiusShower1 / (5 * k_cm));
     int ringl1 = (int) (radiusShowerlog1 / (5 * k_cm));
     
+    double frac_ring_thres = frac_thres_1_to_5;
+    if (ring1 >= 6)
+      frac_ring_thres = frac_thres_6_to_23;
+    double frac_rings_thres = frac_thres_1_to_5;
+    if (rings1 >= 6)
+      frac_rings_thres = frac_thres_6_to_23;
+    double frac_ringl_thres = frac_thres_1_to_5;
+    if (ringl1 >= 6)
+      frac_ringl_thres = frac_thres_6_to_23;
+    
     double frac1 = fcalCluster1->getEmax()/fcalCluster1->getEnergy();
     double Eclust1 = fcalCluster1->getEnergy();
     double Ephoton1 = photon1->lorentzMomentum().E();
@@ -206,7 +230,9 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double p1y = p1 * sin(vertex1.Theta()) * sin(vertex1.Phi());
     double p1z = p1 * cos(vertex1.Theta());
     TLorentzVector photon1P4(p1x, p1y, p1z, p1);
+    double tdiff1 = t1 - locRFTime;
     
+    Fill1DHistogram("FCAL_Pi0HFA","","tdiff1", tdiff1, ";t_{#gamma}^{1} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
     Fill1DHistogram("FCAL_Pi0HFA","","E", Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","","P", Ephoton1, ";E_{#gamma};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","",Form("E_ring_%d", ring1), Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
@@ -291,8 +317,9 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
         
     for (unsigned int j = i + 1; j < neutralParticleVector.size(); j ++){
       const DNeutralParticleHypothesis *photon2 = neutralParticleVector[j]->Get_Hypothesis(Gamma);
-      bool bo_pho2 = true;
-      if(photon2 == nullptr) bo_pho2 = false;
+      //bool bo_pho2 = true;
+      //if (photon2 == nullptr && (USE_TRACKS == 0 || USE_TRACKS == 2)) bo_pho2 = false;
+      if (photon2 == nullptr && (USE_TRACKS == 0 || USE_TRACKS == 2)) continue;
       const DNeutralShower *shower2 = photon2->Get_NeutralShower();
       if(shower2->dDetectorSystem != SYS_FCAL) continue;
       DFCALShower *fcalShower2 = (DFCALShower *) shower2->dBCALFCALShower;
@@ -318,6 +345,16 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       int rings2 = (int) (radiusShower2 / (5 * k_cm));
       int ringl2 = (int) (radiusShowerlog2 / (5 * k_cm));
 
+      double frac_ring_thres = frac_thres_1_to_5;
+      if (ring2 >= 6)
+	frac_ring_thres = frac_thres_6_to_23;
+      double frac_rings_thres = frac_thres_1_to_5;
+      if (rings2 >= 6)
+	frac_rings_thres = frac_thres_6_to_23;
+      double frac_ringl_thres = frac_thres_1_to_5;
+      if (ringl2 >= 6)
+	frac_ringl_thres = frac_thres_6_to_23;
+
       double frac2 = fcalCluster2->getEmax()/fcalCluster2->getEnergy();
       double Eclust2 = fcalCluster2->getEnergy();
       double Ephoton2 = photon2->lorentzMomentum().E();
@@ -329,8 +366,9 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       double p2y = p2 * sin(vertex2.Theta()) * sin(vertex2.Phi());
       double p2z = p2 * cos(vertex2.Theta());
       TLorentzVector photon2P4(p2x, p2y, p2z, p2);
-
-
+      double tdiff2 = t2 - locRFTime;
+    
+      Fill1DHistogram("FCAL_Pi0HFA","","tdiff2", tdiff2, ";t_{#gamma}^{2} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
       double Eratio = Eclust1 / Eclust2;
       bool bo_5p = false;
       bool bo_10p = false;
@@ -342,6 +380,11 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       if (0.70 <= Eratio && Eratio <= 1.30) bo_30p = true;
       double pi0Mass = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).M();
       double pi0Masslog = (photon1P4 + photon2P4).M();
+      double theta_pi0 = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).Theta() * TMath::RadToDeg();
+      double pi0P = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).P();
+      double theta_pi0log = (photon1P4 + photon2P4).Theta() * TMath::RadToDeg();
+      double pi0E = (photon1P4 + photon2P4).E();
+      double pi0Plog = (photon1P4 + photon2P4).P();
       double avgE = 0.5*fcalCluster1->getEnergy() + 0.5*fcalCluster2->getEnergy();
       DVector3 distance = vertex1 - vertex2;
       double d = distance.Mag();
@@ -414,16 +457,39 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
       } // end DTOFPoint loop
       
-      if ((tof_match1 == 0 && tof_match2 == 0) || (ltof_match1 == 0 && ltof_match2 == 0)) {
+      if (((tof_match1 == 0 && tof_match2 == 0) || (ltof_match1 == 0 && ltof_match2 == 0)) && 
+	  (fabs(tdiff1) < m_time_FCALRF_cut) && (fabs(tdiff2) < m_time_FCALRF_cut) && 
+	  (fabs(t1-t2) < m_time_FCALFCAL_cut)) {
 	
-	if (bo_pho1 && bo_pho2) {
-	  
+	//if (bo_pho1 && bo_pho2) {
+	if (DO_METHOD == 0) {
 	  Fill1DHistogram("FCAL_Pi0HFA","","Pi0Mass",
 			  pi0Mass,
 			  "#pi^{0} Mass; #pi^{0} Mass;",
 			  500, 0.05, 0.7);
-	  
-	  if(frac1 > 0.5){
+	  Fill1DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass_ring_%d", ring1),
+			  pi0Mass,
+			  "#pi^{0} Mass; #pi^{0} Mass;",
+			  500, 0.05, 0.7);
+	  Fill1DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass_ring_%d", ring2),
+			  pi0Mass,
+			  "#pi^{0} Mass; #pi^{0} Mass;",
+			  500, 0.05, 0.7);
+	  if (neutralParticleVector.size() == 2) {
+	    Fill1DHistogram("FCAL_Pi0HFA","","Pi0Mass2g",
+			    pi0Mass, 
+			    "#pi^{0} Mass; #pi^{0} Mass;",
+			    500, 0.05, 0.7);
+	    Fill1DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2g_ring_%d", ring1),
+			    pi0Mass, 
+			    "#pi^{0} Mass; #pi^{0} Mass;",
+			    500, 0.05, 0.7);
+	    Fill1DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2g_ring_%d", ring2),
+			    pi0Mass, 
+			    "#pi^{0} Mass; #pi^{0} Mass;",
+			    500, 0.05, 0.7);
+	  }
+	  if(frac1 > frac_ring_thres){
 	    Fill2DHistogram("FCAL_Pi0HFA","","Pi0MassVsChNum",
 			    ch1, pi0Mass,
 			    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
@@ -449,7 +515,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	    
 	  }
-	  if(frac2 > 0.5){
+	  if(frac2 > frac_ring_thres){
 	    Fill2DHistogram("FCAL_Pi0HFA","","Pi0MassVsChNum",
 			    ch2, pi0Mass,
 			    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
@@ -538,7 +604,104 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	    
 	  }
-	  
+	  Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_ring_%d", ring1),
+			    avgE, pi0Mass,
+			  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			  100, 0.0, 10.0, 500, 0.05, 0.7);
+	  Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_ring_%d", ring2),
+			  avgE, pi0Mass,
+			  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			  100, 0.0, 10.0, 500, 0.05, 0.7);
+	  if (bo_5p){
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring1),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_5_ring_%d", ring2),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	  }
+	  if (bo_10p){
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_10_ring_%d", ring1),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_10_ring_%d", ring2),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	  }
+	  if (bo_20p){
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_20_ring_%d", ring1),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_20_ring_%d", ring2),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	  }
+	  if (bo_30p){
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_30_ring_%d", ring1),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0MassVsE_30_ring_%d", ring2),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	  }
+	  if (neutralParticleVector.size() == 2) {
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_ring_%d", ring1),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_ring_%d", ring2),
+			    avgE, pi0Mass,
+			    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			    100, 0.0, 10.0, 500, 0.05, 0.7);
+	    if (bo_5p){
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	    }
+	    if (bo_10p){
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_10_ring_%d", ring1),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_10_ring_%d", ring2),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	    }
+	    if (bo_20p){
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_20_ring_%d", ring1),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_20_ring_%d", ring2),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	    }
+	    if (bo_30p){
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_30_ring_%d", ring1),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	      Fill2DHistogram("FCAL_Pi0HFA","",Form("Pi0Mass2gVsE_30_ring_%d", ring2),
+			      avgE, pi0Mass,
+			      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+			      100, 0.0, 10.0, 500, 0.05, 0.7);
+	    } 
+	  }
 	  if (fabs(fcalCluster1->getEnergy() - fcalCluster2->getEnergy()) < 0.25){
 	    Fill2DHistogram("FCAL_Pi0HFA","","Pi0MassVsE",
 			    avgE, pi0Mass,
@@ -616,885 +779,1173 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	  }
 	}
+	//}
 	
-	for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
-
-	  const DBeamPhoton *ebeam = locBeamPhotons[k]; 
-	  //double eb = ebeam->lorentzMomentum().E();
-	  double tb = ebeam->time();
-	  double zb = ebeam->position().Z();
-	  
-	  double locDeltaTRF = tb - (locRFTime + (zb - m_targetZ) / 29.9792458);
-	  Fill1DHistogram("FCAL_Pi0TOF","","TaggerTiming1", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
-	  //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t1 - t2, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
-	  //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t2 - t1, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
-	  double weight = 0;
-	  if (fabs(locDeltaTRF) <= 2.004) {
-	    weight = 1;
-	  } else if ( ( -(2.004 + 3.0 * 4.008) <= locDeltaTRF && locDeltaTRF <= -(2.004 + 4.008) ) || 
-		      ( (2.004 + 4.008) <= locDeltaTRF && locDeltaTRF <= (2.004 + 3.0 * 4.008) ) ) {
-	    weight = -0.25;
-	  } else {
-	    continue;
-	  }
-	  if (tof_match1 == 0 && tof_match2 == 0) {
+	if (DO_METHOD == 1 || DO_METHOD == 2) {
+	  for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
 	    
-	    Fill1DHistogram("FCAL_Pi0TOF","","TaggerTiming2", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t1 - t2, pi0Mass, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t2 - t1, pi0Mass, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
+	    const DBeamPhoton *ebeam = locBeamPhotons[k]; 
+	    //double eb = ebeam->lorentzMomentum().E();
+	    double tb = ebeam->time();
+	    double zb = ebeam->position().Z();
+	    double eb = ebeam->lorentzMomentum().E();
+	    double locDeltaTRF = tb - (locRFTime + (zb - m_targetZ) / 29.9792458);
+	    Fill1DHistogram("FCAL_Pi0TOF","","TaggerTiming1", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
+	    //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t1 - t2, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
+	    //Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t2 - t1, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100.);
+	    double weight = 0;
+	    if (fabs(locDeltaTRF) <= 2.004) {
+	      weight = 1;
+	    } else if ( ( -(2.004 + 3.0 * 4.008) <= locDeltaTRF && locDeltaTRF <= -(2.004 + 4.008) ) || 
+			( (2.004 + 4.008) <= locDeltaTRF && locDeltaTRF <= (2.004 + 3.0 * 4.008) ) ) {
+	      weight = -0.25;
+	    } else {
+	      continue;
+	    }
+	    double dE = eb - pi0E;
+	    if (DO_METHOD == 1) {
+	      if (tof_match1 == 0 && tof_match2 == 0) {
+		
+		Fill1DHistogram("FCAL_Pi0TOF","","TaggerTiming2", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t1 - t2, pi0Mass, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","","PhotonTiming1", t2 - t1, pi0Mass, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
+		
+		Fill1DWeightedHistogram("FCAL_Pi0TOF","","Pi0Mass",
+					pi0Mass, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		
+		Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_ring_%d", ring1),
+					pi0Mass, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_rings_%d", rings1),
+					pi0Mass, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_ring_%d", ring2),
+					pi0Mass, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_rings_%d", rings2),
+					pi0Mass, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
 
-	    Fill1DWeightedHistogram("FCAL_Pi0TOF","","Pi0Mass",
-				    pi0Mass, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_ring_%d", ring1),
-				    pi0Mass, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_rings_%d", rings1),
-				    pi0Mass, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_ring_%d", ring2),
-				    pi0Mass, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_rings_%d", rings2),
-				    pi0Mass, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    
-	    if (neutralParticleVector.size() == 2) {
-	      Fill1DWeightedHistogram("FCAL_Pi0TOF","","Pi0Mass",
-				      pi0Mass, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_ring_%d", ring1),
-				      pi0Mass, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_rings_%d", rings1),
-				      pi0Mass, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_ring_%d", ring2),
-				      pi0Mass, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_rings_%d", rings2),
-				      pi0Mass, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	    }	  
-	    if(frac1 > 0.1){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum",
-				      ch1, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      
-	      if(radiusShower2<108.4239 && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_Fid",
-					ch1, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_FidBoth",
+		if (frac1 > frac_ring_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_th_ring_%d", ring1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac1 > frac_rings_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_th_rings_%d", rings1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac2 > frac_ring_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_th_ring_%d", ring2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac2 > frac_rings_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass_th_rings_%d", rings2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+
+		
+		if (neutralParticleVector.size() == 2) {
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","","Pi0Mass",
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_ring_%d", ring1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_rings_%d", rings1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_ring_%d", ring2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_rings_%d", rings2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+
+		  if (frac1 > frac_ring_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_th_ring_%d", ring1),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac1 > frac_rings_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_th_rings_%d", rings1),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac2 > frac_ring_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_th_ring_%d", ring2),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac2 > frac_rings_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2g_th_rings_%d", rings2),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+
+		}	  
+		if(frac1 > frac_rings_thres){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum",
 					  ch1, pi0Mass, weight,
 					  "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  
+		  if(radiusShower2<108.4239 && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_Fid",
+					    ch1, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_FidBoth",
+					      ch1, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  if(radiusShower1<20.785 || radiusShower2<20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_InnerRing",
+					    ch1, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  }
+		  
 		}
-	      }
-	      if(radiusShower1<20.785 || radiusShower2<20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_InnerRing",
-					ch1, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      }
-	      
-	    }
-	    if(frac2 > 0.1){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum",
-				      ch2, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShower1<108.4239 && radiusShower1>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_Fid",
-					ch2, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShower2<108.4239 && radiusShower2>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_FidBoth",
+		if(frac2 > frac_rings_thres){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum",
 					  ch2, pi0Mass, weight,
 					  "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
+					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShower1<108.4239 && radiusShower1>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_Fid",
+					    ch2, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShower2<108.4239 && radiusShower2>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_FidBoth",
+					      ch2, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  if(radiusShower1<20.785 || radiusShower2<20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_InnerRing",
+					    ch1, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  }
+		  
 		}
-	      }
-	      if(radiusShower1<20.785 || radiusShower2<20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNum_InnerRing",
-					ch1, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      }
-	      
-	    }
-	    // Energy Weighted Pi0 Mass
-	    for(auto hit : fcalCluster1->GetHits()){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted",
-				      hit.ch, pi0Mass, hit.E / fcalCluster1->getEnergy() * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared",
-				      hit.ch, pi0Mass, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShower2<108.4239  && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_Fid",
-					hit.ch, pi0Mass, hit.E / fcalCluster1->getEnergy() * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_Fid",
-					hit.ch, pi0Mass, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_FidBoth",
+		// Energy Weighted Pi0 Mass
+		for(auto hit : fcalCluster1->GetHits()){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted",
 					  hit.ch, pi0Mass, hit.E / fcalCluster1->getEnergy() * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_FidBoth",
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared",
 					  hit.ch, pi0Mass, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShower2<108.4239  && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_Fid",
+					    hit.ch, pi0Mass, hit.E / fcalCluster1->getEnergy() * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_Fid",
+					    hit.ch, pi0Mass, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_FidBoth",
+					      hit.ch, pi0Mass, hit.E / fcalCluster1->getEnergy() * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_FidBoth",
+					      hit.ch, pi0Mass, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	      
-	    }
-	    
-	    for(auto hit : fcalCluster2->GetHits()){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted",
-				      hit.ch, pi0Mass, hit.E / fcalCluster2->getEnergy() * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared",
-				      hit.ch, pi0Mass, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShower1<108.4239 && radiusShower1>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_Fid",
-					hit.ch, pi0Mass, hit.E / fcalCluster2->getEnergy() * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_Fid",
-					hit.ch, pi0Mass, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShower2<108.4239 && radiusShower2>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_FidBoth",
+		
+		for(auto hit : fcalCluster2->GetHits()){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted",
 					  hit.ch, pi0Mass, hit.E / fcalCluster2->getEnergy() * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_FidBoth",
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared",
 					  hit.ch, pi0Mass, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShower1<108.4239 && radiusShower1>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_Fid",
+					    hit.ch, pi0Mass, hit.E / fcalCluster2->getEnergy() * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_Fid",
+					    hit.ch, pi0Mass, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShower2<108.4239 && radiusShower2>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeighted_FidBoth",
+					      hit.ch, pi0Mass, hit.E / fcalCluster2->getEnergy() * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsChNumWeightedSquared_FidBoth",
+					      hit.ch, pi0Mass, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	      
-	    }
-	    
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_ring_%d", ring1),
-				    Eclust1, pi0Mass, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_ring_%d", ring2),
-				    Eclust2, pi0Mass, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_rings_%d", rings1),
-				    Eclust1, pi0Mass, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_rings_%d", rings2),
-				    Eclust2, pi0Mass, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    if (neutralParticleVector.size() == 2) {
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_ring_%d", ring1),
-				      Eclust1, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_ring_%d", ring2),
-				      Eclust2, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_rings_%d", rings1),
-				      Eclust1, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_rings_%d", rings2),
-				      Eclust2, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	    }
-	    
-	    if (bo_5p){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_ring_%d", ring1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_ring_%d", ring2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_rings_%d", rings1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_rings_%d", rings2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
-					avgE, pi0Mass, weight,
+		
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_ring_%d", ring1),
+					Eclust1, pi0Mass, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
-					avgE, pi0Mass, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_ring_%d", ring2),
+					Eclust2, pi0Mass, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_rings_%d", rings1),
-					avgE, pi0Mass, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_rings_%d", rings1),
+					Eclust1, pi0Mass, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_rings_%d", rings2),
-					avgE, pi0Mass, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_rings_%d", rings2),
+					Eclust2, pi0Mass, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5",
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if(radiusShower2<108.4239 && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5_Fiducial",
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5_FiducialBoth",
-					  avgE, pi0Mass, weight,
-					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					  100, 0.0, 10.0, 500, 0.05, 0.7);
-		}
-	      }
-	      
-	    }
-	    if (bo_10p){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_ring_%d", ring1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_ring_%d", ring2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_rings_%d", rings1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_rings_%d", rings2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_ring_%d", ring1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_ring_%d", ring2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_rings_%d", rings1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_rings_%d", rings2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10",
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      
-	      if(radiusShower2<108.4239 && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10_Fiducial",
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10_FiducialBoth",
-					  avgE, pi0Mass, weight,
-					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					  100, 0.0, 10.0, 500, 0.05, 0.7);
-		}
-	      }
-	      
-	    }
-	    if (bo_20p){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_ring_%d", ring1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_ring_%d", ring2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_rings_%d", rings1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_rings_%d", rings2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_ring_%d", ring1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_ring_%d", ring2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_rings_%d", rings1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_rings_%d", rings2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20",
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      
-	      if(radiusShower2<108.4239 && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20_Fiducial",
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20_FiducialBoth",
-					  avgE, pi0Mass, weight,
-					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					  100, 0.0, 10.0, 500, 0.05, 0.7);
-		}
-	      }
-	    }
-	    if (bo_30p){
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_ring_%d", ring1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_ring_%d", ring2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_rings_%d", rings1),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_rings_%d", rings2),
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_ring_%d", ring1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_ring_%d", ring2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_rings_%d", rings1),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_rings_%d", rings2),
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30",
-				      avgE, pi0Mass, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if(radiusShower2<108.4239 && radiusShower2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30_Fiducial",
-					avgE, pi0Mass, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShower1<108.4239 && radiusShower1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30_FiducialBoth",
-					  avgE, pi0Mass, weight,
-					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					  100, 0.0, 10.0, 500, 0.05, 0.7);
-		}
-	      }
-	    }
-	  }
-	  
-	  if (ltof_match1 == 0 && ltof_match2 == 0) {
-	    	    
-	    Fill1DHistogram("FCAL_Pi0log","","TaggerTiming1", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
-	    Fill2DWeightedHistogram("FCAL_Pi0log","","PhotonTiming1", t1 - t2, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0log","","PhotonTiming1", t2 - t1, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
-	    
-	    if (api0)
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi0Clusters",
-				      ring1, d, weight,
-				      ";ring #;Distance between two clusters [cm];Count [a.u.]",
-				      30, 0, 30, 500, 0., 100.);
-	    if (aeta)
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi0Clusters",
-				      ring1, d, weight,
-				      ";ring #;Distance between two clusters [cm];Count [a.u.]",
-				      30, 0, 30, 500, 0., 100.);
-      
 
+		if (api0) {
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_theta_%d", ring1),
+					  pi0P, theta_pi0, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_theta_%d", ring2),
+					  pi0P, theta_pi0, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_thetas_%d", rings1),
+					  pi0P, theta_pi0, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_thetas_%d", rings2),
+					  pi0P, theta_pi0, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		}
 
-	    Fill1DWeightedHistogram("FCAL_Pi0log","","Pi0Mass",
-				    pi0Masslog, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ring_%d", ring1),
-				    pi0Masslog, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ringl_%d", ringl1),
-				    pi0Masslog, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ring_%d", ring2),
-				    pi0Masslog, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ringl_%d", ringl2),
-				    pi0Masslog, weight,
-				    "#pi^{0} Mass; #pi^{0} Mass;",
-				    500, 0.05, 0.7);
-	    
-	    if (neutralParticleVector.size() == 2) {
-	    if (api0)
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi02gClusters",
-				      ring1, d, weight,
-				      ";ring #;Distance between two clusters [cm];Count [a.u.]",
-				      30, 0, 30, 500, 0., 100.);
-	    if (aeta)
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi02gClusters",
-				      ring1, d, weight,
-				      ";ring #;Distance between two clusters [cm];Count [a.u.]",
-				      30, 0, 30, 500, 0., 100.);
+		if (neutralParticleVector.size() == 2) {
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_ring_%d", ring1),
+					  Eclust1, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_ring_%d", ring2),
+					  Eclust2, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_rings_%d", rings1),
+					  Eclust1, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_rings_%d", rings2),
+					  Eclust2, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		}
+		
+		if (bo_5p){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_ring_%d", ring1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_ring_%d", ring2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_rings_%d", rings1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_rings_%d", rings2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_theta_%d", ring1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_theta_%d", ring2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_thetas_%d", rings1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_5_thetas_%d", rings2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_rings_%d", rings1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_5_rings_%d", rings2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5",
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if(radiusShower2<108.4239 && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5_Fiducial",
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_5_FiducialBoth",
+					      avgE, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		  
+		}
+		if (bo_10p){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_ring_%d", ring1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_ring_%d", ring2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_rings_%d", rings1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_rings_%d", rings2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_theta_%d", ring1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_theta_%d", ring2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_thetas_%d", rings1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_10_thetas_%d", rings2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_ring_%d", ring1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_ring_%d", ring2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_rings_%d", rings1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_10_rings_%d", rings2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10",
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  
+		  if(radiusShower2<108.4239 && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10_Fiducial",
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_10_FiducialBoth",
+					      avgE, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		  
+		}
+		if (bo_20p){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_ring_%d", ring1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_ring_%d", ring2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_rings_%d", rings1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_rings_%d", rings2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_theta_%d", ring1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_theta_%d", ring2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_thetas_%d", rings1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_20_thetas_%d", rings2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_ring_%d", ring1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_ring_%d", ring2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_rings_%d", rings1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_20_rings_%d", rings2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20",
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  
+		  if(radiusShower2<108.4239 && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20_Fiducial",
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_20_FiducialBoth",
+					      avgE, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		}
+		if (bo_30p){
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_ring_%d", ring1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_ring_%d", ring2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_rings_%d", rings1),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_rings_%d", rings2),
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_theta_%d", ring1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_theta_%d", ring2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_thetas_%d", rings1),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0MassVsE_30_thetas_%d", rings2),
+					    pi0P, theta_pi0, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_ring_%d", ring1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_ring_%d", ring2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_rings_%d", rings1),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","",Form("Pi0Mass2gVsE_30_rings_%d", rings2),
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30",
+					  avgE, pi0Mass, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if(radiusShower2<108.4239 && radiusShower2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30_Fiducial",
+					    avgE, pi0Mass, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShower1<108.4239 && radiusShower1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0TOF","","Pi0MassVsE_30_FiducialBoth",
+					      avgE, pi0Mass, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		}
+	      }
+	    }
+	    if (DO_METHOD == 2) {
+	      if (ltof_match1 == 0 && ltof_match2 == 0) {
+		
+		Fill1DHistogram("FCAL_Pi0log","","TaggerTiming1", locDeltaTRF, ";t_{e^{-}} - t_{#gamma} [ns];Count [a.u.]", 500, -100., 100.);
+		Fill2DWeightedHistogram("FCAL_Pi0log","","PhotonTiming1", t1 - t2, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
+		Fill2DWeightedHistogram("FCAL_Pi0log","","PhotonTiming1", t2 - t1, pi0Masslog, weight, ";t_{#gamma} - t_{#gamma} [ns]; pi0 mass [GeV];Count [a.u.]", 500, -100., 100., 500, 0.05, 0.7);
+		
+		if (api0 && neutralParticleVector.size() == 2 && eb > 8.0) {
+		  Fill1DWeightedHistogram("FCAL_Pi0log","","DeltaE",
+					  dE, weight,
+					  ";E_{#gamma} - E_{#pi^{0}} [GeV];Count [a.u.]",
+					  1200, -2., 10.);
+		  if (ring1 > 1 && ring2 > 1) {
+		    Fill1DWeightedHistogram("FCAL_Pi0log","","DeltaE_ring",
+					    dE, weight,
+					    ";E_{#gamma} - E_{#pi^{0}} [GeV];Count [a.u.]",
+					    1200, -2., 10.);
+		  }
+		}
+		
+		if (api0)
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi0Clusters",
+					  ring1, d, weight,
+					  ";ring #;Distance between two clusters [cm];Count [a.u.]",
+					  30, 0, 30, 500, 0., 100.);
+		if (aeta)
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi0Clusters",
+					  ring1, d, weight,
+					  ";ring #;Distance between two clusters [cm];Count [a.u.]",
+					  30, 0, 30, 500, 0., 100.);
+		
+		
+		
+		Fill1DWeightedHistogram("FCAL_Pi0log","","Pi0Mass",
+					pi0Masslog, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ring_%d", ring1),
+					pi0Masslog, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ringl_%d", ringl1),
+					pi0Masslog, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ring_%d", ring2),
+					pi0Masslog, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
+		Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_ringl_%d", ringl2),
+					pi0Masslog, weight,
+					"#pi^{0} Mass; #pi^{0} Mass;",
+					500, 0.05, 0.7);
 
-	      Fill1DWeightedHistogram("FCAL_Pi0log","","Pi0Mass",
-				      pi0Masslog, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ring_%d", ring1),
-				      pi0Masslog, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ringl_%d", ringl1),
-				      pi0Masslog, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ring_%d", ring2),
-				      pi0Masslog, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	      Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ringl_%d", ringl2),
-				      pi0Masslog, weight,
-				      "#pi^{0} Mass; #pi^{0} Mass;",
-				      500, 0.05, 0.7);
-	    }	  
-	    if(frac1 > 0.1){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum",
-				      ch1, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      
-	      if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_Fid",
-					ch1, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_FidBoth",
+		if (frac1 > frac_ring_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_th_ring_%d", ring1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac1 > frac_ringl_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_th_ringl_%d", rings1),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac2 > frac_ring_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_th_ring_%d", ring2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		if (frac2 > frac_ringl_thres)
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass_th_ringl_%d", rings2),
+					  pi0Mass, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		
+		if (neutralParticleVector.size() == 2) {
+		  if (api0)
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi02gClusters",
+					    ring1, d, weight,
+					    ";ring #;Distance between two clusters [cm];Count [a.u.]",
+					    30, 0, 30, 500, 0., 100.);
+		  if (aeta)
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","DistanceBetweenPi02gClusters",
+					    ring1, d, weight,
+					    ";ring #;Distance between two clusters [cm];Count [a.u.]",
+					    30, 0, 30, 500, 0., 100.);
+		  
+		  Fill1DWeightedHistogram("FCAL_Pi0log","","Pi0Mass",
+					  pi0Masslog, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ring_%d", ring1),
+					  pi0Masslog, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ringl_%d", ringl1),
+					  pi0Masslog, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ring_%d", ring2),
+					  pi0Masslog, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+		  Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_ringl_%d", ringl2),
+					  pi0Masslog, weight,
+					  "#pi^{0} Mass; #pi^{0} Mass;",
+					  500, 0.05, 0.7);
+
+		  if (frac1 > frac_ring_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_th_ring_%d", ring1),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac1 > frac_ringl_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_th_ringl_%d", rings1),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac2 > frac_ring_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_th_ring_%d", ring2),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		  if (frac2 > frac_ringl_thres)
+		    Fill1DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2g_th_ringl_%d", rings2),
+					    pi0Mass, weight,
+					    "#pi^{0} Mass; #pi^{0} Mass;",
+					    500, 0.05, 0.7);
+		}	  
+		if(frac1 > frac_ringl_thres){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum",
 					  ch1, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  
+		  if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_Fid",
+					    ch1, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_FidBoth",
+					      ch1, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  if(radiusShowerlog1<20.785 || radiusShowerlog2<20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_InnerRing",
+					    ch1, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  }
+		  
 		}
-	      }
-	      if(radiusShowerlog1<20.785 || radiusShowerlog2<20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_InnerRing",
-					ch1, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      }
-	      
-	    }
-	    if(frac2 > 0.1){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum",
-				      ch2, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_Fid",
-					ch2, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_FidBoth",
+		if(frac2 > frac_ringl_thres){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum",
 					  ch2, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
+					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_Fid",
+					    ch2, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_FidBoth",
+					      ch2, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  if(radiusShowerlog1<20.785 || radiusShowerlog2<20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_InnerRing",
+					    ch1, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  }
+		  
 		}
-	      }
-	      if(radiusShowerlog1<20.785 || radiusShowerlog2<20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNum_InnerRing",
-					ch1, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Channel Number; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      }
-	      
-	    }
-	    // Energy Weighted Pi0 Mass
-	    for(auto hit : fcalCluster1->GetHits()){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted",
-				      hit.ch, pi0Masslog, hit.E / fcalCluster1->getEnergy() * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared",
-				      hit.ch, pi0Masslog, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShowerlog2<108.4239  && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_Fid",
-					hit.ch, pi0Masslog, hit.E / fcalCluster1->getEnergy() * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_Fid",
-					hit.ch, pi0Masslog, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_FidBoth",
+		// Energy Weighted Pi0 Mass
+		for(auto hit : fcalCluster1->GetHits()){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted",
 					  hit.ch, pi0Masslog, hit.E / fcalCluster1->getEnergy() * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_FidBoth",
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared",
 					  hit.ch, pi0Masslog, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShowerlog2<108.4239  && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_Fid",
+					    hit.ch, pi0Masslog, hit.E / fcalCluster1->getEnergy() * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_Fid",
+					    hit.ch, pi0Masslog, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_FidBoth",
+					      hit.ch, pi0Masslog, hit.E / fcalCluster1->getEnergy() * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_FidBoth",
+					      hit.ch, pi0Masslog, (hit.E / fcalCluster1->getEnergy())*(hit.E / fcalCluster1->getEnergy()) * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	      
-	    }
-	    
-	    for(auto hit : fcalCluster2->GetHits()){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted",
-				      hit.ch, pi0Masslog, hit.E / fcalCluster2->getEnergy() * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared",
-				      hit.ch, pi0Masslog, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
-				      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-				      2800, -0.5, 2799.5, 500, 0.05, 0.7);
-	      if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_Fid",
-					hit.ch, pi0Masslog, hit.E / fcalCluster2->getEnergy() * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_Fid",
-					hit.ch, pi0Masslog, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
-					"#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
-					2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_FidBoth",
+		
+		for(auto hit : fcalCluster2->GetHits()){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted",
 					  hit.ch, pi0Masslog, hit.E / fcalCluster2->getEnergy() * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_FidBoth",
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared",
 					  hit.ch, pi0Masslog, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
 					  "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
 					  2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		  if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_Fid",
+					    hit.ch, pi0Masslog, hit.E / fcalCluster2->getEnergy() * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_Fid",
+					    hit.ch, pi0Masslog, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
+					    "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					    2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeighted_FidBoth",
+					      hit.ch, pi0Masslog, hit.E / fcalCluster2->getEnergy() * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsChNumWeightedSquared_FidBoth",
+					      hit.ch, pi0Masslog, (hit.E / fcalCluster2->getEnergy())*(hit.E / fcalCluster2->getEnergy()) * weight,
+					      "#pi^{0} Mass Vs. Channel Number Weighted; CCDB Index; #pi^{0} Mass",
+					      2800, -0.5, 2799.5, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	      
-	    }
-	    
-	    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ring_%d", ring1),
-				    Eclust1, pi0Masslog, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ring_%d", ring2),
-				    Eclust2, pi0Masslog, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ringl_%d", ringl1),
-				    Eclust1, pi0Masslog, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ringl_%d", ringl2),
-				    Eclust2, pi0Masslog, weight,
-				    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				    100, 0.0, 10.0, 500, 0.05, 0.7);
-	    if (neutralParticleVector.size() == 2) {
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ring_%d", ring1),
-				      Eclust1, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ring_%d", ring2),
-				      Eclust2, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ringl_%d", ringl1),
-				      Eclust1, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ringl_%d", ringl2),
-				      Eclust2, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	    }
-	    
-	    if (bo_5p){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ring_%d", ring1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ring_%d", ring2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ringl_%d", ringl1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ringl_%d", ringl2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
-					avgE, pi0Masslog, weight,
+		
+		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ring_%d", ring1),
+					Eclust1, pi0Masslog, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
-					avgE, pi0Masslog, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ring_%d", ring2),
+					Eclust2, pi0Masslog, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ringl_%d", ringl1),
-					avgE, pi0Masslog, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ringl_%d", ringl1),
+					Eclust1, pi0Masslog, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ringl_%d", ringl2),
-					avgE, pi0Masslog, weight,
+		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_ringl_%d", ringl2),
+					Eclust2, pi0Masslog, weight,
 					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5",
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5_Fiducial",
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5_FiducialBoth",
-					  avgE, pi0Masslog, weight,
+		if (api0) {
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_theta_%d", ring1),
+					  pi0Plog, theta_pi0log, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_theta_%d", ring2),
+					  pi0Plog, theta_pi0log, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_thetal_%d", ringl1),
+					  pi0Plog, theta_pi0log, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_thetal_%d", ringl2),
+					  pi0Plog, theta_pi0log, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 180, 0., 18.);
+		}
+		if (neutralParticleVector.size() == 2) {
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ring_%d", ring1),
+					  Eclust1, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ring_%d", ring2),
+					  Eclust2, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ringl_%d", ringl1),
+					  Eclust1, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_ringl_%d", ringl2),
+					  Eclust2, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					  100, 0.0, 10.0, 500, 0.05, 0.7);
 		}
-	      }
-	      
-	    }
-	    if (bo_10p){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ring_%d", ring1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ring_%d", ring2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ringl_%d", ringl1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ringl_%d", ringl2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ring_%d", ring1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ring_%d", ring2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ringl_%d", ringl1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ringl_%d", ringl2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10",
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      
-	      if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10_Fiducial",
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10_FiducialBoth",
+		
+		if (bo_5p){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ring_%d", ring1),
 					  avgE, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ring_%d", ring2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ringl_%d", ringl1),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_ringl_%d", ringl2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_theta_%d", ring1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_theta_%d", ring2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_thetal_%d", ringl1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_5_thetal_%d", ringl2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ring_%d", ring1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ring_%d", ring2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ringl_%d", ringl1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_5_ringl_%d", ringl2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5",
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5_Fiducial",
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_5_FiducialBoth",
+					      avgE, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	      
-	    }
-	    if (bo_20p){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ring_%d", ring1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ring_%d", ring2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ringl_%d", ringl1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ringl_%d", ringl2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ring_%d", ring1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ring_%d", ring2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ringl_%d", ringl1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ringl_%d", ringl2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20",
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      
-	      if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20_Fiducial",
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20_FiducialBoth",
+		if (bo_10p){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ring_%d", ring1),
 					  avgE, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ring_%d", ring2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ringl_%d", ringl1),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_ringl_%d", ringl2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_theta_%d", ring1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_theta_%d", ring2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_thetal_%d", ringl1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_10_thetal_%d", ringl2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ring_%d", ring1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ring_%d", ring2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ringl_%d", ringl1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_10_ringl_%d", ringl2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10",
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  
+		  if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10_Fiducial",
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_10_FiducialBoth",
+					      avgE, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		  
 		}
-	      }
-	    }
-	    if (bo_30p){
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ring_%d", ring1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ring_%d", ring2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ringl_%d", ringl1),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ringl_%d", ringl2),
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if (neutralParticleVector.size() == 2) {
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ring_%d", ring1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ring_%d", ring2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ringl_%d", ringl1),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ringl_%d", ringl2),
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-	      }
-	      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30",
-				      avgE, pi0Masslog, weight,
-				      "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
-				      100, 0.0, 10.0, 500, 0.05, 0.7);
-	      if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
-		Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30_Fiducial",
-					avgE, pi0Masslog, weight,
-					"#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
-					100, 0.0, 10.0, 500, 0.05, 0.7);
-		if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
-		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30_FiducialBoth",
+		if (bo_20p){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ring_%d", ring1),
 					  avgE, pi0Masslog, weight,
 					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
 					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ring_%d", ring2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ringl_%d", ringl1),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_ringl_%d", ringl2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_theta_%d", ring1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_theta_%d", ring2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_thetal_%d", ringl1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_20_thetal_%d", ringl2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ring_%d", ring1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ring_%d", ring2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ringl_%d", ringl1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_20_ringl_%d", ringl2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20",
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  
+		  if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20_Fiducial",
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_20_FiducialBoth",
+					      avgE, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
+		}
+		if (bo_30p){
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ring_%d", ring1),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ring_%d", ring2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ringl_%d", ringl1),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_ringl_%d", ringl2),
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if (api0) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_theta_%d", ring1),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_theta_%d", ring2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_thetal_%d", ringl1),
+					    pi0Plog, theta_pi0log, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0MassVsE_30_thetal_%d", ringl2),
+					    pi0Plog, theta_pi0log, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 180, 0., 18.);
+		  }
+		  if (neutralParticleVector.size() == 2) {
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ring_%d", ring1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ring_%d", ring2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ringl_%d", ringl1),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    Fill2DWeightedHistogram("FCAL_Pi0log","",Form("Pi0Mass2gVsE_30_ringl_%d", ringl2),
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		  }
+		  Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30",
+					  avgE, pi0Masslog, weight,
+					  "#pi^{0} Mass Vs. Average Shower Energy; Cluster Energy; #pi^{0} Mass",
+					  100, 0.0, 10.0, 500, 0.05, 0.7);
+		  if(radiusShowerlog2<108.4239 && radiusShowerlog2>20.785){
+		    Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30_Fiducial",
+					    avgE, pi0Masslog, weight,
+					    "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					    100, 0.0, 10.0, 500, 0.05, 0.7);
+		    if(radiusShowerlog1<108.4239 && radiusShowerlog1>20.785){
+		      Fill2DWeightedHistogram("FCAL_Pi0log","","Pi0MassVsE_30_FiducialBoth",
+					      avgE, pi0Masslog, weight,
+					      "#pi^{0} Mass Vs. Average Shower Energy; Avg. Cluster Energy; #pi^{0} Mass",
+					      100, 0.0, 10.0, 500, 0.05, 0.7);
+		    }
+		  }
 		}
 	      }
 	    }
 	  }
 	}
-      }   
+      }
     }
   }
-    
   return NOERROR;
 }
 

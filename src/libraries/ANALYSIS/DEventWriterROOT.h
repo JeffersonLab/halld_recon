@@ -10,6 +10,8 @@
 #include "TTree.h"
 #include "TFile.h"
 #include "TROOT.h"
+#include "TMap.h"
+#include "TObjString.h"
 
 #include "JANA/JApplication.h"
 #include "JANA/JObject.h"
@@ -20,6 +22,7 @@
 #include "FCAL/DFCALShower.h"
 #include "CCAL/DCCALShower.h"
 #include "TRACKING/DMCThrown.h"
+#include <TRACKING/DMCTrajectoryPoint.h>
 #include "TRACKING/DTrackTimeBased.h"
 
 #include "PID/DVertex.h"
@@ -147,10 +150,11 @@ class DEventWriterROOT : public JObject
 		void Group_ThrownParticles(const vector<const DMCThrown*>& locMCThrowns_FinalState, const vector<const DMCThrown*>& locMCThrowns_Decaying,
 				vector<const DMCThrown*>& locMCThrownsToSave, map<const DMCThrown*, unsigned int>& locThrownIndexMap) const;
 		void Fill_ThrownInfo(DTreeFillData* locTreeFillData, const DMCReaction* locMCReaction, const DBeamPhoton* locTaggedMCGenBeam, const vector<const DMCThrown*>& locMCThrowns,
-				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying,
+				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, ULong64_t locNumPIDThrown_FinalState, ULong64_t locPIDThrown_Decaying,  const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints,
 				const DMCThrownMatching* locMCThrownMatching = NULL) const;
 		void Fill_ThrownParticleData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DMCThrown* locMCThrown, 
 				const map<const DMCThrown*, unsigned int>& locThrownIndexMap, const DMCThrownMatching* locMCThrownMatching) const;
+		void Fill_ThrownParticleTrajectoryInfo(DTreeFillData* locTreeFillData, const vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints) const;
 
 		//TREE FILLING: GET HYPOTHESES/BEAM
 		vector<const DBeamPhoton*> Get_BeamPhotons(const deque<const DParticleCombo*>& locParticleCombos) const;
