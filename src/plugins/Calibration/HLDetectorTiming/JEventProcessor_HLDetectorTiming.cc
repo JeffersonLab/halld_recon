@@ -924,67 +924,6 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 				}
 		    } 
- 
- /*
- 		double x1    =  (*show1)->getPosition().X() - vertex.X();
-		double y1    =  (*show1)->getPosition().Y() - vertex.Y();
-		double z1    =  (*show1)->getPosition().Z() - vertex.Z();
-		double r1    =  sqrt( x1*x1  +  y1*y1  +  z1*z1 );
-		double e1    =  (*show1)->getEnergy();
-		double phi1  =  atan2( y1,x1 ) * (180. / TMath::Pi());
-		
-		
-		int loc_tof_match = 0;
-		
-		for( vector< const DTOFPoint* >::const_iterator tof = tof_points.begin(); 
-			tof != tof_points.end(); tof++ ) {
-			
-			double xt = (*tof)->pos.X() - vertex.X();
-			double yt = (*tof)->pos.Y() - vertex.Y();
-			double zt = (*tof)->pos.Z() - vertex.Z();
-			double rt = sqrt( xt*xt  +  yt*yt  +  zt*zt );
-			
-			double tt = (*tof)->t  -  (rt/c);
-			if( fabs(tt-rfTime) > 4.008 ) continue;
-			
-			xt *= z1 / zt;
-			yt *= z1 / zt;
-			
-			int hstat = (*tof)->dHorizontalBarStatus;
-			int vstat = (*tof)->dVerticalBarStatus;
-			
-			if( hstat != 3 || vstat != 3 ) continue; 
-			
-			double dx  =  x1 - xt;
-			double dy  =  y1 - yt;
-			double dr  =  sqrt( dx*dx  +  dy*dy );
-			
-			h_tof_dx->Fill( dx );
-			h_tof_dy->Fill( dy );
-			h_tof_dr->Fill( dr );
-			
-			if( ( fabs(dx - TOF_X_MEAN) < 2.*TOF_X_SIG ) && 
-		    	    ( fabs(dy - TOF_Y_MEAN) < 2.*TOF_Y_SIG ) ) {
-				
-				loc_tof_match = 1;
-				n_tof_matches++;
-				
-				tof_dt = tt - rfTime;
-				tof_x  = xt + vertex.X();
-				tof_y  = yt + vertex.Y();
-				
-			}
-			
-		}
-		
-		
-	if( isGoodEvent && n_tof_matches==1 ) {
-		h_tof_rf_dt_cut->Fill( tof_dt );
-		h_xy_tof->Fill( tof_x, tof_y );
-	}
-	
-
- */
 	    } else {
 		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
 				    "Shower Energy [GeV];t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
