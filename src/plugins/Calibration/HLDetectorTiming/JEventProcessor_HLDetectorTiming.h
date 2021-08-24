@@ -17,6 +17,7 @@
 #include <FCAL/DFCALHit.h>
 #include <FDC/DFDCHit.h>
 #include <TOF/DTOFHit.h>
+#include <TOF/DTOFPoint.h>
 #include <START_COUNTER/DSCHit.h>
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMHit.h>
@@ -85,6 +86,10 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         double tagh_fadc_time_offsets[275], tagh_tdc_time_offsets[275];
         vector<double> sc_tdc_time_offsets;
         vector<double> tof_tdc_time_offsets;
+
+		// constants for FCAL/TOF matching
+		const double TOF_X_MEAN  =  0.75;  const double TOF_X_SIG  =  1.75;
+		const double TOF_Y_MEAN  = -0.50;  const double TOF_Y_SIG  =  1.75;
 
 };
 
