@@ -1678,14 +1678,14 @@ void DEventWriterROOT::Fill_ThrownParticleTrajectoryInfo(DTreeFillData* locTreeF
 		TLorentzVector traj_x4 = TLorentzVector(locDMCTrajectoryPoints[loc_i]->x,locDMCTrajectoryPoints[loc_i]->y,locDMCTrajectoryPoints[loc_i]->z,locDMCTrajectoryPoints[loc_i]->t);
 		TLorentzVector traj_p4 = TLorentzVector(locDMCTrajectoryPoints[loc_i]->px,locDMCTrajectoryPoints[loc_i]->py,locDMCTrajectoryPoints[loc_i]->pz,locDMCTrajectoryPoints[loc_i]->E);
 		if(all_index%2==1) { // Odd indices: birth
-			if(locDMCTrajectoryPoints[loc_i]->step > 0.0001) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
+			if(locDMCTrajectoryPoints[loc_i]->step > 1e-10) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
 			locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajBirth"),PID,birth_index);
 			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajBirth"),traj_x4,birth_index);
 			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_trajBirth"),traj_p4,birth_index);
 			birth_index++;
 		}
 		if(all_index%2==0) { // Even indices: death
-			if(locDMCTrajectoryPoints[loc_i]->step < 0.0001) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
+			if(locDMCTrajectoryPoints[loc_i]->step < 1e-10) {cout << "ERROR: DMCTrajectoryPoint FOUND IN UNEXPECTECTED ORDERING! Will not store event. Is TRAJECTORIES card >=2?" << endl; continue;}
 			locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID_trajDeath"),PID,death_index);
 			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_trajDeath"),traj_x4,death_index);
 			// locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_trajDeath"),traj_x4,death_index); //not useful
