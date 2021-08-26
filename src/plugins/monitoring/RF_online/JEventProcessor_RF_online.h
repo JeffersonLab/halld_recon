@@ -39,6 +39,8 @@ class JEventProcessor_RF_online : public jana::JEventProcessor
 
 	private:
 		TDirectoryFile* dROCTIDirectory;
+		
+		TH1I *rf_itself_num_events;
 
 		double dRFSignalPeriod; //not the same as the period of the beam //before multiplexing
 		vector<DetectorSystem_t> dRFSignalSystems;
