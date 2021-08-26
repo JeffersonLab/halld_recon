@@ -162,6 +162,7 @@ jerror_t JEventProcessor_RF_online::init(void)
 		locHistTitle = string("RF_") + locSystemName + string(";#Deltat (First Pair) (ns)");
 		dHistMap_SelfResolution[locSystem] = new TH1I(locHistName.c_str(), locHistTitle.c_str(), locNumDeltaTBins, -1.0*locDeltaTRangeMax, locDeltaTRangeMax);
 	}
+	rf_itself_num_events = new TH1I("rf_itself_num_events", "RF itself number of events", 1, 0.0, 1.0);
 	gDirectory->cd("..");
 
 	//absolute resolutions: compare each rf to each rf
@@ -382,6 +383,9 @@ jerror_t JEventProcessor_RF_online::evnt(JEventLoop* locEventLoop, uint64_t even
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
+		// Event count used by RootSpy->RSAI so it knows how many events have been seen.
+		rf_itself_num_events->Fill(0.5);
+	
 		//num rf signals
 		for(size_t loc_i = 0; loc_i < dRFSignalSystems.size(); ++loc_i)
 		{
