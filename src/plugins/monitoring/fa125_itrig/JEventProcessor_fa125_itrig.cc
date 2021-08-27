@@ -90,6 +90,40 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
 
   hdiffs = new TH2I("errcount","Count of fa125 itrigger time errors; roc ; slot", 15, 1, 16, 17, 3, 20);
 
+  for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
+
+  int xlabels[70] = {0};
+  int nbins;
+
+  for (int i=25; i<29; i++) {
+    int x = i-24;           // CDC, bins 1 to 4
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+  }
+
+  for (int i=52; i<54; i++) {
+    int x = i-46;           // FDC, bins 6-7
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+  }
+
+  for (int i=55; i<63; i++) {
+    int x = i-47;           // FDC, bins 8-15
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+    nbins = x;
+  }
+
+  // ROCs 51,54,63 and 64 are TDCs.
+
+  for (int i=1;i<=nbins;i++) {
+    if (xlabels[i]>0) {
+         hdiffs->GetXaxis()->SetBinLabel(i,Form("%i",xlabels[i]));
+    } else {
+         hdiffs->GetXaxis()->SetBinLabel(i," ");
+    }
+  }
+
   if (MAKE_TREE) {
     tree = new TTree("T","Df125 trigger times");
   
@@ -142,39 +176,6 @@ jerror_t JEventProcessor_fa125_itrig::brun(JEventLoop *eventLoop, int32_t runnum
 jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 	// This is called for every event. 
-
-  int rocmap[70] = {0};    // rocmap[rocid] = bin number for roc rocid in histogram
-  int xlabels[70] = {0};
-  int nbins;
-
-  for (int i=25; i<29; i++) {
-    int x = i-24;           // CDC, bins 1 to 4
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-  }
-
-  for (int i=52; i<54; i++) {
-    int x = i-46;           // FDC, bins 6-7
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-  }
-
-  for (int i=55; i<63; i++) {
-    int x = i-47;           // FDC, bins 8-15
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-    nbins = x;
-  }
-
-  // ROCs 51,54,63 and 64 are TDCs.
-
-  for (int i=1;i<=nbins;i++) {
-    if (xlabels[i]>0) {
-      hdiffs->GetXaxis()->SetBinLabel(i,Form("%i",xlabels[i]));
-    } else {
-      hdiffs->GetXaxis()->SetBinLabel(i," ");
-    }
-  }
 
 
   ULong64_t timestamp = 0;

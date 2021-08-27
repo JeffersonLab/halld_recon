@@ -28,6 +28,8 @@ class JEventProcessor_fa125_itrig:public jana::JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
                 bool MAKE_TREE;
+
+                int rocmap[70];   // which bin to use for each roc in the histogram, to make the histogram compact, not gappy
 };
 
 #endif // _JEventProcessor_fa125_itrig_
