@@ -1,4 +1,5 @@
 // hnamepath: /fa125_itrig/errcount
+// hnamepath: /fa125_itrig/num_events
 
 {
 	TDirectory *locTopDirectory = gDirectory;
@@ -43,7 +44,9 @@
 	if( rs_GetFlag("Is_RSAI")==1 ){
 
           double Nevents = 1.0;
-          TH1I *hevents = (TH1I*)gDirectory->FindObjectAny("num_events");
+
+          TH1I *hevents = (TH1I*)gDirectory->Get("/fa125_itrig/num_events");
+
           if(hevents) Nevents = (double)num_events->GetBinContent(1);
 
 	  auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
@@ -51,7 +54,8 @@
 	  if( Nevents >= min_events ) {
 	    cout << "RF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
 	    rs_SavePad("fa125_itrig", 1);
-	    rs_ResetAllMacroHistos("//fa125_itrig");
+	    rs_ResetAllMacroHistos("//HistMacro_fa125_itrig");
+
 	  }
 	}
 #endif
