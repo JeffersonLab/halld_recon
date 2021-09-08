@@ -11,7 +11,14 @@
 
 #include <JANA/JFactory.h>
 #include <JANA/JObject.h>
+#include <JANA/JApplication.h>
+#include <JANA/JEvent.h>
+#include <JANA/JCalibration.h>
+#include <JANA/JCalibrationCCDB.h>
+#include <JANA/JCalibrationGeneratorCCDB.h>
 using namespace jana;
+
+#include <DANA/DApplication.h>
 
 #include "units.h"
 
@@ -23,7 +30,10 @@ class DTAGHGeometry : public JObject {
    JOBJECT_PUBLIC(DTAGHGeometry);
 
    DTAGHGeometry(JEventLoop *loop);
+   DTAGHGeometry(JCalibration *jcalib, int32_t runnumber);
    ~DTAGHGeometry();
+
+   void Initialize(JCalibration *jcalib, bool print_messages);
 
    static const unsigned int kCounterCount;
 
@@ -38,6 +48,7 @@ class DTAGHGeometry : public JObject {
    
  private:
    double m_endpoint_energy_GeV;
+   double m_endpoint_energy_calib_GeV;
    double m_counter_xlow[TAGH_MAX_COUNTER+1];
    double m_counter_xhigh[TAGH_MAX_COUNTER+1];
 };
