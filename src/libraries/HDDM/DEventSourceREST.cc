@@ -25,17 +25,25 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
-   ifs = new std::ifstream(source_name);
-   if (ifs && ifs->is_open()) {
-      // hddm_r::istream constructor can throw a std::runtime_error
-      // which is not being caught here -- policy question in JANA:
-      // who catches the exceptions, top-level user code or here?
-      fin = new hddm_r::istream(*ifs);
+   ifs = new ifstream(source_name);
+   ifs->get();
+   ifs->unget();
+   if (ifs->rdbuf()->in_avail() > 30) {
+      class nonstd_streambuf: public std::streambuf {
+       public: char *pub_gptr() {return gptr();}
+      };
+      void *buf = (void*)ifs->rdbuf();
+      std::stringstream sbuf(((nonstd_streambuf*)buf)->pub_gptr());
+      std::string head;
+      std::getline(sbuf, head);
+      std::string expected = " class=\"r\" ";
+      if (head.find(expected) == head.npos) {
+         std::string msg("Unexpected header found in input REST stream: ");
+         throw std::runtime_error(msg + head + source_name);
+      }
    }
-   else {
-      // One might want to throw an exception or report an error here.
-      fin = NULL;
-   }
+
+   fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
@@ -45,6 +53,20 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    gPARMS->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction (it's off by default)");
 
    dDIRCMaxChannels = 108*64;
+
+   // any other initialization which needs to happen
+   dBCALShowerFactory = nullptr;
+   dFCALShowerFactory = nullptr;
+
+   USE_CCDB_BCAL_COVARIANCE = false;
+   gPARMS->SetDefaultParameter("REST:USE_CCDB_BCAL_COVARIANCE", USE_CCDB_BCAL_COVARIANCE, 
+   		"Load REST BCAL Shower covariance matrices from CCDB instead of the file.");
+   USE_CCDB_FCAL_COVARIANCE = false;
+   gPARMS->SetDefaultParameter("REST:USE_CCDB_FCAL_COVARIANCE", USE_CCDB_FCAL_COVARIANCE, 
+   		"Load REST BFAL Shower covariance matrices from CCDB instead of the file.");
+   		
+   gPARMS->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
+   calib_generator = new JCalibrationGeneratorCCDB;  // keep this around in case we need to use it
 }
 
 //----------------
@@ -58,6 +80,13 @@ DEventSourceREST::~DEventSourceREST()
   if (ifs) {
     delete ifs;
   }
+  
+  for(auto &entry : dJCalib_olds)
+  	delete entry.second;
+  for(auto &entry : dTAGHGeoms)
+  	delete entry.second;
+  for(auto &entry : dTAGMGeoms)
+  	delete entry.second;
 }
 
 //----------------
@@ -105,12 +134,14 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
 
    hddm_r::HDDM *record = new hddm_r::HDDM();
    try{
-      if (! (*fin >> *record)) {
-         delete fin;
-         fin = NULL;
-         delete ifs;
-         ifs = NULL;
-	     return NO_MORE_EVENTS_IN_SOURCE;
+      while (record->getReconstructedPhysicsEvents().size() == 0) {
+         if (! (*fin >> *record)) {
+            delete fin;
+            fin = NULL;
+            delete ifs;
+            ifs = NULL;
+	        return NO_MORE_EVENTS_IN_SOURCE;
+         }
       }
    }catch(std::runtime_error &e){
       cerr << "Exception caught while trying to read REST file!" << endl;
@@ -145,20 +176,26 @@ jerror_t DEventSourceREST::GetEvent(JEvent &event)
 	     break;
          }
 
-         //set REST calib context
-         const hddm_r::CcdbContextList& locContextStrings = re.getCcdbContexts();
-         hddm_r::CcdbContextList::iterator Contextiter;
-         for (Contextiter = locContextStrings.begin(); Contextiter != locContextStrings.end(); ++Contextiter) {
-        	 string REST_JANA_CALIB_CONTEXT = Contextiter->getText();
-             gPARMS->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
-         }
+         // set REST calib context - use this to load calibration constants that were used
+         // to create the REST files, if needed, but let this be overridden by command-line options
+         if( REST_JANA_CALIB_CONTEXT == "" ) {
+			 const hddm_r::CcdbContextList& locContextStrings = re.getCcdbContexts();
+			 hddm_r::CcdbContextList::iterator Contextiter;
+			 for (Contextiter = locContextStrings.begin(); Contextiter != locContextStrings.end(); ++Contextiter) {
+				 REST_JANA_CALIB_CONTEXT = Contextiter->getText();
+				 jout << " REST file next CCDB context = " << REST_JANA_CALIB_CONTEXT << endl;  // DEBUG?
+			 }
+		 }
 
-         if (! (*fin >> *record)) {
-            delete fin;
-            fin = NULL;
-            delete ifs;
-            ifs = NULL;
-	        return NO_MORE_EVENTS_IN_SOURCE;
+         record->clear();
+         while (record->getReconstructedPhysicsEvents().size() == 0) {
+            if (! (*fin >> *record)) {
+               delete fin;
+               fin = NULL;
+               delete ifs;
+               ifs = NULL;
+	           return NO_MORE_EVENTS_IN_SOURCE;
+            }
          }
 
          continue;
@@ -210,9 +247,13 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 
    JEventLoop* locEventLoop = event.GetJEventLoop();
    string dataClassName = factory->GetDataClassName();
-   
+
+   DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
+   JCalibration *jcalib = dapp->GetJCalibration(event.GetRunNumber());
+
+     
 	//Get target center
-		//multiple reader threads can access this object: need lock
+	//multiple reader threads can access this object: need lock
 	bool locNewRunNumber = false;
 	unsigned int locRunNumber = event.GetRunNumber();
 	LockRead();
@@ -222,11 +263,14 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 	UnlockRead();
 	if(locNewRunNumber)
 	{
-		DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 		DGeometry* locGeometry = dapp->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
 		double locTargetCenterZ = 0.0;
 		locGeometry->GetTargetZ(locTargetCenterZ);
-
+		
+		map<string, double> beam_vals;
+		if (locEventLoop->GetCalib("PHOTON_BEAM/beam_spot",beam_vals))
+		  throw JException("Could not load CCDB table: PHOTON_BEAM/beam_spot");
+	
 		vector<double> locBeamPeriodVector;
 		if(locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector))
 			throw JException("Could not load CCDB table: PHOTON_BEAM/RF/beam_period");
@@ -243,13 +287,58 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 				jout << "Error loading /DIRC/South/channel_status !" << endl;
 		}
 		
+
 		LockRead();
 		{
 			dTargetCenterZMap[locRunNumber] = locTargetCenterZ;
 			dBeamBunchPeriodMap[locRunNumber] = locBeamBunchPeriod;
 			dDIRCChannelStatusMap[locRunNumber] = locDIRCChannelStatus;
+
+			dBeamCenterMap[locRunNumber].Set(beam_vals["x"],
+							 beam_vals["y"]);
+			dBeamDirMap[locRunNumber].Set(beam_vals["dxdz"],
+						      beam_vals["dydz"]);
+			dBeamZ0Map[locRunNumber]=beam_vals["z"];
+			
+			jout << "Run " << locRunNumber << " beam spot:"
+			     << " x=" << dBeamCenterMap[locRunNumber].X()
+			     << " y=" << dBeamCenterMap[locRunNumber].Y()
+			     << " z=" << dBeamZ0Map[locRunNumber]
+			     << " dx/dz=" << dBeamDirMap[locRunNumber].X() 
+			     << " dy/dz=" << dBeamDirMap[locRunNumber].Y() 
+			     << endl;
+
+			// tagger related configs for reverse mapping tagger energy to counter number
+			if( REST_JANA_CALIB_CONTEXT != "" ) {
+				JCalibration *jcalib_old = calib_generator->MakeJCalibration(jcalib->GetURL(), locRunNumber, REST_JANA_CALIB_CONTEXT );
+				dTAGHGeoms[locRunNumber] = new DTAGHGeometry(jcalib_old, locRunNumber);
+				dTAGMGeoms[locRunNumber] = new DTAGMGeometry(jcalib_old, locRunNumber);
+				dJCalib_olds[locRunNumber] = jcalib_old;
+			}
 		}
 		UnlockRead();
+				
+		// do multiple things to limit the number of locks
+		// make sure that we have a handle to the FCAL shower factory
+		if(USE_CCDB_FCAL_COVARIANCE) {
+            if(dFCALShowerFactory==nullptr) {
+                dFCALShowerFactory = static_cast<DFCALShower_factory*>(locEventLoop->GetFactory("DFCALShower"));
+                if(dFCALShowerFactory==nullptr)
+                    throw JException("Couldn't find DFCALShower_factory???");
+            }
+			dFCALShowerFactory->LoadCovarianceLookupTables(locEventLoop);
+        }
+
+        // same with BCAL
+		if(USE_CCDB_BCAL_COVARIANCE) { 
+            if(dBCALShowerFactory==nullptr) {
+                dBCALShowerFactory = static_cast<DBCALShower_factory_IU*>(locEventLoop->GetFactory("DBCALShower", "IU"));
+                if(dBCALShowerFactory==nullptr)
+                    throw JException("Couldn't find DBCALShower_factory???");
+            }
+			dBCALShowerFactory->LoadCovarianceLookupTables(locEventLoop);
+		} 
+		
 	}
 
    if (dataClassName =="DMCReaction") {
@@ -297,15 +386,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DTrigger(record,
                      dynamic_cast<JFactory<DTrigger>*>(factory));
    }
-   if (dataClassName =="DDIRCPmtHit") {      
-      return Extract_DDIRCPmtHit(record,
-		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), locEventLoop);
-   }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
    }
-
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -522,39 +606,61 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    hddm_r::TagmBeamPhotonList::iterator locTAGMiter;
    for(locTAGMiter = locTagmBeamPhotonList.begin(); locTAGMiter != locTagmBeamPhotonList.end(); ++locTAGMiter)
    {
-      if (locTAGMiter->getJtag() != tag)
-         continue;
+		if (locTAGMiter->getJtag() != tag)
+		 continue;
 
-      DBeamPhoton* gamma = new DBeamPhoton();
+		DBeamPhoton* gamma = new DBeamPhoton();
+		
+		// load the counter number (if it exists) and set the energy based on the counter
+		unsigned int column = 0;
+		hddm_r::TagmChannelList &locTagmChannelList = locTAGMiter->getTagmChannels();
+		if (locTagmChannelList.size() > 0) {
+			// it's easy if the column is already set 
+			column = locTagmChannelList().getColumn();
+		} else {
+			// if the TAGM column isn't saved in the REST file, then we do one of two things
+			//   1) if there's no special CCDB context associated with the file, we can just
+			//      reverse engineer the counter, assuming the latest CCDB
+			//   2) If there is a special CCDB context specified, then use that instead
+			if (dJCalib_olds[locRunNumber] == nullptr) {
+				if (!tagmGeom->E_to_column(locTAGMiter->getE(), column)) {
+					column = 0;
+				}
+			} else {
+				if (!dTAGMGeoms[locRunNumber]->E_to_column(locTAGMiter->getE(), column)) {
+					column = 0;
+				}
+			}
 
-		DVector3 mom(0.0, 0.0, locTAGMiter->getE());
+			if(column == 0)
+				std::cerr << "Error in DEventSourceREST - tagger microscope could not look up column for energy "
+				    << locTAGMiter->getE() << std::endl;
+		}
+		
+		// sometimes the simulation will set photons that miss the tagger counters to have a column of zero - skip these
+		if(column == 0) {
+			continue;
+		}
+
+		double Elo = tagmGeom->getElow(column);
+		double Ehi = tagmGeom->getEhigh(column);
+		double Ebeam = (Elo + Ehi)/2.;
+
+		// read the rest of the data from the REST file
+		DVector3 mom(0.0, 0.0, Ebeam);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
 		gamma->setTime(locTAGMiter->getT());
 		gamma->dSystem = SYS_TAGM;
+		gamma->dCounter = column;
 
-	      auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
-	      locCovarianceMatrix->ResizeTo(7, 7);
-	      locCovarianceMatrix->Zero();
+		auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+		locCovarianceMatrix->ResizeTo(7, 7);
+		locCovarianceMatrix->Zero();
 		gamma->setErrorMatrix(locCovarianceMatrix);
-
-      hddm_r::TagmChannelList &locTagmChannelList = locTAGMiter->getTagmChannels();
-      tagmGeom->E_to_column(locTAGMiter->getE(), gamma->dCounter);
-      if (locTagmChannelList.size() > 0) {
-         if (gamma->dCounter != locTagmChannelList().getColumn()) {
-            std::cerr << "Error in DEventSourceREST - tagger microscope energy "
-                         "lookup mismatch:" << std::endl
-                      << "   TAGM column = " << locTagmChannelList().getColumn()
-                      << std::endl
-                      << "   Etag = " << locTAGMiter->getE()
-                      << std::endl
-                      << "   lookup finds TAGM column = " << gamma->dCounter
-                      << std::endl;
-            exit(17);
-         }
-      }
-      dbeam_photons.push_back(gamma);
+      
+      	dbeam_photons.push_back(gamma);
    }
 
    const hddm_r::TaghBeamPhotonList &locTaghBeamPhotonList = record->getTaghBeamPhotons();
@@ -566,33 +672,50 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 
       DBeamPhoton* gamma = new DBeamPhoton();
 
+		// load the counter number (if it exists) and set the energy based on the counter
+		unsigned int counter = 0;
+		hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
+		if (locTaghChannelList.size() > 0) {
+			// it's easy if the column is already set 
+			counter = locTaghChannelList().getCounter();
+		} else {
+			// if the TAGM column isn't saved in the REST file, then we do one of two things
+			//   1) if there's no special CCDB context associated with the file, we can just
+			//      reverse engineer the counter, assuming the latest CCDB
+			//   2) If there is a special CCDB context specified, then use that instead
+			if (dJCalib_olds[locRunNumber] == nullptr) {
+				if (!taghGeom->E_to_counter(locTAGHiter->getE(), counter)) {
+					counter = 0;
+				}
+			} else {
+				if (!dTAGHGeoms[locRunNumber]->E_to_counter(locTAGHiter->getE(), counter)) {
+					counter = 0;
+				}
+			}
+
+			if(counter == 0)
+				std::cerr << "Error in DEventSourceREST - tagger hodoscope could not look up counter for energy "
+				    << locTAGHiter->getE() << std::endl;
+		}
+
+		// sometimes the simulation will set photons that miss the tagger counters to have a column of zero - skip these
+		if(counter == 0) {
+			continue;
+		}
+
 		DVector3 mom(0.0, 0.0, locTAGHiter->getE());
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
 		gamma->setTime(locTAGHiter->getT());
 		gamma->dSystem = SYS_TAGH;
+		gamma->dCounter = counter;
 
 	      auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
 	      locCovarianceMatrix->ResizeTo(7, 7);
 	      locCovarianceMatrix->Zero();
 		gamma->setErrorMatrix(locCovarianceMatrix);
 
-      hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
-      taghGeom->E_to_counter(locTAGHiter->getE(), gamma->dCounter);
-      if (locTaghChannelList.size() > 0) {
-         if (gamma->dCounter != locTaghChannelList().getCounter()) {
-            std::cerr << "Error in DEventSourceREST - tagger hodooscope energy "
-                         "lookup mismatch:" << std::endl
-                      << "   TAGH column = " << locTaghChannelList().getCounter()
-                      << std::endl
-                      << "   Etag = " << locTAGHiter->getE()
-                      << std::endl
-                      << "   lookup finds TAGH column = " << gamma->dCounter
-                      << std::endl;
-            exit(17);
-         }
-      }
       dbeam_photons.push_back(gamma);
    }
 
@@ -698,28 +821,28 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
       tofpoint->tErr = iter->getTerr();
 
       //Status
-		const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
-	   hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
-		if(locStatusIterator == locTofStatusList.end())
-		{
-			tofpoint->dHorizontalBar = 0;
-			tofpoint->dVerticalBar = 0;
-			tofpoint->dHorizontalBarStatus = 3;
-			tofpoint->dVerticalBarStatus = 3;
-		}
-		else //should only be 1
-		{
-			for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
-			{
-				int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
-				tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
-				locStatus %= 45*45*4; //Assume compiler optimizes multiplication
-				tofpoint->dHorizontalBarStatus = locStatus/(45*45);
-				locStatus %= 45*45;
-				tofpoint->dVerticalBar = locStatus/45;
-				tofpoint->dHorizontalBar = locStatus % 45;
-			}
-		}
+      const hddm_r::TofStatusList& locTofStatusList = iter->getTofStatuses();
+      hddm_r::TofStatusList::iterator locStatusIterator = locTofStatusList.begin();
+      if(locStatusIterator == locTofStatusList.end())
+	{
+	  tofpoint->dHorizontalBar = 0;
+	  tofpoint->dVerticalBar = 0;
+	  tofpoint->dHorizontalBarStatus = 3;
+	  tofpoint->dVerticalBarStatus = 3;
+	}
+      else //should only be 1
+	{
+	  for(; locStatusIterator != locTofStatusList.end(); ++locStatusIterator)
+	    {
+	      int locStatus = locStatusIterator->getStatus(); //horizontal_bar + 45*vertical_bar + 45*45*horizontal_status + 45*45*4*vertical_status
+	      tofpoint->dVerticalBarStatus = locStatus/(45*45*4);
+	      locStatus %= 45*45*4; //Assume compiler optimizes multiplication
+	      tofpoint->dHorizontalBarStatus = locStatus/(45*45);
+	      locStatus %= 45*45;
+	      tofpoint->dVerticalBar = locStatus/45;
+	      tofpoint->dHorizontalBar = locStatus % 45;
+	    }
+	}
 
       data.push_back(tofpoint);
    }
@@ -793,6 +916,7 @@ jerror_t DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactory<DTrig
 		DTrigger *locTrigger = new DTrigger();
 		locTrigger->Set_L1TriggerBits(Convert_SignedIntToUnsigned(iter->getL1_trig_bits()));
 		locTrigger->Set_L1FrontPanelTriggerBits(Convert_SignedIntToUnsigned(iter->getL1_fp_trig_bits()));
+		
 		data.push_back(locTrigger);
 	}
 
@@ -832,29 +956,33 @@ jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
       shower->setEnergy(iter->getE());
       shower->setTime(iter->getT());
 
-      TMatrixFSym covariance(5);
-	  covariance(0,0) = iter->getEerr()*iter->getEerr();
-	  covariance(1,1) = iter->getXerr()*iter->getXerr();
-	  covariance(2,2) = iter->getYerr()*iter->getYerr();
-	  covariance(3,3) = iter->getZerr()*iter->getZerr();
-	  covariance(4,4) = iter->getTerr()*iter->getTerr();
-	  covariance(1,2) = covariance(2,1) = iter->getXycorr()*iter->getXerr()*iter->getYerr();
-	  covariance(1,3) = covariance(3,1) = iter->getXzcorr()*iter->getXerr()*iter->getZerr();
-	  covariance(2,3) = covariance(3,2) = iter->getYzcorr()*iter->getYerr()*iter->getZerr();
-	  covariance(0,3) = covariance(3,0) = iter->getEzcorr()*iter->getEerr()*iter->getZerr();
-	  covariance(3,4) = covariance(4,3) = iter->getTzcorr()*iter->getTerr()*iter->getZerr();
-
-	  // further correlations (an extension of REST format, so code is different.)
-	  const hddm_r::FcalCorrelationsList& locFcalCorrelationsList = iter->getFcalCorrelationses();
-	  hddm_r::FcalCorrelationsList::iterator locFcalCorrelationsIterator = locFcalCorrelationsList.begin();
-	  if(locFcalCorrelationsIterator != locFcalCorrelationsList.end()) {
-	  	  covariance(0,4) = covariance(4,0) = locFcalCorrelationsIterator->getEtcorr()*iter->getEerr()*iter->getTerr();
-	  	  covariance(0,1) = covariance(1,0) = locFcalCorrelationsIterator->getExcorr()*iter->getEerr()*iter->getXerr();
-	  	  covariance(0,2) = covariance(2,0) = locFcalCorrelationsIterator->getEycorr()*iter->getEerr()*iter->getYerr();
-	  	  covariance(1,4) = covariance(4,1) = locFcalCorrelationsIterator->getTxcorr()*iter->getTerr()*iter->getXerr();
-	  	  covariance(2,4) = covariance(4,2) = locFcalCorrelationsIterator->getTycorr()*iter->getTerr()*iter->getYerr();
+	  if(USE_CCDB_FCAL_COVARIANCE) {
+	  	 dFCALShowerFactory->FillCovarianceMatrix(shower);
+	  } else {
+		  TMatrixFSym covariance(5);
+		  covariance(0,0) = iter->getEerr()*iter->getEerr();
+		  covariance(1,1) = iter->getXerr()*iter->getXerr();
+		  covariance(2,2) = iter->getYerr()*iter->getYerr();
+		  covariance(3,3) = iter->getZerr()*iter->getZerr();
+		  covariance(4,4) = iter->getTerr()*iter->getTerr();
+		  covariance(1,2) = covariance(2,1) = iter->getXycorr()*iter->getXerr()*iter->getYerr();
+		  covariance(1,3) = covariance(3,1) = iter->getXzcorr()*iter->getXerr()*iter->getZerr();
+		  covariance(2,3) = covariance(3,2) = iter->getYzcorr()*iter->getYerr()*iter->getZerr();
+		  covariance(0,3) = covariance(3,0) = iter->getEzcorr()*iter->getEerr()*iter->getZerr();
+		  covariance(3,4) = covariance(4,3) = iter->getTzcorr()*iter->getTerr()*iter->getZerr();
+	  
+		  // further correlations (an extension of REST format, so code is different.)
+		  const hddm_r::FcalCorrelationsList& locFcalCorrelationsList = iter->getFcalCorrelationses();
+		  hddm_r::FcalCorrelationsList::iterator locFcalCorrelationsIterator = locFcalCorrelationsList.begin();
+		  if(locFcalCorrelationsIterator != locFcalCorrelationsList.end()) {
+			  covariance(0,4) = covariance(4,0) = locFcalCorrelationsIterator->getEtcorr()*iter->getEerr()*iter->getTerr();
+			  covariance(0,1) = covariance(1,0) = locFcalCorrelationsIterator->getExcorr()*iter->getEerr()*iter->getXerr();
+			  covariance(0,2) = covariance(2,0) = locFcalCorrelationsIterator->getEycorr()*iter->getEerr()*iter->getYerr();
+			  covariance(1,4) = covariance(4,1) = locFcalCorrelationsIterator->getTxcorr()*iter->getTerr()*iter->getXerr();
+			  covariance(2,4) = covariance(4,2) = locFcalCorrelationsIterator->getTycorr()*iter->getTerr()*iter->getYerr();
+		  }
+		  shower->ExyztCovariance = covariance;
 	  }
-	  shower->ExyztCovariance = covariance;
 
       // MVA classifier output - this information is being calculated in DNeutralShower now!
       //const hddm_r::FcalShowerClassificationList& locFcalShowerClassificationList = iter->getFcalShowerClassifications();
@@ -878,7 +1006,7 @@ jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
       const hddm_r::FcalShowerNBlocksList& locFcalShowerNBlocksList = iter->getFcalShowerNBlockses();
       hddm_r::FcalShowerNBlocksList::iterator locFcalShowerNBlocksIterator = locFcalShowerNBlocksList.begin();
       if(locFcalShowerNBlocksIterator != locFcalShowerNBlocksList.end()) {
-	shower->setNumBlocks(locFcalShowerNBlocksIterator->getNumBlocks());
+		  shower->setNumBlocks(locFcalShowerNBlocksIterator->getNumBlocks());
       }      
       data.push_back(shower);
    }
@@ -914,37 +1042,42 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
       if (iter->getJtag() != tag)
          continue;
 
-      DBCALShower *shower = new DBCALShower();
-      shower->E = iter->getE();
-      shower->E_raw = -1;
-      shower->x = iter->getX();
-      shower->y = iter->getY();
-      shower->z = iter->getZ();
-      shower->t = iter->getT();
-      shower->Q = 0;    // Fix this to zero for now, can add to REST if it's ever used in higher-level analyses
-      TMatrixFSym covariance(5);
-	  covariance(0,0) = iter->getEerr()*iter->getEerr();
-	  covariance(1,1) = iter->getXerr()*iter->getXerr();
-	  covariance(2,2) = iter->getYerr()*iter->getYerr();
-	  covariance(3,3) = iter->getZerr()*iter->getZerr();
-	  covariance(4,4) = iter->getTerr()*iter->getTerr();
-	  covariance(1,2) = covariance(2,1) = iter->getXycorr()*iter->getXerr()*iter->getYerr();
-	  covariance(1,3) = covariance(3,1) = iter->getXzcorr()*iter->getXerr()*iter->getZerr();
-	  covariance(2,3) = covariance(3,2) = iter->getYzcorr()*iter->getYerr()*iter->getZerr();
-	  covariance(0,3) = covariance(3,0) = iter->getEzcorr()*iter->getEerr()*iter->getZerr();
-	  covariance(3,4) = covariance(4,3) = iter->getTzcorr()*iter->getTerr()*iter->getZerr();
+	  DBCALShower *shower = new DBCALShower();
+	  shower->E = iter->getE();
+	  shower->E_raw = -1;
+	  shower->x = iter->getX();
+	  shower->y = iter->getY();
+	  shower->z = iter->getZ();
+	  shower->t = iter->getT();
+	  shower->Q = 0;    // Fix this to zero for now, can add to REST if it's ever used in higher-level analyses
 
-	  // further correlations (an extension of REST format, so code is different.)
-	  const hddm_r::BcalCorrelationsList& locBcalCorrelationsList = iter->getBcalCorrelationses();
-	  hddm_r::BcalCorrelationsList::iterator locBcalCorrelationsIterator = locBcalCorrelationsList.begin();
-	  if(locBcalCorrelationsIterator != locBcalCorrelationsList.end()) {
-		  covariance(0,4) = covariance(4,0) = locBcalCorrelationsIterator->getEtcorr()*iter->getEerr()*iter->getTerr();
-		  covariance(0,1) = covariance(1,0) = locBcalCorrelationsIterator->getExcorr()*iter->getEerr()*iter->getXerr();
-		  covariance(0,2) = covariance(2,0) = locBcalCorrelationsIterator->getEycorr()*iter->getEerr()*iter->getYerr();
-		  covariance(1,4) = covariance(4,1) = locBcalCorrelationsIterator->getTxcorr()*iter->getTerr()*iter->getXerr();
-		  covariance(2,4) = covariance(4,2) = locBcalCorrelationsIterator->getTycorr()*iter->getTerr()*iter->getYerr();
-	  }
-	  shower->ExyztCovariance = covariance;
+	  if(USE_CCDB_BCAL_COVARIANCE) {
+	  	 dBCALShowerFactory->FillCovarianceMatrix(shower);
+	  } else {
+		  TMatrixFSym covariance(5);
+		  covariance(0,0) = iter->getEerr()*iter->getEerr();
+		  covariance(1,1) = iter->getXerr()*iter->getXerr();
+		  covariance(2,2) = iter->getYerr()*iter->getYerr();
+		  covariance(3,3) = iter->getZerr()*iter->getZerr();
+		  covariance(4,4) = iter->getTerr()*iter->getTerr();
+		  covariance(1,2) = covariance(2,1) = iter->getXycorr()*iter->getXerr()*iter->getYerr();
+		  covariance(1,3) = covariance(3,1) = iter->getXzcorr()*iter->getXerr()*iter->getZerr();
+		  covariance(2,3) = covariance(3,2) = iter->getYzcorr()*iter->getYerr()*iter->getZerr();
+		  covariance(0,3) = covariance(3,0) = iter->getEzcorr()*iter->getEerr()*iter->getZerr();
+		  covariance(3,4) = covariance(4,3) = iter->getTzcorr()*iter->getTerr()*iter->getZerr();
+
+		  // further correlations (an extension of REST format, so code is different.)
+		  const hddm_r::BcalCorrelationsList& locBcalCorrelationsList = iter->getBcalCorrelationses();
+		  hddm_r::BcalCorrelationsList::iterator locBcalCorrelationsIterator = locBcalCorrelationsList.begin();
+		  if(locBcalCorrelationsIterator != locBcalCorrelationsList.end()) {
+			  covariance(0,4) = covariance(4,0) = locBcalCorrelationsIterator->getEtcorr()*iter->getEerr()*iter->getTerr();
+			  covariance(0,1) = covariance(1,0) = locBcalCorrelationsIterator->getExcorr()*iter->getEerr()*iter->getXerr();
+			  covariance(0,2) = covariance(2,0) = locBcalCorrelationsIterator->getEycorr()*iter->getEerr()*iter->getYerr();
+			  covariance(1,4) = covariance(4,1) = locBcalCorrelationsIterator->getTxcorr()*iter->getTerr()*iter->getXerr();
+			  covariance(2,4) = covariance(4,2) = locBcalCorrelationsIterator->getTycorr()*iter->getTerr()*iter->getYerr();
+		  }
+		  shower->ExyztCovariance = covariance;
+		}
 
 		// preshower
 		const hddm_r::PreshowerList& locPreShowerList = iter->getPreshowers();
@@ -1076,6 +1209,18 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    if (factory==NULL) {
       return OBJECT_NOT_AVAILABLE;
    }
+   
+   int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
+   DVector2 locBeamCenter,locBeamDir;
+   double locBeamZ0=0.;
+   LockRead();
+   {
+     locBeamCenter = dBeamCenterMap[locRunNumber]; 
+     locBeamDir = dBeamDirMap[locRunNumber];
+     locBeamZ0 = dBeamZ0Map[locRunNumber];
+   }
+   UnlockRead();
+
    string tag = (factory->Tag())? factory->Tag() : "";
 
    vector<DTrackTimeBased*> data;
@@ -1124,15 +1269,17 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 
       // Convert from cartesian coordinates to the 5x1 state vector corresponding to the tracking error matrix.
       double vect[5];
+      DVector2 beam_pos=locBeamCenter+(track_pos.Z()-locBeamZ0)*locBeamDir;
+      DVector2 diff(track_pos.X()-beam_pos.X(),track_pos.Y()-beam_pos.Y());
       vect[2]=tan(M_PI_2 - track_mom.Theta());
       vect[1]=track_mom.Phi();
       double sinphi=sin(vect[1]);
       double cosphi=cos(vect[1]);
       vect[0]=tra->charge()/track_mom.Perp();
       vect[4]=track_pos.Z();
-      vect[3]=track_pos.Perp();
+      vect[3]=diff.Mod();
 
-      if ((track_pos.X() > 0 && sinphi>0) || (track_pos.Y() <0 && cosphi>0) || (track_pos.Y() >0 && cosphi<0) || (track_pos.X() <0 && sinphi<0))
+      if ((diff.X() > 0 && sinphi>0) || (diff.Y() <0 && cosphi>0) || (diff.Y() >0 && cosphi<0) || (diff.X() <0 && sinphi<0))
         vect[3] *= -1.; 
       tra->setTrackingStateVector(vect[0], vect[1], vect[2], vect[3], vect[4]);
 
@@ -1143,7 +1290,7 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
-		// Hit layers
+      // Hit layers
       const hddm_r::ExpectedhitsList& locExpectedhitsList = iter->getExpectedhitses();
 	   hddm_r::ExpectedhitsList::iterator locExpectedhitsIterator = locExpectedhitsList.begin();
 		if(locExpectedhitsIterator == locExpectedhitsList.end())
@@ -1308,13 +1455,6 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
    locEventLoop->Get(locFCALShowers);
 
    const DParticleID* locParticleID = NULL;
-   vector<const DDIRCPmtHit*> locDIRCHits;
-   vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-   if(RECO_DIRC_CALC_LUT) {
-	   locEventLoop->GetSingle(locParticleID);
-	   locEventLoop->Get(locDIRCHits);
-	   locEventLoop->Get(locDIRCBarHits);
-   }
 
    const hddm_r::DetectorMatchesList &detectormatches = record->getDetectorMatcheses();
 
@@ -1326,46 +1466,6 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          continue;
 
       DDetectorMatches *locDetectorMatches = new DDetectorMatches();
-
-      const hddm_r::DircMatchParamsList &dircList = iter->getDircMatchParamses(); 
-      hddm_r::DircMatchParamsList::iterator dircIter = dircList.begin();
-      const hddm_r::DircMatchHitList &dircMatchHitList = iter->getDircMatchHits(); 
-      
-      for(; dircIter != dircList.end(); ++dircIter)
-      {
-	      size_t locTrackIndex = dircIter->getTrack();
-	      if(locTrackIndex > locTrackTimeBasedVector.size()) continue;
-
-	      auto locTrackTimeBased = locTrackTimeBasedVector[locTrackIndex];
-	      if( !locTrackTimeBased ) continue;
-
-	      auto locDIRCMatchParams = std::make_shared<DDIRCMatchParams>();
-	      map<shared_ptr<const DDIRCMatchParams> ,vector<const DDIRCPmtHit*> > locDIRCTrackMatchParams;
-	      locDetectorMatches->Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParams);
-
-	      // add hits to match list
-	      hddm_r::DircMatchHitList::iterator dircMatchHitIter = dircMatchHitList.begin();
-	      for(; dircMatchHitIter != dircMatchHitList.end(); ++dircMatchHitIter) {
-		size_t locMatchHitTrackIndex = dircMatchHitIter->getTrack();
-		if(locMatchHitTrackIndex == locTrackIndex) {
-		  size_t locMatchHitIndex = dircMatchHitIter->getHit();
-		  locDIRCTrackMatchParams[locDIRCMatchParams].push_back(locDIRCHits[locMatchHitIndex]);
-		}
-	      }
-	      
-	      locDIRCMatchParams->dExtrapolatedPos = DVector3(dircIter->getX(),dircIter->getY(),dircIter->getZ());
-	      locDIRCMatchParams->dExtrapolatedMom = DVector3(dircIter->getPx(),dircIter->getPy(),dircIter->getPz());
-	      locDIRCMatchParams->dExtrapolatedTime = dircIter->getT();
-	      locDIRCMatchParams->dExpectedThetaC = dircIter->getExpectthetac();
-	      locDIRCMatchParams->dThetaC = dircIter->getThetac();
-	      locDIRCMatchParams->dDeltaT = dircIter->getDeltat();
-	      locDIRCMatchParams->dLikelihoodElectron = dircIter->getLele();
-	      locDIRCMatchParams->dLikelihoodPion = dircIter->getLpi();
-	      locDIRCMatchParams->dLikelihoodKaon = dircIter->getLk();
-	      locDIRCMatchParams->dLikelihoodProton = dircIter->getLp();
-	      locDIRCMatchParams->dNPhotons = dircIter->getNphotons();
-	      locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DDIRCMatchParams>(locDIRCMatchParams));
-      }
 
       const hddm_r::BcalMatchParamsList &bcalList = iter->getBcalMatchParamses();
       hddm_r::BcalMatchParamsList::iterator bcalIter = bcalList.begin();
@@ -1542,50 +1642,3 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 	return uint32_t(-1*locSignedInt) + uint32_t(0x80000000); //bit 32 is 1, all others are negative of signed int (which was negative)
 }
 
-//-----------------------
-// Extract_DDIRCPmtHit
-//-----------------------
-jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
-                                   JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop)
-{
-   /// Copies the data from the fcalShower hddm record. This is
-   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
-   /// returns OBJECT_NOT_AVAILABLE immediately.
-
-   if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
-   }
-   string tag = (factory->Tag())? factory->Tag() : "";
-
-   vector<DDIRCPmtHit*> data;
-
-   // loop over fcal shower records
-   const hddm_r::DircHitList &hits =
-                 record->getDircHits();
-   hddm_r::DircHitList::iterator iter;
-   for (iter = hits.begin(); iter != hits.end(); ++iter) {
-      if (iter->getJtag() != tag)
-         continue;
-
-      // throw away hits from bad or noisy channels (after REST reconstruction)
-      int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
-      int box = (iter->getCh() < dDIRCMaxChannels) ? 1 : 0;
-      int channel = iter->getCh() % dDIRCMaxChannels;
-      dirc_status_state status = static_cast<dirc_status_state>(dDIRCChannelStatusMap[locRunNumber][box][channel]);
-      if ( (status==BAD) || (status==NOISY) ) {
-	      continue;
-      }
-
-      DDIRCPmtHit *hit = new DDIRCPmtHit();
-      hit->setChannel(iter->getCh());
-      hit->setTime(iter->getT());
-      hit->setTOT(iter->getTot());
-
-      data.push_back(hit);
-   }
-
-   // Copy into factory
-   factory->CopyTo(data);
-   
-   return NOERROR;
-}
