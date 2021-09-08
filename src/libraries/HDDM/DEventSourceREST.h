@@ -16,6 +16,8 @@
 #include <JANA/JEventSource.h>
 #include <JANA/jerror.h>
 #include <JANA/JCalibration.h>
+#include <JANA/JCalibrationCCDB.h>
+#include <JANA/JCalibrationGeneratorCCDB.h>
 
 #include "hddm_r.hpp"
 
@@ -33,6 +35,9 @@
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
+#include <DIRC/DDIRCPmtHit.h>
+#include <DIRC/DDIRCTruthBarHit.h>
+#include <PID/DParticleID.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include "DResourcePool.h"
@@ -95,6 +100,15 @@ class DEventSourceREST:public JEventSource
 	bool USE_CCDB_BCAL_COVARIANCE;
 	bool USE_CCDB_FCAL_COVARIANCE;
 	
+	bool PRUNE_DUPLICATE_TRACKS;
+	bool RECO_DIRC_CALC_LUT;
+	int dDIRCMaxChannels;
+	enum dirc_status_state {GOOD, BAD, NOISY};
+	map<unsigned int, vector<vector<int>>> dDIRCChannelStatusMap; //unsigned int is run number
+	
+	map<unsigned int, DVector2> dBeamCenterMap,dBeamDirMap;
+	map<unsigned int, double> dBeamZ0Map;
+
 	DFCALShower_factory *dFCALShowerFactory;
 	DBCALShower_factory_IU *dBCALShowerFactory;
 
@@ -104,6 +118,14 @@ class DEventSourceREST:public JEventSource
 
    std::ifstream *ifs;		// input hddm file ifstream
    hddm_r::istream *fin;	// provides hddm layer on top of ifstream
+   
+   string REST_JANA_CALIB_CONTEXT = "";
+   JCalibrationGeneratorCCDB *calib_generator;
+   
+   	map<unsigned int, JCalibration *> dJCalib_olds; //unsigned int is run number
+   	map<unsigned int, DTAGHGeometry *> dTAGHGeoms; //unsigned int is run number
+   	map<unsigned int, DTAGMGeometry *> dTAGMGeoms; //unsigned int is run number
+
 };
 
 #endif //_JEVENT_SOURCEREST_H_
