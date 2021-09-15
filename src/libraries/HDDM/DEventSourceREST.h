@@ -35,8 +35,6 @@
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
-#include <DIRC/DDIRCPmtHit.h>
-#include <DIRC/DDIRCTruthBarHit.h>
 #include <PID/DParticleID.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
