@@ -12,35 +12,6 @@ using namespace std;
 
 #include <DANA/DApplication.h>
 
-// Tree variables
-Int_t eventNumber, nPhotonCandidates;
-Double_t beamEnergy[100], beamT[100];
-Double_t E_shower[2], x_shower[2], y_shower[2], z_shower[2], t_shower[2];
-Bool_t BCAL_shower[2];
-Int_t nHyp;
-Double_t pX_Proton, pY_Proton, pZ_Proton;
-Double_t pX_PiMinus, pY_PiMinus, pZ_PiMinus;
-Double_t pX_Photon0, pY_Photon0, pZ_Photon0;
-Double_t pX_Photon1, pY_Photon1, pZ_Photon1;
-Double_t CL;
-Double_t vertex_X, vertex_Y, vertex_Z, vertex_T;
-
-Int_t N_thrown, type_thrown[19], pdgtype_thrown[19], myid_thrown[19], parentid_thrown[19];
-Double_t beamEnergy_thrown, pX_thrown[19], pY_thrown[19], pZ_thrown[19], E_thrown[19];
-
-Bool_t trigger;
-
-// Histograms
-
-TH2D * h_BCAL;
-TH2D * h_FCAL;
-TH1D * h_m2gamma;
-TH1D * h_m2pi;
-
-double c = 29.98;
-double mN = 0.93892;
-double mpip = 0.139570;
-
 // Routine used to create our DEventProcessor
 extern "C"{
   void InitPlugin(JApplication *app){
@@ -49,6 +20,8 @@ extern "C"{
   }
 } // "C"
 
+//define static local variable //declared in header file
+thread_local DTreeFillData DEventProcessor_1p1pi1pi0::dTreeFillData;
 
 //------------------
 // init
@@ -56,54 +29,74 @@ extern "C"{
 jerror_t DEventProcessor_1p1pi1pi0::init(void)
 {
  
-  tree1 = new TTree( "tree1", "tree1" );
+  //TTREE INTERFACE
+  //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
+  dTreeInterface = DTreeInterface::Create_DTreeInterface("tree_1p1pi1pi0", "tree_1p1pi1pi0.root");
 
-  tree1->Branch("eventNumber",&eventNumber,"eventNumber/I");
-  tree1->Branch("nPhotonCandidates",&nPhotonCandidates,"nPhotonCandidates/I");
-  tree1->Branch("beamEnergy",beamEnergy,"beamEnergy[nPhotonCandidates]/D");
-  tree1->Branch("beamT",beamT,"beamT[nPhotonCandidates]/D");
+  //TTREE BRANCHES
+  DTreeBranchRegister locTreeBranchRegister;
 
-  tree1->Branch("x_shower",x_shower,"x_shower[2]/D");
-  tree1->Branch("y_shower",y_shower,"y_shower[2]/D");
-  tree1->Branch("z_shower",z_shower,"z_shower[2]/D");
-  tree1->Branch("E_shower",E_shower,"E_shower[2]/D");
-  tree1->Branch("t_shower",t_shower,"t_shower[2]/D");
-  tree1->Branch("BCAL_shower",BCAL_shower,"BCAL_shower[2]/O");
+  locTreeBranchRegister.Register_Single<Int_t>("eventNumber");
+  locTreeBranchRegister.Register_Single<Int_t>("nPhotonCandidates");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("beamEnergy", "nPhotonCandidates");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("beamT", "nPhotonCandidates");
 
-  tree1->Branch("pX_Proton",&pX_Proton,"pX_Proton/D");
-  tree1->Branch("pY_Proton",&pY_Proton,"pY_Proton/D");
-  tree1->Branch("pZ_Proton",&pZ_Proton,"pZ_Proton/D");
-  tree1->Branch("pX_PiMinus",&pX_PiMinus,"pX_PiMinus/D");
-  tree1->Branch("pY_PiMinus",&pY_PiMinus,"pY_PiMinus/D");
-  tree1->Branch("pZ_PiMinus",&pZ_PiMinus,"pZ_PiMinus/D");
-  tree1->Branch("pX_Photon0",&pX_Photon0,"pX_Photon0/D");
-  tree1->Branch("pY_Photon0",&pY_Photon0,"pY_Photon0/D");
-  tree1->Branch("pZ_Photon0",&pZ_Photon0,"pZ_Photon0/D");
-  tree1->Branch("pX_Photon1",&pX_Photon1,"pX_Photon1/D");
-  tree1->Branch("pY_Photon1",&pY_Photon1,"pY_Photon1/D");
-  tree1->Branch("pZ_Photon1",&pZ_Photon1,"pZ_Photon1/D");
+  locTreeBranchRegister.Register_Single<Double_t>("pX_Proton");
+  locTreeBranchRegister.Register_Single<Double_t>("pY_Proton");
+  locTreeBranchRegister.Register_Single<Double_t>("pZ_Proton");
+  locTreeBranchRegister.Register_Single<Double_t>("pX_PiMinus");
+  locTreeBranchRegister.Register_Single<Double_t>("pY_PiMinus");
+  locTreeBranchRegister.Register_Single<Double_t>("pZ_PiMinus");
+  locTreeBranchRegister.Register_Single<Double_t>("pX_Photon0");
+  locTreeBranchRegister.Register_Single<Double_t>("pY_Photon0");
+  locTreeBranchRegister.Register_Single<Double_t>("pZ_Photon0");
+  locTreeBranchRegister.Register_Single<Double_t>("pX_Photon1");
+  locTreeBranchRegister.Register_Single<Double_t>("pY_Photon1");
+  locTreeBranchRegister.Register_Single<Double_t>("pZ_Photon1");
 
-  tree1->Branch("CL",&CL,"CL/D");
+  locTreeBranchRegister.Register_Single<Double_t>("x_shower0");
+  locTreeBranchRegister.Register_Single<Double_t>("y_shower0");
+  locTreeBranchRegister.Register_Single<Double_t>("z_shower0");
+  locTreeBranchRegister.Register_Single<Double_t>("E_shower0");
+  locTreeBranchRegister.Register_Single<Double_t>("t_shower0");
+  locTreeBranchRegister.Register_Single<Bool_t>("BCAL_shower0");
+  locTreeBranchRegister.Register_Single<Double_t>("x_shower1");
+  locTreeBranchRegister.Register_Single<Double_t>("y_shower1");
+  locTreeBranchRegister.Register_Single<Double_t>("z_shower1");
+  locTreeBranchRegister.Register_Single<Double_t>("E_shower1");
+  locTreeBranchRegister.Register_Single<Double_t>("t_shower1");
+  locTreeBranchRegister.Register_Single<Bool_t>("BCAL_shower1");
 
-  tree1->Branch("vertex_X",&vertex_X,"vertex_X/D");
-  tree1->Branch("vertex_Y",&vertex_Y,"vertex_Y/D");
-  tree1->Branch("vertex_Z",&vertex_Z,"vertex_Z/D");
-  tree1->Branch("vertex_T",&vertex_T,"vertex_T/D");
+  locTreeBranchRegister.Register_Single<Double_t>("vertex_X");
+  locTreeBranchRegister.Register_Single<Double_t>("vertex_Y");
+  locTreeBranchRegister.Register_Single<Double_t>("vertex_Z");
+  locTreeBranchRegister.Register_Single<Double_t>("vertex_T");
 
-  tree1->Branch("N_thrown",&N_thrown,"N_thrown/I");
-  tree1->Branch("pX_thrown",pX_thrown,"pX_thrown[N_thrown]/D");
-  tree1->Branch("pY_thrown",pY_thrown,"pY_thrown[N_thrown]/D");
-  tree1->Branch("pZ_thrown",pZ_thrown,"pZ_thrown[N_thrown]/D");
-  tree1->Branch("E_thrown",E_thrown,"E_thrown[N_thrown]/D");
-  tree1->Branch("type_thrown",type_thrown,"type_thrown[N_thrown]/I");
-  tree1->Branch("pdgtype_thrown",pdgtype_thrown,"pdgtype_thrown[N_thrown]/I");
-  tree1->Branch("myid_thrown",myid_thrown,"myid_thrown[N_thrown]/I");
-  tree1->Branch("parentid_thrown",parentid_thrown,"parentid_thrown[N_thrown]/I");
+  locTreeBranchRegister.Register_Single<Int_t>("N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("pX_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("pY_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("pZ_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Double_t>("E_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Int_t>("type_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Int_t>("pdgtype_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Int_t>("myid_thrown", "N_thrown");
+  locTreeBranchRegister.Register_FundamentalArray<Int_t>("parentid_thrown", "N_thrown");
+
+  locTreeBranchRegister.Register_Single<Double_t>("CL");
+
+  //REGISTER BRANCHES
+  dTreeInterface->Create_Branches(locTreeBranchRegister);
+
+  // create root folder and cd to it, store main dir
+  TDirectory *main = gDirectory;
+  gDirectory->mkdir("SRC_1p1pi1pi0")->cd();
 
   h_BCAL = new TH2D("h_BCAL","BCAL;z [cm];r [cm]",100,-200.,800.,100,0.,200.);
   h_FCAL = new TH2D("h_FCAL","FCAL;z [cm];r [cm]",100,-200.,800.,100,0.,200.);
   h_m2gamma = new TH1D("h_m2gamma",";m2gamma [GeV];",100,0.,1.);
   h_m2pi = new TH1D("h_m2pi",";m2pi [GeV];",250,0.,5.);
+
+  main->cd();
 
   return NOERROR;
 }
@@ -144,93 +137,39 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   loop->Get(reaction);
 
-  japp->RootWriteLock();
+  dTreeFillData.Fill_Single<Int_t>("eventNumber", eventnumber);
 
-  eventNumber = eventnumber;
+  double E_shower[2];
+  double x_shower[2];
+  double y_shower[2];
+  double z_shower[2];
+  double t_shower[2];
+  bool BCAL_shower[2];
 
-  // Clearing output arrays                                                                             
-  for (unsigned int ii = 0; ii < 100; ii++)
-    {
-      beamEnergy[ii] = 0;
-      beamT[ii] = 0;
-    }                
-  for (unsigned int ii = 0; ii < 2; ii++)
-    {
-      E_shower[ii] = 0;
-      x_shower[ii] = 0;
-      y_shower[ii] = 0;
-      z_shower[ii] = 0;
-      t_shower[ii] = 0;
-      BCAL_shower[ii] = false;
-    }
+  if (mcthrown.size() > 0) {
+    dTreeFillData.Fill_Single<Int_t>("N_thrown", mcthrown.size());
+    dTreeFillData.Fill_Single<Int_t>("beamEnergy_thrown",reaction[0]->beam.energy());
 
-  pX_Proton = 0;
-  pY_Proton = 0;
-  pZ_Proton = 0;
-  pX_PiMinus = 0;
-  pY_PiMinus = 0;
-  pZ_PiMinus = 0;
-  pX_Photon0 = 0;
-  pY_Photon0 = 0;
-  pZ_Photon0 = 0;
-  pX_Photon1 = 0;
-  pY_Photon1 = 0;
-  pZ_Photon1 = 0;
+    for (unsigned int ii = 0; ii < mcthrown.size(); ii++)
+      {
+	dTreeFillData.Fill_Array<Int_t>("type_thrown", mcthrown[ii]->type, ii);
+	dTreeFillData.Fill_Array<Double_t>("pX_thrown", mcthrown[ii]->momentum().X(), ii);
+	dTreeFillData.Fill_Array<Double_t>("pY_thrown", mcthrown[ii]->momentum().Y(), ii);
+	dTreeFillData.Fill_Array<Double_t>("pZ_thrown", mcthrown[ii]->momentum().Z(), ii);
+	dTreeFillData.Fill_Array<Double_t>("E_thrown", mcthrown[ii]->energy(), ii);
+	dTreeFillData.Fill_Array<Int_t>("pdgtype_thrown", mcthrown[ii]->pdgtype, ii);
+	dTreeFillData.Fill_Array<Int_t>("myid_thrown", mcthrown[ii]->myid, ii);
+	dTreeFillData.Fill_Array<Int_t>("parentid_thrown", mcthrown[ii]->parentid, ii);
+      }
+  }
   
-  CL = 0;
-  vertex_X = 0;
-  vertex_Y = 0;
-  vertex_Z = 0;
-  vertex_T = 0;
-  
-  for (unsigned int ii = 0; ii < 19; ii++)
-    {
-      type_thrown[ii] = 0;
-      pX_thrown[ii] = 0;
-      pY_thrown[ii] = 0;
-      pZ_thrown[ii] = 0;
-      E_thrown[ii] = 0;
-    }
-
-  beamEnergy_thrown = 0;
-
-  N_thrown = mcthrown.size();
-
-  if ((N_thrown > 0) and (N_thrown < 19))
-    {
-
-      beamEnergy_thrown = reaction[0]->beam.energy();
-      
-      for (unsigned int ii = 0; ii < N_thrown; ii++)
-	{
-	  if (N_thrown != mcthrown.size())
-	    cout << "\n"<< N_thrown <<"\t"<< mcthrown.size()<<"\t"<<ii<<"\ta\n"; 
-	  type_thrown[ii] = mcthrown[ii]->type;
-	  pX_thrown[ii] = mcthrown[ii]->momentum().X();
-	  pY_thrown[ii] = mcthrown[ii]->momentum().Y();
-	  pZ_thrown[ii] = mcthrown[ii]->momentum().Z();
-	  E_thrown[ii] = mcthrown[ii]->energy();
-          pdgtype_thrown[ii] = mcthrown[ii]->pdgtype;
-          myid_thrown[ii] = mcthrown[ii]->myid;
-          parentid_thrown[ii] = mcthrown[ii]->parentid;
-
-	}
-
-    }
-
-  N_thrown = mcthrown.size();  
-
   fcal_ncl    = 0;
   fcal_en_cl  = 0;
   fcal_x_cl   = 0;
   fcal_y_cl   = 0;
 
   if ((ch_tracks.size() != 2) || (showers.size() != 2))
-    {
-      japp->RootUnLock();
-
       return NOERROR;
-    }
 
   map<Particle_t, int> targetParticles = {
     {Proton,1},
@@ -242,17 +181,17 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   GetHypotheses(ch_tracks,targetParticles,emptyHypothesis,hypothesisList);
   
-  nHyp = hypothesisList.size();
+  Int_t nHyp = hypothesisList.size();
   
-  nPhotonCandidates = beam_ph.size();
+  dTreeFillData.Fill_Single<Int_t>("nPhotonCandidates", beam_ph.size());
   
   if(beam_ph.size() > 0)
     {
       
       for(unsigned int ii = 0; ii < beam_ph.size(); ii++)
 	{
-	  beamEnergy[ii] = beam_ph[ii]->momentum().Mag();
-	  beamT[ii] = beam_ph[ii]->time();
+	  dTreeFillData.Fill_Array<Double_t>("beamEnergy", beam_ph[ii]->momentum().Mag(), ii);
+	  dTreeFillData.Fill_Array<Double_t>("beamT", beam_ph[ii]->time(), ii);
 	}
       
     }
@@ -268,8 +207,9 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       z_shower[ii] = shower->dSpacetimeVertex.Z();
       t_shower[ii] = shower->dSpacetimeVertex.T();
       BCAL_shower[ii] = (shower->dDetectorSystem == SYS_BCAL);
-      
-      // Filling shower positions                                                              
+
+      // Filling shower positions
+      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       if (BCAL_shower[ii])
 	{
 	  h_BCAL->Fill(z_shower[ii],shower->dSpacetimeVertex.Perp());
@@ -278,17 +218,14 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
 	{
 	  h_FCAL->Fill(z_shower[ii],shower->dSpacetimeVertex.Perp());
 	}
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       
     }
-  
+
   if (nHyp == 0)
-    {
-      japp->RootUnLock();
-      
       return NOERROR;
-    }
   
-  for (unsigned int ii = 0; ii < nHyp; ii++)
+  for (int ii = 0; ii < nHyp; ii++)
     {
       
       map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[ii];
@@ -326,13 +263,15 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
             
       dKinFitter->Fit_Reaction();
       
-      CL = dKinFitter->Get_ConfidenceLevel();
-            
-      if (CL == 0)
+      dTreeFillData.Fill_Single<Double_t>("CL",dKinFitter->Get_ConfidenceLevel());
+      if (dKinFitter->Get_ConfidenceLevel() == 0)
 	continue;
       
       TVector3 vertex;
-      double vertex_x, vertex_y, vertex_z, vertex_t;
+      double vertex_x = 0;
+      double vertex_y = 0;
+      double vertex_z = 0;
+      double vertex_t = 0;
 
       shared_ptr<DKinFitParticle> fitProton = NULL;
       shared_ptr<DKinFitParticle> fitPiMinus = NULL;
@@ -381,10 +320,10 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       TVector3 vertexPos(vertex_x,vertex_y,vertex_z);
       
-      vertex_X = vertex_x;
-      vertex_Y = vertex_y;
-      vertex_Z = vertex_z;
-      vertex_T = vertex_t;
+      dTreeFillData.Fill_Single<Double_t>("vertex_X", vertex_x);
+      dTreeFillData.Fill_Single<Double_t>("vertex_Y", vertex_y);
+      dTreeFillData.Fill_Single<Double_t>("vertex_Z", vertex_z);
+      dTreeFillData.Fill_Single<Double_t>("vertex_T", vertex_t);
       
       // Showers using fit vertex
       TVector3 p_shower0(x_shower[0]-vertex_x,y_shower[0]-vertex_y,z_shower[0]-vertex_z);
@@ -395,33 +334,48 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       // Filling invariant mass without fitting
       double m2gammaSq = 2.*(p_shower1.Mag()*p_shower0.Mag() - p_shower1.Dot(p_shower0));
-      h_m2gamma->Fill(sqrt(m2gammaSq));
       
       TLorentzVector vProton(fitProton->Get_Momentum(),sqrt(fitProton->Get_Momentum().Mag2() + mN*mN));
       TLorentzVector vPiMinus(fitPiMinus->Get_Momentum(),sqrt(fitPiMinus->Get_Momentum().Mag2() + mpip*mpip));
       TLorentzVector vPhoton1(fitPhoton1->Get_Momentum(),fitPhoton1->Get_Momentum().Mag());
       TLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
       TLorentzVector vPi0 = vPhoton0 + vPhoton1;
+
+      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      h_m2gamma->Fill(sqrt(m2gammaSq));
       h_m2pi->Fill((vPi0+vPiMinus).M());
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       
-      pX_Proton = vProton.X();
-      pY_Proton = vProton.Y();
-      pZ_Proton = vProton.Z();
-      pX_PiMinus = vPiMinus.X();
-      pY_PiMinus = vPiMinus.Y();
-      pZ_PiMinus = vPiMinus.Z();
-      pX_Photon0 = vPhoton0.X();
-      pY_Photon0 = vPhoton0.Y();
-      pZ_Photon0 = vPhoton0.Z();
-      pX_Photon1 = vPhoton1.X();
-      pY_Photon1 = vPhoton1.Y();
-      pZ_Photon1 = vPhoton1.Z();
+      dTreeFillData.Fill_Single<Double_t>("pX_Proton", vProton.X());
+      dTreeFillData.Fill_Single<Double_t>("pY_Proton", vProton.Y());
+      dTreeFillData.Fill_Single<Double_t>("pZ_Proton", vProton.Z());
+      dTreeFillData.Fill_Single<Double_t>("pX_PiMinus", vPiMinus.X());
+      dTreeFillData.Fill_Single<Double_t>("pY_PiMinus", vPiMinus.Y());
+      dTreeFillData.Fill_Single<Double_t>("pZ_PiMinus", vPiMinus.Z());
+      dTreeFillData.Fill_Single<Double_t>("pX_Photon0", vPhoton0.X());
+      dTreeFillData.Fill_Single<Double_t>("pY_Photon0", vPhoton0.Y());
+      dTreeFillData.Fill_Single<Double_t>("pZ_Photon0", vPhoton0.Z());
+      dTreeFillData.Fill_Single<Double_t>("pX_Photon1", vPhoton1.X());
+      dTreeFillData.Fill_Single<Double_t>("pY_Photon1", vPhoton1.Y());
+      dTreeFillData.Fill_Single<Double_t>("pZ_Photon1", vPhoton1.Z());
       
+      dTreeFillData.Fill_Single<Double_t>("E_shower0", E_shower[0]);
+      dTreeFillData.Fill_Single<Double_t>("x_shower0", x_shower[0]);
+      dTreeFillData.Fill_Single<Double_t>("y_shower0", y_shower[0]);
+      dTreeFillData.Fill_Single<Double_t>("z_shower0", z_shower[0]);
+      dTreeFillData.Fill_Single<Double_t>("t_shower0", t_shower[0]);
+      dTreeFillData.Fill_Single<Bool_t>("BCAL_shower0", BCAL_shower[0]);
+      dTreeFillData.Fill_Single<Double_t>("E_shower1", E_shower[1]);
+      dTreeFillData.Fill_Single<Double_t>("x_shower1", x_shower[1]);
+      dTreeFillData.Fill_Single<Double_t>("y_shower1", y_shower[1]);
+      dTreeFillData.Fill_Single<Double_t>("z_shower1", z_shower[1]);
+      dTreeFillData.Fill_Single<Double_t>("t_shower1", t_shower[1]);
+      dTreeFillData.Fill_Single<Bool_t>("BCAL_shower1", BCAL_shower[1]);
+  
     }
   
-  tree1->Fill();
-  
-  japp->RootUnLock();
+  //FILL TTREE
+  dTreeInterface->Fill(dTreeFillData);
   
   return NOERROR;
 
@@ -442,6 +396,8 @@ jerror_t DEventProcessor_1p1pi1pi0::erun(void)
 //------------------
 jerror_t DEventProcessor_1p1pi1pi0::fini(void)
 {
+
+  delete dTreeInterface; //saves trees to file, closes file
 
   return NOERROR;
 }

@@ -14,6 +14,7 @@ using namespace jana;
 #include <PID/DBeamPhoton.h>
 #include <KINFITTER/DKinFitter.h>
 #include <ANALYSIS/DKinFitUtils_GlueX.h>
+#include "ANALYSIS/DTreeInterface.h"
 #include <PID/DBeamPhoton.h>
 #include <PID/DChargedTrack.h>
 #include <PID/DParticleID.h>
@@ -49,11 +50,26 @@ class DEventProcessor_1p1pi1pi0:public JEventProcessor{
 		     vector<map<Particle_t, vector<const DChargedTrackHypothesis*> > > &hypothesisList
 		     ) const;
 
-  TTree* tree1;
-  
   Int_t fcal_ncl; 
   
   Float_t fcal_en_cl, fcal_x_cl, fcal_y_cl;
+
+  //TREE
+  DTreeInterface* dTreeInterface;
+  //thread_local: Each thread has its own object: no lock needed
+  //important: manages it's own data internally: don't want to call new/delete every event!
+  static thread_local DTreeFillData dTreeFillData;
+
+  // Histograms
+  
+  TH2D * h_BCAL;
+  TH2D * h_FCAL;
+  TH1D * h_m2gamma;
+  TH1D * h_m2pi;
+
+  const double c = 29.98;
+  const double mN = 0.93892;
+  const double mpip = 0.139570;
   
 };
 
