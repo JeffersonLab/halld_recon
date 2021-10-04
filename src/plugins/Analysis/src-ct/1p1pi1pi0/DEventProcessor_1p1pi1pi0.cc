@@ -31,7 +31,7 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
  
   //TTREE INTERFACE
   //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
-  dTreeInterface = DTreeInterface::Create_DTreeInterface("tree_1p1pi1pi0", "tree_1p1pi1pi0.root");
+  dTreeInterface = DTreeInterface::Create_DTreeInterface("tree", "tree_1p1pi1pi0.root");
 
   //TTREE BRANCHES
   DTreeBranchRegister locTreeBranchRegister;
@@ -73,6 +73,7 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
   locTreeBranchRegister.Register_Single<Double_t>("vertex_T");
 
   locTreeBranchRegister.Register_Single<Int_t>("N_thrown");
+  locTreeBranchRegister.Register_Single<Int_t>("beamEnergy_thrown");
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("pX_thrown", "N_thrown");
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("pY_thrown", "N_thrown");
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("pZ_thrown", "N_thrown");
