@@ -31,7 +31,11 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
  
   //TTREE INTERFACE
   //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
-  dTreeInterface = DTreeInterface::Create_DTreeInterface("tree_1p1pi1pi0", "tree_1p1pi1pi0.root");
+  string treeName = "tree_1p1pi1pi0";
+  string treeFile = "tree_1p1pi1pi0.root";
+  gPARMS->SetDefaultParameter("SRC_RHO_MINUS:TREENAME", treeName);
+  gPARMS->SetDefaultParameter("SRC_RHO_MINUS:TREEFILE", treeFile);
+  dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
 
   //TTREE BRANCHES
   DTreeBranchRegister locTreeBranchRegister;
