@@ -174,7 +174,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   fcal_y_cl   = 0;
 
   if ((ch_tracks.size() != 2) || (showers.size() != 2))
-      return NOERROR;
+    return NOERROR;
 
   map<Particle_t, int> targetParticles = {
     {Proton,1},
@@ -227,157 +227,152 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       
     }
 
-  if (nHyp == 0)
-      return NOERROR;
+  if (nHyp != 1)
+    return NOERROR;
+      
+  map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[0];
+  const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
+  const DChargedTrackHypothesis * hyp_pim = thisHyp[PiMinus][0];
   
-  for (int ii = 0; ii < nHyp; ii++)
+  DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
+  DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
+  
+  dKinFitUtils->Reset_NewEvent();
+  dKinFitter->Reset_NewEvent();
+  dKinFitter->Reset_NewFit();
+  
+  set<shared_ptr<DKinFitParticle> > FinalParticles, FinalPhotons, NoParticles;
+  
+  shared_ptr<DKinFitParticle> myProton = dKinFitUtils->Make_DetectedParticle(hyp_pr->Get_TrackTimeBased());
+  shared_ptr<DKinFitParticle> myPiMinus = dKinFitUtils->Make_DetectedParticle(hyp_pim->Get_TrackTimeBased());
+  FinalParticles.insert(myProton);
+  FinalParticles.insert(myPiMinus);
+  
+  shared_ptr<DKinFitParticle> myPhoton0 = dKinFitUtils->Make_DetectedShower(showers[0],Gamma);
+  shared_ptr<DKinFitParticle> myPhoton1 = dKinFitUtils->Make_DetectedShower(showers[1],Gamma);
+  FinalParticles.insert(myPhoton0);
+  FinalParticles.insert(myPhoton1);
+  FinalPhotons.insert(myPhoton0);
+  FinalPhotons.insert(myPhoton1);
+  
+  shared_ptr<DKinFitParticle> myPion = dKinFitUtils->Make_DecayingParticle(Pi0,NoParticles,FinalPhotons);
+  
+  shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint = dKinFitUtils->Make_VertexConstraint(FinalParticles,NoParticles,hyp_pr->Get_TrackTimeBased()->position());
+  dKinFitter->Add_Constraint(locProductionVertexConstraint);
+  
+  shared_ptr<DKinFitConstraint_Mass> pionMassConstraint = dKinFitUtils->Make_MassConstraint(myPion);
+  dKinFitter->Add_Constraint(pionMassConstraint);
+  
+  dKinFitter->Fit_Reaction();
+  
+  dTreeFillData.Fill_Single<Double_t>("CL",dKinFitter->Get_ConfidenceLevel());
+  if (dKinFitter->Get_ConfidenceLevel() == 0)
+    return NOERROR;
+  
+  TVector3 vertex;
+  double vertex_x = 0;
+  double vertex_y = 0;
+  double vertex_z = 0;
+  double vertex_t = 0;
+  
+  shared_ptr<DKinFitParticle> fitProton = NULL;
+  shared_ptr<DKinFitParticle> fitPiMinus = NULL;
+  shared_ptr<DKinFitParticle> fitPhoton0 = NULL;
+  shared_ptr<DKinFitParticle> fitPhoton1 = NULL;
+  
+  // Loop over particles
+  set<shared_ptr<DKinFitParticle> >myParticles = dKinFitter->Get_KinFitParticles();
+  set<shared_ptr<DKinFitParticle> >::iterator locParticleIterator=myParticles.begin();
+  for(; locParticleIterator != myParticles.end(); ++locParticleIterator)
     {
       
-      map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[ii];
-      const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
-      const DChargedTrackHypothesis * hyp_pim = thisHyp[PiMinus][0];
+      int pid = (*locParticleIterator)->Get_PID();
       
-      DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
-      DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
+      switch (pid)
+	{
+	case 2212:
+	  fitProton = (*locParticleIterator);
+	  vertex = fitProton->Get_Position();
+	  vertex_x = vertex.X();
+	  vertex_y = vertex.Y();
+	  vertex_z = vertex.Z();
+	  vertex_t = fitProton->Get_Time();
+	  break;
+	case -211:
+	  fitPiMinus = (*locParticleIterator);
+	  break;
+	case 22:
+	  if (fitPhoton0 == NULL)
+	    {
+	      fitPhoton0 = (*locParticleIterator);
+	    }
+	  else
+	    {
+	      fitPhoton1 = (*locParticleIterator);
+	    }
+	  break;
+	case 111:
+	  break;
+	default:
+	  cout << pid << "\n\n";
+	  break;
+	}
       
-      dKinFitUtils->Reset_NewEvent();
-      dKinFitter->Reset_NewEvent();
-      dKinFitter->Reset_NewFit();
-      
-      set<shared_ptr<DKinFitParticle> > FinalParticles, FinalPhotons, NoParticles;
-      
-      shared_ptr<DKinFitParticle> myProton = dKinFitUtils->Make_DetectedParticle(hyp_pr->Get_TrackTimeBased());
-      shared_ptr<DKinFitParticle> myPiMinus = dKinFitUtils->Make_DetectedParticle(hyp_pim->Get_TrackTimeBased());
-      FinalParticles.insert(myProton);
-      FinalParticles.insert(myPiMinus);
-      
-      shared_ptr<DKinFitParticle> myPhoton0 = dKinFitUtils->Make_DetectedShower(showers[0],Gamma);
-      shared_ptr<DKinFitParticle> myPhoton1 = dKinFitUtils->Make_DetectedShower(showers[1],Gamma);
-      FinalParticles.insert(myPhoton0);
-      FinalParticles.insert(myPhoton1);
-      FinalPhotons.insert(myPhoton0);
-      FinalPhotons.insert(myPhoton1);
-      
-      shared_ptr<DKinFitParticle> myPion = dKinFitUtils->Make_DecayingParticle(Pi0,NoParticles,FinalPhotons);
-      
-      shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint = dKinFitUtils->Make_VertexConstraint(FinalParticles,NoParticles,hyp_pr->Get_TrackTimeBased()->position());
-      dKinFitter->Add_Constraint(locProductionVertexConstraint);
-      
-      shared_ptr<DKinFitConstraint_Mass> pionMassConstraint = dKinFitUtils->Make_MassConstraint(myPion);
-      dKinFitter->Add_Constraint(pionMassConstraint);
-            
-      dKinFitter->Fit_Reaction();
-      
-      dTreeFillData.Fill_Single<Double_t>("CL",dKinFitter->Get_ConfidenceLevel());
-      if (dKinFitter->Get_ConfidenceLevel() == 0)
-	continue;
-      
-      TVector3 vertex;
-      double vertex_x = 0;
-      double vertex_y = 0;
-      double vertex_z = 0;
-      double vertex_t = 0;
-
-      shared_ptr<DKinFitParticle> fitProton = NULL;
-      shared_ptr<DKinFitParticle> fitPiMinus = NULL;
-      shared_ptr<DKinFitParticle> fitPhoton0 = NULL;
-      shared_ptr<DKinFitParticle> fitPhoton1 = NULL;
-      
-      // Loop over particles
-      set<shared_ptr<DKinFitParticle> >myParticles = dKinFitter->Get_KinFitParticles();
-      set<shared_ptr<DKinFitParticle> >::iterator locParticleIterator=myParticles.begin();
-      for(; locParticleIterator != myParticles.end(); ++locParticleIterator)
-        {
-
-          int pid = (*locParticleIterator)->Get_PID();
-
-          switch (pid)
-            {
-            case 2212:
-              fitProton = (*locParticleIterator);
-              vertex = fitProton->Get_Position();
-              vertex_x = vertex.X();
-              vertex_y = vertex.Y();
-              vertex_z = vertex.Z();
-              vertex_t = fitProton->Get_Time();
-              break;
-	    case -211:
-              fitPiMinus = (*locParticleIterator);
-              break;
-            case 22:
-              if (fitPhoton0 == NULL)
-                {
-                  fitPhoton0 = (*locParticleIterator);
-                }
-              else
-                {
-                  fitPhoton1 = (*locParticleIterator);
-                }
-              break;
-            case 111:
-              break;
-            default:
-              cout << pid << "\n\n";
-              break;
-            }
-
-        }
-      
-      TVector3 vertexPos(vertex_x,vertex_y,vertex_z);
-      
-      dTreeFillData.Fill_Single<Double_t>("vertex_X", vertex_x);
-      dTreeFillData.Fill_Single<Double_t>("vertex_Y", vertex_y);
-      dTreeFillData.Fill_Single<Double_t>("vertex_Z", vertex_z);
-      dTreeFillData.Fill_Single<Double_t>("vertex_T", vertex_t);
-      
-      // Showers using fit vertex
-      TVector3 p_shower0(x_shower[0]-vertex_x,y_shower[0]-vertex_y,z_shower[0]-vertex_z);
-      p_shower0 = p_shower0.Unit()*E_shower[0];
-      
-      TVector3 p_shower1(x_shower[1]-vertex_x,y_shower[1]-vertex_y,z_shower[1]-vertex_z);
-      p_shower1 = p_shower1.Unit()*E_shower[1];
-      
-      // Filling invariant mass without fitting
-      double m2gammaSq = 2.*(p_shower1.Mag()*p_shower0.Mag() - p_shower1.Dot(p_shower0));
-      
-      TLorentzVector vProton(fitProton->Get_Momentum(),sqrt(fitProton->Get_Momentum().Mag2() + mN*mN));
-      TLorentzVector vPiMinus(fitPiMinus->Get_Momentum(),sqrt(fitPiMinus->Get_Momentum().Mag2() + mpip*mpip));
-      TLorentzVector vPhoton1(fitPhoton1->Get_Momentum(),fitPhoton1->Get_Momentum().Mag());
-      TLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
-      TLorentzVector vPi0 = vPhoton0 + vPhoton1;
-
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-      h_m2gamma->Fill(sqrt(m2gammaSq));
-      h_m2pi->Fill((vPi0+vPiMinus).M());
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-      
-      dTreeFillData.Fill_Single<Double_t>("pX_Proton", vProton.X());
-      dTreeFillData.Fill_Single<Double_t>("pY_Proton", vProton.Y());
-      dTreeFillData.Fill_Single<Double_t>("pZ_Proton", vProton.Z());
-      dTreeFillData.Fill_Single<Double_t>("pX_PiMinus", vPiMinus.X());
-      dTreeFillData.Fill_Single<Double_t>("pY_PiMinus", vPiMinus.Y());
-      dTreeFillData.Fill_Single<Double_t>("pZ_PiMinus", vPiMinus.Z());
-      dTreeFillData.Fill_Single<Double_t>("pX_Photon0", vPhoton0.X());
-      dTreeFillData.Fill_Single<Double_t>("pY_Photon0", vPhoton0.Y());
-      dTreeFillData.Fill_Single<Double_t>("pZ_Photon0", vPhoton0.Z());
-      dTreeFillData.Fill_Single<Double_t>("pX_Photon1", vPhoton1.X());
-      dTreeFillData.Fill_Single<Double_t>("pY_Photon1", vPhoton1.Y());
-      dTreeFillData.Fill_Single<Double_t>("pZ_Photon1", vPhoton1.Z());
-      
-      dTreeFillData.Fill_Single<Double_t>("E_shower0", E_shower[0]);
-      dTreeFillData.Fill_Single<Double_t>("x_shower0", x_shower[0]);
-      dTreeFillData.Fill_Single<Double_t>("y_shower0", y_shower[0]);
-      dTreeFillData.Fill_Single<Double_t>("z_shower0", z_shower[0]);
-      dTreeFillData.Fill_Single<Double_t>("t_shower0", t_shower[0]);
-      dTreeFillData.Fill_Single<Bool_t>("BCAL_shower0", BCAL_shower[0]);
-      dTreeFillData.Fill_Single<Double_t>("E_shower1", E_shower[1]);
-      dTreeFillData.Fill_Single<Double_t>("x_shower1", x_shower[1]);
-      dTreeFillData.Fill_Single<Double_t>("y_shower1", y_shower[1]);
-      dTreeFillData.Fill_Single<Double_t>("z_shower1", z_shower[1]);
-      dTreeFillData.Fill_Single<Double_t>("t_shower1", t_shower[1]);
-      dTreeFillData.Fill_Single<Bool_t>("BCAL_shower1", BCAL_shower[1]);
-  
     }
+  
+  TVector3 vertexPos(vertex_x,vertex_y,vertex_z);
+  
+  dTreeFillData.Fill_Single<Double_t>("vertex_X", vertex_x);
+  dTreeFillData.Fill_Single<Double_t>("vertex_Y", vertex_y);
+  dTreeFillData.Fill_Single<Double_t>("vertex_Z", vertex_z);
+  dTreeFillData.Fill_Single<Double_t>("vertex_T", vertex_t);
+  
+  // Showers using fit vertex
+  TVector3 p_shower0(x_shower[0]-vertex_x,y_shower[0]-vertex_y,z_shower[0]-vertex_z);
+  p_shower0 = p_shower0.Unit()*E_shower[0];
+  
+  TVector3 p_shower1(x_shower[1]-vertex_x,y_shower[1]-vertex_y,z_shower[1]-vertex_z);
+  p_shower1 = p_shower1.Unit()*E_shower[1];
+  
+  // Filling invariant mass without fitting
+  double m2gammaSq = 2.*(p_shower1.Mag()*p_shower0.Mag() - p_shower1.Dot(p_shower0));
+  
+  TLorentzVector vProton(fitProton->Get_Momentum(),sqrt(fitProton->Get_Momentum().Mag2() + mN*mN));
+  TLorentzVector vPiMinus(fitPiMinus->Get_Momentum(),sqrt(fitPiMinus->Get_Momentum().Mag2() + mpip*mpip));
+  TLorentzVector vPhoton1(fitPhoton1->Get_Momentum(),fitPhoton1->Get_Momentum().Mag());
+  TLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
+  TLorentzVector vPi0 = vPhoton0 + vPhoton1;
+  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  h_m2gamma->Fill(sqrt(m2gammaSq));
+  h_m2pi->Fill((vPi0+vPiMinus).M());
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  
+  dTreeFillData.Fill_Single<Double_t>("pX_Proton", vProton.X());
+  dTreeFillData.Fill_Single<Double_t>("pY_Proton", vProton.Y());
+  dTreeFillData.Fill_Single<Double_t>("pZ_Proton", vProton.Z());
+  dTreeFillData.Fill_Single<Double_t>("pX_PiMinus", vPiMinus.X());
+  dTreeFillData.Fill_Single<Double_t>("pY_PiMinus", vPiMinus.Y());
+  dTreeFillData.Fill_Single<Double_t>("pZ_PiMinus", vPiMinus.Z());
+  dTreeFillData.Fill_Single<Double_t>("pX_Photon0", vPhoton0.X());
+  dTreeFillData.Fill_Single<Double_t>("pY_Photon0", vPhoton0.Y());
+  dTreeFillData.Fill_Single<Double_t>("pZ_Photon0", vPhoton0.Z());
+  dTreeFillData.Fill_Single<Double_t>("pX_Photon1", vPhoton1.X());
+  dTreeFillData.Fill_Single<Double_t>("pY_Photon1", vPhoton1.Y());
+  dTreeFillData.Fill_Single<Double_t>("pZ_Photon1", vPhoton1.Z());
+  
+  dTreeFillData.Fill_Single<Double_t>("E_shower0", E_shower[0]);
+  dTreeFillData.Fill_Single<Double_t>("x_shower0", x_shower[0]);
+  dTreeFillData.Fill_Single<Double_t>("y_shower0", y_shower[0]);
+  dTreeFillData.Fill_Single<Double_t>("z_shower0", z_shower[0]);
+  dTreeFillData.Fill_Single<Double_t>("t_shower0", t_shower[0]);
+  dTreeFillData.Fill_Single<Bool_t>("BCAL_shower0", BCAL_shower[0]);
+  dTreeFillData.Fill_Single<Double_t>("E_shower1", E_shower[1]);
+  dTreeFillData.Fill_Single<Double_t>("x_shower1", x_shower[1]);
+  dTreeFillData.Fill_Single<Double_t>("y_shower1", y_shower[1]);
+  dTreeFillData.Fill_Single<Double_t>("z_shower1", z_shower[1]);
+  dTreeFillData.Fill_Single<Double_t>("t_shower1", t_shower[1]);
+  dTreeFillData.Fill_Single<Bool_t>("BCAL_shower1", BCAL_shower[1]);
   
   //FILL TTREE
   dTreeInterface->Fill(dTreeFillData);
