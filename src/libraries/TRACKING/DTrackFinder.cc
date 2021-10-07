@@ -183,7 +183,7 @@ bool DTrackFinder::FindAxialSegments(void){
             for (unsigned int iHit = 0; iHit < neighbors.size(); iHit++) dir += neighbors[iHit]->wire->origin;
             if(dir.Mag() != 0.) dir.SetMag(1.);
          }
-
+	 
          if (VERBOSE){
             jout << " Axial Segment Formed: " << endl;
             for(unsigned int jj = 0; jj<neighbors.size(); jj++){
@@ -743,6 +743,14 @@ bool DTrackFinder::LinkFDCSegments(void){
       } // loop over packages
    } //loop over existing tracks
 
+   // Make track candidates out of single segments not connected to other tracks
+   for (unsigned int j=0;j<4;j++){
+     for (unsigned int k=0;k<fdc_segments[j].size();k++){
+       if (fdc_segments[j][k].matched==false){
+	 fdc_tracks.push_back(fdc_segments[j][k]);
+       }
+     }
+   }
 
    return true;
 }
@@ -844,4 +852,3 @@ bool DTrackFinder::FindIntersectionsWithCylinder(double R,
 
    return true;
 }
-
