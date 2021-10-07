@@ -27,13 +27,15 @@ class DTrackTimeBased_factory_StraightLine:public jana::JFactory<DTrackTimeBased
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
+  void FilterDuplicates(void);
   void GetStartTime(const DTrackWireBased *track,
 		    vector<const DSCHit*>&sc_hits,
 		    vector<const DTOFPoint*>&tof_points,
 		    vector<const DBCALShower*>&bcal_showers,	
 		    vector<const DFCALShower*>&fcal_showers,
 		    double &t0,DetectorSystem_t &t0_detector) const;
-  
+
+  int DEBUG_LEVEL=0;
   double CDC_MATCH_CUT,FDC_MATCH_CUT;
 
   // outer detector geom info

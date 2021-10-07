@@ -20,6 +20,27 @@ using namespace std;
 
 using namespace jana;
 
+
+bool DTrackTimeBased_straightline_cmp(DTrackTimeBased *a,DTrackTimeBased *b){
+  return a->candidateid<b->candidateid;
+}
+
+
+// count_common_members
+//------------------
+template<typename T>
+static unsigned int count_common_members(vector<T> &a, vector<T> &b)
+{
+	unsigned int n=0;
+	for(unsigned int i=0; i<a.size(); i++){
+		for(unsigned int j=0; j<b.size(); j++){
+			if(a[i]==b[j])n++;
+		}
+	}
+	
+	return n;
+}
+
 //------------------
 // init
 //------------------
@@ -203,6 +224,9 @@ jerror_t DTrackTimeBased_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
     }
   }
 
+  // Filter out duplicate tracks
+  FilterDuplicates();
+
   return NOERROR;
 }
 
@@ -266,3 +290,121 @@ DTrackTimeBased_factory_StraightLine::GetStartTime(const DTrackWireBased *track,
     return;
   }
 }
+
+//------------------
+// FilterDuplicates
+//------------------
+void DTrackTimeBased_factory_StraightLine::FilterDuplicates(void)
+{
+  /// Look through all current DTrackTimeBased objects and remove any
+  /// that have most of their hits in common with another track
+	
+  if(_data.size()==0)return;
+  
+  if(DEBUG_LEVEL>2) _DBG_<<"Looking for clones of time-based tracks ..."<<endl;
+    
+  vector<unsigned int> candidates_to_keep;
+  vector<unsigned int> candidates_to_delete;
+  for(unsigned int i=0; i<_data.size()-1; i++){
+    DTrackTimeBased *dtrack1 = _data[i];
+    
+    vector<const DCDCTrackHit*> cdchits1;
+    vector<const DFDCPseudo*> fdchits1;
+    dtrack1->Get(cdchits1);
+    dtrack1->Get(fdchits1);
+    // Total number of hits in this candidate
+    unsigned int num_cdc1=cdchits1.size();
+    unsigned int num_fdc1=fdchits1.size();
+    unsigned int total1 = num_cdc1+num_fdc1;
+    
+    JObject::oid_t cand1=dtrack1->candidateid;
+    for(unsigned int j=i+1; j<_data.size(); j++){
+      DTrackTimeBased *dtrack2 = _data[j];
+      
+      vector<const DCDCTrackHit*> cdchits2;
+      vector<const DFDCPseudo*> fdchits2;
+      dtrack2->Get(cdchits2);
+      dtrack2->Get(fdchits2);
+      
+      // Total number of hits in this candidate
+      unsigned int num_cdc2=cdchits2.size();
+      unsigned int num_fdc2=fdchits2.size();
+      unsigned int total2 = num_cdc2+num_fdc2;
+      
+      // Count number of cdc and fdc hits in common
+      unsigned int Ncdc = count_common_members(cdchits1, cdchits2);
+      unsigned int Nfdc = count_common_members(fdchits1, fdchits2);
+      
+      if(DEBUG_LEVEL>3){
+	_DBG_<<"cand1:"<<cand1<<" cand2:"<<dtrack2->candidateid<<endl;
+	_DBG_<<"   Ncdc="<<Ncdc<<" num_cdc1="<<num_cdc1<<" num_cdc2="<<num_cdc2<<endl;
+	_DBG_<<"   Nfdc="<<Nfdc<<" num_fdc1="<<num_fdc1<<" num_fdc2="<<num_fdc2<<endl;
+      }
+      unsigned int total = Ncdc + Nfdc;	
+      // If the tracks share at most one hit, consider them
+      // to be separate tracks
+      if (total<=1) continue;
+      
+      // Deal with the case where there are cdc hits in 
+      // common between the tracks but there were no fdc 
+      // hits used in one of the tracks.
+      if (Ncdc>0 && (num_fdc1>0 || num_fdc2>0) 
+	  && (num_fdc1*num_fdc2)==0) continue;
+      
+      // Deal with the case where there are fdc hits in
+      // common between the tracks but no cdc hits used in 
+      // one of the tracks.			
+      if (Nfdc>0 && (num_cdc1>0 || num_cdc2>0)
+	  && (num_cdc1*num_cdc2)==0) continue;
+      
+      // Look for tracks with many common hits in the CDC
+      if (num_cdc1>0 && num_cdc2>0){
+	if (double(Ncdc)/double(num_cdc1)<0.9) continue;
+	if (double(Ncdc)/double(num_cdc2)<0.9) continue;
+      }
+      // Look for tracks with many common hits in the FDC
+      if (num_fdc1>0 && num_fdc2>0){
+	if (double(Nfdc)/double(num_fdc1)<0.9) continue;
+	if (double(Nfdc)/double(num_fdc2)<0.9) continue;
+      }
+      
+      if(total1<total2){
+	candidates_to_delete.push_back(cand1);
+	candidates_to_keep.push_back(dtrack2->candidateid);
+      } else {
+	candidates_to_delete.push_back(dtrack2->candidateid);
+	candidates_to_keep.push_back(cand1);
+      }
+    }
+  }
+
+  if(DEBUG_LEVEL>2)
+    _DBG_<<"Found "<<candidates_to_delete.size()<<" time-based clones"<<endl;
+  
+  // Return now if we're keeping everyone
+  if(candidates_to_delete.size()==0)return;
+  
+  // Copy pointers that we want to keep to a new container and delete
+  // the clone objects
+  vector<DTrackTimeBased*> new_data;
+  sort(_data.begin(),_data.end(),DTrackTimeBased_straightline_cmp);
+  for (unsigned int i=0;i<_data.size();i++){
+    bool keep_track=true;
+    for (unsigned int j=0;j<candidates_to_delete.size();j++){
+      if (_data[i]->candidateid==candidates_to_delete[j]){
+	keep_track=false;
+	if(DEBUG_LEVEL>1)
+	  {
+	    _DBG_<<"Deleting clone time-based fitted result "<<i<<endl;
+	  }
+	break;
+      }
+    }
+    if (keep_track){
+      new_data.push_back(_data[i]);
+    }
+    else delete _data[i];
+  }
+  _data = new_data;
+}
+
