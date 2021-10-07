@@ -177,7 +177,7 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
        sc_dir.push_back(temp);
      }
      SC_END_NOSE_Z=sc_pos[0][12].z();
-     SC_BARREL_R=sc_pos[0][0].Perp();
+     SC_BARREL_R=sc_pos[0][0].Perp()+0.5; // radius just outside start counter volume
      SC_PHI_SECTOR1=sc_pos[0][0].Phi();
    }
    
