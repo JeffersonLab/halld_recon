@@ -6,7 +6,8 @@
 //
 
 // Looks for differences between Df125triggertime's itrigger and the eventnumber,
-// which could indicate the fadc getting out of sync
+// which could indicate the fadc getting out of sync.
+// Also compares the trigger time of each fadc to that of the others.
 
 // Increments a 2D histogram(roc,slot) each time a difference is found.
 // For normal runs the histogram looks like noise; bad runs look as if there are hot channels, with larger z scale.
@@ -37,8 +38,8 @@ using namespace jana;
 #include <TMath.h>
 #include <TBits.h>
 
-static TH2I *hdiffs=NULL;
-
+static TH2I *hdiffs = NULL;
+static TH1I *hevents = NULL;
 static TTree *tree = NULL;
 
 
@@ -83,12 +84,46 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
   }
 
 
-  japp->RootWriteLock();
-
   TDirectory *main = gDirectory;
   gDirectory->mkdir("fa125_itrig")->cd();
 
   hdiffs = new TH2I("errcount","Count of fa125 itrigger time errors; roc ; slot", 15, 1, 16, 17, 3, 20);
+
+  hevents = new TH1I("num_events","Number of events", 1, 0.0, 1.0);
+
+  for (int i=0; i<70; i++) rocmap[i] = 0;  // rocmap[rocid] = bin number for roc rocid in histogram
+
+  int xlabels[70] = {0};
+  int nbins;
+
+  for (int i=25; i<29; i++) {
+    int x = i-24;           // CDC, bins 1 to 4
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+  }
+
+  for (int i=52; i<54; i++) {
+    int x = i-46;           // FDC, bins 6-7
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+  }
+
+  for (int i=55; i<63; i++) {
+    int x = i-47;           // FDC, bins 8-15
+    rocmap[i] = x;
+    xlabels[x] = i;         // histo label
+    nbins = x;
+  }
+
+  // ROCs 51,54,63 and 64 are TDCs.
+
+  for (int i=1;i<=nbins;i++) {
+    if (xlabels[i]>0) {
+         hdiffs->GetXaxis()->SetBinLabel(i,Form("%i",xlabels[i]));
+    } else {
+         hdiffs->GetXaxis()->SetBinLabel(i," ");
+    }
+  }
 
   if (MAKE_TREE) {
     tree = new TTree("T","Df125 trigger times");
@@ -121,8 +156,6 @@ jerror_t JEventProcessor_fa125_itrig::init(void)
 
   main->cd();
 
-  japp->RootUnLock();
-
 
   return NOERROR;
 }
@@ -143,39 +176,8 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
 {
 	// This is called for every event. 
 
-  int rocmap[70] = {0};    // rocmap[rocid] = bin number for roc rocid in histogram
-  int xlabels[70] = {0};
-  int nbins;
-
-  for (int i=25; i<29; i++) {
-    int x = i-24;           // CDC, bins 1 to 4
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-  }
-
-  for (int i=52; i<54; i++) {
-    int x = i-46;           // FDC, bins 6-7
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-  }
-
-  for (int i=55; i<63; i++) {
-    int x = i-47;           // FDC, bins 8-15
-    rocmap[i] = x;
-    xlabels[x] = i;         // histo label
-    nbins = x;
-  }
-
-  // ROCs 51,54,63 and 64 are TDCs.
-
-  for (int i=1;i<=nbins;i++) {
-    if (xlabels[i]>0) {
-      hdiffs->GetXaxis()->SetBinLabel(i,Form("%i",xlabels[i]));
-    } else {
-      hdiffs->GetXaxis()->SetBinLabel(i," ");
-    }
-  }
-
+  // Event count used by RootSpy->RSAI so it knows how many events have been seen.
+  hevents->Fill(0.5);
 
   ULong64_t timestamp = 0;
 
@@ -273,15 +275,17 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
       tdiff = most_popular_time - ttime;
 
       // count the bits differing between ttime and most popular time
-      // ttime often differs by 1 between L and R halves of the crate 
+      // ttime often differs by 1 between L and R halves of the crate, this is not important. 
       // single bit differences in more significant bits happen infrequently when other output is ok
 
       ULong64_t posdiff;
 
+      // Compare right-shifted ttime and most_popular_time to ignore LSB.
+
       if (ttime > most_popular_time) {
-        posdiff = ttime - most_popular_time;
+        posdiff = (ttime>>1) - (most_popular_time>>1);
       } else {
-        posdiff = most_popular_time - ttime;
+        posdiff = (most_popular_time>>1) - (ttime>>1);
       }
 
       UInt_t diffcount_ttime = 0;

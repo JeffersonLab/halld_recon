@@ -310,6 +310,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DSCHit *> scHitVector;
     vector<const DBCALUnifiedHit *> bcalUnifiedHitVector;
     vector<const DTOFHit *> tofHitVector;
+    vector<const DTOFPoint *> tofPointVector;
     vector<const DFCALHit *> fcalHitVector;
     vector<const DCCALHit *> ccalHitVector;
     vector<const DDIRCPmtHit *> dircPmtHitVector;
@@ -323,6 +324,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(scHitVector);
     loop->Get(bcalUnifiedHitVector);
     loop->Get(tofHitVector);
+    loop->Get(tofPointVector);
     loop->Get(fcalHitVector);
     if(CCAL_CALIB) {
       loop->Get(ccalHitVector);
@@ -893,6 +895,35 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
 					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    }
+		    
+		    // if we're not using tracking, then align the TOF using hits matched between the TOF and FCAL
+		    if(NO_TRACKS) {
+		    	for( vector< const DTOFPoint* >::const_iterator tof = tofPointVector.begin(); 
+					tof != tofPointVector.end(); tof++ ) {
+					
+					const DTOFPoint* tof_hit = *tof;
+					
+					// select double-ended hits
+					if( tof_hit->dHorizontalBarStatus != 3 || tof_hit->dVerticalBarStatus != 3 )
+						continue;
+						
+					double dx = tof_hit->pos.X() - neutralShowerVector[i]->dSpacetimeVertex.X();
+					double dy = tof_hit->pos.Y() - neutralShowerVector[i]->dSpacetimeVertex.Y();
+					
+	    			double locTOFPathLength = (tof_hit->pos - locTargetCenter).Mag();
+					double locTOFDeltaT = tof_hit->t - locTOFPathLength/29.9792458 - thisRFBunch->dTime;
+					
+					// match the hits
+					if( ( fabs(dx - TOF_X_MEAN) < 2.*TOF_X_SIG ) && 
+		    	    	( fabs(dy - TOF_Y_MEAN) < 2.*TOF_Y_SIG ) ) {
+					   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time (No Tracks)",
+							 locTOFDeltaT,
+							 "t_{TOF} - t_{RF} at Target (No Tracks); t_{TOF} - t_{RF} at Target [ns]; Entries",
+							 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+		    	    }
+
+				}
+		    } 
 	    } else {
 		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
 				    "Shower Energy [GeV];t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
@@ -917,13 +948,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 	    Fill2DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time vs. Energy (Neutral)",  ccalShowerVector[i]->E, locDeltaT,
 			    "Shower Energy [GeV];t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-			    100, 0., 10., 200, -20, 20);
+			    100, 0., 10., 500, -20, 20);
 	    
 	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
 	    if(ccalShowerVector[i]->E > 0.1) {
 		    Fill1DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time (Neutral)",  locDeltaT,
 				    "t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-				    500, -50, 50);
+				    2000, -50, 50);
 		    //NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 	    }
     }
