@@ -55,8 +55,12 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=0.0004;
+  MASS_CUT=0.0001;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
+ ENERGY_SHARING_CUTOFF=0.9;
+  gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
+  ENERGY_SHARING_CUTOFF=0.9;
+  gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
   HistProb=new TH1D("HistProb",";CL",100,0,1);
@@ -312,7 +316,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       }
     }
    
-    if (num_hits>3){    
+    if (num_hits>4){    
       SplitPeaks(W,clusterHits,peaks,chisq);
     }
 
@@ -511,11 +515,12 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
 					   ) const {  
   size_t nhits=hitList.size();
   size_t npeaks=peaks.size();  
-  // Save the current info for the new peak
-  PeakInfo saved_peak=myNewPeak;
+  // Save the current peak info
+  vector<PeakInfo>saved_peaks=peaks;
+  PeakInfo saved_new_peak=myNewPeak;
 
   // Iterate to find best shower energy and position
-  double chisq_old=1e6,chisq_new=0.;
+  chisq=1e6;
   unsigned int max_iter=100;
   double min_frac=MIN_CUTDOWN_FRACTION;
   double cutdown_scale=(1.-min_frac)/double(max_iter); //for cut-down for parameter adjustment
@@ -575,18 +580,20 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
       //cout << " Ediff " << Ediff << endl;
     }
     // Compute chi^2 for this iteration
-    chisq_new=0.;
+    double chisq_new=0.;
     for (unsigned int i=0;i<nhits;i++) chisq_new+=W(i,i)*dE(i,0)*dE(i,0);
     // cout << endl;
     // cout << k << " chisq "<< chisq_new << " " << (chisq_new-chisq_old)/chisq_old <<endl;
     //cout << endl;
-    if (chisq_new>chisq_old){
-      // Restore the "best" version before the convergence failure
-      chisq_new=chisq_old;
-      myNewPeak=saved_peak;
-      break;
-    }
-    if (fabs(chisq_new-chisq_old)/chisq_old<0.0001) break;
+    if (fabs(chisq_new-chisq)/chisq<0.0001) break;
+    if (chisq_new>chisq) break;
+    
+    // Save the current value of chisq
+    chisq=chisq_new;
+        
+    // Save the current best peak values
+    saved_new_peak=myNewPeak;
+    saved_peaks.assign(peaks.begin(),peaks.end());
     
     // Determine the set of corrections needed to bring the computed shower 
     // shape closer to the measurements
@@ -604,15 +611,15 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
       peaks[i].x+=dPar(3*i+1,0);
       peaks[i].y+=dPar(3*i+2,0);
     } 
-    saved_peak=myNewPeak;
-
     myNewPeak.E+=dPar(3*npeaks+0,0);
     myNewPeak.x+=dPar(3*npeaks+1,0);
     myNewPeak.y+=dPar(3*npeaks+2,0);
-    
-    chisq_old=chisq_new;
   }
-  chisq=chisq_new;
+
+  // Peak info for output of the routine.  At this stage myNewPeak, for example,
+  // has been adjusted away from the solution with the best chisq value.
+  myNewPeak=saved_new_peak;
+  peaks.assign(saved_peaks.begin(),saved_peaks.end());
 
   // Sanity check for peak position: does it correspond to one of the hit
   // blocks?
@@ -750,8 +757,8 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
     }
     alpha/=E0*rsq;
     // Make sure alpha is not too small or too big
-    if (alpha<-0.8) alpha=-0.8;
-    if (alpha> 0.8) alpha= 0.8;
+    if (alpha<-ENERGY_SHARING_CUTOFF) alpha=-ENERGY_SHARING_CUTOFF;
+    if (alpha> ENERGY_SHARING_CUTOFF) alpha= ENERGY_SHARING_CUTOFF;
 
     // Find the first guess for the energies of the two potential peaks
     double alpha_plus_factor=0.5*(1.+alpha);

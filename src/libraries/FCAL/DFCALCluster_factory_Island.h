@@ -52,11 +52,11 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   bool CheckPeak(const vector<PeakInfo>&peaks,const PeakInfo &myNewPeak) const;
  
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
-  double SHOWER_WIDTH_PARAMETER;
+  double SHOWER_WIDTH_PARAMETER,ENERGY_SHARING_CUTOFF;
   double INSERT_SHOWER_WIDTH_PARAMETER;
   double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN,MASS_CUT;
   bool DEBUG_HISTS;
-  int MAX_HITS_FOR_CLUSTERING;
+  unsigned int MAX_HITS_FOR_CLUSTERING;
 
   double m_insert_Eres[3],m_Eres[3];
   double m_zdiff;
