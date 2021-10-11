@@ -284,6 +284,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     Fill1DHistogram("FCAL_Pi0HFA","","tdiff1", tdiff1, ";t_{#gamma}^{1} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
     Fill1DHistogram("FCAL_Pi0HFA","","E", Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","","P", Ephoton1, ";E_{#gamma};Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("FCAL_Pi0HFA","","Emax", emax1, ";E_{max};Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("FCAL_Pi0HFA","",Form("Emax_ring_%d", ring1), emax1, ";E_{max};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","",Form("E_ring_%d", ring1), Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","",Form("P_ring_%d", ring1), Ephoton1, ";E_{#gamma};Count [a.u.]", 12000, 0., 12.);
     Fill1DHistogram("FCAL_Pi0HFA","",Form("E_rings_%d", rings1), Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
