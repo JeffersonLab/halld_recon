@@ -190,6 +190,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     const DFCALCluster *fcalCluster1;
     fcalShower1->GetSingle(fcalCluster1);
     int ch1 = fcalCluster1->getChannelEmax();
+    double emax1 = fcalCluster1->getEmax();
     double xShower1=fcalShower1->getPosition().X();
     double yShower1=fcalShower1->getPosition().Y();
     double zShower1=fcalShower1->getPosition().Z();
