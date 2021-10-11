@@ -39,6 +39,7 @@ class JEventProcessor_TrackingPulls_straight : public jana::JEventProcessor {
   int track_index_;
   double chi2_;
   int ndf_;
+  double mom_;
   double phi_;
   double theta_;
   double pos_x_;

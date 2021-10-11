@@ -18,6 +18,14 @@ extern "C"{
 }
 
 
+JEventProcessor_CCAL_online::JEventProcessor_CCAL_online()
+{
+	// Set defaults:
+	
+    	BEAM_RF_MAIN_PEAK = 0.0;
+	
+	gPARMS->SetDefaultParameter( "CCAL_online:BEAM_RF_MAIN_PEAK", BEAM_RF_MAIN_PEAK );
+}
 
 
 //----------------------------------------------------------------------------------
@@ -29,82 +37,185 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 	gDirectory->mkdir("ccal")->cd();
 	
 	
-	
 	ccal_num_events = new TH1D("ccal_num_events","CCAL Number of Events",1,0.5,1.5);
 	
 	
 	// CCALDigiHit Plots
 	
-	hdigN           = new TH1I("digN", "CCAL Number of DigiHits; Number of DigiHits; Events", 144, 0, 144 );
-	hdigOcc2D       = new TH2F("digOcc2D", "CCAL DigiHit Occupancy; column; row", 12, -0.5, 11.5, 12, -0.5, 11.5 );
-	hdigInt         = new TH1I("digInt", "CCAL Pulse Integral", 300, 0, 30000);
-	hdigPeak        = new TH1I("digPeak", "CCAL Pulse Peak", 300, 0, 5000);
-	hdigT           = new TH1I("digT", "CCAL Pulse Time; Time [4 ns]; Pulses / ns", 4096, 0, 4096);
-	hdigPed         = new TH1I("digPed", "CCAL Pedestal (All Channels); ADC Counts; Pulses / 10 Counts", 100, 0, 1000);
-	hdigPedChan     = new TProfile("digPedChan", "CCAL Pedestal vs. Channel; ccal id; Average Pedestal [ADC Counts]", 144, -0.5, 143.5);
-	hdigPed2D       = new TH2F("digPed2D", "CCAL Pedestals [ADC Counts]; column; row",12, -0.5, 11.5, 12, -0.5, 11.5);
-	hdigPedSq2D     = new TH2F("digPedSq2D", "CCAL Pedestals Squared [ADC Counts]; column; row", 12, -0.5, 11.5, 12, -0.5, 11.5);
-	hdigIntVsPeak   = new TH2I("digIntVsPeak", "CCAL Pulse Integral vs. Peak Sample; Peak Sample [ADC Units]; Integral [ADC Units]", 200, 0, 4000, 200, 0, 40000 );
-	hdigQF          = new TH1I("digQual", "CCAL Hit Quality; Quality Factor Index; Number of Pulses", 16, -0.5, 15.5 );
+	hdigN           = new TH1I("digN", 
+		"CCAL Number of DigiHits; Number of DigiHits; Events", 
+		144, 0, 144 );
+	hdigOcc2D       = new TH2F("digOcc2D", 
+		"CCAL DigiHit Occupancy; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5 );
+	hdigInt         = new TH1I("digInt", 
+		"CCAL Pulse Integral", 
+		300, 0, 30000);
+	hdigPeak        = new TH1I("digPeak", 
+		"CCAL Pulse Peak", 
+		300, 0, 5000);
+	hdigT           = new TH1I("digT", 
+		"CCAL Pulse Time; Time [4 ns]; Pulses / ns", 
+		4096, 0, 4096);
+	hdigPed         = new TH1I("digPed", 
+		"CCAL Pedestal (All Channels); ADC Counts; Pulses / 10 Counts", 
+		100, 0, 1000);
+	hdigPedChan     = new TProfile("digPedChan", 
+		"CCAL Pedestal vs. Channel; ccal id; Average Pedestal [ADC Counts]", 
+		144, -0.5, 143.5);
+	hdigPed2D       = new TH2F("digPed2D", 
+		"CCAL Pedestals [ADC Counts]; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5);
+	hdigPedSq2D     = new TH2F("digPedSq2D", 
+		"CCAL Pedestals Squared [ADC Counts]; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5);
+	hdigIntVsPeak   = new TH2I("digIntVsPeak", 
+		"CCAL Pulse Integral vs. Amplitude; Pulse Amplitude [ADC Counts]; Integral [ADC Counts]", 
+		200, 0, 4000, 200, 0, 40000 );
+	hdigQF          = new TH1I("digQual", 
+		"CCAL Hit Quality; Quality Factor Index; Number of Pulses", 
+		16, -0.5, 15.5 );
 	
 	
 	
 	// CCALHit Plots
 	
-	hhitN       = new TH1I("hitN", "CCAL Number of Hits; Number of Hits; Events", 144, 0, 144 );
-	hhitE       = new TH1I("hitE", "CCAL Hit Energy; Energy [MeV]; Hits / 100 MeV", 100, 0, 10000 );
-	hhitETot    = new TH1I("hitETot", "CCAL Hit Total Energy; Energy [MeV]; Events / 100 MeV", 120, 0, 12000 );
-	hhitiop     = new TH1I("hitiop", "CCAL Pulse Integral over Peak", 300, 0, 300);
-	hhitT       = new TH1I("hitT", "CCAL Hit Time; t [ns]; Hits / 4 ns", 100, -100, 300 );
-	hhitE2D     = new TH2F("hitE2D", "CCAL Hit Average Energy [MeV]; column; row", 12, -0.5, 11.5, 12, -0.5, 11.5 );
-	hhitOcc2D   = new TH2F("hitOcc2D", "CCAL Hit Occupancy; column; row", 12, -0.5, 11.5, 12, -0.5, 11.5 );
+	hhitN       = new TH1I("hitN", 
+		"CCAL Number of Hits; Number of Hits; Events", 
+		144, 0, 144 );
+	hhitE       = new TH1I("hitE", 
+		"CCAL Hit Energy; Energy [MeV]; Hits / 100 MeV", 
+		100, 0, 10000 );
+	hhitETot    = new TH1I("hitETot", 
+		"CCAL Hit Total Energy; Energy [MeV]; Events / 100 MeV", 
+		120, 0, 12000 );
+	hhitiop     = new TH1I("hitiop", 
+		"CCAL Pulse Integral over Peak", 
+		300, 0, 300);
+	hhitT       = new TH1I("hitT", 
+		"CCAL Hit Time; t [ns]; Hits / 4 ns", 
+		100, -100, 300 );
+	hhitE2D     = new TH2F("hitE2D", 
+		"CCAL Hit Average Energy [MeV]; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5 );
+	hhitOcc2D   = new TH2F("hitOcc2D", 
+		"CCAL Hit Occupancy; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5 );
 	
 	
 	
 	// CCALShower Plots
 	
-	hshowN      = new TH1I("showN", "CCAL Number of showers; Number of Showers; Events", 10, -0.5, 9.5 );
-	hshowE      = new TH1I("showE", "CCAL Shower Energy; Energy [MeV]; Showers / 50 MeV", 100, 0, 15000 );
-	hshowETot   = new TH1I("showETot", "CCAL Shower Total Energy; Energy [MeV]; Events / 100 MeV", 100, 0, 15000 );
-	hshowT      = new TH1I("showT", "CCAL Shower Time; t [ns]; Showers / 4 ns", 100, -100, 300 );
-	hshowDime   = new TH1I("showDime", "CCAL Shower Dimension; Modules in Shower", 50, -0.5, 49.5);
-	hshowXYHigh = new TH2I("showXYHigh", "CCAL Shower Positions (E > 1 GeV); x [cm]; y [cm]", 100, -12.5, 12.5, 100, -12.5, 12.5 );
-	hshowXYLow  = new TH2I("showXYLow", "CCAL Shower Positions (E < 1 GeV); x [cm]; y [cm]", 100, -12.5, 12.5, 100, -12.5, 12.5 );
-	hshowPhi    = new TH1I("showPhi", "CCAL Shower #phi; #phi [rad]; Showers / 62.8 mrad", 100, -3.14, 3.14 );
+	hshowN      = new TH1I("showN", 
+		"CCAL Number of showers; Number of Showers; Events", 
+		10, -0.5, 9.5 );
+	hshowE      = new TH1I("showE", 
+		"CCAL Shower Energy; Energy [MeV]; Showers / 50 MeV", 
+		100, 0, 15000 );
+	hshowETot   = new TH1I("showETot", 
+		"CCAL Shower Total Energy; Energy [MeV]; Events / 100 MeV", 
+		100, 0, 15000 );
+	hshowT      = new TH1I("showT", 
+		"CCAL Shower Time; t [ns]; Showers / 4 ns", 
+		100, -100, 300 );
+	hshowDime   = new TH1I("showDime", 
+		"CCAL Shower Dimension; Modules in Shower", 
+		50, -0.5, 49.5);
+	hshowXYHigh = new TH2I("showXYHigh", 
+		"CCAL Shower Positions (E > 1 GeV); x [cm]; y [cm]", 
+		100, -12.5, 12.5, 100, -12.5, 12.5 );
+	hshowXYLow  = new TH2I("showXYLow", 
+		"CCAL Shower Positions (E < 1 GeV); x [cm]; y [cm]", 
+		100, -12.5, 12.5, 100, -12.5, 12.5 );
+	hshowPhi    = new TH1I("showPhi", 
+		"CCAL Shower #phi; #phi [rad]; Showers / 62.8 mrad", 
+		100, -3.14, 3.14 );
 	hshowPhi->SetMinimum( 0 );
-	hshow2GMass = new TH1I( "show2GMass", "CCAL 2 Shower Invariant Mass (E > 1 GeV); Invariant Mass [GeV]", 500, 0.0, 0.6 );
-	hshow2GMass_fcal = new TH1I("show2GMass_fcal", "Invariant Mass, 1 CCAL & 1 FCAL Shower (E > 1 GeV); Invariant Mass [GeV]", 500, 0.0, 0.6 );
-	hshowOccEmax = new TH2I("showOccEmax", "Occupancy when E_{max} > 3 GeV and E_{cl}-E_{max} < 1.0 GeV; column; row", 12, -0.5, 11.5, 12, -0.5, 11.5);
+	hshow2GMass = new TH1I( "show2GMass", 
+		"CCAL 2 Shower Invariant Mass (E > 1 GeV); Invariant Mass [GeV]", 
+		500, 0.0, 0.6 );
+	hshow2GMass_fcal = new TH1I("show2GMass_fcal", 
+		"Invariant Mass, 1 CCAL & 1 FCAL Shower (E > 1 GeV); Invariant Mass [GeV]", 
+		500, 0.0, 0.6 );
+	hshowOccEmax = new TH2I("showOccEmax", 
+		"Occupancy when E_{max} > 3 GeV and E_{cl}-E_{max} < 1.0 GeV; column; row", 
+		12, -0.5, 11.5, 12, -0.5, 11.5);
 	
 	
 	
 	// Compton Plots
 	
-	hcomp_bfdt         = new TH1F("comp_bfdt","FCAL Shower Time - Beam Time; t_{fcal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
-	hcomp_fcdt         = new TH1F("comp_fcdt","CCAL Time - FCAL Time; t_{fcal}-t_{ccal} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
-	hcomp_bcdt     = new TH1F("comp_bcdt","CCAL Shower Time - Beam Time; t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 1000, -50., 50.);
+	hcomp_bfdt         = new TH1F("comp_bfdt",
+		"FCAL Shower Time - Beam Time; t_{fcal}-t_{beam} [ns]; Counts / 0.5 ns", 
+		4000, -200., 200.);
+	hcomp_fcdt         = new TH1F("comp_fcdt", 
+		"CCAL Time - FCAL Time; t_{ccal}-t_{fcal} [ns]; Counts / 0.5 ns", 
+		4000, -50., 50.);
+	hcomp_bcdt     = new TH1F("comp_bcdt", 
+		"CCAL Shower Time - Beam Time; t_{ccal}-t_{beam} [ns]; Counts / 0.5 ns", 
+		4000, -50., 50.);
 	
-	hcomp_cratio   = new TH1F("comp_cratio", "CCAL Energy over Calculated Compton Energy; #frac{E_{ccal}}{E_{comp}}", 1000, 0., 2.);
-	hcomp_cfbratio = new TH1F("comp_cfbratio", "Energy Conservation; #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 1000, -1., 1.);
-	hcomp_cfb2d    = new TH2F("comp_cfb2d", "Reconstructed Energy vs. Calculated Compton Energy; #frac{E_{ccal,comp}+E_{fcal,comp}}{E_{beam}}; #frac{E_{ccal}+E_{fcal}}{E_{beam}}", 
-		200, 0., 2., 200, 0., 2.);
-	hcomp_pfpc     = new TH1F("comp_pfpc", "FCAL - CCAL Azimuthal Angle; #phi_{fcal}-#phi_{ccal} [deg]; Counts / 0.5 degrees", 1440, -360., 360.);
-	hcomp_cxy      = new TH2F("comp_cxy","Reconstructed Compton Positions in CCAL; x_{ccal} [cm]; y_{ccal} [cm]", 200, -12.5, 12.5, 200, -12.5, 12.5);
-	hcomp_fxy      = new TH2F("comp_fxy","Reconstructed Compton Positions in FCAL; x_{fcal} [cm]; y_{fcal} [cm]", 200, -50., 50., 200, -50., 50.);
+	hcomp_cratio   = new TH1F("comp_cratio", 
+		"CCAL Energy over Calculated Compton Energy; #frac{E_{ccal}}{E_{comp}}", 
+		1000, 0., 2.);
+	hcomp_cfbratio = new TH1F("comp_cfbratio", 
+		"Energy Conservation; #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 
+		1000, -1., 1.);
 	
-	hcomp_cratio_bkgd   = new TH1F("comp_cratio_bkgd", "CCAL Energy over Calculated Compton Energy (Accidentals); #frac{E_{ccal}}{E_{comp}}", 1000, 0., 2.);
-	hcomp_cfbratio_bkgd = new TH1F("comp_cfbratio_bkgd", "Energy Conservation (Accidentals); #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 1000, -1., 1.);
-	hcomp_cfb2d_bkgd    = new TH2F("comp_cfb2d_bkgd", "Reconstructed Energy vs. Calculated Compton Energy (Accidentals); #frac{E_{ccal,comp}+E_{fcal,comp}}{E_{beam}}; #frac{E_{ccal}+E_{fcal}}{E_{beam}}", 
+	hcomp_cfb2d    = new TH2F("comp_cfb2d", 
+		"Reconstructed Energy vs. Calculated Compton Energy", 
 		200, 0., 2., 200, 0., 2.);
-	hcomp_pfpc_bkgd     = new TH1F("comp_pfpc_bkgd", "FCAL - CCAL Azimuthal Angle (Accidentals); #phi_{fcal}-#phi_{ccal} [deg]; Counts / 0.5 degrees", 1440, -360., 360.);
-	hcomp_cxy_bkgd      = new TH2F("comp_cxy_bkgd","Reconstructed Compton Positions in CCAL (Accidentals); x_{ccal} [cm]; y_{ccal} [cm]", 200, -12.5, 12.5, 200, -12.5, 12.5);
-	hcomp_fxy_bkgd      = new TH2F("comp_fxy_bkgd","Reconstructed Compton Positions in FCAL (Accidentals); x_{fcal} [cm]; y_{fcal} [cm]", 200, -50., 50., 200, -50., 50.);
-
+	hcomp_cfb2d->GetXaxis()->SetTitle("#frac{E_{CCAL,Comp} + E_{FCAL,Comp}}{E_{Beam}}");
+	hcomp_cfb2d->GetYaxis()->SetTitle("#frac{E_{CCAL} + E_{FCAL}}{E_{Beam}}");
+	
+	hcomp_pfpc     = new TH1F("comp_pfpc", 
+		"FCAL - CCAL Azimuthal Angle; #phi_{fcal}-#phi_{ccal} [deg]; Counts / 0.5 degrees",
+		1440, -360., 360.);
+	
+	hcomp_cxy      = new TH2F("comp_cxy", 
+		"Reconstructed Compton Positions in CCAL", 
+		200, -12.5, 12.5, 200, -12.5, 12.5);
+	hcomp_cxy->GetXaxis()->SetTitle("x_{CCAL} [cm]");
+	hcomp_cxy->GetYaxis()->SetTitle("y_{CCAL} [cm]");
+	
+	hcomp_fxy      = new TH2F("comp_fxy", 
+		"Reconstructed Compton Positions in FCAL", 
+		200, -50., 50., 200, -50., 50.);
+	hcomp_fxy->GetXaxis()->SetTitle("x_{CCAL} [cm]");
+	hcomp_fxy->GetYaxis()->SetTitle("y_{CCAL} [cm]");
+	
+	
+	
+	hcomp_cratio_bkgd   = new TH1F("comp_cratio_bkgd", 
+		"CCAL Energy over Calculated Compton Energy (Accidentals)", 
+		1000, 0., 2.);
+	hcomp_cfbratio_bkgd = new TH1F("comp_cfbratio_bkgd", 
+		"Energy Conservation (Accidentals); #frac{E_{ccal}+E_{fcal}-E_{beam}}{E_{beam}}", 
+		1000, -1., 1.);
+	
+	hcomp_cfb2d_bkgd    = new TH2F("comp_cfb2d_bkgd", 
+		"Reconstructed Energy vs. Calculated Compton Energy (Accidentals)",
+		200, 0., 2., 200, 0., 2.);
+	hcomp_cfb2d_bkgd->GetXaxis()->SetTitle("#frac{E_{CCAL,Comp} + E_{FCAL,Comp}}{E_{Beam}}");
+	hcomp_cfb2d_bkgd->GetYaxis()->SetTitle("#frac{E_{CCAL} + E_{FCAL}}{E_{Beam}}");
+	
+	hcomp_cxy_bkgd      = new TH2F("comp_cxy_bkgd", 
+		"Reconstructed Compton Positions in CCAL (Accidentals)", 
+		200, -12.5, 12.5, 200, -12.5, 12.5);
+	hcomp_cxy_bkgd->GetXaxis()->SetTitle("x_{CCAL} [cm]");
+	hcomp_cxy_bkgd->GetYaxis()->SetTitle("y_{CCAL} [cm]");
+	
+	hcomp_fxy_bkgd      = new TH2F("comp_fxy_bkgd", 
+		"Reconstructed Compton Positions in FCAL (Accidentals)", 
+		200, -50., 50., 200, -50., 50.);
+	hcomp_fxy_bkgd->GetXaxis()->SetTitle("x_{CCAL} [cm]");
+	hcomp_fxy_bkgd->GetYaxis()->SetTitle("y_{CCAL} [cm]");
+	
 	hNPhotons = new TH1I("NPhotons","Number of Beam Photons per Event",80,-0.5,79.5);
 	
 	
 	
-	 main->cd();
+	main->cd();
 	
 	return NOERROR;
 }
@@ -123,12 +234,9 @@ jerror_t JEventProcessor_CCAL_online::brun(JEventLoop *eventLoop, int32_t runnum
 	if( dapp ) dgeom = dapp->GetDGeometry( runnumber );
 	
 	if( dgeom ){
-		
 		dgeom->GetTargetZ( m_beamZ );
-		
 	}
 	else{
-		
 		cerr << "No geometry accessbile to CCAL_online monitoring plugin." << endl;
 		return RESOURCE_UNAVAILABLE;
 	}
@@ -440,14 +548,13 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 		
 		const DFCALShower *fcal_shower = locFCALShowers[ih];
 		
-		DVector3 fcal_pos = fcal_shower->getPosition()  -  locVertex;
+		DVector3 fcal_pos = fcal_shower->getPosition_log()  -  locVertex;
 		double fcal_t     = fcal_shower->getTime()  -  (fcal_pos.Mag() / c);
 		double fcal_e     = fcal_shower->getEnergy();
 		
-		if( fcal_e < 0.4 ) continue;
+		if( fcal_e < 0.35 ) continue;
 		
 		double phif       = fcal_pos.Phi();
-		
 		
 		for(unsigned int ic = 0; ic < locCCALShowers.size(); ++ic) {
 			
@@ -477,10 +584,12 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 			double dt_fc_cc = ccal_t - fcal_t;
 			hcomp_fcdt->Fill( dt_fc_cc );
 			
+			hcomp_pfpc->Fill( (phif-phic)*180./TMath::Pi() );
+			
+			/*
 			if( fabs(fcal_t - rfTime) > 2.004 ) continue;
 			if( fabs(ccal_t - rfTime) > 2.004 ) continue;
-			
-			
+			*/
 			
 			for(unsigned int ib = 0; ib < locBeamPhotons.size(); ++ib) {
 				
@@ -491,7 +600,7 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 				double brfdt  = beam_t - rfTime;
 				
 				double dt_fcal_bm = fcal_t - beam_t;
-				double dt_ccal_bm   = ccal_t - beam_t;
+				double dt_ccal_bm = ccal_t - beam_t;
 				
 				hcomp_bfdt->Fill( dt_fcal_bm );
 				hcomp_bcdt->Fill( dt_ccal_bm );
@@ -501,25 +610,34 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 				double ecompf  =  1. / ( (1./beam_e)  +  (1./m_e)*(1. - cos(fcal_pos.Theta())) );
 				double ecompc  =  1. / ( (1./beam_e)  +  (1./m_e)*(1. - cos(ccal_pos.Theta())) );
 				
+				brfdt -= BEAM_RF_MAIN_PEAK;
 				
-				if( fabs(brfdt) <  2.004 ) {
+				int beam_main_cut = 0;
+				if( fabs(brfdt) < 6.012 ) beam_main_cut = 1;
+				
+				int beam_acc_cut  = 0;
+				if( (fabs(brfdt + 4.5*4.008) < 4.008) 
+					|| (fabs(brfdt - 4.5*4.008) < 4.008) )
+					beam_acc_cut = 1;
+				
+				
+				if( beam_main_cut ) {
 					
 					hcomp_cratio->Fill( ccal_e/ecompc );
 					hcomp_cfbratio->Fill( (ccal_e+fcal_e-beam_e)/beam_e );
 					hcomp_cxy->Fill( ccal_pos.X(), ccal_pos.Y() );
 					hcomp_fxy->Fill( fcal_pos.X(), fcal_pos.Y() );
-					hcomp_cfb2d->Fill( (ecompc+ecompf)/beam_e, (ccal_e+fcal_e)/beam_e );
-					hcomp_pfpc->Fill( (phif-phic)*180./TMath::Pi() );
+					hcomp_cfb2d->Fill( (ecompc+ecompf)/beam_e, 
+						(ccal_e+fcal_e)/beam_e );
 					
-				} else if( (  -(6.012 + 2.*4.008) <= brfdt && brfdt <= -(6.012 + 1.*4.008) )
-					|| (   (6.012 + 1.*4.008) <= brfdt && brfdt <=  (6.012 + 2.*4.008) ) ) {
+				} else if( beam_acc_cut ) {
 					
 					hcomp_cratio_bkgd->Fill( ccal_e/ecompc );
 					hcomp_cfbratio_bkgd->Fill( (ccal_e+fcal_e-beam_e)/beam_e );
 					hcomp_cxy_bkgd->Fill( ccal_pos.X(), ccal_pos.Y() );
 					hcomp_fxy_bkgd->Fill( fcal_pos.X(), fcal_pos.Y() );
-					hcomp_cfb2d_bkgd->Fill( (ecompc+ecompf)/beam_e, (ccal_e+fcal_e)/beam_e );
-					hcomp_pfpc_bkgd->Fill( (phif-phic)*180./TMath::Pi() );
+					hcomp_cfb2d_bkgd->Fill( (ecompc+ecompf)/beam_e, 
+						(ccal_e+fcal_e)/beam_e );
 					
 				}
 			}

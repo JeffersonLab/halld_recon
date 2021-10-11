@@ -5,6 +5,7 @@ subdirs = [
 'FDC_InternalAlignment',
 'MilleFieldOff',
 'MilleFieldOn',
+'MilleKs',
 'FDCProjectionResiduals'
 ]
 
