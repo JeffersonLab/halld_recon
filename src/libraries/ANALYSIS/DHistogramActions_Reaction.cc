@@ -2025,7 +2025,12 @@ bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DPa
 
 void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 {
-        gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", dHistDependenceFlag);
+        if (gPARMS->Exists("KINFIT:DEPENDENCE_HISTS")){
+                bool locHistDependenceFlag = false;
+                gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
+                gPARMS->GetParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
+                dHistDependenceFlag = locHistDependenceFlag;
+	}
 
 	auto locReaction = Get_Reaction();
 	DKinFitType locKinFitType = locReaction->Get_KinFitType();
