@@ -196,6 +196,11 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double xShowerlog1=fcalShower1->getPosition_log().X();
     double yShowerlog1=fcalShower1->getPosition_log().Y();
     double zShowerlog1=fcalShower1->getPosition_log().Z();
+    xShower1 = xShowerlog1;
+    yShower1 = yShowerlog1;
+    zShower1 = zShowerlog1;
+    int row = fcalGeom.row(static_cast<float>(yShowerlog1));
+    int col = fcalGeom.column(static_cast<float>(xShowerlog1));
     double x1 = xShower1 - kinfitVertexX;
     double y1 = yShower1 - kinfitVertexY;
     double z1 = zShower1 - kinfitVertexZ;
@@ -231,6 +236,49 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double p1z = p1 * cos(vertex1.Theta());
     TLorentzVector photon1P4(p1x, p1y, p1z, p1);
     double tdiff1 = t1 - locRFTime;
+    
+    Fill2DHistogram("XY","","xy_all", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+    Fill2DHistogram("CR","","xy_all", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    if (emax1 > 1.0) {
+      Fill2DHistogram("XY","","xy_1GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_1GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 2.0) {
+      Fill2DHistogram("XY","","xy_2GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_2GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 3.0) {
+      Fill2DHistogram("XY","","xy_3GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_3GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 4.0) {
+      Fill2DHistogram("XY","","xy_4GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_4GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }    
+    if (emax1 > 5.0) {
+      Fill2DHistogram("XY","","xy_5GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_5GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 6.0) {
+      Fill2DHistogram("XY","","xy_6GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_6GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }    
+    if (emax1 > 7.0) {
+      Fill2DHistogram("XY","","xy_7GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_7GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 8.0) {
+      Fill2DHistogram("XY","","xy_8GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_8GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 9.0) {
+      Fill2DHistogram("XY","","xy_9GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_9GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
+    if (emax1 > 10.0) {
+      Fill2DHistogram("XY","","xy_10GeV", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
+      Fill2DHistogram("CR","","xy_10GeV", col - 29, row - 29, ";Column;Row;Counts", 59, -30, 30, 59, -30, 30);
+    }
     
     Fill1DHistogram("FCAL_Pi0HFA","","tdiff1", tdiff1, ";t_{#gamma}^{1} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
     Fill1DHistogram("FCAL_Pi0HFA","","E", Eclust1, ";E_{cluster};Count [a.u.]", 12000, 0., 12.);
@@ -332,6 +380,9 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       double xShowerlog2=fcalShower2->getPosition_log().X();
       double yShowerlog2=fcalShower2->getPosition_log().Y();
       double zShowerlog2=fcalShower2->getPosition_log().Z();
+      xShower2 = xShowerlog2;
+      yShower2 = yShowerlog2;
+      zShower2 = zShowerlog2;
       double x2 = xShower2 - kinfitVertexX;
       double y2 = yShower2 - kinfitVertexY;
       double z2 = zShower2 - kinfitVertexZ;
@@ -380,11 +431,14 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       if (0.70 <= Eratio && Eratio <= 1.30) bo_30p = true;
       double pi0Mass = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).M();
       double pi0Masslog = (photon1P4 + photon2P4).M();
+      pi0Mass = pi0Masslog;
       double theta_pi0 = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).Theta() * TMath::RadToDeg();
       double pi0P = (photon1->lorentzMomentum() + photon2->lorentzMomentum()).P();
       double theta_pi0log = (photon1P4 + photon2P4).Theta() * TMath::RadToDeg();
+      theta_pi0 = theta_pi0log;
       double pi0E = (photon1P4 + photon2P4).E();
       double pi0Plog = (photon1P4 + photon2P4).P();
+      pi0P = pi0Plog;
       double avgE = 0.5*fcalCluster1->getEnergy() + 0.5*fcalCluster2->getEnergy();
       DVector3 distance = vertex1 - vertex2;
       double d = distance.Mag();
