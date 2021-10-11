@@ -28,6 +28,7 @@
 // hnamepath: /occupancy/L1GTPRate
 // hnamepath: /occupancy/L1livetime
 // hnamepath: /highlevel/BCALVsFCAL_TrigBit1
+// hnamepath: /highlevel/CCALVsFCAL_TrigBit1
 // hnamepath: /highlevel/L1bits_gtp
 // hnamepath: /highlevel/L1bits_fp
 // hnamepath: /highlevel/NumTriggers
@@ -63,7 +64,6 @@
 	}
 
 	//Get/Make Canvas
-        gROOT->SetStyle("Plain");
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
 		locCanvas = new TCanvas("Kinematics", "Kinematics", 1200, 900); //for testing
@@ -223,8 +223,6 @@
 		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_alt4 = new TH1I("locHist_Trigger_alt4", "", bin_number, 0, bin_number);
-		TH1I *locHist_Trigger_alt5 = new TH1I("locHist_Trigger_alt5", "", bin_number, 0, bin_number);
 
 		for (int i=1; i <= bin_number; i++)
 		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
@@ -241,19 +239,17 @@
 
 		// FCAL LED: FP Bit 3
 		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
-		locHist_Trigger_alt2->Fill(3., locHist_L1bits_fp->GetBinContent(3));
 
 		// CCAL LED: FP Bit 5
 		locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(5));
-		locHist_Trigger_alt3->Fill(4., locHist_L1bits_fp->GetBinContent(5));
+		locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(5));
 
 		// CCAL Alpha: FP Bit 6
 		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(6));
-		locHist_Trigger_alt4->Fill(5., locHist_L1bits_fp->GetBinContent(6));
 
 		// Random Trigger: FP Bit 12
 		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
-		locHist_Trigger_alt5->Fill(6., locHist_L1bits_fp->GetBinContent(12));
+		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
 
 		// BCAL LED: FP Bit 9 and Bit 10
 		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(9)+locHist_L1bits_fp->GetBinContent(10));
@@ -271,8 +267,6 @@
 		locHist_Trigger_alt1->Draw("hist same");
 		locHist_Trigger_alt2->Draw("hist same");
 		locHist_Trigger_alt3->Draw("hist same");
-		locHist_Trigger_alt4->Draw("hist same");
-		locHist_Trigger_alt5->Draw("hist same");
 
 		gPad->SetBottomMargin(0.265);
 		gPad->RedrawAxis();
