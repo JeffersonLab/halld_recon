@@ -138,7 +138,7 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 		                QUIT_AFTER_FINDING_NTH = true;
 				SKIP_BORING_EVENTS = true;
 				PAUSE_BETWEEN_EVENTS = false;
-				if (strlen(argv[i])>2) {  // N_TO_FIND defaults to 1 if not specified
+				if (strlen(argv[i])>2) {  // N_TO_FIND defaults to 0(=all events) if not specified
 				  long int number_to_find = strtol(&argv[i][2],NULL,10);
 				  N_TO_FIND = (int)number_to_find;
 				}
