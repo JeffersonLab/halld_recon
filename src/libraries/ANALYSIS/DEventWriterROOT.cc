@@ -722,6 +722,7 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumTrackArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locArraySizeString, dInitNumTrackArraySize);
 
 	//DIRC:
 	if(DIRC_OUTPUT) {
@@ -784,6 +785,7 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaPhi"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackBCAL_DeltaZ"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locArraySizeString, dInitNumNeutralArraySize);
 
 	//PHOTON PID INFO
 		//Computed using DVertex (best estimate of reaction vertex using all "good" tracks)
@@ -1853,9 +1855,14 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 
 	//SHOWER MATCHING: FCAL
 	double locDOCAToShower_FCAL = 999.0;
-	if(locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL)
+	double locDeltaT_TrackToShower_FCAL = 999.0;
+	if(locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL) {
+        const DFCALShower* locFCALShower = locChargedTrackHypothesis->Get_FCALShowerMatchParams()->dFCALShower;
 		locDOCAToShower_FCAL = locChargedTrackHypothesis->Get_FCALShowerMatchParams()->dDOCAToShower;
+		locDeltaT_TrackToShower_FCAL = locFCALShower->getTime() - ( locChargedTrackHypothesis->t0() + locFCALShower->getTimeTrack() );
+    }
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locDOCAToShower_FCAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locDeltaT_TrackToShower_FCAL, locArrayIndex);
 
 	// DIRC
 	if(DIRC_OUTPUT) {
@@ -2003,14 +2010,17 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 
 	//Track DOCA to Shower - FCAL
 	double locDistanceToNearestTrack_FCAL = 999.0;
+	double locDeltaT_TrackToShower_FCAL = 999.0;
 	if(locFCALShower != NULL)
 	{
 		if(!locDetectorMatches->Get_DistanceToNearestTrack(locFCALShower, locDistanceToNearestTrack_FCAL))
 			locDistanceToNearestTrack_FCAL = 999.0;
 		if(locDistanceToNearestTrack_FCAL > 999.0)
 			locDistanceToNearestTrack_FCAL = 999.0;
+		locDeltaT_TrackToShower_FCAL = locFCALShower->getTime() - ( locNeutralParticleHypothesis->t0() + locFCALShower->getTimeTrack() );
 	}
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"), locDistanceToNearestTrack_FCAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DOCA"),   locDistanceToNearestTrack_FCAL, locArrayIndex);
+	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "TrackFCAL_DeltaT"), locDeltaT_TrackToShower_FCAL, locArrayIndex);
 
 	//PHOTON PID INFO
 	double locStartTimeError = locNeutralParticleHypothesis->t0_err();
