@@ -28,7 +28,7 @@ bool ACTIVATE_TAGGED_FOR_SUMMARY = false;
 bool QUIT_AFTER_FINDING_NTH = false;
 extern bool SPARSIFY_SUMMARY;
 
-int N_TO_FIND=1;
+int N_TO_FIND=0; // default to processing all events
 
 int n_found=0;
 
