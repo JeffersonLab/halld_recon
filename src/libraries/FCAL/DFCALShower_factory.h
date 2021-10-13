@@ -88,12 +88,14 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double FCAL_C_EFFECTIVE;
 
   // parameters for insert
-  double INSERT_PAR1,INSERT_PAR2,INSERT_PAR3,INSERT_PAR4;
+  double INSERT_PAR1,INSERT_PAR2;
   double INSERT_RADIATION_LENGTH;
   double INSERT_CRITICAL_ENERGY;
   double INSERT_SHOWER_OFFSET;
   double INSERT_C_EFFECTIVE;
   double m_insertFront;
+  double INSERT_POS_RES1,INSERT_POS_RES2;
+  double INSERT_E_VAR1,INSERT_E_VAR2,INSERT_E_VAR3;
 
   const DFCALGeometry *fcalGeom=NULL;
 

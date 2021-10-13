@@ -56,7 +56,7 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 {
 	
 	public:
-  		JEventProcessor_CCAL_online() {};
+  		JEventProcessor_CCAL_online();
   		~JEventProcessor_CCAL_online() {};
   		const char* className(void) { return "JEventProcessor_CCAL_online"; }
 	
@@ -70,8 +70,7 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 		
 		int ccalLayer( int, int );
 		
-		
-		
+		double BEAM_RF_MAIN_PEAK;
 		
 		const double m_e = 0.510998928e-3;
 		const double c   = 29.9792458;
@@ -79,11 +78,6 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 		double m_beamX = 0.;
 		double m_beamY = 0.;
 		double m_beamZ;
-		
-		
-		
-		
-		
 		
 		TH1D *ccal_num_events;
 		
@@ -133,7 +127,6 @@ class JEventProcessor_CCAL_online:public jana::JEventProcessor
 		TH1F *hcomp_cratio_bkgd;
 		TH1F *hcomp_cfbratio_bkgd;
 		TH2F *hcomp_cfb2d_bkgd;
-		TH1F *hcomp_pfpc_bkgd;
 		TH2F *hcomp_cxy_bkgd;
 		TH2F *hcomp_fxy_bkgd;
 		

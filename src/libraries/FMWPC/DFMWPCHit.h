@@ -10,6 +10,8 @@
 
 #include <JANA/jerror.h>
 
+using namespace jana;
+
 class DFMWPCHit:public JObject{
 	public:
 		JOBJECT_PUBLIC(DFMWPCHit);
