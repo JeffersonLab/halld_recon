@@ -45,7 +45,7 @@ class hdv_optionsframe:public TGMainFrame {
 	private:
 	
 		hdv_mainframe *hdvmf;
-		map<string, TGCheckButton*> checkbuttons;
+		std::map<std::string, TGCheckButton*> checkbuttons;
 		
 	ClassDef(hdv_optionsframe,1)
 };

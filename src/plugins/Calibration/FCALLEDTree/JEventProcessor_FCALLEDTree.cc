@@ -30,7 +30,8 @@ extern "C"{
 //------------------
 JEventProcessor_FCALLEDTree::JEventProcessor_FCALLEDTree()
 {
-
+  btree = 0;
+  gPARMS->SetDefaultParameter( "FCALLED:Tree", btree );
 }
 
 //------------------
@@ -48,22 +49,26 @@ jerror_t JEventProcessor_FCALLEDTree::init(void)
 {
   // This is called once at program startup. 
   japp->RootWriteLock();
-
-  m_tree = new TTree( "fcalBlockHits", "FCAL Block Hits" );
-
-  m_tree->Branch( "nHits", &m_nHits, "nHits/I" );
-  m_tree->Branch( "chan", m_chan, "chan[nHits]/I" );
-  m_tree->Branch( "x", m_x, "x[nHits]/F" );
-  m_tree->Branch( "y", m_y, "y[nHits]/F" );
-  m_tree->Branch( "E", m_E, "E[nHits]/F" );
-  m_tree->Branch( "t", m_t, "t[nHits]/F" );
-  m_tree->Branch( "integ", m_integ, "integ[nHits]/F" );
-  m_tree->Branch( "ped", m_ped, "ped[nHits]/F" );
-  m_tree->Branch( "peak", m_peak, "peak[nHits]/F" );
   
-  m_tree->Branch( "run", &m_run, "run/I" );
-  m_tree->Branch( "event", &m_event, "event/L" );
-  m_tree->Branch( "eTot", &m_eTot, "eTot/F" );
+  if (btree == 1) {
+  
+    m_tree = new TTree( "fcalBlockHits", "FCAL Block Hits" );
+
+    m_tree->Branch( "nHits", &m_nHits, "nHits/I" );
+    m_tree->Branch( "chan", m_chan, "chan[nHits]/I" );
+    m_tree->Branch( "x", m_x, "x[nHits]/F" );
+    m_tree->Branch( "y", m_y, "y[nHits]/F" );
+    m_tree->Branch( "E", m_E, "E[nHits]/F" );
+    m_tree->Branch( "t", m_t, "t[nHits]/F" );
+    m_tree->Branch( "integ", m_integ, "integ[nHits]/F" );
+    m_tree->Branch( "ped", m_ped, "ped[nHits]/F" );
+    m_tree->Branch( "peak", m_peak, "peak[nHits]/F" );
+    
+    m_tree->Branch( "run", &m_run, "run/I" );
+    m_tree->Branch( "event", &m_event, "event/L" );
+    m_tree->Branch( "eTot", &m_eTot, "eTot/F" );
+  }
+  
 
   japp->RootUnLock();
   
@@ -107,11 +112,11 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
   
   m_nHits = 0;
   m_eTot = 0;
-    
+  
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end();
        ++hit ){
-
+    
     vector< const DFCALDigiHit* > digiHits;
     (**hit).Get( digiHits );
     if( digiHits.size() != 1 ) std::cout << "ERROR:  wrong size!! " << std::endl;
@@ -123,21 +128,33 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     m_y[m_nHits] = (**hit).y;
     m_E[m_nHits] = (**hit).E;
     m_t[m_nHits] = (**hit).t;
-
+    
     m_eTot += (**hit).E;
 
     m_ped[m_nHits] = (float)dHit.pedestal/dHit.nsamples_pedestal;
     m_peak[m_nHits] = dHit.pulse_peak - m_ped[m_nHits];
     m_integ[m_nHits] = dHit.pulse_integral -
-       (m_ped[m_nHits]*dHit.nsamples_integral);
+      (m_ped[m_nHits]*dHit.nsamples_integral);
+  
+    int row = fcalGeom.row((**hit).x);
+    int col = fcalGeom.column((**hit).y);
     
+    Fill2DHistogram("hv_scan","","XYGeo", row, col, ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
+    Fill2DWeightedHistogram("hv_scan","","XYGeo_w", row, col, (**hit).E, ";row;column #;E_{max}^{sum} [GeV]", 59, 0, 59, 59, 0, 59);
+    Fill2DHistogram("hv_scan","","m_E", fcalGeom.channel((**hit).row, (**hit).column ), (**hit).E, ";channel;energy;Counts", 2800, 0, 2800, 1200, 0, 12.);
+    Fill2DHistogram("hv_scan","","m_ped", fcalGeom.channel((**hit).row, (**hit).column ), (float)dHit.pedestal/dHit.nsamples_pedestal, ";channel;pedestal;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+    Fill2DHistogram("hv_scan","","m_peak", fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_peak - m_ped[m_nHits], ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+    Fill2DHistogram("hv_scan","","m_integ", fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_integral - (m_ped[m_nHits]*dHit.nsamples_integral), ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+
     ++m_nHits;
   }
 
-  m_tree->Fill();
+  if (btree == 1) {  
+    m_tree->Fill();
+  }
   
   japp->RootFillUnLock(this);
-
+  
   return NOERROR;
 }
 

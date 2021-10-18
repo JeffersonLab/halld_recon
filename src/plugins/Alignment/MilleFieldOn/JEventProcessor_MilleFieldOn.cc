@@ -30,13 +30,15 @@ JEventProcessor_MilleFieldOn::~JEventProcessor_MilleFieldOn() {}
 
 jerror_t JEventProcessor_MilleFieldOn::init(void) {
   // This is called once at program startup.
-  int version = -1;
-  gPARMS->SetDefaultParameter("MILLE:VERSION", version);
-  if (version < 0) {
-    milleWriter = new Mille("fieldon_mille_out.mil");
-  } else {
-    milleWriter = new Mille(Form("mil/fieldon_mille_out_v%02d.mil", version));
+  string output_filename;
+  gPARMS->GetParameter("OUTPUT_FILENAME", output_filename);
+  int ext_pos = output_filename.rfind(".root");
+  if (ext_pos != (int)output_filename.size() - 5) {
+    jerr << "[MilleFieldOn] Invalid output filename." << endl;
+    japp->Quit();
   }
+  output_filename.replace(ext_pos, 5, ".mil");
+  milleWriter = new Mille(output_filename.data());
 
   return NOERROR;
 }

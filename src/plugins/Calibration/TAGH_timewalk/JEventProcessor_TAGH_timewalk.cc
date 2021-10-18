@@ -23,6 +23,7 @@ const int Nslots = 274; // number of TAGH counter slots
 static TH2I *hTAGH_tdcadcTimeDiffVsSlotID;
 static TH2I *hTAGHRF_tdcTimeDiffVsSlotID;
 static TH2I *hTAGHRF_tdcTimeDiffVsPulseHeight[1+Nslots];
+static TH2I *hTAGHRF_correctedTdcTimeDiffVsPulseHeight[1+Nslots];
 
 extern "C"{
     void InitPlugin(JApplication *app){
@@ -74,6 +75,14 @@ jerror_t JEventProcessor_TAGH_timewalk::init(void)
         TString title = "TAGH counter " + ss.str();
         hTAGHRF_tdcTimeDiffVsPulseHeight[i] = new TH2I(name,title+";pulse height [fADC counts];time(TDC) - time(RF) [ns]",41,0,4100,50,-2.5,2.5);
     }
+    taghDir->cd();
+    gDirectory->mkdir("Corrected_Timewalk")->cd();
+    for (int i = 0; i < 1+Nslots; i++) {
+        stringstream ss; ss << i;
+        TString name = "TAGHRF_correctedTdcTimeDiffVsPulseHeight_" + ss.str();
+        TString title = "TAGH counter " + ss.str();
+        hTAGHRF_correctedTdcTimeDiffVsPulseHeight[i] = new TH2I(name,title+";pulse height [fADC counts];time(TDC) - time(RF) [ns]",41,0,4100,50,-2.5,2.5);
+    }
     mainDir->cd();
 
     return NOERROR;
@@ -120,14 +129,19 @@ jerror_t JEventProcessor_TAGH_timewalk::evnt(JEventLoop *loop, uint64_t eventnum
         const DTAGHHit *hit = taghhits[i];
         if (!hit->has_TDC || !hit->has_fADC) continue;
         int id = hit->counter_id;
+        double t = hit->t;
         double t_tdc = hit->time_tdc;
         double t_adc = hit->time_fadc;
         double pulse_height = hit->pulse_peak;
         hTAGH_tdcadcTimeDiffVsSlotID->Fill(id,t_tdc-t_adc);
         hTAGHRF_tdcTimeDiffVsSlotID->Fill(id,t_tdc-t_RF);
+
         t_tdc = dRFTimeFactory->Step_TimeToNearInputTime(t_tdc,t_RF);
+        t = dRFTimeFactory->Step_TimeToNearInputTime(t,t_RF);
+
         hTAGHRF_tdcTimeDiffVsPulseHeight[0]->Fill(pulse_height,t_tdc-t_RF);
         hTAGHRF_tdcTimeDiffVsPulseHeight[id]->Fill(pulse_height,t_tdc-t_RF);
+        hTAGHRF_correctedTdcTimeDiffVsPulseHeight[id]->Fill(pulse_height,t-t_RF);
     }
 
     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
