@@ -182,6 +182,7 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		int SIMU_BASELINE;
 		int SIMU_GAIN;
 
+		bool ENABLE_TOF;
 		int MIN_TOF_BITS_LOW,MIN_TOF_BITS_HIGH;
 
 		double time_shift;

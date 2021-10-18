@@ -137,6 +137,11 @@ jerror_t DL1MCTrigger_factory::init(void)
   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
 
+  // Enable/disable TOF trigger emulation
+  ENABLE_TOF=false;
+  gPARMS->SetDefaultParameter("TRIG:ENABLE_TOF", ENABLE_TOF,
+			      "Enable emulation of TOF trigger");
+
   MIN_TOF_BITS_LOW=2;
   MIN_TOF_BITS_HIGH=2;
   gPARMS->SetDefaultParameter("TRIG:MIN_TOF_BITS_LOW", MIN_TOF_BITS_LOW,
@@ -333,7 +338,6 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
   if (TOFGeom!=NULL){
     int TOF_NUM_PLANES = TOFGeom->Get_NPlanes();
     TOF_NUM_BARS = TOFGeom->Get_NBars();
-    cout << TOF_NUM_BARS << endl;
     
     string locTOFADC2ETable = TOFGeom->Get_CCDB_DirectoryName() + "/adc2E";
     vector<double> raw_adc2E;
@@ -658,7 +662,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	// Search for triggers
 	l1_found = FindTriggers(trigger);
-	if (TOFTrigger(tof_hits)){
+	if (ENABLE_TOF && TOFTrigger(tof_hits)){
 	  trigger->trig_mask|=0x20;
 	  l1_found=1;
 	}
