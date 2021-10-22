@@ -8,7 +8,6 @@
 ///           the use of TOFHitRaw::TRUTH information to calculate the TOFHit positions
 ///           (e.q. use of unsmeared data)
 
-
 #ifndef _DTOFPaddleHit_factory_
 #define _DTOFPaddleHit_factory_
 
@@ -21,37 +20,32 @@
 #include "TMath.h"
 using namespace jana;
 
-/// \htmlonly
-/// <A href="index.html#legend">
-///	<IMG src="CORE.png" width="100">
-///	</A>
-/// \endhtmlonly
+///
+/// The header file DTOFPaddleHit_factory.h is the basis for the factory that generates
+/// TOFPaddleHit objects are based on long paddles with 2-ended readout. 
+/// The individual hits from either side come from DTOFHit objects.
 
-/// 2-ended TOF coincidences. The individual hits come from DTOFHit objects and
-/// the 2 planes are combined into single hits in the DTOFPoint objects. This is the
-/// intermediate set of objects between the two.
 
 class DTOFPaddleHit_factory:public JFactory<DTOFPaddleHit>{
  public:
   DTOFPaddleHit_factory(){TOF_POINT_TAG="";gPARMS->SetDefaultParameter("TOF:TOF_POINT_TAG", TOF_POINT_TAG,"");};
   ~DTOFPaddleHit_factory(){};
   
-  string TOF_POINT_TAG;
-  double C_EFFECTIVE;
-  double HALFPADDLE;
-  double E_THRESHOLD;
-  double ATTEN_LENGTH;
-  double ENERGY_ATTEN_FACTOR;
-  double TIME_COINCIDENCE_CUT;
+  string TOF_POINT_TAG; ///< JFactory tag for TOF Paddle Hit factory: command line -PTOF:TOF_POINT_TAG=XXX
+  double C_EFFECTIVE;   ///< effective speed of light in paddle
+  double HALFPADDLE;    ///< length of short paddles
+  double E_THRESHOLD;   ///< energy threshold applied to ADC hits
+  double ATTEN_LENGTH;  ///< attenuation length in paddle
+  double TIME_COINCIDENCE_CUT; ///< timing window to find match between both ends of a paddle
 
-  int TOF_NUM_PLANES;
-  int TOF_NUM_BARS;
+  int TOF_NUM_PLANES; ///< number of TOF planes is 2
+  int TOF_NUM_BARS;   ///< number of paddles in a plane 44 ( 46 for TOF2)
 
-  vector<double> propagation_speed;
+  vector<double> propagation_speed; ///< effective speed of light in paddle (each paddle separate) from CCDB
 
-  vector < vector <float> > AttenuationLengths;
+  vector < vector <float> > AttenuationLengths; ///< attenuation length in paddle from CCDB
 
-  vector <const DTOFGeometry*> TOFGeom;
+  vector <const DTOFGeometry*> TOFGeom; ///< tof geometry class (vector has only one element)
 
  protected:
   //jerror_t init(void);					///< Called once at program start.

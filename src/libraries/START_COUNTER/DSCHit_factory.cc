@@ -1,9 +1,16 @@
 // $Id$
 //
-//    File: DSCHit_factory.cc
-// Created: Tue Aug  6 12:53:32 EDT 2013
-// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-//
+///    File: DSCHit_factory.cc
+/// Created: Tue Aug  6 12:53:32 EDT 2013
+/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+/// Purpose: Implementation of DSCHit_factory methods ::init(), ::brun(), ::evnt()
+
+/// \addtogroup SCDetector
+
+/*! \file DSCHit_factory.cc
+ * Implementation of start counter hit factory methods ::init(), ::brun(), ::evnt()
+ * Generates DSCHit objects of start counter hits with energy (GeV) and time (ns)
+ */
 
 
 #include <iostream>
@@ -23,149 +30,172 @@ using namespace jana;
 
 bool DSCHit_fadc_cmp(const DSCDigiHit *a,const DSCDigiHit *b)
 {
-    if (a->sector==b->sector) return (a->pulse_time<b->pulse_time);
-    return (a->sector<b->sector);
+  if (a->sector==b->sector) return (a->pulse_time<b->pulse_time);
+  return (a->sector<b->sector);
 }
 
 bool DSCHit_tdc_cmp(const DSCTDCDigiHit *a,const DSCTDCDigiHit *b)
 {
-    if (a->sector==b->sector) return (a->time<b->time);
-    return (a->sector<b->sector);
+  if (a->sector==b->sector) return (a->time<b->time);
+  return (a->sector<b->sector);
 }
 
 //------------------
 // init
 //------------------
+/// \fn jerror_t DSCHit_factory::init(void)
+/// initialize timing window (default = 20ns) for hit matching between ADC and TDC hits
+/// this parameter can be modified on the command line: -PSC:DELTA_T_ADC_TDC_MAX=xx
+/// same for the timing window for hits in general: -PSC:HIT_TIME_WINDOW=xx
+/// the default for this parameter is 60ns
+/// A default threshold on the ADC value is set at 120 ADC counts and can also be modfied
+/// on the command line with -PSC:ADC_THRESHOLD=xxx
+/// the time walk correction is by default applied but can be turned off on the 
+/// command line with : -PSC:USE_TIMEWALK_CORRECTION=0
+/// by default it is required that a DSCHit has to have both ADC and TDC matched data. This
+/// requirement can be turned off with -PSC:REQUIRE_ADC_TDC_MATCH=false
+/// by default ADC errors are checked and such data is ignored. This can be
+/// turned off on the command line like: -PSC:CHECK_FADC_ERRORS=false
 jerror_t DSCHit_factory::init(void)
 {
-    DELTA_T_ADC_TDC_MAX = 20.0; // ns
-    //DELTA_T_ADC_TDC_MAX = 50.0; // ns
-    //DELTA_T_ADC_TDC_MAX = 3600.0; // ns
-    gPARMS->SetDefaultParameter("SC:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
-            "Maximum difference in ns between a (calibrated) fADC time and"
-            " F1TDC time for them to be matched in a single hit");
-
-    HIT_TIME_WINDOW = 60.0; //ns
-    gPARMS->SetDefaultParameter("SC:HIT_TIME_WINDOW", HIT_TIME_WINDOW,
-           "Time window of trigger corrected TDC time in which a hit in"
-	   " in the TDC will match to a hit in the fADC to form an ST hit");
-			     
-    //ADC_THRESHOLD = 200.; // adc counts (= 50 mV threshold)
-    ADC_THRESHOLD = 120.; // adc counts (= 10 Mv threshold)
-    gPARMS->SetDefaultParameter("SC:ADC_THRESHOLD", ADC_THRESHOLD,
-            "Software pulse integral threshold");
-
-    USE_TIMEWALK_CORRECTION = 1.;
-    gPARMS->SetDefaultParameter("SC:USE_TIMEWALK_CORRECTION", USE_TIMEWALK_CORRECTION,
-                                "Flag to decide if timewalk corrections should be applied.");
-
-    REQUIRE_ADC_TDC_MATCH=true;
-    gPARMS->SetDefaultParameter("SC:REQUIRE_ADC_TDC_MATCH", 
-				REQUIRE_ADC_TDC_MATCH,
-                                "Flag to decide if a match between adc and tdc hits is required.");
-    
-    /// set the base conversion scales
-    a_scale    = 0.0001; 
-    t_scale    = 0.0625;   // 62.5 ps/count
-    t_base     = 0.;       // ns
-    t_tdc_base = 0.;
-
-    CHECK_FADC_ERRORS = true;
-    gPARMS->SetDefaultParameter("SC:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
-
-    return NOERROR;
+  DELTA_T_ADC_TDC_MAX = 20.0; // ns
+  //DELTA_T_ADC_TDC_MAX = 50.0; // ns
+  //DELTA_T_ADC_TDC_MAX = 3600.0; // ns
+  gPARMS->SetDefaultParameter("SC:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
+			      "Maximum difference in ns between a (calibrated) fADC time and"
+			      " F1TDC time for them to be matched in a single hit");
+  
+  HIT_TIME_WINDOW = 60.0; //ns
+  gPARMS->SetDefaultParameter("SC:HIT_TIME_WINDOW", HIT_TIME_WINDOW,
+			      "Time window of trigger corrected TDC time in which a hit in"
+			      " in the TDC will match to a hit in the fADC to form an ST hit");
+  
+  //ADC_THRESHOLD = 200.; // adc counts (= 50 mV threshold)
+  ADC_THRESHOLD = 120.; // adc counts (= 10 Mv threshold)
+  gPARMS->SetDefaultParameter("SC:ADC_THRESHOLD", ADC_THRESHOLD,
+			      "Software pulse integral threshold");
+  
+  USE_TIMEWALK_CORRECTION = 1.;
+  gPARMS->SetDefaultParameter("SC:USE_TIMEWALK_CORRECTION", USE_TIMEWALK_CORRECTION,
+			      "Flag to decide if timewalk corrections should be applied.");
+  
+  REQUIRE_ADC_TDC_MATCH=true;
+  gPARMS->SetDefaultParameter("SC:REQUIRE_ADC_TDC_MATCH", 
+			      REQUIRE_ADC_TDC_MATCH,
+			      "Flag to decide if a match between adc and tdc hits is required.");
+  
+  /// set the base conversion scales
+  a_scale    = 0.0001; 
+  t_scale    = 0.0625;   // 62.5 ps/count
+  t_base     = 0.;       // ns
+  t_tdc_base = 0.;
+  
+  CHECK_FADC_ERRORS = true;
+  gPARMS->SetDefaultParameter("SC:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+  
+  return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
+/// \fn jerror_t DSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+/// \param eventLoop
+/// \param runnumber
+/// this function is called every time the run number changes and calibration parameters
+/// will be loaded in from CCDB like timing offsets and walk corrections
+
 jerror_t DSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-    // Only print messages for one thread whenever run number change
-    static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
-    static set<int> runs_announced;
-    pthread_mutex_lock(&print_mutex);
-    bool print_messages = false;
-    if(runs_announced.find(runnumber) == runs_announced.end()){
-        print_messages = true;
-        runs_announced.insert(runnumber);
-    }
-    pthread_mutex_unlock(&print_mutex);
 
-    /// Load geometry - just need the number of sectors
-    DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    if(!dapp)
-        jerr << "Cannot get DApplication from JEventLoop!" << endl;
-    DGeometry* locGeometry = dapp->GetDGeometry(runnumber);
-
-    // Get start counter geometry
-    vector<vector<DVector3> >sc_norm; 
-    vector<vector<DVector3> >sc_pos;
-    MAX_SECTORS=0;
-    if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
-		MAX_SECTORS = sc_pos.size();
-	else
-		jerr << "Cannot load Start Counter geometry information!" << endl;
-		
-    /// Read in calibration constants
-    if(print_messages) jout << "In DSCHit_factory, loading constants..." << endl;
-
-    // load scale factors
-    map<string,double> scale_factors;
-    // a_scale (SC_ADC_SCALE)
-    if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
-        jout << "Error loading /START_COUNTER/digi_scales !" << endl;
-    if (scale_factors.find("SC_ADC_ASCALE") != scale_factors.end())
-        a_scale = scale_factors["SC_ADC_ASCALE"];
-    else
-        jerr << "Unable to get SC_ADC_ASCALE from /START_COUNTER/digi_scales !" 
-            << endl;
-    // t_scale (SC_ADC_SCALE)
-    if (scale_factors.find("SC_ADC_TSCALE") != scale_factors.end())
-        t_scale = scale_factors["SC_ADC_TSCALE"];
-    else
-        jerr << "Unable to get SC_ADC_TSCALE from /START_COUNTER/digi_scales !" 
-            << endl;
-
-    // load base time offset
-    map<string,double> base_time_offset;
-    // t_base (SC_BASE_TIME_OFFSET)
-    if (eventLoop->GetCalib("/START_COUNTER/base_time_offset",base_time_offset))
-        jout << "Error loading /START_COUNTER/base_time_offset !" << endl;
-    if (base_time_offset.find("SC_BASE_TIME_OFFSET") != base_time_offset.end())
-        t_base = base_time_offset["SC_BASE_TIME_OFFSET"];
-    else
-        jerr << "Unable to get SC_BASE_TIME_OFFSET from /START_COUNTER/base_time_offset !" << endl;
-    // t_tdc_base (SC_TDC_BASE_TIME_OFFSET)
-    if (base_time_offset.find("SC_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
-        t_tdc_base = base_time_offset["SC_TDC_BASE_TIME_OFFSET"];
-    else
-        jerr << "Unable to get SC_BASE_TIME_OFFSET from /START_COUNTER/base_time_offset !" << endl;
-
-    // load constant tables
-    // a_gains (gains)
-    if (eventLoop->GetCalib("/START_COUNTER/gains", a_gains))
-        jout << "Error loading /START_COUNTER/gains !" << endl;
-    // a_pedestals (pedestals)
-    if (eventLoop->GetCalib("/START_COUNTER/pedestals", a_pedestals))
-        jout << "Error loading /START_COUNTER/pedestals !" << endl;
-    // adc_time_offsets (adc_timing_offsets)
-    if (eventLoop->GetCalib("/START_COUNTER/adc_timing_offsets", adc_time_offsets))
-        jout << "Error loading /START_COUNTER/adc_timing_offsets !" << endl;
-    // tdc_time_offsets (tdc_timing_offsets)
-    if (eventLoop->GetCalib("/START_COUNTER/tdc_timing_offsets", tdc_time_offsets))
-        jout << "Error loading /START_COUNTER/tdc_timing_offsets !" << endl;
-    // timewalk_parameters (timewalk_parms)
-    if(eventLoop->GetCalib("START_COUNTER/timewalk_parms_v2", timewalk_parameters))
-        jout << "Error loading /START_COUNTER/timewalk_parms_v2 !" << endl;
-
-
-    return NOERROR;
+  // Only print messages for one thread whenever run number change
+  static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
+  static set<int> runs_announced;
+  pthread_mutex_lock(&print_mutex);
+  bool print_messages = false;
+  if(runs_announced.find(runnumber) == runs_announced.end()){
+    print_messages = true;
+    runs_announced.insert(runnumber);
+  }
+  pthread_mutex_unlock(&print_mutex);
+  
+  /// Load geometry - just need the number of sectors
+  DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  if(!dapp)
+    jerr << "Cannot get DApplication from JEventLoop!" << endl;
+  DGeometry* locGeometry = dapp->GetDGeometry(runnumber);
+  
+  // Get start counter geometry
+  vector<vector<DVector3> >sc_norm; 
+  vector<vector<DVector3> >sc_pos;
+  MAX_SECTORS=0;
+  if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
+    MAX_SECTORS = sc_pos.size();
+  else
+    jerr << "Cannot load Start Counter geometry information!" << endl;
+  
+  /// Read in calibration constants
+  if(print_messages) jout << "In DSCHit_factory, loading constants..." << endl;
+  
+  // load scale factors
+  map<string,double> scale_factors;
+  // a_scale (SC_ADC_SCALE)
+  if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
+    jout << "Error loading /START_COUNTER/digi_scales !" << endl;
+  if (scale_factors.find("SC_ADC_ASCALE") != scale_factors.end())
+    a_scale = scale_factors["SC_ADC_ASCALE"];
+  else
+    jerr << "Unable to get SC_ADC_ASCALE from /START_COUNTER/digi_scales !" 
+	 << endl;
+  // t_scale (SC_ADC_SCALE)
+  if (scale_factors.find("SC_ADC_TSCALE") != scale_factors.end())
+    t_scale = scale_factors["SC_ADC_TSCALE"];
+  else
+    jerr << "Unable to get SC_ADC_TSCALE from /START_COUNTER/digi_scales !" 
+	 << endl;
+  
+  // load base time offset
+  map<string,double> base_time_offset;
+  // t_base (SC_BASE_TIME_OFFSET)
+  if (eventLoop->GetCalib("/START_COUNTER/base_time_offset",base_time_offset))
+    jout << "Error loading /START_COUNTER/base_time_offset !" << endl;
+  if (base_time_offset.find("SC_BASE_TIME_OFFSET") != base_time_offset.end())
+    t_base = base_time_offset["SC_BASE_TIME_OFFSET"];
+  else
+    jerr << "Unable to get SC_BASE_TIME_OFFSET from /START_COUNTER/base_time_offset !" << endl;
+  // t_tdc_base (SC_TDC_BASE_TIME_OFFSET)
+  if (base_time_offset.find("SC_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
+    t_tdc_base = base_time_offset["SC_TDC_BASE_TIME_OFFSET"];
+  else
+    jerr << "Unable to get SC_BASE_TIME_OFFSET from /START_COUNTER/base_time_offset !" << endl;
+  
+  // load constant tables
+  // a_gains (gains)
+  if (eventLoop->GetCalib("/START_COUNTER/gains", a_gains))
+    jout << "Error loading /START_COUNTER/gains !" << endl;
+  // a_pedestals (pedestals)
+  if (eventLoop->GetCalib("/START_COUNTER/pedestals", a_pedestals))
+    jout << "Error loading /START_COUNTER/pedestals !" << endl;
+  // adc_time_offsets (adc_timing_offsets)
+  if (eventLoop->GetCalib("/START_COUNTER/adc_timing_offsets", adc_time_offsets))
+    jout << "Error loading /START_COUNTER/adc_timing_offsets !" << endl;
+  // tdc_time_offsets (tdc_timing_offsets)
+  if (eventLoop->GetCalib("/START_COUNTER/tdc_timing_offsets", tdc_time_offsets))
+    jout << "Error loading /START_COUNTER/tdc_timing_offsets !" << endl;
+  // timewalk_parameters (timewalk_parms)
+  if(eventLoop->GetCalib("START_COUNTER/timewalk_parms_v2", timewalk_parameters))
+    jout << "Error loading /START_COUNTER/timewalk_parms_v2 !" << endl;
+  
+  
+  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
+/// \fn jerror_t DSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+/// \param loop : 
+/// \param eventnumber:
 jerror_t DSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
     /// Generate DSCHit object for each DSCDigiHit object.
@@ -177,7 +207,7 @@ jerror_t DSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
 
-    // First, make hits out of all fADC250 hits
+    /// First, make DSCHit(s) out of all fADC250 DSCDigiHit(s)
     vector<const DSCDigiHit*> digihits;
     loop->Get(digihits);
     sort(digihits.begin(),digihits.end(),DSCHit_fadc_cmp);
@@ -187,7 +217,9 @@ jerror_t DSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     char str[256];
     vector<DSCHit *>temp_schits;
-
+    /// Loop over all ADC Digi Hits apply offset parameters
+    /// this includes subracting pedestals from ADC amplituded and integrals before
+    /// converting to energy in GeV
     for (unsigned int i = 0; i < digihits.size(); i++)  {
         const DSCDigiHit *digihit = digihits[i];
 
@@ -244,96 +276,93 @@ jerror_t DSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         hit->has_TDC = false;
         hit->has_fADC = true;
-
+	
         hit->t = hit->t_fADC; // set time from fADC in case no TDC hit
         hit->pulse_height = pulse_peak;
-
+	
         hit->AddAssociatedObject(digihit);
-
+	
         temp_schits.push_back(hit);
     }
     
 
-	// Next, loop over TDC hits, matching them to the
-	// existing fADC hits where possible and updating
-	// their time information. If no match is found, then
-	// create a new hit with just the TDC info.
-	vector<const DSCTDCDigiHit*> tdcdigihits;
-	loop->Get(tdcdigihits);
-	sort(tdcdigihits.begin(),tdcdigihits.end(),DSCHit_tdc_cmp);
-
-	for (unsigned int i = 0; i < tdcdigihits.size(); i++) {
-	    const DSCTDCDigiHit *digihit = tdcdigihits[i];
-
-	    // Make sure sector is in valid range
-	    if((digihit->sector <= 0) && (digihit->sector > MAX_SECTORS)) {
-            sprintf(str, "DSCDigiHit sector out of range! sector=%d (should be 1-%d)",
-                    digihit->sector, MAX_SECTORS);
-            throw JException(str);
-        }
-        
-	    unsigned int id = digihit->sector - 1;
-	    double T = locTTabUtilities->Convert_DigiTimeToNs_F1TDC(digihit) - tdc_time_offsets[id] + t_tdc_base;
-
-	    // Look for existing hits to see if there is a match
-	    //   or create new one if there is no match
-	    // Require that the trigger corrected TDC time fall within
-	    //   a reasonable time window so that when a hit is associated with
-	    //   a hit in the TDC and not the ADC it is a "decent" TDC hit
-        if (fabs(T) < HIT_TIME_WINDOW) {
-	  DSCHit *hit = FindMatch(temp_schits,digihit->sector, T);
-            if (hit == nullptr) {
-                hit = new DSCHit;
-                hit->sector = digihit->sector;
-                hit->dE = 0.0;
-                hit->t_fADC= numeric_limits<double>::quiet_NaN();
-                hit->has_fADC=false;
-                temp_schits.push_back(hit);
-            }
-
-            hit->has_TDC=true;
-            hit->t_TDC=T;
-
-            if (USE_TIMEWALK_CORRECTION && (hit->dE > 0.0) ) {
-                // Correct for time walk
-                // The correction is the form t=t_tdc- C1 (A^C2 - A0^C2)
-                // double A  = hit->dE;
-                // double C1 = timewalk_parameters[id][1];
-                // double C2 = timewalk_parameters[id][2];
-                // double A0 = timewalk_parameters[id][3];
-                // T -= C1*(pow(A,C2) - pow(A0,C2));
-
-                // Correct for timewalk using pulse peak instead of pulse integral
-                double A        = hit->pulse_height;
-                // double C0       = timewalk_parameters[id][0];
-                double C1       = timewalk_parameters[id][1];
-                double C2       = timewalk_parameters[id][2];
-                double A_THRESH = timewalk_parameters[id][3];
-                double A0       = timewalk_parameters[id][4];
-                // do correction
-                T -= C1*(pow(A/A_THRESH, C2) - pow(A0/A_THRESH, C2));
-            }
-
-            hit->t=T;
-
-            hit->AddAssociatedObject(digihit);
-        } // Hit time window cut
-
+    /// Next, loop over TDC hits, matching them to the
+    /// existing fADC hits where possible and updating
+    /// their time information. If no match is found, then
+    /// create a new hit with just the TDC info.
+    vector<const DSCTDCDigiHit*> tdcdigihits;
+    loop->Get(tdcdigihits);
+    sort(tdcdigihits.begin(),tdcdigihits.end(),DSCHit_tdc_cmp);
+    
+    for (unsigned int i = 0; i < tdcdigihits.size(); i++) {
+      const DSCTDCDigiHit *digihit = tdcdigihits[i];
+      
+      // Make sure sector is in valid range
+      if((digihit->sector <= 0) && (digihit->sector > MAX_SECTORS)) {
+	sprintf(str, "DSCDigiHit sector out of range! sector=%d (should be 1-%d)",
+		digihit->sector, MAX_SECTORS);
+	throw JException(str);
+      }
+      
+      unsigned int id = digihit->sector - 1;
+      double T = locTTabUtilities->Convert_DigiTimeToNs_F1TDC(digihit) - tdc_time_offsets[id] + t_tdc_base;
+      
+      // Look for existing hits to see if there is a match
+      //   or create new one if there is no match
+      // Require that the trigger corrected TDC time fall within
+      //   a reasonable time window so that when a hit is associated with
+      //   a hit in the TDC and not the ADC it is a "decent" TDC hit
+      if (fabs(T) < HIT_TIME_WINDOW) {
+	DSCHit *hit = FindMatch(temp_schits,digihit->sector, T);
+	if (hit == nullptr) {
+	  hit = new DSCHit;
+	  hit->sector = digihit->sector;
+	  hit->dE = 0.0;
+	  hit->t_fADC= numeric_limits<double>::quiet_NaN();
+	  hit->has_fADC=false;
+	  temp_schits.push_back(hit);
 	}
-
-	for (unsigned int i=0;i<temp_schits.size();i++){
-	  if (REQUIRE_ADC_TDC_MATCH==false){
-	    _data.push_back(temp_schits[i]);
-	  }
-	  else if (temp_schits[i]->has_fADC && temp_schits[i]->has_TDC){
-	    _data.push_back(temp_schits[i]);
-	  }
-	  else delete temp_schits[i];
-	}
-
 	
+	hit->has_TDC=true;
+	hit->t_TDC=T;
+	
+	if (USE_TIMEWALK_CORRECTION && (hit->dE > 0.0) ) {
+	  /// Correct for time walk
+	  /// The correction is the form t=t_tdc- C1 (A^C2 - A0^C2)
+	  /// double A  = hit->dE;
+	  /// double C1 = timewalk_parameters[id][1];
+	  /// double C2 = timewalk_parameters[id][2];
+	  /// double A0 = timewalk_parameters[id][3];
+	  /// T -= C1*(pow(A,C2) - pow(A0,C2));
+	  
+	  // Correct for timewalk using pulse peak instead of pulse integral
+	  double A        = hit->pulse_height;
+	  // double C0       = timewalk_parameters[id][0];
+	  double C1       = timewalk_parameters[id][1];
+	  double C2       = timewalk_parameters[id][2];
+	  double A_THRESH = timewalk_parameters[id][3];
+	  double A0       = timewalk_parameters[id][4];
+	  // do correction
+	  T -= C1*(pow(A/A_THRESH, C2) - pow(A0/A_THRESH, C2));
+	}
+	
+	hit->t=T;
 
-
+	hit->AddAssociatedObject(digihit);
+      } // Hit time window cut
+      
+    }
+    
+    for (unsigned int i=0;i<temp_schits.size();i++){
+      if (REQUIRE_ADC_TDC_MATCH==false){
+	_data.push_back(temp_schits[i]);
+      }
+      else if (temp_schits[i]->has_fADC && temp_schits[i]->has_TDC){
+	_data.push_back(temp_schits[i]);
+      }
+      else delete temp_schits[i];
+    }
+   
     return NOERROR;
 }
 
