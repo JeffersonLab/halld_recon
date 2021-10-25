@@ -1,9 +1,17 @@
 // $Id$
 //
-//    File: DTOFPaddleHit_factory.cc
-// Created: Thu Jun  9 10:05:21 EDT 2005
-// Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
-//
+/*! **File**: DTOFPaddleHit_factory.cc
+ *+ Created: Thu Jun  9 10:05:21 EDT 2005
+ *+ Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
+ *+ Purpose: Implementation of DTOFPaddleHit factory creating paddle hits based on matched
+ * DTOFHit objects for long paddles that are equiped with PMTs on both ends. For these paddle
+ * hits a time-difference and mean-time can be determined. The time difference results in a
+ * hit position along the paddle while the mean-time is a measure of the time of flight of the
+ * particle from the IP to the paddle.
+*/
+
+/// \addtogroup TOFDetector
+
 // Modified: Wed Feb 12 13:19:10 EST 2014 by B. Zihlmann
 //           reflect the changes in the TOF geometry with
 //           19 LWB, 2 LNB, 2 SB, 2LNB, 19 LWB

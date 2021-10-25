@@ -1,10 +1,10 @@
 // $Id$
 //
-///    File: DSCDigiHit.h
-/// Created: Tue Aug  6 12:53:36 EDT 2013
-/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-/// Purpose: Container class holding Start Counter raw data from fADC250
-
+/*! **File**: DSCDigiHit.h
+ *+ Created: Tue Aug  6 12:53:36 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Container class holding Start Counter raw data from fADC250
+*/
 /// \defgroup SCDetector StartCounter Detector Objects
 
 /*! \file DSCDigiHith
@@ -24,7 +24,7 @@ class DSCDigiHit:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DSCDigiHit);
   
-  int sector;		// sector number 1-24
+  int sector;		///< sector number 1-30
   uint32_t pulse_integral; ///< identified pulse integral as returned by FPGA algorithm
   uint32_t pulse_time;     ///< identified pulse time as returned by FPGA algorithm
   uint32_t pedestal;       ///< pedestal info used by FPGA (if any)

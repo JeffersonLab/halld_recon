@@ -1,10 +1,10 @@
 // $Id$
 //
-///    File: DSCTDCDigiHit.h
-/// Created: Tue Aug  6 13:02:22 EDT 2013
-/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-/// Purpose: Container class holding raw data for the Start Counter from F1TDC
-
+/*! **File**: DSCTDCDigiHit.h
+ *+ Created: Tue Aug  6 13:02:22 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Container class holding raw data for the Start Counter from F1TDC
+*/
 /// \addtogroup SCDetector
 
 /*! \file DSCTDCDigiHit.h

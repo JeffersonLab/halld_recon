@@ -1,9 +1,17 @@
 // $Id$
 //
-//    File: DTOFHit_factory.h
-// Created: Wed Aug  7 09:30:17 EDT 2013
-// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-//
+/*! **File**: DTOFHit_factory.h
+ *+ Created: Wed Aug  7 09:30:17 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Create TOF Hits based on DTOFDigiHit and DTOFTDCDigihit objects by finding
+ * matches between ADC and TDC hits. A match is defined by a timing window and energy threshold.
+ * If a match is found the TDC timing data is corrected for detector walk using the ADC 
+ * amplitude. Both ADC and TDC times are converted to ns and the ADC energy deposition is 
+ * converted to GeV. (No correction for attenuation yet.)
+ * Calibration parameters are loaded from CCDB in the method ::brun()
+*/
+
+/// \addtogroup TOFDetector
 
 /*! \file DTOFHit_factory.h define TOF Hit factory class and 
  * member functions definitions to faciliate the creation of TOF hits based on ADC

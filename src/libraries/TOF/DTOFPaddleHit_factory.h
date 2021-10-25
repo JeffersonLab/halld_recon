@@ -1,10 +1,10 @@
 // $Id$
 //
-/*! File: DTOFPaddleHit_factory.h
+/*! **File**: DTOFPaddleHit_factory.h
  *+ Created: Thu Jun  9 10:05:21 EDT 2005
  *+ Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
- *+ Purpose: Create TOF paddle hits for long paddles with both ends instrumented based
- * on matched objects form DTOFHit list
+ *+ Purpose: Create TOF paddle hits for long paddles with both ends instrumented with PMTs based
+ * on matched DTOFHit objects.
  *+ Addition: command line parmeter -PTOF:TOF_POINT_TAG=TRUTH will initiate 
  *           the use of TOFHitRaw::TRUTH information to calculate the TOFHit positions 
  *           (e.q. use of unsmeared data)

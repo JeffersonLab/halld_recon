@@ -1,11 +1,11 @@
 // $Id$
 //
-///    File: DSCHit_factory.h
-/// Created: Tue Aug  6 12:53:32 EDT 2013
-/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-/// Purpose: Start Counter factory to generate Start Counter hits based on matched ADC and TDC data
-/// converted to units of GeV for energy and ns for time
-
+/*! **File**: DSCHit_factory.h
+ *+ Created: Tue Aug  6 12:53:32 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Start Counter factory to generate Start Counter hits based on matched ADC and TDC data
+ * converted to units of GeV for energy and ns for time
+*/
 /// \addtogroup SCDetector
 
 /*! \file DSCHit_factory.h

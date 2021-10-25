@@ -1,6 +1,6 @@
 // $Id$
 //
-/*!    File: DTOFPoint.h
+/*! **File**: DTOFPoint.h
  *+ Created: Tue Oct 18 09:50:52 EST 2005
  *+ Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
  *+ Purpose: Container class object holding TOF Point matched data by combined hits from the two

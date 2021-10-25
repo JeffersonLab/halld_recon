@@ -1,9 +1,17 @@
 // $Id$
 //
-//    File: DTOFHit_factory.cc
-// Created: Wed Aug  7 09:30:17 EDT 2013
-// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-//
+/*! **File**: DTOFHit_factory.cc
+ *+ Created: Wed Aug  7 09:30:17 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Implementation of the DTOFHit factory. Creating DTOFHit objects from raw ADC
+ * and TDC data (DTOFDigiHit and DTOFTDCDigiHit objects, respectively). Matches between
+ * ADC and TDC hits are identified within a given time window. Calibration parameters
+ * for timing and energy conversion are loaded from CCDB and updated in the method ::brun()
+ * any time the run number changes. For found matches between ADC and TDC hits the TDC timing
+ * is corrected for detector walk based on the associated ADC amplituded.
+*/
+/// \addtogroup TOFDetector
+
 
 /*! \file DTOFHit_factory.cc implementation of the 5 JFactory member functions
  * the execution of these functions are controlled by the JANA/DANA framework

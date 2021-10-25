@@ -1,7 +1,7 @@
 // $Id$
 //
 
-/*! File: DTOFDigiHit.h
+/*! **File**: DTOFDigiHit.h
  *+ Created: Wed Aug  7 09:30:38 EDT 2013
  *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
  *+ Purpose: Container class object holding raw fADC250 data: integral, pulse, pedestal, time

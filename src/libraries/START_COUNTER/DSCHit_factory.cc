@@ -1,10 +1,10 @@
 // $Id$
 //
-///    File: DSCHit_factory.cc
-/// Created: Tue Aug  6 12:53:32 EDT 2013
-/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-/// Purpose: Implementation of DSCHit_factory methods ::init(), ::brun(), ::evnt()
-
+/*! **File**: DSCHit_factory.cc
+ *+ Created: Tue Aug  6 12:53:32 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Implementation of DSCHit_factory methods ::init(), ::brun(), ::evnt()
+*/
 /// \addtogroup SCDetector
 
 /*! \file DSCHit_factory.cc

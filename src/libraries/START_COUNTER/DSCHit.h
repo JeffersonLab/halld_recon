@@ -1,10 +1,11 @@
 // $Id$
 //
-///    File: DSCHit.h
-/// Created: Wed Feb  7 10:46:20 EST 2007
-/// Creator: davidl (on Linux megrez.jlab.org 2.6.9-42.0.2.ELsmp x86_64)
-/// Purpose: Container class for Start Counter holding data from matched ADC and TDC hits
-/// with energies converted to GeV and times converted to ns
+/*! **File**: DSCHit.h
+ *+ Created: Wed Feb  7 10:46:20 EST 2007
+ *+ Creator: davidl (on Linux megrez.jlab.org 2.6.9-42.0.2.ELsmp x86_64)
+ *+ Purpose: Container class for Start Counter holding data from matched ADC and TDC hits
+ * with energies converted to GeV and times converted to ns
+*/
 
 /// \addtogroup SCDetector
 
