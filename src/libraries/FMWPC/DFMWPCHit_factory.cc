@@ -177,13 +177,13 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// the precalibrated values directly into the _data vector.
   
   /// In order to use the new Flash125 data types and maintain compatibility with the old code, what is below is a bit of a mess
-  
+
   vector<const DFMWPCDigiHit*> digihits;
   loop->Get(digihits);
   char str[256];
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DFMWPCDigiHit *digihit = digihits[i];
-    
+
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
@@ -249,9 +249,9 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     maxamp = maxamp - scaled_ped;
     
-    if (maxamp<FMWPC_HIT_THRESHOLD) {
-      continue;
-    }
+    // if (maxamp<FMWPC_HIT_THRESHOLD) {
+    //   continue;
+    // }
     
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
@@ -266,25 +266,24 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     double t = t_scale * t_raw - time_offsets[layer][wire] + t_base;
     
-    /** ????
     DFMWPCHit *hit = new DFMWPCHit;
     hit->layer  = layer;
     hit->wire = wire;
     
     // Values for d, itrack, ptype only apply to MC data
     // note that ring/straw counting starts at 1
-    hit->q = q;
-    hit->amp = amp;
+    // hit->q = q;
+    // hit->amp = amp;
     hit->t = t;
-    hit->d = 0.0;
-    hit->QF = digihit->QF;
-    hit->itrack = -1;
-    hit->ptype = 0;
-    
+    // hit->d = 0.0;
+    // hit->QF = digihit->QF;
+    // hit->itrack = -1;
+    // hit->ptype = 0;
+    hit->dE = 0;
+
     hit->AddAssociatedObject(digihit);
 
     _data.push_back(hit);
-    **/
     
   }
   
