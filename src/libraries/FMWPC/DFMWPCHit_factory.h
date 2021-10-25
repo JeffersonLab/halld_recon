@@ -26,7 +26,7 @@ class DFMWPCHit_factory:public jana::JFactory<DFMWPCHit>{
  public:
   DFMWPCHit_factory(){};
   ~DFMWPCHit_factory(){};
-  const char* Tag(void){return "";}
+//  const char* Tag(void){return "";}
 
   // overall scale factors.
   double a_scale, amp_a_scale;

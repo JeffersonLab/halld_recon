@@ -114,7 +114,9 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   //FillCalibTable(gains, raw_gains);
   //FillCalibTable(pedestals, raw_pedestals);
   //FillCalibTable(time_offsets, raw_time_offsets);
-  
+
+
+  /* -- DISABLE THESE FOR NOW
   // Verify that the right number of rings was read for each set of constants
   char str[256];
   if (gains.size() != Nlayers) {
@@ -158,6 +160,7 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       throw JException(str);
     }
   }
+  -- */
 
   return NOERROR;
 }
@@ -180,6 +183,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   vector<const DFMWPCDigiHit*> digihits;
   loop->Get(digihits);
+
   char str[256];
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DFMWPCDigiHit *digihit = digihits[i];
@@ -188,7 +192,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
-    
+
     /* fill in sanity check when you decided the detector numbering
     // Make sure ring and straw are in valid range
     if ( (ring < 1) || (ring > (int)Nrings)) {
@@ -257,14 +261,16 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     double t_raw = double(digihit->pulse_time);
     
     // Scale factor to account for gain variation
-    double gain=gains[layer][wire];
-       
+    //double gain=gains[layer][wire];   // REMOVE CHANNEL-SPECIFIC CORRECTIONS
+    double gain=1.;
+ 
     // Charge and amplitude 
     double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
 				      - scaled_ped*nsamples_integral);
     double amp = amp_a_scale*gain*double(maxamp);
     
-    double t = t_scale * t_raw - time_offsets[layer][wire] + t_base;
+    //double t = t_scale * t_raw - time_offsets[layer][wire] + t_base;
+    double t = t_scale * t_raw /*- time_offsets[layer][wire]*/ + t_base;   // REMOVE CHANNEL-SPECIFIC CORRECTIONS
     
     DFMWPCHit *hit = new DFMWPCHit;
     hit->layer  = layer;
