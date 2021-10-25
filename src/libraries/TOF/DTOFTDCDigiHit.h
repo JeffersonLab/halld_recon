@@ -1,10 +1,10 @@
 // $Id$
 //
-///    File: DTOFTDCDigiHit.h
-/// Created: Wed Aug  7 09:31:00 EDT 2013
-/// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-/// Purpose: Container class object holding raw CAEN TDC data for TOF
-
+/*!    File: DTOFTDCDigiHit.h
+ *+ Created: Wed Aug  7 09:31:00 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Container class object holding raw CAEN TDC data for TOF
+*/
 /// \addtogroup TOFDetector
 
 

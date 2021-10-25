@@ -1,10 +1,11 @@
 // $Id$
 //
-///    File: DTOFPaddleHit.h
-/// Created: Thu Jun  9 10:05:21 EDT 2005
-/// Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
-/// Purpose: Container class object holding TOF Paddle matched hit data
+/*!    File: DTOFPaddleHit.h
+ *+ Created: Thu Jun  9 10:05:21 EDT 2005
+ *+ Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
+ *+ Purpose: Container class object holding TOF Paddle matched hit data
 
+*/
 /// \addtogroup TOFDetector
 
 

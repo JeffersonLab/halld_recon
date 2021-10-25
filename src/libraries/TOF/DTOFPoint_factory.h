@@ -1,11 +1,11 @@
 // $Id$
 //
-///				File: DTOFPoint_factory.h
-/// Created: Tue Oct 18 09:50:52 EST 2005
-/// Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
-/// Purpose: DTOFPoint Factory generating TOF points from TOF paddle hits
-/// combining data from the two orthogonal planes into space points.
-
+/*! File: DTOFPoint_factory.h
+ *+ Created: Tue Oct 18 09:50:52 EST 2005
+ *+ Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
+ *+ Purpose: DTOFPoint Factory generating TOF points from TOF paddle hits
+ * combining data from the two orthogonal planes into space points.
+*/
 /// \addtogroup TOFDetector
 
 #ifndef _DTOFPoint_factory_

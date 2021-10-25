@@ -1,9 +1,11 @@
 // $Id: DTOFHit.h Tue Jan 18 16:15:26 EST 2011
 //
-/// File:    DTOFHit.h
-/// Created: Tue Jan 18 16:15:26 EST 2011
-/// Creator: B. Zihlmann
-/// Purpose: Container class object holding TOF Hit data converted to GeV (ADC) and ns (ADC and TDC)
+/*! File:    DTOFHit.h
+ *+  Created: Tue Jan 18 16:15:26 EST 2011
+ *+ Creator: B. Zihlmann
+ *+ Purpose: Container class object holding TOF Hit data converted to GeV (ADC) and ns (ADC and TDC)
+
+*/
 
 /// \addtogroup TOFDetector
 
