@@ -23,12 +23,12 @@
 //           bar 22 and 23 are the 4 short bars distinguished by north/south
 //
 
-/// \file DTOFPaddleHit_factory.cc
-/// The code file DTOFPaddleHit_factory.cc is the implementation of the factory that generates
-/// TOFPaddleHit objects and is based on long paddles with 2-ended readout. 
-/// The individual hits from either side come from DTOFHit objects.
-/// This factory code is called for every event. The mothod is DTOFPaddleHit_factory::evnt(). 
-
+/*! \file DTOFPaddleHit_factory.cc
+ * The code file DTOFPaddleHit_factory.cc is the implementation of the factory that generates
+ * TOFPaddleHit objects and is based on long paddles with 2-ended readout. 
+ * The individual hits from either side come from DTOFHit objects.
+ * This factory code is called for every event. The mothod is DTOFPaddleHit_factory::evnt(). 
+*/
 
 #include <iostream>
 using namespace std;

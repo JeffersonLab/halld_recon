@@ -14,6 +14,11 @@
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
 
+/*! \file DTOFTDCDigiHit.h
+ * Container class holding the raw TOF data from CAEN TDCs.
+ */
+
+
 // the follwing is for doxygen describing the class
 /*! \class DTOFTDCDigiHit 
  * This is a container class holding raw data from TOF CAEN TDC

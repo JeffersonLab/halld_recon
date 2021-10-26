@@ -6,7 +6,14 @@
  *+ Purpose: Create TOF points from TOF paddle hit ojects (DTOFPaddleHit) by 
  * combining such hits from both the two orthogonal planes to form space points.
 */
+
 /// \addtogroup TOFDetector
+
+/*! \file DTOFPoint_factory.h
+ * Basic class definition to create TOF Points (space points) based on Paddle hits
+ */
+
+
 
 #ifndef _DTOFPoint_factory_
 #define _DTOFPoint_factory_

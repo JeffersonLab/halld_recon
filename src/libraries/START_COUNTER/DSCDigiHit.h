@@ -7,7 +7,7 @@
 */
 /// \defgroup SCDetector StartCounter Detector Objects
 
-/*! \file DSCDigiHith
+/*! \file DSCDigiHit.h
  * Container class definition for raw data from fADC250(s) reading the start counter
  * the raw data includes ADC and amplituded and integral values as well as pedestal and 
  * timing 

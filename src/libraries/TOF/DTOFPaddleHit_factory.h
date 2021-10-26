@@ -26,7 +26,8 @@
 using namespace jana;
 
 ///
-/// The header file DTOFPaddleHit_factory.h is the basis for the factory that generates
+/// \file DTOFPaddleHit_factory.h 
+/// Basis class definitions for the factory that generates
 /// TOFPaddleHit objects are based on long paddles with 2-ended readout. 
 /// The individual hits from either side come from DTOFHit objects.
 

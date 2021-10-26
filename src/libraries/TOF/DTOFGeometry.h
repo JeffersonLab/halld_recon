@@ -8,7 +8,8 @@
 ///\addtogorup TOFDetector
 
 // the following is for doxygen describing this file
-/*! \file \brief TOF class providing TOF Geometry parameters
+/*! \file DTOFGeometry.h 
+ * TOF class providing TOF Geometry parameters
  * like number of planes, paddles, short paddles, paddle lengths, ect.
  */
 

@@ -6,6 +6,13 @@
  *+ Purpose: Container class holding "truth" information from MC data 
 */
 
+/// \addtogroup SCDetector
+
+/*! \file DSCTruthHit.h
+ * Container class holding MC truth hits in the  Start Counter Detector made
+ * by thrown tracks.
+ */
+
 #ifndef _DSCTruthHit_
 #define _DSCTruthHit_
 

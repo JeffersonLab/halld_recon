@@ -15,6 +15,13 @@
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
 
+
+/*! \file DTOFDigiHit.h 
+ * container class hodling raw fADC250 DATA for TOF hits.
+ */
+
+
+
 // the follwing is for doxygen describing the class
 /*! \class DTOFDigiHit 
  * This is a container class holding raw data from TOF fADC250s
