@@ -38,7 +38,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	if(!lut_file.empty()) {
 		jout<<"Reading DIRC LUT TTree from "<<lut_file<<" ..."<<endl;
 		
-		auto saveDir = gDirectory;
+		TDirectory *saveDir = gDirectory;
 		TFile *fLut = new TFile(lut_file.c_str());
 		if( !fLut->IsOpen() ){
 			jerr << "Unable to open " << lut_file << "!!" << endl;
