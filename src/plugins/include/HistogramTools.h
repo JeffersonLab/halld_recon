@@ -35,6 +35,10 @@ using namespace jana;
 #define ansi_back(A)            ansi_escape<<"["<<(A)<<"D"
 #endif // ansi_escape
 
+// Note that the standard ROOT output file name is given by the JANA parameter OUTPUT_FILENAME
+static TDirectory *root_output_file = nullptr;
+
+
 vector <TDirectory *>& GetAllDirectories(void){
    static vector <TDirectory *> allDirectories;
    return allDirectories;
@@ -85,6 +89,12 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
    static pthread_rwlock_t *mapLock = InitializeMapLock(); 
    TH1I * histogram;
    pair<TH1I*, pthread_rwlock_t*> histogramPair;
+   
+   //cout << "in Fill1DHistogram() ... " << endl;
+   //cout << " PLUGIN = " << plugin << "  DIR NAME = " << directoryName << "  NAME = " << name << endl;
+
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
 
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name); 
@@ -115,13 +125,18 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
+         //cout << "PATH = " << gDirectory->GetPath() << endl;
+         gDirectory->ls();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
          if(temp) GetAllDirectories().push_back(temp);
          gDirectory->cd(plugin);
-         GetAllDirectories().push_back(gDirectory->mkdir(directoryName));
-         gDirectory->cd(directoryName);
+         if(strcmp(directoryName,"") != 0) {
+             GetAllDirectories().push_back(gDirectory->mkdir(directoryName));
+             gDirectory->cd(directoryName);
+         }
          histogram = new TH1I( name, title, nBins, xmin, xmax);
          histogram->Fill(value);
          homedir->cd();
@@ -150,6 +165,9 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
    static pthread_rwlock_t *mapLock = InitializeMapLock();
    TH1I * histogram;
    pair<TH1I*, pthread_rwlock_t*> histogramPair;
+
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
 
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
@@ -180,6 +198,7 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -217,6 +236,9 @@ void Fill1DWeightedHistogram (const char * plugin, const char * directoryName, c
     TH1D * histogram;
     pair<TH1D*, pthread_rwlock_t*> histogramPair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
     char fullNameChar[500];
     sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name); 
     TString fullName = TString(fullNameChar);
@@ -246,6 +268,7 @@ void Fill1DWeightedHistogram (const char * plugin, const char * directoryName, c
             // there would be a problem if there was another function that tried to grab the map lock
             // inside a root lock. In this code, this will not happen.
             japp->RootWriteLock();
+            gDirectory = root_output_file;  // KLUDGE
             TDirectory *homedir = gDirectory;
             TDirectory *temp;
             temp = gDirectory->mkdir(plugin);
@@ -282,6 +305,9 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
    TH2I * histogram;
    pair<TH2I*, pthread_rwlock_t*> histogramPair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
    TString fullName = TString(fullNameChar);
@@ -311,6 +337,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -348,6 +375,9 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
    TH2I * histogram;
    pair<TH2I*, pthread_rwlock_t*> histogramPair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
    TString fullName = TString(fullNameChar);
@@ -377,6 +407,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -413,6 +444,9 @@ void Fill2DWeightedHistogram (const char * plugin, const char * directoryName, c
     TH2D * histogram;
     pair<TH2D*, pthread_rwlock_t*> histogramPair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
     char fullNameChar[500];
     sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
     TString fullName = TString(fullNameChar);
@@ -442,6 +476,7 @@ void Fill2DWeightedHistogram (const char * plugin, const char * directoryName, c
             // there would be a problem if there was another function that tried to grab the map lock
             // inside a root lock. In this code, this will not happen.
             japp->RootWriteLock();
+            gDirectory = root_output_file;  // KLUDGE
             TDirectory *homedir = gDirectory;
             TDirectory *temp;
             temp = gDirectory->mkdir(plugin);
@@ -478,6 +513,9 @@ void Fill3DHistogram (const char * plugin, const char * directoryName, const cha
    TH3I * histogram;
    pair<TH3I*, pthread_rwlock_t*> histogramPair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
    TString fullName = TString(fullNameChar);
@@ -507,6 +545,7 @@ void Fill3DHistogram (const char * plugin, const char * directoryName, const cha
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -545,6 +584,9 @@ void Fill1DProfile (const char * plugin, const char * directoryName, const char 
    TProfile * profile;
    pair<TProfile*, pthread_rwlock_t*> profilePair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
    TString fullName = TString(fullNameChar);
@@ -573,6 +615,7 @@ void Fill1DProfile (const char * plugin, const char * directoryName, const char 
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
          japp->RootWriteLock();// Get the ROOT lock and create the histogram
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -608,6 +651,9 @@ void Fill2DProfile (const char * plugin, const char * directoryName, const char 
    TProfile2D * profile;
    pair<TProfile2D*, pthread_rwlock_t*> profilePair;
 
+   if(root_output_file == nullptr)   // KLUDGE
+       root_output_file = gDirectory;
+
    char fullNameChar[500];
    sprintf(fullNameChar, "%s/%s/%s", plugin, directoryName, name);
    TString fullName = TString(fullNameChar);
@@ -636,6 +682,7 @@ void Fill2DProfile (const char * plugin, const char * directoryName, const char 
          // there would be a problem if there was another function that tried to grab the map lock 
          // inside a root lock. In this code, this will not happen. 
          japp->RootWriteLock();
+         gDirectory = root_output_file;  // KLUDGE
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
