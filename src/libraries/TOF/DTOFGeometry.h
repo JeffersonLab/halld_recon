@@ -1,9 +1,18 @@
 // $Id$
 //
-//    File: DTOFGeometry.h
-// Created: Mon Jul 18 11:43:31 EST 2005
-// Creator: remitche (on Linux mantrid00 2.4.20-18.8 i686)
-//
+///    File: DTOFGeometry.h
+/// Created: Mon Jul 18 11:43:31 EST 2005
+/// Creator: remitche (on Linux mantrid00 2.4.20-18.8 i686)
+/// Purpose: Container class object to hold Geometry data for the TOF from CCDB
+
+///\addtogorup TOFDetector
+
+// the following is for doxygen describing this file
+/*! \file DTOFGeometry.h 
+ * TOF class providing TOF Geometry parameters
+ * like number of planes, paddles, short paddles, paddle lengths, ect.
+ */
+
 
 #ifndef _DTOFGeometry_
 #define _DTOFGeometry_
@@ -18,7 +27,31 @@
 #include "JANA/JObject.h"
 #include "JANA/JFactory.h"
 using namespace jana;
+// the follwing is for doxygen describing the class
+/*! \class DTOFGeometry provides TOF geometry parameters
 
+ * \fn Get_NLayers(): returns Number of planes
+ * \fn Get_NPlanes(): returns Number of planes
+ * \fn Get_NEnds(): returns Number of ends of paddle (shold be 2)
+ * \fn Get_NBars(): returns Number of paddles in a plane
+ * \fn Get_NLongBars(): returns Number of long paddles in one plane
+ * \fn Get_NShortBars(): reutrns Number of short paddles in one plane
+ * \fn Get_FristShortBar(): returns bar number of first short bar in a plane
+ * \fn GetLastShortBar(): return bar number of last short bar in one plane
+ * \fn Is_ShortBar(int paddle): returns true if paddle number refers to a short paddle
+ * \fn Get_LongBarLength(): returns length or long paddles
+ * \fn Get_HalfLongBarLength(): 
+ * \fn Get_ShortBarLength(): returns length of short paddles
+ * \fn Get_HalfShortBarLength):
+ * \fn Get_BarWidth(int bar): returns width of paddle with number "bar", 1,2,3, ....
+ * \fn Get_CenterVertPlane():
+ * \fn Get_CenterHorizPlane():
+ * \fn Get_CenterMidPlane(): 
+ * \fn Get_CCDB_DirectoryName(): returns name of Geometry directory, "TOF" or "TOF2"
+ * \fn bar2y(int bar, int end=0): converts bar number to position in segemenation
+ * \fn y2bar(double y): converts paddle position the direction of segemenation into paddle number
+
+ */
 class DTOFGeometry : public JObject {
 
  public:
