@@ -11,13 +11,17 @@ using namespace jana;
 
 #include "DFMWPCHit.h"
 #include "DFMWPCTruthHit.h"
+#include "DCTOFHit.h"
+#include "DCTOFPoint_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
 
-	/// Create and register FMWPC data factories
-	loop->AddFactory(new JFactory<DFMWPCHit>());
-	loop->AddFactory(new JFactory<DFMWPCTruthHit>());
-
-	return NOERROR;
+  /// Create and register FMWPC data factories
+  loop->AddFactory(new JFactory<DFMWPCHit>());
+  loop->AddFactory(new JFactory<DFMWPCTruthHit>());
+  loop->AddFactory(new JFactory<DCTOFHit>());
+  loop->AddFactory(new DCTOFPoint_factory());
+  
+  return NOERROR;
 }
 
