@@ -13,13 +13,15 @@ using namespace jana;
 #include "DFMWPCTruthHit.h"
 #include "DFMWPCDigiHit.h"
 #include "DFMWPCHit_factory.h"
+#include "DFMWPCCluster_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
 
 	/// Create and register FMWPC data factories
 	//loop->AddFactory(new JFactory<DFMWPCHit>());
-    loop->AddFactory(new JFactory<DFMWPCDigiHit>());
+	loop->AddFactory(new JFactory<DFMWPCDigiHit>());
 	loop->AddFactory(new DFMWPCHit_factory());
+	loop->AddFactory(new DFMWPCCluster_factory());
 
 	return NOERROR;
 }

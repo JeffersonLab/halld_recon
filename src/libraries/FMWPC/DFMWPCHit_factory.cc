@@ -265,8 +265,9 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     double gain=1.;
  
     // Charge and amplitude 
-    double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
-				      - scaled_ped*nsamples_integral);
+    //double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
+    //               - scaled_ped*nsamples_integral);
+    double q = digihit->pulse_integral;
     double amp = amp_a_scale*gain*double(maxamp);
     
     //double t = t_scale * t_raw - time_offsets[layer][wire] + t_base;
@@ -277,8 +278,8 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->wire = wire;
     
     // Values for d, itrack, ptype only apply to MC data
-    // note that ring/straw counting starts at 1
-    // hit->q = q;
+    // note that wire counting starts at 1
+    hit->q = q;
     // hit->amp = amp;
     hit->t = t;
     // hit->d = 0.0;
