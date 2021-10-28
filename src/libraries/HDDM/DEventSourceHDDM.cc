@@ -451,6 +451,10 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DFMWPCHit")
       return Extract_DFMWPCHit(record, 
                      dynamic_cast<JFactory<DFMWPCHit>*>(factory), tag);
+   
+   if (dataClassName == "DCTOFHit")
+      return Extract_DCTOFHit(record, 
+                     dynamic_cast<JFactory<DCTOFHit>*>(factory), tag);
 
    if (dataClassName == "DDIRCTruthBarHit")
      return Extract_DDIRCTruthBarHit(record,
@@ -2752,6 +2756,37 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       DFMWPCHit *hit = new DFMWPCHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
+      hit->dE    = iter->getDE();
+      hit->t     = iter->getT();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//------------------
+// Extract_DCTOFHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTOFHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL) return OBJECT_NOT_AVAILABLE;
+   if (tag != "") return OBJECT_NOT_AVAILABLE;
+
+   vector<DCTOFHit*> data;
+
+   const hddm_s::CtofHitList &points = record->getCtofHits();
+   hddm_s::CtofHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DCTOFHit *hit = new DCTOFHit;
+      hit->bar = iter->getBar();
+      hit->end  = iter->getEnd();
       hit->dE    = iter->getDE();
       hit->t     = iter->getT();
       data.push_back(hit);

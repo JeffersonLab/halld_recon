@@ -70,6 +70,7 @@ using namespace std;
 #include "PAIR_SPECTROMETER/DPSCTruthHit.h"
 #include "FMWPC/DFMWPCTruthHit.h"
 #include "FMWPC/DFMWPCHit.h"
+#include "FMWPC/DCTOFHit.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
 #include "TPOL/DTPOLHit.h"
 #include "TPOL/DTPOLTruthHit.h"
@@ -138,6 +139,8 @@ class DEventSourceHDDM:public JEventSource
 			       string tag);
       jerror_t Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactory<DFMWPCTruthHit> *factory, string tag);
       jerror_t Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFMWPCHit> *factory, string tag);
+      jerror_t Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTOFHit> *factory, string tag);
+
 
       jerror_t Extract_DTPOLHit(hddm_s::HDDM *record, JFactory<DTPOLHit>* factory, string tag);
       jerror_t Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactory<DTPOLTruthHit>* factory, string tag);
