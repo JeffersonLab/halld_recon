@@ -8809,7 +8809,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   const double fcal_radius_sq=120.47*120.47;
   bool hit_tof=false; 
   bool hit_dirc=false;
-  bool hit_fcal=false,hit_fcal_back=false;
+  bool hit_fcal=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
@@ -8895,10 +8895,6 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dFCALz+EPS;
       ds=(newz-z)/dz_ds;
     }
-    if (hit_fcal_back==false && newz>dFCALzBack){
-      newz=dFCALzBack+EPS;
-      ds=(newz-z)/dz_ds;
-    }
     if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
       newz=dFMWPCz_vec[fmwpc_index]+EPS;
       ds=(newz-z)/dz_ds;
@@ -8966,7 +8962,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       if (got_fmwpc==false) return NOERROR;
     }
     // Deal with muon detector
-    if (hit_fcal_back==true 
+    if (hit_fcal==true 
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
