@@ -353,8 +353,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
    geom->GetTRDZ(dTRDz_vec); // TRD planes
-   
-   
+      
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
      // Create vector of direction vectors in scintillator planes
@@ -8807,6 +8806,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   const double z_outer_max=1000.;
   const double x_max=130.;
   const double y_max=130.;
+  const double fcal_radius_sq=120.47*120.47;
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false,hit_fcal_back=false;
@@ -8930,20 +8930,41 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (hit_tof==false && newz>dTOFz){
       hit_tof=true;
       AddExtrapolation(SYS_TOF,z,S,t,s);
-    }  
-
+    }
     if (hit_fcal==false && newz>dFCALz){
+      double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+      if (r2>fcal_radius_sq) return NOERROR;
+
       hit_fcal=true;
       AddExtrapolation(SYS_FCAL,z,S,t,s);
-    }
-    // add another extrapolation point at downstream end of FCAL   
-    if (hit_fcal_back==false && newz>dFCALzBack){
-      hit_fcal_back=true;
+
+      // Propagate the track to the back of the FCAL block
+      int num=int(45./dz);
+      int m=0;
+      for (;m<num;m++){	
+	newz=z+dz;
+	// Step through field
+	Step(z,newz,dEdx,S);
+	z=newz;
+
+	r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+	if (r2>fcal_radius_sq){
+	  // Break out of the loop if the track exits out of the FCAL before 
+	  // reaching the back end of the block
+	  break;
+	}
+      }
+      if (m==num){
+	newz=dFCALzBack;
+	// Step through field
+	Step(z,newz,dEdx,S); 
+	z=newz;
+      }
+      // add another extrapolation point at downstream end of FCAL
       AddExtrapolation(SYS_FCAL,z,S,t,s);   
       // .. and exit if the muon detector is not installed
       if (got_fmwpc==false) return NOERROR;
     }
-    
     // Deal with muon detector
     if (hit_fcal_back==true 
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
