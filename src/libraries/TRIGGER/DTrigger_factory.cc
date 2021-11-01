@@ -78,14 +78,16 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         // use realistic trigger simulation to calculate what the BCAL & FCAL energies
         // used in the trigger decision were - hopefully this is good enough
         // eventually we'll get the values directly from the firmware
-        vector<const DL1MCTrigger*> locMCTriggers;
-        locEventLoop->Get(locMCTriggers);
-        const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
+        if(EMULATE_CAL_ENERGY_SUMS) {
+            vector<const DL1MCTrigger*> locMCTriggers;
+            locEventLoop->Get(locMCTriggers);
+            const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 
-        if(locMCTrigger != NULL)
-        {
-            locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
-            locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+            if(locMCTrigger != NULL)
+            {
+                locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
+                locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+            }
         }
 
 	}
