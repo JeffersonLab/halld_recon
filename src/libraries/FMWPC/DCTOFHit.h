@@ -15,10 +15,10 @@ class DCTOFHit:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DCTOFHit);
 
-  int bar; // bar number
-  int end; // top=0,bottom=1;
-  float dE; // attenuated energy deposition
-  double t; // time
+  int bar; ///< bar number
+  int end; ///< top=0,bottom=1;
+  float dE; ///< attenuated energy deposition in GeV
+  double t; ///< time in ns
    
   void toStrings(vector<pair<string,string> > &items)const{
     AddString(items, "bar", "%d", bar);

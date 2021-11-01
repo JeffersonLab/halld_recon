@@ -14,10 +14,11 @@
 class DCTOFPoint:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DCTOFPoint);
-		
-  // Add data members here. For example:
-  int bar;
-  double dE,t,y;
+
+  int bar; ///< bar number
+  double dE; ///< Energy depostion in GeV
+  double t; ///< Time in ns 
+  double y; ///< position along scintillator in cm
 		
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
