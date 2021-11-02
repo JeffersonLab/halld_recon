@@ -163,8 +163,7 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Kinematic fit
       //--------------------------------
       dKinFitter->Reset_NewFit();
-
-      set<shared_ptr<DKinFitParticle>> FinalParticles, NoParticles;
+      dKinFitUtils->Reset_NewEvent();
 
       shared_ptr<DKinFitParticle>myProton=dKinFitUtils->Make_DetectedParticle(proton_track);
       shared_ptr<DKinFitParticle>myPiMinus=dKinFitUtils->Make_DetectedParticle(pi_min_track);
@@ -220,6 +219,9 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
                         break;
              }
 	}
+
+
+     cout << hex << "0x" << fitPiPlus << "  0x" << fitPiMinus << "  0x" << fitProton << endl;
 
 	dTreeFillData.Fill_Array<Double_t>("X_vertex",vertex_kf[0], j);
 	dTreeFillData.Fill_Array<Double_t>("Y_vertex",vertex_kf[1], j);
