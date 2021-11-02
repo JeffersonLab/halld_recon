@@ -85,6 +85,8 @@ jerror_t DEventProcessor_1p2pi::init(void)
 //------------------  
 jerror_t DEventProcessor_1p2pi::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitter = new DKinFitter(dKinFitUtils);
 
   return NOERROR;
 }
@@ -160,8 +162,6 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
       //--------------------------------
       // Kinematic fit
       //--------------------------------
-      DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
-      DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
       dKinFitter->Reset_NewFit();
 
       set<shared_ptr<DKinFitParticle>> FinalParticles, NoParticles;
