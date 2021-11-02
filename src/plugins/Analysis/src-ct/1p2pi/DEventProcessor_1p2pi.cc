@@ -42,7 +42,7 @@ jerror_t DEventProcessor_1p2pi::init(void)
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("bmE",    "nPhotonCandidates");
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("bmtime", "nPhotonCandidates");
 
-  locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime_Measured", "RFTime_Measured");
+  //locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime_Measured", "RFTime_Measured");
 
   locTreeBranchRegister.Register_Single<Int_t>("nShower");
   locTreeBranchRegister.Register_Single<Int_t>("nHyp");
@@ -85,6 +85,8 @@ jerror_t DEventProcessor_1p2pi::init(void)
 //------------------  
 jerror_t DEventProcessor_1p2pi::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitter = new DKinFitter(dKinFitUtils);
 
   return NOERROR;
 }
@@ -160,9 +162,8 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
       //--------------------------------
       // Kinematic fit
       //--------------------------------
-      DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
-      DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
       dKinFitter->Reset_NewFit();
+      dKinFitUtils->Reset_NewEvent();
 
       set<shared_ptr<DKinFitParticle>> FinalParticles, NoParticles;
 
@@ -220,6 +221,7 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
                         break;
              }
 	}
+
 
 	dTreeFillData.Fill_Array<Double_t>("X_vertex",vertex_kf[0], j);
 	dTreeFillData.Fill_Array<Double_t>("Y_vertex",vertex_kf[1], j);
@@ -299,7 +301,6 @@ void DEventProcessor_1p2pi::GetHypotheses(vector<const DChargedTrack *> &tracks,
 	  if ((hyp = firstTrack->Get_Hypothesis(particle)) != NULL){
 
 	      double prob = TMath::Prob(hyp->Get_ChiSq(),hyp->Get_NDF());
-	      if (prob < 0) continue; 
 	      if (prob < 0) continue; 
 		map<Particle_t, vector<const DChargedTrackHypothesis*> > newHypothesis = assignmentHypothesis;
               
