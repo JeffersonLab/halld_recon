@@ -42,7 +42,7 @@ jerror_t DEventProcessor_1p2pi::init(void)
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("bmE",    "nPhotonCandidates");
   locTreeBranchRegister.Register_FundamentalArray<Double_t>("bmtime", "nPhotonCandidates");
 
-  locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime_Measured", "RFTime_Measured");
+  //locTreeBranchRegister.Register_FundamentalArray<Double_t>("RFTime_Measured", "RFTime_Measured");
 
   locTreeBranchRegister.Register_Single<Int_t>("nShower");
   locTreeBranchRegister.Register_Single<Int_t>("nHyp");
@@ -299,7 +299,6 @@ void DEventProcessor_1p2pi::GetHypotheses(vector<const DChargedTrack *> &tracks,
 	  if ((hyp = firstTrack->Get_Hypothesis(particle)) != NULL){
 
 	      double prob = TMath::Prob(hyp->Get_ChiSq(),hyp->Get_NDF());
-	      if (prob < 0) continue; 
 	      if (prob < 0) continue; 
 		map<Particle_t, vector<const DChargedTrackHypothesis*> > newHypothesis = assignmentHypothesis;
               
