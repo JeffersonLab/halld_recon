@@ -9,6 +9,10 @@
 #define _JEventProcessor_CDC_drift_
 
 #include <JANA/JEventProcessor.h>
+#include <TH2.h>
+#include <TH1.h>
+#include <TF1.h>
+#include <TTree.h>
 
 
 class JEventProcessor_CDC_drift:public jana::JEventProcessor{
@@ -25,6 +29,18 @@ class JEventProcessor_CDC_drift:public jana::JEventProcessor{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
+
+  // histograms
+
+  TH1F *cdc_time = NULL;
+  TH1I *cdc_rawtime = NULL;
+
+  TTree *tfit = NULL;
+  TTree *rtfit = NULL;
+
+  bool FIT;
+  bool VERBOSE;
+  
 };
 
 #endif // _JEventProcessor_CDC_drift_
