@@ -36,8 +36,10 @@ class DEventProcessor_1p2pi:public JEventProcessor{
 		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	
 		jerror_t erun(void);	
-		jerror_t fini(void);	
+		jerror_t fini(void);
 
+		DKinFitUtils_GlueX *dKinFitUtils;
+		DKinFitter *dKinFitter;
 
   		void GetHypotheses(vector<const DChargedTrack *> &tracks,
 		     map<Particle_t, int> &particles,
