@@ -413,57 +413,49 @@ void DEventProcessor_1p1pi1pi0::GetHypotheses(vector<const DChargedTrack *> &tra
   vector<const DChargedTrack *> otherTracks(tracks);
   otherTracks.erase(otherTracks.begin());
   map<Particle_t, int>::iterator partIt;
-
+  
   for (partIt = particles.begin(); partIt != particles.end(); partIt++)
     {
-      if (partIt->second > 0)
+      if (partIt->second == 0)
+	continue;
+      
+      Particle_t particle = partIt->first;
+      const DChargedTrackHypothesis *hyp=NULL;
+      
+      if ((hyp = firstTrack->Get_Hypothesis(particle)) == NULL)
+	continue;
+      
+      double prob = TMath::Prob(hyp->Get_ChiSq(),hyp->Get_NDF());
+      
+      if (prob <= 0)
+	continue;
+      
+      map<Particle_t, vector<const DChargedTrackHypothesis*> > newHypothesis = assignmentHypothesis;
+      
+      if (assignmentHypothesis.find(particle) == assignmentHypothesis.end())
 	{
-
-	  Particle_t particle = partIt->first;
-
-	  const DChargedTrackHypothesis *hyp=NULL;
-	  
-	  if ((hyp = firstTrack->Get_Hypothesis(particle)) != NULL)
-	    {
-	      
-	      // Using dEdX for PID
-	      double prob = TMath::Prob(hyp->Get_ChiSq_DCdEdx(),hyp->Get_NDF_DCdEdx());
-	      
-	      if (prob > 1E-3)
-		{
-		  
-		  map<Particle_t, vector<const DChargedTrackHypothesis*> > newHypothesis = assignmentHypothesis;
-		  
-		  if (assignmentHypothesis.find(particle) == assignmentHypothesis.end())
-		    {
-		      vector<const DChargedTrackHypothesis*> newVector;
-		      newHypothesis[particle] = newVector;
-		    }
-		  
-		  newHypothesis[particle].push_back(hyp);		    
-		  
-		  if (otherTracks.empty())
-		    {
-		      hypothesisList.push_back(newHypothesis);
-		    }
-		  else
-		    {
-		      map<Particle_t, int> otherParticles(particles);
-		      otherParticles[particle]--;
-		      GetHypotheses(otherTracks,
-				    otherParticles,
-				    newHypothesis,
-				    hypothesisList
-				    );
-
-		    }
-		  
-		}
-	      
-	    }
-
+	  vector<const DChargedTrackHypothesis*> newVector;
+	  newHypothesis[particle] = newVector;
 	}
-
+      
+      newHypothesis[particle].push_back(hyp);		    
+      
+      if (otherTracks.empty())
+	{
+	  hypothesisList.push_back(newHypothesis);
+	}
+      else
+	{
+	  map<Particle_t, int> otherParticles(particles);
+	  otherParticles[particle]--;
+	  GetHypotheses(otherTracks,
+			otherParticles,
+			newHypothesis,
+			hypothesisList
+			);
+	  
+	}    
+      
     }
-
+  
 }
