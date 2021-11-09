@@ -88,6 +88,8 @@ jerror_t DEventProcessor_1p2pi::brun(JEventLoop *eventLoop, int32_t runnumber)
   dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
   dKinFitter = new DKinFitter(dKinFitUtils);
 
+  eventLoop->GetSingle(dAnalysisUtilities);
+
   return NOERROR;
 }
 
@@ -127,6 +129,8 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
     
    if(_nHyp == 0)  return NOERROR;
 
+   LockState(); //ACQUIRE PROCESSOR LOCK
+
    dTreeFillData.Fill_Single<Int_t>("nHyp", _nHyp);
 
    //=== Photon Informatiion 
@@ -145,6 +149,10 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTreeFillData.Fill_Single<Int_t>("eventNumber", eventnumber); 
   dTreeFillData.Fill_Single<Double_t>("L1TriggerBits", Trigger->Get_L1TriggerBits());
 
+
+  dKinFitUtils->Reset_NewEvent();
+  dKinFitter->Reset_NewEvent();
+
   for (Int_t j = 0; j < _nHyp; j++){
   
      map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[j];
@@ -159,12 +167,18 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
      const DChargedTrackHypothesis *hyp_proton   = thisHyp[Proton][0];
      const DTrackTimeBased *proton_track = hyp_proton->Get_TrackTimeBased();	    
 
+	 vector<const DTrackTimeBased*> locTrackTimeBasedVectorForVertexing;
+	 locTrackTimeBasedVectorForVertexing.push_back(pi_min_track);
+	 locTrackTimeBasedVectorForVertexing.push_back(pi_plus_track);
+	 locTrackTimeBasedVectorForVertexing.push_back(proton_track);
+	 DVector3 locRoughPosition = dAnalysisUtilities->Calc_CrudeVertex(locTrackTimeBasedVectorForVertexing);
+	 TVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
+
+
       //--------------------------------
       // Kinematic fit
       //--------------------------------
       dKinFitter->Reset_NewFit();
-      dKinFitUtils->Reset_NewEvent();
-
       set<shared_ptr<DKinFitParticle>> FinalParticles, NoParticles;
 
       shared_ptr<DKinFitParticle>myProton=dKinFitUtils->Make_DetectedParticle(proton_track);
@@ -181,80 +195,91 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
       locFullConstrainParticles.insert(myPiMinus);
       locFullConstrainParticles.insert(myProton);
 
+      //shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
+	  // maybe use a better vertex guess
       shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
+
       dKinFitter->Add_Constraint(locProductionVertexConstraint);
 
       // PERFORM THE KINEMATIC FIT
-      dKinFitter->Fit_Reaction();
+      bool locFitStatus = dKinFitter->Fit_Reaction();
+      if(!locFitStatus) continue;
+
       //GET THE FIT RESULTS
       double _CL = dKinFitter->Get_ConfidenceLevel();
 
       if (_CL>0){
 
-         TVector3 vertex_kf;
-	 set<shared_ptr<DKinFitParticle>>myParticles=dKinFitter->Get_KinFitParticles();
-         set<shared_ptr<DKinFitParticle>>::iterator locParticleIterator=myParticles.begin();
-	
-	 //============= Fit Values ========================================================
-	 shared_ptr<DKinFitParticle> fitProton = NULL;
-         shared_ptr<DKinFitParticle> fitPiPlus = NULL;
-         shared_ptr<DKinFitParticle> fitPiMinus = NULL;
-	 for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
-            if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle) {
-		vertex_kf=(*locParticleIterator)->Get_Position();
-		dTreeFillData.Fill_Array<Double_t>("T_vertex",  (*locParticleIterator)->Get_Time(),j);
-	    }
-		
-	     int pid = (*locParticleIterator)->Get_PID();
+		 TVector3 vertex_kf;
+		 set<shared_ptr<DKinFitParticle>>myParticles=dKinFitter->Get_KinFitParticles();
+		 set<shared_ptr<DKinFitParticle>>::iterator locParticleIterator=myParticles.begin();
 
-             switch (pid){
-       		case 2212:
-                	fitProton = (*locParticleIterator);
-                	break;
-                case 211:
-                       	fitPiPlus = (*locParticleIterator);
-                        break;
-                case -211:
-                        fitPiMinus = (*locParticleIterator);
-                        break;
-               	default:
-                        break;
-             }
-	}
+		//============= Fit Values ========================================================
+		shared_ptr<DKinFitParticle> fitProton = NULL;
+		shared_ptr<DKinFitParticle> fitPiPlus = NULL;
+		shared_ptr<DKinFitParticle> fitPiMinus = NULL;
+
+		for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
+			 if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle) {
+				 vertex_kf=(*locParticleIterator)->Get_Position();
+				 dTreeFillData.Fill_Array<Double_t>("T_vertex",  (*locParticleIterator)->Get_Time(),j);
+			 }
+
+			 int pid = (*locParticleIterator)->Get_PID();
+
+			 switch (pid){
+			 case 2212:
+				 fitProton = (*locParticleIterator);
+				 break;
+			 case 211:
+				 fitPiPlus = (*locParticleIterator);
+				 break;
+			 case -211:
+				 fitPiMinus = (*locParticleIterator);
+				 break;
+			 default:
+				 break;
+			 }
+		}
 
 
-	dTreeFillData.Fill_Array<Double_t>("X_vertex",vertex_kf[0], j);
-	dTreeFillData.Fill_Array<Double_t>("Y_vertex",vertex_kf[1], j);
-	dTreeFillData.Fill_Array<Double_t>("Z_vertex",vertex_kf[2], j);
-	dTreeFillData.Fill_Array<Double_t>("CLKinFit",_CL, j);
-	dTreeFillData.Fill_Array<Double_t>("NDF", dKinFitter->Get_NDF(), j);
-	dTreeFillData.Fill_Array<Double_t>("ChiSqFit", dKinFitter->Get_ChiSq(), j);
-	dTreeFillData.Fill_Array<Double_t>("Common_Time", fitPiPlus->Get_CommonTime(), j);
+		 //cout << hex << "0x" << fitProton << "  0x" << fitPiPlus << "  0x" << fitPiMinus << endl;
+	 
+		dTreeFillData.Fill_Array<Double_t>("X_vertex",vertex_kf[0], j);
+		dTreeFillData.Fill_Array<Double_t>("Y_vertex",vertex_kf[1], j);
+		dTreeFillData.Fill_Array<Double_t>("Z_vertex",vertex_kf[2], j);
+		dTreeFillData.Fill_Array<Double_t>("CLKinFit",_CL, j);
+		dTreeFillData.Fill_Array<Double_t>("NDF", dKinFitter->Get_NDF(), j);
+		dTreeFillData.Fill_Array<Double_t>("ChiSqFit", dKinFitter->Get_ChiSq(), j);
+		dTreeFillData.Fill_Array<Double_t>("Common_Time", fitPiPlus->Get_CommonTime(), j);
 
-	dTreeFillData.Fill_Array<Double_t>("pX_piminus", fitPiMinus->Get_Momentum().X(),j);
-	dTreeFillData.Fill_Array<Double_t>("pY_piminus", fitPiMinus->Get_Momentum().Y(),j);
-	dTreeFillData.Fill_Array<Double_t>("pZ_piminus", fitPiMinus->Get_Momentum().Z(),j);
-	dTreeFillData.Fill_Array<Double_t>("E_piminus",  fitPiMinus->Get_Energy(),j);
-	dTreeFillData.Fill_Array<Double_t>("t_piminus",  fitPiMinus->Get_Time(),j);
+		dTreeFillData.Fill_Array<Double_t>("pX_piminus", fitPiMinus->Get_Momentum().X(),j);
+		dTreeFillData.Fill_Array<Double_t>("pY_piminus", fitPiMinus->Get_Momentum().Y(),j);
+		dTreeFillData.Fill_Array<Double_t>("pZ_piminus", fitPiMinus->Get_Momentum().Z(),j);
+		dTreeFillData.Fill_Array<Double_t>("E_piminus",  fitPiMinus->Get_Energy(),j);
+		dTreeFillData.Fill_Array<Double_t>("t_piminus",  fitPiMinus->Get_Time(),j);
 
-	dTreeFillData.Fill_Array<Double_t>("pX_piplus", fitPiPlus->Get_Momentum().X(),j);
-	dTreeFillData.Fill_Array<Double_t>("pY_piplus", fitPiPlus->Get_Momentum().Y(),j);
-	dTreeFillData.Fill_Array<Double_t>("pZ_piplus", fitPiPlus->Get_Momentum().Z(),j);
-	dTreeFillData.Fill_Array<Double_t>("E_piplus",  fitPiPlus->Get_Energy(),j);
-	dTreeFillData.Fill_Array<Double_t>("t_piplus",  fitPiPlus->Get_Time(),j);
+		dTreeFillData.Fill_Array<Double_t>("pX_piplus", fitPiPlus->Get_Momentum().X(),j);
+		dTreeFillData.Fill_Array<Double_t>("pY_piplus", fitPiPlus->Get_Momentum().Y(),j);
+		dTreeFillData.Fill_Array<Double_t>("pZ_piplus", fitPiPlus->Get_Momentum().Z(),j);
+		dTreeFillData.Fill_Array<Double_t>("E_piplus",  fitPiPlus->Get_Energy(),j);
+		dTreeFillData.Fill_Array<Double_t>("t_piplus",  fitPiPlus->Get_Time(),j);
 
-	dTreeFillData.Fill_Array<Double_t>("pX_proton", fitProton->Get_Momentum().X(),j);
-	dTreeFillData.Fill_Array<Double_t>("pY_proton", fitProton->Get_Momentum().Y(),j); 
-	dTreeFillData.Fill_Array<Double_t>("pZ_proton", fitProton->Get_Momentum().Z(),j);
-	dTreeFillData.Fill_Array<Double_t>("E_proton",  fitProton->Get_Energy(),j);
-	dTreeFillData.Fill_Array<Double_t>("t_proton",  fitProton->Get_Time(),j);
+		dTreeFillData.Fill_Array<Double_t>("pX_proton", fitProton->Get_Momentum().X(),j);
+		dTreeFillData.Fill_Array<Double_t>("pY_proton", fitProton->Get_Momentum().Y(),j); 
+		dTreeFillData.Fill_Array<Double_t>("pZ_proton", fitProton->Get_Momentum().Z(),j);
+		dTreeFillData.Fill_Array<Double_t>("E_proton",  fitProton->Get_Energy(),j);
+		dTreeFillData.Fill_Array<Double_t>("t_proton",  fitProton->Get_Time(),j);
+
+		dTreeInterface->Fill(dTreeFillData);
+  
 
       }//CL
 
   }// for hyp
 
-  dTreeInterface->Fill(dTreeFillData);
-  
+  UnlockState(); //RELEASE PROCESSOR LOCK
+
   return NOERROR;
 
 }
