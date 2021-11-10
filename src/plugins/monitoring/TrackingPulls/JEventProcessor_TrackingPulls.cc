@@ -385,6 +385,14 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
                         resic / errc, "Residual/Error", 100, -5.0, 5.0);
         Fill1DHistogram("TrackingPulls", planeName, "All Wire Residuals", resi,
                         "Residual", 100, -0.1, 0.1);
+        if (trackingFOM > 0.02) {
+          Fill1DHistogram("TrackingPulls", planeName, "wire_residual", resi, "Residual", 200, -0.1, 0.1);
+          if (pulls[iPull].left_right == 1) {
+            Fill1DHistogram("TrackingPulls", planeName, "wire_residual_right", resi, "Residual", 200, -0.1, 0.1);
+          } else if (pulls[iPull].left_right == -1) {
+            Fill1DHistogram("TrackingPulls", planeName, "wire_residual_left", resi, "Residual", 200, -0.1, 0.1);
+          }
+        }
         Fill1DHistogram("TrackingPulls", planeName, "All Cathode Residuals",
                         resic, "Residual", 100, -0.1, 0.1);
         Fill2DHistogram("TrackingPulls", planeName,
