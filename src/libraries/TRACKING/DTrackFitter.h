@@ -156,6 +156,7 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_DIRC].clear();
 		  extrapolations[SYS_TRD].clear();
 		  extrapolations[SYS_FMWPC].clear();
+		  extrapolations[SYS_CTOF].clear();
 		};
 		
 		// Fit parameter accessor methods

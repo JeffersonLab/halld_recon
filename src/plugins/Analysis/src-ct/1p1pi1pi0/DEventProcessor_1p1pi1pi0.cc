@@ -111,6 +111,8 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
 //------------------
 jerror_t DEventProcessor_1p1pi1pi0::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitter = new DKinFitter(dKinFitUtils);
 
   return NOERROR;
 }
@@ -233,9 +235,6 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[0];
   const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
   const DChargedTrackHypothesis * hyp_pim = thisHyp[PiMinus][0];
-  
-  DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
-  DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
   
   dKinFitUtils->Reset_NewEvent();
   dKinFitter->Reset_NewEvent();
