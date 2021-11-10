@@ -16,6 +16,8 @@
 #include <JANA/JEventSource.h>
 #include <JANA/jerror.h>
 #include <JANA/JCalibration.h>
+#include <JANA/JCalibrationCCDB.h>
+#include <JANA/JCalibrationGeneratorCCDB.h>
 
 #include "hddm_r.hpp"
 
@@ -124,6 +126,14 @@ class DEventSourceREST:public JEventSource
 
    std::ifstream *ifs;		// input hddm file ifstream
    hddm_r::istream *fin;	// provides hddm layer on top of ifstream
+   
+   string REST_JANA_CALIB_CONTEXT = "";
+   JCalibrationGeneratorCCDB *calib_generator;
+   
+   	map<unsigned int, JCalibration *> dJCalib_olds; //unsigned int is run number
+   	map<unsigned int, DTAGHGeometry *> dTAGHGeoms; //unsigned int is run number
+   	map<unsigned int, DTAGMGeometry *> dTAGMGeoms; //unsigned int is run number
+
 };
 
 #endif //_JEVENT_SOURCEREST_H_

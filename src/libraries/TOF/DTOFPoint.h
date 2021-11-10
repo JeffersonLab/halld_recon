@@ -1,9 +1,21 @@
 // $Id$
 //
-//    File: DTOFPoint.h
-// Created: Tue Oct 18 09:50:52 EST 2005
-// Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
-//
+/*! **File**: DTOFPoint.h
+ *+ Created: Tue Oct 18 09:50:52 EST 2005
+ *+ Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
+ *+ Purpose: Container class object holding TOF Point matched data by combined hits from the two
+ *  orthogonal planes.
+*/
+/// \addtogroup TOFDetector
+
+/*! \file DTOFPoint.h container class definition file for TOF points generated from
+ * TOF Paddle hits of two opposing planes (vertical and horizontal).
+ 
+ * two member functions:
+ * \fn Is_XPositionWellDefined(void): boolean return
+ * \fn Is_YPositionWellDefined(void): boolean return
+
+ */
 
 #ifndef _DTOFPoint_
 #define _DTOFPoint_
@@ -30,21 +42,21 @@ class DTOFPoint : public JObject
   // The properties of these hits are fully-defined through matching to tracks (in the other direction)
   // The corrected hit energy & time (propagated to the track location) are stored in DDetectorMatches
   
-  DVector3 pos;   	//reconstructed position
-  float t;               //reconstructed time
-  float dE;            //reconstructed deposited energy
-  float tErr; //uncertainty on reconstructed time
-  float dE1;    // dE first plane
-  float dE2;    // dE second plane
+  DVector3 pos;   	///< reconstructed position (x,y,z) in cm
+  float t;               ///< reconstructed time in ns
+  float dE;            ///< reconstructed deposited energy in GeV
+  float tErr; ///< uncertainty on reconstructed time
+  float dE1;    ///< energy deposition dE first plane in GeV
+  float dE2;    ///< energy deposition dE second plane in GeV
 
 
-  int dHorizontalBar; //0 for none (unmatched)
-  int dVerticalBar; //0 for none (unmatched)
+  int dHorizontalBar; ///< 0 for none (unmatched)
+  int dVerticalBar; ///< 0 for none (unmatched)
   
   //Status: 0 if no hit (or none above threshold), 1 if only North hit above threshold, 2 if only South hit above threshold, 3 if both hits above threshold
   //For horizontal, North/South is +x/-x
-  int dHorizontalBarStatus;
-  int dVerticalBarStatus;
+  int dHorizontalBarStatus;  ///< 0, 1, 2, 3: no hit, north only, south only, both ends 
+  int dVerticalBarStatus; ///< 0, 1, 2, 3: no hit, north only, south only, both ends 
   
   bool Is_XPositionWellDefined(void) const
   {

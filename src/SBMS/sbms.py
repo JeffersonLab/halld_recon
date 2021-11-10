@@ -690,10 +690,16 @@ def AddCCDB(env):
 ##################################
 def AddSQLite(env):
 	sqlitecpp_home = os.getenv('SQLITECPP_HOME')
-	env.Append(CPPDEFINES={'SQLITE_USE_LEGACY_STRUCT':'ON'})
+	sqlite_ge_3_19 = version_greater_than_or_equal_to('SQLITE_VERSION', [3, 19, 0])
+	if not sqlite_ge_3_19.defined or (sqlite_ge_3_19.defined and not sqlite_ge_3_19.answer):
+		env.Append(CPPDEFINES={'SQLITE_USE_LEGACY_STRUCT':'ON'})
 	SQLITECPP_CPPPATH = ["%s/include" % (sqlitecpp_home)]
 	env.AppendUnique(CPPPATH = SQLITECPP_CPPPATH)
-	SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
+	sqlitecpp_ge_2_5 = version_greater_than_or_equal_to('SQLITECPP_VERSION', [2, 5, 0])
+	if sqlitecpp_ge_2_5.defined and sqlitecpp_ge_2_5.answer:
+		SQLITECPP_LIBPATH = ["%s/lib64" % (sqlitecpp_home)]
+	else:
+		SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
 	env.AppendUnique(LIBPATH = SQLITECPP_LIBPATH)
 	env.AppendUnique(LIBS    = 'SQLiteCpp')
 	sqlite_home = os.getenv('SQLITE_HOME')
@@ -1130,4 +1136,46 @@ def AddCobrems(env):
 	env.AppendUnique(LIBS    = 'AMPTOOLS_MCGEN')
 	env.AppendUnique(CCFLAGS = pyincludes.rstrip().split())
 
+##################################
+# version comparison helper
+##################################
 
+class version_result():
+	def __init__(self, version, defined, answer):
+		self.version = version
+		self.defined = defined
+		self.answer = answer
+
+def version_greater_than_or_equal_to(version_env_var, version_array):
+	major_std = version_array[0]
+	minor_std = version_array[1]
+	subminor_std = version_array[2]
+	version = str(os.environ.get(version_env_var))
+	answer = False
+	disallowed_chars = 'pv'
+	if version == 'None':
+		defined = False
+	else:
+		defined = True
+		for char in disallowed_chars:
+			version = version.replace(char, "")
+		versions = version.split('.')
+		major = int(versions[0])
+		minor = int(versions[1])
+		subminor = int(versions[2])
+		if major > major_std:
+			answer = True
+		elif major == major_std:
+			if minor > minor_std:
+				answer = True
+			elif minor == minor_std:
+				if subminor >= subminor_std:
+					answer = True
+				else:
+					answer = False
+			else:
+				answer = False
+		else:
+			answer = False
+	result = version_result(version, defined, answer)
+	return result

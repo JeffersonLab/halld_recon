@@ -11,6 +11,8 @@ jerror_t DTrigger_factory::init(void)
 {
 	EMULATE_FCAL_LED_TRIGGER = false;
 	EMULATE_BCAL_LED_TRIGGER = false;
+
+    EMULATE_CAL_ENERGY_SUMS = false;
 	
 	BCAL_LED_NHITS_THRESHOLD = 200;
 	FCAL_LED_NHITS_THRESHOLD = 200;
@@ -20,7 +22,8 @@ jerror_t DTrigger_factory::init(void)
 	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_BCAL_LED_TRIGGER", EMULATE_BCAL_LED_TRIGGER, locUsageString);
 	locUsageString = "Set FCAL LED front panel trigger bits if such events leak into other triggers (1/0, off by default)";
 	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_FCAL_LED_TRIGGER", EMULATE_FCAL_LED_TRIGGER, locUsageString);
-	
+	locUsageString = "Calculate calorimter energy sums using emulated triggers (1/0, off by default)";
+	gPARMS->SetDefaultParameter("TRIGGER:EMULATE_CAL_ENERGY_SUMS", EMULATE_CAL_ENERGY_SUMS, locUsageString);
 
 	return NOERROR;
 }
@@ -75,14 +78,16 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         // use realistic trigger simulation to calculate what the BCAL & FCAL energies
         // used in the trigger decision were - hopefully this is good enough
         // eventually we'll get the values directly from the firmware
-        vector<const DL1MCTrigger*> locMCTriggers;
-        locEventLoop->Get(locMCTriggers);
-        const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
+        if(EMULATE_CAL_ENERGY_SUMS) {
+            vector<const DL1MCTrigger*> locMCTriggers;
+            locEventLoop->Get(locMCTriggers);
+            const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 
-        if(locMCTrigger != NULL)
-        {
-            locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
-            locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+            if(locMCTrigger != NULL)
+            {
+                locTrigger->Set_GTP_BCALEnergy(locMCTrigger->bcal_gtp_en);
+                locTrigger->Set_GTP_FCALEnergy(locMCTrigger->fcal_gtp_en);
+            }
         }
 
 	}

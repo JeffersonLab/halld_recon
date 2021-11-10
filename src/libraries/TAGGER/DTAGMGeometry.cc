@@ -40,19 +40,48 @@ static set<int> runs_announced;
 //---------------------------------
 DTAGMGeometry::DTAGMGeometry(JEventLoop *loop)
 {
-   // keep track of which runs we print out messages for
-   int32_t runnumber = loop->GetJEvent().GetRunNumber();
-   pthread_mutex_lock(&print_mutex);
-   bool print_messages = false;
-   if(runs_announced.find(runnumber) == runs_announced.end()){
+	// keep track of which runs we print out messages for
+	int32_t runnumber = loop->GetJEvent().GetRunNumber();
+	pthread_mutex_lock(&print_mutex);
+	bool print_messages = false;
+	if(runs_announced.find(runnumber) == runs_announced.end()){
 	  print_messages = true;
 	  runs_announced.insert(runnumber);
-   }
-   pthread_mutex_unlock(&print_mutex);
+	}
+	pthread_mutex_unlock(&print_mutex);
+
+	JEvent &event = loop->GetJEvent();
+	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+	JCalibrationCCDB *jcalib =  dynamic_cast<JCalibrationCCDB*>( dapp->GetJCalibration(event.GetRunNumber()) );
+
+	Initialize(jcalib, print_messages);
+}
+
+//---------------------------------
+// DTAGMGeometry    (Constructor)
+//---------------------------------
+DTAGMGeometry::DTAGMGeometry(JCalibration *jcalib, int32_t runnumber)
+{
+	pthread_mutex_lock(&print_mutex);
+	bool print_messages = false;
+	if(runs_announced.find(runnumber) == runs_announced.end()){
+	  print_messages = true;
+	  runs_announced.insert(runnumber);
+	}
+	pthread_mutex_unlock(&print_mutex);
+
+	Initialize(jcalib, print_messages);
+}
+
+//---------------------------------
+// Initialize
+//---------------------------------
+void DTAGMGeometry::Initialize(JCalibration *jcalib, bool print_messages)
+{
 
    /* read tagger set endpoint energy from calibdb */
    std::map<string,double> result1;
-   loop->GetCalib("/PHOTON_BEAM/endpoint_energy", result1);
+   jcalib->Get("/PHOTON_BEAM/endpoint_energy", result1);
    if (result1.find("PHOTON_BEAM_ENDPOINT_ENERGY") == result1.end()) {
       std::cerr << "Error in DTAGMGeometry constructor: "
                 << "failed to read photon beam endpoint energy "
@@ -65,7 +94,7 @@ DTAGMGeometry::DTAGMGeometry(JEventLoop *loop)
 
    /* read microscope channel energy bounds from calibdb */
    std::vector<std::map<string,double> > result2;
-   loop->GetCalib("/PHOTON_BEAM/microscope/scaled_energy_range", result2);
+   jcalib->Get("/PHOTON_BEAM/microscope/scaled_energy_range", result2);
    if (result2.size() != kColumnCount) {
       std::cerr << "Error in DTAGMGeometry constructor: "
                 << "failed to read photon beam scaled_energy_range table "
@@ -89,7 +118,7 @@ DTAGMGeometry::DTAGMGeometry(JEventLoop *loop)
    m_endpoint_energy_calib_GeV = 0.;
    
    std::map<string,double> result3;
-   status = loop->GetCalib("/PHOTON_BEAM/hodoscope/endpoint_calib",result3);
+   status = jcalib->Get("/PHOTON_BEAM/hodoscope/endpoint_calib",result3);
    
    
    if(!status){

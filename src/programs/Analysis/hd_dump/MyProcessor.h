@@ -24,6 +24,9 @@ extern bool PRINT_SUMMARY_ALL;
 extern bool PRINT_SUMMARY_HEADER;
 extern bool PRINT_STATUS_BITS;
 extern bool ACTIVATE_TAGGED_FOR_SUMMARY;
+extern bool QUIT_AFTER_FINDING_NTH;
+
+extern int N_TO_FIND;
 
 extern set<string> toprint;
 extern set<string> tosummarize;

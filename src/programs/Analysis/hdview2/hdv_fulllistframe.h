@@ -42,21 +42,21 @@ class hdv_fulllistframe:public TGMainFrame {
 		virtual ~hdv_fulllistframe(){};
 		
 		void DoClose(void);
-		void UpdateTrackLabels(vector<const DMCThrown*> &throwns, vector<const DKinematicData*> &trks);
+		void UpdateTrackLabels(std::vector<const DMCThrown*> &throwns, std::vector<const DKinematicData*> &trks);
 		
 	private:
 	
 		hdv_mainframe *hdvmf;
 
 		TGComboBox *reconfactory;
-		map<string, vector<TGLabel*> > thrownlabs;
-		map<string, vector<TGLabel*> > reconlabs;
+		std::map<std::string, std::vector<TGLabel*> > thrownlabs;
+		std::map<std::string, std::vector<TGLabel*> > reconlabs;
 
 		TGGroupFrame *throwninfo;
 		TGGroupFrame *reconinfo;
 		
-		map<string, TGVerticalFrame *> tf;
-		map<string, TGVerticalFrame *> rf;
+		std::map<std::string, TGVerticalFrame *> tf;
+		std::map<std::string, TGVerticalFrame *> rf;
 		
 	ClassDef(hdv_fulllistframe,1)
 };

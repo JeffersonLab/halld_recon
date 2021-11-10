@@ -24,6 +24,8 @@ class DTrigger_factory : public jana::JFactory<DTrigger>
 		
 		bool EMULATE_BCAL_LED_TRIGGER;
 		bool EMULATE_FCAL_LED_TRIGGER;
+
+        bool EMULATE_CAL_ENERGY_SUMS;
 		
 		unsigned int BCAL_LED_NHITS_THRESHOLD;
 		unsigned int FCAL_LED_NHITS_THRESHOLD;

@@ -1,7 +1,7 @@
 // $Id$
 //
 //    File: JEventProcessor_MilleFieldOff.cc
-// Created: Tue Jan 17 19:32:32 Local time zone must be set--see zic manual page 2017
+// Created: Tue Jan 17 19:32:32
 // Creator: mstaib (on Linux egbert 2.6.32-642.6.2.el6.x86_64 x86_64)
 //
 
@@ -29,13 +29,15 @@ JEventProcessor_MilleFieldOff::~JEventProcessor_MilleFieldOff() {}
 
 jerror_t JEventProcessor_MilleFieldOff::init(void) {
   // This is called once at program startup.
-  int version = -1;
-  gPARMS->SetDefaultParameter("MILLE:VERSION", version);
-  if (version < 0) {
-    milleWriter = new Mille("nofield_mille_out.mil");
-  } else {
-    milleWriter = new Mille(Form("mil/nofield_mille_out_v%02d.mil", version));
+  string output_filename;
+  gPARMS->GetParameter("OUTPUT_FILENAME", output_filename);
+  int ext_pos = output_filename.rfind(".root");
+  if (ext_pos != (int)output_filename.size() - 5) {
+    jerr << "[MilleFieldOff] Invalid output filename." << endl;
+    japp->Quit();
   }
+  output_filename.replace(ext_pos, 5, ".mil");
+  milleWriter = new Mille(output_filename.data());
 
   return NOERROR;
 }
@@ -47,7 +49,7 @@ jerror_t JEventProcessor_MilleFieldOff::brun(JEventLoop *eventLoop,
   DApplication *dapp =
       dynamic_cast<DApplication *>(eventLoop->GetJApplication());
   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(
-                             dapp->GetBfield(runnumber)) != NULL);
+                             dapp->GetBfield(runnumber)) != nullptr);
 
   // This plugin is designed for field off data. If this is used for field on
   // data, Abort...
@@ -110,22 +112,20 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
       float err = pulls[iPull].err;    // estimated error of measurement
       const DCDCTrackHit *cdc_hit = pulls[iPull].cdc_hit;
       const DFDCPseudo *fdc_hit = pulls[iPull].fdc_hit;
-      float resic = pulls[iPull].resic;  // residual for FDC cathode measuremtns
+      float resic = pulls[iPull].resic;  // residual for FDC cathode measurement
       float errc = pulls[iPull].errc;
 
-      vector<double> trackDerivatives = pulls[iPull].trackDerivatives;
+      vector<double> der = pulls[iPull].trackDerivatives;
 
       if (fdc_hit != nullptr && fdc_hit->status == 6) {
         // Add fdc hit
-        DFDCPseudo *thisHit = const_cast<DFDCPseudo *>(fdc_hit);
+        DFDCPseudo *hit = const_cast<DFDCPseudo *>(fdc_hit);
 
-        vector<double> pseudoAlignmentDerivatives =
-            thisHit->GetFDCPseudoAlignmentDerivatives();
-        vector<double> fdcStripPitchDerivatives =
-            thisHit->GetFDCStripPitchDerivatives();
+        vector<double> pseudo_der = hit->GetFDCPseudoAlignmentDerivatives();
+        vector<double> strip_der = hit->GetFDCStripPitchDerivatives();
 
         // hit->wire->layer: 1-based [1-24]
-        int label_layer_offset = 100000 + thisHit->wire->layer * 1000;
+        int label_layer_offset = 100000 + hit->wire->layer * 1000;
 
         // For wire measurement.
         const int NLC = 4;
@@ -134,17 +134,17 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         float derGl_W[NGL_W];
         int label_W[NGL_W];
 
-        derLc_W[0] = trackDerivatives[FDCTrackD::dDOCAW_dx];
-        derLc_W[1] = trackDerivatives[FDCTrackD::dDOCAW_dy];
-        derLc_W[2] = trackDerivatives[FDCTrackD::dDOCAW_dtx];
-        derLc_W[3] = trackDerivatives[FDCTrackD::dDOCAW_dty];
+        derLc_W[0] = der[FDCTrackD::dDOCAW_dx];
+        derLc_W[1] = der[FDCTrackD::dDOCAW_dy];
+        derLc_W[2] = der[FDCTrackD::dDOCAW_dtx];
+        derLc_W[3] = der[FDCTrackD::dDOCAW_dty];
 
-        derGl_W[0] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaX];
-        derGl_W[1] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiX];
-        derGl_W[2] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiY];
-        derGl_W[3] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaPhiZ];
-        derGl_W[4] = trackDerivatives[FDCTrackD::dDOCAW_dDeltaZ];
-        derGl_W[5] = -trackDerivatives[FDCTrackD::dW_dt0];
+        derGl_W[0] = der[FDCTrackD::dDOCAW_dDeltaX];
+        derGl_W[1] = der[FDCTrackD::dDOCAW_dDeltaPhiX];
+        derGl_W[2] = der[FDCTrackD::dDOCAW_dDeltaPhiY];
+        derGl_W[3] = der[FDCTrackD::dDOCAW_dDeltaPhiZ];
+        derGl_W[4] = der[FDCTrackD::dDOCAW_dDeltaZ];
+        derGl_W[5] = -der[FDCTrackD::dW_dt0];
 
         label_W[0] = label_layer_offset + 1;
         label_W[1] = label_layer_offset + 2;
@@ -163,17 +163,17 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         float derGl_C[NGL_C];
         int label_C[NGL_C];
 
-        derLc_C[0] = trackDerivatives[FDCTrackD::dDOCAC_dx];
-        derLc_C[1] = trackDerivatives[FDCTrackD::dDOCAC_dy];
-        derLc_C[2] = trackDerivatives[FDCTrackD::dDOCAC_dtx];
-        derLc_C[3] = trackDerivatives[FDCTrackD::dDOCAC_dty];
+        derLc_C[0] = der[FDCTrackD::dDOCAC_dx];
+        derLc_C[1] = der[FDCTrackD::dDOCAC_dy];
+        derLc_C[2] = der[FDCTrackD::dDOCAC_dtx];
+        derLc_C[3] = der[FDCTrackD::dDOCAC_dty];
 
         derGl_C[0] = -1.0;
-        derGl_C[1] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaX];
-        derGl_C[2] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiX];
-        derGl_C[3] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiY];
-        derGl_C[4] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaPhiZ];
-        derGl_C[5] = trackDerivatives[FDCTrackD::dDOCAC_dDeltaZ];
+        derGl_C[1] = der[FDCTrackD::dDOCAC_dDeltaX];
+        derGl_C[2] = der[FDCTrackD::dDOCAC_dDeltaPhiX];
+        derGl_C[3] = der[FDCTrackD::dDOCAC_dDeltaPhiY];
+        derGl_C[4] = der[FDCTrackD::dDOCAC_dDeltaPhiZ];
+        derGl_C[5] = der[FDCTrackD::dDOCAC_dDeltaZ];
 
         label_C[0] = label_layer_offset + 100;
         label_C[1] = label_layer_offset + 1;
@@ -183,10 +183,10 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         label_C[5] = label_layer_offset + 5;
 
         // Cathode U and V offsets
-        derGl_C[6] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU];
-        derGl_C[7] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV];
-        derGl_C[8] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaPhiU];
-        derGl_C[9] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaPhiV];
+        derGl_C[6] = -pseudo_der[FDCPseudoD::dSddeltaU];
+        derGl_C[7] = -pseudo_der[FDCPseudoD::dSddeltaV];
+        derGl_C[8] = -pseudo_der[FDCPseudoD::dSddeltaPhiU];
+        derGl_C[9] = -pseudo_der[FDCPseudoD::dSddeltaPhiV];
 
         label_C[6] = label_layer_offset + 101;
         label_C[7] = label_layer_offset + 102;
@@ -194,26 +194,16 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         label_C[9] = label_layer_offset + 104;
 
         // Strip Pitch Calibration
-        derGl_C[10] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU] *
-                      fdcStripPitchDerivatives[0];
-        derGl_C[11] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU] *
-                      fdcStripPitchDerivatives[1];
-        derGl_C[12] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU] *
-                      fdcStripPitchDerivatives[2];
-        derGl_C[13] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU] *
-                      fdcStripPitchDerivatives[3];
-        derGl_C[14] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaU] *
-                      fdcStripPitchDerivatives[4];
-        derGl_C[15] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV] *
-                      fdcStripPitchDerivatives[5];
-        derGl_C[16] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV] *
-                      fdcStripPitchDerivatives[6];
-        derGl_C[17] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV] *
-                      fdcStripPitchDerivatives[7];
-        derGl_C[18] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV] *
-                      fdcStripPitchDerivatives[8];
-        derGl_C[19] = -pseudoAlignmentDerivatives[FDCPseudoD::dSddeltaV] *
-                      fdcStripPitchDerivatives[9];
+        derGl_C[10] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[0];
+        derGl_C[11] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[1];
+        derGl_C[12] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[2];
+        derGl_C[13] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[3];
+        derGl_C[14] = -pseudo_der[FDCPseudoD::dSddeltaU] * strip_der[4];
+        derGl_C[15] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[5];
+        derGl_C[16] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[6];
+        derGl_C[17] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[7];
+        derGl_C[18] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[8];
+        derGl_C[19] = -pseudo_der[FDCPseudoD::dSddeltaV] * strip_der[9];
 
         label_C[10] = label_layer_offset + 200;
         label_C[11] = label_layer_offset + 201;
@@ -231,9 +221,9 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
 
       if (cdc_hit != nullptr) {
         const DCDCWire *constWire = cdc_hit->wire;
-        DCDCWire *thisWire = const_cast<DCDCWire *>(constWire);
+        DCDCWire *wire = const_cast<DCDCWire *>(constWire);
 
-        vector<double> wireDerivatives = thisWire->GetCDCWireDerivatives();
+        vector<double> wire_der = wire->GetCDCWireDerivatives();
 
         const int NLC = 4;
         const int NGL = 10;
@@ -241,140 +231,120 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         float derGl[NGL];
         int label[NGL];
 
-        derLc[0] = trackDerivatives[CDCTrackD::dDOCAdS0];
-        derLc[1] = trackDerivatives[CDCTrackD::dDOCAdS1];
-        derLc[2] = trackDerivatives[CDCTrackD::dDOCAdS2];
-        derLc[3] = trackDerivatives[CDCTrackD::dDOCAdS3];
+        derLc[0] = der[CDCTrackD::dDOCAdS0];
+        derLc[1] = der[CDCTrackD::dDOCAdS1];
+        derLc[2] = der[CDCTrackD::dDOCAdS2];
+        derLc[3] = der[CDCTrackD::dDOCAdS3];
 
-        derGl[0] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaX] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaX] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaX];
+        derGl[0] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaX] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaX] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaX] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaX] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaX] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaX];
 
-        derGl[1] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaY] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaY] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaY];
+        derGl[1] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaY] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaY] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaY] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaY] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaY] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaY];
 
-        derGl[2] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaZ];
+        derGl[2] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaZ] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaZ] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaZ] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaZ] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaZ] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaZ];
 
-        derGl[3] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaPhiX] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaPhiX] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaPhiX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaPhiX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaPhiX] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaPhiX];
+        derGl[3] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaPhiX] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaPhiX] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaPhiX] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiX] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiX] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiX];
 
-        derGl[4] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaPhiY] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaPhiY] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaPhiY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaPhiY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaPhiY] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaPhiY];
+        derGl[4] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaPhiY] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaPhiY] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaPhiY] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiY] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiY] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiY];
 
-        derGl[5] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaPhiZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaPhiZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaPhiZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaPhiZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaPhiZ] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaPhiZ];
+        derGl[5] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaPhiZ] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaPhiZ] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaPhiZ] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaPhiZ] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaPhiZ] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaPhiZ];
 
-        derGl[6] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaXu] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaXu] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaXu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaXu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaXu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaXu];
+        derGl[6] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaXu] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaXu] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaXu] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaXu] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaXu] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaXu];
 
-        derGl[7] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaYu] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaYu] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaYu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaYu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaYu] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaYu];
+        derGl[7] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaYu] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaYu] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaYu] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaYu] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaYu] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaYu];
 
-        derGl[8] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaXd] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaXd] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaXd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaXd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaXd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaXd];
+        derGl[8] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaXd] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaXd] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaXd] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaXd] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaXd] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaXd];
 
-        derGl[9] = trackDerivatives[CDCTrackD::dDOCAdOriginX] *
-                       wireDerivatives[CDCWireD::dOriginXddeltaYd] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginY] *
-                       wireDerivatives[CDCWireD::dOriginYddeltaYd] +
-                   trackDerivatives[CDCTrackD::dDOCAdOriginZ] *
-                       wireDerivatives[CDCWireD::dOriginZddeltaYd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirX] *
-                       wireDerivatives[CDCWireD::dDirXddeltaYd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirY] *
-                       wireDerivatives[CDCWireD::dDirYddeltaYd] +
-                   trackDerivatives[CDCTrackD::dDOCAdDirZ] *
-                       wireDerivatives[CDCWireD::dDirZddeltaYd];
+        derGl[9] =
+            der[CDCTrackD::dDOCAdOriginX] *
+                wire_der[CDCWireD::dOriginXddeltaYd] +
+            der[CDCTrackD::dDOCAdOriginY] *
+                wire_der[CDCWireD::dOriginYddeltaYd] +
+            der[CDCTrackD::dDOCAdOriginZ] *
+                wire_der[CDCWireD::dOriginZddeltaYd] +
+            der[CDCTrackD::dDOCAdDirX] * wire_der[CDCWireD::dDirXddeltaYd] +
+            der[CDCTrackD::dDOCAdDirY] * wire_der[CDCWireD::dDirYddeltaYd] +
+            der[CDCTrackD::dDOCAdDirZ] * wire_der[CDCWireD::dDirZddeltaYd];
 
         label[0] = 1;
         label[1] = 2;
@@ -382,18 +352,10 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         label[3] = 4;
         label[4] = 5;
         label[5] = 6;
-        label[6] = 1000 +
-                   (straw_offset[thisWire->ring] + (thisWire->straw - 1)) * 4 +
-                   1;
-        label[7] = 1000 +
-                   (straw_offset[thisWire->ring] + (thisWire->straw - 1)) * 4 +
-                   2;
-        label[8] = 1000 +
-                   (straw_offset[thisWire->ring] + (thisWire->straw - 1)) * 4 +
-                   3;
-        label[9] = 1000 +
-                   (straw_offset[thisWire->ring] + (thisWire->straw - 1)) * 4 +
-                   4;
+        label[6] = 1001 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[7] = 1002 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[8] = 1003 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
+        label[9] = 1004 + (straw_offset[wire->ring] + wire->straw - 1) * 4;
 
         milleWriter->mille(NLC, derLc, NGL, derGl, label, resi, err);
       }

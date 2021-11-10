@@ -17,6 +17,7 @@
 #include <FCAL/DFCALHit.h>
 #include <FDC/DFDCHit.h>
 #include <TOF/DTOFHit.h>
+#include <TOF/DTOFPoint.h>
 #include <START_COUNTER/DSCHit.h>
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMHit.h>
@@ -69,10 +70,14 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
 		int DO_HIGH_RESOLUTION;
+		unsigned int TRIGGER_MASK;
         int fBeamEventCounter;
         int dMaxDIRCChannels;
 		bool NO_TRACKS;
+		bool NO_FIELD;
 		bool CCAL_CALIB;
+		bool STRAIGHT_TRACK;
+		
         // The final setup requires some shifts relative to the previous values, need to store them
 
         int NBINS_TDIFF, NBINS_TAGGER_TIME, NBINS_MATCHING, NBINS_RF_COMPARE;
@@ -85,6 +90,10 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         double tagh_fadc_time_offsets[275], tagh_tdc_time_offsets[275];
         vector<double> sc_tdc_time_offsets;
         vector<double> tof_tdc_time_offsets;
+
+		// constants for FCAL/TOF matching
+		const double TOF_X_MEAN  =  0.75;  const double TOF_X_SIG  =  1.75;
+		const double TOF_Y_MEAN  = -0.50;  const double TOF_Y_SIG  =  1.75;
 
 };
 

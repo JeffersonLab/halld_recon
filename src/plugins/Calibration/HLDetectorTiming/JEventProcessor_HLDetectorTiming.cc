@@ -134,9 +134,12 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     DO_HIGH_RESOLUTION = 0;
 
     USE_RF_BUNCH = 1;
+    TRIGGER_MASK = 0;
 
     NO_TRACKS = false;
+    NO_FIELD = true;
     CCAL_CALIB = false;
+    STRAIGHT_TRACK = false;
 
     if(gPARMS){
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
@@ -152,6 +155,8 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_TRACKS", NO_TRACKS, "Don't use tracking information for timing calibrations");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:CCAL_CALIB", CCAL_CALIB, "Perform CCAL calibrations");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:TRIGGER_MASK", TRIGGER_MASK, "Set to >0 to override use of standard physics trigger");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:STRAIGHT_TRACK", STRAIGHT_TRACK, "Set to >0 to change better for straight track data (field-off, drift chambers-on)");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -232,14 +237,22 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
    const DMagneticFieldMap *bfield=app->GetBfield(loop->GetJEvent().GetRunNumber());
    bool locIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
 
-
     const DTrigger* locTrigger = NULL; 
     loop->GetSingle(locTrigger); 
+    
+    // make sure no "special" front-panel trigger events are used (e.g. LED, random pulser...)
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
 
-    if(!locTrigger->Get_IsPhysicsEvent())
-	    return NOERROR;
+	// allow the user to select which trigger select events to use for calibrations
+	if( TRIGGER_MASK > 0) {
+	    if( !((locTrigger->Get_L1TriggerBits())&TRIGGER_MASK) )
+        	return NOERROR;
+	} else {
+		// but default to the main physics trigger
+    	if(!locTrigger->Get_IsPhysicsEvent())
+	    	return NOERROR;
+	}
 
     // Get the particleID object for each run
     vector<const DParticleID *> locParticleID_algos;
@@ -310,6 +323,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DSCHit *> scHitVector;
     vector<const DBCALUnifiedHit *> bcalUnifiedHitVector;
     vector<const DTOFHit *> tofHitVector;
+    vector<const DTOFPoint *> tofPointVector;
     vector<const DFCALHit *> fcalHitVector;
     vector<const DCCALHit *> ccalHitVector;
     vector<const DDIRCPmtHit *> dircPmtHitVector;
@@ -323,6 +337,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(scHitVector);
     loop->Get(bcalUnifiedHitVector);
     loop->Get(tofHitVector);
+    loop->Get(tofPointVector);
     loop->Get(fcalHitVector);
     if(CCAL_CALIB) {
       loop->Get(ccalHitVector);
@@ -412,7 +427,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             Fill1DHistogram ("HLDetectorTiming", "BCAL", "BCALHit ADC time", thisADCHit->t,
                     "BCALHit ADC time; t_{ADC} [ns]; Entries", nBins, xMin, xMax);
 
-            if (DO_OPTIONAL){
+            //if (DO_OPTIONAL){
                 if (bcalUnifiedHitVector[i]->end == 0){
                     Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Upstream Per Channel ADC Hit Time",
                             the_cell, thisADCHit->t,
@@ -425,7 +440,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                             "BCALHit Downstream Per Channel Hit Time; cellID; t_{ADC} [ns] ",
                             768, 0.5, 768.5, 250, -50, 50);
                 }
-            }
+                //}
         }
 
         if (thisTDCHit != NULL){
@@ -606,6 +621,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
             Fill2DHistogram("HLDetectorTiming", "SC", "SCHit TDC_ADC Difference",
                     scHitVector[i]->sector, scHitVector[i]->t_TDC - scHitVector[i]->t_fADC,
                     "SC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nSCCounters, 0.5, nSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+            Fill2DHistogram("HLDetectorTiming", "SC", "SCHit Matched time per Counter",
+                            scHitVector[i]->sector, scHitVector[i]->t,
+                            "SCHit Matched ADC/TDC time; Sector ;t [ns]", nSCCounters, 0.5, nSCCounters + 0.5, 50, -50, 50);
         }
 
     }
@@ -770,6 +788,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 
     const DEventRFBunch *thisRFBunch = NULL;
+    
     if(NO_TRACKS) {
 	    // If the drift chambers are turned off, we'll need to use the neutral showers
 	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
@@ -876,12 +895,12 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     
     DVector3 locTargetCenter(0.,0.,Z_TARGET);
 
-    //double largest_fcal_time = 
-
     for (i = 0; i <  neutralShowerVector.size(); i++){
 	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
 	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
 	    
+        //cout << locDeltaT << endl;
+
 	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
 	    //   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
 	    if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
@@ -893,14 +912,43 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
 					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    }
+		    
+		    // if we're not using tracking, then align the TOF using hits matched between the TOF and FCAL
+		    if(NO_TRACKS) {
+		    	for( vector< const DTOFPoint* >::const_iterator tof = tofPointVector.begin(); 
+					tof != tofPointVector.end(); tof++ ) {
+					
+					const DTOFPoint* tof_hit = *tof;
+					
+					// select double-ended hits
+					if( tof_hit->dHorizontalBarStatus != 3 || tof_hit->dVerticalBarStatus != 3 )
+						continue;
+						
+					double dx = tof_hit->pos.X() - neutralShowerVector[i]->dSpacetimeVertex.X();
+					double dy = tof_hit->pos.Y() - neutralShowerVector[i]->dSpacetimeVertex.Y();
+					
+	    			double locTOFPathLength = (tof_hit->pos - locTargetCenter).Mag();
+					double locTOFDeltaT = tof_hit->t - locTOFPathLength/29.9792458 - thisRFBunch->dTime;
+					
+					// match the hits
+					if( ( fabs(dx - TOF_X_MEAN) < 2.*TOF_X_SIG ) && 
+		    	    	( fabs(dy - TOF_Y_MEAN) < 2.*TOF_Y_SIG ) ) {
+					   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time (No Tracks)",
+							 locTOFDeltaT,
+							 "t_{TOF} - t_{RF} at Target (No Tracks); t_{TOF} - t_{RF} at Target [ns]; Entries",
+							 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+		    	    }
+
+				}
+		    } 
 	    } else {
 		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
 				    "Shower Energy [GeV];t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
-				    100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+                            100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    if(neutralShowerVector[i]->dEnergy > 0.1) {
 			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time (Neutral)",  locDeltaT,
 					    "t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
-					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+                                NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 		    }
 	    }
 	    
@@ -917,13 +965,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 	    Fill2DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time vs. Energy (Neutral)",  ccalShowerVector[i]->E, locDeltaT,
 			    "Shower Energy [GeV];t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-			    100, 0., 10., 200, -20, 20);
+			    100, 0., 10., 500, -20, 20);
 	    
 	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
 	    if(ccalShowerVector[i]->E > 0.1) {
 		    Fill1DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time (Neutral)",  locDeltaT,
 				    "t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-				    500, -50, 50);
+				    2000, -50, 50);
 		    //NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
 	    }
     }
@@ -960,10 +1008,14 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         // Keep this minimal for now and investigate later
         //float trackingFOMCut = 0.01;
         //float trackingFOMCut =0.0027;
-        float trackingFOMCut = 2.87E-7;
-        int trackingNDFCut = 5;
-
-        if(trackingFOM < trackingFOMCut) continue;
+		float trackingFOMCut = 2.87E-7;
+		float trackingNDFCut = 5;
+		if(STRAIGHT_TRACK) {
+        	trackingFOMCut = 1.E-10;
+        	trackingNDFCut = 5;
+		}
+		
+        if( trackingFOM < trackingFOMCut ) continue;
         if( locTrackTimeBased->Ndof < trackingNDFCut) continue;
 
         //////////////////////////////////////////
@@ -1022,7 +1074,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 					locSCHitMatchParams->dSCHit->sector, locSCDeltaT,
 					"t_{SC} - t_{RF} at Target; Sector; t_{SC} - t_{RF} at Target [ns];",
 					30, 0.5, 30.5, 800, -20., 20.);
-		}
+            }
 
         // Get the pulls vector from the track
 		auto thisTimeBasedTrack = pionHypothesis->Get_TrackTimeBased();
@@ -1048,19 +1100,24 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                  earliestTime - locSCHitMatchParams->dHitTime,
                  "Earliest CDC Time Minus Matched SC Time; t_{CDC} - t_{SC} [ns];",
                  400, -50, 150);
+
         }
 
         // Loop over TAGM hits
         for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
            int nTAGMColumns = 122;
            // We want to look at the timewalk within these ADC/TDC detectors
+
            Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - SC Target Time",
                  GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - flightTimeCorrectedSCTime,
                  "#Deltat TAGM-SC; Column ;t_{TAGM} - t_{SC @ target} [ns]", nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
+
            Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC Target Time",
                  tagmHitVector[j]->t - flightTimeCorrectedSCTime, tagmHitVector[j]->E,
                  "Tagger - SC Target Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
                  NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);   
+
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC 1D Target Time",
                  tagmHitVector[j]->t - flightTimeCorrectedSCTime,
                  "Tagger - SC Time at Target; #Deltat_{Tagger - SC} [ns]; Entries",
@@ -1084,14 +1141,17 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
                  160, -20, 20);
         }
 
+
         if (locTOFHitMatchParams != NULL){
            // Now check the TOF matching. Do this on a full detector level.
            float flightTimeCorrectedTOFTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - targetCenterCorrection;
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - SC Target Time",
                  flightTimeCorrectedTOFTime - flightTimeCorrectedSCTime,
                  "t_{TOF} - t_{SC} at Target; t_{TOF} - t_{SC} at Target [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time",
+ 
+          Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time",
                  flightTimeCorrectedTOFTime - thisRFBunch->dTime,
                  "t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
@@ -1162,19 +1222,24 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 		}
         if (locBCALShowerMatchParams != NULL){
            float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time",
                  flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime,
                  "t_{BCAL} - t_{SC} at Target; t_{BCAL} - t_{SC} [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time",
                  flightTimeCorrectedBCALTime - thisRFBunch->dTime,
                  "t_{BCAL} - t_{RF} at Target; t_{BCAL} - t_{RF} [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+
+
            // Add histogram suggested by Mark Dalton
            Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time Vs Correction",
                  locBCALShowerMatchParams->dFlightTime, flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime,
                  "t_{BCAL} - t_{SC} at Target; Flight time [ns]; t_{BCAL} - t_{SC} [ns]",
                  100, 0, 20, 50, -10, 10);
+
            // Fill the following when there is a SC/BCAL match.
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "Earliest Flight-time Corrected CDC Time",
                  earliestCDCTime,
@@ -1183,10 +1248,12 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         }
         if (locFCALShowerMatchParams != NULL){
            float flightTimeCorrectedFCALTime = locFCALShowerMatchParams->dFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - targetCenterCorrection;
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - SC Target Time",
                  flightTimeCorrectedFCALTime - flightTimeCorrectedSCTime,
                  "t_{FCAL} - t_{SC} at Target; t_{FCAL} - t_{SC} [ns]; Entries",
                  NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
+
            Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time",
                  flightTimeCorrectedFCALTime - thisRFBunch->dTime,
                  "t_{FCAL} - t_{RF} at Target; t_{FCAL} - t_{RF} [ns]; Entries",

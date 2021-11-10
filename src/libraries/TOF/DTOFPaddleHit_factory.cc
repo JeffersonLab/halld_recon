@@ -1,9 +1,17 @@
 // $Id$
 //
-//    File: DTOFPaddleHit_factory.cc
-// Created: Thu Jun  9 10:05:21 EDT 2005
-// Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
-//
+/*! **File**: DTOFPaddleHit_factory.cc
+ *+ Created: Thu Jun  9 10:05:21 EDT 2005
+ *+ Creator: davidl (on Darwin wire129.jlab.org 7.8.0 powerpc)
+ *+ Purpose: Implementation of DTOFPaddleHit factory creating paddle hits based on matched
+ * DTOFHit objects for long paddles that are equiped with PMTs on both ends. For these paddle
+ * hits a time-difference and mean-time can be determined. The time difference results in a
+ * hit position along the paddle while the mean-time is a measure of the time of flight of the
+ * particle from the IP to the paddle.
+*/
+
+/// \addtogroup TOFDetector
+
 // Modified: Wed Feb 12 13:19:10 EST 2014 by B. Zihlmann
 //           reflect the changes in the TOF geometry with
 //           19 LWB, 2 LNB, 2 SB, 2LNB, 19 LWB
@@ -15,6 +23,12 @@
 //           bar 22 and 23 are the 4 short bars distinguished by north/south
 //
 
+/*! \file DTOFPaddleHit_factory.cc
+ * The code file DTOFPaddleHit_factory.cc is the implementation of the factory that generates
+ * TOFPaddleHit objects and is based on long paddles with 2-ended readout. 
+ * The individual hits from either side come from DTOFHit objects.
+ * This factory code is called for every event. The mothod is DTOFPaddleHit_factory::evnt(). 
+*/
 
 #include <iostream>
 using namespace std;
@@ -33,6 +47,10 @@ using namespace std;
 //------------------
 jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
+  /// Retreive TOF parameters based on the TOF geometry for this run. This includes
+  /// values like the number of bars in a plane the length of the bars, the effective
+  /// speed of light in the bars and attenuation lengths.  
+
 
   // load values from geometry
   loop->Get(TOFGeom);
@@ -59,7 +77,6 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
     ATTEN_LENGTH = 400.;  // 400cm attenuation length
   }
 
-  ENERGY_ATTEN_FACTOR=exp(HALFPADDLE/ATTEN_LENGTH);
   TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
 
   string locTOFPropSpeedTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/propagation_speed";
@@ -78,6 +95,16 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 //------------------
 jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
+  /// General Purpose:
+  /// Based on the list of DTOFHit objects this methodes finds hits for paddles
+  /// with PMTs on both ends and forms paddles hits. The timing information from
+  /// both ends of a paddle can be used to determine the hit position along the paddle
+  /// as well as the mean time which is a measure of Time-Of-Flight for the particle 
+  /// from the vertex to the detector impact location.
+  /// With a hit location the energy depositon can be corrected for attenuation.
+  /// For a mathced hit on both ends both ends energy has to be above an energy threshold
+  /// E_THRESHOLD (default 0.5MeV) and within a time window TIME_COINCIDENCE_CUT given by
+  /// the time for a signal to traverse a full length paddle.
 
   vector<const DTOFHit*> hits;
   loop->Get(hits,TOF_POINT_TAG.c_str());
@@ -98,6 +125,10 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   //int c2r = 0;
 
   // sort the tof hits into left and right PMTs for both planes
+
+
+  /// First Loop over DTOFHits and sort them into lists accroding to Left and Right 
+  /// for both planes individually. This results in four separate lists of DTOFHit objects.
 
   for (unsigned int i = 0; i < hits.size(); i++){
     const DTOFHit *hit = hits[i];
@@ -123,6 +154,14 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
   // find matching Up/Down TOFHits
+  ///
+  /// Now loop over the hits of "TOP" PMT hits which are the hits in the plane
+  /// with vertically oriented paddles the PMTs at the top. All short paddles will
+  /// be ignored.
+  /// For each found hit a match is seeked in the list of "BOTTOM" PMT hits with the
+  /// requirement that both ends have a signal over threhold (default is 0.5MeV) and 
+  /// both hits have a timing not further appart than a value given by TOF_COINCIDENCE_CUT
+  /// which is deduced by the total length of the paddle and the effective speed of light.
   for (unsigned int i=0; i<P1hitsL.size(); i++){
 
     int bar = P1hitsL[i]->bar;
@@ -152,6 +191,10 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
 
   // find Full length bar with not corresponding hit on the right side
+  ///
+  /// In case no match is found a DTOFPaddleHit object is created with only one
+  /// end having its information loaded while the values of other end are initialized to zero.
+  /// An energy threhold for the signal is still required (default 0.5MeV)
   for (unsigned int i=0; i<P1hitsL.size(); i++){ 
     int bar = P1hitsL[i]->bar;
     int found = 0;
@@ -317,10 +360,6 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       hit->pos = pos;
       hit->dpos      = 2.;  // manually/artificially set to 2cm. 
       
-      // mean energy deposition at the location of the hit position
-      // use geometrical mean
-      //hit->dE = ENERGY_ATTEN_FACTOR*sqrt(hit->E_north*hit->E_south);
-
       float xl =  pos; // distance to left PMT 
       float xr =  pos; // distance to right PMT
       int idl = hit->orientation*TOF_NUM_PLANES*TOF_NUM_BARS + hit->bar-1;
