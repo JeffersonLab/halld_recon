@@ -194,10 +194,10 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
       locFullConstrainParticles.insert(myPiPlus);
       locFullConstrainParticles.insert(myPiMinus);
       locFullConstrainParticles.insert(myProton);
-
+      
       //shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
 	  // maybe use a better vertex guess
-      shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
+      shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, locTRoughPosition);
 
       dKinFitter->Add_Constraint(locProductionVertexConstraint);
 
