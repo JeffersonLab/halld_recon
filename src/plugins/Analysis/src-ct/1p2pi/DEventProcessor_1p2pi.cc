@@ -429,10 +429,10 @@ dTreeFillData.Fill_Array<Double_t>("SumV_FCAL_protcand",SumV_FCAL_protcand, j);
       locFullConstrainParticles.insert(myPiPlus);
       locFullConstrainParticles.insert(myPiMinus);
       locFullConstrainParticles.insert(myProton);
-
+      
       //shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
 	  // maybe use a better vertex guess
-      shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, proton_track->position());
+      shared_ptr<DKinFitConstraint_Vertex> locProductionVertexConstraint =  dKinFitUtils->Make_VertexConstraint(locFullConstrainParticles, NoParticles, locTRoughPosition);
 
       dKinFitter->Add_Constraint(locProductionVertexConstraint);
 
