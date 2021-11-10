@@ -111,6 +111,8 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
 //------------------
 jerror_t DEventProcessor_1p1pi1pi0::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitter = new DKinFitter(dKinFitUtils);
 
   return NOERROR;
 }
@@ -230,12 +232,11 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (nHyp != 1)
     return NOERROR;
       
+  LockState(); //ACQUIRE PROCESSOR LOCK
+
   map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[0];
   const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
   const DChargedTrackHypothesis * hyp_pim = thisHyp[PiMinus][0];
-  
-  DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
-  DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);
   
   dKinFitUtils->Reset_NewEvent();
   dKinFitter->Reset_NewEvent();
@@ -266,8 +267,10 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   dKinFitter->Fit_Reaction();
   
   dTreeFillData.Fill_Single<Double_t>("CL",dKinFitter->Get_ConfidenceLevel());
-  if (dKinFitter->Get_ConfidenceLevel() == 0)
+  if (dKinFitter->Get_ConfidenceLevel() == 0){
+    UnlockState(); //RELEASE PROCESSOR LOCK
     return NOERROR;
+  }
   
   TVector3 vertex;
   double vertex_x = 0;
@@ -377,6 +380,8 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   //FILL TTREE
   dTreeInterface->Fill(dTreeFillData);
   
+  UnlockState(); //RELEASE PROCESSOR LOCK
+
   return NOERROR;
 
 }
