@@ -57,8 +57,12 @@ DDIRCGeometry::Initialize(int runnumber) {
 	all_found &= jgeom->Get("//trd[@name='OWDG']/@Xmp_Ymp_Z", OWDG_XYZ);
 	
         if( !all_found ){
-                jerr << "Problem finding all DIRC geometry elements. Please make sure your HDDS is up to date!" << endl;
-                _exit(-1);
+				// Not all experiments use the DIRC (e.g. CPP) and so their geometries do not
+				// include it in HDDS. Thus, we can only warn here and return if those elements
+				// are not found.   2021-09-21 David L.
+                jerr << "Problem finding all DIRC geometry elements. Please make sure your HDDS is up to date! (non-fatal)" << endl;
+                return;
+                //_exit(-1);
         }
         
 	// set array of bar positions
