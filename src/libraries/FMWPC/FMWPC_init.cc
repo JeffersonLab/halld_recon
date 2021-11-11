@@ -11,9 +11,6 @@ using namespace jana;
 
 #include "DFMWPCHit.h"
 #include "DFMWPCTruthHit.h"
-#include "DFMWPCDigiHit.h"
-#include "DFMWPCHit_factory.h"
-#include "DFMWPCCluster_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
 

@@ -1783,6 +1783,24 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
    }
 }
 
+
+
+//---------------------------------
+// GetCTOFZ
+//---------------------------------
+bool DGeometry::GetCTOFZ(double &z) const {
+  z=1000; // cm; initialize to a large value
+  vector<double> CppScintPos;
+  bool good = Get("//section/composition/posXYZ[@volume='CppScint']/@X_Y_Z", CppScintPos);
+  if (!good){  
+    _DBG_<<"Unable to retrieve CPP scintillator position."<<endl;
+    return false;
+  }
+  z=CppScintPos[2];
+  return true;
+}
+
+
 //---------------------------------
 // GetFMWPCZ
 //---------------------------------
