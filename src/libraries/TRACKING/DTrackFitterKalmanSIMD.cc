@@ -336,10 +336,12 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
      cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
       
    // Outer detector geometry parameters
-   geom->GetFCALZ(dFCALz); 
+   geom->GetFCALZ(dFCALz);
+   dFCALzBack=dFCALz+45.;
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
    geom->GetFMWPCZ_vec(dFMWPCz_vec);
    geom->GetFMWPCSize(dFMWPCsize);
+   geom->GetCTOFZ(dCTOFz);
 
    vector<double>tof_face;
    geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
@@ -351,8 +353,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
    geom->GetTRDZ(dTRDz_vec); // TRD planes
-   
-   
+      
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
      // Create vector of direction vectors in scintillator planes
@@ -8799,21 +8800,13 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   double s=forward_traj[0].s;
 
   // Store the position and momentum at the exit to the tracking volume
-  double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-  double tanl=1./sqrt(tsquare);
-  double cosl=cos(atan(tanl));
-  double pt=cosl/fabs(S(state_q_over_p));
-  double phi=atan2(S(state_ty),S(state_tx));
-  DVector3 position(S(state_x),S(state_y),z);
-  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
-						     t*TIME_UNIT_CONVERSION,
-						     s));
+  AddExtrapolation(SYS_NULL,z,S,t,s);
 
   // Loop to propagate track to outer detectors
   const double z_outer_max=1000.;
   const double x_max=130.;
   const double y_max=130.;
+  const double fcal_radius_sq=120.47*120.47;
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
@@ -8821,7 +8814,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
-	 && fabs(S(state_y))<y_max){   
+	 && fabs(S(state_y))<y_max){
     // Bail if the momentum has dropped below some minimum
     if (fabs(S(state_q_over_p))>Q_OVER_P_MAX){
       if (DEBUG_LEVEL>2)
@@ -8840,15 +8833,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
 	return VALUE_OUT_OF_RANGE;
       }
       if (z<406.){
-	double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-	double tanl=1./sqrt(tsquare);
-	double cosl=cos(atan(tanl));
-	double pt=cosl/fabs(S(state_q_over_p));
-	double phi=atan2(S(state_ty),S(state_tx));
-	DVector3 position(S(state_x),S(state_y),z);
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
-							   t*TIME_UNIT_CONVERSION,s));
+	AddExtrapolation(SYS_BCAL,z,S,t,s);
       }
       else if (extrapolations.at(SYS_BCAL).size()<5){
 	// There needs to be some steps inside the the volume of the BCAL for 
@@ -8910,8 +8895,12 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dFCALz+EPS;
       ds=(newz-z)/dz_ds;
     }
-    if (got_fmwpc&&newz>dFMWPCz_vec[fmwpc_index]){
+    if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
       newz=dFMWPCz_vec[fmwpc_index]+EPS;
+      ds=(newz-z)/dz_ds;
+    }
+    if (got_fmwpc&&newz>dCTOFz){
+      newz=dCTOFz+EPS;
       ds=(newz-z)/dz_ds;
     }
     s+=ds;
@@ -8927,94 +8916,63 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     z=newz;
 
     if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      //position.Print();
-      extrapolations[SYS_TRD].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
+      AddExtrapolation(SYS_TRD,z,S,t,s);
       trd_index++;
     }
     if (hit_dirc==false && newz>dDIRCz){
       hit_dirc=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_DIRC].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s));
+      AddExtrapolation(SYS_DIRC,z,S,t,s);
     }  
     if (hit_tof==false && newz>dTOFz){
       hit_tof=true;
-
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_TOF].push_back(Extrapolation_t(position,momentum,
-							t*TIME_UNIT_CONVERSION,s)); 
-    }  
-
+      AddExtrapolation(SYS_TOF,z,S,t,s);
+    }
     if (hit_fcal==false && newz>dFCALz){
+      double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+      if (r2>fcal_radius_sq) return NOERROR;
+
       hit_fcal=true;
-      
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s)); 
+      AddExtrapolation(SYS_FCAL,z,S,t,s);
 
+      // Propagate the track to the back of the FCAL block
+      int num=int(45./dz);
+      int m=0;
+      for (;m<num;m++){	
+	newz=z+dz;
+	// Step through field
+	Step(z,newz,dEdx,S);
+	z=newz;
+
+	r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+	if (r2>fcal_radius_sq){
+	  // Break out of the loop if the track exits out of the FCAL before 
+	  // reaching the back end of the block
+	  break;
+	}
+      }
+      if (m==num){
+	newz=dFCALzBack;
+	// Step through field
+	Step(z,newz,dEdx,S); 
+	z=newz;
+      }
       // add another extrapolation point at downstream end of FCAL
-      double zend=newz+45.;
-      Step(newz,zend,dEdx,S); 
-      ds=(zend-newz)/dz_ds;
-      t+=ds*sqrt(one_over_beta2); // in units where c=1 
-      s+=ds;
-      tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      tanl=1./sqrt(tsquare); 
-      cosl=cos(atan(tanl));
-      pt=cosl/fabs(S(state_q_over_p));
-      phi=atan2(S(state_ty),S(state_tx));
-      position.SetXYZ(S(state_x),S(state_y),zend);
-      momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FCAL].push_back(Extrapolation_t(position,momentum,
-					    t*TIME_UNIT_CONVERSION,s));
-
+      AddExtrapolation(SYS_FCAL,z,S,t,s);   
+      // .. and exit if the muon detector is not installed
       if (got_fmwpc==false) return NOERROR;
     }
-    
     // Deal with muon detector
     if (hit_fcal==true 
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
-    if (got_fmwpc && newz>dFMWPCz_vec[fmwpc_index]){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FMWPC].push_back(Extrapolation_t(position,momentum,
-							  t*TIME_UNIT_CONVERSION,s));
+    if (fmwpc_index<dFMWPCz_vec.size() && newz>dFMWPCz_vec[fmwpc_index]){
+      AddExtrapolation(SYS_FMWPC,z,S,t,s);
       fmwpc_index++;
-      if (fmwpc_index>5) return NOERROR;
+    }
+    if (got_fmwpc && newz>dCTOFz){
+      AddExtrapolation(SYS_CTOF,z,S,t,s);
+      return NOERROR;
     }
   }
 
@@ -9067,7 +9025,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 	double dmin=d;
 	double bestz=z;
 	double t=forward_traj[k].t;
-	double s=forward_traj[k].s;  
+	double s=forward_traj[k].s;
+	double bestt=t,bests=s;
+
 	// Magnetic field 
 	bfield->GetField(S(state_x),S(state_y),z,Bx,By,Bz); 
 
@@ -9088,36 +9048,24 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 	  s-=ds;
 
 	  // Find the index for the nearest start counter paddle
-         double dphi=atan2(S(state_y),S(state_x))-SC_PHI_SECTOR1;
-         if (dphi<0) dphi+=2.*M_PI;
-         index=int(floor(dphi/(2.*M_PI/30.)));
-
-	 // Find the new distance to the start counter (which could now be to
-         // a plane in the one adjacent to the one before the step...)
-	 d=sc_norm[index][m].Dot(DVector3(S(state_x),S(state_y),z)
-                                 -sc_pos[index][m]);
-	 if (fabs(d)<fabs(dmin)){
-           bestS=S;
-           dmin=d;
-	   bestz=z;
-	 }
-	 count++;
+	  double dphi=atan2(S(state_y),S(state_x))-SC_PHI_SECTOR1;
+	  if (dphi<0) dphi+=2.*M_PI;
+	  index=int(floor(dphi/(2.*M_PI/30.)));
+	  
+	  // Find the new distance to the start counter (which could now be to
+	  // a plane in the one adjacent to the one before the step...)
+	  d=sc_norm[index][m].Dot(DVector3(S(state_x),S(state_y),z)
+				  -sc_pos[index][m]);
+	  if (fabs(d)<fabs(dmin)){
+	    bestS=S;
+	    dmin=d;
+	    bestz=z;
+	    bests=s;
+	    bestt=t;
+	  }
+	  count++;
 	}
-
-	// New position and momentum
-	double tsquare=bestS(state_tx)*bestS(state_tx)
-	  +bestS(state_ty)*bestS(state_ty);
-	double tanl=1./sqrt(tsquare);
-	double cosl=cos(atan(tanl));
-	double pt=cosl/fabs(bestS(state_q_over_p));
-	double phi=atan2(bestS(state_ty),bestS(state_tx));
-	DVector3 position(bestS(state_x),bestS(state_y),bestz);
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_START].push_back(Extrapolation_t(position,momentum,
-						    t*TIME_UNIT_CONVERSION,s));
-
-	//printf("forward track:\n");
-	//position.Print();
+	AddExtrapolation(SYS_START,bestz,bestS,bestt,bests);
 	intersected_start_counter=true;
 	break;
       }
@@ -9141,19 +9089,14 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
   mT0MinimumDriftTime=1e6;
   for (int k=intersected_start_counter?index_beyond_start_counter:inner_index;k>=0;k--){
     double z=forward_traj[k].z;
-    double t=forward_traj[k].t*TIME_UNIT_CONVERSION;
+    double t=forward_traj[k].t;
     double s=forward_traj[k].s;
     DMatrix5x1 S=forward_traj[k].S;
-    double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-    double tanl=1./sqrt(tsquare);
-    double cosl=cos(atan(tanl));
-    double pt=cosl/fabs(S(state_q_over_p));
-    double phi=atan2(S(state_ty),S(state_tx)); 
 
     // Find estimate for t0 using earliest drift time
     if (forward_traj[k].h_id>999){
       unsigned int index=forward_traj[k].h_id-1000;
-      double dt=my_cdchits[index]->tdrift-t;
+      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;
       if (dt<mT0MinimumDriftTime){
 	mT0MinimumDriftTime=dt;
 	mT0Detector=SYS_CDC;
@@ -9161,7 +9104,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
     }
     else if (forward_traj[k].h_id>0){
       unsigned int index=forward_traj[k].h_id-1;
-      double dt=my_fdchits[index]->t-t;  
+      double dt=my_fdchits[index]->t-t*TIME_UNIT_CONVERSION;  
       if (dt<mT0MinimumDriftTime){
 	mT0MinimumDriftTime=dt;
 	mT0Detector=SYS_FDC;
@@ -9177,12 +9120,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
     }
     // Extrapolations in CDC region
     if (z<endplate_z_downstream){
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_CDC].push_back(Extrapolation_t(position,momentum,
-						t*TIME_UNIT_CONVERSION,s,
-						s_theta_ms_sum,theta2ms_sum));
-
+      AddExtrapolation(SYS_CDC,z,S,t,s,s_theta_ms_sum,theta2ms_sum);
     }
     else{ // extrapolations in FDC region
       // output step near wire plane  
@@ -9191,17 +9129,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 	//printf("extrp dz %f\n",dz);
 	if (fabs(dz)>EPS2){
 	  Step(z,fdc_z_wires[fdc_plane],0.,S);
-	  tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-	  tanl=1./sqrt(tsquare);
-	  cosl=cos(atan(tanl));
-	  pt=cosl/fabs(S(state_q_over_p));
-	  phi=atan2(S(state_ty),S(state_tx)); 
 	}
-	DVector3 position(S(state_x),S(state_y),fdc_z_wires[fdc_plane]);
-	DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_FDC].push_back(Extrapolation_t(position,momentum,
-						t*TIME_UNIT_CONVERSION,s,
-						s_theta_ms_sum,theta2ms_sum));
+	AddExtrapolation(SYS_FDC,fdc_z_wires[fdc_plane],S,t,s,s_theta_ms_sum,
+			 theta2ms_sum);
+
 	if (fdc_plane==23){
 	  return NOERROR;	
 	}
@@ -9313,17 +9244,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
     z=newz;
 
     if (got_fdc_hit){
-      double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
-      double tanl=1./sqrt(tsquare);
-      double cosl=cos(atan(tanl));
-      double pt=cosl/fabs(S(state_q_over_p));
-      double phi=atan2(S(state_ty),S(state_tx));
-      DVector3 position(S(state_x),S(state_y),z);
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
-      extrapolations[SYS_FDC].push_back(Extrapolation_t(position,momentum,
-						t*TIME_UNIT_CONVERSION,s,
-						s_theta_ms_sum,theta2ms_sum));
-
+      AddExtrapolation(SYS_FDC,z,S,s,t,s_theta_ms_sum,theta2ms_sum);
       fdc_plane++;
     }          
   }
@@ -9403,6 +9324,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	DVector2 bestXY=central_traj[k].xy;
 	double t=central_traj[k].t;
 	double s=central_traj[k].s;
+	double bests=s,bestt=t;
 	// Magnetic field 
 	bfield->GetField(xy.X(),xy.Y(),S(state_z),Bx,By,Bz); 
 	
@@ -9438,20 +9360,14 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	    bestS=S;
 	    dmin=d;
 	    bestXY=xy;
+	    bests=s;
+	    bestt=t;
 	  }
 	  count++;
 	}
-
+      
 	if (bestS(state_z)>sc_pos[0][0].z()-0.1){
-	  double tanl=bestS(state_tanl);
-	  double pt=1/fabs(bestS(state_q_over_pt));
-	  double phi=bestS(state_phi);
-	  DVector3 position(bestXY.X(),bestXY.Y(),bestS(state_z));
-	  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
-	  extrapolations[SYS_START].push_back(Extrapolation_t(position,momentum,
-	  					   t*TIME_UNIT_CONVERSION,s));
-	  //printf("Central track:\n");
-	  //position.Print();
+	  AddExtrapolation(SYS_START,bestS,bestXY,bestt,bests);
 	}  
 	break;
       }
@@ -9473,12 +9389,9 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
   for (int k=index_beyond_start_counter;k>=0;k--){ 
     S=central_traj[k].S;
     xy=central_traj[k].xy;
-    double t=central_traj[k].t*TIME_UNIT_CONVERSION; // convert to ns
+    double t=central_traj[k].t;
     double s=central_traj[k].s;
-    double tanl=S(state_tanl);
-    double pt=1/fabs(S(state_q_over_pt));
-    double phi=S(state_phi); 
-
+    
     // Find estimate for t0 using earliest drift time
     if (central_traj[k].h_id>0){
       unsigned int index=central_traj[k].h_id-1;
@@ -9497,26 +9410,15 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
       theta2ms_sum+=ds_theta_ms_sq/(ds*ds);
     }
     if (S(state_z)<endplate_z){
-      DVector3 position(xy.X(),xy.Y(),S(state_z));
-      DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
-      extrapolations[SYS_CDC].push_back(Extrapolation_t(position,momentum,t,s,
-					       s_theta_ms_sum,theta2ms_sum));
-      
+      AddExtrapolation(SYS_CDC,S,xy,t,s,s_theta_ms_sum,theta2ms_sum);
     }
   }
-  // Save the extrapolatoin at the exit of the tracking volume
+  // Save the extrapolation at the exit of the tracking volume
   S=central_traj[0].S;
   xy=central_traj[0].xy;
   double t=central_traj[0].t;
   double s=central_traj[0].s;
-  double tanl=S(state_tanl);
-  double pt=1/fabs(S(state_q_over_pt));
-  double phi=S(state_phi); 
-  DVector3 position(xy.X(),xy.Y(),S(state_z));
-  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl); 
-  extrapolations[SYS_NULL].push_back(Extrapolation_t(position,momentum,
-						     t*TIME_UNIT_CONVERSION
-						     ,s));
+  AddExtrapolation(SYS_NULL,S,xy,t,s);
 
   //------------------------------
   // Next swim to outer detectors
@@ -9589,13 +9491,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	return VALUE_OUT_OF_RANGE;
       }
       if (S(state_z)<406.&&S(state_z)>17.0){
-	tanl=S(state_tanl);
-	pt=1/fabs(S(state_q_over_pt));
-	phi=S(state_phi);
-	position.SetXYZ(xy.X(),xy.Y(),S(state_z));   
-	momentum.SetXYZ(pt*cos(phi),pt*sin(phi),pt*tanl);
-	extrapolations[SYS_BCAL].push_back(Extrapolation_t(position,momentum,
-							   t*TIME_UNIT_CONVERSION,s));
+	AddExtrapolation(SYS_BCAL,S,xy,t,s);
       }
       else if (extrapolations.at(SYS_BCAL).size()<5){
 	// There needs to be some steps inside the the volume of the BCAL for 
@@ -10392,5 +10288,56 @@ void DTrackFitterKalmanSIMD::UpdateSandCMultiHit(const DKalmanForwardTrajectory_
   // update number of degrees of freedom
   if (skip_plane==false){
     numdof+=2;
+  }
+}
+
+// Add extrapolation information for the given detector
+void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
+					      double z,const DMatrix5x1 &S,
+					      double t,double s,
+					      double s_theta_ms_sum,
+					      double theta2ms_sum){
+  double tsquare=S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty);
+  double tanl=1./sqrt(tsquare);
+  double cosl=cos(atan(tanl));
+  double pt=cosl/fabs(S(state_q_over_p));
+  double phi=atan2(S(state_ty),S(state_tx));
+  DVector3 position(S(state_x),S(state_y),z);
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+  extrapolations[detector].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION,s,
+						     s_theta_ms_sum,
+						     theta2ms_sum));
+  if (DEBUG_LEVEL>0){
+    cout << SystemName(detector) << ": s=" << s 
+	 << " t=" << t*TIME_UNIT_CONVERSION << " (x,y,z)=("
+	 << position.x() <<","<<position.y()<<","<<position.z()<<") (px,py,pz)="
+	 << momentum.x() <<","<<momentum.y()<<","<<momentum.z()<<")" 
+       << endl;
+  }
+}
+
+// Add extrapolation information for the given detector
+void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
+					      const DMatrix5x1 &S,
+					      const DVector2 &xy,
+					      double t,double s,
+					      double s_theta_ms_sum,
+					      double theta2ms_sum){
+  double tanl=S(state_tanl);
+  double pt=1/fabs(S(state_q_over_pt));
+  double phi=S(state_phi);
+  DVector3 position(xy.X(),xy.Y(),S(state_z));
+  DVector3 momentum(pt*cos(phi),pt*sin(phi),pt*tanl);
+  extrapolations[detector].push_back(Extrapolation_t(position,momentum,
+						     t*TIME_UNIT_CONVERSION,s,
+						     s_theta_ms_sum,
+						     theta2ms_sum));
+  if (DEBUG_LEVEL>0){
+    cout << SystemName(detector) << ": s=" << s 
+	 << " t=" << t*TIME_UNIT_CONVERSION << " (x,y,z)=("<< position.x() 
+	 <<","<<position.y()<<","<<position.z()<<") (px,py,pz)="
+	 << momentum.x() <<","<<momentum.y()<<","<<momentum.z()<<")" 
+	 << endl;
   }
 }
