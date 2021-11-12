@@ -9395,7 +9395,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
     // Find estimate for t0 using earliest drift time
     if (central_traj[k].h_id>0){
       unsigned int index=central_traj[k].h_id-1;
-      double dt=my_cdchits[index]->tdrift-t;  
+      double dt=my_cdchits[index]->tdrift-t*TIME_UNIT_CONVERSION;  
       if (dt<mT0MinimumDriftTime){
 	mT0MinimumDriftTime=dt;
 	mT0Detector=SYS_CDC;
