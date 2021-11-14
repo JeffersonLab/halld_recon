@@ -8,6 +8,7 @@ using namespace jana;
 #include <TRIGGER/DTrigger.h>
 #include <PID/DBeamPhoton.h>
 
+#include "ANALYSIS/DAnalysisUtilities.h"
 #include "ANALYSIS/DTreeInterface.h"
 #include <KINFITTER/DKinFitter.h>
 #include <ANALYSIS/DKinFitUtils_GlueX.h>
@@ -40,6 +41,8 @@ class DEventProcessor_1p2pi:public JEventProcessor{
 
 		DKinFitUtils_GlueX *dKinFitUtils;
 		DKinFitter *dKinFitter;
+		const DAnalysisUtilities* dAnalysisUtilities;
+
 
   		void GetHypotheses(vector<const DChargedTrack *> &tracks,
 		     map<Particle_t, int> &particles,
