@@ -8938,11 +8938,19 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       int num=int(45./dz);
       int m=0;
       for (;m<num;m++){	
+	// propagate t and s to back of FCAL block
+	double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+	double one_over_beta2=1.+mass2*q_over_p_sq;
+	if (one_over_beta2>BIG) one_over_beta2=BIG;
+	ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
+	t+=ds*sqrt(one_over_beta2); // in units where c=1
+	s+=ds;
+
 	newz=z+dz;
 	// Step through field
 	Step(z,newz,dEdx,S);
 	z=newz;
-
+	
 	r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
 	if (r2>fcal_radius_sq){
 	  // Break out of the loop if the track exits out of the FCAL before 
@@ -8952,6 +8960,16 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       }
       if (m==num){
 	newz=dFCALzBack;
+
+	// Propagate t and s to back of FCAL block
+	double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+	double one_over_beta2=1.+mass2*q_over_p_sq;
+	if (one_over_beta2>BIG) one_over_beta2=BIG;
+	dz=newz-z;
+	ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
+	t+=ds*sqrt(one_over_beta2); // in units where c=1
+	s+=ds;
+
 	// Step through field
 	Step(z,newz,dEdx,S); 
 	z=newz;
