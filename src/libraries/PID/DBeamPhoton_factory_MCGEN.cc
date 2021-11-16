@@ -3,6 +3,9 @@
 using namespace std;
 
 #include "DBeamPhoton_factory_MCGEN.h"
+#include "TAGGER/DTAGHGeometry.h"
+#include "TAGGER/DTAGMGeometry.h"
+
 using namespace jana;
 
 //------------------
@@ -62,9 +65,31 @@ jerror_t DBeamPhoton_factory_MCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_
 		}
 	}
 
-	//Photon is NOT TAGGED //Create a beam object from the DMCReaction
+	// extract the TAGH geometry
+    vector<const DTAGHGeometry*> taghGeomVect;
+    eventLoop->Get(taghGeomVect);
+    if (taghGeomVect.empty())
+        return NOERROR;
+    const DTAGHGeometry* taghGeom = taghGeomVect[0];
+
+    // extract the TAGM geometry
+    vector<const DTAGMGeometry*> tagmGeomVect;
+    eventLoop->Get(tagmGeomVect);
+    if (tagmGeomVect.empty())
+        return NOERROR;
+    const DTAGMGeometry* tagmGeom = tagmGeomVect[0];
+
+    //Photon is NOT TAGGED //Create a beam object from the DMCReaction
 	auto *locBeamPhoton = new DBeamPhoton;
 	*(DKinematicData*)locBeamPhoton = locMCReactions[0]->beam;
+
+    if(tagmGeom->E_to_column(locBeamPhoton->energy(), locBeamPhoton->dCounter))
+        locBeamPhoton->dSystem = SYS_TAGM;
+    else if(taghGeom->E_to_counter(locBeamPhoton->energy(), locBeamPhoton->dCounter))
+        locBeamPhoton->dSystem = SYS_TAGH;
+    else
+        locBeamPhoton->dSystem = SYS_NULL;
+
 	_data.push_back(locBeamPhoton);
 
 	return NOERROR;

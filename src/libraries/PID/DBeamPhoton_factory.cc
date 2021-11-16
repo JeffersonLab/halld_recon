@@ -126,7 +126,10 @@ void DBeamPhoton_factory::Set_BeamPhoton(DBeamPhoton* gamma, const DTAGMHit* hit
     gamma->setPosition(pos);
     gamma->setTime(hit->t);
     gamma->dCounter = hit->column;
-    gamma->dSystem = SYS_TAGM;
+    if(gamma->dCounter == 0)   // handle photons from simulation that miss tagger counters
+        gamma->dSystem = SYS_NULL;
+    else
+        gamma->dSystem = SYS_TAGM;
     gamma->AddAssociatedObject(hit);
 
 	auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
@@ -144,7 +147,10 @@ void DBeamPhoton_factory::Set_BeamPhoton(DBeamPhoton* gamma, const DTAGHHit* hit
     gamma->setPosition(pos);
     gamma->setTime(hit->t);
     gamma->dCounter = hit->counter_id;
-    gamma->dSystem = SYS_TAGH;
+    if(gamma->dCounter == 0)   // handle photons from simulation that miss tagger counters
+        gamma->dSystem = SYS_NULL;
+    else
+        gamma->dSystem = SYS_TAGH;
     gamma->AddAssociatedObject(hit);
 
 	auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
