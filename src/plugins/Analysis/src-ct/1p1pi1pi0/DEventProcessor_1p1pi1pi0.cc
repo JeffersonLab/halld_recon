@@ -89,6 +89,66 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
 
   locTreeBranchRegister.Register_Single<Double_t>("CL");
 
+  locTreeBranchRegister.Register_Single<Double_t>("FOM_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("NDF_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("ChiSq_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("piminus_dedx_dc_NDF");
+  locTreeBranchRegister.Register_Single<Double_t>("piminus_dedx_dc_ChiSq");
+  locTreeBranchRegister.Register_Single<Double_t>("Beta_Timing_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("NDF_Timing_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("ChiSq_Timing_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_TOF_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_BCALPreshower_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigLong_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigTheta_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigTrans_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("RMSTime_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("E_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("x_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("y_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("z_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("t_BCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_FCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("E1E9_FCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("E9E25_FCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("SumU_FCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("SumV_FCAL_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaPhi_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaZ_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackFCAL_DOCA_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_ST_piminuscand");
+
+  locTreeBranchRegister.Register_Single<Double_t>("FOM_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("NDF_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("ChiSq_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("prot_dedx_dc_NDF");
+  locTreeBranchRegister.Register_Single<Double_t>("prot_dedx_dc_ChiSq");
+  locTreeBranchRegister.Register_Single<Double_t>("Beta_Timing_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("NDF_Timing_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("ChiSq_Timing_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_TOF_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_BCALPreshower_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigLong_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigTheta_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("SigTrans_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("RMSTime_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("E_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("x_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("y_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("z_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("t_BCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("Energy_FCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("E1E9_FCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("E9E25_FCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("SumU_FCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("SumV_FCAL_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaPhi_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaZ_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("TrackFCAL_DOCA_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_ST_protcand");
+
   //REGISTER BRANCHES
   dTreeInterface->Create_Branches(locTreeBranchRegister);
 
@@ -237,7 +297,144 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   map<Particle_t, vector<const DChargedTrackHypothesis*> > thisHyp = hypothesisList[0];
   const DChargedTrackHypothesis * hyp_pr = thisHyp[Proton][0];
   const DChargedTrackHypothesis * hyp_pim = thisHyp[PiMinus][0];
-  
+
+  // Pi Minus Candidate
+  double FOM_piminuscand          = hyp_pim->Get_FOM();
+  double NDF_piminuscand          = hyp_pim->Get_NDF();
+  double ChiSq_piminuscand        = hyp_pim->Get_ChiSq();
+  double piminus_dedx_dc_NDF      = hyp_pim->Get_NDF_DCdEdx();
+  double piminus_dedx_dc_ChiSq    = hyp_pim->Get_ChiSq_DCdEdx();
+  double Beta_Timing_piminuscand  = hyp_pim->measuredBeta();
+  double NDF_Timing_piminuscand   = hyp_pim->Get_NDF_Timing();
+  double ChiSq_Timing_piminuscand = hyp_pim->Get_ChiSq_Timing();
+  double dEdx_TOF_piminuscand     = (hyp_pim->Get_TOFHitMatchParams() != NULL) ? hyp_pim->Get_TOFHitMatchParams()->dEdx : 0.0;
+  double dEdx_ST_piminuscand      = (hyp_pim->Get_SCHitMatchParams()  != NULL) ? hyp_pim->Get_SCHitMatchParams()->dEdx : 0.0;
+  const DBCALShower* showerpiminus = NULL;
+  if (hyp_pim->Get_BCALShowerMatchParams() != NULL) showerpiminus = hyp_pim->Get_BCALShowerMatchParams()->dBCALShower;
+  double Energy_BCAL_piminuscand  = (showerpiminus != NULL ) ? showerpiminus->E : 0.0;
+  double Energy_BCALPreshower_piminuscand  = (showerpiminus != NULL ) ? showerpiminus->E_preshower : 0.0;
+  double SigLong_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->sigLong : 0.0;
+  double SigTheta_BCAL_piminuscand= (showerpiminus != NULL ) ? showerpiminus->sigTheta : 0.0;
+  double SigTrans_BCAL_piminuscand= (showerpiminus != NULL ) ? showerpiminus->sigTrans : 0.0;
+  double RMSTime_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->rmsTime : 0.0;
+  double E_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->E : 0.0;
+  double x_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->x : 0.0;
+  double y_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->y : 0.0;
+  double z_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->z : 0.0;
+  double t_BCAL_piminuscand = (showerpiminus != NULL ) ? showerpiminus->t : 0.0;
+
+  const DFCALShower* FCALshowerpiminus = NULL;
+  if (hyp_pim->Get_FCALShowerMatchParams() != NULL) FCALshowerpiminus = hyp_pim->Get_FCALShowerMatchParams()->dFCALShower;
+  double Energy_FCAL_piminuscand = (FCALshowerpiminus != NULL) ? FCALshowerpiminus->getEnergy() : 0.0;
+  double E1E9_FCAL_piminuscand   = (FCALshowerpiminus != NULL) ? FCALshowerpiminus->getE1E9() : 0.0;
+  double E9E25_FCAL_piminuscand  = (FCALshowerpiminus != NULL) ? FCALshowerpiminus->getE9E25() : 0.0;
+  double SumU_FCAL_piminuscand   = (FCALshowerpiminus != NULL) ? FCALshowerpiminus->getSumU() : 0.0;
+  double SumV_FCAL_piminuscand   = (FCALshowerpiminus != NULL) ? FCALshowerpiminus->getSumV() : 0.0;
+
+  double TrackBCAL_DeltaPhi_piminuscand = ( hyp_pim->Get_BCALShowerMatchParams()  != NULL) ? hyp_pim->Get_BCALShowerMatchParams()->dDeltaPhiToShower : 999.0;
+  double TrackBCAL_DeltaZ_piminuscand   = ( hyp_pim->Get_BCALShowerMatchParams()  != NULL) ? hyp_pim->Get_BCALShowerMatchParams()->dDeltaZToShower : 999.0;
+  double TrackFCAL_DOCA_piminuscand     = ( hyp_pim->Get_FCALShowerMatchParams()  != NULL) ? hyp_pim->Get_FCALShowerMatchParams()->dDOCAToShower : 999.0;  
+
+  dTreeFillData.Fill_Single<Double_t>("FOM_piminuscand",FOM_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("NDF_piminuscand",NDF_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_piminuscand",ChiSq_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("piminus_dedx_dc_NDF",piminus_dedx_dc_NDF);
+  dTreeFillData.Fill_Single<Double_t>("piminus_dedx_dc_ChiSq",piminus_dedx_dc_ChiSq);
+  dTreeFillData.Fill_Single<Double_t>("Beta_Timing_piminuscand",Beta_Timing_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("NDF_Timing_piminuscand",NDF_Timing_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_piminuscand",ChiSq_Timing_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_piminuscand",ChiSq_Timing_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_TOF_piminuscand",dEdx_TOF_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_ST_piminuscand",dEdx_ST_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_BCAL_piminuscand",Energy_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_BCALPreshower_piminuscand",Energy_BCALPreshower_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("SigLong_BCAL_piminuscand",SigLong_BCAL_piminuscand); 
+  dTreeFillData.Fill_Single<Double_t>("SigTheta_BCAL_piminuscand",SigTheta_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("SigTrans_BCAL_piminuscand",SigTrans_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("RMSTime_BCAL_piminuscand",RMSTime_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("E_BCAL_piminuscand",E_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("x_BCAL_piminuscand",x_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("y_BCAL_piminuscand",y_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("z_BCAL_piminuscand",z_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("t_BCAL_piminuscand",t_BCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_FCAL_piminuscand",Energy_FCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("E1E9_FCAL_piminuscand",E1E9_FCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("E9E25_FCAL_piminuscand",E9E25_FCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("SumU_FCAL_piminuscand",SumU_FCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("SumV_FCAL_piminuscand",SumV_FCAL_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("TrackBCAL_DeltaPhi_piminuscand",TrackBCAL_DeltaPhi_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("TrackBCAL_DeltaZ_piminuscand",TrackBCAL_DeltaZ_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("TrackFCAL_DOCA_piminuscand",TrackFCAL_DOCA_piminuscand);
+
+  // Pi Minus Candidate
+  double FOM_protcand          = hyp_pr->Get_FOM();
+  double NDF_protcand          = hyp_pr->Get_NDF();
+  double ChiSq_protcand        = hyp_pr->Get_ChiSq();
+  double prot_dedx_dc_NDF      = hyp_pr->Get_NDF_DCdEdx();
+  double prot_dedx_dc_ChiSq    = hyp_pr->Get_ChiSq_DCdEdx();
+  double Beta_Timing_protcand  = hyp_pr->measuredBeta();
+  double NDF_Timing_protcand   = hyp_pr->Get_NDF_Timing();
+  double ChiSq_Timing_protcand = hyp_pr->Get_ChiSq_Timing();
+  double dEdx_TOF_protcand     = (hyp_pr->Get_TOFHitMatchParams() != NULL) ? hyp_pr->Get_TOFHitMatchParams()->dEdx : 0.0;
+  double dEdx_ST_protcand      = (hyp_pr->Get_SCHitMatchParams()  != NULL) ? hyp_pr->Get_SCHitMatchParams()->dEdx : 0.0;
+  const DBCALShower* showerprot = NULL;
+  if (hyp_pr->Get_BCALShowerMatchParams() != NULL) showerprot = hyp_pr->Get_BCALShowerMatchParams()->dBCALShower;
+  double Energy_BCAL_protcand  = (showerprot != NULL ) ? showerprot->E : 0.0;
+  double Energy_BCALPreshower_protcand  = (showerprot != NULL ) ? showerprot->E_preshower : 0.0;
+  double SigLong_BCAL_protcand = (showerprot != NULL ) ? showerprot->sigLong : 0.0;
+  double SigTheta_BCAL_protcand= (showerprot != NULL ) ? showerprot->sigTheta : 0.0;
+  double SigTrans_BCAL_protcand= (showerprot != NULL ) ? showerprot->sigTrans : 0.0;
+  double RMSTime_BCAL_protcand = (showerprot != NULL ) ? showerprot->rmsTime : 0.0;
+  double E_BCAL_protcand = (showerprot != NULL ) ? showerprot->E : 0.0;
+  double x_BCAL_protcand = (showerprot != NULL ) ? showerprot->x : 0.0;
+  double y_BCAL_protcand = (showerprot != NULL ) ? showerprot->y : 0.0;
+  double z_BCAL_protcand = (showerprot != NULL ) ? showerprot->z : 0.0;
+  double t_BCAL_protcand = (showerprot != NULL ) ? showerprot->t : 0.0;
+
+  const DFCALShower* FCALshowerprot = NULL;
+  if (hyp_pr->Get_FCALShowerMatchParams() != NULL) FCALshowerprot = hyp_pr->Get_FCALShowerMatchParams()->dFCALShower;
+  double Energy_FCAL_protcand = (FCALshowerprot != NULL) ? FCALshowerprot->getEnergy() : 0.0;
+  double E1E9_FCAL_protcand   = (FCALshowerprot != NULL) ? FCALshowerprot->getE1E9() : 0.0;
+  double E9E25_FCAL_protcand  = (FCALshowerprot != NULL) ? FCALshowerprot->getE9E25() : 0.0;
+  double SumU_FCAL_protcand   = (FCALshowerprot != NULL) ? FCALshowerprot->getSumU() : 0.0;
+  double SumV_FCAL_protcand   = (FCALshowerprot != NULL) ? FCALshowerprot->getSumV() : 0.0;
+
+  double TrackBCAL_DeltaPhi_protcand = ( hyp_pr->Get_BCALShowerMatchParams()  != NULL) ? hyp_pr->Get_BCALShowerMatchParams()->dDeltaPhiToShower : 999.0;
+  double TrackBCAL_DeltaZ_protcand   = ( hyp_pr->Get_BCALShowerMatchParams()  != NULL) ? hyp_pr->Get_BCALShowerMatchParams()->dDeltaZToShower : 999.0;
+  double TrackFCAL_DOCA_protcand     = ( hyp_pr->Get_FCALShowerMatchParams()  != NULL) ? hyp_pr->Get_FCALShowerMatchParams()->dDOCAToShower : 999.0;
+
+  dTreeFillData.Fill_Single<Double_t>("FOM_protcand",FOM_protcand);
+  dTreeFillData.Fill_Single<Double_t>("NDF_protcand",NDF_protcand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_protcand",ChiSq_protcand);
+  dTreeFillData.Fill_Single<Double_t>("prot_dedx_dc_NDF",prot_dedx_dc_NDF);
+  dTreeFillData.Fill_Single<Double_t>("prot_dedx_dc_ChiSq",prot_dedx_dc_ChiSq);
+  dTreeFillData.Fill_Single<Double_t>("Beta_Timing_protcand",Beta_Timing_protcand);
+  dTreeFillData.Fill_Single<Double_t>("NDF_Timing_protcand",NDF_Timing_protcand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_protcand",ChiSq_Timing_protcand);
+  dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_protcand",ChiSq_Timing_protcand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_TOF_protcand",dEdx_TOF_protcand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_ST_protcand",dEdx_ST_protcand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_BCAL_protcand",Energy_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_BCALPreshower_protcand",Energy_BCALPreshower_protcand);
+  dTreeFillData.Fill_Single<Double_t>("SigLong_BCAL_protcand",SigLong_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("SigTheta_BCAL_protcand",SigTheta_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("SigTrans_BCAL_protcand",SigTrans_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("RMSTime_BCAL_protcand",RMSTime_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("E_BCAL_protcand",E_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("x_BCAL_protcand",x_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("y_BCAL_protcand",y_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("z_BCAL_protcand",z_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("t_BCAL_protcand",t_BCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("Energy_FCAL_protcand",Energy_FCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("E1E9_FCAL_protcand",E1E9_FCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("E9E25_FCAL_protcand",E9E25_FCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("SumU_FCAL_protcand",SumU_FCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("SumV_FCAL_protcand",SumV_FCAL_protcand);
+  dTreeFillData.Fill_Single<Double_t>("TrackBCAL_DeltaPhi_protcand",TrackBCAL_DeltaPhi_protcand);
+  dTreeFillData.Fill_Single<Double_t>("TrackBCAL_DeltaZ_protcand",TrackBCAL_DeltaZ_protcand);
+  dTreeFillData.Fill_Single<Double_t>("TrackFCAL_DOCA_protcand",TrackFCAL_DOCA_protcand);
+
+  // Kinematic Fitting
   dKinFitUtils->Reset_NewEvent();
   dKinFitter->Reset_NewEvent();
   dKinFitter->Reset_NewFit();
