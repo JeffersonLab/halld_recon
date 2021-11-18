@@ -21,6 +21,7 @@ class DFMWPCCluster:public jana::JObject{
 		int layer; ///< #1-6 FMWPC layer
 		float q; ///< total charge in the cluster
 		float u; ///< center of gravity of cluster in wire coordinates
+		int Nhits; ///< Number of wire hits in cluster
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
@@ -28,6 +29,7 @@ class DFMWPCCluster:public jana::JObject{
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "q", "%10.2f", q);
 			AddString(items, "u", "%3.4f", u);
+			AddString(items, "Nhits", "%d", Nhits);
 		}
 		
 };

@@ -139,7 +139,6 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
       if(iend>=H.size()) break;
       if( (H[iend]->wire - H[iend-1]->wire) > 1 ) break;
     }
-    if( (iend-istart)<2 ) continue; // don't allow single strip clusters
     
     // istart should now point to beginning of cluster 
     // and iend to one past end of cluster
@@ -147,10 +146,12 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     newCluster->q = 0.0;
     newCluster->u = 0.0;
     newCluster->layer = first_hit->layer;
+    newCluster->Nhits = 0;
     for(uint32_t i=istart; i<iend; i++){
       newCluster->q += H[i]->q;
       newCluster->u += H[i]->wire * H[i]->q; // weigh position with charge
       newCluster->members.push_back(H[i]);
+      newCluster->Nhits++;
     }
     newCluster->u /= newCluster->q; // normalize to total charge
     _data.push_back(newCluster);
