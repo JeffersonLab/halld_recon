@@ -477,14 +477,6 @@ dTreeFillData.Fill_Array<Double_t>("SumV_FCAL_protcand",SumV_FCAL_protcand, j);
 	 TVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
 
 
-	 vector<const DTrackTimeBased*> locTrackTimeBasedVectorForVertexing;
-	 locTrackTimeBasedVectorForVertexing.push_back(pi_min_track);
-	 locTrackTimeBasedVectorForVertexing.push_back(pi_plus_track);
-	 locTrackTimeBasedVectorForVertexing.push_back(proton_track);
-	 DVector3 locRoughPosition = dAnalysisUtilities->Calc_CrudeVertex(locTrackTimeBasedVectorForVertexing);
-	 TVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
-
-
       //--------------------------------
       // Kinematic fit
       //--------------------------------
