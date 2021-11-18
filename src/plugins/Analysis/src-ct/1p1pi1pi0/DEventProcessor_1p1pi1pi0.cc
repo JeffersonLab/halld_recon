@@ -118,6 +118,8 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
   locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaZ_piminuscand");
   locTreeBranchRegister.Register_Single<Double_t>("TrackFCAL_DOCA_piminuscand");
   locTreeBranchRegister.Register_Single<Double_t>("dEdx_ST_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_CDC_piminuscand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_FDC_piminuscand");
 
   locTreeBranchRegister.Register_Single<Double_t>("FOM_protcand");
   locTreeBranchRegister.Register_Single<Double_t>("NDF_protcand");
@@ -148,6 +150,8 @@ jerror_t DEventProcessor_1p1pi1pi0::init(void)
   locTreeBranchRegister.Register_Single<Double_t>("TrackBCAL_DeltaZ_protcand");
   locTreeBranchRegister.Register_Single<Double_t>("TrackFCAL_DOCA_protcand");
   locTreeBranchRegister.Register_Single<Double_t>("dEdx_ST_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_CDC_protcand");
+  locTreeBranchRegister.Register_Single<Double_t>("dEdx_FDC_protcand");
 
   //REGISTER BRANCHES
   dTreeInterface->Create_Branches(locTreeBranchRegister);
@@ -309,6 +313,8 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   double ChiSq_Timing_piminuscand = hyp_pim->Get_ChiSq_Timing();
   double dEdx_TOF_piminuscand     = (hyp_pim->Get_TOFHitMatchParams() != NULL) ? hyp_pim->Get_TOFHitMatchParams()->dEdx : 0.0;
   double dEdx_ST_piminuscand      = (hyp_pim->Get_SCHitMatchParams()  != NULL) ? hyp_pim->Get_SCHitMatchParams()->dEdx : 0.0;
+  double dEdx_CDC_piminuscand      = (hyp_pim->Get_TrackTimeBased() != NULL) ? hyp_pim->Get_TrackTimeBased()->ddEdx_CDC : 0.0;
+  double dEdx_FDC_piminuscand      = (hyp_pim->Get_TrackTimeBased() != NULL) ? hyp_pim->Get_TrackTimeBased()->ddEdx_FDC : 0.0;
   const DBCALShower* showerpiminus = NULL;
   if (hyp_pim->Get_BCALShowerMatchParams() != NULL) showerpiminus = hyp_pim->Get_BCALShowerMatchParams()->dBCALShower;
   double Energy_BCAL_piminuscand  = (showerpiminus != NULL ) ? showerpiminus->E : 0.0;
@@ -346,6 +352,8 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_piminuscand",ChiSq_Timing_piminuscand);
   dTreeFillData.Fill_Single<Double_t>("dEdx_TOF_piminuscand",dEdx_TOF_piminuscand);
   dTreeFillData.Fill_Single<Double_t>("dEdx_ST_piminuscand",dEdx_ST_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_CDC_piminuscand",dEdx_CDC_piminuscand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_FDC_piminuscand",dEdx_FDC_piminuscand);
   dTreeFillData.Fill_Single<Double_t>("Energy_BCAL_piminuscand",Energy_BCAL_piminuscand);
   dTreeFillData.Fill_Single<Double_t>("Energy_BCALPreshower_piminuscand",Energy_BCALPreshower_piminuscand);
   dTreeFillData.Fill_Single<Double_t>("SigLong_BCAL_piminuscand",SigLong_BCAL_piminuscand); 
@@ -376,7 +384,9 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   double NDF_Timing_protcand   = hyp_pr->Get_NDF_Timing();
   double ChiSq_Timing_protcand = hyp_pr->Get_ChiSq_Timing();
   double dEdx_TOF_protcand     = (hyp_pr->Get_TOFHitMatchParams() != NULL) ? hyp_pr->Get_TOFHitMatchParams()->dEdx : 0.0;
-  double dEdx_ST_protcand      = (hyp_pr->Get_SCHitMatchParams()  != NULL) ? hyp_pr->Get_SCHitMatchParams()->dEdx : 0.0;
+  double dEdx_ST_protcand      = (hyp_pr->Get_SCHitMatchParams() != NULL) ? hyp_pr->Get_SCHitMatchParams()->dEdx : 0.0;
+  double dEdx_CDC_protcand      = (hyp_pr->Get_TrackTimeBased() != NULL) ? hyp_pr->Get_TrackTimeBased()->ddEdx_CDC : 0.0;
+  double dEdx_FDC_protcand      = (hyp_pr->Get_TrackTimeBased() != NULL) ? hyp_pr->Get_TrackTimeBased()->ddEdx_FDC : 0.0;
   const DBCALShower* showerprot = NULL;
   if (hyp_pr->Get_BCALShowerMatchParams() != NULL) showerprot = hyp_pr->Get_BCALShowerMatchParams()->dBCALShower;
   double Energy_BCAL_protcand  = (showerprot != NULL ) ? showerprot->E : 0.0;
@@ -414,6 +424,8 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTreeFillData.Fill_Single<Double_t>("ChiSq_Timing_protcand",ChiSq_Timing_protcand);
   dTreeFillData.Fill_Single<Double_t>("dEdx_TOF_protcand",dEdx_TOF_protcand);
   dTreeFillData.Fill_Single<Double_t>("dEdx_ST_protcand",dEdx_ST_protcand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_CDC_protcand",dEdx_CDC_protcand);
+  dTreeFillData.Fill_Single<Double_t>("dEdx_FDC_protcand",dEdx_FDC_protcand);
   dTreeFillData.Fill_Single<Double_t>("Energy_BCAL_protcand",Energy_BCAL_protcand);
   dTreeFillData.Fill_Single<Double_t>("Energy_BCALPreshower_protcand",Energy_BCALPreshower_protcand);
   dTreeFillData.Fill_Single<Double_t>("SigLong_BCAL_protcand",SigLong_BCAL_protcand);
