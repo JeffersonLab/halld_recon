@@ -39,18 +39,6 @@ class DEventProcessor_1p2pi:public JEventProcessor{
 		jerror_t erun(void);	
 		jerror_t fini(void);
 
-		DKinFitUtils_GlueX *dKinFitUtils;
-		DKinFitter *dKinFitter;
-		const DAnalysisUtilities* dAnalysisUtilities;
-
-
-  		void GetHypotheses(vector<const DChargedTrack *> &tracks,
-		     map<Particle_t, int> &particles,
-		     map<Particle_t, vector<const DChargedTrackHypothesis*> > &assignmentHypothesis,
-		     vector<map<Particle_t, vector<const DChargedTrackHypothesis*> > > &hypothesisList
-	        ) const;
-
-
 
   //TREE
   DTreeInterface* dTreeInterface;
