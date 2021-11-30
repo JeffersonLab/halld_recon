@@ -229,37 +229,6 @@ jerror_t DTrackWireBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
    // Get the particle ID algorithms
    loop->GetSingle(dPIDAlgorithm);
 
-   // Outer detector geometry parameters
-   if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
-   geom->GetFCALZ(dFCALz); 
-   vector<double>tof_face;
-   geom->Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",
-	      tof_face);
-   vector<double>tof_plane;  
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane);
-   dTOFz=tof_face[2]+tof_plane[2]; 
-   geom->Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane);
-   dTOFz+=tof_face[2]+tof_plane[2];
-   dTOFz*=0.5;  // mid plane between tof planes
-   
-    // Get start counter geometry;
-   if (geom->GetStartCounterGeom(sc_pos,sc_norm)){
-     // Create vector of direction vectors in scintillator planes
-     for (int i=0;i<30;i++){
-       vector<DVector3>temp;
-       for (unsigned int j=0;j<sc_pos[i].size()-1;j++){
-	 double dx=sc_pos[i][j+1].x()-sc_pos[i][j].x();
-	 double dy=sc_pos[i][j+1].y()-sc_pos[i][j].y();
-	 double dz=sc_pos[i][j+1].z()-sc_pos[i][j].z();
-	 temp.push_back(DVector3(dx/dz,dy/dz,1.));
-       }
-     sc_dir.push_back(temp);
-     }
-     SC_END_NOSE_Z=sc_pos[0][12].z();
-     SC_BARREL_R=sc_pos[0][0].Perp();
-     SC_PHI_SECTOR1=sc_pos[0][0].Phi();
-   }
-
    return NOERROR;
 }
 

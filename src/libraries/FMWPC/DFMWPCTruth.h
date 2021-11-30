@@ -1,29 +1,18 @@
 // $Id$
 //
-/*! **File**: DTOFTruth.h
- *+ Created: Mon Oct 17 13:58:02 EST 2005
- *+ Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
- *+ Purpose: Container class hodling MC thrown data as truth hits in the TOF
-*/
+//    File: DFMWPCTruth.h
+// Created: Wed Nov  3 20:53:15 EDT 2021
+// Creator: staylor (on Linux ifarm1901.jlab.org 3.10.0-1062.4.1.el7.x86_64 x86_64)
+//
 
-/// \addtogroup TOFDetector
+#ifndef _DFMWPCTruth_
+#define _DFMWPCTruth_
 
-/*! \file DTOFTruth.h
- * Container class holding MC thrown this in TOF
- */
+#include "JANA/JObject.h"
+#include "JANA/JFactory.h"
 
-
-#ifndef _DTOFTruth_
-#define _DTOFTruth_
-
-#include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
-
-class DTOFTruth:public JObject{
-  
- public:
-  JOBJECT_PUBLIC(DTOFTruth);
+class DFMWPCTruth:public JObject{
+ public:JOBJECT_PUBLIC(DFMWPCTruth);
   
   int track;         ///<  track index
   int itrack;        ///< MCThrown track index
@@ -35,7 +24,7 @@ class DTOFTruth:public JObject{
   int ptype;         ///<  GEANT particle type
   
   /// \fn void toStrings(vector<pair<string,string> > &items)const
-  /// method used by hd_dump to print this container data for each MC thrown hit.
+  /// method used by hd_dump to print this container data for each MC thrown hit
   void toStrings(vector<pair<string,string> > &items)const{
     AddString(items, "track", "%d", track);
     AddString(items, "itrack", "%d", itrack);
@@ -52,5 +41,5 @@ class DTOFTruth:public JObject{
   }
 };
 
-#endif // _DTOFTruth_
+#endif // _DFMWPCTruth_
 

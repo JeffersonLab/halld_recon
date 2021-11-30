@@ -44,6 +44,9 @@ class DEventProcessor_1p1pi1pi0:public JEventProcessor{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
   
+  DKinFitUtils_GlueX *dKinFitUtils;
+  DKinFitter *dKinFitter;
+
   void GetHypotheses(vector<const DChargedTrack *> &tracks,
 		     map<Particle_t, int> &particles,
 		     map<Particle_t, vector<const DChargedTrackHypothesis*> > &assignmentHypothesis,
