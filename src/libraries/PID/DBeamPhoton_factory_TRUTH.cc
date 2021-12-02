@@ -51,10 +51,7 @@ jerror_t DBeamPhoton_factory_TRUTH::evnt(jana::JEventLoop *locEventLoop, uint64_
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
 		gamma->setTime(tagm_hits[ih]->t);
-        if(gamma->dCounter == 0)   // handle photons from simulation that miss tagger counters
-            gamma->dSystem = SYS_NULL;
-        else
-            gamma->dSystem = SYS_TAGM;
+		gamma->dSystem = SYS_TAGM;
 		gamma->dCounter = tagm_hits[ih]->column;
 		gamma->AddAssociatedObject(tagm_hits[ih]);
 		_data.push_back(gamma);
@@ -70,10 +67,7 @@ jerror_t DBeamPhoton_factory_TRUTH::evnt(jana::JEventLoop *locEventLoop, uint64_
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
 		gamma->setTime(tagh_hits[ih]->t);
-        if(gamma->dCounter == 0)   // handle photons from simulation that miss tagger counters
-            gamma->dSystem = SYS_NULL;
-        else
-            gamma->dSystem = SYS_TAGH;
+		gamma->dSystem = SYS_TAGH;
 		gamma->dCounter = tagh_hits[ih]->counter_id;
 		gamma->AddAssociatedObject(tagh_hits[ih]);
 		_data.push_back(gamma);
