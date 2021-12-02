@@ -1,5 +1,20 @@
 // hnamepath: /fa125_itrig/errcount
 // hnamepath: /fa125_itrig/num_events
+//
+// e-mail: njarvis@jlab.org
+//
+// Guidance: --------------------------------------------
+//
+//  This plot should be completely empty (white).
+//  
+//  Any filled (pink) cells indicate a problem with an fadc.
+//  The cells are filled if there are large inconsistencies in event count or in trigger times between an fadc and its TI, or between one crate and the rest. 
+//
+//  Large numbers of mismatches indicate that data from different triggers are being packaged together into the same event, becoming useless.  It could be caused by a misconfiguration during startup or by a hardware problem. 
+//
+//  If there are filled cells, stop the DAQ, reboot the bad ROC (the ROCid is on the plot's x-axis) and restart the DAQ.  If that does not clear the error, contact a DAQ expert. 
+//  
+// End Guidance: ----------------------------------------
 
 {
 	TDirectory *locTopDirectory = gDirectory;
