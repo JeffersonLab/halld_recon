@@ -35,6 +35,17 @@ DNeutralShower_factory::DNeutralShower_factory()
   dFCALClassifier = new DNeutralShower_FCALQualityMLP( vars );
   
   dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>(); 
+  
+  TOF_RF_CUT = 6.5;
+  gPARMS->SetDefaultParameter("NeutralShower:TOF_RF_CUT", TOF_RF_CUT);
+
+  SC_RF_CUT_MIN = 1.0;
+  SC_RF_CUT_MAX = 7.0;
+  gPARMS->SetDefaultParameter("NeutralShower:SC_RF_CUT_MIN", SC_RF_CUT_MIN);
+  gPARMS->SetDefaultParameter("NeutralShower:SC_RF_CUT_MAX", SC_RF_CUT_MAX);
+
+  SC_Energy_CUT = 0.2;
+  gPARMS->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
 }
 
 
@@ -56,9 +67,16 @@ jerror_t DNeutralShower_factory::brun(jana::JEventLoop *locEventLoop, int32_t ru
   DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
   DGeometry* locGeometry = locApplication->GetDGeometry(runnumber);
 
+  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
   double locTargetCenterZ;
   locGeometry->GetTargetZ(locTargetCenterZ);
   dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
+  
+
+  std::map<string, float> beam_spot;
+  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+  m_beamSpotX = beam_spot.at("x");
+  m_beamSpotY = beam_spot.at("y");
 	
   return NOERROR;
 }
@@ -92,6 +110,41 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
     }*/ 
   // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
   // The chance of an actual neutral shower matching to a bogus track is very small
+
+  //-----   TOF veto    -----//
+  DVector3 vertex(m_beamSpotX, m_beamSpotY, dTargetCenter.Z());
+  vector <const DTOFPoint*> locTOFPoints;
+  locEventLoop->Get(locTOFPoints);
+  int n_locTOFPoints = 0;
+  for (vector<const DTOFPoint*>::const_iterator tof = locTOFPoints.begin(); tof != locTOFPoints.end(); tof++) {
+    double xt = (*tof)->pos.X() - vertex.X();
+    double yt = (*tof)->pos.Y() - vertex.Y();
+    double zt = (*tof)->pos.Z() - vertex.Z();
+    double rt = sqrt(xt*xt + yt*yt + zt*zt);
+    double tt = (*tof)->t - (rt / TMath::C());
+    double dt = tt - rfTime;
+    if (fabs(dt) < TOF_RF_CUT)
+      n_locTOFPoints ++;
+  }
+  
+  //-----   SC veto -----//
+  vector<const DSCHit*> locSCHits;
+  locEventLoop->Get(locSCHits);
+  int n_locSCHits = 0;
+  for (unsigned int i = 0; i < locSCHits.size(); i ++) {
+    const DSCHit *schits = locSCHits[i];
+    double t = schits->t;
+    double e = schits->dE;
+    //double s = schits->sector;
+    double diff_t = t - rfTime;
+    //double phi = 6.0 * (s + 1) - 11.25;
+    if (SC_RF_CUT_MIN < diff_t && diff_t < SC_RF_CUT_MAX) {
+      if ((e * 1e3) > SC_Energy_CUT)
+	n_locSCHits ++;
+    }
+  }
+
+
   JObject::oid_t locShowerID = 0;
   for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
     {
@@ -108,6 +161,9 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       // in the BCAL set the quality variable 1 to avoid eliminating
       // NeutralShowers in future splitoff rejection algorithms
       locNeutralShower->dQuality = 1;
+
+      locNeutralShower->dTOFVeto = n_locTOFPoints;
+      locNeutralShower->dSCVeto = n_locSCHits;
 
       locNeutralShower->dEnergy = locBCALShowers[loc_i]->E;
       locNeutralShower->dSpacetimeVertex.SetXYZT(locBCALShowers[loc_i]->x, locBCALShowers[loc_i]->y, locBCALShowers[loc_i]->z, locBCALShowers[loc_i]->t);
@@ -140,6 +196,9 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       locNeutralShower->dSpacetimeVertex.SetT(locFCALShowers[loc_i]->getTime());
       
       locNeutralShower->dQuality = getFCALQuality( locFCALShowers[loc_i], rfTime );
+
+      locNeutralShower->dTOFVeto = n_locTOFPoints;
+      locNeutralShower->dSCVeto = n_locSCHits;
       
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
       locCovMatrix->ResizeTo(5, 5);
@@ -167,6 +226,9 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       
       locNeutralShower->dQuality = 1;
       
+      locNeutralShower->dTOFVeto = n_locTOFPoints;
+      locNeutralShower->dSCVeto = n_locSCHits;
+
       locNeutralShower->dEnergy = locCCALShowers[loc_i]->E;
       locNeutralShower->dSpacetimeVertex.SetXYZT(locCCALShowers[loc_i]->x, locCCALShowers[loc_i]->y, locCCALShowers[loc_i]->z, locCCALShowers[loc_i]->time);
       //std::cout << "CCAL MERDE Energy " <<  locCCALShowers[loc_i]->E << " time " << locCCALShowers[loc_i]->time << std::endl;

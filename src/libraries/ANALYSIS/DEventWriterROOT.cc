@@ -761,6 +761,8 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	//SHOWER INFO
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Shower"), dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOFVeto"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSCVeto"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
 	if(BCAL_VERBOSE_OUTPUT) {
@@ -1939,6 +1941,8 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Timing"), locNeutralParticleHypothesis->Get_ChiSq(), locArrayIndex);
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Timing"), locNeutralParticleHypothesis->Get_NDF(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locNeutralShower->dQuality, locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOFVeto"), locNeutralShower->dTOFVeto, locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSCVeto"), locNeutralShower->dSCVeto, locArrayIndex);
 
 	//SHOWER ENERGY
 	DetectorSystem_t locDetector = locNeutralShower->dDetectorSystem;

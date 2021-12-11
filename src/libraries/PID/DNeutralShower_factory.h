@@ -15,6 +15,8 @@
 #include <PID/DNeutralShower.h>
 #include <PID/DChargedTrack.h>
 #include <PID/DChargedTrackHypothesis.h>
+#include <TOF/DTOFPoint.h>
+#include <START_COUNTER/DSCHit.h>
 #include <FCAL/DFCALShower.h>
 #include <BCAL/DBCALShower.h>
 #include <CCAL/DCCALShower.h>
@@ -41,11 +43,17 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
 
   shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
   DVector3 dTargetCenter;
+  double m_beamSpotX;
+  double m_beamSpotY;  
 
   const char* inputVars[8] = { "nHits", "e9e25Sh", "e1e9Sh", "sumUSh", "sumVSh", "asymUVSh", "speedSh", "dtTrSh" };
   DNeutralShower_FCALQualityMLP* dFCALClassifier;
 
   double getFCALQuality( const DFCALShower* fcalShower, double rfTime ) const;
+  double TOF_RF_CUT;
+  double SC_RF_CUT_MIN;
+  double SC_RF_CUT_MAX;
+  double SC_Energy_CUT;
 };
 
 #endif // _DNeutralShower_factory_
