@@ -121,7 +121,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
     double yt = (*tof)->pos.Y() - vertex.Y();
     double zt = (*tof)->pos.Z() - vertex.Z();
     double rt = sqrt(xt*xt + yt*yt + zt*zt);
-    double tt = (*tof)->t - (rt / TMath::C());
+    double tt = (*tof)->t - (rt / TMath::C() * 1e7);
     double dt = tt - rfTime;
     if (fabs(dt) < TOF_RF_CUT)
       n_locTOFPoints ++;
