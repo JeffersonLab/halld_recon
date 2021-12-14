@@ -46,6 +46,18 @@ DNeutralShower_factory::DNeutralShower_factory()
 
   SC_Energy_CUT = 0.2;
   gPARMS->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
+
+  TOF_FCAL_THETA_CUT = 10;
+  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_THETA_CUT", TOF_FCAL_THETA_CUT);
+
+  TOF_FCAL_PHI_CUT = 10;
+  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_PHI_CUT", TOF_FCAL_PHI_CUT);
+
+  SC_FCAL_PHI_CUT = 10;
+  gPARMS->SetDefaultParameter("NeutralShower:SC_FCAL_PHI_CUT", SC_FCAL_PHI_CUT);
+
+  SC_BCAL_PHI_CUT = 10;
+  gPARMS->SetDefaultParameter("NeutralShower:SC_BCAL_PHI_CUT", SC_BCAL_PHI_CUT);
 }
 
 
@@ -162,6 +174,35 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       // NeutralShowers in future splitoff rejection algorithms
       locNeutralShower->dQuality = 1;
 
+      double x = locBCALShowers[loc_i]->x - vertex.X();
+      double y = locBCALShowers[loc_i]->y - vertex.Y();
+      double z = locBCALShowers[loc_i]->z - vertex.Z();
+      double t = locBCALShowers[loc_i]->t;
+      DVector3 position(x, y, z);
+      double r = position.Mag();
+      t -= (r / TMath::C() * 1e7);
+      double phi_bcal = position.Phi();
+      //double theta_bcal = position.Theta();
+      
+      bool Charge_Hit_in_BCAL = false;
+      for (unsigned int i = 0; i < locSCHits.size(); i ++) {
+	const DSCHit *schits = locSCHits[i];
+	double t = schits->t;
+	double e = schits->dE;
+	double s = schits->sector;
+	double diff_t = t - rfTime;
+	double phi_sc = 6.0 * (s + 1) - 11.25 - 45.0 * TMath::DegToRad();
+	if (SC_RF_CUT_MIN < diff_t && diff_t < SC_RF_CUT_MAX)
+	  if ((e * 1e3) > SC_Energy_CUT)
+	    if ((fabs(phi_bcal - phi_sc) * TMath::RadToDeg()) < SC_BCAL_PHI_CUT)
+	      Charge_Hit_in_BCAL = true;
+      }
+      
+      //locNeutralShower->dTOF_FCAL_match = 0;
+      if (Charge_Hit_in_BCAL)
+	locNeutralShower->dSC_BCAL_match = 1;
+      else
+	locNeutralShower->dSC_BCAL_match = 0;
       locNeutralShower->dTOFVeto = n_locTOFPoints;
       locNeutralShower->dSCVeto = n_locSCHits;
 
@@ -197,9 +238,57 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       
       locNeutralShower->dQuality = getFCALQuality( locFCALShowers[loc_i], rfTime );
 
+      DVector3 position = locFCALShowers[loc_i]->getPosition_log() - vertex;
+      double t = locFCALShowers[loc_i]->getTime();
+      double r = position.Mag();
+      t -= (r / TMath::C() * 1e7);
+      double phi_fcal = position.Phi();
+      double theta_fcal = position.Theta();
+      
+      bool Charge_Hit_in_FCAL = false;
+      for (vector<const DTOFPoint*>::const_iterator tof = locTOFPoints.begin(); tof != locTOFPoints.end(); tof++) {
+	double xt = (*tof)->pos.X() - vertex.X();
+	double yt = (*tof)->pos.Y() - vertex.Y();
+	double zt = (*tof)->pos.Z() - vertex.Z();
+	double rt = sqrt(xt*xt + yt*yt + zt*zt);
+	double tt = (*tof)->t - (rt / TMath::C() * 1e7);
+	double dt = tt - rfTime;
+	DVector3 tof_position(xt, yt, zt);
+	double phi_tof = tof_position.Phi();
+	double theta_tof = tof_position.Theta();
+	if (fabs(dt) < TOF_RF_CUT && 
+	    fabs(theta_fcal - theta_tof) * TMath::RadToDeg() < TOF_FCAL_THETA_CUT && 
+	    fabs(phi_fcal - phi_tof) * TMath::RadToDeg() < TOF_FCAL_PHI_CUT) {
+	  Charge_Hit_in_FCAL = true;
+	}
+      }
+      
+      if (Charge_Hit_in_FCAL)
+	locNeutralShower->dTOF_FCAL_match = 1;
+      else
+	locNeutralShower->dTOF_FCAL_match = 0;
+      
+      Charge_Hit_in_FCAL = false;
+      for (unsigned int i = 0; i < locSCHits.size(); i ++) {
+	const DSCHit *schits = locSCHits[i];
+	double t = schits->t;
+	double e = schits->dE;
+	double s = schits->sector;
+	double diff_t = t - rfTime;
+	double phi_sc = 6.0 * (s + 1) - 11.25 - 45.0 * TMath::DegToRad();
+	if (SC_RF_CUT_MIN < diff_t && diff_t < SC_RF_CUT_MAX) 
+	  if ((e * 1e3) > SC_Energy_CUT) 
+	    if ((fabs(phi_fcal - phi_sc) * TMath::RadToDeg()) < SC_FCAL_PHI_CUT)
+	      Charge_Hit_in_FCAL = true;
+      }
+      
+      if (Charge_Hit_in_FCAL)
+	locNeutralShower->dSC_FCAL_match = 1;
+      else
+        locNeutralShower->dSC_FCAL_match = 0;
       locNeutralShower->dTOFVeto = n_locTOFPoints;
       locNeutralShower->dSCVeto = n_locSCHits;
-      
+
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
       locCovMatrix->ResizeTo(5, 5);
       *locCovMatrix = locFCALShowers[loc_i]->ExyztCovariance;
@@ -226,6 +315,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       
       locNeutralShower->dQuality = 1;
       
+      //locNeutralShower->dTOF_FCAL_match = 0;
       locNeutralShower->dTOFVeto = n_locTOFPoints;
       locNeutralShower->dSCVeto = n_locSCHits;
 

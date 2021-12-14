@@ -54,6 +54,10 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   double SC_RF_CUT_MIN;
   double SC_RF_CUT_MAX;
   double SC_Energy_CUT;
+  double TOF_FCAL_THETA_CUT;
+  double TOF_FCAL_PHI_CUT;
+  double SC_FCAL_PHI_CUT;
+  double SC_BCAL_PHI_CUT;
 };
 
 #endif // _DNeutralShower_factory_

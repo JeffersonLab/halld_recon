@@ -39,6 +39,9 @@ class DNeutralShower : public jana::JObject
 
   double dQuality;
   int dTOFVeto;
+  int dTOF_FCAL_match;
+  int dSC_FCAL_match;
+  int dSC_BCAL_match;
   int dSCVeto;
 
   const JObject* dBCALFCALShower; //is either DBCALShower or DFCALShower: dynamic_cast as appropriate (based on dDetectorSystem)

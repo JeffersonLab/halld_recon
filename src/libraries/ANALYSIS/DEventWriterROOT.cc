@@ -763,6 +763,10 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOFVeto"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSCVeto"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
 	if(BCAL_VERBOSE_OUTPUT) {
@@ -1943,6 +1947,9 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locNeutralShower->dQuality, locArrayIndex);
 	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOFVeto"), locNeutralShower->dTOFVeto, locArrayIndex);
 	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSCVeto"), locNeutralShower->dSCVeto, locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locNeutralShower->dSC_BCAL_match, locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locNeutralShower->dSC_FCAL_match, locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locNeutralShower->dTOF_FCAL_match, locArrayIndex);
 
 	//SHOWER ENERGY
 	DetectorSystem_t locDetector = locNeutralShower->dDetectorSystem;
