@@ -61,7 +61,7 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   double SC_BCAL_PHI_CUT;
   double TOF_FCAL_x_match_CUT;
   double TOF_FCAL_y_match_CUT;
-  int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points);
+  int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points, vector <float> &match_x, vector <float> &match_y);
   
 };
 

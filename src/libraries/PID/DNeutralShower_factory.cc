@@ -272,11 +272,15 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 	}
       }
       */
+      vector <float> match_x; match_x.clear();
+      vector <float> match_y; match_y.clear();
+      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, match_x, match_y);
       
-      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints);
-      
+      locNeutralShower->dTOF_FCAL_x = match_x;
+      locNeutralShower->dTOF_FCAL_y = match_y;
+
       if (tof_match)
-	locNeutralShower->dTOF_FCAL_match = 1;
+	locNeutralShower->dTOF_FCAL_match = match_x.size();
       else
 	locNeutralShower->dTOF_FCAL_match = 0;
       
@@ -383,7 +387,7 @@ double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, do
   return dFCALClassifier->GetMvaValue( mvaInputs );
 }
 
-int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints) 
+int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints, vector <float> &match_x, vector <float> &match_y) 
 {
 	
   int global_tof_match = 0;
@@ -402,8 +406,11 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
     double dy = fcalpos.Y() - yt;
     
     if (fabs(dx) < TOF_FCAL_x_match_CUT && fabs(dy) < TOF_FCAL_y_match_CUT) {
-      if (fabs(dt) < TOF_RF_CUT) 
+      if (fabs(dt) < TOF_RF_CUT) {
+	match_x.push_back(dx);
+	match_y.push_back(dy);
 	global_tof_match ++;
+      }
     }
   }
 
