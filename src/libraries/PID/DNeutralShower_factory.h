@@ -45,7 +45,8 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   DVector3 dTargetCenter;
   double m_beamSpotX;
   double m_beamSpotY;  
-
+  int RunNumber;
+  
   const char* inputVars[8] = { "nHits", "e9e25Sh", "e1e9Sh", "sumUSh", "sumVSh", "asymUVSh", "speedSh", "dtTrSh" };
   DNeutralShower_FCALQualityMLP* dFCALClassifier;
 
@@ -58,6 +59,11 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   double TOF_FCAL_PHI_CUT;
   double SC_FCAL_PHI_CUT;
   double SC_BCAL_PHI_CUT;
+  double TOF_FCAL_x_match_CUT;
+  double TOF_FCAL_y_match_CUT;
+  double bar2x(int bar);
+  int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points);
+  
 };
 
 #endif // _DNeutralShower_factory_
