@@ -47,21 +47,21 @@ DNeutralShower_factory::DNeutralShower_factory()
   SC_Energy_CUT = 0.2;
   gPARMS->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
 
-  TOF_FCAL_THETA_CUT = 10;
-  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_THETA_CUT", TOF_FCAL_THETA_CUT);
+  //TOF_FCAL_THETA_CUT = 10;
+  //gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_THETA_CUT", TOF_FCAL_THETA_CUT);
 
-  TOF_FCAL_PHI_CUT = 10;
-  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_PHI_CUT", TOF_FCAL_PHI_CUT);
+  //TOF_FCAL_PHI_CUT = 10;
+  //gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_PHI_CUT", TOF_FCAL_PHI_CUT);
 
   TOF_FCAL_x_match_CUT = 10;
   TOF_FCAL_y_match_CUT = 10;
   gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_x_match_CUT", TOF_FCAL_x_match_CUT);
   gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_y_match_CUT", TOF_FCAL_y_match_CUT);
 
-  SC_FCAL_PHI_CUT = 10;
+  SC_FCAL_PHI_CUT = 25;
   gPARMS->SetDefaultParameter("NeutralShower:SC_FCAL_PHI_CUT", SC_FCAL_PHI_CUT);
 
-  SC_BCAL_PHI_CUT = 10;
+  SC_BCAL_PHI_CUT = 15;
   gPARMS->SetDefaultParameter("NeutralShower:SC_BCAL_PHI_CUT", SC_BCAL_PHI_CUT);
 }
 
@@ -107,10 +107,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 {
   const DDetectorMatches* locDetectorMatches = NULL;
   locEventLoop->GetSingle(locDetectorMatches);
-  
-  
-  locEventLoop->GetSingle(dTOFGeometry);
-
+    
   vector<const DBCALShower*> locBCALShowers;
   locEventLoop->Get(locBCALShowers);
 
@@ -385,112 +382,29 @@ double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, do
   
   return dFCALClassifier->GetMvaValue( mvaInputs );
 }
-/*
-double DNeutralShower_factory::bar2x(int bar) {
-  
-  double x = -1000;
-  
-  if (RunNumber < 70000) {
-    
-    int ic = 2 * bar - 45; 
-    
-    double pos;
-    if (ic == 1  || ic == -1) 
-      pos = 3.0 * (double) ic;
-    else if (ic == 3 || ic ==  5) 
-      pos = 1.5 * (double) (ic + 2);
-    else if (ic == -3 || ic == -5) 
-      pos = 1.5 * (double) (ic - 2);
-    else if (ic >  5) 
-      pos = 3. * (ic - 2);
-    else 
-      pos = 3.* (ic + 2);
-    
-    x = 1.1 * pos;
-    
-  } if (RunNumber > 70000) {
-    
-    double inner_region_offset = 24.0;
-    
-    // outer region modules:
-    if (bar <= 17) { // assumes bar=1 is the most negative position
-      int ic = 17 - bar;
-      x = inner_region_offset + 6.0 * (0.5 + (double) ic);
-      x *= -1.0;
-    } if (bar >= 30) {
-      int ic = bar - 30;
-      x = inner_region_offset + 6.0 * (0.5 + (double) ic);
-    }
-    
-    //inner regions (just hard code each for now):
-    if (bar == 18) x = -21.75;
-    else if (bar == 19) x = -17.25;
-    else if (bar == 20) x = -13.50;
-    else if (bar == 21) x = -10.50;
-    else if (bar == 22) x = -6.75;
-    else if (bar == 23) x = -2.25;
-    else if (bar == 24) x = 2.25;
-    else if (bar == 25) x = 6.75;
-    else if (bar == 26) x = 10.50;
-    else if (bar == 27) x = 13.50;
-    else if (bar == 28) x = 17.25;
-    else if (bar == 29) x = 21.75;
-  }
-  
-  return x;
-}
-*/
+
 int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints) 
 {
 	
   int global_tof_match = 0;
   
   for (vector< const DTOFPoint* >::const_iterator tof = locTOFPoints.begin(); tof != locTOFPoints.end(); tof++) {
-		
+    
     double xt = (*tof)->pos.X() - vertex.X();
     double yt = (*tof)->pos.Y() - vertex.Y();
     double zt = (*tof)->pos.Z() - vertex.Z();
     double rt = sqrt(xt*xt + yt*yt + zt*zt);
-    
     double tt = (*tof)->t - (rt / TMath::C() * 1e7);
     double dt = tt - rfTime;
-    
     xt *= fcalpos.Z() / zt;
     yt *= fcalpos.Z() / zt;
-    
-    int hbar  = (*tof)->dHorizontalBar;
-    int hstat = (*tof)->dHorizontalBarStatus;
-    int vbar  = (*tof)->dVerticalBar;
-    int vstat = (*tof)->dVerticalBarStatus;
-    
-    double bh = dTOFGeometry->bar2y(hbar);
-    double bv = dTOFGeometry->bar2y(vbar);
-    
-    double dx, dy;
-    
-    if (hstat==3 && vstat==3) { // both planes have hits in both ends
-      dx = fcalpos.X() - xt;
-      dy = fcalpos.Y() - yt;
-    } else if (hstat==3) { // only good position information in horizontal plane
-      dx = fcalpos.X() - xt;
-      //dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
-      dy = fcalpos.Y() - (bh - vertex.Y()) * (fcalpos.Z() / zt);
-    } else if (vstat==3) {
-      //dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
-      dx = fcalpos.X() - (bv - vertex.X()) * (fcalpos.Z() / zt);
-      dy = fcalpos.Y() - yt;
-    } else {
-      //dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
-      //dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
-      dx = fcalpos.X() - (bv - vertex.X()) * (fcalpos.Z() / zt);
-      dy = fcalpos.Y() - (bh - vertex.Y()) * (fcalpos.Z() / zt);
-    }
+    double dx = fcalpos.X() - xt;
+    double dy = fcalpos.Y() - yt;
     
     if (fabs(dx) < TOF_FCAL_x_match_CUT && fabs(dy) < TOF_FCAL_y_match_CUT) {
       if (fabs(dt) < TOF_RF_CUT) 
 	global_tof_match ++;
     }
-    
   }
 
   return global_tof_match;
