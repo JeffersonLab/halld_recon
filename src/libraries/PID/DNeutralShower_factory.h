@@ -16,6 +16,7 @@
 #include <PID/DChargedTrack.h>
 #include <PID/DChargedTrackHypothesis.h>
 #include <TOF/DTOFPoint.h>
+#include <TOF/DTOFGeometry_factory.h>
 #include <START_COUNTER/DSCHit.h>
 #include <FCAL/DFCALShower.h>
 #include <BCAL/DBCALShower.h>
@@ -61,7 +62,8 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   double SC_BCAL_PHI_CUT;
   double TOF_FCAL_x_match_CUT;
   double TOF_FCAL_y_match_CUT;
-  double bar2x(int bar);
+  //double bar2x(int bar);
+  const DTOFGeometry* dTOFGeometry;
   int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points);
   
 };

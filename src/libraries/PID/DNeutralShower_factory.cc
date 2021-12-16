@@ -107,6 +107,9 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 {
   const DDetectorMatches* locDetectorMatches = NULL;
   locEventLoop->GetSingle(locDetectorMatches);
+  
+  
+  locEventLoop->GetSingle(dTOFGeometry);
 
   vector<const DBCALShower*> locBCALShowers;
   locEventLoop->Get(locBCALShowers);
@@ -382,7 +385,7 @@ double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, do
   
   return dFCALClassifier->GetMvaValue( mvaInputs );
 }
-
+/*
 double DNeutralShower_factory::bar2x(int bar) {
   
   double x = -1000;
@@ -436,7 +439,7 @@ double DNeutralShower_factory::bar2x(int bar) {
   
   return x;
 }
-
+*/
 int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints) 
 {
 	
@@ -460,6 +463,9 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
     int vbar  = (*tof)->dVerticalBar;
     int vstat = (*tof)->dVerticalBarStatus;
     
+    double bh = dTOFGeometry->bar2y(hbar);
+    double bv = dTOFGeometry->bar2y(vbar);
+    
     double dx, dy;
     
     if (hstat==3 && vstat==3) { // both planes have hits in both ends
@@ -467,13 +473,17 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
       dy = fcalpos.Y() - yt;
     } else if (hstat==3) { // only good position information in horizontal plane
       dx = fcalpos.X() - xt;
-      dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
+      //dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
+      dy = fcalpos.Y() - (bh - vertex.Y()) * (fcalpos.Z() / zt);
     } else if (vstat==3) {
-      dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
+      //dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
+      dx = fcalpos.X() - (bv - vertex.X()) * (fcalpos.Z() / zt);
       dy = fcalpos.Y() - yt;
     } else {
-      dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
-      dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
+      //dx = fcalpos.X() - (bar2x(vbar) - vertex.X()) * (fcalpos.Z() / zt);
+      //dy = fcalpos.Y() - (bar2x(hbar) - vertex.Y()) * (fcalpos.Z() / zt);
+      dx = fcalpos.X() - (bv - vertex.X()) * (fcalpos.Z() / zt);
+      dy = fcalpos.Y() - (bh - vertex.Y()) * (fcalpos.Z() / zt);
     }
     
     if (fabs(dx) < TOF_FCAL_x_match_CUT && fabs(dy) < TOF_FCAL_y_match_CUT) {
