@@ -46,7 +46,9 @@ class DNeutralShower : public jana::JObject
 
   vector <float> dTOF_FCAL_x;
   vector <float> dTOF_FCAL_y;
-
+  vector <float> dSC_BCAL_phi;
+  vector <float> dSC_FCAL_phi;
+  
   const JObject* dBCALFCALShower; //is either DBCALShower or DFCALShower: dynamic_cast as appropriate (based on dDetectorSystem)
 
   void toStrings(vector<pair<string,string> > &items) const{
