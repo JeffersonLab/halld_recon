@@ -312,9 +312,9 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
     double dx = fcalpos.X() - xt;
     double dy = fcalpos.Y() - yt;
     if (fabs(dx) < dx_min)
-      dx_min = dx;
+      dx_min = fabs(dx);
     if (fabs(dy) < dy_min)
-      dy_min = dy;
+      dy_min = fabs(dy);
     if (fabs(dt) < TOF_RF_CUT) {
       global_tof_match ++;
     }
@@ -332,7 +332,7 @@ int DNeutralShower_factory::check_SC_match(double phi, double rfTime, vector< co
     const DSCHit *schits = locSCHits[i];
     double t = schits->t;
     double e = schits->dE;
-    double s = schits->sector-1;
+    double s = schits->sector - 1;
     double diff_t = t - rfTime;
     double phi_sc = sc_pos[s][0].Phi();
     double dphi = phi - phi_sc;
