@@ -55,12 +55,11 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   double SC_RF_CUT_MIN;
   double SC_RF_CUT_MAX;
   double SC_Energy_CUT;
-  double SC_FCAL_PHI_CUT;
-  double SC_BCAL_PHI_CUT;
-  double TOF_FCAL_x_match_CUT;
-  double TOF_FCAL_y_match_CUT;
-  int check_SC_match(double phi, double rfTime, double SC_PHI_CUT, vector< const DSCHit* > locSCHits, vector <float> &match_phi);
-  int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points, vector <float> &match_x, vector <float> &match_y);
+  int check_SC_match(double phi, double rfTime, vector< const DSCHit* > locSCHits, double &dphi_min);
+  int check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector<const DTOFPoint*> tof_points, double &dx_min, double &dy_min);
+  
+  vector<vector<DVector3> >sc_pos;
+  vector<vector<DVector3> >sc_norm;
   
 };
 

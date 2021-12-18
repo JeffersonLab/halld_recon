@@ -47,16 +47,6 @@ DNeutralShower_factory::DNeutralShower_factory()
   SC_Energy_CUT = 0.2;
   gPARMS->SetDefaultParameter("NeutralShower:SC_Energy_CUT", SC_Energy_CUT);
   
-  TOF_FCAL_x_match_CUT = 10;
-  TOF_FCAL_y_match_CUT = 10;
-  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_x_match_CUT", TOF_FCAL_x_match_CUT);
-  gPARMS->SetDefaultParameter("NeutralShower:TOF_FCAL_y_match_CUT", TOF_FCAL_y_match_CUT);
-
-  SC_FCAL_PHI_CUT = 25;
-  gPARMS->SetDefaultParameter("NeutralShower:SC_FCAL_PHI_CUT", SC_FCAL_PHI_CUT);
-
-  SC_BCAL_PHI_CUT = 15;
-  gPARMS->SetDefaultParameter("NeutralShower:SC_BCAL_PHI_CUT", SC_BCAL_PHI_CUT);
 }
 
 
@@ -83,6 +73,8 @@ jerror_t DNeutralShower_factory::brun(jana::JEventLoop *locEventLoop, int32_t ru
   locGeometry->GetTargetZ(locTargetCenterZ);
   dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
   
+  // Get start counter geometry;
+  locGeometry->GetStartCounterGeom(sc_pos,sc_norm);
 
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
@@ -174,14 +166,11 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       double z = locBCALShowers[loc_i]->z - vertex.Z();
       DVector3 position(x, y, z);
       double phi_bcal = position.Phi();
-      vector <float> match_phi; match_phi.clear();
-      int sc_match = check_SC_match(phi_bcal, rfTime, SC_BCAL_PHI_CUT, locSCHits, match_phi);
-      
+      double delta_phi_min = 1000.;
+      int sc_match = check_SC_match(phi_bcal, rfTime, locSCHits, delta_phi_min);
       locNeutralShower->dSC_BCAL_match = sc_match;
-      locNeutralShower->dSC_BCAL_phi = match_phi;
-      locNeutralShower->dTOFVeto = n_locTOFPoints;
-      locNeutralShower->dSCVeto = n_locSCHits;
-
+      locNeutralShower->dSC_BCAL_phi_min = (float) delta_phi_min;
+      
       locNeutralShower->dEnergy = locBCALShowers[loc_i]->E;
       locNeutralShower->dSpacetimeVertex.SetXYZT(locBCALShowers[loc_i]->x, locBCALShowers[loc_i]->y, locBCALShowers[loc_i]->z, locBCALShowers[loc_i]->t);
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
@@ -216,21 +205,17 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
 
       DVector3 position = locFCALShowers[loc_i]->getPosition_log() - vertex;
       double phi_fcal = position.Phi();
-      vector <float> match_x; match_x.clear();
-      vector <float> match_y; match_y.clear();
-      vector <float> match_phi; match_phi.clear();
-      int sc_match = check_SC_match(phi_fcal, rfTime, SC_FCAL_PHI_CUT , locSCHits, match_phi);
-      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, match_x, match_y);
-      
+      double delta_x_min = 1000.;
+      double delta_y_min = 1000.;
+      double delta_phi_min = 1000.;
+      int sc_match = check_SC_match(phi_fcal, rfTime, locSCHits, delta_phi_min);
+      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, delta_x_min, delta_y_min);
       locNeutralShower->dTOF_FCAL_match = tof_match;
-      locNeutralShower->dTOF_FCAL_x = match_x;
-      locNeutralShower->dTOF_FCAL_y = match_y;
+      locNeutralShower->dTOF_FCAL_x_min = (float) delta_x_min;
+      locNeutralShower->dTOF_FCAL_y_min = (float) delta_y_min;
       locNeutralShower->dSC_FCAL_match = sc_match;
-      locNeutralShower->dSC_FCAL_phi = match_phi;
+      locNeutralShower->dSC_FCAL_phi_min = (float) delta_phi_min;
       
-      locNeutralShower->dTOFVeto = n_locTOFPoints;
-      locNeutralShower->dSCVeto = n_locSCHits;
-
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
       locCovMatrix->ResizeTo(5, 5);
       *locCovMatrix = locFCALShowers[loc_i]->ExyztCovariance;
@@ -257,9 +242,6 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       
       locNeutralShower->dQuality = 1;
       
-      locNeutralShower->dTOFVeto = n_locTOFPoints;
-      locNeutralShower->dSCVeto = n_locSCHits;
-
       locNeutralShower->dEnergy = locCCALShowers[loc_i]->E;
       locNeutralShower->dSpacetimeVertex.SetXYZT(locCCALShowers[loc_i]->x, locCCALShowers[loc_i]->y, locCCALShowers[loc_i]->z, locCCALShowers[loc_i]->time);
       
@@ -274,7 +256,7 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
     }
   
   sort(_data.begin(), _data.end(), DNeutralShower_SortByEnergy);
-
+  
   return NOERROR;
 }
 
@@ -312,11 +294,11 @@ double DNeutralShower_factory::getFCALQuality( const DFCALShower* fcalShower, do
   return dFCALClassifier->GetMvaValue( mvaInputs );
 }
 
-int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints, vector <float> &match_x, vector <float> &match_y) 
+int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVector3 vertex, vector< const DTOFPoint* > locTOFPoints, double &dx_min, double &dy_min) 
 {
-	
   int global_tof_match = 0;
-  
+  dx_min = 1000;
+  dy_min = 1000;
   for (vector< const DTOFPoint* >::const_iterator tof = locTOFPoints.begin(); tof != locTOFPoints.end(); tof++) {
     
     double xt = (*tof)->pos.X() - vertex.X();
@@ -329,36 +311,39 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
     yt *= fcalpos.Z() / zt;
     double dx = fcalpos.X() - xt;
     double dy = fcalpos.Y() - yt;
-    
-    if (fabs(dx) < TOF_FCAL_x_match_CUT && fabs(dy) < TOF_FCAL_y_match_CUT) {
-      if (fabs(dt) < TOF_RF_CUT) {
-	match_x.push_back(dx);
-	match_y.push_back(dy);
-	global_tof_match ++;
-      }
+    if (fabs(dx) < dx_min)
+      dx_min = dx;
+    if (fabs(dy) < dy_min)
+      dy_min = dy;
+    if (fabs(dt) < TOF_RF_CUT) {
+      global_tof_match ++;
     }
   }
-
+  
   return global_tof_match;
 }
 
-int DNeutralShower_factory::check_SC_match(double phi, double rfTime, double SC_PHI_CUT, vector< const DSCHit* > locSCHits, vector <float> &match_phi) 
+int DNeutralShower_factory::check_SC_match(double phi, double rfTime, vector< const DSCHit* > locSCHits, double &dphi_min) 
 {
   int global_sc_match = 0;
-  
+  dphi_min = 1000.;
   for (unsigned int i = 0; i < locSCHits.size(); i ++) {
-
+    
     const DSCHit *schits = locSCHits[i];
     double t = schits->t;
     double e = schits->dE;
-    double s = schits->sector;
+    double s = schits->sector-1;
     double diff_t = t - rfTime;
-    double phi_sc = 6.0 * (s + 1) - 11.25 - 45.0 * TMath::DegToRad();
-    if (SC_RF_CUT_MIN < diff_t && diff_t < SC_RF_CUT_MAX) { 
-      if ((e * 1e3) > SC_Energy_CUT && (fabs(phi - phi_sc) * TMath::RadToDeg()) < SC_PHI_CUT) {
-	match_phi.push_back(phi - phi_sc);
-	global_sc_match ++;
-      }
+    double phi_sc = sc_pos[s][0].Phi();
+    double dphi = phi - phi_sc;
+    if (dphi < -TMath::Pi()) 
+      dphi += 2.0 * TMath::Pi();
+    if (dphi > TMath::Pi()) 
+      dphi -= 2.0 * TMath::Pi();
+    if (fabs(dphi) < dphi_min)
+      dphi_min = fabs(dphi);
+    if ((SC_RF_CUT_MIN < diff_t) && (diff_t < SC_RF_CUT_MAX) && ((e * 1e3) > SC_Energy_CUT)) {
+      global_sc_match ++;
     }
   } 
   
