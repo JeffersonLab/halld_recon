@@ -116,34 +116,11 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
   DVector3 vertex(m_beamSpotX, m_beamSpotY, dTargetCenter.Z());
   vector <const DTOFPoint*> locTOFPoints;
   locEventLoop->Get(locTOFPoints);
-  int n_locTOFPoints = 0;
-  for (vector<const DTOFPoint*>::const_iterator tof = locTOFPoints.begin(); tof != locTOFPoints.end(); tof++) {
-    double xt = (*tof)->pos.X() - vertex.X();
-    double yt = (*tof)->pos.Y() - vertex.Y();
-    double zt = (*tof)->pos.Z() - vertex.Z();
-    double rt = sqrt(xt*xt + yt*yt + zt*zt);
-    double tt = (*tof)->t - (rt / TMath::C() * 1e7);
-    double dt = tt - rfTime;
-    if (fabs(dt) < TOF_RF_CUT)
-      n_locTOFPoints ++;
-  }
   
   //-----   SC veto -----//
   vector<const DSCHit*> locSCHits;
   locEventLoop->Get(locSCHits);
-  int n_locSCHits = 0;
-  for (unsigned int i = 0; i < locSCHits.size(); i ++) {
-    const DSCHit *schits = locSCHits[i];
-    double t = schits->t;
-    double e = schits->dE;
-    double diff_t = t - rfTime;
-    if (SC_RF_CUT_MIN < diff_t && diff_t < SC_RF_CUT_MAX) {
-      if ((e * 1e3) > SC_Energy_CUT)
-	n_locSCHits ++;
-    }
-  }
-
-
+  
   JObject::oid_t locShowerID = 0;
   for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
     {
