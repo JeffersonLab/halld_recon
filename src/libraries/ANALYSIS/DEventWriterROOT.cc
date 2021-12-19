@@ -10,6 +10,8 @@ static bool STORE_PULL_INFO = false;
 static bool STORE_ERROR_MATRIX_INFO = false;
 static bool STORE_MC_TRAJECTORIES = false;
 
+static bool STORE_VETO_INFO = false;
+
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
 	dInitNumThrownArraySize = 20;
@@ -276,6 +278,9 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
     	{gPARMS->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO); cout << "ANALYSIS:STORE_ERROR_MATRIX_INFO set to " << STORE_ERROR_MATRIX_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:STORE_MC_TRAJECTORIES")) 
 		{gPARMS->GetParameter("ANALYSIS:STORE_MC_TRAJECTORIES",STORE_MC_TRAJECTORIES); cout << "ANALYSIS:STORE_MC_TRAJECTORIES set to " << STORE_MC_TRAJECTORIES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+
+	if(gPARMS->Exists("ANALYSIS:STORE_VETO_INFO"))
+	    {gPARMS->GetParameter("ANALYSIS:STORE_VETO_INFO",STORE_VETO_INFO); cout << "ANALYSIS:STORE_VETO_INFO set to " << STORE_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -761,14 +766,16 @@ void DEventWriterROOT::Create_Branches_NeutralHypotheses(DTreeBranchRegister& lo
 	//SHOWER INFO
 	locBranchRegister.Register_ClonesArray<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Shower"), dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_phi_min"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_phi_min"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_x_min"), locArraySizeString, dInitNumNeutralArraySize);
-	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_y_min"), locArraySizeString, dInitNumNeutralArraySize);
+	if (STORE_VETO_INFO) {
+	  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_phi_min"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_phi_min"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_x_min"), locArraySizeString, dInitNumNeutralArraySize);
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_y_min"), locArraySizeString, dInitNumNeutralArraySize);
+	}
 	
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCAL"), locArraySizeString, dInitNumNeutralArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "Energy_BCALPreshower"), locArraySizeString, dInitNumNeutralArraySize);
@@ -1948,14 +1955,16 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ChiSq_Timing"), locNeutralParticleHypothesis->Get_ChiSq(), locArrayIndex);
 	locTreeFillData->Fill_Array<UInt_t>(Build_BranchName(locParticleBranchName, "NDF_Timing"), locNeutralParticleHypothesis->Get_NDF(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerQuality"), locNeutralShower->dQuality, locArrayIndex);
-	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locNeutralShower->dSC_BCAL_match, locArrayIndex);
-	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locNeutralShower->dSC_FCAL_match, locArrayIndex);
-	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locNeutralShower->dTOF_FCAL_match, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_x_min"), locNeutralShower->dTOF_FCAL_x_min, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_y_min"), locNeutralShower->dTOF_FCAL_y_min, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_phi_min"), locNeutralShower->dSC_BCAL_phi_min, locArrayIndex);
-	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_phi_min"), locNeutralShower->dSC_FCAL_phi_min, locArrayIndex);
-	
+	if (STORE_VETO_INFO) {
+	  locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_match"), locNeutralShower->dSC_BCAL_match, locArrayIndex);
+	  locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_match"), locNeutralShower->dSC_FCAL_match, locArrayIndex);
+	  locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_match"), locNeutralShower->dTOF_FCAL_match, locArrayIndex);
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_x_min"), locNeutralShower->dTOF_FCAL_x_min, locArrayIndex);
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerTOF_FCAL_y_min"), locNeutralShower->dTOF_FCAL_y_min, locArrayIndex);
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_BCAL_phi_min"), locNeutralShower->dSC_BCAL_phi_min, locArrayIndex);
+	  locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "ShowerSC_FCAL_phi_min"), locNeutralShower->dSC_FCAL_phi_min, locArrayIndex);
+	}
+
 	//SHOWER ENERGY
 	DetectorSystem_t locDetector = locNeutralShower->dDetectorSystem;
 	double locBCALEnergy = (locDetector == SYS_BCAL) ? locNeutralShower->dEnergy : 0.0;

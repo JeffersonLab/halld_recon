@@ -35,6 +35,9 @@ DNeutralShower_factory::DNeutralShower_factory()
   dFCALClassifier = new DNeutralShower_FCALQualityMLP( vars );
   
   dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>(); 
+
+  STORE_VETO_INFO = false;
+  gPARMS->SetDefaultParameter("NeutralShower:STORE_VETO_INFO", STORE_VETO_INFO);
   
   TOF_RF_CUT = 6.5;
   gPARMS->SetDefaultParameter("NeutralShower:TOF_RF_CUT", TOF_RF_CUT);
@@ -109,18 +112,19 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
   assert( eventRFBunches.size() == 1 );
   double rfTime = eventRFBunches[0]->dTime; // this is the RF time at the center of the target
 
-  // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
-  // The chance of an actual neutral shower matching to a bogus track is very small
-
   //-----   TOF veto    -----//
   DVector3 vertex(m_beamSpotX, m_beamSpotY, dTargetCenter.Z());
   vector <const DTOFPoint*> locTOFPoints;
-  locEventLoop->Get(locTOFPoints);
+  if (STORE_VETO_INFO) 
+    locEventLoop->Get(locTOFPoints);
   
   //-----   SC veto -----//
   vector<const DSCHit*> locSCHits;
-  locEventLoop->Get(locSCHits);
+  if (STORE_VETO_INFO) 
+    locEventLoop->Get(locSCHits);
   
+  // Loop over all DBCALShowers, create DNeutralShower if didn't match to any tracks
+  // The chance of an actual neutral shower matching to a bogus track is very small
   JObject::oid_t locShowerID = 0;
   for(size_t loc_i = 0; loc_i < locBCALShowers.size(); ++loc_i)
     {
@@ -137,17 +141,20 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       // in the BCAL set the quality variable 1 to avoid eliminating
       // NeutralShowers in future splitoff rejection algorithms
       locNeutralShower->dQuality = 1;
-
-      double x = locBCALShowers[loc_i]->x - vertex.X();
-      double y = locBCALShowers[loc_i]->y - vertex.Y();
-      double z = locBCALShowers[loc_i]->z - vertex.Z();
-      DVector3 position(x, y, z);
-      double phi_bcal = position.Phi();
-      double delta_phi_min = 1000.;
-      int sc_match = check_SC_match(phi_bcal, rfTime, locSCHits, delta_phi_min);
-      locNeutralShower->dSC_BCAL_match = sc_match;
-      locNeutralShower->dSC_BCAL_phi_min = (float) delta_phi_min;
       
+      // Check if indeed shower is not related to a non-reconstructed track in SC
+      if (STORE_VETO_INFO) {
+	double x = locBCALShowers[loc_i]->x - vertex.X();
+	double y = locBCALShowers[loc_i]->y - vertex.Y();
+	double z = locBCALShowers[loc_i]->z - vertex.Z();
+	DVector3 position(x, y, z);
+	double phi_bcal = position.Phi();
+	double delta_phi_min = 1000.;
+	int sc_match = check_SC_match(phi_bcal, rfTime, locSCHits, delta_phi_min);
+	locNeutralShower->dSC_BCAL_match = sc_match;
+	locNeutralShower->dSC_BCAL_phi_min = (float) delta_phi_min;
+      }
+
       locNeutralShower->dEnergy = locBCALShowers[loc_i]->E;
       locNeutralShower->dSpacetimeVertex.SetXYZT(locBCALShowers[loc_i]->x, locBCALShowers[loc_i]->y, locBCALShowers[loc_i]->z, locBCALShowers[loc_i]->t);
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
@@ -179,19 +186,22 @@ jerror_t DNeutralShower_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t e
       locNeutralShower->dSpacetimeVertex.SetT(locFCALShowers[loc_i]->getTime());
       
       locNeutralShower->dQuality = getFCALQuality( locFCALShowers[loc_i], rfTime );
-
-      DVector3 position = locFCALShowers[loc_i]->getPosition_log() - vertex;
-      double phi_fcal = position.Phi();
-      double delta_x_min = 1000.;
-      double delta_y_min = 1000.;
-      double delta_phi_min = 1000.;
-      int sc_match = check_SC_match(phi_fcal, rfTime, locSCHits, delta_phi_min);
-      int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, delta_x_min, delta_y_min);
-      locNeutralShower->dTOF_FCAL_match = tof_match;
-      locNeutralShower->dTOF_FCAL_x_min = (float) delta_x_min;
-      locNeutralShower->dTOF_FCAL_y_min = (float) delta_y_min;
-      locNeutralShower->dSC_FCAL_match = sc_match;
-      locNeutralShower->dSC_FCAL_phi_min = (float) delta_phi_min;
+      
+      // Check if indeed shower is not related to a non-reconstructed track in SC and/or TOF
+      if (STORE_VETO_INFO) {
+	DVector3 position = locFCALShowers[loc_i]->getPosition_log() - vertex;
+	double phi_fcal = position.Phi();
+	double delta_x_min = 1000.;
+	double delta_y_min = 1000.;
+	double delta_phi_min = 1000.;
+	int sc_match = check_SC_match(phi_fcal, rfTime, locSCHits, delta_phi_min);
+	int tof_match = check_TOF_match(position, rfTime, vertex, locTOFPoints, delta_x_min, delta_y_min);
+	locNeutralShower->dTOF_FCAL_match = tof_match;
+	locNeutralShower->dTOF_FCAL_x_min = (float) delta_x_min;
+	locNeutralShower->dTOF_FCAL_y_min = (float) delta_y_min;
+	locNeutralShower->dSC_FCAL_match = sc_match;
+	locNeutralShower->dSC_FCAL_phi_min = (float) delta_phi_min;
+      }
       
       auto locCovMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
       locCovMatrix->ResizeTo(5, 5);

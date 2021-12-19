@@ -51,6 +51,7 @@ class DNeutralShower_factory:public jana::JFactory<DNeutralShower>
   DNeutralShower_FCALQualityMLP* dFCALClassifier;
 
   double getFCALQuality( const DFCALShower* fcalShower, double rfTime ) const;
+  bool STORE_VETO_INFO;
   double TOF_RF_CUT;
   double SC_RF_CUT_MIN;
   double SC_RF_CUT_MAX;
