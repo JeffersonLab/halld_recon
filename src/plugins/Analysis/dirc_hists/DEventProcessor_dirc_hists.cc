@@ -21,20 +21,16 @@ DEventProcessor_dirc_hists::~DEventProcessor_dirc_hists() {
 jerror_t DEventProcessor_dirc_hists::init(void) {
   
   DIRC_TRUTH_BARHIT = false;
-  if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
-	  gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
-
   DIRC_CUT_TDIFF = 3.0;
-  if(gPARMS->Exists("DIRC:HIST_CUT_TDIFF"))
-          gPARMS->GetParameter("DIRC:HIST_CUT_TDIFF",DIRC_CUT_TDIFF);
-
   DIRC_BAR_DIAGNOSTIC = false;
-  if(gPARMS->Exists("DIRC:BAR_DIAGNOSTIC"))
-          gPARMS->GetParameter("DIRC:BAR_DIAGNOSTIC",DIRC_BAR_DIAGNOSTIC);
-
   DIRC_BAR_HIT_MAP = -1;
-  if(gPARMS->Exists("DIRC:BAR_HIT_MAP"))
-          gPARMS->GetParameter("DIRC:BAR_HIT_MAP",DIRC_BAR_HIT_MAP);
+
+  if(gPARMS) {
+    gPARMS->SetDefaultParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
+    gPARMS->SetDefaultParameter("DIRC:HIST_CUT_TDIFF",DIRC_CUT_TDIFF);
+    gPARMS->SetDefaultParameter("DIRC:BAR_DIAGNOSTIC",DIRC_BAR_DIAGNOSTIC);
+    gPARMS->SetDefaultParameter("DIRC:BAR_HIT_MAP",DIRC_BAR_HIT_MAP);
+  }
 
   TDirectory *dir = new TDirectoryFile("DIRC","DIRC");
   dir->cd();
