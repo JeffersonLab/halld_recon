@@ -303,12 +303,6 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	
 	// needs to be X dependent choice for reflection cut (from CCDB?)
 	bool reflected = hitTime>44; // try only some photons as reflected for now
-	
-	// LUT time corrections
-	if(DIRC_LUT_CORR){
-	  if (reflected) hitTime += dDIRCLutReader->GetLutCorrTimeReflected(bar,box_pmt,bin);
-	  else hitTime += dDIRCLutReader->GetLutCorrTimeDirect(bar,box_pmt,bin);
-	}
 
 	// get position along bar for calculated time 
 	double radiatorL = dDIRCGeometry->GetBarLength(bar);
@@ -357,6 +351,12 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 
 				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
 				double totalTime = bartime+evtime;
+
+				// LUT time corrections
+				if(DIRC_LUT_CORR){
+				  if (reflected) totalTime -= dDIRCLutReader->GetLutCorrTimeReflected(bar,box_pmt,bin);
+				  else totalTime -= dDIRCLutReader->GetLutCorrTimeDirect(bar,box_pmt,bin);
+				}
 
 				// calculate time difference
 				double locDeltaT = totalTime-hitTime;
