@@ -100,6 +100,7 @@ private:
   deque<Particle_t> dFinalStatePIDs;
   bool DIRC_TRUTH_BARHIT;
   bool DIRC_BAR_DIAGNOSTIC;
+  int DIRC_BAR_HIT_MAP;
   double DIRC_CUT_TDIFF;
 
 };

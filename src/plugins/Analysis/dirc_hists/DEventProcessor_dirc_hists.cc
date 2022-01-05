@@ -32,6 +32,10 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
   if(gPARMS->Exists("DIRC:BAR_DIAGNOSTIC"))
           gPARMS->GetParameter("DIRC:BAR_DIAGNOSTIC",DIRC_BAR_DIAGNOSTIC);
 
+  DIRC_BAR_HIT_MAP = -1;
+  if(gPARMS->Exists("DIRC:BAR_HIT_MAP"))
+          gPARMS->GetParameter("DIRC:BAR_HIT_MAP",DIRC_BAR_HIT_MAP);
+
   TDirectory *dir = new TDirectoryFile("DIRC","DIRC");
   dir->cd();
  
@@ -160,18 +164,20 @@ jerror_t DEventProcessor_dirc_hists::init(void) {
 	  dir->cd();
   }
   
-  int locBar = 3;
-  string locParticleName = "PiPlus";
-  // occupancy for fixed position and momentum
-  TDirectory *locMapDir = new TDirectoryFile("HitMapBar3","HitMapBar3");
-  locMapDir->cd();
-  for(int locXbin=0; locXbin<40; locXbin++) {
-	  double xbin_min = -100.0 + locXbin*5.0;
-	  double xbin_max = xbin_min + 5.0;
-	 
-	  hHitTimeMap[locXbin] = new TH1I(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; t_{measured} [ns]; entries [#]",locBar,xbin_min,xbin_max), 100,0,100); 
-	  hPixelHitMap[locXbin] = new TH2S(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
-	  hPixelHitMapReflected[locXbin] = new TH2S(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+  if(DIRC_BAR_HIT_MAP > 0) {
+    int locBar = DIRC_BAR_HIT_MAP;
+    string locParticleName = "PiPlus";
+    // occupancy for fixed position and momentum
+    TDirectory *locMapDir = new TDirectoryFile(Form("HitMapBar%d",locBar),Form("HitMapBar%d",locBar));
+    locMapDir->cd();
+    for(int locXbin=0; locXbin<40; locXbin++) {
+      double xbin_min = -100.0 + locXbin*5.0;
+      double xbin_max = xbin_min + 5.0;
+      
+      hHitTimeMap[locXbin] = new TH1I(Form("hHitTimeMap_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; t_{measured} [ns]; entries [#]",locBar,xbin_min,xbin_max), 100,0,100); 
+      hPixelHitMap[locXbin] = new TH2S(Form("hPixelHit_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+      hPixelHitMapReflected[locXbin] = new TH2S(Form("hPixelHitReflected_%s_%d_%d",locParticleName.data(),locBar,locXbin), Form("Bar %d, xbin [%0.0f,%0.0f]; pixel rows; pixel columns", locBar,xbin_min,xbin_max), 144, -0.5, 143.5, DDIRCGeometry::kBars, -0.5, 47.5);
+    }
   }
 
   gDirectory->cd("/");
@@ -292,15 +298,17 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 
 			  // if find track which points to relevant bar, fill photon yield and matched
 			  int locXbin = (int)(posInBar.X()/5.0) + 19;
-			  if(locXbin >= 0 && locXbin < 40 && locBar == 3 && locPID == PiPlus && momInBar.Mag() > 4.0) {
-				  
-				  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-				  hHitTimeMap[locXbin]->Fill(locHitTime);
-				  if(locHitTime < 38)
-					  hPixelHitMap[locXbin]->Fill(pixel_row, pixel_col);
-				  else
-					  hPixelHitMapReflected[locXbin]->Fill(pixel_row, pixel_col);	  
-				  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+			  if(DIRC_BAR_HIT_MAP > 0) {
+			    if(locXbin >= 0 && locXbin < 40 && locBar == DIRC_BAR_HIT_MAP && locPID == PiPlus && momInBar.Mag() > 4.0) {
+			      
+			      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+			      hHitTimeMap[locXbin]->Fill(locHitTime);
+			      if(locHitTime < 38)
+				hPixelHitMap[locXbin]->Fill(pixel_row, pixel_col);
+			      else
+				hPixelHitMapReflected[locXbin]->Fill(pixel_row, pixel_col);	  
+			      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+			    }
 			  }
 
 			  if(locDIRCPhotons.size() > 0) {
