@@ -54,6 +54,12 @@ DDIRCLut::DDIRCLut()
 	// CHROMATIC CORRECTION
 	DIRC_CHROMATIC_CORR = true;
 	gPARMS->SetDefaultParameter("DIRC:CHROMATIC_CORR",DIRC_CHROMATIC_CORR);
+	DIRC_CHROMATIC_CONST = 0.0025;
+	gPARMS->SetDefaultParameter("DIRC:CHROMATIC_CONST",DIRC_CHROMATIC_CONST);
+
+	// CHERENKOV ANGLE CUT
+	DIRC_CUT_ANGLE = 0.3;
+	gPARMS->SetDefaultParameter("DIRC:CUT_ANGLE",DIRC_CUT_ANGLE);
 
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
@@ -296,7 +302,7 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 	}
 	
 	// needs to be X dependent choice for reflection cut (from CCDB?)
-	bool reflected = hitTime>35; // try only some photons as reflected for now
+	bool reflected = hitTime>44; // try only some photons as reflected for now
 	
 	// LUT time corrections
 	if(DIRC_LUT_CORR){
@@ -343,7 +349,18 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				if(u == 3) dir.SetXYZ( dird.X(),-dird.Y(), -dird.Z());
 				if(r) dir.SetXYZ( -dir.X(), dir.Y(), dir.Z());
 				if(dir.Angle(fnY1) < dCriticalAngle || dir.Angle(fnZ1) < dCriticalAngle) continue;
-				
+
+				dir = dir.Unit();
+
+				luttheta = dir.Angle(TVector3(-1,0,0));
+				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
+
+				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
+				double totalTime = bartime+evtime;
+
+				// calculate time difference
+				double locDeltaT = totalTime-hitTime;
+
 				TVector3 trackMom = momInBar;
 				if(DIRC_ROTATE_TRACK) { // rotate tracks to bar plane from survey data
 				  trackMom.RotateX(rotX);
@@ -361,18 +378,10 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				  if (r) tangle += dDIRCLutReader->GetLutCorrAngleReflected(bar,box_pmt,bin);
 				  else tangle += dDIRCLutReader->GetLutCorrAngleDirect(bar,box_pmt,bin);
 				}
-
-				luttheta = dir.Angle(TVector3(-1,0,0));
-				if(luttheta > TMath::PiOver2()) luttheta = TMath::Pi()-luttheta;
-				double bartime = lenz/cos(luttheta)/DIRC_LIGHT_V;
-				double totalTime = bartime+evtime;
-
-				// calculate time difference
-				double locDeltaT = totalTime-hitTime;
-
+				
 				// chromatic correction
 				if (fabs(locDeltaT) < 2.0 && DIRC_CHROMATIC_CORR) 
-				  tangle += 0.0025 * locDeltaT; 
+				  tangle += DIRC_CHROMATIC_CONST * locDeltaT; 
 
 				if(DIRC_DEBUG_HISTS) {	
 					dapp->RootWriteLock(); 
@@ -410,8 +419,11 @@ vector<pair<double,double>> DDIRCLut::CalcPhoton(const DDIRCPmtHit *locDIRCHit, 
 				}
 				
 				// remove photon candidates not used in likelihood
-				if(fabs(tangle-0.5*(locExpectedAngle[PiPlus]+locExpectedAngle[KPlus]))>0.03) continue;
-				
+				if(locPID==Proton || locPID==AntiProton) {
+				  if(fabs(tangle-locExpectedAngle[PiPlus])>DIRC_CUT_ANGLE && fabs(tangle-locExpectedAngle[KPlus])>DIRC_CUT_ANGLE && fabs(tangle-locExpectedAngle[Proton])>DIRC_CUT_ANGLE) continue;
+				}
+				else if(fabs(tangle-locExpectedAngle[PiPlus])>DIRC_CUT_ANGLE && fabs(tangle-locExpectedAngle[KPlus])>DIRC_CUT_ANGLE) continue;
+
 				isReflected = r;
 
 				// save good photons to matched list

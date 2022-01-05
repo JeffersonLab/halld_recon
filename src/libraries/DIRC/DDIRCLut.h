@@ -60,6 +60,8 @@ private:
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
+	double DIRC_CHROMATIC_CONST;
+	double DIRC_CUT_ANGLE;
 
 	double dThetaCOffset[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs]; 
 	double dRotationX[DDIRCGeometry::kBars], dRotationY[DDIRCGeometry::kBars], dRotationZ[DDIRCGeometry::kBars];
