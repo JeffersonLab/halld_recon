@@ -24,8 +24,8 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
         string lut_file;
         gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
 
-	string corr_file;
-        gPARMS->SetDefaultParameter("DIRC_LUT_CORR", corr_file, "DIRC LUT correction root file (will eventually be moved to resource)");
+	string lutcorr_file;
+        gPARMS->SetDefaultParameter("DIRC_LUT_CORR", lutcorr_file, "DIRC LUT correction root file (will eventually be moved to resource)");
 	
 	// follow similar procedure as other resources (DMagneticFieldMapFineMesh)
 	map<string,string> lut_map_name;
@@ -49,7 +49,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		}
 		TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 		if( tLut == NULL ){
-			jerr << "Unable find TTree lut_dirc_flat in " << lut_file << "!!" << endl;
+			jerr << "Unable to find TTree lut_dirc_flat in " << lut_file << "!!" << endl;
 			_exit(-1);
 		}
 		
@@ -94,17 +94,24 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		fLut->Close();
 
 		// attempt to open LUT correction tree
-		if(!corr_file.empty()) {
-		  jout<<"Reading DIRC LUT correction TTree from "<<corr_file<<" ..."<<endl;
+		map<string,string> lutcorr_map_name;
+		if(jcalib->GetCalib("/DIRC/LUT/lutcorr_map", lutcorr_map_name)) 
+		  jout << "Can't find requested /DIRC/LUT/lutcorr_map in CCDB for this run!" << endl;
+		else if(lutcorr_map_name.find("map_name") != lutcorr_map_name.end() && lutcorr_map_name["map_name"] != "None" && lutcorr_file.empty()) {
+		  jresman = japp->GetJResourceManager(run_number);
+		  lutcorr_file = jresman->GetResource(lutcorr_map_name["map_name"]);
+		}
+		if(!lutcorr_file.empty()) {
+		  jout<<"Reading DIRC LUT correction TTree from "<<lutcorr_file<<" ..."<<endl;
 		  
-		  TFile *fLutCorr = new TFile(corr_file.c_str());
+		  TFile *fLutCorr = new TFile(lutcorr_file.c_str());
 		  if( !fLutCorr->IsOpen() ){
-		    jerr << "Unable to open " << lut_file << "!!" << endl;
+		    jerr << "Unable to open " << lutcorr_file << "!!" << endl;
 		    _exit(-1);
 		  }
 		  TTree *tLutCorr=(TTree*) fLutCorr->Get("corr");
 		  if( tLutCorr == NULL ){
-		    jerr << "Unable find TTree corr in " << corr_file << "!!" << endl;
+		    jerr << "Unable to find TTree corr in " << lutcorr_file << "!!" << endl;
 		    _exit(-1);
 		  }
 		  
@@ -138,15 +145,10 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		  // fill arrays with per-PMT corrections
 		  for (int i = 0; i < tLutCorr->GetEntries(); i++) {
 		    tLutCorr->GetEvent(i);
-		    // conditions for corrections to be used
-		    if (fabs(corrAD) < 10) {
-		      lutCorrAngleDirect[tb][tp].at(tbin) = 0.001 * corrAD;
-		      lutCorrTimeDirect[tb][tp].at(tbin) = corrTD;
-		    }
-		    if (fabs(corrAR) < 10) {
-		      lutCorrAngleReflected[tb][tp].at(tbin) = 0.001 * corrAR;
-		      lutCorrTimeReflected[tb][tp].at(tbin) = corrTR;
-		    }
+		    lutCorrAngleDirect[tb][tp].at(tbin) = 0.001 * corrAD;
+		    lutCorrTimeDirect[tb][tp].at(tbin) = corrTD;
+		    lutCorrAngleReflected[tb][tp].at(tbin) = 0.001 * corrAR;
+		    lutCorrTimeReflected[tb][tp].at(tbin) = corrTR;
 		  }
 
 		  // close LUT correction file
