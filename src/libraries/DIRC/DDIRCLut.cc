@@ -58,7 +58,7 @@ DDIRCLut::DDIRCLut()
 	gPARMS->SetDefaultParameter("DIRC:CHROMATIC_CONST",DIRC_CHROMATIC_CONST);
 
 	// CHERENKOV ANGLE CUT
-	DIRC_CUT_ANGLE = 0.3;
+	DIRC_CUT_ANGLE = 0.03;
 	gPARMS->SetDefaultParameter("DIRC:CUT_ANGLE",DIRC_CUT_ANGLE);
 
 	// set PID for different passes in debuging histograms
