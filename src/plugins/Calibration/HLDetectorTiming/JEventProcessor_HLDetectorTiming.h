@@ -77,6 +77,7 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		bool NO_FIELD;
 		bool CCAL_CALIB;
 		bool STRAIGHT_TRACK;
+		bool NO_START_COUNTER;
 		
         // The final setup requires some shifts relative to the previous values, need to store them
 
