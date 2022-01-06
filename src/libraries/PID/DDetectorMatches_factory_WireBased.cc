@@ -12,6 +12,9 @@
 //------------------
 jerror_t DDetectorMatches_factory_WireBased::init(void)
 {
+   ENABLE_FCAL_SINGLE_HITS = false;
+   gPARMS->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);
+
 	return NOERROR;
 }
 
@@ -52,9 +55,6 @@ DDetectorMatches* DDetectorMatches_factory_WireBased::Create_DDetectorMatches(ja
 	vector<const DFCALShower*> locFCALShowers;
 	locEventLoop->Get(locFCALShowers);
 
-	vector<const DFCALHit*> locFCALHits;
-	locEventLoop->Get(locFCALHits);
-
 	vector<const DBCALShower*> locBCALShowers;
 	locEventLoop->Get(locBCALShowers);
 
@@ -76,15 +76,19 @@ DDetectorMatches* DDetectorMatches_factory_WireBased::Create_DDetectorMatches(ja
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackWireBasedVector, locDetectorMatches);
 
 	// Try to find matches between tracks and single hits in FCAL
-	if (locFCALHits.size()>0){
-	  vector<const DFCALHit*>locSingleHits;
-	  locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
-					   locSingleHits);
-	  
-	  for (size_t loc_j=0;loc_j<locTrackWireBasedVector.size();loc_j++){
-	    MatchToFCAL(locParticleID,locTrackWireBasedVector[loc_j],
-			locSingleHits,locDetectorMatches);
-	  }	  
+	if (ENABLE_FCAL_SINGLE_HITS){
+	  vector<const DFCALHit*> locFCALHits;
+	  locEventLoop->Get(locFCALHits);
+	  if (locFCALHits.size()>0){
+	    vector<const DFCALHit*>locSingleHits;
+	    locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackWireBasedVector.size();loc_j++){
+	      MatchToFCAL(locParticleID,locTrackWireBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }	  
+	  }
 	}
 
 	//Set flight-time/p correlations
