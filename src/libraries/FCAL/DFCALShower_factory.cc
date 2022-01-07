@@ -369,7 +369,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// with each track
 	
 	DVector3 fcalFacePos = ( shower->getPosition() - vertex );
-	if (SHOWER_POSITION_LOG) fcalFacePos = ( shower->getPosition_log() - vertex );
+	//if (SHOWER_POSITION_LOG) fcalFacePos = ( shower->getPosition_log() - vertex );
 	fcalFacePos.SetMag( fcalFacePos.Mag() * projPos.Z() / fcalFacePos.Z() );
  
 	double distance = ( fcalFacePos - projPos ).Mag();
@@ -405,14 +405,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       double sumV = 0;
       // if there is no nearest track, the defaults for xTr and yTr will result
       // in using the beam axis as the directional axis
-      if (!SHOWER_POSITION_LOG)
-	getUVFromHits( sumU, sumV, fcalHits,
-		       DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
-		       DVector3( xTr, yTr, 0 ) );
-      else
-	getUVFromHits( sumU, sumV, fcalHits,
-		       DVector3( shower->getPosition_log().X(), shower->getPosition_log().Y(), 0 ),
-		       DVector3( xTr, yTr, 0 ) );
+      //if (!SHOWER_POSITION_LOG)
+      getUVFromHits( sumU, sumV, fcalHits,
+		     DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
+		     DVector3( xTr, yTr, 0 ) );
+      //else
+      //getUVFromHits( sumU, sumV, fcalHits,
+      //	       DVector3( shower->getPosition_log().X(), shower->getPosition_log().Y(), 0 ),
+      //	       DVector3( xTr, yTr, 0 ) );
 
       shower->setSumU( sumU );
       shower->setSumV( sumV );
@@ -581,11 +581,11 @@ DFCALShower_factory::FillCovarianceMatrix(DFCALShower *shower){
   float shower_x = shower->getPosition().X();
   float shower_y = shower->getPosition().Y();
   float shower_z = shower->getPosition().Z();
-  if (SHOWER_POSITION_LOG) {
-    shower_x = shower->getPosition_log().X();
-    shower_y = shower->getPosition_log().Y();
-    shower_z = shower->getPosition_log().Z();
-  }
+  //if (SHOWER_POSITION_LOG) {
+  //shower_x = shower->getPosition_log().X();
+  //shower_y = shower->getPosition_log().Y();
+  //shower_z = shower->getPosition_log().Z();
+  //}
   float shower_r = sqrt(shower_x*shower_x + shower_y*shower_y);
   float shower_theta = atan2(shower_r,shower_z);
   float thlookup = shower_theta/3.14159265*180;

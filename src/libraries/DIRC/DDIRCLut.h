@@ -53,11 +53,15 @@ private:
 	bool DIRC_TRUTH_PIXELTIME;
 	bool DIRC_ROTATE_TRACK;
 	bool DIRC_THETAC_OFFSET;
+	bool DIRC_LUT_CORR;
+	bool DIRC_CHROMATIC_CORR;
 
 	double DIRC_CUT_TDIFFD;
 	double DIRC_CUT_TDIFFR;
 	double DIRC_SIGMA_THETAC;
 	double DIRC_LIGHT_V;
+	double DIRC_CHROMATIC_CONST;
+	double DIRC_CUT_ANGLE;
 
 	double dThetaCOffset[DDIRCGeometry::kBars][DDIRCGeometry::kPMTs]; 
 	double dRotationX[DDIRCGeometry::kBars], dRotationY[DDIRCGeometry::kBars], dRotationZ[DDIRCGeometry::kBars];
