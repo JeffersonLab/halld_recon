@@ -74,7 +74,7 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Layer by layer, create clusters of hits.
       thisLayer.clear();
       vector<const DFMWPCHit*>::iterator i = allHits.begin();
-      for (int iLayer=1;iLayer<6;iLayer++){
+      for (int iLayer=1;iLayer<7;iLayer++){
 	if (i==allHits.end()) break;
 	  
 	vector<const DFMWPCHit*> hits;	
