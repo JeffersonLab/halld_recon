@@ -171,7 +171,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       W(i,i)=1./varE;
       Esum+=E;
     }
-
+    
+    double chisq=1e6,chisq_old=1e6;  
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
     for (unsigned int j=0;j<num_hits;j++){
       if (clusterHits[j]->row<min_row) min_row=clusterHits[j]->row;
@@ -179,143 +180,180 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       if (clusterHits[j]->row>max_row) max_row=clusterHits[j]->row;
       if (clusterHits[j]->column>max_col) max_col=clusterHits[j]->column;
     }
-    // Create arrays to represent the cluster of hits to aid in peak search
-    int num_rows=max_row-min_row+3;
-    int num_cols=max_col-min_col+3;
-    vector<vector<double>>Emap(num_cols,vector<double>(num_rows));
-    vector<vector<unsigned int>>imap(num_cols,vector<unsigned int>(num_rows));
-    for (unsigned int j=0;j<num_hits;j++){
-      int ic=clusterHits[j]->column-min_col+1;
-      int ir=clusterHits[j]->row-min_row+1;
-      Emap[ic][ir]=clusterHits[j]->E;
-      imap[ic][ir]=j;      
+    if (min_row<100 && max_row>=100){
+      // Handle the interface between the insert and the lead glass blocks
+      // Find the block with the maximum energy and make a peak object
+      double Emax=0.,Esum=0.;
+      unsigned int jmax=0;
+      for (unsigned int j=0;j<num_hits;j++){
+	double Ej=clusterHits[j]->E;
+	Esum+=Ej;
+	if (Ej>Emax){
+	  Emax=Ej;
+	  jmax=j;
+	}
+      }
+      if (Emax>MIN_CLUSTER_SEED_ENERGY){
+	PeakInfo myPeak(Esum,clusterHits[jmax]->x,clusterHits[jmax]->y,0,0,
+			num_hits);
+	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
+	if (good_fit){
+	  peaks.push_back(myPeak);
+	}
+	else{
+	  // Use energy-weighted average for position and put myPeak in peak 
+	  // list
+	  myPeak.x=0.;
+	  myPeak.y=0.;
+	  for (unsigned int j=0;j<num_hits;j++){
+	    double Ej=clusterHits[j]->E;
+	    myPeak.x+=Ej*clusterHits[j]->x;
+	    myPeak.y+=Ej*clusterHits[j]->y;
+	  }
+	  myPeak.x/=Esum;
+	  myPeak.y/=Esum;
+	  peaks.push_back(myPeak);
+	}
+      }
     }
+    else {
+      // Handle clusters fully in insert or in lead glass region
+      // Create arrays to represent the cluster of hits to aid in peak search
+      int num_rows=max_row-min_row+3;
+      int num_cols=max_col-min_col+3;
+      vector<vector<double>>Emap(num_cols,vector<double>(num_rows));
+      vector<vector<unsigned int>>imap(num_cols,vector<unsigned int>(num_rows));
+      for (unsigned int j=0;j<num_hits;j++){
+	int ic=clusterHits[j]->column-min_col+1;
+	int ir=clusterHits[j]->row-min_row+1;
+	Emap[ic][ir]=clusterHits[j]->E;
+	imap[ic][ir]=j;      
+      }
   
-    double chisq=1e6,chisq_old=1e6;
-
-    // Loop over hits looking for peaks.
-    vector<PeakInfo>peak_candidates;
-    for (int ic=1;ic<num_cols-1;ic++){
-      for (int ir=1;ir<num_rows-1;ir++){
-	double E=Emap[ic][ir];
-	if (E>MIN_CLUSTER_SEED_ENERGY){
-	  double x=E*clusterHits[imap[ic][ir]]->x;
-	  double y=E*clusterHits[imap[ic][ir]]->y;
-	  int nhits_in_peak=1;
-	
-	  bool got_peak=true;
+      // Loop over hits looking for peaks.
+      vector<PeakInfo>peak_candidates;
+      for (int ic=1;ic<num_cols-1;ic++){
+	for (int ir=1;ir<num_rows-1;ir++){
+	  double E=Emap[ic][ir];
+	  if (E>MIN_CLUSTER_SEED_ENERGY){
+	    double x=E*clusterHits[imap[ic][ir]]->x;
+	    double y=E*clusterHits[imap[ic][ir]]->y;
+	    int nhits_in_peak=1;
+	    
+	    bool got_peak=true;
+	    int lo_col=ic-1;
+	    int hi_col=ic+1;
+	    int lo_row=ir-1;
+	    int hi_row=ir+1;
+	    for (int j=lo_col;j<=hi_col;j++){
+	      for (int k=lo_row;k<=hi_row;k++){
+		if (j==ic && k==ir) continue;
+		
+		double Ejk=Emap[j][k];
+		if (Ejk<0.001) continue;
+		
+		got_peak=(E-Ejk>0)&&got_peak;
+		if (got_peak){
+		  // Accumulate energy and energy weighted position variables
+		  E+=Ejk;
+		  x+=Ejk*clusterHits[imap[j][k]]->x;
+		  y+=Ejk*clusterHits[imap[j][k]]->y;
+		  
+		  nhits_in_peak++;
+		}      
+	      }
+	    }
+	    if (got_peak){
+	      x/=E;
+	      y/=E;
+	      peak_candidates.push_back(PeakInfo(E,x,y,ic,ir,nhits_in_peak));
+	    }
+	  }// cut on minimum energy of central block
+	} // loop over rows
+      } // loop over columns
+      
+      // Sort peak candidates by energy
+      if (peak_candidates.size()>0){
+	sort(peak_candidates.begin(),peak_candidates.end(),peak_E_cmp);
+      }
+      
+      // Loop over peak candidates to perform the peak fit and add good 
+      // candidates to the output list.
+      for (size_t i=0;i<peak_candidates.size();i++){
+	PeakInfo myPeak=peak_candidates[i];
+	if (peaks.size()>0){
+	  int ir=myPeak.ir;
+	  int ic=myPeak.ic;
 	  int lo_col=ic-1;
 	  int hi_col=ic+1;
 	  int lo_row=ir-1;
 	  int hi_row=ir+1;
-	  for (int j=lo_col;j<=hi_col;j++){
-	    for (int k=lo_row;k<=hi_row;k++){
-	      if (j==ic && k==ir) continue;
-	      
-	      double Ejk=Emap[j][k];
-	      if (Ejk<0.001) continue;
-	      
-	      got_peak=(E-Ejk>0)&&got_peak;
-	      if (got_peak){
-		// Accumulate energy and energy weighted position variables
-		E+=Ejk;
-		x+=Ejk*clusterHits[imap[j][k]]->x;
-		y+=Ejk*clusterHits[imap[j][k]]->y;
-
-		nhits_in_peak++;
-	      }      
-	    }
-	  }
-	  if (got_peak){
-	    x/=E;
-	    y/=E;
-	    peak_candidates.push_back(PeakInfo(E,x,y,ic,ir,nhits_in_peak));
-	  }
-	}// cut on minimum energy of central block
-      } // loop over rows
-    } // loop over columns
-
-    // Sort peak candidates by energy
-    if (peak_candidates.size()>0){
-      sort(peak_candidates.begin(),peak_candidates.end(),peak_E_cmp);
-    }
-
-    // Loop over peak candidates to perform the peak fit and add good candidates
-    // to the output list.
-    for (size_t i=0;i<peak_candidates.size();i++){
-      PeakInfo myPeak=peak_candidates[i];
-      if (peaks.size()>0){
-	int ir=myPeak.ir;
-	int ic=myPeak.ic;
-	int lo_col=ic-1;
-	int hi_col=ic+1;
-	int lo_row=ir-1;
-	int hi_row=ir+1;
-
-	// Subtract background due to the set of peaks already in the 
-	// list from the current peak
-	for (unsigned int m=0;m<peaks.size();m++){
-	  double frac=0.;
-	  for (int j=lo_col;j<=hi_col;j++){
-	    for (int k=lo_row;k<=hi_row;k++){
-	      if (Emap[j][k]>0.) {
-		frac+=CalcClusterEDeriv(clusterHits[imap[j][k]],peaks[m]);
+	  
+	  // Subtract background due to the set of peaks already in the 
+	  // list from the current peak
+	  for (unsigned int m=0;m<peaks.size();m++){
+	    double frac=0.;
+	    for (int j=lo_col;j<=hi_col;j++){
+	      for (int k=lo_row;k<=hi_row;k++){
+		if (Emap[j][k]>0.) {
+		  frac+=CalcClusterEDeriv(clusterHits[imap[j][k]],peaks[m]);
+		}
 	      }
 	    }
+	    myPeak.E-=peaks[m].E*frac;
 	  }
-	  myPeak.E-=peaks[m].E*frac;
 	}
-      }
-
-      if (myPeak.E>MIN_CLUSTER_SEED_ENERGY){
-	// Save the current peak list
-	vector<PeakInfo>saved_peaks=peaks;
-	PeakInfo peak_guess=myPeak;
-	if (myPeak.nhits>2){
-	  // Fit the data to find the best current guesses for the shower 
-	  // parameters for each peak within this group of FCAL hits.	  
-	  chisq_old=chisq;
-	  bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
-	  if (good_fit && chisq<chisq_old){
-	    // Check that the difference between this candidate and the peaks
-	    // in the list is physical (i.e., could be compatible with a pi0)
-	    bool keep_photon_candidate=CheckPeak(peaks,myPeak);
-	    if (keep_photon_candidate){
-	      peaks.push_back(myPeak);
+	
+	if (myPeak.E>MIN_CLUSTER_SEED_ENERGY){
+	  // Save the current peak list
+	  vector<PeakInfo>saved_peaks=peaks;
+	  PeakInfo peak_guess=myPeak;
+	  if (myPeak.nhits>2){
+	    // Fit the data to find the best current guesses for the shower 
+	    // parameters for each peak within this group of FCAL hits.	  
+	    chisq_old=chisq;
+	    bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
+	    if (good_fit && chisq<chisq_old){
+	      // Check that the difference between this candidate and the peaks
+	      // in the list is physical (i.e., could be compatible with a pi0)
+	      bool keep_photon_candidate=CheckPeak(peaks,myPeak);
+	      if (keep_photon_candidate){
+		peaks.push_back(myPeak);
+	      }
+	      else {
+		// Difference between this photon and the others in the list is 
+		// not physical.  Restore the old list.
+		peaks=saved_peaks;
+		chisq=chisq_old;
+	      }
 	    }
-	    else {
-	      // Difference between this photon and the others in the list is 
-	      // not physical.  Restore the old list.
+	    else if (peaks.size()==0){
+	      // Always add the first peak, even if the fit failed.
+	      // Use the initial guess for the peak info.
+	      peaks.push_back(peak_guess);
+	    }
+	    else{
+	      // No improvement from adding the new peak. Restore the old
+	      // list
 	      peaks=saved_peaks;
 	      chisq=chisq_old;
 	    }
-	  }
-	  else if (peaks.size()==0){
-	    // Always add the first peak, even if the fit failed.
-	    // Use the initial guess for the peak info.
-	    peaks.push_back(peak_guess);
-	  }
-	  else{
-	    // No improvement from adding the new peak. Restore the old
-	    // list
-	    peaks=saved_peaks;
-	    chisq=chisq_old;
-	  }
-	} // check number of hits in peak candidate
-      } // check threshold
-    } // loop over peak candidates
-    
-    if (DEBUG_HISTS&&num_hits>3&&peaks.size()==1){
-      HistProb->Fill(TMath::Prob(chisq,num_hits-3));
-
-      PeakInfo myPeakInfo=peaks[0];
-      for (unsigned int k=0;k<clusterHits.size();k++){
-	double Ecalc=0.,E=clusterHits[k]->E;
-	Ecalc+=myPeakInfo.E*CalcClusterEDeriv(clusterHits[k],myPeakInfo);
-	HistdE->Fill(E,E-Ecalc);
+	  } // check number of hits in peak candidate
+	} // check threshold
+      } // loop over peak candidates
+      
+      if (DEBUG_HISTS&&num_hits>3&&peaks.size()==1){
+	HistProb->Fill(TMath::Prob(chisq,num_hits-3));
+	
+	PeakInfo myPeakInfo=peaks[0];
+	for (unsigned int k=0;k<clusterHits.size();k++){
+	  double Ecalc=0.,E=clusterHits[k]->E;
+	  Ecalc+=myPeakInfo.E*CalcClusterEDeriv(clusterHits[k],myPeakInfo);
+	  HistdE->Fill(E,E-Ecalc);
+	}
       }
     }
-   
+
     if (num_hits>4){    
       SplitPeaks(W,clusterHits,peaks,chisq);
     }
@@ -477,9 +515,7 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 
 	  // look for adjacent clusters between the lead glass and the insert,
 	  // if present
-	  bool isInsert1=dFCALGeom->isInsertBlock(row1,col1);
-	  bool isInsert2=dFCALGeom->isInsertBlock(row2,col2);
-	  if ((isInsert1&&!isInsert2) || (isInsert2&&!isInsert1)){
+	  if (dFCALGeom->hitPairHasInsertHit(row1,row2)){
 	    double dx=(*iter)[i]->x-(*iter2)[j]->x;
 	    double dy=(*iter)[i]->y-(*iter2)[j]->y;
 	    if (fabs(dx)<borderCut && fabs(dy)<borderCut){
