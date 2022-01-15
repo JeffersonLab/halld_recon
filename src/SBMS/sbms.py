@@ -696,7 +696,12 @@ def AddSQLite(env):
 	SQLITECPP_CPPPATH = ["%s/include" % (sqlitecpp_home)]
 	env.AppendUnique(CPPPATH = SQLITECPP_CPPPATH)
 	sqlitecpp_ge_2_5 = version_greater_than_or_equal_to('SQLITECPP_VERSION', [2, 5, 0])
-	if sqlitecpp_ge_2_5.defined and sqlitecpp_ge_2_5.answer:
+	bms_osname = os.getenv('BMS_OSNAME')
+	if bms_osname.find('Ubuntu'):
+		on_ubuntu = True
+	else:
+		on_ubuntu = False
+	if sqlitecpp_ge_2_5.defined and sqlitecpp_ge_2_5.answer and not on_ubuntu:
 		SQLITECPP_LIBPATH = ["%s/lib64" % (sqlitecpp_home)]
 	else:
 		SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
