@@ -1,0 +1,15 @@
+The script is used to calibrate ADC and TDC times for 
+TAGH channels, for which the wrong RF bunch was selected.
+The PSC time is used as an external reference for these
+channels.
+
+bash run_time_shift.sh  run_number root_file
+
+bash run_time_shift.sh 90221 run_90221_test.root 
+
+New calibration constants will be stored in the OUTPUT_SHIFT/run_number 
+directory 
+
+To publish fadc_time_offsets and tdc_time_offsets
+
+`bash publish_time_shift.sh 90221 90221 90221`
