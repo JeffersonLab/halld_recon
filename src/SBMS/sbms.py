@@ -711,6 +711,7 @@ def AddSQLite(env):
 		AddSQLite.SQLITE_LINKFLAGS = "-Wl,-rpath=%s/lib" % (sqlite_home)
 		AddLinkFlags(env, AddSQLite.SQLITE_LINKFLAGS)
 	env.AppendUnique(LIBS = 'sqlite3')
+	env.AppendUnique(LIBS = 'fmt')
 
 ##################################
 # RCDB
