@@ -8,7 +8,7 @@
 #include "DTrackFinder.h"
 
 bool DTrackFinder_cdc_hit_cosmics_cmp(const DCDCTrackHit *a,const DCDCTrackHit *b){
-   return(a->wire->origin.Y()>b->wire->origin.Y());
+   return(a->wire->origin.Y()<b->wire->origin.Y());
 }
 
 bool DTrackFinder_cdc_hit_cmp(const DCDCTrackHit *a,const DCDCTrackHit *b){
@@ -36,13 +36,17 @@ DTrackFinder::DTrackFinder()
    VERBOSE=0;
    gPARMS->SetDefaultParameter("TRKFIND:VERBOSE", VERBOSE);
 
+   FDC_MATCH_RADIUS=2.;
+   if (COSMICS) FDC_MATCH_RADIUS=10.;
+   gPARMS->SetDefaultParameter("FDC:MATCH_RADIUS", FDC_MATCH_RADIUS);
+
    CDC_MATCH_RADIUS=2.5;
    gPARMS->SetDefaultParameter("TRKFIND:CDC_MATCH_RADIUS", CDC_MATCH_RADIUS);
 
-   CDC_MATCH_PHI=0.04;
+   CDC_MATCH_PHI=0.2;
    gPARMS->SetDefaultParameter("TRKFIND:CDC_MATCH_PHI", CDC_MATCH_PHI);
    
-   CDC_COSMIC_MATCH_PHI=0.35;
+   CDC_COSMIC_MATCH_PHI=0.55;
    gPARMS->SetDefaultParameter("TRKFIND:CDC_COSMIC_MATCH_PHI", CDC_COSMIC_MATCH_PHI);
 
    if (DEBUG_HISTS){
@@ -177,6 +181,7 @@ bool DTrackFinder::FindAxialSegments(void){
             for (iHit = 1; iHit < neighbors.size(); iHit++){
                dir+=neighbors[iHit]->wire->origin-origin;
             }
+	 
             if(dir.Mag() != 0.) dir.SetMag(1.);
          }
          else{
@@ -211,11 +216,19 @@ bool DTrackFinder::LinkCDCSegments(void){
       if (axial_segments[i].matched==false){
          DTrackFinder::cdc_track_t mytrack(axial_segments[i].hits);
 
-         DVector3 pos0=axial_segments[i].hits[0]->wire->origin;
+	 const DCDCWire *wire1=axial_segments[i].hits[0]->wire;
          DVector3 vhat=axial_segments[i].dir;
-
+	 int superlayer1=(wire1->ring-1)/4;
          for (unsigned int j=i+1;j<num_axial;j++){
-            if (axial_segments[j].matched==false){
+            if (axial_segments[j].matched==false){	      
+	      const DCDCWire *wire2=axial_segments[j].hits[0]->wire;
+	      int superlayer2=(wire2->ring-1)/4;
+	      if (superlayer1==superlayer2){
+		// Don't try to link segments in the same ring for events with 
+		// the beam 
+		if (COSMICS==false) continue;
+	      }
+
                double dphi = axial_segments[j].dir.Phi() - axial_segments[i].dir.Phi();
                while (dphi>M_PI) dphi-=2*M_PI;
                while (dphi<-M_PI) dphi+=2*M_PI;
@@ -231,12 +244,16 @@ bool DTrackFinder::LinkCDCSegments(void){
                         axial_segments[j].hits.end());
                   if (COSMICS) sort(mytrack.axial_hits.begin(),mytrack.axial_hits.end(),DTrackFinder_cdc_hit_cosmics_cmp);
                   else sort(mytrack.axial_hits.begin(),mytrack.axial_hits.end(),DTrackFinder_cdc_hit_cmp);
+
+		  unsigned int last_index=mytrack.axial_hits.size()-1;
+		  vhat=mytrack.axial_hits[last_index]->wire->origin
+		    -mytrack.axial_hits[0]->wire->origin;
+		  vhat.SetMag(1.);
                }
             }
          }
          //  Position of the first axial wire in the track  
-         pos0=mytrack.axial_hits[0]->wire->origin;
-         vhat.SetMag(1.);
+         DVector3 pos0=mytrack.axial_hits[0]->wire->origin;
          if (VERBOSE){
             jout << " Axial track Formed: pos vhat" << endl;
             pos0.Print(); vhat.Print();
@@ -244,40 +261,6 @@ bool DTrackFinder::LinkCDCSegments(void){
                jout << "  R" << mytrack.axial_hits[jj]->wire->ring << " S" << mytrack.axial_hits[jj]->wire->straw << endl;
             }
          }
-
-         // Grab axial hits not associated with segments
-         bool got_match=false;
-         for (unsigned int j=0;j<axial_hits.size();j++){
-            if (axial_hits[j].used==false){
-               if (MatchCDCHit(vhat,pos0,axial_hits[j].hit,CDC_MATCH_RADIUS)){
-                  axial_hits[j].used=true;
-                  mytrack.axial_hits.push_back(axial_hits[j].hit);
-                  if (VERBOSE) jout << "Added to axial track R" << axial_hits[j].hit->wire->ring << " S" << axial_hits[j].hit->wire->straw << endl;
-                  got_match=true;
-               }
-            }
-         }
-         // Resort if we added axial hits and recompute direction vector
-         if (got_match){
-            if (COSMICS){
-               sort(mytrack.axial_hits.begin(),mytrack.axial_hits.end(),
-                     DTrackFinder_cdc_hit_cosmics_cmp);
-            }
-            else{
-               sort(mytrack.axial_hits.begin(),mytrack.axial_hits.end(),
-                     DTrackFinder_cdc_hit_cmp);
-            }
-
-            vhat.SetXYZ(0., 0., 0.);
-            for (unsigned int iHit = 1; iHit < mytrack.axial_hits.size(); iHit++){
-               DVector3 temp =mytrack.axial_hits[iHit]->wire->origin
-                  -mytrack.axial_hits[0]->wire->origin;
-               if(mytrack.axial_hits[iHit]->wire->ring != mytrack.axial_hits[0]->wire->ring) vhat += temp;
-            }
-            vhat.SetMag(1.);   
-            pos0=mytrack.axial_hits[0]->wire->origin;
-         }
-
 
          // Now try to associate stereo hits with this track
          for (unsigned int j=0;j<stereo_hits.size();j++){
@@ -314,7 +297,7 @@ bool DTrackFinder::MatchCDCHit(const DVector3 &vhat,const DVector3 &pos0,
    double scale=1./(1.-vhat_dot_uhat*vhat_dot_uhat);
    double s=scale*(vhat_dot_uhat*diff.Dot(vhat)-diff.Dot(uhat));
    double t=scale*(diff.Dot(vhat)-vhat_dot_uhat*diff.Dot(uhat));
-   if (t<0) return false;
+   if (COSMICS==false && t<0) return false;
    double d=(diff+s*uhat-t*vhat).Mag();
 
    if (d<cut) return true;
@@ -333,7 +316,7 @@ bool DTrackFinder::MatchCDCStereoHit(const DVector3 &tdir,const DVector3 &t0,
    double wdirCrosstdir=wdir.X()*tdir.Y()-wdir.Y()*tdir.X();
    double w=diffCrosstdir/wdirCrosstdir;
    double t=diffCrosswdir/wdirCrosstdir;
-   if(t<0.) return false;
+   if (COSMICS==false && t<0.) return false;
    if(fabs(w)<hit->wire->L/2.) return true;
 
    return false;
@@ -350,7 +333,7 @@ jerror_t DTrackFinder::cdc_track_t::FindStateVector(bool IsCosmics){
    double xa=pos0.x();
    double ya=pos0.y();
  
-   double sumv=0,sumx=0,sumy=0,sumz=0,sumxx=0,sumyy=0,sumxz=0,sumyz=0;
+   double sumv=0,sumz=0,sumrz=0,sumr=0,sumrr=0.;
    for (unsigned int i=0;i<this->stereo_hits.size();i++){
       // Intersection of line in xy-plane with this stereo straw
       DVector3 origin_s=this->stereo_hits[i]->wire->origin;
@@ -361,51 +344,34 @@ jerror_t DTrackFinder::cdc_track_t::FindStateVector(bool IsCosmics){
       double dy=ya-origin_s.y();
       double s=(dx*vy-dy*vx)/(ux_s*vy-uy_s*vx);
       DVector3 pos1=origin_s+s*dir_s;
-      double x=pos1.x(),y=pos1.y(),z=pos1.z();
+      double z=pos1.z();
+      double r=(pos1-pos0).Perp();
 
       if (z>17.0 && z<167.0)
       { // Check for CDC dimensions
          sumv+=1.;
-         sumx+=x;
-         sumxx+=x*x;
-         sumy+=y;
-         sumyy+=y*y;
          sumz+=z;
-         sumxz+=x*z;
-         sumyz+=y*z;
+	 sumr+=r;
+	 sumrz+=r*z;
+	 sumrr+=r*r;
       }
    }
-   /*
-   if (IsCosmics==false){  // Encourage track to come from target region
-     sumz+=TARGET_Z;
-     sumv+=1.;
-   }
-   */
-   const double EPS=1e-4;
-   double xdenom=sumv*sumxz-sumx*sumz;
-   if (fabs(xdenom)<EPS) return VALUE_OUT_OF_RANGE;
 
-   double ydenom=sumv*sumyz-sumy*sumz;
-   if (fabs(ydenom)<EPS) return VALUE_OUT_OF_RANGE;
+   // Find the z position of the start of the track
+   double denom=sumv*sumrr-sumr*sumr;
+   if (fabs(denom)<1e-4) return VALUE_OUT_OF_RANGE;
+   double z0=(sumz*sumrr-sumr*sumrz)/denom;
 
-   double xtemp=sumv*sumxx-sumx*sumx;
-   double xslope=xtemp/xdenom;
-   double ytemp=sumv*sumyy-sumy*sumy;
-   double yslope=ytemp/ydenom;
-
-   //  double z0x=(sumxx*sumz-sumx*sumxz)/xtemp;
-   double z0y=(sumyy*sumz-sumy*sumyz)/ytemp;
-
-   // Increment just beyond point largest in y
-   double delta_z=(yslope>0)?0.5:-0.5;
-
-   //Starting z position
-   this->z=z0y+ya/yslope+delta_z;
-
-   this->S(state_x)=xa+xslope*delta_z;
-   this->S(state_y)=ya+yslope*delta_z;
-   this->S(state_tx)=xslope;
-   this->S(state_ty)=yslope;
+   // Find the direction of the track
+   double tanl=(sumv*sumrz-sumz*sumr)/denom;
+   double dydx=vy/vx;
+   double temp=1./tanl/sqrt(1.+dydx*dydx);
+  
+   this->z=z0;
+   this->S(state_x)=xa;
+   this->S(state_y)=ya;
+   this->S(state_tx)=temp;
+   this->S(state_ty)=dydx*temp;
 
    return NOERROR;
 
@@ -470,7 +436,6 @@ double DTrackFinder::FindDoca(double z,const DMatrix4x1 &S,const DVector3 &wdir,
 bool DTrackFinder::FindFDCSegments(void){
    if (fdc_hits.size()==0) return false;
    unsigned int num_hits=fdc_hits.size();
-   const double MATCH_RADIUS=2.0;
    const double ADJACENT_MATCH_RADIUS=1.0;
 
    // Order points by z
@@ -522,7 +487,7 @@ bool DTrackFinder::FindFDCSegments(void){
                      double delta_z=fabs(z-fdc_hits[m].hit->wire->origin.z());
                      if (delta<delta_min){
                         delta_min=delta;
-                        if (delta<MATCH_RADIUS && delta_z<11.0) {
+                        if (delta<FDC_MATCH_RADIUS && delta_z<11.0) {
                            match=m;
                            hasMatch = true;
                         }
@@ -578,8 +543,7 @@ bool DTrackFinder::FindFDCSegments(void){
 
 // Link segments from package to package by doing straight-line projections
 bool DTrackFinder::LinkFDCSegments(void){
-   // Cuts for matching
-   const double MATCH_RADIUS=2.0;
+   // matching cut
    const double LINK_MATCH_RADIUS=7.0;
 
    // Vector to store hits for the linked segments
@@ -681,7 +645,7 @@ bool DTrackFinder::LinkFDCSegments(void){
                DVector2 proj(S(state_x)+z*S(state_tx),S(state_y)+z*S(state_ty));
                double diff=(fdc_tracks[j].hits[0]->xy-proj).Mod();
 
-               if (diff<MATCH_RADIUS){
+               if (diff<FDC_MATCH_RADIUS){
                   // Combine the hits from the two tracks and recompute the state 
                   // vector S
                   if (last_pack_1<first_pack_2){
@@ -720,7 +684,7 @@ bool DTrackFinder::LinkFDCSegments(void){
                   DVector2 proj(S(state_x)+z*S(state_tx),S(state_y)+z*S(state_ty));
                   double diff=(fdc_segments[j][k].hits[0]->xy-proj).Mod();
 
-                  if (diff<MATCH_RADIUS){
+                  if (diff<FDC_MATCH_RADIUS){
                      fdc_segments[j][k].matched=true;
 
                      // Add hits and recompute S
