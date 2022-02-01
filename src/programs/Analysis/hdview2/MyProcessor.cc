@@ -100,9 +100,11 @@ MyProcessor::MyProcessor()
 	
 	RMAX_INTERIOR = 65.0;
 	RMAX_EXTERIOR = 88.0;
+    ZMAX = 890.0;
 	gPARMS->SetDefaultParameter("RT:RMAX_INTERIOR",	RMAX_INTERIOR, "cm track drawing Rmax inside solenoid region");
 	gPARMS->SetDefaultParameter("RT:RMAX_EXTERIOR",	RMAX_EXTERIOR, "cm track drawing Rmax outside solenoid region");
-	
+    gPARMS->SetDefaultParameter("RT:ZMAX",	ZMAX, "cm track drawing ZMax");
+
 	BCALVERBOSE = 0;
 	gPARMS->SetDefaultParameter("BCALVERBOSE", BCALVERBOSE, "Verbosity level for BCAL objects and display");
 
@@ -2103,9 +2105,10 @@ void MyProcessor::AddKinematicDataTrack(const DKinematicData* kd, int color, dou
 {
 	// Create a reference trajectory with the given kinematic data and swim
 	// it through the detector.
-	DReferenceTrajectory rt(Bfield);
+	DReferenceTrajectoryHDV rt(Bfield);
 	rt.Rsqmax_interior = RMAX_INTERIOR*RMAX_INTERIOR;
 	rt.Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
+    rt.SetZmaxTrackBoundary( ZMAX );
 
 	if(MATERIAL_MAP_MODEL=="DRootGeom"){
 		rt.SetDRootGeom(RootGeom);
@@ -2139,9 +2142,10 @@ void MyProcessor::GetIntersectionWithCalorimeter(const DKinematicData* kd, DVect
 {
 	// Create a reference trajectory with the given kinematic data and swim
 	// it through the detector.
-	DReferenceTrajectory rt(Bfield);
+	DReferenceTrajectoryHDV rt(Bfield);
 	rt.Rsqmax_interior = RMAX_INTERIOR*RMAX_INTERIOR;
 	rt.Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
+	rt.SetZmaxTrackBoundary( ZMAX );
 
 	if(MATERIAL_MAP_MODEL=="DRootGeom"){
 		rt.SetDRootGeom(RootGeom);
@@ -2242,7 +2246,7 @@ unsigned int MyProcessor::GetNrows(const string &factory, string tag)
 //------------------------------------------------------------------
 // GetDReferenceTrajectory 
 //------------------------------------------------------------------
-void MyProcessor::GetDReferenceTrajectory(string dataname, string tag, unsigned int index, DReferenceTrajectory* &rt, vector<const DCDCTrackHit*> &cdchits)
+void MyProcessor::GetDReferenceTrajectory(string dataname, string tag, unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits)
 {
 _DBG__;
 	// initialize rt to NULL in case we don't find the one requested
@@ -2326,9 +2330,10 @@ _DBG_<<"mass="<<mass<<endl;
 	
 	// Create a new DReference trajectory object. The caller takes
 	// ownership of this and so they are responsible for deleting it.
-	rt = new DReferenceTrajectory(Bfield);
+	rt = new DReferenceTrajectoryHDV(Bfield);
 	rt->Rsqmax_interior = RMAX_INTERIOR*RMAX_INTERIOR;
 	rt->Rsqmax_exterior = RMAX_EXTERIOR*RMAX_EXTERIOR;
+	rt->SetZmaxTrackBoundary( ZMAX );
 	rt->SetMass(mass);
 	if(MATERIAL_MAP_MODEL=="DRootGeom"){
 		rt->SetDRootGeom(RootGeom);

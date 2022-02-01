@@ -17,6 +17,7 @@ subdirs = [
 'FCAL_invmass',
 'FDC_online',
 'FDC_Efficiency',
+'FMWPC_online',
 'PSC_online',
 'RF_online',
 'pedestal_online',
@@ -61,6 +62,7 @@ subdirs = [
 'lumi_mon',
 'scaler_primex'
 ,'cppFMWPC'
+,'cppFMWPC_ana'
 
 ]
 

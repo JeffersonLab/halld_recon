@@ -27,6 +27,7 @@ class DParticleID_PID1:public DParticleID{
 	double GetEOverPMean(DetectorSystem_t detector,double p) const;
 	double GetEOverPSigma(DetectorSystem_t detector,double p) const;
 	double GetTimeVariance(DetectorSystem_t detector,Particle_t particle,double p) const;
+	double GetTimeMean(DetectorSystem_t detector,Particle_t particle,double p) const;
 
 	jerror_t CalcDCdEdxChiSq(DChargedTrackHypothesis *locChargedTrackHypothesis) const;
 	inline double Function_dEdx(double locBetaGamma, const vector<float> &locParams) const{return locParams[0]/(locBetaGamma*locBetaGamma)+locParams[1]/locBetaGamma + locParams[2] + locParams[3]*locBetaGamma;}
@@ -70,12 +71,20 @@ class DParticleID_PID1:public DParticleID{
 	vector<float> dTimeSigmaParams_BCAL_KPlus;
 	vector<float> dTimeSigmaParams_BCAL_PiPlus;
 	vector<float> dTimeSigmaParams_BCAL_Positron;
+	vector<float> dTimeMeanParams_BCAL_Proton;
+	vector<float> dTimeMeanParams_BCAL_KPlus;
+	vector<float> dTimeMeanParams_BCAL_PiPlus;
+	vector<float> dTimeMeanParams_BCAL_Positron;
 	vector<float> dEOverPSigmaParams_BCAL;
 
 	vector<float> dTimeSigmaParams_FCAL_Proton;
 	vector<float> dTimeSigmaParams_FCAL_KPlus;
 	vector<float> dTimeSigmaParams_FCAL_PiPlus;
 	vector<float> dTimeSigmaParams_FCAL_Positron;
+	vector<float> dTimeMeanParams_FCAL_Proton;
+	vector<float> dTimeMeanParams_FCAL_KPlus;
+	vector<float> dTimeMeanParams_FCAL_PiPlus;
+	vector<float> dTimeMeanParams_FCAL_Positron;
 	vector<float> dEOverPSigmaParams_FCAL;
 
  private:

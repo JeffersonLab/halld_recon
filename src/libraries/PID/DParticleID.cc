@@ -311,6 +311,14 @@ DParticleID::DParticleID(JEventLoop *loop)
 	
 	// Initialize DIRC LUT
 	loop->GetSingle(dDIRCLut);
+
+	// FCAL timewalk parameters
+	dFCALTimewalkPar1=3.89677;
+	dFCALTimewalkPar2=1.22325;	
+	// temporary command line arguments for testing time walk
+	gPARMS->SetDefaultParameter("FCAL:TIMEWALK1",dFCALTimewalkPar1);
+	gPARMS->SetDefaultParameter("FCAL:TIMEWALK2",dFCALTimewalkPar2);
+	
 }
 
 // Group fitted tracks according to candidate id
@@ -745,6 +753,14 @@ double DParticleID::Distance_ToTrack(const DFCALShower *locFCALShower,
 	}
     }
   return sqrt(d2min);
+}
+// routine to find the distance to a single hit in the FCAL that is 
+// closest to a projected track position
+double DParticleID::Distance_ToTrack(const DFCALHit *locFCALHit,
+				     const DVector3 &locProjPos) const{
+  double dx=locFCALHit->x-locProjPos.x();
+  double dy=locFCALHit->y-locProjPos.y();
+  return sqrt(dx*dx+dy*dy);
 }
 
 
@@ -1221,6 +1237,23 @@ bool DParticleID::ProjectTo_SC(const DReferenceTrajectory* rt, unsigned int locS
 }
 
 // The routines below use the extrapolations vector from the track
+bool DParticleID::Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const{
+  if (fabs(locFCALHit->t-extrapolation.t-locStartTime)>OUT_OF_TIME_CUT)
+    return false;
+
+  double dx=locFCALHit->x-extrapolation.position.x();
+  double dy=locFCALHit->y-extrapolation.position.y();
+  locDOCA=sqrt(dx*dx+dy*dy);
+
+  double p=extrapolation.momentum.Mag();
+  double theta=extrapolation.momentum.Theta()*180./M_PI;
+
+  if (locDOCA<(FCAL_CUT_PAR1+FCAL_CUT_PAR2/p)*(1.+FCAL_CUT_PAR3*theta*theta)){
+    locHitTime=locFCALHit->t-dFCALTimewalkPar1*exp(-dFCALTimewalkPar2*locFCALHit->E);
+    return true;
+  }
+  return false;
+}
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {
@@ -1912,6 +1945,31 @@ shared_ptr<const DFCALShowerMatchParams> DParticleID::Get_BestFCALMatchParams(ve
 			continue;
 		locMinDistance = locShowerMatchParams[loc_i]->dDOCAToShower;
 		locBestMatchParams = locShowerMatchParams[loc_i];
+	}
+	return locBestMatchParams;
+}
+
+bool DParticleID::Get_BestFCALSingleHitMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALSingleHitMatchParams>& locBestMatchParams) const
+{
+	//choose the "best" shower to use for computing quantities
+	vector<shared_ptr<const DFCALSingleHitMatchParams> > locMatchParams;
+	if(!locDetectorMatches->Get_FCALSingleHitMatchParams(locTrack, locMatchParams))
+		return false;
+
+	locBestMatchParams = Get_BestFCALSingleHitMatchParams(locMatchParams);
+	return true;
+}
+
+shared_ptr<const DFCALSingleHitMatchParams> DParticleID::Get_BestFCALSingleHitMatchParams(vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const
+{
+	double locMinDistance = 9.9E9;
+	shared_ptr<const DFCALSingleHitMatchParams> locBestMatchParams;
+	for(size_t loc_i = 0; loc_i < locMatchParams.size(); ++loc_i)
+	{
+		if(locMatchParams[loc_i]->dDOCAToHit >= locMinDistance)
+			continue;
+		locMinDistance = locMatchParams[loc_i]->dDOCAToHit;
+		locBestMatchParams = locMatchParams[loc_i];
 	}
 	return locBestMatchParams;
 }
@@ -3063,6 +3121,38 @@ bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &ext
 }  
 
 bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
+				const vector<const DFCALHit*>& FCALHits,
+				double& StartTime) const{
+  if (FCALHits.size()==0) return false;
+  if (extrapolations.size()==0) return false;
+  double StartTimeGuess=StartTime;
+  DVector3 trackpos=extrapolations[0].position;
+  double d_min=1e6;
+  unsigned int best_fcal_match=0;
+  for (unsigned int i=0;i<FCALHits.size();i++){
+    const DFCALHit *fcal_hit=FCALHits[i];
+    double d=Distance_ToTrack(fcal_hit,trackpos);
+    if (d<d_min){
+      d_min=d;
+      best_fcal_match=i;
+    }
+  }
+  StartTime=FCALHits[best_fcal_match]->t-extrapolations[0].t;
+  // apply timewalk correction
+  StartTime-=dFCALTimewalkPar1*exp(-dFCALTimewalkPar2*FCALHits[best_fcal_match]->E); 
+  if (fabs(StartTime-StartTimeGuess)>OUT_OF_TIME_CUT) return false;
+
+  double p=extrapolations[0].momentum.Mag();
+  double cut=FCAL_CUT_PAR1+FCAL_CUT_PAR2/p;
+  if (d_min<cut){
+    return true;
+  }
+
+  return false;
+}
+  
+
+bool DParticleID::Get_StartTime(const vector<DTrackFitter::Extrapolation_t> &extrapolations,
 			    const vector<const DSCHit*>& SCHits, 
 			    double& StartTime) const{
   if (SCHits.size()==0) return false;
@@ -3262,6 +3352,7 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
   if (locBcalParms!=NULL){
     double dt_bcal=locBcalParms->dBCALShower->t-locBcalParms->dFlightTime-locT0;
     double vart_bcal=GetTimeVariance(SYS_BCAL,locPID,locP);
+    dt_bcal-=GetTimeMean(SYS_BCAL,locPID,locP);
     locChiSq_sum+=(dt_bcal*dt_bcal)/vart_bcal;
     locNDF++;
   }
@@ -3269,6 +3360,15 @@ double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHy
   shared_ptr<const DFCALShowerMatchParams>locFcalParms=locChargedHypo->Get_FCALShowerMatchParams();
   if (locFcalParms!=NULL){
     double dt_fcal=locFcalParms->dFCALShower->getTime()-locFcalParms->dFlightTime-locT0;
+    dt_fcal-=GetTimeMean(SYS_FCAL,locPID,locP);
+    double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
+    locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
+    locNDF++;
+  }
+
+  shared_ptr<const DFCALSingleHitMatchParams>locFcalSingleHitParms=locChargedHypo->Get_FCALSingleHitMatchParams();
+  if (locFcalSingleHitParms!=NULL){
+    double dt_fcal=locFcalSingleHitParms->dTHit-locFcalSingleHitParms->dFlightTime-locT0;
     double vart_fcal=GetTimeVariance(SYS_FCAL,locPID,locP);
     locChiSq_sum+=(dt_fcal*dt_fcal)/vart_fcal;
     locNDF++;
@@ -3671,4 +3771,29 @@ double DParticleID::Get_CorrectedHitTime(const DSCHit* locSCHit,
 
 const DDIRCLut* DParticleID::Get_DIRCLut() const {
 	return dDIRCLut;
+}
+
+// Look for single hits in the FCAL not associated with clusters
+void DParticleID::GetSingleFCALHits(vector<const DFCALShower*>&locFCALShowers,
+				    vector<const DFCALHit *>&locFCALHits,
+				    vector<const DFCALHit*>&locSingleHits) const {
+  vector<JObject::oid_t>used_fcal_ids;	  
+  for (size_t loc_j=0;loc_j<locFCALShowers.size();loc_j++){
+    vector<const DFCALCluster*>clusters;
+    locFCALShowers[loc_j]->Get(clusters);
+    if (clusters.size()>0){
+      vector<const DFCALHit*>fcal_hits_in_cluster;
+      clusters[0]->Get(fcal_hits_in_cluster);
+      for (size_t loc_i=0;loc_i<fcal_hits_in_cluster.size();loc_i++){
+	used_fcal_ids.push_back(fcal_hits_in_cluster[loc_i]->id);
+      }
+    }
+  }
+  for (size_t loc_i=0;loc_i<locFCALHits.size();loc_i++){
+    if (find(used_fcal_ids.begin(),used_fcal_ids.end(),
+	     locFCALHits[loc_i]->id)!=used_fcal_ids.end()){
+      continue;
+    }
+    locSingleHits.push_back(locFCALHits[loc_i]);
+  }
 }
