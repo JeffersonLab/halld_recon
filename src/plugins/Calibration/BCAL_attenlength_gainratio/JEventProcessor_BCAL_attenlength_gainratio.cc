@@ -78,7 +78,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
 	TDirectory *bcalgainratio = main->mkdir("bcalgainratio");
 	bcalgainratio->cd();
 
-	char histname[255], modtitle[255], histtitle[255];
+	char histname[255], modtitle[50], histtitle[255];
 
 	sprintf(histtitle,"All channels;Z Position (cm);log of integral ratio US/DS");
 	logintratiovsZ_all = new TH2I("logintratiovsZ_all",histtitle,500,-250.0,250.0,500,-3,3);
