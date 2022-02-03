@@ -286,7 +286,6 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // hit->QF = digihit->QF;
     // hit->itrack = -1;
     // hit->ptype = 0;
-    hit->dE = 0;
 
     hit->AddAssociatedObject(digihit);
 
