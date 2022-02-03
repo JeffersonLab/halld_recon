@@ -17,6 +17,7 @@ class DFMWPCTruthHit:public JObject{
 		int layer;   // 1-8
 		int wire;    // 1-144
 		float dE;    // GeV
+		float q; // fC
 		float dx;    // cm
 		float t;     // ns
 
