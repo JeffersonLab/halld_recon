@@ -23,6 +23,9 @@
 #include <DCoordinateSystem.h>
 #include <TRACKING/DReferenceTrajectory.h>
 #include "DReferenceTrajectoryHDV.h"
+#include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DFMWPCCluster.h>
+#include <FMWPC/DFMWPCMatchedTrack.h>
 
 class DQuickFit;
 class DTrackCandidate_factory;
@@ -103,6 +106,7 @@ class MyProcessor:public JEventProcessor
 			       unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits);
   void GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits);
   void FormatHistogram(TH2*, int);
+
 
  private:	
   
