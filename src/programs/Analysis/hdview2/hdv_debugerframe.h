@@ -30,13 +30,14 @@
 #include <TG3DLine.h>
 
 
-class hdv_mainframe;
+//class hdv_mainframe;
+#include "hdv_mainframe.h"
+
 class DKinematicData;
 class DTrackWireBased;
 class DTrackTimeBased;
 
 #if !(defined(__CINT__) || defined(__CLING__))
-#include "hdv_mainframe.h"
 #include <PID/DKinematicData.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackTimeBased.h>

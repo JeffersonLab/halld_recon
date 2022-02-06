@@ -30,20 +30,23 @@
 
 class hdv_mainframe;
 class trk_mainframe;
+class fmwpc_mainframe;
 class hdv_optionsframe;
 class hdv_debugerframe;
 class hdv_fulllistframe;
 class hdv_endviewAframe;
 class hdv_endviewBframe;
 class DKinematicData;
-#if !(defined(__CINT__) || defined(__CLING__))
+
 #include "trk_mainframe.h"
+#include "fmwpc_mainframe.h"
 #include "hdv_optionsframe.h"
 #include "hdv_debugerframe.h"
 #include "hdv_fulllistframe.h"
 #include "hdv_endviewAframe.h"
 #include "hdv_endviewBframe.h"
-#endif
+
+
 
 class hdv_mainframe:public TGMainFrame {
 
@@ -69,6 +72,7 @@ class hdv_mainframe:public TGMainFrame {
 		void DoTimer(void);
 		
 		void DoOpenTrackInspector(void);
+        void DoOpenFMWPCInspector(void);
 		void DoOpenOptionsWindow(void);
 		void DoOpenFullListWindow(void);
 		void DoOpenTOFInspector(void);
@@ -79,6 +83,7 @@ class hdv_mainframe:public TGMainFrame {
 		void DoUpdateBcalDisp(void);
 
 		void DoClearTrackInspectorPointer(void);
+        void DoClearFMWPCInspectorPointer(void);
 		void DoClearOptionsWindowPointer(void);
 		void DoClearTOFInspectorPointer(void);
 		void DoClearFCALInspectorPointer(void);
@@ -152,6 +157,7 @@ class hdv_mainframe:public TGMainFrame {
 	private:
 	
 		trk_mainframe *trkmf;
+        fmwpc_mainframe *fmwpcmf;
 		hdv_optionsframe *optionsmf;
 		hdv_debugerframe *debugermf;
 		TCanvas *bcaldispmf;
