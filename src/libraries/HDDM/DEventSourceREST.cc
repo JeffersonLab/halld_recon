@@ -1692,9 +1692,19 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 	       {
 		 locTOFHitMatchParams->dEdx1 = locTofDedxIterator->getDEdx1();
 		 locTOFHitMatchParams->dEdx2 = locTofDedxIterator->getDEdx2();
+
+		 // check if already have average dE/dx
+		 if(locTOFHitMatchParams->dEdx > 0) continue;
+		 
+		 // average dE/dx is missing: take average if hits in both planes, otherwise use single plane value
+		 if(locTOFHitMatchParams->dEdx1>0 && locTOFHitMatchParams->dEdx2>0)
+			 locTOFHitMatchParams->dEdx = (locTOFHitMatchParams->dEdx1 + locTOFHitMatchParams->dEdx2) / 2.0; 
+		 else if(locTOFHitMatchParams->dEdx1>0)
+			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx1;
+		 else if(locTOFHitMatchParams->dEdx2>0) 
+			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx2;
 	       }
-	   }
-	 
+	   }	 
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();
