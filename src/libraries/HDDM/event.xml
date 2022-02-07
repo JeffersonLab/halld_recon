@@ -216,7 +216,7 @@
       <forwardMWPC minOccurs="0">
         <fmwpcChamber layer="int" maxOccurs="unbounded" minOccurs="0" wire="int">
           <fmwpcTruthHit q="float" dE="float" dx="float" maxOccurs="unbounded" t="float"/>
-          <fmwpcHit q="float" maxOccurs="unbounded" t="float"/>
+          <fmwpcHit q="float" amp="float" maxOccurs="unbounded" t="float"/>
         </fmwpcChamber>
         <fmwpcTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>

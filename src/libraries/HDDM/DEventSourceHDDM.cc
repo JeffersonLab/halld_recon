@@ -2809,7 +2809,8 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       DFMWPCHit *hit = new DFMWPCHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
-      hit->q    = iter->getQ();
+      hit->q     = iter->getQ();
+      hit->amp   = iter->getAmp(); 
       hit->t     = iter->getT();
       data.push_back(hit);
    }
