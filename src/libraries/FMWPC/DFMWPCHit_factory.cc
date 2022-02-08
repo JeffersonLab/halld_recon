@@ -280,7 +280,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // Values for d, itrack, ptype only apply to MC data
     // note that wire counting starts at 1
     hit->q = q;
-    // hit->amp = amp;
+    hit->amp = amp;
     hit->t = t;
     // hit->d = 0.0;
     // hit->QF = digihit->QF;
