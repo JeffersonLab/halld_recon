@@ -21,6 +21,8 @@ class DFMWPCCluster:public jana::JObject{
 		int layer; ///< #1-6 FMWPC layer
 		float q; ///< total charge in the cluster
 		float u; ///< center of gravity of cluster in wire coordinates
+		int first_wire; ///< first wire in cluster 1-144
+        int last_wire; ///< last wire in cluster 1-144
 		int Nhits; ///< Number of wire hits in cluster
 		
 		// This method is used primarily for pretty printing
@@ -29,6 +31,8 @@ class DFMWPCCluster:public jana::JObject{
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "q", "%10.2f", q);
 			AddString(items, "u", "%3.4f", u);
+            AddString(items, "first_wire", "%3d", first_wire);
+            AddString(items, "last_wire", "%3d", last_wire);
 			AddString(items, "Nhits", "%d", Nhits);
 		}
 		

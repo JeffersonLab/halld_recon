@@ -1,6 +1,6 @@
 // $Id$
 //
-//    File: trk_mainframe.h
+//    File: fmwpc_mainframe.h
 // Created: Wed Apr  9 08:11:16 EDT 2008
 // Creator: davidl (on Darwin Amelia.local 8.11.1 i386)
 //
@@ -10,8 +10,8 @@
 // It is OK to do that in the .cc file, just not here in the 
 // header.
 
-#ifndef _trk_mainframe_
-#define _trk_mainframe_
+#ifndef _fmwpc_mainframe_
+#define _fmwpc_mainframe_
 
 #include <iostream>
 #include <cmath>
@@ -36,8 +36,6 @@
 #include <TH1.h>
 #include <TLatex.h>
 
-
-
 #include "hdv_mainframe.h"
 
 
@@ -45,10 +43,10 @@ class DCoordinateSystem;
 class DReferenceTrajectory;
 class DCDCTrackHit;
 
-class trk_mainframe:public TGMainFrame{
+class fmwpc_mainframe:public TGMainFrame{
 	public:
-		trk_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t w, UInt_t h);
-		virtual ~trk_mainframe();
+		fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t w, UInt_t h);
+		virtual ~fmwpc_mainframe();
 		
 		void DoNewEvent(void);
 		void DoMyRedraw(void);
@@ -57,10 +55,8 @@ class trk_mainframe:public TGMainFrame{
 		void DoTagMenuUpdate(Int_t widgetId, Int_t id);
 		void DoTrackNumberMenuUpdate(Int_t widgetId, Int_t id);
 		void DoRequestFocus(Int_t id);
+        void DoClose(void);
 		
-		void FillDataTypeComboBox(TGComboBox* cb, const std::string &def="DTrack");
-		void FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamecb, const std::string &def);
-		void FillTrackNumberComboBox(TGComboBox* cb, TGComboBox* datanamecb, TGComboBox* tagcb, bool add_best_match_option);
 		
 	protected:
 	
@@ -68,20 +64,26 @@ class trk_mainframe:public TGMainFrame{
 	private:
 		hdv_mainframe *hdvmf;
 		
-		TRootEmbeddedCanvas *canvas;
+		TRootEmbeddedCanvas *topcanvas;
+        TRootEmbeddedCanvas *sidecanvas;
 		TRootEmbeddedCanvas *histocanvas;
 		TH1D *resi;
 		TLatex *resi_lab;
 		std::vector<TGComboBox*> datatype;
 		std::vector<TGComboBox*> factorytag;
 		std::vector<TGComboBox*> trackno;
-		TGCheckButton *slock;
+        std::map<std::string, TGCheckButton*> checkbuttons;
 
-		double slo, shi, resilo, resihi;
+        TGLabel *event, *run;
+
+		double slo, shi, zlo, zhi;
 		
-		std::vector<TObject*> graphics;
+		std::vector<TObject*> topgraphics;
+		std::vector<TObject*> sidegraphics;
+        std::map<TObject*, string> graphics_draw_options; // for special draw options for those graphics that need them
 		
 		void DrawAxes(TCanvas *c, std::vector<TObject*> &graphics, const char *xlab, const char *ylab);
+        void DrawDetectors(TCanvas *c, std::vector<TObject*> &graphics, string view);
 		void DrawHits(std::vector<TObject*> &graphics);
 		void DrawHitsForOneTrack(TVector3 &pos, TVector3 &mom, std::vector<TObject*> &graphics);
 		void DrawHitsForOneTrack(std::vector<TObject*> &graphics,
@@ -92,8 +94,11 @@ class trk_mainframe:public TGMainFrame{
 
 		bool WireInList(const DCoordinateSystem *wire, std::vector<const DCDCTrackHit*> &cdctrackhits);
 
-	ClassDef(trk_mainframe,1)
+
+
+	ClassDef(fmwpc_mainframe,1)
+
 };
 
-#endif // _trk_mainframe_
+#endif // _fmwpc_mainframe_
 

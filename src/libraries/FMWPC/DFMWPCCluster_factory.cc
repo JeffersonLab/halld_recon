@@ -69,7 +69,7 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Sort hits by layer number and by time
       sort(allHits.begin(),allHits.end(),DFMWPCHit_cmp);
 
-      cout << "bla" << endl;
+      //cout << "bla" << endl;
       
       // Layer by layer, create clusters of hits.
       thisLayer.clear();
@@ -146,11 +146,13 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     newCluster->q = 0.0;
     newCluster->u = 0.0;
     newCluster->layer = first_hit->layer;
+    newCluster->first_wire = first_hit->wire;
     newCluster->Nhits = 0;
     for(uint32_t i=istart; i<iend; i++){
       newCluster->q += H[i]->q;
       newCluster->u += H[i]->wire * H[i]->q; // weigh position with charge
       newCluster->members.push_back(H[i]);
+      newCluster->last_wire = H[i]->wire;
       newCluster->Nhits++;
     }
     newCluster->u /= newCluster->q; // normalize to total charge
