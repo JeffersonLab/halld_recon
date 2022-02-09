@@ -771,13 +771,13 @@ void MyProcessor::FillGraphics(void)
 		    //cout << "Down : " << bar << endl;
 		    translate_side = 0;
 		    pmtPline = hdvmf->GetTOFPolyLine(translate_side, bar);
-		    pmtPline->SetFillColor(2);
+              if( pmtPline ) pmtPline->SetFillColor(2);
 		  }
 		  else if(end == 0){
 		    //cout << "Up : " << bar << endl;
 		    translate_side = 2;
 		    pmtPline = hdvmf->GetTOFPolyLine(translate_side, bar);
-		    pmtPline->SetFillColor(2);
+		    if( pmtPline ) pmtPline->SetFillColor(2);
 		}
 		  else{
 		  cerr << "Out of range TOF end" << endl;
@@ -788,13 +788,13 @@ void MyProcessor::FillGraphics(void)
 		    //cout << "North : " << bar << endl;
 		    translate_side = 3;
 		    pmtPline = hdvmf->GetTOFPolyLine(translate_side, bar);
-		    pmtPline->SetFillColor(2);
+              if( pmtPline ) pmtPline->SetFillColor(2);
 		  }
 		  else if(end == 1){
 		    //cout << "South : " << bar << endl;
 		    translate_side = 1;
 		    pmtPline = hdvmf->GetTOFPolyLine(translate_side, bar);
-		    pmtPline->SetFillColor(2);
+              if( pmtPline ) pmtPline->SetFillColor(2);
 		  }
 		  else{
 		    cerr << "Out of range TOF end" << endl;

@@ -9,12 +9,14 @@
 using namespace jana;
 
 #include "FMWPC/DFMWPCDigiHit.h"
+#include "FMWPC/DFMWPCHit.h"
 
 #include <TDirectory.h>
 #include <TH1.h>
 
 static TH1I *fmwpc_num_events;
 static TH1F *fmwpc_occ_layer[6];
+static TH1F *fmwpc_hit_layer[6];
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -60,6 +62,11 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
          sprintf(htitle, "FMWPC Occupancy Layer %01d", iLayer+1);
          fmwpc_occ_layer[iLayer] = new TH1F(hname, htitle, 144, 0.5, 144.5);
          fmwpc_occ_layer[iLayer]->SetXTitle("Strip Number");
+
+         sprintf(hname, "fmwpc_hit_layer_%01d", iLayer+1);
+         sprintf(htitle, "FMWPC Calibrated Hits Layer %01d", iLayer+1);
+         fmwpc_hit_layer[iLayer] = new TH1F(hname, htitle, 144, 0.5, 144.5);
+         fmwpc_hit_layer[iLayer]->SetXTitle("Strip Number");
         }
 
         // back to main dir
@@ -100,6 +107,10 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
         vector<const DFMWPCDigiHit*>fmwpcdigis;
         loop->Get(fmwpcdigis);
 
+        // get calibrated hits
+        vector<const DFMWPCHit*>fmwpchits;
+        loop->Get(fmwpchits);
+
         // FILL HISTOGRAMS
         // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
         japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -112,6 +123,14 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 
          fmwpc_occ_layer[digi->layer-1]->Fill(digi->wire);
         }
+
+        for (unsigned int i=0; i<fmwpchits.size();i++){
+         const DFMWPCHit *hit = fmwpchits[i];
+
+         fmwpc_hit_layer[hit->layer-1]->Fill(hit->wire);
+        }
+
+	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	return NOERROR;
 }
