@@ -654,9 +654,9 @@ void trk_mainframe::DrawHitsForOneTrack(
     vector<const DTrackFitter*> fitters;
     eventloop->Get(fitters, "KalmanSIMD");
     const DTrackFitterKalmanSIMD *fitter=0;
-    if (fitters.size() > 0)
-        fitter =  dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
-
+    if (fitters.size() > 0) {
+        fitter = dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
+    }
 
 	vector<pair<const DCoordinateSystem*,double> > &hits = index==0 ? allhits:TRACKHITS;
 	

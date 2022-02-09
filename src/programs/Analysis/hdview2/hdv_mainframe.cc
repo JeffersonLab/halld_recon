@@ -61,8 +61,8 @@ static float BCAL_LAYS1 =  3;
 static float BCAL_SECS1 =  4; 
 static float BCAL_SECS2 =  4;
 static float BCAL_PHI_SHIFT = 0.0; // radians (will be overwritten in constructor!)
-static float FCAL_Zlen = 45.0;
-static float FCAL_Zmin = 622.8;
+float FCAL_Zlen = 45.0;
+float FCAL_Zmin = 622.8;
 static float FCAL_Rmin = 6.0;
 static float FCAL_Rmax = 212.0/2.0;
 static float CCAL_Zlen = 18.0;
@@ -81,10 +81,11 @@ static float FDC_Rmin = 3.5;
 static float FDC_Rmax = 48.5;
 static float TARGET_Zmid = 65.0;
 static float TARGET_Zlen = 30.0;
-static float FMWPC_width = 162.56;
-static float FMWPC_Zlen = 5.26;
-static float FMWPC_Dead_diameter = 8.0;
-static vector<double> FMWPC_Zpos;
+float FMWPC_width = 162.56;
+float FMWPC_Zlen = 5.26;
+float FMWPC_Dead_diameter = 8.0;
+float FMWPC_WIRE_SPACING = 1.016;
+vector<double> FMWPC_Zpos;
 
 static DFCALGeometry *fcalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
@@ -121,8 +122,8 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   // CPP FMWPC z-positions
   double my_FMWPC_width;
   dgeom->GetFMWPCZ_vec(FMWPC_Zpos);
-  dgeom->GetFMWPCSize(my_FMWPC_width)*2.0; // We want full width and method returns half-width
-  FMWPC_width = my_FMWPC_width;
+  dgeom->GetFMWPCSize(my_FMWPC_width);
+  FMWPC_width = my_FMWPC_width*2.0; // We want full width and method returns half-width
 
   UInt_t MainWidth = w;
   
@@ -264,10 +265,12 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
  
   //----------------- Inspectors
   TGTextButton *trackinspector	= new TGTextButton(inspectors,	"Track Inspector");
+  TGTextButton *fmwpcinspector	= new TGTextButton(inspectors,	"FMWPC Inspector");
   //TGTextButton *tofinspector	= new TGTextButton(inspectors,	"TOF Inspector");
   //TGTextButton *bcalinspector	= new TGTextButton(inspectors,	"BCAL Inspector");
   //TGTextButton *fcalinspector	= new TGTextButton(inspectors,	"FCAL Inspector");
   inspectors->AddFrame(trackinspector, xhints);
+  inspectors->AddFrame(fmwpcinspector, xhints);
   //inspectors->AddFrame(tofinspector, xhints);
   //inspectors->AddFrame(bcalinspector, xhints);
   //inspectors->AddFrame(fcalinspector, xhints);
@@ -521,6 +524,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   // Pointers to optional daughter windows (these must be done before ReadPreferences in
   // order for the options they implement to be filled into checkbuttons)
   trkmf = NULL;
+  fmwpcmf = NULL;
   bcaldispmf = NULL;
   optionsmf = new hdv_optionsframe(this, NULL, 100, 100);
   debugermf = new hdv_debugerframe(this, NULL, 800, 800);
@@ -556,6 +560,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   delay->Connect("Selected(Int_t)","hdv_mainframe", this, "DoSetDelay(Int_t)");
   
   trackinspector->Connect("Clicked()","hdv_mainframe", this, "DoOpenTrackInspector()");
+  fmwpcinspector->Connect("Clicked()","hdv_mainframe", this, "DoOpenFMWPCInspector()");
   moreOptions->Connect("Clicked()","hdv_mainframe", this, "DoOpenOptionsWindow()");
   listall->Connect("Clicked()","hdv_mainframe", this, "DoOpenFullListWindow()");
   debuger->Connect("Clicked()","hdv_mainframe", this, "DoOpenDebugerWindow()");
@@ -911,6 +916,23 @@ void hdv_mainframe::DoOpenTrackInspector(void)
 }
 
 //-------------------
+// DoOpenFMWPCInspector
+//-------------------
+void hdv_mainframe::DoOpenFMWPCInspector(void)
+{
+    if(fmwpcmf==NULL){
+        fmwpcmf = new fmwpc_mainframe(this, NULL, 100, 100);
+        if(fmwpcmf){
+            next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+            prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+        }
+    }else{
+        fmwpcmf->RaiseWindow();
+        fmwpcmf->RequestFocus();
+    }
+}
+
+//-------------------
 // DoOpenOptionsWindow
 //-------------------
 void hdv_mainframe::DoOpenOptionsWindow(void)
@@ -1001,6 +1023,14 @@ void hdv_mainframe::DoOpenBCALInspector(void)
 void hdv_mainframe::DoClearTrackInspectorPointer(void)
 {
 	trkmf = NULL;
+}
+
+//-------------------
+// DoClearFMWPCInspectorPointer
+//-------------------
+void hdv_mainframe::DoClearFMWPCInspectorPointer(void)
+{
+    fmwpcmf = NULL;
 }
 
 //-------------------
@@ -1402,9 +1432,9 @@ void hdv_mainframe::DrawDetectorsXY(void)
 
         // ----- FMWPC ------
         if(GetCheckButton("fmwpc")){
-            jout << "Drawing FMWPC" << endl;
+//            jout << "Drawing FMWPC" << endl;
             for( auto z : FMWPC_Zpos ){
-                jout << "   z: "<< z << endl;
+//                jout << "   z: "<< z << endl;
                 TBox *fmwpc1 = new TBox(z-FMWPC_Zlen/2.0,  FMWPC_Dead_diameter/2.0, z+FMWPC_Zlen/2.0, FMWPC_width/2.0);
                 TBox *fmwpc2 = new TBox(z-FMWPC_Zlen/2.0,  -FMWPC_Dead_diameter/2.0, z+FMWPC_Zlen/2.0, -FMWPC_width/2.0);
                 fmwpc1->SetFillColor(42);
