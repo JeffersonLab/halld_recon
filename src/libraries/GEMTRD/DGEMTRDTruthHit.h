@@ -15,17 +15,18 @@ class DGEMTRDTruthHit:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DGEMTRDTruthHit);
 
-  int plane;
+  int layer;
   double x,y;
-  double q,t;
+  double q,t,zdrift;
 	
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
   void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "plane", "%4d", plane);
+    AddString(items, "layer", "%4d", layer);
     AddString(items, "x", "%f", x);
     AddString(items, "y", "%f", y);
-    AddString(items, "t", "%f", z);
+    AddString(items, "zdrift", "%f", zdrift);
+    AddString(items, "t", "%f", t);
     AddString(items, "q", "%f", q);
   }
 		
