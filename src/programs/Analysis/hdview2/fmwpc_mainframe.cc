@@ -230,7 +230,7 @@ void fmwpc_mainframe::DoNewEvent(void)
     // Update run, event info
     if( eventloop ) {
         auto jevent = eventloop->GetJEvent();
-        stringstream ss;
+        std::stringstream ss;
         ss << jevent.GetRunNumber();
         run->SetTitle(ss.str().c_str());
         run->Draw();
@@ -409,7 +409,7 @@ void fmwpc_mainframe::DrawAxes(TCanvas *c, vector<TObject*> &graphics, const cha
     // Draw Label
     auto x = (xhi-xlo)*0.05 + xlo;
     auto y = (yhi-ylo)*0.9 + ylo;
-    auto lab = new TLatex(x, y, string(ylab)=="y(cm)" ? "Side View": "Top View");
+    auto lab = new TLatex(x, y, std::string(ylab)=="y(cm)" ? "Side View": "Top View");
     lab->SetTextSize(0.08);
     graphics.push_back( lab );
 }
@@ -418,7 +418,7 @@ void fmwpc_mainframe::DrawAxes(TCanvas *c, vector<TObject*> &graphics, const cha
 //-------------------
 // DrawDetectors
 //-------------------
-void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, string view)
+void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std::string view)
 {
 
     // Draw chambers

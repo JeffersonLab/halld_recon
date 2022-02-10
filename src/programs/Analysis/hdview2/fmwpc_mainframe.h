@@ -80,10 +80,10 @@ class fmwpc_mainframe:public TGMainFrame{
 		
 		std::vector<TObject*> topgraphics;
 		std::vector<TObject*> sidegraphics;
-        std::map<TObject*, string> graphics_draw_options; // for special draw options for those graphics that need them
+        std::map<TObject*, std::string> graphics_draw_options; // for special draw options for those graphics that need them
 		
 		void DrawAxes(TCanvas *c, std::vector<TObject*> &graphics, const char *xlab, const char *ylab);
-        void DrawDetectors(TCanvas *c, std::vector<TObject*> &graphics, string view);
+        void DrawDetectors(TCanvas *c, std::vector<TObject*> &graphics, std::string view);
 		void DrawHits(std::vector<TObject*> &graphics);
 		void DrawHitsForOneTrack(TVector3 &pos, TVector3 &mom, std::vector<TObject*> &graphics);
 		void DrawHitsForOneTrack(std::vector<TObject*> &graphics,
