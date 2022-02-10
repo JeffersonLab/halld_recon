@@ -489,6 +489,18 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DTPOLTruthHit")
       return Extract_DTPOLTruthHit(record,
                      dynamic_cast<JFactory<DTPOLTruthHit>*>(factory), tag);
+   
+   if (dataClassName == "DGEMTRDTruthHit")
+      return Extract_DGEMTRDTruthHit(record, 
+                     dynamic_cast<JFactory<DGEMTRDTruthHit>*>(factory), tag);
+   
+   if (dataClassName == "DGEMTRDTruth")
+      return Extract_DGEMTRDTruth(record, 
+                     dynamic_cast<JFactory<DGEMTRDTruth>*>(factory), tag);
+
+   if (dataClassName == "DGEMTRDHit")
+      return Extract_DGEMTRDHit(record, 
+                     dynamic_cast<JFactory<DGEMTRDHit>*>(factory), tag);
 
    return OBJECT_NOT_AVAILABLE;
 }
@@ -3078,3 +3090,113 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
 
   return NOERROR;
 }
+
+//------------------
+// Extract_DGEMTRDTruthHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DGEMTRDTruthHit(hddm_s::HDDM *record,  JFactory<DGEMTRDTruthHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL) return OBJECT_NOT_AVAILABLE;
+   if (tag != "") return OBJECT_NOT_AVAILABLE;
+
+   vector<DGEMTRDTruthHit*> data;
+
+   const hddm_s::GemtrdTruthHitList &points = record->getGemtrdTruthHits();
+   hddm_s::GemtrdTruthHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DGEMTRDTruthHit *hit = new DGEMTRDTruthHit;
+      hit->layer = iter->getLayer();
+      hit->q     = iter->getQ();
+      hit->y    = iter->getY();
+      hit->x    = iter->getX();
+      hit->t     = iter->getT();
+      hit->zdrift = iter->getZdrift();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+
+//------------------
+// Extract_DGEMTRDTruth
+//------------------
+jerror_t DEventSourceHDDM::Extract_DGEMTRDTruth(hddm_s::HDDM *record,
+                                   JFactory<DGEMTRDTruth>* factory, string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+  
+   vector<DGEMTRDTruth*> data;
+
+   const hddm_s::GemtrdTruthPointList &points = record->getGemtrdTruthPoints();
+   hddm_s::GemtrdTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DGEMTRDTruth *gemtrdtruth = new DGEMTRDTruth;
+      gemtrdtruth->primary = iter->getPrimary();
+      gemtrdtruth->track   = iter->getTrack();
+      gemtrdtruth->x       = iter->getX();
+      gemtrdtruth->y       = iter->getY();
+      gemtrdtruth->z       = iter->getZ();
+      gemtrdtruth->t       = iter->getT();
+      gemtrdtruth->px      = iter->getPx();
+      gemtrdtruth->py      = iter->getPy();
+      gemtrdtruth->pz      = iter->getPz();
+      gemtrdtruth->E       = iter->getE();
+      gemtrdtruth->ptype   = iter->getPtype();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      gemtrdtruth->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(gemtrdtruth);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//------------------
+// Extract_DGEMTRDHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DGEMTRDHit(hddm_s::HDDM *record,  JFactory<DGEMTRDHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL) return OBJECT_NOT_AVAILABLE;
+   if (tag != "") return OBJECT_NOT_AVAILABLE;
+
+   vector<DGEMTRDHit*> data;
+
+   const hddm_s::GemtrdHitList &points = record->getGemtrdHits();
+   hddm_s::GemtrdHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DGEMTRDHit *hit = new DGEMTRDHit;
+      hit->layer = iter->getLayer();
+      hit->q     = iter->getQ();
+      hit->t     = iter->getT();
+      hit->x     = iter->getX();
+      hit->y     = iter->getY();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+

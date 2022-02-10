@@ -213,6 +213,15 @@
       <RFtime minOccurs="0" jtag="string" tsync="float" tunit="ns">
          <RFsubsystem maxOccurs="unbounded" minOccurs="0" jtag="string" tsync="float" tunit="ns"/>
       </RFtime>
+      <GEMTRD minOccurs="0">
+	<gemtrdChamber maxOccurs="unbounded" minOccurs="0" layer="int">
+	  <gemtrdTruthHit q="float" x="float" y="float" t="float" zdrift="float"/>
+	  <gemtrdHit q="float" x="float" y="float" t="float"/>
+	</gemtrdChamber>
+	<gemtrdTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+          <trackID minOccurs="0" itrack="int"/>
+        </gemtrdTruthPoint>
+      </GEMTRD>
       <forwardMWPC minOccurs="0">
         <fmwpcChamber layer="int" maxOccurs="unbounded" minOccurs="0" wire="int">
           <fmwpcTruthHit q="float" dE="float" dx="float" maxOccurs="unbounded" t="float"/>

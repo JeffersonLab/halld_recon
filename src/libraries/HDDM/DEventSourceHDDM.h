@@ -71,6 +71,9 @@ using namespace std;
 #include "FMWPC/DFMWPCTruthHit.h"
 #include "FMWPC/DFMWPCHit.h"
 #include "FMWPC/DFMWPCTruth.h"
+#include "GEMTRD/DGEMTRDTruthHit.h"
+#include "GEMTRD/DGEMTRDHit.h"
+#include "GEMTRD/DGEMTRDTruth.h"
 #include "FMWPC/DCTOFHit.h"
 #include "FMWPC/DCTOFHit.h"
 #include "FMWPC/DCTOFTruth.h"
@@ -145,6 +148,10 @@ class DEventSourceHDDM:public JEventSource
       jerror_t Extract_DFMWPCTruth(hddm_s::HDDM *record,  JFactory<DFMWPCTruth> *factory, string tag);
       jerror_t Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTOFHit> *factory, string tag);
       jerror_t Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactory<DCTOFTruth> *factory, string tag);
+      
+      jerror_t Extract_DGEMTRDTruthHit(hddm_s::HDDM *record,  JFactory<DGEMTRDTruthHit> *factory, string tag);
+      jerror_t Extract_DGEMTRDHit(hddm_s::HDDM *record,  JFactory<DGEMTRDHit> *factory, string tag);
+      jerror_t Extract_DGEMTRDTruth(hddm_s::HDDM *record,  JFactory<DGEMTRDTruth> *factory, string tag);
 
       jerror_t Extract_DTPOLHit(hddm_s::HDDM *record, JFactory<DTPOLHit>* factory, string tag);
       jerror_t Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactory<DTPOLTruthHit>* factory, string tag);
