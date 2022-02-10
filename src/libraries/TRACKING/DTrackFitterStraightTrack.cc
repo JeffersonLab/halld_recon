@@ -871,14 +871,8 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
 
   // Initial guess for covariance matrix
   DMatrix4x4 C;
-  if (fit_type==kWireBased){
-    C(state_x,state_x)=C(state_y,state_y)=4.0;     
-    C(state_tx,state_tx)=C(state_ty,state_ty)=1.0;
-  }
-  else{
-    C(state_x,state_x)=C(state_y,state_y)=1.;     
-    C(state_tx,state_tx)=C(state_ty,state_ty)=0.01;
-  }
+  C(state_x,state_x)=C(state_y,state_y)=1.0;     
+  C(state_tx,state_tx)=C(state_ty,state_ty)=0.01;
 
   // Starting z-position and time
   double z=input_pos.z();
@@ -912,7 +906,7 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   // Sort the CDC hits by radius or y (for cosmics)
   if (cdchits.size()>0){
     if (COSMICS){
-      stable_sort(cdchits.begin(),cdchits.end(),DTrackFitterStraightTrack_cdc_hit_cmp);
+      stable_sort(cdchits.begin(),cdchits.end(),DTrackFitterStraightTrack_cdc_hit_reverse_cmp);
     }
     else{
       stable_sort(cdchits.begin(),cdchits.end(),DTrackFitterStraightTrack_cdc_hit_radius_cmp);
@@ -926,26 +920,17 @@ DTrackFitter::fit_status_t DTrackFitterStraightTrack::FitTrack(void){
   }
   else if (cdchits.size()>0){
     double dzsign=(pz>0)?1.:-1.;
+    if (COSMICS){
+      dzsign=(S(state_ty)>0.)?1.:-1.;
+    }
     status=FitCentralTrack(z,t0,dzsign,S,C,chisq,Ndof);
   }
 
   if (status==DTrackFitter::kFitSuccess){
     // Output fit results
     double tx=S(state_tx),ty=S(state_ty);
-    double phi=atan2(ty,tx);
-    double tanl=1./sqrt(tx*tx+ty*ty);
-    // Check for tracks heading upstream
-    if (cdchits_used_in_fit.size()>0){
-      double phi_diff=phi-cdchits_used_in_fit[0]->wire->origin.Phi()-M_PI;
-      if (phi_diff<-M_PI) phi_diff+=2.*M_PI;
-      if (phi_diff> M_PI) phi_diff-=2.*M_PI;
-      if (fabs(phi_diff)<M_PI_2){
-	tanl*=-1;
-	phi+=M_PI;
-      }
-    }
-    double pt=5.0*cos(atan(tanl)); // arbitrary magnitude...
-    DVector3 mom(pt*cos(phi),pt*sin(phi),pt*tanl);
+    DVector3 mom(tx,ty,1.);
+    mom.SetMag(1.);
     
     // Convert 4x4 covariance matrix to a TMatrixFSym for output
     TMatrixFSym errMatrix(5);

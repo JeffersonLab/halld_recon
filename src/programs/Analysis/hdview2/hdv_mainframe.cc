@@ -61,8 +61,8 @@ static float BCAL_LAYS1 =  3;
 static float BCAL_SECS1 =  4; 
 static float BCAL_SECS2 =  4;
 static float BCAL_PHI_SHIFT = 0.0; // radians (will be overwritten in constructor!)
-static float FCAL_Zlen = 45.0;
-static float FCAL_Zmin = 622.8;
+float FCAL_Zlen = 45.0;
+float FCAL_Zmin = 622.8;
 static float FCAL_Rmin = 6.0;
 static float FCAL_Rmax = 212.0/2.0;
 static float CCAL_Zlen = 18.0;
@@ -81,6 +81,11 @@ static float FDC_Rmin = 3.5;
 static float FDC_Rmax = 48.5;
 static float TARGET_Zmid = 65.0;
 static float TARGET_Zlen = 30.0;
+float FMWPC_width = 162.56;
+float FMWPC_Zlen = 5.26;
+float FMWPC_Dead_diameter = 8.0;
+float FMWPC_WIRE_SPACING = 1.016;
+vector<double> FMWPC_Zpos;
 
 static DFCALGeometry *fcalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
@@ -113,6 +118,12 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   float my_BCAL_PHI_SHIFT;
   dgeom->GetBCALPhiShift(my_BCAL_PHI_SHIFT);
   BCAL_PHI_SHIFT = my_BCAL_PHI_SHIFT*TMath::DegToRad();  // convert to radians
+
+  // CPP FMWPC z-positions
+  double my_FMWPC_width;
+  dgeom->GetFMWPCZ_vec(FMWPC_Zpos);
+  dgeom->GetFMWPCSize(my_FMWPC_width);
+  FMWPC_width = my_FMWPC_width*2.0; // We want full width and method returns half-width
 
   UInt_t MainWidth = w;
   
@@ -254,10 +265,12 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
  
   //----------------- Inspectors
   TGTextButton *trackinspector	= new TGTextButton(inspectors,	"Track Inspector");
+  TGTextButton *fmwpcinspector	= new TGTextButton(inspectors,	"FMWPC Inspector");
   //TGTextButton *tofinspector	= new TGTextButton(inspectors,	"TOF Inspector");
   //TGTextButton *bcalinspector	= new TGTextButton(inspectors,	"BCAL Inspector");
   //TGTextButton *fcalinspector	= new TGTextButton(inspectors,	"FCAL Inspector");
   inspectors->AddFrame(trackinspector, xhints);
+  inspectors->AddFrame(fmwpcinspector, xhints);
   //inspectors->AddFrame(tofinspector, xhints);
   //inspectors->AddFrame(bcalinspector, xhints);
   //inspectors->AddFrame(fcalinspector, xhints);
@@ -373,7 +386,8 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   checkbuttons["fcal"]		= new TGCheckButton(hitdrawopts,	"FCAL");
   checkbuttons["bcal"]		= new TGCheckButton(hitdrawopts,	"BCAL");
   checkbuttons["ccal"]		= new TGCheckButton(hitdrawopts,	"CCAL");
-  
+  checkbuttons["fmwpc"]		= new TGCheckButton(hitdrawopts,	"FMWPC");
+
   hitdrawopts->AddFrame(checkbuttons["cdc"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdcdrift"], lhints);
   hitdrawopts->AddFrame(checkbuttons["cdctruth"], lhints);
@@ -385,8 +399,9 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   hitdrawopts->AddFrame(checkbuttons["fcal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["bcal"], lhints);
   hitdrawopts->AddFrame(checkbuttons["ccal"], lhints);
-  
-  TGTextButton *moreOptions	= new TGTextButton(hitdrawopts,	"More options");
+  hitdrawopts->AddFrame(checkbuttons["fmwpc"], lhints);
+
+    TGTextButton *moreOptions	= new TGTextButton(hitdrawopts,	"More options");
   hitdrawopts->AddFrame(moreOptions, lhints);
 
   // Color codes
@@ -509,6 +524,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   // Pointers to optional daughter windows (these must be done before ReadPreferences in
   // order for the options they implement to be filled into checkbuttons)
   trkmf = NULL;
+  fmwpcmf = NULL;
   bcaldispmf = NULL;
   optionsmf = new hdv_optionsframe(this, NULL, 100, 100);
   debugermf = new hdv_debugerframe(this, NULL, 800, 800);
@@ -544,6 +560,7 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   delay->Connect("Selected(Int_t)","hdv_mainframe", this, "DoSetDelay(Int_t)");
   
   trackinspector->Connect("Clicked()","hdv_mainframe", this, "DoOpenTrackInspector()");
+  fmwpcinspector->Connect("Clicked()","hdv_mainframe", this, "DoOpenFMWPCInspector()");
   moreOptions->Connect("Clicked()","hdv_mainframe", this, "DoOpenOptionsWindow()");
   listall->Connect("Clicked()","hdv_mainframe", this, "DoOpenFullListWindow()");
   debuger->Connect("Clicked()","hdv_mainframe", this, "DoOpenDebugerWindow()");
@@ -899,6 +916,23 @@ void hdv_mainframe::DoOpenTrackInspector(void)
 }
 
 //-------------------
+// DoOpenFMWPCInspector
+//-------------------
+void hdv_mainframe::DoOpenFMWPCInspector(void)
+{
+    if(fmwpcmf==NULL){
+        fmwpcmf = new fmwpc_mainframe(this, NULL, 100, 100);
+        if(fmwpcmf){
+            next->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+            prev->Connect("Clicked()","fmwpc_mainframe", fmwpcmf, "DoNewEvent()");
+        }
+    }else{
+        fmwpcmf->RaiseWindow();
+        fmwpcmf->RequestFocus();
+    }
+}
+
+//-------------------
 // DoOpenOptionsWindow
 //-------------------
 void hdv_mainframe::DoOpenOptionsWindow(void)
@@ -989,6 +1023,14 @@ void hdv_mainframe::DoOpenBCALInspector(void)
 void hdv_mainframe::DoClearTrackInspectorPointer(void)
 {
 	trkmf = NULL;
+}
+
+//-------------------
+// DoClearFMWPCInspectorPointer
+//-------------------
+void hdv_mainframe::DoClearFMWPCInspectorPointer(void)
+{
+    fmwpcmf = NULL;
 }
 
 //-------------------
@@ -1328,12 +1370,14 @@ void hdv_mainframe::DrawDetectorsXY(void)
 
 
 		// ----- BCAL ------
-		TBox *bcal1 = new TBox(BCAL_Zmin, BCAL_Rmin, BCAL_Zmin+BCAL_Zlen, BCAL_Rmax);
-		TBox *bcal2 = new TBox(BCAL_Zmin, -BCAL_Rmin, BCAL_Zmin+BCAL_Zlen, -BCAL_Rmax);
-		bcal1->SetFillColor(28);
-		bcal2->SetFillColor(28);
-		graphics_sideA.push_back(bcal1);
-		graphics_sideA.push_back(bcal2);
+        if(GetCheckButton("bcal")) {
+            TBox *bcal1 = new TBox(BCAL_Zmin, BCAL_Rmin, BCAL_Zmin + BCAL_Zlen, BCAL_Rmax);
+            TBox *bcal2 = new TBox(BCAL_Zmin, -BCAL_Rmin, BCAL_Zmin + BCAL_Zlen, -BCAL_Rmax);
+            bcal1->SetFillColor(28);
+            bcal2->SetFillColor(28);
+            graphics_sideA.push_back(bcal1);
+            graphics_sideA.push_back(bcal2);
+        }
 
 		// ----- CDC ------
 		TBox *cdc1 = new TBox(CDC_Zmin, CDC_Rmin, CDC_Zmin + CDC_Zlen, CDC_Rmax);
@@ -1357,30 +1401,50 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		}
 		
 		// ----- TOF ------
-		TBox *tof1 = new TBox(TOF_Zmin, TOF_Rmin, TOF_Zmin+TOF_Zlen, TOF_Rmax);
-		TBox *tof2 = new TBox(TOF_Zmin, -TOF_Rmin, TOF_Zmin+TOF_Zlen, -TOF_Rmax);
-		tof1->SetFillColor(11);
-		tof2->SetFillColor(11);
-		graphics_sideA.push_back(tof1);
-		graphics_sideA.push_back(tof2);
+        if(GetCheckButton("tof") || GetCheckButton("toftruth")) {
+            TBox *tof1 = new TBox(TOF_Zmin, TOF_Rmin, TOF_Zmin + TOF_Zlen, TOF_Rmax);
+            TBox *tof2 = new TBox(TOF_Zmin, -TOF_Rmin, TOF_Zmin + TOF_Zlen, -TOF_Rmax);
+            tof1->SetFillColor(11);
+            tof2->SetFillColor(11);
+            graphics_sideA.push_back(tof1);
+            graphics_sideA.push_back(tof2);
+        }
 		
 		// ----- FCAL ------
-		TBox *fcal1 = new TBox(FCAL_Zmin, FCAL_Rmin, FCAL_Zmin+FCAL_Zlen, FCAL_Rmax);
-		TBox *fcal2 = new TBox(FCAL_Zmin, -FCAL_Rmin, FCAL_Zmin+FCAL_Zlen, -FCAL_Rmax);
-		fcal1->SetFillColor(40);
-		fcal2->SetFillColor(40);
-		graphics_sideA.push_back(fcal1);
-		graphics_sideA.push_back(fcal2);
+        if(GetCheckButton("fcal")) {
+            TBox *fcal1 = new TBox(FCAL_Zmin, FCAL_Rmin, FCAL_Zmin + FCAL_Zlen, FCAL_Rmax);
+            TBox *fcal2 = new TBox(FCAL_Zmin, -FCAL_Rmin, FCAL_Zmin + FCAL_Zlen, -FCAL_Rmax);
+            fcal1->SetFillColor(40);
+            fcal2->SetFillColor(40);
+            graphics_sideA.push_back(fcal1);
+            graphics_sideA.push_back(fcal2);
+        }
 		
 		// ----- CCAL ------
-		TBox *ccal1 = new TBox(CCAL_Zmin,  CCAL_Rmin, CCAL_Zmin+CCAL_Zlen,  CCAL_Rmax);
-		TBox *ccal2 = new TBox(CCAL_Zmin, -CCAL_Rmin, CCAL_Zmin+CCAL_Zlen, -CCAL_Rmax);
-		ccal1->SetFillColor(42);
-		ccal2->SetFillColor(42);
-		graphics_sideA.push_back(ccal1);
-		graphics_sideA.push_back(ccal2);
+        if(GetCheckButton("ccal")){
+            TBox *ccal1 = new TBox(CCAL_Zmin,  CCAL_Rmin, CCAL_Zmin+CCAL_Zlen,  CCAL_Rmax);
+            TBox *ccal2 = new TBox(CCAL_Zmin, -CCAL_Rmin, CCAL_Zmin+CCAL_Zlen, -CCAL_Rmax);
+            ccal1->SetFillColor(42);
+            ccal2->SetFillColor(42);
+            graphics_sideA.push_back(ccal1);
+            graphics_sideA.push_back(ccal2);
+        }
 
-		// ------ scale ------
+        // ----- FMWPC ------
+        if(GetCheckButton("fmwpc")){
+//            jout << "Drawing FMWPC" << endl;
+            for( auto z : FMWPC_Zpos ){
+//                jout << "   z: "<< z << endl;
+                TBox *fmwpc1 = new TBox(z-FMWPC_Zlen/2.0,  FMWPC_Dead_diameter/2.0, z+FMWPC_Zlen/2.0, FMWPC_width/2.0);
+                TBox *fmwpc2 = new TBox(z-FMWPC_Zlen/2.0,  -FMWPC_Dead_diameter/2.0, z+FMWPC_Zlen/2.0, -FMWPC_width/2.0);
+                fmwpc1->SetFillColor(42);
+                fmwpc2->SetFillColor(42);
+                graphics_sideA.push_back(fmwpc1);
+                graphics_sideA.push_back(fmwpc2);
+            }
+        }
+
+        // ------ scale ------
 		DrawScale(sideviewA->GetCanvas(), graphics_sideA);
 	}
 
@@ -1401,12 +1465,14 @@ void hdv_mainframe::DrawDetectorsXY(void)
 	endviewB->GetCanvas()->Clear();
 
 		// ----- BCAL ------
-		TEllipse *bcal1 = new TEllipse(0.0, 0.0, BCAL_Rmax, BCAL_Rmax);
-		TEllipse *bcal2 = new TEllipse(0.0, 0.0, BCAL_Rmin, BCAL_Rmin);
-		bcal1->SetFillColor(0);
-		bcal2->SetFillColor(0);
-		graphics_endA.push_back(bcal1);
-		graphics_endA.push_back(bcal2);
+        if(GetCheckButton("bcal")) {
+            TEllipse *bcal1 = new TEllipse(0.0, 0.0, BCAL_Rmax, BCAL_Rmax);
+            TEllipse *bcal2 = new TEllipse(0.0, 0.0, BCAL_Rmin, BCAL_Rmin);
+            bcal1->SetFillColor(0);
+            bcal2->SetFillColor(0);
+            graphics_endA.push_back(bcal1);
+            graphics_endA.push_back(bcal2);
+        }
 		
 		double dlayer1 = 0.5*(BCAL_MIDRAD-BCAL_Rmin)/(double)BCAL_LAYS1;
 		//double dlayer2 = (BCAL_Rmax-BCAL_MIDRAD)/(double)BCAL_LAYS2;

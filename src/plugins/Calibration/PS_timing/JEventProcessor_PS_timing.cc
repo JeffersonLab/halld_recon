@@ -3,7 +3,7 @@
 //    File: JEventProcessor_PS_timing.cc
 // Created: Sat Nov 21 17:21:28 EST 2015
 // Creator: nsparks (on Linux cua2.jlab.org 3.10.0-327.el7.x86_64 x86_64)
-//
+// A.S. Select RF closest to the FADC hit, 1/13/2022
 
 #include "JEventProcessor_PS_timing.h"
 
@@ -14,6 +14,9 @@ using namespace jana;
 #include <PAIR_SPECTROMETER/DPSPair.h>
 #include <TAGGER/DTAGHHit.h>
 #include <RF/DRFTime.h>
+
+// RF header files
+#include <RF/DRFTime_factory.h>
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -30,6 +33,9 @@ static TH2I *hPSC_tdcadcTimeDiffVsID;
 static TH2I *hPSCRF_tdcTimeDiffVsID;
 static TH2I *hPSRF_adcTimeDiffVsID;
 static TH2I *hTAGHRF_tdcTimeDiffVsID;
+
+// Define RFTime_factory
+DRFTime_factory* locRFTimeFactory;
 
 extern "C"{
     void InitPlugin(JApplication *app){
@@ -84,6 +90,13 @@ jerror_t JEventProcessor_PS_timing::init(void)
 //------------------
 jerror_t JEventProcessor_PS_timing::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+
+  locRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+ 
+  // be sure that DRFTime_factory::init() and brun() are called
+  vector<const DRFTime*> rfTimes;
+  eventLoop->Get(rfTimes);
+
     // This is called whenever the run number changes
     return NOERROR;
 }
@@ -120,18 +133,33 @@ jerror_t JEventProcessor_PS_timing::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     double t_RF = rfTime->dTime;
     if (cpairs.size() >= 1) { // PSC
+
         const DPSCHit* clhit = cpairs[0]->ee.first; // left hit in coarse PS
         const DPSCHit* crhit = cpairs[0]->ee.second;// right hit in coarse PS
+
+	double psc_rf_left  = locRFTimeFactory->Step_TimeToNearInputTime(t_RF, clhit->time_fadc);
+	double psc_rf_right = locRFTimeFactory->Step_TimeToNearInputTime(t_RF, crhit->time_fadc);
+
         hPSC_tdcadcTimeDiffVsID->Fill(clhit->module,clhit->t-clhit->time_fadc);
-        hPSCRF_tdcTimeDiffVsID->Fill(clhit->module,clhit->t-t_RF);
+
+	hPSCRF_tdcTimeDiffVsID->Fill(clhit->module, clhit->t - psc_rf_left );
+	
         hPSC_tdcadcTimeDiffVsID->Fill(crhit->module+8,crhit->t-crhit->time_fadc);
-        hPSCRF_tdcTimeDiffVsID->Fill(crhit->module+8,crhit->t-t_RF);
+
+	hPSCRF_tdcTimeDiffVsID->Fill(crhit->module+8,crhit->t-psc_rf_right);
+
         for (const auto& h : taghhits) hTAGHRF_tdcTimeDiffVsID->Fill(h->counter_id,h->t-t_RF);
+
         if (fpairs.size() >= 1) { // PS
+
 	  const DPSPair::PSClust* flhit = fpairs[0]->ee.first;  // left hit in fine PS
 	  const DPSPair::PSClust* frhit = fpairs[0]->ee.second; // right hit in fine PS
-	  hPSRF_adcTimeDiffVsID->Fill(flhit->column,flhit->t_tile-t_RF);
-	  hPSRF_adcTimeDiffVsID->Fill(frhit->column+145,frhit->t_tile-t_RF);
+
+	  double ps_rf_left  = locRFTimeFactory->Step_TimeToNearInputTime(t_RF, flhit->t_tile);
+	  double ps_rf_right = locRFTimeFactory->Step_TimeToNearInputTime(t_RF, frhit->t_tile);
+
+	  hPSRF_adcTimeDiffVsID->Fill(flhit->column,flhit->t_tile - ps_rf_left);
+	  hPSRF_adcTimeDiffVsID->Fill(frhit->column+145,frhit->t_tile - ps_rf_right);
         }
     }
 

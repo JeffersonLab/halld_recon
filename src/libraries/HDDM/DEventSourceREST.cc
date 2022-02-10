@@ -49,8 +49,8 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    gPARMS->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS, 
    								"Turn on/off cleaning up multiple tracks with the same hypothesis from the same candidate. Set to \"0\" to turn off (it's on by default)");
 
-   RECO_DIRC_CALC_LUT = false;
-   gPARMS->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction (it's off by default)");
+   RECO_DIRC_CALC_LUT = true;
+   gPARMS->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction");
 
    dDIRCMaxChannels = 108*64;
 
@@ -1615,6 +1615,25 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locFCALShowers[locShowerIndex], std::const_pointer_cast<const DFCALShowerMatchParams>(locShowerMatchParams));
       }
 
+      const hddm_r::FcalSingleHitMatchParamsList &fcalSingleHitList = iter->getFcalSingleHitMatchParamses();
+      hddm_r::FcalSingleHitMatchParamsList::iterator fcalSingleHitIter = fcalSingleHitList.begin();
+      for(; fcalSingleHitIter != fcalSingleHitList.end(); ++fcalSingleHitIter)
+      {
+         size_t locTrackIndex = fcalSingleHitIter->getTrack();
+
+         auto locSingleHitMatchParams = std::make_shared<DFCALSingleHitMatchParams>();
+         locSingleHitMatchParams->dEHit = fcalSingleHitIter->getEhit();
+	 locSingleHitMatchParams->dTHit = fcalSingleHitIter->getThit();
+         locSingleHitMatchParams->dx = fcalSingleHitIter->getDx();
+         locSingleHitMatchParams->dFlightTime = fcalSingleHitIter->getTflight();
+         locSingleHitMatchParams->dFlightTimeVariance = fcalSingleHitIter->getTflightvar();
+         locSingleHitMatchParams->dPathLength = fcalSingleHitIter->getPathlength();
+         locSingleHitMatchParams->dDOCAToHit = fcalSingleHitIter->getDoca();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex],std::const_pointer_cast<const DFCALSingleHitMatchParams>(locSingleHitMatchParams));
+      }
+
+
       const hddm_r::ScMatchParamsList &scList = iter->getScMatchParamses();
       hddm_r::ScMatchParamsList::iterator scIter = scList.begin();
       for(; scIter != scList.end(); ++scIter)
@@ -1673,9 +1692,19 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 	       {
 		 locTOFHitMatchParams->dEdx1 = locTofDedxIterator->getDEdx1();
 		 locTOFHitMatchParams->dEdx2 = locTofDedxIterator->getDEdx2();
+
+		 // check if already have average dE/dx
+		 if(locTOFHitMatchParams->dEdx > 0) continue;
+		 
+		 // average dE/dx is missing: take average if hits in both planes, otherwise use single plane value
+		 if(locTOFHitMatchParams->dEdx1>0 && locTOFHitMatchParams->dEdx2>0)
+			 locTOFHitMatchParams->dEdx = (locTOFHitMatchParams->dEdx1 + locTOFHitMatchParams->dEdx2) / 2.0; 
+		 else if(locTOFHitMatchParams->dEdx1>0)
+			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx1;
+		 else if(locTOFHitMatchParams->dEdx2>0) 
+			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx2;
 	       }
-	   }
-	 
+	   }	 
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();

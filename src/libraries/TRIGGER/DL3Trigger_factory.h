@@ -14,6 +14,8 @@ using std::mutex;
 #include <JANA/JFactory.h>
 #include "DL3Trigger.h"
 
+#include <RtypesCore.h>
+
 #ifdef HAVE_TMVA
 #include <TMVA/Reader.h>
 #endif
@@ -33,7 +35,7 @@ class DL3Trigger_factory:public jana::JFactory<DL3Trigger>{
 		
 		
 #ifdef HAVE_TMVA
-		TMVA::Reader *mvareader;
+		TMVA::Reader *mvareader=nullptr;
 #endif
 		Float_t Nstart_counter;
 		Float_t Ntof;

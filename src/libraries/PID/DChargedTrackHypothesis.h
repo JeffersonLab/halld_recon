@@ -66,6 +66,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DTOFHitMatchParams> Get_TOFHitMatchParams(void) const{return dTrackingInfo->dTOFHitMatchParams;}
 		shared_ptr<const DBCALShowerMatchParams> Get_BCALShowerMatchParams(void) const{return dTrackingInfo->dBCALShowerMatchParams;}
 		shared_ptr<const DFCALShowerMatchParams> Get_FCALShowerMatchParams(void) const{return dTrackingInfo->dFCALShowerMatchParams;}
+		shared_ptr<const DFCALSingleHitMatchParams> Get_FCALSingleHitMatchParams(void) const{return dTrackingInfo->dFCALSingleHitMatchParams;}
 		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
 		
 		
@@ -90,6 +91,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_TOFHitMatchParams(shared_ptr<const DTOFHitMatchParams> locMatchParams){dTrackingInfo->dTOFHitMatchParams = locMatchParams;}
 		void Set_BCALShowerMatchParams(shared_ptr<const DBCALShowerMatchParams> locMatchParams){dTrackingInfo->dBCALShowerMatchParams = locMatchParams;}
 		void Set_FCALShowerMatchParams(shared_ptr<const DFCALShowerMatchParams> locMatchParams){dTrackingInfo->dFCALShowerMatchParams = locMatchParams;}
+		void Set_FCALSingleHitMatchParams(shared_ptr<const DFCALSingleHitMatchParams> locMatchParams){dTrackingInfo->dFCALSingleHitMatchParams = locMatchParams;}
 		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}
 
 		void toStrings(vector<pair<string,string> > &items) const
@@ -166,6 +168,7 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DTOFHitMatchParams> dTOFHitMatchParams = nullptr;
 				shared_ptr<const DBCALShowerMatchParams> dBCALShowerMatchParams = nullptr;
 				shared_ptr<const DFCALShowerMatchParams> dFCALShowerMatchParams = nullptr;
+				shared_ptr<const DFCALSingleHitMatchParams> dFCALSingleHitMatchParams = nullptr;
 				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;
 		};
 
@@ -403,6 +406,7 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dTOFHitMatchParams = nullptr;
 	dBCALShowerMatchParams = nullptr;
 	dFCALShowerMatchParams = nullptr;
+	dFCALSingleHitMatchParams = nullptr;
 	dDIRCMatchParams = nullptr;
 }
 

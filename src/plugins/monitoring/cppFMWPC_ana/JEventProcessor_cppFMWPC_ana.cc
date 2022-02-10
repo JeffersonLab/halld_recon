@@ -50,28 +50,28 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
   TDirectory *top = gDirectory;
   top->cd();
 
-  gDirectory->mkdir("FMWPC")->cd();
+  gDirectory->mkdir("FMWPC_ana")->cd();
 
   nFMWPCchambers = 6;
   char hnam[128], htit[128];
   for ( int k=0; k<nFMWPCchambers ;k++){
-    sprintf(hnam,"FMWPCwiresT%d",k);
-    sprintf(htit,"Chamber %d FMWPC hit time vs. wire number",k);
+    sprintf(hnam,"FMWPCwiresT%d",k+1);
+    sprintf(htit,"Chamber %d FMWPC hit time vs. wire number",k+1);
     FMWPCwiresT[k] = new TH2D(hnam, htit,  145, 0., 145., 100, 0., 500.);
 
-    sprintf(hnam,"FMWPCwiresE%d",k);
-    sprintf(htit,"Chamber %d FMWPC hit dE vs. wire number",k);
+    sprintf(hnam,"FMWPCwiresE%d",k+1);
+    sprintf(htit,"Chamber %d FMWPC hit dE vs. wire number",k+1);
     FMWPCwiresE[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 100.);
 
-    sprintf(hnam,"h2_pmuon_vs_mult%d",k);
-    sprintf(htit,"Plane %d;Multipliticity;Pmuon",k);
+    sprintf(hnam,"h2_pmuon_vs_mult%d",k+1);
+    sprintf(htit,"Plane %d;Multipliticity;Pmuon",k+1);
     h2_pmuon_vs_mult[k] = new TH2D(hnam, htit,  10, 0, 10, 40, 0, 8);
   }
 
 
   for (int k=0; k<24; k++){
-    sprintf(hnam,"FDCwiresT%d",k);
-    sprintf(htit,"Plane %d FDC hit time vs. wire number",k);
+    sprintf(hnam,"FDCwiresT%d",k+1);
+    sprintf(htit,"Plane %d FDC hit time vs. wire number",k+1);
     FDCwiresT[k] = new TH2D(hnam, htit,  100, 0., 100., 100, 0., 500.);
   }
 
@@ -79,12 +79,11 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
 
   h2_V1_vs_H2 = new TH2D("h2_V1_vs_H2",";H2 wire;V1 wire",145,0,145,145,0,145);
   h2_V3_vs_H4 = new TH2D("h2_V3_vs_H4",";H4 wire;V3 wire",145,0,145,145,0,145);
-  h2_V5_vs_H4 = new TH2D("h2_V5_vs_H4",";H4 wire;V5 wire",145,0,145,145,0,145);
-  h2_V6_vs_H4 = new TH2D("h2_V6_vs_H4",";H4 wire;V6 wire",145,0,145,145,0,145);
-  h2_V3_vs_V1 = new TH2D("h2_V3_vs_V1",";V1 wire;V3 wire",145,0,145,145,0,145);
+  h2_V5_vs_H6 = new TH2D("h2_V5_vs_H6",";H6 wire;V5 wire",145,0,145,145,0,145);
+  h2_V1_vs_V3 = new TH2D("h2_V1_vs_V3",";V3 wire;V1 wire",145,0,145,145,0,145);
   h2_H2_vs_H4 = new TH2D("h2_H2_vs_H4",";H4 wire;H2 wire",145,0,145,145,0,145);
   h2_V3_vs_V5 = new TH2D("h2_V3_vs_V5",";V5 wire;V3 wire",145,0,145,145,0,145);
-  h2_V5_vs_V6 = new TH2D("h2_V5_vs_V6",";V6 wire;V5 wire",145,0,145,145,0,145);
+  h2_H4_vs_H6 = new TH2D("h2_H4_vs_H6",";H6 wire;H4 wire",145,0,145,145,0,145);
 
   h2_pmuon_vs_MWPC = new TH2D("h2_pmuon_vs_MWPC",";MWPC plane; Muon momentum (GeV)",7,0,7,40,0,8);
   
@@ -219,10 +218,10 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
     }
   }
 
-  // V5 vs H4
+  // V5 vs H6
 
   jlayer1=4;
-  jlayer2=3;
+  jlayer2=5;
   for (int k=0; k<(int)fmwpcHits.size(); k++) {
     
     const DFMWPCHit *hit1 = fmwpcHits[k];
@@ -234,17 +233,17 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
 	//std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
 
 	if (hit2->layer-1 == jlayer2) {
-	h2_V5_vs_H4->Fill((double)hit2->wire, (double)hit1->wire);
+	h2_V5_vs_H6->Fill((double)hit2->wire, (double)hit1->wire);
 	}
       }
     }
   }
 
 
-  // V6 vs H4
+  // V1 vs V3
 
-  jlayer1=5;
-  jlayer2=3;
+  jlayer1=0;
+  jlayer2=2;
   for (int k=0; k<(int)fmwpcHits.size(); k++) {
     
     const DFMWPCHit *hit1 = fmwpcHits[k];
@@ -256,28 +255,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
 	//std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
 
 	if (hit2->layer-1 == jlayer2) {
-	h2_V6_vs_H4->Fill((double)hit2->wire, (double)hit1->wire);
-	}
-      }
-    }
-  }
-
-  // V3 vs V1
-
-  jlayer1=2;
-  jlayer2=0;
-  for (int k=0; k<(int)fmwpcHits.size(); k++) {
-    
-    const DFMWPCHit *hit1 = fmwpcHits[k];
-    //std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
-    if (hit1->layer-1 == jlayer1) {
-      for (int j=0; j<(int)fmwpcHits.size(); j++) {
-    
-	const DFMWPCHit *hit2 = fmwpcHits[j];
-	//std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
-
-	if (hit2->layer-1 == jlayer2) {
-	h2_V3_vs_V1->Fill((double)hit2->wire, (double)hit1->wire);
+	h2_V1_vs_V3->Fill((double)hit2->wire, (double)hit1->wire);
 	}
       }
     }
@@ -325,9 +303,9 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
     }
   }
 
-  // V5 vs V6
+  // H4 vs H6
 
-  jlayer1=4;
+  jlayer1=3;
   jlayer2=5;
   for (int k=0; k<(int)fmwpcHits.size(); k++) {
     
@@ -340,7 +318,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
 	//std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
 
 	if (hit2->layer-1 == jlayer2) {
-	h2_V5_vs_V6->Fill((double)hit2->wire, (double)hit1->wire);
+	h2_H4_vs_H6->Fill((double)hit2->wire, (double)hit1->wire);
 	}
       }
     }

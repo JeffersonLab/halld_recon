@@ -12,6 +12,10 @@
 //------------------
 jerror_t DDetectorMatches_factory::init(void)
 {
+  ENABLE_FCAL_SINGLE_HITS = false;
+  gPARMS->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);	
+
+
 	return NOERROR;
 }
 
@@ -79,6 +83,22 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToTrack(locParticleID, locBCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 	for(size_t loc_i = 0; loc_i < locFCALShowers.size(); ++loc_i)
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
+
+	// Try to find matches between tracks and single hits in FCAL
+	if (ENABLE_FCAL_SINGLE_HITS){
+	  vector<const DFCALHit*> locFCALHits;
+	  locEventLoop->Get(locFCALHits);
+	  if (locFCALHits.size()>0){
+	    vector<const DFCALHit*>locSingleHits;
+	    locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
+	}
 
 	//Set flight-time/p correlations
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
@@ -222,3 +242,32 @@ void DDetectorMatches_factory::MatchToTrack(const DParticleID* locParticleID, co
 	}
 	locDetectorMatches->Set_DistanceToNearestTrack(locFCALShower, locMinDistance);
 }
+
+// Try to find matches between a track and a single hit in FCAL
+void 
+DDetectorMatches_factory::MatchToFCAL(const DParticleID* locParticleID,
+				      const DTrackTimeBased *locTrackTimeBased,
+				      vector<const DFCALHit *>&locSingleHits,
+				      DDetectorMatches* locDetectorMatches) const {
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_FCAL);
+  if (extrapolations.size()==0) return;
+
+  for (unsigned int i=0;i<locSingleHits.size();i++){
+    double locDOCA=0.,locHitTime;
+    if (locParticleID->Distance_ToTrack(locTrackTimeBased->t0(),
+					extrapolations[0],locSingleHits[i],
+					locDOCA,locHitTime)){
+      shared_ptr<DFCALSingleHitMatchParams> locMatchParams=std::make_shared<DFCALSingleHitMatchParams>();
+      
+      locMatchParams->dEHit=locSingleHits[i]->E;
+      locMatchParams->dTHit=locHitTime;
+      locMatchParams->dFlightTime = extrapolations[0].t;
+      locMatchParams->dFlightTimeVariance = 0.; // Fill this in!
+      locMatchParams->dPathLength = extrapolations[0].s;
+      locMatchParams->dDOCAToHit = locDOCA;
+      
+      locDetectorMatches->Add_Match(locTrackTimeBased,locMatchParams);
+    }
+  }
+}
+

@@ -1,4 +1,4 @@
-void plot_MWPChits (TString tag="070_pi_plus")
+void plot_MWPChits (TString tag="110_mu_plus")
 {
 // File: plot_MWPChits.C
     // Read output of cppMWPC plugin and plot histograms.
@@ -24,8 +24,13 @@ void plot_MWPChits (TString tag="070_pi_plus")
     // TFile *inData = new TFile("hd_root_particle_gun_031022_"+tag+".root","read");    // pions-: 2deg +/- 3.95/2 deg; Dead wires; 0.5-7.5 GeV pions
     // TFile *inData = new TFile("hd_root_particle_gun_031023_"+tag+".root","read");    // pions+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV pions
     // TFile *inData = new TFile("hd_root_particle_gun_031024_"+tag+".root","read");    // pions+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV muons
-    TFile *inData = new TFile("hd_root_particle_gun_031024_"+tag+".root","read");    // pions+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV pions
-    TDirectory *dir = (TDirectory *)gDirectory->FindObjectAny("FMWPC");
+    // TFile *inData = new TFile("hd_root_particle_gun_031024_"+tag+".root","read");    // pions+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV pions
+    // TFile *inData = new TFile("hd_root_particle_gun_071728_"+tag+".root","read");    // muons-: 4deg +/- 0.05/2 deg; Dead wires; 0.25-5.75 GeV neg muons
+    // TFile *inData = new TFile("hd_root_particle_gun_071728_"+tag+".root","read");    // muons-: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV neg muons
+    // TFile *inData = new TFile("hd_root_particle_gun_071728_"+tag+".root","read");    // pions-: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV neg pions
+    // TFile *inData = new TFile("hd_root_particle_gun_071728_"+tag+".root","read");    // pions+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV pos pions
+    TFile *inData = new TFile("hd_root_particle_gun_071728_"+tag+".root","read");    // muons+: 2deg +/- 3.95/2 deg; Dead wires; 0.25-5.75 GeV pos muons
+    TDirectory *dir = (TDirectory *)gDirectory->FindObjectAny("FMWPC_ana");
     if (dir) dir->cd();
     
     const Int_t nFMWPCchambers=6;
@@ -40,26 +45,25 @@ void plot_MWPChits (TString tag="070_pi_plus")
     
     
     for (Int_t jj=0; jj<nFMWPCchambers; jj++) {
-        index.Form("FMWPCwiresT%d",jj);
+        index.Form("FMWPCwiresT%d",jj+1);
         cout << "jj=" << jj << "index=" << index << endl;
         FMWPCwiresT[jj] = (TH2D*) gDirectory->FindObjectAny(index);
-        index.Form("FMWPCwiresE%d",jj);
+        index.Form("FMWPCwiresE%d",jj+1);
         cout << "jj=" << jj << "index=" << index << endl;
         FMWPCwiresE[jj] = (TH2D*) gDirectory->FindObjectAny(index);
-        index.Form("h2_pmuon_vs_mult%d",jj);
-        cout << "jj=" << jj << "index=" << index << endl;
+        index.Form("h2_pmuon_vs_mult%d",jj+1);
+        cout << "jj+1=" << jj+1 << "index=" << index << endl;
         h2_pmuon_vs_mult[jj] = (TH2D*) gDirectory->FindObjectAny(index);
     }
     
     TH2D *h2_V1_vs_H2 = (TH2D*) gDirectory->FindObjectAny("h2_V1_vs_H2");
     TH2D *h2_V3_vs_H4 = (TH2D*) gDirectory->FindObjectAny("h2_V3_vs_H4");
-    TH2D *h2_V5_vs_H4 = (TH2D*) gDirectory->FindObjectAny("h2_V5_vs_H4");
-    TH2D *h2_V6_vs_H4 = (TH2D*) gDirectory->FindObjectAny("h2_V6_vs_H4");
+    TH2D *h2_V5_vs_H6 = (TH2D*) gDirectory->FindObjectAny("h2_V5_vs_H6");
     
-    TH2D *h2_V3_vs_V1 = (TH2D*) gDirectory->FindObjectAny("h2_V3_vs_V1");
+    TH2D *h2_V1_vs_V3 = (TH2D*) gDirectory->FindObjectAny("h2_V1_vs_V3");
     TH2D *h2_H2_vs_H4 = (TH2D*) gDirectory->FindObjectAny("h2_H2_vs_H4");
     TH2D *h2_V3_vs_V5 = (TH2D*) gDirectory->FindObjectAny("h2_V3_vs_V5");
-    TH2D *h2_V5_vs_V6 = (TH2D*) gDirectory->FindObjectAny("h2_V5_vs_V6");
+    TH2D *h2_H4_vs_H6 = (TH2D*) gDirectory->FindObjectAny("h2_H4_vs_H6");
     
     TH2D *h2_pmuon_vs_MWPC = (TH2D*) gDirectory->FindObjectAny("h2_pmuon_vs_MWPC");
     
@@ -112,52 +116,36 @@ void plot_MWPChits (TString tag="070_pi_plus")
     gPad->SetGridx();
     gPad->SetGridy();
     gPad->SetLogz();
-    // h2_V5_vs_H4->SetTitle("");
-    // h2_V5_vs_H4->GetXaxis()->SetRangeUser(xmin,xmax);
-    // h2_V5_vs_H4->GetYaxis()->SetRangeUser(ymin,ymax);
-    h2_V5_vs_H4->GetXaxis()->SetTitleSize(0.05);
-    h2_V5_vs_H4->GetYaxis()->SetTitleSize(0.05);
-    //h2_V5_vs_H4->GetXaxis()->SetTitle("");
-    //h2_V5_vs_H4->GetYaxis()->SetTitle("");
-    h2_V5_vs_H4->SetLineColor(2);
-    h2_V5_vs_H4->SetMarkerColor(2);
-    h2_V5_vs_H4->SetMarkerStyle(20);
-    h2_V5_vs_H4->SetMarkerSize(0.5);
-    h2_V5_vs_H4->Draw("colz");
+    // h2_V5_vs_H6->SetTitle("");
+    // h2_V5_vs_H6->GetXaxis()->SetRangeUser(xmin,xmax);
+    // h2_V5_vs_H6->GetYaxis()->SetRangeUser(ymin,ymax);
+    h2_V5_vs_H6->GetXaxis()->SetTitleSize(0.05);
+    h2_V5_vs_H6->GetYaxis()->SetTitleSize(0.05);
+    //h2_V5_vs_H6->GetXaxis()->SetTitle("");
+    //h2_V5_vs_H6->GetYaxis()->SetTitle("");
+    h2_V5_vs_H6->SetLineColor(2);
+    h2_V5_vs_H6->SetMarkerColor(2);
+    h2_V5_vs_H6->SetMarkerStyle(20);
+    h2_V5_vs_H6->SetMarkerSize(0.5);
+    h2_V5_vs_H6->Draw("colz");
     
-    c0->cd(4);
-    gPad->SetGridx();
-    gPad->SetGridy();
-    gPad->SetLogz();
-    // h2_V6_vs_H4->SetTitle("");
-    // h2_V6_vs_H4->GetXaxis()->SetRangeUser(xmin,xmax);
-    // h2_V6_vs_H4->GetYaxis()->SetRangeUser(ymin,ymax);
-    h2_V6_vs_H4->GetXaxis()->SetTitleSize(0.05);
-    h2_V6_vs_H4->GetYaxis()->SetTitleSize(0.05);
-    //h2_V6_vs_H4->GetXaxis()->SetTitle("");
-    //h2_V6_vs_H4->GetYaxis()->SetTitle("");
-    h2_V6_vs_H4->SetLineColor(2);
-    h2_V6_vs_H4->SetMarkerColor(2);
-    h2_V6_vs_H4->SetMarkerStyle(20);
-    h2_V6_vs_H4->SetMarkerSize(0.5);
-    h2_V6_vs_H4->Draw("colz");
     
     c0->cd(5);
     gPad->SetGridx();
     gPad->SetGridy();
     gPad->SetLogz();
-    // h2_V3_vs_V1->SetTitle("");
-    // h2_V3_vs_V1->GetXaxis()->SetRangeUser(xmin,xmax);
-    // h2_V3_vs_V1->GetYaxis()->SetRangeUser(ymin,ymax);
-    h2_V3_vs_V1->GetXaxis()->SetTitleSize(0.05);
-    h2_V3_vs_V1->GetYaxis()->SetTitleSize(0.05);
-    //h2_V3_vs_V1->GetXaxis()->SetTitle("");
-    //h2_V3_vs_V1->GetYaxis()->SetTitle("");
-    h2_V3_vs_V1->SetLineColor(2);
-    h2_V3_vs_V1->SetMarkerColor(2);
-    h2_V3_vs_V1->SetMarkerStyle(20);
-    h2_V3_vs_V1->SetMarkerSize(0.5);
-    h2_V3_vs_V1->Draw("colz");
+    // h2_V1_vs_V3->SetTitle("");
+    // h2_V1_vs_V3->GetXaxis()->SetRangeUser(xmin,xmax);
+    // h2_V1_vs_V3->GetYaxis()->SetRangeUser(ymin,ymax);
+    h2_V1_vs_V3->GetXaxis()->SetTitleSize(0.05);
+    h2_V1_vs_V3->GetYaxis()->SetTitleSize(0.05);
+    //h2_V1_vs_V3->GetXaxis()->SetTitle("");
+    //h2_V1_vs_V3->GetYaxis()->SetTitle("");
+    h2_V1_vs_V3->SetLineColor(2);
+    h2_V1_vs_V3->SetMarkerColor(2);
+    h2_V1_vs_V3->SetMarkerStyle(20);
+    h2_V1_vs_V3->SetMarkerSize(0.5);
+    h2_V1_vs_V3->Draw("colz");
     
     c0->cd(6);
     gPad->SetGridx();
@@ -195,18 +183,18 @@ void plot_MWPChits (TString tag="070_pi_plus")
     c0->cd(8);
     gPad->SetGridx();
     gPad->SetGridy();
-    // h2_V5_vs_V6->SetTitle("");
-    // h2_V5_vs_V6->GetXaxis()->SetRangeUser(xmin,xmax);
-    // h2_V5_vs_V6->GetYaxis()->SetRangeUser(ymin,ymax);
-    h2_V5_vs_V6->GetXaxis()->SetTitleSize(0.05);
-    h2_V5_vs_V6->GetYaxis()->SetTitleSize(0.05);
-    //h2_V5_vs_V6->GetXaxis()->SetTitle("");
-    //h2_V5_vs_V6->GetYaxis()->SetTitle("");
-    h2_V5_vs_V6->SetLineColor(2);
-    h2_V5_vs_V6->SetMarkerColor(2);
-    h2_V5_vs_V6->SetMarkerStyle(20);
-    h2_V5_vs_V6->SetMarkerSize(0.5);
-    h2_V5_vs_V6->Draw("colz");
+    // h2_H4_vs_H6->SetTitle("");
+    // h2_H4_vs_H6->GetXaxis()->SetRangeUser(xmin,xmax);
+    // h2_H4_vs_H6->GetYaxis()->SetRangeUser(ymin,ymax);
+    h2_H4_vs_H6->GetXaxis()->SetTitleSize(0.05);
+    h2_H4_vs_H6->GetYaxis()->SetTitleSize(0.05);
+    //h2_H4_vs_H6->GetXaxis()->SetTitle("");
+    //h2_H4_vs_H6->GetYaxis()->SetTitle("");
+    h2_H4_vs_H6->SetLineColor(2);
+    h2_H4_vs_H6->SetMarkerColor(2);
+    h2_H4_vs_H6->SetMarkerStyle(20);
+    h2_H4_vs_H6->SetMarkerSize(0.5);
+    h2_H4_vs_H6->Draw("colz");
     
     
     TCanvas *c1 = new TCanvas("c1", "c1",200,10,1300,700);

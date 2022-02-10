@@ -28,10 +28,7 @@
 #include <TGLabel.h>
 #include <TTimer.h>
 
-class hdv_mainframe;
-#if !(defined(__CINT__) || defined(__CLING__))
 #include "hdv_mainframe.h"
-#endif
 
 class hdv_endviewAframe:public TGMainFrame {
 

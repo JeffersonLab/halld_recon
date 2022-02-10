@@ -22,6 +22,10 @@
 #include <PID/DKinematicData.h>
 #include <DCoordinateSystem.h>
 #include <TRACKING/DReferenceTrajectory.h>
+#include "DReferenceTrajectoryHDV.h"
+#include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DFMWPCCluster.h>
+#include <FMWPC/DFMWPCMatchedTrack.h>
 
 class DQuickFit;
 class DTrackCandidate_factory;
@@ -99,9 +103,10 @@ class MyProcessor:public JEventProcessor
   void GetFactories(vector<JFactory_base*> &factories);
   unsigned int GetNrows(const string &factory, string tag);
   void GetDReferenceTrajectory(string dataname, string tag, 
-			       unsigned int index, DReferenceTrajectory* &rt, vector<const DCDCTrackHit*> &cdchits);
+			       unsigned int index, DReferenceTrajectoryHDV* &rt, vector<const DCDCTrackHit*> &cdchits);
   void GetAllWireHits(vector<pair<const DCoordinateSystem*,double> > &allhits);
   void FormatHistogram(TH2*, int);
+
 
  private:	
   
@@ -115,6 +120,7 @@ class MyProcessor:public JEventProcessor
   string MATERIAL_MAP_MODEL;
   double RMAX_INTERIOR; // Used to allow user to extend drawing range of charged tracks
   double RMAX_EXTERIOR; // Used to allow user to extend drawing range of charged tracks
+  double ZMAX;         // Used to allow user to extend drawing range of charged tracks
 
   uint32_t BCALVERBOSE;
   TCanvas *BCALHitCanvas;  
