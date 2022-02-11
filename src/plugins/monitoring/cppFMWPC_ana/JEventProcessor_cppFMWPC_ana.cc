@@ -60,8 +60,8 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
     FMWPCwiresT[k] = new TH2D(hnam, htit,  145, 0., 145., 100, 0., 500.);
 
     sprintf(hnam,"FMWPCwiresE%d",k+1);
-    sprintf(htit,"Chamber %d FMWPC hit dE vs. wire number",k+1);
-    FMWPCwiresE[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 100.);
+    sprintf(htit,"Chamber %d FMWPC hit q vs. wire number",k+1);
+    FMWPCwiresQ[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 100.);
 
     sprintf(hnam,"h2_pmuon_vs_mult%d",k+1);
     sprintf(htit,"Plane %d;Multipliticity;Pmuon",k+1);
@@ -161,7 +161,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
     const DFMWPCHit *hit1 = fmwpcHits[k];
     //std::cout<<hit->layer<<" / "<<hit->wire<<" / "<<hit->t<<std::endl;
     FMWPCwiresT[hit1->layer-1]->Fill((double)hit1->wire, (double)hit1->t);
-    FMWPCwiresE[hit1->layer-1]->Fill((double)hit1->wire, (double)hit1->dE);
+    FMWPCwiresQ[hit1->layer-1]->Fill((double)hit1->wire, (double)hit1->q);
 
     mwpc_mult[hit1->layer-1] += 1;
     // cout << " k=" << k << " hit1->layer-1=" << hit1->layer-1 << " mwpc_mult[k]=" << mwpc_mult[hit1->layer-1] << endl;
