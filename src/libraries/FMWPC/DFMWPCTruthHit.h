@@ -17,14 +17,15 @@ class DFMWPCTruthHit:public JObject{
 		int layer;   // 1-8
 		int wire;    // 1-144
 		float dE;    // GeV
-		float dx;    // cm
+		float q; // fC
+		float d;    // cm
 		float t;     // ns
 
 		void toStrings(vector<pair<string, string> >&items) const {
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "wire", "%d", wire);
 			AddString(items, "dE(keV)", "%3.1f", dE*1.0E6);
-			AddString(items, "dx", "%3.2f", dx);
+			AddString(items, "d", "%3.2f", d);
 			AddString(items, "t", "%3.3f", t);
 		}
 
