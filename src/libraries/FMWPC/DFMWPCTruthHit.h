@@ -17,7 +17,7 @@ class DFMWPCTruthHit:public JObject{
 		int layer;   // 1-8
 		int wire;    // 1-144
 		float dE;    // GeV
-		float q; // fC
+		float q; // pC
 		float d;    // cm
 		float t;     // ns
 
@@ -25,6 +25,7 @@ class DFMWPCTruthHit:public JObject{
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "wire", "%d", wire);
 			AddString(items, "dE(keV)", "%3.1f", dE*1.0E6);
+			AddString(items, "q", "%3.2f", q);
 			AddString(items, "d", "%3.2f", d);
 			AddString(items, "t", "%3.3f", t);
 		}
