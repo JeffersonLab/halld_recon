@@ -39,7 +39,9 @@ bool DFMWPCHit_wire_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
 //------------------
 jerror_t DFMWPCCluster_factory::init(void)
 {
+  // Future calibration constants
   TIME_SLICE=10000.0; //ns
+  FMWPC_WIRE_SPACING = 1.016; // distance between wires of FMWPC in cm
   gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
   
   return NOERROR;
@@ -55,10 +57,15 @@ jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnum
   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
   dgeom  = dapp->GetDGeometry(runnumber);
 
-  // Get the FMWPC z positions from the HDDM geometry
-  // if it is not in there, use hard-coded values
+  // Get the FMWPC z,x and y positions from the HDDM geometry
+  // if they are not in there, use hard-coded values
   if (!dgeom->GetFMWPCZ_vec(zvec))
     zvec = {935.366,948.536,961.706,976.226,993.246,1016.866};
+  if (!dgeom->GetFMWPCXY_rot(xvec, yvec, rot)){
+    xvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+    yvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+    rot = {90.0,0.0,90.0,0.0,90.0,0.0};
+  }
 
   return NOERROR;
 }
@@ -166,8 +173,9 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     newCluster->u /= newCluster->q; // normalize to total charge
 
     // global coordinate system
-    double x = 0;
-    double y = 0;
+    // set to -777 for not measured coordinate
+    double x = (rot[newCluster->layer-1]==90.0) ? xvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
+    double y = (rot[newCluster->layer-1]==0.0) ? yvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
     double z = zvec[newCluster->layer-1];
     DVector3 pos(x,y,z);
     newCluster->pos = pos;
