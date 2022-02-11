@@ -59,7 +59,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
     sprintf(htit,"Chamber %d FMWPC hit time vs. wire number",k+1);
     FMWPCwiresT[k] = new TH2D(hnam, htit,  145, 0., 145., 100, 0., 500.);
 
-    sprintf(hnam,"FMWPCwiresE%d",k+1);
+    sprintf(hnam,"FMWPCwiresQ%d",k+1);
     sprintf(htit,"Chamber %d FMWPC hit q vs. wire number",k+1);
     FMWPCwiresQ[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 100.);
 
