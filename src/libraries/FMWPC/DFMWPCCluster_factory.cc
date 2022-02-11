@@ -50,7 +50,17 @@ jerror_t DFMWPCCluster_factory::init(void)
 //------------------
 jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-	return NOERROR;
+
+  // Get pointer to DGeometry object
+  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  dgeom  = dapp->GetDGeometry(runnumber);
+
+  // Get the FMWPC z positions from the HDDM geometry
+  // if it is not in there, use hard-coded values
+  if (!dgeom->GetFMWPCZ_vec(zvec))
+    zvec = {935.366,948.536,961.706,976.226,993.246,1016.866};
+
+  return NOERROR;
 }
 
 //------------------
@@ -69,8 +79,6 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Sort hits by layer number and by time
       sort(allHits.begin(),allHits.end(),DFMWPCHit_cmp);
 
-      //cout << "bla" << endl;
-      
       // Layer by layer, create clusters of hits.
       thisLayer.clear();
       vector<const DFMWPCHit*>::iterator i = allHits.begin();
@@ -156,6 +164,14 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
       newCluster->Nhits++;
     }
     newCluster->u /= newCluster->q; // normalize to total charge
+
+    // global coordinate system
+    double x = 0;
+    double y = 0;
+    double z = zvec[newCluster->layer-1];
+    DVector3 pos(x,y,z);
+    newCluster->pos = pos;
+
     _data.push_back(newCluster);
 		
     istart = iend-1;
