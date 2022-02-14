@@ -1833,7 +1833,7 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 //---------------------------------
 // GetFMWPCXY
 //---------------------------------
-bool DGeometry::GetFMWPCXY_rot(vector<double>&xvec_fmwpc, vector<double>&yvec_fmwpc, vector<double>&rot_fmwpc) const
+bool DGeometry::GetFMWPCXY_vec(vector<double>&xvec_fmwpc, vector<double>&yvec_fmwpc) const
 {
   vector<double> ForwardMWPCpos;
   bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
@@ -1864,20 +1864,21 @@ bool DGeometry::GetFMWPCXY_rot(vector<double>&xvec_fmwpc, vector<double>&yvec_fm
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='6']", CPPChamberPos);
   xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
   yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
- 
-  vector<double>CPPChamberRot;
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='1']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='2']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='3']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='4']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='5']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
-  Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='6']", CPPChamberRot);
-  rot_fmwpc.push_back(CPPChamberRot[2]);
+
+  // Currently, not all chambers have a 'rot' field in hdds
+  // vector<double>CPPChamberRot;
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='1']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='2']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='3']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='4']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='5']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='6']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
 
   return true;
 }

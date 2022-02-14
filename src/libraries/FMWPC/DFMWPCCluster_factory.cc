@@ -61,11 +61,11 @@ jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnum
   // if they are not in there, use hard-coded values
   if (!dgeom->GetFMWPCZ_vec(zvec))
     zvec = {935.366,948.536,961.706,976.226,993.246,1016.866};
-  if (!dgeom->GetFMWPCXY_rot(xvec, yvec, rot)){
+  if (!dgeom->GetFMWPCXY_vec(xvec, yvec)){
     xvec = {0.0,0.0,0.0,0.0,0.0,0.0};
     yvec = {0.0,0.0,0.0,0.0,0.0,0.0};
-    rot = {90.0,0.0,90.0,0.0,90.0,0.0};
   }
+  rot = {90.0,0.0,90.0,0.0,90.0,0.0};
 
   return NOERROR;
 }
@@ -170,7 +170,7 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
       newCluster->last_wire = H[i]->wire;
       newCluster->Nhits++;
     }
-    newCluster->u /= newCluster->q; // normalize to total charge
+    if (newCluster->q != 0) newCluster->u /= newCluster->q; // normalize to total charge
 
     // global coordinate system
     // set to -777 for not measured coordinate
