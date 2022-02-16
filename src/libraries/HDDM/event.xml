@@ -215,8 +215,8 @@
       </RFtime>
       <GEMTRD minOccurs="0">
 	<gemtrdChamber maxOccurs="unbounded" minOccurs="0" layer="int">
-	  <gemtrdTruthHit q="float" x="float" y="float" t="float" zdrift="float"/>
-	  <gemtrdHit q="float" x="float" y="float" t="float"/>
+	  <gemtrdTruthHit q="float" x="float" y="float" t="float" d="float" maxOccurs="unbounded"/>
+	  <gemtrdHit q="float" x="float" y="float" t="float" maxOccurs="unbounded"/>
 	</gemtrdChamber>
 	<gemtrdTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>

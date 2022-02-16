@@ -3111,10 +3111,10 @@ jerror_t DEventSourceHDDM::Extract_DGEMTRDTruthHit(hddm_s::HDDM *record,  JFacto
       DGEMTRDTruthHit *hit = new DGEMTRDTruthHit;
       hit->layer = iter->getLayer();
       hit->q     = iter->getQ();
-      hit->y    = iter->getY();
-      hit->x    = iter->getX();
+      hit->y     = iter->getY();
+      hit->x     = iter->getX();
       hit->t     = iter->getT();
-      hit->zdrift = iter->getZdrift();
+      hit->d     = iter->getD();
       data.push_back(hit);
    }
 
