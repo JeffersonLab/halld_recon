@@ -1,0 +1,141 @@
+
+Here is a description of the branches of the matched tree
+for purposes of documentation for Data Science use.
+
+
+eventNo
+--------
+The event number.
+
+nChargedTracks
+--------------
+The number of reconstructed tracks that met the following
+conditions:
+
+1. Had either a pi+ or pi- mass hypothesis
+2. Track projected cleanly to the FCAL
+3. Track projected cleanly to the first layer of the FMWPC
+
+n.b. This may be less than nFMWPCMatchedTracks since those
+include tracks that don't require 3. above.
+
+nFCALShowers
+------------
+Number of reconstructed FCAL showers. By default showers
+require a minimum of 2 blocks. Single blocks where no
+neighbors are hit are, therefore, not counted. There is 
+also a minimum energy deposit of 350MeV. This mean for 
+minimum ionizing particles (MIPs) that pass right through
+a single block, depositing a small amount of energy, there
+will be no corresponding "shower". This is the case for
+most muons and some pions.
+
+nFCALhits
+----------
+Number of FCAL hits. This is basically the number of blocks
+hit in the event. Technically, it could include two hits
+in a single block if they were far enough away in time, but
+that is very unlikely. There is no cut on the timing of these
+so there may be accidentals included from unrelated events
+close in time with the triggering event. This is not present
+in the simulated data, but will be in the real data.
+
+nMWPChits
+-----------
+Number of FMWPC wire hits in the event.
+
+
+nFMWPCMatchedTracks
+-------------------
+Number of "matched" tracks in the event. This is the number
+of reconstructed tracks that were one of a e+,e-,pi+,pi-
+mass hypothesis. No other criteria was applied. Thus, this
+will count tracks that were not counted in the nChargedTracks
+field above. 
+
+n.b. The following values are all variable-sized arrays with
+nFMWPCMatchedTracks elements. These correspond to the
+DFMWPCMatchedTrack reconstructed data objects in the Hall-D
+code. The "matched" refers to including information from the
+track and hits/clusters it was matched to in the FCAL and
+FMWPC detectors.
+
+
+FMWPC_pid[nFMWPCMatchedTracks]
+------------------------------
+The mass hypothesis for each matched track. These should be
+one of:
+
+2 = positron
+3 = electron
+8 = pi+
+9 = pi-
+
+
+FCAL_E_center
+-------------
+Calibrated energy hit for the FCAL block the track projected
+to. Note that while this is a calibrated hit, it does not
+include things like the depth corrections done when a block
+is part of a cluster. Also, because the pion and muon 
+particles we are interested in here do not create EM showers,
+there is a lot of energy deposited in the downstream end
+of the block that less attenuated compared to typical shower
+energy. Thus, the "apparent" energy will be higher for those.
+Finally, This can easily be 0 if the track projection points 
+to a different block than was actually hit. This last point
+probably makes this of limited use. More likely we will want
+to look at the 3x3 or 5x5 values.
+
+FCAL_E_3x3
+----------
+Sum of the 3x3 group of FCAL blocks centered on the block
+corresponding to FCAL_E_center (see above).
+
+n.b. this is intended to look in a small region of the FCAL
+in the vicinity of the projectyed track. It is a straight
+sum of the FCAL hits with no depth corrections etc..
+
+
+FCAL_E_5x5
+----------
+Sum of the 5x5 group of FCAL blocks centered on the block
+corresponding to FCAL_E_center (see above).
+
+It is likely that the ratio of FCAL_E_3x3 and FCAL_E_5x5 
+would be a good feature to train on since it indicates
+how contained the shower is.
+
+
+FMWPC_closest_wire*
+------------------
+This is the closest hit wire in the FMWPC to the projected
+track for the FMWPC layer. 
+
+n.b. Some layers will have no wires hit in the event as
+so will report a wire number of -1000 indicating this.
+
+n.b. If a layer has only a single wire hit, then it will
+necessarily be the closest wire for all tracks in the 
+event. For this reason, the more important value is the
+FMWPC_dist_closest_wire* values described below.
+
+
+FMWPC_dist_closest_wire*
+------------------------
+The distance between the track projection to the layer
+and the closest hit wire (if any). This is in units of
+wires and the wire spacing is just over 1cm so it is
+basically in cm. If no wire was hit in the layer then
+this defaults to 1.0E6
+
+
+FMWPC_Nhits_cluster*
+--------------------
+The number of contiguous wires hit that include the 
+FMWPC_closest_wire*. In principle, this would be an
+indication of the size of a hardonic shower as it passes
+though the FMWPC layer. 
+
+
+
