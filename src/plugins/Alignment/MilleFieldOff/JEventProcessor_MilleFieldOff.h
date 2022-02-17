@@ -1,7 +1,7 @@
 // $Id$
 //
 //    File: JEventProcessor_MilleFieldOff.h
-// Created: Tue Jan 17 19:32:32 Local time zone must be set--see zic manual page 2017
+// Created: Tue Jan 17 19:32:32
 // Creator: mstaib (on Linux egbert 2.6.32-642.6.2.el6.x86_64 x86_64)
 //
 

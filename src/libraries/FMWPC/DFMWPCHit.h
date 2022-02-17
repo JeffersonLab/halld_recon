@@ -18,13 +18,15 @@ class DFMWPCHit:public JObject{
 
 		int layer;   // 1-8
 		int wire;    // 1-144
-		float dE;    // energy in GeV
+		float q;     // charge deposited
+		float amp;   // peak amplitude
 		float t;     // time in ns
 
 		void toStrings(vector<pair<string, string> >&items) const {
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "wire", "%d", wire);
-			AddString(items, "dE(keV)", "%3.1f", dE*1.0E6);
+			AddString(items, "q",      "%10.2f",  q);
+			AddString(items, "amp",    "%10.2f", amp);
 			AddString(items, "t", "%3.3f", t);
 		}
 

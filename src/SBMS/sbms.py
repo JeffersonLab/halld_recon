@@ -690,10 +690,16 @@ def AddCCDB(env):
 ##################################
 def AddSQLite(env):
 	sqlitecpp_home = os.getenv('SQLITECPP_HOME')
-	env.Append(CPPDEFINES={'SQLITE_USE_LEGACY_STRUCT':'ON'})
+	sqlite_ge_3_19 = version_greater_than_or_equal_to('SQLITE_VERSION', [3, 19, 0])
+	if not sqlite_ge_3_19.defined or (sqlite_ge_3_19.defined and not sqlite_ge_3_19.answer):
+		env.Append(CPPDEFINES={'SQLITE_USE_LEGACY_STRUCT':'ON'})
 	SQLITECPP_CPPPATH = ["%s/include" % (sqlitecpp_home)]
 	env.AppendUnique(CPPPATH = SQLITECPP_CPPPATH)
-	SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
+	sqlitecpp_ge_2_5 = version_greater_than_or_equal_to('SQLITECPP_VERSION', [2, 5, 0])
+	if sqlitecpp_ge_2_5.defined and sqlitecpp_ge_2_5.answer:
+		SQLITECPP_LIBPATH = ["%s/lib64" % (sqlitecpp_home)]
+	else:
+		SQLITECPP_LIBPATH = ["%s/lib" % (sqlitecpp_home)]
 	env.AppendUnique(LIBPATH = SQLITECPP_LIBPATH)
 	env.AppendUnique(LIBS    = 'SQLiteCpp')
 	sqlite_home = os.getenv('SQLITE_HOME')
@@ -891,23 +897,27 @@ def AddROOT(env):
 	rootcintpath  = "%s/bin/rootcint" % (rootsys)
 	rootclingpath = "%s/bin/rootcling" % (rootsys)
 	if env['SHOWBUILD']==0:
-		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootcintpath) , 'ROOTCINT   [$SOURCE]')
-		rootclingaction = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootclingpath), 'ROOTCLING  [$SOURCE]')
+		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCES" % (rootcintpath) , 'ROOTCINT   [$SOURCE]')
+		rootclingaction = SCons.Script.Action("%s -f $TARGET    $SOURCES" % (rootclingpath), 'ROOTCLING  [$SOURCE]')
 	else:
-		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootcintpath) )
-		rootclingaction = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootclingpath))
+		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCES" % (rootcintpath) )
+		rootclingaction = SCons.Script.Action("%s -f $TARGET    $SOURCES" % (rootclingpath))
 	if os.path.exists(rootclingpath) :
-		bld = SCons.Script.Builder(action = rootclingaction, suffix='_Dict.cc', src_suffix='.h')
+		bld = SCons.Script.Builder(action = rootclingaction)
 	elif os.path.exists(rootcintpath):
-		bld = SCons.Script.Builder(action = rootcintaction, suffix='_Dict.cc', src_suffix='.h')
+		bld = SCons.Script.Builder(action = rootcintaction)
 	else:
 		print('Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.')
 		return
 
 	env.Append(BUILDERS = {'ROOTDict' : bld})
 
-	# Generate ROOT dictionary file targets for each header
-	# containing "ClassDef"
+	# Generate ROOT dictionaries for all headers containing "ClassDef"
+	#
+	# n.b. This was changed in 2022. The current behavior is to create
+	# a single dictionary file for all headers in the current source 
+	# directory. Previously, a separate dictionary file was created for
+	# each header. -DL 
 	#
 	# n.b. It seems if scons is run when the build directory doesn't exist,
 	# then the cwd is set to the source directory. Otherwise, it is the
@@ -919,12 +929,25 @@ def AddROOT(env):
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
 		print("---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath)
+
+	# The user may wish to limit which headers are used to make a dictionary.
+	# They may bypass the automtic search for files with "ClassDef" by setting
+	# the 'ROOT_DICT_SRC' variable in the build environment.
 	os.chdir(srcpath)
-	for f in glob.glob('*.[h|hh|hpp]'):
-		if 'ClassDef' in open(f).read():
-			env.AppendUnique(ALL_SOURCES = env.ROOTDict(f))
-			if(int(env['SHOWBUILD'])>1):
-				print("       ROOT dictionary for %s" % f)
+	ROOT_DICT_SRC = []
+	if 'ROOT_DICT_SRC' in list(env.Dictionary().keys()):
+		# user specified which headers to make dictionaries from
+		ROOT_DICT_SRC = env['ROOT_DICT_SRC']
+	else:
+		# automatically find headers to make dictionaries from
+		for f in glob.glob('*.[h|hh|hpp]'):
+			if 'ClassDef' in open(f).read(): ROOT_DICT_SRC.append(f)
+
+	if len(ROOT_DICT_SRC):
+		# Create root dictionary that includes all specified headers
+		env.AppendUnique(ALL_SOURCES = env.ROOTDict(target='My_ROOT_Dict.cc', source=ROOT_DICT_SRC))
+		if(int(env['SHOWBUILD'])>1):
+			print("       ROOT dictionary for %s" % ' '.join(ROOT_DICT_SRC))
 	os.chdir(curpath)
 
 
@@ -1130,4 +1153,46 @@ def AddCobrems(env):
 	env.AppendUnique(LIBS    = 'AMPTOOLS_MCGEN')
 	env.AppendUnique(CCFLAGS = pyincludes.rstrip().split())
 
+##################################
+# version comparison helper
+##################################
 
+class version_result():
+	def __init__(self, version, defined, answer):
+		self.version = version
+		self.defined = defined
+		self.answer = answer
+
+def version_greater_than_or_equal_to(version_env_var, version_array):
+	major_std = version_array[0]
+	minor_std = version_array[1]
+	subminor_std = version_array[2]
+	version = str(os.environ.get(version_env_var))
+	answer = False
+	disallowed_chars = 'pv'
+	if version == 'None':
+		defined = False
+	else:
+		defined = True
+		for char in disallowed_chars:
+			version = version.replace(char, "")
+		versions = version.split('.')
+		major = int(versions[0])
+		minor = int(versions[1])
+		subminor = int(versions[2])
+		if major > major_std:
+			answer = True
+		elif major == major_std:
+			if minor > minor_std:
+				answer = True
+			elif minor == minor_std:
+				if subminor >= subminor_std:
+					answer = True
+				else:
+					answer = False
+			else:
+				answer = False
+		else:
+			answer = False
+	result = version_result(version, defined, answer)
+	return result

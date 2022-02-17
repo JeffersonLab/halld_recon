@@ -30,20 +30,23 @@
 
 class hdv_mainframe;
 class trk_mainframe;
+class fmwpc_mainframe;
 class hdv_optionsframe;
 class hdv_debugerframe;
 class hdv_fulllistframe;
 class hdv_endviewAframe;
 class hdv_endviewBframe;
 class DKinematicData;
-#if !(defined(__CINT__) || defined(__CLING__))
+
 #include "trk_mainframe.h"
+#include "fmwpc_mainframe.h"
 #include "hdv_optionsframe.h"
 #include "hdv_debugerframe.h"
 #include "hdv_fulllistframe.h"
 #include "hdv_endviewAframe.h"
 #include "hdv_endviewBframe.h"
-#endif
+
+
 
 class hdv_mainframe:public TGMainFrame {
 
@@ -69,6 +72,7 @@ class hdv_mainframe:public TGMainFrame {
 		void DoTimer(void);
 		
 		void DoOpenTrackInspector(void);
+        void DoOpenFMWPCInspector(void);
 		void DoOpenOptionsWindow(void);
 		void DoOpenFullListWindow(void);
 		void DoOpenTOFInspector(void);
@@ -79,6 +83,7 @@ class hdv_mainframe:public TGMainFrame {
 		void DoUpdateBcalDisp(void);
 
 		void DoClearTrackInspectorPointer(void);
+        void DoClearFMWPCInspectorPointer(void);
 		void DoClearOptionsWindowPointer(void);
 		void DoClearTOFInspectorPointer(void);
 		void DoClearFCALInspectorPointer(void);
@@ -104,16 +109,16 @@ class hdv_mainframe:public TGMainFrame {
 		
 		void DrawDetectorsXY(void);
 		void DrawDetectorsRPhi(void);
-		void DrawAxes(TCanvas *c, vector<TObject*> &graphics, const char *xlab, const char *ylab);
-		void DrawScale(TCanvas *c, vector<TObject*> &graphics);
-		void DrawLabel(TCanvas *c, vector<TObject*> &graphics, const char *txt);
+		void DrawAxes(TCanvas *c, std::vector<TObject*> &graphics, const char *xlab, const char *ylab);
+		void DrawScale(TCanvas *c, std::vector<TObject*> &graphics);
+		void DrawLabel(TCanvas *c, std::vector<TObject*> &graphics, const char *txt);
 
 
 		// Other (non-slot) methods
 		void SetEvent(ULong64_t id);
 		void SetRun(Int_t id);
 		void SetTrig(char *trigstring);
-		void SetSource(string source);
+		void SetSource(std::string source);
 		bool GetDrawCandidates(void){return draw_candidates;}
 		bool GetDrawTracks(void){return draw_tracks;}
 		bool GetDrawThrowns(void){return draw_throwns;}
@@ -121,37 +126,38 @@ class hdv_mainframe:public TGMainFrame {
 		hdv_fulllistframe* GetFullListFrame(void){return fulllistmf;}
 		hdv_debugerframe* GetDebugerFrame(void){return debugermf;}
 		TCanvas* GetBcalDispFrame(void){return bcaldispmf;}
-		map<string, vector<TGLabel*> >& GetThrownLabels(void){return thrownlabs;}
-		map<string, vector<TGLabel*> >& GetReconstructedLabels(void){return reconlabs;}
+		std::map<std::string, std::vector<TGLabel*> >& GetThrownLabels(void){return thrownlabs;}
+		std::map<std::string, std::vector<TGLabel*> >& GetReconstructedLabels(void){return reconlabs;}
 		
-		void SetCandidateFactories(vector<string> &facnames);
-		void SetWireBasedTrackFactories(vector<string> &facnames);
-		void SetTimeBasedTrackFactories(vector<string> &facnames);
-		void SetReconstructedFactories(vector<string> &facnames);
-		void SetChargedTrackFactories(vector<string> &facnames);
+		void SetCandidateFactories(std::vector<std::string> &facnames);
+		void SetWireBasedTrackFactories(std::vector<std::string> &facnames);
+		void SetTimeBasedTrackFactories(std::vector<std::string> &facnames);
+		void SetReconstructedFactories(std::vector<std::string> &facnames);
+		void SetChargedTrackFactories(std::vector<std::string> &facnames);
 		void SetDebugerFrame(hdv_debugerframe* d){debugermf = d;}
 		void SetBcalDispFrame(TCanvas* d){bcaldispmf = d;}
 		void SetFullListFrame(hdv_fulllistframe* d){fulllistmf = d;}
 
-		bool GetCheckButton(string who);
-		void AddCheckButtons(map<string, TGCheckButton*> &checkbuttons);
-		const char* GetFactoryTag(string who);
-		void GetReconFactory(string &name, string &tag);
+		bool GetCheckButton(std::string who);
+		void AddCheckButtons(std::map<std::string, TGCheckButton*> &checkbuttons);
+		const char* GetFactoryTag(std::string who);
+		void GetReconFactory(std::string &name, std::string &tag);
 		TPolyLine* GetFCALPolyLine(int channel);
 		TPolyLine* GetFCALPolyLine(int row, int column);
 		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);
 		
-		void AddGraphicsSideA(vector<TObject*> &v);
-		void AddGraphicsSideB(vector<TObject*> &v);
-		void AddGraphicsEndA(vector<TObject*> &v);
-		void AddGraphicsEndB(vector<TObject*> &v);
+		void AddGraphicsSideA(std::vector<TObject*> &v);
+		void AddGraphicsSideB(std::vector<TObject*> &v);
+		void AddGraphicsEndA(std::vector<TObject*> &v);
+		void AddGraphicsEndB(std::vector<TObject*> &v);
 
 
 	private:
 	
 		trk_mainframe *trkmf;
+        fmwpc_mainframe *fmwpcmf;
 		hdv_optionsframe *optionsmf;
 		hdv_debugerframe *debugermf;
 		TCanvas *bcaldispmf;
@@ -178,9 +184,9 @@ class hdv_mainframe:public TGMainFrame {
 		TGGroupFrame *throwninfo;
 		TGGroupFrame *reconinfo;
 		
-		string default_candidate;
-		string default_track;
-		string default_reconstructed;
+		std::string default_candidate;
+		std::string default_track;
+		std::string default_reconstructed;
 		
 		bool draw_candidates;
 		bool draw_tracks;
@@ -192,23 +198,23 @@ class hdv_mainframe:public TGMainFrame {
 		double canvas_width, default_canvas_width;
 		coordsys_t coordinatetype;
 
-		vector<TObject*> graphics_sideA;
-		vector<TObject*> graphics_sideB;
-		vector<TObject*> graphics_endA;
-		vector<TObject*> graphics_endB;
+		std::vector<TObject*> graphics_sideA;
+		std::vector<TObject*> graphics_sideB;
+		std::vector<TObject*> graphics_endA;
+		std::vector<TObject*> graphics_endB;
 
-		map<string, vector<TGLabel*> > thrownlabs;
-		map<string, vector<TGLabel*> > reconlabs;
-		map<string, TGCheckButton*> checkbuttons;
-		map<int, TPolyLine*> fcalblocks;
-		map<int, TPolyLine*> bcalblocks;
-		map<int, TPolyLine*> ccalblocks;
-		map<int, map<int, TPolyLine*> > tofblocks;
+		std::map<std::string, std::vector<TGLabel*> > thrownlabs;
+		std::map<std::string, std::vector<TGLabel*> > reconlabs;
+		std::map<std::string, TGCheckButton*> checkbuttons;
+		std::map<int, TPolyLine*> fcalblocks;
+		std::map<int, TPolyLine*> bcalblocks;
+		std::map<int, TPolyLine*> ccalblocks;
+		std::map<int, std::map<int, TPolyLine*> > tofblocks;
 
 		TTimer *timer;
 		long sleep_time; // in milliseconds
 		
-		template<typename T> void FillPoly(T *sA, T *sB, T *eA, vector<TVector3> &v);
+		template<typename T> void FillPoly(T *sA, T *sB, T *eA, std::vector<TVector3> &v);
 		
 	ClassDef(hdv_mainframe,1)
 };
@@ -224,7 +230,7 @@ class hdv_mainframe:public TGMainFrame {
 // FillPoly
 //---------------
 template<typename T>
-void hdv_mainframe::FillPoly(T *sA, T *sB, T *eA, vector<TVector3> &v)
+void hdv_mainframe::FillPoly(T *sA, T *sB, T *eA, std::vector<TVector3> &v)
 {
 	/// Fill sA, sB, and eA with the space points given in v. This is done
 	/// via repeated calls to the SetNextPoint method of T which

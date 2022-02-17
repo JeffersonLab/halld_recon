@@ -550,7 +550,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
             // Now proj_pos contains the projected position of the track at this particular point within the BCAL
             // We can plot the difference of the projected position and the BCAL position as a function of the channel
-            char channame[255], layername[255], chargename[255];
+            char channame[20], layername[255], chargename[255];
             sprintf(channame, "M%02iL%iS%i", thisPoint->module(), thisPoint->layer(), thisPoint->sector());
             sprintf(layername, "AllLayer%i", thisPoint->layer());
             sprintf(chargename, "All_q%s", q);

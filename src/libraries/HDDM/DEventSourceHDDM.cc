@@ -447,10 +447,22 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName == "DFMWPCTruthHit")
       return Extract_DFMWPCTruthHit(record, 
                      dynamic_cast<JFactory<DFMWPCTruthHit>*>(factory), tag);
+   
+   if (dataClassName == "DFMWPCTruth")
+      return Extract_DFMWPCTruth(record, 
+                     dynamic_cast<JFactory<DFMWPCTruth>*>(factory), tag);
 
    if (dataClassName == "DFMWPCHit")
       return Extract_DFMWPCHit(record, 
                      dynamic_cast<JFactory<DFMWPCHit>*>(factory), tag);
+
+   if (dataClassName == "DCTOFTruth")
+      return Extract_DCTOFTruth(record, 
+                     dynamic_cast<JFactory<DCTOFTruth>*>(factory), tag);
+   
+   if (dataClassName == "DCTOFHit")
+      return Extract_DCTOFHit(record, 
+                     dynamic_cast<JFactory<DCTOFHit>*>(factory), tag);
 
    if (dataClassName == "DDIRCTruthBarHit")
      return Extract_DDIRCTruthBarHit(record,
@@ -2720,10 +2732,55 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactor
       DFMWPCTruthHit *hit = new DFMWPCTruthHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
+      hit->q     = iter->getQ();
       hit->dE    = iter->getDE();
-      hit->dx    = iter->getDx();
+      hit->d    = iter->getD();
       hit->t     = iter->getT();
       data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+
+//------------------
+// Extract_DFMWPCTruth
+//------------------
+jerror_t DEventSourceHDDM::Extract_DFMWPCTruth(hddm_s::HDDM *record,
+                                   JFactory<DFMWPCTruth>* factory, string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+  
+   vector<DFMWPCTruth*> data;
+
+   const hddm_s::FmwpcTruthPointList &points = record->getFmwpcTruthPoints();
+   hddm_s::FmwpcTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DFMWPCTruth *fmwpctruth = new DFMWPCTruth;
+      fmwpctruth->primary = iter->getPrimary();
+      fmwpctruth->track   = iter->getTrack();
+      fmwpctruth->x       = iter->getX();
+      fmwpctruth->y       = iter->getY();
+      fmwpctruth->z       = iter->getZ();
+      fmwpctruth->t       = iter->getT();
+      fmwpctruth->px      = iter->getPx();
+      fmwpctruth->py      = iter->getPy();
+      fmwpctruth->pz      = iter->getPz();
+      fmwpctruth->E       = iter->getE();
+      fmwpctruth->ptype   = iter->getPtype();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      fmwpctruth->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(fmwpctruth);
    }
 
    // Copy into factory
@@ -2752,6 +2809,83 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       DFMWPCHit *hit = new DFMWPCHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
+      hit->q     = iter->getQ();
+      hit->amp   = iter->getAmp(); 
+      hit->t     = iter->getT();
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+
+//------------------
+// Extract_DCTOFTruth
+//------------------
+jerror_t DEventSourceHDDM::Extract_DCTOFTruth(hddm_s::HDDM *record,
+                                   JFactory<DCTOFTruth>* factory, string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+  
+   vector<DCTOFTruth*> data;
+
+   const hddm_s::CtofTruthPointList &points = record->getCtofTruthPoints();
+   hddm_s::CtofTruthPointList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DCTOFTruth *ctoftruth = new DCTOFTruth;
+      ctoftruth->primary = iter->getPrimary();
+      ctoftruth->track   = iter->getTrack();
+      ctoftruth->x       = iter->getX();
+      ctoftruth->y       = iter->getY();
+      ctoftruth->z       = iter->getZ();
+      ctoftruth->t       = iter->getT();
+      ctoftruth->px      = iter->getPx();
+      ctoftruth->py      = iter->getPy();
+      ctoftruth->pz      = iter->getPz();
+      ctoftruth->E       = iter->getE();
+      ctoftruth->ptype   = iter->getPtype();
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      ctoftruth->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(ctoftruth);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+
+//------------------
+// Extract_DCTOFHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTOFHit> *factory, string tag)
+{
+   /// Copies the data from the given hddm_s record. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL) return OBJECT_NOT_AVAILABLE;
+   if (tag != "") return OBJECT_NOT_AVAILABLE;
+
+   vector<DCTOFHit*> data;
+
+   const hddm_s::CtofHitList &points = record->getCtofHits();
+   hddm_s::CtofHitList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      DCTOFHit *hit = new DCTOFHit;
+      hit->bar = iter->getBar();
+      hit->end  = iter->getEnd();
       hit->dE    = iter->getDE();
       hit->t     = iter->getT();
       data.push_back(hit);

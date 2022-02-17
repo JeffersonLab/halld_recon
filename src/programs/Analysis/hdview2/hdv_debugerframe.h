@@ -30,13 +30,14 @@
 #include <TG3DLine.h>
 
 
-class hdv_mainframe;
+//class hdv_mainframe;
+#include "hdv_mainframe.h"
+
 class DKinematicData;
 class DTrackWireBased;
 class DTrackTimeBased;
 
 #if !(defined(__CINT__) || defined(__CLING__))
-#include "hdv_mainframe.h"
 #include <PID/DKinematicData.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DTrackTimeBased.h>
@@ -73,9 +74,9 @@ class hdv_debugerframe:public TGMainFrame {
   void SetNTrCand(Int_t d) { NTrCand = d;}
   void SetNTrTimeBased(Int_t d) { NTrTimeBased = d;}
   void SetNTrWireBased(Int_t d) { NTrWireBased = d;}
-  void SetTrackCandidates(vector<const DKinematicData*> d) {TrackCandidates=d;}
-  void SetTrackWireBased(vector<const DTrackWireBased*> d) {subTrackWireBased=d;}
-  void SetTrackTimeBased(vector<const DTrackTimeBased*> d) {subTrackTimeBased=d;}
+  void SetTrackCandidates(std::vector<const DKinematicData*> d) {TrackCandidates=d;}
+  void SetTrackWireBased(std::vector<const DTrackWireBased*> d) {subTrackWireBased=d;}
+  void SetTrackTimeBased(std::vector<const DTrackTimeBased*> d) {subTrackTimeBased=d;}
   void SetUpMid1Frame();
   void SetUpMid2Frame();
 
@@ -86,18 +87,18 @@ class hdv_debugerframe:public TGMainFrame {
   Int_t NTrCand;
   Int_t NTrTimeBased;
   Int_t NTrWireBased;
-  vector<const DKinematicData*> TrackCandidates;
-  vector<const DTrackWireBased*> subTrackWireBased;
-  vector<const DTrackTimeBased*> subTrackTimeBased;
+  std::vector<const DKinematicData*> TrackCandidates;
+  std::vector<const DTrackWireBased*> subTrackWireBased;
+  std::vector<const DTrackTimeBased*> subTrackTimeBased;
 
   map<string, TGVerticalFrame *> tf;
-  map<string, vector<TGLabel*> > candlabs;
+  map<string, std::vector<TGLabel*> > candlabs;
 
   map<string, TGVerticalFrame *> tfWB;
-  map<string, vector<TGLabel*> > wblabs;
+  map<string, std::vector<TGLabel*> > wblabs;
 	       
   map<string, TGVerticalFrame *> tfTB;
-  map<string, vector<TGLabel*> > tblabs;
+  map<string, std::vector<TGLabel*> > tblabs;
 	       
   hdv_mainframe *hdvmf;
   map<string, TGCheckButton*> checkbuttons;

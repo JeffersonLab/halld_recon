@@ -14,11 +14,12 @@ subdirs.extend(['trackeff_hists','imaging'])
 subdirs.extend(['pid_dirc','truth_dirc', 'lut_dirc', 'dirc_hists', 'dirc_reactions', 'dirc_tree', 'TRD_hists'])
 subdirs.extend(['B3pi_eff_missgamma','B3pi_eff_misspip','B3pi_eff_misspim','B3pi_eff_missprot', 'mcthrown_hists'])
 subdirs.extend(['compton'])
+subdirs.extend(['src-ct'])
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
 
 # Optional targets
-optdirs = ['phys_tree', 'pedestals','bcal_calib','bcal_calib_cosmic_cdc']
+optdirs = ['phys_tree', 'pedestals','bcal_calib','bcal_calib_cosmic_cdc', 'CPPMVAtree']
 
 optdirs.extend(['acceptance_hists', 'mcthrown_hists', 'cdc_hists', 'fcal_hists'])
 optdirs.extend(['dc_alignment','p2pi_trees','Z2pi_trees','ccal_hits','ccal_display','fcal_led','F250_mode10_pedestal','Z2pi0_trees'])

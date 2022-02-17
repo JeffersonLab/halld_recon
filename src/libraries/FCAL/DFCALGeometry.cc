@@ -209,3 +209,9 @@ bool DFCALGeometry::isInsertBlock(int row,int column) const{
   if (row>=100&&column>=100) return true;
   return false;
 }
+
+bool DFCALGeometry::hitPairHasInsertHit(int row1, int row2) const {
+  if (row1>=100 && row2<100) return true;
+  if (row2>=100 && row1<100) return true;
+  return false;
+}

@@ -28,11 +28,7 @@
 #include <TGLabel.h>
 #include <TTimer.h>
 
-class hdv_mainframe;
-#if !(defined(__CINT__) || defined(__CLING__))
-
 #include "hdv_mainframe.h"
-#endif
 
 class hdv_optionsframe:public TGMainFrame {
 
@@ -45,7 +41,7 @@ class hdv_optionsframe:public TGMainFrame {
 	private:
 	
 		hdv_mainframe *hdvmf;
-		map<string, TGCheckButton*> checkbuttons;
+		std::map<std::string, TGCheckButton*> checkbuttons;
 		
 	ClassDef(hdv_optionsframe,1)
 };

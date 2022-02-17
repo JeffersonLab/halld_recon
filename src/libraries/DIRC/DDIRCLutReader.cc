@@ -23,6 +23,9 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 
         string lut_file;
         gPARMS->SetDefaultParameter("DIRC_LUT", lut_file, "DIRC LUT root file (will eventually be moved to resource)");
+
+	string lutcorr_file;
+        gPARMS->SetDefaultParameter("DIRC_LUT_CORR", lutcorr_file, "DIRC LUT correction root file (will eventually be moved to resource)");
 	
 	// follow similar procedure as other resources (DMagneticFieldMapFineMesh)
 	map<string,string> lut_map_name;
@@ -38,7 +41,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 	if(!lut_file.empty()) {
 		jout<<"Reading DIRC LUT TTree from "<<lut_file<<" ..."<<endl;
 		
-		auto saveDir = gDirectory;
+		TDirectory *saveDir = gDirectory;
 		TFile *fLut = new TFile(lut_file.c_str());
 		if( !fLut->IsOpen() ){
 			jerr << "Unable to open " << lut_file << "!!" << endl;
@@ -46,7 +49,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		}
 		TTree *tLut=(TTree*) fLut->Get("lut_dirc_flat");
 		if( tLut == NULL ){
-			jerr << "Unable find TTree lut_dirc_flat in " << lut_file << "!!" << endl;
+			jerr << "Unable to find TTree lut_dirc_flat in " << lut_file << "!!" << endl;
 			_exit(-1);
 		}
 		
@@ -89,6 +92,70 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 		
 		// close LUT file
 		fLut->Close();
+
+		// attempt to open LUT correction tree
+		map<string,string> lutcorr_map_name;
+		if(jcalib->GetCalib("/DIRC/LUT/lutcorr_map", lutcorr_map_name)) 
+		  jout << "Can't find requested /DIRC/LUT/lutcorr_map in CCDB for this run!" << endl;
+		else if(lutcorr_map_name.find("map_name") != lutcorr_map_name.end() && lutcorr_map_name["map_name"] != "None" && lutcorr_file.empty()) {
+		  jresman = japp->GetJResourceManager(run_number);
+		  lutcorr_file = jresman->GetResource(lutcorr_map_name["map_name"]);
+		}
+		if(!lutcorr_file.empty()) {
+		  jout<<"Reading DIRC LUT correction TTree from "<<lutcorr_file<<" ..."<<endl;
+		  
+		  TFile *fLutCorr = new TFile(lutcorr_file.c_str());
+		  if( !fLutCorr->IsOpen() ){
+		    jerr << "Unable to open " << lutcorr_file << "!!" << endl;
+		    _exit(-1);
+		  }
+		  TTree *tLutCorr=(TTree*) fLutCorr->Get("corr");
+		  if( tLutCorr == NULL ){
+		    jerr << "Unable to find TTree corr in " << lutcorr_file << "!!" << endl;
+		    _exit(-1);
+		  }
+		  
+		  const int nbins = tLutCorr->GetMaximum("bin")+1;
+		  double corrAD, corrAR, sigmaAD, sigmaAR, corrTD, corrTR, sigmaTD, sigmaTR;
+		  int tb, tp, tbin;
+		  tLutCorr->SetBranchAddress("bar", &tb);
+		  tLutCorr->SetBranchAddress("pmt", &tp);
+		  tLutCorr->SetBranchAddress("bin", &tbin);
+		  tLutCorr->SetBranchAddress("zcorrAD", &corrAD);
+		  tLutCorr->SetBranchAddress("zcorrAR", &corrAR);
+		  tLutCorr->SetBranchAddress("zcorrTD", &corrTD);
+		  tLutCorr->SetBranchAddress("zcorrTR", &corrTR);
+		  tLutCorr->SetBranchAddress("zsigmaTD", &sigmaTD);
+		  tLutCorr->SetBranchAddress("zsigmaTR", &sigmaTR);
+		  tLutCorr->SetBranchAddress("zsigmaAD", &sigmaAD);
+		  tLutCorr->SetBranchAddress("zsigmaAR", &sigmaAR);
+		  
+		  // clear arrays to fill from TTree
+		  for(int bar=0; bar<DDIRCGeometry::kBars; bar++){
+		    for(int pmt=0; pmt<DDIRCGeometry::kPMTs; pmt++){
+		      for(int bin=0; bin<nbins; bin++){
+			lutCorrAngleDirect[bar][pmt].push_back(0);
+			lutCorrAngleReflected[bar][pmt].push_back(0);
+			lutCorrTimeDirect[bar][pmt].push_back(0);
+			lutCorrTimeReflected[bar][pmt].push_back(0);
+		      }
+		    }
+		  }
+		      
+		  // fill arrays with per-PMT corrections
+		  for (int i = 0; i < tLutCorr->GetEntries(); i++) {
+		    tLutCorr->GetEvent(i);
+		    lutCorrAngleDirect[tb][tp].at(tbin) = 0.001 * corrAD;
+		    lutCorrTimeDirect[tb][tp].at(tbin) = corrTD;
+		    lutCorrAngleReflected[tb][tp].at(tbin) = 0.001 * corrAR;
+		    lutCorrTimeReflected[tb][tp].at(tbin) = corrTR;
+		  }
+
+		  // close LUT correction file
+		  fLutCorr->Close();
+		}
+
+		// switch back to default ROOT file
 		saveDir->cd();
 	}
 }
@@ -126,4 +193,33 @@ Float_t DDIRCLutReader::GetLutPixelTime(int bar, int pixel, int entry) const
 Long64_t DDIRCLutReader::GetLutPixelPath(int bar, int pixel, int entry) const
 {
 	return lutNodePath[bar][pixel].at(entry);
+}
+
+int DDIRCLutReader::GetLutCorrNbins() const
+{
+  return (int)lutCorrAngleDirect[0][0].size();
+}
+
+double DDIRCLutReader::GetLutCorrAngleDirect(int bar, int pmt, int bin) const
+{
+        if(bin < 0 || bin >= GetLutCorrNbins()) return 0.;
+	return lutCorrAngleDirect[bar][pmt].at(bin);
+}
+
+double DDIRCLutReader::GetLutCorrAngleReflected(int bar, int pmt, int bin) const
+{
+        if(bin < 0 || bin >= GetLutCorrNbins()) return 0.;
+        return lutCorrAngleReflected[bar][pmt].at(bin);
+}
+
+double DDIRCLutReader::GetLutCorrTimeDirect(int bar, int pmt, int bin) const
+{
+        if(bin < 0 || bin >= GetLutCorrNbins()) return 0.;
+        return lutCorrTimeDirect[bar][pmt].at(bin);
+}
+
+double DDIRCLutReader::GetLutCorrTimeReflected(int bar, int pmt, int bin) const
+{
+        if(bin < 0 || bin >= GetLutCorrNbins()) return 0.;
+	return lutCorrTimeReflected[bar][pmt].at(bin);
 }

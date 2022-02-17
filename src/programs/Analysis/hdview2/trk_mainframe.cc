@@ -12,6 +12,7 @@ using namespace std;
 #include "hdv_mainframe.h"
 #include "hdview2.h"
 #include "MyProcessor.h"
+#include "DReferenceTrajectoryHDV.h"
 
 #include <CDC/DCDCWire.h>
 #include <CDC/DCDCTrackHit.h>
@@ -589,7 +590,7 @@ void trk_mainframe::DrawHits(vector<TObject*> &graphics)
 	REFTRAJ.clear();
 	
 	// Get the reference trajectory for the prime track
-	DReferenceTrajectory *rt=NULL;
+	DReferenceTrajectoryHDV *rt=NULL;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	gMYPROC->GetDReferenceTrajectory(dataname, tag, index, rt, cdctrackhits);
 	if(rt==NULL){
@@ -620,7 +621,7 @@ void trk_mainframe::DrawHits(vector<TObject*> &graphics)
 		}
 		
 		// Get reference trajectory for this track
-		DReferenceTrajectory *myrt=NULL;
+		DReferenceTrajectoryHDV *myrt=NULL;
 		gMYPROC->GetDReferenceTrajectory(dataname, tag, index, myrt, cdctrackhits);
 		if(myrt){
 			REFTRAJ.push_back(myrt);
@@ -653,9 +654,9 @@ void trk_mainframe::DrawHitsForOneTrack(
     vector<const DTrackFitter*> fitters;
     eventloop->Get(fitters, "KalmanSIMD");
     const DTrackFitterKalmanSIMD *fitter=0;
-    if (fitters.size() > 0)
-        fitter =  dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
-
+    if (fitters.size() > 0) {
+        fitter = dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
+    }
 
 	vector<pair<const DCoordinateSystem*,double> > &hits = index==0 ? allhits:TRACKHITS;
 	

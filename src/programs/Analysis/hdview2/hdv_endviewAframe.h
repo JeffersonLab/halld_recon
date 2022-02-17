@@ -28,10 +28,7 @@
 #include <TGLabel.h>
 #include <TTimer.h>
 
-class hdv_mainframe;
-#if !(defined(__CINT__) || defined(__CLING__))
 #include "hdv_mainframe.h"
-#endif
 
 class hdv_endviewAframe:public TGMainFrame {
 
@@ -42,7 +39,7 @@ class hdv_endviewAframe:public TGMainFrame {
 		void DoDismiss(void);
 
 		void SetRange(double xlo, double ylo, double xhi, double yhi);
-		void DrawObjects(vector<TObject*> &graphics_endA);
+		void DrawObjects(std::vector<TObject*> &graphics_endA);
 		
 	private:
 	

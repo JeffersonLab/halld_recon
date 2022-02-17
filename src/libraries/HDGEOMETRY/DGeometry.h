@@ -171,6 +171,8 @@ class DGeometry{
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
       bool GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const; ///< z-locations of chamber of FMWPC in cm
       bool GetFMWPCSize(double &xy_fmwpc) const; /// maximum x or y extent of FMWPC in cm
+      bool GetCTOFZ(double &z) const; ///< z location of CPP scintillators in cm
+      
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
 	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;

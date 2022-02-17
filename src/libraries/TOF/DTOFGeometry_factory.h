@@ -4,6 +4,10 @@
 // Created: Mon Jul 18 11:43:31 EST 2005
 // Creator: remitche (on Linux mantrid00 2.4.20-18.8 i686)
 //
+/*! \file DTOFGeometry_factory.h defines the factory to update the TOF geometry any time the
+ * run number will change.  
+ */
+
 
 #ifndef _DTOFGeometry_factory_
 #define _DTOFGeometry_factory_
@@ -13,6 +17,12 @@ using namespace jana;
 
 #include "DTOFGeometry.h"
 
+/*! \class DTOFGeometry_factory is a JFactory class
+ * initialize the pointer tofgeometry of DTOFGeometry type
+ * and in the function brun() update the content of TOF Geometry according to the current run number
+ * Question here??: how to use the "tofgeometry" in a code like a plugin.
+
+ */
 class DTOFGeometry_factory:public JFactory<DTOFGeometry>{
 	public:
 		DTOFGeometry_factory(){};
