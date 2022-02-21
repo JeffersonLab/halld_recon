@@ -57,8 +57,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
 
   MASS_CUT=0.0001;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
- ENERGY_SHARING_CUTOFF=0.9;
-  gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
+
   ENERGY_SHARING_CUTOFF=0.9;
   gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
 
@@ -235,6 +234,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       for (int ic=1;ic<num_cols-1;ic++){
 	for (int ir=1;ir<num_rows-1;ir++){
 	  double E=Emap[ic][ir];
+	  double Esum=E;
 	  if (E>MIN_CLUSTER_SEED_ENERGY){
 	    double x=E*clusterHits[imap[ic][ir]]->x;
 	    double y=E*clusterHits[imap[ic][ir]]->y;
@@ -251,11 +251,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 		
 		double Ejk=Emap[j][k];
 		if (Ejk<0.001) continue;
-		
+
 		got_peak=(E-Ejk>0)&&got_peak;
 		if (got_peak){
 		  // Accumulate energy and energy weighted position variables
-		  E+=Ejk;
+		  Esum+=Ejk;
 		  x+=Ejk*clusterHits[imap[j][k]]->x;
 		  y+=Ejk*clusterHits[imap[j][k]]->y;
 		  
@@ -264,9 +264,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      }
 	    }
 	    if (got_peak){
-	      x/=E;
-	      y/=E;
-	      peak_candidates.push_back(PeakInfo(E,x,y,ic,ir,nhits_in_peak));
+	      x/=Esum;
+	      y/=Esum;
+	      peak_candidates.push_back(PeakInfo(Esum,x,y,ic,ir,nhits_in_peak));
 	    }
 	  }// cut on minimum energy of central block
 	} // loop over rows
@@ -353,8 +353,53 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
       }
     }
-
-    if (num_hits>4){    
+  
+    if (num_hits>4){
+      // Subtract the energy due to the fitted peaks from the energy of each
+      // hit to see if we have excess energy that has not been accounted for
+      vector<double>Elist(clusterHits.size());
+      for (unsigned int m=0;m<clusterHits.size();m++){
+	Elist[m]=clusterHits[m]->E;
+	for (unsigned int k=0;k<peaks.size();k++){
+	  Elist[m]-=peaks[k].E*CalcClusterEDeriv(clusterHits[m],peaks[k]);
+	}
+      }
+      double Emax=0.,Esum=0.;
+      // Find the maximum of the peak-subtracted hit distribution
+      for (unsigned int m=0;m<Elist.size();m++){
+	if (Elist[m]>Emax){
+	  Emax=Elist[m];
+	}
+      }
+      if (Emax>MIN_CLUSTER_SEED_ENERGY){
+	double x=0.,y=0.;
+	int num_hits=0;
+	// Make a peak candidate out of the excess energy in the cluster of hits
+	for (unsigned int m=0;m<Elist.size();m++){
+	  if (Elist[m]>0){
+	    Esum+=Elist[m];
+	    x+=Elist[m]*clusterHits[m]->x;
+	    y+=Elist[m]*clusterHits[m]->y;
+	    num_hits++;
+	  }
+	}
+	vector<PeakInfo>saved_peaks=peaks;
+	double chisq_old=chisq;
+	PeakInfo myPeak(Esum,x/Esum,y/Esum,0,0,num_hits);
+	// Add the new peak to the fit to see if the fit quality improves
+	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
+	if (good_fit && chisq+CHISQ_MARGIN<chisq_old
+	    && CheckPeak(peaks,myPeak)
+	    ){
+	  peaks.push_back(myPeak);
+	}
+	else {
+	  // Chisq did not improve.  Restore the old list of peaks.
+	  peaks=saved_peaks;
+	  chisq=chisq_old;
+	}
+      }
+      // Try to split the peaks further using moments of the hit distribution
       SplitPeaks(W,clusterHits,peaks,chisq);
     }
 
@@ -816,7 +861,7 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
     double y1=y0+dyc*alpha_plus_factor;  
     double x2=x0+dxc*alpha_minus_factor;
     double y2=y0+dyc*alpha_minus_factor;
-     
+
     PeakInfo myNewPeak(E2,x2,y2,0,0,0);
     peaks[i].E=E1;
     peaks[i].x=x1;
