@@ -2734,7 +2734,7 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactor
       hit->wire  = iter->getWire();
       hit->q     = iter->getQ();
       hit->dE    = iter->getDE();
-      hit->dx    = iter->getDx();
+      hit->d    = iter->getD();
       hit->t     = iter->getT();
       data.push_back(hit);
    }
