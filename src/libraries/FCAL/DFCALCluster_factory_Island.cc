@@ -39,13 +39,13 @@ jerror_t DFCALCluster_factory_Island::init(void)
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
-  SHOWER_WIDTH_PARAMETER=0.675;
+  SHOWER_WIDTH_PARAMETER=0.69;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PARAMETER",
 			      SHOWER_WIDTH_PARAMETER);
-  INSERT_SHOWER_WIDTH_PARAMETER=0.315;
+  INSERT_SHOWER_WIDTH_PARAMETER=0.31;
   gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PARAMETER",
 			      INSERT_SHOWER_WIDTH_PARAMETER);
-  MIN_CUTDOWN_FRACTION=0.25;
+  MIN_CUTDOWN_FRACTION=0.1;
   gPARMS->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
 			      MIN_CUTDOWN_FRACTION);
 
@@ -171,7 +171,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       Esum+=E;
     }
     
-    double chisq=1e6,chisq_old=1e6;  
+    double chisq=1e6,chisq_old=1e6;
+    // Find the minimum and maximum row and column numbers
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
     for (unsigned int j=0;j<num_hits;j++){
       if (clusterHits[j]->row<min_row) min_row=clusterHits[j]->row;
@@ -179,6 +180,18 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       if (clusterHits[j]->row>max_row) max_row=clusterHits[j]->row;
       if (clusterHits[j]->column>max_col) max_col=clusterHits[j]->column;
     }
+    // Create arrays to represent the cluster of hits to aid in peak search
+    int num_rows=max_row-min_row+3;
+    int num_cols=max_col-min_col+3;
+    vector<vector<double>>Emap(num_cols,vector<double>(num_rows));
+    vector<vector<unsigned int>>imap(num_cols,vector<unsigned int>(num_rows));
+    for (unsigned int j=0;j<num_hits;j++){
+      int ic=clusterHits[j]->column-min_col+1;
+      int ir=clusterHits[j]->row-min_row+1;
+      Emap[ic][ir]=clusterHits[j]->E;
+	imap[ic][ir]=j;      
+    }
+      
     if (min_row<100 && max_row>=100){
       // Handle the interface between the insert and the lead glass blocks
       // Find the block with the maximum energy and make a peak object
@@ -216,19 +229,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       }
     }
     else {
-      // Handle clusters fully in insert or in lead glass region
-      // Create arrays to represent the cluster of hits to aid in peak search
-      int num_rows=max_row-min_row+3;
-      int num_cols=max_col-min_col+3;
-      vector<vector<double>>Emap(num_cols,vector<double>(num_rows));
-      vector<vector<unsigned int>>imap(num_cols,vector<unsigned int>(num_rows));
-      for (unsigned int j=0;j<num_hits;j++){
-	int ic=clusterHits[j]->column-min_col+1;
-	int ir=clusterHits[j]->row-min_row+1;
-	Emap[ic][ir]=clusterHits[j]->E;
-	imap[ic][ir]=j;      
-      }
-  
+      // Handle clusters fully in insert or in lead glass region   
       // Loop over hits looking for peaks.
       vector<PeakInfo>peak_candidates;
       for (int ic=1;ic<num_cols-1;ic++){
@@ -236,8 +237,6 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  double E=Emap[ic][ir];
 	  double Esum=E;
 	  if (E>MIN_CLUSTER_SEED_ENERGY){
-	    double x=E*clusterHits[imap[ic][ir]]->x;
-	    double y=E*clusterHits[imap[ic][ir]]->y;
 	    int nhits_in_peak=1;
 	    
 	    bool got_peak=true;
@@ -254,18 +253,15 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
 		got_peak=(E-Ejk>0)&&got_peak;
 		if (got_peak){
-		  // Accumulate energy and energy weighted position variables
+		  // Accumulate energy
 		  Esum+=Ejk;
-		  x+=Ejk*clusterHits[imap[j][k]]->x;
-		  y+=Ejk*clusterHits[imap[j][k]]->y;
-		  
 		  nhits_in_peak++;
 		}      
 	      }
 	    }
 	    if (got_peak){
-	      x/=Esum;
-	      y/=Esum;
+	      double x=clusterHits[imap[ic][ir]]->x;
+	      double y=clusterHits[imap[ic][ir]]->y;
 	      peak_candidates.push_back(PeakInfo(Esum,x,y,ic,ir,nhits_in_peak));
 	    }
 	  }// cut on minimum energy of central block
@@ -295,7 +291,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    double frac=0.;
 	    for (int j=lo_col;j<=hi_col;j++){
 	      for (int k=lo_row;k<=hi_row;k++){
-		if (Emap[j][k]>0.) {
+		if (Emap[j][k]>0.){
 		  frac+=CalcClusterEDeriv(clusterHits[imap[j][k]],peaks[m]);
 		}
 	      }
@@ -364,29 +360,43 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  Elist[m]-=peaks[k].E*CalcClusterEDeriv(clusterHits[m],peaks[k]);
 	}
       }
-      double Emax=0.,Esum=0.;
+      double Emax=0.;
       // Find the maximum of the peak-subtracted hit distribution
+      unsigned int mmax=0;
       for (unsigned int m=0;m<Elist.size();m++){
 	if (Elist[m]>Emax){
 	  Emax=Elist[m];
+	  mmax=m;
 	}
       }
       if (Emax>MIN_CLUSTER_SEED_ENERGY){
-	double x=0.,y=0.;
-	int num_hits=0;
 	// Make a peak candidate out of the excess energy in the cluster of hits
-	for (unsigned int m=0;m<Elist.size();m++){
-	  if (Elist[m]>0){
-	    Esum+=Elist[m];
-	    x+=Elist[m]*clusterHits[m]->x;
-	    y+=Elist[m]*clusterHits[m]->y;
-	    num_hits++;
+	int ic=clusterHits[mmax]->column-min_col+1;
+	int ir=clusterHits[mmax]->row-min_row+1;
+	int lo_col=ic-1;
+	int hi_col=ic+1;
+	int lo_row=ir-1;
+	int hi_row=ir+1;
+	int num_hits=0;
+        double Esum=0.;
+	for (int j=lo_col;j<=hi_col;j++){
+	  for (int k=lo_row;k<=hi_row;k++){
+	    int index=imap[j][k];
+	    if (Elist[index]>0){
+	      Esum+=Elist[index];
+	      num_hits++;
+	    }
 	  }
 	}
+	double x=clusterHits[mmax]->x;
+	double y=clusterHits[mmax]->y;
+	PeakInfo myPeak(Esum,x,y,ic,ir,num_hits);
+
+	// Save the current list of peaks
 	vector<PeakInfo>saved_peaks=peaks;
-	double chisq_old=chisq;
-	PeakInfo myPeak(Esum,x/Esum,y/Esum,0,0,num_hits);
+
 	// Add the new peak to the fit to see if the fit quality improves
+	double chisq_old=chisq;
 	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
 	if (good_fit && chisq+CHISQ_MARGIN<chisq_old
 	    && CheckPeak(peaks,myPeak)
@@ -602,7 +612,7 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
 
   // Iterate to find best shower energy and position
   chisq=1e6;
-  unsigned int max_iter=100;
+  unsigned int max_iter=200;
   double min_frac=MIN_CUTDOWN_FRACTION;
   double cutdown_scale=(1.-min_frac)/double(max_iter); //for cut-down for parameter adjustment
   for (unsigned int k=0;k<max_iter;k++){
