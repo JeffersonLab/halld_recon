@@ -697,7 +697,7 @@ def AddSQLite(env):
 	env.AppendUnique(CPPPATH = SQLITECPP_CPPPATH)
 	sqlitecpp_ge_2_5 = version_greater_than_or_equal_to('SQLITECPP_VERSION', [2, 5, 0])
 	bms_osname = os.getenv('BMS_OSNAME')
-	if bms_osname.find('Ubuntu'):
+	if bms_osname.find('Ubuntu') != -1:
 		on_ubuntu = True
 	else:
 		on_ubuntu = False
