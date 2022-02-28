@@ -2732,10 +2732,11 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactor
       DFMWPCTruthHit *hit = new DFMWPCTruthHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
-      hit->q     = iter->getQ();
       hit->dE    = iter->getDE();
-      hit->d    = iter->getD();
       hit->t     = iter->getT();
+      const hddm_s::FmwpcTruthHitQList &charges=iter->getFmwpcTruthHitQs();   
+      hit->q     = (charges.size()) ? charges.begin()->getQ() : 0.;
+      hit->d     = (charges.size()) ? charges.begin()->getD() : 0.;
       data.push_back(hit);
    }
 
@@ -2809,9 +2810,10 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       DFMWPCHit *hit = new DFMWPCHit;
       hit->layer = iter->getLayer();
       hit->wire  = iter->getWire();
-      hit->q     = iter->getQ();
-      hit->amp   = iter->getAmp(); 
       hit->t     = iter->getT();
+      const hddm_s::FmwpcHitQList &charges=iter->getFmwpcHitQs();
+      hit->q     = (charges.size()) ? charges.begin()->getQ() : 0.;
+      hit->amp   = (charges.size()) ? hit->q/28.8 : 0.; // copied from CDC
       data.push_back(hit);
    }
 
