@@ -1808,7 +1808,7 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 {
   vector<double> ForwardMWPCpos;
   bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
-  if (!good){  
+  if (!good){
     //_DBG_<<"Unable to retrieve ForwardMWPC position."<<endl;
     return false;
   }
@@ -1817,7 +1817,7 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='1']", CPPChamberPos);
   zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='2']", CPPChamberPos);
-  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]); 
+  zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='3']", CPPChamberPos);
   zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='4']", CPPChamberPos);
@@ -1826,7 +1826,60 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
   zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
   Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='6']", CPPChamberPos);
   zvec_fmwpc.push_back(ForwardMWPCpos[2]+CPPChamberPos[2]);
- 
+
+  return true;
+}
+
+//---------------------------------
+// GetFMWPCXY
+//---------------------------------
+bool DGeometry::GetFMWPCXY_vec(vector<double>&xvec_fmwpc, vector<double>&yvec_fmwpc) const
+{
+  vector<double> ForwardMWPCpos;
+  bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
+  if (!good){
+    //_DBG_<<"Unable to retrieve ForwardMWPC position."<<endl;
+    return false;
+  }
+
+  // Get offsets tweaking nominal geometry from calibration database
+  // JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+
+  vector<double>CPPChamberPos;
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='1']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='2']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='3']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='4']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='5']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+  Get("//posXYZ[@volume='CPPChamber']/@X_Y_Z/layer[@value='6']", CPPChamberPos);
+  xvec_fmwpc.push_back(ForwardMWPCpos[0]+CPPChamberPos[0]);
+  yvec_fmwpc.push_back(ForwardMWPCpos[1]+CPPChamberPos[1]);
+
+  // Currently, not all chambers have a 'rot' field in hdds
+  // vector<double>CPPChamberRot;
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='1']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='2']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='3']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='4']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='5']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+  // Get("//posXYZ[@volume='CPPChamber']/@rot/layer[@value='6']", CPPChamberRot);
+  // rot_fmwpc.push_back(CPPChamberRot[2]);
+
   return true;
 }
 
