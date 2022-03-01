@@ -61,12 +61,12 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
          sprintf(hname, "fmwpc_occ_layer_%01d", iLayer+1);
          sprintf(htitle, "FMWPC Occupancy Layer %01d", iLayer+1);
          fmwpc_occ_layer[iLayer] = new TH1F(hname, htitle, 144, 0.5, 144.5);
-         fmwpc_occ_layer[iLayer]->SetXTitle("Strip Number");
+         fmwpc_occ_layer[iLayer]->SetXTitle("Wire Number");
 
          sprintf(hname, "fmwpc_hit_layer_%01d", iLayer+1);
          sprintf(htitle, "FMWPC Calibrated Hits Layer %01d", iLayer+1);
          fmwpc_hit_layer[iLayer] = new TH1F(hname, htitle, 144, 0.5, 144.5);
-         fmwpc_hit_layer[iLayer]->SetXTitle("Strip Number");
+         fmwpc_hit_layer[iLayer]->SetXTitle("Wire Number");
         }
 
         // back to main dir

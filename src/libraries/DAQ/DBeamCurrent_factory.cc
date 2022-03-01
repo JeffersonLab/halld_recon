@@ -88,6 +88,12 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 		jout << "Use map from EPICS in DBeamCurrent to decide if the beam is \"on\" (MIGHT BE BROKEN!)" << endl;
 	}
 	else{
+	        double new_cutoff;
+		if(loop->GetCalib("/ELECTRON_BEAM/ps_counts_threshold",new_cutoff))
+		    jerr << "Error loading /ELECTRON_BEAM/ps_counts_threshold !" << endl;
+		else 
+		    BEAM_ON_MIN_PSCOUNTS = new_cutoff;
+
 		loop->GetJCalibration()->GetCalib("/ELECTRON_BEAM/ps_counts", mstr);
 		if(mstr.empty()) return NOERROR;
 		electron_beam_proxy = mstr.begin()->second;
