@@ -12,6 +12,7 @@
 
 #include "DFMWPCCluster.h"
 #include "DFMWPCHit.h"
+#include "HDGEOMETRY/DGeometry.h"
 
 class DFMWPCCluster_factory:public jana::JFactory<DFMWPCCluster>{
 	public:
@@ -33,6 +34,13 @@ class DFMWPCCluster_factory:public jana::JFactory<DFMWPCCluster>{
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 		double TIME_SLICE;
+		double FMWPC_WIRE_SPACING;
+
+		DGeometry *dgeom;
+		vector<double> zvec;
+		vector<double> xvec;
+		vector<double> yvec;
+		vector<double> rot;
 };
 
 #endif // _DFMWPCCluster_factory_
