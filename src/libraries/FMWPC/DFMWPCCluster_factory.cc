@@ -39,7 +39,9 @@ bool DFMWPCHit_wire_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
 //------------------
 jerror_t DFMWPCCluster_factory::init(void)
 {
+  // Future calibration constants
   TIME_SLICE=10000.0; //ns
+  FMWPC_WIRE_SPACING = 1.016; // distance between wires of FMWPC in cm
   gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
   
   return NOERROR;
@@ -50,7 +52,22 @@ jerror_t DFMWPCCluster_factory::init(void)
 //------------------
 jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-	return NOERROR;
+
+  // Get pointer to DGeometry object
+  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  dgeom  = dapp->GetDGeometry(runnumber);
+
+  // Get the FMWPC z,x and y positions from the HDDM geometry
+  // if they are not in there, use hard-coded values
+  if (!dgeom->GetFMWPCZ_vec(zvec))
+    zvec = {935.366,948.536,961.706,976.226,993.246,1016.866};
+  if (!dgeom->GetFMWPCXY_vec(xvec, yvec)){
+    xvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+    yvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+  }
+  rot = {90.0,0.0,90.0,0.0,90.0,0.0};
+
+  return NOERROR;
 }
 
 //------------------
@@ -69,8 +86,6 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // Sort hits by layer number and by time
       sort(allHits.begin(),allHits.end(),DFMWPCHit_cmp);
 
-      //cout << "bla" << endl;
-      
       // Layer by layer, create clusters of hits.
       thisLayer.clear();
       vector<const DFMWPCHit*>::iterator i = allHits.begin();
@@ -155,7 +170,16 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
       newCluster->last_wire = H[i]->wire;
       newCluster->Nhits++;
     }
-    newCluster->u /= newCluster->q; // normalize to total charge
+    if (newCluster->q != 0) newCluster->u /= newCluster->q; // normalize to total charge
+
+    // global coordinate system
+    // set to -777 for not measured coordinate
+    double x = (rot[newCluster->layer-1]==90.0) ? xvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
+    double y = (rot[newCluster->layer-1]==0.0) ? yvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
+    double z = zvec[newCluster->layer-1];
+    DVector3 pos(x,y,z);
+    newCluster->pos = pos;
+
     _data.push_back(newCluster);
 		
     istart = iend-1;
