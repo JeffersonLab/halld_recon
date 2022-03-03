@@ -136,23 +136,15 @@ jerror_t DFDCPseudo_factory::brun(JEventLoop *loop, int32_t runnumber)
     _DBG_<< "FDC geometry not available!" <<endl;
     USE_FDC=false;
   }
-  if (USE_FDC){
-     // Get package offsets
-    vector<double>offsets;
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_1']/@X_Y_Z",offsets);
-    dX[0]=offsets[0];
-    dY[0]=offsets[1];
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_2']/@X_Y_Z",offsets);
-    dX[1]=offsets[0];
-    dY[1]=offsets[1]; 
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_3']/@X_Y_Z",offsets);
-    dX[2]=offsets[0];
-    dY[2]=offsets[1];
-    dgeom->Get("//posXYZ[@volume='forwardDC_package_4']/@X_Y_Z",offsets);
-    dX[3]=offsets[0];
-    dY[3]=offsets[1];
-  }
  
+  // Get plane offsets in global coordinate system
+  vector<DVector3>planeXYZ;
+  dgeom->GetFDCPlaneXYZs(planeXYZ);
+  for (unsigned int i=0;i<planeXYZ.size();i++){
+    fdc_x0.push_back(planeXYZ[i].x());
+    fdc_y0.push_back(planeXYZ[i].y());
+  }
+  
   // Get offsets tweaking nominal geometry from calibration database
   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
   vector<map<string,double> >vals;
@@ -611,11 +603,11 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     }
                     double sinangle=newPseu->wire->udir(0);
                     double cosangle=newPseu->wire->udir(1); 
-                    unsigned int pack_id=(layer-1)/6;
-                    newPseu->s+=dY[pack_id]*cosangle+dX[pack_id]*sinangle; 
 
-                    newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle,
-                          -(newPseu->w)*sinangle+(newPseu->s)*cosangle);
+                    newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle
+				    +fdc_x0[ilay],
+				    -(newPseu->w)*sinangle+(newPseu->s)*cosangle
+				    +fdc_y0[ilay]);
 
                     double sigx2=HALF_CELL*HALF_CELL/3.;
                     double sigy2=MAX_DEFLECTION*MAX_DEFLECTION/3.;

@@ -371,15 +371,21 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
      SC_BARREL_R2=sc_pos[0][0].Perp2();
      SC_PHI_SECTOR1=sc_pos[0][0].Phi();
    }
-
-   // Get z positions of fdc wire planes
-   geom->GetFDCZ(fdc_z_wires);
-   // for now, assume the z extent of a package is the difference between the positions
-   // of the two wire planes.  save half of this distance
-   fdc_package_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
+ 
+   // Find the centers of each wire plane in the lab frame
+   vector<DVector3>planeXYZ;
+   geom->GetFDCPlaneXYZs(planeXYZ);
+   for (unsigned int i=0;i<planeXYZ.size();i++){
+     fdc_x0.push_back(planeXYZ[i].x());
+     fdc_y0.push_back(planeXYZ[i].y());
+     fdc_z_wires.push_back(planeXYZ[i].z());
+   }
+   // for now, assume the z extent of a cell is the difference between the 
+   // positions of two adjacent wire planes.  save half of this distance
+   fdc_cell_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
    geom->GetFDCRmin(fdc_rmin_packages);
    geom->GetFDCRmax(fdc_rmax);
-
+   
    ADD_VERTEX_POINT=false; 
    gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
   
@@ -1077,10 +1083,10 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 		double z = extrapolations[SYS_FDC][i].position.Z();
 		double r = extrapolations[SYS_FDC][i].position.Perp();
 
-		// see if we're in the "sensitive area" of a package
+		// see if we're in the "sensitive area" of a cell
 		for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
 			int package = plane/6;
-			if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
+			if(fabs(z-fdc_z_wires[plane]) < fdc_cell_size) {
 				if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
 					expected_hit_fdc_planes.insert(plane);
 				}
@@ -4041,12 +4047,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    for (unsigned int k=break_point_step_index+1;k<central_traj.size();k++){
       unsigned int k_minus_1=k-1;
 
-      // Check that C matrix is positive definite
-      if (!Cc.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
-      }
-
       // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
       S0=central_traj[k].S;
@@ -4267,8 +4267,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
                //Ctest=Cc.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
                // Check that Ctest is positive definite
                if (!Ctest.IsPosDef()){
-                  if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-                  return BROKEN_COVARIANCE_MATRIX;
+		 if (DEBUG_LEVEL>0) 
+		   _DBG_ << "Broken covariance matrix!" <<endl;
+		 return BROKEN_COVARIANCE_MATRIX;
                }
                bool skip_ring
                   =(my_cdchits[cdc_index]->hit->wire->ring==RING_TO_SKIP);
@@ -4486,12 +4487,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
     // from reference trajectory
@@ -4798,7 +4793,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
 	    //Ctest=C.SandwichMultiply(I5x5-K*H)+Vc*MultiplyTranspose(K);	 
 	    // Check that Ctest is positive definite
 	    if (!Ctest.IsPosDef()){
-	      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	      if (DEBUG_LEVEL>0)
+		_DBG_ << "Broken covariance matrix!" <<endl;
 	      return BROKEN_COVARIANCE_MATRIX;
 	    }
 	    bool skip_ring
@@ -5128,12 +5124,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
     unsigned int k_minus_1=k-1;
     
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
-    
     z=forward_traj[k].z;
     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
@@ -5295,7 +5285,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
 	  //Ctest=C.SandwichMultiply(I5x5-K*H)+V*MultiplyTranspose(K);
 	  // Check that Ctest is positive definite
 	  if (!Ctest.IsPosDef()){
-	    if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	    if (DEBUG_LEVEL>0) 
+	      _DBG_ << "Broken covariance matrix!" <<endl;
 	    return BROKEN_COVARIANCE_MATRIX;
 	  }
 	  
@@ -7450,15 +7441,18 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                dC=A*(Cs-C)*A.Transpose();
                Cs=fdc_updates[id].C+dC;
                if (!Cs.IsPosDef()){
-                  if (DEBUG_LEVEL>1)
-                     _DBG_ << "Covariance Matrix not PosDef..." << endl;
-                  return VALUE_OUT_OF_RANGE;
+		 if (DEBUG_LEVEL>1)
+		   _DBG_ << "Covariance Matrix not PosDef..." << endl;
+		 return VALUE_OUT_OF_RANGE;
                }
 
                // Position and direction from state vector with small angle
 	       // alignment correction
-               double x=Ss(state_x) + my_fdchits[id]->phiZ*Ss(state_y);
-               double y=Ss(state_y) - my_fdchits[id]->phiZ*Ss(state_x);
+	       unsigned int layer_index=my_fdchits[id]->hit->wire->layer-1;
+               double x=Ss(state_x) + my_fdchits[id]->phiZ*Ss(state_y)
+		 - fdc_x0[layer_index];
+               double y=Ss(state_y) - my_fdchits[id]->phiZ*Ss(state_x)
+		 - fdc_y0[layer_index];
                double tx=Ss(state_tx)+ my_fdchits[id]->phiZ*Ss(state_ty) 
 		 - my_fdchits[id]->phiY;
                double ty=Ss(state_ty) - my_fdchits[id]->phiZ*Ss(state_tx) 
@@ -7513,25 +7507,28 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                // Compute projection matrix and find the variance for the residual
                DMatrix5x2 H_T;
                double temp2=nz_sinalpha_plus_nr_cosalpha-tv*sinalpha;
-               H_T(state_x,1)=sina+cosa*cosalpha*temp2;
-               H_T(state_y,1)=cosa-sina*cosalpha*temp2;
+	       double temp_cosa=cosa+my_fdchits[id]->phiZ*sina;
+	       double temp_sina=sina-my_fdchits[id]->phiZ*cosa;
+
+	       H_T(state_x,1)=temp_sina+temp_cosa*cosalpha*temp2;
+               H_T(state_y,1)=temp_cosa-temp_sina*cosalpha*temp2;
 
                double cos2_minus_sin2=cosalpha*cosalpha-sinalpha*sinalpha;
                double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
                double doca_cosalpha=doca*cosalpha;
                double temp=doca_cosalpha*fac;
-               H_T(state_tx,1)=cosa*temp
-                  -doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2)
+               H_T(state_tx,1)=temp_cosa*temp
+                  -doca_cosalpha*(tu*temp_sina+tv*temp_cosa*cos2_minus_sin2)
                   ;
-               H_T(state_ty,1)=-sina*temp
-                  -doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2)
+               H_T(state_ty,1)=-temp_sina*temp
+                  -doca_cosalpha*(tu*temp_cosa-tv*temp_sina*cos2_minus_sin2)
                   ;
 
-               H_T(state_x,0)=cosa*cosalpha;
-               H_T(state_y,0)=-sina*cosalpha;
+               H_T(state_x,0)=temp_cosa*cosalpha;
+               H_T(state_y,0)=-temp_sina*cosalpha;
                double factor=du*tu/sqrt(one_plus_tu2)/one_plus_tu2;
-               H_T(state_ty,0)=sina*factor;
-               H_T(state_tx,0)=-cosa*factor;
+               H_T(state_ty,0)=temp_sina*factor;
+               H_T(state_tx,0)=-temp_cosa*factor;
 
                // Matrix transpose H_T -> H
                DMatrix2x5 H=Transpose(H_T);
@@ -7707,9 +7704,9 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForward(vector<pull_t>&forward_pulls){
                Ss=cdc_updates[id].S+A*(Ss-S);
                Cs=cdc_updates[id].C+A*(Cs-C)*A.Transpose();
                if (!Cs.IsPosDef()){
-                  if (DEBUG_LEVEL>1)
-                     _DBG_ << "Covariance Matrix not PosDef..." << endl;
-                  return VALUE_OUT_OF_RANGE;
+		 if (DEBUG_LEVEL>1)
+		   _DBG_ << "Covariance Matrix not PosDef..." << endl;
+		 return VALUE_OUT_OF_RANGE;
                } 
                if (!Ss.IsFinite()){
                   if (DEBUG_LEVEL>5) _DBG_ << "Invalid values for smoothed parameters..." << endl;
@@ -7777,11 +7774,11 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
                return VALUE_OUT_OF_RANGE;
             }
             if (!Cs.IsPosDef()){
-               if (DEBUG_LEVEL>5){
-		 _DBG_ << "Covariance Matrix not PosDef... Ckk dC A" << endl;
-		 cdc_updates[id].C.Print(); dC.Print(); A.Print();
-               }
-               return VALUE_OUT_OF_RANGE;
+	      if (DEBUG_LEVEL>5){
+		_DBG_ << "Covariance Matrix not PosDef... Ckk dC A" << endl;
+		cdc_updates[id].C.Print(); dC.Print(); A.Print();
+	      }
+	      return VALUE_OUT_OF_RANGE;
             }
 
             // Get estimate for energy loss 
@@ -8188,9 +8185,10 @@ jerror_t DTrackFitterKalmanSIMD::SmoothForwardCDC(vector<pull_t>&cdc_pulls){
             Cs=cdc_updates[cdc_index].C+A*(Cs-C)*A.Transpose();
 
             if (!Cs.IsPosDef()){
-               if (DEBUG_LEVEL>5){
-                  _DBG_ << "Covariance Matrix not Pos Def..." << endl;
-                  _DBG_ << " cdc_updates[cdc_index].C A C_ Cs " << endl;
+	      if (DEBUG_LEVEL>5)
+		{
+		  _DBG_ << "Covariance Matrix not Pos Def..." << endl;
+		  _DBG_ << " cdc_updates[cdc_index].C A C_ Cs " << endl;
                   cdc_updates[cdc_index].C.Print();
                   A.Print();
                   C.Print();
@@ -9694,7 +9692,9 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	     Ctest=C.SubSym(Kc*(Hc*C));
 	     
 	     if (!Ctest.IsPosDef()){
-	       if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	       if (DEBUG_LEVEL>0) 
+		 _DBG_ << "Broken covariance matrix!" <<endl;
+	       return BROKEN_COVARIANCE_MATRIX;
 	     }
 	     
 	     if (tdrift >= CDC_T_DRIFT_MIN){
@@ -10073,8 +10073,9 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // Use small-angle form.
   
   // Position and direction from state vector
-  double x=S(state_x) + hit->phiZ*S(state_y);
-  double y=S(state_y) - hit->phiZ*S(state_x);
+  unsigned int layer_index=hit->hit->wire->layer-1;
+  double x=S(state_x) + hit->phiZ*S(state_y) - fdc_x0[layer_index];
+  double y=S(state_y) - hit->phiZ*S(state_x) - fdc_y0[layer_index];
   double tx =S(state_tx) + hit->phiZ*S(state_ty) - hit->phiY;
   double ty =S(state_ty) - hit->phiZ*S(state_tx) + hit->phiX;
 
@@ -10112,29 +10113,31 @@ void DTrackFitterKalmanSIMD::FindDocaAndProjectionMatrix(const DKalmanSIMDFDCHit
   // To transform from (x,y) to (u,v), need to do a rotation:
   //   u = x*cosa-y*sina
   //   v = y*cosa+x*sina
+  double temp_cosa=cosa+hit->phiZ*sina;
+  double temp_sina=sina-hit->phiZ*cosa;
   if (hit->status!=gem_hit){
-    H_T(state_x,1)=sina+cosa*cosalpha*lorentz_factor;	
-    H_T(state_y,1)=cosa-sina*cosalpha*lorentz_factor;
+    H_T(state_x,1)=temp_sina+temp_cosa*cosalpha*lorentz_factor;	
+    H_T(state_y,1)=temp_cosa-temp_sina*cosalpha*lorentz_factor;
     
     double cos2_minus_sin2=cosalpha2-sinalpha*sinalpha;
     double fac=nz*cos2_minus_sin2-2.*nr*cosalpha*sinalpha;
     double doca_cosalpha=doca*cosalpha;
     double temp=doca_cosalpha*fac;	
-    H_T(state_tx,1)=cosa*temp-doca_cosalpha*(tu*sina+tv*cosa*cos2_minus_sin2);
-    H_T(state_ty,1)=-sina*temp-doca_cosalpha*(tu*cosa-tv*sina*cos2_minus_sin2);
+    H_T(state_tx,1)=temp_cosa*temp-doca_cosalpha*(tu*temp_sina+tv*temp_cosa*cos2_minus_sin2);
+    H_T(state_ty,1)=-temp_sina*temp-doca_cosalpha*(tu*temp_cosa-tv*temp_sina*cos2_minus_sin2);
   
-    H_T(state_x,0)=cosa*cosalpha;
-    H_T(state_y,0)=-sina*cosalpha;
+    H_T(state_x,0)=temp_cosa*cosalpha;
+    H_T(state_y,0)=-temp_sina*cosalpha;
     
     double factor=doca*tu*cosalpha2;
-    H_T(state_ty,0)=sina*factor;
-    H_T(state_tx,0)=-cosa*factor; 
+    H_T(state_ty,0)=temp_sina*factor;
+    H_T(state_tx,0)=-temp_cosa*factor; 
   }
   else{  
-    H_T(state_x,1)=sina;
-    H_T(state_y,1)=cosa;    
-    H_T(state_x,0)=cosa;
-    H_T(state_y,0)=-sina;
+    H_T(state_x,1)=temp_sina;
+    H_T(state_y,1)=temp_cosa;    
+    H_T(state_x,0)=temp_cosa;
+    H_T(state_y,0)=-temp_sina;
   }
 }
 

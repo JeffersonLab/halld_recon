@@ -2,7 +2,6 @@
 
 #ifndef USE_SSE2
 
-#include "DMatrixDSym.h"
 // Matrix class without SIMD instructions
 
 class DMatrix5x5{
@@ -216,6 +215,31 @@ class DMatrix5x5{
          return *this;
       }
 
+      double Determinant() const {
+	DMatrix4x4 A(mA[1][1],mA[1][2],mA[1][3],mA[1][4],
+		     mA[2][1],mA[2][2],mA[2][3],mA[2][4],
+		     mA[3][1],mA[3][2],mA[3][3],mA[3][4],
+		     mA[4][1],mA[4][2],mA[4][3],mA[4][4]);
+	DMatrix4x4 B(mA[1][0],mA[1][2],mA[1][3],mA[1][4],
+		     mA[2][0],mA[2][2],mA[2][3],mA[2][4],
+		     mA[3][0],mA[3][2],mA[3][3],mA[3][4],
+		     mA[4][0],mA[4][2],mA[4][3],mA[4][4]);
+	DMatrix4x4 C(mA[1][0],mA[1][1],mA[1][3],mA[1][4],
+		     mA[2][0],mA[2][1],mA[2][3],mA[2][4],
+		     mA[3][0],mA[3][1],mA[3][3],mA[3][4],
+		     mA[4][0],mA[4][1],mA[4][3],mA[4][4]);
+	DMatrix4x4 D(mA[1][0],mA[1][1],mA[1][2],mA[1][4],
+		     mA[2][0],mA[2][1],mA[2][2],mA[2][4],
+		     mA[3][0],mA[3][1],mA[3][2],mA[3][4],
+		     mA[4][0],mA[4][1],mA[4][2],mA[4][4]);
+	DMatrix4x4 E(mA[1][0],mA[1][1],mA[1][2],mA[1][3],
+		     mA[2][0],mA[2][1],mA[2][2],mA[2][3],
+		     mA[3][0],mA[3][1],mA[3][2],mA[3][3],
+		     mA[4][0],mA[4][1],mA[4][2],mA[4][3]);
+	return mA[0][0]*A.Determinant() - mA[0][1]*B.Determinant()
+	  + mA[0][2]*C.Determinant() - mA[0][3]*D.Determinant() 
+	  + mA[0][4]*E.Determinant();
+      }
 
       // Matrix inversion by blocks for a symmetric matrix
       DMatrix5x5 InvertSym(){
@@ -581,23 +605,23 @@ class DMatrix5x5{
 
       }
 
-      DMatrixDSym GetSub(unsigned int lowerBound, unsigned int upperBound){
-         if (upperBound >= lowerBound) return DMatrixDSym();
-         DMatrixDSym subMatrix(upperBound - lowerBound);
-         for (unsigned int i=lowerBound; i <= upperBound; i++){
-            for (unsigned int j=lowerBound; j <= upperBound; j++){
-               subMatrix(i,j) = mA[i][j];
-            }
-         }
-         return subMatrix;
-      }
-
+      // Apply Sylvester's criterion for a symmetric matrix to be positive 
+      // definite.
       bool IsPosDef(){
-         if(mA[0][0] > 0. && 
-               GetSub(0,1).Determinant() > 0. && GetSub(0,2).Determinant() > 0. &&
-               GetSub(0,3).Determinant() > 0. && GetSub(0,4).Determinant() > 0.)
-                  return true;
-         else return false;
+	double det1=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+	DMatrix3x3 B(mA[0][0],mA[0][1],mA[0][2],
+		     mA[1][0],mA[1][1],mA[1][2],
+		     mA[2][0],mA[2][1],mA[2][2]);
+	DMatrix4x4 C(mA[0][0],mA[0][1],mA[0][2],mA[0][3],
+		     mA[1][0],mA[1][1],mA[1][2],mA[1][3],
+		     mA[2][0],mA[2][1],mA[2][2],mA[2][3],
+		     mA[3][0],mA[3][1],mA[3][2],mA[3][3]);	
+	if (mA[0][0]>0. && det1>0. && B.Determinant()>0. && C.Determinant()>0.
+	    && Determinant()>0.){
+	  return true;
+	}
+
+	return false;
       }
 
       void Print(){

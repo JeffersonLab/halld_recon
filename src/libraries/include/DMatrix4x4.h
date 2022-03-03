@@ -1,7 +1,7 @@
 #include <align_16.h>
 
 #ifndef USE_SSE2
-#include "DMatrixDSym.h"
+
 // Matrix class without SIMD instructions
 
 class DMatrix4x4{
@@ -155,7 +155,23 @@ class DMatrix4x4{
 		      );
   } 
   
-
+  
+  double Determinant() const {
+    DMatrix3x3 A(mA[1][1],mA[1][2],mA[1][3],
+		 mA[2][1],mA[2][2],mA[2][3],
+		 mA[3][1],mA[3][2],mA[3][3]);
+    DMatrix3x3 B(mA[1][0],mA[1][2],mA[1][3],
+		 mA[2][0],mA[2][2],mA[2][3],
+		 mA[3][0],mA[3][2],mA[3][3]);
+    DMatrix3x3 C(mA[1][0],mA[1][1],mA[1][3],
+		 mA[2][0],mA[2][1],mA[2][3],
+		 mA[3][0],mA[3][1],mA[3][3]);
+    DMatrix3x3 D(mA[1][0],mA[1][1],mA[1][2],
+		 mA[2][0],mA[2][1],mA[2][2],
+		 mA[3][0],mA[3][1],mA[3][2]);
+    return mA[0][0]*A.Determinant() - mA[0][1]*B.Determinant()
+      + mA[0][2]*C.Determinant() - mA[0][3]*D.Determinant();
+  }
 
 
   DMatrix4x4 Invert(){
@@ -181,23 +197,18 @@ class DMatrix4x4{
     return temp;
   }
 
-  DMatrixDSym GetSub(unsigned int lowerBound, unsigned int upperBound){
-     if (upperBound >= lowerBound) return DMatrixDSym();
-     DMatrixDSym subMatrix(upperBound - lowerBound);
-     for (unsigned int i=lowerBound; i <= upperBound; i++){
-        for (unsigned int j=lowerBound; j <= upperBound; j++){
-           subMatrix(i,j) = mA[i][j];
-        }
-     }
-     return subMatrix;
-  }
-
+  // Apply Sylvester's criterion for a symmetric matrix to be positive 
+  // definite.
   bool IsPosDef(){
-     if(mA[0][0] > 0. &&
-           GetSub(0,1).Determinant() > 0. && GetSub(0,2).Determinant() > 0. &&
-           GetSub(0,3).Determinant() > 0.)
-        return true;
-     else return false;
+    double det1=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+    DMatrix3x3 B(mA[0][0],mA[0][1],mA[0][2],
+		 mA[1][0],mA[1][1],mA[1][2],
+		 mA[2][0],mA[2][1],mA[2][2]);
+    if (mA[0][0]>0. && det1>0. && B.Determinant()>0. && Determinant()>0.){
+      return true;
+    }
+
+    return false;
   }
 
   void Print(){
