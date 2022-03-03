@@ -541,7 +541,7 @@ string DReaction_factory_ReactionFilter::Create_StepNameString(const DReactionSt
 {
 	string locNameString = "";
 	auto locFirstStepTargetPID = locFirstStepFlag ? std::get<1>(locStepTuple) : Unknown;
-	if(!locFirstStepFlag)
+	if(!locFirstStepFlag || locFirstStepTargetPID != 14) //use initial state if target is not a proton
 	{
 		locNameString = ShortName(std::get<0>(locStepTuple));
 		auto locSecondPID = std::get<1>(locStepTuple);
@@ -551,8 +551,8 @@ string DReaction_factory_ReactionFilter::Create_StepNameString(const DReactionSt
 	}
 	for(auto& locFinalPID : std::get<2>(locStepTuple))
 	{
-		if(locFinalPID == locFirstStepTargetPID)
-			continue; //target PID is understood
+		if(locFinalPID == locFirstStepTargetPID && locFirstStepTargetPID == 14)
+			continue; //target proton is understood
 		locNameString += ShortName(locFinalPID);
 	}
 	auto locMissFinalPID = std::get<3>(locStepTuple);
