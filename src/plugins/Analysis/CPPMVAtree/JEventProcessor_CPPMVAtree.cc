@@ -270,10 +270,10 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
         Double_t y      = 0;
         Double_t xdelta = 1.016;
         Double_t xmid   = 72.5*xdelta;
-        if (layer==1 || layer==3 || layer==5 || layer==6) {
+        if (layer==1 || layer==3 || layer==5) {
             // chamber is vertical -> wire gives x position
             x = wire*xdelta - xmid;
-        } else if (layer==2 || layer==4) {
+        } else if (layer==2 || layer==4 || layer==6) {
             // chamber is horizontal -> wire gives y position
             y = wire*xdelta - xmid;
         } else {

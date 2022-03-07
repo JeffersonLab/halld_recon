@@ -154,10 +154,14 @@ fmwpc_mainframe::fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t
         //-----------  Draw enable checkboxes
         TGGroupFrame *drawenableframe = new TGGroupFrame(topframe, "Draw Options", kVerticalFrame);
         topframe->AddFrame(drawenableframe, lhints);
+        checkbuttons["Draw FMWPC"         ] = new TGCheckButton(drawenableframe, "Draw FMWPC");
         checkbuttons["Draw Tracks"        ] = new TGCheckButton(drawenableframe, "Draw Tracks");
-        checkbuttons["Draw FMWPCHits"     ] = new TGCheckButton(drawenableframe, "Draw FMWPCHits");
-        checkbuttons["Draw FMWPCClusters" ] = new TGCheckButton(drawenableframe, "Draw FMWPCClusters");
-        checkbuttons["Draw FCALHits"      ] = new TGCheckButton(drawenableframe, "Draw FCALHits");
+        checkbuttons["Draw Track Hit Projections"] = new TGCheckButton(drawenableframe, "Draw Track Hit Projections");
+        checkbuttons["Draw FMWPCHits"     ] = new TGCheckButton(drawenableframe, "Draw DFMWPCHits");
+        checkbuttons["Draw FMWPCClusters" ] = new TGCheckButton(drawenableframe, "Draw DFMWPCClusters");
+        checkbuttons["Draw FCALHits"      ] = new TGCheckButton(drawenableframe, "Draw DFCALHits");
+        checkbuttons["Draw Vertex Momentum Values"] = new TGCheckButton(drawenableframe, "Draw Vertex Momentum Values");
+        checkbuttons["Draw Projection Momentum Values"] = new TGCheckButton(drawenableframe, "Draw Projection Momentum Values");
         for( auto cb : checkbuttons ){
             cb.second->SetState(kButtonDown);
             drawenableframe->AddFrame( cb.second, lhints );
@@ -422,32 +426,37 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
 {
 
     // Draw chambers
-    for( auto z : FMWPC_Zpos ){
-        Float_t zmin = z - FMWPC_Zlen/2.0;
-        Float_t zmax = zmin + FMWPC_Zlen;
-        Float_t smin = -FMWPC_width/2.0;
-        Float_t smax = +FMWPC_width/2.0;
-        auto box = new TBox(zmin, smin, zmax, smax);
-        box->SetLineWidth(1);
-        box->SetLineColor(kBlack);
-        box->SetFillStyle(3001);
-        box->SetFillColor(TColor::GetColor((Float_t)0.9, 0.9, 0.9));
-        graphics.push_back( box );
-        graphics_draw_options[box] = "L"; // Draw outline AND fill style
-    }
+    int wires_into_screen = view=="top"; // true=wires into screen ; false=wires parallel to screen
+    if( checkbuttons["Draw FMWPC"]->GetState() == kButtonDown) {
+        for (auto z: FMWPC_Zpos) {
+            Float_t zmin = z - FMWPC_Zlen / 2.0;
+            Float_t zmax = zmin + FMWPC_Zlen;
+            Float_t smin = -FMWPC_width / 2.0;
+            Float_t smax = +FMWPC_width / 2.0;
+            auto box = new TBox(zmin, smin, zmax, smax);
+            box->SetLineWidth(1);
+            box->SetLineColor(wires_into_screen ? kBlack : kGray);
+            box->SetFillStyle(3001);
+            box->SetFillColor(wires_into_screen ? TColor::GetColor((Float_t) 0.9, 0.9, 0.9) : kGray);
+            graphics.push_back(box);
+            graphics_draw_options[box] = "L"; // Draw outline AND fill style
 
-    // Draw Absorbers
-    for(uint32_t i=0; i<FMWPC_Zpos.size()-2; i++){
-        Float_t z_upstream = FMWPC_Zpos[i];   // center of upstream chamber
-        Float_t z_dnstream = FMWPC_Zpos[i+1]; // center of downstream chamber
-        Float_t zmin = z_upstream + FMWPC_Zlen/2.0 + 1.0;
-        Float_t zmax = z_dnstream - FMWPC_Zlen/2.0 - 1.0;
-        Float_t smin = -FMWPC_width/2.0 - 2.0;
-        Float_t smax = +FMWPC_width/2.0 + 2.0;        
-        auto box = new TBox(zmin, smin, zmax, smax);
-        box->SetFillStyle(3001);
-        box->SetFillColor(42);
-        graphics.push_back( box );
+            wires_into_screen = !wires_into_screen;
+        }
+
+        // Draw Absorbers
+        for (uint32_t i = 0; i < FMWPC_Zpos.size() - 2; i++) {
+            Float_t z_upstream = FMWPC_Zpos[i];   // center of upstream chamber
+            Float_t z_dnstream = FMWPC_Zpos[i + 1]; // center of downstream chamber
+            Float_t zmin = z_upstream + FMWPC_Zlen / 2.0 + 1.0;
+            Float_t zmax = z_dnstream - FMWPC_Zlen / 2.0 - 1.0;
+            Float_t smin = -FMWPC_width / 2.0 - 2.0;
+            Float_t smax = +FMWPC_width / 2.0 + 2.0;
+            auto box = new TBox(zmin, smin, zmax, smax);
+            box->SetFillStyle(3001);
+            box->SetFillColor(42);
+            graphics.push_back(box);
+        }
     }
 
     // Get all JANA objects
@@ -485,8 +494,8 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
             // row/column we use the dimension going into the screen
             // "u" to shift the block forward or backward slightly
             // in z.
-            double z_shift = -u*40.0/120.0;
-            z_up += z_shift;
+            //double z_shift = -u*40.0/120.0;
+            //z_up += z_shift;
             //z_dn += z_shift;
 
             auto b = new TBox(z_up, s_min, z_dn, s_max);
@@ -565,9 +574,7 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
 
             if ((tbt->PID() == 8) || (tbt->PID() == 9)) {
                 auto fcal_projections = tbt->extrapolations.at(SYS_FCAL);
- //             if( ! fcal_projections.empty() ){
                 for( auto proj : fcal_projections ){
-//                    auto proj = fcal_projections[fcal_projections.size()-1];
                     double s = 0;
                     double z = proj.position.z();
                     if (view == "top") {
@@ -575,14 +582,19 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
                     } else if (view == "side") {
                         s = proj.position.y();
                     }
-                    auto m = new TMarker(z, s, 47);
-                    m->SetMarkerColor(kBlue+2);
-                    m->SetMarkerSize(2.0);
-                    graphics.push_back(m);
+
+                    if(checkbuttons["Draw Track Hit Projections"]->GetState() == kButtonDown) {
+                        if( wires_into_screen ) {
+                            auto m = new TMarker(z, s, 47);
+                            m->SetMarkerColor(kBlue + 2);
+                            m->SetMarkerSize(2.0);
+                            graphics.push_back(m);
+                        }
+                    }
 
                     S.push_back(s);
                     Z.push_back(z);
-                }
+               }
 
                 auto fmwpc_projections = tbt->extrapolations.at(SYS_FMWPC);
                 for (int layer = 1; layer <= (int) fmwpc_projections.size(); layer++) {
@@ -592,13 +604,32 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
                     double z = proj.position.z();
                     if (view == "top") {
                         s = proj.position.x();
+                        wires_into_screen = (layer%2) == 1;
                     } else if (view == "side") {
                         s = proj.position.y();
+                        wires_into_screen = (layer%2) == 0;
                     }
-                    auto m = new TMarker(z, s, 47);
-                    m->SetMarkerColor(kBlue);
-                    m->SetMarkerSize(1.0);
-                    graphics.push_back(m);
+
+                    if( wires_into_screen ) {
+                        if(checkbuttons["Draw Track Hit Projections"]->GetState() == kButtonDown) {
+                            auto m = new TMarker(z, s, 47);
+                            m->SetMarkerColor(kBlue);
+                            m->SetMarkerSize(1.0);
+                            graphics.push_back(m);
+                        }
+
+                        if(checkbuttons["Draw Projection Momentum Values"]->GetState() == kButtonDown) {
+                            double x = proj.position.z();
+                            double y = s+1;
+                            char str[256];
+                            sprintf(str, "p=%3.1f GeV/c", proj.momentum.Mag());
+                            auto lat = new TLatex(x, y, str);
+                            lat->SetTextSize(0.04);
+                            lat->SetTextColor(kBlue);
+                            lat->SetTextAlign(21);
+                            graphics.push_back(lat);
+                        }
+                    }
 
                     S.push_back(s);
                     Z.push_back(z);
@@ -609,249 +640,20 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
                     sp->SetLineColor(kBlue);
                     graphics.push_back(sp);
                     graphics_draw_options[sp] = "same"; // Draw outline AND fill style
+
+                    if(checkbuttons["Draw Vertex Momentum Values"]->GetState() == kButtonDown) {
+                        double x = FCAL_Zmin - 4.0 ; //750.0;
+                        double y = sp->Eval(x);
+                        char str[256];
+                        sprintf(str, "p=%3.1f GeV/c", tbt->pmag());
+                        auto lat = new TLatex(x,y, str);
+                        lat->SetTextColor(kBlue);
+                        lat->SetTextAlign(32);
+                        graphics.push_back(lat);
+                    }
                 }
             }
         }
     }
 }
 
-//-------------------
-// DrawHits
-//-------------------
-void fmwpc_mainframe::DrawHits(vector<TObject*> &graphics)
-{
-// 	// Find the factory name, tag, and track number for the prime track
-// 	string dataname = datatype[0]->GetTextEntry()->GetText();
-// 	string tag = factorytag[0]->GetTextEntry()->GetText();
-// 	string track = trackno[0]->GetTextEntry()->GetText();
-// 
-// 	// Reset residual histogram
-// 	this->resi->Reset();
-// 
-// 	if(track==""){_DBG_<<"No prime tracks!"<<endl;return;}
-// 	if(tag=="<default>")tag="";
-// 	unsigned int index = atoi(track.c_str());
-// 	
-// 	// Clear out any existing reference trajectories
-// 	for(unsigned int i=0; i<REFTRAJ.size(); i++)delete REFTRAJ[i];
-// 	REFTRAJ.clear();
-// 	
-// 	// Get the reference trajectory for the prime track
-// 	DReferenceTrajectoryHDV *rt=NULL;
-// 	vector<const DCDCTrackHit*> cdctrackhits;
-// 	gMYPROC->GetDReferenceTrajectory(dataname, tag, index, rt, cdctrackhits);
-// 	if(rt==NULL){
-// 		_DBG_<<"Reference trajectory unavailable for "<<dataname<<":"<<tag<<" #"<<index<<endl;
-// 		return;
-// 	}
-// 	
-// 	REFTRAJ.push_back(rt);
-// 
-// 	// Get a list of ALL wire hits for this event
-// 	vector<pair<const DCoordinateSystem*,double> > allhits;
-// 	gMYPROC->GetAllWireHits(allhits);
-// 	
-// 	// Draw prime track
-// 	DrawHitsForOneTrack(graphics, allhits, rt, 0, cdctrackhits);
-// 	
-// 	// Draw other tracks
-// 	for(unsigned int i=1; i<datatype.size(); i++){
-// 		dataname = datatype[i]->GetTextEntry()->GetText();
-// 		tag = factorytag[i]->GetTextEntry()->GetText();
-// 		track = trackno[i]->GetTextEntry()->GetText();
-// 		if(track=="")continue;
-// 		if(tag=="<default>")tag="";
-// 		unsigned int index = atoi(track.c_str());
-// 		if(track=="Best Match"){
-// 			// Need to implement algorithm to find the best match
-// 			index=0;
-// 		}
-// 		
-// 		// Get reference trajectory for this track
-// 		DReferenceTrajectoryHDV *myrt=NULL;
-// 		gMYPROC->GetDReferenceTrajectory(dataname, tag, index, myrt, cdctrackhits);
-// 		if(myrt){
-// 			REFTRAJ.push_back(myrt);
-// 			DrawHitsForOneTrack(graphics, allhits, myrt, i, cdctrackhits);
-// 		}
-// 	}
-}
-
-// //-------------------
-// // DrawHitsForOneTrack
-// //-------------------
-// void fmwpc_mainframe::DrawHitsForOneTrack(
-// 	vector<TObject*> &graphics,
-// 	vector<pair<const DCoordinateSystem*,double> > &allhits,
-// 	DReferenceTrajectory *rt,
-// 	int index,
-// 	vector<const DCDCTrackHit*> &cdctrackhits)
-// {
-// 	// Clear current hits list
-// 	if(index==0){
-// 		TRACKHITS.clear();
-// 		S_VALS.clear();
-// 		slo = shi = 20.0;
-// 	}
-// 	
-// 	// Get state of s-lock checkbutton
-// 	bool lock_s_coordinate = slock->GetState();
-// 
-//     // Get fdc drift time - distance function
-//     vector<const DTrackFitter*> fitters;
-//     eventloop->Get(fitters, "KalmanSIMD");
-//     const DTrackFitterKalmanSIMD *fitter=0;
-//     if (fitters.size() > 0)
-//         fitter =  dynamic_cast<const DTrackFitterKalmanSIMD *>(fitters[0]);
-// 
-// 
-// 	vector<pair<const DCoordinateSystem*,double> > &hits = index==0 ? allhits:TRACKHITS;
-// 	
-// 	// Loop over all hits and create graphics objects for each
-// 	for(unsigned int i=0; i<hits.size(); i++){
-// 		const DCoordinateSystem *wire = hits[i].first;
-// 		double dist = hits[i].second;
-// 		DVector3 pos_doca, mom_doca;
-// 		double s;
-// 		if(wire==NULL){_DBG_<<"wire==NULL!!"<<endl; continue;}
-// 		if(rt==NULL){_DBG_<<"rt==NULL!!"<<endl; continue;}
-// 		double doca = rt->DistToRT(wire, &s);
-// 		rt->GetLastDOCAPoint(pos_doca, mom_doca);
-// 		DVector3 shift = wire->udir.Cross(mom_doca);
-// 		
-// 		// The magnitude of "dist" is based on the drift time
-// 		// which does not yet subtract out the TOF. This can add
-// 		// 50-100 microns to the resolution.
-// 		//
-// 		// What is really needed here is to try different hypotheses
-// 		// as to the particle type. For now, we just assume its a pion
-// 		double mass = 0.13957;
-// 		double beta = 1.0/sqrt(1.0 + pow(mass/mom_doca.Mag(), 2.0))*2.998E10;
-// 		double tof = s/beta/1.0E-9; // in ns
-//         if (fitter) {
-//             double Bz = rt->FindClosestSwimStep(wire)->B[2];
-//             dist = fitter->GetFDCDriftDistance(dist / 55.0e-4 - tof, Bz);
-// #if PRINT_DRIFT_DISTANCE_MAP
-//             static bool print_the_map=true;
-//             if (print_the_map) {
-//                print_the_map = false;
-//                for (double t=0; t < 2.5; t += 0.001) {
-//                   double d = fitter->GetFDCDriftDistance(t, Bz);
-//                   std::cout << d << " " << t << std::endl;
-//                }
-//             }
-// #endif
-//         }
-//         else {
-// 		    dist -= tof*55.0E-4;
-//         }
-// 		shift.SetMag(dist);
-// 
-// 		// See comments in DTrack_factory_ALT1.cc::LeastSquaresB
-// 		double u = rt->GetLastDistAlongWire();
-// 		DVector3 pos_wire = wire->origin + u*wire->udir;
-// 		DVector3 pos_diff = pos_doca-pos_wire;
-// 		double sdist = pos_diff.Mag();
-// 		if(shift.Dot(pos_diff)<0.0){
-// 			shift = -shift;
-// 			sdist = -sdist;
-// 		}
-// 		
-// 		// OK. Finally, we can decide on a sign for the residual.
-// 		// We do this by taking the dot product of the shift with
-// 		// the vector pointing to the center of the wire.
-// 		//double sign = (shift.Dot(pos_wire)<0.0) ? -1.0:+1.0;
-// 		double resi = fabs(doca)-fabs(dist);
-// 		if(!isfinite(resi))continue;
-// #if VERBOSE_PRINT_FDC_HIT_INFO
-//          std::cout
-//            << "hit " << i << ": "
-//            << "dist=" << dist
-//            << " (" << shift[0] << "," << shift[1] << "," << shift[2] << ")"
-//            << ", sdist=" << sdist
-//            << " (" << pos_diff[0] << "," << pos_diff[1] << "," << pos_diff[2] << ")"
-//            << ", tof=" << tof
-//            << " at (" << pos_doca[0] << "," << pos_doca[1] << "," << pos_doca[2] << ")"
-//            << std::endl;
-// #endif
-// 		// If the residual is reasonably small, consider this hit to be
-// 		// on this track and record it (if this is the prime track)
-// 		if(index==0)TRACKHITS.push_back(hits[i]);
-// 		
-// //_DBG_<<"resi="<<resi<<"  s="<<s<<"   resi*10E4="<<resi*1.0E4<<endl;
-// 		
-// 		if(index==0){
-// 			TMarker *m = new TMarker(sdist, s, 20);
-// 			m->SetMarkerSize(1.6);
-// 			m->SetMarkerColor(kYellow);
-// 			graphics.push_back(m);
-// 			this->resi->Fill(resi);
-// 			
-// 			// Record limits for s.
-// 			// NOTE: We calculate zlo and zhi from these later
-// 			// in DoMyRedraw().
-// 			if(s<slo)slo=s;
-// 			if(s>shi)shi=s;
-// 		}
-// 		
-// 		// Check if this is a CDC wire.
-// 		int marker_style = 20;
-// 		double ellipse_width = 0.8;
-// 		int ellipse_color = colors[index%ncolors];
-// 		const DCDCWire *cdcwire = dynamic_cast<const DCDCWire*>(wire);
-// 		if(cdcwire!=NULL && cdcwire->stereo!=0.0){
-// 			ellipse_width = 3.0;
-// 			ellipse_color += cdcwire->stereo>0.0 ? 4:-2;
-// 			marker_style = 5;
-// 		}
-// 		
-// 		// Check if this is wire is in the list of wires associated with this track
-// 		int ellipse_style = 1;
-// 		if(!WireInList(wire, cdctrackhits)){
-// 			ellipse_style=2;
-// 			ellipse_width=2.0;
-// 		}
-// 		
-// 		// If the lock_s_coordinate flag is set and this is not the prime track
-// 		// then try and replace the s-value for this hit by the one from the 
-// 		// prime track. If this is the prime track, then record the s-value.
-// 		if(lock_s_coordinate){
-// 			if(index==0){
-// 				// This is prime track. Record s-value for this wire
-// 				S_VALS[wire] = s;
-// 			}else{
-// 				map<const DCoordinateSystem*,double>::iterator iter = S_VALS.find(wire);
-// 				if(iter!=S_VALS.end()){
-// 					s = iter->second;
-// 				}
-// 			}
-// 		}
-// 
-// 		// Create ellipse for distance from wire
-// 		TEllipse *e = new TEllipse(sdist, s, dist, dist);
-// 		e->SetLineWidth((Width_t)ellipse_width);
-// 		e->SetLineColor(ellipse_color);
-// 		e->SetLineStyle(ellipse_style);
-// 		e->SetFillColor(19);
-// 		graphics.push_back(e);
-// 
-// 		// Create marker for wire
-// 		TMarker *m = new TMarker(sdist, s, marker_style);
-// 		m->SetMarkerSize(1.5);
-// 		m->SetMarkerColor(colors[index%ncolors]);
-// 		graphics.push_back(m);
-// 		
-// 	}
-// }
-
-// //-------------------
-// // WireInList
-// //-------------------
-// bool fmwpc_mainframe::WireInList(const DCoordinateSystem *wire, vector<const DCDCTrackHit*> &cdctrackhits)
-// {
-// 	for(unsigned int i=0; i<cdctrackhits.size(); i++){
-// 		if(cdctrackhits[i]->wire == wire)return true;
-// 	}
-// 
-// 	return false;
-// }
