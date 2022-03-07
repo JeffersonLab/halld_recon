@@ -48,7 +48,7 @@ void PipPimAnalysis(DKinFitter *dKinFitter,double weight) const;
 
 double SPLIT_CUT,FCAL_THRESHOLD,BCAL_THRESHOLD,GAMMA_DT_CUT;
 double EPEM_CL_CUT,PIPPIM_CL_CUT;
-Particle_t m_TargetParticle=Proton;//Pb208;
+Particle_t m_TargetParticle=Pb208;
 
 TH2F *H_CL_comp,*H_E_over_P_electron,*H_E_over_P_positron;
 TH2F *H_VertexXY;
