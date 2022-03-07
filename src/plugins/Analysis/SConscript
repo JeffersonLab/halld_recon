@@ -15,6 +15,7 @@ subdirs.extend(['pid_dirc','truth_dirc', 'lut_dirc', 'dirc_hists', 'dirc_reactio
 subdirs.extend(['B3pi_eff_missgamma','B3pi_eff_misspip','B3pi_eff_misspim','B3pi_eff_missprot', 'mcthrown_hists'])
 subdirs.extend(['compton'])
 subdirs.extend(['src-ct'])
+subdirs.extend(['CPPAnalysis'])
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
 

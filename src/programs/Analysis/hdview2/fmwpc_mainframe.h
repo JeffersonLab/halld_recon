@@ -84,13 +84,6 @@ class fmwpc_mainframe:public TGMainFrame{
 		
 		void DrawAxes(TCanvas *c, std::vector<TObject*> &graphics, const char *xlab, const char *ylab);
         void DrawDetectors(TCanvas *c, std::vector<TObject*> &graphics, std::string view);
-		void DrawHits(std::vector<TObject*> &graphics);
-		void DrawHitsForOneTrack(TVector3 &pos, TVector3 &mom, std::vector<TObject*> &graphics);
-		void DrawHitsForOneTrack(std::vector<TObject*> &graphics,
-										std::vector<std::pair<const DCoordinateSystem*,double> > &allhits,
-										DReferenceTrajectory *rt,
-										int index,
-										std::vector<const DCDCTrackHit*> &cdctrackhits);
 
 		bool WireInList(const DCoordinateSystem *wire, std::vector<const DCDCTrackHit*> &cdctrackhits);
 

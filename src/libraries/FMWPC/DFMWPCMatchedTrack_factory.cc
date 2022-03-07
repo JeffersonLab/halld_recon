@@ -16,6 +16,7 @@ using namespace jana;
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry.h>
 #include <FMWPC/DFMWPCHit.h>
+#include <PID/DChargedTrack.h>
 
 
 //------------------
@@ -49,10 +50,12 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
     vector<const DTrackTimeBased*> tbts;
     vector<const DFCALHit*>        fcalhits;
     vector<const DFMWPCHit*>       fmwpchits;
+    vector<const DChargedTrack*>   chargedtracks;
     const DFCALGeometry*           fcalgeom = nullptr;
     loop->Get(tbts);
     loop->Get(fcalhits);
     loop->Get(fmwpchits);
+    loop->Get(chargedtracks);
     loop->GetSingle( fcalgeom );
 
     // Make sure we found a DFCALGeometry object
@@ -91,6 +94,24 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
         // Make a DFMWPCMatchedTrack
         auto fmpwc_mt = new DFMWPCMatchedTrack(tbt);
         fmpwc_mt->AddAssociatedObject( tbt ); // don't really need this as associated object, but allows janaview to click through to it for easier debugging
+
+        // Find the DChargedTrack object that has this as one of its hypotheses
+        for( auto ct : chargedtracks ){
+            for( auto hypoth : ct->dChargedTrackHypotheses ){
+                if( hypoth->Get_TrackTimeBased() == tbt ){
+                    // Found the DChargedTrack that this DTrackTimeBased belongs to.
+                    // Add matched objects from that as associated objects to this
+                    // DFMWPCMatchedTrack
+                    fmpwc_mt->AddAssociatedObject( ct );
+                    fmpwc_mt->AddAssociatedObject( hypoth );
+                    auto fcalmatch = hypoth->Get_FCALShowerMatchParams();
+                    if( fcalmatch ){
+                        fmpwc_mt->AddAssociatedObject( fcalmatch->dFCALShower );
+                    }
+                    break;
+                }
+            }
+        }
 
         // Match to FCAL
         DVector3 pos;
