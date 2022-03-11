@@ -814,7 +814,7 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
 
       axialwires.push_back(w);
    }
-
+   
    return true;
 }
 
@@ -929,7 +929,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
       if (!GetCDCAxialWires(ring,numstraws[ring-1],zcenter,L,cdc_offsets,straws,
                rot_angles,cdc_origin[0],cdc_origin[1])) return false;    
       cdcwires.push_back(straws);
-   }  
+   }
 
    // First set of stereo layers
    for (unsigned int i=0;i<8;i++){
@@ -2173,6 +2173,34 @@ bool DGeometry::GetDIRCZ(double &z_dirc) const
     return true;
   }
 }
+
+//---------------------------------
+// GetGEMTRDz
+//---------------------------------
+bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
+{
+  z_gemtrd=9999.;
+  vector<double> origin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  bool good = Get("//section/composition/posXYZ[@volume='GEMTRD']/@X_Y_Z",origin);
+  jgeom->SetVerbose(1);   // reenable error messages
+
+  if(!good){
+    _DBG_<<"Unable to retrieve GEMTRD position."<<endl;
+    return false;
+  }
+ 
+  vector<double>offset;
+  Get("//composition[@name='GEMTRD']/posXYZ[@volume='gemTRD']/@X_Y_Z",offset);
+
+  vector<double>width;
+  Get("//box[@name='GTSV']/@X_Y_Z",width);
+
+  z_gemtrd=origin[2]+offset[2]+0.5*width[2];
+  
+  return true;
+}
+  
 
 //---------------------------------
 // GetTRDZ
