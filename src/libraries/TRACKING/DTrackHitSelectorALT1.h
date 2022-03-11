@@ -25,6 +25,7 @@ class DTrackHitSelectorALT1:public DTrackHitSelector{
 				const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out,int N) const {};
 		void GetGEMHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DGEMPoint*> &gemhits_in, vector<const DGEMPoint*> &gemhits_out) const {};
 		void GetTRDHits(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DTRDPoint*> &trdhits_in, vector<const DTRDPoint*> &trdhits_out) const {};
+		const DGEMTRDSegment *GetGEMTRDSegment(const DTrackFitter::Extrapolation_t &extrapolation,const vector<const DGEMTRDSegment*>&gemtrdsegments_in) const {return NULL;};
 
 	private:
 		int HS_DEBUG_LEVEL;

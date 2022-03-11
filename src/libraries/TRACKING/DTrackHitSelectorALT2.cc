@@ -79,6 +79,9 @@ DTrackHitSelectorALT2::DTrackHitSelectorALT2(jana::JEventLoop *loop, int32_t run
 	MIN_FDC_SIGMA_ANODE_WIREBASED = 0.0100;
 	MIN_FDC_SIGMA_CATHODE_WIREBASED = 0.0100;
 	MAX_DOCA=2.5;
+	GEMTRD_CUT=0.04;
+
+	gPARMS->SetDefaultParameter("TRKFIT:GEMTRD_CUT",GEMTRD_CUT);
 
 	gPARMS->SetDefaultParameter("TRKFIT:MAX_DOCA",MAX_DOCA,"Maximum doca for associating hit with track");
 
@@ -142,6 +145,27 @@ DTrackHitSelectorALT2::~DTrackHitSelectorALT2()
 
 }
 
+//---------------------------------
+// GetGEMTRDSegment
+//---------------------------------
+const DGEMTRDSegment *DTrackHitSelectorALT2::GetGEMTRDSegment(const DTrackFitter::Extrapolation_t &extrapolation,const vector<const DGEMTRDSegment*>&gemtrdsegments_in) const {
+  DVector3 pos=extrapolation.position;
+  const DGEMTRDSegment *segment_out=NULL;
+  double dr2_min=1e9;
+  for (unsigned int j=0;j<gemtrdsegments_in.size();j++){
+    const DGEMTRDSegment *segment=gemtrdsegments_in[j];
+    double dx=segment->x-pos.X();
+    double dy=segment->y-pos.Y();
+    double dr2=dx*dx+dy*dy;
+    if (dr2<dr2_min){
+      dr2_min=dr2;
+      if (dr2<GEMTRD_CUT){
+	segment_out=segment;
+      }
+    }
+  }
+  return segment_out;
+}
 
 //---------------------------------
 // GetTRDHits
