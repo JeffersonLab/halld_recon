@@ -109,15 +109,27 @@ jerror_t DGEMTRDSegment_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
     double denom=sumv*sumzz-sumz*sumz;
     double y0=(sumzz*sumy-sumz*sumyz)/denom;
-    double dydz=(sumv*sumyz-sumz*sumy)/denom;
+    double dydz=-(sumv*sumyz-sumz*sumy)/denom;
+
     double x0=(sumzz*sumx-sumz*sumxz)/denom;
-    double dxdz=(sumv*sumxz-sumz*sumx)/denom;
-  
+    double dxdz=-(sumv*sumxz-sumz*sumx)/denom;
+
+    // Covariance matrix for (s)lope and (i)ntercept
+    double var_i=sumzz/denom;
+    double var_s=sumv/denom;
+    double cov_is=-sumz/denom;
+
     DGEMTRDSegment *mysegment=new DGEMTRDSegment;
+    mysegment->layer=segments[i][0]->layer;
+    mysegment->t=segments[i][0]->t;
     mysegment->x=x0;
     mysegment->y=y0;
     mysegment->dxdz=dxdz;
     mysegment->dydz=dydz;
+    mysegment->var_x=var_i;
+    mysegment->var_tx=var_s;
+    mysegment->cov_xtx=cov_is;
+    cout << "GEMTRD " << mysegment->layer <<endl;
     _data.push_back(mysegment);
   }
 
