@@ -353,7 +353,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    dTOFz+=tof_face[2]+tof_plane[2];
    dTOFz*=0.5;  // mid plane between tof planes
    geom->GetTRDZ(dTRDz_vec); // TRD planes
-      
+   geom->GetGEMTRDz(dGEMTRDz);
+
    // Get start counter geometry;
    if (geom->GetStartCounterGeom(sc_pos, sc_norm)){
      // Create vector of direction vectors in scintillator planes
@@ -416,7 +417,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    gPARMS->SetDefaultParameter("TRKFIT:USE_TRD_DRIFT_TIMES",USE_TRD_DRIFT_TIMES);
    USE_GEM_HITS=false;
    gPARMS->SetDefaultParameter("TRKFIT:USE_GEM_HITS",USE_GEM_HITS);
-
+   USE_GEMTRD=false;
+   gPARMS->SetDefaultParameter("TRKFIT:USE_GEMTRD",USE_GEMTRD);
 
    // Flag to enable calculation of alignment derivatives
    ALIGNMENT=false;
@@ -791,14 +793,10 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 //-----------------
 DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 {
-   // Reset member data and free an memory associated with the last fit,
+   // Reset member data and free any memory associated with the last fit,
    // but some of which only for wire-based fits 
    ResetKalmanSIMD();
-
-   // Check that we have enough FDC and CDC hits to proceed
-   if (cdchits.size()==0 && fdchits.size()<4) return kFitNotDone;
-   if (cdchits.size()+fdchits.size() < 6) return kFitNotDone;
-   
+  
    // Copy hits from base class into structures specific to DTrackFitterKalmanSIMD  
    if (USE_CDC_HITS) 
      for(unsigned int i=0; i<cdchits.size(); i++)AddCDCHit(cdchits[i]);
@@ -817,6 +815,9 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
        //_DBG_ << " Got GEM" << endl;
        got_trd_gem_hits=true;
      }
+   }
+   if (USE_GEMTRD && gemtrdsegment!=NULL){
+     AddGEMTRDHit();
    }
 
    unsigned int num_good_cdchits=my_cdchits.size();
@@ -1164,7 +1165,16 @@ void DTrackFitterKalmanSIMD::AddGEMHit(const DGEMPoint *gemhit){
   my_fdchits.push_back(hit);
 }
 
+// Add GEMTRD segment data
+void DTrackFitterKalmanSIMD::AddGEMTRDHit(){
+  DKalmanSIMDFDCHit_t *hit= new DKalmanSIMDFDCHit_t;
 
+  hit->z=dGEMTRDz;
+  hit->status=gemtrd_hit;
+  hit->hit=NULL;
+
+  my_fdchits.push_back(hit);
+}
 
 // Add TRD points
 void DTrackFitterKalmanSIMD::AddTRDHit(const DTRDPoint *trdhit){
@@ -1949,38 +1959,44 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
      z_max=600.;
      r2max=100.*100.;
    }
-   for (m=0;m<my_fdchits.size();m++){
-      if (fabs(S(state_q_over_p))>Q_OVER_P_MAX
-	  || fabs(S(state_tx))>TAN_MAX
-	  || fabs(S(state_ty))>TAN_MAX
-	  || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max  
-	  || z>z_max || z<Z_MIN
-         ){
-         break;
-      }
-     
-      zhit=my_fdchits[m]->z;
-      if (fabs(old_zhit-zhit)>EPS){
-         bool done=false;
-         while (!done){
-	   if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX
-	       || fabs(S(state_tx))>TAN_MAX
-	       || fabs(S(state_ty))>TAN_MAX  
-	       || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max
-	       || z>z_max || z< Z_MIN
-               ){
-               break;
-            }
-
-            if (PropagateForward(forward_traj_length,i,z,zhit,S,done,
-                     stepped_to_boundary,stepped_to_endplate)
-                  !=NOERROR)
-               return UNRECOVERABLE_ERROR;
-         } 
-      }
-      old_zhit=zhit;
+   else if (gemtrdsegment!=NULL){
+     z_max=dGEMTRDz;
+     r2max=100.*100.;
    }
-
+   for (m=0;m<my_fdchits.size();m++){
+     if (USE_GEMTRD&&gemtrdsegment!=NULL)_DBG_ << m+1 << "/" <<my_fdchits.size() << " z " << z <<endl;
+     if (fabs(S(state_q_over_p))>Q_OVER_P_MAX
+	 || fabs(S(state_tx))>TAN_MAX
+	 || fabs(S(state_ty))>TAN_MAX
+	 || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max  
+	 || z>z_max || z<Z_MIN
+         ){
+       break;
+     }
+     
+     zhit=my_fdchits[m]->z;
+     //_DBG_ << "   " << zhit << endl;
+     if (fabs(old_zhit-zhit)>EPS){
+       bool done=false;
+       while (!done){
+	 if (fabs(S(state_q_over_p))>=Q_OVER_P_MAX
+	     || fabs(S(state_tx))>TAN_MAX
+	     || fabs(S(state_ty))>TAN_MAX  
+	     || S(state_x)*S(state_x)+S(state_y)*S(state_y)>r2max
+	     || z>z_max || z< Z_MIN
+	     ){
+	   break;
+	 }
+	 
+	 if (PropagateForward(forward_traj_length,i,z,zhit,S,done,
+			      stepped_to_boundary,stepped_to_endplate)
+                  !=NOERROR)
+	   return UNRECOVERABLE_ERROR;
+       } 
+     }
+     old_zhit=zhit;
+   }
+   
    // If m<2 then no useable FDC hits survived the check on the magnitude on the 
    // momentum
    if (m<2) return UNRECOVERABLE_ERROR;
@@ -4542,119 +4558,133 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     // Add the hit
     if (num_fdc_hits>0){
       if (forward_traj[k].h_id>0 && forward_traj[k].h_id<1000){
-	unsigned int id=forward_traj[k].h_id-1; 
-	// Check if this is a plane we want to skip in the fit (we still want
-	// to store track and hit info at this plane, however).
-	bool skip_plane=(my_fdchits[id]->hit!=NULL
-			 &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
-	double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
-	FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
-				    lorentz_factor,H_T);
-	// Matrix transpose H_T -> H
-	H=Transpose(H_T);
-	
-	// Variance in coordinate transverse to wire
-	V(0,0)=my_fdchits[id]->uvar;
-	if (my_fdchits[id]->hit==NULL&&my_fdchits[id]->status!=trd_hit){
-	  V(0,0)*=fdc_anneal_factor;
+	unsigned int id=forward_traj[k].h_id-1;
+	if (my_fdchits[id]->status==gemtrd_hit){
+	  cout << "Using GEMTRD" <<endl;
+	  DMatrix4x1 M4;
+	  DMatrix4x4 V4;
+	  //DMatrix4x5 H4;
+	  // DMatrix5x4 H4T;
+	  M4(0)=gemtrdsegment->x-S(state_x);
+	  M4(1)=gemtrdsegment->dxdz-S(state_tx);
+	  M4(2)=gemtrdsegment->y-S(state_y);
+	  M4(3)=gemtrdsegment->dydz-S(state_ty);
+	  M4.Print();
 	}
-	
-	// Variance in coordinate along wire
-	V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
-
-	// Residual for coordinate along wire
-	Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
-       
-	// Residual for coordinate transverse to wire
-	Mdiff(0)=-doca;
-	double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
-	if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
-	  if (my_fdchits[id]->hit!=NULL){
-	    double drift=(doca>0.0?1.:-1.)
-	      *fdc_drift_distance(drift_time,forward_traj[k].B);
-	    Mdiff(0)+=drift;
- 
-	    // Variance in drift distance
-	    V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;	
-	  }
-	  else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
-	    double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
-	    Mdiff(0)+=drift;
-
-	    // Variance in drift distance
-	    V(0,0)=0.05*0.05*fdc_anneal_factor;
-	  }
-	}
-	// Check to see if we have multiple hits in the same plane
-	if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
-	  UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
-			      lorentz_factor,V,Mdiff,H,H_T,S,C,
-			      fdc_chi2cut,skip_plane,chisq,numdof,
-			      fdc_anneal_factor);
-	}
-	else{
-	  if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
-
-	  // Variance for this hit
-	  DMatrix2x2 Vtemp=V+H*C*H_T;
-	  InvV=Vtemp.Invert();
+	else {
+	  // Check if this is a plane we want to skip in the fit (we still want
+	  // to store track and hit info at this plane, however).
+	  bool skip_plane=(my_fdchits[id]->hit!=NULL
+			   &&my_fdchits[id]->hit->wire->layer==PLANE_TO_SKIP);
+	  double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+	  FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,
+				      cosalpha,lorentz_factor,H_T);
+	  // Matrix transpose H_T -> H
+	  H=Transpose(H_T);
 	  
-	  // Check if this hit is an outlier
-	  double chi2_hit=Vtemp.Chi2(Mdiff);
-	  if (chi2_hit<fdc_chi2cut){
-	    // Compute Kalman gain matrix
-	    K=C*H_T*InvV;
-
-	    if (skip_plane==false){
-	      // Update the state vector 
-	      S+=K*Mdiff;
+	  // Variance in coordinate transverse to wire
+	  V(0,0)=my_fdchits[id]->uvar;
+	  if (my_fdchits[id]->hit==NULL&&my_fdchits[id]->status!=trd_hit){
+	    V(0,0)*=fdc_anneal_factor;
+	  }
+	  
+	  // Variance in coordinate along wire
+	  V(1,1)=my_fdchits[id]->vvar*fdc_anneal_factor;
+	  
+	  // Residual for coordinate along wire
+	  Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
+	  
+	  // Residual for coordinate transverse to wire
+	  Mdiff(0)=-doca;
+	  double drift_time=my_fdchits[id]->t-mT0-forward_traj[k].t*TIME_UNIT_CONVERSION;
+	  if (fit_type==kTimeBased && USE_FDC_DRIFT_TIMES){	
+	    if (my_fdchits[id]->hit!=NULL){
+	      double drift=(doca>0.0?1.:-1.)
+		*fdc_drift_distance(drift_time,forward_traj[k].B);
+	      Mdiff(0)+=drift;
 	      
-	      // Update state vector covariance matrix
-	      //C=C-K*(H*C);    
-	      C=C.SubSym(K*(H*C));
-	      
-	      if (DEBUG_LEVEL > 25) {
-		jout << "S Update: " << endl; S.Print();
-		jout << "C Uodate: " << endl; C.Print();
-	      }
+	      // Variance in drift distance
+	      V(0,0)=fdc_drift_variance(drift_time)*fdc_anneal_factor;	
 	    }
+	    else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
+	      double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	      Mdiff(0)+=drift;
+	      
+	      // Variance in drift distance
+	      V(0,0)=0.05*0.05*fdc_anneal_factor;
+	    }
+	  }
+	  // Check to see if we have multiple hits in the same plane
+	  if (!ALIGNMENT_FORWARD && forward_traj[k].num_hits>1){
+	    UpdateSandCMultiHit(forward_traj[k],upred,vpred,doca,cosalpha,
+				lorentz_factor,V,Mdiff,H,H_T,S,C,
+				fdc_chi2cut,skip_plane,chisq,numdof,
+				fdc_anneal_factor);
+	  }
+	  else{
+	    if (DEBUG_LEVEL > 25) jout << " == There is a single FDC hit on this plane" << endl;
 	    
-	    // Store the "improved" values for the state vector and covariance
-	    fdc_updates[id].S=S;
-	    fdc_updates[id].C=C;
-	    fdc_updates[id].tdrift=drift_time;
-	    fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
-	    fdc_updates[id].doca=doca;
-	    fdc_used_in_fit[id]=true;
+	    // Variance for this hit
+	    DMatrix2x2 Vtemp=V+H*C*H_T;
+	    InvV=Vtemp.Invert();
 	    
-	    if (skip_plane==false){  
-	      // Filtered residual and covariance of filtered residual
-	      R=Mdiff-H*K*Mdiff;   
-	      RC=V-H*(C*H_T);
+	    // Check if this hit is an outlier
+	    double chi2_hit=Vtemp.Chi2(Mdiff);
+	    if (chi2_hit<fdc_chi2cut){
+	      // Compute Kalman gain matrix
+	      K=C*H_T*InvV;
 	      
-	      fdc_updates[id].V=RC;
-	      
-	      // Update chi2 for this segment
-	      chisq+=RC.Chi2(R);
-	      
-	      // update number of degrees of freedom
-	      numdof+=2;
-	      
-	      if (DEBUG_LEVEL>20)
-		{
-		  printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
-			 id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
-			 sqrt(V(1,1)),RC.Chi2(R),
-			 forward_traj[k].z);
-		  
+	      if (skip_plane==false){
+		// Update the state vector 
+		S+=K*Mdiff;
+		
+		// Update state vector covariance matrix
+		//C=C-K*(H*C);    
+		C=C.SubSym(K*(H*C));
+		
+		if (DEBUG_LEVEL > 25) {
+		  jout << "S Update: " << endl; S.Print();
+		  jout << "C Uodate: " << endl; C.Print();
 		}
-	    }
-	    else{
-	      fdc_updates[id].V=V;
-	    }
+	      }
 	    
-	    break_point_fdc_index=id;
-	    break_point_step_index=k;
+	      // Store the "improved" values for the state vector and covariance
+	      fdc_updates[id].S=S;
+	      fdc_updates[id].C=C;
+	      fdc_updates[id].tdrift=drift_time;
+	      fdc_updates[id].tcorr=fdc_updates[id].tdrift; // temporary!
+	      fdc_updates[id].doca=doca;
+	      fdc_used_in_fit[id]=true;
+	      
+	      if (skip_plane==false){  
+		// Filtered residual and covariance of filtered residual
+		R=Mdiff-H*K*Mdiff;   
+		RC=V-H*(C*H_T);
+		
+		fdc_updates[id].V=RC;
+		
+		// Update chi2 for this segment
+		chisq+=RC.Chi2(R);
+		
+		// update number of degrees of freedom
+		numdof+=2;
+		
+		if (DEBUG_LEVEL>20)
+		  {
+		    printf("hit %d p %5.2f t %f dm %5.2f sig %f chi2 %5.2f z %5.2f\n",
+			   id,1./S(state_q_over_p),fdc_updates[id].tdrift,Mdiff(1),
+			   sqrt(V(1,1)),RC.Chi2(R),
+			   forward_traj[k].z);
+		    
+		  }
+	      }
+	      else{
+		fdc_updates[id].V=V;
+	      }
+	    
+	      break_point_fdc_index=id;
+	      break_point_step_index=k;
+	    }
 	  }
 	}
 	if (num_fdc_hits>=forward_traj[k].num_hits)
@@ -8808,6 +8838,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
+  bool hit_gemtrd=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
@@ -8877,6 +8908,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (ds<0.5 && z<406. && r2>65.*65.) ds=0.5;
     dz=ds*dz_ds;
     newz=z+dz;
+    if (hit_gemtrd==false && newz>dGEMTRDz){
+      newz=dGEMTRDz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
     if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
       newz=dTRDz_vec[trd_index]+EPS;
       ds=(newz-z)/dz_ds;   
@@ -8913,6 +8948,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     Step(z,newz,dEdx,S); 
     z=newz;
 
+    if (hit_gemtrd==false && newz>dGEMTRDz){
+      hit_gemtrd=true;
+      AddExtrapolation(SYS_GEMTRD,z,S,t,s);
+    }  
     if (trd_index<dTRDz_vec.size() && newz>dTRDz_vec[trd_index]){
       AddExtrapolation(SYS_TRD,z,S,t,s);
       trd_index++;
@@ -9742,87 +9781,89 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      }
      if ((*rit).h_id>0&&(*rit).h_id<1000){
        unsigned int id=(*rit).h_id-1;
-       
-       // Variance in coordinate transverse to wire
-       V(0,0)=my_fdchits[id]->uvar;
-       
-       // Variance in coordinate along wire
-       V(1,1)=my_fdchits[id]->vvar;
-	   
-       double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
-       FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
+       if (my_fdchits[id]->status==gemtrd_hit){
+	 cout << " Reverse GEMTRD" << endl;
+       }
+       else {
+	 // Variance in coordinate transverse to wire
+	 V(0,0)=my_fdchits[id]->uvar;
+	 
+	 // Variance in coordinate along wire
+	 V(1,1)=my_fdchits[id]->vvar;
+	 
+	 double upred=0,vpred=0.,doca=0.,cosalpha=0.,lorentz_factor=0.;
+	 FindDocaAndProjectionMatrix(my_fdchits[id],S,upred,vpred,doca,cosalpha,
 				   lorentz_factor,H_T);
-       // Matrix transpose H_T -> H
-       H=Transpose(H_T);
-       
-   
-       DMatrix2x2 Vtemp=V+H*C*H_T;
-   
-       // Residual for coordinate along wire
-       Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
-
-       // Residual for coordinate transverse to wire
-       double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
-       if (my_fdchits[id]->hit!=NULL){
-	 double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
-	 Mdiff(0)=drift-doca;
- 
-	 // Variance in drift distance
-	 V(0,0)=fdc_drift_variance(drift_time);	
-       }
-       else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
-	 double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
-	 Mdiff(0)=drift-doca;
-
-	 // Variance in drift distance
-	 V(0,0)=0.05*0.05;
-       }
-       if ((*rit).num_hits==1){  
-	 // Add contribution of track covariance from state vector propagation
-	 // to measurement errors
+	 // Matrix transpose H_T -> H
+	 H=Transpose(H_T);	 
+	 
 	 DMatrix2x2 Vtemp=V+H*C*H_T;
-	 double chi2_hit=Vtemp.Chi2(Mdiff); 
-	 if (chi2_hit<fdc_chi2cut){  
-	   // Compute Kalman gain matrix
-	   DMatrix2x2 InvV=Vtemp.Invert();
-	   DMatrix5x2 K=C*H_T*InvV;
+	 
+	 // Residual for coordinate along wire
+	 Mdiff(1)=my_fdchits[id]->vstrip-vpred-doca*lorentz_factor;
+	 
+	 // Residual for coordinate transverse to wire
+	 double drift_time=my_fdchits[id]->t-mT0-(*rit).t*TIME_UNIT_CONVERSION;
+	 if (my_fdchits[id]->hit!=NULL){
+	   double drift=(doca>0.0?1.:-1.)*fdc_drift_distance(drift_time,(*rit).B);
+	   Mdiff(0)=drift-doca;
 	   
-	   // Update the state vector 
-	   S+=K*Mdiff;
+	   // Variance in drift distance
+	   V(0,0)=fdc_drift_variance(drift_time);	
+	 }
+	 else if (USE_TRD_DRIFT_TIMES&&my_fdchits[id]->status==trd_hit){
+	   double drift =(doca>0.0?1.:-1.)*0.1*pow(drift_time/8./0.91,1./1.556);
+	   Mdiff(0)=drift-doca;
 	   
-	   // Update state vector covariance matrix
-	   //C=C-K*(H*C);    
-	   C=C.SubSym(K*(H*C));
+	   // Variance in drift distance
+	   V(0,0)=0.05*0.05;
+	 }
+	 if ((*rit).num_hits==1){  
+	   // Add contribution of track covariance from state vector propagation
+	   // to measurement errors
+	   DMatrix2x2 Vtemp=V+H*C*H_T;
+	   double chi2_hit=Vtemp.Chi2(Mdiff); 
+	   if (chi2_hit<fdc_chi2cut){  
+	     // Compute Kalman gain matrix
+	     DMatrix2x2 InvV=Vtemp.Invert();
+	     DMatrix5x2 K=C*H_T*InvV;
+	     
+	     // Update the state vector 
+	     S+=K*Mdiff;
+	     
+	     // Update state vector covariance matrix
+	     //C=C-K*(H*C);    
+	     C=C.SubSym(K*(H*C));
+	     
+	     if (DEBUG_LEVEL > 35) {
+	       jout << "S Update: " << endl; S.Print();
+	       jout << "C Update: " << endl; C.Print();
+	     }
+	     
+	     // Filtered residual and covariance of filtered residual
+	     DMatrix2x1 R=Mdiff-H*K*Mdiff;   
+	     DMatrix2x2 RC=V-H*(C*H_T);
+	     
+	     // Update chi2 for this segment
+	     chisq+=RC.Chi2(R);
 	   
-	   if (DEBUG_LEVEL > 35) {
-	     jout << "S Update: " << endl; S.Print();
-	     jout << "C Update: " << endl; C.Print();
+	     if (DEBUG_LEVEL>30)
+	       {
+		 printf("hit %d p %5.2f dm %5.4f %5.4f sig %5.4f %5.4f chi2 %5.2f\n",
+			id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
+			sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
+	       }
+	     
+	     numdof+=2;
 	   }
-	   
-	   // Filtered residual and covariance of filtered residual
-	   DMatrix2x1 R=Mdiff-H*K*Mdiff;   
-	   DMatrix2x2 RC=V-H*(C*H_T);
-	   
-	   // Update chi2 for this segment
-	   chisq+=RC.Chi2(R);
-	   
-	   if (DEBUG_LEVEL>30)
-	   {
-	     printf("hit %d p %5.2f dm %5.4f %5.4f sig %5.4f %5.4f chi2 %5.2f\n",
-		    id,1./S(state_q_over_p),Mdiff(0),Mdiff(1),
-		    sqrt(V(0,0)),sqrt(V(1,1)),RC.Chi2(R));
-	   }
-	   
-	   numdof+=2;
+	 }
+	 // Handle the case where there are multiple adjacent hits in the plane
+	 else {
+	   UpdateSandCMultiHit(*rit,upred,vpred,doca,cosalpha,lorentz_factor,V,
+			       Mdiff,H,H_T,S,C,fdc_chi2cut,false,chisq,numdof);
 	 }
        }
-       // Handle the case where there are multiple adjacent hits in the plane
-       else {
-	 UpdateSandCMultiHit(*rit,upred,vpred,doca,cosalpha,lorentz_factor,V,
-			     Mdiff,H,H_T,S,C,fdc_chi2cut,false,chisq,numdof);
-       }
      }
-   
      //printf("chisq %f ndof %d prob %f\n",chisq,numdof,TMath::Prob(chisq,numdof));
    }
 

@@ -191,6 +191,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void AddFDCHit(const DFDCPseudo *fdchit);
   void AddTRDHit(const DTRDPoint *trdhit);
   void AddGEMHit(const DGEMPoint *gemhit);
+  void AddGEMTRDHit();
 
   jerror_t KalmanLoop(void);
   virtual kalman_error_t KalmanReverse(double fdc_anneal,double cdc_anneal,
@@ -270,6 +271,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     late_hit,
     trd_hit,
     gem_hit,
+    gemtrd_hit,
   };
   enum fit_region{
     kForward,
@@ -487,7 +489,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   // upstream cdc start position
   vector<double>cdc_origin;
   // outer detectors
-  double dTOFz,dFCALz,dFCALzBack,dDIRCz,dFMWPCsize,dCTOFz;
+  double dTOFz,dFCALz,dFCALzBack,dDIRCz,dFMWPCsize,dCTOFz,dGEMTRDz;
   vector<double>dFMWPCz_vec;
   vector<double>dTRDz_vec;
 
@@ -545,7 +547,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   bool ALIGNMENT,ALIGNMENT_CENTRAL,ALIGNMENT_FORWARD;
   double COVARIANCE_SCALE_FACTOR_FORWARD, COVARIANCE_SCALE_FACTOR_CENTRAL;
 
-  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS;
+  bool USE_CDC_HITS,USE_FDC_HITS,USE_TRD_HITS,USE_GEM_HITS,USE_GEMTRD;
   bool got_trd_gem_hits;
 
   // Maximum number of sigma's away from the predicted position to include hit
