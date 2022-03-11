@@ -24,6 +24,7 @@
 #include <TRACKING/DReferenceTrajectory.h>
 #include <TRD/DTRDPoint.h>
 #include <TRD/DGEMPoint.h>
+#include <GEMTRD/DGEMTRDSegment.h>
 
 using namespace std;
 
@@ -157,6 +158,7 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_TRD].clear();
 		  extrapolations[SYS_FMWPC].clear();
 		  extrapolations[SYS_CTOF].clear();
+		  extrapolations[SYS_GEMTRD].clear();
 		};
 		
 		// Fit parameter accessor methods
@@ -236,6 +238,7 @@ class DTrackFitter:public jana::JObject{
 		vector<const DFDCPseudo*> fdchits;		//< Hits in the FDC
 		vector<const DTRDPoint*> trdhits;
 		vector<const DGEMPoint*> gemhits;
+		const DGEMTRDSegment *gemtrdsegment=NULL;
 
 	DTrackingData input_params;				//< Starting parameters for the fit
 		fit_type_t fit_type;							//< kWireBased or kTimeBased

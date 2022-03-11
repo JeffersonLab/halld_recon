@@ -66,6 +66,7 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations.emplace(SYS_TRD,myvector);
 	extrapolations.emplace(SYS_FMWPC,myvector);
 	extrapolations.emplace(SYS_CTOF,myvector);
+	extrapolations.emplace(SYS_GEMTRD,myvector);
 	extrapolations.emplace(SYS_NULL,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
@@ -78,6 +79,7 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations[SYS_TRD].reserve(5);
 	extrapolations[SYS_FMWPC].reserve(6);
 	extrapolations[SYS_CTOF].reserve(1);
+	extrapolations[SYS_GEMTRD].reserve(1);
 	extrapolations[SYS_NULL].reserve(1);
 	
 	pulls.reserve(30);
@@ -109,6 +111,7 @@ void DTrackFitter::Reset(void)
 	fdchits.clear();
 	trdhits.clear();
 	gemhits.clear();
+	gemtrdsegment=NULL;
 	fit_type = kWireBased;
 	chisq = 1.0E6;
 	Ndof=0;
@@ -269,10 +272,12 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   vector<const DFDCPseudo*> fdcpseudos;
   vector<const DTRDPoint *> trdhits_in;
   vector<const DGEMPoint *> gemhits_in;
+  vector<const DGEMTRDSegment*>gemtrdsegments_in;
   loop->Get(cdctrackhits);
   loop->Get(fdcpseudos);
   loop->Get(trdhits_in);
   loop->Get(gemhits_in);
+  loop->Get(gemtrdsegments_in);
 
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
@@ -300,9 +305,21 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
       hitselector->GetGEMHits(extraps,gemhits_in,gemhits);
     }
   }
-  if (got_hits==false){
-    return fit_status = kFitNotDone;
+  if (extrapolations.at(SYS_GEMTRD).size()>0){
+    vector<Extrapolation_t>extraps=extrapolations.at(SYS_GEMTRD);
+    gemtrdsegment=hitselector->GetGEMTRDSegment(extraps[0],gemtrdsegments_in);
+    _DBG_ << "Fitter " << gemtrdsegment << endl;
   }
+  _DBG_ << fdchits.size() << " " << cdchits.size() << endl;
+
+  // Check that we have enough FDC and CDC hits to proceed
+  if (cdchits.size()==0 && fdchits.size()<4) return fit_status=kFitNotDone;
+  if (cdchits.size()+fdchits.size() < 6) return fit_status=kFitNotDone;
+
+  //if (got_hits==false){
+  //  _DBG_ << endl;
+  //  return fit_status = kFitNotDone;
+  //}
 
   // In case the subclass doesn't actually set the mass ....
   fit_params.setPID(IDTrack(q, mass));
