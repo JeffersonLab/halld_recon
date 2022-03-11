@@ -14,16 +14,23 @@
 class DGEMTRDSegment:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DGEMTRDSegment);
-  
-  double x,y;
+
+  int layer;
+  double x,y,t;
   double dxdz,dydz;
+  double var_x,var_tx,cov_xtx;
 		
   // the second argument to AddString is printf style format
   void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "x", "%f", x);
-    AddString(items, "y", "%f", y);
+    AddString(items, "layer", "%d", layer);
+    AddString(items, "t", "%3.1f", t);
+    AddString(items, "x", "%5.3f", x);
+    AddString(items, "y", "%5.3f", y);
     AddString(items, "dxdz", "%f", dxdz);
     AddString(items, "dydz", "%f", dydz);
+    AddString(items, "var_x", "%f", var_x);
+    AddString(items, "var_tx", "%f", var_tx);
+    AddString(items, "cov_xtx", "%f", cov_xtx);
   }
   
 };
