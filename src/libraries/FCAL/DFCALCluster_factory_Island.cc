@@ -55,7 +55,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=0.0001;
+  MASS_CUT=1e-6;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
   ENERGY_SHARING_CUTOFF=0.9;
