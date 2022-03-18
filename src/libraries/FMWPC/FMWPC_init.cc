@@ -18,6 +18,7 @@ using namespace jana;
 #include "DCTOFHit.h"
 #include "DCTOFPoint_factory.h"
 #include "DFMWPCMatchedTrack_factory.h"
+#include "DCPPEpEm_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
 
@@ -34,6 +35,9 @@ jerror_t FMWPC_init(JEventLoop *loop) {
   loop->AddFactory(new JFactory<DCTOFHit>());
   loop->AddFactory(new JFactory<DCTOFTruth>());
   loop->AddFactory(new DCTOFPoint_factory());
+
+  // Factory for e+e-/ pi+pi- fitting
+  loop->AddFactory(new DCPPEpEm_factory());
 
   return NOERROR;
 }

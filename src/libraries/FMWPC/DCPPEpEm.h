@@ -1,0 +1,46 @@
+// $Id$
+//
+//    File: DCPPEpEm.h
+// Created: Thu Mar 17 14:49:42 EDT 2022
+// Creator: staylor (on Linux ifarm1801.jlab.org 3.10.0-1160.11.1.el7.x86_64 x86_64)
+//
+
+#ifndef _DCPPEpEm_
+#define _DCPPEpEm_
+
+#include <JANA/JObject.h>
+#include <JANA/JFactory.h>
+#include <FCAL/DFCALShower.h>
+
+class DCPPEpEm:public jana::JObject{
+ public:
+  JOBJECT_PUBLIC(DCPPEpEm);
+  
+  double Ebeam; // Photon beam energy 
+  double weight;  // event weight (+: prompt, -: accidental)
+  double pippim_chisq,epem_chisq; // fit qualities
+  const DFCALShower *ElectronShower,*PositronShower; // pointers to FCAL showers to which the tracks point
+  DLorentzVector pim_v4,pip_v4; // four vectors for pion hypothesis pairs
+  DLorentzVector em_v4,ep_v4; // four vectors for e+/e- hypothesis pairs
+
+  // This method is used primarily for pretty printing
+  // the second argument to AddString is printf style format
+  void toStrings(vector<pair<string,string> > &items)const{
+    AddString(items, "Ebeam", "%f", Ebeam);
+    AddString(items, "weight", "%f", weight);
+    AddString(items, "Electron E", "%f", 
+	      (ElectronShower!=NULL)?ElectronShower->getEnergy():0.);
+    AddString(items, "Positron E", "%f", 
+	      (PositronShower!=NULL)?PositronShower->getEnergy():0.);
+    AddString(items, "pippim_chisq", "%f", pippim_chisq);
+    AddString(items, "pi+ momentum", "%f", pip_v4.P());
+    AddString(items, "pi- momentum", "%f", pim_v4.P());
+    AddString(items, "epem_chisq", "%f", epem_chisq);
+    AddString(items, "e+ momentum", "%f", ep_v4.P());
+    AddString(items, "e- momentum", "%f", em_v4.P());
+  }
+  
+};
+
+#endif // _DCPPEpEm_
+
