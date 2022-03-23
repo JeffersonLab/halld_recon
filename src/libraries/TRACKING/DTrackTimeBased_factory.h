@@ -90,6 +90,7 @@ class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
 
   // Geometry
   const DGeometry *geom;
+  double TARGET_Z=65.;
 
 //  double mPathLength,mEndTime,mStartTime,mFlightTime;
   double mStartTime;
