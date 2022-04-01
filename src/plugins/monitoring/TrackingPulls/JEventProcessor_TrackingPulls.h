@@ -34,6 +34,7 @@ class JEventProcessor_TrackingPulls : public jana::JEventProcessor {
                         ///< been processed.
 
   //TREE
+  bool MAKE_TREE;
   DTreeInterface* dTreeInterface;
   static thread_local DTreeFillData dTreeFillData;
 };
