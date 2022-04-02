@@ -16,6 +16,7 @@ using namespace std;
 
 #include "DCTOFPoint_factory.h"
 #include "DCTOFHit.h"
+#include "HDGEOMETRY/DGeometry.h"
 using namespace jana;
 
 //------------------
@@ -35,6 +36,11 @@ jerror_t DCTOFPoint_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber
   LIGHT_PROPAGATION_SPEED=15.; // cm/ns
   THRESHOLD=0.0005; // GeV
 
+  // Get the geometry
+  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  geom->GetCTOFPositions(ctof_positions);
+ 
   return NOERROR;
 }
 
@@ -61,7 +67,8 @@ jerror_t DCTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  
 	  DCTOFPoint *myDCTOFPoint = new DCTOFPoint;
 	  myDCTOFPoint->bar = hit1->bar;
-	  myDCTOFPoint->y = y;
+	  myDCTOFPoint->pos = ctof_positions[hit1->bar-1];
+	  myDCTOFPoint->pos.SetY(myDCTOFPoint->pos.y()+y);
 	  myDCTOFPoint->t = t;
 	  myDCTOFPoint->dE= dE;
 	  
