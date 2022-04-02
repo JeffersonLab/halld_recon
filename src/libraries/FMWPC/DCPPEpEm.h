@@ -18,10 +18,11 @@ class DCPPEpEm:public jana::JObject{
   
   double Ebeam; // Photon beam energy 
   double weight;  // event weight (+: prompt, -: accidental)
-  double pippim_chisq,epem_chisq; // fit qualities
+  double pippim_chisq,epem_chisq,kpkm_chisq; // fit qualities
   const DFCALShower *ElectronShower,*PositronShower; // pointers to FCAL showers to which the tracks point
   DLorentzVector pim_v4,pip_v4; // four vectors for pion hypothesis pairs
   DLorentzVector em_v4,ep_v4; // four vectors for e+/e- hypothesis pairs
+  DLorentzVector km_v4,kp_v4; // four vectors for K+/K- hypothesis pairs
 
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
@@ -32,6 +33,9 @@ class DCPPEpEm:public jana::JObject{
 	      (ElectronShower!=NULL)?ElectronShower->getEnergy():0.);
     AddString(items, "Positron E", "%f", 
 	      (PositronShower!=NULL)?PositronShower->getEnergy():0.);
+    AddString(items, "kpkm_chisq", "%f", kpkm_chisq);
+    AddString(items, "K+ momentum", "%f", kp_v4.P());
+    AddString(items, "K- momentum", "%f", km_v4.P());
     AddString(items, "pippim_chisq", "%f", pippim_chisq);
     AddString(items, "pi+ momentum", "%f", pip_v4.P());
     AddString(items, "pi- momentum", "%f", pim_v4.P());

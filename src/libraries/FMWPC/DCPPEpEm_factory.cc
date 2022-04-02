@@ -7,8 +7,8 @@
 /// This factory is intended to aid in the identification of e+/e- events 
 /// coming from the Pb target.  For events with one positive and one negative
 /// track, it performs kinematic fits for the hypotheses that the pair of tracks
-/// is either e+/e- or pi+/pi- and saves the four-vectors for the tracks after
-/// the fits along with the FCAL showers associated with the tracks.
+/// is either e+/e-, pi+/pi-, or K+K- and saves the four-vectors for the tracks
+/// after the fits along with the FCAL showers associated with the tracks.
 
 #include <iostream>
 #include <iomanip>
@@ -70,6 +70,14 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   hyp=tracks[in]->Get_Hypothesis(PiMinus);
   if (hyp==NULL) return RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *piminus=hyp->Get_TrackTimeBased();
+
+  hyp=tracks[ip]->Get_Hypothesis(KPlus);
+  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  const DTrackTimeBased *kplus=hyp->Get_TrackTimeBased();
+
+  hyp=tracks[in]->Get_Hypothesis(KMinus);
+  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  const DTrackTimeBased *kminus=hyp->Get_TrackTimeBased();
 
   hyp=tracks[ip]->Get_Hypothesis(Positron);
   if (hyp==NULL) return RESOURCE_UNAVAILABLE;
@@ -149,6 +157,29 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  }
 	  else{
 	    myCPPEpEm->pim_v4=(*locParticleIterator)->Get_P4();
+    	  }
+	}
+      }
+
+       //--------------------------------
+      // Kinematic fit for K+/K- case
+      //--------------------------------
+      dKinFitter->Reset_NewFit();
+      DoKinematicFit(beamphotons[i],kminus,kplus,dKinFitUtils,dKinFitter,
+		     dAnalysisUtilities);
+        // fit quality
+      myCPPEpEm->kpkm_chisq=dKinFitter->Get_ChiSq();
+
+      // Get the fitted 4-vectors
+      myParticles=dKinFitter->Get_KinFitParticles();
+      locParticleIterator=myParticles.begin();
+      for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
+	if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle){
+	  if ((*locParticleIterator)->Get_PID()==-321){
+	    myCPPEpEm->km_v4=(*locParticleIterator)->Get_P4();
+	  }
+	  else{
+	    myCPPEpEm->kp_v4=(*locParticleIterator)->Get_P4();
     	  }
 	}
       }
