@@ -1800,6 +1800,23 @@ bool DGeometry::GetCTOFZ(double &z) const {
   return true;
 }
 
+//---------------------------------
+// GetCTOFPositions
+//---------------------------------
+bool DGeometry::GetCTOFPositions(vector<DVector3>&posvec) const{
+  vector<double>origin;
+  bool good = Get("//section/composition/posXYZ[@volume='CppScint']/@X_Y_Z",origin);
+  if (!good) return false;
+  DVector3 pos(origin[0],origin[1],origin[2]);
+  for (unsigned int paddle=1;paddle<5;paddle++){
+    vector<double>local_pos;
+    Get(Form("//posXYZ[@volume='CPPPaddle']/@X_Y_Z/column[@value='%d']",paddle),local_pos);
+    DVector3 dpos(local_pos[0],local_pos[1],local_pos[2]);
+    posvec.push_back(pos+dpos);
+  }
+
+  return true;
+}
 
 //---------------------------------
 // GetFMWPCZ
