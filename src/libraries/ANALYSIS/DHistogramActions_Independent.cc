@@ -3558,7 +3558,8 @@ void DHistogramAction_NumReconstructedObjects::Initialize(JEventLoop* locEventLo
 			dHist_NumFDCCathodeHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# Cathode DFDCHit", dMaxNumFDCHits/2 + 1, -0.5, (float)dMaxNumFDCHits - 0.5 + 2.0);
 			locHistName = "NumFDCPseudoHits";
 			dHist_NumFDCPseudoHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# FDC Pseudo Hits", dMaxNumFDCHits/2 + 1, -0.5, (float)dMaxNumFDCHits - 0.5 + 2.0);
-
+			locHistName = "NumFMWPCHits";
+			dHist_NumFMWPCHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DFMWPCHit", dMaxNumFMWPCHits + 1, -0.5, (float)dMaxNumFMWPCHits + 0.5);
 			locHistName = "NumTOFHits";
 			dHist_NumTOFHits = GetOrCreate_Histogram<TH1I>(locHistName, ";# DTOFHit", dMaxNumTOFCalorimeterHits + 1, -0.5, (float)dMaxNumTOFCalorimeterHits + 0.5);
 			locHistName = "NumBCALHits";
@@ -3625,6 +3626,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 	vector<const DTrackCandidate*> locTrackCandidates_FDC;
 	vector<const DCDCHit*> locCDCHits;
 	vector<const DFDCHit*> locFDCHits;
+	vector<const DFMWPCHit*> locFMWPCHits;
 	vector<const DTOFHit*> locTOFHits;
 	vector<const DBCALHit*> locBCALHits;
 	vector<const DFCALHit*> locFCALHits;
@@ -3645,6 +3647,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 		locEventLoop->Get(locCDCHits);
 		locEventLoop->Get(locFDCHits);
 		locEventLoop->Get(locFDCPseudoHits);
+		locEventLoop->Get(locFMWPCHits);
 		locEventLoop->Get(locTOFHits);
 		locEventLoop->Get(locBCALHits);
 		locEventLoop->Get(locFCALHits);
@@ -3795,6 +3798,7 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(JEventLoop* locEve
 			dHist_NumFDCWireHits->Fill((Double_t)locNumFDCWireHits);
 			dHist_NumFDCCathodeHits->Fill((Double_t)locNumFDCCathodeHits);
 			dHist_NumFDCPseudoHits->Fill((Double_t)locFDCPseudoHits.size());
+			dHist_NumFMWPCHits->Fill((Double_t)locFMWPCHits.size());
 			dHist_NumTOFHits->Fill((Double_t)locTOFHits.size());
 			dHist_NumBCALHits->Fill((Double_t)locBCALHits.size());
 			dHist_NumFCALHits->Fill((Double_t)locFCALHits.size());

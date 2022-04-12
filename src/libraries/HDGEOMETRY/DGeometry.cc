@@ -1917,6 +1917,32 @@ bool DGeometry::GetFMWPCSize(double &xy_fmwpc) const
 }
 
 //---------------------------------
+// GetFMWPCWireSpacing -- space between wires in cm
+//---------------------------------
+bool DGeometry::GetFMWPCWireSpacing(double &fmwpc_wire_spacing) const
+{
+    fmwpc_wire_spacing = 1.016;
+
+    return true;
+}
+
+//---------------------------------
+// GetFMWPCWireSpacing -- space between wires in cm
+//---------------------------------
+bool DGeometry::GetFMWPCWireOrientation(vector<fmwpc_wire_orientation_t> &fmwpc_wire_orientation) const
+{
+    fmwpc_wire_orientation.clear();
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+
+    return true;
+}
+
+//---------------------------------
 // GetFCALZ
 //---------------------------------
 bool DGeometry::GetFCALZ(double &z_fcal) const

@@ -15,6 +15,7 @@
 	TH1I* locHist_NumTAGMHits = (TH1I*)gDirectory->Get("NumTAGMHits");
 	TH1I* locHist_NumTAGHHits = (TH1I*)gDirectory->Get("NumTAGHHits");
 	TH1I* locHist_NumSCHits = (TH1I*)gDirectory->Get("NumSCHits");
+	TH1I* locHist_NumTOFHits = (TH1I*)gDirectory->Get("NumTOFHits");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -22,7 +23,7 @@
 		locCanvas = new TCanvas("NumLowLevelObjects_p1", "NumLowLevelObjects_p1", 1200, 800); //for testing
 	else
 		locCanvas = gPad->GetCanvas();
-	locCanvas->Divide(2, 2);
+	locCanvas->Divide(3, 2);
 
 	//Draw
 	locCanvas->cd(1);
@@ -71,5 +72,16 @@
 	gPad->SetLogy();
 	gPad->Update();
 
+	locCanvas->cd(5);
+	gPad->SetTicks();
+	gPad->SetGrid();
+	if(locHist_NumTOFHits != NULL)
+	{
+	        locHist_NumTOFHits->GetXaxis()->SetRangeUser(0.0, 200.0);
+		locHist_NumTOFHits->GetXaxis()->SetTitleSize(0.05);
+		locHist_NumTOFHits->GetXaxis()->SetLabelSize(0.05);
+		locHist_NumTOFHits->GetYaxis()->SetLabelSize(0.05);
+		locHist_NumTOFHits->Draw();
+	}
 }
 

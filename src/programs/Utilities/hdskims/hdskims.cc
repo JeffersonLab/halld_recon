@@ -51,7 +51,7 @@ void GetTrigMasks(uint32_t *buff, uint32_t buff_len, uint32_t Mevents, vector <u
 
 vector <string> filenames;
 string   USER_OFILENAME = "";
-uint64_t MAX_EVIO_EVENTS = 50000;
+uint64_t MAX_EVIO_EVENTS = 1000000;
 uint64_t SKIP_EVIO_EVENTS = 0;
 uint64_t Nevents = 0;
 uint64_t Nevents_saved = 0;
