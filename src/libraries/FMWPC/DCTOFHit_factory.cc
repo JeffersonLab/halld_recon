@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <cmath>
 using namespace std;
 
 #include "DCTOFHit_factory.h"
