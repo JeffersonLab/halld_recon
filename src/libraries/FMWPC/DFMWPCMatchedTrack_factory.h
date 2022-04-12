@@ -9,6 +9,7 @@
 #define _DFMWPCMatchedTrack_factory_
 
 #include <JANA/JFactory.h>
+#include <HDGEOMETRY/DGeometry.h>
 #include "DFMWPCMatchedTrack.h"
 
 class DFMWPCMatchedTrack_factory:public jana::JFactory<DFMWPCMatchedTrack>{
@@ -18,7 +19,11 @@ class DFMWPCMatchedTrack_factory:public jana::JFactory<DFMWPCMatchedTrack>{
         
         double MIN_DELTA_T_FCAL_PROJECTION;  // min. time between track projection and FCAL hit to consider them matched
         double MIN_DELTA_T_FMWPC_PROJECTION; // min. time between track projection and FMWPC hit to consider them matched
+        DGeometry *dgeom;
+        vector<double> xvec;                 // x-offset for each layer in cm (should be close to 0)
+        vector<double> yvec;                 // y-offset for each layer in cm (should be close to 0)
         double FMWPC_WIRE_SPACING;           // distance between wires in FMWPC in cm
+        vector<DGeometry::fmwpc_wire_orientation_t> fmwpc_wire_orientation;  // Wire orientation for each layer
 
 	private:
 		jerror_t init(void);						///< Called once at program start.
