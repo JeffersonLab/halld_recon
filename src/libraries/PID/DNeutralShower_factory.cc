@@ -289,10 +289,10 @@ int DNeutralShower_factory::check_TOF_match(DVector3 fcalpos, double rfTime, DVe
     double dx = fcalpos.X() - xt;
     double dy = fcalpos.Y() - yt;
     if (fabs(dt) < TOF_RF_CUT) {
-      if (fabs(dx) < dx_min)
+      if (dx*dx + dy*dy < dx_min*dx_min + dy_min*dy_min) {
 	dx_min = fabs(dx);
-      if (fabs(dy) < dy_min)
 	dy_min = fabs(dy);
+      }
       global_tof_match ++;
     }
   }
