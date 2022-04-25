@@ -2357,9 +2357,9 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(gluex_target_exists) gluex_target_exists = Get("//composition[@name='Target']/posXYZ[@volume='targetVessel']/@X_Y_Z", xyz_target);
    if(gluex_target_exists) gluex_target_exists = Get("//posXYZ[@volume='Target']/@X_Y_Z", xyz_detector);
    if(gluex_target_exists) {
-      z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
-   	  jgeom->SetVerbose(1);   // reenable error messages
-	  return true;
+     z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
+     jgeom->SetVerbose(1);   // reenable error messages
+     return true;
    }
 
    // Check if CPP target is defined
@@ -2372,7 +2372,7 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(cpp_target_exists) cpp_target_exists = Get("//composition/posXYZ[@volume='TargetCPP']/@X_Y_Z", xyz_TargetCPP);
    if(cpp_target_exists) {
       z_target = xyz_TGT0[2] + xyz_TARG[2] + xyz_TargetCPP[2];
-   	  jgeom->SetVerbose(1);   // reenable error messages
+      jgeom->SetVerbose(1);   // reenable error messages
       return true;
    }
    
@@ -2386,12 +2386,28 @@ bool DGeometry::GetTargetZ(double &z_target) const
 
      z_target = xyz_BETG[2] + xyz_target[2] + xyz_detector[2];
 
-     //     cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
+     //cout << " PrimEx Be targer selected. Z target =   = " << z_target << endl;
      
      jgeom->SetVerbose(1);   // reenable error messages
      return true;
    }
    
+   // Check if SRC carbon foils are defined.  Return the center of the ladder  
+   vector<double>ladder_xyz;
+   if (Get("//composition[@name='targetVessel']/posXYZ[@volume='carbonLadder']/@X_Y_Z",ladder_xyz)){
+     Get("//composition[@name='Target']/posXYZ[@volume='targetVessel']/@X_Y_Z", xyz_target);
+     Get("//posXYZ[@volume='Target']/@X_Y_Z", xyz_detector);
+     
+     vector<double>foil_pos;
+     Get("//composition[@name='carbonLadder']/posXYZ[@volume='carbonTarget1']/@X_Y_Z",foil_pos);
+     z_target=0.5*foil_pos[2];
+     Get("//composition[@name='carbonLadder']/posXYZ[@volume='carbonTarget8']/@X_Y_Z",foil_pos);
+     z_target+=0.5*foil_pos[2];
+     z_target+=xyz_target[2]+xyz_detector[2]+ladder_xyz[2];
+
+     jgeom->SetVerbose(1);   // reenable error messages
+     return true;
+   }
 
 
    jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " << 
@@ -2407,14 +2423,52 @@ bool DGeometry::GetTargetZ(double &z_target) const
 //---------------------------------
 bool DGeometry::GetTargetLength(double &target_length) const
 {
-   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   vector<double> zLength;
-   bool good = Get("//section[@name='Target']/pcon[@name='LIH2']/real[@name='length']/[@value]", zLength);
-   jgeom->SetVerbose(1);   // reenable error messages
+ 
+  target_length=0.;
+  vector<double> zLength;  
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+  
+  // Regular GlueX target 
+  if (Get("//section[@name='Target']/pcon[@name='LIH2']/real[@name='length']/[@value]", zLength)){
+    target_length=zLength[0];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+  
+  // Liquid helium target
+  if (Get("//section[@name='Target']/pcon[@name='LIHE']/real[@name='length']/[@value]", zLength)){
+    target_length=zLength[0];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+  
+  // Beryllium target
+  vector<double>rio_z;
+  if (Get("//section[@name='Target']/tubs[@name='BETG']/@Rio_Z",rio_z)){
+    target_length=rio_z[2];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+  
+  // Carbon foils for SRC; length is distance between first and last foil
+  vector<double>foil_pos;
+  if (Get("//composition[@name='carbonLadder']/posXYZ[@volume='carbonTarget1']/@X_Y_Z",foil_pos)){
+    target_length-=foil_pos[2];
+    Get("//composition[@name='carbonLadder']/posXYZ[@volume='carbonTarget8']/@X_Y_Z",foil_pos);
+    target_length+=foil_pos[2];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
 
-   target_length = good ? zLength[0]:0.0;
-
-   return good;
+  // Lead target for CPP
+  if (Get("//section[@name='TargetCPP']/tubs[@name='TGT0']/@Rio_Z",rio_z)){
+    target_length=rio_z[2];
+    jgeom->SetVerbose(1);   // reenable error messages
+    return true;
+  }
+  
+  jgeom->SetVerbose(1);   // reenable error messages
+  return false;
 }
 
 // Get vectors of positions and norm vectors for start counter from XML
