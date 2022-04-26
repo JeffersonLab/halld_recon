@@ -72,12 +72,11 @@ jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locE
     vector<const DTAGMHit*> tagm_hits;
     locEventLoop->Get(tagm_hits);
 
-    DBeamPhoton* gamma = nullptr;;
     for (unsigned int ih=0; ih < tagm_hits.size(); ++ih)
     {
         if (!tagm_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (tagm_hits[ih]->row > 0) continue; // Skip individual fiber readouts
-        gamma = Get_Resource();
+        DBeamPhoton* gamma = Get_Resource();
 
         Set_BeamPhoton(gamma, tagm_hits[ih], locEventNumber);
         _data.push_back(gamma);
@@ -90,25 +89,10 @@ jerror_t DBeamPhoton_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t locE
     {
         if (!tagh_hits[ih]->has_fADC) continue; // Skip TDC-only hits (i.e. hits with no ADC info.)
         if (!tagh_hits[ih]->has_TDC) continue;  // Skip fADC-only hits (i.e. hits with no TDC info.)
+        DBeamPhoton* gamma = Get_Resource();
 
-
-        /*DBeamPhoton *gamma = nullptr;
-        for (unsigned int jh=0; jh < _data.size(); ++jh)
-        {
-            if (fabs(_data[jh]->momentum().Mag() - tagh_hits[ih]->E) < DELTA_E_DOUBLES_MAX
-            && fabs(_data[jh]->time() - tagh_hits[ih]->t) < DELTA_T_DOUBLES_MAX)
-            {
-                gamma = _data[jh];
-                if (_data[jh]->momentum().Mag() < tagh_hits[ih]->E)
-                {
-                    gamma->Reset();
-                    Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
-                }
-            }
-	    }*/
-        if (gamma == nullptr) gamma = Get_Resource();
-            Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
-            _data.push_back(gamma);
+	Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
+        _data.push_back(gamma);
 	   
     }
 
