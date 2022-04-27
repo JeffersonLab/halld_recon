@@ -97,7 +97,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
-	F125_EMULATION_MODE = kEmulationAuto;
+	F125_EMULATION_MODE = kEmulationNone;
 	F250_EMULATION_VERSION = 3;
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
