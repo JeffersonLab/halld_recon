@@ -177,7 +177,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DFMWPCDigiHit *digihit = digihits[i];
 
-    //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
@@ -262,7 +262,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->amp = amp;
     hit->t = t;
     // hit->d = 0.0;
-    // hit->QF = digihit->QF;
+    hit->QF = digihit->QF;
     // hit->itrack = -1;
     // hit->ptype = 0;
 
