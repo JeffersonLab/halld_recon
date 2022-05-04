@@ -25,7 +25,7 @@ class JEventProcessor_cppFMWPC_ana:public jana::JEventProcessor{
 
   int nFMWPCchambers;
   TH2D *FMWPCwiresT[8];
-  TH2D *FMWPCwiresE[8];
+  TH2D *FMWPCwiresQ[8];
 
   TH2D *h2_pmuon_vs_mult[8];
   
@@ -35,12 +35,11 @@ class JEventProcessor_cppFMWPC_ana:public jana::JEventProcessor{
 
   TH2D *h2_V1_vs_H2;
   TH2D *h2_V3_vs_H4;
-  TH2D *h2_V5_vs_H4;
-  TH2D *h2_V6_vs_H4;
-  TH2D *h2_V3_vs_V1;
+  TH2D *h2_V5_vs_H6;
+  TH2D *h2_V1_vs_V3;
   TH2D *h2_H2_vs_H4;
   TH2D *h2_V3_vs_V5;
-  TH2D *h2_V5_vs_V6;
+  TH2D *h2_H4_vs_H6;
 
   TH2D *h2_pmuon_vs_MWPC;
 

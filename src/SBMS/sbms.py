@@ -897,23 +897,27 @@ def AddROOT(env):
 	rootcintpath  = "%s/bin/rootcint" % (rootsys)
 	rootclingpath = "%s/bin/rootcling" % (rootsys)
 	if env['SHOWBUILD']==0:
-		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootcintpath) , 'ROOTCINT   [$SOURCE]')
-		rootclingaction = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootclingpath), 'ROOTCLING  [$SOURCE]')
+		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCES" % (rootcintpath) , 'ROOTCINT   [$SOURCE]')
+		rootclingaction = SCons.Script.Action("%s -f $TARGET    $SOURCES" % (rootclingpath), 'ROOTCLING  [$SOURCE]')
 	else:
-		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootcintpath) )
-		rootclingaction = SCons.Script.Action("%s -f $TARGET -c $SOURCE" % (rootclingpath))
+		rootcintaction  = SCons.Script.Action("%s -f $TARGET -c $SOURCES" % (rootcintpath) )
+		rootclingaction = SCons.Script.Action("%s -f $TARGET    $SOURCES" % (rootclingpath))
 	if os.path.exists(rootclingpath) :
-		bld = SCons.Script.Builder(action = rootclingaction, suffix='_Dict.cc', src_suffix='.h')
+		bld = SCons.Script.Builder(action = rootclingaction)
 	elif os.path.exists(rootcintpath):
-		bld = SCons.Script.Builder(action = rootcintaction, suffix='_Dict.cc', src_suffix='.h')
+		bld = SCons.Script.Builder(action = rootcintaction)
 	else:
 		print('Neither rootcint nor rootcling exists. Unable to create ROOT dictionaries if any encountered.')
 		return
 
 	env.Append(BUILDERS = {'ROOTDict' : bld})
 
-	# Generate ROOT dictionary file targets for each header
-	# containing "ClassDef"
+	# Generate ROOT dictionaries for all headers containing "ClassDef"
+	#
+	# n.b. This was changed in 2022. The current behavior is to create
+	# a single dictionary file for all headers in the current source 
+	# directory. Previously, a separate dictionary file was created for
+	# each header. -DL 
 	#
 	# n.b. It seems if scons is run when the build directory doesn't exist,
 	# then the cwd is set to the source directory. Otherwise, it is the
@@ -925,12 +929,25 @@ def AddROOT(env):
 	srcpath = env.Dir('.').srcnode().abspath
 	if(int(env['SHOWBUILD'])>1):
 		print("---- Scanning for headers to generate ROOT dictionaries in: %s" % srcpath)
+
+	# The user may wish to limit which headers are used to make a dictionary.
+	# They may bypass the automtic search for files with "ClassDef" by setting
+	# the 'ROOT_DICT_SRC' variable in the build environment.
 	os.chdir(srcpath)
-	for f in glob.glob('*.[h|hh|hpp]'):
-		if 'ClassDef' in open(f).read():
-			env.AppendUnique(ALL_SOURCES = env.ROOTDict(f))
-			if(int(env['SHOWBUILD'])>1):
-				print("       ROOT dictionary for %s" % f)
+	ROOT_DICT_SRC = []
+	if 'ROOT_DICT_SRC' in list(env.Dictionary().keys()):
+		# user specified which headers to make dictionaries from
+		ROOT_DICT_SRC = env['ROOT_DICT_SRC']
+	else:
+		# automatically find headers to make dictionaries from
+		for f in glob.glob('*.[h|hh|hpp]'):
+			if 'ClassDef' in open(f).read(): ROOT_DICT_SRC.append(f)
+
+	if len(ROOT_DICT_SRC):
+		# Create root dictionary that includes all specified headers
+		env.AppendUnique(ALL_SOURCES = env.ROOTDict(target='My_ROOT_Dict.cc', source=ROOT_DICT_SRC))
+		if(int(env['SHOWBUILD'])>1):
+			print("       ROOT dictionary for %s" % ' '.join(ROOT_DICT_SRC))
 	os.chdir(curpath)
 
 

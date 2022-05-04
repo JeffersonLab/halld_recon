@@ -12,6 +12,10 @@
 //------------------
 jerror_t DDetectorMatches_factory::init(void)
 {
+  ENABLE_FCAL_SINGLE_HITS = false;
+  gPARMS->SetDefaultParameter("PID:ENABLE_FCAL_SINGLE_HITS",ENABLE_FCAL_SINGLE_HITS);	
+
+
 	return NOERROR;
 }
 
@@ -52,9 +56,6 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	vector<const DFCALShower*> locFCALShowers;
 	locEventLoop->Get(locFCALShowers);
 
-	vector<const DFCALHit*> locFCALHits;
-	locEventLoop->Get(locFCALHits);
-
 	vector<const DBCALShower*> locBCALShowers;
 	locEventLoop->Get(locBCALShowers);
 
@@ -84,15 +85,19 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToTrack(locParticleID, locFCALShowers[loc_i], locTrackTimeBasedVector, locDetectorMatches);
 
 	// Try to find matches between tracks and single hits in FCAL
-	if (locFCALHits.size()>0){
-	  vector<const DFCALHit*>locSingleHits;
-	  locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
-					   locSingleHits);
-	  
-	  for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
-	    MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
-			locSingleHits,locDetectorMatches);
-	  }	  
+	if (ENABLE_FCAL_SINGLE_HITS){
+	  vector<const DFCALHit*> locFCALHits;
+	  locEventLoop->Get(locFCALHits);
+	  if (locFCALHits.size()>0){
+	    vector<const DFCALHit*>locSingleHits;
+	    locParticleID->GetSingleFCALHits(locFCALShowers,locFCALHits,
+					     locSingleHits);
+	    
+	    for (size_t loc_j=0;loc_j<locTrackTimeBasedVector.size();loc_j++){
+	      MatchToFCAL(locParticleID,locTrackTimeBasedVector[loc_j],
+			  locSingleHits,locDetectorMatches);
+	    }
+	  }
 	}
 
 	//Set flight-time/p correlations

@@ -9,6 +9,7 @@
 #define _JEventProcessor_TrackingPulls_
 
 #include <JANA/JEventProcessor.h>
+#include "ANALYSIS/DTreeInterface.h"
 #include <TTree.h>
 
 class JEventProcessor_TrackingPulls : public jana::JEventProcessor {
@@ -32,41 +33,10 @@ class JEventProcessor_TrackingPulls : public jana::JEventProcessor {
   jerror_t fini(void);  ///< Called after last event of last event source has
                         ///< been processed.
 
-  TTree *tree_;
-  int eventnumber_;
-  int track_index_;
-  double chi2_;
-  int ndf_;
-  double charge_;
-  double mom_;
-  double phi_;
-  double theta_;
-  double pos_x_;
-  double pos_y_;
-  double pos_z_;
-  int smoothed_;  // 1: smoothed, 0: not smoothed
-  int any_nan_;   // 1: anyNaN = true, 0: anyNaN = false
-  int cdc_ring_multi_hits_;
-  double fdc_resi_[kNumFdcPlanes];
-  double fdc_resic_[kNumFdcPlanes];
-  double fdc_err_[kNumFdcPlanes];
-  double fdc_errc_[kNumFdcPlanes];
-  double fdc_x_[kNumFdcPlanes];
-  double fdc_y_[kNumFdcPlanes];
-  double fdc_z_[kNumFdcPlanes];
-  double fdc_w_[kNumFdcPlanes];
-  double fdc_s_[kNumFdcPlanes];
-  double fdc_d_[kNumFdcPlanes];
-  double fdc_tdrift_[kNumFdcPlanes];
-  int fdc_wire_[kNumFdcPlanes];
-  int fdc_left_right_[kNumFdcPlanes];  // -1: left, +1: right
-  double cdc_resi_[kNumCdcRings];
-  double cdc_err_[kNumCdcRings];
-  double cdc_z_[kNumCdcRings];
-  double cdc_tdrift_[kNumCdcRings];
-  int cdc_straw_[kNumCdcRings];
-  int cdc_left_right_[kNumCdcRings];  // -1: left, +1: right
-  double cdc_phi_intersect_[kNumCdcRings];
+  //TREE
+  bool MAKE_TREE;
+  DTreeInterface* dTreeInterface;
+  static thread_local DTreeFillData dTreeFillData;
 };
 
 #endif  // _JEventProcessor_TrackingPulls_

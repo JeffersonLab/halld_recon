@@ -37,21 +37,8 @@
 #include <TLatex.h>
 
 
-#if !(defined(__CINT__) || defined(__CLING__))
 
 #include "hdv_mainframe.h"
-
-#else
-
-// This ugliness is due to rootcling incorrectly flagging the
-// foward declaration of hdv_mainframe as an error. Since only
-// pointers to the class with no internals being referenced here,
-// a forward declaration should be allowed. This empty class
-// definition is just to appease rootcling but should not be
-// seen by the actual C++ compiler.
-class hdv_mainframe{};
-
-#endif
 
 
 class DCoordinateSystem;

@@ -14,6 +14,7 @@ using namespace std;
 #include <FCAL/DFCALCluster.h>
 #include <FCAL/DFCALHit.h>
 #include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DFMWPCMatchedTrack.h>
 #include <TRACKING/DTrackTimeBased.h>
 //#include "ANALYSIS/DAnalysisUtilities.h"
 
@@ -112,9 +113,43 @@ jerror_t JEventProcessor_CPPMVAtree::init(void)
     t1->Branch("MWPC_hit_dEwire", MWPC_hit_dEwire,"MWPC_hit_dEwire[nMWPChits]/D");
     t1->Branch("MWPC_hit_twire", MWPC_hit_twire, "MWPC_hit_twire[nMWPChits]/D");
     t1->Branch("MWPC_hit_x", MWPC_hit_x, "MWPC_hit_x[nMWPChits]/D");
-    t1->Branch("MWPC_hit_y", MWPC_hit_y,"MWPC_hit_y[nMWPChits]/D");  
+    t1->Branch("MWPC_hit_y", MWPC_hit_y,"MWPC_hit_y[nMWPChits]/D");
 
-	return NOERROR;
+    //------------ Tree for DFMWPCMatchedTrack objects
+    tmatched = new TTree("matched", "DFMWPCMatchedTrack");
+
+    //General
+    tmatched->Branch("eventNo", &eventNo, "eventNo/I");
+    tmatched->Branch("nChargedTracks", &nChargedTracks, "nChargedTracks/I");
+    tmatched->Branch("nFCALShowers", &nFCALShowers, "nFCALShowers/I");
+    tmatched->Branch("nFCALhits", &nFCALhits, "nFCALhits/I");
+    tmatched->Branch("nMWPChits", &nMWPChits, "nMWPChits/I");
+    tmatched->Branch("nFMWPCMatchedTracks", &nFMWPCMatchedTracks, "nFMWPCMatchedTracks/I");
+
+    // TRACK info
+    tmatched->Branch("FMWPC_pid", FMWPC_pid, "FMWPC_pid[nFMWPCMatchedTracks]/I");
+
+    // FCAL info
+    tmatched->Branch("FCAL_E_center", FCAL_E_center, "FCAL_E_center[nFMWPCMatchedTracks]/D");
+    tmatched->Branch("FCAL_E_3x3", FCAL_E_3x3, "FCAL_E_3x3[nFMWPCMatchedTracks]/D");
+    tmatched->Branch("FCAL_E_5x5", FCAL_E_5x5, "FCAL_E_5x5[nFMWPCMatchedTracks]/D");
+
+    // FMWPC info
+    for( int ilayer=1; ilayer<=6; ilayer++) {
+        char branch_name[256];
+        sprintf(branch_name, "FMWPC_closest_wire%d", ilayer);
+        tmatched->Branch(branch_name, &FMWPC_closest_wire[ilayer-1],      (string(branch_name)+"[nFMWPCMatchedTracks]/I").c_str());
+        sprintf(branch_name, "FMWPC_dist_closest_wire%d", ilayer);
+        tmatched->Branch(branch_name, &FMWPC_dist_closest_wire[ilayer-1], (string(branch_name)+"[nFMWPCMatchedTracks]/D").c_str());
+        sprintf(branch_name, "FMWPC_Nhits_cluster%d", ilayer);
+        tmatched->Branch(branch_name, &FMWPC_Nhits_cluster[ilayer-1],     (string(branch_name)+"[nFMWPCMatchedTracks]/I").c_str());
+    }
+
+    //------------ Histograms
+    tdiff_trk_fcal  = new TH1D("tdiff_trk_fcal", "#deltat between track and matched FCAL hits from DFMWPCMatchedTrack;t_{TRK}-t_{FCAL}(ns)", 101, -50.0, 50.0);
+    tdiff_trk_fmwpc = new TH2D("tdiff_trk_fmwpc", "#deltat between track and matched FMWPC hits from DFMWPCMatchedTrack;t_{TRK}-t_{FMWPC}(ns);FMWPC layer", 101, -50.0, 50.0, 6,0.5,6.5);
+
+    return NOERROR;
 }
 
 //------------------
@@ -135,11 +170,13 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
     vector<const DFCALShower*>     fcalshowers;
     vector<const DFMWPCHit*>       fmwpchits;
     vector<const DTrackTimeBased*> timebasedtracks;
+    vector<const DFMWPCMatchedTrack*> fmwpcmatchedtracks;
 
     loop->Get(fcalhits);
     loop->Get(fcalshowers);
     loop->Get(fmwpchits);
     loop->Get(timebasedtracks);
+    loop->Get(fmwpcmatchedtracks);
 
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
     
@@ -148,6 +185,7 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
     nFCALhits      = 0;
     nFCALShowers   = 0;
     nMWPChits      = 0;
+    nFMWPCMatchedTracks = 0;
 
     // Timebased tracks
     for( auto tbt : timebasedtracks ){
@@ -158,7 +196,7 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
 
         // Projections to FCAL and FMWPC
         DVector3 trkpos_fcal, proj_mom_fcal, trkpos_fmwpc, proj_mom_fmwpc;
-        double t_fcal, t_fmwpc;
+        double t_fcal=-1000.0, t_fmwpc=-1000.0;
         bool good_fcal_proj  = tbt->GetProjection(SYS_FCAL,  trkpos_fcal,  &proj_mom_fcal,  &t_fcal);
         bool good_fmwpc_proj = tbt->GetProjection(SYS_FMWPC, trkpos_fmwpc, &proj_mom_fmwpc, &t_fmwpc);
 
@@ -232,10 +270,10 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
         Double_t y      = 0;
         Double_t xdelta = 1.016;
         Double_t xmid   = 72.5*xdelta;
-        if (layer==1 || layer==3 || layer==5 || layer==6) {
+        if (layer==1 || layer==3 || layer==5) {
             // chamber is vertical -> wire gives x position
             x = wire*xdelta - xmid;
-        } else if (layer==2 || layer==4) {
+        } else if (layer==2 || layer==4 || layer==6) {
             // chamber is horizontal -> wire gives y position
             y = wire*xdelta - xmid;
         } else {
@@ -252,11 +290,58 @@ jerror_t JEventProcessor_CPPMVAtree::evnt(JEventLoop *loop, uint64_t eventnumber
         if( ++nMWPChits >= nMaxMWPChits ) break;        
     }
 
-    t1->Fill();
+    //MATCHED TRACKS
+     for( auto fmwpc_mt : fmwpcmatchedtracks ) {
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+         FMWPC_pid[nFMWPCMatchedTracks] = fmwpc_mt->PID();
+         FCAL_E_center[nFMWPCMatchedTracks] = fmwpc_mt->FCAL_E_center;
+         FCAL_E_3x3[nFMWPCMatchedTracks] = fmwpc_mt->FCAL_E_3x3;
+         FCAL_E_5x5[nFMWPCMatchedTracks] = fmwpc_mt->FCAL_E_5x5;
+         for (int ilayer = 1; ilayer <= 6; ilayer++) {
+            FMWPC_closest_wire[ilayer-1][nFMWPCMatchedTracks]      = fmwpc_mt->FMWPC_closest_wire[ilayer-1];
+            FMWPC_Nhits_cluster[ilayer-1][nFMWPCMatchedTracks]     = fmwpc_mt->FMWPC_Nhits_cluster[ilayer-1];
+            FMWPC_dist_closest_wire[ilayer-1][nFMWPCMatchedTracks] = fmwpc_mt->FMWPC_dist_closest_wire[ilayer-1];
+         }
 
-	return NOERROR;
+         // Histogram of time diff
+         // FCAL
+         DVector3 pos;
+         double t_fcal_proj=-1000.0;
+         if( fmwpc_mt->tbt->GetProjection(SYS_FCAL, pos, NULL, &t_fcal_proj) ) {
+
+             vector<const DFCALHit *> fcalhits;
+             fmwpc_mt->Get(fcalhits);
+             for (auto hit: fcalhits) {
+                 auto delta_t = t_fcal_proj - hit->t;
+                 tdiff_trk_fcal->Fill(delta_t);
+             }
+         }
+
+         // FMPWC
+         vector<const DFMWPCHit *> fmwpchits;
+         fmwpc_mt->Get(fmwpchits);
+         if( !fmwpchits.empty() ) {
+             auto fmwpc_projections = fmwpc_mt->tbt->extrapolations.at(SYS_FMWPC);
+             for (int layer = 1; layer <= (int) fmwpc_projections.size(); layer++) {
+                 auto proj = fmwpc_projections[layer - 1];
+
+                 for (auto hit: fmwpchits) {
+                     auto delta_t = proj.t - hit->t;
+                     tdiff_trk_fmwpc->Fill(delta_t, hit->layer);
+                 }
+             }
+         }
+
+         if( ++nFMWPCMatchedTracks >= nMaxMWPCMatchedTracks ) break;
+     }
+
+     // Fill trees
+     t1->Fill();
+     tmatched->Fill();
+
+     japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+     return NOERROR;
 }
 
 //------------------

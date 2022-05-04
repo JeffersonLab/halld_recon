@@ -39,6 +39,8 @@ DFCALShower_factory::DFCALShower_factory()
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
+  SHOWER_POSITION_LOG = false;
+  gPARMS->SetDefaultParameter("FCAL:SHOWER_POSITION_LOG", SHOWER_POSITION_LOG);
   // these need to come from database to ensure accuracy
   // remove default value which might be close to the right solution,
   // but not quite correct -- allow command line tuning
@@ -306,7 +308,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       DFCALShower* shower = new DFCALShower;
       
       shower->setEnergy( Ecorrected );
-      shower->setPosition( pos_corrected );
+      if (!SHOWER_POSITION_LOG)
+	shower->setPosition( pos_corrected );
+      else
+	shower->setPosition( pos_log );
       shower->setPosition_log( pos_log ); 
       shower->setTime ( cTime );
 
@@ -364,6 +369,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// with each track
 	
 	DVector3 fcalFacePos = ( shower->getPosition() - vertex );
+	//if (SHOWER_POSITION_LOG) fcalFacePos = ( shower->getPosition_log() - vertex );
 	fcalFacePos.SetMag( fcalFacePos.Mag() * projPos.Z() / fcalFacePos.Z() );
  
 	double distance = ( fcalFacePos - projPos ).Mag();
@@ -399,10 +405,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       double sumV = 0;
       // if there is no nearest track, the defaults for xTr and yTr will result
       // in using the beam axis as the directional axis
+      //if (!SHOWER_POSITION_LOG)
       getUVFromHits( sumU, sumV, fcalHits,
 		     DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
 		     DVector3( xTr, yTr, 0 ) );
-      
+      //else
+      //getUVFromHits( sumU, sumV, fcalHits,
+      //	       DVector3( shower->getPosition_log().X(), shower->getPosition_log().Y(), 0 ),
+      //	       DVector3( xTr, yTr, 0 ) );
+
       shower->setSumU( sumU );
       shower->setSumV( sumV );
       
@@ -570,6 +581,11 @@ DFCALShower_factory::FillCovarianceMatrix(DFCALShower *shower){
   float shower_x = shower->getPosition().X();
   float shower_y = shower->getPosition().Y();
   float shower_z = shower->getPosition().Z();
+  //if (SHOWER_POSITION_LOG) {
+  //shower_x = shower->getPosition_log().X();
+  //shower_y = shower->getPosition_log().Y();
+  //shower_z = shower->getPosition_log().Z();
+  //}
   float shower_r = sqrt(shower_x*shower_x + shower_y*shower_y);
   float shower_theta = atan2(shower_r,shower_z);
   float thlookup = shower_theta/3.14159265*180;

@@ -28,12 +28,9 @@
 #include <TGLabel.h>
 #include <TTimer.h>
 
-class hdv_mainframe;
 class DMCThrown;
 class DKinematicData;
-#if !(defined(__CINT__) || defined(__CLING__))
 #include "hdv_mainframe.h"
-#endif
 
 class hdv_fulllistframe:public TGMainFrame {
 

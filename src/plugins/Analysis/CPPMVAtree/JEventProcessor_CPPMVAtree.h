@@ -13,12 +13,15 @@ using namespace jana;
 
 #include <TFile.h>
 #include <TTree.h>
+#include <TH1.h>
+#include <TH2.h>
 
 /*********TFile, TTree, and TBranches****/
 #define nMaxTracks 10
 #define nMaxFCALhits 20
 #define nMaxFCALShowers 10
 #define nMaxMWPChits 100
+#define nMaxMWPCMatchedTracks 8
 
 class JEventProcessor_CPPMVAtree:public jana::JEventProcessor{
 	public:
@@ -56,6 +59,22 @@ class JEventProcessor_CPPMVAtree:public jana::JEventProcessor{
         //MWPC HITS
         Int_t MWPC_hit_layer[nMaxMWPChits], MWPC_hit_wire[nMaxMWPChits];
         Double_t MWPC_hit_dEwire[nMaxMWPChits], MWPC_hit_twire[nMaxMWPChits], MWPC_hit_x[nMaxMWPChits], MWPC_hit_y[nMaxMWPChits];
+
+        //------ Tree to hold DFMWPCMatchedTrack values
+        TTree *tmatched;
+        
+         //General
+        Int_t nFMWPCMatchedTracks;
+
+        //MATCHED TRACKS
+        Int_t    FMWPC_pid[nMaxMWPCMatchedTracks];
+        Double_t FCAL_E_center[nMaxMWPCMatchedTracks], FCAL_E_3x3[nMaxMWPCMatchedTracks], FCAL_E_5x5[nMaxMWPCMatchedTracks];
+        Int_t    FMWPC_closest_wire[6][nMaxMWPCMatchedTracks], FMWPC_Nhits_cluster[6][nMaxMWPCMatchedTracks];
+        Double_t FMWPC_dist_closest_wire[6][nMaxMWPCMatchedTracks];
+
+        //--------  Histograms
+        TH1D *tdiff_trk_fcal = nullptr;
+        TH2D *tdiff_trk_fmwpc = nullptr;
 
 	private:
 		jerror_t init(void);						///< Called once at program start.

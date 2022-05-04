@@ -188,7 +188,7 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
     const DFMWPCHit *hit1 = fmwpcHits[k];
     Int_t layer = hit1->layer;
     Int_t wire = hit1->wire;
-    Double_t dEwire = hit1->dE;
+    Double_t q = hit1->q;
     Double_t twire = hit1->t;
     Double_t x = 0;
     Double_t y = 0;
@@ -200,7 +200,7 @@ jerror_t JEventProcessor_fcal_charged::evnt(JEventLoop *locEventLoop, uint64_t e
       // chamber is horizontal -> wire gives y position
       y = wire*1.016 - xmid;
     }
-    cout << "FMWPC Hits Event=" << eventnumber << " k=" << k << " layer=" << layer <<  " wire=" << wire << " dE=" << dEwire << " x=" << x << " y=" << y << " time=" << twire << endl;
+    cout << "FMWPC Hits Event=" << eventnumber << " k=" << k << " layer=" << layer <<  " wire=" << wire << " q=" << q << " x=" << x << " y=" << y << " time=" << twire << endl;
   }
 
 

@@ -55,6 +55,8 @@ class DDetectorMatches_factory : public jana::JFactory<DDetectorMatches>
 		//matching showers to tracks routines
 		void MatchToTrack(const DParticleID* locParticleID, const DBCALShower* locBCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
 		void MatchToTrack(const DParticleID* locParticleID, const DFCALShower* locFCALShower, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, DDetectorMatches* locDetectorMatches) const;
+
+		bool ENABLE_FCAL_SINGLE_HITS;
 };
 
 #endif // _DDetectorMatches_factory_

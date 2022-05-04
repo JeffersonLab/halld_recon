@@ -16,7 +16,7 @@
 	TH1I* locHist_NumCDCHits = (TH1I*)gDirectory->Get("NumCDCHits");
 	TH1I* locHist_NumFDCWireHits = (TH1I*)gDirectory->Get("NumFDCWireHits");
 	TH1I* locHist_NumFDCCathodeHits = (TH1I*)gDirectory->Get("NumFDCCathodeHits");
-	TH1I* locHist_NumTOFHits = (TH1I*)gDirectory->Get("NumTOFHits");
+	TH1I* locHist_NumFMWPCHits = (TH1I*)gDirectory->Get("NumFMWPCHits");
 	TH1I* locHist_NumBCALHits = (TH1I*)gDirectory->Get("NumBCALHits");
 	TH1I* locHist_NumFCALHits = (TH1I*)gDirectory->Get("NumFCALHits");
 
@@ -71,13 +71,13 @@
 	locCanvas->cd(4);
 	gPad->SetTicks();
 	gPad->SetGrid();
-	if(locHist_NumTOFHits != NULL)
+	if(locHist_NumFMWPCHits != NULL)
 	{
-	        locHist_NumTOFHits->GetXaxis()->SetRangeUser(0.0, 200.0);
-		locHist_NumTOFHits->GetXaxis()->SetTitleSize(0.05);
-		locHist_NumTOFHits->GetXaxis()->SetLabelSize(0.05);
-		locHist_NumTOFHits->GetYaxis()->SetLabelSize(0.05);
-		locHist_NumTOFHits->Draw();
+	        locHist_NumFMWPCHits->GetXaxis()->SetRangeUser(0.0, 200.0);
+		locHist_NumFMWPCHits->GetXaxis()->SetTitleSize(0.05);
+		locHist_NumFMWPCHits->GetXaxis()->SetLabelSize(0.05);
+		locHist_NumFMWPCHits->GetYaxis()->SetLabelSize(0.05);
+		locHist_NumFMWPCHits->Draw();
 	}
 
 	locCanvas->cd(5);

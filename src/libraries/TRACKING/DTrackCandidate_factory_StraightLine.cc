@@ -129,7 +129,7 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 	 double tx=tracks[i].S(state_tx),ty=tracks[i].S(state_ty);
 	 double phi=atan2(ty,tx);
 	 double tanl=1./sqrt(tx*tx+ty*ty);
-	 double pt=5.0*cos(atan(tanl)); // arbitrary magnitude...    
+	 double pt=cos(atan(tanl)); // arbitrary magnitude...    
 	 cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
 
 	 DVector3 pos,origin,dir(0,0,1.);
@@ -168,32 +168,43 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 	   for (unsigned int k=0;k<hits.size();k++){
 	     cand->AddAssociatedObject(hits[k]);
 	   }
-
-	   double z=tracks[i].z;
+	
 	   // state vector
 	   DMatrix4x1 S(tracks[i].S);
-	   double tx=tracks[i].S(state_tx),ty=tracks[i].S(state_ty);
-	   double phi=atan2(ty,tx);
-	   double tanl=1./sqrt(tx*tx+ty*ty);
-	   // Check for tracks heading upstream
-	   double phi_diff=phi-hits[0]->wire->origin.Phi()-M_PI;
-	   if (phi_diff<-M_PI) phi_diff+=2.*M_PI;
-	   if (phi_diff> M_PI) phi_diff-=2.*M_PI;
-	   if (fabs(phi_diff)<M_PI_2){
-	     tanl*=-1;
-	     phi+=M_PI;
-	   }
-	   double pt=5.*cos(atan(tanl)); //arbitrary magnitude...    
-	   cand->setMomentum(DVector3(pt*cos(phi),pt*sin(phi),pt*tanl));
-
+	   double x=S(state_x);
+	   double y=S(state_y);
+	   double z=tracks[i].z;
+	   double tx=S(state_tx),ty=S(state_ty);
+	  
 	   if (COSMICS==false){
-	     DVector3 pos,origin,dir(0,0,1.);
-	     finder->FindDoca(z,tracks[i].S,dir,origin,&pos);
+	     double phi=atan2(ty,tx);
+	     double tanl=1./sqrt(tx*tx+ty*ty);
+	     double phi_diff=phi-hits[0]->wire->origin.Phi()-M_PI;
+	     if (phi_diff<-M_PI) phi_diff+=2.*M_PI;
+	     if (phi_diff> M_PI) phi_diff-=2.*M_PI;
+	     if (fabs(phi_diff)<M_PI_2){
+	       phi+=M_PI;
+	     }
+	     double pt=cos(atan(tanl)); // set magnitude to 1.
+	     DVector3 tdir(pt*cos(phi),pt*sin(phi),pt*tanl);
+	     cand->setMomentum(tdir);
+
+	     DVector3 tpos(x,y,z),origin,dir(0.,0.,1.),pos;
+	     finder->FindDoca(tpos,tdir,origin,dir,&pos);
 	     cand->setPosition(pos);
 	   }
 	   else{
-	     cand->setPosition(DVector3(tracks[i].S(state_x),
-					tracks[i].S(state_y),z));
+	     DVector3 mom(tx,ty,1.);
+	     double delta_y=-1.;
+	     double delta_z=delta_y/ty;
+	     // Go slightly beyond the first hit in y
+	     x+=tx*delta_z;
+	     y+=delta_y;
+	     z+=delta_z;
+
+	     mom.SetMag(1.);
+	     cand->setMomentum(mom);
+	     cand->setPosition(DVector3(x,y,z));
 	   }
 	 
 	   _data.push_back(cand);

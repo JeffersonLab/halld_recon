@@ -28,6 +28,8 @@ using namespace jana;
 #include "DAQ/Df125Config.h"
 #include "TRIGGER/DTrigger.h"
 
+#include <JANA/JCalibration.h>
+
 #include <TDirectory.h>
 #include <TH2.h>
 #include <TH1.h>
@@ -96,6 +98,12 @@ jerror_t JEventProcessor_CDC_online::init(void) {
   // scales for the later runs using the new firmware
 
 
+  WG_OCC = false;
+    if(gPARMS){
+      gPARMS->SetDefaultParameter("CDC_ONLINE:WG_OCC", WG_OCC, "Fill occupancy only if wire_gain > 0");
+    }  
+
+  
   // create root folder for cdc and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC")->cd();
@@ -130,7 +138,6 @@ jerror_t JEventProcessor_CDC_online::init(void) {
   // back to main dir
   main->cd();
 
-
   return NOERROR;
 }
 
@@ -140,7 +147,9 @@ jerror_t JEventProcessor_CDC_online::init(void) {
 
 jerror_t JEventProcessor_CDC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
   // This is called whenever the run number changes
-
+ 
+    jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+   
   // max values for histogram scales, modified fa250-format readout
 
 
@@ -226,6 +235,37 @@ jerror_t JEventProcessor_CDC_online::brun(JEventLoop *eventLoop, int32_t runnumb
 
 	japp->RootUnLock(); //RELEASE ROOT LOCK
 
+    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
+        135,135,146,146,158,158,170,170,182,182,197,197,
+        209,209};
+
+
+    //    cout << "WG_OCC: " << WG_OCC << endl; 
+    
+   // Get the wire_gain parameters from the database
+   vector< map<string, double> > tvals;
+   wire_gain.clear();
+
+   unsigned int straw_count=0,ring_count=0;
+   if (jcalib->Get("CDC/wire_gains", tvals)==false){
+      vector<double>temp;
+      for(unsigned int i=0; i<tvals.size(); i++){
+         map<string, double> &row = tvals[i];
+
+         temp.push_back(row["Acorr"]);
+	 //	 if (i<15) cout << i << " " << row["Acorr"] << endl;
+         straw_count++;
+         if (straw_count==numstraws[ring_count]){
+            wire_gain.push_back(temp);
+            temp.clear();
+            straw_count=0;
+            ring_count++;
+         }
+      }
+   }
+
+   //   for (uint i=0; i<100; i++) cout << "wire_gain[" << i << "] " << wire_gain[0][i] << endl;
+	
 
   return NOERROR;
 }
@@ -349,11 +389,22 @@ jerror_t JEventProcessor_CDC_online::evnt(JEventLoop *eventLoop, uint64_t eventn
       integral = digihit->pulse_integral; // pulse integral in fadc units, pedestal not subtracted
 
 
-      cdc_o->Fill(straw,ring);  
+      // If WG_OCC is set true, then only fill the occupancy histos if the straw's wire_gain > 0
+      // If it is set false, then fill the occupancy histo anyway
+      
+      bool live_straw = 1;
+      
+      if (WG_OCC && (wire_gain[ring-1][straw-1] <= 0)) live_straw=0;
 
-      Double_t w = cdc_occ_ring[ring]->GetBinContent(straw, 1) + 1.0;
-      cdc_occ_ring[ring]->SetBinContent(straw, 1, w);
+      //      if (n<30) cout << " straw " << n << " live:" << live_straw << endl;
+      
+      if (live_straw) {
 
+          cdc_o->Fill(straw,ring);  
+
+   	  Double_t w = cdc_occ_ring[ring]->GetBinContent(straw, 1) + 1.0;
+          cdc_occ_ring[ring]->SetBinContent(straw, 1, w);
+      }
 
       integ = 0;
 
