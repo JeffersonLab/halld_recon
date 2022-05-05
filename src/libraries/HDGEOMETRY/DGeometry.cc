@@ -2409,9 +2409,22 @@ bool DGeometry::GetTargetZ(double &z_target) const
      return true;
    }
 
+   // Only print warning for one thread whenever run number change
+   static pthread_mutex_t empty_target_mutex = PTHREAD_MUTEX_INITIALIZER;
+   static set<int> empty_target_runs_announced;
 
-   jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " << 
-     z_target << " cm" << endl;
+   // keep track of which runs we print out warnings for
+   pthread_mutex_lock(&empty_target_mutex);
+   bool empty_target_warning = false;
+   if(empty_target_runs_announced.find(runnumber) == empty_target_runs_announced.end()){
+     empty_target_warning = true;
+     empty_target_runs_announced.insert(runnumber);
+   }
+   pthread_mutex_unlock(&empty_target_mutex);
+
+   if (empty_target_warning)
+     jout << " WARNING: Unable to get target location from XML for any of GlueX, PrimEx, or CPP targets. It's likely an empty target run. Using default of " <<
+       z_target << " cm" << endl;
 
    jgeom->SetVerbose(1);   // reenable error messages
 

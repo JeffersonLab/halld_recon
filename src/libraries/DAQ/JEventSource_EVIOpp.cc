@@ -26,7 +26,6 @@ using namespace std;
 using namespace std::chrono;
 
 
-#include <TTAB/DTranslationTable_factory.h>
 #include <DAQ/Df250EmulatorAlgorithm_v1.h>
 #include <DAQ/Df250EmulatorAlgorithm_v2.h>
 #include <DAQ/Df250EmulatorAlgorithm_v3.h>
@@ -98,7 +97,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	APPLY_TRANSLATION_TABLE = true;
 	IGNORE_EMPTY_BOR = false;
 	F250_EMULATION_MODE = kEmulationAuto;
-	F125_EMULATION_MODE = kEmulationAuto;
+	F125_EMULATION_MODE = kEmulationNone;
 	F250_EMULATION_VERSION = 3;
 	RECORD_CALL_STACK = false;
 	TREAT_TRUNCATED_AS_ERROR = false;
@@ -687,7 +686,12 @@ jerror_t JEventSource_EVIOpp::GetObjects(JEvent &event, JFactory_base *factory)
 		
 		// Optionally emulate flash firmware
 		if(!pe->vDf250WindowRawData.empty()) EmulateDf250Firmware(pe);
-		if(!pe->vDf125WindowRawData.empty()) EmulateDf125Firmware(pe);
+		if(!pe->vDf125WindowRawData.empty()) {
+			if(APPLY_TRANSLATION_TABLE)
+				EmulateDf125Firmware(pe, translationTables[0]);
+			else 
+				EmulateDf125Firmware(pe, nullptr);
+		}
 
 		// Copy all low-level hits to appropriate factories
 		pe->CopyToFactories(loop);
@@ -1131,7 +1135,7 @@ void JEventSource_EVIOpp::EmulateDf250Firmware(DParsedEvent *pe)
 //----------------
 // EmulateDf125Firmware
 //----------------
-void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe)
+void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe, const DTranslationTable *ttab)
 {
 	/// This is called from GetObjects, but only if window raw
 	/// data objects exist. It will emulate the firmware, producing
@@ -1153,12 +1157,22 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe)
 		// This should rarely happen since CDC_long and FDC_long mores have the raw data
 		// along with the calculated quantities in a pulse word. Pure raw mode would be the only time
 		// when this would not be the case. 
-        // Since this is so infrequently used (if ever), 
-		// we add a hard coded ROCID check for CDC/FDC determination...
-		// ROCID CDC: 25-28
-		// ROCID FDC Cathode: 52,53,55-62
+        // While this is infrequently used, usually different detectors use 
+        // different types, so let's pick the pulse type based on the 
+        // translated detector info (this came up in FMWPC testing)
 
-        if(f125CDCPulse == NULL && ( wrd->rocid < 30 ) ){
+		DTranslationTable::Detector_t locDetector = DTranslationTable::UNKNOWN_DETECTOR;
+		if(ttab) {
+ 			auto rocid_by_system = ttab->Get_ROCID_By_System();
+ 			if( rocid_by_system[ DTranslationTable::CDC ].count( wrd->rocid ) != 0 )
+ 				locDetector = DTranslationTable::CDC;
+ 			else if( rocid_by_system[ DTranslationTable::FDC_CATHODES ].count( wrd->rocid ) != 0 )
+ 				locDetector = DTranslationTable::FDC_CATHODES;
+ 			else if( rocid_by_system[ DTranslationTable::FMWPC ].count( wrd->rocid ) != 0 )
+ 				locDetector = DTranslationTable::FMWPC;
+		}
+
+        if(f125CDCPulse == NULL && ( locDetector == DTranslationTable::CDC || locDetector == DTranslationTable::FMWPC ) ){
             f125CDCPulse           = pe->NEW_Df125CDCPulse();
             f125CDCPulse->rocid    = wrd->rocid;
             f125CDCPulse->slot     = wrd->slot;
@@ -1166,7 +1180,7 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe)
             f125CDCPulse->emulated = true;
             f125CDCPulse->AddAssociatedObject(wrd);
         }
-        else if(f125FDCPulse == NULL && ( wrd->rocid > 30 ) ){
+        else if(f125FDCPulse == NULL && ( locDetector == DTranslationTable::FDC_CATHODES ) ){
             f125FDCPulse           = pe->NEW_Df125FDCPulse();
             f125FDCPulse->rocid    = wrd->rocid;
             f125FDCPulse->slot     = wrd->slot;
@@ -1174,6 +1188,12 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe)
             f125FDCPulse->emulated = true;
             f125FDCPulse->AddAssociatedObject(wrd);
         }
+        
+        // if there's no translation table or the hits have no pulse data
+        // and can't be matched to a known detector (not a good situation!)
+        // then give up
+        if( f125FDCPulse == NULL && f125CDCPulse == NULL )
+        	return;
 
 		// Flag all objects as emulated and their values will be replaced with emulated quantities
 		if (F125_EMULATION_MODE == kEmulationAlways){

@@ -27,6 +27,8 @@
 #include <DAQ/Df250EmulatorAlgorithm.h>
 #include <DAQ/Df125EmulatorAlgorithm.h>
 
+#include <TTAB/DTranslationTable_factory.h>
+
 #include <DANA/DApplication.h>
 #include <DANA/DStatusBits.h>
 
@@ -133,7 +135,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		               void LinkBORassociations(DParsedEvent *pe);
 		           uint64_t SearchFileForRunNumber(void);
 		               void EmulateDf250Firmware(DParsedEvent *pe);
-		               void EmulateDf125Firmware(DParsedEvent *pe);
+		               void EmulateDf125Firmware(DParsedEvent *pe, const DTranslationTable *ttab);
 		               void AddToCallStack(DParsedEvent *pe, JEventLoop *loop);
 		               void AddSourceObjectsToCallStack(JEventLoop *loop, string className);
 		               void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
