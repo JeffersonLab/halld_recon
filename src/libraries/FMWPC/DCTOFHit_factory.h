@@ -1,22 +1,20 @@
 // $Id$
 //
-//    File: DCTOFPoint_factory.h
-// Created: Thu Oct 28 07:48:04 EDT 2021
-// Creator: staylor (on Linux ifarm1901.jlab.org 3.10.0-1062.4.1.el7.x86_64 x86_64)
+//    File: DCTOFHit_factory.h
+// Created: Fri Mar 18 09:00:12 EDT 2022
+// Creator: staylor (on Linux ifarm1801.jlab.org 3.10.0-1160.11.1.el7.x86_64 x86_64)
 //
 
-#ifndef _DCTOFPoint_factory_
-#define _DCTOFPoint_factory_
+#ifndef _DCTOFHit_factory_
+#define _DCTOFHit_factory_
 
 #include <JANA/JFactory.h>
-#include "DCTOFPoint.h"
-#include <DVector3.h>
+#include "DCTOFHit.h"
 
-class DCTOFPoint_factory:public jana::JFactory<DCTOFPoint>{
+class DCTOFHit_factory:public jana::JFactory<DCTOFHit>{
  public:
-  DCTOFPoint_factory(){};
-  ~DCTOFPoint_factory(){};
-  
+  DCTOFHit_factory(){};
+  ~DCTOFHit_factory(){};
   
  private:
   jerror_t init(void);						///< Called once at program start.
@@ -25,10 +23,10 @@ class DCTOFPoint_factory:public jana::JFactory<DCTOFPoint>{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-  vector<DVector3>ctof_positions;
-
-  double LIGHT_PROPAGATION_SPEED,THRESHOLD,ATTENUATION_LENGTH;
+  double DELTA_T_ADC_TDC_MAX;
+  double t_base,t_base_tdc,t_scale;
+  double adc_time_offsets[8]={},tdc_time_offsets[8]={};
 };
 
-#endif // _DCTOFPoint_factory_
+#endif // _DCTOFHit_factory_
 

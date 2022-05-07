@@ -33,7 +33,7 @@ class DFMWPCCluster:public jana::JObject{
 			AddString(items, "layer", "%d", layer);
 			AddString(items, "q", "%10.2f", q);
 			AddString(items, "u", "%3.4f", u);
-			AddString(items, "first_wire", "%3d", first_wire);
+ 			AddString(items, "first_wire", "%3d", first_wire);
 			AddString(items, "last_wire", "%3d", last_wire);
 			AddString(items, "Nhits", "%d", Nhits);
 			AddString(items, "x", "%1.3f", pos.x());

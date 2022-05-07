@@ -239,6 +239,16 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 
 	}
 
+	JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+	map<string, double> targetparms;
+	if (jcalib->Get("TARGET/target_parms",targetparms)==false){
+	  TARGET_Z = targetparms["TARGET_Z_POSITION"];
+	}
+	else{
+	  geom->GetTargetZ(TARGET_Z);
+	}
+	
+
 	return NOERROR;
 }
 
@@ -1207,7 +1217,7 @@ void DTrackTimeBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momen
   rt.SetMass(my_mass);
   rt.SetPLossDirection(DReferenceTrajectory::kBackward);
   DVector3 last_pos,last_mom;
-  DVector3 origin(0.,0.,65.);
+  DVector3 origin(0.,0.,TARGET_Z);
   DVector3 dir(0.,0.,1.);
   rt.FastSwim(position,momentum,last_pos,last_mom,q,origin,dir,300.);   
   position=last_pos;
