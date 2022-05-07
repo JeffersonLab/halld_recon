@@ -1153,6 +1153,31 @@ def AddCobrems(env):
 	env.AppendUnique(LIBS    = 'AMPTOOLS_MCGEN')
 	env.AppendUnique(CCFLAGS = pyincludes.rstrip().split())
 
+
+##################################
+# Tensorflow-lite
+##################################
+def AddTensorflowLite(env):
+	tensorflowliteroot = os.getenv('TENSORFLOW_LITE')
+	if(tensorflowliteroot != None) :
+		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOWLITE'])
+		env.AppendUnique(CPPPATH = ['%s' % tensorflowliteroot])
+		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowliteroot])
+		env.AppendUnique(LIBS=['tflite'])
+
+
+##################################
+# Tensorflow
+##################################
+def AddTensorflow(env):
+	tensorflowroot = os.getenv('TENSORFLOW_ROOT')
+	if(tensorflowroot != None) :
+		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOW'])
+		env.AppendUnique(CPPPATH = ['%s/include' % tensorflowroot])
+		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowroot])
+		env.AppendUnique(LIBS=['tensorflow'])
+
+
 ##################################
 # version comparison helper
 ##################################
