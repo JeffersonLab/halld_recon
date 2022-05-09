@@ -17,6 +17,8 @@ using namespace jana;
 #include "DCTOFTruth.h"
 #include "DCTOFHit.h"
 #include "DCTOFPoint_factory.h"
+#include "DCTOFDigiHit.h"
+#include "DCTOFTDCDigiHit.h"
 #include "DFMWPCMatchedTrack_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
@@ -31,6 +33,8 @@ jerror_t FMWPC_init(JEventLoop *loop) {
   loop->AddFactory(new DFMWPCMatchedTrack_factory());
 
   /// Factories for downstream scintillators
+  loop->AddFactory(new JFactory<DCTOFDigiHit>());
+  loop->AddFactory(new JFactory<DCTOFTDCDigiHit>());
   loop->AddFactory(new JFactory<DCTOFHit>());
   loop->AddFactory(new JFactory<DCTOFTruth>());
   loop->AddFactory(new DCTOFPoint_factory());
