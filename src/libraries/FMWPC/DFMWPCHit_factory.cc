@@ -243,14 +243,16 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     double t_raw = double(digihit->pulse_time);
     
     // Scale factor to account for gain variation
-    double gain=gains[layer-1][wire-1];
+    unsigned int layer_i=layer-1;
+    unsigned int wire_i=wire-1;
+    double gain=gains[layer_i][wire_i];
  
     // Charge and amplitude 
     double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
 				      - scaled_ped*nsamples_integral);
     double amp = amp_a_scale*gain*double(maxamp);
     
-    double t = t_scale * t_raw - time_offsets[layer-1][wire-1] + t_base;
+    double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
     
     DFMWPCHit *hit = new DFMWPCHit;
     hit->layer  = layer;

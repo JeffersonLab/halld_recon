@@ -10,15 +10,16 @@
 
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
+#include <DVector3.h>
 
 class DCTOFPoint:public jana::JObject{
  public:
   JOBJECT_PUBLIC(DCTOFPoint);
 
   int bar; ///< bar number
-  double dE; ///< Energy depostion in GeV
+  double dE; ///< Energy deposition in GeV
   double t; ///< Time in ns 
-  double y; ///< position along scintillator in cm
+  DVector3 pos; ///< point position vector, in cm
 		
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
@@ -26,7 +27,9 @@ class DCTOFPoint:public jana::JObject{
     AddString(items, "bar", "%4d", bar);
     AddString(items, "dE", "%f", dE);
     AddString(items, "t", "%f", t);
-    AddString(items, "y", "%f", y);
+    AddString(items, "x", "%f", pos.x());
+    AddString(items, "y", "%f", pos.y());
+    AddString(items, "z", "%f", pos.z());
   }
 		
 };

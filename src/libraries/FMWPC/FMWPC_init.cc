@@ -15,11 +15,12 @@ using namespace jana;
 #include "DFMWPCTruthHit.h"
 #include "DFMWPCTruth.h"
 #include "DCTOFTruth.h"
-#include "DCTOFHit.h"
-#include "DCTOFPoint_factory.h"
+#include "DCTOFHit_factory.h"
 #include "DCTOFDigiHit.h"
 #include "DCTOFTDCDigiHit.h"
+#include "DCTOFPoint_factory.h"
 #include "DFMWPCMatchedTrack_factory.h"
+#include "DCPPEpEm_factory.h"
 
 jerror_t FMWPC_init(JEventLoop *loop) {
 
@@ -35,9 +36,12 @@ jerror_t FMWPC_init(JEventLoop *loop) {
   /// Factories for downstream scintillators
   loop->AddFactory(new JFactory<DCTOFDigiHit>());
   loop->AddFactory(new JFactory<DCTOFTDCDigiHit>());
-  loop->AddFactory(new JFactory<DCTOFHit>());
   loop->AddFactory(new JFactory<DCTOFTruth>());
+  loop->AddFactory(new DCTOFHit_factory());
   loop->AddFactory(new DCTOFPoint_factory());
+
+  // Factory for e+e-/ pi+pi- fitting
+  loop->AddFactory(new DCPPEpEm_factory());
 
   return NOERROR;
 }

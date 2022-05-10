@@ -1800,6 +1800,23 @@ bool DGeometry::GetCTOFZ(double &z) const {
   return true;
 }
 
+//---------------------------------
+// GetCTOFPositions
+//---------------------------------
+bool DGeometry::GetCTOFPositions(vector<DVector3>&posvec) const{
+  vector<double>origin;
+  bool good = Get("//section/composition/posXYZ[@volume='CppScint']/@X_Y_Z",origin);
+  if (!good) return false;
+  DVector3 pos(origin[0],origin[1],origin[2]);
+  for (unsigned int paddle=1;paddle<5;paddle++){
+    vector<double>local_pos;
+    Get(Form("//posXYZ[@volume='CPPPaddle']/@X_Y_Z/column[@value='%d']",paddle),local_pos);
+    DVector3 dpos(local_pos[0],local_pos[1],local_pos[2]);
+    posvec.push_back(pos+dpos);
+  }
+
+  return true;
+}
 
 //---------------------------------
 // GetFMWPCZ
@@ -1897,6 +1914,32 @@ bool DGeometry::GetFMWPCSize(double &xy_fmwpc) const
   xy_fmwpc=0.5*ForwardMWPCdimensions[0];
 
   return true;
+}
+
+//---------------------------------
+// GetFMWPCWireSpacing -- space between wires in cm
+//---------------------------------
+bool DGeometry::GetFMWPCWireSpacing(double &fmwpc_wire_spacing) const
+{
+    fmwpc_wire_spacing = 1.016;
+
+    return true;
+}
+
+//---------------------------------
+// GetFMWPCWireSpacing -- space between wires in cm
+//---------------------------------
+bool DGeometry::GetFMWPCWireOrientation(vector<fmwpc_wire_orientation_t> &fmwpc_wire_orientation) const
+{
+    fmwpc_wire_orientation.clear();
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_VERTICAL );
+    fmwpc_wire_orientation.push_back( kFMWPC_WIRE_ORIENTATION_HORIZONTAL );
+
+    return true;
 }
 
 //---------------------------------
