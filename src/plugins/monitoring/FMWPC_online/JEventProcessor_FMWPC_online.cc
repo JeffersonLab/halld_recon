@@ -15,10 +15,12 @@ using namespace jana;
 
 #include <TDirectory.h>
 #include <TH1.h>
+#include <TH2.h>
 
 static TH1I *fmwpc_num_events;
 static TH1F *fmwpc_occ_layer[6];
 static TH1F *fmwpc_hit_layer[6];
+static TH2I *fmwpc_pedestal[6];
 
 static TH1I *ctof_adc_events;
 static TH1F *ctof_adc_occ_up;
@@ -78,6 +80,11 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
          sprintf(htitle, "FMWPC Calibrated Hits Layer %01d", iLayer+1);
          fmwpc_hit_layer[iLayer] = new TH1F(hname, htitle, 144, 0.5, 144.5);
          fmwpc_hit_layer[iLayer]->SetXTitle("Wire Number");
+	 
+         sprintf(hname, "fmwpc_pedestal_layer_%01d", iLayer+1);
+         sprintf(htitle, "FMWPC Pedestal vs. wire %01d;Wire Number;Pedestal", iLayer+1);
+	 fmwpc_pedestal[iLayer] = new TH2I(hname, htitle, 144, 0.5, 144.5, 400, 0.0, 400.0);
+	 fmwpc_pedestal[iLayer]->SetStats(0);
         }
 
 	ctof_adc_occ_up = new TH1F("ctof_adc_occ_up", "CTOF ADC Occupancy", 4, 0.5, 4.5);
@@ -150,6 +157,7 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
          const DFMWPCDigiHit *digi = fmwpcdigis[i];
 
          fmwpc_occ_layer[digi->layer-1]->Fill(digi->wire);
+	 fmwpc_pedestal[digi->layer-1]->Fill(digi->wire, digi->pedestal);
         }
 
         for (unsigned int i=0; i<fmwpchits.size();i++){
