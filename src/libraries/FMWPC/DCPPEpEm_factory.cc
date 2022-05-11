@@ -30,6 +30,55 @@ jerror_t DCPPEpEm_factory::init(void)
   gPARMS->SetDefaultParameter("CPPAnalysis:BCAL_THRESHOLD",BCAL_THRESHOLD);
   GAMMA_DT_CUT=2.; 
 
+  // TODO: The following needs to be replaced by a JANA resource!
+  PIMU_MODEL_FILE = "/gapps/tensorflow/example_model.tflite";
+  gPARMS->SetDefaultParameter("CPPAnalysis:PIMU_MODEL_FILE",PIMU_MODEL_FILE, "TFLite model file for pi/mu classification");
+  
+  VERBOSE=1;
+  gPARMS->SetDefaultParameter("CPPAnalysis:VERBOSE", VERBOSE);
+
+#ifdef HAVE_TENSORFLOWLITE
+  // Load pi/mu classification model
+  jout << "Loading pi/mu classification ML model from: " << PIMU_MODEL_FILE << endl;
+  pimu_model = tflite::FlatBufferModel::BuildFromFile(PIMU_MODEL_FILE.c_str());
+  if(pimu_model == nullptr) throw JException("Unable to load pi/mu tensorflow-lite model file");
+
+  // Build the interpreter with the InterpreterBuilder.
+  tflite::ops::builtin::BuiltinOpResolver resolver;
+  tflite::InterpreterBuilder builder(*pimu_model, resolver);
+  builder(&pimu_interpreter);
+  if(pimu_interpreter == nullptr)throw JException("Error building TFLite interpretor for pi/mu model");
+  
+  // Allocate tensor buffers.
+  if(pimu_interpreter->AllocateTensors() != kTfLiteOk) throw JException("Error allocating tensors for pi/mu model");
+  if( VERBOSE >= 2 ) tflite::PrintInterpreterState(pimu_interpreter.get());
+
+  // Get list of indexes for inputs and outputs
+  auto inputs  = pimu_interpreter->inputs();
+  auto outputs = pimu_interpreter->outputs();
+  if( VERBOSE >= 1 ){
+	 cout << "Model Inputs:" << endl;
+	 for( uint32_t idx=0; idx<inputs.size(); idx++ ){
+   	cout << "  " << idx << " : " << pimu_interpreter->GetInputName( idx ) << endl;
+	 }
+	 cout << "Model Outputs:" << endl;
+	 for( uint32_t idx=0; idx<outputs.size(); idx++ ){
+   	cout << "  " << idx << " : " << pimu_interpreter->GetOutputName( idx ) << endl;
+	 }
+  }
+  if( VERBOSE >= 2 ){
+	 cout << "All layer names:" << endl;
+	 for( int idx=0; idx<=outputs[0]; idx++ ){
+   	auto mytensor = pimu_interpreter->tensor( idx );
+   	cout << "  " << idx << " : " << mytensor->name << endl;
+	 }
+  }
+  
+  // Get pointers to input and output buffers
+  pimu_input  = pimu_interpreter->typed_input_tensor<float>(0);
+  pimu_output = pimu_interpreter->typed_output_tensor<float>(0);
+#endif // HAVE_TENSORFLOWLITE
+
   return NOERROR;
 }
 
@@ -206,6 +255,29 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     	  }
 	}
       }
+      
+      //--------------------------------
+      // Use ML model for pi/mu classification 
+      //--------------------------------
+      myCPPEpEm->pimu_ML_classifier = -1; // initialize to "no info" in case anything below fails
+#ifdef HAVE_TENSORFLOWLITE
+      
+      // Is this needed? We are creating a new interpreter for every
+      // thread so in principle it is not
+      //const std::lock_guard<std::mutex> pimu_lock(pimu_model_mutex);
+      
+      // Fill in all model features
+      // n.b. if we need to use a mutex then we should pass a local
+      // array for "input" and the lock the mutex just for the copy
+      // to the tflite tensor.
+      if( PiMuFillFeatures(loop, piplus, piminus, pimu_input) ){
+
+      	// Run inference
+      	if( pimu_interpreter->Invoke() == kTfLiteOk){
+      	  if( pimu_output ) myCPPEpEm->pimu_ML_classifier = pimu_output[0];
+      	}
+      }
+#endif // HAVE_TENSORFLOWLITE
 
       _data.push_back(myCPPEpEm);
     }
@@ -306,3 +378,122 @@ bool DCPPEpEm_factory::VetoNeutrals(double t0_rf,const DVector3 &vect,
   
   return false;
 }
+
+// Fill the features array with values for this event.
+// Return true if values are valid, false otherwise.
+// e.g. return false if there is not at least 1 pi+
+// and 1 pi- candidate.
+bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTimeBased *piplus, const DTrackTimeBased *piminus, float *features){
+  
+  vector<const DFMWPCMatchedTrack*> matchedtracks;
+  loop->Get( matchedtracks );
+  
+  // Find the DFMWPCMatchedTrack objects corresponding to
+  // the piplus, piminus tracks used in for the kinematic fit
+  // (i.e. the ones passed into this method as arguments)
+  const DFMWPCMatchedTrack *piplus_mt  = nullptr;
+  const DFMWPCMatchedTrack *piminus_mt = nullptr;
+  for( auto mt : matchedtracks ){
+    const DTrackTimeBased *trk;
+    mt->GetSingleT(trk);
+    if( trk == piplus  ) piplus_mt = mt;
+    if( trk == piminus ) piminus_mt = mt;
+  }
+  
+  // Must have a DFMWPCMatchedTrack for both a pi+ and pi-
+  if( (piplus_mt==nullptr) || (piminus_mt==nullptr) ) return false;
+  
+  // Features list is the following:
+  //  0  nChargedTracks
+  //  1  nFCALShowers
+  //  2  nFCALhits
+  //  3  nMWPChits
+  //  4  nFMWPCMatchedTracks
+  //  5  FCAL_E_center_8
+  //  6  FCAL_E_3x3_8
+  //  7  FCAL_E_5x5_8
+  //  8  FMWPC_closest_wire1_8
+  //  9  FMWPC_dist_closest_wire1_8
+  // 10  FMWPC_Nhits_cluster1_8
+  // 11  FMWPC_closest_wire2_8
+  // 12  FMWPC_dist_closest_wire2_8
+  // 13  FMWPC_Nhits_cluster2_8
+  // 14  FMWPC_closest_wire3_8
+  // 15  FMWPC_dist_closest_wire3_8
+  // 16  FMWPC_Nhits_cluster3_8
+  // 17  FMWPC_closest_wire4_8
+  // 18  FMWPC_dist_closest_wire4_8
+  // 19  FMWPC_Nhits_cluster4_8
+  // 20  FMWPC_closest_wire5_8
+  // 21  FMWPC_dist_closest_wire5_8
+  // 22  FMWPC_Nhits_cluster5_8
+  // 23  FMWPC_closest_wire6_8
+  // 24  FMWPC_dist_closest_wire6_8
+  // 25  FMWPC_Nhits_cluster6_8
+  // 26  FCAL_E_center_9
+  // 27  FCAL_E_3x3_9
+  // 28  FCAL_E_5x5_9
+  // 29  FMWPC_closest_wire1_9
+  // 30  FMWPC_dist_closest_wire1_9
+  // 31  FMWPC_Nhits_cluster1_9
+  // 32  FMWPC_closest_wire2_9
+  // 33  FMWPC_dist_closest_wire2_9
+  // 34  FMWPC_Nhits_cluster2_9
+  // 35  FMWPC_closest_wire3_9
+  // 36  FMWPC_dist_closest_wire3_9
+  // 37  FMWPC_Nhits_cluster3_9
+  // 38  FMWPC_closest_wire4_9
+  // 39  FMWPC_dist_closest_wire4_9
+  // 40  FMWPC_Nhits_cluster4_9
+  // 41  FMWPC_closest_wire5_9
+  // 42  FMWPC_dist_closest_wire5_9
+  // 43  FMWPC_Nhits_cluster5_9
+  // 44  FMWPC_closest_wire6_9
+  // 45  FMWPC_dist_closest_wire6_9
+  // 46  FMWPC_Nhits_cluster6_9
+  
+  vector<const DChargedTrack*> chargedtracks;
+  vector<const DFCALShower*  > fcalshowers;
+  vector<const DFCALHit*     > fcalhits;
+  vector<const DFMWPCHit*    > fmwpchits;
+  loop->Get( chargedtracks );
+  loop->Get( fcalshowers   );
+  loop->Get( fcalhits      );
+  loop->Get( fmwpchits     );
+
+  features[ 0] = chargedtracks.size();
+  features[ 1] = fcalshowers.size();
+  features[ 2] = fcalhits.size();
+  features[ 3] = fmwpchits.size();
+  features[ 4] = matchedtracks.size();
+  features[ 5] = piplus_mt->FCAL_E_center;
+  features[ 6] = piplus_mt->FCAL_E_3x3;
+  features[ 7] = piplus_mt->FCAL_E_5x5;
+  for(int ilayer=0; ilayer<6; ilayer++){
+    features[ 8+3*ilayer] = piplus_mt->FMWPC_closest_wire[ilayer];
+    features[ 9+3*ilayer] = piplus_mt->FMWPC_dist_closest_wire[ilayer];
+    features[10+3*ilayer] = piplus_mt->FMWPC_Nhits_cluster[ilayer];
+  }
+  features[26] = piminus_mt->FCAL_E_center;
+  features[27] = piminus_mt->FCAL_E_3x3;
+  features[28] = piminus_mt->FCAL_E_5x5;
+  for(int ilayer=0; ilayer<6; ilayer++){
+    features[29+3*ilayer] = piminus_mt->FMWPC_closest_wire[ilayer];
+    features[30+3*ilayer] = piminus_mt->FMWPC_dist_closest_wire[ilayer];
+    features[31+3*ilayer] = piminus_mt->FMWPC_Nhits_cluster[ilayer];
+  }
+
+
+  // These are values Nikhil sent that were used for normalizing the
+  // features before training the model.  
+  static const float feature_min[] = {2.0,0.0,2.0,0.0,2.0,0.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,0.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,0.0};
+  static const float feature_max[] = {6.0,10.0,20.0,94.0,8.0,3.924656391143799,5.177245497703552,5.349521217867732,144.0,1000000.0,39.0,144.0,1000000.0,17.0,144.0,1000000.0,12.0,144.0,1000000.0,11.0,144.0,1000000.0,8.0,144.0,1000000.0,7.0,4.154212951660156,5.578885164111853,5.9553504548966885,144.0,1000000.0,39.0,144.0,1000000.0,32.0,144.0,1000000.0,14.0,144.0,1000000.0,35.0,144.0,1000000.0,7.0,144.0,1000000.0,11.0,1.0};
+  for(int i=0; i<48; i++){
+    features[i] = (features[i] - feature_min[i])/(feature_max[i]-feature_min[i]);
+  }
+
+  return true;   
+}
+
+
+
