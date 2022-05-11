@@ -638,6 +638,7 @@ def AddDANA(env):
 	AddEVIO(env)
 	AddET(env)
 	AddMySQL(env)   # needed for EventStore
+	AddTensorflowLite(env) # optional. Used for CPP pi/mu classification
 	DANA_LIBS  = "DANA ANALYSIS KINFITTER PID TAGGER TRACKING START_COUNTER"
 	DANA_LIBS += " CERE DIRC CDC TRIGGER PAIR_SPECTROMETER RF TRD"
 	DANA_LIBS += " FDC TOF BCAL FCAL CCAL TPOL HDGEOMETRY TTAB FMWPC TAC"
