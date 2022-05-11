@@ -482,7 +482,17 @@ bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTime
     features[30+3*ilayer] = piminus_mt->FMWPC_dist_closest_wire[ilayer];
     features[31+3*ilayer] = piminus_mt->FMWPC_Nhits_cluster[ilayer];
   }
-
+  
+  // Before training the model, Nikhil's code replaced feature values
+  // where the distance to the closest wire was >30 with values used
+  // to indicate no wire hit. 
+  for(int ilayer=0; ilayer<6; ilayer++){
+    if( piminus_mt->FMWPC_dist_closest_wire[ilayer] >30.0 ){
+      features[29+3*ilayer] = -1000.0;
+      features[30+3*ilayer] = 1000000;
+      features[31+3*ilayer] = 0;
+    }
+  }
 
   // These are values Nikhil sent that were used for normalizing the
   // features before training the model.  
