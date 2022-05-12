@@ -8,6 +8,15 @@
 #ifndef _DCPPEpEm_factory_
 #define _DCPPEpEm_factory_
 
+#include <mutex>
+
+#ifdef HAVE_TENSORFLOWLITE
+#include "tensorflow/lite/interpreter.h"
+#include "tensorflow/lite/kernels/register.h"
+#include "tensorflow/lite/model.h"
+#include "tensorflow/lite/optional_debug_tools.h"
+#endif // HAVE_TENSORFLOWLITE
+
 #include <JANA/JFactory.h>
 #include "DCPPEpEm.h"
 #include <TRACKING/DTrackTimeBased.h>
@@ -17,6 +26,8 @@
 #include <PID/DNeutralParticle.h>
 #include <KINFITTER/DKinFitter.h>
 #include <ANALYSIS/DKinFitUtils_GlueX.h>
+#include <FMWPC/DFMWPCMatchedTrack.h>
+#include <FMWPC/DFMWPCHit.h>
 
 class DCPPEpEm_factory:public jana::JFactory<DCPPEpEm>{
 public:
@@ -39,7 +50,20 @@ void DoKinematicFit(const DBeamPhoton *beamphoton,
 bool VetoNeutrals(double t0_rf,const DVector3 &vect,
 		    vector<const DNeutralParticle*>&neutrals) const;
 
+bool PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTimeBased *piplus, const DTrackTimeBased *piminus, float *features);
+
 double SPLIT_CUT,FCAL_THRESHOLD,BCAL_THRESHOLD,GAMMA_DT_CUT;
+string PIMU_MODEL_FILE;
+int    VERBOSE;
+std::mutex pimu_model_mutex;
+
+#if HAVE_TENSORFLOWLITE
+std::unique_ptr<tflite::FlatBufferModel> pimu_model;
+std::unique_ptr<tflite::Interpreter>     pimu_interpreter;
+float *pimu_input  = nullptr;
+float *pimu_output = nullptr;
+#endif // HAVE_TENSORFLOWLITE
+
 };
 
 #endif // _DCPPEpEm_factory_
