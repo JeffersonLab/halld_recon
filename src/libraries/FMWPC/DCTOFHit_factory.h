@@ -24,8 +24,8 @@ class DCTOFHit_factory:public jana::JFactory<DCTOFHit>{
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
   double DELTA_T_ADC_TDC_MAX;
-  double t_base,t_base_tdc,t_scale;
-  double adc_time_offsets[8]={},tdc_time_offsets[8]={};
+  double t_base_adc,t_base_tdc,t_scale;
+  vector<double>adc_time_offsets,tdc_time_offsets;
 };
 
 #endif // _DCTOFHit_factory_
