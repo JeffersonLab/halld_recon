@@ -51,8 +51,9 @@ jerror_t DCTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   }
 
   // Channel-by-channel timing offsets
-  eventLoop->GetCalib("/CTOF/adc_timing_offsets", adc_time_offsets); 
+  eventLoop->GetCalib("/CTOF/adc_timing_offsets", adc_time_offsets);  
   eventLoop->GetCalib("/CTOF/tdc_timing_offsets", tdc_time_offsets);
+  eventLoop->GetCalib("/CTOF/adc2E", adc2E);
 
   return NOERROR;
 }
@@ -113,7 +114,7 @@ jerror_t DCTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       hit->end   = digihit->end;
       hit->t     = T;
       hit->t_adc = Tadc;
-      hit->dE    = dA;
+      hit->dE    = adc2E[ind]*dA;
 
       hit->AddAssociatedObject(digihit);
       hit->AddAssociatedObject(tdcdigihit);
