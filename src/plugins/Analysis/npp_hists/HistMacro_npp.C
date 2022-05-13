@@ -4,7 +4,6 @@
 // hnamepath: /npp_hists/Hist_InvariantMass_2Pi0_KinFit/InvariantMass
 // hnamepath: /npp_hists/Custom_npp_hists/t
 // hnamepath: /npp_hists/Custom_npp_hists/Phi
-
 {
 	TDirectory *locInitDirectory = gDirectory;
 	TDirectory *locReactionDirectory = (TDirectory*)locInitDirectory->FindObjectAny("npp_hists");
@@ -46,25 +45,8 @@
 		locHist_MM->Draw("");
 	}
 
-	//KinFit Confidence Level
-	locCanvas->cd(2);
-	gPad->SetTicks();
-	gPad->SetGrid();
-	gPad->SetLogy();
-	if(locHist_KinFitConLev != NULL)
-	{
-		locHist_KinFitConLev->SetTitle("Confidence Level");
-		locHist_KinFitConLev->GetXaxis()->SetTitleOffset(1.2);
-		locHist_KinFitConLev->GetXaxis()->SetTitleSize(0.04);
-		locHist_KinFitConLev->GetYaxis()->SetTitle("");
-		locHist_KinFitConLev->GetXaxis()->SetLabelSize(0.05);
-		locHist_KinFitConLev->GetYaxis()->SetLabelSize(0.05);
-		locHist_KinFitConLev->SetFillColor(kTeal + 1);
-		locHist_KinFitConLev->Draw("");
-	}
-
 	//Pi0 Mass
-	locCanvas->cd(3);
+	locCanvas->cd(2);
 	gPad->SetTicks();
 	gPad->SetGrid();
 	if(locHist_Pi0_Mass != NULL)
@@ -79,6 +61,23 @@
 		locHist_Pi0_Mass->SetFillColor(kAzure + 1);
 		locHist_Pi0_Mass->GetYaxis()->SetRangeUser(0.0, 1.05*locHist_Pi0_Mass->GetBinContent(locHist_Pi0_Mass->GetMaximumBin()));
 		locHist_Pi0_Mass->Draw("");
+	}
+
+	//KinFit Confidence Level
+	locCanvas->cd(3);
+	gPad->SetTicks();
+	gPad->SetGrid();
+	gPad->SetLogy();
+	if(locHist_KinFitConLev != NULL)
+	{
+		locHist_KinFitConLev->SetTitle("Confidence Level");
+		locHist_KinFitConLev->GetXaxis()->SetTitleOffset(1.2);
+		locHist_KinFitConLev->GetXaxis()->SetTitleSize(0.04);
+		locHist_KinFitConLev->GetYaxis()->SetTitle("");
+		locHist_KinFitConLev->GetXaxis()->SetLabelSize(0.05);
+		locHist_KinFitConLev->GetYaxis()->SetLabelSize(0.05);
+		locHist_KinFitConLev->SetFillColor(kTeal + 1);
+		locHist_KinFitConLev->Draw("");
 	}
 
 	//Squared 4-Momentum Transfer -t
