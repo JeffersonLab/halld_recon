@@ -22,6 +22,9 @@ class JEventProcessor_FMWPC_online:public jana::JEventProcessor{
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+		double ctof_t_base_adc,ctof_t_base_tdc;
+		vector<double> ctof_adc_time_offsets, ctof_tdc_time_offsets;
 };
 
 #endif // _JEventProcessor_FMWPC_online_

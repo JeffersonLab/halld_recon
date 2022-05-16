@@ -9,6 +9,7 @@
 using namespace jana;
 
 #include "FMWPC/DFMWPCCluster.h"
+#include "FMWPC/DCPPEpEm.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
 
@@ -21,6 +22,16 @@ static TH2D *hfmwpc_residual_vs_y[6];
 
 static TH2D *hfmwpc_expected[6];
 static TH2D *hfmwpc_measured[6];
+
+static TH1D *hinvmass_nocut;
+static TH1D *hinvmass_pipi;
+static TH1D *hinvmass_mumu;
+static TH1D *hpimu_ML_classifier;
+
+static TH1D *hpsi_nocut;
+static TH1D *hpsi_pipi;
+static TH1D *hpsi_mumu;
+
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -88,6 +99,21 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
     hfmwpc_measured[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -72.5, 72.5);
   }	
 
+  gDirectory->cd("/FMWPC_Performance");
+
+  gDirectory->mkdir("Reconstructed")->cd();
+  hinvmass_nocut = new TH1D("hinvmass_nocut", "Inv. Mass #pi^{+}#pi^{-} - No cut;inv. mass (MeV/c^{2})", 200, 250.0, 650.0);
+  hinvmass_pipi = new TH1D("hinvmass_pipi", "Inv. Mass #pi^{+}#pi^{-} - ML=#pi;inv. mass (MeV/c^{2})", 200, 250.0, 650.0);
+  hinvmass_mumu = new TH1D("hinvmass_mumu", "Inv. Mass #pi^{+}#pi^{-} - ML=#mu;inv. mass (MeV/c^{2})", 200, 250.0, 650.0);
+  hpimu_ML_classifier = new TH1D("hpimu_ML_classifier", "ML model classifier for #pi/#mu;classifier value", 200, 0.0, 1.0);
+  
+  hinvmass_mumu->SetLineColor(kBlue);
+  hinvmass_pipi->SetLineColor(kRed);
+  
+  hpsi_nocut = new TH1D("hpsi_nocut", "#psi;#psi (radians)", 200, -0.01, 6.4);
+  hpsi_pipi = new TH1D("hpsi_pipi", "#psi;#psi (radians)", 200, -0.01, 6.4);
+  hpsi_mumu = new TH1D("hpsi_mumu", "#psi;#psi (radians)", 200, -0.01, 6.4);
+
   main->cd();
   
   return NOERROR;
@@ -112,6 +138,10 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	// loop->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
+
+  // get kinematic fit values + pi/mu classification
+  vector<const DCPPEpEm*> locCPPEpEms;
+  loop->Get(locCPPEpEms);
 	
   // get fmwpc clusters
   vector<const DFMWPCCluster*> locFMWPCClusters;
@@ -172,6 +202,43 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
     }
   }
   
+  // Invariant mass
+  for( auto cppepem : locCPPEpEms ){
+  	auto &pip_v4 = cppepem->pip_v4;
+  	auto &pim_v4 = cppepem->pim_v4;
+  	auto invmass = 1E3*(pip_v4 + pim_v4).M(); // in MeV !
+	auto &pimu_ML_classifier = cppepem->pimu_ML_classifier;
+	hinvmass_nocut->Fill( invmass );
+
+	double model_cut = 0.5;
+	hpimu_ML_classifier->Fill( pimu_ML_classifier );
+	if( (pimu_ML_classifier>=0.0      ) && (pimu_ML_classifier<model_cut) ) hinvmass_pipi->Fill( invmass );
+	if( (pimu_ML_classifier>=model_cut) && (pimu_ML_classifier<=1.0     ) ) hinvmass_mumu->Fill( invmass );
+	
+	//------ Rory's recipe ------
+	TVector3 k_hat = (pip_v4+pim_v4).Vect();
+	k_hat.SetMag(1.0);
+
+	// Rotation angle about y to get into y-z plane
+	double theta_yz = atan2(-k_hat.X(), k_hat.Z());
+	k_hat.RotateY(theta_yz);
+
+	// pi+ direction in rotated lab frame
+	TVector3 pip_hat = pip_v4.Vect();
+	pip_hat.RotateY(theta_yz);
+
+	// Angle to rotate k_hat into z-direction
+	double theta_x = atan2(k_hat.Y(), k_hat.Z());
+	k_hat.RotateX(theta_x);
+	pip_hat.RotateX(theta_x);
+	double psi = pip_hat.Phi();
+	if(psi<0.0)psi += TMath::TwoPi();
+	//----------------------------
+	
+	hpsi_nocut->Fill( psi );
+	if( (pimu_ML_classifier>=0.0      ) && (pimu_ML_classifier<model_cut) ) hpsi_pipi->Fill( psi );
+	if( (pimu_ML_classifier>=model_cut) && (pimu_ML_classifier<=1.0     ) ) hpsi_mumu->Fill( psi );
+  }
   
   
   return NOERROR;
