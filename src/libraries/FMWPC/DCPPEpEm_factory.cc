@@ -17,11 +17,19 @@ using namespace std;
 #include "DCPPEpEm_factory.h"
 using namespace jana;
 
+
+
 //------------------
 // init
 //------------------
 jerror_t DCPPEpEm_factory::init(void)
 {
+
+  vector< string > varsMinus( inputVarsMinus, inputVarsMinus + sizeof( inputVarsMinus )/sizeof( char* ) );
+  dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
+  vector< string > varsPlus( inputVarsPlus, inputVarsPlus + sizeof( inputVarsPlus )/sizeof( char* ) );
+  dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
+
   SPLIT_CUT=0.5;
   gPARMS->SetDefaultParameter("CPPAnalysis:SPLIT_CUT",SPLIT_CUT); 
   FCAL_THRESHOLD=0.1;
@@ -505,5 +513,25 @@ bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTime
   return true;   
 }
 
+double DCPPEpEm_factory::getEPIClassifierMinus(double EoverP_minus, double FCAL_DOCA_minus, double FCAL_E9E25_minus){
+  vector<double> mvaInputsMinus(3);
+  //  mvaInputsMinus[0] = (ElectronShower->getEnergy())/(em_v4.P()); 
+  //define EoverP_minus in loop. Call this function within loop.
+  //Classifier instantiated in constructor at top of the code (is this not the correct way to do it?)
+  mvaInputsMinus[0] = EoverP_minus;
+  mvaInputsMinus[1] = FCAL_DOCA_minus;
+  mvaInputsMinus[2] = FCAL_E9E25_minus;
+  double epiMVAminus = dEPIClassifierMinus->GetMvaValue( mvaInputsMinus );
+  return epiMVAminus;
+}
 
+
+double DCPPEpEm_factory::getEPIClassifierPlus(double EoverP_plus, double FCAL_DOCA_plus, double FCAL_E9E25_plus){
+  vector<double> mvaInputsPlus(3);
+  mvaInputsPlus[0] = EoverP_plus;
+  mvaInputsPlus[1] = FCAL_DOCA_plus;
+  mvaInputsPlus[2] = FCAL_E9E25_plus;
+  double epiMVAplus = dEPIClassifierPlus->GetMvaValue( mvaInputsPlus );
+  return epiMVAplus;
+}
 
