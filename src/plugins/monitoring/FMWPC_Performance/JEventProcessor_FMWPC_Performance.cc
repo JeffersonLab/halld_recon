@@ -28,9 +28,35 @@ static TH1D *hinvmass_pipi;
 static TH1D *hinvmass_mumu;
 static TH1D *hpimu_ML_classifier;
 
+static TH1D *hpsi_nocut_rory;
+static TH1D *hpsi_pipi_rory;
+static TH1D *hpsi_mumu_rory;
+
 static TH1D *hpsi_nocut;
 static TH1D *hpsi_pipi;
 static TH1D *hpsi_mumu;
+
+static TH1D *hPhi_nocut;
+static TH1D *hPhi_pipi;
+static TH1D *hPhi_mumu;
+
+static TH1D *hphi_nocut;
+static TH1D *hphi_pipi;
+static TH1D *hphi_mumu;
+
+static TH1D *hCosTheta_nocut;
+static TH1D *hCosTheta_pipi;
+static TH1D *hCosTheta_mumu;
+
+static TH2D *hCosTheta_vs_psi_nocut;
+static TH2D *hCosTheta_vs_psi_pipi;
+static TH2D *hCosTheta_vs_psi_mumu;
+
+static TH2D *hphi_vs_Phi_nocut;
+static TH2D *hphi_vs_Phi_pipi;
+static TH2D *hphi_vs_Phi_mumu;
+
+static TH1D *hphiJT;
 
 
 // Routine used to create our JEventProcessor
@@ -99,6 +125,7 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
     hfmwpc_measured[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -72.5, 72.5);
   }	
 
+
   gDirectory->cd("/FMWPC_Performance");
 
   gDirectory->mkdir("Reconstructed")->cd();
@@ -110,10 +137,37 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
   hinvmass_mumu->SetLineColor(kBlue);
   hinvmass_pipi->SetLineColor(kRed);
   
-  hpsi_nocut = new TH1D("hpsi_nocut", "#psi;#psi (radians)", 200, -0.01, 6.4);
-  hpsi_pipi = new TH1D("hpsi_pipi", "#psi;#psi (radians)", 200, -0.01, 6.4);
-  hpsi_mumu = new TH1D("hpsi_mumu", "#psi;#psi (radians)", 200, -0.01, 6.4);
+  hpsi_nocut_rory = new TH1D("hpsi_nocut_rory", "#psi;#psi (radians)", 200, -0.01, 6.4);
+  hpsi_pipi_rory = new TH1D("hpsi_pipi_rory", "#psi;#psi (radians)", 200, -0.01, 6.4);
+  hpsi_mumu_rory = new TH1D("hpsi_mumu_rory", "#psi;#psi (radians)", 200, -0.01, 6.4);
 
+  hpsi_nocut = new TH1D("hpsi_nocut", "#psi;#psi (degrees)", 180,-180,180);
+  hpsi_pipi = new TH1D("hpsi_pipi", ";#psi;#psi (degrees)", 180,-180,180);
+  hpsi_mumu = new TH1D("hpsi_mumu", "#psi;#psi (degrees)", 180,-180,180);
+
+  hPhi_nocut =  new TH1D("hPhi_nocut", "#Phi ;#Phi (degrees)", 180,-180,180);
+  hPhi_pipi = new TH1D("hPhi_pipi", "#Phi ;#Phi (degrees)", 180,-180,180);
+  hPhi_mumu = new TH1D("hPhi_mumu", "#Phi ;#Phi (degrees)", 180,-180,180);
+
+  hphi_nocut = new TH1D("hphi_nocut", "#phi ;#phi (degrees)", 180,-180,180);
+  hphi_pipi = new TH1D("hphi_pipi", "#phi ;#phi (degrees)", 180,-180,180);
+  hphi_mumu = new TH1D("hphi_mumu", "#phi ;#phi (degrees)", 180,-180,180);
+
+  hCosTheta_nocut = new TH1D("hCosTheta_nocut", "Cos#Theta ;Cos#Theta", 100, -1, 1);
+  hCosTheta_pipi = new TH1D("hCostTheta_pipi", "Cos#Theta ;Cos#Theta", 100, -1, 1);
+  hCosTheta_mumu = new TH1D("hCostTheta_mumu", "Cos#Theta ;Cos#Theta", 100, -1, 1);
+
+  hCosTheta_vs_psi_nocut = new TH2D("hCosTheta_vs_psi_nocut", "#Cos#Theta vs #psi ;#psi (degrees) ;Cos#Theta", 180, -180., 180, 100, -1., 1.);
+  hCosTheta_vs_psi_pipi = new TH2D("hCosTheta_vs_psi_pipi", "#Cos#Theta vs #psi ;#psi (degrees) ;Cos#Theta", 180, -180., 180, 100, -1., 1.);
+  hCosTheta_vs_psi_mumu = new TH2D("hCosTheta_vs_psi_mumu", "#Cos#Theta vs #psi ;#psi (degrees) ;Cos#Theta", 180, -180., 180, 100, -1., 1.);
+
+  hphi_vs_Phi_nocut = new TH2D("hphi_vs_Phi_nocut", "#phi vs #Phi ;#Phi ;#phi", 90, -180, 180, 90, -180, 180); 
+  hphi_vs_Phi_pipi = new TH2D("hphi_vs_Phi_pipi", "#phi vs #Phi ;#Phi ;#phi", 90, -180, 180, 90,-180, 180);
+  hphi_vs_Phi_mumu = new TH2D("hphi_vs_Phi_mumu", "#phi vs #Phi ;#Phi ;#phi", 90, -180, 180, 90,-180, 180);
+
+  hphiJT = new TH1D("hphiJT", "#vec{J}_{T}.#phi() ;#phi (degrees)", 90, -180, 180);
+  
+   
   main->cd();
   
   return NOERROR;
@@ -206,14 +260,18 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
   for( auto cppepem : locCPPEpEms ){
   	auto &pip_v4 = cppepem->pip_v4;
   	auto &pim_v4 = cppepem->pim_v4;
-  	auto invmass = 1E3*(pip_v4 + pim_v4).M(); // in MeV !
-	auto &pimu_ML_classifier = cppepem->pimu_ML_classifier;
-	hinvmass_nocut->Fill( invmass );
+	auto &Ebeam = cppepem->Ebeam;
+	auto &weight = cppepem->weight;
+	
+	DLorentzVector Pb208Target, locMissingPb208P4, locBeamP4;
+	Pb208Target.SetXYZM(0,0,0,193.750748);
+	locBeamP4.SetXYZM(0,0,Ebeam,0);
+	locMissingPb208P4 = locBeamP4 + Pb208Target - pim_v4 - pip_v4;
 
+        auto invmass = 1E3*(pip_v4 + pim_v4).M(); // in MeV !
+	auto &pimu_ML_classifier = cppepem->pimu_ML_classifier;
 	double model_cut = 0.5;
-	hpimu_ML_classifier->Fill( pimu_ML_classifier );
-	if( (pimu_ML_classifier>=0.0      ) && (pimu_ML_classifier<model_cut) ) hinvmass_pipi->Fill( invmass );
-	if( (pimu_ML_classifier>=model_cut) && (pimu_ML_classifier<=1.0     ) ) hinvmass_mumu->Fill( invmass );
+
 	
 	//------ Rory's recipe ------
 	TVector3 k_hat = (pip_v4+pim_v4).Vect();
@@ -231,13 +289,97 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	double theta_x = atan2(k_hat.Y(), k_hat.Z());
 	k_hat.RotateX(theta_x);
 	pip_hat.RotateX(theta_x);
-	double psi = pip_hat.Phi();
-	if(psi<0.0)psi += TMath::TwoPi();
+	double psi_rory = pip_hat.Phi();
+	if(psi_rory<0.0)psi_rory += TMath::TwoPi();
 	//----------------------------
+
+
+	//------- rho study recipe --------
+	TLorentzRotation resonanceBoost2( -(pip_v4 + pim_v4).BoostVector() );   // boost into 2pi frame                                                     
+	TLorentzVector beam_res = resonanceBoost2 * locBeamP4;
+	TLorentzVector recoil_res = resonanceBoost2 * locMissingPb208P4;
+	TLorentzVector p1_res = resonanceBoost2 * pip_v4;
+	TLorentzVector p2_res = resonanceBoost2 * pim_v4;
+	double phipol = 0;
+	TVector3 eps(cos(phipol), sin(phipol), 0.0);
+	TVector3 y = (locBeamP4.Vect().Unit().Cross(-locMissingPb208P4.Vect().Unit())).Unit();
+	// choose helicity frame: z-axis opposite recoil lead in rho rest frame 
+	TVector3 z = -1. * recoil_res.Vect().Unit();
+	TVector3 x = y.Cross(z).Unit();
+
+	TVector3 angles( (p1_res.Vect()).Dot(x),
+			    (p1_res.Vect()).Dot(y),
+			    (p1_res.Vect()).Dot(z) );
+
+	double CosTheta = angles.CosTheta();
+	double phi = angles.Phi();
+	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
+	double psi = Phi - phi;
+	if(psi < -3.14159) psi += 2*3.14159;
+	if(psi > 3.14159) psi -= 2*3.14159;
+	//---------------------------------
 	
-	hpsi_nocut->Fill( psi );
-	if( (pimu_ML_classifier>=0.0      ) && (pimu_ML_classifier<model_cut) ) hpsi_pipi->Fill( psi );
-	if( (pimu_ML_classifier>=model_cut) && (pimu_ML_classifier<=1.0     ) ) hpsi_mumu->Fill( psi );
+	/*
+	  //can uncomment out once e/pi classifier is properly implemented (if this is something we want as a monitoring plot at all...)
+	//---- Polarization observable from e+ e-
+	auto &ep_v4 = cppepem->ep_v4;
+	auto &em_v4 = cppepem->em_v4;
+	double ep_v3mag = ep_v4.Vect().Mag(); //sqrt(p1.X()*p1.X() + p1.Y()*p1.Y() + p1.Z()*p1.Z());
+	double em_v3mag = em_v4.Vect().Mag(); 
+	double JTx = ep_v4.X() * 2*em_v4.E()/(ep_v4.E() - ep_v3mag * cos(ep_v4.Theta()))  +
+	             em_v4.X() * 2*ep_v4.E()/(em_v4.E() - em_v3mag * cos(em_v4.Theta()));
+
+	double JTy = ep_v4.Y() * 2*em_v4.E()/(ep_v4.E() - ep_v3mag * cos(ep_v4.Theta()))  +
+	             em_v4.Y() * 2*ep_v4.E()/(em_v4.E() - em_v3mag * cos(em_v4.Theta()));
+
+        double Jphi = atan2(JTy, JTx)*180/acos(-1);
+	
+	
+	//if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
+	  // hphiJT->Fill(Jphi, weight);
+	//}
+
+	*/
+        
+
+
+	//------- no MVA cut histograms ---------
+	hinvmass_nocut->Fill( invmass, weight );
+	hpimu_ML_classifier->Fill( pimu_ML_classifier );
+
+	hpsi_nocut_rory->Fill( psi_rory );
+	hpsi_nocut->Fill(psi*TMath::RadToDeg(), weight);
+	hPhi_nocut->Fill(Phi*TMath::RadToDeg(), weight);
+	hphi_nocut->Fill(phi*TMath::RadToDeg(), weight);
+	hCosTheta_nocut->Fill(CosTheta, weight);	
+	hCosTheta_vs_psi_nocut->Fill(psi*TMath::RadToDeg(), CosTheta);
+	hphi_vs_Phi_nocut->Fill(Phi*TMath::RadToDeg(), phi*TMath::RadToDeg());
+
+
+	//------- pion selection -------
+	if( (pimu_ML_classifier>=0.0      ) && (pimu_ML_classifier<model_cut) )
+	  {
+	    hinvmass_pipi->Fill( invmass, weight );
+	    hpsi_pipi_rory->Fill( psi_rory );
+	    hpsi_pipi->Fill(psi*TMath::RadToDeg(), weight);
+	    hPhi_pipi->Fill(Phi*TMath::RadToDeg(), weight);
+	    hphi_pipi->Fill(phi*TMath::RadToDeg(), weight);
+	    hCosTheta_pipi->Fill(CosTheta,weight);
+	    hCosTheta_vs_psi_pipi->Fill(psi*TMath::RadToDeg(), CosTheta);
+	    hphi_vs_Phi_pipi->Fill(Phi*TMath::RadToDeg(), phi*TMath::RadToDeg());
+	  }
+
+	//------- muon selection -------
+	if( (pimu_ML_classifier>=model_cut) && (pimu_ML_classifier<=1.0     ) )
+	  {
+	    hinvmass_mumu->Fill( invmass, weight );
+	    hpsi_mumu_rory->Fill( psi_rory );
+	    hpsi_mumu->Fill(psi*TMath::RadToDeg(), weight);
+	    hPhi_mumu->Fill(Phi*TMath::RadToDeg(), weight);
+	    hphi_mumu->Fill(phi*TMath::RadToDeg(), weight);
+	    hCosTheta_mumu->Fill(CosTheta,weight);
+	    hCosTheta_vs_psi_mumu->Fill(psi*TMath::RadToDeg(), CosTheta);
+	  }
   }
   
   
