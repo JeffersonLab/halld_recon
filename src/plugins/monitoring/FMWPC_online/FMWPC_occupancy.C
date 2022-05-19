@@ -107,6 +107,19 @@
 		fmwpc_occ_layer_6->Draw();
 	}
 
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 5E5;
+		if( Nevents >= min_events ) {
+			cout << "FMWPC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("FMWPC_occupancy", 0);
+			rs_ResetAllMacroHistos("//FMWPC_occupancy");
+		}
+	}
+#endif
+
 }
 
 
