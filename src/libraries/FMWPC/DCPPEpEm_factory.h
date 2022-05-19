@@ -29,10 +29,16 @@
 #include <FMWPC/DFMWPCMatchedTrack.h>
 #include <FMWPC/DFMWPCHit.h>
 
+
+class ReadMLPMinus;
+class ReadMLPPlus;
+
 class DCPPEpEm_factory:public jana::JFactory<DCPPEpEm>{
 public:
-DCPPEpEm_factory(){};
-~DCPPEpEm_factory(){};
+DCPPEpEm_factory(){
+
+};
+ ~DCPPEpEm_factory(){};
 
 private:
 jerror_t init(void);						///< Called once at program start.
@@ -63,6 +69,13 @@ std::unique_ptr<tflite::Interpreter>     pimu_interpreter;
 float *pimu_input  = nullptr;
 float *pimu_output = nullptr;
 #endif // HAVE_TENSORFLOWLITE
+
+ ReadMLPMinus* dEPIClassifierMinus;
+ ReadMLPPlus* dEPIClassifierPlus;
+ const char* inputVarsMinus[3] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
+ const char* inputVarsPlus[3] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
+ double getEPIClassifierMinus(double EoverP_minus, double FCAL_DOCA_minus, double FCAL_E9E25_minus);
+ double getEPIClassifierPlus(double EoverP_plus, double FCAL_DOCA_plus, double FCAL_E9E25_plus);
 
 };
 
