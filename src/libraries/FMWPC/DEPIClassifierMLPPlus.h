@@ -148,19 +148,19 @@ class IClassifierReader {
 
  public:
 
-   // constructor
-   IClassifierReader() : fStatusIsClean( true ) {}
-   virtual ~IClassifierReader() {}
+  // constructor
+ IClassifierReader() : fStatusIsClean( true ) {}
+  virtual ~IClassifierReader() {}
 
-   // return classifier response
-   virtual double GetMvaValue( const std::vector<double>& inputValues ) const = 0;
+  // return classifier response
+  virtual double GetMvaValue( const std::vector<double>& inputValues ) const = 0;
 
-   // returns classifier status
-   bool IsStatusClean() const { return fStatusIsClean; }
+  // returns classifier status
+  bool IsStatusClean() const { return fStatusIsClean; }
 
  protected:
 
-   bool fStatusIsClean;
+  bool fStatusIsClean;
 };
 
 #endif
@@ -169,214 +169,214 @@ class ReadMLPPlus : public IClassifierReader {
 
  public:
 
-   // constructor
-   ReadMLPPlus( std::vector<std::string>& theInputVars )
-      : IClassifierReader(),
-        fClassName( "ReadMLPPlus" ),
-        fNvars( 3 )
-   {
-      // the training input variables
-      const char* inputVars[] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
+  // constructor
+  ReadMLPPlus( std::vector<std::string>& theInputVars )
+    : IClassifierReader(),
+    fClassName( "ReadMLPPlus" ),
+    fNvars( 3 )
+      {
+	// the training input variables
+	const char* inputVars[] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
 
-      // sanity checks
-      if (theInputVars.size() <= 0) {
-         std::cout << "Problem in class \"" << fClassName << "\": empty input vector" << std::endl;
-         fStatusIsClean = false;
-      }
+	// sanity checks
+	if (theInputVars.size() <= 0) {
+	  std::cout << "Problem in class \"" << fClassName << "\": empty input vector" << std::endl;
+	  fStatusIsClean = false;
+	}
 
-      if (theInputVars.size() != fNvars) {
-         std::cout << "Problem in class \"" << fClassName << "\": mismatch in number of input values: "
-                   << theInputVars.size() << " != " << fNvars << std::endl;
-         fStatusIsClean = false;
-      }
+	if (theInputVars.size() != fNvars) {
+	  std::cout << "Problem in class \"" << fClassName << "\": mismatch in number of input values: "
+		    << theInputVars.size() << " != " << fNvars << std::endl;
+	  fStatusIsClean = false;
+	}
 
-      // validate input variables
-      for (size_t ivar = 0; ivar < theInputVars.size(); ivar++) {
-         if (theInputVars[ivar] != inputVars[ivar]) {
-            std::cout << "Problem in class \"" << fClassName << "\": mismatch in input variable names" << std::endl
+	// validate input variables
+	for (size_t ivar = 0; ivar < theInputVars.size(); ivar++) {
+	  if (theInputVars[ivar] != inputVars[ivar]) {
+	    std::cout << "Problem in class \"" << fClassName << "\": mismatch in input variable names" << std::endl
                       << " for variable [" << ivar << "]: " << theInputVars[ivar].c_str() << " != " << inputVars[ivar] << std::endl;
             fStatusIsClean = false;
-         }
+	  }
+	}
+
+	// initialize min and max vectors (for normalisation)
+	fVmin[0] = -1;
+	fVmax[0] = 1;
+	fVmin[1] = -1;
+	fVmax[1] = 1;
+	fVmin[2] = -1;
+	fVmax[2] = 1;
+
+	// initialize input variable types
+	fType[0] = 'F';
+	fType[1] = 'F';
+	fType[2] = 'F';
+
+	// initialize constants
+	Initialize();
+
+	// initialize transformation
+	InitTransform();
       }
 
-      // initialize min and max vectors (for normalisation)
-      fVmin[0] = -1;
-      fVmax[0] = 1;
-      fVmin[1] = -1;
-      fVmax[1] = 1;
-      fVmin[2] = -1;
-      fVmax[2] = 1;
+  // destructor
+  virtual ~ReadMLPPlus() {
+    Clear(); // method-specific
+  }
 
-      // initialize input variable types
-      fType[0] = 'F';
-      fType[1] = 'F';
-      fType[2] = 'F';
-
-      // initialize constants
-      Initialize();
-
-      // initialize transformation
-      InitTransform();
-   }
-
-   // destructor
-   virtual ~ReadMLPPlus() {
-      Clear(); // method-specific
-   }
-
-   // the classifier response
-   // "inputValues" is a vector of input values in the same order as the
-   // variables given to the constructor
-   double GetMvaValue( const std::vector<double>& inputValues ) const override;
+  // the classifier response
+  // "inputValues" is a vector of input values in the same order as the
+  // variables given to the constructor
+  double GetMvaValue( const std::vector<double>& inputValues ) const override;
 
  private:
 
-   // method-specific destructor
-   void Clear();
+  // method-specific destructor
+  void Clear();
 
-   // input variable transformation
+  // input variable transformation
 
-   double fOff_1[3][3];
-   double fScal_1[3][3];
-   void InitTransform_1();
-   void Transform_1( std::vector<double> & iv, int sigOrBgd ) const;
-   void InitTransform();
-   void Transform( std::vector<double> & iv, int sigOrBgd ) const;
+  double fOff_1[3][3];
+  double fScal_1[3][3];
+  void InitTransform_1();
+  void Transform_1( std::vector<double> & iv, int sigOrBgd ) const;
+  void InitTransform();
+  void Transform( std::vector<double> & iv, int sigOrBgd ) const;
 
-   // common member variables
-   const char* fClassName;
+  // common member variables
+  const char* fClassName;
 
-   const size_t fNvars;
-   size_t GetNvar()           const { return fNvars; }
-   char   GetType( int ivar ) const { return fType[ivar]; }
+  const size_t fNvars;
+  size_t GetNvar()           const { return fNvars; }
+  char   GetType( int ivar ) const { return fType[ivar]; }
 
-   // normalisation of input variables
-   double fVmin[3];
-   double fVmax[3];
-   double NormVariable( double x, double xmin, double xmax ) const {
-      // normalise to output range: [-1, 1]
-      return 2*(x - xmin)/(xmax - xmin) - 1.0;
-   }
+  // normalisation of input variables
+  double fVmin[3];
+  double fVmax[3];
+  double NormVariable( double x, double xmin, double xmax ) const {
+    // normalise to output range: [-1, 1]
+    return 2*(x - xmin)/(xmax - xmin) - 1.0;
+  }
 
-   // type of input variable: 'F' or 'I'
-   char   fType[3];
+  // type of input variable: 'F' or 'I'
+  char   fType[3];
 
-   // initialize internal variables
-   void Initialize();
-   double GetMvaValue__( const std::vector<double>& inputValues ) const;
+  // initialize internal variables
+  void Initialize();
+  double GetMvaValue__( const std::vector<double>& inputValues ) const;
 
-   // private members (method specific)
+  // private members (method specific)
 
-   double ActivationFnc(double x) const;
-   double OutputActivationFnc(double x) const;
+  double ActivationFnc(double x) const;
+  double OutputActivationFnc(double x) const;
 
-   double fWeightMatrix0to1[9][4];   // weight matrix from layer 0 to 1
-   double fWeightMatrix1to2[1][9];   // weight matrix from layer 1 to 2
+  double fWeightMatrix0to1[9][4];   // weight matrix from layer 0 to 1
+  double fWeightMatrix1to2[1][9];   // weight matrix from layer 1 to 2
 
 };
 
 inline void ReadMLPPlus::Initialize()
 {
-   // build network structure
-   // weight matrix from layer 0 to 1
-   fWeightMatrix0to1[0][0] = -2.08060659768941;
-   fWeightMatrix0to1[1][0] = 10.4423631118401;
-   fWeightMatrix0to1[2][0] = 0.941660483693641;
-   fWeightMatrix0to1[3][0] = 4.2143819709242;
-   fWeightMatrix0to1[4][0] = -20.2224902395566;
-   fWeightMatrix0to1[5][0] = -1.5955928360986;
-   fWeightMatrix0to1[6][0] = -1.16226384366091;
-   fWeightMatrix0to1[7][0] = 18.8432980236022;
-   fWeightMatrix0to1[0][1] = -1.73118055319759;
-   fWeightMatrix0to1[1][1] = -2.47210889880549;
-   fWeightMatrix0to1[2][1] = -1.52897425507095;
-   fWeightMatrix0to1[3][1] = -0.55964466964922;
-   fWeightMatrix0to1[4][1] = 9.77474083855576;
-   fWeightMatrix0to1[5][1] = -0.814888310064462;
-   fWeightMatrix0to1[6][1] = -0.446693279414019;
-   fWeightMatrix0to1[7][1] = -9.65235931090619;
-   fWeightMatrix0to1[0][2] = 0.27812538231478;
-   fWeightMatrix0to1[1][2] = 8.0151085106482;
-   fWeightMatrix0to1[2][2] = 0.103673778921681;
-   fWeightMatrix0to1[3][2] = 0.271171405754352;
-   fWeightMatrix0to1[4][2] = 1.28343415529658;
-   fWeightMatrix0to1[5][2] = -0.405049614703418;
-   fWeightMatrix0to1[6][2] = 0.556378416252582;
-   fWeightMatrix0to1[7][2] = -1.5329403741349;
-   fWeightMatrix0to1[0][3] = -0.714161907040034;
-   fWeightMatrix0to1[1][3] = -0.0621970258479199;
-   fWeightMatrix0to1[2][3] = 1.42485718010522;
-   fWeightMatrix0to1[3][3] = -1.16442213027241;
-   fWeightMatrix0to1[4][3] = -9.85324063130186;
-   fWeightMatrix0to1[5][3] = 0.450258980738719;
-   fWeightMatrix0to1[6][3] = 0.965564172528727;
-   fWeightMatrix0to1[7][3] = 9.21657302680691;
-   // weight matrix from layer 1 to 2
-   fWeightMatrix1to2[0][0] = -1.49698575061048;
-   fWeightMatrix1to2[0][1] = 2.77510315646445;
-   fWeightMatrix1to2[0][2] = -0.869033938335677;
-   fWeightMatrix1to2[0][3] = 1.70010037497054;
-   fWeightMatrix1to2[0][4] = -5.38518921976457;
-   fWeightMatrix1to2[0][5] = 0.0660990172824434;
-   fWeightMatrix1to2[0][6] = -2.70372625564066;
-   fWeightMatrix1to2[0][7] = 5.23369359336179;
-   fWeightMatrix1to2[0][8] = -0.430760507845041;
+  // build network structure
+  // weight matrix from layer 0 to 1
+  fWeightMatrix0to1[0][0] = -2.08060659768941;
+  fWeightMatrix0to1[1][0] = 10.4423631118401;
+  fWeightMatrix0to1[2][0] = 0.941660483693641;
+  fWeightMatrix0to1[3][0] = 4.2143819709242;
+  fWeightMatrix0to1[4][0] = -20.2224902395566;
+  fWeightMatrix0to1[5][0] = -1.5955928360986;
+  fWeightMatrix0to1[6][0] = -1.16226384366091;
+  fWeightMatrix0to1[7][0] = 18.8432980236022;
+  fWeightMatrix0to1[0][1] = -1.73118055319759;
+  fWeightMatrix0to1[1][1] = -2.47210889880549;
+  fWeightMatrix0to1[2][1] = -1.52897425507095;
+  fWeightMatrix0to1[3][1] = -0.55964466964922;
+  fWeightMatrix0to1[4][1] = 9.77474083855576;
+  fWeightMatrix0to1[5][1] = -0.814888310064462;
+  fWeightMatrix0to1[6][1] = -0.446693279414019;
+  fWeightMatrix0to1[7][1] = -9.65235931090619;
+  fWeightMatrix0to1[0][2] = 0.27812538231478;
+  fWeightMatrix0to1[1][2] = 8.0151085106482;
+  fWeightMatrix0to1[2][2] = 0.103673778921681;
+  fWeightMatrix0to1[3][2] = 0.271171405754352;
+  fWeightMatrix0to1[4][2] = 1.28343415529658;
+  fWeightMatrix0to1[5][2] = -0.405049614703418;
+  fWeightMatrix0to1[6][2] = 0.556378416252582;
+  fWeightMatrix0to1[7][2] = -1.5329403741349;
+  fWeightMatrix0to1[0][3] = -0.714161907040034;
+  fWeightMatrix0to1[1][3] = -0.0621970258479199;
+  fWeightMatrix0to1[2][3] = 1.42485718010522;
+  fWeightMatrix0to1[3][3] = -1.16442213027241;
+  fWeightMatrix0to1[4][3] = -9.85324063130186;
+  fWeightMatrix0to1[5][3] = 0.450258980738719;
+  fWeightMatrix0to1[6][3] = 0.965564172528727;
+  fWeightMatrix0to1[7][3] = 9.21657302680691;
+  // weight matrix from layer 1 to 2
+  fWeightMatrix1to2[0][0] = -1.49698575061048;
+  fWeightMatrix1to2[0][1] = 2.77510315646445;
+  fWeightMatrix1to2[0][2] = -0.869033938335677;
+  fWeightMatrix1to2[0][3] = 1.70010037497054;
+  fWeightMatrix1to2[0][4] = -5.38518921976457;
+  fWeightMatrix1to2[0][5] = 0.0660990172824434;
+  fWeightMatrix1to2[0][6] = -2.70372625564066;
+  fWeightMatrix1to2[0][7] = 5.23369359336179;
+  fWeightMatrix1to2[0][8] = -0.430760507845041;
 }
 
 inline double ReadMLPPlus::GetMvaValue__( const std::vector<double>& inputValues ) const
 {
-   if (inputValues.size() != (unsigned int)3) {
-      std::cout << "Input vector needs to be of size " << 3 << std::endl;
-      return 0;
-   }
+  if (inputValues.size() != (unsigned int)3) {
+    std::cout << "Input vector needs to be of size " << 3 << std::endl;
+    return 0;
+  }
 
-   std::array<double, 9> fWeights1 {{}};
-   std::array<double, 1> fWeights2 {{}};
-   fWeights1.back() = 1.;
+  std::array<double, 9> fWeights1 {{}};
+  std::array<double, 1> fWeights2 {{}};
+  fWeights1.back() = 1.;
 
-   // layer 0 to 1
-   for (int o=0; o<8; o++) {
-      std::array<double, 4> buffer; // no need to initialise
-      for (int i = 0; i<4 - 1; i++) {
-         buffer[i] = fWeightMatrix0to1[o][i] * inputValues[i];
-      } // loop over i
-      buffer.back() = fWeightMatrix0to1[o][3];
-      for (int i=0; i<4; i++) {
-         fWeights1[o] += buffer[i];
-      } // loop over i
-    } // loop over o
-   for (int o=0; o<8; o++) {
-      fWeights1[o] = ActivationFnc(fWeights1[o]);
-   } // loop over o
-   // layer 1 to 2
-   for (int o=0; o<1; o++) {
-      std::array<double, 9> buffer; // no need to initialise
-      for (int i=0; i<9; i++) {
-         buffer[i] = fWeightMatrix1to2[o][i] * fWeights1[i];
-      } // loop over i
-      for (int i=0; i<9; i++) {
-         fWeights2[o] += buffer[i];
-      } // loop over i
-    } // loop over o
-   for (int o=0; o<1; o++) {
-      fWeights2[o] = OutputActivationFnc(fWeights2[o]);
-   } // loop over o
+  // layer 0 to 1
+  for (int o=0; o<8; o++) {
+    std::array<double, 4> buffer; // no need to initialise
+    for (int i = 0; i<4 - 1; i++) {
+      buffer[i] = fWeightMatrix0to1[o][i] * inputValues[i];
+    } // loop over i
+    buffer.back() = fWeightMatrix0to1[o][3];
+    for (int i=0; i<4; i++) {
+      fWeights1[o] += buffer[i];
+    } // loop over i
+  } // loop over o
+  for (int o=0; o<8; o++) {
+    fWeights1[o] = ActivationFnc(fWeights1[o]);
+  } // loop over o
+  // layer 1 to 2
+  for (int o=0; o<1; o++) {
+    std::array<double, 9> buffer; // no need to initialise
+    for (int i=0; i<9; i++) {
+      buffer[i] = fWeightMatrix1to2[o][i] * fWeights1[i];
+    } // loop over i
+    for (int i=0; i<9; i++) {
+      fWeights2[o] += buffer[i];
+    } // loop over i
+  } // loop over o
+  for (int o=0; o<1; o++) {
+    fWeights2[o] = OutputActivationFnc(fWeights2[o]);
+  } // loop over o
 
-   return fWeights2[0];
+  return fWeights2[0];
 }
 
 double ReadMLPPlus::ActivationFnc(double x) const {
-   // fast hyperbolic tan approximation
-   if (x > 4.97) return 1;
-   if (x < -4.97) return -1;
-   float x2 = x * x;
-   float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
-   float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
-   return a / b;
+  // fast hyperbolic tan approximation
+  if (x > 4.97) return 1;
+  if (x < -4.97) return -1;
+  float x2 = x * x;
+  float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+  float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+  return a / b;
 }
 double ReadMLPPlus::OutputActivationFnc(double x) const {
-   // sigmoid
-   return 1.0/(1.0+exp(-x));
+  // sigmoid
+  return 1.0/(1.0+exp(-x));
 }
 
 // Clean up
@@ -385,114 +385,114 @@ inline void ReadMLPPlus::Clear()
 }
 inline double ReadMLPPlus::GetMvaValue( const std::vector<double>& inputValues ) const
 {
-   // classifier response value
-   double retval = 0;
+  // classifier response value
+  double retval = 0;
 
-   // classifier response, sanity check first
-   if (!IsStatusClean()) {
-      std::cout << "Problem in class \"" << fClassName << "\": cannot return classifier response"
-                << " because status is dirty" << std::endl;
-   }
-   else {
-         std::vector<double> iV(inputValues);
-         Transform( iV, -1 );
-         retval = GetMvaValue__( iV );
-   }
+  // classifier response, sanity check first
+  if (!IsStatusClean()) {
+    std::cout << "Problem in class \"" << fClassName << "\": cannot return classifier response"
+	      << " because status is dirty" << std::endl;
+  }
+  else {
+    std::vector<double> iV(inputValues);
+    Transform( iV, -1 );
+    retval = GetMvaValue__( iV );
+  }
 
-   return retval;
+  return retval;
 }
 
 //_______________________________________________________________________
 inline void ReadMLPPlus::InitTransform_1()
 {
-   double fMin_1[3][3];
-   double fMax_1[3][3];
-   // Normalization transformation, initialisation
-   fMin_1[0][0] = 0.543130040169;
-   fMax_1[0][0] = 12.2184658051;
-   fScal_1[0][0] = 2.0/(fMax_1[0][0]-fMin_1[0][0]);
-   fOff_1[0][0] = fMin_1[0][0]*fScal_1[0][0]+1.;
-   fMin_1[1][0] = 0;
-   fMax_1[1][0] = 3.84925508499;
-   fScal_1[1][0] = 2.0/(fMax_1[1][0]-fMin_1[1][0]);
-   fOff_1[1][0] = fMin_1[1][0]*fScal_1[1][0]+1.;
-   fMin_1[2][0] = 0;
-   fMax_1[2][0] = 12.2184658051;
-   fScal_1[2][0] = 2.0/(fMax_1[2][0]-fMin_1[2][0]);
-   fOff_1[2][0] = fMin_1[2][0]*fScal_1[2][0]+1.;
-   fMin_1[0][1] = 0.0169768221676;
-   fMax_1[0][1] = 3.1447467804;
-   fScal_1[0][1] = 2.0/(fMax_1[0][1]-fMin_1[0][1]);
-   fOff_1[0][1] = fMin_1[0][1]*fScal_1[0][1]+1.;
-   fMin_1[1][1] = 0.0219437051564;
-   fMax_1[1][1] = 999;
-   fScal_1[1][1] = 2.0/(fMax_1[1][1]-fMin_1[1][1]);
-   fOff_1[1][1] = fMin_1[1][1]*fScal_1[1][1]+1.;
-   fMin_1[2][1] = 0.0169768221676;
-   fMax_1[2][1] = 999;
-   fScal_1[2][1] = 2.0/(fMax_1[2][1]-fMin_1[2][1]);
-   fOff_1[2][1] = fMin_1[2][1]*fScal_1[2][1]+1.;
-   fMin_1[0][2] = 0.522525668144;
-   fMax_1[0][2] = 1;
-   fScal_1[0][2] = 2.0/(fMax_1[0][2]-fMin_1[0][2]);
-   fOff_1[0][2] = fMin_1[0][2]*fScal_1[0][2]+1.;
-   fMin_1[1][2] = 0;
-   fMax_1[1][2] = 1;
-   fScal_1[1][2] = 2.0/(fMax_1[1][2]-fMin_1[1][2]);
-   fOff_1[1][2] = fMin_1[1][2]*fScal_1[1][2]+1.;
-   fMin_1[2][2] = 0;
-   fMax_1[2][2] = 1;
-   fScal_1[2][2] = 2.0/(fMax_1[2][2]-fMin_1[2][2]);
-   fOff_1[2][2] = fMin_1[2][2]*fScal_1[2][2]+1.;
+  double fMin_1[3][3];
+  double fMax_1[3][3];
+  // Normalization transformation, initialisation
+  fMin_1[0][0] = 0.543130040169;
+  fMax_1[0][0] = 12.2184658051;
+  fScal_1[0][0] = 2.0/(fMax_1[0][0]-fMin_1[0][0]);
+  fOff_1[0][0] = fMin_1[0][0]*fScal_1[0][0]+1.;
+  fMin_1[1][0] = 0;
+  fMax_1[1][0] = 3.84925508499;
+  fScal_1[1][0] = 2.0/(fMax_1[1][0]-fMin_1[1][0]);
+  fOff_1[1][0] = fMin_1[1][0]*fScal_1[1][0]+1.;
+  fMin_1[2][0] = 0;
+  fMax_1[2][0] = 12.2184658051;
+  fScal_1[2][0] = 2.0/(fMax_1[2][0]-fMin_1[2][0]);
+  fOff_1[2][0] = fMin_1[2][0]*fScal_1[2][0]+1.;
+  fMin_1[0][1] = 0.0169768221676;
+  fMax_1[0][1] = 3.1447467804;
+  fScal_1[0][1] = 2.0/(fMax_1[0][1]-fMin_1[0][1]);
+  fOff_1[0][1] = fMin_1[0][1]*fScal_1[0][1]+1.;
+  fMin_1[1][1] = 0.0219437051564;
+  fMax_1[1][1] = 999;
+  fScal_1[1][1] = 2.0/(fMax_1[1][1]-fMin_1[1][1]);
+  fOff_1[1][1] = fMin_1[1][1]*fScal_1[1][1]+1.;
+  fMin_1[2][1] = 0.0169768221676;
+  fMax_1[2][1] = 999;
+  fScal_1[2][1] = 2.0/(fMax_1[2][1]-fMin_1[2][1]);
+  fOff_1[2][1] = fMin_1[2][1]*fScal_1[2][1]+1.;
+  fMin_1[0][2] = 0.522525668144;
+  fMax_1[0][2] = 1;
+  fScal_1[0][2] = 2.0/(fMax_1[0][2]-fMin_1[0][2]);
+  fOff_1[0][2] = fMin_1[0][2]*fScal_1[0][2]+1.;
+  fMin_1[1][2] = 0;
+  fMax_1[1][2] = 1;
+  fScal_1[1][2] = 2.0/(fMax_1[1][2]-fMin_1[1][2]);
+  fOff_1[1][2] = fMin_1[1][2]*fScal_1[1][2]+1.;
+  fMin_1[2][2] = 0;
+  fMax_1[2][2] = 1;
+  fScal_1[2][2] = 2.0/(fMax_1[2][2]-fMin_1[2][2]);
+  fOff_1[2][2] = fMin_1[2][2]*fScal_1[2][2]+1.;
 }
 
 //_______________________________________________________________________
 inline void ReadMLPPlus::Transform_1( std::vector<double>& iv, int cls) const
 {
-   // Normalization transformation
-   if (cls < 0 || cls > 2) {
-   if (2 > 1 ) cls = 2;
-      else cls = 2;
-   }
-   const int nVar = 3;
+  // Normalization transformation
+  if (cls < 0 || cls > 2) {
+    if (2 > 1 ) cls = 2;
+    else cls = 2;
+  }
+  const int nVar = 3;
 
-   // get indices of used variables
+  // get indices of used variables
 
-   // define the indices of the variables which are transformed by this transformation
-   static std::vector<int> indicesGet;
-   static std::vector<int> indicesPut;
+  // define the indices of the variables which are transformed by this transformation
+  static std::vector<int> indicesGet;
+  static std::vector<int> indicesPut;
 
-   if ( indicesGet.empty() ) {
-      indicesGet.reserve(fNvars);
-      indicesGet.push_back( 0);
-      indicesGet.push_back( 1);
-      indicesGet.push_back( 2);
-   }
-   if ( indicesPut.empty() ) {
-      indicesPut.reserve(fNvars);
-      indicesPut.push_back( 0);
-      indicesPut.push_back( 1);
-      indicesPut.push_back( 2);
-   }
+  if ( indicesGet.empty() ) {
+    indicesGet.reserve(fNvars);
+    indicesGet.push_back( 0);
+    indicesGet.push_back( 1);
+    indicesGet.push_back( 2);
+  }
+  if ( indicesPut.empty() ) {
+    indicesPut.reserve(fNvars);
+    indicesPut.push_back( 0);
+    indicesPut.push_back( 1);
+    indicesPut.push_back( 2);
+  }
 
-   static std::vector<double> dv;
-   dv.resize(nVar);
-   for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];
-   for (int ivar=0;ivar<3;ivar++) {
-      double offset = fOff_1[cls][ivar];
-      double scale  = fScal_1[cls][ivar];
-      iv[indicesPut.at(ivar)] = scale*dv[ivar]-offset;
-   }
+  static std::vector<double> dv;
+  dv.resize(nVar);
+  for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];
+  for (int ivar=0;ivar<3;ivar++) {
+    double offset = fOff_1[cls][ivar];
+    double scale  = fScal_1[cls][ivar];
+    iv[indicesPut.at(ivar)] = scale*dv[ivar]-offset;
+  }
 }
 
 //_______________________________________________________________________
 inline void ReadMLPPlus::InitTransform()
 {
-   InitTransform_1();
+  InitTransform_1();
 }
 
 //_______________________________________________________________________
 inline void ReadMLPPlus::Transform( std::vector<double>& iv, int sigOrBgd ) const
 {
-   Transform_1( iv, sigOrBgd );
+  Transform_1( iv, sigOrBgd );
 }

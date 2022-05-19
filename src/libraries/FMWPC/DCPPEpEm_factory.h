@@ -29,8 +29,9 @@
 #include <FMWPC/DFMWPCMatchedTrack.h>
 #include <FMWPC/DFMWPCHit.h>
 
-#include "DEPIClassifierMLPMinus.h"
-#include "DEPIClassifierMLPPlus.h"
+
+class ReadMLPMinus;
+class ReadMLPPlus;
 
 class DCPPEpEm_factory:public jana::JFactory<DCPPEpEm>{
 public:
@@ -75,6 +76,7 @@ float *pimu_output = nullptr;
  const char* inputVarsPlus[3] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
  double getEPIClassifierMinus(double EoverP_minus, double FCAL_DOCA_minus, double FCAL_E9E25_minus);
  double getEPIClassifierPlus(double EoverP_plus, double FCAL_DOCA_plus, double FCAL_E9E25_plus);
+
 };
 
 #endif // _DCPPEpEm_factory_

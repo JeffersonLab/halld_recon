@@ -55,7 +55,6 @@ CalculateErrors: "False" [Calculates inverse Hessian matrix at the end of the tr
 WeightRange: "1.000000e+00" [Take the events for the estimator calculations from small deviations from the desired value to large deviations only over the weight range]
 ##
 
-
 #VAR -*-*-*-*-*-*-*-*-*-*-*-* variables *-*-*-*-*-*-*-*-*-*-*-*-
 
 NVar 3
@@ -146,235 +145,233 @@ class IClassifierReader {
 
  public:
 
-   // constructor
-   IClassifierReader() : fStatusIsClean( true ) {}
-   virtual ~IClassifierReader() {}
+  // constructor
+ IClassifierReader() : fStatusIsClean( true ) {}
+  virtual ~IClassifierReader() {}
 
-   // return classifier response
-   virtual double GetMvaValue( const std::vector<double>& inputValues ) const = 0;
+  // return classifier response
+  virtual double GetMvaValue( const std::vector<double>& inputValues ) const = 0;
 
-   // returns classifier status
-   bool IsStatusClean() const { return fStatusIsClean; }
+  // returns classifier status
+  bool IsStatusClean() const { return fStatusIsClean; }
 
  protected:
 
-   bool fStatusIsClean;
+  bool fStatusIsClean;
 };
 
 #endif
-
 class ReadMLPMinus : public IClassifierReader {
 
  public:
 
-   // constructor
-   ReadMLPMinus( std::vector<std::string>& theInputVars )
-      : IClassifierReader(),
-        fClassName( "ReadMLPMinus" ),
-        fNvars( 3 )
-   {
-      // the training input variables
-      const char* inputVars[] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
+  // constructor
+  ReadMLPMinus( std::vector<std::string>& theInputVars )
+    : IClassifierReader(),
+    fClassName( "ReadMLPMinus" ),
+    fNvars( 3 )
+      {
+	// the training input variables
+	const char* inputVars[] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
 
-      // sanity checks
-      if (theInputVars.size() <= 0) {
-         std::cout << "Problem in class \"" << fClassName << "\": empty input vector" << std::endl;
-         fStatusIsClean = false;
-      }
+	// sanity checks
+	if (theInputVars.size() <= 0) {
+	  std::cout << "Problem in class \"" << fClassName << "\": empty input vector" << std::endl;
+	  fStatusIsClean = false;
+	}
 
-      if (theInputVars.size() != fNvars) {
-         std::cout << "Problem in class \"" << fClassName << "\": mismatch in number of input values: "
-                   << theInputVars.size() << " != " << fNvars << std::endl;
-         fStatusIsClean = false;
-      }
+	if (theInputVars.size() != fNvars) {
+	  std::cout << "Problem in class \"" << fClassName << "\": mismatch in number of input values: "
+		    << theInputVars.size() << " != " << fNvars << std::endl;
+	  fStatusIsClean = false;
+	}
 
-      // validate input variables
-      for (size_t ivar = 0; ivar < theInputVars.size(); ivar++) {
-         if (theInputVars[ivar] != inputVars[ivar]) {
-            std::cout << "Problem in class \"" << fClassName << "\": mismatch in input variable names" << std::endl
+	// validate input variables
+	for (size_t ivar = 0; ivar < theInputVars.size(); ivar++) {
+	  if (theInputVars[ivar] != inputVars[ivar]) {
+	    std::cout << "Problem in class \"" << fClassName << "\": mismatch in input variable names" << std::endl
                       << " for variable [" << ivar << "]: " << theInputVars[ivar].c_str() << " != " << inputVars[ivar] << std::endl;
             fStatusIsClean = false;
-         }
+	  }
+	}
+
+	// initialize min and max vectors (for normalisation)
+	fVmin[0] = -1;
+	fVmax[0] = 1;
+	fVmin[1] = -1;
+	fVmax[1] = 0.99999988079071;
+	fVmin[2] = -1;
+	fVmax[2] = 1;
+
+	// initialize input variable types
+	fType[0] = 'F';
+	fType[1] = 'F';
+	fType[2] = 'F';
+
+	// initialize constants
+	Initialize();
+
+	// initialize transformation
+	InitTransform();
       }
 
-      // initialize min and max vectors (for normalisation)
-      fVmin[0] = -1;
-      fVmax[0] = 1;
-      fVmin[1] = -1;
-      fVmax[1] = 0.99999988079071;
-      fVmin[2] = -1;
-      fVmax[2] = 1;
+  // destructor
+  virtual ~ReadMLPMinus() {
+    Clear(); // method-specific
+  }
 
-      // initialize input variable types
-      fType[0] = 'F';
-      fType[1] = 'F';
-      fType[2] = 'F';
-
-      // initialize constants
-      Initialize();
-
-      // initialize transformation
-      InitTransform();
-   }
-
-   // destructor
-   virtual ~ReadMLPMinus() {
-      Clear(); // method-specific
-   }
-
-   // the classifier response
-   // "inputValues" is a vector of input values in the same order as the
-   // variables given to the constructor
-   double GetMvaValue( const std::vector<double>& inputValues ) const override;
+  // the classifier response
+  // "inputValues" is a vector of input values in the same order as the
+  // variables given to the constructor
+  double GetMvaValue( const std::vector<double>& inputValues ) const override;
 
  private:
 
-   // method-specific destructor
-   void Clear();
+  // method-specific destructor
+  void Clear();
 
-   // input variable transformation
+  // input variable transformation
 
-   double fOff_1[3][3];
-   double fScal_1[3][3];
-   void InitTransform_1();
-   void Transform_1( std::vector<double> & iv, int sigOrBgd ) const;
-   void InitTransform();
-   void Transform( std::vector<double> & iv, int sigOrBgd ) const;
+  double fOff_1[3][3];
+  double fScal_1[3][3];
+  void InitTransform_1();
+  void Transform_1( std::vector<double> & iv, int sigOrBgd ) const;
+  void InitTransform();
+  void Transform( std::vector<double> & iv, int sigOrBgd ) const;
 
-   // common member variables
-   const char* fClassName;
+  // common member variables
+  const char* fClassName;
 
-   const size_t fNvars;
-   size_t GetNvar()           const { return fNvars; }
-   char   GetType( int ivar ) const { return fType[ivar]; }
+  const size_t fNvars;
+  size_t GetNvar()           const { return fNvars; }
+  char   GetType( int ivar ) const { return fType[ivar]; }
 
-   // normalisation of input variables
-   double fVmin[3];
-   double fVmax[3];
-   double NormVariable( double x, double xmin, double xmax ) const {
-      // normalise to output range: [-1, 1]
-      return 2*(x - xmin)/(xmax - xmin) - 1.0;
-   }
+  // normalisation of input variables
+  double fVmin[3];
+  double fVmax[3];
+  double NormVariable( double x, double xmin, double xmax ) const {
+    // normalise to output range: [-1, 1]
+    return 2*(x - xmin)/(xmax - xmin) - 1.0;
+  }
+  // type of input variable: 'F' or 'I'
+  char   fType[3];
 
-   // type of input variable: 'F' or 'I'
-   char   fType[3];
+  // initialize internal variables
+  void Initialize();
+  double GetMvaValue__( const std::vector<double>& inputValues ) const;
 
-   // initialize internal variables
-   void Initialize();
-   double GetMvaValue__( const std::vector<double>& inputValues ) const;
+  // private members (method specific)
 
-   // private members (method specific)
+  double ActivationFnc(double x) const;
+  double OutputActivationFnc(double x) const;
 
-   double ActivationFnc(double x) const;
-   double OutputActivationFnc(double x) const;
-
-   double fWeightMatrix0to1[9][4];   // weight matrix from layer 0 to 1
-   double fWeightMatrix1to2[1][9];   // weight matrix from layer 1 to 2
+  double fWeightMatrix0to1[9][4];   // weight matrix from layer 0 to 1
+  double fWeightMatrix1to2[1][9];   // weight matrix from layer 1 to 2
 
 };
 
 inline void ReadMLPMinus::Initialize()
 {
-   // build network structure
-   // weight matrix from layer 0 to 1
-   fWeightMatrix0to1[0][0] = -1.18823571687521;
-   fWeightMatrix0to1[1][0] = 12.0651512471318;
-   fWeightMatrix0to1[2][0] = 0.72016334651328;
-   fWeightMatrix0to1[3][0] = 5.06434452992559;
-   fWeightMatrix0to1[4][0] = -24.1627785647897;
-   fWeightMatrix0to1[5][0] = -2.67916556059741;
-   fWeightMatrix0to1[6][0] = -0.123315564227041;
-   fWeightMatrix0to1[7][0] = 22.7356884121901;
-   fWeightMatrix0to1[0][1] = -2.2149927446738;
-   fWeightMatrix0to1[1][1] = -6.47373785472743;
-   fWeightMatrix0to1[2][1] = -1.53604599429525;
-   fWeightMatrix0to1[3][1] = -2.6015201810913;
-   fWeightMatrix0to1[4][1] = 11.2657608542095;
-   fWeightMatrix0to1[5][1] = -0.167718202272265;
-   fWeightMatrix0to1[6][1] = -0.833638886492201;
-   fWeightMatrix0to1[7][1] = -11.052248174505;
-   fWeightMatrix0to1[0][2] = 1.11833150108507;
-   fWeightMatrix0to1[1][2] = 1.84536900923381;
-   fWeightMatrix0to1[2][2] = 0.129891117047098;
-   fWeightMatrix0to1[3][2] = 0.811656785498521;
-   fWeightMatrix0to1[4][2] = -0.880354990015578;
-   fWeightMatrix0to1[5][2] = -1.57554260495044;
-   fWeightMatrix0to1[6][2] = 1.57378290191702;
-   fWeightMatrix0to1[7][2] = 0.602289617042502;
-   fWeightMatrix0to1[0][3] = -0.577185806326553;
-   fWeightMatrix0to1[1][3] = 3.74567215224631;
-   fWeightMatrix0to1[2][3] = 1.64519081003051;
-   fWeightMatrix0to1[3][3] = 0.70246234655876;
-   fWeightMatrix0to1[4][3] = -10.5941232408768;
-   fWeightMatrix0to1[5][3] = -0.473450459709862;
-   fWeightMatrix0to1[6][3] = 0.323087853755992;
-   fWeightMatrix0to1[7][3] = 9.90074496017678;
-   // weight matrix from layer 1 to 2
-   fWeightMatrix1to2[0][0] = -2.53374181503195;
-   fWeightMatrix1to2[0][1] = 2.29720936277301;
-   fWeightMatrix1to2[0][2] = -2.26804383342745;
-   fWeightMatrix1to2[0][3] = -0.652721723222071;
-   fWeightMatrix1to2[0][4] = -6.78038498079703;
-   fWeightMatrix1to2[0][5] = 2.11172370306038;
-   fWeightMatrix1to2[0][6] = -3.94034261913044;
-   fWeightMatrix1to2[0][7] = 6.40906629537685;
-   fWeightMatrix1to2[0][8] = -1.60535480993613;
+  // build network structure
+  // weight matrix from layer 0 to 1
+  fWeightMatrix0to1[0][0] = -1.18823571687521;
+  fWeightMatrix0to1[1][0] = 12.0651512471318;
+  fWeightMatrix0to1[2][0] = 0.72016334651328;
+  fWeightMatrix0to1[3][0] = 5.06434452992559;
+  fWeightMatrix0to1[4][0] = -24.1627785647897;
+  fWeightMatrix0to1[5][0] = -2.67916556059741;
+  fWeightMatrix0to1[6][0] = -0.123315564227041;
+  fWeightMatrix0to1[7][0] = 22.7356884121901;
+  fWeightMatrix0to1[0][1] = -2.2149927446738;
+  fWeightMatrix0to1[1][1] = -6.47373785472743;
+  fWeightMatrix0to1[2][1] = -1.53604599429525;
+  fWeightMatrix0to1[3][1] = -2.6015201810913;
+  fWeightMatrix0to1[4][1] = 11.2657608542095;
+  fWeightMatrix0to1[5][1] = -0.167718202272265;
+  fWeightMatrix0to1[6][1] = -0.833638886492201;
+  fWeightMatrix0to1[7][1] = -11.052248174505;
+  fWeightMatrix0to1[0][2] = 1.11833150108507;
+  fWeightMatrix0to1[1][2] = 1.84536900923381;
+  fWeightMatrix0to1[2][2] = 0.129891117047098;
+  fWeightMatrix0to1[3][2] = 0.811656785498521;
+  fWeightMatrix0to1[4][2] = -0.880354990015578;
+  fWeightMatrix0to1[5][2] = -1.57554260495044;
+  fWeightMatrix0to1[6][2] = 1.57378290191702;
+  fWeightMatrix0to1[7][2] = 0.602289617042502;
+  fWeightMatrix0to1[0][3] = -0.577185806326553;
+  fWeightMatrix0to1[1][3] = 3.74567215224631;
+  fWeightMatrix0to1[2][3] = 1.64519081003051;
+  fWeightMatrix0to1[3][3] = 0.70246234655876;
+  fWeightMatrix0to1[4][3] = -10.5941232408768;
+  fWeightMatrix0to1[5][3] = -0.473450459709862;
+  fWeightMatrix0to1[6][3] = 0.323087853755992;
+  fWeightMatrix0to1[7][3] = 9.90074496017678;
+  // weight matrix from layer 1 to 2
+  fWeightMatrix1to2[0][0] = -2.53374181503195;
+  fWeightMatrix1to2[0][1] = 2.29720936277301;
+  fWeightMatrix1to2[0][2] = -2.26804383342745;
+  fWeightMatrix1to2[0][3] = -0.652721723222071;
+  fWeightMatrix1to2[0][4] = -6.78038498079703;
+  fWeightMatrix1to2[0][5] = 2.11172370306038;
+  fWeightMatrix1to2[0][6] = -3.94034261913044;
+  fWeightMatrix1to2[0][7] = 6.40906629537685;
+  fWeightMatrix1to2[0][8] = -1.60535480993613;
 }
 
 inline double ReadMLPMinus::GetMvaValue__( const std::vector<double>& inputValues ) const
 {
-   if (inputValues.size() != (unsigned int)3) {
-      std::cout << "Input vector needs to be of size " << 3 << std::endl;
-      return 0;
-   }
+  if (inputValues.size() != (unsigned int)3) {
+    std::cout << "Input vector needs to be of size " << 3 << std::endl;
+    return 0;
+  }
 
-   std::array<double, 9> fWeights1 {{}};
-   std::array<double, 1> fWeights2 {{}};
-   fWeights1.back() = 1.;
+  std::array<double, 9> fWeights1 {{}};
+  std::array<double, 1> fWeights2 {{}};
+  fWeights1.back() = 1.;
 
-   // layer 0 to 1
-   for (int o=0; o<8; o++) {
-      std::array<double, 4> buffer; // no need to initialise
-      for (int i = 0; i<4 - 1; i++) {
-         buffer[i] = fWeightMatrix0to1[o][i] * inputValues[i];
-      } // loop over i
-      buffer.back() = fWeightMatrix0to1[o][3];
-      for (int i=0; i<4; i++) {
-         fWeights1[o] += buffer[i];
-      } // loop over i
-    } // loop over o
-   for (int o=0; o<8; o++) {
-      fWeights1[o] = ActivationFnc(fWeights1[o]);
-   } // loop over o
-   // layer 1 to 2
-   for (int o=0; o<1; o++) {
-      std::array<double, 9> buffer; // no need to initialise
-      for (int i=0; i<9; i++) {
-         buffer[i] = fWeightMatrix1to2[o][i] * fWeights1[i];
-      } // loop over i
-      for (int i=0; i<9; i++) {
-         fWeights2[o] += buffer[i];
-      } // loop over i
-    } // loop over o
-   for (int o=0; o<1; o++) {
-      fWeights2[o] = OutputActivationFnc(fWeights2[o]);
-   } // loop over o
+  // layer 0 to 1
+  for (int o=0; o<8; o++) {
+    std::array<double, 4> buffer; // no need to initialise
+    for (int i = 0; i<4 - 1; i++) {
+      buffer[i] = fWeightMatrix0to1[o][i] * inputValues[i];
+    } // loop over i
+    buffer.back() = fWeightMatrix0to1[o][3];
+    for (int i=0; i<4; i++) {
+      fWeights1[o] += buffer[i];
+    } // loop over i
+  } // loop over o
+  for (int o=0; o<8; o++) {
+    fWeights1[o] = ActivationFnc(fWeights1[o]);
+  } // loop over o
+  // layer 1 to 2
+  for (int o=0; o<1; o++) {
+    std::array<double, 9> buffer; // no need to initialise
+    for (int i=0; i<9; i++) {
+      buffer[i] = fWeightMatrix1to2[o][i] * fWeights1[i];
+    } // loop over i
+    for (int i=0; i<9; i++) {
+      fWeights2[o] += buffer[i];
+    } // loop over i
+  } // loop over o
+  for (int o=0; o<1; o++) {
+    fWeights2[o] = OutputActivationFnc(fWeights2[o]);
+  } // loop over o
 
-   return fWeights2[0];
+  return fWeights2[0];
 }
 
 double ReadMLPMinus::ActivationFnc(double x) const {
-   // fast hyperbolic tan approximation
-   if (x > 4.97) return 1;
-   if (x < -4.97) return -1;
-   float x2 = x * x;
-   float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
-   float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
-   return a / b;
+  // fast hyperbolic tan approximation
+  if (x > 4.97) return 1;
+  if (x < -4.97) return -1;
+  float x2 = x * x;
+  float a = x * (135135.0f + x2 * (17325.0f + x2 * (378.0f + x2)));
+  float b = 135135.0f + x2 * (62370.0f + x2 * (3150.0f + x2 * 28.0f));
+  return a / b;
 }
 double ReadMLPMinus::OutputActivationFnc(double x) const {
-   // sigmoid
-   return 1.0/(1.0+exp(-x));
+  // sigmoid
+  return 1.0/(1.0+exp(-x));
 }
 
 // Clean up
@@ -383,114 +380,115 @@ inline void ReadMLPMinus::Clear()
 }
 inline double ReadMLPMinus::GetMvaValue( const std::vector<double>& inputValues ) const
 {
-   // classifier response value
-   double retval = 0;
+  // classifier response value
+  double retval = 0;
 
-   // classifier response, sanity check first
-   if (!IsStatusClean()) {
-      std::cout << "Problem in class \"" << fClassName << "\": cannot return classifier response"
-                << " because status is dirty" << std::endl;
-   }
-   else {
-         std::vector<double> iV(inputValues);
-         Transform( iV, -1 );
-         retval = GetMvaValue__( iV );
-   }
+  // classifier response, sanity check first
+  if (!IsStatusClean()) {
+    std::cout << "Problem in class \"" << fClassName << "\": cannot return classifier response"
+	      << " because status is dirty" << std::endl;
+  }
+  else {
+    std::vector<double> iV(inputValues);
+    Transform( iV, -1 );
+    retval = GetMvaValue__( iV );
+  }
 
-   return retval;
+  return retval;
 }
 
 //_______________________________________________________________________
 inline void ReadMLPMinus::InitTransform_1()
 {
-   double fMin_1[3][3];
-   double fMax_1[3][3];
-   // Normalization transformation, initialisation
-   fMin_1[0][0] = 0.0156741552055;
-   fMax_1[0][0] = 16.4249000549;
-   fScal_1[0][0] = 2.0/(fMax_1[0][0]-fMin_1[0][0]);
-   fOff_1[0][0] = fMin_1[0][0]*fScal_1[0][0]+1.;
-   fMin_1[1][0] = 0;
-   fMax_1[1][0] = 11.6820173264;
-   fScal_1[1][0] = 2.0/(fMax_1[1][0]-fMin_1[1][0]);
-   fOff_1[1][0] = fMin_1[1][0]*fScal_1[1][0]+1.;
-   fMin_1[2][0] = 0;
-   fMax_1[2][0] = 16.4249000549;
-   fScal_1[2][0] = 2.0/(fMax_1[2][0]-fMin_1[2][0]);
-   fOff_1[2][0] = fMin_1[2][0]*fScal_1[2][0]+1.;
-   fMin_1[0][1] = 0.0115333553404;
-   fMax_1[0][1] = 999;
-   fScal_1[0][1] = 2.0/(fMax_1[0][1]-fMin_1[0][1]);
-   fOff_1[0][1] = fMin_1[0][1]*fScal_1[0][1]+1.;
-   fMin_1[1][1] = 0.0118714151904;
-   fMax_1[1][1] = 999;
-   fScal_1[1][1] = 2.0/(fMax_1[1][1]-fMin_1[1][1]);
-   fOff_1[1][1] = fMin_1[1][1]*fScal_1[1][1]+1.;
-   fMin_1[2][1] = 0.0115333553404;
-   fMax_1[2][1] = 999;
-   fScal_1[2][1] = 2.0/(fMax_1[2][1]-fMin_1[2][1]);
-   fOff_1[2][1] = fMin_1[2][1]*fScal_1[2][1]+1.;
-   fMin_1[0][2] = 0;
-   fMax_1[0][2] = 1;
-   fScal_1[0][2] = 2.0/(fMax_1[0][2]-fMin_1[0][2]);
-   fOff_1[0][2] = fMin_1[0][2]*fScal_1[0][2]+1.;
-   fMin_1[1][2] = 0;
-   fMax_1[1][2] = 1;
-   fScal_1[1][2] = 2.0/(fMax_1[1][2]-fMin_1[1][2]);
-   fOff_1[1][2] = fMin_1[1][2]*fScal_1[1][2]+1.;
-   fMin_1[2][2] = 0;
-   fMax_1[2][2] = 1;
-   fScal_1[2][2] = 2.0/(fMax_1[2][2]-fMin_1[2][2]);
-   fOff_1[2][2] = fMin_1[2][2]*fScal_1[2][2]+1.;
+  double fMin_1[3][3];
+  double fMax_1[3][3];
+  // Normalization transformation, initialisation
+  fMin_1[0][0] = 0.0156741552055;
+  fMax_1[0][0] = 16.4249000549;
+  fScal_1[0][0] = 2.0/(fMax_1[0][0]-fMin_1[0][0]);
+  fOff_1[0][0] = fMin_1[0][0]*fScal_1[0][0]+1.;
+  fMin_1[1][0] = 0;
+  fMax_1[1][0] = 11.6820173264;
+  fScal_1[1][0] = 2.0/(fMax_1[1][0]-fMin_1[1][0]);
+  fOff_1[1][0] = fMin_1[1][0]*fScal_1[1][0]+1.;
+  fMin_1[2][0] = 0;
+  fMax_1[2][0] = 16.4249000549;
+  fScal_1[2][0] = 2.0/(fMax_1[2][0]-fMin_1[2][0]);
+  fOff_1[2][0] = fMin_1[2][0]*fScal_1[2][0]+1.;
+  fMin_1[0][1] = 0.0115333553404;
+  fMax_1[0][1] = 999;
+  fScal_1[0][1] = 2.0/(fMax_1[0][1]-fMin_1[0][1]);
+  fOff_1[0][1] = fMin_1[0][1]*fScal_1[0][1]+1.;
+  fMin_1[1][1] = 0.0118714151904;
+  fMax_1[1][1] = 999;
+  fScal_1[1][1] = 2.0/(fMax_1[1][1]-fMin_1[1][1]);
+  fOff_1[1][1] = fMin_1[1][1]*fScal_1[1][1]+1.;
+  fMin_1[2][1] = 0.0115333553404;
+  fMax_1[2][1] = 999;
+  fScal_1[2][1] = 2.0/(fMax_1[2][1]-fMin_1[2][1]);
+  fOff_1[2][1] = fMin_1[2][1]*fScal_1[2][1]+1.;
+  fMin_1[0][2] = 0;
+  fMax_1[0][2] = 1;
+  fScal_1[0][2] = 2.0/(fMax_1[0][2]-fMin_1[0][2]);
+  fOff_1[0][2] = fMin_1[0][2]*fScal_1[0][2]+1.;
+  fMin_1[1][2] = 0;
+  fMax_1[1][2] = 1;
+  fScal_1[1][2] = 2.0/(fMax_1[1][2]-fMin_1[1][2]);
+  fOff_1[1][2] = fMin_1[1][2]*fScal_1[1][2]+1.;
+  fMin_1[2][2] = 0;
+  fMax_1[2][2] = 1;
+  fScal_1[2][2] = 2.0/(fMax_1[2][2]-fMin_1[2][2]);
+  fOff_1[2][2] = fMin_1[2][2]*fScal_1[2][2]+1.;
 }
+
 
 //_______________________________________________________________________
 inline void ReadMLPMinus::Transform_1( std::vector<double>& iv, int cls) const
 {
-   // Normalization transformation
-   if (cls < 0 || cls > 2) {
-   if (2 > 1 ) cls = 2;
-      else cls = 2;
-   }
-   const int nVar = 3;
+  // Normalization transformation
+  if (cls < 0 || cls > 2) {
+    if (2 > 1 ) cls = 2;
+    else cls = 2;
+  }
+  const int nVar = 3;
 
-   // get indices of used variables
+  // get indices of used variables
 
-   // define the indices of the variables which are transformed by this transformation
-   static std::vector<int> indicesGet;
-   static std::vector<int> indicesPut;
+  // define the indices of the variables which are transformed by this transformation
+  static std::vector<int> indicesGet;
+  static std::vector<int> indicesPut;
 
-   if ( indicesGet.empty() ) {
-      indicesGet.reserve(fNvars);
-      indicesGet.push_back( 0);
-      indicesGet.push_back( 1);
-      indicesGet.push_back( 2);
-   }
-   if ( indicesPut.empty() ) {
-      indicesPut.reserve(fNvars);
-      indicesPut.push_back( 0);
-      indicesPut.push_back( 1);
-      indicesPut.push_back( 2);
-   }
+  if ( indicesGet.empty() ) {
+    indicesGet.reserve(fNvars);
+    indicesGet.push_back( 0);
+    indicesGet.push_back( 1);
+    indicesGet.push_back( 2);
+  }
+  if ( indicesPut.empty() ) {
+    indicesPut.reserve(fNvars);
+    indicesPut.push_back( 0);
+    indicesPut.push_back( 1);
+    indicesPut.push_back( 2);
+  }
 
-   static std::vector<double> dv;
-   dv.resize(nVar);
-   for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];
-   for (int ivar=0;ivar<3;ivar++) {
-      double offset = fOff_1[cls][ivar];
-      double scale  = fScal_1[cls][ivar];
-      iv[indicesPut.at(ivar)] = scale*dv[ivar]-offset;
-   }
+  static std::vector<double> dv;
+  dv.resize(nVar);
+  for (int ivar=0; ivar<nVar; ivar++) dv[ivar] = iv[indicesGet.at(ivar)];
+  for (int ivar=0;ivar<3;ivar++) {
+    double offset = fOff_1[cls][ivar];
+    double scale  = fScal_1[cls][ivar];
+    iv[indicesPut.at(ivar)] = scale*dv[ivar]-offset;
+  }
 }
 
 //_______________________________________________________________________
 inline void ReadMLPMinus::InitTransform()
 {
-   InitTransform_1();
+  InitTransform_1();
 }
 
 //_______________________________________________________________________
 inline void ReadMLPMinus::Transform( std::vector<double>& iv, int sigOrBgd ) const
 {
-   Transform_1( iv, sigOrBgd );
+  Transform_1( iv, sigOrBgd );
 }

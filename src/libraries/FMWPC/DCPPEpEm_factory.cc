@@ -12,6 +12,8 @@
 
 #include <iostream>
 #include <iomanip>
+#include "DEPIClassifierMLPMinus.h"
+#include "DEPIClassifierMLPPlus.h"
 using namespace std;
 
 #include "DCPPEpEm_factory.h"
@@ -25,11 +27,12 @@ using namespace jana;
 jerror_t DCPPEpEm_factory::init(void)
 {
 
+  
   vector< string > varsMinus( inputVarsMinus, inputVarsMinus + sizeof( inputVarsMinus )/sizeof( char* ) );
   dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
   vector< string > varsPlus( inputVarsPlus, inputVarsPlus + sizeof( inputVarsPlus )/sizeof( char* ) );
   dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
-
+  
   SPLIT_CUT=0.5;
   gPARMS->SetDefaultParameter("CPPAnalysis:SPLIT_CUT",SPLIT_CUT); 
   FCAL_THRESHOLD=0.1;
