@@ -146,7 +146,9 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    // FCAL shower associated with the e+ track
   shared_ptr<const DFCALShowerMatchParams>fcalparms=hyp->Get_FCALShowerMatchParams();
   const DFCALShower *PositronShower=NULL;
+  double PositronTrackDoca=999.;
   if (fcalparms!=NULL){
+    PositronTrackDoca=fcalparms->dDOCAToShower;
     PositronShower=fcalparms->dFCALShower;
   }
     
@@ -157,7 +159,9 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // FCAL shower associated with the e- track
   fcalparms=hyp->Get_FCALShowerMatchParams();
   const DFCALShower *ElectronShower=NULL;
+  double ElectronTrackDoca=999.;
   if (fcalparms!=NULL){
+    ElectronTrackDoca=fcalparms->dDOCAToShower;
     ElectronShower=fcalparms->dFCALShower;
   }
 
@@ -289,6 +293,26 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       	}
       }
 #endif // HAVE_TENSORFLOWLITE
+
+       //--------------------------------
+      // Use ML model for pi/e classification 
+      //--------------------------------
+      myCPPEpEm->pipep_ML_classifier=-1;
+      myCPPEpEm->pimem_ML_classifier=-1;
+      if (ElectronShower){
+	double EOverP=ElectronShower->getEnergy()/myCPPEpEm->em_v4.P();
+	double E9E25=ElectronShower->getE9E25();
+	myCPPEpEm->pipep_ML_classifier=getEPIClassifierMinus(EOverP,
+							     ElectronTrackDoca,
+							     E9E25);
+      }
+      if (PositronShower){
+	double EOverP=PositronShower->getEnergy()/myCPPEpEm->ep_v4.P();
+	double E9E25=PositronShower->getE9E25();
+	myCPPEpEm->pimem_ML_classifier=getEPIClassifierPlus(EOverP,
+							    PositronTrackDoca,
+							    E9E25);
+      }
 
       _data.push_back(myCPPEpEm);
     }
