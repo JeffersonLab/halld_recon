@@ -27,10 +27,6 @@
 	TH1I *ctof_adc_events = (TH1I*)gDirectory->FindObjectAny("ctof_adc_events");
 	if(ctof_adc_events) adc_events = (double)ctof_adc_events->GetBinContent(1);
 
-	double tdc_events = 1.0;
-	TH1I *ctof_tdc_events = (TH1I*)gDirectory->FindObjectAny("ctof_tdc_events");
-	if(ctof_tdc_events) tdc_events = (double)ctof_tdc_events->GetBinContent(1);
-
 	TH1I *ha_u = (TH1I*)gDirectory->FindObjectAny("ctof_adc_occ_up");
 	TH1I *ha_d = (TH1I*)gDirectory->FindObjectAny("ctof_adc_occ_down");
 
@@ -128,36 +124,14 @@
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
-		 // MIN_EVENTS_RSAI is typically 1E5, but CTOF has low rate so we
-		 // set it to 1000. 
-		 // n.b. we do this as a function of the RS parameter MIN_EVENTS_RSAI
-		 // so the value can be scaled globally for testing.
-		auto min_events = rs_GetFlag("MIN_EVENTS_RSAI")/100;
-		if( min_events < 1 ) min_events = 20;
-		
-		
-		// n.b. This macro is slightly different from the usual pattern
-		// since the ADC and TDC num event counts are kept spearately.
-		// Thus, instead of resetting all histos for this macro, we must
-		// set only the specific histos for ADC and TDC hists as needed.
-		// WARNING: This means if new hnamepath directives are added in
-		// the comments at the top of the file then they must ALSO BE
-		// ADDED HERE MANUALLY!
-		if( adc_events >= min_events ) {
-			cout << "CTOF ADC Flagging AI check after " << adc_events << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("CTOF_ADC_occupancy", 1);
-			rs_ResetHisto("/FMWPC/ctof_adc_events");
-			rs_ResetHisto("/FMWPC/ctof_adc_occ_up");
-			rs_ResetHisto("/FMWPC/ctof_adc_occ_down");
-		}
-		if( tdc_events >= min_events ) {
-			cout << "CTOF TDC Flagging AI check after " << tdc_events << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("CTOF_TDC_occupancy", 2);
-			rs_ResetHisto("/FMWPC/ctof_tdc_events");
-			rs_ResetHisto("/FMWPC/ctof_tdc_occ_up");
-			rs_ResetHisto("/FMWPC/ctof_tdc_occ_down");
-		}
-	}
+          auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
+          if( min_events < 1 ) min_events = 5E5;
+          if( adc_events >= min_events ) {
+            cout << "CTOF Flagging AI check after " << adc_events << " events (>=" << min_events << ")" << endl;
+            rs_SavePad("CTOF_occupancy", 0);
+            rs_ResetAllMacroHistos("//CTOF_occupancy");
+          }
+        }
 #endif
 
 }
