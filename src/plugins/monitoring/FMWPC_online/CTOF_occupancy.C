@@ -2,8 +2,6 @@
 // The following are special comments used by RootSpy to know
 // which histograms to fetch for the macro.
 //
-// n.b. see notes in RSAI section below if adding anything here.
-//
 // hnamepath: /FMWPC/ctof_adc_events
 // hnamepath: /FMWPC/ctof_tdc_events
 // hnamepath: /FMWPC/ctof_adc_occ_up
