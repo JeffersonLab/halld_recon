@@ -323,8 +323,8 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	double phi = angles.Phi();
 	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
 	double psi = Phi - phi;
-	if(psi < -3.14159) psi += 2*3.14159;
-	if(psi > 3.14159) psi -= 2*3.14159;
+	if(psi < -M_PI) psi += 2*M_PI;
+	if(psi > M_PI) psi -= 2*M_PI;
 	//---------------------------------
 	
 	//---- Polarization observable from e+ e-
