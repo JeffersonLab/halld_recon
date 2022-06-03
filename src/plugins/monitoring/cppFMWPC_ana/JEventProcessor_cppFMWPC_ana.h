@@ -23,11 +23,15 @@ class JEventProcessor_cppFMWPC_ana:public jana::JEventProcessor{
   ~JEventProcessor_cppFMWPC_ana();
   const char* className(void){return "JEventProcessor_cppFMWPC_ana";}
 
-  int nFMWPCchambers;
-  TH2D *FMWPCwiresT[8];
-  TH2D *FMWPCwiresQ[8];
+  int nFMWPCchambers=6;
+  TH2D *FMWPCwiresT[6];
+  TH2D *FMWPCwiresQ[6];
+  TH2D *h2_pmuon_vs_mult[6];
 
-  TH2D *h2_pmuon_vs_mult[8];
+  int nCTOF=4;
+  TH1D *h1_CTOFPoint_dE[4];
+  TH1D *h1_CTOFPoint_t[4];
+  TH1D *h1_CTOFPoint_y[4];
   
   TH2D *FDCwiresT[24];
 

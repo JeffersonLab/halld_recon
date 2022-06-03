@@ -3,6 +3,7 @@
 //    File: JEventProcessor_cppFMWPC_ana.cc
 // Created: Sat Mar 13 08:01:05 EST 2021
 // Creator: zihlmann (on Linux ifarm1901.jlab.org 3.10.0-1062.4.1.el7.x86_64 x86_64)
+// Modified by Elton
 //
 
 #include <JANA/JEventProcessor.h>
@@ -16,6 +17,7 @@ using namespace std;
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
 #include "TRACKING/DMCThrown.h"
+#include "FMWPC/DCTOFPoint.h"
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
@@ -52,20 +54,34 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
 
   gDirectory->mkdir("FMWPC_ana")->cd();
 
-  nFMWPCchambers = 6;
   char hnam[128], htit[128];
   for ( int k=0; k<nFMWPCchambers ;k++){
     sprintf(hnam,"FMWPCwiresT%d",k+1);
     sprintf(htit,"Chamber %d FMWPC hit time vs. wire number",k+1);
-    FMWPCwiresT[k] = new TH2D(hnam, htit,  145, 0., 145., 100, 0., 500.);
+    FMWPCwiresT[k] = new TH2D(hnam, htit,  145, 0., 145., 150, 0., 1500.);
 
     sprintf(hnam,"FMWPCwiresQ%d",k+1);
     sprintf(htit,"Chamber %d FMWPC hit q vs. wire number",k+1);
-    FMWPCwiresQ[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 100.);
+    FMWPCwiresQ[k] = new TH2D(hnam, htit,  145, 0., 145., 500, 0., 10000.);
 
     sprintf(hnam,"h2_pmuon_vs_mult%d",k+1);
     sprintf(htit,"Plane %d;Multipliticity;Pmuon",k+1);
     h2_pmuon_vs_mult[k] = new TH2D(hnam, htit,  10, 0, 10, 40, 0, 8);
+  }
+
+  for ( int k=0; k<nCTOF; k++){
+    sprintf(hnam,"CTOFPoint_dE%d",k+1);
+    sprintf(htit,"Counter %d CTOF dE (MeV)",k+1);
+    h1_CTOFPoint_dE[k] = new TH1D(hnam, htit,  100, 0, 10);
+
+    sprintf(hnam,"CTOFPoint_t%d",k+1);
+    sprintf(htit,"Counter %d CTOF t (ns)",k+1);
+    h1_CTOFPoint_t[k] = new TH1D(hnam, htit,  100, 0, 200);
+
+    sprintf(hnam,"CTOFPoint_y%d",k+1);
+    sprintf(htit,"Counter %d CTOF y (cm)",k+1);
+    h1_CTOFPoint_y[k] = new TH1D(hnam, htit,  100, -400, 400);
+
   }
 
 
@@ -143,13 +159,33 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
   // if  (mcthrowns.size() > 1) return NOERROR;   // eliminate muon decays
 
   // define variables to accumulate multiplicities per event
+  nFMWPCchambers=6;
+  nCTOF=4;
   Int_t mwpc_mult[nFMWPCchambers];
 
   for (int k=0; k<nFMWPCchambers; k++) {
     mwpc_mult[k] = 0;     // initialize each event
   }
 
- 
+
+  vector < const DCTOFPoint*> ctofPoints;
+  loop->Get(ctofPoints);
+
+  // cout << " (int)ctofPoints.size()=" << (int)ctofPoints.size() << endl;
+
+  for (int k=0; k<(int)ctofPoints.size(); k++) {
+    
+    const DCTOFPoint *point = ctofPoints[k];
+    DVector3 position = point->pos;
+    Int_t counter_id = point->bar;
+    cout << " k=" << k << " point->bar=" << point->bar << " point->dE=" << point->dE << " point->t=" << point->t  << " x=" << position.x() << " y=" << position.y() << " z=" << position.z() << endl;
+
+    h1_CTOFPoint_dE[counter_id-1]->Fill((double)point->dE);
+    h1_CTOFPoint_t[counter_id-1]->Fill((double)point->t);
+    h1_CTOFPoint_y[counter_id-1]->Fill((double)position.y());
+
+  }
+
 
   vector < const DFMWPCHit*> fmwpcHits;
   loop->Get(fmwpcHits);
@@ -166,8 +202,6 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
     mwpc_mult[hit1->layer-1] += 1;
     // cout << " k=" << k << " hit1->layer-1=" << hit1->layer-1 << " mwpc_mult[k]=" << mwpc_mult[hit1->layer-1] << endl;
   }
-
-
 
   for (int k=0; k<nFMWPCchambers; k++) {
     h2_pmuon_vs_mult[k]->Fill((double)mwpc_mult[k],pmuon);
