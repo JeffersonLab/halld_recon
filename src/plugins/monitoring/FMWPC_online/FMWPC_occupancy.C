@@ -52,7 +52,10 @@
 	        TH1 *fmwpc_norm_layer_1 = (TH1*)fmwpc_occ_layer_1->Clone(hname);
 		fmwpc_norm_layer_1->SetStats(0);
 		fmwpc_norm_layer_1->Scale(1./Nevents);
-		fmwpc_norm_layer_1->Draw();
+		fmwpc_norm_layer_1->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_1->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_1->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_1->Draw("h");
 	}
 
 	TVirtualPad *pad2 = c1->cd(2);
@@ -65,7 +68,10 @@
 	        TH1 *fmwpc_norm_layer_2 = (TH1*)fmwpc_occ_layer_2->Clone(hname);
 		fmwpc_norm_layer_2->SetStats(0);
 		fmwpc_norm_layer_2->Scale(1./Nevents);
-		fmwpc_norm_layer_2->Draw();
+		fmwpc_norm_layer_2->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_2->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_2->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_2->Draw("h");
 	}
 
 	TVirtualPad *pad3 = c1->cd(3);
@@ -78,7 +84,10 @@
 	        TH1 *fmwpc_norm_layer_3 = (TH1*)fmwpc_occ_layer_3->Clone(hname);
 		fmwpc_norm_layer_3->SetStats(0);
 		fmwpc_norm_layer_3->Scale(1./Nevents);
-		fmwpc_norm_layer_3->Draw();
+		fmwpc_norm_layer_3->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_3->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_3->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_3->Draw("h");
 	}
 
 	TVirtualPad *pad4 = c1->cd(4);
@@ -91,7 +100,10 @@
 	        TH1 *fmwpc_norm_layer_4 = (TH1*)fmwpc_occ_layer_4->Clone(hname);
 		fmwpc_norm_layer_4->SetStats(0);
 		fmwpc_norm_layer_4->Scale(1./Nevents);
-		fmwpc_norm_layer_4->Draw();
+		fmwpc_norm_layer_4->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_4->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_4->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_4->Draw("h");
 	}
 
 	TVirtualPad *pad5 = c1->cd(5);
@@ -104,7 +116,10 @@
 	        TH1 *fmwpc_norm_layer_5 = (TH1*)fmwpc_occ_layer_5->Clone(hname);
 		fmwpc_norm_layer_5->SetStats(0);
 		fmwpc_norm_layer_5->Scale(1./Nevents);
-		fmwpc_norm_layer_5->Draw();
+		fmwpc_norm_layer_5->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_5->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_5->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_5->Draw("h");
 	}
 
 	TVirtualPad *pad6 = c1->cd(6);
@@ -117,7 +132,10 @@
 	        TH1 *fmwpc_norm_layer_6 = (TH1*)fmwpc_occ_layer_6->Clone(hname);
 		fmwpc_norm_layer_6->SetStats(0);
 		fmwpc_norm_layer_6->Scale(1./Nevents);
-		fmwpc_norm_layer_6->Draw();
+		fmwpc_norm_layer_6->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_6->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_6->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_6->Draw("h");
 	}
 
 #ifdef ROOTSPY_MACROS
