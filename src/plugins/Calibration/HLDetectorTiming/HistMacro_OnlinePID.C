@@ -41,7 +41,7 @@
 
         //Setpoints
         double nominalSCTime = 4.;
-        double nominalTOFTime = 24.;
+        double nominalTOFTime = 31.;
 
 	//Get Histograms
 	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("SC/SCHit Matched time");
