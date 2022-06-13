@@ -45,8 +45,8 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalTAGHTime = -1.;
-        double nominalTAGMTime = -1.;	
+        double nominalTAGHTime = 8.;
+        double nominalTAGMTime = 8.;	
 
 	//Get Histograms
 	TH1I* TAGH_Timing        = (TH1I*)gDirectory->Get("TAGH/TAGHHit Matched time");
