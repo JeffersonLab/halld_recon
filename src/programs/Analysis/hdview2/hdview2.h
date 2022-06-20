@@ -5,6 +5,8 @@
 
 #include <iostream>
 #include <iomanip>
+#include <vector>
+#include <string>
 using namespace std;
 
 #include <TApplication.h>
@@ -21,6 +23,9 @@ extern JEventLoop *eventloop;
 extern MyProcessor *myproc;
 
 extern int32_t RUNNUMBER;
+
+extern std::vector< std::string > REQUIRED_CLASSES_FOR_DRAWING;
+
 
 jerror_t hdv_getevent(void);
 jerror_t hdv_drawevent(void);

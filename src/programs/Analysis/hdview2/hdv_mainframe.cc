@@ -86,6 +86,10 @@ float FMWPC_Zlen = 5.26;
 float FMWPC_Dead_diameter = 8.0;
 float FMWPC_WIRE_SPACING = 1.016;
 vector<double> FMWPC_Zpos;
+float CTOF_width  =  20.0;  // from CppScint_HDDS.xml
+float CTOF_length = 120.0;  // from CppScint_HDDS.xml
+float CTOF_depth  =  1.27;  // from CppScint_HDDS.xml
+vector<DVector3> CTOF_pos;  // from DGeometry::GetCTOFPositions()
 
 static DFCALGeometry *fcalgeom = NULL;
 static DTOFGeometry *tofgeom = NULL;
@@ -124,6 +128,9 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   dgeom->GetFMWPCZ_vec(FMWPC_Zpos);
   dgeom->GetFMWPCSize(my_FMWPC_width);
   FMWPC_width = my_FMWPC_width*2.0; // We want full width and method returns half-width
+  
+  // CPP CTOF positions
+  dgeom->GetCTOFPositions(CTOF_pos);
 
   UInt_t MainWidth = w;
   
@@ -2516,6 +2523,17 @@ bool hdv_mainframe::GetCheckButton(string who)
 	if(iter==checkbuttons.end())return false;
 	return iter->second->GetState()==kButtonDown;
 }
+
+//-------------------
+// SetCheckButton
+//-------------------
+void hdv_mainframe::SetCheckButton(string who, bool set_checked)
+{
+	map<string, TGCheckButton*>::iterator iter = checkbuttons.find(who);
+	if(iter==checkbuttons.end())return;
+	iter->second->SetState(set_checked ? kButtonDown:kButtonUp, true); // set value and signal all connected slots
+}
+
 //-------------------
 // AddCheckButtons
 //-------------------
@@ -2652,4 +2670,19 @@ void hdv_mainframe::AddGraphicsEndA(vector<TObject*> &v)
 void hdv_mainframe::AddGraphicsEndB(vector<TObject*> &v)
 {
 	for(unsigned int i=0; i<v.size(); i++)graphics_endB.push_back(v[i]);
+}
+
+//-------------------
+// RedrawAuxillaryWindows
+//-------------------
+void hdv_mainframe::RedrawAuxillaryWindows(void)
+{
+	// This is called to tell the any other windows like the trk_mainframe
+	// or fmwpc_mainframe to redraw the event. It is needed when the user 
+	// specifies to only draw events with certain objects and some events
+	// are skipped. The hdv_mainframe window is automatically redrawn, in
+	// those cases so that is not included here.
+	if( trkmf ) trkmf->DoNewEvent();
+	if( fmwpcmf ) fmwpcmf->DoNewEvent();
+	
 }

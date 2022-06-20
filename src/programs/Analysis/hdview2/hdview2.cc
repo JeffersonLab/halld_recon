@@ -10,6 +10,7 @@
 int GO = 0; // 1=continuously display events 0=wait for user
 bool PRINT_FACTORY_LIST = false;
 bool SKIP_EPICS_EVENTS = true;
+std::vector< std::string> REQUIRED_CLASSES_FOR_DRAWING;
 
 TCanvas *maincanvas=NULL;
 extern JApplication *japp;
@@ -145,6 +146,9 @@ void ParseCommandLineArguments(int &narg, char *argv[], JApplication *japp)
 				PRINT_FACTORY_LIST = true;
 				//PrintFactoryList(japp);
 				break;
+			case 'D':
+				REQUIRED_CLASSES_FOR_DRAWING.push_back(&(argv[i][2]));
+				break;
 		}
 	}
 	
@@ -175,11 +179,8 @@ void Usage(JApplication *japp)
 	cout<<"Options:"<<endl;
 	cout<<endl;
 	cout<<"   -h        Print this message"<<endl;
-	cout<<"   -Dname    Print the data of type \"name\" (can be used multiple times)"<<endl;
-	cout<<"   -A        Print ALL data types (overrides and -DXXX options)"<<endl;
 	cout<<"   -L        List available factories and exit"<<endl;
-	cout<<"   -p        Don't pause for keystroke between events (def. is to pause)"<<endl;
-	cout<<"   -s        Skip events which don't have any of the specified data types"<<endl;
+	cout<<"   -Dname    Only draw events with at least one object of the data of type \"name\" (can be used multiple times. OR logic)"<<endl;
 	cout<<endl;
 	cout<<"JANA options:"<<endl;
 	cout<<endl;
