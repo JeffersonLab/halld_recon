@@ -804,6 +804,26 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
         }
     }
 
+    // Draw CTOFPoints
+    if( checkbuttons["Draw CTOFPoints"]->GetState() == kButtonDown) {
+        for (auto point: ctofpoints) {
+
+
+            double s = (view == "top") ? point->pos.X():point->pos.Y();
+            double z = point->pos.Z();
+            
+            // Some empirical color scaling
+				// Top PMT will be a shade of blue while bottom will be shade of red
+            Float_t amp = 0.4 + (double)point->dE/0.002;
+            if( amp<0.4) amp = 0.4;
+            if( amp>1.0) amp = 1.0;
+            auto color = TColor::GetColor((Float_t) 1.0, 1.0-amp, 1.0); // Default to magenta-ish
+				auto m = new TMarker( z, s, 22 );
+				m->SetMarkerColor( color );
+            graphics.push_back(m);
+        }
+    }
+
     // Draw Tracks
     if( checkbuttons["Draw Tracks"]->GetState() == kButtonDown) {
         for (auto tbt: tbts) {

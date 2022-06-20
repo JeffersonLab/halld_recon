@@ -11,6 +11,8 @@ int GO = 0; // 1=continuously display events 0=wait for user
 bool PRINT_FACTORY_LIST = false;
 bool SKIP_EPICS_EVENTS = true;
 std::vector< std::string> REQUIRED_CLASSES_FOR_DRAWING;
+REQUIRED_CLASSES_LOGIC_t REQUIRED_CLASSES_LOGIC=REQUIRED_CLASSES_LOGIC_OR;
+
 
 TCanvas *maincanvas=NULL;
 extern JApplication *japp;
@@ -147,7 +149,17 @@ void ParseCommandLineArguments(int &narg, char *argv[], JApplication *japp)
 				//PrintFactoryList(japp);
 				break;
 			case 'D':
-				REQUIRED_CLASSES_FOR_DRAWING.push_back(&(argv[i][2]));
+			{
+				stringstream s_stream(&(argv[i][2])); //create string stream from the string
+				while(s_stream.good()) {
+					string substr;
+					getline(s_stream, substr, ','); //get first string delimited by comma
+					REQUIRED_CLASSES_FOR_DRAWING.push_back(substr);
+				}				
+				break;
+			}
+			case 'A':
+				REQUIRED_CLASSES_LOGIC=REQUIRED_CLASSES_LOGIC_AND;
 				break;
 		}
 	}
@@ -181,6 +193,7 @@ void Usage(JApplication *japp)
 	cout<<"   -h        Print this message"<<endl;
 	cout<<"   -L        List available factories and exit"<<endl;
 	cout<<"   -Dname    Only draw events with at least one object of the data of type \"name\" (can be used multiple times. OR logic)"<<endl;
+	cout<<"   -A        Use AND logic instead of OR for the classes listed in -D. (i.e. all of tham must be present rather than at least one)" << endl;
 	cout<<endl;
 	cout<<"JANA options:"<<endl;
 	cout<<endl;

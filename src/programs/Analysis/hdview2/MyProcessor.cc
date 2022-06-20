@@ -204,18 +204,28 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// whether to draw the event.
 	if( ! REQUIRED_CLASSES_FOR_DRAWING.empty() ){
 		if( Nevents_since_last_draw==0 ) {
-			cout << "Seeking event with object of at least one of: ";
+			string login_str = (REQUIRED_CLASSES_LOGIC == REQUIRED_CLASSES_LOGIC_AND) ? "all":"at least one";
+			cout << "Seeking event with " << login_str << " of: ";
 			for( auto s : REQUIRED_CLASSES_FOR_DRAWING ) cout << s << " ";
 			cout << endl;
 		}
 	}
-	bool draw_event = REQUIRED_CLASSES_FOR_DRAWING.empty();
+
+	uint32_t num_required_classes_present = 0;
 	for( auto c : REQUIRED_CLASSES_FOR_DRAWING ){
 		auto fac = loop->GetFactory( c );
-		if( fac->GetNrows() != 0 ){
-			draw_event = true;
-			break;
+		if( !fac ){
+			jerr << "No factory found for type: " << c << " !" << endl;
+			jerr << "Double check that there is not a typo in the name and run again." << endl;
+			exit(-1);
 		}
+		if( fac->GetNrows() != 0 ){
+			num_required_classes_present++;
+		}
+	}
+	bool draw_event = num_required_classes_present > 0; // Default to OR logic
+	if(REQUIRED_CLASSES_LOGIC == REQUIRED_CLASSES_LOGIC_AND){ // Overwrite draw_ewvent if using AND logic
+		draw_event = (num_required_classes_present>=REQUIRED_CLASSES_FOR_DRAWING.size());
 	}
 	
 	if( draw_event ){

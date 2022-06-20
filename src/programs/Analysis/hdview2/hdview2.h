@@ -24,7 +24,13 @@ extern MyProcessor *myproc;
 
 extern int32_t RUNNUMBER;
 
+enum REQUIRED_CLASSES_LOGIC_t{
+	REQUIRED_CLASSES_LOGIC_OR,
+	REQUIRED_CLASSES_LOGIC_AND
+};
 extern std::vector< std::string > REQUIRED_CLASSES_FOR_DRAWING;
+extern REQUIRED_CLASSES_LOGIC_t REQUIRED_CLASSES_LOGIC;
+
 
 
 jerror_t hdv_getevent(void);
