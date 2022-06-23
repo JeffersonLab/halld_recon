@@ -64,33 +64,4 @@
 		locHist->Draw("colz");  // don't use colz2, it is buggy in -b mode
 	}
 
-
-#ifdef ROOTSPY_MACROS
-	// ------ The following is used by RSAI --------
-	if( rs_GetFlag("Is_RSAI")==1 ){
-
-          std::cout << "HistMacro_cpp_itrig: RSAI block" << std::endl;
-
-          double Nevents = 1.0;
-
-          TH1I *hevents = (TH1I*)gDirectory->Get("num_events");
-
-          if(hevents){
-             Nevents = (double)num_events->GetBinContent(1);
-             std::cout << "HistMacro_cpp_itrig: Nevents=" << Nevents << std::endl;
-          }else{
-             std::cout << "HistMacro_cpp_itrig: unable to find /cpp_itrig/num_events !" << std::endl;
-          }
-
-	  auto min_events = rs_GetFlag("MIN_EVENTS_RSAI");
-	  if( min_events < 1 ) min_events = 1E4;
-	  if( Nevents >= min_events ) {
-	    cout << "RF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-	    rs_SavePad("cpp_itrig", 0);
-	    rs_ResetAllMacroHistos("//HistMacro_cpp_itrig");
-
-	  }
-	}
-#endif
-	
 }
