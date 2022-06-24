@@ -26,6 +26,7 @@ class DFMWPCCluster:public jana::JObject{
 		int last_wire; ///< last wire in cluster 1-144
 		int Nhits; ///< Number of wire hits in cluster
 		DVector3 pos; ///< position (x,y,z) in global coodinates
+		float t;     // time in ns
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
@@ -39,6 +40,7 @@ class DFMWPCCluster:public jana::JObject{
 			AddString(items, "x", "%1.3f", pos.x());
 			AddString(items, "y", "%1.3f", pos.y());
 			AddString(items, "z", "%1.3f", pos.z());
+			AddString(items, "t", "%1.3f", t);
 		}
 		
 };
