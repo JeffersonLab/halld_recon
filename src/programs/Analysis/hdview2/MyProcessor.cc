@@ -227,6 +227,7 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	if(REQUIRED_CLASSES_LOGIC == REQUIRED_CLASSES_LOGIC_AND){ // Overwrite draw_ewvent if using AND logic
 		draw_event = (num_required_classes_present>=REQUIRED_CLASSES_FOR_DRAWING.size());
 	}
+	if( REQUIRED_CLASSES_FOR_DRAWING.empty() ) draw_event = true; // If nothing specified, then draw every event
 	
 	if( draw_event ){
 	
