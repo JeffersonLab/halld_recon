@@ -254,7 +254,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	dHist_BeamEnergy = new TH1I("BeamEnergy", "Reconstructed Tagger Beam Energy;Beam Energy (GeV)", 240, 0.0, 12.0);
 
 	// Beam Energy from PS
-	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 250, 7.0, 12.0);
+	dHist_PSPairEnergy = new TH1I("PSPairEnergy", "Reconstructed PS Beam Energy;Beam Energy (GeV)", 450, 3., 12.);
 
 	// PVsTheta Time-Based Tracks
 	dHist_PVsTheta_Tracks = new TH2I("PVsTheta_Tracks", "P vs. #theta for time-based tracks;#theta#circ;p (GeV/c)", 280, 0.0, 140.0, 150, 0.0, 12.0);
@@ -265,7 +265,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	/*************************************************************** VERTEX ***************************************************************/
 
 	// Event Vertex-Z
-	dEventVertexZ = new TH1I("EventVertexZ", "Reconstructed Event Vertex Z;Event Vertex-Z (cm)", 600, 0.0, 200.0);
+	dEventVertexZ = new TH1I("EventVertexZ", "Reconstructed Event Vertex Z;Event Vertex-Z (cm)", 600, -100.0, 200.0);
 
 	// Event Vertex-Y Vs Vertex-X
 	dEventVertexYVsX = new TH2I("EventVertexYVsX", "Reconstructed Event Vertex X/Y;Event Vertex-X (cm);Event Vertex-Y (cm)", 400, -10.0, 10.0, 400, -10.0, 10.0);
