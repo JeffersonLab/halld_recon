@@ -63,6 +63,7 @@ using namespace std;
 #include "TRIGGER/DL1Trigger.h"
 
 extern hdv_mainframe *hdvmf;
+extern int GO; // defined in hdview2.cc
 
 // These are declared in hdv_mainframe.cc, but as static so we need to do it here as well (yechh!)
 static float FCAL_Zmin = 622.8;
@@ -194,28 +195,95 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	loop = eventLoop;
 	last_jevent.FreeEvent();
 	last_jevent = loop->GetJEvent();
+	static uint64_t Nevents_since_last_draw = 0;
+	static bool save_continuous = (GO == 1);
+	static long save_sleep_time = hdvmf->GetSleepTime();
 	
-	// get the trigger bits
-	char trigstring[10];
-	const DL1Trigger *trig = NULL;
-	try {
-		loop->GetSingle(trig);
-	} catch (...) {}
-	if (trig) {
-		sprintf(trigstring,"0x%04x",trig->trig_mask); 
-	} else {
-		sprintf(trigstring,"no bits");
+	// The user may specify to only draw events that have at least
+	// one object of list of classes. Check for this so we know
+	// whether to draw the event.
+	if( ! REQUIRED_CLASSES_FOR_DRAWING.empty() ){
+		if( Nevents_since_last_draw==0 ) {
+			string login_str = (REQUIRED_CLASSES_LOGIC == REQUIRED_CLASSES_LOGIC_AND) ? "all":"at least one";
+			cout << "Seeking event with " << login_str << " of: ";
+			for( auto s : REQUIRED_CLASSES_FOR_DRAWING ) cout << s << " ";
+			cout << endl;
+		}
 	}
-	hdvmf->SetTrig(trigstring);
 
-	string source = "<no source>";
-	if(last_jevent.GetJEventSource())source = last_jevent.GetJEventSource()->GetSourceName();
+	uint32_t num_required_classes_present = 0;
+	for( auto c : REQUIRED_CLASSES_FOR_DRAWING ){
+		auto fac = loop->GetFactory( c );
+		if( !fac ){
+			jerr << "No factory found for type: " << c << " !" << endl;
+			jerr << "Double check that there is not a typo in the name and run again." << endl;
+			exit(-1);
+		}
+		if( fac->GetNrows() != 0 ){
+			num_required_classes_present++;
+		}
+	}
+	bool draw_event = num_required_classes_present > 0; // Default to OR logic
+	if(REQUIRED_CLASSES_LOGIC == REQUIRED_CLASSES_LOGIC_AND){ // Overwrite draw_ewvent if using AND logic
+		draw_event = (num_required_classes_present>=REQUIRED_CLASSES_FOR_DRAWING.size());
+	}
+	if( REQUIRED_CLASSES_FOR_DRAWING.empty() ) draw_event = true; // If nothing specified, then draw every event
 	
-	cout<<"----------- New Event "<<eventnumber<<"  (run " << last_jevent.GetRunNumber()<<") -------------"<<endl;
-	hdvmf->SetEvent(eventnumber);
-	hdvmf->SetRun(last_jevent.GetRunNumber());
-	hdvmf->SetSource(source.c_str());
-	hdvmf->DoMyRedraw();	
+	if( draw_event ){
+	
+		// Restore control values set if we skipped drawing the previous event
+		if( Nevents_since_last_draw > 0 ){
+			cout << endl;
+			Nevents_since_last_draw = 0;
+			hdvmf->SetCheckButton("continuous", save_continuous);
+			hdvmf->SetSleepTime(save_sleep_time);
+			
+			// At this point, the "clicked()" signal may have been sent to 
+			// the other auxillary windows (e.g. trk_mainframe), but enough 
+			// of a delay occurred that they will have already redrawn and 
+			// need to be redrawn again for this current event. The main
+			// window should be OK, since DoMyRedraw is getting called below.
+			hdvmf->RedrawAuxillaryWindows();
+		}
+	
+		// get the trigger bits
+		char trigstring[10];
+		const DL1Trigger *trig = NULL;
+		try {
+			loop->GetSingle(trig);
+		} catch (...) {}
+		if (trig) {
+			sprintf(trigstring,"0x%04x",trig->trig_mask); 
+		} else {
+			sprintf(trigstring,"no bits");
+		}
+		hdvmf->SetTrig(trigstring);
+
+		string source = "<no source>";
+		if(last_jevent.GetJEventSource())source = last_jevent.GetJEventSource()->GetSourceName();
+
+		cout<<"----------- New Event "<<eventnumber<<"  (run " << last_jevent.GetRunNumber()<<") -------------"<<endl;
+		hdvmf->SetEvent(eventnumber);
+		hdvmf->SetRun(last_jevent.GetRunNumber());
+		hdvmf->SetSource(source.c_str());
+		hdvmf->DoMyRedraw();	
+	}else{
+	
+		// If this is the first event in a sequence we are skipping the draw
+		// then set the "continuous" checkbox on so the outer loop will continue
+		// to call us. Save the state of the checkbox so we can restore it once an
+		// event we do draw is encountered.
+		if( Nevents_since_last_draw == 0 ){
+			save_continuous = hdvmf->GetCheckButton("continuous");
+			if( ! save_continuous ) hdvmf->SetCheckButton("continuous", true);
+			save_sleep_time = hdvmf->GetSleepTime();
+			hdvmf->SetSleepTime(0);
+		}
+
+		Nevents_since_last_draw++;
+		cout << "Skipping events without specified objects " << Nevents_since_last_draw << "  \r";
+		if( Nevents_since_last_draw%1 == 0 ) cout.flush();
+	}
 
 	japp->SetSequentialEventComplete();
 	

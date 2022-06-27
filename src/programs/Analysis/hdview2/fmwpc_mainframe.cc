@@ -20,6 +20,10 @@ using namespace std;
 #include <FCAL/DFCALHit.h>
 #include <TRACKING/DTrackFitterKalmanSIMD.h>
 #include <TRACKING/DTrackTimeBased.h>
+#include <FMWPC/DCTOFDigiHit.h>
+#include <FMWPC/DCTOFTDCDigiHit.h>
+#include <FMWPC/DCTOFHit.h>
+#include <FMWPC/DCTOFPoint.h>
 
 #include <TGButtonGroup.h>
 #include <TGTextEntry.h>
@@ -44,6 +48,10 @@ extern float FMWPC_Zlen;
 extern float FMWPC_Dead_diameter;
 extern float FMWPC_WIRE_SPACING;
 extern vector<double> FMWPC_Zpos;
+extern float CTOF_width;  // 20
+extern float CTOF_length; // 120
+extern float CTOF_depth;  // 1.27
+extern vector<DVector3> CTOF_pos;  // from DGeometry::GetCTOFPositions()
 
 
 // We declare this as a global since putting it in the class would
@@ -155,11 +163,17 @@ fmwpc_mainframe::fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t
         TGGroupFrame *drawenableframe = new TGGroupFrame(topframe, "Draw Options", kVerticalFrame);
         topframe->AddFrame(drawenableframe, lhints);
         checkbuttons["Draw FMWPC"         ] = new TGCheckButton(drawenableframe, "Draw FMWPC");
+        checkbuttons["Draw CTOF"          ] = new TGCheckButton(drawenableframe, "Draw CTOF");
         checkbuttons["Draw Tracks"        ] = new TGCheckButton(drawenableframe, "Draw Tracks");
         checkbuttons["Draw Track Hit Projections"] = new TGCheckButton(drawenableframe, "Draw Track Hit Projections");
         checkbuttons["Draw FMWPCHits"     ] = new TGCheckButton(drawenableframe, "Draw DFMWPCHits");
+        checkbuttons["Draw FMWPCDigiHits" ] = new TGCheckButton(drawenableframe, "Draw DFMWPCDigiHits");
         checkbuttons["Draw FMWPCClusters" ] = new TGCheckButton(drawenableframe, "Draw DFMWPCClusters");
         checkbuttons["Draw FCALHits"      ] = new TGCheckButton(drawenableframe, "Draw DFCALHits");
+        checkbuttons["Draw CTOFDigiHits"  ] = new TGCheckButton(drawenableframe, "Draw CTOFDigiHits");
+        checkbuttons["Draw CTOFTDCDigiHits"] = new TGCheckButton(drawenableframe, "Draw CTOFTDCDigiHits");
+        checkbuttons["Draw CTOFHits"      ] = new TGCheckButton(drawenableframe, "Draw CTOFHits");
+        checkbuttons["Draw CTOFPoints"    ] = new TGCheckButton(drawenableframe, "Draw CTOFPoints");
         checkbuttons["Draw Vertex Momentum Values"] = new TGCheckButton(drawenableframe, "Draw Vertex Momentum Values");
         checkbuttons["Draw Projection Momentum Values"] = new TGCheckButton(drawenableframe, "Draw Projection Momentum Values");
         for( auto cb : checkbuttons ){
@@ -190,7 +204,7 @@ fmwpc_mainframe::fmwpc_mainframe(hdv_mainframe *hdvmf, const TGWindow *p, UInt_t
 		slo = -95.0;
 		shi =  95.0;
 		zlo = 575.0;
-		zhi = 970.0;
+		zhi = 985.0;
         topcanvas->GetCanvas()->cd();
         topcanvas->GetCanvas()->Range(zlo, slo, zhi, shi);
         sidecanvas->GetCanvas()->cd();
@@ -445,32 +459,73 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
         }
 
         // Draw Absorbers
-        for (uint32_t i = 0; i < FMWPC_Zpos.size() - 2; i++) {
-            Float_t z_upstream = FMWPC_Zpos[i];   // center of upstream chamber
-            Float_t z_dnstream = FMWPC_Zpos[i + 1]; // center of downstream chamber
-            Float_t zmin = z_upstream + FMWPC_Zlen / 2.0 + 1.0;
-            Float_t zmax = z_dnstream - FMWPC_Zlen / 2.0 - 1.0;
-            Float_t smin = -FMWPC_width / 2.0 - 2.0;
-            Float_t smax = +FMWPC_width / 2.0 + 2.0;
+		  if( FMWPC_Zpos.size() < 2 ){
+			jout << "FMWPC_Zpos.size()=" << FMWPC_Zpos.size() <<" which is <2. Unable to draw FMWPC." << std::endl;
+			jout << "Please make sure the CPP geometry is being used. e,g." << std::endl;
+			jout << "  setenv JANA_CALIB_CONTEXT \"variation=mc_cpp\"" << std::endl;
+		  }else{
+      	  for (uint32_t i = 0; i < FMWPC_Zpos.size() - 2; i++) {
+            	Float_t z_upstream = FMWPC_Zpos[i];   // center of upstream chamber
+            	Float_t z_dnstream = FMWPC_Zpos[i + 1]; // center of downstream chamber
+            	Float_t zmin = z_upstream + FMWPC_Zlen / 2.0 + 1.0;
+            	Float_t zmax = z_dnstream - FMWPC_Zlen / 2.0 - 1.0;
+            	Float_t smin = -FMWPC_width / 2.0 - 2.0;
+            	Float_t smax = +FMWPC_width / 2.0 + 2.0;
+            	auto box = new TBox(zmin, smin, zmax, smax);
+            	box->SetFillStyle(3001);
+            	box->SetFillColor(42);
+            	graphics.push_back(box);
+      	  }
+		  }
+    }
+
+    // Draw CTOF
+    if( checkbuttons["Draw CTOF"]->GetState() == kButtonDown) {
+        for (auto pos: CTOF_pos) {
+        
+            Float_t zmin = pos.Z() - CTOF_depth/2.0;
+            Float_t zmax = zmin + CTOF_depth;
+            Float_t smin;
+            Float_t smax;
+            if( view=="top" ){
+                smin = pos.X() - CTOF_width/2.0;
+                smax = smin + CTOF_width;
+            }else{
+                smin = pos.Y() - CTOF_length/2.0;
+                smax = smin + CTOF_length;
+            }
             auto box = new TBox(zmin, smin, zmax, smax);
+            box->SetLineWidth(1);
+            box->SetLineColor(kBlack);
             box->SetFillStyle(3001);
-            box->SetFillColor(42);
+            box->SetFillColor(TColor::GetColor((Float_t) 0.9, 0.9, 0.9));
             graphics.push_back(box);
+            graphics_draw_options[box] = "L"; // Draw outline AND fill style
         }
     }
 
     // Get all JANA objects
     vector<const DTrackTimeBased*> tbts;
     vector<const DFCALHit*> fcalhits;
+    vector<const DFMWPCDigiHit*> fmwpcdigihits;
     vector<const DFMWPCHit*> fmwpchits;
     vector<const DFMWPCCluster*> fmwpcclusters;
     vector<const DFMWPCMatchedTrack*> fmwpcmatchedtracks;
+    vector<const DCTOFDigiHit*> ctofdigihits;
+    vector<const DCTOFTDCDigiHit*> ctoftdcdigihits;
+    vector<const DCTOFHit*> ctofhits;
+    vector<const DCTOFPoint*> ctofpoints;
     if( eventloop != NULL ) {
         eventloop->Get(tbts);
         eventloop->Get(fcalhits);
+        eventloop->Get(fmwpcdigihits);
         eventloop->Get(fmwpchits);
         eventloop->Get(fmwpcclusters);
         eventloop->Get(fmwpcmatchedtracks);
+        eventloop->Get(ctofdigihits);
+        eventloop->Get(ctoftdcdigihits);
+        eventloop->Get(ctofhits);
+        eventloop->Get(ctofpoints);
     }
 
     // Draw FCALHits
@@ -547,6 +602,23 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
         }
     }
 
+    // Draw FMWPCDigiHits
+    if( checkbuttons["Draw FMWPCDigiHits"]->GetState() == kButtonDown) {
+        for (auto hit: fmwpcdigihits) {
+
+            // layers 1,3,5=vertical   layers 2,4,6=horizontal
+            if ((view == "top" ) && ((hit->layer % 2) == 0)) continue; // skip horizontal wires if drawing vertical wires
+            if ((view == "side") && ((hit->layer % 2) == 1)) continue; // skip vertical wires if drawing horizontal wires
+
+            double s = (hit->wire * FMWPC_WIRE_SPACING) - 71.5;
+            double z = (uint32_t)(hit->layer) <= FMWPC_Zpos.size() ? FMWPC_Zpos[hit->layer - 1] : 0.0;
+            auto m = new TMarker(z, s, 22);
+            m->SetMarkerColor(kRed+4);
+            m->SetMarkerSize(1.0);
+            graphics.push_back(m);
+        }
+    }
+
     // Draw FMWPCHits
     if( checkbuttons["Draw FMWPCHits"]->GetState() == kButtonDown) {
         for (auto hit: fmwpchits) {
@@ -560,6 +632,194 @@ void fmwpc_mainframe::DrawDetectors(TCanvas *c, vector<TObject*> &graphics, std:
             auto m = new TMarker(z, s, 8);
             m->SetMarkerColor(kRed);
             m->SetMarkerSize(1.0);
+            graphics.push_back(m);
+        }
+    }
+
+    // Draw CTOFDigiHits
+    if( checkbuttons["Draw CTOFDigiHits"]->GetState() == kButtonDown) {
+        for (auto hit: ctofdigihits) {
+
+            if( (hit->bar<1) || (hit->bar>(int)CTOF_pos.size()) ){
+                _DBG_<<"CTOF bar out of range (" << hit->bar << " not in range 1-" << CTOF_pos.size() << ")" << endl;
+                continue;
+            }
+
+            auto pos = CTOF_pos[ hit->bar -1 ];
+            double s = (view == "top") ? pos.X():pos.Y();
+            double z = pos.Z();
+            
+            // For top view, draw circle, bot side view draw box
+            TObject *m = nullptr;
+            auto pedestal = (double)hit->pedestal*(double)hit->nsamples_integral/(double)hit->nsamples_pedestal;
+            
+            // Some empirical color scaling based on cosmic run 100288
+				// Top PMT will be a shade of blue while bottom will be shade of red
+            Float_t amp = 0.2 + ((double)hit->pulse_integral - pedestal)/2500.0;
+            if( amp<0.2) amp = 0.2;
+            if( amp>1.0) amp = 1.0;
+            auto color = TColor::GetColor((Float_t) 1.0, 1.0-amp, 1.0-amp); // Default to red-ish for top PMT
+				if(hit->end==1) color = TColor::GetColor((Float_t) 1.0-amp, 1.0-amp, 1.0); // blue-ish for bottom PMT
+
+            if( view == "top" ){
+                // For top view, shift the marker upstream/downstream for the top/bottom PMT so both can be seen
+                if( hit->end == 0 ){
+                    // top end
+                    z -= 3.0/2.0 + CTOF_depth;
+                }else{
+                    // bottom end
+                    z += 3.0/2.0 + CTOF_depth;
+                }
+                auto obj = new TEllipse( z, s, 3.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }else{
+                // for side view, shift marker to top or bottom PMT position
+                if( hit->end == 0 ){
+                    // top end
+                    s += CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }else{
+                    // bottom end
+                    s -= CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }
+                auto obj = new TBox( z-3.0, s-10.0, z+3.0, s+10.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }
+            
+            if( m == nullptr ) continue;
+            graphics.push_back(m);
+        }
+    }
+
+    // Draw CTOFTDCDigiHits
+    if( checkbuttons["Draw CTOFTDCDigiHits"]->GetState() == kButtonDown) {
+        for (auto hit: ctoftdcdigihits) {
+
+            if( (hit->bar<1) || (hit->bar>(int)CTOF_pos.size()) ){
+                _DBG_<<"CTOF bar out of range (" << hit->bar << " not in range 1-" << CTOF_pos.size() << ")" << endl;
+                continue;
+            }
+
+            auto pos = CTOF_pos[ hit->bar -1 ];
+            double s = (view == "top") ? pos.X():pos.Y();
+            double z = pos.Z();
+            
+            // For top view, draw circle, bot side view draw box
+            TObject *m = nullptr;
+            
+            // Color top PMT green and bottom yellow
+            auto color = TColor::GetColor((Float_t) 0.0, 1.0, 0.0); // Default to green for top PMT
+				if(hit->end==1) color = TColor::GetColor((Float_t) 1.0, 1.0, 0.2); // yellow for bottom PMT
+
+            if( view == "top" ){
+                // For top view, shift the marker upstream/downstream for the top/bottom PMT so both can be seen
+                if( hit->end == 0 ){
+                    // top end
+                    z -= 2.5/2.0 + CTOF_depth;
+                }else{
+                    // bottom end
+                    z += 2.5/2.0 + CTOF_depth;
+                }
+                auto obj = new TEllipse( z, s, 2.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }else{
+                // for side view, shift marker to top or bottom PMT position
+                if( hit->end == 0 ){
+                    // top end
+                    s += CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }else{
+                    // bottom end
+                    s -= CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }
+                auto obj = new TBox( z-1.5, s-8.0, z+1.5, s+8.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }
+            
+            if( m == nullptr ) continue;
+            graphics.push_back(m);
+        }
+    }
+
+    // Draw CTOFHits
+    if( checkbuttons["Draw CTOFHits"]->GetState() == kButtonDown) {
+        for (auto hit: ctofhits) {
+
+            if( (hit->bar<1) || (hit->bar>(int)CTOF_pos.size()) ){
+                _DBG_<<"CTOF bar out of range (" << hit->bar << " not in range 1-" << CTOF_pos.size() << ")" << endl;
+                continue;
+            }
+
+            auto pos = CTOF_pos[ hit->bar -1 ];
+            double s = (view == "top") ? pos.X():pos.Y();
+            double z = pos.Z();
+            
+            // For top view, draw circle, bot side view draw box
+            TObject *m = nullptr;
+            
+            // Some empirical color scaling
+				// Top PMT will be a shade of blue while bottom will be shade of red
+            Float_t amp = 0.2 + (double)hit->dE/0.100;
+            if( amp<0.2) amp = 0.2;
+            if( amp>1.0) amp = 1.0;
+            auto color = TColor::GetColor((Float_t) 1.0, 1.0-amp, 1.0-amp); // Default to red-ish for top PMT
+				if(hit->end==1) color = TColor::GetColor((Float_t) 1.0-amp, 1.0-amp, 1.0); // blue-ish for bottom PMT
+
+            if( view == "top" ){
+                // For top view, shift the marker upstream/downstream for the top/bottom PMT so both can be seen
+                if( hit->end == 0 ){
+                    // top end
+                    z -= 2.5/2.0 + CTOF_depth;
+                }else{
+                    // bottom end
+                    z += 2.5/2.0 + CTOF_depth;
+                }
+                auto obj = new TEllipse( z, s, 1.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }else{
+                // for side view, shift marker to top or bottom PMT position
+                if( hit->end == 0 ){
+                    // top end
+                    s += CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }else{
+                    // bottom end
+                    s -= CTOF_length/2.0 + 10.0; // 10.0 so tube can be drawn as 20cm long
+                }
+                auto obj = new TBox( z-1.0, s-6.0, z+1.0, s+6.0);
+                obj->SetFillStyle(1001);
+                obj->SetFillColor( color );
+                m = obj;
+            }
+            
+            if( m == nullptr ) continue;
+            graphics.push_back(m);
+        }
+    }
+
+    // Draw CTOFPoints
+    if( checkbuttons["Draw CTOFPoints"]->GetState() == kButtonDown) {
+        for (auto point: ctofpoints) {
+
+
+            double s = (view == "top") ? point->pos.X():point->pos.Y();
+            double z = point->pos.Z();
+            
+            // Some empirical color scaling
+				// Top PMT will be a shade of blue while bottom will be shade of red
+            Float_t amp = 0.4 + (double)point->dE/0.002;
+            if( amp<0.4) amp = 0.4;
+            if( amp>1.0) amp = 1.0;
+            auto color = TColor::GetColor((Float_t) 1.0, 1.0-amp, 1.0); // Default to magenta-ish
+				auto m = new TMarker( z, s, 22 );
+				m->SetMarkerColor( color );
             graphics.push_back(m);
         }
     }
