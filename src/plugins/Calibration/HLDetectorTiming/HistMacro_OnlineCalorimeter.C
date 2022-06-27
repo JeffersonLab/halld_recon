@@ -45,9 +45,9 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalFCALTime = 19.;
-	double nominalBCALADCTime = 17.5;
-	double nominalBCALTDCTime = 17.5;
+	double nominalFCALTime = 30.;
+	double nominalBCALADCTime = 27.5;
+	double nominalBCALTDCTime = 27.5;
 
 	//Get Histograms
 	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("BCAL/BCALHit ADC time");

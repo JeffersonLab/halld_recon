@@ -145,7 +145,7 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         // throw away hits from bad or noisy counters
         int quality = counter_quality[counter];
-        if (quality == k_counter_bad || quality == k_counter_noisy)
+        if (quality == k_counter_dead || quality == k_counter_bad || quality == k_counter_noisy)
             continue;
 
         // Throw away hits with firmware errors (post-summer 2016 firmware)

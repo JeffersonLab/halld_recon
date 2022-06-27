@@ -20,8 +20,6 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/SC/SCHit Matched time
-// hnamepath: /HLDetectorTiming/SC/SCHit TDC_ADC Difference
 // hnamepath: /HLDetectorTiming/TOF/TOFHit Matched time
 // hnamepath: /HLDetectorTiming/TOF/TOFHit TDC_ADC Difference
 //

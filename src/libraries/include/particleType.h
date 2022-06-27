@@ -2179,9 +2179,9 @@ inline static int PDGtype(Particle_t p)
   case OmegaMinus:	return  3334;
   case AntiNeutron:	return -2112;
   case AntiLambda:	return -3122;
-  case AntiSigmaMinus:	return -3112;
+  case AntiSigmaMinus:	return -3222;
   case AntiSigma0:	return -3212;
-  case AntiSigmaPlus:	return -3222;
+  case AntiSigmaPlus:	return -3112;
   case AntiXi0:		return -3322;
   case AntiXiPlus:	return -3312;
   case AntiOmegaPlus:	return -3334;
@@ -2308,9 +2308,9 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 3334:			return OmegaMinus;
   case -2112:		return AntiNeutron;
   case -3122:		return AntiLambda;
-  case -3112:		return AntiSigmaMinus;
+  case -3222:		return AntiSigmaMinus;
   case -3212:		return AntiSigma0;
-  case -3222:		return AntiSigmaPlus;
+  case -3112:		return AntiSigmaPlus;
   case -3322:		return AntiXi0;
   case -3312:		return AntiXiPlus;
   case -3334:		return AntiOmegaPlus;

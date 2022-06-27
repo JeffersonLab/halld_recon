@@ -58,6 +58,9 @@ static TH2D *hphi_vs_Phi_mumu;
 
 static TH1D *hphiJT;
 
+static TH1D *hpimem_ML_classifier;
+static TH1D *hpipep_ML_classifier;
+
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -166,6 +169,11 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
   hphi_vs_Phi_mumu = new TH2D("hphi_vs_Phi_mumu", "#phi vs #Phi ;#Phi ;#phi", 90, -180, 180, 90,-180, 180);
 
   hphiJT = new TH1D("hphiJT", "#vec{J}_{T}.#phi() ;#phi (degrees)", 90, -180, 180);
+  
+  hpimem_ML_classifier = new TH1D("hpimem_ML_classifier", "ML model classifier for #pi^{-}/e^{-};classifier value", 200, 0.0, 1.0);
+  hpipep_ML_classifier = new TH1D("hpipep_ML_classifier", "ML model classifier for #pi^{+}/e^{+};classifier value", 200, 0.0, 1.0);
+  
+  
   
    
   main->cd();
@@ -315,12 +323,10 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	double phi = angles.Phi();
 	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
 	double psi = Phi - phi;
-	if(psi < -3.14159) psi += 2*3.14159;
-	if(psi > 3.14159) psi -= 2*3.14159;
+	if(psi < -M_PI) psi += 2*M_PI;
+	if(psi > M_PI) psi -= 2*M_PI;
 	//---------------------------------
 	
-	/*
-	  //can uncomment out once e/pi classifier is properly implemented (if this is something we want as a monitoring plot at all...)
 	//---- Polarization observable from e+ e-
 	auto &ep_v4 = cppepem->ep_v4;
 	auto &em_v4 = cppepem->em_v4;
@@ -333,16 +339,14 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	             em_v4.Y() * 2*ep_v4.E()/(em_v4.E() - em_v3mag * cos(em_v4.Theta()));
 
         double Jphi = atan2(JTy, JTx)*180/acos(-1);
-	
-	
-	//if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
-	  // hphiJT->Fill(Jphi, weight);
-	//}
-
-	*/
+	double MLPClassifierMinus=cppepem->pimem_ML_classifier;
+	hpimem_ML_classifier->Fill(MLPClassifierMinus);
+  	double MLPClassifierPlus=cppepem->pipep_ML_classifier;
+	hpipep_ML_classifier->Fill(MLPClassifierPlus);
+	if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
+	  hphiJT->Fill(Jphi, weight);
+	}
         
-
-
 	//------- no MVA cut histograms ---------
 	hinvmass_nocut->Fill( invmass, weight );
 	hpimu_ML_classifier->Fill( pimu_ML_classifier );

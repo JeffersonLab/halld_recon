@@ -90,6 +90,7 @@ jerror_t JEventProcessor_PSC_TW::init(void)
 	// japp->RootUnLock();
 	//
 
+   TDirectory *main = gDirectory;
    TDirectory *pscDir = gDirectory->mkdir("PSC_TW");
    pscDir->cd();
 
@@ -119,9 +120,9 @@ jerror_t JEventProcessor_PSC_TW::init(void)
                                          Pulse peak; #Delta t (raw TDC - RF)",i+1),
                                    PBINS, PMIN, PMAX, TBINS, TMIN, TMAX);
    }
-   pscDir->cd();
+   main->cd();
 
-	return NOERROR;
+   return NOERROR;
 }
 
 //------------------
