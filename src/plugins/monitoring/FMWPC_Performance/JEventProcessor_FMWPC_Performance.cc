@@ -296,7 +296,7 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
       continue;
 
     // Cut on the number of hit layers
-    if(nLayerHit < 4 )//|| layerHit[5] == 0)
+    if(nLayerHit < 3 )//|| layerHit[5] == 0)
       continue;
 
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
