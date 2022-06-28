@@ -142,7 +142,7 @@ class hdv_mainframe:public TGMainFrame {
 		void SetFullListFrame(hdv_fulllistframe* d){fulllistmf = d;}
 
 		bool GetCheckButton(std::string who);
-		void SetCheckButton(string who, bool set_checked=true);
+		void SetCheckButton(std::string who, bool set_checked=true);
 		void AddCheckButtons(std::map<std::string, TGCheckButton*> &checkbuttons);
 		const char* GetFactoryTag(std::string who);
 		void GetReconFactory(std::string &name, std::string &tag);
