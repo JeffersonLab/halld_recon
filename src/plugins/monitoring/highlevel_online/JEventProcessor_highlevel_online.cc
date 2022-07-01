@@ -366,7 +366,7 @@ jerror_t JEventProcessor_highlevel_online::brun(JEventLoop *locEventLoop, int32_
 
 	dCoherentPeakRange = pair<double, double>(8.4, 9.0);
 	map<string, double> photon_beam_param;
-	if(locEventLoop->GetCalib("/ANALYSIS/beam_asymmetry/coherent_energy", photon_beam_param) == false)
+	if(locEventLoop->GetCalib("/PHOTON_BEAM/coherent_energy", photon_beam_param) == false)
 		dCoherentPeakRange = pair<double, double>(photon_beam_param["cohmin_energy"], photon_beam_param["cohedge_energy"]);
 
 	fcal_cell_thr  =  65;
@@ -773,7 +773,7 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 		}
 		
 		// Keep counts of events with any physics trigger as bit 33
-		if( locgtpTrigBits[1-1] | locgtpTrigBits[3-1] ) dHist_L1bits_gtp->Fill(33);
+		if( locgtpTrigBits[1-1] | locgtpTrigBits[2-1] | locgtpTrigBits[3-1] ) dHist_L1bits_gtp->Fill(33);
 
 		// #triggers: total
 		if(locL1Trigger->trig_mask > 0)
