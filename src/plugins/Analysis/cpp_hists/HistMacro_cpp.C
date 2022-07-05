@@ -1,7 +1,7 @@
 // hnamepath: /cpp_hists/Hist_MissingMass_PreKinFit/MissingMass
 // hnamepath: /cpp_hists/Hist_KinFitResults/ConfidenceLevel
 // hnamepath: /cpp_hists/Hist_InvariantMass_2Pi_KinFit/InvariantMass
-// hnamepath: /cpp_hists/Custom_cpp_hists/t
+// hnamepath: /cpp_hists/Custom_cpp_hists/t_rho
 // hnamepath: /cpp_hists/Custom_cpp_hists/Psi_rho
 {
 	TDirectory *locInitDirectory = gDirectory;
@@ -24,7 +24,7 @@
 	TH1I* locHist_MM = (TH1I*)locReactionDirectory->Get("Hist_MissingMass_PreKinFit/MissingMass");
 	TH1I* locHist_KinFitConLev = (TH1I*)locReactionDirectory->Get("Hist_KinFitResults/ConfidenceLevel");
 	TH1I* locHist_2Pi_Mass = (TH1I*)locReactionDirectory->Get("Hist_InvariantMass_2Pi_KinFit/InvariantMass");
-	TH1I* locHist_t = (TH1I*)locReactionDirectory->Get("Custom_cpp_hists/t");
+	TH1I* locHist_t = (TH1I*)locReactionDirectory->Get("Custom_cpp_hists/t_rho");
 	TH1I* locHist_Psi = (TH1I*)locReactionDirectory->Get("Custom_cpp_hists/Psi_rho");
 
 	//Draw
