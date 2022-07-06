@@ -23,7 +23,9 @@
 #include "DANA/DApplication.h"
 #include "JANA/JApplication.h"
 #include "JANA/JFactory.h"
+#include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALShower.h"
+#include "FCAL/DFCALHit.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "RF/DRFTime.h"
@@ -52,6 +54,8 @@ JEventProcessor_cal_high_energy_skim::JEventProcessor_cal_high_energy_skim()
   MIN_BCAL_E = 2.;
   MIN_FCAL_E = 5.;
 
+  MIN_TOTAL_CAL_E = 100.; // don't select on this by default
+
   //WRITE_EVIO = 1;
   MAKE_DIAGNOSTICS = 0;   // only save ROOT histograms if we need to
 
@@ -59,6 +63,7 @@ JEventProcessor_cal_high_energy_skim::JEventProcessor_cal_high_energy_skim()
   gPARMS->SetDefaultParameter("CALHIGHENERGY:DIAGNOSTICS", MAKE_DIAGNOSTICS );
   gPARMS->SetDefaultParameter("CALHIGHENERGY:MIN_BCAL_E" , MIN_BCAL_E );
   gPARMS->SetDefaultParameter("CALHIGHENERGY:MIN_FCAL_E" , MIN_FCAL_E );
+  gPARMS->SetDefaultParameter("CALHIGHENERGY:MIN_TOTAL_CAL_E" , MIN_TOTAL_CAL_E );
   
   num_epics_events = 0;
   
@@ -164,6 +169,26 @@ jerror_t JEventProcessor_cal_high_energy_skim::evnt(JEventLoop *loop, uint64_t e
 	  }
 	  if(MAKE_DIAGNOSTICS) japp->RootUnLock();
   }
+
+  // calculate the total calorimeter energy
+  vector<const DBCALHit *> bcal_hits;
+  loop->Get(bcal_hits);
+  double total_bcal_energy = 0.;
+  for(unsigned int i=0; i<bcal_hits.size(); i++) {
+      total_bcal_energy += bcal_hits[i]->E;
+  }
+
+  vector<const DFCALHit *> fcal_hits;
+  loop->Get(fcal_hits);
+  double total_fcal_energy = 0.;
+  for(unsigned int i=0; i<fcal_hits.size(); i++) {
+      total_fcal_energy += fcal_hits[i]->E;
+  }
+  
+  double total_energy = total_bcal_energy + total_fcal_energy;
+      
+  if(total_energy > MIN_TOTAL_CAL_E)
+      to_save_event = true;
 
   if(to_save_event) {
 	  locEventWriterEVIO->Write_EVIOEvent( loop, "cal_high_energy_skim" );

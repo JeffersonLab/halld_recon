@@ -32,8 +32,10 @@ class JEventProcessor_cal_high_energy_skim:public jana::JEventProcessor{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);	
   					///< Called after last event of last event source has been processed.
+
   double MIN_BCAL_E;
   double MIN_FCAL_E;
+  double MIN_TOTAL_CAL_E;
  
   //int WRITE_EVIO;
   int MAKE_DIAGNOSTICS;
