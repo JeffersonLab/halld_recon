@@ -63,7 +63,6 @@
 	}
 
 	//Get/Make Canvas
-        gROOT->SetStyle("Plain");
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
 		locCanvas = new TCanvas("Kinematics", "Kinematics", 1200, 900); //for testing
@@ -107,7 +106,7 @@
 		latex.SetTextAlign(31);
 
 		latex.DrawLatex(0.5, 0.9, "trig 1");
-		latex.DrawLatex(0.7, 0.9, "trig 3");		
+		latex.DrawLatex(0.7, 0.9, "trig 2");
 		latex.DrawLatex(0.9, 0.9, "trig 4");
 
 		latex.DrawLatex(0.3, 0.70, "Triggers");
@@ -141,12 +140,12 @@
 		sprintf(str, "%4.3g", h->GetBinContent(1,4));
 		latex.DrawLatex(0.45, 0.275, str);
 
-		// trig 3
-		sprintf(str, "%4.3g", h->GetBinContent(3,1));
+		// trig 2
+		sprintf(str, "%4.3g", h->GetBinContent(2,1));
 		latex.DrawLatex(0.65, 0.725, str);
-		sprintf(str, "%4.3g", h->GetBinContent(3,3));
+		sprintf(str, "%4.3g", h->GetBinContent(2,3));
 		latex.DrawLatex(0.65, 0.500, str);
-		sprintf(str, "%4.3g", h->GetBinContent(3,4));
+		sprintf(str, "%4.3g", h->GetBinContent(2,4));
 		latex.DrawLatex(0.65, 0.275, str);
 
 		// trig 4
@@ -179,17 +178,17 @@
  		latex.DrawLatex(0.45, 0.225, str);
  		latex2.DrawLatex(0.45, 0.185, "of trig 1's");
 
-		// trig 3
-		double Ntrig3 = h->GetBinContent(3,1);
-		sprintf(str, "(%4.1f%%)", Ntrig3/all_trigs*100.0);
+		// trig 2
+		double Ntrig2 = h->GetBinContent(2,1);
+		sprintf(str, "(%4.1f%%)", Ntrig2/all_trigs*100.0);
 		latex.DrawLatex(0.65, 0.675, str);
 		latex2.DrawLatex(0.65, 0.635, "of all trigs");
-		sprintf(str, "(%4.1f%%)", h->GetBinContent(3,3)/Ntrig3*100.0);
+		sprintf(str, "(%4.1f%%)", h->GetBinContent(2,3)/Ntrig2*100.0);
 		latex.DrawLatex(0.65, 0.450, str);
-		latex2.DrawLatex(0.65, 0.410, "of trig 3's");
-		sprintf(str, "(%4.1f%%)", h->GetBinContent(3,4)/Ntrig3*100.0);
+		latex2.DrawLatex(0.65, 0.410, "of trig 2's");
+		sprintf(str, "(%4.1f%%)", h->GetBinContent(2,4)/Ntrig2*100.0);
 		latex.DrawLatex(0.65, 0.225, str);
-		latex2.DrawLatex(0.65, 0.185, "of trig 3's");
+		latex2.DrawLatex(0.65, 0.185, "of trig 2's");
 
 		// trig 4
 		double Ntrig4 = h->GetBinContent(4,1);
@@ -248,40 +247,46 @@
 		double max_fp  = locHist_L1bits_fp->GetMaximum();
 		double max = (max_gtp>max_fp) ? max_gtp:max_fp;
 		
-		const int bin_number = 8;
-		const char *bin_label[bin_number] = {"Main (1)", "BCal (3)", "PS (4)", "FCal LED (3)", "BCal LED (9)", "BCal LED (10)", "Random (12)", "CTOF (6)"};
+		const int bin_number = 9;
+		const char *bin_label[bin_number] = {"Main (1)", "TOF (2)", "BCal (3)", "PS (4)", "TOF3 (6)", "FCal LED (3)", "BCal LED (9/10)", "Random (12)", "CTOF (6)"};
 		TH1I *locHist_Trigger_GTP = new TH1I("locHist_Trigger_GTP", "L1 Trigger Bits", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_FP = new TH1I("locHist_Trigger_FP", "", bin_number, 0, bin_number);
 		// helper histograms for the individual columns
 		TH1I *locHist_Trigger_alt1 = new TH1I("locHist_Trigger_alt1", "", bin_number, 0, bin_number);
-		// TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_alt2 = new TH1I("locHist_Trigger_alt2", "", bin_number, 0, bin_number);
 		TH1I *locHist_Trigger_alt3 = new TH1I("locHist_Trigger_alt3", "", bin_number, 0, bin_number);
+		TH1I *locHist_Trigger_alt4 = new TH1I("locHist_Trigger_alt4", "", bin_number, 0, bin_number);
 		for (int i=1; i <= bin_number; i++)
 		  locHist_Trigger_GTP->GetXaxis()->SetBinLabel(i,bin_label[i-1]);
 
 		// Main Trigger BCAL+FCAL: GTP Bit 1
 		locHist_Trigger_GTP->Fill(0., locHist_L1bits_gtp->GetBinContent(1));
+		// Main Trigger TOF: GTP Bit 2
+		locHist_Trigger_GTP->Fill(1., locHist_L1bits_gtp->GetBinContent(2));
+		locHist_Trigger_alt1->Fill(1., locHist_L1bits_gtp->GetBinContent(2));
 		// BCAL Trigger: GTP Bit 3
-		locHist_Trigger_GTP->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
-		locHist_Trigger_alt1->Fill(1., locHist_L1bits_gtp->GetBinContent(3));
+		locHist_Trigger_GTP->Fill(2., locHist_L1bits_gtp->GetBinContent(3));
 		// PS Trigger: GTP Bit 4
-		locHist_Trigger_GTP->Fill(2., locHist_L1bits_gtp->GetBinContent(4));
+		locHist_Trigger_GTP->Fill(3., locHist_L1bits_gtp->GetBinContent(4));
+		locHist_Trigger_alt2->Fill(3., locHist_L1bits_gtp->GetBinContent(4));
+		// TOF3 Trigger: GTP Bit 6
+		locHist_Trigger_GTP->Fill(4., locHist_L1bits_gtp->GetBinContent(6));
 
 		// FCAL LED: FP Bit 3
-		locHist_Trigger_FP->Fill(3., locHist_L1bits_fp->GetBinContent(3));
+		locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(3));
+		locHist_Trigger_alt3->Fill(5., locHist_L1bits_fp->GetBinContent(3));
 
-                // Don't fill these bits.
+                // Add these bits.
 		// BCAL LED: FP Bit 9
-                // locHist_Trigger_FP->Fill(4., locHist_L1bits_fp->GetBinContent(9));
-		// locHist_Trigger_alt2->Fill(4., locHist_L1bits_fp->GetBinContent(9));
+		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(9));
 		// BCAL LED: FP Bit 10
-                // locHist_Trigger_FP->Fill(5., locHist_L1bits_fp->GetBinContent(10));
+		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(10));
 
 		// Random Trigger: FP Bit 12
-		locHist_Trigger_FP->Fill(6., locHist_L1bits_fp->GetBinContent(12));
-		locHist_Trigger_alt3->Fill(6., locHist_L1bits_fp->GetBinContent(12));
+		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(12));
+		locHist_Trigger_alt4->Fill(7., locHist_L1bits_fp->GetBinContent(12));
 		// CTOF: FP Bit 6
-		locHist_Trigger_FP->Fill(7., locHist_L1bits_fp->GetBinContent(6));
+		locHist_Trigger_FP->Fill(8., locHist_L1bits_fp->GetBinContent(6));
 
 		locHist_Trigger_GTP->SetFillColor(kOrange);
 		locHist_Trigger_GTP->SetStats(0);
@@ -293,8 +298,9 @@
 
 		locHist_Trigger_FP->SetFillColor(kRed-4);
 		locHist_Trigger_FP->Draw("hist same");
-		// locHist_Trigger_alt2->Draw("hist same");
+		locHist_Trigger_alt2->Draw("hist same");
 		locHist_Trigger_alt3->Draw("hist same");
+		locHist_Trigger_alt4->Draw("hist same");
 
 		gPad->SetBottomMargin(0.25);
 		gPad->RedrawAxis();
