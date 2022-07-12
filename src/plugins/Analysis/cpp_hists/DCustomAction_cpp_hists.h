@@ -45,6 +45,7 @@ class DCustomAction_cpp_hists : public DAnalysisAction
 		const DAnalysisUtilities* dAnalysisUtilities;
 
                 TH1I *dEgamma, *dcosTheta_rho, *dphi_rho, *dPhi_rho, *dpsi_rho, *dt_rho, *dcosTheta_cpp, *dphi_cpp, *dPhi_cpp, *dpsi_cpp, *dt_cpp;
+		TH2I *dpsi_vs_E_rho;
 
 		//Store any histograms as member variables here
 };

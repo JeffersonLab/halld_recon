@@ -1201,8 +1201,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
            // Now check the TOF matching. Do this on a full detector level.
            float flightTimeCorrectedTOFTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - targetCenterCorrection;
 
-			cout << "TOF match = " << flightTimeCorrectedTOFTime << " " << locTOFHitMatchParams->dHitTime << " "
-				 << locTOFHitMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
+			// cout << "TOF match = " << flightTimeCorrectedTOFTime << " " << locTOFHitMatchParams->dHitTime << " "
+			// 	 << locTOFHitMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
 
 		   if(!NO_START_COUNTER) {
 			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - SC Target Time",
