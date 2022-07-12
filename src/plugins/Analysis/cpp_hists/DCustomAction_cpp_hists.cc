@@ -120,7 +120,7 @@ bool DCustomAction_cpp_hists::Perform_Action(JEventLoop* locEventLoop, const DPa
         }
 	
 	TLorentzVector locBeamP4 = locBeamPhoton->lorentzMomentum();
-	TLorentzVector locPiP4 = locParticles[1]->lorentzMomentum();
+	TLorentzVector locPiP4 = locParticles[0]->lorentzMomentum();
 	
 	// calculate missing P4
 	DLorentzVector locMissingPb208P4 = dAnalysisUtilities->Calc_MissingP4(Get_Reaction(), locParticleCombo,Get_UseKinFitResultsFlag());
@@ -151,7 +151,7 @@ bool DCustomAction_cpp_hists::Perform_Action(JEventLoop* locEventLoop, const DPa
 	TVector3 eps(cos(phipol), sin(phipol), 0.0); // beam polarization vector in lab
 	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
 	
-	double psi = Phi - phi;
+	double psi = phi - Phi;
 	if(psi < -3.14159) psi += 2*3.14159;
 	if(psi > 3.14159) psi -= 2*3.14159;
 	
