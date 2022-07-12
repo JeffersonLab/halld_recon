@@ -72,6 +72,7 @@ void DCustomAction_cpp_hists::Initialize(JEventLoop* locEventLoop)
 		dphi_rho = GetOrCreate_Histogram<TH1I>("phi_rho","#phi",360,-180,180);	
 		dPhi_rho = GetOrCreate_Histogram<TH1I>("Phi_rho","#Phi",360,-180,180);	
 		dpsi_rho = GetOrCreate_Histogram<TH1I>("Psi_rho","#psi",360,-180,180);
+		dpsi_vs_E_rho = GetOrCreate_Histogram<TH2I>("Psi_vs_E_rho","#psi",360,-180,180,endpoint_energy_bins, 0., endpoint_energy);
 		dt_rho = GetOrCreate_Histogram<TH1I>("t_rho","-t; -t (GeV/c)^{2}",400,0.,.1);	
 		dcosTheta_cpp = GetOrCreate_Histogram<TH1I>("cosTheta_cpp","cos#theta",200,-1,1);	
 		dphi_cpp = GetOrCreate_Histogram<TH1I>("phi_cpp","#phi",360,-180,180);	
@@ -164,6 +165,7 @@ bool DCustomAction_cpp_hists::Perform_Action(JEventLoop* locEventLoop, const DPa
 	  dEgamma->Fill(locBeamPhotonEnergy);
 	  if (locP4_2pi.M() > 0.6 && locP4_2pi.M() < 0.88){ // rho(770)
 	    dt_rho->Fill(t);
+	    dpsi_vs_E_rho->Fill(psi*TMath::RadToDeg(),locBeamPhotonEnergy);
 	    if(locBeamPhotonEnergy > cohmin_energy && locBeamPhotonEnergy < cohedge_energy){
 	      dphi_rho->Fill(phi*TMath::RadToDeg());
 	      dPhi_rho->Fill(Phi*TMath::RadToDeg());
