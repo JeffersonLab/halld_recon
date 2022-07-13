@@ -39,7 +39,6 @@ using namespace std;
 #include <CCAL/DCCALGeometry.h>
 #include <CCAL/DCCALHit.h>
 
-
 //------------------------------------------------------------------
 // Binary predicate used to sort hits
 //------------------------------------------------------------------
@@ -710,6 +709,7 @@ jerror_t DEventSourceHDDM::GetCherenkovTruthHits(hddm_s::HDDM *record,
 jerror_t DEventSourceHDDM::GetDIRCTruthHits(hddm_s::HDDM *record,
                                             vector<DMCTrackHit*>& data)
 {
+  /** don't need DIRC hits for GlueX-1 data, so ignore to avoid some DIRC hit stuff to avoid compilation errors
    const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
    hddm_s::DircTruthPointList::iterator iter;
    for (iter = points.begin(); iter != points.end(); ++iter) {
@@ -727,6 +727,7 @@ jerror_t DEventSourceHDDM::GetDIRCTruthHits(hddm_s::HDDM *record,
       mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
       data.push_back(mctrackhit);
    }
+  **/
 
    return NOERROR;
 }
@@ -2755,6 +2756,8 @@ jerror_t DEventSourceHDDM::Extract_DDIRCHit(hddm_s::HDDM *record,
    /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
+  /* see GetDIRCTruthHits()
+
    if (factory == NULL)
       return OBJECT_NOT_AVAILABLE;
    if (tag != "")
@@ -2776,6 +2779,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCHit(hddm_s::HDDM *record,
 
   // Copy into factory
   factory->CopyTo(data);
+  */
 
   return NOERROR;
 }
@@ -2835,6 +2839,8 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthHit(hddm_s::HDDM *record,
    if (tag != "")
       return OBJECT_NOT_AVAILABLE;
 
+   /* see GetDIRCTruthHits()
+
    vector<DDIRCTruthHit*> data;
 
    const hddm_s::DircTruthPointList &points = record->getDircTruthPoints();
@@ -2858,6 +2864,8 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthHit(hddm_s::HDDM *record,
    }
 
    factory->CopyTo(data);
+   */
+
    return NOERROR;
 }
 
@@ -2875,6 +2883,8 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthBarHit(hddm_s::HDDM *record,
       return OBJECT_NOT_AVAILABLE;
    if (tag != "")
       return OBJECT_NOT_AVAILABLE;
+
+   /* See GetDIRCTruthHits()
 
    vector<DDIRCTruthBarHit*> data;
 
@@ -2898,6 +2908,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthBarHit(hddm_s::HDDM *record,
 
   // Copy into factory
   factory->CopyTo(data);
+   */
 
   return NOERROR;
 }
@@ -2917,6 +2928,8 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
    if (tag != "")
       return OBJECT_NOT_AVAILABLE;
 
+   /* See GetDIRCTruthHits() 
+
    vector<DDIRCTruthPmtHit*> data;
 
    const hddm_s::DircTruthPmtHitList &hits = record->getDircTruthPmtHits();
@@ -2935,6 +2948,7 @@ jerror_t DEventSourceHDDM::Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record,
 
   // Copy into factory
   factory->CopyTo(data);
+   */
 
   return NOERROR;
 }

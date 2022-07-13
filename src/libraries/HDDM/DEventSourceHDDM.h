@@ -59,10 +59,10 @@ using namespace std;
 // modified by yqiang, Oct 10 2012
 // added RichTruthHit object, yqiang, Oct 7, 2013
 #include <CERE/DCereHit.h>
-#include "DIRC/DDIRCHit.h"
-#include "DIRC/DDIRCTruthHit.h"
-#include "DIRC/DDIRCTruthBarHit.h"
-#include "DIRC/DDIRCTruthPmtHit.h"
+#include <DIRC/DDIRCHit.h>
+#include <DIRC/DDIRCTruthBarHit.h>  
+#include <DIRC/DDIRCTruthHit.h>  
+#include <DIRC/DDIRCTruthPmtHit.h>
 #include <RF/DRFTime.h>
 #include <DANA/DApplication.h>
 #include "PAIR_SPECTROMETER/DPSHit.h"
@@ -151,9 +151,9 @@ class DEventSourceHDDM:public JEventSource
       jerror_t GetDIRCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t Extract_DCereHit(hddm_s::HDDM *record, JFactory<DCereHit> *factory, string tag);
       jerror_t Extract_DDIRCHit(hddm_s::HDDM *record, JFactory<DDIRCHit> *factory, string tag);
-      jerror_t Extract_DDIRCTruthHit(hddm_s::HDDM *record, JFactory<DDIRCTruthHit> *factory, string tag);
       jerror_t Extract_DDIRCTruthBarHit(hddm_s::HDDM *record, JFactory<DDIRCTruthBarHit> *factory, string tag);
       jerror_t Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record, JFactory<DDIRCTruthPmtHit> *factory, string tag);
+      jerror_t Extract_DDIRCTruthHit(hddm_s::HDDM *record, jana::JFactory<DDIRCTruthHit> *factory, std::string tag);
 
       std::ifstream *ifs;
       hddm_s::istream *fin;
