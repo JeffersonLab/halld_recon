@@ -25,13 +25,16 @@ enum DetectorSystem_t{
      SYS_START      = 0x0100,
      SYS_DIRC       = 0x0200,
      SYS_CCAL       = 0x0400,
+     SYS_CCAL_REF   = 0x0500,
      SYS_TAGH       = 0x0800,
      SYS_RF         = 0x1000,
      SYS_PS         = 0x2000,
      SYS_PSC        = 0x4000,
      SYS_FMWPC      = 0x8000,
      SYS_TPOL       = 0x10000,
-	 SYS_TAC		= 0x20000
+     SYS_TAC	    = 0x20000,
+     SYS_TRD        = 0x40000,
+     SYS_CTOF       = 0x80000,
 };
 
 inline const char* SystemName(DetectorSystem_t sys)
@@ -76,6 +79,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_CCAL:
               return "CCAL";
               break;
+          case SYS_CCAL_REF:
+              return "CCAL_REF";
+              break;
           case SYS_RF:
               return "RF";
               break;
@@ -94,6 +100,12 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_TAC:
               return "TAC";
               break;
+	  case SYS_TRD:
+	      return "TRD";
+	      break;
+          case SYS_CTOF:
+	      return "CTOF";
+	      break;
      }
      return "UNKNOWN";
 }
@@ -128,6 +140,8 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
 		return SYS_DIRC;
 	else if(strcmp(locSystemName, "CCAL") == 0)
 		return SYS_CCAL;
+	else if(strcmp(locSystemName, "CCAL_REF") == 0)
+		return SYS_CCAL_REF;
 	else if(strcmp(locSystemName, "RF") == 0)
 		return SYS_RF;
 	else if(strcmp(locSystemName, "PS") == 0)
@@ -140,6 +154,10 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
 		return SYS_TPOL;
 	else if(strcmp(locSystemName, "TAC") == 0)
 		return SYS_TAC;
+        else if(strcmp(locSystemName, "TRD") == 0)
+                return SYS_TRD;
+	else if(strcmp(locSystemName, "CTOF") == 0)
+                return SYS_CTOF;
 	else
 		return SYS_NULL;
 }
