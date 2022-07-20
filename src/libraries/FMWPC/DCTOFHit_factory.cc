@@ -79,7 +79,7 @@ jerror_t DCTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int j=0;j<tdcdigihits.size();j++){
       const DCTOFTDCDigiHit *tdcdigihit = tdcdigihits[j];
  
-      if (tdcdigihit->bar!=digihit->bar && tdcdigihit->end!=digihit->end) 
+      if (tdcdigihit->bar!=digihit->bar || tdcdigihit->end!=digihit->end) 
 	continue;
 
       // pulse pedestal
