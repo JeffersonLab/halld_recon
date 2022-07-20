@@ -657,7 +657,7 @@ class FitWrapper{
 		double Ntrig = Ntrig_tot - Ntrig_tot_pi0;
 		double rate_per_1ktrig = I/Ntrig*1000.0;
 		if(Ntrig>0.0){
-			sprintf(str, "%3.1f per 1k triggers (bits 1,3)", rate_per_1ktrig);
+			sprintf(str, "%3.1f per 1k triggers (bits 1,2)", rate_per_1ktrig);
 			latex.SetTextSize(0.06);
 			latex.DrawLatex(0.3, max*0.65, str);
 		}
@@ -666,7 +666,7 @@ class FitWrapper{
 		double Nmy_ps = Nps - Nps_pi0;
 		double rate_per_ps = I/Nmy_ps*1000.0;
 		if(Nmy_ps>0.0){
-			sprintf(str, "%3.1f per 1k PS coin(>7GeV)", rate_per_ps);
+			sprintf(str, "%3.1f per 1k PS coin", rate_per_ps);
 			latex.SetTextSize(0.06);
 			latex.DrawLatex(0.3, max*0.565, str);
 		}
@@ -757,7 +757,7 @@ class FitWrapper{
 			double Ntrig = Ntrig_tot - Ntrig_tot_phi;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,3)", rate_per_1ktrig);
+				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.4, max*0.65, str);
 			}
@@ -766,7 +766,7 @@ class FitWrapper{
 			double Nmy_ps = Nps - Nps_phi;
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
-				sprintf(str, "%3.3f per 1k PS coin(>7GeV)", rate_per_ps);
+				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.4, max*0.565, str);
 			}
@@ -834,7 +834,7 @@ class FitWrapper{
 			double Ntrig = Ntrig_tot - Ntrig_tot_rho;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,3)", rate_per_1ktrig);
+				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.010, max*0.65, str);
 			}
@@ -843,7 +843,7 @@ class FitWrapper{
 			double Nmy_ps = Nps - Nps_rho;
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
-				sprintf(str, "%3.3f per 1k PS coin(>7GeV)", rate_per_ps);
+				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.010, max*0.565, str);
 			}
@@ -910,7 +910,7 @@ class FitWrapper{
 			double Ntrig = Ntrig_tot - Ntrig_tot_omega;
 			double rate_per_1ktrig = I/Ntrig*1000.0;
 			if(Ntrig_tot>0.0){
-				sprintf(str, "%3.3f per 1k triggers (bits 1,3)", rate_per_1ktrig);
+				sprintf(str, "%3.3f per 1k triggers (bits 1,2)", rate_per_1ktrig);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.010, max*0.65, str);
 			}
@@ -919,7 +919,7 @@ class FitWrapper{
 			double Nmy_ps = Nps - Nps_omega;
 			double rate_per_ps = I/Nmy_ps*1000.0;
 			if(Nmy_ps>0.0){
-				sprintf(str, "%3.3f per 1k PS coin(>7GeV)", rate_per_ps);
+				sprintf(str, "%3.3f per 1k PS coin", rate_per_ps);
 				latex.SetTextSize(0.06);
 				latex.DrawLatex(1.010, max*0.565, str);
 			}

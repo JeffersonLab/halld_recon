@@ -25,16 +25,22 @@ using namespace jana;
 //----------------
 DFCALShower_factory::DFCALShower_factory()
 {
+  //debug_level=1;
   // should we use CCDB constants?
-  LOAD_NONLIN_CCDB = 1.;
-  LOAD_TIMING_CCDB = 1.;
+  LOAD_NONLIN_CCDB = true;
+  LOAD_TIMING_CCDB = true;
   // 29/03/2020 ijaegle@jlab.org decouple non linear and timing correction
   gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
   gPARMS->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
+  // Should we use the PrimeX-D energy correction?
+  USE_RING_E_CORRECTION=false;
+  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION",USE_RING_E_CORRECTION);
 
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
+  SHOWER_POSITION_LOG = false;
+  gPARMS->SetDefaultParameter("FCAL:SHOWER_POSITION_LOG", SHOWER_POSITION_LOG);
   // these need to come from database to ensure accuracy
   // remove default value which might be close to the right solution,
   // but not quite correct -- allow command line tuning
@@ -42,9 +48,9 @@ DFCALShower_factory::DFCALShower_factory()
   cutoff_energy= 0;
   linfit_slope = 0;
   linfit_intercept = 0;
-  expfit_param1 = 0;
-  expfit_param2 = 0;
-  expfit_param3 = 0;
+  expfit_param1 = 1.10358;
+  expfit_param2 = 0.31385;
+  expfit_param3 = -2.02585;
 
   timeConst0 = 0;
   timeConst1 = 0; 
@@ -89,16 +95,25 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=1.345;
-  INSERT_PAR2=0.04;
-  INSERT_PAR3=1.16;
-  INSERT_PAR4=2.;
+  INSERT_PAR1=0.0843;
+  INSERT_PAR2=1.1356;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
-
+  INSERT_POS_RES1=0.11;
+  INSERT_POS_RES2=0.22;
+  // For Island algorithm:
+  // INSERT_POS_RES1=0.18;
+  // INSERT_POS_RES2=0.055;
+  INSERT_E_VAR1=0.001223;
+  INSERT_E_VAR2=0.;
+  INSERT_E_VAR3=2.025e-5;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
+ 
 }
 
 //------------------
@@ -149,7 +164,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   // by default, load non-linear shower corrections from the CCDB
   // but allow these to be overridden by command line parameters
   energy_dependence_correction_vs_ring.clear();
-  if(LOAD_NONLIN_CCDB > 0.1) {
+  if(LOAD_NONLIN_CCDB) {
     map<string, double> shower_calib_piecewise;
     loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
     cutoff_energy = shower_calib_piecewise["cutoff_energy"];
@@ -186,7 +201,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     }
   }
   
-  if (LOAD_TIMING_CCDB > 0.1) {
+  if (LOAD_TIMING_CCDB) {
     // Get timing correction polynomial, J. Mirabelli 10/31/17
     map<string,double> timing_correction;
     loop->GetCalib("FCAL/shower_timing_correction", timing_correction); 
@@ -293,7 +308,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       DFCALShower* shower = new DFCALShower;
       
       shower->setEnergy( Ecorrected );
-      shower->setPosition( pos_corrected );
+      if (!SHOWER_POSITION_LOG)
+	shower->setPosition( pos_corrected );
+      else
+	shower->setPosition( pos_log );
       shower->setPosition_log( pos_log ); 
       shower->setTime ( cTime );
 
@@ -301,13 +319,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	FillCovarianceMatrix( shower );
       }
       else{
-	// Some guesses for insert resolution, currently hard-coded...
-	double sigx=0.1016/sqrt(Ecorrected)+0.2219;
+	// Some guesses for insert resolution
+	double sigx=INSERT_POS_RES1/sqrt(Ecorrected)+INSERT_POS_RES2;
 	shower->ExyztCovariance(1,1)=sigx*sigx;
 	shower->ExyztCovariance(2,2)=sigx*sigx;
-	shower->ExyztCovariance(0,0)=Ecorrected*Ecorrected*(0.01586/Ecorrected
-							    +0.0002342/(Ecorrected*Ecorrected)
-							    +1.695e-6);
+	shower->ExyztCovariance(0,0)
+	  =Ecorrected*Ecorrected*(INSERT_E_VAR1/Ecorrected
+				  + INSERT_E_VAR2/(Ecorrected*Ecorrected)
+				  + INSERT_E_VAR3);
 	for (unsigned int i=0;i<5;i++){
 	  for(unsigned int j=0;j<5;j++){
 	    if (i!=j) shower->ExyztCovariance(i,j)=0.;
@@ -350,6 +369,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// with each track
 	
 	DVector3 fcalFacePos = ( shower->getPosition() - vertex );
+	//if (SHOWER_POSITION_LOG) fcalFacePos = ( shower->getPosition_log() - vertex );
 	fcalFacePos.SetMag( fcalFacePos.Mag() * projPos.Z() / fcalFacePos.Z() );
  
 	double distance = ( fcalFacePos - projPos ).Mag();
@@ -376,7 +396,8 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setNumBlocks( fcalHits.size() );
       
       double e9e25, e1e9;
-      getE1925FromHits( e1e9, e9e25, fcalHits, getMaxHit( fcalHits ) );
+      getE1925FromHits( e1e9, e9e25, fcalHits,
+			getMaxHit(cluster->getChannelEmax(),fcalHits) );
       shower->setE1E9( e1e9 );
       shower->setE9E25( e9e25 );
 
@@ -384,10 +405,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       double sumV = 0;
       // if there is no nearest track, the defaults for xTr and yTr will result
       // in using the beam axis as the directional axis
+      //if (!SHOWER_POSITION_LOG)
       getUVFromHits( sumU, sumV, fcalHits,
 		     DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
 		     DVector3( xTr, yTr, 0 ) );
-      
+      //else
+      //getUVFromHits( sumU, sumV, fcalHits,
+      //	       DVector3( shower->getPosition_log().X(), shower->getPosition_log().Y(), 0 ),
+      //	       DVector3( xTr, yTr, 0 ) );
+
       shower->setSumU( sumU );
       shower->setSumV( sumV );
       
@@ -411,6 +437,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   //int MAXITER = 1000;
 
   DVector3  posInCal = cluster->getCentroid();
+ 
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
   double Eclust = cluster->getEnergy();
@@ -437,39 +464,46 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     critical_energy=INSERT_CRITICAL_ENERGY;
     zfront=m_insertFront;
 
-    A=INSERT_PAR1;
-    B=INSERT_PAR2;
-    C=INSERT_PAR3;
-    D=INSERT_PAR4;
-    if (Eclust<D){
-      Egamma=A*Eclust/(1.+B*Eclust);
-    }
-    else Egamma=A*D/(1.+D*B)+C*(Eclust-D);
+    Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
   }
   else{
-    int ring_region = -1;
-    if (0 <= ring_nb && ring_nb <= 2)
-      ring_region = 0;
-    else if (3 <= ring_nb && ring_nb <= 4)
-      ring_region = 1;
-    else if (ring_nb == 5)
-      ring_region = 2;
-    else if (6 <= ring_nb && ring_nb <= 7)
-      ring_region = 3;
-    else if (8 <= ring_nb && ring_nb <= 9)
-      ring_region = 4;
-    else if (10 <= ring_nb && ring_nb <= 11)
-      ring_region = 5;
-    else if (12 <= ring_nb && ring_nb <= 17)
-      ring_region = 6;
-    else if (18 <= ring_nb && ring_nb <= 20)
-      ring_region = 7;
-    else if (21 <= ring_nb && ring_nb <= 23)
-      ring_region = 8;
-  
-    // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
-    if (LOAD_NONLIN_CCDB > 0.1) {
-      
+     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
+    if (USE_RING_E_CORRECTION && energy_dependence_correction_vs_ring.size()>0){
+      // Method II: PRIMEXD way, correction per ring
+      Egamma=Eclust; // Initialize, before correction
+      int ring_region = -1;
+      if (0 <= ring_nb && ring_nb <= 2)
+	ring_region = 0;
+      else if (3 <= ring_nb && ring_nb <= 4)
+	ring_region = 1;
+      else if (ring_nb == 5)
+	ring_region = 2;
+      else if (6 <= ring_nb && ring_nb <= 7)
+	ring_region = 3;
+      else if (8 <= ring_nb && ring_nb <= 9)
+	ring_region = 4;
+      else if (10 <= ring_nb && ring_nb <= 11)
+	ring_region = 5;
+      else if (12 <= ring_nb && ring_nb <= 17)
+	ring_region = 6;
+      else if (18 <= ring_nb && ring_nb <= 20)
+	ring_region = 7;
+      else if (21 <= ring_nb && ring_nb <= 23)
+	ring_region = 8;
+      if (ring_region != -1) {	
+	Egamma = 0;
+	A = energy_dependence_correction_vs_ring[ring_region][0];
+	B = energy_dependence_correction_vs_ring[ring_region][1];
+	C = energy_dependence_correction_vs_ring[ring_region][2];
+	//D = energy_dependence_correction_vs_ring[ring_nb][3];
+	//E = energy_dependence_correction_vs_ring[ring_nb][4];
+	//F = energy_dependence_correction_vs_ring[ring_nb][5];
+	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2) + D * pow(Eclust, 3) + E * pow(Eclust, 4) + F * pow(Eclust, 5)); 
+	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
+	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
+      }
+      // End Correction method II     
+    } else {
       // Method I: IU way, one overall correction
       Egamma = 0;
       Ecutoff = cutoff_energy;
@@ -484,34 +518,15 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	
 	Egamma = Eclust / (A * Eclust + B); // Linear part
 	
-      } else
+      } else {
 	// 29/03/2020 ijaegle@jlab.org this correction is always applied if all C=2 & D=E=0 then Egamma = Eclust
-	if ( Eclust > Ecutoff ) { 
-	  
-	  Egamma = Eclust / (C - exp(-D * Eclust + E)); // Non-linear part
-	  
-	}
-      // 29/03/2020 ijaegle@jlab.org if all C=D=E=0 by mistake then Egamma = - Eclust
-      // End Correction method I 
-      
-      // Method II: PRIMEXD way, correction per ring
-      if (C == 2 && D == 0 && E == 0 && energy_dependence_correction_vs_ring.size() > 0 && ring_region != -1) {
-	
-	Egamma = 0;
-	A = energy_dependence_correction_vs_ring[ring_region][0];
-	B = energy_dependence_correction_vs_ring[ring_region][1];
-	C = energy_dependence_correction_vs_ring[ring_region][2];
-	//D = energy_dependence_correction_vs_ring[ring_nb][3];
-	//E = energy_dependence_correction_vs_ring[ring_nb][4];
-	//F = energy_dependence_correction_vs_ring[ring_nb][5];
-	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2) + D * pow(Eclust, 3) + E * pow(Eclust, 4) + F * pow(Eclust, 5)); 
-	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
-	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
+	// if all C=D=E=0 by mistake then Egamma = - Eclust
+	Egamma = Eclust / (C - exp(-D * Eclust + E)); // Non-linear part
       }
-      // End Correction method II  
-    }
-    //End energy dependence correction
+    } // End Correction method I 
   }
+  //End energy dependence correction
+  
   if (Egamma <= 0 && Eclust > 0) Egamma = Eclust; 
   
   // then depth corrections 
@@ -566,6 +581,11 @@ DFCALShower_factory::FillCovarianceMatrix(DFCALShower *shower){
   float shower_x = shower->getPosition().X();
   float shower_y = shower->getPosition().Y();
   float shower_z = shower->getPosition().Z();
+  //if (SHOWER_POSITION_LOG) {
+  //shower_x = shower->getPosition_log().X();
+  //shower_y = shower->getPosition_log().Y();
+  //shower_z = shower->getPosition_log().Z();
+  //}
   float shower_r = sqrt(shower_x*shower_x + shower_y*shower_y);
   float shower_theta = atan2(shower_r,shower_z);
   float thlookup = shower_theta/3.14159265*180;
@@ -722,6 +742,22 @@ DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
 }
 
 unsigned int
+DFCALShower_factory::getMaxHit(int chan_Emax, const vector< const DFCALHit* >& hitVec ) const {
+  
+  unsigned int maxIndex = 0;
+  
+  for( vector< const DFCALHit* >::const_iterator hit = hitVec.begin();
+       hit != hitVec.end(); ++hit ){
+    if (fcalGeom->channel((**hit).row,(**hit).column)==chan_Emax){
+      maxIndex = hit - hitVec.begin();
+      break;
+    }
+  }
+  return maxIndex;
+}
+
+
+unsigned int
 DFCALShower_factory::getMaxHit( const vector< const DFCALHit* >& hitVec ) const {
   
   unsigned int maxIndex = 0;
@@ -789,7 +825,7 @@ DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh,
   double E25 = 0;
 
   const DFCALHit* maxHit = hits[maxIndex];
-  
+ 
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end(); ++hit ){
      
@@ -860,7 +896,8 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   DVector3  posInCal = cluster->getCentroid();
   
-  const vector< DFCALCluster::DFCALClusterHit_t > locHitVector = cluster->GetHits();
+  vector<const DFCALHit*> locHitVector;
+  cluster->Get(locHitVector);
   
   int loc_nhits = (int)locHitVector.size();
   if( loc_nhits < 1 ) {
@@ -879,11 +916,11 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   for( int ih = 0; ih < loc_nhits; ih++ ) {
   	
-	DFCALCluster::DFCALClusterHit_t locHit = locHitVector[ih];
+	const DFCALHit *locHit = locHitVector[ih];
 	
-	double xcell = locHit.x;
-	double ycell = locHit.y;
-	double ecell = locHit.E;
+	double xcell = locHit->x;
+	double ycell = locHit->y;
+	double ecell = locHit->E;
 	
 	W  =  log_position_const + log( ecell / ecluster );
 	if( W > 0. ) {
@@ -906,7 +943,7 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   
   // Shower Depth Corrections (copied from GetCorrectedEnergyAndPosition function)
-   
+
   if ( Egamma > 0 ) { 
     float dxV   = x1 - vertex->X();
     float dyV   = y1 - vertex->Y();

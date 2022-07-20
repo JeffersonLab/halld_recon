@@ -60,6 +60,7 @@ public:
 	  return isBlockActive(row(channel),column(channel));
 	}
 	bool isInsertBlock(int row,int column) const;
+	bool isFiducial(double x,double y) const;
 	unsigned int numChannels() const {return m_numChannels;}
 	
 	DVector2 positionOnFace( int row, int column ) const;
@@ -70,6 +71,8 @@ public:
 
 	bool inInsert(int channel) const;
 	int channel( int row, int column ) const;
+	int channel(double x,double y) const;
+	bool hitPairHasInsertHit(int row1, int row2) const;
 
 	int row   ( int channel ) const { return m_row[channel];    }
 	int column( int channel ) const { return m_column[channel]; }
@@ -100,7 +103,8 @@ public:
 	
 	// global offsets
 	double m_FCALdX,m_FCALdY,m_FCALfront,m_insertFront;
-	
+	// global rotation angles
+	double m_FCALthetaX,m_FCALthetaY,m_FCALthetaZ;
 
  private:
 	DFCALGeometry(){};// force use of constructor with arguments.

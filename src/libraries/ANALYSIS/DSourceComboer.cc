@@ -146,7 +146,7 @@ void DSourceComboer::Define_DefaultCuts(void)
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].first = "[0]"; //low bound
 	ddEdxCuts_TF1Params[KPlus][SYS_CDC].first = {-9.9E9};
 	ddEdxCuts_TF1FunctionStrings[KPlus][SYS_CDC].second = "exp(-1.0*[0]*x + [1]) + [2]"; //high bound
-	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {7.0, 3.0, 6.2};
+	ddEdxCuts_TF1Params[KPlus][SYS_CDC].second = {8.0, 4.7, 5.5};
 
 	//CDC e-
 	ddEdxCuts_TF1FunctionStrings[Electron][SYS_CDC].first = "[0]"; //low bound
@@ -480,7 +480,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString_High = locSystemStringMap[locSystemPair.first].second;
 
 			//Create TF1 low-side, Set cut values
-			auto locFunc_Low = new TF1("df_dEdxCut_Low", locCutFuncString_Low.c_str(), 0.0, 12.0);
+			auto locFunc_Low = new TF1("df_dEdxCut_Low", (locCutFuncString_Low + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, low-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_Low;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].first = locFunc_Low;
@@ -494,7 +494,7 @@ void DSourceComboer::Create_CutFunctions(void)
 				jout << endl;
 
 			//Create TF1 high-side, Set cut values
-			auto locFunc_High = new TF1("df_dEdxCut_High", locCutFuncString_High.c_str(), 0.0, 12.0);
+			auto locFunc_High = new TF1("df_dEdxCut_High", (locCutFuncString_High + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "dE/dx Cut PID, System, High-side func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString_High;
 			ddEdxCutMap[locPIDPair.first][locSystemPair.first].second = locFunc_High;
@@ -526,7 +526,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_EOverPCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_EOverPCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "E/p Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dEOverPCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -558,7 +558,7 @@ void DSourceComboer::Create_CutFunctions(void)
 			auto locCutFuncString = locSystemStringMap[locSystemPair.first];
 
 			//Create TF1, Set cut values
-			auto locFunc = new TF1("df_BetaCut", locCutFuncString.c_str(), 0.0, 12.0);
+			auto locFunc = new TF1("df_BetaCut", (locCutFuncString + "     ").c_str(), 0.0, 12.0);
 			if(dPrintCutFlag)
 				jout << "Beta Cut PID, System, func form, params: " << ParticleType(locPIDPair.first) << ", " << SystemName(locSystemPair.first) << ", " << locCutFuncString;
 			dBetaCutMap[locPIDPair.first][locSystemPair.first] = locFunc;
@@ -1405,10 +1405,10 @@ bool DSourceComboer::Cut_dEdxAndEOverP(const DChargedTrackHypothesis* locCharged
 	bool locPassedCutFlag = true;
 
 	//CDC dE/dx
-//cout << "PID, p, dedx, #hits = " << locPID << ", " << locP << ", " << locTrackTimeBased->ddEdx_CDC*1.0E6 << ", " << locTrackTimeBased->dNumHitsUsedFordEdx_CDC << endl;
+//cout << "PID, p, dedx, #hits = " << locPID << ", " << locP << ", " << locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6 << ", " << locTrackTimeBased->dNumHitsUsedFordEdx_CDC << endl;
 	if(locTrackTimeBased->dNumHitsUsedFordEdx_CDC > 0)
 	{
-		auto locdEdx = locTrackTimeBased->ddEdx_CDC_amp*1.0E6;
+	        auto locdEdx = locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6;
 		if(!Cut_dEdx(locPID, SYS_CDC, locP, locdEdx))
 			locPassedCutFlag = false;
 	}

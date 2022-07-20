@@ -39,6 +39,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		double Get_ChiSq_DCdEdx(void) const{return dTrackingInfo->dChiSq_DCdEdx;}
 		unsigned int Get_NDF_EoverP(void) const{return dEOverPInfo->dNDF_EoverP;}
 		double Get_ChiSq_EoverP(void) const{return dEOverPInfo->dChiSq_EoverP;}
+		double Get_dEdx_CDC_amp(void) const{return dTrackingInfo->ddEdx_CDC_amp;}
+		double Get_dEdx_CDC_int(void) const{return dTrackingInfo->ddEdx_CDC_int;}
 		const DTrackTimeBased* Get_TrackTimeBased(void) const{return dTrackingInfo->dTrackTimeBased;}
 
 		//Timing
@@ -64,6 +66,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DTOFHitMatchParams> Get_TOFHitMatchParams(void) const{return dTrackingInfo->dTOFHitMatchParams;}
 		shared_ptr<const DBCALShowerMatchParams> Get_BCALShowerMatchParams(void) const{return dTrackingInfo->dBCALShowerMatchParams;}
 		shared_ptr<const DFCALShowerMatchParams> Get_FCALShowerMatchParams(void) const{return dTrackingInfo->dFCALShowerMatchParams;}
+		shared_ptr<const DFCALSingleHitMatchParams> Get_FCALSingleHitMatchParams(void) const{return dTrackingInfo->dFCALSingleHitMatchParams;}
 		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
 		
 		
@@ -80,12 +83,15 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_TrackTimeBased(const DTrackTimeBased* locTrackTimeBased){dTrackingInfo->dTrackTimeBased = locTrackTimeBased;}
 		void Set_ChiSq_DCdEdx(double locChiSq, unsigned int locNDF);
 		void Set_ChiSq_EOverP(DetectorSystem_t detector,double locChiSq, unsigned int locNDF);
+		void Set_dEdx_CDC_amp(double locCDCdEdx_amp);
+		void Set_dEdx_CDC_int(double locCDCdEdx_int);
 
 		//Match params
 		void Set_SCHitMatchParams(shared_ptr<const DSCHitMatchParams> locMatchParams){dTrackingInfo->dSCHitMatchParams = locMatchParams;}
 		void Set_TOFHitMatchParams(shared_ptr<const DTOFHitMatchParams> locMatchParams){dTrackingInfo->dTOFHitMatchParams = locMatchParams;}
 		void Set_BCALShowerMatchParams(shared_ptr<const DBCALShowerMatchParams> locMatchParams){dTrackingInfo->dBCALShowerMatchParams = locMatchParams;}
 		void Set_FCALShowerMatchParams(shared_ptr<const DFCALShowerMatchParams> locMatchParams){dTrackingInfo->dFCALShowerMatchParams = locMatchParams;}
+		void Set_FCALSingleHitMatchParams(shared_ptr<const DFCALSingleHitMatchParams> locMatchParams){dTrackingInfo->dFCALSingleHitMatchParams = locMatchParams;}
 		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}
 
 		void toStrings(vector<pair<string,string> > &items) const
@@ -153,12 +159,16 @@ class DChargedTrackHypothesis : public DKinematicData
 				unsigned int dNDF_EoverP=0;
 				double dChiSq_EoverP=0.0;
 
+				double ddEdx_CDC_amp=0.0;
+				double ddEdx_CDC_int=0.0;
+
 				const DTrackTimeBased* dTrackTimeBased = nullptr; //can get candidateid from here
 
 				shared_ptr<const DSCHitMatchParams> dSCHitMatchParams = nullptr;
 				shared_ptr<const DTOFHitMatchParams> dTOFHitMatchParams = nullptr;
 				shared_ptr<const DBCALShowerMatchParams> dBCALShowerMatchParams = nullptr;
 				shared_ptr<const DFCALShowerMatchParams> dFCALShowerMatchParams = nullptr;
+				shared_ptr<const DFCALSingleHitMatchParams> dFCALSingleHitMatchParams = nullptr;
 				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;
 		};
 
@@ -339,6 +349,16 @@ inline void DChargedTrackHypothesis::Set_ChiSq_DCdEdx(double locChiSq, unsigned 
 	dTrackingInfo->dNDF_DCdEdx = locNDF;
 }
 
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_amp(double locCDCdEdx_amp)
+{
+	dTrackingInfo->ddEdx_CDC_amp = locCDCdEdx_amp;
+}
+
+inline void DChargedTrackHypothesis::Set_dEdx_CDC_int(double locCDCdEdx_int)
+{
+	dTrackingInfo->ddEdx_CDC_int = locCDCdEdx_int;
+}
+
 inline void DChargedTrackHypothesis::Set_ChiSq_Overall(double locChiSq, unsigned int locNDF, double locFOM)
 {
 	dTimingInfo->dChiSq = locChiSq;
@@ -379,11 +399,14 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 {
 	dNDF_DCdEdx = 0;
 	dChiSq_DCdEdx = 0.0;
+	ddEdx_CDC_amp = 0.0;
+	ddEdx_CDC_int = 0.0;
 	dTrackTimeBased = nullptr;
 	dSCHitMatchParams = nullptr;
 	dTOFHitMatchParams = nullptr;
 	dBCALShowerMatchParams = nullptr;
 	dFCALShowerMatchParams = nullptr;
+	dFCALSingleHitMatchParams = nullptr;
 	dDIRCMatchParams = nullptr;
 }
 

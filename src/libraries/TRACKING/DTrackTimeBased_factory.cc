@@ -239,6 +239,16 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
 
 	}
 
+	JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+	map<string, double> targetparms;
+	if (jcalib->Get("TARGET/target_parms",targetparms)==false){
+	  TARGET_Z = targetparms["TARGET_Z_POSITION"];
+	}
+	else{
+	  geom->GetTargetZ(TARGET_Z);
+	}
+	
+
 	return NOERROR;
 }
 
@@ -287,7 +297,9 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     loop->Get(bcal_showers);
   }
   vector<const DFCALShower*>fcal_showers;
+  vector<const DFCALHit*>fcal_hits; // for fallback to single hits in FCAL
   if (USE_FCAL_TIME){
+    loop->Get(fcal_hits);
     loop->Get(fcal_showers);
   }
   
@@ -302,7 +314,7 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // Create vector of start times from various sources
     vector<DTrackTimeBased::DStartTime_t>start_times;
-    CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,start_times);
+    CreateStartTimeList(track,sc_hits,tof_points,bcal_showers,fcal_showers,fcal_hits,start_times);
 	
     // Fit the track
     DoFit(track,start_times,loop,track->mass());
@@ -649,6 +661,7 @@ void DTrackTimeBased_factory
 			vector<const DTOFPoint*>&tof_points,
 			vector<const DBCALShower*>&bcal_showers,	
 			vector<const DFCALShower*>&fcal_showers,
+			vector<const DFCALHit*>&fcal_hits,
 			vector<DTrackTimeBased::DStartTime_t>&start_times){
   DTrackTimeBased::DStartTime_t start_time;
    
@@ -684,6 +697,16 @@ void DTrackTimeBased_factory
     //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
     start_time.system=SYS_FCAL;
     start_times.push_back(start_time); 
+  }
+  // look for matches to single FCAL hits
+  else if (pid_algorithm->Get_StartTime(track->extrapolations.at(SYS_FCAL),fcal_hits,locStartTime)){
+    // Fill in the start time vector
+    start_time.t0=locStartTime;
+    start_time.t0_sigma=sqrt(locStartTimeVariance);
+    //    start_time.t0_sigma=sqrt(locTimeVariance); //uncomment when ready
+    start_time.system=SYS_FCAL;
+    start_times.push_back(start_time); 
+
   }
   // Get start time estimate from BCAL
   locStartTime=track_t0;
@@ -1194,7 +1217,7 @@ void DTrackTimeBased_factory::CorrectForELoss(DVector3 &position,DVector3 &momen
   rt.SetMass(my_mass);
   rt.SetPLossDirection(DReferenceTrajectory::kBackward);
   DVector3 last_pos,last_mom;
-  DVector3 origin(0.,0.,65.);
+  DVector3 origin(0.,0.,TARGET_Z);
   DVector3 dir(0.,0.,1.);
   rt.FastSwim(position,momentum,last_pos,last_mom,q,origin,dir,300.);   
   position=last_pos;

@@ -37,21 +37,8 @@
 #include <TLatex.h>
 
 
-#if !(defined(__CINT__) || defined(__CLING__))
 
 #include "hdv_mainframe.h"
-
-#else
-
-// This ugliness is due to rootcling incorrectly flagging the
-// foward declaration of hdv_mainframe as an error. Since only
-// pointers to the class with no internals being referenced here,
-// a forward declaration should be allowed. This empty class
-// definition is just to appease rootcling but should not be
-// seen by the actual C++ compiler.
-class hdv_mainframe{};
-
-#endif
 
 
 class DCoordinateSystem;
@@ -71,8 +58,8 @@ class trk_mainframe:public TGMainFrame{
 		void DoTrackNumberMenuUpdate(Int_t widgetId, Int_t id);
 		void DoRequestFocus(Int_t id);
 		
-		void FillDataTypeComboBox(TGComboBox* cb, const string &def="DTrack");
-		void FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamecb, const string &def);
+		void FillDataTypeComboBox(TGComboBox* cb, const std::string &def="DTrack");
+		void FillFactoryTagComboBox(TGComboBox* cb, TGComboBox* datanamecb, const std::string &def);
 		void FillTrackNumberComboBox(TGComboBox* cb, TGComboBox* datanamecb, TGComboBox* tagcb, bool add_best_match_option);
 		
 	protected:
@@ -85,25 +72,25 @@ class trk_mainframe:public TGMainFrame{
 		TRootEmbeddedCanvas *histocanvas;
 		TH1D *resi;
 		TLatex *resi_lab;
-		vector<TGComboBox*> datatype;
-		vector<TGComboBox*> factorytag;
-		vector<TGComboBox*> trackno;
+		std::vector<TGComboBox*> datatype;
+		std::vector<TGComboBox*> factorytag;
+		std::vector<TGComboBox*> trackno;
 		TGCheckButton *slock;
 
 		double slo, shi, resilo, resihi;
 		
-		vector<TObject*> graphics;
+		std::vector<TObject*> graphics;
 		
-		void DrawAxes(TCanvas *c, vector<TObject*> &graphics, const char *xlab, const char *ylab);
-		void DrawHits(vector<TObject*> &graphics);
-		void DrawHitsForOneTrack(TVector3 &pos, TVector3 &mom, vector<TObject*> &graphics);
-		void DrawHitsForOneTrack(vector<TObject*> &graphics,
-										vector<pair<const DCoordinateSystem*,double> > &allhits,
+		void DrawAxes(TCanvas *c, std::vector<TObject*> &graphics, const char *xlab, const char *ylab);
+		void DrawHits(std::vector<TObject*> &graphics);
+		void DrawHitsForOneTrack(TVector3 &pos, TVector3 &mom, std::vector<TObject*> &graphics);
+		void DrawHitsForOneTrack(std::vector<TObject*> &graphics,
+										std::vector<std::pair<const DCoordinateSystem*,double> > &allhits,
 										DReferenceTrajectory *rt,
 										int index,
-										vector<const DCDCTrackHit*> &cdctrackhits);
+										std::vector<const DCDCTrackHit*> &cdctrackhits);
 
-		bool WireInList(const DCoordinateSystem *wire, vector<const DCDCTrackHit*> &cdctrackhits);
+		bool WireInList(const DCoordinateSystem *wire, std::vector<const DCDCTrackHit*> &cdctrackhits);
 
 	ClassDef(trk_mainframe,1)
 };

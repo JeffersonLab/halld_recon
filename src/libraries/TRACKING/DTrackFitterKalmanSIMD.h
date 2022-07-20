@@ -422,6 +422,12 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   void ComputeCDCDrift(double dphi,double delta,double t,double B,double &d, 
 		       double &V, double &tcorr);
   void TransformCovariance(DMatrix5x5 &C);
+  void AddExtrapolation(DetectorSystem_t detector,const DMatrix5x1 &S,
+			const DVector2 &xy,double t,double s,
+			double s_theta_ms_sum=0.,double theta2ms_sum=0.);
+  void AddExtrapolation(DetectorSystem_t detector,double z,const DMatrix5x1 &S,
+			double t,double s,double s_theta_ms_sum=0.,
+			double theta2ms_sum=0.);
 
   //const DMagneticFieldMap *bfield; ///< pointer to magnetic field map
   //const DGeometry *geom;
@@ -481,7 +487,8 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   // upstream cdc start position
   vector<double>cdc_origin;
   // outer detectors
-  double dTOFz,dFCALz,dDIRCz;
+  double dTOFz,dFCALz,dFCALzBack,dDIRCz,dFMWPCsize,dCTOFz;
+  vector<double>dFMWPCz_vec;
   vector<double>dTRDz_vec;
 
   // Mass hypothesis

@@ -991,7 +991,7 @@ bool DCutAction_dEdx::Cut_dEdx(const DChargedTrackHypothesis* locChargedTrackHyp
 		return true;
 
 	auto locP = locTrackTimeBased->momentum().Mag();
-	auto locdEdx = locTrackTimeBased->ddEdx_CDC_amp*1.0E6;
+	auto locdEdx = locChargedTrackHypothesis->Get_dEdx_CDC_amp()*1.0E6;
 
 	return ((locdEdx >= locCutPair.first->Eval(locP)) && (locdEdx <= locCutPair.second->Eval(locP)));
 }

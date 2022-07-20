@@ -528,6 +528,12 @@ bool HDEVIO::readNoFileBuff(uint32_t *user_buff, uint32_t user_buff_len, bool al
 			return false;			
 		}
 
+		if( words_left_in_file == 0 ) {
+		        err_mess << "Error reading EVIO block header (at EOF - truncated?)";
+		        err_code = HDEVIO_FILE_TRUNCATED;
+			return false;
+		}
+
 		// read EVIO block header
 		BLOCKHEADER_t bh;
 		ifs.seekg( NB_next_pos, ios_base::beg);

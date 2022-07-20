@@ -114,6 +114,19 @@ jerror_t DDetectorMatches_factory_Combo::evnt(jana::JEventLoop* locEventLoop, ui
 			locNewMatch->dFlightTimeVariance = locDeltaTVar*locEnergyRatio.first*locEnergyRatio.first + locEnergyRatio.second*locDeltaT*locDeltaT;
 			locDetectorMatches->Add_Match(locTrackTimeBased, locFCALShowerMatchParamsVector[loc_j]->dFCALShower, locNewMatch);
 		}
+		// Single FCAL Hits
+		vector<shared_ptr<const DFCALSingleHitMatchParams>> locFCALSingleHitMatchParamsVector;
+		locDetectorMatches->Get_FCALSingleHitMatchParams(locOriginalTrackTimeBased, locFCALSingleHitMatchParamsVector);
+		for(size_t loc_j = 0; loc_j < locFCALSingleHitMatchParamsVector.size(); ++loc_j)
+		{
+			double locDeltaT = locFCALSingleHitMatchParamsVector[loc_j]->dFlightTime;
+			double locDeltaTVar = locFCALSingleHitMatchParamsVector[loc_j]->dFlightTimeVariance;
+			auto locNewMatch = std::make_shared<DFCALSingleHitMatchParams>(*locFCALSingleHitMatchParamsVector[loc_j]);
+			locNewMatch->dFlightTime *= locEnergyRatio.first;
+			//assumes correlation between delta-t and E-ratio is negligible
+			locNewMatch->dFlightTimeVariance = locDeltaTVar*locEnergyRatio.first*locEnergyRatio.first + locEnergyRatio.second*locDeltaT*locDeltaT;
+			locDetectorMatches->Add_Match(locTrackTimeBased, locNewMatch);
+		}
 
 		//TOF
 		vector<shared_ptr<const DTOFHitMatchParams>> locTOFHitMatchParamsVector;

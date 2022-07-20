@@ -1,0 +1,12 @@
+
+import sbms
+
+Import('*')
+
+Import('env osname')
+
+subdirs = ['1p1pi1pi0','1p2pi']
+SConscript(dirs=subdirs, exports='env osname', duplicate=0)
+
+
+

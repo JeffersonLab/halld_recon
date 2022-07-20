@@ -102,7 +102,6 @@ void CDC_dedx(int integral=0) {
   if (fitstat == 0) {
     g->GetParameters(&pars[0]);
     res = 2.0*pars[2]/pars[1];
-    scale = pars[1]/2.5;    // dE/dx band is usually at ~2.5 keV/cm after calibration
     mean = pars[1];
 
     g->DrawCopy("same");

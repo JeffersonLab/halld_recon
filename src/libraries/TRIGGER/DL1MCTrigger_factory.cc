@@ -419,6 +419,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    fcal_hit_en += fcal_hits[ii]->E;
 	    
 	    fcal_signal fcal_tmp;
+	    fcal_tmp.merged = 0;
 	    
 	    fcal_tmp.row     = row;
 	    fcal_tmp.column  = col;
@@ -543,6 +544,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    bcal_hit_en += bcal_hits[ii]->E;
 	    
 	    bcal_signal bcal_tmp;	    
+	    bcal_tmp.merged  = 0;
 	    bcal_tmp.module  = module;
 	    bcal_tmp.layer   = layer;
   	    bcal_tmp.sector  = sector;

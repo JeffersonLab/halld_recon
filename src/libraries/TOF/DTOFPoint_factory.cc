@@ -1,9 +1,14 @@
 // $Id$
 //
-//		File: DTOFPoint_factory.cc
-// Created: Tue Oct 18 09:50:52 EST 2005
-// Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
-//
+/*! **File**: DTOFPoint_factory.cc
+ *+ Created: Tue Oct 18 09:50:52 EST 2005
+ *+ Creator: remitche (on Linux mantrid00 2.4.20-18.8smp i686)
+ *+ Purpose: Implementation of the DTOFPoint_factory creating DTOFHitPoints based on 
+ * DTOFPaddleHit objects from both planes (vertical and horizontal) forming space points.
+*/
+
+/// \addtogroup TOFDetector
+
 // Modified: Wed Feb 12 13:23:42 EST 2014 B. Zihlamnn
 //					 use new TOF geometry with narrow long paddles
 //					 and short paddles #22 and #23 for both north and south
@@ -422,18 +427,31 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       locMatchTErr = locHMatchTErr;
       locMatchdE2 = locTOFHit_Horizontal->dE;
 
-      const DTOFHit* loctofhit;
-      locTOFHit_Vertical->GetSingle(loctofhit);
-      int id = loctofhit->plane*NUM_BARS*2 + loctofhit->bar-1 + loctofhit->end*NUM_BARS;
-      float atten1 = AttenuationLengths[id][0];
-      float atten2 = AttenuationLengths[id][1];
-      float locd = TMath::Abs(locMatchY) - 15.; // only attenuate close to end of paddle not to center.
-      float corr = 1;
-      if (locd>0){
-	corr = (TMath::Exp(-locd/atten1) + TMath::Exp(-locd/atten2))/2.;
+      std::vector<const DTOFHit*> loctofhits;
+      locTOFHit_Vertical->Get(loctofhits);
+      const DTOFHit* loctofhit = 0;
+      for (auto hit : loctofhits) {
+        if ( (locMatchY > 0 && hit->end == 0) ||
+             (locMatchY < 0 && hit->end == 1) )
+        {
+           loctofhit = hit;
+        }
       }
-      locMatchdE1 = loctofhit->dE * corr;
-      //cout<<"Vertical: dE1 "<<locMatchdE1<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
+      if (loctofhit) {
+        int id = loctofhit->plane*NUM_BARS*2 + loctofhit->bar-1 + loctofhit->end*NUM_BARS;
+        float atten1 = AttenuationLengths[id][0];
+        float atten2 = AttenuationLengths[id][1];
+        float locd = TMath::Abs(locMatchY) - 15.; // only attenuate close to end of paddle not to center.
+        float corr = 1;
+        if (locd>0){
+          corr = (TMath::Exp(-locd/atten1) + TMath::Exp(-locd/atten2))/2.;
+        }
+        locMatchdE1 = loctofhit->dE * corr;
+        //cout<<"Vertical: dE1 "<<locMatchdE1<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
+      }
+      else {
+         locMatchdE1 = 0;
+      }
     }
   else if(locTOFSpacetimeHit_Vertical->dPositionWellDefinedFlag)
     {
@@ -446,19 +464,31 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       locMatchTErr = locVMatchTErr;
       locMatchdE1 = locTOFHit_Vertical->dE;
 
-      const DTOFHit* loctofhit;
-      locTOFHit_Horizontal->GetSingle(loctofhit);
-      int id = loctofhit->plane*NUM_BARS*2 + loctofhit->bar-1 + loctofhit->end*NUM_BARS;
-      float atten1 = AttenuationLengths[id][0];
-      float atten2 = AttenuationLengths[id][1];
-      float locd = TMath::Abs(locMatchX) - 15.; // only attenuate close to end of paddle not to center.
-      float corr = 1;
-      if (locd>0){
-	corr = (TMath::Exp(-locd/atten1) + TMath::Exp(-locd/atten2))/2.;
+      std::vector<const DTOFHit*> loctofhits;
+      locTOFHit_Horizontal->Get(loctofhits);
+      const DTOFHit* loctofhit = 0;
+      for (auto hit : loctofhits) {
+        if ( (locMatchX > 0 && hit->end == 0) ||
+             (locMatchX < 0 && hit->end == 1) )
+        {
+           loctofhit = hit;
+        }
       }
-      locMatchdE2 = loctofhit->dE * corr;
-      //cout<<"Horizontal: dE2 "<<locMatchdE2<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
-
+      if (loctofhit) {
+        int id = loctofhit->plane*NUM_BARS*2 + loctofhit->bar-1 + loctofhit->end*NUM_BARS;
+        float atten1 = AttenuationLengths[id][0];
+        float atten2 = AttenuationLengths[id][1];
+        float locd = TMath::Abs(locMatchX) - 15.; // only attenuate close to end of paddle not to center.
+        float corr = 1;
+        if (locd>0){
+          corr = (TMath::Exp(-locd/atten1) + TMath::Exp(-locd/atten2))/2.;
+        }
+        locMatchdE2 = loctofhit->dE * corr;
+        //cout<<"Horizontal: dE2 "<<locMatchdE2<<" = "<<loctofhit->dE<<"  *  "<<corr<<endl;
+      }
+      else {
+         locMatchdE2= 0;
+      }
     }
   else {
     return;

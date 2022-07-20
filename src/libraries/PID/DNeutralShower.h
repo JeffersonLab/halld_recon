@@ -38,7 +38,15 @@ class DNeutralShower : public jana::JObject
   // in the FCAL.  Quality = 1 for all BCAL showers.
 
   double dQuality;
-
+  
+  int dTOF_FCAL_match;
+  int dSC_FCAL_match;
+  int dSC_BCAL_match;
+  float dTOF_FCAL_x_min;
+  float dTOF_FCAL_y_min;
+  float dSC_BCAL_phi_min;
+  float dSC_FCAL_phi_min;
+  
   const JObject* dBCALFCALShower; //is either DBCALShower or DFCALShower: dynamic_cast as appropriate (based on dDetectorSystem)
 
   void toStrings(vector<pair<string,string> > &items) const{

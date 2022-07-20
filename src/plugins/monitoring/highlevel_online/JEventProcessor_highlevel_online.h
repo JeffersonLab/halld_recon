@@ -24,6 +24,7 @@
 #include <TAGGER/DTAGHHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
+#include <CCAL/DCCALDigiHit.h>
 #include <DAQ/Df250PulsePedestal.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
@@ -45,6 +46,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 
 		TH2I* dHist_NumTriggers;
 		TH2I* dHist_BCALVsFCAL_TrigBit1;
+		TH2I* dHist_CCALVsFCAL_TrigBit1;
 		TH1I* dHist_L1bits_gtp;
 		TH1I* dHist_L1bits_fp;
                 TH1I* dHist_L1bits_fp_twelvehundhits; // BCAL LED Pseudo Trigger(1200 hits in BCAL)
@@ -66,6 +68,8 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
 		TH1I *dptrans;
+		TH1I *dme_rho;
+		TH1I *dme_omega;
 		
 		TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
@@ -81,6 +85,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 
 		int fcal_cell_thr;
 		int bcal_cell_thr;
+		int ccal_cell_thr;
 		int fcal_row_mask_min, fcal_row_mask_max, fcal_col_mask_min, fcal_col_mask_max;
 
 		vector<double> dNumHadronicTriggers_CoherentPeak_RFSignal;
@@ -91,6 +96,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		pair<double, double> dCoherentPeakRange;
 		pair<int, int> dRFSidebandBunchRange;
 		map<Particle_t, map<DetectorSystem_t, double> > dTimingCutMap;
+		bool isExclusive;
 
 		double last_timestamp;
 		double unix_offset;

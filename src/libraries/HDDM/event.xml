@@ -215,13 +215,27 @@
       </RFtime>
       <forwardMWPC minOccurs="0">
         <fmwpcChamber layer="int" maxOccurs="unbounded" minOccurs="0" wire="int">
-          <fmwpcTruthHit dE="float" dx="float" maxOccurs="unbounded" t="float"/>
-          <fmwpcHit dE="float" maxOccurs="unbounded" t="float"/>
+          <fmwpcTruthHit dE="float" dx="float" maxOccurs="unbounded" t="float">
+	    <fmwpcTruthHitQ q="float" d="float" maxOccurs="unbounded"/>
+	  </fmwpcTruthHit>
+          <fmwpcHit dE="float" maxOccurs="unbounded" t="float">
+	    <fmwpcHitQ q="float" maxOccurs="unbounded"/>
+	  </fmwpcHit>
         </fmwpcChamber>
         <fmwpcTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
           <trackID minOccurs="0" itrack="int"/>
         </fmwpcTruthPoint>
       </forwardMWPC>
+      <cppTOF minOccurs="0">
+        <ctofCounter bar="int" maxOccurs="unbounded" minOccurs="0">
+          <!-- ctof hits are either top (end=0) or bottom (end=1)-->
+          <ctofHit end="int" maxOccurs="unbounded" minOccurs="0" dE="float" t="float"/>
+          <ctofTruthHit end="int" maxOccurs="unbounded" minOccurs="0" dE="float" t="float"/>
+        </ctofCounter>
+        <ctofTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+          <trackID minOccurs="0" itrack="int"/>
+        </ctofTruthPoint>
+      </cppTOF>
 
     </hitView>
     <reconView minOccurs="0" version="1.0">

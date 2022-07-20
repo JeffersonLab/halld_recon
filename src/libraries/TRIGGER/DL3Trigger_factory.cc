@@ -36,7 +36,6 @@ jerror_t DL3Trigger_factory::init(void)
 	L1_FP_TRIG_MASK = 0xffffffff;
 	MVA_WEIGHTS = "";
 	MVA_CUT = -0.2;
-	mvareader = NULL;
 
 	gPARMS->SetDefaultParameter("L3:FRACTION_TO_KEEP", FRACTION_TO_KEEP ,"Random Fraction of event L3 should keep. (Only used for debugging).");
 	gPARMS->SetDefaultParameter("L3:DO_WIRE_BASED_TRACKING", DO_WIRE_BASED_TRACKING ,"Activate wire-based tracking for every event");

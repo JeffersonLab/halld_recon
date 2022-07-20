@@ -1,10 +1,53 @@
 // $Id$
 //
-//    File: DTOFHit_factory.cc
-// Created: Wed Aug  7 09:30:17 EDT 2013
-// Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
-//
+/*! **File**: DTOFHit_factory.cc
+ *+ Created: Wed Aug  7 09:30:17 EDT 2013
+ *+ Creator: davidl (on Darwin harriet.jlab.org 11.4.2 i386)
+ *+ Purpose: Implementation of the DTOFHit factory. Creating DTOFHit objects from raw ADC
+ * and TDC data (DTOFDigiHit and DTOFTDCDigiHit objects, respectively). Matches between
+ * ADC and TDC hits are identified within a given time window. Calibration parameters
+ * for timing and energy conversion are loaded from CCDB and updated in the method ::brun()
+ * any time the run number changes. For found matches between ADC and TDC hits the TDC timing
+ * is corrected for detector walk based on the associated ADC amplituded.
+*/
+/// \addtogroup TOFDetector
 
+
+/*! \file DTOFHit_factory.cc implementation of the 5 JFactory member functions
+ * the execution of these functions are controlled by the JANA/DANA framework
+ * \fn ::init() called at start up
+ *              initialize basic variables that do not depend on the run number
+ * \fn ::brun() called whenever the run number changes
+ *              initialize variables that can change from run to run
+ *              read these calibration parameters from CCDB and RCDB
+ * \fn ::evnt() called for every event
+ *              process event, get raw TOF data from ADC and TDC match these hits based on timing
+ *              after timing offset parameters are applied, the TDC timing will be corrected for 
+ *              detector walk in case of matched hits
+ * \fn ::erun() called at the end of a run
+ * \fn ::fini() called at the end of the last processed event
+ 
+ * additional helper methods are implemented:
+ * \fn ::FindMatch() find match in ADC raw data for raw TDC time data, return ADC match
+ * match to be found within time window: DELTA_T_ADC_TDC_MAX defaults to 20ns can be modified
+ * by command line: -PTOF:DELTA_T_ADC_TDC_MAX=XX where XX is time window in ns 
+ * \param plane:
+ * \param bar:
+ * \param end: 
+ * \param T: TDC time
+
+ * \fn ::FillCalibTable()
+ * \fn ::GetConstant(), overloaded 4 times
+
+ * there are 5 different implementation of the walk correction, the last one CalcWalkCorrNEW5PAR() is
+ * the latest and currently used algorithm as defined in the table TOF2/walkcorr_type 
+ * \fn ::CalcWalkCorrIntegral()
+ * \fn ::CalcWalkCorrAmplitude()
+ * \fn ::CalcWalkCorrNEW()
+ * \fn ::CalcWalkCorrNEWAMP()
+ * \fn ::CalcWalkCorrNEW5PAR()
+
+ */
 
 #include <iostream>
 #include <iomanip>
@@ -40,9 +83,9 @@ jerror_t DTOFHit_factory::init(void)
   gPARMS->SetDefaultParameter("TOF:DEBUG_TOF_HITS", TOF_DEBUG,
 			      "Generate DEBUG output");
 
-  USE_NEWAMP_4WALKCORR = 0;
-  USE_AMP_4WALKCORR = 0;
-  USE_NEW_WALK_NEW = 0;
+  USE_NEWAMP_4WALKCORR = 0; // flag to use this walk correction
+  USE_AMP_4WALKCORR = 0;    // flag to use this walk correction
+  USE_NEW_WALK_NEW = 0;     // flag to use this walk correction
   USE_NEW_4WALKCORR = 0; // this is new always zero and not used!
 
   DELTA_T_ADC_TDC_MAX = 20.0; // ns
@@ -90,6 +133,12 @@ jerror_t DTOFHit_factory::init(void)
 //------------------
 jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
+  /// This method is called every time the run number changes and calibration
+  /// parameters can be loaded from CCDB. These parameters include timing offsets
+  /// walk fit parameters, attenuation lengths, effective speed of light in paddles,
+  /// At this point the selection of which walk correction is to be applied is done.
+
+
     // Only print messages for one thread whenever run number change
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -304,6 +353,14 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// This is where the first set of calibration constants
   /// is applied to convert from digitzed units into natural
   /// units.
+  /// 
+  /// In a second step TDC information from DTOFTDCDigiHit objects are
+  /// added to the hits if the TDC matches the ADC in time within a given timing window. 
+  //  In this case the TDC time can be corrected for detector signal walk. All times
+  /// are converted to nano seconds. 
+  /// The ADC energy deposition in paddle is converted to GeV assuming the hit is
+  /// at the center of the paddle. This will be corrected later using the hit position
+  /// and the attenuation length in the DTOFHIT_Paddle factory.
   ///
   /// Note that this code does NOT get called for simulated
   /// data in HDDM format. The HDDM event source will copy
@@ -563,10 +620,17 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 //------------------
 DTOFHit* DTOFHit_factory::FindMatch(int plane, int bar, int end, double T)
 {
+  /// This method tries to finds a corresponding match of an ADC hit to a
+  /// TDC hit object from DTOFTDCDigiHit with the requirement that the hit time T is within a predefined
+  /// window of size DELTA_T_ADC_TDC_MAX. This value can be over written on the
+  /// command line at start up by -PTOF:DELTA_T_ADC_TDC_MAX=xx where xx is the value
+  /// in ns. The default time window is 20ns. 
+
     DTOFHit* best_match = NULL;
 
     // Loop over existing hits (from fADC) and look for a match
     // in both the sector and the time.
+
     for(unsigned int i=0; i<_data.size(); i++){
         DTOFHit *hit = _data[i];
 

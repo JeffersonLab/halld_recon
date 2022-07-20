@@ -25,7 +25,12 @@ bool PRINT_SUMMARY_ALL = false;
 bool PRINT_SUMMARY_HEADER = false;
 bool PRINT_STATUS_BITS = false;
 bool ACTIVATE_TAGGED_FOR_SUMMARY = false;
+bool QUIT_AFTER_FINDING_NTH = false;
 extern bool SPARSIFY_SUMMARY;
+
+int N_TO_FIND=0; // default to processing all events
+
+int n_found=0;
 
 set<string> toprint;
 set<string> tosummarize;
@@ -187,13 +192,17 @@ jerror_t MyProcessor::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 			string name =fac_info[i].dataClassName;
 			string tag = fac_info[i].tag;
 			eventLoop->Print(name,tag.c_str());
-
+                        
 			if(LIST_ASSOCIATED_OBJECTS)PrintAssociatedObjects(eventLoop, &fac_info[i]);
 		}catch(...){
 			// exception thrown
 		}
 	}
 	
+        n_found++; // keep count of number of events printed
+
+        if (n_found==N_TO_FIND) eventLoop->QuitProgram();
+
 	// If the program is quitting, then don't bother waiting for the user
 	if(eventLoop->GetJApplication()->GetQuittingStatus())return NOERROR;
 	

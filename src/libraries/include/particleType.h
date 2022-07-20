@@ -107,6 +107,7 @@ typedef enum {
   Hg202          = 110,
   Pb208          = 111,
   U238           = 112,
+  Ta181          = 113,
 
   /* the constants defined by GEANT end here */
   
@@ -399,6 +400,8 @@ inline static char* ParticleType(Particle_t p)
     return (char*)"Dysprosium";
   case Yb174:
     return (char*)"Ytterbium";
+  case Ta181:
+    return (char*)"Tantalum";
   case W184:
     return (char*)"Tungsten";
   case Pt194:
@@ -652,6 +655,8 @@ inline static char* EnumString(Particle_t p)
     return (char*)"Dysprosium";
   case Yb174:
     return (char*)"Ytterbium";
+  case Ta181:
+    return (char*)"Tantalum";
   case W184:
     return (char*)"Tungsten";
   case Pt194:
@@ -905,6 +910,8 @@ inline static char* EvtGenString(Particle_t p)
     return (char*)"Dysprosium";
   case Yb174:
     return (char*)"Ytterbium";
+  case Ta181:
+    return (char*)"Tantalum";
   case W184:
     return (char*)"Tungsten";
   case Pt194:
@@ -1128,6 +1135,8 @@ inline static char* ShortName(Particle_t locPID)
     return (char*)"dy164";
   case Yb174:
     return (char*)"yb174";
+  case Ta181:
+    return (char*)"ta181";
   case W184:
     return (char*)"w184";
   case Pt194:
@@ -1410,6 +1419,8 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
     return Dy164;
   else if(strcmp(locParticleName, "Ytterbium") == 0)
     return Yb174;
+  else if(strcmp(locParticleName, "Tantalum") == 0)
+    return Ta181;
   else if(strcmp(locParticleName, "Tungsten") == 0)
     return W184;
   else if(strcmp(locParticleName, "Platium") == 0)
@@ -1540,6 +1551,7 @@ inline static unsigned short int IsFixedMass(Particle_t p)
   case Sm152:   return 1;
   case Dy164:   return 1;
   case Yb174:   return 1;
+  case Ta181:   return 1;
   case W184:    return 1;
   case Pt194:   return 1;
   case Au197:   return 1;
@@ -1814,6 +1826,8 @@ inline static char* ParticleName_ROOT(Particle_t p)
     return (char*)"^{164}Dy";
   case Yb174:
     return (char*)"^{174}Yb";
+  case Ta181:
+    return (char*)"^{181}Ta";
   case W184:
     return (char*)"^{184}W";
   case Pt194:
@@ -1968,6 +1982,7 @@ inline static double ParticleMass(Particle_t p)
   case Sm152:       return 141.51236;
   case Dy164:       return 152.69909;
   case Yb174:       return 162.02245;
+  case Ta181:       return 180.94788;
   case W184:        return 171.34924;
   case Pt194:       return 180.67513;
   case Au197:       return 183.47324;
@@ -1987,8 +2002,8 @@ inline static double ParticleMass(Particle_t p)
   case D0:              return 1.86484;
   case AntiD0:          return 1.86484;
   case DPlus:           return 1.86961;
-  case Dstar0:          return 2.01026;
-  case DstarPlus:       return 2.00696;
+  case Dstar0:          return 2.00685;
+  case DstarPlus:       return 2.01026;
   case Lambda_c:        return 2.28646;
   default:
     fprintf(stderr,"ParticleMass: Error: Unknown particle type %d,",p);
@@ -2101,6 +2116,7 @@ inline static int ParticleCharge(Particle_t p)
   case Sm152:       return 62;
   case Dy164:       return 66;
   case Yb174:       return 70;
+  case Ta181:       return 73;
   case W184:        return 74;
   case Pt194:       return 78;
   case Au197:       return 79;
@@ -2163,9 +2179,9 @@ inline static int PDGtype(Particle_t p)
   case OmegaMinus:	return  3334;
   case AntiNeutron:	return -2112;
   case AntiLambda:	return -3122;
-  case AntiSigmaMinus:	return -3112;
+  case AntiSigmaMinus:	return -3222;
   case AntiSigma0:	return -3212;
-  case AntiSigmaPlus:	return -3222;
+  case AntiSigmaPlus:	return -3112;
   case AntiXi0:		return -3322;
   case AntiXiPlus:	return -3312;
   case AntiOmegaPlus:	return -3334;
@@ -2238,6 +2254,7 @@ inline static int PDGtype(Particle_t p)
   case Sm152:    return 1000621520;
   case Dy164:    return 1000661640;
   case Yb174:    return 1000701740;
+  case Ta181:    return 1000731810;
   case W184:     return 1000741840;
   case Pt194:    return 1000781940;
   case Au197:    return 1000791970;
@@ -2291,9 +2308,9 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 3334:			return OmegaMinus;
   case -2112:		return AntiNeutron;
   case -3122:		return AntiLambda;
-  case -3112:		return AntiSigmaMinus;
+  case -3222:		return AntiSigmaMinus;
   case -3212:		return AntiSigma0;
-  case -3222:		return AntiSigmaPlus;
+  case -3112:		return AntiSigmaPlus;
   case -3322:		return AntiXi0;
   case -3312:		return AntiXiPlus;
   case -3334:		return AntiOmegaPlus;
@@ -2365,6 +2382,7 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 1000621520:  return Sm152;
   case 1000661640:  return Dy164;
   case 1000701740:  return Yb174;
+  case 1000731810:  return Ta181;
   case 1000741840:  return W184;
   case 1000781940:  return Pt194;
   case 1000791970:  return Au197;
@@ -2457,6 +2475,7 @@ inline static int Is_FinalStateParticle(Particle_t locPID)
         case Sm152:       return 1;
         case Dy164:       return 1;
         case Yb174:       return 1;
+        case Ta181:       return 1;
         case W184:        return 1;
         case Pt194:       return 1;
         case Au197:       return 1;
@@ -2644,6 +2663,8 @@ inline static char* Get_ShortName(Particle_t locPID)
         return (char*)"dy164";
     case Yb174:
         return (char*)"yb174";
+    case Ta181:
+        return (char*)"ta181";
     case W184:
         return (char*)"w184";
     case Pt194:
