@@ -196,17 +196,24 @@ class DMatrix4x4{
   }
 
   bool IsPosDef(){
-    // Determinant of 2x2 sub-matrix
-    double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
-    // Determinant of 3x3 sub-matrix
-    double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
-      - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
-      + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
-    //Determinant of 4x4 matrix
-    double det44=Determinant();
-    if(mA[0][0] > 0. && det22>0. && det33>0. && det44>0.)
-      return true;
-    else return false;
+    if (mA[0][0]>0.){
+      // Determinant of 2x2 sub-matrix
+      double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+      if (det22>0.){
+	// Determinant of 3x3 sub-matrix
+	double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
+	  - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
+	  + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
+	if (det33>0.){
+	  //Determinant of 4x4 matrix
+	  double det44=Determinant();
+	  if(det44>0.){
+	    return true;
+	  }
+	}
+      }
+    }
+    return false;
   }
 
   void Print(){

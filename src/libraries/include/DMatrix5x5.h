@@ -601,30 +601,37 @@ class DMatrix5x5{
   }
   
   bool IsPosDef(){
-    // Determinant of 2x2 sub-matrix
-    double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
-    // Determinant of 3x3 sub-matrix
-    double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
-      - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
-      + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
-    //Determinant of 4x4 sub-matrix
-    double det5=mA[2][2]*mA[3][3]-mA[2][3]*mA[3][2];
-    double det6=mA[2][1]*mA[3][3]-mA[2][3]*mA[3][1];
-    double det7=mA[2][1]*mA[3][2]-mA[2][2]*mA[3][1];
-    double det1=mA[1][1]*det5 - mA[1][2]*det6 + mA[1][3]*det7;
-    double det8=mA[2][0]*mA[3][3]-mA[2][3]*mA[3][0];
-    double det9=mA[2][0]*mA[3][2]-mA[2][2]*mA[3][0];
-    double det2=mA[1][0]*det5 - mA[1][2]*det8 + mA[1][3]*det9;
-    double det10=mA[2][0]*mA[3][1]-mA[2][1]*mA[3][0];
-    double det3=mA[1][0]*det6 - mA[1][1]*det8 + mA[1][3]*det10;
-    double det4=mA[1][0]*det7 - mA[1][1]*det9 + mA[1][2]*det10;
-    double det44=mA[0][0]*det1-mA[0][1]*det2+mA[0][2]*det3-mA[0][3]*det4;
-    // Determinant of 5x5matrix
-    double det55=Determinant();
-
-    if (mA[0][0] > 0. && det22>0. && det33>0. && det44>0. && det55>0.){ 
-      return true;
-    }
+    if (mA[0][0]>0.){
+      // Determinant of 2x2 sub-matrix
+      double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+      if (det22>0.){
+	// Determinant of 3x3 sub-matrix
+	double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
+	  - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
+	  + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
+	if (det33>0.){
+	  //Determinant of 4x4 sub-matrix
+	  double det5=mA[2][2]*mA[3][3]-mA[2][3]*mA[3][2];
+	  double det6=mA[2][1]*mA[3][3]-mA[2][3]*mA[3][1];
+	  double det7=mA[2][1]*mA[3][2]-mA[2][2]*mA[3][1];
+	  double det1=mA[1][1]*det5 - mA[1][2]*det6 + mA[1][3]*det7;
+	  double det8=mA[2][0]*mA[3][3]-mA[2][3]*mA[3][0];
+	  double det9=mA[2][0]*mA[3][2]-mA[2][2]*mA[3][0];
+	  double det2=mA[1][0]*det5 - mA[1][2]*det8 + mA[1][3]*det9;
+	  double det10=mA[2][0]*mA[3][1]-mA[2][1]*mA[3][0];
+	  double det3=mA[1][0]*det6 - mA[1][1]*det8 + mA[1][3]*det10;
+	  double det4=mA[1][0]*det7 - mA[1][1]*det9 + mA[1][2]*det10;
+	  double det44=mA[0][0]*det1-mA[0][1]*det2+mA[0][2]*det3-mA[0][3]*det4;
+	  if (det44>0.){
+	    // Determinant of 5x5 matrix
+	    double det55=Determinant();
+	    if (det55>0.){
+	      return true;
+	    }
+	  } // det44>0.?
+	} //det33>0.?
+      } // det22>0.?
+    } // mA[0][0]>0.?
 
     return false;
   }
