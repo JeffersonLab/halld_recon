@@ -23,14 +23,6 @@ class DTrackTimeBased:public DTrackingData{
 		JOBJECT_PUBLIC(DTrackTimeBased);
 		
 		double dEdx(void) const{return ((dNumHitsUsedFordEdx_CDC >= dNumHitsUsedFordEdx_FDC) ? ddEdx_CDC_amp : ddEdx_FDC);}
-		typedef struct{
-		  unsigned int inner_layer;
-		  unsigned int outer_layer;
-		  unsigned int total_hits;
-		}hit_usage_t;
-
-		hit_usage_t cdc_hit_usage;
-		hit_usage_t fdc_hit_usage;
 
 		unsigned int measured_fdc_hits_on_track;
 		unsigned int measured_cdc_hits_on_track;
