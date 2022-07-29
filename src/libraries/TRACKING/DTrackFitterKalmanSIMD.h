@@ -170,13 +170,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     chisq_ = 0.0;
     ndf_ = 0;
 
-    for (unsigned int i=0;i<cdcwires.size();i++){
-      for (unsigned int j=0;j<cdcwires[i].size();j++){
-	delete cdcwires[i][j];
-      }
-    }
-    cdcwires.clear();
-
    }
 
   // Virtual methods from TrackFitter base class
@@ -571,9 +564,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   vector<vector<double> >max_sag;
   vector<vector<double> >sag_phi_offset;
   
-  vector<vector<DCDCWire *> > cdcwires;
-  vector<double> cdc_rmid;
-
   // Parameters for dealing with FDC drift B dependence
   double FDC_DRIFT_BSCALE_PAR1,FDC_DRIFT_BSCALE_PAR2;
 
@@ -590,9 +580,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   
   // FDC wire info
   vector<double>fdc_z_wires;
-  double fdc_package_size;
-  double fdc_rmax;
-  vector<double> fdc_rmin_packages;
 
   // start counter geom info
   vector<vector<DVector3> >sc_dir; // direction vector in plane of plastic
