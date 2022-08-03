@@ -3969,12 +3969,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    for (unsigned int k=break_point_step_index+1;k<central_traj.size();k++){
       unsigned int k_minus_1=k-1;
 
-      // Check that C matrix is positive definite
-      if (!Cc.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
-      }
-
       // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
       S0=central_traj[k].S;
@@ -4414,13 +4408,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
-    
+     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
     // from reference trajectory
     S0=(forward_traj[k].S);
@@ -5055,13 +5043,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   S0_=(forward_traj[break_point_step_index].S);
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
-    
+
     z=forward_traj[k].z;
     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
@@ -9623,6 +9605,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	     
 	     if (!Ctest.IsPosDef()){
 	       if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	       return BROKEN_COVARIANCE_MATRIX;
 	     }
 	     
 	     if (tdrift >= CDC_T_DRIFT_MIN){
