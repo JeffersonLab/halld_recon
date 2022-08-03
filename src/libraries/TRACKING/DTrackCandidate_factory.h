@@ -146,7 +146,7 @@ class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
   vector<DTrackCandidate *>trackcandidates;
 
   int DEBUG_LEVEL,MIN_NUM_HITS;
-  bool DEBUG_HISTS;
+  bool DEBUG_HISTS,ADD_VERTEX_POINT;
   TH2F *match_dist,*match_dist_vs_p;
 //  TH2F *match_center_dist2;
 

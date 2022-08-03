@@ -79,7 +79,7 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 			 vector<vector<int> >&is_paired);
 
 
-  bool DEBUG_HISTS,USE_FDC;
+  bool DEBUG_HISTS,USE_FDC,ADD_VERTEX_POINT;
 
   TH2F *match_dist_fdc,*match_center_dist2;
  
