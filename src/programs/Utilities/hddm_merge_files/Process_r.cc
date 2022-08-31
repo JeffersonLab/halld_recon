@@ -53,7 +53,8 @@ void Process_r(unsigned int &NEvents, unsigned int &NEvents_read)
       // Loop over events
       while (ifs.good()) {
          HDDM xrec;
-         *istr >> xrec;
+         if (! (*istr >> xrec))
+            break;
          NEvents_read++;
 
          *ostr << xrec;
