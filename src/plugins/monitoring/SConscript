@@ -65,7 +65,6 @@ subdirs = [
 ,'cppFMWPC'
 ,'cppFMWPC_ana'
 ,'cpp_itrig'
-,'primex-online'
 
 ]
 
