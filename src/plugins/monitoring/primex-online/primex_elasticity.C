@@ -1,37 +1,11 @@
-#include <iostream>
-#include <fstream>
-using namespace std;
-#include <TFile.h>
-#include <TGraphErrors.h>
-#include <TMath.h>
-#include <TGraph2D.h>
-#include <TRandom.h>
-#include <TRandom3.h>
-#include <TStyle.h>
-#include <TText.h>
-#include <TCanvas.h>
-//#include <TF2.h>
-#include <TF1.h>
-#include <TH1.h>
-#include <TH2.h>
-#include <TH1F.h>
-#include <TH2F.h>
-#include <TROOT.h>
-#include <TLegend.h>
-#include <TLatex.h>
-#include <TLine.h>
-#include <TGaxis.h>
-#include "TLorentzVector.h"
-#include "TVector3.h"
-#include "TLorentzRotation.h"
-#include <TGenPhaseSpace.h>
-#include "TProfile.h"
-#include "Nice1D.C"
-#include "Nice3D2D.C"
-#include "Nicer1D.C"
-#include "Nice1Db.C"
+// hnamepath: /histo/Primakoff_2g
+// hnamepath: /histo/Primakoff_6g
+// hnamepath: /histo/Primakoff_2g2pi
+// hnamepath: /histo/theta_2g
+// hnamepath: /histo/theta_6g
+// hnamepath: /histo/theta_2g2pi
 
-void primex_elasticity(){
+{
   
   gROOT->Reset();
     
@@ -82,6 +56,9 @@ void primex_elasticity(){
   TString ylab = "";
   TString dir_path = "histo/";
   TString file = "";
+
+  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("histo");
+  if(dir) dir->cd();
   
   TH2F * h2D[3];
   TH1F * h_theta[3];
@@ -95,22 +72,76 @@ void primex_elasticity(){
   TString str_m[] = {"#it{m}_{#gamma#gamma}", "#it{m}_{#pi^{0}#pi^{0}#pi^{0}}", "#it{m}_{#pi^{0}#pi^{+}#pi^{-}}"};
   int nbin_im;
   double min_im_bin, max_im_bin, im_step;
+  Double_t BinMin = 0.4;
+  Double_t BinMax = 1.199;
+  Double_t SizeLabel = 0.05;
+  Double_t SizeTitle = 0.05;
+  Int_t TFONT = 42;
+  Int_t NDIV = 505;
+  Double_t OffsetTitleX = 1.;
+  Double_t OffsetTitleY = 1.;
+  Double_t OffsetTitleZ = 1.;
+  TString NameTitle = "";
+  TString NameXTitle = "";
+  TString NameYTitle = "";
+  TString NameZTitle = "";
   
   for (int i = 0; i < 3; i ++) {
-    h2D[i] = (TH2F *) gDirectory->Get(dir_path + str_elasticity[i]);
-    Nice3D2D(h2D[i], 0.05, 0.05, 42, 505, 1.1, 0.9, 1.25, "",
-	     Form("#font[42]{%s/m_{#eta}}", str_E[i].Data()),
-	     Form("#font[42]{%s/E_{#gamma}^{beam}}", str_m[i].Data()),
-	     "#font[42]{Entries #}");
-
-    h_theta[i] = (TH1F *) gDirectory->Get(dir_path + str_theta[i]);
+    h2D[i] = (TH2F *) gDirectory->FindObjectAny(str_elasticity[i]);
+    NameXTitle = Form("#font[42]{%s/m_{#eta}}", str_E[i].Data());
+    NameYTitle = Form("#font[42]{%s/E_{#gamma}^{beam}}", str_m[i].Data());
+    NameZTitle = "#font[42]{Entries #}";
+    OffsetTitleX = 1.1;
+    OffsetTitleY = 0.9;
+    OffsetTitleZ = 1.25;
+    h2D[i]->SetTitle(NameTitle);
+    h2D[i]->SetLabelSize(SizeLabel,"X");
+    h2D[i]->SetLabelSize(SizeLabel,"Y");
+    h2D[i]->SetLabelSize(SizeLabel,"Z");
+    h2D[i]->SetLabelFont(TFONT,"X");
+    h2D[i]->SetLabelFont(TFONT,"Y");
+    h2D[i]->SetLabelFont(TFONT,"Z");
+    h2D[i]->SetTitleSize(SizeTitle);
+    h2D[i]->SetTitleSize(SizeTitle,"X");
+    h2D[i]->SetTitleSize(SizeTitle,"Y");
+    h2D[i]->SetTitleSize(SizeTitle,"Z");
+    h2D[i]->SetNdivisions(NDIV,"X");
+    h2D[i]->SetNdivisions(NDIV,"Y");
+    h2D[i]->SetNdivisions(NDIV,"Z");
+    h2D[i]->SetTitleOffset(OffsetTitleX,"X");
+    h2D[i]->SetTitleOffset(OffsetTitleY,"Y");
+    h2D[i]->SetTitleOffset(OffsetTitleZ,"Z");
+    h2D[i]->GetXaxis()->CenterTitle(kTRUE);
+    h2D[i]->GetYaxis()->CenterTitle(kTRUE);
+    h2D[i]->GetZaxis()->CenterTitle(kTRUE);
+    h2D[i]->SetXTitle(NameXTitle);
+    h2D[i]->SetYTitle(NameYTitle);
+    h2D[i]->SetZTitle(NameZTitle);
+    h_theta[i] = (TH1F *) gDirectory->FindObjectAny(str_theta[i]);
     h_theta[i]->Rebin(10);
     nbin_im = h_theta[i]->GetNbinsX();
     min_im_bin = h_theta[i]->GetXaxis()->GetXmin();
     max_im_bin = h_theta[i]->GetXaxis()->GetXmax();
     im_step = (max_im_bin - min_im_bin) / ((double) nbin_im);
-    Nice1D(h_theta[i], 0.05, 0.05, 42,505,1.,1.6,"",Form("#font[42]{#it{#theta}_{#eta#rightarrow%s} [^{o}]}", str_fs[i].Data()), Form("#font[41]{Events / %0.3f [^{o}]}", im_step));
-    
+    OffsetTitleX = 1.0;
+    OffsetTitleY = 1.6;
+    NameXTitle = Form("#font[42]{#it{#theta}_{#eta#rightarrow%s} [^{o}]}", str_fs[i].Data());
+    NameYTitle = Form("#font[41]{Events / %0.3f [^{o}]}", im_step);
+    h_theta[i]->SetTitle(NameTitle);
+    h_theta[i]->SetLabelSize(SizeLabel,"X");
+    h_theta[i]->SetLabelSize(SizeLabel,"Y");
+    h_theta[i]->SetLabelFont(TFONT,"X");
+    h_theta[i]->SetLabelFont(TFONT,"Y");
+    h_theta[i]->SetTitleSize(SizeTitle,"X");
+    h_theta[i]->SetTitleSize(SizeTitle,"Y");
+    h_theta[i]->SetNdivisions(NDIV,"X");
+    h_theta[i]->SetNdivisions(NDIV,"Y");
+    h_theta[i]->SetTitleOffset(OffsetTitleX,"X");
+    h_theta[i]->SetTitleOffset(OffsetTitleY,"Y");
+    h_theta[i]->GetXaxis()->CenterTitle(kTRUE);
+    h_theta[i]->GetYaxis()->CenterTitle(kTRUE);
+    h_theta[i]->SetXTitle(NameXTitle);
+    h_theta[i]->SetYTitle(NameYTitle);
     h_theta[i]->SetLineColor(1);
     h_theta[i]->SetMarkerColor(1);
     h_theta[i]->SetMarkerSize(1);
