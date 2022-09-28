@@ -1,11 +1,11 @@
-// hnamepath: /histo/fcal_tof_dx
-// hnamepath: /histo/TaggerTiming_vs_egcut
-// hnamepath: /histo/FCALetato2g_trg3_Esum_sc_w
-// hnamepath: /histo/FCALetato2g_trg2_Esum_sc_w
-// hnamepath: /histo/FCALetato3pi0_trg3_Esum_sc_w
-// hnamepath: /histo/FCALetato3pi0_trg2_Esum_sc_w
-// hnamepath: /histo/FCALetato2g2pi_trg3_Esum_sc_w
-// hnamepath: /histo/FCALetato2g2pi_trg2_Esum_sc_w
+// hnamepath: /primex-online/fcal_tof_dx
+// hnamepath: /primex-online/TaggerTiming_vs_egcut
+// hnamepath: /primex-online/FCALetato2g_trg3_Esum_sc_w
+// hnamepath: /primex-online/FCALetato2g_trg2_Esum_sc_w
+// hnamepath: /primex-online/FCALetato3pi0_trg3_Esum_sc_w
+// hnamepath: /primex-online/FCALetato3pi0_trg2_Esum_sc_w
+// hnamepath: /primex-online/FCALetato2g2pi_trg3_Esum_sc_w
+// hnamepath: /primex-online/FCALetato2g2pi_trg2_Esum_sc_w
 
 {
   gROOT->Reset();
@@ -55,10 +55,10 @@
   TString cleg = "";
   TString xlab = "";
   TString ylab = "";
-  TString dir_path = "histo/";
+  TString dir_path = "primex-online/";
   TString file = "";
 
-  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("histo");
+  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("primex-online");
   if(dir) dir->cd();
   
   TH2F * h2D = (TH2F *) gDirectory->FindObjectAny("fcal_tof_dx");
@@ -103,12 +103,14 @@
   h2D->SetYTitle(NameYTitle);
   h2D->SetZTitle(NameZTitle);
   int nbin_im;
-  double min_im_bin, max_im_bin, im_step;
+  double min_im_bin, max_im_bin, im_step = 0;
   TH1F * h_time = (TH1F *) ((TH2F *) gDirectory->FindObjectAny("TaggerTiming_vs_egcut"))->ProjectionY("time");
-  nbin_im = h_time->GetNbinsX();
-  min_im_bin = h_time->GetXaxis()->GetXmin();
-  max_im_bin = h_time->GetXaxis()->GetXmax();
-  im_step = (max_im_bin - min_im_bin) / ((double) nbin_im);
+  if (h_time != NULL) {
+    nbin_im = h_time->GetNbinsX();
+    min_im_bin = h_time->GetXaxis()->GetXmin();
+    max_im_bin = h_time->GetXaxis()->GetXmax();
+    im_step = (max_im_bin - min_im_bin) / ((double) nbin_im);
+  }
   //Nice1Db(h_time,-30, 30, 0.05, 0.05, 42,505,1.,1.3,"","#font[42]{t_{Tagger}-t_{RF} [ns]}", Form("#font[41]{Events / %0.3f [ns]}", im_step));
   OffsetTitleX = 1.;
   OffsetTitleY = 1.3;
@@ -129,7 +131,8 @@
   h_time->GetYaxis()->CenterTitle(kTRUE);
   h_time->SetXTitle(NameXTitle);
   h_time->SetYTitle(NameYTitle);
-  h_time->GetXaxis()->SetRange(h_time->GetXaxis()->FindBin(BinMin),h_time->GetXaxis()->FindBin(BinMax));
+  if (h_time != NUL)
+    h_time->GetXaxis()->SetRange(h_time->GetXaxis()->FindBin(BinMin),h_time->GetXaxis()->FindBin(BinMax));
   TString str_trg_gg[] = {"FCALetato2g_trg3_Esum_sc_w", "FCALetato2g_trg2_Esum_sc_w"};
   TString str_trg_pi0pi0pi0[] = {"FCALetato3pi0_trg3_Esum_sc_w", "FCALetato3pi0_trg2_Esum_sc_w"};
   TString str_trg_pi0pippim[] = {"FCALetato2g2pi_trg3_Esum_sc_w", "FCALetato2g2pi_trg2_Esum_sc_w"};
@@ -142,8 +145,11 @@
   for (int i = 0; i < 2; i ++) {
     
     h_trg_gg[i] = (TH1F *) gDirectory->FindObjectAny(str_trg_gg[i]);
+    if (h_trg_gg[i] == NULL) continue;
     h_trg_pi0pi0pi0[i] = (TH1F *) gDirectory->FindObjectAny(str_trg_pi0pi0pi0[i]);
+    if (h_trg_pi0pi0pi0[i] == NULL) continue;
     h_trg_pi0pippim[i] = (TH1F *) gDirectory->FindObjectAny(str_trg_pi0pippim[i]);
+    if (h_trg_pi0pippim[i]  == NULL) continue;
     h_trg_gg[i]->Rebin(100);
     h_trg_pi0pi0pi0[i]->Rebin(100);
     h_trg_pi0pippim[i]->Rebin(100);
@@ -235,10 +241,11 @@
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h2D->SetMinimum(1);
-  h2D->Draw("colz");
-  gPad->SetLogz();
-
+  if (h2D != NULL) {
+    h2D->SetMinimum(1);
+    h2D->Draw("colz");
+    gPad->SetLogz();
+  }
   smallBetween1 = .15;
   smallBetween2 = .05;
   smallBetween3 = .05;
@@ -248,46 +255,52 @@
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_time->Draw();
+  if (h_time != NULL)
+    h_time->Draw();
 
   C1->cd(4);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_trg_gg[0]->Draw();
-  h_trg_gg[1]->Draw("same");
+  if (h_trg_gg[0] != NULL) {
+    h_trg_gg[0]->Draw();
+    if (h_trg_gg[1] != NULL)
+      h_trg_gg[1]->Draw("same");
   
-  legend=new TLegend(0.25,0.75,0.45,0.9);
-  legend->AddEntry(h_trg_gg[1],"#font[42]{Bit 1, E^{FCAL}_{sum} #geq 3.5GeV}","p");
-  legend->AddEntry(h_trg_gg[0],"#font[42]{Bit 2, E^{FCAL}_{sum} #geq 0.5GeV}","p");
-  legend->SetFillColor(0);
-  legend->SetTextFont(22);
-  legend->SetTextSize(.05);
-  legend->SetLineColor(0);
-  legend->Draw("same");
+    legend=new TLegend(0.25,0.75,0.45,0.9);
+    if (h_trg_gg[1] != NULL) legend->AddEntry(h_trg_gg[1],"#font[42]{Bit 1, E^{FCAL}_{sum} #geq 3.5GeV}","p");
+    legend->AddEntry(h_trg_gg[0],"#font[42]{Bit 2, E^{FCAL}_{sum} #geq 0.5GeV}","p");
+    legend->SetFillColor(0);
+    legend->SetTextFont(22);
+    legend->SetTextSize(.05);
+    legend->SetLineColor(0);
+    legend->Draw("same");
   
-  t->DrawLatex(0.5, h_trg_gg[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#gamma#gamma}");
-  
-  
+    t->DrawLatex(0.5, h_trg_gg[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#gamma#gamma}");
+  }
   C1->cd(5);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_trg_pi0pi0pi0[0]->Draw();
-  h_trg_pi0pi0pi0[1]->Draw("same");
+  if (h_trg_pi0pi0pi0[0] != NULL) {
+    h_trg_pi0pi0pi0[0]->Draw();
+    if (h_trg_pi0pi0pi0[1] != NULL)
+      h_trg_pi0pi0pi0[1]->Draw("same");
   
-  t->DrawLatex(0.5, h_trg_pi0pi0pi0[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#pi^{0}#pi^{0}#pi^{0}}");
-
+    t->DrawLatex(0.5, h_trg_pi0pi0pi0[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#pi^{0}#pi^{0}#pi^{0}}");
+  }
   C1->cd(6);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_trg_pi0pippim[0]->Draw();
-  h_trg_pi0pippim[1]->Draw("same");
+  if (h_trg_pi0pippim[0] != NULL) {
+    h_trg_pi0pippim[0]->Draw();
+    if (h_trg_pi0pippim[1])
+      h_trg_pi0pippim[1]->Draw("same");
   
-  t->DrawLatex(0.5, h_trg_pi0pippim[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#pi^{0}#pi^{+}#pi^{-}}");
-
+    t->DrawLatex(0.5, h_trg_pi0pippim[0]->GetMaximum() * 0.7, "#font[42]{#eta#rightarrow#pi^{0}#pi^{+}#pi^{-}}");
+  }
 }

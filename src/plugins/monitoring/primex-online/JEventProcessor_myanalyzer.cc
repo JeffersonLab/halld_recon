@@ -118,7 +118,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     for (unsigned int bit = 0; bit < 32; bit ++) {
       trig_bit[bit + 1] = (locL1Triggers[0]->trig_mask & (1 << bit)) ? 1 : 0;
       if(trig_bit[bit + 1] == 1) //htrig_bit->Fill(Float_t(bit+1));
-	Fill1DHistogram("histo","","trig_bit", Float_t(bit+1), ";Trigger bit #;Count [a.u.]", 100, 0., 100.);
+	Fill1DHistogram("primex-online","","trig_bit", Float_t(bit+1), ";Trigger bit #;Count [a.u.]", 100, 0., 100.);
       
     }
   }
@@ -182,8 +182,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     kinfitVertexY = locVerteces[i]->dSpacetimeVertex.Y();
     kinfitVertexZ = locVerteces[i]->dSpacetimeVertex.Z();
     kinfitR = sqrt(pow(kinfitVertexX, 2) + pow(kinfitVertexY, 2));
-    Fill1DHistogram("histo","","h_z", kinfitVertexZ, ";z [cm];Count [a.u.]", 1000, -1000., 1000.);
-    Fill1DHistogram("histo","","h_r", kinfitR, ";z [cm];Count [a.u.]", 1000, 0., 1000.);
+    Fill1DHistogram("primex-online","","h_z", kinfitVertexZ, ";z [cm];Count [a.u.]", 1000, -1000., 1000.);
+    Fill1DHistogram("primex-online","","h_r", kinfitR, ";z [cm];Count [a.u.]", 1000, 0., 1000.);
   }
 
   Bool_t target_vtx_z = (50.0 < kinfitVertexZ && kinfitVertexZ < 80);
@@ -195,7 +195,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     const DMCReaction* locMCReactions = NULL;
     eventLoop->GetSingle(locMCReactions);
     mc_eb = locMCReactions->beam.energy();
-    Fill1DHistogram("histo","","mc_eb", mc_eb, ";E_{#gamma} [GeV]", 500, 3.0, 12.0);  
+    Fill1DHistogram("primex-online","","mc_eb", mc_eb, ";E_{#gamma} [GeV]", 500, 3.0, 12.0);  
     for (unsigned int bit = 0; bit < 32; bit ++) {
       trig_bit[bit + 1] = 1;
     }
@@ -216,13 +216,13 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       FCAL_trg_Esum += (**hit).E;
   }
   if (FCAL_trg_Esum > 0) {
-    Fill1DHistogram("histo","","FCAL_trg_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("primex-online","","FCAL_trg_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
     if (trig_bit[1] == 1)
-      Fill1DHistogram("histo","","FCAL_trg1_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","FCAL_trg1_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
     if (trig_bit[2] == 1)
-      Fill1DHistogram("histo","","FCAL_trg2_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","FCAL_trg2_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
     if (trig_bit[3] == 1)
-      Fill1DHistogram("histo","","FCAL_trg3_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","FCAL_trg3_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
   }
 
   //Loop over neutral particle list, showers matching a track a removed
@@ -251,7 +251,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double pz = e * cos(position.Theta());
       TLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
-      Fill2DHistogram("histo", "", "bcal_edep", diff_t, e, ";t_{#gamma}^{bcal} - t_{RF} [ns];E_{shower} [GeV];count [a.u.]", 2000, -40., 40., 2000, 0., 2.);
+      Fill2DHistogram("primex-online", "", "bcal_edep", diff_t, e, ";t_{#gamma}^{bcal} - t_{RF} [ns];E_{shower} [GeV];count [a.u.]", 2000, -40., 40., 2000, 0., 2.);
       if (fabs(diff_t) < BCAL_RF_CUT) {
 	if (e > 0.25) PhotonsList.push_back(photon);
 	n_locBCALShowers ++;
@@ -286,10 +286,10 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
 
       //bool in_insert = fcalGeom->inInsert(channel);
       double radius = sqrt(pow(position.X(), 2) + pow(position.Y(), 2));
-      Fill1DHistogram("histo","","fcal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
-      Fill2DHistogram("histo","","fcal_xy", face_x, face_y, ";row;column #;Counts", 500, -125, 125, 500, -125, 125);
-      Fill2DHistogram("histo","","fcal_rc", row, col, ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
-      Fill2DHistogram("histo","","fcal_tof_dx", TOF_FCAL_x_min, TOF_FCAL_y_min, ";#Deltax;#Deltay;Counts", 200, 0, 50, 200, 0, 50);
+      Fill1DHistogram("primex-online","","fcal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
+      Fill2DHistogram("primex-online","","fcal_xy", face_x, face_y, ";row;column #;Counts", 500, -125, 125, 500, -125, 125);
+      Fill2DHistogram("primex-online","","fcal_rc", row, col, ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
+      Fill2DHistogram("primex-online","","fcal_tof_dx", TOF_FCAL_x_min, TOF_FCAL_y_min, ";#Deltax;#Deltay;Counts", 200, 0, 50, 200, 0, 50);
 
       if (fabs(diff_t) < FCAL_RF_CUT) {
 	if (radius < 10) InnerFCAL_ring = true;
@@ -321,7 +321,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double phi_ccal = PhotonVec.Phi();
       double theta_ccal = PhotonVec.Theta();
       double delta_phi_min = 1000.;
-      Fill1DHistogram("histo","","ccal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
+      Fill1DHistogram("primex-online","","ccal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
       if (fabs(diff_t) < CCAL_RF_CUT) {
 	//ShowersList.push_back(PhotonVec);
 	n_locCCALShowers++;
@@ -332,29 +332,29 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
 
   //Checking showers energy sum
   if (n_locBCALShowers > 0)
-    Fill1DHistogram("histo","","Esum_bcal", BCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("primex-online","","Esum_bcal", BCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
   if (n_locFCALShowers > 0) {
-    Fill1DHistogram("histo","","Esum_fcal", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("primex-online","","Esum_fcal", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     if (trig_bit[1] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg1", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_fcal_trg1", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
     if (trig_bit[2] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg2", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_fcal_trg2", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
     if (trig_bit[3] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg3", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_fcal_trg3", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
   }
   if (n_locCCALShowers > 0) {
-    Fill1DHistogram("histo","","Esum_ccal", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    Fill1DHistogram("primex-online","","Esum_ccal", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     if (trig_bit[1] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg1", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_ccal_trg1", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
     if (trig_bit[2] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg2", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_ccal_trg2", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
     if (trig_bit[3] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg3", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      Fill1DHistogram("primex-online","","Esum_ccal_trg3", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
     }
   }
   
@@ -375,13 +375,13 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     DLorentzVector ggP4 = gP4[0] + gP4[1];
     good_eta_to_2g = true;
     EtaP4 = ggP4;
-    Fill1DHistogram("histo","","mgg_all", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+    Fill1DHistogram("primex-online","","mgg_all", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
     
     if (n_locFCALShowers == 2)
-      Fill1DHistogram("histo","","mgg_fcal", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+      Fill1DHistogram("primex-online","","mgg_fcal", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
     
     if (n_locFCALTOFShowers == 2)
-      Fill1DHistogram("histo","","mgg_fcaltof", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+      Fill1DHistogram("primex-online","","mgg_fcaltof", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
     
     Bool_t GoodPi0 = (0.11 < ggP4.M() && ggP4.M() < 0.16);
 
@@ -392,18 +392,18 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       pimP4 = pipsList[0]->lorentzMomentum();
       DLorentzVector ggpipiP4 = ggP4 + pipP4 + pimP4;
       
-      Fill1DHistogram("histo","","mgg", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
-      Fill1DHistogram("histo","","mggpipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","mgg", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+      Fill1DHistogram("primex-online","","mggpipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       
       if (GoodPi0) {
 	good_eta_to_2g2pi = true;
 	EtaP4 = ggpipiP4;
-	Fill1DHistogram("histo","","mpipipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","mpipipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	if (trig_bit[2] == 1) {
-	  Fill1DHistogram("histo","","mpipipi_trg2", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","mpipipi_trg2", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
 	if (trig_bit[3] == 1) {
-	  Fill1DHistogram("histo","","mpipipi_trg3", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","mpipipi_trg3", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
       }
     }
@@ -449,25 +449,25 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
 	DLorentzVector g1P4 = PhotonsList[Index6gList[2 * i]]->lorentzMomentum();
 	DLorentzVector g2P4 = PhotonsList[Index6gList[2 * i + 1]]->lorentzMomentum();
 	DLorentzVector ggP4 = g1P4 + g2P4;
-	Fill1DHistogram("histo","","mgg_all15", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+	Fill1DHistogram("primex-online","","mgg_all15", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
 	Bool_t GoodPi0 = (0.11 < ggP4.M() && ggP4.M() < 0.16);
 	if (GoodPi0) pi0_nb ++;
       }
       
-      Fill1DHistogram("histo","","m6g_all", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-      Fill1DHistogram("histo","","m3pi0_all", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","m6g_all", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","m3pi0_all", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (pi0_nb == 3) {
 	good_eta_to_3pi0 = true;
 	EtaP4 = pi0pi0pi0P4;
-	Fill1DHistogram("histo","","m6g_pi0", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	Fill1DHistogram("histo","","m3pi0_pi0", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m6g_pi0", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m3pi0_pi0", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	if (trig_bit[2] == 1) {
-	  Fill1DHistogram("histo","","m6g_trg2", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	  Fill1DHistogram("histo","","m3pi0_trg2", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","m6g_trg2", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","m3pi0_trg2", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
 	if (trig_bit[3] == 1) {
-	  Fill1DHistogram("histo","","m6g_trg3", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	  Fill1DHistogram("histo","","m3pi0_trg3", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","m6g_trg3", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DHistogram("primex-online","","m3pi0_trg3", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
       }
     }
@@ -486,80 +486,80 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       !InnerFCAL_ring) {
     
     if (Prim2g) {
-      Fill1DHistogram("histo","","m2g_sc", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","m2g_sc", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m2g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m2g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m2g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m2g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
     }
     if (Prim3pi0) {
-      Fill1DHistogram("histo","","m6g_sc", EtaP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","m6g_sc", EtaP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m6g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m6g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m6g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m6g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
     }
     if (Prim2g2pi) {
-      Fill1DHistogram("histo","","m2g2pi_sc", EtaP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      Fill1DHistogram("primex-online","","m2g2pi_sc", EtaP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m2g2pi_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m2g2pi_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m2g2pi_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	Fill1DHistogram("primex-online","","m2g2pi_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
     }
 
     if (FCAL_trg_Esum > 0) {
       if (Prim2g) {
-	Fill1DHistogram("histo","","FCAL2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	Fill1DHistogram("primex-online","","FCAL2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCALetato2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	}
       }
       if (Prim3pi0) {
-	Fill1DHistogram("histo","","FCAL3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	Fill1DHistogram("primex-online","","FCAL3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCALetato3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	}
       }
       if (Prim2g2pi) {
-	Fill1DHistogram("histo","","FCAL2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	Fill1DHistogram("primex-online","","FCAL2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCAL2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  Fill1DHistogram("primex-online","","FCALetato2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DHistogram("primex-online","","FCALetato2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	}
       }
     }
@@ -574,10 +574,10 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       int tagm_ctr = -1;
       int tagh_ctr = -1;
       if (sys == SYS_TAGH) {
-	Fill2DHistogram("histo","","tagh", eb, counter, ";E_{#gamma} [GeV];TAGH counter;count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);     
+	Fill2DHistogram("primex-online","","tagh", eb, counter, ";E_{#gamma} [GeV];TAGH counter;count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);     
 	tagh_ctr = counter;
       } else if (sys == SYS_TAGM) {
-	Fill2DHistogram("histo","","tagm", eb, counter, ";E_{#gamma} [GeV];TAGM counter;t_{tagger} - t_{RF} [ns];count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);
+	Fill2DHistogram("primex-online","","tagm", eb, counter, ";E_{#gamma} [GeV];TAGM counter;t_{tagger} - t_{RF} [ns];count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);
 	tagm_ctr = counter;
       }
       if (eb < 8.0) continue;
@@ -586,7 +586,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       TLorentzVector PhotonBeamP4(0, 0, eb, eb);
       TLorentzVector ISP4 = TargetP4 + PhotonBeamP4;
       double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
-      Fill2DHistogram("histo","","TaggerTiming_vs_eg", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+      Fill2DHistogram("primex-online","","TaggerTiming_vs_eg", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
       double weight = 0;
       if (fabs(locDeltaTRF) <= 2.004) {
 	weight = 1;
@@ -596,7 +596,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       } else {
 	continue;
       }
-      Fill2DHistogram("histo","","TaggerTiming_vs_egcut", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+      Fill2DHistogram("primex-online","","TaggerTiming_vs_egcut", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
       
       double DE = eb - EtaP4.E();
       double M = EtaP4.M();
@@ -607,26 +607,26 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       //double RatiorE = RatioM * cos(45.0 * TMath::RadToDeg()) - RatioE * sin(45.0 * TMath::RadToDeg());; 
       double theta_eta = EtaP4.Theta() * TMath::RadToDeg();
       if (Prim2g) {
-	Fill2DWeightedHistogram("histo","","Primakoff_2g", RatioM, RatioE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_2g", RatioM, RatioE, weight, 
 				";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_2g_r", RatioM, RatiorE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_2g_r", RatioM, RatiorE, weight, 
 				";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
       }
       if (Prim3pi0) {
-	Fill2DWeightedHistogram("histo","","Primakoff_6g", RatioM, RatioE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_6g", RatioM, RatioE, weight, 
 				";m_{#gamma#gamma#gamma#gamma#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_6g_r", RatioM, RatiorE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_6g_r", RatioM, RatiorE, weight, 
 				";m_{#gamma#gamma#gamma#gamma#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
       }
       if (Prim2g2pi) {
-	Fill2DWeightedHistogram("histo","","Primakoff_2g2pi", RatioM, RatioE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_2g2pi", RatioM, RatioE, weight, 
 				";m_{#gamma#gamma#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_2g2pi_r", RatioM, RatiorE, weight, 
+	Fill2DWeightedHistogram("primex-online","","Primakoff_2g2pi_r", RatioM, RatiorE, weight, 
 				";m_{#gamma#gamma#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
 				500, 0.7, 2.0, 500, 0.3, 1.4);
       }
@@ -634,96 +634,96 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       Bool_t good_eta = (0.9 < RatioM && RatioM < 1.1);
       if (elasticity) {	
 	if (Prim2g) {
-	  Fill1DWeightedHistogram("histo","","m2g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DWeightedHistogram("primex-online","","m2g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m2g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m2g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
 	if (Prim3pi0) {
-	  Fill1DWeightedHistogram("histo","","m6g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DWeightedHistogram("primex-online","","m6g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m6g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m6g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m6g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m6g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
 	if (Prim2g2pi) {
-	  Fill1DWeightedHistogram("histo","","m2g2pi_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  Fill1DWeightedHistogram("primex-online","","m2g2pi_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g2pi_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m2g2pi_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g2pi_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    Fill1DWeightedHistogram("primex-online","","m2g2pi_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
 	}
 	
 	if (FCAL_trg_Esum > 0) {
 	  if (Prim2g) {
-	    Fill1DWeightedHistogram("histo","","FCAL2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DWeightedHistogram("primex-online","","FCAL2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCALetato2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    }
 	  }
 	  if (Prim3pi0) {
-	    Fill1DWeightedHistogram("histo","","FCAL3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DWeightedHistogram("primex-online","","FCAL3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCALetato3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    }
 	  }
 	  if (Prim2g2pi) {
-	    Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    Fill1DWeightedHistogram("primex-online","","FCAL2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCAL2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      Fill1DWeightedHistogram("primex-online","","FCALetato2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		Fill1DWeightedHistogram("primex-online","","FCALetato2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
 	    }
 	  }
 	}
       }
       if (good_eta && elasticity) {
 	if (Prim2g)
-	  Fill1DWeightedHistogram("histo","","theta_2g", theta_eta, weight, 
+	  Fill1DWeightedHistogram("primex-online","","theta_2g", theta_eta, weight, 
 				  ";#theta_{#eta #rightarrow 2#gamma};count [a.u.]", 
 				  650, 0.0, 6.5);
 	if (Prim3pi0)
-	  Fill1DWeightedHistogram("histo","","theta_6g", theta_eta, weight, 
+	  Fill1DWeightedHistogram("primex-online","","theta_6g", theta_eta, weight, 
 				  ";#theta_{#eta #rightarrow 3#pi^{0}};count [a.u.]", 
 				  650, 0.0, 6.5);
 	
 	if (Prim2g2pi)
-	  Fill1DWeightedHistogram("histo","","theta_2g2pi", theta_eta, weight, 
+	  Fill1DWeightedHistogram("primex-online","","theta_2g2pi", theta_eta, weight, 
 				  ";#theta_{#eta #rightarrow 2#gamma#pi^{+}#pi^{-}};count [a.u.]", 
 				  650, 0.0, 6.5);
       }

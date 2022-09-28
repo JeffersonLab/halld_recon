@@ -1,9 +1,9 @@
-// hnamepath: /histo/Primakoff_2g
-// hnamepath: /histo/Primakoff_6g
-// hnamepath: /histo/Primakoff_2g2pi
-// hnamepath: /histo/theta_2g
-// hnamepath: /histo/theta_6g
-// hnamepath: /histo/theta_2g2pi
+// hnamepath: /primex-online/Primakoff_2g
+// hnamepath: /primex-online/Primakoff_6g
+// hnamepath: /primex-online/Primakoff_2g2pi
+// hnamepath: /primex-online/theta_2g
+// hnamepath: /primex-online/theta_6g
+// hnamepath: /primex-online/theta_2g2pi
 
 {
   
@@ -54,10 +54,10 @@
   TString cleg = "";
   TString xlab = "";
   TString ylab = "";
-  TString dir_path = "histo/";
+  TString dir_path = "primex-online/";
   TString file = "";
 
-  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("histo");
+  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("primex-online");
   if(dir) dir->cd();
   
   TH2F * h2D[3];
@@ -88,6 +88,7 @@
   
   for (int i = 0; i < 3; i ++) {
     h2D[i] = (TH2F *) gDirectory->FindObjectAny(str_elasticity[i]);
+    if (h2D[i] == NULL) continue;
     NameXTitle = Form("#font[42]{%s/m_{#eta}}", str_E[i].Data());
     NameYTitle = Form("#font[42]{%s/E_{#gamma}^{beam}}", str_m[i].Data());
     NameZTitle = "#font[42]{Entries #}";
@@ -118,6 +119,7 @@
     h2D[i]->SetYTitle(NameYTitle);
     h2D[i]->SetZTitle(NameZTitle);
     h_theta[i] = (TH1F *) gDirectory->FindObjectAny(str_theta[i]);
+    if (h_theta[i] == NULL) continue;
     h_theta[i]->Rebin(10);
     nbin_im = h_theta[i]->GetNbinsX();
     min_im_bin = h_theta[i]->GetXaxis()->GetXmin();
@@ -159,6 +161,8 @@
   C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
   C1->Divide(3,2);
   for (int i = 0; i < 3; i ++) {
+    if (h2D[i] == NULL) continue;
+    if (h_theta[i] == NULL) continue;
     smallBetween1 = .1;
     smallBetween2 = .175;
     smallBetween3 = .05;

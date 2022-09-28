@@ -1,15 +1,15 @@
-// hnamepath: /histo/m2g_sc_trg3
-// hnamepath: /histo/m2g_sc_trg2
-// hnamepath: /histo/m2g_sc_w_trg3
-// hnamepath: /histo/m2g_sc_w_trg2
-// hnamepath: /histo/m6g_sc_trg3
-// hnamepath: /histo/m6g_sc_trg2
-// hnamepath: /histo/m6g_sc_w_trg3
-// hnamepath: /histo/m6g_sc_w_trg2
-// hnamepath: /histo/m2g2pi_sc_trg3
-// hnamepath: /histo/m2gpi_sc_trg2
-// hnamepath: /histo/m2gpi_sc_w_trg3
-// hnamepath: /histo/m2gpi_sc_w_trg2
+// hnamepath: /primex-online/m2g_sc_trg3
+// hnamepath: /primex-online/m2g_sc_trg2
+// hnamepath: /primex-online/m2g_sc_w_trg3
+// hnamepath: /primex-online/m2g_sc_w_trg2
+// hnamepath: /primex-online/m6g_sc_trg3
+// hnamepath: /primex-online/m6g_sc_trg2
+// hnamepath: /primex-online/m6g_sc_w_trg3
+// hnamepath: /primex-online/m6g_sc_w_trg2
+// hnamepath: /primex-online/m2g2pi_sc_trg3
+// hnamepath: /primex-online/m2gpi_sc_trg2
+// hnamepath: /primex-online/m2gpi_sc_w_trg3
+// hnamepath: /primex-online/m2gpi_sc_w_trg2
 
 {
   gROOT->Reset();
@@ -59,11 +59,11 @@
   TString cleg = "";
   TString xlab = "";
   TString ylab = "";
-  TString dir_path = "histo/";
+  TString dir_path = "primex-online/";
   TString file = "";
   
 
-  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("histo");
+  TDirectory *dir = (TDirectory*)gDirectory->FindObjectAny("primex-online");
   if(dir) dir->cd();
     
   TH1F * h_m_gg[4];
@@ -91,8 +91,11 @@
   TString NameYTitle = "";
   for (int i = 0; i < 4; i ++) {
     h_m_gg[i] = (TH1F *) gDirectory->FindObjectAny(str_gg[i]);
+    if (h_m_gg[i] == NULL) continue;
     h_m_pi0pi0pi0[i] = (TH1F *) gDirectory->FindObjectAny(str_pi0pi0pi0[i]);
+    if (h_m_pi0pi0pi0[i] == NULL) continue;
     h_m_pi0pippim[i] = (TH1F *) gDirectory->FindObjectAny(str_pi0pippim[i]);
+    if (h_m_pi0pippim[i] == NULL) continue;
     h_m_gg[i]->Rebin(10);
     h_m_pi0pi0pi0[i]->Rebin(10);
     h_m_pi0pippim[i]->Rebin(10);
@@ -195,67 +198,80 @@
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_gg[0]->Draw();
-  h_m_gg[1]->Draw("same");
+  if (h_m_gg[0] != NULL) {
+    h_m_gg[0]->Draw();
+    if (h_m_gg[1] != NULL) 
+      h_m_gg[1]->Draw("same");
   
-  legend=new TLegend(0.45,0.75,0.85,0.9);
-  legend->AddEntry(h_m_gg[1],"#font[42]{Bit 1, E^{FCAL}_{sum} #geq 3.5GeV}","p");
-  legend->AddEntry(h_m_gg[0],"#font[42]{Bit 2, E^{FCAL}_{sum} #geq 0.5GeV}","p");
-  legend->SetFillColor(0);
-  legend->SetTextFont(22);
-  legend->SetTextSize(.05);
-  legend->SetLineColor(0);
-  legend->Draw("same");
+    legend=new TLegend(0.45,0.75,0.85,0.9);
+    if (h_m_gg[1] != NULL) legend->AddEntry(h_m_gg[1],"#font[42]{Bit 1, E^{FCAL}_{sum} #geq 3.5GeV}","p");
+    legend->AddEntry(h_m_gg[0],"#font[42]{Bit 2, E^{FCAL}_{sum} #geq 0.5GeV}","p");
+    legend->SetFillColor(0);
+    legend->SetTextFont(22);
+    legend->SetTextSize(.05);
+    legend->SetLineColor(0);
+    legend->Draw("same");
   
-  t->DrawLatex(0.5, h_m_gg[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
-  
+    t->DrawLatex(0.5, h_m_gg[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
+  }
   C1->cd(2);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_pi0pi0pi0[0]->Draw();
-  h_m_pi0pi0pi0[1]->Draw("same");
+  if (h_m_pi0pi0pi0[0] != NULL) {
+    h_m_pi0pi0pi0[0]->Draw();
+    if (h_m_pi0pi0pi0[1] != NULL)
+      h_m_pi0pi0pi0[1]->Draw("same");
   
-  t->DrawLatex(0.5, h_m_pi0pi0pi0[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
-  
+    t->DrawLatex(0.5, h_m_pi0pi0pi0[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
+  }
   C1->cd(3);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_pi0pippim[0]->Draw();
-  h_m_pi0pippim[1]->Draw("same");
+  if (h_m_pi0pippim[0] != NULL) {
+    h_m_pi0pippim[0]->Draw();
+    if (h_m_pi0pippim[1] != NULL)
+      h_m_pi0pippim[1]->Draw("same");
   
-  t->DrawLatex(0.5, h_m_pi0pippim[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
-  
+    t->DrawLatex(0.5, h_m_pi0pippim[0]->GetMaximum() * 1.09, "#font[42]{Untagged}");
+  }
   C1->cd(4);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_gg[2]->Draw();
-  h_m_gg[3]->Draw("same");
+  if (h_m_gg[2] != NULL) {
+    h_m_gg[2]->Draw();
+    if (h_m_gg[3] != NULL)
+      h_m_gg[3]->Draw("same");
   
-  t->DrawLatex(0.65, h_m_gg[2]->GetMaximum() * 0.8, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
-
+    t->DrawLatex(0.65, h_m_gg[2]->GetMaximum() * 0.8, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
+  }
   C1->cd(5);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_pi0pi0pi0[2]->Draw();
-  h_m_pi0pi0pi0[3]->Draw("same");
+  if (h_m_pi0pi0pi0[2] != NULL) {
+    h_m_pi0pi0pi0[2]->Draw();
+    if (h_m_pi0pi0pi0[3] != NULL)
+      h_m_pi0pi0pi0[3]->Draw("same");
   
-  t->DrawLatex(0.65, h_m_pi0pi0pi0[2]->GetMaximum() * 0.8, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
-
+    t->DrawLatex(0.65, h_m_pi0pi0pi0[2]->GetMaximum() * 0.8, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
+  }
   C1->cd(6);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);
   gPad->SetTopMargin(smallBetween3);
   gPad->SetBottomMargin(smallBetween4);
-  h_m_pi0pippim[2]->Draw();
-  h_m_pi0pippim[3]->Draw("same");
+  if (h_m_pi0pippim[2] != NULL) {
+    h_m_pi0pippim[2]->Draw();
+    if (h_m_pi0pippim[3] != NULL)
+      h_m_pi0pippim[3]->Draw("same");
   
-  t->DrawLatex(0.5, h_m_pi0pippim[2]->GetMaximum() * 1.09, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
+    t->DrawLatex(0.5, h_m_pi0pippim[2]->GetMaximum() * 1.09, "#font[42]{Tagged & E_{#gamma}^{beam} #geq 8 GeV}");
+  }
 }
