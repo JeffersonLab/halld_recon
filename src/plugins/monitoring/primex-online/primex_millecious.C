@@ -131,7 +131,7 @@
   h_time->GetYaxis()->CenterTitle(kTRUE);
   h_time->SetXTitle(NameXTitle);
   h_time->SetYTitle(NameYTitle);
-  if (h_time != NUL)
+  if (h_time != NULL)
     h_time->GetXaxis()->SetRange(h_time->GetXaxis()->FindBin(BinMin),h_time->GetXaxis()->FindBin(BinMax));
   TString str_trg_gg[] = {"FCALetato2g_trg3_Esum_sc_w", "FCALetato2g_trg2_Esum_sc_w"};
   TString str_trg_pi0pi0pi0[] = {"FCALetato3pi0_trg3_Esum_sc_w", "FCALetato3pi0_trg2_Esum_sc_w"};
