@@ -7,9 +7,9 @@
 // hnamepath: /primex-online/m6g_sc_w_trg3
 // hnamepath: /primex-online/m6g_sc_w_trg2
 // hnamepath: /primex-online/m2g2pi_sc_trg3
-// hnamepath: /primex-online/m2gpi_sc_trg2
-// hnamepath: /primex-online/m2gpi_sc_w_trg3
-// hnamepath: /primex-online/m2gpi_sc_w_trg2
+// hnamepath: /primex-online/m2g2pi_sc_trg2
+// hnamepath: /primex-online/m2g2pi_sc_w_trg3
+// hnamepath: /primex-online/m2g2pi_sc_w_trg2
 
 {
   gROOT->Reset();
