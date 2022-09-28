@@ -120,7 +120,7 @@
     h2D[i]->SetZTitle(NameZTitle);
     h_theta[i] = (TH1F *) gDirectory->FindObjectAny(str_theta[i]);
     if (h_theta[i] == NULL) continue;
-    h_theta[i]->Rebin(10);
+    //h_theta[i]->Rebin(10);
     nbin_im = h_theta[i]->GetNbinsX();
     min_im_bin = h_theta[i]->GetXaxis()->GetXmin();
     max_im_bin = h_theta[i]->GetXaxis()->GetXmax();

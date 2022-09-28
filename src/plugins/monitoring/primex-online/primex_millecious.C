@@ -150,9 +150,9 @@
     if (h_trg_pi0pi0pi0[i] == NULL) continue;
     h_trg_pi0pippim[i] = (TH1F *) gDirectory->FindObjectAny(str_trg_pi0pippim[i]);
     if (h_trg_pi0pippim[i]  == NULL) continue;
-    h_trg_gg[i]->Rebin(100);
-    h_trg_pi0pi0pi0[i]->Rebin(100);
-    h_trg_pi0pippim[i]->Rebin(100);
+    //h_trg_gg[i]->Rebin(100);
+    //h_trg_pi0pi0pi0[i]->Rebin(100);
+    //h_trg_pi0pippim[i]->Rebin(100);
     nbin_im = h_trg_gg[i]->GetNbinsX();
     min_im_bin = h_trg_gg[i]->GetXaxis()->GetXmin();
     max_im_bin = h_trg_gg[i]->GetXaxis()->GetXmax();
