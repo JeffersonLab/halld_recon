@@ -137,8 +137,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     trigmask = trig->trig_mask;	
     fp_trigmask = trig->fp_trig_mask;
     for (int ibit = 0; ibit < 33; ibit++) {
-      if(trigmask & (1 << ibit)) Fill1DHistogram("trigger","","trig", ibit, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
-      if(fp_trigmask & (1 << ibit)) Fill1DHistogram("trigger","","fptrig", ibit, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
+      if(trigmask & (1 << ibit)) Fill1DHistogram("primex-online","","trig1", ibit, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
+      if(fp_trigmask & (1 << ibit)) Fill1DHistogram("primex-online","","fptrig1", ibit, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
     }
     if( trigmask==8 ) return NOERROR;
     if( fp_trigmask ) return NOERROR;
@@ -146,8 +146,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     trigmask = 1;
     fp_trigmask = 1;
   }
-  Fill1DHistogram("trigger","","trig", trigmask, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
-  Fill1DHistogram("trigger","","fptrig", fp_trigmask, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
+  Fill1DHistogram("primex-online","","trig2", trigmask, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
+  Fill1DHistogram("primex-online","","fptrig2", fp_trigmask, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
   
   //-----   RF Bunch   -----//
   
