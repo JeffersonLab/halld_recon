@@ -158,7 +158,16 @@
   smallBetween4 = .15;
   
   cleg = "PrimEx-eta-elasticity";
-  C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
+    if(gPad == NULL){
+    C1 = new TCanvas(cleg, cleg, 1800, 1200);
+    C1->cd(0);
+    C1->Draw();
+    C1->Update();
+  }
+  
+  if( !gPad ) return;
+  C1 = gPad->GetCanvas();
+  //C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
   C1->Divide(3,2);
   for (int i = 0; i < 3; i ++) {
     if (h2D[i] == NULL) continue;

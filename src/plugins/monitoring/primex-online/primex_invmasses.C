@@ -191,8 +191,19 @@
   smallBetween4 = .15;
   
   cleg = "PrimEx-eta-invariant-masses";
-  C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
-  C1->Divide(3,2);
+  if(gPad == NULL){
+    C1 = new TCanvas(cleg, cleg, 1800, 1200);
+    C1->cd(0);
+    C1->Draw();
+    C1->Update();
+  }
+  
+  if( !gPad ) return;
+  C1 = gPad->GetCanvas();
+  C1->Divide(3, 2);
+   
+  //C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
+  //C1->Divide(3,2);
   C1->cd(1);
   gPad->SetLeftMargin(smallBetween1);
   gPad->SetRightMargin(smallBetween2);

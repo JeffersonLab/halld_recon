@@ -230,7 +230,17 @@
   smallBetween4 = .15;
   
   cleg = "PrimEx-eta-millecious";
-  C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
+    if(gPad == NULL){
+    C1 = new TCanvas(cleg, cleg, 1800, 1200);
+    C1->cd(0);
+    C1->Draw();
+    C1->Update();
+  }
+  
+  if( !gPad ) return;
+  C1 = gPad->GetCanvas();
+  
+  //C1 = new TCanvas(cleg, cleg, 10, 10, 1800, 1200);
   C1->Divide(3,2);
   smallBetween1 = .11;
   smallBetween2 = .175;
