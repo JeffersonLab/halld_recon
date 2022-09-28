@@ -149,7 +149,7 @@
     min_im_bin = h_m_pi0pippim[i]->GetXaxis()->GetXmin();
     max_im_bin = h_m_pi0pippim[i]->GetXaxis()->GetXmax();
     im_step = (max_im_bin - min_im_bin) / ((double) nbin_im);
-    NameXTitle = "#font[42]{#it{m}_{#it{m}_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}]} [GeV/#it{c}^{2}]}";
+    NameXTitle = "#font[42]{#it{m}_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}]}";
     h_m_pi0pippim[i]->SetTitle(NameTitle);
     h_m_pi0pippim[i]->SetLabelSize(SizeLabel,"X");
     h_m_pi0pippim[i]->SetLabelSize(SizeLabel,"Y");
