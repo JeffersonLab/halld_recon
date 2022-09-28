@@ -149,6 +149,7 @@
     min_im_bin = h_m_pi0pippim[i]->GetXaxis()->GetXmin();
     max_im_bin = h_m_pi0pippim[i]->GetXaxis()->GetXmax();
     im_step = (max_im_bin - min_im_bin) / ((double) nbin_im);
+    NameXTitle = "#font[42]{#it{m}_{#it{m}_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}]} [GeV/#it{c}^{2}]}";
     h_m_pi0pippim[i]->SetTitle(NameTitle);
     h_m_pi0pippim[i]->SetLabelSize(SizeLabel,"X");
     h_m_pi0pippim[i]->SetLabelSize(SizeLabel,"Y");
@@ -165,7 +166,6 @@
     h_m_pi0pippim[i]->SetXTitle(NameXTitle);
     h_m_pi0pippim[i]->SetYTitle(NameYTitle);
     h_m_pi0pippim[i]->GetXaxis()->SetRange(h_m_pi0pippim[i]->GetXaxis()->FindBin(BinMin),h_m_pi0pippim[i]->GetXaxis()->FindBin(BinMax));
-    NameXTitle = "#font[42]{#it{m}_{#it{m}_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}]} [GeV/#it{c}^{2}]}";
     //Nice1Db(h_m_pi0pippim[i], 0.4, 1.199, 0.05, 0.05, 42,505,1.,1.6,"","#font[42]{#it{m}_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}]}", Form("#font[41]{Events / %0.3f [GeV/#it{c}^{2}]}", im_step));
     h_m_gg[i]->SetLineColor(color[i]);
     h_m_gg[i]->SetMarkerColor(color[i]);
