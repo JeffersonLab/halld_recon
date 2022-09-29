@@ -35,7 +35,6 @@
 // hnamepath: /occupancy/tagm_tdc_occ
 //
 // e-mail: davidl@jlab.org
-// e-mail: aebarnes@jlab.org
 // e-mail: somov@jlab.org
 // e-mail: richard.t.jones@uconn.edu
 // e-mail: tbritton@jlab.org
