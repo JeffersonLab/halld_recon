@@ -758,8 +758,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Basic selection criteria
   Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
   Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
