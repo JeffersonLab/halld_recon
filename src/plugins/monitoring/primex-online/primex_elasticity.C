@@ -89,8 +89,8 @@
   for (int i = 0; i < 3; i ++) {
     h2D[i] = (TH2F *) gDirectory->FindObjectAny(str_elasticity[i]);
     if (h2D[i] == NULL) continue;
-    NameXTitle = Form("#font[42]{%s/m_{#eta}}", str_E[i].Data());
-    NameYTitle = Form("#font[42]{%s/E_{#gamma}^{beam}}", str_m[i].Data());
+    NameYTitle = Form("#font[42]{%s/m_{#eta}}", str_E[i].Data());
+    NameXTitle = Form("#font[42]{%s/E_{#gamma}^{beam}}", str_m[i].Data());
     NameZTitle = "#font[42]{Entries #}";
     OffsetTitleX = 1.1;
     OffsetTitleY = 0.9;

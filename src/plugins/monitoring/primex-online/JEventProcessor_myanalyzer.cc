@@ -183,6 +183,7 @@ jerror_t JEventProcessor_myanalyzer::init(void)
   h_trig2->Sumw2();  
   h_fptrig1->Sumw2();  
   h_fptrig2->Sumw2();
+  */
   h_mc_eb->Sumw2();
   h_z->Sumw2();  
   h_r->Sumw2();
@@ -223,29 +224,84 @@ jerror_t JEventProcessor_myanalyzer::init(void)
   h_m6g_trg3->Sumw2(); 
   h_m3pi0_trg3->Sumw2();
   h_m2g_sc->Sumw2(); 
-  h_m2g_sc_trg2->Sumw2();  h_m2g_sc_trg3->Sumw2();  h_m2g_sc_w->Sumw2();  h_m2g_sc_w_trg2->Sumw2();  h_m2g_sc_w_trg3->Sumw2();
+  h_m2g_sc_trg2->Sumw2();  
+  h_m2g_sc_trg3->Sumw2();  
+  h_m2g_sc_w->Sumw2();  
+  h_m2g_sc_w_trg2->Sumw2();  
+  h_m2g_sc_w_trg3->Sumw2();
   h_m6g_sc->Sumw2(); 
-  h_m6g_sc_trg2->Sumw2();  h_m6g_sc_trg3->Sumw2();  h_m6g_sc_w->Sumw2();  h_m6g_sc_w_trg2->Sumw2();  h_m6g_sc_w_trg3->Sumw2(); 
-  h_m2g2pi_sc->Sumw2();  h_m2g2pi_sc_trg2->Sumw2();  h_m2g2pi_sc_trg3->Sumw2();  h_m2g2pi_sc_w->Sumw2();  h_m2g2pi_sc_w_trg2->Sumw2();  h_m2g2pi_sc_w_trg3->Sumw2();
-  h_FCAL2g_trg_Esum_sc->Sumw2();  h_FCAL2g_trg1_Esum_sc->Sumw2();  h_FCAL2g_trg2_Esum_sc->Sumw2();  h_FCAL2g_trg3_Esum_sc->Sumw2(); 
-  h_FCAL2g_trg_Esum_sc_w->Sumw2();  h_FCAL2g_trg1_Esum_sc_w->Sumw2();  h_FCAL2g_trg2_Esum_sc_w->Sumw2();  h_FCAL2g_trg3_Esum_sc_w->Sumw2();
-  h_FCAL3pi0_trg_Esum_sc->Sumw2();  h_FCAL3pi0_trg1_Esum_sc->Sumw2();  h_FCAL3pi0_trg2_Esum_sc->Sumw2();  h_FCAL3pi0_trg3_Esum_sc->Sumw2(); 
-  h_FCAL3pi0_trg_Esum_sc_w->Sumw2();  h_FCAL3pi0_trg1_Esum_sc_w->Sumw2();  h_FCAL3pi0_trg2_Esum_sc_w->Sumw2();  h_FCAL3pi0_trg3_Esum_sc_w->Sumw2();
-  h_FCAL2g2pi_trg_Esum_sc->Sumw2();  h_FCAL2g2pi_trg1_Esum_sc->Sumw2();  h_FCAL2g2pi_trg2_Esum_sc->Sumw2();  h_FCAL2g2pi_trg3_Esum_sc->Sumw2(); 
-  h_FCAL2g2pi_trg_Esum_sc_w->Sumw2();  h_FCAL2g2pi_trg1_Esum_sc_w->Sumw2();  h_FCAL2g2pi_trg2_Esum_sc_w->Sumw2();  h_FCAL2g2pi_trg3_Esum_sc_w->Sumw2();
-  h_FCALetato2g_trg_Esum_sc->Sumw2();  h_FCALetato2g_trg1_Esum_sc->Sumw2();  h_FCALetato2g_trg2_Esum_sc->Sumw2();  h_FCALetato2g_trg3_Esum_sc->Sumw2(); 
-  h_FCALetato2g_trg_Esum_sc_w->Sumw2();  h_FCALetato2g_trg1_Esum_sc_w->Sumw2();  h_FCALetato2g_trg2_Esum_sc_w->Sumw2();  h_FCALetato2g_trg3_Esum_sc_w->Sumw2();
-  h_FCALetato3pi0_trg_Esum_sc->Sumw2();  h_FCALetato3pi0_trg1_Esum_sc->Sumw2();  h_FCALetato3pi0_trg2_Esum_sc->Sumw2();  h_FCALetato3pi0_trg3_Esum_sc->Sumw2(); 
-  h_FCALetato3pi0_trg_Esum_sc_w->Sumw2();  h_FCALetato3pi0_trg1_Esum_sc_w->Sumw2();  h_FCALetato3pi0_trg2_Esum_sc_w->Sumw2();  h_FCALetato3pi0_trg3_Esum_sc_w->Sumw2();
-  h_FCALetato2g2pi_trg_Esum_sc->Sumw2();  h_FCALetato2g2pi_trg1_Esum_sc->Sumw2();  h_FCALetato2g2pi_trg2_Esum_sc->Sumw2();  h_FCALetato2g2pi_trg3_Esum_sc->Sumw2(); 
-  h_FCALetato2g2pi_trg_Esum_sc_w->Sumw2();  h_FCALetato2g2pi_trg1_Esum_sc_w->Sumw2();  h_FCALetato2g2pi_trg2_Esum_sc_w->Sumw2();  h_FCALetato2g2pi_trg3_Esum_sc_w->Sumw2();
-  h_theta_2g->Sumw2();  h_theta_6g->Sumw2();  h_theta_2g2pi->Sumw2();
-  h_Primakoff_2g->Sumw2();  h_Primakoff_2g_r->Sumw2();
-  h_Primakoff_6g->Sumw2();  h_Primakoff_6g_r->Sumw2();
-  h_Primakoff_2g2pi->Sumw2();  h_Primakoff_2g2pi_r->Sumw2();
-  h_tagh->Sumw2();  h_tagm->Sumw2();
-  h_TaggerTiming_vs_eg->Sumw2();  h_TaggerTiming_vs_egcut->Sumw2();
-  */
+  h_m6g_sc_trg2->Sumw2();  
+  h_m6g_sc_trg3->Sumw2();  
+  h_m6g_sc_w->Sumw2();  
+  h_m6g_sc_w_trg2->Sumw2();  
+  h_m6g_sc_w_trg3->Sumw2(); 
+  h_m2g2pi_sc->Sumw2();  
+  h_m2g2pi_sc_trg2->Sumw2();  
+  h_m2g2pi_sc_trg3->Sumw2();  
+  h_m2g2pi_sc_w->Sumw2();  
+  h_m2g2pi_sc_w_trg2->Sumw2(); 
+  h_m2g2pi_sc_w_trg3->Sumw2();
+  h_FCAL2g_trg_Esum_sc->Sumw2();  
+  h_FCAL2g_trg1_Esum_sc->Sumw2();  
+  h_FCAL2g_trg2_Esum_sc->Sumw2();  
+  h_FCAL2g_trg3_Esum_sc->Sumw2(); 
+  h_FCAL2g_trg_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg3_Esum_sc_w->Sumw2();
+  h_FCAL3pi0_trg_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg1_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg2_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg3_Esum_sc->Sumw2(); 
+  h_FCAL3pi0_trg_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg3_Esum_sc_w->Sumw2();
+  h_FCAL2g2pi_trg_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg1_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg2_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg3_Esum_sc->Sumw2(); 
+  h_FCAL2g2pi_trg_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato2g_trg_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg1_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg2_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato2g_trg_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato3pi0_trg_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg1_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg2_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato3pi0_trg_Esum_sc_w->Sumw2(); 
+  h_FCALetato3pi0_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato3pi0_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato3pi0_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato2g2pi_trg_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg1_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg2_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato2g2pi_trg_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg3_Esum_sc_w->Sumw2();
+  h_theta_2g->Sumw2();  h_theta_6g->Sumw2();  
+  h_theta_2g2pi->Sumw2();
+  h_Primakoff_2g->Sumw2();  
+  h_Primakoff_2g_r->Sumw2();
+  h_Primakoff_6g->Sumw2();  
+  h_Primakoff_6g_r->Sumw2();
+  h_Primakoff_2g2pi->Sumw2();  
+  h_Primakoff_2g2pi_r->Sumw2();
+  //h_tagh->Sumw2();  
+  //h_tagm->Sumw2();
+  //h_TaggerTiming_vs_eg->Sumw2();  
+  //h_TaggerTiming_vs_egcut->Sumw2();
+  
   main->cd();
 
   return NOERROR;
@@ -331,13 +387,12 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     Bit 10: CCAL
   */
   
-  //japp->RootFillLock(this);  
+  
   
   //uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
   //uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
   
-  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
     for (unsigned int bit = 0; bit < 32; bit ++) {
@@ -345,8 +400,9 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       if(trig_bit[bit + 1] == 1) h_trig_bit->Fill(Float_t(bit+1));
     }
   }
-  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   Check Trigger   -----//
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   uint32_t trigmask;
   uint32_t fp_trigmask;
   if (locDMCThrown.size() == 0) {
@@ -372,7 +428,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   
   h_trig2->Fill(trigmask);
   h_fptrig2->Fill(fp_trigmask);
-  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   RF Bunch   -----//
   
   const DEventRFBunch *locRFBunch = NULL;
@@ -400,7 +456,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   double kinfitVertexY = m_beamY;
   double kinfitVertexZ = m_beamZ;
   double kinfitR = 0;
-  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   for (unsigned int i = 0 ; i < locVerteces.size(); i++) {
     kinfitVertexX = locVerteces[i]->dSpacetimeVertex.X();
     kinfitVertexY = locVerteces[i]->dSpacetimeVertex.Y();
@@ -449,7 +505,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     if (trig_bit[3] == 1)
       h_FCAL_trg3_Esum->Fill(FCAL_trg_Esum);
   }
-
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Loop over neutral particle list, showers matching a track a removed
   vector<const DNeutralParticleHypothesis*> PhotonsList;
   Bool_t InnerFCAL_ring = false;
@@ -583,7 +640,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       h_Esum_ccal_trg3->Fill(CCAL_Esum);
     }
   }
-  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //Retrieve tracks info and assign it a pi hypo
   vector <const DTrackTimeBased *> pimsList;
   vector <const DTrackTimeBased *> pipsList;
@@ -592,7 +649,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   DLorentzVector gP4[6];
   DLorentzVector pipP4;
   DLorentzVector pimP4;
-  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 2 unmatched showers
   if (PhotonsList.size() == 2) {
     
@@ -635,7 +692,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 6 unmatched showers
   if (PhotonsList.size() == 6) {
     
@@ -700,7 +758,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Basic selection criteria
   Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
   Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
@@ -943,7 +1002,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     }
   }
   
-  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
   return NOERROR;
 }
