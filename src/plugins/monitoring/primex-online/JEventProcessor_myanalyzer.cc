@@ -400,9 +400,9 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       if(trig_bit[bit + 1] == 1) h_trig_bit->Fill(Float_t(bit+1));
     }
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   Check Trigger   -----//
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   uint32_t trigmask;
   uint32_t fp_trigmask;
   if (locDMCThrown.size() == 0) {
@@ -428,7 +428,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   
   h_trig2->Fill(trigmask);
   h_fptrig2->Fill(fp_trigmask);
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   RF Bunch   -----//
   
   const DEventRFBunch *locRFBunch = NULL;
@@ -456,7 +456,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   double kinfitVertexY = m_beamY;
   double kinfitVertexZ = m_beamZ;
   double kinfitR = 0;
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   for (unsigned int i = 0 ; i < locVerteces.size(); i++) {
     kinfitVertexX = locVerteces[i]->dSpacetimeVertex.X();
     kinfitVertexY = locVerteces[i]->dSpacetimeVertex.Y();
@@ -505,8 +505,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     if (trig_bit[3] == 1)
       h_FCAL_trg3_Esum->Fill(FCAL_trg_Esum);
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Loop over neutral particle list, showers matching a track a removed
   vector<const DNeutralParticleHypothesis*> PhotonsList;
   Bool_t InnerFCAL_ring = false;
@@ -640,7 +640,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       h_Esum_ccal_trg3->Fill(CCAL_Esum);
     }
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //Retrieve tracks info and assign it a pi hypo
   vector <const DTrackTimeBased *> pimsList;
   vector <const DTrackTimeBased *> pipsList;
@@ -649,7 +649,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   DLorentzVector gP4[6];
   DLorentzVector pipP4;
   DLorentzVector pimP4;
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 2 unmatched showers
   if (PhotonsList.size() == 2) {
     
@@ -692,8 +692,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 6 unmatched showers
   if (PhotonsList.size() == 6) {
     
@@ -758,8 +758,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  //japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  //japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Basic selection criteria
   Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
   Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
