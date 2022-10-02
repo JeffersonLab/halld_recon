@@ -33,7 +33,6 @@
   
   Double_t small = .00001;
   
-  TLine TLine;
   TLatex *t = new TLatex();
   t->SetTextSize(0.05);
   t->SetTextFont(42);
