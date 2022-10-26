@@ -315,7 +315,7 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
 	     PhotonEtaprim6gList);
   */
   photon_nb = PhotonList.size();	
-  Candidate |= ( (6 <= photon_nb && photon_nb <= 15) ) );
+  Candidate |= ( (6 <= photon_nb && photon_nb <= 15) );
   
   if ( Candidate ) {
     //cout <<"eta6g_skim"<<endl;
