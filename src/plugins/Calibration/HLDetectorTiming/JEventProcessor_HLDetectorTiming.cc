@@ -1106,9 +1106,12 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			DVector3 IntersectionPoint, IntersectionMomentum;	
 			vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 			shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-			// comment out definition of sc_match_pid to suppress warning
-			//		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-			//								   true, &IntersectionPoint, &IntersectionMomentum);
+			bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, 
+									     locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+									     true, &IntersectionPoint, &IntersectionMomentum);
+			if (!sc_match_pid){
+			  continue;
+			}
 			double locSCzIntersection = IntersectionPoint.z();
 			if( locSCzIntersection < 83. ) {
 				Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
