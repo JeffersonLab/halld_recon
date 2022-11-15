@@ -417,6 +417,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_amp = amp - m_amp;
           d_pktime=0;
 
+	  diffs=0;
           if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp) diffs = 1;
 	  
 	}
@@ -488,6 +489,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_amp = amp - m_amp;
           d_pktime = pktime - m_pktime;
 
+	  diffs=0;
           if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp || d_pktime) diffs = 1;
 	}
 	
