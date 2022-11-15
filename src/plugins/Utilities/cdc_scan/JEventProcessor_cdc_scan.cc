@@ -327,7 +327,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     uint32_t ns;
     p->SetBranchAddress("nsamples",&ns);
 
-    uint16_t adc[NSAMPLES];       //    vector<uint16_t> samples;
+    uint16_t adc[NSAMPLES] = {0};       //    vector<uint16_t> samples;
     p->SetBranchAddress("adc",&adc);
 
     
@@ -395,10 +395,9 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           for (uint j=nsave; j<NSAMPLES; j++) adc[j]=0;   
         }	  
 	
-        if (EMU && wrd) {   // need to make a flag whether to do the emu or not
+        if (EMU && wrd) { 
 	
  	  Df125CDCPulse *emu = new Df125CDCPulse();
-        //Df125FDCPulse *fp = new Df125FDCPulse();      
 
           em->EmulateFirmware(wrd, emu, NULL);
 	
