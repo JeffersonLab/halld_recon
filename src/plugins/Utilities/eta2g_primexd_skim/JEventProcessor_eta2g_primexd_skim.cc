@@ -290,7 +290,7 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
       Double_t inv_mass = ptot.M();
       
       //Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-      Candidate |= (E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.380) && BCAL_energy_sum < 0.1 && CCAL_energy_sum < 0.1) ;
+      Candidate |= (E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.340) ) ;
       
       //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
       if(E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.380) ) {
