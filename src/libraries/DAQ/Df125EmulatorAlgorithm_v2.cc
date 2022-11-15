@@ -194,7 +194,7 @@ void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawDat
     // Now try to get the configuration form the BOR record, if this does not exist,
     // or is forced, use the default values.
     const Df125BORConfig *BORConfig = NULL;
-    //rawData->GetSingle(BORConfig);  // DEBUG
+    rawData->GetSingle(BORConfig); 
 
     if(BORConfig != NULL){
         if (VERBOSE > 0) jout << "--Found BORConfig" << endl; 
@@ -236,7 +236,6 @@ void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawDat
 
     //Set override params if given in command line  PBIT can be negative
     if ( isCDC ) {
-      if (VERBOSE > 0) jout << "WARNING Df125EmulatorAlgorithm_v2::EmulateFirmware Using CDC override values" << endl;
       if (CDC_WS >= 0) WS  = CDC_WS;
       if (CDC_WE >= 0) WE  = CDC_WE;
       if (CDC_IE >= 0) IE  = CDC_IE;
@@ -271,7 +270,6 @@ void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawDat
 
     //Set override params if given in command line  PBIT can be -ve
     if ( isFDC ) {
-      if (VERBOSE > 0) jout << "WARNING Df125EmulatorAlgorithm_v2::EmulateFirmware Using FDC override values" << endl;
       if (FDC_WS >= 0) WS  = FDC_WS;
       if (FDC_WE >= 0) WE  = FDC_WE;
       if (FDC_IE >= 0) IE  = FDC_IE;
