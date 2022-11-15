@@ -28,7 +28,8 @@ class JEventProcessor_cdc_scan:public jana::JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 
-                int SHORT_MODE; // set to 0 to include window raw data
+                int EMU; // set to 1 to run emulation if window raw data is present
+                int FDC; // set to 0 to skip FDC data
 
 };
 
