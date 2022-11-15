@@ -25,6 +25,285 @@ void InitPlugin(JApplication *app){
 jerror_t JEventProcessor_myanalyzer::init(void)
 {
   combi6 = new Combination (6);
+  
+  TDirectory *main = gDirectory;
+  gDirectory->mkdir("primex-online")->cd();
+  
+  h_trig_bit = new TH1F("trig_bit", ";Trigger bit;Events [a.u.]", 100, 0, 100);
+  h_trig1 = new TH1F("trig1", ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);
+  h_fptrig1 = new TH1F("fptrig1", ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);
+  h_trig2 = new TH1F("trig2", ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);
+  h_fptrig2 = new TH1F("fptrig2", ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);
+  
+  h_z = new TH1F ("h_z", ";z [cm];Count [a.u.]", 1000, -100., 400.);
+  h_r = new TH1F ("h_r", ";r [cm];Count [a.u.]", 1000, 0., 1000.);
+  
+  h_mc_eb = new TH1F("mc_ev", ";E_{#gamma} [GeV]", 500, 3.0, 12.0);
+
+  h_FCAL_trg_Esum = new TH1F("FCAL_trg_Esum", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_FCAL_trg1_Esum = new TH1F("FCAL_trg1_Esum", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_FCAL_trg2_Esum = new TH1F("FCAL_trg2_Esum", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_FCAL_trg3_Esum = new TH1F("FCAL_trg3_Esum", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  
+  h_bcal_e_v_t = new TH2F("bcal_e_v_t", ";t_{#gamma}^{bcal} - t_{RF} [ns];E_{shower} [GeV];count [a.u.]", 2000, -40., 40., 2000, 0., 2.);
+
+  h_fcal_rf = new TH1F("fcal_rf", ";t_{fcal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
+  h_fcal_xy = new TH2F("fcal_xy", ";row;column #;Counts", 500, -125, 125, 500, -125, 125);
+  h_fcal_rc = new TH2F("fcal_rc", ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
+  h_fcal_tof_dx = new TH2F("fcal_tof_dx", ";#Deltax;#Deltay;Counts", 200, 0, 50, 200, 0, 50);
+  
+  h_ccal_rf = new TH1F("ccal_rf", ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
+  
+  h_Esum_bcal = new TH1F("Esum_bcal", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_fcal = new TH1F("Esum_fcal", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_ccal = new TH1F("Esum_ccal", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_fcal_trg1 = new TH1F("Esum_fcal_trg1", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_ccal_trg1 = new TH1F("Esum_ccal_trg1", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_fcal_trg2 = new TH1F("Esum_fcal_trg2", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_ccal_trg2 = new TH1F("Esum_ccal_trg2", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_fcal_trg3 = new TH1F("Esum_fcal_trg3", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+  h_Esum_ccal_trg3 = new TH1F("Esum_ccal_trg3", ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+
+  h_mgg_all = new TH1F("mgg_all", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+  h_mgg_fcal = new TH1F("mgg_fcal", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+  h_mgg_fcaltof = new TH1F("mgg_fcaltof", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+  h_mgg = new TH1F("mgg", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+  h_mggpipi = new TH1F("mggpipi", ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_mpipipi = new TH1F("mpipipi", ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_mpipipi_trg2 = new TH1F("mpipipi_trg2", ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_mpipipi_trg3 = new TH1F("mpipipi_trg3", ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  
+  h_mgg_all15 = new TH1F("mgg_all15", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+  h_m6g_all = new TH1F("m6g_all", ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m3pi0_all = new TH1F("m3pi0_all", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m6g_pi0 = new TH1F("m6g_pi0", ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m3pi0_pi0 = new TH1F("m3pi0_pi0", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m6g_trg2 = new TH1F("m6g_trg2", ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m3pi0_trg2 = new TH1F("m3pi0_trg2", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m6g_trg3 = new TH1F("m6g_trg3", ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  h_m3pi0_trg3 = new TH1F("m3pi0_trg3", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+  
+  h_m2g_sc = new TH1F("m2g_sc", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g_sc_trg2 = new TH1F("m2g_sc_trg2", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g_sc_trg3 = new TH1F("m2g_sc_trg3", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g_sc_w = new TH1F("m2g_sc_w", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g_sc_w_trg2 = new TH1F("m2g_sc_w_trg2", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g_sc_w_trg3 = new TH1F("m2g_sc_w_trg3", ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_FCAL2g_trg_Esum_sc = new TH1F("FCAL2g_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg1_Esum_sc = new TH1F("FCAL2g_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg2_Esum_sc = new TH1F("FCAL2g_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg3_Esum_sc = new TH1F("FCAL2g_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg_Esum_sc = new TH1F("FCALetato2g_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg1_Esum_sc = new TH1F("FCALetato2g_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg2_Esum_sc = new TH1F("FCALetato2g_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg3_Esum_sc = new TH1F("FCALetato2g_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg_Esum_sc_w = new TH1F("FCAL2g_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg1_Esum_sc_w = new TH1F("FCAL2g_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg2_Esum_sc_w = new TH1F("FCAL2g_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g_trg3_Esum_sc_w = new TH1F("FCAL2g_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg_Esum_sc_w = new TH1F("FCALetato2g_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg1_Esum_sc_w = new TH1F("FCALetato2g_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg2_Esum_sc_w = new TH1F("FCALetato2g_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g_trg3_Esum_sc_w = new TH1F("FCALetato2g_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  
+  h_m6g_sc = new TH1F("m6g_sc", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m6g_sc_trg2 = new TH1F("m6g_sc_trg2", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m6g_sc_trg3 = new TH1F("m6g_sc_trg3", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m6g_sc_w = new TH1F("m6g_sc_w", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m6g_sc_w_trg2 = new TH1F("m6g_sc_w_trg2", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m6g_sc_w_trg3 = new TH1F("m6g_sc_w_trg3", ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_FCAL3pi0_trg_Esum_sc = new TH1F("FCAL3pi0_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg1_Esum_sc = new TH1F("FCAL3pi0_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg2_Esum_sc = new TH1F("FCAL3pi0_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg3_Esum_sc = new TH1F("FCAL3pi0_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg_Esum_sc = new TH1F("FCALetato3pi0_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg1_Esum_sc = new TH1F("FCALetato3pi0_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg2_Esum_sc = new TH1F("FCALetato3pi0_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg3_Esum_sc = new TH1F("FCALetato3pi0_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg_Esum_sc_w = new TH1F("FCAL3pi0_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg1_Esum_sc_w = new TH1F("FCAL3pi0_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg2_Esum_sc_w = new TH1F("FCAL3pi0_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL3pi0_trg3_Esum_sc_w = new TH1F("FCAL3pi0_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg_Esum_sc_w = new TH1F("FCALetato3pi0_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg1_Esum_sc_w = new TH1F("FCALetato3pi0_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg2_Esum_sc_w = new TH1F("FCALetato3pi0_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato3pi0_trg3_Esum_sc_w = new TH1F("FCALetato3pi0_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+    
+  h_m2g2pi_sc = new TH1F("m2g2pi_sc", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g2pi_sc_trg2 = new TH1F("m2g2pi_sc_trg2", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g2pi_sc_trg3 = new TH1F("m2g2pi_sc_trg3", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g2pi_sc_w = new TH1F("m2g2pi_sc_w", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g2pi_sc_w_trg2 = new TH1F("m2g2pi_sc_w_trg2", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_m2g2pi_sc_w_trg3 = new TH1F("m2g2pi_sc_w_trg3", ";m_{#pi^{0}#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 300, 0., 3.);
+  h_FCAL2g2pi_trg_Esum_sc = new TH1F("FCAL2g2pi_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg1_Esum_sc = new TH1F("FCAL2g2pi_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg2_Esum_sc = new TH1F("FCAL2g2pi_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg3_Esum_sc = new TH1F("FCAL2g2pi_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg_Esum_sc = new TH1F("FCALetato2g2pi_trg_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg1_Esum_sc = new TH1F("FCALetato2g2pi_trg1_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg2_Esum_sc = new TH1F("FCALetato2g2pi_trg2_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg3_Esum_sc = new TH1F("FCALetato2g2pi_trg3_Esum_sc", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg_Esum_sc_w = new TH1F("FCAL2g2pi_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg1_Esum_sc_w = new TH1F("FCAL2g2pi_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg2_Esum_sc_w = new TH1F("FCAL2g2pi_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCAL2g2pi_trg3_Esum_sc_w = new TH1F("FCAL2g2pi_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg_Esum_sc_w = new TH1F("FCALetato2g2pi_trg_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg1_Esum_sc_w = new TH1F("FCALetato2g2pi_trg1_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg2_Esum_sc_w = new TH1F("FCALetato2g2pi_trg2_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+  h_FCALetato2g2pi_trg3_Esum_sc_w = new TH1F("FCALetato2g2pi_trg3_Esum_sc_w", ";E [GeV];Count [a.u.]", 120, 0., 12.);
+
+  h_tagh = new TH2F("tagh", ";E_{#gamma} [GeV];TAGH counter;count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);
+  h_tagm = new TH2F("tagm", ";E_{#gamma} [GeV];TAGM counter;t_{tagger} - t_{RF} [ns];count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);
+  h_TaggerTiming_vs_eg = new TH2F("TaggerTiming_vs_eg", ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+  h_TaggerTiming_vs_egcut = new TH2F("TaggerTiming_vs_egcut", ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+    
+  h_theta_2g = new TH1F("theta_2g", ";#theta_{#eta #rightarrow 2#gamma};count [a.u.]", 65, 0.0, 6.5);
+  h_theta_6g = new TH1F("theta_6g", ";#theta_{#eta #rightarrow 3#pi^{0}};count [a.u.]", 65, 0.0, 6.5);
+  h_theta_2g2pi = new TH1F("theta_2g2pi", ";#theta_{#eta #rightarrow 2#gamma#pi^{+}#pi^{-}};count [a.u.]", 65, 0.0, 6.5);
+    
+  h_Primakoff_2g = new TH2F("Primakoff_2g", ";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 500, 0.7, 2.0, 500, 0.3, 1.4);
+  h_Primakoff_2g_r = new TH2F("Primakoff_2g_r", ";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 500, 0.7, 2.0, 500, 0.3, 1.4);
+  h_Primakoff_6g = new TH2F("Primakoff_6g", 
+			    ";m_{3#pi^{0}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
+			    500, 0.7, 2.0, 500, 0.3, 1.4);
+  h_Primakoff_6g_r = new TH2F("Primakoff_6g_r", 
+			      ";m_{3#pi^{0}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
+			      500, 0.7, 2.0, 500, 0.3, 1.4);
+  h_Primakoff_2g2pi = new TH2F("Primakoff_2g2pi", 
+			       ";m_{#pi^{0}#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
+			       500, 0.7, 2.0, 500, 0.3, 1.4);
+  h_Primakoff_2g2pi_r = new TH2F("Primakoff_2g2pi_r", 
+				 ";m_{#pi^{0}#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
+				 500, 0.7, 2.0, 500, 0.3, 1.4);
+  
+  /*
+  h_trigbit->Sumw2();
+  h_trig_bit->Sumw2();  
+  h_trig1->Sumw2();  
+  h_trig2->Sumw2();  
+  h_fptrig1->Sumw2();  
+  h_fptrig2->Sumw2();
+  */
+  h_mc_eb->Sumw2();
+  h_z->Sumw2();  
+  h_r->Sumw2();
+  h_FCAL_trg_Esum->Sumw2();  
+  h_FCAL_trg1_Esum->Sumw2();  
+  h_FCAL_trg2_Esum->Sumw2();  
+  h_FCAL_trg3_Esum->Sumw2();
+  h_bcal_e_v_t->Sumw2();
+  h_fcal_rf->Sumw2();  
+  h_ccal_rf->Sumw2();
+  h_fcal_xy->Sumw2();  
+  h_fcal_rc->Sumw2();  
+  h_fcal_tof_dx->Sumw2();
+  h_Esum_bcal->Sumw2();  
+  h_Esum_fcal->Sumw2();  
+  h_Esum_ccal->Sumw2(); 
+  h_Esum_fcal_trg1->Sumw2();  
+  h_Esum_ccal_trg1->Sumw2();
+  h_Esum_fcal_trg2->Sumw2();  
+  h_Esum_ccal_trg2->Sumw2();
+  h_Esum_fcal_trg3->Sumw2();  
+  h_Esum_ccal_trg3->Sumw2();
+  h_mgg_all->Sumw2();  
+  h_mgg_fcal->Sumw2();  
+  h_mgg_fcaltof->Sumw2();
+  h_mgg->Sumw2();  
+  h_mggpipi->Sumw2();
+  h_mpipipi->Sumw2();  
+  h_mpipipi_trg2->Sumw2();  
+  h_mpipipi_trg3->Sumw2();
+  h_mgg_all15->Sumw2();
+  h_m6g_all->Sumw2();  
+  h_m3pi0_all->Sumw2();
+  h_m6g_pi0->Sumw2();  
+  h_m3pi0_pi0->Sumw2();
+  h_m6g_trg2->Sumw2(); 
+  h_m3pi0_trg2->Sumw2();
+  h_m6g_trg3->Sumw2(); 
+  h_m3pi0_trg3->Sumw2();
+  h_m2g_sc->Sumw2(); 
+  h_m2g_sc_trg2->Sumw2();  
+  h_m2g_sc_trg3->Sumw2();  
+  h_m2g_sc_w->Sumw2();  
+  h_m2g_sc_w_trg2->Sumw2();  
+  h_m2g_sc_w_trg3->Sumw2();
+  h_m6g_sc->Sumw2(); 
+  h_m6g_sc_trg2->Sumw2();  
+  h_m6g_sc_trg3->Sumw2();  
+  h_m6g_sc_w->Sumw2();  
+  h_m6g_sc_w_trg2->Sumw2();  
+  h_m6g_sc_w_trg3->Sumw2(); 
+  h_m2g2pi_sc->Sumw2();  
+  h_m2g2pi_sc_trg2->Sumw2();  
+  h_m2g2pi_sc_trg3->Sumw2();  
+  h_m2g2pi_sc_w->Sumw2();  
+  h_m2g2pi_sc_w_trg2->Sumw2(); 
+  h_m2g2pi_sc_w_trg3->Sumw2();
+  h_FCAL2g_trg_Esum_sc->Sumw2();  
+  h_FCAL2g_trg1_Esum_sc->Sumw2();  
+  h_FCAL2g_trg2_Esum_sc->Sumw2();  
+  h_FCAL2g_trg3_Esum_sc->Sumw2(); 
+  h_FCAL2g_trg_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL2g_trg3_Esum_sc_w->Sumw2();
+  h_FCAL3pi0_trg_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg1_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg2_Esum_sc->Sumw2();  
+  h_FCAL3pi0_trg3_Esum_sc->Sumw2(); 
+  h_FCAL3pi0_trg_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL3pi0_trg3_Esum_sc_w->Sumw2();
+  h_FCAL2g2pi_trg_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg1_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg2_Esum_sc->Sumw2();  
+  h_FCAL2g2pi_trg3_Esum_sc->Sumw2(); 
+  h_FCAL2g2pi_trg_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg1_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg2_Esum_sc_w->Sumw2();  
+  h_FCAL2g2pi_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato2g_trg_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg1_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg2_Esum_sc->Sumw2();  
+  h_FCALetato2g_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato2g_trg_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato2g_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato3pi0_trg_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg1_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg2_Esum_sc->Sumw2();  
+  h_FCALetato3pi0_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato3pi0_trg_Esum_sc_w->Sumw2(); 
+  h_FCALetato3pi0_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato3pi0_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato3pi0_trg3_Esum_sc_w->Sumw2();
+  h_FCALetato2g2pi_trg_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg1_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg2_Esum_sc->Sumw2();  
+  h_FCALetato2g2pi_trg3_Esum_sc->Sumw2(); 
+  h_FCALetato2g2pi_trg_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg1_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg2_Esum_sc_w->Sumw2();  
+  h_FCALetato2g2pi_trg3_Esum_sc_w->Sumw2();
+  h_theta_2g->Sumw2();  h_theta_6g->Sumw2();  
+  h_theta_2g2pi->Sumw2();
+  h_Primakoff_2g->Sumw2();  
+  h_Primakoff_2g_r->Sumw2();
+  h_Primakoff_6g->Sumw2();  
+  h_Primakoff_6g_r->Sumw2();
+  h_Primakoff_2g2pi->Sumw2();  
+  h_Primakoff_2g2pi_r->Sumw2();
+  //h_tagh->Sumw2();  
+  //h_tagm->Sumw2();
+  //h_TaggerTiming_vs_eg->Sumw2();  
+  //h_TaggerTiming_vs_egcut->Sumw2();
+  
+  main->cd();
+
   return NOERROR;
 }
 
@@ -33,7 +312,7 @@ jerror_t JEventProcessor_myanalyzer::init(void)
 //------------------
 jerror_t JEventProcessor_myanalyzer::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
-	
+
   DGeometry*   dgeom = NULL;
   DApplication* dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
   if( dapp )   dgeom = dapp->GetDGeometry( runnumber );
@@ -108,21 +387,19 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     Bit 10: CCAL
   */
   
-  //japp->RootFillLock(this);  
   
-  uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
-  uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
   
+  //uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
+  //uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
+  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
     for (unsigned int bit = 0; bit < 32; bit ++) {
       trig_bit[bit + 1] = (locL1Triggers[0]->trig_mask & (1 << bit)) ? 1 : 0;
-      if(trig_bit[bit + 1] == 1) //htrig_bit->Fill(Float_t(bit+1));
-	Fill1DHistogram("histo","","trig_bit", Float_t(bit+1), ";Trigger bit #;Count [a.u.]", 100, 0., 100.);
-      
+      if(trig_bit[bit + 1] == 1) h_trig_bit->Fill(Float_t(bit+1));
     }
   }
-  
   //-----   Check Trigger   -----//
   uint32_t trigmask;
   uint32_t fp_trigmask;
@@ -132,23 +409,33 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       eventLoop->GetSingle(trig);
     } catch (...) {
     }
-    if (trig == NULL) { return NOERROR; }
+    if (trig == NULL) { 
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return NOERROR;
+    }
         
     trigmask = trig->trig_mask;	
     fp_trigmask = trig->fp_trig_mask;
     for (int ibit = 0; ibit < 33; ibit++) {
-      if(trigmask & (1 << ibit)) Fill1DHistogram("trigger","","trig", ibit, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
-      if(fp_trigmask & (1 << ibit)) Fill1DHistogram("trigger","","fptrig", ibit, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
+      if(trigmask & (1 << ibit)) h_trig1->Fill(ibit);
+      if(fp_trigmask & (1 << ibit)) h_fptrig1->Fill(ibit);
     }
-    if( trigmask==8 ) return NOERROR;
-    if( fp_trigmask ) return NOERROR;
+    if( trigmask==8 ) {
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return NOERROR;
+    }
+    if( fp_trigmask ) {
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      return NOERROR;
+    }
   } else {
     trigmask = 1;
     fp_trigmask = 1;
   }
-  Fill1DHistogram("trigger","","trig", trigmask, ";GTP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
-  Fill1DHistogram("trigger","","fptrig", fp_trigmask, ";FP trigger bit;Events [a.u.]", 33, -0.5, 32.5);  //hTrig->Fill(ibit);
   
+  h_trig2->Fill(trigmask);
+  h_fptrig2->Fill(fp_trigmask);
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //-----   RF Bunch   -----//
   
   const DEventRFBunch *locRFBunch = NULL;
@@ -176,14 +463,14 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   double kinfitVertexY = m_beamY;
   double kinfitVertexZ = m_beamZ;
   double kinfitR = 0;
-  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   for (unsigned int i = 0 ; i < locVerteces.size(); i++) {
     kinfitVertexX = locVerteces[i]->dSpacetimeVertex.X();
     kinfitVertexY = locVerteces[i]->dSpacetimeVertex.Y();
     kinfitVertexZ = locVerteces[i]->dSpacetimeVertex.Z();
     kinfitR = sqrt(pow(kinfitVertexX, 2) + pow(kinfitVertexY, 2));
-    Fill1DHistogram("histo","","h_z", kinfitVertexZ, ";z [cm];Count [a.u.]", 1000, -1000., 1000.);
-    Fill1DHistogram("histo","","h_r", kinfitR, ";z [cm];Count [a.u.]", 1000, 0., 1000.);
+    h_z->Fill(kinfitVertexZ);
+    h_r->Fill(kinfitR);
   }
 
   Bool_t target_vtx_z = (50.0 < kinfitVertexZ && kinfitVertexZ < 80);
@@ -195,7 +482,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     const DMCReaction* locMCReactions = NULL;
     eventLoop->GetSingle(locMCReactions);
     mc_eb = locMCReactions->beam.energy();
-    Fill1DHistogram("histo","","mc_eb", mc_eb, ";E_{#gamma} [GeV]", 500, 3.0, 12.0);  
+    h_mc_eb->Fill(mc_eb);
     for (unsigned int bit = 0; bit < 32; bit ++) {
       trig_bit[bit + 1] = 1;
     }
@@ -215,16 +502,16 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     if ((**hit).E > 0.150)
       FCAL_trg_Esum += (**hit).E;
   }
-  if (FCAL_trg_Esum > 0) {
-    Fill1DHistogram("histo","","FCAL_trg_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
-    if (trig_bit[1] == 1)
-      Fill1DHistogram("histo","","FCAL_trg1_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
-    if (trig_bit[2] == 1)
-      Fill1DHistogram("histo","","FCAL_trg2_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
-    if (trig_bit[3] == 1)
-      Fill1DHistogram("histo","","FCAL_trg3_Esum", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
-  }
 
+  if (FCAL_trg_Esum > 0) {
+    h_FCAL_trg_Esum->Fill(FCAL_trg_Esum);
+    if (trig_bit[1] == 1)
+      h_FCAL_trg1_Esum->Fill(FCAL_trg_Esum);
+    if (trig_bit[2] == 1)
+      h_FCAL_trg2_Esum->Fill(FCAL_trg_Esum);
+    if (trig_bit[3] == 1)
+      h_FCAL_trg3_Esum->Fill(FCAL_trg_Esum);
+  }
   //Loop over neutral particle list, showers matching a track a removed
   vector<const DNeutralParticleHypothesis*> PhotonsList;
   Bool_t InnerFCAL_ring = false;
@@ -251,7 +538,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double pz = e * cos(position.Theta());
       TLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
-      Fill2DHistogram("histo", "", "bcal_edep", diff_t, e, ";t_{#gamma}^{bcal} - t_{RF} [ns];E_{shower} [GeV];count [a.u.]", 2000, -40., 40., 2000, 0., 2.);
+      h_bcal_e_v_t->Fill(diff_t, e);
       if (fabs(diff_t) < BCAL_RF_CUT) {
 	if (e > 0.25) PhotonsList.push_back(photon);
 	n_locBCALShowers ++;
@@ -279,18 +566,19 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       //int layer = fcalLayer(row, col);
       const DFCALCluster *fcalCluster;
       fcal_shower->GetSingle(fcalCluster);
-      int channel = fcalCluster->getChannelEmax();
-      double emax = fcalCluster->getEmax();
+      //int channel = fcalCluster->getChannelEmax();
+      //double emax = fcalCluster->getEmax();
       float TOF_FCAL_x_min = shower->dTOF_FCAL_x_min;
       float TOF_FCAL_y_min = shower->dTOF_FCAL_y_min;
 
       //bool in_insert = fcalGeom->inInsert(channel);
       double radius = sqrt(pow(position.X(), 2) + pow(position.Y(), 2));
-      Fill1DHistogram("histo","","fcal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
-      Fill2DHistogram("histo","","fcal_xy", face_x, face_y, ";row;column #;Counts", 500, -125, 125, 500, -125, 125);
-      Fill2DHistogram("histo","","fcal_rc", row, col, ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
-      Fill2DHistogram("histo","","fcal_tof_dx", TOF_FCAL_x_min, TOF_FCAL_y_min, ";#Deltax;#Deltay;Counts", 200, 0, 50, 200, 0, 50);
-
+      
+      h_fcal_rf->Fill(diff_t);
+      h_fcal_xy->Fill(face_x, face_y);
+      h_fcal_rc->Fill(row, col);
+      h_fcal_tof_dx->Fill(TOF_FCAL_x_min, TOF_FCAL_y_min);
+      
       if (fabs(diff_t) < FCAL_RF_CUT) {
 	if (radius < 10) InnerFCAL_ring = true;
 	if (e > 0.25) PhotonsList.push_back(photon);
@@ -318,10 +606,10 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double pz = e * cos(position.Theta());
       TLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
-      double phi_ccal = PhotonVec.Phi();
-      double theta_ccal = PhotonVec.Theta();
-      double delta_phi_min = 1000.;
-      Fill1DHistogram("histo","","ccal_rf", diff_t, ";t_{ccal} - t_{RF} [ns];Count [a.u.]", 1000, -50., 50.);
+      //double phi_ccal = PhotonVec.Phi();
+      //double theta_ccal = PhotonVec.Theta();
+      //double delta_phi_min = 1000.;
+      h_ccal_rf->Fill(diff_t);
       if (fabs(diff_t) < CCAL_RF_CUT) {
 	//ShowersList.push_back(PhotonVec);
 	n_locCCALShowers++;
@@ -329,35 +617,35 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       }
     }
   }
-
+  
   //Checking showers energy sum
   if (n_locBCALShowers > 0)
-    Fill1DHistogram("histo","","Esum_bcal", BCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    h_Esum_bcal->Fill(BCAL_Esum);
   if (n_locFCALShowers > 0) {
-    Fill1DHistogram("histo","","Esum_fcal", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    h_Esum_fcal->Fill(FCAL_Esum);
     if (trig_bit[1] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg1", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_fcal_trg1->Fill(FCAL_Esum);
     }
     if (trig_bit[2] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg2", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_fcal_trg2->Fill(FCAL_Esum);
     }
     if (trig_bit[3] == 1) {
-      Fill1DHistogram("histo","","Esum_fcal_trg3", FCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_fcal_trg3->Fill(FCAL_Esum);
     }
   }
   if (n_locCCALShowers > 0) {
-    Fill1DHistogram("histo","","Esum_ccal", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+    h_Esum_ccal->Fill(CCAL_Esum);
     if (trig_bit[1] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg1", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_ccal_trg1->Fill(CCAL_Esum);
     }
     if (trig_bit[2] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg2", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_ccal_trg2->Fill(CCAL_Esum);
     }
     if (trig_bit[3] == 1) {
-      Fill1DHistogram("histo","","Esum_ccal_trg3", CCAL_Esum, ";E_{dep} [GeV];Count [a.u.]", 12000, 0., 12.);
+      h_Esum_ccal_trg3->Fill(CCAL_Esum);
     }
   }
-  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   //Retrieve tracks info and assign it a pi hypo
   vector <const DTrackTimeBased *> pimsList;
   vector <const DTrackTimeBased *> pipsList;
@@ -366,7 +654,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   DLorentzVector gP4[6];
   DLorentzVector pipP4;
   DLorentzVector pimP4;
-  
+  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   //Looking at event with 2 unmatched showers
   if (PhotonsList.size() == 2) {
     
@@ -375,13 +663,14 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
     DLorentzVector ggP4 = gP4[0] + gP4[1];
     good_eta_to_2g = true;
     EtaP4 = ggP4;
-    Fill1DHistogram("histo","","mgg_all", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+
+    h_mgg_all->Fill(ggP4.M());
     
     if (n_locFCALShowers == 2)
-      Fill1DHistogram("histo","","mgg_fcal", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+      h_mgg_fcal->Fill(ggP4.M());
     
     if (n_locFCALTOFShowers == 2)
-      Fill1DHistogram("histo","","mgg_fcaltof", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+      h_mgg_fcaltof->Fill(ggP4.M());
     
     Bool_t GoodPi0 = (0.11 < ggP4.M() && ggP4.M() < 0.16);
 
@@ -392,23 +681,22 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       pimP4 = pipsList[0]->lorentzMomentum();
       DLorentzVector ggpipiP4 = ggP4 + pipP4 + pimP4;
       
-      Fill1DHistogram("histo","","mgg", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
-      Fill1DHistogram("histo","","mggpipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      h_mgg->Fill(ggP4.M());
+      h_mggpipi->Fill(ggpipiP4.M());
       
       if (GoodPi0) {
 	good_eta_to_2g2pi = true;
 	EtaP4 = ggpipiP4;
-	Fill1DHistogram("histo","","mpipipi", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_mpipipi->Fill(ggpipiP4.M());
 	if (trig_bit[2] == 1) {
-	  Fill1DHistogram("histo","","mpipipi_trg2", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_mpipipi_trg2->Fill(ggpipiP4.M());
 	}
 	if (trig_bit[3] == 1) {
-	  Fill1DHistogram("histo","","mpipipi_trg3", ggpipiP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_mpipipi_trg3->Fill(ggpipiP4.M());
 	}
       }
     }
   }
-
   //Looking at event with 6 unmatched showers
   if (PhotonsList.size() == 6) {
     
@@ -449,30 +737,30 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
 	DLorentzVector g1P4 = PhotonsList[Index6gList[2 * i]]->lorentzMomentum();
 	DLorentzVector g2P4 = PhotonsList[Index6gList[2 * i + 1]]->lorentzMomentum();
 	DLorentzVector ggP4 = g1P4 + g2P4;
-	Fill1DHistogram("histo","","mgg_all15", ggP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 2000, 0., 2.);
+	h_mgg_all15->Fill(ggP4.M());
 	Bool_t GoodPi0 = (0.11 < ggP4.M() && ggP4.M() < 0.16);
 	if (GoodPi0) pi0_nb ++;
       }
       
-      Fill1DHistogram("histo","","m6g_all", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-      Fill1DHistogram("histo","","m3pi0_all", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      h_m6g_all->Fill(ggggggP4.M());
+      h_m3pi0_all->Fill(pi0pi0pi0P4.M());
+      
       if (pi0_nb == 3) {
 	good_eta_to_3pi0 = true;
 	EtaP4 = pi0pi0pi0P4;
-	Fill1DHistogram("histo","","m6g_pi0", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	Fill1DHistogram("histo","","m3pi0_pi0", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m6g_pi0->Fill(ggggggP4.M());
+	h_m3pi0_pi0->Fill(pi0pi0pi0P4.M());
 	if (trig_bit[2] == 1) {
-	  Fill1DHistogram("histo","","m6g_trg2", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	  Fill1DHistogram("histo","","m3pi0_trg2", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_m6g_trg2->Fill(ggggggP4.M());
+	  h_m3pi0_trg2->Fill(pi0pi0pi0P4.M());
 	}
 	if (trig_bit[3] == 1) {
-	  Fill1DHistogram("histo","","m6g_trg3", ggggggP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
-	  Fill1DHistogram("histo","","m3pi0_trg3", pi0pi0pi0P4.M(), ";m_{#pi^{0}#pi^{0}#pi^{0}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_m6g_trg3->Fill(ggggggP4.M());
+	  h_m3pi0_trg3->Fill(pi0pi0pi0P4.M());
 	}
       }
     }
   }
-  
   //Basic selection criteria
   Bool_t Prim2g = good_eta_to_2g * (locChargedTracks.size() == 0 && n_locBCALShowers == 0 && n_locFCALTOFShowers == 2);
   Bool_t Prim3pi0 = good_eta_to_3pi0 * (locChargedTracks.size() == 0);
@@ -486,80 +774,80 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       !InnerFCAL_ring) {
     
     if (Prim2g) {
-      Fill1DHistogram("histo","","m2g_sc", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      h_m2g_sc->Fill(EtaP4.M());
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m2g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m2g_sc_trg2->Fill(EtaP4.M());
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m2g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m2g_sc_trg3->Fill(EtaP4.M());
     }
     if (Prim3pi0) {
-      Fill1DHistogram("histo","","m6g_sc", EtaP4.M(), ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      h_m6g_sc->Fill(EtaP4.M());
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m6g_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m6g_sc_trg2->Fill(EtaP4.M());
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m6g_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m6g_sc_trg3->Fill(EtaP4.M());
     }
     if (Prim2g2pi) {
-      Fill1DHistogram("histo","","m2g2pi_sc", EtaP4.M(), ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+      h_m2g2pi_sc->Fill(EtaP4.M());
       if (trig_bit[2] == 1)
-	Fill1DHistogram("histo","","m2g2pi_sc_trg2", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m2g2pi_sc_trg2->Fill(EtaP4.M());
       if (trig_bit[3] == 1)
-	Fill1DHistogram("histo","","m2g2pi_sc_trg3", EtaP4.M(), ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	h_m2g2pi_sc_trg3->Fill(EtaP4.M());
     }
 
     if (FCAL_trg_Esum > 0) {
       if (Prim2g) {
-	Fill1DHistogram("histo","","FCAL2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	h_FCAL2g_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato2g_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCALetato2g_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	}
       }
       if (Prim3pi0) {
-	Fill1DHistogram("histo","","FCAL3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	h_FCAL3pi0_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL3pi0_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL3pi0_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL3pi0_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato3pi0_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCALetato3pi0_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato3pi0_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato3pi0_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato3pi0_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato3pi0_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	}
       }
       if (Prim2g2pi) {
-	Fill1DHistogram("histo","","FCAL2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	h_FCAL2g2pi_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[1] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g2pi_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[2] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g2pi_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	if (trig_bit[3] == 1)
-	  Fill1DHistogram("histo","","FCAL2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCAL2g2pi_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	  Fill1DHistogram("histo","","FCALetato2g2pi_trg_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	  h_FCALetato2g2pi_trg_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[1] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg1_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g2pi_trg1_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[2] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg2_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g2pi_trg2_Esum_sc->Fill(FCAL_trg_Esum);
 	  if (trig_bit[3] == 1)
-	    Fill1DHistogram("histo","","FCALetato2g2pi_trg3_Esum_sc", FCAL_trg_Esum, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCALetato2g2pi_trg3_Esum_sc->Fill(FCAL_trg_Esum);
 	}
       }
     }
@@ -571,14 +859,14 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double eb = ebeam->lorentzMomentum().E();	
       DetectorSystem_t sys = ebeam->dSystem;
       int counter = ebeam->dCounter;
-      int tagm_ctr = -1;
-      int tagh_ctr = -1;
+      //int tagm_ctr = -1;
+      //int tagh_ctr = -1;
       if (sys == SYS_TAGH) {
-	Fill2DHistogram("histo","","tagh", eb, counter, ";E_{#gamma} [GeV];TAGH counter;count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);     
-	tagh_ctr = counter;
+	h_tagh->Fill(eb, counter);
+	//tagh_ctr = counter;
       } else if (sys == SYS_TAGM) {
-	Fill2DHistogram("histo","","tagm", eb, counter, ";E_{#gamma} [GeV];TAGM counter;t_{tagger} - t_{RF} [ns];count [a.u.]", 6000, 5.0, 12.0, 500, -0.5, 499.5);
-	tagm_ctr = counter;
+	h_tagm->Fill(eb, counter);
+	//tagm_ctr = counter;
       }
       if (eb < 8.0) continue;
       double tb = ebeam->time();
@@ -586,7 +874,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       TLorentzVector PhotonBeamP4(0, 0, eb, eb);
       TLorentzVector ISP4 = TargetP4 + PhotonBeamP4;
       double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
-      Fill2DHistogram("histo","","TaggerTiming_vs_eg", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+      h_TaggerTiming_vs_eg->Fill(eb, locDeltaTRF);
       double weight = 0;
       if (fabs(locDeltaTRF) <= 2.004) {
 	weight = 1;
@@ -596,141 +884,127 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       } else {
 	continue;
       }
-      Fill2DHistogram("histo","","TaggerTiming_vs_egcut", eb, locDeltaTRF, ";E_{#gamma} [GeV];RF-tagger;t_{tagger} - t_{RF} [ns];count [a.u.]", 500, 3.0, 12.0, 2000, -200, 200);
+      h_TaggerTiming_vs_egcut->Fill(eb, locDeltaTRF);
       
-      double DE = eb - EtaP4.E();
+      //double DE = eb - EtaP4.E();
       double M = EtaP4.M();
-      double rM = M * cos(45.0 * TMath::RadToDeg()) - DE * sin(45.0 * TMath::RadToDeg());
+      //double rM = M * cos(45.0 * TMath::RadToDeg()) - DE * sin(45.0 * TMath::RadToDeg());
       double RatioE = EtaP4.E() / eb;
       double RatiorE = (m_eta / M * EtaP4).E() / eb;
       double RatioM = EtaP4.M() / m_eta; 
       //double RatiorE = RatioM * cos(45.0 * TMath::RadToDeg()) - RatioE * sin(45.0 * TMath::RadToDeg());; 
       double theta_eta = EtaP4.Theta() * TMath::RadToDeg();
+      
       if (Prim2g) {
-	Fill2DWeightedHistogram("histo","","Primakoff_2g", RatioM, RatioE, weight, 
-				";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_2g_r", RatioM, RatiorE, weight, 
-				";m_{#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
+	h_Primakoff_2g->Fill(RatioM, RatioE, weight);
+	h_Primakoff_2g_r->Fill(RatioM, RatiorE, weight);
       }
       if (Prim3pi0) {
-	Fill2DWeightedHistogram("histo","","Primakoff_6g", RatioM, RatioE, weight, 
-				";m_{#gamma#gamma#gamma#gamma#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_6g_r", RatioM, RatiorE, weight, 
-				";m_{#gamma#gamma#gamma#gamma#gamma#gamma} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#gamma}^{3} + E_{#gamma}^{4} + E_{#gamma}^{5} + E_{#gamma}^{6}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
+	h_Primakoff_6g->Fill(RatioM, RatioE, weight);
+	h_Primakoff_6g_r->Fill(RatioM, RatiorE, weight);
       }
       if (Prim2g2pi) {
-	Fill2DWeightedHistogram("histo","","Primakoff_2g2pi", RatioM, RatioE, weight, 
-				";m_{#gamma#gamma#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
-	Fill2DWeightedHistogram("histo","","Primakoff_2g2pi_r", RatioM, RatiorE, weight, 
-				";m_{#gamma#gamma#pi^{+}#pi^{-}} / m _{#eta};(E_{#gamma}^{1} + E_{#gamma}^{2} + E_{#pi^{+}} + E_{#pi^{-}}) / E_{#gamma}^{beam};count [a.u.]", 
-				500, 0.7, 2.0, 500, 0.3, 1.4);
+	h_Primakoff_2g2pi->Fill(RatioM, RatioE, weight);
+	h_Primakoff_2g2pi_r->Fill(RatioM, RatiorE, weight);
       }
       Bool_t elasticity = (0.9 < RatioE && RatioE < 1.1);
       Bool_t good_eta = (0.9 < RatioM && RatioM < 1.1);
       if (elasticity) {	
 	if (Prim2g) {
-	  Fill1DWeightedHistogram("histo","","m2g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_m2g_sc_w->Fill(EtaP4.M(), weight);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m2g_sc_w_trg2->Fill(EtaP4.M(), weight);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m2g_sc_w_trg3->Fill(EtaP4.M(), weight);
 	}
 	if (Prim3pi0) {
-	  Fill1DWeightedHistogram("histo","","m6g_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#gamma#gamma#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_m6g_sc_w->Fill(EtaP4.M(), weight);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m6g_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m6g_sc_w_trg2->Fill(EtaP4.M(), weight);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m6g_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m6g_sc_w_trg3->Fill(EtaP4.M(), weight);
 	}
 	if (Prim2g2pi) {
-	  Fill1DWeightedHistogram("histo","","m2g2pi_sc_w", EtaP4.M(), weight, ";m_{#gamma#gamma#pi^{+}#pi^{-}} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	  h_m2g2pi_sc_w->Fill(EtaP4.M(), weight);
 	  if (trig_bit[2] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g2pi_sc_w_trg2", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m2g2pi_sc_w_trg2->Fill(EtaP4.M(), weight);
 	  if (trig_bit[3] == 1)
-	    Fill1DWeightedHistogram("histo","","m2g2pi_sc_w_trg3", EtaP4.M(), weight, ";m_{#gamma#gamma} [GeV/#it{c}^{2}];Count [a.u.]", 3000, 0., 3.);
+	    h_m2g2pi_sc_w_trg3->Fill(EtaP4.M(), weight);
 	}
 	
 	if (FCAL_trg_Esum > 0) {
 	  if (Prim2g) {
-	    Fill1DWeightedHistogram("histo","","FCAL2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCAL2g_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato2g_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCALetato2g_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    }
 	  }
 	  if (Prim3pi0) {
-	    Fill1DWeightedHistogram("histo","","FCAL3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCAL3pi0_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL3pi0_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL3pi0_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL3pi0_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCALetato3pi0_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato3pi0_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato3pi0_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato3pi0_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato3pi0_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    }
 	  }
 	  if (Prim2g2pi) {
-	    Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	    h_FCAL2g2pi_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[1] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g2pi_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[2] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g2pi_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (trig_bit[3] == 1)
-	      Fill1DWeightedHistogram("histo","","FCAL2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCAL2g2pi_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    if (0.5 < EtaP4.M() && EtaP4.M() < 0.6) {
-	      Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+	      h_FCALetato2g2pi_trg_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[1] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg1_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g2pi_trg1_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[2] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg2_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g2pi_trg2_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	      if (trig_bit[3] == 1)
-		Fill1DWeightedHistogram("histo","","FCALetato2g2pi_trg3_Esum_sc_w", FCAL_trg_Esum, weight, ";E [GeV];Count [a.u.]", 12000, 0., 12.);
+		h_FCALetato2g2pi_trg3_Esum_sc_w->Fill(FCAL_trg_Esum, weight);
 	    }
 	  }
 	}
       }
-      if (good_eta && elasticity) {
+
+      if (good_eta && elasticity && (0.5 < EtaP4.M() && EtaP4.M() < 0.6)) {
 	if (Prim2g)
-	  Fill1DWeightedHistogram("histo","","theta_2g", theta_eta, weight, 
-				  ";#theta_{#eta #rightarrow 2#gamma};count [a.u.]", 
-				  650, 0.0, 6.5);
+	  h_theta_2g->Fill(theta_eta, weight);
+
 	if (Prim3pi0)
-	  Fill1DWeightedHistogram("histo","","theta_6g", theta_eta, weight, 
-				  ";#theta_{#eta #rightarrow 3#pi^{0}};count [a.u.]", 
-				  650, 0.0, 6.5);
+	  h_theta_6g->Fill(theta_eta, weight);
 	
 	if (Prim2g2pi)
-	  Fill1DWeightedHistogram("histo","","theta_2g2pi", theta_eta, weight, 
-				  ";#theta_{#eta #rightarrow 2#gamma#pi^{+}#pi^{-}};count [a.u.]", 
-				  650, 0.0, 6.5);
+	  h_theta_2g2pi->Fill(theta_eta, weight);
       }
     }
   }
-  //japp->RootFillUnLock(this);
-  //
+  
+  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
   return NOERROR;
 }
 
@@ -756,14 +1030,14 @@ jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTr
 							 vector<const DTrackTimeBased *>&pims,
 							 vector<const DTrackTimeBased *>&pips) {
   
-  for (unsigned int j = 0; j < (int) locChargedTracks.size(); j ++) {    
+  for (unsigned int j = 0; j < locChargedTracks.size(); j ++) {    
   
     const DTrackTimeBased * pion_track = NULL;
     const DChargedTrackHypothesis * hyp = NULL;
     bool got_piplus = false;
     double pion_prob = 0.;
-    double pion_dEdx = 0.;
-    double pion_bg = 0.;
+    //double pion_dEdx = 0.;
+    //double pion_bg = 0.;
     
     // Look at pions
     hyp = locChargedTracks[j]->Get_Hypothesis(PiPlus);
@@ -794,8 +1068,8 @@ jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTr
 	  num_dof ++;
 	}
 	pion_prob = TMath::Prob(sum_chi2, num_dof);
-	pion_bg = betagamma;
-	pion_dEdx = dEdx;
+	//pion_bg = betagamma;
+	//pion_dEdx = dEdx;
       }
     }
     if (pion_track != NULL && pion_prob > 1e-6) {
@@ -806,8 +1080,8 @@ jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTr
     if (got_piplus == false){
       pion_prob = 0.;
       pion_track = NULL;
-      pion_dEdx = 0.;
-      pion_bg = 0.;
+      //pion_dEdx = 0.;
+      //pion_bg = 0.;
       
       hyp = locChargedTracks[j]->Get_Hypothesis(PiMinus);
       if (hyp != NULL) {
@@ -839,8 +1113,8 @@ jerror_t JEventProcessor_myanalyzer::FillParticleVectors(vector<const DChargedTr
 	  }
 	  
 	  pion_prob = TMath::Prob(sum_chi2, num_dof);
-	  pion_bg = betagamma;
-	  pion_dEdx = dEdx;
+	  //pion_bg = betagamma;
+	  //pion_dEdx = dEdx;
 	}
       }
       
