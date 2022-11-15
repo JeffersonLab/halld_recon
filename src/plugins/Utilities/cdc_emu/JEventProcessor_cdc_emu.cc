@@ -7,8 +7,6 @@
 
 // read in thresholds from RunLog configuration files, filenames are hardcoded except for the run number.   TH and TL are hardcoded
 
-// CDC:RUN_CONFIG specifies run number to use parameter files from, defaults to current run
-
 // CDC:DIFFS_ONLY only write out events with differing fa125 output & emulation if this =1
 
 // writes out reported and emulated fa125 quantities to tree_m.root
@@ -63,10 +61,7 @@ JEventProcessor_cdc_emu::~JEventProcessor_cdc_emu()
 jerror_t JEventProcessor_cdc_emu::init(void)
 {
 
-
-  RUN_CONFIG = 0;
-  gPARMS->SetDefaultParameter("CDC:RUN_CONFIG",RUN_CONFIG,"Run to be used as source of configuration files");
-
+  
   DIFFS_ONLY = 0;
   gPARMS->SetDefaultParameter("CDC:DIFFS_ONLY",DIFFS_ONLY,"Record (0) all events or (1) only those events where difference are found");
 
@@ -157,15 +152,6 @@ jerror_t JEventProcessor_cdc_emu::brun(JEventLoop *eventLoop, int32_t runnumber)
 
   //read in thresholds file
 
-
-  //  printf("brun:: RUN_CONFIG %06i\n",RUN_CONFIG);
-
-  Int_t runfile = runnumber;
-
-  //printf("Run number %06i\n",runnumber);
-
-  if (RUN_CONFIG > 0) runfile = RUN_CONFIG; //use this instead of runnumber
-
   int i;
 
   Char_t line[200];
@@ -179,7 +165,7 @@ jerror_t JEventProcessor_cdc_emu::brun(JEventLoop *eventLoop, int32_t runnumber)
   for (int iroc=1; iroc<5; iroc++) {
 
 
-    sprintf(filename,"Run%06i/RunLog%06i/CDC/COM/roccdc%i_fadc125_fall2018.cnf",runfile,runfile,iroc);
+    sprintf(filename,"roccdc%i_fadc125.cnf",iroc);
 
     printf("Looking for config parameter file %s\n",filename);
 
@@ -387,21 +373,18 @@ jerror_t JEventProcessor_cdc_emu::brun(JEventLoop *eventLoop, int32_t runnumber)
 //------------------
 jerror_t JEventProcessor_cdc_emu::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
-	// This is called for every event. Use of common resources like writing
-	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
-	// reconstruction algorithm) should be done outside of any mutex lock
-	// since multiple threads may call this method at the same time.
-	// Here's an example:
-	//
-	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
-	//
-	// japp->RootWriteLock();
-	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
 
+  // Only look at physics triggers
+  
+  const DTrigger* locTrigger = NULL; 
+  loop->GetSingle(locTrigger); 
+  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
+    return NOERROR;
+  if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
+    return NOERROR;
+  }
 
+  
   // vector<const DCODAEventInfo*> info;
 
   // ULong64_t timestamp = 0;
