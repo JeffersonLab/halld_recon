@@ -166,6 +166,9 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
   vector<const DTOFPoint*> tof_points;
   vector< const DBeamPhoton* > locBeamPhotons;
   vector< const DSCHit* > locSCHit;
+  vector<const DFCALHit *> locFCALHits;
+
+  loop->Get(locFCALHits);
 
   loop->Get(locFCALShowers);
   loop->Get(locBCALShowers);
@@ -264,7 +267,7 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
     TLorentzVector PhotonVec(px, py, pz, e);
-    PhotonList.push_back(PhotonVec);
+    if (e > 0.2) PhotonList.push_back(PhotonVec);
   }
   for (unsigned int i = 0; i < locFCALShowers.size(); i ++) {
     double e = locFCALShowers[i]->getEnergy();
@@ -279,8 +282,9 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
     double py = p * sin(vertex.Theta()) * sin(vertex.Phi());
     double pz = p * cos(vertex.Theta());
     TLorentzVector PhotonVec(px, py, pz, e);
-    PhotonList.push_back(PhotonVec);
+    if (e > 0.2) PhotonList.push_back(PhotonVec);
   }
+/*	
   for (unsigned int i = 0; i < locCCALShowers.size(); i ++) {
     double e =  locCCALShowers[i]->E;
     double x =  locCCALShowers[i]->x - kinfitVertexX;
@@ -296,11 +300,12 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
     TLorentzVector PhotonVec(px, py, pz, e);
     PhotonList.push_back(PhotonVec);
   }
-  
+*/
   Double_t bestChi2Eta = 1.0e30;
   Double_t bestChi2EtaPrim = 1.0e30;
   vector <TLorentzVector> PhotonEta6gList;PhotonEta6gList.clear();
   vector <TLorentzVector> PhotonEtaprim6gList;PhotonEtaprim6gList.clear();
+  /*
   Combined6g(PhotonList,
 	     bestChi2Eta,
 	     bestChi2EtaPrim,
@@ -311,10 +316,19 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
 	     bestChi2EtaPrim,
 	     PhotonEta6gList,
 	     PhotonEtaprim6gList);
+  */
+  photon_nb = PhotonList.size();	
+  double FCAL_trg_Esum = 0;
 
-  Candidate |= ( (6 <= photon_nb && photon_nb <= 7) && (PhotonEta6gList.size() > 0 || PhotonEtaprim6gList.size() > 0) );
+  for (vector<const DFCALHit*>::const_iterator hit  = locFCALHits.begin(); hit != locFCALHits.end(); hit++ ) {
+    if ((**hit).E > 0.150)
+      FCAL_trg_Esum += (**hit).E;
+  }
+
+	
+  Candidate |= ( (6 <= photon_nb && photon_nb <= 15) );
   
-  if ( Candidate ) {
+  if ( FCAL_trg_Esum > 3.5 && PhotonList.size() >= 6 ) {
     //cout <<"eta6g_skim"<<endl;
     if( WRITE_EVIO ){
       //locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g_skim", locObjectsToSave );
