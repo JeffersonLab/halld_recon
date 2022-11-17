@@ -22,7 +22,7 @@
 
 #define MAX_TB_PASSES 20
 #define MAX_WB_PASSES 20
-#define MAX_P 12.0
+
 #define ALPHA 1./137.
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
@@ -4283,16 +4283,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    }
    else my_ndf-=5;
 
-   // Check if the momentum is unphysically large
-   double p=cos(atan(Sc(state_tanl)))/fabs(Sc(state_q_over_pt));
-   if (p>12.0){
-      if (DEBUG_LEVEL>2)
-      {
-         _DBG_ << "Unphysical momentum: P = " << p <<endl;
-      }
-      return MOMENTUM_OUT_OF_RANGE;
-   }
-
    // Check if we have a kink in the track or threw away too many cdc hits
    if (num_cdc>=MIN_HITS_FOR_REFIT){
       if (break_point_cdc_index>1){
@@ -5302,16 +5292,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
    z_=forward_traj[forward_traj.size()-1].z;
 
    if (!S.IsFinite()) return FIT_FAILED;
-
-   // Check if the momentum is unphysically large
-   if (1./fabs(S(state_q_over_p))>12.0){
-      if (DEBUG_LEVEL>2)
-      {
-         _DBG_ << "Unphysical momentum: P = " << 1./fabs(S(state_q_over_p))
-            <<endl;
-      }
-      return MOMENTUM_OUT_OF_RANGE;
-   }
 
    // Check if we have a kink in the track or threw away too many cdc hits
    if (num_cdc>=MIN_HITS_FOR_REFIT){
