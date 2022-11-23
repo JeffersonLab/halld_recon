@@ -23,6 +23,8 @@ void InitPlugin(JApplication *app) {
 }
 }  // "C"
 
+thread_local DTreeFillData JEventProcessor_TrackingPulls::dTreeFillData;
+
 JEventProcessor_TrackingPulls::JEventProcessor_TrackingPulls() {}
 
 JEventProcessor_TrackingPulls::~JEventProcessor_TrackingPulls() {}
@@ -30,49 +32,65 @@ JEventProcessor_TrackingPulls::~JEventProcessor_TrackingPulls() {}
 jerror_t JEventProcessor_TrackingPulls::init(void) {
   // This is called once at program startup.
 
-  tree_ = new TTree("tracking_pulls", "tracking_pulls");
-  tree_->SetAutoSave(1000);
-  tree_->Branch("eventnumber", &eventnumber_, "eventnumber/I");
-  tree_->Branch("track_index", &track_index_, "track_index/I");
-  tree_->Branch("chi2", &chi2_, "chi2/D");
-  tree_->Branch("ndf", &ndf_, "ndf/I");
-  tree_->Branch("charge", &charge_, "charge/D");
-  tree_->Branch("mom", &mom_, "mom/D");
-  tree_->Branch("phi", &phi_, "phi/D");
-  tree_->Branch("theta", &theta_, "theta/D");
-  tree_->Branch("pos_x", &pos_x_, "pos_x/D");
-  tree_->Branch("pos_y", &pos_y_, "pos_y/D");
-  tree_->Branch("pos_z", &pos_z_, "pos_z/D");
-  tree_->Branch("smoothed", &smoothed_, "smoothed/I");
-  tree_->Branch("any_nan", &any_nan_, "any_nan/I");
-  tree_->Branch("cdc_ring_multi_hits", &cdc_ring_multi_hits_,
-                "cdc_ring_multi_hits/I");
-  tree_->Branch("fdc_resi", fdc_resi_, Form("fdc_resi[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_resic", fdc_resic_,
-                Form("fdc_resic[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_err", fdc_err_, Form("fdc_err[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_errc", fdc_errc_, Form("fdc_errc[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_x", fdc_x_, Form("fdc_x[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_y", fdc_y_, Form("fdc_y[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_z", fdc_z_, Form("fdc_z[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_w", fdc_w_, Form("fdc_w[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_s", fdc_s_, Form("fdc_s[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_d", fdc_d_, Form("fdc_d[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_tdrift", fdc_tdrift_,
-                Form("fdc_tdrift[%d]/D", kNumFdcPlanes));
-  tree_->Branch("fdc_wire", fdc_wire_, Form("fdc_wire[%d]/I", kNumFdcPlanes));
-  tree_->Branch("fdc_left_right", fdc_left_right_,
-                Form("fdc_left_right[%d]/I", kNumFdcPlanes));
-  tree_->Branch("cdc_resi", cdc_resi_, Form("cdc_resi[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_err", cdc_err_, Form("cdc_err[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_z", cdc_z_, Form("cdc_z[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_tdrift", cdc_tdrift_,
-                Form("cdc_tdrift[%d]/D", kNumCdcRings));
-  tree_->Branch("cdc_straw", cdc_straw_, Form("cdc_straw[%d]/I", kNumCdcRings));
-  tree_->Branch("cdc_left_right", cdc_left_right_,
-                Form("cdc_left_right[%d]/I", kNumCdcRings));
-  tree_->Branch("cdc_phi_intersect", cdc_phi_intersect_,
-                Form("cdc_phi_intersect[%d]/D", kNumCdcRings));
+  // Use -PTRACKINGPULLS:MAKE_TREE=1 to produce tree output
+  MAKE_TREE = 0;
+  if(gPARMS){
+    gPARMS->SetDefaultParameter("TRACKINGPULLS:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
+  }
+
+  if (MAKE_TREE){
+    string treeName = "tree_tracking_pulls";
+    string treeFile = "tree_tracking_pulls.root";
+    gPARMS->SetDefaultParameter("TRACKINGPULLS:TREENAME", treeName);
+    gPARMS->SetDefaultParameter("TRACKINGPULLS:TREEFILE", treeFile);
+    dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
+
+    //TTREE BRANCHES
+    DTreeBranchRegister locTreeBranchRegister;
+
+    locTreeBranchRegister.Register_Single<Int_t>("eventNumber");
+    locTreeBranchRegister.Register_Single<Int_t>("L1TriggerBits");
+
+    locTreeBranchRegister.Register_Single<Int_t>("nFdcPlanes");
+    locTreeBranchRegister.Register_Single<Int_t>("nCdcRings");
+    locTreeBranchRegister.Register_Single<Int_t>("eventnumber");
+    locTreeBranchRegister.Register_Single<Int_t>("track_index");
+    locTreeBranchRegister.Register_Single<Double_t>("chi2");
+    locTreeBranchRegister.Register_Single<Int_t>("ndf");
+    locTreeBranchRegister.Register_Single<Double_t>("charge");
+    locTreeBranchRegister.Register_Single<Double_t>("mom");
+    locTreeBranchRegister.Register_Single<Double_t>("phi");
+    locTreeBranchRegister.Register_Single<Double_t>("theta");
+    locTreeBranchRegister.Register_Single<Double_t>("pos_x");
+    locTreeBranchRegister.Register_Single<Double_t>("pos_y");
+    locTreeBranchRegister.Register_Single<Double_t>("pos_z");
+    locTreeBranchRegister.Register_Single<Int_t>("smoothed");
+    locTreeBranchRegister.Register_Single<Int_t>("any_nan");
+    locTreeBranchRegister.Register_Single<Int_t>("cdc_ring_multi_hits");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_resi", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_resic", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_err", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_errc", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_x", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_y", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_z", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_w", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_s", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_d", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("fdc_tdrift", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("fdc_wire", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("fdc_left_right", "nFdcPlanes");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("cdc_resi", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("cdc_err", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("cdc_z", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("cdc_tdrift", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("cdc_straw", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Int_t>("cdc_left_right", "nCdcRings");
+    locTreeBranchRegister.Register_FundamentalArray<Double_t>("cdc_phi_intersect", "nCdcRings");
+
+    //REGISTER BRANCHES
+    dTreeInterface->Create_Branches(locTreeBranchRegister);
+  }
 
   return NOERROR;
 }
@@ -141,43 +159,49 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     // Get the pulls vector from the track
     auto track = bestHypothesis->Get_TrackTimeBased();
 
-    // Initializes TTree variables.
-    for (int j = 0; j < kNumFdcPlanes; ++j) {
-      fdc_resi_[j] = -999.9;
-      fdc_resic_[j] = -999.9;
-      fdc_err_[j] = -999.9;
-      fdc_errc_[j] = -999.9;
-      fdc_x_[j] = -999.9;
-      fdc_y_[j] = -999.9;
-      fdc_z_[j] = -999.9;
-      fdc_w_[j] = -999.9;
-      fdc_s_[j] = -999.9;
-      fdc_d_[j] = -999.9;
-      fdc_tdrift_[j] = -999.9;
-      fdc_wire_[j] = -999;
-      fdc_left_right_[j] = -999;
+    if (MAKE_TREE){
+      dTreeFillData.Fill_Single<Int_t>("nFdcPlanes", 24);
+      dTreeFillData.Fill_Single<Int_t>("nCdcRings", 28);
+
+      // Initializes TTree variables.
+      for (int j = 0; j < kNumFdcPlanes; ++j) {
+	dTreeFillData.Fill_Array<Double_t>("fdc_resi", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_resic", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_err", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_errc", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_x", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_y", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_z", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_w", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_s", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_d", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("fdc_tdrift", -999.9, j);
+	dTreeFillData.Fill_Array<Int_t>("fdc_wire", -999, j);
+	dTreeFillData.Fill_Array<Int_t>("fdc_left_right", -999, j);
+      }
+      for (int j = 0; j < kNumCdcRings; ++j) {
+	dTreeFillData.Fill_Array<Double_t>("cdc_resi", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("cdc_err", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("cdc_z", -999.9, j);
+	dTreeFillData.Fill_Array<Double_t>("cdc_tdrift", -999.9, j);
+	dTreeFillData.Fill_Array<Int_t>("cdc_straw", -999, j);
+	dTreeFillData.Fill_Array<Int_t>("cdc_left_right", -999, j);
+	dTreeFillData.Fill_Array<Double_t>("cdc_phi_intersect", -999.9, j);
+      }
+
+      dTreeFillData.Fill_Single<Int_t>("eventnumber", (int)eventnumber);
+      dTreeFillData.Fill_Single<Int_t>("track_index", (int)i);
+      dTreeFillData.Fill_Single<Double_t>("chi2", track->chisq);
+      dTreeFillData.Fill_Single<Int_t>("ndf", track->Ndof);
+      dTreeFillData.Fill_Single<Double_t>("charge", track->charge());
+      dTreeFillData.Fill_Single<Double_t>("mom", track->momentum().Mag());
+      dTreeFillData.Fill_Single<Double_t>("phi", track->momentum().Phi() * TMath::RadToDeg());
+      dTreeFillData.Fill_Single<Double_t>("theta", track->momentum().Theta() * TMath::RadToDeg());
+      dTreeFillData.Fill_Single<Double_t>("pos_x", track->position().X());
+      dTreeFillData.Fill_Single<Double_t>("pos_y", track->position().Y());
+      dTreeFillData.Fill_Single<Double_t>("pos_z", track->position().Z());
+      dTreeFillData.Fill_Single<Int_t>("smoothed", (track->IsSmoothed ? 1 : 0));
     }
-    for (int j = 0; j < kNumCdcRings; ++j) {
-      cdc_resi_[j] = -999.9;
-      cdc_err_[j] = -999.9;
-      cdc_z_[j] = -999.9;
-      cdc_tdrift_[j] = -999.9;
-      cdc_straw_[j] = -999;
-      cdc_left_right_[j] = -999;
-      cdc_phi_intersect_[j] = -999.9;
-    }
-    eventnumber_ = (int)eventnumber;
-    track_index_ = (int)i;
-    chi2_ = track->chisq;
-    ndf_ = track->Ndof;
-    charge_ = track->charge();
-    mom_ = track->momentum().Mag();
-    phi_ = track->momentum().Phi() * TMath::RadToDeg();
-    theta_ = track->momentum().Theta() * TMath::RadToDeg();
-    pos_x_ = track->position().X();
-    pos_y_ = track->position().Y();
-    pos_z_ = track->position().Z();
-    smoothed_ = (track->IsSmoothed ? 1 : 0);
 
     if (!track->IsSmoothed) {
       Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothFailure",
@@ -213,16 +237,20 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     vector<DTrackFitter::pull_t> pulls = track->pulls;
 
     // Check for NaNs
-    any_nan_ = false;
+    int any_nan = false;
+    if (MAKE_TREE)
+      dTreeFillData.Fill_Single<Int_t>("any_nan", any_nan);
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
       double err = pulls[iPull].err;
       double errc = pulls[iPull].errc;
       if (err != err || errc != errc) {
-        any_nan_ = true;
+	any_nan = true;
+	if (MAKE_TREE)
+	  dTreeFillData.Fill_Single<Int_t>("any_nan", any_nan);
         break;
       }
     }
-    if (any_nan_) {
+    if (any_nan) {
       Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess_NaN",
                       "Tracking FOM", trackingFOM, "Tracking FOM", 200, 0.0,
                       1.0);
@@ -483,19 +511,22 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
               "Distance to Wire; Distance Along the Wire",
               100, -50., 50., 100, -50., 50.);
         }
-        fdc_resi_[fdc_hit->wire->layer - 1] = resi;
-        fdc_resic_[fdc_hit->wire->layer - 1] = resic;
-        fdc_err_[fdc_hit->wire->layer - 1] = err;
-        fdc_errc_[fdc_hit->wire->layer - 1] = errc;
-        fdc_x_[fdc_hit->wire->layer - 1] = fdc_hit->xy.X();
-        fdc_y_[fdc_hit->wire->layer - 1] = fdc_hit->xy.Y();
-        fdc_z_[fdc_hit->wire->layer - 1] = pulls[iPull].z;
-        fdc_w_[fdc_hit->wire->layer - 1] = fdc_hit->w;
-        fdc_s_[fdc_hit->wire->layer - 1] = fdc_hit->s;
-        fdc_d_[fdc_hit->wire->layer - 1] = pulls[iPull].d;
-        fdc_tdrift_[fdc_hit->wire->layer - 1] = tdrift;
-        fdc_wire_[fdc_hit->wire->layer - 1] = fdc_hit->wire->wire;
-        fdc_left_right_[fdc_hit->wire->layer - 1] = pulls[iPull].left_right;
+
+	if (MAKE_TREE){
+	  dTreeFillData.Fill_Array<Double_t>("fdc_resi", resi, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_resic", resic, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_err", err, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_errc", errc, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_x", fdc_hit->xy.X(), fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_y", fdc_hit->xy.Y(), fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_z", pulls[iPull].z, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_w", fdc_hit->w, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_s", fdc_hit->s, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_d", pulls[iPull].d, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Double_t>("fdc_tdrift", tdrift, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Int_t>("fdc_wire", fdc_hit->wire->wire, fdc_hit->wire->layer - 1);
+	  dTreeFillData.Fill_Array<Int_t>("fdc_left_right", pulls[iPull].left_right, fdc_hit->wire->layer - 1);
+	}
       }
 
       // Once we are done with the FDC, move on to the CDC.
@@ -610,20 +641,20 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
                         pmag, resi, ";#theta;|P|", 70, 0.0, 140.0, 50, 0.0,
                         10.0);
         }
-        cdc_resi_[cdc_hit->wire->ring - 1] = resi;
-        cdc_err_[cdc_hit->wire->ring - 1] = err;
-        cdc_z_[cdc_hit->wire->ring - 1] = pulls[iPull].z;
-        cdc_tdrift_[cdc_hit->wire->ring - 1] = tdrift;
-        cdc_straw_[cdc_hit->wire->ring - 1] = cdc_hit->wire->straw;
-        cdc_left_right_[cdc_hit->wire->ring - 1] = pulls[iPull].left_right;
-        cdc_phi_intersect_[cdc_hit->wire->ring - 1] =
-            (cdc_hit->wire->origin + (z - 92.0) * cdc_hit->wire->udir).Phi() *
-            TMath::RadToDeg();
+
+	if (MAKE_TREE){
+	  dTreeFillData.Fill_Array<Double_t>("cdc_resi", resi, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Double_t>("cdc_err", err, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Double_t>("cdc_z", pulls[iPull].z, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Double_t>("cdc_tdrift", tdrift, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Int_t>("cdc_straw", cdc_hit->wire->straw, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Int_t>("cdc_left_right", pulls[iPull].left_right, cdc_hit->wire->ring - 1);
+	  dTreeFillData.Fill_Array<Double_t>("cdc_phi_intersect", (cdc_hit->wire->origin + (z - 92.0) * cdc_hit->wire->udir).Phi() * TMath::RadToDeg(), cdc_hit->wire->ring - 1);
+	}
       }
     }
-    japp->RootWriteLock();
-    tree_->Fill();
-    japp->RootUnLock();
+    if (MAKE_TREE)
+      dTreeInterface->Fill(dTreeFillData);
   }
 
   return NOERROR;
@@ -638,5 +669,7 @@ jerror_t JEventProcessor_TrackingPulls::erun(void) {
 
 jerror_t JEventProcessor_TrackingPulls::fini(void) {
   // Called before program exit after event processing is finished.
+  if (MAKE_TREE)
+    delete dTreeInterface; //saves trees to file, closes file
   return NOERROR;
 }

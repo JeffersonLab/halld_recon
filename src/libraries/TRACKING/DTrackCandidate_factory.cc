@@ -205,6 +205,9 @@ jerror_t DTrackCandidate_factory::brun(JEventLoop* eventLoop,int32_t runnumber){
   DEBUG_LEVEL=0;
   gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
 
+  ADD_VERTEX_POINT=true;
+  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+   
   return NOERROR;
 }
 
@@ -1649,7 +1652,9 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 	  // Create a new DHelicalFit object for fitting combined data
 	  DHelicalFit fit; 
 	  // Fake point at origin
-	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true); 
+	  if (ADD_VERTEX_POINT){
+	    fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true);
+	  }
 	  // Add hits to the fit object and also to the track candidate
 	  // itself as associated objects
 	  for (unsigned int m=0;m<src_segments.size();m++){
@@ -2254,7 +2259,9 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	  }
 	  
 	  // Fake point at origin
-	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true);
+	  if (ADD_VERTEX_POINT){
+	    fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.,true);
+	  }
 	  // Fit the points to a circle
 	  if (fit.FitCircleRiemann(segments[0]->rc)==NOERROR){
 	    // Use the fdc track candidate to get tanl

@@ -72,6 +72,8 @@ using namespace jana;
 #include <TRD/DTRDDigiHit.h>
 #include <TRD/DGEMDigiWindowRawData.h>
 #include <FMWPC/DFMWPCDigiHit.h>
+#include <FMWPC/DCTOFDigiHit.h>
+#include <FMWPC/DCTOFTDCDigiHit.h>
 
 // (See comments in DParsedEvent.h for enlightenment)
 #define MyTypes(X) \
@@ -102,6 +104,8 @@ using namespace jana;
 		X(DDIRCTDCDigiHit) \
 		X(DTRDDigiHit) \
 		X(DGEMDigiWindowRawData) \
+		X(DCTOFDigiHit) \
+ 		X(DCTOFTDCDigiHit) \
 		X(DFMWPCDigiHit) 
 
 #define MyfADCTypes(X) \
@@ -120,6 +124,7 @@ using namespace jana;
 		X(DTPOLSectorDigiHit) \
 		X(DTACDigiHit) \
 		X(DTRDDigiHit) \
+		X(DCTOFDigiHit) \
 		X(DFMWPCDigiHit) 
 
 
@@ -168,6 +173,7 @@ class DTranslationTable:public jana::JObject{
 			DIRC,
 			TRD,
 			FMWPC,
+			CTOF,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -192,6 +198,7 @@ class DTranslationTable:public jana::JObject{
 				case DIRC: return "DIRC";
 			        case TRD: return "TRD";
 			        case FMWPC: return "FMWPC";
+ 			        case CTOF: return "CTOF";
 				case UNKNOWN_DETECTOR:
 				default:
 					return "UNKNOWN";
@@ -388,6 +395,18 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 
+		class CTOFIndex_t{
+			public:
+			uint32_t plane;
+			uint32_t bar;
+			uint32_t end;
+
+			inline bool operator==(const CTOFIndex_t &rhs) const {
+			    return (plane==rhs.plane) && (bar==rhs.bar) && (end==rhs.end);
+			}
+		};
+		
+
 		// DChannelInfo holds translation between indexing schemes
 		// for one channel.
 		class DChannelInfo{
@@ -415,6 +434,7 @@ class DTranslationTable:public jana::JObject{
 					DIRCIndex_t dirc;
 					TRDIndex_t trd;
 					FMWPCIndex_t fmwpc;
+					CTOFIndex_t ctof;
 				};
 		};
 
@@ -508,8 +528,10 @@ class DTranslationTable:public jana::JObject{
 		DPSCDigiHit*        MakePSCDigiHit(        const PSCIndex_t &idx,        const Df250PulseData *pd) const;
 		DRFDigiTime*        MakeRFDigiTime(        const RFIndex_t &idx,         const Df250PulseData *pd) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250PulseData *pd) const;
-		DTACDigiHit* 		MakeTACDigiHit( 	   const TACIndex_t &idx, 		 const Df250PulseData *pd) const;
+		DTACDigiHit* 	    MakeTACDigiHit( 	   const TACIndex_t &idx, 	 const Df250PulseData *pd) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250WindowRawData *window) const;
+		DCTOFDigiHit*       MakeCTOFDigiHit(       const CTOFIndex_t &idx,       const Df250PulseData *pd) const;
+
 
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -525,6 +547,7 @@ class DTranslationTable:public jana::JObject{
 		DRFDigiTime*        MakeRFDigiTime( const RFIndex_t &idx,   const Df250PulseTime *hit) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit(const TPOLSECTORIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DTACDigiHit* 		MakeTACDigiHit( const TACIndex_t &idx,  const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
+		DCTOFDigiHit*       MakeCTOFDigiHit( const CTOFIndex_t &idx,const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 
 		// fADC125
 		DCDCDigiHit* MakeCDCDigiHit(const CDCIndex_t &idx, const Df125PulseIntegral *pi, const Df125PulseTime *pt, const Df125PulsePedestal *pp) const;
@@ -547,9 +570,10 @@ class DTranslationTable:public jana::JObject{
 		DPSCTDCDigiHit*  MakePSCTDCDigiHit( const PSCIndex_t &idx,       const DF1TDCHit *hit) const;
 		
 		// CAEN1290TDC
-		DTOFTDCDigiHit*  MakeTOFTDCDigiHit(const TOFIndex_t &idx,        const DCAEN1290TDCHit *hit) const;
-		DRFTDCDigiTime*  MakeRFTDCDigiTime(const RFIndex_t &idx,         const DCAEN1290TDCHit *hit) const;
-		DTACTDCDigiHit*  MakeTACTDCDigiHit( const TACIndex_t &idx,       const DCAEN1290TDCHit *hit) const;
+		DTOFTDCDigiHit*   MakeTOFTDCDigiHit( const TOFIndex_t &idx,        const DCAEN1290TDCHit *hit) const;
+		DRFTDCDigiTime*   MakeRFTDCDigiTime( const RFIndex_t &idx,         const DCAEN1290TDCHit *hit) const;
+		DTACTDCDigiHit*   MakeTACTDCDigiHit( const TACIndex_t &idx,        const DCAEN1290TDCHit *hit) const;
+		DCTOFTDCDigiHit*  MakeCTOFTDCDigiHit(const CTOFIndex_t &idx,       const DCAEN1290TDCHit *hit) const;
 
 		DDIRCTDCDigiHit*  MakeDIRCTDCDigiHit( const DIRCIndex_t &idx,       const DDIRCTDCHit *hit) const;
 

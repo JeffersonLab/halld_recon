@@ -638,6 +638,7 @@ def AddDANA(env):
 	AddEVIO(env)
 	AddET(env)
 	AddMySQL(env)   # needed for EventStore
+	AddTensorflowLite(env) # optional. Used for CPP pi/mu classification
 	DANA_LIBS  = "DANA ANALYSIS KINFITTER PID TAGGER TRACKING START_COUNTER"
 	DANA_LIBS += " CERE DIRC CDC TRIGGER PAIR_SPECTROMETER RF TRD"
 	DANA_LIBS += " FDC TOF BCAL FCAL CCAL TPOL HDGEOMETRY TTAB FMWPC TAC"
@@ -1152,6 +1153,31 @@ def AddCobrems(env):
 	env.AppendUnique(LIBPATH = ["%s/%s/lib" % (cobrems_home, env['OSNAME'])])
 	env.AppendUnique(LIBS    = 'AMPTOOLS_MCGEN')
 	env.AppendUnique(CCFLAGS = pyincludes.rstrip().split())
+
+
+##################################
+# Tensorflow-lite
+##################################
+def AddTensorflowLite(env):
+	tensorflowliteroot = os.getenv('TENSORFLOW_LITE')
+	if(tensorflowliteroot != None) :
+		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOWLITE'])
+		env.AppendUnique(CPPPATH = ['%s' % tensorflowliteroot])
+		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowliteroot])
+		env.AppendUnique(LIBS=['tflite'])
+
+
+##################################
+# Tensorflow
+##################################
+def AddTensorflow(env):
+	tensorflowroot = os.getenv('TENSORFLOW_ROOT')
+	if(tensorflowroot != None) :
+		env.AppendUnique(CXXFLAGS = ['-DHAVE_TENSORFLOW'])
+		env.AppendUnique(CPPPATH = ['%s/include' % tensorflowroot])
+		env.AppendUnique(LIBPATH = ['%s/lib' % tensorflowroot])
+		env.AppendUnique(LIBS=['tensorflow'])
+
 
 ##################################
 # version comparison helper

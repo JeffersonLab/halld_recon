@@ -119,10 +119,13 @@ class hdv_mainframe:public TGMainFrame {
 		void SetRun(Int_t id);
 		void SetTrig(char *trigstring);
 		void SetSource(std::string source);
+		void SetSleepTime(long st) {sleep_time = st;}
 		bool GetDrawCandidates(void){return draw_candidates;}
 		bool GetDrawTracks(void){return draw_tracks;}
 		bool GetDrawThrowns(void){return draw_throwns;}
 		bool GetDrawTrajectories(void){return draw_trajectories;}
+		bool GetContinuous(void){return GetCheckButton("continuous");}
+		long GetSleepTime(void){return sleep_time;}
 		hdv_fulllistframe* GetFullListFrame(void){return fulllistmf;}
 		hdv_debugerframe* GetDebugerFrame(void){return debugermf;}
 		TCanvas* GetBcalDispFrame(void){return bcaldispmf;}
@@ -139,6 +142,7 @@ class hdv_mainframe:public TGMainFrame {
 		void SetFullListFrame(hdv_fulllistframe* d){fulllistmf = d;}
 
 		bool GetCheckButton(std::string who);
+		void SetCheckButton(std::string who, bool set_checked=true);
 		void AddCheckButtons(std::map<std::string, TGCheckButton*> &checkbuttons);
 		const char* GetFactoryTag(std::string who);
 		void GetReconFactory(std::string &name, std::string &tag);
@@ -153,6 +157,8 @@ class hdv_mainframe:public TGMainFrame {
 		void AddGraphicsEndA(std::vector<TObject*> &v);
 		void AddGraphicsEndB(std::vector<TObject*> &v);
 
+
+		void RedrawAuxillaryWindows(void);
 
 	private:
 	

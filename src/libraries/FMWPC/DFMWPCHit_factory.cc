@@ -16,7 +16,7 @@ using namespace std;
 
 using namespace jana;
 
-static int FMWPC_HIT_THRESHOLD = 0;
+static int FMWPC_HIT_THRESHOLD = 700;
 
 //#define ENABLE_UPSAMPLING
 
@@ -68,10 +68,6 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   
   // load geometry from XML here!!
 	  
-  //vector<double> raw_gains;
-  //vector<double> raw_pedestals;
-  //vector<double> raw_time_offsets;
-  
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
   
   // load scale factors
@@ -110,14 +106,8 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   if (eventLoop->GetCalib("/FMWPC/timing_offsets", time_offsets))
     jout << "Error loading /FMWPC/timing_offsets !" << endl;
   
-  // fill the tables
-  //FillCalibTable(gains, raw_gains);
-  //FillCalibTable(pedestals, raw_pedestals);
-  //FillCalibTable(time_offsets, raw_time_offsets);
 
-
-  /* -- DISABLE THESE FOR NOW
-  // Verify that the right number of rings was read for each set of constants
+  // Verify that the right number of chambers was read for each set of constants
   char str[256];
   if (gains.size() != Nlayers) {
     sprintf(str, "Bad # of layers for FMWPC gain from CCDB! CCDB=%zu , should be %d", gains.size(), Nlayers);
@@ -160,7 +150,6 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
       throw JException(str);
     }
   }
-  -- */
 
   return NOERROR;
 }
@@ -189,24 +178,23 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     const DFMWPCDigiHit *digihit = digihits[i];
 
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
 
-    /* fill in sanity check when you decided the detector numbering
-    // Make sure ring and straw are in valid range
-    if ( (ring < 1) || (ring > (int)Nrings)) {
-      sprintf(str, "DCDCDigiHit ring out of range!"
-	      " ring=%d (should be 1-%d)", ring, Nrings);
+    // Make sure layer and wire are in valid range
+    if ( (layer < 1) || (layer > (int)Nlayers)) {
+      sprintf(str, "DFMWPCDigiHit layer out of range!"
+	      " layer=%d (should be 1-%d)", layer, Nlayers);
       throw JException(str);
     }
-    if ( (straw < 1) || (straw > (int)Nstraws[ring-1])) {
-      sprintf(str, "DCDCDigiHit straw out of range!"
-	      " straw=%d for ring=%d (should be 1-%d)",
-	      straw, ring, Nstraws[ring-1]);
+    if ( (wire < 1) || (wire > (int)Nwires[layer-1])) {
+      sprintf(str, "DFMWPCDigiHit wire out of range!"
+	      " wire=%d for layer=%d (should be 1-%d)",
+	      wire, layer, Nwires[layer-1]);
       throw JException(str);
     }
-	*/
 
     // Grab the pedestal from the digihit since this should be consistent between the old and new formats
     int raw_ped           = digihit->pedestal;
@@ -235,43 +223,42 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
 		ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
 		PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-		NW   = config->NW   == 0xffff ? 180 : config->NW;
+		NW   = config->NW   == 0xffff ? 200 : config->NW;
 	}
 
-	if(NW==0) NW=180; // some data was taken (<=run 4700) where NW was written as 0 to file
-
-	// The integration window in the CDC should always extend past the end 
-	//of the window
-	// Only true after about run 4100
 	nsamples_integral = (NW - (digihit->pulse_time / 10));      
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
     int scaled_ped = raw_ped << PBIT;
     
     if (maxamp > 0) maxamp = maxamp << ABIT;
-    //if (maxamp <= scaled_ped) continue;
+    if (maxamp <= scaled_ped) continue;
     
     maxamp = maxamp - scaled_ped;
     
-    // if (maxamp<FMWPC_HIT_THRESHOLD) {
-    //   continue;
-    // }
+    if (maxamp<FMWPC_HIT_THRESHOLD) {
+      continue;
+    }
     
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
+    if (t_raw < 250 || t_raw > 450)
+      continue;
     
     // Scale factor to account for gain variation
-    //double gain=gains[layer][wire];   // REMOVE CHANNEL-SPECIFIC CORRECTIONS
-    double gain=1.;
+    unsigned int layer_i=layer-1;
+    unsigned int wire_i=wire-1;
+    double gain=gains[layer_i][wire_i];
  
     // Charge and amplitude 
-    //double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
-    //               - scaled_ped*nsamples_integral);
-    double q = digihit->pulse_integral;
+    // if ((digihit->pulse_integral<<IBIT) < scaled_ped*nsamples_integral)
+    //   continue;
+    // double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
+    // 				      - scaled_ped*nsamples_integral);
+    double q = amp_a_scale*gain*double(maxamp);
     double amp = amp_a_scale*gain*double(maxamp);
     
-    //double t = t_scale * t_raw - time_offsets[layer][wire] + t_base;
-    double t = t_scale * t_raw /*- time_offsets[layer][wire]*/ + t_base;   // REMOVE CHANNEL-SPECIFIC CORRECTIONS
+    double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
     
     DFMWPCHit *hit = new DFMWPCHit;
     hit->layer  = layer;
@@ -283,7 +270,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->amp = amp;
     hit->t = t;
     // hit->d = 0.0;
-    // hit->QF = digihit->QF;
+    hit->QF = digihit->QF;
     // hit->itrack = -1;
     // hit->ptype = 0;
 
@@ -312,35 +299,6 @@ jerror_t DFMWPCHit_factory::fini(void)
 {
   return NOERROR;
 }
-
-/* -- shouldn't need this if you make the CCDB tables 2D tables
-//------------------
-// FillCalibTable
-//------------------
-void DFMWPCHit_factory::FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table)
-{
-  int ring = 0;
-  int straw = 0;
-  
-  // reset table before filling it
-  table.clear();
-  table.resize( Nstraws.size() );
-  
-  for (unsigned int channel=0; channel<raw_table.size(); channel++,straw++) {
-    // make sure that we don't try to load info for channels that don't exist
-    if (channel == maxChannels) break;
-    
-    // if we've hit the end of the ring, move on to the next
-    if (straw == (int)Nstraws[ring]) {
-      ring++;
-      straw = 0;
-    }
-    
-    table[ring].push_back( raw_table[channel] );
-  }
-  
-}
-*/
 
 //------------------------------------
 // GetConstant
@@ -401,14 +359,14 @@ const double DFMWPCHit_factory::GetConstant(const fmwpc_digi_constants_t &the_ta
   char str[256];
   
   if ( (in_hit->layer <= 0) || (static_cast<unsigned int>(in_hit->layer) > Nlayers)) {
-    sprintf(str, "Bad ring # requested in DFMWPCHit_factory::GetConstant()!"
+    sprintf(str, "Bad layer # requested in DFMWPCHit_factory::GetConstant()!"
 	    " requested=%d , should be %ud", in_hit->layer, Nlayers);
     std::cerr << str << std::endl;
     throw JException(str);
   }
   if ( (in_hit->wire <= 0) || 
        (static_cast<unsigned int>(in_hit->wire) > Nwires[in_hit->layer]) ) {
-    sprintf(str, "Bad straw # requested in DFMWPCHit_factory::GetConstant()!"
+    sprintf(str, "Bad wire # requested in DFMWPCHit_factory::GetConstant()!"
 	    " requested=%d , should be %ud",
 	    in_hit->wire, Nwires[in_hit->layer]);
     std::cerr << str << std::endl;

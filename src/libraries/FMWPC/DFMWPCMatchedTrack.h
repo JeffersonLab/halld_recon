@@ -35,6 +35,14 @@ class DFMWPCMatchedTrack:public jana::JObject{
         double FMWPC_dist_closest_wire[6]; // DOCA of closest wire in units of wire spacing (NOT cm!)
         int    FMWPC_Nhits_cluster[6];     // Number of adjacent wires in cluster that FMWPC_closest_wire is in 
 
+        // n.b. The following are also added as associated objects (if matched)
+        // DTrackTimeBased
+        // DChargedTrack
+        // DChargedTrackHypothesis
+        // DFCALShower
+        // DFCALHit
+        // DFMWPCCluster
+        // DCTOFPoint
 
         // Convenience methods
         Particle_t PID(void) const { return tbt->PID(); }

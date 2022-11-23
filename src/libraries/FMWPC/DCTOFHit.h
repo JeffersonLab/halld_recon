@@ -19,12 +19,14 @@ class DCTOFHit:public jana::JObject{
   int end; ///< top=0,bottom=1;
   float dE; ///< attenuated energy deposition in GeV
   double t; ///< time in ns
+  double t_adc;///< time in ns from FADC
    
   void toStrings(vector<pair<string,string> > &items)const{
     AddString(items, "bar", "%d", bar);
     AddString(items, "end", "%d", end);
     AddString(items, "dE", "%12.4f", dE);
     AddString(items, "t", "%12.4f", t);
+    AddString(items, "t_adc", "%12.4f", t_adc);
   }
 };
 

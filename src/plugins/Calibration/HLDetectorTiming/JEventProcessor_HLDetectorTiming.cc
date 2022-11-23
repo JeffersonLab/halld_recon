@@ -29,6 +29,9 @@ using namespace jana;
 #include "CCAL/DCCALShower.h"
 #include "DIRC/DDIRCPmtHit.h"
 #include "DIRC/DDIRCPmtHit_factory.h"
+#include "FMWPC/DFMWPCHit.h"
+#include "FMWPC/DCTOFHit.h"
+
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -336,6 +339,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DTAGHHit *> taghHitVector;
     vector<const DPSHit *> psHitVector;
     vector<const DPSCHit *> pscHitVector;
+    vector<const DFMWPCHit *> fmwpcHitVector;
+    vector<const DCTOFHit *> ctofHitVector;
+
 
     loop->Get(cdcHitVector);
     loop->Get(fdcHitVector);
@@ -352,6 +358,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(pscHitVector);
     loop->Get(tagmHitVector, "Calib");
     loop->Get(taghHitVector, "Calib");
+    loop->Get(fmwpcHitVector);
+    loop->Get(ctofHitVector);
     
 
     // TTabUtilities object used for RF time conversion
@@ -491,6 +499,27 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit time", tofHitVector[i]->t,
                 "TOFHit time;t [ns];", nBins, xMin, xMax);
     }
+
+    for (i = 0; i < fmwpcHitVector.size(); i++){
+        Fill1DHistogram ("HLDetectorTiming", "FMWPC", "FMWPCHit time", fmwpcHitVector[i]->t,
+                "FMWPCHit time;t [ns];", nBins, xMin, xMax);
+
+        Fill2DHistogram ("HLDetectorTiming", "FMWPC", "FMWPCHit time per Layer", 
+        		fmwpcHitVector[i]->t, 144*(fmwpcHitVector[i]->layer-1) + fmwpcHitVector[i]->wire,
+                "FMWPCHit time;t [ns]; CCDB Index", nBins, xMin, xMax, 1152, 0.5, 1152.5);
+		
+    }
+    
+    for (i = 0; i < ctofHitVector.size(); i++){
+        Fill1DHistogram ("HLDetectorTiming", "CTOF", "CTOFHit time", ctofHitVector[i]->t,
+                "CTOFHit time;t [ns];", nBins, xMin, xMax);
+
+        Fill2DHistogram ("HLDetectorTiming", "CTOF", "CTOFHit time per Layer", 
+        		ctofHitVector[i]->t, 2*(ctofHitVector[i]->bar-1) + ctofHitVector[i]->end+1,
+                "CTOFHit time;t [ns]; CCDB Index", nBins, xMin, xMax, 16, 0.5, 16.5);
+		
+    }
+
 
     for (i = 0; i < psHitVector.size(); i++){
 	int nColumns = 145*2;
@@ -1077,9 +1106,12 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			DVector3 IntersectionPoint, IntersectionMomentum;	
 			vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 			shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-			// comment out definition of sc_match_pid to suppress warning
-			//		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-			//								   true, &IntersectionPoint, &IntersectionMomentum);
+			bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, 
+									     locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+									     true, &IntersectionPoint, &IntersectionMomentum);
+			if (!sc_match_pid){
+			  continue;
+			}
 			double locSCzIntersection = IntersectionPoint.z();
 			if( locSCzIntersection < 83. ) {
 				Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
@@ -1172,8 +1204,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
            // Now check the TOF matching. Do this on a full detector level.
            float flightTimeCorrectedTOFTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - targetCenterCorrection;
 
-			cout << "TOF match = " << flightTimeCorrectedTOFTime << " " << locTOFHitMatchParams->dHitTime << " "
-				 << locTOFHitMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
+			// cout << "TOF match = " << flightTimeCorrectedTOFTime << " " << locTOFHitMatchParams->dHitTime << " "
+			// 	 << locTOFHitMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
 
 		   if(!NO_START_COUNTER) {
 			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - SC Target Time",
@@ -1280,8 +1312,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         if (locFCALShowerMatchParams != NULL){
            float flightTimeCorrectedFCALTime = locFCALShowerMatchParams->dFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - targetCenterCorrection;
 
-			cout << "FCAL = " << flightTimeCorrectedFCALTime << " " << locFCALShowerMatchParams->dFCALShower->getTime() << " " 
-				 << locFCALShowerMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
+// 			cout << "FCAL = " << flightTimeCorrectedFCALTime << " " << locFCALShowerMatchParams->dFCALShower->getTime() << " " 
+// 				 << locFCALShowerMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
 
 
 		   if(!NO_START_COUNTER) {

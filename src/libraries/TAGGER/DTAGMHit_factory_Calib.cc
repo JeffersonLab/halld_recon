@@ -20,6 +20,7 @@ using namespace std;
 
 using namespace jana;
 
+const int DTAGMHit_factory_Calib::k_fiber_dead;
 const int DTAGMHit_factory_Calib::k_fiber_good;
 const int DTAGMHit_factory_Calib::k_fiber_bad;
 const int DTAGMHit_factory_Calib::k_fiber_noisy;
@@ -194,7 +195,7 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
         // throw away hits from bad or noisy fibers
         int quality = fiber_quality[digihit->row][digihit->column];
-        if (quality == k_fiber_bad || quality == k_fiber_noisy)
+        if (quality == k_fiber_dead || quality == k_fiber_bad || quality == k_fiber_noisy)
             continue;
 
         // Apply calibration constants

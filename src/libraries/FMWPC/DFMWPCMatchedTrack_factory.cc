@@ -16,6 +16,8 @@ using namespace jana;
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry.h>
 #include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DFMWPCCluster.h>
+#include <FMWPC/DCTOFPoint.h>
 #include <PID/DChargedTrack.h>
 
 
@@ -39,7 +41,23 @@ jerror_t DFMWPCMatchedTrack_factory::init(void)
 //------------------
 jerror_t DFMWPCMatchedTrack_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
-	return NOERROR;
+    // Get pointer to DGeometry object
+    DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
+    dgeom  = dapp->GetDGeometry(runnumber);
+
+    // Get x and y offsets for each chamber.
+    if (!dgeom->GetFMWPCXY_vec(xvec, yvec)){
+        xvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+        yvec = {0.0,0.0,0.0,0.0,0.0,0.0};
+    }
+
+    // Get the FMWPC wire spacing in cm (should be 1.016)
+    dgeom->GetFMWPCWireSpacing( FMWPC_WIRE_SPACING );
+
+    // Get the FMWPC wire orientation (should be vertical, horizontal, ...)
+    dgeom->GetFMWPCWireOrientation( fmwpc_wire_orientation );
+
+    return NOERROR;
 }
 
 //------------------
@@ -50,12 +68,16 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
     vector<const DTrackTimeBased*> tbts;
     vector<const DFCALHit*>        fcalhits;
     vector<const DFMWPCHit*>       fmwpchits;
+    vector<const DFMWPCCluster*>   fmwpcclusters;
+    vector<const DCTOFPoint*>      ctofpoints;
     vector<const DChargedTrack*>   chargedtracks;
     const DFCALGeometry*           fcalgeom = nullptr;
     loop->Get(tbts);
     loop->Get(fcalhits);
     loop->Get(fmwpchits);
+    loop->Get(fmwpcclusters);
     loop->Get(chargedtracks);
+    loop->Get(ctofpoints);
     loop->GetSingle( fcalgeom );
 
     // Make sure we found a DFCALGeometry object
@@ -150,83 +172,57 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
             for( int layer=1; layer<=(int)fmwpc_projections.size(); layer++){
                 auto proj = fmwpc_projections[layer-1];
 
-//                if( layer==1) _DBG_<<" proj.position.x()="<<proj.position.x()<<" proj.position.y()="<<proj.position.y()<<endl;
+                // Convert into local coordinates so we can work with wire numbers
+                auto orientation = fmwpc_wire_orientation[layer-1];
+                auto xoffset = xvec[layer-1];
+                auto yoffset = yvec[layer-1];
+                auto xpos = xoffset + proj.position.x();
+                auto ypos = yoffset + proj.position.y();
+                double s = orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL ? xpos:ypos;
+                int wire_trk_proj = round(71.5 + s/FMWPC_WIRE_SPACING) + 1; // 1-144
 
-                // TODO: Fix this code so the geometry numbers come from
-                // a central service like DGeometry. Some of this is really
-                // just guesses too so it needs to be carefully reviewed.
-                int wire_trk_proj = 0;
-                switch( layer ){
-                    case 1:
-                    case 3:
-                    case 5:
-                        wire_trk_proj = round(71.5 + proj.position.x()/FMWPC_WIRE_SPACING) + 1; // 1-144
-                        break;
-                    case 2:
-                    case 4:
-                    case 6:
-                        wire_trk_proj = round(71.5 + proj.position.y()/FMWPC_WIRE_SPACING) + 1; // 1-144
-                        break;
-                }
-                
-                // Check if projection is within bound of this layer
-//                _DBG_<<" layer=" << layer << "  wire_trk_proj="<<wire_trk_proj<<"  proj.position.z()="<<proj.position.z()<<endl;
-                if( (wire_trk_proj>=1) && (wire_trk_proj<=144) ) {
+                // If the projection is outside of the wire range then bail now
+                if( (wire_trk_proj<1) || (wire_trk_proj>144) ) continue;
 
-                    // Loop over FMWPC hits that are in-time with the track projection.
-                    // Fill a 144 length array to know which wires fired. This will
-                    // allow us to identify the wire with a hit that is closest 
-                    // to the wire that the track projected closest to. (clear?)
-                    // For the value of the array use a pointer to the actual DFMWPCHit
-                    // object. This makes it easier to add the ones we use as associated
-                    // objects later.
-                    vector<const DFMWPCHit *> wires_hit(144, nullptr);
-                    int min_delta_wire = 1E6;
-                    for (auto hit: fmwpchits) {
-                        if (hit->layer != layer) continue;
-//                        _DBG_<<"  hit->t="<<hit->t<<" proj.t="<<proj.t<<" delta_t="<<fabs(hit->t - proj.t)<<" MIN_DELTA_T_FMWPC_PROJECTION="<<MIN_DELTA_T_FMWPC_PROJECTION<<endl;
-                        if (fabs(hit->t - proj.t) > MIN_DELTA_T_FMWPC_PROJECTION) continue;
-                        uint32_t idx = hit->wire - 1;
-                        if( idx < 144) {
-                            wires_hit[idx] = hit;
-                        }else{
-                            _DBG_ << " FMWPC wire index out of range! " << hit->wire << " should be between 1 and 144 inclusive!" << std::endl;
-                        }
+                // Loop over DFMWPCClusters and find closest match to this projection
+                int min_dist = 1000000;
+                const DFMWPCCluster* closest_fmwpc_cluster= nullptr;
+                for(auto fmwpccluster : fmwpcclusters){
+                    if( fmwpccluster->layer != layer ) continue;
 
-                        // keep track of which hit wire is closest to track projection
-                        int delta_wire = abs(hit->wire - wire_trk_proj);
-                        if (delta_wire < min_delta_wire) {
-                            min_delta_wire = delta_wire;
-//                            _DBG_<<"  fmpwc_mt->FMWPC_closest_wire[layer="<<layer<<" - 1]=" << hit->wire << endl;
-                            fmpwc_mt->FMWPC_closest_wire[layer - 1] = hit->wire;
-                            fmpwc_mt->FMWPC_dist_closest_wire[layer - 1] = min_delta_wire;
-                        }
+                    int dist;
+                    if( wire_trk_proj >= fmwpccluster->first_wire ){
+                        dist = wire_trk_proj - fmwpccluster->last_wire; // distance beyond last wire (will be negative if inside cluster)
+                        if( dist < 0 ) dist = 0; // force dist to 0 if inside cluster
+                    }else{
+                        dist = fmwpccluster->first_wire - wire_trk_proj; // distance before first wire
                     }
 
-                    // Count the number of consecutive wires hit including 
-                    // the one closest to the projection. First count those
-                    // with smaller wire numbers and then those with larger
-                    // wire numbers.
-//                    _DBG_<<"  -- fmpwc_mt->FMWPC_closest_wire[layer="<<layer<<" - 1] = " << fmpwc_mt->FMWPC_closest_wire[layer - 1] <<endl;
-                    if ((fmpwc_mt->FMWPC_closest_wire[layer - 1] >= 1) && (fmpwc_mt->FMWPC_closest_wire[layer - 1] <= 144)) {
-                        for (int i = fmpwc_mt->FMWPC_closest_wire[layer - 1];
-                             i >= 1; i--) { // before and including closest wire
-//                            _DBG_<<"    --- i="<<i<<" wires_hit[i-1]=" <<wires_hit[i-1]<<endl;
-                            if (wires_hit[i-1] == nullptr) break;
-                            fmpwc_mt->FMWPC_Nhits_cluster[layer - 1]++;
-                            fmpwc_mt->AddAssociatedObject(wires_hit[i-1]);
-                        }
-                        for (int i = fmpwc_mt->FMWPC_closest_wire[layer - 1] + 1;
-                             i <= 144; i++) { // after, but not including closest wire
-//                            _DBG_<<"    --- i="<<i<<" wires_hit[i-1]=" <<wires_hit[i-1]<<endl;
-                            if (wires_hit[i-1] == nullptr) break;
-                            fmpwc_mt->FMWPC_Nhits_cluster[layer - 1]++;
-                            fmpwc_mt->AddAssociatedObject(wires_hit[i-1]);
-                        }
+                    if( dist < min_dist ){
+                        min_dist = dist;
+                        closest_fmwpc_cluster = fmwpccluster;
+                    }
+                }
+
+                // If a DFMWPCCluster was found, add it as an associated object
+                // and fill in relevant fields of matched track
+                if( closest_fmwpc_cluster ){
+                    fmpwc_mt->AddAssociatedObject( closest_fmwpc_cluster );
+                    fmpwc_mt->FMWPC_dist_closest_wire[layer-1] = min_dist;
+                    fmpwc_mt->FMWPC_Nhits_cluster[layer-1] = closest_fmwpc_cluster->Nhits;
+                    if( wire_trk_proj < closest_fmwpc_cluster->first_wire ) {
+                        fmpwc_mt->FMWPC_closest_wire[layer - 1] = closest_fmwpc_cluster->first_wire;
+                    }else if(wire_trk_proj > closest_fmwpc_cluster->last_wire){
+                        fmpwc_mt->FMWPC_closest_wire[layer - 1] = closest_fmwpc_cluster->last_wire;
+                    }else{
+                        fmpwc_mt->FMWPC_closest_wire[layer - 1] = wire_trk_proj;
                     }
                 }
             }
-        
+
+            // Match to CTOF
+
+
         }catch(...){
             // We get here if there are no extrapolations to the FMWPC
         }

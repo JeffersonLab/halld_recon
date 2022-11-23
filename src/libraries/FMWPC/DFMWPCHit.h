@@ -21,6 +21,7 @@ class DFMWPCHit:public JObject{
 		float q;     // charge deposited
 		float amp;   // peak amplitude
 		float t;     // time in ns
+		int QF;      // quality factor
 
 		void toStrings(vector<pair<string, string> >&items) const {
 			AddString(items, "layer", "%d", layer);
@@ -28,6 +29,7 @@ class DFMWPCHit:public JObject{
 			AddString(items, "q",      "%10.2f",  q);
 			AddString(items, "amp",    "%10.2f", amp);
 			AddString(items, "t", "%3.3f", t);
+			AddString(items, "QF", "%d", QF);
 		}
 
 };

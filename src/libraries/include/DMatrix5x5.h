@@ -605,24 +605,61 @@ class DMatrix5x5{
 
       }
 
-      // Apply Sylvester's criterion for a symmetric matrix to be positive 
-      // definite.
-      bool IsPosDef(){
-	double det1=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
-	DMatrix3x3 B(mA[0][0],mA[0][1],mA[0][2],
-		     mA[1][0],mA[1][1],mA[1][2],
-		     mA[2][0],mA[2][1],mA[2][2]);
-	DMatrix4x4 C(mA[0][0],mA[0][1],mA[0][2],mA[0][3],
-		     mA[1][0],mA[1][1],mA[1][2],mA[1][3],
-		     mA[2][0],mA[2][1],mA[2][2],mA[2][3],
-		     mA[3][0],mA[3][1],mA[3][2],mA[3][3]);	
-	if (mA[0][0]>0. && det1>0. && B.Determinant()>0. && C.Determinant()>0.
-	    && Determinant()>0.){
-	  return true;
-	}
+  double SubDeterminant(int c1,int c2,int c3,int c4) const {
+    double det5=mA[3][c3]*mA[4][c4]-mA[3][c4]*mA[4][c3];
+    double det6=mA[3][c2]*mA[4][c4]-mA[3][c4]*mA[4][c2];
+    double det7=mA[3][c2]*mA[4][c3]-mA[3][c3]*mA[4][c2];
+    double det1=mA[2][c2]*det5 - mA[2][c3]*det6 + mA[2][c4]*det7;
+    double det8=mA[3][c1]*mA[4][c4]-mA[3][c4]*mA[4][c1];
+    double det9=mA[3][c1]*mA[4][c3]-mA[3][c3]*mA[4][c1];
+    double det2=mA[2][c1]*det5 - mA[2][c3]*det8 + mA[2][c4]*det9;
+    double det10=mA[3][c1]*mA[4][c2]-mA[3][c2]*mA[4][c1];
+    double det3=mA[2][c1]*det6 - mA[2][c2]*det8 + mA[2][c4]*det10;
+    double det4=mA[2][c1]*det7 - mA[2][c2]*det9 + mA[2][c3]*det10;
+    return mA[1][c1]*det1-mA[1][c2]*det2+mA[1][c3]*det3-mA[1][c4]*det4;
+  }
+  
+  double Determinant() const {
+    return mA[0][0]*SubDeterminant(1,2,3,4)-mA[0][1]*SubDeterminant(0,2,3,4)
+      +mA[0][2]*SubDeterminant(0,1,3,4)-mA[0][3]*SubDeterminant(0,1,2,4)
+      +mA[0][4]*SubDeterminant(0,1,2,3);
+  }
+  
+  bool IsPosDef(){
+    if (mA[0][0]>0.){
+      // Determinant of 2x2 sub-matrix
+      double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+      if (det22>0.){
+	// Determinant of 3x3 sub-matrix
+	double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
+	  - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
+	  + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
+	if (det33>0.){
+	  //Determinant of 4x4 sub-matrix
+	  double det5=mA[2][2]*mA[3][3]-mA[2][3]*mA[3][2];
+	  double det6=mA[2][1]*mA[3][3]-mA[2][3]*mA[3][1];
+	  double det7=mA[2][1]*mA[3][2]-mA[2][2]*mA[3][1];
+	  double det1=mA[1][1]*det5 - mA[1][2]*det6 + mA[1][3]*det7;
+	  double det8=mA[2][0]*mA[3][3]-mA[2][3]*mA[3][0];
+	  double det9=mA[2][0]*mA[3][2]-mA[2][2]*mA[3][0];
+	  double det2=mA[1][0]*det5 - mA[1][2]*det8 + mA[1][3]*det9;
+	  double det10=mA[2][0]*mA[3][1]-mA[2][1]*mA[3][0];
+	  double det3=mA[1][0]*det6 - mA[1][1]*det8 + mA[1][3]*det10;
+	  double det4=mA[1][0]*det7 - mA[1][1]*det9 + mA[1][2]*det10;
+	  double det44=mA[0][0]*det1-mA[0][1]*det2+mA[0][2]*det3-mA[0][3]*det4;
+	  if (det44>0.){
+	    // Determinant of 5x5 matrix
+	    double det55=Determinant();
+	    if (det55>0.){
+	      return true;
+	    }
+	  } // det44>0.?
+	} //det33>0.?
+      } // det22>0.?
+    } // mA[0][0]>0.?
 
-	return false;
-      }
+    return false;
+  }
 
       void Print(){
          cout << "DMatrix5x5:" <<endl;

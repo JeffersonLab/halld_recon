@@ -82,6 +82,11 @@ class DGeometry{
       typedef pair<string, map<string,string> > node_t;
       typedef vector<node_t> xpathparsed_t;
 
+      enum fmwpc_wire_orientation_t{
+        kFMWPC_WIRE_ORIENTATION_HORIZONTAL,
+        kFMWPC_WIRE_ORIENTATION_VERTICAL
+      };
+
       void FindNodes(string xpath, vector<xpathparsed_t> &matched_xpaths) const;
 
       // Methods for accessing material map tables obtained from calibDB
@@ -170,11 +175,13 @@ class DGeometry{
 
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
       bool GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const; ///< z-locations of FMWPC chambers in cm
-      bool GetFMWPCXY_vec(vector<double>&zvec_fmwpc,
-			  vector<double>&yvec_fmwpc) const; ///< xy-locations of FMWPC chambers in cm
+      bool GetFMWPCXY_vec(vector<double>&xvec_fmwpc, vector<double>&yvec_fmwpc) const; ///< xy-locations of FMWPC chambers in cm
       bool GetFMWPCSize(double &xy_fmwpc) const; /// maximum x or y extent of FMWPC in cm
+      bool GetFMWPCWireSpacing(double &fmwpc_wire_spacing) const;
+      bool GetFMWPCWireOrientation(vector<fmwpc_wire_orientation_t> &fmwpc_wire_orientation) const;
       bool GetCTOFZ(double &z) const; ///< z location of CPP scintillators in cm
-      
+      bool GetCTOFPositions(vector<DVector3>&posvec) const; ///< vector of positions of CPP scintillators in cm
+
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
 	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;

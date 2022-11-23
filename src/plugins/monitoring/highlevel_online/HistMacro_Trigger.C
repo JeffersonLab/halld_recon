@@ -63,7 +63,6 @@
 	}
 
 	//Get/Make Canvas
-        gROOT->SetStyle("Plain");
 	TCanvas *locCanvas = NULL;
 	if(TVirtualPad::Pad() == NULL)
 		locCanvas = new TCanvas("Kinematics", "Kinematics", 1200, 900); //for testing

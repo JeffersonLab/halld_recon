@@ -46,10 +46,16 @@
 	//pad1->SetLogz();
 	pad1->SetLeftMargin(0.15);
 	pad1->SetRightMargin(0.15);
+	char hname[256];
 	if(fmwpc_occ_layer_1){
-		fmwpc_occ_layer_1->SetStats(0);
-		fmwpc_occ_layer_1->Scale(1./Nevents);
-		fmwpc_occ_layer_1->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_1");
+	        TH1 *fmwpc_norm_layer_1 = (TH1*)fmwpc_occ_layer_1->Clone(hname);
+		fmwpc_norm_layer_1->SetStats(0);
+		fmwpc_norm_layer_1->Scale(1./Nevents);
+		fmwpc_norm_layer_1->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_1->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_1->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_1->Draw("h");
 	}
 
 	TVirtualPad *pad2 = c1->cd(2);
@@ -58,9 +64,14 @@
 	pad2->SetLeftMargin(0.15);
 	pad2->SetRightMargin(0.15);
 	if(fmwpc_occ_layer_2){
-		fmwpc_occ_layer_2->SetStats(0);
-		fmwpc_occ_layer_2->Scale(1./Nevents);
-		fmwpc_occ_layer_2->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_2");
+	        TH1 *fmwpc_norm_layer_2 = (TH1*)fmwpc_occ_layer_2->Clone(hname);
+		fmwpc_norm_layer_2->SetStats(0);
+		fmwpc_norm_layer_2->Scale(1./Nevents);
+		fmwpc_norm_layer_2->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_2->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_2->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_2->Draw("h");
 	}
 
 	TVirtualPad *pad3 = c1->cd(3);
@@ -69,9 +80,14 @@
 	pad3->SetLeftMargin(0.15);
 	pad3->SetRightMargin(0.15);
 	if(fmwpc_occ_layer_3){
-		fmwpc_occ_layer_3->SetStats(0);
-		fmwpc_occ_layer_3->Scale(1./Nevents);
-		fmwpc_occ_layer_3->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_3");
+	        TH1 *fmwpc_norm_layer_3 = (TH1*)fmwpc_occ_layer_3->Clone(hname);
+		fmwpc_norm_layer_3->SetStats(0);
+		fmwpc_norm_layer_3->Scale(1./Nevents);
+		fmwpc_norm_layer_3->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_3->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_3->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_3->Draw("h");
 	}
 
 	TVirtualPad *pad4 = c1->cd(4);
@@ -80,9 +96,14 @@
 	pad4->SetLeftMargin(0.15);
 	pad4->SetRightMargin(0.15);
 	if(fmwpc_occ_layer_4){
-		fmwpc_occ_layer_4->SetStats(0);
-		fmwpc_occ_layer_4->Scale(1./Nevents);
-		fmwpc_occ_layer_4->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_4");
+	        TH1 *fmwpc_norm_layer_4 = (TH1*)fmwpc_occ_layer_4->Clone(hname);
+		fmwpc_norm_layer_4->SetStats(0);
+		fmwpc_norm_layer_4->Scale(1./Nevents);
+		fmwpc_norm_layer_4->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_4->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_4->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_4->Draw("h");
 	}
 
 	TVirtualPad *pad5 = c1->cd(5);
@@ -91,9 +112,14 @@
 	pad5->SetLeftMargin(0.15);
 	pad5->SetRightMargin(0.15);
 	if(fmwpc_occ_layer_5){
-		fmwpc_occ_layer_5->SetStats(0);
-		fmwpc_occ_layer_5->Scale(1./Nevents);
-		fmwpc_occ_layer_5->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_5");
+	        TH1 *fmwpc_norm_layer_5 = (TH1*)fmwpc_occ_layer_5->Clone(hname);
+		fmwpc_norm_layer_5->SetStats(0);
+		fmwpc_norm_layer_5->Scale(1./Nevents);
+		fmwpc_norm_layer_5->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_5->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_5->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_5->Draw("h");
 	}
 
 	TVirtualPad *pad6 = c1->cd(6);
@@ -102,10 +128,28 @@
 	pad6->SetLeftMargin(0.15);
 	pad6->SetRightMargin(0.15);
 	if(fmwpc_occ_layer_6){
-		fmwpc_occ_layer_6->SetStats(0);
-		fmwpc_occ_layer_6->Scale(1./Nevents);
-		fmwpc_occ_layer_6->Draw();
+	        sprintf(hname, "fmwpc_norm_layer_6");
+	        TH1 *fmwpc_norm_layer_6 = (TH1*)fmwpc_occ_layer_6->Clone(hname);
+		fmwpc_norm_layer_6->SetStats(0);
+		fmwpc_norm_layer_6->Scale(1./Nevents);
+		fmwpc_norm_layer_6->GetXaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_6->GetYaxis()->SetLabelSize(0.05);
+		fmwpc_norm_layer_6->GetXaxis()->SetTitleSize(0.05);
+		fmwpc_norm_layer_6->Draw("h");
 	}
+
+#ifdef ROOTSPY_MACROS
+	// ------ The following is used by RSAI --------
+	if( rs_GetFlag("Is_RSAI")==1 ){
+		auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
+		if( min_events < 1 ) min_events = 5E5;
+		if( Nevents >= min_events ) {
+			cout << "FMWPC Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
+			rs_SavePad("FMWPC_occupancy", 0);
+			rs_ResetAllMacroHistos("//FMWPC_occupancy");
+		}
+	}
+#endif
 
 }
 

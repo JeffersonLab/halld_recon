@@ -18,6 +18,7 @@ subdirs = [
 'FDC_online',
 'FDC_Efficiency',
 'FMWPC_online',
+'FMWPC_Performance',
 'PSC_online',
 'RF_online',
 'pedestal_online',
@@ -63,6 +64,8 @@ subdirs = [
 'scaler_primex'
 ,'cppFMWPC'
 ,'cppFMWPC_ana'
+,'cpp_itrig'
+,'primex-online'
 
 ]
 

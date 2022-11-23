@@ -41,7 +41,6 @@ jerror_t DFMWPCCluster_factory::init(void)
 {
   // Future calibration constants
   TIME_SLICE=10000.0; //ns
-  FMWPC_WIRE_SPACING = 1.016; // distance between wires of FMWPC in cm
   gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
   
   return NOERROR;
@@ -65,7 +64,12 @@ jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnum
     xvec = {0.0,0.0,0.0,0.0,0.0,0.0};
     yvec = {0.0,0.0,0.0,0.0,0.0,0.0};
   }
-  rot = {90.0,0.0,90.0,0.0,90.0,0.0};
+
+  // Get the FMWPC wire spacing in cm (should be 1.016)
+  dgeom->GetFMWPCWireSpacing( FMWPC_WIRE_SPACING );
+
+  // Get the FMWPC wire orientation (should be vertical, horizontal, ...)
+  dgeom->GetFMWPCWireOrientation( fmwpc_wire_orientation );
 
   return NOERROR;
 }
@@ -163,24 +167,30 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     newCluster->layer = first_hit->layer;
     newCluster->first_wire = first_hit->wire;
     newCluster->Nhits = 0;
+    newCluster->t = 0.0;
     for(uint32_t i=istart; i<iend; i++){
       newCluster->q += H[i]->q;
       newCluster->u += H[i]->wire * H[i]->q; // weigh position with charge
+      newCluster->t += H[i]->t * H[i]->q; // weigh time with charge
       newCluster->members.push_back(H[i]);
       newCluster->last_wire = H[i]->wire;
       newCluster->Nhits++;
     }
-    if (newCluster->q != 0) newCluster->u /= newCluster->q; // normalize to total charge
+    if (newCluster->q != 0){
+      newCluster->u /= newCluster->q; // normalize to total charge
+      newCluster->t /= newCluster->q; // normalize to total charge
+    }
 
     // global coordinate system
     // set to -777 for not measured coordinate
-    double x = (rot[newCluster->layer-1]==90.0) ? xvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
-    double y = (rot[newCluster->layer-1]==0.0) ? yvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
+    auto orientation = fmwpc_wire_orientation[newCluster->layer-1];
+    double x = (orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL  ) ? xvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
+    double y = (orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_HORIZONTAL) ? yvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
     double z = zvec[newCluster->layer-1];
     DVector3 pos(x,y,z);
     newCluster->pos = pos;
 
-    _data.push_back(newCluster);
+     _data.push_back(newCluster);
 		
     istart = iend-1;
   }

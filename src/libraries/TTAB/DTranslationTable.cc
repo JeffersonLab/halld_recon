@@ -302,6 +302,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 		rocid_map[name_to_id[        "DIRC"]] = {92};
 		rocid_map[name_to_id[         "TRD"]] = {76};
 		rocid_map[name_to_id[       "FMWPC"]] = {88};
+		rocid_map[name_to_id[        "CTOF"]] = {77, 78};
 		
 	}
 
@@ -415,6 +416,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PSC:        MakePSCDigiHit(chaninfo.psc, pi, pt, pp);                break;
          case RF:         MakeRFDigiTime(chaninfo.rf, pt);                         break;
          case TAC:        MakeTACDigiHit(chaninfo.tac, pi, pt, pp);  	   	   break;
+         case CTOF:       MakeCTOFDigiHit(chaninfo.ctof, pi, pt, pp);              break;
 
          default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
@@ -459,7 +461,8 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case PS:         MakePSDigiHit(   chaninfo.ps,   pd);             break;
          case PSC:        MakePSCDigiHit(  chaninfo.psc,  pd);             break;
          case RF:         MakeRFDigiTime(  chaninfo.rf,   pd);             break;
-         case TAC: 		  MakeTACDigiHit(chaninfo.tac, pd);  			   break;
+         case TAC: 	  MakeTACDigiHit(  chaninfo.tac,  pd);  	   break;
+         case CTOF:       MakeCTOFDigiHit( chaninfo.ctof, pd);             break;
         default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
             break;
@@ -709,6 +712,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case TOF:    MakeTOFTDCDigiHit(chaninfo.tof, hit); break;
          case RF:     MakeRFTDCDigiTime(chaninfo.rf, hit);  break;
          case TAC:    MakeTACTDCDigiHit(chaninfo.tac, hit); break;
+         case CTOF:   MakeCTOFTDCDigiHit(chaninfo.ctof, hit); break;
          default:     
              if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
@@ -823,6 +827,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       	Addf250ObjectsToCallStack(loop, "DCCALRefDigiHit");
       	Addf250ObjectsToCallStack(loop, "DSCDigiHit");
       	Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
+      	Addf250ObjectsToCallStack(loop, "DCTOFDigiHit");
       	Addf250ObjectsToCallStack(loop, "DTACDigiHit");
       	Addf125CDCObjectsToCallStack(loop, "DCDCDigiHit", cdcpulses.size()>0);
       	Addf125FDCObjectsToCallStack(loop, "DFDCCathodeDigiHit", fdcpulses.size()>0);
@@ -835,6 +840,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       	AddCAEN1290TDCObjectsToCallStack(loop, "DTOFTDCDigiHit");
       	AddCAEN1290TDCObjectsToCallStack(loop, "DTACTDCDigiHit");
       	AddCAEN1290TDCObjectsToCallStack(loop, "DFWMPCDigiHit");
+      	AddCAEN1290TDCObjectsToCallStack(loop, "DCTOFTDCDigiHit");
 		}
    }
 }
@@ -940,6 +946,24 @@ DTOFDigiHit* DTranslationTable::MakeTOFDigiHit(const TOFIndex_t &idx,
    h->end   = idx.end;
 
    vDTOFDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
+// MakeCTOFDigiHit
+//---------------------------------
+DCTOFDigiHit* DTranslationTable::MakeCTOFDigiHit(const CTOFIndex_t &idx,
+                                               const Df250PulseData *pd) const
+{
+   DCTOFDigiHit *h = new DCTOFDigiHit();
+   CopyDf250Info(h, pd);
+
+   h->plane = idx.plane;
+   h->bar   = idx.bar;
+   h->end   = idx.end;
+
+   vDCTOFDigiHit.push_back(h);
    
    return h;
 }
@@ -1137,6 +1161,26 @@ DTOFDigiHit* DTranslationTable::MakeTOFDigiHit(const TOFIndex_t &idx,
    h->end   = idx.end;
 
    vDTOFDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
+// MakeTOFDigiHit
+//---------------------------------
+DCTOFDigiHit* DTranslationTable::MakeCTOFDigiHit(const CTOFIndex_t &idx,
+                                               const Df250PulseIntegral *pi,
+                                               const Df250PulseTime *pt,
+                                               const Df250PulsePedestal *pp) const
+{
+   DCTOFDigiHit *h = new DCTOFDigiHit();
+   CopyDf250Info(h, pi, pt, pp);
+
+   h->plane = idx.plane;
+   h->bar   = idx.bar;
+   h->end   = idx.end;
+
+   vDCTOFDigiHit.push_back(h);
    
    return h;
 }
@@ -1641,6 +1685,25 @@ DTOFTDCDigiHit*  DTranslationTable::MakeTOFTDCDigiHit(
 }
 
 //---------------------------------
+// MakeTOFTDCDigiHit
+//---------------------------------
+DCTOFTDCDigiHit*  DTranslationTable::MakeCTOFTDCDigiHit(
+                                    const CTOFIndex_t &idx,
+                                    const DCAEN1290TDCHit *hit) const
+{
+   DCTOFTDCDigiHit *h = new DCTOFTDCDigiHit();
+   CopyDCAEN1290TDCInfo(h, hit);
+
+   h->plane = idx.plane;
+   h->bar   = idx.bar;
+   h->end   = idx.end;
+
+   vDCTOFTDCDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
 // MakeTPOLSectorDigiHit
 //---------------------------------
 DTPOLSectorDigiHit* DTranslationTable::MakeTPOLSectorDigiHit(const TPOLSECTORIndex_t &idx,
@@ -1842,6 +1905,10 @@ const DTranslationTable::csc_t
              if ( det_channel.tof == in_channel.tof )
                 found = true;
              break;
+          case DTranslationTable::CTOF:
+             if ( det_channel.ctof == in_channel.ctof )
+                found = true;
+             break;
           case DTranslationTable::TPOLSECTOR:
              if ( det_channel.tpolsector == in_channel.tpolsector )
                 found = true;
@@ -1941,6 +2008,10 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
     case DTranslationTable::TOF:
        ss << "plane = " << in_channel.tof.plane << " bar = " << in_channel.tof.bar
           << " end = " << in_channel.tof.end;
+       break;
+    case DTranslationTable::CTOF:
+       ss << "plane = " << in_channel.ctof.plane << " bar = " << in_channel.ctof.bar
+          << " end = " << in_channel.ctof.end;
        break;
     case DTranslationTable::TPOLSECTOR:
        ss << "sector = " << in_channel.tpolsector.sector;
@@ -2244,6 +2315,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
       return DTranslationTable::TAGM;
    } else if ( type == "tof" ) {
       return DTranslationTable::TOF;
+   } else if ( type == "ctof" ) {
+      return DTranslationTable::CTOF;
    } else if ( type == "tpol" ) {
       return DTranslationTable::TPOLSECTOR;
    } else if ( type == "tac" ) {
@@ -2391,13 +2464,13 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
                view=3;
             }
             else if (sval == "N")
-               end = 0; // TOF north
+               end = 0; // TOF or CTOF north
             else if (sval == "S")
-               end = 1; // TOF south
+               end = 1; // TOF or CTOF south
             else if (sval == "UP")
-               end = 0; // TOF up
+               end = 0; // TOF or CTOF up
             else if (sval == "DW") 
-               end = 1; // TOF down
+               end = 1; // TOF or CTOF down
          }
          else if (tag == "strip_type") {
             if (sval == "full")
@@ -2508,6 +2581,11 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
             ci.tof.plane = plane;
             ci.tof.bar = bar;
             ci.tof.end = end;
+            break;
+         case DTranslationTable::CTOF:
+            ci.ctof.plane = layer;
+            ci.ctof.bar = bar;
+            ci.ctof.end = end;
             break;
          case DTranslationTable::PS:
 	        ci.ps.side = side;

@@ -39,8 +39,8 @@
 
 	//Setpoints
 	double nominalCDCTime = 10.;
-	double nominalFDCCathodeTime = 14.;
-	double nominalFDCWireTime = 12.;
+	double nominalFDCCathodeTime = 3.;
+	double nominalFDCWireTime = 3.;
 
 	//Get Histograms
 	TH1I* CDCHit_Timing    = (TH1I*)gDirectory->Get("CDC/CDCHit time");

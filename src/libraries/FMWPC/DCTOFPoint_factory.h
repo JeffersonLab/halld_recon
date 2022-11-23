@@ -10,6 +10,7 @@
 
 #include <JANA/JFactory.h>
 #include "DCTOFPoint.h"
+#include <DVector3.h>
 
 class DCTOFPoint_factory:public jana::JFactory<DCTOFPoint>{
  public:
@@ -23,6 +24,8 @@ class DCTOFPoint_factory:public jana::JFactory<DCTOFPoint>{
   jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+  vector<DVector3>ctof_positions;
 
   double LIGHT_PROPAGATION_SPEED,THRESHOLD,ATTENUATION_LENGTH;
 };

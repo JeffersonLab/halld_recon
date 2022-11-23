@@ -68,6 +68,8 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH1I *dpip_pim_pi0;
 		TH2I *dbeta_vs_p;
 		TH1I *dptrans;
+		TH1I *dme_rho;
+		TH1I *dme_omega;
 		
 		TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
@@ -94,6 +96,7 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		pair<double, double> dCoherentPeakRange;
 		pair<int, int> dRFSidebandBunchRange;
 		map<Particle_t, map<DetectorSystem_t, double> > dTimingCutMap;
+		bool isExclusive;
 
 		double last_timestamp;
 		double unix_offset;
