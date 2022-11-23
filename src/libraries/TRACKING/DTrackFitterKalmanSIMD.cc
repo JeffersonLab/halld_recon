@@ -8719,6 +8719,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
+  bool hit_gemtrd=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
