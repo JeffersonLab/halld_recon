@@ -86,14 +86,6 @@ class DMatrix3x3{
 		       );
   }
 
-  double Determinant() const {
-    double b11=mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1];
-    double b21=mA[1][2]*mA[2][0]-mA[1][0]*mA[2][2];
-    double b31=mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0];
-    return mA[0][0]*b11+mA[0][1]*b21+mA[0][2]*b31;
-  }
-
-
   // Matrix inversion
   DMatrix3x3 Invert() const{
     double b11=mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1];
@@ -109,6 +101,8 @@ class DMatrix3x3{
     return DMatrix3x3(one_over_det*b11,one_over_det*b12,one_over_det*b13,
 		      one_over_det*b21,one_over_det*b22,one_over_det*b23,
 		      one_over_det*b31,one_over_det*b32,one_over_det*b33);
+
+
   }
 
 
