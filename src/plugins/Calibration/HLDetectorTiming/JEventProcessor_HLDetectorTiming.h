@@ -39,6 +39,11 @@
 #include <DIRC/DDIRCGeometry.h>
 #include <DIRC/DDIRCLut.h>
 
+#include <functional>
+#include <map>
+
+using std::function;
+
 //#include "HistogramTools.h"
 
 //class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor, public HistogramTools{
@@ -57,6 +62,8 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 
         //HistogramTools *histoTools;     
         
+        void CreateHistograms(string dirname);
+        
         void DoRoughTiming();
         void DoTDCADCAlign();
         void DoTrackBased();
@@ -66,6 +73,9 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         int GetCCDBIndexTAGM(const DTAGMHit *);
         int GetCCDBIndexCDC(const DCDCHit *);
         int GetCCDBIndexCDC(int, int);
+        
+        map< string, function<bool(jana::JEventLoop *eventLoop)> > dCutFunctions;
+        
         double BEAM_CURRENT;
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
@@ -95,6 +105,7 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		// constants for FCAL/TOF matching
 		const double TOF_X_MEAN  =  0.75;  const double TOF_X_SIG  =  1.75;
 		const double TOF_Y_MEAN  = -0.50;  const double TOF_Y_SIG  =  1.75;
+
 
 };
 

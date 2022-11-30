@@ -115,6 +115,17 @@ JEventProcessor_HLDetectorTiming::~JEventProcessor_HLDetectorTiming()
 
 }
 
+
+//------------------
+// CreateHistograms
+//------------------
+void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
+{
+
+
+}
+
+
 //------------------
 // init
 //------------------
@@ -124,6 +135,13 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 
     fBeamEventCounter = 0;
     dMaxDIRCChannels = 108*64;
+
+	dCutFunctions["All Events"] = [](JEventLoop *loop) { return true; };
+	dCutFunctions["Physics Triggers"] = [](JEventLoop *loop) { 
+			const DTrigger* locTrigger = NULL; 
+    		loop->GetSingle(locTrigger); 
+			if(!locTrigger->Get_IsPhysicsEvent()) return false; else return true; 
+	};
 
     REQUIRE_BEAM = 0;
     BEAM_EVENTS_TO_KEEP = 1000000000; // Set enormously high
@@ -200,6 +218,21 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 
     NBINS_RF_COMPARE = 200; MIN_RF_COMPARE = -2.2; MAX_RF_COMPARE = 2.2;
 
+
+	// Fill histograms in different directories
+	TDirectory *mainDir = gDirectory;
+    TDirectory *timingDir = gDirectory->mkdir("HLDetectorTiming");
+    timingDir->cd();
+
+    for (const auto& [key, ignore] : dCutFunctions) {
+		CreateHistograms(key);
+		timingDir->cd();
+	}
+
+    // back to main dir
+    mainDir->cd();
+
+
     return NOERROR;
 }
 
@@ -212,6 +245,9 @@ jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t r
     DApplication* app = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     DGeometry* geom = app->GetDGeometry(runnumber);
     geom->GetTargetZ(Z_TARGET);
+
+// 	if(dCutFunctions.size() == 0) {
+// 	}
 
     return NOERROR;
 }
@@ -251,7 +287,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
 
-    
+	/*    
 	// allow the user to select which trigger select events to use for calibrations
 	if( TRIGGER_MASK > 0) {
 	    if( !((locTrigger->Get_L1TriggerBits())&TRIGGER_MASK) )
@@ -261,6 +297,14 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     	if(!locTrigger->Get_IsPhysicsEvent())
 	    	return NOERROR;
 	}
+	*/
+	
+	// COMMENT
+	map<string, bool> passed_cuts;
+	for (const auto& [key, cut_function] : dCutFunctions) {
+		passed_cuts[key] = cut_function(loop);
+	}
+	
     
     // Get the particleID object for each run
     vector<const DParticleID *> locParticleID_algos;
