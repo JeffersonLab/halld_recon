@@ -409,8 +409,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           m_amp = emu->first_max_amp_emulated;
           m_pktime=0;
 
+          // Firmware q is either 1 or 0.  m_q is the q_code, 0 to 9, where 0 indicates a good time measurement
+	  // Only flag a difference between these if one is 0 and the other isn't.
+	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
+          d_q = q - m_q_binary;
+
           d_time = time - m_time;
-          d_q = q - m_q;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
           d_integral = integral - m_integral;
@@ -481,8 +485,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           m_amp = fp->peak_amp_emulated;
           m_pktime = fp->peak_time_emulated;	
 
+          // Firmware q is either 1 or 0.  m_q is the q_code, 0 to 9, where 0 indicates a good time measurement
+	  // Only flag a difference between these if one is 0 and the other isn't.
+	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
+          d_q = q - m_q_binary;
+
           d_time = time - m_time;
-          d_q = q - m_q;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
           d_integral = integral - m_integral;
@@ -490,7 +498,8 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_pktime = pktime - m_pktime;
 
 	  diffs=0;
-          if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp || d_pktime) diffs = 1;
+          // FDC mode 8 does not report the integral, so don't flag those differences in the diffs branch
+          if (d_time || d_q || d_overflows || d_pedestal || d_amp || d_pktime) diffs = 1;
 	}
 	
         p->Fill();
