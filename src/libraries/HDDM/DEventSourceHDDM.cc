@@ -1156,8 +1156,11 @@ jerror_t DEventSourceHDDM::Extract_DMCReaction(hddm_s::HDDM *record,
                       target.getMomentum().getPz());
          mcreaction->target.setPosition(locPosition);
          mcreaction->target.setMomentum(mom);
-         mcreaction->target.setPID(IDTrack(target.getProperties().getCharge(),
-        		 target.getProperties().getMass()));
+         hddm_s::PropertiesList &properties = target.getPropertiesList();
+         if (properties.size() > 0) {
+            mcreaction->target.setPID(IDTrack(properties(0).getCharge(),
+        		                              properties(0).getMass()));
+         }
          mcreaction->target.setTime(torig - (zorig - locTargetCenterZ)/29.9792458);
       }
       else {
