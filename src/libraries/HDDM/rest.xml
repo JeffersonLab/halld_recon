@@ -76,7 +76,9 @@
               NsampleFDC="int" dxFDC="float" dEdxFDC="float"
               NsampleCDC="int" dxCDC="float" dEdxCDC="float"
               lunit="cm" dEdx_unit="GeV/cm">
-	<CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
+        <CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
+        <CDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
+        <FDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
       </dEdxDC>
       <exitParams maxOccurs="1" minOccurs="0" 
 		  x1="float" y1="float" z1="float"

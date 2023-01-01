@@ -1406,6 +1406,14 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       // add the drift chamber dE/dx information
       const hddm_r::DEdxDCList &el = iter->getDEdxDCs();
       hddm_r::DEdxDCList::iterator diter = el.begin();
+      tra->ddx_CDC_trunc.clear();
+      tra->ddx_CDC_amp_trunc.clear();
+      tra->ddEdx_CDC_trunc.clear();
+      tra->ddEdx_CDC_amp_trunc.clear();
+      tra->ddx_FDC_trunc.clear();
+      tra->ddx_FDC_amp_trunc.clear();
+      tra->ddEdx_FDC_trunc.clear();
+      tra->ddEdx_FDC_amp_trunc.clear();
       if (diter != el.end()) {
          tra->dNumHitsUsedFordEdx_FDC = diter->getNsampleFDC();
          tra->dNumHitsUsedFordEdx_CDC = diter->getNsampleCDC();
@@ -1423,6 +1431,36 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 	   tra->ddx_CDC_amp=tra->ddx_CDC;
 	   tra->ddEdx_CDC_amp=tra->ddEdx_CDC;
 	 }
+         const hddm_r::CDCdEdxTruncList &cdctruncs = diter->getCDCdEdxTruncs();
+         hddm_r::CDCdEdxTruncList::iterator itcdc;
+         for (itcdc = cdctruncs.begin(); itcdc != cdctruncs.end(); ++itcdc) {
+           int ntrunc = itcdc->getNtrunc();
+           for (int s=(int)tra->ddx_CDC_trunc.size(); s <= ntrunc; ++s) {
+             tra->ddx_CDC_trunc.push_back(0);
+             tra->ddx_CDC_amp_trunc.push_back(0);
+             tra->ddEdx_CDC_trunc.push_back(0);
+             tra->ddEdx_CDC_amp_trunc.push_back(0);
+           }
+           tra->ddx_CDC_trunc[ntrunc] = itcdc->getDx();
+           tra->ddx_CDC_amp_trunc[ntrunc] = itcdc->getDxAmp();
+           tra->ddEdx_CDC_trunc[ntrunc] = itcdc->getDEdx();
+           tra->ddEdx_CDC_amp_trunc[ntrunc] = itcdc->getDEdxAmp();
+         }
+         const hddm_r::FDCdEdxTruncList &fdctruncs = diter->getFDCdEdxTruncs();
+         hddm_r::FDCdEdxTruncList::iterator itfdc;
+         for (itfdc = fdctruncs.begin(); itfdc != fdctruncs.end(); ++itfdc) {
+           int ntrunc = itfdc->getNtrunc();
+           for (int s=(int)tra->ddx_FDC_trunc.size(); s <= ntrunc; ++s) {
+             tra->ddx_FDC_trunc.push_back(0);
+             tra->ddx_FDC_amp_trunc.push_back(0);
+             tra->ddEdx_FDC_trunc.push_back(0);
+             tra->ddEdx_FDC_amp_trunc.push_back(0);
+           }
+           tra->ddx_FDC_trunc[ntrunc] = itfdc->getDx();
+           tra->ddx_FDC_amp_trunc[ntrunc] = itfdc->getDxAmp();
+           tra->ddEdx_FDC_trunc[ntrunc] = itfdc->getDEdx();
+           tra->ddEdx_FDC_amp_trunc[ntrunc] = itfdc->getDEdxAmp();
+         }
       }
       else {
          tra->dNumHitsUsedFordEdx_FDC = 0;
