@@ -40,6 +40,14 @@ bool DTrackTimeBased_cmp(DTrackTimeBased *a,DTrackTimeBased *b){
   return a->candidateid<b->candidateid;
 }
 
+// Routines for sorting dEdx data
+bool DTrackTimeBased_dedx_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
+  return a.dEdx > b.dEdx;
+}
+
+bool DTrackTimeBased_dedx_amp_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
+  return a.dEdx_amp > b.dEdx_amp;
+}
 
 // count_common_members
 //------------------
@@ -155,6 +163,9 @@ jerror_t DTrackTimeBased_factory::init(void)
 	USE_BCAL_TIME=true;
 	gPARMS->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
        
+    SAVE_TRUNCATED_DEDX = false;
+    gPARMS->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
+
 	return NOERROR;
 }
 
@@ -1157,7 +1168,91 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   timebased_track->ddx_CDC = locdx_CDC;
   timebased_track->ddx_CDC_amp = locdx_CDC_amp;
   timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
-  
+
+  // The above code has a truncated mean algorithm for dEdx hardwired for the FDC
+  // and selectable between on and off for the CDC_amp. Here I save the complete
+  // information for a variety of truncation choices, and let the user decide later.
+
+  if (SAVE_TRUNCATED_DEDX) {
+    std::vector<DParticleID::dedx_t> locdEdxHits_CDC;
+    std::vector<DParticleID::dedx_t> locdEdxHits_FDC;
+    jerror_t locReturnStatus = pid_algorithm->GetDCdEdxHits(timebased_track, locdEdxHits_CDC, locdEdxHits_FDC);
+    if (locReturnStatus == NOERROR) {
+      const int maxtrunc(5);
+      sort(locdEdxHits_CDC.begin(),locdEdxHits_CDC.end(), DTrackTimeBased_dedx_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_CDC.size(); ++i) {
+          double dx = locdEdxHits_CDC[i].dx;
+          double dE = locdEdxHits_CDC[i].dEdx * dx;
+          if (itrunc < (int)timebased_track->ddx_CDC_trunc.size()) {
+            timebased_track->ddx_CDC_trunc[itrunc] += dx;
+            timebased_track->ddEdx_CDC_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_CDC_trunc.push_back(dx);
+            timebased_track->ddEdx_CDC_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_CDC_trunc.size())
+          timebased_track->ddEdx_CDC_trunc[itrunc] /= timebased_track->ddx_CDC_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_CDC.begin(),locdEdxHits_CDC.end(), DTrackTimeBased_dedx_amp_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_CDC.size(); ++i) {
+          double dx = locdEdxHits_CDC[i].dx;
+          double dE = locdEdxHits_CDC[i].dEdx_amp * dx;
+          if (itrunc < (int)timebased_track->ddx_CDC_amp_trunc.size()) {
+            timebased_track->ddx_CDC_amp_trunc[itrunc] += dx;
+            timebased_track->ddEdx_CDC_amp_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_CDC_amp_trunc.push_back(dx);
+            timebased_track->ddEdx_CDC_amp_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_CDC_amp_trunc.size())
+          timebased_track->ddEdx_CDC_amp_trunc[itrunc] /= timebased_track->ddx_CDC_amp_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_FDC.begin(),locdEdxHits_FDC.end(), DTrackTimeBased_dedx_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_FDC.size(); ++i) {
+          double dx = locdEdxHits_FDC[i].dx;
+          double dE = locdEdxHits_FDC[i].dEdx * dx;
+          if (itrunc < (int)timebased_track->ddx_FDC_trunc.size()) {
+            timebased_track->ddx_FDC_trunc[itrunc] += dx;
+            timebased_track->ddEdx_FDC_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_FDC_trunc.push_back(dx);
+            timebased_track->ddEdx_FDC_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_FDC_trunc.size())
+          timebased_track->ddEdx_FDC_trunc[itrunc] /= timebased_track->ddx_FDC_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_FDC.begin(),locdEdxHits_FDC.end(), DTrackTimeBased_dedx_amp_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_FDC.size(); ++i) {
+          double dx = locdEdxHits_FDC[i].dx;
+          double dE = locdEdxHits_FDC[i].dEdx_amp * dx;
+          if (itrunc < (int)timebased_track->ddx_FDC_amp_trunc.size()) {
+            timebased_track->ddx_FDC_amp_trunc[itrunc] += dx;
+            timebased_track->ddEdx_FDC_amp_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_FDC_amp_trunc.push_back(dx);
+            timebased_track->ddEdx_FDC_amp_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_FDC_amp_trunc.size())
+          timebased_track->ddEdx_FDC_amp_trunc[itrunc] /= timebased_track->ddx_FDC_amp_trunc[itrunc] + 1e-99;
+      }
+    }
+  }
+
   // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
   vector<const DCDCTrackHit*> tempCDCTrackHits;
   vector<const DFDCPseudo*> tempFDCPseudos;
