@@ -33,8 +33,9 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
 
 	MAX_OUTPUT_QUEUE_SIZE  = 200; // in buffers/events
 	MAX_OUTPUT_BUFFER_SIZE = 0;   // in words (0=AUTO)
-	MAX_HOLD_TIME          = 2;   // in seconds
+	MAX_HOLD_TIME          = 5;   // in seconds
 	NEVENTS_PER_BLOCK      = 100;  // suggested number of events per EVIO block
+    THREAD_SLEEP_TIME      = 250;  // in microseconds - can be increased if few threads are used, depending on the event processing rate
 	DEBUG_FILES            = false; 
 
 	if(gPARMS){
@@ -45,9 +46,10 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
 
 		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_QUEUE_SIZE" , MAX_OUTPUT_QUEUE_SIZE,  "Maximum number of events output queue can have before processing threads start blocking.");
 		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_BUFFER_SIZE", max_output_buffer,      "Maximum number of words in output EVIO block. This may be overwritten by ET event size if writing to ET.");
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set lesst than 2.");
+		gPARMS->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set less than 2 when running online.  Default is 5 for offline running");
 		gPARMS->SetDefaultParameter("EVIOOUT:NEVENTS_PER_BLOCK",      NEVENTS_PER_BLOCK,      "Suggested number of events to write in single output block.");
 		gPARMS->SetDefaultParameter("EVIOOUT:DEBUG_FILES" , DEBUG_FILES,  "Write input and output debug files in addition to the standard output.");
+		gPARMS->SetDefaultParameter("EVIOOUT:THREAD_SLEEP_TIME" , THREAD_SLEEP_TIME,  "Time in microseconds for thread to sleep in between checking to see if we are ready to write to the disk");
 
 		// Check if user specified max max buffer size
 		if( max_output_buffer != "AUTO" ){
@@ -331,7 +333,7 @@ void* HDEVIOWriter::HDEVIOOutputThread(void)
 		if(!flush_event){
 			pthread_mutex_unlock(&output_deque_mutex);
 			if(quit) break; // don't go to sleep just as we're quitting
-			usleep(100);
+			usleep(THREAD_SLEEP_TIME);
 
 			if(japp && japp->GetQuittingStatus()) quit=true;
 			continue;

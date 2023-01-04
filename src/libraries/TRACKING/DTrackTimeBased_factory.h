@@ -90,11 +90,17 @@ class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
 
   // Geometry
   const DGeometry *geom;
+  vector<vector<DCDCWire *> > cdcwires;
+  vector<double> cdc_rmid;
+  vector<double>fdc_z_wires;
+  double fdc_package_size;
+  double fdc_rmax;
+  vector<double> fdc_rmin_packages;
   double TARGET_Z=65.;
 
-//  double mPathLength,mEndTime,mStartTime,mFlightTime;
+  //  double mPathLength,mEndTime,mStartTime,mFlightTime;
   double mStartTime;
-//  DetectorSystem_t mDetector, mStartDetector;
+  //  DetectorSystem_t mDetector, mStartDetector;
   DetectorSystem_t mStartDetector;
   int mNumHypPlus,mNumHypMinus;
   bool dIsNoFieldFlag,INSERT_MISSING_HYPOTHESES;

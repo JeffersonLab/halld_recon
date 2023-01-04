@@ -80,9 +80,9 @@
 		locHist_PSPairEnergy->GetXaxis()->SetLabelSize(0.05);
 		locHist_PSPairEnergy->GetYaxis()->SetLabelSize(0.05);
 		// GlueX
-		// locHist_PSPairEnergy->GetXaxis()->SetRangeUser(7.,12.);
+		locHist_PSPairEnergy->GetXaxis()->SetRangeUser(6.,12.);
 		// CPP
-		locHist_PSPairEnergy->GetXaxis()->SetRangeUser(3.5,8.5);
+		// locHist_PSPairEnergy->GetXaxis()->SetRangeUser(3.5,8.5);
 		locHist_PSPairEnergy->SetStats(0);
 		locHist_PSPairEnergy->Draw();
 		

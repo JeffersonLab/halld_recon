@@ -22,7 +22,7 @@
 
 #define MAX_TB_PASSES 20
 #define MAX_WB_PASSES 20
-#define MAX_P 12.0
+
 #define ALPHA 1./137.
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
@@ -328,13 +328,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    geom->Get("//tubs[@name='CDPU']/@Rio_Z",cdc_endplate_dim);
    cdc_origin[2]+=cdc_center[2]+cdc_upstream_endplate_pos[2]
       +0.5*cdc_endplate_dim[2];
-   
-   geom->GetCDCWires(cdcwires);
-   //   geom->GetCDCRmid(cdc_rmid); // THIS ISN'T IMPLEMENTED!!
-   // extract the "mean" radius of each ring from the wire data
-   for(uint ring=0; ring<cdcwires.size(); ring++)
-     cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
-      
+        
    // Outer detector geometry parameters
    geom->GetFCALZ(dFCALz);
    dFCALzBack=dFCALz+45.;
@@ -374,11 +368,6 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
 
    // Get z positions of fdc wire planes
    geom->GetFDCZ(fdc_z_wires);
-   // for now, assume the z extent of a package is the difference between the positions
-   // of the two wire planes.  save half of this distance
-   fdc_package_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
-   geom->GetFDCRmin(fdc_rmin_packages);
-   geom->GetFDCRmax(fdc_rmax);
 
    ADD_VERTEX_POINT=false; 
    gPARMS->SetDefaultParameter("KALMAN:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
@@ -1035,67 +1024,6 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
    this->chisq = GetChiSq();
    this->Ndof = GetNDF();
    fit_status = kFitSuccess;
-
-   // figure out the number of expected hits for this track based on the final fit
-	set<const DCDCWire *> expected_hit_straws;
-	set<int> expected_hit_fdc_planes;
-
-	for(uint i=0; i<extrapolations[SYS_CDC].size(); i++) {
-		// figure out the radial position of the point to see which ring it's in
-		double r = extrapolations[SYS_CDC][i].position.Perp();
-		uint ring=0;
-		for(; ring<cdc_rmid.size(); ring++) {
-			//_DBG_ << "Rs = " << r << " " << cdc_rmid[ring] << endl;
-			if( (r<cdc_rmid[ring]-0.78) || (fabs(r-cdc_rmid[ring])<0.78) )
-				break;
-		}
-		if(ring == cdc_rmid.size()) ring--;
-		//_DBG_ << "ring = " << ring << endl;
-		//_DBG_ << "ring = " << ring << "  stereo = " << cdcwires[ring][0]->stereo << endl;
-		int best_straw=0;
-		double best_dist_diff=fabs((extrapolations[SYS_CDC][i].position 
-			- cdcwires[ring][0]->origin).Mag());		
-	    // match based on straw center
-	    for(uint straw=1; straw<cdcwires[ring].size(); straw++) {
-	    	DVector3 wire_position = cdcwires[ring][straw]->origin;  // start with the nominal wire center
-	    	// now take into account the z dependence due to the stereo angle
-	    	double dz = extrapolations[SYS_CDC][i].position.Z() - cdcwires[ring][straw]->origin.Z();
-	    	double ds = dz*tan(cdcwires[ring][straw]->stereo);
-	    	wire_position += DVector3(-ds*sin(cdcwires[ring][straw]->origin.Phi()), ds*cos(cdcwires[ring][straw]->origin.Phi()), dz);
-	    	double diff = fabs((extrapolations[SYS_CDC][i].position
-				- wire_position).Mag());
-			if( diff < best_dist_diff )
-				best_straw = straw;
-	    }
-	    
-	    expected_hit_straws.insert(cdcwires[ring][best_straw]);
-	}
-	
-	for(uint i=0; i<extrapolations[SYS_FDC].size(); i++) {
-		// check to make sure that the track goes through the sensitive region of the FDC
-		// assume one hit per plane
-		double z = extrapolations[SYS_FDC][i].position.Z();
-		double r = extrapolations[SYS_FDC][i].position.Perp();
-
-		// see if we're in the "sensitive area" of a package
-		for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
-			int package = plane/6;
-			if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
-				if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
-					expected_hit_fdc_planes.insert(plane);
-				}
-				break; // found the right plane
-			}
- 		}
-	}
-	
-	potential_cdc_hits_on_track = expected_hit_straws.size();
-	potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
-
-    if(DEBUG_LEVEL>0) {
-   		_DBG_ << " CDC hits/potential hits " << my_cdchits.size() << "/" << potential_cdc_hits_on_track 
-        	 << "  FDC hits/potential hits " << my_fdchits.size() << "/" << potential_fdc_hits_on_track  << endl;
-	}
 	
    //_DBG_  << "========= done!" << endl;
 
@@ -4041,12 +3969,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    for (unsigned int k=break_point_step_index+1;k<central_traj.size();k++){
       unsigned int k_minus_1=k-1;
 
-      // Check that C matrix is positive definite
-      if (!Cc.IsPosDef()){
-         if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-         return BROKEN_COVARIANCE_MATRIX;
-      }
-
       // Get the state vector, jacobian matrix, and multiple scattering matrix 
       // from reference trajectory
       S0=central_traj[k].S;
@@ -4361,16 +4283,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    }
    else my_ndf-=5;
 
-   // Check if the momentum is unphysically large
-   double p=cos(atan(Sc(state_tanl)))/fabs(Sc(state_q_over_pt));
-   if (p>12.0){
-      if (DEBUG_LEVEL>2)
-      {
-         _DBG_ << "Unphysical momentum: P = " << p <<endl;
-      }
-      return MOMENTUM_OUT_OF_RANGE;
-   }
-
    // Check if we have a kink in the track or threw away too many cdc hits
    if (num_cdc>=MIN_HITS_FOR_REFIT){
       if (break_point_cdc_index>1){
@@ -4486,13 +4398,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size();k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
-    
+     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
     // from reference trajectory
     S0=(forward_traj[k].S);
@@ -5127,13 +5033,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   S0_=(forward_traj[break_point_step_index].S);
   for (unsigned int k=break_point_step_index+1;k<forward_traj.size()/*-1*/;k++){
     unsigned int k_minus_1=k-1;
-    
-    // Check that C matrix is positive definite
-    if (!C.IsPosDef()){
-      if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
-      return BROKEN_COVARIANCE_MATRIX;
-    }
-    
+
     z=forward_traj[k].z;
     
     // Get the state vector, jacobian matrix, and multiple scattering matrix 
@@ -5392,16 +5292,6 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
    z_=forward_traj[forward_traj.size()-1].z;
 
    if (!S.IsFinite()) return FIT_FAILED;
-
-   // Check if the momentum is unphysically large
-   if (1./fabs(S(state_q_over_p))>12.0){
-      if (DEBUG_LEVEL>2)
-      {
-         _DBG_ << "Unphysical momentum: P = " << 1./fabs(S(state_q_over_p))
-            <<endl;
-      }
-      return MOMENTUM_OUT_OF_RANGE;
-   }
 
    // Check if we have a kink in the track or threw away too many cdc hits
    if (num_cdc>=MIN_HITS_FOR_REFIT){
@@ -9695,6 +9585,7 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
 	     
 	     if (!Ctest.IsPosDef()){
 	       if (DEBUG_LEVEL>0) _DBG_ << "Broken covariance matrix!" <<endl;
+	       return BROKEN_COVARIANCE_MATRIX;
 	     }
 	     
 	     if (tdrift >= CDC_T_DRIFT_MIN){

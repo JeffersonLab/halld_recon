@@ -78,6 +78,10 @@ def tw_corr(h,row,col,newV, offsets, offsets_ind, run):
                 # Write constants to file
                 file1.write(str(row) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
                             str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
+                if col in indCol:
+                        for j in range(1,6):
+                                file1.write(str(j) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
+                                            str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
                 file1.close()
                 return None
 
@@ -107,6 +111,10 @@ def tw_corr(h,row,col,newV, offsets, offsets_ind, run):
                 # Write constants to file
                 file1.write(str(row) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
                             str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
+                if col in indCol:
+                        for j in range(1,6):
+                                file1.write(str(j) + '   ' + str(col) + '   ' + str(c0) + '   ' + str(c1) + '   ' +
+                                            str(c2) + '   ' + str(c3) + '   ' + str(dtmean) + '\n')
                 file1.close()
                 return None
 

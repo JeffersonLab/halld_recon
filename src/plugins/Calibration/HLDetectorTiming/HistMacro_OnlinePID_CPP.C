@@ -39,7 +39,7 @@
 
         //Setpoints
         double nominalSCTime = 4.;
-        double nominalTOFTime = 31.;
+        double nominalTOFTime = 12.;
 
 	//Get Histograms
 	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/SC/SCHit Matched time");

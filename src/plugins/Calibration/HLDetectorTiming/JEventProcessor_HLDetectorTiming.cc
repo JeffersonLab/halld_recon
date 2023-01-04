@@ -1476,8 +1476,10 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
 			sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
 											   true, &IntersectionPoint, &IntersectionMomentum);
-		 	locSCzIntersection = IntersectionPoint.z();
-			flightTimeCorrectedSCTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - targetCenterCorrection; 
+			if(sc_match_pid) {
+				locSCzIntersection = IntersectionPoint.z();
+				flightTimeCorrectedSCTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - targetCenterCorrection; 
+			}
 		}
 		double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
 		double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
@@ -1502,7 +1504,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			bool passed = cut.second;
 			if(!passed) continue;
  
-			if(!NO_START_COUNTER) {
+			if(!NO_START_COUNTER && sc_match_pid) {
 				dSCRFTime_AllHits[key]->Fill(flightTimeCorrectedSCTime - thisRFBunch->dTime);
 				
 				// Stay away from the nose section, since the propagation time corrections are not stable there.

@@ -43,12 +43,13 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
   bool FitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hitList,
-		vector<PeakInfo>&peaks,PeakInfo &myPeak,double &chisq) const;
+		vector<PeakInfo>&peaks,PeakInfo &myPeak,double &chisq,
+		unsigned int &ndf) const;
   double CalcClusterEDeriv(const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,const DFCALHit *hit,
 			    const PeakInfo &myPeakInfo) const;
   void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
-		  vector<PeakInfo>&peaks,double &chisq) const;
+		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
   bool CheckPeak(const vector<PeakInfo>&peaks,const PeakInfo &myNewPeak) const;
  
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
