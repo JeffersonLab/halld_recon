@@ -1295,13 +1295,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			bool passed = cut.second;
 			if(!passed) continue;
         
-        	if(DO_OPTIONAL && taghHitVector[j]->has_fADC) {
-            	double locShiftedADCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_fadc);
-            	dTAGMADCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(taghHitVector[j]->time_fadc - locShiftedADCTime);
+        	if(DO_OPTIONAL && tagmHitVector[j]->has_fADC) {
+            	double locShiftedADCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
+            	dTAGMADCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(tagmHitVector[j]->time_fadc - locShiftedADCTime);
             }
-            if(taghHitVector[j]->has_TDC) {
-				double locShiftedTDCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->t);
-				dTAGMTDCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(taghHitVector[j]->t - locShiftedTDCTime);
+            if(tagmHitVector[j]->has_TDC) {
+				double locShiftedTDCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
+				dTAGMTDCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(tagmHitVector[j]->t - locShiftedTDCTime);
 			}
         
         	if(tagmHitVector[j]->row == 0) {
@@ -1466,17 +1466,19 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         // These "flightTime" corrected time are essentially that detector's estimate of the target time
         float targetCenterCorrection = ((pionHypothesis->position()).Z() - Z_TARGET) / SPEED_OF_LIGHT;
         float flightTimeCorrectedSCTime = 0.; 
- 
-		// need to get the projected hit position at the SC in order to cut on it
-		DVector3 IntersectionPoint, IntersectionMomentum;	
-		vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
-		shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-		bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-										   true, &IntersectionPoint, &IntersectionMomentum);
-		double locSCzIntersection = IntersectionPoint.z();
-
-		if(!NO_START_COUNTER) 
+        double locSCzIntersection = 0.;
+ 		bool sc_match_pid = false;
+ 		
+		if(!NO_START_COUNTER) {
+			// need to get the projected hit position at the SC in order to cut on it
+			DVector3 IntersectionPoint, IntersectionMomentum;	
+			vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
+			shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
+			sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+											   true, &IntersectionPoint, &IntersectionMomentum);
+		 	locSCzIntersection = IntersectionPoint.z();
 			flightTimeCorrectedSCTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - targetCenterCorrection; 
+		}
 		double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
 		double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
 
