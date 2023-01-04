@@ -15,8 +15,8 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/TPOL/TPOL_time
-// hnamepath: /HLDetectorTiming/TPOL/TPOL_time_per_sector
+// hnamepath: /HLDetectorTiming/Physics Triggers/TPOL/TPOL_time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TPOL/TPOL_time_per_sector
 
 {
 	//Goto Path
@@ -29,8 +29,8 @@
 	double nominalTPOLTime = 10.;
 
 	//Get Histograms
-	TH1I* TPOLHit_Timing    = (TH1I*)gDirectory->Get("TPOL/TPOL_time");
-	TH2I* TPOLHit_Timing_vs_sector  = (TH2I*)gDirectory->Get("TPOL/TPOL_time_per_sector");
+	TH1I* TPOLHit_Timing    = (TH1I*)gDirectory->Get("Physics Triggers/TPOL/TPOLHit time");
+	TH2I* TPOLHit_Timing_vs_sector  = (TH2I*)gDirectory->Get("Physics Triggers/TPOL/TPOLHit time per Layer");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

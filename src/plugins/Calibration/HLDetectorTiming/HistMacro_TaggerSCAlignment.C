@@ -1,7 +1,7 @@
-// hnamepath: /HLDetectorTiming/TRACKING/TAGM - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/TAGH - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/Tagger - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/Tagger - SC 1D Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGM - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGH - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - SC 1D Target Time
 
 {
 	//Goto Path
@@ -11,10 +11,10 @@
 	locDirectory->cd();
 
 	//Get Histograms
-    TH1I* Tagger_SC_1D = (TH1I*)gDirectory->Get("TRACKING/Tagger - SC 1D Target Time");
-    TH2I* Tagger_SC_2D = (TH2I*)gDirectory->Get("TRACKING/Tagger - SC Target Time");
-    TH2I* TAGH_SC_2D   = (TH2I*)gDirectory->Get("TRACKING/TAGH - SC Target Time");
-    TH2I* TAGM_SC_2D   = (TH2I*)gDirectory->Get("TRACKING/TAGM - SC Target Time");
+    TH1I* Tagger_SC_1D = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - SC 1D Target Time");
+    TH2I* Tagger_SC_2D = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - SC Target Time");
+    TH2I* TAGH_SC_2D   = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/TAGH - SC Target Time");
+    TH2I* TAGM_SC_2D   = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/TAGM - SC Target Time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

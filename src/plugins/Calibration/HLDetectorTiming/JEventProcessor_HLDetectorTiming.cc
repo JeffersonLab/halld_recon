@@ -21,7 +21,6 @@ using namespace jana;
 #include "CCAL/DCCALGeometry.h"
 #include "TRIGGER/DTrigger.h"
 #include "RF/DRFTime.h"
-#include "HistogramTools.h"
 
 #include "PAIR_SPECTROMETER/DPSCHit.h"
 #include "PAIR_SPECTROMETER/DPSHit.h"
@@ -115,6 +114,354 @@ JEventProcessor_HLDetectorTiming::~JEventProcessor_HLDetectorTiming()
 
 }
 
+
+//------------------
+// CreateHistograms
+//------------------
+void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
+{
+    int nBins = 2000;
+    float xMin = -500, xMax = 1500;
+	int nStraws = 3522;
+	int nTAGMColumns = 122; // 102 + 20 including 4 fully read out columns
+	int nTAGHCounters = 274;
+    int nPSCCounters = 16;
+	int nTOFCounters = 176;
+	int nSCCounters = 30;
+	int nTPOLSectors = 32;
+	unsigned int nTPOLsamples = 100; // CHECK ????
+
+	char name [200];
+	char title[500];
+
+    // We want to plot the delta t at the target between the SC hit and the tagger hits
+    // Some limits for these
+    float nBinsE = 160, EMin = 3.0, EMax = 12.0;
+
+	//TDirectory *curDir = gDirectory;
+    TDirectory *newDir = gDirectory->mkdir(dirname.c_str());
+
+    newDir->cd();
+	newDir->mkdir("CDC")->cd();
+
+	dCDCHitTimes[dirname] = new TH1F( "CDCHit time", "CDCHit time;t [ns];", nBins, xMin, xMax );
+	dCDCHitTimesPerStraw[dirname] = new TH2F( "CDCHit time per Straw", "Hit time for each CDC wire; t [ns]; CCDB Index",
+	                     					  750, -500, 1000, nStraws, 0.5, nStraws + 0.5);
+	                     					  
+    newDir->cd();
+	newDir->mkdir("FDC")->cd();
+
+	dFDCWireHitTimes[dirname] = new TH1F( "FDCHit Wire time", "FDCHit Wire time;t [ns];", nBins, xMin, xMax );
+	dFDCWireModuleHitTimes[dirname] = new TH2F( "FDCHit Wire time vs. module", "FDCHit Wire time; module/slot; t [ns];",
+	                     					    48, 0.5, 48.5, 400, -200, 600);
+	dFDCCathodeHitTimes[dirname] = new TH1F( "FDCHit Cathode time", "FDCHit Cathode time;t [ns];", nBins, xMin, xMax );
+			 
+    newDir->cd();
+	newDir->mkdir("SC")->cd();
+
+	dSCHitTimes[dirname] = new TH1F( "SCHit time", "SCHit time;t [ns];", nBins, xMin, xMax );
+	dSCADCHitTimes[dirname] = new TH1F( "SCHit ADC time", "SCHit ADC only time;t [ns];", nBins, xMin, xMax );
+	dSCTDCHitTimes[dirname] = new TH1F( "SCHit TDC time", "SCHit TDC only time;t [ns];", nBins, xMin, xMax );
+	dSCMatchedHitTimes[dirname] = new TH1F( "SCHit Matched time", "SCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax );
+	dSCADCTDCHitTimes[dirname] = new TH2F( "SCHit TDC_ADC Difference", "SC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]",
+	                     					    nSCCounters, 0.5, nSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+	dSCMatchedHitTimesPerSector[dirname] = new TH2F( "SCHit Matched time per Counter", "SCHit Matched ADC/TDC time; Sector ;t [ns]",
+	                     					    nSCCounters, 0.5, nSCCounters + 0.5, 50, -50, 50);
+
+    newDir->cd();
+	newDir->mkdir("TOF")->cd();
+
+	dTOFHitTimes[dirname] = new TH1F( "TOFHit time", "TOFHit time;t [ns];", nBins, xMin, xMax );
+	dTOFADCHitTimes[dirname] = new TH1F( "TOFHit ADC time", "TOFHit ADC only time;t [ns];", nBins, xMin, xMax );
+	dTOFTDCHitTimes[dirname] = new TH1F( "TOFHit TDC time", "TOFHit TDC only time;t [ns];", nBins, xMin, xMax );
+	dTOFMatchedHitTimes[dirname] = new TH1F( "TOFHit Matched time", "TOFHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax );
+	dTOFADCTDCHitTimes[dirname] = new TH2F( "TOFHit TDC_ADC Difference", "TOF #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]",
+	                     					    nTOFCounters, 0.5, nTOFCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+
+    newDir->cd();
+	newDir->mkdir("BCAL")->cd();
+
+	dBCALADCHitTimes[dirname] = new TH1F( "BCALHit ADC time", "BCALHit ADC time;t [ns];", nBins, xMin, xMax );
+	dBCALADCHitTimesUpstream[dirname] = new TH2F( "BCALHit Upstream Per Channel ADC Hit Time", 
+							"BCALHit Upstream Per Channel Hit Time; cellID; t_{ADC} [ns]", 768, 0.5, 768.5, 250, -50, 50 );
+	dBCALADCHitTimesDownstream[dirname] = new TH2F( "BCALHit Downstream Per Channel ADC Hit Time", 
+							"BCALHit Downstream Per Channel Hit Time; cellID; t_{ADC} [ns]", 768, 0.5, 768.5, 250, -50, 50 );
+	dBCALTDCHitTimes[dirname] = new TH1F( "BCALHit TDC time", "BCALHit TDC time;t [ns];", nBins, xMin, xMax );
+	dBCALTDCHitTimesUpstream[dirname] = new TH2F( "BCALHit Upstream Per Channel TDC Hit Time", 
+					"BCALHit Upstream Per Channel TDC Hit Time; cellID; t_{TDC} [ns]", 576, 0.5, 576.5, 350, -50, 300 );
+	dBCALTDCHitTimesDownstream[dirname] = new TH2F( "BCALHit Downstream Per Channel TDC Hit Time", 
+					"BCALHit Downstream Per Channel TDC Hit Time; cellID; t_{TDC} [ns]", 576, 0.5, 576.5, 350, -50, 300 );
+	dBCALADCTDCHitTimesUpstream[dirname] = new TH2F( "BCALHit Upstream Per Channel TDC-ADC Hit Time", 
+					"BCALHit Upstream Per Channel TDC-ADC Hit Time; cellID; t_{TDC} - t_{ADC} [ns]", 576, 0.5, 576.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF );
+	dBCALADCTDCHitTimesDownstream[dirname] = new TH2F( "BCALHit Downstream Per Channel TDC-ADC Hit Time", 
+					"BCALHit Downstream Per Channel TDC-ADC Hit Time; cellID; t_{TDC} - t_{ADC} [ns]", 576, 0.5, 576.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF );
+
+
+    newDir->cd();
+	newDir->mkdir("FCAL")->cd();
+
+	dFCALTotalEnergy[dirname] = new TH1F( "FCAL total energy", "FCAL total energy;FCAL energy [GeV]", 400, 0, 8000 );
+	dFCALHitTimes[dirname] = new TH1F( "FCALHit time", "FCALHit time;t [ns];", nBins, xMin, xMax );
+	dFCALHitOccupancy[dirname] = new TH2F( "FCALHit Occupancy", "FCAL Hit Occupancy; column; row",
+	                     				   61, -1.5, 59.5, 61, -1.5, 59.5);
+	dFCALHitLocalTimes[dirname] = new TH2F( "FCALHit Local Time", "FCAL Hit Local Time [ns]; column; row",
+	                     					61, -1.5, 59.5, 61, -1.5, 59.5);
+	dFCALHitTimesPerChannel[dirname] = new TH2F( "FCALHit Per Channel Time", "FCALHit time;t [ns]; CCDB Index",
+	                     					    2800, 0.5, 2800.+0.5, 250, -50, 50);
+
+    newDir->cd();
+	newDir->mkdir("DIRC")->cd();
+
+	dDIRCHitTimes[dirname] = new TH1F( "DIRCHit time", "DIRCHit time;t [ns];", nBins, xMin, xMax );
+	dDIRCHitTimesPerChannelNorth[dirname] = new TH2F( "DIRCHit North Per Channel TDC Hit Time", 
+													  "DIRCHit North Per Channel TDC Hit Time; channel ID; t_{TDC} [ns]",
+	                     					    	  DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+								                      (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
+	dDIRCHitTimesPerChannelSouth[dirname] = new TH2F( "DIRCHit South Per Channel TDC Hit Time", 
+													  "DIRCHit South Per Channel TDC Hit Time; channel ID; t_{TDC} [ns]",
+	                     					    	  DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+								                      (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
+
+	dDIRCDeltaTimePerChannelNorth[dirname] = new TH2F( "DIRCHit North Per Channel t_{DIRC} - t_{track}", 
+										"DIRCHit North Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns]", 
+										DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+													(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50 );
+	dDIRCDeltaTimePerChannelSouth[dirname] = new TH2F( "DIRCHit South Per Channel t_{DIRC} - t_{track}", 
+										"DIRCHit South Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns]", 
+										DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
+													(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
+
+
+
+    newDir->cd();
+	newDir->mkdir("TPOL")->cd();
+
+	dTPOLHitTimes[dirname] = new TH1F( "TPOLHit time", "TPOLHit time;t [ns];", nTPOLsamples+25,0.0,4.0*nTPOLsamples+100 );
+	dTPOLHitTimesPerSector[dirname] = new TH2F( "TPOLHit time per Layer", "TPOLHit time;t [ns]; CCDB Index",
+	                     					   nTPOLSectors,0.5,nTPOLSectors+0.5,nTPOLsamples+25,0.0,4.0*nTPOLsamples+100);
+
+    newDir->cd();
+	newDir->mkdir("FMWPC")->cd();
+
+	dFMWPCHitTimes[dirname] = new TH1F( "FMWPCHit time", "FMWPCHit time;t [ns];", nBins, xMin, xMax );
+	dFMWPCHitTimesPerLayer[dirname] = new TH2F( "FMWPCHit time per Layer", "FMWPCHit time;t [ns]; CCDB Index",
+	                     					   nBins, xMin, xMax, 1152, 0.5, 1152.5);
+
+    newDir->cd();
+	newDir->mkdir("CTOF")->cd();
+
+	dCTOFHitTimes[dirname] = new TH1F( "CTOFHit time", "CDCHit time;t [ns];", nBins, xMin, xMax );
+	dCTOFHitTimesPerLayer[dirname] = new TH2F( "CTOFHit time per Layer", "CTOFHit time;t [ns]; CCDB Index",
+	                     					  nBins, xMin, xMax, 16, 0.5, 16.5);
+
+    newDir->cd();
+	newDir->mkdir("PS")->cd();
+
+	dPSHitTimes[dirname] = new TH1F( "PSHit time", "PSHit time;t [ns];", nBins, xMin, xMax );
+	dPSHitTimesPerColumn[dirname] = new TH2F( "PSHit time per Column", "Hit time for each PS column; t [ns]; CCDB Index",
+	                     					  nBins, xMin, xMax, 145*2, 0.5, 145.*2.+0.5);
+
+    newDir->cd();
+	newDir->mkdir("TAGH")->cd();
+
+	dTAGHHitTimes[dirname] = new TH1F( "TAGHHit time", "TAGHHit time;t [ns];", nBins, xMin, xMax );
+	dTAGHADCHitTimes[dirname] = new TH1F( "TAGHHit ADC time", "TAGHHit ADC only time;t [ns];", nBins, xMin, xMax );
+	dTAGHTDCHitTimes[dirname] = new TH1F( "TAGHHit TDC time", "TAGHHit TDC only time;t [ns];", nBins, xMin, xMax );
+	dTAGHMatchedHitTimes[dirname] = new TH1F( "TAGHHit Matched time", "TAGHHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax );
+	dTAGHADCTDCHitTimes[dirname] = new TH2F( "TAGHHit TDC_ADC Difference", "TAGH #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]",
+	                     					    nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+	dTAGHMatchedHitTimesPerSector[dirname] = new TH2F( "TAGHHit Matched time per Counter", "TAGHHit Matched ADC/TDC time; Sector ;t [ns]",
+	                     					    nTAGHCounters, 0.5, nTAGHCounters + 0.5, 50, -50, 50);
+
+    newDir->cd();
+	newDir->mkdir("TAGM")->cd();
+
+	dTAGMHitTimes[dirname] = new TH1F( "TAGMHit time", "TAGMHit time;t [ns];", nBins, xMin, xMax );
+	dTAGMADCHitTimes[dirname] = new TH1F( "TAGMHit ADC time", "TAGMHit ADC only time;t [ns];", nBins, xMin, xMax );
+	dTAGMTDCHitTimes[dirname] = new TH1F( "TAGMHit TDC time", "TAGMHit TDC only time;t [ns];", nBins, xMin, xMax );
+	dTAGMMatchedHitTimes[dirname] = new TH1F( "TAGMHit Matched time", "TAGMHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax );
+	dTAGMADCTDCHitTimes[dirname] = new TH2F( "TAGMHit TDC_ADC Difference", "TAGM #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]",
+	                     					    nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+	dTAGMMatchedHitTimesPerSector[dirname] = new TH2F( "TAGMHit Matched time per Counter", "TAGMHit Matched ADC/TDC time; Sector ;t [ns]",
+	                     					    nTAGMColumns, 0.5, nTAGMColumns + 0.5, 50, -50, 50);
+
+    newDir->cd();
+	newDir->mkdir("PSC")->cd();
+
+	dPSCHitTimes[dirname] = new TH1F( "PSCHit time", "PSCHit time;t [ns];", nBins, xMin, xMax );
+	dPSCADCHitTimes[dirname] = new TH1F( "PSCHit ADC time", "PSCHit ADC only time;t [ns];", nBins, xMin, xMax );
+	dPSCTDCHitTimes[dirname] = new TH1F( "PSCHit TDC time", "PSCHit TDC only time;t [ns];", nBins, xMin, xMax );
+	dPSCMatchedHitTimes[dirname] = new TH1F( "PSCHit Matched time", "PSCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax );
+	dPSCADCTDCHitTimes[dirname] = new TH2F( "PSCHit TDC_ADC Difference", "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]",
+	                     					    nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+	dPSCMatchedHitTimesPerSector[dirname] = new TH2F( "PSCHit Matched time per Counter", "PSCHit Matched ADC/TDC time; Sector ;t [ns]",
+	                     					    nPSCCounters, 0.5, nPSCCounters + 0.5, 50, -50, 50);
+
+
+    newDir->cd();
+	newDir->mkdir("CCAL")->cd();
+
+	dCCALHitTimes[dirname] = new TH1F( "CCALHit time", "CCALHit time;t [ns];", nBins, xMin, xMax );
+	dCCALHitOccupancy[dirname] = new TH2F( "CCALHit Occupancy", "CCAL Hit Occupancy; column; row",
+	                     				   13, -1.5, 11.5, 13, -1.5, 11.5);
+	dCCALHitLocalTimes[dirname] = new TH2F( "CCALHit Local Time", "CCAL Hit Local Time [ns]; column; row",
+	                     					13, -1.5, 11.5, 13, -1.5, 11.5);
+	dCCALHitTimesPerChannel[dirname] = new TH2F( "CCALHit Per Channel Time", "CCALHit time;t [ns]; CCDB Index",
+	                     					    150, 0.5, 150+0.5, 13, -1.5, 11.5); 
+
+
+	if(DO_OPTIONAL) {
+		newDir->cd();
+		newDir->mkdir("TAGH_ADC_RF_Compare")->cd();
+	
+		for(int i=0; i<nTAGHCounters; i++) {
+            sprintf(name, "TAGH Counter ID %.3i", i);
+            sprintf(title, "TAGH Counter ID %i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", i);
+			dTAGHADCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );			
+		}
+	}
+	
+    newDir->cd();
+	newDir->mkdir("TAGH_TDC_RF_Compare")->cd();
+
+	for(int i=0; i<nTAGHCounters; i++) {
+		sprintf(name, "TAGH Counter ID %.3i", i);
+		sprintf(title, "TAGH Counter ID %i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", i);
+		dTAGHTDCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );			
+	}
+
+	if(DO_OPTIONAL) {
+		newDir->cd();
+		newDir->mkdir("TAGM_ADC_RF_Compare")->cd();
+	
+		for(int column=0,row=0; column<102; column++) {
+            sprintf(name, "TAGM Column %.3i Row %.1i", column, row);
+            sprintf(title, "TAGM Column %.3i Row %.1i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", column, row);
+			dTAGMADCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
+			
+			if( (column==9) || (column==27) || (column==81) || (column==99) ) {
+				for(column=1; column<5; column++) {
+					sprintf(name, "TAGM Column %.3i Row %.1i", column, row);
+					sprintf(title, "TAGM Column %.3i Row %.1i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", column, row);
+					dTAGMADCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
+				}
+				column = 0;
+			}
+		}
+	}
+	
+    newDir->cd();
+	newDir->mkdir("TAGM_TDC_RF_Compare")->cd();
+
+	for(int column=0,row=0; column<102; column++) {
+		sprintf(name, "TAGM Column %.3i Row %.1i", column, row);
+		sprintf(title, "TAGM Column %.3i Row %.1i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", column, row);
+		dTAGMTDCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
+	
+		if( (column==9) || (column==27) || (column==81) || (column==99) ) {
+			for(row=1; row<=5; row++) {
+				sprintf(name, "TAGM Column %.3i Row %.1i", column, row);
+				sprintf(title, "TAGM Column %.3i Row %.1i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", column, row);
+				dTAGMTDCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
+			}
+			row = 0;
+		}
+	}
+
+    newDir->cd();
+	newDir->mkdir("TRACKING")->cd();
+
+	dTaggerRFTime[dirname] = new TH1F( "Tagger - RFBunch 1D Time", "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries", 480, -30, 30 );
+	dTAGHRFTime[dirname] = new TH1F( "TAGH - RFBunch 1D Time", "TAGH - RFBunch Time; #Deltat_{TAGH - RFBunch} [ns]; Entries", 480, -30, 30 );
+	dTAGMRFTime[dirname] = new TH1F( "TAGM - RFBunch 1D Time", "TAGM - RFBunch Time; #Deltat_{TAGM - RFBunch} [ns]; Entries", 480, -30, 30 );
+	dTaggerRFEnergyTime[dirname] = new TH2F( "Tagger - RFBunch Time", "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Energy [GeV]",
+										NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax );
+	dTAGHRFCounterTime[dirname] = new TH2F( "TAGH - RFBunch Time", "#Deltat TAGH-RFBunch; Counter ID ;t_{TAGH} - t_{RFBunch} [ns]", 
+										nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME );
+	dTAGMRFCounterTime[dirname] = new TH2F( "TAGM - RFBunch Time", "#Deltat TAGM-RFBunch; Counter ID ;t_{TAGH} - t_{RFBunch} [ns]", 
+										nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME );
+	dTaggerSCTime[dirname] = new TH1F( "Tagger - SC 1D Target Time", "Tagger - SC Time at Target; #Deltat_{Tagger - SC} [ns]; Entries", 480, -30, 30 );
+	dTaggerSCEnergyTime[dirname] = new TH2F( "Tagger - SC Target Time", "Tagger - SC Target Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
+										NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax );
+	dTAGHSCCounterTime[dirname] = new TH2F( "TAGH - SC Target Time", "#Deltat TAGH-SC; Column ;t_{TAGM} - t_{SC @ target} [ns]", 
+										nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME );
+	dTAGMSCCounterTime[dirname] = new TH2F( "TAGM - SC Target Time", "#Deltat TAGM-SC; Column ;t_{TAGM} - t_{SC @ target} [ns]", 
+										nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME );
+	
+
+	dBCALShowerRFTime_NoTracks[dirname] = new TH1F( "BCAL - RF Time  (Neutral)", 
+										"t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dBCALShowerRFTimeVsEnergy_NoTracks[dirname] = new TH2F( "BCAL - RF Time vs. Energy (Neutral)", 
+										"Shower Energy [GeV]; t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries", 
+										100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dFCALShowerRFTime_NoTracks[dirname] = new TH1F( "FCAL - RF Time (Neutral)", 
+										"t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dFCALShowerRFTimeVsEnergy_NoTracks[dirname] = new TH2F( "FCAL - RF Time vs. Energy (Neutral)", 
+										"Shower Energy [GeV]; t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries", 
+										100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dCCALShowerRFTime_NoTracks[dirname] = new TH1F( "CCAL - RF Time vs. Energy (Neutral)", 
+										"t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries", 
+										2000, -50, 50 );
+	dCCALShowerRFTimeVsEnergy_NoTracks[dirname] = new TH2F( "CCAL - RF Time (Neutral)", 
+										"Shower Energy [GeV]; t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries", 
+										100, 0., 10., 500, -20, 20 );
+	dTOFShowerRFTime_NoTracks[dirname] = new TH1F( "TOF - RF Time (No Tracks)", 
+										"t_{TOF} - t_{RF} at Target (No Tracks); t_{TOF} - t_{RF} at Target [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+
+	dSCRFTime_AllHits[dirname] = new TH1F( "SC - RF Time (all)", "t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dSCRFTime[dirname] = new TH1F( "SC - RF Time", "t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dSCRFTimeVsSector[dirname] = new TH2F( "SC - RF Time vs. Sector", "t_{SC} - t_{RF} at Target; Sector; t_{SC} - t_{RF} at Target [ns];", 
+										30, 0.5, 30.5, 800, -20., 20. );
+// 	dBCALShowerRFTime_NoTracks[dirname] = new TH1F( "BCAL - RF Time vs. Energy (Neutral)", 
+// 										"t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries", 
+// 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dCDCSCTime[dirname] = new TH1F( "Earliest CDC Time Minus Matched SC Time", "Earliest CDC Time Minus Matched SC Time; t_{CDC} - t_{SC} [ns];", 
+										400, -50, 150 );
+	dTOFRFTime[dirname] = new TH1F( "TOF - RF Time", 
+										"t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dTOFSCTime[dirname] = new TH1F( "TOF - SC Target Time", 
+										"t_{TOF} - t_{SC} at Target; t_{TOF} - t_{SC} at Target [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dEarliestCDCTime[dirname] = new TH1F( "Earliest Flight-time Corrected CDC Time", 
+										"Earliest Flight-time corrected CDC Time; t_{CDC} [ns];", 
+										200, -50, 150 );
+	dEarliestFDCTime[dirname] = new TH1F( "Earliest Flight-time Corrected FDC Time", 
+										"Earliest Flight-time corrected FDC Time; t_{FDC} [ns];", 
+										200, -50, 150 );
+	dBCALShowerRFTime[dirname] = new TH1F( "BCAL - RF Time", "t_{BCAL} - t_{RF} at Target; t_{BCAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dBCALShowerSCTime[dirname] = new TH1F( "BCAL - SC Target Time", "t_{BCAL} - t_{SC} at Target; t_{BCAL} - t_{SC} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dBCALShowerSCTimeVsCorrection[dirname] = new TH2F( "BCAL - SC Target Time Vs Correction", 
+										"t_{BCAL} - t_{SC} at Target; Flight time [ns]; t_{BCAL} - t_{SC} [ns]", 
+										100, 0, 20, 50, -10, 10 );
+	dFCALShowerRFTime[dirname] = new TH1F( "FCAL - RF Time", "t_{FCAL} - t_{RF} at Target; t_{FCAL} - t_{RF} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+	dFCALShowerSCTime[dirname] = new TH1F( "FCAL - SC Target Time", "t_{FCAL} - t_{SC} at Target; t_{FCAL} - t_{SC} [ns]; Entries", 
+										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
+
+
+    newDir->cd();
+	newDir->mkdir("SC_Target_RF_Compare")->cd();
+
+	for(int i=0; i<nSCCounters; i++) {
+		sprintf(name, "Sector %.2i", i);
+		sprintf(title, "SC Sector %i t_{Target} - t_{RF}; t_{Target} - t_{RF} [ns]; Entries", i);
+		dSCTargetRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );			
+	}
+
+
+
+
+}
+
+
 //------------------
 // init
 //------------------
@@ -140,6 +487,11 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
     TRIGGER_MASK = 0;
     NO_START_COUNTER = 0;
 
+	INCLUDE_ALL_TRIGGERS = false;
+	INCLUDE_PS_TRIGGERS = false;
+	PRIMEX_TRIGGERS = false;
+	CPP_TRIGGERS = false;
+
     NO_TRACKS = false;
     NO_FIELD = true;
     CCAL_CALIB = false;
@@ -162,6 +514,11 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:TRIGGER_MASK", TRIGGER_MASK, "Set to >0 to override use of standard physics trigger");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:STRAIGHT_TRACK", STRAIGHT_TRACK, "Set to >0 to change better for straight track data (field-off, drift chambers-on)");
         gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_START_COUNTER", NO_START_COUNTER, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_ALL_TRIGGERS", INCLUDE_ALL_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_PS_TRIGGERS", INCLUDE_PS_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:PRIMEX_TRIGGERS", PRIMEX_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        gPARMS->SetDefaultParameter("HLDETECTORTIMING:CPP_TRIGGERS", CPP_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -200,6 +557,115 @@ jerror_t JEventProcessor_HLDetectorTiming::init(void)
 
     NBINS_RF_COMPARE = 200; MIN_RF_COMPARE = -2.2; MAX_RF_COMPARE = 2.2;
 
+
+	// we define here different cut functions which select out different classes of events
+	// all histograms will be created for each different class of events
+	// this was originally written to select out events from different
+	// trigger types, but the sky is the limit!
+	if(INCLUDE_ALL_TRIGGERS) {
+		dCutFunctions["All Events"] = [](JEventLoop *loop) { return true; };
+	}
+	dCutFunctions["Physics Triggers"] = [](JEventLoop *loop) { 
+			const DTrigger* locTrigger = NULL; 
+    		loop->GetSingle(locTrigger); 
+			if(!locTrigger->Get_IsPhysicsEvent()) return false; else return true; 
+	};
+	if(INCLUDE_PS_TRIGGERS) {
+		dCutFunctions["PS Triggers"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 3)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+	}
+	if(PRIMEX_TRIGGERS) {
+		// currently based on 2022-08 run period
+		// see, e.g. https://logbooks.jlab.org/entry/4039521
+		// note that the "physics trigger" in this case is the CCAL + FCAL trigger
+		dCutFunctions["CCAL+FCAL"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (0x1)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["FCAL (E>3.5 GeV)"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 1)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["FCAL (E>0.5 GeV)"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 2)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["CCAL"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 10)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+
+	}
+	if(CPP_TRIGGERS) {
+		// based on ???
+		dCutFunctions["FCAL"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (0x1)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["FCAL+BCAL"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 1)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["TOF"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 2)) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+		dCutFunctions["FCAL+CTOF"] = [](JEventLoop *loop) { 
+				const DTrigger* locTrigger = NULL; 
+				loop->GetSingle(locTrigger); 
+				int trig_bit = ((locTrigger->Get_L1TriggerBits() & (0x1)) && (locTrigger->Get_L1FrontPanelTriggerBits() & (1 << 5))) ? 1 : 0;
+				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
+		};
+
+	}
+	
+	// Fill histograms in different directories
+	TDirectory *mainDir = gDirectory;
+    TDirectory *timingDir = gDirectory->mkdir("HLDetectorTiming");
+    timingDir->cd();
+
+	// book event-wide histograms for monitoring
+	
+	dHistBeamCurrent = new TH1F("Beam Current", "Beam Current; Beam Current [nA]; Entries", 100, 0, 200);
+	dHistBeamEvents = new TH1F("Beam Events", "Beam On Events (0 = no beam, 1 = beam > 10nA)", 2, -0.5, 1.5);
+
+	// book the histograms for each class of events
+	/** C++17
+    for (const auto& [key, ignore] : dCutFunctions) {
+		CreateHistograms(key);
+		timingDir->cd();
+	}
+	**/
+	
+	for (auto const& cut : dCutFunctions) {
+		const string &key = cut.first;
+		CreateHistograms(key);
+		timingDir->cd();
+	}
+
+
+    // back to main dir
+    mainDir->cd();
+
+
     return NOERROR;
 }
 
@@ -213,6 +679,9 @@ jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t r
     DGeometry* geom = app->GetDGeometry(runnumber);
     geom->GetTargetZ(Z_TARGET);
 
+// 	if(dCutFunctions.size() == 0) {
+// 	}
+
     return NOERROR;
 }
 
@@ -221,25 +690,10 @@ jerror_t JEventProcessor_HLDetectorTiming::brun(JEventLoop *eventLoop, int32_t r
 //------------------
 jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
-    // select events with physics events, i.e., not LED and other front panel triggers
-    vector<const DTPOLHit *> tpolHitVector;
-    loop->Get(tpolHitVector);
-    
-    //if (tpolHitVector.size() > 0) cout<<tpolHitVector.size()<<endl;
-    //Loop over TPOL hits. Not in physics event trigger.
-    //If loop over below, size of tpolHitVector is always 0. 
-    //Might want check for the specific trigger implemented.
-    for (unsigned int j = 0; j < tpolHitVector.size(); j++){
-        if (tpolHitVector[j]->w_samp1 > 160.0 || tpolHitVector[j]->pulse_peak < 60.0) continue;
-        unsigned int NSECTORS = 32;
-        unsigned int nsamples = tpolHitVector[j]->nsamples;
-        Fill2DHistogram("HLDetectorTiming","TPOL","TPOL_time_per_sector",tpolHitVector[j]->sector,tpolHitVector[j]->t_proxy,"TPOL time vs. sector; Sector; Time [ns]",NSECTORS,0.5,NSECTORS+0.5,nsamples+25,0.0,4.0*nsamples+100);
-
-        Fill1DHistogram("HLDetectorTiming","TPOL","TPOL_time",tpolHitVector[j]->t_proxy,"TPOL time; Time [ns]; Entries",nsamples+25,0.0,4.0*nsamples+100);
-    }
 
    DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
    //   DGeometry* geom = app->GetDGeometry(loop->GetJEvent().GetRunNumber());
+   
    // Check for magnetic field
    const DMagneticFieldMap *bfield=app->GetBfield(loop->GetJEvent().GetRunNumber());
    bool locIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(bfield) != NULL);
@@ -251,7 +705,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
       return NOERROR;
 
-    
+	/*    
 	// allow the user to select which trigger select events to use for calibrations
 	if( TRIGGER_MASK > 0) {
 	    if( !((locTrigger->Get_L1TriggerBits())&TRIGGER_MASK) )
@@ -261,7 +715,15 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     	if(!locTrigger->Get_IsPhysicsEvent())
 	    	return NOERROR;
 	}
-    
+	*/
+	
+	// COMMENT
+	map<string, bool> passed_cuts;
+	for (auto const& cut : dCutFunctions) {
+		const string &key = cut.first;
+		passed_cuts[key] = cut.second(loop);
+	}
+	
     // Get the particleID object for each run
     vector<const DParticleID *> locParticleID_algos;
     loop->Get(locParticleID_algos);
@@ -277,8 +739,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(locRFTimes);      // make sure brun() gets called for this factory!
     auto dRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
 
-    vector<const DDIRCGeometry*> locDIRCGeometryVec;
-    loop->Get(locDIRCGeometryVec);
+//     vector<const DDIRCGeometry*> locDIRCGeometryVec;
+//     loop->Get(locDIRCGeometryVec);
     // next line commented out to supress warning
     //    const DDIRCGeometry* locDIRCGeometry = locDIRCGeometryVec[0];
 
@@ -289,35 +751,32 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
     loop->Get(epicsValues);
+    
+    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
     for(unsigned int j = 0; j < epicsValues.size(); j++){
         const DEPICSvalue *thisValue = epicsValues[j];
         if (strcmp((thisValue->name).c_str(), "IBCAD00CRCUR6") == 0){
             BEAM_CURRENT = thisValue->fval;
-            Fill1DHistogram("HLDetectorTiming", "", "Beam Current",
-                    BEAM_CURRENT,
-                    "Beam Current; Beam Current [nA]; Entries",
-                    100, 0, 200);
+            dHistBeamCurrent->Fill(BEAM_CURRENT);
         }
-        //cout << "EPICS Name " <<  (thisValue->name).c_str() << " Value " << thisValue->fval << endl;
     }
+
     // There is a caveat here when running multithreaded
     // Another thread might be the one to catch the EPICS event
     // and there is no way to reject events that may have come from earilier
     // Expect number of entries in histograms to vary slightly over the same file with many threads
     if (BEAM_CURRENT < 10.0) {
-        Fill1DHistogram("HLDetectorTiming", "" , "Beam Events",
-                0, "Beam On Events (0 = no beam, 1 = beam > 10nA)",
-                2, -0.5, 1.5);
+    	dHistBeamEvents->Fill(0);
         if (REQUIRE_BEAM){
+        	japp->RootUnLock(); //RELEASE ROOT LOCK
             return NOERROR; // Skip events where we can't verify the beam current
         }
     }
     else{
-        Fill1DHistogram("HLDetectorTiming", "" , "Beam Events",
-                1, "Beam On Events (0 = no beam, 1 = beam > 10nA)",
-                2, -0.5, 1.5);
+    	dHistBeamEvents->Fill(1);
         fBeamEventCounter++;
     }
+    japp->RootUnLock(); //RELEASE ROOT LOCK
 
     if (fBeamEventCounter >= BEAM_EVENTS_TO_KEEP) { // Able to specify beam ON events instead of just events
         cout<< "Maximum number of Beam Events reached" << endl;
@@ -325,6 +784,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         return NOERROR;
     }
 
+    
     // Get the objects from the event loop
     vector<const DCDCHit *> cdcHitVector;
     vector<const DFDCHit *> fdcHitVector;
@@ -341,7 +801,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     vector<const DPSCHit *> pscHitVector;
     vector<const DFMWPCHit *> fmwpcHitVector;
     vector<const DCTOFHit *> ctofHitVector;
-
+    vector<const DTPOLHit *> tpolHitVector;
 
     loop->Get(cdcHitVector);
     loop->Get(fdcHitVector);
@@ -360,176 +820,269 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(taghHitVector, "Calib");
     loop->Get(fmwpcHitVector);
     loop->Get(ctofHitVector);
+    loop->Get(tpolHitVector);
+
+    vector<const DNeutralShower *> neutralShowerVector;
+    loop->Get(neutralShowerVector);
+    vector<const DCCALShower *> ccalShowerVector;
+    loop->Get(ccalShowerVector);
+    vector<const DChargedTrack *> chargedTrackVector;
+    loop->Get(chargedTrackVector);
+
     
+   
+
+	// extract the FCAL Geometry
+	vector<const DFCALGeometry*> fcalGeomVect;
+	loop->Get( fcalGeomVect );
+	if (fcalGeomVect.size() < 1){
+        cout << "FCAL Geometry not available?" << endl;
+        return OBJECT_NOT_AVAILABLE;
+	}
+	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
+
 
     // TTabUtilities object used for RF time conversion
     const DTTabUtilities* locTTabUtilities = NULL;
     loop->GetSingle(locTTabUtilities);
 
     unsigned int i = 0;
-    int nBins = 2000;
-    float xMin = -500, xMax = 1500;
-    for (i = 0; i < cdcHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "CDC", "CDCHit time", cdcHitVector[i]->t, 
-                "CDCHit time;t [ns];", nBins, xMin, xMax);
-        if(DO_VERIFY || DO_CDC_TIMING){
-            int nStraws = 3522;
-            Fill2DHistogram("HLDetectorTiming", "CDC", "CDCHit time per Straw Raw", 
-                    cdcHitVector[i]->t, GetCCDBIndexCDC(cdcHitVector[i]),
-                    "Hit time for each CDC wire; t [ns]; CCDB Index",
-                    750, -500, 1000, nStraws, 0.5, nStraws + 0.5);
-        }
+
+	// retrieve RF bunch information
+	const DEventRFBunch *thisRFBunch = NULL;
+    
+    if(NO_TRACKS) {
+	    // If the drift chambers are turned off, we'll need to use the neutral showers to choose the RF
+	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
+    } else {
+        if(NO_START_COUNTER) {
+		    loop->GetSingle(thisRFBunch);   // if there's no start counter, then use the normal RF times 
+		} else {
+	    	loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
+	    }
     }
 
+
+    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+
+	// Start by filling individual hit times
+	// 
+	// The detectors with both TDCs and ADCs need these two to be aligned
+    // These detectors are the SC,TAGM,TAGH,TOF,PSC
+
+    for (i = 0; i < cdcHitVector.size(); i++) {
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+		
+			dCDCHitTimes[key]->Fill(cdcHitVector[i]->t);
+			if(DO_VERIFY || DO_CDC_TIMING){
+				dCDCHitTimesPerStraw[key]->Fill(cdcHitVector[i]->t, GetCCDBIndexCDC(cdcHitVector[i]));
+			}
+		}
+	}
+    
     for (i = 0; i < fdcHitVector.size(); i++){
-        if(fdcHitVector[i]->type == 0 ) {
-            Fill1DHistogram ("HLDetectorTiming", "FDC", "FDCHit Wire time", fdcHitVector[i]->t,
-                    "FDCHit Wire time;t [ns];", nBins, xMin, xMax);
-	    // Keep track of module/crate level shifts
-	    // two F1TDC modules per wire layer
-	    int module = 2 * fdcHitVector[i]->gLayer - 1;  // layers start counting at 1
-	    if(fdcHitVector[i]->element > 48)
-		    module++;
-	    Fill2DHistogram ("HLDetectorTiming", "FDC", "FDCHit Wire time vs. module",
-			     module, fdcHitVector[i]->t,
-			     "FDCHit Wire time; module/slot; t [ns];", 
-			     48, 0.5, 48.5, 400, -200, 600);
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
-        }
-        else{
-            Fill1DHistogram ("HLDetectorTiming", "FDC", "FDCHit Cathode time", fdcHitVector[i]->t,
-                    "FDCHit Cathode time;t [ns];", nBins, xMin, xMax);
-        }
-    }
+			if(fdcHitVector[i]->type == 0 ) {
+				dFDCWireHitTimes[key]->Fill(fdcHitVector[i]->t);
 
-	if(!NO_START_COUNTER) {
-		for (i = 0; i < scHitVector.size(); i++){
-			//if(!scHitVector[i]->has_fADC || !scHitVector[i]->has_TDC) continue;
-			Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit time", scHitVector[i]->t,
-					"SCHit time;t [ns];", nBins, xMin, xMax);
+				// Keep track of module/crate level shifts
+				// two F1TDC modules per wire layer
+				int module = 2 * fdcHitVector[i]->gLayer - 1;  // layers start counting at 1
+				if(fdcHitVector[i]->element > 48)
+					module++;
+					
+				dFDCWireModuleHitTimes[key]->Fill(module, fdcHitVector[i]->t);
+			}
+			else{
+				dFDCCathodeHitTimes[key]->Fill(fdcHitVector[i]->t);
+			}
+		}
+	}
+	    
+    for (unsigned int j = 0; j < tpolHitVector.size(); j++){
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+
+			if (tpolHitVector[j]->w_samp1 > 160.0 || tpolHitVector[j]->pulse_peak < 60.0) continue;  // pick good events
+			//unsigned int nsamples = tpolHitVector[j]->nsamples;
+			
+			dTPOLHitTimes[key]->Fill(tpolHitVector[j]->t_proxy);
+			dTPOLHitTimesPerSector[key]->Fill(tpolHitVector[j]->sector,tpolHitVector[j]->t_proxy);
 		}
 	}
 
-    for (i = 0; i < dircPmtHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit time", dircPmtHitVector[i]->t,
-                "DIRCHit time;t [ns];", nBins, xMin, xMax);
-                
-        if(dircPmtHitVector[i]->ch < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
-            Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit North Per Channel TDC Hit Time",
-                            dircPmtHitVector[i]->ch, dircPmtHitVector[i]->t,
-                            "DIRCHit North Per Channel TDC Hit Time; channel ID; t_{TDC} [ns] ",
-                            DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
-                            (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
-        } else {
-            Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit South Per Channel TDC Hit Time",
-                            dircPmtHitVector[i]->ch-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, dircPmtHitVector[i]->t,
-                            "DIRCHit South Per Channel TDC Hit Time; channel ID; t_{TDC} [ns] ",
-                            DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
-                            (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 500, -50, 150);
-        }
-    }
-    
-    for (i = 0; i < bcalUnifiedHitVector.size(); i++){
-        int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
-        // There is one less layer of TDCs so the numbering relects this
-        int the_tdc_cell = (bcalUnifiedHitVector[i]->module - 1) * 12 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
-        // Get the underlying associated objects
-        const DBCALHit * thisADCHit;
-        const DBCALTDCHit * thisTDCHit;
-        bcalUnifiedHitVector[i]->GetSingle(thisADCHit);
-        bcalUnifiedHitVector[i]->GetSingle(thisTDCHit);
+	if(!NO_START_COUNTER) {
+		for (i = 0; i < scHitVector.size(); i++) {
+			for (auto const& cut : passed_cuts) {
+				const string &key = cut.first;
+				bool passed = cut.second;
+				if(!passed) continue;
 
-        if (thisADCHit != NULL){ //This should never be NULL but might as well check
-            Fill1DHistogram ("HLDetectorTiming", "BCAL", "BCALHit ADC time", thisADCHit->t,
-                    "BCALHit ADC time; t_{ADC} [ns]; Entries", nBins, xMin, xMax);
-
-            //if (DO_OPTIONAL){
-                if (bcalUnifiedHitVector[i]->end == 0){
-                    Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Upstream Per Channel ADC Hit Time",
-                            the_cell, thisADCHit->t,
-                            "BCALHit Upstream Per Channel Hit Time; cellID; t_{ADC} [ns] ",
-                            768, 0.5, 768.5, 250, -50, 50);
-                }
-                else{
-                    Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Downstream Per Channel ADC Hit Time",
-                            the_cell, thisADCHit->t,
-                            "BCALHit Downstream Per Channel Hit Time; cellID; t_{ADC} [ns] ",
-                            768, 0.5, 768.5, 250, -50, 50);
-                }
-                //}
-        }
-
-        if (thisTDCHit != NULL){
-            Fill1DHistogram ("HLDetectorTiming", "BCAL", "BCALHit TDC time", thisTDCHit->t,
-                    "BCALHit TDC time; t_{TDC} [ns]; Entries", nBins, xMin, xMax);
-
-            if (DO_OPTIONAL){
-                if (bcalUnifiedHitVector[i]->end == 0){
-                    Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Upstream Per Channel TDC Hit Time",
-                            the_tdc_cell, thisTDCHit->t,
-                            "BCALHit Upstream Per Channel TDC Hit Time; cellID; t_{TDC} [ns] ",
-                            576, 0.5, 576.5, 350, -50, 300);
-                }
-                else{
-                    Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Downstream Per Channel TDC Hit Time",
-                            the_tdc_cell, thisTDCHit->t,
-                            "BCALHit Downstream Per Channel TDC Hit Time; cellID; t_{TDC} [ns] ",
-                            576, 0.5, 576.5, 350, -50, 300);
-                }
-            }
-        }
-
-        if (thisADCHit != NULL && thisTDCHit != NULL){
-            if (bcalUnifiedHitVector[i]->end == 0){
-                Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Upstream Per Channel TDC-ADC Hit Time",
-                        the_tdc_cell, thisTDCHit->t - thisADCHit->t,
-                        "BCALHit Upstream Per Channel TDC-ADC Hit Time; cellID; t_{TDC} - t_{ADC} [ns] ",
-                        576, 0.5, 576.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-            }
-            else{
-                Fill2DHistogram ("HLDetectorTiming", "BCAL", "BCALHit Downstream Per Channel TDC-ADC Hit Time",
-                        the_tdc_cell, thisTDCHit->t - thisADCHit->t,
-                        "BCALHit Downstream Per Channel TDC-ADC Hit Time; cellID; t_{TDC} - t_{ADC} [ns] ",
-                        576, 0.5, 576.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-            }
-        }
-    }
+				//if(!scHitVector[i]->has_fADC || !scHitVector[i]->has_TDC) continue;
+				dSCHitTimes[key]->Fill(scHitVector[i]->t);
+			
+				// Break these histograms up into hits coming from the TDC and hits coming from the ADC
+				const DSCHit *thisSCHit = scHitVector[i];
+				if (thisSCHit->has_fADC && !thisSCHit->has_TDC){
+					dSCADCHitTimes[key]->Fill(scHitVector[i]->t_fADC);
+							
+					// Manual loop over hits to match out of time
+					for (auto hit = scHitVector.begin(); hit != scHitVector.end(); hit++){
+						if ((*hit)->has_TDC && !(*hit)->has_fADC){
+							if (scHitVector[i]->sector == (*hit)->sector){
+								dSCADCTDCHitTimes[key]->Fill(scHitVector[i]->sector, 
+															 scHitVector[i]->t_TDC - scHitVector[i]->t_fADC);
+							}
+						}
+					}
+				}
+				else if (!thisSCHit->has_fADC && thisSCHit->has_TDC){
+					dSCTDCHitTimes[key]->Fill(scHitVector[i]->t_TDC);
+				}
+				else{
+					dSCMatchedHitTimes[key]->Fill(scHitVector[i]->t);
+					dSCADCHitTimes[key]->Fill(scHitVector[i]->t_fADC);
+					dSCTDCHitTimes[key]->Fill(scHitVector[i]->t_TDC);
+					
+					dSCADCTDCHitTimes[key]->Fill(scHitVector[i]->sector, scHitVector[i]->t_TDC - scHitVector[i]->t_fADC);
+					dSCMatchedHitTimesPerSector[key]->Fill(scHitVector[i]->sector, scHitVector[i]->t);
+				}
+			}
+		}
+	}
+	
 
     for (i = 0; i < tofHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit time", tofHitVector[i]->t,
-                "TOFHit time;t [ns];", nBins, xMin, xMax);
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+
+			const DTOFHit *thisTOFHit = tofHitVector[i];
+
+			dTOFHitTimes[key]->Fill(tofHitVector[i]->t);
+				
+			if(thisTOFHit->has_fADC && !thisTOFHit->has_TDC){
+				dTOFADCHitTimes[key]->Fill(tofHitVector[i]->t);
+				
+				// Manual loop over hits to match out of time
+				for (auto hit = tofHitVector.begin(); hit != tofHitVector.end(); hit++){
+					if ((*hit)->has_TDC && !(*hit)->has_fADC){
+						if (GetCCDBIndexTOF(tofHitVector[i]) == GetCCDBIndexTOF(*hit)){
+							dTOFADCTDCHitTimes[key]->Fill(GetCCDBIndexTOF(tofHitVector[i]), tofHitVector[i]->t_TDC - tofHitVector[i]->t_fADC);
+						}
+					}
+				}
+			}
+			else if (!thisTOFHit->has_fADC && thisTOFHit->has_TDC){
+				dTOFTDCHitTimes[key]->Fill(tofHitVector[i]->t_TDC);
+			}
+			else{
+				dTOFMatchedHitTimes[key]->Fill(tofHitVector[i]->t);
+				dTOFADCHitTimes[key]->Fill(tofHitVector[i]->t_fADC);
+				dTOFTDCHitTimes[key]->Fill(tofHitVector[i]->t_TDC);
+
+				dTOFADCTDCHitTimes[key]->Fill(GetCCDBIndexTOF(tofHitVector[i]), tofHitVector[i]->t_TDC - tofHitVector[i]->t_fADC);
+			}
+		}
+    }
+    
+	
+    for (i = 0; i < dircPmtHitVector.size(); i++){
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dDIRCHitTimes[key]->Fill(dircPmtHitVector[i]->t);
+			
+			if(dircPmtHitVector[i]->ch < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
+				dDIRCHitTimesPerChannelNorth[key]->Fill(dircPmtHitVector[i]->ch, dircPmtHitVector[i]->t);
+			} else {
+				dDIRCHitTimesPerChannelNorth[key]->Fill(dircPmtHitVector[i]->ch-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 
+														dircPmtHitVector[i]->t);
+			}
+		}
+	}
+	    
+    for (i = 0; i < bcalUnifiedHitVector.size(); i++){
+ 		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+		    int the_cell = (bcalUnifiedHitVector[i]->module - 1) * 16 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
+			// There is one fewer layer of TDCs so the numbering relects this
+			int the_tdc_cell = (bcalUnifiedHitVector[i]->module - 1) * 12 + (bcalUnifiedHitVector[i]->layer - 1) * 4 + bcalUnifiedHitVector[i]->sector;
+
+			// Get the underlying associated objects
+			const DBCALHit * thisADCHit;
+			const DBCALTDCHit * thisTDCHit;
+			bcalUnifiedHitVector[i]->GetSingle(thisADCHit);
+			bcalUnifiedHitVector[i]->GetSingle(thisTDCHit);
+
+			if (thisADCHit != NULL) { //This should never be NULL but might as well check
+				dBCALADCHitTimes[key]->Fill(thisADCHit->t);
+
+				if (bcalUnifiedHitVector[i]->end == 0) {
+					dBCALADCHitTimesUpstream[key]->Fill(the_cell, thisADCHit->t);
+				} else {
+					dBCALADCHitTimesDownstream[key]->Fill(the_cell, thisADCHit->t);
+				}
+			}
+
+			if (thisTDCHit != NULL){
+				dBCALADCHitTimes[key]->Fill(thisTDCHit->t);
+
+				if (DO_OPTIONAL){
+					if (bcalUnifiedHitVector[i]->end == 0) {
+						dBCALADCHitTimesUpstream[key]->Fill(the_cell, thisTDCHit->t);
+					} else {
+						dBCALADCHitTimesDownstream[key]->Fill(the_cell, thisTDCHit->t);
+					}
+				}
+			}
+
+			if (thisADCHit != NULL && thisTDCHit != NULL){
+				if (bcalUnifiedHitVector[i]->end == 0) {
+					dBCALADCTDCHitTimesUpstream[key]->Fill(the_tdc_cell, thisTDCHit->t - thisADCHit->t);
+				} else {
+					dBCALADCTDCHitTimesDownstream[key]->Fill(the_tdc_cell, thisTDCHit->t - thisADCHit->t);
+				}
+			}
+    	}
     }
 
-    for (i = 0; i < fmwpcHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "FMWPC", "FMWPCHit time", fmwpcHitVector[i]->t,
-                "FMWPCHit time;t [ns];", nBins, xMin, xMax);
 
-        Fill2DHistogram ("HLDetectorTiming", "FMWPC", "FMWPCHit time per Layer", 
-        		fmwpcHitVector[i]->t, 144*(fmwpcHitVector[i]->layer-1) + fmwpcHitVector[i]->wire,
-                "FMWPCHit time;t [ns]; CCDB Index", nBins, xMin, xMax, 1152, 0.5, 1152.5);
-		
+    for (i = 0; i < fmwpcHitVector.size(); i++){
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dFMWPCHitTimes[key]->Fill(fmwpcHitVector[i]->t);
+			dFMWPCHitTimesPerLayer[key]->Fill(fmwpcHitVector[i]->t, 144*(fmwpcHitVector[i]->layer-1) + fmwpcHitVector[i]->wire);		
+    	}
     }
     
     for (i = 0; i < ctofHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "CTOF", "CTOFHit time", ctofHitVector[i]->t,
-                "CTOFHit time;t [ns];", nBins, xMin, xMax);
-
-        Fill2DHistogram ("HLDetectorTiming", "CTOF", "CTOFHit time per Layer", 
-        		ctofHitVector[i]->t, 2*(ctofHitVector[i]->bar-1) + ctofHitVector[i]->end+1,
-                "CTOFHit time;t [ns]; CCDB Index", nBins, xMin, xMax, 16, 0.5, 16.5);
-		
-    }
-
-
-    for (i = 0; i < psHitVector.size(); i++){
-	int nColumns = 145*2;
-        Fill1DHistogram ("HLDetectorTiming", "PS", "PSHit time", psHitVector[i]->t, 
-                "PSHit time;t [ns];", nBins, xMin, xMax);
-
-	Fill2DHistogram("HLDetectorTiming", "PS", "PSHit time per Column", 
-			psHitVector[i]->t, psHitVector[i]->column+psHitVector[i]->arm*nColumns/2, //GetCCDBIndexPS(psHitVector[i]),
-			"Hit time for each PS column; t [ns]; CCDB Index",
-			nBins, xMin, xMax, nColumns, 0.5, nColumns + 0.5);
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dCTOFHitTimes[key]->Fill(ctofHitVector[i]->t);
+			dCTOFHitTimesPerLayer[key]->Fill(ctofHitVector[i]->t, 2*(ctofHitVector[i]->bar-1) + ctofHitVector[i]->end+1);		
+    	}
     }
 
     // from FCAL_online:  find energy weighted average time for FCAL hits, useful as a t0
@@ -541,499 +1094,332 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     }
     fcalHitEwtT /= fcalHitETot;
     
-	// extract the FCAL Geometry
-	vector<const DFCALGeometry*> fcalGeomVect;
-	loop->Get( fcalGeomVect );
-	if (fcalGeomVect.size() < 1){
-        cout << "FCAL Geometry not available?" << endl;
-        return OBJECT_NOT_AVAILABLE;
+    // FCAL energy
+	for (auto const& cut : passed_cuts) {
+		const string &key = cut.first;
+		bool passed = cut.second;
+		if(!passed) continue;
+
+		dFCALTotalEnergy[key]->Fill(fcalHitETot);
 	}
-	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
-
+	    
+	// FCAL timing
     for (i = 0; i < fcalHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCALHit time", fcalHitVector[i]->t,
-                         "FCALHit time;t [ns];", nBins, xMin, xMax);
-        
-        Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Occupancy",
-                        fcalHitVector[i]->row, fcalHitVector[i]->column, 
-                        "FCAL Hit Occupancy; column; row",
-                        61, -1.5, 59.5, 61, -1.5, 59.5);
-        double locTime = ( fcalHitVector[i]->t - fcalHitEwtT )*k_to_nsec;
-        //Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
-        Fill2DWeightedHistogram("HLDetectorTiming", "FCAL", "FCALHit Local Time",
-                                fcalHitVector[i]->row, fcalHitVector[i]->column, locTime,
-                                "FCAL Hit Local Time [ns]; column; row",
-                                61, -1.5, 59.5, 61, -1.5, 59.5);
-        
-        if (DO_OPTIONAL){
-            Fill2DHistogram("HLDetectorTiming", "FCAL", "FCALHit Per Channel Time",
-                            fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t,
-                            "FCAL Per Channel Hit time; channel; t [ns]",
-                            fcalGeom.numChannels(), 0.5, fcalGeom.numChannels() + 0.5, 250, -50, 50); 
-        }
-    }
+		double locTime = ( fcalHitVector[i]->t - fcalHitEwtT )*k_to_nsec; // CHECK
 
-    Fill1DHistogram ("HLDetectorTiming", "FCAL", "FCAL total energy", fcalHitETot,
-                         "FCAL total energy;", 400, 0, 8000);
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dFCALHitTimes[key]->Fill(fcalHitVector[i]->t);
+			dFCALHitOccupancy[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column);
+			dFCALHitLocalTimes[key]->Fill(fcalHitVector[i]->row, fcalHitVector[i]->column, locTime);
+			if(DO_OPTIONAL) {
+				dFCALHitTimesPerChannel[key]->Fill(fcalGeom.channel(fcalHitVector[i]->row, fcalHitVector[i]->column), fcalHitVector[i]->t);
+			}
+		}
+    }
 
     if(CCAL_CALIB) {
-      // Do the same thing for the CCAL as a start
-      double ccalHitETot = 0;
-      double ccalHitEwtT = 0;
-      for (i = 0; i < ccalHitVector.size(); i++){
-	ccalHitETot += ccalHitVector[i]->E;
-	ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
-      }
-      ccalHitEwtT /= ccalHitETot;
-    
-      // extract the CCAL Geometry
-      vector<const DCCALGeometry*> ccalGeomVect;
-      loop->Get( ccalGeomVect );
-      if (ccalGeomVect.size() < 1){
-	cout << "CCAL Geometry not available?" << endl;
-      } else {
-        for (i = 0; i < ccalHitVector.size(); i++){
-	  Fill1DHistogram ("HLDetectorTiming", "CCAL", "CCALHit time", ccalHitVector[i]->t,
-			   "CCALHit time;t [ns];", nBins, xMin, xMax);
-	  // next line commented out to suppress warning
-	  //            const DCCALGeometry& ccalGeom = *(ccalGeomVect[0]);
-	  for (i = 0; i < ccalHitVector.size(); i++) {
-	    Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Occupancy",
-			    ccalHitVector[i]->row, ccalHitVector[i]->column, 
-			    "CCAL Hit Occupancy; column; row",
-			    13, -1.5, 11.5, 13, -1.5, 11.5);
-	    double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
-	    //Fill2DHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-	    Fill2DWeightedHistogram("HLDetectorTiming", "CCAL", "CCALHit Local Time",
-				    ccalHitVector[i]->row, ccalHitVector[i]->column, locTime,
-				    "CCAL Hit Local Time [ns]; column; row",
-				    13, -1.5, 11.5, 13, -1.5, 11.5);
-	  }
-        }
-      }
+		// Do the same thing for the CCAL as a start
+		double ccalHitETot = 0;
+		double ccalHitEwtT = 0;
+		for (i = 0; i < ccalHitVector.size(); i++){
+			ccalHitETot += ccalHitVector[i]->E;
+			ccalHitEwtT += ccalHitVector[i]->E * ccalHitVector[i]->t;
+		}
+		ccalHitEwtT /= ccalHitETot;
+
+		for (i = 0; i < ccalHitVector.size(); i++){
+			double locTime = ( ccalHitVector[i]->t - ccalHitEwtT )*k_to_nsec;
+
+			for (auto const& cut : passed_cuts) {
+				const string &key = cut.first;
+				bool passed = cut.second;
+				if(!passed) continue;
+	
+			
+				dCCALHitTimes[key]->Fill(ccalHitVector[i]->t);
+				dCCALHitOccupancy[key]->Fill(ccalHitVector[i]->row, ccalHitVector[i]->column);
+				dCCALHitLocalTimes[key]->Fill(ccalHitVector[i]->row, ccalHitVector[i]->column, locTime);
+				if(DO_OPTIONAL) {
+					dCCALHitTimesPerChannel[key]->Fill(12.*ccalHitVector[i]->row+ccalHitVector[i]->column, ccalHitVector[i]->t);
+				}
+			}
+		}
     }
 
-    for (i = 0; i < tagmHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit time", tagmHitVector[i]->t,
-                "TAGMHit time;t [ns];", nBins, xMin, xMax);
-    }
-    for (i = 0; i < taghHitVector.size(); i++){
-        Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit time", taghHitVector[i]->t,
-                "TAGHHit time;t [ns];", nBins, xMin, xMax);
+    for (i = 0; i < psHitVector.size(); i++){
+		int nColumns = 145*2;
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dPSHitTimes[key]->Fill(psHitVector[i]->t);
+			dPSHitTimesPerColumn[key]->Fill(psHitVector[i]->t, psHitVector[i]->column+psHitVector[i]->arm*nColumns/2);		
+    	}
     }
 
-    // The detectors with both TDCs and ADCs need these two to be aligned
-    // These detectors are the SC,TAGM,TAGH,TOF,PSC
+	for (i = 0; i < tagmHitVector.size(); i++) {
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
-	if(!NO_START_COUNTER) {
-		// Break these histograms up into hits coming from the TDC and hits coming from the ADC
-		for (i = 0; i < scHitVector.size(); i++){
-			int nSCCounters = 30;
-			const DSCHit *thisSCHit = scHitVector[i];
-			if (thisSCHit->has_fADC && !thisSCHit->has_TDC){
-				Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit ADC time", scHitVector[i]->t,
-						"SCHit ADC only time;t [ns];", nBins, xMin, xMax);
+			//if(!tagmHitVector[i]->has_fADC || !tagmHitVector[i]->has_TDC) continue;
+			dTAGMHitTimes[key]->Fill(tagmHitVector[i]->t);
+		
+			// Break these histograms up into hits coming from the TDC and hits coming from the ADC
+			const DTAGMHit *thisTAGMHit = tagmHitVector[i];
+			if (thisTAGMHit->has_fADC && !thisTAGMHit->has_TDC){
+				dTAGMADCHitTimes[key]->Fill(tagmHitVector[i]->time_fadc);
+						
 				// Manual loop over hits to match out of time
-				for (auto hit = scHitVector.begin(); hit != scHitVector.end(); hit++){
+				for (auto hit = tagmHitVector.begin(); hit != tagmHitVector.end(); hit++){
 					if ((*hit)->has_TDC && !(*hit)->has_fADC){
-						if (scHitVector[i]->sector == (*hit)->sector){
-							Fill2DHistogram("HLDetectorTiming", "SC", "SCHit TDC_ADC Difference",
-									scHitVector[i]->sector, (*hit)->t_TDC - scHitVector[i]->t_fADC,
-									"SC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nSCCounters, 0.5, nSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
+						if (GetCCDBIndexTAGM(tagmHitVector[i]) == GetCCDBIndexTAGM(*hit)){
+							dTAGMADCTDCHitTimes[key]->Fill(GetCCDBIndexTAGM(tagmHitVector[i]), 
+														 tagmHitVector[i]->t - tagmHitVector[i]->time_fadc);
 						}
 					}
 				}
 			}
-			else if (!thisSCHit->has_fADC && thisSCHit->has_TDC){
-				Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit TDC time", scHitVector[i]->t,
-						"SCHit TDC only time;t [ns];", nBins, xMin, xMax);
+			else if (!thisTAGMHit->has_fADC && thisTAGMHit->has_TDC){
+				dTAGMTDCHitTimes[key]->Fill(tagmHitVector[i]->t);
 			}
 			else{
-				Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit Matched time", scHitVector[i]->t,
-						"SCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
-				Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit ADC time", scHitVector[i]->t_fADC,
-						"SCHit ADC only time;t [ns];", nBins, xMin, xMax);
-				Fill1DHistogram ("HLDetectorTiming", "SC", "SCHit TDC time", scHitVector[i]->t_TDC,
-						"SCHit TDC only time;t [ns];", nBins, xMin, xMax);
-
-				Fill2DHistogram("HLDetectorTiming", "SC", "SCHit TDC_ADC Difference",
-						scHitVector[i]->sector, scHitVector[i]->t_TDC - scHitVector[i]->t_fADC,
-						"SC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nSCCounters, 0.5, nSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-				Fill2DHistogram("HLDetectorTiming", "SC", "SCHit Matched time per Counter",
-								scHitVector[i]->sector, scHitVector[i]->t,
-								"SCHit Matched ADC/TDC time; Sector ;t [ns]", nSCCounters, 0.5, nSCCounters + 0.5, 50, -50, 50);
+				dTAGMMatchedHitTimes[key]->Fill(tagmHitVector[i]->t);
+				dTAGMADCHitTimes[key]->Fill(tagmHitVector[i]->time_fadc);
+				dTAGMTDCHitTimes[key]->Fill(tagmHitVector[i]->t);
+				
+				dTAGMADCTDCHitTimes[key]->Fill(GetCCDBIndexTAGM(tagmHitVector[i]), tagmHitVector[i]->t - tagmHitVector[i]->time_fadc);
+				dTAGMMatchedHitTimesPerSector[key]->Fill(GetCCDBIndexTAGM(tagmHitVector[i]), tagmHitVector[i]->t);
 			}
-
 		}
 	}
-	
-    for (i = 0; i < tagmHitVector.size(); i++){
 
-        const DTAGMHit *thisTAGMHit = tagmHitVector[i];
-        int nTAGMCounters = 122; // 102 + 20 including 4 fully read out columns
+	for (i = 0; i < taghHitVector.size(); i++) {
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
-        if(thisTAGMHit->has_fADC && !thisTAGMHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit ADC time", tagmHitVector[i]->t,
-                    "TAGMHit ADC only time;t [ns];", nBins, xMin, xMax);
-            // Manual loop over hits to match out of time
-            for (auto hit = tagmHitVector.begin(); hit != tagmHitVector.end(); hit++){
-                if ((*hit)->has_TDC && !(*hit)->has_fADC){
-                    if (GetCCDBIndexTAGM(tagmHitVector[i]) == GetCCDBIndexTAGM(*hit)){
-                        Fill2DHistogram("HLDetectorTiming", "TAGM", "TAGMHit TDC_ADC Difference",
-                                GetCCDBIndexTAGM(tagmHitVector[i]), (*hit)->t - tagmHitVector[i]->time_fadc,
-					//GetCCDBIndexTAGM(tagmHitVector[i]), (*hit)->time_tdc - tagmHitVector[i]->time_fadc,
-                                "TAGM #Deltat TDC-ADC; Column ;t_{TDC} - t_{ADC} [ns]", nTAGMCounters, 0.5, nTAGMCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-                    }
-                }
-            }
-        }
-        else if (!thisTAGMHit->has_fADC && thisTAGMHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit TDC time", tagmHitVector[i]->t,
-                    "TAGMHit TDC only time;t [ns];", nBins, xMin, xMax);
-        }
-        else{
-            Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit Matched time", tagmHitVector[i]->t,
-                    "TAGMHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit ADC time", tagmHitVector[i]->time_fadc,
-                    "TAGMHit ADC only time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TAGM", "TAGMHit TDC time", tagmHitVector[i]->t,
-                    "TAGMHit TDC only time;t [ns];", nBins, xMin, xMax);
+			//if(!taghHitVector[i]->has_fADC || !taghHitVector[i]->has_TDC) continue;
+			dTAGHHitTimes[key]->Fill(taghHitVector[i]->t);
+		
+			// Break these histograms up into hits coming from the TDC and hits coming from the ADC
+			const DTAGHHit *thisTAGHHit = taghHitVector[i];
+			if (thisTAGHHit->has_fADC && !thisTAGHHit->has_TDC){
+				dTAGHADCHitTimes[key]->Fill(taghHitVector[i]->time_fadc);
+						
+				// Manual loop over hits to match out of time
+				for (auto hit = taghHitVector.begin(); hit != taghHitVector.end(); hit++){
+					if ((*hit)->has_TDC && !(*hit)->has_fADC){
+						if (taghHitVector[i]->counter_id == (*hit)->counter_id){
+							dTAGHADCTDCHitTimes[key]->Fill(taghHitVector[i]->counter_id, 
+														 taghHitVector[i]->time_tdc - taghHitVector[i]->time_fadc);
+						}
+					}
+				}
+			}
+			else if (!thisTAGHHit->has_fADC && thisTAGHHit->has_TDC){
+				dTAGHTDCHitTimes[key]->Fill(taghHitVector[i]->t);
+			}
+			else{
+				dTAGHMatchedHitTimes[key]->Fill(taghHitVector[i]->t);
+				dTAGHADCHitTimes[key]->Fill(taghHitVector[i]->time_fadc);
+				dTAGHTDCHitTimes[key]->Fill(taghHitVector[i]->time_tdc);
+				
+				dTAGHADCTDCHitTimes[key]->Fill(taghHitVector[i]->counter_id, taghHitVector[i]->time_tdc - taghHitVector[i]->time_fadc);
+				dTAGHMatchedHitTimesPerSector[key]->Fill(taghHitVector[i]->counter_id, taghHitVector[i]->t);
+			}
+		}
+	}
 
-            Fill2DHistogram("HLDetectorTiming", "TAGM", "TAGMHit TDC_ADC Difference",
-                    GetCCDBIndexTAGM(tagmHitVector[i]), tagmHitVector[i]->t - tagmHitVector[i]->time_fadc,
-                    "TAGM #Deltat TDC-ADC; Column ;t_{TDC} - t_{ADC} [ns]", nTAGMCounters, 0.5, nTAGMCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-            if (DO_OPTIONAL){
-                Fill2DHistogram("HLDetectorTiming", "TAGM", "TAGM Per Channel TDC Time",
-                        GetCCDBIndexTAGM(tagmHitVector[i]), tagmHitVector[i]->t,
-                        "TAGM Per Channel TDC time; Column ;t_{TDC} [ns]", nTAGMCounters, 0.5, nTAGMCounters + 0.5, 100, -50, 50);
-            }
+	for (i = 0; i < pscHitVector.size(); i++) {
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
-        }
+			//if(!pscHitVector[i]->has_fADC || !pscHitVector[i]->has_TDC) continue;
+			dPSCHitTimes[key]->Fill(pscHitVector[i]->t);
+		
+			// Break these histograms up into hits coming from the TDC and hits coming from the ADC
+			const DPSCHit *thisPSCHit = pscHitVector[i];
+			if (thisPSCHit->has_fADC && !thisPSCHit->has_TDC){
+				dPSCADCHitTimes[key]->Fill(pscHitVector[i]->time_fadc);
+						
+				// Manual loop over hits to match out of time
+				for (auto hit = pscHitVector.begin(); hit != pscHitVector.end(); hit++){
+					if ((*hit)->has_TDC && !(*hit)->has_fADC){
+						if ( (pscHitVector[i]->arm == (*hit)->arm) && (pscHitVector[i]->module == (*hit)->module) ){
+							dPSCADCTDCHitTimes[key]->Fill( pscHitVector[i]->module+pscHitVector[i]->arm*16/2, 
+														   pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc);
+						}
+					}
+				}
+			}
+			else if (!thisPSCHit->has_fADC && thisPSCHit->has_TDC){
+				dPSCTDCHitTimes[key]->Fill(pscHitVector[i]->t);
+			}
+			else{
+				dPSCMatchedHitTimes[key]->Fill(pscHitVector[i]->t);
+				dPSCADCHitTimes[key]->Fill(pscHitVector[i]->time_fadc);
+				dPSCTDCHitTimes[key]->Fill(pscHitVector[i]->time_tdc);
+				
+				dPSCADCTDCHitTimes[key]->Fill( pscHitVector[i]->module+pscHitVector[i]->arm*16/2, 
+											   pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc);
+				dPSCMatchedHitTimesPerSector[key]->Fill(pscHitVector[i]->module+pscHitVector[i]->arm*16/2, pscHitVector[i]->t);
+			}
+		}
+	}
 
-    }
-    
-    for (i = 0; i < taghHitVector.size(); i++){
 
-        const DTAGHHit *thisTAGHHit = taghHitVector[i];
-        int nTAGHCounters = 274;
 
-        if(thisTAGHHit->has_fADC && !thisTAGHHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit ADC time", taghHitVector[i]->t,
-                    "TAGHHit ADC only time;t [ns];", nBins, xMin, xMax);
-            // Manual loop over hits to match out of time
-            for (auto hit = taghHitVector.begin(); hit != taghHitVector.end(); hit++){
-                if ((*hit)->has_TDC && !(*hit)->has_fADC){
-                    if (taghHitVector[i]->counter_id == (*hit)->counter_id){
-                        Fill2DHistogram("HLDetectorTiming", "TAGH", "TAGHHit TDC_ADC Difference",
-                                taghHitVector[i]->counter_id, (*hit)->time_tdc - taghHitVector[i]->time_fadc,
-                                "TAGH #Deltat TDC-ADC; Counter ID ;t_{TDC} - t_{ADC} [ns]", nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-                    }
-                }
-            }
-        }
-        else if (!thisTAGHHit->has_fADC && thisTAGHHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit TDC time", taghHitVector[i]->t,
-                    "TAGHHit TDC only time;t [ns];", nBins, xMin, xMax);
-        }
-        else{
-            Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit Matched time", taghHitVector[i]->t,
-                    "TAGHHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit ADC time", taghHitVector[i]->time_fadc,
-                    "TAGHHit ADC only time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TAGH", "TAGHHit TDC time", taghHitVector[i]->time_tdc,
-                    "TAGHHit TDC only time;t [ns];", nBins, xMin, xMax);
-
-            // We want to look at the timewalk within these ADC/TDC detectors
-            Fill2DHistogram("HLDetectorTiming", "TAGH", "TAGHHit TDC_ADC Difference",
-                    taghHitVector[i]->counter_id, taghHitVector[i]->time_tdc - taghHitVector[i]->time_fadc,
-                    "TAGH #Deltat TDC-ADC; Counter ID ;t_{TDC} - t_{ADC} [ns]", nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-        }
-    }
-    
-    for (i = 0; i < tofHitVector.size(); i++){
-        const DTOFHit *thisTOFHit = tofHitVector[i];
-        int nTOFCounters = 176;
-        if(thisTOFHit->has_fADC && !thisTOFHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit ADC time", tofHitVector[i]->t,
-                    "TOFHit ADC only time;t [ns];", nBins, xMin, xMax);
-            // Manual loop over hits to match out of time
-            for (auto hit = tofHitVector.begin(); hit != tofHitVector.end(); hit++){
-                if ((*hit)->has_TDC && !(*hit)->has_fADC){
-                    if (GetCCDBIndexTOF(tofHitVector[i]) == GetCCDBIndexTOF(*hit)){
-                        Fill2DHistogram("HLDetectorTiming", "TOF", "TOFHit TDC_ADC Difference",
-                                GetCCDBIndexTOF(tofHitVector[i]), (*hit)->t_TDC - tofHitVector[i]->t_fADC,
-                                "TOF #Deltat TDC-ADC; CDCB Index ;t_{TDC} - t_{ADC} [ns]", nTOFCounters, 0.5, nTOFCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-                    }
-                }
-            }
-        }
-        else if (!thisTOFHit->has_fADC && thisTOFHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit TDC time", tofHitVector[i]->t,
-                    "TOFHit TDC only time;t [ns];", nBins, xMin, xMax);
-        }
-        else{
-            Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit Matched time", tofHitVector[i]->t,
-                    "TOFHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit ADC time", tofHitVector[i]->t_fADC,
-                    "TOFHit ADC only time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "TOF", "TOFHit TDC time", tofHitVector[i]->t_TDC,
-                    "TOFHit TDC only time;t [ns];", nBins, xMin, xMax);
-
-            Fill2DHistogram("HLDetectorTiming", "TOF", "TOFHit TDC_ADC Difference",
-                    GetCCDBIndexTOF(tofHitVector[i]), tofHitVector[i]->t_TDC - tofHitVector[i]->t_fADC,
-                    "TOF #Deltat TDC-ADC; CDCB Index ;t_{TDC} - t_{ADC} [ns]", nTOFCounters, 0.5, nTOFCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-        }
-    }
-    
-    for (i = 0; i < pscHitVector.size(); i++){
-        int nPSCCounters = 16;
-        const DPSCHit *thisPSCHit = pscHitVector[i];
-        if (thisPSCHit->has_fADC && !thisPSCHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->t,
-                             "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
-            // Manual loop over hits to match out of time
-            for (auto hit = pscHitVector.begin(); hit != pscHitVector.end(); hit++){
-                if ((*hit)->has_TDC && !(*hit)->has_fADC){
-                    if ( (pscHitVector[i]->arm == (*hit)->arm) && (pscHitVector[i]->module == (*hit)->module) ) {
-                        Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
-                                        pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, (*hit)->time_tdc - pscHitVector[i]->time_fadc,
-                                        "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-                    }
-                }
-            }
-        }
-        else if (!thisPSCHit->has_fADC && thisPSCHit->has_TDC){
-            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->t,
-                             "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
-        }
-        else{
-            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit Matched time", pscHitVector[i]->t,
-                             "PSCHit Matched ADC/TDC time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit ADC time", pscHitVector[i]->time_fadc,
-                             "PSCHit ADC only time;t [ns];", nBins, xMin, xMax);
-            Fill1DHistogram ("HLDetectorTiming", "PS", "PSCHit TDC time", pscHitVector[i]->time_tdc,
-                             "PSCHit TDC only time;t [ns];", nBins, xMin, xMax);
-            
-            Fill2DHistogram("HLDetectorTiming", "PS", "PSCHit TDC_ADC Difference",
-                            pscHitVector[i]->module+pscHitVector[i]->arm*nPSCCounters/2, pscHitVector[i]->time_tdc - pscHitVector[i]->time_fadc,
-                            "PSC #Deltat TDC-ADC; Sector ;t_{TDC} - t_{ADC} [ns]", nPSCCounters, 0.5, nPSCCounters + 0.5, NBINS_TDIFF, MIN_TDIFF, MAX_TDIFF);
-        }
-    }
 
     // Next the relative times between detectors using tracking
     // By the time we get to this point, our first guess at the timing should be fairly good. 
     // Certainly good enough to take a pass at the time based tracking
     // This will be the final alignment step for now
 
-    // We want to plot the delta t at the target between the SC hit and the tagger hits
-    // Some limits for these
-    float nBinsE = 160, EMin = 3.0, EMax = 12.0;
-
-
-    const DEventRFBunch *thisRFBunch = NULL;
-    
-    if(NO_TRACKS) {
-	    // If the drift chambers are turned off, we'll need to use the neutral showers
-	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
-    } else {
-        if(NO_START_COUNTER) {
-		    loop->GetSingle(thisRFBunch);   // if there's no start counter, then use the normal RF times 
-		} else {
-	    	loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
-	    }
-    }
-    if (thisRFBunch->dNumParticleVotes < 2) return NOERROR;
+    if (thisRFBunch->dNumParticleVotes < 2) { japp->RootUnLock(); return NOERROR; }
 
     // Loop over TAGM hits
     for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
-        int nTAGMColumns = 122; // Not really just columns, but a name is a name
-        if(tagmHitVector[j]->has_fADC){
-            char name [200];
-            char title[500];
-            sprintf(name, "Column %.3i Row %.1i", tagmHitVector[j]->column, tagmHitVector[j]->row);
-            sprintf(title, "TAGM Column %i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", tagmHitVector[j]->column);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
-            Fill1DHistogram("HLDetectorTiming", "TAGM_ADC_RF_Compare", name,
-                    tagmHitVector[j]->time_fadc - locShiftedTime,
-                    title,
-                    NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-        }
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+        
+        	if(DO_OPTIONAL && tagmHitVector[j]->has_fADC) {
+            	double locShiftedADCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
+            	dTAGMADCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])-1]->Fill(tagmHitVector[j]->time_fadc - locShiftedADCTime);
+            }
+            if(tagmHitVector[j]->has_TDC) {
+				double locShiftedTDCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
+				//cerr << GetCCDBIndexTAGM(tagmHitVector[j]) << "  " << dTAGMTDCRFCompareTimes[key].size() << endl;
+				dTAGMTDCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])-1]->Fill(tagmHitVector[j]->t - locShiftedTDCTime);
+			}
+        
+        	if(tagmHitVector[j]->row == 0) {
+				dTaggerRFTime[key]->Fill(tagmHitVector[j]->t - thisRFBunch->dTime);
+				dTAGMRFTime[key]->Fill(tagmHitVector[j]->t - thisRFBunch->dTime);
 
-        if(tagmHitVector[j]->has_TDC){
-            char name [200];
-            char title[500];
-            sprintf(name, "Column %.3i Row %.1i", tagmHitVector[j]->column, tagmHitVector[j]->row);
-            sprintf(title, "TAGM Column %i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", tagmHitVector[j]->column);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
-            Fill1DHistogram("HLDetectorTiming", "TAGM_TDC_RF_Compare", name,
-                    tagmHitVector[j]->t - locShiftedTime,
-                    title,
-                    NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-        }
-
-        Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - RFBunch Time",
-                GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - thisRFBunch->dTime,
-                "#Deltat TAGM-RFBunch; CCDB Index ;t_{TAGM} - t_{SC @ target} [ns]",
-                nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
-        Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch Time",
-                tagmHitVector[j]->t - thisRFBunch->dTime, tagmHitVector[j]->E,
-                "Tagger - RFBunch Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
-                NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
-        Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch 1D Time",
-                tagmHitVector[j]->t - thisRFBunch->dTime,
-                "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
-			//160, -20, 20);
-                    800, -50, 50);
-        if (tagmHitVector[j]->row == 0){
-            Fill1DHistogram("HLDetectorTiming", "TRACKING", "TAGM - RFBunch 1D Time",
-                    tagmHitVector[j]->t - thisRFBunch->dTime,
-                    "TAGM - RFBunch Time; #Deltat_{TAGM - RFBunch} [ns]; Entries",
-			    //480, -30, 30);
-                    800, -50, 50);
+				dTaggerRFEnergyTime[key]->Fill(tagmHitVector[j]->t - thisRFBunch->dTime, tagmHitVector[j]->E);
+				dTAGMRFCounterTime[key]->Fill(GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - thisRFBunch->dTime);        
+        	}
         }
     }
 
     // Loop over TAGH hits
     for (unsigned int j = 0 ; j < taghHitVector.size(); j++){
-        int nTAGHCounters = 274;
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
-        if(taghHitVector[j]->has_fADC){
-            char name [200];
-            char title[500];
-            sprintf(name, "Counter ID %.3i", taghHitVector[j]->counter_id);
-            sprintf(title, "TAGH Counter ID %i t_{ADC} - t_{RF}; t_{ADC} - t_{RF} [ns]; Entries", taghHitVector[j]->counter_id);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_fadc);
-            Fill1DHistogram("HLDetectorTiming", "TAGH_ADC_RF_Compare", name,
-                    taghHitVector[j]->time_fadc - locShiftedTime,
-                    title,
-                    NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-        }
-        if(taghHitVector[j]->has_TDC){
-            char name [200];
-            char title[500];
-            sprintf(name, "Counter ID %.3i", taghHitVector[j]->counter_id);
-            sprintf(title, "TAGH Counter ID %i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", taghHitVector[j]->counter_id);
-            double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_tdc);
-            Fill1DHistogram("HLDetectorTiming", "TAGH_TDC_RF_Compare", name,
-                    taghHitVector[j]->time_tdc - locShiftedTime,
-                    title,
-                    NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-        }
+			if(DO_OPTIONAL && taghHitVector[j]->has_fADC) {
+            	double locShiftedADCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_fadc);
+            	dTAGHADCRFCompareTimes[key][taghHitVector[j]->counter_id-1]->Fill(taghHitVector[j]->time_fadc - locShiftedADCTime);
+            }
+            if(taghHitVector[j]->has_TDC) {
+				double locShiftedTDCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, taghHitVector[j]->time_tdc);
+				//cerr << (taghHitVector[j]->counter_id-1) << " out of " << dTAGHADCRFCompareTimes[key].size() << endl;
+				dTAGHTDCRFCompareTimes[key][taghHitVector[j]->counter_id-1]->Fill(taghHitVector[j]->time_tdc - locShiftedTDCTime);
+			}
 
-        Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGH - RFBunch Time",
-                taghHitVector[j]->counter_id, taghHitVector[j]->t - thisRFBunch->dTime,
-                "#Deltat TAGH-RFBunch; Counter ID ;t_{TAGH} - t_{RFBunch} [ns]",
-                nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
+			dTaggerRFTime[key]->Fill(taghHitVector[j]->t - thisRFBunch->dTime);
+			dTAGHRFTime[key]->Fill(taghHitVector[j]->t - thisRFBunch->dTime);
 
-        Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch Time",
-                taghHitVector[j]->t - thisRFBunch->dTime, taghHitVector[j]->E,
-                "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Energy [GeV]",
-                NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
-
-        Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch 1D Time",
-                taghHitVector[j]->t - thisRFBunch->dTime,
-                "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
-                480, -30, 30);
+			dTaggerRFEnergyTime[key]->Fill(taghHitVector[j]->t - thisRFBunch->dTime, taghHitVector[j]->E);
+			dTAGHRFCounterTime[key]->Fill(taghHitVector[j]->counter_id, taghHitVector[j]->t - thisRFBunch->dTime);
+		}
     }
 
     // now loop over neutral showers to align calorimeters
-    vector<const DNeutralShower *> neutralShowerVector;
-    loop->Get(neutralShowerVector);
-    
     DVector3 locTargetCenter(0.,0.,Z_TARGET);
 
-    for (i = 0; i <  neutralShowerVector.size(); i++){
+    for (i = 0; i <  neutralShowerVector.size(); i++) {
 	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
 	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
 
-	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
-	    //   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
-	    if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
-		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
-				    "Shower Energy [GeV]; t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
-				    100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    if(neutralShowerVector[i]->dEnergy > 0.2) {
-			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time (Neutral)",  locDeltaT,
-					    "t_{FCAL} - t_{RF} at Target (Neutral); t_{FCAL} - t_{RF} [ns]; Entries",
-					    NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    }
-		    
-		    // if we're not using tracking, then align the TOF using hits matched between the TOF and FCAL
-		    if(NO_TRACKS) {
-		    	for( vector< const DTOFPoint* >::const_iterator tof = tofPointVector.begin(); 
-					tof != tofPointVector.end(); tof++ ) {
-					
-					const DTOFPoint* tof_hit = *tof;
-					
-					// select double-ended hits
-					if( tof_hit->dHorizontalBarStatus != 3 || tof_hit->dVerticalBarStatus != 3 )
-						continue;
-						
-					double dx = tof_hit->pos.X() - neutralShowerVector[i]->dSpacetimeVertex.X();
-					double dy = tof_hit->pos.Y() - neutralShowerVector[i]->dSpacetimeVertex.Y();
-					
-	    			double locTOFPathLength = (tof_hit->pos - locTargetCenter).Mag();
-					double locTOFDeltaT = tof_hit->t - locTOFPathLength/29.9792458 - thisRFBunch->dTime;
-					
-					// match the hits
-					if( ( fabs(dx - TOF_X_MEAN) < 2.*TOF_X_SIG ) && 
-		    	    	( fabs(dy - TOF_Y_MEAN) < 2.*TOF_Y_SIG ) ) {
-					   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time (No Tracks)",
-							 locTOFDeltaT,
-							 "t_{TOF} - t_{RF} at Target (No Tracks); t_{TOF} - t_{RF} at Target [ns]; Entries",
-							 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    	    }
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
 
+			// to eliminate low-energy tails and other reconstruction problems, require minimum energies
+			//   E(FCAL) > 200 MeV,  E(BCAL) > 100 MeV
+			if(neutralShowerVector[i]->dDetectorSystem == SYS_FCAL) {
+				dFCALShowerRFTimeVsEnergy_NoTracks[key]->Fill(neutralShowerVector[i]->dEnergy, locDeltaT);
+				if(neutralShowerVector[i]->dEnergy > 0.2) {
+					dFCALShowerRFTime_NoTracks[key]->Fill(locDeltaT);
 				}
-		    } 
-	    } else {
-		    Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time vs. Energy (Neutral)",  neutralShowerVector[i]->dEnergy, locDeltaT,
-				    "Shower Energy [GeV];t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
-                            100, 0., 10., NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    if(neutralShowerVector[i]->dEnergy > 0.1) {
-			    Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time (Neutral)",  locDeltaT,
-					    "t_{BCAL} - t_{RF} at Target (Neutral); t_{BCAL} - t_{RF} [ns]; Entries",
-                                NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		    }
+			
+				// if we're not using tracking, then align the TOF using hits matched between the TOF and FCAL
+				if(NO_TRACKS) {
+					for( vector< const DTOFPoint* >::const_iterator tof = tofPointVector.begin(); 
+						tof != tofPointVector.end(); tof++ ) {
+					
+						const DTOFPoint* tof_hit = *tof;
+					
+						// select double-ended hits
+						if( tof_hit->dHorizontalBarStatus != 3 || tof_hit->dVerticalBarStatus != 3 )
+							continue;
+						
+						double dx = tof_hit->pos.X() - neutralShowerVector[i]->dSpacetimeVertex.X();
+						double dy = tof_hit->pos.Y() - neutralShowerVector[i]->dSpacetimeVertex.Y();
+					
+						double locTOFPathLength = (tof_hit->pos - locTargetCenter).Mag();
+						double locTOFDeltaT = tof_hit->t - locTOFPathLength/29.9792458 - thisRFBunch->dTime;
+					
+						// match the hits
+						if( ( fabs(dx - TOF_X_MEAN) < 2.*TOF_X_SIG ) && 
+							( fabs(dy - TOF_Y_MEAN) < 2.*TOF_Y_SIG ) ) {
+							dTOFShowerRFTime_NoTracks[key]->Fill(locTOFDeltaT);
+						}
+
+					}
+				}
+			} else {  // neutralShowerVector[i]->dDetectorSystem == SYS_BCAL
+				dBCALShowerRFTimeVsEnergy_NoTracks[key]->Fill(neutralShowerVector[i]->dEnergy, locDeltaT);
+				if(neutralShowerVector[i]->dEnergy > 0.1) {
+					dBCALShowerRFTime_NoTracks[key]->Fill(locDeltaT);
+				}
+			}
 	    }
-	    
     } // End of loop over neutral showers
 
-    vector<const DCCALShower *> ccalShowerVector;
-    loop->Get(ccalShowerVector);
-    
     for (i = 0; i <  ccalShowerVector.size(); i++){
 	    DVector3 locShowerPos(ccalShowerVector[i]->x, ccalShowerVector[i]->y, ccalShowerVector[i]->z);
 	    double locPathLength = (locShowerPos - locTargetCenter).Mag();
 	    double locDeltaT = ccalShowerVector[i]->time - locPathLength/29.9792458 - thisRFBunch->dTime;
 
-	    Fill2DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time vs. Energy (Neutral)",  ccalShowerVector[i]->E, locDeltaT,
-			    "Shower Energy [GeV];t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-			    100, 0., 10., 500, -20, 20);
-	    
-	    // to eliminate low-energy tails and other reconstruction problems, require minimum energies
-	    if(ccalShowerVector[i]->E > 0.1) {
-		    Fill1DHistogram("HLDetectorTiming", "TRACKING", "CCAL - RF Time (Neutral)",  locDeltaT,
-				    "t_{CCAL} - t_{RF} at Target (Neutral); t_{CCAL} - t_{RF} [ns]; Entries",
-				    2000, -50, 50);
-		    //NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-	    }
+		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+			
+			dCCALShowerRFTimeVsEnergy_NoTracks[key]->Fill(ccalShowerVector[i]->E, locDeltaT);
+			if(neutralShowerVector[i]->dEnergy > 0.1) {
+				dCCALShowerRFTime_NoTracks[key]->Fill(locDeltaT);
+			}
+		}
     }
     
     // we went this far just to align the tagger with the RF time, nothing else to do without tracks
     if(NO_TRACKS) 
-	    return NOERROR;
+	    { japp->RootUnLock();  return NOERROR; }
 
-    if (!DO_TRACK_BASED && !DO_VERIFY ) return NOERROR; // Before this stage we aren't really ready yet, so just return
+    if (!DO_TRACK_BASED && !DO_VERIFY ) { japp->RootUnLock();  return NOERROR; }   // Before this stage we aren't really ready yet, so just return
 
     // Try using the detector matches
     // Loop over the charged tracks
 
-    vector<const DChargedTrack *> chargedTrackVector;
-    loop->Get(chargedTrackVector);
-
-    for (i = 0; i < chargedTrackVector.size(); i++){
-
+    for (i = 0; i < chargedTrackVector.size(); i++) {
         const DChargedTrackHypothesis *pionHypothesis;
 
         // We only want negative particles to kick out protons
@@ -1080,310 +1466,173 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         // These "flightTime" corrected time are essentially that detector's estimate of the target time
         float targetCenterCorrection = ((pionHypothesis->position()).Z() - Z_TARGET) / SPEED_OF_LIGHT;
         float flightTimeCorrectedSCTime = 0.; 
-  
-        if(!NO_START_COUNTER) {
-			flightTimeCorrectedSCTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - targetCenterCorrection; 
-			char name [200];
-			char title[500];
-			sprintf(name, "Sector %.2i", locSCHitMatchParams->dSCHit->sector);
-			sprintf(title, "SC Sector %i t_{Target} - t_{RF}; t_{Target} - t_{RF} [ns]; Entries", locSCHitMatchParams->dSCHit->sector);
-			double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
-			double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
-			Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare_all", name,
-				flightTimeCorrectedSCTime - locShiftedTime,
-				title,
-				NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-			Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time (all)",
-				flightTimeCorrectedSCTime - thisRFBunch->dTime,
-				"t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries",
-				NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-
-			// Stay away from the nose section, since the propagation time corrections are not stable there.
-			// cut corresponds to ~50 cm path length through the SC - not too far into the nose section
-			// but enough to get some statistics
-	
+        double locSCzIntersection = 0.;
+ 		bool sc_match_pid = false;
+ 		
+		if(!NO_START_COUNTER) {
 			// need to get the projected hit position at the SC in order to cut on it
 			DVector3 IntersectionPoint, IntersectionMomentum;	
 			vector<DTrackFitter::Extrapolation_t> extrapolations = locTrackTimeBased->extrapolations.at(SYS_START);
 			shared_ptr<DSCHitMatchParams> locSCHitMatchParams2;
-			bool sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, 
-									     locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
-									     true, &IntersectionPoint, &IntersectionMomentum);
-			if (!sc_match_pid){
-			  continue;
-			}
-			double locSCzIntersection = IntersectionPoint.z();
-			if( locSCzIntersection < 83. ) {
-				Fill1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", name,
-						flightTimeCorrectedSCTime - locShiftedTime,
-						title,
-						NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE);
-				Fill1DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time",
-						flightTimeCorrectedSCTime - thisRFBunch->dTime,
-						"t_{SC} - t_{RF} at Target; t_{SC} - t_{RF} at Target [ns]; Entries",
-						NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-				Fill2DHistogram("HLDetectorTiming", "TRACKING", "SC - RF Time vs. Sector",
-						locSCHitMatchParams->dSCHit->sector, locSCDeltaT,
-						"t_{SC} - t_{RF} at Target; Sector; t_{SC} - t_{RF} at Target [ns];",
-						30, 0.5, 30.5, 800, -20., 20.);
+			sc_match_pid = locParticleID->Cut_MatchDistance(extrapolations, locSCHitMatchParams->dSCHit, locSCHitMatchParams->dSCHit->t, locSCHitMatchParams2, 
+											   true, &IntersectionPoint, &IntersectionMomentum);
+			if(sc_match_pid) {
+				locSCzIntersection = IntersectionPoint.z();
+				flightTimeCorrectedSCTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime - targetCenterCorrection; 
 			}
 		}
+		double locShiftedTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, flightTimeCorrectedSCTime);
+		double locSCDeltaT = flightTimeCorrectedSCTime - thisRFBunch->dTime;
 
-        // Get the pulls vector from the track
+		// Get the pulls vector from the track
 		auto thisTimeBasedTrack = pionHypothesis->Get_TrackTimeBased();
 
-        vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
-        double earliestCDCTime = 10000.;
-        double earliestFDCTime = 10000.;
-        for (size_t iPull = 0; iPull < pulls.size(); iPull++){
-            if ( pulls[iPull].cdc_hit != nullptr && pulls[iPull].tdrift < earliestCDCTime) earliestCDCTime = pulls[iPull].tdrift;
-            if ( pulls[iPull].fdc_hit != nullptr && pulls[iPull].tdrift < earliestFDCTime) earliestFDCTime = pulls[iPull].tdrift;
-         }
+		vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
+		double earliestCDCTime = 10000.;
+		double earliestFDCTime = 10000.;
+		for (size_t iPull = 0; iPull < pulls.size(); iPull++){
+			if ( pulls[iPull].cdc_hit != nullptr && pulls[iPull].tdrift < earliestCDCTime) earliestCDCTime = pulls[iPull].tdrift;
+			if ( pulls[iPull].fdc_hit != nullptr && pulls[iPull].tdrift < earliestFDCTime) earliestFDCTime = pulls[iPull].tdrift;
+		 }
 
-		if(!NO_START_COUNTER) {
-			// Do this the old way for the CDC
-			vector < const DCDCTrackHit *> cdcTrackHitVector;
-			pionHypothesis->Get_TrackTimeBased()->Get(cdcTrackHitVector);
-			if (cdcTrackHitVector.size() != 0){
-			   float earliestTime = 10000; // Initialize high
-			   for (unsigned int iCDC = 0; iCDC < cdcTrackHitVector.size(); iCDC++){
-				  if (cdcTrackHitVector[iCDC]->tdrift < earliestTime) earliestTime = cdcTrackHitVector[iCDC]->tdrift;
-			   }
+		// get CDC hit info for timing
+		vector < const DCDCTrackHit *> cdcTrackHitVector;
+		pionHypothesis->Get_TrackTimeBased()->Get(cdcTrackHitVector);
 
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "Earliest CDC Time Minus Matched SC Time",
-					 earliestTime - locSCHitMatchParams->dHitTime,
-					 "Earliest CDC Time Minus Matched SC Time; t_{CDC} - t_{SC} [ns];",
-					 400, -50, 150);
+ 		for (auto const& cut : passed_cuts) {
+			const string &key = cut.first;
+			bool passed = cut.second;
+			if(!passed) continue;
+ 
+			if(!NO_START_COUNTER && sc_match_pid) {
+				dSCRFTime_AllHits[key]->Fill(flightTimeCorrectedSCTime - thisRFBunch->dTime);
+				
+				// Stay away from the nose section, since the propagation time corrections are not stable there.
+				// cut corresponds to ~50 cm path length through the SC - not too far into the nose section
+				// but enough to get some statistics
+				if( sc_match_pid && locSCzIntersection < 83. ) {
+					dSCTargetRFCompareTimes[key][locSCHitMatchParams->dSCHit->sector-1]->Fill(flightTimeCorrectedSCTime - locShiftedTime);
+					dSCRFTime[key]->Fill(flightTimeCorrectedSCTime - thisRFBunch->dTime);
+					dSCRFTimeVsSector[key]->Fill(locSCHitMatchParams->dSCHit->sector, locSCDeltaT);
+				}
 
+				// Do this the old way for the CDC
+				if (cdcTrackHitVector.size() != 0) {
+					float earliestTime = 10000; // Initialize high
+					for (unsigned int iCDC = 0; iCDC < cdcTrackHitVector.size(); iCDC++){
+						if (cdcTrackHitVector[iCDC]->tdrift < earliestTime) earliestTime = cdcTrackHitVector[iCDC]->tdrift;
+					}
+
+					dCDCSCTime[key]->Fill(earliestTime - locSCHitMatchParams->dHitTime);
+				}
+
+				// Loop over TAGM hits
+				for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
+					dTaggerSCTime[key]->Fill(tagmHitVector[j]->t - flightTimeCorrectedSCTime);
+					dTAGMSCCounterTime[key]->Fill(GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - flightTimeCorrectedSCTime);
+					dTaggerSCEnergyTime[key]->Fill(tagmHitVector[j]->t - flightTimeCorrectedSCTime, tagmHitVector[j]->E);
+				}
+				// Loop over TAGH hits
+				for (unsigned int j = 0 ; j < taghHitVector.size(); j++){
+					dTaggerSCTime[key]->Fill(taghHitVector[j]->t - flightTimeCorrectedSCTime);
+					dTAGHSCCounterTime[key]->Fill(taghHitVector[j]->counter_id, taghHitVector[j]->t - flightTimeCorrectedSCTime);
+					dTaggerSCEnergyTime[key]->Fill(taghHitVector[j]->t - flightTimeCorrectedSCTime, taghHitVector[j]->E);
+				}				
+			} else {
+				// TODO: need to come up with some way to at least time in the CDC if there's no start counter??
 			}
-		} else {
-			// need to come up with some way to do this if there's no start counter??
-		}
 
-		if(!NO_START_COUNTER) {
-			// Loop over TAGM hits
-			for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
-			   int nTAGMColumns = 122;
-			   // We want to look at the timewalk within these ADC/TDC detectors
+			if (locTOFHitMatchParams != NULL) {
+			   	// Now check the TOF matching. Do this on a full detector level.
+			   	float flightTimeCorrectedTOFTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - targetCenterCorrection;
 
-			   Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - SC Target Time",
-					 GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - flightTimeCorrectedSCTime,
-					 "#Deltat TAGM-SC; Column ;t_{TAGM} - t_{SC @ target} [ns]", nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
+			   	if(!NO_START_COUNTER) {
+					dTOFSCTime[key]->Fill(flightTimeCorrectedTOFTime - flightTimeCorrectedSCTime);
+			   	}
+				dTOFRFTime[key]->Fill(flightTimeCorrectedTOFTime - thisRFBunch->dTime);
+				dEarliestFDCTime[key]->Fill(earliestFDCTime);
 
-			   Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC Target Time",
-					 tagmHitVector[j]->t - flightTimeCorrectedSCTime, tagmHitVector[j]->E,
-					 "Tagger - SC Target Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
-					 NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);   
+				 
+				 // TODO: OPTIMIZE THIS
+				// get DIRC match parameters (contains LUT information)
+				const DDetectorMatches* locDetectorMatches = NULL;
+				loop->GetSingle(locDetectorMatches);
+				DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
+				shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
+				bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
+				// For DIRC calibrations, select tracks which have a good TOF match
+				if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
 
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC 1D Target Time",
-					 tagmHitVector[j]->t - flightTimeCorrectedSCTime,
-					 "Tagger - SC Time at Target; #Deltat_{Tagger - SC} [ns]; Entries",
-					 160, -20, 20);
-			}
-			// Loop over TAGH hits
-			for (unsigned int j = 0 ; j < taghHitVector.size(); j++){
-			   int nTAGHCounters = 274;
-			   Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGH - SC Target Time",
-					 taghHitVector[j]->counter_id, taghHitVector[j]->t - flightTimeCorrectedSCTime,
-					 "#Deltat TAGH-SC; Counter ID ;t_{TAGH} - t_{SC @ target} [ns]", nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
+					// Get match parameters
+					TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+					TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+					// next line commented out to suppress warning
+					//				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
+					double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
+					// next line commented out to suppress warning
+					//				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
 
-			   Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC Target Time",
-					 taghHitVector[j]->t - flightTimeCorrectedSCTime, taghHitVector[j]->E,
-					 "Tagger - SC Target Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
-					 NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
+					Particle_t locPID = locTrackTimeBased->PID();
+					double locMass = ParticleMass(locPID);
+					double locAngle = dDIRCLut->CalcAngle(momInBar.Mag(), locMass);
+					map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar.Mag());
 
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - SC 1D Target Time",
-					 taghHitVector[j]->t - flightTimeCorrectedSCTime,
-					 "Tagger - SC Time at Target; #Deltat_{Tagger - SC} [ns]; Entries",
-					 160, -20, 20);
-			}
-		}
+					// get map of DIRCMatches to PMT hits
+					map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
+					locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
+					map<Particle_t, double> logLikelihoodSum;
 
-        if (locTOFHitMatchParams != NULL){
-           // Now check the TOF matching. Do this on a full detector level.
-           float flightTimeCorrectedTOFTime = locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime - targetCenterCorrection;
+					// loop over associated hits for LUT diagnostic plots
+					for(uint loc_i=0; loc_i<dircPmtHitVector.size(); loc_i++) {
+						bool locIsReflected = false;
+						vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(dircPmtHitVector[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, locIsReflected, logLikelihoodSum);
+						double locHitTime = dircPmtHitVector[loc_i]->t - locExtrapolatedTime;
+						int locChannel = dircPmtHitVector[loc_i]->ch%dMaxDIRCChannels;
 
-			// cout << "TOF match = " << flightTimeCorrectedTOFTime << " " << locTOFHitMatchParams->dHitTime << " "
-			// 	 << locTOFHitMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
-
-		   if(!NO_START_COUNTER) {
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - SC Target Time",
-					 flightTimeCorrectedTOFTime - flightTimeCorrectedSCTime,
-					 "t_{TOF} - t_{SC} at Target; t_{TOF} - t_{SC} at Target [ns]; Entries",
-					 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
- 		   }
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "TOF - RF Time",
-                 flightTimeCorrectedTOFTime - thisRFBunch->dTime,
-                 "t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries",
-                 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-           // Fill the following when there is a SC/TOF match
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "Earliest Flight-time Corrected FDC Time",
-                 earliestFDCTime,
-                 "Earliest Flight-time corrected FDC Time; t_{FDC} [ns];",
-                 200, -50, 150);
-                 
-		    // get DIRC match parameters (contains LUT information)
-			const DDetectorMatches* locDetectorMatches = NULL;
-			loop->GetSingle(locDetectorMatches);
-			DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
-		    shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
-		    bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
-
-        	// For DIRC calibrations, select tracks which have a good TOF match
-		    if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
-
-				// Get match parameters
-				TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-				TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
-				// next line commented out to suppress warning
-				//				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
-				double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
-				// next line commented out to suppress warning
-				//				int locBar = locDIRCGeometry->GetBar(posInBar.Y());
-
-				Particle_t locPID = locTrackTimeBased->PID();
-				double locMass = ParticleMass(locPID);
-				double locAngle = dDIRCLut->CalcAngle(momInBar.Mag(), locMass);
-				map<Particle_t, double> locExpectedAngle = dDIRCLut->CalcExpectedAngles(momInBar.Mag());
-
-				// get map of DIRCMatches to PMT hits
-				map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> > locDIRCTrackMatchParamsMap;
-				locDetectorMatch.Get_DIRCTrackMatchParamsMap(locDIRCTrackMatchParamsMap);
-				map<Particle_t, double> logLikelihoodSum;
-
-		  		// loop over associated hits for LUT diagnostic plots
-		  		for(uint loc_i=0; loc_i<dircPmtHitVector.size(); loc_i++) {
-				        bool locIsReflected = false;
-			  		vector<pair<double, double>> locDIRCPhotons = dDIRCLut->CalcPhoton(dircPmtHitVector[loc_i], locExtrapolatedTime, posInBar, momInBar, locExpectedAngle, locAngle, locPID, locIsReflected, logLikelihoodSum);
-			  		double locHitTime = dircPmtHitVector[loc_i]->t - locExtrapolatedTime;
-			  		int locChannel = dircPmtHitVector[loc_i]->ch%dMaxDIRCChannels;
-
-			  		if(locDIRCPhotons.size() > 0) {
-						// loop over candidate photons
-						for(uint loc_j = 0; loc_j<locDIRCPhotons.size(); loc_j++) {
-							double locDeltaT = locDIRCPhotons[loc_j].first - locHitTime;
+						if(locDIRCPhotons.size() > 0) {
+							// loop over candidate photons
+							for(uint loc_j = 0; loc_j<locDIRCPhotons.size(); loc_j++) {
+								double locDeltaT = locDIRCPhotons[loc_j].first - locHitTime;
 		
-							if(locChannel < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
-								Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit North Per Channel t_{DIRC} - t_{track}",
-												locChannel, locDeltaT,
-												"DIRCHit North Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns] ",
-												DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
-												(double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
-							} else {
-								Fill2DHistogram ("HLDetectorTiming", "DIRC", "DIRCHit South Per Channel t_{DIRC} - t_{track}",
-												locChannel-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, locDeltaT,
-												"DIRCHit South Per Channel t_{DIRC} - t_{track}; channel ID; t_{DIRC} - t_{track} [ns] ",
-												DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, 0.5, 
-                                                (double)DDIRCPmtHit_factory::DIRC_MAX_CHANNELS+0.5, 400, -50, 50);
+								if(locChannel < DDIRCPmtHit_factory::DIRC_MAX_CHANNELS) {
+									dDIRCDeltaTimePerChannelNorth[key]->Fill(locChannel, locDeltaT);
+								} else {
+									dDIRCDeltaTimePerChannelSouth[key]->Fill(locChannel-DDIRCPmtHit_factory::DIRC_MAX_CHANNELS, locDeltaT);
+								}
 							}
 						}
 					}
 				}
 			}
+			
+			if (locBCALShowerMatchParams != NULL) {
+			   	float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
+				dBCALShowerRFTime[key]->Fill(flightTimeCorrectedBCALTime - thisRFBunch->dTime);
+				
+			   	if(!NO_START_COUNTER) {
+			   		dBCALShowerSCTime[key]->Fill(flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime);
+			   		dBCALShowerSCTimeVsCorrection[key]->Fill(locBCALShowerMatchParams->dFlightTime, flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime);
+			   	}
+
+			   	// Fill the following when there is a SC/BCAL match.
+			   	dEarliestCDCTime[key]->Fill(earliestCDCTime);
+			}
+			
+			if (locFCALShowerMatchParams != NULL) {
+			   	float flightTimeCorrectedFCALTime = locFCALShowerMatchParams->dFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - targetCenterCorrection;
+				dFCALShowerRFTime[key]->Fill(flightTimeCorrectedFCALTime - thisRFBunch->dTime);
+
+			   	if(!NO_START_COUNTER) {
+					dFCALShowerSCTime[key]->Fill(flightTimeCorrectedFCALTime - flightTimeCorrectedSCTime);
+			   	}
+			}
 		}
-        if (locBCALShowerMatchParams != NULL){
-           float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
-
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - RF Time",
-                 flightTimeCorrectedBCALTime - thisRFBunch->dTime,
-                 "t_{BCAL} - t_{RF} at Target; t_{BCAL} - t_{RF} [ns]; Entries",
-                 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-
-		   if(!NO_START_COUNTER) {
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time",
-					 flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime,
-					 "t_{BCAL} - t_{SC} at Target; t_{BCAL} - t_{SC} [ns]; Entries",
-					 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-
-			   // Add histogram suggested by Mark Dalton
-			   Fill2DHistogram("HLDetectorTiming", "TRACKING", "BCAL - SC Target Time Vs Correction",
-					 locBCALShowerMatchParams->dFlightTime, flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime,
-					 "t_{BCAL} - t_{SC} at Target; Flight time [ns]; t_{BCAL} - t_{SC} [ns]",
-					 100, 0, 20, 50, -10, 10);
-           }
-
-           // Fill the following when there is a SC/BCAL match.
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "Earliest Flight-time Corrected CDC Time",
-                 earliestCDCTime,
-                 "Earliest Flight-time Corrected CDC Time; t_{CDC} [ns];",
-                 200, -50, 150);
-        }
-        if (locFCALShowerMatchParams != NULL){
-           float flightTimeCorrectedFCALTime = locFCALShowerMatchParams->dFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime - targetCenterCorrection;
-
-// 			cout << "FCAL = " << flightTimeCorrectedFCALTime << " " << locFCALShowerMatchParams->dFCALShower->getTime() << " " 
-// 				 << locFCALShowerMatchParams->dFlightTime << " " << targetCenterCorrection << endl;
-
-
-		   if(!NO_START_COUNTER) {
-			   Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - SC Target Time",
-					 flightTimeCorrectedFCALTime - flightTimeCorrectedSCTime,
-					 "t_{FCAL} - t_{SC} at Target; t_{FCAL} - t_{SC} [ns]; Entries",
-					 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-		   }
-
-           Fill1DHistogram("HLDetectorTiming", "TRACKING", "FCAL - RF Time",
-                 flightTimeCorrectedFCALTime - thisRFBunch->dTime,
-                 "t_{FCAL} - t_{RF} at Target; t_{FCAL} - t_{RF} [ns]; Entries",
-                 NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T);
-        }
-
     } // End of loop over time based tracks
+		
+    japp->RootUnLock(); //RELEASE ROOT LOCK - FIX IT
 
-    if (DO_REACTION){
-       // Trigger the analysis
-       vector<const DAnalysisResults*> locAnalysisResultsVector;
-       loop->Get(locAnalysisResultsVector);
-       // Get the time from the results and fill histograms
-       deque<const DParticleCombo*> locPassedParticleCombos;
-       locAnalysisResultsVector[0]->Get_PassedParticleCombos(locPassedParticleCombos);
 
-       for (i=0; i < locPassedParticleCombos.size(); i++){
-          double taggerTime = locPassedParticleCombos[i]->Get_ParticleComboStep(0)->Get_InitialParticle_Measured()->time();
-          //cout << "We have a tagger time of " << taggerTime << endl;
-          //Find matching hit by time
-          for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
-             if (taggerTime == tagmHitVector[j]->t){
-                int nTAGMColumns = 122;
-                // We want to look at the timewalk within these ADC/TDC detectors
-                Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - RFBunch Time p2pi",
-                      GetCCDBIndexTAGM(tagmHitVector[j]), tagmHitVector[j]->t - thisRFBunch->dTime,
-                      "#Deltat TAGM-RFBunch; Column ;t_{TAGM} - t_{SC @ target} [ns]",
-                      nTAGMColumns, 0.5, nTAGMColumns + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
-                Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch Time p2pi",
-                      tagmHitVector[j]->t - thisRFBunch->dTime, tagmHitVector[j]->E,
-                      "Tagger - RFBunch Time; #Deltat_{Tagger - SC} [ns]; Energy [GeV]",
-                      NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
-                Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch 1D Time p2pi",
-                      tagmHitVector[j]->t - thisRFBunch->dTime,
-                      "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
-                      160, -20, 20);
-             }
-          }
-          // Loop over TAGH hits
-          for (unsigned int j = 0 ; j < taghHitVector.size(); j++){
-             if (taggerTime == taghHitVector[j]->t){
-                int nTAGHCounters = 274;
-                Fill2DHistogram("HLDetectorTiming", "TRACKING", "TAGH -  RFBunch Time p2pi",
-                      taghHitVector[j]->counter_id, taghHitVector[j]->t - thisRFBunch->dTime,
-                      "#Deltat TAGH-RFBunch; Counter ID ;t_{TAGH} - t_{RFBunch} [ns]",
-                      nTAGHCounters, 0.5, nTAGHCounters + 0.5, NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME);
-
-                Fill2DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch Time p2pi",
-                      taghHitVector[j]->t - thisRFBunch->dTime, taghHitVector[j]->E,
-                      "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Energy [GeV]",
-                      NBINS_TAGGER_TIME,MIN_TAGGER_TIME,MAX_TAGGER_TIME, nBinsE, EMin, EMax);
-
-                Fill1DHistogram("HLDetectorTiming", "TRACKING", "Tagger - RFBunch 1D Time p2pi",
-                                taghHitVector[j]->t - thisRFBunch->dTime,
-                                "Tagger - RFBunch Time; #Deltat_{Tagger - RFBunch} [ns]; Entries",
-                                160, -20, 20);
-             }
-          }
-       }
-    }
-    
     return NOERROR;
 }
 
@@ -1425,7 +1674,6 @@ jerror_t JEventProcessor_HLDetectorTiming::fini(void)
 {
    // Called before program exit after event processing is finished.
    //Here is where we do the fits to the data to see if we have a reasonable alignment
-   SortDirectories(); //Defined in HistogramTools.h
 
    return NOERROR;
 }

@@ -1,10 +1,10 @@
-// hnamepath: /HLDetectorTiming/CDC/CDCHit time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Cathode time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time
-// hnamepath: /HLDetectorTiming/TRACKING/Earliest CDC Time Minus Matched SC Time
-// hnamepath: /HLDetectorTiming/TRACKING/Earliest Flight-time Corrected CDC Time
-// hnamepath: /HLDetectorTiming/TRACKING/Earliest Flight-time Corrected FDC Time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time vs. module
+// hnamepath: /HLDetectorTiming/Physics Triggers/CDC/CDCHit time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Cathode time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Wire time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Earliest CDC Time Minus Matched SC Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Earliest Flight-time Corrected CDC Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Earliest Flight-time Corrected FDC Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Wire time vs. module
 {
 	//Goto Path
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("HLDetectorTiming");
@@ -13,13 +13,13 @@
 	locDirectory->cd();
 
 	//Get Histograms
-	TH1I* CDC_Timing     = (TH1I*)gDirectory->Get("CDC/CDCHit time");
-	TH1I* CDC_SC_Timing  = (TH1I*)gDirectory->Get("TRACKING/Earliest CDC Time Minus Matched SC Time");
-	TH1I* CDC_Earliest_Time  = (TH1I*)gDirectory->Get("TRACKING/Earliest Flight-time Corrected CDC Time");
-	TH1I* FDC_Strip_Timing     = (TH1I*)gDirectory->Get("FDC/FDCHit Cathode time");
-	TH1I* FDC_Wire_Timing     = (TH1I*)gDirectory->Get("FDC/FDCHit Wire time");
-	TH1I* FDC_Earliest_Time  = (TH1I*)gDirectory->Get("TRACKING/Earliest Flight-time Corrected FDC Time");
-	TH2I* FDC_Wire_Module_Time  = (TH2I*)gDirectory->Get("FDC/FDCHit Wire time vs. module");
+	TH1I* CDC_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/CDC/CDCHit time");
+	TH1I* CDC_SC_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Earliest CDC Time Minus Matched SC Time");
+	TH1I* CDC_Earliest_Time  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Earliest Flight-time Corrected CDC Time");
+	TH1I* FDC_Strip_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Cathode time");
+	TH1I* FDC_Wire_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Wire time");
+	TH1I* FDC_Earliest_Time  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Earliest Flight-time Corrected FDC Time");
+	TH2I* FDC_Wire_Module_Time  = (TH2I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Wire time vs. module");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
