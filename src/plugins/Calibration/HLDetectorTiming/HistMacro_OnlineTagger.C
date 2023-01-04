@@ -27,10 +27,10 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/TAGM/TAGMHit Matched time
-// hnamepath: /HLDetectorTiming/TAGM/TAGMHit TDC_ADC Difference
-// hnamepath: /HLDetectorTiming/TAGH/TAGHHit Matched time
-// hnamepath: /HLDetectorTiming/TAGH/TAGHHit TDC_ADC Difference
+// hnamepath: /HLDetectorTiming/Physics Triggers/TAGM/TAGMHit Matched time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TAGM/TAGMHit TDC_ADC Difference
+// hnamepath: /HLDetectorTiming/Physics Triggers/TAGH/TAGHHit Matched time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TAGH/TAGHHit TDC_ADC Difference
 
 // e-mail: aaustreg@jlab.org
 // e-mail: sdobbs@jlab.org
@@ -49,10 +49,10 @@
         double nominalTAGMTime = 8.;	
 
 	//Get Histograms
-	TH1I* TAGH_Timing        = (TH1I*)gDirectory->Get("TAGH/TAGHHit Matched time");
-	TH1I* TAGM_Timing        = (TH1I*)gDirectory->Get("TAGM/TAGMHit Matched time");
-	TH2I* TAGH_TDCADC_Timing = (TH2I*)gDirectory->Get("TAGH/TAGHHit TDC_ADC Difference");
-	TH2I* TAGM_TDCADC_Timing = (TH2I*)gDirectory->Get("TAGM/TAGMHit TDC_ADC Difference");
+	TH1I* TAGH_Timing        = (TH1I*)gDirectory->Get("Physics Triggers/TAGH/TAGHHit Matched time");
+	TH1I* TAGM_Timing        = (TH1I*)gDirectory->Get("Physics Triggers/TAGM/TAGMHit Matched time");
+	TH2I* TAGH_TDCADC_Timing = (TH2I*)gDirectory->Get("Physics Triggers/TAGH/TAGHHit TDC_ADC Difference");
+	TH2I* TAGM_TDCADC_Timing = (TH2I*)gDirectory->Get("Physics Triggers/TAGM/TAGMHit TDC_ADC Difference");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

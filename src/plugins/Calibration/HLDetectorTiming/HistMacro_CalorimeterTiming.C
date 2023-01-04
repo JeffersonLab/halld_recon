@@ -1,7 +1,7 @@
-// hnamepath: /HLDetectorTiming/FCAL/FCALHit time
-// hnamepath: /HLDetectorTiming/BCAL/BCALHit TDC time
-// hnamepath: /HLDetectorTiming/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time
-// hnamepath: /HLDetectorTiming/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FCAL/FCALHit time
+// hnamepath: /HLDetectorTiming/Physics Triggers/BCAL/BCALHit TDC time
+// hnamepath: /HLDetectorTiming/Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time
 
 {
 	//Goto Path
@@ -11,10 +11,10 @@
 	locDirectory->cd();
 
 	//Get Histograms
-    TH1I* FCAL_Timing          = (TH1I*)gDirectory->Get("FCAL/FCALHit time");
-    TH1I* BCAL_Timing          = (TH1I*)gDirectory->Get("BCAL/BCALHit TDC time");
-    TH2I* BCAL_U_TDCADC_Timing = (TH2I*)gDirectory->Get("BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time");
-    TH2I* BCAL_D_TDCADC_Timing = (TH2I*)gDirectory->Get("BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time");
+    TH1I* FCAL_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit time");
+    TH1I* BCAL_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit TDC time");
+    TH2I* BCAL_U_TDCADC_Timing = (TH2I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time");
+    TH2I* BCAL_D_TDCADC_Timing = (TH2I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time");
 
     //Get/Make Canvas
     TCanvas *locCanvas = NULL;
