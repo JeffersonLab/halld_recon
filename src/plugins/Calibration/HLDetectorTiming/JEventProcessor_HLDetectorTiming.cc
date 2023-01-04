@@ -21,7 +21,6 @@ using namespace jana;
 #include "CCAL/DCCALGeometry.h"
 #include "TRIGGER/DTrigger.h"
 #include "RF/DRFTime.h"
-#include "HistogramTools.h"
 
 #include "PAIR_SPECTROMETER/DPSCHit.h"
 #include "PAIR_SPECTROMETER/DPSHit.h"
@@ -360,7 +359,7 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 		dTAGMTDCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
 	
 		if( (column==9) || (column==27) || (column==81) || (column==99) ) {
-			for(row=1; row<5; row++) {
+			for(row=1; row<=5; row++) {
 				sprintf(name, "TAGM Column %.3i Row %.1i", column, row);
 				sprintf(title, "TAGM Column %.3i Row %.1i t_{TDC} - t_{RF}; t_{TDC} - t_{RF} [ns]; Entries", column, row);
 				dTAGMTDCRFCompareTimes[dirname].push_back( new TH1F(name, title, NBINS_RF_COMPARE, MIN_RF_COMPARE, MAX_RF_COMPARE) );
@@ -1297,11 +1296,12 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         
         	if(DO_OPTIONAL && tagmHitVector[j]->has_fADC) {
             	double locShiftedADCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->time_fadc);
-            	dTAGMADCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(tagmHitVector[j]->time_fadc - locShiftedADCTime);
+            	dTAGMADCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])-1]->Fill(tagmHitVector[j]->time_fadc - locShiftedADCTime);
             }
             if(tagmHitVector[j]->has_TDC) {
 				double locShiftedTDCTime = dRFTimeFactory->Step_TimeToNearInputTime(thisRFBunch->dTime, tagmHitVector[j]->t);
-				dTAGMTDCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])]->Fill(tagmHitVector[j]->t - locShiftedTDCTime);
+				//cerr << GetCCDBIndexTAGM(tagmHitVector[j]) << "  " << dTAGMTDCRFCompareTimes[key].size() << endl;
+				dTAGMTDCRFCompareTimes[key][GetCCDBIndexTAGM(tagmHitVector[j])-1]->Fill(tagmHitVector[j]->t - locShiftedTDCTime);
 			}
         
         	if(tagmHitVector[j]->row == 0) {
@@ -1674,7 +1674,6 @@ jerror_t JEventProcessor_HLDetectorTiming::fini(void)
 {
    // Called before program exit after event processing is finished.
    //Here is where we do the fits to the data to see if we have a reasonable alignment
-   SortDirectories(); //Defined in HistogramTools.h
 
    return NOERROR;
 }
