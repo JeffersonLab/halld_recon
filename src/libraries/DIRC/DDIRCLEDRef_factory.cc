@@ -91,7 +91,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
             for(uint i=0; i<sipmadchits.size(); i++) {
                     const Df250PulseData* sipmadchit = (Df250PulseData*)sipmadchits[i];
-                    if(sipmadchit->rocid == 77 && sipmadchit->slot == 19 && sipmadchit->channel == 15) {
+                    if(sipmadchit->rocid == 77 && sipmadchit->slot == 16 && sipmadchit->channel == 15) {
                             double T = (double)((sipmadchit->course_time<<6) + sipmadchit->fine_time);
 			    
 			    // Apply calibration constants here
