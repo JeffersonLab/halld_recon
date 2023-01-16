@@ -45,18 +45,18 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalFCALTime = 13.;
-	double nominalBCALADCTime = 6.;
-	double nominalBCALTDCTime = 6.;
+	double nominalFCALTime = 27.;
+	double nominalBCALADCTime = 22.;
+	double nominalBCALTDCTime = 22.;
 
 	//Get Histograms
-	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit ADC time");
-	TH1I* BCAL_TDC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit TDC time");
-	TH1I* BCAL_TDC_ADC_DS_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time");
-	TH1I* BCAL_TDC_ADC_US_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time");
-	TH1I* FCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit time");
-	TH1I* FCAL_Local_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Local Time");
-	TH1I* FCAL_Occupancy = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Occupancy");
+ 	TH1I* BCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit ADC time");
+ 	TH1I* BCAL_TDC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit TDC time");
+ 	TH1I* BCAL_TDC_ADC_DS_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Downstream Per Channel TDC-ADC Hit Time");
+ 	TH1I* BCAL_TDC_ADC_US_Timing = (TH1I*)gDirectory->Get("Physics Triggers/BCAL/BCALHit Upstream Per Channel TDC-ADC Hit Time");
+ 	TH1I* FCAL_ADC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit time");
+ 	TH1I* FCAL_Local_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Local Time");
+ 	TH1I* FCAL_Occupancy = (TH1I*)gDirectory->Get("Physics Triggers/FCAL/FCALHit Occupancy");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
