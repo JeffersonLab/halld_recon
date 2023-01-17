@@ -40,14 +40,14 @@
 	locDirectory->cd();
 
         //Setpoints
-        double nominalSCTime = 4.;
-        double nominalTOFTime = 31.;
+        double nominalSCTime = 10.;
+        double nominalTOFTime = 30.;
 
 	//Get Histograms
-	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/SC/SCHit Matched time");
-	TH1I* TOF_Timing         = (TH1I*)gDirectory->Get("Physics Triggers/TOF/TOFHit Matched time");
-	TH2I* SC_TDCADC_Timing   = (TH2I*)gDirectory->Get("Physics Triggers/SC/SCHit TDC_ADC Difference");
-	TH2I* TOF_TDCADC_Timing  = (TH2I*)gDirectory->Get("Physics Triggers/TOF/TOFHit TDC_ADC Difference");
+ 	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/SC/SCHit Matched time");
+ 	TH1I* TOF_Timing         = (TH1I*)gDirectory->Get("Physics Triggers/TOF/TOFHit Matched time");
+ 	TH2I* SC_TDCADC_Timing   = (TH2I*)gDirectory->Get("Physics Triggers/SC/SCHit TDC_ADC Difference");
+ 	TH2I* TOF_TDCADC_Timing  = (TH2I*)gDirectory->Get("Physics Triggers/TOF/TOFHit TDC_ADC Difference");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
