@@ -463,7 +463,26 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::CDCAmpdEdxList elo2 = elo().addCDCAmpdEdxs(1);
 			elo2().setDxCDCAmp(tracks[i]->ddx_CDC_amp);
 			elo2().setDEdxCDCAmp(tracks[i]->ddEdx_CDC_amp);
-
+            for (int it=0; it < (int)tracks[i]->ddx_CDC_trunc.size() &&
+                           it < (int)tracks[i]->ddx_CDC_amp_trunc.size(); ++it)
+            {
+               hddm_r::CDCdEdxTruncList elo3 = elo().addCDCdEdxTruncs(1);
+               elo3().setNtrunc(it);
+               elo3().setDx(tracks[i]->ddx_CDC_trunc[it]);
+               elo3().setDEdx(tracks[i]->ddEdx_CDC_trunc[it]);
+               elo3().setDxAmp(tracks[i]->ddx_CDC_amp_trunc[it]);
+               elo3().setDEdxAmp(tracks[i]->ddEdx_CDC_amp_trunc[it]);
+            }
+            for (int it=0; it < (int)tracks[i]->ddx_FDC_trunc.size() &&
+                           it < (int)tracks[i]->ddx_FDC_amp_trunc.size(); ++it)
+            {
+               hddm_r::FDCdEdxTruncList elo3 = elo().addFDCdEdxTruncs(1);
+               elo3().setNtrunc(it);
+               elo3().setDx(tracks[i]->ddx_FDC_trunc[it]);
+               elo3().setDEdx(tracks[i]->ddEdx_FDC_trunc[it]);
+               elo3().setDxAmp(tracks[i]->ddx_FDC_amp_trunc[it]);
+               elo3().setDEdxAmp(tracks[i]->ddEdx_FDC_amp_trunc[it]);
+            }
 		}
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
 		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
