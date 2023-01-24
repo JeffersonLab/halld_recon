@@ -122,6 +122,9 @@ class MyProcessor:public JEventProcessor
   double RMAX_INTERIOR; // Used to allow user to extend drawing range of charged tracks
   double RMAX_EXTERIOR; // Used to allow user to extend drawing range of charged tracks
   double ZMAX;         // Used to allow user to extend drawing range of charged tracks
+  
+  // start counter rotation
+  double SC_PHI0;
 
   uint32_t BCALVERBOSE;
   TCanvas *BCALHitCanvas;  

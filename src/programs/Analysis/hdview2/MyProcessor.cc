@@ -174,6 +174,12 @@ jerror_t MyProcessor::brun(JEventLoop *eventloop, int32_t runnumber)
 	const DGeometry *dgeom  = dapp->GetDGeometry(runnumber);
 	dgeom->GetFDCWires(fdcwires);
 
+	// Start counter rotation
+	SC_PHI0=0.;
+	vector<double>sc_rot_angles;
+	dgeom->Get("//posXYZ[@volume='StartCntr']/@rot", sc_rot_angles);
+	SC_PHI0=M_PI/180.*sc_rot_angles[2];
+
 	RootGeom = dapp->GetRootGeom(runnumber);
 	geom = dapp->GetDGeometry(runnumber);
 	
@@ -968,8 +974,8 @@ void MyProcessor::FillGraphics(void)
 	for (unsigned int i=0;i<schits.size();i++){
 	  DGraphicSet gset(6,kLine,2.0);
 	  double r_start=7.7493;
-	  double phi0=0.2094395*(schits[i]->sector-1);  // span 12 deg in phi
-	  double phi1=0.2094395*(schits[i]->sector);
+	  double phi0=SC_PHI0+0.2094395*(schits[i]->sector-1);  // span 12 deg in phi
+	  double phi1=SC_PHI0+0.2094395*(schits[i]->sector);
 	  TVector3 point1(r_start*cos(phi0),r_start*sin(phi0),38.75); 
 	  gset.points.push_back(point1); // upstream end of sctraight section of scint
 	  TVector3 point2(r_start*cos(phi1),r_start*sin(phi1),38.75);
