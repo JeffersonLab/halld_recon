@@ -1041,13 +1041,13 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			}
 
 			if (thisTDCHit != NULL){
-				dBCALADCHitTimes[key]->Fill(thisTDCHit->t);
+				dBCALTDCHitTimes[key]->Fill(thisTDCHit->t);
 
 				if (DO_OPTIONAL){
 					if (bcalUnifiedHitVector[i]->end == 0) {
-						dBCALADCHitTimesUpstream[key]->Fill(the_cell, thisTDCHit->t);
+						dBCALTDCHitTimesUpstream[key]->Fill(the_cell, thisTDCHit->t);
 					} else {
-						dBCALADCHitTimesDownstream[key]->Fill(the_cell, thisTDCHit->t);
+						dBCALTDCHitTimesDownstream[key]->Fill(the_cell, thisTDCHit->t);
 					}
 				}
 			}
