@@ -1693,6 +1693,7 @@ void CodeBuilder::writeMatcher()
          << "      (token = strtok(line+level+1,\" >\")))"      << std::endl
          << "   {"                                              << std::endl
          << "      strncpy(tag,token,500);"                     << std::endl
+         << "      tag[499] = 0;"                               << std::endl
          << "      return level/2;"                             << std::endl
          << "   }"                                              << std::endl
          << "   return -1;"                                     << std::endl
