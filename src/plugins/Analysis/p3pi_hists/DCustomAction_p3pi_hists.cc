@@ -56,7 +56,7 @@ bool DCustomAction_p3pi_hists::Perform_Action(JEventLoop* locEventLoop, const DP
         double locBeamPhotonEnergy = locBeamPhoton->energy();
 
 	DLorentzVector locSumInitP4;
-	locSumInitP4.SetXYZM(0, 0, 0, 0.938);
+	locSumInitP4.SetXYZT(0, 0, 0, 0.938);
         locSumInitP4 += locBeamPhoton->lorentzMomentum();
 
 	// calculate missing mass
