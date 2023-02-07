@@ -991,7 +991,7 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 	return locNumber_UnusedShowers;
 }
 
-int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
+int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, DVector3 &locSumP3_UnusedTracks) const
 {
 	vector<const DChargedTrack*> locUnusedChargedTracks;
 	Get_UnusedChargedTracks(locEventLoop, locParticleCombo, locUnusedChargedTracks);
