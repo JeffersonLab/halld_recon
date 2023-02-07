@@ -5,9 +5,10 @@
 
 #ifndef USE_SSE2
 
-#include <TVector2.h>
-typedef TVector2 DVector2;
-
+#include <DVector2S.h>
+typedef DVector2S DVector2;
+//#include <TVector2.h>
+//typedef TVector2 DVector2;
 #else
 
 #include <math.h>
