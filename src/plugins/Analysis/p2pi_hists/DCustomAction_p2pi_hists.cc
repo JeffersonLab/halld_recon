@@ -145,30 +145,35 @@ bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DP
 	DLorentzVector locProtonP4Init(0,0,0,0.938);
 	locSumInitP4 += locProtonP4Init;
 	locSumInitP4 += locBeamPhoton->lorentzMomentum();
-	TLorentzVector locDelta = (locProtonP4 - locProtonP4Init);
+	DLorentzVector locDelta = (locProtonP4 - locProtonP4Init);
 	double t = locDelta.M2();
 
-	TLorentzVector locPiPlus_P4 = locParticles[1]->lorentzMomentum();
+	DLorentzVector locPiPlus_P4 = locParticles[1]->lorentzMomentum();
 
 	// boost to resonance frame for angular distributions 	
-	TLorentzRotation resonanceBoost( -locP4_2pi.BoostVector() );
-	TLorentzVector recoil_res = resonanceBoost * locProtonP4;
-	TLorentzVector p1_res = resonanceBoost * locPiPlus_P4;
-	
+	//TLorentzRotation resonanceBoost( -locP4_2pi.BoostVector() );
+	//TLorentzVector recoil_res = resonanceBoost * locProtonP4;
+	//TLorentzVector p1_res = resonanceBoost * locPiPlus_P4;
+	DVector3 locBoostVec=-locP4_2pi.BoostVector();
+	DLorentzVector recoil_res(locProtonP4);
+	recoil_res.Boost(locBoostVec);
+	DLorentzVector p1_res(locPiPlus_P4);
+	p1_res.Boost(locBoostVec);
+
 	// normal to the production plane
-	TVector3 y = (locBeamPhoton->lorentzMomentum().Vect().Unit().Cross(-locProtonP4.Vect().Unit())).Unit();
+	DVector3 y = (locBeamPhoton->lorentzMomentum().Vect().Unit().Cross(-locProtonP4.Vect().Unit())).Unit();
 	
 	// choose helicity frame: z-axis opposite recoil proton in rho rest frame
-	TVector3 z = -1. * recoil_res.Vect().Unit();
-	TVector3 x = y.Cross(z).Unit();
-	TVector3 angles( (p1_res.Vect()).Dot(x),
+	DVector3 z = -1. * recoil_res.Vect().Unit();
+	DVector3 x = y.Cross(z).Unit();
+	DVector3 angles( (p1_res.Vect()).Dot(x),
 			 (p1_res.Vect()).Dot(y),
 			 (p1_res.Vect()).Dot(z) );
 
 	double cosTheta = angles.CosTheta();
 	double phi = angles.Phi();
 	
-	TVector3 eps(1.0, 0.0, 0.0); // beam polarization vector
+	DVector3 eps(1.0, 0.0, 0.0); // beam polarization vector
 	double Phi = atan2(y.Dot(eps), locBeamPhoton->lorentzMomentum().Vect().Unit().Dot(eps.Cross(y)));
 
 	double locPsi = phi - Phi;
