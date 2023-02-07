@@ -1378,7 +1378,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//UNUSED TRACKS
 	double locSumPMag_UnusedTracks = 0.0;
-	TVector3 locSumP3_UnusedTracks;
+	DVector3 locSumP3_UnusedTracks;
 	int locNumUnusedTracks = dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEventLoop, locParticleCombos[0], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 	locTreeFillData->Fill_Single<UChar_t>("NumUnusedTracks", locNumUnusedTracks);
 
@@ -1400,10 +1400,11 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
 		double locSumPMag_UnusedTracks = 0;
-		TVector3 locSumP3_UnusedTracks;
+		DVector3 locSumP3_UnusedTracks;
 		dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEventLoop, locParticleCombos[loc_i], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 		locTreeFillData->Fill_Array<Float_t>("SumPMag_UnusedTracks", locSumPMag_UnusedTracks, loc_i);
-		locTreeFillData->Fill_Array<TVector3>("SumP3_UnusedTracks", locSumP3_UnusedTracks, loc_i);
+		locTreeFillData->Fill_Array<TVector3>("SumP3_UnusedTracks", 
+						      TVector3(locSumP3_UnusedTracks.x(),locSumP3_UnusedTracks.y(),locSumP3_UnusedTracks.z()), loc_i);
 
 		if(locMCReaction != NULL)
 		{
