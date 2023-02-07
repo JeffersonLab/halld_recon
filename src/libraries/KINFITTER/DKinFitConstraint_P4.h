@@ -22,8 +22,8 @@ class DKinFitConstraint_P4 : public DKinFitConstraint
 		DKinFitConstraint_P4(void);
 		~DKinFitConstraint_P4(void){}
 
-		TVector3 Get_InitP3Guess(void) const{return dInitP3Guess;};
-		void Set_InitP3Guess(const TVector3& locInitP3Guess){dInitP3Guess = locInitP3Guess;};
+		DVector3 Get_InitP3Guess(void) const{return dInitP3Guess;};
+		void Set_InitP3Guess(const DVector3& locInitP3Guess){dInitP3Guess = locInitP3Guess;};
 
 		char Get_FIndex(void) const{return dFIndex;}
 		set<shared_ptr<DKinFitParticle>> Get_InitialParticles(void) const{return dInitialParticles;};
@@ -51,7 +51,7 @@ class DKinFitConstraint_P4 : public DKinFitConstraint
 		set<shared_ptr<DKinFitParticle>> dInitialParticles;
 		set<shared_ptr<DKinFitParticle>> dFinalParticles;
 
-		TVector3 dInitP3Guess; //initial guess for missing or open-ended-decaying particle. ignored if not present
+		DVector3 dInitP3Guess; //initial guess for missing or open-ended-decaying particle. ignored if not present
 };
 
 inline DKinFitConstraint_P4::DKinFitConstraint_P4(void)
@@ -62,7 +62,7 @@ inline DKinFitConstraint_P4::DKinFitConstraint_P4(void)
 inline void DKinFitConstraint_P4::Reset(void)
 {
 	dFIndex = 0;
-	dInitP3Guess = TVector3(0.0, 0.0, 0.0);
+	dInitP3Guess = DVector3(0.0, 0.0, 0.0);
 	dInitialParticles.clear();
 	dFinalParticles.clear();
 }
