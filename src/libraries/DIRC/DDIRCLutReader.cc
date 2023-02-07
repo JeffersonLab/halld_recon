@@ -82,7 +82,7 @@ DDIRCLutReader::DDIRCLutReader(JApplication *japp, unsigned int run_number)
 			
 			for(int l=0; l<luts; l++){ // loop over bars
 				for(uint j=0; j<LutPixelAngleX[l]->size(); j++) { // loop over possible paths
-					TVector3 angle(LutPixelAngleX[l]->at(j), LutPixelAngleY[l]->at(j), LutPixelAngleZ[l]->at(j));
+					DVector3 angle(LutPixelAngleX[l]->at(j), LutPixelAngleY[l]->at(j), LutPixelAngleZ[l]->at(j));
 					lutNodeAngle[l][i].push_back(angle);
 					lutNodeTime[l][i].push_back(LutPixelTime[l]->at(j));
 					lutNodePath[l][i].push_back(LutPixelPath[l]->at(j));
@@ -180,7 +180,7 @@ uint DDIRCLutReader::GetLutPixelPathSize(int bar, int pixel) const
 	return lutNodePath[bar][pixel].size();
 }
 
-TVector3 DDIRCLutReader::GetLutPixelAngle(int bar, int pixel, int entry) const
+DVector3 DDIRCLutReader::GetLutPixelAngle(int bar, int pixel, int entry) const
 {
 	return lutNodeAngle[bar][pixel].at(entry);
 }
