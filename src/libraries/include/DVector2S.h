@@ -52,6 +52,13 @@ class DVector2S{
   DVector2S& operator/=(const double &f){mx/=f; my/=f; return *this;}
   DVector2S& operator+=(const DVector2S &v){mx+=v.X(); my+=v.Y(); return *this;}
   DVector2S& operator-=(const DVector2S &v){mx-=v.X(); my-=v.Y(); return *this;}
+
+  // Rotate by angle phi
+  DVector2S Rotate(const double phi) const{
+    double cphi=cos(phi);
+    double sphi=sin(phi);
+    return DVector2S(mx*cphi-my*sphi, mx*sphi+my*cphi);
+  }
   
   void Print(){
     cout << "DVector2 (x,y)=("<<X()<<","<<Y()<<") (rho,phi)=("<< Mod()
