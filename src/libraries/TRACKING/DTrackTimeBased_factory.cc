@@ -40,6 +40,14 @@ bool DTrackTimeBased_cmp(DTrackTimeBased *a,DTrackTimeBased *b){
   return a->candidateid<b->candidateid;
 }
 
+// Routines for sorting dEdx data
+bool DTrackTimeBased_dedx_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
+  return a.dEdx > b.dEdx;
+}
+
+bool DTrackTimeBased_dedx_amp_cmp(DParticleID::dedx_t a,DParticleID::dedx_t b){
+  return a.dEdx_amp > b.dEdx_amp;
+}
 
 // count_common_members
 //------------------
@@ -155,6 +163,9 @@ jerror_t DTrackTimeBased_factory::init(void)
 	USE_BCAL_TIME=true;
 	gPARMS->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
        
+    SAVE_TRUNCATED_DEDX = false;
+    gPARMS->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
+
 	return NOERROR;
 }
 
@@ -212,8 +223,23 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
     _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
     return RESOURCE_UNAVAILABLE;
   }
-  
 
+  // Get z positions of fdc wire planes
+  geom->GetFDCZ(fdc_z_wires);
+  // for now, assume the z extent of a package is the difference between the positions
+  // of the two wire planes.  save half of this distance
+  fdc_package_size = (fdc_z_wires[1]-fdc_z_wires[0]) / 2.;
+  geom->GetFDCRmin(fdc_rmin_packages);
+  geom->GetFDCRmax(fdc_rmax);
+  
+  // Get CDC wire geometry data
+  geom->GetCDCWires(cdcwires);
+  //   geom->GetCDCRmid(cdc_rmid); // THIS ISN'T IMPLEMENTED!!
+  // extract the "mean" radius of each ring from the wire data
+  for(uint ring=0; ring<cdcwires.size(); ring++)
+    cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
+  
+  
 	if(DEBUG_HISTS){
 		dapp->Lock();
 		
@@ -352,6 +378,69 @@ jerror_t DTrackTimeBased_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       _data[loc_i]->dMCThrownMatchMyID = -1;
       _data[loc_i]->dNumHitsMatchedToThrown = 0;
     }
+  }
+
+  // figure out the number of expected hits for this track based on the final fit
+  for (size_t j=0; j<_data.size();j++){
+    set<const DCDCWire *> expected_hit_straws;
+    set<int> expected_hit_fdc_planes;
+    
+    vector<DTrackFitter::Extrapolation_t>cdc_extraps=_data[j]->extrapolations.at(SYS_CDC);
+    for(uint i=0; i<cdc_extraps.size(); i++) {
+      // figure out the radial position of the point to see which ring it's in
+      DVector3 track_pos=cdc_extraps[i].position;
+      double r = track_pos.Perp();
+      uint ring=0;
+      for(; ring<cdc_rmid.size(); ring++) {
+	//_DBG_ << "Rs = " << r << " " << cdc_rmid[ring] << endl;
+	if( (r<cdc_rmid[ring]-0.78) || (fabs(r-cdc_rmid[ring])<0.78) )
+	  break;
+      }
+      if(ring == cdc_rmid.size()) ring--;
+      //_DBG_ << "ring = " << ring << endl;
+      //_DBG_ << "ring = " << ring << "  stereo = " << cdcwires[ring][0]->stereo << endl;
+      int best_straw=0;
+      double best_dist_diff2=(track_pos - cdcwires[ring][0]->origin).Mag2();
+      // match based on straw center
+      for(uint straw=1; straw<cdcwires[ring].size(); straw++) {
+	const DCDCWire *wire=cdcwires[ring][straw];
+	DVector3 wire_position = wire->origin;  // start with the nominal wire center
+	// now take into account the z dependence due to the stereo angle
+	double dz = track_pos.Z() - wire_position.Z();
+	double ds = dz*tan(wire->stereo);
+	double phi=wire_position.Phi();
+	wire_position += DVector3(-ds*sin(phi), ds*cos(phi), dz);
+	double diff2 = (track_pos - wire_position).Mag2();
+	if( diff2 < best_dist_diff2 ){
+	  best_straw = straw;
+	  best_dist_diff2=diff2;
+	}
+      }
+      
+      expected_hit_straws.insert(cdcwires[ring][best_straw]);
+    }
+    
+    vector<DTrackFitter::Extrapolation_t>fdc_extraps=_data[j]->extrapolations.at(SYS_FDC);
+    for(uint i=0; i<fdc_extraps.size(); i++) {
+      // check to make sure that the track goes through the sensitive region of the FDC
+      // assume one hit per plane
+      double z = fdc_extraps[i].position.Z();
+      double r = fdc_extraps[i].position.Perp();
+      
+      // see if we're in the "sensitive area" of a package
+      for(uint plane=0; plane<fdc_z_wires.size(); plane++) {
+	int package = plane/6;
+	if(fabs(z-fdc_z_wires[plane]) < fdc_package_size) {
+	  if( r<fdc_rmax && r>fdc_rmin_packages[package]) {
+	    expected_hit_fdc_planes.insert(plane);
+	  }
+	  break; // found the right plane
+	}
+      }
+    }
+    
+    _data[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
+    _data[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
   }
 
   return NOERROR;
@@ -831,8 +920,8 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       for(unsigned int m=0; m<mycdchits.size(); m++)
 	timebased_track->AddAssociatedObject(mycdchits[m]);
 
- 	  timebased_track->measured_cdc_hits_on_track = mycdchits.size();
- 	  timebased_track->measured_fdc_hits_on_track = myfdchits.size();
+      timebased_track->measured_cdc_hits_on_track = mycdchits.size();
+      timebased_track->measured_fdc_hits_on_track = myfdchits.size();
 
       // dEdx
       double locdEdx_FDC, locdx_FDC, locdEdx_CDC, locdEdx_CDC_amp;
@@ -848,9 +937,6 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->ddx_CDC = locdx_CDC; 
       timebased_track->ddx_CDC_amp = locdx_CDC_amp;
       timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
-      
-      timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
- 	  timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
 
       timebased_track->AddAssociatedObject(track);
       _data.push_back(timebased_track);
@@ -894,29 +980,6 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       const vector<const DCDCTrackHit*> &cdchits = fitter->GetCDCFitHits();
       const vector<const DFDCPseudo*> &fdchits = fitter->GetFDCFitHits();
       
-      unsigned int num_fdc_potential=fitter->GetNumPotentialFDCHits();
-      unsigned int num_cdc_potential=fitter->GetNumPotentialCDCHits();
-
-      DTrackTimeBased::hit_usage_t temp;
-      temp.inner_layer=0;
-      temp.outer_layer=0;
-      temp.total_hits=num_cdc_potential;
-      if (cdchits.size()>0){
-	temp.inner_layer=cdchits[0]->wire->ring;
-	temp.outer_layer=cdchits[cdchits.size()-1]->wire->ring;
-      }
-      timebased_track->cdc_hit_usage=temp;
-
-      // Reset the structure
-      temp.inner_layer=0;
-      temp.outer_layer=0;
-      temp.total_hits=num_fdc_potential; 
-      if (fdchits.size()>0){
-	temp.inner_layer=fdchits[0]->wire->layer;
-	temp.outer_layer=fdchits[fdchits.size()-1]->wire->layer;
-      }
-      timebased_track->fdc_hit_usage=temp;
-      
       for(unsigned int m=0; m<cdchits.size(); m++)
 	timebased_track->AddAssociatedObject(cdchits[m]);
       for(unsigned int m=0; m<fdchits.size(); m++)
@@ -947,9 +1010,6 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
       timebased_track->Get(tempFDCPseudos);
       timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
       timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-      
-      timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
-      timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
 
       // Add DTrack object as associate object
       timebased_track->AddAssociatedObject(track);
@@ -998,8 +1058,6 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   timebased_track->trackid = src_track->id;
   timebased_track->candidateid=src_track->candidateid;
   timebased_track->FOM=src_track->FOM;
-  timebased_track->cdc_hit_usage=src_track->cdc_hit_usage;
-  timebased_track->fdc_hit_usage=src_track->fdc_hit_usage;
   timebased_track->flags=DTrackTimeBased::FLAG__USED_OTHER_HYPOTHESIS;
   
   // Add list of start times
@@ -1071,38 +1129,15 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
       // Add hits used as associated objects
       const vector<const DCDCTrackHit*> &cdchits = fitter->GetCDCFitHits();
       const vector<const DFDCPseudo*> &fdchits = fitter->GetFDCFitHits();
-      
-      unsigned int num_fdc_potential=fitter->GetNumPotentialFDCHits();
-      unsigned int num_cdc_potential=fitter->GetNumPotentialCDCHits();
-
-      DTrackTimeBased::hit_usage_t temp;
-      temp.inner_layer=0;
-      temp.outer_layer=0;
-      temp.total_hits=num_cdc_potential;
-      if (cdchits.size()>0){
-	temp.inner_layer=cdchits[0]->wire->ring;
-	temp.outer_layer=cdchits[cdchits.size()-1]->wire->ring;
-      }
-      timebased_track->cdc_hit_usage=temp;
-
-      // Reset the structure
-      temp.inner_layer=0;
-      temp.outer_layer=0;
-      temp.total_hits=num_fdc_potential; 
-      if (fdchits.size()>0){
-	temp.inner_layer=fdchits[0]->wire->layer;
-	temp.outer_layer=fdchits[fdchits.size()-1]->wire->layer;
-      }
-      timebased_track->fdc_hit_usage=temp;
-      
+       
       for(unsigned int m=0; m<cdchits.size(); m++)
 	timebased_track->AddAssociatedObject(cdchits[m]);
       for(unsigned int m=0; m<fdchits.size(); m++)
 	timebased_track->AddAssociatedObject(fdchits[m]); 
-      
+       
       timebased_track->measured_cdc_hits_on_track = cdchits.size();
       timebased_track->measured_fdc_hits_on_track = fdchits.size();
-      
+       
       // Compute the figure-of-merit based on tracking
       timebased_track->FOM = TMath::Prob(timebased_track->chisq, timebased_track->Ndof);
       
@@ -1133,7 +1168,91 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   timebased_track->ddx_CDC = locdx_CDC;
   timebased_track->ddx_CDC_amp = locdx_CDC_amp;
   timebased_track->dNumHitsUsedFordEdx_CDC = locNumHitsUsedFordEdx_CDC;
-  
+
+  // The above code has a truncated mean algorithm for dEdx hardwired for the FDC
+  // and selectable between on and off for the CDC_amp. Here I save the complete
+  // information for a variety of truncation choices, and let the user decide later.
+
+  if (SAVE_TRUNCATED_DEDX) {
+    std::vector<DParticleID::dedx_t> locdEdxHits_CDC;
+    std::vector<DParticleID::dedx_t> locdEdxHits_FDC;
+    jerror_t locReturnStatus = pid_algorithm->GetDCdEdxHits(timebased_track, locdEdxHits_CDC, locdEdxHits_FDC);
+    if (locReturnStatus == NOERROR) {
+      const int maxtrunc(5);
+      sort(locdEdxHits_CDC.begin(),locdEdxHits_CDC.end(), DTrackTimeBased_dedx_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_CDC.size(); ++i) {
+          double dx = locdEdxHits_CDC[i].dx;
+          double dE = locdEdxHits_CDC[i].dEdx * dx;
+          if (itrunc < (int)timebased_track->ddx_CDC_trunc.size()) {
+            timebased_track->ddx_CDC_trunc[itrunc] += dx;
+            timebased_track->ddEdx_CDC_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_CDC_trunc.push_back(dx);
+            timebased_track->ddEdx_CDC_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_CDC_trunc.size())
+          timebased_track->ddEdx_CDC_trunc[itrunc] /= timebased_track->ddx_CDC_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_CDC.begin(),locdEdxHits_CDC.end(), DTrackTimeBased_dedx_amp_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_CDC.size(); ++i) {
+          double dx = locdEdxHits_CDC[i].dx;
+          double dE = locdEdxHits_CDC[i].dEdx_amp * dx;
+          if (itrunc < (int)timebased_track->ddx_CDC_amp_trunc.size()) {
+            timebased_track->ddx_CDC_amp_trunc[itrunc] += dx;
+            timebased_track->ddEdx_CDC_amp_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_CDC_amp_trunc.push_back(dx);
+            timebased_track->ddEdx_CDC_amp_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_CDC_amp_trunc.size())
+          timebased_track->ddEdx_CDC_amp_trunc[itrunc] /= timebased_track->ddx_CDC_amp_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_FDC.begin(),locdEdxHits_FDC.end(), DTrackTimeBased_dedx_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_FDC.size(); ++i) {
+          double dx = locdEdxHits_FDC[i].dx;
+          double dE = locdEdxHits_FDC[i].dEdx * dx;
+          if (itrunc < (int)timebased_track->ddx_FDC_trunc.size()) {
+            timebased_track->ddx_FDC_trunc[itrunc] += dx;
+            timebased_track->ddEdx_FDC_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_FDC_trunc.push_back(dx);
+            timebased_track->ddEdx_FDC_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_FDC_trunc.size())
+          timebased_track->ddEdx_FDC_trunc[itrunc] /= timebased_track->ddx_FDC_trunc[itrunc] + 1e-99;
+      }
+
+      sort(locdEdxHits_FDC.begin(),locdEdxHits_FDC.end(), DTrackTimeBased_dedx_amp_cmp);  
+      for (int itrunc=0; itrunc <= maxtrunc; ++itrunc) {
+        for (int i=itrunc; i < (int)locdEdxHits_FDC.size(); ++i) {
+          double dx = locdEdxHits_FDC[i].dx;
+          double dE = locdEdxHits_FDC[i].dEdx_amp * dx;
+          if (itrunc < (int)timebased_track->ddx_FDC_amp_trunc.size()) {
+            timebased_track->ddx_FDC_amp_trunc[itrunc] += dx;
+            timebased_track->ddEdx_FDC_amp_trunc[itrunc] += dE;
+          }
+          else {
+            timebased_track->ddx_FDC_amp_trunc.push_back(dx);
+            timebased_track->ddEdx_FDC_amp_trunc.push_back(dE);
+          }
+        }
+        if (itrunc < (int)timebased_track->ddx_FDC_amp_trunc.size())
+          timebased_track->ddEdx_FDC_amp_trunc[itrunc] /= timebased_track->ddx_FDC_amp_trunc[itrunc] + 1e-99;
+      }
+    }
+  }
+
   // Set CDC ring & FDC plane hit patterns before candidate and wirebased tracks are associated
   vector<const DCDCTrackHit*> tempCDCTrackHits;
   vector<const DFDCPseudo*> tempFDCPseudos;
@@ -1141,9 +1260,6 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   timebased_track->Get(tempFDCPseudos);
   timebased_track->dCDCRings = pid_algorithm->Get_CDCRingBitPattern(tempCDCTrackHits);
   timebased_track->dFDCPlanes = pid_algorithm->Get_FDCPlaneBitPattern(tempFDCPseudos);
-  
-  timebased_track->potential_cdc_hits_on_track = fitter->GetNumPotentialCDCHits();
-  timebased_track->potential_fdc_hits_on_track = fitter->GetNumPotentialFDCHits();
   
   tracks_to_add.push_back(timebased_track);
 }

@@ -25,10 +25,6 @@
 	TH1I *ctof_adc_events = (TH1I*)gDirectory->FindObjectAny("ctof_adc_events");
 	if(ctof_adc_events) adc_events = (double)ctof_adc_events->GetBinContent(1);
 
-	double tdc_events = 1.0;
-	TH1I *ctof_tdc_events = (TH1I*)gDirectory->FindObjectAny("ctof_tdc_events");
-	if(ctof_tdc_events) tdc_events = (double)ctof_tdc_events->GetBinContent(1);
-
 	TH1I *ha_u = (TH1I*)gDirectory->FindObjectAny("ctof_adc_occ_up");
 	TH1I *ha_d = (TH1I*)gDirectory->FindObjectAny("ctof_adc_occ_down");
 
@@ -126,14 +122,14 @@
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
 	if( rs_GetFlag("Is_RSAI")==1 ){
-		auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
-		if( min_events < 1 ) min_events = 5E5;
-		if( Nevents >= min_events ) {
-			cout << "CTOF Flagging AI check after " << Nevents << " events (>=" << min_events << ")" << endl;
-			rs_SavePad("CTOF_occupancy", 0);
-			rs_ResetAllMacroHistos("//CTOF_occupancy");
-		}
-	}
+          auto min_events = 5*rs_GetFlag("MIN_EVENTS_RSAI");
+          if( min_events < 1 ) min_events = 5E5;
+          if( adc_events >= min_events ) {
+            cout << "CTOF Flagging AI check after " << adc_events << " events (>=" << min_events << ")" << endl;
+            rs_SavePad("CTOF_occupancy", 0);
+            rs_ResetAllMacroHistos("//CTOF_occupancy");
+          }
+        }
 #endif
 
 }

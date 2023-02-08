@@ -1,7 +1,7 @@
 #include <align_16.h>
 
 #ifndef USE_SSE2
-#include "DMatrixDSym.h"
+
 // Matrix class without SIMD instructions
 
 class DMatrix4x4{
@@ -181,23 +181,39 @@ class DMatrix4x4{
     return temp;
   }
 
-  DMatrixDSym GetSub(unsigned int lowerBound, unsigned int upperBound){
-     if (upperBound >= lowerBound) return DMatrixDSym();
-     DMatrixDSym subMatrix(upperBound - lowerBound);
-     for (unsigned int i=lowerBound; i <= upperBound; i++){
-        for (unsigned int j=lowerBound; j <= upperBound; j++){
-           subMatrix(i,j) = mA[i][j];
-        }
-     }
-     return subMatrix;
+  double Determinant() const{
+    double det5=mA[2][2]*mA[3][3]-mA[2][3]*mA[3][2];
+    double det6=mA[2][1]*mA[3][3]-mA[2][3]*mA[3][1];
+    double det7=mA[2][1]*mA[3][2]-mA[2][2]*mA[3][1];
+    double det1=mA[1][1]*det5 - mA[1][2]*det6 + mA[1][3]*det7;
+    double det8=mA[2][0]*mA[3][3]-mA[2][3]*mA[3][0];
+    double det9=mA[2][0]*mA[3][2]-mA[2][2]*mA[3][0];
+    double det2=mA[1][0]*det5 - mA[1][2]*det8 + mA[1][3]*det9;
+    double det10=mA[2][0]*mA[3][1]-mA[2][1]*mA[3][0];
+    double det3=mA[1][0]*det6 - mA[1][1]*det8 + mA[1][3]*det10;
+    double det4=mA[1][0]*det7 - mA[1][1]*det9 + mA[1][2]*det10;
+    return mA[0][0]*det1 - mA[0][1]*det2 + mA[0][2]*det3 - mA[0][3]*det4;
   }
 
   bool IsPosDef(){
-     if(mA[0][0] > 0. &&
-           GetSub(0,1).Determinant() > 0. && GetSub(0,2).Determinant() > 0. &&
-           GetSub(0,3).Determinant() > 0.)
-        return true;
-     else return false;
+    if (mA[0][0]>0.){
+      // Determinant of 2x2 sub-matrix
+      double det22=mA[0][0]*mA[1][1]-mA[0][1]*mA[1][0];
+      if (det22>0.){
+	// Determinant of 3x3 sub-matrix
+	double det33=mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
+	  - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
+	  + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
+	if (det33>0.){
+	  //Determinant of 4x4 matrix
+	  double det44=Determinant();
+	  if(det44>0.){
+	    return true;
+	  }
+	}
+      }
+    }
+    return false;
   }
 
   void Print(){

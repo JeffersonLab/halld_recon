@@ -20,6 +20,7 @@ class DCPPEpEm:public jana::JObject{
   double weight;  // event weight (+: prompt, -: accidental)
   double pippim_chisq,epem_chisq,kpkm_chisq; // fit qualities
   double pimu_ML_classifier;    // ~0=mu event , ~1=pi event -1=info not available
+  double pipep_ML_classifier,pimem_ML_classifier;// ~1 = lepton
   const DFCALShower *ElectronShower,*PositronShower; // pointers to FCAL showers to which the tracks point
   DLorentzVector pim_v4,pip_v4; // four vectors for pion hypothesis pairs
   DLorentzVector em_v4,ep_v4; // four vectors for e+/e- hypothesis pairs
@@ -35,7 +36,9 @@ class DCPPEpEm:public jana::JObject{
     AddString(items, "Positron E", "%f", 
 	      (PositronShower!=NULL)?PositronShower->getEnergy():0.);
     AddString(items, "kpkm_chisq", "%f", kpkm_chisq);
-    AddString(items, "pimu_ML_classifier", "%f", pimu_ML_classifier);
+    AddString(items, "pimu_ML_classifier", "%f", pimu_ML_classifier); 
+    AddString(items, "pimem_ML_classifier", "%f", pimem_ML_classifier);
+    AddString(items, "pipep_ML_classifier", "%f", pipep_ML_classifier);
     AddString(items, "K+ momentum", "%f", kp_v4.P());
     AddString(items, "K- momentum", "%f", km_v4.P());
     AddString(items, "pippim_chisq", "%f", pippim_chisq);

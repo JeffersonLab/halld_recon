@@ -167,14 +167,19 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     newCluster->layer = first_hit->layer;
     newCluster->first_wire = first_hit->wire;
     newCluster->Nhits = 0;
+    newCluster->t = 0.0;
     for(uint32_t i=istart; i<iend; i++){
       newCluster->q += H[i]->q;
       newCluster->u += H[i]->wire * H[i]->q; // weigh position with charge
+      newCluster->t += H[i]->t * H[i]->q; // weigh time with charge
       newCluster->members.push_back(H[i]);
       newCluster->last_wire = H[i]->wire;
       newCluster->Nhits++;
     }
-    if (newCluster->q != 0) newCluster->u /= newCluster->q; // normalize to total charge
+    if (newCluster->q != 0){
+      newCluster->u /= newCluster->q; // normalize to total charge
+      newCluster->t /= newCluster->q; // normalize to total charge
+    }
 
     // global coordinate system
     // set to -777 for not measured coordinate

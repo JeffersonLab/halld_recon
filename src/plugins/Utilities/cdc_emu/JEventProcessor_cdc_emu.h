@@ -35,7 +35,7 @@ using namespace jana;
 #include "DAQ/Df125CDCPulse.h"
 #include "DAQ/Df125Config.h"
 #include "DAQ/Df125TriggerTime.h"
-
+#include "TRIGGER/DTrigger.h"
 //#include "DAQ/DCODAEventInfo.h"
 
 #include "fa125fns.h"

@@ -39,7 +39,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
-  SHOWER_WIDTH_PARAMETER=0.69;
+  SHOWER_WIDTH_PARAMETER=0.72;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PARAMETER",
 			      SHOWER_WIDTH_PARAMETER);
   INSERT_SHOWER_WIDTH_PARAMETER=0.31;
@@ -55,7 +55,7 @@ jerror_t DFCALCluster_factory_Island::init(void)
   CHISQ_MARGIN=5.;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
-  MASS_CUT=1e-6;
+  MASS_CUT=5e-5;
   gPARMS->SetDefaultParameter("FCAL:MASS_CUT",MASS_CUT);
 
   ENERGY_SHARING_CUTOFF=0.9;
@@ -83,9 +83,10 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
   m_insert_Eres[0]=0.0003;
   m_insert_Eres[1]=0.00025;
   m_insert_Eres[2]=4.4e-5;
-  m_Eres[0]=0.0005;
-  m_Eres[1]=0.001225;
-  m_Eres[2]=9.0e-4;
+
+  m_Eres[0]=0.0006;
+  m_Eres[1]=0.0025;
+  m_Eres[2]=0.0009;
 
   return NOERROR;
 }
@@ -115,7 +116,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     if (clusterCandidates[i].size()==1) continue;
 
     // Mininum number of hits to make a shower = 2
-    if (clusterCandidates[i].size()<3){
+    if (clusterCandidates[i].size()<4){
       // Create a new DFCALCluster object and add it to the _data list
       DFCALCluster *myCluster= new DFCALCluster(0);
       vector<const DFCALHit*>clusterCandidate=clusterCandidates[i];
@@ -172,6 +173,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     }
     
     double chisq=1e6,chisq_old=1e6;
+    unsigned int ndf=1,ndf_old=1;
     // Find the minimum and maximum row and column numbers
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
     for (unsigned int j=0;j<num_hits;j++){
@@ -208,7 +210,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       if (Emax>MIN_CLUSTER_SEED_ENERGY){
 	PeakInfo myPeak(Esum,clusterHits[jmax]->x,clusterHits[jmax]->y,0,0,
 			num_hits);
-	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
+	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq,ndf);
 	if (good_fit){
 	  peaks.push_back(myPeak);
 	}
@@ -225,6 +227,15 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  myPeak.x/=Esum;
 	  myPeak.y/=Esum;
 	  peaks.push_back(myPeak);
+
+	  // Compute chisq estimate just in case we need to make a split
+	  chisq=0.;
+	  ndf=num_hits-3;
+	  for (unsigned int j=0;j<num_hits;j++){
+	    double dE=clusterHits[j]->E
+	      -Esum*CalcClusterEDeriv(clusterHits[j],myPeak);
+	    chisq+=W(j,j)*dE*dE;
+	  }
 	}
       }
     }
@@ -236,7 +247,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	for (int ir=1;ir<num_rows-1;ir++){
 	  double E=Emap[ic][ir];
 	  double Esum=E;
-	  if (E>MIN_CLUSTER_SEED_ENERGY){
+	  if (E>MIN_CLUSTER_SEED_ENERGY
+	      && num_hits>3*(peak_candidates.size()+1)
+	      ){
 	    int nhits_in_peak=1;
 	    
 	    bool got_peak=true;
@@ -304,37 +317,48 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  // Save the current peak list
 	  vector<PeakInfo>saved_peaks=peaks;
 	  PeakInfo peak_guess=myPeak;
-	  if (myPeak.nhits>2){
-	    // Fit the data to find the best current guesses for the shower 
-	    // parameters for each peak within this group of FCAL hits.	  
-	    chisq_old=chisq;
-	    bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
-	    if (good_fit && chisq<chisq_old){
-	      // Check that the difference between this candidate and the peaks
-	      // in the list is physical (i.e., could be compatible with a pi0)
-	      bool keep_photon_candidate=CheckPeak(peaks,myPeak);
-	      if (keep_photon_candidate){
-		peaks.push_back(myPeak);
-	      }
-	      else {
-		// Difference between this photon and the others in the list is 
-		// not physical.  Restore the old list.
-		peaks=saved_peaks;
-		chisq=chisq_old;
-	      }
+
+	  // Fit the data to find the best current guesses for the shower 
+	  // parameters for each peak within this group of FCAL hits.	  
+	  chisq_old=chisq;
+	  ndf_old=ndf;
+	  bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq,ndf);
+	  if (good_fit && chisq/ndf<chisq_old/ndf_old){
+	    // Check that the difference between this candidate and the peaks
+	    // in the list is physical (i.e., could be compatible with a pi0)
+	    bool keep_photon_candidate=CheckPeak(peaks,myPeak);
+	    if (keep_photon_candidate){
+	      peaks.push_back(myPeak);
 	    }
-	    else if (peaks.size()==0){
-	      // Always add the first peak, even if the fit failed.
-	      // Use the initial guess for the peak info.
-	      peaks.push_back(peak_guess);
-	    }
-	    else{
-	      // No improvement from adding the new peak. Restore the old
-	      // list
+	    else {
+	      // Difference between this photon and the others in the list is 
+	      // not physical.  Restore the old list.
 	      peaks=saved_peaks;
 	      chisq=chisq_old;
+	      ndf=ndf_old;
 	    }
-	  } // check number of hits in peak candidate
+	  }
+	  else if (peaks.size()==0){
+	    // Always add the first peak, even if the fit failed.
+	    // Use the initial guess for the peak info.
+	    peaks.push_back(peak_guess);
+	    
+	    // Compute chisq estimate just in case we need to make a split
+	    chisq=0.;
+	    ndf=num_hits-3;
+	    for (unsigned int j=0;j<num_hits;j++){
+	      double dE=clusterHits[j]->E
+		-Esum*CalcClusterEDeriv(clusterHits[j],peak_guess);
+	      chisq+=W(j,j)*dE*dE;
+	    }
+	  }
+	  else{
+	    // No improvement from adding the new peak. Restore the old
+	    // list
+	    peaks=saved_peaks;
+	    chisq=chisq_old;
+	    ndf=ndf_old;
+	  }
 	} // check threshold
       } // loop over peak candidates
       
@@ -350,7 +374,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       }
     }
   
-    if (num_hits>4){
+    if (num_hits>3*(peaks.size()+1)){
       // Subtract the energy due to the fitted peaks from the energy of each
       // hit to see if we have excess energy that has not been accounted for
       vector<double>Elist(clusterHits.size());
@@ -396,9 +420,10 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	vector<PeakInfo>saved_peaks=peaks;
 
 	// Add the new peak to the fit to see if the fit quality improves
-	double chisq_old=chisq;
-	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq);
-	if (good_fit && chisq+CHISQ_MARGIN<chisq_old
+	chisq_old=chisq;
+	ndf_old=ndf;
+	bool good_fit=FitPeaks(W,clusterHits,peaks,myPeak,chisq,ndf);
+	if (good_fit && chisq/ndf+CHISQ_MARGIN<chisq_old/ndf_old
 	    && CheckPeak(peaks,myPeak)
 	    ){
 	  peaks.push_back(myPeak);
@@ -407,10 +432,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  // Chisq did not improve.  Restore the old list of peaks.
 	  peaks=saved_peaks;
 	  chisq=chisq_old;
+	  ndf=ndf_old;
 	}
       }
       // Try to split the peaks further using moments of the hit distribution
-      SplitPeaks(W,clusterHits,peaks,chisq);
+      SplitPeaks(W,clusterHits,peaks,chisq,ndf);
     }
 
     // Estimate fraction of "seen" energy for each peak
@@ -447,7 +473,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	}
 
-	myCluster->setTimeEWeight(clusterHits[jmax]->t);
+	myCluster->setTimeEWeight(t/fsum);
 	int channel=dFCALGeom->channel(clusterHits[jmax]->row,
 				       clusterHits[jmax]->column);
 	myCluster->setChannelEmax(channel);
@@ -602,7 +628,8 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
 					   vector<const DFCALHit*>&hitList,
 					   vector<PeakInfo>&peaks,
-					   PeakInfo &myNewPeak,double &chisq
+					   PeakInfo &myNewPeak,double &chisq,
+					   unsigned int &ndf
 					   ) const {  
   size_t nhits=hitList.size();
   size_t npeaks=peaks.size();  
@@ -707,6 +734,9 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,
     myNewPeak.y+=dPar(3*npeaks+2,0);
   }
 
+  // Number of degrees of freedom
+  ndf=nhits-3*(peaks.size()+1);
+
   // Peak info for output of the routine.  At this stage myNewPeak, for example,
   // has been adjusted away from the solution with the best chisq value.
   myNewPeak=saved_new_peak;
@@ -798,11 +828,12 @@ double DFCALCluster_factory_Island::CalcClusterEDeriv(const DFCALHit *hit,
 void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
 					     vector<const DFCALHit*>&hits,
 					     vector<PeakInfo>&peaks,
-					     double &chisq) const{
+					     double &chisq,unsigned int &ndf) const{
   unsigned int npeaks=peaks.size(),nhits=hits.size();
   vector<PeakInfo>saved_peaks=peaks;
 
   double chisq_old=chisq;
+  unsigned int ndf_old=ndf;
   // Find the centroid of the hits for each peak region
   for (unsigned int i=0;i<npeaks;i++){
     double E0=0.,x0=0.,y0=0.;
@@ -879,8 +910,9 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
 
     // Refit with the split peaks
     chisq_old=chisq;
-    bool good_fit=FitPeaks(W,hits,peaks,myNewPeak,chisq);
-    if (good_fit && chisq+CHISQ_MARGIN<chisq_old){
+    ndf_old=ndf;
+    bool good_fit=FitPeaks(W,hits,peaks,myNewPeak,chisq,ndf);
+    if (good_fit && chisq/ndf+CHISQ_MARGIN<chisq_old/ndf_old){
       // Check that the difference between this candidate and the peaks in the
       // list is physical (i.e., could be compatible with a pi0)
       bool keep_photon_candidate=CheckPeak(peaks,myNewPeak);
@@ -892,12 +924,14 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,
 	// physical.  Restore the old list.
 	peaks=saved_peaks;
 	chisq=chisq_old;
+	ndf=ndf_old;
       }
     }
     else {
       // No improvement from adding the new peak. Restore the old list.
       peaks=saved_peaks;
       chisq=chisq_old;
+      ndf=ndf_old;
     }
   }
 }

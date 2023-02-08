@@ -52,7 +52,9 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
 
   FDC_HOUGH_THRESHOLD=10.;
   gPARMS->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
-
+  ADD_VERTEX_POINT=true;
+  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+ 
   if(DEBUG_HISTS) {
     dapp->Lock();
     match_dist_fdc=(TH2F*)gROOT->FindObject("match_dist_fdc");
@@ -225,7 +227,9 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
     // Create the fit object and add the hits
     DHelicalFit fit; 
     // Fake point at origin
-    fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+    if (ADD_VERTEX_POINT){
+      fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+    }
     double max_r=0.;
     rc=0.,xc=0.,yc=0.,tanl=0.; //initialize helix variables
     q=mytracks[i][0]->q;
@@ -267,7 +271,9 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
 
       // Prune the fake hit at the origin in case we need to use an alternate
       // fit
-      fit.PruneHit(0);
+      if (ADD_VERTEX_POINT){
+	fit.PruneHit(0);
+      }
       if (p>10.){//... try alternate circle fit
 	fit.FitCircle();
 	rc=fit.r0;
@@ -699,7 +705,9 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	// Create fit object and add hits
 	DHelicalFit fit;  
 	// Fake point at origin
-	fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+	if (ADD_VERTEX_POINT){
+	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+	}
 	double max_r=0.;
 	for (unsigned int m=0;m<segments.size();m++){ 
 	  for (unsigned int k=0;k<segments[m]->hits.size();k++){
@@ -728,7 +736,9 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  
 	  // Prune the fake hit at the origin in case we need to use an 
 	  // alternate fit
-	  fit.PruneHit(0);
+	  if (ADD_VERTEX_POINT){
+	    fit.PruneHit(0);
+	  }
 	  if (p>10.){//... try alternate circle fit 
 	    fit.FitCircle();
 	    rc=fit.r0;

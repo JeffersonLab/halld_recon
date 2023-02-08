@@ -16,12 +16,29 @@ using namespace jana;
 #include <TH1.h>
 #include <TH2.h>
 
+static TH1D *htrack_mom;
+static TH1D *htrack_mom_ok;
+static TH1D *htrack_chi2;
+static TH1D *htrack_chi2_ok;
+static TH1D *htrack_theta;
+static TH1D *htrack_theta_ok;
+static TH1D *htrack_phi;
+static TH1D *htrack_phi_ok;
+static TH1D *htrack_layer;
+static TH1D *htrack_layer_ok;
+
+static TH1D *hcluster_q;
+static TH1D *hcluster_q_ok;
+static TH1D *hcluster_t;
+static TH1D *hcluster_t_ok;
+
 static TH1D *hfmwpc_residual[6];
 static TH2D *hfmwpc_residual_vs_x[6];
 static TH2D *hfmwpc_residual_vs_y[6];
 
 static TH2D *hfmwpc_expected[6];
 static TH2D *hfmwpc_measured[6];
+static TH2D *hfmwpc_correlation[6];
 
 static TH1D *hinvmass_nocut;
 static TH1D *hinvmass_pipi;
@@ -57,6 +74,9 @@ static TH2D *hphi_vs_Phi_pipi;
 static TH2D *hphi_vs_Phi_mumu;
 
 static TH1D *hphiJT;
+
+static TH1D *hpimem_ML_classifier;
+static TH1D *hpipep_ML_classifier;
 
 
 // Routine used to create our JEventProcessor
@@ -96,19 +116,42 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
   // create root folder for fdc and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("FMWPC_Performance")->cd();
+  gDirectory->mkdir("Tracks")->cd();
+  htrack_mom = new TH1D("htrack_mom", ";p (GeV/c)", 200, 0, 10);
+  htrack_mom_ok = new TH1D("htrack_mom_ok", ";p (GeV/c)", 200, 0, 10);
+  htrack_chi2 = new TH1D("htrack_chi2","; #chi^{2}/NDF", 500, 0.0, 1.0);
+  htrack_chi2_ok = new TH1D("htrack_chi2_ok","; #chi^{2}/NDF", 500, 0.0, 1.0);
+  htrack_theta = new TH1D("htrack_theta","; Track #theta", 500, 0.0, 50);
+  htrack_theta_ok = new TH1D("htrack_theta_ok","; Track #theta", 500, 0.0, 50);
+  htrack_phi = new TH1D("htrack_phi"," ; Track #phi", 360, -180, 180);
+  htrack_phi_ok = new TH1D("htrack_phi_ok"," ; Track #phi", 360, -180, 180);
+  htrack_layer = new TH1D("htrack_layer"," ; Number of layers hit", 7, -0.5, 6.5);
+  htrack_layer_ok = new TH1D("htrack_layer_ok"," ; Number of layers hit", 7, -0.5, 6.5);
+
+  hcluster_q = new TH1D("hcluster_q"," ; Integrated cluster charge", 500, 0, 50000);
+  hcluster_q_ok = new TH1D("hcluster_q_ok"," ; Integrated cluster charge", 500, 0, 50000);
+
+  hcluster_t = new TH1D("hcluster_t"," ; Mean cluster time", 500, 0, 1000);
+  hcluster_t_ok = new TH1D("hcluster_t_ok"," ; Mean cluster time", 500, 0, 1000);
+
+  gDirectory->cd("/FMWPC_Performance");
+
   gDirectory->mkdir("Alignment")->cd();
 
   for(int layer=1; layer<=6; layer++){
       
     char hname[256];
     sprintf(hname, "hfmwpc_residual_layer%d", layer);
-    hfmwpc_residual[layer-1] = new TH1D(hname, "", 200, -10, 10);
+    hfmwpc_residual[layer-1] = new TH1D(hname, "", 200, -100, 100);
 
     sprintf(hname, "hfmwpc_residual_vs_x_layer%d", layer);
-    hfmwpc_residual_vs_x[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -10, 10);
+    hfmwpc_residual_vs_x[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -100, 100);
 
     sprintf(hname, "hfmwpc_residual_vs_y_layer%d", layer);
-    hfmwpc_residual_vs_y[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -10, 10);
+    hfmwpc_residual_vs_y[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -100, 100);
+
+    sprintf(hname, "hfmwpc_correlation_layer%d", layer);
+    hfmwpc_correlation[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -72.5, 72.5);
 
   }	
   gDirectory->cd("/FMWPC_Performance");
@@ -123,6 +166,7 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
 
     sprintf(hname, "hfmwpc_measured_layer%d", layer);
     hfmwpc_measured[layer-1] = new TH2D(hname, "", 200, -72.5, 72.5, 200, -72.5, 72.5);
+
   }	
 
 
@@ -167,6 +211,11 @@ jerror_t JEventProcessor_FMWPC_Performance::init(void)
 
   hphiJT = new TH1D("hphiJT", "#vec{J}_{T}.#phi() ;#phi (degrees)", 90, -180, 180);
   
+  hpimem_ML_classifier = new TH1D("hpimem_ML_classifier", "ML model classifier for #pi^{-}/e^{-};classifier value", 200, 0.0, 1.0);
+  hpipep_ML_classifier = new TH1D("hpipep_ML_classifier", "ML model classifier for #pi^{+}/e^{+};classifier value", 200, 0.0, 1.0);
+  
+  
+  
    
   main->cd();
   
@@ -204,26 +253,70 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
   // pre-sort clusters to save time
   // only need to search within the given layer
   map<int, set<const DFMWPCCluster*> > locSortedFMWPCClusters; // int: layer
+  unsigned int layerHit[6] = {0,0,0,0,0,0};
   for( unsigned int clusNum = 0; clusNum < locFMWPCClusters.size(); clusNum++){
     const DFMWPCCluster * locCluster = locFMWPCClusters[clusNum];
     locSortedFMWPCClusters[locCluster->layer-1].insert(locCluster);
+    layerHit[locCluster->layer-1] = 1;
   }
+  int nLayerHit = layerHit[0] + layerHit[1] + layerHit[2] + layerHit[3] + layerHit[4] + layerHit[5];
   
   // get charged tracks
   vector <const DChargedTrack *> chargedTrackVector;
   loop->Get(chargedTrackVector);
   
+  // get detector matches
+  const DDetectorMatches *detMatches = nullptr;
+  loop->GetSingle(detMatches);
+
   for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
     
     const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
     
     // Cut very loosely on the track quality
     auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
-    
+    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    htrack_mom->Fill(thisTimeBasedTrack->pmag());
+    htrack_chi2->Fill(thisTimeBasedTrack->FOM);
+    htrack_theta->Fill(thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg());
+    htrack_phi->Fill(thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg());
+    htrack_layer->Fill(nLayerHit);
+    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+    // At least one match either to the Time-Of-Flight OR the FCAL
+    if ( !detMatches->Get_IsMatchedToDetector(thisTimeBasedTrack, SYS_TOF) && !detMatches->Get_IsMatchedToDetector(thisTimeBasedTrack, SYS_FCAL))
+      continue;
+
+    // from CDC analysis
+    if (thisTimeBasedTrack->FOM < 1E-20)
+      continue;
+
+    // Cut on the reconstructed momentum below 1GeV, no curlers
+    if(thisTimeBasedTrack->pmag() < 1.0)
+      continue;
+
+    // Cut on the number of hit layers
+    if(nLayerHit < 3 )//|| layerHit[5] == 0)
+      continue;
+
+    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    htrack_mom_ok->Fill(thisTimeBasedTrack->pmag());
+    htrack_chi2_ok->Fill(thisTimeBasedTrack->FOM);
+    htrack_theta_ok->Fill(thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg());
+    htrack_phi_ok->Fill(thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg());
+    htrack_layer_ok->Fill(nLayerHit);
+    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
+
     // Get all extrapolations and loop over layers
     auto fmwpc_projections = thisTimeBasedTrack->extrapolations.at(SYS_FMWPC);
     for( int layer=1; layer<=(int)fmwpc_projections.size(); layer++){
       auto proj = fmwpc_projections[layer-1];
+
+      // Skip tracks in the dead zone
+      //double track_r = sqrt(proj.position.x()*proj.position.x() + proj.position.y()*proj.position.y());
+      if ( proj.position.Perp() < 10)
+	continue;
 
       // FILL HISTOGRAMS
       japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -237,19 +330,33 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	  const DFMWPCCluster * locCluster = * locIterator;
 	  if (locCluster == NULL) continue;
 
+	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hcluster_q->Fill(locCluster->q);
+	  hcluster_t->Fill(locCluster->t);
+
 	  double residual = 0;
 	  if (locCluster->pos.y() == -777) // plane measures X
-	    residual = proj.position.x() - locCluster->pos.x();
+	    {
+	      residual = proj.position.x() - locCluster->pos.x();
+	      hfmwpc_correlation[layer-1]->Fill(proj.position.x(),locCluster->pos.x());
+	    }
 	  else  // plane measures Y
-	    residual = proj.position.y() - locCluster->pos.y();
+	    {
+	      residual = proj.position.y() - locCluster->pos.y();
+	      hfmwpc_correlation[layer-1]->Fill(proj.position.y(),locCluster->pos.y());
+	    }
 
 	  // FILL HISTOGRAMS
-	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	  hfmwpc_residual[layer-1]->Fill(residual);
 	  hfmwpc_residual_vs_x[layer-1]->Fill(proj.position.x(), residual);
 	  hfmwpc_residual_vs_y[layer-1]->Fill(proj.position.y(), residual);
-	  if (residual < 5)
+	  if (fabs(residual) < 10){
+	    hcluster_q_ok->Fill(locCluster->q);
+	    hcluster_t_ok->Fill(locCluster->t);
 	    hfmwpc_measured[layer-1]->Fill(proj.position.x(), proj.position.y());
+	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	    break;
+	  }
 	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 		  
 	}
@@ -315,12 +422,10 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	double phi = angles.Phi();
 	double Phi = atan2(y.Dot(eps), locBeamP4.Vect().Unit().Dot(eps.Cross(y)));
 	double psi = Phi - phi;
-	if(psi < -3.14159) psi += 2*3.14159;
-	if(psi > 3.14159) psi -= 2*3.14159;
+	if(psi < -M_PI) psi += 2*M_PI;
+	if(psi > M_PI) psi -= 2*M_PI;
 	//---------------------------------
 	
-	/*
-	  //can uncomment out once e/pi classifier is properly implemented (if this is something we want as a monitoring plot at all...)
 	//---- Polarization observable from e+ e-
 	auto &ep_v4 = cppepem->ep_v4;
 	auto &em_v4 = cppepem->em_v4;
@@ -333,16 +438,14 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	             em_v4.Y() * 2*ep_v4.E()/(em_v4.E() - em_v3mag * cos(em_v4.Theta()));
 
         double Jphi = atan2(JTy, JTx)*180/acos(-1);
-	
-	
-	//if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
-	  // hphiJT->Fill(Jphi, weight);
-	//}
-
-	*/
+	double MLPClassifierMinus=cppepem->pimem_ML_classifier;
+	hpimem_ML_classifier->Fill(MLPClassifierMinus);
+  	double MLPClassifierPlus=cppepem->pipep_ML_classifier;
+	hpipep_ML_classifier->Fill(MLPClassifierPlus);
+	if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
+	  hphiJT->Fill(Jphi, weight);
+	}
         
-
-
 	//------- no MVA cut histograms ---------
 	hinvmass_nocut->Fill( invmass, weight );
 	hpimu_ML_classifier->Fill( pimu_ML_classifier );

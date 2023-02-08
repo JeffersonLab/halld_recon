@@ -48,9 +48,9 @@ DFCALShower_factory::DFCALShower_factory()
   cutoff_energy= 0;
   linfit_slope = 0;
   linfit_intercept = 0;
-  expfit_param1 = 0;
-  expfit_param2 = 0;
-  expfit_param3 = 0;
+  expfit_param1 = 1.10358;
+  expfit_param2 = 0.31385;
+  expfit_param3 = -2.02585;
 
   timeConst0 = 0;
   timeConst1 = 0; 
@@ -95,8 +95,8 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.155;
-  INSERT_PAR2=1.1425;
+  INSERT_PAR1=0.0843;
+  INSERT_PAR2=1.1356;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
 

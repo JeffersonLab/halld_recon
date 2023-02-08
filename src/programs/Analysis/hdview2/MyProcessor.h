@@ -23,6 +23,7 @@
 #include <DCoordinateSystem.h>
 #include <TRACKING/DReferenceTrajectory.h>
 #include "DReferenceTrajectoryHDV.h"
+#include <FMWPC/DFMWPCDigiHit.h>
 #include <FMWPC/DFMWPCHit.h>
 #include <FMWPC/DFMWPCCluster.h>
 #include <FMWPC/DFMWPCMatchedTrack.h>

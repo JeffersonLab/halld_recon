@@ -16,7 +16,7 @@ using namespace std;
 
 using namespace jana;
 
-static int FMWPC_HIT_THRESHOLD = 0;
+static int FMWPC_HIT_THRESHOLD = 700;
 
 //#define ENABLE_UPSAMPLING
 
@@ -177,7 +177,8 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DFMWPCDigiHit *digihit = digihits[i];
 
-    if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
@@ -222,7 +223,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
 		ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
 		PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-		NW   = config->NW   == 0xffff ? 180 : config->NW;
+		NW   = config->NW   == 0xffff ? 200 : config->NW;
 	}
 
 	nsamples_integral = (NW - (digihit->pulse_time / 10));      
@@ -231,7 +232,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     int scaled_ped = raw_ped << PBIT;
     
     if (maxamp > 0) maxamp = maxamp << ABIT;
-    //if (maxamp <= scaled_ped) continue;
+    if (maxamp <= scaled_ped) continue;
     
     maxamp = maxamp - scaled_ped;
     
@@ -241,6 +242,8 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
+    if (t_raw < 250 || t_raw > 450)
+      continue;
     
     // Scale factor to account for gain variation
     unsigned int layer_i=layer-1;
@@ -248,8 +251,11 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     double gain=gains[layer_i][wire_i];
  
     // Charge and amplitude 
-    double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
-				      - scaled_ped*nsamples_integral);
+    // if ((digihit->pulse_integral<<IBIT) < scaled_ped*nsamples_integral)
+    //   continue;
+    // double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
+    // 				      - scaled_ped*nsamples_integral);
+    double q = amp_a_scale*gain*double(maxamp);
     double amp = amp_a_scale*gain*double(maxamp);
     
     double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;

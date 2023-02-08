@@ -121,6 +121,12 @@ class DMatrix3x3{
 
   }
 
+  double Determinant() const {
+    return mA[0][0]*(mA[1][1]*mA[2][2]-mA[1][2]*mA[2][1])
+      - mA[0][1]*(mA[1][0]*mA[2][2]-mA[1][2]*mA[2][0])
+      + mA[0][2]*(mA[1][0]*mA[2][1]-mA[1][1]*mA[2][0]);
+  }
+
   void Print(){
     cout << "DMatrix3x3:" <<endl;
     cout << "     |      0    |      1    |      2    |" <<endl;

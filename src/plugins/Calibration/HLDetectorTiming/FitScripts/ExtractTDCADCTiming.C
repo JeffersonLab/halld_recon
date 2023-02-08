@@ -117,7 +117,8 @@ Double_t FitFunctionRight(Double_t *x, Double_t *par)
     return f;
 }
 
-void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 10390, TString variation = "default", TString prefix = ""){
+void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 10390, TString variation = "default", TString prefix = "", TString trigger_dir = "Physics Triggers")
+{
 
     // set "prefix" in case you want to think about thowing the text files into another directory
     cout << "Performing TDC/ADC timing fits for File: " << fileName.Data() << " Run: " << runNumber << " Variation: " << variation.Data() << endl;
@@ -188,7 +189,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
     //Move the base times just for the tracking
 
     float CDC_ADC_Offset = 0.0;
-    TH1I * this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "CDC", "CDCHit time");
+    TH1I * this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/CDC", "CDCHit time");
     if(this1DHist != NULL){
         Int_t firstBin = this1DHist->FindLastBinAbove( 1 , 1); // Find first bin with content above 1 in the histogram
         for (int i = 0; i <= 25; i++){
@@ -212,7 +213,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
     outFile.close();
 
     float FDC_ADC_Offset = 0.0, FDC_TDC_Offset = 0.0;
-    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "FDC", "FDCHit Cathode time");
+    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/FDC", "FDCHit Cathode time");
     if(this1DHist != NULL){
         Int_t firstBin = this1DHist->FindLastBinAbove( 1 , 1); // Find first bin with content above 1 in the histogram
         for (int i = 0; i <= 25; i++){
@@ -229,7 +230,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         FDC_ADC_Offset = mean;
         delete f;
     }
-    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "FDC", "FDCHit Wire time");
+    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/FDC", "FDCHit Wire time");
     if(this1DHist != NULL){
         Int_t firstBin = this1DHist->FindLastBinAbove( 1 , 1); // Find first bin with content above 1 in the histogram
         for (int i = 0; i <= 25; i++){
@@ -262,7 +263,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
 
     float sc_tdc_base_time = 0.0;
 
-    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "SC", "SCHit TDC time");
+    this1DHist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/SC", "SCHit TDC time");
     if(this1DHist != NULL){
         //Gaussian
         Double_t maximum = this1DHist->GetBinCenter(this1DHist->GetMaximumBin());
@@ -271,7 +272,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         sc_tdc_base_time = mean;
     }
 
-    TH2I *thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "SC", "SCHit TDC_ADC Difference");
+    TH2I *thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/SC", "SCHit TDC_ADC Difference");
     TH1D * selected_SC_TDCADCOffset = NULL;
     TH1I * SCOffsetDistribution = NULL;
     if(thisHist != NULL){
@@ -330,7 +331,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
     outFile << sc_base_time_adc - (sc_tdc_base_time + meanDiff) << " " << sc_base_time_tdc - sc_tdc_base_time << endl;
     outFile.close();
 
-    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "TOF", "TOFHit TDC_ADC Difference");
+    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TOF", "TOFHit TDC_ADC Difference");
     if(thisHist != NULL){
         int nBinsX = thisHist->GetNbinsX();
         int nBinsY = thisHist->GetNbinsY();
@@ -384,7 +385,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
 
     }
 
-    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "TAGM", "TAGMHit TDC_ADC Difference");
+    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TAGM", "TAGMHit TDC_ADC Difference");
     if(thisHist != NULL){
         float tdcRFOffset[122] = {}; // 122 possible offsets
         char name[100];
@@ -394,7 +395,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         for (unsigned int column = 1; column <= 102; column++){
             for (unsigned int row = 0; row <= 5; row++){
                 sprintf(name, "Column %.3i Row %.1i", column, row);
-                TH1I *rf_hist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "TAGM_TDC_RF_Compare", name, false);
+                TH1I *rf_hist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/TAGM_TDC_RF_Compare", name, false);
                 if (rf_hist != NULL){
                     // do the fit and store the result
                     // Some fancy footwork to fit this periodic function
@@ -493,7 +494,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         outFile.close();
     }
 
-    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "TAGH", "TAGHHit TDC_ADC Difference");
+    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TAGH", "TAGHHit TDC_ADC Difference");
     if (thisHist != NULL) {
 
         // Setup histograms for determining the most probable change in offset for each F1TDC slot
@@ -522,7 +523,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         for (unsigned int counter_id = 1; counter_id <= 274; counter_id++) {
             sprintf(name, "Counter ID %.3i", counter_id);
             cout << "Fitting TAGH " << name << endl;
-            TH1I *rf_hist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", "TAGH_TDC_RF_Compare", name, false);
+            TH1I *rf_hist = ExtractTDCADCTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/TAGH_TDC_RF_Compare", name, false);
             if (rf_hist != NULL) {
                 // do the fit and store the result
                 // Some fancy footwork to fit this periodic function
@@ -655,7 +656,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
     TH1D * selectedBCALOffset = new TH1D("selectedBCALOffset", "Selected BCAL TDC Offset; Column; Offset [ns]", 1152, 0.5, 1152 + 0.5);
     TH1I * BCALOffsetDistribution = new TH1I("BCALOffsetDistribution", "BCAL TDC Offset; TDC Offset [ns]; Entries", 500, -500, 500); 
 
-    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "BCAL", "BCALHit Upstream Per Channel TDC-ADC Hit Time");
+    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/BCAL", "BCALHit Upstream Per Channel TDC-ADC Hit Time");
     if(thisHist != NULL){
         int nBinsX = thisHist->GetNbinsX();
         int nBinsY = thisHist->GetNbinsY();
@@ -687,7 +688,7 @@ void ExtractTDCADCTiming(TString fileName = "hd_root.root", int runNumber = 1039
         }
     }
 
-    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", "BCAL", "BCALHit Downstream Per Channel TDC-ADC Hit Time");
+    thisHist = ExtractTDCADCTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/BCAL", "BCALHit Downstream Per Channel TDC-ADC Hit Time");
     if(thisHist != NULL){
         int nBinsX = thisHist->GetNbinsX();
         int nBinsY = thisHist->GetNbinsY();

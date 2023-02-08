@@ -23,14 +23,6 @@ class DTrackTimeBased:public DTrackingData{
 		JOBJECT_PUBLIC(DTrackTimeBased);
 		
 		double dEdx(void) const{return ((dNumHitsUsedFordEdx_CDC >= dNumHitsUsedFordEdx_FDC) ? ddEdx_CDC_amp : ddEdx_FDC);}
-		typedef struct{
-		  unsigned int inner_layer;
-		  unsigned int outer_layer;
-		  unsigned int total_hits;
-		}hit_usage_t;
-
-		hit_usage_t cdc_hit_usage;
-		hit_usage_t fdc_hit_usage;
 
 		unsigned int measured_fdc_hits_on_track;
 		unsigned int measured_cdc_hits_on_track;
@@ -71,6 +63,20 @@ class DTrackTimeBased:public DTrackingData{
 		double ddEdx_CDC,ddEdx_CDC_amp;
 		double ddx_CDC,ddx_CDC_amp;
 		unsigned int dNumHitsUsedFordEdx_CDC;
+
+		// Add vectors for truncated means in the DC dEdx track parameters.
+		// If these vectors are empty then the truncated means are not available,
+		// otherwise ddx_FDC_trunc[1] is the dx sum for the FDC track hits with
+		// the single hit with the highest dEdx removed, [2] with the two hits
+		// with the highest dEdx removed, and so on, for as many as you find.
+		std::vector<double> ddx_FDC_trunc;  
+		std::vector<double> ddEdx_FDC_trunc;  
+		std::vector<double> ddx_FDC_amp_trunc;  
+		std::vector<double> ddEdx_FDC_amp_trunc;  
+		std::vector<double> ddx_CDC_trunc;  
+		std::vector<double> ddEdx_CDC_trunc;  
+		std::vector<double> ddx_CDC_amp_trunc;  
+		std::vector<double> ddEdx_CDC_amp_trunc;  
 
 		// Hit CDC Rings & FDC Planes
 		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these

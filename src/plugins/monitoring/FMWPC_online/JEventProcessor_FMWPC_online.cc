@@ -152,8 +152,8 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 	//  ... fill historgrams or trees ...
 	// japp->RootFillUnLock(this);
 
-  const DTTabUtilities* locTTabUtilities = NULL;
-  loop->GetSingle(locTTabUtilities);
+        const DTTabUtilities* locTTabUtilities = NULL;
+        loop->GetSingle(locTTabUtilities);
   
         // get wire digis
         vector<const DFMWPCDigiHit*>fmwpcdigis;
@@ -175,8 +175,7 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
         // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
         japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
-        if( fmwpcdigis.size()>0 )
-         fmwpc_num_events->Fill(1);
+        fmwpc_num_events->Fill(1);
 
         for (unsigned int i=0; i<fmwpcdigis.size();i++){
          const DFMWPCDigiHit *digi = fmwpcdigis[i];
@@ -191,8 +190,7 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
          fmwpc_hit_layer[hit->layer-1]->Fill(hit->wire);
         }
 
-        if( ctofdigis.size()>0 )
-         ctof_adc_events->Fill(1);
+        ctof_adc_events->Fill(1);
 
         for (unsigned int i=0; i<ctofdigis.size();i++){
          const DCTOFDigiHit *digi = ctofdigis[i];
@@ -208,8 +206,7 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 	 ctof_adc_time->Fill(ind,T);
 	}
 
-        if( ctoftdcdigis.size()>0 )
-         ctof_tdc_events->Fill(1);
+        ctof_tdc_events->Fill(1);
 
         for (unsigned int i=0; i<ctoftdcdigis.size();i++){
          const DCTOFTDCDigiHit *digi = ctoftdcdigis[i];

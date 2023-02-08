@@ -64,6 +64,8 @@ subdirs = [
 'scaler_primex'
 ,'cppFMWPC'
 ,'cppFMWPC_ana'
+,'cpp_itrig'
+,'primex-online'
 
 ]
 

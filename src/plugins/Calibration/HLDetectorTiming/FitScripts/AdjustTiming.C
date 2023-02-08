@@ -145,7 +145,8 @@ void FindFDCPackageChamber(int plane, int &package, int &chamber) {
   }
 }
 
-void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TString variation = "default", bool verbose = false,TString prefix = ""){
+void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TString variation = "default", bool verbose = false, TString prefix = "", TString trigger_dir = "Physics Triggers")
+{
    // configuration parameters
    bool FIX_START_COUNTER = false;    // should we keep the start counter peak aligned to a certain time?
                                      // this helps in certain analysis without tracks
@@ -248,17 +249,17 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
    //When the RF is present we can try to simply pick out the correct beam bucket for each of the runs
    //First just a simple check to see if we have the appropriate data
    bool useRF = false;
-   TH1I *testHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", "TAGH_TDC_RF_Compare","Counter ID 001");
+   TH1I *testHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/TAGH_TDC_RF_Compare","Counter ID 001");
    if (testHist != NULL){ // Not great since we rely on channel 1 working, but can be craftier later.
       cout << "Using RF Times for Calibration" << endl;
       useRF = true;
    }
    ofstream outFile;
    TH2I *thisHist; 
-   thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - SC Target Time");
+   thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TRACKING", "TAGM - SC Target Time");
 
 
-   if (useRF) thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "TRACKING", "TAGM - RFBunch Time");
+   if (useRF) thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TRACKING", "TAGM - RFBunch Time");
    if (thisHist != NULL){
       //Statistics on these histograms are really quite low we will have to rebin and do some interpolation
       outFile.open(prefix + "tagm_tdc_timing_offsets.txt", ios::out | ios::trunc);
@@ -379,7 +380,7 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
    }
 
 
-   TH1I *tagmRFalignHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", "TRACKING", "TAGM - RFBunch 1D Time");
+   TH1I *tagmRFalignHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/TRACKING", "TAGM - RFBunch 1D Time");
    if(tagmRFalignHist != NULL) {
      double maximum = tagmRFalignHist->GetBinCenter(tagmRFalignHist->GetMaximumBin());
      TFitResultPtr fr = tagmRFalignHist->Fit("gaus", "SQ", "", maximum - 0.3, maximum + 0.4);
@@ -394,8 +395,8 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
      outFile.close();
    }
 
-   thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "TRACKING", "TAGH - SC Target Time");
-   if (useRF) thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "TRACKING", "TAGH - RFBunch Time");
+   thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TRACKING", "TAGH - SC Target Time");
+   if (useRF) thisHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TRACKING", "TAGH - RFBunch Time");
    if (thisHist != NULL) {
       outFile.open(prefix + "tagh_tdc_timing_offsets.txt", ios::out | ios::trunc);
       outFile.close(); // clear file
@@ -405,7 +406,7 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
 
       // Also realign ADCs and TDCs
       // assuming anything larger than 28 ns is due to a TDC shift, otherwise the ADCs are shifted
-      TH2I *taghADCTDCHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "TAGH", "TAGHHit TDC_ADC Difference");
+      TH2I *taghADCTDCHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/TAGH", "TAGHHit TDC_ADC Difference");
       int nBinsX = thisHist->GetNbinsX();
       double taghAdcOffsets[274] = { 0. };
       double taghTdcOffsets[274] = { 0. };
@@ -596,7 +597,7 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
       // assuming anything larger than 28 ns is due to a TDC shift, otherwise the ADCs are shifted
       double scAdcOffsets[30] = { 0. };
       double scTdcOffsets[30] = { 0. };
-      TH2I *scADCTDCHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", "SC", "SCHit TDC_ADC Difference");
+      TH2I *scADCTDCHist = ExtractTrackBasedTimingNS::Get2DHistogram("HLDetectorTiming", trigger_dir+"/SC", "SCHit TDC_ADC Difference");
 
       for (int sector = 1; sector <= 30; sector++){
 	 // first realign ADCs and TDCs
@@ -632,7 +633,7 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
 
 	 // now align RF times
      if(!DONT_SHIFT_SC_RF) { 
-         TH1I *scRFHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", "SC_Target_RF_Compare", Form("Sector %.2i", sector));
+         TH1I *scRFHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/SC_Target_RF_Compare", Form("Sector %.2i", sector));
          if (scRFHist == NULL) continue;
          //Do the fit
          TFitResultPtr fr = scRFHist->Fit("pol0", "SQ", "", -2, 2);
@@ -656,7 +657,7 @@ void AdjustTiming(TString fileName = "hd_root.root", int runNumber = 10390, TStr
       meanSCOffset = selectedSCSectorOffsetDistribution->GetMean();
       // Move mean SC time around if we want it to end up in a particular location
       if(FIX_START_COUNTER) {  // experimental
-	TH1I *scHitTimeHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", "SC", "SCHitMatchedTime");
+	TH1I *scHitTimeHist = ExtractTrackBasedTimingNS::Get1DHistogram("HLDetectorTiming", trigger_dir+"/SC", "SCHitMatchedTime");
 	double scMax = scHitTimeHist->GetBinCenter(scHitTimeHist->GetMaximumBin());
 	TFitResultPtr fr = scHitTimeHist->Fit("gaus", "S", "", scMax - 5., scMax + 5.);
 
