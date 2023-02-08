@@ -1565,8 +1565,8 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 				if(foundDIRC && locTOFHitMatchParams->dDeltaXToHit < 10.0 && locTOFHitMatchParams->dDeltaYToHit < 10.0) {
 
 					// Get match parameters
-					TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-					TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+					DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+					DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 					// next line commented out to suppress warning
 					//				double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 					double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
