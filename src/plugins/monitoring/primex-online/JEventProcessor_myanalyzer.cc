@@ -347,7 +347,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
   Bool_t good_eta_to_3pi0 = false;
   Bool_t good_eta_to_2g2pi = false;
   
-  TLorentzVector TargetP4(0, 0, 0, massHe4);
+  DLorentzVector TargetP4(0, 0, 0, massHe4);
   vector<const DMCThrown*> locDMCThrown;	
   eventLoop->Get(locDMCThrown);  
   vector<const DL1Trigger *> locL1Triggers;
@@ -536,7 +536,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double px = e * sin(position.Theta()) * cos(position.Phi());
       double py = e * sin(position.Theta()) * sin(position.Phi());
       double pz = e * cos(position.Theta());
-      TLorentzVector PhotonVec(px, py, pz, e);
+      DLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
       h_bcal_e_v_t->Fill(diff_t, e);
       if (fabs(diff_t) < BCAL_RF_CUT) {
@@ -557,7 +557,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double px = e * sin(position.Theta()) * cos(position.Phi());
       double py = e * sin(position.Theta()) * sin(position.Phi());
       double pz = e * cos(position.Theta());
-      TLorentzVector PhotonVec(px, py, pz, e);
+      DLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
       double face_x = vertex.X() + (position.X() * (m_fcalZ - vertex.Z())/position.Z());
       double face_y = vertex.Y() + (position.Y() * (m_fcalZ - vertex.Z())/position.Z());
@@ -604,7 +604,7 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       double px = e * sin(position.Theta()) * cos(position.Phi());
       double py = e * sin(position.Theta()) * sin(position.Phi());
       double pz = e * cos(position.Theta());
-      TLorentzVector PhotonVec(px, py, pz, e);
+      DLorentzVector PhotonVec(px, py, pz, e);
       double diff_t = t - locRFTime;
       //double phi_ccal = PhotonVec.Phi();
       //double theta_ccal = PhotonVec.Theta();
@@ -871,8 +871,8 @@ jerror_t JEventProcessor_myanalyzer::evnt(JEventLoop *eventLoop, uint64_t eventn
       if (eb < 8.0) continue;
       double tb = ebeam->time();
       double zb = ebeam->position().Z();
-      TLorentzVector PhotonBeamP4(0, 0, eb, eb);
-      TLorentzVector ISP4 = TargetP4 + PhotonBeamP4;
+      DLorentzVector PhotonBeamP4(0, 0, eb, eb);
+      DLorentzVector ISP4 = TargetP4 + PhotonBeamP4;
       double locDeltaTRF = tb - (locRFTime + (zb - m_beamZ) / 29.9792458);
       h_TaggerTiming_vs_eg->Fill(eb, locDeltaTRF);
       double weight = 0;
