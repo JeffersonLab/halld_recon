@@ -137,6 +137,10 @@ class DVector3S{
   
   // dot product of "this" and vector v
   double Dot(const DVector3S &v) const {return (mx*v.x()+my*v.y()+mz*v.z());}
+  double operator*(const DVector3S &v1) const{
+    return (mx*v1.X()+my*v1.Y()+mz*v1.Z());
+  }  
+
   // Create a vector orthogonal to "this" 
   DVector3S Orthogonal() const{  
     double xx= mx<0.0 ? -mx : mx;
