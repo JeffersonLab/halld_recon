@@ -15,6 +15,7 @@
 #include <JANA/JEventProcessor.h>
 #include "evio_writer/DEventWriterEVIO.h"
 #include "Combination.h"
+#include <DLorentzVector.h>
 
 class TTree;
 class DFCALCluster;
@@ -38,16 +39,16 @@ class JEventProcessor_eta6g_skim:public jana::JEventProcessor{
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
   void writeClustersToRoot( const vector< const DFCALCluster* > clusVec );
-  void Combined6g(vector<TLorentzVector>&EMList,
+  void Combined6g(vector<DLorentzVector>&EMList,
 		  Double_t &bestChi2Eta,
 		  Double_t &bestChi2EtaPrim,
-		  vector<TLorentzVector>&PhotonEta6gList,
-		  vector<TLorentzVector>&PhotonEtaprim6gList);
-  void Combined7g(vector<TLorentzVector>&EMList,
+		  vector<DLorentzVector>&PhotonEta6gList,
+		  vector<DLorentzVector>&PhotonEtaprim6gList);
+  void Combined7g(vector<DLorentzVector>&EMList,
 		  Double_t &bestChi2Eta,
 		  Double_t &bestChi2EtaPrim,
-		  vector<TLorentzVector>&PhotonEta6gList,
-		  vector<TLorentzVector>&PhotonEtaprim6gList);
+		  vector<DLorentzVector>&PhotonEta6gList,
+		  vector<DLorentzVector>&PhotonEtaprim6gList);
 
   double MIN_MASS;
   double MAX_MASS;
