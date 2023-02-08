@@ -32,7 +32,6 @@ using namespace std;
 #include "TRIGGER/DTrigger.h"
 
 // Define some constants
-const double    RAD2DEG       = 57.29577951;      // Convert radians to degrees
 const uint32_t  NCHANNELS     = 30;              // number of scintillator paddles
 
 // Declare 2D tracking histos
