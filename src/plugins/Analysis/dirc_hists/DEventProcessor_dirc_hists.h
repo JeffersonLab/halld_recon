@@ -33,8 +33,7 @@ using namespace jana;
 #include <TH2.h>
 #include <TDirectoryFile.h>
 #include <TThread.h>
-#include <TLorentzVector.h>
-#include <TVector3.h>
+#include <DVector3.h>
 #include <TROOT.h>
 #include <TClonesArray.h>
 

@@ -272,7 +272,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
     return NOERROR;
   }
   
-  TVector3 vertex;
+  DVector3 vertex;
   double vertex_x = 0;
   double vertex_y = 0;
   double vertex_z = 0;
@@ -323,7 +323,7 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
       
     }
   
-  TVector3 vertexPos(vertex_x,vertex_y,vertex_z);
+  DVector3 vertexPos(vertex_x,vertex_y,vertex_z);
   
   dTreeFillData.Fill_Single<Double_t>("vertex_X", vertex_x);
   dTreeFillData.Fill_Single<Double_t>("vertex_Y", vertex_y);
@@ -331,20 +331,20 @@ jerror_t DEventProcessor_1p1pi1pi0::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTreeFillData.Fill_Single<Double_t>("vertex_T", vertex_t);
   
   // Showers using fit vertex
-  TVector3 p_shower0(x_shower[0]-vertex_x,y_shower[0]-vertex_y,z_shower[0]-vertex_z);
+  DVector3 p_shower0(x_shower[0]-vertex_x,y_shower[0]-vertex_y,z_shower[0]-vertex_z);
   p_shower0 = p_shower0.Unit()*E_shower[0];
   
-  TVector3 p_shower1(x_shower[1]-vertex_x,y_shower[1]-vertex_y,z_shower[1]-vertex_z);
+  DVector3 p_shower1(x_shower[1]-vertex_x,y_shower[1]-vertex_y,z_shower[1]-vertex_z);
   p_shower1 = p_shower1.Unit()*E_shower[1];
   
   // Filling invariant mass without fitting
   double m2gammaSq = 2.*(p_shower1.Mag()*p_shower0.Mag() - p_shower1.Dot(p_shower0));
   
-  TLorentzVector vProton(fitProton->Get_Momentum(),sqrt(fitProton->Get_Momentum().Mag2() + mN*mN));
-  TLorentzVector vPiMinus(fitPiMinus->Get_Momentum(),sqrt(fitPiMinus->Get_Momentum().Mag2() + mpip*mpip));
-  TLorentzVector vPhoton1(fitPhoton1->Get_Momentum(),fitPhoton1->Get_Momentum().Mag());
-  TLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
-  TLorentzVector vPi0 = vPhoton0 + vPhoton1;
+  DLorentzVector vProton(fitProton->Get_Momentum(),sqrt(fitProton->Get_Momentum().Mag2() + mN*mN));
+  DLorentzVector vPiMinus(fitPiMinus->Get_Momentum(),sqrt(fitPiMinus->Get_Momentum().Mag2() + mpip*mpip));
+  DLorentzVector vPhoton1(fitPhoton1->Get_Momentum(),fitPhoton1->Get_Momentum().Mag());
+  DLorentzVector vPhoton0(fitPhoton0->Get_Momentum(),fitPhoton0->Get_Momentum().Mag());
+  DLorentzVector vPi0 = vPhoton0 + vPhoton1;
   
   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   h_m2gamma->Fill(sqrt(m2gammaSq));
