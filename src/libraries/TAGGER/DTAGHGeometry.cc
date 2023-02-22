@@ -191,15 +191,26 @@ DTAGHGeometry::~DTAGHGeometry() { }
 
 bool DTAGHGeometry::E_to_counter(double E, unsigned int &counter) const
 {  
+  double Emiss(0.1);       // tolerate max 100 MeV energy difference
+  int nearest_counter(0);
   for (counter = 1; counter <= kCounterCount; ++counter) {     
     
     double Emin = getElow(counter);
     double Emax = getEhigh(counter);
+    double Emean = (Emin + Emax)/2;
+    if (fabs(E - Emean) < Emiss) {
+      Emiss = fabs(E - Emean);
+      nearest_counter = counter;
+    }
     
     if ( E >= Emin &&  E <= Emax )
       {
 	return true;
       }
+  }
+  if (nearest_counter > 0) {
+    counter = nearest_counter;
+    return true;
   }
   return false;
 }

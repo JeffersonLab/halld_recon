@@ -146,15 +146,26 @@ DTAGMGeometry::~DTAGMGeometry() { }
 
 bool DTAGMGeometry::E_to_column(double E, unsigned int &column) const
 {
+   double Emiss(0.1);       // tolerate max 100 MeV energy difference
+   int nearest_column(0);
    for (column = 1; column <= kColumnCount; ++column) {
 
      double Emin = getElow(column);
      double Emax = getEhigh(column);
+     double Emean = (Emin + Emax)/2;
+     if (fabs(E - Emean) < Emiss) {
+        Emiss = fabs(E - Emean);
+        nearest_column = column;
+     }
      
      if ( E >= Emin &&  E <= Emax ){
 
          return true;
       }
+   }
+   if (nearest_column > 0) {
+      column = nearest_column;
+      return true;
    }
    return false;
 }
