@@ -1686,13 +1686,13 @@ void CodeBuilder::writeMatcher()
          << "   int level;"                                     << std::endl
          << "   char* token;"                                   << std::endl
          << "   char line[500];"                                << std::endl
-         << "   strncpy(line,d,500);"                           << std::endl
+         << "   strncpy(line,d,499);"                           << std::endl
          << "   line[499] = 0;"                                 << std::endl
          << "   level = index(line,'<')-line;"                  << std::endl
          << "   if (level < 500 &&"                             << std::endl
          << "      (token = strtok(line+level+1,\" >\")))"      << std::endl
          << "   {"                                              << std::endl
-         << "      strncpy(tag,token,500);"                     << std::endl
+         << "      strncpy(tag,token,499);"                     << std::endl
          << "      tag[499] = 0;"                               << std::endl
          << "      return level/2;"                             << std::endl
          << "   }"                                              << std::endl
@@ -1703,7 +1703,7 @@ void CodeBuilder::writeMatcher()
          << "{"                                                 << std::endl
          << "   char line[500];"                                << std::endl
          << "   char endTag[510];"                              << std::endl
-         << "   strncpy(line,d,500);"                           << std::endl
+         << "   strncpy(line,d,499);"                           << std::endl
          << "   line[499] = 0;"                                 << std::endl
          << "   if (strstr(strtok(line,\"\\n\"),\"/>\") == 0)"  << std::endl
          << "   {"                                              << std::endl
