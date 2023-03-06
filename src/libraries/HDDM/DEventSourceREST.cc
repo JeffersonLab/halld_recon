@@ -1478,7 +1478,6 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    
    if( PRUNE_DUPLICATE_TRACKS && (data.size() > 1) ) {
    		vector< int > indices_to_erase;
-   		vector<DTrackTimeBased*>::iterator it = data.begin();
    		
    		 for( unsigned int i=0; i<data.size()-1; i++ ) {
   			for( unsigned int j=i+1; j<data.size(); j++ ) {
