@@ -20,6 +20,7 @@ using namespace std;
 static map<string, int> rs_flags;
 
 std::map<string, set<int> > rs_PadsToSave;  // key=macro basename  val=Tpad numbers to save (0=whole canvas)
+std::map<string, set<bool> > rs_PadsToKeepPadNum;  // key=macro basename  false=remove padnum from filename
 
 // Calls from macros to have rootspy reset a histogram will simply
 // add them to this list. The hd_rsai_gen will then reset them
@@ -140,8 +141,9 @@ void rs_RestoreAllMacroHistos(const string hnamepath)
 // This is used by RSAI to allow macros to indicate when an image
 // should be saved and checked against an AI model.
 //-------------------
-void rs_SavePad(const string fname, int ipad)
+void rs_SavePad(const string fname, int ipad, bool keepPadNum=true )
 {
 	rs_PadsToSave[fname].insert( ipad );
+	rs_PadsToKeepPadNum[fname].insert( keepPadNum ); //insert whether to keep pad number for a given filename.  Ensures both maps have the same keys
 }
 
