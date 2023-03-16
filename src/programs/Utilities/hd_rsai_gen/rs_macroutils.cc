@@ -141,7 +141,7 @@ void rs_RestoreAllMacroHistos(const string hnamepath)
 // This is used by RSAI to allow macros to indicate when an image
 // should be saved and checked against an AI model.
 //-------------------
-void rs_SavePad(const string fname, int ipad, bool keepPadNum=true )
+void rs_SavePad(const string fname, int ipad, bool keepPadNum)
 {
 	rs_PadsToSave[fname].insert( ipad );
 	rs_PadsToKeepPadNum[fname].insert( keepPadNum ); //insert whether to keep pad number for a given filename.  Ensures both maps have the same keys
