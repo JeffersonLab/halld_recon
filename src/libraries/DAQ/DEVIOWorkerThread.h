@@ -81,6 +81,7 @@ class DEVIOWorkerThread{
 		streampos pos;
 
 		bool  PARSE_F250;
+		bool  SKIP_F250_FORMAT_ERROR;
 		bool  PARSE_F125;
 		bool  PARSE_F1TDC;
 		bool  PARSE_CAEN1290TDC;
@@ -95,7 +96,7 @@ class DEVIOWorkerThread{
 
 		bool  LINK_TRIGGERTIME;
 		bool  LINK_CONFIG;
-		
+
 		void Run(void);
 		void Finish(bool wait_to_complete=true);
 		void Prune(void);
