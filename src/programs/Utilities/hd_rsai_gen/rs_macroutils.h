@@ -10,6 +10,7 @@
 using std::string;
 
 extern std::map<string, set<int> > rs_PadsToSave;  // key=macro basename  val=Tpad numbers to save (0=whole canvas)
+std::map<string, set<bool> > rs_PadsToKeepPadNum;
 extern std::set<std::string> hnamepaths_to_reset;
 extern std::set<std::string> macros_to_reset;
 extern std::map<std::string, std::string> MACROS;
@@ -22,4 +23,4 @@ void rs_RestoreHisto(const string hnamepath);
 void rs_ResetAllMacroHistos(const string hnamepath);
 void rs_RestoreAllMacroHistos(const string hnamepath);
 
-void rs_SavePad(const string fname, int ipad);
+void rs_SavePad(const string fname, int ipad, bool keepPadNum=true);
