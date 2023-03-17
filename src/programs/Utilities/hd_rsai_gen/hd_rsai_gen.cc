@@ -229,7 +229,12 @@ void MacroThread(JApplication *app)
 						string pad_name = pad->GetName();
 
 						//get whether or not to include the pad number in the name
-						bool keepPadNum=rs_PadsToKeepPadNum[basename];
+						bool keepPadNum = false; // initialize to false by default
+						std::set<bool> padNumsToKeep = rs_PadsToKeepPadNum[basename]; // extract the set from the map
+						if (padNumsToKeep.count(true)) { // check if the set contains true
+							keepPadNum = true; // set keepPadNum to true if the set contains true
+						}
+						
 
 						// Standard filename format includes pad name or number and time "chunk"
 						char fname_base[256];
