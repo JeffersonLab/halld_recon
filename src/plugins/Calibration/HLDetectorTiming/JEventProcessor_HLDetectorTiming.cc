@@ -422,6 +422,8 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 // 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
 	dCDCSCTime[dirname] = new TH1F( "Earliest CDC Time Minus Matched SC Time", "Earliest CDC Time Minus Matched SC Time; t_{CDC} - t_{SC} [ns];", 
 										400, -50, 150 );
+	dCDCBCALTime[dirname] = new TH1F( "Earliest CDC Time Minus Matched BCAL Time", "Earliest CDC Time Minus Matched BCAL Time; t_{CDC} - t_{BCAL} [ns];", 
+										400, -50, 150 );
 	dTOFRFTime[dirname] = new TH1F( "TOF - RF Time", 
 										"t_{TOF} - t_{RF} at Target; t_{TOF} - t_{RF} at Target [ns]; Entries", 
 										NBINS_MATCHING, MIN_MATCHING_T, MAX_MATCHING_T );
@@ -1617,6 +1619,21 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 
 			   	// Fill the following when there is a SC/BCAL match.
 			   	dEarliestCDCTime[key]->Fill(earliestCDCTime);
+			   	
+				// Try to correlate the latest CDC track hit times with the BCAL shower time
+				if (cdcTrackHitVector.size() != 0) {
+					float earliestTime = 10000; // Initialize high
+					//float latestTime = -10000; // Initialize low
+					//float lastTime = -10000; // Initialize low
+					for (unsigned int iCDC = 0; iCDC < cdcTrackHitVector.size(); iCDC++){
+						//if (cdcTrackHitVector[iCDC]->tdrift > latestTime) latestTime = cdcTrackHitVector[iCDC]->tdrift;
+						if (cdcTrackHitVector[iCDC]->tdrift < earliestTime) earliestTime = cdcTrackHitVector[iCDC]->tdrift;
+						//lastTime = cdcTrackHitVector[iCDC]->tdrift;
+					}
+
+					dCDCBCALTime[key]->Fill(earliestTime - flightTimeCorrectedBCALTime);
+				}
+
 			}
 			
 			if (locFCALShowerMatchParams != NULL) {
