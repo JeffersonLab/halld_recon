@@ -212,6 +212,7 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		map<string, TH1F*> dSCRFTime_AllHits;
 		map<string, TH2F*> dSCRFTimeVsSector;
 		map<string, TH1F*> dCDCSCTime;
+		map<string, TH1F*> dCDCBCALTime;
 		map<string, TH1F*> dTOFRFTime;
 		map<string, TH1F*> dTOFSCTime;
 		map<string, TH1F*> dEarliestCDCTime;
