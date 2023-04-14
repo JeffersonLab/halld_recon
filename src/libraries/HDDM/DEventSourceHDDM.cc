@@ -1216,11 +1216,33 @@ jerror_t DEventSourceHDDM::Extract_DMCThrown(hddm_s::HDDM *record,
          if (!isfinite(mass))
             mass = 0.0;
          DMCThrown *mcthrown = new DMCThrown;
-         mcthrown->type     = piter->getType();
+         mcthrown->type     = piter->getType();  // GEANT partcile type
          mcthrown->myid     = piter->getId();
          mcthrown->parentid = piter->getParentid();
          mcthrown->mech     = piter->getMech();
-         mcthrown->pdgtype  = piter->getPdgtype();
+         mcthrown->pdgtype  = piter->getPdgtype();  // PDG particle type
+         // Ensure consistency of GEANT type and PDG type information
+         const Particle_t pTypeFromPdgType = PDGtoPType(mcthrown->pdgtype);
+         if (mcthrown->type != (int)pTypeFromPdgType) {
+            // GEANT type and PDG type information are inconsistent
+            if ((mcthrown->type == 0) and (pTypeFromPdgType != Unknown)) {
+               // Workaround for cases where `type` is 0, i.e. Unknown, but the `pgdtype` is valid
+               // This may happen, for example, when EvtGen is used to decay particles
+               // Assume that the PDG type info is correct and set the GEANT type accordingly
+               mcthrown->type = (int)pTypeFromPdgType;
+            } else if ((pTypeFromPdgType == Unknown) and (PDGtype((Particle_t)mcthrown->type) != 0)) {
+               // Workaround for cases where the `pgdtype` is Unknown, but `type` is not Unknown
+               // Assume that the GEANT type info is correct and set the PDG type accordingly
+               mcthrown->pdgtype = PDGtype((Particle_t)mcthrown->type);
+            } else {
+               // Both types inconsistent but also not Unknown; not clear which is correct
+               jerr << std::endl
+                    << "WARNING: type mismatch for MC-thrown particle with myid = " << mcthrown->myid
+                    << ": GEANT type = " << mcthrown->type
+                    << " vs. PDG type = " << mcthrown->pdgtype << "."
+                    << std::endl;
+            }
+         }
          mcthrown->setPID((Particle_t)mcthrown->type);
          mcthrown->setMomentum(DVector3(px, py, pz));
          mcthrown->setPosition(DVector3(vertex[1], vertex[2], vertex[3]));
