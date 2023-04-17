@@ -54,22 +54,24 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-  jerror_t GetPositionAndMomentum(const DFDCSegment *segment);
   jerror_t GetPositionAndMomentum(DVector3 &pos,DVector3 &mom);
-  jerror_t GetPositionAndMomentum(vector<const DFDCSegment *>segments,
-				  DVector3 &pos,DVector3 &mom); 
+  jerror_t GetPositionAndMomentum(double xhit,double yhit,double zhit,
+				  double Bz,double q,
+				  double xc,double yc,double rc, double tanl,
+				  DVector3 &pos,DVector3 &mom) const; 
   jerror_t GetPositionAndMomentum(const DFDCSegment *segment,
-				  DVector3 &pos,DVector3 &mom);
+				  DVector3 &pos,DVector3 &mom) const;
   
   double GetCharge(const DVector3 &pos,const DFDCSegment *segment);
   double GetCharge(const DVector3 &pos,vector<const DFDCSegment *>segments);
 
-  double DocaSqToHelix(const DFDCPseudo *hit);
+  double DocaSqToHelix(const DFDCSegment *segment1,const DFDCSegment *segment2) const; 
   DFDCSegment *GetTrackMatch(DFDCSegment *segment,vector<DFDCSegment*>package,
 			     unsigned int &match_id);
   void LinkSegments(unsigned int pack1,vector<DFDCSegment *>packages[4],
 		    vector<pair<const DFDCSegment*,const DFDCSegment*> >&paired_segments, vector<vector<int> >&is_paired); 
   double Match(double p);
+  double MatchR(double rc) const;
 
   bool GetTrackMatch(double q,DVector3 &pos,DVector3 &mom,
 		     const DFDCSegment *segment);
@@ -87,19 +89,19 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double TARGET_Z,BEAM_VAR,FDC_HOUGH_THRESHOLD;
   
   double FactorForSenseOfRotation;
-  
-  // Fit parameters
-  double xc,yc,rc,q,tanl;
-  
-  // Parameters at the end of the segment
-  double xs,ys,zs;
-  double p,cosphi,sinphi,twokappa,cotl;
+
 };
 
 inline double DTrackCandidate_factory_FDCCathodes::Match(double p){
   double cut=5.5/p;
   if (cut>9.0) cut=9.0;
   if (cut<5.) cut=5.0;
+  return cut;
+}
+
+inline double DTrackCandidate_factory_FDCCathodes::MatchR(double rc) const {
+  double cut=200./rc+4.;
+  if (cut>9.0) cut=9.0;
   return cut;
 }
 
