@@ -540,27 +540,9 @@ DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(
 
   dphi1*=-1.;
   if (FactorForSenseOfRotation*q<0) dphi1+=M_PI;
-
-  // Find the average Bz
-  double Bz=0.;
-  double z=zmin;
-  unsigned int num_segments=segments.size();
-  double zmax=segments[num_segments-1]->hits[0]->wire->origin.z();
-  unsigned int num_samples=20*num_segments;
-  double one_over_denom=1./double(num_samples);
-  dz=(zmax-zmin)*one_over_denom;
-  for (unsigned int i=0;i<num_samples;i++){
-    double my_dphi=phi1+(z-zmin)*q_over_rc_tanl;
-    x=xc+rc*cos(my_dphi);
-    y=yc+rc*sin(my_dphi);
-    Bz+=bfield->GetBz(x,y,z);
-
-    z+=dz;
-  }
-  Bz=fabs(Bz)*one_over_denom;
   
-  
-  // Momentum 
+  // Momentum
+  double Bz=fabs(bfield->GetBz(xhit,yhit,zhit));
   double pt=0.003*Bz*rc; 
   double px=pt*sin(dphi1);
   double py=pt*cos(dphi1);
