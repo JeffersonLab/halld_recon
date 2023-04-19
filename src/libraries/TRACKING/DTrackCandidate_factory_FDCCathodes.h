@@ -65,11 +65,13 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double GetCharge(const DVector3 &pos,vector<const DFDCSegment *>segments);
 
   double DocaSqToHelix(const DFDCPseudo *hit);
+  double DocaSqToHelix(const DFDCSegment *segment1,const DFDCSegment *segment2) const;
   DFDCSegment *GetTrackMatch(DFDCSegment *segment,vector<DFDCSegment*>package,
 			     unsigned int &match_id);
   void LinkSegments(unsigned int pack1,vector<DFDCSegment *>packages[4],
 		    vector<pair<const DFDCSegment*,const DFDCSegment*> >&paired_segments, vector<vector<int> >&is_paired); 
   double Match(double p);
+  double MatchR(double rc) const;
 
   bool GetTrackMatch(double q,DVector3 &pos,DVector3 &mom,
 		     const DFDCSegment *segment);
@@ -102,7 +104,12 @@ inline double DTrackCandidate_factory_FDCCathodes::Match(double p){
   if (cut<5.) cut=5.0;
   return cut;
 }
-
+inline double DTrackCandidate_factory_FDCCathodes::MatchR(double rc) const {
+  double cut=200.0/rc;
+  if (cut>9.0) cut=9.0;
+  if (cut<5.) cut=5.0;
+  return cut;
+}
 
 #endif // _DTrackCandidate_factory_FDCCathodes_
 

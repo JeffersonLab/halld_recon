@@ -61,12 +61,12 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
     if (!match_dist_fdc){ 
       match_dist_fdc=new TH2F("match_dist_fdc",
 			      "Matching distance for connecting FDC segments",
-			      50,0.,7,500,0,100.);
+			      500,0.,500,500,0,100.);
     }
     match_center_dist2=(TH2F*)gROOT->FindObject("match_center_dist2");
     if (!match_center_dist2){
-      match_center_dist2=new TH2F("match_center_dist2","matching distance squared between two circle centers vs p",50,0,1.5,100,0,100);
-      match_center_dist2->SetXTitle("p [GeV/c]");
+      match_center_dist2=new TH2F("match_center_dist2","matching distance squared between two circle centers vs rc",500,0,500.,100,0,100);
+      match_center_dist2->SetXTitle("rc [cm]");
       match_center_dist2->SetYTitle("(#Deltad)^{2} [cm^{2}]");
     }
     
@@ -406,34 +406,46 @@ double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCPseudo *hit)
   return (dx*dx+dy*dy);
 }
 
+// Project segment1 to a hit in segment 2 and compute the square of the doca
+// between the projection and the hit
+double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCSegment *segment1,const DFDCSegment *segment2) const {
+   const DFDCPseudo *hit1=segment1->hits[0]; 
+   const DFDCPseudo *hit2=segment2->hits[0];
+   double z1=hit1->wire->origin.z();
+   double z2=hit2->wire->origin.z();
+   double x2=hit2->xy.X();
+   double y2=hit2->xy.Y();
+   double phi=segment1->Phi1+(z1-z2)*segment1->q/(segment1->rc*segment1->tanl);
+   double dx=segment1->xc+segment1->rc*cos(phi)-x2;
+   double dy=segment1->yc+segment1->rc*sin(phi)-y2;
+   
+   return (dx*dx+dy*dy);
+}
+
 // Propagate track from one package to the next and look for a match to a 
 // segment in the new package
 DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *segment,
 								vector<DFDCSegment*>package,
 								unsigned int &match_id){
   DFDCSegment *match=NULL;
-
-  // Get the position and momentum at the exit of the package for the 
-  // current segment
-  GetPositionAndMomentum(segment);
   
   // Match to the next package
   double doca2_min=1e6,doca2;
   for (unsigned int j=0;j<package.size();j++){
     DFDCSegment *segment2=package[j];
-    doca2=DocaSqToHelix(segment2->hits[0]);
+    doca2=DocaSqToHelix(segment,segment2);
 
     if (doca2<doca2_min){
       doca2_min=doca2;
-      if(doca2<Match(p)){
-	match=segment2;
-	match_id=j;
-      }
+      match_id=j;
     }
+  }
+  if (doca2_min<MatchR(segment->rc)){
+    match=package[match_id];
   }
 
   if(DEBUG_HISTS){
-    match_dist_fdc->Fill(p,doca2_min);
+    match_dist_fdc->Fill(segment->rc,doca2_min);
   }
   if (match!=NULL) return match;
 
@@ -442,16 +454,16 @@ DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *seg
   doca2_min=1e6;
   for (unsigned int i=0;i<package.size();i++){
     DFDCSegment *segment2=package[i];
-    GetPositionAndMomentum(segment2);
-    doca2=DocaSqToHelix(segment->hits[segment->hits.size()-1]);
+    doca2=DocaSqToHelix(segment2,segment);
+
     if (doca2<doca2_min){
-      doca2_min=doca2;
-      if (doca2<Match(p)){
+      doca2_min=doca2;	
+      if (doca2<Match(segment2->rc)){
 	match=segment2;
 	match_id=i;
       }
     }       
-  }
+  } 
   if (match!=NULL) return match;
 
   // Match by centers of circles
@@ -472,7 +484,7 @@ DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *seg
     }
   }
   if (DEBUG_HISTS){
-    match_center_dist2->Fill(p,circle_center_diff2_min);
+    match_center_dist2->Fill(segment->rc,circle_center_diff2_min);
   }  
   return match;
 }
