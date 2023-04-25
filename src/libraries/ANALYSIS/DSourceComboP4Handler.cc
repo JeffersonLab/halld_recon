@@ -136,6 +136,11 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	dInvariantMassCuts.emplace(phiMeson, std::make_pair(0.8, 1.2));
 	dInvariantMassCuts.emplace(D0, std::make_pair(1.8, 1.92));
 	dInvariantMassCuts.emplace(AntiD0, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(DPlus, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(DMinus, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(Dstar0, std::make_pair(1.8, 2.2));
+	dInvariantMassCuts.emplace(DstarPlus, std::make_pair(1.8, 2.2));
+	dInvariantMassCuts.emplace(DstarMinus, std::make_pair(1.8, 2.2));
 //	dInvariantMassCuts.emplace(Jpsi, std::make_pair(2.7, 3.5));
 
 	//INVARIANT MASS CUTS: BARYONS
