@@ -164,7 +164,8 @@ typedef enum {
   Dstar0 = 191,
   DstarPlus = 192,
   Lambda_c = 193,
-  AntiD0 = 194, 
+  AntiD0 = 194,
+  DstarMinus = 195,
 
   /* These are defined in pythia-geant.map in bggen */
 
@@ -438,6 +439,8 @@ inline static char* ParticleType(Particle_t p)
     return (char*)"D*0";
   case DstarPlus:
     return (char*)"D*+";
+  case DstarMinus:
+    return (char*)"D*-";
   case Lambda_c:
     return (char*)"LambdaC";
   default:
@@ -693,6 +696,8 @@ inline static char* EnumString(Particle_t p)
     return (char*)"Dstar0";
   case DstarPlus:
     return (char*)"DstarPlus";
+  case DstarMinus:
+    return (char*)"DstarMinus";
   case Lambda_c:
     return (char*)"Lambda_c";
   default:
@@ -948,6 +953,8 @@ inline static char* EvtGenString(Particle_t p)
     return (char*)"D*0";
   case DstarPlus:
     return (char*)"D*+";
+  case DstarMinus:
+    return (char*)"D*-";
   case Lambda_c:
     return (char*)"Lambda_c0";
   default:
@@ -1171,6 +1178,8 @@ inline static char* ShortName(Particle_t locPID)
 	return (char*)"ds0";
   case DstarPlus:
 	return (char*)"dsp";
+  case DstarMinus:
+	return (char*)"dsm";
   case Lambda_c:
 	return (char*)"lambc";
 
@@ -1457,6 +1466,8 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
     return Dstar0;
   else if(strcmp(locParticleName, "D*+") == 0)
     return DstarPlus;
+  else if(strcmp(locParticleName, "D*-") == 0)
+    return DstarMinus;
   else if(strcmp(locParticleName, "LambdaC") == 0)
     return Lambda_c;
   else
@@ -1569,6 +1580,7 @@ inline static unsigned short int IsFixedMass(Particle_t p)
   case DPlus:   return 1;
   case Dstar0:  return 1;
   case DstarPlus:  return 1;
+  case DstarMinus:  return 1;
   case Lambda_c: return 1;
   default: return 0;
   }
@@ -1870,6 +1882,8 @@ inline static char* ParticleName_ROOT(Particle_t p)
     return (char*)"D^{*0}";
   case DstarPlus:
     return (char*)"D^{*+}";
+  case DstarMinus:
+    return (char*)"D^{*-}";
   case Lambda_c:
     return (char*)"#Lambda_{c}";
 		 
@@ -2004,6 +2018,7 @@ inline static double ParticleMass(Particle_t p)
   case DPlus:           return 1.86961;
   case Dstar0:          return 2.00685;
   case DstarPlus:       return 2.01026;
+  case DstarMinus:      return 2.01026;
   case Lambda_c:        return 2.28646;
   default:
     fprintf(stderr,"ParticleMass: Error: Unknown particle type %d,",p);
@@ -2138,6 +2153,7 @@ inline static int ParticleCharge(Particle_t p)
   case DPlus:   return 1;
   case Dstar0:  return 0;
   case DstarPlus:  return 1;
+  case DstarMinus: return -1;
   case Lambda_c:   return 1;
 
   default:
@@ -2273,6 +2289,7 @@ inline static int PDGtype(Particle_t p)
   case DPlus:         return 411;
   case Dstar0:        return 423;
   case DstarPlus:     return 413;
+  case DstarMinus:    return -413;
   case Lambda_c:      return 4122;
   default:		return  0;
   }
@@ -2401,6 +2418,7 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case 411:          return DPlus;
   case 423:          return Dstar0;
   case 413:          return DstarPlus;
+  case -413:         return DstarMinus;
   case 4122:         return Lambda_c;
   default:			return Unknown;
   }
@@ -2776,6 +2794,7 @@ inline static int ParticleMultiplexPower(Particle_t locPID)
 		case DstarPlus:        return 45;
 		case Lambda_c:         return 46;
 		case AntiD0:           return 47;
+	        case DstarMinus:       return 48;
 		default: return -1;
 	}
 }
@@ -2857,7 +2876,8 @@ inline static Particle_t DemultiplexPID(int locBit, int locIsDecayingFlag)
 		case 44:  return Dstar0;
 		case 45:  return DstarPlus;
 		case 46:  return Lambda_c;
-      case 47:  return AntiD0;
+	        case 47:  return AntiD0;
+		case 48:  return DstarMinus;
 		default:  return Unknown;
 	}
 }
