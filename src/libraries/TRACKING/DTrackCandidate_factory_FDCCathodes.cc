@@ -419,7 +419,24 @@ double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCSegment *seg
    double dx=segment1->xc+segment1->rc*cos(phi)-x2;
    double dy=segment1->yc+segment1->rc*sin(phi)-y2;
    
-   return (dx*dx+dy*dy);
+   return dx*dx+dy*dy;
+}
+
+// Project track candidate to a hit in a segment and compute the square of the 
+// doca between the projection and the hit
+double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DTrackCandidate *candidate,const DFDCPseudo *hit) const {
+  DVector3 pos=candidate->position();
+  DVector3 mom=candidate->momentum();
+  double z2=hit->wire->origin.z();
+  double x2=hit->xy.X();
+  double y2=hit->xy.Y();
+  double Phi1=atan2(pos.y()-candidate->yc,pos.x()-candidate->xc);
+  double mytanl=tan(M_PI_2-mom.Theta());
+  double phi=Phi1+(pos.z()-z2)*candidate->charge()/(candidate->rc*mytanl);
+  double dx=candidate->xc+candidate->rc*cos(phi)-x2;
+  double dy=candidate->yc+candidate->rc*sin(phi)-y2;
+
+  return dx*dx+dy*dy;
 }
 
 // Propagate track from one package to the next and look for a match to a 
@@ -647,6 +664,7 @@ bool DTrackCandidate_factory_FDCCathodes::GetTrackMatch(double q,
     double dx=hit->xy.X()-pos.x();
     double dy=hit->xy.Y()-pos.y();
     double d2=dx*dx+dy*dy;
+   
     if (d2<Match(mom.Mag())) return true;
   }
   return false;
@@ -671,99 +689,99 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
       }
     }
     if (got_segment_in_package==false){
-      // Try to link this segment to an existing candidate
-      DVector3 pos=_data[i]->position();
-      DVector3 mom=_data[i]->momentum();
-
-      // Switch the direction of the momentum if we would need to backtrack to 
-      // get to the segment
-      if (segment->hits[0]->wire->origin.z()<pos.z()){
-	mom=-1.0*mom;
-      }
-      // Match by swimming to a plane in the stray segment
-      bool got_match=GetTrackMatch(_data[i]->charge(),pos,mom,segment);      
-      // if this does not work, try to match using the centers of the circles
-      if (got_match==false){
-	double dx=segment->xc-_data[i]->xc;
-	double dy=segment->yc-_data[i]->yc;
-	if (dx*dx+dy*dy<9.0) got_match=true;
-      }
-      if (got_match){
-	// Add the segment as an associated object to _data[i]
-	_data[i]->AddAssociatedObject(segment);
-   
-	// Add the new segment and sort by z
-	segments.push_back(segment);
-	stable_sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
-	
-	// Create fit object and add hits
-	DHelicalFit fit;  
-	// Fake point at origin
-	if (ADD_VERTEX_POINT){
-	  fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+      // Sort segments already associated with the track and try to match
+      // stray segments beyond one end or the other of the existing track
+      sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
+      unsigned int max_i=segments.size()-1;
+      if (segment->package<segments[0]->package 
+	  || segment->package>segments[max_i]->package){
+	const DFDCPseudo *myhit=segment->hits[0];
+	double doca2=DocaSqToHelix(_data[i],myhit);
+	bool got_match=(doca2<MatchR(_data[i]->rc));
+	// if this does not work, try to match using the centers of the circles
+	if (got_match==false){
+	  double dx=segment->xc-_data[i]->xc;
+	  double dy=segment->yc-_data[i]->yc;
+	  if (dx*dx+dy*dy<9.0) got_match=true;
 	}
-	double max_r=0.;
-	for (unsigned int m=0;m<segments.size();m++){ 
-	  for (unsigned int k=0;k<segments[m]->hits.size();k++){
-	    const DFDCPseudo *hit=segments[m]->hits[k];
-	    fit.AddHit(hit);
-
-	    double r=hit->xy.Mod();
-	    if (r>max_r){
-	      max_r=r;
+	if (got_match){
+	  // Add the segment as an associated object to _data[i]
+	  _data[i]->AddAssociatedObject(segment);
+	  
+	  // Add the new segment and sort by z
+	  segments.push_back(segment);
+	  stable_sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
+	  
+	  // Create fit object and add hits
+	  DHelicalFit fit;  
+	  // Fake point at origin
+	  if (ADD_VERTEX_POINT){
+	    fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
+	  }
+	  double max_r=0.;
+	  for (unsigned int m=0;m<segments.size();m++){ 
+	    for (unsigned int k=0;k<segments[m]->hits.size();k++){
+	      const DFDCPseudo *hit=segments[m]->hits[k];
+	      fit.AddHit(hit);
+	      
+	      double r=hit->xy.Mod();
+	      if (r>max_r){
+		max_r=r;
+	      }
 	    }
 	  }
-	}
 	
-	// Redo the helical fit with the additional hits
-	if (fit.FitTrackRiemann(_data[i]->rc)==NOERROR){      	
-	  rc=fit.r0;
-	  tanl=fit.tanl;
-	  xc=fit.x0;
-	  yc=fit.y0;
-	  q=FactorForSenseOfRotation*fit.h;
-	  
-	   // Look for cases where the momentum is unrealistically large...
-	  const DFDCPseudo *myhit=segments[0]->hits[0];
-	  double Bz=fabs(bfield->GetBz(myhit->xy.X(),myhit->xy.Y(),myhit->wire->origin.z()));
-	  double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-	  
-	  // Prune the fake hit at the origin in case we need to use an 
-	  // alternate fit
-	  if (ADD_VERTEX_POINT){
-	    fit.PruneHit(0);
-	  }
-	  if (p>10.){//... try alternate circle fit 
-	    fit.FitCircle();
+	  // Redo the helical fit with the additional hits
+	  if (fit.FitTrackRiemann(_data[i]->rc)==NOERROR){      	
 	    rc=fit.r0;
-	    xc=fit.x0;
-	    yc=fit.y0;
-	  } 
-	  if (rc<0.5*max_r && max_r<10.0){
-	    // ... we can also have issues near the beam line:
-	    // Try to fix relatively high momentum tracks in the very forward 
-	    // direction that look like low momentum tracks due to small pt.
-	    // Assume that the particle came from the center of the target.	
-	    fit.FitTrack_FixedZvertex(TARGET_Z);
 	    tanl=fit.tanl;
-	    rc=fit.r0;
 	    xc=fit.x0;
 	    yc=fit.y0;
-	    fit.FindSenseOfRotation();
-	    q=FactorForSenseOfRotation*fit.h;      
+	    q=FactorForSenseOfRotation*fit.h;
+	    
+	    // Look for cases where the momentum is unrealistically large...
+	    myhit=segments[0]->hits[0];
+	    double Bz=fabs(bfield->GetBz(myhit->xy.X(),myhit->xy.Y(),myhit->wire->origin.z()));
+	    double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
+	    
+	    // Prune the fake hit at the origin in case we need to use an 
+	    // alternate fit
+	    if (ADD_VERTEX_POINT){
+	      fit.PruneHit(0);
+	    }
+	    if (p>10.){//... try alternate circle fit 
+	      fit.FitCircle();
+	      rc=fit.r0;
+	      xc=fit.x0;
+	      yc=fit.y0;
+	    } 
+	    if (rc<0.5*max_r && max_r<10.0){
+	      // ... we can also have issues near the beam line:
+	      // Try to fix relatively high momentum tracks in the very forward 
+	      // direction that look like low momentum tracks due to small pt.
+	      // Assume that the particle came from the center of the target.	
+	      fit.FitTrack_FixedZvertex(TARGET_Z);
+	      tanl=fit.tanl;
+	      rc=fit.r0;
+	      xc=fit.x0;
+	      yc=fit.y0;
+	      fit.FindSenseOfRotation();
+	      q=FactorForSenseOfRotation*fit.h;      
+	    }
+	    
+	    // Get position and momentum just upstream of first hit
+	    DVector3 pos,mom;
+	    GetPositionAndMomentum(segments,pos,mom);
+	    
+	    _data[i]->chisq=fit.chisq;
+	    _data[i]->Ndof=fit.ndof;
+	    _data[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
+	    _data[i]->setPosition(pos);
+	    _data[i]->setMomentum(mom); 
 	  }
-	  
-	  // Get position and momentum just upstream of first hit
-	  GetPositionAndMomentum(segments,pos,mom);
-	  
-	  _data[i]->chisq=fit.chisq;
-	  _data[i]->Ndof=fit.ndof;
-	  _data[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
-	  _data[i]->setPosition(pos);
-	  _data[i]->setMomentum(mom); 
-	}
 
-	return true;
+	  return true;
+	} // got a match to a stray segment
       }
     }
   }

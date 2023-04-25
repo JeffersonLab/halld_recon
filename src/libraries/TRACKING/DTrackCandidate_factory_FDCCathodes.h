@@ -66,6 +66,8 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 
   double DocaSqToHelix(const DFDCPseudo *hit);
   double DocaSqToHelix(const DFDCSegment *segment1,const DFDCSegment *segment2) const;
+  double DocaSqToHelix(const DTrackCandidate *candidate,const DFDCPseudo *hit) const;
+
   DFDCSegment *GetTrackMatch(DFDCSegment *segment,vector<DFDCSegment*>package,
 			     unsigned int &match_id);
   void LinkSegments(unsigned int pack1,vector<DFDCSegment *>packages[4],
