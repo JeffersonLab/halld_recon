@@ -40,6 +40,7 @@ class DTAGMHit_factory_Calib: public jana::JFactory<DTAGMHit> {
       double t_tdc_base;
 
       // calibration constants stored in row, column format
+      int WalkCorMethod;
       double fadc_gains[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];
       double fadc_pedestals[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];
       double fadc_time_offsets[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];

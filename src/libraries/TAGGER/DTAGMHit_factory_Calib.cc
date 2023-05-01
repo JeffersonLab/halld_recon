@@ -86,6 +86,18 @@ jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     pthread_mutex_unlock(&print_mutex);
     if(print_messages) jout << "In DTAGMHit_factory_Calib, loading constants..." << std::endl;
 
+
+    WalkCorMethod = 0;
+    vector <int> WCM;
+    if (eventLoop->GetCalib("/PHOTON_BEAM/microscope/WalkCorrectionMethod", WCM)){
+      jout<<"\033[1;31m";  // red text";
+      jout << "Error loading /PHOTON_BEAM/microscope/WalkCorrectionMethod !" << endl;
+      jout<< "Default to ZERO! \033[0m" << endl;
+    } else {
+      WalkCorMethod = WCM[0];
+      jout<<"TAGM walk correction Method: "<<WalkCorMethod<<endl;
+    }
+
     // load base time offset
     map<string,double> base_time_offset;
     if (eventLoop->GetCalib("/PHOTON_BEAM/microscope/base_time_offset",base_time_offset))
@@ -291,8 +303,16 @@ jerror_t DTAGMHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
         double t0 = ref[row][column];
         //pp_0 = TH*pow((pp_0-c0)/c1,1/c2);
         if (P > 0) {
-           //T -= c1*(pow(P/TH,c2)-pow(pp_0/TH,c2));
-           T -= c1*pow(1/(P+c3),c2) - (t0 - c0);
+	  if (WalkCorMethod == 0 ) {
+	    //T -= c1*(pow(P/TH,c2)-pow(pp_0/TH,c2));
+	    T -= c1*pow(1/(P+c3),c2) - (t0 - c0);
+	  }
+	  if (WalkCorMethod == 1){
+	    double wcor = c1*pow(1./P,1.) + c2*pow(1./P,2.) + c3*pow(1./P,3.) - c0; 
+	    T -= wcor;
+	  }
+
+
         }
 
         // Optionally only use ADC times
