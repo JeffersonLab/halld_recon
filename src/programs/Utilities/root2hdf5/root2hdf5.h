@@ -22,6 +22,17 @@ class column_ {
    column_(TLeaf *column_leaf)
     : leaf(column_leaf), dtype_id(0), mtype_id(0), dset_id(0), chunk_id(0)
    {
+      if (strstr(leaf->GetBranch()->GetName(), leaf->GetName()) == 0) {
+         char *pathname = new char[strlen(leaf->GetBranch()->GetName()) +
+                                   strlen(leaf->GetName()) + 3];
+         sprintf(pathname, "%s_%s", leaf->GetBranch()->GetName(),
+                                    leaf->GetName());
+         name = std::string(pathname);
+         delete pathname;
+      }
+      else {
+         name = std::string(leaf->GetBranch()->GetName());
+      }
       vleaf = leaf->GetLeafCounter(width);
       if (vleaf != 0)
          varwidth = std::min(vleaf->GetMaximum(), MAXLEN_VARRAY);
@@ -128,7 +139,7 @@ class column_ {
    }
 
    virtual const char *getname() {
-      return leaf->GetBranch()->GetName();
+      return name.c_str();
    }
 
    virtual void *address(int irow) {
@@ -146,6 +157,7 @@ class column_ {
       return 0;
    }
 
+   std::string name;
    TLeaf *leaf;
    TLeaf *vleaf;
    hvl_t *vlen;
