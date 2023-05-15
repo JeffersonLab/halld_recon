@@ -44,6 +44,7 @@
 #include <xercesc/util/PlatformUtils.hpp>
 #include <xercesc/dom/DOMNamedNodeMap.hpp>
 
+#include "VersionConfig.hpp"
 #include "XParsers.hpp"
 #include "XString.hpp"
 
@@ -88,6 +89,7 @@ void usage()
         << "Options:\n"
         <<  "    -t <template>    read template from <template>\n"
         <<  "    -o <filename>    write to hddm file <filename>"
+        << "Version: " << HDDM_VERSION_MAJOR << "." << HDDM_VERSION_MINOR
         << std::endl;
 }
 

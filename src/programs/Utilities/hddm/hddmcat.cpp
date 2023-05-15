@@ -12,6 +12,8 @@
  */
 
 
+#include "VersionConfig.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -30,6 +32,7 @@ void usage()
 {
    cerr << "\nUsage:\n"
         << "    hddmcat file1.hddm [file2.hddm] ...\n\n"
+        << "Version: " << HDDM_VERSION_MAJOR << "." << HDDM_VERSION_MINOR
         << endl;
 }
 

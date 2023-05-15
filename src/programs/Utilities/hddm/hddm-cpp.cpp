@@ -15,6 +15,13 @@
  *           October 10, 2020 - introduced support for reading and
  *                              writing of hddm streams to HDF5 files.
  *
+ *  Version 1.4 - Richard Jones, February 10, 2021.
+ *  - Modified to be able to accept a hddm file as a valid hddm template.
+ *    This simplifies the documentation by eliminating the false distinction
+ *    between a hddm template and the text header that appears at the top of
+ *    every hddm file. It also gets rid of the unnecessary step of having
+ *    to delete the binary data following the header in a hddm file before
+ *    it can be used as a template.
  *
  *  Programmer's Notes:
  *  -------------------
@@ -28,7 +35,7 @@
  * 3. The code has been tested with the xerces-c DOM implementation from
  *    Apache, and is intended to be used with the xerces-c library.
  *
- * 4. Output is sent to <filename>.hpp and <filename>.cpp where <filename>
+ * 4. Output is sent to <filename>.hpp and <filename>++.cpp where <filename>
  *    is by default "hddm_X" and can be changed with the -o option, where
  *    X is the user-defined HDDM class string defined in the HDDM tag.
  *
@@ -70,17 +77,20 @@
  *       contents which appear in both models will be unpacked, however.
  */
 
+#include "VersionConfig.hpp"
 #include "XString.hpp"
 #include "XParsers.hpp"
 #include <xercesc/util/XMLUri.hpp>
 
 #include <particleType.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include <string>
 #include <vector>
 #include <map>
 #include <fstream>
+#include <sstream>
 
 #define X(str) XString(str).unicode_str()
 #define S(str) str.c_str()
@@ -96,7 +106,8 @@ void usage()
         << "    hddm-cpp [-v | -o <filename>] {HDDM file}\n\n"
         << "Options:\n"
         <<  "    -v			validate only\n"
-        <<  "    -o <filename>	write to <filename>.hpp, <filename>.cpp"
+        <<  "    -o <filename>	write to <filename>.hpp, <filename>++.cpp"
+        << "Version: " << HDDM_VERSION_MAJOR << "." << HDDM_VERSION_MINOR
         << std::endl;
 }
 
@@ -214,11 +225,76 @@ int main(int argC, char* argV[])
       return 1;
    }
    xmlFile = XtString(argV[argInd]);
+   std::ifstream ifs(xmlFile.c_str());
+   if (!ifs.good())
+   {
+      std::cerr
+           << "hddm-cpp: Error opening hddm template " << xmlFile << std::endl;
+      exit(1);
+   }
+   std::ostringstream tmpFileStr;
+   tmpFileStr << "tmp" << getpid();
+   std::ofstream ofs(tmpFileStr.str().c_str());
+   if (! ofs.is_open())
+   {
+      std::cerr
+           << "hddm-cpp: Error opening temp file " << tmpFileStr.str() << std::endl;
+      exit(2);
+   }
+
+   XString xmlPreamble("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+   XString xmlHeader;
+   XString line;
+   while (getline(ifs,line))
+   {
+      if (line.find("<?xml") != line.npos)
+      {
+         xmlPreamble = line + "\n";
+      }
+      else if (line.find("<!DOCTYPE HDDM>") != line.npos)
+      {
+         xmlPreamble += line + "\n";
+      }
+      else if (line.size() == 0)
+      {
+         xmlPreamble += "\n";
+      }
+      else if (line.find("<HDDM ") != line.npos)
+      {
+         xmlHeader = line + "\n";
+         ofs << xmlPreamble << line;
+         break;
+      }
+      else
+      {
+         std::cerr
+              << "hddm-cpp: Template does not contain valid hddm header"
+              << std::endl;
+         exit(1);
+      }
+   }
+   if (xmlHeader.size() == 0)
+   {
+      std::cerr
+           << "hddm-cpp: Error reading from hddm template " << xmlFile 
+           << std::endl;
+      exit(1);
+   }
+   while (getline(ifs,line))
+   {
+      ofs << line;
+      if (line == "</HDDM>")
+      {
+         break;
+      }
+   }
+   ofs.close();
+   ifs.close();
 
 #if defined OLD_STYLE_XERCES_PARSER
-   DOMDocument* document = parseInputDocument(xmlFile.c_str(),false);
+   DOMDocument* document = parseInputDocument(tmpFileStr.str().c_str(),false);
 #else
-   DOMDocument* document = buildDOMDocument(xmlFile.c_str(),false);
+   DOMDocument* document = buildDOMDocument(tmpFileStr.str().c_str(),false);
 #endif
    if (document == 0)
    {
@@ -227,6 +303,7 @@ int main(int argC, char* argV[])
            << "cannot continue" << std::endl;
       return 1;
    }
+   unlink(tmpFileStr.str().c_str());
 
    DOMElement* rootEl = document->getDocumentElement();
    XtString rootS(rootEl->getTagName());
@@ -273,11 +350,11 @@ int main(int argC, char* argV[])
    }
    else if (hFilename.size())
    {
-      cname = hFilename + ".cpp";
+      cname = hFilename + "++.cpp";
    }
    else
    {
-      cname = "hddm_" + classPrefix + ".cpp";
+      cname = "hddm_" + classPrefix + "++.cpp";
    }
 
    builder.cFile.open(cname.c_str());
@@ -302,9 +379,8 @@ int main(int argC, char* argV[])
    " * The hddm data model tool set was written by\n"
    " * Richard Jones, University of Connecticut.\n"
    " *\n"
-   " * For more information see the following web site\n"
-   " *\n"
-   " * http://zeus.phys.uconn.edu/halld/datamodel/doc\n"
+   " * For more information see the documentation at\n"
+   " * http://github.com/rjones30/HDDM\n"
    " *\n"
    " */\n"
    "\n"
@@ -1133,7 +1209,7 @@ int main(int argC, char* argV[])
 
    builder.cFile <<
    "/*\n"
-   " * hddm_" << classPrefix << ".cpp - DO NOT EDIT THIS FILE\n"
+   " * hddm_" << classPrefix << "++.cpp - DO NOT EDIT THIS FILE\n"
    " *\n"
    " * This file was generated automatically by hddm-cpp from the file\n"
    << " * " << xmlFile << std::endl <<
@@ -1144,9 +1220,8 @@ int main(int argC, char* argV[])
    " * The hddm data model tool set was written by\n"
    " * Richard Jones, University of Connecticut.\n"
    " *\n"
-   " * For more information see the following web site\n"
-   " *\n"
-   " * http://zeus.phys.uconn.edu/halld/datamodel/doc\n"
+   " * For more information see the documentation at\n"
+   " * http://github.com/rjones30/HDDM\n"
    " */\n"
    "\n"
    "#include <sstream>\n"
@@ -1214,10 +1289,17 @@ int main(int argC, char* argV[])
    " : m_istr(src),\n"
    "   m_status_bits(0)\n"
    "{\n"
-   "   char hdr[10];\n"
+   "   char hdr[1000];\n"
    "   src.getline(hdr,7);\n"
    "   m_documentString = hdr;\n"
-   "   if (m_documentString != \"<HDDM \") {\n"
+   "   while (m_documentString != \"<HDDM \") {\n"
+   "      if (m_documentString == \"<?xml \") {\n"
+   "         src.clear();\n"
+   "         src.getline(hdr,1000);\n"
+   "         src.getline(hdr,7);\n"
+   "         m_documentString = hdr;\n"
+   "         continue;\n"
+   "      }\n"
    "      throw std::runtime_error(\"hddm_" + classPrefix +
    "::istream::istream error - invalid hddm header\");\n"
    "   }\n"
@@ -1231,7 +1313,7 @@ int main(int argC, char* argV[])
    "   }\n"
    "   if (src.bad()) {\n"
    "      throw std::runtime_error(\"hddm_" + classPrefix +
-   "::istream::istream error - invalid hddm header\");\n"
+   "::istream::istream error - hddm header invalid\");\n"
    "   }\n"
    "   pthread_mutex_init(&m_streambuf_mutex,0);\n"
    "   for (int i=0; i<threads::max_threads; ++i) {\n"
@@ -1534,13 +1616,7 @@ int main(int argC, char* argV[])
    "         if (crc.digest() != recorded_crc) {\n"
    "            char errmsg[] = \n"
    "                 \"WARNING: crc data integrity check failed\"\n"
-   "                 \" on hddm_" << classPrefix << " input stream!\"\n"
-   "                 \"\\nThis may be the result of a bug in the\"\n"
-   "                 \" xstream library if you are analyzing a data\"\n"
-   "                 \" file that was generated by code prior to svn\"\n"
-   "                 \" rev 18530.\\nIf this concerns you, regenerate\"\n"
-   "                 \" using a newer build of the sim-recon tools\"\n"
-   "                 \" and it should go away.\\n\";\n"
+   "                 \" on hddm_" << classPrefix << " input stream!\";\n"
    "            if ((MY(status_bits) & 0x02) == 0) {\n"
    "               std::cerr << errmsg << std::endl;\n"
    "               MY(status_bits) |= 0x02;\n"
@@ -2476,6 +2552,11 @@ void CodeBuilder::writeClassdef(DOMElement* el)
             << "   static herr_t hdf5GetFilters(hid_t file_id,"
             << " std::vector<H5Z_filter_t> &filters);"
             << std::endl
+            << "   static void hdf5_memcpy(void *dst, void *src, int size) {"
+            << std::endl
+	    << "      memcpy(dst, src, size);"
+            << std::endl
+	    << "   }" << std::endl
             << " private:" << std::endl
             << "   static std::map<std::string, hid_t> s_hdf5_datatype;"
             << std::endl
@@ -3475,7 +3556,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   char *pstamp;" << std::endl
             << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
             << " H5P_DEFAULT);" << std::endl
-            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);" << std::endl
             << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
             << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
             << std::endl
@@ -3512,7 +3593,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   char *pstamp;" << std::endl
             << "   hid_t stamp_id = H5Dopen(file_id, \"HDDMstamp\","
             << " H5P_DEFAULT);" << std::endl
-            << "   hid_t stamp_sid = H5Dget_space(stamp_id);"
+            << "   hid_t stamp_sid = H5Dget_space(stamp_id);" << std::endl
             << "   hid_t stamp_tid = H5Dget_type(stamp_id);" << std::endl
             << "   stamp_tid = H5Tget_native_type(stamp_tid, H5T_DIR_DEFAULT);"
             << std::endl
@@ -3555,8 +3636,8 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "   }" << std::endl
             << "   else {" << std::endl
-            << "      eventdata_id = s_hdf5_dataset[file_id];"
-            << "      chunking_id = s_hdf5_chunking[file_id];"
+            << "      eventdata_id = s_hdf5_dataset[file_id];" << std::endl
+            << "      chunking_id = s_hdf5_chunking[file_id];" << std::endl
             << "      eventspace_id = s_hdf5_dataspace[file_id];"
             << std::endl
             << "   }" << std::endl
@@ -3693,7 +3774,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
                   << "(" << dnameS.simpleType() << "*)hdf5_record.vl_"
                   << dnameS << ".p;" << std::endl
                   << "      for (int i=0; i < len; ++i, ++iter) {" << std::endl
-                  << "         memcpy(p+i, *iter, size);" << std::endl
+                  << "         hdf5_memcpy(p+i, *iter, size);" << std::endl
                   << "         p[i].hdf5DataPack();" << std::endl
                   << "      }" << std::endl
                   << "   }" << std::endl;
@@ -3737,7 +3818,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   }" << std::endl
             << "   hid_t eventdata_id;" << std::endl
             << "   if (s_hdf5_dataset.find(file_id)"
-            << " == s_hdf5_dataset.end()) {" << std::endl
+            << " == s_hdf5_dataset.end()) {"
             << std::endl
             << "      eventdata_id = H5Dcreate(file_id, \"HDDMevents\","
             << std::endl
@@ -3749,11 +3830,11 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "      s_hdf5_dataset[file_id] = eventdata_id;" << std::endl
             << "      m_hdf5_record_extent = 0;" << std::endl
-            << "      m_hdf5_record_offset = 0;" << std::endl
+            << "      m_hdf5_record_offset = 0;"
             << std::endl
             << "   }" << std::endl
             << "   else {" << std::endl
-            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      eventdata_id = s_hdf5_dataset[file_id];" << std::endl
             << "      hsize_t maxdims;" << std::endl
             << "      H5Sget_simple_extent_dims(eventspace_id,"
             << " &m_hdf5_record_extent, &maxdims);" << std::endl
@@ -3841,7 +3922,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << std::endl
             << "   }" << std::endl
             << "   else {" << std::endl
-            << "      eventdata_id = s_hdf5_dataset[file_id];"
+            << "      eventdata_id = s_hdf5_dataset[file_id];" << std::endl
             << "      chunking_id = s_hdf5_chunking[file_id];"
             << std::endl
             << "   }" << std::endl
