@@ -3818,7 +3818,7 @@ void CodeBuilder::writeClassimp(DOMElement* el)
             << "   }" << std::endl
             << "   hid_t eventdata_id;" << std::endl
             << "   if (s_hdf5_dataset.find(file_id)"
-            << " == s_hdf5_dataset.end()) {" << std::endl
+            << " == s_hdf5_dataset.end()) {"
             << std::endl
             << "      eventdata_id = H5Dcreate(file_id, \"HDDMevents\","
             << std::endl
