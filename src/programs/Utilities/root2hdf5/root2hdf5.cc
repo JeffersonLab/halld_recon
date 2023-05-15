@@ -109,7 +109,8 @@ int main(int argc, char *argv[])
    TObjArray *leaves = tree->GetListOfLeaves();
    for (int ileaf=0; ileaf < leaves->GetEntries(); ++ileaf) {
       TLeaf *leaf = (TLeaf*)(*leaves)[ileaf];
-      if (colnames.size() > 0 && colnames.find(leaf->GetName()) == colnames.end())
+      const char *colname = leaf->GetBranch()->GetName();
+      if (colnames.size() > 0 && colnames.find(colname) == colnames.end())
          continue;
       else if (leaf->IsA() == TLeafC::Class())
          columns.push_back(new column_cstring(leaf));
@@ -145,7 +146,7 @@ int main(int argc, char *argv[])
          columns.push_back(new column_bool(leaf));
       else {
          std::cerr << "root2hdf5 error - unknown leaf type " << leaf->GetTypeName()
-                   << " found in tree column " << leaf->GetName()
+                   << " found in tree column " << colname
                    << ", cannot continue." << std::endl;
          exit(3);
       }
@@ -181,7 +182,7 @@ int main(int argc, char *argv[])
    std::vector<column_*>::iterator icolumn;
    for (icolumn = columns.begin(); icolumn != columns.end(); ++icolumn) {
       std::cout << "(" << (*icolumn)->leaf->GetTypeName() << ")" 
-                << (*icolumn)->leaf->GetName();
+                << (*icolumn)->getname();
       if ((*icolumn)->width > 1)
          std::cout << "[" << (*icolumn)->width << "]";
       else if ((*icolumn)->vleaf != 0)

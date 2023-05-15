@@ -71,7 +71,7 @@ class column_ {
             H5Pset_chunk(chunk_id, 2, chunks);
       }
       if (dset_id == 0) {
-         dset_id = H5Dcreate(file_id, leaf->GetName(),
+         dset_id = H5Dcreate(file_id, getname(),
                              dtype_id, dspace_id,
                              H5P_DEFAULT, chunk_id, H5P_DEFAULT);
          dset_offset = 0;
@@ -120,11 +120,15 @@ class column_ {
 
    virtual void print() {
       std::cout << "branch " << leaf->GetBranch()->GetName()
-                << ", column name " << leaf->GetName()
+                << ", column name " << getname()
                 << ", type " << leaf->GetTypeName();
       if (width != 1)
          std::cout << "[" << width << "]";
       std::cout << std::endl;
+   }
+
+   virtual const char *getname() {
+      return leaf->GetBranch()->GetName();
    }
 
    virtual void *address(int irow) {
