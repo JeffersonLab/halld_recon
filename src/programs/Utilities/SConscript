@@ -9,7 +9,7 @@ subdirs.extend( ['hddm', 'hddm_cull_events', 'hddm_merge_files'])
 subdirs.extend( ['mkplugin', 'mkfactory_plugin'] )
 subdirs.extend( ['hdevio_scan', 'hdbeam_current', 'hdevio_sample', 'hdskims'] )
 subdirs.extend( ['mergeTrees'] )
-subdirs.extend( ['hddm2root', 'root2hdf5'] )
+subdirs.extend( ['hddm2root'] )
 
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)
 
