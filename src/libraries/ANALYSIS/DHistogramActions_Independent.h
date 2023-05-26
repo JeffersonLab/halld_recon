@@ -321,6 +321,7 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		}
 
 		double TOF_E_THRESHOLD;
+        bool IGNORE_START_COUNTER;
 
 		//bool is time/wire-based for true/false
 		map<DetectorSystem_t, map<bool, TH2I*> > dHistMap_PVsTheta_HasHit;
