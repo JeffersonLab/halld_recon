@@ -28,6 +28,8 @@ class JEventProcessor_BCAL_TDC_Timing:public jana::JEventProcessor{
 		uint32_t VERBOSE;
 		uint32_t VERBOSEHISTOGRAMS;
 
+        bool DONT_USE_SC;
+
       double Z_TARGET;
 
       //Used as a key for maps
