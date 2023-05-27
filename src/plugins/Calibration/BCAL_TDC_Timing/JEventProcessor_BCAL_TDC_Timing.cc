@@ -51,9 +51,12 @@ JEventProcessor_BCAL_TDC_Timing::JEventProcessor_BCAL_TDC_Timing()
 	VERBOSE = 0;
 	VERBOSEHISTOGRAMS = 0;
 
+    DONT_USE_SC = false;
+
 	if(gPARMS){
 		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
 		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
+		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:DONT_USE_SC", DONT_USE_SC, "Don't require tracks to match to the start counter (default 0 to require this matching)");
 	}
 
 }
@@ -409,7 +412,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
       if (bcalMatch == NULL) continue; 
       Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 4, "Success profile;Step", 16, -0.5, 15.5);
-      if (scMatch == NULL) continue;
+      if (!DONT_USE_SC && (scMatch == NULL)) continue;
       Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 5, "Success profile;Step", 16, -0.5, 15.5);
 
       double dDeltaZToShower = bcalMatch->dDeltaZToShower;
@@ -420,7 +423,12 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
                       200, -25, 25, 200, -0.1, 0.1);
 
       const DTrackTimeBased *timeBasedTrack = bestHypothesis->Get_TrackTimeBased();
-      if (timeBasedTrack->FOM < 0.0027) continue; // 3-sigma cut on tracking FOM
+
+      if(DONT_USE_SC) {
+          if (timeBasedTrack->FOM < 1e-10) continue; // if ther's no SC, the tracking FOM is not as good
+      } else {
+          if (timeBasedTrack->FOM < 0.0027) continue; // 3-sigma cut on tracking FOM
+      }
       Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 6, "Success profile;Step", 16, -0.5, 15.5);
       if (timeBasedTrack->Ndof < 10) continue; // CDC: 5 params in fit, 10 dof => [15 hits]; FDC [10 hits]
 
@@ -544,6 +552,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
                           Z_shower, Z_point + Z_TARGET,
                           "Z_{Point} vs Z_{Shower};Z_{Shower}  [cm];Z_{Point} [cm]",
                           225, zminhall, zmaxhall, 225, zminhall, zmaxhall);
+
 	 if (fitter->ExtrapolateToRadius(rpoint,extrapolations,proj_pos,
 					 proj_mom,
 					 flightTime,pathLength)){	
@@ -705,7 +714,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
             }
 
             // Now fill some histograms that are useful for aligning the BCAL with the rest of the detector systems
-            if (thisRFBunch->dNumParticleVotes >= 2 && scMatch != NULL && dEdx_pion){ // Require good RF bunch and this track match the SC
+            if (thisRFBunch->dNumParticleVotes >= 2 && (DONT_USE_SC || (scMatch != NULL)) && dEdx_pion){ // Require good RF bunch and this track match the SC
                // Get the time of the BCAL point
                double pointTime = thisPoint->t();
                // We have the flight time to our BCAL point, so we can get the target time

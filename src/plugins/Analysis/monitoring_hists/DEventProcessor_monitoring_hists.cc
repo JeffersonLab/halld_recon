@@ -29,6 +29,9 @@ jerror_t DEventProcessor_monitoring_hists::init(void)
 	dNumMemoryMonitorEvents = 0;
 	gPARMS->SetDefaultParameter("MONITOR:MEMORY_EVENTS", dNumMemoryMonitorEvents);
 
+    MIN_TRACKING_FOM = 0.0027;
+    gPARMS->SetDefaultParameter("MONITOR:MIN_TRACKING_FOM", MIN_TRACKING_FOM);
+
 	string locOutputFileName = "hd_root.root";
 	if(gPARMS->Exists("OUTPUT_FILENAME"))
 		gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
@@ -68,11 +71,13 @@ jerror_t DEventProcessor_monitoring_hists::brun(JEventLoop *locEventLoop, int32_
 	dHistogramAction_Reconstruction.Initialize(locEventLoop);
 	dHistogramAction_EventVertex.Initialize(locEventLoop);
 
+    dHistogramAction_DetectorMatching.dMinTrackingFOM = MIN_TRACKING_FOM;
 	dHistogramAction_DetectorMatching.Initialize(locEventLoop);
 	dHistogramAction_DetectorMatchParams.Initialize(locEventLoop);
 	dHistogramAction_Neutrals.Initialize(locEventLoop);
 	dHistogramAction_DetectorPID.Initialize(locEventLoop);
 
+    dHistogramAction_TrackMultiplicity.dMinTrackingFOM = MIN_TRACKING_FOM;
 	dHistogramAction_TrackMultiplicity.Initialize(locEventLoop);
 	dHistogramAction_DetectedParticleKinematics.Initialize(locEventLoop);
 	dHistogramAction_TrackShowerErrors.Initialize(locEventLoop);
