@@ -365,6 +365,7 @@ class DHistogramAction_DetectorMatching : public DAnalysisAction
 		map<bool, TH2I*> dHistMap_SCTrackDeltaPhiVsP;
 		map<bool, TH2I*> dHistMap_SCTrackDeltaPhiVsZ;
 		map<bool, TH2I*> dHistMap_SCTrackDeltaPhiVsTheta;
+		map<bool, TH2I*> dHistMap_SCTrackDeltaPhiVsPhi;
 		map<bool, TH2I*> dHistMap_FCALTrackDistanceVsP;
 		map<bool, TH2I*> dHistMap_FCALTrackDistanceVsTheta;
 		map<bool, TH2I*> dHistMap_BCALDeltaPhiVsP;

@@ -930,6 +930,9 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 			locHistName = "SCTrackDeltaPhiVsZ";
 			locHistTitle = locTrackString + string(";Projected SC Hit-Z (cm);SC / Track #Delta#phi#circ");
 			dHistMap_SCTrackDeltaPhiVsZ[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DSCZBins, 0.0, 120.0, dNum2DDeltaPhiBins, dSCMatchMinDeltaPhi, dSCMatchMaxDeltaPhi);
+			locHistName = "SCTrackDeltaPhiVsPhi";
+			locHistTitle = locTrackString + string(";Projected SC Hit-Phi ;SC / Track #Delta#phi#circ");
+			dHistMap_SCTrackDeltaPhiVsPhi[locIsTimeBased] = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, 72, -180.0, 180.0, dNum2DDeltaPhiBins, dSCMatchMinDeltaPhi, dSCMatchMaxDeltaPhi);
 			gDirectory->cd("..");
 
 			//TOFPaddle
@@ -1455,6 +1458,8 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 				dHistMap_SCTrackDeltaPhiVsP[locIsTimeBased]->Fill(locTrack->momentum().Mag(), locDeltaPhi);
 				dHistMap_SCTrackDeltaPhiVsTheta[locIsTimeBased]->Fill(locTrack->momentum().Theta()*180.0/TMath::Pi(), locDeltaPhi);
 				dHistMap_SCTrackDeltaPhiVsZ[locIsTimeBased]->Fill(locProjectedZ, locDeltaPhi);
+				if (locProjectedZ > 96)
+				  dHistMap_SCTrackDeltaPhiVsPhi[locIsTimeBased]->Fill(locTrack->momentum().Phi()*180.0/TMath::Pi(), locDeltaPhi);
 			}
 		}
 
