@@ -39,6 +39,9 @@ class DTOFGeometry : public JObject {
   float Get_CenterHorizPlane() const { return CenterHPlane; };
   float Get_CenterMidPlane() const { return CenterMPlane; };
 
+  string Get_CCDB_DirectoryName() const {
+      return "TOF";
+  }
 
   int NLONGBARS;        ///> number of long scintillator bars
   int NWIDEBARS;        ///> number of long scintillator bars
