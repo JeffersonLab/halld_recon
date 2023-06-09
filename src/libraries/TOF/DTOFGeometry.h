@@ -19,6 +19,27 @@ class DTOFGeometry : public JObject {
  public:
   JOBJECT_PUBLIC(DTOFGeometry);
 
+  
+  // Get functions
+  int Get_NLayers() const { return NLAYERS; };
+  int Get_NPlanes() const { return NLAYERS; };
+  int Get_NEnds() const { return NENDS; };
+  // NOTE THAT Get_NBars() is the number of bars along one end!
+  // Therefore Get_NBars() != Get_NLongBars()+Get_NShortBars()
+  int Get_NBars() const { return NBARS; }
+  int Get_NLongBars() const { return NLONGBARS; }
+  int Get_NShortBars() const { return NSHORTBARS; }
+
+  int Get_FirstShortBar() const { return FirstShortBar; }
+  int Get_LastShortBar() const { return LastShortBar; }
+
+  bool Is_ShortBar(int paddle) const { return (paddle >= FirstShortBar) && (paddle <= LastShortBar); }
+
+  float Get_CenterVertPlane() const { return CenterVPlane; };  
+  float Get_CenterHorizPlane() const { return CenterHPlane; };
+  float Get_CenterMidPlane() const { return CenterMPlane; };
+
+
   int NLONGBARS;        ///> number of long scintillator bars
   int NWIDEBARS;        ///> number of long scintillator bars
   int NBARS;            ///> number of long scintillator bars

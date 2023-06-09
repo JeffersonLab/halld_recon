@@ -20,7 +20,6 @@ jerror_t DTOFGeometry_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
   myDTOFGeometry->NENDS          = 2;
 
   myDTOFGeometry->NLONGBARS        = 42;
-  myDTOFGeometry->NWIDEBARS        = 38;
   myDTOFGeometry->NSHORTBARS       = 4;
   myDTOFGeometry->LONGBARLENGTH    = 252.0;
   myDTOFGeometry->SHORTBARLENGTH   = 120.0;
