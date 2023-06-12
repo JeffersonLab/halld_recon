@@ -47,6 +47,10 @@ class DTOFGeometry : public JObject {
   float Get_CenterHorizPlane() const { return CenterHPlane; };
   float Get_CenterMidPlane() const { return CenterMPlane; };
 
+  string Get_CCDB_DirectoryName() const {
+    return "TOF";
+  }
+
   float bar2y(int bar, int end=0) const;  
   int y2bar(double y) const;
 
