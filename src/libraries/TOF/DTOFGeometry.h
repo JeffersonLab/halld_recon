@@ -26,7 +26,7 @@ class DTOFGeometry : public JObject {
   int Get_NEnds() const { return NENDS; };
   // NOTE THAT Get_NBars() is the number of bars along one end!
   // Therefore Get_NBars() != Get_NLongBars()+Get_NShortBars()
-  int Get_NBars() const { return NBARS; }
+  int Get_NBars() const { return NLONGBARS + NSHORTBARS/2; }
   int Get_NLongBars() const { return NLONGBARS; }
   int Get_NShortBars() const { return NSHORTBARS; }
 
