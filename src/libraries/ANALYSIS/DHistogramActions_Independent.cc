@@ -819,6 +819,11 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
 
+    IGNORE_START_COUNTER = false;
+	if(gPARMS->Exists("MATCHING:IGNORE_START_COUNTER"))
+		gPARMS->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
+
+
 	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
@@ -1469,7 +1474,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 			double locP = locTrack->momentum().Mag();
 
 			//BCAL
-			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_START))
+			if(IGNORE_START_COUNTER || locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_START))
 			{
 				if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_BCAL))
 				{

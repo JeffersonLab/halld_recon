@@ -228,17 +228,29 @@ void MacroThread(JApplication *app)
 						if( ipad != 0 ) default_pad_name << "_" << ipad;
 						string pad_name = pad->GetName();
 
+						//get whether or not to include the pad number in the name
+						bool keepPadNum = false; // initialize to false by default
+						std::set<bool> padNumsToKeep = rs_PadsToKeepPadNum[basename]; // extract the set from the map
+						if (padNumsToKeep.count(true)) { // check if the set contains true
+							keepPadNum = true; // set keepPadNum to true if the set contains true
+						}
+						
+
 						// Standard filename format includes pad name or number and time "chunk"
 						char fname_base[256];
 						if( ipad == 0 ){
 							// Whole canvas excludes pad from fname
 							sprintf(fname_base, "%s_%04d.png", basename.c_str(), ++CHUNK_COUNTER[basename][ipad]);
-						}else if( pad_name == default_pad_name.str() ){
+						}else if( pad_name == default_pad_name.str() && keepPadNum ){
 							// Use pad number in fname
 							sprintf(fname_base, "%s-%02d_%04d.png", basename.c_str(), ipad, ++CHUNK_COUNTER[basename][ipad]);
-						}else{
+						}else if(pad_name != default_pad_name.str() && keepPadNum){
 							// Use pad name in fname
 							sprintf(fname_base, "%s-%s_%04d.png", basename.c_str(), pad_name.c_str(), ++CHUNK_COUNTER[basename][ipad]);
+						}
+						else
+						{
+							sprintf(fname_base, "%s_%04d.png", basename.c_str(), ++CHUNK_COUNTER[basename][ipad]);
 						}
 						char fname[512];
 						sprintf(fname, "%s/%s",  OUTPUT_DIR.c_str(), fname_base);
