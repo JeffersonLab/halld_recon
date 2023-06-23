@@ -302,6 +302,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 		rocid_map[name_to_id[        "DIRC"]] = {92};
 		rocid_map[name_to_id[         "TRD"]] = {76};
 		rocid_map[name_to_id[       "FMWPC"]] = {88};
+		rocid_map[name_to_id[        "CTOF"]] = {77, 78};
 		rocid_map[name_to_id[        "HELI"]] = {71};
 		
 		
