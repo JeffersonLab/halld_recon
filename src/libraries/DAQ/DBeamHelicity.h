@@ -13,11 +13,12 @@ class DBeamHelicity:public jana::JObject{
 	public:
 		JOBJECT_PUBLIC(DBeamHelicity);
 	
-	        bool pattern_sync;
+		// Need to add notes on meanings (Mark?)
+	        bool pattern_sync; 
 		bool t_settle;
 	        bool helicity;
 		bool pair_sync;
-		bool ihwp;
+		bool ihwp; // from EPICS variable (0=IN and 1=OUT)
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format

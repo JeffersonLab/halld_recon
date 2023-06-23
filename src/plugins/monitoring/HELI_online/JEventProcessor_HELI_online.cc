@@ -48,7 +48,7 @@ jerror_t JEventProcessor_HELI_online::init(void)
 
 	// create root folder for trig and cd to it, store main dir
 	TDirectory *main = gDirectory;
-	gDirectory->mkdir("EPICS_dump")->cd();
+	gDirectory->mkdir("HELI")->cd();
 
 	dBeamHelicity = new TH1F("BeamHelicity","Beam Helicity ",5,0,5);
 	for(int i=1; i<=5; i++)
@@ -88,6 +88,9 @@ jerror_t JEventProcessor_HELI_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	if(locBeamHelicity[0]->pair_sync) dBeamHelicity->Fill(3);
 	if(locBeamHelicity[0]->ihwp) dBeamHelicity->Fill(4);
 	japp->RootFillUnLock(this);
+
+        // Ken add your code here to use obtain helicity from these bits
+        // Cardcoded constants are great for now, later can replace with proper CCDB tables
 
 	return NOERROR;
 }
