@@ -17,7 +17,7 @@ class DBeamHelicity:public jana::JObject{
 		bool t_settle;
 	        bool helicity;
 		bool pair_sync;
-		int ihwp;
+		bool ihwp;
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format

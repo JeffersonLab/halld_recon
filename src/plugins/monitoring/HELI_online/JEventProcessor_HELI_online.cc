@@ -43,7 +43,10 @@ jerror_t JEventProcessor_HELI_online::init(void)
 {
 	// This is called once at program startup. 
 
-	dBeamHelicity = new TH1F("BeamHelicity","",5,0,5);
+	const char *name[5] = {"pattern_sync","t_settle","helicity","pair_sync","ihwp"};
+	dBeamHelicity = new TH1F("BeamHelicity","Beam Helicity ",5,0,5);
+	for(int i=1; i<=5; i++) 
+		dBeamHelicity->GetXaxis()->SetBinLabel(i,name[i-1]);
 
 	return NOERROR;
 }
