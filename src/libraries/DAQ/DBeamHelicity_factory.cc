@@ -36,6 +36,9 @@ jerror_t DBeamHelicity_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 
 	// Grab information from CCDB tables here
 
+	// Constants for determined helicity pattern (from Ken) 
+
+	// Half Waveplate status at run start (could be from RCDB?)
 
 	return NOERROR;
 }

@@ -11,9 +11,8 @@
 		return;
 	locDirectory->cd();
 
-	//Get RF DeltaT Histograms
-	gDirectory->cd("DeltaT_RF_Itself");
-	TH1F* locHist_BeamHelicity = (TH1F*)gDirectory->Get("BeamHelicity");
+	//Get Beam Helicity Histograms
+	TH1F* locHist_BeamHelicity = (TH1F*)locDirectory->Get("BeamHelicity");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;
@@ -26,7 +25,6 @@
 	locCanvas->cd(1);
 	gPad->SetTicks();
 	gPad->SetGrid();
-	gPad->SetLogy(1);
 	if(locHist_BeamHelicity != NULL)
 	{
 		locHist_BeamHelicity->GetXaxis()->SetTitleSize(0.05);
