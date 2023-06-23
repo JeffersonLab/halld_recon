@@ -302,7 +302,8 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 		rocid_map[name_to_id[        "DIRC"]] = {92};
 		rocid_map[name_to_id[         "TRD"]] = {76};
 		rocid_map[name_to_id[       "FMWPC"]] = {88};
-		rocid_map[name_to_id[        "CTOF"]] = {77, 78};
+		rocid_map[name_to_id[        "HELI"]] = {71};
+		
 		
 	}
 
@@ -463,6 +464,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case RF:         MakeRFDigiTime(  chaninfo.rf,   pd);             break;
          case TAC: 	  MakeTACDigiHit(  chaninfo.tac,  pd);  	   break;
          case CTOF:       MakeCTOFDigiHit( chaninfo.ctof, pd);             break;
+	 case HELI:       MakeHELIDigiHit( chaninfo.heli, pd);             break;
         default:
             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
             break;
@@ -829,6 +831,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       	Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
       	Addf250ObjectsToCallStack(loop, "DCTOFDigiHit");
       	Addf250ObjectsToCallStack(loop, "DTACDigiHit");
+	Addf250ObjectsToCallStack(loop, "DHELIDigiHit");
       	Addf125CDCObjectsToCallStack(loop, "DCDCDigiHit", cdcpulses.size()>0);
       	Addf125FDCObjectsToCallStack(loop, "DFDCCathodeDigiHit", fdcpulses.size()>0);
       	Addf125CDCObjectsToCallStack(loop, "DFMWPCDigiHit", cdcpulses.size()>0);
@@ -1273,6 +1276,22 @@ DPSDigiHit* DTranslationTable::MakePSDigiHit(const PSIndex_t &idx,
    h->column = idx.id;
 
    vDPSDigiHit.push_back(h);
+   
+   return h;
+}
+
+//---------------------------------
+// MakeHELIDigiHit
+//---------------------------------
+DHELIDigiHit* DTranslationTable::MakeHELIDigiHit(const HELIIndex_t &idx, 
+                                             const Df250PulseData *pd) const
+{
+   DHELIDigiHit *h = new DHELIDigiHit();
+   CopyDf250Info(h, pd);
+
+   h->chan = idx.chan;
+
+   vDHELIDigiHit.push_back(h);
    
    return h;
 }
@@ -1928,6 +1947,9 @@ const DTranslationTable::csc_t
 	  case DTranslationTable::FMWPC:
              if ( det_channel.fmwpc == in_channel.fmwpc )
                 found = true;
+	  case DTranslationTable::HELI:
+             if ( det_channel.heli == in_channel.heli )
+                found = true;
              break;
 
           default:
@@ -2029,6 +2051,9 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
     case DTranslationTable::FMWPC:
        ss << "layer = " << in_channel.fmwpc.layer;
        ss << "wire = " << in_channel.fmwpc.wire;
+       break;
+    case DTranslationTable::HELI:
+       ss << "channel = " << in_channel.heli.chan;
        break;
 
     default:
@@ -2327,6 +2352,8 @@ DTranslationTable::Detector_t DetectorStr2DetID(string &type)
 	   return DTranslationTable::TRD;
    } else if ( type == "fmwpc" ) {
 	   return DTranslationTable::FMWPC;
+   } else if ( type == "heli" ) {
+	   return DTranslationTable::HELI;
    } else
    {
       return DTranslationTable::UNKNOWN_DETECTOR;
@@ -2610,6 +2637,9 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
          case DTranslationTable::FMWPC:
 	      ci.fmwpc.layer = layer;
 	      ci.fmwpc.wire = wire;
+	      break;
+        case DTranslationTable::HELI:
+	      ci.heli.chan = id;
 	      break;
         case DTranslationTable::UNKNOWN_DETECTOR:
 		 default:

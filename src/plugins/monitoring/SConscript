@@ -66,7 +66,7 @@ subdirs = [
 ,'cppFMWPC_ana'
 ,'cpp_itrig'
 ,'primex-online'
-
+,'HELI_online'
 ]
 
 #'L3_online',
