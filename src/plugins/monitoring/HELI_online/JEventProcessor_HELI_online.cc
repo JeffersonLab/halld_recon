@@ -19,6 +19,7 @@ void InitPlugin(JApplication *app){
 }
 } // "C"
 
+#include <TDirectory.h>
 
 //------------------
 // JEventProcessor_HELI_online (Constructor)
@@ -44,9 +45,17 @@ jerror_t JEventProcessor_HELI_online::init(void)
 	// This is called once at program startup. 
 
 	const char *name[5] = {"pattern_sync","t_settle","helicity","pair_sync","ihwp"};
+
+	// create root folder for trig and cd to it, store main dir
+	TDirectory *main = gDirectory;
+	gDirectory->mkdir("EPICS_dump")->cd();
+
 	dBeamHelicity = new TH1F("BeamHelicity","Beam Helicity ",5,0,5);
-	for(int i=1; i<=5; i++) 
+	for(int i=1; i<=5; i++)
 		dBeamHelicity->GetXaxis()->SetBinLabel(i,name[i-1]);
+
+	// back to main dir
+	main->cd();
 
 	return NOERROR;
 }

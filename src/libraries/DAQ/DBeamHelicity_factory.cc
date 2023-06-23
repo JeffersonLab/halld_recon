@@ -53,7 +53,7 @@ jerror_t DBeamHelicity_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		for(vector<const DEPICSvalue*>::const_iterator val_itr = epicsvalues.begin(); val_itr != epicsvalues.end(); val_itr++) {
 			const DEPICSvalue* epics_val = *val_itr;
 			int conv = atoi(epics_val->sval.c_str());
-			if(epics_val->name == "IGL1I00DI24_24M") 	
+			if(epics_val->name == "IGL1I00DI24_24M") 
 				dIHWP = conv;
 		}
 		return NOERROR;
