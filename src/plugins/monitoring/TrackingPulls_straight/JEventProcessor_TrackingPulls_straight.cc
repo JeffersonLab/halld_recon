@@ -36,6 +36,8 @@ jerror_t JEventProcessor_TrackingPulls_straight::init(void) {
   tree_->Branch("track_index", &track_index_, "track_index/I");
   tree_->Branch("chi2", &chi2_, "chi2/D");
   tree_->Branch("ndf", &ndf_, "ndf/I");
+  tree_->Branch("ncdchits", &ncdchits_, "ncdchits/I");
+  tree_->Branch("nfdchits", &nfdchits_, "nfdchits/I");
   tree_->Branch("mom", &mom_, "mom/D");
   tree_->Branch("phi", &phi_, "phi/D");
   tree_->Branch("theta", &theta_, "theta/D");
@@ -123,6 +125,8 @@ jerror_t JEventProcessor_TrackingPulls_straight::evnt(JEventLoop *loop,
     track_index_ = (int)i;
     chi2_ = track->chisq;
     ndf_ = track->Ndof;
+    ncdchits_ = track->measured_cdc_hits_on_track;
+    nfdchits_ = track->measured_fdc_hits_on_track;
     mom_ = track->momentum().Mag();
     phi_ = track->momentum().Phi() * TMath::RadToDeg();
     theta_ = track->momentum().Theta() * TMath::RadToDeg();
