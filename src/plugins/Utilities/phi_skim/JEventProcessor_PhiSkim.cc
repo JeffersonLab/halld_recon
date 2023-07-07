@@ -36,7 +36,7 @@ JEventProcessor_PhiSkim::JEventProcessor_PhiSkim()
   WRITE_EVIO_FILE = 1;
   gPARMS->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
 
-  WRITE_ROOT_TREE = 0;
+  WRITE_ROOT_TREE = 1;
   gPARMS->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
 }
 
