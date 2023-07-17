@@ -50,6 +50,21 @@ static TH1I *hPseudoTime_accepted[25];
 static TH1I *hPullTime[25];
 static TH1I *hDeltaTime[25];
 
+static TH1F *hExpectedHitsVsDOCA;
+static TH1F *hExpectedHitsVsTrackingFOM;
+static TH1F *hExpectedHitsVsTheta;
+static TH1F *hExpectedHitsVsMom;
+static TH1F *hExpectedHitsVsPhi;
+static TH1F *hExpectedHitsVsHitCells;
+  
+static TH1F *hMeasuredHitsVsDOCA;
+static TH1F *hMeasuredHitsVsTrackingFOM;
+static TH1F *hMeasuredHitsVsTheta;
+static TH1F *hMeasuredHitsVsMom;
+static TH1F *hMeasuredHitsVsPhi;
+static TH1F *hMeasuredHitsVsHitCells;
+
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
@@ -171,6 +186,24 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
     hDeltaTime[icell+1] = new TH1I(hname_X, "Time Difference between Wires and Cathode Clusters", 200, -50, 50);
 
   }
+
+  gDirectory->cd("/FDC_Efficiency");
+  gDirectory->mkdir("Offline")->cd();
+  
+	hExpectedHitsVsDOCA = new TH1F("Expected Hits Vs DOCA", "Expected Hits", 100, 0 , 0.5);
+	hExpectedHitsVsTrackingFOM = new TH1F("Expected Hits Vs Tracking FOM",  "Expected Hits", 100, 0 , 1.0);
+	hExpectedHitsVsTheta = new TH1F("Expected Hits Vs theta", "Expected Hits", 100, 0, 180);
+	hExpectedHitsVsMom = new TH1F("Expected Hits Vs p", "Expected Hits", 100, 0 , 10.0);
+	hExpectedHitsVsPhi = new TH1F("Expected Hits Vs delta", "Expected Hits", 100, -180, 180);
+	hExpectedHitsVsHitCells = new TH1F("Expected Hits Vs N", "Expected Hits", 25, -0.5 , 24.5);
+  
+	hMeasuredHitsVsDOCA = new TH1F("Measured Hits Vs DOCA", "Measured Hits", 100, 0 , 0.5);
+	hMeasuredHitsVsTrackingFOM = new TH1F("Measured Hits Vs Tracking FOM",  "Measured Hits", 100, 0 , 1.0);
+	hMeasuredHitsVsTheta = new TH1F("Measured Hits Vs theta", "Measured Hits", 100, 0, 180);
+	hMeasuredHitsVsMom = new TH1F("Measured Hits Vs p", "Measured Hits", 100, 0 , 10.0);
+	hMeasuredHitsVsPhi = new TH1F("Measured Hits Vs delta", "Measured Hits", 100, -180, 180);
+	hMeasuredHitsVsHitCells = new TH1F("Measured Hits Vs N", "Measured Hits", 25, -0.5 , 24.5);
+	
 
   main->cd();
 
@@ -426,13 +459,16 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 
 	  
 	if (expectHit && fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs DOCA", distanceToWire, "Expected Hits", 100, 0 , 0.5);
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Expected Hits", 100, 0 , 1.0);
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs theta", theta_deg, "Expected Hits", 100, 0, 180);
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs p", tmom, "Expected Hits", 100, 0 , 10.0);
-	  Fill1DHistogram("FDC_Efficiency", "Offline", "Expected Hits Vs Hit Cells", cells, "Expected Hits", 25, -0.5 , 24.5);
-	  
+
+	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	  hExpectedHitsVsDOCA->Fill(distanceToWire);
+	  hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	  hExpectedHitsVsTheta->Fill(theta_deg);
+	  hExpectedHitsVsMom->Fill(tmom);
+	  hExpectedHitsVsPhi->Fill(phi_deg);
+	  hExpectedHitsVsHitCells->Fill(cells);
+	  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
 	  Double_t w, v;
 	  if(fdc_wire_expected_cell[cellNum] != NULL && cellNum < 25){
 	    // FILL HISTOGRAMS
@@ -459,13 +495,15 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	      }
 	    }
 	    	    
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.5);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs theta", theta_deg, "Measured Hits", 100, 0, 180);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs phi", phi_deg, "Measured Hits", 100, -180, 180);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs p", tmom, "Measured Hits", 100, 0 , 10.0);
-	    Fill1DHistogram("FDC_Efficiency", "Offline", "Measured Hits Vs Hit Cells", cells, "Measured Hits", 25, -0.5 , 24.5);
-	    
+	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	    hMeasuredHitsVsDOCA->Fill(distanceToWire);
+	    hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+	    hMeasuredHitsVsTheta->Fill(theta_deg);
+	    hMeasuredHitsVsMom->Fill(tmom);
+	    hMeasuredHitsVsPhi->Fill(phi_deg);
+	    hMeasuredHitsVsHitCells->Fill(cells);
+	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+
 	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    v = fdc_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
