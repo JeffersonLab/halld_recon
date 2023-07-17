@@ -54,11 +54,14 @@ class JEventProcessor_BCAL_attenlength_gainratio:public jana::JEventProcessor{
 		TH2I *logintratiovsZ_all = nullptr;
 		TH2I *logpeakratiovsZ[JEventProcessor_BCAL_attenlength_gainratio::nummodule][JEventProcessor_BCAL_attenlength_gainratio::numlayer][JEventProcessor_BCAL_attenlength_gainratio::numsector];
 		TH2I *logintratiovsZ[JEventProcessor_BCAL_attenlength_gainratio::nummodule][JEventProcessor_BCAL_attenlength_gainratio::numlayer][JEventProcessor_BCAL_attenlength_gainratio::numsector];
+		TH2I *logEratiovsZ[JEventProcessor_BCAL_attenlength_gainratio::nummodule][JEventProcessor_BCAL_attenlength_gainratio::numlayer][JEventProcessor_BCAL_attenlength_gainratio::numsector];
 		TH2I *EvsZ[JEventProcessor_BCAL_attenlength_gainratio::nummodule][JEventProcessor_BCAL_attenlength_gainratio::numlayer][JEventProcessor_BCAL_attenlength_gainratio::numsector];
 
 		// Debug histograms to help understand data
 		TH2I *EvsZ_all = nullptr;
 		TH2I *EvsZ_layer[4] = { nullptr };
+		TH2I *logintratiovsZ_layers[4] = { nullptr };
+		TH2I *logEratiovsZ_layers[4] = { nullptr };
 		TH2F *hist2D_aveZ = nullptr;
 };
 
