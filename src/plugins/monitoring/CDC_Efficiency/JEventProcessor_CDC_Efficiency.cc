@@ -164,9 +164,88 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
 
     gDirectory->cd("/CDC_Efficiency");
     gDirectory->mkdir("Track_Quality")->cd();
+    
     hChi2OverNDF = new TH1I("hChi2OverNDF","hChi2OverNDF", 500, 0.0, 1.0);
     ChargeVsTrackLength = new TH2I("ChargeVsTrackLength", "ChargeVsTrackLength", 1000, 0, 8.0, 2000, 0, 5000000);
     hResVsT = new TH2I("hResVsT","Tracking Residual (Biased) Vs Drift Time; Drift Time [ns]; Residual [cm]", 500, 0.0, 700.0, 1000, -0.5, 0.5);
+
+    gDirectory->cd("/CDC_Efficiency");
+    gDirectory->mkdir("Offline")->cd();
+    
+	hExpectedHitsVsPathLength = new TH1F("Expected Hits Vs Path Length", "Expected Hits", 100, 0 , 4.0);
+	hExpectedHitsVsDOCA = new TH1F("Expected Hits Vs DOCA", "Expected Hits", 100, 0 , 0.78);
+	hExpectedHitsVsTrackingFOM = new TH1F("Expected Hits Vs Tracking FOM",  "Expected Hits", 100, 0 , 1.0);
+	hExpectedHitsVsTheta = new TH1F("Expected Hits Vs theta", "Expected Hits", 100, 0, 180);
+	hExpectedHitsVsMom = new TH1F("Expected Hits Vs p", "Expected Hits", 100, 0 , 4.0);
+	hExpectedHitsVsDelta = new TH1F("Expected Hits Vs delta", "Expected Hits", 100, -0.3 , 0.3);
+	hExpectedHitsMomVsTheta = new TH2F("Expected hits p Vs Theta",  "Expected Hits", 100, 0, 180, 100, 0 , 4.0);
+	hExpectedHitsVsN = new TH1F("Expected Hits Vs N", "Expected Hits", 3522, 0.5, 3522.5);
+	
+	hMeasuredHitsVsPathLength = new TH1F("Measured Hits Vs Path Length", "Measured Hits", 100, 0 , 4.0);
+	hMeasuredHitsVsDOCA = new TH1F("Measured Hits Vs DOCA", "Measured Hits", 100, 0 , 0.78);
+	hMeasuredHitsVsTrackingFOM = new TH1F("Measured Hits Vs Tracking FOM",  "Measured Hits", 100, 0 , 1.0);
+	hMeasuredHitsVsTheta = new TH1F("Measured Hits Vs theta", "Measured Hits", 100, 0, 180);
+	hMeasuredHitsVsMom = new TH1F("Measured Hits Vs p", "Measured Hits", 100, 0 , 4.0);
+	hMeasuredHitsVsDelta = new TH1F("Measured Hits Vs delta", "Measured Hits", 100, -0.3 , 0.3);
+	hMeasuredHitsMomVsTheta = new TH2F("Measured hits p Vs Theta",  "Measured Hits", 100, 0, 180, 100, 0 , 4.0);
+	hMeasuredHitsVsN = new TH1F("Measured Hits Vs N", "Measured Hits", 3522, 0.5, 3522.5);
+	
+	hMeasuredHitsWithDEDxVsPathLength = new TH1F("Measured Hits with dE/dx info Vs Path Length", "Measured Hits with dE/dx info", 100, 0 , 4.0);
+	hMeasuredHitsWithDEDxVsDOCA = new TH1F("Measured Hits with dE/dx info Vs DOCA", "Measured Hits with dE/dx info", 100, 0 , 0.78);
+	hMeasuredHitsWithDEDxVsTrackingFOM = new TH1F("Measured Hits with dE/dx info Vs Tracking FOM",  "Measured Hits with dE/dx info", 100, 0 , 1.0);
+	hMeasuredHitsWithDEDxVsTheta = new TH1F("Measured Hits with dE/dx info Vs theta", "Measured Hits with dE/dx info", 100, 0, 180);
+	hMeasuredHitsWithDEDxVsMom = new TH1F("Measured Hits with dE/dx info Vs p", "Measured Hits with dE/dx info", 100, 0 , 4.0);
+	hMeasuredHitsWithDEDxVsDelta = new TH1F("Measured Hits with dE/dx info Vs delta", "Measured Hits with dE/dx info", 100, -0.3 , 0.3);
+	hMeasuredHitsWithDEDxMomVsTheta = new TH2F("Expected hits p Vs Theta",  "Measured Hits with dE/dx info", 100, 0, 180, 100, 0 , 4.0);
+	hMeasuredHitsWithDEDxVsN = new TH1F("Measured Hits with dE/dx info Vs N", "Measured Hits with dE/dx info", 3522, 0.5, 3522.5);
+	
+    gDirectory->cd("/CDC_Efficiency");
+    gDirectory->mkdir("Online")->cd();
+    
+	hEfficiencyVsPathLength = new TProfile("Efficiency Vs Path Length", "Efficiency", 100, 0 , 4.0);
+	hEfficiencyVsDOCA = new TProfile("Efficiency Vs DOCA", "Efficiency", 100, 0 , 0.78);
+	hEfficiencyVsTrackingFOM = new TProfile("Efficiency Vs Tracking FOM",  "Efficiency", 100, 0 , 1.0);
+	hEfficiencyVsTheta = new TProfile("Efficiency Vs theta", "Efficiency", 100, 0, 180);
+	hEfficiencyVsMom = new TProfile("Efficiency Vs p", "Efficiency", 100, 0 , 4.0);
+	hEfficiencyVsDelta = new TProfile("Efficiency Vs delta", "Efficiency", 100, -0.3 , 0.3);
+	hEfficiencyVsN = new TProfile("Efficiency Vs N", "Efficiency", 3522, 0.5, 3522.5);
+	
+	hEfficiencyWithDEDxVsPathLength = new TProfile("Efficiency (with dE/dx)  Vs Path Length", "Efficiency (with dE/dx) ", 100, 0 , 4.0);
+	hEfficiencyWithDEDxVsDOCA = new TProfile("Efficiency (with dE/dx)  Vs DOCA", "Efficiency (with dE/dx) ", 100, 0 , 0.78);
+	hEfficiencyWithDEDxVsTrackingFOM = new TProfile("Efficiency (with dE/dx)  Vs Tracking FOM",  "Efficiency (with dE/dx) ", 100, 0 , 1.0);
+	hEfficiencyWithDEDxVsTheta = new TProfile("Efficiency (with dE/dx)  Vs theta", "Efficiency (with dE/dx) ", 100, 0, 180);
+	hEfficiencyWithDEDxVsMom = new TProfile("Efficiency (with dE/dx)  Vs p", "Efficiency (with dE/dx) ", 100, 0 , 4.0);
+	hEfficiencyWithDEDxVsDelta = new TProfile("Efficiency (with dE/dx)  Vs delta", "Efficiency (with dE/dx) ", 100, -0.3 , 0.3);
+	hEfficiencyWithDEDxVsN = new TProfile("Efficiency (with dE/dx)  Vs N", "Efficiency (with dE/dx) ", 3522, 0.5, 3522.5);
+	
+	int ROCnums[] = {25, 26, 27, 28};
+	hEfficiencyVsChannel = new TProfile("Efficiency Vs Channel Number", "Efficiency; Channel Number; Efficiency", 73, -0.5 , 72.5);
+	for(int i=0; i<4; i++) {
+        char name [200];
+        sprintf(name, "Slot Efficiency ROCID %.2i", ROCnums[i]);
+		hEfficiencyVsSlotROC[ROCnums[i]] = new TProfile(name, "Efficiency; Slot Number; Efficiency", 21, -0.5 , 20.5);
+        sprintf(name, "Channel Efficiency ROCID %.2i", ROCnums[i]);
+		hEfficiencyVsChannelROC[ROCnums[i]] = new TProfile(name, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
+	}
+	
+	hEfficiencyWithDEDxVsChannel = new TProfile("Efficiency Vs Channel Number", "Efficiency; Channel Number; Efficiency", 73, -0.5 , 72.5);
+	for(int i=0; i<4; i++) {
+        char name [200];
+        sprintf(name, "Slot Efficiency ROCID %.2i", ROCnums[i]);
+		hEfficiencyWithDEDxVsSlotROC[ROCnums[i]] = new TProfile(name, "Efficiency; Slot Number; Efficiency", 21, -0.5 , 20.5);
+        sprintf(name, "Channel Efficiency ROCID %.2i", ROCnums[i]);
+		hEfficiencyWithDEDxVsChannelROC[ROCnums[i]] = new TProfile(name, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
+	}
+	
+	hEfficiencyMomVsTheta = new TProfile2D("Efficiency p Vs Theta", "Efficiency; Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
+	hEfficiencyDistanceVsDelta = new TProfile2D("Efficiency distance Vs delta", "Efficiency;#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
+	hEfficiencyZVsDelta = new TProfile2D("Efficiency z Vs delta", "Efficiency;#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
+
+	hEfficiencyWithDEDxMomVsTheta = new TProfile2D("Efficiency (with dE/dx) p Vs Theta", "Efficiency (with dE/dx); Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
+	hEfficiencyWithDEDxDistanceVsDelta = new TProfile2D("Efficiency (with dE/dx) distance Vs delta", "Efficiency (with dE/dx);#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
+	hEfficiencyWithDEDxZVsDelta = new TProfile2D("Efficiency (with dE/dx) z Vs delta", "Efficiency (with dE/dx);#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
+
+
     main->cd();
 
 	dTargetCenterZ = 65.0;
@@ -452,16 +531,19 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
       //FILL EXPECTED HISTOGRAMS
       double dx = pid_algorithm->CalcdXHit(mom,pos,wire);
       double locTheta = thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg();
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs Path Length", dx, "Expected Hits", 100, 0 , 4.0);
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs DOCA", distanceToWire, "Expected Hits", 100, 0 , 0.78);
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Expected Hits", 100, 0 , 1.0);
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs theta", locTheta, "Expected Hits", 100, 0, 180);
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs p", thisTimeBasedTrack->pmag(), "Expected Hits", 100, 0 , 4.0);
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs delta", delta, "Expected Hits", 100, -0.3 , 0.3);
-      Fill2DHistogram("CDC_Efficiency", "Offline", "Expected hits p Vs Theta", locTheta, thisTimeBasedTrack->pmag(), "Expected Hits", 100, 0, 180, 100, 0 , 4.0);
-      //expected hits by straw number
-      Fill1DHistogram("CDC_Efficiency", "Offline", "Expected Hits Vs N", Nstraws_previous[ringNum-1]+wireNum, "Expected Hits", 3522, 0.5, 3522.5);
-
+      
+      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      hExpectedHitsVsPathLength->Fill(dx);
+      hExpectedHitsVsDOCA->Fill(distanceToWire);
+      hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+      hExpectedHitsVsTheta->Fill(locTheta);
+      hExpectedHitsVsMom->Fill(thisTimeBasedTrack->pmag());
+      hExpectedHitsVsDelta->Fill(delta);
+      hExpectedHitsMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag());
+      hExpectedHitsVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+   
+      
       // look for a CDC hit match
       // We need a backwards map from ring/straw to flash channel. Unfortunately there is no easy way
       // Will construct the map manually
@@ -491,91 +573,79 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
             ChannelFromRingStraw[ringNum - 1][wireNum - 1] = thisPulse->channel;
          }
 
-
-
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs Path Length", dx, "Measured Hits", 100, 0 , 4.0);
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs DOCA", distanceToWire, "Measured Hits", 100, 0 , 0.78);
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits", 100, 0 , 1.0);
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs theta", locTheta, "Measured Hits", 100, 0, 180);
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs p", thisTimeBasedTrack->pmag(), "Measured Hits", 100, 0 , 4.0);
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs delta", delta, "Measured Hits", 100, -0.3 , 0.3);
-         Fill2DHistogram("CDC_Efficiency", "Offline", "Measured hits p Vs Theta", locTheta, thisTimeBasedTrack->pmag(), "Measured Hits", 100, 0, 180, 100, 0 , 4.0);
-
-         //expected hits by straw number
-         Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits Vs N", Nstraws_previous[ringNum-1]+wireNum, "Measured Hits", 3522, 0.5 , 3522.5);
+      	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		  hMeasuredHitsVsPathLength->Fill(dx);
+		  hMeasuredHitsVsDOCA->Fill(distanceToWire);
+		  hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+		  hMeasuredHitsVsTheta->Fill(locTheta);
+		  hMeasuredHitsVsMom->Fill(thisTimeBasedTrack->pmag());
+		  hMeasuredHitsVsDelta->Fill(delta);
+		  hMeasuredHitsMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag());
+		  hMeasuredHitsVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
 
 	 if (FILL_DEDX_HISTOS) {
 	   if (foundHitWithdEdx) { // fill histos for which hit contributes to dE/dx
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs Path Length", dx, "Measured Hits with dE/dx info", 100, 0 , 4.0);
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs DOCA", distanceToWire, "Measured Hits with dE/dx info", 100, 0 , 0.78);
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs Tracking FOM", thisTimeBasedTrack->FOM, "Measured Hits with dE/dx info", 100, 0 , 1.0);
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs theta", locTheta, "Measured Hits with dE/dx info", 100, 0, 180);
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs p", thisTimeBasedTrack->pmag(), "Measured Hits with dE/dx info", 100, 0 , 4.0);
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs delta", delta, "Measured Hits with dE/dx info", 100, -0.3 , 0.3);
-	     Fill2DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info  p Vs Theta", locTheta, thisTimeBasedTrack->pmag(), "Measured Hits with dE/dx info", 100, 0, 180, 100, 0 , 4.0);
-
-	     //expected hits by straw number
-	     Fill1DHistogram("CDC_Efficiency", "Offline", "Measured Hits with dE/dx info Vs N", Nstraws_previous[ringNum-1]+wireNum, "Measured Hits with dE/dx info", 3522, 0.5 , 3522.5);
+		  hMeasuredHitsWithDEDxVsPathLength->Fill(dx);
+		  hMeasuredHitsWithDEDxVsDOCA->Fill(distanceToWire);
+		  hMeasuredHitsWithDEDxVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
+		  hMeasuredHitsWithDEDxVsTheta->Fill(locTheta);
+		  hMeasuredHitsWithDEDxVsMom->Fill(thisTimeBasedTrack->pmag());
+		  hMeasuredHitsWithDEDxVsDelta->Fill(delta);
+		  hMeasuredHitsWithDEDxMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag());
+		  hMeasuredHitsWithDEDxVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
 	   }
 	 }
 
       }
 
       //FILL PROFILES: BASED ON FOUND OR NOT
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs Path Length", dx,foundHit, "Efficiency; dx [cm]; Efficiency", 100, 0 , 4.0);
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs DOCA", distanceToWire,foundHit, "Efficiency; DOCA [cm]; Efficiency", 100, 0 , 0.78);
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs Tracking FOM", thisTimeBasedTrack->FOM,foundHit, "Efficiency; Tracking FOM; Efficiency", 100, 0 , 1.0);
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs theta", locTheta,foundHit, "Efficiency; Track #Theta [deg]; Efficiency", 100, 0, 180);
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs p", thisTimeBasedTrack->pmag(),foundHit, "Efficiency; Momentum [GeV]; Efficiency", 100, 0 , 4.0);
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs delta", delta,foundHit, "Efficiency; #delta [cm]; Efficiency", 100, -0.3 , 0.3);
+	  hEfficiencyVsPathLength->Fill(dx,foundHit);
+	  hEfficiencyVsDOCA->Fill(distanceToWire,foundHit);
+	  hEfficiencyVsTrackingFOM->Fill(thisTimeBasedTrack->FOM,foundHit);
+	  hEfficiencyVsTheta->Fill(locTheta,foundHit);
+	  hEfficiencyVsMom->Fill(thisTimeBasedTrack->pmag(),foundHit);
+	  hEfficiencyVsDelta->Fill(delta,foundHit);
+	  hEfficiencyVsN->Fill(Nstraws_previous[ringNum-1]+wireNum,foundHit);            //expected hits by straw number
 
-      //expected hits by straw number
-      Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs N", Nstraws_previous[ringNum-1]+wireNum, foundHit,"Efficiency; N; Efficiency", 3522, 0.5 , 3522.5);
 
       // repeat for hits contributing to dE/dx
 
       if (FILL_DEDX_HISTOS) {
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Path Length", dx,foundHitWithdEdx, "Efficiency (with dE/dx); dx [cm]; Efficiency (with dE/dx)", 100, 0 , 4.0);
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs DOCA", distanceToWire,foundHitWithdEdx, "Efficiency (with dE/dx); DOCA [cm]; Efficiency (with dE/dx)", 100, 0 , 0.78);
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Tracking FOM", thisTimeBasedTrack->FOM,foundHitWithdEdx, "Efficiency (with dE/dx); Tracking FOM; Efficiency (with dE/dx)", 100, 0 , 1.0);
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs theta", locTheta,foundHitWithdEdx, "Efficiency (with dE/dx); Track #Theta [deg]; Efficiency (with dE/dx)", 100, 0, 180);
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs p", thisTimeBasedTrack->pmag(),foundHitWithdEdx, "Efficiency (with dE/dx); Momentum [GeV]; Efficiency (with dE/dx)", 100, 0 , 4.0);
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs delta", delta,foundHitWithdEdx, "Efficiency (with dE/dx); #delta [cm]; Efficiency (with dE/dx)", 100, -0.3 , 0.3);
-
-	//expected hits by straw number
-	Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs N", Nstraws_previous[ringNum-1]+wireNum, foundHitWithdEdx,"Efficiency (with dE/dx); N; Efficiency (with dE/dx)", 3522, 0.5 , 3522.5);
+		  hEfficiencyWithDEDxVsPathLength->Fill(dx,foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsDOCA->Fill(distanceToWire,foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsTrackingFOM->Fill(thisTimeBasedTrack->FOM,foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsTheta->Fill(locTheta,foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsMom->Fill(thisTimeBasedTrack->pmag(),foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsDelta->Fill(delta,foundHitWithdEdx);
+		  hEfficiencyWithDEDxVsN->Fill(Nstraws_previous[ringNum-1]+wireNum,foundHitWithdEdx);            //expected hits by straw number
       }
 
 
       if( ChannelFromRingStraw[ringNum - 1][wireNum - 1] != -1)
       {
-         Fill1DProfile("CDC_Efficiency", "Online", "Efficiency Vs Channel Number", ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHit, "Efficiency; Channel Number; Efficiency", 73, -0.5 , 72.5);
-         char name [200];
-         sprintf(name, "Slot Efficiency ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
-         Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHit, "Efficiency; Slot Number; Efficiency", 21, -0.5 , 20.5);
-         sprintf(name, "Channel Efficiency ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
-         Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHit, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
+         hEfficiencyVsChannel->Fill(ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHit);
+         hEfficiencyVsSlotROC[ ROCIDFromRingStraw[ringNum - 1][wireNum - 1] ]->Fill(SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHit);
+         hEfficiencyVsChannelROC[ ROCIDFromRingStraw[ringNum - 1][wireNum - 1] ]->Fill(SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHit);
 
 	 if (FILL_DEDX_HISTOS) {
 	   // repeat w dedx info 
-	   Fill1DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) Vs Channel Number", ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Channel Number; Efficiency (with dE/dx)", 73, -0.5 , 72.5);
-	   sprintf(name, "Slot Efficiency (with dE/dx) ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
-	   Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Slot Number; Efficiency (with dE/dx)", 21, -0.5 , 20.5);
-	   sprintf(name, "Channel Efficiency (with dE/dx) ROCID %.2i", ROCIDFromRingStraw[ringNum - 1][wireNum - 1]);
-	   Fill1DProfile("CDC_Efficiency", "Online", name, SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx, "Efficiency (with dE/dx); Channel; Efficiency (with dE/dx)", 1501, 299.5 , 1800.5);
+         hEfficiencyWithDEDxVsChannel->Fill(ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx);
+         hEfficiencyWithDEDxVsSlotROC[ ROCIDFromRingStraw[ringNum - 1][wireNum - 1] ]->Fill(SlotFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx);
+         hEfficiencyWithDEDxVsSlotROC[ ROCIDFromRingStraw[ringNum - 1][wireNum - 1] ]->Fill(SlotFromRingStraw[ringNum - 1][wireNum - 1] * 100 + ChannelFromRingStraw[ringNum - 1][wireNum - 1],foundHitWithdEdx);
 	 }
       }
 
-      Fill2DProfile("CDC_Efficiency", "Online", "Efficiency p Vs Theta", locTheta, thisTimeBasedTrack->pmag(),foundHit, "Efficiency; Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
-      Fill2DProfile("CDC_Efficiency", "Online", "Efficiency distance Vs delta", delta,distanceToWire,foundHit, "Efficiency;#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
-      Fill2DProfile("CDC_Efficiency", "Online", "Efficiency z Vs delta", delta,dz,foundHit, "Efficiency;#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
+		hEfficiencyMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag(),foundHit);
+		hEfficiencyDistanceVsDelta->Fill(delta,distanceToWire,foundHit);
+		hEfficiencyZVsDelta->Fill(delta,dz,foundHit);
 
       if (FILL_DEDX_HISTOS) {
          // repeat w dedx info 
-	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) p Vs Theta", locTheta, thisTimeBasedTrack->pmag(),foundHitWithdEdx, "Efficiency (with dE/dx); Track #Theta [deg]; Momentum [GeV]", 100, 0, 180, 100, 0 , 4.0);
-	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) distance Vs delta", delta,distanceToWire,foundHitWithdEdx, "Efficiency (with dE/dx);#delta [cm]; DOCA [cm]", 100, -0.3, 0.3, 100, 0 , 1.2);
-	Fill2DProfile("CDC_Efficiency", "Online", "Efficiency (with dE/dx) z Vs delta", delta,dz,foundHitWithdEdx, "Efficiency (with dE/dx);#delta [cm]; z [cm] (CDC local coordinates)", 100, -0.3, 0.3, 150, -75 , 75);
+		hEfficiencyWithDEDxMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag(),foundHitWithdEdx);
+		hEfficiencyWithDEDxDistanceVsDelta->Fill(delta,distanceToWire,foundHitWithdEdx);
+		hEfficiencyWithDEDxZVsDelta->Fill(delta,dz,foundHitWithdEdx);
       }
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 
       //FILL AS FUNCTION OF DOCA
