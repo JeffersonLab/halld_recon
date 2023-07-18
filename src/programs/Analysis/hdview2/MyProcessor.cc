@@ -177,9 +177,10 @@ jerror_t MyProcessor::brun(JEventLoop *eventloop, int32_t runnumber)
 	// Start counter rotation
 	SC_PHI0=0.;
 	vector<double>sc_rot_angles;
-	dgeom->Get("//posXYZ[@volume='StartCntr']/@rot", sc_rot_angles);
-	SC_PHI0=M_PI/180.*sc_rot_angles[2];
-
+	if (dgeom->Get("//posXYZ[@volume='StartCntr']/@rot", sc_rot_angles)){
+	  SC_PHI0=M_PI/180.*sc_rot_angles[2];
+	}
+	  
 	RootGeom = dapp->GetRootGeom(runnumber);
 	geom = dapp->GetDGeometry(runnumber);
 	
