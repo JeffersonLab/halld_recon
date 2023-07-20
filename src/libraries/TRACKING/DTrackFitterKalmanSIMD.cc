@@ -26,6 +26,7 @@
 #define ALPHA 1./137.
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
+#define LOG2 0.69314718
 
 // Only print messages for one thread whenever run number change
 static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -723,7 +724,6 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 
    len = 0.0;
    ftime=0.0;
-   var_ftime=0.0;
    x_=0.,y_=0.,tx_=0.,ty_=0.,q_over_p_ = 0.0;
    z_=0.,phi_=0.,tanl_=0.,q_over_pt_ =0, D_= 0.0;
    chisq_ = 0.0;
@@ -1438,10 +1438,9 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForwardCDC(int length,int &index,
 // Routine that extracts the state vector propagation part out of the reference
 // trajectory loop
 jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
-      DVector2 &my_xy,
-      double &var_t_factor,
-      DMatrix5x1 &Sc,
-      bool &stepped_to_boundary){
+						  DVector2 &my_xy,
+						  DMatrix5x1 &Sc,
+						  bool &stepped_to_boundary){
    DKalmanCentralTrajectory_t temp;
    DMatrix5x5 J;  // State vector Jacobian matrix 
    DMatrix5x5 Q;  // Process noise covariance matrix
@@ -1539,12 +1538,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
 
    // Update flight time
    double dt=step_size*sqrt(one_over_beta2); // in units of c=1
-   double one_minus_beta2=1.-1./one_over_beta2;
    ftime+=dt;
-   var_ftime+=dt*dt*one_minus_beta2*one_minus_beta2*0.0004;
-   var_t_factor=dt*dt*one_minus_beta2*one_minus_beta2;
-
-   //printf("t %f sigt %f\n",TIME_UNIT_CONVERSION*ftime,TIME_UNIT_CONVERSION*sqrt(var_ftime));
 
    // Multiple scattering    
    GetProcessNoiseCentral(step_size,temp.chi2c_factor,temp.chi2a_factor,
@@ -1595,9 +1589,6 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
       DMatrix5x1 &Sc){
    bool stepped_to_boundary=false;
    int i=0,central_traj_length=central_traj.size();
-   // factor for scaling momentum resolution to propagate variance in flight 
-   // time
-   double var_t_factor=0; 
 
    // Magnetic field and gradient at beginning of trajectory
    //bfield->GetField(x_,y_,z_,Bx,By,Bz);
@@ -1619,7 +1610,7 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
    while(z<endplate_z && z>=Z_MIN && r2<endplate_r2max
          && fabs(Sc(state_q_over_pt))<Q_OVER_PT_MAX
         ){
-      if (PropagateCentral(central_traj_length,i,my_xy,var_t_factor,Sc,stepped_to_boundary)
+      if (PropagateCentral(central_traj_length,i,my_xy,Sc,stepped_to_boundary)
             !=NOERROR) return UNRECOVERABLE_ERROR;    
       z=Sc(state_z);
       r2=my_xy.Mod2();
@@ -3118,10 +3109,10 @@ double DTrackFitterKalmanSIMD::GetdEdx(double q_over_p,double K_rho_Z_over_A,
       double tau_plus_2_sq=tau_plus_2*tau_plus_2;
       double f=0.; // function that depends on tau; see Leo (2nd ed.), p. 38.
       if (IsElectron){
-         f=1.-beta2+(0.125*tau_sq-(2.*tau+1.)*log(2.))/(tau_plus_1*tau_plus_1);
+         f=1.-beta2+(0.125*tau_sq-(2.*tau+1.)*LOG2)/(tau_plus_1*tau_plus_1);
       }
       else{
-         f=2.*log(2.)-(beta2/12.)*(23.+14./tau_plus_2+10./tau_plus_2_sq
+         f=2.*LOG2-(beta2/12.)*(23.+14./tau_plus_2+10./tau_plus_2_sq
                +4./(tau_plus_2*tau_plus_2_sq));
       }
 
@@ -6466,7 +6457,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       // Initialize path length variable and flight time
       len=0;
       ftime=0.;
-      var_ftime=0.;
 
       // Scale cut for pruning hits according to the iteration number
       fdc_anneal=(iter<MIN_ITER)?(FORWARD_ANNEAL_SCALE/pow(FORWARD_ANNEAL_POW_CONST,iter)+1.):1.;
@@ -6779,7 +6769,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       // Initialize path length variable and flight time
       len=0;
       ftime=0.;
-      var_ftime=0.;
 
       // Swim to create the reference trajectory
       jerror_t ref_track_error=SetCDCForwardReferenceTrajectory(S);
@@ -7088,7 +7077,6 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       // Initialize path length variable and flight time
       len=0.;
       ftime=0.;
-      var_ftime=0.;
 
       // Scale cut for pruning hits according to the iteration number
       anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;

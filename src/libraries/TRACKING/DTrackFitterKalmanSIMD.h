@@ -164,7 +164,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
     cov.clear();
     fcov.clear();
 
-    len=0.,ftime=0.0,var_ftime=0.0;
+    len=0.,ftime=0.0;
     x_=0.,y_=0.,tx_=0.,ty_=0.,q_over_p_ = 0.0;
     z_=0.,phi_=0.,tanl_=0.,q_over_pt_ =0, D_= 0.0;
     chisq_ = 0.0;
@@ -381,7 +381,6 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 			    bool &stepped_to_boundary, 
 			    bool &stepped_to_endplate);
   jerror_t PropagateCentral(int length, int &index,DVector2 &my_xy,
-			    double &var_t_factor,
 			    DMatrix5x1 &Sc,bool &stepped_to_boundary);
 
   shared_ptr<TMatrixFSym> Get7x7ErrorMatrix(DMatrixDSym C);
@@ -466,7 +465,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   vector<bool>fdc_used_in_fit;
 
   // flight time and path length
-  double ftime, len, var_ftime;
+  double ftime, len;
 
   // B-field and gradient
   double Bx,By,Bz;
