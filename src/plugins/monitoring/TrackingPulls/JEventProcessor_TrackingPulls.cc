@@ -31,6 +31,11 @@ JEventProcessor_TrackingPulls::~JEventProcessor_TrackingPulls() {}
 
 jerror_t JEventProcessor_TrackingPulls::init(void) {
   // This is called once at program startup.
+  int numlayers = 24;
+  int numrings = 28;
+  unsigned int numstraws[28] = {
+      42,  42,  54,  54,  66,  66,  80,  80,  93,  93,  106, 106, 123, 123,
+      135, 135, 146, 146, 158, 158, 170, 170, 182, 182, 197, 197, 209, 209};
 
   // Use -PTRACKINGPULLS:MAKE_TREE=1 to produce tree output
   MAKE_TREE = 0;
@@ -91,7 +96,190 @@ jerror_t JEventProcessor_TrackingPulls::init(void) {
     //REGISTER BRANCHES
     dTreeInterface->Create_Branches(locTreeBranchRegister);
   }
+  
+  
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("TrackingPulls")->cd();
 
+    gDirectory->mkdir("TrackInfo")->cd();
+
+	hTrackingFOM = new TH1F("Tracking FOM", "Tracking FOM", 200, 0.0, 1.0);
+	hTrack_PVsTheta = new TH2F("P Vs. Theta", "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0, 140.0, 50, 0.0, 10.0);
+	hTrack_PhiVsTheta = new TH2F("Phi Vs. Theta", "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0, 140.0, 180, -180.0, 180.0);
+	hTrack_PVsPhi = new TH2F("P Vs. Phi", "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0, 50, 0.0, 10.0);
+
+	gDirectory->cd("..");
+
+    gDirectory->mkdir("TrackInfo_SmoothFailure")->cd();
+
+	hTrackingFOM_SmoothFailure = new TH1F("Tracking FOM", "Tracking FOM", 200, 0.0, 1.0);
+	hTrack_PVsTheta_SmoothFailure = new TH2F("P Vs. Theta", "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0, 140.0, 50, 0.0, 10.0);
+	hTrack_PhiVsTheta_SmoothFailure = new TH2F("Phi Vs. Theta", "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0, 140.0, 180, -180.0, 180.0);
+	hTrack_PVsPhi_SmoothFailure = new TH2F("P Vs. Phi", "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0, 50, 0.0, 10.0);
+
+	gDirectory->cd("..");
+
+    gDirectory->mkdir("TrackInfo_SmoothSuccess")->cd();
+
+	hTrackingFOM_SmoothSuccess = new TH1F("Tracking FOM", "Tracking FOM", 200, 0.0, 1.0);
+	hTrack_PVsTheta_SmoothSuccess = new TH2F("P Vs. Theta", "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0, 140.0, 50, 0.0, 10.0);
+	hTrack_PhiVsTheta_SmoothSuccess = new TH2F("Phi Vs. Theta", "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0, 140.0, 180, -180.0, 180.0);
+	hTrack_PVsPhi_SmoothSuccess = new TH2F("P Vs. Phi", "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0, 50, 0.0, 10.0);
+
+	gDirectory->cd("..");
+
+    gDirectory->mkdir("TrackInfo_SmoothSuccess_NaN")->cd();
+
+	hTrackingFOM_SmoothSuccess_NaN = new TH1F("Tracking FOM", "Tracking FOM", 200, 0.0, 1.0);
+	hTrack_PVsTheta_SmoothSuccess_NaN = new TH2F("P Vs. Theta", "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0, 140.0, 50, 0.0, 10.0);
+	hTrack_PhiVsTheta_SmoothSuccess_NaN = new TH2F("Phi Vs. Theta", "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0, 140.0, 180, -180.0, 180.0);
+	hTrack_PVsPhi_SmoothSuccess_NaN = new TH2F("P Vs. Phi", "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0, 50, 0.0, 10.0);
+
+	gDirectory->cd("..");
+
+    gDirectory->mkdir("TrackPulls")->cd();
+
+	hAllPulls = new TH1F("All Pulls", "Residual/Error", 100, -5.0, 5.0);
+	hAllPulls_Vs_P = new TH2F("All Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0);
+	hAllPulls_Vs_Phi = new TH2F("All Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0);
+	hAllPulls_Vs_Theta = new TH2F("All Pulls Vs. Theta", ";#theta ;Residual/Error", 140, 0.0, 140.0, 100, -5.0, 5.0);
+	hAllPulls_Vs_NDF = new TH2F("All Pulls Vs. NDF", ";Track NDF ;Residual/Error", 140, 0.0, 140.0, 100, -5.0, 5.0);
+	hAllPulls_Vs_TrackingFOM = new TH2F("All Pulls Vs. Tracking FOM", ";Track FOM ;Residual/Error", 140, 0.0, 140.0, 100, -5.0, 5.0);
+	hFDCWireError = new TH1F("FDC Wire Error", "Wire Residual Error", 100, 0.0, 0.1);
+	hFDCCathodeError = new TH1F("FDC Cathode Error", "Cathode Residual Error", 100, 0.0, 0.1);
+	hCDCError = new TH1F("CDCError", "Residual Error", 100, 0.0, 0.1);
+
+	gDirectory->cd("..");
+
+    gDirectory->mkdir("FDCPulls")->cd();
+
+	hFDCAllWirePulls = new TH1F("All Wire Pulls", "Residual/Error", 100, -5.0, 5.0);
+	hFDCAllCathodeulls = new TH1F("All Cathode Pulls", "Residual/Error", 100, -5.0, 5.0);
+	hFDCAllWireResiduals = new TH1F("All Wire Residuals", "Residual", 100, -0.1, 0.1);
+	hFDCAllCathodeResiduals = new TH1F("All Cathode Residuals", "Residual", 100, -0.1, 0.1);
+	hFDCAllWireResidualsVsPlane = new TH2F("All Wire Residuals Vs. Plane", ";plane ;Residual", 24, 0.5, 24.5, 100, -0.1, 0.1);
+	hFDCAllCathodeResidualsVsPlane = new TH2F("All Cathode Residuals Vs. Plane", ";plane ;Residual", 24, 0.5, 24.5, 100, -0.1, 0.1);
+	hFDCAllWirePullsVsPlane = new TH2F("All Wire Pulls Vs. Plane", ";plane ;Residual/Error", 24, 0.5, 24.5, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsPlane = new TH2F("All Cathode Pulls Vs. Plane", ";plane ;Residual/Error", 24, 0.5, 24.5, 100, -5.0, 5.0);
+	hFDCAllWireResidualsVsDriftTime = new TH2F("All Wire Residuals Vs Drift Time", ";Drift Time;Residual", 170, -20.0, 150.0, 100, -0.1, 0.1);
+	hFDCAllWirePullsVsDriftTime = new TH2F("All Wire Pulls Vs Drift Time", ";Drift Time;Residual/Error", 170, -20.0, 150.0, 100, -5.0, 5.0);
+	hFDCAllWirePullsVsP = new TH2F("All Wire Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0);
+	hFDCAllWirePullsVsPhi = new TH2F("All Wire Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0);
+	hFDCAllWirePullsVsTheta = new TH2F("All Wire Pulls Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsP = new TH2F("All Cathode Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsPhi = new TH2F("All Cathode Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsTheta = new TH2F("All Cathode Pulls Vs. Theta",  ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0);
+	hFDCAllWireResidualsVsP = new TH2F("All Wire Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1);
+	hFDCAllWireResidualsVsPhi = new TH2F("All Wire Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1);
+	hFDCAllWireResidualsVsTheta = new TH2F("All Wire Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1);
+	hFDCAllCathodeResidualsVsP = new TH2F("All Cathode Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1);
+	hFDCAllCathodeResidualsVsPhi = new TH2F( "All Cathode Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1);
+	hFDCAllCathodeResidualsVsTheta = new TH2F("All Cathode Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1);
+	hFDCAllWirePullsVsNDF = new TH2F("All Wire Pulls Vs. NDF", ";Track NDF ;Residual/Error", 50, 0.5, 50.5, 100, -5.0, 5.0);
+	hFDCAllWirePullsVsTrackingFOM = new TH2F("All Wire Pulls Vs. Tracking FOM", ";Track FOM ;Residual/Error", 100, 0.0, 1.0, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsNDF = new TH2F("All Cathode Pulls Vs. NDF", ";Track NDF ;Residual/Error", 50, 0.5, 50.5, 100, -5.0, 5.0);
+	hFDCAllCathodePullsVsTrackingFOM = new TH2F("All Cathode Pulls Vs. Tracking FOM", ";Track FOM ;Residual/Error", 100, 0.0, 1.0, 100, -5.0, 5.0);
+
+	gDirectory->cd("..");
+
+	for(int layer=0; layer<numlayers; layer++) {
+		// Make the Per-Plane Histograms
+		char name[256];
+		sprintf(name, "FDCPulls_Plane%.2i", layer);
+
+		gDirectory->mkdir(name)->cd();
+
+		hFDCAllWirePulls_ByLayer.push_back( new TH1F("All Wire Pulls", "Residual/Error", 100, -5.0, 5.0) );
+		hFDCAllCathodeulls_ByLayer.push_back( new TH1F("All Cathode Pulls", "Residual/Error", 100, -5.0, 5.0) );
+		hFDCAllWireResiduals_ByLayer.push_back( new TH1F("All Wire Residuals", "Residual", 100, -0.1, 0.1) );
+		hFDCAllCathodeResiduals_ByLayer.push_back( new TH1F("All Cathode Residuals", "Residual", 100, -0.1, 0.1) );
+		hFDCWireResidualsGoodTracks_ByLayer.push_back( new TH1F("wire_residual", "Residual", 200, -0.1, 0.1) );
+		hFDCWireResidualsGoodTracksRight_ByLayer.push_back( new TH1F("wire_residual_right", "Residual", 200, -0.1, 0.1) );
+		hFDCWireResidualsGoodTracksLeft_ByLayer.push_back( new TH1F("wire_residual_left", "Residual", 200, -0.1, 0.1) );
+		hFDCAllWireResidualsVsDriftTime_ByLayer.push_back( new TH2F("All Wire Residuals Vs Drift Time", ";Drift Time;Residual", 170, -20.0, 150.0, 100, -0.1, 0.1) );
+		hFDCAllWirePullsVsDriftTime_ByLayer.push_back( new TH2F("All Wire Pulls Vs Drift Time", ";Drift Time;Residual/Error", 170, -20.0, 150.0, 100, -5.0, 5.0) );
+		hFDCAllWirePullsVsP_ByLayer.push_back( new TH2F("All Wire Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0) );
+		hFDCAllWirePullsVsPhi_ByLayer.push_back( new TH2F("All Wire Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0) );
+		hFDCAllWirePullsVsTheta_ByLayer.push_back( new TH2F("All Wire Pulls Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0) );
+		hFDCAllCathodePullsVsP_ByLayer.push_back( new TH2F("All Cathode Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0) );
+		hFDCAllCathodePullsVsPhi_ByLayer.push_back( new TH2F("All Cathode Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0) );
+		hFDCAllCathodePullsVsTheta_ByLayer.push_back( new TH2F("All Cathode Pulls Vs. Theta",  ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0) );
+		hFDCAllWireResidualsVsP_ByLayer.push_back( new TH2F("All Wire Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1) );
+		hFDCAllWireResidualsVsPhi_ByLayer.push_back( new TH2F("All Wire Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1) );
+		hFDCAllWireResidualsVsTheta_ByLayer.push_back( new TH2F("All Wire Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1) );
+		hFDCAllCathodeResidualsVsP_ByLayer.push_back( new TH2F("All Cathode Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1) );
+		hFDCAllCathodeResidualsVsPhi_ByLayer.push_back( new TH2F( "All Cathode Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1) );
+		hFDCAllCathodeResidualsVsTheta_ByLayer.push_back( new TH2F("All Cathode Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1) );
+
+		hFDCWirePulls_ByLayer.push_back( new TH2F("Wire Pulls", ";Wire Number ;Residual/Error", 96, 0.5, 96.5, 100, -5.0, 5.0) );
+		hFDCWireResiduals_ByLayer.push_back( new TH2F("Wire Residuals", ";Wire Number ;Residual", 96,  0.5, 96.5, 100, -0.1, 0.1) );
+		hFDC2DWirePulls_ByLayer.push_back( new TProfile2D("2D Wire Hit Pulls", "Mean of Wire Pulls vs. PseudoHit XY", 100, -50., 50., 100, -50., 50.) );
+		hFDC2DWireResiduals_ByLayer.push_back( new TProfile2D("2D Wire Hit Residuals", "Mean of Wire Residuals vs. PseudoHit XY", 100, -50., 50., 100, -50., 50.) );
+		hFDC2DWireResidualsLocal_ByLayer.push_back( new TProfile2D("2D Wire Hit Residuals Local", "Mean of Wire Residuals vs. PseudoHit WS;Perpendicular Distance to Wire; Distance Along the Wire", 
+				100, -50., 50., 100, -50., 50.) );
+		hFDC2DCathodePulls_ByLayer.push_back( new TProfile2D("2D Cathode Hit Pulls", "Mean of Cathode Pulls vs. PseudoHit XY", 100, -50.,  50., 100, -50., 50.) );
+		hFDC2DCathodeResiduals_ByLayer.push_back( new TProfile2D("2D Cathode Hit Residuals", "Mean of Cathode Residuals vs. PseudoHit XY", 100, -50., 50., 100, -50., 50.) );
+		hFDC2DCathodeResidualsLocal_ByLayer.push_back( new TProfile2D("2D Cathode Hit Residuals Local", "Mean of Cathode Residuals vs. PseudoHit WS;Perpendicular Distance to Wire; Distance Along the Wire",
+            	100, -50., 50., 100, -50., 50.) );
+
+		gDirectory->cd("..");
+	}
+	
+    gDirectory->mkdir("CDCPulls")->cd();
+
+	hCDCAllPulls = new TH1F("All Pulls", "Residual/Error", 100, -5.0, 5.0);
+	hCDCAllResiduals = new TH1F("All Residuals", "Residual", 100, -0.1, 0.1);
+	hCDCAllResidualsVsRing = new TH2F("All Residuals Vs. Ring", ";Ring ;Residual", 24, 0.5, 24.5, 100, -0.1, 0.1);
+	hCDCAllPullsVsRing = new TH2F("All Pulls Vs. Ring", ";Ring ;Residual/Error", 24, 0.5, 24.5, 100, -5.0, 5.0);
+	hCDCAllResidualsVsDriftTime = new TH2F("All Residuals Vs Drift Time", ";Drift Time;Residual", 170, -20.0, 150.0, 100, -0.1, 0.1);
+	hCDCAllPullsVsDriftTime = new TH2F("All Pulls Vs Drift Time", ";Drift Time;Residual/Error", 170, -20.0, 150.0, 100, -5.0, 5.0);
+	hCDCAllPullsVsP = new TH2F("All Pulls Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -5.0, 5.0);
+	hCDCAllPullsVsPhi = new TH2F("Al  Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0);
+	hCDCAllPullsVsTheta = new TH2F("All Pulls Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0);
+	hCDCAllResidualsVsP = new TH2F("All Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1);
+	hCDCAllResidualsVsPhi = new TH2F("All Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1);
+	hCDCAllResidualsVsTheta = new TH2F("All Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1);
+	hCDCAllPullsVsNDF = new TH2F("All Pulls Vs. NDF", ";Track NDF ;Residual/Error", 50, 0.5, 50.5, 100, -5.0, 5.0);
+	hCDCAllPullsVsTrackingFOM = new TH2F("All Pulls Vs. Tracking FOM", ";Track FOM ;Residual/Error", 100, 0.0, 1.0, 100, -5.0, 5.0);
+
+	gDirectory->cd("..");
+
+	for(int ring=0; ring<numrings; ring++) {
+		// Make the Per-Plane Histograms
+		char name[256];
+		sprintf(name, "CDCPulls_Ring%.2i", ring);
+
+		double nStraw = numstraws[ring];
+
+		gDirectory->mkdir(name)->cd();
+
+		hCDCAllPulls_ByRing.push_back( new TH1F("All Wire Pulls", "Residual/Error", 100, -5.0, 5.0) );
+		hCDCAllResiduals_ByRing.push_back( new TH1F("All Wire Residuals", "Residual", 100, -0.1, 0.1) );
+		hCDCAllResidualsVsDriftTime_ByRing.push_back( new TH2F("All Wire Residuals Vs Drift Time", ";Drift Time;Residual", 200, 0.0, 1000.0, 100, -0.1, 0.1) );
+		hCDCAllPullsVsDriftTime_ByRing.push_back( new TH2F("All Wire Pulls Vs Drift Time", ";Drift Time;Residual/Error", 200, 0.0, 1000.0, 100, -5.0, 5.0) );
+		hCDCAllResidualsVsZ_ByRing.push_back( new TH2F("All Wire Residuals Vs z", ";z [cm];Residual", 200, -30., 200., 100, -0.1, 0.1) );
+		hCDCAllPullsVsZ_ByRing.push_back( new TH2F("All Wire Pulls Vs z", ";z [cm];Residual/Error", 200, -30., 200., 100, -5.0, 5.0) );
+		hCDCAllPullsVsP_ByRing.push_back( new TH2F("All Wire Pulls Vs. P", ";|P| ;Residual/Error", 50, 0.0, 10.0, 100, -5.0, 5.0) );
+		hCDCAllPullsVsPhi_ByRing.push_back( new TH2F("All Wire Pulls Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0, 5.0) );
+		hCDCAllPullsVsTheta_ByRing.push_back( new TH2F("All Wire Pulls Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0, 5.0) );
+		hCDCAllResidualsVsP_ByRing.push_back( new TH2F("All Wire Residuals Vs. P", ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1) );
+		hCDCAllResidualsVsPhi_ByRing.push_back( new TH2F("All Wire Residuals Vs. Phi", ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1) );
+		hCDCAllResidualsVsTheta_ByRing.push_back( new TH2F("All Wire Residuals Vs. Theta", ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1) );
+
+		hCDCStrawPulls_ByRing.push_back( new TH2F("Per Straw Pulls", ";Straw Number ;Residual/Error", nStraw, 0.5, nStraw + 0.5, 100, -5.0, 5.0) );
+		hCDCStrawResiduals_ByRing.push_back( new TH2F("Per Straw Residuals",  ";Straw Number ;Residual", nStraw, 0.5, nStraw + 0.5, 100, -0.1, 0.1) );
+
+		hCDCStrawResidualsVsPhiTheta_ByRing.push_back( new TProfile2D("Residual Vs Phi-Theta", ";#theta;#phi", 70, 0.0, 140.0, 180, -180.0, 180.0) );
+		hCDCStrawResidualsVsPhiZ_ByRing.push_back( new TProfile2D("Residual Vs Phi-z", ";z;#phi", 200, 0.0, 200.0, 180, -180.0, 180.0) );
+		hCDCStrawResidualsVsPhiIntersectZ_ByRing.push_back( new TProfile2D("Residual Vs PhiIntersect-z", ";z;#phi Intersect", 200, 0.0, 200.0, nStraw, -180.0, 180.0) );
+		hCDCStrawResidualsVsPTheta_ByRing.push_back( new TProfile2D("Residual Vs P-Theta", ";#theta;|P|", 70, 0.0, 140.0, 50, 0.0, 10.0) );
+
+		gDirectory->cd("..");
+	}
+	
+	gDirectory->cd();
+	
+	
   return NOERROR;
 }
 
@@ -144,18 +332,11 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     if (pmag < 0.5) continue;
 
     // Fill some track information
-    Fill1DHistogram("TrackingPulls", "TrackInfo", "Tracking FOM", trackingFOM,
-                    "Tracking FOM", 200, 0.0, 1.0);
-    Fill2DHistogram("TrackingPulls", "TrackInfo", "P Vs. Theta", theta, pmag,
-                    "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0, 140.0,
-                    50, 0.0, 10.0);
-    Fill2DHistogram("TrackingPulls", "TrackInfo", "Phi Vs. Theta", theta, phi,
-                    "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0,
-                    140.0, 180, -180.0, 180.0);
-    Fill2DHistogram("TrackingPulls", "TrackInfo", "P Vs. Phi", phi, pmag,
-                    "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0,
-                    50, 0.0, 10.0);
-
+    hTrackingFOM->Fill(trackingFOM);
+    hTrack_PVsTheta->Fill(theta, pmag);
+    hTrack_PhiVsTheta->Fill(theta, phi);
+    hTrack_PVsPhi->Fill(phi, pmag);
+    
     // Get the pulls vector from the track
     auto track = bestHypothesis->Get_TrackTimeBased();
 
@@ -204,34 +385,16 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     }
 
     if (!track->IsSmoothed) {
-      Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothFailure",
-                      "Tracking FOM", trackingFOM, "Tracking FOM", 200, 0.0,
-                      1.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothFailure", "P Vs. Theta",
-                      theta, pmag, "P Vs. #theta; #theta [deg.]; |P| [GeV/c]",
-                      70, 0.0, 140.0, 50, 0.0, 10.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothFailure",
-                      "Phi Vs. Theta", theta, phi,
-                      "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0,
-                      140.0, 180, -180.0, 180.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothFailure", "P Vs. Phi",
-                      phi, pmag, "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180,
-                      -180, 180.0, 50, 0.0, 10.0);
-      continue;
+		hTrackingFOM_SmoothFailure->Fill(trackingFOM);
+		hTrack_PVsTheta_SmoothFailure->Fill(theta, pmag);
+		hTrack_PhiVsTheta_SmoothFailure->Fill(theta, phi);
+		hTrack_PVsPhi_SmoothFailure->Fill(phi, pmag);
+        continue;
     } else {
-      Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess",
-                      "Tracking FOM", trackingFOM, "Tracking FOM", 200, 0.0,
-                      1.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess", "P Vs. Theta",
-                      theta, pmag, "P Vs. #theta; #theta [deg.]; |P| [GeV/c]",
-                      70, 0.0, 140.0, 50, 0.0, 10.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess",
-                      "Phi Vs. Theta", theta, phi,
-                      "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0,
-                      140.0, 180, -180.0, 180.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess", "P Vs. Phi",
-                      phi, pmag, "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180,
-                      -180, 180.0, 50, 0.0, 10.0);
+		hTrackingFOM_SmoothSuccess->Fill(trackingFOM);
+		hTrack_PVsTheta_SmoothSuccess->Fill(theta, pmag);
+		hTrack_PhiVsTheta_SmoothSuccess->Fill(theta, phi);
+		hTrack_PVsPhi_SmoothSuccess->Fill(phi, pmag);
     }
 
     vector<DTrackFitter::pull_t> pulls = track->pulls;
@@ -251,22 +414,11 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
       }
     }
     if (any_nan) {
-      Fill1DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess_NaN",
-                      "Tracking FOM", trackingFOM, "Tracking FOM", 200, 0.0,
-                      1.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess_NaN",
-                      "P Vs. Theta", theta, pmag,
-                      "P Vs. #theta; #theta [deg.]; |P| [GeV/c]", 70, 0.0,
-                      140.0, 50, 0.0, 10.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess_NaN",
-                      "Phi Vs. Theta", theta, phi,
-                      "#phi Vs. #theta; #theta [deg.];  #phi [deg.]", 70, 0.0,
-                      140.0, 180, -180.0, 180.0);
-      Fill2DHistogram("TrackingPulls", "TrackInfo_SmoothSuccess_NaN",
-                      "P Vs. Phi", phi, pmag,
-                      "P Vs. #phi; #phi [deg.]; |P| [GeV/c]", 180, -180, 180.0,
-                      50, 0.0, 10.0);
-      continue;
+		hTrackingFOM_SmoothSuccess_NaN->Fill(trackingFOM);
+		hTrack_PVsTheta_SmoothSuccess_NaN->Fill(theta, pmag);
+		hTrack_PhiVsTheta_SmoothSuccess_NaN->Fill(theta, phi);
+		hTrack_PVsPhi_SmoothSuccess_NaN->Fill(phi, pmag);
+        continue;
     }
 
     for (size_t iPull = 0; iPull < pulls.size(); iPull++) {
@@ -279,33 +431,18 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
       double resic = pulls[iPull].resic;
       double errc = pulls[iPull].errc;
 
-      Fill1DHistogram("TrackingPulls", "TrackPulls", "All Pulls", resi / err,
-                      "Residual/Error", 100, -5.0, 5.0);
-      Fill2DHistogram("TrackingPulls", "TrackPulls", "All Pulls Vs. P", pmag,
-                      resi / err, ";|P| ;Residual/Error", 100, 0.0, 10.0, 100,
-                      -5.0, 5.0);
-      Fill2DHistogram("TrackingPulls", "TrackPulls", "All Pulls Vs. Phi", phi,
-                      resi / err, ";#phi ;Residual/Error", 180, -180.0, 180.0,
-                      100, -5.0, 5.0);
-      Fill2DHistogram("TrackingPulls", "TrackPulls", "All Pulls Vs. Theta",
-                      theta, resi / err, ";#theta ;Residual/Error", 140, 0.0,
-                      140.0, 100, -5.0, 5.0);
-      Fill2DHistogram("TrackingPulls", "TrackPulls", "All Pulls Vs. NDF",
-                      locTrackTimeBased->Ndof, resi / err,
-                      ";Track NDF ;Residual/Error", 140, 0.0, 140.0, 100, -5.0,
-                      5.0);
-      Fill2DHistogram("TrackingPulls", "TrackPulls",
-                      "All Pulls Vs. Tracking FOM", trackingFOM, resi / err,
-                      ";Track FOM ;Residual/Error", 140, 0.0, 140.0, 100, -5.0,
-                      5.0);
+	  hAllPulls->Fill(resi / err);
+	  hAllPulls_Vs_P->Fill(pmag, resi / err);
+	  hAllPulls_Vs_Phi->Fill(phi, resi / err);
+	  hAllPulls_Vs_Theta->Fill(theta, resi / err);
+	  hAllPulls_Vs_NDF->Fill(locTrackTimeBased->Ndof, resi / err);
+	  hAllPulls_Vs_TrackingFOM->Fill(trackingFOM, resi / err);
+
       if (fdc_hit != nullptr) {
-        Fill1DHistogram("TrackingPulls", "TrackPulls", "FDC Wire Error", err,
-                        "Wire Residual Error", 100, 0.0, 0.1);
-        Fill1DHistogram("TrackingPulls", "TrackPulls", "FDC Cathode Error",
-                        errc, "Cathode Residual Error", 100, 0.0, 0.1);
+		  hFDCWireError->Fill(err);
+		  hFDCCathodeError->Fill(errc);
       } else {
-        Fill1DHistogram("TrackingPulls", "TrackPulls", "CDCError", err,
-                        "Residual Error", 100, 0.0, 0.1);
+	      hCDCError->Fill(err);
       }
 
       // Fill some detector specific info
@@ -315,202 +452,79 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
 
       if (fdc_hit != nullptr && fdc_hit->wire->layer <= nextPlane) {
         if (fdc_hit->wire->layer == nextPlane) nextPlane++;
-        Fill1DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls",
-                        resi / err, "Residual/Error", 100, -5.0, 5.0);
-        Fill1DHistogram("TrackingPulls", "FDCPulls", "All Cathode Pulls",
-                        resic / errc, "Residual/Error", 100, -5.0, 5.0);
-        Fill1DHistogram("TrackingPulls", "FDCPulls", "All Wire Residuals", resi,
-                        "Residual", 100, -0.1, 0.1);
-        Fill1DHistogram("TrackingPulls", "FDCPulls", "All Cathode Residuals",
-                        resic, "Residual", 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Wire Residuals Vs. Plane", fdc_hit->wire->layer,
-                        resi, ";plane ;Residual", 24, 0.5, 24.5, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Residuals Vs. Plane", fdc_hit->wire->layer,
-                        resic, ";plane ;Residual", 24, 0.5, 24.5, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls Vs. Plane",
-                        fdc_hit->wire->layer, resi / err,
-                        ";plane ;Residual/Error", 24, 0.5, 24.5, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Pulls Vs. Plane", fdc_hit->wire->layer,
-                        resic / errc, ";plane ;Residual/Error", 24, 0.5, 24.5,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Wire Residuals Vs Drift Time", tdrift, resi,
-                        ";Drift Time;Residual", 170, -20.0, 150.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Wire Pulls Vs Drift Time", tdrift, resi / err,
-                        ";Drift Time;Residual/Error", 170, -20.0, 150.0, 100,
-                        -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls Vs. P",
-                        pmag, resi / err, ";|P| ;Residual/Error", 100, 0.0,
-                        10.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls Vs. Phi",
-                        phi, resi / err, ";#phi ;Residual/Error", 180, -180.0,
-                        180.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls Vs. Theta",
-                        theta, resi / err, ";#theta ;Residual/Error", 50, 0.0,
-                        25.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Cathode Pulls Vs. P",
-                        pmag, resic / errc, ";|P| ;Residual/Error", 100, 0.0,
-                        10.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Pulls Vs. Phi", phi, resic / errc,
-                        ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Pulls Vs. Theta", theta, resic / errc,
-                        ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Residuals Vs. P",
-                        pmag, resi, ";|P| ;Residual/Error", 100, 0.0, 10.0, 100,
-                        -0.1, 0.1);
-        Fill2DHistogram(
-            "TrackingPulls", "FDCPulls", "All Wire Residuals Vs. Phi", phi,
-            resi, ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1);
-        Fill2DHistogram(
-            "TrackingPulls", "FDCPulls", "All Wire Residuals Vs. Theta", theta,
-            resi, ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Residuals Vs. P", pmag, resic,
-                        ";|P| ;Residual/Error", 100, 0.0, 10.0, 100, -0.1, 0.1);
-        Fill2DHistogram(
-            "TrackingPulls", "FDCPulls", "All Cathode Residuals Vs. Phi", phi,
-            resic, ";#phi ;Residual/Error", 180, -180.0, 180.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Residuals Vs. Theta", theta, resic,
-                        ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", "FDCPulls", "All Wire Pulls Vs. NDF",
-                        locTrackTimeBased->Ndof, resi / err,
-                        ";Track NDF ;Residual/Error", 50, 0.5, 50.5, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Wire Pulls Vs. Tracking FOM", trackingFOM,
-                        resi / err, ";Track FOM ;Residual/Error", 100, 0.0, 1.0,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Pulls Vs. NDF", locTrackTimeBased->Ndof,
-                        resic / errc, ";Track NDF ;Residual/Error", 50, 0.5,
-                        50.5, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "FDCPulls",
-                        "All Cathode Pulls Vs. Tracking FOM", trackingFOM,
-                        resic / errc, ";Track FOM ;Residual/Error", 100, 0.0,
-                        1.0, 100, -5.0, 5.0);
 
-        // Make the Per-Plane Histograms
-        char planeName[256];
-        sprintf(planeName, "FDCPulls_Plane%.2i", fdc_hit->wire->layer);
+		hFDCAllWirePulls->Fill(resi / err);
+		hFDCAllCathodeulls->Fill(resic / errc);
+		hFDCAllWireResiduals->Fill(resi);
+		hFDCAllCathodeResiduals->Fill(resic);
+		hFDCAllWireResidualsVsPlane->Fill(fdc_hit->wire->layer, resi);
+		hFDCAllCathodeResidualsVsPlane->Fill(fdc_hit->wire->layer, resic);
+		hFDCAllWirePullsVsPlane->Fill(fdc_hit->wire->layer, resi / err);
+		hFDCAllCathodePullsVsPlane->Fill(fdc_hit->wire->layer, resic / errc);
+		hFDCAllWireResidualsVsDriftTime->Fill(tdrift, resi);
+		hFDCAllWirePullsVsDriftTime->Fill(tdrift, resi / err);
+		hFDCAllWirePullsVsP->Fill(pmag, resi / err);
+		hFDCAllWirePullsVsTheta->Fill(theta, resi / err);
+		hFDCAllWirePullsVsPhi->Fill(phi, resi / err);
+		hFDCAllCathodePullsVsP->Fill(pmag, resic / errc);
+		hFDCAllCathodePullsVsPhi->Fill(phi, resic / errc);
+		hFDCAllCathodePullsVsTheta->Fill(theta, resic / errc);
+		hFDCAllWireResidualsVsP->Fill(pmag, resi);
+		hFDCAllWireResidualsVsPhi->Fill(phi, resi);
+		hFDCAllWireResidualsVsTheta->Fill(theta, resi);
+		hFDCAllCathodeResidualsVsP->Fill(pmag, resic);
+		hFDCAllCathodeResidualsVsPhi->Fill(phi, resic);
+		hFDCAllCathodeResidualsVsTheta->Fill(theta, resic);
+		hFDCAllWirePullsVsNDF->Fill(locTrackTimeBased->Ndof, resi / err);
+		hFDCAllWirePullsVsTrackingFOM->Fill(trackingFOM, resi / err);
+		hFDCAllCathodePullsVsNDF->Fill(locTrackTimeBased->Ndof, resic / err);
+		hFDCAllCathodePullsVsTrackingFOM->Fill(trackingFOM, resic / err);
 
-        Fill1DHistogram("TrackingPulls", planeName, "All Wire Pulls",
-                        resi / err, "Residual/Error", 100, -5.0, 5.0);
-        Fill1DHistogram("TrackingPulls", planeName, "All Cathode Pulls",
-                        resic / errc, "Residual/Error", 100, -5.0, 5.0);
-        Fill1DHistogram("TrackingPulls", planeName, "All Wire Residuals", resi,
-                        "Residual", 100, -0.1, 0.1);
+		hFDCAllWirePulls_ByLayer[fdc_hit->wire->layer]->Fill(resi / err);
+		hFDCAllCathodeulls_ByLayer[fdc_hit->wire->layer]->Fill(resic / errc);
+		hFDCAllWireResiduals_ByLayer[fdc_hit->wire->layer]->Fill(resi);
         if (trackingFOM > 0.02) {
-          Fill1DHistogram("TrackingPulls", planeName, "wire_residual", resi, "Residual", 200, -0.1, 0.1);
-          if (pulls[iPull].left_right == 1) {
-            Fill1DHistogram("TrackingPulls", planeName, "wire_residual_right", resi, "Residual", 200, -0.1, 0.1);
-          } else if (pulls[iPull].left_right == -1) {
-            Fill1DHistogram("TrackingPulls", planeName, "wire_residual_left", resi, "Residual", 200, -0.1, 0.1);
-          }
+        	hFDCWireResidualsGoodTracks_ByLayer[fdc_hit->wire->layer]->Fill(resi);
+			if (pulls[iPull].left_right == 1) {
+				hFDCWireResidualsGoodTracksRight_ByLayer[fdc_hit->wire->layer]->Fill(resi);
+			} else if (pulls[iPull].left_right == -1) {
+				hFDCWireResidualsGoodTracksLeft_ByLayer[fdc_hit->wire->layer]->Fill(resi);
+			}
         }
-        Fill1DHistogram("TrackingPulls", planeName, "All Cathode Residuals",
-                        resic, "Residual", 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Wire Residuals Vs Drift Time", tdrift, resi,
-                        ";Drift Time;Residual", 170, -20.0, 150.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Wire Pulls Vs Drift Time", tdrift, resi / err,
-                        ";Drift Time;Residual/Error", 170, -20.0, 150.0, 100,
-                        -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "All Wire Pulls Vs. P",
-                        pmag, resi / err, ";|P| ;Residual/Error", 100, 0.0,
-                        10.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "All Wire Pulls Vs. Phi",
-                        phi, resi / err, ";#phi ;Residual/Error", 180, -180.0,
-                        180.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "All Wire Pulls Vs. Theta",
-                        theta, resi / err, ";#theta ;Residual/Error", 50, 0.0,
-                        25.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "All Wire Residuals Vs. P",
-                        pmag, resi, ";|P| ;Residual", 100, 0.0, 10.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Wire Residuals Vs. Phi", phi, resi,
-                        ";#phi ;Residual", 180, -180.0, 180.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Wire Residuals Vs. Theta", theta, resi,
-                        ";#theta ;Residual", 50, 0.0, 25.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName, "All Cathode Pulls Vs. P",
-                        pmag, resic / errc, ";|P| ;Residual/Error", 100, 0.0,
-                        10.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "All Cathode Pulls Vs. Phi",
-                        phi, resic / errc, ";#phi ;Residual/Error", 180, -180.0,
-                        180.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Cathode Pulls Vs. Theta", theta, resic / errc,
-                        ";#theta ;Residual/Error", 50, 0.0, 25.0, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Cathode Residuals Vs. P", pmag, resic,
-                        ";|P| ;Residual", 100, 0.0, 10.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Cathode Residuals Vs. Phi", phi, resic,
-                        ";#phi ;Residual", 180, -180.0, 180.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName,
-                        "All Cathode Residuals Vs. Theta", theta, resic,
-                        ";#theta ;Residual", 50, 0.0, 25.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", planeName, "Wire Pulls",
-                        fdc_hit->wire->wire, resi / err,
-                        ";Wire Number ;Residual/Error", 96, 0.5, 96.5, 100,
-                        -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", planeName, "Wire Residuals",
-                        fdc_hit->wire->wire, resi, ";Wire Number ;Residual", 96,
-                        0.5, 96.5, 100, -0.1, 0.1);
+
+		hFDCAllCathodeResiduals_ByLayer[fdc_hit->wire->layer]->Fill(resic);
+		hFDCAllWireResidualsVsDriftTime_ByLayer[fdc_hit->wire->layer]->Fill(tdrift, resi);
+		hFDCAllWirePullsVsDriftTime_ByLayer[fdc_hit->wire->layer]->Fill(tdrift, resi / err);
+		hFDCAllWirePullsVsP_ByLayer[fdc_hit->wire->layer]->Fill(pmag, resi / err);
+		hFDCAllWirePullsVsTheta_ByLayer[fdc_hit->wire->layer]->Fill(theta, resi / err);
+		hFDCAllWirePullsVsPhi_ByLayer[fdc_hit->wire->layer]->Fill(phi, resi / err);
+		hFDCAllCathodePullsVsP_ByLayer[fdc_hit->wire->layer]->Fill(pmag, resic / errc);
+		hFDCAllCathodePullsVsPhi_ByLayer[fdc_hit->wire->layer]->Fill(phi, resic / errc);
+		hFDCAllCathodePullsVsTheta_ByLayer[fdc_hit->wire->layer]->Fill(theta, resic / errc);
+		hFDCAllWireResidualsVsP_ByLayer[fdc_hit->wire->layer]->Fill(pmag, resi);
+		hFDCAllWireResidualsVsPhi_ByLayer[fdc_hit->wire->layer]->Fill(phi, resi);
+		hFDCAllWireResidualsVsTheta_ByLayer[fdc_hit->wire->layer]->Fill(theta, resi);
+		hFDCAllCathodeResidualsVsP_ByLayer[fdc_hit->wire->layer]->Fill(pmag, resic);
+		hFDCAllCathodeResidualsVsPhi_ByLayer[fdc_hit->wire->layer]->Fill(phi, resic);
+		hFDCAllCathodeResidualsVsTheta_ByLayer[fdc_hit->wire->layer]->Fill(theta, resic);
+		hFDCWirePulls_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->wire->wire, resi / err);
+		hFDCWireResiduals_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->wire->wire, resi);
+		
         if (fabs(resi / err) < 5.0) {
-          Fill2DProfile("TrackingPulls", planeName, "2D Wire Hit Pulls",
-                        fdc_hit->xy.X(), fdc_hit->xy.Y(), resi / err,
-                        "Mean of Wire Pulls vs. PseudoHit XY", 100, -50., 50.,
-                        100, -50., 50.);
+ 			hFDC2DWirePulls_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->xy.X(), fdc_hit->xy.Y(), resi / err);
         }
         if (fabs(resi) < 0.1) {
-          Fill2DProfile("TrackingPulls", planeName, "2D Wire Hit Residuals",
-                        fdc_hit->xy.X(), fdc_hit->xy.Y(), resi,
-                        "Mean of Wire Residuals vs. PseudoHit XY", 100, -50.,
-                        50., 100, -50., 50.);
-          Fill2DProfile("TrackingPulls", planeName,
-                        "2D Wire Hit Residuals Local", fdc_hit->w, fdc_hit->s,
-                        resi,
-                        "Mean of Wire Residuals vs. PseudoHit WS;Perpendicular "
-                        "Distance to Wire; Distance Along the Wire",
-                        100, -50., 50., 100, -50., 50.);
+ 			hFDC2DWireResiduals_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->xy.X(), fdc_hit->xy.Y(), resi);
+ 			hFDC2DWireResidualsLocal_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->w, fdc_hit->s, resi);
         }
         if (fabs(resic / errc) < 5.0) {
-          Fill2DProfile("TrackingPulls", planeName, "2D Cathode Hit Pulls",
-                        fdc_hit->xy.X(), fdc_hit->xy.Y(), resic / errc,
-                        "Mean of Cathode Pulls vs. PseudoHit XY", 100, -50.,
-                        50., 100, -50., 50.);
+  			hFDC2DCathodePulls_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->xy.X(), fdc_hit->xy.Y(), resic / err);
         }
         if (fabs(resic) < 0.1) {
-          Fill2DProfile("TrackingPulls", planeName, "2D Cathode Hit Residuals",
-                        fdc_hit->xy.X(), fdc_hit->xy.Y(), resic,
-                        "Mean of Cathode Residuals vs. PseudoHit XY", 100, -50.,
-                        50., 100, -50., 50.);
-          Fill2DProfile(
-              "TrackingPulls", planeName, "2D Cathode Hit Residuals Local",
-              fdc_hit->w, fdc_hit->s, resic,
-              "Mean of Cathode Residuals vs. PseudoHit WS;Perpendicular "
-              "Distance to Wire; Distance Along the Wire",
-              100, -50., 50., 100, -50., 50.);
+ 			hFDC2DCathodeResiduals_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->xy.X(), fdc_hit->xy.Y(), resic);
+ 			hFDC2DCathodeResidualsLocal_ByLayer[fdc_hit->wire->layer]->Fill(fdc_hit->w, fdc_hit->s, resic);
         }
+
 
 	if (MAKE_TREE){
 	  dTreeFillData.Fill_Array<Double_t>("fdc_resi", resi, fdc_hit->wire->layer - 1);
@@ -534,112 +548,47 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
           (nextPlane == 25 || evntCount > 1000)) {
         if (cdc_hit->wire->ring == nextRing) nextRing++;
 
-        Fill1DHistogram("TrackingPulls", "CDCPulls", "All Residuals", resi,
-                        "Residual", 100, -0.1, 0.1);
-        Fill1DHistogram("TrackingPulls", "CDCPulls", "All Pulls", resi / err,
-                        "Residual/Error", 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. Ring",
-                        cdc_hit->wire->ring, resi / err,
-                        ";ring ;Residual/Error", 28, 0.5, 28.5, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Residuals Vs. Ring",
-                        cdc_hit->wire->ring, resi, ";ring ;Residual", 28, 0.5,
-                        28.5, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. tdrift",
-                        tdrift, resi / err, ";tdrift [ns] ;Residual/Error", 200,
-                        0.0, 1000.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Residuals Vs. tdrift",
-                        tdrift, resi, ";tdrift [ns] ;Residual", 200, 0.0,
-                        1000.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. P", pmag,
-                        resi / err, ";|P| ;Residual/Error", 50, 0.0, 10.0, 100,
-                        -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. Phi", phi,
-                        resi / err, ";#phi ;Residual/Error", 180, -180.0, 180.0,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. Theta",
-                        theta, resi / err, ";#theta ;Residual/Error", 140, 0.0,
-                        140.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Residuals Vs. P",
-                        pmag, resi, ";|P| ;Residual", 50, 0.0, 10.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Residuals Vs. Phi",
-                        phi, resi, ";#phi ;Residual", 180, -180.0, 180.0, 100,
-                        -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Residuals Vs. Theta",
-                        theta, resi, ";#theta ;Residual", 140, 0.0, 140.0, 100,
-                        -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", "CDCPulls", "All Pulls Vs. NDF",
-                        locTrackTimeBased->Ndof, resi / err,
-                        ";Track NDF ;Residual/Error", 50, 0.5, 50.5, 100, -5.0,
-                        5.0);
-        Fill2DHistogram("TrackingPulls", "CDCPulls",
-                        "All Pulls Vs. Tracking FOM", trackingFOM, resi / err,
-                        ";Track FOM ;Residual/Error", 100, 0.0, 1.0, 100, -5.0,
-                        5.0);
+		hCDCAllPulls->Fill(resi / err);
+		hCDCAllResiduals->Fill(resi);
+		hCDCAllResidualsVsRing->Fill(cdc_hit->wire->ring, resi);
+		hCDCAllPullsVsRing->Fill(cdc_hit->wire->ring, resi / err);
+		hCDCAllResidualsVsDriftTime->Fill(tdrift, resi);
+		hCDCAllPullsVsDriftTime->Fill(tdrift, resi / err);
+		hCDCAllPullsVsP->Fill(pmag, resi / err);
+		hCDCAllPullsVsTheta->Fill(theta, resi / err);
+		hCDCAllPullsVsPhi->Fill(phi, resi / err);
+		hCDCAllResidualsVsP->Fill(pmag, resi);
+		hCDCAllResidualsVsPhi->Fill(phi, resi);
+		hCDCAllResidualsVsTheta->Fill(theta, resi);
+		hCDCAllPullsVsNDF->Fill(locTrackTimeBased->Ndof, resi / err);
+		hCDCAllPullsVsTrackingFOM->Fill(trackingFOM, resi / err);
 
-        // Make the Per-Ring Histograms
-        char ringName[256];
-        sprintf(ringName, "CDCPulls_Ring%.2i", cdc_hit->wire->ring);
-
-        Fill1DHistogram("TrackingPulls", ringName, "All Residuals", resi,
-                        "Residual", 100, -0.1, 0.1);
-        Fill1DHistogram("TrackingPulls", ringName, "All Pulls", resi / err,
-                        "Residual/Error", 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Pulls Vs. tdrift",
-                        tdrift, resi / err, ";tdrift [ns] ;Residual/Error", 200,
-                        0.0, 1000.0, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Pulls Vs. z", z,
-                        resi / err, ";z [cm] ;Residual/Error", 200, -30., 200.,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Residuals Vs. tdrift",
-                        tdrift, resi, ";tdrift [ns] ;Residual", 200, 0.0,
-                        1000.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", ringName, "All Residuals Vs. z", z,
-                        resi, ";z [cm] ;Residual", 200, -30., 200.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", ringName, "All Pulls Vs. P", pmag,
-                        resi / err, ";|P| ;Residual/Error", 50, 0.0, 10.0, 100,
-                        -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Pulls Vs. Phi", phi,
-                        resi / err, ";#phi ;Residual/Error", 180, -180.0, 180.0,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Pulls Vs. Theta", theta,
-                        resi / err, ";#theta ;Residual/Error", 140, 0.0, 140.0,
-                        100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "All Residuals Vs. P", pmag,
-                        resi, ";|P| ;Residual", 50, 0.0, 10.0, 100, -0.1, 0.1);
-        Fill2DHistogram("TrackingPulls", ringName, "All Residuals Vs. Phi", phi,
-                        resi, ";#phi ;Residual", 180, -180.0, 180.0, 100, -0.1,
-                        0.1);
-        Fill2DHistogram("TrackingPulls", ringName, "All Residuals Vs. Theta",
-                        theta, resi, ";#theta ;Residual", 140, 0.0, 140.0, 100,
-                        -0.1, 0.1);
+		hCDCAllPulls_ByRing[cdc_hit->wire->ring]->Fill(resi / err);
+		hCDCAllResiduals_ByRing[cdc_hit->wire->ring]->Fill(resi);
+		hCDCAllResidualsVsDriftTime_ByRing[cdc_hit->wire->ring]->Fill(tdrift, resi);
+		hCDCAllPullsVsDriftTime_ByRing[cdc_hit->wire->ring]->Fill(tdrift, resi / err);
+		hCDCAllResidualsVsZ_ByRing[cdc_hit->wire->ring]->Fill(z, resi);
+		hCDCAllPullsVsZ_ByRing[cdc_hit->wire->ring]->Fill(z, resi / err);
+		hCDCAllPullsVsP_ByRing[cdc_hit->wire->ring]->Fill(pmag, resi / err);
+		hCDCAllPullsVsTheta_ByRing[cdc_hit->wire->ring]->Fill(theta, resi / err);
+		hCDCAllPullsVsPhi_ByRing[cdc_hit->wire->ring]->Fill(phi, resi / err);
+		hCDCAllResidualsVsP_ByRing[cdc_hit->wire->ring]->Fill(pmag, resi);
+		hCDCAllResidualsVsPhi_ByRing[cdc_hit->wire->ring]->Fill(phi, resi);
+		hCDCAllResidualsVsTheta_ByRing[cdc_hit->wire->ring]->Fill(theta, resi);
 
         double nStraw = numstraws[cdc_hit->wire->ring - 1];
         double phiIntersect =
             (cdc_hit->wire->origin + (z - 92.0) * cdc_hit->wire->udir).Phi() *
             TMath::RadToDeg();
 
-        Fill2DHistogram("TrackingPulls", ringName, "Per Straw Pulls",
-                        cdc_hit->wire->straw, resi / err,
-                        ";Straw Number ;Residual/Error", nStraw, 0.5,
-                        nStraw + 0.5, 100, -5.0, 5.0);
-        Fill2DHistogram("TrackingPulls", ringName, "Per Straw Residuals",
-                        cdc_hit->wire->straw, resi, ";Straw Number ;Residual",
-                        nStraw, 0.5, nStraw + 0.5, 100, -0.1, 0.1);
+		hCDCStrawPulls_ByRing[cdc_hit->wire->ring]->Fill(cdc_hit->wire->straw, resi / err);
+		hCDCStrawResiduals_ByRing[cdc_hit->wire->ring]->Fill(cdc_hit->wire->straw, resi);
 
         if (fabs(resi) < 0.1) {
-          Fill2DProfile("TrackingPulls", ringName, "Residual Vs Phi-Theta",
-                        theta, phi, resi, ";#theta;#phi", 70, 0.0, 140.0, 180,
-                        -180.0, 180.0);
-          Fill2DProfile("TrackingPulls", ringName, "Residual Vs Phi-z", z, phi,
-                        resi, ";z;#phi", 200, 0.0, 200.0, 180, -180.0, 180.0);
-          Fill2DProfile("TrackingPulls", ringName, "Residual Vs PhiIntersect-z",
-                        z, phiIntersect, resi, ";z;#phi Intersect", 200, 0.0,
-                        200.0, nStraw, -180.0, 180.0);
-          Fill2DProfile("TrackingPulls", ringName, "Residual Vs P-Theta", theta,
-                        pmag, resi, ";#theta;|P|", 70, 0.0, 140.0, 50, 0.0,
-                        10.0);
+			hCDCStrawResidualsVsPhiTheta_ByRing[cdc_hit->wire->ring]->Fill(theta, phi, resi);
+			hCDCStrawResidualsVsPhiZ_ByRing[cdc_hit->wire->ring]->Fill(z, phi, resi);
+			hCDCStrawResidualsVsPhiIntersectZ_ByRing[cdc_hit->wire->ring]->Fill(z, phiIntersect, resi);
+			hCDCStrawResidualsVsPTheta_ByRing[cdc_hit->wire->ring]->Fill(theta, pmag, resi);
         }
 
 	if (MAKE_TREE){
