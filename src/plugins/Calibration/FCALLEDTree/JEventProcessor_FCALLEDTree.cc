@@ -24,6 +24,13 @@ extern "C"{
   }
 } // "C"
 
+static TH2F *hXYGeo;
+static TH2F *hXYGeo_w;
+static TH2F *hE;
+static TH2F *hped;
+static TH2F *hpeak;
+static TH2F *hinteg;
+
 
 //------------------
 // JEventProcessor_FCALLEDTree (Constructor)
@@ -68,9 +75,22 @@ jerror_t JEventProcessor_FCALLEDTree::init(void)
     m_tree->Branch( "event", &m_event, "event/L" );
     m_tree->Branch( "eTot", &m_eTot, "eTot/F" );
   }
-  
 
-  japp->RootUnLock();
+  // create root folder and cd to it, store main dir
+  TDirectory *main = gDirectory;  // save current directory
+  TDirectory *hvscandir = main->mkdir("hv_scan");
+  hvscandir->cd();
+
+  hXYGeo = new TH2F("XYGeo", ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
+  hXYGeo_w = new TH2F("XYGeo_w", ";row;column #;E_{max}^{sum} [GeV]", 59, 0, 59, 59, 0, 59);
+  hE = new TH2F("E", ";channel;energy;Counts", 2800, 0, 2800, 1200, 0, 12.);
+  hped = new TH2F("ped", ";channel;pedestal;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+  hpeak = new TH2F("peak", ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+  hinteg = new TH2F("integ", ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+
+  gDirectory->cd();
+  
+ japp->RootUnLock();
   
   return NOERROR;
 }
@@ -106,7 +126,6 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     return OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
   
-  japp->RootFillLock(this);
 
   m_event = eventnumber;
   
@@ -119,6 +138,9 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     
     vector< const DFCALDigiHit* > digiHits;
     (**hit).Get( digiHits );
+
+    japp->RootFillLock(this);
+
     if( digiHits.size() != 1 ) std::cout << "ERROR:  wrong size!! " << std::endl;
     
     const DFCALDigiHit& dHit = *(digiHits[0]);
@@ -138,22 +160,23 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
   
     int row = fcalGeom.row((**hit).x);
     int col = fcalGeom.column((**hit).y);
-    
-    Fill2DHistogram("hv_scan","","XYGeo", row, col, ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
-    Fill2DWeightedHistogram("hv_scan","","XYGeo_w", row, col, (**hit).E, ";row;column #;E_{max}^{sum} [GeV]", 59, 0, 59, 59, 0, 59);
-    Fill2DHistogram("hv_scan","","m_E", fcalGeom.channel((**hit).row, (**hit).column ), (**hit).E, ";channel;energy;Counts", 2800, 0, 2800, 1200, 0, 12.);
-    Fill2DHistogram("hv_scan","","m_ped", fcalGeom.channel((**hit).row, (**hit).column ), (float)dHit.pedestal/dHit.nsamples_pedestal, ";channel;pedestal;Counts", 2800, 0, 2800, 4096, 0., 4096.);
-    Fill2DHistogram("hv_scan","","m_peak", fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_peak - m_ped[m_nHits], ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
-    Fill2DHistogram("hv_scan","","m_integ", fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_integral - (m_ped[m_nHits]*dHit.nsamples_integral), ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+
+    hXYGeo->Fill( row, col );
+    hXYGeo_w->Fill(row, col, (**hit).E ;
+    hE->Fill(fcalGeom.channel((**hit).row, (**hit).column ), (**hit).E);
+    hped->Fill(fcalGeom.channel((**hit).row, (**hit).column ), (float)dHit.pedestal/dHit.nsamples_pedestal);
+    hpeak->Fill(fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_peak - m_ped[m_nHits]);
+    hinteg->Fill(fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_integral - (m_ped[m_nHits]*dHit.nsamples_integral));
 
     ++m_nHits;
   }
+
+  japp->RootFillUnLock(this);
 
   if (btree == 1) {  
     m_tree->Fill();
   }
   
-  japp->RootFillUnLock(this);
   
   return NOERROR;
 }
