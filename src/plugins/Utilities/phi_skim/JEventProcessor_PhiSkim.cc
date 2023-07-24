@@ -15,6 +15,9 @@ using namespace jana;
 #include <ANALYSIS/DAnalysisResults.h>
 #include <ANALYSIS/DEventWriterROOT.h>
 
+#include <HDDM/DEventWriterHDDM.h>
+#include <HDDM/DEventWriterREST.h>
+
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
@@ -35,6 +38,12 @@ JEventProcessor_PhiSkim::JEventProcessor_PhiSkim()
 
   WRITE_EVIO_FILE = 1;
   gPARMS->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
+
+  WRITE_HDDM_FILE = 1;
+  gPARMS->SetDefaultParameter( "WRITE_HDDM_FILE", WRITE_HDDM_FILE );
+
+  WRITE_REST_FILE = 1;
+  gPARMS->SetDefaultParameter( "WRITE_REST_FILE", WRITE_REST_FILE );
 
   WRITE_ROOT_TREE = 1;
   gPARMS->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
@@ -76,10 +85,8 @@ jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DAnalysisResults*> locAnalysisResultsVector;
   loop->Get( locAnalysisResultsVector );
 
-    const DEventWriterEVIO* eventWriterEVIO = NULL;
-  if( WRITE_EVIO_FILE ){
-    
-
+  const DEventWriterEVIO* eventWriterEVIO = NULL;
+  if( WRITE_EVIO_FILE ) {   
     loop->GetSingle(eventWriterEVIO);
 
     // write out BOR events
@@ -88,6 +95,16 @@ jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
       return NOERROR;
     }
   }
+  
+  	const DEventWriterHDDM* eventWriterHDDM = NULL;
+	if( WRITE_HDDM_FILE ) {
+		loop->GetSingle(eventWriterHDDM);
+	}
+
+  	const DEventWriterREST* eventWriterREST = NULL;
+	if( WRITE_REST_FILE ) {
+		loop->GetSingle(eventWriterREST);
+	}
 
 	//Make sure that there are combos that survived for ****THIS**** CHANNEL!!!
 	bool locSuccessFlag = false;
@@ -105,13 +122,17 @@ jerror_t JEventProcessor_PhiSkim::evnt(JEventLoop *loop, uint64_t eventnumber)
 	if(!locSuccessFlag)
 		return NOERROR;
 
-  if( WRITE_EVIO_FILE ){
-   eventWriterEVIO->Write_EVIOEvent(loop, "phi");
-
-  }
+	if( WRITE_EVIO_FILE ){
+		eventWriterEVIO->Write_EVIOEvent(loop, "phi");
+	}
+  	if( WRITE_HDDM_FILE ) {
+		eventWriterHDDM->Write_HDDMEvent(loop, "phi");
+	}
+  	if( WRITE_REST_FILE ) {
+		eventWriterREST->Write_RESTEvent(loop, "phi");
+	}
 
   if( WRITE_ROOT_TREE ){
-    
     //Recommended: Write surviving particle combinations (if any) to output ROOT TTree
     //If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations.
     //The event writer gets the DAnalysisResults objects from JANA, performing the analysis.
