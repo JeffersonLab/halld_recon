@@ -17,6 +17,7 @@
 #include <ANALYSIS/DCutActions.h>
 
 #include "DCustomAction_RecoilMass.h"
+#include "DCustomAction_MissingMatch.h"
 
 using namespace std;
 using namespace jana;
