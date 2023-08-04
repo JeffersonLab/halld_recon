@@ -89,7 +89,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	//_data.push_back(locReaction); //Register the DReaction with the factory
 
 
 	/**************************************************** pi0pimmisspip__B1_T1_U1_M7_Effic ****************************************************/
@@ -128,7 +128,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	//_data.push_back(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** pi0pipmisspim__B1_T1_U1_Effic ****************************************************/
 
