@@ -700,7 +700,6 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	
 	// MISSING MASS SQUARED
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "MM2")); 
-	locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.25, 3.75));
 	
 	_data.push_back(locReaction); //Register the DReaction with the factory
 
