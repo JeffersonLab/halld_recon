@@ -129,6 +129,8 @@ class DAnalysisUtilities : public JObject
 
 		double Calc_CrudeTime(const vector<const DKinematicData*>& locParticles, const DVector3& locCommonVertex) const;
 		double Calc_CrudeTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const;
+		double Calc_CrudeWeightedTime(const vector<const DKinematicData*>& locParticles, const DVector3& locCommonVertex) const;
+		double Calc_CrudeWeightedTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const;
 		DVector3 Calc_CrudeVertex(const vector<const DKinematicData*>& locParticles) const;
 		DVector3 Calc_CrudeVertex(const vector<shared_ptr<DKinFitParticle>>& locParticles) const;
 		DVector3 Calc_CrudeVertex(const vector<const DChargedTrackHypothesis*>& locParticles) const;

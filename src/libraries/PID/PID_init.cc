@@ -29,6 +29,10 @@ using namespace jana;
 #include "DMCThrown_factory_FinalState.h"
 #include "DMCThrown_factory_Decaying.h"
 #include "DMCThrown_factory_Primary.h"
+#include "DBeamKLong_factory.h"
+#include "DBeamKLong_factory_MCGEN.h"
+#include "DEventRFBunch_factory_KLong.h"
+#include "DVertex_KLong_factory.h"
 
 #include "DMCReaction.h"
 
@@ -64,6 +68,10 @@ jerror_t PID_init(JEventLoop *loop)
 	loop->AddFactory(new DMCThrown_factory_FinalState);
 	loop->AddFactory(new DMCThrown_factory_Decaying);
 	loop->AddFactory(new DMCThrown_factory_Primary);
+	loop->AddFactory(new DBeamKLong_factory);
+	loop->AddFactory(new DBeamKLong_factory_MCGEN);
+	loop->AddFactory(new DEventRFBunch_factory_KLong);
+	loop->AddFactory(new DVertex_KLong_factory);
 
 	return NOERROR;
 }

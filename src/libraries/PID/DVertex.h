@@ -32,6 +32,8 @@ class DVertex: public jana::JObject
 		double dKinFitChiSq;
 		map<const JObject*, map<DKinFitPullType, double> > dKinFitPulls;
 
+		bool dUseKLongVertex;
+
 		// Objects used to calculate this added as Associated Objects
 		void toStrings(vector<pair<string,string> > &items) const
 		{

@@ -1407,6 +1407,63 @@ double DAnalysisUtilities::Calc_CrudeTime(const vector<DKinFitParticle*>& locPar
 	return locAverageTime/(double(locParticles.size()));
 }
 
+double DAnalysisUtilities::Calc_CrudeWeightedTime(const vector<const DKinematicData*>& locParticles, const DVector3& locCommonVertex) const
+{
+	//crudely propagate the track times to the common vertex and return the average track time
+	//weight timing by the variance of each track
+	DVector3 locPOCA;
+	DVector3 locDeltaVertex;
+	DVector3 locMomentum;
+	double locAverageTime = 0.0;
+	double locWeights = 0.0;
+	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
+	{
+		Calc_DOCAToVertex(locParticles[loc_i], locCommonVertex, locPOCA);
+		locDeltaVertex = locPOCA - locParticles[loc_i]->position();
+		locMomentum = locParticles[loc_i]->momentum();
+		double locTime = locParticles[loc_i]->time() + locDeltaVertex.Dot(locMomentum)*locParticles[loc_i]->energy()/(29.9792458*locMomentum.Mag2());
+		const TMatrixFSym& locTrackErrorMatrix = *(locParticles[loc_i]->errorMatrix());
+		locAverageTime += locTime / locTrackErrorMatrix(6,6);
+		locWeights += 1.0 / locTrackErrorMatrix(6,6);
+	}
+	return locAverageTime/locWeights;
+}
+
+double DAnalysisUtilities::Calc_CrudeWeightedTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const
+{
+	//crudely propagate the track times to the common vertex and return the average track time
+	DVector3 locPOCA;
+	DVector3 locDeltaVertex;
+	double locAverageTime = 0.0;
+	double locWeights = 0.0;
+	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
+	{
+		double locTime = 0.0;
+		double locE = locParticles[loc_i]->Get_ShowerEnergy();
+		if((locParticles[loc_i]->Get_Charge() == 0) && (locE > 0.0))
+		{
+			double locMass = locParticles[loc_i]->Get_Mass();
+			double locPMag = sqrt(locE*locE - locMass*locMass);
+			DVector3 locPosition = locParticles[loc_i]->Get_Position();
+			DVector3 locDPosition(locPosition.X(), locPosition.Y(), locPosition.Z());
+			DVector3 locDeltaVertex = locDPosition - locCommonVertex;
+			locTime = locParticles[loc_i]->Get_Time() + locDeltaVertex.Mag()*locE/(29.9792458*locPMag);
+		}
+		else
+		{
+			Calc_DOCAToVertex(locParticles[loc_i], locCommonVertex, locPOCA);
+			locDeltaVertex = locPOCA - DVector3(locParticles[loc_i]->Get_Position().X(),locParticles[loc_i]->Get_Position().Y(),locParticles[loc_i]->Get_Position().Z());
+			DVector3 locMomentum(locParticles[loc_i]->Get_Momentum().X(),locParticles[loc_i]->Get_Momentum().Y(),locParticles[loc_i]->Get_Momentum().Z());
+			locTime = locParticles[loc_i]->Get_Time() + locDeltaVertex.Dot(locMomentum)*locParticles[loc_i]->Get_Energy()/(29.9792458*locMomentum.Mag2());
+		}
+		const TMatrixFSym& locTrackErrorMatrix = *(locParticles[loc_i]->Get_CovarianceMatrix());
+
+		locAverageTime += locTime / locTrackErrorMatrix(locParticles[loc_i]->Get_CovMatrixTParamIndex(),locParticles[loc_i]->Get_CovMatrixTParamIndex());
+		locWeights += 1.0 / locTrackErrorMatrix(locParticles[loc_i]->Get_CovMatrixTParamIndex(),locParticles[loc_i]->Get_CovMatrixTParamIndex());
+	}
+	return locAverageTime/locWeights;
+}
+
 DVector3 DAnalysisUtilities::Calc_CrudeVertex(const vector<const DTrackTimeBased*>& locParticles) const
 {
 	//assumes tracks are straight lines
