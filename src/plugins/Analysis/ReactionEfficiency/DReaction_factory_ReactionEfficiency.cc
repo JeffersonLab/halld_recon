@@ -7,6 +7,44 @@
 
 #include "DReaction_factory_ReactionEfficiency.h"
 
+// helper function that splits string at positions of given delimiter keeping only non-empty tokens
+vector<string>
+tokenizeString(
+	const string& s,
+	const char delimiter
+) {
+	istringstream ss(s);
+	string token;
+	vector<string> result;
+	while (getline(ss, token, delimiter)) {
+		if (token != "") {
+			result.push_back(token);
+		}
+	}
+	return result;
+}
+
+// helper function that registers reaction depending on white list
+void
+DReaction_factory_ReactionEfficiency::registerReaction(
+	DReaction* locReaction,
+	const vector<string>& locReactionsToWrite
+) {
+	if (not locReaction) {
+		return;
+	}
+	if (locReactionsToWrite.empty()) {
+		// process all reactions
+		_data.push_back(locReaction);
+	} else {
+		// process only selected reactions
+		const string locReactionName = locReaction->Get_ReactionName();
+		if (find(locReactionsToWrite.begin(), locReactionsToWrite.end(), locReactionName) != locReactionsToWrite.end()) {
+			_data.push_back(locReaction);
+		}
+	}
+}
+
 //------------------
 // evnt
 //------------------
@@ -18,6 +56,10 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 	double locMinKinFitFOM = 1e-4;
 	gPARMS->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
+	string locOnlyReactions = "";  // default: process all reactions
+	gPARMS->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
+	                                                                                // e.g. REACTIONEFFIC:ONLY_REACTIONS pi0pipmisspim__B1_T1_U1_Effic;pi0pimmisspip__B1_T1_U1_Effic
+	const vector<string> locReactionsToWrite = tokenizeString(locOnlyReactions, ';');
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -89,8 +131,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	//_data.push_back(locReaction); //Register the DReaction with the factory
-
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** pi0pimmisspip__B1_T1_U1_M7_Effic ****************************************************/
 
@@ -128,7 +169,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	//_data.push_back(locReaction); //Register the DReaction with the factory
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** pi0pipmisspim__B1_T1_U1_Effic ****************************************************/
 
@@ -165,7 +206,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** pi0pimmisspip__B1_T1_U1_Effic ****************************************************/
 
@@ -202,7 +243,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** pippimmisspi0__B1_T1_U1_M7_Effic ****************************************************/
@@ -226,7 +267,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
         locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
-        _data.push_back(locReaction); //Register the DReaction with the factory
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** pippimpi0__B1_T1_U1_M7_Effic ****************************************************/
@@ -260,7 +301,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         // HISTOGRAM MASSES //false/true: measured/kinfit data
         locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-        _data.push_back(locReaction); //Register the DReaction with the factory
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 	
 	
 	/**************************************************** pippimpi0__B1_T1_U1_Effic ****************************************************/
@@ -294,7 +335,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         // HISTOGRAM MASSES //false/true: measured/kinfit data
         locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-        _data.push_back(locReaction); //Register the DReaction with the factory
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** pippim__B1_T1_U1_Effic ****************************************************/
         locReaction = new DReaction("pippim__B1_T1_U1_Effic");
@@ -316,7 +357,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
         locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
-        _data.push_back(locReaction); //Register the DReaction with the factory
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** kpkmmissprot__B1_T1_U1_Effic ****************************************************/
@@ -340,7 +381,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	//_data.push_back(locReaction); //Register the DReaction with the factory
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
 	
@@ -363,7 +404,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
 	
@@ -386,7 +427,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kmmisskp__B1_T1_U1_PhiEffic ****************************************************/
 	
@@ -409,7 +450,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** gpimkpmissprot__B1_T1_U1_Effic ****************************************************/
 	
@@ -432,7 +473,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpsigmamissprot__B1_T1_U1_Effic ****************************************************/
 	
@@ -464,7 +505,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
@@ -496,7 +537,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
 	/**************************************************** antilamblambmisspim__B1_T1_U1_Effic ****************************************************/
@@ -528,7 +569,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
 	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
@@ -560,7 +601,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 	
 
 	/**************************************************** antilamblambmisspip__B1_T1_U1_Effic ****************************************************/
@@ -592,7 +633,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** pi0lambmisskp__B1_T1_U1_Effic ****************************************************/
@@ -625,7 +666,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 0.95, 1.25, "LambdaMassCut"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
 	/**************************************************** pi0kplambmissprot__B1_T1_U1_Effic ****************************************************/
@@ -652,7 +693,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** pi0kplambmisspim__B1_T1_U1_Effic ****************************************************/
@@ -679,7 +720,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** pippippimpimmissprot__B1_T1_U1_Effic ****************************************************/
@@ -701,7 +742,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// MISSING MASS SQUARED
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "MM2")); 
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** omegamisspim__B1_T1_U1_Effic ****************************************************/
@@ -741,7 +782,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** omegapi0misspip__B1_T1_U1_Effic ****************************************************/
 
@@ -780,7 +821,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	return NOERROR;
 }
