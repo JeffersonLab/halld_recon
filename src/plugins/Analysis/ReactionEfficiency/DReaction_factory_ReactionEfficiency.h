@@ -33,6 +33,7 @@ class DReaction_factory_ReactionEfficiency : public jana::JFactory<DReaction>
 		const char* Tag(void){return "ReactionEfficiency";}
 
 	private:
+		void registerReaction(DReaction* locReaction, const vector<string>& locReactionsToWrite);
 		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
