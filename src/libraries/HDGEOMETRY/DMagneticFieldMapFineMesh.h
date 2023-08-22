@@ -47,6 +47,8 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
 			   double &dBydz,
 			   double &dBzdx, double &dBzdy,
 			   double &dBzdz) const;
+  void GetFieldAndGradient(double x,double y,double z,
+			   DBfieldCartesian_t &Bdata) const;
   void GetFineMeshMap(string namepath,int32_t runnumber);
   void WriteEvioFile(string evioFileName);	
   void ReadEvioFile(string evioFileName);
@@ -63,7 +65,7 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
   }DBfieldPoint_t;
   
   typedef struct{
-    double Br,Bz;
+    double Br,Bz,Bmag;
     double dBrdr,dBrdz,dBzdr,dBzdz;
   }DBfieldCylindrical_t;
   
