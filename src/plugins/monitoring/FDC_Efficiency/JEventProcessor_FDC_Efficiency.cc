@@ -98,8 +98,8 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_pseudo_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_pseudo_expected_cell[%d]", icell+1);
-    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -50, 50, 100, -50, 50);
-    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -50, 50, 100, -50, 50);
+    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
 
   }	
 
