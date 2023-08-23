@@ -16,6 +16,22 @@ static TH1D *fdc_wire_expected_cell[25]; // Contains total number of expected hi
 static TH2D *fdc_pseudo_measured_cell[25]; //Filled with total actually detected before division at end
 static TH2D *fdc_pseudo_expected_cell[25]; // Contains total number of expected hits by DOCA
 
+// q+
+static TH1D *fdc_qpos_wire_measured_cell[25]; //Filled with total actually detected before division at end
+static TH1D *fdc_qpos_wire_expected_cell[25]; // Contains total number of expected hits by DOCA
+
+static TH2D *fdc_qpos_pseudo_measured_cell[25]; //Filled with total actually detected before division at end
+static TH2D *fdc_qpos_pseudo_expected_cell[25]; // Contains total number of expected hits by DOCA
+
+// q-
+static TH1D *fdc_qneg_wire_measured_cell[25]; //Filled with total actually detected before division at end
+static TH1D *fdc_qneg_wire_expected_cell[25]; // Contains total number of expected hits by DOCA
+
+static TH2D *fdc_qneg_pseudo_measured_cell[25]; //Filled with total actually detected before division at end
+static TH2D *fdc_qneg_pseudo_expected_cell[25]; // Contains total number of expected hits by DOCA
+
+
+
 //For extraction of magnetic field slope, split the detectors into bins in radius
 const unsigned int rad = 1; // 1, 5 or 9
 
@@ -101,6 +117,28 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
     fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
     fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
 
+    // q+
+    sprintf(hname_measured, "fdc_qpos_wire_measured_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qpos_wire_expected_cell[%d]", icell+1);
+    fdc_qpos_wire_measured_cell[icell+1] = new TH1D(hname_measured, "", 96, 0.5, 96.5);
+    fdc_qpos_wire_expected_cell[icell+1] = new TH1D(hname_expected, "", 96, 0.5, 96.5);
+
+    sprintf(hname_measured, "fdc_qpos_pseudo_measured_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qpos_pseudo_expected_cell[%d]", icell+1);
+    fdc_qpos_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_qpos_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+
+    // q-
+    sprintf(hname_measured, "fdc_qneg_wire_measured_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qneg_wire_expected_cell[%d]", icell+1);
+    fdc_qneg_wire_measured_cell[icell+1] = new TH1D(hname_measured, "", 96, 0.5, 96.5);
+    fdc_qneg_wire_expected_cell[icell+1] = new TH1D(hname_expected, "", 96, 0.5, 96.5);
+
+    sprintf(hname_measured, "fdc_qneg_pseudo_measured_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qneg_pseudo_expected_cell[%d]", icell+1);
+    fdc_qneg_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_qneg_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    
   }	
 
   gDirectory->cd("/FDC_Efficiency");
@@ -197,7 +235,7 @@ jerror_t JEventProcessor_FDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
 
   // Get inner radii for FDC packages
   dgeom->GetFDCRmin(fdcrmin);
-
+    for (uint i=0; i<4; i++) { cout << fdcrmin[i] << endl; }
   // Get outer radius of FDC 
   dgeom->GetFDCRmax(fdcrmax);
   fdcrmax = 48; // fix to 48cm from DFDCPseudo_factory
@@ -295,6 +333,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     double theta_deg = thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg();
     double phi_deg = thisTimeBasedTrack->momentum().Phi()*TMath::RadToDeg();
     double tmom = thisTimeBasedTrack->pmag();
+    double tcharge = thisTimeBasedTrack->charge();
     
     // Fill Histograms for all Tracks    
     japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -389,6 +428,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       
       // cut out central hole and intersections at too large radii
       int packageIndex = (cellNum - 1) / 6;
+      if (interPosition.Perp() < fdcrmin[packageIndex] ) cout << "track through central hole, radius " << interPosition.Perp() << endl;
       if (interPosition.Perp() < fdcrmin[packageIndex] || interPosition.Perp() > fdcrmax) continue;
       
 
@@ -439,6 +479,15 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    w = fdc_wire_expected_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_expected_cell[cellNum]->SetBinContent(wireNum, 1, w);
+
+	    if (tcharge>0) {
+ 	        w = fdc_qpos_wire_expected_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
+	        fdc_qpos_wire_expected_cell[cellNum]->SetBinContent(wireNum, 1, w);
+            } else {
+	    	w = fdc_qneg_wire_expected_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
+	        fdc_qneg_wire_expected_cell[cellNum]->SetBinContent(wireNum, 1, w);
+            }
+
 	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	  }
 	  
@@ -469,6 +518,15 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	    v = fdc_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
 	    fdc_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
+
+	    if (tcharge>0) {
+ 	        v = fdc_qpos_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
+	        fdc_qpos_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
+            } else {
+	    	v = fdc_qneg_wire_measured_cell[cellNum]->GetBinContent(wireNum, 1) + 1.0;
+	        fdc_qneg_wire_measured_cell[cellNum]->SetBinContent(wireNum, 1, v);
+            }
+
 	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	  }
 
@@ -488,6 +546,11 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	// FILL HISTOGRAMS
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	fdc_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+	if (tcharge>0) {
+	    	fdc_qpos_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+        } else {
+	    	fdc_qneg_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+	}
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       }
 
@@ -527,16 +590,22 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	    
 	    if (foundPseudo) continue; 
-	    // to avoid double conting
+	    // to avoid double counting
 	    	    
 	    //if (residualR < 1.6){ // = 5 sigma in x and in y
 	    if (residualR < 2){ // = to account for non-gaussian tails and tracking/extrapolation errors
 	      foundPseudo = true;
 	      
 	      if(fdc_pseudo_measured_cell[cellNum] != NULL && cellNum < 25){
-		// fill histogramms with the predicted, not with the measured position
+		// fill histograms with the predicted, not with the measured position
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
 		fdc_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+                if (tcharge>0) {
+		    fdc_qpos_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+		} else {
+		    fdc_qneg_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		  
+		}
 		hPseudoTime_accepted[cellNum]->Fill(locPseudo->time);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_u);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_v);
