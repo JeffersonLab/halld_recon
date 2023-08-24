@@ -352,6 +352,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	for (size_t i=0; i < ctofpoints.size(); i++)
 	{
 		hddm_r::CtofPointList ctof = res().addCtofPoints(1);
+		ctof().setBar(ctofpoints[i]->bar);
 		ctof().setX(ctofpoints[i]->pos(0));
 		ctof().setY(ctofpoints[i]->pos(1));
 		ctof().setZ(ctofpoints[i]->pos(2));

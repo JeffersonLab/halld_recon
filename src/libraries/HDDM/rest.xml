@@ -89,8 +89,8 @@
               sector="int" t="float" dE="float"
               tunit="ns" Eunit="GeV"/>
     <ctofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
-              x="float" y="float" z="float" t="float" dE="float"
-              lunit="cm" tunit="ns" Eunit="GeV">
+	       bar="int" x="float" y="float" z="float" t="float" dE="float"
+               lunit="cm" tunit="ns" Eunit="GeV">
     </ctofPoint>
     <tofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
               x="float" y="float" z="float" t="float" dE="float" terr="float"
