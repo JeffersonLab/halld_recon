@@ -88,6 +88,10 @@
     <startHit maxOccurs="unbounded" minOccurs="0" jtag="string"
               sector="int" t="float" dE="float"
               tunit="ns" Eunit="GeV"/>
+    <ctofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
+              x="float" y="float" z="float" t="float" dE="float"
+              lunit="cm" tunit="ns" Eunit="GeV">
+    </ctofPoint>
     <tofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
               x="float" y="float" z="float" t="float" dE="float" terr="float"
               lunit="cm" tunit="ns" Eunit="GeV">
@@ -132,6 +136,11 @@
                 track="int" ehit="float" thit="float"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
                 tunit="ns" lunit="cm"/>
+      <ctofMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" hit="int"
+                dEdx="float" thit="float" ehit="float"
+                deltax="float" deltay="float" tflight="float"
+		tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
