@@ -137,8 +137,7 @@
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
                 tunit="ns" lunit="cm"/>
       <ctofMatchParams maxOccurs="unbounded" minOccurs="0"
-                track="int" hit="int"
-                dEdx="float" thit="float" ehit="float"
+                track="int" hit="int" dEdx="float" 
                 deltax="float" deltay="float" tflight="float"
 		tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
