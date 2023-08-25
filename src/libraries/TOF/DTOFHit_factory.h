@@ -65,8 +65,8 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   // Timing Cut Values
   double TimeCenterCut;  ///< timing cut values to select in time hits
   double TimeWidthCut;   ///< timing cut values to select in time hits
-  double hi_time_cut;    ///< timing cut values to select in time hits
-  double lo_time_cut;    ///< timing cut values to select in time hits
+  double hi_time_cut=100.;    ///< timing cut values to select in time hits
+  double lo_time_cut=-100.;    ///< timing cut values to select in time hits
 
   // ADC to Energy conversion for individual PMT channels
   vector<double> adc2E;   ///< ADC to energy converstion values (loaded from CCDB) 
