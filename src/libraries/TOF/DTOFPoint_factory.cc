@@ -557,13 +557,12 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
     }
   else
     {
-      //position not well defined: save anyway:
+     return; 
+
+     //position not well defined: save anyway:
       //Will use track matching to define position in the other direction
       //Then, will update the hit energy and time based on that position
-      
-      // IGNORE NOW
-      return;
-
+     /*
       DTOFPoint* locTOFPoint = new DTOFPoint;
       locTOFPoint->AddAssociatedObject(locPaddleHit);
       
@@ -589,6 +588,7 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
       locTOFPoint->dE = locEnergy;
    
       _data.push_back(locTOFPoint);
+     */
     }
 }
 
