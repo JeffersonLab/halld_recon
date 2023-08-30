@@ -78,6 +78,7 @@ class DMaterialMap{
 		double r0, z0;	// Location of first nodes in R and Z
 		
 		double rmin, rmax; // Range limits in R of this map
+		double rminsq,rmaxsq; // squares of these limits
 		double zmin, zmax; // Range limits in Z of this map
 		
 		int MAX_BOUNDARY_SEARCH_STEPS;
@@ -102,8 +103,8 @@ inline const DMaterialMap::MaterialNode* DMaterialMap::FindNode(const DVector3 &
   //double r = sqrt(pos_x*pos_x + pos_y*pos_y);
   double r=pos.Perp();
 	double z = pos.Z();
-	int ir = (int)floor((r-rmin)*one_over_dr);
-	int iz = (int)floor((z-zmin)*one_over_dz);
+	int ir = static_cast<int>((r-rmin)*one_over_dr);
+	int iz = static_cast<int>((z-zmin)*one_over_dz);
 	if(ir<0 || ir>=Nr || iz<0 || iz>=Nz)return NULL;
 	
 	return &nodes[ir][iz];

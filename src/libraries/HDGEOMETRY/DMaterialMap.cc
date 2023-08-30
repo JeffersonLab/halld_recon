@@ -71,6 +71,8 @@ DMaterialMap::DMaterialMap(string namepath, JCalibration *jcalib)
 		if(r>rmax)rmax=r;
 		if(z>zmax)zmax=z;
 	}
+	rminsq=rmin*rmin;
+	rmaxsq=rmax*rmax;
 	Nr = rvals.size();
 	Nz = zvals.size();
 	r0 = rmin;
@@ -356,23 +358,26 @@ double DMaterialMap::EstimatedDistanceToBoundary(const DVector3 &pos, const DVec
 	double mom_x = mom.X();
 	double mom_y = mom.Y();
 	double x_dot_p = pos_x*mom_x + pos_y*mom_y;
-	double r = sqrt(pos_x*pos_x + pos_y*pos_y);
+	double rsq = pos_x*pos_x + pos_y*pos_y;
 	if(x_dot_p>0.0){
-	  if(r>rmax)return s_to_boundary;
+	  if(rsq>rmaxsq)return s_to_boundary;
 	} else {
-	  if(r<rmin)return s_to_boundary;
+	  if(rsq<rminsq)return s_to_boundary;
 	}
 
-	double pr = sqrt(mom_x*mom_x + mom_y*mom_y) * (x_dot_p>0 ? +1.0:-1.0); // sign of pr depends on x_dot_p
+	double prsq = mom_x*mom_x + mom_y*mom_y;
 	
 	// Unit vector pointing in momentum direction in r-z space
-	double mod = sqrt(pr*pr + pz*pz);
-	if(mod<1.0E-6)return s_to_boundary; // for when momentum is purely in phi direction
-	double p_hatR = pr/mod;
-	double p_hatZ = pz/mod;
+	double modsq = prsq + pz*pz;
+	if(modsq<1.0E-12)return s_to_boundary; // for when momentum is purely in phi direction
+	double invmod=1./sqrt(modsq);
+	double pr=sqrt(prsq)* (x_dot_p>0 ? +1.0:-1.0); // sign of pr depends on x_dot_p
+	double p_hatR = pr*invmod;
+	double p_hatZ = pz*invmod;
 	//DVector2 p_hat(p_hatR, p_hatZ);
 
 	// Get shortest distance to boundary of entire map
+	double r=sqrt(rsq);
 	s_to_boundary = DistanceToBox(r, z, p_hatR, p_hatZ, rmin, rmax, zmin, zmax);
 
 	// If point is outside of map, then return now. s_to_boundary has valid answer
@@ -388,8 +393,9 @@ double DMaterialMap::EstimatedDistanceToBoundary(const DVector3 &pos, const DVec
 	}
 	
 	// Loop over boundaries stored in z_boundaries
+	double one_over_p_hatZ=1./p_hatZ;
 	for(unsigned int i=0; i<z_boundaries.size(); i++){
-		double dist = (z_boundaries[i]-z)/p_hatZ;
+		double dist = (z_boundaries[i]-z)*one_over_p_hatZ;
 		if(!isfinite(dist))continue;
 		if(dist<0.0)continue; // boundary is behind us
 		if(dist>s_to_boundary)continue; // boundary intersection is already further than closest boundary
@@ -444,8 +450,8 @@ double DMaterialMap::EstimatedDistanceToBoundarySearch(double r, double z, doubl
 	DVector2 delta_rz(scale*p_hatR, scale*p_hatZ);
 
 	// Find radiation length of our starting cell
-	int ir_start = (int)floor((r-rmin)*one_over_dr);
-	int iz_start = (int)floor((z-zmin)*one_over_dz);
+	int ir_start = static_cast<int>((r-rmin)*one_over_dr);
+	int iz_start = static_cast<int>((z-zmin)*one_over_dz);
 	double RadLen_start = nodes[ir_start][iz_start].RadLen;
 	
 	// Loop until we find a change of radiation length within this map or
@@ -460,8 +466,8 @@ double DMaterialMap::EstimatedDistanceToBoundarySearch(double r, double z, doubl
 	  rzpos+= delta_rz;
 
 		// Find indexes for this cell
-		int ir = (int)floor((rzpos.X()-rmin)*one_over_dr);
-		int iz = (int)floor((rzpos.Y()-zmin)*one_over_dz);
+		int ir = static_cast<int>((rzpos.X()-rmin)*one_over_dr);
+		int iz = static_cast<int>((rzpos.Y()-zmin)*one_over_dz);
 
 		// Check if we hit the boundary of the map and if so, simply return
 		// the value found above for the distance to the map boundary.
