@@ -334,6 +334,8 @@ inline bool DDetectorMatches::Get_IsMatchedToHit(const DTrackingData* locTrack) 
 		return true;
 	if(dTrackSCMatchParams.find(locTrack) != dTrackSCMatchParams.end())
 		return true;
+	if(dTrackCTOFMatchParams.find(locTrack) != dTrackCTOFMatchParams.end())
+		return true;
 	return false;
 }
 
@@ -347,6 +349,8 @@ inline bool DDetectorMatches::Get_IsMatchedToDetector(const DTrackingData* locTr
 		return (dTrackTOFMatchParams.find(locTrack) != dTrackTOFMatchParams.end());
 	else if(locDetectorSystem == SYS_START)
 		return (dTrackSCMatchParams.find(locTrack) != dTrackSCMatchParams.end());
+	else if(locDetectorSystem == SYS_CTOF)
+		return (dTrackCTOFMatchParams.find(locTrack) != dTrackCTOFMatchParams.end());
 	else
 		return false;
 }
