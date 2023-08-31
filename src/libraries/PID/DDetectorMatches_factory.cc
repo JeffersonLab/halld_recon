@@ -66,6 +66,9 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
 	locEventLoop->Get(locDIRCBarHits);
 
+	vector<const DCTOFPoint*> locCTOFPoints;
+	locEventLoop->Get(locCTOFPoints);
+
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
 	//Match tracks to showers/hits
@@ -76,6 +79,7 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToFCAL(locParticleID, locTrackTimeBasedVector[loc_i], locFCALShowers, locDetectorMatches);
 		MatchToSC(locParticleID, locTrackTimeBasedVector[loc_i], locSCHits, locDetectorMatches);
 		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
 	}
 
 	//Find nearest tracks to showers
@@ -135,6 +139,20 @@ void DDetectorMatches_factory::MatchToBCAL(const DParticleID* locParticleID, con
 	  if(locParticleID->Cut_MatchDistance(extrapolations, locBCALShowers[loc_i], locInputStartTime, locShowerMatchParams))
 	    locDetectorMatches->Add_Match(locTrackTimeBased, locBCALShowers[loc_i], locShowerMatchParams);
 	}
+}
+
+void DDetectorMatches_factory::MatchToCTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DCTOFPoint*>& locCTOFPoints, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_CTOF);
+  if (extrapolations.size()==0) return;
+  
+  double locInputStartTime = locTrackTimeBased->t0();
+  for(size_t loc_i = 0; loc_i < locCTOFPoints.size(); ++loc_i)
+    {
+      shared_ptr<DCTOFHitMatchParams> locCTOFHitMatchParams;
+      if(locParticleID->Cut_MatchDistance(extrapolations, locCTOFPoints[loc_i], locInputStartTime, locCTOFHitMatchParams))
+	locDetectorMatches->Add_Match(locTrackTimeBased, locCTOFPoints[loc_i], locCTOFHitMatchParams);
+    }
 }
 
 void DDetectorMatches_factory::MatchToTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTOFPoint*>& locTOFPoints, DDetectorMatches* locDetectorMatches) const

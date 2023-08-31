@@ -33,6 +33,7 @@
 #include <BCAL/DBCALShower_factory_IU.h>
 #include <START_COUNTER/DSCHit.h>
 #include <TOF/DTOFPoint.h>
+#include <FMWPC/DCTOFPoint.h>
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
@@ -76,7 +77,9 @@ class DEventSourceREST:public JEventSource
    jerror_t Extract_DSCHit(hddm_r::HDDM *record,
                     JFactory<DSCHit>* factory);
    jerror_t Extract_DTOFPoint(hddm_r::HDDM *record,
-                    JFactory<DTOFPoint>* factory);
+                    JFactory<DTOFPoint>* factory); 
+   jerror_t Extract_DCTOFPoint(hddm_r::HDDM *record,
+                    JFactory<DCTOFPoint>* factory);
    jerror_t Extract_DFCALShower(hddm_r::HDDM *record,
                     JFactory<DFCALShower>* factory);
    jerror_t Extract_DBCALShower(hddm_r::HDDM *record,
