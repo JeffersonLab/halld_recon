@@ -181,6 +181,7 @@ int DMagneticFieldMapFineMesh::ReadMap(string namepath, int32_t runnumber, strin
     b->Bx = a[3];
     b->By = a[4];
     b->Bz = a[5];
+    b->Bmag=sqrt(b->Bx*b->Bx + b->By*b->By + b->Bz*b->Bz);
   }
   
   // Calculate gradient at every point in the map.
@@ -525,8 +526,8 @@ void DMagneticFieldMapFineMesh::InterpolateField(double r,double z,double &Br,
 void DMagneticFieldMapFineMesh::GetFieldAndGradient(double x,double y,double z,
 						    DBfieldCartesian_t &Bdata) const{
   // radial distance
-  double r = sqrt(x*x + y*y);
-  if (r>xmax || z>zmax || z<zmin){
+  double rsq = x*x + y*y;
+  if (rsq>xmax*xmax || z>zmax || z<zmin){
     Bdata.Bx=0.0,Bdata.By=0.0,Bdata.Bz=0.;
     Bdata.Bmag=0.0;
     Bdata.dBxdx=0.0,Bdata.dBxdy=0.0,Bdata.dBxdz=0.0;
@@ -541,6 +542,7 @@ void DMagneticFieldMapFineMesh::GetFieldAndGradient(double x,double y,double z,
   // If the point (x,y,z) is outside the fine-mesh grid, interpolate 
   // on the coarse grid
   //if (true){
+  double r=sqrt(rsq);
   if (z<zminFine || z>=zmaxFine || r>=rmaxFine){
     // Get closest indices for this point
     int index_x = static_cast<int>(r*one_over_dx);
@@ -557,7 +559,7 @@ void DMagneticFieldMapFineMesh::GetFieldAndGradient(double x,double y,double z,
       // Use gradient to project grid point to requested position
       Br_ = B->Bx+B->dBxdx*ur+B->dBxdz*uz;
       Bdata.Bz = B->Bz+B->dBzdx*ur+B->dBzdz*uz;
-      Bdata.Bmag=sqrt(Bdata.Bz*Bdata.Bz+Br_*Br_);
+      Bdata.Bmag=B->Bmag; // approximation, at grid point edge
       
       dBrdr_=B->dBxdx;
       dBrdz_=B->dBxdz;

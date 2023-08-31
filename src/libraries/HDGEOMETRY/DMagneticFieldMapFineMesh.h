@@ -62,6 +62,7 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
     double dBxdxdy,dBxdxdz,dBxdydz;
     double dBydxdy,dBydxdz,dBydydz;
     double dBzdxdy,dBzdxdz,dBzdydz;
+    double Bmag;
   }DBfieldPoint_t;
   
   typedef struct{
