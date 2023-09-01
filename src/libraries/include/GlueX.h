@@ -36,6 +36,7 @@ enum DetectorSystem_t{
      SYS_TRD        = 0x40000,
      SYS_CTOF       = 0x80000,
      SYS_GEMTRD     = 0x100000,
+     SYS_ITOF       = 0x200000,
 };
 
 inline const char* SystemName(DetectorSystem_t sys)
@@ -110,6 +111,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_GEMTRD:
 	      return "GEMTRD";
 	      break;
+          case SYS_ITOF:
+	      return "ITOF";
+	      break;
      }
      return "UNKNOWN";
 }
@@ -164,6 +168,8 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
                 return SYS_CTOF;
 	else if(strcmp(locSystemName, "GEMTRD") == 0)
                 return SYS_GEMTRD;
+	else if(strcmp(locSystemName, "ITOF") == 0)
+                return SYS_ITOF;
 	else
 		return SYS_NULL;
 }
