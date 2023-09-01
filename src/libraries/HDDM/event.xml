@@ -124,6 +124,15 @@
     </dircTruthPmtHit>
     <dircPmtHit maxOccurs="unbounded" minOccurs="0" t="float" ch="int"/>
       </DIRC>
+      <innerTOF minOccurs="0">
+	<itofCounter maxOccurs="unbounded" minOccurs="0">  
+	  <itofHit maxOccurs="unbounded" minOccurs="0" dE="float" t="float" x="float" y="float"/>  
+	  <itofTruthHit maxOccurs="unbounded" minOccurs="0" dE="float" t="float" x="float" y="float"/>
+	</itofCounter>
+	<itofTruthPoint E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+          <trackID minOccurs="0" itrack="int"/>
+        </itofTruthPoint>
+      </innerTOF>
       <forwardTOF minOccurs="0">
         <ftofCounter bar="int" maxOccurs="unbounded" minOccurs="0" plane="int">
           <!-- ftof hits are either north / beam-left (end=0) or south / beam-right (end=1)-->
