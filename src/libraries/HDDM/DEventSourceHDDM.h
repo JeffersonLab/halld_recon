@@ -46,6 +46,7 @@ using namespace std;
 #include "TOF/DTOFTruth.h"
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFHitMC.h"
+#include "TOF/DITOFHit.h"
 #include "START_COUNTER/DSCTruthHit.h"
 #include "START_COUNTER/DSCHit.h"
 #include <PID/DMCReaction.h>
@@ -74,7 +75,6 @@ using namespace std;
 #include "GEMTRD/DGEMTRDTruthHit.h"
 #include "GEMTRD/DGEMTRDHit.h"
 #include "GEMTRD/DGEMTRDTruth.h"
-#include "FMWPC/DCTOFHit.h"
 #include "FMWPC/DCTOFHit.h"
 #include "FMWPC/DCTOFTruth.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
@@ -148,7 +148,7 @@ class DEventSourceHDDM:public JEventSource
       jerror_t Extract_DFMWPCTruth(hddm_s::HDDM *record,  JFactory<DFMWPCTruth> *factory, string tag);
       jerror_t Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTOFHit> *factory, string tag);
       jerror_t Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactory<DCTOFTruth> *factory, string tag);
-      
+      jerror_t Extract_DITOFHit(hddm_s::HDDM *record,  JFactory<DITOFHit> *factory, string tag);
       jerror_t Extract_DGEMTRDTruthHit(hddm_s::HDDM *record,  JFactory<DGEMTRDTruthHit> *factory, string tag);
       jerror_t Extract_DGEMTRDHit(hddm_s::HDDM *record,  JFactory<DGEMTRDHit> *factory, string tag);
       jerror_t Extract_DGEMTRDTruth(hddm_s::HDDM *record,  JFactory<DGEMTRDTruth> *factory, string tag);
