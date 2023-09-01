@@ -20,8 +20,8 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/TOF/TOFHit Matched time
-// hnamepath: /HLDetectorTiming/TOF/TOFHit TDC_ADC Difference
+// hnamepath: /HLDetectorTiming/Physics Triggers/TOF/TOFHit Matched time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TOF/TOFHit TDC_ADC Difference
 //
 // e-mail: aaustreg@jlab.org
 // e-mail: marki@jlab.org
@@ -42,10 +42,10 @@
         double nominalTOFTime = 12.;
 
 	//Get Histograms
-	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("SC/SCHit Matched time");
-	TH1I* TOF_Timing         = (TH1I*)gDirectory->Get("TOF/TOFHit Matched time");
-	TH2I* SC_TDCADC_Timing   = (TH2I*)gDirectory->Get("SC/SCHit TDC_ADC Difference");
-	TH2I* TOF_TDCADC_Timing  = (TH2I*)gDirectory->Get("TOF/TOFHit TDC_ADC Difference");
+	TH1I* SC_Timing          = (TH1I*)gDirectory->Get("Physics Triggers/SC/SCHit Matched time");
+	TH1I* TOF_Timing         = (TH1I*)gDirectory->Get("Physics Triggers/TOF/TOFHit Matched time");
+	TH2I* SC_TDCADC_Timing   = (TH2I*)gDirectory->Get("Physics Triggers/SC/SCHit TDC_ADC Difference");
+	TH2I* TOF_TDCADC_Timing  = (TH2I*)gDirectory->Get("Physics Triggers/TOF/TOFHit TDC_ADC Difference");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

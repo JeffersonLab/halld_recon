@@ -119,7 +119,7 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 	//prepare for kinematic fit
 	dKinFitUtils->Reset_NewEvent();
 	dKinFitter->Reset_NewEvent();
-	TVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
+	DVector3 locTRoughPosition(locRoughPosition.X(), locRoughPosition.Y(), locRoughPosition.Z());
 
 	// create particles for kinematic fit
 	set<shared_ptr<DKinFitParticle>> locKinFitParticles;
@@ -210,7 +210,7 @@ jerror_t DVertex_factory::Create_Vertex_KinFit(const DEventRFBunch* locEventRFBu
 {
 	auto locResultVertexConstraint = std::dynamic_pointer_cast<DKinFitConstraint_Vertex>(*dKinFitter->Get_KinFitConstraints().begin());
 
-	TVector3 locFitVertex = locResultVertexConstraint->Get_CommonVertex();
+	DVector3 locFitVertex = locResultVertexConstraint->Get_CommonVertex();
 	DVector3 locDFitVertex(locFitVertex.X(), locFitVertex.Y(), locFitVertex.Z());
 	double locTime = locEventRFBunch->dTime + (locDFitVertex.Z() - dTargetZCenter)/29.9792458;
 

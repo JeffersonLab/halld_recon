@@ -66,8 +66,8 @@ def main():
     # check 2ns shift:  assume that if both the SC and TOF are shifted, then everything is
     # we'll assume the shift is -2ns for now
     f = TFile(ROOT_FILE)
-    SC_RF_T_Hist = f.Get("HLDetectorTiming/TRACKING/SC - RF Time")
-    TOF_RF_T_Hist = f.Get("HLDetectorTiming/TRACKING/TOF - RF Time")
+    SC_RF_T_Hist = f.Get("HLDetectorTiming/Physics Triggers/TRACKING/SC - RF Time")
+    TOF_RF_T_Hist = f.Get("HLDetectorTiming/Physics Triggers/TRACKING/TOF - RF Time")
 
     # fit to Start Counter times
     try:

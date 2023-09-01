@@ -60,14 +60,14 @@ bool DKinFitUtils_GlueX::Get_IsBFieldNearBeamline(void) const
 	return (dynamic_cast<const DMagneticFieldMapNoField*>(dMagneticFieldMap) == NULL);
 }
 
-TVector3 DKinFitUtils_GlueX::Get_BField(const TVector3& locPosition) const
+DVector3 DKinFitUtils_GlueX::Get_BField(const DVector3& locPosition) const
 {
 	if(dMagneticFieldMap == NULL)
-		return TVector3(0.0, 0.0, 0.0);
+		return DVector3(0.0, 0.0, 0.0);
 
 	double locBx, locBy, locBz;
 	dMagneticFieldMap->GetField(locPosition.X(), locPosition.Y(), locPosition.Z(), locBx, locBy, locBz);
-	return (TVector3(locBx, locBy, locBz));
+	return (DVector3(locBx, locBy, locBz));
 }
 
 /****************************************************************** MAKE PARTICLES *****************************************************************/
@@ -78,8 +78,8 @@ shared_ptr<DKinFitParticle> DKinFitUtils_GlueX::Make_BeamParticle(const DBeamPho
 	if(dParticleMap_SourceToInput_Beam.find(locSourcePair) != dParticleMap_SourceToInput_Beam.end())
 		return dParticleMap_SourceToInput_Beam[locSourcePair]; //not unique, return existing
 
-	TLorentzVector locSpacetimeVertex(Make_TVector3(locBeamPhoton->position()), locBeamPhoton->time());
-	TVector3 locMomentum = Make_TVector3(locBeamPhoton->momentum());
+	DLorentzVector locSpacetimeVertex(locBeamPhoton->position(), locBeamPhoton->time());
+	DVector3 locMomentum = locBeamPhoton->momentum();
 	Particle_t locPID = locBeamPhoton->PID();
 
 	auto locKinFitParticle = DKinFitUtils::Make_BeamParticle(PDGtype(locPID), ParticleCharge(locPID), ParticleMass(locPID), locSpacetimeVertex, locMomentum, locBeamPhoton->errorMatrix());
@@ -95,8 +95,8 @@ shared_ptr<DKinFitParticle> DKinFitUtils_GlueX::Make_BeamParticle(const DBeamPho
 		return dParticleMap_SourceToInput_Beam[locSourcePair]; //not unique, return existing
 
 	//set rf time for beam particle
-	TLorentzVector locSpacetimeVertex(Make_TVector3(locBeamPhoton->position()), locEventRFBunch->dTime);
-	TVector3 locMomentum = Make_TVector3(locBeamPhoton->momentum());
+	DLorentzVector locSpacetimeVertex(locBeamPhoton->position(), locEventRFBunch->dTime);
+	DVector3 locMomentum = locBeamPhoton->momentum();
 	Particle_t locPID = locBeamPhoton->PID();
 
 	//set rf time variance in covariance matrix
@@ -121,8 +121,8 @@ shared_ptr<DKinFitParticle> DKinFitUtils_GlueX::Make_DetectedParticle(const DKin
 	if(dParticleMap_SourceToInput_DetectedParticle.find(locKinematicData) != dParticleMap_SourceToInput_DetectedParticle.end())
 		return dParticleMap_SourceToInput_DetectedParticle[locKinematicData]; //not unique, return existing
 
-	TLorentzVector locSpacetimeVertex(Make_TVector3(locKinematicData->position()), locKinematicData->time());
-	TVector3 locMomentum = Make_TVector3(locKinematicData->momentum());
+	DLorentzVector locSpacetimeVertex(locKinematicData->position(), locKinematicData->time());
+	DVector3 locMomentum = locKinematicData->momentum();
 	Particle_t locPID = locKinematicData->PID();
 
 	double locPathLength = 0.0;
@@ -149,7 +149,7 @@ shared_ptr<DKinFitParticle> DKinFitUtils_GlueX::Make_DetectedShower(const DNeutr
 		return dParticleMap_SourceToInput_Shower[locSourcePair]; //not unique, return existing
 
 	//use DNeutralShower object (doesn't make assumption about vertex!)
-	TLorentzVector locShowerSpacetime = Make_TLorentzVector(locNeutralShower->dSpacetimeVertex);
+	DLorentzVector locShowerSpacetime = locNeutralShower->dSpacetimeVertex;
 	auto locKinFitParticle = DKinFitUtils::Make_DetectedShower(PDGtype(locPID), ParticleMass(locPID), locShowerSpacetime, locNeutralShower->dEnergy, locNeutralShower->dCovarianceMatrix);
 
 	dParticleMap_SourceToInput_Shower[locSourcePair] = locKinFitParticle;
@@ -591,11 +591,11 @@ set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const 
 				locDefinedP4 = dAnalysisUtilities->Calc_MissingP4(locReaction, locParticleCombo, false);
 			else
 				locDefinedP4 = dAnalysisUtilities->Calc_FinalStateP4(locReaction, locParticleCombo, 0, false);
-			TVector3 locInitP3Guess(locDefinedP4.Px(), locDefinedP4.Py(), locDefinedP4.Pz());
+			DVector3 locInitP3Guess(locDefinedP4.Px(), locDefinedP4.Py(), locDefinedP4.Pz());
 			locP4Constraint->Set_InitP3Guess(locInitP3Guess);
 		}
 		else
-			locP4Constraint->Set_InitP3Guess(TVector3(0.0, 0.0, 0.0));
+			locP4Constraint->Set_InitP3Guess(DVector3(0.0, 0.0, 0.0));
 	}
 
 	//Set P4 & Mass constraints
@@ -614,7 +614,7 @@ set<shared_ptr<DKinFitConstraint>> DKinFitUtils_GlueX::Create_Constraints(const 
 			if(!locStepVertexInfo->Get_FittableVertexFlag())
 				continue;
 			auto locDX4 = locParticleCombo->Get_ParticleComboStep(locStepVertexInfo->Get_StepIndices().front())->Get_SpacetimeVertex();
-			TLorentzVector locX4(locDX4.X(), locDX4.Y(), locDX4.Z(), locDX4.T());
+			DLorentzVector locX4(locDX4.X(), locDX4.Y(), locDX4.Z(), locDX4.T());
 
 			auto locFullConstrainParticles = Build_ParticleSet(locStepVertexInfo->Get_FullConstrainParticles(true), locKinFitChain);
 			auto locNoConstrainParticles = Build_ParticleSet(locStepVertexInfo->Get_NoConstrainParticles(true), locKinFitChain);
@@ -898,8 +898,8 @@ bool DKinFitUtils_GlueX::Propagate_TrackInfoToCommonVertex(DKinematicData* locKi
 		//this function should only be used on decaying particles involved in two vertex fits:
 			//propagates the track information from the vertex at which it is DEFINED to the OTHER vertex (e.g. production -> decay)
 
-	TVector3 locMomentum;
-	TLorentzVector locSpacetimeVertex;
+	DVector3 locMomentum;
+	DLorentzVector locSpacetimeVertex;
 	pair<double, double> locPathLengthPair, locRestFrameLifetimePair;
 	TMatrixFSym locTempCovarianceMatrix(11);
 	if(!DKinFitUtils::Propagate_TrackInfoToCommonVertex(locKinFitParticle, locVXi, locMomentum, locSpacetimeVertex, locPathLengthPair, locRestFrameLifetimePair, &locTempCovarianceMatrix))

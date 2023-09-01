@@ -47,7 +47,9 @@ class DMagneticFieldMapSpoiled:public DMagneticFieldMap{
 					 double &dBydz,
 					 double &dBzdx, double &dBzdy,
 					 double &dBzdz) const;
-		
+		void GetFieldAndGradient(double x,double y,double z,
+					 DBfieldCartesian_t &Bdata) const;
+
 	protected:
 		
 		void Init(void);

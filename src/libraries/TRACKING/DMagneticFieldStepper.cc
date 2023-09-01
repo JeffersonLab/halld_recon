@@ -450,24 +450,24 @@ bool DMagneticFieldStepper::SwimToPlane(DVector3 &mypos, DVector3 &mymom, const 
 		double C = zdir.Dot(norm);
 		double D = pos_diff.Dot(norm);
 
-		double alpha = -A*Ro/2.0;
+		double alpha = -0.5*A*Ro;
 		
 		// If alpha is zero here (which it is if "norm" happens to be perpendicular
 		// to "xdir") then we will need to fall back to a linear projection
 		if(alpha!=0.0 && isfinite(alpha)){
-
 			double beta = B*Ro + C*dz_dphi;
 			
 			// now we solve the quadratic equation for phi. It's not obvious
 			// a priori which root will be correct so we calculate both and
 			// choose the one closer to phi=0
 			double d = sqrt(beta*beta - 4.0*alpha*D);
-			double phi1 = (-beta + d)/(2.0*alpha);
-			double phi2 = (-beta - d)/(2.0*alpha);
+			double one_over_2alpha=0.5/alpha;
+			double phi1 = (-beta + d)*one_over_2alpha;
+			double phi2 = (-beta - d)*one_over_2alpha;
 			double phi = fabs(phi1)<fabs(phi2) ? phi1:phi2;
 			
 			// Calculate position in plane
-			mypos += -Ro*phi*phi/2.0*xdir + Ro*phi*ydir + dz_dphi*phi*zdir;
+			mypos += -0.5*Ro*phi*phi*xdir + Ro*phi*ydir + dz_dphi*phi*zdir;
 
 			// Calculate momentum in plane
 			mom.Rotate(phi, zdir);

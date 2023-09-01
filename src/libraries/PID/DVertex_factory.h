@@ -11,8 +11,6 @@
 #include <JANA/JFactory.h>
 #include "JANA/JEventLoop.h"
 
-#include "TVector3.h"
-
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "DANA/DApplication.h"
 #include "DVector3.h"

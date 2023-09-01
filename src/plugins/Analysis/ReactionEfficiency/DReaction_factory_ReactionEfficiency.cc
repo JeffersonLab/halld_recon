@@ -7,6 +7,44 @@
 
 #include "DReaction_factory_ReactionEfficiency.h"
 
+// helper function that splits string at positions of given delimiter keeping only non-empty tokens
+vector<string>
+tokenizeString(
+	const string& s,
+	const char delimiter
+) {
+	istringstream ss(s);
+	string token;
+	vector<string> result;
+	while (getline(ss, token, delimiter)) {
+		if (token != "") {
+			result.push_back(token);
+		}
+	}
+	return result;
+}
+
+// helper function that registers reaction depending on white list
+void
+DReaction_factory_ReactionEfficiency::registerReaction(
+	DReaction* locReaction,
+	const vector<string>& locReactionsToWrite
+) {
+	if (not locReaction) {
+		return;
+	}
+	if (locReactionsToWrite.empty()) {
+		// process all reactions
+		_data.push_back(locReaction);
+	} else {
+		// process only selected reactions
+		const string locReactionName = locReaction->Get_ReactionName();
+		if (find(locReactionsToWrite.begin(), locReactionsToWrite.end(), locReactionName) != locReactionsToWrite.end()) {
+			_data.push_back(locReaction);
+		}
+	}
+}
+
 //------------------
 // evnt
 //------------------
@@ -18,6 +56,10 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 	double locMinKinFitFOM = 1e-4;
 	gPARMS->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
+	string locOnlyReactions = "";  // default: process all reactions
+	gPARMS->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
+	                                                                                // e.g. REACTIONEFFIC:ONLY_REACTIONS pi0pipmisspim__B1_T1_U1_Effic;pi0pimmisspip__B1_T1_U1_Effic
+	const vector<string> locReactionsToWrite = tokenizeString(locOnlyReactions, ';');
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -81,11 +123,15 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
+	// CUSTOM ACTION TO MATCH MISSING TRAJECTORY WITH FAST DETECTOR
+	deque<int> locChargedIndices; locChargedIndices.clear();  
+	locChargedIndices.push_back(1); locChargedIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_MissingMatch(locReaction, true, locChargedIndices, "MissingMatch"));
+
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** pi0pimmisspip__B1_T1_U1_M7_Effic ****************************************************/
 
@@ -115,10 +161,204 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
 
+	// CUSTOM ACTION TO MATCH MISSING TRAJECTORY WITH FAST DETECTOR
+	locChargedIndices.clear();  
+	locChargedIndices.push_back(1); locChargedIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_MissingMatch(locReaction, true, locChargedIndices, "MissingMatch"));
+
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+	/**************************************************** pi0pipmisspim__B1_T1_U1_Effic ****************************************************/
+
+	locReaction = new DReaction("pi0pipmisspim__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiPlus, Proton}, PiMinus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_pi0pipmisspim__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+	locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+	// CUSTOM ACTION TO MATCH MISSING TRAJECTORY WITH FAST DETECTOR
+	locChargedIndices.clear();  
+	locChargedIndices.push_back(1); locChargedIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_MissingMatch(locReaction, true, locChargedIndices, "MissingMatch"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+	/**************************************************** pi0pimmisspip__B1_T1_U1_Effic ****************************************************/
+
+	locReaction = new DReaction("pi0pimmisspip__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiMinus, Proton}, PiPlus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_pi0pimmisspip__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+	locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+	// CUSTOM ACTION TO MATCH MISSING TRAJECTORY WITH FAST DETECTOR
+	locChargedIndices.clear();  
+	locChargedIndices.push_back(1); locChargedIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_MissingMatch(locReaction, true, locChargedIndices, "MissingMatch"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+
+	/**************************************************** pippimmisspi0__B1_T1_U1_M7_Effic ****************************************************/
+
+        locReaction = new DReaction("pippimmisspi0__B1_T1_U1_M7_Effic");
+        locReactionStep = new DReactionStep(Gamma, Proton, {PiPlus, PiMinus, Proton}, Pi0);
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+        locReaction->Set_KinFitType(d_P4AndVertexFit);
+        locReaction->Set_NumPlusMinusRFBunches(1); // B1
+        locReaction->Set_MaxExtraGoodTracks(1); // T1
+        locReaction->Enable_TTreeOutput("tree_pippimmisspi0__B1_T1_U1_M7_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+        // KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+        locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+        // CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+
+	/**************************************************** pippimpi0__B1_T1_U1_M7_Effic ****************************************************/
+        // exclusive pi+ pi- pi0 w/ no pi0 mass constraint
+        locReaction = new DReaction("pippimpi0__B1_T1_U1_M7_Effic");
+        locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiPlus, PiMinus, Proton});
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+        locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+        locReactionStep->Set_KinFitConstrainInitMassFlag(false);
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+        locReaction->Set_KinFitType(d_P4AndVertexFit);
+        locReaction->Set_NumPlusMinusRFBunches(1); // B1
+        locReaction->Set_MaxExtraGoodTracks(1); // T1
+        locReaction->Enable_TTreeOutput("tree_pippimpi0__B1_T1_U1_M7_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+        // HISTOGRAM MASSES //false/true: measured/kinfit data
+        locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+        // KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+        locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+        // CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(3);
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+        // HISTOGRAM MASSES //false/true: measured/kinfit data
+        locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+	
+	
+	/**************************************************** pippimpi0__B1_T1_U1_Effic ****************************************************/
+        // exclusive pi+ pi- pi0 w/ pi0 mass constraint
+        locReaction = new DReaction("pippimpi0__B1_T1_U1_Effic");
+        locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiPlus, PiMinus, Proton});
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+        locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+        locReactionStep->Set_KinFitConstrainInitMassFlag(true);
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+        locReaction->Set_KinFitType(d_P4AndVertexFit);
+        locReaction->Set_NumPlusMinusRFBunches(1); // B1
+        locReaction->Set_MaxExtraGoodTracks(1); // T1
+        locReaction->Enable_TTreeOutput("tree_pippimpi0__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+        // HISTOGRAM MASSES //false/true: measured/kinfit data
+        locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+        // KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+        locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+        // CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(3);
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+        // HISTOGRAM MASSES //false/true: measured/kinfit data
+        locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+	/**************************************************** pippim__B1_T1_U1_Effic ****************************************************/
+        locReaction = new DReaction("pippim__B1_T1_U1_Effic");
+        locReactionStep = new DReactionStep(Gamma, Proton, {PiPlus, PiMinus, Proton});
+        locReaction->Add_ReactionStep(locReactionStep);
+        dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+        locReaction->Set_KinFitType(d_P4AndVertexFit);
+        locReaction->Set_NumPlusMinusRFBunches(1); // B1
+        locReaction->Set_MaxExtraGoodTracks(1); // T1
+        locReaction->Enable_TTreeOutput("tree_pippim__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+        // KINEMATIC FIT
+        locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+        locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+        locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.2, 1.2, "OmegaRecoil"));
+        locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.2, 1.2, "OmegaRecoil_KinFit"));
+
+        registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
 
 	/**************************************************** kpkmmissprot__B1_T1_U1_Effic ****************************************************/
 	
@@ -141,7 +381,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	//_data.push_back(locReaction); //Register the DReaction with the factory
+	//registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_Lambda1520Effic ****************************************************/
 	
@@ -164,7 +404,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 1.0, 2.0, "Lambda1520Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpmisskm__B1_T1_U1_PhiEffic ****************************************************/
 	
@@ -187,7 +427,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kmmisskp__B1_T1_U1_PhiEffic ****************************************************/
 	
@@ -210,7 +450,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.3, "PhiRecoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.3, "PhiRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** gpimkpmissprot__B1_T1_U1_Effic ****************************************************/
 	
@@ -233,7 +473,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	/**************************************************** kpsigmamissprot__B1_T1_U1_Effic ****************************************************/
 	
@@ -265,7 +505,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil"));
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.5, 1.5, "Sigma0Recoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
 	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
@@ -297,7 +537,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
 	/**************************************************** antilamblambmisspim__B1_T1_U1_Effic ****************************************************/
@@ -329,7 +569,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, AntiLambda, false, 100, 0.8, 1.3, "AntiLambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, AntiLambda, false, 0.95, 1.25, "AntiLambdaMassCut"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
 	/**************************************************** antilamblambmissprot__B1_T1_U1_Effic ****************************************************/
@@ -361,7 +601,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 	
 
 	/**************************************************** antilamblambmisspip__B1_T1_U1_Effic ****************************************************/
@@ -393,12 +633,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Lambda, false, 0.95, 1.25, "LambdaMassCut"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
-	/**************************************************** pi0lambkpmiss__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** pi0lambmisskp__B1_T1_U1_Effic ****************************************************/
 	
-	locReaction = new DReaction("pi0lambkpmiss__B1_T1_U1_Effic");
+	locReaction = new DReaction("pi0lambmisskp__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiMinus, Proton}, KPlus);
 	locReaction->Add_ReactionStep(locReactionStep);
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
@@ -410,7 +650,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // B1
 	locReaction->Set_MaxExtraGoodTracks(1); // T1
-	locReaction->Enable_TTreeOutput("tree_pi0lambkpmiss__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	locReaction->Enable_TTreeOutput("tree_pi0lambmisskp__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
 	
 	// KINEMATIC FIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
@@ -426,12 +666,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 100, 0.8, 1.3, "LambdaMass"));
 	locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, 0, locLambdaIndices, false, 0.95, 1.25, "LambdaMassCut"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	
-	/**************************************************** pi0lambpmiss__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** pi0kplambmissprot__B1_T1_U1_Effic ****************************************************/
 	
-	locReaction = new DReaction("pi0lambpmiss__B1_T1_U1_Effic");
+	locReaction = new DReaction("pi0kplambmissprot__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, PiMinus, KPlus}, Proton);
 	locReaction->Add_ReactionStep(locReactionStep);
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
@@ -443,7 +683,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // B1
 	locReaction->Set_MaxExtraGoodTracks(1); // T1
-	locReaction->Enable_TTreeOutput("tree_pi0lambpmiss__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	locReaction->Enable_TTreeOutput("tree_pi0kplambmissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
 	
 	// KINEMATIC FIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
@@ -453,12 +693,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
-	/**************************************************** pi0lambpimmiss__B1_T1_U1_Effic ****************************************************/
+	/**************************************************** pi0kplambmisspim__B1_T1_U1_Effic ****************************************************/
 	
-	locReaction = new DReaction("pi0lambpimmiss__B1_T1_U1_Effic");
+	locReaction = new DReaction("pi0kplambmisspim__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {Pi0, KPlus, Proton}, PiMinus);
 	locReaction->Add_ReactionStep(locReactionStep);
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
@@ -470,7 +710,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Set_KinFitType(d_P4AndVertexFit);
 	locReaction->Set_NumPlusMinusRFBunches(1); // B1
 	locReaction->Set_MaxExtraGoodTracks(1); // T1
-	locReaction->Enable_TTreeOutput("tree_pi0lambpimmiss__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	locReaction->Enable_TTreeOutput("tree_pi0kplambmisspim__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
 	
 	// KINEMATIC FIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
@@ -480,7 +720,108 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
         locRecoilIndices.clear();  locRecoilIndices.push_back(0); locRecoilIndices.push_back(2); // K* = Pi0+KPlus 
 	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.9, 1.3, "LambdaRecoil_KinFit"));
 	
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+
+	/**************************************************** pippippimpimmissprot__B1_T1_U1_Effic ****************************************************/
+	
+	locReaction = new DReaction("pippippimpimmissprot__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {PiPlus, PiPlus, PiMinus, PiMinus}, Proton);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_pippippimpimmissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+	
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+	
+	// MISSING MASS SQUARED
+	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "MM2")); 
+	
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+
+	/**************************************************** omegamisspim__B1_T1_U1_Effic ****************************************************/
+
+	locReaction = new DReaction("omegamisspim__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {omega, Pi0, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(omega, {Pi0, PiPlus}, PiMinus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_omegapi0misspim__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+	locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.6, "b1Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.6, "b1Recoil_KinFit"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+	/**************************************************** omegapi0misspip__B1_T1_U1_Effic ****************************************************/
+
+	locReaction = new DReaction("omegapi0misspip__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {omega, Pi0, Proton});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReactionStep = new DReactionStep(omega, {Pi0, PiMinus}, PiPlus);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_omegapi0misspip__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PreKinFit"));
+
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// CUSTOM ACTION TO REDUCE OUTPUT SIZE
+	locRecoilIndices.clear();  locRecoilIndices.push_back(2);
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, false, locRecoilIndices, 0.8, 1.6, "b1Recoil"));
+	locReaction->Add_AnalysisAction(new DCustomAction_RecoilMass(locReaction, true, locRecoilIndices, 0.8, 1.6, "b1Recoil_KinFit"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 600, 0.0, 0.3, "Pi0_PostKinFit"));
+
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 	return NOERROR;
 }

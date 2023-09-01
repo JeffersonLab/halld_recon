@@ -33,11 +33,18 @@
 #include "TFitResult.h"
 #include "TF1.h"
 #include "TH1D.h"
+#include "TH1F.h"
+#include "TH2F.h"
 #include "TObjArray.h"
 #include "TMath.h"
 
 #include <DIRC/DDIRCGeometry.h>
 #include <DIRC/DDIRCLut.h>
+
+#include <functional>
+#include <map>
+
+using std::function;
 
 //#include "HistogramTools.h"
 
@@ -57,6 +64,8 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 
         //HistogramTools *histoTools;     
         
+        void CreateHistograms(string dirname);
+        
         void DoRoughTiming();
         void DoTDCADCAlign();
         void DoTrackBased();
@@ -66,6 +75,9 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
         int GetCCDBIndexTAGM(const DTAGMHit *);
         int GetCCDBIndexCDC(const DCDCHit *);
         int GetCCDBIndexCDC(int, int);
+        
+        map< string, function<bool(jana::JEventLoop *eventLoop)> > dCutFunctions;
+        
         double BEAM_CURRENT;
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
@@ -78,6 +90,10 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		bool CCAL_CALIB;
 		bool STRAIGHT_TRACK;
 		bool NO_START_COUNTER;
+		bool INCLUDE_ALL_TRIGGERS;
+		bool INCLUDE_PS_TRIGGERS;
+		bool PRIMEX_TRIGGERS;
+		bool CPP_TRIGGERS;
 		
         // The final setup requires some shifts relative to the previous values, need to store them
 
@@ -95,6 +111,132 @@ class JEventProcessor_HLDetectorTiming:public jana::JEventProcessor{
 		// constants for FCAL/TOF matching
 		const double TOF_X_MEAN  =  0.75;  const double TOF_X_SIG  =  1.75;
 		const double TOF_Y_MEAN  = -0.50;  const double TOF_Y_SIG  =  1.75;
+
+		// histograms
+		TH1F *dHistBeamCurrent;
+		TH1F *dHistBeamEvents;
+		
+		map<string, TH1F*> dCDCHitTimes;
+		map<string, TH2F*> dCDCHitTimesPerStraw;
+
+		map<string, TH1F*> dFDCWireHitTimes;
+		map<string, TH2F*> dFDCWireModuleHitTimes;
+		map<string, TH1F*> dFDCCathodeHitTimes;
+		
+		map<string, TH1F*> dSCHitTimes;
+		map<string, TH1F*> dSCADCHitTimes;
+		map<string, TH1F*> dSCTDCHitTimes;
+		map<string, TH1F*> dSCMatchedHitTimes;
+		map<string, TH2F*> dSCADCTDCHitTimes;
+		map<string, TH2F*> dSCMatchedHitTimesPerSector;
+
+		map<string, TH1F*> dTOFHitTimes;
+		map<string, TH1F*> dTOFADCHitTimes;
+		map<string, TH1F*> dTOFTDCHitTimes;
+		map<string, TH1F*> dTOFMatchedHitTimes;
+		map<string, TH2F*> dTOFADCTDCHitTimes;
+		map<string, TH2F*> dTOFMatchedHitTimesPerSector;
+
+		map<string, TH1F*> dBCALADCHitTimes;
+		map<string, TH2F*> dBCALADCHitTimesUpstream;
+		map<string, TH2F*> dBCALADCHitTimesDownstream;
+		map<string, TH1F*> dBCALTDCHitTimes;
+		map<string, TH2F*> dBCALTDCHitTimesUpstream;
+		map<string, TH2F*> dBCALTDCHitTimesDownstream;
+		map<string, TH2F*> dBCALADCTDCHitTimesUpstream;
+		map<string, TH2F*> dBCALADCTDCHitTimesDownstream;
+
+		map<string, TH1F*> dFCALHitTimes;
+		map<string, TH2F*> dFCALHitOccupancy;
+		map<string, TH2F*> dFCALHitLocalTimes;
+		map<string, TH2F*> dFCALHitTimesPerChannel;
+		map<string, TH1F*> dFCALTotalEnergy;
+
+		map<string, TH1F*> dCCALHitTimes;
+		map<string, TH2F*> dCCALHitOccupancy;
+		map<string, TH2F*> dCCALHitLocalTimes;
+		map<string, TH2F*> dCCALHitTimesPerChannel;
+
+		map<string, TH1F*> dDIRCHitTimes;
+		map<string, TH2F*> dDIRCHitTimesPerChannelNorth;
+		map<string, TH2F*> dDIRCHitTimesPerChannelSouth;
+		map<string, TH2F*> dDIRCDeltaTimePerChannelNorth;
+		map<string, TH2F*> dDIRCDeltaTimePerChannelSouth;
+
+		map<string, TH1F*> dTPOLHitTimes;
+		map<string, TH2F*> dTPOLHitTimesPerSector;
+
+		map<string, TH1F*> dFMWPCHitTimes;
+		map<string, TH2F*> dFMWPCHitTimesPerLayer;
+
+		map<string, TH1F*> dCTOFHitTimes;
+		map<string, TH2F*> dCTOFHitTimesPerLayer;
+
+		map<string, TH1F*> dPSHitTimes;
+		map<string, TH2F*> dPSHitTimesPerColumn;
+
+		map<string, TH1F*> dPSCHitTimes;
+		map<string, TH1F*> dPSCADCHitTimes;
+		map<string, TH1F*> dPSCTDCHitTimes;
+		map<string, TH1F*> dPSCMatchedHitTimes;
+		map<string, TH2F*> dPSCADCTDCHitTimes;
+		map<string, TH2F*> dPSCMatchedHitTimesPerSector;
+
+		map<string, TH1F*> dTAGHHitTimes;
+		map<string, TH1F*> dTAGHADCHitTimes;
+		map<string, TH1F*> dTAGHTDCHitTimes;
+		map<string, TH1F*> dTAGHMatchedHitTimes;
+		map<string, TH2F*> dTAGHADCTDCHitTimes;
+		map<string, TH2F*> dTAGHMatchedHitTimesPerSector;
+
+		map<string, TH1F*> dTAGMHitTimes;
+		map<string, TH1F*> dTAGMADCHitTimes;
+		map<string, TH1F*> dTAGMTDCHitTimes;
+		map<string, TH1F*> dTAGMMatchedHitTimes;
+		map<string, TH2F*> dTAGMADCTDCHitTimes;
+		map<string, TH2F*> dTAGMMatchedHitTimesPerSector;
+
+		map<string, TH1F*> dTaggerRFTime;
+		map<string, TH1F*> dTAGHRFTime;
+		map<string, TH1F*> dTAGMRFTime;
+		map<string, TH2F*> dTaggerRFEnergyTime;
+		map<string, TH2F*> dTAGHRFCounterTime;
+		map<string, TH2F*> dTAGMRFCounterTime;
+
+		map<string, TH1F*> dTaggerSCTime;
+		map<string, TH2F*> dTaggerSCEnergyTime;
+		map<string, TH2F*> dTAGHSCCounterTime;
+		map<string, TH2F*> dTAGMSCCounterTime;
+
+		map<string, TH1F*> dSCRFTime;
+		map<string, TH1F*> dSCRFTime_AllHits;
+		map<string, TH2F*> dSCRFTimeVsSector;
+		map<string, TH1F*> dCDCSCTime;
+		map<string, TH1F*> dCDCBCALTime;
+		map<string, TH1F*> dTOFRFTime;
+		map<string, TH1F*> dTOFSCTime;
+		map<string, TH1F*> dEarliestCDCTime;
+		map<string, TH1F*> dEarliestFDCTime;
+		map<string, TH1F*> dBCALShowerRFTime;
+		map<string, TH1F*> dBCALShowerSCTime;
+		map<string, TH2F*> dBCALShowerSCTimeVsCorrection;
+		map<string, TH1F*> dFCALShowerRFTime;
+		map<string, TH1F*> dFCALShowerSCTime;
+
+		
+		map<string, TH1F*> dBCALShowerRFTime_NoTracks;
+		map<string, TH2F*> dBCALShowerRFTimeVsEnergy_NoTracks;
+		map<string, TH1F*> dFCALShowerRFTime_NoTracks;
+		map<string, TH2F*> dFCALShowerRFTimeVsEnergy_NoTracks;
+		map<string, TH1F*> dCCALShowerRFTime_NoTracks;
+		map<string, TH2F*> dCCALShowerRFTimeVsEnergy_NoTracks;
+		map<string, TH1F*> dTOFShowerRFTime_NoTracks;
+
+		map<string, vector<TH1F*> > dTAGHADCRFCompareTimes;
+		map<string, vector<TH1F*> > dTAGHTDCRFCompareTimes;
+		map<string, vector<TH1F*> > dTAGMADCRFCompareTimes;
+		map<string, vector<TH1F*> > dTAGMTDCRFCompareTimes;
+		map<string, vector<TH1F*> > dSCTargetRFCompareTimes;
 
 };
 

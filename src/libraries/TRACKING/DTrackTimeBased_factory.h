@@ -50,6 +50,9 @@ class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
   bool PID_FORCE_TRUTH;
   bool USE_HITS_FROM_WIREBASED_FIT;
 
+  bool SAVE_TRUNCATED_DEDX;       // store extra dEdx information in time based tracks
+  bool COUNT_POTENTIAL_HITS; // count the number of FDC+CDC hits that could be on the track
+
   DTrackFitter *fitter;
   const DParticleID* pid_algorithm;
   vector<int> mass_hypotheses_positive;

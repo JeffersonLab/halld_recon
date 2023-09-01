@@ -254,8 +254,8 @@ jerror_t DEventProcessor_dirc_hists::evnt(JEventLoop *loop, uint64_t eventnumber
 	 
 	  if(foundDIRC) {
 
-		  TVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-		  TVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+		  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
+		  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
 		  double locExpectedThetaC = locDIRCMatchParams->dExpectedThetaC;
 		  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 		  int locBar = locDIRCGeometry->GetBar(posInBar.Y());

@@ -19,11 +19,11 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/CDC/CDCHit time
-// hnamepath: /HLDetectorTiming/CDC/CDCHit time per Straw Raw
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Cathode time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Wire time vs. module
+// hnamepath: /HLDetectorTiming/Physics Triggers/CDC/CDCHit time
+// hnamepath: /HLDetectorTiming/Physics Triggers/CDC/CDCHit time per Straw Raw
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Cathode time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Wire time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Wire time vs. module
 
 // e-mail: aaustreg@jlab.org
 // e-mail: pentchev@jlab.org
@@ -38,16 +38,16 @@
 	locDirectory->cd();
 
 	//Setpoints
-	double nominalCDCTime = 10.;
-	double nominalFDCCathodeTime = 3.;
-	double nominalFDCWireTime = 3.;
+	double nominalCDCTime = 12.;
+	double nominalFDCCathodeTime = 20.;
+	double nominalFDCWireTime = 20.;
 
 	//Get Histograms
-	TH1I* CDCHit_Timing    = (TH1I*)gDirectory->Get("CDC/CDCHit time");
-	TH2I* CDCHit_vs_module_Timing  = (TH2I*)gDirectory->Get("CDC/CDCHit time per Straw Raw");
-	TH1I* FDCHit_Cathode_Timing    = (TH1I*)gDirectory->Get("FDC/FDCHit Cathode time");
-	TH1I* FDCHit_Wire_Timing = (TH1I*)gDirectory->Get("FDC/FDCHit Wire time");
-	TH2I* FDCHit_Wire_vs_module_Timing  = (TH2I*)gDirectory->Get("FDC/FDCHit Wire time vs. module");
+ 	TH1I* CDCHit_Timing    = (TH1I*) gDirectory->Get("Physics Triggers/CDC/CDCHit time");
+	TH2I* CDCHit_vs_module_Timing  = (TH2I*)gDirectory->Get("Physics Triggers/CDC/CDCHit time per Straw Raw");
+ 	TH1I* FDCHit_Cathode_Timing    = (TH1I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Cathode time");
+ 	TH1I* FDCHit_Wire_Timing = (TH1I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Wire time");
+ 	TH2I* FDCHit_Wire_vs_module_Timing  = (TH2I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Wire time vs. module");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

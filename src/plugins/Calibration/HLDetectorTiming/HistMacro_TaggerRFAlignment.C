@@ -25,10 +25,10 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/TRACKING/TAGM - RFBunch Time
-// hnamepath: /HLDetectorTiming/TRACKING/TAGH - RFBunch Time
-// hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch Time
-// hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch 1D Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGM - RFBunch Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGH - RFBunch Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - RFBunch Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - RFBunch 1D Time
 
 // e-mail: aaustreg@jlab.org
 // e-mail: sdobbs@jlab.org
@@ -42,10 +42,10 @@
 	locDirectory->cd();
 
 	//Get Histograms
-    TH1I* Tagger_RF_1D = (TH1I*)gDirectory->Get("TRACKING/Tagger - RFBunch 1D Time");
-    TH2I* Tagger_RF_2D = (TH2I*)gDirectory->Get("TRACKING/Tagger - RFBunch Time");
-    TH2I* TAGH_RF_2D   = (TH2I*)gDirectory->Get("TRACKING/TAGH - RFBunch Time");
-    TH2I* TAGM_RF_2D   = (TH2I*)gDirectory->Get("TRACKING/TAGM - RFBunch Time");
+    TH1I* Tagger_RF_1D = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - RFBunch 1D Time");
+    TH2I* Tagger_RF_2D = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - RFBunch Time");
+    TH2I* TAGH_RF_2D   = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/TAGH - RFBunch Time");
+    TH2I* TAGM_RF_2D   = (TH2I*)gDirectory->Get("Physics Triggers/TRACKING/TAGM - RFBunch Time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

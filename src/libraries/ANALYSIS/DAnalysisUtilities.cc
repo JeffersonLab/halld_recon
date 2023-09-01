@@ -626,6 +626,35 @@ void DAnalysisUtilities::Get_UnusedNeutralParticles(JEventLoop* locEventLoop, co
 	}
 }
 
+void DAnalysisUtilities::Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const
+{
+	locUnusedTOFPoints.clear();
+	locEventLoop->Get(locUnusedTOFPoints);
+
+	vector<const DParticleComboStep*> locParticleComboSteps = locParticleCombo->Get_ParticleComboSteps();
+	for(size_t loc_icombo = 0; loc_icombo < locParticleComboSteps.size(); ++loc_icombo) {
+		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_icombo);
+		for(size_t loc_ipart = 0; loc_ipart < locParticleComboStep->Get_NumFinalParticles(); ++loc_ipart) {
+
+			auto locParticle = locParticleComboStep->Get_FinalParticle_Measured(loc_ipart);
+			if(locParticle == nullptr || locParticle->charge() == 0) continue; 
+
+			const DChargedTrack* locChargedTrack = static_cast<const DChargedTrack*>(locParticleComboStep->Get_FinalParticle_SourceObject(loc_ipart));
+			const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(locParticle->PID());
+	
+			if(locChargedTrackHypothesis->Get_TOFHitMatchParams() == nullptr) continue;
+			const DTOFPoint *locTOFPoint = locChargedTrackHypothesis->Get_TOFHitMatchParams()->dTOFPoint;
+
+			for(auto locIterator = locUnusedTOFPoints.begin(); locIterator != locUnusedTOFPoints.end();) {
+				if(locTOFPoint != *locIterator)
+					++locIterator;
+				else
+					locIterator = locUnusedTOFPoints.erase(locIterator);
+			}
+		}
+	}
+}
+
 void DAnalysisUtilities::Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const
 {
  	vector<const DMCThrown*> locMCThrowns;
@@ -991,7 +1020,7 @@ int DAnalysisUtilities::Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, cons
 	return locNumber_UnusedShowers;
 }
 
-int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const
+int DAnalysisUtilities::Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, DVector3 &locSumP3_UnusedTracks) const
 {
 	vector<const DChargedTrack*> locUnusedChargedTracks;
 	Get_UnusedChargedTracks(locEventLoop, locParticleCombo, locUnusedChargedTracks);

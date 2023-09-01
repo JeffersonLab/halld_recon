@@ -16,14 +16,14 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/CDC/CDCHit time
-// hnamepath: /HLDetectorTiming/FDC/FDCHit Cathode time
-// hnamepath: /HLDetectorTiming/TRACKING/Earliest Flight-time Corrected FDC Time
-// hnamepath: /HLDetectorTiming/TRACKING/Earliest CDC Time Minus Matched SC Time
-// hnamepath: /HLDetectorTiming/TRACKING/FCAL - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/TOF - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/BCAL - SC Target Time
-// hnamepath: /HLDetectorTiming/TRACKING/SC - RF Time vs. Sector
+// hnamepath: /HLDetectorTiming/Physics Triggers/CDC/CDCHit time
+// hnamepath: /HLDetectorTiming/Physics Triggers/FDC/FDCHit Cathode time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Earliest Flight-time Corrected FDC Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Earliest CDC Time Minus Matched SC Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/FCAL - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TOF - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/BCAL - SC Target Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/SC - RF Time vs. Sector
 //
 // e-mail: aaustreg@jlab.org
 // e-mail: dalton@jlab.org
@@ -41,14 +41,14 @@
 	locDirectory->cd();
 
 	//Get Histograms
-    TH1I* CDC_Timing     = (TH1I*)gDirectory->Get("CDC/CDCHit time");
-    TH1I* FDC_Timing     = (TH1I*)gDirectory->Get("FDC/FDCHit Cathode time");
-    TH1I* SC_RF_Timing  = (TH1I*)gDirectory->Get("TRACKING/SC - RF Time vs. Sector");
-    TH1I* FDC_SC_Timing  = (TH1I*)gDirectory->Get("TRACKING/Earliest Flight-time Corrected FDC Time");
-    TH1I* CDC_SC_Timing  = (TH1I*)gDirectory->Get("TRACKING/Earliest CDC Time Minus Matched SC Time");
-    TH1I* FCAL_SC_Timing = (TH1I*)gDirectory->Get("TRACKING/FCAL - SC Target Time");
-    TH1I* TOF_SC_Timing  = (TH1I*)gDirectory->Get("TRACKING/TOF - SC Target Time");
-    TH1I* BCAL_SC_Timing = (TH1I*)gDirectory->Get("TRACKING/BCAL - SC Target Time");
+    TH1I* CDC_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/CDC/CDCHit time");
+    TH1I* FDC_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/FDC/FDCHit Cathode time");
+    TH1I* SC_RF_Timing   = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/SC - RF Time vs. Sector");
+    TH1I* FDC_SC_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Earliest Flight-time Corrected FDC Time");
+    TH1I* CDC_SC_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Earliest CDC Time Minus Matched SC Time");
+    TH1I* FCAL_SC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/FCAL - SC Target Time");
+    TH1I* TOF_SC_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/TOF - SC Target Time");
+    TH1I* BCAL_SC_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/BCAL - SC Target Time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

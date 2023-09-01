@@ -64,6 +64,20 @@ class DTrackTimeBased:public DTrackingData{
 		double ddx_CDC,ddx_CDC_amp;
 		unsigned int dNumHitsUsedFordEdx_CDC;
 
+		// Add vectors for truncated means in the DC dEdx track parameters.
+		// If these vectors are empty then the truncated means are not available,
+		// otherwise ddx_FDC_trunc[1] is the dx sum for the FDC track hits with
+		// the single hit with the highest dEdx removed, [2] with the two hits
+		// with the highest dEdx removed, and so on, for as many as you find.
+		std::vector<double> ddx_FDC_trunc;  
+		std::vector<double> ddEdx_FDC_trunc;  
+		std::vector<double> ddx_FDC_amp_trunc;  
+		std::vector<double> ddEdx_FDC_amp_trunc;  
+		std::vector<double> ddx_CDC_trunc;  
+		std::vector<double> ddEdx_CDC_trunc;  
+		std::vector<double> ddx_CDC_amp_trunc;  
+		std::vector<double> ddEdx_CDC_amp_trunc;  
+
 		// Hit CDC Rings & FDC Planes
 		// use the DParticleID Get_CDCRings & Get_FDCPlanes functions to extract the information from these
 		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)

@@ -30,15 +30,15 @@ bool DCustomAction_RecoilMass::Perform_Action(JEventLoop* locEventLoop, const DP
 	// get beam, target and final state recoil particle to subtract
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);
 	auto locBeamPhoton = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_InitialParticle() : locParticleComboStep->Get_InitialParticle_Measured();
-	TLorentzVector locRecoilSumP4;
+	DLorentzVector locRecoilSumP4;
 	
 	for(size_t i=0; i<dRecoilIndices.size(); i++) {
 		auto locParticle = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticle(dRecoilIndices[i]) : locParticleComboStep->Get_FinalParticle_Measured(dRecoilIndices[i]);
 		locRecoilSumP4 += locParticle->lorentzMomentum();
 	}
 	
-	TLorentzVector locTargetP4(0,0,0,0.938);
-	TLorentzVector locRecoilP4 = locBeamPhoton->lorentzMomentum() + locTargetP4;
+	DLorentzVector locTargetP4(0,0,0,0.938);
+	DLorentzVector locRecoilP4 = locBeamPhoton->lorentzMomentum() + locTargetP4;
 	locRecoilP4 -= locRecoilSumP4;
 	double locRecoilMass = locRecoilP4.M();
 

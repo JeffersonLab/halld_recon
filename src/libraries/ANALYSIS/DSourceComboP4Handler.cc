@@ -136,6 +136,11 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	dInvariantMassCuts.emplace(phiMeson, std::make_pair(0.8, 1.2));
 	dInvariantMassCuts.emplace(D0, std::make_pair(1.8, 1.92));
 	dInvariantMassCuts.emplace(AntiD0, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(DPlus, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(DMinus, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(Dstar0, std::make_pair(1.9, 2.1));
+	dInvariantMassCuts.emplace(DstarPlus, std::make_pair(1.9, 2.1));
+	dInvariantMassCuts.emplace(DstarMinus, std::make_pair(1.9, 2.1));
 //	dInvariantMassCuts.emplace(Jpsi, std::make_pair(2.7, 3.5));
 
 	//INVARIANT MASS CUTS: BARYONS
@@ -764,7 +769,7 @@ DLorentzVector DSourceComboP4Handler::Calc_P4_NoMassiveNeutrals(const DSourceCom
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 		auto locTargetPIDToSubtract = std::get<4>(locCombosByUsePair.first);
 		if(locTargetPIDToSubtract != Unknown)
-			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
+			locTotalP4 -= DLorentzVector(DVector3(), ParticleMass(locTargetPIDToSubtract));
 	}
 
 	//save the results and return
@@ -930,7 +935,7 @@ bool DSourceComboP4Handler::Calc_P4_HasMassiveNeutrals(bool locIsProductionVerte
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 		auto locTargetPIDToSubtract = std::get<4>(locCombosByUsePair.first);
 		if(locTargetPIDToSubtract != Unknown)
-			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
+			locTotalP4 -= DLorentzVector(DVector3(), ParticleMass(locTargetPIDToSubtract));
 	}
 
 	if(!locAccuratePhotonsFlag || !locHasPhotons)
@@ -973,7 +978,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_NoMassiveNeutrals(const DSourceCom
 
 	//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 	if(locTargetPIDToSubtract != Unknown)
-		locFinalStateP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
+		locFinalStateP4 -= DLorentzVector(DVector3(), ParticleMass(locTargetPIDToSubtract));
 	auto locInvariantMass = locFinalStateP4.M();
 
 	//save and cut
@@ -1019,7 +1024,7 @@ bool DSourceComboP4Handler::Cut_InvariantMass_HasMassiveNeutral(bool locIsProduc
 
 		//Subtract target p4 if necessary (e.g. Lambda, p -> p, p, pi-)
 		if(locTargetPIDToSubtract != Unknown)
-			locTotalP4 -= DLorentzVector(TVector3(), ParticleMass(locTargetPIDToSubtract));
+			locTotalP4 -= DLorentzVector(DVector3(), ParticleMass(locTargetPIDToSubtract));
 
 		auto locInvariantMass = locTotalP4.M();
 		auto locPassCutFlag = ((locInvariantMass > locMassCuts.first) && (locInvariantMass < locMassCuts.second));

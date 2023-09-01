@@ -52,7 +52,8 @@ void Process_s(unsigned int &NEvents, unsigned int &NEvents_read)
       // Loop over all events in input
       while (ifs.good()) {
          hddm_s::HDDM record;
-         *fin >> record;
+         if (! (*fin >> record))
+            break;
          NEvents_read++;
          
          // Write this output event to file

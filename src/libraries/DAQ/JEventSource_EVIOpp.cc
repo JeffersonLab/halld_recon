@@ -83,6 +83,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 	LINK_CONFIG = true;
 	PARSE = true;
 	PARSE_F250 = true;
+	SKIP_F250_FORMAT_ERROR = false;
 	PARSE_F125 = true;
 	PARSE_F1TDC = true;
 	PARSE_CAEN1290TDC = true;
@@ -129,6 +130,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 
 	gPARMS->SetDefaultParameter("EVIO:PARSE", PARSE, "Set this to 0 to disable parsing of event buffers and generation of any objects (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_F250", PARSE_F250, "Set this to 0 to disable parsing of data from F250 ADC modules (for benchmarking/debugging)");
+	gPARMS->SetDefaultParameter("EVIO:SKIP_F250_FORMAT_ERROR", SKIP_F250_FORMAT_ERROR, "Set this to 1 to skip F250 format errors (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_F125", PARSE_F125, "Set this to 0 to disable parsing of data from F125 ADC modules (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_F1TDC", PARSE_F1TDC, "Set this to 0 to disable parsing of data from F1TDC modules (for benchmarking/debugging)");
 	gPARMS->SetDefaultParameter("EVIO:PARSE_CAEN1290TDC", PARSE_CAEN1290TDC, "Set this to 0 to disable parsing of data from CAEN 1290 TDC modules (for benchmarking/debugging)");
@@ -218,6 +220,7 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(const char* source_name):JEventSource(s
 		w->MAX_EVENT_RECYCLES  = MAX_EVENT_RECYCLES;
 		w->MAX_OBJECT_RECYCLES = MAX_OBJECT_RECYCLES;
 		w->PARSE_F250          = PARSE_F250;
+		w->SKIP_F250_FORMAT_ERROR = SKIP_F250_FORMAT_ERROR;
 		w->PARSE_F125          = PARSE_F125;
 		w->PARSE_F1TDC         = PARSE_F1TDC;
 		w->PARSE_CAEN1290TDC   = PARSE_CAEN1290TDC;

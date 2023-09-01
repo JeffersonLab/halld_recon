@@ -6,10 +6,6 @@
 #include <map>
 #include <algorithm>
 
-#include "TVector3.h"
-#include "TLorentzVector.h"
-#include "TMatrixFSym.h"
-
 #include "JANA/JEventLoop.h"
 
 #include "DResourcePool.h"
@@ -62,12 +58,12 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		/************************************************************** CREATE PARTICLES ************************************************************/
 
 		//If multiple constraints, it is EXTREMELY CRITICAL that only one DKinFitParticle be created per particle, so that the particles are correctly linked across constraints!!
-		shared_ptr<DKinFitParticle> Make_BeamParticle(int locPID, int locCharge, double locMass, TLorentzVector locSpacetimeVertex, TVector3 locMomentum, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
+		shared_ptr<DKinFitParticle> Make_BeamParticle(int locPID, int locCharge, double locMass, DLorentzVector locSpacetimeVertex, DVector3 locMomentum, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
 		shared_ptr<DKinFitParticle> Make_TargetParticle(int locPID, int locCharge, double locMass);
 
 		//locPathLength is from timing detector to vertex (for updating the time)
-		shared_ptr<DKinFitParticle> Make_DetectedParticle(int locPID, int locCharge, double locMass, TLorentzVector locSpacetimeVertex, TVector3 locMomentum, double locPathLength, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
-		shared_ptr<DKinFitParticle> Make_DetectedShower(int locPID, double locMass, TLorentzVector locSpacetimeVertex, double locShowerEnergy, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
+		shared_ptr<DKinFitParticle> Make_DetectedParticle(int locPID, int locCharge, double locMass, DLorentzVector locSpacetimeVertex, DVector3 locMomentum, double locPathLength, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
+		shared_ptr<DKinFitParticle> Make_DetectedShower(int locPID, double locMass, DLorentzVector locSpacetimeVertex, double locShowerEnergy, const shared_ptr<const TMatrixFSym>& locCovarianceMatrix);
 
 		shared_ptr<DKinFitParticle> Make_MissingParticle(int locPID, int locCharge, double locMass);
 		shared_ptr<DKinFitParticle> Make_DecayingParticle(int locPID, int locCharge, double locMass, const set<shared_ptr<DKinFitParticle>>& locFromInitialState, const set<shared_ptr<DKinFitParticle>>& locFromFinalState);
@@ -76,9 +72,9 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 
 		shared_ptr<DKinFitConstraint_Mass> Make_MassConstraint(const shared_ptr<DKinFitParticle>& locDecayingParticle);
 		shared_ptr<DKinFitConstraint_P4> Make_P4Constraint(const set<shared_ptr<DKinFitParticle>>& locInitialParticles, const set<shared_ptr<DKinFitParticle>>& locFinalParticles);
-		shared_ptr<DKinFitConstraint_Vertex> Make_VertexConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, TVector3 locVertexGuess = TVector3());
+		shared_ptr<DKinFitConstraint_Vertex> Make_VertexConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, DVector3 locVertexGuess = DVector3());
 		shared_ptr<DKinFitConstraint_Spacetime> Make_SpacetimeConstraint(const set<shared_ptr<DKinFitParticle>>& locFullConstrainParticles, const set<shared_ptr<DKinFitParticle>>& locOnlyConstrainTimeParticles,
-			const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, TLorentzVector locSpacetimeGuess = TLorentzVector());
+			const set<shared_ptr<DKinFitParticle>>& locNoConstrainParticles, DLorentzVector locSpacetimeGuess = DLorentzVector());
 
 		virtual bool Validate_Constraints(const set<shared_ptr<DKinFitConstraint>>& locKinFitConstraints) const; //empty, can override
 
@@ -86,16 +82,16 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 
 		//if input flag is true: return the value of the p4 at spot defined by locKinFitParticle->Get_Position() //else at the common vertex
 			//useful for setting the momentum: locKinFitParticle->Set_Momentum()
-		TLorentzVector Calc_DecayingP4_ByPosition(const DKinFitParticle* locKinFitParticle, bool locAtPositionFlag, bool locDontPropagateAtAllFlag = false) const;
+		DLorentzVector Calc_DecayingP4_ByPosition(const DKinFitParticle* locKinFitParticle, bool locAtPositionFlag, bool locDontPropagateAtAllFlag = false) const;
 
 		//if input flag is true: return the value of the p4 at the vertex where the p3-deriving particles are at
 			//useful for doing mass constraints
-		TLorentzVector Calc_DecayingP4_ByP3Derived(const DKinFitParticle* locKinFitParticle, bool locAtP3DerivedFlag, bool locDontPropagateAtAllFlag = false) const;
+		DLorentzVector Calc_DecayingP4_ByP3Derived(const DKinFitParticle* locKinFitParticle, bool locAtP3DerivedFlag, bool locDontPropagateAtAllFlag = false) const;
 
 		//if input flag is true: return the value of the p4 at the production vertex //else return it at the decay vertex
-		TLorentzVector Calc_DecayingP4_ByVertex(const DKinFitParticle* locKinFitParticle, bool locAtProductionVertexFlag, bool locDontPropagateAtAllFlag = false) const;
+		DLorentzVector Calc_DecayingP4_ByVertex(const DKinFitParticle* locKinFitParticle, bool locAtProductionVertexFlag, bool locDontPropagateAtAllFlag = false) const;
 
-		bool Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi, TVector3& locMomentum, TLorentzVector& locSpacetimeVertex, pair<double, double>& locPathLengthPair, pair<double, double>& locRestFrameLifetimePair, TMatrixFSym* locCovarianceMatrix) const;
+		bool Propagate_TrackInfoToCommonVertex(const DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi, DVector3& locMomentum, DLorentzVector& locSpacetimeVertex, pair<double, double>& locPathLengthPair, pair<double, double>& locRestFrameLifetimePair, TMatrixFSym* locCovarianceMatrix) const;
 
 		/********************************************************** DKINFITCHAIN RESOURCES **********************************************************/
 
@@ -114,7 +110,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		virtual bool Get_IncludeBeamlineInVertexFitFlag(void) const = 0;
 
 		//FOR FITS:
-		virtual TVector3 Get_BField(const TVector3& locPosition) const = 0; //must return in units of Tesla!!
+		virtual DVector3 Get_BField(const DVector3& locPosition) const = 0; //must return in units of Tesla!!
 		virtual bool Get_IsBFieldNearBeamline(void) const = 0;
 
 		/********************************************************* GET AND RECYCLE RESOURCES ********************************************************/
@@ -160,7 +156,7 @@ class DKinFitUtils //contains pure-virtual functions: cannot directly instantiat
 		/*********************************************************** CALCULATION ROUTINES ***********************************************************/
 
 		//Don't call directly: Rather, call the public wrappers (simpler)
-		TLorentzVector Calc_DecayingP4(const DKinFitParticle* locKinFitParticle, bool locIsConstrainedParticle, double locStateSignMultiplier, bool locDontPropagateAtAllFlag = false) const;
+		DLorentzVector Calc_DecayingP4(const DKinFitParticle* locKinFitParticle, bool locIsConstrainedParticle, double locStateSignMultiplier, bool locDontPropagateAtAllFlag = false) const;
 
 		bool Calc_PathLength(const DKinFitParticle* locKinFitParticle, const TMatrixDSym* locVXi, const TMatrixFSym* locCovarianceMatrix, pair<double, double>& locPathLengthPair, pair<double, double>& locRestFrameLifetimePair) const;
 		void Calc_DecayingParticleJacobian(const DKinFitParticle* locKinFitParticle, bool locDontPropagateDecayingP3Flag, double locStateSignMultiplier, int locNumEta, const map<const DKinFitParticle*, int>& locAdditionalPxParamIndices, TMatrixD& locJacobian) const;

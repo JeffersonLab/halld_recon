@@ -399,7 +399,7 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	DFDCWire * wire = wireByNumber[wireIndex]; 
 	double dz=wire->origin.z()-interPosition.z();
 	DVector3 trackPosition = interPosition + (dz/trackDirection.z())*trackDirection;
-	TVector3 perp = wire->udir.Cross(trackDirection).Unit();
+	DVector3 perp = wire->udir.Cross(trackDirection).Unit();
 	double distanceToWire = fabs(perp * (trackPosition - wire->origin));
 	bool expectHit = false;
 

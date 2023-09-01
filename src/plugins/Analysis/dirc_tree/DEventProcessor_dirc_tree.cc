@@ -155,8 +155,12 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
 	bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
 
 	if(foundDIRC){
-	  DVector3 posInBar = locDIRCMatchParams->dExtrapolatedPos; 
-	  DVector3 momInBar = locDIRCMatchParams->dExtrapolatedMom;
+	  TVector3 posInBar(locDIRCMatchParams->dExtrapolatedPos.x(),
+			    locDIRCMatchParams->dExtrapolatedPos.y(),
+			    locDIRCMatchParams->dExtrapolatedPos.z());
+	  TVector3 momInBar(locDIRCMatchParams->dExtrapolatedMom.x(),
+			    locDIRCMatchParams->dExtrapolatedMom.y(),
+			    locDIRCMatchParams->dExtrapolatedMom.z());
 	  double locExtrapolatedTime = locDIRCMatchParams->dExtrapolatedTime;
 	  int locBar = locDIRCGeometryVec[0]->GetBar(posInBar.Y());
 

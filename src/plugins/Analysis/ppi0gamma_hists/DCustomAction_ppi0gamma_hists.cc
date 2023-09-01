@@ -53,7 +53,7 @@ bool DCustomAction_ppi0gamma_hists::Perform_Action(JEventLoop* locEventLoop, con
         double locBeamPhotonEnergy = locBeamPhoton->energy();
 
 	DLorentzVector locSumInitP4;
-	locSumInitP4.SetXYZM(0, 0, 0, 0.938);
+	locSumInitP4.SetXYZT(0, 0, 0, 0.938);
         locSumInitP4 += locBeamPhoton->lorentzMomentum();
 
 	// calculate missing mass

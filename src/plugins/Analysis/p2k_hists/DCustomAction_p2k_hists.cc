@@ -117,8 +117,8 @@ bool DCustomAction_p2k_hists::Perform_Action(JEventLoop* locEventLoop, const DPa
 			if(locChargedTrackPion != NULL)
 				kplus_PionHypothesis = locChargedTrackPion->lorentzMomentum();
 			//else 
-				
-			kplus_PionHypothesis.SetXYZM(locParticles[0]->lorentzMomentum().X(), locParticles[0]->lorentzMomentum().Y(), locParticles[0]->lorentzMomentum().Z(), 0.13957);
+			double locP=locParticles[0]->lorentzMomentum().P();
+			kplus_PionHypothesis.SetXYZT(locParticles[0]->lorentzMomentum().X(), locParticles[0]->lorentzMomentum().Y(), locParticles[0]->lorentzMomentum().Z(), sqrt(0.13957*0.13957+locP*locP));
 		}
 		else if(loc_i == 1){
 			locChargedTrackHypothesis = locChargedTrack->Get_Hypothesis(KMinus);
@@ -130,8 +130,8 @@ bool DCustomAction_p2k_hists::Perform_Action(JEventLoop* locEventLoop, const DPa
 			if(locChargedTrackPion != NULL)
 				kminus_PionHypothesis = locChargedTrackPion->lorentzMomentum();
 			//else 
-				
-			kminus_PionHypothesis.SetXYZM(locParticles[1]->lorentzMomentum().X(), locParticles[1]->lorentzMomentum().Y(), locParticles[1]->lorentzMomentum().Z(), 0.13957);
+			double locP=locParticles[0]->lorentzMomentum().P();
+			kminus_PionHypothesis.SetXYZT(locParticles[1]->lorentzMomentum().X(), locParticles[1]->lorentzMomentum().Y(), locParticles[1]->lorentzMomentum().Z(), sqrt(0.13957*0.13957+locP*locP));
 		}
 	}
 

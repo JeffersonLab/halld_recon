@@ -191,6 +191,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 
 		bool     PARSE;
 		bool     PARSE_F250;
+		bool     SKIP_F250_FORMAT_ERROR;
 		bool     PARSE_F125;
 		bool     PARSE_F1TDC;
 		bool     PARSE_CAEN1290TDC;

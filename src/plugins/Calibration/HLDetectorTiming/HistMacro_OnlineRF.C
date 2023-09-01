@@ -24,12 +24,12 @@
 //
 // End Guidance: ----------------------------------------
 //
-// hnamepath: /HLDetectorTiming/TRACKING/TAGM - RFBunch 1D Time
-// hnamepath: /HLDetectorTiming/TRACKING/Tagger - RFBunch 1D Time
-// hnamepath: /HLDetectorTiming/TRACKING/SC - RF Time
-// hnamepath: /HLDetectorTiming/TRACKING/FCAL - RF Time
-// hnamepath: /HLDetectorTiming/TRACKING/TOF - RF Time
-// hnamepath: /HLDetectorTiming/TRACKING/BCAL - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TAGM - RFBunch 1D Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/Tagger - RFBunch 1D Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/SC - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/FCAL - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/TOF - RF Time
+// hnamepath: /HLDetectorTiming/Physics Triggers/TRACKING/BCAL - RF Time
 //
 // e-mail: aaustreg@jlab.org
 // e-mail: sdobbs@jlab.org
@@ -44,12 +44,12 @@
 	locDirectory->cd();
 
 	//Get Histograms
-	TH1I* TAGM_RF_Timing     = (TH1I*)gDirectory->Get("TRACKING/TAGM - RFBunch 1D Time");
-	TH1I* Tagger_RF_Timing     = (TH1I*)gDirectory->Get("TRACKING/Tagger - RFBunch 1D Time");
-	TH1I* SC_RF_Timing  = (TH1I*)gDirectory->Get("TRACKING/SC - RF Time");
-	TH1I* FCAL_RF_Timing = (TH1I*)gDirectory->Get("TRACKING/FCAL - RF Time");
-	TH1I* TOF_RF_Timing  = (TH1I*)gDirectory->Get("TRACKING/TOF - RF Time");
-	TH1I* BCAL_RF_Timing = (TH1I*)gDirectory->Get("TRACKING/BCAL - RF Time");
+	TH1I* TAGM_RF_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/TAGM - RFBunch 1D Time");
+	TH1I* Tagger_RF_Timing     = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/Tagger - RFBunch 1D Time");
+	TH1I* SC_RF_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/SC - RF Time");
+	TH1I* FCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/FCAL - RF Time");
+	TH1I* TOF_RF_Timing  = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/TOF - RF Time");
+	TH1I* BCAL_RF_Timing = (TH1I*)gDirectory->Get("Physics Triggers/TRACKING/BCAL - RF Time");
 
 	//Get/Make Canvas
 	TCanvas *locCanvas = NULL;

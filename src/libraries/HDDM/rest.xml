@@ -76,7 +76,9 @@
               NsampleFDC="int" dxFDC="float" dEdxFDC="float"
               NsampleCDC="int" dxCDC="float" dEdxCDC="float"
               lunit="cm" dEdx_unit="GeV/cm">
-	<CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
+        <CDCAmpdEdx dxCDCAmp="float" dEdxCDCAmp="float" minOccurs="0"/>
+        <CDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
+        <FDCdEdxTrunc minOccurs="0" maxOccurs="unbounded" ntrunc="int" dx="float" dEdx="float" dxAmp="float" dEdxAmp="float" lunit="cm" dEdx_unit="GeV/cm"/>
       </dEdxDC>
       <exitParams maxOccurs="1" minOccurs="0" 
 		  x1="float" y1="float" z1="float"
@@ -86,6 +88,10 @@
     <startHit maxOccurs="unbounded" minOccurs="0" jtag="string"
               sector="int" t="float" dE="float"
               tunit="ns" Eunit="GeV"/>
+    <ctofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
+	       bar="int" x="float" y="float" z="float" t="float" dE="float"
+               lunit="cm" tunit="ns" Eunit="GeV">
+    </ctofPoint>
     <tofPoint maxOccurs="unbounded" minOccurs="0" jtag="string"
               x="float" y="float" z="float" t="float" dE="float" terr="float"
               lunit="cm" tunit="ns" Eunit="GeV">
@@ -130,6 +136,10 @@
                 track="int" ehit="float" thit="float"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
                 tunit="ns" lunit="cm"/>
+      <ctofMatchParams maxOccurs="unbounded" minOccurs="0"
+                track="int" hit="int" dEdx="float" 
+                deltax="float" deltay="float" tflight="float"
+		tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"

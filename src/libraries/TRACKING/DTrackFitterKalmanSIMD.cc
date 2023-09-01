@@ -26,6 +26,7 @@
 #define ALPHA 1./137.
 #define CHISQ_DELTA 0.01
 #define MIN_ITER 3
+#define LOG2 0.69314718
 
 // Only print messages for one thread whenever run number change
 static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -252,7 +253,7 @@ void DTrackFitterKalmanSIMD::ComputeCDCDrift(double dphi,double delta,double t,
 #define FDC_T0_OFFSET 17.6
 // Interpolate on a table to convert time to distance for the fdc
 /*
-   double DTrackFitterKalmanSIMD::fdc_drift_distance(double t,double Bz) const {
+   double DTrackFitterKalmanSIMD::fdc_drift_distance(double t,double myField.Bz) const {
    double a=93.31,b=4.614,Bref=2.143;
    t*=(a+b*Bref)/(a+b*Bz);
    int id=int((t+FDC_T0_OFFSET)/2.);
@@ -725,16 +726,16 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
 
    len = 0.0;
    ftime=0.0;
-   var_ftime=0.0;
    x_=0.,y_=0.,tx_=0.,ty_=0.,q_over_p_ = 0.0;
    z_=0.,phi_=0.,tanl_=0.,q_over_pt_ =0, D_= 0.0;
    chisq_ = 0.0;
    ndf_ = 0;
    MASS=0.13957;
    mass2=MASS*MASS;
-   Bx=By=0.;
-   Bz=2.;
-   dBxdx=0.,dBxdy=0.,dBxdz=0.,dBydx=0.,dBydy=0.,dBydy=0.,dBzdx=0.,dBzdy=0.,dBzdz=0.;
+   myField.Bx=myField.By=myField.Bz=0.;
+   myField.Bmag=0.;
+   myField.dBxdx=0.,myField.dBxdy=0.,myField.dBxdz=0.,myField.dBydx=0.,myField.dBydy=0.,myField.dBydy=0.,myField.dBzdx=0.,myField.dBzdy=0.,myField.dBzdz=0.;
+
    // Step sizes
    mStepSizeS=2.0;
    mStepSizeZ=2.0;
@@ -1180,8 +1181,8 @@ jerror_t DTrackFitterKalmanSIMD::CalcDeriv(double z,
    double txty=tx*ty;
    double one_plus_tx2=1.+tx2;
    double dsdz=sqrt(one_plus_tx2+ty2);
-   double dtx_Bfac=ty*Bz+txty*Bx-one_plus_tx2*By;
-   double dty_Bfac=Bx*(1.+ty2)-txty*By-tx*Bz;
+   double dtx_Bfac=ty*myField.Bz+txty*myField.Bx-one_plus_tx2*myField.By;
+   double dty_Bfac=myField.Bx*(1.+ty2)-txty*myField.By-tx*myField.Bz;
    double kq_over_p_dsdz=kq_over_p*dsdz;
 
    // Derivative of S with respect to z
@@ -1210,9 +1211,7 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCForwardReferenceTrajectory(DMatrix5x1 &S)
 
    // Magnetic field and gradient at beginning of trajectory
    //bfield->GetField(x_,y_,z_,Bx,By,Bz); 
-   bfield->GetFieldAndGradient(x_,y_,z_,Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(x_,y_,z_,myField);
 
    // Reset cdc status flags
    for (unsigned int i=0;i<my_cdchits.size();i++){
@@ -1392,7 +1391,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForwardCDC(int length,int &index,
    double newz=z+ds*dz_ds; // new z position  
 
    // Store magnetic field
-   temp.B=sqrt(Bx*Bx+By*By+Bz*Bz);
+   temp.B=myField.Bmag;
 
    // Step through field
    ds=FasterStep(z,newz,dEdx,S);
@@ -1440,10 +1439,9 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForwardCDC(int length,int &index,
 // Routine that extracts the state vector propagation part out of the reference
 // trajectory loop
 jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
-      DVector2 &my_xy,
-      double &var_t_factor,
-      DMatrix5x1 &Sc,
-      bool &stepped_to_boundary){
+						  DVector2 &my_xy,
+						  DMatrix5x1 &Sc,
+						  bool &stepped_to_boundary){
    DKalmanCentralTrajectory_t temp;
    DMatrix5x5 J;  // State vector Jacobian matrix 
    DMatrix5x5 Q;  // Process noise covariance matrix
@@ -1468,7 +1466,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
    temp.S=Sc;
 
    // Store magnitude of magnetic field
-   temp.B=sqrt(Bx*Bx+By*By+Bz*Bz);
+   temp.B=myField.Bmag;
 
    // get material properties from the Root Geometry
    DVector3 pos3d(my_xy.X(),my_xy.Y(),Sc(state_z));
@@ -1541,12 +1539,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
 
    // Update flight time
    double dt=step_size*sqrt(one_over_beta2); // in units of c=1
-   double one_minus_beta2=1.-1./one_over_beta2;
    ftime+=dt;
-   var_ftime+=dt*dt*one_minus_beta2*one_minus_beta2*0.0004;
-   var_t_factor=dt*dt*one_minus_beta2*one_minus_beta2;
-
-   //printf("t %f sigt %f\n",TIME_UNIT_CONVERSION*ftime,TIME_UNIT_CONVERSION*sqrt(var_ftime));
 
    // Multiple scattering    
    GetProcessNoiseCentral(step_size,temp.chi2c_factor,temp.chi2a_factor,
@@ -1562,9 +1555,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateCentral(int length, int &index,
    }
 
    // B-field and gradient at current (x,y,z)
-   bfield->GetFieldAndGradient(my_xy.X(),my_xy.Y(),Sc(state_z),Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(my_xy.X(),my_xy.Y(),Sc(state_z),myField);
 
    // Compute the Jacobian matrix and its transpose
    StepJacobian(my_xy,temp.xy-my_xy,-step_size,Sc,dEdx,J);
@@ -1597,15 +1588,10 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
       DMatrix5x1 &Sc){
    bool stepped_to_boundary=false;
    int i=0,central_traj_length=central_traj.size();
-   // factor for scaling momentum resolution to propagate variance in flight 
-   // time
-   double var_t_factor=0; 
 
    // Magnetic field and gradient at beginning of trajectory
    //bfield->GetField(x_,y_,z_,Bx,By,Bz);
-   bfield->GetFieldAndGradient(x_,y_,z_,Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(x_,y_,z_,myField);
 
    // Copy of initial position in xy
    DVector2 my_xy=xy;
@@ -1621,7 +1607,7 @@ jerror_t DTrackFitterKalmanSIMD::SetCDCReferenceTrajectory(const DVector2 &xy,
    while(z<endplate_z && z>=Z_MIN && r2<endplate_r2max
          && fabs(Sc(state_q_over_pt))<Q_OVER_PT_MAX
         ){
-      if (PropagateCentral(central_traj_length,i,my_xy,var_t_factor,Sc,stepped_to_boundary)
+      if (PropagateCentral(central_traj_length,i,my_xy,Sc,stepped_to_boundary)
             !=NOERROR) return UNRECOVERABLE_ERROR;    
       z=Sc(state_z);
       r2=my_xy.Mod2();
@@ -1801,7 +1787,7 @@ jerror_t DTrackFitterKalmanSIMD::PropagateForward(int length,int &i,
    }
 
    // Store magnitude of magnetic field
-   temp.B=sqrt(Bx*Bx+By*By+Bz*Bz);
+   temp.B=myField.Bmag;
 
    // Step through field
    ds=FasterStep(z,newz,dEdx,S);
@@ -1853,9 +1839,7 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
 
    // Magnetic field and gradient at beginning of trajectory
    //bfield->GetField(x_,y_,z_,Bx,By,Bz);
-   bfield->GetFieldAndGradient(x_,y_,z_,Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+  bfield->GetFieldAndGradient(x_,y_,z_,myField);
 
    // progress in z from hit to hit
    double z=z_;
@@ -2002,13 +1986,13 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
 	    if (my_fdchits[hit_id]->hit!=NULL){
 	      // Get the magnetic field at this position along the trajectory
 	      bfield->GetField(forward_traj[m].S(state_x),forward_traj[m].S(state_y),
-			       z,Bx,By,Bz);
-	      double Br=sqrt(Bx*Bx+By*By);
+			       z,myField.Bx,myField.By,myField.Bz);
+	      double Br=sqrt(myField.Bx*myField.Bx+myField.By*myField.By);
 
 	      // Angle between B and wire
 	      double my_phi=0.;
-	      if (Br>0.) my_phi=acos((Bx*my_fdchits[hit_id]->sina 
-				      +By*my_fdchits[hit_id]->cosa)/Br);
+	      if (Br>0.) my_phi=acos((myField.Bx*my_fdchits[hit_id]->sina 
+				      +myField.By*my_fdchits[hit_id]->cosa)/Br);
 	      /*
 		lorentz_def->GetLorentzCorrectionParameters(forward_traj[m].pos.x(),
 		forward_traj[m].pos.y(),
@@ -2018,8 +2002,8 @@ jerror_t DTrackFitterKalmanSIMD::SetReferenceTrajectory(DMatrix5x1 &S){
 		my_fdchits[hit_id]->nz=tanz;
 	      */
 
-	      my_fdchits[hit_id]->nr=LORENTZ_NR_PAR1*Bz*(1.+LORENTZ_NR_PAR2*Br);
-	      my_fdchits[hit_id]->nz=(LORENTZ_NZ_PAR1+LORENTZ_NZ_PAR2*Bz)*(Br*cos(my_phi));
+	      my_fdchits[hit_id]->nr=LORENTZ_NR_PAR1*myField.Bz*(1.+LORENTZ_NR_PAR2*Br);
+	      my_fdchits[hit_id]->nz=(LORENTZ_NZ_PAR1+LORENTZ_NZ_PAR2*myField.Bz)*(Br*cos(my_phi));
 	    }
 
             my_id--;
@@ -2092,10 +2076,8 @@ double DTrackFitterKalmanSIMD::Step(double oldz,double newz, double dEdx,
    DMatrix5x1 D1,D2,D3,D4;
 
    //B-field and gradient at  at (x,y,z)
-   bfield->GetFieldAndGradient(S(state_x),S(state_y),oldz,Bx,By,Bz, 
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
-   double Bx0=Bx,By0=By,Bz0=Bz;
+   bfield->GetFieldAndGradient(S(state_x),S(state_y),oldz,myField);
+   double Bx0=myField.Bx,By0=myField.By,Bz0=myField.Bz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(oldz,S,dEdx,D1);
@@ -2104,9 +2086,12 @@ double DTrackFitterKalmanSIMD::Step(double oldz,double newz, double dEdx,
    // Calculate the field at the first intermediate point
    double dx=S1(state_x)-S(state_x);
    double dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z_over_2;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z_over_2;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z_over_2;
+   double dBx_z=myField.dBxdz*delta_z_over_2;
+   double dBy_z=myField.dBydz*delta_z_over_2;
+   double dBz_z=myField.dBzdz*delta_z_over_2;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+dBx_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+dBy_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+dBz_z;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(midz,S1,dEdx,D2);
@@ -2115,9 +2100,9 @@ double DTrackFitterKalmanSIMD::Step(double oldz,double newz, double dEdx,
    // Calculate the field at the second intermediate point
    dx=S1(state_x)-S(state_x);
    dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z_over_2;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z_over_2;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z_over_2;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+dBx_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+dBy_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+dBz_z;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(midz,S1,dEdx,D3);
@@ -2126,9 +2111,9 @@ double DTrackFitterKalmanSIMD::Step(double oldz,double newz, double dEdx,
    // Calculate the field at the final point
    dx=S1(state_x)-S(state_x);
    dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*delta_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*delta_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*delta_z;
 
    // Final derivative
    CalcDeriv(newz,S1,dEdx,D4);
@@ -2169,7 +2154,7 @@ double DTrackFitterKalmanSIMD::FasterStep(double oldz,double newz, double dEdx,
    double delta_z_over_2=0.5*delta_z;
    double midz=oldz+delta_z_over_2;
    DMatrix5x1 D1,D2,D3,D4;
-   double Bx0=Bx,By0=By,Bz0=Bz;
+   double Bx0=myField.Bx,By0=myField.By,Bz0=myField.Bz;
 
    // The magnetic field at the beginning of the step is assumed to be 
    // obtained at the end of the previous step through StepJacobian
@@ -2181,9 +2166,12 @@ double DTrackFitterKalmanSIMD::FasterStep(double oldz,double newz, double dEdx,
    // Calculate the field at the first intermediate point
    double dx=S1(state_x)-S(state_x);
    double dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z_over_2;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z_over_2;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z_over_2;
+   double dBx_z=myField.dBxdz*delta_z_over_2;
+   double dBy_z=myField.dBydz*delta_z_over_2;
+   double dBz_z=myField.dBzdz*delta_z_over_2;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+dBx_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+dBy_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+dBz_z;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(midz,S1,dEdx,D2);
@@ -2192,9 +2180,9 @@ double DTrackFitterKalmanSIMD::FasterStep(double oldz,double newz, double dEdx,
    // Calculate the field at the second intermediate point
    dx=S1(state_x)-S(state_x);
    dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z_over_2;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z_over_2;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z_over_2;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+dBx_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+dBy_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+dBz_z;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(midz,S1,dEdx,D3);
@@ -2203,9 +2191,9 @@ double DTrackFitterKalmanSIMD::FasterStep(double oldz,double newz, double dEdx,
    // Calculate the field at the final point
    dx=S1(state_x)-S(state_x);
    dy=S1(state_y)-S(state_y);
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*delta_z;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*delta_z;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*delta_z;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*delta_z;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*delta_z;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*delta_z;
 
    // Final derivative
    CalcDeriv(newz,S1,dEdx,D4);
@@ -2250,10 +2238,7 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(double oldz,double newz,
    double q_over_p=S(state_q_over_p);
 
    //B-field and field gradient at (x,y,z)
-   //if (get_field) 
-   bfield->GetFieldAndGradient(x,y,oldz,Bx,By,Bz,dBxdx,dBxdy,
-         dBxdz,dBydx,dBydy,
-         dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(x,y,oldz,myField);
 
    // Don't let the magnitude of the momentum drop below some cutoff
    if (fabs(q_over_p)>Q_OVER_P_MAX){
@@ -2279,13 +2264,13 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(double oldz,double newz,
    double kds=qBr2p*ds;
    double kqdz_over_p_over_dsdz=kq_over_p*delta_z/dsdz;
    double kq_over_p_ds=kq_over_p*ds;
-   double dtx_Bdep=ty*Bz+txty*Bx-one_plus_tx2*By;
-   double dty_Bdep=Bx*one_plus_ty2-txty*By-tx*Bz;
-   double Bxty=Bx*ty;
-   double Bytx=By*tx;
-   double Bztxty=Bz*txty;
-   double Byty=By*ty;
-   double Bxtx=Bx*tx;
+   double dtx_Bdep=ty*myField.Bz+txty*myField.Bx-one_plus_tx2*myField.By;
+   double dty_Bdep=myField.Bx*one_plus_ty2-txty*myField.By-tx*myField.Bz;
+   double Bxty=myField.Bx*ty;
+   double Bytx=myField.By*tx;
+   double Bztxty=myField.Bz*txty;
+   double Byty=myField.By*ty;
+   double Bxtx=myField.Bx*tx;
 
    // Jacobian
    J(state_x,state_tx)=J(state_y,state_ty)=delta_z;
@@ -2294,17 +2279,17 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(double oldz,double newz,
    J(state_tx,state_tx)+=kqdz_over_p_over_dsdz*(Bxty*(one_plus_twotx2_plus_ty2)
          -Bytx*(3.*one_plus_tx2+twoty2)
          +Bztxty);
-   J(state_tx,state_x)=kq_over_p_ds*(ty*dBzdx+txty*dBxdx-one_plus_tx2*dBydx);
+   J(state_tx,state_x)=kq_over_p_ds*(ty*myField.dBzdx+txty*myField.dBxdx-one_plus_tx2*myField.dBydx);
    J(state_ty,state_ty)+=kqdz_over_p_over_dsdz*(Bxty*(3.*one_plus_ty2+twotx2)
          -Bytx*(one_plus_twoty2_plus_tx2)
          -Bztxty);
-   J(state_ty,state_y)= kq_over_p_ds*(one_plus_ty2*dBxdy-txty*dBydy-tx*dBzdy);
+   J(state_ty,state_y)= kq_over_p_ds*(one_plus_ty2*myField.dBxdy-txty*myField.dBydy-tx*myField.dBzdy);
    J(state_tx,state_ty)=kqdz_over_p_over_dsdz
-      *((Bxtx+Bz)*(one_plus_twoty2_plus_tx2)-Byty*one_plus_tx2);
-   J(state_tx,state_y)= kq_over_p_ds*(tx*dBzdy+txty*dBxdy-one_plus_tx2*dBydy);
-   J(state_ty,state_tx)=-kqdz_over_p_over_dsdz*((Byty+Bz)*(one_plus_twotx2_plus_ty2)
+     *((Bxtx+myField.Bz)*(one_plus_twoty2_plus_tx2)-Byty*one_plus_tx2);
+   J(state_tx,state_y)= kq_over_p_ds*(tx*myField.dBzdy+txty*myField.dBxdy-one_plus_tx2*myField.dBydy);
+   J(state_ty,state_tx)=-kqdz_over_p_over_dsdz*((Byty+myField.Bz)*(one_plus_twotx2_plus_ty2)
          -Bxtx*one_plus_ty2);
-   J(state_ty,state_x)=kq_over_p_ds*(one_plus_ty2*dBxdx-txty*dBydx-tx*dBzdx);
+   J(state_ty,state_x)=kq_over_p_ds*(one_plus_ty2*myField.dBxdx-txty*myField.dBydx-tx*myField.dBzdx);
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){
       double one_over_p_sq=q_over_p*q_over_p;
       double E=sqrt(1./one_over_p_sq+mass2); 
@@ -2343,7 +2328,7 @@ jerror_t DTrackFitterKalmanSIMD::CalcDeriv(DVector2 &dpos,const DMatrix5x1 &S,
    double kq_over_pt=qBr2p*q_over_pt;
 
    // Derivative of S with respect to s
-   double By_cosphi_minus_Bx_sinphi=By*cosphi-Bx*sinphi;
+   double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
    D1(state_q_over_pt)
       =kq_over_pt*q_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
    double one_over_cosl=1./cosl;
@@ -2355,7 +2340,7 @@ jerror_t DTrackFitterKalmanSIMD::CalcDeriv(DVector2 &dpos,const DMatrix5x1 &S,
    }
    //  D1(state_phi)
    //  =kq_over_pt*(Bx*cosphi*sinl+By*sinphi*sinl-Bz*cosl);
-   D1(state_phi)=kq_over_pt*((Bx*cosphi+By*sinphi)*sinl-Bz*cosl);
+   D1(state_phi)=kq_over_pt*((myField.Bx*cosphi+myField.By*sinphi)*sinl-myField.Bz*cosl);
    D1(state_tanl)=kq_over_pt*By_cosphi_minus_Bx_sinphi*one_over_cosl;  
    D1(state_z)=sinl;
 
@@ -2390,24 +2375,23 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
    // Other parameters
    double q_over_pt=S(state_q_over_pt);
    double pt=fabs(1./q_over_pt);
-   double q=pt*q_over_pt;
-
+   double q_over_pt_sinl=q_over_pt*sinl;
+  
    // Turn off dEdx if pt drops below some minimum
    if (pt<PT_MIN) {
       dEdx=0.;
    }
    double kq_over_pt=qBr2p*q_over_pt;
+   double k_q_over_pt_sq_sinl=kq_over_pt*q_over_pt_sinl;
 
    // B-field and gradient at (x,y,z)
-   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),myField);
 
    // Derivative of S with respect to s
-   double By_cosphi_minus_Bx_sinphi=By*cosphi-Bx*sinphi;
-   double By_sinphi_plus_Bx_cosphi=By*sinphi+Bx*cosphi;
-   D1(state_q_over_pt)=kq_over_pt*q_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
-   D1(state_phi)=kq_over_pt*(By_sinphi_plus_Bx_cosphi*sinl-Bz*cosl);
+   double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
+   double By_sinphi_plus_Bx_cosphi=myField.By*sinphi+myField.Bx*cosphi;
+   D1(state_q_over_pt)=k_q_over_pt_sq_sinl*By_cosphi_minus_Bx_sinphi;
+   D1(state_phi)=kq_over_pt*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    D1(state_tanl)=kq_over_pt*By_cosphi_minus_Bx_sinphi*one_over_cosl;
    D1(state_z)=sinl;
 
@@ -2417,18 +2401,18 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
    // Jacobian matrix elements
    J1(state_phi,state_phi)=kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
    J1(state_phi,state_q_over_pt)
-      =qBr2p*(By_sinphi_plus_Bx_cosphi*sinl-Bz*cosl);
+      =qBr2p*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    J1(state_phi,state_tanl)=kq_over_pt*(By_sinphi_plus_Bx_cosphi*cosl
-         +Bz*sinl)*cosl2;
+         +myField.Bz*sinl)*cosl2;
    J1(state_phi,state_z)
-      =kq_over_pt*(dBxdz*cosphi*sinl+dBydz*sinphi*sinl-dBzdz*cosl);
+     =kq_over_pt*((myField.dBxdz*cosphi+myField.dBydz*sinphi)*sinl-myField.dBzdz*cosl);
 
    J1(state_tanl,state_phi)=-kq_over_pt*By_sinphi_plus_Bx_cosphi*one_over_cosl;
    J1(state_tanl,state_q_over_pt)=qBr2p*By_cosphi_minus_Bx_sinphi*one_over_cosl;
    J1(state_tanl,state_tanl)=kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
-   J1(state_tanl,state_z)=kq_over_pt*(dBydz*cosphi-dBxdz*sinphi)*one_over_cosl;  
+   J1(state_tanl,state_z)=kq_over_pt*(myField.dBydz*cosphi-myField.dBxdz*sinphi)*one_over_cosl;  
    J1(state_q_over_pt,state_phi)
-      =-kq_over_pt*q_over_pt*sinl*By_sinphi_plus_Bx_cosphi;  
+      =-k_q_over_pt_sq_sinl*By_sinphi_plus_Bx_cosphi;  
    J1(state_q_over_pt,state_q_over_pt)
       =2.*kq_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
    J1(state_q_over_pt,state_tanl)
@@ -2438,13 +2422,14 @@ jerror_t DTrackFitterKalmanSIMD::CalcDerivAndJacobian(const DVector2 &xy,
       double p_sq=p*p;
       double m2_over_p2=mass2/p_sq;
       double E=sqrt(p_sq+mass2);
+      double dEdx_over_E=dEdx/E;
 
       D1(state_q_over_pt)-=q_over_pt*E/p_sq*dEdx;
-      J1(state_q_over_pt,state_q_over_pt)-=dEdx*(2.+3.*m2_over_p2)/E;
-      J1(state_q_over_pt,state_tanl)+=q*dEdx*sinl*(1.+2.*m2_over_p2)/(p*E);
+      J1(state_q_over_pt,state_q_over_pt)-=dEdx_over_E*(2.+3.*m2_over_p2);
+      J1(state_q_over_pt,state_tanl)+=q_over_pt_sinl*cosl*dEdx_over_E*(1.+2.*m2_over_p2);
    }
    J1(state_q_over_pt,state_z)
-      =kq_over_pt*q_over_pt*sinl*(dBydz*cosphi-dBxdz*sinphi);
+      =k_q_over_pt_sq_sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
    J1(state_z,state_tanl)=cosl3;
 
    return NOERROR;
@@ -2462,10 +2447,8 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
    if (fabs(ds)<EPS) return NOERROR; // break out if ds is too small
 
    // B-field and gradient at current (x,y,z)
-   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
-   double Bx0=Bx,By0=By,Bz0=Bz;
+   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),myField);
+   double Bx0=myField.Bx,By0=myField.By,Bz0=myField.Bz;
 
    // Matrices for intermediate steps
    DMatrix5x1 D1,D2,D3,D4;
@@ -2483,9 +2466,9 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
    double dz=S1(state_z)-S(state_z);
    double dx=ds_2*dxy1.X();
    double dy=ds_2*dxy1.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy2,S1,dEdx,D2);
@@ -2495,9 +2478,9 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
    dz=S1(state_z)-S(state_z);
    dx=ds_2*dxy2.X();
    dy=ds_2*dxy2.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy3,S1,dEdx,D3);
@@ -2507,9 +2490,9 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
    dz=S1(state_z)-S(state_z);
    dx=ds*dxy3.X();
    dy=ds*dxy3.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Final derivative
    CalcDeriv(dxy4,S1,dEdx,D4);
@@ -2528,11 +2511,10 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
    J+=ds*J1;
 
    // Deal with changes in D
-   double B=sqrt(Bx0*Bx0+By0*By0+Bz0*Bz0);
    //double qrc_old=qpt/(qBr2p*Bz_);
    double qpt=1./S(state_q_over_pt);
    double q=(qpt>0.)?1.:-1.;
-   double qrc_old=qpt/(qBr2p*B);
+   double qrc_old=qpt/(qBr2p*myField.Bmag);
    double sinphi=sin(S(state_phi));
    double cosphi=cos(S(state_phi));
    double qrc_plus_D=S(state_D)+qrc_old;
@@ -2569,8 +2551,8 @@ jerror_t DTrackFitterKalmanSIMD::StepStateAndCovariance(DVector2 &xy,
 
    // New covariance matrix
    // C=J C J^T
-   //C=C.SandwichMultiply(J);
-   C=J*C*J.Transpose();
+   C=C.SandwichMultiply(J);
+   //C=J*C*J.Transpose();
 
    return NOERROR;
 }
@@ -2588,7 +2570,7 @@ jerror_t DTrackFitterKalmanSIMD::FasterStep(DVector2 &xy,double ds,
    DMatrix5x1 S1;
    DVector2 dxy1,dxy2,dxy3,dxy4;
    double ds_2=0.5*ds;
-   double Bx0=Bx,By0=By,Bz0=Bz;
+   double Bx0=myField.Bx,By0=myField.By,Bz0=myField.Bz;
 
    // The magnetic field at the beginning of the step is assumed to be 
    // obtained at the end of the previous step through StepJacobian
@@ -2601,9 +2583,9 @@ jerror_t DTrackFitterKalmanSIMD::FasterStep(DVector2 &xy,double ds,
    double dz=S1(state_z)-S(state_z);
    double dx=ds_2*dxy1.X();
    double dy=ds_2*dxy1.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy2,S1,dEdx,D2);
@@ -2613,9 +2595,9 @@ jerror_t DTrackFitterKalmanSIMD::FasterStep(DVector2 &xy,double ds,
    dz=S1(state_z)-S(state_z);
    dx=ds_2*dxy2.X();
    dy=ds_2*dxy2.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy3,S1,dEdx,D3);
@@ -2625,9 +2607,9 @@ jerror_t DTrackFitterKalmanSIMD::FasterStep(DVector2 &xy,double ds,
    dz=S1(state_z)-S(state_z);
    dx=ds*dxy3.X();
    dy=ds*dxy3.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Final derivative
    CalcDeriv(dxy4,S1,dEdx,D4);
@@ -2667,10 +2649,8 @@ jerror_t DTrackFitterKalmanSIMD::Step(DVector2 &xy,double ds,
    if (fabs(ds)<EPS) return NOERROR; // break out if ds is too small
 
    // B-field and gradient at current (x,y,z)
-   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),Bx,By,Bz,
-         dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
-   double Bx0=Bx,By0=By,Bz0=Bz;
+   bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),myField);
+   double Bx0=myField.Bx,By0=myField.By,Bz0=myField.Bz;
 
    // Matrices for intermediate steps
    DMatrix5x1 D1,D2,D3,D4;
@@ -2687,9 +2667,9 @@ jerror_t DTrackFitterKalmanSIMD::Step(DVector2 &xy,double ds,
    double dz=S1(state_z)-S(state_z);
    double dx=ds_2*dxy1.X();
    double dy=ds_2*dxy1.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy2,S1,dEdx,D2);
@@ -2699,9 +2679,9 @@ jerror_t DTrackFitterKalmanSIMD::Step(DVector2 &xy,double ds,
    dz=S1(state_z)-S(state_z);
    dx=ds_2*dxy2.X();
    dy=ds_2*dxy2.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Calculate the derivative and propagate the state to the next point
    CalcDeriv(dxy3,S1,dEdx,D3);
@@ -2711,9 +2691,9 @@ jerror_t DTrackFitterKalmanSIMD::Step(DVector2 &xy,double ds,
    dz=S1(state_z)-S(state_z);
    dx=ds*dxy3.X();
    dy=ds*dxy3.Y();  
-   Bx=Bx0+dBxdx*dx+dBxdy*dy+dBxdz*dz;
-   By=By0+dBydx*dx+dBydy*dy+dBydz*dz;
-   Bz=Bz0+dBzdx*dx+dBzdy*dy+dBzdz*dz;
+   myField.Bx=Bx0+myField.dBxdx*dx+myField.dBxdy*dy+myField.dBxdz*dz;
+   myField.By=By0+myField.dBydx*dx+myField.dBydy*dy+myField.dBydz*dz;
+   myField.Bz=Bz0+myField.dBzdx*dx+myField.dBzdy*dy+myField.dBzdz*dz;
 
    // Final derivative
    CalcDeriv(dxy4,S1,dEdx,D4);
@@ -2763,7 +2743,7 @@ void DTrackFitterKalmanSIMD::FastStep(double &z,double ds, double dEdx,
   double k_q=qBr2p*q;
   double ds_over_p=ds*one_over_p;
   double factor=k_q*(0.25*ds_over_p);
-  double Ax=factor*Bx,Ay=factor*By,Az=factor*Bz;
+  double Ax=factor*myField.Bx,Ay=factor*myField.By,Az=factor*myField.Bz;
   double Ax2=Ax*Ax,Ay2=Ay*Ay,Az2=Az*Az;
   double AxAy=Ax*Ay,AxAz=Ax*Az,AyAz=Ay*Az;
   double one_plus_Ax2=1.+Ax2;
@@ -2778,9 +2758,9 @@ void DTrackFitterKalmanSIMD::FastStep(double &z,double ds, double dEdx,
   z+=dz;
       
   // Compute new momentum
-  px+=k_q*(Bz*dy-By*dz);
-  py+=k_q*(Bx*dz-Bz*dx);
-  pz+=k_q*(By*dx-Bx*dy); 
+  px+=k_q*(myField.Bz*dy-myField.By*dz);
+  py+=k_q*(myField.Bx*dz-myField.Bz*dx);
+  pz+=k_q*(myField.By*dx-myField.Bx*dy); 
   S(state_tx)=px/pz;
   S(state_ty)=py/pz;
   if (fabs(dEdx)>EPS){
@@ -2804,7 +2784,7 @@ void DTrackFitterKalmanSIMD::FastStep(DVector2 &xy,double ds, double dEdx,
   double k_q=qBr2p*q;
   double ds_over_p=ds*one_over_p;
   double factor=k_q*(0.25*ds_over_p);
-  double Ax=factor*Bx,Ay=factor*By,Az=factor*Bz;
+  double Ax=factor*myField.Bx,Ay=factor*myField.By,Az=factor*myField.Bz;
   double Ax2=Ax*Ax,Ay2=Ay*Ay,Az2=Az*Az;
   double AxAy=Ax*Ay,AxAz=Ax*Az,AyAz=Ay*Az;
   double one_plus_Ax2=1.+Ax2;
@@ -2818,9 +2798,9 @@ void DTrackFitterKalmanSIMD::FastStep(DVector2 &xy,double ds, double dEdx,
   S(state_z)+=dz;
       
   // Compute new momentum
-  px+=k_q*(Bz*dy-By*dz);
-  py+=k_q*(Bx*dz-Bz*dx);
-  pz+=k_q*(By*dx-Bx*dy);
+  px+=k_q*(myField.Bz*dy-myField.By*dz);
+  py+=k_q*(myField.Bx*dz-myField.Bz*dx);
+  pz+=k_q*(myField.By*dx-myField.Bx*dy);
   pt=sqrt(px*px+py*py); 
   S(state_q_over_pt)=q/pt;
   S(state_phi)=atan2(py,px);
@@ -2844,10 +2824,6 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    J=I5x5;
 
    if (fabs(ds)<EPS) return NOERROR; // break out if ds is too small
-   // B-field and gradient at current (x,y,z)
-   //bfield->GetFieldAndGradient(xy.X(),xy.Y(),S(state_z),Bx,By,Bz,
-   //dBxdx,dBxdy,dBxdz,dBydx,
-   //dBydy,dBydz,dBzdx,dBzdy,dBzdz);
 
    // Charge
    double q=(S(state_q_over_pt)>0.0)?1.:-1.;
@@ -2864,6 +2840,7 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    double cosl3=cosl*cosl2;
    double one_over_cosl=1./cosl;
    double pt=fabs(1./q_over_pt);
+   double q_over_pt_sinl=q_over_pt*sinl;
 
    // Turn off dEdx if pt drops below some minimum
    if (pt<PT_MIN) {
@@ -2871,25 +2848,27 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    }
    double kds=qBr2p*ds;
    double kq_ds_over_pt=kds*q_over_pt;
-   double By_cosphi_minus_Bx_sinphi=By*cosphi-Bx*sinphi;
-   double By_sinphi_plus_Bx_cosphi=By*sinphi+Bx*cosphi;
+   double kq_ds_over_pt_sinl=kq_ds_over_pt*sinl;
+   double k_ds_q_over_pt_sq_sinl=kq_ds_over_pt*q_over_pt_sinl;
+   double By_cosphi_minus_Bx_sinphi=myField.By*cosphi-myField.Bx*sinphi;
+   double By_sinphi_plus_Bx_cosphi=myField.By*sinphi+myField.Bx*cosphi;
 
    // Jacobian matrix elements
-   J(state_phi,state_phi)+=kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
-   J(state_phi,state_q_over_pt)=kds*(By_sinphi_plus_Bx_cosphi*sinl-Bz*cosl);
+   J(state_phi,state_phi)+=kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
+   J(state_phi,state_q_over_pt)=kds*(By_sinphi_plus_Bx_cosphi*sinl-myField.Bz*cosl);
    J(state_phi,state_tanl)=kq_ds_over_pt*(By_sinphi_plus_Bx_cosphi*cosl
-         +Bz*sinl)*cosl2;
+         +myField.Bz*sinl)*cosl2;
    J(state_phi,state_z)
-      =kq_ds_over_pt*(dBxdz*cosphi*sinl+dBydz*sinphi*sinl-dBzdz*cosl);
+      =kq_ds_over_pt*(myField.dBxdz*cosphi*sinl+myField.dBydz*sinphi*sinl-myField.dBzdz*cosl);
 
    J(state_tanl,state_phi)=-kq_ds_over_pt*By_sinphi_plus_Bx_cosphi*one_over_cosl;
    J(state_tanl,state_q_over_pt)=kds*By_cosphi_minus_Bx_sinphi*one_over_cosl;
-   J(state_tanl,state_tanl)+=kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
-   J(state_tanl,state_z)=kq_ds_over_pt*(dBydz*cosphi-dBxdz*sinphi)*one_over_cosl;  
+   J(state_tanl,state_tanl)+=kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
+   J(state_tanl,state_z)=kq_ds_over_pt*(myField.dBydz*cosphi-myField.dBxdz*sinphi)*one_over_cosl;  
    J(state_q_over_pt,state_phi)
-      =-kq_ds_over_pt*q_over_pt*sinl*By_sinphi_plus_Bx_cosphi;  
+      =-k_ds_q_over_pt_sq_sinl*By_sinphi_plus_Bx_cosphi;  
    J(state_q_over_pt,state_q_over_pt)
-      +=2.*kq_ds_over_pt*sinl*By_cosphi_minus_Bx_sinphi;
+      +=2.*kq_ds_over_pt_sinl*By_cosphi_minus_Bx_sinphi;
    J(state_q_over_pt,state_tanl)
       =kq_ds_over_pt*q_over_pt*cosl3*By_cosphi_minus_Bx_sinphi;
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){  
@@ -2900,17 +2879,16 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
       double dE_over_E=dEdx*ds/E;
 
       J(state_q_over_pt,state_q_over_pt)-=dE_over_E*(2.+3.*m2_over_p2);
-      J(state_q_over_pt,state_tanl)+=q*dE_over_E*sinl*(1.+2.*m2_over_p2)/p;
+      J(state_q_over_pt,state_tanl)+=q_over_pt*cosl*dE_over_E*sinl*(1.+2.*m2_over_p2);
    }
    J(state_q_over_pt,state_z)
-      =kq_ds_over_pt*q_over_pt*sinl*(dBydz*cosphi-dBxdz*sinphi);
+      =k_ds_q_over_pt_sq_sinl*(myField.dBydz*cosphi-myField.dBxdz*sinphi);
    J(state_z,state_tanl)=cosl3*ds;
 
    // Deal with changes in D
-   double B=sqrt(Bx*Bx+By*By+Bz*Bz);
    //double qrc_old=qpt/(qBr2p*fabs(Bz));
    double qpt=FactorForSenseOfRotation/q_over_pt;
-   double qrc_old=qpt/(qBr2p*B);
+   double qrc_old=qpt/(qBr2p*myField.Bmag);
    double qrc_plus_D=D+qrc_old;
    double dx=dxy.X();
    double dy=dxy.Y();
@@ -2966,9 +2944,8 @@ jerror_t DTrackFitterKalmanSIMD::StepJacobian(const DVector2 &xy,
    DVector2 dxy =ds*dxy1;
 
    // Deal with changes in D
-   double B=sqrt(Bx*Bx+By*By+Bz*Bz);
    //double qrc_old=qpt/(qBr2p*Bz_);
-   double qrc_old=qpt/(qBr2p*B);
+   double qrc_old=qpt/(qBr2p*myField.Bmag);
    double qrc_plus_D=D+qrc_old;
    double dx=dxy.X();
    double dy=dxy.Y();
@@ -3124,10 +3101,10 @@ double DTrackFitterKalmanSIMD::GetdEdx(double q_over_p,double K_rho_Z_over_A,
       double tau_plus_2_sq=tau_plus_2*tau_plus_2;
       double f=0.; // function that depends on tau; see Leo (2nd ed.), p. 38.
       if (IsElectron){
-         f=1.-beta2+(0.125*tau_sq-(2.*tau+1.)*log(2.))/(tau_plus_1*tau_plus_1);
+         f=1.-beta2+(0.125*tau_sq-(2.*tau+1.)*LOG2)/(tau_plus_1*tau_plus_1);
       }
       else{
-         f=2.*log(2.)-(beta2/12.)*(23.+14./tau_plus_2+10./tau_plus_2_sq
+         f=2.*LOG2-(beta2/12.)*(23.+14./tau_plus_2+10./tau_plus_2_sq
                +4./(tau_plus_2*tau_plus_2_sq));
       }
 
@@ -3991,8 +3968,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
       // Update the actual state vector and covariance matrix
       Sc=S0+J*(Sc-S0_);
       // Cc=J*(Cc*JT)+Q;   
-      // Cc=Q.AddSym(Cc.SandwichMultiply(J));
-      Cc=Q.AddSym(J*Cc*J.Transpose());
+       Cc=Q.AddSym(Cc.SandwichMultiply(J));
+      //Cc=Q.AddSym(J*Cc*J.Transpose());
 
       // Save the current state and covariance matrix in the deque
       if (fit_type==kTimeBased){
@@ -4429,8 +4406,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     
 
     //C=J*(C*J_T)+Q;   
-    //C=Q.AddSym(C.SandwichMultiply(J));
-    C=Q.AddSym(J*C*J.Transpose());
+    C=Q.AddSym(C.SandwichMultiply(J));
+    //C=Q.AddSym(J*C*J.Transpose());
     
     // Save the current state and covariance matrix in the deque
     forward_traj[k].Skk=S;
@@ -4830,8 +4807,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
       double newz=z_+my_dz;
       // Step C along z
       StepJacobian(z_,newz,S,0.,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step S along z
       Step(z_,newz,0.,S);
@@ -4841,8 +4818,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     
     // Step C along z
     StepJacobian(z_,TARGET_Z,S,0.,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
     
     // Step S along z
     Step(z_,TARGET_Z,0.,S);
@@ -5083,8 +5060,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
     }
    
     //C=J*(C*J_T)+Q;   
-    C=Q.AddSym(J*C*J.Transpose());
-    //C=Q.AddSym(C.SandwichMultiply(J));
+    //C=Q.AddSym(J*C*J.Transpose());
+    C=Q.AddSym(C.SandwichMultiply(J));
     
     // Save the current state of the reference trajectory
     S0_=S0;
@@ -5440,8 +5417,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,z_,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          // Step to the position of the doca
          Step(z,z_,dEdx,S);
@@ -5461,8 +5438,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,newz,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          S2=S;
          S=S1;
@@ -5480,8 +5457,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          StepJacobian(z,newz,S,dEdx,J);  
 
          // Propagate the covariance matrix
-         C=J*C*J.Transpose();
-         //C=C.SandwichMultiply(J);
+         //C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
 
          S1=S;
          S=S2;
@@ -5567,8 +5544,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
       StepJacobian(z,newz,S,dEdx,J);  
 
       // Propagate the covariance matrix
-      C=Q.AddSym(J*C*J.Transpose());
-      //C=Q.AddSym(C.SandwichMultiply(J));
+      //C=Q.AddSym(J*C*J.Transpose());
+      C=Q.AddSym(C.SandwichMultiply(J));
 
       // Step through field
       Step(z,newz,dEdx,S);
@@ -5595,8 +5572,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DMatrix5x1 &S,
          // Propagate the covariance matrix
          //C=J*C*J.Transpose()+(dz/(newz-z))*Q;
          //C=((dz/newz-z)*Q).AddSym(C.SandwichMultiply(J));
-         //C=C.SandwichMultiply(J);
-	 C=J*C*J.Transpose();
+         C=C.SandwichMultiply(J);
+	 //C=J*C*J.Transpose();
 
          // update internal variables
          x_=S(state_x);
@@ -5847,10 +5824,8 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToVertex(DVector2 &xy,
 	 //printf ("Brent min r %f\n",xy.Mod());
          
          // Find the field and gradient at (old_x,old_y,old_z)
-         bfield->GetFieldAndGradient(old_xy.X(),old_xy.Y(),S0(state_z),Bx,By,Bz,
-               dBxdx,dBxdy,dBxdz,dBydx,
-               dBydy,dBydz,dBzdx,dBzdy,dBzdz);
-
+         bfield->GetFieldAndGradient(old_xy.X(),old_xy.Y(),S0(state_z),myField);
+ 
          // Compute the Jacobian matrix
          my_ds-=ds_old;
          StepJacobian(old_xy,xy-old_xy,my_ds,S0,dedx,Jc);
@@ -6485,7 +6460,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
       // Initialize path length variable and flight time
       len=0;
       ftime=0.;
-      var_ftime=0.;
 
       // Scale cut for pruning hits according to the iteration number
       fdc_anneal=(iter<MIN_ITER)?(FORWARD_ANNEAL_SCALE/pow(FORWARD_ANNEAL_POW_CONST,iter)+1.):1.;
@@ -6650,7 +6624,8 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardFit(const DMatrix5x1 &S0,const DMa
 	   StepJacobian(z,newz,SReverse,dEdx,J);
 	   Step(z,newz,dEdx,SReverse);
 	   
-	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   //CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   CReverse=forward_traj[k].Q.AddSym(CReverse.SandwichMultiply(J));
 	 }
 
 	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
@@ -6797,7 +6772,6 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
       // Initialize path length variable and flight time
       len=0;
       ftime=0.;
-      var_ftime=0.;
 
       // Swim to create the reference trajectory
       jerror_t ref_track_error=SetCDCForwardReferenceTrajectory(S);
@@ -6969,7 +6943,9 @@ kalman_error_t DTrackFitterKalmanSIMD::ForwardCDCFit(const DMatrix5x1 &S0,const 
 	   StepJacobian(z,newz,SReverse,dEdx,J);
 	   Step(z,newz,dEdx,SReverse);
 	   
-	   CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   //CReverse=forward_traj[k].Q.AddSym(J*CReverse*J.Transpose());
+	   CReverse=forward_traj[k].Q.AddSym(CReverse.SandwichMultiply(J));
+	   
 	 }
 	 
 	 double reduced_chisq=reverse_chisq/double(reverse_ndf);
@@ -7104,7 +7080,6 @@ kalman_error_t DTrackFitterKalmanSIMD::CentralFit(const DVector2 &startpos,
       // Initialize path length variable and flight time
       len=0.;
       ftime=0.;
-      var_ftime=0.;
 
       // Scale cut for pruning hits according to the iteration number
       anneal_factor=(iter2<MIN_ITER)?(ANNEAL_SCALE/pow(ANNEAL_POW_CONST,iter2)+1.):1.;
@@ -7990,9 +7965,8 @@ jerror_t DTrackFitterKalmanSIMD::SmoothCentral(vector<pull_t>&cdc_pulls){
             // Compute the Jacobian matrix
             // Find the field and gradient at (old_x,old_y,old_z)
             bfield->GetFieldAndGradient(old_xy.X(),old_xy.Y(),Ss(state_z),
-                  Bx,By,Bz,
-                  dBxdx,dBxdy,dBxdz,dBydx,
-                  dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+					myField);
+
             DMatrix5x5 Jc;
             StepJacobian(old_xy,xy-old_xy,myds,Ss,dEdx,Jc);
 
@@ -8424,9 +8398,8 @@ jerror_t DTrackFitterKalmanSIMD::FillPullsVectorEntry(const DMatrix5x1 &Ss,
 
    // Find the field and gradient at (old_x,old_y,old_z) and compute the 
    // Jacobian matrix for transforming from S to myS
-   bfield->GetFieldAndGradient(Ss(state_x),Ss(state_y),z,
-         Bx,By,Bz,dBxdx,dBxdy,dBxdz,dBydx,
-         dBydy,dBydz,dBzdx,dBzdy,dBzdz);
+   bfield->GetFieldAndGradient(Ss(state_x),Ss(state_y),z,myField);
+
    DMatrix5x5 Jc;
    StepJacobian(z,new_z,Ss,dEdx,Jc);
 
@@ -8965,7 +8938,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToInnerDetectors(){
 	double bestt=t,bests=s;
 
 	// Magnetic field 
-	bfield->GetField(S(state_x),S(state_y),z,Bx,By,Bz); 
+	bfield->GetField(S(state_x),S(state_y),z,myField.Bx,myField.By,myField.Bz); 
 
 	while (fabs(d)>0.001 && count<20){
 	  // track direction
@@ -9262,7 +9235,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateCentralToOtherDetectors(){
 	double s=central_traj[k].s;
 	double bests=s,bestt=t;
 	// Magnetic field 
-	bfield->GetField(xy.X(),xy.Y(),S(state_z),Bx,By,Bz); 
+	bfield->GetField(xy.X(),xy.Y(),S(state_z),myField.Bx,myField.By,myField.Bz); 
 	
 	while (fabs(d)>0.05 && count<20){
 	  // track direction
@@ -9511,7 +9484,8 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanReverse(double fdc_anneal_factor,
      }
      // Update the actual state vector and covariance matrix
      S=S0+J*(S-S0_);
-     C=Q.AddSym(J*C*J.Transpose());
+     //C=Q.AddSym(J*C*J.Transpose());
+     C=Q.AddSym(C.SandwichMultiply(J));
      //C.Print();
      
      // Save the current state of the reference trajectory
@@ -9837,8 +9811,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
 
 	// propagate error matrix to z-position of hit
 	StepJacobian(my_z,newz,S0,dedx,J);
-	C=J*C*J.Transpose();
-	//C=C.SandwichMultiply(J);
+	//C=J*C*J.Transpose();
+	C=C.SandwichMultiply(J);
 	
 	// Step reference trajectory by my_dz
 	Step(my_z,newz,dedx,S0); 
@@ -9849,8 +9823,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
       newz=my_z+dz3;
       // propagate error matrix to z-position of hit
       StepJacobian(my_z,newz,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
 
       // Step reference trajectory by dz3
       Step(my_z,newz,dedx,S0); 	    
@@ -9860,8 +9834,8 @@ DTrackFitterKalmanSIMD::FindDoca(const DKalmanSIMDCDCHit_t *hit,
       
       // propagate error matrix to z-position of hit
       StepJacobian(z,newz,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step reference trajectory by dz
       Step(z,newz,dedx,S0); 
@@ -9903,8 +9877,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
   if (num_steps==0){
     // Step C back to the z-position on the reference trajectory
     StepJacobian(newz,z,S0,dedx,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
 
     // Step S to current position on the reference trajectory
     Step(newz,z,dedx,S);
@@ -9921,8 +9895,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
       
       // Step C along z
       StepJacobian(my_z,z,S0,dedx,J);
-      C=J*C*J.Transpose();
-      //C=C.SandwichMultiply(J);
+      //C=J*C*J.Transpose();
+      C=C.SandwichMultiply(J);
       
       // Step S along z
       Step(my_z,z,dedx,S); 
@@ -9936,8 +9910,8 @@ void DTrackFitterKalmanSIMD::StepBack(double dedx,double newz,double z,
     
     // Step C back to the z-position on the reference trajectory
     StepJacobian(my_z,z,S0,dedx,J);
-    C=J*C*J.Transpose();
-    //C=C.SandwichMultiply(J);
+    //C=J*C*J.Transpose();
+    C=C.SandwichMultiply(J);
 
     // Step S to current position on the reference trajectory
     Step(my_z,z,dedx,S);

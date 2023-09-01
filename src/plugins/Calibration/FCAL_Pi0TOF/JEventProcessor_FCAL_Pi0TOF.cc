@@ -145,9 +145,6 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   loop->Get(locEventRFBunches);
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
   
-  uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
-  uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
-  
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
     for (unsigned int bit = 0; bit < 32; bit ++) {
@@ -214,17 +211,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     int ring1 = (int) (radius1 / (5 * k_cm));
     int rings1 = (int) (radiusShower1 / (5 * k_cm));
     int ringl1 = (int) (radiusShowerlog1 / (5 * k_cm));
-    
-    double frac_ring_thres = frac_thres_1_to_5;
-    if (ring1 >= 6)
-      frac_ring_thres = frac_thres_6_to_23;
-    double frac_rings_thres = frac_thres_1_to_5;
-    if (rings1 >= 6)
-      frac_rings_thres = frac_thres_6_to_23;
-    double frac_ringl_thres = frac_thres_1_to_5;
-    if (ringl1 >= 6)
-      frac_ringl_thres = frac_thres_6_to_23;
-    
+       
     double frac1 = fcalCluster1->getEmax()/fcalCluster1->getEnergy();
     double Eclust1 = fcalCluster1->getEnergy();
     double Ephoton1 = photon1->lorentzMomentum().E();
@@ -235,7 +222,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double p1x = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
     double p1y = p1 * sin(vertex1.Theta()) * sin(vertex1.Phi());
     double p1z = p1 * cos(vertex1.Theta());
-    TLorentzVector photon1P4(p1x, p1y, p1z, p1);
+    DLorentzVector photon1P4(p1x, p1y, p1z, p1);
     double tdiff1 = t1 - locRFTime;
     
     Fill2DHistogram("XY","","xy_all", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
@@ -419,7 +406,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       double p2x = p2 * sin(vertex2.Theta()) * cos(vertex2.Phi());
       double p2y = p2 * sin(vertex2.Theta()) * sin(vertex2.Phi());
       double p2z = p2 * cos(vertex2.Theta());
-      TLorentzVector photon2P4(p2x, p2y, p2z, p2);
+      DLorentzVector photon2P4(p2x, p2y, p2z, p2);
       double tdiff2 = t2 - locRFTime;
     
       Fill1DHistogram("FCAL_Pi0HFA","","tdiff2", tdiff2, ";t_{#gamma}^{2} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
@@ -839,7 +826,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	//}
 	
 	if (DO_METHOD == 1 || DO_METHOD == 2) {
-	  for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
+	  for (unsigned int k = 0; k < locBeamPhotons.size(); k ++) {
 	    
 	    const DBeamPhoton *ebeam = locBeamPhotons[k]; 
 	    //double eb = ebeam->lorentzMomentum().E();

@@ -92,6 +92,9 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	std::vector<const DTOFPoint*> tofpoints;
 	locEventLoop->Get(tofpoints);
 
+	std::vector<const DCTOFPoint*> ctofpoints;
+	locEventLoop->Get(ctofpoints);
+
 	std::vector<const DSCHit*> starthits;
 	locEventLoop->Get(starthits);
 
@@ -343,7 +346,19 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
         ccal().setDime(ccalshowers[i]->dime);                                                                                             
         ccal().setId(ccalshowers[i]->id);                                                                                                
         ccal().setIdmax(ccalshowers[i]->idmax);                                                                                                
-    }                                                                                                                                            
+    }
+
+    // push any DCTOFPoint objects to the output record
+	for (size_t i=0; i < ctofpoints.size(); i++)
+	{
+		hddm_r::CtofPointList ctof = res().addCtofPoints(1);
+		ctof().setBar(ctofpoints[i]->bar);
+		ctof().setX(ctofpoints[i]->pos(0));
+		ctof().setY(ctofpoints[i]->pos(1));
+		ctof().setZ(ctofpoints[i]->pos(2));
+		ctof().setT(ctofpoints[i]->t);
+		ctof().setDE(ctofpoints[i]->dE);
+	}
 
 	// push any DTOFPoint objects to the output record
 	for (size_t i=0; i < tofpoints.size(); i++)
@@ -463,7 +478,26 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hddm_r::CDCAmpdEdxList elo2 = elo().addCDCAmpdEdxs(1);
 			elo2().setDxCDCAmp(tracks[i]->ddx_CDC_amp);
 			elo2().setDEdxCDCAmp(tracks[i]->ddEdx_CDC_amp);
-
+            for (int it=0; it < (int)tracks[i]->ddx_CDC_trunc.size() &&
+                           it < (int)tracks[i]->ddx_CDC_amp_trunc.size(); ++it)
+            {
+               hddm_r::CDCdEdxTruncList elo3 = elo().addCDCdEdxTruncs(1);
+               elo3().setNtrunc(it);
+               elo3().setDx(tracks[i]->ddx_CDC_trunc[it]);
+               elo3().setDEdx(tracks[i]->ddEdx_CDC_trunc[it]);
+               elo3().setDxAmp(tracks[i]->ddx_CDC_amp_trunc[it]);
+               elo3().setDEdxAmp(tracks[i]->ddEdx_CDC_amp_trunc[it]);
+            }
+            for (int it=0; it < (int)tracks[i]->ddx_FDC_trunc.size() &&
+                           it < (int)tracks[i]->ddx_FDC_amp_trunc.size(); ++it)
+            {
+               hddm_r::FDCdEdxTruncList elo3 = elo().addFDCdEdxTruncs(1);
+               elo3().setNtrunc(it);
+               elo3().setDx(tracks[i]->ddx_FDC_trunc[it]);
+               elo3().setDEdx(tracks[i]->ddEdx_FDC_trunc[it]);
+               elo3().setDxAmp(tracks[i]->ddx_FDC_amp_trunc[it]);
+               elo3().setDEdxAmp(tracks[i]->ddEdx_FDC_amp_trunc[it]);
+            }
 		}
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
 		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
@@ -570,6 +604,27 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				fcalList().setPathlength(locFCALShowerMatchParamsVector[loc_k]->dPathLength);
 				fcalList().setTflight(locFCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				fcalList().setTflightvar(locFCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
+			}
+
+			vector<shared_ptr<const DCTOFHitMatchParams>> locCTOFHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_CTOFMatchParams(tracks[loc_j], locCTOFHitMatchParamsVector);
+			for(size_t loc_k = 0; loc_k < locCTOFHitMatchParamsVector.size(); ++loc_k)
+			{
+				hddm_r::CtofMatchParamsList ctofList = matches().addCtofMatchParamses(1);
+				ctofList().setTrack(loc_j);
+
+				size_t locCTOFindex = 0;
+				for(; locCTOFindex < ctofpoints.size(); ++locCTOFindex)
+				{
+					if(ctofpoints[locCTOFindex] == locCTOFHitMatchParamsVector[loc_k]->dCTOFPoint)
+						break;
+				}
+				ctofList().setHit(locCTOFindex);
+				ctofList().setDEdx(locCTOFHitMatchParamsVector[loc_k]->dEdx);
+				ctofList().setTflight(locCTOFHitMatchParamsVector[loc_k]->dFlightTime);
+
+				ctofList().setDeltax(locCTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
+				ctofList().setDeltay(locCTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
 			}
 
 			vector<shared_ptr<const DFCALSingleHitMatchParams>> locFCALSingleHitMatchParamsVector;

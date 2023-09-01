@@ -38,9 +38,9 @@ using namespace jana;
 #include "DAQ/Df125CDCPulse.h"
 #include "DAQ/Df125FDCPulse.h"
 #include "DAQ/Df125TriggerTime.h"
+#include "DAQ/Df125BORConfig.h"
+#include "DAQ/bor_roc.h"
 #include "TRIGGER/DTrigger.h"
-
-
 
 #include <TTree.h>
 #include <TBranch.h>
@@ -177,6 +177,27 @@ jerror_t JEventProcessor_cdc_scan::init(void)
     p->Branch("diffs",&diffs,"diffs/O");
   }
   
+  //BORConfig values
+  uint32_t board_id,version,proc_version,proc_blocklevel,temp;
+  uint32_t cPL,cNW,cIE,cPG,cP1,cP2,cIBIT,cABIT,cPBIT,cH,cTH,cTL;
+  p->Branch("board_id",&board_id,"board_id/i");
+  p->Branch("version",&version,"version/i");
+  p->Branch("proc_version",&proc_version,"proc_version/i");
+  p->Branch("temp",&temp,"temp/i");
+  p->Branch("proc_blocklevel",&proc_blocklevel,"proc_blocklevel/i");
+  p->Branch("PL",&cPL,"PL/i");
+  p->Branch("NW",&cNW,"NW/i");
+  p->Branch("IE",&cIE,"IE/i");
+  p->Branch("PG",&cPG,"PG/i");
+  p->Branch("P1",&cP1,"P1/i");
+  p->Branch("P2",&cP2,"P2/i");
+  p->Branch("IBIT",&cIBIT,"IBIT/i");
+  p->Branch("ABIT",&cABIT,"ABIT/i");
+  p->Branch("PBIT",&cPBIT,"PBIT/i");
+  p->Branch("H",&cH,"H/i");
+  p->Branch("TH",&cTH,"TH/i");
+  p->Branch("TL",&cTL,"TL/i");
+
 
   tt = new TTree("TT","Trigger time");
 
@@ -212,6 +233,37 @@ jerror_t JEventProcessor_cdc_scan::brun(JEventLoop *eventLoop, int32_t runnumber
 jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
 
+
+  /* 0x1058 FE nw register defintions */
+  #define FA125_FE_NW_MASK          0x000003FF
+  
+  /* 0x105C FE pl register defintions */
+  #define FA125_FE_PL_MASK           0x0000FFFF
+  
+  /* 0xN0A0 FE ped_sf definitions */
+  #define FA125_FE_PED_SF_NP_MASK       0x000000FF
+  #define FA125_FE_PED_SF_NP2_MASK      0x0000FF00
+  #define FA125_FE_PED_SF_IBIT_MASK     0x00070000
+  #define FA125_FE_PED_SF_ABIT_MASK     0x00380000
+  #define FA125_FE_PED_SF_PBIT_MASK     0x01C00000
+  #define FA125_FE_PED_SF_PBIT_SIGN     (1<<25)
+  #define FA125_FE_PED_SF_CALC_MASK     0x1C000000
+  
+  
+  /* 0xN0B0 FE integration_end definitions */
+  #define FA125_FE_IE_INTEGRATION_END_MASK  0x00000FFF
+  #define FA125_FE_IE_PEDESTAL_GAP_MASK     0x000FF000
+  
+  /* 0xN070 - 0xN084 threshold register defintions */
+  #define FA125_FE_THRESHOLD_MASK          0x00000FFF
+  
+  /* 0xN0A4 FE timing_thres_lo definitions */
+  #define FA125_FE_TIMING_THRES_LO_MASK(x) (0xFF<<(8+((x%2)*16)))
+  
+  /* 0xN0B4 FE timing_thres_hi definitions */
+  #define FA125_FE_TIMING_THRES_HI_MASK(x) (0x1FF<<((x%3)*9))
+  
+  
   // Only look at physics triggers
   
   const DTrigger* locTrigger = NULL; 
@@ -355,6 +407,28 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
       p->SetBranchAddress("diffs",&diffs);  
     }
 
+    //BORConfig values
+    uint32_t board_id=0, version=0, proc_version=0, proc_blocklevel=0, temp=0;
+    uint32_t cPL=0, cNW=0, cIE=0, cPG=0, cP1=0, cP2=0, cIBIT=0, cABIT=0, cPBIT=0, cH=0, cTH=0, cTL=0;
+    p->SetBranchAddress("board_id", &board_id);
+    p->SetBranchAddress("version",&version);
+    p->SetBranchAddress("proc_version",&proc_version);
+    p->SetBranchAddress("temp",&temp);
+    p->SetBranchAddress("proc_blocklevel",&proc_blocklevel);
+    p->SetBranchAddress("PL",&cPL);
+    p->SetBranchAddress("NW",&cNW);
+    p->SetBranchAddress("IE",&cIE);
+    p->SetBranchAddress("PG",&cPG);
+    p->SetBranchAddress("P1",&cP1);
+    p->SetBranchAddress("P2",&cP2);
+    p->SetBranchAddress("IBIT",&cIBIT);
+    p->SetBranchAddress("ABIT",&cABIT);
+    p->SetBranchAddress("PBIT",&cPBIT);
+    p->SetBranchAddress("H",&cH);
+    p->SetBranchAddress("TH",&cTH);
+    p->SetBranchAddress("TL",&cTL);
+
+
     Df125EmulatorAlgorithm_v2 *em = new Df125EmulatorAlgorithm_v2();    
     
     if (nc) {
@@ -409,8 +483,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           m_amp = emu->first_max_amp_emulated;
           m_pktime=0;
 
+          // Firmware q is either 1 or 0.  m_q is the q_code, 0 to 9, where 0 indicates a good time measurement
+	  // Only flag a difference between these if one is 0 and the other isn't.
+	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
+          d_q = q - m_q_binary;
+
           d_time = time - m_time;
-          d_q = q - m_q;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
           d_integral = integral - m_integral;
@@ -422,6 +500,67 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  
 	}
 	
+        board_id=0;
+        version=0;
+        proc_version=0;
+        proc_blocklevel=0;
+        temp=0;
+        cPL=0;
+        cNW=0;
+        cIE=0;
+        cPG=0;
+        cP1=0;
+        cP2=0;
+        cIBIT=0;
+        cABIT=0;        
+        cPBIT=0;
+        cH=0;
+        cTH=0;
+        cTL=0;
+
+        const Df125BORConfig *BORConfig=NULL;
+        cp->GetSingle(BORConfig);
+
+        if (BORConfig) {
+
+          board_id = BORConfig->board_id;
+          version = BORConfig->version;
+          proc_version = BORConfig->proc_version;
+          proc_blocklevel = BORConfig->proc_blocklevel;
+          temp = BORConfig->temperature[0];
+
+          //BORConfig->fe[12] holds the config params for the fadc module
+          // in 12 sets of 6 channels
+
+          uint32_t j = p_channel/6;
+          f125config_fe fe  = BORConfig->fe[j];
+
+          cPL = fe.pl & FA125_FE_PL_MASK;                       // 
+          cNW = fe.nw & FA125_FE_NW_MASK;                       // 0x000003FF;
+          cIE = fe.ie & FA125_FE_IE_INTEGRATION_END_MASK;       // 0x00000FFF
+          cPG = (fe.ie & FA125_FE_IE_PEDESTAL_GAP_MASK) >> 12;  // 0x000FF000
+          cP1 = fe.ped_sf & FA125_FE_PED_SF_NP_MASK;            // 0x000000FF
+          cP2 = (fe.ped_sf & FA125_FE_PED_SF_NP2_MASK) >> 8;    // 0x0000FF00
+          cIBIT = (fe.ped_sf & FA125_FE_PED_SF_IBIT_MASK) >> 16;  // 0x00070000
+          cABIT = (fe.ped_sf & FA125_FE_PED_SF_ABIT_MASK) >> 19;  // 0x00380000
+          cPBIT = (fe.ped_sf & FA125_FE_PED_SF_PBIT_MASK) >> 22;  // 0x01C00000
+      
+          int psign = (fe.ped_sf & FA125_FE_PED_SF_PBIT_SIGN) >> 25;  // (1<<25)
+          if (psign) cPBIT = -1*cPBIT;
+
+          uint32_t k = p_channel - 6*j;
+
+          cH = fe.threshold[k]&0xFFF;    //  0x00000FFF
+
+          if (k%2==0) cTL = (fe.timing_thres_lo[(k/2)%3] & FA125_FE_TIMING_THRES_LO_MASK(k)) >> 8;   //(0xFF<<(8+((x%2)*16)))
+          if (k%2==1) cTL = (fe.timing_thres_lo[(k/2)%3] & FA125_FE_TIMING_THRES_LO_MASK(k)) >> 24;
+
+          if (k%3==0) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 0;  //(0x1FF<<((x%3)*9))
+          if (k%3==1) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 9;
+          if (k%3==2) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 18;
+
+        }
+
         p->Fill();
   
       }
@@ -481,8 +620,12 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           m_amp = fp->peak_amp_emulated;
           m_pktime = fp->peak_time_emulated;	
 
+          // Firmware q is either 1 or 0.  m_q is the q_code, 0 to 9, where 0 indicates a good time measurement
+	  // Only flag a difference between these if one is 0 and the other isn't.
+	  uint m_q_binary = (m_q == 0) ? 0 : 1 ;
+          d_q = q - m_q_binary;
+
           d_time = time - m_time;
-          d_q = q - m_q;
           d_overflows = overflows - m_overflows;
           d_pedestal = pedestal - m_pedestal;
           d_integral = integral - m_integral;
@@ -490,8 +633,71 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
           d_pktime = pktime - m_pktime;
 
 	  diffs=0;
-          if (d_time || d_q || d_overflows || d_pedestal || d_integral || d_amp || d_pktime) diffs = 1;
+          // FDC mode 8 does not report the integral, so don't flag those differences in the diffs branch
+          if (d_time || d_q || d_overflows || d_pedestal || d_amp || d_pktime) diffs = 1;
 	}
+
+
+        board_id=0;
+        version=0;
+        proc_version=0;
+        proc_blocklevel=0;
+        temp=0;
+        cPL=0;
+        cNW=0;
+        cIE=0;
+        cPG=0;
+        cP1=0;
+        cP2=0;
+        cIBIT=0;
+        cABIT=0;        
+        cPBIT=0;
+        cH=0;
+        cTH=0;
+        cTL=0;
+
+        const Df125BORConfig *BORConfig=NULL;
+        fp->GetSingle(BORConfig);
+
+        if (BORConfig) {
+
+          board_id = BORConfig->board_id;
+          version = BORConfig->version;
+          proc_version = BORConfig->proc_version;
+          proc_blocklevel = BORConfig->proc_blocklevel;
+          temp = BORConfig->temperature[0];
+
+          //BORConfig->fe[12] holds the config params for the fadc module
+          // in 12 sets of 6 channels
+
+          uint32_t j = p_channel/6;
+          f125config_fe fe  = BORConfig->fe[j];
+
+          cPL = fe.pl & FA125_FE_PL_MASK;                       // 
+          cNW = fe.nw & FA125_FE_NW_MASK;                       // 0x000003FF;
+          cIE = fe.ie & FA125_FE_IE_INTEGRATION_END_MASK;       // 0x00000FFF
+          cPG = (fe.ie & FA125_FE_IE_PEDESTAL_GAP_MASK) >> 12;  // 0x000FF000
+          cP1 = fe.ped_sf & FA125_FE_PED_SF_NP_MASK;            // 0x000000FF
+          cP2 = (fe.ped_sf & FA125_FE_PED_SF_NP2_MASK) >> 8;    // 0x0000FF00
+          cIBIT = (fe.ped_sf & FA125_FE_PED_SF_IBIT_MASK) >> 16;  // 0x00070000
+          cABIT = (fe.ped_sf & FA125_FE_PED_SF_ABIT_MASK) >> 19;  // 0x00380000
+          cPBIT = (fe.ped_sf & FA125_FE_PED_SF_PBIT_MASK) >> 22;  // 0x01C00000
+      
+          int psign = (fe.ped_sf & FA125_FE_PED_SF_PBIT_SIGN) >> 25;  // (1<<25)
+          if (psign) cPBIT = -1*cPBIT;
+
+          uint32_t k = p_channel - 6*j;
+
+          cH = fe.threshold[k]&0xFFF;    //  0x00000FFF
+
+          if (k%2==0) cTL = (fe.timing_thres_lo[(k/2)%3] & FA125_FE_TIMING_THRES_LO_MASK(k)) >> 8;   //(0xFF<<(8+((x%2)*16)))
+          if (k%2==1) cTL = (fe.timing_thres_lo[(k/2)%3] & FA125_FE_TIMING_THRES_LO_MASK(k)) >> 24;
+
+          if (k%3==0) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 0;  //(0x1FF<<((x%3)*9))
+          if (k%3==1) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 9;
+          if (k%3==2) cTH = (fe.timing_thres_hi[(k/3)%2] & FA125_FE_TIMING_THRES_HI_MASK(k)) >> 18;
+
+        }
 	
         p->Fill();
   

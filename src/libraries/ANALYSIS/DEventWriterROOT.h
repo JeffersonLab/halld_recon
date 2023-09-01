@@ -17,6 +17,8 @@
 #include "JANA/JObject.h"
 #include "JANA/JEventLoop.h"
 
+#include "DVector3.h"
+
 #include "TRIGGER/DTrigger.h"
 #include "BCAL/DBCALShower.h"
 #include "FCAL/DFCALShower.h"

@@ -61,6 +61,7 @@ DEVIOWorkerThread::DEVIOWorkerThread(
 	buff                = new uint32_t[buff_len];
 
 	PARSE_F250          = true;
+	SKIP_F250_FORMAT_ERROR = false;
 	PARSE_F125          = true;
 	PARSE_F1TDC         = true;
 	PARSE_CAEN1290TDC   = true;
@@ -1394,7 +1395,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 {
 	if(!PARSE_F250){ iptr = &iptr[(*iptr) + 1]; return; }
 
-	int continue_on_format_error = false;
+	int continue_on_format_error = SKIP_F250_FORMAT_ERROR;
 
 	auto pe_iter = current_parsed_events.begin();
 	DParsedEvent *pe = NULL;
@@ -1513,7 +1514,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 					
 						if( (*iptr>>30) != 0x01) {
 							jerr << "Bad f250 Pulse Data for rocid="<<rocid<<" slot="<<slot<<" channel="<<channel<<endl;
-							DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
+							if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, ((uint64_t)&iptr[3]-(uint64_t)istart_pulse_data)/4, iptr);
 							if (continue_on_format_error) {
 								iptr = iend;
 								return;
@@ -1532,7 +1533,7 @@ void DEVIOWorkerThread::Parsef250Bank(uint32_t rocid, uint32_t* &iptr, uint32_t 
 
 						iptr++;
 						if( (*iptr>>30) != 0x00){
-							DumpBinary(istart_pulse_data, iend, 128, iptr);
+							if(VERBOSE>7) DumpBinary(istart_pulse_data, iend, 128, iptr);
 							if (continue_on_format_error) {
 								iptr = iend;
 								return;

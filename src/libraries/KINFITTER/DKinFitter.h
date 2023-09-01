@@ -9,11 +9,12 @@
 #include <set>
 #include <limits>
 
-#include "TVector3.h"
+#include "DVector3.h"
+#include "TMatrixF.h"
 #include "TMatrixD.h"
 #include "TMatrixDSym.h"
 #include "TMatrixFSym.h"
-#include "TLorentzVector.h"
+#include "DLorentzVector.h"
 #include "TMath.h"
 #include "TDecompLU.h"
 
@@ -144,14 +145,14 @@ class DKinFitter //purely virtual: cannot directly instantiate class, can only i
 		void Calc_dF(void);
 
 		void Calc_dF_P4(int locFIndex, const DKinFitParticle* locKinFitParticle, double locStateSignMultiplier);
-		void Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* locKinFitParticle, TLorentzVector locXP4, double locStateSignMultiplier, bool locIsConstrainedParticle);
+		void Calc_dF_MassDerivs(size_t locFIndex, const DKinFitParticle* locKinFitParticle, DLorentzVector locXP4, double locStateSignMultiplier, bool locIsConstrainedParticle);
 
 		void Calc_dF_Vertex(size_t locFIndex, const DKinFitParticle* locKinFitParticle, const DKinFitParticle* locKinFitParticle_DecayingSource, double locStateSignMultiplier);
 		void Calc_dF_Vertex_NotDecaying(size_t locFIndex, const DKinFitParticle* locKinFitParticle);
 		void Calc_dF_Vertex_Decaying_Accel(size_t locFIndex, const DKinFitParticle* locKinFitParticle, const DKinFitParticle* locKinFitParticle_DecayingSource, double locStateSignMultiplier);
 		void Calc_dF_Vertex_Decaying_NonAccel(size_t locFIndex, const DKinFitParticle* locKinFitParticle, const DKinFitParticle* locKinFitParticle_DecayingSource, double locStateSignMultiplier);
-		bool Calc_Vertex_Params(const DKinFitParticle* locKinFitParticle, double& locJ, TVector3& locQ, TVector3& locM, TVector3& locD);
-		TVector3 Calc_VertexParams_P4DerivedAtCommonVertex(const DKinFitParticle* locKinFitParticle);
+		bool Calc_Vertex_Params(const DKinFitParticle* locKinFitParticle, double& locJ, DVector3& locQ, DVector3& locM, DVector3& locD);
+		DVector3 Calc_VertexParams_P4DerivedAtCommonVertex(const DKinFitParticle* locKinFitParticle);
 
 		/************************************************************* UPDATE & FINAL ***************************************************************/
 
