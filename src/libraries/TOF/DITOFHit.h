@@ -23,7 +23,7 @@ class DITOFHit:public jana::JObject{
     AddString(items, "dE", "%12.4f", dE);
     AddString(items, "t", "%12.4f", t);
     AddString(items, "x", "%12.4f", x);
-    AddString(items, "y", "%12.4f", x);
+    AddString(items, "y", "%12.4f", y);
   }
 };
 
