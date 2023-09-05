@@ -31,6 +31,20 @@ static TH2D *fdc_qneg_pseudo_measured_cell[25]; //Filled with total actually det
 static TH2D *fdc_qneg_pseudo_expected_cell[25]; // Contains total number of expected hits by DOCA
 
 
+// repeat, zoomed in for pseudo hits
+
+static TH2D *fdc_pseudo_measured_mid_cell[25]; //Filled with total actually detected before division at end
+static TH2D *fdc_pseudo_expected_mid_cell[25]; // Contains total number of expected hits by DOCA
+
+// q+
+static TH2D *fdc_qpos_pseudo_measured_mid_cell[25]; //Filled with total actually detected before division at end
+static TH2D *fdc_qpos_pseudo_expected_mid_cell[25]; // Contains total number of expected hits by DOCA
+
+// q-
+static TH2D *fdc_qneg_pseudo_measured_mid_cell[25]; //Filled with total actually detected before division at end
+static TH2D *fdc_qneg_pseudo_expected_mid_cell[25]; // Contains total number of expected hits by DOCA
+
+
 
 //For extraction of magnetic field slope, split the detectors into bins in radius
 const unsigned int rad = 1; // 1, 5 or 9
@@ -114,9 +128,14 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_pseudo_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_pseudo_expected_cell[%d]", icell+1);
-    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -50, 50, 100, -50, 50);
+    fdc_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -50, 50, 100, -50, 50);
 
+    sprintf(hname_measured, "fdc_pseudo_measured_mid_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_pseudo_expected_mid_cell[%d]", icell+1);
+    fdc_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    
     // q+
     sprintf(hname_measured, "fdc_qpos_wire_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qpos_wire_expected_cell[%d]", icell+1);
@@ -125,9 +144,15 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_qpos_pseudo_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qpos_pseudo_expected_cell[%d]", icell+1);
-    fdc_qpos_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_qpos_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_qpos_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -50, 50, 100, -50, 50);
+    fdc_qpos_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -50, 50, 100, -50, 50);
 
+    sprintf(hname_measured, "fdc_qpos_pseudo_measured_mid_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qpos_pseudo_expected_mid_cell[%d]", icell+1);
+    fdc_qpos_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_qpos_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+
+    
     // q-
     sprintf(hname_measured, "fdc_qneg_wire_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qneg_wire_expected_cell[%d]", icell+1);
@@ -136,8 +161,13 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_qneg_pseudo_measured_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qneg_pseudo_expected_cell[%d]", icell+1);
-    fdc_qneg_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_qneg_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_qneg_pseudo_measured_cell[icell+1] = new TH2D(hname_measured, "", 100, -50, 50, 100, -50, 50);
+    fdc_qneg_pseudo_expected_cell[icell+1] = new TH2D(hname_expected, "", 100, -50, 50, 100, -50, 50);
+    
+    sprintf(hname_measured, "fdc_qneg_pseudo_measured_mid_cell[%d]", icell+1);
+    sprintf(hname_expected, "fdc_qneg_pseudo_expected_mid_cell[%d]", icell+1);
+    fdc_qneg_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
+    fdc_qneg_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
     
   }	
 
@@ -546,10 +576,13 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	// FILL HISTOGRAMS
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	fdc_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+	fdc_pseudo_expected_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());	
 	if (tcharge>0) {
 	    	fdc_qpos_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+	    	fdc_qpos_pseudo_expected_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		
         } else {
 	    	fdc_qneg_pseudo_expected_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+	    	fdc_qneg_pseudo_expected_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		
 	}
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
       }
@@ -601,10 +634,13 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 		fdc_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+		fdc_pseudo_measured_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		
                 if (tcharge>0) {
 		    fdc_qpos_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+		    fdc_qpos_pseudo_measured_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		    
 		} else {
-		    fdc_qneg_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		  
+		    fdc_qneg_pseudo_measured_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());
+		    fdc_qneg_pseudo_measured_mid_cell[cellNum]->Fill(interPosition.X(), interPosition.Y());		  		    
 		}
 		hPseudoTime_accepted[cellNum]->Fill(locPseudo->time);
 		hCathodeTime_accepted[cellNum]->Fill(locPseudo->t_u);
