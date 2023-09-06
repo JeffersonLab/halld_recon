@@ -32,7 +32,10 @@ using namespace std;
 #include <TRACKING/DTrackWireBased.h>
 #include <PID/DChargedTrack.h>
 #include <PID/DDetectorMatches.h>
+#include <PID/DBeamPhoton.h>
 #include <FDC/DFDCHit.h>
+
+
 
 class JEventProcessor_FDC_Efficiency:public jana::JEventProcessor{
  public:
@@ -52,6 +55,8 @@ class JEventProcessor_FDC_Efficiency:public jana::JEventProcessor{
   vector<double> fdcz; // FDC z positions
   vector<double> fdcrmin; // FDC inner radii
   double fdcrmax; // FDC outer radius
+
+  bool ignore_lowE_tagh; // set this in brun and use it in the event loop
 };
 
 #endif // _JEventProcessor_FDC_Efficiency_

@@ -269,7 +269,12 @@ jerror_t JEventProcessor_FDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
   // Get outer radius of FDC 
   dgeom->GetFDCRmax(fdcrmax);
   fdcrmax = 48; // fix to 48cm from DFDCPseudo_factory
-		  
+		 
+  ignore_lowE_tagh = 0;
+
+  if (runnumber >= 30796) ignore_lowE_tagh = 1; // low E TAGH counters switched off
+
+ 
   return NOERROR;
 }
 
@@ -277,6 +282,22 @@ jerror_t JEventProcessor_FDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
 // evnt
 //------------------
 jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnumber){
+
+
+  // skip if this is MC and low E tag H hit from late spring 2017 high intensity on
+  // would only be present if MC was generated over full 
+
+  if (ignore_lowE_tagh) {
+    vector<const DBeamPhoton *> genBeamPhotons;
+    loop->Get(genBeamPhotons, "MCGEN");
+
+    if (genBeamPhotons.size() > 0) {
+        if(genBeamPhotons[0]->energy() < 5.35) {
+           return NOERROR;
+        }
+    }
+
+  }
 
   vector< const DFDCHit *> locFDCHitVector;
   loop->Get(locFDCHitVector);
