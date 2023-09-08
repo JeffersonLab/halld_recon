@@ -479,7 +479,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
   // upstream cdc start position
   vector<double>cdc_origin;
   // outer detectors
-  double dTOFz,dFCALz,dFCALzBack,dDIRCz,dFMWPCsize,dCTOFz,dGEMTRDz;
+  double dTOFz,dFCALz,dFCALzBack,dDIRCz,dFMWPCsize,dCTOFz,dGEMTRDz,dITOFz;
   vector<double>dFMWPCz_vec;
   vector<double>dTRDz_vec;
 

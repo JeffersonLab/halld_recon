@@ -330,7 +330,8 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
    cdc_origin[2]+=cdc_center[2]+cdc_upstream_endplate_pos[2]
       +0.5*cdc_endplate_dim[2];
         
-   // Outer detector geometry parameters
+   // Outer detector geometry parameters 
+   geom->GetITOFZ(dITOFz);
    geom->GetFCALZ(dFCALz);
    dFCALzBack=dFCALz+45.;
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
@@ -8693,6 +8694,7 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   bool hit_dirc=false;
   bool hit_fcal=false;
   bool hit_gemtrd=false;
+  bool hit_itof=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
@@ -8817,6 +8819,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     if (hit_tof==false && newz>dTOFz){
       hit_tof=true;
       AddExtrapolation(SYS_TOF,z,S,t,s);
+    } 
+    if (hit_itof==false && newz>dITOFz){
+      hit_itof=true;
+      AddExtrapolation(SYS_ITOF,z,S,t,s);
     }
     if (hit_fcal==false && newz>dFCALz){
       double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);

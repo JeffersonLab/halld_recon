@@ -12,6 +12,7 @@
 #include <JANA/JFactory.h>
 #include <JANA/JEventLoop.h>
 
+#define PROFILE_TRK_TIMES
 #ifdef PROFILE_TRK_TIMES
 #include <prof_time.h>
 #endif
@@ -158,7 +159,8 @@ class DTrackFitter:public jana::JObject{
 		  extrapolations[SYS_TRD].clear();
 		  extrapolations[SYS_FMWPC].clear();
 		  extrapolations[SYS_CTOF].clear();
-		  extrapolations[SYS_GEMTRD].clear();
+		  extrapolations[SYS_GEMTRD].clear(); 
+		  extrapolations[SYS_ITOF].clear();
 		};
 		
 		// Fit parameter accessor methods

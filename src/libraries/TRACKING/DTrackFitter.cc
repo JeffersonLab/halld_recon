@@ -67,9 +67,11 @@ DTrackFitter::DTrackFitter(JEventLoop *loop)
 	extrapolations.emplace(SYS_FMWPC,myvector);
 	extrapolations.emplace(SYS_CTOF,myvector);
 	extrapolations.emplace(SYS_GEMTRD,myvector);
-	extrapolations.emplace(SYS_NULL,myvector);	
+	extrapolations.emplace(SYS_NULL,myvector);
+	extrapolations.emplace(SYS_ITOF,myvector);	
 
 	extrapolations[SYS_TOF].reserve(1);
+	extrapolations[SYS_ITOF].reserve(1);
 	extrapolations[SYS_BCAL].reserve(300);
 	extrapolations[SYS_FCAL].reserve(2);
 	extrapolations[SYS_FDC].reserve(24);
@@ -279,6 +281,10 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   loop->Get(gemhits_in);
   loop->Get(gemtrdsegments_in);
 
+#ifdef PROFILE_TRK_TIMES
+  prof_time start_time;
+#endif  
+
   // Get Bfield at the position at the middle of the extrapolations, i.e. the 
   // region where we actually have measurements...
   bool got_hits=false;
@@ -308,9 +314,9 @@ DTrackFitter::FindHitsAndFitTrack(const DKinematicData &starting_params,
   if (extrapolations.at(SYS_GEMTRD).size()>0){
     vector<Extrapolation_t>extraps=extrapolations.at(SYS_GEMTRD);
     gemtrdsegment=hitselector->GetGEMTRDSegment(extraps[0],gemtrdsegments_in);
-    _DBG_ << "Fitter " << gemtrdsegment << endl;
+    //_DBG_ << "Fitter " << gemtrdsegment << endl;
   }
-  _DBG_ << fdchits.size() << " " << cdchits.size() << endl;
+  //_DBG_ << fdchits.size() << " " << cdchits.size() << endl;
 
   // Check that we have enough FDC and CDC hits to proceed
   if (cdchits.size()==0 && fdchits.size()<4) return fit_status=kFitNotDone;
