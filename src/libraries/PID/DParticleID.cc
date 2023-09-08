@@ -143,6 +143,9 @@ DParticleID::DParticleID(JEventLoop *loop)
 	gPARMS->SetDefaultParameter("CTOF:MATCH_X_CUT",CTOF_MATCH_X_CUT);
 	gPARMS->SetDefaultParameter("CTOF:MATCH_Y_CUT",CTOF_MATCH_Y_CUT);
 
+	gPARMS->SetDefaultParameter("ITOF:MATCH_X_CUT",ITOF_MATCH_X_CUT);
+	gPARMS->SetDefaultParameter("ITOF:MATCH_Y_CUT",ITOF_MATCH_Y_CUT);
+
 	double locSCCutPar = 8.0;
 	gPARMS->SetDefaultParameter("SC:SC_CUT_PAR1",locSCCutPar);
 	dSCCutPars_TimeBased.push_back(locSCCutPar);
@@ -1399,6 +1402,45 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&e
   return true;
 }
 
+bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DITOFHit* locITOFHit, double locInputStartTime,shared_ptr<DITOFHitMatchParams>& locITOFHitMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
+{
+  if(extrapolations.size()==0)
+    return false;
+
+  // Find the track projection to the CTOF
+  DVector3 locProjPos=extrapolations[0].position;
+  DVector3 locProjMom=extrapolations[0].momentum;
+  double locFlightTime=extrapolations[0].t;
+
+  double locHitTime = locITOFHit->t;
+  // Check that the hit is not out of time with respect to the track
+  double locDeltaT = locHitTime - locFlightTime - locInputStartTime;
+  if(fabs(locDeltaT) > OUT_OF_TIME_CUT)
+    return false;
+  
+  if(locOutputProjMom != nullptr)
+    {
+      *locOutputProjPos = locProjPos;
+      *locOutputProjMom = locProjMom;
+    }
+
+  double locDeltaX = locITOFHit->x - locProjPos.X();
+  double locDeltaY = locITOFHit->y - locProjPos.Y();
+
+  //SET MATCHING INFORMATION
+  if(locITOFHitMatchParams == nullptr)
+    locITOFHitMatchParams = std::make_shared<DITOFHitMatchParams>();
+   
+  locITOFHitMatchParams->dITOFHit = locITOFHit;
+  double dx = 0.4*locProjMom.Mag()/locProjMom.Dot(DVector3(0.0,0.,1.));
+  locITOFHitMatchParams->dEdx = locITOFHit->dE/dx;
+  locITOFHitMatchParams->dFlightTime = locFlightTime;
+  locITOFHitMatchParams->dDeltaXToHit = locDeltaX;
+  locITOFHitMatchParams->dDeltaYToHit = locDeltaY;
+
+  return true;
+}
+
 
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const
 {
@@ -1859,6 +1901,28 @@ bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> 
   return true;
 }
 
+bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DITOFHit* locITOFHit, double locInputStartTime,shared_ptr<DITOFHitMatchParams>& locITOFHitMatchParams, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
+{
+  DVector3 locProjPos, locProjMom;
+  if(!Distance_ToTrack(extrapolations, locITOFHit, locInputStartTime, locITOFHitMatchParams, &locProjPos, &locProjMom))
+    return false;
+  
+  if(locOutputProjMom != nullptr)
+    {
+      *locOutputProjPos = locProjPos;
+      *locOutputProjMom = locProjMom;
+    }
+  
+  double locDeltaX = locITOFHitMatchParams->dDeltaXToHit;
+  if (fabs(locDeltaX)>ITOF_MATCH_X_CUT) return false;
+
+  double locDeltaY = locITOFHitMatchParams->dDeltaYToHit;
+  if (fabs(locDeltaY)>ITOF_MATCH_Y_CUT) return false;
+
+  return true;
+}
+
+
 bool DParticleID::Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, bool locIsTimeBased, DVector3 *locOutputProjPos, DVector3 *locOutputProjMom) const
 {
 	DVector3 locProjPos, locProjMom;
@@ -1987,6 +2051,33 @@ shared_ptr<const DCTOFHitMatchParams> DParticleID::Get_BestCTOFMatchParams(vecto
     }
   return locBestMatchParams;
 }
+
+bool DParticleID::Get_BestITOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DITOFHitMatchParams>& locBestMatchParams) const
+{
+  //choose the "best" hit to use for computing quantities
+  vector<shared_ptr<const DITOFHitMatchParams> > locITOFHitMatchParams;
+  if(!locDetectorMatches->Get_ITOFMatchParams(locTrack, locITOFHitMatchParams))
+    return false;
+
+  locBestMatchParams = Get_BestITOFMatchParams(locITOFHitMatchParams);
+  return true;
+}
+
+shared_ptr<const DITOFHitMatchParams> DParticleID::Get_BestITOFMatchParams(vector<shared_ptr<const DITOFHitMatchParams> >& locITOFHitMatchParams) const
+{
+  double locMinDistance = 9.9E9;
+  shared_ptr<const DITOFHitMatchParams> locBestMatchParams;
+  for(size_t loc_i = 0; loc_i < locITOFHitMatchParams.size(); ++loc_i)
+    {
+      double locDeltaR = locITOFHitMatchParams[loc_i]->Get_DistanceToTrack();
+      if(locDeltaR >= locMinDistance)
+	continue;
+      locMinDistance = locDeltaR;
+      locBestMatchParams = locITOFHitMatchParams[loc_i];
+    }
+  return locBestMatchParams;
+}
+
 
 
 bool DParticleID::Get_BestTOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTOFHitMatchParams>& locBestMatchParams) const

@@ -69,6 +69,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		shared_ptr<const DFCALSingleHitMatchParams> Get_FCALSingleHitMatchParams(void) const{return dTrackingInfo->dFCALSingleHitMatchParams;}
 		shared_ptr<const DDIRCMatchParams> Get_DIRCMatchParams(void) const{return dTrackingInfo->dDIRCMatchParams;}
 		shared_ptr<const DCTOFHitMatchParams> Get_CTOFHitMatchParams(void) const{return dTrackingInfo->dCTOFHitMatchParams;}
+		shared_ptr<const DITOFHitMatchParams> Get_ITOFHitMatchParams(void) const{return dTrackingInfo->dITOFHitMatchParams;}
 
 		//SETTERS
 
@@ -93,6 +94,7 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_FCALSingleHitMatchParams(shared_ptr<const DFCALSingleHitMatchParams> locMatchParams){dTrackingInfo->dFCALSingleHitMatchParams = locMatchParams;}
 		void Set_DIRCMatchParams(shared_ptr<const DDIRCMatchParams> locMatchParams){dTrackingInfo->dDIRCMatchParams = locMatchParams;}	
 		void Set_CTOFHitMatchParams(shared_ptr<const DCTOFHitMatchParams> locMatchParams){dTrackingInfo->dCTOFHitMatchParams = locMatchParams;}
+		void Set_ITOFHitMatchParams(shared_ptr<const DITOFHitMatchParams> locMatchParams){dTrackingInfo->dITOFHitMatchParams = locMatchParams;}
 
 		void toStrings(vector<pair<string,string> > &items) const
 		{
@@ -171,6 +173,7 @@ class DChargedTrackHypothesis : public DKinematicData
 				shared_ptr<const DFCALSingleHitMatchParams> dFCALSingleHitMatchParams = nullptr;
 				shared_ptr<const DDIRCMatchParams> dDIRCMatchParams = nullptr;	
 				shared_ptr<const DCTOFHitMatchParams> dCTOFHitMatchParams = nullptr;
+				shared_ptr<const DITOFHitMatchParams> dITOFHitMatchParams = nullptr;
 		};
 
 	private:
@@ -405,7 +408,8 @@ inline void DChargedTrackHypothesis::DTrackingInfo::Reset(void)
 	dTrackTimeBased = nullptr;
 	dSCHitMatchParams = nullptr;
 	dTOFHitMatchParams = nullptr;
-	dCTOFHitMatchParams = nullptr;
+	dCTOFHitMatchParams = nullptr;	
+	dITOFHitMatchParams = nullptr;
 	dBCALShowerMatchParams = nullptr;
 	dFCALShowerMatchParams = nullptr;
 	dFCALSingleHitMatchParams = nullptr;

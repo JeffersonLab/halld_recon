@@ -41,6 +41,8 @@ class DChargedTrackHypothesis_factory:public jana::JFactory<DChargedTrackHypothe
 			return locHypo;
 		}
 
+		void Get7x7ErrorMatrix(const DTrackTimeBased *myTrack,TMatrixFSym &myCovarianceMatrix) const;
+
 	private:
 		const DParticleID* dPIDAlgorithm;
 

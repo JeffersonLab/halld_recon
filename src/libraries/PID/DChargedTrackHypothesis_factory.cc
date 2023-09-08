@@ -271,6 +271,8 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	shared_ptr<const DFCALSingleHitMatchParams> locFCALSingleHitMatchParams;
 	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;	
 	shared_ptr<const DCTOFHitMatchParams> locCTOFHitMatchParams;
+	shared_ptr<const DITOFHitMatchParams> locITOFHitMatchParams;
+
 	if(dPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
 		locChargedTrackHypothesis->Set_BCALShowerMatchParams(locBCALShowerMatchParams);
 	if(dPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
@@ -282,7 +284,9 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	if(dPIDAlgorithm->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams))
 		locChargedTrackHypothesis->Set_DIRCMatchParams(locDIRCMatchParams);
 	if(dPIDAlgorithm->Get_BestCTOFMatchParams(locTrackTimeBased, locDetectorMatches, locCTOFHitMatchParams))
-	  locChargedTrackHypothesis->Set_CTOFHitMatchParams(locCTOFHitMatchParams);
+	  locChargedTrackHypothesis->Set_CTOFHitMatchParams(locCTOFHitMatchParams);	
+	if(dPIDAlgorithm->Get_BestITOFMatchParams(locTrackTimeBased, locDetectorMatches, locITOFHitMatchParams))
+	  locChargedTrackHypothesis->Set_ITOFHitMatchParams(locITOFHitMatchParams);
 
 	//PID
 	if(locChargedTrackHypothesis->t1_detector() == SYS_BCAL)

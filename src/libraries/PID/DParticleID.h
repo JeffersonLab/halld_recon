@@ -30,6 +30,7 @@
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry_factory.h>
 #include <FMWPC/DCTOFPoint.h>
+#include <TOF/DITOFHit.h>
 #include <TOF/DTOFPoint.h>
 #include <TOF/DTOFPaddleHit.h>
 #include <TOF/DTOFGeometry_factory.h>
@@ -131,6 +132,7 @@ class DParticleID:public jana::JObject
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime, shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DCTOFPoint* locCTOFPoint, double locInputStartTime,shared_ptr<DCTOFHitMatchParams>& locCTOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
+		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DITOFHit* locITOFHit, double locInputStartTime,shared_ptr<DITOFHitMatchParams>& locITOFHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DBCALShower* locBCALShower, double locInputStartTime,shared_ptr<DBCALShowerMatchParams>& locShowerMatchParams, DVector3* locOutputProjPos=nullptr, DVector3* locOutputProjMom=nullptr) const;
 		bool Distance_ToTrack(double locStartTime,const DTrackFitter::Extrapolation_t &extrapolation,const DFCALHit *locFCALHit,double &locDOCA,double &locHitTime) const;
@@ -147,6 +149,7 @@ class DParticleID:public jana::JObject
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DFCALShower* locFCALShower, double locInputStartTime,shared_ptr<DFCALShowerMatchParams>& locShowerMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;	
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DCTOFPoint* locCTOFPoint, double locInputStartTime,shared_ptr<DCTOFHitMatchParams>& locCTOFHitMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
+		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DITOFHit* locITOFHit, double locInputStartTime,shared_ptr<DITOFHitMatchParams>& locITOFHitMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDistance(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const DSCHit* locSCHit, double locInputStartTime,shared_ptr<DSCHitMatchParams>& locSCHitMatchParams, bool locIsTimeBased, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 		bool Cut_MatchDIRC(const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DDIRCPmtHit*> locDIRCHits, double locInputStartTime, Particle_t locPID, shared_ptr<DDIRCMatchParams>& locDIRCMatchParams, const vector<const DDIRCTruthBarHit*> locDIRCBarHits, map<shared_ptr<const DDIRCMatchParams>, vector<const DDIRCPmtHit*> >& locDIRCTrackMatchParams, DVector3 *locOutputProjPos=nullptr, DVector3 *locOutputProjMom=nullptr) const;
 
@@ -157,6 +160,7 @@ class DParticleID:public jana::JObject
 		bool Get_BestSCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DSCHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestTOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DTOFHitMatchParams>& locBestMatchParams) const;	
 		bool Get_BestCTOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DCTOFHitMatchParams>& locBestMatchParams) const;
+		bool Get_BestITOFMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DITOFHitMatchParams>& locBestMatchParams) const;
 		bool Get_BestFCALMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALShowerMatchParams>& locBestMatchParams) const;
 		bool Get_BestFCALSingleHitMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DFCALSingleHitMatchParams>& locBestMatchParams) const;
 		bool Get_DIRCMatchParams(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches, shared_ptr<const DDIRCMatchParams>& locBestMatchParams) const;
@@ -166,6 +170,7 @@ class DParticleID:public jana::JObject
 		shared_ptr<const DSCHitMatchParams> Get_BestSCMatchParams(vector<shared_ptr<const DSCHitMatchParams> >& locSCHitMatchParams) const;
 		shared_ptr<const DTOFHitMatchParams> Get_BestTOFMatchParams(vector<shared_ptr<const DTOFHitMatchParams> >& locTOFHitMatchParams) const;
 		shared_ptr<const DCTOFHitMatchParams> Get_BestCTOFMatchParams(vector<shared_ptr<const DCTOFHitMatchParams> >& locCTOFHitMatchParams) const;
+		shared_ptr<const DITOFHitMatchParams> Get_BestITOFMatchParams(vector<shared_ptr<const DITOFHitMatchParams> >& locITOFHitMatchParams) const;
 		shared_ptr<const DFCALShowerMatchParams> Get_BestFCALMatchParams(vector<shared_ptr<const DFCALShowerMatchParams> >& locShowerMatchParams) const;
 		shared_ptr<const DFCALSingleHitMatchParams> Get_BestFCALSingleHitMatchParams(vector<shared_ptr<const DFCALSingleHitMatchParams> >& locMatchParams) const;
 
@@ -265,6 +270,7 @@ class DParticleID:public jana::JObject
 		double dA_FDC;
 
 		double CTOF_MATCH_X_CUT=20.,CTOF_MATCH_Y_CUT=20.0;
+		double ITOF_MATCH_X_CUT=20.,ITOF_MATCH_Y_CUT=20.0;
 		double BCAL_Z_CUT,BCAL_PHI_CUT_PAR1,BCAL_PHI_CUT_PAR2, BCAL_PHI_CUT_PAR3;
 		double FCAL_CUT_PAR1,FCAL_CUT_PAR2,FCAL_CUT_PAR3;
 		double TOF_CUT_PAR1, TOF_CUT_PAR2, TOF_CUT_PAR3, TOF_CUT_PAR4;
