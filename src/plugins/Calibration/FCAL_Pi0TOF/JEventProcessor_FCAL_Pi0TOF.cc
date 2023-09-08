@@ -145,8 +145,8 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
   loop->Get(locEventRFBunches);
   double locRFTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
   
-  uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
-  uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
+  // uint32_t locL1Trigger_fp = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->fp_trig_mask;
+  // uint32_t locL1Trigger = locL1Triggers.empty() ? 0.0 : locL1Triggers[0]->trig_mask;
   
   int trig_bit[33];
   if (locL1Triggers.size() > 0) {
@@ -215,15 +215,15 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     int rings1 = (int) (radiusShower1 / (5 * k_cm));
     int ringl1 = (int) (radiusShowerlog1 / (5 * k_cm));
     
-    double frac_ring_thres = frac_thres_1_to_5;
-    if (ring1 >= 6)
-      frac_ring_thres = frac_thres_6_to_23;
-    double frac_rings_thres = frac_thres_1_to_5;
-    if (rings1 >= 6)
-      frac_rings_thres = frac_thres_6_to_23;
-    double frac_ringl_thres = frac_thres_1_to_5;
-    if (ringl1 >= 6)
-      frac_ringl_thres = frac_thres_6_to_23;
+    // double frac_ring_thres = frac_thres_1_to_5;
+    // if (ring1 >= 6)
+    //   frac_ring_thres = frac_thres_6_to_23;
+    // double frac_rings_thres = frac_thres_1_to_5;
+    // if (rings1 >= 6)
+    //   frac_rings_thres = frac_thres_6_to_23;
+    // double frac_ringl_thres = frac_thres_1_to_5;
+    // if (ringl1 >= 6)
+    //   frac_ringl_thres = frac_thres_6_to_23;
     
     double frac1 = fcalCluster1->getEmax()/fcalCluster1->getEnergy();
     double Eclust1 = fcalCluster1->getEnergy();
@@ -839,7 +839,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
 	//}
 	
 	if (DO_METHOD == 1 || DO_METHOD == 2) {
-	  for (unsigned int k = 0; k < (int) locBeamPhotons.size(); k ++) {
+	  for (unsigned int k = 0; k < (unsigned int) locBeamPhotons.size(); k ++) {
 	    
 	    const DBeamPhoton *ebeam = locBeamPhotons[k]; 
 	    //double eb = ebeam->lorentzMomentum().E();
