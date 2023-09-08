@@ -18,6 +18,7 @@
 #include <TH1F.h>
 #include <TH2F.h>
 
+#define PROFILE_TRK_TIMES
 #ifdef PROFILE_TRK_TIMES
 #include <prof_time.h>
 static map<string, prof_time::time_diffs> cand_prof_times;
@@ -312,6 +313,11 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       }
     }
   }
+
+#ifdef PROFILE_TRK_TIMES
+  start_time.TimeDiffNow(cand_prof_times, "Link stray segments");
+#endif
+  
     
   // Create track stubs for unused segments
   for (unsigned int j=0;j<4;j++){
@@ -341,10 +347,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       }
     }
   }
-
-#ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Full sequence");
-#endif
 
   return NOERROR;
 }
