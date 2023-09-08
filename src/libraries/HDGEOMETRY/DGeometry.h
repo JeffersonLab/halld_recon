@@ -180,7 +180,8 @@ class DGeometry{
       bool GetFMWPCWireSpacing(double &fmwpc_wire_spacing) const;
       bool GetFMWPCWireOrientation(vector<fmwpc_wire_orientation_t> &fmwpc_wire_orientation) const;
       bool GetCTOFZ(double &z) const; ///< z location of CPP scintillators in cm
-      bool GetCTOFPositions(vector<DVector3>&posvec) const; ///< vector of positions of CPP scintillators in cm
+      bool GetCTOFPositions(vector<DVector3>&posvec) const; ///< vector of positions of CPP scintillators in cm 
+      bool GetITOFZ(double &z) const;  ///< z location of Inner TOF in cm
 
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
@@ -213,6 +214,8 @@ class DGeometry{
       // after pos[0][1].
 
       vector<DMaterialMap*> GetMaterialMapVector(void) const;
+
+      bool TOF_TEST_GEOM;
 
    protected:
       DGeometry(){}

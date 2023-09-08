@@ -36,6 +36,9 @@ DGeometry::DGeometry(JGeometry *jgeom, DApplication *dapp, int32_t runnumber)
 	pthread_mutex_init(&materialmap_mutex, NULL);
 	pthread_mutex_init(&materials_mutex, NULL);
 
+	TOF_TEST_GEOM=false;
+	gPARMS->SetDefaultParameter("TOF:TEST_GEOM",TOF_TEST_GEOM);
+
 	ReadMaterialMaps();
 }
 
@@ -1915,6 +1918,25 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
    }
 }
 
+//---------------------------------
+// GetITOFZ
+//---------------------------------
+bool DGeometry::GetITOFZ(double &z) const {
+  z=1000; // cm; initialize to a large value
+  
+  vector<double> ITOFPos;
+  bool good = Get("//section/composition/posXYZ[@volume='ITOF']/@X_Y_Z", ITOFPos);
+  if (!good){  
+    _DBG_<<"Unable to retrieve Inner TOF position."<<endl;
+    return false;
+  }
+  vector<double> ForwardTOF;
+  if(!Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z", ForwardTOF)) return false;
+
+  z=ForwardTOF[2]+ITOFPos[2];
+  return true;
+}
+
 
 
 //---------------------------------
@@ -2304,65 +2326,88 @@ bool DGeometry::GetTOFZ(vector<double> &z_tof) const
 //---------------------------------
 bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
 {
-	vector<double> xyz_bar;
+  vector<double> xyz_bar;
+  
+  // load the number of bars in each area
+  int num_bars1 = 0;
+  int num_narrow_bars1 = 0;
+  int num_single_end_bars1 = 0;  
+  int num_narrower_bars1 = 0;   // optional - added during upgrade
+  int num_narrower_bars2 = 0;   // optional  - added during upgrade
+  int num_narrow_bars2 = 0;
+  int num_single_end_bars2 = 0; 
+  int num_bars2 = 0;
 
-	// load the number of bars in each area
-    int num_bars1 = 0;
-    if(!Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1)) return false; 
-    int num_narrow_bars1 = 0;
+  if(!Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1)) return false;
+  
+  if(!Get("//composition[@name='forwardTOF_top1']/mposY[@volume='FTOC']/@ncopy",num_bars2)) return false; 
+  
+  if(!Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1)) return false;  
+
+  if(!Get("//composition[@name='forwardTOF_south']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars2)) return false;
+
+  if (TOF_TEST_GEOM){
+    int num_extra_bars=0;
+    if(!Get("//composition[@name='forwardTOF_north1']/mposY[@volume='FTOX']/@ncopy",num_extra_bars)) return false;
+    num_single_end_bars1+=num_extra_bars;
+
+    if(!Get("//composition[@name='forwardTOF_north2']/mposY[@volume='FTOX']/@ncopy",num_extra_bars)) return false;
+    num_single_end_bars1+=num_extra_bars;  
+
+    if(!Get("//composition[@name='forwardTOF_south2']/mposY[@volume='FTOX']/@ncopy",num_extra_bars)) return false;
+    num_single_end_bars2+=num_extra_bars; 
+    
+    if(!Get("//composition[@name='forwardTOF_south1']/mposY[@volume='FTOX']/@ncopy",num_extra_bars)) return false;
+    num_single_end_bars2+=num_extra_bars; 
+  }
+  else{
     if(!Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1)) return false; 
-    int num_single_end_bars1 = 0;
-    if(!Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1)) return false;
-
+    
     jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-    int num_narrower_bars1 = 0;   // optional - added during upgrade
+    
     Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
-    int num_narrower_bars2 = 0;   // optional  - added during upgrade
+    
     Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
-    jgeom->SetVerbose(1);   // reenable error messages
+    jgeom->SetVerbose(1);   // reenable error messages 
 
-    int num_narrow_bars2 = 0;
     if(!Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2)) return false;
-    int num_bars2 = 0;
-    if(!Get("//composition[@name='forwardTOF_top1']/mposY[@volume='FTOC']/@ncopy",num_bars2)) return false;
-    int num_single_end_bars2 = 0;
-    if(!Get("//composition[@name='forwardTOF_south']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars2)) return false;
-
-	int NLONGBARS = num_bars1 + num_bars2 + num_narrow_bars1 + num_narrow_bars2
-						 + num_narrower_bars1 + num_narrower_bars2;
-	int NSHORTBARS = num_single_end_bars1 + num_single_end_bars2;
-	int FIRSTSHORTBAR = num_bars1 + num_narrow_bars1 + num_narrower_bars1 + 1;
-	int LASTSHORTBAR = FIRSTSHORTBAR + NSHORTBARS/2 - 1;
-
-	// load bar sizes
-	//Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@X_Y_Z",xyz_bar);
-    if(!Get("//box[@name='FTOC' and sensitive='true']/@X_Y_Z", xyz_bar)) return false;
-	double LONGBARLENGTH = xyz_bar[0];
-	double BARWIDTH  = xyz_bar[1];
-	//Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOH']/@X_Y_Z",xyz_bar);
-    if(!Get("//box[@name='FTOH' and sensitive='true']/@X_Y_Z", xyz_bar)) return false;
-	double SHORTBARLENGTH = xyz_bar[0];
-
-	
-	// load up the structure containing the parameters for the calling function
-	paddle_params["NLONGBARS"] = NLONGBARS;
-	paddle_params["NSHORTBARS"] = NSHORTBARS;
-	paddle_params["BARWIDTH"] = BARWIDTH;
-
-	paddle_params["LONGBARLENGTH"] = LONGBARLENGTH;
-	paddle_params["HALFLONGBARLENGTH"] = LONGBARLENGTH/2.;
-	paddle_params["SHORTBARLENGTH"] = SHORTBARLENGTH;
-	paddle_params["HALFSHORTBARLENGTH"] = SHORTBARLENGTH/2.;
-
-	paddle_params["FIRSTSHORTBAR"] = FIRSTSHORTBAR;
-	paddle_params["LASTSHORTBAR"] = LASTSHORTBAR;
-
-	//cout << "In DGeometry::GetTOFPaddleParameters() ..." << endl;
-	//for(auto el : paddle_params) {
-   	//	std::cout << el.first << " " << el.second << endl;
-	//}	
-	
-	return true;
+  }
+  
+  int NLONGBARS = num_bars1 + num_bars2 + num_narrow_bars1 + num_narrow_bars2
+    + num_narrower_bars1 + num_narrower_bars2;
+  int NSHORTBARS = num_single_end_bars1 + num_single_end_bars2;
+  int FIRSTSHORTBAR = num_bars1 + num_narrow_bars1 + num_narrower_bars1 + 1;
+  int LASTSHORTBAR = FIRSTSHORTBAR + NSHORTBARS/2 - 1;
+  
+  // load bar sizes
+  //Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@X_Y_Z",xyz_bar);
+  if(!Get("//box[@name='FTOC' and sensitive='true']/@X_Y_Z", xyz_bar)) return false;
+  double LONGBARLENGTH = xyz_bar[0];
+  double BARWIDTH  = xyz_bar[1];
+  //Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOH']/@X_Y_Z",xyz_bar);
+  if(!Get("//box[@name='FTOH' and sensitive='true']/@X_Y_Z", xyz_bar)) return false;
+  double SHORTBARLENGTH = xyz_bar[0];
+  
+  
+  // load up the structure containing the parameters for the calling function
+  paddle_params["NLONGBARS"] = NLONGBARS;
+  paddle_params["NSHORTBARS"] = NSHORTBARS;
+  paddle_params["BARWIDTH"] = BARWIDTH;
+  
+  paddle_params["LONGBARLENGTH"] = LONGBARLENGTH;
+  paddle_params["HALFLONGBARLENGTH"] = LONGBARLENGTH/2.;
+  paddle_params["SHORTBARLENGTH"] = SHORTBARLENGTH;
+  paddle_params["HALFSHORTBARLENGTH"] = SHORTBARLENGTH/2.;
+  
+  paddle_params["FIRSTSHORTBAR"] = FIRSTSHORTBAR;
+  paddle_params["LASTSHORTBAR"] = LASTSHORTBAR;
+  
+  cout << "In DGeometry::GetTOFPaddleParameters() ..." << endl;
+  for(auto el : paddle_params) {
+    std::cout << el.first << " " << el.second << endl;
+  }	
+  
+  return true;
 }
 
 
@@ -2371,121 +2416,148 @@ bool DGeometry::GetTOFPaddleParameters(map<string,double> &paddle_params) const
 //---------------------------------
 bool DGeometry::GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const
 {
-	// add in a dummy entry, since we are indexing by paddle number, which starts at 1
-	// maybe change this some day?
-	y_tof.push_back(0);
-	y_widths.push_back(0);
-	
-  	// Next fill array of bar positions within a plane
-  	// y_tof[barnumber] gives y position in the center of the bar. [currently barnumber = 1 - 46]
-  	double y0,dy;
+  // add in a dummy entry, since we are indexing by paddle number, which starts at 1
+  // maybe change this some day?
+  y_tof.push_back(0);
+  y_widths.push_back(0);
+  
+  // Next fill array of bar positions within a plane
+  // y_tof[barnumber] gives y position in the center of the bar. [currently barnumber = 1 - 46]
+  double y0,dy;
 
-	// load the number of bars
-    int num_bars=1;   // start counting at 1
-    int num_bars1 = 0;
-    Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1); 
-    int num_narrow_bars1 = 0;
+  // load the number of bars
+  int num_bars=1;   // start counting at 1
+  int num_bars1 = 0;
+  int num_narrow_bars1 = 0;
+  
+  // First 19 long bars
+  Get("//composition[@name='forwardTOF_bottom1']/mposY[@volume='FTOC']/@ncopy",num_bars1);
+  Get("//composition[@name='forwardTOF_bottom1']/mposY/@Y0",y0);
+  Get("//composition[@name='forwardTOF_bottom1']/mposY/@dY",dy);
+  vector<double>tof_bottom1;
+  Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom1']/@X_Y_Z",tof_bottom1);  
+  for (int k=num_bars;k<num_bars+num_bars1;k++){
+    y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-num_bars));
+    y_widths.push_back(dy);
+  }
+  num_bars+=num_bars1;
+ 
+  if (TOF_TEST_GEOM==false){
+    // two narrow long bars 
     Get("//composition[@name='forwardTOF_bottom2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars1); 
-    int num_single_end_bars1 = 0;
-    Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1); 
-
-    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    Get("//composition[@name='forwardTOF_bottom2']/mposY/@Y0",y0);
+    Get("//composition[@name='forwardTOF_bottom2']/mposY/@dY",dy);
+    vector<double>tof_bottom2;
+    Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom2']/@X_Y_Z",tof_bottom2);  
+    for (int k=num_bars;k<num_bars+num_narrow_bars1;k++){
+      y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-num_bars));
+      y_widths.push_back(dy);
+    }
+    num_bars+=num_narrow_bars1;
+  	
+    // two narrower long bars - added by upgrade
     int num_narrower_bars1 = 0;
     Get("//composition[@name='forwardTOF_bottom3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars1); 
+    if(num_narrower_bars1 > 0) {
+      Get("//composition[@name='forwardTOF_bottom3']/mposY/@Y0",y0);
+      Get("//composition[@name='forwardTOF_bottom3']/mposY/@dY",dy);
+      vector<double>tof_bottom3;
+      Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom3']/@X_Y_Z",tof_bottom3);  
+      for (int k=num_bars;k<num_bars+num_narrower_bars1;k++){
+	y_tof.push_back(y0+tof_bottom3[1]+dy*double(k-num_bars));
+	y_widths.push_back(dy);
+      }
+      num_bars+=num_narrower_bars1;
+    }
+  }
+
+  if (TOF_TEST_GEOM){
+    int num_extra_bars=0;
+    Get("//composition[@name='forwardTOF_north1']/mposY[@volume='FTOX']/@ncopy",num_extra_bars); 
+    Get("//composition[@name='forwardTOF_north1']/mposY/@Y0",y0);
+    Get("//composition[@name='forwardTOF_north1']/mposY/@dY",dy);
+    vector<double>tof_north1;
+    Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north1']/@X_Y_Z",tof_north1);  
+    for (int k=num_bars;k<num_bars+num_extra_bars;k++){
+      y_tof.push_back(y0+tof_north1[1]+dy*double(k-num_bars));
+      y_widths.push_back(dy);
+    }
+    num_bars+=num_extra_bars;
+  }
+  
+  // two short wide bars  (4 wide in upgrade)
+  int num_single_end_bars1 = 0;
+  Get("//composition[@name='forwardTOF_north']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars1); 
+  Get("//composition[@name='forwardTOF_north']/mposY/@Y0",y0);
+  Get("//composition[@name='forwardTOF_north']/mposY/@dY",dy);
+  vector<double>tof_north;
+  Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north']/@X_Y_Z",tof_north);  
+  for (int k=num_bars;k<num_bars+num_single_end_bars1;k++){
+    y_tof.push_back(y0+tof_north[1]+dy*double(k-num_bars));
+    y_widths.push_back(dy);
+  }
+  num_bars+=num_single_end_bars1;
+
+  if (TOF_TEST_GEOM){
+    int num_extra_bars=0;
+    Get("//composition[@name='forwardTOF_north2']/mposY[@volume='FTOX']/@ncopy",num_extra_bars); 
+    Get("//composition[@name='forwardTOF_north2']/mposY/@Y0",y0);
+    Get("//composition[@name='forwardTOF_north2']/mposY/@dY",dy);
+    vector<double>tof_north2;
+    Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north2']/@X_Y_Z",tof_north2);  
+    for (int k=num_bars;k<num_bars+num_extra_bars;k++){
+      y_tof.push_back(y0+tof_north2[1]+dy*double(k-num_bars));
+      y_widths.push_back(dy);
+    }
+    num_bars+=num_extra_bars;
+  }
+  else{
+    // two narrower long bars - added by upgrade
     int num_narrower_bars2 = 0;
     Get("//composition[@name='forwardTOF_top3']/mposY[@volume='FTOL']/@ncopy",num_narrower_bars2); 
-    jgeom->SetVerbose(1);   // reenable error messages
+    if(num_narrower_bars2 > 0) {
+      Get("//composition[@name='forwardTOF_top3']/mposY/@Y0",y0);
+      Get("//composition[@name='forwardTOF_top3']/mposY/@dY",dy);
+      vector<double>tof_top3;
+      Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top3']/@X_Y_Z",tof_top3);  
+      for (int k=num_bars;k<num_bars+num_narrower_bars2;k++){
+	y_tof.push_back(y0+tof_top3[1]+dy*double(k-num_bars));
+	y_widths.push_back(dy);
+      }
+      num_bars+=num_narrower_bars2;
+    }
 
+    // two narrow long bars
     int num_narrow_bars2 = 0;
     Get("//composition[@name='forwardTOF_top2']/mposY[@volume='FTOX']/@ncopy",num_narrow_bars2); 
-    int num_bars2 = 0;
-    Get("//composition[@name='forwardTOF_top1']/mposY[@volume='FTOC']/@ncopy",num_bars2); 
-    int num_single_end_bars2 = 0;
-    Get("//composition[@name='forwardTOF_south']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars2); 
-	
-  	// First 19 long bars
-  	Get("//composition[@name='forwardTOF_bottom1']/mposY/@Y0",y0);
-  	Get("//composition[@name='forwardTOF_bottom1']/mposY/@dY",dy);
-  	vector<double>tof_bottom1;
-  	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom1']/@X_Y_Z",tof_bottom1);  
-  	for (int k=num_bars;k<num_bars+num_bars1;k++){
-    	y_tof.push_back(y0+tof_bottom1[1]+dy*double(k-num_bars));
-    	y_widths.push_back(dy);
-  	}
-  	num_bars+=num_bars1;
+    Get("//composition[@name='forwardTOF_top2']/mposY/@Y0",y0);
+    Get("//composition[@name='forwardTOF_top2']/mposY/@dY",dy);
+    vector<double>tof_top2;
+    Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top2']/@X_Y_Z",tof_top2);  
+    for (int k=num_bars;k<num_bars+num_narrow_bars2;k++){
+      y_tof.push_back(y0+tof_top2[1]+dy*double(k-num_bars));
+      y_widths.push_back(dy);
+    }
+    num_bars+=num_narrow_bars2;
+  } 
+
+  // Last 19 long bars
+  int num_bars2 = 0;
+  Get("//composition[@name='forwardTOF_top1']/mposY[@volume='FTOC']/@ncopy",num_bars2); 
+  Get("//composition[@name='forwardTOF_top1']/mposY/@Y0",y0);
+  Get("//composition[@name='forwardTOF_top1']/mposY/@dY",dy);
+  vector<double>tof_top1;
+  Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top1']/@X_Y_Z",tof_top1);  
+  for (int k=num_bars;k<num_bars+num_bars2;k++){
+    y_tof.push_back(y0+tof_top1[1]+dy*double(k-num_bars));
+    y_widths.push_back(dy);
+  }
+  num_bars+=num_bars2;
   
-  	// two narrow long bars
-  	Get("//composition[@name='forwardTOF_bottom2']/mposY/@Y0",y0);
-  	Get("//composition[@name='forwardTOF_bottom2']/mposY/@dY",dy);
-  	vector<double>tof_bottom2;
-  	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom2']/@X_Y_Z",tof_bottom2);  
-  	for (int k=num_bars;k<num_bars+num_narrow_bars1;k++){
-    	y_tof.push_back(y0+tof_bottom2[1]+dy*double(k-num_bars));
-    	y_widths.push_back(dy);
-  	}
-  	num_bars+=num_narrow_bars1;
-  	
-  	// two narrower long bars - added by upgrade
-  	if(num_narrower_bars1 > 0) {
-		Get("//composition[@name='forwardTOF_bottom3']/mposY/@Y0",y0);
-		Get("//composition[@name='forwardTOF_bottom3']/mposY/@dY",dy);
-		vector<double>tof_bottom3;
-		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_bottom3']/@X_Y_Z",tof_bottom3);  
-		for (int k=num_bars;k<num_bars+num_narrower_bars1;k++){
-			y_tof.push_back(y0+tof_bottom3[1]+dy*double(k-num_bars));
- 	   		y_widths.push_back(dy);
-		}
-		num_bars+=num_narrow_bars1;
-  	}
-
-  	// two short wide bars  (4 wide in upgrade)
-  	Get("//composition[@name='forwardTOF_north']/mposY/@Y0",y0);
-  	Get("//composition[@name='forwardTOF_north']/mposY/@dY",dy);
-  	vector<double>tof_north;
-  	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_north']/@X_Y_Z",tof_north);  
-  	for (int k=num_bars;k<num_bars+num_single_end_bars1;k++){
-    	y_tof.push_back(y0+tof_north[1]+dy*double(k-num_bars));
-    	y_widths.push_back(dy);
-  	}
-  	num_bars+=num_single_end_bars1;
-
-  	// two narrower long bars - added by upgrade
-  	if(num_narrower_bars2 > 0) {
-		Get("//composition[@name='forwardTOF_top3']/mposY/@Y0",y0);
-		Get("//composition[@name='forwardTOF_top3']/mposY/@dY",dy);
-		vector<double>tof_top3;
-		Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top3']/@X_Y_Z",tof_top3);  
-		for (int k=num_bars;k<num_bars+num_narrower_bars2;k++){
-			y_tof.push_back(y0+tof_top3[1]+dy*double(k-num_bars));
-    		y_widths.push_back(dy);
-		}
-		num_bars+=num_narrow_bars2;
-  	}
-
-  	// two narrow long bars
-  	Get("//composition[@name='forwardTOF_top2']/mposY/@Y0",y0);
-  	Get("//composition[@name='forwardTOF_top2']/mposY/@dY",dy);
-  	vector<double>tof_top2;
-  	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top2']/@X_Y_Z",tof_top2);  
-  	for (int k=num_bars;k<num_bars+num_narrow_bars2;k++){
-    	y_tof.push_back(y0+tof_top2[1]+dy*double(k-num_bars));
-    	y_widths.push_back(dy);
-  	}
-  	num_bars+=num_narrow_bars2;
-
-  	// Last 19 long bars
-  	Get("//composition[@name='forwardTOF_top1']/mposY/@Y0",y0);
-  	Get("//composition[@name='forwardTOF_top1']/mposY/@dY",dy);
-  	vector<double>tof_top1;
-  	Get("//composition[@name='forwardTOF']/posXYZ[@volume='forwardTOF_top1']/@X_Y_Z",tof_top1);  
-  	for (int k=num_bars;k<num_bars+num_bars2;k++){
-   	 	y_tof.push_back(y0+tof_top1[1]+dy*double(k-num_bars));
-    	y_widths.push_back(dy);
-  	}
-  	num_bars+=num_bars2;
-
 	/*
   	// two more short wide bars - IGNORE FOR NOW, ASSUME SAME Y AS OTHER SINGLE ENDED
+	 int num_single_end_bars2 = 0;
+  Get("//composition[@name='forwardTOF_south']/mposY[@volume='FTOH']/@ncopy",num_single_end_bars2); 
   	Get("//composition[@name='forwardTOF_south']/mposY/@Y0",y0);
   	Get("//composition[@name='forwardTOF_south']/mposY/@dY",dy);
   	vector<double>tof_south;
