@@ -199,13 +199,13 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // Grab the pedestal from the digihit since this should be consistent between the old and new formats
     int raw_ped           = digihit->pedestal;
     int maxamp            = digihit->pulse_peak;
-    int nsamples_integral = 0; // actual number computed below using config info
+    // int nsamples_integral = 0; // actual number computed below using config info
     
     // There are a few values from the new data type that are critical for the interpretation of the data
-    uint16_t IBIT = 0; // 2^{IBIT} Scale factor for integral
+    // uint16_t IBIT = 0; // 2^{IBIT} Scale factor for integral
     uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
     uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
-    uint16_t NW   = 0;
+    // uint16_t NW   = 0;
     
 	// Configuration data needed to interpret the hits is stored in the data stream
 	vector<const Df125Config*> configs;
@@ -220,13 +220,13 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	} else {
 		// Set some constants to defaults until they appear correctly in the config words in the future
 		const Df125Config *config = configs[0];
-		IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
+		// IBIT = config->IBIT == 0xffff ? 4 : config->IBIT;
 		ABIT = config->ABIT == 0xffff ? 3 : config->ABIT;
 		PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
-		NW   = config->NW   == 0xffff ? 200 : config->NW;
+		// NW   = config->NW   == 0xffff ? 200 : config->NW;
 	}
 
-	nsamples_integral = (NW - (digihit->pulse_time / 10));      
+	// nsamples_integral = (NW - (digihit->pulse_time / 10));      
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
     int scaled_ped = raw_ped << PBIT;
