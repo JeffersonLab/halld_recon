@@ -133,8 +133,8 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_pseudo_measured_mid_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_pseudo_expected_mid_cell[%d]", icell+1);
-    fdc_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 200, -25, 25, 200, -25, 25);
+    fdc_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 200, -25, 25, 200, -25, 25);
     
     // q+
     sprintf(hname_measured, "fdc_qpos_wire_measured_cell[%d]", icell+1);
@@ -149,8 +149,8 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
     sprintf(hname_measured, "fdc_qpos_pseudo_measured_mid_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qpos_pseudo_expected_mid_cell[%d]", icell+1);
-    fdc_qpos_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_qpos_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_qpos_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 200, -25, 25, 200, -25, 25);
+    fdc_qpos_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 200, -25, 25, 200, -25, 25);
 
     
     // q-
@@ -166,8 +166,8 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
     
     sprintf(hname_measured, "fdc_qneg_pseudo_measured_mid_cell[%d]", icell+1);
     sprintf(hname_expected, "fdc_qneg_pseudo_expected_mid_cell[%d]", icell+1);
-    fdc_qneg_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 100, -25, 25, 100, -25, 25);
-    fdc_qneg_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 100, -25, 25, 100, -25, 25);
+    fdc_qneg_pseudo_measured_mid_cell[icell+1] = new TH2D(hname_measured, "", 200, -25, 25, 200, -25, 25);
+    fdc_qneg_pseudo_expected_mid_cell[icell+1] = new TH2D(hname_expected, "", 200, -25, 25, 200, -25, 25);
     
   }	
 
@@ -478,9 +478,9 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       }
       
       // cut out central hole and intersections at too large radii
-      int packageIndex = (cellNum - 1) / 6;
-      if (interPosition.Perp() < fdcrmin[packageIndex] ) cout << "track through central hole, radius " << interPosition.Perp() << endl;
-      if (interPosition.Perp() < fdcrmin[packageIndex] || interPosition.Perp() > fdcrmax) continue;
+      //      int packageIndex = (cellNum - 1) / 6;
+      //      if (interPosition.Perp() < fdcrmin[packageIndex] ) cout << "track through central hole, radius " << interPosition.Perp() << endl;
+      //      if (interPosition.Perp() < fdcrmin[packageIndex] || interPosition.Perp() > fdcrmax) continue;
       
 
       /////////////////// WIRE ANALYSIS /////////////////////////////////
