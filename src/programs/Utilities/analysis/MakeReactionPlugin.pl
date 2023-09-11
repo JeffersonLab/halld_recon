@@ -620,6 +620,17 @@ sub PrintSConstruct()
 {
 	# Contents of default SConstruct file for plugins
         $content = "
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+from builtins import map
+from builtins import str
+from builtins import open
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
 
 import os
 import sys
@@ -629,7 +640,7 @@ import glob
 # Get HALLD_RECON_HOME environment variable, verifying it is set
 halld_home = os.getenv('HALLD_RECON_HOME')
 if(halld_home == None):
-        print 'HALLD_RECON_HOME environment variable not set!'
+        print('HALLD_RECON_HOME environment variable not set!')
         exit(-1)
 
 # Get HALLD_MY if it exists. Otherwise use HALLD_RECON_HOME
@@ -651,7 +662,8 @@ SHOWBUILD = ARGUMENTS.get('SHOWBUILD', 0)
 osname = os.getenv('BMS_OSNAME', 'build')
 
 # Get architecture name
-arch = subprocess.Popen([\"uname\"], stdout=subprocess.PIPE).communicate()[0].strip()
+arch_out = ROOT_CFLAGS = subprocess.Popen([\"uname\"], stdout=subprocess.PIPE).communicate()[0].strip()
+arch = str(arch_out, 'utf-8')
 
 # Setup initial environment
 plugininstalldir = halld_my
