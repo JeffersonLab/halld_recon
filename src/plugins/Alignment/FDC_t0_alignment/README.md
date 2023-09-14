@@ -14,6 +14,7 @@ path_to_output_dir          .. absolute path to ouput directory for .mil files (
 path_to_swif2_output_dir    .. absolute path to swif2 (standard and error) outputs
 path_to_pede                .. absolute path to the executable "pede". See https://www.desy.de/~kleinwrt/MP2/doc/html/index.html to install Millepede (="pede").
 path_to_output_ccdb_sqlite  .. absolute path to CCDB SQLite file for output results. This can be the same as path_to_input_ccdb_sqlite.
+is_straight                 .. true or false. true for field-on analysis, and false for field-off (=straight track) analysis.
 num_of_events               .. Number of events which will be analyzed by Mille plugin.
 
 
