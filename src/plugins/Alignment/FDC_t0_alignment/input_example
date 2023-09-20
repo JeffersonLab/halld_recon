@@ -1,4 +1,4 @@
-# paths for mille_straight.py
+# paths for mille.py
 path_to_input_ccdb_sqlite  /path/to/your/input/ccdb.sqlite
 path_to_version_xml        /group/halld/www/halldweb/html/halld_versions/version.xml
 path_to_output_dir         /path/to/your/output/directory/
@@ -9,6 +9,9 @@ path_to_swif2_output_dir  /path/to/your/swif2/output/directory/
 # paths for pede.py
 path_to_pede                /path/to/your/pede
 path_to_output_ccdb_sqlite  /path/to/your/output/ccdb.sqlite
+
+# B-field ON (MilleFieldOn) or OFF (MilleFieldOff)?  true .. FieldOn analysis,  false .. FieldOff analysis
+is_straight  false
 
 # Number of events analyzed. Negative number means full analysis.
 num_of_events  1000000

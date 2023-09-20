@@ -6,7 +6,6 @@ import os
 import glob
 import shlex
 import subprocess
-import rcdb
 
 
 def main():
@@ -23,6 +22,7 @@ def main():
   ver_xml = par['path_to_version_xml']
   ccdb_path = par['path_to_input_ccdb_sqlite']
   output_dir = par['path_to_output_dir'].rstrip('/') + '/'
+  is_straight = True if par['is_straight'].upper().startswith('T') else False
   num_of_events = int(par['num_of_events'])
 
   gxenv(ver_xml)
@@ -41,11 +41,15 @@ def main():
   os.environ['JANA_CALIB_URL'] = sqlite_str
 
   cmd_list = ['hd_root']
-  cmd_list.append('-PPLUGINS=MilleFieldOn,TrackingPulls')
-  cmd_list.append('-PTRACKINGPULLS:MAKE_TREE=1')
-  cmd_list.append('-PTRACKINGPULLS:TREEFILE=%stree%06d.root' % (output_dir, runnum))
-  cmd_list.append('-PTRKFIT:ALIGNMENT=1')
-  cmd_list.append('-PNTHEADS=4')
+  if is_straight:
+    cmd_list.append('-PPLUGINS=MilleFieldOff,TrackingPulls_straight')
+    cmd_list.append('-PBFIELD_TYPE=NoField')
+  else:
+    cmd_list.append('-PPLUGINS=MilleFieldOn,TrackingPulls')
+    cmd_list.append('-PTRACKINGPULLS:MAKE_TREE=1')
+    cmd_list.append('-PTRACKINGPULLS:TREEFILE=%stree%06d.root' % (output_dir, runnum))
+    cmd_list.append('-PTRKFIT:ALIGNMENT=1')
+    cmd_list.append('-PNTHEADS=4')
   if num_of_events > 0:
     cmd_list.append('-PEVENTS_TO_KEEP=%d' % num_of_events)
   cmd_list.append(evio_path)
