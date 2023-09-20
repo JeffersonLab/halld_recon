@@ -301,8 +301,8 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
     PhotonList.push_back(PhotonVec);
   }
 */
-  Double_t bestChi2Eta = 1.0e30;
-  Double_t bestChi2EtaPrim = 1.0e30;
+  // Double_t bestChi2Eta = 1.0e30;
+  // Double_t bestChi2EtaPrim = 1.0e30;
   vector <TLorentzVector> PhotonEta6gList;PhotonEta6gList.clear();
   vector <TLorentzVector> PhotonEtaprim6gList;PhotonEtaprim6gList.clear();
   /*
