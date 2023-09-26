@@ -67,6 +67,9 @@ jerror_t DFCALCluster_factory_Island::init(void)
   SPLIT_PEAKS=false;
   gPARMS->SetDefaultParameter("FCAL:SPLIT_PEAKS",SPLIT_PEAKS);
 
+  MERGE_HITS_AT_BOUNDARY=true;
+  gPARMS->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
+
   ENERGY_SHARING_CUTOFF=0.9;
   gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
   APPLY_S_CURVE_CORRECTION=true;
@@ -254,7 +257,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       b=SHOWER_WIDTH_PAR0+SHOWER_WIDTH_PAR1*R+SHOWER_WIDTH_PAR2*R*R;
     }
     
-    if (min_row<100 && max_row>=100){
+    if (MERGE_HITS_AT_BOUNDARY && min_row<100 && max_row>=100){
       //cout << "!!! overlap " << Emax << endl;
       // Handle the interface between the insert and the lead glass blocks
       double Esum=0.;
@@ -663,7 +666,8 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 
 	  // look for adjacent clusters between the lead glass and the insert,
 	  // if present
-	  if (dFCALGeom->hitPairHasInsertHit(row1,row2)){
+	  if (MERGE_HITS_AT_BOUNDARY
+	      && dFCALGeom->hitPairHasInsertHit(row1,row2)){
 	    double dx=(*iter)[i]->x-(*iter2)[j]->x;
 	    double dy=(*iter)[i]->y-(*iter2)[j]->y;
 	    if (fabs(dx)<borderCut && fabs(dy)<borderCut){
