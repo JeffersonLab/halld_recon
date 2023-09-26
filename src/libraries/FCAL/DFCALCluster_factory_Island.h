@@ -63,7 +63,7 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   double m_insert_Eres[3],m_Eres[3];
   double m_zdiff;
 
-  bool SPLIT_PEAKS;
+  bool SPLIT_PEAKS,MERGE_HITS_AT_BOUNDARY;
   bool APPLY_S_CURVE_CORRECTION;
   double S_CURVE_PAR1,S_CURVE_PAR2,INSERT_S_CURVE_PAR1,INSERT_S_CURVE_PAR2;
   
