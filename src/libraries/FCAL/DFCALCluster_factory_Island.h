@@ -42,25 +42,30 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 
   void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
 		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
-  bool FitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hitList,
+  bool FitPeaks(const TMatrixD &W,double b,vector<const DFCALHit*>&hitList,
 		vector<PeakInfo>&peaks,PeakInfo &myPeak,double &chisq,
 		unsigned int &ndf) const;
-  double CalcClusterEDeriv(const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
-  double CalcClusterXYDeriv(bool isXDeriv,const DFCALHit *hit,
+  double CalcClusterEDeriv(double b,const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
+  double CalcClusterXYDeriv(bool isXDeriv,double b,const DFCALHit *hit,
 			    const PeakInfo &myPeakInfo) const;
-  void SplitPeaks(const TMatrixD &W,vector<const DFCALHit*>&hits,
+  void SplitPeaks(const TMatrixD &W,double b,vector<const DFCALHit*>&hits,
 		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
-  bool CheckPeak(const vector<PeakInfo>&peaks,const PeakInfo &myNewPeak) const;
  
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
+  double MIN_EXCESS_SEED_ENERGY;
   double SHOWER_WIDTH_PARAMETER,ENERGY_SHARING_CUTOFF;
-  double INSERT_SHOWER_WIDTH_PARAMETER;
+  double INSERT_SHOWER_WIDTH_PAR0,INSERT_SHOWER_WIDTH_PAR1;
+  double SHOWER_WIDTH_PAR0,SHOWER_WIDTH_PAR1,SHOWER_WIDTH_PAR2;
   double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN,MASS_CUT;
   bool DEBUG_HISTS;
   unsigned int MAX_HITS_FOR_CLUSTERING;
 
   double m_insert_Eres[3],m_Eres[3];
   double m_zdiff;
+
+  bool SPLIT_PEAKS,MERGE_HITS_AT_BOUNDARY;
+  bool APPLY_S_CURVE_CORRECTION;
+  double S_CURVE_PAR1,S_CURVE_PAR2,INSERT_S_CURVE_PAR1,INSERT_S_CURVE_PAR2;
   
   const DFCALGeometry *dFCALGeom=NULL;
   TH2D *HistdE;
