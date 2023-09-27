@@ -93,6 +93,7 @@ class DCCALShower : public JObject {
 		ClusterType_t ClusterType;
 		PeakType_t PeakType;
       		
+		vector<DCCALHit>hitsInCluster;
 		
 		TMatrixFSym ExyztCovariance;
 		
