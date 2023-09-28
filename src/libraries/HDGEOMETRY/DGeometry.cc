@@ -1769,7 +1769,7 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
 {
    vector<double> ComptonEMcalpos;
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);\
+   bool good = Get("//section/composition/posXYZ[@volume='ComptonEMcal']/@X_Y_Z", ComptonEMcalpos);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
@@ -1791,9 +1791,11 @@ bool DGeometry::GetCCALZ(double &z_ccal) const
 bool DGeometry::GetCTOFZ(double &z) const {
   z=1000; // cm; initialize to a large value
   vector<double> CppScintPos;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='CppScint']/@X_Y_Z", CppScintPos);
+  jgeom->SetVerbose(1);   // reenable error messages
   if (!good){  
-    _DBG_<<"Unable to retrieve CPP scintillator position."<<endl;
+    //_DBG_<<"Unable to retrieve CPP scintillator position."<<endl;
     return false;
   }
   z=CppScintPos[2];
@@ -1805,7 +1807,9 @@ bool DGeometry::GetCTOFZ(double &z) const {
 //---------------------------------
 bool DGeometry::GetCTOFPositions(vector<DVector3>&posvec) const{
   vector<double>origin;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='CppScint']/@X_Y_Z",origin);
+  jgeom->SetVerbose(1);   // reenable error messages
   if (!good) return false;
   DVector3 pos(origin[0],origin[1],origin[2]);
   for (unsigned int paddle=1;paddle<5;paddle++){
@@ -1824,7 +1828,9 @@ bool DGeometry::GetCTOFPositions(vector<DVector3>&posvec) const{
 bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 {
   vector<double> ForwardMWPCpos;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
+  jgeom->SetVerbose(1);   // reenable error messages
   if (!good){
     //_DBG_<<"Unable to retrieve ForwardMWPC position."<<endl;
     return false;
@@ -1853,7 +1859,9 @@ bool DGeometry::GetFMWPCZ_vec(vector<double>&zvec_fmwpc) const
 bool DGeometry::GetFMWPCXY_vec(vector<double>&xvec_fmwpc, vector<double>&yvec_fmwpc) const
 {
   vector<double> ForwardMWPCpos;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section/composition/posXYZ[@volume='ForwardMWPC']/@X_Y_Z", ForwardMWPCpos);
+  jgeom->SetVerbose(1);   // reenable error messages
   if (!good){
     //_DBG_<<"Unable to retrieve ForwardMWPC position."<<endl;
     return false;
@@ -1906,7 +1914,9 @@ bool DGeometry::GetFMWPCXY_vec(vector<double>&xvec_fmwpc, vector<double>&yvec_fm
 bool DGeometry::GetFMWPCSize(double &xy_fmwpc) const
 {
   vector<double> ForwardMWPCdimensions;
+  jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
   bool good = Get("//section[@name='ForwardMWPC']/box[@name='CPPF']/@X_Y_Z", ForwardMWPCdimensions);
+  jgeom->SetVerbose(1);   // reenable error messages
   if (!good){  
     xy_fmwpc=0.0;
     return false;
