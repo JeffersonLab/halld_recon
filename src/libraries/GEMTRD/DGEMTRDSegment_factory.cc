@@ -72,11 +72,15 @@ jerror_t DGEMTRDSegment_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  used_in_segment[i]=true;
 	  num_left--;
 	}
-	
+	x1=x2;
+	y1=y2;
       }
     }
-    segments.push_back(segment);
+    if (segment.size()>2){
+      segments.push_back(segment);
+    }
     segment.clear();
+
     for (unsigned int i=ibegin+1;i<hits.size();i++){
       if (used_in_segment[i]==false){
 	ibegin=i;
@@ -91,7 +95,7 @@ jerror_t DGEMTRDSegment_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     // the downstream end of the drift region
     double sumv=1e4,sumz=0,sumzz=0.,sumxz=0,sumyz=0.;
     double t0=segments[i][0]->t;
-    double sumx=segments[i][0]->x*1e4;
+    double sumx=segments[i][0]->x*1e4;  // scale by expected variance
     double sumy=segments[i][0]->y*1e4;
     for (unsigned int j=1;j<segments[i].size();j++){
       const DGEMTRDHit *hit=segments[i][j];
@@ -129,7 +133,7 @@ jerror_t DGEMTRDSegment_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     mysegment->var_x=var_i;
     mysegment->var_tx=var_s;
     mysegment->cov_xtx=cov_is;
-    cout << "GEMTRD " << mysegment->layer <<endl;
+
     _data.push_back(mysegment);
   }
 
