@@ -2255,13 +2255,7 @@ bool DGeometry::GetGEMTRDz(double &z_gemtrd) const
     return false;
   }
  
-  vector<double>offset;
-  Get("//composition[@name='GEMTRD']/posXYZ[@volume='gemTRDmodule']/@X_Y_Z",offset);
-
-  vector<double>width;
-  Get("//box[@name='GTSV']/@X_Y_Z",width);
-
-  z_gemtrd=origin[2]+offset[2]+0.5*width[2];
+  z_gemtrd=origin[2];
   
   return true;
 }
