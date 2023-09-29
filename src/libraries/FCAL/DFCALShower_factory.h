@@ -96,6 +96,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double INSERT_C_EFFECTIVE;
   double m_insertFront;
   double INSERT_POS_RES1,INSERT_POS_RES2;
+  double INSERT_POS_PHI1,INSERT_POS_PHI2;
   double INSERT_E_VAR1,INSERT_E_VAR2,INSERT_E_VAR3;
 
   const DFCALGeometry *fcalGeom=NULL;
