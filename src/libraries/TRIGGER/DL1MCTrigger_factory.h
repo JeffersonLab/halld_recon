@@ -181,6 +181,8 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 		int SIMU_BASELINE;
 		int SIMU_GAIN;
+		
+		int VERBOSE;
 
 
 		double time_shift;
