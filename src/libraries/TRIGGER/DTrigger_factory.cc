@@ -12,7 +12,7 @@ jerror_t DTrigger_factory::init(void)
 	EMULATE_FCAL_LED_TRIGGER = false;
 	EMULATE_BCAL_LED_TRIGGER = false;
 
-    EMULATE_CAL_ENERGY_SUMS = false;
+    EMULATE_CAL_ENERGY_SUMS = true;
 	
 	BCAL_LED_NHITS_THRESHOLD = 200;
 	FCAL_LED_NHITS_THRESHOLD = 200;
