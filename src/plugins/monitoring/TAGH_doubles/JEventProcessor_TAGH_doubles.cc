@@ -6,12 +6,11 @@
 //
 
 #include "JEventProcessor_TAGH_doubles.h"
-using namespace jana;
 using namespace std;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGHGeometry.h>
@@ -42,7 +41,7 @@ static TH2I *hBM2_PulseHeightVsID;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TAGH_doubles());
+        app->Add(new JEventProcessor_TAGH_doubles());
     }
 } // "C"
 
@@ -52,7 +51,7 @@ extern "C"{
 //------------------
 JEventProcessor_TAGH_doubles::JEventProcessor_TAGH_doubles()
 {
-
+	SetTypeName("JEventProcessor_TAGH_doubles");
 }
 
 //------------------
@@ -64,10 +63,13 @@ JEventProcessor_TAGH_doubles::~JEventProcessor_TAGH_doubles()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TAGH_doubles::init(void)
+void JEventProcessor_TAGH_doubles::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     // This is called once at program startup.
     TDirectory *mainDir = gDirectory;
     TDirectory *taghDir = gDirectory->mkdir("TAGH_doubles");
@@ -93,45 +95,43 @@ jerror_t JEventProcessor_TAGH_doubles::init(void)
     hAM3_Energy    = new TH1F("AM3_Energy","TAGH energy: Doubles only w/ overlaps, after merging doubles;photon energy [GeV];hits / counter",180,3.0,12.0);
     // back to main dir
     mainDir->cd();
-
-return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TAGH_doubles::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TAGH_doubles::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TAGH_doubles::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TAGH_doubles::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
 
     // Get unmerged hits
     vector<const DTAGHHit*> hits_c;
-    loop->Get(hits_c, "Calib");
+    event->Get(hits_c, "Calib");
     // Get merged hits
     vector<const DTAGHHit*> hits;
-    loop->Get(hits);
+    event->Get(hits);
 
     // Extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
-    loop->Get(taghGeomVect);
+    event->Get(taghGeomVect);
     if (taghGeomVect.size() < 1)
-        return OBJECT_NOT_AVAILABLE;
+        throw JException("TAGHGeometry missing");
+
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
 
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     // Before merging doubles
     int BM_NHits = 0;
     for (const auto& hit : hits_c) {
@@ -181,28 +181,23 @@ jerror_t JEventProcessor_TAGH_doubles::evnt(JEventLoop *loop, uint64_t eventnumb
             hAM_tdiffVsIDdiff->Fill(abs(hit1->counter_id-hit2->counter_id),hit1->t-hit2->t);
         }
     }
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TAGH_doubles::erun(void)
+void JEventProcessor_TAGH_doubles::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TAGH_doubles::fini(void)
+void JEventProcessor_TAGH_doubles::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }

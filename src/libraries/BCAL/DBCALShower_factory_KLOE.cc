@@ -9,13 +9,17 @@
 #include <math.h>
 #include <map>
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALTDCHit.h"
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALGeometry.h"
 #include "BCAL/DBCALShower_factory_KLOE.h"
 
-#include "DANA/DApplication.h"
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 
 #include "units.h"
 
@@ -24,7 +28,7 @@ using namespace std;
 //------------------
 // init
 //------------------
-jerror_t DBCALShower_factory_KLOE::init()
+void DBCALShower_factory_KLOE::Init()
 {
     // this should be lower than cut in mcsmear
 	ethr_cell=0.0001;     // MIN ENERGY THRESD OF cell in GeV
@@ -45,13 +49,14 @@ jerror_t DBCALShower_factory_KLOE::init()
 
   // this parameter is used to break clusters based on rms time
   BREAK_THRESH_TRMS= 5.0;   // T RMS THRESHOLD
-    
-  gPARMS->SetDefaultParameter( "BCALRECON:CLUST_THRESH", CLUST_THRESH );
-  gPARMS->SetDefaultParameter( "BCALRECON:MERGE_THRESH_DIST", MERGE_THRESH_DIST );
-  gPARMS->SetDefaultParameter( "BCALRECON:MERGE_THRESH_TIME", MERGE_THRESH_TIME );
-  gPARMS->SetDefaultParameter( "BCALRECON:MERGE_THRESH_ZDIST", MERGE_THRESH_ZDIST );
-  gPARMS->SetDefaultParameter( "BCALRECON:MERGE_THRESH_XYDIST", MERGE_THRESH_XYDIST );
-  gPARMS->SetDefaultParameter( "BCALRECON:BREAK_THRESH_TRMS", BREAK_THRESH_TRMS );
+
+  auto app = GetApplication();
+  app->SetDefaultParameter( "BCALRECON:CLUST_THRESH", CLUST_THRESH );
+  app->SetDefaultParameter( "BCALRECON:MERGE_THRESH_DIST", MERGE_THRESH_DIST );
+  app->SetDefaultParameter( "BCALRECON:MERGE_THRESH_TIME", MERGE_THRESH_TIME );
+  app->SetDefaultParameter( "BCALRECON:MERGE_THRESH_ZDIST", MERGE_THRESH_ZDIST );
+  app->SetDefaultParameter( "BCALRECON:MERGE_THRESH_XYDIST", MERGE_THRESH_XYDIST );
+  app->SetDefaultParameter( "BCALRECON:BREAK_THRESH_TRMS", BREAK_THRESH_TRMS );
   
   /*  this is unused code
   if( !DBCALGeometry::summingOn() ){
@@ -85,22 +90,26 @@ jerror_t DBCALShower_factory_KLOE::init()
   m_nonlinZ_p2 = 0;
   m_nonlinZ_p3 = 0;
   //}
-  
-  return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DBCALShower_factory_KLOE::brun(JEventLoop *loop, int32_t runnumber)
+void DBCALShower_factory_KLOE::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    //get target position
-    DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-    DGeometry* geom = app->GetDGeometry(runnumber);
-    geom->GetTargetZ(m_z_target_center);
+	auto event_number = event->GetEventNumber();
+	auto run_number = event->GetRunNumber();
+	auto calibration_manager = event->GetJApplication()->GetService<JCalibrationManager>();
+	auto calibration = calibration_manager->GetJCalibration(run_number);
+    auto app = GetApplication();
+    auto geom_manager = app->GetService<DGeometryManager>();
+    auto geom = geom_manager->GetDGeometry(run_number);
+
+	//get target position
+	geom->GetTargetZ(m_z_target_center);
     
     vector<const DBCALGeometry*> bcalGeomVect;
-    loop->Get( bcalGeomVect );
+    event->Get( bcalGeomVect );
     bcalGeom = bcalGeomVect[0];
     
     //////////////////////////////////////////////////////////////////
@@ -174,19 +183,17 @@ jerror_t DBCALShower_factory_KLOE::brun(JEventLoop *loop, int32_t runnumber)
     // Now the cell information are already contained in xx and yy arrays.
     // xx and yy arrays are private members of this class
     ////////////////////////////////////////////////////////////////////////////
-    
-	 return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DBCALShower_factory_KLOE::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALShower_factory_KLOE::Process(const std::shared_ptr<const JEvent>& event)
 {
     // Call core KLOE reconstruction routines
-    CellRecon(loop);
+    CellRecon(event);
     CeleToArray();   
-    PreCluster(loop); 
+    PreCluster(event); 
     ClusNorm();
     ClusAnalysis();
     Trakfit();
@@ -232,7 +239,7 @@ jerror_t DBCALShower_factory_KLOE::evnt(JEventLoop *loop, uint64_t eventnumber)
         // Trace back to the DBCALPoint objects used in this shower and
         // add them as associated objects.
         vector<const DBCALPoint*> pointsInShower;
-        FindPointsInShower(j, loop, pointsInShower);
+        FindPointsInShower(j, event, pointsInShower);
 
         //Determine cluster (x,y,z,t) by averaging (x,y,z,t) of constituent
         //DBCALPoints.
@@ -321,17 +328,15 @@ jerror_t DBCALShower_factory_KLOE::evnt(JEventLoop *loop, uint64_t eventnumber)
         // shower->xyzCovariance[1][1] = shower->yErr*shower->yErr;
         // shower->xyzCovariance[2][2] = shower->zErr*shower->zErr;
 
-        _data.push_back(shower);  
+        Insert(shower);  
     }
-    
-    return NOERROR;
 }
 
 
 //------------------
 // FindPointsInShower()
 //------------------
-void DBCALShower_factory_KLOE::FindPointsInShower(int indx, JEventLoop *loop, vector<const DBCALPoint*> &pointsInShower)
+void DBCALShower_factory_KLOE::FindPointsInShower(int indx, const std::shared_ptr<const JEvent>& event, vector<const DBCALPoint*> &pointsInShower)
 {
 	/// This is called after the clusters have been completely formed. Our
 	/// job is simply to find the DBCALPoint objects used to form a given cluster.
@@ -342,7 +347,7 @@ void DBCALShower_factory_KLOE::FindPointsInShower(int indx, JEventLoop *loop, ve
 	// cluster. It also indexes the narr[][] array which holds the module, layer,
 	// sector(column) values for the hits.
 	//
-	// Here, we need to loop over next[] elements starting at next[indx] until
+	// Here, we need to event over next[] elements starting at next[indx] until
 	// we find the one pointing to element "indx" (i.e. the start of the list of
 	// cells in the cluster.) For each of these, we must find the LAST 
 	// member in bcalhits to have the same module, layer, number indicating 
@@ -350,7 +355,7 @@ void DBCALShower_factory_KLOE::FindPointsInShower(int indx, JEventLoop *loop, ve
 
 
 	vector<const DBCALPoint*> points;
-	loop->Get(points);
+	event->Get(points);
 	
 	int start_indx = indx;
 	do{
@@ -376,7 +381,7 @@ void DBCALShower_factory_KLOE::FindPointsInShower(int indx, JEventLoop *loop, ve
 //------------------
 // CellRecon()
 //------------------
-void DBCALShower_factory_KLOE::CellRecon(JEventLoop *loop)
+void DBCALShower_factory_KLOE::CellRecon(const std::shared_ptr<const JEvent>& event)
 {
     //**********************************************************************
     // The main purpose of this function is extracting information
@@ -414,7 +419,7 @@ void DBCALShower_factory_KLOE::CellRecon(JEventLoop *loop)
     //then the other arrays will also have been set properly and not full of garbage
     
     vector<const DBCALPoint*> points;
-    loop->Get(points);
+    event->Get(points);
     if(points.size() <=0) return;
 
     for (vector<const DBCALPoint*>::const_iterator point_iter = points.begin();
@@ -440,8 +445,8 @@ void DBCALShower_factory_KLOE::CellRecon(JEventLoop *loop)
         //we require knowledge of the times and energies of the individual upstream and downstream hits
         //to get these we need the associated objects
         double EUp=0,EDown=0,tUp=0,tDown=0;
-        vector<const DBCALUnifiedHit*> assoc_hits;
-        point.Get(assoc_hits);
+        vector<const DBCALUnifiedHit*> assoc_hits = point.Get<DBCALUnifiedHit>();
+
         for (unsigned int i=0; i<assoc_hits.size(); i++) {
             if (assoc_hits[i]->end == DBCALGeometry::kUpstream) {
                 EUp = assoc_hits[i]->E;
@@ -559,7 +564,7 @@ void DBCALShower_factory_KLOE::CeleToArray(void)
 //------------------
 // PreCluster()
 //------------------        
-void DBCALShower_factory_KLOE::PreCluster(JEventLoop *loop)
+void DBCALShower_factory_KLOE::PreCluster(const std::shared_ptr<const JEvent>& event)
 {
   //what this function does: for each cell with a hit it finds the maximum
   //energy neighbor and Connect()'s the two. Two cells are neighbors if they
@@ -573,7 +578,7 @@ void DBCALShower_factory_KLOE::PreCluster(JEventLoop *loop)
     
   // extract the BCAL Geometry
   //vector<const DBCALGeometry*> bcalGeomVect;
-  //loop->Get( bcalGeomVect );
+  //event->Get( bcalGeomVect );
   //const DBCALGeometry& bcalGeom = *(bcalGeomVect[0]);
     
   // calculate cell position

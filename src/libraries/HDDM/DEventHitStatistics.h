@@ -9,9 +9,8 @@
 #define _DEventHitStatistics_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DEventHitStatistics:public jana::JObject{
+class DEventHitStatistics:public JObject{
    public:
       JOBJECT_PUBLIC(DEventHitStatistics);
 
@@ -25,16 +24,16 @@ class DEventHitStatistics:public jana::JObject{
       int tof_paddles;
       int dirc_PMTs;
 
-      void toStrings(vector<pair<string,string> > &items) const {
-        AddString(items, "start counter hits", "%d", start_counters);
-        AddString(items, "cdc straw hits", "%d", cdc_straws);
-        AddString(items, "fdc pseudo-hits", "%d", fdc_pseudos);
-        AddString(items, "bcal cells hit", "%d", bcal_cells);
-        AddString(items, "fcal blocks hit", "%d", fcal_blocks);
-        AddString(items, "ecal blocks hit", "%d", ecal_blocks);
-        AddString(items, "ccal blocks hit", "%d", ccal_blocks);
-        AddString(items, "tof paddle hits","%d", tof_paddles);
-        AddString(items, "dirc PMT hits","%d", dirc_PMTs);
+      void Summarize(JObjectSummary& summary) const override {
+        summary.add(start_counters, "start counter hits", "%d");
+        summary.add(cdc_straws, "cdc straw hits", "%d");
+        summary.add(fdc_pseudos, "fdc pseudo-hits", "%d");
+        summary.add(bcal_cells, "bcal cells hit", "%d");
+        summary.add(fcal_blocks, "fcal blocks hit", "%d");
+        summary.add(ecal_blocks, "ecal blocks hit", "%d");
+        summary.add(ccal_blocks, "ccal blocks hit", "%d");
+        summary.add(tof_paddles, "tof paddle hits", "%d");
+        summary.add(dirc_PMTs, "dirc PMT hits", "%d");
       }
 };
 

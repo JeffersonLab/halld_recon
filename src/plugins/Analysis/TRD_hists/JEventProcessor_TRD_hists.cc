@@ -5,9 +5,8 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include <TRIGGER/DL1Trigger.h>
 #include <TRD/DTRDDigiHit.h>
@@ -55,7 +54,7 @@ static TH2I *hWire_GEMTRDXstrip, *hWire_GEMTRDX_DeltaT;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TRD_hists());
+        app->Add(new JEventProcessor_TRD_hists());
     }
 }
 
@@ -64,6 +63,7 @@ extern "C"{
 
 
 JEventProcessor_TRD_hists::JEventProcessor_TRD_hists() {
+	SetTypeName("JEventProcessor_TRD_hists");
 }
 
 
@@ -76,7 +76,7 @@ JEventProcessor_TRD_hists::~JEventProcessor_TRD_hists() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TRD_hists::init(void) {
+void JEventProcessor_TRD_hists::Init() {
 
     // create root folder for TRD and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -119,36 +119,33 @@ jerror_t JEventProcessor_TRD_hists::init(void) {
 
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_hists::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TRD_hists::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
+
+    auto runnumber = event->GetRunNumber();
 
     // special conditions for different geometries
     if(runnumber < 70000) wirePlaneOffset = 0;
     else wirePlaneOffset = 4;
 
-    DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    const DGeometry *geom = dapp->GetDGeometry(runnumber);
+    const DGeometry *geom = DEvent::GetDGeometry(event);
     vector<double> z_trd;
     geom->GetTRDZ(z_trd);
 
-    const DMagneticFieldMap *bfield = dapp->GetBfield(runnumber);
+    const DMagneticFieldMap *bfield = DEvent::GetBfield(event);
     dIsNoFieldFlag = ((dynamic_cast<const DMagneticFieldMapNoField*>(bfield)) != NULL);
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TRD_hists::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -160,7 +157,7 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     const DL1Trigger *trig_words = nullptr;
     uint32_t trig_mask, fp_trig_mask;
     try {
-        eventLoop->GetSingle(trig_words);
+        event->GetSingle(trig_words);
     } catch(...) {};
     if (trig_words != nullptr) {
         trig_mask = trig_words->trig_mask;
@@ -173,41 +170,41 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
     int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
     // Select PS-triggered events
     if (trig_bits != 8) {
-        return NOERROR;
+        return;
     }
 */
 
     vector<const DTRDDigiHit*> digihits;
-    eventLoop->Get(digihits);
+    event->Get(digihits);
     vector<const DTRDHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
     vector<const DTRDStripCluster*> clusters;
-    eventLoop->Get(clusters);
+    event->Get(clusters);
     vector<const DTRDPoint*> points;
-    eventLoop->Get(points);
+    event->Get(points);
 
     vector<const DGEMDigiWindowRawData*> windowrawdata;
-    eventLoop->Get(windowrawdata);
+    event->Get(windowrawdata);
     vector<const DGEMHit*> gem_hits;
-    eventLoop->Get(gem_hits);
+    event->Get(gem_hits);
     vector<const DGEMStripCluster*> gem_clusters;
-    eventLoop->Get(gem_clusters);
+    event->Get(gem_clusters);
     vector<const DGEMPoint*> gem_points;
-    eventLoop->Get(gem_points);
+    event->Get(gem_points);
 
     vector<const DTrackWireBased*> straight_tracks;
     vector<const DTrackTimeBased*> tracks;
     if (dIsNoFieldFlag)
-	    eventLoop->Get(straight_tracks, "StraightLine");
+	    event->Get(straight_tracks, "StraightLine");
     else
-	    eventLoop->Get(tracks);
+	    event->Get(tracks);
 
     num_tracks->Fill(0.,(double)straight_tracks.size());
     num_tracks->Fill(1.,(double)tracks.size());
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     ///////////////////////////
     // TRD DigiHits and Hits //
@@ -377,27 +374,23 @@ jerror_t JEventProcessor_TRD_hists::evnt(JEventLoop *eventLoop, uint64_t eventnu
 	    }
     }
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_hists::erun(void) {
+void JEventProcessor_TRD_hists::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRD_hists::fini(void) {
+void JEventProcessor_TRD_hists::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------

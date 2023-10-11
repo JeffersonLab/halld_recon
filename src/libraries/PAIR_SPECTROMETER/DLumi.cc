@@ -2,27 +2,31 @@
 #include <iostream>
 #include <map>
 
-#include <JANA/JApplication.h>
 #include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "DLumi.h"
 
 //---------------------------------
 // DLumi    (Constructor)
 //---------------------------------
-DLumi::DLumi(JEventLoop *loop)
+DLumi::DLumi(const std::shared_ptr<const JEvent>& event)
 {
-  
+  auto run_number = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
   compute_lumi = 1;
 
   // read constants for Lumi determination from calibdb
   std::vector<std::map<string,double> > result;
 
-  loop->GetCalib("/PHOTON_BEAM/lumi/PS_accept", result);
+  calibration->Get("/PHOTON_BEAM/lumi/PS_accept", result);
 
   if ((int)result.size() != DETECTORS) {
     jerr << "Error in DLumi constructor: "
 	 << "failed to read constants for PS/PSC acceptances "
-	 << "from calibdb at /PHOTON_BEAM/lumi/PS_accept" << std::endl;
+	 << "from calibdb at /PHOTON_BEAM/lumi/PS_accept" << jendl;
     m_psc_accept[0] = 0.;  m_psc_accept[1] = 0.;  m_psc_accept[2] = 0.;
     m_ps_accept[0]  = 0.;  m_ps_accept[1]  = 0.;  m_ps_accept[2]  = 0.;
   } 
@@ -37,12 +41,12 @@ DLumi::DLumi(JEventLoop *loop)
     m_ps_accept[2] = (result[1])["Emax"]; 
   }
 
-  loop->GetCalib("/PHOTON_BEAM/lumi/tagm_tagged", result);
+  calibration->Get("/PHOTON_BEAM/lumi/tagm_tagged", result);
 
   if ((int)result.size() != TAGM_CH) {
     jerr << "Error in DLumi constructor: "
 	 << "failed to read constants number of TAGM hits "
-	 << "from calibdb at /PHOTON_BEAM/lumi/tagm_tagged" << std::endl;
+	 << "from calibdb at /PHOTON_BEAM/lumi/tagm_tagged" << jendl;
     for(int ii = 0; ii < TAGM_CH; ii++)
       tagm_tagged[ii] = 0.;
 
@@ -59,7 +63,7 @@ DLumi::DLumi(JEventLoop *loop)
       else {
 	jerr << "Error in DLumi constructor: "
 	     << "Invalid counter in the /PHOTON_BEAM/lumi/tagm_tagged table "
-	     << std::endl;
+	     << jendl;
 	tagm_tagged[ii] = 0;
 	compute_lumi = 0;
       }       
@@ -68,12 +72,12 @@ DLumi::DLumi(JEventLoop *loop)
   }
 
 
-  loop->GetCalib("/PHOTON_BEAM/lumi/tagh_tagged", result);
+  calibration->Get("/PHOTON_BEAM/lumi/tagh_tagged", result);
   
   if ((int)result.size() != TAGH_CH) {
     jerr << "Error in DLumi constructor: "
 	 << "failed to read constants number of TAGH hits "
-	 << "from calibdb at /PHOTON_BEAM/lumi/tagh_tagged" << std::endl;
+	 << "from calibdb at /PHOTON_BEAM/lumi/tagh_tagged" << jendl;
     for(int ii = 0; ii < TAGH_CH; ii++)
       tagh_tagged[ii] = 0.;
     
@@ -89,7 +93,7 @@ DLumi::DLumi(JEventLoop *loop)
       else {
 	jerr << "Error in DLumi constructor: "
 	     << "Invalid counter in the /PHOTON_BEAM/lumi/tagh_tagged table "
-	     << std::endl;
+	     << jendl;
 	tagh_tagged[ii] = 0;
 	compute_lumi = 0;
       }       
@@ -97,25 +101,25 @@ DLumi::DLumi(JEventLoop *loop)
     }
   }
 
-  loop->Get( taghGeomVect );
+  event->Get( taghGeomVect );
   if (taghGeomVect.size() < 1){
     jerr << "Error in DLumi constructor: "
 	 << "Cannot get TAGH geometry "
-	 << endl;
+	 << jendl;
     compute_lumi = 0;
 
   }
 
-  loop->Get( tagmGeomVect );
+  event->Get( tagmGeomVect );
   if (tagmGeomVect.size() < 1){
     jerr << "Error in DLumi constructor: "
 	 << "Cannot get TAGM geometry "
-	 << endl;    
+	 << jendl;
     compute_lumi = 0;
   }
 
   std::map<string,double> result1;
-  loop->GetCalib("/PHOTON_BEAM/endpoint_energy", result1);
+  calibration->Get("/PHOTON_BEAM/endpoint_energy", result1);
   if (result1.find("PHOTON_BEAM_ENDPOINT_ENERGY") == result1.end()) {
     std::cerr << "Error in DLumi constructor: "
 	      << "failed to read photon beam endpoint energy "
@@ -132,7 +136,7 @@ DLumi::DLumi(JEventLoop *loop)
   else {
     jerr << "Error in DLumi constructor: "
 	 << "Cannot compute Luminosity "
-	 << std::endl;
+	 << jendl;
   }
 
 }

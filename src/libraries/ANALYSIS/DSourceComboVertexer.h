@@ -11,7 +11,7 @@
 #include <sstream>
 #include <map>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 
 #include "particleType.h"
 #include "PID/DChargedTrackHypothesis.h"
@@ -38,8 +38,8 @@ class DSourceComboVertexer
 
 		//CONSTRUCTORS
 		DSourceComboVertexer(void) = delete;
-		DSourceComboVertexer(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler);
-		void Set_RunDependent_Data(JEventLoop *locEventLoop);
+		DSourceComboVertexer(const std::shared_ptr<const JEvent>& locEvent, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler);
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset(void);
 		void Set_Vertex(const DVertex* locVertex){dVertex = locVertex;} //COMPARE
 		

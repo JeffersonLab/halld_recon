@@ -9,15 +9,16 @@
 #define _DTrackWireBased_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
+#include <DANA/DObjectID.h>
 #include <TRACKING/DTrackingData.h>
 #include <TRACKING/DTrackFitter.h>
 
 class DTrackWireBased:public DTrackingData{
 	public:
 		JOBJECT_PUBLIC(DTrackWireBased);
-		
-		oid_t candidateid;	///< which DTrackCandidate this came from
+
+		oid_t id = reinterpret_cast<oid_t>(this);
+		oid_t candidateid;		///< which DTrackCandidate this came from
 		float chisq;			///< Chi-squared for the track (not chisq/dof!)
 		int Ndof;				///< Number of degrees of freedom in the fit
 		vector<DTrackFitter::pull_t> pulls;	///< Holds pulls used in chisq calc. (not including off-diagonals)
@@ -35,11 +36,11 @@ class DTrackWireBased:public DTrackingData{
 		unsigned int dCDCRings; //CDC rings where the track has an associated DCDCTrackHit //rings correspond to bits (1 -> 28)
 		unsigned int dFDCPlanes; //FDC planes where the track has an associated DFDCPseudoHit //planes correspond to bits (1 -> 24)
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			DKinematicData::toStrings(items);
-			AddString(items, "candidate", "%d", candidateid);
-			AddString(items, "chisq", "%f", chisq);
-			AddString(items, "Ndof", "%d", Ndof);
+		void Summarize(JObjectSummary& summary) const override {
+			DKinematicData::Summarize(summary);
+			summary.add(candidateid, "candidate", "%d");
+			summary.add(chisq, "chisq", "%f");
+			summary.add(Ndof, "Ndof", "%d");
 		}
 };
 

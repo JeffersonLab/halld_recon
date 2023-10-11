@@ -23,59 +23,56 @@ using namespace std;
 
 #include "DEventHitStatistics_factory.h"
 
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventHitStatistics_factory::init(void)
+void DEventHitStatistics_factory::Init()
 {
     // Setting this flag makes it so that JANA does not delete the objects in _data.
     // This factory will manage this memory.
     SetFactoryFlag(NOT_OBJECT_OWNER);
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventHitStatistics_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DEventHitStatistics_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventHitStatistics_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventHitStatistics_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Clear _data vector
 	Reset_Data();
 	DEventHitStatistics* stats = new DEventHitStatistics;
     {
        vector<const DSCHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->start_counters = hits.size();
     }
     {
        vector<const DCDCHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->cdc_straws = hits.size();
     }
     {
        vector<const DFDCPseudo*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->fdc_pseudos = hits.size();
     }
     {
        vector<const DBCALHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->bcal_cells = hits.size();
     }
     {
        vector<const DFCALHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->fcal_blocks = hits.size();
     }
     {
@@ -85,45 +82,41 @@ jerror_t DEventHitStatistics_factory::evnt(JEventLoop *loop, uint64_t eventnumbe
     }
     {
        vector<const DCCALHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->ccal_blocks = hits.size();
     }
     {
        vector<const DTOFPaddleHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->tof_paddles = hits.size();
     }
     {
        vector<const DDIRCPmtHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->dirc_PMTs = hits.size();
     }
-	_data.push_back(const_cast<DEventHitStatistics*>(stats));
-
-    return NOERROR;
+	Insert(const_cast<DEventHitStatistics*>(stats));
 }
 
 //------------------
 // Reset_Data()
 //------------------
-void DEventHitStatistics_factory::Reset_Data(void)
+void DEventHitStatistics_factory::Reset_Data()
 {
 	// Clear _data vector
-	_data.clear();
+	mData.clear();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventHitStatistics_factory::erun(void)
+void DEventHitStatistics_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventHitStatistics_factory::fini(void)
+void DEventHitStatistics_factory::Finish()
 {
-    return NOERROR;
 }

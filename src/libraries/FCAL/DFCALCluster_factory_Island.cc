@@ -11,7 +11,8 @@
 using namespace std;
 
 #include "DFCALCluster_factory_Island.h"
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <DANA/DEvent.h>
 
 inline bool FCALHit_E_cmp(const DFCALHit *a,const DFCALHit *b){
   return (a->E>b->E);
@@ -25,10 +26,12 @@ inline bool peak_E_cmp(DFCALCluster_factory_Island::PeakInfo a,
 //------------------
 // init
 //------------------
-jerror_t DFCALCluster_factory_Island::init(void)
+void DFCALCluster_factory_Island::Init() 
 {
+  auto app = GetApplication();
+  
   TIME_CUT=15.;
-  gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+  app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
   
   MAX_HITS_FOR_CLUSTERING = 250;  
   gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
@@ -36,10 +39,10 @@ jerror_t DFCALCluster_factory_Island::init(void)
   gPARMS->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
 			      MIN_EXCESS_SEED_ENERGY);
   MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
+  app->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
 			      MIN_CLUSTER_SEED_ENERGY);
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
+  app->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
   SHOWER_WIDTH_PAR0=0.6356;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
@@ -55,11 +58,11 @@ jerror_t DFCALCluster_factory_Island::init(void)
   gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR1",
 			      INSERT_SHOWER_WIDTH_PAR1);
   MIN_CUTDOWN_FRACTION=0.1;
-  gPARMS->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
+  app->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
 			      MIN_CUTDOWN_FRACTION);
 
   DEBUG_HISTS=false;
-  gPARMS->SetDefaultParameter("FCAL:DEBUG_HISTS",DEBUG_HISTS);
+  app->SetDefaultParameter("FCAL:DEBUG_HISTS",DEBUG_HISTS);
 
   CHISQ_MARGIN=12.5;
   gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
@@ -87,21 +90,18 @@ jerror_t DFCALCluster_factory_Island::init(void)
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
   HistProb=new TH1D("HistProb",";CL",100,0,1);
-  
-  return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFCALCluster_factory_Island::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
-  DApplication *dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = DEvent::GetDGeometry(event);
 
   double targetZ=0.;
   geom->GetTargetZ(targetZ);
-  eventLoop->GetSingle(dFCALGeom);
+  event->GetSingle(dFCALGeom);
   m_zdiff=dFCALGeom->fcalFrontZ()-targetZ;
 
   m_insert_Eres[0]=0.0003;
@@ -118,15 +118,15 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
 //------------------
 // evnt
 //------------------
-jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFCALCluster_factory_Island::Process(const std::shared_ptr<const JEvent> &event)
 {
   vector<const DFCALHit*>fcal_hits;
-  loop->Get(fcal_hits);
-  if (fcal_hits.size()==0) return OBJECT_NOT_AVAILABLE;
+  event->Get(fcal_hits);
+  if (fcal_hits.size()==0) return; // OBJECT_NOT_AVAILABLE;
 
   // LED events will have hits in nearly every channel. Do NOT
   // try clusterizing if more than 250 hits in FCAL
-  if(fcal_hits.size() > MAX_HITS_FOR_CLUSTERING) return VALUE_OUT_OF_RANGE;
+  if(fcal_hits.size() > MAX_HITS_FOR_CLUSTERING) return; // VALUE_OUT_OF_RANGE;
     
   // Sort the hits according to energy.
   stable_sort(fcal_hits.begin(),fcal_hits.end(),FCALHit_E_cmp);
@@ -184,7 +184,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
       myCluster->setCentroid(x,y);
       
-      _data.push_back(myCluster);
+      Insert(myCluster);
 
       continue;
     }
@@ -569,28 +569,24 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	}
 	
-	_data.push_back(myCluster);
+	Insert(myCluster);
       }
     }
   }
-
-  return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t DFCALCluster_factory_Island::erun(void)
+void DFCALCluster_factory_Island::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DFCALCluster_factory_Island::fini(void)
+void DFCALCluster_factory_Island::Finish()
 {
-  return NOERROR;
 }
 
 // Make a list of potential clusters, each consisting of a "central" block 

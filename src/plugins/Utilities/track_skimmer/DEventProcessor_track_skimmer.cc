@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_track_skimmer.h"
+#include <JANA/JEventSource.h>
 
 // Routine used to create our DEventProcessor
 
@@ -14,26 +15,28 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_track_skimmer()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_track_skimmer()); //register the factory generator
+		locApplication->Add(new DEventProcessor_track_skimmer()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_track_skimmer()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_track_skimmer::init(void)
+void DEventProcessor_track_skimmer::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... create historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
 
 	//CREATE STREAMS
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
 	//# Tracks
 	dIDXAStreamMap["q+"] = new ofstream("q+.idxa");
@@ -96,41 +99,37 @@ jerror_t DEventProcessor_track_skimmer::init(void)
 	map<string, ofstream*>::iterator locStreamIterator = dIDXAStreamMap.begin();
 	for(; locStreamIterator != dIDXAStreamMap.end(); ++locStreamIterator)
 		*(locStreamIterator->second) << "IDXA" << endl;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_track_skimmer::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_track_skimmer::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_track_skimmer::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_track_skimmer::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(!locTrigger->Get_IsPhysicsEvent())
-		return NOERROR;
+		return;
 
 	// See whether this is MC data or real data
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
-	unsigned int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
-	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEventLoop);
+	unsigned int locRunNumber = locEvent->GetRunNumber();
+	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEvent);
 
 	//Default Tag: No PreSelect!! // Definition of PreSelect may change, and these skims are intended to be universal
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 	size_t locNumQPlus = 0, locNumQMinus = 0;
 	for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
 	{
@@ -142,7 +141,7 @@ jerror_t DEventProcessor_track_skimmer::evnt(jana::JEventLoop* locEventLoop, uin
 
 	//Default Tag: No PreSelect!! // Definition of PreSelect may change, and these skims are intended to be universal
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	locEvent->Get(locNeutralShowers);
 
 	//Find which skims are satisfied by this event
 	set<ofstream*> locSaveSkimStreams;
@@ -177,7 +176,7 @@ jerror_t DEventProcessor_track_skimmer::evnt(jana::JEventLoop* locEventLoop, uin
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 
 	//DECAYING PARTICLES
 	for(size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); ++loc_i)
@@ -260,34 +259,32 @@ jerror_t DEventProcessor_track_skimmer::evnt(jana::JEventLoop* locEventLoop, uin
 
 	//BUILD TO-PRINT STRING
 	ostringstream locToPrintStream;
-	locToPrintStream << locRunNumber << " " << locEventNumber << " " << locUniqueID;
+	locToPrintStream << locRunNumber << " " << locEvent->GetEventNumber() << " " << locUniqueID;
 	string locToPrintString = locToPrintStream.str();
 
 	//LOCK AND PRINT
 	set<ofstream*>::iterator locSetIterator = locSaveSkimStreams.begin();
-	LockState();
+	lockService->RootFillLock(this);
 	{
 		for(; locSetIterator != locSaveSkimStreams.end(); ++locSetIterator)
 			(**locSetIterator) << locToPrintString << endl;
 	}
-	UnlockState();
-
-	return NOERROR;
+	lockService->RootFillUnLock(this);
 }
 
-int DEventProcessor_track_skimmer::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_track_skimmer::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = locEventSource->GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -306,20 +303,19 @@ int DEventProcessor_track_skimmer::Get_FileNumber(JEventLoop* locEventLoop) cons
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_track_skimmer::erun(void)
+void DEventProcessor_track_skimmer::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_track_skimmer::fini(void)
+void DEventProcessor_track_skimmer::Finish()
 {
 	// Called before program exit after event processing is finished.
 
@@ -327,7 +323,5 @@ jerror_t DEventProcessor_track_skimmer::fini(void)
 	map<string, ofstream*>::iterator locStreamIterator = dIDXAStreamMap.begin();
 	for(; locStreamIterator != dIDXAStreamMap.end(); ++locStreamIterator)
 		locStreamIterator->second->close();
-
-	return NOERROR;
 }
 

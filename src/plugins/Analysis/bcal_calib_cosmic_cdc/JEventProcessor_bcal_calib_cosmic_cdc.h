@@ -19,11 +19,10 @@ This class is used to project stright lines from cosmic rays in the CDC lines to
 
 */
 
-class JEventProcessor_bcal_calib_cosmic_cdc:public jana::JEventProcessor{
+class JEventProcessor_bcal_calib_cosmic_cdc:public JEventProcessor{
 	public:
 		JEventProcessor_bcal_calib_cosmic_cdc();
 		~JEventProcessor_bcal_calib_cosmic_cdc();
-		const char* className(void){return "JEventProcessor_bcal_calib_cosmic_cdc";}
 
 		TTree *bcal_calib_cosmic_cdc_tree;
 		int eventnum;
@@ -42,11 +41,11 @@ class JEventProcessor_bcal_calib_cosmic_cdc:public jana::JEventProcessor{
 		int Ndof;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		/// Command Line Parameters
 		int VERBOSE;

@@ -27,15 +27,13 @@ class DDIRCTDCHit:public DDAQAddress{
 		uint32_t edge;         ///< 0=leading edge  1=trailing edge
 		uint32_t time;         ///< 16 bit relative to beginning of defined readout window
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "dev_id",       "%d", dev_id);
-			AddString(items, "ievent_cnt",   "%d", ievent_cnt);
-			AddString(items, "channel_fpga", "%d", channel_fpga);
-			AddString(items, "edge",         "%d", edge);
-			AddString(items, "time",         "%d", time);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(dev_id, NAME_OF(dev_id), "%d");
+			summary.add(ievent_cnt, NAME_OF(ievent_cnt), "%d");
+			summary.add(channel_fpga, NAME_OF(channel_fpga), "%d");
+			summary.add(edge, NAME_OF(edge), "%d");
+			summary.add(time, NAME_OF(time), "%d");
 		}
 };
 

@@ -9,9 +9,8 @@
 #include <iostream>
 using namespace std;
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JFactoryGenerator.h>
-using namespace jana;
 
 #include "JFactoryGenerator_RSAI_KO.h"
 
@@ -22,10 +21,10 @@ static void Usage(void);
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddFactoryGenerator(new JFactoryGenerator_RSAI_KO());
+	app->Add(new JFactoryGenerator_RSAI_KO());
 
 	bool show_help = false;
-	gPARMS->SetDefaultParameter("KO:HELP", show_help, "Set this to any value to print the help message for the RSAI_KO plugin.");
+	app->SetDefaultParameter("KO:HELP", show_help, "Set this to any value to print the help message for the RSAI_KO plugin.");
 	if( show_help ) Usage();
 }
 } // "C"

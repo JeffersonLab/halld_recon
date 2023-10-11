@@ -26,11 +26,11 @@ class DGEMSRSWindowRawData:public DDAQAddress{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "apv_id",       "%d", apv_id);
-			AddString(items, "channel_apv",  "%d", channel_apv);
-			AddString(items, "samples",      "%d", samples.size());
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(apv_id, NAME_OF(apv_id), "%d");
+			summary.add(channel_apv, NAME_OF(channel_apv), "%d");
+			summary.add(samples.size(), "samples", "%d");
 		}
 };
 

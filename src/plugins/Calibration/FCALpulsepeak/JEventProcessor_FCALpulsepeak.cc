@@ -6,12 +6,9 @@
 //
 
 #include "JEventProcessor_FCALpulsepeak.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 #include <stdint.h>
 #include <vector>
 #include <iostream>
@@ -27,7 +24,7 @@ using namespace jana;
 #include "DLorentzVector.h"
 #include "DVector3.h"
 #include "HDGEOMETRY/DGeometry.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
 
 #include <iostream>
@@ -49,7 +46,7 @@ static TH1I* pulsepeak[nChan];
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FCALpulsepeak());
+	app->Add(new JEventProcessor_FCALpulsepeak());
 }
 } // "C"
 
@@ -59,7 +56,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_FCALpulsepeak::JEventProcessor_FCALpulsepeak()
 {
-
+	SetTypeName("JEventProcessor_FCALpulsepeak");
 }
 
 //------------------
@@ -71,9 +68,9 @@ JEventProcessor_FCALpulsepeak::~JEventProcessor_FCALpulsepeak()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCALpulsepeak::init(void)
+void JEventProcessor_FCALpulsepeak::Init()
 {
 
 	//This is called once at program startup. 
@@ -86,38 +83,36 @@ TDirectory *main = gDirectory;
   }
 
   main->cd();
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCALpulsepeak::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FCALpulsepeak::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCALpulsepeak::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_FCALpulsepeak::Process(const std::shared_ptr<const JEvent>& event)
 {
 
     // select events with physics events, i.e., not LED and other front panel triggers
     const DTrigger* locTrigger = NULL; 
-    eventLoop->GetSingle(locTrigger); 
+    event->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-      return NOERROR;
+      return;
 
     vector< const DFCALDigiHit*  > digiHits;
-    eventLoop->Get( digiHits );
+    event->Get( digiHits );
     vector< const DFCALGeometry* > geomVec;
-    eventLoop->Get( geomVec );
+    event->Get( geomVec );
     
     const DFCALGeometry& fcalGeom = *(geomVec[0]);
-    
-    japp->RootFillLock(this);
+
+    auto lockService = GetLockService(event);
+    lockService->RootFillLock(this);
 
     for( vector< const DFCALDigiHit* >::const_iterator dHitItr = digiHits.begin();
          dHitItr != digiHits.end(); ++dHitItr ){
@@ -135,7 +130,7 @@ jerror_t JEventProcessor_FCALpulsepeak::evnt(JEventLoop *eventLoop, uint64_t eve
         }
     }
 
-    japp->RootFillUnLock(this);
+    lockService->RootFillUnLock(this);
     
 
 
@@ -143,9 +138,9 @@ jerror_t JEventProcessor_FCALpulsepeak::evnt(JEventLoop *eventLoop, uint64_t eve
 	  vector< const DFCALGeometry* > geomVec;
   vector< const DFCALDigiHit*  > digiHits;
   vector< const DFCALHit*      > hits;
-    eventLoop->Get( geomVec );
-  eventLoop->Get( digiHits );
-  eventLoop->Get( hits );
+    event->Get( geomVec );
+  event->Get( digiHits );
+  event->Get( hits );
   
   
   const DFCALGeometry& fcalGeom = *(geomVec[0]);
@@ -203,26 +198,23 @@ japp->RootFillUnLock(this);
 
 
 
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCALpulsepeak::erun(void)
+void JEventProcessor_FCALpulsepeak::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCALpulsepeak::fini(void)
+void JEventProcessor_FCALpulsepeak::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

@@ -11,11 +11,10 @@
 #include <sstream>
 
 #include <DAQ/DModuleType.h>
-#include <DAQ/JEventSource_EVIO.h>
-#include <DAQ/JEventSource_EVIOpp.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
 
-using namespace jana;
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 using namespace std;
 
 
@@ -98,7 +97,7 @@ bool SortBCALDigiHit(const DBCALDigiHit *a, const DBCALDigiHit *b) {
 //---------------------------------
 // DTranslationTable    (Constructor)
 //---------------------------------
-DTranslationTable::DTranslationTable(JEventLoop *loop)
+DTranslationTable::DTranslationTable(JApplication* app, JEvent* event)
 {
    // Default is to just read translation table from CCDB. If this fails,
    // then an attempt will be made to read from a file on the local disk.
@@ -112,28 +111,28 @@ DTranslationTable::DTranslationTable(JEventLoop *loop)
    VERBOSE = 0;
    SYSTEMS_TO_PARSE = "";
    CALL_STACK = false;
-   gPARMS->SetDefaultParameter("TT:NO_CCDB", NO_CCDB, 
+   app->SetDefaultParameter("TT:NO_CCDB", NO_CCDB,
            "Don't try getting translation table from CCDB and just look"
            " for file. Only useful if you want to force reading tt.xml."
            " This is automatically set if you specify a different"
            " filename via the TT:XML_FILENAME parameter.");
-   JParameter *p = gPARMS->SetDefaultParameter("TT:XML_FILENAME", XML_FILENAME,
+   JParameter *p = app->SetDefaultParameter("TT:XML_FILENAME", XML_FILENAME,
            "Fallback filename of translation table XML file."
            " If set to non-default, CCDB will not be checked.");
-   if (p->GetDefault() != p->GetValue())
+   if (!p->IsDefault())
      NO_CCDB = true;
-   gPARMS->SetDefaultParameter("TT:VERBOSE", VERBOSE, 
+   app->SetDefaultParameter("TT:VERBOSE", VERBOSE,
            "Verbosity level for Applying Translation Table."
            " 0=no messages, 10=all messages.");
    
    ROCID_MAP_FILENAME = "rocid.map";
-   gPARMS->SetDefaultParameter("TT:ROCID_MAP_FILENAME", ROCID_MAP_FILENAME,
+   app->SetDefaultParameter("TT:ROCID_MAP_FILENAME", ROCID_MAP_FILENAME,
            "Optional rocid to rocid conversion map for use with files"
            " generated with the non-standard rocid's");
 
-	gPARMS->SetDefaultParameter("TT:SYSTEMS_TO_PARSE", SYSTEMS_TO_PARSE,"This is deprecated. Please use EVIO:SYSTEMS_TO_PARSE instead.");
+	app->SetDefaultParameter("TT:SYSTEMS_TO_PARSE", SYSTEMS_TO_PARSE,"This is deprecated. Please use EVIO:SYSTEMS_TO_PARSE instead.");
 
-	gPARMS->SetDefaultParameter("TT:CALL_STACK", CALL_STACK,
+	app->SetDefaultParameter("TT:CALL_STACK", CALL_STACK,
 			"Set this to one to try and force correct recording of the"
 			"JANA call stack. You will want this if using the janadot"
 			"plugin, but otherwise, it will just give a slight performance"
@@ -149,7 +148,7 @@ DTranslationTable::DTranslationTable(JEventLoop *loop)
 	// the nsamples_integral and nsamples_pedestal fields of each type of
 	// fADC digihit class. This is done using some special macros in
 	// DTranslationTable.h
-	InitNsamplesOverride();
+	InitNsamplesOverride(app);
 
 	// Initialize dedicated JStreamLog used for debugging messages
 	ttout.SetTag("--- TT ---: ");
@@ -161,11 +160,7 @@ DTranslationTable::DTranslationTable(JEventLoop *loop)
 
 	// Read in Translation table. This will create DChannelInfo objects
 	// and store them in the "TT" map, indexed by csc_t objects
-	ReadTranslationTable(loop->GetJCalibration());
-   
-	// Set up pointers to the factories for this JEventLoop.
-	// (n.b. each JEventLoop will have it's own DTranslationTable object)
-	InitFactoryPointers(loop);
+	ReadTranslationTable(app->GetService<JCalibrationManager>()->GetJCalibration(event->GetRunNumber()));
 }
 
 //---------------------------------
@@ -241,36 +236,29 @@ void DTranslationTable::ReadOptionalROCidTranslation(void)
 }
 
 //---------------------------------
-// SetSystemsToParse
+// GetSystemsToParse
 //---------------------------------
-void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_force, JEventSource *eventsource)
+std::set<uint32_t> DTranslationTable::GetSystemsToParse(string systems, int systems_to_parse_force)
 {
 	/// This takes a string of comma separated system names and
 	/// identifies a list of Detector_t values from this (using
-	/// strings returned by DetectorName() ). It then tries to 
+	/// strings returned by DetectorName() ). It then tries to
 	/// copy the value into the DAQ plugin so they can be used
 	/// to restrict which banks to parse.
+	std::set<uint32_t> rocids_to_parse;
 
 	// Copy value on how to handle mismatch bewtween CCDB and hard-coded to internal variable
     Get_ROCID_By_System_Mismatch_Behaviour() = systems_to_parse_force;
-	
-	if(systems == "") return; // nothing to do for empty strings
-	jout << "Setting systems to parse to: " << systems << endl;
 
-	// Make sure this is a JEventSource_EVIO object pointer
-	JEventSource_EVIO   *eviosource   = dynamic_cast<JEventSource_EVIO*  >(eventsource);
-	JEventSource_EVIOpp *evioppsource = dynamic_cast<JEventSource_EVIOpp*>(eventsource);
-	if( (!eviosource) && !(evioppsource) ) {
-		jerr << "eventsource not a JEventSource_EVIO or JEventSource_EVIOpp object! Cannot restrict parsing list!" << endl;
-		return;
-	}
+	if(systems == "") return rocids_to_parse; // nothing to do for empty strings
+	jout << "Setting systems to parse to: " << systems << std::endl;
 
     // Make map of system type id by name
 	map<string, Detector_t> name_to_id;
 	for(uint32_t dettype=UNKNOWN_DETECTOR; dettype<NUM_DETECTOR_TYPES; dettype++){
 		name_to_id[DetectorName((Detector_t)dettype)] = (Detector_t)dettype;
 	}
-	
+
 	// There is a chicken-egg problem of reading the ROCID assignments
 	// from the CCDB which requires a run number. The run number is
 	// not actually available though until parsing of the first event.
@@ -311,10 +299,10 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 	std::istringstream ss(systems);
 	std::string token;
 	while(std::getline(ss, token, ',')) {
-		
+
 		// Get initial list of rocids based on token
 		set<uint32_t> rocids = rocid_map[name_to_id[token]];
-		
+
 		// Let "FDC" be an alias for both cathode strips and wires
 		if(token == "FDC"){
 			set<uint32_t> rocids1 = rocid_map[name_to_id["FDC_CATHODES"]];
@@ -323,7 +311,7 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 			rocids.insert(rocids2.begin(), rocids2.end());
 		}
 
-		// More likely than not, someone specifying "PS" will also want "PSC" 
+		// More likely than not, someone specifying "PS" will also want "PSC"
 		if(token == "PS"){
 			set<uint32_t> rocids1 = rocid_map[name_to_id["PSC"]];
 			rocids.insert(rocids1.begin(), rocids1.end());
@@ -334,18 +322,17 @@ void DTranslationTable::SetSystemsToParse(string systems, int systems_to_parse_f
 
 			// Add this rocid to the DAQ parsing list
 			uint32_t rocid = *it;
-			if(eviosource  ) eviosource->AddROCIDtoParseList(rocid);	
-			if(evioppsource) evioppsource->AddROCIDtoParseList(rocid);	
-			jout << "   Added rocid " << rocid << " for system " << token << " to parse list" << endl;
+			rocids_to_parse.insert(rocid);
+			jout << "   Added rocid " << rocid << " for system " << token << " to parse list" << std::endl;
 		}
 	}
-
+	return rocids_to_parse;
 }
 
 //---------------------------------
 // ApplyTranslationTable
 //---------------------------------
-void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
+void DTranslationTable::ApplyTranslationTable(const std::shared_ptr<const JEvent> &event) const
 {
    /// This will get all of the low level objects and
    /// generate detector hit objects from them, placing
@@ -361,12 +348,12 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // is because this routine is called while already in a loop->Get() call
    // so JANA will treat all other loop->Get() calls we make as being dependencies
    // of the loop->Get() call that we are already in. (Confusing eh?) 
-   bool record_call_stack = loop->GetCallStackRecordingStatus();
-   if (record_call_stack) loop->DisableCallStackRecording();
-   
+   bool record_call_stack = event->GetJCallGraphRecorder()->IsEnabled();
+   if (record_call_stack) event->GetJCallGraphRecorder()->SetEnabled(false);
+
    // Df250PulseIntegral (will apply Df250PulseTime via associated objects)
    vector<const Df250PulseIntegral*> pulseintegrals250;
-   loop->Get(pulseintegrals250);
+   event->Get(pulseintegrals250);
    if (VERBOSE > 2) ttout << "  Number Df250PulseIntegral objects: "  << pulseintegrals250.size() << std::endl;
    for (uint32_t i=0; i<pulseintegrals250.size(); i++) {
       const Df250PulseIntegral *pi = pulseintegrals250[i];
@@ -428,7 +415,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // Df250PulseData
    vector<const Df250PulseData*> pulsedatas250;
-   loop->Get(pulsedatas250);
+   event->Get(pulsedatas250);
    if (VERBOSE > 2) ttout << "  Number Df250PulseData objects: "  << pulsedatas250.size() << std::endl;
    for(auto pd : pulsedatas250){
       
@@ -474,7 +461,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // Direct creation of DigiHits from Df250WindowRawData for TPOL (always raw mode readout) 
    vector<const Df250WindowRawData*> windowrawdata;
-   loop->Get(windowrawdata);
+   event->Get(windowrawdata);
    if (VERBOSE > 2) ttout << "  Number Df250WindowRawData objects: " << windowrawdata.size() << std::endl;
    for (uint32_t i=0; i<windowrawdata.size(); i++) {
       const Df250WindowRawData *window = windowrawdata[i];
@@ -500,7 +487,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << std::endl;
       
       // Create the appropriate hit type based on detector type
       if(chaninfo.det_sys == TPOLSECTOR) 
@@ -509,7 +496,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // Df125PulseIntegral (will apply Df125PulseTime via associated objects)
    vector<const Df125PulseIntegral*> pulseintegrals125;
-   loop->Get(pulseintegrals125);
+   event->Get(pulseintegrals125);
    if (VERBOSE > 2) ttout << "  Number Df125PulseIntegral objects: " << pulseintegrals125.size() << std::endl;
    for (uint32_t i=0; i<pulseintegrals125.size(); i++) {
       const Df125PulseIntegral *pi = pulseintegrals125[i];
@@ -548,14 +535,14 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
          case CDC:           MakeCDCDigiHit(chaninfo.cdc, pi, pt, pp);                 break;
          case FDC_CATHODES:  MakeFDCCathodeDigiHit(chaninfo.fdc_cathodes, pi, pt, pp); break;
          default: 
-             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl; 
+             if (VERBOSE > 4) ttout << "       - Don't know how to make DigiHit objects for this detector type!" << std::endl;
              break;
       }
    }
 
    // Df125CDCPulse
    vector<const Df125CDCPulse*> cdcpulses;
-   loop->Get(cdcpulses);
+   event->Get(cdcpulses);
    if (VERBOSE > 2) ttout << "  Number Df125CDCPulse objects: " << cdcpulses.size() << std::endl;
    for (uint32_t i=0; i<cdcpulses.size(); i++) {
       const Df125CDCPulse *p = cdcpulses[i];
@@ -596,7 +583,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // Df125FDCPulse
    vector<const Df125FDCPulse*> fdcpulses;
-   loop->Get(fdcpulses);
+   event->Get(fdcpulses);
    if (VERBOSE > 2) ttout << "  Number Df125FDCPulse objects: " << fdcpulses.size() << std::endl;
    for (uint32_t i=0; i<fdcpulses.size(); i++) {
       const Df125FDCPulse *p = fdcpulses[i];
@@ -637,7 +624,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // DF1TDCHit
    vector<const DF1TDCHit*> f1tdchits;
-   loop->Get(f1tdchits);
+   event->Get(f1tdchits);
    if (VERBOSE > 2) ttout << "  Number DF1TDCHit objects: " << f1tdchits.size() << std::endl;
    for (uint32_t i=0; i<f1tdchits.size(); i++) {
       const DF1TDCHit *hit = f1tdchits[i];
@@ -682,7 +669,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // DCAEN1290TDCHit
    vector<const DCAEN1290TDCHit*> caen1290tdchits;
-   loop->Get(caen1290tdchits);
+   event->Get(caen1290tdchits);
    if (VERBOSE > 2) ttout << "  Number DCAEN1290TDCHit objects: " << caen1290tdchits.size() << std::endl;
    for (uint32_t i=0; i<caen1290tdchits.size(); i++) {
       const DCAEN1290TDCHit *hit = caen1290tdchits[i];
@@ -721,10 +708,10 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
              break;
       }
    }
-	
+
    // DDIRCTDCHit
    vector<const DDIRCTDCHit*> dirctdchits;
-   loop->Get(dirctdchits);
+   event->Get(dirctdchits);
    if (VERBOSE > 2) ttout << "  Number DDIRCTDCHit objects: " << dirctdchits.size() << std::endl;
    for (uint32_t i=0; i<dirctdchits.size(); i++) {
       const DDIRCTDCHit *hit = dirctdchits[i];
@@ -750,7 +737,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << std::endl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -763,7 +750,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
 
    // DGEMSRSWindowRawData
    vector<const DGEMSRSWindowRawData*> gemsrswindowrawdata;
-   loop->Get(gemsrswindowrawdata);
+   event->Get(gemsrswindowrawdata);
    if (VERBOSE > 2) ttout << "  Number DGEMSRSWindowRawData objects: " << gemsrswindowrawdata.size() << std::endl;
    for (uint32_t i=0; i<gemsrswindowrawdata.size(); i++) {
       const DGEMSRSWindowRawData *hit = gemsrswindowrawdata[i];
@@ -789,7 +776,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
       const DChannelInfo &chaninfo = iter->second;
       if (VERBOSE > 6)
 	      ttout << "     - Found entry for: " << DetectorName(chaninfo.det_sys)
-               << std::endl; 
+               << std::endl;
       
       // Create the appropriate hit type based on detector type
       switch (chaninfo.det_sys) {
@@ -810,7 +797,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // Copy pointers to all objects produced to their appropriate
    // factories. This hands ownership of them over to the factories
    // so JANA will delete them.
-   CopyToFactories();
+   CopyToFactories(const_cast<JEvent*>(&(*event))); // TODO: NWB: Make this less hacky
    
    
 	if (VERBOSE > 3) PrintVectorSizes();
@@ -821,7 +808,7 @@ void DTranslationTable::ApplyTranslationTable(JEventLoop *loop) const
    // are correct. That would just be too complicated given how that code works.
    if (record_call_stack) {
       // re-enable call stack recording
-      loop->EnableCallStackRecording();
+      event->GetJCallGraphRecorder()->SetEnabled(true);
 
 		if(CALL_STACK){
       	Addf250ObjectsToCallStack(loop, "DBCALDigiHit");
@@ -2109,70 +2096,70 @@ string DTranslationTable::Channel2Str(const DChannelInfo &in_channel) const
 //----------------
 // Addf250ObjectsToCallStack
 //----------------
-void DTranslationTable::Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const
+void DTranslationTable::Addf250ObjectsToCallStack(const JEvent& event, string caller) const
 {
-	AddToCallStack(loop, caller, "Df250Config");
-	AddToCallStack(loop, caller, "Df250PulseIntegral");
-	AddToCallStack(loop, caller, "Df250PulsePedestal");
-	AddToCallStack(loop, caller, "Df250PulseTime");
+	AddToCallStack(event, caller, "Df250Config");
+	AddToCallStack(event, caller, "Df250PulseIntegral");
+	AddToCallStack(event, caller, "Df250PulsePedestal");
+	AddToCallStack(event, caller, "Df250PulseTime");
 }
 
 //----------------
 // Addf125CDCObjectsToCallStack
 //----------------
-void DTranslationTable::Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
+void DTranslationTable::Addf125CDCObjectsToCallStack(const JEvent& event, string caller, bool addpulseobjs) const
 {
-	AddToCallStack(loop, caller, "Df125Config");
+	AddToCallStack(event, caller, "Df125Config");
 	if(addpulseobjs){
 		// new style
-		AddToCallStack(loop, caller, "Df125CDCPulse");
+		AddToCallStack(event, caller, "Df125CDCPulse");
 	}else{
 		// old style
-		AddToCallStack(loop, caller, "Df125PulseIntegral");
-		AddToCallStack(loop, caller, "Df125PulsePedestal");
-		AddToCallStack(loop, caller, "Df125PulseTime");
+		AddToCallStack(event, caller, "Df125PulseIntegral");
+		AddToCallStack(event, caller, "Df125PulsePedestal");
+		AddToCallStack(event, caller, "Df125PulseTime");
 	}
 }
 
 //----------------
 // Addf125FDCObjectsToCallStack
 //----------------
-void DTranslationTable::Addf125FDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const
+void DTranslationTable::Addf125FDCObjectsToCallStack(const JEvent& event, string caller, bool addpulseobjs) const
 {
-	AddToCallStack(loop, caller, "Df125Config");
+	AddToCallStack(event, caller, "Df125Config");
 	if(addpulseobjs){
 		// new style
-		AddToCallStack(loop, caller, "Df125FDCPulse");
+		AddToCallStack(event, caller, "Df125FDCPulse");
 	}else{
 		// old style
-		AddToCallStack(loop, caller, "Df125PulseIntegral");
-		AddToCallStack(loop, caller, "Df125PulsePedestal");
-		AddToCallStack(loop, caller, "Df125PulseTime");
+		AddToCallStack(event, caller, "Df125PulseIntegral");
+		AddToCallStack(event, caller, "Df125PulsePedestal");
+		AddToCallStack(event, caller, "Df125PulseTime");
 	}
 }
 
 //----------------
 // AddF1TDCObjectsToCallStack
 //----------------
-void DTranslationTable::AddF1TDCObjectsToCallStack(JEventLoop *loop, string caller) const
+void DTranslationTable::AddF1TDCObjectsToCallStack(const JEvent& event, string caller) const
 {
-	AddToCallStack(loop, caller, "DF1TDCConfig");
-	AddToCallStack(loop, caller, "DF1TDCHit");
+	AddToCallStack(event, caller, "DF1TDCConfig");
+	AddToCallStack(event, caller, "DF1TDCHit");
 }
 
 //----------------
 // AddCAEN1290TDCObjectsToCallStack
 //----------------
-void DTranslationTable::AddCAEN1290TDCObjectsToCallStack(JEventLoop *loop, string caller) const
+void DTranslationTable::AddCAEN1290TDCObjectsToCallStack(const JEvent& event, string caller) const
 {
-	AddToCallStack(loop, caller, "DCAEN1290TDCConfig");
-	AddToCallStack(loop, caller, "DCAEN1290TDCHit");
+	AddToCallStack(event, caller, "DCAEN1290TDCConfig");
+	AddToCallStack(event, caller, "DCAEN1290TDCHit");
 }
 
 //----------------
 // AddToCallStack
 //----------------
-void DTranslationTable::AddToCallStack(JEventLoop *loop, 
+void DTranslationTable::AddToCallStack(const JEvent& event,
                                        string caller, string callee) const
 {
    /// This is used to give information to JANA regarding the relationship and
@@ -2181,16 +2168,16 @@ void DTranslationTable::AddToCallStack(JEventLoop *loop,
    /// of how this plugin works, JANA can't record the correct call stack (at
    /// least not easily!) Therefore, we have to give it a little help here.
 
-   JEventLoop::call_stack_t cs;
+   JCallGraphRecorder::JCallGraphNode cs;
    cs.start_time = cs.end_time = 0.0;
    cs.caller_name = caller;
    cs.callee_name = callee;
-   cs.data_source = JEventLoop::DATA_FROM_CACHE;
-   loop->AddToCallStack(cs);
+   cs.data_source = JCallGraphRecorder::DATA_FROM_CACHE;
+   event.GetJCallGraphRecorder()->AddToCallGraph(cs);
    cs.callee_name = cs.caller_name;
    cs.caller_name = "<ignore>";
-   cs.data_source = JEventLoop::DATA_FROM_FACTORY;
-   loop->AddToCallStack(cs);
+   cs.data_source = JCallGraphRecorder::DATA_FROM_FACTORY;
+   event.GetJCallGraphRecorder()->AddToCallGraph(cs);
 }
 
 //----------------------------------------------------------------------------
@@ -2691,8 +2678,8 @@ void StartElement(void *userData, const char *xmlname, const char **atts)
       }
 
    } else {
-      jerr << std::endl << std::endl 
-           << "?startElement...unknown xml tag " << xmlname 
+      jerr << std::endl << std::endl
+           << "?startElement...unknown xml tag " << xmlname
            << std::endl << std::endl;
    }
    

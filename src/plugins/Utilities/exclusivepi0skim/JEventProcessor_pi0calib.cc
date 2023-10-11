@@ -8,7 +8,6 @@
 #include "JEventProcessor_pi0calib.h"
 #include "DFactoryGenerator_pi0calib.h"
 
-using namespace jana;
 
 #include "evio_writer/DEventWriterEVIO.h"
 
@@ -17,12 +16,12 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_pi0calib());
-    app->AddFactoryGenerator( new DFactoryGenerator_pi0calib() );
+    app->Add(new JEventProcessor_pi0calib());
+    app->Add( new DFactoryGenerator_pi0calib() );
   }
 } // "C"
 
@@ -32,12 +31,7 @@ extern "C"{
 //------------------
 JEventProcessor_pi0calib::JEventProcessor_pi0calib()
 {
-
-  WRITE_EVIO_FILE = 1;
-  gPARMS->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
-
-  WRITE_ROOT_TREE = 0;
-  gPARMS->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
+  SetTypeName("JEventProcessor_pi0calib");
 }
 
 //------------------
@@ -45,47 +39,50 @@ JEventProcessor_pi0calib::JEventProcessor_pi0calib()
 //------------------
 JEventProcessor_pi0calib::~JEventProcessor_pi0calib()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_pi0calib::init(void)
+void JEventProcessor_pi0calib::Init()
 {
-  // This is called once at program startup. 
+	// This is called once at program startup.
+	auto app = GetApplication();
 
-  return NOERROR;
+	WRITE_EVIO_FILE = 1;
+	app->SetDefaultParameter( "WRITE_EVIO_FILE", WRITE_EVIO_FILE );
+
+	WRITE_ROOT_TREE = 0;
+	app->SetDefaultParameter( "WRITE_ROOT_TREE", WRITE_ROOT_TREE );
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_pi0calib::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_pi0calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_pi0calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_pi0calib::Process(const std::shared_ptr<const JEvent>& event)
 {
 
   vector<const DAnalysisResults*> locAnalysisResultsVector;
-  loop->Get( locAnalysisResultsVector );
+  event->Get( locAnalysisResultsVector );
   
   if( WRITE_EVIO_FILE ){
     
     const DEventWriterEVIO* eventWriterEVIO = NULL;
-    loop->GetSingle(eventWriterEVIO);
+    event->GetSingle(eventWriterEVIO);
 
     // write out BOR events
-    if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+    if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
 
-      eventWriterEVIO->Write_EVIOEvent(loop, "exclusivepi0");
-      return NOERROR;
+      eventWriterEVIO->Write_EVIOEvent(event, "exclusivepi0");
+      return;
     }
 
     //Make sure that there are combos that survived for ****THIS**** CHANNEL!!!
@@ -112,12 +109,12 @@ jerror_t JEventProcessor_pi0calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    vector< const JObject* > locObjectsToSave;
             
             vector<const DEventRFBunch*> locEventRFBunches;
-            loop->Get(locEventRFBunches);
+            event->Get(locEventRFBunches);
 	    //locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches));
 	    locObjectsToSave.push_back(locEventRFBunches[0]);
 
             vector<const DVertex*> kinfitVertex;
-            loop->Get(kinfitVertex);
+            event->Get(kinfitVertex);
 	    locObjectsToSave.push_back(kinfitVertex[0]);
 	    
             if(kinfitVertex.size() > 0) {   // pretty sure this should always be true if we have a combo....
@@ -153,7 +150,7 @@ jerror_t JEventProcessor_pi0calib::evnt(JEventLoop *loop, uint64_t eventnumber)
             }
 
 	    // actually write the event out
-	    eventWriterEVIO->Write_EVIOEvent( loop, "exclusivepi0", locObjectsToSave );                    
+	    eventWriterEVIO->Write_EVIOEvent( event, "exclusivepi0", locObjectsToSave );
 
 	    //}
 
@@ -172,30 +169,26 @@ jerror_t JEventProcessor_pi0calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     // string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 
     const DEventWriterROOT* eventWriterROOT = NULL;
-    loop->GetSingle(eventWriterROOT);
-    eventWriterROOT->Fill_DataTrees(loop, "excl_pi0calib");
+    event->GetSingle(eventWriterROOT);
+    eventWriterROOT->Fill_DataTrees(event, "excl_pi0calib");
   }
-  
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_pi0calib::erun(void)
+void JEventProcessor_pi0calib::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_pi0calib::fini(void)
+void JEventProcessor_pi0calib::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

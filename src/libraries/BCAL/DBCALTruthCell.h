@@ -12,9 +12,8 @@
 #define _DBCALTruthCell_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DBCALTruthCell:public jana::JObject{
+class DBCALTruthCell: public JObject {
 	public:
 		JOBJECT_PUBLIC(DBCALTruthCell);
 		
@@ -25,15 +24,13 @@ class DBCALTruthCell:public jana::JObject{
 		double t;
 		double zLocal;
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "module", "%2d", module);
-			AddString(items, "layer", "%2d", layer);
-			AddString(items, "sector", "%1d", sector);
-			AddString(items, "E", "%5.3f", E);
-			AddString(items, "t", "%7.2f", t);
-			AddString(items, "zLocal", "%5.1f", zLocal);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(module, "module", "%2d");
+			summary.add(layer, "layer", "%2d");
+			summary.add(sector, "sector", "%1d");
+			summary.add(E, "E", "%5.3f");
+			summary.add(t, "t", "%7.2f");
+			summary.add(zLocal, "zLocal", "%5.1f");
 		}
 		
 };

@@ -11,11 +11,11 @@
 #include <pthread.h>
 #include <map>
 
-#include <JANA/jerror.h>
-#include <JANA/JGeometry.h>
-using namespace jana;
+#include <JANA/JApplication.h>
+#include <JANA/Compatibility/jerror.h>
+#include <JANA/Compatibility/JGeometry.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DGeometryManager.h>
 #include "FDC/DFDCGeometry.h"
 #include "FDC/DFDCWire.h"
 #include "FDC/DFDCCathode.h"
@@ -25,48 +25,44 @@ using namespace jana;
 #include <DVector3.h>
 #include "DMaterial.h"
 #include "DMaterialMap.h"
-using namespace jana;
 
-class DApplication;
-class DMagneticFieldMap;
-class DLorentzDeflections;
-
+class JCalibrationManager;
 
 class DGeometry{
-	public:
-		DGeometry(JGeometry *jgeom, DApplication *dapp, int32_t runnumber);
-		virtual ~DGeometry();
-		virtual const char* className(void){return static_className();}
-		static const char* static_className(void){return "DGeometry";}
+    public:
+        DGeometry(JGeometry *jgeom, DGeometryManager *dgeoman, JApplication* app, int32_t runnumber);
+        virtual ~DGeometry();
+        virtual const char* className(void){return static_className();}
+        static const char* static_className(void){return "DGeometry";}
 
-		JGeometry* GetJGeometry(void) {return jgeom;}
-		DMagneticFieldMap* GetBfield(void) const;
-		DLorentzDeflections *GetLorentzDeflections(void);
+        JGeometry* GetJGeometry(void) {return jgeom;}
+        DMagneticFieldMap* GetBfield(void) const;
+        DLorentzDeflections *GetLorentzDeflections(void);
 
-		// These methods just map to the same methods in JGeometry. Ideally, we'd
-		// base DGeometry on JGeometry and so we'd get these automatically.
-		// However, that would require a more complicated generator mechanism
-		// where the geometry objects are made outside of JANA.
-		bool Get(string xpath, string &sval) const {return jgeom->Get(xpath, sval);}
-		bool Get(string xpath, map<string, string> &svals) const {return jgeom->Get(xpath, svals);}
-		template<class T> bool Get(string xpath, T &val) const {return jgeom->Get(xpath, val);}
-		template<class T> bool Get(string xpath, vector<T> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
-		template<class T> bool Get(string xpath, map<string,T> &vals) const {return jgeom->Get(xpath, vals);}
+        // These methods just map to the same methods in JGeometry. Ideally, we'd
+        // base DGeometry on JGeometry and so we'd get these automatically.
+        // However, that would require a more complicated generator mechanism
+        // where the geometry objects are made outside of JANA.
+        bool Get(string xpath, string &sval) const {return jgeom->Get(xpath, sval);}
+        bool Get(string xpath, map<string, string> &svals) const {return jgeom->Get(xpath, svals);}
+        template<class T> bool Get(string xpath, T &val) const {return jgeom->Get(xpath, val);}
+        template<class T> bool Get(string xpath, vector<T> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
+        template<class T> bool Get(string xpath, map<string,T> &vals) const {return jgeom->Get(xpath, vals);}
 
-		// The GNU 3.2.3 compiler has a problem resolving the ambiguity between
-		// Get(string, T&val) and Get(string, vector<T> &vals, string) above.
-		// This does not seem to be a problem with the 4.0 compiler. To get
-		// around this, some non-templated versions are provided (eeech!).
-		bool Get(string xpath, vector<double> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
-		bool Get(string xpath, vector<int> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
-		bool Get(string xpath, vector<float> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
+        // The GNU 3.2.3 compiler has a problem resolving the ambiguity between
+        // Get(string, T&val) and Get(string, vector<T> &vals, string) above.
+        // This does not seem to be a problem with the 4.0 compiler. To get
+        // around this, some non-templated versions are provided (eeech!).
+        bool Get(string xpath, vector<double> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
+        bool Get(string xpath, vector<int> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
+        bool Get(string xpath, vector<float> &vals, string delimiter=" ") const {return jgeom->Get(xpath, vals, delimiter);}
 
-		bool GetMultiple(string xpath,vector<vector<double> >&vals,
-				 string delimiter=" ") const
-		{return jgeom->GetMultiple(xpath,vals,delimiter);}
-	
-		typedef struct{
-		  double du,dphi,dz;
+        bool GetMultiple(string xpath,vector<vector<double> >&vals,
+                 string delimiter=" ") const
+        {return jgeom->GetMultiple(xpath,vals,delimiter);}
+
+        typedef struct{
+          double du,dphi,dz;
       }fdc_wire_offset_t;
       typedef struct{
          double dPhiX,dPhiY,dPhiZ;
@@ -216,7 +212,9 @@ class DGeometry{
 
    private:
       JGeometry *jgeom;
-      DApplication *dapp;
+      DGeometryManager* dgeoman;
+      JApplication *app;
+      std::shared_ptr<JCalibrationManager> jcalman;
       mutable DMagneticFieldMap *bfield;
       int32_t runnumber;
       mutable vector<DMaterial*> materials;			/// Older implementation to keep track of material specs without ranges

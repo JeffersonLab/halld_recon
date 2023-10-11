@@ -21,14 +21,13 @@
 
 #include <JANA/JApplication.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JFactory.h>
+#include <JANA/JEvent.h>
+#include <JANA/JFactoryT.h>
 
 #include <evioFileChannel.hxx>
 
 
 using namespace std;
-using namespace jana;
 using namespace evio;
 
 
@@ -38,16 +37,14 @@ using namespace evio;
 class JEventProcessor_danaevio : public JEventProcessor {
 
  public:
-  JOBJECT_PUBLIC(JEventProcessor_danaevio);
-  const char* className(void) { return "JEventProcessor_danaevio";}
 
   JEventProcessor_danaevio();
   ~JEventProcessor_danaevio();
 
 
  private:
-  jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
   
 
 //----------------------------------------------------------------------------

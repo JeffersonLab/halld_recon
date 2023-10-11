@@ -11,7 +11,7 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTTabUtilities.h"
 
 #include "DFDCHit.h"
@@ -21,7 +21,7 @@ using namespace std;
 // store constants indexed by gPlane/element number
 typedef  vector< vector<double> >  fdc_digi_constants_t;
 
-class DFDCHit_factory:public jana::JFactory<DFDCHit>{
+class DFDCHit_factory:public JFactoryT<DFDCHit>{
 	public:
 		DFDCHit_factory(){};
 		~DFDCHit_factory(){};
@@ -50,14 +50,14 @@ class DFDCHit_factory:public jana::JFactory<DFDCHit>{
 		//			 const int in_rocid, const int in_slot, const int in_channel) const;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 	
-	bool USE_FDC;
-		void LoadPackageCalibTables(jana::JEventLoop *eventLoop, string ccdb_prefix);
+		bool USE_FDC;
+		void LoadPackageCalibTables(const std::shared_ptr<const JEvent>& event, string ccdb_prefix);
 };
 
 #endif // _DFDCHit_factory_

@@ -9,26 +9,26 @@
 #define _DPSCPair_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include "DPSCHit.h"
+using std::pair;
 
-class DPSCPair:public jana::JObject{
+class DPSCPair: public JObject{
  public:
   JOBJECT_PUBLIC(DPSCPair);
 
   pair<const DPSCHit*,const DPSCHit*> ee;	// first:North(left); second:South(right)		
   
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "module_lhit", "%d", ee.first->module);
-    AddString(items, "module_rhit", "%d", ee.second->module);
-    AddString(items, "t_tdc_lhit", "%f", ee.first->time_tdc);
-    AddString(items, "t_tdc_rhit", "%f", ee.second->time_tdc);
-    AddString(items, "t_fadc_lhit", "%f", ee.first->time_fadc);
-    AddString(items, "t_fadc_rhit", "%f", ee.second->time_fadc);
-    AddString(items, "integral_lhit", "%f", ee.first->integral);
-    AddString(items, "integral_rhit", "%f", ee.second->integral);
-    AddString(items, "pulse_peak_lhit", "%f", ee.first->pulse_peak);
-    AddString(items, "pulse_peak_rhit", "%f", ee.second->pulse_peak);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(ee.first->module, "module_lhit", "%d");
+    summary.add(ee.second->module, "module_rhit", "%d");
+    summary.add(ee.first->time_tdc, "t_tdc_lhit", "%f");
+    summary.add(ee.second->time_tdc, "t_tdc_rhit", "%f");
+    summary.add(ee.first->time_fadc, "t_fadc_lhit", "%f");
+    summary.add(ee.second->time_fadc, "t_fadc_rhit", "%f");
+    summary.add(ee.first->integral, "integral_lhit", "%f");
+    summary.add(ee.second->integral, "integral_rhit", "%f");
+    summary.add(ee.first->pulse_peak, "pulse_peak_lhit", "%f");
+    summary.add(ee.second->pulse_peak, "pulse_peak_rhit", "%f");
   }
 		
 };

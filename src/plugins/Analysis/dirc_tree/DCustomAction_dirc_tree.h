@@ -12,7 +12,7 @@
 #include "TH1.h"
 #include "TLorentzRotation.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "DIRC/DDIRCGeometry.h"
@@ -30,7 +30,6 @@
 #include <TClonesArray.h>
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_dirc_tree : public DAnalysisAction
 {
@@ -39,11 +38,11 @@ public:
   DCustomAction_dirc_tree(const DReaction* locReaction, bool locUseKinFitResultsFlag, Particle_t locPID, int locParticleComboStepIndex, string locActionUniqueString = "") :
     DAnalysisAction(locReaction, "Custom_dirc_reactions", locUseKinFitResultsFlag, locActionUniqueString), dParticleComboStepIndex(locParticleComboStepIndex), dPID(locPID) {}
 
-  void Initialize(JEventLoop* locEventLoop);
+  void Initialize(const std::shared_ptr<const JEvent>& locEvent);
 
 private:
 
-  bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+  bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
   // Optional: Useful utility functions.
   const DAnalysisUtilities* dAnalysisUtilities;

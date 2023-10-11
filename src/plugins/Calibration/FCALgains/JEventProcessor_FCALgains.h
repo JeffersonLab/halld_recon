@@ -9,7 +9,7 @@
 #define _DEventProcessor_FCAL_Shower_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include <ANALYSIS/DEventWriterROOT.h>
 #include <HDDM/DEventWriterREST.h>
@@ -21,25 +21,28 @@
 #include "TMatrixD.h"
 
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_FCALgains : public jana::JEventProcessor
+class JEventProcessor_FCALgains : public JEventProcessor
 {
 	public:
-		JEventProcessor_FCALgains(){};
+		JEventProcessor_FCALgains(){
+			SetTypeName("JEventProcessor_FCALgains");
+		};
 		~JEventProcessor_FCALgains(){};
-		const char* className(void){return "JEventProcessor_FCALgains";}
 		//DVector3 Calc_CrudeVertex(const deque< const DKinematicData* > & locParticles) const;
 		
 	       	
 	private:
 		//const DAnalysisUtilities* dAnalysisUtilities;
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber);	///< Called every time a new run number is detected.
-		jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
-		jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
+
 		//jerror_t fillHists();
 //double m_x;
 

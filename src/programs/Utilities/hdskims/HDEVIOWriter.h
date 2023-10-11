@@ -22,7 +22,6 @@ using namespace std;
 #include <et.h>
 #endif // HAVE_ET
 
-#include <JANA/jerror.h>
 
 // C-style wrapper
 void* HDEVIOOutputThread(void *l3out);

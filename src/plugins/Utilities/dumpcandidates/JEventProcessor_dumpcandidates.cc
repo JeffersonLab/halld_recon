@@ -6,22 +6,19 @@
 //
 
 #include "JEventProcessor_dumpcandidates.h"
-using namespace jana;
 
-
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
 
 #include <TRACKING/DTrackCandidate.h>
 #include <TRACKING/DTrackHitSelector.h>
 #include <TRACKING/DTrackFitter.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
+#include <DANA/DEvent.h>
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_dumpcandidates());
+	app->Add(new JEventProcessor_dumpcandidates());
 }
 } // "C"
 
@@ -31,6 +28,8 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_dumpcandidates::JEventProcessor_dumpcandidates()
 {
+	SetTypeName("JEventProcessor_dumpcandidates");
+
 	events_written = 0;
 	events_discarded = 0;
 	
@@ -47,32 +46,31 @@ JEventProcessor_dumpcandidates::~JEventProcessor_dumpcandidates()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_dumpcandidates::init(void)
+void JEventProcessor_dumpcandidates::Init()
 {
-	// 
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	MAX_CANDIDATE_FILTER = 1000;
-	gPARMS->SetDefaultParameter("MAX_CANDIDATE_FILTER", MAX_CANDIDATE_FILTER, "Maximum number of candidates allowed in event before any are written to file.");
+	app->SetDefaultParameter("MAX_CANDIDATE_FILTER", MAX_CANDIDATE_FILTER, "Maximum number of candidates allowed in event before any are written to file.");
 
 	
 	// Open output file
 	ofs = new ofstream("gluex_candidates.txt");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_dumpcandidates::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_dumpcandidates::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// Get pointer to geometry object
-	DApplication* dapp=dynamic_cast<DApplication*>(japp);
-	dgeom = dapp->GetDGeometry(1);
+	dgeom = GetDGeometry(event);
 	if(!dgeom){
 		jerr << "Couldn't get DGeometry pointer!!" << endl;
-		return UNKNOWN_ERROR;
+		return;
 	}
 
 	// Get CDC wires
@@ -83,7 +81,7 @@ jerror_t JEventProcessor_dumpcandidates::brun(JEventLoop *eventLoop, int32_t run
 	vector<vector<DFDCWire *> > fdcwires;
 	dgeom->GetFDCWires(fdcwires);
 	
-	LockState();
+	lockService->RootFillLock(this);
 	// Generate map keyed by wire object's address
 	// (in the form of an unsigned long) and whose
 	// value is the index of the wire (i.e. position
@@ -106,39 +104,37 @@ jerror_t JEventProcessor_dumpcandidates::brun(JEventLoop *eventLoop, int32_t run
 			wireID[ GetFDCWireID(w) ] = index++;
 		}
 	}
-	UnlockState();
-
-	return NOERROR;
+	lockService->RootFillUnLock(this);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_dumpcandidates::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_dumpcandidates::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get track candidates
 	vector<const DTrackCandidate*> candidates;
-	loop->Get(candidates);
+	event->Get(candidates);
 	if(candidates.size()==0 || candidates.size()>MAX_CANDIDATE_FILTER){
 		events_discarded++;
-		return NOERROR;
+		return;
 	}
 
 	// Get pointer to DTrackHitSelector object
 	vector<const DTrackHitSelector *> hitselectors;
-	loop->Get(hitselectors);
+	event->Get(hitselectors);
 	if(hitselectors.size()<1){
 		_DBG_<<"Unable to get a DTrackHitSelector object!"<<endl;
-		return UNKNOWN_ERROR;
+		return;
 	}
 	const DTrackHitSelector * hitselector = hitselectors[0];
 
 	// Get pointer to DTrackFitter object
 	vector<const DTrackFitter *> fitters;
-	loop->Get(fitters);
+	event->Get(fitters);
 	if(fitters.size()<1){
 		_DBG_<<"Unable to get a DTrackFitter object!"<<endl;
-		return UNKNOWN_ERROR;
+		throw JException("Unable to get a DTrackFitter object!");
 	}
 	DTrackFitter *fitter = const_cast<DTrackFitter*>(fitters[0]);
 	
@@ -155,8 +151,8 @@ jerror_t JEventProcessor_dumpcandidates::evnt(JEventLoop *loop, uint64_t eventnu
 		// Get hits to be used for the fit
 		vector<const DCDCTrackHit*> cdctrackhits;
 		vector<const DFDCPseudo*> fdcpseudos;
-		loop->Get(cdctrackhits);
-		loop->Get(fdcpseudos);
+		event->Get(cdctrackhits);
+		event->Get(fdcpseudos);
 		hitselector->GetAllHits(DTrackHitSelector::kHelical, rt, cdctrackhits, fdcpseudos, fitter);
 
 		// Get list of wire ids
@@ -193,22 +189,19 @@ jerror_t JEventProcessor_dumpcandidates::evnt(JEventLoop *loop, uint64_t eventnu
 		(*ofs) << ss.str() << endl;
 		events_written++;
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_dumpcandidates::erun(void)
+void JEventProcessor_dumpcandidates::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_dumpcandidates::fini(void)
+void JEventProcessor_dumpcandidates::Finish()
 {
 	if(ofs){
 		ofs->close();
@@ -219,8 +212,6 @@ jerror_t JEventProcessor_dumpcandidates::fini(void)
 	cout << endl;
 	cout << "Wrote " << events_written << " candidate events to output file (discarded " << events_discarded << ")" << endl;
 	cout << endl;
-
-	return NOERROR;
 }
 
 

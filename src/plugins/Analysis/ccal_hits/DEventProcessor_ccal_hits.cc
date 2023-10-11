@@ -10,7 +10,7 @@ using namespace std;
 
 #include "DEventProcessor_ccal_hits.h"
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <CCAL/DCCALDigiHit.h>
 
 #include <CCAL/DCCALHit.h>
@@ -23,15 +23,15 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_ccal_hits());
+	app->Add(new DEventProcessor_ccal_hits());
 }
 } // "C"
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_ccal_hits::init(void)
+void DEventProcessor_ccal_hits::Init()
 {
          
   TDirectory *dir = new TDirectoryFile("CCAL","CCAL");
@@ -78,33 +78,29 @@ jerror_t DEventProcessor_ccal_hits::init(void)
   // Go back up to the parent directory
   dir->cd("../");
 
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_ccal_hits::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_ccal_hits::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_ccal_hits::Process(const std::shared_ptr<const JEvent>& event)
 {
 	
 	vector<const DCCALDigiHit*> ccal_digihits;
 
 	vector<const DCCALHit*> ccal_hits;
 
-	loop->Get(ccal_digihits);
-	loop->Get(ccal_hits);
+	event->Get(ccal_digihits);
+	event->Get(ccal_hits);
 
-	cout << " Event number = " << eventnumber  <<  endl;
+	cout << " Event number = " << event->GetEventNumber()  <<  endl;
 	cout << " Number of digi hits = " << ccal_digihits.size() <<  endl;
 	cout << " Number of hits = " << ccal_hits.size() <<  endl;
 
@@ -122,7 +118,7 @@ jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
 	nsamples_pedestal = 0;
 
 
-	japp->RootWriteLock(); 
+	DEvent::GetLockService(event)->RootWriteLock();
 
 
         for(unsigned int ii = 0; ii < ccal_digihits.size(); ii++){
@@ -186,26 +182,22 @@ jerror_t DEventProcessor_ccal_hits::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  tree1->Fill();
 	}
 
-	japp->RootUnLock();
-
-	return NOERROR;
+	DEvent::GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_ccal_hits::erun(void)
+void DEventProcessor_ccal_hits::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_ccal_hits::fini(void)
+void DEventProcessor_ccal_hits::Finish()
 {
-	return NOERROR;
 }
 

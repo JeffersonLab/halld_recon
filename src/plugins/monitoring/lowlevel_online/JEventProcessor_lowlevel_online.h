@@ -9,6 +9,7 @@
 #define _JEventProcessor_lowlevel_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include <GlueX.h>
 #include <PAIR_SPECTROMETER/DPSGeometry.h>
@@ -19,14 +20,12 @@
 
 #include <vector>
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_lowlevel_online:public jana::JEventProcessor{
+class JEventProcessor_lowlevel_online: public JEventProcessor{
 	public:
 		JEventProcessor_lowlevel_online();
 		~JEventProcessor_lowlevel_online();
-		const char* className(void){return "JEventProcessor_lowlevel_online";}
 
 		bool MORE_PLOTS;
         bool INDIVIDUAL_CHANNEL_DATA;
@@ -320,11 +319,13 @@ class JEventProcessor_lowlevel_online:public jana::JEventProcessor{
 	TH2I *f1tdc_bad_hit_fifo;
 
 	private:
-		jerror_t init(void);
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-		jerror_t erun(void);
-		jerror_t fini(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_lowlevel_online_

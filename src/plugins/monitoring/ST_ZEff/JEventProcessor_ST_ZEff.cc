@@ -5,16 +5,15 @@
 // Creator: mkamel (on Linux ifarm1102 2.6.32-431.el6.x86_64 x86_64)
 //
 #include "JEventProcessor_ST_ZEff.h"
+#include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
-using namespace jana;
 using namespace std;
+
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_ZEff());
+	app->Add(new JEventProcessor_ST_ZEff());
 }
 } // "C"
 //------------------
@@ -22,7 +21,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_ZEff::JEventProcessor_ST_ZEff()
 {
-
+	SetTypeName("JEventProcessor_ST_ZEff");
 }
 //------------------
 // ~JEventProcessor_ST_ZEff (Destructor)
@@ -32,24 +31,29 @@ JEventProcessor_ST_ZEff::~JEventProcessor_ST_ZEff()
 
 }
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_ZEff::init(void)
+void JEventProcessor_ST_ZEff::Init()
 {
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
+
+  auto app = GetApplication();
+  auto params = app->GetJParameterManager();
+  lockService = app->GetService<JLockService>();
+
   //****** Define Some Constants*********************************
   int NoBins_z = 240;
   double z_lower_limit = 38.5;
   double z_upper_limit = 98.5;
   // Do not reconstruct tracks with start counter time
-  gPARMS->SetParameter("TRKFIT:USE_SC_TIME",false);
+  params->SetParameter("TRKFIT:USE_SC_TIME",false);
   int USE_SC_TIME = 0;
-  if(gPARMS->Exists("TRKFIT:USE_SC_TIME"))
-    gPARMS->GetParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME);
+  if(params->Exists("TRKFIT:USE_SC_TIME"))
+    params->GetParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME);
     
   //cout << "USE_SC_TIME = " << USE_SC_TIME << endl;
   // Warning message if sc time is used in track reconstruction
@@ -105,28 +109,25 @@ jerror_t JEventProcessor_ST_ZEff::init(void)
   // cd back to main directory
   gDirectory->cd("../");
   main->cd();
-  return NOERROR;
+  return;
 }
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_ZEff::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_ZEff::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
     
   // Obtain the target center along z;
   map<string,double> target_params;
-  if (eventLoop->GetCalib("/TARGET/target_parms", target_params))
+  if (GetCalib(event, "/TARGET/target_parms", target_params))
     jout << "Error loading /TARGET/target_parms/ !" << endl;
   if (target_params.find("TARGET_Z_POSITION") != target_params.end())
     z_target_center = target_params["TARGET_Z_POSITION"];
   else
     jerr << "Unable to get TARGET_Z_POSITION from /TARGET/target_parms !" << endl;
   // Obtain the Start Counter geometry
-  DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  if(!dapp)
-    _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl; 
-  DGeometry* locGeometry = dapp->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
+  DGeometry* locGeometry = GetDGeometry(event);
   sc_angle_corr = 1.;
   if (locGeometry->GetStartCounterGeom(sc_pos, sc_norm))
     {
@@ -135,67 +136,65 @@ jerror_t JEventProcessor_ST_ZEff::brun(JEventLoop *eventLoop, int32_t runnumber)
     }  
 
   // Propagation Time constant
-  if(eventLoop->GetCalib("START_COUNTER/propagation_time_corr", propagation_time_corr))
+  if(GetCalib(event, "START_COUNTER/propagation_time_corr", propagation_time_corr))
       jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
   // Propagation Time fit Boundaries
-  if(eventLoop->GetCalib("START_COUNTER/PTC_Boundary", PTC_Boundary))
+  if(GetCalib(event, "START_COUNTER/PTC_Boundary", PTC_Boundary))
     jout << "Error loading /START_COUNTER/PTC_Boundary !" << endl;
-
-  return NOERROR;
 }
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_ST_ZEff::Process(const std::shared_ptr<const JEvent>& event)
 {
   //cout << USE_SC_TIME << endl;
   //cout << " *********************** Event number" << eventnumber << "**************"<<endl;
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
   vector<const DSCHit*>           st_hits;
   vector<const DChargedTrack*> chargedTrackVector;
   
-  eventLoop->Get(st_hits);
-  eventLoop->Get(chargedTrackVector);
+  event->Get(st_hits);
+  event->Get(chargedTrackVector);
   vector<DVector3> sc_track_position;
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-    return NOERROR;
+    return;
   double speed_light = 29.9792458;
    const DEventRFBunch* locEventRFBunch = NULL;
-   eventLoop->GetSingle(locEventRFBunch);
+   event->GetSingle(locEventRFBunch);
   if(locEventRFBunch->dNumParticleVotes <= 1)
-   return NOERROR; //don't trust PID: beta-dependence
+   return; //don't trust PID: beta-dependence
 
   // Get the particleID object for each run
   vector<const DParticleID* > locParticleID_algos;
-  eventLoop->Get(locParticleID_algos);
+  event->Get(locParticleID_algos);
   if(locParticleID_algos.size() < 1)
     {
       _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return;
     }
   auto locParticleID = locParticleID_algos[0];
   // We want to be use some of the tools available in the RFTime factory 
   // Specifically steping the RF back to a chosen time
-  vector<DRFTime *> locRFTimes;
-  eventLoop->Get(locRFTimes);      // make sure brun() gets called for this factory!
-  auto locRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+  vector<const DRFTime *> locRFTimes;
+  event->Get(locRFTimes);      // make sure brun() gets called for this factory!
+  auto locRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
 
   // Grab the associated detector matches object
   const DDetectorMatches* locDetectorMatches = NULL;
-  eventLoop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
 
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
   sc_track_position.clear();
   for (uint32_t i = 0; i < chargedTrackVector.size(); i++)
     {
@@ -453,29 +452,29 @@ jerror_t JEventProcessor_ST_ZEff::evnt(JEventLoop *eventLoop, uint64_t eventnumb
 	}//end of trcak position loop
       
     }// end of charged track loop	
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  return NOERROR;
+  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_ZEff::erun(void)
+void JEventProcessor_ST_ZEff::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_ZEff::fini(void)
+void JEventProcessor_ST_ZEff::Finish()
 {
 
 	// Called before program exit after event processing is finished.
-  japp->RootUnLock();
-  return NOERROR;
+  lockService->RootUnLock();
+  return;
 }
 

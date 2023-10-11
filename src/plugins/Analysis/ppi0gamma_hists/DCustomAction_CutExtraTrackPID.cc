@@ -7,26 +7,26 @@
 
 #include "DCustomAction_CutExtraTrackPID.h"
 
-void DCustomAction_CutExtraTrackPID::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_CutExtraTrackPID::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	dPIDCuts[SYS_TOF] = 1.0;
 	dPIDCuts[SYS_BCAL] = 1.0;
 	dPIDCuts[SYS_FCAL] = 2.0;
 
 	ddEdxCutAction = new DCutAction_dEdx(Get_Reaction());
-	ddEdxCutAction->Initialize(locEventLoop);
+	ddEdxCutAction->Initialize(locEvent);
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 }
 
-bool DCustomAction_CutExtraTrackPID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_CutExtraTrackPID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Write custom code to perform an action on the INPUT DParticleCombo (DParticleCombo)
 	//NEVER: Grab DParticleCombo or DAnalysisResults objects (of any tag!) from the JEventLoop within this function
 	//NEVER: Grab objects that are created post-kinfit (e.g. DKinFitResults, etc.) from the JEventLoop if Get_UseKinFitResultsFlag() == false: CAN CAUSE INFINITE DEPENDENCY LOOP
 
 	vector<const DChargedTrack*> locUnusedChargedTracks;
-	dAnalysisUtilities->Get_UnusedChargedTracks(locEventLoop, locParticleCombo, locUnusedChargedTracks);
+	dAnalysisUtilities->Get_UnusedChargedTracks(locEvent, locParticleCombo, locUnusedChargedTracks);
 
 	for(size_t loc_i = 0; loc_i < locUnusedChargedTracks.size(); ++loc_i)
 	{

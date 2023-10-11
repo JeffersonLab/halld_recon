@@ -21,7 +21,7 @@
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_expert_2());
+    app->Add(new JEventProcessor_CDC_expert_2());
   }
 }
 
@@ -30,6 +30,7 @@ extern "C"{
 
 
 JEventProcessor_CDC_expert_2::JEventProcessor_CDC_expert_2() {
+	SetTypeName("JEventProcessor_CDC_expert_2");
 }
 
 
@@ -42,8 +43,10 @@ JEventProcessor_CDC_expert_2::~JEventProcessor_CDC_expert_2() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_CDC_expert_2::init(void) {
+void JEventProcessor_CDC_expert_2::Init() {
 
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   // raw quantities for read out (fa125 new format) are
   //   time                    field max 2047   scaled x 1, units 0.8ns
@@ -266,8 +269,6 @@ jerror_t JEventProcessor_CDC_expert_2::init(void) {
 
   main->cd();    // back to main 
 
-  return NOERROR;
-
 
 }
 
@@ -275,10 +276,9 @@ jerror_t JEventProcessor_CDC_expert_2::init(void) {
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert_2::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_CDC_expert_2::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
 
-  return NOERROR;
 
 }
 
@@ -286,7 +286,7 @@ jerror_t JEventProcessor_CDC_expert_2::brun(JEventLoop *eventLoop, int32_t runnu
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert_2::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CDC_expert_2::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -325,12 +325,12 @@ jerror_t JEventProcessor_CDC_expert_2::evnt(JEventLoop *eventLoop, uint64_t even
   int straw_offset[29] = {0,0,42,84,138,192,258,324,404,484,577,670,776,882,1005,1128,1263,1398,1544,1690,1848,2006,2176,2346,2528,2710,2907,3104,3313};
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
+    return;
   }
 
   //first set of histograms is for dcdchits, these are t and q after calibration
@@ -338,14 +338,14 @@ jerror_t JEventProcessor_CDC_expert_2::evnt(JEventLoop *eventLoop, uint64_t even
 
   // get hit data for cdc
   vector<const DCDCHit*> hits;
-  eventLoop->Get(hits);
+  event->Get(hits);
  
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  eventLoop->Get(digihits);
+  event->Get(digihits);
 
 
-  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 
 
@@ -500,7 +500,7 @@ jerror_t JEventProcessor_CDC_expert_2::evnt(JEventLoop *eventLoop, uint64_t even
     cdc_what_is_n->SetBinContent(cdc_what_is_n->FindBin(n,100*slot + channel),rocid-24);
 
 
-    // initial pedestals from window raw data samples if available
+    // Initial pedestals from window raw data samples if available
 
     wrd = NULL;
     cp->GetSingle(wrd);
@@ -531,30 +531,26 @@ jerror_t JEventProcessor_CDC_expert_2::evnt(JEventLoop *eventLoop, uint64_t even
   } //end for each digihit
 
 
-  japp->RootFillUnLock(this); //RELEASE ROOT LOCK!!
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert_2::erun(void) {
+void JEventProcessor_CDC_expert_2::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert_2::fini(void) {
+void JEventProcessor_CDC_expert_2::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

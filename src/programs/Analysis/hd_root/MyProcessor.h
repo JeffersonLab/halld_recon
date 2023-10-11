@@ -7,13 +7,12 @@
 ///
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <TFile.h>
 #include <TTree.h>
 
-extern vector<string> toprint;
+extern std::vector<std::string> toprint;
 extern bool ACTIVATE_ALL;
 
 class MyProcessor:public JEventProcessor
@@ -22,17 +21,17 @@ class MyProcessor:public JEventProcessor
 		MyProcessor();
 		~MyProcessor();
 	
-		jerror_t init(void);				///< Called once at program start.
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);						///< Called every event.
-		jerror_t erun(void){return NOERROR;};				///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);				///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override {};
+		void Finish() override;
 
 		typedef struct{
-			string dataClassName;
-			string tag;
+			std::string dataClassName;
+			std::string tag;
 		}factory_info_t;
-		vector<factory_info_t> fac_info;
+		std::vector<factory_info_t> fac_info;
 
 		TFile *ROOTfile;
 };

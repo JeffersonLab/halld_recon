@@ -11,7 +11,7 @@ using namespace std;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new DEventProcessor_1p2pi());
+    app->Add(new DEventProcessor_1p2pi());
   }
 } // "C"
 
@@ -21,15 +21,17 @@ thread_local DTreeFillData DEventProcessor_1p2pi::dTreeFillData;
 // init
 ///------------------
 
-jerror_t DEventProcessor_1p2pi::init(void)
+void DEventProcessor_1p2pi::Init()
 {
   //TTREE INTERFACE
   //MUST DELETE WHEN FINISHED: OR ELSE DATA WON'T BE SAVED!!!
-  
+
+  auto app = GetApplication();
+
   string treeName = "tree_1p2pi";
   string treeFile = "tree_1p2pi.root";
-  gPARMS->SetDefaultParameter("SRC_1P2PI:TREENAME", treeName);
-  gPARMS->SetDefaultParameter("SRC_1P2PI:TREEFILE", treeFile);
+  app->SetDefaultParameter("SRC_1P2PI:TREENAME", treeName);
+  app->SetDefaultParameter("SRC_1P2PI:TREEFILE", treeFile);
   dTreeInterface = DTreeInterface::Create_DTreeInterface(treeName, treeFile);
 
   //TTREE BRANCHES
@@ -76,28 +78,24 @@ jerror_t DEventProcessor_1p2pi::init(void)
 
   //REGISTER BRANCHES
   dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-  return NOERROR;
 }
 
 //------------------ 
-// brun
+// BeginRun
 //------------------  
-jerror_t DEventProcessor_1p2pi::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DEventProcessor_1p2pi::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
-  dKinFitUtils = new DKinFitUtils_GlueX(eventLoop);
+  dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
   dKinFitter = new DKinFitter(dKinFitUtils);
 
-  eventLoop->GetSingle(dAnalysisUtilities);
-
-  return NOERROR;
+  locEvent->GetSingle(dAnalysisUtilities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
-jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_1p2pi::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
   vector<const DChargedTrack*>ch_tracks;
@@ -105,13 +103,13 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DNeutralShower*> showers;
   const DTrigger* Trigger = NULL;
 
-  loop->Get(ch_tracks);
-  loop->Get(beam_ph);
-  loop->Get(showers);
-  loop->GetSingle(Trigger);
+  locEvent->Get(ch_tracks);
+  locEvent->Get(beam_ph);
+  locEvent->Get(showers);
+  locEvent->GetSingle(Trigger);
 
-  if(!Trigger->Get_IsPhysicsEvent()) return NOERROR;
-  if (ch_tracks.size()!=3) return NOERROR;
+  if(!Trigger->Get_IsPhysicsEvent()) return; // NOERROR;
+  if (ch_tracks.size()!=3) return; // NOERROR;
 
 
   map<Particle_t, int> targetParticles = {
@@ -127,9 +125,9 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
 
    Int_t _nHyp = hypothesisList.size();
     
-   if(_nHyp == 0)  return NOERROR;
+   if(_nHyp == 0)  return; // NOERROR;
 
-   LockState(); //ACQUIRE PROCESSOR LOCK
+   std::lock_guard<std::mutex> guard(m_mutex); // ACQUIRE PROCESSOR LOCK
 
    dTreeFillData.Fill_Single<Int_t>("nHyp", _nHyp);
 
@@ -146,7 +144,7 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
   //==========================
   //
-  dTreeFillData.Fill_Single<Int_t>("eventNumber", eventnumber); 
+  dTreeFillData.Fill_Single<Int_t>("eventNumber", locEvent->GetEventNumber());
   dTreeFillData.Fill_Single<Double_t>("L1TriggerBits", Trigger->Get_L1TriggerBits());
 
 
@@ -278,28 +276,23 @@ jerror_t DEventProcessor_1p2pi::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   }// for hyp
 
-  UnlockState(); //RELEASE PROCESSOR LOCK
-
-  return NOERROR;
-
+  //RELEASE PROCESSOR LOCK
 }
 
 //------------------
-jerror_t DEventProcessor_1p2pi::erun(void)
+void DEventProcessor_1p2pi::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
 
-jerror_t DEventProcessor_1p2pi::fini(void)
+void DEventProcessor_1p2pi::Finish()
 {
 	delete dTreeInterface; //saves trees to file, closes file
-	return NOERROR;
 }
 
 // Recursive function for determining possible particle assignments
@@ -346,8 +339,6 @@ void DEventProcessor_1p2pi::GetHypotheses(vector<const DChargedTrack *> &tracks,
         }
       }
   }
-
-  return;
 
 } // end GetHypotheses
 

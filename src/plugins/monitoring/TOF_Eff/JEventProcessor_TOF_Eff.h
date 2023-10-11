@@ -7,7 +7,7 @@
 #define _JEventProcessor_TOF_Eff_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include "TH1I.h"
 #include "TH2I.h"
@@ -29,22 +29,24 @@
 #include <set>
 #include <thread>
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_TOF_Eff : public jana::JEventProcessor
+class JEventProcessor_TOF_Eff : public JEventProcessor
 {
 	public:
-		JEventProcessor_TOF_Eff(){};
+		JEventProcessor_TOF_Eff(){
+			SetTypeName("JEventProcessor_TOF_Eff");
+		};
 		~JEventProcessor_TOF_Eff(){};
-		const char* className(void){return "JEventProcessor_TOF_Eff";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop* locEventLoop, int locRunNumber);	///< Called every time a new run number is detected.
-		jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
-		jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 
 		int Calc_NearestHit(const DTOFPaddleHit* locPaddleHit) const;
 		bool Cut_FCALTiming(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DParticleID* locParticleID, const DEventRFBunch* locEventRFBunch);

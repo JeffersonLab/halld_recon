@@ -8,11 +8,11 @@
 #ifndef _DFCALShower_factory_
 #define _DFCALShower_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Compatibility/jerror.h>
+
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALCluster.h>
-#include <DANA/DApplication.h>
 
 #include <DMatrixDSym.h>
 
@@ -21,18 +21,19 @@
 class DFCALHit;
 class DTrackWireBased;
 
-class DFCALShower_factory:public JFactory<DFCALShower>{
+class DFCALShower_factory:public JFactoryT<DFCALShower>{
  public:
-  DFCALShower_factory();
-  ~DFCALShower_factory(){};
-  jerror_t LoadCovarianceLookupTables(JEventLoop *eventLoop);
+  DFCALShower_factory() = default;
+  ~DFCALShower_factory() override = default;
+  jerror_t LoadCovarianceLookupTables(const std::shared_ptr<const JEvent>& event);
   jerror_t FillCovarianceMatrix(DFCALShower* shower);
 	
  private:
 
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t erun(void);
+  void Init() override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
 
   void GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb,
 				     double &Ecorrected,
@@ -116,6 +117,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   TH2F *CovarianceLookupTable[5][5];
   
   double log_position_const;
+  int debug_level;
 };
 
 

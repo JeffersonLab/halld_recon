@@ -8,10 +8,10 @@
 #ifndef _DBCALCluster_factory_SINGLE_
 #define _DBCALCluster_factory_SINGLE_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DBCALCluster.h"
 
-class DBCALCluster_factory_SINGLE:public jana::JFactory<DBCALCluster>{
+class DBCALCluster_factory_SINGLE:public JFactoryT<DBCALCluster>{
 
 	/// This factory will create a single DBCALCluster objects from
 	/// all of the DBCALPoint objects. It is intended only for
@@ -21,16 +21,17 @@ class DBCALCluster_factory_SINGLE:public jana::JFactory<DBCALCluster>{
 	/// object is not created.
 
 	public:
-		DBCALCluster_factory_SINGLE(){};
+		DBCALCluster_factory_SINGLE(){
+			SetTag("SINGLE");
+		};
 		~DBCALCluster_factory_SINGLE(){};
-		const char* Tag(void){return "SINGLE";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		double m_z_target_center;
 		const DBCALGeometry *dBCALGeom;

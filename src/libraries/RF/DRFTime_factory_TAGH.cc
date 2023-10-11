@@ -7,33 +7,39 @@
 
 #include "DRFTime_factory_TAGH.h"
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 //------------------
-// init
+// Init
 //------------------
-jerror_t DRFTime_factory_TAGH::init(void)
+void DRFTime_factory_TAGH::Init()
 {
 	dSourceSystem = SYS_TAGH;
 	dTimeOffset = 0.0;
 	dTimeOffsetVariance = 0.0;
 	dTimeResolutionSq = 0.0;
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DRFTime_factory_TAGH::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DRFTime_factory_TAGH::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
 	//RF Period
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	calibration->Get("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 	
 	//Time Offsets
 	map<string, double> locCCDBMap;
 	map<string, double>::iterator locIterator;
-	if(locEventLoop->GetCalib("/PHOTON_BEAM/RF/time_offset", locCCDBMap))
-		jout << "Error loading /PHOTON_BEAM/RF/time_offset !" << endl;
+	if(calibration->Get("/PHOTON_BEAM/RF/time_offset", locCCDBMap))
+		jout << "Error loading /PHOTON_BEAM/RF/time_offset !" << jendl;
 	for(locIterator = locCCDBMap.begin(); locIterator != locCCDBMap.end(); ++locIterator)
 	{
 		DetectorSystem_t locSystem = NameToSystem(locIterator->first.c_str());
@@ -44,8 +50,8 @@ jerror_t DRFTime_factory_TAGH::brun(jana::JEventLoop *locEventLoop, int32_t runn
 	}
 
 	//Time Offset Variances
-	if(locEventLoop->GetCalib("/PHOTON_BEAM/RF/time_offset_var", locCCDBMap))
-		jout << "Error loading /PHOTON_BEAM/RF/time_offset_var !" << endl;
+	if(calibration->Get("/PHOTON_BEAM/RF/time_offset_var", locCCDBMap))
+		jout << "Error loading /PHOTON_BEAM/RF/time_offset_var !" << jendl;
 	for(locIterator = locCCDBMap.begin(); locIterator != locCCDBMap.end(); ++locIterator)
 	{
 		DetectorSystem_t locSystem = NameToSystem(locIterator->first.c_str());
@@ -56,8 +62,8 @@ jerror_t DRFTime_factory_TAGH::brun(jana::JEventLoop *locEventLoop, int32_t runn
 	}
 
 	//Time Resolution Squared
-	if(locEventLoop->GetCalib("/PHOTON_BEAM/RF/time_resolution_sq", locCCDBMap))
-		jout << "Error loading /PHOTON_BEAM/RF/time_resolution_sq !" << endl;
+	if(calibration->Get("/PHOTON_BEAM/RF/time_resolution_sq", locCCDBMap))
+		jout << "Error loading /PHOTON_BEAM/RF/time_resolution_sq !" << jendl;
 	for(locIterator = locCCDBMap.begin(); locIterator != locCCDBMap.end(); ++locIterator)
 	{
 		DetectorSystem_t locSystem = NameToSystem(locIterator->first.c_str());
@@ -66,23 +72,21 @@ jerror_t DRFTime_factory_TAGH::brun(jana::JEventLoop *locEventLoop, int32_t runn
 		dTimeResolutionSq = locIterator->second;
 		break;
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DRFTime_factory_TAGH::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void DRFTime_factory_TAGH::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//The RF Time is defined at the center of the target
 	//The time offset needed to line it up to the center of the target is absorbed into the calibration constants.
 
 	vector<const DRFTDCDigiTime*> locRFTDCDigiTimes;
-	locEventLoop->Get(locRFTDCDigiTimes);
+	event->Get(locRFTDCDigiTimes);
 
 	const DTTabUtilities* locTTabUtilities = NULL;
-	locEventLoop->GetSingle(locTTabUtilities);
+	event->GetSingle(locTTabUtilities);
 
 	//Get RF Times
 	vector<double> locRFTimes;
@@ -99,7 +103,7 @@ jerror_t DRFTime_factory_TAGH::evnt(JEventLoop *locEventLoop, uint64_t eventnumb
 	}
 
 	if(locRFTimes.empty())
-		return NOERROR;
+		return;
 
 	//Calculate the average RF time
 	double locRFTimeVariance = 0.0;
@@ -108,9 +112,7 @@ jerror_t DRFTime_factory_TAGH::evnt(JEventLoop *locEventLoop, uint64_t eventnumb
 	DRFTime* locRFTime = new DRFTime();
 	locRFTime->dTime = locAverageRFTime; //This time is defined at the center of the target (offsets with other detectors center it)
 	locRFTime->dTimeVariance = locRFTimeVariance;
-	_data.push_back(locRFTime);
-
-	return NOERROR;
+	Insert(locRFTime);
 }
 
 double DRFTime_factory_TAGH::Step_TimeToNearInputTime(double locTimeToStep, double locTimeToStepTo) const
@@ -184,17 +186,15 @@ double DRFTime_factory_TAGH::Calc_WeightedAverageRFTime(vector<double>& locRFTim
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DRFTime_factory_TAGH::erun(void)
+void DRFTime_factory_TAGH::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DRFTime_factory_TAGH::fini(void)
+void DRFTime_factory_TAGH::Finish()
 {
-	return NOERROR;
 }

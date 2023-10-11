@@ -10,7 +10,6 @@
 // 
 
 #include "JEventProcessor_F250_mode8_pedestal.h"
-using namespace jana;
 
 #include <DAQ/Df250WindowRawData.h>
 
@@ -19,11 +18,11 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_F250_mode8_pedestal());
+	app->Add(new JEventProcessor_F250_mode8_pedestal());
 }
 } // "C"
 
@@ -33,13 +32,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_F250_mode8_pedestal::JEventProcessor_F250_mode8_pedestal()
 {
-
-	NSA_NSB = 60;
-	
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("F250_m8_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
-	}
-
+	SetTypeName("JEventProcessor_F250_mode8_pedestal");
 }
 
 //------------------
@@ -51,22 +44,25 @@ JEventProcessor_F250_mode8_pedestal::~JEventProcessor_F250_mode8_pedestal()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_F250_mode8_pedestal::init(void)
+void JEventProcessor_F250_mode8_pedestal::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
+	NSA_NSB = 60;
+	auto app = GetApplication();
+	app->SetDefaultParameter("F250_m8_ped:NSA_NSB", NSA_NSB, "The number of samples integrated in the signal.");
 
 	// lock all root operations
-	japp->RootWriteLock();
+	GetLockService(locEvent)->RootWriteLock();
 
 	gStyle->SetTitleOffset(1, "Y");
   	gStyle->SetTitleSize(0.05,"xyz");
@@ -91,42 +87,40 @@ jerror_t JEventProcessor_F250_mode8_pedestal::init(void)
 		}
 	}
 
-	japp->RootUnLock();
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_F250_mode8_pedestal::brun(JEventLoop *eventLoop, int runnumber)
+void JEventProcessor_F250_mode8_pedestal::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_F250_mode8_pedestal::evnt(JEventLoop *loop, int eventnumber)
+void JEventProcessor_F250_mode8_pedestal::Process(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
-	vector<const Df250WindowRawData*> f250WindowRawData_vec;
-	loop->Get(f250WindowRawData_vec);
+	std::vector<const Df250WindowRawData*> f250WindowRawData_vec;
+	event->Get(f250WindowRawData_vec);
 
-	japp->RootWriteLock();
+	GetLockService(event)->RootWriteLock();
 	//printf("in the lock\n");
 
 	unsigned int num_f250WRD = f250WindowRawData_vec.size();
@@ -137,7 +131,7 @@ jerror_t JEventProcessor_F250_mode8_pedestal::evnt(JEventLoop *loop, int eventnu
 		int slot = f250WindowRawData->slot;
 		int channel = f250WindowRawData->channel;
  		// Get a vector of the samples for this channel
-		const vector<uint16_t> &samplesvector = f250WindowRawData->samples;
+		const std::vector<uint16_t> &samplesvector = f250WindowRawData->samples;
 		int nsamples=samplesvector.size();
 
 		/// create histogram if necessary
@@ -219,30 +213,27 @@ jerror_t JEventProcessor_F250_mode8_pedestal::evnt(JEventLoop *loop, int eventnu
 		}
 	}
 
-	japp->RootUnLock();
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_F250_mode8_pedestal::erun(void)
+void JEventProcessor_F250_mode8_pedestal::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_F250_mode8_pedestal::fini(void)
+void JEventProcessor_F250_mode8_pedestal::Finish()
 {
 	// Called before program exit after event processing is finished.
 
-	japp->RootWriteLock();
+	GetLockService(locEvent)->RootWriteLock();
 
 	float RMSsum=0;
 	int numchans=0;
@@ -291,8 +282,6 @@ jerror_t JEventProcessor_F250_mode8_pedestal::fini(void)
 	}
 	printf("mean RMS = %f\n",RMSsum/numchans);
 
-	japp->RootUnLock();
-
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock();
 }
 

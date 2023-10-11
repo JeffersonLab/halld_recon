@@ -20,9 +20,8 @@
 #include "ANALYSIS/DSourceComboTimeHandler.h"
 
 using namespace std;
-using namespace jana;
 
-class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
+class DReaction_factory_ReactionFilter : public JFactoryT<DReaction>
 {
 	//return tuple: initial pid, target/2nd-beam pid, detected final pids, missing final pid (if any), missing particle index
 	using DReactionStepTuple = tuple<Particle_t, Particle_t, vector<Particle_t>, Particle_t, int>;
@@ -30,19 +29,20 @@ class DReaction_factory_ReactionFilter : public jana::JFactory<DReaction>
 	public:
 		DReaction_factory_ReactionFilter()
 		{
-			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event. 
-			SetFactoryFlag(PERSISTANT);
-			
-			gPARMS->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
-			gPARMS->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
+			SetTag("ReactionFilter");
 
+			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event.
+			SetFactoryFlag(PERSISTENT);
+
+			auto app = GetApplication();
+			app->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
+			app->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
 		}
-		const char* Tag(void){return "ReactionFilter";}
 
 	private:
 		bool dDebugFlag = false;
 
-		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
 
 		//UTILITY FUNCTIONS
 		map<size_t, tuple<string, string, string, vector<string>>> Parse_Input(void);

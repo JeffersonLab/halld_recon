@@ -8,16 +8,17 @@
 #ifndef _Df125EmulatorAlgorithm_factory_
 #define _Df125EmulatorAlgorithm_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
+
 #include <DAQ/Df125EmulatorAlgorithm.h>
 
-class Df125EmulatorAlgorithm_factory:public jana::JFactory<Df125EmulatorAlgorithm>{
+class Df125EmulatorAlgorithm_factory:public JFactoryT<Df125EmulatorAlgorithm>{
 	public:
 		Df125EmulatorAlgorithm_factory(){};
 		~Df125EmulatorAlgorithm_factory(){};
 
-	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		void Process(const std::shared_ptr<const JEvent>& event) override {
 
             // This is a trivial class that simply implements the
             // v2 tagged factory as the default. It is here so
@@ -27,15 +28,13 @@ class Df125EmulatorAlgorithm_factory:public jana::JFactory<Df125EmulatorAlgorith
             // v1 = ported f250 code (has not been implemented)
             // v2 = firmware using the upsampling technique.
 
-            vector<const Df125EmulatorAlgorithm*> emulators;
-            Df125EmulatorAlgorithm_factory *f125EmFac = static_cast<Df125EmulatorAlgorithm_factory*>(loop->GetFactory("Df125EmulatorAlgorithm","v2"));
-            if(f125EmFac) f125EmFac->Get(emulators);
-            for(unsigned int i=0; i< emulators.size(); i++){
-                _data.push_back(const_cast<Df125EmulatorAlgorithm*>(emulators[i]));
+            vector<Df125EmulatorAlgorithm*> emulators;
+            auto f125EmV2 = event->Get<Df125EmulatorAlgorithm>("v2");
+            for (auto emulator : f125EmV2) {
+            	emulators.push_back(const_cast<Df125EmulatorAlgorithm*>(emulator));
             }
+            Set(emulators);
             SetFactoryFlag(NOT_OBJECT_OWNER);
-
-            return NOERROR;
         }
 };
 

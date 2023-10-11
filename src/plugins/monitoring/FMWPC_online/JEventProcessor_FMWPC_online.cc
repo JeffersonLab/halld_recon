@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_FMWPC_online.h"
-using namespace jana;
 
 #include "FMWPC/DFMWPCDigiHit.h"
 #include "FMWPC/DFMWPCHit.h"
@@ -18,6 +17,8 @@ using namespace jana;
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
+
+using std::vector;
 
 static TH1I *fmwpc_num_events;
 static TH1F *fmwpc_occ_layer[6];
@@ -52,7 +53,7 @@ static TH2D *h2_fmwpc_pi_chamber;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FMWPC_online());
+	app->Add(new JEventProcessor_FMWPC_online());
 }
 } // "C"
 
@@ -61,6 +62,7 @@ void InitPlugin(JApplication *app){
 // JEventProcessor_FMWPC_online (Constructor)
 //------------------
 JEventProcessor_FMWPC_online::JEventProcessor_FMWPC_online(){
+    SetTypeName("JEventProcessor_FMWPC_online");
 }
 
 //------------------
@@ -72,7 +74,7 @@ JEventProcessor_FMWPC_online::~JEventProcessor_FMWPC_online(){
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_FMWPC_online::init(void)
+void JEventProcessor_FMWPC_online::Init()
 {
 	// This is called once at program startup. 
   ctof_t_base_adc = 0.;       // ns
@@ -152,14 +154,12 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
 
         // back to main dir
         main->cd();
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FMWPC_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FMWPC_online::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   // This is called whenever the run number changes
    // load base time offset
@@ -180,9 +180,9 @@ jerror_t JEventProcessor_FMWPC_online::brun(JEventLoop *eventLoop, int32_t runnu
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FMWPC_online::Process(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
@@ -203,11 +203,11 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
   
         // get wire digis
         vector<const DFMWPCDigiHit*>fmwpcdigis;
-        loop->Get(fmwpcdigis);
+        event->Get(fmwpcdigis);
 
         // get calibrated hits
         vector<const DFMWPCHit*>fmwpchits;
-        loop->Get(fmwpchits);
+        event->Get(fmwpchits);
 
         // get CTOF ADC digis
         vector<const DCTOFDigiHit*>ctofdigis;
@@ -222,7 +222,7 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 
         // FILL HISTOGRAMS
         // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-        japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+        lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
         fmwpc_num_events->Fill(1);
 
@@ -314,22 +314,20 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FMWPC_online::erun(void)
+void JEventProcessor_FMWPC_online::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FMWPC_online::fini(void)
+void JEventProcessor_FMWPC_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

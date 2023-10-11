@@ -9,21 +9,23 @@
 #define _JEventProcessor_TOF_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
 
-class JEventProcessor_TOF_online:public jana::JEventProcessor{
+class JEventProcessor_TOF_online:public JEventProcessor{
  public:
   JEventProcessor_TOF_online();
   ~JEventProcessor_TOF_online();
-  const char* className(void){return "JEventProcessor_TOF_online";}
   float TOF_TDC_SHIFT;
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
+  std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_TOF_online_

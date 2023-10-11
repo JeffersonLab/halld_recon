@@ -23,7 +23,7 @@
 #include "DLorentzVector.h"
 #include "DVector3.h"
 #include "HDGEOMETRY/DGeometry.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "DANA/DStatusBits.h"
 #include "TRIGGER/DL1Trigger.h"
 
@@ -35,7 +35,6 @@
 #include <TProfile2D.h>
 
 using namespace std;
-using namespace jana;
 
 
 //----------------------------------------------------------------------------------
@@ -45,7 +44,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FCAL_online());
+    app->Add(new JEventProcessor_FCAL_online());
   }
 }
 
@@ -54,6 +53,7 @@ extern "C"{
 
 
 JEventProcessor_FCAL_online::JEventProcessor_FCAL_online() {
+	SetTypeName("JEventProcessor_FCAL_online");
 }
 
 
@@ -66,7 +66,9 @@ JEventProcessor_FCAL_online::~JEventProcessor_FCAL_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_FCAL_online::init(void) {
+void JEventProcessor_FCAL_online::Init() {
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   // create root folder for fcal and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -148,20 +150,17 @@ jerror_t JEventProcessor_FCAL_online::init(void) {
   // back to main dir
   main->cd();
 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_FCAL_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_FCAL_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
 
-  DGeometry *dgeom = NULL;
-  DApplication *dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-  if( dapp ) dgeom = dapp->GetDGeometry( runnumber );
-   
+  DGeometry *dgeom = GetDGeometry(event);
+
   if( dgeom ){
 
     dgeom->GetTargetZ( m_targetZ );
@@ -170,17 +169,15 @@ jerror_t JEventProcessor_FCAL_online::brun(JEventLoop *eventLoop, int32_t runnum
   else{
 
     cerr << "No geometry accessbile to FCAL_online monitoring plugin." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No geometry accessbile to FCAL_online monitoring plugin.");
   }
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_FCAL_online::Process(const std::shared_ptr<const JEvent>& event) {
 
   vector< const DFCALGeometry* > geomVec;
   vector< const DFCALDigiHit*  > digiHits;
@@ -193,7 +190,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   
   const DL1Trigger *trig = NULL;
   try {
-      eventLoop->GetSingle(trig);
+      event->GetSingle(trig);
   } catch (...) {}
   if (trig) {
       if (trig->fp_trig_mask){
@@ -201,21 +198,21 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
       }
   } else {
       // HDDM files are from simulation, so keep them even though they have no trigger
-      bool locIsHDDMEvent = eventLoop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+      bool locIsHDDMEvent = GetStatusBit(event, kSTATUS_HDDM);
       if (!locIsHDDMEvent) goodtrigger=0;		
   }
 	
   if (!goodtrigger) {
-      return NOERROR;
+      return;
   }
 
 
-  eventLoop->Get( geomVec );
-  eventLoop->Get( digiHits );
-  eventLoop->Get( hits );
+  event->Get( geomVec );
+  event->Get( digiHits );
+  event->Get( hits );
   if( hits.size() <= 500 ){  // only form clusters and showers if there aren't too many hits
-    eventLoop->Get( clusterVec );
-    eventLoop->Get( showerVec );
+    event->Get( clusterVec );
+    event->Get( showerVec );
   }
 
   const DFCALGeometry& fcalGeom = *(geomVec[0]);
@@ -306,7 +303,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   if( digiHits.size() > 0 )
 	  fcal_num_events->Fill(1);
@@ -401,7 +398,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   }
   m_digNOver->Fill( nOverflow );
 
-//  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+//  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
   // end of raw hit filling
 
@@ -413,7 +410,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   
   // now fill histograms
 
-//  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+//  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   m_hitETot->Fill( hitETot*k_to_MeV );
   m_hitT0->Fill( hitEwtT );
@@ -441,14 +438,14 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
     m_hitE2D->Fill( hit.column, hit.row, hit.E*k_to_MeV );
   }
 
-//  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+//  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
   // end calibrated block-level filling
 
   // for events with a lot of hits -- stop now
   if( hits.size() > 500 ){
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+    return;
   }
 
   //
@@ -460,7 +457,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 
 
-//  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+//  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
   
   m_clusN->Fill( clusterVec.size() );
 
@@ -536,7 +533,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
       m_clus2GMass->Fill( ( gam1 + gam2 ).M() );
     }
   }
-//  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+//  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
   // end cluster lever filling
 
@@ -545,7 +542,7 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
   // applied on a cluster level
 
 
-//  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+//  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   for( vector< const DFCALShower* >::const_iterator showItr = showerVec.begin();
        showItr != showerVec.end(); ++showItr ){
@@ -595,28 +592,25 @@ jerror_t JEventProcessor_FCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
     
 
   }
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-  return NOERROR;
+  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_FCAL_online::erun(void) {
+void JEventProcessor_FCAL_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_FCAL_online::fini(void) {
+void JEventProcessor_FCAL_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

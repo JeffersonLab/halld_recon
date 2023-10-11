@@ -9,9 +9,8 @@
 #define _DMCTrigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DMCTrigger:public jana::JObject{
+class DMCTrigger: public JObject{
 	public:
 		JOBJECT_PUBLIC(DMCTrigger);
 		
@@ -31,15 +30,15 @@ class DMCTrigger:public jana::JObject{
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "L1a_fired", "%d", L1a_fired ? 1:0);
-			AddString(items, "L1b_fired", "%d", L1b_fired ? 1:0);
-			AddString(items, "Ebcal", "%5.3f", Ebcal);
-			AddString(items, "Efcal", "%5.3f", Efcal);
-			AddString(items, "Ebcal_all", "%5.3f", Ebcal_all);
-			AddString(items, "Efcal_all", "%5.3f", Efcal_all);
-			AddString(items, "Nschits", "%2d", Nschits);
-			AddString(items, "Ntofhits", "%2d", Ntofhits);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(L1a_fired ? 1:0, "L1a_fired", "%d");
+			summary.add(L1b_fired ? 1:0, "L1b_fired", "%d");
+			summary.add(Ebcal, "Ebcal", "%5.3f");
+			summary.add(Efcal, "Efcal", "%5.3f");
+			summary.add(Ebcal_all, "Ebcal_all", "%5.3f");
+			summary.add(Efcal_all, "Efcal_all", "%5.3f");
+			summary.add(Nschits, "Nschits", "%2d");
+			summary.add(Ntofhits, "Ntofhits", "%2d");
 		}
 		
 };

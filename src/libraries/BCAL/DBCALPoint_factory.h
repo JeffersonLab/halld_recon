@@ -5,10 +5,7 @@
 #include <map>
 using namespace std;
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include "BCAL/DBCALPoint.h"
 #include "BCAL/DBCALUnifiedHit.h"
@@ -22,15 +19,10 @@ typedef vector< vector<double> >  track_parms_t;
 
 class DBCALHit;
 
-class DBCALPoint_factory : public JFactory<DBCALPoint> {
+class DBCALPoint_factory : public JFactoryT<DBCALPoint> {
 
  public:
-  DBCALPoint_factory() : m_BCALGeom(NULL) {
-    PRINTCALIBRATION = false;
-    if(gPARMS){
-      gPARMS->SetDefaultParameter("BCALPOINT:PRINTCALIBRATION", PRINTCALIBRATION, "Print the calibration parameters.");
-    }
-  }
+  DBCALPoint_factory() : m_BCALGeom(NULL) {}
   ~DBCALPoint_factory() {}
 
  private:
@@ -54,8 +46,9 @@ class DBCALPoint_factory : public JFactory<DBCALPoint> {
 
   bool PRINTCALIBRATION;
 
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
 
   const int GetCalibIndex( int module, int layer, int sector ) const {
 	  return BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);

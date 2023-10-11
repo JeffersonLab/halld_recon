@@ -9,12 +9,11 @@
 #define _DCCALGeometry_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include "DVector2.h"
 #include "units.h"
 
-class DCCALGeometry:public jana::JObject{
+class DCCALGeometry: public JObject{
 
 	public:
 		JOBJECT_PUBLIC(DCCALGeometry);
@@ -50,11 +49,11 @@ class DCCALGeometry:public jana::JObject{
 		int row   ( float y ) const;
 		int column( float x ) const;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-		  AddString(items, "kCCALBlocksWide", "%d", (int) kCCALBlocksWide);
-		  AddString(items, "kCCALBlocksTall", "%d", (int) kCCALBlocksTall);
-		  AddString(items, "kCCALMaxChannels", "%d",(int) kCCALMaxChannels);
-		  AddString(items, "kCCALBeamHoleSize", "%2.3f",(int) kCCALBeamHoleSize);
+		void Summarize(JObjectSummary& summary) const override {
+		  summary.add((int) kCCALBlocksWide, "kCCALBlocksWide", "%d");
+		  summary.add((int) kCCALBlocksTall, "kCCALBlocksTall", "%d");
+		  summary.add((int) kCCALMaxChannels, "kCCALMaxChannels", "%d");
+		  summary.add((int) kCCALBeamHoleSize, "kCCALBeamHoleSize", "%2.3f");
 		}
 	
 	private:

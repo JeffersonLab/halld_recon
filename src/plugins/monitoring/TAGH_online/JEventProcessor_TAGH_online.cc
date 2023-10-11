@@ -12,7 +12,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "TTAB/DTTabUtilities.h"
 #include <TAGGER/DTAGHTDCDigiHit.h>
@@ -112,7 +111,7 @@ static TH2I *hDigiHit_adctdcMatchesVsSlotID_cut;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TAGH_online());
+        app->Add(new JEventProcessor_TAGH_online());
     }
 }
 
@@ -121,6 +120,7 @@ extern "C"{
 
 
 JEventProcessor_TAGH_online::JEventProcessor_TAGH_online() {
+	SetTypeName("JEventProcessor_TAGH_online");
 }
 
 
@@ -133,7 +133,9 @@ JEventProcessor_TAGH_online::~JEventProcessor_TAGH_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TAGH_online::init(void) {
+void JEventProcessor_TAGH_online::Init() {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     // create root folder for tagh and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -213,19 +215,17 @@ jerror_t JEventProcessor_TAGH_online::init(void) {
     hDigiHit_adctdcMatchesVsSlotID_cut = new TH2I("DigiHit_adctdcMatchesVsSlotID_cut","TAGH #TDC matches / fADC hit vs. counter ID (> 1k ADC integral counts);counter ID;#TDC matches / fADC hit",Nslots,0.5,0.5+Nslots,8,-0.5,7.5);
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGH_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TAGH_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
     // extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
-    eventLoop->Get(taghGeomVect);
-    if (taghGeomVect.size() == 0) return OBJECT_NOT_AVAILABLE;
+    event->Get(taghGeomVect);
+    if (taghGeomVect.size() == 0) throw JException("Missing DTAGHGeometry");
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
     // get photon energy bin low of each counter for energy histogram binning
     double Elows[Nslots + 1];
@@ -246,22 +246,20 @@ jerror_t JEventProcessor_TAGH_online::brun(JEventLoop *eventLoop, int32_t runnum
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     if (hHit_Energy->GetEntries() == 0) hHit_Energy->SetBins(Nslots,Elows);
     if (hHit_EnergyVsSlotID->GetEntries() == 0) hHit_EnergyVsSlotID->SetBins(Nslots,slots,Nslots,Elows);
     if (hHit_TimeVsEnergy->GetEntries() == 0) hHit_TimeVsEnergy->SetBins(Nslots,Elows,Ntime,Tlows);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGH_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TAGH_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -270,14 +268,14 @@ jerror_t JEventProcessor_TAGH_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // Get TAGH hits and digihits
     vector<const DTAGHHit*> hits;
-    eventLoop->Get(hits, "Calib");
+    event->Get(hits, "Calib");
     vector<const DTAGHDigiHit*> digihits;
-    eventLoop->Get(digihits);
+    event->Get(digihits);
     vector<const DTAGHTDCDigiHit*> tdcdigihits;
-    eventLoop->Get(tdcdigihits);
+    event->Get(tdcdigihits);
 
     const DTTabUtilities* ttabUtilities = nullptr;
-    eventLoop->GetSingle(ttabUtilities);
+    event->GetSingle(ttabUtilities);
 
     // Cache pulse data and window raw data objects
     map< const DTAGHDigiHit*, pair<const Df250PulseData*, const Df250WindowRawData*> > pd_wrd_cache;
@@ -291,7 +289,7 @@ jerror_t JEventProcessor_TAGH_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // Get beam current
     vector<const DEPICSvalue*> epicsVals;
-    eventLoop->Get(epicsVals);
+    event->Get(epicsVals);
     for (const auto& ev : epicsVals) {
         if (ev->name == "IBCAD00CRCUR6") {
             beam_current = ev->fval;
@@ -301,7 +299,7 @@ jerror_t JEventProcessor_TAGH_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     hBeamCurrent->Fill(beam_current);
     if (digihits.size() > 0 || tdcdigihits.size() > 0)
@@ -445,29 +443,25 @@ jerror_t JEventProcessor_TAGH_online::evnt(JEventLoop *eventLoop, uint64_t event
     hHit_NHits_us->Fill(NHits_hasADC_us);
     hHit_NHits_ds->Fill(NHits_hasADC_ds);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGH_online::erun(void) {
+void JEventProcessor_TAGH_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TAGH_online::fini(void) {
+void JEventProcessor_TAGH_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 

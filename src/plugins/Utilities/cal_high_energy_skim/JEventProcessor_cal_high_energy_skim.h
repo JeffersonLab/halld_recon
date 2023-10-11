@@ -7,22 +7,20 @@
 #define _JEventProcessor_cal_high_energy_skim_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 #include "evio_writer/DEventWriterEVIO.h"
 
 #include <TH1F.h>
 
 #include <vector>
 
-using namespace jana;
 using namespace std;
 
-class JEventProcessor_cal_high_energy_skim:public jana::JEventProcessor{
+class JEventProcessor_cal_high_energy_skim:public JEventProcessor{
  public:
 
   JEventProcessor_cal_high_energy_skim();
   ~JEventProcessor_cal_high_energy_skim();
-  const char* className(void){return "JEventProcessor_cal_high_energy_skim";}
 
 
  private:

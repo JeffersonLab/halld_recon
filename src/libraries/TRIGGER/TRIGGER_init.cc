@@ -5,8 +5,7 @@
 // Creator: davidl (on Darwin eleanor.jlab.org 12.2.0 i386)
 //
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactorySet.h>
 
 #include "DMCTrigger_factory.h"
 #include "DL1MCTrigger_factory.h"
@@ -14,15 +13,13 @@ using namespace jana;
 #include "DL1Trigger_factory.h"
 #include "DTrigger_factory.h"
 
-jerror_t TRIGGER_init(JEventLoop *loop) {
+void TRIGGER_init(JFactorySet *factorySet) {
 
-	loop->AddFactory(new DMCTrigger_factory());
-	loop->AddFactory(new DL1MCTrigger_factory());
-	loop->AddFactory(new DL3Trigger_factory());
-	loop->AddFactory(new DL1Trigger_factory());
-	loop->AddFactory(new DTrigger_factory());
-
-	return NOERROR;
+	factorySet->Add(new DMCTrigger_factory());
+	factorySet->Add(new DL1MCTrigger_factory());
+	factorySet->Add(new DL3Trigger_factory());
+	factorySet->Add(new DL1Trigger_factory());
+	factorySet->Add(new DTrigger_factory());
 }
 
 

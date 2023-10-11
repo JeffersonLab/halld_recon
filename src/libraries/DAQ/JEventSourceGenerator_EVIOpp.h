@@ -8,23 +8,20 @@
 #ifndef _JEventSourceGenerator_EVIOpp_
 #define _JEventSourceGenerator_EVIOpp_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
 
 #include <DAQ/HDEVIO.h>
 
 #include "JEventSource_EVIOpp.h"
 
-class JEventSourceGenerator_EVIOpp: public jana::JEventSourceGenerator{
+class JEventSourceGenerator_EVIOpp: public JEventSourceGenerator{
 	public:
-		JEventSourceGenerator_EVIOpp(){}
-		virtual ~JEventSourceGenerator_EVIOpp(){}
-		virtual const char* className(void){return static_className();}
-		static const char* static_className(void){return "JEventSourceGenerator_EVIOpp";}
-		
-		const char* Description(void);
-		double CheckOpenable(string source);
-		jana::JEventSource* MakeJEventSource(string source);
+
+		std::string GetType() const override { return "JEventSource_EVIOpp"; }
+		std::string GetDescription() const override;
+		double CheckOpenable(string source) override;
+		JEventSource* MakeJEventSource(string source) override;
 };
 
 #endif // _JEventSourceGenerator_EVIOpp_

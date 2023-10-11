@@ -11,7 +11,7 @@
 #include <JANA/JEventProcessor.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <stdint.h>
 #include <vector>
@@ -25,7 +25,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 #include "ANALYSIS/DTreeInterface.h"
 
@@ -43,18 +42,17 @@ using namespace jana;
 
 
 
-class JEventProcessor_cdc_emu:public jana::JEventProcessor{
+class JEventProcessor_cdc_emu:public JEventProcessor{
 	public:
 		JEventProcessor_cdc_emu();
 		~JEventProcessor_cdc_emu();
-		const char* className(void){return "JEventProcessor_cdc_emu";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
                 //TREE
                 DTreeInterface* dTreeInterface;

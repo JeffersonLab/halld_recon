@@ -15,7 +15,8 @@
 
 using namespace std;
 
-#include <DANA/DApplication.h>
+#include <JANA/JEventSourceGenerator.h>
+#include <JANA/Services/JComponentManager.h>
 #include <DANA/DStatusBits.h>
 
 #include <TRandom3.h>
@@ -41,8 +42,18 @@ static bool TEST_MODE = false;
 //---------------------------------
 // DEventSourceEventStore    (Constructor)
 //---------------------------------
-DEventSourceEventStore::DEventSourceEventStore(const char* source_name):JEventSource(source_name)
-{
+DEventSourceEventStore::DEventSourceEventStore(std::string source_name):JEventSource(source_name) {
+	SetTypeName("DEventSourceEventStore");
+}
+
+//---------------------------------
+// Open
+//---------------------------------
+void DEventSourceEventStore::Open() {
+
+	auto app = GetApplication();
+	auto source_name = GetResourceName();
+
 	// initialize data members
 	es_data_loaded = false;
 	event_source = NULL;
@@ -71,11 +82,11 @@ DEventSourceEventStore::DEventSourceEventStore(const char* source_name):JEventSo
 	// priority:  JANA command line -> environment variable -> default
 	if(getenv("EVENTSTORE_CONNECTION") != NULL)
 		esdb_connection = getenv("EVENTSTORE_CONNECTION");
-	gPARMS->SetDefaultParameter("ESDB:DB_CONNECTION", esdb_connection,
+	app->SetDefaultParameter("ESDB:DB_CONNECTION", esdb_connection,
 								"Specification of EventStore DB connection.");
 	
 	int test_mode_flag = 0;
-	gPARMS->SetDefaultParameter("ESDB:TEST_MODE", test_mode_flag,
+	app->SetDefaultParameter("ESDB:TEST_MODE", test_mode_flag,
 								"Toggle test mode features");
 	if(test_mode_flag != 0) {
 		TEST_MODE = true;
@@ -260,78 +271,75 @@ DEventSourceEventStore::~DEventSourceEventStore()
 //---------------------------------
 // GetEvent
 //---------------------------------
-jerror_t DEventSourceEventStore::GetEvent(JEvent &event)
+void DEventSourceEventStore::GetEvent(std::shared_ptr<JEvent> event)
 {
+
+	auto statusBits = new DStatusBits;
+	statusBits->SetStatusBit(kSTATUS_FROM_FILE);
+	statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
+	event->Insert(statusBits);
 
 	// FOR DEBUGGING - EMIT EVENTS FOREVER
 	if(TEST_MODE) {
 		// output some fake event with skim information
-    	event.SetEventNumber(1);
-    	event.SetRunNumber(10000);
-    	event.SetJEventSource(this);
+    	event->SetEventNumber(1);
+    	event->SetRunNumber(10000);
+    	event->SetJEventSource(this);
    		//event.SetRef(NULL);
-    	event.SetStatusBit(kSTATUS_FROM_FILE);
-    	event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
 
 		DEventStoreEvent *the_es_event = new DEventStoreEvent();
-		event.SetRef(the_es_event);
+		event->Insert(the_es_event);
 		for(int i=0; i<4; i++)
 			if(gRandom->Uniform() < 0.5)
 				the_es_event->Add_Skim(skim_list[i]);
-
-		return NOERROR;
 	}
 	
 	// make sure the file is open
 	while(event_source == NULL) {
 		while(OpenNextFile() != NOERROR) {}  // keep trying to open files until none are left
 		if(event_source == NULL)
-			return NO_MORE_EVENTS_IN_SOURCE;
+			throw RETURN_STATUS::kNO_MORE_EVENTS;
 	
 		// skip to next event
 		jerror_t retval;
 		if( (retval = MoveToNextEvent()) != NOERROR)
-			return retval;   // if we can't get to another event, then we're done
+			throw RETURN_STATUS::kERROR; // if we can't get to another event, then we're done
 		
 		// read the next event in
-		retval = event_source->GetEvent(event);
+		event_source->GetEvent(event);
 		if(retval == NOERROR) {
 			// To store the skim and other EventStore information for the event
 			// we wrap the actual event data and store our information in the wrapper
 			DEventStoreEvent *the_es_event = new DEventStoreEvent();
 			the_es_event->Set_EventSource(event_source);
-			the_es_event->Set_SourceRef(event.GetRef());    // save the actual event data
-			event.SetRef(the_es_event);
-		    event.SetStatusBit(kSTATUS_FROM_FILE);
-		    event.SetStatusBit(kSTATUS_PHYSICS_EVENT);
+			// the_es_event->Set_SourceRef(event.GetRef());    // save the actual event data
+			// TODO: NWB: Uncomment previous line. Problem: `Ref` is untyped, and our sources now Insert()
+			//            a typed object which `GetRef` can't find. To fix this, we need a "Ref" container
+			//            which _all_ of our eventsources can insert.
+			event->Insert(the_es_event);
 
 			// tag event with skims
-			;
-		} else if(retval == NO_MORE_EVENTS_IN_SOURCE) {   
+		} else if(retval == NO_MORE_EVENTS_IN_SOURCE) {
 			// if the source is empty, close the current one, then move to the next
 			delete event_source;
 			event_source = NULL;
-		} else {   // if there'a another error, then pass it on...
-			return retval;
 		}
 	}
-	
-	return NOERROR;
 }
 
 //---------------------------------
 // FreeEvent
 //---------------------------------
-void DEventSourceEventStore::FreeEvent(JEvent &event)
+void DEventSourceEventStore::FinishEvent(JEvent &event)
 {
 	if(event_source != NULL)
-		event_source->FreeEvent(event);
+		event_source->FinishEvent(event);
 }
 
 //---------------------------------
 // GetObjects
 //---------------------------------
-jerror_t DEventSourceEventStore::GetObjects(JEvent &event, JFactory_base *factory)
+bool DEventSourceEventStore::GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory)
 {
 	/// This gets called through the virtual method of the
 	/// JEventSource base class. It creates the objects of the type
@@ -341,32 +349,22 @@ jerror_t DEventSourceEventStore::GetObjects(JEvent &event, JFactory_base *factor
 	if(!factory) throw RESOURCE_UNAVAILABLE;
 
 	// return meta-EventStore information
-    string dataClassName = factory->GetDataClassName();
+    string dataClassName = factory->GetObjectName();
 	
 	if (dataClassName =="DESSkimData") {
-		JFactory<DESSkimData> *essd_factory = dynamic_cast<JFactory<DESSkimData>*>(factory);
+		JFactoryT<DESSkimData> *essd_factory = dynamic_cast<JFactoryT<DESSkimData>*>(factory);
 		
-		DEventStoreEvent *the_es_event = static_cast<DEventStoreEvent *>(event.GetRef());
+		DEventStoreEvent *the_es_event = const_cast<DEventStoreEvent*>(event->GetSingleStrict<DEventStoreEvent>());
 		DESSkimData *skim_data = new DESSkimData(the_es_event->Get_Skims(), skim_list);
 
 		vector<DESSkimData*> skim_data_vec(1, skim_data);
-		essd_factory->CopyTo(skim_data_vec);
+		essd_factory->Set(skim_data_vec);
 
-		return NOERROR;
+		return true;
 	}
 	
 	if(!event_source) throw RESOURCE_UNAVAILABLE;
-	
-	// See GetEvent() for the motivation for this
-	// Unwrap the event...
-	DEventStoreEvent *the_es_event = static_cast<DEventStoreEvent *>(event.GetRef());
-	event.SetRef(the_es_event->Get_SourceRef());
-	// ..now grab the objects...
-	jerror_t retval = event_source->GetObjects(event, factory);
-	// ...and wrap it back up
-	event.SetRef(the_es_event);
-
-	return retval;
+	return event_source->GetObjects(event, factory);
 }
 
 //---------------------------------
@@ -408,8 +406,9 @@ jerror_t DEventSourceEventStore::OpenNextFile()
 	}
 
 	//Get generators
-	vector<JEventSourceGenerator*> locEventSourceGenerators = japp->GetEventSourceGenerators();
-	
+	auto jcm = japp->GetService<JComponentManager>();
+	vector<JEventSourceGenerator*> locEventSourceGenerators = jcm->get_evt_src_gens();
+
 	//Get event source
 	while( (event_source == NULL) && (current_file_itr != data_files.end()) ) {
 
@@ -436,7 +435,7 @@ jerror_t DEventSourceEventStore::OpenNextFile()
 
 		if(locEventSourceGenerator != NULL)
 		{
-			jout<<"Opening source \""<<locFileName<<"\" of type: "<<locEventSourceGenerator->Description()<<endl;
+			jout<<"Opening source \""<<locFileName<<"\" of type: "<<locEventSourceGenerator->GetDescription()<<endl;
 			event_source = locEventSourceGenerator->MakeJEventSource(locFileName);
 		}
 

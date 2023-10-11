@@ -8,23 +8,21 @@
 #ifndef _DTrackFinder_factory_
 #define _DTrackFinder_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackFinder.h"
 
-class DTrackFinder_factory:public jana::JFactory<DTrackFinder>{
+class DTrackFinder_factory:public JFactoryT<DTrackFinder>{
  public:
-  DTrackFinder_factory(){};
-  ~DTrackFinder_factory(){};
+  DTrackFinder_factory() = default;
+  ~DTrackFinder_factory() override = default;
 
  private:
-  jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+  void Process(const std::shared_ptr<const JEvent>& event) override {
     
-    SetFactoryFlag(PERSISTANT);
+    SetFactoryFlag(PERSISTENT);
     ClearFactoryFlag(WRITE_TO_OUTPUT);
    
-    _data.push_back(new DTrackFinder());   
-
-    return NOERROR;
+    Insert(new DTrackFinder(GetApplication()));
   }
 };
 

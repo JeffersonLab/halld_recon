@@ -7,8 +7,6 @@
 
 #include "JEventProcessor_Pi0Finder.h"
 
-using namespace jana;
-
 #include "TTree.h"
 
 #include "FCAL/DFCALShower.h"
@@ -40,17 +38,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_Pi0Finder()); //register this plugin
-
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_OmegaSkim()); //register this plugin
-
+		locApplication->Add(new JEventProcessor_Pi0Finder()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_OmegaSkim()); //register this plugin
 	}
 } // "C"
 thread_local DTreeFillData JEventProcessor_Pi0Finder::dTreeFillData;
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_Pi0Finder::init(void)
+void JEventProcessor_Pi0Finder::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
@@ -118,19 +114,16 @@ jerror_t JEventProcessor_Pi0Finder::init(void)
 	dTreeInterface->Create_Branches(treeBranchRegister);
 	//----------------------------------
 	//	japp->RootUnLock();
-
-	return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t JEventProcessor_Pi0Finder::brun(jana::JEventLoop* loop, int32_t runnumber)
+void JEventProcessor_Pi0Finder::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
 
-	DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	const DGeometry *geom = dapp->GetDGeometry(runnumber);
+	const DGeometry *geom = GetDGeometry(event);
 
 	if( geom ) {
 
@@ -140,38 +133,36 @@ jerror_t JEventProcessor_Pi0Finder::brun(jana::JEventLoop* loop, int32_t runnumb
 	else{
 
 		cerr << "No geometry accessbile." << endl;
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
-
-	return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnumber)
+void JEventProcessor_Pi0Finder::Process(const std::shared_ptr<const JEvent> &event)
 {
 	vector<const DAnalysisResults*> analysisResultsVector;
-	loop->Get( analysisResultsVector );
+	event->Get( analysisResultsVector );
 
 	vector<const DFCALShower*> showerVector;
-	loop->Get( showerVector );
+	event->Get( showerVector );
 
 	vector<const DEventRFBunch*> eventRFBunches;
-	loop->Get( eventRFBunches );
+	event->Get( eventRFBunches );
 
 	vector<const DFCALCluster*> fcalClusters;
-	loop->Get(fcalClusters);
+	event->Get(fcalClusters);
 
 	vector<const DChargedTrack*> chargedTracks;
-        loop->Get( chargedTracks );
+        event->Get( chargedTracks );
 
         dTreeFillData.Fill_Single<Int_t>("nTrk", chargedTracks.size());
 	
 
 	map< const DFCALShower*, double > showerQualityMap;
 	vector< const DNeutralShower* > neutralShowers;
-	loop->Get( neutralShowers );
+	event->Get( neutralShowers );
 
 	for( size_t i = 0; i < neutralShowers.size(); ++i ){
 
@@ -190,7 +181,7 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 		if( reaction->Get_ReactionName() != "p3pi_excl" ) continue;
 		size_t nCombos = (**res).Get_NumPassedParticleCombos();
 
-		if( nCombos != 1 ) return NOERROR;
+		if( nCombos != 1 ) return;
 		deque< const DParticleCombo* > combos;
 		(**res).Get_PassedParticleCombos( combos );
 		const DParticleCombo* combo = combos[0];
@@ -360,30 +351,26 @@ jerror_t JEventProcessor_Pi0Finder::evnt(jana::JEventLoop* loop, uint64_t evtnum
 		//	japp->RootFillUnLock(this);
 
 	}
-	return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t JEventProcessor_Pi0Finder::erun(void)
+void JEventProcessor_Pi0Finder::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_Pi0Finder::fini(void)
+void JEventProcessor_Pi0Finder::Finish()
 {
 	// Called before program exit after event processing is finished.
 	//japp->RootWriteLock();
 	//m_tree->Write();
 	//japp->RootUnLock();
 	delete dTreeInterface;
-
-	return NOERROR;
 }

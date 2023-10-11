@@ -19,9 +19,8 @@
 #define _DTPOLRingDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTPOLRingDigiHit:public jana::JObject{
+class DTPOLRingDigiHit:public JObject{
  public:
   JOBJECT_PUBLIC(DTPOLRingDigiHit);
   
@@ -35,17 +34,17 @@ class DTPOLRingDigiHit:public jana::JObject{
   uint32_t nsamples_pedestal;    ///< number of samples used in pedestal
   
   // This method is used primarily for pretty printing
-  // the second argument to AddString is printf style format
-  /// \fn   void toStrings(vector<pair<string,string> > &items)const
+  // the second argument to summary.add is printf style format
+  /// \fn   void Summarize(JObjectSummary& summary) const
   /// used by hd_dump to print all TPOL Sector Hit object data for an event.
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "ring", "%d", ring);
-    AddString(items, "pulse_integral", "%d", pulse_integral);
-    AddString(items, "pulse_time", "%d", pulse_time);
-    AddString(items, "pedestal", "%d", pedestal);
-    AddString(items, "QF", "%d", QF);
-    AddString(items, "nsamples_integral", "%d", nsamples_integral);
-    AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
+  void Summarize(JObjectSummary& summary) const{
+    summary.add(ring, "ring", "%d");
+    summary.add(pulse_integral, "pulse_integral", "%d");
+    summary.add(pulse_time, "pulse_time", "%d");
+    summary.add(pedestal, "pedestal", "%d");
+    summary.add(QF, "QF", "%d");
+    summary.add(nsamples_integral, "nsamples_integral", "%d");
+    summary.add(nsamples_pedestal, "nsamples_pedestal", "%d");
   }
   
 };

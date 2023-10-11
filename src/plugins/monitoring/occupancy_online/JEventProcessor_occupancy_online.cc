@@ -8,7 +8,6 @@
 #include <TMath.h>
 
 #include "JEventProcessor_occupancy_online.h"
-using namespace jana;
 
 #include <BCAL/DBCALHit.h>
 #include <BCAL/DBCALDigiHit.h>
@@ -65,12 +64,10 @@ using namespace jana;
 	X(DDIRCTDCDigiHit) \
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_occupancy_online());
+    app->Add(new JEventProcessor_occupancy_online());
   }
 } // "C"
 
@@ -80,7 +77,7 @@ extern "C"{
 //------------------
 JEventProcessor_occupancy_online::JEventProcessor_occupancy_online()
 {
-  
+	SetTypeName("JEventProcessor_occupancy_online");
 }
 
 //------------------
@@ -92,11 +89,13 @@ JEventProcessor_occupancy_online::~JEventProcessor_occupancy_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_occupancy_online::init(void)
+void JEventProcessor_occupancy_online::Init()
 {
-	japp->RootWriteLock();
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+	lockService->RootWriteLock();
 
 	// All histograms go in the "occupancy" directory
 	TDirectory *main = gDirectory;
@@ -288,39 +287,35 @@ jerror_t JEventProcessor_occupancy_online::init(void)
 	// back to main dir
 	main->cd();
   
-	japp->RootUnLock();
- 
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_occupancy_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_occupancy_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
 
   vector<const DDIRCGeometry*> locDIRCGeometry;
-  eventLoop->Get(locDIRCGeometry);
+  event->Get(locDIRCGeometry);
   dDIRCGeometry = locDIRCGeometry[0];
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_occupancy_online::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// The following 2 lines will do the following for each DigiHitTypes type:
 	//   vector<const A*> vDBCALDigiHit;
-	//   loop->Get(vDBCALDigiHit);
-	#define GetDigihits(A) vector<const A*> v##A; loop->Get(v##A);
+	//   event->Get(vDBCALDigiHit);
+	#define GetDigihits(A) vector<const A*> v##A; event->Get(v##A);
 	DigiHitTypes(GetDigihits)
 	
 	// L1 triggers
 	vector<const DL1Trigger*>          l1triggers;
-	loop->Get(l1triggers);
+	event->Get(l1triggers);
 	const DL1Trigger* l1trigger = l1triggers.empty() ? NULL : l1triggers[0];
 	
 	// trig[idx[  where idx=0-31 corresponds to "trig bit 1-32"
@@ -331,20 +326,20 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		for(int itrig=0; itrig<32; itrig++) fp_trig[itrig] = (l1trigger->fp_trig_mask >> itrig)&0x01;
 	}
 	else // not a triggered event
-	  return NOERROR;
+	  return;
 
 	// calculate total BCAL energy in order to catch BCAL LED events
 	vector<const DBCALHit *> bcal_hits;
-	loop->Get(bcal_hits);
+	event->Get(bcal_hits);
 	double total_bcal_energy = 0.;
 	for(unsigned int i=0; i<bcal_hits.size(); i++) {
             total_bcal_energy += bcal_hits[i]->E;
         }
 	
 	vector<const DTPOLHit *> tpol_hits;
-	loop->Get(tpol_hits);
+	event->Get(tpol_hits);
 
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
 	//------------------------ BCAL -----------------------
 	
@@ -564,29 +559,24 @@ jerror_t JEventProcessor_occupancy_online::evnt(JEventLoop *loop, uint64_t event
 		DigiHitTypes(FillDigiHitHist)
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-
-	return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_occupancy_online::erun(void)
+void JEventProcessor_occupancy_online::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_occupancy_online::fini(void)
+void JEventProcessor_occupancy_online::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

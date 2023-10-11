@@ -3,12 +3,11 @@
 #define _DLumi_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
+#include <JANA/JEvent.h>
 
 #include "TAGGER/DTAGHGeometry.h"
 #include "TAGGER/DTAGMGeometry.h"
 
-using namespace jana;
 using namespace std;
 
 #include <string>
@@ -19,7 +18,7 @@ class DLumi : public JObject {
   
   JOBJECT_PUBLIC(DLumi);
   
-  DLumi(JEventLoop *loop);
+  DLumi(const std::shared_ptr<const JEvent>& loop);
   ~DLumi();
   
   static const int DETECTORS =  2;

@@ -22,14 +22,13 @@ dPerformAntiCut(false), dReaction(locReaction), dActionName(locActionBaseName), 
 		dActionName += string("_") + locActionUniqueString;
 
 	dOutputFileName = "hd_root.root";
-	if(gPARMS->Exists("OUTPUT_FILENAME"))
-		gPARMS->GetParameter("OUTPUT_FILENAME", dOutputFileName);
+	japp->SetDefaultParameter("OUTPUT_FILENAME", dOutputFileName);
 
 	string locLockName = dActionName;
 	if(dReaction != NULL)
 		locLockName += string("_") + dReaction->Get_ReactionName();
 
-	dActionLock = japp->ReadLock(locLockName); //will create if doesn't exist, else returns it
+	dActionLock = japp->GetService<JLockService>()->ReadLock(locLockName); //will create if doesn't exist, else returns it
 	pthread_rwlock_unlock(dActionLock); //unlock
 }
 

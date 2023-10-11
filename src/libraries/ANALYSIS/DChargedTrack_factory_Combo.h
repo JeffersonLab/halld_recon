@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TRACKING/DTrackTimeBased.h>
 #include "PID/DEventRFBunch.h"
 #include "PID/DDetectorMatches.h"
@@ -14,19 +14,19 @@
 #include "PID/DChargedTrackHypothesis_factory.h"
 
 using namespace std;
-using namespace jana;
 
-class DChargedTrack_factory_Combo : public jana::JFactory<DChargedTrack>
+class DChargedTrack_factory_Combo : public JFactoryT<DChargedTrack>
 {
 	public:
-		DChargedTrack_factory_Combo(){};
-		~DChargedTrack_factory_Combo(){};
-		const char* Tag(void){return "Combo";}
+		DChargedTrack_factory_Combo(){
+			SetTag("Combo");
+		}
+		~DChargedTrack_factory_Combo() = default;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 		string dTrackSelectionTag;
 		DChargedTrackHypothesis_factory* dChargedTrackHypothesisFactory;

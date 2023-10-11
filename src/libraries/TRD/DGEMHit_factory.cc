@@ -9,27 +9,27 @@
 using namespace std;
 
 #include "TRD/DGEMHit_factory.h"
-using namespace jana;
+
 
 double ns_per_sample = 25;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DGEMHit_factory::init(void)
+void DGEMHit_factory::Init()
 {
-	// initialize calibration tables
+	// Initialize calibration tables
 	//vector<double> new_t0s(TRD_MAX_CHANNELS);	
 	//time_offsets.push_back(new_t0s); time_offsets.push_back(new_t0s);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DGEMHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DGEMHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+
 	// Only print messages for one thread whenever run number change
 	static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
 	static set<int> runs_announced;
@@ -41,13 +41,13 @@ jerror_t DGEMHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	}
 	pthread_mutex_unlock(&print_mutex);
 	
-	if(print_messages) jout << "In DGEMHit_factory, loading constants..." << endl;
+	if(print_messages) jout << "In DGEMHit_factory, loading constants..." << jendl;
 
 	/*	
 	// load base time offset
 	map<string,double> base_time_offset;
-	if (eventLoop->GetCalib("/TRD/base_time_offset",base_time_offset))
-		jout << "Error loading /TRD/base_time_offset !" << endl;
+	if (calibration->Get("/TRD/base_time_offset",base_time_offset))
+		jout << "Error loading /TRD/base_time_offset !" << jendl;
 	else if (base_time_offset.find("t0_wire") != base_time_offset.end() && base_time_offset.find("t0_gem") != base_time_offset.end()) {
 		t_base[0] = base_time_offset["t0_wire"];
 		t_base[1] = base_time_offset["t0_gem"];
@@ -56,19 +56,17 @@ jerror_t DGEMHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 		jerr << "Unable to get t0s from /TRD/base_time_offset !" << endl;
 	
 	// load constant tables
-	if (eventLoop->GetCalib("/TRD/Wire/timing_offsets", time_offsets[0]))
-	jout << "Error loading /TRD/Wire/timing_offsets !" << endl;
+	if (calibration->Get("/TRD/Wire/timing_offsets", time_offsets[0]))
+	jout << "Error loading /TRD/Wire/timing_offsets !" << jendl;
 	*/
 
 	pulse_peak_threshold = 400;
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DGEMHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DGEMHit object for each DGEMDigiWindowRawData 
     /// object which has a hit above the predefined threshold.
@@ -81,9 +79,9 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     /// the precalibrated values directly into the _data vector.
 
     vector<const DGEMDigiWindowRawData*> windowrawdata;
-    eventLoop->Get(windowrawdata);
+    event->Get(windowrawdata);
     if(windowrawdata.size() == 0) 
-      return NOERROR;
+      return;
 
     // determine pedestals for each APV and time slice
     const DGEMSRSWindowRawData* srswindow;
@@ -141,24 +139,20 @@ jerror_t DGEMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->t = T;
 	
 	hit->AddAssociatedObject(window);
-	_data.push_back(hit);
+	Insert(hit);
     }
-		    
-    return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DGEMHit_factory::erun(void)
+void DGEMHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DGEMHit_factory::fini(void)
+void DGEMHit_factory::Finish()
 {
-    return NOERROR;
 }

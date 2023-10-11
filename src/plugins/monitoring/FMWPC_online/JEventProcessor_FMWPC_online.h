@@ -9,12 +9,12 @@
 #define _JEventProcessor_FMWPC_online_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
-class JEventProcessor_FMWPC_online:public jana::JEventProcessor{
+class JEventProcessor_FMWPC_online:public JEventProcessor{
 	public:
 		JEventProcessor_FMWPC_online();
 		~JEventProcessor_FMWPC_online();
-		const char* className(void){return "JEventProcessor_FMWPC_online";}
 
 	private:
 		jerror_t init(void);						///< Called once at program start.

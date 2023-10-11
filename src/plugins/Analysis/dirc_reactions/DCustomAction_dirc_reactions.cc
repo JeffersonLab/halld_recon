@@ -5,36 +5,37 @@
 
 #include "DCustomAction_dirc_reactions.h"
 
-void DCustomAction_dirc_reactions::Run_Update(JEventLoop* locEventLoop)
+void DCustomAction_dirc_reactions::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// get PID algos
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 	dParticleID = locParticleID;
 
-	locEventLoop->GetSingle(dDIRCLut);
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dDIRCLut);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	// get DIRC geometry
 	vector<const DDIRCGeometry*> locDIRCGeometry;
-	locEventLoop->Get(locDIRCGeometry);
+	locEvent->Get(locDIRCGeometry);
 	dDIRCGeometry = locDIRCGeometry[0];
 
 }
 
-void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_dirc_reactions::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto params = locEvent->GetJApplication()->GetJParameterManager();
 	DIRC_TRUTH_BARHIT = false;
-	if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
-		gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
+	if(params->Exists("DIRC:TRUTH_BARHIT"))
+		params->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
 
 	DIRC_FILL_BAR_MAP = false;
-	gPARMS->SetDefaultParameter("DIRC:FILL_BAR_MAP",DIRC_FILL_BAR_MAP);
+	params->SetDefaultParameter("DIRC:FILL_BAR_MAP",DIRC_FILL_BAR_MAP);
 
 	//DIRC_FILL_PIXEL_MAP = false;
-	//gPARMS->SetDefaultParameter("DIRC:FILL_PIXEL_MAP",DIRC_FILL_PIXEL_MAP);
+	//params->SetDefaultParameter("DIRC:FILL_PIXEL_MAP",DIRC_FILL_PIXEL_MAP);
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	// set PID for different passes in debuging histograms
 	dFinalStatePIDs.push_back(Positron);
@@ -44,7 +45,7 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -136,22 +137,22 @@ void DCustomAction_dirc_reactions::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_dirc_reactions::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_dirc_reactions::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 	DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 	
 	// truth information on tracks hitting DIRC bar (for comparison)
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-	locEventLoop->Get(locDIRCBarHits);
+	locEvent->Get(locDIRCBarHits);
 
 	vector<const DDIRCPmtHit*> locDIRCPmtHits;
-	locEventLoop->Get(locDIRCPmtHits);
+	locEvent->Get(locDIRCPmtHits);
 
 	// Get selected particle from reaction for DIRC analysis
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(dParticleComboStepIndex);

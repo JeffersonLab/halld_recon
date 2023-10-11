@@ -22,25 +22,22 @@
 //
 
 
-class Df125BORConfig:public jana::JObject, public f125config{
+class Df125BORConfig:public JObject, public f125config{
 	public:
 		JOBJECT_PUBLIC(Df125BORConfig);
 
 		Df125BORConfig(){}
 		virtual ~Df125BORConfig(){}
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"   , "%d", rocid);
-			AddString(items, "slot"    , "%d", slot);
-			AddString(items, "id"      , "0x%x", board_id);
-			AddString(items, "version" , "0x%x", version);
-			AddString(items, "proc_version" , "0x%x", proc_version);
-			AddString(items, "ctrl1" , "0x%x", ctrl1);
-			AddString(items, "proc_blocklevel" , "%d", proc_blocklevel);
-		}
 
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(rocid, NAME_OF(rocid), "%d");
+			summary.add(slot, NAME_OF(slot), "%d");
+			summary.add(board_id, "id", "0x%x");
+			summary.add(version, NAME_OF(version), "0x%x");
+			summary.add(proc_version, NAME_OF(proc_version), "0x%x");
+			summary.add(ctrl1, NAME_OF(ctrl1), "0x%x");
+			summary.add(proc_blocklevel, NAME_OF(proc_blocklevel), "%d");
+		}
 };
 
 #endif // _Df125BORConfig_

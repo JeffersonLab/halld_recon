@@ -11,7 +11,6 @@
 using namespace std;
 
 #include "DFMWPCMatchedTrack_factory.h"
-using namespace jana;
 
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALGeometry.h>
@@ -22,9 +21,9 @@ using namespace jana;
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DFMWPCMatchedTrack_factory::init(void)
+void DFMWPCMatchedTrack_factory::Init()
 {
 
     // These need to be promoted to either JANA config. parameters
@@ -32,14 +31,12 @@ jerror_t DFMWPCMatchedTrack_factory::init(void)
     MIN_DELTA_T_FCAL_PROJECTION  = 100.0; // min. time between track projection and FCAL hit to consider them matched
     MIN_DELTA_T_FMWPC_PROJECTION = 100.0; // min. time between track projection and FMWPC hit to consider them matched
     FMWPC_WIRE_SPACING           = 1.016; // distance between wires in FMWPC in cm
-
-	return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DFMWPCMatchedTrack_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFMWPCMatchedTrack_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
     // Get pointer to DGeometry object
     DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
@@ -61,9 +58,9 @@ jerror_t DFMWPCMatchedTrack_factory::brun(jana::JEventLoop *eventLoop, int32_t r
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFMWPCMatchedTrack_factory::Process(const std::shared_ptr<const JEvent> &event)
 {
     vector<const DTrackTimeBased*> tbts;
     vector<const DFCALHit*>        fcalhits;
@@ -83,7 +80,7 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
     // Make sure we found a DFCALGeometry object
     if( ! fcalgeom ){
         _DBG_ << " Missing DFCALGeometry!!" << endl;
-        return NOERROR; // should this be a fatal error?
+        return; // NOERROR; // should this be a fatal error?
     }    
 
     // Loop over time-based tracks and make a DFMWPCMatchedTrack
@@ -228,25 +225,21 @@ jerror_t DFMWPCMatchedTrack_factory::evnt(JEventLoop *loop, uint64_t eventnumber
         }
 
         // Publish DFMWPCMatchedTrack by pushing onto _data
-        _data.push_back(fmpwc_mt);
+        Insert(fmpwc_mt);
     }
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFMWPCMatchedTrack_factory::erun(void)
+void DFMWPCMatchedTrack_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFMWPCMatchedTrack_factory::fini(void)
+void DFMWPCMatchedTrack_factory::Finish()
 {
-	return NOERROR;
 }
 

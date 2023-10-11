@@ -9,8 +9,6 @@
 #define DCEREHIT_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 class DCereHit: public JObject {
 
@@ -21,10 +19,10 @@ public:
 	float pe;	// number of photon electrons
 	float t;	// time
 
-	void toStrings(vector<pair<string, string> >&items) const {
-		AddString(items, "sector", "%d", sector);
-		AddString(items, "pe", "%1.3f", pe);
-		AddString(items, "t", "%1.3f", t);
+	void Summarize(JObjectSummary& summary) const override {
+		summary.add(sector, "sector", "%d");
+		summary.add(pe, "pe", "%1.3f");
+		summary.add(t, "t", "%1.3f");
 	}
 };
 

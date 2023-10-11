@@ -12,30 +12,33 @@ extern "C"
   void InitPlugin(JApplication *locApplication)
   {
     InitJANAPlugin(locApplication);
-    locApplication->AddProcessor(new DEventProcessor_dirc_tree()); //register this plugin
-    locApplication->AddFactoryGenerator(new DFactoryGenerator_dirc_tree()); //register the factory generator
+    locApplication->Add(new DEventProcessor_dirc_tree()); //register this plugin
+    locApplication->Add(new DFactoryGenerator_dirc_tree()); //register the factory generator
   }
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_dirc_tree::init(void)
+void DEventProcessor_dirc_tree::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
   // ROOT mutex like this:
   //
-  // japp->RootWriteLock();
+  // GetLockService(locEvent)->RootWriteLock();
   //  ... create historgrams or trees ...
-  // japp->RootUnLock();
+  // GetLockService(locEvent)->RootUnLock();
   //
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  auto lockSvc = GetApplication()->GetService<JLockService>();
+  auto params = GetApplication()->GetJParameterManager();
+
+  lockSvc->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+  if(params->Exists("OUTPUT_FILENAME"))
+    params->GetParameter("OUTPUT_FILENAME", locOutputFileName);
 
   //go to file
   TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -53,54 +56,50 @@ jerror_t DEventProcessor_dirc_tree::init(void)
   fcEvent = new TClonesArray("DrcEvent");
   fTree->Branch("DrcEvent",&fcEvent,256000,2);
   
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
-  
-  return NOERROR;
+  lockSvc->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_dirc_tree::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void DEventProcessor_dirc_tree::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
   // This is called whenever the run number changes
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEventNumber)
+void DEventProcessor_dirc_tree::Process(const std::shared_ptr<const JEvent> &event)
 {
   // get DIRC geometry
   vector<const DDIRCGeometry*> locDIRCGeometryVec;
-  loop->Get(locDIRCGeometryVec);
+  event->Get(locDIRCGeometryVec);
   // next line commented out to supress warning, variable not used
   //  auto locDIRCGeometry = locDIRCGeometryVec[0];
 
   // get PID algos
   const DParticleID* locParticleID = NULL;
-  loop->GetSingle(locParticleID);
+  event->GetSingle(locParticleID);
 
   vector<const DAnalysisResults*> locAnalysisResultsVector;
-  loop->Get(locAnalysisResultsVector);
+  event->Get(locAnalysisResultsVector);
 
   vector<const DTrackTimeBased*> locTimeBasedTracks;
-  loop->Get(locTimeBasedTracks);
+  event->Get(locTimeBasedTracks);
 
   vector<const DDIRCPmtHit*> locDIRCPmtHits;
-  loop->Get(locDIRCPmtHits);
+  event->Get(locDIRCPmtHits);
 
   const DDetectorMatches* locDetectorMatches = NULL;
-  loop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
   DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 
   // cheat and get truth info of track at bar
   vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-  loop->Get(locDIRCBarHits);
+  event->Get(locDIRCBarHits);
 
-  japp->RootWriteLock();
+  GetLockService(event)->RootWriteLock();
     
   TClonesArray& cevt = *fcEvent;
   cevt.Clear();
@@ -220,28 +219,24 @@ jerror_t DEventProcessor_dirc_tree::evnt(jana::JEventLoop* loop, uint64_t locEve
   }
   
   if(cevt.GetEntriesFast()>0) fTree->Fill();
-  japp->RootUnLock();
-	
-  return NOERROR;
+  GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_dirc_tree::erun(void)
+void DEventProcessor_dirc_tree::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_dirc_tree::fini(void)
+void DEventProcessor_dirc_tree::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -20,7 +20,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_RecoilMass : public DAnalysisAction
 {
@@ -29,13 +28,13 @@ class DCustomAction_RecoilMass : public DAnalysisAction
                 DCustomAction_RecoilMass(const DReaction* locReaction, bool locUseKinFitResultsFlag, deque<int> locRecoilIndices, double locMinRecoilMass, double locMaxRecoilMass, string locActionUniqueString = "") : 
 	        DAnalysisAction(locReaction, "Custom_RecoilMass", locUseKinFitResultsFlag, locActionUniqueString), dRecoilIndices(locRecoilIndices), dMinRecoilMass(locMinRecoilMass), dMaxRecoilMass(locMaxRecoilMass) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {};
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {};
 
 		void Reset_NewEvent(void){}; //RESET HISTOGRAM DUPLICATE-CHECK TRACKING HERE!!
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		//Store any histograms as member variables here
 		deque<int> dRecoilIndices;

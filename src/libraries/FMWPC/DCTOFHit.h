@@ -9,9 +9,8 @@
 #define _DCTOFHit_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
-class DCTOFHit:public jana::JObject{
+class DCTOFHit:public JObject{
  public:
   JOBJECT_PUBLIC(DCTOFHit);
 

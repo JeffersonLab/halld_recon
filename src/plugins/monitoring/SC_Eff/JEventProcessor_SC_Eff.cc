@@ -11,7 +11,7 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_SC_Eff()); //register this plugin
+		locApplication->Add(new JEventProcessor_SC_Eff()); //register this plugin
 	}
 } // "C"
 
@@ -19,10 +19,13 @@ extern "C"
 thread_local DTreeFillData JEventProcessor_SC_Eff::dTreeFillData;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_SC_Eff::init(void)
+void JEventProcessor_SC_Eff::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	//TRACK REQUIREMENTS
 	dMinTrackingFOM = 5.73303E-7; // +/- 5 sigma
 	dMinNumTrackHits = 14; //e.g. 6 in CDC, 8 in 
@@ -72,29 +75,24 @@ jerror_t JEventProcessor_SC_Eff::init(void)
 
 	//REGISTER BRANCHES
 	dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_SC_Eff::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_SC_Eff::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-
-jerror_t JEventProcessor_SC_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_SC_Eff::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
@@ -103,31 +101,31 @@ jerror_t JEventProcessor_SC_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t l
 
 	//CUT ON TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-		return NOERROR;
+		return;
 
 	//SEE IF SC REQUIRED TO TRIGGER
 	uint32_t locTriggerBits = locTrigger->Get_L1TriggerBits();
 	if(locTriggerBits >= 32)
-		return NOERROR;
+		return;
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 	if(locEventRFBunch->dNumParticleVotes <= 1)
-		return NOERROR; //don't trust PID: beta-dependence
+		return; //don't trust PID: beta-dependence
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	//Try to select the most-pure sample of tracks possible
 	set<const DChargedTrackHypothesis*> locBestTracks;
@@ -244,7 +242,7 @@ jerror_t JEventProcessor_SC_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t l
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	{
 		//Fill Found
 		for(auto& locHitPair : locHitMap_HitFound)
@@ -254,9 +252,7 @@ jerror_t JEventProcessor_SC_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t l
 		for(auto& locHitPair : locHitMap_HitTotal)
 			dHist_HitTotal->Fill(locHitPair.second, locHitPair.first);
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 bool JEventProcessor_SC_Eff::Cut_PIDDeltaT(const DChargedTrackHypothesis* locChargedTrackHypothesis)
@@ -270,27 +266,23 @@ bool JEventProcessor_SC_Eff::Cut_PIDDeltaT(const DChargedTrackHypothesis* locCha
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_SC_Eff::erun(void)
+void JEventProcessor_SC_Eff::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_SC_Eff::fini(void)
+void JEventProcessor_SC_Eff::Finish()
 {
 	// Called before program exit after event processing is finished.  
 
 	delete dCutAction_TrackHitPattern;
 	delete dTreeInterface; //saves trees to file, closes file
-
-	return NOERROR;
 }
 

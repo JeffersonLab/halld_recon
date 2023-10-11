@@ -9,11 +9,8 @@
 #ifndef _JFactoryGenerator_DAQ_
 #define _JFactoryGenerator_DAQ_
 
-#include <JANA/jerror.h>
-#include <JANA/JFactory.h>
+#include <JANA/Compatibility/JGetObjectsFactory.h>
 #include <JANA/JFactoryGenerator.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
 
 #include "Df250Config.h"
 #include "Df250PulseIntegral.h"
@@ -43,44 +40,41 @@ using namespace jana;
 #include "Df250Scaler.h"
 #include "Df250AsyncPedestal.h"
 
-class JFactoryGenerator_DAQ: public jana::JFactoryGenerator{
-	public:
-		JFactoryGenerator_DAQ(){}
-		virtual ~JFactoryGenerator_DAQ(){}
-		virtual const char* className(void){return static_className();}
-		static const char* static_className(void){return "JFactoryGenerator_DAQ";}
-		
-		jerror_t GenerateFactories(jana::JEventLoop *loop){
-			loop->AddFactory(new JFactory<Df250Config>());
-			loop->AddFactory(new JFactory<Df250PulseIntegral>());
-			loop->AddFactory(new JFactory<Df250StreamingRawData>());
-			loop->AddFactory(new JFactory<Df250WindowSum>());
-			loop->AddFactory(new JFactory<Df250PulseRawData>());
-			loop->AddFactory(new JFactory<Df250TriggerTime>());
-			loop->AddFactory(new JFactory<Df250PulseTime>());
-			loop->AddFactory(new JFactory<Df250PulsePedestal>());
-			loop->AddFactory(new JFactory<Df250WindowRawData>());
-			loop->AddFactory(new JFactory<Df125Config>());
-			loop->AddFactory(new JFactory<Df125TriggerTime>());
-			loop->AddFactory(new JFactory<Df125PulseIntegral>());
-			loop->AddFactory(new JFactory<Df125PulseTime>());
-			loop->AddFactory(new JFactory<Df125PulsePedestal>());
-			loop->AddFactory(new JFactory<Df125PulseRawData>());
-			loop->AddFactory(new JFactory<Df125WindowRawData>());
-			loop->AddFactory(new JFactory<DF1TDCHit>());
-			loop->AddFactory(new JFactory<DF1TDCConfig>());
-			loop->AddFactory(new JFactory<DF1TDCTriggerTime>());
-			loop->AddFactory(new JFactory<DCAEN1290TDCConfig>());
-			loop->AddFactory(new JFactory<DCAEN1290TDCHit>());
-			loop->AddFactory(new JFactory<DCODAEventInfo>());
-			loop->AddFactory(new JFactory<DCODAROCInfo>());
-			loop->AddFactory(new JFactory<DEPICSvalue>());
-			loop->AddFactory(new JFactory<DL1Info>());
-			loop->AddFactory(new JFactory<Df250Scaler>());
-			loop->AddFactory(new JFactory<Df250AsyncPedestal>());
-			return NOERROR;
-		}
 
+class JFactoryGenerator_DAQ: public JFactoryGenerator{
+	/// This is only necessary because we are using JEventSource::GetObjects instead of JEvent::Insert.
+	/// I strongly recommend refactoring JEventSource_EVIOpp, and getting rid of this in the process.
+	public:
+
+		void GenerateFactories(JFactorySet *factory_set) override {
+			factory_set->Add(new JGetObjectsFactory<Df250Config>());
+			factory_set->Add(new JGetObjectsFactory<Df250PulseIntegral>());
+			factory_set->Add(new JGetObjectsFactory<Df250StreamingRawData>());
+			factory_set->Add(new JGetObjectsFactory<Df250WindowSum>());
+			factory_set->Add(new JGetObjectsFactory<Df250PulseRawData>());
+			factory_set->Add(new JGetObjectsFactory<Df250TriggerTime>());
+			factory_set->Add(new JGetObjectsFactory<Df250PulseTime>());
+			factory_set->Add(new JGetObjectsFactory<Df250PulsePedestal>());
+			factory_set->Add(new JGetObjectsFactory<Df250WindowRawData>());
+			factory_set->Add(new JGetObjectsFactory<Df125Config>());
+			factory_set->Add(new JGetObjectsFactory<Df125TriggerTime>());
+			factory_set->Add(new JGetObjectsFactory<Df125PulseIntegral>());
+			factory_set->Add(new JGetObjectsFactory<Df125PulseTime>());
+			factory_set->Add(new JGetObjectsFactory<Df125PulsePedestal>());
+			factory_set->Add(new JGetObjectsFactory<Df125PulseRawData>());
+			factory_set->Add(new JGetObjectsFactory<Df125WindowRawData>());
+			factory_set->Add(new JGetObjectsFactory<DF1TDCHit>());
+			factory_set->Add(new JGetObjectsFactory<DF1TDCConfig>());
+			factory_set->Add(new JGetObjectsFactory<DF1TDCTriggerTime>());
+			factory_set->Add(new JGetObjectsFactory<DCAEN1290TDCConfig>());
+			factory_set->Add(new JGetObjectsFactory<DCAEN1290TDCHit>());
+			factory_set->Add(new JGetObjectsFactory<DCODAEventInfo>());
+			factory_set->Add(new JGetObjectsFactory<DCODAROCInfo>());
+			factory_set->Add(new JGetObjectsFactory<DEPICSvalue>());
+			factory_set->Add(new JGetObjectsFactory<DL1Info>());
+			factory_set->Add(new JGetObjectsFactory<Df250Scaler>());
+			factory_set->Add(new JGetObjectsFactory<Df250AsyncPedestal>());
+		}
 };
 
 #endif // _JFactoryGenerator_DAQ_

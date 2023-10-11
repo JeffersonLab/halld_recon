@@ -17,40 +17,39 @@
 using namespace std;
 
 #include "DDIRCLEDRef_factory.h"
+
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250Config.h>
-
 #include <DAQ/DCODAROCInfo.h>
 
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DDIRCLEDRef_factory::init(void)
+void DDIRCLEDRef_factory::Init()
 {
-
   /// Set basic conversion constants
   a_scale    = 0.2/5.2E5;
   t_scale    = 0.0625;   // 62.5 ps/count
   t_base     = 0.;       // ns
   t_base_tdc = 0.; // ns
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DDIRCLEDRef_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DDIRCLEDRef_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DDIRCLEDRef_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DDIRCLEDRef object for each DTOFDigiHit object.
   /// This is where the first set of calibration constants
@@ -60,32 +59,36 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// Note that this code does NOT get called for simulated
   /// data in HDDM format. The HDDM event source will copy
   /// the precalibrated values directly into the _data vector.
-  
+
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
   const DTTabUtilities* locTTabUtilities = NULL;
-  loop->GetSingle(locTTabUtilities);
+  event->GetSingle(locTTabUtilities);
  
   vector<const DCAEN1290TDCHit*> sipmtdchits;
-  loop->Get(sipmtdchits);
+  event->Get(sipmtdchits);
   vector<const Df250PulseData*> sipmadchits;
-  loop->Get(sipmadchits);
+  event->Get(sipmadchits);
 
   tdc_time_offset = 0.0;
   adc_time_offset = 0.0;
 
   map<string,double> led_ref_time_offset;
   
-  if (loop->GetCalib("DIRC/led_ref_time_offset", led_ref_time_offset)) 
-	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+  if (calibration->Get("DIRC/led_ref_time_offset", led_ref_time_offset)) 
+	  jout << "Error loading DIRC SiPM reference timing table !" << jendl;
   
   if (led_ref_time_offset.find("ADC_time_offset") != led_ref_time_offset.end())
 	  adc_time_offset = led_ref_time_offset["ADC_time_offset"];
   else
-	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+	  jout << "Error loading DIRC SiPM reference timing table !" << jendl;
   
   if (led_ref_time_offset.find("TDC_time_offset") != led_ref_time_offset.end())
 	  tdc_time_offset = led_ref_time_offset["TDC_time_offset"];
   else
-	  jout << "Error loading DIRC SiPM reference timing table !" << endl;
+	  jout << "Error loading DIRC SiPM reference timing table !" << jendl;
 
   //cout << "Timing: " << adc_time_offset << "    " << tdc_time_offset  << endl;
 
@@ -110,7 +113,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 			    hit->AddAssociatedObject(sipmadchit);
 
-			    _data.push_back(hit);
+			    Insert(hit);
 		    }
             }
 
@@ -136,7 +139,7 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 				newhit->t = hit->t_fADC;  // set initial time to the ADC time, in case there's no matching TDC hit	
 				newhit->has_TDC=false;
 				newhit->AddAssociatedObject(sipmtdchit);
-				_data.push_back(newhit);
+				Insert(newhit);
 				hit = newhit;
 			    }
 		      	    hit->has_TDC=true;
@@ -174,8 +177,6 @@ jerror_t DDIRCLEDRef_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
      			    hit->AddAssociatedObject(sipmtdchit);
     		    }
 	    }
-  
-  return NOERROR;
 }
 
 //------------------
@@ -187,8 +188,8 @@ DDIRCLEDRef* DDIRCLEDRef_factory::FindMatch(double T)
 
     // Loop over existing hits (from fADC) and look for a match
     // in both the sector and the time.
-    for(unsigned int i=0; i<_data.size(); i++){
-        DDIRCLEDRef *hit = _data[i];
+    for(unsigned int i=0; i<mData.size(); i++){
+        DDIRCLEDRef *hit = mData[i];
 
         if(!isfinite(hit->t_fADC)) continue; // only match to fADC hits, not bachelor TDC hits
 
@@ -209,19 +210,17 @@ DDIRCLEDRef* DDIRCLEDRef_factory::FindMatch(double T)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DDIRCLEDRef_factory::erun(void)
+void DDIRCLEDRef_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DDIRCLEDRef_factory::fini(void)
+void DDIRCLEDRef_factory::Finish()
 {
-    return NOERROR;
 }
 
 

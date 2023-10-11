@@ -8,10 +8,9 @@
 #ifndef _DBCALTDCHit_
 #define _DBCALTDCHit_
 
-#include <JANA/jerror.h>
 #include <BCAL/DBCALGeometry.h>
 
-class DBCALTDCHit:public JObject{
+class DBCALTDCHit: public JObject {
 
 	/// This class holds data originating from the F1TDC
 	/// modules connected to the BCAL
@@ -28,12 +27,12 @@ class DBCALTDCHit:public JObject{
 
 		int cellId;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "module", "%d", module);
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "end", "%s", end==0 ? "upstream":"downstream" );
-			AddString(items, "t(ns)", "%4.2f", t);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(module, "module", "%d");
+			summary.add(layer, "layer", "%d");
+			summary.add(sector, "sector", "%d");
+			summary.add(end==0 ? "upstream":"downstream" , "end", "%s");
+			summary.add(t, "t(ns)", "%4.2f");
 		}
 };
 

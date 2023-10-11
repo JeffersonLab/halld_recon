@@ -22,22 +22,21 @@
 //
 
 
-class DF1TDCBORConfig:public jana::JObject, public F1TDCconfig{
+class DF1TDCBORConfig:public JObject, public F1TDCconfig{
 	public:
 		JOBJECT_PUBLIC(DF1TDCBORConfig);
 
 		DF1TDCBORConfig(){}
 		virtual ~DF1TDCBORConfig(){}
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "rocid"      , "%d", rocid);
-			AddString(items, "slot"       , "%d", slot);
-			AddString(items, "version"    , "0x%x", version);
-			AddString(items, "ctrl"       , "0x%x", ctrl);
-			AddString(items, "blocklevel" , "%d", blocklevel);
-			AddString(items, "nchips"     , "%d", nchips);
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(rocid, NAME_OF(rocid), "%d");
+			summary.add(slot, NAME_OF(slot), "%d");
+			summary.add(version, NAME_OF(version), "0x%x");
+			summary.add(ctrl, NAME_OF(ctrl), "0x%x");
+			summary.add(blocklevel, NAME_OF(blocklevel), "%d");
+			summary.add(nchips, NAME_OF(nchips), "%d");
 		}
 
 };

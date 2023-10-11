@@ -4,7 +4,6 @@
 //
 
 #include "JEventProcessor_PS_E_calib.h"
-using namespace jana;
 
 #include <iostream>
 #include <iomanip>
@@ -22,6 +21,7 @@ using namespace jana;
 #include <TAGGER/DTAGMGeometry.h>
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
+#include <DANA/DEvent.h>
 
 #define CORRECTIONS false
 
@@ -69,11 +69,11 @@ static TH1F *h_dt;				// PS - TAGX timing check
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_PS_E_calib());
+	app->Add(new JEventProcessor_PS_E_calib());
 }
 } // "C"
 
@@ -83,7 +83,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_PS_E_calib::JEventProcessor_PS_E_calib()
 {
-
+	SetTypeName("JEventProcessor_PS_E_calib");
 }
 
 //------------------
@@ -95,17 +95,20 @@ JEventProcessor_PS_E_calib::~JEventProcessor_PS_E_calib()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_PS_E_calib::init(void)
+void JEventProcessor_PS_E_calib::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
    // create root folder tagm
@@ -138,24 +141,23 @@ jerror_t JEventProcessor_PS_E_calib::init(void)
  
 
    mainDir->cd();
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PS_E_calib::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PS_E_calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
    // THIS IS TEMPORARY! FIX ONCE PS-TAGX COINCIDENCE
    // IS THE SAME FOR ALL RUNS
-   run = runnumber;
+   run = event->GetRunNumber();
 
    // Get the PS energy corrections from CCDB 
    std::vector< std::map<std::string, double> > table;
    std::string ccdb_key = "/PHOTON_BEAM/pair_spectrometer/fine/energy_corrections";
-   if (eventLoop->GetCalib(ccdb_key, table)) {
+   if (GetCalib(event, ccdb_key, table)) {
       jout << "Error loading " << ccdb_key << " from ccdb!" << std::endl;
    }
    for (unsigned int i=0; i < table.size(); ++i) {
@@ -163,42 +165,40 @@ jerror_t JEventProcessor_PS_E_calib::brun(JEventLoop *eventLoop, int32_t runnumb
       p1 = (table[i])["linear"];
       p2 = (table[i])["quadratic"];
    }
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PS_E_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PS_E_calib::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
    vector<const DTAGMHit*>	tm_hits;
    vector<const DTAGHHit*>	th_hits;
    vector<const DPSPair*>	ps_pairs;
    vector<const DPSCPair*>	psc_pairs;
 
-   loop->Get(tm_hits);
-   loop->Get(th_hits);
-   loop->Get(ps_pairs);
-   loop->Get(psc_pairs);
+   event->Get(tm_hits);
+   event->Get(th_hits);
+   event->Get(ps_pairs);
+   event->Get(psc_pairs);
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
    if (psc_pairs.size() > 0 ) {
       for (uint32_t i = 0; i < ps_pairs.size(); ++i) {
@@ -255,28 +255,24 @@ jerror_t JEventProcessor_PS_E_calib::evnt(JEventLoop *loop, uint64_t eventnumber
       }
    }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PS_E_calib::erun(void)
+void JEventProcessor_PS_E_calib::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PS_E_calib::fini(void)
+void JEventProcessor_PS_E_calib::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

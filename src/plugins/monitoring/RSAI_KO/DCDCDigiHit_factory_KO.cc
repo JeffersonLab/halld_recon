@@ -16,7 +16,7 @@
 using namespace std;
 
 #include "DCDCDigiHit_factory_KO.h"
-using namespace jana;
+#include <JANA/JEvent.h>
 
 
 static thread_local std::default_random_engine generator;
@@ -51,10 +51,12 @@ int  DCDCDigiHit_factory_KO::SetBoardEfficiency(string boardname, double eff)
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCDCDigiHit_factory_KO::init(void)
+void DCDCDigiHit_factory_KO::Init()
 {
+	auto app = GetApplication();
+
 	// Tell JANA we don't own any of the objects in _data
 	SetFactoryFlag( NOT_OBJECT_OWNER );
 
@@ -65,13 +67,13 @@ jerror_t DCDCDigiHit_factory_KO::init(void)
 	// Get all parameters starting with "KO:CDC_". The keys will have that
 	// portion of the string removed leaving only the board name.
 	map<string,string> parms;
-	gPARMS->GetParameters(parms, "KO:CDC_");
+	app->GetJParameterManager()->FilterParameters(parms, "KO:CDC_");
 	map<string, int> Npins;
 	for( auto p : parms ) {
 		int N = SetBoardEfficiency( p.first, stod( p.second ) );
 		Npins[p.first] = N;
 		string one("1.00000");
-		gPARMS->SetDefaultParameter( string("KO:CDC_")+p.first, one ); // Set default parameter to avoid flashing red warning
+		app->SetDefaultParameter( string("KO:CDC_")+p.first, one ); // Set default parameter to avoid flashing red warning
 	}
 
 	// Print list of boards that have an efficiency defined
@@ -85,50 +87,44 @@ jerror_t DCDCDigiHit_factory_KO::init(void)
 		cout << endl;
 	});
 
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCDCDigiHit_factory_KO::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCDCDigiHit_factory_KO::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCDCDigiHit_factory_KO::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCDCDigiHit_factory_KO::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DCDCDigiHit*> cdcdigihits;
-	loop->Get(cdcdigihits, "", false); // get original hits
+	event->Get(cdcdigihits, ""); // get original hits
 
 	for( auto hit : cdcdigihits ){
 		auto key = std::make_pair( hit->ring, hit->straw );
 		if( CDC_pin_eff.count(key) ){
-			if( distribution(generator) <= CDC_pin_eff[key]) _data.push_back( (DCDCDigiHit*)hit );
+			if( distribution(generator) <= CDC_pin_eff[key]) Insert( (DCDCDigiHit*)hit );
 		}else{
-			_data.push_back( (DCDCDigiHit*)hit );
+			Insert( (DCDCDigiHit*)hit );
 		}
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCDCDigiHit_factory_KO::erun(void)
+void DCDCDigiHit_factory_KO::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCDCDigiHit_factory_KO::fini(void)
+void DCDCDigiHit_factory_KO::Finish()
 {
-	return NOERROR;
 }
 

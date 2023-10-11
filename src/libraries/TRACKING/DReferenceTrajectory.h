@@ -14,10 +14,12 @@ using std::vector;
 #include <TMatrixFSym.h>
 #include <TMatrix.h>
 
+#include <JANA/Compatibility/jerror.h>
+#include <JANA/JApplication.h>
+
 #include <HDGEOMETRY/DGeometry.h>
 #include <DVector3.h>
 #include <DVector2.h>
-#include <JANA/jerror.h>
 #include <DMatrixDSym.h>
 #include <DMatrix.h>
 #include <PID/DKinematicData.h>
@@ -75,10 +77,11 @@ class DReferenceTrajectory{
 		};
 
 		DReferenceTrajectory(const DMagneticFieldMap *
+									, JApplication *app = nullptr
 									, double q=1.0
 									, swim_step_t *swim_steps=NULL
 									, int max_swim_steps=0
-									, double step_size=-1.0);
+									, double step_size=-1.0 );
 		DReferenceTrajectory(const DReferenceTrajectory& rt);
 		DReferenceTrajectory& operator=(const DReferenceTrajectory& rt);
 		virtual ~DReferenceTrajectory();
@@ -227,6 +230,7 @@ class DReferenceTrajectory{
 		double MAX_STEP_SIZE;
 	
 	    static thread_local shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
+	    JApplication* app = nullptr;  // Need this in order to retrieve parameter values
 
 	private:
 		DReferenceTrajectory(){} // force use of constructor with arguments.

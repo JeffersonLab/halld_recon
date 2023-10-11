@@ -1,7 +1,7 @@
 #include <DAQ/Df250EmulatorAlgorithm_v1.h>
 
-Df250EmulatorAlgorithm_v1::Df250EmulatorAlgorithm_v1(){
-    // Enables forced use of default values 
+Df250EmulatorAlgorithm_v1::Df250EmulatorAlgorithm_v1(JApplication* app){
+    // Enables forced use of default values
     FORCE_DEFAULT = 0;
     // Default values for the essential parameters
     NSA_DEF = 20;
@@ -10,13 +10,11 @@ Df250EmulatorAlgorithm_v1::Df250EmulatorAlgorithm_v1(){
     // Set verbosity
     VERBOSE = 0;
 
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("EMULATION250:FORCE_DEFAULT", FORCE_DEFAULT,"Set to >0 to force use of default values");
-        gPARMS->SetDefaultParameter("EMULATION250:NSA", NSA_DEF,"Set NSA for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:NSB", NSB_DEF,"Set NSB for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:THR", THR_DEF,"Set threshold for firmware emulation, will be overwritten by BORConfig if present");
-        gPARMS->SetDefaultParameter("EMULATION250:VERBOSE", VERBOSE,"Set verbosity for f250 emulation");
-    }
+    app->SetDefaultParameter("EMULATION250:FORCE_DEFAULT", FORCE_DEFAULT,"Set to >0 to force use of default values");
+    app->SetDefaultParameter("EMULATION250:NSA", NSA_DEF,"Set NSA for firmware emulation, will be overwritten by BORConfig if present");
+    app->SetDefaultParameter("EMULATION250:NSB", NSB_DEF,"Set NSB for firmware emulation, will be overwritten by BORConfig if present");
+    app->SetDefaultParameter("EMULATION250:THR", THR_DEF,"Set threshold for firmware emulation, will be overwritten by BORConfig if present");
+    app->SetDefaultParameter("EMULATION250:VERBOSE", VERBOSE,"Set verbosity for f250 emulation");
 }
 
 void Df250EmulatorAlgorithm_v1::EmulateFirmware(const Df250WindowRawData* rawData,
@@ -264,5 +262,4 @@ void Df250EmulatorAlgorithm_v1::EmulateFirmware(const Df250WindowRawData* rawDat
     }
 
     if (VERBOSE > 0) jout << " Df250EmulatorAlgorithm_v1::EmulateFirmware ==> Emulation complete <==" << endl;    
-    return;
 }

@@ -6,11 +6,10 @@
 #ifndef _DDIRCLutReader_
 #define _DDIRCLutReader_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-
-#include <DANA/DApplication.h>
+#include <JANA/Calibrations/JCalibration.h>
+#include <JANA/Calibrations/JLargeCalibration.h>
 
 #include <DIRC/DDIRCGeometry.h>
 
@@ -58,7 +57,7 @@ private:
 
 protected:
 	JCalibration *jcalib;
-	JResourceManager *jresman;
+	JLargeCalibration *jresman;
 };
 
 #endif // _DDIRCLutReader_

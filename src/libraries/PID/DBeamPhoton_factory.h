@@ -8,14 +8,13 @@
 #ifndef _DBeamPhoton_factory_
 #define _DBeamPhoton_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DBeamPhoton.h>
 #include <TAGGER/DTAGMHit.h>
 #include <TAGGER/DTAGHHit.h>
-#include <DANA/DApplication.h>
 #include "DResourcePool.h"
 
-class DBeamPhoton_factory:public jana::JFactory<DBeamPhoton>
+class DBeamPhoton_factory:public JFactoryT<DBeamPhoton>
 {
 	public:
 		DBeamPhoton_factory(void)
@@ -39,18 +38,17 @@ class DBeamPhoton_factory:public jana::JFactory<DBeamPhoton>
 			return locBeam;
 		}
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
 
 	private:
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber);	///< Called every event.
-		jerror_t fini(void)
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override
 		{
-			for(auto locBeam : _data)
+			for(auto locBeam : mData)
 				Recycle_Resource(locBeam);
-			_data.clear();
+			mData.clear();
 			delete dResourcePool_BeamPhotons;
-			return NOERROR;
 		}
 
 		double dTargetCenterZ;

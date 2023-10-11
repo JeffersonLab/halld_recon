@@ -10,20 +10,18 @@
 #define _DFactoryGenerator_MilleKs_
 
 #include <JANA/JFactoryGenerator.h>
-#include <JANA/jerror.h>
 
 #include "DReaction_factory_MilleKs.h"
 
-class DFactoryGenerator_MilleKs : public jana::JFactoryGenerator {
+class DFactoryGenerator_MilleKs : public JFactoryGenerator {
  public:
   virtual const char* className(void) { return static_className(); }
   static const char* static_className(void) {
     return "DFactoryGenerator_MilleKs";
   }
 
-  jerror_t GenerateFactories(jana::JEventLoop* locEventLoop) {
-    locEventLoop->AddFactory(new DReaction_factory_MilleKs());
-    return NOERROR;
+  void GenerateFactories(JFactorySet* fs) {
+    fs->Add(new DReaction_factory_MilleKs());
   }
 };
 

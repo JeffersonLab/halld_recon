@@ -17,7 +17,7 @@
 
 #include <TMath.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <DVector3.h>
 #include <DMatrix.h>
@@ -33,28 +33,27 @@
 #include <PID/DBeamPhoton.h>
 
 #include <HDGEOMETRY/DGeometry.h>
-#include <DANA/DApplication.h>
 
 using namespace std;
-using namespace jana;
 
-class DEventRFBunch_factory : public jana::JFactory<DEventRFBunch>
+
+class DEventRFBunch_factory : public JFactoryT<DEventRFBunch>
 {
 	public:
 		DEventRFBunch_factory(){};
 		~DEventRFBunch_factory(){};
 
-		bool Get_RFTimeGuess(JEventLoop* locEventLoop, double& locRFTimeGuess, double& locRFVariance, DetectorSystem_t& locTimeSource) const;
+		bool Get_RFTimeGuess(const std::shared_ptr<const JEvent>& event, double& locRFTimeGuess, double& locRFVariance, DetectorSystem_t& locTimeSource) const;
 
 	private:
 
-		void Select_GoodTracks(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locSelectedTimeBasedTracks) const;
-		jerror_t Select_RFBunch(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector, const DRFTime* locRFTime);
-		int Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes);
+		void Select_GoodTracks(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locSelectedTimeBasedTracks) const;
+		jerror_t Select_RFBunch(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector, const DRFTime* locRFTime);
+		int Conduct_Vote(const std::shared_ptr<const JEvent>& event, double locRFTime, vector<pair<double, const JObject*> >& locTimes, bool locUsedTracksFlag, int& locHighestNumVotes);
 
 		bool Find_TrackTimes_SCTOF(const DDetectorMatches* locDetectorMatches, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, vector<pair<double, const JObject*> >& locTimes) const;
 		bool Find_TrackTimes_All(const DDetectorMatches* locDetectorMatches, const vector<const DTrackTimeBased*>& locTrackTimeBasedVector, vector<pair<double, const JObject*> >& locTimes);
-		bool Find_NeutralTimes(JEventLoop* locEventLoop, vector<pair<double, const JObject*> >& locTimes);
+		bool Find_NeutralTimes(const std::shared_ptr<const JEvent>& event, vector<pair<double, const JObject*> >& locTimes);
 
 		int Find_BestRFBunchShifts(double locRFHitTime, const vector<pair<double, const JObject*> >& locTimes, map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts);
 
@@ -62,7 +61,7 @@ class DEventRFBunch_factory : public jana::JFactory<DEventRFBunch>
 		int Break_TieVote_Tracks(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts);
 		int Break_TieVote_Neutrals(map<int, vector<const JObject*> >& locNumBeamBucketsShiftedMap, set<int>& locBestRFBunchShifts);
 
-		jerror_t Select_RFBunch_NoRFTime(JEventLoop* locEventLoop, vector<const DTrackTimeBased*>& locTrackTimeBasedVector);
+		jerror_t Select_RFBunch_NoRFTime(const std::shared_ptr<const JEvent>& event, vector<const DTrackTimeBased*>& locTrackTimeBasedVector);
 
 		void Get_RFTimeGuess(vector<pair<double, const JObject*> >& locTimes, double& locRFTimeGuess, double& locRFVariance) const;
 
@@ -77,11 +76,11 @@ class DEventRFBunch_factory : public jana::JFactory<DEventRFBunch>
 		
 		string OVERRIDE_TAG;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _DEventRFBunch_factory_

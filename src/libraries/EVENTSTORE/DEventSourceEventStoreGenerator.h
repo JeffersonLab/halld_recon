@@ -11,25 +11,17 @@
 #include <string>
 using namespace std;
 
-#include <JANA/JApplication.h>
-#include <JANA/jerror.h>
 #include <JANA/JEventSourceGenerator.h>
-using namespace jana;
 
-class DEventSourceEventStoreGenerator:public JEventSourceGenerator{
+class DEventSourceEventStoreGenerator: public JEventSourceGenerator{
 	public:
 		DEventSourceEventStoreGenerator();
-		virtual ~DEventSourceEventStoreGenerator();
-		
-		const char* Description(void);
-		double CheckOpenable(string source);
-		JEventSource* MakeJEventSource(string source);
-		
-	protected:
-	
-	
-	private:
+		~DEventSourceEventStoreGenerator() override;
 
+		std::string GetType() const override;
+		std::string GetDescription(void) const override;
+		double CheckOpenable(string source) override;
+		JEventSource* MakeJEventSource(string source) override;
 };
 
 #endif // _DEventSourceEventStoreGenerator_

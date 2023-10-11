@@ -146,7 +146,7 @@ class DMapEVIOWords{
 		void ParseModuleConfiguration(uint32_t rocid, uint32_t *&iptr, uint32_t *iend, uint32_t *word_stats);
 		void ParseTSscalerBank(uint32_t *&iptr, uint32_t *iend, uint32_t *word_stats);
 
-		set<uint64_t> ts_history;
+		std::set<uint64_t> ts_history;
 		uint32_t max_history_buff_size;
 		
 		uint64_t Nphysics_events;

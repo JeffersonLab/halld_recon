@@ -6,15 +6,12 @@
 //
 
 #include "JEventProcessor_twogamma_fcal_skim.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
 #include <TLorentzVector.h>
 #include "TMath.h"
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
@@ -30,11 +27,12 @@ using namespace jana;
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
-#include <JANA/JFactory.h>
+
+
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_twogamma_fcal_skim());
+	app->Add(new JEventProcessor_twogamma_fcal_skim());
 }
 } // "C"
 
@@ -44,6 +42,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_twogamma_fcal_skim::JEventProcessor_twogamma_fcal_skim()
 {
+	SetTypeName("JEventProcessor_twogamma_fcal_skim");
 
 }
 
@@ -56,73 +55,70 @@ JEventProcessor_twogamma_fcal_skim::~JEventProcessor_twogamma_fcal_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_twogamma_fcal_skim::init(void)
+void JEventProcessor_twogamma_fcal_skim::Init()
 {
 	// This is called once at program startup. 
 
   num_epics_events = 0;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_twogamma_fcal_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_twogamma_fcal_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_twogamma_fcal_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_twogamma_fcal_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootUnLock();
 
 
 
 vector< const DFCALShower* > locFCALShowers;
   vector< const DVertex* > kinfitVertex;
-  loop->Get(locFCALShowers);
-  loop->Get(kinfitVertex);
+  event->Get(locFCALShowers);
+  event->Get(kinfitVertex);
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
-  loop->Get(locTrackTimeBased);
+  event->Get(locTrackTimeBased);
 
   vector < const DFCALShower * > matchedShowers;
 
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	loop->GetSingle(locEventWriterEVIO);
+	event->GetSingle(locEventWriterEVIO);
 
   // always write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "twogamma_fcal_skim" );
-      return NOERROR;
+      locEventWriterEVIO->Write_EVIOEvent( event, "twogamma_fcal_skim" );
+      return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "twogamma_fcal_skim" );
+      locEventWriterEVIO->Write_EVIOEvent( event, "twogamma_fcal_skim" );
       num_epics_events++;
-      return NOERROR;
+      return;
   }
 
   vector< const JObject* > locObjectsToSave;  
@@ -142,7 +138,7 @@ vector< const DFCALShower* > locFCALShowers;
     }
 
     vector<const DEventRFBunch*> locEventRFBunches;
-    loop->Get(locEventRFBunches);
+    event->Get(locEventRFBunches);
     if(locEventRFBunches.size() > 0) {
         locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
     }
@@ -150,7 +146,7 @@ vector< const DFCALShower* > locFCALShowers;
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
  // Double_t radius = 0;
-  //japp->RootWriteLock();
+  //lockService->RootWriteLock();
   //Double_t p;
   for (unsigned int i=0; i < locTrackTimeBased.size() ; ++i){
     vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
@@ -251,7 +247,7 @@ vector< const DFCALShower* > locFCALShowers;
 
     if( WRITE_EVIO ){
 
-        locEventWriterEVIO->Write_EVIOEvent( loop, "twogamma_fcal_skim", locObjectsToSave );
+        locEventWriterEVIO->Write_EVIOEvent( event, "twogamma_fcal_skim", locObjectsToSave );
     }
  }
  
@@ -259,27 +255,23 @@ vector< const DFCALShower* > locFCALShowers;
 
 
 
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_twogamma_fcal_skim::erun(void)
+void JEventProcessor_twogamma_fcal_skim::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_twogamma_fcal_skim::fini(void)
+void JEventProcessor_twogamma_fcal_skim::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

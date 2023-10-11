@@ -11,6 +11,7 @@
 #include <TTree.h>
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include <DAQ/Df250TriggerTime.h>
 #include <DAQ/Df250PulseData.h>
@@ -166,12 +167,11 @@
 	X(Evisible_protons) \
 	X(Evisible)
 
-class JEventProcessor_L3BDTtree:public jana::JEventProcessor{
+class JEventProcessor_L3BDTtree:public JEventProcessor{
 	public:
 		JEventProcessor_L3BDTtree();
 		~JEventProcessor_L3BDTtree();
-		const char* className(void){return "JEventProcessor_L3BDTtree";}
-		
+
 		class bdt_params_t{
 			public:
 				// Include number of objects for all JANA types
@@ -187,11 +187,13 @@ class JEventProcessor_L3BDTtree:public jana::JEventProcessor{
 		bdt_params_t bdt;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_L3BDTtree_

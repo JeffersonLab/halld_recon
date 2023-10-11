@@ -9,10 +9,9 @@
 #define _DPSCHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include "DPSGeometry.h"
 
-class DPSCHit:public jana::JObject{
+class DPSCHit: public JObject{
  public:
   JOBJECT_PUBLIC(DPSCHit);
 
@@ -26,17 +25,17 @@ class DPSCHit:public jana::JObject{
   double npe_fadc;
   bool has_fADC,has_TDC;
 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "arm", "%d", arm);
-    AddString(items, "module", "%d", module);
-    AddString(items, "t(ns)", "%f", t);
-    AddString(items, "time_tdc(ns)", "%f", time_tdc);
-    AddString(items, "time_fadc(ns)", "%f", time_fadc);
-    AddString(items, "integral", "%f", integral);
-    AddString(items, "pulse_peak", "%f", pulse_peak);
-    AddString(items, "npe_fadc", "%f", npe_fadc);
-    AddString(items, "has_fADC", "%d", (int)has_fADC);
-    AddString(items, "has_TDC", "%d", (int)has_TDC);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(arm, "arm", "%d");
+    summary.add(module, "module", "%d");
+    summary.add(t, "t(ns)", "%f");
+    summary.add(time_tdc, "time_tdc(ns)", "%f");
+    summary.add(time_fadc, "time_fadc(ns)", "%f");
+    summary.add(integral, "integral", "%f");
+    summary.add(pulse_peak, "pulse_peak", "%f");
+    summary.add(npe_fadc, "npe_fadc", "%f");
+    summary.add((int)has_fADC, "has_fADC", "%d");
+    summary.add((int)has_TDC, "has_TDC", "%d");
   }
 };
 

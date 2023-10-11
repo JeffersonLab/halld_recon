@@ -7,13 +7,13 @@
 
 #include "DCustomAction_p2pi_cuts.h"
 
-void DCustomAction_p2pi_cuts::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_cuts::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// check if a particle is missing
 	Get_Reaction()->Get_MissingPID(dMissingPID);
 }
 
-bool DCustomAction_p2pi_cuts::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2pi_cuts::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	// should only have one reaction step
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);

@@ -11,7 +11,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <ANALYSIS/DReaction.h>
 #include <ANALYSIS/DHistogramActions.h>
 #include <ANALYSIS/DCutActions.h>
@@ -19,21 +19,20 @@
 #include "DCustomAction_p2pi0_hists.h"
 
 using namespace std;
-using namespace jana;
 
-class DReaction_factory_p2pi0_hists : public jana::JFactory<DReaction>
+class DReaction_factory_p2pi0_hists : public JFactoryT<DReaction>
 {
 	public:
 		DReaction_factory_p2pi0_hists()
 		{
-			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event. 
-			SetFactoryFlag(PERSISTANT);
+			SetTag("p2pi0_hists");
+			SetFactoryFlag(PERSISTENT);
+			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event.
 		}
-		const char* Tag(void){return "p2pi0_hists";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void Finish() override;
 
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks
 };

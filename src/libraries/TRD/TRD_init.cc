@@ -5,11 +5,8 @@
  *      Author: jrsteven
  */
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactorySet.h>
 
-#include "DTRDDigiHit.h"
-#include "DGEMDigiWindowRawData.h"
 #include "DTRDHit_factory.h"
 #include "DGEMHit_factory.h"
 #include "DTRDStripCluster_factory.h"
@@ -17,24 +14,24 @@ using namespace jana;
 #include "DGEMStripCluster_factory.h"
 #include "DGEMPoint_factory.h"
 
+#include <JANA/Compatibility/JGetObjectsFactory.h>
 
-jerror_t TRD_init(JEventLoop *loop) {
+void TRD_init(JFactorySet *factorySet) {
 
 	/// Create and register TRD data factories
-	loop->AddFactory(new JFactory<DTRDDigiHit>());
-	loop->AddFactory(new JFactory<DGEMDigiWindowRawData>());
-	loop->AddFactory(new DTRDHit_factory());
-	loop->AddFactory(new DGEMHit_factory());
+	factorySet->Add(new JGetObjectsFactory<DTRDDigiHit>());
+	factorySet->Add(new JGetObjectsFactory<DGEMDigiWindowRawData>());
 
-	loop->AddFactory(new DTRDStripCluster_factory());
-	loop->AddFactory(new DTRDPoint_factory());
-	loop->AddFactory(new DGEMStripCluster_factory());
-	loop->AddFactory(new DGEMPoint_factory());
+	factorySet->Add(new DTRDHit_factory());
+	factorySet->Add(new DGEMHit_factory());
 
-	//loop->AddFactory(new DTRDGeometry_factory());
-	//loop->AddFactory(new JFactory<DTRDTruthGEMHit>());
-	//loop->AddFactory(new JFactory<DTRDTruthWireHit>());
+	factorySet->Add(new DTRDStripCluster_factory());
+	factorySet->Add(new DTRDPoint_factory());
+	factorySet->Add(new DGEMStripCluster_factory());
+	factorySet->Add(new DGEMPoint_factory());
 
-	return NOERROR;
+	//factorySet->Add(new DTRDGeometry_factory());
+	//factorySet->Add(new JFactory<DTRDTruthGEMHit>());
+	//factorySet->Add(new JFactory<DTRDTruthWireHit>());
 }
 

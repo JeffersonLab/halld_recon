@@ -14,8 +14,7 @@
 #include <vector>
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DF1TDCConfig.h>
@@ -26,7 +25,7 @@ using namespace std;
 
 // This object is MODIFIED every event, so make sure to get it anew for each event!
 	//DO NOT GRAB in your factory's brun() method.
-class DTTabUtilities : public jana::JObject
+class DTTabUtilities : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DTTabUtilities);

@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_BCAL_TimeCalibration.h"
-using namespace jana;
 
 #include <TLorentzVector.h>
 #include "TMath.h"
@@ -25,7 +24,7 @@ using namespace jana;
 #include "DAQ/Df250PulseIntegral.h" // Needed for pulse integral !!! added
 #include "BCAL/DBCALDigiHit.h"
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "FCAL/DFCALShower.h"
@@ -68,10 +67,6 @@ using namespace jana;
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
-
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 
 static mutex mtx;
 
@@ -168,7 +163,7 @@ static Double_t gfunc (Double_t *x, Double_t *par) {
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_TimeCalibration());
+	app->Add(new JEventProcessor_BCAL_TimeCalibration());
 }
 } // "C"
 
@@ -189,17 +184,17 @@ JEventProcessor_BCAL_TimeCalibration::~JEventProcessor_BCAL_TimeCalibration()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_TimeCalibration::init(void)
+void JEventProcessor_BCAL_TimeCalibration::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
 	ievent = 0;
@@ -212,37 +207,37 @@ jerror_t JEventProcessor_BCAL_TimeCalibration::init(void)
 	  }
 	}
 		
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_TimeCalibration::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_TimeCalibration::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 	iRunNumber = runnumber;
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_TimeCalibration::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_BCAL_TimeCalibration::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	
 static 	int goodFlag = 0;
 static 	double ttU, ttD;
@@ -256,12 +251,12 @@ static 	double x,y,z,R, dPhi,dZ, E;
 //****************	
 //CHECK TRIGGER TYPE
 //       const DL1Trigger* locTrigger = NULL;
-//       locEventLoop->GetSingle(locTrigger);
+//       locEvent->GetSingle(locTrigger);
 
          uint32_t trig_mask=0;
          const DL1Trigger *trig_words = NULL;
 	  try {
-	    locEventLoop->GetSingle(trig_words);
+	    locEvent->GetSingle(trig_words);
 	  } catch(...) {};
 	  if (trig_words) {
 	    trig_mask = trig_words->trig_mask;
@@ -274,28 +269,28 @@ static 	double x,y,z,R, dPhi,dZ, E;
 //****************
 	
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	  locEventLoop->Get(locTrackTimeBased);
+	  locEvent->Get(locTrackTimeBased);
 	vector<const DChargedTrackHypothesis*> locTrackHypothesis;
-	  locEventLoop->Get(locTrackHypothesis);
+	  locEvent->Get(locTrackHypothesis);
 	
 	vector<const DBCALShower*> locBCALShowers;
-	  locEventLoop->Get(locBCALShowers);
+	  locEvent->Get(locBCALShowers);
 	  	
 	vector<const DBCALShower*> matchedShowers;
 	
 	vector<const DBCALCluster*> locBCALClusters;
-//	  locEventLoop->Get(locBCALClusters);
+//	  locEvent->Get(locBCALClusters);
 	  
 	vector<const DBCALPoint*> matchedBCALPoints;
 	  
 	vector<const DBCALPoint*> locBCALPoints;
-	  locEventLoop->Get(locBCALPoints);
+	  locEvent->Get(locBCALPoints);
 	  
 	vector<const DVertex*> kinfitVertex;
-	  locEventLoop->Get(kinfitVertex);
+	  locEvent->Get(kinfitVertex);
 	  
 	vector<const DEventRFBunch*> RFbunch;
-	  locEventLoop->Get(RFbunch);
+	  locEvent->Get(RFbunch);
 	int Nvotes;  
 
 	for (unsigned int ij=0; ij<RFbunch.size(); ij++) {
@@ -303,7 +298,7 @@ static 	double x,y,z,R, dPhi,dZ, E;
 	}    
 	
 	vector<const DBCALUnifiedHit *> locBCALUnifiedHit;
-	  locEventLoop->Get(locBCALUnifiedHit);
+	  locEvent->Get(locBCALUnifiedHit);
 	  
 	vector<const DBCALUnifiedHit *> matchedBCALUnifiedHit;
 
@@ -494,25 +489,25 @@ static 	double x,y,z,R, dPhi,dZ, E;
 	  } //if(GoodFlag end 
 	} //end of ij loop
         
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_TimeCalibration::erun(void)
+void JEventProcessor_BCAL_TimeCalibration::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
 //*********************************************************************************
-jerror_t JEventProcessor_BCAL_TimeCalibration::fini(void)
+void JEventProcessor_BCAL_TimeCalibration::Finish()
 {
 	// Called before program exit after event processing is finished.
 	
@@ -1881,5 +1876,5 @@ delete lin1;
   datwarn.close();  
 //************************************************************************************
 	
-	return NOERROR;
+	return;
 }

@@ -12,16 +12,19 @@ using namespace std;
 #include <DAQ/Df250PulsePedestal.h>
 #include <DAQ/Df250PulseIntegral.h>
 #include <TTAB/DTTabUtilities.h>
-using namespace jana;
+
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DPSHit_factory::init(void)
+void DPSHit_factory::Init()
 {
+  auto app = GetApplication();
   ADC_THRESHOLD = 500.0; // ADC integral counts
-  gPARMS->SetDefaultParameter("PSHit:ADC_THRESHOLD",ADC_THRESHOLD,
+  app->SetDefaultParameter("PSHit:ADC_THRESHOLD",ADC_THRESHOLD,
 			      "pedestal-subtracted pulse integral threshold");	
 	
   /// set the base conversion scales
@@ -30,16 +33,18 @@ jerror_t DPSHit_factory::init(void)
   t_base     = 0.;    // ns
 	
   CHECK_FADC_ERRORS = true;
-  gPARMS->SetDefaultParameter("PSHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
-
-  return NOERROR;
+  app->SetDefaultParameter("PSHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DPSHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DPSHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -52,50 +57,50 @@ jerror_t DPSHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   pthread_mutex_unlock(&print_mutex);
 	
   /// Read in calibration constants
-  if(print_messages) jout << "In DPSHit_factory, loading constants..." << endl;
+  if(print_messages) jout << "In DPSHit_factory, loading constants..." << jendl;
 	
   // extract the PS Geometry
   vector<const DPSGeometry*> psGeomVect;
-  eventLoop->Get(psGeomVect);
+  event->Get(psGeomVect);
   if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    return; // OBJECT_NOT_AVAILABLE;
   const DPSGeometry& psGeom = *(psGeomVect[0]);
 	
   // load scale factors
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/digi_scales !" << endl;
+  if (calibration->Get("/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/digi_scales !" << jendl;
   if (scale_factors.find("PS_ADC_ASCALE") != scale_factors.end())
     a_scale = scale_factors["PS_ADC_ASCALE"];
   else
     jerr << "Unable to get PS_ADC_ASCALE from /PHOTON_BEAM/pair_spectrometer/digi_scales !" 
-	 << endl;
+	 << jendl;
   if (scale_factors.find("PS_ADC_TSCALE") != scale_factors.end())
     t_scale = scale_factors["PS_ADC_TSCALE"];
   else
     jerr << "Unable to get PS_ADC_TSCALE from /PHOTON_BEAM/pair_spectrometer/digi_scales !" 
-	 << endl;
+	 << jendl;
 	
   // load base time offset
   map<string,double> base_time_offset;
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/base_time_offset",base_time_offset))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << endl;
+  if (calibration->Get("/PHOTON_BEAM/pair_spectrometer/base_time_offset",base_time_offset))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << jendl;
   if (base_time_offset.find("PS_FINE_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["PS_FINE_BASE_TIME_OFFSET"];
   else
-    jerr << "Unable to get PS_FINE_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << endl;
+    jerr << "Unable to get PS_FINE_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << jendl;
 	
-  FillCalibTable(adc_pedestals, "/PHOTON_BEAM/pair_spectrometer/fine/adc_pedestals", psGeom);
-  FillCalibTable(adc_gains, "/PHOTON_BEAM/pair_spectrometer/fine/adc_gain_factors", psGeom);
-  FillCalibTable(adc_time_offsets, "/PHOTON_BEAM/pair_spectrometer/fine/adc_timing_offsets", psGeom);
+  FillCalibTable(calibration, adc_pedestals, "/PHOTON_BEAM/pair_spectrometer/fine/adc_pedestals", psGeom);
+  FillCalibTable(calibration, adc_gains, "/PHOTON_BEAM/pair_spectrometer/fine/adc_gain_factors", psGeom);
+  FillCalibTable(calibration, adc_time_offsets, "/PHOTON_BEAM/pair_spectrometer/fine/adc_timing_offsets", psGeom);
 	
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DPSHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DPSHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DPSHit object for each DPSDigiHit object.
   /// This is where the first set of calibration constants
@@ -108,17 +113,17 @@ jerror_t DPSHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   // extract the PS Geometry
   vector<const DPSGeometry*> psGeomVect;
-  eventLoop->Get(psGeomVect);
+  event->Get(psGeomVect);
   if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    return; // OBJECT_NOT_AVAILABLE;
   const DPSGeometry& psGeom = *(psGeomVect[0]);
 
   const DTTabUtilities* locTTabUtilities = nullptr;
-  loop->GetSingle(locTTabUtilities);
+  event->GetSingle(locTTabUtilities);
 
   // First, make hits out of all fADC250 hits
   vector<const DPSDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   char str[256];
 
   for (unsigned int i=0; i < digihits.size(); i++) {
@@ -148,7 +153,7 @@ jerror_t DPSHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
     if(nsamples_pedestal == 0) {
-        jerr << "DPSDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+        jerr << "DPSDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << jendl;
         continue;
     }
 
@@ -186,40 +191,35 @@ jerror_t DPSHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     hit->AddAssociatedObject(digihit);
                 
-    _data.push_back(hit);
+    Insert(hit);
   }
-
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DPSHit_factory::erun(void)
+void DPSHit_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DPSHit_factory::fini(void)
+void DPSHit_factory::Finish()
 {
-  return NOERROR;
 }
 
 //------------------
 // FillCalibTable
 //------------------
-void DPSHit_factory::FillCalibTable(ps_digi_constants_t &table, string table_name, 
+void DPSHit_factory::FillCalibTable(JCalibration* calibration, ps_digi_constants_t &table, string table_name,
 				    const DPSGeometry &psGeom)
 {
   char str[256];
 
   // load constant table
-  if(eventLoop->GetCalib(table_name, table))
-    jout << "Error loading " + table_name + " !" << endl;
+  if(calibration->Get(table_name, table))
+    jout << "Error loading " + table_name + " !" << jendl;
 
 	
   // check that the size of the tables loaded are correct

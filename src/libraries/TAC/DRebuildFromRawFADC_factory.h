@@ -12,8 +12,8 @@
 #include <set>
 using namespace std;
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+
 #include <DANA/ReadWriteLock.h>
 #include <TTAB/DTTabUtilities.h>
 #include <DAQ/Df250WindowRawData.h>
@@ -43,59 +43,51 @@ protected:
 	std::string fTag;
 //	std::set<const Df250WindowRawData*> rawDataPtrSet;
 
-//	virtual jerror_t rebuildHit(jana::JEventLoop *eventLoop,
+//	virtual jerror_t rebuildHit(const std::shared_ptr<const JEvent>& event,
 //			uint64_t eventNumber, const DTACHit* baseHit);
 //	virtual const Df250WindowRawData* getRawData(const DTACHit* baseHit);
 //	virtual double getTimeFromRawData(const vector<uint16_t>& samples);
 public:
-	DRebuildFromRawFADC_factory() :
-			BASE_FACTORY() {
-	}
-	virtual const char* Tag() {
-		fTag = std::string(BASE_FACTORY::Tag()) + BUILDER::getTagString();
-		return fTag.c_str();
+	DRebuildFromRawFADC_factory() : BASE_FACTORY() {
+		this->SetTag(BASE_FACTORY::getTagString() + BUILDER::getTagString());
 	}
 	virtual ~DRebuildFromRawFADC_factory() {
 	}
-	virtual jerror_t init(void) override;
-	virtual jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber)
-			override;          ///< Called everytime a new run number is detected
-	virtual jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventNumber)
-			override;          ///< Called every event
-	virtual jerror_t erun(void) override;          ///< Called everytime run number changes, if brun has been called
-	virtual jerror_t fini(void) override;          ///< Called after last event of last event source has been processed
+
+	void Init() override;
+	void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+	void Process(const std::shared_ptr<const JEvent>& event) override;
+	void EndRun() override;
+	void Finish() override;
 };
 
 using namespace std;
 
 template<typename BASE_FACTORY, typename BUILDER>
-jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::init(void) {
-	BASE_FACTORY::init();
+void DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::Init() {
+	BASE_FACTORY::Init();
 //	this->setTimeScaleADC(this->getTimeScaleADC() * 64);          // Time scale for a single FADC hit
-	return NOERROR;
 }
 
 template<typename BASE_FACTORY, typename BUILDER>
-jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::brun(
-		jana::JEventLoop *eventLoop, int32_t runnumber) {
-	BASE_FACTORY::brun(eventLoop, runnumber);
+void DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::BeginRun(
+		const std::shared_ptr<const JEvent>& event) {
+	BASE_FACTORY::BeginRun(event);
 //	hitBuilder = new BUILDER(this->getTimeScaleADC(), this->getADCTimeOffset(),
 //			this->getTimeBaseADC());
-	hitBuilder = new BUILDER( eventLoop );
-
-	return NOERROR;
+	hitBuilder = new BUILDER( event );
 }
 
 // override the event processing method
 template<typename BASE_FACTORY, typename BUILDER>
-jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::evnt(
-		jana::JEventLoop* eventLoop, uint64_t eventNumber) {
+void DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::Process(
+		const std::shared_ptr<const JEvent>& event) {
 
 //	cout << "In DTACHit_Rebuild_factory::evnt" << endl;
 //
 //	cout << "Data structure has " << _data.size() << " elements" << endl;
 	vector<const DTACHit*> baseHitVector;
-	eventLoop->Get(baseHitVector, "");
+	event->Get(baseHitVector, "");
 
 //	// Declare comparison functor for this TAC hits basedon pulse peak
 //	static auto compareHits =
@@ -106,7 +98,7 @@ jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::evnt(
 //
 ////	rawDataPtrSet = new set<const Df250WindowRawData*>();
 //	for (auto baseHit : baseHitVector) {
-//		rebuildHit(eventLoop, eventNumber, baseHit);
+//		rebuildHit(event, eventNumber, baseHit);
 //		vector<DTACHit*> newHitVec = BUILDER( baseHit );
 //	}
 //	cout << "Here are all the " << _data.size() << " new hits in the rebuild factory" << endl;
@@ -128,33 +120,30 @@ jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::evnt(
 	vector<DTACHit*> newHitVector = (*hitBuilder)(baseHitVector);
 	for (auto newHit : newHitVector) {
 		this->AppendData(newHit);
-//		_data.push_back(newHit);
+//		Insert(newHit);
 	}
 
 //	cout << "Done rebuilding TACHit " << endl;
-
-	return NOERROR;
 }
 
-// erun
+//------------------
+// EndRun
 //------------------
 template<typename BASE_FACTORY, typename BUILDER>
-jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::erun(void) {
+void DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::EndRun() {
 	if (hitBuilder != nullptr) {
 		delete hitBuilder;
 		hitBuilder = nullptr;
 	}
-	BASE_FACTORY::erun();
-	return NOERROR;
+	BASE_FACTORY::EndRun();
 }
 
 //------------------
-// fini
+// Finish
 //------------------
 template<typename BASE_FACTORY, typename BUILDER>
-jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::fini(void) {
-	BASE_FACTORY::fini();
-	return NOERROR;
+void DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::Finish() {
+	BASE_FACTORY::Finish();
 }
 
 
@@ -170,6 +159,6 @@ jerror_t DRebuildFromRawFADC_factory<BASE_FACTORY, BUILDER>::fini(void) {
 //template<>
 //jerror_t DRebuildFromRawFADC_factory<DTACHit_factory,
 //		HitRebuilderByFit<WaveformErfcFunctor>>::brun(
-//		jana::JEventLoop *eventLoop, int32_t runnumber);
+//		const std::shared_ptr<const JEvent>& event, int32_t runnumber);
 
 #endif /* LIBRARIES_DREBUILDFROMRAWFADC_FACTORY_H_ */

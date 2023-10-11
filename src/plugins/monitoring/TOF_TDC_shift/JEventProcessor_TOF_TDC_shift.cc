@@ -8,7 +8,6 @@
 #include "JEventProcessor_TOF_TDC_shift.h"
 #include <JANA/JApplication.h>
 using namespace std;
-using namespace jana;
 
 #include "TOF/DTOFHit.h"
 #include "TOF/DTOFDigiHit.h"
@@ -26,19 +25,22 @@ const float_t   TDC_BIN = 0.0234375; // CAEN TDC time resolution (ns)
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_TOF_TDC_shift());
+    app->Add(new JEventProcessor_TOF_TDC_shift());
   }
 }
 //----------------------------------------------------------------------------------
 JEventProcessor_TOF_TDC_shift::JEventProcessor_TOF_TDC_shift() {
+	SetTypeName("JEventProcessor_TOF_TDC_shift");
 }
 //----------------------------------------------------------------------------------
 JEventProcessor_TOF_TDC_shift::~JEventProcessor_TOF_TDC_shift() {
 }
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TOF_TDC_shift::init(void) {
-  
+void JEventProcessor_TOF_TDC_shift::Init() {
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   // Create root folder for ST and cd to it, store main dir
   TDirectory *main = gDirectory;
   filedir = main;
@@ -50,22 +52,19 @@ jerror_t JEventProcessor_TOF_TDC_shift::init(void) {
 
   // cd back to main directory
   main->cd();
-
-  return NOERROR;
 }
 //----------------------------------------------------------------------------------
-jerror_t JEventProcessor_TOF_TDC_shift::brun(JEventLoop *eventLoop, int32_t runnumber) {
-
+void JEventProcessor_TOF_TDC_shift::BeginRun(const std::shared_ptr<const JEvent>& event) {
+  auto runnumber = event->GetRunNumber();
   char filename[200];
   sprintf(filename,"TOF_TDC_shift_%6.6d.txt",runnumber);
   OUTPUT.open(filename);
   // OUTPUT << setw(6) << runnumber;
 
   // This is called whenever the run number changes
-  return NOERROR;
 }
 //----------------------------------------------------------------------------------
-jerror_t JEventProcessor_TOF_TDC_shift::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TOF_TDC_shift::Process(const std::shared_ptr<const JEvent>& event) {
 
   // Get all data objects first so we minimize the time we hold the ROOT mutex lock
 
@@ -76,10 +75,10 @@ jerror_t JEventProcessor_TOF_TDC_shift::evnt(JEventLoop *eventLoop, uint64_t eve
   vector<const DCODAROCInfo*>       dcodarocinfo;        // DCODAROCInfo
 
   // TOF
-  eventLoop->Get(dtofhits);
-  eventLoop->Get(dtofdigihits);
-  eventLoop->Get(dtoftdcdigihits);
-  eventLoop->Get(dcodarocinfo);
+  event->Get(dtofhits);
+  event->Get(dtofdigihits);
+  event->Get(dtoftdcdigihits);
+  event->Get(dcodarocinfo);
 
   Int_t TriggerBIT = -1;
   for(UInt_t i=0;i<dcodarocinfo.size();i++){
@@ -95,7 +94,7 @@ jerror_t JEventProcessor_TOF_TDC_shift::evnt(JEventLoop *eventLoop, uint64_t eve
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   // Fill histogram of TI % 6 vs (ADC time - TDC time)
   for(UInt_t tof = 0;tof<dtofdigihits.size();tof++){
@@ -119,19 +118,16 @@ jerror_t JEventProcessor_TOF_TDC_shift::evnt(JEventLoop *eventLoop, uint64_t eve
       hrocTimeRemainder_AdcTdcTimeDiff_corrected->Fill(diff, TriggerBIT);
   }
 
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 //----------------------------------------------------------------------------------
-jerror_t JEventProcessor_TOF_TDC_shift::erun(void) {
+void JEventProcessor_TOF_TDC_shift::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 //----------------------------------------------------------------------------------
-jerror_t JEventProcessor_TOF_TDC_shift::fini(void) {
+void JEventProcessor_TOF_TDC_shift::Finish() {
 
   // calculate mean timing for 6 possible values of
   // TI remainder. The TI remainder bin with the highest
@@ -142,7 +138,7 @@ jerror_t JEventProcessor_TOF_TDC_shift::fini(void) {
   Double_t min = +99999;
   Int_t shift = -1;
 
-  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+  lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   TDirectory *main = gDirectory;
   filedir->cd();
@@ -190,10 +186,9 @@ jerror_t JEventProcessor_TOF_TDC_shift::fini(void) {
   //filedir->cd();
   main->cd();
 
-  japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 //----------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------

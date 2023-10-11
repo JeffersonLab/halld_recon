@@ -13,59 +13,54 @@ using namespace std;
 #include <map>
 
 #include "DTrackCandidate_factory_StraightLine.h"
-using namespace jana;
-#include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-#include <DANA/DApplication.h>
-#include "HDGEOMETRY/DGeometry.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory_StraightLine::init(void)
+void DTrackCandidate_factory_StraightLine::Init()
 {
-   return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackCandidate_factory_StraightLine::brun(jana::JEventLoop *loop, int runnumber)
+void DTrackCandidate_factory_StraightLine::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+   auto app = GetApplication();
 
    COSMICS=false;
-   gPARMS->SetDefaultParameter("TRKFIND:COSMICS",COSMICS);
+   app->SetDefaultParameter("TRKFIND:COSMICS",COSMICS);
 
    CHI2CUT = 15.0; 
-   gPARMS->SetDefaultParameter("TRKFIT:CHI2CUT",CHI2CUT);    
+   app->SetDefaultParameter("TRKFIT:CHI2CUT",CHI2CUT);    
 
    DO_PRUNING = 1;
-   gPARMS->SetDefaultParameter("TRKFIT:DO_PRUNING",DO_PRUNING);
+   app->SetDefaultParameter("TRKFIT:DO_PRUNING",DO_PRUNING);
 
    DEBUG_HISTS=false;
-   gPARMS->SetDefaultParameter("TRKFIND:DEBUG_HISTS",DEBUG_HISTS);
+   app->SetDefaultParameter("TRKFIND:DEBUG_HISTS",DEBUG_HISTS);
 
 
    USE_FDC_DRIFT_TIMES=true;
-   gPARMS->SetDefaultParameter("TRKFIT:USE_FDC_DRIFT_TIMES",
+   app->SetDefaultParameter("TRKFIT:USE_FDC_DRIFT_TIMES",
          USE_FDC_DRIFT_TIMES);
 
    PLANE_TO_SKIP=0;
-   gPARMS->SetDefaultParameter("TRKFIT:PLANE_TO_SKIP",PLANE_TO_SKIP);
+   app->SetDefaultParameter("TRKFIT:PLANE_TO_SKIP",PLANE_TO_SKIP);
 
    SKIP_CDC=false;
-   gPARMS->SetDefaultParameter("TRKFIT:SKIP_CDC",SKIP_CDC);
+   app->SetDefaultParameter("TRKFIT:SKIP_CDC",SKIP_CDC);
 
    SKIP_FDC=false;
-   gPARMS->SetDefaultParameter("TRKFIT:SKIP_FDC",SKIP_FDC);
+   app->SetDefaultParameter("TRKFIT:SKIP_FDC",SKIP_FDC);
 
    // Get pointer to TrackFinder object 
    vector<const DTrackFinder *> finders;
-   loop->Get(finders);
+   event->Get(finders);
 
    if(finders.size()<1){
       _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return; // RESOURCE_UNAVAILABLE;
    }
 
    // Drop the const qualifier from the DTrackFinder pointer
@@ -82,14 +77,12 @@ jerror_t DTrackCandidate_factory_StraightLine::brun(jana::JEventLoop *loop, int 
    // TMatrix pool
    dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
    dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
-  
-   return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackCandidate_factory_StraightLine::Process(const std::shared_ptr<const JEvent>& event)
 {
 
    // Reset the track finder
@@ -97,8 +90,8 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 
    vector<const DCDCTrackHit*>cdcs;
    vector<const DFDCPseudo*>pseudos;
-   loop->Get(cdcs);
-   loop->Get(pseudos);
+   event->Get(cdcs);
+   event->Get(pseudos);
 
    set<unsigned int> used_cdc;
 
@@ -136,7 +129,7 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 	 finder->FindDoca(0,tracks[i].S,dir,origin,&pos);
 	 cand->setPosition(pos);
 	 
-	 _data.push_back(cand);
+	 Insert(cand);
 
          }
       }
@@ -207,39 +200,35 @@ jerror_t DTrackCandidate_factory_StraightLine::evnt(JEventLoop *loop, uint64_t e
 	     cand->setPosition(DVector3(x,y,z));
 	   }
 	 
-	   _data.push_back(cand);
+	   Insert(cand);
          }
       }
    }
 
    // Set CDC ring & FDC plane hit patterns
-   for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)
+   for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
    {
       vector<const DCDCTrackHit*> locCDCTrackHits;
-      _data[loc_i]->Get(locCDCTrackHits);
+      mData[loc_i]->Get(locCDCTrackHits);
 
       vector<const DFDCPseudo*> locFDCPseudos;
-      _data[loc_i]->Get(locFDCPseudos);
+      mData[loc_i]->Get(locFDCPseudos);
 
-      _data[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
-      _data[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+      mData[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+      mData[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
    }
-
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTrackCandidate_factory_StraightLine::erun(void)
+void DTrackCandidate_factory_StraightLine::EndRun()
 {
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackCandidate_factory_StraightLine::fini(void)
+void DTrackCandidate_factory_StraightLine::Finish()
 {
-   return NOERROR;
 }

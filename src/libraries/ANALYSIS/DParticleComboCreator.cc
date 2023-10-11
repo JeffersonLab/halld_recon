@@ -1,33 +1,37 @@
 #include "ANALYSIS/DParticleComboCreator.h"
 #include "ANALYSIS/DSourceComboer.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
+#include "DANA/DEvent.h"
 
 namespace DAnalysis
 {
 
-DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSourceComboer* locSourceComboer, DSourceComboTimeHandler* locSourceComboTimeHandler, const DSourceComboVertexer* locSourceComboVertexer) :
+DParticleComboCreator::DParticleComboCreator(const std::shared_ptr<const JEvent>& locEvent, const DSourceComboer* locSourceComboer, DSourceComboTimeHandler* locSourceComboTimeHandler, const DSourceComboVertexer* locSourceComboVertexer) :
 		dSourceComboer(locSourceComboer), dSourceComboTimeHandler(locSourceComboTimeHandler), dSourceComboVertexer(locSourceComboVertexer)
 {
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+	locEvent->GetJApplication()->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+	dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
 
-	Set_RunDependent_Data(locEventLoop);
+	Set_RunDependent_Data(locEvent);
 	
 	dResourcePool_KinematicData.Set_ControlParams(20, 20, 200, 1000, 0);
 	dResourcePool_ParticleCombo.Set_ControlParams(100, 20, 1000, 3000, 0);
 	dResourcePool_ParticleComboStep.Set_ControlParams(100, 50, 1500, 4000, 0);
 
 	vector<const DNeutralParticleHypothesis*> locNeutralParticleHypotheses;
-	locEventLoop->Get(locNeutralParticleHypotheses); //make sure that brun() is called for the default factory!!!
-	dNeutralParticleHypothesisFactory = static_cast<DNeutralParticleHypothesis_factory*>(locEventLoop->GetFactory("DNeutralParticleHypothesis"));
+	locEvent->Get(locNeutralParticleHypotheses); //make sure that brun() is called for the default factory!!!
+	dNeutralParticleHypothesisFactory = dynamic_cast<DNeutralParticleHypothesis_factory*>(locEvent->GetFactory<DNeutralParticleHypothesis>());
+	// TODO: NWB: I don't like this one bit!
 
 	vector<const DChargedTrackHypothesis*> locChargedTrackHypotheses;
-	locEventLoop->Get(locChargedTrackHypotheses); //make sure that brun() is called for the default factory!!!
-	dChargedTrackHypothesisFactory = static_cast<DChargedTrackHypothesis_factory*>(locEventLoop->GetFactory("DChargedTrackHypothesis"));
+	locEvent->Get(locChargedTrackHypotheses); //make sure that brun() is called for the default factory!!!
+	dChargedTrackHypothesisFactory = dynamic_cast<DChargedTrackHypothesis_factory*>(locEvent->GetFactory<DChargedTrackHypothesis>());
+	// TODO: NWB: I don't like this one bit!
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons); //make sure that brun() is called for the default factory!!!
-	dBeamPhotonfactory = static_cast<DBeamPhoton_factory*>(locEventLoop->GetFactory("DBeamPhoton"));
+	locEvent->Get(locBeamPhotons); //make sure that brun() is called for the default factory!!!
+	dBeamPhotonfactory = dynamic_cast<DBeamPhoton_factory*>(locEvent->GetFactory<DBeamPhoton>());
+	// TODO: NWB: I don't like this one bit!
 
 	//error matrix //too lazy to compute properly right now ... need to hack DAnalysisUtilities::Calc_DOCA()
 	dVertexCovMatrix.ResizeTo(4, 4);
@@ -38,20 +42,19 @@ DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSo
 	dVertexCovMatrix(3, 3) = 0.0; //t variance //not used
 }
 
-void DParticleComboCreator::Set_RunDependent_Data(JEventLoop *locEventLoop)
+void DParticleComboCreator::Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 
 	//TARGET INFORMATION
 	double locTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(locTargetCenterZ);
 	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
 
-	locEventLoop->GetSingle(dParticleID);
+	locEvent->GetSingle(dParticleID);
 		
-	dKinFitUtils->Set_RunDependent_Data(locEventLoop);
+	dKinFitUtils->Set_RunDependent_Data(locEvent);
 }		
 
 void DParticleComboCreator::Reset(void)
@@ -802,21 +805,21 @@ DKinematicData* DParticleComboCreator::Build_KinematicData(const DKinFitResults*
 	return locKinematicData;
 }
 
-const DParticleCombo* DParticleComboCreator::Build_ThrownCombo(JEventLoop* locEventLoop)
+const DParticleCombo* DParticleComboCreator::Build_ThrownCombo(const std::shared_ptr<const JEvent>& locEvent)
 {
 	deque<pair<const DMCThrown*, deque<const DMCThrown*> > > locThrownSteps;
 	if(dAnalysisUtilities == nullptr)
-		locEventLoop->GetSingle(dAnalysisUtilities);
-	dAnalysisUtilities->Get_ThrownParticleSteps(locEventLoop, locThrownSteps);
+		locEvent->GetSingle(dAnalysisUtilities);
+	dAnalysisUtilities->Get_ThrownParticleSteps(locEvent, locThrownSteps);
 	if(locThrownSteps.empty())
 		return nullptr;
 
  	vector<const DReaction*> locReactions;
-	locEventLoop->Get(locReactions, "Thrown");
-	return Build_ThrownCombo(locEventLoop, locReactions[0], locThrownSteps);
+	locEvent->Get(locReactions, "Thrown");
+	return Build_ThrownCombo(locEvent, locReactions[0], locThrownSteps);
 }
 
-const DParticleCombo* DParticleComboCreator::Build_ThrownCombo(JEventLoop* locEventLoop, const DReaction* locThrownReaction, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps)
+const DParticleCombo* DParticleComboCreator::Build_ThrownCombo(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locThrownReaction, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps)
 {
 	auto locThrownComboTuple = std::make_tuple((const DReactionVertexInfo*)nullptr, (const DSourceCombo*)nullptr, (const DKinematicData*)nullptr, 1, true);
 	auto locComboMapIterator = dComboMap.find(locThrownComboTuple);
@@ -824,10 +827,10 @@ const DParticleCombo* DParticleComboCreator::Build_ThrownCombo(JEventLoop* locEv
 		return locComboMapIterator->second;
 
  	vector<const DMCReaction*> locMCReactions;
-	locEventLoop->Get(locMCReactions);
+	locEvent->Get(locMCReactions);
 
  	vector<const DEventRFBunch*> locEventRFBunches;
-	locEventLoop->Get(locEventRFBunches, "Thrown");
+	locEvent->Get(locEventRFBunches, "Thrown");
 
 	auto locParticleCombo = Get_ParticleComboResource();
 	auto locParticleComboStep = Get_ParticleComboStepResource();

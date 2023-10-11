@@ -18,10 +18,8 @@
 #include <stdio.h>
 
 #include "JEventProcessor_CDC_roc_hits.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 
 
@@ -33,7 +31,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_roc_hits());
+    app->Add(new JEventProcessor_CDC_roc_hits());
   }
 }
 
@@ -42,6 +40,7 @@ extern "C"{
 
 
 JEventProcessor_CDC_roc_hits::JEventProcessor_CDC_roc_hits() {
+	SetTypeName("JEventProcessor_CDC_roc_hits");
 }
 
 
@@ -54,17 +53,19 @@ JEventProcessor_CDC_roc_hits::~JEventProcessor_CDC_roc_hits() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_CDC_roc_hits::init(void) {
+void JEventProcessor_CDC_roc_hits::Init() {
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 
   TSTART = 200;
   TSTOP = 1200;
 
-  if (gPARMS) {
-    gPARMS->SetDefaultParameter("CDC_ROC_HITS:TSTART",TSTART);
-    gPARMS->SetDefaultParameter("CDC_ROC_HITS:TSTOP",TSTOP);
+  if (app) {
+    app->SetDefaultParameter("CDC_ROC_HITS:TSTART",TSTART);
+    app->SetDefaultParameter("CDC_ROC_HITS:TSTOP",TSTOP);
   }
 
   // create root folder for cdc and cd to it, store main dir
@@ -119,26 +120,26 @@ cdc_netamp_roc28   = new TH2D("cdc_netamp_roc28","CDC pulse peak amplitude minus
   
   main->cd();
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_roc_hits::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_CDC_roc_hits::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_roc_hits::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CDC_roc_hits::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -163,9 +164,9 @@ jerror_t JEventProcessor_CDC_roc_hits::evnt(JEventLoop *eventLoop, uint64_t even
 
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  eventLoop->Get(digihits);
+  event->Get(digihits);
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   if(digihits.size() > 0) cdc_nevents->Fill(1);
 
@@ -279,28 +280,28 @@ jerror_t JEventProcessor_CDC_roc_hits::evnt(JEventLoop *eventLoop, uint64_t even
   }
 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_roc_hits::erun(void) {
+void JEventProcessor_CDC_roc_hits::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_roc_hits::fini(void) {
+void JEventProcessor_CDC_roc_hits::Finish() {
   // Called before program exit after event processing is finished.
 
 
@@ -544,7 +545,7 @@ jerror_t JEventProcessor_CDC_roc_hits::fini(void) {
   if (outfile) fclose(outfile);
 
 
-  return NOERROR;
+  return;
 }
 
 

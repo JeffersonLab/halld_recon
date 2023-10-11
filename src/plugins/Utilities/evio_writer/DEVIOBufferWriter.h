@@ -7,10 +7,10 @@
 #include <set>
 
 #include <JANA/JObject.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JApplication.h>
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <DAQ/Df250PulseData.h>
 #include <DAQ/Df250PulseIntegral.h>
@@ -55,7 +55,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 class DEVIOBufferWriter
 {
@@ -68,8 +67,8 @@ class DEVIOBufferWriter
     }
     ~DEVIOBufferWriter(void) {}
 
-    void WriteEventToBuffer(JEventLoop *loop, vector<uint32_t> &buff, vector<const JObject *> objects_to_save) const;
-    void WriteEventToBuffer(JEventLoop *locEventLoop, vector<uint32_t> &buff) const;
+    void WriteEventToBuffer(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff, vector<const JObject *> objects_to_save) const;
+    void WriteEventToBuffer(const std::shared_ptr<const JEvent>& locEvent, vector<uint32_t> &buff) const;
 
     void SetROCsToWriteOut(set<uint32_t> &new_rocs_to_write_out) {
         rocs_to_write_out = new_rocs_to_write_out;
@@ -82,7 +81,7 @@ class DEVIOBufferWriter
   protected:
 
         void WriteBuiltTriggerBank(vector<uint32_t> &buff,
-                                   JEventLoop *loop,
+                                   const std::shared_ptr<const JEvent>& loop,
                                    vector<const DCODAROCInfo*> &coda_rocinfos,
                                    vector<const DCODAEventInfo*> &coda_events) const;
 
@@ -135,17 +134,17 @@ class DEVIOBufferWriter
 
         template<typename T, typename M, typename F>
             void WriteBORSingle(vector<uint32_t> &buff, M m, F&& modFunc) const;
-        void WriteBORData(JEventLoop *loop, vector<uint32_t> &buff) const;
+        void WriteBORData(const std::shared_ptr<const JEvent>& loop, vector<uint32_t> &buff) const;
 
-        void WriteTSSyncData(JEventLoop *loop,
+        void WriteTSSyncData(const std::shared_ptr<const JEvent>& loop,
                              vector<uint32_t> &buff,
                              const DL1Info *l1info) const;
 
-        void WriteDVertexData(JEventLoop *loop,
+        void WriteDVertexData(const std::shared_ptr<const JEvent>& loop,
                               vector<uint32_t> &buff,
                               const DVertex *vertex) const;
 
-        void WriteDEventRFBunchData(JEventLoop *loop, 
+        void WriteDEventRFBunchData(const std::shared_ptr<const JEvent>& loop, 
                                     vector<uint32_t> &buff, 
                                     const DEventRFBunch *rftime) const;
 

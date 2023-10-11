@@ -16,9 +16,9 @@ using namespace std;
 #include <TH1.h>
 #include <TH2.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <PID/DKinematicData.h>
 #include <TRACKING/DReferenceTrajectory.h>
@@ -36,7 +36,6 @@ class DEventProcessor_trkres_tree:public JEventProcessor{
 	public:
 		DEventProcessor_trkres_tree();
 		~DEventProcessor_trkres_tree();
-		const char* className(void){return "DEventProcessor_trackres_tree";}
 
 		trackres *trkres_ptr, trkres;
 		TTree *ttrkres;
@@ -59,11 +58,11 @@ class DEventProcessor_trkres_tree:public JEventProcessor{
 		};
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		
 		const DMCTrajectoryPoint* FindTrajectoryPoint(const DCoordinateSystem *wire, double &radlen, double &s, vector<const DMCTrajectoryPoint*> trajpoints);
 		void GetPtRes(vector<meas_t> &meas, double &deltak, double &pt_res);

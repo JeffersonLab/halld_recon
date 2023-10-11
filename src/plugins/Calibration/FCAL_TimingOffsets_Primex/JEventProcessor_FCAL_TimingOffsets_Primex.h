@@ -9,7 +9,7 @@
 #define _JEventProcessor_FCAL_TimingOffsets_Primex_
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 
 #include "TTree.h"
 #include "TH1.h"
@@ -44,22 +44,24 @@
 #include <thread>
 #include <mutex>
 
-using namespace jana;
 using namespace std;
 
 
 class JEventProcessor_FCAL_TimingOffsets_Primex:public JEventProcessor{
  	public:
-		JEventProcessor_FCAL_TimingOffsets_Primex(){};
+		JEventProcessor_FCAL_TimingOffsets_Primex(){
+			SetTypeName("JEventProcessor_FCAL_TimingOffsets_Primex");
+		};
   		~JEventProcessor_FCAL_TimingOffsets_Primex(){};
-  		const char* className(void){return "JEventProcessor_FCAL_TimingOffsets_Primex";}
-	
+
  	private:
-		jerror_t init(void);
-  		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  		jerror_t erun(void);
-  		jerror_t fini(void);
+		void Init() override;
+  		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  		void Process(const std::shared_ptr<const JEvent>& event) override;
+  		void EndRun() override;
+  		void Finish() override;
+
+  		std::shared_ptr<JLockService> lockService;
 		
 		double bar2x( int bar );
 		int check_TOF_match( const DFCALShower *show, vector< const DTOFPoint* > tof_points, DVector3 vertex );

@@ -12,12 +12,11 @@
 #include <chrono>
 #include <cinttypes>
 
-#include <JANA/jerror.h>
 #include <JANA/JApplication.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
-#include <JANA/JFactory.h>
-#include <JANA/JStreamLog.h>
+#include <JANA/Compatibility/JStreamLog.h>
+#include <JANA/Compatibility/jerror.h>
 
 #include <DAQ/HDEVIO.h>
 #include <DAQ/HDET.h>
@@ -104,7 +103,7 @@
 ///    events are rare.
 ///
 
-class JEventSource_EVIOpp: public jana::JEventSource{
+class JEventSource_EVIOpp: public JEventSource{
 	public:
 
 		enum EVIOSourceType{
@@ -120,7 +119,7 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		};
 
 
-		                    JEventSource_EVIOpp(const char* source_name);
+		                    JEventSource_EVIOpp(std::string source_name);
 		           virtual ~JEventSource_EVIOpp();
 		virtual const char* className(void){return static_className();}
 		 static const char* static_className(void){return "JEventSource_EVIOpp";}
@@ -128,9 +127,9 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		               void Dispatcher(void);
 		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
-		           jerror_t GetEvent(jana::JEvent &event);
-		               void FreeEvent(jana::JEvent &event);
-		           jerror_t GetObjects(jana::JEvent &event, jana::JFactory_base *factory);
+		           void GetEvent(std::shared_ptr<JEvent> event) override;
+		               void FinishEvent(JEvent &event) override;
+		           bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory* factory) override;
 
 		               void LinkBORassociations(DParsedEvent *pe);
 		           uint64_t SearchFileForRunNumber(void);
@@ -144,7 +143,6 @@ class JEventSource_EVIOpp: public jana::JEventSource{
 		               void DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords=0, const uint32_t *imark=NULL);
 
 
-		DApplication *dapp = NULL;
 		bool DONE;
 		bool DISPATCHER_END;
 		std::chrono::high_resolution_clock::time_point tstart;

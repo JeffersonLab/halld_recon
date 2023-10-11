@@ -1,5 +1,4 @@
 #include "JEventProcessor_highlevel_online.h"
-using namespace jana;
 
 #include <DAQ/Df250PulseData.h>
 
@@ -14,15 +13,16 @@ using namespace jana;
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DCODAEventInfo.h>
 #include <DAQ/DEPICSvalue.h>
+#include <DANA/DEvent.h>
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_highlevel_online());
+    app->Add(new JEventProcessor_highlevel_online());
   }
 } // "C"
 
@@ -149,10 +149,13 @@ void JEventProcessor_highlevel_online::FillF1Hist(vector<const T*> hits)
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_highlevel_online::init(void)
+void JEventProcessor_highlevel_online::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	//timing cuts
 	dTimingCutMap[Gamma][SYS_BCAL] = 3.0;
 	dTimingCutMap[Gamma][SYS_FCAL] = 5.0;
@@ -177,7 +180,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	dTimingCutMap[Positron][SYS_BCAL] = 2.5;
 	dTimingCutMap[Positron][SYS_FCAL] = 3.0;
 
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
 	// All histograms go in the "highlevel" directory
 	TDirectory *main = gDirectory;
@@ -349,19 +352,17 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	// back to main dir
 	main->cd();
   
-	japp->RootUnLock();
- 
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_highlevel_online::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	GetCalib(event, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 	dCoherentPeakRange = pair<double, double>(8.4, 9.0);
@@ -378,101 +379,99 @@ jerror_t JEventProcessor_highlevel_online::brun(JEventLoop *locEventLoop, int32_
 	fcal_col_mask_min = 26;
 	fcal_col_mask_max = 32;
 
-	if( runnumber < 11127 )
+	if( event->GetRunNumber() < 11127 )
 	{
 		fcal_row_mask_min = 24;
 		fcal_row_mask_max = 34;
 		fcal_col_mask_min = 24;
 		fcal_col_mask_max = 34;
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_highlevel_online::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	locEvent->Get(locTrackTimeBasedVector);
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	vector<const DPSPair*> locPSPairs;
-	locEventLoop->Get(locPSPairs);
+	locEvent->Get(locPSPairs);
 
 	vector<const DPSCPair*> locPSCPairs;
-	locEventLoop->Get(locPSCPairs);
+	locEvent->Get(locPSCPairs);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	locEvent->Get(locNeutralShowers);
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles, "PreSelect");
+	locEvent->Get(locNeutralParticles, "PreSelect");
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	vector<const DTAGHHit*> locTAGHHits;
-	locEventLoop->Get(locTAGHHits);
+	locEvent->Get(locTAGHHits);
 
 	vector<const DBCALDigiHit*> locBCALDigiHits;
-	locEventLoop->Get(locBCALDigiHits);
+	locEvent->Get(locBCALDigiHits);
         
 	vector<const DCCALDigiHit*> locCCALDigiHits;
-	locEventLoop->Get(locCCALDigiHits);
+	locEvent->Get(locCCALDigiHits);
 
         // BCAL LED Pseudo Trigger//
         vector<const DBCALHit*> locdbcalhits;
-        locEventLoop->Get(locdbcalhits);
+        locEvent->Get(locdbcalhits);
 
         vector<const DBCALPoint*> locdbcalpoints;
-        locEventLoop->Get(locdbcalpoints);
+        locEvent->Get(locdbcalpoints);
 
 	vector<const DFCALDigiHit*> locFCALDigiHits;
-	locEventLoop->Get(locFCALDigiHits);
+	locEvent->Get(locFCALDigiHits);
 
 	const DCODAEventInfo* locCODAEventInfo = NULL;
-	try {locEventLoop->GetSingle(locCODAEventInfo);}catch(...){}
+	try {locEvent->GetSingle(locCODAEventInfo);}catch(...){}
 
 	const DEPICSvalue* locEPICSvalue = NULL;
-	try {locEventLoop->GetSingle(locEPICSvalue);}catch(...){}
+	try {locEvent->GetSingle(locEPICSvalue);}catch(...){}
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 
 	const DVertex* locVertex = NULL;
-	locEventLoop->GetSingle(locVertex);
+	locEvent->GetSingle(locVertex);
 
 	vector<const DL1Trigger*> locL1Triggers;
-	locEventLoop->Get(locL1Triggers);
+	locEvent->Get(locL1Triggers);
 	const DL1Trigger* locL1Trigger = locL1Triggers.empty() ? NULL : locL1Triggers[0];
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, "PreSelect");
+	locEvent->Get(locChargedTracks, "PreSelect");
 
 	// The following declares containers for all types in F1Types
 	// (defined at top of this file) and fills them.
 	#define GetVect(A) \
 		vector<const A*> v##A; \
-		locEventLoop->Get(v##A);
+		locEvent->Get(v##A);
 	#define GetTaggerVect(A) \
 		vector<const A*> v##A; \
-		locEventLoop->Get(v##A,"Calib");
+		locEvent->Get(v##A,"Calib");
 	F1Types(GetVect)		
 	F1TaggerTypes(GetTaggerVect)		
 
@@ -727,7 +726,7 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 
 
 	/*************************************************************** F1 TDC - fADC time ***************************************************************/
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 	// The following fills the dF1TDC_fADC_tdiff histo for
 	// all detectors that use F1TDC modules. See the templates
@@ -844,7 +843,7 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 
 	const DL1Trigger *trig = NULL;
 	try {
-		locEventLoop->GetSingle(trig);
+		locEvent->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
         	if (trig->fp_trig_mask & 0x100){//bit=9
@@ -875,8 +874,8 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
        dHist_L1bits_fp_twelvehundhits->Fill(pseudo_triggerbit);
 	// DON'T DO HIGHER LEVEL PROCESSING FOR FRONT PANEL TRIGGER EVENTS, OR NON-TRIGGER EVENTS
     if(!locL1Trigger || (locL1Trigger && (locL1Trigger->fp_trig_mask>0))) {
-        japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-        return NOERROR;
+        lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+        return;
     }
 
 	/****************************************************** NUM RECONSTRUCTED OBJECTS *****************************************************/
@@ -1142,29 +1141,24 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 	}
 
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_highlevel_online::erun(void)
+void JEventProcessor_highlevel_online::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_highlevel_online::fini(void)
+void JEventProcessor_highlevel_online::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

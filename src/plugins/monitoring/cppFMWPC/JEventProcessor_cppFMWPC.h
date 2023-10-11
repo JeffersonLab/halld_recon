@@ -9,7 +9,7 @@
 #define _JEventProcessor_cppFMWPC_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
+#include <JANA/Compatibility/JLockService.h>
 
 #include <FMWPC/DFMWPCHit.h>
 #include <FDC/DFDCHit.h>
@@ -17,11 +17,10 @@ using namespace jana;
 #include <TH1D.h>
 #include <TH2D.h>
 
-class JEventProcessor_cppFMWPC:public jana::JEventProcessor{
+class JEventProcessor_cppFMWPC:public JEventProcessor{
  public:
   JEventProcessor_cppFMWPC();
   ~JEventProcessor_cppFMWPC();
-  const char* className(void){return "JEventProcessor_cppFMWPC";}
 
   int nFMWPCchambers;
   TH2D *FMWPCwiresT[8];
@@ -41,11 +40,13 @@ class JEventProcessor_cppFMWPC:public jana::JEventProcessor{
   TH2D *h2_V5_vs_V6;
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+    void Init() override;
+    void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+    void Process(const std::shared_ptr<const JEvent>& event) override;
+    void EndRun() override;
+    void Finish() override;
+
+    std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_cppFMWPC_

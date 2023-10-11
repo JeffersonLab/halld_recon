@@ -8,13 +8,10 @@
 #ifndef _DMagneticFieldMapSpoiled_
 #define _DMagneticFieldMapSpoiled_
 
-#include <JANA/jerror.h>
-
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DMagneticFieldMapCalibDB;
 
@@ -51,7 +48,8 @@ class DMagneticFieldMapSpoiled:public DMagneticFieldMap{
 	protected:
 		
 		void Init(void);
-	
+
+		JApplication* app;
 		bool initialized;
 		DMagneticFieldMapCalibDB *bfield;
 		double phi_amp;		///< Amplitude of phi spoiler (fraction of magnitude)

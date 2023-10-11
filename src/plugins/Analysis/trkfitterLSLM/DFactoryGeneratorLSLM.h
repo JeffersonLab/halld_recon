@@ -8,9 +8,7 @@
 #ifndef _DFactoryGeneratorLSLM_
 #define _DFactoryGeneratorLSLM_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
-using namespace jana;
 
 #include "DTrackFitter_factory_LSLM.h"
 
@@ -21,9 +19,8 @@ class DFactoryGeneratorLSLM: public JFactoryGenerator{
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGeneratorLSLM";}
 		
-		jerror_t GenerateFactories(JEventLoop *loop){
-			loop->AddFactory(new DTrackFitter_factory_LSLM());
-			return NOERROR;
+		void GenerateFactories(JFactorySet* fs){
+			fs->Add(new DTrackFitter_factory_LSLM());
 		}
 
 	protected:
