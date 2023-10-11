@@ -10,13 +10,14 @@
 #include "TRIGGER/DL1Trigger.h"
 #include "BCAL/DBCALHit.h"
 #include "DAQ/DL1Info.h"
+#include "DANA/DEvent.h"
 
 // for initializing plugins
 extern "C" {
    void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_trigger_skims(), true);
+		app->Add(new JEventProcessor_trigger_skims());
    }
 } // "extern C"
 
@@ -32,10 +33,11 @@ static bool write_out_ctof = true;
 
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::init(void)
+void JEventProcessor_trigger_skims::Init()
 {
+    auto app = GetApplication();
     int bcal_led_writeout_toggle = 1;
     int fcal_led_writeout_toggle = 1;
     int ccal_led_writeout_toggle = 1;
@@ -71,21 +73,20 @@ jerror_t JEventProcessor_trigger_skims::init(void)
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_trigger_skims::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
     // Get EVIO writer 
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	locEventLoop->GetSingle(locEventWriterEVIO);
+	locEvent->GetSingle(locEventWriterEVIO);
 
     // Save BOR events
     if(locEventLoop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
@@ -108,16 +109,16 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
 	// Save EPICS events
 	vector<const DEPICSvalue*> locEPICSValues;
-	locEventLoop->Get(locEPICSValues);
+	locEvent->Get(locEPICSValues);
 	if(!locEPICSValues.empty()) {
         if (write_out_bcal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "BCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "BCAL-LED");
         if (write_out_ccal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "CCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
         if (write_out_fcal_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "FCAL-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");
         if (write_out_dirc_led)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "DIRC-LED");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "DIRC-LED");
         if (write_out_random)
             locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "random");
         if (write_out_ctof)
@@ -137,7 +138,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
     
 	const DL1Trigger *trig = NULL;
 	try {
-		locEventLoop->GetSingle(trig);
+		locEvent->GetSingle(trig);
 	} catch (...) {}
 
     // parse the triggers we want to save
@@ -192,7 +193,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // Do some backup calculations for runs in which the BCAL LED trigger did not latch correctly
     vector<const DBCALHit *> bcal_hits;
-    locEventLoop->Get(bcal_hits);
+    locEvent->Get(bcal_hits);
     double total_bcal_energy = 0.;
     if(write_out_bcal_led) {
         for(unsigned int i=0; i<bcal_hits.size(); i++) {
@@ -202,7 +203,7 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 
     // if there's a DL1Info object, this extra L1 info means that it's a "sync event"
     vector<const DL1Info*> l1_info;
-    locEventLoop->Get(l1_info);
+    locEvent->Get(l1_info);
     if(l1_info.size() == 1) {
         is_sync_event = true;
     }
@@ -216,22 +217,22 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
     bool save_BCAL_LED_event = is_BCAL_LED_US_trigger || is_BCAL_LED_DS_trigger
       || (bcal_hits.size() >= 1200);// || (total_bcal_energy > 12.); Diabling energy trigger
     if ( write_out_bcal_led && save_BCAL_LED_event ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "BCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "BCAL-LED");
     }
     if ( write_out_ccal_led && is_CCAL_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "CCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "CCAL-LED");
     }
     if ( write_out_fcal_led && is_FCAL_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "FCAL-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "FCAL-LED");
     }
     if ( write_out_dirc_led && is_DIRC_LED_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "DIRC-LED");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "DIRC-LED");
     }
     if ( write_out_random && is_random_trigger ) {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "random");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "random");
     }
     if ( write_out_sync && is_sync_event )  {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "sync");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "sync");
     }
     if ( write_out_ctof && is_ctof_event )  {
       locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "ctof");
@@ -241,18 +242,16 @@ jerror_t JEventProcessor_trigger_skims::evnt(JEventLoop *locEventLoop, uint64_t 
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::erun(void)
+void JEventProcessor_trigger_skims::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_trigger_skims::fini(void)
+void JEventProcessor_trigger_skims::Finish()
 {
-   return NOERROR;
 }
 

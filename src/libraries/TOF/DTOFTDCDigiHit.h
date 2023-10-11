@@ -12,7 +12,6 @@
 #define _DTOFTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 /*! \file DTOFTDCDigiHit.h
  * Container class holding the raw TOF data from CAEN TDCs.
@@ -24,7 +23,7 @@
  * This is a container class holding raw data from TOF CAEN TDC
  * the data from the TDC modules are read and written to this container by the reader/translator code
  */
-class DTOFTDCDigiHit:public jana::JObject{
+class DTOFTDCDigiHit:public JObject{
  public:
   JOBJECT_PUBLIC(DTOFTDCDigiHit);
   
@@ -34,14 +33,14 @@ class DTOFTDCDigiHit:public jana::JObject{
   uint32_t time;  ///< hit time
   
   // This method is used primarily for pretty printing
-  // the second argument to AddString is printf style format
-  ///\fn void toStrings(vector<pair<string,string> > &items)const
+  // the third argument to summary.add is printf style format
+  ///\fn void Summarize(JObjectSummary& summary)const
   /// standard method used by hd_dump to print this container class data.
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "bar", "%d", bar);
-    AddString(items, "plane", "%d", plane);
-    AddString(items, "end", "%d", end);
-    AddString(items, "time", "%d", time);
+  void Summarize(JObjectSummary& summary)const{
+    summary.add(bar, "bar", "%d");
+    summary.add(plane, "plane", "%d");
+    summary.add(end, "end", "%d");
+    summary.add(time, "time", "%d");
   }
   
 };

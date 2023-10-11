@@ -9,7 +9,7 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 #include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
@@ -44,19 +44,19 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_FCAL_invmass()); //register this plugin
+		locApplication->Add(new JEventProcessor_FCAL_invmass()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_invmass::init(void)
+void JEventProcessor_FCAL_invmass::Init()
 {
 
 	if(InvMass1 && InvMass2 != NULL){
-		japp->RootUnLock();
-		return NOERROR;
+		lockService->RootUnLock();
+		return;
 	}
 
 	TDirectory *main = gDirectory;
@@ -90,30 +90,25 @@ jerror_t JEventProcessor_FCAL_invmass::init(void)
 
 	main->cd();
 
-
-	return NOERROR;
 }
 
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_invmass::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void JEventProcessor_FCAL_invmass::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	double z_target; double z_fcal;
-	const DGeometry* dgeom = locApplication->GetDGeometry(locRunNumber);
+	const DGeometry* dgeom = GetDGeometry(event);
 
 	dgeom->GetTargetZ(z_target);
 	dgeom->GetFCALZ(z_fcal);
 
 	z_diff = z_fcal - z_target;
-
-	return NOERROR;
 }
 
-jerror_t JEventProcessor_FCAL_invmass::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_FCAL_invmass::Process(const std::shared_ptr<const JEvent> &event)
 {
 	map< const DFCALShower*, double > showerQualityMap;
 	vector< const DNeutralShower* > neutralShowers;	
@@ -123,14 +118,14 @@ jerror_t JEventProcessor_FCAL_invmass::evnt(jana::JEventLoop* locEventLoop, uint
 	vector< const DVertex* > kinfitVertex;
 	vector< const DTrackTimeBased* > locTrackTimeBased;
 
-	locEventLoop->Get( hits );
+	event->Get( hits );
 
 	if( hits.size() <= 500 ){ // only form clusters and showers if there aren't too many hits
 
-		locEventLoop->Get(locFCALShowers);
-		locEventLoop->Get(kinfitVertex);
-		locEventLoop->Get(locTrackTimeBased);
-		locEventLoop->Get( neutralShowers );
+		event->Get(locFCALShowers);
+		event->Get(kinfitVertex);
+		event->Get(locTrackTimeBased);
+		event->Get( neutralShowers );
 	}
 
 	for( size_t i = 0; i < neutralShowers.size(); ++i ){
@@ -186,8 +181,8 @@ jerror_t JEventProcessor_FCAL_invmass::evnt(jana::JEventLoop* locEventLoop, uint
 		}
 	}
 
-	// japp->RootWriteLock();
-	japp->RootFillLock(this); 
+	// lockService->RootWriteLock();
+	lockService->RootWriteLock(); 
 	if (locFCALShowers.size() >=2) {
 
 		for(unsigned int i=0; i<locFCALShowers.size(); i++)
@@ -297,34 +292,29 @@ jerror_t JEventProcessor_FCAL_invmass::evnt(jana::JEventLoop* locEventLoop, uint
 			}
 		}
 	}
-	//japp->RootUnLock();
+	//lockService->RootUnLock();
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_invmass::erun(void)
+void JEventProcessor_FCAL_invmass::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_invmass::fini(void)
+void JEventProcessor_FCAL_invmass::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
 

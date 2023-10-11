@@ -6,12 +6,8 @@
 //
 
 #include "JEventProcessor_PSC_TW.h"
-using namespace jana;
 
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
-// ROOT header fiels
+// ROOT header files
 #include <TH2.h>
 #include <TDirectory.h>
 // RF header files
@@ -56,7 +52,7 @@ DRFTime_factory* locRFTimeFactory;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_PSC_TW());
+	app->Add(new JEventProcessor_PSC_TW());
 }
 } // "C"
 
@@ -66,7 +62,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_PSC_TW::JEventProcessor_PSC_TW()
 {
-
+	SetTypeName("JEventProcessor_PSC_TW");
 }
 
 //------------------
@@ -78,16 +74,19 @@ JEventProcessor_PSC_TW::~JEventProcessor_PSC_TW()
 }
 
 //------------------
-// init //------------------
-jerror_t JEventProcessor_PSC_TW::init(void)
+// Init //------------------
+void JEventProcessor_PSC_TW::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
 
    TDirectory *main = gDirectory;
@@ -126,61 +125,59 @@ jerror_t JEventProcessor_PSC_TW::init(void)
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PSC_TW::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PSC_TW::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
   
   //////////////
   // Initialize RF time factory
-  locRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+  locRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
   
   // be sure that DRFTime_factory::init() and brun() are called
   vector<const DRFTime*> locRFTimes;
-  eventLoop->Get(locRFTimes);
-  
-  return NOERROR;
+  event->Get(locRFTimes);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PSC_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PSC_TW::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 
    vector<const DRFTime*>	locRFTimes;
    vector<const DPSCPair*>	pairs;
 
-   loop->Get(pairs);
-   loop->Get(locRFTimes,"PSC");
+   event->Get(pairs);
+   event->Get(locRFTimes,"PSC");
 
    const DRFTime* locRFTime = NULL;
 
    if (locRFTimes.size() > 0)
       locRFTime = locRFTimes[0];
    else
-      return NOERROR;
+      return;
 
 
    // Since we are filling histograms local to this plugin, 
    // it will not interfere with other ROOT operations:
    // can use plugin-wide ROOT fill lock
-   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
    for (uint32_t i = 0; i < pairs.size(); ++i)
    {
@@ -207,27 +204,23 @@ jerror_t JEventProcessor_PSC_TW::evnt(JEventLoop *loop, uint64_t eventnumber)
       h_dt_vs_pp_t_r[psc_mod_r - 1]->Fill(pp_r, t_r - rf_r);
    }
 
-   japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-   return NOERROR;
+   lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PSC_TW::erun(void)
+void JEventProcessor_PSC_TW::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PSC_TW::fini(void)
+void JEventProcessor_PSC_TW::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }

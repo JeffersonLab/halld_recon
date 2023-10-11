@@ -11,8 +11,6 @@
 using namespace std;
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 ///
 /// class DFDCHit: definition for a basic FDC hit data type.
@@ -47,21 +45,21 @@ class DFDCHit : public JObject{
 	    int itrack;                         // track number causing the hit
 	    int ptype;                          // particle type causing the hit
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "layer",  "%d",      layer);
-			AddString(items, "module", "%d",      module);
-			AddString(items, "w/s #",  "%d",      element);
-			AddString(items, "plane",  "%s",      plane==1 ? "V":(plane==2 ? "X":"U"));
-			AddString(items, "gPlane", "%d",      gPlane);
-			AddString(items, "gLayer", "%d",      gLayer);
-			AddString(items, "q",      "%10.2f",  q);
-			AddString(items, "pulse height","%10.2f", pulse_height);
-			AddString(items, "t",      "%10.2f",      t);
-			AddString(items, "r",      "%10.2f",      r);
-			AddString(items, "d",      "%f",      d);
-			AddString(items, "type",   "%d",      type);
-			AddString(items, "itrack", "%d",      itrack);
-			AddString(items, "ptype",  "%d",      ptype);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(layer, "layer", "%d");
+			summary.add(module, "module", "%d");
+			summary.add(element, "w/s #", "%d");
+			summary.add(plane==1 ? "V":(plane==2 ? "X":"U"), "plane", "%s");
+			summary.add(gPlane, "gPlane", "%d");
+			summary.add(gLayer, "gLayer", "%d");
+			summary.add(q, "q", "%10.2f");
+			summary.add(pulse_height, "pulse height", "%10.2f");
+			summary.add(t, "t", "%10.2f");
+			summary.add(r, "r", "%10.2f");
+			summary.add(d, "d", "%f");
+			summary.add(type, "type", "%d");
+			summary.add(itrack, "itrack", "%d");
+			summary.add(ptype, "ptype", "%d");
 		}
 	    	
 };

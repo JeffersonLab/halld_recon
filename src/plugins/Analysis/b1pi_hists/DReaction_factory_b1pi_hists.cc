@@ -3,9 +3,9 @@
 #include "DCustomAction_HistMass_X_2000.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_b1pi_hists::init(void)
+void DReaction_factory_b1pi_hists::Init()
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep;
@@ -87,42 +87,37 @@ jerror_t DReaction_factory_b1pi_hists::init(void)
 	locReaction->Add_AnalysisAction(new DCustomAction_HistMass_b1_1235(locReaction, true)); //true: kinfit data
 	locReaction->Add_AnalysisAction(new DCustomAction_HistMass_X_2000(locReaction, true)); //true: kinfit data
 
-	_data.push_back(locReaction); //Register the DReaction
+	Insert(locReaction); //Register the DReaction
 
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_b1pi_hists::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DReaction_factory_b1pi_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_b1pi_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DReaction_factory_b1pi_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DReaction_factory_b1pi_hists::erun(void)
+void DReaction_factory_b1pi_hists::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_b1pi_hists::fini(void)
+void DReaction_factory_b1pi_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i];
-	return NOERROR;
 }
 

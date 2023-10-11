@@ -7,7 +7,6 @@
 #include <PID/DKinematicData.h>
 
 using namespace std;
-using namespace jana;
 
 class DTrackingData : public DKinematicData
 {

@@ -8,21 +8,22 @@
 #ifndef _DChargedTrack_factory_PreSelect_
 #define _DChargedTrack_factory_PreSelect_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DChargedTrack.h>
 #include <PID/DChargedTrackHypothesis.h>
 #include <TRACKING/DTrackTimeBased.h>
 #include "DResourcePool.h"
 
 using namespace std;
-using namespace jana;
 
-class DChargedTrack_factory_PreSelect : public jana::JFactory<DChargedTrack>
+
+class DChargedTrack_factory_PreSelect : public JFactoryT<DChargedTrack>
 {
 	public:
-		DChargedTrack_factory_PreSelect(){};
+		DChargedTrack_factory_PreSelect(){
+			SetTag("PreSelect");
+		};
 		~DChargedTrack_factory_PreSelect(){};
-		const char* Tag(void){return "PreSelect";}
 
 		void Recycle_Hypotheses(vector<DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
 		void Recycle_Hypotheses(vector<const DChargedTrack*>& locHypos){dResourcePool_ChargedTrack->Recycle(locHypos);}
@@ -41,11 +42,11 @@ class DChargedTrack_factory_PreSelect : public jana::JFactory<DChargedTrack>
 		vector<DChargedTrack*> dCreated;
 		DResourcePool<DChargedTrack>* dResourcePool_ChargedTrack = nullptr;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		bool Cut_HasDetectorMatch(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DDetectorMatches* locDetectorMatches) const;
 		bool Cut_TrackingFOM(const DChargedTrackHypothesis* locChargedTrackHypothesis) const;

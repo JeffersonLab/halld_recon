@@ -11,9 +11,9 @@
 #include <TDirectory.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEvent.h>
+#include <JANA/Compatibility/JLockService.h>
 
-class JEventProcessor_DAQ_online:public jana::JEventProcessor{
+class JEventProcessor_DAQ_online:public JEventProcessor{
 	public:
 
 		enum EVIOWordType{
@@ -120,13 +120,12 @@ class JEventProcessor_DAQ_online:public jana::JEventProcessor{
 
 		JEventProcessor_DAQ_online();
 		~JEventProcessor_DAQ_online();
-		const char* className(void){return "JEventProcessor_DAQ_online";}
 
 		TDirectory *maindir;
 		TDirectory *daqdir;
 		
-		void AddROCIDLabels(jana::JEventLoop *loop);
-		void ParseEventSize(jana::JEvent &event);
+		void AddROCIDLabels(const std::shared_ptr<const JEvent>& loop);
+		void ParseEventSize(const std::shared_ptr<const JEvent>& event);
 		void DataWordStats(uint32_t *iptr, uint32_t *iend, uint32_t *word_stats);
 
 		void ParseJLabModuleData(uint32_t rocid, uint32_t *&iptr, uint32_t *iend, uint32_t *word_stats);
@@ -138,11 +137,13 @@ class JEventProcessor_DAQ_online:public jana::JEventProcessor{
 		void ParseModuleConfiguration(uint32_t rocid, uint32_t *&iptr, uint32_t *iend, uint32_t *word_stats);
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_DAQ_online_

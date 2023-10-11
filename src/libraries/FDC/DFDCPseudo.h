@@ -9,7 +9,7 @@
 #define DFDCPSEUDO_H
 
 #include <JANA/JObject.h>
-using namespace jana;
+#include <JANA/Compatibility/jerror.h>
 
 #include "DFDCWire.h"
 #include "DFDCCathodeCluster.h"
@@ -70,7 +70,7 @@ enum FDCPseudoD {
 
 ///
 /// class DFDCPseudo: definition for a reconstructed point in the FDC
-/// 
+///
 class DFDCPseudo : public JObject {
    public :
       JOBJECT_PUBLIC(DFDCPseudo);			/// DANA identifier
@@ -99,23 +99,23 @@ class DFDCPseudo : public JObject {
       int itrack;
       DVector2 xy; ///< rough x,y coordinates in lab coordinate system
 
-      void toStrings(vector<pair<string,string> > &items)const{ 
-         AddString(items,"u","%3.2f",u);
-         AddString(items,"v","%3.2f",v);
-         AddString(items,"t_u","%3.2f",t_u);
-         AddString(items,"t_v","%3.2f",t_v);
-         AddString(items,"phi_u","%3.2f",phi_u);
-         AddString(items,"phi_v","%3.2f",phi_v);
-         AddString(items, "w", "%3.4f", w);
-         AddString(items, "w_c", "%3.4f", w_c);
-         AddString(items, "s", "%3.4f", s);
-         AddString(items, "layer", "%d", wire->layer);
-         AddString(items, "wire", "%d", wire->wire);
-         AddString(items, "time", "%3.1f", time);
-         AddString(items, "status", "%d", status);
-         AddString(items, "x", "%.4f", xy.X());
-         AddString(items, "y", "%.4f", xy.Y());
-         AddString(items, "dE", "%3.1f", dE);
+      void Summarize(JObjectSummary& summary) const override {
+         summary.add(u, "u", "%3.2f");
+         summary.add(v, "v", "%3.2f");
+         summary.add(t_u, "t_u", "%3.2f");
+         summary.add(t_v, "t_v", "%3.2f");
+         summary.add(phi_u, "phi_u", "%3.2f");
+         summary.add(phi_v, "phi_v", "%3.2f");
+         summary.add(w, "w", "%3.4f");
+         summary.add(w_c, "w_c", "%3.4f");
+         summary.add(s, "s", "%3.4f");
+         summary.add(wire->layer, "layer", "%d");
+         summary.add(wire->wire, "wire", "%d");
+         summary.add(time, "time", "%3.1f");
+         summary.add(status, "status", "%d");
+         summary.add(xy.X(), "x", "%.4f");
+         summary.add(xy.Y(), "y", "%.4f");
+         summary.add(dE, "dE", "%3.1f");
       }
 
       // For alignment purposes the residuals wrt the alignment parameters are needed.
@@ -196,9 +196,9 @@ class DFDCPseudo : public JObject {
          FindCentroid(cluster_v.N+deltaVectV2, cluster_v.X, positionShifted);
          derivatives.push_back((positionShifted-positionNominal)/delta);
 
-         //jout << " New Hit" << endl;
+         //jout << " New Hit" << jendl;
          //for (size_t i=0 ; i < derivatives.size(); i++){
-         //   jout << "i " << i << " der " << derivatives[i] << endl;
+         //   jout << "i " << i << " der " << derivatives[i] << jendl;
          //}
 
          return derivatives;

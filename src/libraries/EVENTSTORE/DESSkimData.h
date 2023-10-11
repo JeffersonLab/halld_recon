@@ -8,10 +8,7 @@
 #ifndef _DESSkimData_
 #define _DESSkimData_
 
-#include <JANA/JFactory.h>
 #include <JANA/JObject.h>
-#include <JANA/JEvent.h>
-using namespace jana;
 
 #include <vector>
 #include <set>

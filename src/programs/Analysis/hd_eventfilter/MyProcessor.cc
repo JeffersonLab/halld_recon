@@ -17,25 +17,27 @@ using namespace std;
 #include <TRIGGER/DMCTrigger.h>
 
 //------------------------------------------------------------------
-// init   -Open output file here (e.g. a ROOT file)
+// Init   -Open output file here (e.g. a ROOT file)
 //------------------------------------------------------------------
-jerror_t MyProcessor::init(void)
+void MyProcessor::Init()
 {
    // open HDDM file
    filename = "filtered.hddm";
    ofs = new ofstream(filename.c_str());
    if (!ofs->is_open()) {
       fout = 0;
-      return UNRECOVERABLE_ERROR;
+      throw JException("Unable to open output file 'filtered.hddm'");
    }
    fout = new hddm_s::ostream(*ofs);
 
+   auto app = GetApplication();
+
    HDDM_USE_COMPRESSION = false;
-   gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION,
+   app->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION,
                           "Turn on/off compression of the output HDDM stream."
                           " Set to \"1\" to turn on (it's off by default)");
    HDDM_USE_INTEGRITY_CHECKS = false;
-   gPARMS->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS",
+   app->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS",
                                 HDDM_USE_INTEGRITY_CHECKS,
                           "Turn on/off automatic integrity checking on the"
                           " output HDDM stream."
@@ -62,25 +64,24 @@ jerror_t MyProcessor::init(void)
    }
 
    Nevents_written = 0;
-
-   return NOERROR;
 }
 
 //------------------------------------------------------------------
-// evnt   -Fill histograms here
+// Process   -Fill histograms here
 //------------------------------------------------------------------
-jerror_t MyProcessor::evnt(JEventLoop *loop, uint64_t eventnumber)
+void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 {
-   JEvent& event = loop->GetJEvent();
-   JEventSource *source = event.GetJEventSource();
+   JEventSource *source = event->GetJEventSource();
    DEventSourceHDDM *hddm_source = dynamic_cast<DEventSourceHDDM*>(source);
    if (!hddm_source) {
       cerr << " This program MUST be used with an HDDM file as input!" << endl;
       exit(-1);
    }
-   hddm_s::HDDM *hddm = (hddm_s::HDDM*)event.GetRef();
+   auto hddmc = event->GetSingle<hddm_s::HDDM>();
+   hddm_s::HDDM *hddm = const_cast<hddm_s::HDDM*>(hddmc);
+   // TODO: NWB: I just don't like const casts
    if (!hddm)
-      return NOERROR;
+      return;
    
    
    // Initialize write_out flag. We set this to true to write the event
@@ -97,10 +98,10 @@ jerror_t MyProcessor::evnt(JEventLoop *loop, uint64_t eventnumber)
    //---------------------- Filter Code Start ----------------------
    // Get data
    vector<const DMCThrown*> mcthrowns;
-   loop->Get(mcthrowns);
+   event->Get(mcthrowns);
    
    vector<const DMCTrigger*> triggers;
-   loop->Get(triggers);
+   event->Get(triggers);
 
    // Loop over thrown tracks
    for (unsigned int i=0; i < mcthrowns.size(); i++) {
@@ -142,14 +143,12 @@ jerror_t MyProcessor::evnt(JEventLoop *loop, uint64_t eventnumber)
    else {
       hddm->clear();
    }
-   
-   return NOERROR;
 }
 
 //------------------------------------------------------------------
-// fini   -Close output file here
+// Finish   -Close output file here
 //------------------------------------------------------------------
-jerror_t MyProcessor::fini(void)
+void MyProcessor::Finish()
 {
    if (fout) {
       delete fout;
@@ -161,6 +160,4 @@ jerror_t MyProcessor::fini(void)
       cout << endl << "Closed HDDM output file" << endl;
    }
    cout << " " << Nevents_written << " events written to " << filename << endl;
-   
-   return NOERROR;
 }

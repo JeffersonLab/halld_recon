@@ -9,7 +9,6 @@
 #define _DEventProcessor_bcal_hists_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
 
 #include <TFile.h>
 #include <TH1.h>
@@ -17,16 +16,17 @@ using namespace jana;
 
 class DEventProcessor_bcal_hists:public JEventProcessor{
 	public:
-		DEventProcessor_bcal_hists(){};
+		DEventProcessor_bcal_hists(){
+			SetTypeName("DEventProcessor_bcal_hists");
+		};
 		~DEventProcessor_bcal_hists(){};
-		const char* className(void){return "DEventProcessor_bcal_hists";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		
 		TH1F* two_gamma_mass, *two_gamma_mass_corr, *two_gamma_mass_cut;
 		TH1F* bcal_fcal_two_gamma_mass, *bcal_fcal_two_gamma_mass_cut;

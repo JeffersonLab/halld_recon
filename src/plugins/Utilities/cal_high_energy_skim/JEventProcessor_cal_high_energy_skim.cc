@@ -40,7 +40,7 @@
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_cal_high_energy_skim());
+    app->Add(new JEventProcessor_cal_high_energy_skim());
   }
 } // "C"
 
@@ -50,6 +50,7 @@ extern "C"{
 //------------------
 JEventProcessor_cal_high_energy_skim::JEventProcessor_cal_high_energy_skim()
 {
+  SetTypeName("JEventProcessor_cal_high_energy_skim");
 
   MIN_BCAL_E = 2.;
   MIN_FCAL_E = 5.;
@@ -78,67 +79,79 @@ JEventProcessor_cal_high_energy_skim::~JEventProcessor_cal_high_energy_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cal_high_energy_skim::init(void)
+void JEventProcessor_cal_high_energy_skim::Init()
 {
-	h_FCAL_shen = new TH1F("FCAL_cluster_energy", "FCAL Cluster Energy; E(cluster), Gev; Counts", 120, 0, 12.);
-	h_BCAL_shen = new TH1F("BCAL_shower_energy", "BCAL Shower Energy; E(shower), Gev; Counts", 120, 0, 6.);
+  auto app = GetApplication();
 
-	return NOERROR;
+  MIN_BCAL_E = 2.;
+  MIN_FCAL_E = 5.;
+
+  //WRITE_EVIO = 1;
+  MAKE_DIAGNOSTICS = 0;   // only save ROOT histograms if we need to
+
+  //app->SetDefaultParameter("CALHIGHENERGY:WRITE_EVIO", WRITE_EVIO );
+  app->SetDefaultParameter("CALHIGHENERGY:DIAGNOSTICS", MAKE_DIAGNOSTICS );
+  app->SetDefaultParameter("CALHIGHENERGY:MIN_BCAL_E" , MIN_BCAL_E );
+  app->SetDefaultParameter("CALHIGHENERGY:MIN_FCAL_E" , MIN_FCAL_E );
+
+  num_epics_events = 0;
+
+  h_FCAL_shen = new TH1F("FCAL_cluster_energy", "FCAL Cluster Energy; E(cluster), Gev; Counts", 120, 0, 12.);
+  h_BCAL_shen = new TH1F("BCAL_shower_energy", "BCAL Shower Energy; E(shower), Gev; Counts", 120, 0, 6.);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cal_high_energy_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cal_high_energy_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cal_high_energy_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cal_high_energy_skim::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector< const DBCALShower* > locBCALShowers;
   vector< const DFCALShower* > locFCALShowers;
   vector< const DFCALCluster* > locFCALClusters;
   //vector< const DTrackTimeBased*> locTrackTimeBased;
-  //loop->Get(locTrackTimeBased);
+  //event->Get(locTrackTimeBased);
   //vector<const DVertex*> kinfitVertex;
-  //loop->Get(kinfitVertex);
+  //event->Get(kinfitVertex);
 
-  // initialization
+  // Initialization
   bool to_save_event = false;
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
   
   // always write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
 	  //jout << "Found BOR!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cal_high_energy_skim" );
-	  return NOERROR;
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cal_high_energy_skim" );
+	  return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
 	  //jout << "Found EPICS!" << endl;
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cal_high_energy_skim" );
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cal_high_energy_skim" );
 	  num_epics_events++;
-	  return NOERROR;
+	  return;
   }
   
   // only look at potential physics events
   const DTrigger* locTrigger = NULL;
-  loop->GetSingle(locTrigger);
+  event->GetSingle(locTrigger);
   if(!locTrigger->Get_IsPhysicsEvent())
-	  return NOERROR;
+	  return;
   
   // Check to see if we have a high energy BCAL shower
-  loop->Get(locBCALShowers);
+  event->Get(locBCALShowers);
 
-  if(MAKE_DIAGNOSTICS) japp->RootWriteLock();
+  if(MAKE_DIAGNOSTICS) lockService->RootWriteLock();
   for(unsigned int j = 0; j < locBCALShowers.size(); ++j) {
 	  
 	  if(MAKE_DIAGNOSTICS) h_BCAL_shen->Fill( locBCALShowers[j]->E_raw );
@@ -149,14 +162,14 @@ jerror_t JEventProcessor_cal_high_energy_skim::evnt(JEventLoop *loop, uint64_t e
 	  if(to_save_event)
 		  break;
   }
-  if(MAKE_DIAGNOSTICS) japp->RootUnLock();
+  if(MAKE_DIAGNOSTICS) lockService->RootUnLock();
 
 
   // if we aren't already going to save these events, save ones with a high energy FCAL shower
   if(!to_save_event || MAKE_DIAGNOSTICS) {
 
-	  loop->Get(locFCALClusters);
-	  if(MAKE_DIAGNOSTICS) japp->RootWriteLock();
+	  event->Get(locFCALClusters);
+	  if(MAKE_DIAGNOSTICS) lockService->RootWriteLock();
 	  for(unsigned int j = 0; j < locFCALClusters.size(); ++j) {
 
 		  if(MAKE_DIAGNOSTICS) h_FCAL_shen->Fill( locFCALClusters[j]->getEnergy() );
@@ -167,7 +180,7 @@ jerror_t JEventProcessor_cal_high_energy_skim::evnt(JEventLoop *loop, uint64_t e
 		  if(to_save_event)
 			  break;
 	  }
-	  if(MAKE_DIAGNOSTICS) japp->RootUnLock();
+	  if(MAKE_DIAGNOSTICS) lockService->RootUnLock();
   }
 
   // calculate the total calorimeter energy
@@ -191,30 +204,25 @@ jerror_t JEventProcessor_cal_high_energy_skim::evnt(JEventLoop *loop, uint64_t e
       to_save_event = true;
 
   if(to_save_event) {
-	  locEventWriterEVIO->Write_EVIOEvent( loop, "cal_high_energy_skim" );
+	  locEventWriterEVIO->Write_EVIOEvent( event, "cal_high_energy_skim" );
   }
-  
-  
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cal_high_energy_skim::erun(void)
+void JEventProcessor_cal_high_energy_skim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_cal_high_energy_skim::fini(void)
+void JEventProcessor_cal_high_energy_skim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

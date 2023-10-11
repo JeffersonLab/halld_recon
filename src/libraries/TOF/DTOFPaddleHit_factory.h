@@ -16,13 +16,10 @@
 #ifndef _DTOFPaddleHit_factory_
 #define _DTOFPaddleHit_factory_
 
-#include "JANA/JFactory.h"
-#include "JANA/JApplication.h"
-#include "JANA/JParameterManager.h"
-#include "JANA/JEventLoop.h"
+#include <JANA/JFactoryT.h>
 #include "DTOFPaddleHit.h"
 #include "TMath.h"
-using namespace jana;
+
 
 ///
 /// \file DTOFPaddleHit_factory.h 
@@ -31,9 +28,9 @@ using namespace jana;
 /// The individual hits from either side come from DTOFHit objects.
 
 
-class DTOFPaddleHit_factory:public JFactory<DTOFPaddleHit>{
+class DTOFPaddleHit_factory:public JFactoryT<DTOFPaddleHit>{
  public:
-  DTOFPaddleHit_factory(){TOF_POINT_TAG="";gPARMS->SetDefaultParameter("TOF:TOF_POINT_TAG", TOF_POINT_TAG,"");};
+  DTOFPaddleHit_factory(){};
   ~DTOFPaddleHit_factory(){};
   
   string TOF_POINT_TAG; ///< JFactory tag for TOF Paddle Hit factory: command line -PTOF:TOF_POINT_TAG=XXX
@@ -53,11 +50,11 @@ class DTOFPaddleHit_factory:public JFactory<DTOFPaddleHit>{
 
 
  protected:
-  //jerror_t init(void);					///< Called once at program start.
-  jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	        ///< Called everytime a new run number is detected.
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  //jerror_t erun(void);					///< Called everytime run number changes, provided brun has been called.
-  //jerror_t fini(void);					///< Called after last event of last event source has been processed.
+  // void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  //void EndRun() override;
+  //void Finish() override;
 };
 
 #endif // _DTOFPaddleHit_factory_

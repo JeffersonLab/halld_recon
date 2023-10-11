@@ -7,21 +7,21 @@
 
 #include "DCustomAction_p2pi_unusedHists.h"
 
-void DCustomAction_p2pi_unusedHists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_unusedHists::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 
 	// get PID algos
 	const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
+        locEvent->GetSingle(locParticleID);
 	dParticleID = locParticleID;
 
 	vector<const DFCALGeometry*> locFCALGeometry;
-	locEventLoop->Get(locFCALGeometry);
+	locEvent->Get(locFCALGeometry);
 	dFCALGeometry = locFCALGeometry[0];
 	
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -245,10 +245,10 @@ void DCustomAction_p2pi_unusedHists::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_p2pi_unusedHists::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2pi_unusedHists::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	
 	// should only have one reaction step
@@ -269,23 +269,23 @@ bool DCustomAction_p2pi_unusedHists::Perform_Action(JEventLoop* locEventLoop, co
 
 	// detector matches for charged track -to- shower matching
 	const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 
 	// thrown particles for track resolution
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-        locEventLoop->Get(locMCThrownMatchingVector);
+        locEvent->Get(locMCThrownMatchingVector);
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	// get all charged tracks and showers for comparison to combo (no "pre-select" cut here)
         vector<const DChargedTrack*> locChargedTracks;
-        locEventLoop->Get(locChargedTracks); //, "PreSelect"); 
+        locEvent->Get(locChargedTracks); //, "PreSelect"); 
 	vector<const DNeutralShower*> locNeutralShowers;
-        locEventLoop->Get(locNeutralShowers); //, "PreSelect"); 
+        locEvent->Get(locNeutralShowers); //, "PreSelect"); 
 	vector<const DFCALShower*> locFCALShowers;
-        locEventLoop->Get(locFCALShowers); 
+        locEvent->Get(locFCALShowers); 
 	vector<const DBCALShower*> locBCALShowers;
-        locEventLoop->Get(locBCALShowers); 
+        locEvent->Get(locBCALShowers); 
 
         vector<const DChargedTrack*> locUnusedChargedTracks;
 	vector<const DNeutralShower*> locUnusedNeutralShowers;
@@ -308,14 +308,14 @@ bool DCustomAction_p2pi_unusedHists::Perform_Action(JEventLoop* locEventLoop, co
                         const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_BestFOM();
 			if(locChargedTracks[loc_j]->Get_BestFOM()->candidateid == locChargedTrackHypothesis->candidateid) {
                                 nMatched++;
-				FillTrack(locEventLoop, locChargedTracks[loc_j], true, locMCThrown);
+				FillTrack(locEvent, locChargedTracks[loc_j], true, locMCThrown);
 			}
                 }
 		
 		// plot properties of unused charged tracks
                 if(nMatched==0) {
 			locUnusedChargedTracks.push_back(locChargedTracks[loc_j]);
-			FillTrack(locEventLoop, locChargedTracks[loc_j], false, locMCThrown);
+			FillTrack(locEvent, locChargedTracks[loc_j], false, locMCThrown);
 		}
         }
 
@@ -476,7 +476,7 @@ bool DCustomAction_p2pi_unusedHists::Perform_Action(JEventLoop* locEventLoop, co
 }
 
 
-void DCustomAction_p2pi_unusedHists::FillTrack(JEventLoop* locEventLoop, const DChargedTrack* locChargedTrack, bool locMatch, const DMCThrown* locMCThrown)
+void DCustomAction_p2pi_unusedHists::FillTrack(const std::shared_ptr<const JEvent>& locEvent, const DChargedTrack* locChargedTrack, bool locMatch, const DMCThrown* locMCThrown)
 {
 
 	const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTrack->Get_BestFOM();
@@ -559,7 +559,7 @@ void DCustomAction_p2pi_unusedHists::FillTrack(JEventLoop* locEventLoop, const D
         double dEdx = locTrackTimeBased->dEdx()*1e6;
 
 	vector<const DFCALHit*> fcalhits;
-        locEventLoop->Get(fcalhits);
+        locEvent->Get(fcalhits);
 	if(fcalhits.empty()) return;
 
 	if (locTrackTimeBased->rt->GetIntersectionWithPlane(fcal_origin,fcal_normal,trkpos,proj_mom,NULL,NULL,NULL,SYS_FCAL)==NOERROR){
@@ -685,7 +685,7 @@ void DCustomAction_p2pi_unusedHists::FillShower(const DNeutralShower* locNeutral
 	if(locSystem == SYS_FCAL) {
 			
 		const DFCALShower* locFCALShower = NULL;
-		locNeutralShower->GetSingleT(locFCALShower);
+		locNeutralShower->GetSingle(locFCALShower);
 
 		vector<const DFCALCluster*> locFCALClusters;
 		locFCALShower->Get(locFCALClusters);
@@ -707,7 +707,7 @@ void DCustomAction_p2pi_unusedHists::FillShower(const DNeutralShower* locNeutral
 	if(locSystem == SYS_BCAL) {
 
 		const DBCALShower* locBCALShower = NULL;
-		locNeutralShower->GetSingleT(locBCALShower);
+		locNeutralShower->GetSingle(locBCALShower);
 		
 		//FILL HISTOGRAMS
 		//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock

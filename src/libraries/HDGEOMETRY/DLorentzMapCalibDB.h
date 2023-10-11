@@ -4,8 +4,7 @@
 #include "DLorentzDeflections.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
 
 class DLorentzMapCalibDB:public DLorentzDeflections{
  public:

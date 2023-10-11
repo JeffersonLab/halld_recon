@@ -5,7 +5,7 @@
 // Creator: sdobbs (on Linux ifarm1102 2.6.32-220.7.1.el6.x86_64 x86_64)
 //
 
-#include <DEPICSstore.h>
+#include "DEPICSstore.h"
 
 //----------------
 // GetValue

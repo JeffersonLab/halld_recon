@@ -12,7 +12,7 @@
 #include <iomanip>
 #include <memory>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DDetectorMatches.h>
 #include <TRACKING/DTrackWireBased.h>
 #include <PID/DParticleID.h>
@@ -22,22 +22,23 @@
 #include <TMath.h>
 
 using namespace std;
-using namespace jana;
 
-class DDetectorMatches_factory_WireBased : public jana::JFactory<DDetectorMatches>
+
+class DDetectorMatches_factory_WireBased : public JFactoryT<DDetectorMatches>
 {
 	public:
-		DDetectorMatches_factory_WireBased(){};
+		DDetectorMatches_factory_WireBased(){
+			SetTag("WireBased");
+		};
 		virtual ~DDetectorMatches_factory_WireBased(){};
-		const char* Tag(void){return "WireBased";}
 
 		//called by DDetectorMatches tag=Combo factory
-		DDetectorMatches* Create_DDetectorMatches(jana::JEventLoop* locEventLoop, vector<const DTrackWireBased*>& locTrackWireBasedVector);
+		DDetectorMatches* Create_DDetectorMatches(const std::shared_ptr<const JEvent>& event, vector<const DTrackWireBased*>& locTrackWireBasedVector);
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 		//matching tracks to hits/showers routines
 		void MatchToTOF(const DParticleID* locParticleID, const DTrackWireBased* locTrackWireBased, const vector<const DTOFPoint*>& locTOFPoints, DDetectorMatches* locDetectorMatches) const;

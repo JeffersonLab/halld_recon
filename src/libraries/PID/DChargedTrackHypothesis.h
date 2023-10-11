@@ -26,8 +26,8 @@ class DChargedTrackHypothesis : public DKinematicData
 		DChargedTrackHypothesis(const DTrackTimeBased* locSourceData);
 		DChargedTrackHypothesis& operator=(const DChargedTrackHypothesis& locSourceData);
 
-		void Reset(void);
-		void Release(void);
+		void Reset(void) override;
+		void Release(void) override;
 
 		//SHARE RESOURCES
 		void Share_FromInput(const DChargedTrackHypothesis* locSourceData, bool locShareTrackingFlag, bool locShareTimingFlag, bool locShareEOverPFlag, bool locShareKinematicsFlag);
@@ -96,16 +96,16 @@ class DChargedTrackHypothesis : public DKinematicData
 		void Set_CTOFHitMatchParams(shared_ptr<const DCTOFHitMatchParams> locMatchParams){dTrackingInfo->dCTOFHitMatchParams = locMatchParams;}
 		void Set_FMWPCMatchParams(shared_ptr<const DFMWPCMatchParams> locMatchParams){dTrackingInfo->dFMWPCMatchParams = locMatchParams;}
 
-		void toStrings(vector<pair<string,string> > &items) const
+		void Summarize(JObjectSummary& summary) const override
 		{
-			AddString(items, "candidate","%d", dTrackingInfo->dTrackTimeBased->candidateid);
-			DKinematicData::toStrings(items);
-			AddString(items, "Track_ChiSq", "%f", dTrackingInfo->dTrackTimeBased->chisq);
-			AddString(items, "dEdx_ChiSq", "%f", dTrackingInfo->dChiSq_DCdEdx);
-			AddString(items, "TOF_ChiSq", "%f", dTimingInfo->dChiSq_Timing);
-			AddString(items, "EOverP_ChiSq", "%f", dEOverPInfo->dChiSq_EoverP);
-			AddString(items, "PID_ChiSq", "%f", dTimingInfo->dChiSq);
-			AddString(items, "PID_FOM", "%f", dTimingInfo->dFOM);
+			summary.add(dTrackingInfo->dTrackTimeBased->candidateid, "candidate", "%d");
+			DKinematicData::Summarize(summary);
+			summary.add(dTrackingInfo->dTrackTimeBased->chisq, "Track_ChiSq", "%f");
+			summary.add(dTrackingInfo->dChiSq_DCdEdx, "dEdx_ChiSq", "%f");
+			summary.add(dTimingInfo->dChiSq_Timing, "TOF_ChiSq", "%f");
+			summary.add(dEOverPInfo->dChiSq_EoverP, "EOverP_ChiSq", "%f");
+			summary.add(dTimingInfo->dChiSq, "PID_ChiSq", "%f");
+			summary.add(dTimingInfo->dFOM, "PID_FOM", "%f");
 		}
 
 		class DTimingInfo : public DResettable

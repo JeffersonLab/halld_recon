@@ -14,6 +14,9 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/JEvent.h>
+
 #include "DTACHit_factory.h"
 
 // The parameter below can be overwritten from the command line
@@ -32,88 +35,89 @@ double DTACHit_factory::timeDifferencInADCandTDC = 100;
 set<int> DTACHit_factory::announcedRuns;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTACHit_factory::init(void) {
+void DTACHit_factory::Init() {
 	// Set default configuration parameters
 
-//	gPARMS->SetDefaultParameter("TAC:CHECK_FADC_ERRORS", checkErrorsOnFADC,
+//	app->SetDefaultParameter("TAC:CHECK_FADC_ERRORS", checkErrorsOnFADC,
 //			"Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 //
-//	gPARMS->SetDefaultParameter("TAC:HIT_TIME_WINDOW", timeWindowTDC,
+//	app->SetDefaultParameter("TAC:HIT_TIME_WINDOW", timeWindowTDC,
 //			"Time window of trigger corrected TDC time in which a hit in"
 //					" in the TDC will match to a hit in the fADC to form an TAC hit");
 //
-//	gPARMS->SetDefaultParameter("TAC:DELTA_T_ADC_TDC_MAX",
+//	app->SetDefaultParameter("TAC:DELTA_T_ADC_TDC_MAX",
 //			timeDifferencInADCandTDC,
 //			"Maximum difference in ns between a (calibrated) fADC time and"
 //					" CAEN TDC time for them to be matched in a single hit");
 //
-//	gPARMS->SetDefaultParameter("TAC:USE_TIMEWALK_CORRECTION",
+//	app->SetDefaultParameter("TAC:USE_TIMEWALK_CORRECTION",
 //			useTimeWalkCorrections,
 //			"Flag to decide if time-walk corrections should be applied.");
 
 	cout << "In DTACHit_factory::init" << endl;
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTACHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber) {
+void DTACHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
 	// Only print messages for one thread whenever run number change
 	bool printMessages = false;
-	if (addRun(runnumber)) {
+	if (addRun(event->GetRunNumber())) {
 		printMessages = true;
 	}
 	/// Read in calibration constants
 	if (printMessages)
-		jout << "In DTACHit_factory, loading constants..." << endl;
+		jout << "In DTACHit_factory, loading constants..." << jendl;
 
-	readCCDB( eventLoop );
-
-	return NOERROR;
+	readCCDB( event );
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTACHit_factory::evnt(jana::JEventLoop *eventLoop, uint64_t eventNumber) {
+void DTACHit_factory::Process(const std::shared_ptr<const JEvent>& event) {
 //	cout << "Building basic DTACHit objects" << endl;
-	makeFADCHits(eventLoop, eventNumber);
-	makeTDCHits(eventLoop, eventNumber);
-
-	return NOERROR;
+	makeFADCHits(event, event->GetEventNumber());
+	makeTDCHits(event, event->GetEventNumber());
 }
 
-jerror_t DTACHit_factory::readCCDB(jana::JEventLoop *eventLoop) {
+jerror_t DTACHit_factory::readCCDB(const std::shared_ptr<const JEvent>& event) {
+
+	auto app = event->GetJApplication();
+	auto run_number = event->GetRunNumber();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
 	// load scale factors
 	map<string, double> scaleFactors;
 	// a_scale (TAC_ADC_SCALE)
-	if (eventLoop->GetCalib("/TAC/digi_scales", scaleFactors))
-		jout << "Error loading /TAC/digi_scales !" << endl;
+	if (calibration->Get("/TAC/digi_scales", scaleFactors))
+		jout << "Error loading /TAC/digi_scales !" << jendl;
 	if (scaleFactors.find("TAC_ADC_ASCALE") != scaleFactors.end())
 		energyScale = scaleFactors["TAC_ADC_ASCALE"];
 	else
-		jerr << "Unable to get TAC_ADC_ASCALE from /TAC/digi_scales !" << endl;
+		jerr << "Unable to get TAC_ADC_ASCALE from /TAC/digi_scales !" << jendl;
 	// t_scale (TAC_ADC_SCALE)
 	if (scaleFactors.find("TAC_ADC_TSCALE") != scaleFactors.end())
 		timeScaleADC = scaleFactors["TAC_ADC_TSCALE"];
 	else
-		jerr << "Unable to get TAC_ADC_TSCALE from /TAC/digi_scales !" << endl;
+		jerr << "Unable to get TAC_ADC_TSCALE from /TAC/digi_scales !" << jendl;
 
 	// load base time offset
 	map<string, double> baseTimeOffsets;
 	// t_base (TAC_BASE_TIME_OFFSET)
-	if (eventLoop->GetCalib("/TAC/base_time_offset", baseTimeOffsets))
-		jout << "Error loading /TAC/base_time_offset !" << endl;
+	if (calibration->Get("/TAC/base_time_offset", baseTimeOffsets))
+		jout << "Error loading /TAC/base_time_offset !" << jendl;
 	if (baseTimeOffsets.find("TAC_BASE_TIME_OFFSET") != baseTimeOffsets.end())
 		timeBaseADC = baseTimeOffsets["TAC_BASE_TIME_OFFSET"];
 	else
 		jerr
 				<< "Unable to get TAC_BASE_TIME_OFFSET from /TAC/base_time_offset !"
-				<< endl;
+				<< jendl;
 	// t_tdc_base (TAC_TDC_BASE_TIME_OFFSET)
 	if (baseTimeOffsets.find("TAC_TDC_BASE_TIME_OFFSET")
 			!= baseTimeOffsets.end())
@@ -121,36 +125,36 @@ jerror_t DTACHit_factory::readCCDB(jana::JEventLoop *eventLoop) {
 	else
 		jerr
 				<< "Unable to get TAC_TDC_BASE_TIME_OFFSET from /TAC/base_time_offset !"
-				<< endl;
+				<< jendl;
 
 	// load constant tables
 	// a_gains (gains)
-	if (eventLoop->GetCalib("/TAC/gains", energyGain))
-		jout << "Error loading /TAC/gains !" << endl;
+	if (calibration->Get("/TAC/gains", energyGain))
+		jout << "Error loading /TAC/gains !" << jendl;
 	// a_pedestals (pedestals)
-	if (eventLoop->GetCalib("/TAC/pedestals", adcPedestal))
-		jout << "Error loading /TAC/pedestals !" << endl;
+	if (calibration->Get("/TAC/pedestals", adcPedestal))
+		jout << "Error loading /TAC/pedestals !" << jendl;
 	// adc_time_offsets (adc_timing_offsets)
-	if (eventLoop->GetCalib("/TAC/adc_timing_offsets", adcTimeOffset))
-		jout << "Error loading /TAC/adc_timing_offsets !" << endl;
+	if (calibration->Get("/TAC/adc_timing_offsets", adcTimeOffset))
+		jout << "Error loading /TAC/adc_timing_offsets !" << jendl;
 	// tdc_time_offsets (tdc_timing_offsets)
-	if (eventLoop->GetCalib("/TAC/timing_offsets", tdcTimeOffsets))
-		jout << "Error loading /TAC/timing_offsets !" << endl;
+	if (calibration->Get("/TAC/timing_offsets", tdcTimeOffsets))
+		jout << "Error loading /TAC/timing_offsets !" << jendl;
 	// timewalk_parameters (timewalk_parms)
-	if (eventLoop->GetCalib("TAC/timewalk_parms", timeWalkParameters))
-		jout << "Error loading /TAC/timewalk_parms !" << endl;
+	if (calibration->Get("TAC/timewalk_parms", timeWalkParameters))
+		jout << "Error loading /TAC/timewalk_parms !" << jendl;
 
 	return NOERROR;
 }
 
-void DTACHit_factory::makeFADCHits(jana::JEventLoop *eventLoop,
+void DTACHit_factory::makeFADCHits(const std::shared_ptr<const JEvent>& event,
 		uint64_t eventNumber) {
 	const DTTabUtilities* locTTabUtilities = nullptr;
-	eventLoop->GetSingle(locTTabUtilities);
+	event->GetSingle(locTTabUtilities);
 
 	// Get TAC hits
 	vector<const DTACDigiHit*> tacDigiHits;
-	eventLoop->Get(tacDigiHits);
+	event->Get(tacDigiHits);
 
 	for (auto& tacDigiHit : tacDigiHits) {
 		// Throw away hits with firmware errors (post-summer 2016 firmware)
@@ -169,7 +173,7 @@ void DTACHit_factory::makeFADCHits(jana::JEventLoop *eventLoop,
 		// nsamples_pedestal should always be positive for valid data - err on the side of caution for now
 		if (nsamples_pedestal == 0) {
 			jerr << "DSCDigiHit with nsamples_pedestal == 0 !   Event = "
-					<< eventNumber << endl;
+					<< eventNumber << jendl;
 			continue;
 		}
 
@@ -217,22 +221,20 @@ void DTACHit_factory::makeFADCHits(jana::JEventLoop *eventLoop,
 
 		tacHit->AddAssociatedObject(tacDigiHit);
 
-		_data.push_back(tacHit);
+		Insert(tacHit);
 	}
-
-	return;
 }
 
-void DTACHit_factory::makeTDCHits(jana::JEventLoop *eventLoop, uint64_t eventnumber) {
+void DTACHit_factory::makeTDCHits(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber) {
 	// Next, loop over TDC hits, matching them to the
 	// existing fADC hits where possible and updating
 	// their time information. If no match is found, then
 	// create a new hit with just the TDC info.
 	const DTTabUtilities* locTTabUtilities = nullptr;
-	eventLoop->GetSingle(locTTabUtilities);
+	event->GetSingle(locTTabUtilities);
 
 	vector<const DTACTDCDigiHit*> tacTDCDigiHits;
-	eventLoop->Get(tacTDCDigiHits);
+	event->Get(tacTDCDigiHits);
 
 	for (auto& tacTDCDigiHit : tacTDCDigiHits) {
 
@@ -255,7 +257,7 @@ void DTACHit_factory::makeTDCHits(jana::JEventLoop *eventLoop, uint64_t eventnum
 				tacHitCombined->setTimeFADC(
 						numeric_limits<double>::quiet_NaN());
 				tacHitCombined->setFADCPresent(false);
-				_data.push_back(tacHitCombined);
+				Insert(tacHitCombined);
 			}
 
 			tacHitCombined->setTDCPresent(true);
@@ -302,7 +304,7 @@ DTACHit* DTACHit_factory::findMatch(double tdcTime) {
 
 	// Loop over existing hits (from fADC) and look for a match
 	// in both the sector and the time.
-	for (auto& adcHit : _data) {
+	for (auto& adcHit : mData) {
 		// only match to fADC hits, not bachelor TDC hits
 		if (!isfinite(adcHit->getTimeFADC()))
 			continue;
@@ -323,23 +325,21 @@ DTACHit* DTACHit_factory::findMatch(double tdcTime) {
 //------------------
 // Reset_Data()
 //------------------
-void DTACHit_factory::Reset_Data(void) {
+void DTACHit_factory::Reset_Data() {
 	// Clear _data vector
-	_data.clear();
+	mData.clear();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTACHit_factory::erun(void) {
-	return NOERROR;
+void DTACHit_factory::EndRun() {
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTACHit_factory::fini(void) {
-	return NOERROR;
+void DTACHit_factory::Finish() {
 }
 
 //std::string DTACHit_factory::SetTag(std::string tag) {

@@ -12,7 +12,8 @@
 using namespace std;
 
 #include <JANA/JEvent.h>
-using namespace jana;
+#include "DANA/DEvent.h"
+
 
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALCluster_factory.h"
@@ -46,71 +47,73 @@ const DFCALHit *GetDFCALHitFromClusterHit(const DFCALCluster::DFCALClusterHit_t 
 DFCALCluster_factory::DFCALCluster_factory()
 {
 	// Set defaults
-        MIN_CLUSTER_BLOCK_COUNT = 2;
-        MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
+	MIN_CLUSTER_BLOCK_COUNT = 2;
+	MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
 	REMOVE_BAD_BLOCK = 0;
 	
-	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
-	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
-	gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
-	gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
-	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
-
+	japp->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
+	japp->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
+	japp->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+	japp->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+	japp->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFCALCluster_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
+void DFCALCluster_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	double targetZ;
 	double fcalFrontFaceZ;
-	
-	DGeometry *dgeom = NULL;
-	DApplication *dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-	if( dapp ) dgeom = dapp->GetDGeometry( runnumber );
-   
-	if( dgeom ){
 
+	// Get geometry
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto dgeom = geo_manager->GetDGeometry(runnumber);
+
+	if( dgeom ){
 	  dgeom->GetTargetZ( targetZ );
 	  dgeom->GetFCALZ( fcalFrontFaceZ );
 	}
 	else{
 
-	  cerr << "No geometry accessbile." << endl;
-	  return RESOURCE_UNAVAILABLE;
+	  cerr << "No geometry accessible." << endl;
+	  return; // RESOURCE_UNAVAILABLE;
 	}
 
 	fcalFaceZ_TargetIsZeq0 = fcalFrontFaceZ - targetZ;
 
 	bad_blocks_list.clear();
-	if (eventLoop->GetCalib("/FCAL/bad_block", bad_blocks_list))
+	if (DEvent::GetCalib(event, "/FCAL/bad_block", bad_blocks_list))
 	  jout << "Error loading /FCAL/bad_block !" << endl;
 	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //    Implementation of UConn LGD clusterizer (M. Kornicer)
 //------------------
-jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	vector<const DFCALHit*> fcalhits;
-	eventLoop->Get(fcalhits);
+	event->Get(fcalhits);
 	// Hits in PWO insert
 	vector<const DECALHit*> ecalhits;
-	eventLoop->Get(ecalhits);
+	event->Get(ecalhits);
 	
 	// LED events will have hits in nearly every channel. Do NOT
 	// try clusterizing if more than 250 hits in FCAL
 	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
 	const DFCALGeometry* fcalGeom=NULL;
-	eventLoop->GetSingle(fcalGeom);
+	event->GetSingle(fcalGeom);
+
+	// Sort hits by energy
+	sort(fcalhits.begin(), fcalhits.end(), FCALHitsSort_C);
 
 	// fill user's hit list
         int nhits = 0;
@@ -296,7 +299,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                       clusterList[c]->AddAssociatedObject( clusterHit );
               }
 
-              _data.push_back( clusterList[c] );
+              Insert( clusterList[c] );
 	   }
         }
   
@@ -305,8 +308,5 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
            free(hits);
            hits=0;
         }
-
-	return NOERROR;
-
 }
 

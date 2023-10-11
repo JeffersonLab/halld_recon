@@ -7,7 +7,6 @@
 #include <cmath>
 #include <stdint.h>
 #include "JEventProcessor_TPOL_tree.h"
-using namespace jana;
 using namespace std;
 
 #include <TRIGGER/DL1Trigger.h>
@@ -17,17 +16,17 @@ using namespace std;
 #include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMHit.h>
 #include <PID/DBeamPhoton.h>
+#include <DANA/DEvent.h>
 
 const int NSECTORS = DTPOLHit_factory::NSECTORS;
 const double SECTOR_DIVISION = DTPOLHit_factory::SECTOR_DIVISION;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TPOL_tree());
+        app->Add(new JEventProcessor_TPOL_tree());
     }
 } // "C"
 
@@ -46,7 +45,7 @@ bool JEventProcessor_TPOL_tree::DTPOLRingHit_fadc_cmp(const DTPOLRingDigiHit *a,
 //------------------
 JEventProcessor_TPOL_tree::JEventProcessor_TPOL_tree()
 {
-
+	SetTypeName("JEventProcessor_TPOL_tree");
 }
 
 //------------------
@@ -58,9 +57,9 @@ JEventProcessor_TPOL_tree::~JEventProcessor_TPOL_tree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TPOL_tree::init(void)
+void JEventProcessor_TPOL_tree::Init()
 {
     // This is called once at program startup. If you are creating
     // and filling historgrams in this plugin, you should lock the
@@ -98,36 +97,36 @@ jerror_t JEventProcessor_TPOL_tree::init(void)
 
     count = 0;
     //
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TPOL_tree::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TPOL_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TPOL_tree::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
     //
 
-    //if (count > 10000) return NOERROR;
+    auto eventnumber = event->GetEventNumber();
+
+    //if (count > 10000) return;
 
     const DL1Trigger *trig_words = NULL;
     uint32_t trig_mask, fp_trig_mask;
     try {
-        loop->GetSingle(trig_words);
+        event->GetSingle(trig_words);
     } catch(...) {};
     if (trig_words) {
         trig_mask = trig_words->trig_mask;
@@ -140,33 +139,33 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
     int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
     // skim PS triggers
     if (trig_bits!=8) {
-        return NOERROR;
+        return;
     }
     //
     //vector<const DTPOLHit*> hits;
-    //loop->Get(hits);
+    //event->Get(hits);
     vector<const DTPOLHit*> tpolhits;
-    loop->Get(tpolhits);
+    event->Get(tpolhits);
     //sort(sectordigihits.begin(),sectordigihits.end(),DTPOLSectorHit_fadc_cmp);
 
     //vector<const Df250WindowRawData*> windowraws;
-    //loop->Get(windowraws);
+    //event->Get(windowraws);
     // coarse PS pairs
     vector<const DPSCPair*> cpairs;
-    loop->Get(cpairs);
+    event->Get(cpairs);
     // fine PS pairs
     vector<const DPSPair*> fpairs;
-    loop->Get(fpairs);
+    event->Get(fpairs);
     // tagger hits
     vector<const DTAGHHit*> taghhits;
-    loop->Get(taghhits);
+    event->Get(taghhits);
     vector<const DTAGMHit*> tagmhits;
-    loop->Get(tagmhits);
+    event->Get(tagmhits);
     // Get beam photons
     vector<const DBeamPhoton*> beamPhotons;
-    loop->Get(beamPhotons);
+    event->Get(beamPhotons);
 
-    japp->RootFillLock(this);
+    GetLockService(event)->RootFillLock(this);
     // PSC coincidences
     if (cpairs.size()>=1) {
         // take pair with smallest time difference from sorted vector
@@ -182,7 +181,7 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
             double t_lhit = clhit->t; Double_t t_rhit = crhit->t;
 	    double E_pair = flhit->E+frhit->E;	  
  
-	    dTreeFillData.Fill_Single<ULong64_t>("eventnum",eventnumber); 
+	    dTreeFillData.Fill_Single<ULong64_t>("eventnum",eventnumber);
 	    dTreeFillData.Fill_Single<Double_t>("E_lhit",E_lhit);
             dTreeFillData.Fill_Single<Double_t>("E_rhit",E_rhit);
 	    dTreeFillData.Fill_Single<Double_t>("t_lhit",t_lhit);
@@ -307,16 +306,14 @@ jerror_t JEventProcessor_TPOL_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
 	    dTreeFillData.Fill_Single<UShort_t>("nadc",nadc);
    	    dTreeFillData.Fill_Single<UShort_t>("ntpol",ntpol);
 
-   	    //if (nadc == 0 || ntag == 0) return NOERROR;
+   	    //if (nadc == 0 || ntag == 0) return;
 
    	    dTreeInterface->Fill(dTreeFillData);
    	    count++;
 
         }
     }
-    japp->RootFillUnLock(this);
-    //
-    return NOERROR;
+    GetLockService(event)->RootFillUnLock(this);
 }
 
 double JEventProcessor_TPOL_tree::GetPhi(unsigned int sector)
@@ -328,23 +325,20 @@ double JEventProcessor_TPOL_tree::GetPhi(unsigned int sector)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TPOL_tree::erun(void)
+void JEventProcessor_TPOL_tree::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TPOL_tree::fini(void)
+void JEventProcessor_TPOL_tree::Finish()
 {
     // Called before program exit after event processing is finished.
     delete dTreeInterface;
-
-    return NOERROR;
 }

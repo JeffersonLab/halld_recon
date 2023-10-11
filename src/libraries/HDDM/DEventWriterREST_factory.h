@@ -1,36 +1,35 @@
 #ifndef _DEventWriterREST_factory_
 #define _DEventWriterREST_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
 
 #include "HDDM/DEventWriterREST.h"
 
-class DEventWriterREST_factory : public jana::JFactory<DEventWriterREST>
+class DEventWriterREST_factory : public JFactoryT<DEventWriterREST>
 {
 	public:
-		DEventWriterREST_factory(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
-		~DEventWriterREST_factory(){};
+		DEventWriterREST_factory() = default;
+		~DEventWriterREST_factory() = default;
 
 	private:
-		jerror_t init(void)
+		void Init() override
 		{
+			auto app = GetApplication();
 			dOutputFileBaseName = "dana_rest";
-		   gPARMS->SetDefaultParameter("rest:FILENAME", dOutputFileBaseName);
-		string locDummyString = "";
-                gPARMS->SetDefaultParameter("REST:DATAVERSIONSTRING", locDummyString);
-			return NOERROR;
+			app->SetDefaultParameter("rest:FILENAME", dOutputFileBaseName);
+			std::string locDummyString = "";
+			app->SetDefaultParameter("REST:DATAVERSIONSTRING", locDummyString);
 		}
 
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override
 		{
 			// Create single DEventWriterREST object and marks the factory as persistent so it doesn't get deleted every event.
-			SetFactoryFlag(PERSISTANT);
+			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(new DEventWriterREST(locEventLoop, dOutputFileBaseName));
-			return NOERROR;
+			Insert(new DEventWriterREST(locEvent, dOutputFileBaseName));
 		}
-		string dOutputFileBaseName;
+		std::string dOutputFileBaseName;
 };
 
 #endif // _DEventWriterREST_factory_

@@ -8,12 +8,11 @@
 #ifndef _DBCALTDCDigiHit_
 #define _DBCALTDCDigiHit_
 
-#include <JANA/jerror.h>
 #include <JANA/JObject.h>
 
 #include <BCAL/DBCALGeometry.h>
 
-class DBCALTDCDigiHit: public jana::JObject{
+class DBCALTDCDigiHit: public JObject{
 	public:
 		JOBJECT_PUBLIC(DBCALTDCDigiHit);
 	
@@ -22,15 +21,14 @@ class DBCALTDCDigiHit: public jana::JObject{
 		uint32_t sector;
 		DBCALGeometry::End end;
 		uint32_t time;
-		
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "module", "%d", module);
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "end", "%s", end==0 ? "upstream":"downstream" );
-			AddString(items, "time", "%d", time);
-		}
 
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(module, NAME_OF(module), "%d");
+			summary.add(layer, NAME_OF(layer), "%d");
+			summary.add(sector, NAME_OF(sector), "%d");
+			summary.add((end==0 ? "upstream":"downstream"), NAME_OF(end), "%s");
+			summary.add(time, NAME_OF(time), "%d");
+		}
 };
 
 #endif // _DBCALTDCDigiHit_

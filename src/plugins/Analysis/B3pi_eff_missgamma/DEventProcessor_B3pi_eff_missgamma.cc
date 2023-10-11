@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_B3pi_eff_missgamma.h"
+#include <JANA/JEventSource.h>
 // Routine used to create our DEventProcessor
 
 extern "C"
@@ -13,15 +14,15 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_B3pi_eff_missgamma()); //register this plugin
-		locApplication->AddFactoryGenerator(new DFactoryGenerator_B3pi_eff_missgamma()); //register the factory generator
+		locApplication->Add(new DEventProcessor_B3pi_eff_missgamma()); //register this plugin
+		locApplication->Add(new DFactoryGenerator_B3pi_eff_missgamma()); //register the factory generator
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_B3pi_eff_missgamma::init(void)
+void DEventProcessor_B3pi_eff_missgamma::Init()
 {
 	// This is called once at program startup.
 
@@ -31,35 +32,31 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::init(void)
 	dEventStoreSkimStream.open(locSkimFileName.c_str());
 	dEventStoreSkimStream << "IDXA" << endl;
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_B3pi_eff_missgamma::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_B3pi_eff_missgamma::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_B3pi_eff_missgamma::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
 	// japp->RootFillLock(this);
 	//  ... fill historgrams or trees ...
@@ -82,10 +79,10 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
+	locEvent->GetSingle(locEventWriterROOT);
 
         vector<const DMCThrown*> locMCThrowns;
-        locEventLoop->Get(locMCThrowns);
+        locEvent->Get(locMCThrowns);
         bool has_omega = false;
         for (unsigned int i = 0; i < locMCThrowns.size(); i++)
         {
@@ -95,7 +92,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 	//only write events with real omega
 	//if (has_omega == true)
 	//{
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "B3pi_eff_missgamma");
+	locEventWriterROOT->Fill_DataTrees(locEvent, "B3pi_eff_missgamma");
 	//}
 
 	/*
@@ -103,7 +100,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 		//Getting these objects triggers the analysis, if it wasn't performed already. 
 		//These objects contain the DParticleCombo objects that survived the DAnalysisAction cuts that were added to the DReactions
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 	*/
 
 	/************************************************** OPTIONAL: FURTHER ANALYSIS **************************************************/
@@ -112,7 +109,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 		//If kinematic fits were requested, these contain both the measured and kinematic-fit track parameters
 		//No cuts from DAnalysisActions are placed on these combos
 	vector<const DParticleCombo*> locParticleCombos;
-	locEventLoop->Get(locParticleCombos);
+	locEvent->Get(locParticleCombos);
 	for(size_t loc_i = 0; loc_i < locParticleCombos.size(); ++loc_i)
 	{
 		const DParticleCombo* locParticleCombo = locParticleCombos[loc_i];
@@ -145,7 +142,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 	/*
 	//Optional: Save event to output REST file. Use this to create physical skims.
 	const DEventWriterREST* locEventWriterREST = NULL;
-	locEventLoop->GetSingle(locEventWriterREST);
+	locEvent->GetSingle(locEventWriterREST);
 	for(size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); ++loc_i)
 	{
 		const DAnalysisResults* locAnalysisResults = locAnalysisResultsVector[loc_i];
@@ -157,7 +154,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 		locAnalysisResults->Get_PassedParticleCombos(locPassedParticleCombos);
 
 		if(!locPassedParticleCombos.empty())
-			locEventWriterREST->Write_RESTEvent(locEventLoop, "B3pi_eff_missgamma"); //string is part of output file name
+			locEventWriterREST->Write_RESTEvent(locEvent, "B3pi_eff_missgamma"); //string is part of output file name
 	}
 	*/
 
@@ -167,7 +164,7 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 	// See whether this is MC data or real data
 /*
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 	printf("\n");
 	for (unsigned int i = 0; i < locMCThrowns.size(); i++)
 	{
@@ -175,8 +172,8 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 	}
 */
 /*
-	unsigned int locRunNumber = locEventLoop->GetJEvent().GetRunNumber();
-	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEventLoop);
+	unsigned int locRunNumber = locEvent->GetJEvent().GetRunNumber();
+	unsigned int locUniqueID = locMCThrowns.empty() ? 1 : Get_FileNumber(locEvent);
 
 	// If a particle combo passed the cuts, save the event info in the output file
 	for(size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); ++loc_i)
@@ -195,23 +192,21 @@ jerror_t DEventProcessor_B3pi_eff_missgamma::evnt(jana::JEventLoop* locEventLoop
 		japp->Unlock("B3pi_eff_missgamma.idxa");
 	}
 	*/
-
-	return NOERROR;
 }
 
-int DEventProcessor_B3pi_eff_missgamma::Get_FileNumber(JEventLoop* locEventLoop) const
+int DEventProcessor_B3pi_eff_missgamma::Get_FileNumber(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//Assume that the file name is in the format: *_X.ext, where:
 		//X is the file number (a string of numbers of any length)
 		//ext is the file extension (probably .evio or .hddm)
 
 	//get the event source
-	JEventSource* locEventSource = locEventLoop->GetJEvent().GetJEventSource();
+	JEventSource* locEventSource = locEvent->GetJEventSource();
 	if(locEventSource == NULL)
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetSourceName();
+	string locSourceFileName = locEventSource->GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
@@ -230,24 +225,22 @@ int DEventProcessor_B3pi_eff_missgamma::Get_FileNumber(JEventLoop* locEventLoop)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_B3pi_eff_missgamma::erun(void)
+void DEventProcessor_B3pi_eff_missgamma::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_B3pi_eff_missgamma::fini(void)
+void DEventProcessor_B3pi_eff_missgamma::Finish()
 {
 	// Called before program exit after event processing is finished.
 	if(dEventStoreSkimStream.is_open())
 		dEventStoreSkimStream.close();
-	return NOERROR;
 }
 

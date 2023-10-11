@@ -9,8 +9,6 @@
 #define _DTrackCandidate_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 #include <TRACKING/DTrackingData.h>
 #include <TRACKING/DTrackFitter.h>
@@ -56,11 +54,10 @@ class DTrackCandidate:public DTrackingData{
 
       bool IsSmoothed; // Boolean value to indicate whether the smoother was run succesfully over this track.
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			DKinematicData::toStrings(items);
-			AddString(items, "id", "0x%x", id);
-			AddString(items, "chisq", "%f", chisq);
-			AddString(items, "Ndof", "%d", Ndof);
+		void Summarize(JObjectSummary& summary) const override {
+			DKinematicData::Summarize(summary);
+			summary.add(chisq, "chisq", "%f");
+			summary.add(Ndof, "Ndof", "%d");
 		}
 };
 

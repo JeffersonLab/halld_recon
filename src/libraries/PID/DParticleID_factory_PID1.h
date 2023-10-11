@@ -8,53 +8,47 @@
 #ifndef _DParticleID_factory_PID1_
 #define _DParticleID_factory_PID1_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DParticleID_PID1.h"
 
-class DParticleID_factory_PID1:public jana::JFactory<DParticleID>{
+class DParticleID_factory_PID1:public JFactoryT<DParticleID>{
 	public:
-		DParticleID_factory_PID1(){};
+		DParticleID_factory_PID1(){
+			SetTag("PID1");
+		};
 		~DParticleID_factory_PID1(){};
-		const char* Tag(void){return "PID1";}
 
 		DParticleID_PID1 *particleid = nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( particleid ) delete particleid;
-
-			particleid = new DParticleID_PID1(loop);
-
-			return NOERROR;
+			delete particleid;
+			particleid = new DParticleID_PID1(event);
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& event) override
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( particleid ) _data.push_back( particleid );
-			 
-			 return NOERROR;
+			if( particleid ) mData.push_back( particleid );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( particleid ) delete particleid;
-			particleid = NULL;
-			
-			return NOERROR;
+			delete particleid;
+			particleid = nullptr;
 		}
 
 };

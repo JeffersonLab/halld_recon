@@ -2,10 +2,8 @@
 #include <vector>
 
 #include "JEventProcessor_TPOL_online.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include <DAQ/Df250WindowRawData.h>
 #include <DAQ/Df250PulseData.h>
@@ -67,7 +65,7 @@ static TH2I *hDigiHit_TimeVsIntegral;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_TPOL_online());
+        app->Add(new JEventProcessor_TPOL_online());
     }
 }
 
@@ -76,6 +74,7 @@ extern "C"{
 
 
 JEventProcessor_TPOL_online::JEventProcessor_TPOL_online() {
+	SetTypeName("JEventProcessor_TPOL_online");
 }
 
 
@@ -88,7 +87,9 @@ JEventProcessor_TPOL_online::~JEventProcessor_TPOL_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TPOL_online::init(void) {
+void JEventProcessor_TPOL_online::Init() {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     // create root folder for TPOL and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -138,23 +139,20 @@ jerror_t JEventProcessor_TPOL_online::init(void) {
     hDigiHit_TimeVsIntegral = new TH2I("DigiHit_fadcTimeVsIntegral","TPOL fADC pulse time vs. integral;pulse integral;pulse time [ns]",500,0.0,30000.0,200,0.0,400.0);
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TPOL_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TPOL_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TPOL_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -163,7 +161,7 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
     const DL1Trigger *trig_words = nullptr;
     uint32_t trig_mask, fp_trig_mask;
     try {
-        eventLoop->GetSingle(trig_words);
+        event->GetSingle(trig_words);
     } catch(...) {};
     if (trig_words != nullptr) {
         trig_mask = trig_words->trig_mask;
@@ -176,14 +174,14 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
     int trig_bits = fp_trig_mask > 0 ? 10 + fp_trig_mask:trig_mask;
     // Select PS-triggered events
     if (trig_bits != 8) {
-        return NOERROR;
+        return;
     }
     vector<const DTPOLHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
     vector<const DTPOLSectorDigiHit*> sdhits;
-    eventLoop->Get(sdhits);
+    event->Get(sdhits);
     vector<const Df250WindowRawData*> windowrawdata;
-    eventLoop->Get(windowrawdata);
+    event->Get(windowrawdata);
 
     // Cache pulse data objects
     map< const DTPOLSectorDigiHit*, const Df250PulseData* > pd_cache;
@@ -195,7 +193,7 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     int NHits = 0;
     for (const auto& wrd : windowrawdata) {
@@ -255,26 +253,23 @@ jerror_t JEventProcessor_TPOL_online::evnt(JEventLoop *eventLoop, uint64_t event
         hHit_TimeVsPeak->Fill(hit->pulse_peak,hit->t);
     }
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    return NOERROR;
 }
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TPOL_online::erun(void) {
+void JEventProcessor_TPOL_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TPOL_online::fini(void) {
+void JEventProcessor_TPOL_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 //----------------------------------------------------------------------------------

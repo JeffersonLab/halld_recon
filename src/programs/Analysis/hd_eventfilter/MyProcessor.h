@@ -9,25 +9,22 @@
 #include <string>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/Compatibility/JLockService.h>
 
 #include <HDDM/hddm_s.hpp>
 #include <fstream>
 
 
-class MyProcessor:public JEventProcessor
+class MyProcessor: public JEventProcessor
 {
    public:
-      jerror_t init(void);                              ///< Called once at program start.
-      jerror_t brun(JEventLoop *loop, int32_t runnumber) {  ///< Called everytime a new run number is detected.
-         return NOERROR;
-      }
-      jerror_t evnt(JEventLoop *loop, uint64_t eventnumber); ///< Called every event.
-      jerror_t erun(void) {                             ///< Called everytime run number changes, provided brun has been called.
-         return NOERROR;
-      }
-      jerror_t fini(void);                              ///< Called after last event of last event source has been processed.
+      void Init() override;
+      void BeginRun(const std::shared_ptr<const JEvent>& event) override {};
+      void Process(const std::shared_ptr<const JEvent>& event) override;
+      void EndRun() override {};
+      void Finish() override;
+
+      std::shared_ptr<JLockService> lockService;
 
       std::string filename;
       std::ofstream *ofs;

@@ -22,7 +22,6 @@
 #include "ANALYSIS/DSourceComboTimeHandler.h"
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {
@@ -39,7 +38,7 @@ class DSourceComboP4Handler
 		DSourceComboP4Handler(DSourceComboer* locSourceComboer, bool locCreateHistsFlag = true);
 		~DSourceComboP4Handler(void){Fill_Histograms();}
 		void Set_DebugLevel(int locDebugLevel){dDebugLevel = locDebugLevel;}
-		void Set_RunDependent_Data(JEventLoop *locEventLoop) {}
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent) {}
 
 		//SET HANDLERS
 		void Set_SourceComboVertexer(const DSourceComboVertexer* locSourceComboVertexer){dSourceComboVertexer = locSourceComboVertexer;}

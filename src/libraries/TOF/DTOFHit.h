@@ -20,7 +20,6 @@
 #define _DTOFHit_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
 /*! \class DTOFHit
  * container class for TOF Hits formed from raw ADC and TDC data provided by the objects
@@ -29,7 +28,7 @@
  * converted to energy [GeV], at this point with no correction for hit location (attenuation not known yet).
  */
 
-class DTOFHit:public jana::JObject{
+class DTOFHit:public JObject{
   
  public:
   JOBJECT_PUBLIC(DTOFHit);
@@ -45,17 +44,17 @@ class DTOFHit:public jana::JObject{
   bool has_fADC; ///< boolean to indicate this hit contains ADC information
   bool has_TDC; ///< boolean to indicate this hit contains TDC information
   
-  /// \fn void toStrings(vector<pair<string,string> > &items)const
+  /// \fn void toStrings(vector<pair<string,string> > &)const
   /// print function used by hd_dump to list all TOF hits based on this objects for an event 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "bar", "%d", bar);
-    AddString(items, "plane", "%d", plane);
-    AddString(items, "end", "%d", end);
-    AddString(items, "dE", "%12.4f", dE);
-    AddString(items, "Amp", "%12.4f", Amp);
-    AddString(items, "t", "%12.4f", t);
-    AddString(items, "t_TDC","%12.4f",t_TDC);
-    AddString(items, "t_fADC","%12.4f",t_fADC);
+  void Summarize(JObjectSummary& summary)const{
+    summary.add(bar, "bar", "%d");
+    summary.add(plane, "plane", "%d");
+    summary.add(end, "end", "%d");
+    summary.add(dE, "dE", "%12.4f");
+    summary.add(Amp, "Amp", "%12.4f");
+    summary.add(t, "t", "%12.4f");
+    summary.add(t_TDC, "t_TDC","%12.4f");
+    summary.add(t_fADC, "t_fADC","%12.4f");
   }
 };
 

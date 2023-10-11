@@ -9,13 +9,11 @@
 #define _DTrackFitter_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #ifdef PROFILE_TRK_TIMES
 #include <prof_time.h>
 #endif
-#include <DANA/DApplication.h>
 #include <TRACKING/DTrackingData.h>
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 #include "HDGEOMETRY/DLorentzMapCalibDB.h"
@@ -60,7 +58,7 @@ class DGeometry;
 /// and will turn off the the WRITE_TO_OUTPUT bit by default.
 //////////////////////////////////////////////////////////////////////////////////
 
-class DTrackFitter:public jana::JObject{
+class DTrackFitter: public JObject{
 	public:
 		JOBJECT_PUBLIC(DTrackFitter);
 		
@@ -127,7 +125,7 @@ class DTrackFitter:public jana::JObject{
 		};
 		
 		// Constructor and destructor
-		DTrackFitter(JEventLoop *loop);	// require JEventLoop in constructor
+		DTrackFitter(const std::shared_ptr<const JEvent>& event);  // TODO: Let's move this logic somewhere else please
 		virtual ~DTrackFitter();
 		
 		void Reset(void);
@@ -189,7 +187,7 @@ class DTrackFitter:public jana::JObject{
 		fit_status_t 
 		  FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				      const DReferenceTrajectory *rt, 
-				      JEventLoop *loop, double mass=-1.0,
+				      const std::shared_ptr<const JEvent> &loop, double mass=-1.0,
 				      int N=0,
 				      double t0=QuietNaN,
 				      DetectorSystem_t t0_det=SYS_NULL
@@ -197,7 +195,7 @@ class DTrackFitter:public jana::JObject{
 		fit_status_t 
 		  FindHitsAndFitTrack(const DKinematicData &starting_params, 
 				      const map<DetectorSystem_t,vector<DTrackFitter::Extrapolation_t> >&extrapolations,
-				      JEventLoop *loop, 
+				      const std::shared_ptr<const JEvent>& loop,
 				      double mass,int N,double t0,
 				      DetectorSystem_t t0_det);
 		
@@ -242,7 +240,8 @@ class DTrackFitter:public jana::JObject{
 		const DMagneticFieldMap *bfield;			//< Magnetic field map for current event (acquired through loop)
 		const DGeometry *geom;						//< DGeometry pointer used to access materials through calibDB maps for eloss
 		const DRootGeom *RootGeom;					//< ROOT geometry used for accessing material for MULS, energy loss
-		JEventLoop *loop;								//< Pointer to JEventLoop object handling the current event
+		std::shared_ptr<const JEvent> event;	    //< Pointer to JEventLoop object handling the current event
+													// TODO: Delete me completely if at all possible!
 
 		// The following should be set as outputs by FitTrack(void)
 		DTrackingData fit_params;									//< Results of last fit

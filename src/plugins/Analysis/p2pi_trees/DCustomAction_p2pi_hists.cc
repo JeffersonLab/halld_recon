@@ -7,10 +7,9 @@
 
 #include "DCustomAction_p2pi_hists.h"
 
-void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_p2pi_hists::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
 
 	// Parameters for event selection to fill histograms
 	endpoint_energy = 12.;
@@ -45,17 +44,17 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 
 	// get PID algos
         const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
+        locEvent->GetSingle(locParticleID);
         dParticleID = locParticleID;
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	// check if a particle is missing
 	Get_Reaction()->Get_MissingPID(dMissingPID);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -94,14 +93,14 @@ void DCustomAction_p2pi_hists::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_p2pi_hists::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_p2pi_hists::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 
 	// should only have one reaction step
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(0);

@@ -13,26 +13,26 @@
 extern "C"{
 	void InitPlugin( JApplication *app ) {
 		InitJANAPlugin(app);
-		app->AddProcessor( new JEventProcessor_CCAL_online() );
+		app->Add( new JEventProcessor_CCAL_online() );
 	}
 }
 
 
 JEventProcessor_CCAL_online::JEventProcessor_CCAL_online()
 {
-	// Set defaults:
-	
-    	BEAM_RF_MAIN_PEAK = 0.0;
-	
-	gPARMS->SetDefaultParameter( "CCAL_online:BEAM_RF_MAIN_PEAK", BEAM_RF_MAIN_PEAK );
 }
 
 
 //----------------------------------------------------------------------------------
+void JEventProcessor_CCAL_online::Init() {
 
-jerror_t JEventProcessor_CCAL_online::init( void ) {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
-	
+	// Set defaults:
+	BEAM_RF_MAIN_PEAK = 0.0;
+	app->SetDefaultParameter( "CCAL_online:BEAM_RF_MAIN_PEAK", BEAM_RF_MAIN_PEAK );
+
 	TDirectory *main = gDirectory;
 	gDirectory->mkdir("ccal")->cd();
 	
@@ -216,8 +216,6 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 	
 	
 	main->cd();
-	
-	return NOERROR;
 }
 
 
@@ -226,31 +224,26 @@ jerror_t JEventProcessor_CCAL_online::init( void ) {
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CCAL_online::brun(JEventLoop *eventLoop, int32_t runnumber) 
+void JEventProcessor_CCAL_online::BeginRun(const std::shared_ptr<const JEvent>& event) 
 {
 	
-	DGeometry *dgeom = NULL;
-	DApplication *dapp = dynamic_cast< DApplication* >( eventLoop->GetJApplication() );
-	if( dapp ) dgeom = dapp->GetDGeometry( runnumber );
-	
+	DGeometry *dgeom = DEvent::GetDGeometry(event);
+
 	if( dgeom ){
 		dgeom->GetTargetZ( m_beamZ );
 	}
 	else{
 		cerr << "No geometry accessbile to CCAL_online monitoring plugin." << endl;
-		return RESOURCE_UNAVAILABLE;
+                return; // RESOURCE_UNAVAILABLE
 	}
 	
 	
-	jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
   	std::map<string, float> beam_spot;
   	jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   	m_beamX  =  beam_spot.at("x");
   	m_beamY  =  beam_spot.at("y");
 	
-	
-	
-	return NOERROR;
 }
 
 
@@ -259,7 +252,7 @@ jerror_t JEventProcessor_CCAL_online::brun(JEventLoop *eventLoop, int32_t runnum
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CCAL_online::Process(const std::shared_ptr<const JEvent>& event) {
 	
 	
 	
@@ -271,8 +264,8 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	const DTrigger  *dtrig = NULL;
 	
 	try {
-		eventLoop->GetSingle(trig);
-		eventLoop->GetSingle(dtrig);
+		event->GetSingle(trig);
+		event->GetSingle(dtrig);
 	} catch (...) {}
 	
 	if (trig) {
@@ -283,12 +276,12 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	} else {
 		
 		// HDDM files are from simulation, so keep them even though they have no trigger
-		bool locIsHDDMEvent = eventLoop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+		bool locIsHDDMEvent = GetStatusBit(event, kSTATUS_HDDM);
 		if( !locIsHDDMEvent ) goodtrigger = false;	
 	}
 	
 	if( !goodtrigger ) {
-		return NOERROR;
+		return;
 	}
 	
 	
@@ -296,11 +289,11 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	//----------   Get Data Objects   ----------//
 	
 	vector< const DCCALGeometry* > ccalGeomVec;
-  	eventLoop->Get( ccalGeomVec );
+  	event->Get( ccalGeomVec );
 	
   	if( ccalGeomVec.size() != 1 ) {
     		cerr << "No CCAL geometry accessbile." << endl;
-    		return RESOURCE_UNAVAILABLE;
+    		throw JException("No CCAL geometry accessbile.");
   	}
 	
 	const DCCALGeometry *ccalGeom = ccalGeomVec[0];
@@ -312,22 +305,22 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	vector< const DFCALShower*   > locFCALShowers;
 	vector< const DBeamPhoton*   > locBeamPhotons;
 	
-	eventLoop->Get( locDigiHits );
-	eventLoop->Get( locHits );
+	event->Get( locDigiHits );
+	event->Get( locHits );
 	
 	if( locHits.size() <= 50 ) {
-		eventLoop->Get( locCCALShowers ); 
-		eventLoop->Get( locFCALShowers );
-		eventLoop->Get( locBeamPhotons );
+		event->Get( locCCALShowers ); 
+		event->Get( locFCALShowers );
+		event->Get( locBeamPhotons );
 	}
 	
 	
 	const DEventRFBunch *locRFBunch = NULL;
 	try { 
-	  	eventLoop->GetSingle( locRFBunch, "CalorimeterOnly" );
-	} catch (...) { return NOERROR; }
+	  	event->GetSingle( locRFBunch, "CalorimeterOnly" );
+	} catch (...) { return; }
 	double rfTime = locRFBunch->dTime;
-	if( locRFBunch->dNumParticleVotes < 2 ) return NOERROR;
+	if( locRFBunch->dNumParticleVotes < 2 ) return;
 	
 	
 	
@@ -350,7 +343,7 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	//----------   Fill Histograms   ----------//
 	
 	
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	
 	
 	//-----   DigiHit Plots   -----//
@@ -406,8 +399,8 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	// for events with a lot of hits -- stop now
 	
 	if( locHits.size() > 50 ){
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-		return NOERROR;
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
+		return;
 	}
 	
 	
@@ -646,8 +639,7 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 	
 	
 	
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
@@ -655,19 +647,13 @@ jerror_t JEventProcessor_CCAL_online::evnt(JEventLoop *eventLoop, uint64_t event
 
 //----------------------------------------------------------------------------------
 
-
-jerror_t JEventProcessor_CCAL_online::erun( void ) 
+void JEventProcessor_CCAL_online::EndRun()
 {
-	
-	return NOERROR;
 }
 
 
-
-jerror_t JEventProcessor_CCAL_online::fini( void ) 
+void JEventProcessor_CCAL_online::Finish()
 {
-	
-	return NOERROR;
 }
 
 

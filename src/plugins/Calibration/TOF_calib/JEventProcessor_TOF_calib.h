@@ -9,7 +9,9 @@
 #define _JEventProcessor_TOF_calib_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
+#include <JANA/Compatibility/jerror.h>
+#include <JANA/Compatibility/JLockService.h>
+
 using namespace std;
 #include <stdint.h>
 #include <DAQ/DCODAEventInfo.h>
@@ -33,11 +35,10 @@ using namespace std;
 
 #define MaxHits 100
 
-class JEventProcessor_TOF_calib:public jana::JEventProcessor{
+class JEventProcessor_TOF_calib:public JEventProcessor{
  public:
   JEventProcessor_TOF_calib();
   ~JEventProcessor_TOF_calib();
-  const char* className(void){return "JEventProcessor_TOF_calib";}
 
   int RunNumber;
   int ThreadCounter;
@@ -125,13 +126,13 @@ class JEventProcessor_TOF_calib:public jana::JEventProcessor{
  private:
   jerror_t WriteRootFile(void);
   jerror_t MakeHistograms(void);
-  jerror_t init(void);	
-  //jerror_t brun(jana::JEventLoop *eventLoop, int runnumber);
-  //jerror_t evnt(jana::JEventLoop *eventLoop, int eventnumber);
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  jerror_t erun(void);	
-  jerror_t fini(void);
+
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+  std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_TOF_calib_

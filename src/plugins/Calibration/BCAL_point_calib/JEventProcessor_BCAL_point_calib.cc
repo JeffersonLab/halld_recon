@@ -13,7 +13,7 @@
 #include "TCanvas.h"
 #include "TLatex.h"
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "BCAL/DBCALPoint.h"
@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace jana;
 using namespace std;
 
 		// histograms for storing matched shower info
@@ -105,12 +104,10 @@ using namespace std;
 		vector< vector< double > > z_point_thrown(768, vector< double >() );
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_point_calib());
+	app->Add(new JEventProcessor_BCAL_point_calib());
 }
 } // "C"
 
@@ -120,7 +117,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_point_calib::JEventProcessor_BCAL_point_calib()
 {
-
+	SetTypeName("JEventProcessor_BCAL_point_calib");
 }
 
 //------------------
@@ -132,26 +129,31 @@ JEventProcessor_BCAL_point_calib::~JEventProcessor_BCAL_point_calib()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_point_calib::init(void)
+void JEventProcessor_BCAL_point_calib::Init()
 {
 	// This is called once at program startup. 
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 	
-	// japp->RootFillLock(this); 
+	// japp->RootFillLock(this);
+
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
         DEBUG=false;
 	VERBOSE=false;
-        gPARMS->SetDefaultParameter("BCALPOINTCALIB:DEBUG", DEBUG, "Control the creation of extra histograms");
-        gPARMS->SetDefaultParameter("BCALPOINTCALIB:DEBUG", VERBOSE, "Control verbose output");
+        app->SetDefaultParameter("BCALPOINTCALIB:DEBUG", DEBUG, "Control the creation of extra histograms");
+        app->SetDefaultParameter("BCALPOINTCALIB:DEBUG", VERBOSE, "Control verbose output");
 
 	if(h1_Num_matched_showers != NULL){
-		return NOERROR;
+		return;
 	}
 	
  	// lock all root operations
- 	japp->RootWriteLock();
+ 	lockService->RootWriteLock();
 
 	 //	TDirectory *dir = new TDirectoryFile("BCAL","BCAL");
 	 //	dir->cd();
@@ -307,64 +309,62 @@ jerror_t JEventProcessor_BCAL_point_calib::init(void)
 	// japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
 	// unlock
-	japp->RootUnLock();
-
-	return NOERROR;
+	lockService->RootUnLock();
 
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_point_calib::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_point_calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	Run_Number = runnumber;
+	Run_Number = event->GetRunNumber();
 	//BCAL_Neutrals->Fill();
 	//cout << " run number = " << RunNumber << endl;
 
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_point_calib::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootFillLock(this);
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootFillUnLock(this);
+
+	auto eventnumber = event->GetEventNumber();
 
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 
-	loop->GetSingle(locTrigger); 
+	event->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-	  return NOERROR;
+	  return;
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
 
 	vector<const DTrackFitter *> fitters;
-	loop->Get(fitters);
+	event->Get(fitters);
 	
 	if(fitters.size()<1){
 	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
+	  throw JException("Unable to get a DTrackFinder object!");
 	}
 	
 	auto fitter = fitters[0];
@@ -373,12 +373,12 @@ jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t event
 	vector<const DBCALHit*> bcalhits;
 	vector<const DBCALPoint*> locBCALPoints;
 
-	loop->Get(locBCALShowers);
-	loop->Get(bcalhits);
-	loop->Get(locBCALPoints);
+	event->Get(locBCALShowers);
+	event->Get(bcalhits);
+	event->Get(locBCALPoints);
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	loop->Get(locTrackTimeBased);
+	event->Get(locTrackTimeBased);
 
 	vector <const DBCALShower *> matchedShowers;
 	vector < const DBCALShower *> matchedShowersneg;
@@ -475,7 +475,7 @@ jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t event
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	for(int i=0; i<numshowers_per_event; i++){
 	        if(DEBUG) {
@@ -613,38 +613,34 @@ jerror_t JEventProcessor_BCAL_point_calib::evnt(JEventLoop *loop, uint64_t event
 
 	}   // end loop over matched showers
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
 	dEventWriterREST->Write_RESTEvent(loop, "BCAL_Shower"); //string is part of output file name
 	*/
-
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_point_calib::erun(void)
+void JEventProcessor_BCAL_point_calib::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_point_calib::fini(void)
+void JEventProcessor_BCAL_point_calib::Finish()
 {
 	// Called before program exit after event processing is finished.
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	// lock all root operations
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 
 	TDirectory *main = gDirectory;
 	TDirectory *locDirectory = (TDirectory*)gDirectory->FindObjectAny("bcal_point_calibs");
@@ -705,11 +701,9 @@ jerror_t JEventProcessor_BCAL_point_calib::fini(void)
 
 	main->cd();
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	
  	// unlock
- 	//japp->RootUnLock();
-
-	return NOERROR;
+ 	//lockService->RootUnLock();
 }
 

@@ -8,7 +8,7 @@
 #include <algorithm>
 
 #include "JANA/JObject.h"
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 
 #include "particleType.h"
 #include "DResettable.h"
@@ -16,7 +16,6 @@
 #include "PID/DNeutralShower.h"
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {

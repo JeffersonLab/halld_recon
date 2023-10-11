@@ -47,26 +47,26 @@ class Df125Config:public DDAQConfig{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQConfig::toStrings(items);
-			AddString(items, "NSA"      , "%d", NSA);
-			AddString(items, "NSB"      , "%d", NSB);
-			AddString(items, "NSA_NSB"  , "%d", NSA_NSB);
-			AddString(items, "NPED"     , "%d", NPED);
-			AddString(items, "WINWIDTH" , "%d", WINWIDTH);
-			AddString(items, "PL"       , "%d", PL);
-			AddString(items, "NW"       , "%d", NW);
-			AddString(items, "NPK"      , "%d", NPK);
-			AddString(items, "P1"       , "%d", P1);
-			AddString(items, "P2"       , "%d", P2);
-			AddString(items, "PG"       , "%d", PG);
-			AddString(items, "IE"       , "%d", IE);
-			AddString(items, "H"        , "%d", H);
-			AddString(items, "TH"       , "%d", TH);
-			AddString(items, "TL"       , "%d", TL);
-			AddString(items, "IBIT"     , "%d", IBIT);
-			AddString(items, "ABIT"     , "%d", ABIT);
-			AddString(items, "PBIT"     , "%d", PBIT);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQConfig::Summarize(summary);
+			summary.add(NSA, NAME_OF(NSA), "%d");
+			summary.add(NSB, NAME_OF(NSB), "%d");
+			summary.add(NSA_NSB, NAME_OF(NSA_NSB), "%d");
+			summary.add(NPED, NAME_OF(NPED), "%d");
+			summary.add(WINWIDTH, NAME_OF(WINWIDTH), "%d");
+			summary.add(PL, NAME_OF(PL), "%d");
+			summary.add(NW, NAME_OF(NW), "%d");
+			summary.add(NPK, NAME_OF(NPK), "%d");
+			summary.add(P1, NAME_OF(P1), "%d");
+			summary.add(P2, NAME_OF(P2), "%d");
+			summary.add(PG, NAME_OF(PG), "%d");
+			summary.add(IE, NAME_OF(IE), "%d");
+			summary.add(H, NAME_OF(H), "%d");
+			summary.add(TH, NAME_OF(TH), "%d");
+			summary.add(TL, NAME_OF(TL), "%d");
+			summary.add(IBIT, NAME_OF(IBIT), "%d");
+			summary.add(ABIT, NAME_OF(ABIT), "%d");
+			summary.add(PBIT, NAME_OF(PBIT), "%d");
 		}
 		
 };

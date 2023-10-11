@@ -1,36 +1,30 @@
 #include <iostream>
-#include <iomanip>
 using namespace std;
 
-#include <JANA/JApplication.h>
+#include <JANA/JEvent.h>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
-
-using namespace jana;
 
 #include "DL1Trigger_factory.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DL1Trigger_factory::init(void)
+void DL1Trigger_factory::Init()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DL1Trigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DL1Trigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DL1Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DL1Trigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// The L1 trigger latch words are added as "misc" words to the 
 	// Physic's Event's Built Trigger Bank. These show up in the
@@ -39,13 +33,13 @@ jerror_t DL1Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// never change!)
 
 
-        int l1_found = 0;  
+        int l1_found = 0;
 
 	vector<const DCODAROCInfo*> codarocinfos;
-	loop->Get(codarocinfos);
+	event->Get(codarocinfos);
 	
 	vector<const DL1Info*> l1_info;
-	loop->Get(l1_info);
+	event->Get(l1_info);
 
 	DL1Trigger *l1trigger = new DL1Trigger;
 
@@ -97,29 +91,23 @@ jerror_t DL1Trigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
 	if(l1_found){
-	  _data.push_back(l1trigger);	 
+	  Insert(l1trigger);
 	}else{
 	  delete l1trigger; // prevent memory leak
 	}
-
-
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DL1Trigger_factory::erun(void)
+void DL1Trigger_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DL1Trigger_factory::fini(void)
+void DL1Trigger_factory::Finish()
 {
-	return NOERROR;
 }
 

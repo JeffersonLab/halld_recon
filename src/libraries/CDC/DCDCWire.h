@@ -10,6 +10,8 @@
 
 #include <DCoordinateSystem.h>
 
+using std::vector;
+
 enum CDCWireD {
    dOriginXddeltaX=0,
    dOriginXddeltaY,

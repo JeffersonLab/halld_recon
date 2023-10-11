@@ -21,7 +21,7 @@
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_BCAL_LED_time());
+		app->Add(new JEventProcessor_BCAL_LED_time());
 	}
 
 }
@@ -31,6 +31,7 @@ extern "C"{
 
 
 JEventProcessor_BCAL_LED_time::JEventProcessor_BCAL_LED_time() {
+	SetTypeName("JEventProcessor_BCAL_LED_time");
 }
 
 
@@ -43,16 +44,19 @@ JEventProcessor_BCAL_LED_time::~JEventProcessor_BCAL_LED_time() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_BCAL_LED_time::init(void) {
+void JEventProcessor_BCAL_LED_time::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 	
 	// lock all root operations
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 	
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 	if(bcal_time_vevent != NULL){
-		japp->RootUnLock();
-		return NOERROR;
+		lockService->RootUnLock();
+		return;
 	}
 	
 	//NOtrig=0; FPtrig=0; GTPtrig=0; FPGTPtrig=0; trigUS=0; trigDS=0; trigCosmic=0;
@@ -247,31 +251,31 @@ jerror_t JEventProcessor_BCAL_LED_time::init(void) {
 	main->cd();
 	
 	// unlock
-	japp->RootUnLock();
+	lockService->RootUnLock();
 	
-	
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED_time::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_BCAL_LED_time::BeginRun(const std::shared_ptr<const JEvent>& event) {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED_time::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_BCAL_LED_time::Process(const std::shared_ptr<const JEvent>& event) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
+
+	auto eventnumber = event->GetEventNumber();
+	auto runnumber = event->GetRunNumber();
 	
 	int chcounter[1536] = { 0 } ;
 	  
@@ -289,7 +293,7 @@ jerror_t JEventProcessor_BCAL_LED_time::evnt(JEventLoop *loop, uint64_t eventnum
 	
 	const DL1Trigger *trig = NULL;
 	try {
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
 
@@ -325,7 +329,7 @@ jerror_t JEventProcessor_BCAL_LED_time::evnt(JEventLoop *loop, uint64_t eventnum
 		//NOtrig++;
 	}	
 	// Lock ROOT
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 
 	float ledup_sector = 0;
 	int ledup_sector_int = 0;
@@ -336,9 +340,9 @@ jerror_t JEventProcessor_BCAL_LED_time::evnt(JEventLoop *loop, uint64_t eventnum
 	float leddown_mean = 0;
 	int leddown_events = 0;
         // fill layer histogram
-	loop->Get(dbcalhits);
-	loop->Get(bcaldigihits);
-	loop->Get(dbcalpoints);   
+	event->Get(dbcalhits);
+	event->Get(bcaldigihits);
+	event->Get(dbcalpoints);   
 
 	// tag events that did not latch properly. Steal code from Sean's skim program
 
@@ -776,17 +780,15 @@ jerror_t JEventProcessor_BCAL_LED_time::evnt(JEventLoop *loop, uint64_t eventnum
 
 	}//if LEDUP || LEDDOWN    
 	// Unlock ROOT
-	japp->RootUnLock();
+	lockService->RootUnLock();
 	
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED_time::erun(void) {
+void JEventProcessor_BCAL_LED_time::EndRun() {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
@@ -824,14 +826,13 @@ jerror_t JEventProcessor_BCAL_LED_time::erun(void) {
 	
 	printf("%20s: %10i\n","Unidentified",unidentified);*/
 	
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LED_time::fini(void) {
+void JEventProcessor_BCAL_LED_time::Finish() {
 	// Called before program exit after event processing is finished.
 
 // 	//Write mean pulse time to output file
@@ -891,8 +892,6 @@ jerror_t JEventProcessor_BCAL_LED_time::fini(void) {
 	fouthighdown.close();
 	fouthighup.close();
 
-
-return NOERROR;
 }
 
 

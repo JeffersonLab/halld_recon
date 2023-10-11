@@ -18,9 +18,8 @@
 #define _DTOFHitMC_
 
 #include "JANA/JObject.h"
-#include "JANA/JFactory.h"
 
-class DTOFHitMC:public JObject{
+class DTOFHitMC: public JObject{
   
  public:
   JOBJECT_PUBLIC(DTOFHitMC);
@@ -39,22 +38,22 @@ class DTOFHitMC:public JObject{
   float pz;
   float E;		///< particle Energy
   
-  /// \fn void toStrings(vector<pair<string,string> > &items)const
+  /// \fn void Summarize(JObjectSummary& summary) const
   /// print function used by hd_dump to list all TOF hits based on this objects for an event 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "bar", "%d", bar);
-    AddString(items, "plane", "%d", plane);
-    AddString(items, "end", "%d", end);
-    AddString(items, "dist", "%12.4e", dist);
-    AddString(items, "x", "%12.4e", x);
-    AddString(items, "y", "%12.4e", y);
-    AddString(items, "z", "%12.4e", z);
-    AddString(items, "px", "%12.4e", px);
-    AddString(items, "py", "%12.4e", py);
-    AddString(items, "pz", "%12.4e", pz);
-    AddString(items, "E", "%12.4e", E);
-    AddString(items, "ptype", "%d", ptype);
-    AddString(items, "itrack", "%d", itrack);
+  void Summarize(JObjectSummary& summary) const {
+    summary.add(bar, "bar", "%d");
+    summary.add(plane, "plane", "%d");
+    summary.add(end, "end", "%d");
+    summary.add(dist, "dist", "%12.4e");
+    summary.add(x, "x", "%12.4e");
+    summary.add(y, "y", "%12.4e");
+    summary.add(z, "z", "%12.4e");
+    summary.add(px, "px", "%12.4e");
+    summary.add(py, "py", "%12.4e");
+    summary.add(pz, "pz", "%12.4e");
+    summary.add(E, "E", "%12.4e");
+    summary.add(ptype, "ptype", "%d");
+    summary.add(itrack, "itrack", "%d");
   }
 };
 

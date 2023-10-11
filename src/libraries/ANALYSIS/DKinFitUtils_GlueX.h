@@ -12,7 +12,6 @@
 
 #include "particleType.h"
 
-#include "DANA/DApplication.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "PID/DBeamPhoton.h"
@@ -42,12 +41,12 @@ class DKinFitUtils_GlueX : public DKinFitUtils
 		/***************************************************************** INITIALIZE ***************************************************************/
 
 		//CONSTRUCTORS //call either one
-		DKinFitUtils_GlueX(JEventLoop* locEventLoop);
+		DKinFitUtils_GlueX(const std::shared_ptr<const JEvent>& locEvent);
 		//useful for manually using a different field:
 		DKinFitUtils_GlueX(const DMagneticFieldMap* locMagneticFieldMap, const DAnalysisUtilities* locAnalysisUtilities);
 
 		void Reset_NewEvent(void);
-		void Set_RunDependent_Data(JEventLoop *locEventLoop);
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent);
 		void Set_IncludeBeamlineInVertexFitFlag(bool locIncludeBeamlineInVertexFitFlag){dIncludeBeamlineInVertexFitFlag = locIncludeBeamlineInVertexFitFlag;}
 
 		/************************************************************** CREATE PARTICLES ************************************************************/
@@ -158,7 +157,6 @@ class DKinFitUtils_GlueX : public DKinFitUtils
 		/************************************************************** MISCELLANEOUS ***************************************************************/
 
 		bool dIncludeBeamlineInVertexFitFlag;
-		DApplication* dApplication;
 		bool dWillBeamHaveErrorsFlag;
 };
 

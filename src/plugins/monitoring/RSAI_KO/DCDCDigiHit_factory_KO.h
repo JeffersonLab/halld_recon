@@ -8,25 +8,26 @@
 #ifndef _DCDCDigiHit_factory_KO_
 #define _DCDCDigiHit_factory_KO_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <CDC/DCDCDigiHit.h>
 
-class DCDCDigiHit_factory_KO:public jana::JFactory<DCDCDigiHit>{
+class DCDCDigiHit_factory_KO:public JFactoryT<DCDCDigiHit>{
 	public:
-		DCDCDigiHit_factory_KO(){};
+		DCDCDigiHit_factory_KO(){
+			SetTag("KO");
+		};
 		~DCDCDigiHit_factory_KO(){};
-		const char* Tag(void){return "KO";}
 
 		std::map< std::pair<int,int>, double > CDC_pin_eff;
 
 		int SetBoardEfficiency(string boardname, double eff); // returns number of pins in board
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _DCDCDigiHit_factory_KO_

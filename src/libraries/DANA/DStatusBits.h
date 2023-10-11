@@ -21,7 +21,7 @@
 #ifndef _DStatusBits_
 #define _DStatusBits_
 
-#include <JANA/JApplication.h>
+#include <JANA/Compatibility/JStatusBits.h>
 
 // Used for status flags set for each event
 enum StatusBitType{
@@ -52,29 +52,26 @@ enum StatusBitType{
 };
 
 
-class DStatusBits{
+
+class DStatusBits : public JStatusBits<StatusBitType> {
 	public:
-		DStatusBits(){}
-		virtual ~DStatusBits(){}
-		
-		static void SetStatusBitDescriptions(jana::JApplication *japp){
-			// Set status bit descriptions
-			japp->SetStatusBitDescription( kSTATUS_HDDM,          "HDDM file" );
-			japp->SetStatusBitDescription( kSTATUS_REST,          "REST file" );
-			japp->SetStatusBitDescription( kSTATUS_EVIO,          "EVIO" );
-			japp->SetStatusBitDescription( kSTATUS_CODA,          "CODA event recorder" );
-			japp->SetStatusBitDescription( kSTATUS_CDAQ,          "CDAQ event recorder" );
-			japp->SetStatusBitDescription( kSTATUS_FROM_FILE,     "Event read from file" );
-			japp->SetStatusBitDescription( kSTATUS_FROM_ET,       "Event read from ET system" );
-			japp->SetStatusBitDescription( kSTATUS_CONTROL_EVENT, "Control event" );
-			japp->SetStatusBitDescription( kSTATUS_PHYSICS_EVENT, "Physics event" );
-			japp->SetStatusBitDescription( kSTATUS_EPICS_EVENT,   "EPICS event" );
-			japp->SetStatusBitDescription( kSTATUS_SYNC_EVENT,    "SYNC event" );
-			japp->SetStatusBitDescription( kSTATUS_BOR_EVENT,     "Beginning Of Run (BOR) event") ;
 
-			japp->SetStatusBitDescription( kSTATUS_L3PASS,        "L3 Pass") ;
-			japp->SetStatusBitDescription( kSTATUS_L3FAIL,        "L3 Fail") ;
+		static void SetStatusBitDescriptions() {
+			SetStatusBitDescription( kSTATUS_HDDM,          "HDDM file" );
+			SetStatusBitDescription( kSTATUS_REST,          "REST file" );
+			SetStatusBitDescription( kSTATUS_EVIO,          "EVIO" );
+			SetStatusBitDescription( kSTATUS_CODA,          "CODA event recorder" );
+			SetStatusBitDescription( kSTATUS_CDAQ,          "CDAQ event recorder" );
+			SetStatusBitDescription( kSTATUS_FROM_FILE,     "Event read from file" );
+			SetStatusBitDescription( kSTATUS_FROM_ET,       "Event read from ET system" );
+			SetStatusBitDescription( kSTATUS_CONTROL_EVENT, "Control event" );
+			SetStatusBitDescription( kSTATUS_PHYSICS_EVENT, "Physics event" );
+			SetStatusBitDescription( kSTATUS_EPICS_EVENT,   "EPICS event" );
+			SetStatusBitDescription( kSTATUS_SYNC_EVENT,    "SYNC event" );
+			SetStatusBitDescription( kSTATUS_BOR_EVENT,     "Beginning Of Run (BOR) event") ;
 
+			SetStatusBitDescription( kSTATUS_L3PASS,        "L3 Pass") ;
+			SetStatusBitDescription( kSTATUS_L3FAIL,        "L3 Fail") ;
 		}
 };
 
