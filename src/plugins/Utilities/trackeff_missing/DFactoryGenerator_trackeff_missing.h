@@ -8,21 +8,20 @@
 #ifndef _DFactoryGenerator_trackeff_missing_
 #define _DFactoryGenerator_trackeff_missing_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_trackeff_missing.h"
 
-class DFactoryGenerator_trackeff_missing : public jana::JFactoryGenerator
+class DFactoryGenerator_trackeff_missing : public JFactoryGenerator
 {
 	public:
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_trackeff_missing";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
+		void GenerateFactories(JFactorySet* fs)
 		{
-			locEventLoop->AddFactory(new DReaction_factory_trackeff_missing());
-			return NOERROR;
+			fs->Add(new DReaction_factory_trackeff_missing());
 		}
 };
 

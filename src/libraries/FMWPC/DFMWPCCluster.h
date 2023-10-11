@@ -14,7 +14,7 @@
 #include "DFMWPCHit.h"
 #include "DVector3.h"
 
-class DFMWPCCluster:public jana::JObject{
+class DFMWPCCluster:public JObject{
 	public:
 		JOBJECT_PUBLIC(DFMWPCCluster);
 		

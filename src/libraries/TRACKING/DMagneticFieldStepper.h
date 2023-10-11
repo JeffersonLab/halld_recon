@@ -7,7 +7,7 @@
 #include <math.h>
 
 #include <DVector3.h>
-#include "JANA/jerror.h"
+#include "JANA/Compatibility/jerror.h"
 
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 

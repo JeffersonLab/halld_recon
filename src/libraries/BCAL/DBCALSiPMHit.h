@@ -11,8 +11,6 @@
 #include "BCAL/DBCALGeometry.h"
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 // WARNING: This class represents the SiPM hits and is intended
 // for debugging of simulated data only. The information contained
@@ -22,7 +20,7 @@ using namespace jana;
 // Objects of this class hold hold data from the bcalSiPMUpHit and
 // bcalSiPMDownHit structures from HDDM
 
-class DBCALSiPMHit:public JObject{
+class DBCALSiPMHit: public JObject {
 	public:
 		JOBJECT_PUBLIC(DBCALSiPMHit);
 
@@ -38,14 +36,14 @@ class DBCALSiPMHit:public JObject{
 		
 		int cellId;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "cellId", "%d", cellId);
-			AddString(items, "module", "%d", module);
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "end", "%s", end==0 ? "upstream":"downstream" );
-			AddString(items, "E(GeV)", "%2.3f", E);
-			AddString(items, "t(ns)", "%4.2f", t);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(cellId, "cellId", "%d");
+			summary.add(module, "module", "%d");
+			summary.add(layer, "layer", "%d");
+			summary.add(sector, "sector", "%d");
+			summary.add(end==0 ? "upstream":"downstream" , "end", "%s");
+			summary.add(E, "E(GeV)", "%2.3f");
+			summary.add(t, "t(ns)", "%4.2f");
 		}
 };
 

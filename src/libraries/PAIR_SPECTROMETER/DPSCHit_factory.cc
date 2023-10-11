@@ -12,44 +12,50 @@
 #include <limits>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "DPSCHit_factory.h"
 #include "DPSCDigiHit.h"
 #include "DPSCTDCDigiHit.h"
 #include <DAQ/Df250PulsePedestal.h>
 #include <DAQ/Df250PulseIntegral.h>
-using namespace jana;
+
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DPSCHit_factory::init(void)
+void DPSCHit_factory::Init()
 {
+  auto app = GetApplication();
   DELTA_T_ADC_TDC_MAX = 4.0; // ns
-  gPARMS->SetDefaultParameter("PSCHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
+  app->SetDefaultParameter("PSCHit:DELTA_T_ADC_TDC_MAX", DELTA_T_ADC_TDC_MAX,
 			      "Maximum difference in ns between a (calibrated) fADC time and"
 			      " F1TDC time for them to be matched in a single hit");
   ADC_THRESHOLD = 500.0; // ADC integral counts
-  gPARMS->SetDefaultParameter("PSCHit:ADC_THRESHOLD",ADC_THRESHOLD,
+  app->SetDefaultParameter("PSCHit:ADC_THRESHOLD",ADC_THRESHOLD,
 			      "pedestal-subtracted pulse integral threshold");
 
   CHECK_FADC_ERRORS = true;
-  gPARMS->SetDefaultParameter("PSCHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+  app->SetDefaultParameter("PSCHit:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
 
   /// set the base conversion scales
   a_scale    = 0.0001; 
   t_scale    = 0.0625;   // 62.5 ps/count
   t_base     = 0.;    // ns
   t_tdc_base = 0.;
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DPSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DPSCHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -62,43 +68,43 @@ jerror_t DPSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   pthread_mutex_unlock(&print_mutex);	
 
   /// Read in calibration constants
-  if(print_messages) jout << "In DPSCHit_factory, loading constants..." << endl;
+  if(print_messages) jout << "In DPSCHit_factory, loading constants..." << jendl;
 	
   // extract the PS Geometry
   vector<const DPSGeometry*> psGeomVect;
-  eventLoop->Get( psGeomVect );
+  event->Get( psGeomVect );
   if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    return; // OBJECT_NOT_AVAILABLE;
   const DPSGeometry& psGeom = *(psGeomVect[0]);
 
   // load scale factors
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/digi_scales !" << endl;
+  if (calibration->Get("/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/digi_scales !" << jendl;
   if (scale_factors.find("PSC_ADC_ASCALE") != scale_factors.end())
     a_scale = scale_factors["PSC_ADC_ASCALE"];
   else
     jerr << "Unable to get PSC_ADC_ASCALE from /PHOTON_BEAM/pair_spectrometer/digi_scales !" 
-	 << endl;
+	 << jendl;
   if (scale_factors.find("PSC_ADC_TSCALE") != scale_factors.end())
     t_scale = scale_factors["PSC_ADC_TSCALE"];
   else
     jerr << "Unable to get PSC_ADC_TSCALE from /PHOTON_BEAM/pair_spectrometer/digi_scales !" 
-	 << endl;
+	 << jendl;
 
   // load base time offset
   map<string,double> base_time_offset;
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/base_time_offset",base_time_offset))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << endl;
+  if (calibration->Get("/PHOTON_BEAM/pair_spectrometer/base_time_offset",base_time_offset))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << jendl;
   if (base_time_offset.find("PS_COARSE_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["PS_COARSE_BASE_TIME_OFFSET"];
   else
-    jerr << "Unable to get PS_COARSE_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << endl;
+    jerr << "Unable to get PS_COARSE_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << jendl;
   //
   if (base_time_offset.find("PS_COARSE_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
     t_tdc_base = base_time_offset["PS_COARSE_TDC_BASE_TIME_OFFSET"];
   else
-    jerr << "Unable to get PS_COARSE_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << endl;
+    jerr << "Unable to get PS_COARSE_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/pair_spectrometer/base_time_offset !" << jendl;
 
   /// Read in calibration constants
   vector<double> raw_adc_pedestals;
@@ -107,14 +113,14 @@ jerror_t DPSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   vector<double> raw_tdc_offsets;
 
   // load constant tables
-  if(eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/coarse/adc_pedestals", raw_adc_pedestals))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_pedestals !" << endl;
-  if(eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/coarse/adc_gain_factors", raw_adc_gains))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_gain_factors !" << endl;
-  if(eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/coarse/adc_timing_offsets", raw_adc_offsets))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_timing_offsets !" << endl;
-  if(eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/coarse/tdc_timing_offsets", raw_tdc_offsets))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/tdc_timing_offsets !" << endl;
+  if(calibration->Get("/PHOTON_BEAM/pair_spectrometer/coarse/adc_pedestals", raw_adc_pedestals))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_pedestals !" << jendl;
+  if(calibration->Get("/PHOTON_BEAM/pair_spectrometer/coarse/adc_gain_factors", raw_adc_gains))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_gain_factors !" << jendl;
+  if(calibration->Get("/PHOTON_BEAM/pair_spectrometer/coarse/adc_timing_offsets", raw_adc_offsets))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/adc_timing_offsets !" << jendl;
+  if(calibration->Get("/PHOTON_BEAM/pair_spectrometer/coarse/tdc_timing_offsets", raw_tdc_offsets))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/coarse/tdc_timing_offsets !" << jendl;
 
 
   FillCalibTable(adc_pedestals, raw_adc_pedestals, psGeom);
@@ -123,16 +129,16 @@ jerror_t DPSCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   FillCalibTable(tdc_time_offsets, raw_tdc_offsets, psGeom);
 
   // load timewalk corrections
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/tdc_timewalk_corrections", tw_parameters))
-    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/tdc_timewalk_corrections !" << endl;
+  if (calibration->Get("/PHOTON_BEAM/pair_spectrometer/tdc_timewalk_corrections", tw_parameters))
+    jout << "Error loading /PHOTON_BEAM/pair_spectrometer/tdc_timewalk_corrections !" << jendl;
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DPSCHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DPSCHit object for each DPSCDigiHit object.
   /// This is where the first set of calibration constants
@@ -145,17 +151,17 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   // extract the PS Geometry
   vector<const DPSGeometry*> psGeomVect;
-  eventLoop->Get(psGeomVect);
+  event->Get(psGeomVect);
   if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    return; // OBJECT_NOT_AVAILABLE;
   const DPSGeometry& psGeom = *(psGeomVect[0]);
 
   const DTTabUtilities* locTTabUtilities = nullptr;
-  loop->GetSingle(locTTabUtilities);
+  event->GetSingle(locTTabUtilities);
 
   // First, make hits out of all fADC250 hits
   vector<const DPSCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   char str[256];
 
   for (unsigned int i=0; i < digihits.size(); i++) {
@@ -181,7 +187,7 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
     if(nsamples_pedestal == 0) {
-        jerr << "DPSCDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+        jerr << "DPSCDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << jendl;
         continue;
     }
 
@@ -219,7 +225,7 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     hit->AddAssociatedObject(digihit);
 
-    _data.push_back(hit);
+    Insert(hit);
   }
 
   // Second, loop over TDC hits, matching them to the
@@ -227,7 +233,7 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // their time information. If no match is found, then
   // create a new hit with just the TDC info.
   vector<const DPSCTDCDigiHit*> tdcdigihits;
-  loop->Get(tdcdigihits);
+  event->Get(tdcdigihits);
 
     for(unsigned int i=0; i<tdcdigihits.size(); i++) {
       const DPSCTDCDigiHit *digihit = tdcdigihits[i];
@@ -250,7 +256,7 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
           hit->pulse_peak = numeric_limits<double>::quiet_NaN();
           hit->npe_fadc = numeric_limits<double>::quiet_NaN();
           hit->has_fADC = false;
-          _data.push_back(hit);
+          Insert(hit);
       }
       hit->time_tdc = T;
       hit->has_TDC = true;
@@ -276,7 +282,7 @@ jerror_t DPSCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       hit->AddAssociatedObject(digihit);
     }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
@@ -288,8 +294,8 @@ DPSCHit* DPSCHit_factory::FindMatch(DPSGeometry::Arm arm, int module, double T)
 	
   // Loop over existing hits (from fADC) and look for a match
   // in both the sector and the time.
-  for(unsigned int i=0; i<_data.size(); i++) {
-    DPSCHit *hit = _data[i];
+  for(unsigned int i=0; i<mData.size(); i++) {
+    DPSCHit *hit = mData[i];
                 
     if(!hit->has_fADC) continue; // only match to fADC hits, not bachelor TDC hits
     if(hit->arm != arm) continue;
@@ -325,19 +331,17 @@ const int DPSCHit_factory::GetModule(const int counter_id,const int num_counters
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DPSCHit_factory::erun(void)
+void DPSCHit_factory::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DPSCHit_factory::fini(void)
+void DPSCHit_factory::Finish()
 {
-  return NOERROR;
 }
 
 //------------------
@@ -353,7 +357,7 @@ void DPSCHit_factory::FillCalibTable(psc_digi_constants_t &table, vector<double>
   // reset the table before filling it
   table.clear();
 
-  // initialize table
+  // Initialize table
   for(int column=0; column<psGeom.NUM_COARSE_COLUMNS; column++)
     table.push_back( pair<double,double>() );
 

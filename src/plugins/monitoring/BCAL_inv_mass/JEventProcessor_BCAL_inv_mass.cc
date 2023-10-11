@@ -10,8 +10,6 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALTruthShower.h"
 #include "BCAL/DBCALCluster.h"
@@ -54,21 +52,21 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_BCAL_inv_mass()); //register this plugin
+		locApplication->Add(new JEventProcessor_BCAL_inv_mass()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::init(void)
+void JEventProcessor_BCAL_inv_mass::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 
 	if(bcal_diphoton_mass_500 != NULL){
-	  return NOERROR;
+	  return;
 	}
 
 	TDirectory *main = gDirectory;
@@ -127,58 +125,55 @@ jerror_t JEventProcessor_BCAL_inv_mass::init(void)
 
 	main->cd();
 
-	return NOERROR;
+	return;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_BCAL_inv_mass::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
-    
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
 
 
-
-jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_BCAL_inv_mass::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
 
         const DTrigger* locTrigger = NULL; 
-	locEventLoop->GetSingle(locTrigger); 
+	locEvent->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-	  return NOERROR;
+	  return;
 
     vector<const DTrackFitter *> fitters;
-    locEventLoop->Get(fitters);
+    locEvent->Get(fitters);
     
     if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      throw JException("Unable to get a DTrackFinder object!");
     }
 	const DTrackFitter *fitter = fitters[0];
 
@@ -186,15 +181,15 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	vector<const DFCALCluster*> locFCALClusters;
 	vector<const DVertex*> kinfitVertex;
 	//const DDetectorMatches* locDetectorMatches = NULL;
-	//locEventLoop->GetSingle(locDetectorMatches);
-	locEventLoop->Get(locBCALShowers);
-	locEventLoop->Get(locFCALClusters);
-	locEventLoop->Get(kinfitVertex);
+	//locEvent->GetSingle(locDetectorMatches);
+	locEvent->Get(locBCALShowers);
+	locEvent->Get(locFCALClusters);
+	locEvent->Get(kinfitVertex);
 
-	if(locBCALShowers.size() > 15) return NOERROR;
+	if(locBCALShowers.size() > 15) return;
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	locEventLoop->Get(locTrackTimeBased);
+	locEvent->Get(locTrackTimeBased);
 
 	vector <const DBCALShower*> matchedShowers;
 	vector <const DFCALCluster*> matchedFCALClusters;
@@ -266,7 +261,7 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 	for(unsigned int i=0; i<locBCALShowers.size(); i++)
 	{
@@ -327,35 +322,30 @@ jerror_t JEventProcessor_BCAL_inv_mass::evnt(jana::JEventLoop* locEventLoop, uin
 	}   
 
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
 
 	/*
 	//Optional: Save event to output REST file. Use this to create skims.
-	dEventWriterREST->Write_RESTEvent(locEventLoop, "BCAL_Shower"); //string is part of output file name
+	dEventWriterREST->Write_RESTEvent(locEvent, "BCAL_Shower"); //string is part of output file name
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::erun(void)
+void JEventProcessor_BCAL_inv_mass::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_inv_mass::fini(void)
+void JEventProcessor_BCAL_inv_mass::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

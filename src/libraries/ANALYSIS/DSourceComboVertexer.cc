@@ -2,25 +2,26 @@
 #include "ANALYSIS/DSourceComboer.h"
 #include "ANALYSIS/DSourceComboP4Handler.h"
 #include "ANALYSIS/DSourceComboTimeHandler.h"
+#include "DANA/DEvent.h"
 
 namespace DAnalysis
 {
 
-DSourceComboVertexer::DSourceComboVertexer(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler) :
+DSourceComboVertexer::DSourceComboVertexer(const std::shared_ptr<const JEvent>& locEvent, DSourceComboer* locSourceComboer, DSourceComboP4Handler* locSourceComboP4Handler) :
 dSourceComboer(locSourceComboer), dSourceComboP4Handler(locSourceComboP4Handler)
 {
-	Set_RunDependent_Data(locEventLoop);
+	Set_RunDependent_Data(locEvent);
 
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+	auto app = locEvent->GetJApplication();
+	app->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
 }
 
-void DSourceComboVertexer::Set_RunDependent_Data(JEventLoop *locEventLoop)
+void DSourceComboVertexer::Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 
 	//TARGET INFORMATION
 	double locTargetCenterZ = 65.0;

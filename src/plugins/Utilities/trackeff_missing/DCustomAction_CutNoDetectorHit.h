@@ -13,7 +13,7 @@
 
 #include "TH2I.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "BCAL/DBCALShower.h"
@@ -29,7 +29,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_CutNoDetectorHit : public DAnalysisAction
 {
@@ -41,17 +40,18 @@ class DCustomAction_CutNoDetectorHit : public DAnalysisAction
 		dNum2DBCALZBins(450), dMinP(0.0), dMaxP(10.0), dMinTheta(0.0), dMaxTheta(140.0), dMinDeltaPhi(-60.0), dMaxDeltaPhi(60.0),
 		dSCMatchMinDeltaPhi(-180.0), dSCMatchMaxDeltaPhi(180.0), dMinTrackDOCA(0.0), dMaxTrackMatchDOCA(200.0), dMinDeltaZ(-60.0), dMaxDeltaZ(60.0) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {
-			DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-			dMagneticFieldMap = locApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
-			locEventLoop->GetSingle(dParticleID);		
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {
+			dMagneticFieldMap = GetBfield(locEvent);
+			locEvent->GetSingle(dParticleID);
 		}
 		void Reset_NewEvent(void){}; //RESET HISTOGRAM DUPLICATE-CHECK TRACKING HERE!!
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
+
+		std::shared_ptr<JLockService> lockService;
 
 		unsigned int dNum2DPBins, dNum2DThetaBins, dNum2DDeltaPhiBins, dNum2DTrackDOCABins, dNum2DDeltaZBins, dNum2DSCZBins, dNum2DBCALZBins;
 		float dMinP, dMaxP, dMinTheta, dMaxTheta, dMinDeltaPhi, dMaxDeltaPhi, dSCMatchMinDeltaPhi, dSCMatchMaxDeltaPhi;

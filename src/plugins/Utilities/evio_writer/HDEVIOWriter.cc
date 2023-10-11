@@ -12,13 +12,11 @@ using namespace std;
 #include "hdbyte_swapout.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JParameterManager.h>
-using namespace jana;
 
 //---------------------------------
 // HDEVIOWriter    (Constructor)
 //---------------------------------
-HDEVIOWriter::HDEVIOWriter(string sink_name)
+HDEVIOWriter::HDEVIOWriter(string sink_name, JApplication* app)
 {
 	pthread_mutex_init(&output_deque_mutex, NULL);
 	pthread_mutex_init(&buff_pool_mutex,NULL);
@@ -38,7 +36,7 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
     THREAD_SLEEP_TIME      = 250;  // in microseconds - can be increased if few threads are used, depending on the event processing rate
 	DEBUG_FILES            = false; 
 
-	if(gPARMS){
+	if(app){
 		// We want the default for MAX_OUTPUT_BUFFER_SIZE to be "AUTO" so that it can be set
 		// based on the ET system evnt size. This means the type of the config. variable
 		// must be a string.
@@ -335,7 +333,7 @@ void* HDEVIOWriter::HDEVIOOutputThread(void)
 			if(quit) break; // don't go to sleep just as we're quitting
 			usleep(THREAD_SLEEP_TIME);
 
-			if(japp && japp->GetQuittingStatus()) quit=true;
+			if(japp && japp->IsQuitting()) quit=true;
 			continue;
 		}
 

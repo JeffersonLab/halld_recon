@@ -6,6 +6,8 @@
 //
 
 #include "DChargedTrackHypothesis_factory.h"
+#include "DANA/DObjectID.h"
+#include "DANA/DEvent.h"
 
 inline bool DChargedTrackHypothesis_SortByEnergy(const DChargedTrackHypothesis* locChargedTrackHypothesis1, const DChargedTrackHypothesis* locChargedTrackHypothesis2)
 {
@@ -25,9 +27,9 @@ inline bool DChargedTrackHypothesis_SortByEnergy(const DChargedTrackHypothesis* 
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DChargedTrackHypothesis_factory::init(void)
+void DChargedTrackHypothesis_factory::Init()
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -37,50 +39,43 @@ jerror_t DChargedTrackHypothesis_factory::init(void)
 	dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
 
 	CDC_CORRECT_DEDX_THETA = true;
-	gPARMS->SetDefaultParameter("PID:CDC_CORRECT_DEDX_THETA",CDC_CORRECT_DEDX_THETA);
-	
-	return NOERROR;
+	GetApplication()->SetDefaultParameter("PID:CDC_CORRECT_DEDX_THETA",CDC_CORRECT_DEDX_THETA);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DChargedTrackHypothesis_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	locEventLoop->GetSingle(dPIDAlgorithm);
+	event->GetSingle(dPIDAlgorithm);
 
 	if (CDC_CORRECT_DEDX_THETA){
 	   // load CDC dEdx correction table
-	   DApplication* dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	   if(!dapp){
-	     _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl;
-	     return RESOURCE_UNAVAILABLE;
-	   }
 
 	   string dedx_theta_correction_file, dedx_i_theta_correction_file;
 	   map< string,string > dedx_theta_file_name, dedx_i_theta_file_name;
 
-	  if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
+	  if( DEvent::GetCalib(event, "/CDC/dedx_theta/dedx_amp_theta_correction", dedx_theta_file_name) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_theta_correction in CCDB for this run!" << endl;
-	    return RESOURCE_UNAVAILABLE;
+	    return; // RESOURCE_UNAVAILABLE;
 	  }
 	  else if( dedx_theta_file_name.find("file_name") != dedx_theta_file_name.end()
 		  && dedx_theta_file_name["file_name"] != "None" ) {
-	    JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
-	    dedx_theta_correction_file = jresman->GetResource(dedx_theta_file_name["file_name"]);
+	    auto *jlargecalib = DEvent::GetJLargeCalibration(event);
+	    dedx_theta_correction_file = jlargecalib->GetResource(dedx_theta_file_name["file_name"]);
 	  }
 
 	 // check to see if we actually have a filename
 	 if(dedx_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse amplitude) theta correction filename from CCDB" << endl;
-	   return RESOURCE_UNAVAILABLE;
+	   return; // RESOURCE_UNAVAILABLE;
 	 }
 
          // get overall scaling factor 
 	 map<string,double> scale_factors;
-	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_amp_scale", scale_factors) ) {
+	 if( DEvent::GetCalib(event, "/CDC/dedx_theta/dedx_amp_scale", scale_factors) ) {
 	    jerr << "Cannot find requested /CDC/dedx_theta/dedx_amp_scale in CCDB for this run!" << endl;
-	    return RESOURCE_UNAVAILABLE;
+	    return; // RESOURCE_UNAVAILABLE;
 	 }
 
          double dedx_amp_scale = 1.0; 
@@ -88,7 +83,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
            dedx_amp_scale = scale_factors["amp_scale"];
          } else {
            jerr << "Unable to get amp_scale from /CDC/dedx_amp_scale !" << endl;
-           return RESOURCE_UNAVAILABLE;
+           return; // RESOURCE_UNAVAILABLE;
 	 }
 
 	 FILE *dedxfile = fopen(dedx_theta_correction_file.c_str(),"r");
@@ -119,27 +114,27 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 fclose(dedxfile);
 
 	 // repeat for dedx from integral
-	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
+	 if( DEvent::GetCalib(event, "/CDC/dedx_theta/dedx_int_theta_correction", dedx_i_theta_file_name) ) {
 	   jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_theta_correction in CCDB for this run!" << endl;
-	   return RESOURCE_UNAVAILABLE;
+	   return; // RESOURCE_UNAVAILABLE;
 	 }
 	 else if( dedx_i_theta_file_name.find("file_name") != dedx_i_theta_file_name.end()
 		 && dedx_i_theta_file_name["file_name"] != "None" ) {
-	   JResourceManager *jresman = dapp->GetJResourceManager(runnumber);
-	   dedx_i_theta_correction_file = jresman->GetResource(dedx_i_theta_file_name["file_name"]);
+	   auto *jlargecalib = DEvent::GetJLargeCalibration(event);
+	   dedx_i_theta_correction_file = jlargecalib->GetResource(dedx_i_theta_file_name["file_name"]);
 	 }
 
 	 // check to see if we actually have a filename
 	 if(dedx_i_theta_correction_file.empty()) {
 	   jerr <<"Cannot read CDC dedx (from pulse integral) theta correction filename from CCDB" << endl;
-	   return RESOURCE_UNAVAILABLE;
+	   return; // RESOURCE_UNAVAILABLE;
 	 }
 
 	 
          // get overall scaling factor 
-	 if( locEventLoop->GetCalib("/CDC/dedx_theta/dedx_int_scale", scale_factors) ) {
+	 if( DEvent::GetCalib(event, "/CDC/dedx_theta/dedx_int_scale", scale_factors) ) {
            jerr << "Cannot find requested /CDC/dedx_theta/dedx_int_scale in CCDB for this run!" << endl;
-           return RESOURCE_UNAVAILABLE;
+           return; // RESOURCE_UNAVAILABLE;
 	 }
 
          double dedx_int_scale = 1.0;
@@ -147,7 +142,7 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
            dedx_int_scale = scale_factors["int_scale"];
          } else {
            jerr << "Unable to get int_scale from /CDC/dedx_int_scale !" << endl;
-           return RESOURCE_UNAVAILABLE;
+           return; // RESOURCE_UNAVAILABLE;
 	 }
 
 	 dedxfile = fopen(dedx_i_theta_correction_file.c_str(),"r");
@@ -177,41 +172,39 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 	 }
 	 fclose(dedxfile);
 	}
-
- 	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DChargedTrackHypothesis_factory::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+void DChargedTrackHypothesis_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//Recycle
 	dResourcePool_ChargedTrackHypothesis->Recycle(dCreated);
 	dCreated.clear();
-	_data.clear();
+	mData.clear();
 
  	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-	locEventLoop->Get(locTrackTimeBasedVector);
+	event->Get(locTrackTimeBasedVector);
 
 	vector<const DEventRFBunch*> locEventRFBunches;
-	locEventLoop->Get(locEventRFBunches);
+	event->Get(locEventRFBunches);
 	if (locEventRFBunches.size() == 0)
-	   return NOERROR;
+	   return;
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	event->GetSingle(locDetectorMatches);
 
-	map<JObject::oid_t, vector<DChargedTrackHypothesis*> > locChargedTrackHypotheses;
+	map<oid_t, vector<DChargedTrackHypothesis*> > locChargedTrackHypotheses;
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); loc_i++)
 	{
-		DChargedTrackHypothesis* locChargedTrackHypothesis = Create_ChargedTrackHypothesis(locEventLoop, locTrackTimeBasedVector[loc_i], locDetectorMatches, locEventRFBunches[0]);
+		DChargedTrackHypothesis* locChargedTrackHypothesis = Create_ChargedTrackHypothesis(event, locTrackTimeBasedVector[loc_i], locDetectorMatches, locEventRFBunches[0]);
 		locChargedTrackHypotheses[locChargedTrackHypothesis->Get_TrackTimeBased()->candidateid].push_back(locChargedTrackHypothesis);
 	}
 
 	//choose the first hypothesis from each track, and sort by increasing energy in the 1's and 0.1s digits (MeV): pseudo-random
 	vector<DChargedTrackHypothesis*> locTracksToSort;
-	map<JObject::oid_t, vector<DChargedTrackHypothesis*> >::iterator locIterator = locChargedTrackHypotheses.begin();
+	map<oid_t, vector<DChargedTrackHypothesis*> >::iterator locIterator = locChargedTrackHypotheses.begin();
 	for(; locIterator != locChargedTrackHypotheses.end(); ++locIterator)
 		locTracksToSort.push_back(locIterator->second[0]);
 	sort(locTracksToSort.begin(), locTracksToSort.end(), DChargedTrackHypothesis_SortByEnergy);
@@ -219,15 +212,14 @@ jerror_t DChargedTrackHypothesis_factory::evnt(jana::JEventLoop* locEventLoop, u
 	//now loop through the sorted vector, grab all of the hypotheses for each of those tracks from the map, and save them all in _data
 	for(size_t loc_i = 0; loc_i < locTracksToSort.size(); loc_i++)
 	{
-		JObject::oid_t locTrackID = locTracksToSort[loc_i]->Get_TrackTimeBased()->candidateid;
-		_data.insert(_data.end(), locChargedTrackHypotheses[locTrackID].begin(), locChargedTrackHypotheses[locTrackID].end());
+		oid_t locTrackID = locTracksToSort[loc_i]->Get_TrackTimeBased()->candidateid;
+		mData.insert(mData.end(), locChargedTrackHypotheses[locTrackID].begin(), locChargedTrackHypotheses[locTrackID].end());
 	}
 
-	dCreated = _data;
-	return NOERROR;
+	dCreated = mData;
 }
 
-DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHypothesis(JEventLoop* locEventLoop, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches, const DEventRFBunch* locEventRFBunch)
+DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHypothesis(const std::shared_ptr<const JEvent>& event, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches, const DEventRFBunch* locEventRFBunch)
 {
 	DChargedTrackHypothesis* locChargedTrackHypothesis = Get_Resource();
 	locChargedTrackHypothesis->Share_FromInput_Kinematics(static_cast<const DKinematicData*>(locTrackTimeBased));

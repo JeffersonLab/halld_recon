@@ -4,12 +4,11 @@
 //
 
 #include "DEventProcessor_bcal_calib.h"
-using namespace jana;
 
 #include <TROOT.h>
 #include <TCanvas.h>
 #include <TPolyLine.h>
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #define MAX_STEPS 1000
 
@@ -18,7 +17,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_bcal_calib());
+	app->Add(new DEventProcessor_bcal_calib());
 }
 } // "C"
 
@@ -70,7 +69,7 @@ double DEventProcessor_bcal_calib::cdc_drift_distance(double t){
 //------------------
 DEventProcessor_bcal_calib::DEventProcessor_bcal_calib()
 {
-
+	SetTypeName("DEventProcessor_bcal_calib");
 }
 
 //------------------
@@ -82,17 +81,18 @@ DEventProcessor_bcal_calib::~DEventProcessor_bcal_calib()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_bcal_calib::init(void)
+void DEventProcessor_bcal_calib::Init()
 {
   mT0=0.;
 
   DEBUG_HISTS=false;
-  gPARMS->SetDefaultParameter("BCAL_CALIB:DEBUG_HISTS",DEBUG_HISTS);
+  auto app = GetApplication();
+  app->SetDefaultParameter("BCAL_CALIB:DEBUG_HISTS",DEBUG_HISTS);
  
   DEBUG_PLOT_LINES=false;
-  gPARMS->SetDefaultParameter("BCAL_CALIB:DEBUG_PLOT_LINES",DEBUG_PLOT_LINES);
+  app->SetDefaultParameter("BCAL_CALIB:DEBUG_PLOT_LINES",DEBUG_PLOT_LINES);
 
   if (DEBUG_HISTS){
     
@@ -115,18 +115,15 @@ jerror_t DEventProcessor_bcal_calib::init(void)
 			    400,-50.,50.);
     }
   }
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_bcal_calib::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_bcal_calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {	
-  DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-   
-  JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+
+  JCalibration *jcalib = GetJCalibration(event);
   typedef map<string,double>::iterator iter_double;
   vector< map<string, double> > tvals;
   if (jcalib->Get("CDC/cdc_drift_table", tvals)==false){    
@@ -145,41 +142,34 @@ jerror_t DEventProcessor_bcal_calib::brun(JEventLoop *loop, int32_t runnumber)
   jcalib->Get("CDC/cdc_resolution_parms", cdc_res_parms);
   CDC_RES_PAR1 = cdc_res_parms["res_par1"];
   CDC_RES_PAR2 = cdc_res_parms["res_par2"];
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_bcal_calib::erun(void)
+void DEventProcessor_bcal_calib::EndRun()
 {
- 
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_bcal_calib::fini(void)
+void DEventProcessor_bcal_calib::Finish()
 {
-  
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_bcal_calib::evnt(JEventLoop *loop, uint64_t eventnumber){
+void DEventProcessor_bcal_calib::Process(const std::shared_ptr<const JEvent>& event){
   
   // Get BCAL showers
   vector<const DBCALShower*>bcalshowers;
-  loop->Get(bcalshowers);
+  event->Get(bcalshowers);
 
   // Get CDC hits
   vector<const DCDCTrackHit*>cdcs;
-  loop->Get(cdcs);
+  event->Get(cdcs);
 
   // Associate axial hits and stereo hits into segments and link the segments
   // together to form track candidates.  Fit the candidates first using the 
@@ -234,8 +224,6 @@ jerror_t DEventProcessor_bcal_calib::evnt(JEventLoop *loop, uint64_t eventnumber
       }
     }
   }
-   
-  return NOERROR;
 }
 
 // Steering routine for the kalman filter

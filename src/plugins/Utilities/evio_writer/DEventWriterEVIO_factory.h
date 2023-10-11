@@ -1,25 +1,24 @@
 #ifndef _DEventWriterEVIO_factory_
 #define _DEventWriterEVIO_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
 
 #include "DEventWriterEVIO.h"
 
-class DEventWriterEVIO_factory : public jana::JFactory<DEventWriterEVIO>
+class DEventWriterEVIO_factory : public JFactoryT<DEventWriterEVIO>
 {
 	public:
-		DEventWriterEVIO_factory(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
-		~DEventWriterEVIO_factory(){};
+		DEventWriterEVIO_factory() = default;
+		~DEventWriterEVIO_factory() override = default;
 
 	private:
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+		void Process(const std::shared_ptr<const JEvent>& locEvent, uint64_t locEventNumber)
 		{
 			// Create single DEventWriterEVIO object and marks the factory as persistent so it doesn't get deleted every event.
-			SetFactoryFlag(PERSISTANT);
+			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(new DEventWriterEVIO(locEventLoop));
-			return NOERROR;
+			Insert(new DEventWriterEVIO(locEvent));
 		}
 };
 

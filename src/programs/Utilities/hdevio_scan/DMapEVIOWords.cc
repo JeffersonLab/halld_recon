@@ -10,11 +10,9 @@
 
 #include "DMapEVIOWords.h"
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 using namespace std;
-using namespace jana;
 
 #include <DANA/DApplication.h>
 #include <TTAB/DTranslationTable.h>
@@ -198,12 +196,14 @@ void DMapEVIOWords::AddROCIDLabels(void)
 	/// can label them by detector.
 	
 	DApplication dapp(0, NULL);
+	auto app = dapp.GetJApp();
 	//auto jparms = dapp.GetJParameterManager();
 	//int RUNNUMBER = 1234;
 	//jparms->SetDefaultParameter("RUNNUMBER", RUNNUMBER);
-	JEventLoop loop(&dapp);
-	loop.GetJEvent().SetRunNumber(RUNNUMBER);
-	DTranslationTable ttab(&loop);
+	auto event = std::make_shared<JEvent>(app);
+
+	event->SetRunNumber(RUNNUMBER);
+	DTranslationTable ttab(app, &(*event));   // TODO: NWB: Why on earth does TTab ctor take evt as an arg?
 
 	// Loop over all rocid values
 	for(uint32_t rocid=2; rocid<99; rocid++){

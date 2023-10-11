@@ -1,7 +1,6 @@
 // $Id$
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/Compatibility/JGetObjectsFactory.h>
 
 #include "DTAGMDigiHit.h"
 #include "DTAGMTDCDigiHit.h"
@@ -19,21 +18,19 @@ using namespace jana;
 #include "DTAGHHit_factory_Calib.h"
 
 
-jerror_t TAGGER_init(JEventLoop *loop)
+void TAGGER_init(JFactorySet *factorySet)
 {
   /// Create and register TAGGER data factories
-  loop->AddFactory(new JFactory<DTAGMDigiHit>());
-  loop->AddFactory(new JFactory<DTAGMTDCDigiHit>());
-  loop->AddFactory(new JFactory<DTAGHDigiHit>());
-  loop->AddFactory(new JFactory<DTAGHTDCDigiHit>());
-  loop->AddFactory(new DTAGMHit_factory());
-  loop->AddFactory(new DTAGMHit_factory_Calib());
-  loop->AddFactory(new DTAGHHit_factory());
-  loop->AddFactory(new DTAGHHit_factory_Calib());
-  loop->AddFactory(new JFactory<DTAGMHit>("TRUTH"));
-  loop->AddFactory(new JFactory<DTAGHHit>("TRUTH"));
-  loop->AddFactory(new DTAGMGeometry_factory());
-  loop->AddFactory(new DTAGHGeometry_factory());
-
-  return NOERROR;
+  factorySet->Add(new JGetObjectsFactory<DTAGMDigiHit>());
+  factorySet->Add(new JGetObjectsFactory<DTAGMTDCDigiHit>());
+  factorySet->Add(new JGetObjectsFactory<DTAGHDigiHit>());
+  factorySet->Add(new JGetObjectsFactory<DTAGHTDCDigiHit>());
+  factorySet->Add(new DTAGMHit_factory());
+  factorySet->Add(new DTAGMHit_factory_Calib());
+  factorySet->Add(new DTAGHHit_factory());
+  factorySet->Add(new DTAGHHit_factory_Calib());
+  factorySet->Add(new JGetObjectsFactory<DTAGMHit>("TRUTH"));
+  factorySet->Add(new JGetObjectsFactory<DTAGHHit>("TRUTH"));
+  factorySet->Add(new DTAGMGeometry_factory());
+  factorySet->Add(new DTAGHGeometry_factory());
 }

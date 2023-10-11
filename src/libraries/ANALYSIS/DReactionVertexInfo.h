@@ -11,7 +11,6 @@
 #include "ANALYSIS/DReactionStepVertexInfo.h"
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {

@@ -11,8 +11,8 @@
 #include <vector>
 #include <set>
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
+#include <JANA/Compatibility/jerror.h>
 #include <DAQ/Df250WindowRawData.h>
 #include <TAC/DTACHit.h>
 
@@ -24,7 +24,7 @@ class HitRebuilderInterfaceTAC {
 protected:
 	virtual double getTimeFromRawData(const std::vector<uint16_t>& samples) = 0;
 	virtual const Df250WindowRawData* getRawData(const DTACHit* baseHit) = 0;
-	jerror_t readCCDB(jana::JEventLoop* eventLoop) = delete;
+	jerror_t readCCDB(const std::shared_ptr<const JEvent>& event) = delete;
 
 public:
 	HitRebuilderInterfaceTAC() {

@@ -7,12 +7,12 @@
 
 #include "DCustomAction_CutPhotonKin.h"
 
-void DCustomAction_CutPhotonKin::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_CutPhotonKin::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	
 }
 
-bool DCustomAction_CutPhotonKin::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_CutPhotonKin::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
     auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction());
 

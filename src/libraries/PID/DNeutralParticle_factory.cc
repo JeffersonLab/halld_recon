@@ -12,31 +12,31 @@ using namespace std;
 
 #include "DNeutralParticle_factory.h"
 #include "DResourcePool.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DNeutralParticle_factory::init(void)
+void DNeutralParticle_factory::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DNeutralParticle_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralParticle_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DNeutralParticle_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralParticle_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DNeutralParticleHypothesis*> locNeutralParticleHypotheses;
-	locEventLoop->Get(locNeutralParticleHypotheses);
+	event->Get(locNeutralParticleHypotheses);
 
 	map<const DNeutralShower*, vector<const DNeutralParticleHypothesis*> > locHypothesesByShower;
 	for(size_t loc_i = 0; loc_i < locNeutralParticleHypotheses.size(); loc_i++)
@@ -47,26 +47,22 @@ jerror_t DNeutralParticle_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t
 		DNeutralParticle* locNeutralParticle = new DNeutralParticle();
 		locNeutralParticle->dNeutralShower = locPair.first;
 		locNeutralParticle->dNeutralParticleHypotheses = locPair.second;
-		_data.push_back(locNeutralParticle);
+		Insert(locNeutralParticle);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DNeutralParticle_factory::erun(void)
+void DNeutralParticle_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DNeutralParticle_factory::fini(void)
+void DNeutralParticle_factory::Finish()
 {
-	return NOERROR;
 }
 
 

@@ -6,8 +6,8 @@
 //
 
 #include "JEventProcessor_TS_scaler.h"
-using namespace jana;
 
+#include <DANA/DEvent.h>
 #include <DANA/DStatusBits.h>
 #include "TRIGGER/DL1Trigger.h"
 #include "DAQ/DL1Info.h"
@@ -15,17 +15,16 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include <TDirectory.h>
 
 using namespace std;
-using namespace jana;
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_TS_scaler());
+	app->Add(new JEventProcessor_TS_scaler());
 }
 } // "C"
 
@@ -37,7 +36,7 @@ thread_local DTreeFillData JEventProcessor_TS_scaler::dTreeFillData;
 //------------------
 JEventProcessor_TS_scaler::JEventProcessor_TS_scaler()
 {
-
+	SetTypeName("JEventProcessor_TS_scaler");
 }
 
 //------------------
@@ -49,11 +48,13 @@ JEventProcessor_TS_scaler::~JEventProcessor_TS_scaler()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TS_scaler::init(void)
+void JEventProcessor_TS_scaler::Init()
 {
-	// This is called once at program startup. 
+	// This is called once at program startup.
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 	
 	// monitor some trigger bits separately
 	dTrigBits.push_back(1);   // FCAL-BCAL
@@ -134,7 +135,7 @@ jerror_t JEventProcessor_TS_scaler::init(void)
 	// change back to main hd_root file for other plugins
 	mainDir->cd();
 
-	// initialize some variables
+	// Initialize some variables
 	dIsFirstInterval = true;
 	dIsLastInterval = false;
 	dCurrent = 0;
@@ -155,28 +156,27 @@ jerror_t JEventProcessor_TS_scaler::init(void)
 		dFPScalerTriggerBitPrevious[j] = 0;
 		dFPRecordedTriggerBitPrevious[j] = 0;
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TS_scaler::brun(JEventLoop *locEventLoop, int32_t locRunNumber)
+void JEventProcessor_TS_scaler::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_TS_scaler::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto locEventNumber = locEvent->GetEventNumber();
+
 	// get beam current from EPICS events
 	vector<const DEPICSvalue*> epicsvalues;
-        locEventLoop->Get(epicsvalues);
-        bool isEPICS = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT);
+        locEvent->Get(epicsvalues);
+        bool isEPICS = GetStatusBit(locEvent, kSTATUS_EPICS_EVENT);
 	if(isEPICS) {
 		for(vector<const DEPICSvalue*>::const_iterator val_itr = epicsvalues.begin(); val_itr != epicsvalues.end(); val_itr++) {
 			const DEPICSvalue* epics_val = *val_itr;
@@ -187,15 +187,15 @@ jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locE
 	}
 
 	// check if it's a physics event
-	bool isPhysics = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT);
+	bool isPhysics = GetStatusBit(locEvent, kSTATUS_PHYSICS_EVENT);
 	if(!isPhysics) 
-		return NOERROR;
+		return;
 	
 	// check if event has L1 trigger information
 	const DL1Trigger *locL1Trigger = NULL;
-	locEventLoop->GetSingle(locL1Trigger);
+	locEvent->GetSingle(locL1Trigger);
 	if(!locL1Trigger)
-		return NOERROR;
+		return;
 
 	// get trigger masks and count triggers
 	uint32_t trig_mask = locL1Trigger->trig_mask;
@@ -210,18 +210,18 @@ jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locE
 	}
 		
 	int trig_bits = fp_trig_mask > 0? 128 + fp_trig_mask/256: trig_mask;
-	japp->RootFillLock(this);
+	lockService->RootWriteLock();
 	dHistTS_trgbits->Fill(trig_bits);
-	japp->RootFillUnLock(this);
+	lockService->RootUnLock();
 
 	// check if scalers are filled to identify SYNC events
 	//if(locL1Trigger->gtp_sc.size() <= 0)
-	//	return NOERROR;
+	//	return;
 
 	vector<const DL1Info*> locL1Infos;
-	locEventLoop->Get(locL1Infos);
+	locEvent->Get(locL1Infos);
 	if(locL1Infos.empty())
-		return NOERROR;
+		return;
 	const DL1Info *locL1Info = locL1Infos[0];
 
 	dEventNumber = locEventNumber;
@@ -247,13 +247,13 @@ jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locE
 	//printf ("Event=%d int_count=%d livetime=%d busytime=%d time=%d live_inst=%d\n",(int)locEventNumber,int_count,livetime,busytime,(int)timestamp,live_inst);
 	
 	double livetime_integrated = (double)livetime/(livetime+busytime);
-	japp->RootFillLock(this);
+	lockService->RootWriteLock();
 	dHistTS_livetime_tot->Fill(livetime_integrated);
 	dHistTS_liveinst_tot->Fill((float)live_inst/1000.);
 	dHistTS_livetimeEvents->Fill(locEventNumber, livetime_integrated);
 	dHistTS_SyncEvents->Fill(locEventNumber);
 	dHistTS_Current->Fill(dEventNumber, dCurrent);
-	japp->RootFillUnLock(this);
+	lockService->RootUnLock();
 	
 	//STAGE DATA FOR TREE FILL
 	dTreeFillData.Fill_Single<bool>("IsFirstInterval", dIsFirstInterval);
@@ -274,7 +274,7 @@ jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locE
 	dSyncEventUnixTime = timestamp;
 
 	// set info for each trigger bit and fill histograms
-	japp->RootFillLock(this);
+	lockService->RootWriteLock();
 	for (int j=0; j<kScalers; j++) {
 		gtp_rec[j] = dTrigCount[j] - dRecordedTriggerBitPrevious[j];
 		gtp_sc[j] = locL1Info->gtp_sc[j] - dScalerTriggerBitPrevious[j];
@@ -317,32 +317,29 @@ jerror_t JEventProcessor_TS_scaler::evnt(JEventLoop *locEventLoop, uint64_t locE
 			}
 		}
 	}
-	japp->RootFillUnLock(this);
+	lockService->RootUnLock();
 
 	//FILL TTREE
 	dTreeInterface->Fill(dTreeFillData);
 
 	// once you're here it's never the first interval
 	dIsFirstInterval = false;
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TS_scaler::erun(void)
+void JEventProcessor_TS_scaler::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TS_scaler::fini(void)
+void JEventProcessor_TS_scaler::Finish()
 {
 	// Called before program exit after event processing is finished.
 
@@ -372,7 +369,5 @@ jerror_t JEventProcessor_TS_scaler::fini(void)
 	//FILL TTREE
 	dTreeInterface->Fill(dTreeFillData);
 	delete dTreeInterface; //saves trees to file, closes file
-
-	return NOERROR;
 }
 

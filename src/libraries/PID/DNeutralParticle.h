@@ -18,7 +18,7 @@
 
 using namespace std;
 
-class DNeutralParticle : public jana::JObject
+class DNeutralParticle : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DNeutralParticle);
@@ -29,15 +29,15 @@ class DNeutralParticle : public jana::JObject
 		const DNeutralParticleHypothesis* Get_BestFOM(void) const;
 		const DNeutralParticleHypothesis* Get_Hypothesis(Particle_t locPID) const;
 
-		void toStrings(vector<pair<string,string> > &items) const
+		void Summarize(JObjectSummary& summary) const override
 		{
-			AddString(items, "Nhypotheses", "%d", dNeutralParticleHypotheses.size());
-			
+			summary.add(dNeutralParticleHypotheses.size(), "%d", "Nhypotheses");
+
 			stringstream ss;
 			for(auto hypos : dNeutralParticleHypotheses) {
 				ss << hypos->PID() << " ";
 			}
-			AddString(items, "Hypothesis List", "%s", ss.str().c_str());
+			summary.add(ss.str().c_str(), "Hypothesis List", "%s");
 		}
 };
 

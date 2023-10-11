@@ -18,11 +18,10 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JApplication.h>
-using namespace jana;
 
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
@@ -92,10 +91,10 @@ public:
 	pthread_mutex_t mutex;
 
 private:
-	jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-	jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);///< Invoked via DEventProcessor virtual method
-	jerror_t erun(void);		///< Invoked via DEventProcessor virtual method
-	jerror_t fini(void);		///< Invoked via DEventProcessor virtual method
+	void Init() override;
+	void Process(const std::shared_ptr<const JEvent>& event) override;
+	void EndRun() override;
+	void Finish() override;
 
 	bool static CompareLorentzEnergy(const Particle &a, const Particle &b) {
 		return a.p.E() < b.p.E();

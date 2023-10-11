@@ -11,7 +11,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -23,7 +23,6 @@
 #include "TH2D.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_ee_ShowerEoverP_cut : public DAnalysisAction
 {
@@ -36,12 +35,12 @@ class DCustomAction_ee_ShowerEoverP_cut : public DAnalysisAction
                 dBCAL_EP_min(in_BCAL_EP_min),dBCAL_EP_max(in_BCAL_EP_max),dFCAL_EP_min(in_FCAL_EP_min),dFCAL_EP_max(in_FCAL_EP_max) {}
 
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {}
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		double dBCAL_EP_min, dBCAL_EP_max;
 		double dFCAL_EP_min, dFCAL_EP_max;

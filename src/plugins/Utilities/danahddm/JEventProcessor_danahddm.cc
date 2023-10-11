@@ -6,7 +6,6 @@
 //
 //  David Lawrence, 7-May-2010
 
-#include <JANA/JApplication.h>
 #include <HDDM/DEventSourceHDDM.h>
 #include <TRACKING/DTrackTimeBased.h>
 
@@ -25,7 +24,7 @@ static pthread_mutex_t hddmMutex = PTHREAD_MUTEX_INITIALIZER;
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_danahddm(), true);
+    app->Add(new JEventProcessor_danahddm());
   }
 } // "extern C"
 
@@ -34,29 +33,8 @@ extern "C" {
 //-------------------------------
 JEventProcessor_danahddm::JEventProcessor_danahddm()
 {
-
-  jout << std::endl << "  Default JEventProcessor_danahddm invoked" 
-       << std::endl << std::endl;
-
-  // Check for hddm:FILENAME output file name parameter
-  gPARMS->SetDefaultParameter("hddm:FILENAME",hddmFileName);
-  jout << std::endl << "  hddm output file name is " << hddmFileName
-       << std::endl << std::endl;
-  
-  HDDM_USE_COMPRESSION = true;
-  gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION,
-                         "Turn on/off compression of the output HDDM stream."
-                         " Set to \"0\" to turn off (it's on by default)");
-  HDDM_USE_INTEGRITY_CHECKS = true;
-  gPARMS->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS",
-                               HDDM_USE_INTEGRITY_CHECKS,
-                         "Turn on/off automatic integrity checking on the"
-                         " output HDDM stream."
-                         " Set to \"0\" to turn off (it's on by default)");
-  file = NULL;
-  fout = NULL;
-  Nevents_written = 0;
-}  
+	SetTypeName("JEventProcessor_danahddm");
+}
 
 //-------------------------------
 // Destructor
@@ -66,17 +44,39 @@ JEventProcessor_danahddm::~JEventProcessor_danahddm()
 }
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_danahddm::init(void)
+void JEventProcessor_danahddm::Init()
 {
-   return NOERROR;
+	jout << std::endl << "  Default JEventProcessor_danahddm invoked"
+	     << std::endl << std::endl;
+
+	auto app = GetApplication();
+
+	// Check for hddm:FILENAME output file name parameter
+	app->SetDefaultParameter("hddm:FILENAME",hddmFileName);
+	jout << std::endl << "  hddm output file name is " << hddmFileName
+	     << std::endl << std::endl;
+
+	HDDM_USE_COMPRESSION = true;
+	app->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION,
+	                         "Turn on/off compression of the output HDDM stream."
+	                         " Set to \"0\" to turn off (it's on by default)");
+	HDDM_USE_INTEGRITY_CHECKS = true;
+	app->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS",
+	                         HDDM_USE_INTEGRITY_CHECKS,
+	                         "Turn on/off automatic integrity checking on the"
+	                         " output HDDM stream."
+	                         " Set to \"0\" to turn off (it's on by default)");
+	file = NULL;
+	fout = NULL;
+	Nevents_written = 0;
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_danahddm::brun(JEventLoop *loop, int32_t runnumber)
+void JEventProcessor_danahddm::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
    // get write lock
    pthread_mutex_lock(&hddmMutex);
@@ -85,13 +85,12 @@ jerror_t JEventProcessor_danahddm::brun(JEventLoop *loop, int32_t runnumber)
    if (file)
 	{
 	   pthread_mutex_unlock(&hddmMutex);
-      return NOERROR;
+      return;
 	}
 
    // We wait until here to open the output so that we can check if the 
    // input is hddm. If it's not, tell the user and exit immediately
-   JEvent& event = loop->GetJEvent();
-   JEventSource *source = event.GetJEventSource();
+   JEventSource *source = event->GetJEventSource();
    DEventSourceHDDM *hddm_source = dynamic_cast<DEventSourceHDDM*>(source);
    if (! hddm_source) {
       std::cerr << " This program MUST be used with an HDDM file as input!" << std::endl;
@@ -126,32 +125,32 @@ jerror_t JEventProcessor_danahddm::brun(JEventLoop *loop, int32_t runnumber)
    // unlock
    pthread_mutex_unlock(&hddmMutex);
 
-   return NOERROR;
+   return;
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_danahddm::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_danahddm::Process(const std::shared_ptr<const JEvent>& event)
 {
-   JEvent& event = loop->GetJEvent();
-   JEventSource *source = event.GetJEventSource();
+   JEventSource *source = event->GetJEventSource();
    DEventSourceHDDM *hddm_source = dynamic_cast<DEventSourceHDDM*>(source);
    if (! hddm_source) {
       std::cerr << " This program MUST be used only with HDDM files as inputs!"
                 << std::endl;
       exit(-1);
    }
-   hddm_s::HDDM *hddm = (hddm_s::HDDM*)event.GetRef();
+   hddm_s::HDDM *hddm = const_cast<hddm_s::HDDM*>(event->GetSingle<hddm_s::HDDM>());
+   // TODO: NWB: Why are we const_cast-ing here?
    if (! hddm)
-      return NOERROR;
+      return;
    
    // Delete any data in the reconView branch of the event.
    hddm->getPhysicsEvent().deleteReconViews();
 
    // Fill in reconstructed banks, replacing any that are already there
    hddm_s::ReconViewList revs = hddm->getPhysicsEvent().addReconViews();
-   Add_DTrackTimeBased(loop, revs.begin());
+   Add_DTrackTimeBased(event, revs.begin());
 
    // get write lock
    pthread_mutex_lock(&hddmMutex);
@@ -162,22 +161,19 @@ jerror_t JEventProcessor_danahddm::evnt(JEventLoop *loop, uint64_t eventnumber)
 
    // unlock
    pthread_mutex_unlock(&hddmMutex);
-
-   return NOERROR;
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_danahddm::erun(void)
+void JEventProcessor_danahddm::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_danahddm::fini(void)
+void JEventProcessor_danahddm::Finish()
 {
    if (fout)
       delete fout;
@@ -187,19 +183,17 @@ jerror_t JEventProcessor_danahddm::fini(void)
    }
    std::cout << " " << Nevents_written << " event written to "
              << hddmFileName << std::endl;
-
-   return NOERROR;
 }
 
 //-------------------------------
 // Add_DTrackTimeBased
 //-------------------------------
-void JEventProcessor_danahddm::Add_DTrackTimeBased(JEventLoop *loop, 
+void JEventProcessor_danahddm::Add_DTrackTimeBased(const std::shared_ptr<const JEvent>& event,
                                hddm_s::ReconViewList::iterator riter)
 {
    // Get objects to write out
    vector<const DTrackTimeBased*> tracktimebaseds;
-   loop->Get(tracktimebaseds);
+   event->Get(tracktimebaseds);
    if (tracktimebaseds.size() == 0)
       return;
 

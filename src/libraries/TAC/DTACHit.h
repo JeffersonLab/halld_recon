@@ -9,10 +9,8 @@
 #define LIBRARIES_TAC_DTACHIT_H_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
-class DTACHit: public jana::JObject {
+class DTACHit: public JObject {
 protected:
 	double E = 0;
 	double T = 0;
@@ -31,7 +29,7 @@ public:
 
 	DTACHit() {
 	}
-	DTACHit( const DTACHit& hit ) : jana::JObject(hit), E(hit.E), T(hit.T), integral(hit.integral),
+	DTACHit( const DTACHit& hit ) : JObject(hit), E(hit.E), T(hit.T), integral(hit.integral),
 			pulsePeak(hit.pulsePeak), timeTDC(hit.timeTDC), timeFADC(hit.timeFADC), npeFADC(hit.npeFADC),
 			fadcPresent(hit.fadcPresent), tdcPresent(hit.tdcPresent) {
 	}
@@ -40,7 +38,7 @@ public:
 
 	DTACHit& operator=( const DTACHit& hit ) {
 		if( this == &hit ) return *this;
-		*(dynamic_cast<jana::JObject*>(this)) = *dynamic_cast<const jana::JObject*>(&hit);
+		*(dynamic_cast<JObject*>(this)) = *dynamic_cast<const JObject*>(&hit);
 		T=hit.T;
 		E=hit.E;
 		integral=hit.integral;
@@ -54,16 +52,17 @@ public:
 		return *this;
 	}
 
-	virtual void toStrings(vector<pair<string, string> > &items) const override {
-		AddString(items, "E(MeV)", "%2.3f", E );
-		AddString(items, "t(ns)", "%2.3f", T);
-		AddString(items, "time_tdc(ns)", "%f", timeTDC);
-		AddString(items, "time_fadc(ns)", "%f", timeFADC);
-		AddString(items, "integral", "%f", integral);
-		AddString(items, "pulse_peak", "%f", pulsePeak);
-		AddString(items, "npe_fadc", "%f", npeFADC);
-		AddString(items, "has_fADC", "%d", (int) fadcPresent);
-		AddString(items, "has_TDC", "%d", (int) tdcPresent);
+
+	void Summarize(JObjectSummary& summary) const override {
+		summary.add(E , "E(MeV)", "%2.3f");
+		summary.add(T, "t(ns)", "%2.3f");
+		summary.add(timeTDC, "time_tdc(ns)", "%f");
+		summary.add(timeFADC, "time_fadc(ns)", "%f");
+		summary.add(integral, "integral", "%f");
+		summary.add(pulsePeak, "pulse_peak", "%f");
+		summary.add(npeFADC, "npe_fadc", "%f");
+		summary.add((int) fadcPresent, "has_fADC", "%d");
+		summary.add((int) tdcPresent, "has_TDC", "%d");
 	}
 
 	double getE() const {

@@ -13,13 +13,13 @@
 #include "TMatrixFSym.h"
 #include "DResettable.h"
 #include "DResourcePool.h"
+#include <DANA/DObjectID.h>
 
 #ifndef SPEED_OF_LIGHT
 #define SPEED_OF_LIGHT 29.9792458
 #endif
 
 using namespace std;
-using namespace jana;
 
 class DKinematicData : public JObject, public DResettable
 {
@@ -36,8 +36,8 @@ class DKinematicData : public JObject, public DResettable
 		void Share_FromInput_Kinematics(const DKinematicData* locSourceData);
 
 		//Reset & Release
-		virtual void Reset(void);
-		virtual void Release(void);
+		void Reset(void) override;
+		void Release(void) override;
 
 		//GETTERS
 		Particle_t PID(void) const{return dKinematicInfo->dPID;}
@@ -74,19 +74,18 @@ class DKinematicData : public JObject, public DResettable
 		void setErrorMatrix(const shared_ptr<const TMatrixFSym>& aMatrix){dErrorMatrix = aMatrix;}
 		void setErrorMatrix(const shared_ptr<TMatrixFSym>& aMatrix){dErrorMatrix = std::const_pointer_cast<const TMatrixFSym>(aMatrix);}
 
-		void toStrings(vector<pair<string,string> > &items) const
-		{
-			AddString(items, "PID", "%i", (int)PID());
-			AddString(items, "Name", "%s", ParticleType(PID()));
-			AddString(items, "q", "%+1.0f", charge());
-			AddString(items, "x(cm)", "%3.1f", x());
-			AddString(items, "y(cm)", "%3.1f", y());
-			AddString(items, "z(cm)", "%3.1f", z());
-			AddString(items, "E(GeV)", "%2.4f", energy());
-			AddString(items, "t(ns)", "%2.3f", time());
-			AddString(items, "p(GeV/c)", "%2.3f", momentum().Mag());
-			AddString(items, "theta(deg)", "%2.3f", momentum().Theta()*180.0/M_PI);
-			AddString(items, "phi(deg)", "%2.3f", momentum().Phi()*180.0/M_PI);
+		void Summarize(JObjectSummary& summary) const override {
+		    summary.add((int)PID(), "PID", "%i");
+            summary.add(ParticleType(PID()), "Name", "%s");
+            summary.add(charge(), "q", "%+1.0f");
+            summary.add(x(), "x(cm)", "%3.1f");
+            summary.add(y(), "y(cm)", "%3.1f");
+            summary.add(z(), "z(cm)", "%3.1f");
+            summary.add(energy(), "E(GeV)", "%2.4f");
+            summary.add(time(), "t(ns)", "%2.3f");
+            summary.add(momentum().Mag(), "p(GeV/c)", "%2.3f");
+            summary.add(momentum().Theta()*180.0/M_PI, "theta(deg)", "%2.3f");
+            summary.add(momentum().Phi()*180.0/M_PI, "phi(deg)", "%2.3f");
 		}
 
 		class DKinematicInfo : public DResettable

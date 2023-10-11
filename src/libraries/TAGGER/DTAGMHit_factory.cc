@@ -10,6 +10,8 @@
 #include <iostream>
 #include <iomanip>
 #include <TAGGER/DTAGMHit.h>
+
+#include <JANA/JEvent.h>
 using namespace std;
 
 // Sort by column
@@ -21,49 +23,48 @@ bool SortByCol(const DTAGMHit* a, const DTAGMHit* b)
 
 #include "DTAGMHit_factory.h"
 
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTAGMHit_factory::init(void)
+void DTAGMHit_factory::Init()
 {
+	auto app = GetApplication();
+
     // Set default configuration parameters
     DELTA_T_CLUSTER_MAX = 5;
-    gPARMS->SetDefaultParameter("TAGMHit:DELTA_T_CLUSTER_MAX",DELTA_T_CLUSTER_MAX,
+    app->SetDefaultParameter("TAGMHit:DELTA_T_CLUSTER_MAX",DELTA_T_CLUSTER_MAX,
                                 "Maximum time difference in ns between hits in adjacent"
                                 " columns to be merged");
 
     MERGE_HITS = true;
-    gPARMS->SetDefaultParameter("TAGMHit:MERGE_HITS",MERGE_HITS,
+    app->SetDefaultParameter("TAGMHit:MERGE_HITS",MERGE_HITS,
                                 "Merge neighboring hits when true");
 
     // Setting this flag makes it so that JANA does not delete the objects in _data.
     // This factory will manage this memory.
     SetFactoryFlag(NOT_OBJECT_OWNER);
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTAGMHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DTAGMHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTAGMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTAGMHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Clear _data vector
 	Reset_Data();
 
 	// Get (calibrated) TAGM hits
 	vector<const DTAGMHit*> hits;
-	loop->Get(hits, "Calib");
+	event->Get(hits, "Calib");
 
 	sort(hits.begin(), hits.end(), SortByCol);
 
@@ -75,7 +76,7 @@ jerror_t DTAGMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 		if (hit_i->row > 0 || !MERGE_HITS)
 		{
-			_data.push_back(const_cast<DTAGMHit*>(hit_i));
+			Insert(const_cast<DTAGMHit*>(hit_i));
 			continue;
 		}
 		if (!hit_i->has_fADC) continue;
@@ -100,34 +101,29 @@ jerror_t DTAGMHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 				break;
 			}
 		}
-		_data.push_back(const_cast<DTAGMHit*>(hit_i));
+		Insert(const_cast<DTAGMHit*>(hit_i));
 	}
-
-
-    return NOERROR;
 }
 
 //------------------
 // Reset_Data()
 //------------------
-void DTAGMHit_factory::Reset_Data(void)
+void DTAGMHit_factory::Reset_Data()
 {
 	// Clear _data vector
-	_data.clear();
+	mData.clear();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DTAGMHit_factory::erun(void)
+void DTAGMHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTAGMHit_factory::fini(void)
+void DTAGMHit_factory::Finish()
 {
-    return NOERROR;
 }

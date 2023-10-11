@@ -27,7 +27,7 @@
 #include <utility>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTOFDigiHit.h"
 #include "DTOFTDCDigiHit.h"
 #include "DTOFHit.h"
@@ -35,7 +35,7 @@ using namespace std;
 #include "TTAB/DTranslationTable.h"
 #include "TTAB/DTTabUtilities.h"
 #include <DAQ/Df250PulseData.h>
-using namespace jana;
+
 
 
 // store constants so that they can be accessed by plane/bar number
@@ -47,7 +47,7 @@ typedef  vector< vector< pair<double,double> > >  tof_digi_constants_t;
  * TOF Hits based on ADC and TDC information contained in DTOFDigiHit and DTOFTDCDigiHit.
  * Matches between ADC and TDC hits are based on timing.
  */
-class DTOFHit_factory:public jana::JFactory<DTOFHit>{
+class DTOFHit_factory:public JFactoryT<DTOFHit>{
  public:
   DTOFHit_factory(){};
   ~DTOFHit_factory(){};
@@ -110,12 +110,12 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   
   
  private:
-  jerror_t init(void); ///< called at start up
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber); ///< called when run number changes
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber); ///< called for each event
-  jerror_t erun(void); ///< called at the end of a run
-  jerror_t fini(void); ///< called at the end of processing events
-  
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
   void FillCalibTable(tof_digi_constants_t &table, vector<double> &raw_table,
 		      const DTOFGeometry &tofGeom);///< load calibration table with values from CCDB
 

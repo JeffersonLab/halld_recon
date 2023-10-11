@@ -15,10 +15,9 @@ using namespace std;
 #include <TROOT.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
 #include <TRACKING/DMCTrajectoryPoint.h>
@@ -33,7 +32,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_fdc_covariance_hists());
+	app->Add(new DEventProcessor_fdc_covariance_hists());
 }
 } // "C"
 
@@ -57,9 +56,9 @@ DEventProcessor_fdc_covariance_hists::~DEventProcessor_fdc_covariance_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_fdc_covariance_hists::init(void)
+void DEventProcessor_fdc_covariance_hists::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("TRACKING");
@@ -75,66 +74,57 @@ jerror_t DEventProcessor_fdc_covariance_hists::init(void)
 
 	dir->cd("../");
 	
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_fdc_covariance_hists::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_fdc_covariance_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {	
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	if(!dapp){
-		_DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program perhaps?)"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-	bfield=dapp->GetBfield(runnumber);
+	bfield=GetBfield(event);
 	
 	// Get z-position of most upstream FDC layer
 	vector<double> z_wires;
 	dapp->GetDGeometry(runnumber)->GetFDCZ(z_wires);
 	Z_fdc1 = z_wires[0];
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_fdc_covariance_hists::erun(void)
+void DEventProcessor_fdc_covariance_hists::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_fdc_covariance_hists::fini(void)
+void DEventProcessor_fdc_covariance_hists::Finish()
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_fdc_covariance_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_fdc_covariance_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrackHit*> mctrackhits;
 	vector<const DMCTrajectoryPoint*> mctrajectorypoints;
 	vector<const DFDCPseudo*> fdcpseudohits;	
 	
-	loop->Get(mcthrowns);
-	loop->Get(mctrackhits);
-	loop->Get(mctrajectorypoints);
-	loop->Get(fdcpseudohits);
+	event->Get(mcthrowns);
+	event->Get(mctrackhits);
+	event->Get(mctrajectorypoints);
+	event->Get(fdcpseudohits);
 	
 	Nevents++;
 	
 	// Only look at events with one thrown and one reconstructed particle
 	if(mcthrowns.size() !=1){
 		_DBG_<<" mcthrowns.size()="<<mcthrowns.size()<<endl;
-		return NOERROR;
+		return;
 	}
 	
 	// Look for truth point corresponding to hit of upstream most
@@ -149,7 +139,7 @@ jerror_t DEventProcessor_fdc_covariance_hists::evnt(JEventLoop *loop, uint64_t e
 			}
 		}
 	}
-	if(!mctrackhit1)return NOERROR;
+	if(!mctrackhit1)return;
 	DVector3 pos_mctrackhit1;
 	pos_mctrackhit1.SetXYZ(mctrackhit1->r*cos(mctrackhit1->phi), mctrackhit1->r*sin(mctrackhit1->phi), mctrackhit1->z);
 
@@ -174,9 +164,8 @@ jerror_t DEventProcessor_fdc_covariance_hists::evnt(JEventLoop *loop, uint64_t e
 	}
 	s1 = s1_min;
 
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
 	DReferenceTrajectory *rt = new DReferenceTrajectory(bfield);
-	rt->SetDRootGeom(dapp->GetRootGeom());
+	rt->SetDRootGeom(GetRootGeom(event));
 	rt->Swim(pos_fdc1, mom_fdc1);
 
 	// Lock mutex
@@ -255,7 +244,5 @@ jerror_t DEventProcessor_fdc_covariance_hists::evnt(JEventLoop *loop, uint64_t e
 	pthread_mutex_unlock(&mutex);
 	
 	delete rt;
-
-	return NOERROR;
 }
 

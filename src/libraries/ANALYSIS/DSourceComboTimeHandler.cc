@@ -232,7 +232,7 @@ void DSourceComboTimeHandler::Get_CommandLineCuts(void)
 	//COMBO_TIMECUT:9_8=1.5_0.001            //Set the parameters for the pi- cut function above
 
 	map<string, string> locParameterMap; //parameter key - filter, value
-	gPARMS->GetParameters(locParameterMap, "COMBO_TIMECUT:"); //gets all parameters with this filter at the beginning of the key
+	japp->GetJParameterManager()->FilterParameters(locParameterMap, "COMBO_TIMECUT:"); //gets all parameters with this filter at the beginning of the key
 	for(auto locParamPair : locParameterMap)
 	{
 		if(dDebugLevel)
@@ -264,7 +264,7 @@ void DSourceComboTimeHandler::Get_CommandLineCuts(void)
 		//get the parameter, with hack so that don't get warning message about no default
 		string locKeyValue;
 		string locFullParamName = string("COMBO_TIMECUT:") + locParamPair.first; //have to add back on the filter
-		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+		japp->SetDefaultParameter(locFullParamName, locKeyValue);
 
 		//If functional form, save it and continue
 		if(locFuncIndex != string::npos)
@@ -301,7 +301,7 @@ void DSourceComboTimeHandler::Get_CommandLineCuts(void)
 void DSourceComboTimeHandler::Create_CutFunctions(void)
 {
 	//No idea why this lock is necessary, but it crashes without it.  Stupid ROOT. 
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	japp->GetService<JLockService>()->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 	for(auto& locPIDPair : dPIDTimingCuts_TF1Params)
 	{
@@ -342,24 +342,25 @@ void DSourceComboTimeHandler::Create_CutFunctions(void)
 	}
 	dAllRFDeltaTs = dSelectedRFDeltaTs;
 
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	japp->GetService<JLockService>()->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer) :
+DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEvent>& locEvent, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer) :
 		dSourceComboer(locSourceComboer), dSourceComboVertexer(locSourceComboVertexer)
 {
-	gPARMS->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
-	gPARMS->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
+	auto app = locEvent->GetJApplication();
+	app->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+	app->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
 
 	//Setup cuts
 	Define_DefaultCuts();
 	Get_CommandLineCuts();
 	Create_CutFunctions();
 
-	if(locEventLoop == nullptr)
+	if(locEvent == nullptr)
 		return; //only interested in querying cuts
 		
-	Set_RunDependent_Data(locEventLoop);
+	Set_RunDependent_Data(locEvent);
 
 	//INITIALIZE PHOTON VERTEX-Z EVALUATION BINNING
 	//MAKE SURE THAT THE CENTER OF THE TARGET IS THE CENTER OF A BIN
@@ -400,7 +401,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 
 	//Look for troublesome channels: those with photons being produced from a detached vertex
 	//If any, adjust dMaxDecayTimeOffset accordingly
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 	for(auto& locReaction : locReactions)
 	{
 		for(size_t loc_i = 1; loc_i < locReaction->Get_NumReactionSteps(); ++loc_i)
@@ -424,7 +425,7 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 	vector<Particle_t> locPIDs {Unknown, Gamma, Electron, Positron, MuonPlus, MuonMinus, PiPlus, PiMinus, KPlus, KMinus, Proton, AntiProton};
 
 	//CREATE HISTOGRAMS
-	japp->RootWriteLock(); //to prevent undefined behavior due to directory changes, etc.
+	japp->GetService<JLockService>()->RootWriteLock(); //to prevent undefined behavior due to directory changes, etc.
 	{
 		//get and change to the base (file/global) directory
 		TDirectory* locCurrentDir = gDirectory;
@@ -502,17 +503,16 @@ DSourceComboTimeHandler::DSourceComboTimeHandler(JEventLoop* locEventLoop, DSour
 
 		locCurrentDir->cd();
 	}
-	japp->RootUnLock(); //unlock
+	japp->GetService<JLockService>()->RootUnLock(); //unlock
 }
 
-void DSourceComboTimeHandler::Set_RunDependent_Data(JEventLoop *locEventLoop)
+void DSourceComboTimeHandler::Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//UTILITIES
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//GET THE GEOMETRY
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 
 	//TARGET INFORMATION
 	double locTargetCenterZ = 65.0;
@@ -524,7 +524,7 @@ void DSourceComboTimeHandler::Set_RunDependent_Data(JEventLoop *locEventLoop)
 
 	//BEAM BUNCH PERIOD
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 }
@@ -1375,7 +1375,7 @@ bool DSourceComboTimeHandler::Cut_Timing_MissingMassVertices(const DReactionVert
 
 void DSourceComboTimeHandler::Fill_Histograms(void)
 {
-	japp->WriteLock("DSourceComboTimeHandler");
+	japp->GetService<JLockService>()->WriteLock("DSourceComboTimeHandler");
 	{
 		for(auto& locDeltaTPair : dBeamRFDeltaTs)
 			dHist_BeamRFDeltaTVsBeamE->Fill(locDeltaTPair.first, locDeltaTPair.second);
@@ -1414,7 +1414,7 @@ void DSourceComboTimeHandler::Fill_Histograms(void)
 			}
 		}
 	}
-	japp->Unlock("DSourceComboTimeHandler");
+	japp->GetService<JLockService>()->Unlock("DSourceComboTimeHandler");
 
 	//Reset for next event
 	decltype(dBeamRFDeltaTs)().swap(dBeamRFDeltaTs);

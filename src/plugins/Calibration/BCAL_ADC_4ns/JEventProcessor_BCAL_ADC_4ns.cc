@@ -26,16 +26,15 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DL1Trigger.h"
 
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_ADC_4ns());
+	app->Add(new JEventProcessor_BCAL_ADC_4ns());
 }
 } // "C"
 
@@ -45,7 +44,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_ADC_4ns::JEventProcessor_BCAL_ADC_4ns()
 {
-
+	SetTypeName("JEventProcessor_BCAL_ADC_4ns");
 }
 
 //------------------
@@ -57,9 +56,9 @@ JEventProcessor_BCAL_ADC_4ns::~JEventProcessor_BCAL_ADC_4ns()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_ADC_4ns::init(void)
+void JEventProcessor_BCAL_ADC_4ns::Init()
 {
 	// This is called once at program startup. 
 	char channame[50], histtitle[255];
@@ -84,28 +83,28 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::init(void)
 	
 	main->cd();
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_ADC_4ns::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_ADC_4ns::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_ADC_4ns::Process(const std::shared_ptr<const JEvent>& event)
 {
    // First check that this is not a font panel trigger or no trigger
    bool goodtrigger=1;
    const DL1Trigger *trig = NULL;
    try {
-       loop->GetSingle(trig);
+       event->GetSingle(trig);
    } catch (...) {}
    if (trig) {
        if (trig->fp_trig_mask){
@@ -113,14 +112,14 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumb
        }
    }
    if (!goodtrigger) {
-       return NOERROR;
+       return;
    }
 
    const DEventRFBunch *thisRFBunch = NULL;
-   loop->GetSingle(thisRFBunch);
+   event->GetSingle(thisRFBunch);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
       // get charge and choose pion hypothesis as most likely
@@ -187,26 +186,26 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumb
          }
       }
    }
-   return NOERROR;
+   return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_ADC_4ns::erun(void)
+void JEventProcessor_BCAL_ADC_4ns::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_ADC_4ns::fini(void)
+void JEventProcessor_BCAL_ADC_4ns::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }
 

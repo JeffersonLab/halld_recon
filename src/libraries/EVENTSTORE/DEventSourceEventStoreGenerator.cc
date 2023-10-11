@@ -6,7 +6,6 @@
 
 #include "DEventSourceEventStoreGenerator.h"
 #include "DEventSourceEventStore.h"
-#include "DFactoryGenerator_DESSkimData.h"
 
 /*
 // Make this a plugin
@@ -36,9 +35,17 @@ DEventSourceEventStoreGenerator::~DEventSourceEventStoreGenerator()
 }
 
 //---------------------------------
-// Description
+// GetType
 //---------------------------------
-const char* DEventSourceEventStoreGenerator::Description(void)
+std::string DEventSourceEventStoreGenerator::GetType() const
+{
+	return "EventStore";
+}
+
+//---------------------------------
+// GetDescription
+//---------------------------------
+std::string DEventSourceEventStoreGenerator::GetDescription() const
 {
 	return "EventStore";
 }
@@ -57,5 +64,5 @@ double DEventSourceEventStoreGenerator::CheckOpenable(string source)
 //---------------------------------
 JEventSource* DEventSourceEventStoreGenerator::MakeJEventSource(string source)
 {
-	return new DEventSourceEventStore(source.c_str());
+	return new DEventSourceEventStore(source);
 }

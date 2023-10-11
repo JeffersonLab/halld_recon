@@ -2,6 +2,7 @@
 #define _Df125EmulatorAlgorithm_v2_
 
 #include "Df125EmulatorAlgorithm.h"
+#include <JANA/JEvent.h>
 
 /////////////////////////////////////////////////////////////////
 // This implements the base class for the f125 firmware emulation

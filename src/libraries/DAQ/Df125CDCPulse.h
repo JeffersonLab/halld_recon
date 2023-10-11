@@ -77,23 +77,22 @@ class Df125CDCPulse:public DDAQAddress{
         uint32_t pedestal_emulated;         ///< emulated from raw data when available
         uint32_t integral_emulated;         ///< emulated from raw data when available
         uint32_t first_max_amp_emulated;    ///< emulated from raw data when available
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "le_time",           "%d", le_time);
-            AddString(items, "le_time_em",        "%d", le_time_emulated);
-			AddString(items, "integral",          "%d", integral);
-            AddString(items, "integral_em",       "%d", integral_emulated);
-			AddString(items, "pedestal",          "%d", pedestal);
-			AddString(items, "NPK",               "%d", NPK);
-			AddString(items, "time_quality_bit",  "%d", time_quality_bit);
-			AddString(items, "overflow_count",    "%d", overflow_count);
-			AddString(items, "first_max_amp",     "%d", first_max_amp);
-			AddString(items, "nsamples_integral", "%d", nsamples_integral);
-			AddString(items, "nsamples_pedestal", "%d", nsamples_pedestal);
-			AddString(items, "emulated",          "%d", emulated);
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(le_time, NAME_OF(le_time), "%d");
+            summary.add(le_time_emulated, "le_time_em", "%d");
+			summary.add(integral, NAME_OF(integral), "%d");
+            summary.add(integral_emulated, "integral_em", "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+			summary.add(NPK, NAME_OF(NPK), "%d");
+			summary.add(time_quality_bit, NAME_OF(time_quality_bit), "%d");
+			summary.add(overflow_count, NAME_OF(overflow_count), "%d");
+			summary.add(first_max_amp, NAME_OF(first_max_amp), "%d");
+			summary.add(nsamples_integral, NAME_OF(nsamples_integral), "%d");
+			summary.add(nsamples_pedestal, NAME_OF(nsamples_pedestal), "%d");
+			summary.add(emulated, NAME_OF(emulated), "%d");
 		}
 };
 

@@ -9,7 +9,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "BCAL/DBCALDigiHit.h"
 #include "BCAL/DBCALTDCDigiHit.h"
@@ -97,7 +96,7 @@ static TH1I *bcal_num_events;
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_BCAL_LEDonline());
+		app->Add(new JEventProcessor_BCAL_LEDonline());
 	}
 }
 
@@ -106,6 +105,7 @@ extern "C"{
 
 
 JEventProcessor_BCAL_LEDonline::JEventProcessor_BCAL_LEDonline() {
+	SetTypeName("JEventProcessor_BCAL_LEDonline");
 }
 
 
@@ -118,10 +118,13 @@ JEventProcessor_BCAL_LEDonline::~JEventProcessor_BCAL_LEDonline() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_BCAL_LEDonline::init(void) {
+void JEventProcessor_BCAL_LEDonline::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 	
 	if(bcal_fadc_digi_time != NULL){
-		return NOERROR;
+		return;
 	}
 	
 	NOtrig=0; FPtrig=0; GTPtrig=0; FPGTPtrig=0; trigUS=0; trigDS=0; trigCosmic=0;
@@ -310,34 +313,32 @@ jerror_t JEventProcessor_BCAL_LEDonline::init(void) {
 
 	// back to main dir
 	main->cd();
-	
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LEDonline::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_BCAL_LEDonline::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LEDonline::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_BCAL_LEDonline::Process(const std::shared_ptr<const JEvent>& event) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
-	// This is called whenever the run number changes
+	auto eventnumber = event->GetEventNumber();
+
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load locBCALGeometry object!");
 	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];
@@ -353,7 +354,7 @@ jerror_t JEventProcessor_BCAL_LEDonline::evnt(JEventLoop *loop, uint64_t eventnu
 
 	const DL1Trigger *trig = NULL;
 	try {
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
 		//printf("%5i  %5i | %5i  %5i  %5i | %i\n",
@@ -393,15 +394,15 @@ jerror_t JEventProcessor_BCAL_LEDonline::evnt(JEventLoop *loop, uint64_t eventnu
 	
 	if (LED_US || LED_DS) {
 
-		loop->Get(dbcaldigihits);
-		loop->Get(dbcaltdcdigihits);
-		loop->Get(dbcalhits);
-		loop->Get(dbcaltdchits);
-		loop->Get(dbcaluhits);
+		event->Get(dbcaldigihits);
+		event->Get(dbcaltdcdigihits);
+		event->Get(dbcalhits);
+		event->Get(dbcaltdchits);
+		event->Get(dbcaluhits);
 	
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 		if( (dbcaldigihits.size() > 0) || (dbcaltdcdigihits.size() > 0) )
 			bcal_num_events->Fill(1);
@@ -602,17 +603,17 @@ jerror_t JEventProcessor_BCAL_LEDonline::evnt(JEventLoop *loop, uint64_t eventnu
 			}
 		}
 
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
     }
 	
-	return NOERROR;
+	return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LEDonline::erun(void) {
+void JEventProcessor_BCAL_LEDonline::EndRun() {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
@@ -636,16 +637,16 @@ jerror_t JEventProcessor_BCAL_LEDonline::erun(void) {
 	bcal_fadc_digi_integral_vchannel->SetMinimum(bcal_fadc_digi_integral_vchannel->GetMinimum(0.1));	
 	bcal_fadc_digi_peak_vchannel->SetMinimum(bcal_fadc_digi_peak_vchannel->GetMinimum(0.1));	
 
-	return NOERROR;
+	return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_LEDonline::fini(void) {
+void JEventProcessor_BCAL_LEDonline::Finish() {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }
 
 

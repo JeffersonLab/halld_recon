@@ -34,14 +34,14 @@ class Df250PulsePedestal:public DDAQAddress{
 
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "pulse_number", "%d", pulse_number);
-			AddString(items, "pedestal", "%d", pedestal);
-            AddString(items, "pedestal_emulated", "%d", pedestal_emulated);
-			AddString(items, "pulse_peak", "%d", pulse_peak);
-            AddString(items, "pulse_peak_emulated", "%d", pulse_peak_emulated);
-			AddString(items, "emulated", "%d", emulated);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+			summary.add(pedestal, NAME_OF(pedestal), "%d");
+            summary.add(pedestal_emulated, NAME_OF(pedestal_emulated), "%d");
+			summary.add(pulse_peak, NAME_OF(pulse_peak), "%d");
+            summary.add(pulse_peak_emulated, NAME_OF(pulse_peak_emulated), "%d");
+			summary.add(emulated, NAME_OF(emulated), "%d");
 		}
 };
 

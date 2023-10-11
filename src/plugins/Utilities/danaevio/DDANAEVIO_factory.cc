@@ -33,7 +33,7 @@
 //
 //  n.b. to get factory pointer in event processor
 //
-//    DDANAEVIO_factory *f = dynamic_cast<DDANAEVIO_factory*>(eventLoop->GetFactory("DDANAEVIODOMTree"));
+//    DDANAEVIO_factory *f = dynamic_cast<DDANAEVIO_factory*>(event->GetFactory("DDANAEVIODOMTree"));
 //    if(f!=NULL) { ... }
 //
 //
@@ -97,13 +97,10 @@ static string danaObjs[] =  {
 #include <expat.h>
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JFactory_base.h>
+#include <JANA/JFactory.h>
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
-
-#include "DANA/DApplication.h"
 
 #include "TRACKING/DMCThrown.h"
 #include "TRACKING/DMCTrackHit.h"
@@ -179,7 +176,7 @@ DDANAEVIO_factory::DDANAEVIO_factory() {
   static string danaevio = "";
 
 
-  // initialize evio hash map (insert empty set<string> into map for each danaObj)
+  // Initialize evio hash map (insert empty set<string> into map for each danaObj)
   for(unsigned int i=0; i<sizeof(danaObjs)/sizeof(danaObjs[0]); i++) {
     evioMap[danaObjs[i]]=set<string>();
   }
@@ -191,7 +188,7 @@ DDANAEVIO_factory::DDANAEVIO_factory() {
     done_once_only=true;
     
     // get danaevio command line parameter
-    gPARMS->SetDefaultParameter("EVIO:DANAEVIO",danaevio);
+    app->SetDefaultParameter("EVIO:DANAEVIO",danaevio);
 
     // parse tag/num file (using EVIO:DANADICT parameter) our use default string to get tag/num pairs
     get_tagNum_dictionary();
@@ -325,7 +322,7 @@ void DDANAEVIO_factory::setEVIOMap(string danaevio) {
 void DDANAEVIO_factory::get_tagNum_dictionary(void) {
 
 
-  // init string parser
+  // Init string parser
   XML_Parser xmlParser = XML_ParserCreate(NULL);
   XML_SetElementHandler(xmlParser,startElement,NULL);
       
@@ -343,13 +340,13 @@ void DDANAEVIO_factory::get_tagNum_dictionary(void) {
 
   // parse user-supplied dictionary file if specified
   string danadict = "";
-  gPARMS->SetDefaultParameter("EVIO:DANADICT",danadict);
+  app->SetDefaultParameter("EVIO:DANADICT",danadict);
   if(danadict!="") {
 
     const int bufSize = 10000;
     char buf[bufSize];
 
-    // init file parser
+    // Init file parser
     XML_Parser xmlParser2 = XML_ParserCreate(NULL);
     XML_SetElementHandler(xmlParser2,startElement,NULL);
 
@@ -432,7 +429,7 @@ const map< string, pair<uint16_t,uint8_t> > *DDANAEVIO_factory::getTagMapPointer
 //--------------------------------------------------------------------------
 
 
-jerror_t DDANAEVIO_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DDANAEVIO_factory::Process(const std::shared_ptr<const JEvent>& event) {
 
 
 
@@ -443,54 +440,54 @@ jerror_t DDANAEVIO_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
   // create single evio tree object and add to factory vector (may create more than one tree in the future)
   pair<uint16_t,uint8_t> p = tagMap["DanaEvent"];
   DDANAEVIODOMTree  *myDDANAEVIODOMTree = new DDANAEVIODOMTree(p.first,p.second);
-  _data.push_back(myDDANAEVIODOMTree);
+  Insert(myDDANAEVIODOMTree);
 
 
   // add selected DANA banks to event tree
-  if(evioMap["dmctrackhit"        ].size()>0)  addDMCTrackHit(          eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dbeamphoton"        ].size()>0)  addDBeamPhoton(          eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dmcthrown"          ].size()>0)  addDMCThrown(            eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dfcaltruthshower"   ].size()>0)  addDFCALTruthShower(     eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dbcaltruthshower"   ].size()>0)  addDBCALTruthShower(     eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dtoftruth"          ].size()>0)  addDTOFTruth(            eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dsctruthhit"        ].size()>0)  addDSCTruthHit(          eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dmctrajectorypoint" ].size()>0)  addDMCTrajectoryPoint(   eventLoop, myDDANAEVIODOMTree->tree);
+  if(evioMap["dmctrackhit"        ].size()>0)  addDMCTrackHit(          event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dbeamphoton"        ].size()>0)  addDBeamPhoton(          event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dmcthrown"          ].size()>0)  addDMCThrown(            event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dfcaltruthshower"   ].size()>0)  addDFCALTruthShower(     event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dbcaltruthshower"   ].size()>0)  addDBCALTruthShower(     event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dtoftruth"          ].size()>0)  addDTOFTruth(            event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dsctruthhit"        ].size()>0)  addDSCTruthHit(          event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dmctrajectorypoint" ].size()>0)  addDMCTrajectoryPoint(   event, myDDANAEVIODOMTree->tree);
   
-  if(evioMap["dcdchit"            ].size()>0)  addDCDCHit(              eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dfdchit"            ].size()>0)  addDFDCHit(              eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dbcalhit"           ].size()>0)  addDBCALHit(             eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dfcalhit"           ].size()>0)  addDFCALHit(             eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dtofrawhitmc"       ].size()>0)  addDTOFRawHitMC(         eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dschit"             ].size()>0)  addDSCHit(               eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dtagmhit"           ].size()>0)  addDTAGMHit(             eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dtaghhit"           ].size()>0)  addDTAGHHit(             eventLoop, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dcdchit"            ].size()>0)  addDCDCHit(              event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dfdchit"            ].size()>0)  addDFDCHit(              event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dbcalhit"           ].size()>0)  addDBCALHit(             event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dfcalhit"           ].size()>0)  addDFCALHit(             event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dtofrawhitmc"       ].size()>0)  addDTOFRawHitMC(         event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dschit"             ].size()>0)  addDSCHit(               event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dtagmhit"           ].size()>0)  addDTAGMHit(             event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dtaghhit"           ].size()>0)  addDTAGHHit(             event, myDDANAEVIODOMTree->tree); 
   
-  if(evioMap["dcdctrackhit"       ].size()>0)  addDCDCTrackHit(         eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dfdcpseudo"         ].size()>0)  addDFDCPseudo(           eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dtrackwirebased"    ].size()>0)  addDTrackWireBased(      eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dtracktimebased"    ].size()>0)  addDTrackTimeBased(      eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dchargedtrack"      ].size()>0)  addDChargedTrack(        eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dphoton"            ].size()>0)  addDPhoton(              eventLoop, myDDANAEVIODOMTree->tree);
-  if(evioMap["dvertex"            ].size()>0)  addDVertex(              eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dtrackcandidate"    ].size()>0)  addDTrackCandidate(      eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dbcalphoton"        ].size()>0)  addDBCALPhoton(          eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dfcalphoton"        ].size()>0)  addDFCALPhoton(          eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dchargedtruthmatch" ].size()>0)  addDChargedTruthMatch(   eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dtofrawhit"         ].size()>0)  addDTOFRawHit(           eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dtofhit"            ].size()>0)  addDTOFHit(              eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dtofpoint"          ].size()>0)  addDTOFPoint(            eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dbcalshower"        ].size()>0)  addDBCALShower(          eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dfcalcluster"       ].size()>0)  addDFCALCluster(         eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dfdccathodecluster" ].size()>0)  addDFDCCathodeCluster(   eventLoop, myDDANAEVIODOMTree->tree); 
-  if(evioMap["dfdcsegment"        ].size()>0)  addDFDCSegment(          eventLoop, myDDANAEVIODOMTree->tree); 
-  //  if(evioMap["dtwogammafit"       ].size()>0)  addDTwoGammaFit(         eventLoop, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dcdctrackhit"       ].size()>0)  addDCDCTrackHit(         event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dfdcpseudo"         ].size()>0)  addDFDCPseudo(           event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dtrackwirebased"    ].size()>0)  addDTrackWireBased(      event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dtracktimebased"    ].size()>0)  addDTrackTimeBased(      event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dchargedtrack"      ].size()>0)  addDChargedTrack(        event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dphoton"            ].size()>0)  addDPhoton(              event, myDDANAEVIODOMTree->tree);
+  if(evioMap["dvertex"            ].size()>0)  addDVertex(              event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dtrackcandidate"    ].size()>0)  addDTrackCandidate(      event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dbcalphoton"        ].size()>0)  addDBCALPhoton(          event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dfcalphoton"        ].size()>0)  addDFCALPhoton(          event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dchargedtruthmatch" ].size()>0)  addDChargedTruthMatch(   event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dtofrawhit"         ].size()>0)  addDTOFRawHit(           event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dtofhit"            ].size()>0)  addDTOFHit(              event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dtofpoint"          ].size()>0)  addDTOFPoint(            event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dbcalshower"        ].size()>0)  addDBCALShower(          event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dfcalcluster"       ].size()>0)  addDFCALCluster(         event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dfdccathodecluster" ].size()>0)  addDFDCCathodeCluster(   event, myDDANAEVIODOMTree->tree); 
+  if(evioMap["dfdcsegment"        ].size()>0)  addDFDCSegment(          event, myDDANAEVIODOMTree->tree); 
+  //  if(evioMap["dtwogammafit"       ].size()>0)  addDTwoGammaFit(         event, myDDANAEVIODOMTree->tree); 
 
 
   // add global object id bank
   addObjIdBank(myDDANAEVIODOMTree->tree);
 
 
-  return NOERROR;
+  return;
 }
 
 
@@ -543,7 +540,7 @@ void DDANAEVIO_factory::addObjIdBank(evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDMCThrown(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDMCThrown(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create mcthrown bank and add to event tree
@@ -580,7 +577,7 @@ void DDANAEVIO_factory::addDMCThrown(JEventLoop *eventLoop, evioDOMTree &tree) {
   for(iter=evioMap["dmcthrown"].begin(); iter!=evioMap["dmcthrown"].end(); iter++) {
     
     vector<const DMCThrown*> mcthrowns; 
-    eventLoop->Get(mcthrowns,(*iter).c_str());
+    event->Get(mcthrowns,(*iter).c_str());
     if(mcthrowns.size()<=0)continue;
 
 
@@ -630,7 +627,7 @@ void DDANAEVIO_factory::addDMCThrown(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDMCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDMCTrackHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create mctrackhit bank and add to event tree
@@ -663,7 +660,7 @@ void DDANAEVIO_factory::addDMCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DMCTrackHit*> mctrackhits; 
-    eventLoop->Get(mctrackhits,(*iter).c_str()); 
+    event->Get(mctrackhits,(*iter).c_str()); 
     if(mctrackhits.size()<=0)continue;
 
 
@@ -703,7 +700,7 @@ void DDANAEVIO_factory::addDMCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTOFTruth(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTOFTruth(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create toftruth bank and add to event tree
@@ -740,7 +737,7 @@ void DDANAEVIO_factory::addDTOFTruth(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DTOFTruth*> toftruths; 
-    eventLoop->Get(toftruths,(*iter).c_str()); 
+    event->Get(toftruths,(*iter).c_str()); 
     if(toftruths.size()<=0)continue;
     
     
@@ -785,7 +782,7 @@ void DDANAEVIO_factory::addDTOFTruth(JEventLoop *eventLoop, evioDOMTree &tree) {
 
 
 
-void DDANAEVIO_factory::addDFCALTruthShower(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFCALTruthShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create fcaltruthshower bank and add to event tree
@@ -822,7 +819,7 @@ void DDANAEVIO_factory::addDFCALTruthShower(JEventLoop *eventLoop, evioDOMTree &
 
     // is there any data
     vector<const DFCALTruthShower*> fcaltruthshowers; 
-    eventLoop->Get(fcaltruthshowers,(*iter).c_str()); 
+    event->Get(fcaltruthshowers,(*iter).c_str()); 
     if(fcaltruthshowers.size()<=0)continue;
     
     
@@ -866,7 +863,7 @@ void DDANAEVIO_factory::addDFCALTruthShower(JEventLoop *eventLoop, evioDOMTree &
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDBCALTruthShower(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDBCALTruthShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bcaltruthshower bank and add to event tree
@@ -899,7 +896,7 @@ void DDANAEVIO_factory::addDBCALTruthShower(JEventLoop *eventLoop, evioDOMTree &
     
     // is there any data
     vector<const DBCALTruthShower*> bcaltruthshowers; 
-    eventLoop->Get(bcaltruthshowers,(*iter).c_str()); 
+    event->Get(bcaltruthshowers,(*iter).c_str()); 
     if(bcaltruthshowers.size()<=0)continue;
     
     
@@ -939,7 +936,7 @@ void DDANAEVIO_factory::addDBCALTruthShower(JEventLoop *eventLoop, evioDOMTree &
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDCDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDCDCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create cdchit bank and add to event tree
@@ -968,7 +965,7 @@ void DDANAEVIO_factory::addDCDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DCDCHit*> cdchits; 
-    eventLoop->Get(cdchits,(*iter).c_str()); 
+    event->Get(cdchits,(*iter).c_str()); 
     if(cdchits.size()<=0)continue;
     
     
@@ -1005,7 +1002,7 @@ void DDANAEVIO_factory::addDCDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDMCTrajectoryPoint(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDMCTrajectoryPoint(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bank and add to event tree
@@ -1045,7 +1042,7 @@ void DDANAEVIO_factory::addDMCTrajectoryPoint(JEventLoop *eventLoop, evioDOMTree
 
     // is there any data
     vector<const DMCTrajectoryPoint*> mctrajectorypoints; 
-    eventLoop->Get(mctrajectorypoints,(*iter).c_str()); 
+    event->Get(mctrajectorypoints,(*iter).c_str()); 
     if(mctrajectorypoints.size()<=0)continue;
     
     
@@ -1092,7 +1089,7 @@ void DDANAEVIO_factory::addDMCTrajectoryPoint(JEventLoop *eventLoop, evioDOMTree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFDCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create fdchit bank and add to event tree
@@ -1128,7 +1125,7 @@ void DDANAEVIO_factory::addDFDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DFDCHit*> fdchits; 
-    eventLoop->Get(fdchits,(*iter).c_str()); 
+    event->Get(fdchits,(*iter).c_str()); 
     if(fdchits.size()<=0)continue;
     
     
@@ -1171,7 +1168,7 @@ void DDANAEVIO_factory::addDFDCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //----------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDBeamPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDBeamPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bank and add to event tree
@@ -1203,7 +1200,7 @@ void DDANAEVIO_factory::addDBeamPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DBeamPhoton*> beamphotons; 
-    eventLoop->Get(beamphotons,(*iter).c_str()); 
+    event->Get(beamphotons,(*iter).c_str()); 
     if(beamphotons.size()<=0)continue;
     
 
@@ -1249,7 +1246,7 @@ void DDANAEVIO_factory::addDBeamPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDSCTruthHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDSCTruthHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bank and add to event tree
@@ -1284,7 +1281,7 @@ void DDANAEVIO_factory::addDSCTruthHit(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DSCTruthHit*> sctruthhits;
-    eventLoop->Get(sctruthhits,(*iter).c_str()); 
+    event->Get(sctruthhits,(*iter).c_str()); 
     if(sctruthhits.size()<=0)continue;
     
 
@@ -1326,7 +1323,7 @@ void DDANAEVIO_factory::addDSCTruthHit(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFCALHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bank and add to event tree
@@ -1357,7 +1354,7 @@ void DDANAEVIO_factory::addDFCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DFCALHit*> fcalhits;
-    eventLoop->Get(fcalhits,(*iter).c_str()); 
+    event->Get(fcalhits,(*iter).c_str()); 
     if(fcalhits.size()<=0)continue;
     
     
@@ -1396,7 +1393,7 @@ void DDANAEVIO_factory::addDFCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDSCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDSCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create bank and add to event tree
@@ -1424,7 +1421,7 @@ void DDANAEVIO_factory::addDSCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DSCHit*> schits;
-    eventLoop->Get(schits,(*iter).c_str()); 
+    event->Get(schits,(*iter).c_str()); 
     if(schits.size()<=0)continue;
 
 
@@ -1460,7 +1457,7 @@ void DDANAEVIO_factory::addDSCHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTrackWireBased(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTrackWireBased(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create wirebasedtrack bank and add to event tree
@@ -1497,7 +1494,7 @@ void DDANAEVIO_factory::addDTrackWireBased(JEventLoop *eventLoop, evioDOMTree &t
 
     // is there any data
     vector<const DTrackWireBased*> wirebasedtracks;
-    eventLoop->Get(wirebasedtracks,(*iter).c_str()); 
+    event->Get(wirebasedtracks,(*iter).c_str()); 
     if(wirebasedtracks.size()<=0)continue;
 
 
@@ -1541,7 +1538,7 @@ void DDANAEVIO_factory::addDTrackWireBased(JEventLoop *eventLoop, evioDOMTree &t
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTrackTimeBased(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTrackTimeBased(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create timebasedtrack bank and add to event tree
@@ -1580,7 +1577,7 @@ void DDANAEVIO_factory::addDTrackTimeBased(JEventLoop *eventLoop, evioDOMTree &t
 
     // is there any data
     vector<const DTrackTimeBased*> timebasedtracks;
-    eventLoop->Get(timebasedtracks,(*iter).c_str()); 
+    event->Get(timebasedtracks,(*iter).c_str()); 
     if(timebasedtracks.size()<=0)continue;
 
 
@@ -1626,7 +1623,7 @@ void DDANAEVIO_factory::addDTrackTimeBased(JEventLoop *eventLoop, evioDOMTree &t
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDChargedTrack(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDChargedTrack(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create chargedtrack bank and add to event tree
@@ -1652,7 +1649,7 @@ void DDANAEVIO_factory::addDChargedTrack(JEventLoop *eventLoop, evioDOMTree &tre
     
     // is there any data
     vector<const DChargedTrack*> chargedtracks;
-    eventLoop->Get(chargedtracks,(*iter).c_str()); 
+    event->Get(chargedtracks,(*iter).c_str()); 
     if(chargedtracks.size()<=0)continue;
     
     
@@ -1692,7 +1689,7 @@ void DDANAEVIO_factory::addDChargedTrack(JEventLoop *eventLoop, evioDOMTree &tre
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create photon bank and add to event tree
@@ -1727,7 +1724,7 @@ void DDANAEVIO_factory::addDPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DPhoton*> photons;
-    eventLoop->Get(photons),(*iter).c_str(); 
+    event->Get(photons),(*iter).c_str(); 
     if(photons.size()<=0)continue;
 
 
@@ -1769,7 +1766,7 @@ void DDANAEVIO_factory::addDPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDCDCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDCDCTrackHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create cdctrackhit bank and add to event tree
@@ -1803,7 +1800,7 @@ void DDANAEVIO_factory::addDCDCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree
 
     // is there any data
     vector<const DCDCTrackHit*> cdctrackhits; 
-    eventLoop->Get(cdctrackhits,(*iter).c_str()); 
+    event->Get(cdctrackhits,(*iter).c_str()); 
     if(cdctrackhits.size()<=0)continue;
 
 
@@ -1844,7 +1841,7 @@ void DDANAEVIO_factory::addDCDCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFDCPseudo(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFDCPseudo(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   // create fdcpseudo bank and add to event tree
@@ -1881,7 +1878,7 @@ void DDANAEVIO_factory::addDFDCPseudo(JEventLoop *eventLoop, evioDOMTree &tree) 
 
     // is there any data
     vector<const DFDCPseudo*> fdcpseudos; 
-    eventLoop->Get(fdcpseudos,(*iter).c_str()); 
+    event->Get(fdcpseudos,(*iter).c_str()); 
     if(fdcpseudos.size()<=0)continue;
 
 
@@ -1925,7 +1922,7 @@ void DDANAEVIO_factory::addDFDCPseudo(JEventLoop *eventLoop, evioDOMTree &tree) 
 //----------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDVertex(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDVertex(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DVertex";
   string objNameLC(objName);
@@ -1962,7 +1959,7 @@ void DDANAEVIO_factory::addDVertex(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DVertex*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2009,7 +2006,7 @@ void DDANAEVIO_factory::addDVertex(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTrackCandidate(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTrackCandidate(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DTrackCandidate";
   string objNameLC(objName);
@@ -2042,7 +2039,7 @@ void DDANAEVIO_factory::addDTrackCandidate(JEventLoop *eventLoop, evioDOMTree &t
     // is there any data
     //    vector<const DBankName*> dataObjects;
     vector<const DTrackCandidate*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2077,7 +2074,7 @@ void DDANAEVIO_factory::addDTrackCandidate(JEventLoop *eventLoop, evioDOMTree &t
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDBCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDBCALPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DBCALPhoton";
   string objNameLC(objName);
@@ -2116,7 +2113,7 @@ void DDANAEVIO_factory::addDBCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DBCALPhoton*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2157,7 +2154,7 @@ void DDANAEVIO_factory::addDBCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFCALPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DFCALPhoton";
   string objNameLC(objName);
@@ -2196,7 +2193,7 @@ void DDANAEVIO_factory::addDFCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DFCALPhoton*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2237,7 +2234,7 @@ void DDANAEVIO_factory::addDFCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDChargedTruthMatch(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDChargedTruthMatch(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DChargedTruthMatch";
   string objNameLC(objName);
@@ -2272,7 +2269,7 @@ void DDANAEVIO_factory::addDChargedTruthMatch(JEventLoop *eventLoop, evioDOMTree
 
     // is there any data
     vector<const DChargedTruthMatch*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2310,7 +2307,7 @@ void DDANAEVIO_factory::addDChargedTruthMatch(JEventLoop *eventLoop, evioDOMTree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTOFRawHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTOFRawHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   string objName             = "DTOFRawHit";
@@ -2346,7 +2343,7 @@ void DDANAEVIO_factory::addDTOFRawHit(JEventLoop *eventLoop, evioDOMTree &tree) 
 
     // is there any data
     vector<const DTOFRawHit*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2384,7 +2381,7 @@ void DDANAEVIO_factory::addDTOFRawHit(JEventLoop *eventLoop, evioDOMTree &tree) 
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTOFRawHitMC(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTOFRawHitMC(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
 
   string objName             = "DTOFRawHitMC";
@@ -2430,7 +2427,7 @@ void DDANAEVIO_factory::addDTOFRawHitMC(JEventLoop *eventLoop, evioDOMTree &tree
 
     // is there any data
     vector<const DTOFRawHitMC*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2476,7 +2473,7 @@ void DDANAEVIO_factory::addDTOFRawHitMC(JEventLoop *eventLoop, evioDOMTree &tree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTOFHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTOFHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DTOFHit";
   string objNameLC(objName);
@@ -2518,7 +2515,7 @@ void DDANAEVIO_factory::addDTOFHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DTOFHit*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2562,7 +2559,7 @@ void DDANAEVIO_factory::addDTOFHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTOFPoint(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTOFPoint(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DTOFPoint";
   string objNameLC(objName);
@@ -2598,7 +2595,7 @@ void DDANAEVIO_factory::addDTOFPoint(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DTOFPoint*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2637,7 +2634,7 @@ void DDANAEVIO_factory::addDTOFPoint(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDBCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDBCALHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DBCALHit";
   string objNameLC(objName);
@@ -2673,7 +2670,7 @@ void DDANAEVIO_factory::addDBCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DBCALHit*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2713,7 +2710,7 @@ void DDANAEVIO_factory::addDBCALHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDBCALShower(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDBCALShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DBCALShower";
   string objNameLC(objName);
@@ -2748,7 +2745,7 @@ void DDANAEVIO_factory::addDBCALShower(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DBCALShower*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2786,7 +2783,7 @@ void DDANAEVIO_factory::addDBCALShower(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFCALCluster(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFCALCluster(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DFCALCluster";
   string objNameLC(objName);
@@ -2820,7 +2817,7 @@ void DDANAEVIO_factory::addDFCALCluster(JEventLoop *eventLoop, evioDOMTree &tree
 
     // is there any data
     vector<const DFCALCluster*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2857,7 +2854,7 @@ void DDANAEVIO_factory::addDFCALCluster(JEventLoop *eventLoop, evioDOMTree &tree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFDCCathodeCluster(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFDCCathodeCluster(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DFDCCathodeCluster";
   string objNameLC(objName);
@@ -2892,7 +2889,7 @@ void DDANAEVIO_factory::addDFDCCathodeCluster(JEventLoop *eventLoop, evioDOMTree
 
     // is there any data
     vector<const DFDCCathodeCluster*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -2930,7 +2927,7 @@ void DDANAEVIO_factory::addDFDCCathodeCluster(JEventLoop *eventLoop, evioDOMTree
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDFDCSegment(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDFDCSegment(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DFDCSegment";
   string objNameLC(objName);
@@ -2965,7 +2962,7 @@ void DDANAEVIO_factory::addDFDCSegment(JEventLoop *eventLoop, evioDOMTree &tree)
 
     // is there any data
     vector<const DFDCSegment*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 
@@ -3003,7 +3000,7 @@ void DDANAEVIO_factory::addDFDCSegment(JEventLoop *eventLoop, evioDOMTree &tree)
 //------------------------------------------------------------------------------
 
 
-void DDANAEVIO_factory::addDTAGMHit(JEventLoop *eventLoop, evioDOMTree &tree) {
+void DDANAEVIO_factory::addDTAGMHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree) {
 
   string objName             = "DTAGMHit";
   string objNameLC(objName);
@@ -3037,7 +3034,7 @@ void DDANAEVIO_factory::addDTAGMHit(JEventLoop *eventLoop, evioDOMTree &tree) {
 
     // is there any data
     vector<const DTAGMHit*> dataObjects;
-    eventLoop->Get(dataObjects,(*iter).c_str()); 
+    event->Get(dataObjects,(*iter).c_str()); 
     if(dataObjects.size()<=0)continue;
 
 

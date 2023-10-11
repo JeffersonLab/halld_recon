@@ -12,7 +12,7 @@
 #include <JANA/JFactory.h>
 #include <DVector3.h>
 
-class DCTOFPoint:public jana::JObject{
+class DCTOFPoint:public JObject{
  public:
   JOBJECT_PUBLIC(DCTOFPoint);
 

@@ -11,7 +11,7 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_TOF_Eff()); //register this plugin
+		locApplication->Add(new JEventProcessor_TOF_Eff()); //register this plugin
 	}
 } // "C"
 
@@ -19,10 +19,13 @@ extern "C"
 thread_local DTreeFillData JEventProcessor_TOF_Eff::dTreeFillData;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TOF_Eff::init(void)
+void JEventProcessor_TOF_Eff::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	//TRACK REQUIREMENTS
 	dMaxFCALDeltaT = 2.0;
 	dMinTrackingFOM = 5.73303E-7; // +/- 5 sigma
@@ -146,30 +149,25 @@ jerror_t JEventProcessor_TOF_Eff::init(void)
 
 	//REGISTER BRANCHES
 	dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-	return NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TOF_Eff::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_TOF_Eff::BeginRun(const std::shared_ptr<const JEvent>& t)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-
-jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_TOF_Eff::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
@@ -178,29 +176,29 @@ jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t 
 
 	//CUT ON TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-		return NOERROR;
+		return;
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 	if(locEventRFBunch->dNumParticleVotes <= 1)
-		return NOERROR; //don't trust PID: beta-dependence
+		return; //don't trust PID: beta-dependence
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DTOFPaddleHit*> locTOFPaddleHits;
-	locEventLoop->Get(locTOFPaddleHits);
+	locEvent->Get(locTOFPaddleHits);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	//Try to select the most-pure sample of tracks possible
 	set<const DChargedTrackHypothesis*> locBestTracks;
@@ -301,7 +299,7 @@ jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t 
 
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 		{
 			//TOFPaddle
 			dHist_TOFPaddleTrackYVsVerticalPaddle_TotalHit_Top->Fill(locProjectedVerticalBar, locProjectedTOFIntersection.Y());
@@ -334,7 +332,7 @@ jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t 
 				dHist_TrackTOF2DPaddles_HasHit->Fill(locProjectedVerticalBar, locProjectedHorizontalBar);
 			}
 		}
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
 		//TRACK
 		Particle_t locPID = (locChargedTrackHypothesis->Get_FCALShowerMatchParams() != NULL) ? locChargedTrackHypothesis->PID() : Unknown;
@@ -373,8 +371,6 @@ jerror_t JEventProcessor_TOF_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t 
 		//FILL TTREE
 		dTreeInterface->Fill(dTreeFillData);
 	}
-
-	return NOERROR;
 }
 
 int JEventProcessor_TOF_Eff::Calc_NearestHit(const DTOFPaddleHit* locPaddleHit) const
@@ -419,27 +415,23 @@ double JEventProcessor_TOF_Eff::Calc_TOFTiming(const DChargedTrackHypothesis* lo
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TOF_Eff::erun(void)
+void JEventProcessor_TOF_Eff::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TOF_Eff::fini(void)
+void JEventProcessor_TOF_Eff::Finish()
 {
 	// Called before program exit after event processing is finished.  
 
 	delete dCutAction_TrackHitPattern;
 	delete dTreeInterface; //saves trees to file, closes file
-
-	return NOERROR;
 }
 

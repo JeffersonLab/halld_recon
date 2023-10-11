@@ -8,17 +8,21 @@
 
 #include <CDC/DCDCHit_factory_Calib.h>
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <DANA/DGeometryManager.h>
+#include <HDGEOMETRY/DGeometry.h>
 
 //#define ENABLE_UPSAMPLING
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCDCHit_factory_Calib::init(void)
+void DCDCHit_factory_Calib::Init()
 {
-  
   CDC_HIT_THRESHOLD = 0;
-  gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
+  auto app = GetApplication();
+  app->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
 
   // After a saturated pulse, small afterpulses can occur on other channels in the same preamp
@@ -51,15 +55,17 @@ jerror_t DCDCHit_factory_Calib::init(void)
   amp_a_scale = a_scale*28.8;
   t_scale = 8.0/10.0;    // 8 ns/count and integer time is in 1/10th of sample
   t_base  = 0.;       // ns
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCDCHit_factory_Calib::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -72,7 +78,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   pthread_mutex_unlock(&print_mutex);
   
   // calculate the number of straws in each ring
-  CalcNstraws(eventLoop, runnumber, Nstraws);
+  CalcNstraws(event, runnumber, Nstraws);
   Nrings = Nstraws.size();
   
   vector<double> raw_gains;
@@ -83,7 +89,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   
   // load scale factors
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/CDC/digi_scales", scale_factors))
+  if (calibration->Get("/CDC/digi_scales", scale_factors))
     jout << "Error loading /CDC/digi_scales !" << endl;
   if (scale_factors.find("CDC_ADC_ASCALE") != scale_factors.end())
     a_scale = scale_factors["CDC_ADC_ASCALE"];
@@ -102,7 +108,7 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
   
   // load base time offset
   map<string,double> base_time_offset;
-  if (eventLoop->GetCalib("/CDC/base_time_offset",base_time_offset))
+  if (calibration->Get("/CDC/base_time_offset",base_time_offset))
     jout << "Error loading /CDC/base_time_offset !" << endl;
   if (base_time_offset.find("CDC_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["CDC_BASE_TIME_OFFSET"];
@@ -110,11 +116,11 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
     jerr << "Unable to get CDC_BASE_TIME_OFFSET from /CDC/base_time_offset !" << endl;
   
   // load constant tables
-  if (eventLoop->GetCalib("/CDC/wire_gains", raw_gains))
+  if (calibration->Get("/CDC/wire_gains", raw_gains))
     jout << "Error loading /CDC/wire_gains !" << endl;
-  if (eventLoop->GetCalib("/CDC/pedestals", raw_pedestals))
+  if (calibration->Get("/CDC/pedestals", raw_pedestals))
     jout << "Error loading /CDC/pedestals !" << endl;
-  if (eventLoop->GetCalib("/CDC/timing_offsets", raw_time_offsets))
+  if (calibration->Get("/CDC/timing_offsets", raw_time_offsets))
     jout << "Error loading /CDC/timing_offsets !" << endl;
   
   // fill the tables
@@ -166,13 +172,13 @@ jerror_t DCDCHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnum
     }
   }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCDCHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// Generate DCDCHit object for each DCDCDigiHit object.
   /// This is where the first set of calibration constants
@@ -186,7 +192,7 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// In order to use the new Flash125 data types and maintain compatibility with the old code, what is below is a bit of a mess
   
   vector<const DCDCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
   char str[256];
 
 
@@ -340,41 +346,38 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     hit->AddAssociatedObject(digihit);
     
-    _data.push_back(hit);
+    Insert(hit);
   }
-  
-  return NOERROR;
 }
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCDCHit_factory_Calib::erun(void)
+void DCDCHit_factory_Calib::EndRun()
 {
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCDCHit_factory_Calib::fini(void)
+void DCDCHit_factory_Calib::Finish()
 {
-  return NOERROR;
 }
 
 //------------------
 // CalcNstraws
 //------------------
-void DCDCHit_factory_Calib::CalcNstraws(jana::JEventLoop *eventLoop, int32_t runnumber, vector<unsigned int> &Nstraws)
+void DCDCHit_factory_Calib::CalcNstraws(const std::shared_ptr<const JEvent>& event, int32_t runnumber, vector<unsigned int> &Nstraws)
 {
   DGeometry *dgeom;
   vector<vector<DCDCWire *> >cdcwires;
   
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
-  
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  dgeom = geo_manager->GetDGeometry(runnumber);
+
   // Get the CDC wire table from the XML
   dgeom->GetCDCWires(cdcwires);
   
