@@ -9,9 +9,8 @@
 #define _DTrigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTrigger:public jana::JObject{
+class DTrigger:public JObject{
 	public:
 		JOBJECT_PUBLIC(DTrigger);
 		

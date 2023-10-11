@@ -8,7 +8,7 @@
 #ifndef _DTrackHitSelectorTHROWN_
 #define _DTrackHitSelectorTHROWN_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 
 #include <TRACKING/DTrackHitSelector.h>
 
@@ -16,7 +16,7 @@ class DMCTrackHit;
 
 class DTrackHitSelectorTHROWN:public DTrackHitSelector{
 	public:
-		DTrackHitSelectorTHROWN(jana::JEventLoop *loop);
+		DTrackHitSelectorTHROWN(const std::shared_ptr<const JEvent>& loop);
 		virtual ~DTrackHitSelectorTHROWN();
 		
 		void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=0) const;

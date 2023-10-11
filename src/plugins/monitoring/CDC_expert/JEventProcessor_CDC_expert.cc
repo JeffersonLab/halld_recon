@@ -16,7 +16,6 @@
 
 
 using namespace std;
-using namespace jana;
 
 
 #include "CDC/DCDCHit.h"
@@ -102,7 +101,7 @@ bool hists3675 = false;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_expert());
+    app->Add(new JEventProcessor_CDC_expert());
   }
 }
 
@@ -111,7 +110,7 @@ extern "C"{
 
 
 JEventProcessor_CDC_expert::JEventProcessor_CDC_expert() {
-
+	SetTypeName("JEventProcessor_CDC_expert");
 	initialized_histograms = false;
 }
 
@@ -125,27 +124,29 @@ JEventProcessor_CDC_expert::~JEventProcessor_CDC_expert() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_CDC_expert::init(void) {
+void JEventProcessor_CDC_expert::Init() {
 
   // I moved all the histogram setup into the brun so that I can use different
   // scales for the later runs using the new firmware.  NSJ.
 
-  return NOERROR;
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_CDC_expert::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
+  auto runnumber = event->GetRunNumber();
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
   
   // Do not initialize ROOT objects twice!
   if(initialized_histograms){
-    japp->RootUnLock();
-    return NOERROR;
+    lockService->RootUnLock();
+    return;
   }
 
   // max values for histogram scales, modified fa250-format readout
@@ -352,17 +353,15 @@ jerror_t JEventProcessor_CDC_expert::brun(JEventLoop *eventLoop, int32_t runnumb
 
   initialized_histograms = true;
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
   
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CDC_expert::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -397,12 +396,12 @@ jerror_t JEventProcessor_CDC_expert::evnt(JEventLoop *eventLoop, uint64_t eventn
 
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
+    return;
   }
 
   //first set of histograms is for dcdchits, these are t and q after calibration
@@ -410,19 +409,19 @@ jerror_t JEventProcessor_CDC_expert::evnt(JEventLoop *eventLoop, uint64_t eventn
 
   // get hit data for cdc
   vector<const DCDCHit*> hits;
-  eventLoop->Get(hits);
+  event->Get(hits);
  
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  eventLoop->Get(digihits);
+  event->Get(digihits);
 
   //get WRD data for new format (until it is linked to CDCPulse)
   vector<const Df125WindowRawData*> wrdvector;
-  eventLoop->Get(wrdvector);
+  event->Get(wrdvector);
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   for(uint32_t i=0; i<hits.size(); i++) {
 
@@ -595,29 +594,25 @@ jerror_t JEventProcessor_CDC_expert::evnt(JEventLoop *eventLoop, uint64_t eventn
   }
 
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert::erun(void) {
+void JEventProcessor_CDC_expert::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_expert::fini(void) {
+void JEventProcessor_CDC_expert::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

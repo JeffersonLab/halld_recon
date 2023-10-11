@@ -12,7 +12,7 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -27,7 +27,6 @@
 #include <BCAL/DBCALPoint.h>
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_p2pi_unusedHists : public DAnalysisAction
 {
@@ -36,12 +35,12 @@ class DCustomAction_p2pi_unusedHists : public DAnalysisAction
                 DCustomAction_p2pi_unusedHists(const DReaction* locReaction, bool locUseKinFitResultsFlag, string locActionUniqueString = "") : 
 	        DAnalysisAction(locReaction, "Custom_p2pi_unusedHists", locUseKinFitResultsFlag, locActionUniqueString){}
 
-		void Initialize(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
-		void FillTrack(JEventLoop* locEventLoop, const DChargedTrack* locChargedTrack, bool locMatch, const DMCThrown* locMCThrown);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
+		void FillTrack(const std::shared_ptr<const JEvent>& locEvent, const DChargedTrack* locChargedTrack, bool locMatch, const DMCThrown* locMCThrown);
 		void FillShower(const DNeutralShower* locNeutralShower, bool locMatch, double locBeamPhotonTime, double locFlightTime);
 
 		// Optional: Useful utility functions.

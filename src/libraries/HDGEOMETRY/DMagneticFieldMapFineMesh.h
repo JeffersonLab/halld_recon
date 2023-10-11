@@ -5,7 +5,6 @@
 #ifndef _DMagneticFieldMapFineMesh_
 #define _DMagneticFieldMapFineMesh_
 
-#include <JANA/jerror.h>
 
 #include <HDGEOMETRY/DMagneticFieldMap.h>
 
@@ -15,8 +14,8 @@ using std::vector;
 using std::string;
 
 #include <JANA/JApplication.h>
-#include <JANA/JCalibration.h>
-using namespace jana;
+#include <JANA/Calibrations/JCalibration.h>
+#include <JANA/Calibrations/JLargeCalibration.h>
 
 class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  public:
@@ -70,7 +69,7 @@ class DMagneticFieldMapFineMesh:public DMagneticFieldMap{
  protected:
   
   JCalibration *jcalib;
-  JResourceManager *jresman;
+  JLargeCalibration *jresman;
 
   vector< vector< vector<DBfieldPoint_t> > > Btable;
   

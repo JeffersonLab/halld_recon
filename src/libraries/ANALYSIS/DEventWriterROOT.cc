@@ -1,6 +1,8 @@
 #include "DEventWriterROOT.h"
 #include "TObjString.h"
 
+#include <TObjString.h>
+
 static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
 static bool CCAL_VERBOSE_OUTPUT = false;
@@ -14,7 +16,7 @@ static bool STORE_MC_TRAJECTORIES = false;
 static bool STORE_SC_VETO_INFO = false;
 static bool STORE_THROWN_DECAYING_PARTICLES = true;
 
-void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
+void DEventWriterROOT::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	dInitNumThrownArraySize = 20;
 	dInitNumBeamArraySize = 20;
@@ -23,9 +25,9 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 	dInitNumComboArraySize = 100;
 	dThrownTreeInterface = NULL;
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 
 	//CREATE & INITIALIZE ANALYSIS ACTIONS
 	for(size_t loc_i = 0; loc_i < locReactions.size(); ++loc_i)
@@ -34,25 +36,24 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 			continue;
 
 		dCutActionMap_ThrownTopology[locReactions[loc_i]] = new DCutAction_ThrownTopology(locReactions[loc_i], true);
-		dCutActionMap_ThrownTopology[locReactions[loc_i]]->Initialize(locEventLoop);
+		dCutActionMap_ThrownTopology[locReactions[loc_i]]->Initialize(locEvent);
 
 		dCutActionMap_TrueCombo[locReactions[loc_i]] = new DCutAction_TrueCombo(locReactions[loc_i], -1.0, true);
-		dCutActionMap_TrueCombo[locReactions[loc_i]]->Initialize(locEventLoop);
+		dCutActionMap_TrueCombo[locReactions[loc_i]]->Initialize(locEvent);
 
 		dCutActionMap_BDTSignalCombo[locReactions[loc_i]] = new DCutAction_BDTSignalCombo(locReactions[loc_i], 5.73303E-7, true, true); //+/- 5sigma
-		dCutActionMap_BDTSignalCombo[locReactions[loc_i]]->Initialize(locEventLoop);
+		dCutActionMap_BDTSignalCombo[locReactions[loc_i]]->Initialize(locEvent);
 	}
 
 	//CREATE TREES
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	vector<const DReactionVertexInfo*> locVertexInfos;
-	locEventLoop->Get(locVertexInfos);
+	locEvent->Get(locVertexInfos);
 
 	//Get Target Center Z
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	dTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(dTargetCenterZ);
 
@@ -72,28 +73,27 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 		{
 			dVertexInfoMap.emplace(locReaction, locVertexInfo);
 			if(locReaction->Get_EnableTTreeOutputFlag())
-				Create_DataTree(locReaction, locEventLoop, !locMCThrowns.empty());
+				Create_DataTree(locReaction, locEvent, !locMCThrowns.empty());
 		}
 	}
 }
 
-void DEventWriterROOT::Run_Update(JEventLoop* locEventLoop)
+void DEventWriterROOT::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//Get Target Center Z
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = DEvent::GetDGeometry(locEvent);
 	dTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(dTargetCenterZ);
 
 	// update run-dependent info/objects
 	for(auto& locMapPair : dCutActionMap_ThrownTopology)
-		locMapPair.second->Run_Update(locEventLoop);
+		locMapPair.second->Run_Update(locEvent);
 	for(auto& locMapPair : dCutActionMap_TrueCombo)
-		locMapPair.second->Run_Update(locEventLoop);
+		locMapPair.second->Run_Update(locEvent);
 	for(auto& locMapPair : dCutActionMap_BDTSignalCombo)
-		locMapPair.second->Run_Update(locEventLoop);
+		locMapPair.second->Run_Update(locEvent);
 }
 
 DEventWriterROOT::~DEventWriterROOT(void)
@@ -116,7 +116,7 @@ DEventWriterROOT::~DEventWriterROOT(void)
 		delete locMapPair.second;
 }
 
-void DEventWriterROOT::Create_ThrownTree(JEventLoop* locEventLoop, string locOutputFileName) const
+void DEventWriterROOT::Create_ThrownTree(const std::shared_ptr<const JEvent>& locEvent, string locOutputFileName) const
 {
 	if(dThrownTreeInterface != nullptr)
 		return; //Already setup for this thread!
@@ -133,7 +133,7 @@ void DEventWriterROOT::Create_ThrownTree(JEventLoop* locEventLoop, string locOut
 
 	//Get target PID
 	const DMCReaction* locMCReaction = NULL;
-	locEventLoop->GetSingle(locMCReaction);
+	locEvent->GetSingle(locMCReaction);
 	Particle_t locTargetPID = locMCReaction->target.PID();
 
 	//setup target info
@@ -147,14 +147,14 @@ void DEventWriterROOT::Create_ThrownTree(JEventLoop* locEventLoop, string locOut
 	Create_Branches_Thrown(locBranchRegister, true);
 
 	//CUSTOM
-	Create_CustomBranches_ThrownTree(locBranchRegister, locEventLoop);
+	Create_CustomBranches_ThrownTree(locBranchRegister, locEvent);
 
 	//CREATE BRANCHES
 	dThrownTreeInterface->Create_Branches(locBranchRegister);
 	dThrownTreeInterface->Set_TreeIndexBranchNames("RunNumber", "EventNumber");
 }
 
-void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop* locEventLoop, bool locIsMCDataFlag)
+void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, const std::shared_ptr<const JEvent>& locEvent, bool locIsMCDataFlag)
 {
 	string locReactionName = locReaction->Get_ReactionName();
 	string locOutputFileName = locReaction->Get_TTreeOutputFileName();
@@ -173,7 +173,7 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop*
 	DTreeBranchRegister locBranchRegister;
 
 	//fill maps
-	TMap* locPositionToNameMap = Create_UserInfoMaps(locBranchRegister, locEventLoop, locReaction);
+	TMap* locPositionToNameMap = Create_UserInfoMaps(locBranchRegister, locEvent, locReaction);
 
 /******************************************************************** Create Branches ********************************************************************/
 
@@ -207,17 +207,17 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop*
 	Create_Branches_Combo(locBranchRegister, locReaction, locIsMCDataFlag, locPositionToNameMap);
 
 	//Kinematic fit data (pulls and covariance matrices)
-	Create_Branches_KinFitData(locBranchRegister, locEventLoop, locReaction, locIsMCDataFlag);
+	Create_Branches_KinFitData(locBranchRegister, locEvent, locReaction, locIsMCDataFlag);
 
 	//Custom branches
-	Create_CustomBranches_DataTree(locBranchRegister, locEventLoop, locReaction, locIsMCDataFlag);
+	Create_CustomBranches_DataTree(locBranchRegister, locEvent, locReaction, locIsMCDataFlag);
 
 	//Create branches
 	locTreeInterface->Create_Branches(locBranchRegister);
 	locTreeInterface->Set_TreeIndexBranchNames("RunNumber", "EventNumber");
 }
 
-TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegister, JEventLoop* locEventLoop, const DReaction* locReaction) const
+TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction) const
 {
 	auto locReactionVertexInfo = dVertexInfoMap.find(locReaction)->second;
 
@@ -259,51 +259,55 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 	locKinFitTypeStream << locKinFitType;
 	locMiscInfoMap->Add(new TObjString("KinFitType"), new TObjString(locKinFitTypeStream.str().c_str()));
 
+	auto app = locEvent->GetJApplication();
+
 	string ANALYSIS_VERSION_STRING = "";
-	if(gPARMS->Exists("ANALYSIS:DATAVERSIONSTRING"))
-		gPARMS->GetParameter("ANALYSIS:DATAVERSIONSTRING", ANALYSIS_VERSION_STRING);
+	app->SetDefaultParameter("ANALYSIS:DATAVERSIONSTRING", ANALYSIS_VERSION_STRING);
+
 	if(ANALYSIS_VERSION_STRING != "")
 		locMiscInfoMap->Add(new TObjString("ANALYSIS:DATAVERSIONSTRING"), new TObjString(ANALYSIS_VERSION_STRING.c_str()));
 
 	string HDDM_DATA_VERSION_STRING = "";
-	if(gPARMS->Exists("REST:DATAVERSIONSTRING"))
-		gPARMS->GetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+	app->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+
 	if(HDDM_DATA_VERSION_STRING != "")
 		locMiscInfoMap->Add(new TObjString("REST:DATAVERSIONSTRING"), new TObjString(HDDM_DATA_VERSION_STRING.c_str()));
 
 	string REST_JANA_CALIB_CONTEXT = "";
-	if(gPARMS->Exists("REST:JANACALIBCONTEXT"))
-		gPARMS->GetParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
+	app->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
+
 	if(REST_JANA_CALIB_CONTEXT == "")
-		gPARMS->GetParameter("JANA_CALIB_CONTEXT", REST_JANA_CALIB_CONTEXT);
+		app->GetParameter("JANA_CALIB_CONTEXT", REST_JANA_CALIB_CONTEXT);
+
 	if(REST_JANA_CALIB_CONTEXT != "")
 		locMiscInfoMap->Add(new TObjString("REST:JANACALIBCONTEXT"), new TObjString(REST_JANA_CALIB_CONTEXT.c_str()));
 
+	auto params = locEvent->GetJApplication()->GetJParameterManager();
 	// Note: adding these parameters (e.g. in hd_root) will create warnings with "<-- NO DEFAULT! (TYPO?)". Safe to ignore these.
-	if(gPARMS->Exists("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT"))
-		{gPARMS->GetParameter("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT", FDC_VERBOSE_OUTPUT); cout << "ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT set to " << FDC_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT"))
-		{gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT set to " << BCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
-		{gPARMS->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT set to " << FCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT"))
-		{gPARMS->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT set to " << CCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
-		{gPARMS->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT); cout << "ANALYSIS:DIRC_ROOT_OUTPUT set to " << DIRC_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:STORE_PULL_INFO"))
-	    {gPARMS->GetParameter("ANALYSIS:STORE_PULL_INFO",STORE_PULL_INFO); cout << "ANALYSIS:STORE_PULL_INFO set to " << STORE_PULL_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:STORE_ERROR_MATRIX_INFO"))
-    	{gPARMS->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO); cout << "ANALYSIS:STORE_ERROR_MATRIX_INFO set to " << STORE_ERROR_MATRIX_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
-	if(gPARMS->Exists("ANALYSIS:STORE_MC_TRAJECTORIES")) 
-		{gPARMS->GetParameter("ANALYSIS:STORE_MC_TRAJECTORIES",STORE_MC_TRAJECTORIES); cout << "ANALYSIS:STORE_MC_TRAJECTORIES set to " << STORE_MC_TRAJECTORIES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT", FDC_VERBOSE_OUTPUT); cout << "ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT set to " << FDC_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT set to " << BCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT", FCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT set to " << FCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT", CCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:CCAL_VERBOSE_ROOT_OUTPUT set to " << CCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:DIRC_ROOT_OUTPUT"))
+		{params->GetParameter("ANALYSIS:DIRC_ROOT_OUTPUT", DIRC_OUTPUT); cout << "ANALYSIS:DIRC_ROOT_OUTPUT set to " << DIRC_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:STORE_PULL_INFO"))
+	    {params->GetParameter("ANALYSIS:STORE_PULL_INFO",STORE_PULL_INFO); cout << "ANALYSIS:STORE_PULL_INFO set to " << STORE_PULL_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:STORE_ERROR_MATRIX_INFO"))
+    	{params->GetParameter("ANALYSIS:STORE_ERROR_MATRIX_INFO",STORE_ERROR_MATRIX_INFO); cout << "ANALYSIS:STORE_ERROR_MATRIX_INFO set to " << STORE_ERROR_MATRIX_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:STORE_MC_TRAJECTORIES"))
+		{params->GetParameter("ANALYSIS:STORE_MC_TRAJECTORIES",STORE_MC_TRAJECTORIES); cout << "ANALYSIS:STORE_MC_TRAJECTORIES set to " << STORE_MC_TRAJECTORIES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
-	if(gPARMS->Exists("ANALYSIS:STORE_SC_VETO_INFO"))
-	    {gPARMS->GetParameter("ANALYSIS:STORE_SC_VETO_INFO",STORE_SC_VETO_INFO); cout << "ANALYSIS:STORE_SC_VETO_INFO set to " << STORE_SC_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	if(params->Exists("ANALYSIS:STORE_SC_VETO_INFO"))
+	    {params->GetParameter("ANALYSIS:STORE_SC_VETO_INFO",STORE_SC_VETO_INFO); cout << "ANALYSIS:STORE_SC_VETO_INFO set to " << STORE_SC_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
 
 	if(locKinFitType != d_NoFit)
 	{
-		DKinFitUtils_GlueX locKinFitUtils(locEventLoop);
+		DKinFitUtils_GlueX locKinFitUtils(locEvent);
 		size_t locNumConstraints = 0, locNumUnknowns = 0;
 		string locConstraintString = locKinFitUtils.Get_ConstraintInfo(locReactionVertexInfo, locReaction, locNumConstraints, locNumUnknowns);
 		locMiscInfoMap->Add(new TObjString("KinFitConstraints"), new TObjString(locConstraintString.c_str()));
@@ -1010,7 +1014,7 @@ void DEventWriterROOT::Create_Branches_ComboNeutral(DTreeBranchRegister& locBran
 	}
 }
 
-void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, JEventLoop* locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const
+void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const
 {
 
 	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
@@ -1125,17 +1129,17 @@ void DEventWriterROOT::Create_Branches_KinFitData(DTreeBranchRegister& locBranch
     abundanceMap.clear();
 }
 
-void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
+void DEventWriterROOT::Fill_ThrownTree(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	vector<const DMCThrown*> locMCThrowns_FinalState;
-	locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
+	locEvent->Get(locMCThrowns_FinalState, "FinalState");
 
 	vector<const DMCThrown*> locMCThrowns_Decaying;
 	if(STORE_THROWN_DECAYING_PARTICLES)
-		locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+		locEvent->Get(locMCThrowns_Decaying, "Decaying");
 
 	const DMCReaction* locMCReaction = NULL;
-	locEventLoop->GetSingle(locMCReaction);
+	locEvent->GetSingle(locMCReaction);
 
 	ULong64_t locNumPIDThrown_FinalState = 0, locPIDThrown_Decaying = 0;
 	Compute_ThrownPIDInfo(locMCThrowns_FinalState, locMCThrowns_Decaying, locNumPIDThrown_FinalState, locPIDThrown_Decaying);
@@ -1145,37 +1149,37 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	Group_ThrownParticles(locMCThrowns_FinalState, locMCThrowns_Decaying, locMCThrownsToSave, locThrownIndexMap);
 
 	vector<const DBeamPhoton*> locTaggedMCGenBeams;
-	locEventLoop->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
+	locEvent->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
 	vector<const DBeamPhoton*> locMCGenBeams;
-	locEventLoop->Get(locMCGenBeams, "MCGEN");
+	locEvent->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
-	locEventLoop->Get(locDMCTrajectoryPoints);
+	locEvent->Get(locDMCTrajectoryPoints);
 
 	const DBeamPhoton* locTaggedMCGenBeam = locTaggedMCGenBeams.empty() ? locMCGenBeams[0] : locTaggedMCGenBeams[0]; //if empty: will have to do. 
 
-	japp->RootWriteLock();
+	DEvent::GetLockService(locEvent)->RootWriteLock();
 
 	//primary event info
-	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
-	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
+	dThrownTreeFillData.Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
+	dThrownTreeFillData.Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
 
 	//throwns
 	Fill_ThrownInfo(&dThrownTreeFillData, locMCReaction, locTaggedMCGenBeam, locMCThrownsToSave, locThrownIndexMap, locNumPIDThrown_FinalState, locPIDThrown_Decaying, locDMCTrajectoryPoints);
 
 	//Custom Branches
-	Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEventLoop, locMCReaction, locMCThrownsToSave);
+	Fill_CustomBranches_ThrownTree(&dThrownTreeFillData, locEvent, locMCReaction, locMCThrownsToSave);
 
 	//FILL TTREE
 	dThrownTreeInterface->Fill(dThrownTreeFillData);
 
 	
-	japp->RootUnLock();
+	DEvent::GetLockService(locEvent)->RootUnLock();
 
 }
 
-void DEventWriterROOT::Fill_DataTrees(JEventLoop* locEventLoop, string locDReactionTag) const
+void DEventWriterROOT::Fill_DataTrees(const std::shared_ptr<const JEvent>& locEvent, string locDReactionTag) const
 {
 	if(locDReactionTag == "Thrown")
 	{
@@ -1184,10 +1188,10 @@ void DEventWriterROOT::Fill_DataTrees(JEventLoop* locEventLoop, string locDReact
 	}
 
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 
 	vector<const DReaction*> locReactionsWithTag;
-	locEventLoop->Get(locReactionsWithTag, locDReactionTag.c_str());
+	locEvent->Get(locReactionsWithTag, locDReactionTag.c_str());
 
 	for(size_t loc_i = 0; loc_i < locAnalysisResultsVector.size(); ++loc_i)
 	{
@@ -1211,11 +1215,11 @@ void DEventWriterROOT::Fill_DataTrees(JEventLoop* locEventLoop, string locDReact
 		if(!locReactionFoundFlag)
 			continue; //reaction not from this factory, continue
 
-		Fill_DataTree(locEventLoop, locReaction, locPassedParticleCombos);
+		Fill_DataTree(locEvent, locReaction, locPassedParticleCombos);
 	}
 }
 
-void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* locReaction, deque<const DParticleCombo*>& locParticleCombos) const
+void DEventWriterROOT::Fill_DataTree(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, deque<const DParticleCombo*>& locParticleCombos) const
 {
 	if(locReaction->Get_ReactionName() == "Thrown")
 	{
@@ -1232,27 +1236,27 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	/***************************************************** GET THROWN INFO *****************************************************/
 
 	vector<const DMCThrown*> locMCThrowns_FinalState;
-	locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
+	locEvent->Get(locMCThrowns_FinalState, "FinalState");
 
 	vector<const DMCThrown*> locMCThrowns_Decaying;
-	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+	locEvent->Get(locMCThrowns_Decaying, "Decaying");
 
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector.empty() ? NULL : locMCThrownMatchingVector[0];
 
 	vector<const DMCReaction*> locMCReactions;
-	locEventLoop->Get(locMCReactions);
+	locEvent->Get(locMCReactions);
 	const DMCReaction* locMCReaction = locMCReactions.empty() ? NULL : locMCReactions[0];
 
 	vector<const DBeamPhoton*> locTaggedMCGenBeams;
-	locEventLoop->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
+	locEvent->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
 	vector<const DBeamPhoton*> locMCGenBeams;
-	locEventLoop->Get(locMCGenBeams, "MCGEN");
+	locEvent->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
-	locEventLoop->Get(locDMCTrajectoryPoints);
+	locEvent->Get(locDMCTrajectoryPoints);
 
 	const DBeamPhoton* locTaggedMCGenBeam = nullptr;
 
@@ -1285,13 +1289,13 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	vector<const DNeutralParticleHypothesis*> locNeutralParticleHypotheses;
 	if(locSaveUnusedFlag)
 	{
-		locChargedTrackHypotheses = Get_ChargedHypotheses(locEventLoop);
-		locNeutralParticleHypotheses = Get_NeutralHypotheses(locEventLoop, locReactionPIDs);
+		locChargedTrackHypotheses = Get_ChargedHypotheses(locEvent);
+		locNeutralParticleHypotheses = Get_NeutralHypotheses(locEvent, locReactionPIDs);
 	}
 	else
 	{
-		locChargedTrackHypotheses = Get_ChargedHypotheses_Used(locEventLoop, locReaction, locParticleCombos);
-		locNeutralParticleHypotheses = Get_NeutralHypotheses_Used(locEventLoop, locReaction, locReactionPIDs, locParticleCombos);
+		locChargedTrackHypotheses = Get_ChargedHypotheses_Used(locEvent, locReaction, locParticleCombos);
+		locNeutralParticleHypotheses = Get_NeutralHypotheses_Used(locEvent, locReaction, locReactionPIDs, locParticleCombos);
 	}
 
 	//GET BEAM PHOTONS
@@ -1330,19 +1334,19 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//GET DETECTOR MATCHES
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	//GET DVERTEX
 	const DVertex* locVertex = NULL;
-	locEventLoop->GetSingle(locVertex);
+	locEvent->GetSingle(locVertex);
 
 	//GET TRIGGER
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 
 	/************************************************* EXECUTE ANALYSIS ACTIONS ************************************************/
 	       
-	japp->RootWriteLock();
+	DEvent::GetLockService(locEvent)->RootWriteLock();
 
 	Bool_t locIsThrownTopologyFlag = kFALSE;
 	vector<Bool_t> locIsTrueComboFlags;
@@ -1350,14 +1354,14 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	if(locMCReaction != NULL)
 	{
 		DCutAction_ThrownTopology* locThrownTopologyAction = dCutActionMap_ThrownTopology.find(locReaction)->second;
-		locIsThrownTopologyFlag = (*locThrownTopologyAction)(locEventLoop, NULL); //combo not used/needed
+		locIsThrownTopologyFlag = (*locThrownTopologyAction)(locEvent, NULL); //combo not used/needed
 		for(size_t loc_i = 0; loc_i < locParticleCombos.size(); ++loc_i)
 		{
 			DCutAction_TrueCombo* locTrueComboAction = dCutActionMap_TrueCombo.find(locReaction)->second;
-			locIsTrueComboFlags.push_back((*locTrueComboAction)(locEventLoop, locParticleCombos[loc_i]));
+			locIsTrueComboFlags.push_back((*locTrueComboAction)(locEvent, locParticleCombos[loc_i]));
 
 			DCutAction_BDTSignalCombo* locBDTSignalComboAction = dCutActionMap_BDTSignalCombo.find(locReaction)->second;
-			locIsBDTSignalComboFlags.push_back((*locBDTSignalComboAction)(locEventLoop, locParticleCombos[loc_i]));
+			locIsBDTSignalComboFlags.push_back((*locBDTSignalComboAction)(locEvent, locParticleCombos[loc_i]));
 		}
 	}
 
@@ -1367,8 +1371,8 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	DTreeFillData* locTreeFillData = dTreeFillDataMap.find(locReaction)->second;
 
 	//PRIMARY EVENT INFO
-	locTreeFillData->Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
-	locTreeFillData->Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
+	locTreeFillData->Fill_Single<UInt_t>("RunNumber", locEvent->GetRunNumber());
+	locTreeFillData->Fill_Single<ULong64_t>("EventNumber", locEvent->GetEventNumber());
 	locTreeFillData->Fill_Single<UInt_t>("L1TriggerBits", locTrigger->Get_L1TriggerBits());
 	locTreeFillData->Fill_Single<Double_t>("L1BCALEnergy", locTrigger->Get_GTP_BCALEnergy());
 	locTreeFillData->Fill_Single<Double_t>("L1FCALEnergy", locTrigger->Get_GTP_FCALEnergy());
@@ -1408,7 +1412,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	//UNUSED TRACKS
 	double locSumPMag_UnusedTracks = 0.0;
 	TVector3 locSumP3_UnusedTracks;
-	int locNumUnusedTracks = dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEventLoop, locParticleCombos[0], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
+	int locNumUnusedTracks = dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEvent, locParticleCombos[0], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 	locTreeFillData->Fill_Single<UChar_t>("NumUnusedTracks", locNumUnusedTracks);
 
 	//COMBOS
@@ -1421,7 +1425,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		double locEnergy_UnusedShowers = 0.;
 		double locEnergy_UnusedShowers_Quality = 0.;
 		int locNumber_UnusedShowers_Quality = 0;
-		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEventLoop, locParticleCombos[loc_i], locEnergy_UnusedShowers, locNumber_UnusedShowers_Quality, locEnergy_UnusedShowers_Quality);
+		int locNumber_UnusedShowers = dAnalysisUtilities->Calc_Energy_UnusedShowers(locEvent, locParticleCombos[loc_i], locEnergy_UnusedShowers, locNumber_UnusedShowers_Quality, locEnergy_UnusedShowers_Quality);
 		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers", locNumber_UnusedShowers, loc_i);
 		locTreeFillData->Fill_Array<Float_t>("Energy_UnusedShowers", locEnergy_UnusedShowers, loc_i);
 		locTreeFillData->Fill_Array<UChar_t>("NumUnusedShowers_Quality", locNumber_UnusedShowers_Quality, loc_i);
@@ -1430,7 +1434,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 		//MOMENTUM OF UNUSED TRACKS (access to event loop required)
 		double locSumPMag_UnusedTracks = 0;
 		TVector3 locSumP3_UnusedTracks;
-		dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEventLoop, locParticleCombos[loc_i], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
+		dAnalysisUtilities->Calc_Momentum_UnusedTracks(locEvent, locParticleCombos[loc_i], locSumPMag_UnusedTracks, locSumP3_UnusedTracks);
 		locTreeFillData->Fill_Array<Float_t>("SumPMag_UnusedTracks", locSumPMag_UnusedTracks, loc_i);
 		locTreeFillData->Fill_Array<TVector3>("SumP3_UnusedTracks", locSumP3_UnusedTracks, loc_i);
 
@@ -1442,16 +1446,16 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	}
 
 	//Kinematic fit data (pulls and covariance matrices)
-	Fill_KinFitData(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
+	Fill_KinFitData(locTreeFillData, locEvent, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
 
 	//CUSTOM
-	Fill_CustomBranches_DataTree(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
+	Fill_CustomBranches_DataTree(locTreeFillData, locEvent, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
 
 	//FILL
 	DTreeInterface* locTreeInterface = dTreeInterfaceMap.find(locReaction)->second;
 	locTreeInterface->Fill(*locTreeFillData);	
 	
-	japp->RootUnLock();
+	DEvent::GetLockService(locEvent)->RootUnLock();
 
 }
 
@@ -1478,14 +1482,14 @@ vector<const DBeamPhoton*> DEventWriterROOT::Get_BeamPhotons(const deque<const D
 	return locBeamPhotons;
 }
 
-vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses(JEventLoop* locEventLoop) const
+vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses(const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//For default/preselect, save all
 	//For combo, of new PIDs ONLY, save one of each for each track
 		//save the one with the same RF bunch as the common bunch
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, "Combo");
+	locEvent->Get(locChargedTracks, "Combo");
 
 	vector<const DChargedTrackHypothesis*> locChargedHyposToSave;
 	for(auto& locChargedTrack : locChargedTracks)
@@ -1494,10 +1498,10 @@ vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses(J
 	return locChargedHyposToSave;
 }
 
-vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses_Used(JEventLoop* locEventLoop, const DReaction* locReaction, const deque<const DParticleCombo*>& locParticleCombos) const
+vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses_Used(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, const deque<const DParticleCombo*>& locParticleCombos) const
 {
 	//get all hypos
-	vector<const DChargedTrackHypothesis*> locAllHypos = Get_ChargedHypotheses(locEventLoop);
+	vector<const DChargedTrackHypothesis*> locAllHypos = Get_ChargedHypotheses(locEvent);
 
 	//get used time-based tracks
 	set<const DTrackTimeBased*> locUsedTimeBasedTracks;
@@ -1521,14 +1525,14 @@ vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses_U
 	return locAllHypos;
 }
 
-vector<const DNeutralParticleHypothesis*> DEventWriterROOT::Get_NeutralHypotheses(JEventLoop* locEventLoop, const set<Particle_t>& locReactionPIDs) const
+vector<const DNeutralParticleHypothesis*> DEventWriterROOT::Get_NeutralHypotheses(const std::shared_ptr<const JEvent>& locEvent, const set<Particle_t>& locReactionPIDs) const
 {
 	//For default/preselect, save all
 	//For combo, of new PIDs ONLY, save one of each for each shower
 		//save the one with the same RF bunch as the common bunch
 
 	vector<const DNeutralParticle*> locNeutralParticles;
-	locEventLoop->Get(locNeutralParticles, "Combo");
+	locEvent->Get(locNeutralParticles, "Combo");
 
 	vector<const DNeutralParticleHypothesis*> locNeutralHyposToSave;
 	for(auto& locNeutralParticle : locNeutralParticles)
@@ -1537,10 +1541,10 @@ vector<const DNeutralParticleHypothesis*> DEventWriterROOT::Get_NeutralHypothese
 	return locNeutralHyposToSave;
 }
 
-vector<const DNeutralParticleHypothesis*> DEventWriterROOT::Get_NeutralHypotheses_Used(JEventLoop* locEventLoop, const DReaction* locReaction, const set<Particle_t>& locReactionPIDs, const deque<const DParticleCombo*>& locParticleCombos) const
+vector<const DNeutralParticleHypothesis*> DEventWriterROOT::Get_NeutralHypotheses_Used(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, const set<Particle_t>& locReactionPIDs, const deque<const DParticleCombo*>& locParticleCombos) const
 {
 	//get all hypos
-	vector<const DNeutralParticleHypothesis*> locAllHypos = Get_NeutralHypotheses(locEventLoop, locReactionPIDs);
+	vector<const DNeutralParticleHypothesis*> locAllHypos = Get_NeutralHypotheses(locEvent, locReactionPIDs);
 
 	//get used showers
 	set<pair<const DNeutralShower*, Particle_t> > locUsedNeutralShowers;
@@ -2413,7 +2417,7 @@ void DEventWriterROOT::Fill_ComboNeutralData(DTreeFillData* locTreeFillData, uns
 	}
 }
 
-void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoop* locEventLoop, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
+void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, const std::shared_ptr<const JEvent>& locEventLoop, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
 		const DMCThrownMatching* locMCThrownMatching, const DDetectorMatches* locDetectorMatches,
 		const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 		const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const

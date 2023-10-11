@@ -9,9 +9,9 @@
 #define _DTrackCandidate_factory_
 
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
+
+
 #include <TH2F.h>
 #include <TH1F.h>
 #include "DTrackCandidate.h"
@@ -47,20 +47,20 @@ class DParticleID;
 /// In addition, stray CDC hits that did not belong to any candidate are
 /// merged into existing candidates if possible.
 
-class DTrackCandidate_factory:public JFactory<DTrackCandidate>{
+class DTrackCandidate_factory:public JFactoryT<DTrackCandidate>{
  public:
   DTrackCandidate_factory(){
     DEBUG_HISTS=false;
     //DEBUG_HISTS=true;
   };
   ~DTrackCandidate_factory(){};
-   
+
  protected:
-  virtual jerror_t init(void);
-  virtual jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
-  virtual jerror_t brun(JEventLoop* eventLoop,int32_t runnumber);
-  virtual jerror_t erun(void);
-  virtual jerror_t fini(void);
+  void Init() override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 
   double DocaToHelix(const DCDCTrackHit *hit,double q,const DVector3 &pos,
 		     const DVector3 &mom);

@@ -3,7 +3,11 @@
 //************************************************************************
 
 #include "DFDCSegment_factory.h"
-#include "DANA/DApplication.h"
+
+#include <JANA/JEvent.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
 //#include "HDGEOMETRY/DLorentzMapCalibDB.h"
 #include <math.h>
 #include <cmath>
@@ -63,15 +67,17 @@ DFDCSegment_factory::~DFDCSegment_factory() {
 /// DFDCSegment_factory::brun():
 /// Initialization: read in deflection map, get magnetic field map
 ///
-jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) { 
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DMagneticFieldMap *bfield = dapp->GetBfield(runnumber);
+void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
+
+  auto event_number = event->GetEventNumber();
+  auto run_number = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto geom = geo_manager->GetDGeometry(run_number);
+  const DMagneticFieldMap *bfield = geo_manager->GetBfield(run_number);
+
   double Bz=bfield->GetBz(0.,0.,65.);
   RotationSenseToCharge=(Bz>0.)?-1.:1.;
-
-  // get the geometry
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
-
   geom->GetTargetZ(TARGET_Z);
   /*    
   bfield = dapp->GetBfield();
@@ -80,24 +86,21 @@ jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) {
   *_log << "Table of Lorentz deflections initialized." << endMsg;
   */
   DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("FDC:DEBUG_LEVEL", DEBUG_LEVEL);
+  app->SetDefaultParameter("FDC:DEBUG_LEVEL", DEBUG_LEVEL);
   
   BEAM_VARIANCE=1.0;
-  gPARMS->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
-  
-
-  return NOERROR;
+  app->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
 }
 
 ///
-/// DFDCSegment_factory::evnt():
+/// DFDCSegment_factory::Process
 /// Routine where pseudopoints are combined into track segments
 ///
-jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
-  myeventno=eventNo;
+void DFDCSegment_factory::Process(const std::shared_ptr<const JEvent>& event) {
+  myeventno=event->GetEventNumber();
 
   vector<const DFDCPseudo*>pseudopoints;
-  eventLoop->Get(pseudopoints);  
+  event->Get(pseudopoints);  
  
   // Skip segment finding if there aren't enough points to form a sensible 
   // segment 
@@ -117,8 +120,6 @@ jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
       if (package[j].size()>2) FindSegments(package[j]);
     } 
   } // pseudopoints>2
-  
-  return NOERROR;
 }
 
 // Riemann Line fit: linear regression of s on z to determine the tangent of 
@@ -760,7 +761,7 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  segment->package=(neighbors[0]->wire->layer-1)/6;
 	  FillSegmentData(segment);
 
-	  _data.push_back(segment);
+	  Insert(segment);
 	}
 	else {
 	  // Fit assuming particle came from (x,y)=(0,0)
@@ -776,7 +777,7 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  segment->package=(neighbors[0]->wire->layer-1)/6;
 	  FillSegmentData(segment);
 
-	  _data.push_back(segment);
+	  Insert(segment);
 	}
 
       }
@@ -789,9 +790,9 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
   // Use fitted segment results to look for additional stray hits to add to 
   // segments.  
   if (total_num_used<used.size()){
-    for (unsigned int k=0;k<_data.size();k++){
+    for (unsigned int k=0;k<mData.size();k++){
       if (total_num_used==used.size()) break;
-      DFDCSegment *segment=_data[k];
+      DFDCSegment *segment=mData[k];
       bool added_hits=false;
       for (unsigned int i=0;i<used.size();i++){
 	if (total_num_used==used.size()) break;
@@ -1110,6 +1111,6 @@ jerror_t DFDCSegment_factory::CorrectPoints(vector<DFDCPseudo*>points,
     point->covxy=(sigy2-sigx2)*sinangle*cosangle;
     point->status|=CORRECTED;
   }
-  return NOERROR;
+  return;
 }
 */

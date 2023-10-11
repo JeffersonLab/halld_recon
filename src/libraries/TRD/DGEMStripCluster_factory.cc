@@ -1,6 +1,8 @@
 
 #include "DGEMStripCluster_factory.h"
 
+#include <JANA/JEvent.h>
+
 bool DGEMHit_cmp(const DGEMHit* a, const DGEMHit* b) {
   if (a->plane==b->plane){
     return a->t < b->t;
@@ -47,10 +49,10 @@ bool DGEMStripCluster_gPlane_cmp(	const DGEMStripCluster* a,
 ///
 /// Initialization
 ///
-jerror_t DGEMStripCluster_factory::init(void){
+void DGEMStripCluster_factory::Init(){
   TIME_SLICE=50.0; //ns
-  gPARMS->SetDefaultParameter("GEM:CLUSTER_TIME_SLICE",TIME_SLICE);
-  return NOERROR;	
+  auto app = GetApplication();
+  app->SetDefaultParameter("GEM:CLUSTER_TIME_SLICE",TIME_SLICE);
 }
 
 ///
@@ -58,12 +60,12 @@ jerror_t DGEMStripCluster_factory::init(void){
 /// This (along with DGEMStripCluster_factory::pique()) 
 /// is the place cathode hits are associated into cathode clusters.  
 ///
-jerror_t DGEMStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo) {
+void DGEMStripCluster_factory::Process(const std::shared_ptr<const JEvent>& event) {
 	vector<const DGEMHit*> allHits;
 	vector<const DGEMHit*> planeHits[10];
 	vector<vector<const DGEMHit*> >thisLayer;
 	
-	eventLoop->Get(allHits);
+	event->Get(allHits);
 	
 	if (allHits.size()>0) {
 		// Sort hits by layer number and by time
@@ -112,11 +114,9 @@ jerror_t DGEMStripCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventNo)
 		}
 
 		// Ensure that the data are still in order of planes.
-		std::sort(_data.begin(), _data.end(), DGEMStripCluster_gPlane_cmp);
+		std::sort(mData.begin(), mData.end(), DGEMStripCluster_gPlane_cmp);
 	}
-	
-	return NOERROR;	
-}			
+}
 
 //-----------------------------
 // pique
@@ -157,7 +157,7 @@ void DGEMStripCluster_factory::pique(vector<const DGEMHit*>& H)
 
 		// apply seed strip threshold
 		if(max_strip < 800)
-			_data.push_back(newCluster);
+			Insert(newCluster);
 		
 		istart = iend-1;
 	}

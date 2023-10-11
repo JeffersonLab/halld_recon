@@ -11,7 +11,7 @@
 #include "JEventSource_EVIOpp.h"
 #include "LinkAssociations.h"
 
-#include <swap_bank.h>
+#include "swap_bank.h"
 #include <DANA/JExceptionDataFormat.h>
 
 using namespace std;
@@ -121,7 +121,7 @@ void DEVIOWorkerThread::Run(void)
 			current_parsed_events.clear(); // (these are also in parsed_event_pool so were already deleted)
 			jerr << "Data format error exception caught" << endl;
 			jerr << "Stack trace follows:" << endl;
-			jerr << e.getStackTrace() << endl;
+			jerr << e.GetStackTrace() << endl;
 			jerr << e.what() << endl;
 			japp->Quit(10);
 		} catch (exception &e) {

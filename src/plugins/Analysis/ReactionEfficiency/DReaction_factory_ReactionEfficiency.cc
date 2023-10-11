@@ -46,10 +46,12 @@ DReaction_factory_ReactionEfficiency::registerReaction(
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_ReactionEfficiency::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto app = GetApplication();
+
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
 	DReaction* locReaction = NULL; //create with a unique name for each DReaction object. CANNOT (!) be "Thrown"
@@ -827,12 +829,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_ReactionEfficiency::fini(void)
+void DReaction_factory_ReactionEfficiency::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
+	return;
 }
 

@@ -20,10 +20,10 @@ using std::map;
 #include <TH2.h>
 #include <TH3.h>
 
-#include <JANA/JFactory.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JCalibration.h>
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
+#include <JANA/Compatibility/jerror.h>
 
 #include <PID/DKinematicData.h>
 #include <CDC/DCDCTrackHit.h>
@@ -65,11 +65,10 @@ typedef struct{
 #define ITER_MAX 20
 #define CDC_MATCH_RADIUS 5.0
 
-class DEventProcessor_bcal_calib:public jana::JEventProcessor{
+class DEventProcessor_bcal_calib:public JEventProcessor{
  public:
   DEventProcessor_bcal_calib();
   ~DEventProcessor_bcal_calib();
-  const char* className(void){return "DEventProcessor_bcal_calib";}
 
   enum track_type{
     kWireBased,
@@ -83,11 +82,11 @@ class DEventProcessor_bcal_calib:public jana::JEventProcessor{
   };
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
   
   jerror_t GuessForStateVector(const cdc_track_t &track,DMatrix4x1 &S);
   jerror_t DoFilter(DMatrix4x1 &S,vector<const DCDCTrackHit *>&hits);

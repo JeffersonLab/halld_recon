@@ -6,14 +6,13 @@
 //
 #include "JEventProcessor_ST_online_lowlevel.h"
 #include "TRIGGER/DTrigger.h"
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_online_lowlevel());
+	app->Add(new JEventProcessor_ST_online_lowlevel());
 }
 } // "C"
 
@@ -22,7 +21,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_online_lowlevel::JEventProcessor_ST_online_lowlevel()
 {
-
+	SetTypeName("JEventProcessor_ST_online_lowlevel");
 }
 
 //------------------
@@ -50,19 +49,22 @@ bool DSCHit_thit_cmp(const DSCHit *a, const DSCHit *b)
     return (a->sector < b->sector);
 }
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_online_lowlevel::init(void)
+void JEventProcessor_ST_online_lowlevel::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
-  
+
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   //Create root folder for ST and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("st_lowlevel")->cd();
@@ -136,18 +138,16 @@ jerror_t JEventProcessor_ST_online_lowlevel::init(void)
     }
   // cd back to main directory
   main->cd();
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_online_lowlevel::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_online_lowlevel::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // load scale factors
   map<string,double> scale_factors;
-if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
+if (GetCalib(event, "/START_COUNTER/digi_scales", scale_factors))
     jout << "Error loading /START_COUNTER/digi_scales !" << endl;
   // t_scale (SC_ADC_SCALE)
   if (scale_factors.find("SC_ADC_TSCALE") != scale_factors.end())
@@ -159,7 +159,7 @@ if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
   // load base time offset
   map<string,double> base_time_offset;
   // t_base (SC_BASE_TIME_OFFSET)
-  if (eventLoop->GetCalib("/START_COUNTER/base_time_offset",base_time_offset))
+  if (GetCalib(event, "/START_COUNTER/base_time_offset",base_time_offset))
     jout << "Error loading /START_COUNTER/base_time_offset !" << endl;
   if (base_time_offset.find("SC_BASE_TIME_OFFSET") != base_time_offset.end())
     t_base = base_time_offset["SC_BASE_TIME_OFFSET"];
@@ -172,21 +172,20 @@ if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
     jerr << "Unable to get SC_BASE_TIME_OFFSET from /START_COUNTER/base_time_offset !" << endl;
   // load constant tables
   // a_pedestals (pedestals)
-  if (eventLoop->GetCalib("/START_COUNTER/pedestals", a_pedestals))
+  if (GetCalib(event, "/START_COUNTER/pedestals", a_pedestals))
     jout << "Error loading /START_COUNTER/pedestals !" << endl;
   // adc_time_offsets (adc_timing_offsets)
-  if (eventLoop->GetCalib("/START_COUNTER/adc_timing_offsets", adc_time_offsets))
+  if (GetCalib(event, "/START_COUNTER/adc_timing_offsets", adc_time_offsets))
     jout << "Error loading /START_COUNTER/adc_timing_offsets !" << endl;
   // tdc_time_offsets (tdc_timing_offsets)
-  if (eventLoop->GetCalib("/START_COUNTER/tdc_timing_offsets", tdc_time_offsets)) jout << "Error loading /START_COUNTER/tdc_timing_offsets !" << endl;
+  if (GetCalib(event, "/START_COUNTER/tdc_timing_offsets", tdc_time_offsets)) jout << "Error loading /START_COUNTER/tdc_timing_offsets !" << endl;
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_online_lowlevel::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_ST_online_lowlevel::Process(const std::shared_ptr<const JEvent>& event)
 {
   // Get the data objects first so we minimize the time we hold the ROOT mutex lock
   vector<const DSCDigiHit*> dscdigihits;                // ST fADC250 DigiHits
@@ -195,21 +194,21 @@ jerror_t JEventProcessor_ST_online_lowlevel::evnt(JEventLoop *loop, uint64_t eve
   const DTTabUtilities*           TTabUtilities = NULL;
 
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
-  loop->Get(dscdigihits);
-  loop->Get(dsctdcdigihits);
-  loop->Get(dschits);
-  loop->GetSingle(TTabUtilities);
+  event->Get(dscdigihits);
+  event->Get(dsctdcdigihits);
+  event->Get(dschits);
+  event->GetSingle(TTabUtilities);
   uint32_t ADC_hits       = dscdigihits.size();
   uint32_t TDC_hits       = dsctdcdigihits.size();
   uint32_t Hits           = dschits.size();
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   if( (dscdigihits.size()>0) || (dsctdcdigihits.size()>0) || (dschits.size()>0) )
     st_num_events->Fill(1);
@@ -397,27 +396,27 @@ jerror_t JEventProcessor_ST_online_lowlevel::evnt(JEventLoop *loop, uint64_t eve
       
     }// End Hit loop
   // Lock ROOT mutex so other threads won't interfere 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_online_lowlevel::erun(void)
+void JEventProcessor_ST_online_lowlevel::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_online_lowlevel::fini(void)
+void JEventProcessor_ST_online_lowlevel::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }

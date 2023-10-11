@@ -17,40 +17,38 @@ extern "C"
 	void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new DEventProcessor_b1pi_hists());
-		app->AddFactoryGenerator(new DFactoryGenerator_b1pi_hists());
+		app->Add(new DEventProcessor_b1pi_hists());
+		app->Add(new DFactoryGenerator_b1pi_hists());
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_b1pi_hists::init(void)
+void DEventProcessor_b1pi_hists::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_b1pi_hists::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void DEventProcessor_b1pi_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_b1pi_hists::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void DEventProcessor_b1pi_hists::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Triggers the analysis (is also automatically called by DEventWriterROOT::Fill_Trees())
 	vector<const DAnalysisResults*> locAnalysisResultsVector;
-	locEventLoop->Get(locAnalysisResultsVector);
+	locEvent->Get(locAnalysisResultsVector);
 
 	//Output TTree
 	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "b1pi_hists");
+	locEvent->GetSingle(locEventWriterROOT);
+	locEventWriterROOT->Fill_DataTrees(locEvent, "b1pi_hists");
 
 	//Do Miscellaneous Cuts
 	bool locSaveEventFlag = false;
@@ -69,28 +67,24 @@ jerror_t DEventProcessor_b1pi_hists::evnt(JEventLoop *locEventLoop, uint64_t eve
 	if(locSaveEventFlag)
 	{
 		vector<const DEventWriterREST*> locEventWriterRESTVector;
-		locEventLoop->Get(locEventWriterRESTVector);
-		locEventWriterRESTVector[0]->Write_RESTEvent(locEventLoop, "b1pi");
+		locEvent->Get(locEventWriterRESTVector);
+		locEventWriterRESTVector[0]->Write_RESTEvent(locEvent, "b1pi");
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_b1pi_hists::erun(void)
+void DEventProcessor_b1pi_hists::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_b1pi_hists::fini(void)
+void DEventProcessor_b1pi_hists::Finish()
 {
-	return NOERROR;
 }
 

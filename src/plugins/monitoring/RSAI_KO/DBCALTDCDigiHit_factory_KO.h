@@ -11,14 +11,15 @@
 #include <tuple>
 #include <random>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <BCAL/DBCALTDCDigiHit.h>
 
-class DBCALTDCDigiHit_factory_KO:public jana::JFactory<DBCALTDCDigiHit>{
+class DBCALTDCDigiHit_factory_KO:public JFactoryT<DBCALTDCDigiHit>{
 	public:
-		DBCALTDCDigiHit_factory_KO():distribution(0.0, 1.0){};
+		DBCALTDCDigiHit_factory_KO():distribution(0.0, 1.0){
+			SetTag("KO");
+		};
 		~DBCALTDCDigiHit_factory_KO(){};
-		const char* Tag(void){return "KO";}
 
 	std::map< std::tuple<int,int,int,int>, double > BCAL_tdc_cell_eff;
 	std::default_random_engine generator;
@@ -28,11 +29,11 @@ class DBCALTDCDigiHit_factory_KO:public jana::JFactory<DBCALTDCDigiHit>{
 	void CheckRange(int module, int layer, int sector, int end);
 
 private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 };
 
 #endif // _DBCALTDCDigiHit_factory_KO_

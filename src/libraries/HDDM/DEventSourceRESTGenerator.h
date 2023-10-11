@@ -10,21 +10,14 @@
 
 #include <JANA/JEventSourceGenerator.h>
 
-class DEventSourceRESTGenerator:public jana::JEventSourceGenerator
+class DEventSourceRESTGenerator: public JEventSourceGenerator
 {
  public:
-   DEventSourceRESTGenerator() {}
-   ~DEventSourceRESTGenerator() {}
-   const char* className(void) {
-      return static_className();
-   }
-   static const char* static_className(void) {
-      return "DEventSourceRESTGenerator";
-   }
+	std::string GetType() const override { return "DEventSourceREST"; }
+	std::string GetDescription() const override;
 
-   const char* Description(void);
-   double CheckOpenable(std::string source);
-   jana::JEventSource* MakeJEventSource(std::string source);
+	double CheckOpenable(std::string source) override;
+	JEventSource* MakeJEventSource(std::string source) override;
 };
 
 #endif // _DEventSourceRESTGenerator_

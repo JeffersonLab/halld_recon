@@ -1,6 +1,8 @@
 // $Id$
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactorySet.h>
+#include <JANA/Compatibility/JGetObjectsFactory.h>
+
 #include "DBCALGeometry_factory.h"
 #include "DBCALShower_factory_IU.h"
 #include "DBCALShower_factory_KLOE.h"
@@ -25,30 +27,28 @@
 #include "DBCALTruthShower.h"
 
 
-jerror_t BCAL_init(JEventLoop *loop)
+void BCAL_init(JFactorySet *factorySet)
 {
 	/// Create and register BCAL data factories
-	loop->AddFactory(new JFactory<DBCALDigiHit>());
-	loop->AddFactory(new JFactory<DBCALTDCDigiHit>());
-	loop->AddFactory(new DBCALHit_factory());
-	loop->AddFactory(new JFactory<DBCALIncidentParticle>());
-	loop->AddFactory(new DBCALTDCHit_factory());
-	loop->AddFactory(new JFactory<DBCALSiPMHit>());
-	loop->AddFactory(new JFactory<DBCALSiPMSpectrum>());
-	loop->AddFactory(new JFactory<DBCALSiPMSpectrum>("TRUTH"));
-	loop->AddFactory(new DBCALGeometry_factory());
-	loop->AddFactory(new DBCALShower_factory_IU());
-	loop->AddFactory(new DBCALShower_factory_KLOE());
-	loop->AddFactory(new DBCALShower_factory_CURVATURE());
-	loop->AddFactory(new DBCALShower_factory());
-	loop->AddFactory(new DBCALCluster_factory());
-	loop->AddFactory(new DBCALCluster_factory_SINGLE());
-	loop->AddFactory(new JFactory<DBCALTruthShower>());
-	loop->AddFactory(new JFactory<DBCALTruthCell>());
-	loop->AddFactory(new DBCALPoint_factory());
-	loop->AddFactory(new DBCALUnifiedHit_factory());
-	loop->AddFactory(new DBCALClump_factory());
-	loop->AddFactory(new DBCALShower_factory_JLAB());
-
-	return NOERROR;
+	factorySet->Add(new JGetObjectsFactory<DBCALDigiHit>());
+	factorySet->Add(new JGetObjectsFactory<DBCALTDCDigiHit>());
+	factorySet->Add(new DBCALHit_factory());
+	factorySet->Add(new JGetObjectsFactory<DBCALIncidentParticle>());
+	factorySet->Add(new DBCALTDCHit_factory());
+	factorySet->Add(new JGetObjectsFactory<DBCALSiPMHit>());
+	factorySet->Add(new JGetObjectsFactory<DBCALSiPMSpectrum>());
+	factorySet->Add(new JGetObjectsFactory<DBCALSiPMSpectrum>("TRUTH"));
+	factorySet->Add(new DBCALGeometry_factory());
+	factorySet->Add(new DBCALShower_factory_IU());
+	factorySet->Add(new DBCALShower_factory_KLOE());
+	factorySet->Add(new DBCALShower_factory_CURVATURE());
+	factorySet->Add(new DBCALShower_factory());
+	factorySet->Add(new DBCALCluster_factory());
+	factorySet->Add(new DBCALCluster_factory_SINGLE());
+	factorySet->Add(new JGetObjectsFactory<DBCALTruthShower>());
+	factorySet->Add(new JGetObjectsFactory<DBCALTruthCell>());
+	factorySet->Add(new DBCALPoint_factory());
+	factorySet->Add(new DBCALUnifiedHit_factory());
+	factorySet->Add(new DBCALClump_factory());
+	factorySet->Add(new DBCALShower_factory_JLAB());
 }

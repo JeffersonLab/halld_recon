@@ -8,20 +8,21 @@
 #ifndef _DFCALGeometry_factory_
 #define _DFCALGeometry_factory_
 
-#include "JANA/JFactory.h"
+#include <JANA/JFactoryT.h>
+
 #include "DFCALGeometry.h"
 
-class DFCALGeometry_factory : public JFactory<DFCALGeometry> {
+class DFCALGeometry_factory : public JFactoryT<DFCALGeometry> {
 
 public:
 	
-	DFCALGeometry_factory() {}
-	~DFCALGeometry_factory(){}
+	DFCALGeometry_factory() = default;
+	~DFCALGeometry_factory() override = default;
 
 private:
 	
-	jerror_t brun(JEventLoop *loop, int32_t runnumber);	
-	jerror_t erun(void);	
+	void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+	void EndRun() override;
 };
 
 #endif // _DFCALGeometry_factory_

@@ -8,12 +8,12 @@
 #ifndef _DTrackFitterKalmanSIMD_ALT1_
 #define _DTrackFitterKalmanSIMD_ALT1_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <TRACKING/DTrackFitterKalmanSIMD.h>
 
 class DTrackFitterKalmanSIMD_ALT1: public DTrackFitterKalmanSIMD{
  public:
-  DTrackFitterKalmanSIMD_ALT1(JEventLoop *loop):DTrackFitterKalmanSIMD(loop){};
+  DTrackFitterKalmanSIMD_ALT1(const std::shared_ptr<const JEvent>& event):DTrackFitterKalmanSIMD(event){};
     //DTrackFitterKalmanSIMD_ALT1();
     virtual ~DTrackFitterKalmanSIMD_ALT1(){};
     

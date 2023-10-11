@@ -11,9 +11,9 @@
 #include <cmath>
 using namespace std;
 
-#include <JANA/JApplication.h>
+#include <JANA/JEvent.h>
+
 #include "DMCTrigger_factory.h"
-using namespace jana;
 
 #include <BCAL/DBCALHit.h>
 #include <BCAL/DBCALDigiHit.h>
@@ -25,21 +25,20 @@ using namespace jana;
 static double BCAL_MEV_PER_ADC_COUNT    = 0.029;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DMCTrigger_factory::init(void)
+void DMCTrigger_factory::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DMCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DMCTrigger_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	eventLoop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 	  throw JException("Could not load DBCALGeometry object!");
 	const DBCALGeometry *dBCALGeom = BCALGeomVec[0];
@@ -50,7 +49,9 @@ jerror_t DMCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber
 	unattenuate_to_center = exp(+L_over_2/Xo);
 
     USE_OLD_BCAL_HITS = 0;
-    gPARMS->SetDefaultParameter("TRIGGER:USE_OLD_BCAL_HITS", USE_OLD_BCAL_HITS,
+
+    auto app = GetApplication();
+    app->SetDefaultParameter("TRIGGER:USE_OLD_BCAL_HITS", USE_OLD_BCAL_HITS,
                                 "Use old DBCALHit calculation for BCAL energy sum.");
 
     // Per-channel trigger thresholds
@@ -62,19 +63,16 @@ jerror_t DMCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber
     // so for the BCAL use a threshold of  
     BCAL_CHANNEL_THRESHOLD = 455.;     // in adc counts
     FCAL_CHANNEL_THRESHOLD = 0.130;    // in MeV
-    gPARMS->SetDefaultParameter("TRIGGER:BCAL_CHANNEL_THRESHOLD", BCAL_CHANNEL_THRESHOLD,
+    app->SetDefaultParameter("TRIGGER:BCAL_CHANNEL_THRESHOLD", BCAL_CHANNEL_THRESHOLD,
                                 "Threshold for BCAL energy sum (units of adc counts)");
-    gPARMS->SetDefaultParameter("TRIGGER:FCAL_CHANNEL_THRESHOLD", FCAL_CHANNEL_THRESHOLD,
+    app->SetDefaultParameter("TRIGGER:FCAL_CHANNEL_THRESHOLD", FCAL_CHANNEL_THRESHOLD,
                                 "Threshold for FCAL energy sum (units of MeV)");
-
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DMCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DMCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// See comments in DMCTrigger_factory.h
 
@@ -82,10 +80,10 @@ jerror_t DMCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	vector<const DFCALHit*> fcalhits;
 	vector<const DSCHit*> schits;
 	vector<const DTOFHit*> tofhits;
-    loop->Get(bcalhits);
-	loop->Get(fcalhits);
-	loop->Get(schits);
-	loop->Get(tofhits);
+    event->Get(bcalhits);
+	event->Get(fcalhits);
+	event->Get(schits);
+	event->Get(tofhits);
 
     double Ebcal = 0.0;
     double Ebcal_all = 0.0;
@@ -193,24 +191,20 @@ jerror_t DMCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	trig->Nschits = Nschits;
 	trig->Ntofhits = Ntofhits;
 	
-	_data.push_back(trig);
-
-	return NOERROR;
+	Insert(trig);
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DMCTrigger_factory::erun(void)
+void DMCTrigger_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DMCTrigger_factory::fini(void)
+void DMCTrigger_factory::Finish()
 {
-	return NOERROR;
 }
 

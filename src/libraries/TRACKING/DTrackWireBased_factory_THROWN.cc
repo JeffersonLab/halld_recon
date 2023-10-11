@@ -9,12 +9,14 @@
 #include <limits>
 using namespace std;
 
-#include <DANA/DApplication.h>
+#include "DTrackWireBased_factory_THROWN.h"
 
+#include <JANA/JEvent.h>
+#include <DANA/DGeometryManager.h>
+#include <HDGEOMETRY/DGeometry.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
 
-#include "DTrackWireBased_factory_THROWN.h"
 #include "DMCThrown.h"
 #include "DReferenceTrajectory.h"
 #include "DRandom.h"
@@ -27,6 +29,7 @@ using namespace std;
 //------------------
 DTrackWireBased_factory_THROWN::DTrackWireBased_factory_THROWN()
 {
+	SetTag("THROWN");
 	fitter = NULL;
 	hitselector=NULL;
 	
@@ -35,16 +38,16 @@ DTrackWireBased_factory_THROWN::DTrackWireBased_factory_THROWN()
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackWireBased_factory_THROWN::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DTrackWireBased_factory_THROWN::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// Get pointer to DTrackFitter object that actually fits a track
 	vector<const DTrackFitter *> fitters;
-	loop->Get(fitters);
+	event->Get(fitters);
 	if(fitters.size()<1){
 		_DBG_<<"Unable to get a DTrackFitter object! NO Charged track fitting will be done!"<<endl;
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
 	
 	// Drop the const qualifier from the DTrackFitter pointer (I'm surely going to hell for this!)
@@ -53,42 +56,43 @@ jerror_t DTrackWireBased_factory_THROWN::brun(jana::JEventLoop *loop, int32_t ru
 	// Warn user if something happened that caused us NOT to get a fitter object pointer
 	if(!fitter){
 		_DBG_<<"ERROR: Unable to get a DTrackFitter object! Chisq for DTrackWireBased:THROWN will NOT be calculated!"<<endl;
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
 
 	// Get pointer to DTrackHitSelector object
 	vector<const DTrackHitSelector *> hitselectors;
-	loop->Get(hitselectors);
+	event->Get(hitselectors);
 	if(hitselectors.size()<1){
 		_DBG_<<"ERROR: Unable to get a DTrackHitSelector object! NO DTrackWireBased:THROWN objects will be created!"<<endl;
-		return RESOURCE_UNAVAILABLE;
+		return; // RESOURCE_UNAVAILABLE;
 	}
 	hitselector = hitselectors[0];
 
 	// Set DGeometry pointers so it can be used by the DReferenceTrajectory class
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	geom = dapp->GetDGeometry(runnumber);
+
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	geom = geo_manager->GetDGeometry(runnumber);
 
 	// Get the particle ID algorithms
-	loop->GetSingle(dParticleID);
+	event->GetSingle(dParticleID);
 
 	// Set magnetic field pointer
-	bfield = dapp->GetBfield(runnumber);
-
-	return NOERROR;
+	bfield = geo_manager->GetBfield(runnumber);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackWireBased_factory_THROWN::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackWireBased_factory_THROWN::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCPseudo*> fdcpseudos;
-	loop->Get(mcthrowns);
-	loop->Get(cdctrackhits);
-	loop->Get(fdcpseudos);
+	event->Get(mcthrowns);
+	event->Get(cdctrackhits);
+	event->Get(fdcpseudos);
 
 	for(unsigned int i=0; i< mcthrowns.size(); i++){
 		const DMCThrown *thrown = mcthrowns[i];
@@ -107,12 +111,12 @@ jerror_t DTrackWireBased_factory_THROWN::evnt(JEventLoop *loop, uint64_t eventnu
 		// re-use them. If the pool is not big enough, then add one to the
 		// pool.
       unsigned int locNumInitialReferenceTrajectories = rt_pool.size();
-		if(rt_pool.size()<=_data.size()){
+		if(rt_pool.size()<=mData.size()){
 			// This is a little ugly, but only gets called a few times throughout the life of the process
 			// Note: these never get deleted, even at the end of process.
 			rt_pool.push_back(new DReferenceTrajectory(bfield));
 		}
-		DReferenceTrajectory *rt = rt_pool[_data.size()];
+		DReferenceTrajectory *rt = rt_pool[mData.size()];
       if(locNumInitialReferenceTrajectories == rt_pool.size()) //didn't create a new one
         rt->Reset();
       rt->q = track->charge();
@@ -163,22 +167,20 @@ jerror_t DTrackWireBased_factory_THROWN::evnt(JEventLoop *loop, uint64_t eventnu
 		//track->trackid = thrown->id;
 		//track->FOM = 1.0;
 
-		_data.push_back(track);
+		Insert(track);
 	}
 
 	// Set CDC ring & FDC plane hit patterns
-	for(size_t loc_i = 0; loc_i < _data.size(); ++loc_i)
+	for(size_t loc_i = 0; loc_i < mData.size(); ++loc_i)
 	{
 		vector<const DCDCTrackHit*> locCDCTrackHits;
-		_data[loc_i]->Get(locCDCTrackHits);
+		mData[loc_i]->Get(locCDCTrackHits);
 
 		vector<const DFDCPseudo*> locFDCPseudos;
-		_data[loc_i]->Get(locFDCPseudos);
+		mData[loc_i]->Get(locFDCPseudos);
 
-		_data[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
-		_data[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
+		mData[loc_i]->dCDCRings = dParticleID->Get_CDCRingBitPattern(locCDCTrackHits);
+		mData[loc_i]->dFDCPlanes = dParticleID->Get_FDCPlaneBitPattern(locFDCPseudos);
 	}
-
-	return NOERROR;
 }
 

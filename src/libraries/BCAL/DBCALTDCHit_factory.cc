@@ -10,33 +10,35 @@
 #include <iomanip>
 using namespace std;
 
-#include <JANA/JEventLoop.h>
 #include <BCAL/DBCALTDCDigiHit.h>
 #include <BCAL/DBCALTDCHit_factory.h>
 #include <DAQ/DF1TDCHit.h>
 
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 
 //------------------
 // init
 //------------------
-jerror_t DBCALTDCHit_factory::init(void)
+void DBCALTDCHit_factory::Init()
 {
     /// set the base conversion scale
     t_scale    = 0.058;    // 60 ps/count
     t_base     = 0.;    // ns
     t_rollover = 65250;
     //t_offset   = 0;
-
-    return NOERROR;
 }
 
 //------------------
 // brun
 //------------------
-jerror_t DBCALTDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DBCALTDCHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+
+	size_t runnumber = event->GetRunNumber();
+	JCalibration *jcalib = GetApplication()->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+
     // Only print messages for one thread whenever run number changes
     static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
     static set<int> runs_announced;
@@ -64,7 +66,7 @@ jerror_t DBCALTDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumbe
 
     // load scale factors
     map<string,double> scale_factors;
-    if(eventLoop->GetCalib("/BCAL/digi_scales", scale_factors))
+    if(jcalib->Get("/BCAL/digi_scales", scale_factors))
         jout << "Error loading /BCAL/digi_scales !" << endl; 
     if( scale_factors.find("BCAL_TDC_SCALE") != scale_factors.end() ) {
         t_scale = scale_factors["BCAL_TDC_SCALE"];
@@ -74,35 +76,35 @@ jerror_t DBCALTDCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumbe
 
     // load base time offset
     map<string,double> base_time_offset;
-    if (eventLoop->GetCalib("/BCAL/base_time_offset",base_time_offset))
+    if (jcalib->Get("/BCAL/base_time_offset",base_time_offset))
         jout << "Error loading /BCAL/base_time_offset !" << endl;
     if (base_time_offset.find("BCAL_TDC_BASE_TIME_OFFSET") != base_time_offset.end())
         t_base = base_time_offset["BCAL_TDC_BASE_TIME_OFFSET"];
     else
-        jerr << "Unable to get BCAL_TDC_BASE_TIME_OFFSET from /BCAL/base_time_offset !" << endl;  
+        jerr << "Unable to get BCAL_TDC_BASE_TIME_OFFSET from /BCAL/base_time_offset !" << endl;
 
     vector<double> raw_time_offsets;
     vector<double> raw_channel_global_offset;
     vector<double> raw_tdiff_u_d;
 
-    if(eventLoop->GetCalib("/BCAL/TDC_offsets", raw_time_offsets))
+    if(jcalib->Get("/BCAL/TDC_offsets", raw_time_offsets))
         jout << "Error loading /BCAL/TDC_offsets !" << endl;
-    if(eventLoop->GetCalib("/BCAL/channel_global_offset", raw_channel_global_offset))
+    if(jcalib->Get("/BCAL/channel_global_offset", raw_channel_global_offset))
         jout << "Error loading /BCAL/channel_global_offset !" << endl;
-    if(eventLoop->GetCalib("/BCAL/tdiff_u_d", raw_tdiff_u_d))
+    if(jcalib->Get("/BCAL/tdiff_u_d", raw_tdiff_u_d))
         jout << "Error loading /BCAL/tdiff_u_d !" << endl;
 
     FillCalibTable(time_offsets, raw_time_offsets);
     FillCalibTableShort(channel_global_offset, raw_channel_global_offset);
     FillCalibTableShort(tdiff_u_d, raw_tdiff_u_d);
     
-    return NOERROR;
+    return;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t DBCALTDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALTDCHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
     /// Generate DBCALTDCHit object for each DBCALTDCDigiHit object.
     /// This is where the first set of calibration constants
@@ -111,10 +113,10 @@ jerror_t DBCALTDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // Get the TTabUtilities object
     const DTTabUtilities* locTTabUtilities = NULL;
-    loop->GetSingle(locTTabUtilities);
+    event->Get(&locTTabUtilities);
 
     vector<const DBCALTDCDigiHit*> digihits;
-    loop->Get(digihits);
+    event->Get(digihits);
     for(unsigned int i=0; i<digihits.size(); i++){
         const DBCALTDCDigiHit *digihit = digihits[i];
 
@@ -128,8 +130,8 @@ jerror_t DBCALTDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
         double T, T_raw;
 
         //See if the input object is an DF1TDCHit. If so, it is real data.  If not, it is simulated data.
-        const DF1TDCHit* F1TDCHit = NULL;
-        digihit->GetSingle(F1TDCHit);
+        const DF1TDCHit* F1TDCHit = digihit->GetSingle<DF1TDCHit>();
+
         double end_sign = digihit->end ? -1.0 : 1.0; // Upstream = 0 -> Positive
         if (F1TDCHit != NULL) { // This is real data.
             T_raw = locTTabUtilities->Convert_DigiTimeToNs_F1TDC(digihit) + t_base;
@@ -149,26 +151,22 @@ jerror_t DBCALTDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
            */         
         hit->AddAssociatedObject(digihit);
 
-        _data.push_back(hit);
+        Insert(hit);
     }
-
-    return NOERROR;
 }
 
 //------------------
 // erun
 //------------------
-jerror_t DBCALTDCHit_factory::erun(void)
+void DBCALTDCHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DBCALTDCHit_factory::fini(void)
+void DBCALTDCHit_factory::Finish()
 {
-    return NOERROR;
 }
 
 

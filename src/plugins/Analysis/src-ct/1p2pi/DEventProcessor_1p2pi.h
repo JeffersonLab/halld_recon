@@ -2,9 +2,6 @@
 #define _DEventProcessor_1p1pi1pi0_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
-
-#include <JANA/JEventProcessor.h>
 #include <TRIGGER/DTrigger.h>
 #include <PID/DBeamPhoton.h>
 
@@ -28,16 +25,17 @@ using namespace jana;
 
 class DEventProcessor_1p2pi:public JEventProcessor{
 	public:
-		DEventProcessor_1p2pi(){};
-		~DEventProcessor_1p2pi(){};
-		const char* className(void){return "DEventProcessor_1p2pi";}
+	DEventProcessor_1p2pi(){ SetTypeName("DEventProcessor_1p2pi"); };
+	~DEventProcessor_1p2pi() = default;
 
 	private:
-		jerror_t init(void);	
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	
-		jerror_t erun(void);	
-		jerror_t fini(void);
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::mutex m_mutex;
 
 		DKinFitUtils_GlueX *dKinFitUtils;
 		DKinFitter *dKinFitter;
@@ -58,6 +56,6 @@ class DEventProcessor_1p2pi:public JEventProcessor{
 
 };
 
-#endif // _DEventProcessor_1p1pi2gamma_
+#endif // _DEventProcessor_1p1pi1pi0_
 
 

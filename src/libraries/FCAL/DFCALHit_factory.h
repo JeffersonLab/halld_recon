@@ -11,18 +11,19 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTranslationTable.h"
 #include "DFCALDigiHit.h"
 #include "DFCALHit.h"
+#include "DFCALGeometry.h"
 
 // store constants so that they can be accessed by row/column number
 typedef  vector< vector<double> >  fcal_digi_constants_t;
 
-class DFCALHit_factory:public jana::JFactory<DFCALHit>{
+class DFCALHit_factory:public JFactoryT<DFCALHit>{
 	public:
-		DFCALHit_factory(){};
-		~DFCALHit_factory(){};
+		DFCALHit_factory() = default;
+		~DFCALHit_factory() override = default;
 
 		static const int FCAL_MAX_CHANNELS = 2800;  // number of active channels expected
 
@@ -54,11 +55,11 @@ class DFCALHit_factory:public jana::JFactory<DFCALHit>{
 		//			 const DTranslationTable *ttab,
 		//			 const int in_rocid, const int in_slot, const int in_channel) const;
 	private:
-		jerror_t init(void);						///< Called once at program start.2
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		void FillCalibTable( fcal_digi_constants_t &table, 
 				     const vector<double> &raw_table, 

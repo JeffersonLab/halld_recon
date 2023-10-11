@@ -12,9 +12,8 @@
 #include <set>
 #include <stdexcept>
 
-#include <JANA/jerror.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JFactory.h>
+#include <JANA/Compatibility/jerror.h>
+#include <JANA/JFactoryT.h>
 #include <DAQ/Df250WindowRawData.h>
 
 #include "DTACDigiHit.h"
@@ -35,10 +34,10 @@ protected:
 
 //	static std::string tagString;
 
-	virtual double getTimeFromRawData(const std::vector<uint16_t>& samples) override ;
-	virtual const Df250WindowRawData* getRawData(const DTACHit* baseHit) override ;
+	double getTimeFromRawData(const std::vector<uint16_t>& samples) override;
+	const Df250WindowRawData* getRawData(const DTACHit* baseHit) override;
 
-	jerror_t readCCDB( jana::JEventLoop* eventLoop );
+	jerror_t readCCDB( const std::shared_ptr<const JEvent>& event );
 
 //	static std::string& setTagString( std::string tag ) { return (tagString = tag ); }
 public:
@@ -46,8 +45,8 @@ public:
 //			timeScaleADC(timeScale), adcTimeOffset(timeOffset), timeBaseADC(
 //					timeBase) {
 //	}
-	HitRebuilderTAC( jana::JEventLoop* eventLoop ) : HitRebuilderInterfaceTAC() {
-		HitRebuilderTAC::readCCDB( eventLoop );
+	HitRebuilderTAC( const std::shared_ptr<const JEvent>& event ) : HitRebuilderInterfaceTAC() {
+		HitRebuilderTAC::readCCDB( event );
 	}
 
 	HitRebuilderTAC(const HitRebuilderTAC& f) :HitRebuilderInterfaceTAC(),
@@ -67,7 +66,8 @@ public:
 	}
 
 	virtual std::vector<DTACHit*> operator()(
-			vector<const DTACHit*>& baseHitVector) override ;
+			std::vector<const DTACHit*>& baseHitVector) override ;
+
 	static std::string getTagString() {
 		return "REBUILD";
 	}

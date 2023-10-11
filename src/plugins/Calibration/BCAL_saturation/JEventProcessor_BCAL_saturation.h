@@ -9,22 +9,23 @@
 #define _JEventProcessor_BCAL_saturation_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
-
-class JEventProcessor_BCAL_saturation:public jana::JEventProcessor{
+class JEventProcessor_BCAL_saturation:public JEventProcessor{
  public:
   JEventProcessor_BCAL_saturation();
   ~JEventProcessor_BCAL_saturation();
-  const char* className(void){return "JEventProcessor_BCAL_saturation";}
 
   time_t  recentwalltime; 
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
+  std::shared_ptr<JLockService> lockService;
 
   int waveformCounterUS[2][4], waveformCounterDS[2][4];
 };

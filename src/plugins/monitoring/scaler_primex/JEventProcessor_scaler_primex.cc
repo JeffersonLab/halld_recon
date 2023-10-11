@@ -11,12 +11,7 @@
 #include "JEventProcessor_scaler_primex.h"
 
 
-using namespace jana;
 using namespace std;
-
-
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 
 
 #include <TRIGGER/DL1Trigger.h>
@@ -33,7 +28,7 @@ extern "C"{
     InitJANAPlugin(app);
     
     
-    app->AddProcessor(new JEventProcessor_scaler_primex());
+    app->Add(new JEventProcessor_scaler_primex());
 	
   }
 } // "C"
@@ -57,7 +52,7 @@ thread_local DTreeFillData JEventProcessor_scaler_primex::dTreeFillData;
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_scaler_primex::init(void)
+void JEventProcessor_scaler_primex::Init()
 {
 
 
@@ -124,23 +119,19 @@ jerror_t JEventProcessor_scaler_primex::init(void)
   //REGISTER BRANCHES
   dTreeInterface->Create_Branches(locTreeBranchRegister);
 
-  return NOERROR;
-
 }
 
 //------------------
 // brun
 //------------------
-jerror_t JEventProcessor_scaler_primex::brun(JEventLoop *eventLoop, int32_t runnumber)
-{ 
-  
-       return NOERROR;
+void JEventProcessor_scaler_primex::BeginRun(const std::shared_ptr<const JEvent> &event)
+{
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t JEventProcessor_scaler_primex::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_scaler_primex::Process(const std::shared_ptr<const JEvent> &event)
 {
 
         bool is_sync_event = false;
@@ -177,13 +168,13 @@ jerror_t JEventProcessor_scaler_primex::evnt(JEventLoop *loop, uint64_t eventnum
 	// SCALERS
 	vector<const Df250Scaler*> fa250_sc;
 	
-	loop->Get(l1trig); 
+	event->Get(l1trig);
 
-	loop->Get(fa250_sc);
+	event->Get(fa250_sc);
       
 
 
-	japp->RootFillLock(this);
+	lockService->RootFillLock(this);
 	
 	
         if( l1trig.size() > 0){
@@ -424,32 +415,26 @@ jerror_t JEventProcessor_scaler_primex::evnt(JEventLoop *loop, uint64_t eventnum
 	  dTreeInterface->Fill(dTreeFillData);
 
 
-	japp->RootFillUnLock(this); 
-	
-	return NOERROR;
-	
+	lockService->RootFillUnLock(this);
+
 	
 }
 
 //------------------
 // erun
 //------------------
-jerror_t JEventProcessor_scaler_primex::erun(void)
+void JEventProcessor_scaler_primex::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_scaler_primex::fini(void)
+void JEventProcessor_scaler_primex::Finish()
 {
 
          delete dTreeInterface; //saves trees to file, closes file
-	 
-	 
-	 return NOERROR;
 }
 

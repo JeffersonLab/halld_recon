@@ -9,34 +9,32 @@
  *
  */
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
-using namespace jana;
 
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALGeometry.h"
+#include <JANA/Compatibility/jerror.h>
 
 #include "TH2F.h"
 #include <DMatrixDSym.h>
 
-class DBCALShower_factory_IU : public JFactory< DBCALShower > {
+class DBCALShower_factory_IU : public JFactoryT<DBCALShower> {
   
 public:
   
   DBCALShower_factory_IU();
   ~DBCALShower_factory_IU(){}
 
-  const char* Tag(void){return "IU";}
-  jerror_t LoadCovarianceLookupTables(JEventLoop *eventLoop);
+  jerror_t LoadCovarianceLookupTables(const std::shared_ptr<const JEvent>& event);
   jerror_t FillCovarianceMatrix(DBCALShower* shower);
 
 private:
-  
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t erun(void);
-  //jerror_t CreateCovarianceMatrix();
+
+  void Init() override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
 
   int VERBOSE;
   string COVARIANCEFILENAME;

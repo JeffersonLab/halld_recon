@@ -7,10 +7,8 @@
 #include <vector>
 
 #include "JEventProcessor_DIRC_online.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "TTAB/DTTabUtilities.h"
 #include <DAQ/DDIRCTDCHit.h>
@@ -77,7 +75,7 @@ static TH2I *hHit_Timewalk[Nboxes][Nchannels];
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_DIRC_online());
+        app->Add(new JEventProcessor_DIRC_online());
     }
 }
 
@@ -86,6 +84,7 @@ extern "C"{
 
 
 JEventProcessor_DIRC_online::JEventProcessor_DIRC_online() {
+	SetTypeName("JEventProcessor_DIRC_online");
 }
 
 
@@ -98,10 +97,13 @@ JEventProcessor_DIRC_online::~JEventProcessor_DIRC_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_DIRC_online::init(void) {
+void JEventProcessor_DIRC_online::Init() {
+
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     FillTimewalk = false;
-    gPARMS->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
+    app->SetDefaultParameter("DIRC:FILLTIMEWALK", FillTimewalk, "Fill timewalk histograms, default = false");
 
     // create root folder for psc and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -184,49 +186,46 @@ jerror_t JEventProcessor_DIRC_online::init(void) {
     }
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_DIRC_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_DIRC_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
+    auto eventnumber = event->GetEventNumber();
 
     vector<const DDIRCGeometry*> locDIRCGeometryVec;
-    eventLoop->Get(locDIRCGeometryVec);
+    event->Get(locDIRCGeometryVec);
     auto locDIRCGeometry = locDIRCGeometryVec[0];
 
     // Get data for DIRC
     vector<const DDIRCTDCDigiHit*> digihits;
-    eventLoop->Get(digihits);
+    event->Get(digihits);
     vector<const DDIRCPmtHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
     vector<const DDIRCTriggerTime*> timestamps;
-    eventLoop->Get(timestamps);
+    event->Get(timestamps);
 
     const DTTabUtilities* locTTabUtilities = nullptr;
-    eventLoop->GetSingle(locTTabUtilities);
+    event->GetSingle(locTTabUtilities);
 
     // Get DCODAROCInfo for this ROC
     vector<const DCODAROCInfo*> locCODAROCInfos;
-    eventLoop->Get(locCODAROCInfos);
+    event->Get(locCODAROCInfos);
     uint64_t locReferenceClockTime = 0;
     for (const auto& locCODAROCInfo : locCODAROCInfos) {
 	if(locCODAROCInfo->rocid == 92) {
@@ -234,13 +233,13 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	}
     }    
     //if(locReferenceClockTime%2 != 0) 
-    //	return NOERROR;
+    //	return;
 
     // check for LED triggers
     bool locDIRCLEDTrig = false;
     bool locPhysicsTrig = false;
     vector<const DL1Trigger*> trig;
-    eventLoop->Get(trig);
+    event->Get(trig);
     if (trig.size() > 0) {
 	    // LED appears as "bit" 15 in L1 front panel trigger monitoring plots
 	    if (trig[0]->fp_trig_mask & 0x4000){ 
@@ -254,7 +253,7 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     int loc_itrig = 1;
     if(locDIRCLEDTrig) loc_itrig = 0;
     else if(locPhysicsTrig) loc_itrig = 1;
-    else return NOERROR;
+    else return;
 
     // LED specific information
     // next line commented out to supress warning: variable not used
@@ -265,12 +264,12 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 	    
 	    // Get LED SiPM reference
 	    //vector<const DCAEN1290TDCHit*> sipmtdchits;
-	    //eventLoop->Get(sipmtdchits);
+	    //event->Get(sipmtdchits);
 	    //vector<const Df250PulseData*> sipmadchits;
-	    //eventLoop->Get(sipmadchits);
+	    //event->Get(sipmadchits);
 
 	    vector<const DDIRCLEDRef*> dircLEDRefs;
-            eventLoop->Get(dircLEDRefs);
+            event->Get(dircLEDRefs);
 	    for(uint i=0; i<dircLEDRefs.size(); i++) {
 		const DDIRCLEDRef* dircLEDRef = (DDIRCLEDRef*)dircLEDRefs[i];
 		locLEDRefAdcTime = dircLEDRef->t_fADC;
@@ -278,19 +277,19 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
 		// next line commented out to supress warning: variable not used
 		//		locLEDRefTime = dircLEDRef->t_TDC;
 	
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
                 hLEDRefAdcTime->Fill(locLEDRefAdcTime); 
                 hLEDRefIntegral->Fill(dircLEDRef->integral);
 		hLEDRefTdcTime->Fill(locLEDRefTdcTime);
 		hLEDRefAdcVsTdcTime->Fill(locLEDRefTdcTime, locLEDRefAdcTime);
 		hLEDRefIntegralVsTdcTime->Fill(locLEDRefTdcTime, dircLEDRef->integral);
-		japp->RootFillUnLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootUnLock(); //ACQUIRE ROOT FILL LOCK
 	    }
     }
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     if (digihits.size() > 0) dirc_num_events->Fill(1);
 
@@ -388,29 +387,25 @@ jerror_t JEventProcessor_DIRC_online::evnt(JEventLoop *eventLoop, uint64_t event
     hHit_NHits[loc_itrig]->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsBox[loc_itrig]->Fill(0.,NHits[0]); hHit_NHitsVsBox[loc_itrig]->Fill(1.,NHits[1]);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::erun(void) {
+void JEventProcessor_DIRC_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_DIRC_online::fini(void) {
+void JEventProcessor_DIRC_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 

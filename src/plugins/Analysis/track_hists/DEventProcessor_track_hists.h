@@ -17,9 +17,9 @@ using std::map;
 #include <TH1.h>
 #include <TH2.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include <PID/DKinematicData.h>
 #include <TRACKING/DReferenceTrajectory.h>
@@ -72,11 +72,11 @@ class DEventProcessor_track_hists:public JEventProcessor{
 		
 		
 	private:
-		jerror_t init(void);	///< Invoked via DEventProcessor virtual method
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via DEventProcessor virtual method
-		jerror_t erun(void);					///< Invoked via DEventProcessor virtual method
-		jerror_t fini(void);					///< Invoked via DEventProcessor virtual method
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& loop, int32_t runnumber);
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 			
 		pthread_mutex_t mutex;
 		

@@ -8,18 +8,18 @@
 #ifndef _DFactoryGenerator_
 #define _DFactoryGenerator_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
-using namespace jana;
 
 class DFactoryGenerator: public JFactoryGenerator{
 	public:
 		DFactoryGenerator();
 		virtual ~DFactoryGenerator();
+
+		// TODO: Figure out if we want these back or not
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator";}
-		
-		jerror_t GenerateFactories(JEventLoop*);
+
+		void GenerateFactories(JFactorySet *factory_set) override;
 
 	protected:
 	

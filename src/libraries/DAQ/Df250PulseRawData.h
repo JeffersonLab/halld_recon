@@ -24,19 +24,19 @@ class Df250PulseRawData:public DDAQAddress{
 		
 		uint32_t pulse_number;         ///< from Pulse Raw Data Data 1st word
 		uint32_t first_sample_number;  ///< from Pulse Raw Data Data 1st word
-		vector<uint16_t> samples;      ///< from Pulse Raw Data Data words 2-N (each word contains 2 samples)
+		std::vector<uint16_t> samples;      ///< from Pulse Raw Data Data words 2-N (each word contains 2 samples)
 		bool invalid_samples;          ///< true if any sample's "not valid" bit set
 		bool overflow;                 ///< true if any sample's "overflow" bit set
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "pulse_number", "%d", pulse_number);
-			AddString(items, "first_sample_number", "%d", first_sample_number);
-			AddString(items, "Nsamples", "%d", samples.size());
-			AddString(items, "invalid_samples", "%d", invalid_samples);
-			AddString(items, "overflow", "%d", overflow);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(pulse_number, NAME_OF(pulse_number), "%d");
+			summary.add(first_sample_number, NAME_OF(first_sample_number), "%d");
+			summary.add(samples.size(), "Nsamples", "%d");
+			summary.add(invalid_samples, NAME_OF(invalid_samples), "%d");
+			summary.add(overflow, NAME_OF(overflow), "%d");
 		}
 };
 

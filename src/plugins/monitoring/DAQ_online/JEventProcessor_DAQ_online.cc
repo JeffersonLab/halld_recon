@@ -10,10 +10,9 @@
 
 #include "JEventProcessor_DAQ_online.h"
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 using namespace std;
-using namespace jana;
 
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/Df250PulseIntegral.h>
@@ -46,7 +45,7 @@ static bool ttab_labels_set = false;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_DAQ_online());
+    app->Add(new JEventProcessor_DAQ_online());
   }
 } // "C"
 
@@ -56,7 +55,7 @@ extern "C"{
 //------------------
 JEventProcessor_DAQ_online::JEventProcessor_DAQ_online()
 {
-
+	SetTypeName("JEventProcessor_DAQ_online");
 }
 
 //------------------
@@ -68,10 +67,14 @@ JEventProcessor_DAQ_online::~JEventProcessor_DAQ_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_DAQ_online::init(void)
+void JEventProcessor_DAQ_online::Init()
 {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	printf("JEventProcessor_DAQ_online::init()\n");
 
 	// create root folder for DAQ and cd to it, store main dir
@@ -180,13 +183,13 @@ jerror_t JEventProcessor_DAQ_online::init(void)
 	// back to main dir
 	maindir->cd();
 	
-	return NOERROR;
+	return;
 }
 
 //------------------
 // AddROCIDLabels
 //------------------
-void JEventProcessor_DAQ_online::AddROCIDLabels(JEventLoop *loop)
+void JEventProcessor_DAQ_online::AddROCIDLabels(const std::shared_ptr<const JEvent>& event)
 {
 	/// This is called just once to set the x-axis labels
 	/// of histograms whose x-axis is the rocid so that we
@@ -194,7 +197,7 @@ void JEventProcessor_DAQ_online::AddROCIDLabels(JEventLoop *loop)
 
 	// NO lock: called in init()
 	const DTranslationTable *ttab = NULL;
-	loop->GetSingle(ttab);
+	event->GetSingle(ttab);
 
 	// Loop over all rocid values
 	for(uint32_t rocid=2; rocid<99; rocid++){
@@ -222,22 +225,22 @@ void JEventProcessor_DAQ_online::AddROCIDLabels(JEventLoop *loop)
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_DAQ_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_DAQ_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_DAQ_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_DAQ_online::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
@@ -249,20 +252,20 @@ jerror_t JEventProcessor_DAQ_online::evnt(JEventLoop *loop, uint64_t eventnumber
 	vector<const Df125FDCPulse*> f125FDCs;
 	vector<const DCAEN1290TDCHit*> caen1290hits;
 
-	loop->Get(f1tdchits);
-	loop->Get(f250PDs);
-	loop->Get(f250PIs);
-	loop->Get(f125PIs);
-	loop->Get(f125CDCs);
-	loop->Get(f125FDCs);
-	loop->Get(caen1290hits);
+	event->Get(f1tdchits);
+	event->Get(f250PDs);
+	event->Get(f250PIs);
+	event->Get(f125PIs);
+	event->Get(f125CDCs);
+	event->Get(f125FDCs);
+	event->Get(caen1290hits);
 	
-	ParseEventSize(loop->GetJEvent());
+	ParseEventSize(event);
 	
 	// Set rocid histogram labels based on detector if needed
 	if(!ttab_labels_set){
 		ttab_labels_set = true;
-		AddROCIDLabels(loop);
+		AddROCIDLabels(event);
 	}
 
 	// Initialize counters looking at num. hits per crate
@@ -270,7 +273,7 @@ jerror_t JEventProcessor_DAQ_online::evnt(JEventLoop *loop, uint64_t eventnumber
 	for(uint32_t rocid=0; rocid<101; rocid++) Nhits_rocid[rocid] = 0;
 
 	// Although we are only filling objects local to this plugin, The directory changes: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	if (daqdir!=NULL) daqdir->cd();
 	
@@ -495,20 +498,18 @@ jerror_t JEventProcessor_DAQ_online::evnt(JEventLoop *loop, uint64_t eventnumber
 
 	maindir->cd();
 	// Unlock ROOT
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
 // ParseEventSize
 //------------------
-void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
+void JEventProcessor_DAQ_online::ParseEventSize(const std::shared_ptr<const JEvent>& event)
 {
 	/// This ugliness is needed to get at the true banks for each event by rocid.
 
 	// Bombproof
-	if(event.GetJEventSource()->className() != string("JEventSource_EVIO")){
+	if(event->GetJEventSource()->GetTypeName() != "JEventSource_EVIO"){
 		static bool warned = false;
 		if(!warned){
 			cout << "WARNING: This is not an event source of type JEventSource_EVIO!" << endl;
@@ -518,10 +519,10 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 		return;
 	}
 
-	void *ref = event.GetRef();
+	auto ref = event->GetSingle<JEventSource_EVIO::ObjList>();
 	if(!ref) return;
-	uint32_t *istart = JEventSource_EVIO::GetEVIOBufferFromRef(ref);
-	uint32_t evio_buffsize = JEventSource_EVIO::GetEVIOBufferSizeFromRef(ref);
+	uint32_t *istart = JEventSource_EVIO::GetEVIOBufferFromRef((void*)ref);
+	uint32_t evio_buffsize = JEventSource_EVIO::GetEVIOBufferSizeFromRef((void*)ref);
 	uint32_t evio_buffwords = evio_buffsize/sizeof(uint32_t);
 	uint32_t *iend = &istart[evio_buffwords];
 	
@@ -540,9 +541,9 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 				
 			// FILL HISTOGRAMS
 			// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-			japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+			lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 			daq_words_by_type->Fill(kBORData, istart[0]/sizeof(uint32_t));
-			japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+			lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 			return; // no further parsing needed
 		}
 	}
@@ -554,10 +555,10 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 				
 				// FILL HISTOGRAMS
 				// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-				japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+				lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 				daq_words_by_type->Fill(kEPICSheader, 3.0); // EVIO outer and segment headers + timestamp
 				daq_words_by_type->Fill(kEPICSdata, istart[0]/sizeof(uint32_t) - 3);
-				japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+				lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 				return; // no further parsing needed
 			}
 		}
@@ -620,7 +621,7 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 				cout << "     evio_buffwords = " << evio_buffwords << endl;
 				cout << "  physics_event_len = " << physics_event_len << endl;
 				cout << "   trigger_bank_len = " << trigger_bank_len << endl;
-				event.Print();
+				// event.Print(); // TODO: NWB: Who else uses this and do we really need it?
 				if(++Nwarnings == 10) cout << "Last warning!" << endl;
 			}
 			break;
@@ -633,7 +634,7 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	
 	// Calculating time between events is tricky when using multiple-threads.
 	// We need the timestamp of two sequential events, but the order in which
@@ -641,7 +642,7 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 	// a running list of the last 128 timestamps and event numbers seen by this
 	// routine. We can then search this for the event prior to this one and if
 	// found, use it.
-	uint32_t event_num = event.GetEventNumber();
+	uint32_t event_num = event->GetEventNumber();
 	static uint32_t recent_event_nums[128];
 	static uint64_t recent_timestamps[128];
 	static uint32_t ievent = 0;
@@ -676,7 +677,7 @@ void JEventProcessor_DAQ_online::ParseEventSize(JEvent &event)
 		daq_words_by_type->Fill(i, (double)word_stats[i]);
 	}
 	
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
@@ -950,9 +951,9 @@ void JEventProcessor_DAQ_online::ParseModuleConfiguration(uint32_t rocid, uint32
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_DAQ_online::erun(void)
+void JEventProcessor_DAQ_online::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
@@ -960,7 +961,7 @@ jerror_t JEventProcessor_DAQ_online::erun(void)
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 	for (int i=0; i<highcratenum; i++) {
 		if (daq_occ_crates[i] != NULL) {
@@ -977,17 +978,14 @@ jerror_t JEventProcessor_DAQ_online::erun(void)
 		}
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_DAQ_online::fini(void)
+void JEventProcessor_DAQ_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

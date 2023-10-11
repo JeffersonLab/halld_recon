@@ -10,10 +10,9 @@
 
 #include "JEventProcessor_BCAL_point_time.h"
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 using namespace std;
-using namespace jana;
 
 #include "BCAL/DBCALPoint.h"
 #include "TRACKING/DMCThrown.h"
@@ -62,7 +61,7 @@ static TProfile *point_TimeVsZ_layer_prof[numlayer];
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_BCAL_point_time());
+	app->Add(new JEventProcessor_BCAL_point_time());
 }
 } // "C"
 
@@ -72,11 +71,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_point_time::JEventProcessor_BCAL_point_time()
 {
-	VERBOSE = 0;
-
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("BCAL_point_time:VERBOSE", VERBOSE, "BCAL_point_time verbosity level");
-	}
+	SetTypeName("JEventProcessor_BCAL_point_time");
 }
 
 //------------------
@@ -88,14 +83,20 @@ JEventProcessor_BCAL_point_time::~JEventProcessor_BCAL_point_time()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_point_time::init(void)
+void JEventProcessor_BCAL_point_time::Init()
 {
+	VERBOSE = 0;
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
+	app->SetDefaultParameter("BCAL_point_time:VERBOSE", VERBOSE, "BCAL_point_time verbosity level");
 	if (VERBOSE>=1) printf("JEventProcessor_pedestal_online::init()\n");
 
 	// lock all root operations
-	japp->RootWriteLock();
+	lockService->RootWriteLock();
 		
 	gStyle->SetTitleSize(0.06,"xyz");
 	gStyle->SetTitleSize(0.07,"h");
@@ -267,37 +268,35 @@ jerror_t JEventProcessor_BCAL_point_time::init(void)
 	maindir->cd();
 	
 	// unlock
-	japp->RootUnLock();
-
-	return NOERROR;
-
+	lockService->RootUnLock();
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_point_time::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_BCAL_point_time::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_point_time::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_point_time::Process(const std::shared_ptr<const JEvent>& event)
 {
+
+	auto eventnumber = event->GetEventNumber();
+
 	vector<const DBCALPoint*> points;
 	vector<const DBCALHit*> hits;
 	vector<const DMCThrown*> thrown;
 
-	loop->Get(points);
-	loop->Get(thrown);
+	event->Get(points);
+	event->Get(thrown);
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
@@ -305,7 +304,7 @@ jerror_t JEventProcessor_BCAL_point_time::evnt(JEventLoop *loop, uint64_t eventn
 	
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	if (peddir!=NULL) peddir->cd();
 
@@ -326,8 +325,8 @@ jerror_t JEventProcessor_BCAL_point_time::evnt(JEventLoop *loop, uint64_t eventn
 
 	} else {
 	  if (VERBOSE>=1) printf("Event %6lu numthrown %2i   \n",eventnumber,numthrown);
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-		return NOERROR;
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		return;
 	}
 
 	unsigned int numpoints = points.size();
@@ -398,23 +397,20 @@ jerror_t JEventProcessor_BCAL_point_time::evnt(JEventLoop *loop, uint64_t eventn
 
 	maindir->cd();
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-
-	return NOERROR;
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_point_time::erun(void)
+void JEventProcessor_BCAL_point_time::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	
 	int nbins = thrown_NVsZ->GetXaxis()->GetNbins();
 	for (int j=0; j<numlayer; j++) {
@@ -435,17 +431,14 @@ jerror_t JEventProcessor_BCAL_point_time::erun(void)
 		}
 	}
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+    lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_point_time::fini(void)
+void JEventProcessor_BCAL_point_time::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

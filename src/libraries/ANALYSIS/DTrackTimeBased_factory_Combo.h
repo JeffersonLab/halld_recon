@@ -15,15 +15,15 @@
 
 #include "ANALYSIS/DReaction.h"
 
-using namespace jana;
 using namespace std;
 
-class DTrackTimeBased_factory_Combo:public jana::JFactory<DTrackTimeBased>
+class DTrackTimeBased_factory_Combo:public JFactoryT<DTrackTimeBased>
 {
 	public:
-		DTrackTimeBased_factory_Combo(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
-		~DTrackTimeBased_factory_Combo(){};
-		const char* Tag(void){return "Combo";}
+		DTrackTimeBased_factory_Combo(){
+			SetTag("Combo");
+		}
+		~DTrackTimeBased_factory_Combo() = default;
 
 		vector<Particle_t> Get_ParticleIDsToTry(Particle_t locPID) const
 		{
@@ -34,9 +34,9 @@ class DTrackTimeBased_factory_Combo:public jana::JFactory<DTrackTimeBased>
 		}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 		void Create_PIDsAsNeeded(const DChargedTrack* locChargedTrack, set<Particle_t>& locPIDs);
 		const DChargedTrackHypothesis* Get_ChargedHypothesisToUse(const DChargedTrack* locChargedTrack, Particle_t locDesiredPID);

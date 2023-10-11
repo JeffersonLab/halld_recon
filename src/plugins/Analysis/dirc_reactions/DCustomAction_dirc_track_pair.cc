@@ -5,22 +5,22 @@
 
 #include "DCustomAction_dirc_track_pair.h"
 
-void DCustomAction_dirc_track_pair::Run_Update(JEventLoop* locEventLoop)
+void DCustomAction_dirc_track_pair::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// get PID algos
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 	dParticleID = locParticleID;
 
 	// get DIRC geometry
 	vector<const DDIRCGeometry*> locDIRCGeometry;
-	locEventLoop->Get(locDIRCGeometry);
+	locEvent->Get(locDIRCGeometry);
 	dDIRCGeometry = locDIRCGeometry[0];
 }
 
-void DCustomAction_dirc_track_pair::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_dirc_track_pair::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-        Run_Update(locEventLoop);
+        Run_Update(locEvent);
 
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -29,7 +29,7 @@ void DCustomAction_dirc_track_pair::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -38,13 +38,13 @@ void DCustomAction_dirc_track_pair::Initialize(JEventLoop* locEventLoop)
 
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_dirc_track_pair::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_dirc_track_pair::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
         const DDetectorMatches* locDetectorMatches = NULL;
-        locEventLoop->GetSingle(locDetectorMatches);
+        locEvent->GetSingle(locDetectorMatches);
 
         // Get selected particle from reaction for DIRC analysis
 	const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(dParticleComboStepIndex);

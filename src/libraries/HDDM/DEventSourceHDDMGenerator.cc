@@ -13,9 +13,9 @@ using std::string;
 #include "DEventSourceHDDM.h"
 
 //---------------------------------
-// Description
+// GetDescription
 //---------------------------------
-const char* DEventSourceHDDMGenerator::Description(void)
+std::string DEventSourceHDDMGenerator::GetDescription() const
 {
    return "HDDM";
 }

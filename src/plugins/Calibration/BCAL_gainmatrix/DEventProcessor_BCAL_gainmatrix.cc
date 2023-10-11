@@ -10,7 +10,7 @@
 #include <TLorentzVector.h>
 #include "TMath.h"
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALCluster.h"
 #include "BCAL/DBCALPoint.h"
@@ -32,20 +32,22 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_BCAL_gainmatrix()); //register this plugin
+		locApplication->Add(new DEventProcessor_BCAL_gainmatrix()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_BCAL_gainmatrix::init(void)
+void DEventProcessor_BCAL_gainmatrix::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	
 	//  ... create historgrams or trees ...
+
+	lockService = GetApplication()->GetService<JLockService>();
 
 	int n_channels = 768;
 	int m_nElements = 768;
@@ -94,65 +96,61 @@ jerror_t DEventProcessor_BCAL_gainmatrix::init(void)
 	
 	dEventWriterROOT = NULL;
 	dEventWriterREST = NULL;
-
-	return NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_BCAL_gainmatrix::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_BCAL_gainmatrix::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
-	Run_Number = locRunNumber;
+	Run_Number = locEvent->GetRunNumber();
 	/*
 	//Optional: Retrieve REST writer for writing out skims
-	locEventLoop->GetSingle(dEventWriterREST);
+	locEvent->GetSingle(dEventWriterREST);
 	
 	//Recommeded: Create output ROOT TTrees (nothing is done if already created)
-	locEventLoop->GetSingle(dEventWriterROOT);
-	dEventWriterROOT->Create_DataTrees(locEventLoop);
+	locEvent->GetSingle(dEventWriterROOT);
+	dEventWriterROOT->Create_DataTrees(locEvent);
 	*/
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
 
 
 
-jerror_t DEventProcessor_BCAL_gainmatrix::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_BCAL_gainmatrix::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
-	eventnum = locEventNumber;
+	eventnum = locEvent->GetEventNumber();
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
 
 	vector<const DTrackFitter *> fitters;
-	locEventLoop->Get(fitters);
+	locEvent->Get(fitters);
 	
 	if(fitters.size()<1){
 	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
+	  throw JException("Unable to get a DTrackFinder object!");
 	}
 	
 	const DTrackFitter *fitter = fitters[0];
@@ -160,21 +158,21 @@ jerror_t DEventProcessor_BCAL_gainmatrix::evnt(jana::JEventLoop* locEventLoop, u
 
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 
-	locEventLoop->GetSingle(locTrigger); 
+	locEvent->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-	  return NOERROR;
+	  return;
 
 	vector<const DBCALShower*> locBCALShowers;
 	vector<const DBCALCluster*> locBCALClusters;
 	vector<const DBCALPoint*> locBCALPoints;
 	vector<const DVertex*> locVertex;
-	locEventLoop->Get(locBCALShowers);
-	locEventLoop->Get(locBCALClusters);
-	locEventLoop->Get(locBCALPoints);
-	locEventLoop->Get(locVertex);
+	locEvent->Get(locBCALShowers);
+	locEvent->Get(locBCALClusters);
+	locEvent->Get(locBCALPoints);
+	locEvent->Get(locVertex);
 
 	vector<const DTrackTimeBased*> locTrackTimeBased;
-	locEventLoop->Get(locTrackTimeBased);
+	locEvent->Get(locTrackTimeBased);
 
 	num_tracks = locTrackTimeBased.size();
 	num_showers = locBCALShowers.size();
@@ -213,7 +211,7 @@ jerror_t DEventProcessor_BCAL_gainmatrix::evnt(jana::JEventLoop* locEventLoop, u
 //OoOoOoOoOoOoOoOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO CALCULATING THE PI0 INVARIANT MASS PORTION O0O0O0O0O0O0O0O0OOooooooooooOooOoOoooooOOooooOOo
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock();
+	GetLockService(locEvent)->RootWriteLock();
 
 	for(unsigned int i=0; i<locBCALShowers.size(); i++){
 	  	double pi0_mass = 0.1349766;
@@ -316,15 +314,15 @@ jerror_t DEventProcessor_BCAL_gainmatrix::evnt(jana::JEventLoop* locEventLoop, u
 		
 	}   
 
-	japp->RootUnLock();
+	GetLockService(locEvent)->RootUnLock();
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_BCAL_gainmatrix::erun(void)
+void DEventProcessor_BCAL_gainmatrix::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
@@ -332,7 +330,7 @@ jerror_t DEventProcessor_BCAL_gainmatrix::erun(void)
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
   int n_channels = 768;
 
@@ -351,16 +349,15 @@ jerror_t DEventProcessor_BCAL_gainmatrix::erun(void)
    	 }
     }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-    return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_BCAL_gainmatrix::fini(void)
+void DEventProcessor_BCAL_gainmatrix::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }
 

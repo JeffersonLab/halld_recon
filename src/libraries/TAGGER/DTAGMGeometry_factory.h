@@ -9,10 +9,11 @@
 
 #include <string>
 
-#include "JANA/JFactory.h"
+#include <JANA/JFactoryT.h>
+
 #include "DTAGMGeometry.h"
 
-class DTAGMGeometry_factory : public JFactory<DTAGMGeometry> {
+class DTAGMGeometry_factory : public JFactoryT<DTAGMGeometry> {
 	public:
 		DTAGMGeometry_factory(){};
 		~DTAGMGeometry_factory(){};
@@ -20,41 +21,34 @@ class DTAGMGeometry_factory : public JFactory<DTAGMGeometry> {
 		DTAGMGeometry *tagmgeometry=nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& loop)
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( tagmgeometry ) delete tagmgeometry;
-
+			delete tagmgeometry;
 			tagmgeometry = new DTAGMGeometry(loop);
-
-			return NOERROR;
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& loop)
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( tagmgeometry ) _data.push_back( tagmgeometry );
-			 
-			 return NOERROR;
+			if( tagmgeometry ) Insert( tagmgeometry );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun()
 		{
-			if( tagmgeometry ) delete tagmgeometry;
-			tagmgeometry = NULL;
-			
-			return NOERROR;
+			delete tagmgeometry;
+			tagmgeometry = nullptr;
 		}
 };
 #endif // _DTAGMGeometry_factory_

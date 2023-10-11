@@ -4,6 +4,7 @@
 //
 
 #include "JEventProcessor_BCAL_Hadronic_Eff.h"
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
 extern "C"
@@ -11,7 +12,7 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new JEventProcessor_BCAL_Hadronic_Eff()); //register this plugin
+		locApplication->Add(new JEventProcessor_BCAL_Hadronic_Eff()); //register this plugin
 	}
 } // "C"
 
@@ -19,10 +20,13 @@ extern "C"
 thread_local DTreeFillData JEventProcessor_BCAL_Hadronic_Eff::dTreeFillData;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_Hadronic_Eff::init(void)
+void JEventProcessor_BCAL_Hadronic_Eff::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	//TRACK REQUIREMENTS
 	dMaxBCALDeltaT = 1.0;;
 	dMinTrackingFOM = 5.73303E-7; // +/- 5 sigma
@@ -128,37 +132,32 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::init(void)
 
 	//REGISTER BRANCHES
 	dTreeInterface->Create_Branches(locTreeBranchRegister);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_Hadronic_Eff::brun(jana::JEventLoop* locEventLoop, int locRunNumber)
+void JEventProcessor_BCAL_Hadronic_Eff::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// This is called whenever the run number changes
 
 	//Get Target Center Z
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry* locGeometry = GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetCenterZ);
 
 	//Effective velocities
-	locEventLoop->GetCalib("/BCAL/effective_velocities", effective_velocities);
-
-	return NOERROR;
+	GetCalib(locEvent, "/BCAL/effective_velocities", effective_velocities);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
 
-jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_BCAL_Hadronic_Eff::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
@@ -167,20 +166,20 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 
 	//CUT ON TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-		return NOERROR;
+		return;
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	locEventLoop->Get(BCALGeomVec);
+  	locEvent->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load locBCALGeometry object!");
 	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];;
 
 	//COMPUTE TOTAL FCAL ENERGY
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
 
 	double locTotalFCALEnergy = 0.0;
 	for(auto& locShower : locFCALShowers)
@@ -194,30 +193,30 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 	if(((locTriggerBits & 1) == 1) && (locTotalFCALEnergy > 1.0))
 		locBCALRequiredForTriggerFlag = false;
 	if(locBCALRequiredForTriggerFlag)
-		return NOERROR;
+		return;
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 	if(locEventRFBunch->dNumParticleVotes <= 1)
-		return NOERROR; //don't trust PID: beta-dependence
+		return; //don't trust PID: beta-dependence
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks);
+	locEvent->Get(locChargedTracks);
 
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
-	locEventLoop->GetSingle(locDetectorMatches);
+	locEvent->GetSingle(locDetectorMatches);
 
 	vector<const DBCALUnifiedHit*> locBCALUnifiedHits;
-	locEventLoop->Get(locBCALUnifiedHits);
+	locEvent->Get(locBCALUnifiedHits);
 
 	vector<const DBCALPoint*> locBCALPoints;
-	locEventLoop->Get(locBCALPoints);
+	locEvent->Get(locBCALPoints);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	//sort bcal points by layer, total sector //first int: layer. second int: sector
 	map<int, map<int, set<const DBCALPoint*> > > locSortedPoints;
@@ -553,7 +552,7 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	{
 		//Fill Hit Found
 		for(auto& locLayerPair : locHitMap_HitFound)
@@ -575,9 +574,7 @@ jerror_t JEventProcessor_BCAL_Hadronic_Eff::evnt(jana::JEventLoop* locEventLoop,
 			}
 		}
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 double JEventProcessor_BCAL_Hadronic_Eff::Calc_ProjectedSector(int locLayer, const map<int, map<int, set<const DBCALPoint*> > >& locSortedPoints)
@@ -791,26 +788,22 @@ bool JEventProcessor_BCAL_Hadronic_Eff::Cut_BCALTiming(const DChargedTrackHypoth
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_Hadronic_Eff::erun(void)
+void JEventProcessor_BCAL_Hadronic_Eff::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_Hadronic_Eff::fini(void)
+void JEventProcessor_BCAL_Hadronic_Eff::Finish()
 {
 	// Called before program exit after event processing is finished.  
 
 	delete dCutAction_TrackHitPattern;
 	delete dTreeInterface; //saves trees to file, closes file
-
-	return NOERROR;
 }

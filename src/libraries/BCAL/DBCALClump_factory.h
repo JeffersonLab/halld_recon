@@ -8,14 +8,12 @@
 #ifndef _DBCALClump_factory_
 #define _DBCALClump_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
-using namespace jana;
 
 #include "BCAL/DBCALClump.h"
 
-class DBCALClump_factory : public JFactory<DBCALClump> {
+class DBCALClump_factory : public JFactoryT<DBCALClump> {
 
   /// This factory creats Clumps based on all DBCALHits. A Clump is an object of
   /// two related clusters between up stream and down stream BCAL Hits. A seed
@@ -41,9 +39,9 @@ class DBCALClump_factory : public JFactory<DBCALClump> {
 
  private:
   
-  jerror_t init(void);
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
   
 };
 

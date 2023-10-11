@@ -8,26 +8,26 @@
 #ifndef _DTrackFitter_factory_LSLM_
 #define _DTrackFitter_factory_LSLM_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackLSFitter.h"
 
-class DTrackFitter_factory_LSLM:public jana::JFactory<DTrackFitter>{
+class DTrackFitter_factory_LSLM:public JFactoryT<DTrackFitter>{
 	public:
 		DTrackFitter_factory_LSLM(){};
 		~DTrackFitter_factory_LSLM(){};
-		const char* Tag(void){return "LSLM";}
+		SetTag("LSLM")
 
 	private:
-		jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber){
+		void Process(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber){
 
 			// Create single DTrackFitter object and mark the factory as
 			// persistent so it doesn't get deleted every event.
 			DTrackFitter *fitter = new DTrackLSFitter(loop);
-			SetFactoryFlag(PERSISTANT);
+			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(fitter);
+			Insert(fitter);
 			
-			return NOERROR;
+			return;
 		}
 };
 

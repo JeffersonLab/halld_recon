@@ -10,33 +10,35 @@
 using namespace std;
 
 #include "DBeamPhoton_factory_TAGGEDMCGEN.h"
-using namespace jana;
+
+#include <JANA/JEvent.h>
+
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamPhoton_factory_TAGGEDMCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DBeamPhoton_factory_TAGGEDMCGEN::Process(const std::shared_ptr<const JEvent>& event)
 {
-	_data.clear();
+	mData.clear();
 
 	//Check if MC
 	vector<const DMCReaction*> locMCReactions;
-	locEventLoop->Get(locMCReactions);
+	event->Get(locMCReactions);
 	if(locMCReactions.empty())
-		return NOERROR; //Not a thrown event
+		return; //Not a thrown event
 
 	//Get the MCGEN beam
 	const DBeamPhoton* locMCGenBeam;
-	locEventLoop->GetSingle(locMCGenBeam, "MCGEN");
+	event->GetSingle(locMCGenBeam, "MCGEN");
 
 	//See if it was tagged
 	auto locSystem = locMCGenBeam->dSystem;
 	if(locSystem == SYS_NULL)
-		return NOERROR; //Nope, no objects to create
+		return; //Nope, no objects to create
 
 	//Get reconstructed beam photons
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	event->Get(locBeamPhotons);
 
 	//Loop over beam photons
 	double locBestDeltaT = 9.9E9;
@@ -56,9 +58,8 @@ jerror_t DBeamPhoton_factory_TAGGEDMCGEN::evnt(jana::JEventLoop *locEventLoop, u
 	}
 
 	if(locBestPhoton == nullptr)
-		return NOERROR; //Uh oh.  Shouldn't be possible. 
+		return; //Uh oh.  Shouldn't be possible. 
 
-	_data.push_back(new DBeamPhoton(*locBestPhoton));
-	return NOERROR;
+	mData.push_back(new DBeamPhoton(*locBestPhoton));
 }
 

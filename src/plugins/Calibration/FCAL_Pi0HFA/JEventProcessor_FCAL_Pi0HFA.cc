@@ -6,16 +6,13 @@
 //
 
 #include "JEventProcessor_FCAL_Pi0HFA.h"
-using namespace jana;
 
+#include <DANA/DEvent.h>
 
-// Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FCAL_Pi0HFA());
+    app->Add(new JEventProcessor_FCAL_Pi0HFA());
   }
 } // "C"
 
@@ -25,7 +22,7 @@ extern "C"{
 //------------------
 JEventProcessor_FCAL_Pi0HFA::JEventProcessor_FCAL_Pi0HFA()
 {
-
+	SetTypeName("JEventProcessor_FCAL_Pi0HFA");
 }
 
 //------------------
@@ -37,9 +34,9 @@ JEventProcessor_FCAL_Pi0HFA::~JEventProcessor_FCAL_Pi0HFA()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_Pi0HFA::init(void)
+void JEventProcessor_FCAL_Pi0HFA::Init()
 {
   // This is called once at program startup. 
 
@@ -47,60 +44,55 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::init(void)
   gDirectory->cd("FCAL_Pi0HFA");
   hCurrentGainConstants = new TProfile("CurrentGainConstants", "Current Gain Constants", 2800, -0.5, 2799.5);
   gDirectory->cd("..");
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_Pi0HFA::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_FCAL_Pi0HFA::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
 
   // Put the current gain constants into the output file
   vector< double > raw_gains;
   // This is called whenever the run number changes
-  eventLoop->GetCalib("/FCAL/gains", raw_gains);
+  GetCalib(event, "/FCAL/gains", raw_gains);
   for (unsigned int i=0; i<raw_gains.size(); i++){
     hCurrentGainConstants->Fill(i,raw_gains[i]);
   }
-
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FCAL_Pi0HFA::Process(const std::shared_ptr<const JEvent>& event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // loop->Get(...) to get reconstructed objects (and thereby activating the
+  // event->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // loop->Get(mydataclasses);
+  // event->Get(mydataclasses);
   //
   // japp->RootFillLock(this);
   //  ... fill historgrams or trees ...
   // japp->RootFillUnLock(this);
 
   vector<const DFCALGeometry*> fcalGeomVect;
-  loop->Get( fcalGeomVect );
-  if (fcalGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+  event->Get( fcalGeomVect );
+  if (fcalGeomVect.size() < 1) throw JException("FCAL geometry object not available!");
+
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
     
   vector<const DNeutralParticle *> neutralParticleVector;
-  loop->Get(neutralParticleVector);
+  event->Get(neutralParticleVector);
     
     
   // Cut at most 6 neutral particles
-  if (neutralParticleVector.size() > 6 || neutralParticleVector.size() < 2) return NOERROR;
+  if (neutralParticleVector.size() > 6 || neutralParticleVector.size() < 2) return;
     
   for (unsigned int i=0; i< neutralParticleVector.size() - 1; i++){
     const DNeutralParticleHypothesis *photon1 = neutralParticleVector[i]->Get_Hypothesis(Gamma);
@@ -393,27 +385,23 @@ jerror_t JEventProcessor_FCAL_Pi0HFA::evnt(JEventLoop *loop, uint64_t eventnumbe
             
     }
   }
-    
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_Pi0HFA::erun(void)
+void JEventProcessor_FCAL_Pi0HFA::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_Pi0HFA::fini(void)
+void JEventProcessor_FCAL_Pi0HFA::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 

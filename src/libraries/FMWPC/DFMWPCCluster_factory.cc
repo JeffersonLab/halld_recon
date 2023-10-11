@@ -12,8 +12,8 @@
 using namespace std;
 
 #include "DFMWPCCluster_factory.h"
+#include <DANA/DEvent.h>
 
-using namespace jana;
 
 bool DFMWPCHit_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
   if (a->layer==b->layer){
@@ -37,8 +37,9 @@ bool DFMWPCHit_wire_cmp(const DFMWPCHit* a, const DFMWPCHit* b) {
 //------------------
 // init
 //------------------
-jerror_t DFMWPCCluster_factory::init(void)
+void DFMWPCCluster_factory::Init()
 {
+  auto app = GetApplication();
   // Future calibration constants
   TIME_SLICE=10000.0; //ns
   gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
@@ -49,12 +50,11 @@ jerror_t DFMWPCCluster_factory::init(void)
 //------------------
 // brun
 //------------------
-jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DFMWPCCluster_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 
   // Get pointer to DGeometry object
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
+  dgeom  = DEvent::GetDGeometry(event);
 
   // Get the FMWPC z,x and y positions from the HDDM geometry
   // if they are not in there, use hard-coded values
@@ -77,14 +77,14 @@ jerror_t DFMWPCCluster_factory::brun(jana::JEventLoop *eventLoop, int32_t runnum
 //------------------
 // evnt
 //------------------
-jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DFMWPCCluster_factory::Process(const std::shared_ptr<const JEvent> &event)
 {
 
   vector<const DFMWPCHit*> allHits;
   vector<vector<const DFMWPCHit*> >thisLayer;
 
   try {
-    eventLoop->Get(allHits);
+    event->Get(allHits);
     
     if (allHits.size()>0) {
       // Sort hits by layer number and by time
@@ -132,8 +132,6 @@ jerror_t DFMWPCCluster_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   catch (...) {
     cerr << "exception caught in DFMWPCCluster_factory" << endl;
   }
-
-  return NOERROR;
 }
 
 //-----------------------------
@@ -200,18 +198,16 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DFMWPCCluster_factory::erun(void)
+void DFMWPCCluster_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DFMWPCCluster_factory::fini(void)
+void DFMWPCCluster_factory::Finish()
 {
-	return NOERROR;
 }
 

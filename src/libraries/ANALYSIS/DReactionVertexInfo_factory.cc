@@ -1,25 +1,23 @@
 #include "ANALYSIS/DReactionVertexInfo_factory.h"
 
 using namespace std;
-using namespace jana;
 using namespace DAnalysis;
 
-jerror_t DReactionVertexInfo_factory::init(void)
+void DReactionVertexInfo_factory::Init()
 {
 	// This is so that the created objects persist throughout the life of the program instead of being cleared each event.
-	SetFactoryFlag(PERSISTANT);
+	SetFactoryFlag(PERSISTENT);
 	dResourcePool_ReactionStepVertexInfo = new DResourcePool<DReactionStepVertexInfo>();
 
-	gPARMS->SetDefaultParameter("VERTEXINFO:DEBUG_LEVEL", dDebugLevel);
-
-	return NOERROR;
+	auto app = GetApplication();
+	app->SetDefaultParameter("VERTEXINFO:DEBUG_LEVEL", dDebugLevel);
 }
 
-jerror_t DReactionVertexInfo_factory::evnt(JEventLoop *locEventLoop, uint64_t locEventNumber)
+void DReactionVertexInfo_factory::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
+	dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
 
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 	for(auto locReactionIterator = locReactions.begin(); locReactionIterator != locReactions.end(); ++locReactionIterator)
 	{
 		auto locReaction = *locReactionIterator;
@@ -46,11 +44,9 @@ jerror_t DReactionVertexInfo_factory::evnt(JEventLoop *locEventLoop, uint64_t lo
 			DAnalysis::Print_ReactionVertexInfo(locVertexInfo);
 		}
 
-		_data.push_back(locVertexInfo);
+		Insert(locVertexInfo);
 		dVertexInfoMap.emplace(locReaction, locVertexInfo);
 	}
-
-	return NOERROR;
 }
 
 DReactionVertexInfo* DReactionVertexInfo_factory::Build_VertexInfo(const DReaction* locReaction)

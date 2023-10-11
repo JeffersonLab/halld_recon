@@ -9,8 +9,9 @@
 #define _DBCALGeometry_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JEvent.h>
+
+using namespace std;
 
 // create a single number channel id which is useful in algorithms
 // if M L S are module layer sector the bit map looks like:
@@ -29,7 +30,7 @@ public:
   
   JOBJECT_PUBLIC( DBCALGeometry );
   
-  DBCALGeometry(int runnumber);
+  DBCALGeometry(const std::shared_ptr<const JEvent>& event);
   
   enum End { kUpstream, kDownstream };
   
@@ -92,10 +93,9 @@ public:
   int getsector(int globalsector) const;
   int getmodule(int globalsector) const;
 
-private:
+  DBCALGeometry() = delete;       // forbid the default constructor
 
-  DBCALGeometry();       // forbid the default constructor
-  void Initialize(int runnumber);   // this is old, but keep it around for now, make sure no one else can call it
+private:
 
   // as-built geometry
   const int NBCALMODS=48;         ///< number of modules

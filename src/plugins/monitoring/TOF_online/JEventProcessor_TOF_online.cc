@@ -10,10 +10,11 @@
 #include <limits>
 
 #include "JEventProcessor_TOF_online.h"
-#include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
+
+#include <DANA/DEvent.h>
+
 #include <DAQ/DCODAEventInfo.h>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DCAEN1290TDCHit.h>
@@ -72,7 +73,7 @@ static TH2F *TOFWalkExample;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_TOF_online());
+    app->Add(new JEventProcessor_TOF_online());
   }
 }
 
@@ -81,6 +82,7 @@ extern "C"{
 
 
 JEventProcessor_TOF_online::JEventProcessor_TOF_online() {
+	SetTypeName("JEventProcessor_TOF_online");
 }
 
 
@@ -93,7 +95,7 @@ JEventProcessor_TOF_online::~JEventProcessor_TOF_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TOF_online::init(void) {
+void JEventProcessor_TOF_online::Init() {
 
   // create root folder for tof and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -145,34 +147,29 @@ jerror_t JEventProcessor_TOF_online::init(void) {
 
   // back to main dir
   main->cd();
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TOF_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_TOF_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
 
   map<string,double> tdcshift;
   const DTOFGeometry *locTOFGeometry = nullptr;
-  eventLoop->GetSingle(locTOFGeometry);
+  event->GetSingle(locTOFGeometry);
   string locTOFTDCShiftTable = locTOFGeometry->Get_CCDB_DirectoryName() + "/tdc_shift";
-  if(!eventLoop->GetCalib(locTOFTDCShiftTable.c_str(), tdcshift)) {
+  if(!GetCalib(event, locTOFTDCShiftTable.c_str(), tdcshift)) {
     TOF_TDC_SHIFT = tdcshift["TOF_TDC_SHIFT"];
   }
-
- 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_TOF_online::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -180,7 +177,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   // since multiple threads may call this method at the same time.
 
   const DTOFGeometry* locTOFGeometry;
-  eventLoop->GetSingle(locTOFGeometry);
+  event->GetSingle(locTOFGeometry);
 
   uint32_t E,t,pedestal;
   int plane,bar,end;
@@ -216,23 +213,23 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
   // First determine timing shift to resolve 6-fold ambiguity
   /*
   vector<const DCODAEventInfo*> locCODAEventInfo;
-  eventLoop->Get(locCODAEventInfo);
+  event->Get(locCODAEventInfo);
   
   if (locCODAEventInfo.size() == 0){
-    return NOERROR;
+    return;
   }
   */
   
 
   vector< const DCAEN1290TDCHit*> CAENHits;
-  eventLoop->Get(CAENHits);
+  event->Get(CAENHits);
   if (CAENHits.size()<=0){
-    return NOERROR;
+    return;
   }
   uint32_t locROCID = CAENHits[0]->rocid; // this is the crate we want the trigger time from
   int indx = -1;
   vector <const DCODAROCInfo*> ROCS;
-  eventLoop->Get(ROCS);
+  event->Get(ROCS);
   for ( unsigned int n=0; n<ROCS.size(); n++) {
     if (locROCID == ROCS[n]->rocid){
       indx = n;
@@ -240,7 +237,7 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     }
   }
   if (indx<0){
-    return NOERROR;
+    return;
   }
 
   uint64_t TriggerTime = ROCS[indx]->timestamp;
@@ -255,11 +252,11 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
   // get data for tof
   vector<const DTOFHit*> dtofhits;
-  eventLoop->Get(dtofhits);
+  event->Get(dtofhits);
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   if(dtofhits.size() > 0)
 	  tof_num_events->Fill(1);
@@ -452,29 +449,26 @@ jerror_t JEventProcessor_TOF_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
     }
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TOF_online::erun(void) {
+void JEventProcessor_TOF_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TOF_online::fini(void) {
+void JEventProcessor_TOF_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

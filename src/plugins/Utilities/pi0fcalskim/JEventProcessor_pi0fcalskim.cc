@@ -8,14 +8,10 @@
 #include <math.h>
 
 #include "JEventProcessor_pi0fcalskim.h"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include "JANA/JApplication.h"
 #include <TLorentzVector.h>
 #include "TMath.h"
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
@@ -37,7 +33,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_pi0fcalskim());
+    app->Add(new JEventProcessor_pi0fcalskim());
   }
 } // "C"
 
@@ -48,38 +44,7 @@ extern "C"{
 JEventProcessor_pi0fcalskim::JEventProcessor_pi0fcalskim()
 {
 
-  WRITE_EVIO = 1;
-  WRITE_HDDM = 0;
-
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO, "Save skim output as reduced EVIO files (default=1)" );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM, "Save skim output as HDDM (default=0)" );
-
-
-
-  MIN_MASS   = 0.0; // GeV
-  //MAX_MASS   = 0.30; // GeV - old default
-  MAX_MASS   = 1.0; // GeV
-  MIN_E      = 0.5; // GeV (photon energy cut)
-  //MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
-  MAX_DT     =   10; // ns  (cluster time diff. cut)
-  //MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
-  //MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
-
-  SAVE_TOF_HITS = 1;
-
-  WRITE_ROOT = 0;
-  WRITE_EVIO = 1;
-
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_MASS", MIN_MASS, "Minimum two-gamma invariant mass to save (default=0.0 GeV)" );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_MASS", MAX_MASS, "Maximum two-gamma invariant mass to save (default=1.0 GeV)" );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_E", MIN_E, "Minimum photon energy to consider (default = 0.5 GeV)" );
-  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_R", MIN_R );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_DT", MAX_DT, "Minimum Delta T cut between two photons (default = 10 ns)" );
-  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
-  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
-  //gPARMS->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
-  gPARMS->SetDefaultParameter( "PI0FCALSKIM:SAVE_TOF_HITS", MAX_DT, "Save hits from TOF points (default=1)" );
-
+  SetTypeName("JEventProcessor_pi0fcalskim");
 }
 
 //------------------
@@ -91,11 +56,45 @@ JEventProcessor_pi0fcalskim::~JEventProcessor_pi0fcalskim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_pi0fcalskim::init(void)
+void JEventProcessor_pi0fcalskim::Init()
 {
-  num_epics_events = 0;
+	auto app = GetApplication();
+
+	WRITE_EVIO = 1;
+	WRITE_HDDM = 0;
+
+	app->SetDefaultParameter( "PI0FCALSKIM:WRITE_EVIO", WRITE_EVIO, "Save skim output as reduced EVIO files (default=1)" );
+	app->SetDefaultParameter( "PI0FCALSKIM:WRITE_HDDM", WRITE_HDDM, "Save skim output as HDDM (default=0)" );
+
+
+
+	MIN_MASS   = 0.0; // GeV
+	//MAX_MASS   = 0.30; // GeV - old default
+	MAX_MASS   = 1.0; // GeV
+	MIN_E      = 0.5; // GeV (photon energy cut)
+	//MIN_R      =   20; // cm  (cluster distance to beam line) - not currently used
+	MAX_DT     =   10; // ns  (cluster time diff. cut)
+	//MAX_ETOT   =   12; // GeV (max total FCAL energy) - not currently used
+	//MIN_BLOCKS =    2; // minumum blocks per cluster - not currently used
+
+	SAVE_TOF_HITS = 1;
+
+	WRITE_ROOT = 0;
+	WRITE_EVIO = 1;
+
+	app->SetDefaultParameter( "PI0FCALSKIM:MIN_MASS", MIN_MASS, "Minimum two-gamma invariant mass to save (default=0.0 GeV)" );
+	app->SetDefaultParameter( "PI0FCALSKIM:MAX_MASS", MAX_MASS, "Maximum two-gamma invariant mass to save (default=1.0 GeV)" );
+	app->SetDefaultParameter( "PI0FCALSKIM:MIN_E", MIN_E, "Minimum photon energy to consider (default = 0.5 GeV)" );
+	//app->SetDefaultParameter( "PI0FCALSKIM:MIN_R", MIN_R );
+	app->SetDefaultParameter( "PI0FCALSKIM:MAX_DT", MAX_DT, "Minimum Delta T cut between two photons (default = 10 ns)" );
+	//app->SetDefaultParameter( "PI0FCALSKIM:MAX_ETOT", MAX_ETOT );
+	//app->SetDefaultParameter( "PI0FCALSKIM:MIN_BLOCKS", MIN_BLOCKS );
+	//app->SetDefaultParameter( "PI0FCALSKIM:WRITE_ROOT", WRITE_ROOT );
+	app->SetDefaultParameter( "PI0FCALSKIM:SAVE_TOF_HITS", MAX_DT, "Save hits from TOF points (default=1)" );
+
+	num_epics_events = 0;
 /*
   if( ! ( WRITE_ROOT || WRITE_EVIO ) ){
 
@@ -105,7 +104,7 @@ jerror_t JEventProcessor_pi0fcalskim::init(void)
 
   if( WRITE_ROOT ){
 
-    japp->RootWriteLock();
+    lockService->RootWriteLock();
 
     m_tree = new TTree( "cluster", "Cluster Tree for Pi0 Calibration" );
     m_tree->Branch( "nClus", &m_nClus, "nClus/I" );
@@ -118,54 +117,52 @@ jerror_t JEventProcessor_pi0fcalskim::init(void)
     m_tree->Branch( "chan", m_chan, "chan[nHit]/I" );
     m_tree->Branch( "e", m_e, "e[nHit]/F" );
 
-    japp->RootUnLock();
+    lockService->RootUnLock();
   }
 */
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_pi0fcalskim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_pi0fcalskim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_pi0fcalskim::Process(const std::shared_ptr<const JEvent>& event)
 {
  
   vector< const DFCALShower* > locFCALShowers;
   vector< const DTOFPoint* > locTOFPoints;
   vector< const DVertex* > kinfitVertex;
-  loop->Get(locFCALShowers);
-  loop->Get(locTOFPoints);
-  loop->Get(kinfitVertex);
+  event->Get(locFCALShowers);
+  event->Get(locTOFPoints);
+  event->Get(kinfitVertex);
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
-  loop->Get(locTrackTimeBased);
+  event->Get(locTrackTimeBased);
 
   vector < const DFCALShower * > matchedShowers;
 
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	loop->GetSingle(locEventWriterEVIO);
+	event->GetSingle(locEventWriterEVIO);
 
   // always write out BOR events
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcalskim" );
-      return NOERROR;
+      locEventWriterEVIO->Write_EVIOEvent( event, "pi0fcalskim" );
+      return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcalskim" );
+      locEventWriterEVIO->Write_EVIOEvent( event, "pi0fcalskim" );
       num_epics_events++;
-      return NOERROR;
+      return;
   }
 
   vector< const JObject* > locObjectsToSave;  
@@ -192,7 +189,7 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
     }
 
     vector<const DEventRFBunch*> locEventRFBunches;
-    loop->Get(locEventRFBunches);
+    event->Get(locEventRFBunches);
     if(locEventRFBunches.size() > 0) {
         locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
     }
@@ -200,7 +197,7 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
  // Double_t radius = 0;
-  //japp->RootWriteLock();
+  //lockService->RootWriteLock();
   //Double_t p;
   for (unsigned int i=0; i < locTrackTimeBased.size() ; ++i){
     vector<DTrackFitter::Extrapolation_t>extrapolations=locTrackTimeBased[i]->extrapolations.at(SYS_FCAL);
@@ -300,12 +297,12 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
  if( Candidate ){
 
     if( WRITE_EVIO ){
-        locEventWriterEVIO->Write_EVIOEvent( loop, "pi0fcalskim", locObjectsToSave );
+        locEventWriterEVIO->Write_EVIOEvent( event, "pi0fcalskim", locObjectsToSave );
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
-      loop->Get(locEventWriterHDDMVector);
-      locEventWriterHDDMVector[0]->Write_HDDMEvent(loop, ""); 
+      event->Get(locEventWriterHDDMVector);
+      locEventWriterHDDMVector[0]->Write_HDDMEvent(event, "");
     }
 
  }
@@ -313,9 +310,9 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
  
  /*
   vector< const DFCALCluster* > clusterVec;
-  loop->Get( clusterVec );
+  event->Get( clusterVec );
 
-  if( clusterVec.size() < 2 ) return NOERROR;
+  if( clusterVec.size() < 2 ) return;
 
   bool hasCandidate = false;
   double eTot = 0;
@@ -381,33 +378,33 @@ jerror_t JEventProcessor_pi0fcalskim::evnt(JEventLoop *loop, uint64_t eventnumbe
 
     if( WRITE_ROOT ){
 
-      japp->RootWriteLock();
+      lockService->RootWriteLock();
       writeClustersToRoot( clusterVec );
-      japp->RootUnLock();
+      lockService->RootUnLock();
     }
   }
 */
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_pi0fcalskim::erun(void)
+void JEventProcessor_pi0fcalskim::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 //------------------
 // Fin
 //------------------
-jerror_t JEventProcessor_pi0fcalskim::fini(void)
+void JEventProcessor_pi0fcalskim::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

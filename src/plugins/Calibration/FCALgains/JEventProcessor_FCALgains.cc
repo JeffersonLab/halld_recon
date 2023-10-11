@@ -1,8 +1,7 @@
 #include "JEventProcessor_FCALgains.h"
 #include <TLorentzVector.h>
 #include "TMath.h"
-#include "JANA/JApplication.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
@@ -28,23 +27,25 @@ extern "C"
   void InitPlugin(JApplication *locApplication)
   {
     InitJANAPlugin(locApplication);
-    locApplication->AddProcessor(new JEventProcessor_FCALgains()); //register this plugin
+    locApplication->Add(new JEventProcessor_FCALgains()); //register this plugin
   }
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCALgains::init(void)
+void JEventProcessor_FCALgains::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
   // ROOT mutex like this:
-  japp->RootWriteLock();
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+  lockService->RootWriteLock();
 
   if(InvMass1 && InvMass2 != NULL){
-    japp->RootUnLock();
-    return NOERROR;
+    lockService->RootUnLock();
+    return;
   }
 
   n_channels = 2800;
@@ -108,10 +109,7 @@ jerror_t JEventProcessor_FCALgains::init(void)
 			  m_event = 0;
 			  m_TotPastCuts = 0;
 
-			  japp->RootUnLock();
-
-
-			  return NOERROR;
+			  lockService->RootUnLock();
 }
 int JEventProcessor_FCALgains::XYtoAbsNum(int my_x, int my_y)
 {
@@ -130,20 +128,17 @@ pair<int,int> JEventProcessor_FCALgains::AbsNumtoXY(int channel)
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCALgains::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void JEventProcessor_FCALgains::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
-  DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
   double z_target; double z_fcal;
-  const DGeometry* dgeom = locApplication->GetDGeometry(locRunNumber);
+  const DGeometry* dgeom = GetDGeometry(locEvent);
 
   dgeom->GetTargetZ(z_target);
   dgeom->GetFCALZ(z_fcal);
 
   z_diff = z_fcal - z_target;
-
-  return NOERROR;
 }
 
 
@@ -152,38 +147,38 @@ jerror_t JEventProcessor_FCALgains::brun(jana::JEventLoop* locEventLoop, int32_t
 
 
 
-jerror_t JEventProcessor_FCALgains::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void JEventProcessor_FCALgains::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
-  // locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+  // locEvent->Get(...) to get reconstructed objects (and thereby activating the
   // reconstruction algorithm) should be done outside of any mutex lock
   // since multiple threads may call this method at the same time.
   //
   // Here's an example:
   //
   // vector<const MyDataClass*> mydataclasses;
-  // locEventLoop->Get(mydataclasses);
+  // locEvent->Get(mydataclasses);
   //
-  // japp->RootWriteLock();
+  // GetLockService(locEvent)->RootWriteLock();
   //  ... fill historgrams or trees ...
-  // japp->RootUnLock();
+  // GetLockService(locEvent)->RootUnLock();
 
   // DOCUMENTATION:
   // ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
 
     vector< const DFCALHit*> hits;
-    locEventLoop->Get( hits );
+    locEvent->Get( hits );
 
   vector< const DFCALShower* > locFCALShowers;
   vector< const DVertex* > kinfitVertex;
     vector< const DTrackTimeBased* > locTrackTimeBased;
     if( hits.size() <= 500 ){  // only form clusters and showers if there aren't too many hits
 
-  locEventLoop->Get(locFCALShowers);
-    locEventLoop->Get(kinfitVertex);
-      locEventLoop->Get(locTrackTimeBased);
+  locEvent->Get(locFCALShowers);
+    locEvent->Get(kinfitVertex);
+      locEvent->Get(locTrackTimeBased);
 }
   
   vector < const DFCALShower * > matchedShowers;
@@ -227,7 +222,7 @@ jerror_t JEventProcessor_FCALgains::evnt(jana::JEventLoop* locEventLoop, uint64_
     }
   }
   
-    japp->RootWriteLock();
+    GetLockService(locEvent)->RootWriteLock();
   
     if (locFCALShowers.size() >=2) {
     
@@ -396,34 +391,30 @@ jerror_t JEventProcessor_FCALgains::evnt(jana::JEventLoop* locEventLoop, uint64_
       }
     }
 }
-  japp->RootUnLock();
-  
-  //	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+  lockService->RootUnLock();
 
-  return NOERROR;
+  //	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCALgains::erun(void)
+void JEventProcessor_FCALgains::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
 
-  return NOERROR;
 }
 
 
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCALgains::fini(void)
+void JEventProcessor_FCALgains::Finish()
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

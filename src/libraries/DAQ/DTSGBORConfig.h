@@ -21,7 +21,7 @@
 
 
 
-class DTSGBORConfig:public jana::JObject{
+class DTSGBORConfig:public JObject{
 	public:
 		JOBJECT_PUBLIC(DTSGBORConfig);
 
@@ -33,14 +33,12 @@ class DTSGBORConfig:public jana::JObject{
 		uint32_t run_number;
 		uint32_t unix_time;
 		vector<uint32_t> misc_words; // extra words that may be added later
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-		
-			AddString(items, "run_number" , "%d"  , run_number);
-			AddString(items, "unix_time"  , "%d"  , unix_time);
-			AddString(items, "Nwords"     , "%d"  , misc_words.size());
+
+
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(run_number, NAME_OF(run_number), "%d");
+			summary.add(unix_time, NAME_OF(unix_time), "%d");
+			summary.add(misc_words.size(), "Nwords", "%d");
 		}
 
 };

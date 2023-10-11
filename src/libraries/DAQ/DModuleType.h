@@ -10,6 +10,7 @@
 #define _DModuleType_
 
 #include <string>
+using namespace std;
 
 class DModuleType{
 	public:

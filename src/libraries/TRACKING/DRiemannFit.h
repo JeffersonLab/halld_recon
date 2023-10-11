@@ -5,7 +5,7 @@
 using namespace std;
 
 #include <DMatrix.h>
-#include "JANA/jerror.h"
+#include "JANA/Compatibility/jerror.h"
 #include <DVector3.h>
 
 typedef struct{

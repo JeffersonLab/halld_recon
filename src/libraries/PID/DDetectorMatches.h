@@ -226,7 +226,7 @@ class DDetectorMatches : public JObject
 		inline void Set_DistanceToNearestTrack(const DFCALShower* locFCALShower, double locDistanceToNearestTrack);
 		inline void Set_FlightTimePCorrelation(const DTrackingData* locTrack, DetectorSystem_t locDetectorSystem, double locCorrelation);
 
-		void toStrings(vector<pair<string,string> >& items) const
+		void Summarize(JObjectSummary& summary) const override
 		{
 			AddString(items, "#_Track_BCAL_Matches", "%d", Get_NumTrackBCALMatches());
 			AddString(items, "#_Track_FCAL_Matches", "%d", Get_NumTrackFCALMatches());

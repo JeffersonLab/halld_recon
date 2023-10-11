@@ -13,41 +13,43 @@
 #include <mutex>
 using namespace std;
 
+#include "DBeamCurrent_factory.h"
+
+#include <DANA/DEvent.h>
+
 #include <DAQ/DCODAEventInfo.h>
 #include <DAQ/DCODAROCInfo.h>
-#include "DBeamCurrent_factory.h"
-using namespace jana;
 
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamCurrent_factory::init(void)
+void DBeamCurrent_factory::Init()
 {
+	auto app = GetApplication();
+	
 	BEAM_ON_MIN_PSCOUNTS = 3000;
 	USE_EPICS_FOR_BEAM_ON = false;
 	BEAM_ON_MIN_nA  = 10.0;  // nA
 	BEAM_TRIP_MIN_T = 3.0;   // seconds
 	SYNCSKIM_ROCID  = 34;    // rocBCAL4
 	
-	gPARMS->SetDefaultParameter("BEAM_ON_MIN_PSCOUNTS", BEAM_ON_MIN_PSCOUNTS, "Minimum counts in PS to consider the beam \"on\" by DBeamCurrent");
-	gPARMS->SetDefaultParameter("USE_EPICS_FOR_BEAM_ON", USE_EPICS_FOR_BEAM_ON, "Use map from EPICS in DBeamCurrent to decide if the beam is \"on\" (MIGHT BE BROKEN!)");
-	gPARMS->SetDefaultParameter("BEAM_ON_MIN_nA", BEAM_ON_MIN_nA, "Minimum current in nA to consider the beam \"on\" by DBeamCurrent (only used with EPICS map)");
-	gPARMS->SetDefaultParameter("BEAM_TRIP_MIN_T", BEAM_TRIP_MIN_T, "Minimum amount of time in seconds that event is away from beam trips to be considered fiducial");
-	gPARMS->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
+	app->SetDefaultParameter("BEAM_ON_MIN_PSCOUNTS", BEAM_ON_MIN_PSCOUNTS, "Minimum counts in PS to consider the beam \"on\" by DBeamCurrent");
+	app->SetDefaultParameter("USE_EPICS_FOR_BEAM_ON", USE_EPICS_FOR_BEAM_ON, "Use map from EPICS in DBeamCurrent to decide if the beam is \"on\" (MIGHT BE BROKEN!)");
+	app->SetDefaultParameter("BEAM_ON_MIN_nA", BEAM_ON_MIN_nA, "Minimum current in nA to consider the beam \"on\" by DBeamCurrent (only used with EPICS map)");
+	app->SetDefaultParameter("BEAM_TRIP_MIN_T", BEAM_TRIP_MIN_T, "Minimum amount of time in seconds that event is away from beam trips to be considered fiducial");
+	app->SetDefaultParameter("SYNCSKIM:ROCID", SYNCSKIM_ROCID, "ROC id from which to use timestamp. Set to 0 to use average timestamp from CODA EB. Default is 34 (rocBCAL4)");
 
 	ticks_per_sec      = 250.011E6; // 250MHz clock (may be overwritten with calib constant in brun)
 	rcdb_start_time    = 0;       // unix time of when 250MHz clock was reset. (overwritten below)
 	rcdb_250MHz_offset_tics = 0;  // offset between 250MHz clock zero and RCDB recorded start time of event (overwritten below)
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DBeamCurrent_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// Clear maps in case we are called more than once
 	boundaries.clear();
@@ -73,7 +75,7 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 	string electron_beam_proxy; //will be either PS counts (default) or current as measured by EPICS
 	double cutoffval=0; // either counts in PS or minimum bean current
 	
-	loop->GetJCalibration()->GetCalib("/ELECTRON_BEAM/timestamp_to_unix", mcalib);
+	DEvent::GetCalib(event, "/ELECTRON_BEAM/timestamp_to_unix", mcalib);
 	if(mcalib.size() == 3){
 		//ticks_per_sec           = atof(mcalib["tics_per_sec"].c_str());
 		rcdb_250MHz_offset_tics = stoull(mcalib["rcdb_250MHz_offset_tics"].c_str());
@@ -81,21 +83,21 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 	}
 		
 	if(USE_EPICS_FOR_BEAM_ON){
-		loop->GetJCalibration()->GetCalib("/ELECTRON_BEAM/current_map_epics", mstr);
-		if(mstr.empty()) return NOERROR;
+		DEvent::GetCalib(event, "/ELECTRON_BEAM/current_map_epics", mstr);
+		if(mstr.empty()) return;
 		electron_beam_proxy = mstr.begin()->second;
 		cutoffval = BEAM_ON_MIN_nA;
 		jout << "Use map from EPICS in DBeamCurrent to decide if the beam is \"on\" (MIGHT BE BROKEN!)" << endl;
 	}
 	else{
 	        double new_cutoff;
-		if(loop->GetCalib("/ELECTRON_BEAM/ps_counts_threshold",new_cutoff))
+		if(DEvent::GetCalib(event, "/ELECTRON_BEAM/ps_counts_threshold",new_cutoff))
 		    jerr << "Error loading /ELECTRON_BEAM/ps_counts_threshold !" << endl;
 		else 
 		    BEAM_ON_MIN_PSCOUNTS = new_cutoff;
 
-		loop->GetJCalibration()->GetCalib("/ELECTRON_BEAM/ps_counts", mstr);
-		if(mstr.empty()) return NOERROR;
+		DEvent::GetCalib(event, "/ELECTRON_BEAM/ps_counts", mstr);
+		if(mstr.empty()) return;// NOERROR;
 		electron_beam_proxy = mstr.begin()->second;
 		cutoffval = BEAM_ON_MIN_PSCOUNTS;
 	}
@@ -155,27 +157,26 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 	static mutex mtx;
 	lock_guard<mutex> lck(mtx);
 	static set<int32_t> runs_loaded;
+	auto runnumber = event->GetRunNumber();
 	if(runs_loaded.find(runnumber) == runs_loaded.end()){
 		jout << "Electron beam current trip map for run " << runnumber << " loaded with " << boundaries.size() << " boundaries (" << trip.size() << " trips over " << t_max << " sec) using threshold " << cutoffval << endl;
 		runs_loaded.insert(runnumber);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBeamCurrent_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
-	if(boundaries.empty()) return NOERROR;
+	if(boundaries.empty()) return;
 
 	// Get time of this event relative to start of run in seconds
-	// n.b. don't use loop->GetSingle() here. It results in infinite
+	// n.b. don't use event->GetSingle() here. It results in infinite
 	// recursion.
 	vector<const DCODAEventInfo*> codainfos;
-	loop->Get(codainfos);
-	if(codainfos.empty()) return NOERROR;
+	event->Get(codainfos);
+	if(codainfos.empty()) return;
 	const DCODAEventInfo *codainfo = codainfos[0];
 
 	// Get timestamp
@@ -189,7 +190,7 @@ jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		// Use timestamp from the specified ROC. The default is 
 		// ROCID=34 which is the rocBCAL4 crate.
 		vector<const DCODAROCInfo*> codarocinfos;
-		loop->Get(codarocinfos);
+		event->Get(codarocinfos);
 		for( auto codarocinfo : codarocinfos ){
 			if( codarocinfo->rocid == SYNCSKIM_ROCID ){
 				mytimestamp = codarocinfo->timestamp;
@@ -233,26 +234,23 @@ jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 			}
 		}
 		
-		_data.push_back(bc);
+		Insert(bc);
 	}
 
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBeamCurrent_factory::erun(void)
+void DBeamCurrent_factory::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBeamCurrent_factory::fini(void)
+void DBeamCurrent_factory::Finish()
 {
-	return NOERROR;
 }
 
 //------------------

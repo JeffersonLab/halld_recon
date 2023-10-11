@@ -12,19 +12,24 @@
 
 #include <TH1F.h>
 #include <TH2F.h>
+#include <JANA/Compatibility/JLockService.h>
 
-class JEventProcessor_CDC_PerStrawReco:public jana::JEventProcessor{
+using std::vector;
+
+class JEventProcessor_CDC_PerStrawReco:public JEventProcessor{
 	public:
 		JEventProcessor_CDC_PerStrawReco();
 		~JEventProcessor_CDC_PerStrawReco();
-		const char* className(void){return "JEventProcessor_CDC_PerStrawReco";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+
+		std::shared_ptr<JLockService> lockService;
+
         int EXCLUDERING;
         vector<vector<double> >max_sag;
         vector<vector<double> >sag_phi_offset;

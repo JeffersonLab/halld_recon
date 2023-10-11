@@ -30,10 +30,11 @@ struct StepStruct {DReferenceTrajectory::swim_step_t steps[256];};
 // DReferenceTrajectory    (Constructor)
 //---------------------------------
 DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
+														, JApplication* app
 														, double q
 														, swim_step_t *swim_steps
 														, int max_swim_steps
-														, double step_size)
+														, double step_size )
 {
 	// Copy some values into data members
 	this->q = q;
@@ -65,13 +66,16 @@ DReferenceTrajectory::DReferenceTrajectory(const DMagneticFieldMap *bfield
 	MIN_STEP_SIZE = 0.1;	// cm
 	MAX_STEP_SIZE = 3.0;		// cm
 	int MAX_SWIM_STEPS = 2500;
-	
-	gPARMS->SetDefaultParameter("TRK:BOUNDARY_STEP_FRACTION" , BOUNDARY_STEP_FRACTION, "Fraction of estimated distance to boundary to use as step size");
-	gPARMS->SetDefaultParameter("TRK:MIN_STEP_SIZE" , MIN_STEP_SIZE, "Minimum step size in cm to take when swimming a track with adaptive step sizes");
-	gPARMS->SetDefaultParameter("TRK:MAX_STEP_SIZE" , MAX_STEP_SIZE, "Maximum step size in cm to take when swimming a track with adaptive step sizes");
-	gPARMS->SetDefaultParameter("TRK:MAX_SWIM_STEPS" , MAX_SWIM_STEPS, "Number of swim steps for DReferenceTrajectory to allocate memory for (when not using external buffer)");
-	gPARMS->SetDefaultParameter("TRK:DEBUG_LEVEL" , this->debug_level);
-	
+
+	this->app = app;
+	if (app != nullptr) {
+		app->SetDefaultParameter("TRK:BOUNDARY_STEP_FRACTION" , BOUNDARY_STEP_FRACTION, "Fraction of estimated distance to boundary to use as step size");
+		app->SetDefaultParameter("TRK:MIN_STEP_SIZE" , MIN_STEP_SIZE, "Minimum step size in cm to take when swimming a track with adaptive step sizes");
+		app->SetDefaultParameter("TRK:MAX_STEP_SIZE" , MAX_STEP_SIZE, "Maximum step size in cm to take when swimming a track with adaptive step sizes");
+		app->SetDefaultParameter("TRK:MAX_SWIM_STEPS" , MAX_SWIM_STEPS, "Number of swim steps for DReferenceTrajectory to allocate memory for (when not using external buffer)");
+		app->SetDefaultParameter("TRK:DEBUG_LEVEL" , this->debug_level);
+	}
+
 	// It turns out that the greatest bottleneck in speed here comes from
 	// allocating/deallocating the large block of memory required to hold
 	// all of the trajectory info. The preferred way of calling this is 
@@ -334,7 +338,7 @@ void DReferenceTrajectory::FastSwimForHitSelection(const DVector3 &pos, const DV
        
     if(Nswim_steps>=this->max_swim_steps){
       if (debug_level>0){
-	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
       }
       break;
     }
@@ -465,7 +469,7 @@ void DReferenceTrajectory::FastSwim(const DVector3 &pos, const DVector3 &mom, do
        
     if(Nswim_steps>=this->max_swim_steps){
       if (debug_level>0){
-	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+	jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
       }
       break;
     }
@@ -682,7 +686,7 @@ void DReferenceTrajectory::Swim(const DVector3 &pos, const DVector3 &mom, double
 	
 		if(Nswim_steps>=this->max_swim_steps){
 		  if (debug_level>0){
-			jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<endl;
+			jerr<<__FILE__<<":"<<__LINE__<<" Too many steps in trajectory. Truncating..."<<jendl;
 		  }
 			break;
 		}
@@ -1192,7 +1196,7 @@ int DReferenceTrajectory::InsertSteps(const swim_step_t *start_step, double delt
 	// is it can't handle arrays so it has to be wrapped in a struct.
 	auto_ptr<StepStruct> steps_aptr(new StepStruct);
 	DReferenceTrajectory::swim_step_t *steps = steps_aptr->steps;
-	DReferenceTrajectory rt(bfield , my_q , steps , 256);
+	DReferenceTrajectory rt(bfield , app , my_q , steps , 256);
 	rt.SetStepSize(step_size);
 	rt.Swim(pos, mom, my_q,NULL,fabs(delta_s));
 	if(rt.Nswim_steps==0)return 1;

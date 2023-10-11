@@ -8,7 +8,6 @@
 #include "JEventProcessor_PS_flux.h"
 
 using namespace std;
-using namespace jana;
 
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
@@ -19,9 +18,8 @@ using namespace jana;
 #include <TAGGER/DTAGMGeometry.h>
 #include <PID/DBeamPhoton.h>
 #include <DAQ/DBeamCurrent.h>
+#include <DANA/DEvent.h>
 
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -61,7 +59,7 @@ static TH2I *hPSTAG_tdiffVsEtag;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_PS_flux());
+        app->Add(new JEventProcessor_PS_flux());
 
     }
 } // "C"
@@ -74,7 +72,7 @@ thread_local DTreeFillData JEventProcessor_PS_flux::dTreeFillData;
 //------------------
 JEventProcessor_PS_flux::JEventProcessor_PS_flux()
 {
-
+	SetTypeName("JEventProcessor_PS_flux");
 }
 
 //------------------
@@ -86,10 +84,13 @@ JEventProcessor_PS_flux::~JEventProcessor_PS_flux()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_PS_flux::init(void)
+void JEventProcessor_PS_flux::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     // energy binning
     const double Ebw_PS = 0.05;
     const double Ebl_PS = 5.0; 
@@ -184,25 +185,26 @@ jerror_t JEventProcessor_PS_flux::init(void)
     //REGISTER BRANCHES
     dTreeInterface->Create_Branches(locTreeBranchRegister);
 
-    return NOERROR;
+    return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PS_flux::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
    
     dBeamCurrentFactory = new DBeamCurrent_factory();
-    dBeamCurrentFactory->init();
-    dBeamCurrentFactory->brun(eventLoop, runnumber);
+    dBeamCurrentFactory->SetApplication(GetApplication());
+    dBeamCurrentFactory->Init();
+    dBeamCurrentFactory->BeginRun(event);
+    // TODO: NWB: FML
 
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
-    eventLoop->Get(psGeomVect);
-    if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    event->Get(psGeomVect);
+    if (psGeomVect.size() < 1) throw JException("DPSGeometry missing");
     const DPSGeometry *locPSGeom = psGeomVect[0];
 
     // PS pair energy binning
@@ -218,9 +220,8 @@ jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
     }
     // extract the TAGH geometry
     vector<const DTAGHGeometry*> taghGeomVect;
-    eventLoop->Get(taghGeomVect);
-    if (taghGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    event->Get(taghGeomVect);
+    if (taghGeomVect.size() < 1) throw JException("DTAGHGeometry missing");
     const DTAGHGeometry& taghGeom = *(taghGeomVect[0]);
     // get photon energy bin low of each counter for energy histogram binning
     double Elows_TAGH[NC_TAGH+1];
@@ -231,9 +232,8 @@ jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
     Elows_TAGH[NC_TAGH] = taghGeom.getEhigh(1);
     // extract the TAGM geometry
     vector<const DTAGMGeometry*> tagmGeomVect;
-    eventLoop->Get(tagmGeomVect);
-    if (tagmGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    event->Get(tagmGeomVect);
+    if (tagmGeomVect.size() < 1) throw JException("DTAGMGeometry missing");
     const DTAGMGeometry& tagmGeom = *(tagmGeomVect[0]);
     // get photon energy bin low of each counter for energy histogram binning
     double Elows_TAGM[NC_TAGM+1];
@@ -255,11 +255,11 @@ jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
     }
 
     vector<double> locBeamPeriodVector;
-    eventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+    GetCalib(event, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
     dBeamBunchPeriod = locBeamPeriodVector[0];
 
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     // set variable-width energy bins if histogram is empty
     // PS
@@ -270,43 +270,43 @@ jerror_t JEventProcessor_PS_flux::brun(JEventLoop *eventLoop, int32_t runnumber)
     if (hPSTAGH_EdiffVsEtagh->GetEntries()==0) hPSTAGH_EdiffVsEtagh->SetBins(NC_TAGH,Elows_TAGH,NEdiff,EdiffLows);
     // TAGM
     if (hPSTAGM_EdiffVsEtagm->GetEntries()==0) hPSTAGM_EdiffVsEtagm->SetBins(NC_TAGM,Elows_TAGM,NEdiff,EdiffLows);
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    //
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PS_flux::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
+
+    auto eventnumber = event->GetEventNumber();
+
     // coarse PS pairs
     vector<const DPSCPair*> cpairs;
-    loop->Get(cpairs);
+    event->Get(cpairs);
     // fine PS pairs
     vector<const DPSPair*> fpairs;
-    loop->Get(fpairs);
+    event->Get(fpairs);
 
     // tagger hits
     vector<const DBeamPhoton*> beamPhotons;
-    loop->Get(beamPhotons);
+    event->Get(beamPhotons);
 
     // extract the PS geometry
     vector<const DPSGeometry*> psGeomVect;
-    loop->Get(psGeomVect);
-    if (psGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    event->Get(psGeomVect);
+    if (psGeomVect.size() < 1) throw JException("DPSGeometry missing");
     const DPSGeometry *locPSGeom = psGeomVect[0];
 
     // beam current and fiducial definition
     vector<const DBeamCurrent*> beamCurrent;
-    loop->Get(beamCurrent);
+    event->Get(beamCurrent);
 
     // get start and end time of events relative to start of run from DBeamCurrent
     if(!beamCurrent.empty()) {
@@ -318,7 +318,7 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
     psflux_num_events->Fill(1);
     if(!beamCurrent.empty()) {
 	    hBeamCurrentTime->Fill(beamCurrent[0]->t);
@@ -335,7 +335,7 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
         const DPSCHit* clhit = cpairs[0]->ee.first; // left hit in coarse PS
         const DPSCHit* crhit = cpairs[0]->ee.second;// right hit in coarse PS
         double PSC_tdiff = clhit->t-crhit->t;
-	if (fabs(PSC_tdiff) > 6.) {japp->RootFillUnLock(this); return NOERROR;}
+	if (fabs(PSC_tdiff) > 6.) {lockService->RootUnLock(); return;}
 	psflux_num_events->Fill(2);
 
         // PSC,PS coincidences
@@ -346,8 +346,8 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
             const DPSPair::PSClust* frhit = fpairs[0]->ee.second; // right hit in fine PS
 
 	    // geometry check for PS/PSC matching
-	    if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1]) {japp->RootFillUnLock(this); return NOERROR;}
-	    if(frhit->column < geomModuleColumn[crhit->module-1][0] || frhit->column > geomModuleColumn[crhit->module-1][1]) {japp->RootFillUnLock(this); return NOERROR;}
+	    if(flhit->column < geomModuleColumn[clhit->module-1][0] || flhit->column > geomModuleColumn[clhit->module-1][1]) {lockService->RootUnLock(); return;}
+	    if(frhit->column < geomModuleColumn[crhit->module-1][0] || frhit->column > geomModuleColumn[crhit->module-1][1]) {lockService->RootUnLock(); return;}
 
 	    // energy variables with random spread in energy bite
 	    // left  - arm 0
@@ -451,15 +451,13 @@ jerror_t JEventProcessor_PS_flux::evnt(JEventLoop *loop, uint64_t eventnumber)
         }
     }
     //
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PS_flux::erun(void)
+void JEventProcessor_PS_flux::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
@@ -469,19 +467,15 @@ jerror_t JEventProcessor_PS_flux::erun(void)
     double finalFiducialTime = dBeamCurrentFactory->IntegratedFiducialTime(t_start, t_end);
     //cout<<endl<<"Fiducial time: "<<finalFiducialTime<<endl;
     hFiducialTime->SetBinContent(1., finalFiducialTime);
-
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PS_flux::fini(void)
+void JEventProcessor_PS_flux::Finish()
 {
     // Called before program exit after event processing is finished.
 	
     delete dTreeInterface; //saves trees to file, closes file
-
-    return NOERROR;
 }
 

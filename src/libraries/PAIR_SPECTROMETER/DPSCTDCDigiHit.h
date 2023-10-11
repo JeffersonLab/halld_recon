@@ -9,20 +9,17 @@
 #define _DPSCTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DPSCTDCDigiHit:public jana::JObject{
+class DPSCTDCDigiHit : public JObject {
  public:
   JOBJECT_PUBLIC(DPSCTDCDigiHit);
-		
-  // Add data members here. For example:
-  int counter_id;
 
+  int counter_id;
   uint32_t time;
-  
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "counter_id", "%d", counter_id);
-    AddString(items, "time", "%d", time);
+
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(counter_id, NAME_OF(counter_id), "%d");
+    summary.add(time, NAME_OF(time), "%d");
   }
 };
 

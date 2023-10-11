@@ -58,22 +58,22 @@
 
 #include "CompCand.h"
 
-using namespace jana;
 using namespace std;
 
 
 class JEventProcessor_compton:public JEventProcessor{
  	public:
-		JEventProcessor_compton(){};
+		JEventProcessor_compton(){
+			SetTypeName("JEventProcessor_compton");
+		};
   		~JEventProcessor_compton(){};
-  		const char* className(void){return "JEventProcessor_compton";}
-	
+
  	private:
-		jerror_t init(void);
-  		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  		jerror_t erun(void);
-  		jerror_t fini(void);
+		void Init() override;
+  		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  		void Process(const std::shared_ptr<const JEvent>& event) override;
+  		void EndRun() override;
+  		void Finish() override;
 		
 		int ccalLayer(int row, int col);
 		int fcalLayer(int row, int col);

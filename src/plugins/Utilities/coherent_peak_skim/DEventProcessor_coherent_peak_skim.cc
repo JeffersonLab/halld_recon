@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_coherent_peak_skim.h"
+#include "DANA/DEvent.h"
 
 // Routine used to create our DEventProcessor
 
@@ -14,14 +15,14 @@ extern "C"
 	void InitPlugin(JApplication *locApplication)
 	{
 		InitJANAPlugin(locApplication);
-		locApplication->AddProcessor(new DEventProcessor_coherent_peak_skim()); //register this plugin
+		locApplication->Add(new DEventProcessor_coherent_peak_skim()); //register this plugin
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_coherent_peak_skim::init(void)
+void DEventProcessor_coherent_peak_skim::Init()
 {
 	// This is called once at program startup.
 
@@ -49,52 +50,48 @@ jerror_t DEventProcessor_coherent_peak_skim::init(void)
 	dTimingCutMap[Positron][SYS_FCAL] = 3.0;
 
 	dShowerEOverPCut = 0.75;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_coherent_peak_skim::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber)
+void DEventProcessor_coherent_peak_skim::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called whenever the run number changes
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 	dCoherentPeakRange = pair<double, double>(8.4, 9.0);
 	map<string, double> photon_beam_param;
-	if(locEventLoop->GetCalib("/ANALYSIS/beam_asymmetry/coherent_energy", photon_beam_param) == false)
+	if(GetCalib(locEvent, "/ANALYSIS/beam_asymmetry/coherent_energy", photon_beam_param) == false)
 		dCoherentPeakRange = pair<double, double>(photon_beam_param["cohmin_energy"], photon_beam_param["cohedge_energy"]);
 	dCoherentPeakRange.first -= 0.2; //same as below
 	dCoherentPeakRange.second += 0.2; //in case the high-side edge is fluctuating a lot
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(locRunNumber);
+	DGeometry* locGeometry = GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetCenterZ);
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_coherent_peak_skim::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DEventProcessor_coherent_peak_skim::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// locEventLoop->Get(...) to get reconstructed objects (and thereby activating the
+	// locEvent->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	//
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// locEventLoop->Get(mydataclasses);
+	// locEvent->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootUnLock();
 
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -103,13 +100,13 @@ jerror_t DEventProcessor_coherent_peak_skim::evnt(jana::JEventLoop* locEventLoop
 	//Because junk or accidental tracks could have voted on which is the correct RF bunch
 
 	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	locEvent->Get(locBeamPhotons);
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, "PreSelect");
+	locEvent->Get(locChargedTracks, "PreSelect");
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	locEvent->GetSingle(locEventRFBunch);
 /*
 	bool locIsHadronicEventFlag = false;
 	for(auto locTrack : locChargedTracks)
@@ -162,13 +159,11 @@ jerror_t DEventProcessor_coherent_peak_skim::evnt(jana::JEventLoop* locEventLoop
 
 	//Optional: Save event to output REST file. Use this to create physical skims.
 	const DEventWriterREST* locEventWriterREST = NULL;
-	locEventLoop->GetSingle(locEventWriterREST);
+	locEvent->GetSingle(locEventWriterREST);
 //	if(locIsHadronicEventFlag && locCoherentPeakFlag)
-//		locEventWriterREST->Write_RESTEvent(locEventLoop, "hadronic_coherent_peak"); //string is part of output file name
+//		locEventWriterREST->Write_RESTEvent(locEvent, "hadronic_coherent_peak"); //string is part of output file name
 	if(locCoherentPeakFlag && locIsTrackEventFlag)
-		locEventWriterREST->Write_RESTEvent(locEventLoop, "coherent_peak"); //string is part of output file name
-
-	return NOERROR;
+		locEventWriterREST->Write_RESTEvent(locEvent, "coherent_peak"); //string is part of output file name
 }
 
 bool DEventProcessor_coherent_peak_skim::Cut_ShowerEOverP(const DChargedTrackHypothesis* locChargedHypo) const

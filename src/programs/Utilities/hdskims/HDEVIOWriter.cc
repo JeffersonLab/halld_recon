@@ -14,8 +14,7 @@ using namespace std;
 #include "hdbyte_swapout.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JParameterManager.h>
-using namespace jana;
+#include <JANA/Services/JParameterManager.h>
 
 //---------------------------------
 // HDEVIOWriter    (Constructor)
@@ -37,8 +36,10 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
 	MAX_OUTPUT_BUFFER_SIZE = 0;   // in words (0=AUTO)
 	MAX_HOLD_TIME          = 2;   // in seconds
 	NEVENTS_PER_BLOCK      = 100;  // suggested number of events per EVIO block
-	DEBUG_FILES            = false; 
+	DEBUG_FILES            = false;
 
+	// NWB: main() doesn't appear to be actually initializing japp or passing it the argv, so this should be a no-op
+	/*
 	if(gPARMS){
 		// We want the default for MAX_OUTPUT_BUFFER_SIZE to be "AUTO" so that it can be set
 		// based on the ET system evnt size. This means the type of the config. variable
@@ -56,6 +57,7 @@ HDEVIOWriter::HDEVIOWriter(string sink_name)
 			MAX_OUTPUT_BUFFER_SIZE = atoi(max_output_buffer.c_str());
 		}
 	}
+	 */
 
 	// Try opening the output for writing
 	try {
@@ -336,7 +338,8 @@ void* HDEVIOWriter::HDEVIOOutputThread(void)
 			if(quit) break; // don't go to sleep just as we're quitting
 			usleep(100);
 
-			if(japp && japp->GetQuittingStatus()) quit=true;
+			// NWB: main() doesn't appear to be actually initializing japp, so this should be a no-op
+			// if(japp && japp->GetQuittingStatus()) quit=true;
 			continue;
 		}
 

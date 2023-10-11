@@ -3,33 +3,31 @@
 //    File: DDIRCGeometry.cc
 //
 #include <unistd.h>
-#include <DANA/DApplication.h>
+
+#include <TString.h>
+
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Compatibility/JGeometryManager.h>
 
 #include "DDIRCGeometry.h"
 
-//---------------------------------
-// DDIRCGeometry    (Constructor)
-//---------------------------------
-DDIRCGeometry::DDIRCGeometry(int runnumber) {
+
+void
+DDIRCGeometry::Initialize(const std::shared_ptr<const JEvent>& event) {
+
+	auto event_number = event->GetEventNumber();
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+	auto jgeom = app->GetService<JGeometryManager>()->GetJGeometry(run_number);
 
 	CHANNEL_PER_PMT = kPixels; // 64 = 8 x 8 pixels
 	PMT_ROWS = 18;
 	PMT_COLUMNS = 6;
-	DIRC_QZBL_DY = 3.515; 
+	DIRC_QZBL_DY = 3.515;
 
-	// Initialize DDIRCGeometry variables
-	Initialize(runnumber);
-}
-
-void
-DDIRCGeometry::Initialize(int runnumber) {
-
-	//Get pointer to DGeometry object
-	DApplication* dapp=dynamic_cast<DApplication*>(japp);
-	JGeometry *jgeom  = dapp->GetJGeometry(runnumber);	
-	JCalibration *jcalib = japp->GetJCalibration(runnumber);
 	map<string,string> installed;
-        if(jcalib->GetCalib("/DIRC/install_status", installed)) return;
+    if(jcalib->GetCalib("/DIRC/install_status", installed, event_number)) return;
 	if(atoi(installed["status"].data()) == 0) return;
 
 	vector<double>DIRC;
@@ -57,7 +55,7 @@ DDIRCGeometry::Initialize(int runnumber) {
 	all_found &= jgeom->Get("//trd[@name='OWDG']/@Xmp_Ymp_Z", OWDG_XYZ);
 	
         if( !all_found ){
-                jerr << "Problem finding all DIRC geometry elements. Please make sure your HDDS is up to date!" << endl;
+                jerr << "Problem finding all DIRC geometry elements. Please make sure your HDDS is up to date!" << jendl;
                 _exit(-1);
         }
         
@@ -105,8 +103,6 @@ DDIRCGeometry::Initialize(int runnumber) {
 			DIRC_BAR_Y[i] = DCML00_XYZ[1] + DCBR_XYZ[1];
 		}
 	}
-	
-	return;
 }
 
 int

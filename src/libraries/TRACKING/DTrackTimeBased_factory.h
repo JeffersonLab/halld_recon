@@ -12,7 +12,7 @@
 
 #include <TH2.h>
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <PID/DParticleID.h>
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
@@ -31,20 +31,19 @@ class DTrackWireBased;
 class DTrackHitSelector;
 class DParticleID;
 
-using namespace jana;
+
 using namespace std;
 
-class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
+class DTrackTimeBased_factory:public JFactoryT<DTrackTimeBased>{
   
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *loop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *loop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 
- 
-  
+
   bool DEBUG_HISTS;
   int DEBUG_LEVEL;
   bool PID_FORCE_TRUTH;
@@ -77,18 +76,18 @@ class DTrackTimeBased_factory:public jana::JFactory<DTrackTimeBased>{
 			   vector<DTrackTimeBased::DStartTime_t>&start_times);
   bool DoFit(const DTrackWireBased *track,
 	     vector<DTrackTimeBased::DStartTime_t>&start_times,
-	     JEventLoop *loop,double mass);  
+	     const std::shared_ptr<const JEvent>&event,double mass);  
 
   void AddMissingTrackHypothesis(vector<DTrackTimeBased*>&tracks_to_add,
 				 const DTrackTimeBased *src_track,
 				 double my_mass,double q,
-				 JEventLoop *loop);
-  bool InsertMissingHypotheses(JEventLoop *loop);
+				 const std::shared_ptr<const JEvent>&event);
+  bool InsertMissingHypotheses(const std::shared_ptr<const JEvent>&event);
   void CorrectForELoss(DVector3 &position,DVector3 &momentum,double q,double my_mass);
   void AddMissingTrackHypotheses(unsigned int mass_bits,
 				 vector<DTrackTimeBased*>&tracks_to_add,
 				 vector<DTrackTimeBased *>&hypotheses,
-				 double q,bool flipped_charge,JEventLoop *loop);
+				 double q,bool flipped_charge,const std::shared_ptr<const JEvent>&event);
 
   // Geometry
   const DGeometry *geom;

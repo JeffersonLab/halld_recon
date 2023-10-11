@@ -9,13 +9,12 @@
 #define _DTrackHitSelectorALT1_
 #include <TMath.h>
 #include <TTree.h>
-#include <JANA/jerror.h>
 
 #include <TRACKING/DTrackHitSelector.h>
 
 class DTrackHitSelectorALT1:public DTrackHitSelector{
 	public:
-		DTrackHitSelectorALT1(jana::JEventLoop *loop);
+		DTrackHitSelectorALT1(const std::shared_ptr<const JEvent>& event);
 		virtual ~DTrackHitSelectorALT1();
 		
 		void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=20) const;

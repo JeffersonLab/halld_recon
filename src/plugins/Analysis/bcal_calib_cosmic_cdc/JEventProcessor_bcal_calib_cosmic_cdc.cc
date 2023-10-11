@@ -1,4 +1,3 @@
-// $Id$
 //
 //    File: JEventProcessor_bcal_calib_cosmic_cdc.cc
 // Created: Tue Jul  1 13:11:51 EDT 2014
@@ -6,13 +5,13 @@
 //
 
 #include "JEventProcessor_bcal_calib_cosmic_cdc.h"
-using namespace jana;
 
 #include <TRACKING/DTrackCandidate.h>
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250PulseIntegral.h>
 #include <BCAL/DBCALHit.h>
 #include "BCAL/DBCALGeometry.h"
+#include <DANA/DEvent.h>
 
 float getx(float r, float phi) {
 	return r*cos(phi);
@@ -41,11 +40,11 @@ float getdistance(float x1, float y1, float x2, float y2) {
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_bcal_calib_cosmic_cdc());
+		app->Add(new JEventProcessor_bcal_calib_cosmic_cdc());
 	}
 } // "C"
 
@@ -55,7 +54,7 @@ extern "C"{
 //------------------
 JEventProcessor_bcal_calib_cosmic_cdc::JEventProcessor_bcal_calib_cosmic_cdc()
 {
-
+	SetTypeName("JEventProcessor_bcal_calib_cosmic_cdc");
 }
 
 //------------------
@@ -67,18 +66,20 @@ JEventProcessor_bcal_calib_cosmic_cdc::~JEventProcessor_bcal_calib_cosmic_cdc()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_bcal_calib_cosmic_cdc::init(void)
+void JEventProcessor_bcal_calib_cosmic_cdc::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
+
+    auto app = GetApplication();
 
 	/// Setup the parameters
 	/**
@@ -87,8 +88,8 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::init(void)
 	  VERBOSE=3  Output every sector
 	  VERBOSE=4  Output every hit
 	*/
-	VERBOSE=0; 
-	gPARMS->SetDefaultParameter("BCCC:VERBOSE",VERBOSE);
+	VERBOSE=0;
+	app->SetDefaultParameter("BCCC:VERBOSE",VERBOSE);
 	
 	/// Create the root tree
 	bcal_calib_cosmic_cdc_tree = new TTree("bcal_calib_cosmic_cdc",
@@ -108,42 +109,38 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::init(void)
 	bcal_calib_cosmic_cdc_tree->Branch("track_c",&track_c,"track_c/f");
 	bcal_calib_cosmic_cdc_tree->Branch("chisq",&chisq,"chisq/f");
 	bcal_calib_cosmic_cdc_tree->Branch("Ndof",&Ndof,"Ndof/i");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_bcal_calib_cosmic_cdc::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_bcal_calib_cosmic_cdc::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_bcal_calib_cosmic_cdc::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto dBCALGeom = BCALGeomVec[0];
@@ -151,7 +148,7 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 	/// DTrackCandidate:CDCCOSMIC
 	/// Get a vector of DTrackCandidate:CDCCOSMIC objects for this event 
 	vector<const DTrackCandidate*> CDCCOSMIC_vec;
-	loop->Get(CDCCOSMIC_vec,"CDCCOSMIC");
+	event->Get(CDCCOSMIC_vec,"CDCCOSMIC");
 	unsigned int num_CDCCOSMIC = CDCCOSMIC_vec.size();
 	/// Create vectors to store the ID of the hit cells and the traversed distance
 	vector<int> CellId_vec;
@@ -236,7 +233,7 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 				int globalsectormin, globalsectormax; // These are the ordered edge sectors, smallest and largets
 				/// Check that the cells are valid
 				if (fADC_cellIdIN<=0 || fADC_cellIdOUT<=0) {
-					printf("BCCC >>Cells are not valid, event %i\n",eventnumber);
+					printf("BCCC >>Cells are not valid, event %i\n",event->GetEventNumber());
 				} else {
 					if (globalsectorIN == globalsectorOUT) {
 						/// If the track only goes through 1 sector in this layer, then you are done, 
@@ -330,7 +327,7 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 	/// DBCALHit
 	/// Get a vector of DBCALHit objects for this event (1 object for each crate/slot/channel above threshold)
 	vector<const DBCALHit*> BCALHit_vec;
-	loop->Get(BCALHit_vec);
+	event->Get(BCALHit_vec);
 	unsigned int num_BCALHit = BCALHit_vec.size();
 	/// Creat maps from the BCAL cell ID to the DBCALHit object pointer
 	
@@ -361,9 +358,9 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 	//cout << "found " << upstream.size() << " upstream and " << downstream.size() << " downstream hits for map.\n";
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	{
-		eventnum = eventnumber;
+		eventnum = event->GetEventNumber();
 		/// Loop over the intersected cells
 		unsigned int num_CellId = CellId_vec.size();
 		for (unsigned int cellnum=0; cellnum<num_CellId; cellnum++) {
@@ -393,29 +390,25 @@ jerror_t JEventProcessor_bcal_calib_cosmic_cdc::evnt(JEventLoop *loop, uint64_t 
 			bcal_calib_cosmic_cdc_tree->Fill();
 		}
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_bcal_calib_cosmic_cdc::erun(void)
+void JEventProcessor_bcal_calib_cosmic_cdc::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_bcal_calib_cosmic_cdc::fini(void)
+void JEventProcessor_bcal_calib_cosmic_cdc::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
  

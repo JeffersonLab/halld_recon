@@ -1,4 +1,5 @@
 #include "DTreeInterface.h"
+#include <JANA/Compatibility/JLockService.h>
 
 /************************************************* STATIC-VARIABLE-ACCESSING PRIVATE MEMBER FUNCTIONS *************************************************/
 
@@ -16,12 +17,12 @@ map<string, size_t>& DTreeInterface::Get_FundamentalArraySizeMap(TTree* locTree)
 		//This lock is acquired locally: DO NOT CALL THIS FUNCTION WHILE WITHIN A LOCK!!
 	//However, only a file-lock is necessary to read the inner map once it is acquired:
 		//Only the given tree is viewing/modifying it
-	japp->WriteLock("DTreeInterface_SizeMap"); //LOCK MAP
+	japp->GetService<JLockService>()->WriteLock("DTreeInterface_SizeMap"); //LOCK MAP
 
 	static map<TTree*, map<string, size_t> > locFundamentalArraySizeMap;
 	map<string, size_t>& locTreeSpecificMap = locFundamentalArraySizeMap[locTree];
 
-	japp->Unlock("DTreeInterface_SizeMap"); //UNLOCK MAP
+	japp->GetService<JLockService>()->Unlock("DTreeInterface_SizeMap"); //UNLOCK MAP
 	return locTreeSpecificMap;
 }
 
@@ -42,7 +43,7 @@ DTreeInterface* DTreeInterface::Create_DTreeInterface(string locTreeName, string
 DTreeInterface::DTreeInterface(string locTreeName, string locFileName) : dFileName(locFileName),
 dTreeIndex_MajorBranchName("0"), dTreeIndex_MinorBranchName("0")
 {
-	japp->RootWriteLock();
+	japp->GetService<JLockService>()->RootWriteLock();
 	{
 		map<string, int>& locNumWritersByFileMap = Get_NumWritersByFileMap();
 		if(locNumWritersByFileMap.find(dFileName) == locNumWritersByFileMap.end())
@@ -50,7 +51,7 @@ dTreeIndex_MajorBranchName("0"), dTreeIndex_MinorBranchName("0")
 		else
 			++locNumWritersByFileMap[dFileName];
 	}
-	japp->RootUnLock();
+	japp->GetService<JLockService>()->RootUnLock();
 
 	GetOrCreate_FileAndTree(locTreeName);
 }
@@ -58,14 +59,14 @@ dTreeIndex_MajorBranchName("0"), dTreeIndex_MinorBranchName("0")
 //Destructor
 DTreeInterface::~DTreeInterface(void)
 {
-	japp->RootWriteLock();
+	japp->GetService<JLockService>()->RootWriteLock();
 	{
 		map<string, int>& locNumWritersByFileMap = Get_NumWritersByFileMap();
 
 		--locNumWritersByFileMap[dFileName];
 		if(locNumWritersByFileMap[dFileName] != 0)
 		{
-			japp->RootUnLock();
+			japp->GetService<JLockService>()->RootUnLock();
 			return;
 		}
 
@@ -79,12 +80,12 @@ DTreeInterface::~DTreeInterface(void)
 		locOutputFile->Close();
 		delete locOutputFile;
 	}
-	japp->RootUnLock();
+	japp->GetService<JLockService>()->RootUnLock();
 }
 
 void DTreeInterface::GetOrCreate_FileAndTree(string locTreeName)
 {
-	japp->RootWriteLock();
+	japp->GetService<JLockService>()->RootWriteLock();
 	{
 		TDirectory* locCurrentDir = gDirectory;
 
@@ -104,16 +105,16 @@ void DTreeInterface::GetOrCreate_FileAndTree(string locTreeName)
 
 		locCurrentDir->cd();
 	}
-	japp->RootUnLock();
+	japp->GetService<JLockService>()->RootUnLock();
 }
 
 /****************************************************************** CREATE BRANCHES *******************************************************************/
 
 bool DTreeInterface::Get_BranchesCreatedFlag(void) const
 {
-	japp->WriteLock(dFileName); //LOCK FILE
+	japp->GetService<JLockService>()->WriteLock(dFileName); //LOCK FILE
 	bool locBranchesCreatedFlag = (dTree->GetNbranches() > 0);
-	japp->Unlock(dFileName); //UNLOCK FILE
+	japp->GetService<JLockService>()->Unlock(dFileName); //UNLOCK FILE
 	return locBranchesCreatedFlag;
 }
 
@@ -130,12 +131,12 @@ bool DTreeInterface::Create_Branches(const DTreeBranchRegister& locTreeBranchReg
 	//MUST CARRY AROUND A REFERENCE TO THIS.  ONLY READ/MODIFY THE MAP WITHIN A FILE LOCK. 
 	map<string, size_t>& locFundamentalArraySizeMap = Get_FundamentalArraySizeMap(dTree);
 
-	japp->WriteLock(dFileName); //LOCK FILE
+	japp->GetService<JLockService>()->WriteLock(dFileName); //LOCK FILE
 	{
 		//if there are branches already, don't do anything
 		if(dTree->GetNbranches() > 0)
 		{
-			japp->Unlock(dFileName); //UNLOCK FILE
+			japp->GetService<JLockService>()->Unlock(dFileName); //UNLOCK FILE
 			return false;
 		}
 
@@ -171,7 +172,7 @@ bool DTreeInterface::Create_Branches(const DTreeBranchRegister& locTreeBranchReg
 		for(string& locBranchName : locPostponedBranchNames)
 			Create_Branch(locTreeBranchRegister, locBranchName, locFundamentalArraySizeMap);
 	}
-	japp->Unlock(dFileName); //UNLOCK FILE
+	japp->GetService<JLockService>()->Unlock(dFileName); //UNLOCK FILE
 
 	return true;
 }
@@ -242,7 +243,7 @@ void DTreeInterface::Fill(DTreeFillData& locTreeFillData)
 {
 	//MUST CARRY AROUND A REFERENCE TO THIS.  ONLY READ/MODIFY THE MAP WITHIN A FILE LOCK. 
 	map<string, size_t>& locFundamentalArraySizeMap = Get_FundamentalArraySizeMap(dTree);
-	japp->WriteLock(dFileName); //LOCK FILE
+	japp->GetService<JLockService>()->WriteLock(dFileName); //LOCK FILE
 	{
 		//loop over branches
 		for(auto locBranchPair : locTreeFillData.dFillData)
@@ -305,7 +306,7 @@ void DTreeInterface::Fill(DTreeFillData& locTreeFillData)
 		//fill tree
 		dTree->Fill();
 	}
-	japp->Unlock(dFileName); //UNLOCK FILE
+	japp->GetService<JLockService>()->Unlock(dFileName); //UNLOCK FILE
 
 	//Reset fill vectors if too large!!
 	for(auto locBranchPair : locTreeFillData.dFillData)

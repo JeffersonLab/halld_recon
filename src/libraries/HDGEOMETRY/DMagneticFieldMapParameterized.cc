@@ -8,8 +8,8 @@
 #include <cmath>
 using namespace std;
 
-#include <JANA/JParameterManager.h>
-using namespace jana;
+#include <JANA/Services/JParameterManager.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
 
 #include "DMagneticFieldMapParameterized.h"
 
@@ -41,21 +41,20 @@ using namespace jana;
 //---------------------------------
 // DMagneticFieldMapParameterized    (Constructor)
 //---------------------------------
-DMagneticFieldMapParameterized::DMagneticFieldMapParameterized(jana::JApplication *japp, string namepath)
+DMagneticFieldMapParameterized::DMagneticFieldMapParameterized(JApplication *japp, string namepath)
 {
 	int32_t runnumber = 1;
-	jcalib = japp->GetJCalibration(runnumber);
+	jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
 
-	JParameterManager *jparms = japp->GetJParameterManager();
-	jparms->SetDefaultParameter("BFIELD_MAP", namepath);
-	
+	japp->SetDefaultParameter("BFIELD_MAP", namepath);
+
 	Init(jcalib, namepath);
 }
 
 //---------------------------------
 // DMagneticFieldMapParameterized    (Constructor)
 //---------------------------------
-DMagneticFieldMapParameterized::DMagneticFieldMapParameterized(jana::JCalibration *jcalib, string namepath)
+DMagneticFieldMapParameterized::DMagneticFieldMapParameterized(JCalibration *jcalib, string namepath)
 {
 	Init(jcalib, namepath);
 }
@@ -71,7 +70,7 @@ DMagneticFieldMapParameterized::~DMagneticFieldMapParameterized()
 //---------------------------------
 // Init
 //---------------------------------
-void DMagneticFieldMapParameterized::Init(jana::JCalibration *jcalib, string namepath)
+void DMagneticFieldMapParameterized::Init(JCalibration *jcalib, string namepath)
 {
 	this->jcalib = jcalib;
 	

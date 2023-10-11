@@ -11,47 +11,59 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include <BCAL/DBCALDigiHit.h>
 #include "DBCALGeometry.h"
 #include "DBCALHit_factory.h"
 #include <DAQ/Df250PulseIntegral.h>
 #include <DAQ/Df250Config.h>
 #include <TTAB/DTTabUtilities.h>
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBCALHit_factory::init(void)
+void DBCALHit_factory::Init()
 {
-   t_scale    = 0.0625;   // There are 62.5 ps/count from the fADC
-   t_base     = 0.;
+  t_scale    = 0.0625;   // There are 62.5 ps/count from the fADC
+  t_base     = 0.;
 
+  auto app = GetApplication();
+
+  PRINTCALIBRATION = false;
+  app->SetDefaultParameter("BCALHIT:PRINTCALIBRATION", PRINTCALIBRATION, "Print the calibration parameters.");
+  VERBOSE = 0;
+  app->SetDefaultParameter("BCALHIT:VERBOSE", VERBOSE, "Set level of verbosity.");
   CHECK_FADC_ERRORS = true;
-  gPARMS->SetDefaultParameter("BCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
+  app->SetDefaultParameter("BCAL:CHECK_FADC_ERRORS", CHECK_FADC_ERRORS, "Set to 1 to reject hits with fADC250 errors, ser to 0 to keep these hits");
   CORRECT_FADC_SATURATION = true;
-  gPARMS->SetDefaultParameter("BCAL:CORRECT_FADC_SATURATION", CORRECT_FADC_SATURATION, "Set to 1 to correct pulse integral for fADC saturation, set to 0 to not correct pulse integral. (default = 1)");
+  app->SetDefaultParameter("BCAL:CORRECT_FADC_SATURATION", CORRECT_FADC_SATURATION, "Set to 1 to correct pulse integral for fADC saturation, set to 0 to not correct pulse integral. (default = 1)");
   CORRECT_SIPM_SATURATION = true;
-  gPARMS->SetDefaultParameter("BCAL:CORRECT_SIPM_SATURATION", CORRECT_SIPM_SATURATION, "Set to 1 to correct for SiPM saturation, set to 0 to not correct pulse integral or peak. (default = 1)");
+  app->SetDefaultParameter("BCAL:CORRECT_SIPM_SATURATION", CORRECT_SIPM_SATURATION, "Set to 1 to correct for SiPM saturation, set to 0 to not correct pulse integral or peak. (default = 1)");
 
   // cout << " CORRECT_SIPM_SATURATION=" << CORRECT_SIPM_SATURATION << endl;
-
-   return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DBCALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto event_number = event->GetEventNumber();
+  auto run_number = event->GetRunNumber();
+  auto app = GetApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
   // Only print messages for one thread whenever run number changes
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
   pthread_mutex_lock(&print_mutex);
   bool print_messages = false;
-  if(runs_announced.find(runnumber) == runs_announced.end()){
+  if(runs_announced.find(run_number) == runs_announced.end()){
     print_messages = true;
-    runs_announced.insert(runnumber);
+    runs_announced.insert(run_number);
   }
   pthread_mutex_unlock(&print_mutex);
 
@@ -63,68 +75,66 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
    vector<double> raw_tdiff_u_d;
    vector<double> raw_bad_channels;
 
-    if(print_messages) jout << "In DBCALHit_factory, loading constants..." << endl;
+    if(print_messages) jout << "In DBCALHit_factory, loading constants..." << jendl;
    
    // load scale factors
    map<string,double> scale_factors;
-   if (eventLoop->GetCalib("/BCAL/digi_scales", scale_factors))
-       jout << "Error loading /BCAL/digi_scales !" << endl;
+   if (calibration->Get("/BCAL/digi_scales", scale_factors, event_number))
+       jout << "Error loading /BCAL/digi_scales !" << jendl;
    if (scale_factors.find("BCAL_ADC_ASCALE") != scale_factors.end())
        a_scale = scale_factors["BCAL_ADC_ASCALE"];
    else
-       jerr << "Unable to get BCAL_ADC_ASCALE from /BCAL/digi_scales !" << endl;
+       jerr << "Unable to get BCAL_ADC_ASCALE from /BCAL/digi_scales !" << jendl;
    if (scale_factors.find("BCAL_ADC_TSCALE") != scale_factors.end()) {
      t_scale = scale_factors["BCAL_ADC_TSCALE"];
      if (PRINTCALIBRATION) {
-       jout << "DBCALHit_factory >>BCAL_ADC_TSCALE = " << t_scale << endl;
+       jout << "DBCALHit_factory >>BCAL_ADC_TSCALE = " << t_scale << jendl;
      }
    }
    else
-       jerr << "Unable to get BCAL_ADC_TSCALE from /BCAL/digi_scales !" << endl;
+       jerr << "Unable to get BCAL_ADC_TSCALE from /BCAL/digi_scales !" << jendl;
 
   // load base time offset
    map<string,double> base_time_offset;
-   if (eventLoop->GetCalib("/BCAL/base_time_offset",base_time_offset))
-       jout << "Error loading /BCAL/base_time_offset !" << endl;
+   if (calibration->Get("/BCAL/base_time_offset",base_time_offset))
+       jout << "Error loading /BCAL/base_time_offset !" << jendl;
    if (base_time_offset.find("BCAL_BASE_TIME_OFFSET") != base_time_offset.end()) {
      t_base = base_time_offset["BCAL_BASE_TIME_OFFSET"];
      if (PRINTCALIBRATION) {
-       jout << "DBCALHit_factory >>BCAL_BASE_TIME_OFFSET = " << t_base << endl;
+       jout << "DBCALHit_factory >>BCAL_BASE_TIME_OFFSET = " << t_base << jendl;
      }
    }
    else
-       jerr << "Unable to get BCAL_BASE_TIME_OFFSET from /BCAL/base_time_offset !" << endl;  
+       jerr << "Unable to get BCAL_BASE_TIME_OFFSET from /BCAL/base_time_offset !" << jendl;
 
    // load constant tables
-   if (eventLoop->GetCalib("/BCAL/ADC_gains", raw_gains))
-       jout << "Error loading /BCAL/ADC_gains !" << endl;
-   if (eventLoop->GetCalib("/BCAL/ADC_pedestals", raw_pedestals))
-       jout << "Error loading /BCAL/ADC_pedestals !" << endl;
-   if (eventLoop->GetCalib("/BCAL/ADC_timing_offsets", raw_ADC_timing_offsets))
-       jout << "Error loading /BCAL/ADC_timing_offsets !" << endl;
-   if(eventLoop->GetCalib("/BCAL/channel_global_offset", raw_channel_global_offset))
-       jout << "Error loading /BCAL/channel_global_offset !" << endl;
-   if(eventLoop->GetCalib("/BCAL/tdiff_u_d", raw_tdiff_u_d))
-       jout << "Error loading /BCAL/tdiff_u_d !" << endl;
-   if(eventLoop->GetCalib("/BCAL/bad_channels", raw_bad_channels))
-       jout << "Error loading /BCAL/bad_channels !" << endl;
+   if (calibration->Get("/BCAL/ADC_gains", raw_gains))
+       jout << "Error loading /BCAL/ADC_gains !" << jendl;
+   if (calibration->Get("/BCAL/ADC_pedestals", raw_pedestals))
+       jout << "Error loading /BCAL/ADC_pedestals !" << jendl;
+   if (calibration->Get("/BCAL/ADC_timing_offsets", raw_ADC_timing_offsets))
+       jout << "Error loading /BCAL/ADC_timing_offsets !" << jendl;
+   if(calibration->Get("/BCAL/channel_global_offset", raw_channel_global_offset))
+       jout << "Error loading /BCAL/channel_global_offset !" << jendl;
+   if(calibration->Get("/BCAL/tdiff_u_d", raw_tdiff_u_d))
+       jout << "Error loading /BCAL/tdiff_u_d !" << jendl;
 
-   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_gains" << endl;
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_gains" << jendl;
    FillCalibTable(gains, raw_gains);
-   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_pedestals" << endl;
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_pedestals" << jendl;
    FillCalibTable(pedestals, raw_pedestals);
-   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_ADC_timing_offsets" << endl;
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_ADC_timing_offsets" << jendl;
    FillCalibTable(ADC_timing_offsets, raw_ADC_timing_offsets);
-   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_channel_global_offset" << endl;
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_channel_global_offset" << jendl;
    FillCalibTableShort(channel_global_offset, raw_channel_global_offset);
-   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_tdiff_u_d" << endl;
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_tdiff_u_d" << jendl;
    FillCalibTableShort(tdiff_u_d, raw_tdiff_u_d);
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_bad_channels" << endl;
    FillCalibTable(bad_channels, raw_bad_channels);
    
    std::vector<std::map<string,double> > saturation_ADC_pars;
-   if(eventLoop->GetCalib("/BCAL/ADC_saturation", saturation_ADC_pars))
-      jout << "Error loading /BCAL/ADC_saturation !" << endl;
+   if(calibration->Get("/BCAL/ADC_saturation", saturation_ADC_pars))
+      jout << "Error loading /BCAL/ADC_saturation !" << jendl;
    for (unsigned int i=0; i < saturation_ADC_pars.size(); i++) {
 	   int end = (saturation_ADC_pars[i])["end"];
 	   int layer = (saturation_ADC_pars[i])["layer"] - 1;
@@ -135,8 +145,8 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
    // load parameters for SiPM saturation
    std::vector<std::map<string,double> > saturation_SiPM_pars;
-   if(eventLoop->GetCalib("/BCAL/SiPM_saturation", saturation_SiPM_pars))
-      jout << "Error loading /SiPM/SiPM_saturation !" << endl;
+   if(calibration->Get("/BCAL/SiPM_saturation", saturation_SiPM_pars))
+      jout << "Error loading /SiPM/SiPM_saturation !" << jendl;
    for (unsigned int i=0; i < saturation_SiPM_pars.size(); i++) {
 	   int end = (saturation_SiPM_pars[i])["END"];
 	   int layer = (saturation_SiPM_pars[i])["LAYER"] - 1;
@@ -145,15 +155,12 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 	   pixel_per_count[end][layer] = (saturation_SiPM_pars[i])["PIXEL_PER_COUNT"];
    } 
 
-
-
-   return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
    /// Generate DBCALHit object for each DBCALDigiHit object.
    /// This is where the first set of calibration constants
@@ -164,11 +171,10 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    /// data in HDDM format. The HDDM event source will copy
    /// the precalibrated values directly into the _data vector.
 
-   const DTTabUtilities* locTTabUtilities = NULL;
-   loop->GetSingle(locTTabUtilities);
+   const DTTabUtilities* locTTabUtilities = event->GetSingle<DTTabUtilities>();
 
    vector<const DBCALDigiHit*> digihits;
-   loop->Get(digihits);
+   event->Get(digihits);
    for(unsigned int i=0; i<digihits.size(); i++){
       const DBCALDigiHit *digihit = digihits[i];
 
@@ -181,8 +187,7 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
           // There is a slight difference between Mode 7 and 8 data
           // The following condition signals an error state in the flash algorithm
           // Do not make hits out of these
-          const Df250PulsePedestal* PPobj = NULL;
-          digihit->GetSingle(PPobj);
+          auto PPobj = digihit->GetSingle<Df250PulsePedestal>();
           if (PPobj != NULL){
               if (PPobj->pedestal == 0 || PPobj->pulse_peak == 0) continue;
           }
@@ -195,8 +200,7 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       double integral, pedestal, nsamples_integral, nsamples_pedestal;
       if(digihit->datasource == 1) {      // pre-fall 2016 firmware
           // Get Df250PulseIntegral object from DBCALDigiHit object
-          const Df250PulseIntegral* PIobj = NULL;
-          digihit->GetSingle(PIobj);
+          auto PIobj = digihit->GetSingle<Df250PulseIntegral>();
 
           if (PIobj == NULL && digihit->pedestal == 1 && digihit->QF == 1){ // This is a simulated event.  Set the pedestal to zero.
               integral = (double)digihit->pulse_integral;
@@ -227,7 +231,7 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // nsamples_pedestal should always be positive for valid data - err on the side of caution for now
       if(nsamples_pedestal == 0) {
           //throw JException("DBCALDigiHit with nsamples_pedestal == 0 !");
-          if(VERBOSE>0)jerr << "DBCALDigiHit with nsamples_pedestal == 0 !   Event = " << eventnumber << endl;
+          if(VERBOSE>0)jerr << "DBCALDigiHit with nsamples_pedestal == 0 !   Event = " << event->GetEventNumber() << jendl;
           continue;
       }
 
@@ -266,8 +270,8 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit_E = gain * integral_pedsub;
 
       }
-      if (VERBOSE>2) printf("%5lu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
-							eventnumber,i,digihits.size(),digihit->datasource,
+      if (VERBOSE>2) printf("%5llu digihit %2i of %2lu, type %i time %4u, peak %3u, int %4.0f %.0f, ped %3.0f %.0f %5.1f %6.1f, gain %.1e, E=%5.0f MeV\n",
+							event->GetEventNumber(),i,digihits.size(),digihit->datasource,
 							digihit->pulse_time,digihit->pulse_peak,integral,nsamples_integral,
 							pedestal,nsamples_pedestal,single_sample_ped,totalpedestal,gain,hit_E*1000);
       if ( hit_E <= 0 ) continue;  // Throw away negative energy hits  
@@ -316,26 +320,22 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       hit->AddAssociatedObject(digihit);
 
-      _data.push_back(hit);
+      Insert(hit);
    }
-
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBCALHit_factory::erun(void)
+void DBCALHit_factory::EndRun()
 {
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBCALHit_factory::fini(void)
+void DBCALHit_factory::Finish()
 {
-    return NOERROR;
 }
 
 

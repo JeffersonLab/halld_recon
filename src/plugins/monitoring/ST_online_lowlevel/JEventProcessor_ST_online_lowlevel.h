@@ -9,7 +9,8 @@
 #define _JEventProcessor_ST_online_lowlevel_
 
 #include <JANA/JEventProcessor.h>
-using namespace jana;
+#include <JANA/Compatibility/JLockService.h>
+
 using namespace std;
 using std::vector;
 using std::string;
@@ -121,20 +122,19 @@ const float_t  T_HIT_MIN      =  -80.;  // Lower limit of hit time histogram (ns
 const float_t  T_HIT_MAX      =  80.;   // Upper limit of hit time histogram (ns)
 const float_t  T_HIT_BINS     =  160.;   // Number of bins in hit time histogram 
 
-class JEventProcessor_ST_online_lowlevel:public jana::JEventProcessor{
+class JEventProcessor_ST_online_lowlevel:public JEventProcessor{
 	public:
 		JEventProcessor_ST_online_lowlevel();
 		~JEventProcessor_ST_online_lowlevel();
-		const char* className(void){return "JEventProcessor_ST_online_lowlevel";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
-		
+		std::shared_ptr<JLockService> lockService;
 };
 
 #endif // _JEventProcessor_ST_online_lowlevel_

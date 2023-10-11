@@ -6,21 +6,19 @@
 //
 
 #include "JEventProcessor_CDC_Efficiency.h"
-using namespace jana;
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "CDC/DCDCDigiHit.h"
 #include "DAQ/Df125CDCPulse.h"
+#include "DANA/DEvent.h"
 #include "TRIGGER/DTrigger.h"
 #include "HistogramTools.h"
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_Efficiency());
+    app->Add(new JEventProcessor_CDC_Efficiency());
 }
 } // "C"
 
@@ -30,7 +28,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_CDC_Efficiency::JEventProcessor_CDC_Efficiency()
 {
-    ;
+	SetTypeName("JEventProcessor_CDC_Efficiency");
 }
 
 //------------------
@@ -42,36 +40,37 @@ JEventProcessor_CDC_Efficiency::~JEventProcessor_CDC_Efficiency()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_CDC_Efficiency::init(void)
+void JEventProcessor_CDC_Efficiency::Init()
 {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	dMinTrackingFOM = 5.73303E-7; // +/- 5 sigma
 	dMinNumRingsToEvalSuperlayer = 3; //technically, reconstruction minimum is 2 (TRKFIND:MIN_SEED_HITS) //but trust more with 3
 
     // For the overall 2D plots, thus DOCA cut is used
     DOCACUT = 0.35;
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:DOCACUT", DOCACUT, "DOCA Cut on Efficiency Measurement");
-    }  
-
+    app->SetDefaultParameter("CDC_EFFICIENCY:DOCACUT", DOCACUT, "DOCA Cut on Efficiency Measurement");
 
     // Reject tracks with momentum less than PCUTL
     PCUTL = 0.5;
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:PCUTL", PCUTL, "Low momentum Cut on Efficiency Measurement");
+    if(app){
+        app->SetDefaultParameter("CDC_EFFICIENCY:PCUTL", PCUTL, "Low momentum Cut on Efficiency Measurement");
     }  
 
     // Reject tracks with momentum greater than PCUTH
     PCUTH = 6.0;
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:PCUTH", PCUTH, "High momentum Cut on Efficiency Measurement");
+    if(app){
+        app->SetDefaultParameter("CDC_EFFICIENCY:PCUTH", PCUTH, "High momentum Cut on Efficiency Measurement");
     }  
 
     // Fill extra histos requiring dE/dx > 0 if set to 1
     FILL_DEDX_HISTOS = 0;
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("CDC_EFFICIENCY:FILL_DEDX_HISTOS", FILL_DEDX_HISTOS, "Fill 'with dE/dx' histos if DOCA < CDC_GAIN_DOCA_PARS[0]");
+    if(app){
+        app->SetDefaultParameter("CDC_EFFICIENCY:FILL_DEDX_HISTOS", FILL_DEDX_HISTOS, "Fill 'with dE/dx' histos if DOCA < CDC_GAIN_DOCA_PARS[0]");
     }  
 
     
@@ -258,20 +257,19 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
 	dTargetCenterZ = 65.0;
 	dTargetLength = 30.0;
 
-    return NOERROR;
+    return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CDC_Efficiency::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
     // This is called whenever the run number changes
-    DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
-    JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-    dgeom  = dapp->GetDGeometry(runnumber);
+    dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(GetBfield(event)) != NULL);
+    JCalibration *jcalib = GetJCalibration(event);
+    dgeom  = GetDGeometry(event);
     //bfield = dapp->GetBfield();
 
 	//Get Target Center Z, length
@@ -320,33 +318,31 @@ jerror_t JEventProcessor_CDC_Efficiency::brun(JEventLoop *eventLoop, int32_t run
 	//Make sure it gets initialize first, in case we want to change it:
    if(!dIsNoFieldFlag){
       vector<const DTrackCandidate*> locTrackCandidates;
-      eventLoop->Get(locTrackCandidates);
-      gPARMS->GetParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
+      event->Get(locTrackCandidates);
+      GetApplication()->GetParameter("TRKFIND:MAX_DRIFT_TIME", MAX_DRIFT_TIME);
    }
 
-
-   return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnumber){
+void JEventProcessor_CDC_Efficiency::Process(const std::shared_ptr<const JEvent>& event){
 	const DTrigger* locTrigger = NULL; 
-	loop->GetSingle(locTrigger); 
+	event->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-	  return NOERROR;
+	  return;
 	if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-	  return NOERROR;
+	  return;
 	}
 
 	
    	vector<const DTrackFitter *> fitters;
-	loop->Get(fitters);
+	event->Get(fitters);
 
 	if(fitters.size()<1){
 	  _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
+	  throw JException("Missing DTrackFinder");
 	}
 
 	const DTrackFitter *fitter = fitters[0];
@@ -354,17 +350,17 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 	
 	// Get the particle ID algorithms
 	vector<const DParticleID *> pid_algorithms;
-	loop->Get(pid_algorithms);
+	event->Get(pid_algorithms);
 	if(pid_algorithms.size()<1){
 	  _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-	  return RESOURCE_UNAVAILABLE;
+	  return;
 	}
 
 	const DParticleID* pid_algorithm = pid_algorithms[0];
 
    //use CDC track hits: have drift time, can cut
    vector< const DCDCTrackHit *> locCDCTrackHits;
-   loop->Get(locCDCTrackHits);
+   event->Get(locCDCTrackHits);
 
    //Pre-sort hits by ring to save time //only need to search within the given ring, straw
    map<int, map<int, set<const DCDCTrackHit*> > > locSortedCDCTrackHits; //first int: ring //second int: straw
@@ -376,13 +372,13 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
 
    const DDetectorMatches *detMatches = nullptr;
    if(!dIsNoFieldFlag)
-      loop->GetSingle(detMatches);
+      event->GetSingle(detMatches);
 
    const DParticleID *locParticleID = nullptr;
-   loop->GetSingle(locParticleID);
+   event->GetSingle(locParticleID);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
    vector <const DTrackTimeBased *> bestTimeBasedTracks;
    if(!dIsNoFieldFlag){
@@ -392,15 +388,15 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
       }
    }
    else{
-      loop->Get(bestTimeBasedTracks);
+      event->Get(bestTimeBasedTracks);
    }
 
    for (unsigned int iTrack = 0; iTrack < bestTimeBasedTracks.size(); iTrack++){
       auto thisTimeBasedTrack = bestTimeBasedTracks[iTrack];
 
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
       hChi2OverNDF->Fill(thisTimeBasedTrack->FOM);
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
       if (thisTimeBasedTrack->FOM < dMinTrackingFOM)
          continue;
@@ -483,7 +479,7 @@ jerror_t JEventProcessor_CDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
             Fill_Efficiency_Histos(locRing, thisTimeBasedTrack, locSortedCDCTrackHits, pid_algorithm, fitter); 
       }
    }
-   return NOERROR;
+   return;
 }
 
 
@@ -712,7 +708,7 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(bool withdEdx, int ringNum
    if (distanceToWire < DOCACUT)
    {
       //printf("Matching Hit!!!!!\n");
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
       {
          Double_t v = cdc_measured_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, v);
@@ -729,28 +725,28 @@ void JEventProcessor_CDC_Efficiency::Fill_MeasuredHit(bool withdEdx, int ringNum
          // ?	Double_t w = cdc_expected_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          // ?    cdc_measured_ring[ringNum]->SetBinContent(wireNum, 1, w);
       }
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
    }
 
    int locDOCABin = (int) (distanceToWire * 10) % 8;
    TH2D* locHistToFill = cdc_measured_ringmap[locDOCABin][ringNum];
-   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
    {
       Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
       locHistToFill->SetBinContent(wireNum, 1, w);
    }
-   japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+   lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
    if (FILL_DEDX_HISTOS) {
      if (withdEdx) {
 
        TH2D* locHistToFill = cdc_measured_with_dedx_ringmap[locDOCABin][ringNum];
-       japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+       lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
        {
 	 Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
 	 locHistToFill->SetBinContent(wireNum, 1, w);
        }
-       japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+       lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
      }
    }
@@ -763,22 +759,22 @@ void JEventProcessor_CDC_Efficiency::Fill_ExpectedHit(int ringNum, int wireNum, 
    //Fill the expected number of hits histogram
    if (distanceToWire < DOCACUT)
    {
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
       {
          Double_t w = cdc_expected_ring[ringNum]->GetBinContent(wireNum, 1) + 1.0;
          cdc_expected_ring[ringNum]->SetBinContent(wireNum, 1, w);
       }
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
    }
 
    int locDOCABin = (int) (distanceToWire * 10) % 8;
    TH2D* locHistToFill = cdc_expected_ringmap[locDOCABin][ringNum];
-   japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+   lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
    {
       Double_t w = locHistToFill->GetBinContent(wireNum, 1) + 1.0;
       locHistToFill->SetBinContent(wireNum, 1, w);
    }
-   japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+   lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 const DCDCTrackHit* JEventProcessor_CDC_Efficiency::Find_Hit(int locRing, int locProjectedStraw, map<int, set<const DCDCTrackHit*> >& locSortedCDCTrackHits)
@@ -823,21 +819,21 @@ double JEventProcessor_CDC_Efficiency::GetDOCAFieldOff(DVector3 wirePosition, DV
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_CDC_Efficiency::erun(void)
+void JEventProcessor_CDC_Efficiency::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
+   return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_CDC_Efficiency::fini(void)
+void JEventProcessor_CDC_Efficiency::Finish()
 {
-   return NOERROR;
+   return;
 }
 

@@ -17,8 +17,6 @@
 using namespace std;
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
 
 class DFCALShower:public JObject{
  public:
@@ -105,34 +103,34 @@ class DFCALShower:public JObject{
 
 
 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "E(GeV)", "%6.2f", getEnergy());
-    AddString(items, "X(cm)", "%7.2f", getPosition().X());
-    AddString(items, "Y(cm)", "%7.2f", getPosition().Y());
-    AddString(items, "Z(cm)", "%7.2f", getPosition().Z());
-    AddString(items, "t(ns)", "%7.2f", getTime());
-    AddString(items, "dE", "%5.3f", EErr());
-    AddString(items, "dx", "%5.3f", xErr());
-    AddString(items, "dy", "%5.3f", yErr());
-    AddString(items, "dz", "%5.3f", zErr());
-    AddString(items, "dt", "%5.3f", tErr());
-    AddString(items, "docaTr","%7.2f", getDocaTrack());
-    AddString(items, "timeTr","%7.2f", getTimeTrack());
-    AddString(items, "sumU", "%7.2f", getSumU());
-    AddString(items, "sumV", "%7.2f", getSumV());
-    AddString(items, "E9E25", "%7.2f", getE9E25());
-    AddString(items, "E1E9", "%7.2f", getE1E9());
-    AddString(items, "numBlocks", "%3.0i",getNumBlocks());
-    AddString(items, "EXcorr", "%5.3f", EXcorr());
-    AddString(items, "EYcorr", "%5.3f", EYcorr());
-    AddString(items, "EZcorr", "%5.3f", EZcorr());
-    AddString(items, "ETcorr", "%5.3f", ETcorr());
-    AddString(items, "XYcorr", "%5.3f", XYcorr());
-    AddString(items, "XZcorr", "%5.3f", XZcorr());
-    AddString(items, "XTcorr", "%5.3f", XTcorr());
-    AddString(items, "YZcorr", "%5.3f", YZcorr());
-    AddString(items, "YTcorr", "%5.3f", YTcorr());
-    AddString(items, "ZTcorr", "%5.3f", ZTcorr());
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(getEnergy(), "E(GeV)", "%6.2f");
+    summary.add(getPosition().X(), "X(cm)", "%7.2f");
+    summary.add(getPosition().Y(), "Y(cm)", "%7.2f");
+    summary.add(getPosition().Z(), "Z(cm)", "%7.2f");
+    summary.add(getTime(), "t(ns)", "%7.2f");
+    summary.add(EErr(), "dE", "%5.3f");
+    summary.add(xErr(), "dx", "%5.3f");
+    summary.add(yErr(), "dy", "%5.3f");
+    summary.add(zErr(), "dz", "%5.3f");
+    summary.add(tErr(), "dt", "%5.3f");
+    summary.add(getDocaTrack(), "docaTr", "%7.2f");
+    summary.add(getTimeTrack(), "timeTr", "%7.2f");
+    summary.add(getSumU(), "sumU", "%7.2f");
+    summary.add(getSumV(), "sumV", "%7.2f");
+    summary.add(getE9E25(), "E9E25", "%7.2f");
+    summary.add(getE1E9(), "E1E9", "%7.2f");
+    summary.add(getNumBlocks(), "numBlocks", "%3.0i");
+    summary.add(EXcorr(), "EXcorr", "%5.3f");
+    summary.add(EYcorr(), "EYcorr", "%5.3f");
+    summary.add(EZcorr(), "EZcorr", "%5.3f");
+    summary.add(ETcorr(), "ETcorr", "%5.3f");
+    summary.add(XYcorr(), "XYcorr", "%5.3f");
+    summary.add(XZcorr(), "XZcorr", "%5.3f");
+    summary.add(XTcorr(), "XTcorr", "%5.3f");
+    summary.add(YZcorr(), "YZcorr", "%5.3f");
+    summary.add(YTcorr(), "YTcorr", "%5.3f");
+    summary.add(ZTcorr(), "ZTcorr", "%5.3f");
   }
 
  private:

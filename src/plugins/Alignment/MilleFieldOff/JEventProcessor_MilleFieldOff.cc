@@ -11,26 +11,29 @@
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "TDirectory.h"
 #include "TRACKING/DTrackTimeBased.h"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
+
 extern "C" {
 void InitPlugin(JApplication *app) {
   InitJANAPlugin(app);
-  app->AddProcessor(new JEventProcessor_MilleFieldOff());
+  app->Add(new JEventProcessor_MilleFieldOff());
 }
 }  // "C"
 
-JEventProcessor_MilleFieldOff::JEventProcessor_MilleFieldOff() {}
+JEventProcessor_MilleFieldOff::JEventProcessor_MilleFieldOff() {
+    SetTypeName("JEventProcessor_MilleFieldOff");
+}
 
 JEventProcessor_MilleFieldOff::~JEventProcessor_MilleFieldOff() {}
 
-jerror_t JEventProcessor_MilleFieldOff::init(void) {
+void JEventProcessor_MilleFieldOff::Init() {
   // This is called once at program startup.
+  auto app = GetApplication();
   string output_filename;
-  gPARMS->GetParameter("OUTPUT_FILENAME", output_filename);
+  app->GetParameter("OUTPUT_FILENAME", output_filename);
   int ext_pos = output_filename.rfind(".root");
   if (ext_pos != (int)output_filename.size() - 5) {
     jerr << "[MilleFieldOff] Invalid output filename." << endl;
@@ -38,18 +41,13 @@ jerror_t JEventProcessor_MilleFieldOff::init(void) {
   }
   output_filename.replace(ext_pos, 5, ".mil");
   milleWriter = new Mille(output_filename.data());
-
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_MilleFieldOff::brun(JEventLoop *eventLoop,
-                                             int32_t runnumber) {
+void JEventProcessor_MilleFieldOff::BeginRun(const std::shared_ptr<const JEvent> &event, int32_t runnumber) {
+
   // This is called whenever the run number changes
   // Check for magnetic field
-  DApplication *dapp =
-      dynamic_cast<DApplication *>(eventLoop->GetJApplication());
-  bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(
-                             dapp->GetBfield(runnumber)) != nullptr);
+  bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(GetBfield(event)) != nullptr);
 
   // This plugin is designed for field off data. If this is used for field on
   // data, Abort...
@@ -60,18 +58,16 @@ jerror_t JEventProcessor_MilleFieldOff::brun(JEventLoop *eventLoop,
     jerr << " Use -PBFIELD_TYPE=NoField " << endl;
     japp->Quit();
   }
-
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
-                                             uint64_t eventnumber) {
+void JEventProcessor_MilleFieldOff::Process(const std::shared_ptr<const JEvent> &event, uint64_t eventnumber) {
+
   int straw_offset[29] = {0,    0,    42,   84,   138,  192,  258,  324,
                           404,  484,  577,  670,  776,  882,  1005, 1128,
                           1263, 1398, 1544, 1690, 1848, 2006, 2176, 2346,
                           2528, 2710, 2907, 3104, 3313};
   vector<const DTrackTimeBased *> trackVector;
-  loop->Get(trackVector, "StraightLine");
+  event->Get(trackVector, "StraightLine");
 
   for (size_t i = 0; i < trackVector.size(); ++i) {
     const DTrackTimeBased *track = trackVector[i];
@@ -106,7 +102,7 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
     }
     if (contains_bad_pulls) continue;
 
-    japp->RootWriteLock();  // Just use the root lock as a temporary
+    GetLockService(event)->RootWriteLock();  // Just use the root lock as a temporary
     for (size_t iPull = 0; iPull < pulls.size(); ++iPull) {
       float resi = pulls[iPull].resi;  // residual of measurement
       float err = pulls[iPull].err;    // estimated error of measurement
@@ -363,21 +359,17 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
       }
     }
     milleWriter->end();
-    japp->RootUnLock();
+    GetLockService(event)->RootUnLock();
   }
-
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_MilleFieldOff::erun(void) {
+void JEventProcessor_MilleFieldOff::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
-jerror_t JEventProcessor_MilleFieldOff::fini(void) {
+void JEventProcessor_MilleFieldOff::Finish() {
   // Called before program exit after event processing is finished.
   delete milleWriter;
-  return NOERROR;
 }

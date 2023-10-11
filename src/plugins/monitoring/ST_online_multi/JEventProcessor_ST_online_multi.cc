@@ -8,7 +8,6 @@
 #include "JEventProcessor_ST_online_multi.h"
 #include "TRIGGER/DTrigger.h"
 
-using namespace jana;
 //***************** Declare Two Dimensional Histograms*************
 static TH2I *h2_st_adc_tdc_multi;
 static TH2I *h2_st_adc_hit_multi;
@@ -31,12 +30,10 @@ TH1I** h1_hit_multiplicity = new TH1I*[NCHANNELS];
 TH2I** h2_ADC_TDC_multiplicity = new TH2I*[NCHANNELS];
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_online_multi());
+	app->Add(new JEventProcessor_ST_online_multi());
 }
 } // "C"
 
@@ -46,7 +43,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_online_multi::JEventProcessor_ST_online_multi()
 {
-
+	SetTypeName("JEventProcessor_ST_online_multi");
 }
 
 //------------------
@@ -58,18 +55,20 @@ JEventProcessor_ST_online_multi::~JEventProcessor_ST_online_multi()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_online_multi::init(void)
+void JEventProcessor_ST_online_multi::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   //Create root folder for ST and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -107,49 +106,47 @@ jerror_t JEventProcessor_ST_online_multi::init(void)
  
   // cd back to main directory
   main->cd();
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_online_multi::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_online_multi::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_online_multi::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_ST_online_multi::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
   // Get the data objects first so we minimize the time we hold the ROOT mutex lock
   vector<const DSCDigiHit*> ADC_Digi_Hits;      // ST fADC250 DigiHits
   vector<const DSCTDCDigiHit*> TDC_Digi_Hits;   // ST f1TDC DigiHits
   vector<const DSCHit*> Factory_Hits;           // ST hits
   
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
-  loop->Get(ADC_Digi_Hits);
-  loop->Get(TDC_Digi_Hits);
-  loop->Get(Factory_Hits);
+  event->Get(ADC_Digi_Hits);
+  event->Get(TDC_Digi_Hits);
+  event->Get(Factory_Hits);
   //Get the size of each object
   int ADC_hits       = ADC_Digi_Hits.size();
   int TDC_hits       = TDC_Digi_Hits.size();
@@ -158,7 +155,7 @@ jerror_t JEventProcessor_ST_online_multi::evnt(JEventLoop *loop, uint64_t eventn
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
  //reset the counters to zero
   memset(counter_adc, 0, sizeof(counter_adc));
@@ -266,30 +263,25 @@ jerror_t JEventProcessor_ST_online_multi::evnt(JEventLoop *loop, uint64_t eventn
 	}
     }
   
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_online_multi::erun(void)
+void JEventProcessor_ST_online_multi::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_online_multi::fini(void)
+void JEventProcessor_ST_online_multi::Finish()
 {
 	// Called before program exit after event processing is finished.
-
- 
-	return NOERROR;
 }
 

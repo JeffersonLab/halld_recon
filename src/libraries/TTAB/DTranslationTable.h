@@ -15,12 +15,8 @@ using namespace std;
 
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-#include <JANA/JCalibration.h>
-#include <JANA/JException.h>
-#include <JANA/JEventSource.h>
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 
 #include <DAQ/DModuleType.h>
 #include <DAQ/Df250PulseData.h>
@@ -136,11 +132,11 @@ using namespace jana;
 
 #include "GlueX.h"
 
-class DTranslationTable:public jana::JObject{
+class DTranslationTable:public JObject{
 	public:
 		JOBJECT_PUBLIC(DTranslationTable);
 		
-		DTranslationTable(JEventLoop *loop);
+		DTranslationTable(JApplication* app, JEvent* event);
 		~DTranslationTable();
 		
 		// Each detector system has its own native indexing scheme.
@@ -482,21 +478,13 @@ class DTranslationTable:public jana::JObject{
 		#define makevector(A) mutable vector<A*>  v##A;
 		MyTypes(makevector)
 		
-		// Similarly, define a pointer to the factory for each type.
-		#define makefactoryptr(A) JFactory<A> *fac_##A;
-		MyTypes(makefactoryptr)
-		
-		// Method to initialize factory pointers
-		#define copyfactoryptr(A) fac_##A = (JFactory<A>*)loop->GetFactory(#A, NULL, false);
-		void InitFactoryPointers(JEventLoop *loop){ MyTypes(copyfactoryptr) }
-
 		// Method to clear each of the vectors at beginning of event
 		#define clearvector(A) v##A.clear();
 		void ClearVectors(void) const { MyTypes(clearvector) }
 
 		// Method to copy all produced objects to respective factories
-		#define copytofactory(A) fac_##A->CopyTo(v##A);
-		void CopyToFactories(void) const { MyTypes(copytofactory) }
+		#define copytofactory(A) event->Insert(v##A, "");
+		void CopyToFactories(JEvent* event) const { MyTypes(copytofactory) }
 		
 		// Method to check class name against each classname in MyTypes returning
 		// true if found and false if not.
@@ -521,11 +509,11 @@ class DTranslationTable:public jana::JObject{
 		MyfADCTypes(makefadcconfigparam2)
 		
 		// Method to initialize variables and create/get config. parameters
-		void InitNsamplesOverride(void){
+		void InitNsamplesOverride(JApplication* app){
 			#define setdefaultfadc(A) {\
 				NSAMPLES_INTEGRAL_##A = NSAMPLES_PEDESTAL_##A = 0; \
-				gPARMS->SetDefaultParameter("TT:NSAMPLES_INTEGRAL_" #A, NSAMPLES_INTEGRAL_##A, "Overwrite the nsamples_integral field of all " #A " objects with this"); \
-				gPARMS->SetDefaultParameter("TT:NSAMPLES_PEDESTAL_" #A, NSAMPLES_PEDESTAL_##A, "Overwrite the nsamples_pedestal field of all " #A " objects with this"); \
+				app->SetDefaultParameter("TT:NSAMPLES_INTEGRAL_" #A, NSAMPLES_INTEGRAL_##A, "Overwrite the nsamples_integral field of all " #A " objects with this"); \
+				app->SetDefaultParameter("TT:NSAMPLES_PEDESTAL_" #A, NSAMPLES_PEDESTAL_##A, "Overwrite the nsamples_pedestal field of all " #A " objects with this"); \
 			}
 			MyfADCTypes(setdefaultfadc)
 		}
@@ -543,7 +531,7 @@ class DTranslationTable:public jana::JObject{
 		//-----------------------------------------------------------------------
 
 		// Methods
-		void ApplyTranslationTable(jana::JEventLoop *loop) const;
+		void ApplyTranslationTable(const std::shared_ptr<const JEvent>& event) const;
 		
 		// fADC250 -- Fall 2016 -> ?
 		DBCALDigiHit*       MakeBCALDigiHit(       const BCALIndex_t &idx,       const Df250PulseData *pd) const;
@@ -609,16 +597,16 @@ class DTranslationTable:public jana::JObject{
 
 		DDIRCTDCDigiHit*  MakeDIRCTDCDigiHit( const DIRCIndex_t &idx,       const DDIRCTDCHit *hit) const;
 
-		void Addf250ObjectsToCallStack(JEventLoop *loop, string caller) const;
-		void Addf125CDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const;
-		void Addf125FDCObjectsToCallStack(JEventLoop *loop, string caller, bool addpulseobjs) const;
-		void AddF1TDCObjectsToCallStack(JEventLoop *loop, string caller) const;
-		void AddCAEN1290TDCObjectsToCallStack(JEventLoop *loop, string caller) const;
-		void AddToCallStack(JEventLoop *loop, string caller, string callee) const;
+		void Addf250ObjectsToCallStack(const JEvent& event, string caller) const;
+		void Addf125CDCObjectsToCallStack(const JEvent& event, string caller, bool addpulseobjs) const;
+		void Addf125FDCObjectsToCallStack(const JEvent& event, string caller, bool addpulseobjs) const;
+		void AddF1TDCObjectsToCallStack(const JEvent& event, string caller) const;
+		void AddCAEN1290TDCObjectsToCallStack(const JEvent& event, string caller) const;
+		void AddToCallStack(const JEvent& event, string caller, string callee) const;
 
 		void ReadOptionalROCidTranslation(void);
-		static void SetSystemsToParse(string systems, int systems_to_parse_force, JEventSource *eventsource);
-		void SetSystemsToParse(JEventSource *eventsource){SetSystemsToParse(SYSTEMS_TO_PARSE, 0, eventsource);}
+		static std::set<uint32_t> GetSystemsToParse(string systems, int systems_to_parse_force);
+		std::set<uint32_t> GetSystemsToParse() { return GetSystemsToParse(SYSTEMS_TO_PARSE, 0); }
 		void ReadTranslationTable(JCalibration *jcalib=NULL);
 		
 		template<class T> void CopyDf250Info(T *h, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
@@ -673,7 +661,7 @@ class DTranslationTable:public jana::JObject{
 		string SYSTEMS_TO_PARSE;
 		string ROCID_MAP_FILENAME;
 		bool CALL_STACK;
-		
+
 		mutable JStreamLog ttout;
 
 		string Channel2Str(const DChannelInfo &in_channel) const;

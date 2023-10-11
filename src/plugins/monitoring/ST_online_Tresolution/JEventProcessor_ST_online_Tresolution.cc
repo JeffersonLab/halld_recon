@@ -7,19 +7,16 @@
 
 #include "JEventProcessor_ST_online_Tresolution.h"
 #include "TRIGGER/DTrigger.h"
-using namespace jana;
-
+#include "DANA/DEvent.h"
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 
 #include "RF/DRFTime.h"
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_online_Tresolution());
+	app->Add(new JEventProcessor_ST_online_Tresolution());
 }
 } // "C"
 
@@ -29,7 +26,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_online_Tresolution::JEventProcessor_ST_online_Tresolution()
 {
-
+	SetTypeName("JEventProcessor_ST_online_Tresolution");
 }
 
 //------------------
@@ -41,17 +38,17 @@ JEventProcessor_ST_online_Tresolution::~JEventProcessor_ST_online_Tresolution()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_online_Tresolution::init(void)
+void JEventProcessor_ST_online_Tresolution::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
   // **************** define histograms *************************
 
@@ -74,24 +71,23 @@ jerror_t JEventProcessor_ST_online_Tresolution::init(void)
   gDirectory->cd("../");
   main->cd();
 
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_online_Tresolution::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_online_Tresolution::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
   //RF Period
   vector<double> locRFPeriodVector;
-  eventLoop->GetCalib("PHOTON_BEAM/RF/rf_period", locRFPeriodVector);
+  GetCalib(event, "PHOTON_BEAM/RF/rf_period", locRFPeriodVector);
   dRFBunchPeriod = locRFPeriodVector[0];
   
   // Obtain the target center along z;
   map<string,double> target_params;
-  if (eventLoop->GetCalib("/TARGET/target_parms", target_params))
+  if (GetCalib(event, "/TARGET/target_parms", target_params))
     jout << "Error loading /TARGET/target_parms/ !" << endl;
   if (target_params.find("TARGET_Z_POSITION") != target_params.end())
     z_target_center = target_params["TARGET_Z_POSITION"];
@@ -99,86 +95,82 @@ jerror_t JEventProcessor_ST_online_Tresolution::brun(JEventLoop *eventLoop, int3
     jerr << "Unable to get TARGET_Z_POSITION from /TARGET/target_parms !" << endl;
   
   // Obtain the Start Counter geometry
-  DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  if(!dapp)
-    _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl; 
-  DGeometry* locGeometry = dapp->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
+  DGeometry* locGeometry = GetDGeometry(event);
   locGeometry->GetStartCounterGeom(sc_pos, sc_norm);
   // Propagation Time constant
-  if(eventLoop->GetCalib("START_COUNTER/propagation_time_corr", propagation_time_corr))
+  if(GetCalib(event, "START_COUNTER/propagation_time_corr", propagation_time_corr))
     jout << "Error loading /START_COUNTER/propagation_time_corr !" << endl;
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_online_Tresolution::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_ST_online_Tresolution::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
   double speed_light = 29.9792458;
 
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
   // Get the particleID object for each run
   // Be sure that DRFTime_factory::init() and brun() are called
   vector<const DParticleID *> locParticleID_algos;
-  loop->Get(locParticleID_algos);
+  event->Get(locParticleID_algos);
   if(locParticleID_algos.size() < 1)
     {
       _DBG_<<"Unable to get a DParticleID object! NO PID will be done!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      return;
     }
   auto locParticleID = locParticleID_algos[0];
   
   // We want to be use some of the tools available in the RFTime factory 
   // Specifically stepping the RF back to a chosen time
   vector<const DRFTime *> locRFTimes;
-  loop->Get(locRFTimes);      // make sure brun() gets called for this factory!
-  auto locRFTimeFactory = static_cast<DRFTime_factory*>(loop->GetFactory("DRFTime"));
+  event->Get(locRFTimes);      // make sure brun() gets called for this factory!
+  auto locRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
   
 
   // SC hits
   vector<const DSCHit *> scHitVector;
-  loop->Get(scHitVector);
+  event->Get(scHitVector);
   
   // RF time object
   const DRFTime* thisRFTime = NULL;
   vector <const DRFTime*> RFTimeVector;
-  loop->Get(RFTimeVector);
+  event->Get(RFTimeVector);
   if (RFTimeVector.size() != 0)
     thisRFTime = RFTimeVector[0];
 
   // Grab charged tracks
   vector<const DChargedTrack *> chargedTrackVector;
-  loop->Get(chargedTrackVector);
+  event->Get(chargedTrackVector);
 
   // Grab the associated detector matches object
   const DDetectorMatches* locDetectorMatches = NULL;
-  loop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
   
   // Grab the associated RF bunch object
   const DEventRFBunch *thisRFBunch = NULL;
-  loop->GetSingle(thisRFBunch, "Calibrations");
+  event->GetSingle(thisRFBunch, "Calibrations");
   
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
   for (uint32_t i = 0; i < chargedTrackVector.size(); i++)
     {   
@@ -273,28 +265,24 @@ jerror_t JEventProcessor_ST_online_Tresolution::evnt(JEventLoop *loop, uint64_t 
 	}
     } // sc charged tracks
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_online_Tresolution::erun(void)
+void JEventProcessor_ST_online_Tresolution::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_online_Tresolution::fini(void)
+void JEventProcessor_ST_online_Tresolution::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

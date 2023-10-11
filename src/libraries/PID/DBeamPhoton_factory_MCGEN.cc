@@ -2,46 +2,45 @@
 #include <iomanip>
 using namespace std;
 
+#include <JANA/JEvent.h>
 #include "DBeamPhoton_factory_MCGEN.h"
 #include "TAGGER/DTAGHGeometry.h"
 #include "TAGGER/DTAGMGeometry.h"
 
-using namespace jana;
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamPhoton_factory_MCGEN::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DBeamPhoton_factory_MCGEN::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 		//This is because some/all of these pointers are just copied from earlier objects, and should not be deleted.  
-	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
+	bool locIsRESTEvent = event->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 	if(!locIsRESTEvent) //If REST, will grab from file: IS owner
 		SetFactoryFlag(NOT_OBJECT_OWNER);
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamPhoton_factory_MCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DBeamPhoton_factory_MCGEN::Process(const std::shared_ptr<const JEvent>& event)
 {
-	if(!_data.empty())
+	if(!mData.empty())
 	{
-		if(_data[0]->dSystem == SYS_NULL)
-			delete _data[0]; //CREATED BY THIS FACTORY //else copied from TRUTH factory!
-		_data.clear();
+		if(mData[0]->dSystem == SYS_NULL)
+			delete mData[0]; //CREATED BY THIS FACTORY //else copied from TRUTH factory!
+		mData.clear();
 	}
 
 	//Check if MC
 	vector<const DMCReaction*> locMCReactions;
-	locEventLoop->Get(locMCReactions);
+	event->Get(locMCReactions);
 	if(locMCReactions.empty())
-		return NOERROR; //Not a thrown event
+		return; //Not a thrown event
 
 	//First see if it was tagged: If so, use truth DBeamPhoton
 	vector<const DBeamPhoton*> locTruthPhotons;
-	locEventLoop->Get(locTruthPhotons, "TRUTH");
+	event->Get(locTruthPhotons, "TRUTH");
 	for(auto locBeamPhoton : locTruthPhotons)
 	{
 		vector<const DTAGMHit*> locTAGMHits;
@@ -50,8 +49,8 @@ jerror_t DBeamPhoton_factory_MCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_
 		{
 			if(locTAGMHit->bg != 0)
 				continue;
-			_data.push_back(const_cast<DBeamPhoton*>(locBeamPhoton));
-			return NOERROR;
+			mData.push_back(const_cast<DBeamPhoton*>(locBeamPhoton));
+			return;
 		}
 
 		vector<const DTAGHHit*> locTAGHHits;
@@ -60,23 +59,23 @@ jerror_t DBeamPhoton_factory_MCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_
 		{
 			if(locTAGHHit->bg != 0)
 				continue;
-			_data.push_back(const_cast<DBeamPhoton*>(locBeamPhoton));
-			return NOERROR;
+			mData.push_back(const_cast<DBeamPhoton*>(locBeamPhoton));
+			return;
 		}
 	}
 
 	// extract the TAGH geometry
    vector<const DTAGHGeometry*> taghGeomVect;
-   eventLoop->Get(taghGeomVect);
+   event->Get(taghGeomVect);
    if (taghGeomVect.empty())
-      return NOERROR;
+      return;
    const DTAGHGeometry* taghGeom = taghGeomVect[0];
 
    // extract the TAGM geometry
    vector<const DTAGMGeometry*> tagmGeomVect;
-   eventLoop->Get(tagmGeomVect);
+   event->Get(tagmGeomVect);
    if (tagmGeomVect.empty())
-      return NOERROR;
+      return;
    const DTAGMGeometry* tagmGeom = tagmGeomVect[0];
 
 
@@ -89,23 +88,19 @@ jerror_t DBeamPhoton_factory_MCGEN::evnt(jana::JEventLoop *locEventLoop, uint64_
 		locBeamPhoton->dSystem = SYS_TAGH;
 	else
 		locBeamPhoton->dSystem = SYS_NULL;
-	_data.push_back(locBeamPhoton);
-
-	return NOERROR;
+	Insert(locBeamPhoton);
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBeamPhoton_factory_MCGEN::fini(void)
+void DBeamPhoton_factory_MCGEN::Finish()
 {
-	if(!_data.empty())
+	if(!mData.empty())
 	{
-		if(_data[0]->dSystem == SYS_NULL)
-			delete _data[0]; //CREATED BY THIS FACTORY //else copied from TRUTH factory!
-		_data.clear();
+		if(mData[0]->dSystem == SYS_NULL)
+			delete mData[0]; //CREATED BY THIS FACTORY //else copied from TRUTH factory!
+		mData.clear();
 	}
-
-	return NOERROR;
 }
 

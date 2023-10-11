@@ -1,22 +1,22 @@
 #include "ANALYSIS/DHistogramActions.h"
 
-void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_PID::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 	string locParticleName, locParticleName2, locParticleROOTName, locParticleROOTName2;
 	Particle_t locPID, locPID2;
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//auto locDesiredPIDs = Get_Reaction()->Get_FinalPIDs(-1, false, false, d_AllCharges, false);
 	auto locDesiredPIDs = Get_Reaction()->Get_FinalPIDs(-1, false, true, d_AllCharges, false);
 
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 		for(size_t loc_i = 0; loc_i < locDesiredPIDs.size(); ++loc_i)
@@ -451,31 +451,31 @@ void DHistogramAction_PID::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_PID::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_PID::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DParticleID*> locParticleIDs;
-	locEventLoop->Get(locParticleIDs);
+	locEvent->Get(locParticleIDs);
 
 	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	locEvent->Get(locAnalysisUtilitiesVector);
 
 	dParticleID = locParticleIDs[0];
 	dAnalysisUtilities = locAnalysisUtilitiesVector[0];
 }
 
-bool DHistogramAction_PID::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_PID::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<const DMCThrownMatching*> locMCThrownMatchingVector;
-	locEventLoop->Get(locMCThrownMatchingVector);
+	locEvent->Get(locMCThrownMatchingVector);
 	const DMCThrownMatching* locMCThrownMatching = locMCThrownMatchingVector.empty() ? NULL : locMCThrownMatchingVector[0];
 
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 
 	vector<const DReactionVertexInfo*> locVertexInfos;
-	locEventLoop->Get(locVertexInfos);
+	locEvent->Get(locVertexInfos);
 	
 	// figure out what the right DReactionVertexInfo is
 	const DReactionVertexInfo *locReactionVertexInfo = nullptr;
@@ -770,13 +770,13 @@ void DHistogramAction_PID::Fill_NeutralHists(const DNeutralParticleHypothesis* l
 	Unlock_Action();
 }
 
-void DHistogramAction_TrackVertexComparison::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_TrackVertexComparison::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle, locStepROOTName, locParticleName, locParticleROOTName;
 	Particle_t locPID, locHigherMassPID, locLowerMassPID;
 	string locHigherMassParticleName, locLowerMassParticleName, locHigherMassParticleROOTName, locLowerMassParticleROOTName;
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	size_t locNumSteps = Get_Reaction()->Get_NumReactionSteps();
 	dHistDeque_TrackZToCommon.resize(locNumSteps);
@@ -789,7 +789,7 @@ void DHistogramAction_TrackVertexComparison::Initialize(JEventLoop* locEventLoop
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 		for(size_t loc_i = 0; loc_i < locNumSteps; ++loc_i)
@@ -888,17 +888,17 @@ void DHistogramAction_TrackVertexComparison::Initialize(JEventLoop* locEventLoop
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_TrackVertexComparison::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_TrackVertexComparison::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	locEvent->Get(locAnalysisUtilitiesVector);
 	dAnalysisUtilities = locAnalysisUtilitiesVector[0];
 }
 
-bool DHistogramAction_TrackVertexComparison::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_TrackVertexComparison::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	Particle_t locPID;
 	double locDOCA, locDeltaZ, locDeltaT, locMaxDOCA, locMaxDeltaZ, locMaxDeltaT;
@@ -1009,7 +1009,7 @@ bool DHistogramAction_TrackVertexComparison::Perform_Action(JEventLoop* locEvent
 	return true;
 }
 
-void DHistogramAction_ParticleComboKinematics::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_ParticleComboKinematics::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	if(Get_UseKinFitResultsFlag() && (Get_Reaction()->Get_KinFitType() == d_NoFit))
 	{
@@ -1020,7 +1020,7 @@ void DHistogramAction_ParticleComboKinematics::Initialize(JEventLoop* locEventLo
 	string locHistName, locHistTitle, locStepROOTName, locParticleName, locParticleROOTName;
 	Particle_t locPID;
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	size_t locNumSteps = Get_Reaction()->Get_NumReactionSteps();
 	dHistDeque_PVsTheta.resize(locNumSteps);
@@ -1037,7 +1037,7 @@ void DHistogramAction_ParticleComboKinematics::Initialize(JEventLoop* locEventLo
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 		
@@ -1254,26 +1254,25 @@ void DHistogramAction_ParticleComboKinematics::Initialize(JEventLoop* locEventLo
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_ParticleComboKinematics::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_ParticleComboKinematics::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DParticleID*> locParticleIDs;
-	locEventLoop->Get(locParticleIDs);
+	locEvent->Get(locParticleIDs);
 
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
 	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	locEvent->Get(locAnalysisUtilitiesVector);
 	
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
 	dParticleID = locParticleIDs[0];
 	dAnalysisUtilities = locAnalysisUtilitiesVector[0];
 }
 
-bool DHistogramAction_ParticleComboKinematics::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_ParticleComboKinematics::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	if(Get_UseKinFitResultsFlag() && (Get_Reaction()->Get_KinFitType() == d_NoFit))
 	{
@@ -1309,7 +1308,7 @@ bool DHistogramAction_ParticleComboKinematics::Perform_Action(JEventLoop* locEve
 				}
 			}
 			else if(Get_UseKinFitResultsFlag()) //decaying particle, but kinfit so can hist
-				Fill_Hists(locEventLoop, locKinematicData, false, loc_i); //has many source object, and is unique to this combo: no dupes to check against: let it ride
+				Fill_Hists(locEvent, locKinematicData, false, loc_i); //has many source object, and is unique to this combo: no dupes to check against: let it ride
 		}
 
 		//VERTEX INFORMATION
@@ -1371,13 +1370,13 @@ bool DHistogramAction_ParticleComboKinematics::Perform_Action(JEventLoop* locEve
 			}
 
 			bool locIsMissingFlag = (Get_Reaction()->Get_ReactionStep(loc_i)->Get_MissingParticleIndex() == int(loc_j));
-			Fill_Hists(locEventLoop, locKinematicData, locIsMissingFlag, loc_i);
+			Fill_Hists(locEvent, locKinematicData, locIsMissingFlag, loc_i);
 		} //end of particle loop
 	} //end of step loop
 	return true;
 }
 
-void DHistogramAction_ParticleComboKinematics::Fill_Hists(JEventLoop* locEventLoop, const DKinematicData* locKinematicData, bool locIsMissingFlag, size_t locStepIndex)
+void DHistogramAction_ParticleComboKinematics::Fill_Hists(const std::shared_ptr<const JEvent>& locEvent, const DKinematicData* locKinematicData, bool locIsMissingFlag, size_t locStepIndex)
 {
 	Particle_t locPID = locKinematicData->PID();
 	DVector3 locMomentum = locKinematicData->momentum();
@@ -1443,12 +1442,12 @@ void DHistogramAction_ParticleComboKinematics::Fill_BeamHists(const DKinematicDa
 	Unlock_Action();
 }
 
-void DHistogramAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_InvariantMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 	double locMassPerBin = 1000.0*(dMaxMass - dMinMass)/((double)dNumMassBins);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	string locParticleNamesForHist = "";
 	if(dInitialPID != Unknown)
@@ -1466,7 +1465,7 @@ void DHistogramAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1486,24 +1485,23 @@ void DHistogramAction_InvariantMass::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_InvariantMass::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_InvariantMass::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//BEAM BUNCH PERIOD
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
-bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_InvariantMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	auto locFirstStep = locParticleCombo->Get_ParticleComboStep(0);
 	bool locBeamPresent = DAnalysis::Get_IsFirstStepBeam(Get_Reaction());
@@ -1581,7 +1579,7 @@ bool DHistogramAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, co
 	return true;
 }
 
-void DHistogramAction_MissingMass::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_MissingMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	double locMassPerBin = 1000.0*(dMaxMass - dMinMass)/((double)dNumMassBins);
 	string locInitialParticlesROOTName = DAnalysis::Get_InitialParticlesName(Get_Reaction()->Get_ReactionStep(0), true);
@@ -1589,11 +1587,11 @@ void DHistogramAction_MissingMass::Initialize(JEventLoop* locEventLoop)
 	auto locChainPIDs = DAnalysis::Get_ChainPIDs(Get_Reaction(), Get_Reaction()->Get_ReactionStep(0)->Get_InitialPID(), dMissingMassOffOfStepIndex, locMissingMassOffOfPIDs, !Get_UseKinFitResultsFlag(), true);
 	string locFinalParticlesROOTName = DAnalysis::Convert_PIDsToROOTName(locChainPIDs);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1619,24 +1617,23 @@ void DHistogramAction_MissingMass::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_MissingMass::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_MissingMass::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//BEAM BUNCH PERIOD
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
-bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_MissingMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	double locBeamEnergy = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle()->energy();
 
@@ -1697,7 +1694,7 @@ bool DHistogramAction_MissingMass::Perform_Action(JEventLoop* locEventLoop, cons
 	return true;
 }
 
-void DHistogramAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_MissingMassSquared::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	double locMassSqPerBin = 1000.0*1000.0*(dMaxMassSq - dMinMassSq)/((double)dNumMassBins);
 	string locInitialParticlesROOTName = DAnalysis::Get_InitialParticlesName(Get_Reaction()->Get_ReactionStep(0), true);
@@ -1705,11 +1702,11 @@ void DHistogramAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
 	auto locChainPIDs = DAnalysis::Get_ChainPIDs(Get_Reaction(), Get_Reaction()->Get_ReactionStep(0)->Get_InitialPID(), dMissingMassOffOfStepIndex, locMissingMassOffOfPIDs, !Get_UseKinFitResultsFlag(), true);
 	string locFinalParticlesROOTName = DAnalysis::Convert_PIDsToROOTName(locChainPIDs);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1735,24 +1732,23 @@ void DHistogramAction_MissingMassSquared::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_MissingMassSquared::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_MissingMassSquared::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//BEAM BUNCH PERIOD
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
-bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_MissingMassSquared::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	double locBeamEnergy = locParticleCombo->Get_ParticleComboStep(0)->Get_InitialParticle()->energy();
 
@@ -1812,11 +1808,11 @@ bool DHistogramAction_MissingMassSquared::Perform_Action(JEventLoop* locEventLoo
 	return true;
 }
 
-void DHistogramAction_2DInvariantMass::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_2DInvariantMass::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	string locParticleNamesForHistX = "";
 	for(size_t loc_i = 0; loc_i < dXPIDs.size(); ++loc_i)
@@ -1830,7 +1826,7 @@ void DHistogramAction_2DInvariantMass::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1841,24 +1837,23 @@ void DHistogramAction_2DInvariantMass::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_2DInvariantMass::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_2DInvariantMass::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
+	DGeometry *locGeometry = DEvent::GetDGeometry(locEvent);
 	locGeometry->GetTargetZ(dTargetZCenter);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 	//BEAM BUNCH PERIOD
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
-bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_2DInvariantMass::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<pair<double, double> > locMassesToFill;
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
@@ -1932,11 +1927,11 @@ bool DHistogramAction_2DInvariantMass::Perform_Action(JEventLoop* locEventLoop, 
 	return true;
 }
 
-void DHistogramAction_Dalitz::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_Dalitz::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 	
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	string locParticleNamesForHistX = "";
 	for(size_t loc_i = 0; loc_i < dXPIDs.size(); ++loc_i)
@@ -1950,7 +1945,7 @@ void DHistogramAction_Dalitz::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -1961,15 +1956,15 @@ void DHistogramAction_Dalitz::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_Dalitz::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_Dalitz::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_Dalitz::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	vector<pair<double, double> > locMassesToFill;
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
@@ -2023,12 +2018,13 @@ bool DHistogramAction_Dalitz::Perform_Action(JEventLoop* locEventLoop, const DPa
 	return true;
 }
 
-void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_KinFitResults::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
-        if (gPARMS->Exists("KINFIT:DEPENDENCE_HISTS")){
+        auto params = japp->GetJParameterManager();
+        if (params->Exists("KINFIT:DEPENDENCE_HISTS")){
                 bool locHistDependenceFlag = false;
-                gPARMS->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
-                gPARMS->GetParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
+                params->SetDefaultParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
+                params->GetParameter("KINFIT:DEPENDENCE_HISTS", locHistDependenceFlag);
                 dHistDependenceFlag = locHistDependenceFlag;
 	}
 
@@ -2039,7 +2035,7 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 
 	//Get the DReactionVertexInfo for this reaction
 	vector<const DReactionVertexInfo*> locReactionVertexInfos;
-	locEventLoop->Get(locReactionVertexInfos);
+	locEvent->Get(locReactionVertexInfos);
 	const DReactionVertexInfo* locReactionVertexInfo = nullptr;
 	for(auto& locVertexInfo : locReactionVertexInfos)
 	{
@@ -2051,8 +2047,8 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 		break;
 	}
 
-	dKinFitUtils = new DKinFitUtils_GlueX(locEventLoop);
-	Run_Update(locEventLoop);
+	dKinFitUtils = new DKinFitUtils_GlueX(locEvent);
+	Run_Update(locEvent);
 
 	size_t locNumConstraints = 0, locNumUnknowns = 0;
 	string locConstraintString = dKinFitUtils->Get_ConstraintInfo(locReactionVertexInfo, Get_Reaction(), locNumConstraints, locNumUnknowns);
@@ -2070,7 +2066,7 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -2212,13 +2208,13 @@ void DHistogramAction_KinFitResults::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_KinFitResults::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_KinFitResults::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-	dKinFitUtils->Set_RunDependent_Data(locEventLoop);
+	locEvent->GetSingle(dAnalysisUtilities);
+	dKinFitUtils->Set_RunDependent_Data(locEvent);
 }
 
 void DHistogramAction_KinFitResults::Create_ParticlePulls(string locFullROOTName, bool locIsChargedFlag, bool locIsInVertexFitFlag, bool locIsNeutralShowerFlag, int locStepIndex, Particle_t locPID)
@@ -2413,7 +2409,7 @@ void DHistogramAction_KinFitResults::Get_DeltaBinningParams(DKinFitPullType locP
 	}
 }
 
-bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_KinFitResults::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//kinfit results are unique for each DParticleCombo: no need to check for duplicates
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
@@ -2582,16 +2578,16 @@ double DHistogramAction_KinFitResults::Get_Delta(DKinFitPullType locPullType, co
 		return 0.0;
 }
 
-void DHistogramAction_MissingTransverseMomentum::Initialize(JEventLoop* locEventLoop)
+void DHistogramAction_MissingTransverseMomentum::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	string locHistName, locHistTitle;
 	double locPtPerBin = 1000.0*(dMaxPt - dMinPt)/((double)dNumPtBins);
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -2604,17 +2600,17 @@ void DHistogramAction_MissingTransverseMomentum::Initialize(JEventLoop* locEvent
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-void DHistogramAction_MissingTransverseMomentum::Run_Update(JEventLoop* locEventLoop)
+void DHistogramAction_MissingTransverseMomentum::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	locEvent->Get(locAnalysisUtilitiesVector);
 	dAnalysisUtilities = locAnalysisUtilitiesVector[0];
 }
 
-bool DHistogramAction_MissingTransverseMomentum::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DHistogramAction_MissingTransverseMomentum::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	set<pair<const JObject*, unsigned int> > locSourceObjects;
 	DLorentzVector locFinalStateP4 = dAnalysisUtilities->Calc_FinalStateP4(Get_Reaction(), locParticleCombo, 0, locSourceObjects, Get_UseKinFitResultsFlag()); // Use step '0'

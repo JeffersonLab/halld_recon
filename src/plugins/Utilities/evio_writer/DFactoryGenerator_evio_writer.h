@@ -1,12 +1,12 @@
 #ifndef _DFactoryGenerator_evio_writer_
 #define _DFactoryGenerator_evio_writer_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DEventWriterEVIO_factory.h"
 
-class DFactoryGenerator_evio_writer : public jana::JFactoryGenerator
+class DFactoryGenerator_evio_writer : public JFactoryGenerator
 {
 	public:
 		DFactoryGenerator_evio_writer(){}
@@ -14,10 +14,9 @@ class DFactoryGenerator_evio_writer : public jana::JFactoryGenerator
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "DFactoryGenerator_evio_writer";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop *loop)
+		void GenerateFactories(JFactorySet* fs)
 		{
-			loop->AddFactory(new DEventWriterEVIO_factory());
-			return NOERROR;
+			fs->Add(new DEventWriterEVIO_factory());
 		}
 };
 

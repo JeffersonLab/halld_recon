@@ -8,21 +8,19 @@
 #ifndef _JFactoryGenerator_DTrigger_
 #define _JFactoryGenerator_DTrigger_
 
-#include <JANA/jerror.h>
 #include <JANA/JFactoryGenerator.h>
 
 #include "DTrigger_factory.h"
 
-class JFactoryGenerator_DTrigger: public jana::JFactoryGenerator{
+class JFactoryGenerator_DTrigger: public JFactoryGenerator{
 	public:
 		JFactoryGenerator_DTrigger(){}
 		virtual ~JFactoryGenerator_DTrigger(){}
 		virtual const char* className(void){return static_className();}
 		static const char* static_className(void){return "JFactoryGenerator_DTrigger";}
 		
-		jerror_t GenerateFactories(jana::JEventLoop *loop){
-			loop->AddFactory(new DTrigger_factory());
-			return NOERROR;
+		void GenerateFactories(JFactorySet* fs) override{
+			fs->Add(new DTrigger_factory());
 		}
 
 };

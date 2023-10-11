@@ -6,18 +6,17 @@
 //
 
 #include "JEventProcessor_EventTagPi0.h"
-using namespace jana;
 
 #include <DANA/DStatusBits.h>
 #include <FCAL/DFCALHit.h>
 
+using namespace std;
+
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_EventTagPi0());
+	app->Add(new JEventProcessor_EventTagPi0());
 }
 } // "C"
 
@@ -27,7 +26,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_EventTagPi0::JEventProcessor_EventTagPi0()
 {
-
+	SetTypeName("JEventProcessor_EventTagPi0");
 }
 
 //------------------
@@ -39,39 +38,39 @@ JEventProcessor_EventTagPi0::~JEventProcessor_EventTagPi0()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_EventTagPi0::init(void)
+void JEventProcessor_EventTagPi0::Init()
 {
+	auto app = GetApplication();
+	// lockService = app->GetService<JLockService>();
+
 	Emin_MeV = 200.0;
 	Rmin_cm  = 30.0;
 	
-	gPARMS->SetDefaultParameter("PI0TAG:Emin_MeV", Emin_MeV , "Minimum energy in MeV of each single block hit to tag event as FCAL pi0");
-	gPARMS->SetDefaultParameter("PI0TAG:Rmin_cm" , Rmin_cm  , "Minimum distance in cm between single blocks with energy > PI0TAG:Emin_MeV to tag event as FCAL pi0");
+	app->SetDefaultParameter("PI0TAG:Emin_MeV", Emin_MeV , "Minimum energy in MeV of each single block hit to tag event as FCAL pi0");
+	app->SetDefaultParameter("PI0TAG:Rmin_cm" , Rmin_cm  , "Minimum distance in cm between single blocks with energy > PI0TAG:Emin_MeV to tag event as FCAL pi0");
 
 	Rmin_cm_2 = Rmin_cm*Rmin_cm;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_EventTagPi0::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_EventTagPi0::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_EventTagPi0::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_EventTagPi0::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DFCALHit*> fcalhits;
-	loop->Get(fcalhits);
+	event->Get(fcalhits);
 	
-	if(fcalhits.size() < 2) return NOERROR;
+	if(fcalhits.size() < 2) return;
 	
 	for(uint32_t i=0; i<(fcalhits.size()-1); i++){
 		const DFCALHit *hit1 = fcalhits[i];
@@ -85,31 +84,30 @@ jerror_t JEventProcessor_EventTagPi0::evnt(JEventLoop *loop, uint64_t eventnumbe
 			double deltaY = hit1->y - hit2->y;
 			double r2 = deltaX*deltaX + deltaY*deltaY;
 			if( r2 <= Rmin_cm_2 ){
-				JEvent &jevent = loop->GetJEvent();
-				jevent.SetStatusBit(kSTATUS_FCAL_PI0);
-				jevent.SetStatusBit(kSTATUS_PI0);
-				return NOERROR;
+
+				// TODO: NWB: This is dangerous, why are we doing this?
+				const DStatusBits* sbc = event->GetSingle<DStatusBits>();
+				DStatusBits* sb = const_cast<DStatusBits*>(sbc);
+				sb->SetStatusBit(kSTATUS_FCAL_PI0);
+				sb->SetStatusBit(kSTATUS_PI0);
+				return;
 			}
 		}
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_EventTagPi0::erun(void)
+void JEventProcessor_EventTagPi0::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_EventTagPi0::fini(void)
+void JEventProcessor_EventTagPi0::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

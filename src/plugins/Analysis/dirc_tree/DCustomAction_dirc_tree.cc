@@ -6,23 +6,24 @@
 #include "DCustomAction_dirc_tree.h"
 
 
-void DCustomAction_dirc_tree::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_dirc_tree::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
+  auto params = locEvent->GetJApplication()->GetJParameterManager();
   DIRC_TRUTH_BARHIT = false;
-  if(gPARMS->Exists("DIRC:TRUTH_BARHIT"))
-    gPARMS->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
+  if(params->Exists("DIRC:TRUTH_BARHIT"))
+    params->GetParameter("DIRC:TRUTH_BARHIT",DIRC_TRUTH_BARHIT);
 
   // get PID algos
   const DParticleID* locParticleID = NULL;
-  locEventLoop->GetSingle(locParticleID);
+  locEvent->GetSingle(locParticleID);
   dParticleID = locParticleID;
 
-  locEventLoop->GetSingle(dDIRCLut);
-  locEventLoop->GetSingle(dAnalysisUtilities);
+  locEvent->GetSingle(dDIRCLut);
+  locEvent->GetSingle(dAnalysisUtilities);
 
   // get DIRC geometry
   vector<const DDIRCGeometry*> locDIRCGeometry;
-  locEventLoop->Get(locDIRCGeometry);
+  locEvent->Get(locDIRCGeometry);
   dDIRCGeometry = locDIRCGeometry[0];
 
   // set PID for different passes in debuging histograms
@@ -31,11 +32,11 @@ void DCustomAction_dirc_tree::Initialize(JEventLoop* locEventLoop)
   dFinalStatePIDs.push_back(KPlus);
   dFinalStatePIDs.push_back(Proton);
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   string locOutputFileName = "hd_root.root";
-  if(gPARMS->Exists("OUTPUT_FILENAME"))
-    gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+  if(params->Exists("OUTPUT_FILENAME"))
+    params->GetParameter("OUTPUT_FILENAME", locOutputFileName);
 
   //go to file
   TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -53,23 +54,23 @@ void DCustomAction_dirc_tree::Initialize(JEventLoop* locEventLoop)
   fcEvent = new TClonesArray("DrcEvent");
   fTree->Branch("DrcEvent",&fcEvent,256000,2);
   
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
    
 }
 
-bool DCustomAction_dirc_tree::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_dirc_tree::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 
   const DDetectorMatches* locDetectorMatches = NULL;
-  locEventLoop->GetSingle(locDetectorMatches);
+  locEvent->GetSingle(locDetectorMatches);
   DDetectorMatches locDetectorMatch = (DDetectorMatches)locDetectorMatches[0];
 	
   // truth information on tracks hitting DIRC bar (for comparison)
   vector<const DDIRCTruthBarHit*> locDIRCBarHits;
-  locEventLoop->Get(locDIRCBarHits);
+  locEvent->Get(locDIRCBarHits);
 
   vector<const DDIRCPmtHit*> locDIRCPmtHits;
-  locEventLoop->Get(locDIRCPmtHits);
+  locEvent->Get(locDIRCPmtHits);
 
   // Get selected particle from reaction for DIRC analysis
   const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(dParticleComboStepIndex);
@@ -140,9 +141,9 @@ bool DCustomAction_dirc_tree::Perform_Action(JEventLoop* locEventLoop, const DPa
     }
   }
   
-  japp->RootWriteLock();
+  GetLockService(locEvent)->RootWriteLock();
   if(cevt.GetEntriesFast()>0) fTree->Fill();
-  japp->RootUnLock();
+  GetLockService(locEvent)->RootUnLock();
 
   return true;
 }

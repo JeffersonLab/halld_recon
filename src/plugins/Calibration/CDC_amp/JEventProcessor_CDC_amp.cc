@@ -11,11 +11,11 @@
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_CDC_amp());
+	app->Add(new JEventProcessor_CDC_amp());
 }
 } // "C"
 
@@ -25,7 +25,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_CDC_amp::JEventProcessor_CDC_amp()
 {
-
+	SetTypeName("JEventProcessor_CDC_amp");
 }
 
 //------------------
@@ -37,11 +37,13 @@ JEventProcessor_CDC_amp::~JEventProcessor_CDC_amp()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_CDC_amp::init(void)
+void JEventProcessor_CDC_amp::Init()
 {
-	// This is called once at program startup. 
+	// This is called once at program startup.
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC_amp")->cd();
@@ -103,37 +105,36 @@ jerror_t JEventProcessor_CDC_amp::init(void)
 
   main->cd();
 
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_CDC_amp::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CDC_amp::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
+	auto runnumber = event->GetRunNumber();
 
         if (runnumber<40000) ASCALE = 8;    // default for ASCALE before run 40,000 to be used if Df125config is not present
 
         if (runnumber>41497) ASCALE = 8;    // default for ASCALE before run 40,000 to be used if Df125config is not present
 
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_CDC_amp::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
 	// japp->RootFillLock(this);
 	//  ... fill histograms or trees ...
@@ -153,21 +154,21 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-    return NOERROR;
+    return;
 
   // use only events with track vertex in the target region
   const DVertex* locVertex  = NULL;
-  loop->GetSingle(locVertex);
+  event->GetSingle(locVertex);
   double vertexz = locVertex->dSpacetimeVertex.Z();
-  if (vertexz < 52 || vertexz > 78) return NOERROR;
+  if (vertexz < 52 || vertexz > 78) return;
 
 
   // // test whether this is simulated or real data (skip digihits for sim data)
   // int SIMULATION;
   // vector<const DMCThrown*> MCThrowns;
-  // loop->Get(MCThrowns);
+  // event->Get(MCThrowns);
   // if (MCThrowns.empty()) SIMULATION = 0;
   // if (!MCThrowns.empty()) SIMULATION = 1;
 
@@ -186,7 +187,7 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   vector<const DTrackTimeBased*> tracks;
 
-  loop->Get(tracks);
+  event->Get(tracks);
 
 
   for (uint32_t i=0; i<tracks.size(); i++) {
@@ -240,7 +241,7 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
       n = straw_offset[ring] + straw;
 
 
-      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+      lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
       if (!used[n]) {
 
@@ -289,32 +290,27 @@ jerror_t JEventProcessor_CDC_amp::evnt(JEventLoop *loop, uint64_t eventnumber)
       } //if !used
 
 
-      japp->RootFillUnLock(this); 
+      lockService->RootFillUnLock(this);
 
     }
   }
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_CDC_amp::erun(void)
+void JEventProcessor_CDC_amp::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_CDC_amp::fini(void)
+void JEventProcessor_CDC_amp::Finish()
 {
 	// Called before program exit after event processing is finished.
 
-
-	return NOERROR;
 }

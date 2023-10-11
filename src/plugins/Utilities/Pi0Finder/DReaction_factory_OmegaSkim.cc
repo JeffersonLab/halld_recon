@@ -32,19 +32,17 @@ void DReaction_factory_OmegaSkim::PIDCuts(DReaction* locReaction)
 //------------------
 // brun
 //------------------
-jerror_t DReaction_factory_OmegaSkim::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+void DReaction_factory_OmegaSkim::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   vector<double> locBeamPeriodVector;
-  locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+  GetCalib(event, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
   dBeamBunchPeriod = locBeamPeriodVector[0];
-
-  return NOERROR;
 }
 
 //------------------
 // init
 //------------------
-jerror_t DReaction_factory_OmegaSkim::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_OmegaSkim::Process(const std::shared_ptr<const JEvent> &event)
 {
   // Make as many DReaction objects as desired
   DReactionStep* locReactionStep = NULL;
@@ -124,17 +122,14 @@ jerror_t DReaction_factory_OmegaSkim::evnt(JEventLoop* locEventLoop, uint64_t lo
   locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction,omega,true,0.73,0.84));
   locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, true, 600, 0.5, 1.1, "Omega_AllCuts"));
   
-  _data.push_back(locReaction); //Register the DReaction with the factory
-
-  return NOERROR;
+  Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
 // fini
 //------------------
-jerror_t DReaction_factory_OmegaSkim::fini(void)
+void DReaction_factory_OmegaSkim::Finish()
 {
   for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
     delete dReactionStepPool[loc_i]; //cleanup memory
-  return NOERROR;
 }

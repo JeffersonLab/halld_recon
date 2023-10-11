@@ -7,16 +7,14 @@
 
 #include "JEventProcessor_ST_online_efficiency.h"
 #include "TRIGGER/DTrigger.h"
-using namespace jana;
+#include "DANA/DEvent.h"
 using namespace std;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_ST_online_efficiency());
+	app->Add(new JEventProcessor_ST_online_efficiency());
 }
 } // "C"
 
@@ -26,7 +24,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_ST_online_efficiency::JEventProcessor_ST_online_efficiency()
 {
-
+	SetTypeName("JEventProcessor_ST_online_efficiency");
 }
 
 //------------------
@@ -38,23 +36,25 @@ JEventProcessor_ST_online_efficiency::~JEventProcessor_ST_online_efficiency()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_ST_online_efficiency::init(void)
+void JEventProcessor_ST_online_efficiency::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 	//
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
    // Do not reconstruct tracks with start counter time
   int USE_SC_TIME = 0;
-  if(gPARMS){
-    gPARMS->SetDefaultParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME,"Do not reconstruct tracks with start counter time if set to 0!");
-  }
+  app->SetDefaultParameter("TRKFIT:USE_SC_TIME", USE_SC_TIME,"Do not reconstruct tracks with start counter time if set to 0!");
   //cout << "USE_SC_TIME = " << USE_SC_TIME << endl;
   // Warning message if sc time is used in track reconstruction
   if (USE_SC_TIME == 0)
@@ -104,72 +104,66 @@ jerror_t JEventProcessor_ST_online_efficiency::init(void)
   memset(N_recd_hit_bs, 0, sizeof(N_recd_hit_bs));
   memset(N_trck_prd_ns, 0, sizeof(N_trck_prd_ns));
   memset(N_recd_hit_ns, 0, sizeof(N_recd_hit_ns));
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_ST_online_efficiency::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_ST_online_efficiency::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
   // Obtain the target center along z;
   map<string,double> target_params;
-  if (eventLoop->GetCalib("/TARGET/target_parms", target_params))
+  if (GetCalib(event, "/TARGET/target_parms", target_params))
     jout << "Error loading /TARGET/target_parms/ !" << endl;
   if (target_params.find("TARGET_Z_POSITION") != target_params.end())
     z_target_center = target_params["TARGET_Z_POSITION"];
   else
     jerr << "Unable to get TARGET_Z_POSITION from /TARGET/target_parms !" << endl;
   // Obtain the Start Counter geometry
-  DApplication* dapp = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  if(!dapp)
-    _DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program?)"<<endl; 
-  DGeometry* locGeometry = dapp->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
+  DGeometry* locGeometry = GetDGeometry(event);
   locGeometry->GetStartCounterGeom(sc_pos, sc_norm);
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_ST_online_efficiency::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void JEventProcessor_ST_online_efficiency::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// lockService->RootUnLock();
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
 
   vector<const DSCDigiHit*>       st_adc_digi_hits;
   vector<const DParticleID*>      pid_algorithm;
   vector<const DSCHit*>           st_hits;
   vector<const DChargedTrack*> chargedTrackVector;
-  eventLoop->Get(st_adc_digi_hits);
-  eventLoop->Get(pid_algorithm);
-  eventLoop->Get(st_hits);
-  eventLoop->Get(chargedTrackVector);
+  event->Get(st_adc_digi_hits);
+  event->Get(pid_algorithm);
+  event->Get(st_hits);
+  event->Get(chargedTrackVector);
   // Grab the associated detector matches object
   const DDetectorMatches* locDetectorMatches = NULL;
-  eventLoop->GetSingle(locDetectorMatches);
+  event->GetSingle(locDetectorMatches);
   
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
   
   // Loop over charged tracks
   for (uint32_t i = 0; i < chargedTrackVector.size(); i++)
@@ -288,26 +282,23 @@ jerror_t JEventProcessor_ST_online_efficiency::evnt(JEventLoop *eventLoop, uint6
 	} // end if (st_pred_id != 0) 
     }// end of charged track loop
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_ST_online_efficiency::erun(void)
+void JEventProcessor_ST_online_efficiency::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_ST_online_efficiency::fini(void)
+void JEventProcessor_ST_online_efficiency::Finish()
 {
 	// Called before program exit after event processing is finished.
   for (uint32_t i = 0; i < NCHANNELS; i++)
@@ -347,6 +338,5 @@ jerror_t JEventProcessor_ST_online_efficiency::fini(void)
       h_ST_Eff_bs->SetBinError(i+1,dr_bs);
 
     }
-  return NOERROR;
 }
 

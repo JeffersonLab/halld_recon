@@ -9,9 +9,9 @@
 #include "DReaction_factory_p2gamma_hists.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_p2gamma_hists::init(void)
+void DReaction_factory_p2gamma_hists::Init()
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -79,18 +79,15 @@ jerror_t DReaction_factory_p2gamma_hists::init(void)
 	// Kinematics
 	locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false)); //false: fill histograms with measured particle data
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_p2gamma_hists::fini(void)
+void DReaction_factory_p2gamma_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

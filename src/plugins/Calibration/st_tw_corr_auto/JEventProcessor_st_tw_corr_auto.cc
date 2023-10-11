@@ -8,13 +8,13 @@
 #include "TRIGGER/DTrigger.h"
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_st_tw_corr_auto());
+	app->Add(new JEventProcessor_st_tw_corr_auto());
 }
 } // "C"
 
@@ -23,7 +23,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_st_tw_corr_auto::JEventProcessor_st_tw_corr_auto()
 {
-
+	SetTypeName("JEventProcessor_st_tw_corr_auto");
 }
 
 //------------------
@@ -35,20 +35,24 @@ JEventProcessor_st_tw_corr_auto::~JEventProcessor_st_tw_corr_auto()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_st_tw_corr_auto::init(void)
+void JEventProcessor_st_tw_corr_auto::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 	//
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
   USE_TIMEWALK_CORRECTION = 1.;
-  gPARMS->SetDefaultParameter("SC:USE_TIMEWALK_CORRECTION", USE_TIMEWALK_CORRECTION,
+  app->SetDefaultParameter("SC:USE_TIMEWALK_CORRECTION", USE_TIMEWALK_CORRECTION,
 			      "Flag to decide if timewalk corrections should be applied.");
   // ***************** define constants*************************
   NCHANNELS          = 30;
@@ -78,49 +82,47 @@ jerror_t JEventProcessor_st_tw_corr_auto::init(void)
       h2_st_corr_vs_pp[i]= new TH2I(Form("h2_st_corr_vs_pp_%i", i+1), "Hit Time vs. Pulse Peak; Pulse Peak (channels); #delta_{t} (ns)", 4096,0.0,4095.0, 160, -5.0, 5.0);
     }
  
-  return NOERROR;
 }
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_st_tw_corr_auto::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_st_tw_corr_auto::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
   // load constant tables
   // timewalk_parameters (timewalk_parms)
-  if(eventLoop->GetCalib("START_COUNTER/timewalk_parms_v2", timewalk_parameters))
+  if(GetCalib(event, "START_COUNTER/timewalk_parms_v2", timewalk_parameters))
     jout << "Error loading /START_COUNTER/timewalk_parms_v2 !" << endl;
   
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_st_tw_corr_auto::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_st_tw_corr_auto::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootWriteLock();
+	// GetLockService(locEvent)->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootUnLock();
+	// GetLockService(locEvent)->RootUnLock();
 
         // select events with physics events, i.e., not LED and other front panel triggers
         const DTrigger* locTrigger = NULL; 
-	loop->GetSingle(locTrigger); 
+	event->GetSingle(locTrigger); 
 	if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-	  return NOERROR;
+	  return;
 
   vector<const DSCHit*>      st_hits; 
-  loop->Get(st_hits); 
+  event->Get(st_hits); 
   
   for (unsigned int k = 0; k < st_hits.size(); k++)
     {
@@ -146,7 +148,7 @@ jerror_t JEventProcessor_st_tw_corr_auto::evnt(JEventLoop *loop, uint64_t eventn
 
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       {
 	double	st_time = T - adc_t;
 	h_stt_chan[sector-1]->Fill(st_time);
@@ -171,27 +173,24 @@ jerror_t JEventProcessor_st_tw_corr_auto::evnt(JEventLoop *loop, uint64_t eventn
 	    h2_st_corr_vs_pp[sector-1]->Fill(adc_pp,st_time);
 	  }
       }
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
     }
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_st_tw_corr_auto::erun(void)
+void JEventProcessor_st_tw_corr_auto::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_st_tw_corr_auto::fini(void)
+void JEventProcessor_st_tw_corr_auto::Finish()
 {
-  return NOERROR;
 }
 

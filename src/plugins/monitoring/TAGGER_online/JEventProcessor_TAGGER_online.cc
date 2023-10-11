@@ -6,16 +6,13 @@
 //
 
 #include "JEventProcessor_TAGGER_online.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_TAGGER_online());
+	app->Add(new JEventProcessor_TAGGER_online());
 }
 } // "C"
 
@@ -25,7 +22,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_TAGGER_online::JEventProcessor_TAGGER_online()
 {
-
+	SetTypeName("JEventProcessor_TAGGER_online");
 }
 
 //------------------
@@ -37,10 +34,13 @@ JEventProcessor_TAGGER_online::~JEventProcessor_TAGGER_online()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_TAGGER_online::init(void)
+void JEventProcessor_TAGGER_online::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	gDirectory->Cd("/");
 	new TDirectoryFile("TAGGER", "TAGGER");
 	gDirectory->cd("TAGGER");
@@ -50,29 +50,26 @@ jerror_t JEventProcessor_TAGGER_online::init(void)
 	dTaggerEnergy_DeltaTSC = new TH2D("TaggerEnergy_DeltaTSC", "Tagger Energy vs. #Delta t (TAG-SC); #Delta t (TAG-SC); Tagger Energy", 200, -100, 100, 240, 0., 12.); 
 
 	gDirectory->cd("..");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_TAGGER_online::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_TAGGER_online::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_TAGGER_online::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_TAGGER_online::Process(const std::shared_ptr<const JEvent>& event)
 {
         vector<const DBeamPhoton*> locBeamPhotons;
-	loop->Get(locBeamPhotons);
+	event->Get(locBeamPhotons);
 
 	vector<const DSCHit*> locSCHits;
-	loop->Get(locSCHits);
+	event->Get(locSCHits);
 
 	for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); loc_i++) {
 	  const DTAGMHit* locTAGMHit;	  
@@ -80,10 +77,10 @@ jerror_t JEventProcessor_TAGGER_online::evnt(JEventLoop *loop, uint64_t eventnum
 	  if(locTAGMHit != NULL) { 
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 		dTAGMPulsePeak_Column->Fill(locTAGMHit->column, locTAGMHit->pulse_peak);
 		dTAGMIntegral_Column->Fill(locTAGMHit->column, locTAGMHit->integral);
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 		
 		// add threshold on TAGM hits
 		if(locTAGMHit->integral < 500.) continue;
@@ -93,33 +90,29 @@ jerror_t JEventProcessor_TAGGER_online::evnt(JEventLoop *loop, uint64_t eventnum
 	    Double_t locDeltaT = locBeamPhotons[loc_i]->time() - locSCHits[loc_j]->t;
 		// FILL HISTOGRAMS
 		// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-		japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+		lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 	    dTaggerEnergy_DeltaTSC->Fill(locDeltaT, locBeamPhotons[loc_i]->momentum().Mag());
-		japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+		lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
 	  }
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_TAGGER_online::erun(void)
+void JEventProcessor_TAGGER_online::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_TAGGER_online::fini(void)
+void JEventProcessor_TAGGER_online::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

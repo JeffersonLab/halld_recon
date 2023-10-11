@@ -1,5 +1,7 @@
 #include "DKinFitUtils_GlueX.h"
 
+#include <DANA/DEvent.h>
+
 /******************************************************************** INITIALIZE *******************************************************************/
 
 DKinFitUtils_GlueX::DKinFitUtils_GlueX(const DMagneticFieldMap* locMagneticFieldMap, const DAnalysisUtilities* locAnalysisUtilities) : 
@@ -8,25 +10,22 @@ dMagneticFieldMap(locMagneticFieldMap), dAnalysisUtilities(locAnalysisUtilities)
 	dIncludeBeamlineInVertexFitFlag = false;
 	dWillBeamHaveErrorsFlag = false; //Until fixed!
 
-	dApplication = dynamic_cast<DApplication*>(japp);
-	gPARMS->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
+	japp->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
 }
 
-DKinFitUtils_GlueX::DKinFitUtils_GlueX(JEventLoop* locEventLoop)
+DKinFitUtils_GlueX::DKinFitUtils_GlueX(const std::shared_ptr<const JEvent>& locEvent)
 {
-	Set_RunDependent_Data(locEventLoop);
-
-	gPARMS->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
+	Set_RunDependent_Data(locEvent);
+	auto app = locEvent->GetJApplication();
+	app->SetDefaultParameter("KINFIT:LINKVERTICES", dLinkVerticesFlag);
 	dWillBeamHaveErrorsFlag = false; //Until fixed!
 	dIncludeBeamlineInVertexFitFlag = false;
 }
 
-void DKinFitUtils_GlueX::Set_RunDependent_Data(JEventLoop *locEventLoop)
+void DKinFitUtils_GlueX::Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent)
 {
-	locEventLoop->GetSingle(dAnalysisUtilities);
-
-	dApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	dMagneticFieldMap = dApplication->GetBfield(locEventLoop->GetJEvent().GetRunNumber());
+	locEvent->GetSingle(dAnalysisUtilities);
+	dMagneticFieldMap = DEvent::GetBfield(locEvent);
 }
 
 

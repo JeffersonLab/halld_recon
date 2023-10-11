@@ -9,9 +9,8 @@
 #define _DBeamCurrent_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DBeamCurrent:public jana::JObject{
+class DBeamCurrent : public JObject{
 	public:
 		JOBJECT_PUBLIC(DBeamCurrent);
 		
@@ -43,14 +42,13 @@ class DBeamCurrent:public jana::JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "Ibeam", "%5.1f", Ibeam);
-			AddString(items, "t",      "%f", t);
-			AddString(items, "t_prev", "%f", t_prev);
-			AddString(items, "t_next", "%f", t_next);
-			AddString(items, "is_fiducial", "%d", is_fiducial ? 1:0);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(Ibeam, NAME_OF(Ibeam), "%5.1f");
+			summary.add(t, NAME_OF(t), "%f");
+			summary.add(t_prev, NAME_OF(t_prev), "%f");
+			summary.add(t_next, NAME_OF(t_next), "%f");
+			summary.add(is_fiducial, NAME_OF(is_fiducial), "%d");
 		}
-		
 };
 
 #endif // _DBeamCurrent_

@@ -14,9 +14,11 @@ using namespace std;
 #include <math.h>
 
 #include "DTrackCandidate_factory_FDC.h"
-#include "DANA/DApplication.h"
+
+#include <JANA/JEvent.h>
+#include "JANA/Compatibility/JGeometry.h"
+
 #include "DQuickFit.h"
-#include "JANA/JGeometry.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "DVector2.h"
 #include "FDC/DFDCGeometry.h"
@@ -33,17 +35,18 @@ bool FDCSortByZincreasing(DTrackCandidate_factory_FDC::DFDCTrkHit* const &hit1, 
 //------------------
 DTrackCandidate_factory_FDC::DTrackCandidate_factory_FDC()
 {
+	SetTag("FDC");
 #if 0
 	// Set defaults
 	MAX_SEED_DIST = 5.0;
-	gPARMS->SetDefaultParameter("TRKFIND:MAX_SEED_DIST",			MAX_SEED_DIST);
+	app->SetDefaultParameter("TRKFIND:MAX_SEED_DIST",			MAX_SEED_DIST);
 #endif
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackCandidate_factory_FDC::init(void)
+void DTrackCandidate_factory_FDC::Init()
 {
 	TARGET_Z_MIN = 65.0 - 15.0;
 	TARGET_Z_MAX = 65.0 + 15.0;
@@ -51,33 +54,31 @@ jerror_t DTrackCandidate_factory_FDC::init(void)
 	MAX_HIT_DIST = 5.0;
 	MAX_HIT_DIST2 = MAX_HIT_DIST*MAX_HIT_DIST;
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackCandidate_factory_FDC::brun(JEventLoop *loop, int32_t runnumber)
+void DTrackCandidate_factory_FDC::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DTrackCandidate_factory_FDC::fini(void)
+void DTrackCandidate_factory_FDC::Finish()
 {	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackCandidate_factory_FDC::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTrackCandidate_factory_FDC::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Get the hits into the trkhits vector
-	GetTrkHits(loop);
+	GetTrkHits(event);
 	
 	// Find seeds from X/Y projections
 	vector<DFDCSeed> seeds;
@@ -111,16 +112,16 @@ jerror_t DTrackCandidate_factory_FDC::evnt(JEventLoop *loop, uint64_t eventnumbe
 		can->setMomentum(mom);
 		can->setPID((q > 0.0) ? PiPlus : PiMinus);
 
-		_data.push_back(can);
+		Insert(can);
 	}
 
-	return NOERROR;
+	return;
 }
 
 //------------------
 // GetTrkHits
 //------------------
-void DTrackCandidate_factory_FDC::GetTrkHits(JEventLoop *loop)
+void DTrackCandidate_factory_FDC::GetTrkHits(const std::shared_ptr<const JEvent>& event)
 {
 	// Clear out old hits
 	for(unsigned int i=0; i<fdctrkhits.size(); i++){
@@ -130,7 +131,7 @@ void DTrackCandidate_factory_FDC::GetTrkHits(JEventLoop *loop)
 
 	// Get hits
 	vector<const DFDCIntersection*> fdcintersects;
-	loop->Get(fdcintersects);
+	event->Get(fdcintersects);
 	
 	// Create a DFDCTrkHit object for each DFDCIntersection object
 	for(unsigned int i=0; i<fdcintersects.size(); i++){

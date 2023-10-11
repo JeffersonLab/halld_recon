@@ -15,17 +15,16 @@
 #include <stdlib.h>
 
 #include "JEventProcessor_TRIG_online.h"
-#include <JANA/JApplication.h>
 
 #include "BCAL/DBCALPoint.h"
 #include "FCAL/DFCALHit.h"
 #include "TRIGGER/DL1Trigger.h"
+#include <DANA/DEvent.h>
 #include <DANA/DStatusBits.h>
 #include "FCAL/DFCALGeometry.h"
 
 
 using namespace std;
-using namespace jana;
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -34,7 +33,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *locApplication){
     InitJANAPlugin(locApplication);
-    locApplication->AddProcessor(new JEventProcessor_TRIG_online());
+    locApplication->Add(new JEventProcessor_TRIG_online());
   }
 }
 
@@ -43,6 +42,7 @@ extern "C"{
 
 
 JEventProcessor_TRIG_online::JEventProcessor_TRIG_online() {
+	SetTypeName("JEventProcessor_TRIG_online");
 }
 
 
@@ -55,10 +55,13 @@ JEventProcessor_TRIG_online::~JEventProcessor_TRIG_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_TRIG_online::init(void) {
+void JEventProcessor_TRIG_online::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
 	timing = 0;
-	gPARMS->SetDefaultParameter("TRIG_ONLINE:TIMING", timing, "Fill trigger timing histograms: default = false");
+	app->SetDefaultParameter("TRIG_ONLINE:TIMING", timing, "Fill trigger timing histograms: default = false");
 	
 	// create root folder for trig and cd to it, store main dir
 	TDirectory *main = gDirectory;
@@ -107,24 +110,20 @@ jerror_t JEventProcessor_TRIG_online::init(void) {
 
 	// back to main dir
 	main->cd();
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRIG_online::brun(jana::JEventLoop* locEventLoop, int locRunNumber) {
+void JEventProcessor_TRIG_online::BeginRun(const std::shared_ptr<const JEvent>& t) {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
-
-jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber) {
+void JEventProcessor_TRIG_online::Process(const std::shared_ptr<const JEvent> &locEvent) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -133,24 +132,24 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 
 	vector<const DBCALPoint*> bcalpoints;
 	vector<const DFCALHit*> fcalhits;
-	locEventLoop->Get(bcalpoints);
-	locEventLoop->Get(fcalhits);
+	locEvent->Get(bcalpoints);
+	locEvent->Get(fcalhits);
 	const DFCALGeometry *fcalgeom=NULL;
-	locEventLoop->GetSingle(fcalgeom);
+	locEvent->GetSingle(fcalgeom);
 	if (fcalgeom==NULL){
 	  jerr << "FCAL geometry not found!" << endl;
-	  return RESOURCE_UNAVAILABLE;
+	  throw JException("FCAL geometry not found!");
 	}
 
-	bool isPhysics = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_PHYSICS_EVENT);
+	bool isPhysics = GetStatusBit(locEvent, kSTATUS_PHYSICS_EVENT);
 	if(!isPhysics)
-	  return NOERROR;
+	  return;
 
 	// first get trigger bits
 	const DL1Trigger *trig_words = NULL;
 	uint32_t trig_mask, fp_trig_mask;
 	try {
-	  locEventLoop->GetSingle(trig_words);
+	  locEvent->GetSingle(trig_words);
 	} catch(...) {};
 	if (trig_words) {
 	  trig_mask = trig_words->trig_mask;
@@ -174,7 +173,7 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 	float fcal_energy = 0;
 	float fcal_time = 0;
 	double fcal_rings_masked = 2;
-	if(locEventLoop->GetJEvent().GetRunNumber() < 11127) // ugly run dependence for now
+	if(locEvent->GetRunNumber() < 11127) // ugly run dependence for now
 		fcal_rings_masked = 4;
 	float rmin = fcal_rings_masked*4*sqrt(2);    // N rings x 4 cm  on the diagonal.
 	for (unsigned int jj=0; jj<fcalhits.size(); jj++) {
@@ -208,7 +207,7 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 	h1trig_trgbits->Fill(trig_bits);
         h2trig_fcalVSbcal->Fill(bcal_energy,fcal_energy);
@@ -230,29 +229,25 @@ jerror_t JEventProcessor_TRIG_online::evnt(jana::JEventLoop* locEventLoop, uint6
 		}
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-  return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRIG_online::erun(void) {
+void JEventProcessor_TRIG_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_TRIG_online::fini(void) {
+void JEventProcessor_TRIG_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
 }
 
 

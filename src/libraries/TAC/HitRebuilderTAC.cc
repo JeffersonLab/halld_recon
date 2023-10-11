@@ -8,38 +8,47 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include <TAC/HitRebuilderTAC.h>
 
 using namespace std;
 
-jerror_t HitRebuilderTAC::readCCDB( jana::JEventLoop* eventLoop) {
+jerror_t HitRebuilderTAC::readCCDB( const std::shared_ptr<const JEvent>& event) {
+
+	auto event_number = event->GetEventNumber();
+	auto run_number = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+
 	cout << "In HitRebuilderTAC::readCCDB() , reading calibration constants" << endl;
 	// load scale factors
 	map<string, double> scaleFactors;
-	if (eventLoop->GetCalib("/TAC/digi_scales", scaleFactors))
-		jout << "Error loading /TAC/digi_scales !" << endl;
+	if (calibration->Get("/TAC/digi_scales", scaleFactors))
+		jout << "Error loading /TAC/digi_scales !" << jendl;
 	// t_scale (TAC_ADC_SCALE)
 	if (scaleFactors.find("TAC_ADC_TSCALE") != scaleFactors.end())
 		timeScaleADC = adcTimeRescaleFactor * scaleFactors["TAC_ADC_TSCALE"];
 	else
-		jerr << "Unable to get TAC_ADC_TSCALE from /TAC/digi_scales !" << endl;
+		jerr << "Unable to get TAC_ADC_TSCALE from /TAC/digi_scales !" << jendl;
 
 	// load base time offset
 	map<string, double> baseTimeOffsets;
 	// t_base (TAC_BASE_TIME_OFFSET)
-	if (eventLoop->GetCalib("/TAC/base_time_offset", baseTimeOffsets))
-		jout << "Error loading /TAC/base_time_offset !" << endl;
+	if (calibration->Get("/TAC/base_time_offset", baseTimeOffsets))
+		jout << "Error loading /TAC/base_time_offset !" << jendl;
 	if (baseTimeOffsets.find("TAC_BASE_TIME_OFFSET") != baseTimeOffsets.end())
 		timeBaseADC = baseTimeOffsets["TAC_BASE_TIME_OFFSET"];
 	else
 		jerr
 				<< "Unable to get TAC_BASE_TIME_OFFSET from /TAC/base_time_offset !"
-				<< endl;
+				<< jendl;
 
 	// load constant tables
 	// adc_time_offsets (adc_timing_offsets)
-	if (eventLoop->GetCalib("/TAC/adc_timing_offsets", adcTimeOffset))
-		jout << "Error loading /TAC/adc_timing_offsets !" << endl;
+	if (calibration->Get("/TAC/adc_timing_offsets", adcTimeOffset))
+		jout << "Error loading /TAC/adc_timing_offsets !" << jendl;
 
 	cout << "timeScaleADC is " << timeScaleADC << " , timeBaseADC is " << timeBaseADC <<
 			" ,  adcTimeOffset is " << adcTimeOffset << endl;
@@ -147,8 +156,8 @@ vector<DTACHit*> HitRebuilderTAC::operator()(
 			}
 //		cout << "Received new time " << newTime << endl;
 
-//		DTACHit *newHit = new DTACHit(*baseHit);
-			DTACHit* newHit = dynamic_cast<DTACHit*>(baseHit->Clone());
+		DTACHit *newHit = new DTACHit(*baseHit);
+//  	DTACHit* newHit = dynamic_cast<DTACHit*>(baseHit->Clone());
 
 //		vector<pair<string,string>> outputStrings;
 //

@@ -29,16 +29,15 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DL1Trigger.h"
 
-using namespace jana;
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_BCAL_TDC_Timing());
+    app->Add(new JEventProcessor_BCAL_TDC_Timing());
 }
 } // "C"
 
@@ -66,32 +65,36 @@ JEventProcessor_BCAL_TDC_Timing::JEventProcessor_BCAL_TDC_Timing()
 //------------------
 JEventProcessor_BCAL_TDC_Timing::~JEventProcessor_BCAL_TDC_Timing()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::init(void)
+void JEventProcessor_BCAL_TDC_Timing::Init()
 {
-    // This is called once at program startup on a single thread.
+	// This is called once at program startup on a single thread.
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
-    return NOERROR;
+	VERBOSE = 0;
+	VERBOSEHISTOGRAMS = 0;
+
+	app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
+	app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumber)
+void JEventProcessor_BCAL_TDC_Timing::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
     // This is called whenever the run number changes
-    DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-    DGeometry* geom = app->GetDGeometry(runnumber);
+    DGeometry* geom = DEvent::GetDGeometry(event);
     geom->GetTargetZ(Z_TARGET);
 
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
@@ -103,7 +106,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     // // THIS NEEDS TO CHANGE IF THERE IS A NEW TABLE
     // //////
     // //get timewalk corrections from CCDB
-    // JCalibration *jcalib = loop->GetJCalibration();
+    // JCalibration *jcalib = event->GetJCalibration();
     // //these tables hold: module layer sector end c0 c1 c2 c3
     // vector<vector<float> > tdc_timewalk_table;
     // jcalib->Get("BCAL/timewalk_tdc",tdc_timewalk_table);
@@ -133,10 +136,10 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
     /// Read in initial calibration constants and write to root file for use in later calibration
     vector<double> raw_channel_global_offset;
     //if(print_messages) jout << "In BCAL_TDC_Timing, loading constants..." << endl;
-    if(loop->GetCalib("/BCAL/channel_global_offset", raw_channel_global_offset))
+    if(DEvent::GetCalib(event, "/BCAL/channel_global_offset", raw_channel_global_offset))
         jout << "Error loading /BCAL/channel_global_offset !" << endl;
 
-    japp->RootFillLock(this);
+    lockService->RootFillLock(this);
     //TH1D *CCDB_raw_channel_global_offset = new TH1D("CCDB_raw_channel_global_offset","Offsets at time of running;channel;offset",768,0.5,768.5);
     int counter = 1;
     Fill1DWeightedHistogram("BCAL_Global_Offsets", "Target Time", "CCDB_raw_channel_global_offset",
@@ -151,22 +154,22 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::brun(JEventLoop *loop, int32_t runnumb
                                 769, 0.5, 769.5);
         counter++;
     }
-    japp->RootFillUnLock(this);
-
-    return NOERROR;
+    lockService->RootFillUnLock(this);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_BCAL_TDC_Timing::Process(const std::shared_ptr<const JEvent>& event)
 {
+   auto eventnumber = event->GetEventNumber();
+
    // First check that this is not a font panel trigger or no trigger
    bool goodtrigger=1;
 
    const DL1Trigger *trig = NULL;
    try {
-       loop->GetSingle(trig);
+       event->GetSingle(trig);
    } catch (...) {}
    if (trig) {
        if (trig->fp_trig_mask){
@@ -174,23 +177,23 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
        }
    } else {
        // HDDM files are from simulation, so keep them even though they have no trigger
-       bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+       bool locIsHDDMEvent = DEvent::GetStatusBit(event, kSTATUS_HDDM);
        if (!locIsHDDMEvent) goodtrigger=0;
    }
    
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load DBCALGeometry object!");
 	auto locBCALGeom = BCALGeomVec[0];
 
     vector<const DTrackFitter *> fitters;
-    loop->Get(fitters);
+    event->Get(fitters);
     
     if(fitters.size()<1){
       _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-      return RESOURCE_UNAVAILABLE;
+      throw JException("Unable to get a DTrackFinder object!");
     }
     
     auto fitter = fitters[0];
@@ -199,7 +202,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
    // calculate total BCAL energy in order to catch BCAL LED events
    vector<const DBCALHit *> bcal_hits;
-   loop->Get(bcal_hits);
+   event->Get(bcal_hits);
    double total_bcal_energy = 0.;
    for(unsigned int i=0; i<bcal_hits.size(); i++) {
        total_bcal_energy += bcal_hits[i]->E;
@@ -207,11 +210,11 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    if (total_bcal_energy > 12.) goodtrigger=0;
 
    if (!goodtrigger) {
-       return NOERROR;
+       return;
    }
 
    vector<const DBCALUnifiedHit *> bcalUnifiedHitVector;
-   loop->Get(bcalUnifiedHitVector);
+   event->Get(bcalUnifiedHitVector);
 
    /**********************************************
       _____ _                   __        __    _ _    
@@ -316,7 +319,7 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    // Attenuation Length
    //
    // vector<const DBCALPoint *> BCALPointVector;
-   // loop->Get(BCALPointVector);
+   // event->Get(BCALPointVector);
 
    // for (unsigned int i = 0; i < BCALPointVector.size(); i++){
    //     const DBCALPoint *thisPoint = BCALPointVector[i];
@@ -378,10 +381,10 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
 
    // We need the RF bunch for the event in order to check the global alignemtn of the timing
    const DEventRFBunch *thisRFBunch = NULL;
-   loop->GetSingle(thisRFBunch);
+   event->GetSingle(thisRFBunch);
 
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
    Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 1, "Success profile;Step", 16, -0.5, 15.5);
    for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
@@ -858,20 +861,20 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
    if (thisRFBunch->dNumParticleVotes >= 2){ // Require good RF bunch
        Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 11, "Success profile;Step", 16, -0.5, 15.5);
        vector<const DVertex*> locVertex;
-       loop->Get(locVertex);       
+       event->Get(locVertex);       
        // *** get unmatched BCAL showers from neutral showers
        // *** not restrictive enough so do the matching locally
        //vector <const DNeutralShower *> neutralShower;
-       // loop->Get(neutralShower);
+       // event->Get(neutralShower);
        //       for (unsigned int ishower = 0; ishower < neutralShower.size(); ishower++){
        // vector <const DBCALShower*> bcalshowervector;
        // if (neutralShower[ishower]->dDetectorSystem == SYS_BCAL) {
        //        neutralShower[ishower]->Get(bcalshowervector);
        // }
        vector <const DBCALShower *> locBCALShowers;
-       loop->Get(locBCALShowers);
+       event->Get(locBCALShowers);
        vector<const DTrackTimeBased*> locTrackTimeBased;
-       loop->Get(locTrackTimeBased);
+       event->Get(locTrackTimeBased);
        for (unsigned int ibcalshower = 0; ibcalshower < locBCALShowers.size(); ibcalshower++){
            Fill1DHistogram("BCAL_Global_Offsets", "Debug", "Success", 12, "Success profile;Step", 16, -0.5, 15.5);
            const DBCALShower *bcalshower = locBCALShowers[ibcalshower];
@@ -1049,27 +1052,27 @@ jerror_t JEventProcessor_BCAL_TDC_Timing::evnt(JEventLoop *loop, uint64_t eventn
        }
    }   
 
-   return NOERROR;
+   return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::erun(void)
+void JEventProcessor_BCAL_TDC_Timing::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
+   return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_BCAL_TDC_Timing::fini(void)
+void JEventProcessor_BCAL_TDC_Timing::Finish()
 {
    // Called before program exit after event processing is finished.
    SortDirectories(); // Sort the histogram directories by name
-   return NOERROR;
+   return;
 }
 

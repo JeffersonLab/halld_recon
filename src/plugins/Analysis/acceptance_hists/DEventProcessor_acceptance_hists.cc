@@ -12,11 +12,11 @@ using namespace std;
 
 #include <TThread.h>
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
 #include "DEventProcessor_acceptance_hists.h"
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
 #include <FDC/DFDCHit.h>
@@ -39,7 +39,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_acceptance_hists());
+	app->Add(new DEventProcessor_acceptance_hists());
 }
 } // "C"
 
@@ -48,7 +48,8 @@ void InitPlugin(JApplication *app){
 // DEventProcessor_acceptance_hists
 //------------------
 DEventProcessor_acceptance_hists::DEventProcessor_acceptance_hists()
-{	
+{
+    SetTypeName("DEventProcessor_acceptance_hists");
 }
 
 //------------------
@@ -59,9 +60,9 @@ DEventProcessor_acceptance_hists::~DEventProcessor_acceptance_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_acceptance_hists::init(void)
+void DEventProcessor_acceptance_hists::Init()
 {
 	// open ROOT file (if needed)
 	//if(ROOTfile != NULL) ROOTfile->cd();
@@ -96,34 +97,33 @@ jerror_t DEventProcessor_acceptance_hists::init(void)
 	
 	// Go back up to the parent directory
 	dir->cd("../");
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_acceptance_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_acceptance_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrackHit*> mctrackhits;
-	loop->Get(mcthrowns);
-	loop->Get(mctrackhits);	
+	event->Get(mcthrowns);
+	event->Get(mctrackhits);	
 	
 	// Count CDC hits
 	double Ncdc_anode = 0.0;
 	vector<const DCDCTrackHit*> cdctrackhits;
-	loop->Get(cdctrackhits);
+	event->Get(cdctrackhits);
 	Ncdc_anode = (double)cdctrackhits.size();
 
 	// Count FDC anode hits
 	double Nfdc_anode = 0.0;
 	vector<const DFDCHit*> fdchits;
-	loop->Get(fdchits);
+	event->Get(fdchits);
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
+	japp->GetService<JLockService>()->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		for(unsigned int i=0; i<fdchits.size(); i++){
 			if(fdchits[i]->type==0){
@@ -211,33 +211,27 @@ jerror_t DEventProcessor_acceptance_hists::evnt(JEventLoop *loop, uint64_t event
 			}
 		}
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	japp->GetService<JLockService>()->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_acceptance_hists::erun(void)
+void DEventProcessor_acceptance_hists::EndRun()
 {
 	// Since we are modifying histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	japp->GetService<JLockService>()->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		CDC->Divide(thrown_charged);
 		FDC->Divide(thrown_charged);
 		CDC_FDC->Divide(thrown_charged);
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-	return NOERROR;
+	japp->GetService<JLockService>()->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_acceptance_hists::fini(void)
+void DEventProcessor_acceptance_hists::Finish()
 {
-
-	return NOERROR;
 }

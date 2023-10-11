@@ -54,6 +54,7 @@
 
 
 #include "rawevent/JEventProcessor_rawevent.h"
+#include <DANA/DEvent.h>
 
 #include<cmath>
 #include<sstream>
@@ -242,7 +243,7 @@ extern float SIGMA_INDIVIDUAL_PEDESTAL;
 extern "C"{
 void InitPlugin(JApplication *app) {
    InitJANAPlugin(app);
-   app->AddProcessor(new JEventProcessor_rawevent());
+   app->Add(new JEventProcessor_rawevent());
 }
 } // "C"
 
@@ -263,75 +264,10 @@ bool operator == (cscRef a, cscRef b) {
 
 // JEventProcessor_rawevent (Constructor) invoked once only
 JEventProcessor_rawevent::JEventProcessor_rawevent() {
+
+	SetTypeName("JEventProcessor_rawevent");
+
 #ifdef HAVE_EVIO
-
-   // Default is to just read translation table from CCDB. If this fails,
-   // then an attempt will be made to read from a file on the local disk.
-   // The filename can be specified to be anything, but if the user specifies
-   // this, then we assume that they want to use it and skip using the CCDB.
-   // They may also specify that they want to skip checking the CCDB via
-   // the "TT:NO_CCDB" parameter. This would only be useful if they want to
-   // force the use of a local file named "tt.xml".
-   gPARMS->SetDefaultParameter("TT:NO_CCDB", NO_CCDB, "Don't try getting"
-           " translation table from CCDB and just look for file. Only useful"
-           " if you want to force reading tt.xml. This is automatically set"
-           " if you specify a different filename via the "
-           "TT:XML_FILENAME parameter.");
-   JParameter *p = gPARMS->SetDefaultParameter("TT:XML_FILENAME", XML_FILENAME,
-           "Fallback filename of translation table XML file."
-           " If set to non-default, CCDB will not be checked.");
-   if (p->GetDefault() != p->GetValue())
-      NO_CCDB = true;
-
-
-  // get fileBase from command line params
-  gPARMS->SetDefaultParameter("RAWEVENT:FILEBASE",fileBase);
-
-  // get translation table file name from command line 
-  gPARMS->SetDefaultParameter("RAWEVENT:TRANSLATION",translationTableName);
-
-  // trigger time picoseconds
-  gPARMS->SetDefaultParameter("RAWEVENT:TRIGTIME",trigTime);
-
-  // minimum time in picoseconds
-  gPARMS->SetDefaultParameter("RAWEVENT:TMIN",tMin);
-
-  // option to turn off mc2coda output
-  gPARMS->SetDefaultParameter("RAWEVENT:NOMC2CODA",nomc2coda);
-
-  // option to turn off root
-  gPARMS->SetDefaultParameter("RAWEVENT:NOROOT",noroot);
-
-  // option to dump hits
-  gPARMS->SetDefaultParameter("RAWEVENT:DUMPHITS",dumphits);
-
-  // option to dump map to file
-  gPARMS->SetDefaultParameter("RAWEVENT:DUMPMAP",dumpmap,
-          "Dump map of translation table map to file (for debugging)");
-
-  // option to set run number
-  gPARMS->SetDefaultParameter("RAWEVENT:RUNNUMBER",user_runNumber,
-          "Override run number from input file with this one"
-          " which will be written to every event in output file");
-
-  // options for pedestals
-  gPARMS->SetDefaultParameter("RAWEVENT:NO_PEDESTAL",NO_PEDESTAL, "Set to non-zero value to enable pedestals (default is to always use \"0\" for all pedestals)");
-  gPARMS->SetDefaultParameter("RAWEVENT:NO_RANDOM_PEDESTAL",NO_RANDOM_PEDESTAL, "Set this to zero to disable any randomness in pedestals (def. is to randomize)");
-  gPARMS->SetDefaultParameter("RAWEVENT:MEAN_PEDESTAL",MEAN_PEDESTAL, "Mean value of single sample pedestal.");
-  gPARMS->SetDefaultParameter("RAWEVENT:SIGMA_COMMON_PEDESTAL",SIGMA_COMMON_PEDESTAL, "Stochastic width of common pedestal distribution. Common pedestal is used for all channels in a module but will be different module to module.");
-  gPARMS->SetDefaultParameter("RAWEVENT:SIGMA_INDIVIDUAL_PEDESTAL",SIGMA_INDIVIDUAL_PEDESTAL, "Stochastic width of MEASURED pedestal");
-
-  // options for time windows
-  gPARMS->SetDefaultParameter("RAWEVENT:CDC_TIME_WINDOW",CDC_time_window, "Optional window size in which to save CDC hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:FDC_TIME_WINDOW",FDC_time_window, "Optional window size in which to save FDC hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:FCAL_TIME_WINDOW",FCAL_time_window, "Optional window size in which to save FCAL hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:BCAL_TIME_WINDOW",BCAL_time_window, "Optional window size in which to save BCAL hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:TOF_TIME_WINDOW",TOF_time_window, "Optional window size in which to save TOF hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:SC_TIME_WINDOW",SC_time_window, "Optional window size in which to save Start Counter hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:TAGH_TIME_WINDOW",TAGH_time_window, "Optional window size in which to save Tagger Hodoscope hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:TAGM_TIME_WINDOW",TAGM_time_window, "Optional window size in which to save Tagger Microscope hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:PSC_TIME_WINDOW",PSC_time_window, "Optional window size in which to save Coarse Pair Spectrometer hits (in ns)");
-  gPARMS->SetDefaultParameter("RAWEVENT:PS_TIME_WINDOW",PS_time_window, "Optional window size in which to save Fine Pair Spectrometer hits (in ns)");
 
 #endif //HAVE_EVIO
 
@@ -355,14 +291,84 @@ JEventProcessor_rawevent::~JEventProcessor_rawevent() {
 //----------------------------------------------------------------------------
 
 
-// init called once-only at beginning, independent of the number of processing threads
-jerror_t JEventProcessor_rawevent::init(void) {
+// Init called once-only at beginning, independent of the number of processing threads
+void JEventProcessor_rawevent::Init() {
 #ifdef HAVE_EVIO
+  auto app = GetApplication();
+
+  // Default is to just read translation table from CCDB. If this fails,
+  // then an attempt will be made to read from a file on the local disk.
+  // The filename can be specified to be anything, but if the user specifies
+  // this, then we assume that they want to use it and skip using the CCDB.
+  // They may also specify that they want to skip checking the CCDB via
+  // the "TT:NO_CCDB" parameter. This would only be useful if they want to
+  // force the use of a local file named "tt.xml".
+  app->SetDefaultParameter("TT:NO_CCDB", NO_CCDB, "Don't try getting"
+                                                  " translation table from CCDB and just look for file. Only useful"
+                                                  " if you want to force reading tt.xml. This is automatically set"
+                                                  " if you specify a different filename via the "
+                                                  "TT:XML_FILENAME parameter.");
+  JParameter *p = app->SetDefaultParameter("TT:XML_FILENAME", XML_FILENAME,
+                                           "Fallback filename of translation table XML file."
+                                           " If set to non-default, CCDB will not be checked.");
+
+  if (!p->IsDefault())
+    NO_CCDB = true;
+
+
+  // get fileBase from command line params
+  app->SetDefaultParameter("RAWEVENT:FILEBASE",fileBase);
+
+  // get translation table file name from command line 
+  app->SetDefaultParameter("RAWEVENT:TRANSLATION",translationTableName);
+
+  // trigger time picoseconds
+  app->SetDefaultParameter("RAWEVENT:TRIGTIME",trigTime);
+
+  // minimum time in picoseconds
+  app->SetDefaultParameter("RAWEVENT:TMIN",tMin);
+
+  // option to turn off mc2coda output
+  app->SetDefaultParameter("RAWEVENT:NOMC2CODA",nomc2coda);
+
+  // option to turn off root
+  app->SetDefaultParameter("RAWEVENT:NOROOT",noroot);
+
+  // option to dump hits
+  app->SetDefaultParameter("RAWEVENT:DUMPHITS",dumphits);
+
+  // option to dump map to file
+  app->SetDefaultParameter("RAWEVENT:DUMPMAP",dumpmap,
+                           "Dump map of translation table map to file (for debugging)");
+
+  // option to set run number
+  app->SetDefaultParameter("RAWEVENT:RUNNUMBER",user_runNumber,
+                           "Override run number from input file with this one"
+                           " which will be written to every event in output file");
+
+  // options for pedestals
+  app->SetDefaultParameter("RAWEVENT:NO_PEDESTAL",NO_PEDESTAL, "Set to non-zero value to enable pedestals (default is to always use \"0\" for all pedestals)");
+  app->SetDefaultParameter("RAWEVENT:NO_RANDOM_PEDESTAL",NO_RANDOM_PEDESTAL, "Set this to zero to disable any randomness in pedestals (def. is to randomize)");
+  app->SetDefaultParameter("RAWEVENT:MEAN_PEDESTAL",MEAN_PEDESTAL, "Mean value of single sample pedestal.");
+  app->SetDefaultParameter("RAWEVENT:SIGMA_COMMON_PEDESTAL",SIGMA_COMMON_PEDESTAL, "Stochastic width of common pedestal distribution. Common pedestal is used for all channels in a module but will be different module to module.");
+  app->SetDefaultParameter("RAWEVENT:SIGMA_INDIVIDUAL_PEDESTAL",SIGMA_INDIVIDUAL_PEDESTAL, "Stochastic width of MEASURED pedestal");
+
+  // options for time windows
+  app->SetDefaultParameter("RAWEVENT:CDC_TIME_WINDOW",CDC_time_window, "Optional window size in which to save CDC hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:FDC_TIME_WINDOW",FDC_time_window, "Optional window size in which to save FDC hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:FCAL_TIME_WINDOW",FCAL_time_window, "Optional window size in which to save FCAL hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:BCAL_TIME_WINDOW",BCAL_time_window, "Optional window size in which to save BCAL hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:TOF_TIME_WINDOW",TOF_time_window, "Optional window size in which to save TOF hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:SC_TIME_WINDOW",SC_time_window, "Optional window size in which to save Start Counter hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:TAGH_TIME_WINDOW",TAGH_time_window, "Optional window size in which to save Tagger Hodoscope hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:TAGM_TIME_WINDOW",TAGM_time_window, "Optional window size in which to save Tagger Microscope hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:PSC_TIME_WINDOW",PSC_time_window, "Optional window size in which to save Coarse Pair Spectrometer hits (in ns)");
+  app->SetDefaultParameter("RAWEVENT:PS_TIME_WINDOW",PS_time_window, "Optional window size in which to save Fine Pair Spectrometer hits (in ns)");
 
   // read translation table, fill crate id arrays
   readTranslationTable();
 
-  // initialize mc2coda package
+  // Initialize mc2coda package
   if (nomc2coda == 0) {
     expID=mc2codaInitExp(maxCrateNum+1,expName.c_str());
     if (expID == NULL) {
@@ -438,16 +444,17 @@ jerror_t JEventProcessor_rawevent::init(void) {
 
 #endif //HAVE_EVIO
 
-  return NOERROR;
+  return;
 }
 
 //----------------------------------------------------------------------------
 
 
-// brun called once-only at beginning of run, independent of the number of processing threads
-jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber) {
+// BeginRun called once-only at beginning of run, independent of the number of processing threads
+void JEventProcessor_rawevent::BeginRun(const std::shared_ptr<const JEvent>& event) {
 #ifdef HAVE_EVIO
 
+  auto runnumber = event->GetRunNumber();
   runNumber=runnumber;
   jout << std::endl << "   brun called for run " << runNumber << std::endl;
   if (user_runNumber != 0xdeadbeef) {
@@ -485,7 +492,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 
   //F1TDCs
   map<string, int> tdc_parms;
-  if(eventLoop->GetCalib("/F1TDC/rollover", tdc_parms))
+  if(GetCalib(event, "/F1TDC/rollover", tdc_parms))
     jout << "Error loading /F1TDC/rollover !" << endl;
   map<string, int>::const_iterator locMapIterator = tdc_parms.find("tframe");
   double dRolloverTimeWindowLength = (locMapIterator != tdc_parms.end()) ? double(tdc_parms["tframe"]) : std::numeric_limits<double>::quiet_NaN();
@@ -500,7 +507,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
   PSC_TDCtick = 1000.0*locTDCToNsScaleFactor;
 
   map<string,double> scale_factors;
-  if (eventLoop->GetCalib("/CDC/digi_scales", scale_factors))
+  if (GetCalib(event, "/CDC/digi_scales", scale_factors))
 	  jout << "Error loading /CDC/digi_scales !" << endl;
   if ( scale_factors.find("CDC_ADC_ASCALE") != scale_factors.end() ) {
 	  CDC_ADCscale = 1. / scale_factors["CDC_ADC_ASCALE"];
@@ -513,7 +520,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 	  jerr << "Unable to get CDC_ADC_TSCALE from /CDC/digi_scales !" << endl;
   }
 
-  if (eventLoop->GetCalib("/FDC/digi_scales", scale_factors))
+  if (GetCalib(event, "/FDC/digi_scales", scale_factors))
 	  jout << "Error loading /FDC/digi_scales !" << endl;
   if ( scale_factors.find("FDC_ADC_ASCALE") != scale_factors.end() ) {
 	  FDC_ADCscale = 1. / scale_factors["FDC_ADC_ASCALE"];
@@ -526,7 +533,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 	  jerr << "Unable to get FDC_ADC_TSCALE from /FDC/digi_scales !" << endl;
   }
 
-  if (eventLoop->GetCalib("/FCAL/digi_scales", scale_factors))
+  if (GetCalib(event, "/FCAL/digi_scales", scale_factors))
 	  jout << "Error loading /FCAL/digi_scales !" << endl;
   if ( scale_factors.find("FCAL_ADC_ASCALE") != scale_factors.end() ) {
 	  FCAL_ADCscale = 1. / scale_factors["FCAL_ADC_ASCALE"];
@@ -539,7 +546,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 	  jerr << "Unable to get FCAL_ADC_TSCALE from /FCAL/digi_scales !" << endl;
   }
 
-  if (eventLoop->GetCalib("/BCAL/digi_scales", scale_factors))
+  if (GetCalib(event, "/BCAL/digi_scales", scale_factors))
 	  jout << "Error loading /BCAL/digi_scales !" << endl;
   if ( scale_factors.find("BCAL_ADC_ASCALE") != scale_factors.end() ) {
 	  BCAL_ADCscale = 1. / scale_factors["BCAL_ADC_ASCALE"];
@@ -552,7 +559,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 	  jerr << "Unable to get BCAL_ADC_TSCALE from /BCAL/digi_scales !" << endl;
   }
 
-  if (eventLoop->GetCalib("/TOF/digi_scales", scale_factors))
+  if (GetCalib(event, "/TOF/digi_scales", scale_factors))
 	  jout << "Error loading /TOF/digi_scales !" << endl;
   if ( scale_factors.find("TOF_ADC_ASCALE") != scale_factors.end() ) {
 	  TOF_ADCscale = 1. / scale_factors["TOF_ADC_ASCALE"];
@@ -570,7 +577,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 	  jerr << "Unable to get TOF_TDC_SCALE from /TOF/digi_scales !" << endl;
   }
 
-  if (eventLoop->GetCalib("/START_COUNTER/digi_scales", scale_factors))
+  if (GetCalib(event, "/START_COUNTER/digi_scales", scale_factors))
 	  jout << "Error loading /START_COUNTER/digi_scales !" << endl;
   if ( scale_factors.find("SC_ADC_ASCALE") != scale_factors.end() ) {
 	  SC_ADCscale = 1. / scale_factors["SC_ADC_ASCALE"];
@@ -584,7 +591,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
   }
 
   // PS and PSC scales are stored in the same table
-  if (eventLoop->GetCalib("/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
+  if (GetCalib(event, "/PHOTON_BEAM/pair_spectrometer/digi_scales", scale_factors))
 	  jout << "Error loading /PHOTON_BEAM/pair_spectrometer/digi_scales !" << endl;
   if ( scale_factors.find("PSC_ADC_ASCALE") != scale_factors.end() ) {
 	  PSC_ADCscale = 1. / scale_factors["PSC_ADC_ASCALE"];
@@ -619,7 +626,7 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
   
 #endif //HAVE_EVIO
 
-  return NOERROR;
+  return;
 }
 
 
@@ -770,7 +777,10 @@ jerror_t JEventProcessor_rawevent::brun(JEventLoop *eventLoop, int32_t runnumber
 //          buffer in the format planned for disentangled events.
 //        The buffer is written to disk using a mutex-locked EVIO write.
 
-jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_rawevent::Process(const std::shared_ptr<const JEvent>& event) {
+
+  auto eventnumber = event->GetEventNumber();
+
 #ifdef HAVE_EVIO
 
   unsigned int i;
@@ -780,7 +790,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
   static bool first_time = true;
 
 
-  // initialize event buffer info
+  // Initialize event buffer info
   int hitCount             = 0;
   int detID                = 1;
   unsigned short eventType = 0;
@@ -820,7 +830,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DCDCHit - FADC125
   vector<const DCDCHit*> dcdchits; 
-  eventLoop->Get(dcdchits);
+  event->Get(dcdchits);
   sort(dcdchits.begin(),dcdchits.end(),compareDCDCHits);
 
   hc=0;
@@ -897,7 +907,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DTOFHit - FADC250 and CAEN TDC (25 ps)
   vector<const DTOFHit*> dtofrawhits; 
-  eventLoop->Get(dtofrawhits);
+  event->Get(dtofrawhits);
   sort(dtofrawhits.begin(),dtofrawhits.end(),compareDTOFHits);
 
   hc=0;
@@ -994,7 +1004,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DBCALHit - FADC250 and F1TDC32 (60 ps)
   vector<const DBCALHit*> dbcalhits;
-  eventLoop->Get(dbcalhits);
+  event->Get(dbcalhits);
   sort(dbcalhits.begin(),dbcalhits.end(),compareDBCALHits);
 
   hc=0;
@@ -1099,7 +1109,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // BCAL TDC hits are handled in separate objects
   vector<const DBCALTDCHit*> dbcaltdchits;
-  eventLoop->Get(dbcaltdchits);
+  event->Get(dbcaltdchits);
   sort(dbcaltdchits.begin(),dbcaltdchits.end(),compareDBCALTDCHits);
   
   hc=0;
@@ -1165,7 +1175,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DFCALHit - FADC250
   vector<const DFCALHit*> dfcalhits;
-  eventLoop->Get(dfcalhits);
+  event->Get(dfcalhits);
   sort(dfcalhits.begin(),dfcalhits.end(),compareDFCALHits);
 
   hc=0;
@@ -1232,7 +1242,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DFDCHit - cathode strips FADC125 or anode wires F1TDC48 (115 ps)
   vector<const DFDCHit*> dfdchits; 
-  eventLoop->Get(dfdchits);
+  event->Get(dfdchits);
   sort(dfdchits.begin(),dfdchits.end(),compareDFDCHits);
 
   hc=0;
@@ -1343,7 +1353,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DSCHit - FADC250 and F1TDC32 (60 ps)
   vector<const DSCHit*> dsthits;
-  eventLoop->Get(dsthits);
+  event->Get(dsthits);
   sort(dsthits.begin(),dsthits.end(),compareDSTHits);
 
   hc=0;
@@ -1442,7 +1452,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DTAGM - FADC250 and F1TDC32 (60 ps)
   vector<const DTAGMHit*> dtagmhits;
-  eventLoop->Get(dtagmhits);
+  event->Get(dtagmhits);
   sort(dtagmhits.begin(),dtagmhits.end(),compareDTAGMHits);
 
   hc=0;
@@ -1550,7 +1560,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DTAGH - FADC250 and F1TDC32 (60 ps)
   vector<const DTAGHHit*> dtaghhits;
-  eventLoop->Get(dtaghhits);
+  event->Get(dtaghhits);
   sort(dtaghhits.begin(),dtaghhits.end(),compareDTAGHHits);
 
   hc=0;
@@ -1657,7 +1667,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DPSCHit - FADC250 and F1TDC32 (60 ps)
   vector<const DPSCHit*> dpschits;
-  eventLoop->Get(dpschits);
+  event->Get(dpschits);
   sort(dpschits.begin(),dpschits.end(),compareDPSCHits);
 
   hc=0;
@@ -1753,7 +1763,7 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 
   // DPSHit - FADC250
   vector<const DPSHit*> dpshits;
-  eventLoop->Get(dpshits);
+  event->Get(dpshits);
   sort(dpshits.begin(),dpshits.end(),compareDPSHits);
 
   hc=0;
@@ -1868,15 +1878,14 @@ jerror_t JEventProcessor_rawevent::evnt(JEventLoop *eventLoop, uint64_t eventnum
 #else
 cout << "Built without EVIO" << endl;
 #endif
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------
 
 
-// erun called once-only at end of run, independent of the number of processing threads
-jerror_t JEventProcessor_rawevent::erun(void) {
+// EndRun called once-only at end of run, independent of the number of processing threads
+void JEventProcessor_rawevent::EndRun() {
 #ifdef HAVE_EVIO
 
   jout << std::endl << "   erun called for run " << runNumber << std::endl << std::endl;
@@ -1895,16 +1904,14 @@ jerror_t JEventProcessor_rawevent::erun(void) {
   }
 #endif
 
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------
 
 
-// fini called once-only when done, independent of the number of processing threads
-jerror_t JEventProcessor_rawevent::fini(void) {
-  return NOERROR;
+// Finish called once-only when done, independent of the number of processing threads
+void JEventProcessor_rawevent::Finish() {
 }
 
 
@@ -1929,7 +1936,8 @@ void JEventProcessor_rawevent::readTranslationTable(void) {
 
 
    // Get the calibration object
-   JCalibration *jcalib = japp->GetJCalibration(1);
+   JCalibration *jcalib = japp->GetService<JCalibrationManager>()->GetJCalibration(1);
+   // TODO: NWB: Using japp because method is static. Will improve later maybe
    
    //--------------------------------------------------------------
    // (this block cut and pasted from TTab/DTranslationTable.cc)

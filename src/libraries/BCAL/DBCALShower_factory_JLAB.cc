@@ -6,6 +6,9 @@
 //
 
 #include "TMath.h"
+#include <JANA/JEvent.h>
+
+#include "BCAL/DBCALClump.h"
 #include "BCAL/DBCALShower_factory_JLAB.h"
 
 using namespace std;
@@ -15,31 +18,27 @@ using namespace std;
 //------------------
 DBCALShower_factory_JLAB::DBCALShower_factory_JLAB()
 {
-
+	SetTag("JLAB");
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBCALShower_factory_JLAB::brun(JEventLoop *loop, int32_t runnumber)
+void DBCALShower_factory_JLAB::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-    
   // at this point load parameters from data base
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBCALShower_factory_JLAB::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALShower_factory_JLAB::Process(const std::shared_ptr<const JEvent>& event)
 {
 
-  vector < const DBCALClump* > ClumpList;
-  loop->Get(ClumpList);
+  vector<const DBCALClump*> ClumpList = event->Get<DBCALClump>();
   
   // at this point ClumpList contains all information to build Clusters
-  // loop over all Clumps in ClumpList and generate Clusters
+  // event over all Clumps in ClumpList and generate Clusters
 
   int id = 0;
   for (unsigned int i = 0; i < ClumpList.size(); i++){
@@ -47,7 +46,6 @@ jerror_t DBCALShower_factory_JLAB::evnt(JEventLoop *loop, uint64_t eventnumber)
     const DBCALClump* locClump = ClumpList[i];    
     DBCALShower *shower = new DBCALShower;
     
-    shower->id                  = id++;
     shower->E_raw               = locClump->ClumpE[0];
     shower->x                   = TMath::Cos(locClump->ClumpPhi[0])*65.; // HARD CODED VALUE!!!!   
     shower->y                   = TMath::Sin(locClump->ClumpPhi[0])*65.; // HARD CODED VALUE!!!!   
@@ -77,10 +75,8 @@ jerror_t DBCALShower_factory_JLAB::evnt(JEventLoop *loop, uint64_t eventnumber)
       shower->AddAssociatedObject(locClump->HitsD[j]);
     }
     
-    _data.push_back(shower);  
+    Insert(shower);  
   }
-  
-  return NOERROR;
 }
 
 

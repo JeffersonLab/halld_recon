@@ -9,6 +9,9 @@
 #include <sstream>
 #include <cstdlib>
 
+#include <JANA/JException.h>
+#include <JANA/Compatibility/JStreamLog.h>
+
 #include "DESDBProviderMySQL.h"
 
 

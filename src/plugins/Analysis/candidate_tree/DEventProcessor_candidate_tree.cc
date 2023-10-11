@@ -15,9 +15,9 @@ using namespace std;
 #include <TROOT.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCThrown.h>
 #include <TRACKING/DMCTrackHit.h>
 #include <TRACKING/DTrackCandidate.h>
@@ -37,7 +37,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_candidate_tree());
+	app->Add(new DEventProcessor_candidate_tree());
 }
 } // "C"
 
@@ -76,9 +76,9 @@ DEventProcessor_candidate_tree::~DEventProcessor_candidate_tree()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_candidate_tree::init(void)
+void DEventProcessor_candidate_tree::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("TRACKING");
@@ -95,42 +95,30 @@ jerror_t DEventProcessor_candidate_tree::init(void)
 	ttrack->Branch("track","trackpar",&trk_ptr);
 
 	dir->cd("../");
-	
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_candidate_tree::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_candidate_tree::BeginRun(const std::shared_ptr<const JEvent>& event)
 {	
-	DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-	if(!dapp){
-		_DBG_<<"Cannot get DApplication from JEventLoop! (are you using a JApplication based program perhaps?)"<<endl;
-		return RESOURCE_UNAVAILABLE;
-	}
-
 	LockState();
-	lorentz_def=dapp->GetLorentzDeflections();
-	bfield = dapp->GetBfield(runnumber);
+	lorentz_def = GetLorentzDeflections(event);
+	bfield = GetBfield(event);
 	UnlockState();
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_candidate_tree::erun(void)
+void DEventProcessor_candidate_tree::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_candidate_tree::fini(void)
+void DEventProcessor_candidate_tree::Finish()
 {
 	char str[256];
 	sprintf(str,"%3.4f%%", 100.0*(double)NLRbad/(double)(NLRbad+NLRgood));
@@ -142,22 +130,22 @@ jerror_t DEventProcessor_candidate_tree::fini(void)
 	cout<<"Percentage bad: "<<str<<endl;
 	cout<<"       Nevents: "<<Nevents<<endl;
 	cout<<endl;
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_candidate_tree::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_candidate_tree::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
+	auto eventnumber = locEvent->GetEventNumber();
+
 	vector<const DTrackCandidate*> candidates;
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DMCTrackHit*> mctrackhits;
 
-	loop->Get(candidates);
-	loop->Get(mcthrowns);
-	loop->Get(mctrackhits);
+	locEvent->Get(candidates);
+	locEvent->Get(mcthrowns);
+	locEvent->Get(mctrackhits);
 	
 	Nevents++;
 	
@@ -168,7 +156,7 @@ jerror_t DEventProcessor_candidate_tree::evnt(JEventLoop *loop, uint64_t eventnu
 			Nwarnings++;
 			if(Nwarnings==10)_DBG_<<"Last warning!!"<<endl;
 		}
-		return NOERROR;
+		return;
 	}
 	const DTrackCandidate *candidate = candidates[0]; // technically, this could have more than 1 candidate!
 	const DMCThrown *thrown = mcthrowns[0];
@@ -210,10 +198,10 @@ jerror_t DEventProcessor_candidate_tree::evnt(JEventLoop *loop, uint64_t eventnu
 	// outside of the mutex lock.
 	DReferenceTrajectory *rt = new DReferenceTrajectory(bfield);
 	rt->Swim(recon->position(), recon->momentum(), recon->charge());
-	if(!rt)return NOERROR;
+	if(!rt)return;
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Loop over CDC hits
 	int NLRcorrect_this_track = 0;
@@ -331,11 +319,9 @@ jerror_t DEventProcessor_candidate_tree::evnt(JEventLoop *loop, uint64_t eventnu
 	ttrack->Fill();
 
 	// Unlock mutex
-	japp->RootUnLock(); //RELEASE ROOT LOCK
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 	
 	delete rt;
-
-	return NOERROR;
 }
 
 //------------------

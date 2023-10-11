@@ -15,25 +15,28 @@
 #include "ANALYSIS/DKinFitUtils_GlueX.h"
 
 using namespace std;
-using namespace jana;
 
 namespace DAnalysis
 {
 
-class DReactionVertexInfo_factory : public jana::JFactory<DReactionVertexInfo>
+class DReactionVertexInfo_factory : public JFactoryT<DReactionVertexInfo>
 {
+	public:
+	DReactionVertexInfo_factory() {
+		SetObjectName("DReactionVertexInfo"); 
+		// As opposed to "DAnalysis::DReactionInfo"
+	}
 	private:
 
 		//PRIMARY FUNCTIONS
-		jerror_t init(void);
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber);
-		jerror_t fini(void)
+		void Init();
+		void Process(const std::shared_ptr<const JEvent>& locEvent);
+		void Finish()
 		{
-			for(auto locInfo : _data)
+			for(auto locInfo : mData)
 				delete locInfo;
-			_data.clear();
+			mData.clear();
 			delete dResourcePool_ReactionStepVertexInfo;
-			return NOERROR;
 		}
 
 		size_t dDebugLevel = 0;

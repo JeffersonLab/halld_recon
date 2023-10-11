@@ -15,7 +15,7 @@
 
 #include <TH1.h>
 
-#include <JANA/jerror.h>
+using namespace std;
 
 class DHistogram{
 	public:

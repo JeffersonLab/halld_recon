@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <map>
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "PID/DEventRFBunch.h"
 #include "PID/DChargedTrackHypothesis_factory.h"
 #include "PID/DNeutralParticleHypothesis_factory.h"
@@ -18,7 +18,6 @@
 #include "ANALYSIS/DSourceComboVertexer.h"
 
 using namespace std;
-using namespace jana;
 
 class DAnalysisUtilities;
 
@@ -30,16 +29,16 @@ class DSourceComboer;
 class DParticleComboCreator
 {
 	public:
-		DParticleComboCreator(JEventLoop* locEventLoop, const DSourceComboer* locSourceComboer, DSourceComboTimeHandler* locSourceComboTimeHandler, const DSourceComboVertexer* locSourceComboVertexer);
+		DParticleComboCreator(const std::shared_ptr<const JEvent>& locEvent, const DSourceComboer* locSourceComboer, DSourceComboTimeHandler* locSourceComboTimeHandler, const DSourceComboVertexer* locSourceComboVertexer);
 
 		const DParticleCombo* Build_ParticleCombo(const DReactionVertexInfo* locReactionVertexInfo, const DSourceCombo* locFullCombo, const DKinematicData* locBeamParticle, int locRFBunchShift, DKinFitType locKinFitType);
 		const DParticleCombo* Create_KinFitCombo_NewCombo(const DParticleCombo* locOrigCombo, const DReaction* locReaction, const DKinFitResults* locKinFitResults, const shared_ptr<const DKinFitChain>& locKinFitChain);
 
-		const DParticleCombo* Build_ThrownCombo(JEventLoop* locEventLoop);
-		const DParticleCombo* Build_ThrownCombo(JEventLoop* locEventLoop, const DReaction* locThrownReaction, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps);
+		const DParticleCombo* Build_ThrownCombo(const std::shared_ptr<const JEvent>& locEvent);
+		const DParticleCombo* Build_ThrownCombo(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locThrownReaction, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps);
 
 		void Reset(void);
-		void Set_RunDependent_Data(JEventLoop *locEventLoop);
+		void Set_RunDependent_Data(const std::shared_ptr<const JEvent>& locEvent);
 		void Set_DebugLevel(int locDebugLevel){dDebugLevel = locDebugLevel;}
 
 	private:

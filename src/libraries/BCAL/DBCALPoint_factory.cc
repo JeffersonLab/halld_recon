@@ -5,50 +5,65 @@
 using namespace std;
 
 #include <JANA/JApplication.h>
-using namespace jana;
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 
 #include "BCAL/DBCALPoint_factory.h"
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALGeometry.h"
 
-#include "DANA/DApplication.h"
-
 #include "units.h"
 
 
 //----------------
-// brun
+// Init
 //----------------
-jerror_t DBCALPoint_factory::brun(JEventLoop *loop, int32_t runnumber) {
+void DBCALPoint_factory::Init() {
+	PRINTCALIBRATION = false;
+	auto app = GetApplication();
+	app->SetDefaultParameter("BCALPOINT:PRINTCALIBRATION", PRINTCALIBRATION, "Print the calibration parameters.");
+}
+
+//----------------
+// BeginRun
+//----------------
+void DBCALPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
+
+  auto event_number = event->GetEventNumber();
+  auto run_number = event->GetRunNumber();
+  auto app = GetApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+  auto geom = app->GetService<DGeometryManager>()->GetDGeometry(run_number);
+
   // Only print messages for one thread whenever run number changes
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
   pthread_mutex_lock(&print_mutex);
   bool print_messages = false;
-  if(runs_announced.find(runnumber) == runs_announced.end()){
+  if(runs_announced.find(run_number) == runs_announced.end()){
     print_messages = true;
-    runs_announced.insert(runnumber);
+    runs_announced.insert(run_number);
   }
   pthread_mutex_unlock(&print_mutex);
 
-  DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-  DGeometry* geom = app->GetDGeometry(runnumber);
   geom->GetTargetZ(m_z_target_center);
 
   // load BCAL geometry
   vector<const DBCALGeometry *> BCALGeomVec;
-  loop->Get(BCALGeomVec);
+  event->Get(BCALGeomVec);
   if(BCALGeomVec.size() == 0)
 	throw JException("Could not load DBCALGeometry object!");
   m_BCALGeom = BCALGeomVec[0];
 
-  if(print_messages) jout << "in DBCALPoint_factory, loading constants ..." << endl;
+  if(print_messages) jout << "in DBCALPoint_factory, loading constants ..." << jendl;
 
   // load attenuation correction parameters 
   attenuation_parameters.clear();
 
   vector< vector<double> > attenuation_parameters_temp;
-  loop->GetCalib("/BCAL/attenuation_parameters", attenuation_parameters_temp);
+  calibration->Get("/BCAL/attenuation_parameters", attenuation_parameters_temp, event_number);
 
   // avoid potential crash ...
   for (unsigned int i = 0; i < attenuation_parameters_temp.size(); i++){
@@ -77,7 +92,7 @@ jerror_t DBCALPoint_factory::brun(JEventLoop *loop, int32_t runnumber) {
 
   // Passing in the member vector directly was sometimes causing a crash...
   vector <double> effective_velocities_temp;
-  loop->GetCalib("/BCAL/effective_velocities", effective_velocities_temp);
+  calibration->Get("/BCAL/effective_velocities", effective_velocities_temp, event_number);
 
   for (unsigned int i = 0; i < effective_velocities_temp.size(); i++){
     effective_velocities.push_back(effective_velocities_temp.at(i));
@@ -87,24 +102,22 @@ jerror_t DBCALPoint_factory::brun(JEventLoop *loop, int32_t runnumber) {
   track_parameters.clear();
 
   vector< vector<double> > track_parameters_temp;
-  loop->GetCalib("/BCAL/z_track_parms", track_parameters_temp);
+  calibration->Get("/BCAL/z_track_parms", track_parameters_temp, event_number);
 
   // Passing in the member vector directly was sometimes causing a crash...
   for (unsigned int i = 0; i < track_parameters_temp.size(); i++){
       track_parameters.push_back(track_parameters_temp.at(i));
   }
-
-  return NOERROR;
 }
 
 //----------------
-// evnt
+// Process
 //----------------
-jerror_t DBCALPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void DBCALPoint_factory::Process(const std::shared_ptr<const JEvent>& event) {
 
   vector<const DBCALUnifiedHit*> hits;
-  loop->Get(hits);
-  if (hits.size() <= 0) return NOERROR;
+  event->Get(hits);
+  if (hits.size() <= 0) return;
 
   // first arrange the list of hits so they are grouped by cell
   map< int, cellHits > cellHitMap;
@@ -195,14 +208,12 @@ jerror_t DBCALPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber) {
     point->AddAssociatedObject(uphit);
     point->AddAssociatedObject(dnhit);
 
-    _data.push_back(point);
+    Insert(point);
   }
 
   //Possibly we should also construct points from single-ended hits here.
   //The code for this is currently (commented out) in
   //DBCALCluster_factory.cc
-
-  return NOERROR;
 }
 
 bool DBCALPoint_factory::GetAttenuationParameters(int id, double &attenuation_length, 
@@ -234,7 +245,7 @@ bool DBCALPoint_factory::GetTrackParameters(int id, double &track_p0,
 		return true;
 	}
   	else{
-  		jerr<<"Failed to retrieve the z_track parameters from CCDB!!!" << endl;
+  		jerr<<"Failed to retrieve the z_track parameters from CCDB!!!" << jendl;
   		exit(-1);
   	}
 }

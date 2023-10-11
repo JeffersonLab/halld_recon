@@ -13,8 +13,7 @@
 #include <TMath.h>
 #include <TMatrixFSym.h>
 
-#include <JANA/JFactory.h>
-#include <DANA/DApplication.h>
+#include <JANA/JFactoryT.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <PID/DNeutralParticleHypothesis.h>
 #include <PID/DNeutralShower.h>
@@ -25,7 +24,7 @@
 #include <DVector3.h>
 #include <DMatrix.h>
 
-class DNeutralParticleHypothesis_factory : public jana::JFactory<DNeutralParticleHypothesis>
+class DNeutralParticleHypothesis_factory : public JFactoryT<DNeutralParticleHypothesis>
 {
 	public:
 		DNeutralParticleHypothesis* Create_DNeutralParticleHypothesis(const DNeutralShower* locNeutralShower, Particle_t locPID, const DEventRFBunch* locEventRFBunch, const DLorentzVector& dSpacetimeVertex, const TMatrixFSym* locVertexCovMatrix, bool locPerfomBetaCut=true);
@@ -53,16 +52,15 @@ class DNeutralParticleHypothesis_factory : public jana::JFactory<DNeutralParticl
 		DResourcePool<DNeutralParticleHypothesis>* dResourcePool_NeutralParticleHypothesis = nullptr;
 		shared_ptr<DResourcePool<TMatrixFSym>> dResourcePool_TMatrixFSym;
 
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t fini(void)
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override
 		{
-			for(auto locHypo : _data)
+			for(auto locHypo : mData)
 				Recycle_Hypothesis(locHypo);
-			_data.clear();
+			mData.clear();
 			delete dResourcePool_NeutralParticleHypothesis;
-			return NOERROR;
 		}
 };
 

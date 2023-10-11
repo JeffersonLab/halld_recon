@@ -19,7 +19,7 @@
 #include "TROOT.h"
 
 #include "JANA/JFactory.h"
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 
 #include "TRACKING/DMCThrown.h"
 #include "TRIGGER/DTrigger.h"
@@ -40,31 +40,30 @@
 #include "ANALYSIS/DSourceComboer.h"
 #include "ANALYSIS/DParticleComboCreator.h"
 
-using namespace jana;
 using namespace std;
 
-class DAnalysisResults_factory : public jana::JFactory<DAnalysisResults>
+class DAnalysisResults_factory : public JFactoryT<DAnalysisResults>
 {
 	public:
 		~DAnalysisResults_factory(void){delete dSourceComboer;}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(JEventLoop *locEventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *locEventLoop, uint64_t eventnumber);	///< Called every event.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
 
 		void Make_ControlHistograms(vector<const DReaction*>& locReactions);
 		void Check_ReactionNames(vector<const DReaction*>& locReactions) const;
-		const DParticleCombo* Find_TrueCombo(JEventLoop *locEventLoop, const DReaction* locReaction, const vector<const DParticleCombo*>& locCombos);
+		const DParticleCombo* Find_TrueCombo(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, const vector<const DParticleCombo*>& locCombos);
 
-		bool Execute_Actions(JEventLoop* locEventLoop, bool locIsKinFit, const DParticleCombo* locCombo, const DParticleCombo* locTrueCombo, bool locPreKinFitFlag, const vector<DAnalysisAction*>& locActions, size_t& locActionIndex, vector<size_t>& locNumCombosSurvived, int& locLastActionTrueComboSurvives);
+		bool Execute_Actions(const std::shared_ptr<const JEvent>& locEvent, bool locIsKinFit, const DParticleCombo* locCombo, const DParticleCombo* locTrueCombo, bool locPreKinFitFlag, const vector<DAnalysisAction*>& locActions, size_t& locActionIndex, vector<size_t>& locNumCombosSurvived, int& locLastActionTrueComboSurvives);
 
 		const DParticleCombo* Handle_ComboFit(const DReactionVertexInfo* locReactionVertexInfo, const DParticleCombo* locParticleCombo, const DReaction* locReaction);
 		pair<shared_ptr<const DKinFitChain>, const DKinFitResults*> Fit_Kinematics(const DReactionVertexInfo* locReactionVertexInfo, const DReaction* locReaction, const DParticleCombo* locParticleCombo, DKinFitType locKinFitType, bool locUpdateCovMatricesFlag);
 		DKinFitResults* Build_KinFitResults(const DParticleCombo* locParticleCombo, DKinFitType locKinFitType, const shared_ptr<const DKinFitChain>& locKinFitChain);
 
+		std::shared_ptr<JLockService> jLockService;
 		unsigned int dDebugLevel = 0;
-		DApplication* dApplication;
 		double dMinThrownMatchFOM;
 		DSourceComboer* dSourceComboer = nullptr;
 		DParticleComboCreator* dParticleComboCreator = nullptr;

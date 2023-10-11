@@ -11,19 +11,18 @@
 using namespace std;
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
 
 #include <HDDM/DEventWriterREST.h>
 #include <TRIGGER/DTrigger.h>
 
-class JEventProcessor_danarest : public jana::JEventProcessor
+class JEventProcessor_danarest : public JEventProcessor
 {
 	public:
-		jerror_t init(void); ///< Called once at program start.
-		jerror_t brun(JEventLoop *loop, int32_t runnumber); ///< Called everytime a new run number is detected.
-		jerror_t evnt(JEventLoop *loop, uint64_t eventnumber); ///< Called every event.
-		jerror_t erun(void); ///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);	///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
  private:
 		bool is_mc;

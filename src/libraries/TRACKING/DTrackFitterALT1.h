@@ -15,8 +15,8 @@
 #include <TH2.h>
 #include <TH3.h>
 
-#include <JANA/JFactory.h>
-#include <JANA/JGeometry.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Compatibility/JGeometry.h>
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "DTrackWireBased.h"
 #include "DReferenceTrajectory.h"
@@ -40,7 +40,7 @@ class DMCThrown;
 
 class DTrackFitterALT1:public DTrackFitter{
 	public:
-		DTrackFitterALT1(JEventLoop *loop);
+		DTrackFitterALT1(const std::shared_ptr<const JEvent>& loop);
 		~DTrackFitterALT1();
 	
 		typedef DReferenceTrajectory::swim_step_t swim_step_t;
@@ -97,7 +97,7 @@ class DTrackFitterALT1:public DTrackFitter{
 		fit_status_t LeastSquaresB(hitsInfo &hinfo, DReferenceTrajectory *rt);
 		void FilterGood(DMatrix &my_resiv, vector<bool> &my_good, vector<bool> &good_all);
 		void PrintChisqElements(DMatrix &resiv, DMatrix &cov_meas, DMatrix &cov_muls, DMatrix &weights);
-		void ForceLRTruth(JEventLoop *loop, DReferenceTrajectory *rt, hitsInfo &hinfo);
+		void ForceLRTruth(const std::shared_ptr<const JEvent>& event, DReferenceTrajectory *rt, hitsInfo &hinfo);
 		void FillDebugHists(DReferenceTrajectory *rt, DVector3 &vertex_pos, DVector3 &vertex_mom);
 
 		// The following are filled by the last call to one of the

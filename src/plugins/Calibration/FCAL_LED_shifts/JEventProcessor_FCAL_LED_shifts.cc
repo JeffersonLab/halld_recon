@@ -1,5 +1,5 @@
 #include "JEventProcessor_FCAL_LED_shifts.h"
-#include <JANA/JApplication.h>
+#include "DANA/DEvent.h"
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALGeometry.h"
 #include "FCAL/DFCALHit.h"
@@ -31,10 +31,6 @@
 #include <TFitResult.h>
 #include <TFitResultPtr.h>
 
-using namespace jana;
-
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 
 const int numChannels = 2800;
 
@@ -49,7 +45,7 @@ const int firstSlot = 3;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FCAL_LED_shifts());
+    app->Add(new JEventProcessor_FCAL_LED_shifts());
   }
 } // "C"
 
@@ -59,7 +55,7 @@ extern "C"{
 //------------------
 JEventProcessor_FCAL_LED_shifts::JEventProcessor_FCAL_LED_shifts()
 {
-
+	SetTypeName("JEventProcessor_FCAL_LED_shifts");
 }
 
 //------------------
@@ -71,22 +67,25 @@ JEventProcessor_FCAL_LED_shifts::~JEventProcessor_FCAL_LED_shifts()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_LED_shifts::init(void)
+void JEventProcessor_FCAL_LED_shifts::Init()
 {
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
   	// Set parameters
   	CALC_NEW_CONSTANTS_LED = true;
-	gPARMS->SetDefaultParameter("FCAL_SHIFT:CALC_NEW_CONSTANTS_LED", CALC_NEW_CONSTANTS_LED, "True if we should calculate new offsets based on a reference file for LED data");
+	app->SetDefaultParameter("FCAL_SHIFT:CALC_NEW_CONSTANTS_LED", CALC_NEW_CONSTANTS_LED, "True if we should calculate new offsets based on a reference file for LED data");
   	CALC_NEW_CONSTANTS_BEAM = false;
-	gPARMS->SetDefaultParameter("FCAL_SHIFT:CALC_NEW_CONSTANTS_BEAM", CALC_NEW_CONSTANTS_BEAM, "True if we should calculate new offsets based on a reference file for beam data");
+	app->SetDefaultParameter("FCAL_SHIFT:CALC_NEW_CONSTANTS_BEAM", CALC_NEW_CONSTANTS_BEAM, "True if we should calculate new offsets based on a reference file for beam data");
 	REFERENCE_FILE_NAME = "hd_root-r42485-led.root";
-	gPARMS->SetDefaultParameter("FCAL_SHIFT:REFERENCE_FILE_NAME", REFERENCE_FILE_NAME, "Reference file for new offsets");
+	app->SetDefaultParameter("FCAL_SHIFT:REFERENCE_FILE_NAME", REFERENCE_FILE_NAME, "Reference file for new offsets");
 
 	FCAL_TOTAL_ENERGY_HI = 9000.;
-	gPARMS->SetDefaultParameter("FCAL_SHIFT:FCAL_TOTAL_ENERGY_HI", FCAL_TOTAL_ENERGY_HI, "Total event energy cut (hi level)");
+	app->SetDefaultParameter("FCAL_SHIFT:FCAL_TOTAL_ENERGY_HI", FCAL_TOTAL_ENERGY_HI, "Total event energy cut (hi level)");
 	FCAL_TOTAL_ENERGY_LO = 8500.;
-	gPARMS->SetDefaultParameter("FCAL_SHIFT:FCAL_TOTAL_ENERGY_LO", FCAL_TOTAL_ENERGY_LO, "Total event energy cut (lo level)");
+	app->SetDefaultParameter("FCAL_SHIFT:FCAL_TOTAL_ENERGY_LO", FCAL_TOTAL_ENERGY_LO, "Total event energy cut (lo level)");
 
 
     // the histogram limits should be different for LED and beam data events
@@ -134,20 +133,17 @@ jerror_t JEventProcessor_FCAL_LED_shifts::init(void)
   	main->cd();
   	
 
-  	return NOERROR;
+  	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop, 
-					     int32_t runnumber)
+void JEventProcessor_FCAL_LED_shifts::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 	/*
   // get the FCAL z position from the global geometry interface
-  DApplication *dapp = 
-    dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = GetDGeometry(event);
   if( geom ) {
 
     geom->GetFCALZ( m_FCALfront );
@@ -155,7 +151,7 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
   else{
       
     cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No geometry accessible");
   }
 	*/
 
@@ -163,12 +159,12 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
 	// FIGURE OUT A WAY TO SAVE THIS INFO FOR erun()
   // we need an FCAL Geometry object
   vector< const DFCALGeometry* > geomVec;
-  eventLoop->Get( geomVec );
+  event->Get( geomVec );
 
   if( geomVec.size() != 1 ){
 
     cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No FCAL geometry available");
   }
 
   m_fcalGeom = geomVec[0];
@@ -176,30 +172,27 @@ jerror_t JEventProcessor_FCAL_LED_shifts::brun(JEventLoop *eventLoop,
   
   // Load the translation table
   vector< const DTranslationTable* > ttabVec;
-  eventLoop->Get(ttabVec);
+  event->Get(ttabVec);
 
   m_ttab = ttabVec[0];
 
   // save this info - not terribly thread safe, but this plugin
   // should only be used on one run at once
-  m_runnumber = runnumber;
+  m_runnumber = event->GetRunNumber();
   // load old offsets
-  eventLoop->GetCalib("/FCAL/ADC_Offsets", old_ADCoffsets);
-
-  return NOERROR;
+  GetCalib(event, "/FCAL/ADC_Offsets", old_ADCoffsets);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCAL_LED_shifts::evnt(JEventLoop *eventLoop, 
-					     uint64_t eventnumber)
+void JEventProcessor_FCAL_LED_shifts::Process(const std::shared_ptr<const JEvent> &event)
 {
 
 
 
   	vector< const DFCALHit*  > hits;
-  	eventLoop->Get( hits );
+  	event->Get( hits );
 
 
 	// save this mapping outside of the locks below, since the index lookup is pretty slow
@@ -236,7 +229,7 @@ jerror_t JEventProcessor_FCAL_LED_shifts::evnt(JEventLoop *eventLoop,
 
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
   
     m_totalEnergy->Fill(total_energy);
 
@@ -271,10 +264,7 @@ jerror_t JEventProcessor_FCAL_LED_shifts::evnt(JEventLoop *eventLoop,
   	}
     //}
 
-    japp->RootFillUnLock(this);  //RELEASE ROOT FILL LOCK
-
-
-  	return NOERROR;
+    lockService->RootFillUnLock(this);  //RELEASE ROOT FILL LOCK
 }
 
 static double  CalcADCShift(double reference_time, double time) {
@@ -292,9 +282,9 @@ static double  CalcADCShift(double reference_time, double time) {
 
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_LED_shifts::erun(void)
+void JEventProcessor_FCAL_LED_shifts::EndRun()
 {
   	// This is called whenever the run number changes, before it is
   	// changed to give you a chance to clean up before processing
@@ -517,19 +507,14 @@ jerror_t JEventProcessor_FCAL_LED_shifts::erun(void)
   		outf.close();
 
   	}
-  	
-  
-  	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_LED_shifts::fini(void)
+void JEventProcessor_FCAL_LED_shifts::Finish()
 {
-
-  // Called before program exit after event processing is finished.   
-  return NOERROR;
+  // Called before program exit after event processing is finished.
 }
 
 

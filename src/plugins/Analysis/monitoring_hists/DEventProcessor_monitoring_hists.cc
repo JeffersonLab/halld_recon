@@ -17,24 +17,28 @@ extern "C"
 	void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new DEventProcessor_monitoring_hists());
+		app->Add(new DEventProcessor_monitoring_hists());
 	}
 } // "C"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_monitoring_hists::init(void)
+void DEventProcessor_monitoring_hists::Init()
 {
+	auto app = GetApplication();
+
 	dNumMemoryMonitorEvents = 0;
-	gPARMS->SetDefaultParameter("MONITOR:MEMORY_EVENTS", dNumMemoryMonitorEvents);
+	app->SetDefaultParameter("MONITOR:MEMORY_EVENTS", dNumMemoryMonitorEvents);
 
     MIN_TRACKING_FOM = 0.0027;
     gPARMS->SetDefaultParameter("MONITOR:MIN_TRACKING_FOM", MIN_TRACKING_FOM);
 
 	string locOutputFileName = "hd_root.root";
-	if(gPARMS->Exists("OUTPUT_FILENAME"))
-		gPARMS->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+	if(app->GetJParameterManager()->Exists("OUTPUT_FILENAME"))
+		app->GetParameter("OUTPUT_FILENAME", locOutputFileName);
+
+	// TODO: NWB: Rejigger Exists() to be less weird and ugly
 
 	//go to file
 	TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -54,22 +58,20 @@ jerror_t DEventProcessor_monitoring_hists::init(void)
 	dHist_IsEvent->GetXaxis()->SetBinLabel(2, "True");
 
 	gDirectory->cd("..");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_monitoring_hists::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void DEventProcessor_monitoring_hists::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 
 	//Initialize Actions
-	dHistogramAction_NumReconstructedObjects.Initialize(locEventLoop);
-	dHistogramAction_Reconstruction.Initialize(locEventLoop);
-	dHistogramAction_EventVertex.Initialize(locEventLoop);
+	dHistogramAction_NumReconstructedObjects.Initialize(locEvent);
+	dHistogramAction_Reconstruction.Initialize(locEvent);
+	dHistogramAction_EventVertex.Initialize(locEvent);
 
     dHistogramAction_DetectorMatching.dMinTrackingFOM = MIN_TRACKING_FOM;
 	dHistogramAction_DetectorMatching.Initialize(locEventLoop);
@@ -86,89 +88,83 @@ jerror_t DEventProcessor_monitoring_hists::brun(JEventLoop *locEventLoop, int32_
 	if(dNumMemoryMonitorEvents > 0)
 	{
 		dHistogramAction_ObjectMemory.dMaxNumEvents = dNumMemoryMonitorEvents;
-		dHistogramAction_ObjectMemory.Initialize(locEventLoop);
+		dHistogramAction_ObjectMemory.Initialize(locEvent);
 	}
 
 	if(!locMCThrowns.empty())
 	{
-		dHistogramAction_ThrownParticleKinematics.Initialize(locEventLoop);
-		dHistogramAction_ReconnedThrownKinematics.Initialize(locEventLoop);
-		dHistogramAction_GenReconTrackComparison.Initialize(locEventLoop);
+		dHistogramAction_ThrownParticleKinematics.Initialize(locEvent);
+		dHistogramAction_ReconnedThrownKinematics.Initialize(locEvent);
+		dHistogramAction_GenReconTrackComparison.Initialize(locEvent);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_monitoring_hists::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void DEventProcessor_monitoring_hists::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 
         // first fill histograms which should always be filled, whether or not this is a real "physics" event
 	vector<const DMCThrown*> locMCThrowns;
-	locEventLoop->Get(locMCThrowns);
+	locEvent->Get(locMCThrowns);
 	if(!locMCThrowns.empty())
 	{
-		dHistogramAction_ThrownParticleKinematics(locEventLoop);
+		dHistogramAction_ThrownParticleKinematics(locEvent);
 	}
 
 	if(dNumMemoryMonitorEvents > 0)
-		dHistogramAction_ObjectMemory(locEventLoop);
+		dHistogramAction_ObjectMemory(locEvent);
 
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
-	locEventLoop->GetSingle(locTrigger);
+	locEvent->GetSingle(locTrigger);
 	if(!locTrigger->Get_IsPhysicsEvent())
-		return NOERROR;
+		return;
 
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	GetLockService(locEvent)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
 		dHist_IsEvent->Fill(1);
 	}
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	GetLockService(locEvent)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 	//Fill reaction-independent histograms.
-	dHistogramAction_NumReconstructedObjects(locEventLoop);
-	dHistogramAction_Reconstruction(locEventLoop);
-	dHistogramAction_EventVertex(locEventLoop);
+	dHistogramAction_NumReconstructedObjects(locEvent);
+	dHistogramAction_Reconstruction(locEvent);
+	dHistogramAction_EventVertex(locEvent);
 
-	dHistogramAction_DetectorMatching(locEventLoop);
-	dHistogramAction_DetectorMatchParams(locEventLoop);
-	dHistogramAction_Neutrals(locEventLoop);
-	dHistogramAction_DetectorPID(locEventLoop);
+	dHistogramAction_DetectorMatching(locEvent);
+	dHistogramAction_DetectorMatchParams(locEvent);
+	dHistogramAction_Neutrals(locEvent);
+	dHistogramAction_DetectorPID(locEvent);
 
-	dHistogramAction_TrackMultiplicity(locEventLoop);
-	dHistogramAction_DetectedParticleKinematics(locEventLoop);
-	dHistogramAction_TrackShowerErrors(locEventLoop);
-	dHistogramAction_TriggerStudies(locEventLoop);
+	dHistogramAction_TrackMultiplicity(locEvent);
+	dHistogramAction_DetectedParticleKinematics(locEvent);
+	dHistogramAction_TrackShowerErrors(locEvent);
+	dHistogramAction_TriggerStudies(locEvent);
 
 	if(!locMCThrowns.empty())
 	{
-		dHistogramAction_ReconnedThrownKinematics(locEventLoop);
-		dHistogramAction_GenReconTrackComparison(locEventLoop);
+		dHistogramAction_ReconnedThrownKinematics(locEvent);
+		dHistogramAction_GenReconTrackComparison(locEvent);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_monitoring_hists::erun(void)
+void DEventProcessor_monitoring_hists::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_monitoring_hists::fini(void)
+void DEventProcessor_monitoring_hists::Finish()
 {
-	return NOERROR;
 }
 

@@ -12,17 +12,20 @@
 extern "C" {
 void InitPlugin(JApplication* locApplication) {
   InitJANAPlugin(locApplication);
-  locApplication->AddProcessor(new DEventProcessor_MilleKs());  // register this plugin
-  locApplication->AddFactoryGenerator(new DFactoryGenerator_MilleKs());  // register the factory generator
+  locApplication->Add(new DEventProcessor_MilleKs());  // register this plugin
+  locApplication->Add(new DFactoryGenerator_MilleKs());  // register the factory generator
 }
 }  // "C"
 
-jerror_t DEventProcessor_MilleKs::init(void) {
+void DEventProcessor_MilleKs::Init() {
   // This is called once at program startup.
-  gPARMS->SetParameter("TRKFIT:ALIGNMENT", true);
+
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+  app->GetJParameterManager()->SetParameter("TRKFIT:ALIGNMENT", true);
 
   string output_filename;
-  gPARMS->GetParameter("OUTPUT_FILENAME", output_filename);
+  app->GetParameter("OUTPUT_FILENAME", output_filename);
   int ext_pos = output_filename.rfind(".root");
   if (ext_pos != (int)output_filename.size() - 5) {
     jerr << "[MilleKs] Invalid output filename." << endl;
@@ -30,17 +33,14 @@ jerror_t DEventProcessor_MilleKs::init(void) {
   }
   output_filename.replace(ext_pos, 5, ".mil");
   milleWriter = new Mille(output_filename.data());
-
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_MilleKs::brun(jana::JEventLoop* locEventLoop, int32_t locRunNumber) {
+void DEventProcessor_MilleKs::BeginRun(const std::shared_ptr<const JEvent> &locEvent) {
   // This is called whenever the run number changes
   // Check for magnetic field
   bfield = NULL;
-  DApplication *dapp = dynamic_cast<DApplication *>(locEventLoop->GetJApplication());
   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField *>(
-                             dapp->GetBfield(locRunNumber)) != nullptr);
+                             GetBfield(locEvent)) != nullptr);
 
   // This plugin is designed for field on data. If this is used for field off
   // data, Abort...
@@ -50,7 +50,7 @@ jerror_t DEventProcessor_MilleKs::brun(jana::JEventLoop* locEventLoop, int32_t l
          << endl;
     japp->Quit();
   }
-  bfield = dapp->GetBfield(locRunNumber);
+  bfield = GetBfield(locEvent);
 
 
   tree_ = new TTree("MilleKs", "MilleKs");
@@ -60,11 +60,9 @@ jerror_t DEventProcessor_MilleKs::brun(jana::JEventLoop* locEventLoop, int32_t l
   tree_->Branch("m", &m_, "m/D");
   tree_->Branch("m_measured", &m_measured_, "m_measured/D");
   tree_->Branch("conf_lv", &conf_lv_, "conf_lv/D");
-
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_MilleKs::evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber) {
+void DEventProcessor_MilleKs::Process(const std::shared_ptr<const JEvent> &event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // locEventLoop->Get(...) to get reconstructed objects (and thereby activating
@@ -104,7 +102,7 @@ jerror_t DEventProcessor_MilleKs::evnt(jana::JEventLoop* locEventLoop, uint64_t 
   // already. These objects contain the DParticleCombo objects that survived the
   // DAnalysisAction cuts that were added to the DReactions
   vector<const DAnalysisResults*> locAnalysisResultsVector;
-  locEventLoop->Get(locAnalysisResultsVector);
+  event->Get(locAnalysisResultsVector);
   // locAnalysisResultsVector.size() must be 2 for "KsKpPim" and "KsKmPip".
 
   /** OPTIONAL: FURTHER ANALYSIS **/
@@ -333,9 +331,9 @@ jerror_t DEventProcessor_MilleKs::evnt(jana::JEventLoop* locEventLoop, uint64_t 
       m_ = (m2_ < 0.0 ? -1.0 : sqrt(m2_));
       m_measured_ = (m2_measured_ < 0.0 ? -1.0 : sqrt(m2_measured_));
 
-      japp->RootWriteLock();
+      lockService->RootWriteLock();
       tree_->Fill();
-      japp->RootUnLock();
+      lockService->RootUnLock();
 
       vector<DTrackFitter::pull_t> pip_pulls = pip_track->pulls;
       vector<DTrackFitter::pull_t> pim_pulls = pim_track->pulls;
@@ -374,7 +372,7 @@ jerror_t DEventProcessor_MilleKs::evnt(jana::JEventLoop* locEventLoop, uint64_t 
       }
       if (contains_bad_pulls) continue;
 
-      japp->RootWriteLock();  // Just use the root lock as a temporary
+      lockService->RootWriteLock();  // Just use the root lock as a temporary
       int straw_offset[29] = {0,    0,    42,   84,   138,  192,  258,  324,
                               404,  484,  577,  670,  776,  882,  1005, 1128,
                               1263, 1398, 1544, 1690, 1848, 2006, 2176, 2346,
@@ -898,22 +896,18 @@ jerror_t DEventProcessor_MilleKs::evnt(jana::JEventLoop* locEventLoop, uint64_t 
         }
       }
       milleWriter->end();
-      japp->RootUnLock();
+      lockService->RootUnLock();
     }
   }
-
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_MilleKs::erun(void) {
+void DEventProcessor_MilleKs::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
-jerror_t DEventProcessor_MilleKs::fini(void) {
+void DEventProcessor_MilleKs::Finish() {
   // Called before program exit after event processing is finished.
   delete milleWriter;
-  return NOERROR;
 }

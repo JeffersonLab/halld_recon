@@ -9,9 +9,8 @@
 #define _DTAGHhit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTAGHHit:public jana::JObject{
+class DTAGHHit : public JObject{
    public:
       JOBJECT_PUBLIC(DTAGHHit);
 
@@ -26,20 +25,21 @@ class DTAGHHit:public jana::JObject{
       bool has_fADC, has_TDC, is_double;
       int bg = -1; //if MC, 0 for the photon that generated the event, nonzero otherwise //ignore if not MC
 
-      void toStrings(vector<pair<string,string> > &items)const{
-        AddString(items, "counter_id", "%d", counter_id);
-        AddString(items, "E(GeV)", "%f", E);
-        AddString(items, "t(ns)", "%f", t);
-        AddString(items, "time_tdc(ns)", "%f", time_tdc);
-        AddString(items, "time_fadc(ns)", "%f", time_fadc);
-        AddString(items, "integral", "%f", integral);
-        AddString(items, "pulse_peak", "%f", pulse_peak);
-        AddString(items, "npe_fadc", "%f", npe_fadc);
-        AddString(items, "has_fADC", "%d", (int)has_fADC);
-        AddString(items, "has_TDC", "%d", (int)has_TDC);
-        AddString(items, "is_double", "%d", (int)is_double);
-        AddString(items, "bg", "%d", bg);
+      void Summarize(JObjectSummary& summary) const override {
+      	 summary.add(counter_id, NAME_OF(counter_id), "%d");
+	     summary.add(E, "E(GeV)", "%f");
+	     summary.add(t, "t(ns)", "%f");
+	     summary.add(time_tdc, "time_tdc(ns)", "%f");
+	     summary.add(time_fadc, "time_fadc(ns)", "%f");
+	     summary.add(integral, "integral", "%f");
+	     summary.add(pulse_peak, "pulse_peak", "%f");
+	     summary.add(npe_fadc, "npe_fadc", "%f");
+	     summary.add((int)has_fADC, "has_fADC", "%d");
+	     summary.add((int)has_TDC, "has_TDC", "%d");
+	     summary.add((int)is_double, "is_double", "%d");
+	     summary.add(bg, "bg", "%d");
       }
+
 };
 
 #endif // _DTAGHHit_

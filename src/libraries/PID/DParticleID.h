@@ -16,11 +16,9 @@
 #include <algorithm>
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include <DVector3.h>
 #include "HDGEOMETRY/DRootGeom.h"
-#include <TRACKING/DTrackTimeBased_factory.h>
 #include <CDC/DCDCTrackHit.h>
 #include <FDC/DFDCPseudo.h>
 #include <BCAL/DBCALShower.h>
@@ -32,7 +30,7 @@
 #include <FMWPC/DCTOFPoint.h>
 #include <TOF/DTOFPoint.h>
 #include <TOF/DTOFPaddleHit.h>
-#include <TOF/DTOFGeometry_factory.h>
+#include <TOF/DTOFGeometry.h>
 #include <TOF/DTOFPoint_factory.h>
 #include <START_COUNTER/DSCHit.h>
 #include <TRACKING/DTrackFitter.h>
@@ -60,14 +58,13 @@
 
 class DTrackTimeBased;
 
-class DParticleID:public jana::JObject
+class DParticleID: public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DParticleID);
 
-		// Constructor and destructor
-		DParticleID(JEventLoop *loop); // require JEventLoop in constructor
-		virtual ~DParticleID(void){}
+		DParticleID(const std::shared_ptr<const JEvent> &event);
+		virtual ~DParticleID() = default;
 
 		class dedx_t
 		{

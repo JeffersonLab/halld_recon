@@ -5,53 +5,47 @@
 #ifndef _DTrackFitter_factory_Riemann_
 #define _DTrackFitter_factory_Riemann_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TRACKING/DTrackFitterRiemann.h>
 
-class DTrackFitter_factory_Riemann:public jana::JFactory<DTrackFitter>{
+class DTrackFitter_factory_Riemann:public JFactoryT<DTrackFitter>{
 	public:
-		DTrackFitter_factory_Riemann(){};
-		~DTrackFitter_factory_Riemann(){};
-		const char* Tag(void){return "Riemann";}
+		DTrackFitter_factory_Riemann(){
+			SetTag("Riemann");
+		};
+		~DTrackFitter_factory_Riemann() override = default;
 
-		DTrackFitter *fitter=NULL;
+		DTrackFitter *fitter=nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( fitter ) delete fitter;
-
-			fitter = new DTrackFitterRiemann(loop);
-
-			return NOERROR;
+			delete fitter;
+			fitter = new DTrackFitterRiemann(event);
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& event) override
 		 {
 			// Reuse existing DTrackFitterRiemann object.
-			if( fitter ) _data.push_back( fitter );
-			 
-			 return NOERROR;
+			if( fitter ) Insert( fitter );
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( fitter ) delete fitter;
-			fitter = NULL;
-			
-			return NOERROR;
+			delete fitter;
+			fitter = nullptr;
 		}
 };
 

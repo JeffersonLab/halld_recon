@@ -2,7 +2,7 @@
 #ifndef _DLorentzDeflections_
 #define _DLorentzDeflections_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 /* The folowing are for interpreting grid of Lorentz deflection data */
 #define PACKAGE_Z_POINTS 10
 #define LORENTZ_X_POINTS 21

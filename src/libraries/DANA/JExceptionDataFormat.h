@@ -8,7 +8,7 @@
 #ifndef _JExceptionDataFormat_
 #define _JExceptionDataFormat_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JException.h>
 
 /// This is a subclass of JException that is used to indicate a

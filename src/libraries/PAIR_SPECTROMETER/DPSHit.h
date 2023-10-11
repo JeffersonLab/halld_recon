@@ -9,10 +9,9 @@
 #define _DPSHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 #include "DPSGeometry.h"
 
-class DPSHit:public jana::JObject{
+class DPSHit: public JObject{
  public:
   JOBJECT_PUBLIC(DPSHit);
 
@@ -24,14 +23,14 @@ class DPSHit:public jana::JObject{
   double pulse_peak;
   double npix_fadc;
 
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "arm", "%d", arm);
-    AddString(items, "column", "%d", column);
-    AddString(items, "E(GeV)", "%f", E);
-    AddString(items, "t(ns)", "%f", t);
-    AddString(items, "integral", "%f", integral);
-    AddString(items, "pulse_peak", "%f", pulse_peak);
-    AddString(items, "npix_fadc", "%f", npix_fadc);
+  void Summarize(JObjectSummary& summary) const override {
+    summary.add(arm, "arm", "%d");
+    summary.add(column, "column", "%d");
+    summary.add(E, "E(GeV)", "%f");
+    summary.add(t, "t(ns)", "%f");
+    summary.add(integral, "integral", "%f");
+    summary.add(pulse_peak, "pulse_peak", "%f");
+    summary.add(npix_fadc, "npix_fadc", "%f");
   }
 };
 

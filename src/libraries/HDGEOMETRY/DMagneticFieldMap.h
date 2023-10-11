@@ -8,7 +8,6 @@
 #ifndef _DMagneticFieldMap_
 #define _DMagneticFieldMap_
 
-#include <JANA/jerror.h>
 #include <DVector3.h>
 
 class DMagneticFieldMap{

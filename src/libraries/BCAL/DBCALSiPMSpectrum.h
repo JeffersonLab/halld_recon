@@ -2,12 +2,11 @@
 #define _DBCALSiPMSpectrum_
 
 #include <JANA/JObject.h>
-using namespace jana;
 
 #include <DHistogram.h>
 #include <BCAL/DBCALGeometry.h>
 
-class DBCALSiPMSpectrum:public JObject{
+class DBCALSiPMSpectrum: public JObject {
 
 	/// This class holds the signal at the BCAL SiPM as provided by GEANT
 	/// (before summing and electronic response).
@@ -26,12 +25,12 @@ class DBCALSiPMSpectrum:public JObject{
 
 		int incident_id;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "module", "%d", module);
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "sector", "%d", sector);
-			AddString(items, "end", "%s", end==0 ? "upstream":"downstream" );
-			AddString(items, "incident_id", "%d", incident_id);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(module, "module", "%d");
+			summary.add(layer, "layer", "%d");
+			summary.add(sector, "sector", "%d");
+			summary.add(end==0 ? "upstream":"downstream" , "end", "%s");
+			summary.add(incident_id, "incident_id", "%d");
 		}
 };
 

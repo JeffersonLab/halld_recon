@@ -7,18 +7,24 @@
 
 #include "DTrackFitterStraightTrack.h"
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include "DANA/DGeometryManager.h"
+
 //---------------------------------
 // DTrackFitterStraightTrack    (Constructor)
 //---------------------------------
-DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFitter(loop){
-  int runnumber=(loop->GetJEvent()).GetRunNumber();
-  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+DTrackFitterStraightTrack::DTrackFitterStraightTrack(const std::shared_ptr<const JEvent>& event):DTrackFitter(event){
+
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto geom = geo_manager->GetDGeometry(runnumber);
 
   // Get pointer to TrackFinder object 
   vector<const DTrackFinder *> finders;
-  loop->Get(finders);
+  event->Get(finders);
     
    // Drop the const qualifier from the DTrackFinder pointer
   finder = const_cast<DTrackFinder*>(finders[0]);
@@ -33,7 +39,7 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   //****************
 
   map<string,double>drift_res_parms;
-  jcalib->Get("FDC/drift_resolution_parms",drift_res_parms); 
+  jcalib->Get("FDC/drift_resolution_parms",drift_res_parms);
   DRIFT_RES_PARMS[0]=drift_res_parms["p0"];   
   DRIFT_RES_PARMS[1]=drift_res_parms["p1"];
   DRIFT_RES_PARMS[2]=drift_res_parms["p2"]; 
@@ -54,13 +60,13 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
   }
 
   PLANE_TO_SKIP=0;
-  gPARMS->SetDefaultParameter("TRKFIT:PLANE_TO_SKIP",PLANE_TO_SKIP); 
+  app->SetDefaultParameter("TRKFIT:PLANE_TO_SKIP",PLANE_TO_SKIP); 
 
   //****************
   // CDC parameters
   //****************
   RING_TO_SKIP=0;
-  gPARMS->SetDefaultParameter("TRKFIT:RING_TO_SKIP",RING_TO_SKIP);
+  app->SetDefaultParameter("TRKFIT:RING_TO_SKIP",RING_TO_SKIP);
   
   map<string, double> cdc_res_parms;
   jcalib->Get("CDC/cdc_resolution_parms_v2", cdc_res_parms);
@@ -186,13 +192,13 @@ DTrackFitterStraightTrack::DTrackFitterStraightTrack(JEventLoop *loop):DTrackFit
    // Command-line parameters
    //*************************
    VERBOSE=0;
-   gPARMS->SetDefaultParameter("TRKFIT:VERBOSE",VERBOSE);
+   app->SetDefaultParameter("TRKFIT:VERBOSE",VERBOSE);
    COSMICS=false;
-   gPARMS->SetDefaultParameter("TRKFIND:COSMICS",COSMICS);
+   app->SetDefaultParameter("TRKFIND:COSMICS",COSMICS);
    CHI2CUT = 15.0; 
-   gPARMS->SetDefaultParameter("TRKFIT:CHI2CUT",CHI2CUT);
+   app->SetDefaultParameter("TRKFIT:CHI2CUT",CHI2CUT);
    DO_PRUNING = true;
-   gPARMS->SetDefaultParameter("TRKFIT:DO_PRUNING",DO_PRUNING);
+   app->SetDefaultParameter("TRKFIT:DO_PRUNING",DO_PRUNING);
 }
 
 //---------------------------------

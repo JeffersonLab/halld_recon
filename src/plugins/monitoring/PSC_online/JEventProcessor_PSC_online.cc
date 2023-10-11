@@ -12,7 +12,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "TTAB/DTTabUtilities.h"
 #include <PAIR_SPECTROMETER/DPSCDigiHit.h>
@@ -93,7 +92,7 @@ static TH2I *hDigiHit_adctdcMatchesVsModule[Narms];
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_PSC_online());
+        app->Add(new JEventProcessor_PSC_online());
     }
 }
 
@@ -102,6 +101,7 @@ extern "C"{
 
 
 JEventProcessor_PSC_online::JEventProcessor_PSC_online() {
+  SetTypeName("JEventProcessor_PSC_online");
 }
 
 
@@ -114,7 +114,10 @@ JEventProcessor_PSC_online::~JEventProcessor_PSC_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_PSC_online::init(void) {
+void JEventProcessor_PSC_online::Init() {
+
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
 
     // create root folder for psc and cd to it, store main dir
     TDirectory *mainDir = gDirectory;
@@ -196,24 +199,21 @@ jerror_t JEventProcessor_PSC_online::init(void) {
     }
     // back to main dir
     mainDir->cd();
-
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PSC_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_PSC_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PSC_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_PSC_online::Process(const std::shared_ptr<const JEvent>& event) {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
     // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -222,18 +222,18 @@ jerror_t JEventProcessor_PSC_online::evnt(JEventLoop *eventLoop, uint64_t eventn
 
     // Get data for PSC
     vector<const DPSCDigiHit*> digihits;
-    eventLoop->Get(digihits);
+    event->Get(digihits);
     vector<const DPSCTDCDigiHit*> tdcdigihits;
-    eventLoop->Get(tdcdigihits);
+    event->Get(tdcdigihits);
     vector<const DPSCHit*> hits;
-    eventLoop->Get(hits);
+    event->Get(hits);
 
     const DTTabUtilities* ttabUtilities = nullptr;
-    eventLoop->GetSingle(ttabUtilities);
+    event->GetSingle(ttabUtilities);
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
     if (digihits.size() > 0 || tdcdigihits.size() > 0) psc_num_events->Fill(1);
 
@@ -338,29 +338,26 @@ jerror_t JEventProcessor_PSC_online::evnt(JEventLoop *eventLoop, uint64_t eventn
     hHit_NHits->Fill(NHits[0]+NHits[1]);
     hHit_NHitsVsArm->Fill(0.,NHits[0]); hHit_NHitsVsArm->Fill(1.,NHits[1]);
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+    lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PSC_online::erun(void) {
+void JEventProcessor_PSC_online::EndRun() {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_PSC_online::fini(void) {
+void JEventProcessor_PSC_online::Finish() {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 
 

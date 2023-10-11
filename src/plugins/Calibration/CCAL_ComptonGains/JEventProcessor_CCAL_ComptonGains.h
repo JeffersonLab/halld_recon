@@ -42,27 +42,22 @@
 #include <thread>
 #include <mutex>
 
-using namespace jana;
 using namespace std;
 
 
 class JEventProcessor_CCAL_ComptonGains:public JEventProcessor {
  	
 	public:
-		
 		JEventProcessor_CCAL_ComptonGains();
-  		~JEventProcessor_CCAL_ComptonGains(){};
-  		const char* className(void){return "JEventProcessor_CCAL_ComptonGains";}
-		
-	
- 	private:
-		
-		jerror_t init(void);
-  		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);
-  		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);
-  		jerror_t erun(void);
-  		jerror_t fini(void);
-		
+		~JEventProcessor_CCAL_ComptonGains(){};
+
+	private:
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
+
 		double bar2x( int bar );
 		
 		int check_TOF_matches( DVector3 pos, double t1, double rfTime, 

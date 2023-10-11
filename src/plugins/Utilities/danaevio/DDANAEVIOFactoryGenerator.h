@@ -6,9 +6,7 @@
 #define _DDANAEVIOFactoryGenerator_
 
 
-#include "JANA/jerror.h"
 #include "JANA/JFactoryGenerator.h"
-using namespace jana;
 
 
 
@@ -25,7 +23,7 @@ class DDANAEVIOFactoryGenerator : public JFactoryGenerator {
   
 
   // this method dose the work
-  jerror_t GenerateFactories(JEventLoop*);
+  void GenerateFactories(JFactorySet* fs);
 
 };
 
