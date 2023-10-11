@@ -1,33 +1,33 @@
 #ifndef _DEventWriterHDDM_factory_
 #define _DEventWriterHDDM_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
 
 #include "HDDM/DEventWriterHDDM.h"
 
-class DEventWriterHDDM_factory : public jana::JFactory<DEventWriterHDDM>
+class DEventWriterHDDM_factory : public JFactoryT<DEventWriterHDDM>
 {
 	public:
-		DEventWriterHDDM_factory(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
-		~DEventWriterHDDM_factory(){};
+		DEventWriterHDDM_factory() = default;
+		~DEventWriterHDDM_factory() = default;
 
 	private:
-		jerror_t init(void)
+		void Init() override
 		{
+			auto app = GetApplication();
 			dOutputFileBaseName = "converted";
-			gPARMS->SetDefaultParameter("HDDMOUT:FILENAME", dOutputFileBaseName);
-			return NOERROR;
+			app->SetDefaultParameter("HDDMOUT:FILENAME", dOutputFileBaseName);
 		}
 
-		jerror_t evnt(jana::JEventLoop *locEventLoop, uint64_t locEventNumber)
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override
 		{
 			// Create single DEventWriterHDDM object and marks the factory as persistent so it doesn't get deleted every event.
-			SetFactoryFlag(PERSISTANT);
+			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(new DEventWriterHDDM(locEventLoop, dOutputFileBaseName));
-			return NOERROR;
+			Insert(new DEventWriterHDDM(locEvent, dOutputFileBaseName));
 		}
+
 		string dOutputFileBaseName;
 };
 

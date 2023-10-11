@@ -9,28 +9,24 @@
 #ifndef _DBCALShower_factory_JLAB_
 #define _DBCALShower_factory_JLAB_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include <BCAL/DBCALShower.h>
-#include <DBCALClump_factory.h>
 
 
 /// The showers produced here are based on the output of the DBCALClump_factory
 
-class DBCALShower_factory_JLAB:public JFactory<DBCALShower>{
+class DBCALShower_factory_JLAB: public JFactoryT<DBCALShower>{
   
  public:
   
   DBCALShower_factory_JLAB();
-  ~DBCALShower_factory_JLAB(){};
+  ~DBCALShower_factory_JLAB() override = default;
   
-  const char* Tag(void){return "JLAB";}
-  
+
  private:
-  jerror_t brun(JEventLoop *loop, int32_t runnumber);
-  jerror_t evnt(JEventLoop *loop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
   
 };
 

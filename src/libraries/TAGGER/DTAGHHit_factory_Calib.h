@@ -8,15 +8,17 @@
 #ifndef _DTAGHHit_factory_Calib_
 #define _DTAGHHit_factory_Calib_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Calibrations/JCalibration.h>
 #include "DTAGHHit.h"
 #include "DTAGHGeometry.h"
 
-class DTAGHHit_factory_Calib:public jana::JFactory<DTAGHHit>{
+class DTAGHHit_factory_Calib:public JFactoryT<DTAGHHit>{
     public:
-        DTAGHHit_factory_Calib(){};
+        DTAGHHit_factory_Calib(){
+        	SetTag("Calib");
+        };
         ~DTAGHHit_factory_Calib(){};
-        const char* Tag(void){return "Calib";}
 
         static const int k_counter_dead = 0;
         static const int k_counter_good = 1;
@@ -44,16 +46,17 @@ class DTAGHHit_factory_Calib:public jana::JFactory<DTAGHHit>{
         double tdc_twalk_c2[TAGH_MAX_COUNTER+1];
         double tdc_twalk_c3[TAGH_MAX_COUNTER+1];
 
-        bool load_ccdb_constants(std::string table_name,
+        bool load_ccdb_constants(JCalibration* calibration,
+        	std::string table_name,
             std::string column_name,
             double table[TAGH_MAX_COUNTER+1]);
 
     private:
-        jerror_t init(void);						///< Called once at program start.
-        jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-        jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-        jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-        jerror_t fini(void);						///< Called after last event of last event source has been processed.
+        void Init() override;
+        void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+        void Process(const std::shared_ptr<const JEvent>& event) override;
+        void EndRun() override;
+        void Finish() override;
 
         bool CHECK_FADC_ERRORS;
 };

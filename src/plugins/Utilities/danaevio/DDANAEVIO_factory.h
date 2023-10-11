@@ -16,8 +16,7 @@
 using namespace std;
 
 
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 
 #include <danaevio/DDANAEVIODOMTree.h>
@@ -27,7 +26,7 @@ using namespace jana;
 //------------------------------------------------------------------------------------
 
 
-class DDANAEVIO_factory : public JFactory<DDANAEVIODOMTree> {
+class DDANAEVIO_factory : public JFactoryT<DDANAEVIODOMTree> {
   
  public:
   DDANAEVIO_factory();
@@ -37,7 +36,7 @@ class DDANAEVIO_factory : public JFactory<DDANAEVIODOMTree> {
 
 
  private:
-  jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);
+  void Process(const std::shared_ptr<const JEvent>& event, uint64_t eventnumber);
   void get_tagNum_dictionary(void);
   static void startElement(void *userData, const char *xmlname, const char **atts);
 
@@ -47,46 +46,46 @@ class DDANAEVIO_factory : public JFactory<DDANAEVIODOMTree> {
 
   void addObjIdBank(evioDOMTree &tree);
 
-  void addDMCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBeamPhoton(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDMCThrown(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFCALTruthShower(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBCALTruthShower(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFTruth(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDSCTruthHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDMCTrajectoryPoint(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDCDCHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFDCHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFCALHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDHDDMBCALHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDHDDMTOFHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDSCHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDCDCTrackHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFDCPseudo(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTrackWireBased(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTrackTimeBased(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDChargedTrack(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDPhoton(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDVertex(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTrackCandidate(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFCALPhoton(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDChargedTruthMatch(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFRawHitMC(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFRawHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFPoint(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTOFMCResponse(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBCALHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBCALMCResponse(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDBCALShower(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFCALCluster(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFDCCathodeCluster(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDFDCSegment(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTwoGammaFit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDParticle(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTAGMHit(JEventLoop *eventLoop, evioDOMTree &tree);
-  void addDTAGHHit(JEventLoop *eventLoop, evioDOMTree &tree);
+  void addDMCTrackHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBeamPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDMCThrown(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFCALTruthShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBCALTruthShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFTruth(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDSCTruthHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDMCTrajectoryPoint(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDCDCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFDCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFCALHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDHDDMBCALHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDHDDMTOFHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDSCHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDCDCTrackHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFDCPseudo(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTrackWireBased(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTrackTimeBased(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDChargedTrack(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDVertex(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTrackCandidate(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBCALPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFCALPhoton(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDChargedTruthMatch(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFRawHitMC(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFRawHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFPoint(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTOFMCResponse(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBCALHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBCALMCResponse(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDBCALShower(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFCALCluster(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFDCCathodeCluster(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDFDCSegment(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTwoGammaFit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDParticle(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTAGMHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
+  void addDTAGHHit(const std::shared_ptr<const JEvent>& event, evioDOMTree &tree);
 
 
   // map of which factory/tags to convert, can be set on-the-fly via setEVIOMap()

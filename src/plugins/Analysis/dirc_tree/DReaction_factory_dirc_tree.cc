@@ -6,17 +6,16 @@
 #include "DReaction_factory_dirc_tree.h"
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_dirc_tree::brun(JEventLoop* locEventLoop, int32_t locRunNumber)
+void DReaction_factory_dirc_tree::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
-	return NOERROR;
 }
 
 //------------------
-// init
+// Process
 //------------------
-jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_dirc_tree::Process(const std::shared_ptr<const JEvent> &locEvent)
 {
 
         // Make as many DReaction objects as desired
@@ -72,7 +71,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, PiPlus, 0, "PiPlus_DIRC_KinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	
 	/**************************************************** p2pi_dirc Reaction Steps ****************************************************/
@@ -120,18 +119,15 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	// Custom histograms for DIRC
 	//locReaction->Add_AnalysisAction(new DCustomAction_dirc_tree(locReaction, true, KPlus, 0, "KPlus_DIRC_KinFit"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_dirc_tree::fini(void)
+void DReaction_factory_dirc_tree::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

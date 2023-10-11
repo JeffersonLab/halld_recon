@@ -16,9 +16,9 @@ using namespace std;
 #include "DEventProcessor_trackeff_hists.h"
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 #include <TRACKING/DMCTrajectoryPoint.h>
 #include <PID/DChargedTrack.h>
 #include <DVector2.h>
@@ -29,7 +29,7 @@ using namespace std;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_trackeff_hists());
+	app->Add(new DEventProcessor_trackeff_hists());
 }
 } // "C"
 
@@ -57,9 +57,9 @@ DEventProcessor_trackeff_hists::~DEventProcessor_trackeff_hists()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_trackeff_hists::init(void)
+void DEventProcessor_trackeff_hists::Init()
 {
 	// Create TRACKING directory
 	TDirectory *dir = (TDirectory*)gROOT->FindObject("TRACKING");
@@ -74,39 +74,34 @@ jerror_t DEventProcessor_trackeff_hists::init(void)
 
 	dir->cd("../");
 		
-	return NOERROR;
+	return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_trackeff_hists::brun(JEventLoop *loop, int32_t runnumber)
+void DEventProcessor_trackeff_hists::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_trackeff_hists::erun(void)
+void DEventProcessor_trackeff_hists::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_trackeff_hists::fini(void)
+void DEventProcessor_trackeff_hists::Finish()
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_trackeff_hists::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_trackeff_hists::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DCDCTrackHit*> cdctrackhits;
 	vector<const DFDCPseudo*> fdcpseudos;
@@ -117,13 +112,13 @@ jerror_t DEventProcessor_trackeff_hists::evnt(JEventLoop *loop, uint64_t eventnu
 	vector<const DTrackTimeBased*> locAssociatedTrackTimeBasedVector;
 	vector<const DMCTrajectoryPoint*> mctraj;
 	
-	loop->Get(cdctrackhits);
-	loop->Get(fdcpseudos);
-	loop->Get(trackcandidates);
-	loop->Get(trackWBs);
-	loop->Get(trackTBs);
-	loop->Get(throwns, "THROWN");
-	loop->Get(mctraj);
+	event->Get(cdctrackhits);
+	event->Get(fdcpseudos);
+	event->Get(trackcandidates);
+	event->Get(trackWBs);
+	event->Get(trackTBs);
+	event->Get(throwns, "THROWN");
+	event->Get(mctraj);
 
 	// 1. Get number of CDC/FDC wires for each primary track
 	// 2. Get number of CDC/FDC wires and track number for a given DKinematicData object
@@ -162,7 +157,7 @@ jerror_t DEventProcessor_trackeff_hists::evnt(JEventLoop *loop, uint64_t eventnu
 	}
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
 	// Loop over thrown tracks
 	for(unsigned int i=0; i<throwns.size(); i++){
@@ -182,16 +177,14 @@ jerror_t DEventProcessor_trackeff_hists::evnt(JEventLoop *loop, uint64_t eventnu
 		trk.trktb = ti_trktb[trk.track];
 
 		// Fill tree
-		trk.event = eventnumber;
+		trk.event = event->GetEventNumber();
 		trk.mech = mech_max[trk.track];
 		trk.dtheta_mech = dtheta_mech[trk.track];
 		trk.dp_mech = dp_mech[trk.track];
 		trkeff->Fill();
 	}
 	
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------

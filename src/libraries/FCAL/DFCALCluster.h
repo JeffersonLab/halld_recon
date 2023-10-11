@@ -13,8 +13,7 @@
 using namespace std;
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <DANA/DObjectID.h>
 
 #include <FCAL/DFCALGeometry.h>
 
@@ -93,12 +92,12 @@ class DFCALCluster : public JObject {
    inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
    inline uint32_t GetNHits(void) const { return my_hits.size(); }
 
-   void toStrings(vector<pair<string,string> > &items) const {
-      AddString(items, "x(cm)", "%3.1f", getCentroid().x());
-      AddString(items, "y(cm)", "%3.1f", getCentroid().y());
-      AddString(items, "z(cm)", "%3.1f", getCentroid().z());
-      AddString(items, "E(GeV)", "%2.3f", getEnergy());
-      AddString(items, "t(ns)", "%2.3f", getTime());
+   void Summarize(JObjectSummary& summary) const override {
+      summary.add(getCentroid().x(), "x(cm)", "%3.1f");
+      summary.add(getCentroid().y(), "y(cm)", "%3.1f");
+      summary.add(getCentroid().z(), "z(cm)", "%3.1f");
+      summary.add(getEnergy(), "E(GeV)", "%2.3f");
+      summary.add(getTime(), "t(ns)", "%2.3f");
    }
 
    private:
@@ -230,7 +229,7 @@ inline int DFCALCluster::getHits() const
    return fNhits;
 }
 
-inline JObject::oid_t DFCALCluster::getHitID(const userhits_t* const hitList, const int ihit ) const
+inline oid_t DFCALCluster::getHitID(const userhits_t* const hitList, const int ihit ) const
 {
    if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
      return hitList->hit[ fHit[ ihit ] ].id;

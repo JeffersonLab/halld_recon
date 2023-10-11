@@ -6,6 +6,7 @@
 
 #include "MyProcessor.h"
 #include <DANA/DApplication.h>
+#include <iostream>
 
 //-----------
 // main
@@ -16,11 +17,13 @@ int main(int narg, char *argv[])
 	MyProcessor myproc;
 
 	// Instantiate an event loop object
-	DApplication app(narg, argv);
+	DApplication dapp(narg, argv);
+	JApplication* app = dapp.GetJApp();
 
 	// Run though all events, calling our event processor's methods
-	app.Run(&myproc, 1);
-	
-	return 0;
+	auto exitCode = jana::Execute(app, dapp.GetUserOptions());
+
+	if( exitCode ) std::cerr << "Exit code: " << exitCode << std::endl;
+	return exitCode;
 }
 

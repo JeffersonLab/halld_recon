@@ -18,7 +18,7 @@
 #include <iterator>
 using namespace std;
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <DAQ/HDEVIO.h>
 #include <DAQ/DParsedEvent.h>
 #include <DAQ/DModuleType.h>

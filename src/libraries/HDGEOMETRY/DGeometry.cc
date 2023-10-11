@@ -6,10 +6,11 @@
 //
 
 #include <algorithm>
-using namespace std;
+
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Compatibility/JGeometryXML.h>
 
 #include "DGeometry.h"
-#include <JANA/JGeometryXML.h>
 #include "FDC/DFDCWire.h"
 #include "FDC/DFDCGeometry.h"
 #include <ansi_escape.h>
@@ -23,18 +24,20 @@ using namespace std;
 //---------------------------------
 // DGeometry    (Constructor)
 //---------------------------------
-DGeometry::DGeometry(JGeometry *jgeom, DApplication *dapp, int32_t runnumber)
+DGeometry::DGeometry(JGeometry *jgeom, DGeometryManager *dgeoman, JApplication* app, int32_t runnumber)
 {
 	this->jgeom = jgeom;
-	this->dapp = dapp;
-	this->bfield = NULL; // don't ask for B-field object before we're asked for it
+	this->dgeoman = dgeoman;
+	this->app = app;
+	this->jcalman = app->GetService<JCalibrationManager>();
+	this->bfield = nullptr; // don't ask for B-field object before we're asked for it
 	this->runnumber = runnumber;
 	this->materialmaps_read = false;
 	this->materials_read = false;
 	
-	pthread_mutex_init(&bfield_mutex, NULL);
-	pthread_mutex_init(&materialmap_mutex, NULL);
-	pthread_mutex_init(&materials_mutex, NULL);
+	pthread_mutex_init(&bfield_mutex, nullptr);
+	pthread_mutex_init(&materialmap_mutex, nullptr);
+	pthread_mutex_init(&materials_mutex, nullptr);
 
 	ReadMaterialMaps();
 }
@@ -61,7 +64,7 @@ DGeometry::~DGeometry()
 DMagneticFieldMap* DGeometry::GetBfield(void) const
 {
 	pthread_mutex_lock(&bfield_mutex);
-	if(bfield == NULL) bfield = dapp->GetBfield(runnumber);
+	if(bfield == NULL) bfield = dgeoman->GetBfield(runnumber);
 	pthread_mutex_unlock(&bfield_mutex);
 
 	return bfield;
@@ -72,7 +75,7 @@ DMagneticFieldMap* DGeometry::GetBfield(void) const
 //---------------------------------
 DLorentzDeflections* DGeometry::GetLorentzDeflections(void)
 {
-	return dapp->GetLorentzDeflections(runnumber);
+	return dgeoman->GetLorentzDeflections(runnumber);
 }
 
 //---------------------------------
@@ -108,7 +111,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		return;
 	}
 
-	JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+	JCalibration * jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
 	if(!jcalib){
 		_DBG_<<"ERROR:  Unable to get JCalibration object!"<<endl;
 		pthread_mutex_unlock(&materialmap_mutex);
@@ -132,16 +135,16 @@ void DGeometry::ReadMaterialMaps(void) const
 	
 	// Inform user what's happening
 	if(material_namepaths.size()==0){
-		jerr<<"No material maps found in calibration DB!!"<<endl;
+		jerr<<"No material maps found in calibration DB!!"<<jendl;
 		pthread_mutex_unlock(&materialmap_mutex);
 		return;
 	}
-	jout<<"Found "<<material_namepaths.size()<<" material maps in calib. DB"<<endl;
+	jout<<"Found "<<material_namepaths.size()<<" material maps in calib. DB"<<jendl;
 	
 	if(false){ // save this to work off configuration parameter
-		jout<<"Will read in the following:"<<endl;
+		jout<<"Will read in the following:"<<jendl;
 		for(unsigned int i=0; i<material_namepaths.size(); i++){
-			jout<<"  "<<material_namepaths[i]<<endl;
+			jout<<"  "<<material_namepaths[i]<<jendl;
 		}
 	}
 
@@ -152,7 +155,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		// DMaterialMap constructor prints line so we conserve real
 		// estate by having each recycle the line
 		//cout<<ansi_up(1)<<string(85, ' ')<<"\r";
-		DMaterialMap *mat = new DMaterialMap(material_namepaths[i], jcalib);
+		DMaterialMap *mat = new DMaterialMap(material_namepaths[i], jcalib, app->GetJParameterManager());
 		if( ! mat->IS_VALID ) {
 			// This particular map may not exist for this run/variation
 			// (e.g. CPP uses maps downstream of TOF)
@@ -163,7 +166,7 @@ void DGeometry::ReadMaterialMaps(void) const
 		Npoints_total += (unsigned int)(mat->GetNr()*mat->GetNz());
 	}
 	//cout<<ansi_up(1)<<string(85, ' ')<<"\r";
-	jout<<"Read in "<<materialmaps.size()<<" material maps for run "<<runnumber<<" containing "<<Npoints_total<<" grid points total"<<endl;
+	jout<<"Read in "<<materialmaps.size()<<" material maps for run "<<runnumber<<" containing "<<Npoints_total<<" grid points total"<<jendl;
 
 	// Set flag that maps have been read and unlock mutex
 	materialmaps_read = true;
@@ -855,7 +858,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
    double dX=0.0, dY=0.0, dZ=0.0;
    double dPhiX=0.0,dPhiY=0.0,dPhiZ=0.0;
 
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
    if (jcalib->Get("CDC/global_alignment",vals)==false){
       map<string,double> &row = vals[0];
@@ -936,7 +939,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
       cdc_offsets.push_back(tempvec);
    }
    else{
-      jerr<< "CDC wire alignment table not available... bailing... " <<endl;
+      jerr<< "CDC wire alignment table not available... bailing... " <<jendl;
       exit(0);
    }
 
@@ -1045,7 +1048,7 @@ bool DGeometry::GetCDCWires(vector<vector<DCDCWire *> >&cdcwires) const{
 //---------------------------------
 bool DGeometry::GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const{
    // Get offsets tweaking nominal geometry from calibration database
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
    vector<fdc_cathode_offset_t>fdc_cathode_offsets;
    if (jcalib->Get("FDC/cathode_alignment",vals)==false){
@@ -1098,7 +1101,7 @@ bool DGeometry::GetFDCCathodes(vector<vector<DFDCCathode *> >&fdccathodes) const
       }
    }
    else{
-      jerr << "Strip pitch calibration unavailable -- setting default..." <<endl;
+      jerr << "Strip pitch calibration unavailable -- setting default..." <<jendl;
       // set some sensible default
       for (unsigned int i=0;i<2*FDC_NUM_LAYERS;i++){
 
@@ -1187,7 +1190,7 @@ bool DGeometry::GetFDCWires(vector<vector<DFDCWire *> >&fdcwires) const{
    dY[3]=offsets[1];
 
    // Get offsets tweaking nominal geometry from calibration database
-   JCalibration * jcalib = dapp->GetJCalibration(runnumber);
+   JCalibration * jcalib = jcalman->GetJCalibration(runnumber);
    vector<map<string,double> >vals;
    vector<fdc_wire_offset_t>fdc_wire_offsets;
    if (jcalib->Get("FDC/wire_alignment",vals)==false){
@@ -2167,7 +2170,7 @@ bool DGeometry::GetTRDZ(vector<double> &z_trd) const
        jout << z_trd_plane << ", ";
        z_trd.push_back(z_trd_plane);
      }
-     jout << "cm" << endl;
+     jout << "cm" << jendl;
    }
 
    return true;
@@ -2567,7 +2570,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 				    ) const
 {
 				    
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+  JCalibration *jcalib = jcalman->GetJCalibration(runnumber);
 
   // Check if Start Counter geometry is present
   vector<double> sc_origin;

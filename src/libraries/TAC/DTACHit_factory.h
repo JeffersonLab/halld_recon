@@ -11,8 +11,9 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Compatibility/jerror.h>
+
 #include <DANA/ReadWriteLock.h>
 #include <TTAB/DTTabUtilities.h>
 #include <DAQ/Df250PulseRawData.h>
@@ -21,7 +22,7 @@ using namespace std;
 #include "DTACTDCDigiHit.h"
 #include "DTACHit.h"
 
-class DTACHit_factory: public jana::JFactory<DTACHit> {
+class DTACHit_factory: public JFactoryT<DTACHit> {
 protected:
 	double energyScale = 1.0;
 	double timeScaleADC = 0.0625;          // ns
@@ -50,25 +51,25 @@ public:
 		// TODO Auto-generated destructor stub
 	}
 
-	virtual jerror_t init(void) override;          ///< Called once at program start
-	virtual jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber)
-			override;          ///< Called everytime a new run number is detected
-	virtual jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber)
-			override;          ///< Called every event
-	virtual jerror_t erun(void) override;          ///< Called everytime run number changes, if brun has been called
-	virtual jerror_t fini(void) override;          ///< Called after last event of last event source has been processed
+	void Init() override;
+	void BeginRun(const std::shared_ptr<const JEvent> &aEvent) override;
+	void Process(const std::shared_ptr<const JEvent>& aEvent) override;
+	void EndRun() override;
+	void Finish() override;
+
+	std::string getTagString() { return ""; }
 
 	virtual void Reset_Data(void);
-	virtual void AppendData( DTACHit* hit ) { _data.push_back(hit) ;};
+	virtual void AppendData( DTACHit* hit ) { Insert(hit) ;};
 //	virtual std::string SetTag( std::string tag ) ;
 
-	virtual jerror_t readCCDB( jana::JEventLoop *loop );
+	virtual jerror_t readCCDB( const std::shared_ptr<const JEvent>& loop );
 
 	virtual DTACHit* findMatch(double tdcTime);
 
 
-	virtual void makeFADCHits(jana::JEventLoop *loop, uint64_t eventnumber);
-	virtual void makeTDCHits(jana::JEventLoop *loop, uint64_t eventnumber);
+	virtual void makeFADCHits(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber);
+	virtual void makeTDCHits(const std::shared_ptr<const JEvent>& loop, uint64_t eventnumber);
 
 	static bool errorCheckIsNeededForFADC() {
 		return checkErrorsOnFADC;

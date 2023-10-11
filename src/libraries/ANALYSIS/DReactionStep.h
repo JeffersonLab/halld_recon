@@ -55,13 +55,13 @@ class DReactionStep
 		//CONSTRUCTORS
 
 		//if fixed-target production or rescattering:
-		DReactionStep(Particle_t locScatteringPID, Particle_t locTargetPID, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Unknown,
+		DReactionStep(Particle_t locScatteringPID, Particle_t locTargetPID, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Particle_t::Unknown,
 				bool locInclusiveFlag = false, bool locBeamMissingFlag = false);
 		//if 2 beams: collider experiment
-		DReactionStep(pair<Particle_t, Particle_t> locBeamPIDs, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Unknown,
+		DReactionStep(pair<Particle_t, Particle_t> locBeamPIDs, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Particle_t::Unknown,
 				bool locInclusiveFlag = false, bool locFirstBeamMissingFlag = false, bool locSecondBeamMissingFlag = false);
 		//decaying particle
-		DReactionStep(Particle_t locDecayingPID, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Unknown, bool locInclusiveFlag = false);
+		DReactionStep(Particle_t locDecayingPID, vector<Particle_t> locNonMissingFinalPIDs, Particle_t locMissingFinalPID = Particle_t::Unknown, bool locInclusiveFlag = false);
 		// default
 		DReactionStep(void); //DEPRECATED
 
@@ -118,9 +118,9 @@ class DReactionStep
 			bool operator<(const DReactionStepInfo& locInfo) const; //ignores dKinFitConstrainInitMassFlag!!! //not ideal, but in a hurry: for DParticleComboCreator::dComboStepMap
 
 			// PID MEMBERS:
-			Particle_t dInitialPID = Unknown; //e.g. lambda, gamma
-			Particle_t dSecondBeamPID = Unknown; //second beam, Unknown if not present
-			Particle_t dTargetPID = Unknown; //unknown if none
+			Particle_t dInitialPID = Particle_t::Unknown; //e.g. lambda, gamma
+			Particle_t dSecondBeamPID = Particle_t::Unknown; //second beam, Unknown if not present
+			Particle_t dTargetPID = Particle_t::Unknown; //unknown if none
 			vector<Particle_t> dFinalPIDs; //if inclusive, there is no indication of it here!
 
 			// CONTROL MEMBERS:
@@ -149,7 +149,7 @@ inline DReactionStep::DReactionStep(Particle_t locScatteringPID, Particle_t locT
 {
 	//Prepare arguments
 	int locMissingParticleIndex = Prepare_InfoArguments(locNonMissingFinalPIDs, locMissingFinalPID, locInclusiveFlag, locBeamMissingFlag, false);
-	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locScatteringPID, Unknown, locTargetPID, locNonMissingFinalPIDs, locMissingParticleIndex);
+	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locScatteringPID, Particle_t::Unknown, locTargetPID, locNonMissingFinalPIDs, locMissingParticleIndex);
 }
 
 //if 2 beams: collider experiment
@@ -158,7 +158,7 @@ inline DReactionStep::DReactionStep(pair<Particle_t, Particle_t> locBeamPIDs, ve
 {
 	//Prepare arguments
 	int locMissingParticleIndex = Prepare_InfoArguments(locNonMissingFinalPIDs, locMissingFinalPID, locInclusiveFlag, locFirstBeamMissingFlag, locSecondBeamMissingFlag);
-	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locBeamPIDs.first, locBeamPIDs.second, Unknown, locNonMissingFinalPIDs, locMissingParticleIndex);
+	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locBeamPIDs.first, locBeamPIDs.second, Particle_t::Unknown, locNonMissingFinalPIDs, locMissingParticleIndex);
 }
 
 //decaying particle
@@ -166,7 +166,7 @@ inline DReactionStep::DReactionStep(Particle_t locDecayingPID, vector<Particle_t
 {
 	//Prepare arguments
 	int locMissingParticleIndex = Prepare_InfoArguments(locNonMissingFinalPIDs, locMissingFinalPID, locInclusiveFlag, false, false);
-	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locDecayingPID, Unknown, Unknown, locNonMissingFinalPIDs, locMissingParticleIndex);
+	dReactionStepInfo = std::make_shared<DReactionStepInfo>(locDecayingPID, Particle_t::Unknown, Particle_t::Unknown, locNonMissingFinalPIDs, locMissingParticleIndex);
 }
 
 // default
@@ -239,7 +239,7 @@ inline void DReactionStep::Set_InitialParticleID(Particle_t locPID, bool locIsMi
 
 inline Particle_t DReactionStep::Get_MissingPID(void) const
 {
-	return (dReactionStepInfo->dMissingParticleIndex < 0) ? Unknown : dReactionStepInfo->dFinalPIDs[dReactionStepInfo->dMissingParticleIndex];
+	return (dReactionStepInfo->dMissingParticleIndex < 0) ? Particle_t::Unknown : dReactionStepInfo->dFinalPIDs[dReactionStepInfo->dMissingParticleIndex];
 }
 
 inline Particle_t DReactionStep::Get_PID(int locParticlceIndex) const
@@ -252,7 +252,7 @@ inline Particle_t DReactionStep::Get_PID(int locParticlceIndex) const
 		case Get_ParticleIndex_Initial(): return dReactionStepInfo->dInitialPID;
 		case Get_ParticleIndex_SecondBeam(): return dReactionStepInfo->dSecondBeamPID;
 		case Get_ParticleIndex_Target(): return dReactionStepInfo->dTargetPID;
-		default: return Unknown;
+		default: return Particle_t::Unknown;
 	}
 }
 
@@ -322,7 +322,7 @@ inline bool Check_ChannelEquality(const DReactionStep* lhs, const DReactionStep*
 	auto locMissingIndex_rhs = rhs->Get_MissingParticleIndex();
 
 	//if it's not, then ... one must be inclusive, the other none
-	if((lhs->Get_MissingPID() == Unknown) && (locMissingIndex_lhs != locMissingIndex_rhs))
+	if((lhs->Get_MissingPID() == Particle_t::Unknown) && (locMissingIndex_lhs != locMissingIndex_rhs))
 	{
 		if(!locRightSubsetOfLeftFlag)
 			return false;

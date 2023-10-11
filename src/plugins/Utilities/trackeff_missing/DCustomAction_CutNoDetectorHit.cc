@@ -7,26 +7,29 @@
 
 #include "DCustomAction_CutNoDetectorHit.h"
 
-void DCustomAction_CutNoDetectorHit::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_CutNoDetectorHit::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
 		//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time. 
 	//NEVER: Get anything from the JEventLoop while in a lock: May deadlock
 
+	auto app = locEvent->GetJApplication();
+	lockService = app->GetService<JLockService>();
+
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
 	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	string locHistName, locHistTitle;
 	string locTrackString = string("Missing ") + ParticleName_ROOT(dMissingPID);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -84,10 +87,10 @@ void DCustomAction_CutNoDetectorHit::Initialize(JEventLoop* locEventLoop)
 		locHistTitle = locTrackString + string(";Projected BCAL Hit-Z (cm);BCAL / Track #Deltaz (cm)");
 		dHistMap_BCALDeltaZVsZ = GetOrCreate_Histogram<TH2I>(locHistName, locHistTitle, dNum2DBCALZBins, 0.0, 450.0, dNum2DDeltaZBins, dMinDeltaZ, dMaxDeltaZ);
 }
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
-bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_CutNoDetectorHit::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Write custom code to perform an action on the INPUT DParticleCombo (DParticleCombo)
 	//NEVER: Grab DParticleCombo or DAnalysisResults objects (of any tag!) from the JEventLoop within this function
@@ -113,16 +116,16 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, co
 	rt.Swim(locMissingParticle->position(), locMissingParticle->momentum(), rt.q);
 
 	vector<const DBCALShower*> locBCALShowers;
-	locEventLoop->Get(locBCALShowers);
+	locEvent->Get(locBCALShowers);
 
 	vector<const DFCALShower*> locFCALShowers;
-	locEventLoop->Get(locFCALShowers);
+	locEvent->Get(locFCALShowers);
 
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 
 	vector<const DSCHit*> locSCHits;
-	locEventLoop->Get(locSCHits);
+	locEvent->Get(locSCHits);
 
 	// MATCHING: BCAL
 	shared_ptr<const DBCALShowerMatchParams> locBestBCALMatchParams;
@@ -167,7 +170,7 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, co
 
 /*
 	const DAnalysisUtilities* dAnalysisUtilities = nullptr;
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 
 	TMatrixDSym locMissingCovarianceMatrix(3);
@@ -181,7 +184,7 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, co
 
 	//Get unused tracks
 	vector<const DTrackTimeBased*> locUnusedTimeBasedTracks;
-	dAnalysisUtilities->Get_UnusedTimeBasedTracks(locEventLoop, locParticleCombo, locUnusedTimeBasedTracks);
+	dAnalysisUtilities->Get_UnusedTimeBasedTracks(locEvent, locParticleCombo, locUnusedTimeBasedTracks);
 
 	//loop over unused tracks
 	double locBestMatchFOM = -1.0;
@@ -258,7 +261,7 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, co
 		}
 
 //		const DDetectorMatches* locDetectorMatches = nullptr;
-//		locEventLoop->GetSingle(locDetectorMatches);
+//		locEvent->GetSingle(locDetectorMatches);
 	}
 */
 

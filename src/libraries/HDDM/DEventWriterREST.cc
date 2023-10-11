@@ -1,8 +1,8 @@
 
 #include "DEventWriterREST.h"
 
-#include <DANA/DApplication.h>
-#include <JANA/JCalibration.h>
+#include <DANA/DEvent.h>
+#include <JANA/Calibrations/JCalibration.h>
 #include <TRACKING/DTrackFitter.h>
 
 int& DEventWriterREST::Get_NumEventWriterThreads(void) const
@@ -20,39 +20,42 @@ map<string, pair<ofstream*, hddm_r::ostream*> >& DEventWriterREST::Get_RESTOutpu
 	return locRESTOutputFilePointers;
 }
 
-DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
+DEventWriterREST::DEventWriterREST(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileBaseName) : dOutputFileBaseName(locOutputFileBaseName)
 {
-	japp->WriteLock("RESTWriter");
+	auto app = locEventLoop->GetJApplication();
+	lockService = app->GetService<JLockService>();
+
+	lockService->WriteLock("RESTWriter");
 	{
 		++Get_NumEventWriterThreads();
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 	
 	REST_WRITE_TRACK_EXIT_PARAMS=true;
-	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
+	app->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
 
 	HDDM_USE_COMPRESSION = true;
 	string locCompressionString = "Turn on/off compression of the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
+	app->SetDefaultParameter("HDDM:USE_COMPRESSION", HDDM_USE_COMPRESSION, locCompressionString);
 
 	HDDM_USE_INTEGRITY_CHECKS = true;
 	string locIntegrityString = "Turn on/off automatic integrity checking on the output HDDM stream. Set to \"0\" to turn off (it's on by default)";
-	gPARMS->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
+	app->SetDefaultParameter("HDDM:USE_INTEGRITY_CHECKS", HDDM_USE_INTEGRITY_CHECKS, locIntegrityString);
 
 	HDDM_DATA_VERSION_STRING = "";
-	if(gPARMS->Exists("REST:DATAVERSIONSTRING"))
-		gPARMS->GetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+	if(app->GetJParameterManager()->Exists("REST:DATAVERSIONSTRING"))
+		app->GetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
 	else
-		gPARMS->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
+		app->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING, "");
 
 	REST_WRITE_DIRC_HITS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
+	app->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
 	REST_WRITE_FMWPC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
 
 	REST_WRITE_CCAL_SHOWERS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
+	app->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
 	ADD_FCAL_DATA_FOR_CPP=false;
 	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
@@ -60,18 +63,13 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
-    DApplication *dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-    if (dapp) {
-        JEvent& event = locEventLoop->GetJEvent();
-        JCalibration *jcalib = dapp->GetJCalibration(event.GetRunNumber());
-        if (jcalib) {
-            CCDB_CONTEXT_STRING = jcalib->GetContext();
-        }
-    }
-
+	JCalibration *jcalib = DEvent::GetJCalibration(locEventLoop);
+	if (jcalib) {
+		CCDB_CONTEXT_STRING = jcalib->GetContext();
+	}
 }
 
-bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutputFileNameSubString) const
+bool DEventWriterREST::Write_RESTEvent(const std::shared_ptr<const JEvent>& locEventLoop, string locOutputFileNameSubString) const
 {
 	std::vector<const DMCReaction*> reactions;
 	locEventLoop->Get(reactions);
@@ -141,11 +139,10 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	hddm_r::ReconstructedPhysicsEventList res = locRecord.addReconstructedPhysicsEvents(1);
 
 	// load the run and event numbers
-	JEvent& event = locEventLoop->GetJEvent();
-	res().setRunNo(event.GetRunNumber());
+	res().setRunNo(locEventLoop->GetRunNumber());
 	//The REST type for this is int64_t, whereas the event type is uint64_t
 	//This copy is lazy: the last bit is lost.  However, we should never need the last bit.
-	res().setEventNo(event.GetEventNumber());
+	res().setEventNo(locEventLoop->GetEventNumber());
 
 	// push any DMCReaction objects to the output record
 	for (size_t i=0; i < reactions.size(); i++)
@@ -873,14 +870,14 @@ string DEventWriterREST::Get_OutputFileName(string locOutputFileNameSubString) c
 
 bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& locRecord) const
 {
-	japp->WriteLock("RESTWriter");
+	lockService->WriteLock("RESTWriter");
 	{
 		//check to see if the REST file is open
 		if(Get_RESTOutputFilePointers().find(locOutputFileName) != Get_RESTOutputFilePointers().end())
 		{
 			//open: get pointer, write event
 			hddm_r::ostream* locOutputRESTFileStream = Get_RESTOutputFilePointers()[locOutputFileName].second;
-			japp->Unlock("RESTWriter");
+			lockService->Unlock("RESTWriter");
 			*(locOutputRESTFileStream) << locRecord;
 			return true;
 		}
@@ -892,7 +889,7 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 		{
 			//failed to open
 			delete locRESTFilePointers.first;
-			japp->Unlock("RESTWriter");
+			lockService->Unlock("RESTWriter");
 			return false;
 		}
 		locRESTFilePointers.second = new hddm_r::ostream(*locRESTFilePointers.first);
@@ -938,19 +935,19 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 		//store the stream pointers
 		Get_RESTOutputFilePointers()[locOutputFileName] = locRESTFilePointers;
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 
 	return true;
 }
 
 DEventWriterREST::~DEventWriterREST(void)
 {
-	japp->WriteLock("RESTWriter");
+	lockService->WriteLock("RESTWriter");
 	{
 		--Get_NumEventWriterThreads();
 		if(Get_NumEventWriterThreads() > 0)
 		{
-			japp->Unlock("RESTWriter");
+			lockService->Unlock("RESTWriter");
 			return; //not the last thread writing to REST files
 		}
 
@@ -967,7 +964,7 @@ DEventWriterREST::~DEventWriterREST(void)
 		}
 		Get_RESTOutputFilePointers().clear();
 	}
-	japp->Unlock("RESTWriter");
+	lockService->Unlock("RESTWriter");
 }
 
 int32_t DEventWriterREST::Convert_UnsignedIntToSigned(uint32_t locUnsignedInt) const

@@ -8,11 +8,8 @@
 #ifndef DFACTORY_DFDCPSEUDO_H
 #define DFACTORY_DFDCPSEUDO_H
 
-#include <JANA/JFactory.h>
-#include <JANA/JObject.h>
-#include <JANA/JException.h>
-#include <JANA/JStreamLog.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
+#include <JANA/Compatibility/JStreamLog.h>
 
 #include "DFDCPseudo.h"
 #include "DFDCCathodeCluster.h"
@@ -36,7 +33,7 @@ using namespace jana;
 /// produces pseudopoints from anode hits and DFDCCathodeClusters.
 /// For now, it is purely geometry-based.
 /// 
-class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
+class DFDCPseudo_factory : public JFactoryT<DFDCPseudo> {
 	public:
 		
 		///
@@ -61,10 +58,10 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		/// information. See also
 		/// DFDCPseudo_factory::makePseudo().
 		///
-		jerror_t init(void);
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
-		jerror_t brun(JEventLoop *loop, int32_t runnumber);
-		jerror_t erun(void);
+		void Init() override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
 
 		/// 
 		/// DFDCPseudo_factory::makePseudo():

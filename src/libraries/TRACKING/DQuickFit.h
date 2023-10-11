@@ -51,7 +51,7 @@ using namespace std;
 
 #include <DVector3.h>
 
-#include "JANA/jerror.h"
+#include "JANA/Compatibility/jerror.h"
 
 #include <math.h>
 #ifndef atan2f

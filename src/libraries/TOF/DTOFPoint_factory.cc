@@ -18,6 +18,9 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
 #include "DTOFPoint_factory.h"
 #include <DANA/DApplication.h>
 #include <HDGEOMETRY/DGeometry.h>
@@ -34,9 +37,9 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   const DGeometry *geom = dapp->GetDGeometry(runnumber);
@@ -98,8 +101,6 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
   //	dTimeMatchCut_PositionWellDefined = 1.0;
   dTimeMatchCut_PositionWellDefined = 10.0;
   dTimeMatchCut_PositionNotWellDefined = 10.0;
-  
-  return NOERROR;
 }
 
 DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Get_TOFSpacetimeHitResource(void)
@@ -119,9 +120,9 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Get_TOFSpacetimeHitRes
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTOFPoint_factory::Process(const std::shared_ptr<const JEvent>& event)
 {	
   // delete pool size if too large, preventing memory-leakage-like behavor.
   if(dTOFSpacetimeHitPool_All.size() > MAX_TOFSpacetimeHitPoolSize)
@@ -133,7 +134,7 @@ jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   dTOFSpacetimeHitPool_Available = dTOFSpacetimeHitPool_All;
   
   vector<const DTOFPaddleHit*> locTOFHitVector;
-  loop->Get(locTOFHitVector);
+  event->Get(locTOFHitVector);
   
   // create the hit spacetime information
   deque<tof_spacetimehit_t*> locTOFSpacetimeHits_Horizontal, locTOFSpacetimeHits_Vertical;
@@ -203,10 +204,7 @@ jerror_t DTOFPoint_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   // make sure all the hits are sorted by time (why not?)
   // this helps with reproducibiliy problems...
-  std::sort(_data.begin(), _data.end(), Compare_TOFPoint_Time);
-  
-  
-  return NOERROR;
+  std::sort(mData.begin(), mData.end(), Compare_TOFPoint_Time);
 }
 
 DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_Horizontal(const DTOFPaddleHit* locTOFHit)
@@ -530,7 +528,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
   locTOFPoint->dHorizontalBarStatus = int(locTOFHit_Horizontal->E_north > E_THRESHOLD) + 2*int(locTOFHit_Horizontal->E_south > E_THRESHOLD);
   locTOFPoint->dVerticalBarStatus = int(locTOFHit_Vertical->E_north > E_THRESHOLD) + 2*int(locTOFHit_Vertical->E_south > E_THRESHOLD);
   
-  _data.push_back(locTOFPoint);
+  mData.push_back(locTOFPoint);
 }
 
 void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTOFSpacetimeHit)
@@ -572,7 +570,7 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
 	locTOFPoint->dE1 = locPaddleHit->dE;
       }
       
-      _data.push_back(locTOFPoint);
+      mData.push_back(locTOFPoint);
     }
   else
     {
@@ -614,9 +612,8 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
     }
 }
 
-jerror_t DTOFPoint_factory::fini(void)
+void DTOFPoint_factory::Finish()
 {
   for(size_t loc_i = 0; loc_i < dTOFSpacetimeHitPool_All.size(); ++loc_i)
     delete dTOFSpacetimeHitPool_All[loc_i];
-  return NOERROR;
 }

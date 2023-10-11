@@ -11,27 +11,34 @@
 #include "TDirectory.h"
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include <JANA/Compatibility/JLockService.h>
+
 #include "FCAL/DFCALShower_factory.h"
 #include "FCAL/DFCALGeometry.h"
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALHit.h"
 #include "TRACKING/DTrackWireBased.h"
-#include <JANA/JEvent.h>
-#include <JANA/JApplication.h>
-using namespace jana;
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
+
+
 
 //----------------
-// Constructor
+// Init
 //----------------
-DFCALShower_factory::DFCALShower_factory()
+void DFCALShower_factory::Init()
 {
+  auto app = GetApplication();
+
   //debug_level=1;
   // should we use CCDB constants?
   LOAD_NONLIN_CCDB = true;
   LOAD_TIMING_CCDB = true;
   // 29/03/2020 ijaegle@jlab.org decouple non linear and timing correction
-  gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
-  gPARMS->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
+  app->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
+  app->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
   // Should we use the PrimeX-D energy correction?
   USE_RING_E_CORRECTION_V1=false;
   gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
@@ -43,10 +50,10 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
   
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
+  app->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
   SHOWER_POSITION_LOG = false;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_POSITION_LOG", SHOWER_POSITION_LOG);
+  app->SetDefaultParameter("FCAL:SHOWER_POSITION_LOG", SHOWER_POSITION_LOG);
   // these need to come from database to ensure accuracy
   // remove default value which might be close to the right solution,
   // but not quite correct -- allow command line tuning
@@ -98,11 +105,11 @@ DFCALShower_factory::DFCALShower_factory()
     USE_CPP_E_CORRECTION = true;
   }
 
-  gPARMS->SetDefaultParameter("FCAL:P0", timeConst0);
-  gPARMS->SetDefaultParameter("FCAL:P1", timeConst1);
-  gPARMS->SetDefaultParameter("FCAL:P2", timeConst2);
-  gPARMS->SetDefaultParameter("FCAL:P3", timeConst3);
-  gPARMS->SetDefaultParameter("FCAL:P4", timeConst4);
+  app->SetDefaultParameter("FCAL:P0", timeConst0);
+  app->SetDefaultParameter("FCAL:P1", timeConst1);
+  app->SetDefaultParameter("FCAL:P2", timeConst2);
+  app->SetDefaultParameter("FCAL:P3", timeConst3);
+  app->SetDefaultParameter("FCAL:P4", timeConst4);
 
   // Parameters to make shower-depth correction taken from Radphi, 
   // slightly modifed to match photon-polar angle
@@ -110,18 +117,18 @@ DFCALShower_factory::DFCALShower_factory()
   FCAL_CRITICAL_ENERGY = 0;
   FCAL_SHOWER_OFFSET = 0;
 	
-  gPARMS->SetDefaultParameter("FCAL:FCAL_RADIATION_LENGTH", FCAL_RADIATION_LENGTH);
-  gPARMS->SetDefaultParameter("FCAL:FCAL_CRITICAL_ENERGY", FCAL_CRITICAL_ENERGY);
-  gPARMS->SetDefaultParameter("FCAL:FCAL_SHOWER_OFFSET", FCAL_SHOWER_OFFSET);
+  app->SetDefaultParameter("FCAL:FCAL_RADIATION_LENGTH", FCAL_RADIATION_LENGTH);
+  app->SetDefaultParameter("FCAL:FCAL_CRITICAL_ENERGY", FCAL_CRITICAL_ENERGY);
+  app->SetDefaultParameter("FCAL:FCAL_SHOWER_OFFSET", FCAL_SHOWER_OFFSET);
 
   VERBOSE = 0;              ///< >0 once off info ; >2 event by event ; >3 everything
   COVARIANCEFILENAME = "";  ///<  Setting the filename will take precidence over the CCDB.  Files must end in ij.txt, where i and j are integers corresponding to the element of the matrix
-  gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
-  gPARMS->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
+  app->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
+  app->SetDefaultParameter("DFCALShower:COVARIANCEFILENAME", COVARIANCEFILENAME, "File name for covariance files");
   
   
   log_position_const = 4.2;
-  gPARMS->SetDefaultParameter("FCAL:log_position_const", log_position_const);
+  app->SetDefaultParameter("FCAL:log_position_const", log_position_const);
 
 
   INSERT_RADIATION_LENGTH = 0.89;
@@ -154,13 +161,19 @@ DFCALShower_factory::DFCALShower_factory()
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto jcalib = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+  auto root_lock = app->GetService<JLockService>();
+  auto geo_manager = app->GetService<DGeometryManager>();
+  auto geom = geo_manager->GetDGeometry(runnumber);
 
       map<string, double> depth_correction_params;
-      if(loop->GetCalib("FCAL/depth_correction_params", depth_correction_params)) {
+      if(jcalib->Get("FCAL/depth_correction_params", depth_correction_params)) {
          jerr << "Problem loading FCAL/depth_correction_params from CCDB!" << endl;
       } else {
          FCAL_RADIATION_LENGTH   = depth_correction_params["radiation_length"];
@@ -171,7 +184,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 	
   // Get calibration constants
   map<string, double> fcal_parms;
-  loop->GetCalib("FCAL/fcal_parms", fcal_parms);
+  jcalib->Get("FCAL/fcal_parms", fcal_parms);
   if (fcal_parms.find("FCAL_C_EFFECTIVE")!=fcal_parms.end()){
     FCAL_C_EFFECTIVE = fcal_parms["FCAL_C_EFFECTIVE"];
     if(debug_level>0)jout<<"FCAL_C_EFFECTIVE = "<<FCAL_C_EFFECTIVE<<endl;
@@ -179,22 +192,18 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     jerr<<"Unable to get FCAL_C_EFFECTIVE from FCAL/fcal_parms in Calib database!"<<endl;
   }
 
-  DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
-    
   if (geom) {
     geom->GetTargetZ(m_zTarget);
-    loop->GetSingle(fcalGeom);  
+    event->GetSingle(fcalGeom);
     m_FCALfront=fcalGeom->fcalFrontZ(); 
     m_insertFront=fcalGeom->insertFrontZ();
   }
   else{
       
     cerr << "No geometry accessible." << endl;
-    return RESOURCE_UNAVAILABLE;
+    return; // RESOURCE_UNAVAILABLE;
   }
   // 29/03/2020 ijaegle@jlab.org add x,y
-  jana::JCalibration *jcalib = japp->GetJCalibration(runnumber);
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   
@@ -244,7 +253,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   block_to_square.clear();
   if(LOAD_NONLIN_CCDB) {
     map<string, double> shower_calib_piecewise;
-    loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
+    jcalib->Get("FCAL/shower_calib_piecewise", shower_calib_piecewise);
     cutoff_energy = shower_calib_piecewise["cutoff_energy"];
     linfit_slope = shower_calib_piecewise["linfit_slope"];
     linfit_intercept = shower_calib_piecewise["linfit_intercept"];
@@ -264,7 +273,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
       jout << "expfit_param2 = " << expfit_param2<< endl;
       jout << "expfit_param3 = " << expfit_param3 << endl;
     }
-    loop->GetCalib("FCAL/energy_dependence_correction_vs_ring", energy_dependence_correction_vs_ring);
+    jcalib->Get("FCAL/energy_dependence_correction_vs_ring", energy_dependence_correction_vs_ring);
     if (energy_dependence_correction_vs_ring.size() > 0 && energy_dependence_correction_vs_ring[0][0] != 0) {
       m_beamSpotX = beam_spot.at("x");
       m_beamSpotY = beam_spot.at("y");
@@ -320,7 +329,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   if (LOAD_TIMING_CCDB) {
     // Get timing correction polynomial, J. Mirabelli 10/31/17
     map<string,double> timing_correction;
-    loop->GetCalib("FCAL/shower_timing_correction", timing_correction); 
+    jcalib->Get("FCAL/shower_timing_correction", timing_correction);
     timeConst0 = timing_correction["P0"];
     timeConst1 = timing_correction["P1"];     
     timeConst2 = timing_correction["P2"];
@@ -336,16 +345,14 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     }
   }
   
-  jerror_t result = LoadCovarianceLookupTables(eventLoop);
-  if (result!=NOERROR) return result;
+  jerror_t result = LoadCovarianceLookupTables(event);
+  if (result!=NOERROR) return; // result; // TODO: Consider throwing if result is bad
 
   INSERT_C_EFFECTIVE=FCAL_C_EFFECTIVE;
-
-  return NOERROR;
 }
 
 
-jerror_t DFCALShower_factory::erun(void) {
+void DFCALShower_factory::EndRun() {
   // delete lookup tables to prevent memory leak
   for (int i=0; i<5; i++) {
     for (int j=0; j<=i; j++) {
@@ -353,25 +360,24 @@ jerror_t DFCALShower_factory::erun(void) {
       CovarianceLookupTable[i][j] = nullptr;
     }
   }
-  return NOERROR;
 }
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
+void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector<const DFCALCluster*> fcalClusters;
-  eventLoop->Get(fcalClusters);
-  if(fcalClusters.size()<1)return NOERROR;
+  event->Get(fcalClusters);
+  if(fcalClusters.size()<1)return;
  
   // Use the center of the target as an approximation for the vertex position
   // 29/03/2020 ijaegle@jlab.org add beam center in x,y
   DVector3 vertex(m_beamSpotX, m_beamSpotY, m_zTarget);
   
   vector< const DTrackWireBased* > allWBTracks;
-  eventLoop->Get( allWBTracks );
+  event->Get( allWBTracks );
   vector< const DTrackWireBased* > wbTracks = filterWireBasedTracks( allWBTracks );
 
   // Loop over list of DFCALCluster objects and calculate the "Non-linear" corrected
@@ -541,11 +547,9 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       
       shower->AddAssociatedObject( cluster );
 
-      _data.push_back(shower);
+      Insert(shower);
     }
   }
-
-  return NOERROR;
 }
 
 //--------------------------------
@@ -814,7 +818,12 @@ DFCALShower_factory::FillCovarianceMatrix(DFCALShower *shower){
 
 
 jerror_t
-DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
+DFCALShower_factory::LoadCovarianceLookupTables(const std::shared_ptr<const JEvent>& event){
+  auto runnumber = event->GetRunNumber();
+  auto app = event->GetJApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);
+  auto root_lock = app->GetService<JLockService>();
+
   std::thread::id this_id = std::this_thread::get_id();
   stringstream idstring;
   idstring << this_id;
@@ -828,7 +837,7 @@ DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
   map<string,string> covariance_data;
   if (USECCDB) {
     // load information for covariance matrix
-    if (eventLoop->GetJCalibration()->GetCalib("/FCAL/shower_covariance", covariance_data)) {
+    if (calibration->Get("/FCAL/shower_covariance", covariance_data)) {
       jerr << "Error loading /FCAL/shower_covariance !" << endl;
       DUMMYTABLES=1;
     }
@@ -848,7 +857,7 @@ DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
   for (int i=0; i<5; i++) {
     for (int j=0; j<=i; j++) {
 
-      japp->RootWriteLock();
+      root_lock->RootWriteLock();
       // change directory to memory so that histograms are not saved to file
       TDirectory *savedir = gDirectory;
 
@@ -917,7 +926,7 @@ DFCALShower_factory::LoadCovarianceLookupTables(JEventLoop *eventLoop){
 	ifs.close();
       }
       savedir->cd();
-      japp->RootUnLock(); 
+      root_lock->RootUnLock();
     }
   }
   return NOERROR;

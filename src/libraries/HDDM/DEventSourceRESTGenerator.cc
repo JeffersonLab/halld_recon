@@ -12,9 +12,9 @@ using std::string;
 #include "DEventSourceREST.h"
 
 //---------------------------------
-// Description
+// GetDescription
 //---------------------------------
-const char* DEventSourceRESTGenerator::Description(void)
+std::string DEventSourceRESTGenerator::GetDescription() const
 {
    return "REST";
 }

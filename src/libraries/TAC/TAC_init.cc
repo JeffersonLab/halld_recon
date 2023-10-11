@@ -5,8 +5,7 @@
  *      Author: Hovanes Egiyan
  */
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/Compatibility/JGetObjectsFactory.h>
 
 #include "DTACDigiHit.h"
 #include "DTACTDCDigiHit.h"
@@ -16,21 +15,20 @@ using namespace jana;
 #include "WaveformSpikeFunctor.h"
 #include "WaveformErfcFunctor.h"
 
-jerror_t TAC_init(jana::JEventLoop *loop) {
+void TAC_init(JFactorySet *factorySet) {
 	/// Create and register TAC data factories
-	loop->AddFactory(new JFactory<DTACDigiHit>());
-	loop->AddFactory(new JFactory<DTACTDCDigiHit>());
-	loop->AddFactory(new DTACHit_factory());
-	loop->AddFactory(
+	factorySet->Add(new JGetObjectsFactory<DTACDigiHit>());
+	factorySet->Add(new JGetObjectsFactory<DTACTDCDigiHit>());
+	factorySet->Add(new DTACHit_factory());
+	factorySet->Add(
 			new DRebuildFromRawFADC_factory<DTACHit_factory,
 					HitRebuilderByFit<WaveformSpikeFunctor>>());
-	loop->AddFactory(
+	factorySet->Add(
 			new DRebuildFromRawFADC_factory<DTACHit_factory,
 					HitRebuilderByFit<WaveformErfcFunctor>>());
 
-	loop->AddFactory(new DRebuildFromRawFADC_factory<>());
-	loop->AddFactory(new JFactory<DTACHit>("TRUTH"));
+	factorySet->Add(new DRebuildFromRawFADC_factory<>());
+	factorySet->Add(new JGetObjectsFactory<DTACHit>("TRUTH"));
 
-	return NOERROR;
 }
 

@@ -7,14 +7,14 @@
 
 #include "DCustomAction_ee_ShowerEoverP_cut.h"
 
-void DCustomAction_ee_ShowerEoverP_cut::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_ee_ShowerEoverP_cut::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
 	//This is so that when running multithreaded, only one thread is writing to the ROOT file at a time. 
 }
 
-bool DCustomAction_ee_ShowerEoverP_cut::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_ee_ShowerEoverP_cut::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
     // require tracks to have E/p in a certain range
     // reject events with tracks not matched to tracks

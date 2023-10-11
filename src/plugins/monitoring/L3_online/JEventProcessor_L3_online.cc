@@ -14,7 +14,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 
 // for root
@@ -34,7 +33,7 @@ static TH1I * l3;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_L3_online());
+    app->Add(new JEventProcessor_L3_online());
   }
 }
 
@@ -55,7 +54,7 @@ JEventProcessor_L3_online::~JEventProcessor_L3_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_L3_online::init(void) {
+void JEventProcessor_L3_online::Init() {
 
   // create root folder for evnt and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -69,23 +68,23 @@ jerror_t JEventProcessor_L3_online::init(void) {
   // back to main dir
   main->cd();
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_L3_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_L3_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_L3_online::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_L3_online::Process(const std::shared_ptr<const JEvent>& event) {
 
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
@@ -94,33 +93,33 @@ jerror_t JEventProcessor_L3_online::evnt(JEventLoop *eventLoop, uint64_t eventnu
   // since multiple threads may call this method at the same time.
 
 
-  japp->RootWriteLock();
+  lockService->RootWriteLock();
 
   // fill hist
 
-  japp->RootUnLock(); 
+  lockService->RootUnLock(); 
 
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_L3_online::erun(void) {
+void JEventProcessor_L3_online::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_L3_online::fini(void) {
+void JEventProcessor_L3_online::Finish() {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return;
 }
 
 

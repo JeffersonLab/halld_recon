@@ -6,7 +6,6 @@
 //
 
 #include <JANA/JEventProcessor.h>
-#include <JANA/JEventLoop.h>
 // using namespace jana;
 using namespace std;
 
@@ -19,7 +18,7 @@ using namespace std;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_cppFMWPC_ana());
+    app->Add(new JEventProcessor_cppFMWPC_ana());
   }
 } // "C"
 
@@ -29,7 +28,8 @@ extern "C"{
 //------------------
 JEventProcessor_cppFMWPC_ana::JEventProcessor_cppFMWPC_ana()
 {
-  
+    SetTypeName("JEventProcessor_cppFMWPC_ana");
+
 }
 
 //------------------
@@ -41,9 +41,9 @@ JEventProcessor_cppFMWPC_ana::~JEventProcessor_cppFMWPC_ana()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cppFMWPC_ana::init(void)
+void JEventProcessor_cppFMWPC_ana::Init()
 {
   // This is called once at program startup. 
 
@@ -89,23 +89,20 @@ jerror_t JEventProcessor_cppFMWPC_ana::init(void)
   
   top->cd();
 
-
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cppFMWPC_ana::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cppFMWPC_ana::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cppFMWPC_ana::Process(const std::shared_ptr<const JEvent> &event)
 {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
@@ -125,7 +122,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
 
   vector <const DMCThrown*> mcthrowns;
   Double_t pmuon=0;
-  loop->Get(mcthrowns);
+  event->Get(mcthrowns);
   unsigned int kmax= mcthrowns.size() <=1? mcthrowns.size(): 1 ;    // assumes that the original particle is first in list
   for (unsigned int k=0; k<kmax;k++){
     //cout << endl << " cppFMWPC testing output " << endl;
@@ -152,7 +149,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
  
 
   vector < const DFMWPCHit*> fmwpcHits;
-  loop->Get(fmwpcHits);
+  event->Get(fmwpcHits);
 
   // cout << " pmuon=" << pmuon << " (int)fmwpcHits.size()=" << (int)fmwpcHits.size() << endl;
 
@@ -326,7 +323,7 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
 
 
   vector <const DFDCHit*> fdcHits;
-  loop->Get(fdcHits);
+  event->Get(fdcHits);
   
   for (int k=0; k<(int)fdcHits.size(); k++){
     const DFDCHit *h = fdcHits[k];
@@ -338,31 +335,23 @@ jerror_t JEventProcessor_cppFMWPC_ana::evnt(JEventLoop *loop, uint64_t eventnumb
     int w = h->element;
     FDCwiresT[l]->Fill((double)w, h->t);
   }
-
-  
-
-
-  return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cppFMWPC_ana::erun(void)
+void JEventProcessor_cppFMWPC_ana::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_cppFMWPC_ana::fini(void)
+void JEventProcessor_cppFMWPC_ana::Finish()
 {
   // Called before program exit after event processing is finished.
-
-  return NOERROR;
 }
 

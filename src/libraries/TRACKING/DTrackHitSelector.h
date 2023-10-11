@@ -9,7 +9,6 @@
 #define _DTrackHitSelector_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include <TRACKING/DTrackFitter.h>
 
@@ -27,19 +26,19 @@ class DFDCPseudo;
 /// this point in time, we expect at least a couple of algorithms may
 /// be tried.    Feb. 6, 2009  DL
 
-class DTrackHitSelector:public jana::JObject{
+class DTrackHitSelector: public JObject {
  public:
   JOBJECT_PUBLIC(DTrackHitSelector);
   
-  DTrackHitSelector(JEventLoop *loop);
-  DTrackHitSelector(){};
-  
+  DTrackHitSelector(const std::shared_ptr<const JEvent>& event);
+  ~DTrackHitSelector() = default;
+
   enum fit_type_t{
     kWireBased = DTrackFitter::kWireBased, // ensure compatibility with DTrackFitter
     kTimeBased = DTrackFitter::kTimeBased, // ensure compatibility with DTrackFitter
     kHelical
   };
-  
+
   virtual void GetCDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=20) const =0;
   virtual void GetFDCHits(fit_type_t fit_type, const DReferenceTrajectory *rt, const vector<const DFDCPseudo*> &fdchits_in, vector<const DFDCPseudo*> &fdchits_out, int N=20) const =0;	
   virtual void GetCDCHits(double Bz,double q,const vector<DTrackFitter::Extrapolation_t> &extrapolations, const vector<const DCDCTrackHit*> &cdchits_in, vector<const DCDCTrackHit*> &cdchits_out,int N=20) const =0;
@@ -59,7 +58,7 @@ class DTrackHitSelector:public jana::JObject{
 
 	protected:
 	
-		JEventLoop *loop;
+		shared_ptr<const JEvent> event = nullptr;  // TODO: Remove this if possible
 };
 
 #endif // _DTrackHitSelector_

@@ -6,16 +6,13 @@
 //
 
 #include "JEventProcessor_CDC_dedx.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_CDC_dedx());
+	app->Add(new JEventProcessor_CDC_dedx());
 }
 } // "C"
 
@@ -25,7 +22,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_CDC_dedx::JEventProcessor_CDC_dedx()
 {
-
+	SetTypeName("JEventProcessor_CDC_dedx");
 }
 
 //------------------
@@ -37,9 +34,9 @@ JEventProcessor_CDC_dedx::~JEventProcessor_CDC_dedx()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_CDC_dedx::init(void)
+void JEventProcessor_CDC_dedx::Init()
 {
 	// This is called once at program startup. 
 
@@ -62,53 +59,50 @@ jerror_t JEventProcessor_CDC_dedx::init(void)
 
 
   main->cd();
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_CDC_dedx::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CDC_dedx::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
-	// loop->Get(...) to get reconstructed objects (and thereby activating the
+	// event->Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 	// Here's an example:
 	//
 	// vector<const MyDataClass*> mydataclasses;
-	// loop->Get(mydataclasses);
+	// event->Get(mydataclasses);
 	//
-	// japp->RootFillLock(this);
+	// lockService->RootWriteLock();
 	//  ... fill historgrams or trees ...
-	// japp->RootFillUnLock(this);
+	// lockService->RootUnLock();
 
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
-  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return NOERROR;
+  event->GetSingle(locTrigger); 
+  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
 
 
   const DVertex* locVertex  = NULL;
-  loop->GetSingle(locVertex);
+  event->GetSingle(locVertex);
   double vertexz = locVertex->dSpacetimeVertex.Z();
-  if ((vertexz < 52.0) || (vertexz > 78.0)) return NOERROR;
+  if ((vertexz < 52.0) || (vertexz > 78.0)) return;
 
 
   vector<const DTrackTimeBased*> tracks;
-  loop->Get(tracks);
-  if (tracks.size() ==0) return NOERROR;
+  event->Get(tracks);
+  if (tracks.size() ==0) return;
 
 
   for (uint32_t i=0; i<tracks.size(); i++) {
@@ -124,7 +118,7 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     if (dedx > 0) {
 
-      japp->RootFillLock(this);
+      lockService->RootWriteLock();
 
       dedx_p->Fill(p,dedx);
     
@@ -134,7 +128,7 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
         dedx_p_neg->Fill(p,dedx);
       } 
 
-      japp->RootFillUnLock(this);
+      lockService->RootUnLock();
 
     }
 
@@ -144,7 +138,7 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     if (dedx > 0) {
 
-      japp->RootFillLock(this);
+      lockService->RootWriteLock();
 
       intdedx_p->Fill(p,dedx);
     
@@ -154,34 +148,30 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
         intdedx_p_neg->Fill(p,dedx);
       } 
 
-      japp->RootFillUnLock(this);
+      lockService->RootUnLock();
 
     }
 
 
 
   }
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_CDC_dedx::erun(void)
+void JEventProcessor_CDC_dedx::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_CDC_dedx::fini(void)
+void JEventProcessor_CDC_dedx::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 

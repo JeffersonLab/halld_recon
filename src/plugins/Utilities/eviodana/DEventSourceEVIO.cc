@@ -8,7 +8,7 @@
 #include <iostream>
 using namespace std;
 
-#include <DANA/DApplication.h>
+#include <DANA/DEvent.h>
 
 #include "DEventSourceEVIO.h"
 
@@ -79,7 +79,7 @@ DEventSourceEVIO::~DEventSourceEVIO()
 //---------------------------------
 // GetEvent
 //---------------------------------
-jerror_t DEventSourceEVIO::GetEvent(JEvent &event)
+void DEventSourceEVIO::GetEvent(JEvent &event)
 {
 	if(chan==NULL)return NO_MORE_EVENTS_IN_SOURCE;
 	if(chan->read()){
@@ -96,7 +96,7 @@ jerror_t DEventSourceEVIO::GetEvent(JEvent &event)
 		return NO_MORE_EVENTS_IN_SOURCE;
 	}
 
-	return NOERROR;
+	return;
 }
 
 //---------------------------------
@@ -121,7 +121,7 @@ void DEventSourceEVIO::FreeEvent(JEvent &event)
 //---------------------------------
 // GetObjects
 //---------------------------------
-jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory_base *factory)
+jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory *factory)
 {
 	/// This gets called through the virtual method of the
 	/// JEventSource base class. It creates the objects of the type
@@ -135,20 +135,14 @@ jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory_base *factory)
 	if(!evt)throw RESOURCE_UNAVAILABLE;
 
 	// Get pointer to the B-field object and Geometry object
-	JEventLoop *loop = event.GetJEventLoop();
-	if(loop){
-		DApplication *dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-		if(dapp){
-			bfield = dapp->GetBfield(event.GetRunNumber());
-			geom = dapp->GetDGeometry(event.GetRunNumber());
-		}
-	}
+	bfield = GetBfield(event);
+	geom = GetDGeometry(event);
 
 	// Get name of data class we're trying to extract
 	string dataClassName = factory->GetDataClassName();
 
 	if(dataClassName =="DTrackTimeBased")
-	  return Extract_DTrackTimeBased(evt, dynamic_cast<JFactory<DTrackTimeBased>*>(factory));	
+	  return Extract_DTrackTimeBased(evt, dynamic_cast<JFactoryT<DTrackTimeBased>*>(factory));	
 
 	return OBJECT_NOT_AVAILABLE;
 }
@@ -156,7 +150,7 @@ jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory_base *factory)
 //---------------------------------
 // Extract_DTrackTimeBased
 //---------------------------------
-jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<DTrackTimeBased> *factory)
+jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory)
 {
 	// Note: Since this is a reconstructed factory, we want to generally return OBJECT_NOT_AVAILABLE
 	// rather than NOERROR. The reason being that the caller interprets "NOERROR" to mean "yes I
@@ -271,7 +265,7 @@ jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<D
 
 		// If the event had a s_Tracktimebased_t pointer, then report back that
 		// we read them in from the file. Otherwise, report OBJECT_NOT_AVAILABLE
-		return NOERROR;
+		return;
 	}
 
 	// If we get to here then there was not even a placeholder in the HDDM file.

@@ -12,7 +12,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "BCAL/DBCALDigiHit.h"
 #include "BCAL/DBCALTDCDigiHit.h"
@@ -22,6 +21,7 @@ using namespace jana;
 #include "BCAL/DBCALCluster.h"
 #include "BCAL/DBCALShower.h"
 #include "BCAL/DBCALGeometry.h"
+#include "DANA/DEvent.h"
 #include "DANA/DStatusBits.h"
 #include "DAQ/DEPICSvalue.h"
 #include "DAQ/DF1TDCHit.h"
@@ -156,7 +156,7 @@ static TH1I *bcal_num_events;
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_BCAL_online());
+		app->Add(new JEventProcessor_BCAL_online());
 	}
 }
 
@@ -165,6 +165,7 @@ extern "C"{
 
 
 JEventProcessor_BCAL_online::JEventProcessor_BCAL_online() {
+	SetTypeName("JEventProcessor_BCAL_online");
 }
 
 
@@ -177,12 +178,15 @@ JEventProcessor_BCAL_online::~JEventProcessor_BCAL_online() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_BCAL_online::init(void) {
-	
+void JEventProcessor_BCAL_online::Init() {
+
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
+
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 	if(bcal_fadc_digi_integral != NULL){
-		return NOERROR;
+		return;
 	}
 	
 	recentwalltime = 0;
@@ -194,10 +198,8 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 
 	REQUIRE_PHYSICS_TRIG = true;
 	
-	if(gPARMS) {
-	  gPARMS->SetDefaultParameter("BCALONLINE:REQUIRE_PHYSICS_TRIG",   REQUIRE_PHYSICS_TRIG);
-	}
-	
+	app->SetDefaultParameter("BCALONLINE:REQUIRE_PHYSICS_TRIG",   REQUIRE_PHYSICS_TRIG);
+
 	
 	// book hists
 	int timemin_ns = -200;
@@ -469,43 +471,41 @@ jerror_t JEventProcessor_BCAL_online::init(void) {
 	
 	// back to main dir
 	main->cd();
-	
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_online::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_BCAL_online::BeginRun(const std::shared_ptr<const JEvent>& event) {
 	// This is called whenever the run number changes
-
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_BCAL_online::Process(const std::shared_ptr<const JEvent>& event) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
 	// reconstruction algorithm) should be done outside of any mutex lock
 	// since multiple threads may call this method at the same time.
 
+	auto eventnumber = event->GetEventNumber();
+
 	// load BCAL geometry
   	vector<const DBCALGeometry *> BCALGeomVec;
-  	loop->Get(BCALGeomVec);
+  	event->Get(BCALGeomVec);
   	if(BCALGeomVec.size() == 0)
 		throw JException("Could not load locBCALGeometry object!");
 	const DBCALGeometry *locBCALGeom = BCALGeomVec[0];
 	
 	vector<const DEPICSvalue*> depicsvalue;
-	loop->Get(depicsvalue);
+	event->Get(depicsvalue);
 	if (depicsvalue.size()>0) {
 		recentwalltime = depicsvalue[0]->timestamp;
-		return NOERROR;
+		return;
 	}
 
 	vector<const DBCALDigiHit*> dbcaldigihits;
@@ -523,7 +523,7 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	const DL1Trigger *trig = NULL;
 		
 	try {
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
 		// if (trig->fp_trig_mask){
@@ -532,12 +532,12 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		}
 	} else {
 		// HDDM files are from simulation, so keep them even though they have no trigger
-		bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+		bool locIsHDDMEvent = GetStatusBit(event, kSTATUS_HDDM);
 		if (!locIsHDDMEvent) goodtrigger=0;		
 	}
 		
 	// calculate total BCAL energy in order to catch BCAL LED events
-	loop->Get(dbcalhits);
+	event->Get(dbcalhits);
 	double total_bcal_energy = 0.;
 	for(unsigned int i=0; i<dbcalhits.size(); i++) {
 		total_bcal_energy += dbcalhits[i]->E;
@@ -545,20 +545,20 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 	if (total_bcal_energy > 12.&&REQUIRE_PHYSICS_TRIG) goodtrigger=0;
 		
 	if (!goodtrigger) {
-		return NOERROR;
+		return;
 	}
 
-	loop->Get(dbcaldigihits);
-	loop->Get(dbcaltdcdigihits);
-	loop->Get(dbcaltdchits);
-	loop->Get(dbcaluhits);
-	loop->Get(dbcalpoints);
-	loop->Get(dbcalclusters);
-	loop->Get(dbcalshowers);
+	event->Get(dbcaldigihits);
+	event->Get(dbcaltdcdigihits);
+	event->Get(dbcaltdchits);
+	event->Get(dbcaluhits);
+	event->Get(dbcalpoints);
+	event->Get(dbcalclusters);
+	event->Get(dbcalshowers);
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootWriteLock(); //ACQUIRE ROOT FILL LOCK
 
 	if( (dbcaldigihits.size() > 0) || (dbcaltdcdigihits.size() > 0) )
 		bcal_num_events->Fill(1);
@@ -843,33 +843,28 @@ jerror_t JEventProcessor_BCAL_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 		bcal_shower_plane->Fill(shower->x,shower->y);
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-	
-	return NOERROR;
+	lockService->RootUnLock(); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_online::erun(void) {
+void JEventProcessor_BCAL_online::EndRun() {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
 
 	bcal_fadc_digi_pedestal_vtime->SetMinimum(bcal_fadc_digi_pedestal_vtime->GetMinimum(0.1));
 	bcal_fadc_digi_pedestal_vevent->SetMinimum(bcal_fadc_digi_pedestal_vevent->GetMinimum(0.1));
-
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_online::fini(void) {
+void JEventProcessor_BCAL_online::Finish() {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
 

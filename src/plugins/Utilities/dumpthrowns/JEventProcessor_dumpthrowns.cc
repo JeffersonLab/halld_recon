@@ -6,7 +6,6 @@
 //
 
 #include "JEventProcessor_dumpthrowns.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
@@ -18,7 +17,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_dumpthrowns());
+	app->Add(new JEventProcessor_dumpthrowns());
 }
 } // "C"
 
@@ -28,6 +27,8 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_dumpthrowns::JEventProcessor_dumpthrowns()
 {
+	SetTypeName("JEventProcessor_dumpthrowns");
+
 	events_written = 0;
 	events_discarded = 0;
 }
@@ -37,49 +38,46 @@ JEventProcessor_dumpthrowns::JEventProcessor_dumpthrowns()
 //------------------
 JEventProcessor_dumpthrowns::~JEventProcessor_dumpthrowns()
 {
-
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_dumpthrowns::init(void)
+void JEventProcessor_dumpthrowns::Init()
 {
-	// 
-	MAX_CANDIDATE_FILTER = 1000;
-	gPARMS->SetDefaultParameter("MAX_CANDIDATE_FILTER", MAX_CANDIDATE_FILTER, "Maximum number of candidates allowed in event before any are written to file.");
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 
-	
+	MAX_CANDIDATE_FILTER = 1000;
+	app->SetDefaultParameter("MAX_CANDIDATE_FILTER", MAX_CANDIDATE_FILTER, "Maximum number of candidates allowed in event before any are written to file.");
+
 	// Open output file
 	ofs = new ofstream("gluex_throwns.txt");
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_dumpthrowns::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_dumpthrowns::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_dumpthrowns::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_dumpthrowns::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get track candidates
 	vector<const DTrackCandidate*> candidates;
-	loop->Get(candidates);
+	event->Get(candidates);
 	if(candidates.size()==0 || candidates.size()>MAX_CANDIDATE_FILTER){
 		events_discarded++;
-		return NOERROR;
+		return;
 	}
 	
 	// Get thrown particles
 	vector<const DMCThrown*> throwns;
-	loop->Get(throwns);
+	event->Get(throwns);
 
 	// Write out thrown parameters	
 	for(unsigned int i=0; i<throwns.size(); i++){
@@ -92,11 +90,11 @@ jerror_t JEventProcessor_dumpthrowns::evnt(JEventLoop *loop, uint64_t eventnumbe
 		ss << " " << thrown->px() << " " << thrown->py() << " " << thrown->pz();
 		
 		// Write thrown parameters string to file
-		LockState();
+		lockService->RootFillLock(this);
 		(*ofs) << ss.str() << endl;
 		events_written++;
-		UnlockState();
-		
+		lockService->RootFillUnLock(this);
+
 		// Sometimes, generated particles are added to the thrown
 		// particles list. We want only the first MAX_CANDIDATE_FILTER
 		// particles which *may* correspond to the first candidates.
@@ -104,22 +102,19 @@ jerror_t JEventProcessor_dumpthrowns::evnt(JEventLoop *loop, uint64_t eventnumbe
 		// case which is what we are interested in at the moment).
 		if((i+1) >= MAX_CANDIDATE_FILTER) break;
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_dumpthrowns::erun(void)
+void JEventProcessor_dumpthrowns::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_dumpthrowns::fini(void)
+void JEventProcessor_dumpthrowns::Finish()
 {
 	if(ofs){
 		ofs->close();
@@ -130,8 +125,6 @@ jerror_t JEventProcessor_dumpthrowns::fini(void)
 	cout << endl;
 	cout << "Wrote " << events_written << " thrown events to output file (discarded " << events_discarded << ")" << endl;
 	cout << endl;
-
-	return NOERROR;
 }
 
 

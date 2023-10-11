@@ -8,15 +8,14 @@
 #include <JANA/JApplication.h>
 #include <DAQ/JEventSourceGenerator_EVIO.h>
 #include <DAQ/JFactoryGenerator_DAQ.h>
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddEventSourceGenerator(new JEventSourceGenerator_EVIO());
-	app->AddFactoryGenerator(new JFactoryGenerator_DAQ());
+	app->Add(new JEventSourceGenerator_EVIO());
+	app->Add(new JFactoryGenerator_DAQ());
 }
 } // "C"
 

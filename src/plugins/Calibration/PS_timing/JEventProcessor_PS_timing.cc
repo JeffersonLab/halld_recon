@@ -8,7 +8,6 @@
 #include "JEventProcessor_PS_timing.h"
 
 using namespace std;
-using namespace jana;
 
 #include <PAIR_SPECTROMETER/DPSCPair.h>
 #include <PAIR_SPECTROMETER/DPSPair.h>
@@ -19,8 +18,7 @@ using namespace jana;
 #include <RF/DRFTime_factory.h>
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <TDirectory.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -40,7 +38,7 @@ DRFTime_factory* locRFTimeFactory;
 extern "C"{
     void InitPlugin(JApplication *app){
         InitJANAPlugin(app);
-        app->AddProcessor(new JEventProcessor_PS_timing());
+        app->Add(new JEventProcessor_PS_timing());
     }
 } // "C"
 
@@ -50,7 +48,7 @@ extern "C"{
 //------------------
 JEventProcessor_PS_timing::JEventProcessor_PS_timing()
 {
-
+    SetTypeName("JEventProcessor_PS_timing");
 }
 
 //------------------
@@ -62,10 +60,13 @@ JEventProcessor_PS_timing::~JEventProcessor_PS_timing()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_PS_timing::init(void)
+void JEventProcessor_PS_timing::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
     // This is called once at program startup. If you are creating
     // and filling historgrams in this plugin, you should lock the
     // ROOT mutex like this:
@@ -81,55 +82,52 @@ jerror_t JEventProcessor_PS_timing::init(void)
     hPSRF_adcTimeDiffVsID = new TH2I("PSRF_adcTimeDiffVsID","PS-RF ADC time difference vs. counter ID;counter ID;time(ADC) - time(RF) [ns]",NC_PS,0.5,0.5+NC_PS,NTb,Tl,Th);
     hTAGHRF_tdcTimeDiffVsID = new TH2I("TAGHRF_tdcTimeDiffVsID","TAGH-RF TDC time difference vs. counter ID;counter ID;time(TDC) - time(RF) [ns]",NC_TAGH,0.5,0.5+NC_TAGH,NTb,Tl,Th);
     mainDir->cd();
-
-    return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_PS_timing::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_PS_timing::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
-  locRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+  locRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
  
   // be sure that DRFTime_factory::init() and brun() are called
   vector<const DRFTime*> rfTimes;
-  eventLoop->Get(rfTimes);
+  event->Get(rfTimes);
 
     // This is called whenever the run number changes
-    return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_PS_timing::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_PS_timing::Process(const std::shared_ptr<const JEvent>& event)
 {
     // This is called for every event. Use of common resources like writing
     // to a file or filling a histogram should be mutex protected. Using
-    // loop->Get(...) to get reconstructed objects (and thereby activating the
+    // event->Get(...) to get reconstructed objects (and thereby activating the
     // reconstruction algorithm) should be done outside of any mutex lock
     // since multiple threads may call this method at the same time.
     vector<const DPSCPair*> cpairs;
-    loop->Get(cpairs);
+    event->Get(cpairs);
     vector<const DPSPair*> fpairs;
-    loop->Get(fpairs);
+    event->Get(fpairs);
 
     vector<const DTAGHHit*> taghhits;
-    loop->Get(taghhits, "Calib");
+    event->Get(taghhits, "Calib");
 
     const DRFTime* rfTime = nullptr;
     vector <const DRFTime*> rfTimes;
-    loop->Get(rfTimes, "PSC");
+    event->Get(rfTimes, "PSC");
     if (rfTimes.size() > 0)
         rfTime = rfTimes[0];
     else
-        return NOERROR;
+        return;
 
     // FILL HISTOGRAMS
     // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-    japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+    lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
     double t_RF = rfTime->dTime;
     if (cpairs.size() >= 1) { // PSC
@@ -163,28 +161,24 @@ jerror_t JEventProcessor_PS_timing::evnt(JEventLoop *loop, uint64_t eventnumber)
         }
     }
 
-    japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-
-    return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_PS_timing::erun(void)
+void JEventProcessor_PS_timing::EndRun()
 {
     // This is called whenever the run number changes, before it is
     // changed to give you a chance to clean up before processing
     // events from the next run number.
-    return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_PS_timing::fini(void)
+void JEventProcessor_PS_timing::Finish()
 {
     // Called before program exit after event processing is finished.
-    return NOERROR;
 }
 

@@ -9,7 +9,6 @@
 
 
 #include "JEventProcessor_pedestals.h"
-using namespace jana;
 using namespace std;
 
 
@@ -18,14 +17,14 @@ using namespace std;
 #include <DAQ/Df125PulseIntegral.h>
 #include <DAQ/DF1TDCHit.h>
 #include <DAQ/DModuleType.h>
+#include <DANA/DEvent.h>
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_pedestals());
+	app->Add(new JEventProcessor_pedestals());
 }
 } // "C"
 
@@ -35,8 +34,8 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_pedestals::JEventProcessor_pedestals()
 {
+	SetTypeName("JEventProcessor_pedestals");
 	//pthread_mutex_init(&mutex, NULL);
-
 }
 
 //------------------
@@ -48,34 +47,32 @@ JEventProcessor_pedestals::~JEventProcessor_pedestals()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_pedestals::init(void)
+void JEventProcessor_pedestals::Init()
 {
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_pedestals::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_pedestals::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_pedestals::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_pedestals::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const Df250PulseData*> df250dats;
 	vector<const Df250PulseIntegral*> df250pis;
 	vector<const Df125PulseIntegral*> df125pis;
-	loop->Get(df250pis);
-	loop->Get(df125pis);
+	event->Get(df250pis);
+	event->Get(df125pis);
 
 	// Lock ROOT mutex	
-	japp->RootWriteLock();
+	GetLockService(event)->RootWriteLock();
 
 	for(unsigned int i=0; i<df250dats.size(); i++){
 		TH2D *h = GetHist(df250dats[i]);
@@ -94,25 +91,21 @@ jerror_t JEventProcessor_pedestals::evnt(JEventLoop *loop, uint64_t eventnumber)
 	}
 	
 	// Unlock ROOT mutex	
-	japp->RootUnLock();
-
-	return NOERROR;
+	GetLockService(event)->RootUnLock();
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_pedestals::erun(void)
+void JEventProcessor_pedestals::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_pedestals::fini(void)
+void JEventProcessor_pedestals::Finish()
 {
-	return NOERROR;
 }
 
 //------------------

@@ -9,7 +9,7 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTranslationTable.h"
 #include "DTRDDigiHit.h"
 #include "DTRDHit.h"
@@ -17,7 +17,7 @@ using namespace std;
 // store constants so that they can be accessed by pixel number
 typedef  vector<double>  trd_digi_constants_t;
 
-class DTRDHit_factory:public jana::JFactory<DTRDHit>{
+class DTRDHit_factory:public JFactoryT<DTRDHit>{
 	public:
 		DTRDHit_factory(){};
 		~DTRDHit_factory(){};
@@ -26,11 +26,11 @@ class DTRDHit_factory:public jana::JFactory<DTRDHit>{
 		vector<trd_digi_constants_t> time_offsets;
 
 	private:
-		jerror_t init(void);						///< Called once at program start.2
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 
 		double t_base[7];
 		double pulse_peak_threshold;

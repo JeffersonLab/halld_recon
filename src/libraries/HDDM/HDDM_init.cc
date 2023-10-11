@@ -1,18 +1,15 @@
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JFactorySet.h>
 
 #include "DEventWriterREST_factory.h"
 #include "DEventWriterHDDM_factory.h"
 #include "DEventHitStatistics_factory.h"
 
-jerror_t HDDM_init(JEventLoop *loop)
+void HDDM_init(JFactorySet* factorySet)
 {
 	/// Create and register HDDM data factories
-    loop->AddFactory(new DEventWriterREST_factory());
-	loop->AddFactory(new DEventWriterHDDM_factory());
-	loop->AddFactory(new DEventHitStatistics_factory());
-
-	return NOERROR;
+	factorySet->Add(new DEventWriterREST_factory());
+	factorySet->Add(new DEventWriterHDDM_factory());
+	factorySet->Add(new DEventHitStatistics_factory());
 }
 
 

@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <deque>
+#include <fstream>
 
 #include <DMatrixSIMD.h>
 #include <DVector3.h>
@@ -144,7 +145,7 @@ class DTrackFitterKalmanSIMD: public DTrackFitter{
 //   kWireBased,
 //   kTimeBased,
 //  };
-  DTrackFitterKalmanSIMD(JEventLoop *loop);
+  DTrackFitterKalmanSIMD(const std::shared_ptr<const JEvent>& event);
   ~DTrackFitterKalmanSIMD(){
     if (WRITE_ML_TRAINING_OUTPUT){
       mlfile.close();

@@ -10,6 +10,8 @@ using namespace std;
 
 #include <TROOT.h>
 
+#include <JANA/Compatibility/JLockService.h>
+
 #include <TRACKING/DReferenceTrajectory.h>
 
 #include "DTrackHitSelectorALT1.h"
@@ -42,20 +44,22 @@ bool static DTrackHitSelector_fdchit_cmp(pair<double,const DFDCPseudo *>a,
 //---------------------------------
 // DTrackHitSelectorALT1    (Constructor)
 //---------------------------------
-DTrackHitSelectorALT1::DTrackHitSelectorALT1(jana::JEventLoop *loop):DTrackHitSelector(loop)
+DTrackHitSelectorALT1::DTrackHitSelectorALT1(const std::shared_ptr<const JEvent>& event):DTrackHitSelector(event)
 {
 	HS_DEBUG_LEVEL = 0;
 	MAKE_DEBUG_TREES = false;
 
-	gPARMS->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
-	gPARMS->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
-	
+	auto app = event->GetJApplication();
+	app->SetDefaultParameter("TRKFIT:HS_DEBUG_LEVEL", HS_DEBUG_LEVEL, "Debug verbosity level for hit selector used in track fitting (0=no debug messages)");
+	app->SetDefaultParameter("TRKFIT:MAKE_DEBUG_TREES", MAKE_DEBUG_TREES, "Create a TTree with debugging info on hit selection for the FDC and CDC");
+	auto root_lock = app->GetService<JLockService>();
+
 	cdchitsel = NULL;
 	fdchitsel = NULL;
 	if(MAKE_DEBUG_TREES){
-		loop->GetJApplication()->Lock();
+		root_lock->RootWriteLock();
 		
-		 cdchitsel= (TTree*)gROOT->FindObject("cdchitsel");
+		cdchitsel= (TTree*)gROOT->FindObject("cdchitsel");
 		if(!cdchitsel){
 			cdchitsel = new TTree("cdchitsel", "CDC Hit Selector");
 			cdchitsel->Branch("H", &cdchitdbg, "fit_type/I:p/F:theta:mass:sigma:mom_factor:x:y:z:s:s_factor:itheta02:itheta02s:itheta02s2:dist:doca:resi:sigma_total:chisq:prob");
@@ -85,7 +89,7 @@ DTrackHitSelectorALT1::DTrackHitSelectorALT1(jana::JEventLoop *loop):DTrackHitSe
 			fdchitsel = NULL;
 		}
 
-		loop->GetJApplication()->Unlock();
+		root_lock->RootUnLock();
 	}
 }
 

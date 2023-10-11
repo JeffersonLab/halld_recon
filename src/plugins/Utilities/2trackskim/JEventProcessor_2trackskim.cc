@@ -12,68 +12,62 @@ extern "C" {
    void InitPlugin(JApplication *app)
 	{
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_2trackskim(), true);
+		app->Add(new JEventProcessor_2trackskim());
    }
 } // "extern C"
 
 //-------------------------------
-// init
+// Init
 //-------------------------------
-jerror_t JEventProcessor_2trackskim::init(void)
+void JEventProcessor_2trackskim::Init()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// brun
+// BeginRun
 //-------------------------------
-jerror_t JEventProcessor_2trackskim::brun(JEventLoop *locEventLoop, int32_t runnumber)
+void JEventProcessor_2trackskim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// evnt
+// Process
 //-------------------------------
-jerror_t JEventProcessor_2trackskim::evnt(JEventLoop *locEventLoop, uint64_t eventnumber)
+void JEventProcessor_2trackskim::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	const DEventWriterEVIO* locEventWriterEVIO = NULL;
-	locEventLoop->GetSingle(locEventWriterEVIO);
+	event->GetSingle(locEventWriterEVIO);
 
 	//Save EPICS events
 	vector<const DEPICSvalue*> locEPICSValues;
-	locEventLoop->Get(locEPICSValues);
+	event->Get(locEPICSValues);
 	if(!locEPICSValues.empty())
 	{
-		locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "2tracks");
-		return NOERROR;
+		locEventWriterEVIO->Write_EVIOEvent(event, "2tracks");
+		return;
 	}
 
 	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, "PreSelect");
+	event->Get(locChargedTracks, "PreSelect");
 	if(locChargedTracks.size() >= 2)
 	{
-		locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "2tracks");
-		return NOERROR;
+		locEventWriterEVIO->Write_EVIOEvent(event, "2tracks");
+		return;
 	}
-
-   return NOERROR;
 }
 
 //-------------------------------
-// erun
+// EndRun
 //-------------------------------
-jerror_t JEventProcessor_2trackskim::erun(void)
+void JEventProcessor_2trackskim::EndRun()
 {
-   return NOERROR;
 }
 
 //-------------------------------
-// fini
+// Finish
 //-------------------------------
-jerror_t JEventProcessor_2trackskim::fini(void)
+void JEventProcessor_2trackskim::Finish()
 {
-   return NOERROR;
 }
 

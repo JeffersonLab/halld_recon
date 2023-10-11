@@ -13,58 +13,58 @@ using namespace std;
 #include <TMath.h>
 
 #include "DNeutralParticleHypothesis_factory.h"
-using namespace jana;
+
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DNeutralParticleHypothesis_factory::init(void)
+void DNeutralParticleHypothesis_factory::Init()
 {
+	auto app = GetApplication();
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	SetFactoryFlag(NOT_OBJECT_OWNER);
 	dResourcePool_NeutralParticleHypothesis = new DResourcePool<DNeutralParticleHypothesis>();
 	dResourcePool_NeutralParticleHypothesis->Set_ControlParams(50, 20, 400, 4000, 0);
 	dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
 	dResourcePool_TMatrixFSym->Set_ControlParams(50, 20, 1000, 15000, 0);
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DNeutralParticleHypothesis_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DNeutralParticleHypothesis_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+	auto runnumber = event->GetRunNumber();
+	auto app = event->GetJApplication();
+	auto geo_manager = app->GetService<DGeometryManager>();
+	auto locGeometry = geo_manager->GetDGeometry(runnumber);
+
 	// Get Target parameters from XML
-	DApplication *locApplication = dynamic_cast<DApplication*> (locEventLoop->GetJApplication());
-	DGeometry *locGeometry = locApplication ? locApplication->GetDGeometry(runnumber):NULL;
 	locGeometry->GetTargetZ(dTargetCenterZ);
-	locEventLoop->GetSingle(dParticleID);
-	
-	return NOERROR;
+	event->GetSingle(dParticleID);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DNeutralParticleHypothesis_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DNeutralParticleHypothesis_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
 	dResourcePool_NeutralParticleHypothesis->Recycle(dCreated);
 	dCreated.clear();
-	_data.clear();
+	mData.clear();
 
 	vector<const DNeutralShower*> locNeutralShowers;
-	locEventLoop->Get(locNeutralShowers);
+	event->Get(locNeutralShowers);
 
 	vector<Particle_t> locPIDHypotheses;
 	locPIDHypotheses.push_back(Gamma);
 	locPIDHypotheses.push_back(Neutron);
 
 	const DEventRFBunch* locEventRFBunch = NULL;
-	locEventLoop->GetSingle(locEventRFBunch);
+	event->GetSingle(locEventRFBunch);
 
 	const DVertex* locVertex = NULL;
-	locEventLoop->GetSingle(locVertex);
+	event->GetSingle(locVertex);
 
 	// Loop over DNeutralShowers
 	for(size_t loc_i = 0; loc_i < locNeutralShowers.size(); ++loc_i)
@@ -75,12 +75,11 @@ jerror_t DNeutralParticleHypothesis_factory::evnt(jana::JEventLoop *locEventLoop
 		{
 			DNeutralParticleHypothesis* locNeutralParticleHypothesis = Create_DNeutralParticleHypothesis(locNeutralShower, locPIDHypotheses[loc_j], locEventRFBunch, locVertex->dSpacetimeVertex, &locVertex->dCovarianceMatrix);
 			if(locNeutralParticleHypothesis != nullptr)
-				_data.push_back(locNeutralParticleHypothesis);	
+				Insert(locNeutralParticleHypothesis);
 		}
 	}
 
-	dCreated = _data;
-	return NOERROR;
+	dCreated = mData;
 }
 
 DNeutralParticleHypothesis* DNeutralParticleHypothesis_factory::Create_DNeutralParticleHypothesis(const DNeutralShower* locNeutralShower, Particle_t locPID, const DEventRFBunch* locEventRFBunch, const DLorentzVector& dSpacetimeVertex, const TMatrixFSym* locVertexCovMatrix, bool locPerfomBetaCut)

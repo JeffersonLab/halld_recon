@@ -9,21 +9,23 @@
 #define _JEventProcessor_CDC_drift_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 
 
-class JEventProcessor_CDC_drift:public jana::JEventProcessor{
+class JEventProcessor_CDC_drift:public JEventProcessor{
  public:
   JEventProcessor_CDC_drift();
   ~JEventProcessor_CDC_drift();
-  const char* className(void){return "JEventProcessor_CDC_drift";}
 
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
+
+  std::shared_ptr<JLockService> lockService;
 
 };
 

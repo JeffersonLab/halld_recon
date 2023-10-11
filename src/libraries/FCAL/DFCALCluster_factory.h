@@ -8,14 +8,12 @@
 #ifndef _DFCALCluster_factory_
 #define _DFCALCluster_factory_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
 #include "DFCALCluster.h"
 
-using namespace jana;
 
-class DFCALCluster_factory:public JFactory<DFCALCluster>{
+class DFCALCluster_factory:public JFactoryT<DFCALCluster>{
 
 	public:
 		DFCALCluster_factory();
@@ -23,9 +21,8 @@ class DFCALCluster_factory:public JFactory<DFCALCluster>{
 			
 	private:
 
-		jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	
-		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	
-		//< Invoked via JEventProcessor virtual method
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;	
+		void Process(const std::shared_ptr<const JEvent>& event) override;	
 
 		unsigned int MIN_CLUSTER_BLOCK_COUNT;
 		float MIN_CLUSTER_SEED_ENERGY;

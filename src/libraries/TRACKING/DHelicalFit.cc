@@ -7,7 +7,6 @@
 #include <cmath>
 using namespace std;
 
-#include "DANA/DApplication.h"
 #include <TDecompLU.h>
 #include <math.h>
 

@@ -12,13 +12,14 @@
 #include "DTrackTimeBased_factory_Combo.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DTrackTimeBased_factory_Combo::init(void)
+void DTrackTimeBased_factory_Combo::Init()
 {
 	//BEWARE: IF THIS IS CHANGED, CHANGE IN THE ANALYSIS UTILITIES AND THE EVENT WRITER ALSO!!
 	dTrackSelectionTag = "PreSelect";
-	gPARMS->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
+	auto app = GetApplication();
+	app->SetDefaultParameter("COMBO:TRACK_SELECT_TAG", dTrackSelectionTag);
 
 	//remember, charge sign could have flipped during track reconstruction
 	//order of preference:
@@ -42,17 +43,15 @@ jerror_t DTrackTimeBased_factory_Combo::init(void)
 	dParticleIDsToTry.emplace(MuonMinus, dParticleIDsToTry[Electron]);
 
 	dParticleIDsToTry.emplace(Deuteron, vector<Particle_t>{Proton, KPlus, PiPlus});
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTrackTimeBased_factory_Combo::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DTrackTimeBased_factory_Combo::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Get Needed PIDs
-	auto locReactions = DAnalysis::Get_Reactions(locEventLoop);
+	auto locReactions = DAnalysis::Get_Reactions(locEvent);
 	for(size_t loc_i = 0; loc_i < locReactions.size(); ++loc_i)
 	{
 		auto locPositivePIDs = locReactions[loc_i]->Get_FinalPIDs(-1, false, false, d_Positive, false);
@@ -63,21 +62,19 @@ jerror_t DTrackTimeBased_factory_Combo::brun(jana::JEventLoop *locEventLoop, int
 		for(auto& locPID : locNegativePIDs)
 			dNegativelyChargedPIDs.insert(locPID);
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTrackTimeBased_factory_Combo::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DTrackTimeBased_factory_Combo::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 #ifdef VTRACE
 	VT_TRACER("DTrackTimeBased_factory_Combo::evnt()");
 #endif
 
  	vector<const DChargedTrack*> locChargedTracks;
-	locEventLoop->Get(locChargedTracks, dTrackSelectionTag.c_str());
+	locEvent->Get(locChargedTracks, dTrackSelectionTag.c_str());
 
 	for(auto& locTrack : locChargedTracks)
 	{
@@ -86,8 +83,6 @@ jerror_t DTrackTimeBased_factory_Combo::evnt(jana::JEventLoop *locEventLoop, uin
 		if(locTrack->Contains_Charge(-1))
 			Create_PIDsAsNeeded(locTrack, dNegativelyChargedPIDs);
 	}
-
-	return NOERROR;
 }
 
 void DTrackTimeBased_factory_Combo::Create_PIDsAsNeeded(const DChargedTrack* locChargedTrack, set<Particle_t>& locPIDs)
@@ -101,7 +96,7 @@ void DTrackTimeBased_factory_Combo::Create_PIDsAsNeeded(const DChargedTrack* loc
 
 		DTrackTimeBased* locTrackTimeBased = Convert_ChargedTrack(locChargedTrackHypothesis, locPID);
 		locTrackTimeBased->AddAssociatedObject(locChargedTrack);
-		_data.push_back(locTrackTimeBased);
+		Insert(locTrackTimeBased);
 	}
 }
 

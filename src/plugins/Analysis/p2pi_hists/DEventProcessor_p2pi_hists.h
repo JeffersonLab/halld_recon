@@ -17,20 +17,22 @@
 
 #include "DFactoryGenerator_p2pi_hists.h"
 
-using namespace jana;
 using namespace std;
 
-class DEventProcessor_p2pi_hists : public jana::JEventProcessor
+class DEventProcessor_p2pi_hists : public JEventProcessor
 {
 	public:
-		const char* className(void){return "DEventProcessor_p2pi_hists";}
+		DEventProcessor_p2pi_hists() {
+			SetTypeName("DEventProcessor_p2pi_hists");
+		}
+		~DEventProcessor_p2pi_hists() {}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop* locEventLoop, int locRunNumber);	///< Called every time a new run number is detected.
-		jerror_t evnt(jana::JEventLoop* locEventLoop, uint64_t locEventNumber);	///< Called every event.
-		jerror_t erun(void);						///< Called every time run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& locEvent) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
+		void EndRun() override;
+		void Finish() override;
 
 		//For non-custom reaction-independent histograms, it is recommended that you simultaneously run the monitoring_hists plugin instead of defining them here
 };

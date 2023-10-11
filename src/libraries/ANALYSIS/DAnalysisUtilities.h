@@ -11,10 +11,10 @@
 #include <deque>
 #include <set>
 
-#include <JANA/JEventLoop.h>
+#include <JANA/JEvent.h>
 #include <JANA/JObject.h>
 
-#include "DANA/DApplication.h"
+#include "DANA/DEvent.h"
 #include "HDGEOMETRY/DGeometry.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
@@ -43,7 +43,6 @@
 #include "ANALYSIS/DReaction_factory_Thrown.h"
 
 using namespace std;
-using namespace jana;
 using namespace DAnalysis;
 
 class DReaction_factory_Thrown;
@@ -58,24 +57,24 @@ class DAnalysisUtilities : public JObject
 		JOBJECT_PUBLIC(DAnalysisUtilities);
  
 		// Constructor and destructor
-		DAnalysisUtilities(JEventLoop *loop);
+		DAnalysisUtilities(const std::shared_ptr<const JEvent>& loop);
 
-		bool Check_IsBDTSignalEvent(JEventLoop* locEventLoop, const DReaction* locReaction, bool locExclusiveMatchFlag, bool locIncludeDecayingToReactionFlag) const;
+		bool Check_IsBDTSignalEvent(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, bool locExclusiveMatchFlag, bool locIncludeDecayingToReactionFlag) const;
 		void Replace_DecayingParticleWithProducts(deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps, size_t locStepIndex) const;
-		bool Check_ThrownsMatchReaction(JEventLoop* locEventLoop, const DReaction* locReaction, bool locExclusiveMatchFlag) const;
+		bool Check_ThrownsMatchReaction(const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, bool locExclusiveMatchFlag) const;
 		bool Check_ThrownsMatchReaction(const DReaction* locThrownReaction, const DParticleCombo* locThrownCombo, const DReaction* locReaction, bool locExclusiveMatchFlag) const;
 
-		void Get_UnusedChargedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DChargedTrack*>& locUnusedChargedTracks) const;
-		void Get_UnusedTimeBasedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackTimeBased*>& locUnusedTimeBasedTracks) const;
-		void Get_UnusedWireBasedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackWireBased*>& locUnusedWireBasedTracks) const;
-		void Get_UnusedTrackCandidates(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTrackCandidate*>& locUnusedTrackCandidates) const;
+		void Get_UnusedChargedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DChargedTrack*>& locUnusedChargedTracks) const;
+		void Get_UnusedTimeBasedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackTimeBased*>& locUnusedTimeBasedTracks) const;
+		void Get_UnusedWireBasedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackWireBased*>& locUnusedWireBasedTracks) const;
+		void Get_UnusedTrackCandidates(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackCandidate*>& locUnusedTrackCandidates) const;
 
 		void Get_UnusedNeutralShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralShower*>& locUnusedNeutralShowers) const;
 		void Get_UnusedNeutralParticles(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralParticle*>& locUnusedNeutralParticles) const;
 		void Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const;
 
-		void Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const;
-		bool Are_ThrownPIDsSameAsDesired(JEventLoop* locEventLoop, const deque<Particle_t>& locDesiredPIDs, Particle_t locMissingPID = Unknown) const;
+		void Get_ThrownParticleSteps(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const;
+		bool Are_ThrownPIDsSameAsDesired(const std::shared_ptr<const JEvent>& locEvent, const deque<Particle_t>& locDesiredPIDs, Particle_t locMissingPID = Particle_t::Unknown) const;
 
 		double Calc_DOCAVertex(const DVector3 &locUnitDir1, const DVector3 &locUnitDir2, const DVector3 &locVertex1, const DVector3 &locVertex2, DVector3& locDOCAPoint) const;
 		double Calc_DOCA(const DVector3 &locUnitDir1, const DVector3 &locUnitDir2, const DVector3 &locVertex1, const DVector3 &locVertex2) const;
@@ -121,8 +120,8 @@ class DAnalysisUtilities : public JObject
 		DLorentzVector Calc_FinalStateP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, size_t locStepIndex, set<size_t> locToIncludeIndices, bool locUseKinFitDataFlag) const;
 		DLorentzVector Calc_FinalStateP4(const DReaction* locReaction, const DParticleCombo* locParticleCombo, size_t locStepIndex, set<size_t> locToIncludeIndices, set<pair<const JObject*, unsigned int> >& locSourceObjects, bool locUseKinFitDataFlag) const;
 
-		int Calc_Energy_UnusedShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const;
-		int Calc_Momentum_UnusedTracks(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const;
+		int Calc_Energy_UnusedShowers(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locEnergy_UnusedShowers, int &locNumber_UnusedShowers_Quality, double &locEnergy_UnusedShowers_Quality) const;
+		int Calc_Momentum_UnusedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, double &locSumPMag_UnusedTracks, TVector3 &locSumP3_UnusedTracks) const;
 
 		// These routines use the MEAURED particle data.  For the kinfit-data result, just use the error matrix from the missing particle
 		TMatrixFSym Calc_MissingP3Covariance(const DReaction* locReaction, const DParticleCombo* locParticleCombo) const;

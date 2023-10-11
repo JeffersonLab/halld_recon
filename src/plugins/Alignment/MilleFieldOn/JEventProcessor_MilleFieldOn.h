@@ -9,22 +9,21 @@
 #include <JANA/JEventProcessor.h>
 #include "Mille.h"
 
-class JEventProcessor_MilleFieldOn : public jana::JEventProcessor {
+class JEventProcessor_MilleFieldOn : public JEventProcessor {
  public:
   JEventProcessor_MilleFieldOn();
   ~JEventProcessor_MilleFieldOn();
-  const char *className(void) { return "JEventProcessor_MilleFieldOn"; }
 
  private:
-  jerror_t init(void);  ///< Called once at program start.
-  jerror_t brun(
-      jana::JEventLoop *eventLoop,
+  void Init() override;
+  void BeginRun(
+      const std::shared_ptr<const JEvent>& event,
       int32_t runnumber);  ///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop,
+  void Process(const std::shared_ptr<const JEvent>& event,
                 uint64_t eventnumber);  ///< Called every event.
-  jerror_t erun(void);  ///< Called everytime run number changes, provided brun
+  void EndRun() override;
                         ///< has been called.
-  jerror_t fini(void);  ///< Called after last event of last event source has
+  void Finish() override;
                         ///< been processed.
   Mille *milleWriter;
 };

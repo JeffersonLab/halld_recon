@@ -7,7 +7,7 @@
 #ifndef _DEventSourceEventStore_
 #define _DEventSourceEventStore_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
 
@@ -19,20 +19,19 @@
 #include "DESDBProvider.h"
 #include "DESDBProviderMySQL.h"
 
-using namespace jana;
 using namespace std;
 
 
 class DEventSourceEventStore : public JEventSource {
 	public:
-		DEventSourceEventStore(const char* source_name);
-		virtual ~DEventSourceEventStore();
-		const char* className(void){return "DEventSourceEventStore";}
+		explicit DEventSourceEventStore(std::string source_name);
+		~DEventSourceEventStore() override;
 
-		jerror_t GetEvent(JEvent &event);
-		void FreeEvent(JEvent &event);
-		jerror_t GetObjects(JEvent &event, JFactory_base *factory);
-		
+		void Open() override;
+		void GetEvent(std::shared_ptr<JEvent> event) override;
+		void FinishEvent(JEvent &event) override;
+		bool GetObjects(const std::shared_ptr<const JEvent>& event, JFactory* factory) override;
+
 		
 	protected:
 		// reporting functions

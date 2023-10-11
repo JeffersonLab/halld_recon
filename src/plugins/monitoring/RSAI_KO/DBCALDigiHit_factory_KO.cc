@@ -17,12 +17,11 @@
 using namespace std;
 
 #include "DBCALDigiHit_factory_KO.h"
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBCALDigiHit_factory_KO::init(void)
+void DBCALDigiHit_factory_KO::Init()
 {
 	// Tell JANA we don't own any of the objects in _data
 	SetFactoryFlag( NOT_OBJECT_OWNER );
@@ -47,8 +46,6 @@ jerror_t DBCALDigiHit_factory_KO::init(void)
 		}
 		cout << endl;
 	});
-
-	return NOERROR;
 }
 
 //------------------
@@ -60,10 +57,11 @@ jerror_t DBCALDigiHit_factory_KO::init(void)
 //------------------
 void DBCALDigiHit_factory_KO::FillEfficiencyMap(string config_prefix, std::map< std::tuple<int,int,int,int>, double > &eff_map) {
 
+	auto app = GetApplication();
 	// Get all parameters starting with "KO:BCAL_ADC_". The keys will have that
 	// portion of the string removed leaving only readout channel specific part
 	map<string,string> parms;
-	gPARMS->GetParameters(parms, config_prefix);
+	app->GetJParameterManager()->FilterParameters(parms, config_prefix);
 	for( auto p : parms ) {
 
 		// Extract specified module, layer, sector, end
@@ -103,7 +101,7 @@ void DBCALDigiHit_factory_KO::FillEfficiencyMap(string config_prefix, std::map< 
 		}
 
 		string one("1.00000");
-		gPARMS->SetDefaultParameter( config_prefix + p.first, one ); // Set default parameter to avoid flashing red warning
+		app->SetDefaultParameter( config_prefix + p.first, one ); // Set default parameter to avoid flashing red warning
 	}
 
 }
@@ -157,46 +155,43 @@ void DBCALDigiHit_factory_KO::CheckRange(int module, int layer, int sector, int 
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBCALDigiHit_factory_KO::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DBCALDigiHit_factory_KO::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBCALDigiHit_factory_KO::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALDigiHit_factory_KO::Process(const std::shared_ptr<const JEvent>& event)
 {
 	vector<const DBCALDigiHit*> bcaldigihits;
-	loop->Get(bcaldigihits, "", false); // get original hits
+	event->Get(bcaldigihits, ""); // get original hits
 
 	for( auto hit : bcaldigihits ){
 		auto key = std::make_tuple( hit->module, hit->layer, hit->sector, hit->end );
 		if( BCAL_adc_cell_eff.count(key) ){
-			if( distribution(generator) <= BCAL_adc_cell_eff[key]) _data.push_back( const_cast<DBCALDigiHit*>(hit) );
-		}else{
-			_data.push_back( const_cast<DBCALDigiHit*>(hit) );
+			if( distribution(generator) <= BCAL_adc_cell_eff[key]) {
+				Insert(const_cast<DBCALDigiHit*>(hit) );
+			}
+		} else {
+			Insert(const_cast<DBCALDigiHit*>(hit));
 		}
 	}
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBCALDigiHit_factory_KO::erun(void)
+void DBCALDigiHit_factory_KO::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBCALDigiHit_factory_KO::fini(void)
+void DBCALDigiHit_factory_KO::Finish()
 {
-	return NOERROR;
 }
 

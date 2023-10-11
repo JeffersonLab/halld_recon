@@ -1,21 +1,18 @@
 // $Id: CDC_init.cc 2151 2006-10-23 18:01:37Z davidl $
 
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/Compatibility/JGetObjectsFactory.h>
 
 #include "DTPOLTruthHit.h"
 #include "DTPOLSectorDigiHit.h"
 #include "DTPOLRingDigiHit.h"
 #include "DTPOLHit_factory.h"
 
-jerror_t TPOL_init(JEventLoop *loop)
+void TPOL_init(JFactorySet *factorySet)
 {
 	/// Create and register TPOL data factories
-	loop->AddFactory(new JFactory<DTPOLSectorDigiHit>());
-	loop->AddFactory(new JFactory<DTPOLRingDigiHit>());
-	loop->AddFactory(new DTPOLHit_factory());
-	loop->AddFactory(new JFactory<DTPOLHit>("TRUTH"));
-	loop->AddFactory(new JFactory<DTPOLTruthHit>());
-
-	return NOERROR;
+	factorySet->Add(new JGetObjectsFactory<DTPOLSectorDigiHit>());
+	factorySet->Add(new JGetObjectsFactory<DTPOLRingDigiHit>());
+	factorySet->Add(new DTPOLHit_factory());
+	factorySet->Add(new JGetObjectsFactory<DTPOLHit>("TRUTH"));
+	factorySet->Add(new JGetObjectsFactory<DTPOLTruthHit>());
 }

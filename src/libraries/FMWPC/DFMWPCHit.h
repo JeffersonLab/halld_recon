@@ -8,9 +8,8 @@
 #ifndef _DFMWPCHit_
 #define _DFMWPCHit_
 
-#include <JANA/jerror.h>
+#include <JANA/JObject.h>
 
-using namespace jana;
 
 class DFMWPCHit:public JObject{
 	public:

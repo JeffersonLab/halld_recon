@@ -13,11 +13,10 @@
 
 #include "JEventProcessor_CDC_drift.h"
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 
 using namespace std;
-using namespace jana;
 
 
 #include "CDC/DCDCHit.h"
@@ -51,7 +50,7 @@ static bool FIT_TIME = true;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_CDC_drift());
+    app->Add(new JEventProcessor_CDC_drift());
   }
 }
 
@@ -60,6 +59,7 @@ extern "C"{
 
 
 JEventProcessor_CDC_drift::JEventProcessor_CDC_drift() {
+	SetTypeName("JEventProcessor_CDC_drift");
 }
 
 
@@ -72,7 +72,10 @@ JEventProcessor_CDC_drift::~JEventProcessor_CDC_drift() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_CDC_drift::init(void) {
+void JEventProcessor_CDC_drift::Init() {
+
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
 
   /*
   // max values for histogram scales, modified fa250-format readout
@@ -99,7 +102,7 @@ jerror_t JEventProcessor_CDC_drift::init(void) {
   const Int_t TMAX = 2000;  //max for time
 
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   // create root folder for cdc and cd to it, store main dir
   TDirectory *main = gDirectory;
@@ -146,27 +149,24 @@ jerror_t JEventProcessor_CDC_drift::init(void) {
 
   } 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
   main->cd();
-
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_drift::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_CDC_drift::BeginRun(const std::shared_ptr<const JEvent>& event) {
   // This is called whenever the run number changes
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnumber) {
+void JEventProcessor_CDC_drift::Process(const std::shared_ptr<const JEvent>& event) {
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -204,20 +204,20 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
   Bool_t fithisto;     // fit histo if true
 
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
+    return;
   if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
+    return;
   }
 	
 
   // get raw data for cdc
   vector<const DCDCDigiHit*> digihits;
-  eventLoop->Get(digihits);
+  event->Get(digihits);
 
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   fithisto = kFALSE;
 
@@ -268,7 +268,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
   // get raw data for cdc
   vector<const DCDCHit*> hits;
-  eventLoop->Get(hits);
+  event->Get(hits);
 
   fitthisto = kFALSE;
 
@@ -600,31 +600,25 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
-
-  return NOERROR;
+  lockService->RootUnLock(); //RELEASE ROOT LOCK!!
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_drift::erun(void) {
+void JEventProcessor_CDC_drift::EndRun() {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_CDC_drift::fini(void) {
+void JEventProcessor_CDC_drift::Finish() {
   // Called before program exit after event processing is finished.
-
-
-  return NOERROR;
 }
 
 
