@@ -33,6 +33,10 @@
 #include <iostream>
 using namespace std;
 
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+
+#include <DANA/DEvent.h>
 #include "DTOFPaddleHit_factory.h"
 #include "DTOFHit.h"
 #include "DTOFHitMC.h"
@@ -46,9 +50,9 @@ using namespace std;
 #define BuiltInNaN __builtin_nan("")
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
+void DTOFPaddleHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   /// Retreive TOF parameters based on the TOF geometry for this run. This includes
   /// values like the number of bars in a plane the length of the bars, the effective
@@ -98,15 +102,12 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
   string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
   if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
-  
-  return NOERROR;
-
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DTOFPaddleHit_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   /// General Purpose:
   /// Based on the list of DTOFHit objects this methodes finds hits for paddles
@@ -120,7 +121,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   /// the time for a signal to traverse a full length paddle.
 
   vector<const DTOFHit*> hits;
-  loop->Get(hits,TOF_POINT_TAG.c_str());
+  event->Get(hits,TOF_POINT_TAG.c_str());
 
   vector<const DTOFHit*> P1hitsL;
   vector<const DTOFHit*> P1hitsR;
@@ -196,7 +197,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  hit->t_south = P1hitsR[j]->t;      
 	  hit->AddAssociatedObject(P1hitsR[j]);  
 
-	  _data.push_back(hit);
+	  Insert(hit);
 	}
       }
     } 
@@ -231,7 +232,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->t_south = 0.;  
 	hit->AddAssociatedObject(P1hitsL[i]);
 
-	_data.push_back(hit);
+	Insert(hit);
       }
     }
   }
@@ -259,8 +260,8 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->E_north = 0.;
 	hit->t_north = 0.;      
 	hit->AddAssociatedObject(P1hitsR[i]);
-	
-	_data.push_back(hit);
+
+	Insert(hit);
       }
     }
   }
@@ -284,7 +285,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  hit->t_south = P2hitsR[j]->t;      
 	  hit->AddAssociatedObject(P2hitsR[j]);
 	  
-	  _data.push_back(hit);
+	  Insert(hit);
 	}
       }
     }
@@ -316,7 +317,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->t_south = 0.;      
 	hit->AddAssociatedObject(P2hitsL[i]);
 
-	_data.push_back(hit);
+	Insert(hit);
       }
     }
   }
@@ -345,16 +346,16 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	hit->t_north = 0.;      
 	hit->AddAssociatedObject(P2hitsR[i]);
 
-	_data.push_back(hit);
+	Insert(hit);
       }
     }
   }
 
 
-  for (int i=0;i<(int)_data.size(); i++) {
+  for (int i=0;i<(int)mData.size(); i++) {
     
-    DTOFPaddleHit *hit = _data[i];
-    
+    DTOFPaddleHit *hit = mData[i];
+
     int check = -1;
     if (hit->E_north > E_THRESHOLD) {
       check++;
@@ -406,7 +407,5 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    }
 
   }
-  
-  return NOERROR;
 }
 

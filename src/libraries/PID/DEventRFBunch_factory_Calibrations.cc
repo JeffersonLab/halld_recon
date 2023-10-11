@@ -7,55 +7,51 @@
 
 #include "DEventRFBunch_factory_Calibrations.h"
 
-using namespace jana;
+#include "DANA/DEvent.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventRFBunch_factory_Calibrations::init(void)
+void DEventRFBunch_factory_Calibrations::Init()
 {
 	dMinTrackingFOM = 0.001;
 	dRFTDCSourceSystem = SYS_TOF;
 	dMinHitRingsPerCDCSuperlayer = 2;
 	dMinHitPlanesPerFDCPackage = 4;
 
+	auto app = GetApplication();
 	string locSystemName = "";
-	gPARMS->SetDefaultParameter("RF_CALIB:SOURCE_SYSTEM", locSystemName);
+	app->SetDefaultParameter("RF_CALIB:SOURCE_SYSTEM", locSystemName);
 	if(locSystemName != "")
 		dRFTDCSourceSystem = NameToSystem(locSystemName.c_str());
-
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventRFBunch_factory_Calibrations::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DEventRFBunch_factory_Calibrations::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	DGeometry* locGeometry = locApplication->GetDGeometry(runnumber);
+	DGeometry* locGeometry = DEvent::GetDGeometry(event);
+	JCalibration* calibration = DEvent::GetJCalibration(event);
 
 	vector<double> locBeamPeriodVector;
-	locEventLoop->GetCalib("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
+	calibration->Get("PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 
 	double locTargetCenterZ;
 	locGeometry->GetTargetZ(locTargetCenterZ);
 	dTargetCenter.SetXYZ(0.0, 0.0, locTargetCenterZ);
 
-	locEventLoop->GetSingle(dParticleID);
+	event->GetSingle(dParticleID);
 
 	dCutAction_TrackHitPattern = new DCutAction_TrackHitPattern(NULL, dMinHitRingsPerCDCSuperlayer, dMinHitPlanesPerFDCPackage);
-	dCutAction_TrackHitPattern->Initialize(locEventLoop);
-
-	return NOERROR;
+	dCutAction_TrackHitPattern->Initialize(event);
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventRFBunch_factory_Calibrations::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
+void DEventRFBunch_factory_Calibrations::Process(const std::shared_ptr<const JEvent>& event)
 {
 	//There should ALWAYS be one and only one DEventRFBunch created.
 		//If there is not enough information, time is set to NaN
@@ -66,14 +62,14 @@ jerror_t DEventRFBunch_factory_Calibrations::evnt(JEventLoop* locEventLoop, uint
 
 	//Select Good Tracks
 	vector<const DTrackWireBased*> locTrackWireBasedVector;
-	Select_GoodTracks(locEventLoop, locTrackWireBasedVector);
+	Select_GoodTracks(event, locTrackWireBasedVector);
 
 	//Get RF Time
 	vector<const DRFTDCDigiTime*> locRFTDCDigiTimes;
-	locEventLoop->Get(locRFTDCDigiTimes);
+	event->Get(locRFTDCDigiTimes);
 
 	const DTTabUtilities* locTTabUtilities = NULL;
-	locEventLoop->GetSingle(locTTabUtilities);
+	event->GetSingle(locTTabUtilities);
 
 	double locRFTime = numeric_limits<double>::quiet_NaN();
 	bool locHitFoundFlag = false;
@@ -93,13 +89,15 @@ jerror_t DEventRFBunch_factory_Calibrations::evnt(JEventLoop* locEventLoop, uint
 	}
 
 	if(!locHitFoundFlag)
-		return Create_NaNRFBunch();
+		Create_NaNRFBunch();
+		return; // TODO: NWB: Verify
 
 	//Select RF Bunch:
-	return Select_RFBunch(locEventLoop, locTrackWireBasedVector, locRFTime);
+	Select_RFBunch(event, locTrackWireBasedVector, locRFTime);
+	return; // TODO: Verify
 }
 
-void DEventRFBunch_factory_Calibrations::Select_GoodTracks(JEventLoop* locEventLoop, vector<const DTrackWireBased*>& locSelectedWireBasedTracks) const
+void DEventRFBunch_factory_Calibrations::Select_GoodTracks(const std::shared_ptr<const JEvent>& event, vector<const DTrackWireBased*>& locSelectedWireBasedTracks) const
 {
 	//Select tracks:
 		//For each particle (DTrackWireBased::candidateid), use the DTrackWireBased with the best tracking FOM
@@ -108,17 +106,17 @@ void DEventRFBunch_factory_Calibrations::Select_GoodTracks(JEventLoop* locEventL
 	locSelectedWireBasedTracks.clear();
 
 	vector<const DTrackWireBased*> locTrackWireBasedVector;
-	locEventLoop->Get(locTrackWireBasedVector);
+	event->Get(locTrackWireBasedVector);
 
 	//select the best DTrackWireBased for each track: of tracks with good hit pattern, use best tracking FOM
-	map<JObject::oid_t, const DTrackWireBased*> locBestTrackWireBasedMap; //lowest tracking chisq/ndf for each candidate id
+	map<oid_t, const DTrackWireBased*> locBestTrackWireBasedMap; //lowest tracking chisq/ndf for each candidate id
 	for(size_t loc_i = 0; loc_i < locTrackWireBasedVector.size(); ++loc_i)
 	{
 		if(locTrackWireBasedVector[loc_i]->FOM < dMinTrackingFOM)
 			continue;
 		if(!dCutAction_TrackHitPattern->Cut_TrackHitPattern(dParticleID, locTrackWireBasedVector[loc_i]))
 			continue;
-		JObject::oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
+		oid_t locCandidateID = locTrackWireBasedVector[loc_i]->candidateid;
 		if(locBestTrackWireBasedMap.find(locCandidateID) == locBestTrackWireBasedMap.end())
 			locBestTrackWireBasedMap[locCandidateID] = locTrackWireBasedVector[loc_i];
 		else if(locTrackWireBasedVector[loc_i]->FOM > (dynamic_cast<const DTrackWireBased*>(locBestTrackWireBasedMap[locCandidateID]))->FOM)
@@ -126,19 +124,19 @@ void DEventRFBunch_factory_Calibrations::Select_GoodTracks(JEventLoop* locEventL
 	}
 
 	//Save to the vector
-	map<JObject::oid_t, const DTrackWireBased*>::iterator locIterator;
+	map<oid_t, const DTrackWireBased*>::iterator locIterator;
 	for(locIterator = locBestTrackWireBasedMap.begin(); locIterator != locBestTrackWireBasedMap.end(); ++locIterator)
 		locSelectedWireBasedTracks.push_back(locIterator->second);
 }
 
-jerror_t DEventRFBunch_factory_Calibrations::Select_RFBunch(JEventLoop* locEventLoop, vector<const DTrackWireBased*>& locTrackWireBasedVector, double locRFTime)
+jerror_t DEventRFBunch_factory_Calibrations::Select_RFBunch(const std::shared_ptr<const JEvent>& event, vector<const DTrackWireBased*>& locTrackWireBasedVector, double locRFTime)
 {
 	//If RF Time present:
 	//Use tracks with matching SC hits, if any
 	//If None: set DEventRFBunch::dTime to NaN
 
 	vector<const DDetectorMatches*> locDetectorMatchVector;
-	locEventLoop->Get(locDetectorMatchVector, "WireBased");
+	event->Get(locDetectorMatchVector, "WireBased");
 	if(locDetectorMatchVector.empty())
 	{
 		cout << "WARNING: WIREBASED TRACKS NOT PRESENT IN DEventRFBunch_factory_Calibrations(). RETURNING NaN." << endl;
@@ -151,7 +149,7 @@ jerror_t DEventRFBunch_factory_Calibrations::Select_RFBunch(JEventLoop* locEvent
 
 	//Use tracks with matching SC hits, if any
 	if(Find_TrackTimes_SC(locDetectorMatches, locTrackWireBasedVector, locTimes))
-		locBestRFBunchShift = Conduct_Vote(locEventLoop, locRFTime, locTimes, locHighestNumVotes);
+		locBestRFBunchShift = Conduct_Vote(event, locRFTime, locTimes, locHighestNumVotes);
 	else //SET NaN
 		return Create_NaNRFBunch();
 
@@ -160,7 +158,7 @@ jerror_t DEventRFBunch_factory_Calibrations::Select_RFBunch(JEventLoop* locEvent
 	locEventRFBunch->dTimeVariance = 0.0;
 	locEventRFBunch->dNumParticleVotes = locHighestNumVotes;
 	locEventRFBunch->dTimeSource = SYS_RF;
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
 	return NOERROR;
 }
@@ -183,7 +181,7 @@ bool DEventRFBunch_factory_Calibrations::Find_TrackTimes_SC(const DDetectorMatch
 	return (!locTimes.empty());
 }
 
-int DEventRFBunch_factory_Calibrations::Conduct_Vote(JEventLoop* locEventLoop, double locRFTime, vector<pair<double, const JObject*> >& locTimes, int& locHighestNumVotes)
+int DEventRFBunch_factory_Calibrations::Conduct_Vote(const std::shared_ptr<const JEvent>& event, double locRFTime, vector<pair<double, const JObject*> >& locTimes, int& locHighestNumVotes)
 {
 	map<int, vector<const JObject*> > locNumBeamBucketsShiftedMap;
 	set<int> locBestRFBunchShifts;
@@ -271,24 +269,22 @@ jerror_t DEventRFBunch_factory_Calibrations::Create_NaNRFBunch(void)
 	locEventRFBunch->dTimeVariance = numeric_limits<double>::quiet_NaN();
 	locEventRFBunch->dNumParticleVotes = 0;
 	locEventRFBunch->dTimeSource = SYS_NULL;
-	_data.push_back(locEventRFBunch);
+	Insert(locEventRFBunch);
 
 	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventRFBunch_factory_Calibrations::erun(void)
+void DEventRFBunch_factory_Calibrations::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventRFBunch_factory_Calibrations::fini(void)
+void DEventRFBunch_factory_Calibrations::Finish()
 {
-	return NOERROR;
 }
 

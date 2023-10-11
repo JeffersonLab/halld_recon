@@ -8,7 +8,7 @@
 #ifndef _DEventSourceEVIO_
 #define _DEventSourceEVIO_
 
-#include <JANA/jerror.h>
+#include <JANA/Compatibility/jerror.h>
 #include <JANA/JEventSource.h>
 #include <JANA/JEvent.h>
 
@@ -20,7 +20,6 @@
 #include <evioFileChannel.hxx>
 #include <vector>
 
-using namespace jana;
 using namespace evio;
 using namespace std;
 
@@ -32,7 +31,7 @@ class DEventSourceEVIO:public JEventSource{
 
 		jerror_t GetEvent(JEvent &event);
 		void FreeEvent(JEvent &event);
-		jerror_t GetObjects(JEvent &event, JFactory_base *factory);
+		jerror_t GetObjects(JEvent &event, JFactory *factory);
 		
 		template<class T> const vector<T>& GetVector(evioDOMNodeList* nodeList, string) const;
 		
@@ -40,7 +39,7 @@ class DEventSourceEVIO:public JEventSource{
 	
 		map<string, pair<int, int> > tagMap; // first=tag, second=num
 		
-		jerror_t Extract_DTrackTimeBased(evioDOMTree *evt,  JFactory<DTrackTimeBased> *factory);
+		jerror_t Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory);
 	
 	private:
 		evioFileChannel *chan;

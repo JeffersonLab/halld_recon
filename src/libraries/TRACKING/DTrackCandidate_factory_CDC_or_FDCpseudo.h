@@ -8,7 +8,7 @@
 #ifndef _DTrackCandidate_factory_CDC_or_FDCpseudo_
 #define _DTrackCandidate_factory_CDC_or_FDCpseudo_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DTrackCandidate.h"
 
 /// \htmlonly
@@ -29,18 +29,19 @@
 /// class which is also not the default FDC track finder (see DTrackCandidate_factory_FDCCathodes
 /// for that).
 
-class DTrackCandidate_factory_CDC_or_FDCpseudo:public jana::JFactory<DTrackCandidate>{
+class DTrackCandidate_factory_CDC_or_FDCpseudo:public JFactoryT<DTrackCandidate>{
 	public:
-		DTrackCandidate_factory_CDC_or_FDCpseudo(){};
+		DTrackCandidate_factory_CDC_or_FDCpseudo(){
+			SetTag("CDC_or_FDCpseudo");
+		};
 		~DTrackCandidate_factory_CDC_or_FDCpseudo(){};
-		const char* Tag(void){return "CDC_or_FDCpseudo";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		
 		int DEBUG_LEVEL;
 };

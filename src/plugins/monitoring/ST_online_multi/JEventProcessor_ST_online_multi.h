@@ -9,6 +9,7 @@
 #define _JEventProcessor_ST_online_multi_
 
 #include <JANA/JEventProcessor.h>
+#include <JANA/Compatibility/JLockService.h>
 using namespace std;
 // ***************** C++ header files******************
 //*****************************************************
@@ -29,22 +30,24 @@ using namespace std;
 //****************************** Define some constants *********
 //**************************************************************
 const int  NCHANNELS  = 30;     // number of scintillator paddles
-class JEventProcessor_ST_online_multi:public jana::JEventProcessor{
+class JEventProcessor_ST_online_multi:public JEventProcessor{
 	public:
 		JEventProcessor_ST_online_multi();
 		~JEventProcessor_ST_online_multi();
-		const char* className(void){return "JEventProcessor_ST_online_multi";}
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
+		std::shared_ptr<JLockService> lockService;
 		static const uint32_t ADC_MULTI_MIN  = 0.;      // Lower limit of adc multiplicity histogram
 		static const uint32_t ADC_MULTI_MAX  = 51.;     // Upper limit of adc multiplicity histogram
 		static const uint32_t ADC_MULTI_BINS = 51.;     // Number of bins in adc multiplicity histogram
 		static const uint32_t TDC_MULTI_MIN  = 0.;      // Lower limit of tdc multiplicity histogram
 		static const uint32_t TDC_MULTI_MAX  = 70.;     // Upper limit of tdc multiplicity histogram
 		static const uint32_t TDC_MULTI_BINS = 70.;     // Number of bins in tdc multiplicity histogram
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
 		double counter_adc[NCHANNELS];
 		double counter_tdc[NCHANNELS];
 		double counter_hit[NCHANNELS];
@@ -55,8 +58,7 @@ class JEventProcessor_ST_online_multi:public jana::JEventProcessor{
 		int adc_index;
 		int hit_index;
 		int tdc_index;
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
 };
 
 #endif // _JEventProcessor_ST_online_multi_

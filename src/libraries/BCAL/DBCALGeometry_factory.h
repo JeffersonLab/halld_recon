@@ -8,54 +8,47 @@
 #ifndef _DBCALGeometry_factory_
 #define _DBCALGeometry_factory_
 
-#include <JANA/JFactory.h>
-using namespace jana;
+#include <JANA/JFactoryT.h>
 
 #include <BCAL/DBCALGeometry.h>
 
-class DBCALGeometry_factory:public JFactory<DBCALGeometry>{
-	public:
-  DBCALGeometry_factory(){bcalgeometry=NULL;};
-		~DBCALGeometry_factory(){};
+
+class DBCALGeometry_factory:public JFactoryT<DBCALGeometry>{
+public:
+		DBCALGeometry_factory(){bcalgeometry=nullptr;};
+		~DBCALGeometry_factory() override = default;
 
 		DBCALGeometry *bcalgeometry = nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override
 		{
 			// (See DTAGHGeometry_factory.h)
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			
-			if( bcalgeometry ) delete bcalgeometry;
-
-			bcalgeometry = new DBCALGeometry(runnumber);
-
-			return NOERROR;
+			delete bcalgeometry;
+			bcalgeometry = new DBCALGeometry(event);
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
-		 {
+		void Process(const std::shared_ptr<const JEvent>& event) override
+		{
 			// Reuse existing DBCALGeometry object.
-			if( bcalgeometry ) _data.push_back( bcalgeometry );
-			 
-			 return NOERROR;
-		 }
+			if( bcalgeometry ) Insert( bcalgeometry );
+		}
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun() override
 		{
-			if( bcalgeometry ) delete bcalgeometry;
-			bcalgeometry = NULL;
-			
-			return NOERROR;
+			delete bcalgeometry;
+			bcalgeometry = nullptr;
 		}
 };
 

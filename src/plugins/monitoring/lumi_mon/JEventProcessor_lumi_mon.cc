@@ -10,7 +10,6 @@
 #include "JEventProcessor_lumi_mon.h"
 
 
-using namespace jana;
 using namespace std;
 
 
@@ -137,7 +136,7 @@ void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
 
 
-	app->AddProcessor(new JEventProcessor_lumi_mon());
+	app->Add(new JEventProcessor_lumi_mon());
 
 }
 } // "C"
@@ -146,9 +145,11 @@ void InitPlugin(JApplication *app){
 //------------------
 // init
 //------------------
-jerror_t JEventProcessor_lumi_mon::init(void)
+void JEventProcessor_lumi_mon::Init()
 {
-  
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
+
   TDirectory *main = gDirectory;
   TDirectory *dlumi_mon = gDirectory->mkdir("Lumi_mon");
   dlumi_mon->cd();
@@ -258,46 +259,42 @@ jerror_t JEventProcessor_lumi_mon::init(void)
 
   main->cd();
 
-  return NOERROR;
-
 }
 
 
 //------------------
 // brun
 //------------------
-jerror_t JEventProcessor_lumi_mon::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_lumi_mon::BeginRun(const std::shared_ptr<const JEvent> &event)
 { 
   
 
   // Initialize RF time factory
-  dRFTimeFactory = static_cast<DRFTime_factory*>(eventLoop->GetFactory("DRFTime"));
+  dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
   
   // be sure that DRFTime_factory::init() and brun() are called
   vector<const DRFTime*> locRFTimes;
-  eventLoop->Get(locRFTimes);
+  event->Get(locRFTimes);
   
-  
-  return NOERROR;
 }
 
 //------------------
 // evnt
 //------------------
-jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_lumi_mon::Process(const std::shared_ptr<const JEvent> &event)
 {
 
         int trig_bit[33];
 
 	// RF 
 	vector<const DRFTime*>   locRFTimes;
-	loop->Get(locRFTimes, "PSC");
+	event->Get(locRFTimes, "PSC");
 	const DRFTime* locRFTime = NULL;
 	
 	if (locRFTimes.size() > 0)
 	  locRFTime = locRFTimes[0];
 	else
-	  return NOERROR;
+	  return;
 	
 
 
@@ -331,23 +328,23 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	tagm_tmp_time.clear();
 
 
-	loop->Get(l1trig);       
+	event->Get(l1trig);
 
-	loop->Get(ps_pairs);	
-	loop->Get(psc_pairs);	
+	event->Get(ps_pairs);
+	event->Get(psc_pairs);
 
-	loop->Get(tagh_hits);
+	event->Get(tagh_hits);
 
-	loop->Get(tagm_hits);
+	event->Get(tagm_hits);
 
-	loop->Get(beam_ph);
+	event->Get(beam_ph);
 
 
-	loop->Get(ps_hits);
+	event->Get(ps_hits);
 
-	loop->Get(psc_hits);
+	event->Get(psc_hits);
 
-	japp->RootFillLock(this);
+	lockService->RootFillLock(this);
 	
 
 	hnpair->Fill(float(ps_pairs.size()));
@@ -371,13 +368,13 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	
 	if( trig_bit[4] != 1){
-	  japp->RootFillUnLock(this); 
-	  return NOERROR;
+	  lockService->RootFillUnLock(this);
+	  return;
 	}
        
 	if((ps_pairs.size() == 0) || (psc_pairs.size() == 0)){
-	  japp->RootFillUnLock(this); 
-	  return NOERROR;
+	  lockService->RootFillUnLock(this);
+	  return;
 	}
 	
 
@@ -701,28 +698,24 @@ jerror_t JEventProcessor_lumi_mon::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 
 
-	japp->RootFillUnLock(this); 
+	lockService->RootFillUnLock(this);
 	
-	return NOERROR;
-	
-	
+
 }
 
 //------------------
 // erun
 //------------------
-jerror_t JEventProcessor_lumi_mon::erun(void)
+void JEventProcessor_lumi_mon::EndRun()
 {
 	// Any final calculations on histograms (like dividing them)
 	// should be done here. This may get called more than once.
-	return NOERROR;
 }
 
 //------------------
 // fini
 //------------------
-jerror_t JEventProcessor_lumi_mon::fini(void)
+void JEventProcessor_lumi_mon::Finish()
 {
-	return NOERROR;
 }
 

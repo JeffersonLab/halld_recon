@@ -9,9 +9,8 @@
 #define _DL3Trigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DL3Trigger:public jana::JObject{
+class DL3Trigger: public JObject{
 	public:
 		JOBJECT_PUBLIC(DL3Trigger);
 		
@@ -82,10 +81,10 @@ class DL3Trigger:public jana::JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "L3_decision", "%d", L3_decision);
-			AddString(items, "status", "0x%16x", status);
-			AddString(items, "algorithm", "0x%8x", algorithm);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(L3_decision, NAME_OF(L3_decision), "%d");
+			summary.add(status, NAME_OF(status), "0x%16x");
+			summary.add(algorithm, NAME_OF(algorithm), "0x%8x");
 		}
 		
 };

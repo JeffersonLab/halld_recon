@@ -6,23 +6,21 @@
 //
 
 #include "JEventProcessor_CDC_TimeToDistance.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
+#include "DANA/DEvent.h"
 
 
 extern "C"{
 void InitPlugin(JApplication *app){
    InitJANAPlugin(app);
-   app->AddProcessor(new JEventProcessor_CDC_TimeToDistance());
+   app->Add(new JEventProcessor_CDC_TimeToDistance());
 }
 } // "C"
 
@@ -32,7 +30,7 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_CDC_TimeToDistance::JEventProcessor_CDC_TimeToDistance()
 {
-
+	SetTypeName("JEventProcessor_CDC_TimeToDistance");
 }
 
 //------------------
@@ -44,10 +42,13 @@ JEventProcessor_CDC_TimeToDistance::~JEventProcessor_CDC_TimeToDistance()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_CDC_TimeToDistance::init(void)
+void JEventProcessor_CDC_TimeToDistance::Init()
 {
+    auto app = GetApplication();
+    lockService = app->GetService<JLockService>();
+
    int prof_td_max = 1000;
 
    gDirectory->mkdir("CDC_TimeToDistance");
@@ -120,23 +121,20 @@ jerror_t JEventProcessor_CDC_TimeToDistance::init(void)
 
    UNBIASED_RING=0;
    MIN_FOM = 1e-8;
-   if(gPARMS){
-      gPARMS->SetDefaultParameter("KALMAN:RING_TO_SKIP",UNBIASED_RING);
-      gPARMS->SetDefaultParameter("CDCCOSMIC:EXCLUDERING", UNBIASED_RING);
-      gPARMS->SetDefaultParameter("CDC_TTOD:MIN_FOM", MIN_FOM);
-   }
-   return NOERROR;
+   app->SetDefaultParameter("KALMAN:RING_TO_SKIP",UNBIASED_RING);
+   app->SetDefaultParameter("CDCCOSMIC:EXCLUDERING", UNBIASED_RING);
+   app->SetDefaultParameter("CDC_TTOD:MIN_FOM", MIN_FOM);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_CDC_TimeToDistance::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
+    auto runnumber = event->GetRunNumber();
    // This is called whenever the run number changes
-   DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-   dMagneticField = dapp->GetBfield(runnumber);
-   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+   dMagneticField = GetBfield(event);
+   JCalibration *jcalib = GetJCalibration(event);
    // This is called whenever the run number changes
    // Get the straw sag parameters from the database
    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
@@ -166,25 +164,25 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
       }
    }
 
-   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(dapp->GetBfield(runnumber)) != NULL);
+   bool dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(GetBfield(event)) != NULL);
 
    char ccdbTable[128];
    sprintf(ccdbTable,"CDC/cdc_drift_table%s",dIsNoFieldFlag?"::NoBField":"");
 
    if (jcalib->Get(ccdbTable, tvals)==false){
-      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+      lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
       for(unsigned int i=0; i<tvals.size(); i++){
          map<string, double> &row = tvals[i];
          HistCurrentConstants->Fill(i+1,1000.*row["t"]);
       }
-      japp->RootFillUnLock(this); //RELEASE ROOT LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
    }
    else{
       jerr << " CDC time-to-distance table not available... bailing..." << endl;
       exit(0);
    }
    
-   japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+   lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
    sprintf(ccdbTable,"CDC/drift_parameters%s",dIsNoFieldFlag?"::NoBField":"");
    if (jcalib->Get(ccdbTable, tvals)==false){
@@ -219,27 +217,24 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
 
    // Save run number
    HistCurrentConstants->Fill(125,runnumber);
-   
-   japp->RootFillUnLock(this); //RELEASE ROOT LOCK
-      
-   return NOERROR;
+   lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_CDC_TimeToDistance::Process(const std::shared_ptr<const JEvent>& event)
 {
    int straw_offset[29] = {0,0,42,84,138,192,258,324,404,484,577,670,776,882,1005,1128,1263,1398,1544,1690,1848,2006,2176,2346,2528,2710,2907,3104,3313};
 
    // select events with physics events, i.e., not LED and other front panel triggers
    const DTrigger* locTrigger = NULL; 
-   loop->GetSingle(locTrigger); 
-   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return NOERROR;
+   event->GetSingle(locTrigger); 
+   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) return;
 
    // Getting the charged tracks will allow us to use the field on data
    vector <const DChargedTrack *> chargedTrackVector;
-   loop->Get(chargedTrackVector);
+   event->Get(chargedTrackVector);
 
    
    // 2 track events 
@@ -247,7 +242,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
     if ((int)chargedTrackVector.size() == 2) {
 
         const DVertex* locVertex  = NULL;
-        loop->GetSingle(locVertex);
+        event->GetSingle(locVertex);
         double z = locVertex->dSpacetimeVertex.Z();
         double x = locVertex->dSpacetimeVertex.X();
         double y = locVertex->dSpacetimeVertex.Y();
@@ -271,11 +266,11 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
             }
         }
         
-        japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+        lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
         if (least_fom >= 0.001) dHistZ2tracks0001->Fill(z);
         if (least_fom >= 0.01) dHistZ2tracks001->Fill(z);    
         if (least_fom >= 0.1) dHistZ2tracks01->Fill(z);
-        japp->RootFillUnLock(this); //RELEASE ROOT LOCK
+        lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
         
    }   // end if 2 tracks
 
@@ -285,7 +280,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
       const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
 
       // Require Single track events
-      //if (trackCandidateVector.size() != 1) return NOERROR;
+      //if (trackCandidateVector.size() != 1) return;
       //const DTrackCandidate* thisTrackCandidate = trackCandidateVector[0];
       // Cut very loosely on the track quality
       auto thisTimeBasedTrack = bestHypothesis->Get_TrackTimeBased();
@@ -294,7 +289,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
       if (thisTimeBasedTrack->FOM < MIN_FOM) continue;  // was 1e-10
       vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
 
-      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+      lockService->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
       // Loop over the pulls to get the appropriate information for our ring
       for (unsigned int i = 0; i < pulls.size(); i++){
@@ -382,28 +377,25 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
 
       }   
 
-      japp->RootFillUnLock(this); //RELEASE ROOT LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT LOCK
    }
-   return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_CDC_TimeToDistance::erun(void)
+void JEventProcessor_CDC_TimeToDistance::EndRun()
 {
    // This is called whenever the run number changes, before it is
    // changed to give you a chance to clean up before processing
    // events from the next run number.
-   return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_CDC_TimeToDistance::fini(void)
+void JEventProcessor_CDC_TimeToDistance::Finish()
 {
    // Called before program exit after event processing is finished.
-   return NOERROR;
 }
 

@@ -32,40 +32,45 @@ using namespace std;
 #include "DBCALPoint.h"
 #include "DBCALShower_factory_IU.h"
 
-#include "DANA/DApplication.h"
+#include <JANA/JEvent.h>
+#include <JANA/Calibrations/JCalibrationManager.h>
+#include "DANA/DGeometryManager.h"
+#include "HDGEOMETRY/DGeometry.h"
 
 #include "units.h"
-using namespace jana;
+
 #include "TMath.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBCALShower_factory_CURVATURE::init(void)
+void DBCALShower_factory_CURVATURE::Init()
 {
     // these are energy calibration parameters -- 1.2.3.4 summing
-    
-    //last updated for svn revision 9233 
+
+    //last updated for svn revision 9233
     m_scaleZ_p0 =  0.992437;
     m_scaleZ_p1 =  0.00039242;
     m_scaleZ_p2 =  -2.23135e-06;
     m_scaleZ_p3 =  1.40158e-09;
-    
+
     m_nonlinZ_p0 =  -0.0147086;
     m_nonlinZ_p1 =  9.69207e-05;
-    m_nonlinZ_p2 =  0;    
+    m_nonlinZ_p2 =  0;
     m_nonlinZ_p3 =  0;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBCALShower_factory_CURVATURE::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DBCALShower_factory_CURVATURE::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
-  DGeometry* geom = app->GetDGeometry(runnumber);
+  auto event_number = event->GetEventNumber();
+  auto run_number = event->GetRunNumber();
+  auto app = GetApplication();
+  auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
+  auto geom = app->GetService<DGeometryManager>()->GetDGeometry(run_number);
+
   geom->GetTargetZ(m_zTarget);
 
   vector< vector<double> > curvature_parameters;
@@ -75,10 +80,10 @@ jerror_t DBCALShower_factory_CURVATURE::brun(jana::JEventLoop *loop, int32_t run
   // The indices are: [sector type (central or side)][layer (from 0 to 4)][angle bin (from 0 to 11)][energy bin (from 0 to 31)]
   for (int ii = 0; ii < 2; ii++){
     if (ii == 0){
-      if (loop->GetCalib("/BCAL/curvature_central", curvature_parameters)) jout << "Error loading /BCAL/curvature_central !" << endl;
+      if (calibration->Get("/BCAL/curvature_central", curvature_parameters, event_number)) jout << "Error loading /BCAL/curvature_central !" << jendl;
     }
     else {
-      if (loop->GetCalib("/BCAL/curvature_side", curvature_parameters)) jout << "Error loading /BCAL/curvature_side !" << endl;
+      if (calibration->Get("/BCAL/curvature_side", curvature_parameters, event_number)) jout << "Error loading /BCAL/curvature_side !" << jendl;
     }
     for (int line = 0; line < 1536; line++){
       layer = curvature_parameters[line][0];
@@ -97,10 +102,10 @@ jerror_t DBCALShower_factory_CURVATURE::brun(jana::JEventLoop *loop, int32_t run
     }
     curvature_parameters.clear();
   }
-  
+
   // load BCAL geometry
   vector<const DBCALGeometry *> BCALGeomVec;
-  loop->Get(BCALGeomVec);
+  event->Get(BCALGeomVec);
   if(BCALGeomVec.size() == 0)
 	throw JException("Could not load DBCALGeometry object!");
   dBCALGeom = BCALGeomVec[0];
@@ -110,14 +115,12 @@ jerror_t DBCALShower_factory_CURVATURE::brun(jana::JEventLoop *loop, int32_t run
   ZTHRESHOLD = 35.*k_cm; // Range in z, in cm.
   TTHRESHOLD = 8.0*k_nsec; // Loose time range, in ns.
   ETHRESHOLD = 1.0*k_keV; // Points minimal energy, in keV.
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBCALShower_factory_CURVATURE::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DBCALShower_factory_CURVATURE::Process(const std::shared_ptr<const JEvent>& event)
 {
   recon_showers_phi.clear();
   recon_showers_theta.clear();
@@ -127,9 +130,9 @@ jerror_t DBCALShower_factory_CURVATURE::evnt(JEventLoop *loop, uint64_t eventnum
   vector<const DBCALPoint*> Points;
   vector<const DBCALPoint*> CurvaturePoints;
 
-  loop->Get(bcal_showers,"IU");
-  loop->Get(Points);
-  
+  event->Get(bcal_showers,"IU");
+  event->Get(Points);
+
 // Merge overlapping showers and calculate new shower parameters (phi, theta, E)
   while (bcal_showers.size() != 0){
     double recon_x = bcal_showers[0]->x;
@@ -386,11 +389,11 @@ jerror_t DBCALShower_factory_CURVATURE::evnt(JEventLoop *loop, uint64_t eventnum
     // shower->yErr = sig_y;
     // shower->zErr = sig_z;
     // shower->tErr = sig_t;
-      
+
     // calibrate energy:
     // Energy calibration has a z dependence -- the
     // calibration comes from fitting E_rec / E_gen to scale * E_gen^nonlin
-    // for slices of z.  These fit parameters (scale and nonlin) are then plotted 
+    // for slices of z.  These fit parameters (scale and nonlin) are then plotted
     // as a function of z and fit.
     float r = sqrt( shower->x * shower->x + shower->y * shower->y );
     float zEntry = ( shower->z - m_zTarget ) * ( dBCALGeom->GetBCAL_inner_rad() / r );
@@ -405,25 +408,21 @@ jerror_t DBCALShower_factory_CURVATURE::evnt(JEventLoop *loop, uint64_t eventnum
     // shower->xyzCovariance[1][1] = shower->yErr*shower->yErr;
     // shower->xyzCovariance[2][2] = shower->zErr*shower->zErr;
 
-    _data.push_back(shower); 
+    Insert(shower);
   }
-
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBCALShower_factory_CURVATURE::erun(void)
+void DBCALShower_factory_CURVATURE::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBCALShower_factory_CURVATURE::fini(void)
+void DBCALShower_factory_CURVATURE::Finish()
 {
-	return NOERROR;
 }
 

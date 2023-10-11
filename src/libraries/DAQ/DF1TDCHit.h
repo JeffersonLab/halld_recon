@@ -34,13 +34,11 @@ class DF1TDCHit:public DDAQAddress{
 		uint32_t data_word;                    // full data word (bits 24-26 contain some status info)
 		MODULE_TYPE modtype;
 		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			DDAQAddress::toStrings(items);
-			AddString(items, "trig_time", "%d", trig_time);
-			AddString(items, "time", "%d", time);
-			AddString(items, "data_word", "0x%08x", data_word);
+		void Summarize(JObjectSummary& summary) const override {
+			DDAQAddress::Summarize(summary);
+			summary.add(trig_time, NAME_OF(trig_time), "%d");
+			summary.add(time, NAME_OF(time), "%d");
+			summary.add(data_word, NAME_OF(data_word), "0x%08x");
 		}
 };
 

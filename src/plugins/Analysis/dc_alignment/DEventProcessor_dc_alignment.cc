@@ -6,7 +6,7 @@
 //
 
 #include "DEventProcessor_dc_alignment.h"
-using namespace jana;
+#include <DANA/DEvent.h>
 
 #include <TROOT.h>
 #include <TCanvas.h>
@@ -19,7 +19,7 @@ using namespace jana;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_dc_alignment());
+	app->Add(new DEventProcessor_dc_alignment());
 }
 } // "C"
 
@@ -150,6 +150,8 @@ double DEventProcessor_dc_alignment::fdc_drift_distance(double t){
 //------------------
 DEventProcessor_dc_alignment::DEventProcessor_dc_alignment()
 {
+  SetTypeName("DEventProcessor_dc_alignment");
+
   fdc_ptr = &fdc;
   fdc_c_ptr= &fdc_c;
   cdc_ptr = &cdc;
@@ -167,39 +169,40 @@ DEventProcessor_dc_alignment::~DEventProcessor_dc_alignment()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_dc_alignment::init(void)
+void DEventProcessor_dc_alignment::Init()
 {
   myevt=0;
   one_over_zrange=1./150.;
  
   printf("Initializing..........\n");
+  auto app = GetApplication();
  
   RUN_BENCHMARK=false;
-  gPARMS->SetDefaultParameter("DCALIGN:RUN_BENCHMARK",RUN_BENCHMARK);
+  app->SetDefaultParameter("DCALIGN:RUN_BENCHMARK",RUN_BENCHMARK);
   USE_BCAL=false; 
-  gPARMS->SetDefaultParameter("DCALIGN:USE_BCAL", USE_BCAL); 
+  app->SetDefaultParameter("DCALIGN:USE_BCAL", USE_BCAL); 
   USE_FCAL=false; 
-  gPARMS->SetDefaultParameter("DCALIGN:USE_FCAL", USE_FCAL);
+  app->SetDefaultParameter("DCALIGN:USE_FCAL", USE_FCAL);
   COSMICS=false; 
-  gPARMS->SetDefaultParameter("DCALIGN:COSMICS", COSMICS);
+  app->SetDefaultParameter("DCALIGN:COSMICS", COSMICS);
   USE_DRIFT_TIMES=false;
-  gPARMS->SetDefaultParameter("DCALIGN:USE_DRIFT_TIMES",USE_DRIFT_TIMES);
+  app->SetDefaultParameter("DCALIGN:USE_DRIFT_TIMES",USE_DRIFT_TIMES);
   READ_CDC_FILE=false;
-  gPARMS->SetDefaultParameter("DCALIGN:READ_CDC_FILE",READ_CDC_FILE);
+  app->SetDefaultParameter("DCALIGN:READ_CDC_FILE",READ_CDC_FILE);
   READ_ANODE_FILE=false;
-  gPARMS->SetDefaultParameter("DCALIGN:READ_ANODE_FILE",READ_ANODE_FILE);
+  app->SetDefaultParameter("DCALIGN:READ_ANODE_FILE",READ_ANODE_FILE);
   READ_CATHODE_FILE=false;
-  gPARMS->SetDefaultParameter("DCALIGN:READ_CATHODE_FILE",READ_CATHODE_FILE);
+  app->SetDefaultParameter("DCALIGN:READ_CATHODE_FILE",READ_CATHODE_FILE);
   ALIGN_WIRE_PLANES=true;
-  gPARMS->SetDefaultParameter("DCALIGN:ALIGN_WIRE_PLANES",ALIGN_WIRE_PLANES);
+  app->SetDefaultParameter("DCALIGN:ALIGN_WIRE_PLANES",ALIGN_WIRE_PLANES);
   FILL_TREE=false;
-  gPARMS->SetDefaultParameter("DCALIGN:FILL_TREE",FILL_TREE);
+  app->SetDefaultParameter("DCALIGN:FILL_TREE",FILL_TREE);
   MIN_PSEUDOS=12;
-  gPARMS->SetDefaultParameter("DCALIGN:MIN_PSEUDOS",MIN_PSEUDOS);
+  app->SetDefaultParameter("DCALIGN:MIN_PSEUDOS",MIN_PSEUDOS);
   MIN_INTERSECTIONS=10;
-  gPARMS->SetDefaultParameter("DCALIGN:MIN_INTERSECTIONS",MIN_INTERSECTIONS);
+  app->SetDefaultParameter("DCALIGN:MIN_INTERSECTIONS",MIN_INTERSECTIONS);
  
   fdc_alignments.resize(24);
   for (unsigned int i=0;i<24;i++){
@@ -330,17 +333,14 @@ jerror_t DEventProcessor_dc_alignment::init(void)
     cdctree = new TTree("cdc","CDC alignments");
     cdcbranch = cdctree->Branch("T","CDC_branch",&cdc_ptr);
   }
-  
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DEventProcessor_dc_alignment::brun(JEventLoop *loop, int32_t runnumber)
-{	
-  DApplication* dapp=dynamic_cast<DApplication*>(loop->GetJApplication());
-  dgeom  = dapp->GetDGeometry(runnumber);
+void DEventProcessor_dc_alignment::BeginRun(const std::shared_ptr<const JEvent>& event)
+{
+  dgeom  = DEvent::GetDGeometry(event);
   //dgeom->GetFDCWires(fdcwires);
 
   // Get the position of the CDC downstream endplate from DGeometry
@@ -349,7 +349,7 @@ jerror_t DEventProcessor_dc_alignment::brun(JEventLoop *loop, int32_t runnumber)
   endplate_z+=0.5*endplate_dz;
 
    
-  JCalibration *jcalib = dapp->GetJCalibration((loop->GetJEvent()).GetRunNumber());
+  JCalibration *jcalib = DEvent::GetJCalibration(event);
   vector< map<string, double> > tvals;
   cdc_drift_table.clear();
   if (jcalib->Get("CDC/cdc_drift_table::NoBField", tvals)==false){    
@@ -476,7 +476,7 @@ jerror_t DEventProcessor_dc_alignment::brun(JEventLoop *loop, int32_t runnumber)
     short_drift_func[2][2]=row["c3"];
   }
 
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 
   for (int i=0;i<28;i++){
     char title[40];
@@ -617,33 +617,28 @@ jerror_t DEventProcessor_dc_alignment::brun(JEventLoop *loop, int32_t runnumber)
 
 
   
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-  return NOERROR;
+	GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_dc_alignment::erun(void)
+void DEventProcessor_dc_alignment::EndRun()
 {
- 
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_dc_alignment::fini(void)
+void DEventProcessor_dc_alignment::Finish()
 {
    // Get pointer to TrackFinder object 
   vector<const DTrackFinder *> finders;
-  loop->Get(finders);
+  event->Get(finders);
 
   if(finders.size()<1){
     _DBG_<<"Unable to get a DTrackFinder object!"<<endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("Unable to get a DTrackFinder object!");
   }
 
   // Drop the const qualifier from the DTrackFinder pointer
@@ -716,14 +711,12 @@ jerror_t DEventProcessor_dc_alignment::fini(void)
       fdcfile.close(); 
     }
   }
-  
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_dc_alignment::evnt(JEventLoop *loop, uint64_t eventnumber){
+void DEventProcessor_dc_alignment::Process(const std::shared_ptr<const JEvent>& event){
   myevt++;
 
   // Reset the track finder
@@ -731,15 +724,15 @@ jerror_t DEventProcessor_dc_alignment::evnt(JEventLoop *loop, uint64_t eventnumb
   
   // Get BCAL showers, FCAL showers and FDC space points
   vector<const DFCALShower*>fcalshowers;
-  if (USE_FCAL) loop->Get(fcalshowers);
+  if (USE_FCAL) event->Get(fcalshowers);
   vector<const DBCALShower*>bcalshowers;
-  if (USE_BCAL)loop->Get(bcalshowers);
+  if (USE_BCAL)event->Get(bcalshowers);
 
   vector<const DFDCPseudo*>pseudos;
-  loop->Get(pseudos);
+  event->Get(pseudos);
   vector<const DCDCTrackHit*>cdcs;
   //if (COSMICS) 
-  loop->Get(cdcs);
+  event->Get(cdcs);
 
   if (cdcs.size()>20 /* && cdcs.size()<60*/){
     // Add the hits to the finder helper class, link axial hits into segments
@@ -821,7 +814,7 @@ jerror_t DEventProcessor_dc_alignment::evnt(JEventLoop *loop, uint64_t eventnumb
     } //loop over tracks
   } // minimimum number of pseudopoints?
    
-  return NOERROR;
+  return;
 }
 
 // Steering routine for the kalman filter
@@ -965,11 +958,11 @@ DEventProcessor_dc_alignment::DoFilter(double t0,double OuterZ,DMatrix4x1 &S,
 		    
 		    
 			// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-			japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+			GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 		    
 		    cdctree->Fill();
 		    
-			japp->RootUnLock(); //RELEASE ROOT LOCK
+			GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 		    
 		  }
 		}
@@ -980,8 +973,6 @@ DEventProcessor_dc_alignment::DoFilter(double t0,double OuterZ,DMatrix4x1 &S,
       } // at least one time-based fit worked?
     } // check on preliminary fit CL
   } // at least one iteration worked?
-
-  return NOERROR;
 }
 
 
@@ -1081,19 +1072,17 @@ DEventProcessor_dc_alignment::DoFilterCathodePlanes(double t0,double start_z,
 	    fdc_c.N=myevt;
 	    
 		// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-		japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+		GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	    
 	    fdcCtree->Fill();
 	  
-		japp->RootUnLock(); //RELEASE ROOT LOCK
+		GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 	  }
 	}
       }
       return NOERROR;
     }
   }
-   
-  
   return VALUE_OUT_OF_RANGE;
 }
 
@@ -1194,11 +1183,11 @@ DEventProcessor_dc_alignment::DoFilterAnodePlanes(double t0,double start_z,
 	    fdc.N=myevt;
 	    
 		// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-		japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+		GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	    
 	    fdctree->Fill();
 	    
-		japp->RootUnLock(); //RELEASE ROOT LOCK
+		GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK
 	  }
 	}
       }

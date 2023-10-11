@@ -44,11 +44,10 @@
  Wiki documentation can be found here: https://halldweb1.jlab.org/wiki/index.php/DAQTree_plugin
 */
 
-class JEventProcessor_DAQTree:public jana::JEventProcessor{
+class JEventProcessor_DAQTree:public JEventProcessor{
 	public:
 		JEventProcessor_DAQTree();
 		~JEventProcessor_DAQTree();
-		const char* className(void){return "JEventProcessor_DAQTree";}
 
 		TTree *Df125WindowRawData_tree;  ///< f125 readout 
 		TTree *Df125PulseRawData_tree;   ///< f125 readout mode 2
@@ -71,7 +70,7 @@ class JEventProcessor_DAQTree:public jana::JEventProcessor{
 		uint32_t slot;               ///< (from DDAQAddress) Slot number in crate
 		uint32_t channel;            ///< (from DDAQAddress) Channel number in slot
 		uint32_t itrigger;           ///< (from DDAQAddress) Trigger number for cases when this hit was read in a multi-event block (from DDAQAddress)
-		vector<uint32_t> waveform;   ///< STL vector of samples of the waveform for the event\n for f125WRD, f250WRD, f250PRD
+		std::vector<uint32_t> waveform;   ///< STL vector of samples of the waveform for the event\n for f125WRD, f250WRD, f250PRD
 		uint32_t nsamples;           ///< Number of samples extracted from the waveform\n for f125WRD, f250WRD, f250PRD
 		uint32_t w_integral;         ///< Sum of all samples extracted from the waveform\n for f125WRD, f250WRD, f250PRD
 		uint32_t w_min;              ///< Minimum sample extracted from the waveform\n for f125WRD, f250WRD, f250PRD
@@ -94,11 +93,11 @@ class JEventProcessor_DAQTree:public jana::JEventProcessor{
 		uint32_t data_word;            /// \n for F1TDCH
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void EndRun() override;
+		void Finish() override;
 		bool f125WRDtree_exists;
 		bool f125PRDtree_exists;
 		bool f125PItree_exists;

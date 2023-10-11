@@ -5,6 +5,7 @@
 #include <stdexcept>
 
 #include <JANA/JApplication.h>
+#include <JANA/Compatibility/JLockService.h>
 #include <TH1I.h>
 #include <TH2I.h>
 #include <TH3I.h>
@@ -14,7 +15,6 @@
 #include <TDirectory.h>
 
 using namespace std;
-using namespace jana;
 
 #ifndef ansi_escape
 #define ansi_escape         ((char)0x1b)
@@ -114,7 +114,7 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -125,7 +125,7 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          histogram = new TH1I( name, title, nBins, xmin, xmax);
          histogram->Fill(value);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get1DMap()[fullName] = make_pair(histogram, histogramLock);
          pthread_rwlock_unlock(mapLock);
@@ -179,7 +179,7 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -190,7 +190,7 @@ void Fill1DHistogram (const char * plugin, const char * directoryName, const cha
          histogram = new TH1I( name, title, nBins, xbins);
          histogram->Fill(value);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get1DMap()[fullName] = make_pair(histogram, histogramLock);
          pthread_rwlock_unlock(mapLock);
@@ -245,7 +245,7 @@ void Fill1DWeightedHistogram (const char * plugin, const char * directoryName, c
             // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
             // there would be a problem if there was another function that tried to grab the map lock
             // inside a root lock. In this code, this will not happen.
-            japp->RootWriteLock();
+            japp->GetService<JLockService>()->RootWriteLock();
             TDirectory *homedir = gDirectory;
             TDirectory *temp;
             temp = gDirectory->mkdir(plugin);
@@ -256,7 +256,7 @@ void Fill1DWeightedHistogram (const char * plugin, const char * directoryName, c
             histogram = new TH1D( name, title, nBins, xmin, xmax);
             histogram->Fill(value,weight);
             homedir->cd();
-            japp->RootUnLock();
+            japp->GetService<JLockService>()->RootUnLock();
 
             Get1DWeightedMap()[fullName] = make_pair(histogram, histogramLock);
             pthread_rwlock_unlock(mapLock);
@@ -310,7 +310,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -321,7 +321,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          histogram = new TH2I( name, title, nBinsX, xmin, xmax, nBinsY, ymin, ymax);
          histogram->Fill(valueX, valueY);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get2DMap()[fullName] = make_pair(histogram,histogramLock);
          pthread_rwlock_unlock(mapLock);
@@ -376,7 +376,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -387,7 +387,7 @@ void Fill2DHistogram (const char * plugin, const char * directoryName, const cha
          histogram = new TH2I( name, title, nBinsX, xbins, nBinsY, ybins);
          histogram->Fill(valueX, valueY);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get2DMap()[fullName] = make_pair(histogram,histogramLock);
          pthread_rwlock_unlock(mapLock);
@@ -441,7 +441,7 @@ void Fill2DWeightedHistogram (const char * plugin, const char * directoryName, c
             // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
             // there would be a problem if there was another function that tried to grab the map lock
             // inside a root lock. In this code, this will not happen.
-            japp->RootWriteLock();
+            japp->GetService<JLockService>()->RootWriteLock();
             TDirectory *homedir = gDirectory;
             TDirectory *temp;
             temp = gDirectory->mkdir(plugin);
@@ -452,7 +452,7 @@ void Fill2DWeightedHistogram (const char * plugin, const char * directoryName, c
             histogram = new TH2D( name, title, nBinsX, xmin, xmax, nBinsY, ymin, ymax);
             histogram->Fill(valueX, valueY, weight);
             homedir->cd();
-            japp->RootUnLock();
+            japp->GetService<JLockService>()->RootUnLock();
 
             Get2DWeightedMap()[fullName] = make_pair(histogram,histogramLock);
             pthread_rwlock_unlock(mapLock);
@@ -506,7 +506,7 @@ void Fill3DHistogram (const char * plugin, const char * directoryName, const cha
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -517,7 +517,7 @@ void Fill3DHistogram (const char * plugin, const char * directoryName, const cha
          histogram = new TH3I( name, title, nBinsX, xmin, xmax, nBinsY, ymin, ymax, nBinsZ, zmin, zmax);
          histogram->Fill(valueX, valueY, valueZ);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get3DMap()[fullName] = make_pair(histogram,histogramLock);
          pthread_rwlock_unlock(mapLock);
@@ -572,7 +572,7 @@ void Fill1DProfile (const char * plugin, const char * directoryName, const char 
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid.
          // there would be a problem if there was another function that tried to grab the map lock
          // inside a root lock. In this code, this will not happen.
-         japp->RootWriteLock();// Get the ROOT lock and create the histogram
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -583,7 +583,7 @@ void Fill1DProfile (const char * plugin, const char * directoryName, const char 
          profile = new TProfile( name, title, nBinsX, xmin, xmax);
          profile->Fill(valueX, valueY);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get1DProfileMap()[fullName] = make_pair(profile,profileLock);
          pthread_rwlock_unlock(mapLock);
@@ -635,7 +635,7 @@ void Fill2DProfile (const char * plugin, const char * directoryName, const char 
          // WARNING: Locking inside a lock is bad practice, but sometimes not easy to avoid. 
          // there would be a problem if there was another function that tried to grab the map lock 
          // inside a root lock. In this code, this will not happen. 
-         japp->RootWriteLock();
+         japp->GetService<JLockService>()->RootWriteLock();
          TDirectory *homedir = gDirectory;
          TDirectory *temp;
          temp = gDirectory->mkdir(plugin);
@@ -646,7 +646,7 @@ void Fill2DProfile (const char * plugin, const char * directoryName, const char 
          profile = new TProfile2D( name, title, nBinsX, xmin, xmax, nBinsY, ymin, ymax);
          profile->Fill(valueX, valueY, valueZ);
          homedir->cd();
-         japp->RootUnLock();
+         japp->GetService<JLockService>()->RootUnLock();
 
          Get2DProfileMap()[fullName] = make_pair(profile, profileLock);
          pthread_rwlock_unlock(mapLock);
@@ -667,15 +667,15 @@ void Fill2DProfile (const char * plugin, const char * directoryName, const char 
 }
 
 void SortDirectories(){
-   japp->RootWriteLock();
-   for (unsigned int i=0; i < GetAllDirectories().size(); i++){
+    japp->GetService<JLockService>()->RootWriteLock();
+    for (unsigned int i=0; i < GetAllDirectories().size(); i++){
       if (GetAllDirectories()[i] == 0) continue;
       // catch case where the directory sits in a separate file that is already closed
       // note that if the file object has been deleted, then we are in trouble
       if (GetAllDirectories()[i]->GetFile()->IsOpen() == kFALSE) continue;
       GetAllDirectories()[i]->GetList()->Sort();
    }
-   japp->RootUnLock();
+   japp->GetService<JLockService>()->RootUnLock();
 }
 
 TObject* GetHistPointer(const char * plugin, const char * directoryName, const char * name){

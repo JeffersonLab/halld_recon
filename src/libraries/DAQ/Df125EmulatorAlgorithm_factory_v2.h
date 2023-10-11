@@ -8,23 +8,22 @@
 #ifndef _Df125EmulatorAlgorithm_factory_v2_
 #define _Df125EmulatorAlgorithm_factory_v2_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <DAQ/Df125EmulatorAlgorithm_v2.h>
 
-class Df125EmulatorAlgorithm_factory_v2:public jana::JFactory<Df125EmulatorAlgorithm>{
+class Df125EmulatorAlgorithm_factory_v2:public JFactoryT<Df125EmulatorAlgorithm>{
 	public:
 		Df125EmulatorAlgorithm_factory_v2(){
 			// Create single Df125EmulatorAlgorithm object and mark the factory as
 			// persistent so it doesn't get deleted every event.
-			Df125EmulatorAlgorithm *emulator = new Df125EmulatorAlgorithm_v2();
-			SetFactoryFlag(PERSISTANT);
+			SetTag("v2");
+			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
-			_data.push_back(emulator);
-                };
+			Df125EmulatorAlgorithm *emulator = new Df125EmulatorAlgorithm_v2();
+			Insert(emulator);
+		};
 
 		~Df125EmulatorAlgorithm_factory_v2(){};
-
-		const char* Tag(void){return "v2";}
 
 };
 

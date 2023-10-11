@@ -8,27 +8,28 @@
 #ifndef _DFCALCluster_factory_Island_
 #define _DFCALCluster_factory_Island_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DFCALCluster.h"
 #include "DFCALGeometry.h"
 #include "DFCALHit.h"
 #include <ECAL/DECALHit.h>
+#include "DANA/DObjectID.h"
 
 #include "TMatrixD.h"
 #include "TH1D.h"
 #include "TH2D.h"
 
-class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
-public:
-  DFCALCluster_factory_Island(){};
+class DFCALCluster_factory_Island:public JFactoryT<DFCALCluster>{
+ public:
+  DFCALCluster_factory_Island(){
+    SetTag("Island");
+  };
   ~DFCALCluster_factory_Island(){};
-  const char* Tag(void){return "Island";}
-
   class HitInfo{
   public:
-    HitInfo(JObject::oid_t id,int row,int column,double E,double x,double y,double t)
+    HitInfo(int row,int column,double E,double x,double y,double t)
       :id(id),row(row),column(column),E(E),x(x),y(y),t(t){}
-    JObject::oid_t id;
+    oid_t id;
     int row;
     int column;
     double E;
@@ -49,11 +50,12 @@ public:
   }; 
   
  private: 
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 
   void FindClusterCandidates(vector<HitInfo>&fcal_hits,
 			     vector<vector<HitInfo>>&clusterCandidates) const;

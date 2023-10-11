@@ -9,7 +9,9 @@
 #ifndef _DPSHit_factory_
 #define _DPSHit_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/Calibrations/JCalibration.h>
+
 #include "DPSHit.h"
 #include "DPSDigiHit.h"
 #include "DPSGeometry.h"
@@ -18,7 +20,7 @@
 
 typedef vector< vector<double> > ps_digi_constants_t;
 
-class DPSHit_factory:public jana::JFactory<DPSHit>{
+class DPSHit_factory:public JFactoryT<DPSHit>{
  public:
   DPSHit_factory(){};
   ~DPSHit_factory(){};
@@ -45,13 +47,13 @@ class DPSHit_factory:public jana::JFactory<DPSHit>{
 			    const DPSHit *the_hit, const DPSGeometry &psGeom ) const;
 
  private:
-  jerror_t init(void);						///< Called once at program start.
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
+  void Init() override;
+  void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+  void Process(const std::shared_ptr<const JEvent>& event) override;
+  void EndRun() override;
+  void Finish() override;
 
-  void FillCalibTable(ps_digi_constants_t &table, string table_name,
+  void FillCalibTable(JCalibration* calib, ps_digi_constants_t &table, string table_name,
 		      const DPSGeometry &psGeom);
 
   bool CHECK_FADC_ERRORS;

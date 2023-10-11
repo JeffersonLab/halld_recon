@@ -9,22 +9,17 @@
 #define _DTAGHTDCDigiHit_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTAGHTDCDigiHit: public jana::JObject {
+class DTAGHTDCDigiHit: public JObject {
    public:
       JOBJECT_PUBLIC(DTAGHTDCDigiHit);
       
-      // Add data members here. For example:
       int counter_id;  ///< counter id 1-274
-
 	  uint32_t time;
-      
-      // This method is used primarily for pretty printing
-      // the second argument to AddString is printf style format
-      void toStrings(vector<pair<string,string> > &items)const{
-         AddString(items, "counter_id", "%d", counter_id);
-         AddString(items, "time", "%d", time);
+
+	  void Summarize(JObjectSummary& summary) const override {
+		 summary.add(counter_id, NAME_OF(counter_id), "%d");
+		 summary.add(time, NAME_OF(time), "%d");
       }
       
 };

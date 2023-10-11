@@ -14,8 +14,7 @@ using namespace std;
 #include <TLorentzVector.h>
 
 #include <JANA/JApplication.h>
-#include <JANA/JEventLoop.h>
-using namespace jana;
+#include <JANA/JEvent.h>
 
 #include <TRACKING/DMCThrown.h>
 #include <PID/DKinematicData.h>
@@ -45,21 +44,21 @@ extern "C" {
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new DEventProcessor_eta_ntuple());
+	app->Add(new DEventProcessor_eta_ntuple());
 }
 }
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DEventProcessor_eta_ntuple::init(void)
+void DEventProcessor_eta_ntuple::Init()
 {
 	make_hbook = true;
 	make_root = true;
 	
-	gPARMS->SetDefaultParameter("MAKE_HBOOK", make_hbook);
-	gPARMS->SetDefaultParameter("MAKE_ROOT", make_root);
+	app->SetDefaultParameter("MAKE_HBOOK", make_hbook);
+	app->SetDefaultParameter("MAKE_ROOT", make_root);
 
 	evt = new Event();
 
@@ -106,14 +105,12 @@ jerror_t DEventProcessor_eta_ntuple::init(void)
 	}
 	
 	pthread_mutex_init(&mutex, NULL);
-	
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DEventProcessor_eta_ntuple::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DEventProcessor_eta_ntuple::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// Get reconstructed objects
 	vector<const DBeamPhoton*> beam_photons;
@@ -122,11 +119,11 @@ jerror_t DEventProcessor_eta_ntuple::evnt(JEventLoop *loop, uint64_t eventnumber
 	vector<const DMCThrown*> mcthrowns;
 	vector<const DSCHit*> schits;	
 
-	loop->Get(beam_photons);	// from truth info
-	loop->Get(fcalphotons);		// all reconstructed photons in FCAL
-	loop->Get(bcalphotons);		// all reconstructed photons in BCAL
-	loop->Get(mcthrowns);		// all thrown particles
-	loop->Get(schits);			// all start counter hits
+	event->Get(beam_photons);	// from truth info
+	event->Get(fcalphotons);		// all reconstructed photons in FCAL
+	event->Get(bcalphotons);		// all reconstructed photons in BCAL
+	event->Get(mcthrowns);		// all thrown particles
+	event->Get(schits);			// all start counter hits
 
 	// Target is proton at rest in lab frame
 	TLorentzVector target(0.0, 0.0, 0.0, 0.93827);
@@ -149,7 +146,7 @@ jerror_t DEventProcessor_eta_ntuple::evnt(JEventLoop *loop, uint64_t eventnumber
 	// are no DBeamPhoton objects, then punt
 	if(beam_photons.size()!=1){
 		cout<<"Wrong number of DBeamPhoton objects for event "<<eventnumber<<" ("<<beam_photons.size()<<"). Skipping."<<endl;
-		return NOERROR;
+		return;
 	}
 	TLorentzVector beam_photon = MakeTLorentz(beam_photons[0], 0.0);
 	
@@ -167,11 +164,11 @@ jerror_t DEventProcessor_eta_ntuple::evnt(JEventLoop *loop, uint64_t eventnumber
 	}
 	if(!found_eta){
 		cout<<"No thrown eta particle found for event "<<eventnumber<<". Skipping."<<endl;
-		return NOERROR;
+		return;
 	}
 
 	// Although we are only filling objects local to this plugin, TTree::Fill() periodically writes to file: Global ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK
+	GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK
 	
 	evt->Clear();
 	evt->event = eventnumber;
@@ -216,9 +213,7 @@ jerror_t DEventProcessor_eta_ntuple::evnt(JEventLoop *loop, uint64_t eventnumber
 	if(make_root)tree->Fill();
 	if(make_hbook)FillNtuple();
 	
-	japp->RootUnLock(); //RELEASE ROOT LOCK
-
-	return NOERROR;
+	GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK
 }
 
 //------------------
@@ -329,18 +324,16 @@ void DEventProcessor_eta_ntuple::FillNtuple(void)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DEventProcessor_eta_ntuple::erun(void)
+void DEventProcessor_eta_ntuple::EndRun()
 {
-
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DEventProcessor_eta_ntuple::fini(void)
+void DEventProcessor_eta_ntuple::Finish()
 {
 	if(make_hbook){
 		// Close hbook file
@@ -348,7 +341,4 @@ jerror_t DEventProcessor_eta_ntuple::fini(void)
 		hrout(0,icycle,"T");
 		hrend("lun");
 	}
-	
-
-	return NOERROR;
 }

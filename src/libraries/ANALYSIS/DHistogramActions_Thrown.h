@@ -17,7 +17,7 @@
 #include "TH2D.h"
 #include "TTree.h"
 
-#include "JANA/JEventLoop.h"
+#include <JANA/JEvent.h>
 #include "particleType.h"
 
 #include "RF/DRFTime.h"
@@ -60,7 +60,6 @@
 #include "TRACKING/DTrackCandidate.h"
 
 using namespace std;
-using namespace jana;
 
 /*
 THROWN_ONLY:
@@ -91,8 +90,8 @@ class DHistogramAction_ParticleComboGenReconComparison : public DAnalysisAction
 		double dMinDeltaPOverP, dMaxDeltaPOverP, dMinDeltaTheta, dMaxDeltaTheta, dMinDeltaPhi, dMaxDeltaPhi, dMinDeltaT, dMaxDeltaT, dMinDeltaVertexZ, dMaxDeltaVertexZ;
 		double dMinP, dMaxP, dMinTheta, dMaxTheta, dMinRFDeltaT, dMaxRFDeltaT;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -101,7 +100,7 @@ class DHistogramAction_ParticleComboGenReconComparison : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 		void Fill_BeamHists(const DKinematicData* locKinematicData, const DKinematicData* locThrownKinematicData);
 		void Fill_ChargedHists(const DChargedTrackHypothesis* locChargedTrackHypothesis, const DMCThrown* locMCThrown, const DEventRFBunch* locThrownEventRFBunch, size_t locStepIndex);
@@ -196,13 +195,13 @@ class DHistogramAction_ThrownParticleKinematics : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop){}
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent){}
 
 //so: in multi-thread, make direct call. in the main func, no check!
 	//in single-thread, call pre-func to check flag
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		TH1I* 	dMCGENBeamParticle_P;
 		TH1I* 	dMCGENBeamParticle_Time;
@@ -271,11 +270,11 @@ class DHistogramAction_ReconnedThrownKinematics : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		const DAnalysisUtilities* dAnalysisUtilities;
 
@@ -352,11 +351,11 @@ class DHistogramAction_GenReconTrackComparison : public DAnalysisAction
 
 		deque<Particle_t> dFinalStatePIDs;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo = NULL);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo = NULL);
 
 		deque<DKinFitPullType> dPullTypes;
 		double dTargetZCenter;
@@ -416,8 +415,8 @@ class DHistogramAction_TruePID : public DAnalysisAction
 		unsigned int dNumPBins, dNum2DPBins, dNumThetaBins;
 		double dMinP, dMaxP, dMinTheta, dMaxTheta;
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop);
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent);
 		void Reset_NewEvent(void)
 		{
 			DAnalysisAction::Reset_NewEvent();
@@ -425,7 +424,7 @@ class DHistogramAction_TruePID : public DAnalysisAction
 		}
 
 	private:
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
 //		double dMinThrownMatchFOM;
 		const DAnalysisUtilities* dAnalysisUtilities;

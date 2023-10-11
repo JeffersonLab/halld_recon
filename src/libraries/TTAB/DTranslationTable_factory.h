@@ -8,12 +8,14 @@
 #ifndef _DTranslationTable_factory_
 #define _DTranslationTable_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
+#include <JANA/JEvent.h>
+
 #include "DTranslationTable.h"
 
 #include <mutex>
 
-class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
+class DTranslationTable_factory : public JFactoryT<DTranslationTable> {
 
 	public:
 		DTranslationTable_factory(){};
@@ -21,17 +23,17 @@ class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
 
 		DTranslationTable *tt = nullptr;
 
-		//------------------
-		// brun
-		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+
+		void BeginRun(const std::shared_ptr<const JEvent> &event) override
 		{
+			auto runnumber = event->GetRunNumber();
+
 			// Print message about table, but only once for each run
 			static std::mutex mtx;
 			mtx.lock();
 			static set<int32_t> runs_announced;
 			if( runs_announced.count(runnumber)==0 ){
-				jout << "Creating DTranslationTable for run " << runnumber << endl;
+				jout << "Creating DTranslationTable for run " << runnumber << jendl;
 				runs_announced.insert(runnumber);
 			}
 			mtx.unlock();
@@ -42,34 +44,23 @@ class DTranslationTable_factory:public jana::JFactory<DTranslationTable>{
 			
 			if( tt ) delete tt;
 
-			tt = new DTranslationTable(loop);
-
-			// If restricting parsing, make sure it is set for this source
-			tt->SetSystemsToParse(loop->GetJEvent().GetJEventSource());
-
-			return NOERROR;
+			// This is a hack, needed because TranslationTable ctor is doing lots of stuff which doesn't belong
+			// in a JObject. The correct solution is to put most of the TranslationTable logic in a MultiFactory. N.B.
+			// TODO: Implement the correct solution.
+			JEvent* unsafe_event = &(const_cast<JEvent&>(*event));
+			tt = new DTranslationTable(GetApplication(), unsafe_event);
 		}
 
-		//------------------
-		// evnt
-		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
-		 {
+		void Process(const std::shared_ptr<const JEvent>& aEvent) override {
 			// Reuse existing DTranslationTable object.
-			if( tt ) _data.push_back( tt );
-			 
-			 return NOERROR;
-		 }
+			if (tt) {
+				Insert(tt);
+			}
+		}
 
-		//------------------
-		// erun
-		//------------------
-		jerror_t erun(void)
-		{
+		void EndRun() override {
 			if( tt ) delete tt;
 			tt = NULL;
-			
-			return NOERROR;
 		}
 };
 

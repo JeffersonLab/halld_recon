@@ -1,5 +1,4 @@
 #include "JEventProcessor_FCAL_TimingOffsets.h"
-#include <JANA/JApplication.h>
 #include "FCAL/DFCALShower.h"
 #include "FCAL/DFCALGeometry.h"
 #include "FCAL/DFCALHit.h"
@@ -30,11 +29,9 @@
 
 #include <thread>
 
-using namespace jana;
 
 // Routine used to create our JEventProcessor
-#include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include "DANA/DEvent.h"
 
 const int nChan = 2800;
 
@@ -44,7 +41,7 @@ static TH1I* Offsets[nChan];
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_FCAL_TimingOffsets());
+    app->Add(new JEventProcessor_FCAL_TimingOffsets());
   }
 } // "C"
 
@@ -53,7 +50,7 @@ extern "C"{
 //------------------
 JEventProcessor_FCAL_TimingOffsets::JEventProcessor_FCAL_TimingOffsets()
 {
-
+	SetTypeName("JEventProcessor_FCAL_TimingOffsets");
 }
 
 //------------------
@@ -65,9 +62,9 @@ JEventProcessor_FCAL_TimingOffsets::~JEventProcessor_FCAL_TimingOffsets()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets::init(void)
+void JEventProcessor_FCAL_TimingOffsets::Init()
 {
   // This is called once at program startup. If you are creating
   // and filling historgrams in this plugin, you should lock the
@@ -82,20 +79,16 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::init(void)
   }
 
   main->cd();
-  return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets::brun(JEventLoop *eventLoop, 
-					     int32_t runnumber)
+void JEventProcessor_FCAL_TimingOffsets::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
 
   // get the FCAL z position from the global geometry interface
-  DApplication *dapp = 
-    dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = GetDGeometry(event);
   if( geom ) {
 
     geom->GetFCALZ( m_FCALfront );
@@ -103,34 +96,31 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::brun(JEventLoop *eventLoop,
   else{
       
     cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No geometry accessbile.");
   }
-
-  return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop, 
-					     uint64_t eventnumber)
+void JEventProcessor_FCAL_TimingOffsets::Process(const std::shared_ptr<const JEvent> &event)
 {
 
   // select events with physics events, i.e., not LED and other front panel triggers
   const DTrigger* locTrigger = NULL; 
-  eventLoop->GetSingle(locTrigger); 
+  event->GetSingle(locTrigger); 
   if(locTrigger->Get_L1FrontPanelTriggerBits() != 0) 
-    return NOERROR;
+    return;
 
 
   // we need an FCAL Geometry object
   vector< const DFCALGeometry* > geomVec;
-  eventLoop->Get( geomVec );
+  event->Get( geomVec );
 
   if( geomVec.size() != 1 ){
 
     cerr << "No geometry accessbile." << endl;
-    return RESOURCE_UNAVAILABLE;
+    throw JException("No geometry accessbile.");
   }
 
   // next line commented out to suppress warning, variable unused
@@ -138,8 +128,7 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
 
 
   double FCAL_C_EFFECTIVE = 15.0;
-  DApplication* locApplication = dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  DGeometry* locGeometry = locApplication->GetDGeometry(eventLoop->GetJEvent().GetRunNumber());
+  DGeometry *locGeometry = GetDGeometry(event);
   double locTargetZCenter = 0.0;
   locTargetZCenter = locGeometry->GetTargetZ(locTargetZCenter);
   dTargetCenter.SetXYZ(0.0, 0.0, locTargetZCenter);
@@ -152,14 +141,14 @@ jerror_t JEventProcessor_FCAL_TimingOffsets::evnt(JEventLoop *eventLoop,
   vector < const DFCALShower * > matchedShowers;
   
 
-  eventLoop->Get( hits );
+  event->Get( hits );
   
   vector< const DFCALShower* > locFCALShowers;
  
    if( hits.size() < 500 ){  // only form clusters and showers if there aren't too many hits
-    eventLoop->Get(locFCALShowers);    
-    eventLoop->Get(locEventRFBunches);
-    eventLoop->Get(locTrackTimeBased);
+    event->Get(locFCALShowers);    
+    event->Get(locEventRFBunches);
+    event->Get(locTrackTimeBased);
    }
 
   double locStartTime = locEventRFBunches.empty() ? 0.0 : locEventRFBunches[0]->dTime;
@@ -237,32 +226,24 @@ const DFCALShower *s1 = locFCALShowers[k];
 
 
 
-
-
-
-
-return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets::erun(void)
+void JEventProcessor_FCAL_TimingOffsets::EndRun()
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_TimingOffsets::fini(void)
+void JEventProcessor_FCAL_TimingOffsets::Finish()
 {
-
-  // Called before program exit after event processing is finished.   
-  return NOERROR;
+  // Called before program exit after event processing is finished.
 }
 
 

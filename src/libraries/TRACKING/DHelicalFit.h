@@ -71,7 +71,7 @@ using namespace std;
 #include "FDC/DFDCPseudo.h"
 #include "CDC/DCDCWire.h"
 
-#include "JANA/jerror.h"
+#include "JANA/Compatibility/jerror.h"
 
 #include <math.h>
 #ifndef atan2f

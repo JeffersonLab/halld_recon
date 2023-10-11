@@ -12,30 +12,27 @@
 #include "DReaction_factory_Thrown.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_Thrown::init(void)
+void DReaction_factory_Thrown::Init()
 {
 	MAX_dReactionStepPoolSize = 5;
-
-	return NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DReaction_factory_Thrown::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+void DReaction_factory_Thrown::BeginRun(const std::shared_ptr<const JEvent>& locEvent)
 {
  	vector<const DAnalysisUtilities*> locAnalysisUtilitiesVector;
-	locEventLoop->Get(locAnalysisUtilitiesVector);
+	locEvent->Get(locAnalysisUtilitiesVector);
 	dAnalysisUtilities = locAnalysisUtilitiesVector[0];
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_Thrown::evnt(jana::JEventLoop *locEventLoop, uint64_t eventnumber)
+void DReaction_factory_Thrown::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// delete pool sizes if too large, preventing memory-leakage-like behavor.
 	if(dReactionStepPool_All.size() > MAX_dReactionStepPoolSize){
@@ -46,22 +43,20 @@ jerror_t DReaction_factory_Thrown::evnt(jana::JEventLoop *locEventLoop, uint64_t
 	dReactionStepPool_Available = dReactionStepPool_All;
 
 	deque<pair<const DMCThrown*, deque<const DMCThrown*> > > locThrownSteps;
-	dAnalysisUtilities->Get_ThrownParticleSteps(locEventLoop, locThrownSteps);
+	dAnalysisUtilities->Get_ThrownParticleSteps(locEvent, locThrownSteps);
 
-	DReaction* locReaction = Build_ThrownReaction(locEventLoop, locThrownSteps);
-	_data.push_back(locReaction);
-
-	return NOERROR;
+	DReaction* locReaction = Build_ThrownReaction(locEvent, locThrownSteps);
+	Insert(locReaction);
 }
 
-DReaction* DReaction_factory_Thrown::Build_ThrownReaction(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps)
+DReaction* DReaction_factory_Thrown::Build_ThrownReaction(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps)
 {
 #ifdef VTRACE
 	VT_TRACER("DReaction_factory_Thrown::Build_ThrownReaction()");
 #endif
 
  	vector<const DMCReaction*> locMCReactions;
-	locEventLoop->Get(locMCReactions);
+	locEvent->Get(locMCReactions);
 
 	DReaction* locReaction = new DReaction("Thrown");
 	DReactionStep* locReactionStep = Get_ReactionStepResource();
@@ -122,21 +117,19 @@ void DReaction_factory_Thrown::Recycle_Reaction(DReaction* locReaction)
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DReaction_factory_Thrown::erun(void)
+void DReaction_factory_Thrown::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_Thrown::fini(void)
+void DReaction_factory_Thrown::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool_All.size(); ++loc_i)
 		delete dReactionStepPool_All[loc_i];
-	return NOERROR;
 }
 
 

@@ -2,9 +2,8 @@
 #define _DTrigger_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
-class DTrigger : public jana::JObject
+class DTrigger : public JObject
 {
 	public:
 		JOBJECT_PUBLIC(DTrigger);
@@ -25,11 +24,9 @@ class DTrigger : public jana::JObject
 		void Set_GTP_FCALEnergy(float locGTP_FCALEnergy) { dGTP_FCALEnergy = locGTP_FCALEnergy; }
 		void Set_GTP_SCHits(float locGTP_SCHits) { dGTP_SCHits = locGTP_SCHits; }
 
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> >& items) const
-		{
-			AddString(items, "dL1TriggerBits", "%ld", dL1TriggerBits);
-			AddString(items, "dL1FrontPanelTriggerBits", "%ld", dL1FrontPanelTriggerBits);
+		void Summarize(JObjectSummary& summary) const override {
+			summary.add(dL1TriggerBits, "dL1TriggerBits", "%ld");
+			summary.add(dL1FrontPanelTriggerBits, "dL1FrontPanelTriggerBits", "%ld");
 		}
 
 	private:

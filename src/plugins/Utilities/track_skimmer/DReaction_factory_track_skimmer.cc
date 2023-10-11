@@ -9,9 +9,9 @@
 #include "DCustomAction_ee_ShowerEoverP_cut.h"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DReaction_factory_track_skimmer::init(void)
+void DReaction_factory_track_skimmer::Init()
 {
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
@@ -34,7 +34,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep_Pi01); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_2pi0 ****************************************************/
 
@@ -60,7 +60,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep_Pi02); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_3pi0 ****************************************************/
 
@@ -88,7 +88,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep_Pi03); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_ks_2piq ****************************************************/
 
@@ -103,7 +103,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, KShort, false, 800, 0.3, 0.7, "KShort"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_ks_2pi0 ****************************************************/
 
@@ -124,7 +124,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, KShort, false, 800, 0.3, 0.7, "KShort"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_eta_2g ****************************************************/
 
@@ -139,7 +139,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep_Eta2g); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_eta_3pi0 ****************************************************/
 
@@ -162,7 +162,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_eta_3piq ****************************************************/
 
@@ -183,7 +183,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_omega_3piq ****************************************************/
 
@@ -204,7 +204,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, false, 1600, 0.4, 1.2, "Omega"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_omega_pi0g ****************************************************/
 
@@ -224,7 +224,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, false, 1600, 0.4, 1.2, "Omega"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2piqeta_2g ****************************************************/
 
@@ -245,7 +245,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2piqeta_3pi0 ****************************************************/
 
@@ -262,7 +262,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2piqeta_3piq ****************************************************/
 
@@ -277,7 +277,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2piqg ****************************************************/
 
@@ -293,7 +293,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2pi0eta_2g ****************************************************/
 
@@ -317,7 +317,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2pi0eta_3pi0 ****************************************************/
 
@@ -350,7 +350,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_etaprm_2pi0eta_3piq ****************************************************/
 
@@ -367,7 +367,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Eta, false, 1000, 0.3, 0.8, "Eta"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, EtaPrime, false, 1400, 0.6, 1.3, "EtaPrime"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_phi_2kq ****************************************************/
 
@@ -382,7 +382,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, phiMeson, false, 800, 0.8, 1.2, "Phi"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_phi_3piq ****************************************************/
 
@@ -403,7 +403,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, phiMeson, false, 800, 0.8, 1.2, "Phi"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_lambda ****************************************************/
 
@@ -418,7 +418,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	dReactionStepPool.push_back(locReactionStep_Lambda); //register so will be deleted later: prevent memory leak
 
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 800, 1.0, 1.2, "Lambda"));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_sigma0 ****************************************************/
 
@@ -438,7 +438,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 800, 1.0, 1.2, "Lambda"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Sigma0, false, 800, 1.1, 1.3, "Sigma0"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_sigma+ ****************************************************/
 
@@ -458,7 +458,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0, false, 510, 0.05, 0.22, "Pi0"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, SigmaPlus, false, 800, 1.1, 1.3, "Sigma+"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_xi- ****************************************************/
 
@@ -478,7 +478,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 800, 1.0, 1.2, "Lambda"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, XiMinus, false, 800, 1.1, 1.5, "Xi-"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_xi0 ****************************************************/
 
@@ -500,7 +500,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Lambda, false, 800, 1.0, 1.2, "Lambda"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Xi0, false, 800, 1.1, 1.5, "Xi0"));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_ee ****************************************************/
 
@@ -517,7 +517,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 
     // loose E/p cuts - require both tracks to be matched to showers
 	locReaction->Add_AnalysisAction(new DCustomAction_ee_ShowerEoverP_cut(locReaction, false, 0.65, 1.4, 0.65, 1.4));
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
 	/**************************************************** skim_jpsi_ee ****************************************************/
 
@@ -534,18 +534,15 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 
     // loose E/p cuts - require both tracks to be matched to showers
 	locReaction->Add_AnalysisAction(new DCustomAction_ee_ShowerEoverP_cut(locReaction, false, 0.65, 1.4, 0.65, 1.4));
-	_data.push_back(locReaction); //Register the DReaction with the factory
-
-	return NOERROR;
+	Insert(locReaction); //Register the DReaction with the factory
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_track_skimmer::fini(void)
+void DReaction_factory_track_skimmer::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
 }
 

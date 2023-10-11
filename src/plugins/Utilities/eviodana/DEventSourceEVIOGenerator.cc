@@ -12,7 +12,7 @@
 extern "C" {
   void InitPlugin(JApplication *app) {
     InitJANAPlugin(app);
-    app->AddEventSourceGenerator(new DEventSourceEVIOGenerator());
+    app->Add(new DEventSourceEVIOGenerator());
   }
 } // "extern C"
 

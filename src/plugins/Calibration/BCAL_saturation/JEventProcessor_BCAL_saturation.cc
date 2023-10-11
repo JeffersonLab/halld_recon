@@ -12,7 +12,6 @@
 #include <JANA/JApplication.h>
 
 using namespace std;
-using namespace jana;
 
 #include "BCAL/DBCALDigiHit.h"
 #include "DANA/DStatusBits.h"
@@ -21,6 +20,7 @@ using namespace jana;
 #include "DAQ/Df250PulseData.h"
 #include "DAQ/Df250PulseIntegral.h"
 #include "DAQ/Df250WindowRawData.h"
+#include "DANA/DEvent.h"
 #include "TRIGGER/DL1Trigger.h"
 
 #include <TDirectory.h>
@@ -51,7 +51,7 @@ static TH1I *bcal_num_events;
 extern "C"{
 	void InitPlugin(JApplication *app){
 		InitJANAPlugin(app);
-		app->AddProcessor(new JEventProcessor_BCAL_saturation());
+		app->Add(new JEventProcessor_BCAL_saturation());
 	}
 }
 
@@ -60,6 +60,7 @@ extern "C"{
 
 
 JEventProcessor_BCAL_saturation::JEventProcessor_BCAL_saturation() {
+	SetTypeName("JEventProcessor_BCAL_saturation");
 }
 
 
@@ -72,12 +73,16 @@ JEventProcessor_BCAL_saturation::~JEventProcessor_BCAL_saturation() {
 
 //----------------------------------------------------------------------------------
 
-jerror_t JEventProcessor_BCAL_saturation::init(void) {
-	
+void JEventProcessor_BCAL_saturation::Init() {
+
+	lockService = GetApplication()->GetService<JLockService>();
+	lockService->RootWriteLock();
+
 	// First thread to get here makes all histograms. If one pointer is
 	// already not NULL, assume all histograms are defined and return now
 	if(bcal_fadc_digi_integral != NULL){
-		return NOERROR;
+		lockService->RootUnLock();
+		return;
 	}
 
 	// create root folder for bcal and cd to it, store main dir
@@ -121,24 +126,22 @@ jerror_t JEventProcessor_BCAL_saturation::init(void) {
 			waveformCounterDS[locSaturate][locLayer] = 0;
 		}
 	}
-	
-	return NOERROR;
+	lockService->RootUnLock();
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_saturation::brun(JEventLoop *eventLoop, int32_t runnumber) {
+void JEventProcessor_BCAL_saturation::BeginRun(const std::shared_ptr<const JEvent>& event) {
 	// This is called whenever the run number changes
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_saturation::evnt(JEventLoop *loop, uint64_t eventnumber) {
+void JEventProcessor_BCAL_saturation::Process(const std::shared_ptr<const JEvent>& event) {
 	// This is called for every event. Use of common resources like writing
 	// to a file or filling a histogram should be mutex protected. Using
 	// loop-Get(...) to get reconstructed objects (and thereby activating the
@@ -152,7 +155,7 @@ jerror_t JEventProcessor_BCAL_saturation::evnt(JEventLoop *loop, uint64_t eventn
 
 	const DL1Trigger *trig = NULL;
 	try {
-		loop->GetSingle(trig);
+		event->GetSingle(trig);
 	} catch (...) {}
 	if (trig) {
 		if (trig->fp_trig_mask){
@@ -160,21 +163,21 @@ jerror_t JEventProcessor_BCAL_saturation::evnt(JEventLoop *loop, uint64_t eventn
 		}
 	} else {
 		// HDDM files are from simulation, so keep them even though they have no trigger
-		bool locIsHDDMEvent = loop->GetJEvent().GetStatusBit(kSTATUS_HDDM);
+		bool locIsHDDMEvent = DEvent::GetStatusBit(event, kSTATUS_HDDM);
 		if (!locIsHDDMEvent) goodtrigger=0;		
 	}
 	
 	if (!goodtrigger) {
-		return NOERROR;
+		return;
 	}
 
-	loop->Get(dbcaldigihits);
+	event->Get(dbcaldigihits);
 
 	int locSaturatedCounter = 0;
 	
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 	if( (dbcaldigihits.size() > 0) )
 		bcal_num_events->Fill(1);
@@ -227,30 +230,25 @@ jerror_t JEventProcessor_BCAL_saturation::evnt(JEventLoop *loop, uint64_t eventn
 	}
 	bcal_saturated_counter->Fill(locSaturatedCounter);
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
-	
-	return NOERROR;
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_saturation::erun(void) {
+void JEventProcessor_BCAL_saturation::EndRun() {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-
-	return NOERROR;
 }
 
 
 //----------------------------------------------------------------------------------
 
 
-jerror_t JEventProcessor_BCAL_saturation::fini(void) {
+void JEventProcessor_BCAL_saturation::Finish() {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
 }
 
 

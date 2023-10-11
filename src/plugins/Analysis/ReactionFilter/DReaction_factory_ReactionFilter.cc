@@ -163,9 +163,9 @@ void DReaction_factory_ReactionFilter::Set_Flags(DReaction* locReaction, string 
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
+void DReaction_factory_ReactionFilter::Process(const std::shared_ptr<const JEvent>& locEvent)
 {
 	// DOCUMENTATION:
 	// ANALYSIS library: https://halldweb1.jlab.org/wiki/index.php/GlueX_Analysis_Software
@@ -196,7 +196,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 		{
 			locReaction->Add_AnalysisAction(new DHistogramAction_PID(locReaction, false));
 			locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, false));
-			_data.push_back(locReaction); //Register the DReaction with the factory
+			Insert(locReaction); //Register the DReaction with the factory
 			continue;
 		}
 		
@@ -230,10 +230,10 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 		locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, true));
 		locReaction->Add_AnalysisAction(new DHistogramAction_TriggerStudies(locReaction, "", 0.05));
 
-		_data.push_back(locReaction); //Register the DReaction with the factory
+		Insert(locReaction); //Register the DReaction with the factory
 	}
 
-	return NOERROR;
+	return;
 }
 
 /********************************************************************************** CREATION FUNCTIONS ***********************************************************************************/
@@ -579,7 +579,9 @@ map<size_t, tuple<string, string, string, vector<string>>> DReaction_factory_Rea
 	//key is reaction#, 1st string: name (if any) //2nd string: value for 1st decay step //3rd string: value for flags //string vector: value for decays
 	map<size_t, tuple<string, string, string, vector<string>>> locInputStrings;
 	map<string, string> locParameterMap; //parameter key - filter, value
-	gPARMS->GetParameters(locParameterMap, "Reaction"); //gets all parameters with this filter at the beginning of the key
+
+	auto params = GetApplication()->GetJParameterManager();
+	params->FilterParameters(locParameterMap, "Reaction");  //gets all parameters with this filter at the beginning of the key
 	for(auto locParamPair : locParameterMap)
 	{
 		if(dDebugFlag)
@@ -602,7 +604,7 @@ map<size_t, tuple<string, string, string, vector<string>>> DReaction_factory_Rea
 		//hack so that don't get warning message about no default
 		string locKeyValue;
 		string locFullParamName = string("Reaction") + locParamPair.first; //have to add back on the filter
-		gPARMS->SetDefaultParameter(locFullParamName, locKeyValue);
+		params->SetDefaultParameter(locFullParamName, locKeyValue);
 
 		//save it in the input map
 		if(locColonIndex == string::npos)

@@ -7,56 +7,49 @@
 #define _DDIRCGeometry_factory_
 
 #include "JANA/JFactory.h"
-using namespace jana;
 
 #include "DDIRCGeometry.h"
 
-class DDIRCGeometry_factory : public JFactory<DDIRCGeometry> {
+class DDIRCGeometry_factory : public JFactoryT<DDIRCGeometry> {
 
 public:
 	
-	DDIRCGeometry_factory() {}
-	~DDIRCGeometry_factory(){}
+	DDIRCGeometry_factory() = default;
+	~DDIRCGeometry_factory() override = default;
 
 	DDIRCGeometry *dircgeometry=nullptr;
 	
 	//------------------
-	// brun
+	// BeginRun
 	//------------------
-	jerror_t brun(JEventLoop *loop, int32_t runnumber)
+	void BeginRun(const std::shared_ptr<const JEvent>& event) override
 	{
 		// (See DTAGHGeometry_factory.h)
 		SetFactoryFlag(NOT_OBJECT_OWNER);
 		ClearFactoryFlag(WRITE_TO_OUTPUT);
 		
-		if( dircgeometry ) delete dircgeometry;
-		
-		dircgeometry = new DDIRCGeometry(runnumber);
-		
-		return NOERROR;
+		delete dircgeometry;
+		dircgeometry = new DDIRCGeometry();
+		dircgeometry->Initialize(event);
 	}
 	
 	//------------------
-	// evnt
+	// Process
 	//------------------
-	jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+	void Process(const std::shared_ptr<const JEvent>& loop) override
 	{
 		// Reuse existing DDIRCGeometry object.
-		if( dircgeometry ) _data.push_back( dircgeometry );
-		
-		return NOERROR;
+		if( dircgeometry ) Insert( dircgeometry );
 	}
 	
 	//------------------
-	// erun
+	// EndRun
 	//------------------
-	jerror_t erun(void)
+	void EndRun() override
 	{
-		if( dircgeometry ) delete dircgeometry;
-		dircgeometry = NULL;
-		
-		return NOERROR;
-	}	
+		delete dircgeometry;
+		dircgeometry = nullptr;
+	}
 };
 
 #endif // _DDIRCGeometry_factory_
