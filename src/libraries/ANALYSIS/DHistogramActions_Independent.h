@@ -993,21 +993,23 @@ class DHistogramAction_TrackMultiplicity : public DAnalysisAction
 class DHistogramAction_TriggerStudies : public DAnalysisAction
 {
 	public:
-		DHistogramAction_TriggerStudies(const DReaction* locReaction, string locActionUniqueString = "") : 
+		DHistogramAction_TriggerStudies(const DReaction* locReaction, string locActionUniqueString = "", double locKinFitCLCut=-1.) : 
 		DAnalysisAction(locReaction, "Hist_TriggerStudies", false, locActionUniqueString),
-		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.), dKinFitCLCut(locKinFitCLCut) { }
 
 		DHistogramAction_TriggerStudies(string locActionUniqueString) : 
 		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
-		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.), dKinFitCLCut(-1.)  { }
 			
 		DHistogramAction_TriggerStudies(void) : 
 		DAnalysisAction(NULL, "Hist_TriggerStudies", false, ""),
-		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.) { }
+		dBCALBins(240), dFCALBins(240), dMaxBCALEnergy(12.), dMaxFCALEnergy(12.), dKinFitCLCut(-1.)  { }
 
 		int dBCALBins, dFCALBins;
 		double dMaxBCALEnergy;
 		double dMaxFCALEnergy;
+		
+		double dKinFitCLCut;
 
 		void Initialize(JEventLoop* locEventLoop);
 		void Run_Update(JEventLoop* locEventLoop){}
