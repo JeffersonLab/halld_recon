@@ -37,6 +37,9 @@ using namespace std;
 #include "DTOFHit.h"
 #include "DTOFHitMC.h"
 #include "DTOFPaddleHit.h"
+#include <DANA/DApplication.h>
+#include <HDGEOMETRY/DGeometry.h>
+
 #include <math.h>
 
 //#define NaN std::numeric_limits<double>::quiet_NaN()

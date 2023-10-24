@@ -19,6 +19,8 @@
 using namespace std;
 
 #include "DTOFPoint_factory.h"
+#include <DANA/DApplication.h>
+#include <HDGEOMETRY/DGeometry.h>
 
 bool Compare_TOFSpacetimeHitMatches_Distance(const DTOFPoint_factory::tof_spacetimehitmatch_t& locTOFSpacetimeHitMatch1, const DTOFPoint_factory::tof_spacetimehitmatch_t& locTOFSpacetimeHitMatch2)
 {

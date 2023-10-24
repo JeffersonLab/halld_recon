@@ -21,7 +21,6 @@
 #include "JANA/JParameterManager.h"
 #include "JANA/JEventLoop.h"
 #include "DTOFPaddleHit.h"
-#include "DTOFGeometry.h"
 #include "TMath.h"
 using namespace jana;
 

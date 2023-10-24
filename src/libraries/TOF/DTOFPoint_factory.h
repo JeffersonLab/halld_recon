@@ -19,7 +19,6 @@
 #define _DTOFPoint_factory_
 
 #include "JANA/JFactory.h"
-#include "DTOFGeometry_factory.h"
 #include "DTOFPoint.h"
 #include "DTOFPaddleHit.h"
 #include "DTOFHit.h"
@@ -50,9 +49,7 @@ class DTOFPoint_factory : public JFactory<DTOFPoint>
   int NUM_BARS;
 
   vector < vector <float> > AttenuationLengths;
-  
-  const DTOFGeometry* dTOFGeometry;
-  
+    
   class tof_spacetimehit_t
   {
   public:
