@@ -46,12 +46,12 @@ class DTOFPaddleHit_factory:public JFactory<DTOFPaddleHit>{
 
   int TOF_NUM_PLANES; ///< number of TOF planes is 2
   int TOF_NUM_BARS;   ///< number of paddles in a plane 44 ( 46 for TOF2)
+  int FirstShortBar,LastShortBar;
 
   vector<double> propagation_speed; ///< effective speed of light in paddle (each paddle separate) from CCDB
 
   vector < vector <float> > AttenuationLengths; ///< attenuation length in paddle from CCDB
 
-  vector <const DTOFGeometry*> TOFGeom; ///< tof geometry class (vector has only one element)
 
  protected:
   //jerror_t init(void);					///< Called once at program start.

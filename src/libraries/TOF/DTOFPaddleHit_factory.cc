@@ -51,16 +51,26 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
   /// values like the number of bars in a plane the length of the bars, the effective
   /// speed of light in the bars and attenuation lengths.  
 
-
+  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  
   // load values from geometry
-  loop->Get(TOFGeom);
-  TOF_NUM_PLANES = TOFGeom[0]->Get_NPlanes();
-  TOF_NUM_BARS = TOFGeom[0]->Get_NBars();
-  HALFPADDLE = TOFGeom[0]->Get_HalfLongBarLength();
+  map<string,double> paddle_params;
+  geom->GetTOFPaddleParameters(paddle_params);
+  TOF_NUM_BARS=paddle_params["NLONGBARS"]+paddle_params["NSHORTBARS"]/2;
+  TOF_NUM_PLANES=2; // not likely to change...
+  HALFPADDLE=paddle_params["HALFLONGBARLENGTH"];
+  FirstShortBar = paddle_params["FIRSTSHORTBAR"];
+  LastShortBar = paddle_params["LASTSHORTBAR"];
 
-
-  map<string, double> tofparms; 
-  string locTOFParmsTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/tof_parms";
+  map<string, double> tofparms;
+  string ccdb_directory_name;
+  if(TOF_NUM_BARS == 46) {
+    ccdb_directory_name="TOF2";
+  } else {
+    ccdb_directory_name="TOF";
+  }
+  string locTOFParmsTable = ccdb_directory_name + "/tof_parms";
   if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms)) {
     //cout<<"DTOFPaddleHit_factory: loading values from TOF data base"<<endl;
 
@@ -79,10 +89,10 @@ jerror_t DTOFPaddleHit_factory::brun(JEventLoop *loop, int32_t runnumber)
 
   TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
 
-  string locTOFPropSpeedTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/propagation_speed";
+  string locTOFPropSpeedTable = ccdb_directory_name + "/propagation_speed";
   if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
     jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
-  string locTOFAttenLengthTable = TOFGeom[0]->Get_CCDB_DirectoryName() + "/attenuation_lengths";
+  string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
   if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
   
@@ -166,7 +176,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     int bar = P1hitsL[i]->bar;
 
-    if ((bar < TOFGeom[0]->Get_FirstShortBar() ) || (bar > TOFGeom[0]->Get_LastShortBar())) {
+    if ((bar < FirstShortBar) || (bar > LastShortBar)) {
       
       // we are dealing with double ended readout paddles:
       for (unsigned int j=0; j<P1hitsR.size(); j++){      
@@ -199,7 +209,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     int bar = P1hitsL[i]->bar;
     int found = 0;
     
-    if ((bar < TOFGeom[0]->Get_FirstShortBar()) || (bar > TOFGeom[0]->Get_LastShortBar())) {
+    if ((bar < FirstShortBar) || (bar > LastShortBar)) {
       for (unsigned int j=0; j<P1hitsR.size(); j++){      
 	if (bar==P1hitsR[j]->bar){
 	  found = 1;
@@ -228,7 +238,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     int bar = P1hitsR[i]->bar;
     int found = 0;
 
-    if ((bar < TOFGeom[0]->Get_FirstShortBar()) || (bar > TOFGeom[0]->Get_LastShortBar())) {
+    if ((bar < FirstShortBar) || (bar > LastShortBar)) {
       for (unsigned int j=0; j<P1hitsL.size(); j++){      
 	if (bar==P1hitsL[j]->bar){
 	  found = 1;
@@ -256,7 +266,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // now the same thing for plane 2
   for (unsigned int i=0; i<P2hitsL.size(); i++){
     int bar = P2hitsL[i]->bar; 
-    if ((bar <  TOFGeom[0]->Get_FirstShortBar()) || (bar > TOFGeom[0]->Get_LastShortBar() )){
+    if ((bar <  FirstShortBar) || (bar > LastShortBar )){
       for (unsigned int j=0; j<P2hitsR.size(); j++){      
 	if (bar==P2hitsR[j]->bar 
 	    && fabs(P2hitsR[j]->t-P2hitsL[i]->t)<TIME_COINCIDENCE_CUT
@@ -284,7 +294,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     int bar = P2hitsL[i]->bar;
     int found = 0;
     
-    if ((bar < TOFGeom[0]->Get_FirstShortBar()) || (bar > TOFGeom[0]->Get_LastShortBar())) {
+    if ((bar < FirstShortBar) || (bar > LastShortBar)) {
       for (unsigned int j=0; j<P2hitsR.size(); j++){      
 	if (bar==P2hitsR[j]->bar){
 	  found = 1;
@@ -313,7 +323,7 @@ jerror_t DTOFPaddleHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     int bar = P2hitsR[i]->bar;
     int found = 0;
 
-    if ((bar < TOFGeom[0]->Get_FirstShortBar()) || (bar > TOFGeom[0]->Get_LastShortBar())) {
+    if ((bar < FirstShortBar) || (bar > LastShortBar)) {
       for (unsigned int j=0; j<P2hitsL.size(); j++){      
 	if (bar==P2hitsL[j]->bar){
 	  found = 1;
