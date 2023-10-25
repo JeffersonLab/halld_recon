@@ -2302,6 +2302,27 @@ bool DGeometry::GetTRDZ(vector<double> &z_trd) const
 
    return true;
 }
+//---------------------------------
+// GetTOFZ
+//---------------------------------
+bool DGeometry::GetTOFZ(double &CenterVPlane,double &CenterHPlane,
+			double &CenterMPlane) const{
+  // Store the z position for both planes
+  vector<double>tof_face;
+  if (!Get("//section/composition/posXYZ[@volume='ForwardTOF']/@X_Y_Z",tof_face)){
+    return false;
+  }
+  vector<double>tof_plane0;
+  Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='0']", tof_plane0);
+  vector<double>tof_plane1;
+  Get("//composition[@name='ForwardTOF']/posXYZ[@volume='forwardTOF']/@X_Y_Z/plane[@value='1']", tof_plane1);
+  CenterVPlane=tof_face[2]+tof_plane1[2];
+  CenterHPlane=tof_face[2]+tof_plane0[2];
+  // also save position midway between the two planes
+  CenterMPlane=0.5*(CenterHPlane+CenterVPlane);
+
+  return true;
+}
 
 //---------------------------------
 // GetTOFZ

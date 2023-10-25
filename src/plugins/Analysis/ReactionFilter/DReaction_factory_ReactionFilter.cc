@@ -226,6 +226,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 
 		// KINEMATICS & OTHER INFO
 		locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, true));
+		locReaction->Add_AnalysisAction(new DHistogramAction_TriggerStudies(locReaction, "", 0.05));
 
 		_data.push_back(locReaction); //Register the DReaction with the factory
 	}
