@@ -95,25 +95,29 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.0843;
-  INSERT_PAR2=1.1356;
+  INSERT_PAR1=0.167457;
+  INSERT_PAR2=1.1349;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
 
-  INSERT_POS_RES1=0.11;
-  INSERT_POS_RES2=0.22;
-  // For Island algorithm:
-  // INSERT_POS_RES1=0.18;
-  // INSERT_POS_RES2=0.055;
-  INSERT_E_VAR1=0.001223;
-  INSERT_E_VAR2=0.;
-  INSERT_E_VAR3=2.025e-5;
+  // For island algo
+  INSERT_POS_RES1=0.168;
+  INSERT_POS_RES2=0.0636;
+  INSERT_POS_PHI1=0.0;
+  INSERT_POS_PHI2=0.0;
+  // For default algorithm:
+  // INSERT_POS_RES1=0.10;
+  // INSERT_POS_RES2=0.21;
+  INSERT_E_VAR1=6.49300e-04;
+  INSERT_E_VAR2=1.24109e-04;
+  INSERT_E_VAR3=4.70327e-05;
   gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
- 
 }
 
 //------------------
@@ -320,18 +324,24 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       }
       else{
 	// Some guesses for insert resolution
-	double sigx=INSERT_POS_RES1/sqrt(Ecorrected)+INSERT_POS_RES2;
+	double phi=pos_corrected.Phi();
+	double fsinphi=fabs(sin(phi));
+	double fcosphi=fabs(cos(phi));
+	double sigx=(INSERT_POS_RES1+INSERT_POS_PHI1*fsinphi)/sqrt(Ecorrected)
+	  +INSERT_POS_RES2+INSERT_POS_PHI2*fsinphi; 
+	double sigy=(INSERT_POS_RES1+INSERT_POS_PHI1*fcosphi)/sqrt(Ecorrected)
+	  +INSERT_POS_RES2+INSERT_POS_PHI2*fcosphi;
 	shower->ExyztCovariance(1,1)=sigx*sigx;
-	shower->ExyztCovariance(2,2)=sigx*sigx;
+	shower->ExyztCovariance(2,2)=sigy*sigy;
 	shower->ExyztCovariance(0,0)
 	  =Ecorrected*Ecorrected*(INSERT_E_VAR1/Ecorrected
 				  + INSERT_E_VAR2/(Ecorrected*Ecorrected)
 				  + INSERT_E_VAR3);
+	// Make sure off-diagonal elements are zero, for now...
 	for (unsigned int i=0;i<5;i++){
 	  for(unsigned int j=0;j<5;j++){
 	    if (i!=j) shower->ExyztCovariance(i,j)=0.;
 	  }
-	  
 	}
       }
 
@@ -555,11 +565,12 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     
     posInCal.SetZ( zed + zV );
     errZ = zed - zed1;
+    
   }
   
   Ecorrected = Egamma;
   pos_corrected = posInCal;
- 
+
 }
 
 

@@ -176,6 +176,7 @@ class DGeometry{
 
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
+      bool GetTOFZ(double &CenterVPlane,double &CenterHPlane,double &CenterMPlane) const; ///< method used by DTOFPoint code, returning z-locations of centers of paddles
 	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;
 	  bool GetTOFPaddleParameters(map<string,double> &paddle_params) const;
       bool GetTargetZ(double &z_target) const; ///< z-location of center of target

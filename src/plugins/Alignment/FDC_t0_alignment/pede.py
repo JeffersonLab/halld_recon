@@ -5,31 +5,25 @@ import os
 import sys
 import ccdb
 import math
-import glob
 import subprocess
 
 
 def main():
   args = sys.argv
-  if len(args) != 2:
-    print('usage: ./pede.py input_parameter_file')
+  if len(args) != 3:
+    print('usage: ./pede.py input_parameter_file runnum')
     exit(0)
 
   input_par_file = args[1]
+  runnum = int(args[2])
 
   par = get_par(input_par_file)
 
   pede_path = par['path_to_pede']
   in_ccdb_path = par['path_to_input_ccdb_sqlite']
   out_ccdb_path = par['path_to_output_ccdb_sqlite']
-  runnum = int(par['runnum'])
-  mil_path = par['path_to_mil']
-  if par['use_multiple_mil_files'].upper().startswith('T'):
-    mil_list = []
-    for x in glob.glob(mil_path.rstrip('/') + '/*.mil'):
-      mil_list.append(os.path.abspath(x))
-  else:
-    mil_list = [mil_path]
+  rt_dir = par['path_to_output_dir'].rstrip('/') + '/'
+  mil_list = [rt_dir + '%06d.mil' % runnum]
 
   # CCDB table list
   table_list = []
@@ -182,17 +176,17 @@ def par_list():
   fixCDCGlobalPhiZ = True
   fixCDCWires = True
 
-  fixFDCCathodeOffsets = False
-  fixFDCCathodeAngles = False
-  fixFDCCellOffsetsWires = False
-  fixFDCCellOffsetsCathodes = False
-  fixFDCWireRotationX = False
-  fixFDCWireRotationY = False
-  fixFDCWireRotationZ = False
-  fixFDCZ = False
-  fixFDCPitch = False
-  fixFDCGap = False
-  fixFDCT0 = True
+  fixFDCCathodeOffsets = True
+  fixFDCCathodeAngles = True
+  fixFDCCellOffsetsWires = True
+  fixFDCCellOffsetsCathodes = True
+  fixFDCWireRotationX = True
+  fixFDCWireRotationY = True
+  fixFDCWireRotationZ = True
+  fixFDCZ = True
+  fixFDCPitch = True
+  fixFDCGap = True
+  fixFDCT0 = False
 
   translationPresigma = 0.0005
   rotationPresigma = 0.0001

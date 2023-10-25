@@ -72,6 +72,8 @@ jerror_t DL1MCTrigger_factory::init(void)
   SIMU_BASELINE = 1;
   SIMU_GAIN = 0;
   
+  VERBOSE = 0;
+  
 
   simu_baseline_fcal  =  1;
   simu_baseline_bcal  =  1;
@@ -135,6 +137,9 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
+			      
+  gPARMS->SetDefaultParameter("TRIG:VERBOSE", VERBOSE,
+			      "Enable more verbose output");
 
 
   BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
@@ -193,10 +198,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
 
   if(getenv("JANA_CALIB_CONTEXT") != NULL ){ 
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
-    cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
+    if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
     if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
 	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
-      cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
+      if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
@@ -207,7 +212,7 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     }
   }
   else {
-      cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
+      if(print_messages) cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
   }
 
   //  runnumber = 30942;
@@ -946,7 +951,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    }
 	    
 	    catch(...){
-	      if(print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
+	      if(VERBOSE && print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
 		" Channel = " << ch << endl;
 	      continue;
 	    }
@@ -960,7 +965,8 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    tmp.row = channel_info.fcal.row;
 	    tmp.col = channel_info.fcal.col;
 	    
-	    cout << " MASKED CHANNEL = " << tmp.row << "   " << tmp.col << endl;
+	    if(VERBOSE)
+	    	cout << " MASKED CHANNEL = " << tmp.row << "   " << tmp.col << endl;
 
 	    fcal_trig_mask.push_back(tmp);
 	  }
@@ -973,7 +979,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
   }    // Loop over crates       
   
   
-  cout << " NUMBER OF MASKED CHANNELS = " << fcal_trig_mask.size() << endl;
+  if(VERBOSE) cout << " NUMBER OF MASKED CHANNELS = " << fcal_trig_mask.size() << endl;
   
 
   // Load BCAL Trigger Masks
