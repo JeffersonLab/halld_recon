@@ -19,7 +19,6 @@
 #define _DTOFPoint_factory_
 
 #include "JANA/JFactory.h"
-#include "DTOFGeometry_factory.h"
 #include "DTOFPoint.h"
 #include "DTOFPaddleHit.h"
 #include "DTOFHit.h"
@@ -50,9 +49,7 @@ class DTOFPoint_factory : public JFactory<DTOFPoint>
   int NUM_BARS;
 
   vector < vector <float> > AttenuationLengths;
-  
-  const DTOFGeometry* dTOFGeometry;
-  
+    
   class tof_spacetimehit_t
   {
   public:
@@ -95,6 +92,21 @@ class DTOFPoint_factory : public JFactory<DTOFPoint>
   float dPositionMatchCut_DoubleEnded;
   float dTimeMatchCut_PositionWellDefined;
   float dTimeMatchCut_PositionNotWellDefined;
+
+  float bar2y(int bar, int end=0)  const 
+  ///> convert bar number to the
+  ///> position of the center of the
+  ///> bar in local coordinations
+  {
+    float y;
+    y = YPOS.at(bar);
+    
+    // handle position of short bars
+    if (bar>=FirstShortBar && bar<=LastShortBar && end != 0) y *= -1.0;
+    
+    return y;
+  }
+  
   
   size_t MAX_TOFSpacetimeHitPoolSize;
   deque<tof_spacetimehit_t*> dTOFSpacetimeHitPool_All;
@@ -104,6 +116,11 @@ class DTOFPoint_factory : public JFactory<DTOFPoint>
   vector<double> propagation_speed;
   vector<double> paddle_resolutions;
   
+  // Geometrical variables and indexes for bars 
+  vector<double> YPOS;  ///> y (perpendicular) position for bar number
+  double CenterHorizPlane,CenterVertPlane,CenterMidPlane;
+  int FirstShortBar,LastShortBar;
+
 };
 
 #endif // _DTOFPoint_factory_
