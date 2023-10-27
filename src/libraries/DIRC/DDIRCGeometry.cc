@@ -23,6 +23,7 @@ DDIRCGeometry::DDIRCGeometry(int runnumber) {
 
 void
 DDIRCGeometry::Initialize(int runnumber) {
+  return;
 
 	//Get pointer to DGeometry object
 	DApplication* dapp=dynamic_cast<DApplication*>(japp);
