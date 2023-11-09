@@ -1199,7 +1199,7 @@ inline static char* ShortName(Particle_t locPID)
   case Lambda_c:
 	return (char*)"lambc";
   case Sigma_cPlusPlus:
-	return (char*)"sigc";
+	return (char*)"sigcpp";
 
   //not really supported
   case Rho0:
@@ -2754,7 +2754,7 @@ inline static char* Get_ShortName(Particle_t locPID)
 	case Lambda_c:
 		return (char*)"lambc";
 	case Sigma_cPlusPlus:
-		return (char*)"sigc";
+		return (char*)"sigcpp";
 
 	default:
 		return (char*)"Unknown";
