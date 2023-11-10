@@ -84,6 +84,8 @@ DReactionStep* DReaction_factory_ReactionFilter::Create_DefaultDecayStep(Particl
 		return (new DReactionStep(OmegaMinus, {KMinus, Lambda}));
 	else if(locPID == Lambda_c)
 		return (new DReactionStep(Lambda_c, {PiPlus, KMinus, Proton}));
+	else if(locPID == Sigma_cPlusPlus)
+	        return (new DReactionStep(Sigma_cPlusPlus, {PiPlus, Lambda_c}));
 
 	return nullptr;
 }
