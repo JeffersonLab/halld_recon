@@ -362,6 +362,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DTOFPoint(record,
                      dynamic_cast<JFactory<DTOFPoint>*>(factory));
    }
+   if (dataClassName =="DCTOFPoint") {
+      return Extract_DCTOFPoint(record,
+                     dynamic_cast<JFactory<DCTOFPoint>*>(factory));
+   }
    if (dataClassName =="DSCHit") {
       return Extract_DSCHit(record,
                      dynamic_cast<JFactory<DSCHit>*>(factory));
@@ -876,6 +880,46 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
 
    return NOERROR;
 }
+
+//------------------
+// Extract_DCTOFPoint
+//------------------
+jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
+                                   JFactory<DCTOFPoint>* factory)
+{
+   /// Copies the data from the ctofPoint hddm record. This is called
+   /// from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DCTOFPoint*> data;
+
+   // loop over ctofPoint records
+   const hddm_r::CtofPointList &ctofs = record->getCtofPoints();
+   hddm_r::CtofPointList::iterator iter;
+   for (iter = ctofs.begin(); iter != ctofs.end(); ++iter) {
+      if (iter->getJtag() != tag) {
+         continue;
+      }
+      DCTOFPoint *ctofpoint = new DCTOFPoint();
+      ctofpoint->bar = iter->getBar();
+      ctofpoint->pos = DVector3(iter->getX(),iter->getY(),iter->getZ());
+      ctofpoint->t = iter->getT();
+      ctofpoint->dE = iter->getDE();
+      
+      data.push_back(ctofpoint);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
 
 //------------------
 // Extract_DSCHit
@@ -1537,7 +1581,10 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
    locEventLoop->Get(locSCHits);
 
    vector<const DTOFPoint*> locTOFPoints;
-   locEventLoop->Get(locTOFPoints);
+   locEventLoop->Get(locTOFPoints); 
+
+   vector<const DCTOFPoint*> locCTOFPoints;
+   locEventLoop->Get(locCTOFPoints);
 
    vector<const DBCALShower*> locBCALShowers;
    locEventLoop->Get(locBCALShowers);
@@ -1742,6 +1789,24 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx2;
 	       }
 	   }	 
+      }
+      
+      // Extract track matching data for CTOF
+      const hddm_r::CtofMatchParamsList &ctofList = iter->getCtofMatchParamses();
+      hddm_r::CtofMatchParamsList::iterator ctofIter = ctofList.begin();
+      for(; ctofIter != ctofList.end(); ++ctofIter)
+      {
+         size_t locHitIndex = ctofIter->getHit();
+         size_t locTrackIndex = ctofIter->getTrack();
+
+         auto locCTOFHitMatchParams = std::make_shared<DCTOFHitMatchParams>();
+         locCTOFHitMatchParams->dCTOFPoint = locCTOFPoints[locHitIndex];
+         locCTOFHitMatchParams->dEdx = ctofIter->getDEdx();
+         locCTOFHitMatchParams->dFlightTime = ctofIter->getTflight();
+         locCTOFHitMatchParams->dDeltaXToHit = ctofIter->getDeltax();
+         locCTOFHitMatchParams->dDeltaYToHit = ctofIter->getDeltay();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locCTOFPoints[locHitIndex], std::const_pointer_cast<const DCTOFHitMatchParams>(locCTOFHitMatchParams));
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();

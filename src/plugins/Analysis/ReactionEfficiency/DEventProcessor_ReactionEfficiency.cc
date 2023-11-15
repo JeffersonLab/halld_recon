@@ -6,6 +6,7 @@
 //
 
 #include "DEventProcessor_ReactionEfficiency.h"
+#include "DEventWriterROOT_ReactionEfficiency.h"
 
 // Routine used to create our DEventProcessor
 
@@ -71,8 +72,8 @@ jerror_t DEventProcessor_ReactionEfficiency::evnt(jana::JEventLoop* locEventLoop
 		//If no cuts are performed by the analysis actions added to a DReaction, then this saves all of its particle combinations. 
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
-	const DEventWriterROOT* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT);
+	const DEventWriterROOT_ReactionEfficiency* locEventWriterROOT = NULL;
+	locEventLoop->GetSingle(locEventWriterROOT, "ReactionEfficiency");
 	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionEfficiency");
 
 	return NOERROR;

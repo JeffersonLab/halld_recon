@@ -134,8 +134,13 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	dInvariantMassCuts.emplace(omega, std::make_pair(0.4, 1.2));
 	dInvariantMassCuts.emplace(EtaPrime, std::make_pair(0.6, 1.3));
 	dInvariantMassCuts.emplace(phiMeson, std::make_pair(0.8, 1.2));
-	dInvariantMassCuts.emplace(D0, std::make_pair(1.8, 1.92));
-	dInvariantMassCuts.emplace(AntiD0, std::make_pair(1.8, 1.92));
+	dInvariantMassCuts.emplace(D0, std::make_pair(1.7, 2.0));
+	dInvariantMassCuts.emplace(AntiD0, std::make_pair(1.7, 2.0));
+	dInvariantMassCuts.emplace(DPlus, std::make_pair(1.7, 2.0));
+	dInvariantMassCuts.emplace(DMinus, std::make_pair(1.7, 2.0));
+	dInvariantMassCuts.emplace(Dstar0, std::make_pair(1.8, 2.2));
+	dInvariantMassCuts.emplace(DstarPlus, std::make_pair(1.8, 2.2));
+	dInvariantMassCuts.emplace(DstarMinus, std::make_pair(1.8, 2.2));
 //	dInvariantMassCuts.emplace(Jpsi, std::make_pair(2.7, 3.5));
 
 	//INVARIANT MASS CUTS: BARYONS
@@ -152,7 +157,8 @@ void DSourceComboP4Handler::Define_DefaultCuts(void)
 	dInvariantMassCuts.emplace(AntiXi0, dInvariantMassCuts[XiMinus]);
 	dInvariantMassCuts.emplace(AntiXiPlus, dInvariantMassCuts[XiMinus]);
 	dInvariantMassCuts.emplace(OmegaMinus, std::make_pair(1.32, 2.22));
-	dInvariantMassCuts.emplace(Lambda_c, std::make_pair(2.0, 2.6));
+	dInvariantMassCuts.emplace(Lambda_c, std::make_pair(2.1, 2.5));
+	dInvariantMassCuts.emplace(Sigma_cPlusPlus, std::make_pair(2.2, 2.7));
 
 
 	//DEFAULT MISSING MASS SQUARED CUT FUNCTION

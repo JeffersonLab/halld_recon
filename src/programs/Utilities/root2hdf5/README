@@ -1,0 +1,11 @@
+
+
+May 8, 2023  Richard Jones
+
+
+The root2hdf5 program provides a general utility for converting
+a root tree into a hdf5 data file, that is immediately accessible
+for training or testing a neural net within the tensorflow toolkit.
+For instructions on how to run it, do
+
+  $ ./root2hdf5 -h

@@ -398,6 +398,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	  
 	  if (VERBOSE>2) {printf("(E,x,y,z,t)    "); shower->ExyztCovariance.Print(); }
 
+	  shower->hitsInCluster.clear();
 	  for( int icell = 0; icell < ccalClusters[k].nhits; icell++ ) {
 	    
 	    int hitID   = clusterStorage[k].id[icell];
@@ -406,15 +407,15 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
 	    int hitROW  = ccalGeom.row( hitY );
 	    int hitCOL  = ccalGeom.column( hitX );
 	    	    
-	    DCCALHit *clusHit = new DCCALHit;
-	    clusHit->row    = hitROW;
-	    clusHit->column = hitCOL;
-	    clusHit->x      = hitX;
-	    clusHit->y      = hitY;
-	    clusHit->E      = static_cast<float>( 1000.*clusterStorage[k].E[icell] );
-	    clusHit->t      = static_cast<float>( clusterStorage[k].t[icell] );
+	    DCCALHit clusHit;
+	    clusHit.row    = hitROW;
+	    clusHit.column = hitCOL;
+	    clusHit.x      = hitX;
+	    clusHit.y      = hitY;
+	    clusHit.E      = static_cast<float>( 1000.*clusterStorage[k].E[icell] );
+	    clusHit.t      = static_cast<float>( clusterStorage[k].t[icell] );
 	    
-	    shower->AddAssociatedObject( clusHit );
+	    shower->hitsInCluster.push_back( clusHit );
 	    
 	  }
 

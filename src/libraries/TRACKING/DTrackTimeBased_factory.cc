@@ -235,7 +235,9 @@ jerror_t DTrackTimeBased_factory::brun(jana::JEventLoop *loop, int32_t runnumber
   // Get CDC wire geometry data
   geom->GetCDCWires(cdcwires);
   //   geom->GetCDCRmid(cdc_rmid); // THIS ISN'T IMPLEMENTED!!
+
   // extract the "mean" radius of each ring from the wire data
+  cdc_rmid.clear();
   for(uint ring=0; ring<cdcwires.size(); ring++)
     cdc_rmid.push_back( cdcwires[ring][0]->origin.Perp() );
   

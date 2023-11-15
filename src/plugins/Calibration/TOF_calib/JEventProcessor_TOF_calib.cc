@@ -233,6 +233,12 @@ jerror_t JEventProcessor_TOF_calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   memset(th,0,locTOFGeometry->Get_NPlanes()*locTOFGeometry->Get_NBars()*locTOFGeometry->Get_NEnds()*4);
   for (unsigned int k=0; k<ADCHits.size(); k++){
     const DTOFDigiHit *hit = ADCHits[k];
+
+    // only use DigiHits from fADC250 if QF for pedestal is ok
+    if (hit->QF & 0x40){  // pedestal determination failed! do not use this hit!
+      continue;
+    }
+
     int plane = hit->plane;
     int end = hit->end;
 

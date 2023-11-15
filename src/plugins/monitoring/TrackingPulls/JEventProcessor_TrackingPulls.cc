@@ -62,6 +62,8 @@ jerror_t JEventProcessor_TrackingPulls::init(void) {
     locTreeBranchRegister.Register_Single<Int_t>("track_index");
     locTreeBranchRegister.Register_Single<Double_t>("chi2");
     locTreeBranchRegister.Register_Single<Int_t>("ndf");
+    locTreeBranchRegister.Register_Single<Int_t>("ncdchits");
+    locTreeBranchRegister.Register_Single<Int_t>("nfdchits");
     locTreeBranchRegister.Register_Single<Double_t>("charge");
     locTreeBranchRegister.Register_Single<Double_t>("mom");
     locTreeBranchRegister.Register_Single<Double_t>("phi");
@@ -374,6 +376,8 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
       dTreeFillData.Fill_Single<Int_t>("track_index", (int)i);
       dTreeFillData.Fill_Single<Double_t>("chi2", track->chisq);
       dTreeFillData.Fill_Single<Int_t>("ndf", track->Ndof);
+      dTreeFillData.Fill_Single<Int_t>("ncdchits", track->measured_cdc_hits_on_track);
+      dTreeFillData.Fill_Single<Int_t>("nfdchits", track->measured_fdc_hits_on_track);
       dTreeFillData.Fill_Single<Double_t>("charge", track->charge());
       dTreeFillData.Fill_Single<Double_t>("mom", track->momentum().Mag());
       dTreeFillData.Fill_Single<Double_t>("phi", track->momentum().Phi() * TMath::RadToDeg());
