@@ -80,6 +80,7 @@
 		h_d->SetStats(0);
 	}
 
+
 	legend_ua->AddEntry(ha_u,"Up","f");
 	legend_da->AddEntry(ha_d,"Down","f");
 
@@ -100,7 +101,7 @@
 	c1->cd(0);
 	c1->Clear();
 
-	c1->Divide(1,2);
+	c1->Divide(3,3);
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGridy();
@@ -117,7 +118,36 @@
 	if(h_d) h_d->Draw("BAR sames");
 
 	legend_u->Draw();
-	legend_d->Draw();
+        legend_d->Draw();
+
+	TVirtualPad *pad3 = c1->cd(3);
+	pad3->SetTicks();
+	pad3->SetGridy();
+	if(hr_u) hr_u->Draw("BAR");
+	if(hr_d) hr_d->Draw("BAR sames");
+
+	legend_ru->Draw();
+	legend_rd->Draw();
+
+	TVirtualPad *pad4 = c1->cd(4);
+	pad4->SetTicks();
+	pad4->SetGridy();
+	if(h_de) h_de->Draw("BAR colz0");
+
+	TVirtualPad *pad5 = c1->cd(5);
+        pad5->SetTicks();
+        pad5->SetGridy();
+        if(h_t) h_t->Draw("BAR colz0");
+	
+	TVirtualPad *pad6 = c1->cd(6);
+        pad6->SetTicks();
+        pad6->SetGridy();
+        if(h_t_adc) h_t_adc->Draw("BAR colz0");
+
+	TVirtualPad *pad7 = c1->cd(7);
+        pad7->SetTicks();
+        pad7->SetGridy();
+        if(h_adc_tdc) h_adc_tdc->Draw("BAR colz0");
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
