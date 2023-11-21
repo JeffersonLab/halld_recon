@@ -12,6 +12,7 @@ using namespace jana;
 #include "FMWPC/DFMWPCHit.h"
 #include "FMWPC/DCTOFDigiHit.h"
 #include "FMWPC/DCTOFTDCDigiHit.h"
+#include "FMWPC/DCTOFHit.h"
 #include <TTAB/DTTabUtilities.h>
 
 #include <TDirectory.h>
@@ -22,6 +23,9 @@ static TH1I *fmwpc_num_events;
 static TH1F *fmwpc_occ_layer[6];
 static TH1F *fmwpc_hit_layer[6];
 static TH2I *fmwpc_pedestal[6];
+static TH1I *h1_fmwpc_occ_chamber;
+//static TH2F *h2_fmwpc_time;
+//static TH2F *h2_fmwpc_q;
 
 static TH1I *ctof_adc_events;
 static TH1F *ctof_adc_occ_up;
@@ -31,6 +35,16 @@ static TH1F *ctof_tdc_occ_up;
 static TH1F *ctof_tdc_occ_down;
 static TH2F *ctof_tdc_time;
 static TH2F *ctof_adc_time;
+static TH1I *h1_ctof_occ_up;
+static TH1I *h1_ctof_occ_down;
+static TH2F *h2_ctof_dE;
+static TH2D *h2_ctof_t;
+static TH2D *h2_ctof_t_adc;
+static TH2D *h2_ctof_t_adc_tdc;
+static TH1F *fmwpc_time_chamber[6];
+static TH1D *fmwpc_pulse_integral_chamber[6];
+static TH2F *h2_fmwpc_time_chamber;
+static TH2D *h2_fmwpc_pi_chamber;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -90,7 +104,21 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
          sprintf(htitle, "FMWPC Pedestal vs. wire %01d;Wire Number;Pedestal", iLayer+1);
 	 fmwpc_pedestal[iLayer] = new TH2I(hname, htitle, 144, 0.5, 144.5, 400, 0.0, 400.0);
 	 fmwpc_pedestal[iLayer]->SetStats(0);
+	 
+	 sprintf(hname,"fmwpc_time_chamber_%01d", iLayer+1);
+	 sprintf(htitle, "Chamber %01d Time (ns)", iLayer+1);
+	 fmwpc_time_chamber[iLayer] = new TH1F(hname, htitle, 150,0,2000);
+	 fmwpc_time_chamber[iLayer]->SetStats(0);
+
+	 sprintf(hname,"fmwpc_pulse_integral_chamber_%01d", iLayer+1);
+	 sprintf(htitle, "Chamber %01d Pulse Integral", iLayer+1);
+         fmwpc_pulse_integral_chamber[iLayer] = new TH1D(hname, htitle, 100,0,2000);
+	 fmwpc_pulse_integral_chamber[iLayer]->SetStats(0);
         }
+
+	h1_fmwpc_occ_chamber = new TH1I("h1_fmwpc_occ_chamber","FMWPC Hits per Chamber",6,0,6);
+	h2_fmwpc_time_chamber = new TH2F("h2_fmwpc_time_chamber","Time (ns) per Chamber",6,0,6,100,0,2000);
+	h2_fmwpc_pi_chamber = new TH2D("h2_fmwpc_pi_chamber","Energy (GeV) per Chamber",6,0,6,150,0,7000);
 
 	ctof_adc_occ_up = new TH1F("ctof_adc_occ_up", "CTOF ADC Occupancy", 4, 0.5, 4.5);
 	ctof_adc_occ_up->SetXTitle("Bar Number");
@@ -103,6 +131,24 @@ jerror_t JEventProcessor_FMWPC_online::init(void)
 
 	ctof_tdc_time=new TH2F("ctof_tdc_time","CTOF time from TDC;channel;t [ns]",8,-0.5,7.5,2000,-1000,1000);
 	ctof_adc_time=new TH2F("ctof_adc_time","CTOF time from ADC;channel;t [ns]",8,-0.5,7.5,2000,-1000,1000);
+	
+	h1_ctof_occ_up = new TH1I("h1_ctof_occ_up", "CTOF Occupancy", 4, 0.5, 4.5);
+	h1_ctof_occ_down = new TH1I("h1_ctof_occ_down", "CTOF Occupancy", 4, 0.5, 4.5);
+	h1_ctof_occ_up->SetXTitle("Bar Number");
+	h1_ctof_occ_down->SetXTitle("Bar Number");
+	h2_ctof_dE = new TH2F("h1_ctof_dE", "Energy in Each BAR",4,0.5,4.5,100,0,0.003);
+	h2_ctof_dE->SetXTitle("Bar Number");
+	h2_ctof_dE->SetYTitle("Energy (GeV)");
+	h2_ctof_t = new TH2D("h2_ctof_t", "TDC Time in Each BAR",4,0.5,4.5,150,-170,170);
+	h2_ctof_t->SetXTitle("Bar Number");
+	h2_ctof_t->SetYTitle("Time (ns)");
+	h2_ctof_t_adc = new TH2D("h2_ctof_t_adc","ADC Time in Each BAR",4,0.5,4.5,150,-170,170);
+	h2_ctof_t_adc->SetXTitle("Bar Number");
+	h2_ctof_t_adc->SetYTitle("ADC Time (ns)");
+	h2_ctof_t_adc_tdc = new TH2D("h2_ctof_t_adc_tdc","TDC - ADC Time in Each BAR",4,0.5,4.5,150,-170,170);
+	h2_ctof_t_adc_tdc->SetXTitle("Bar Number");
+	h2_ctof_t_adc_tdc->SetYTitle("ADC - TDC Time");
+	
 
         // back to main dir
         main->cd();
@@ -171,6 +217,9 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
         vector<const DCTOFTDCDigiHit*>ctoftdcdigis;
         loop->Get(ctoftdcdigis);
 
+	vector<const DCTOFHit*>ctofHits;
+	loop->Get(ctofHits);
+
         // FILL HISTOGRAMS
         // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
         japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -179,15 +228,37 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 
         for (unsigned int i=0; i<fmwpcdigis.size();i++){
          const DFMWPCDigiHit *digi = fmwpcdigis[i];
-
+	 fmwpc_time_chamber[digi->layer-1]->Fill(digi->pulse_time);
+	 fmwpc_pulse_integral_chamber[digi->layer-1]->Fill(digi->pulse_integral);
+	 h2_fmwpc_time_chamber->Fill(digi->layer-1, digi->pulse_time);
+	 h2_fmwpc_pi_chamber->Fill(digi->layer-1, digi->pulse_integral);
          fmwpc_occ_layer[digi->layer-1]->Fill(digi->wire);
 	 fmwpc_pedestal[digi->layer-1]->Fill(digi->wire, digi->pedestal);
         }
 
         for (unsigned int i=0; i<fmwpchits.size();i++){
          const DFMWPCHit *hit = fmwpchits[i];
-
          fmwpc_hit_layer[hit->layer-1]->Fill(hit->wire);
+	 //h2_fmwpc_time->Fill(hit->layer-1, hit->t);
+	 //h2_fmwpc_q->Fill(hit->layer-1, hit->q);
+	 if(hit->layer == 1){
+	   h1_fmwpc_occ_chamber->Fill(0);
+	 }
+	 if(hit->layer == 2){
+           h1_fmwpc_occ_chamber->Fill(1);
+	 }
+	 if(hit->layer == 3){
+           h1_fmwpc_occ_chamber->Fill(2);
+	 }
+	 if(hit->layer == 4){
+           h1_fmwpc_occ_chamber->Fill(3);
+	 }
+	 if(hit->layer == 5){
+           h1_fmwpc_occ_chamber->Fill(4);
+	 }
+	 if(hit->layer == 6){
+           h1_fmwpc_occ_chamber->Fill(5);
+	 }
         }
 
         ctof_adc_events->Fill(1);
@@ -221,6 +292,20 @@ jerror_t JEventProcessor_FMWPC_online::evnt(JEventLoop *loop, uint64_t eventnumb
 	 T += ctof_t_base_tdc + ctof_tdc_time_offsets[ind];
 
 	 ctof_tdc_time->Fill(ind,T);
+	}
+	//For factory hits
+	for(unsigned int j = 0; j < ctofHits.size(); j++){
+	  const DCTOFHit *hit = ctofHits[j];
+	  h2_ctof_dE->Fill(hit->bar,hit->dE);
+	  h2_ctof_t->Fill(hit->bar,hit->t);
+	  h2_ctof_t_adc->Fill(hit->bar,hit->t_adc);
+	  h2_ctof_t_adc_tdc->Fill(hit->bar,hit->t_adc - hit->t);
+	  if(hit->end == 0){
+	    h1_ctof_occ_up->Fill(hit->bar);
+	  }
+	  if(hit->end == 1){
+	    h1_ctof_occ_down->Fill(hit->bar);
+	  }
 	}
 
 	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
