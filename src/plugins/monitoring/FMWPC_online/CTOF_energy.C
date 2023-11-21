@@ -110,13 +110,13 @@
   //legend_rd->Draw();
 
   TVirtualPad *pad1 = c1->cd(1);
-  pad2->SetTicks();
-  pad2->SetGridy();
+  pad1->SetTicks();
+  pad1->SetGridy();
   if(h_de) h_de->Draw("BAR colz0");
 
   TVirtualPad *pad2 = c1->cd(2);
-  pad3->SetTicks();
-  pad3->SetGridy();
+  pad2->SetTicks();
+  pad2->SetGridy();
   if(h_t) h_t->Draw("BAR colz0");
 
   //TVirtualPad *pad4 = c1->cd(4);
@@ -125,8 +125,8 @@
   //if(h_t_adc) h_t_adc->Draw("BAR colz0");
 
   TVirtualPad *pad3 = c1->cd(3);
-  pad5->SetTicks();
-  pad5->SetGridy();
+  pad3->SetTicks();
+  pad3->SetGridy();
   if(h_adc_tdc) h_adc_tdc->Draw("BAR colz0");
 
 #ifdef ROOTSPY_MACROS
