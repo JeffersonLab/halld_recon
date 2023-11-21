@@ -101,7 +101,7 @@
 	c1->cd(0);
 	c1->Clear();
 
-	c1->Divide(3,3);
+	c1->Divide(2,1);
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGridy();
