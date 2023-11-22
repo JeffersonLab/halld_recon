@@ -80,6 +80,7 @@
 		h_d->SetStats(0);
 	}
 
+
 	legend_ua->AddEntry(ha_u,"Up","f");
 	legend_da->AddEntry(ha_d,"Down","f");
 
@@ -100,7 +101,7 @@
 	c1->cd(0);
 	c1->Clear();
 
-	c1->Divide(1,2);
+	c1->Divide(2,1);
 	TVirtualPad *pad1 = c1->cd(1);
 	pad1->SetTicks();
 	pad1->SetGridy();
@@ -117,7 +118,7 @@
 	if(h_d) h_d->Draw("BAR sames");
 
 	legend_u->Draw();
-	legend_d->Draw();
+        legend_d->Draw();
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------

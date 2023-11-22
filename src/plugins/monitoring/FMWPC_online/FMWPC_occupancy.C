@@ -28,7 +28,7 @@
 	double Nevents = 1.0;
 	TH1I *fmwpc_num_events = (TH1I*)gDirectory->FindObjectAny("fmwpc_num_events");
 	if(fmwpc_num_events) Nevents = (double)fmwpc_num_events->GetBinContent(1);
-
+	
 	// Just for testing
 	if(gPad == NULL){
 		TCanvas *c1 = new TCanvas("c1");
@@ -137,6 +137,8 @@
 		fmwpc_norm_layer_6->GetXaxis()->SetTitleSize(0.05);
 		fmwpc_norm_layer_6->Draw("h");
 	}
+
+
 
 #ifdef ROOTSPY_MACROS
 	// ------ The following is used by RSAI --------
