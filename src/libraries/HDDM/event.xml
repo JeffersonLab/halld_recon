@@ -47,7 +47,9 @@
       <forwardDC minOccurs="0">
         <fdcChamber layer="int" maxOccurs="unbounded" module="int">
           <fdcAnodeWire maxOccurs="unbounded" minOccurs="0" wire="int">
-            <fdcAnodeHit dE="float" maxOccurs="unbounded" t="float"/>
+            <fdcAnodeHit dE="float" maxOccurs="unbounded" t="float">
+	      <forSergey minOccurs="0" itrack="int"/>
+	    </fdcAnodeHit>
             <fdcAnodeTruthHit dE="float" maxOccurs="unbounded" t="float" t_unsmeared="float" d="float" itrack="int" ptype="int"/>
           </fdcAnodeWire>
           <fdcCathodeStrip maxOccurs="unbounded" minOccurs="0" plane="int" strip="int">

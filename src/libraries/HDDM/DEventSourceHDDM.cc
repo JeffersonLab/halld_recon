@@ -1401,7 +1401,9 @@ jerror_t DEventSourceHDDM::Extract_DFDCHit(hddm_s::HDDM *record,
          newHit->pulse_height = 0.;     // not measured
          newHit->t       = ahiter->getT();
          newHit->d       = 0.; // initialize to zero to avoid any NaN
-         newHit->itrack  = 0;  // track information is in TRUTH tag
+         //newHit->itrack  = 0;  // track information is in TRUTH tag
+	 const hddm_s::ForSergeyList &ids = ahiter->getForSergeys(); 
+	 newHit->itrack  = (ids.size())? ids.begin()->getItrack() : 0;
          newHit->ptype   = 0;  // ditto
          newHit->plane   = 2;
          newHit->type    = 0;
