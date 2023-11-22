@@ -771,6 +771,7 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
    phi0*=M_PI/180.;
 
    // Loop over the number of straws
+   DVector3 avg;
    for (unsigned int i=0;i<ncopy;i++){
       DCDCWire *w=new DCDCWire;
       double phi=phi0+double(i)*dphi;
@@ -791,6 +792,7 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
             y0+cdc_offsets[ringid][i].dy_u,
             zcenter-half_dz);
       w->origin=0.5*(upstream+downstream);
+      avg+=1./double(ncopy)*w->origin;
 
       // Here, we need to define a coordinate system for the wire
       // in which the wire runs along one axis. We call the directions
@@ -817,6 +819,7 @@ bool DGeometry::GetCDCAxialWires(unsigned int ring,unsigned int ncopy,
 
       axialwires.push_back(w);
    }
+   avg.Print();
    
    return true;
 }
@@ -1480,6 +1483,7 @@ bool DGeometry::GetFDCZ(vector<double> &z_wires) const
    for(int package=1; package<=4; package++){
       double z_package = forwardDC_package[package-1][2];
 
+      cout << "FDC: " << zfdc+z_package << endl;
       // Each "package" has 1 "module" which is currently positioned at 0,0,0 but
       // that could in principle change so we add the module z-offset
       double z_module = forwardDC_module[package-1][2];
@@ -2616,6 +2620,8 @@ bool DGeometry::GetTargetZ(double &z_target) const
    if(gluex_target_exists) {
      z_target = xyz_vessel[2] + xyz_target[2] + xyz_detector[2];
      jgeom->SetVerbose(1);   // reenable error messages
+
+     cout << "Target z: " << z_target << endl;
      return true;
    }
 
@@ -2800,6 +2806,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
     	loaded_paddle_offsets = true;
     
     // Create vectors of positions and normal vectors for each paddle
+    DVector3 avg;
     for (unsigned int i=0;i<30;i++){
       double phi=ThetaZ+dSCdphi*(double(i)+0.5);
       double sinphi=sin(phi);
@@ -2850,6 +2857,7 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
 	dirvec.push_back(dir);
 	posvec.push_back(DVector3(oldray.X()+dx,oldray.Y()+dy,oldray.Z()+z0));
       }
+      avg+=(1./30.)*DVector3(ray.X()+dx,ray.Y()+dy,ray.Z()+z0);
       posvec.push_back(DVector3(ray.X()+dx,ray.Y()+dy,ray.Z()+z0)); //SAVE THE ENDPOINT OF THE LAST PLANE
       pos.push_back(posvec);
       norm.push_back(dirvec);
@@ -2857,8 +2865,10 @@ bool DGeometry::GetStartCounterGeom(vector<vector<DVector3> >&pos,
       posvec.clear();
       dirvec.clear();
     }
-    
+
+    avg.Print();
   }
+
   return got_sc;
 }
 
