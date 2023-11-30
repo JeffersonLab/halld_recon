@@ -36,6 +36,9 @@ DFCALShower_factory::DFCALShower_factory()
   USE_RING_E_CORRECTION=false;
   gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION",USE_RING_E_CORRECTION);
 
+  USE_RING_E_CORRECTION_V2=false;
+  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
+
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
@@ -168,6 +171,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   // by default, load non-linear shower corrections from the CCDB
   // but allow these to be overridden by command line parameters
   energy_dependence_correction_vs_ring.clear();
+  nonlinear.clear();
   if(LOAD_NONLIN_CCDB) {
     map<string, double> shower_calib_piecewise;
     loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
@@ -198,6 +202,21 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 	  //for (int j = 0; j < 6; j ++) {
 	  for (int j = 0; j < 3; j ++) {
 	    jout << "Ring # " << i << Form(" %s", str_coef[j].Data()) << energy_dependence_correction_vs_ring[i][j]; 
+	  }
+	  jout << endl;
+	}
+      }
+    }
+    loop->GetCalib("FCAL/nonlinear", nonlinear);
+    if (nonlinear.size() > 0 && nonlinear[0][0] != 0) {
+      m_beamSpotX = beam_spot.at("x");
+      m_beamSpotY = beam_spot.at("y");
+      if (debug_level > 0) {
+	TString str_coef[] = {"A", "B", "C", "D", "E", "F", "G", "H", "I"};
+	for (int i = 0; i < 5; i ++) {
+	  //for (int j = 0; j < 6; j ++) {
+	  for (int j = 0; j < 9; j ++) {
+	    jout << "Ring # " << i << Form(" %s", str_coef[j].Data()) << nonlinear[i][j]; 
 	  }
 	  jout << endl;
 	}
@@ -458,6 +477,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   double C = 0;
   double D = 0;
   double E = 0;
+  double F = 0;
+  double G = 0;
+  double H = 0;
+  double I = 0;
   double Egamma = Eclust;
   Ecorrected = 0;
 
@@ -512,7 +535,36 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
 	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
       }
-      // End Correction method II     
+    }
+    if (USE_RING_E_CORRECTION_V2 && nonlinear.size()>0){
+      // Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
+      Egamma=Eclust; // Initialize, before correction
+      int ring_region = -1;
+      if (ring_nb == 1)
+	ring_region = 0;
+      else if (ring_nb == 2)
+	ring_region = 1;
+      else if (ring_nb == 3)
+	ring_region = 2;
+      else if (ring_nb == 4)
+	ring_region = 3;
+      else if (5 <= ring_nb)
+	ring_region = 4;
+      if (ring_region != -1) {	
+	Egamma = 0;
+	A = nonlinear[ring_region][0];
+	B = nonlinear[ring_region][1];
+	C = nonlinear[ring_region][2];
+	D = nonlinear[ring_region][3];
+	E = nonlinear[ring_region][4];
+	F = nonlinear[ring_region][5];
+	G = nonlinear[ring_region][6];
+	H = nonlinear[ring_region][7];
+	I = nonlinear[ring_region][8];
+	//[0]-[1]*exp(-[2]*x+[3]) -[4]/([5]+[6]*exp(-x*[7]+[8])
+	Egamma = Eclust / (A - B * exp(-C * Eclust + D) - E / (F + G * exp(-Eclust * H + I))); 
+      }
+      // End Correction method III     
     } else {
       // Method I: IU way, one overall correction
       Egamma = 0;

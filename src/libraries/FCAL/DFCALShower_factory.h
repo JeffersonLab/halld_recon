@@ -66,6 +66,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   bool LOAD_TIMING_CCDB; 
   bool LOAD_CCDB_CONSTANTS;
   bool USE_RING_E_CORRECTION;
+  bool USE_RING_E_CORRECTION_V2;
   bool SHOWER_POSITION_LOG;
   double SHOWER_ENERGY_THRESHOLD;
   double cutoff_energy;
@@ -75,7 +76,10 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double expfit_param2;
   double expfit_param3;
   
+  //V1 based on pi^0
   vector < vector <double> > energy_dependence_correction_vs_ring;
+  //V2 based on E/P
+  vector < vector <double> > nonlinear;
   
   double timeConst0;
   double timeConst1;
