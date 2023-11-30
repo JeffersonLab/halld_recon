@@ -620,8 +620,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    {
 		if (locTAGMiter->getJtag() != tag)
 		 continue;
-
-		DBeamPhoton* gamma = new DBeamPhoton();
 		
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int column = 0;
@@ -654,6 +652,8 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			continue;
 		}
 
+		DBeamPhoton* gamma = new DBeamPhoton();
+
 		double Elo_tagm = tagmGeom->getElow(column);
 		double Ehi_tagm = tagmGeom->getEhigh(column);
 		double Ebeam_tagm = (Elo_tagm + Ehi_tagm)/2.;
@@ -681,8 +681,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    {
       if (locTAGHiter->getJtag() != tag)
          continue;
-
-      DBeamPhoton* gamma = new DBeamPhoton();
 
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int counter = 0;
@@ -714,6 +712,8 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(counter == 0) {
 			continue;
 		}
+
+      	DBeamPhoton* gamma = new DBeamPhoton();
 
 		double Elo_tagh = taghGeom->getElow(counter);
 		double Ehi_tagh = taghGeom->getEhigh(counter);
