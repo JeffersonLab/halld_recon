@@ -620,8 +620,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    {
 		if (locTAGMiter->getJtag() != tag)
 		 continue;
-
-		DBeamPhoton* gamma = new DBeamPhoton();
 		
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int column = 0;
@@ -654,12 +652,14 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			continue;
 		}
 
-		double Elo = tagmGeom->getElow(column);
-		double Ehi = tagmGeom->getEhigh(column);
-		double Ebeam = (Elo + Ehi)/2.;
+		DBeamPhoton* gamma = new DBeamPhoton();
+
+		double Elo_tagm = tagmGeom->getElow(column);
+		double Ehi_tagm = tagmGeom->getEhigh(column);
+		double Ebeam_tagm = (Elo_tagm + Ehi_tagm)/2.;
 
 		// read the rest of the data from the REST file
-		DVector3 mom(0.0, 0.0, Ebeam);
+		DVector3 mom(0.0, 0.0, Ebeam_tagm);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
@@ -682,8 +682,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
       if (locTAGHiter->getJtag() != tag)
          continue;
 
-      DBeamPhoton* gamma = new DBeamPhoton();
-
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int counter = 0;
 		hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
@@ -691,7 +689,7 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			// it's easy if the column is already set 
 			counter = locTaghChannelList().getCounter();
 		} else {
-			// if the TAGM column isn't saved in the REST file, then we do one of two things
+			// if the TAGH column isn't saved in the REST file, then we do one of two things
 			//   1) if there's no special CCDB context associated with the file, we can just
 			//      reverse engineer the counter, assuming the latest CCDB
 			//   2) If there is a special CCDB context specified, then use that instead
@@ -715,7 +713,13 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			continue;
 		}
 
-		DVector3 mom(0.0, 0.0, locTAGHiter->getE());
+      	DBeamPhoton* gamma = new DBeamPhoton();
+
+		double Elo_tagh = taghGeom->getElow(counter);
+		double Ehi_tagh = taghGeom->getEhigh(counter);
+		double Ebeam_tagh = (Elo_tagh + Ehi_tagh)/2.;
+
+		DVector3 mom(0.0, 0.0, Ebeam_tagh);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
