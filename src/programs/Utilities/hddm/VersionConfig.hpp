@@ -1,4 +1,0 @@
-#define HDDM_VERSION_MAJOR 1
-#define HDDM_VERSION_MINOR 0
-
-#define HDF5_SUPPORT
