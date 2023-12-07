@@ -14,7 +14,8 @@ class DBeamHelicity_factory:public jana::JFactory<DBeamHelicity>{
 		DBeamHelicity_factory(){};
 		~DBeamHelicity_factory(){};
 
-		int dIHWP;
+		static int   dIHWP;
+		static int   dBeamOn;
 
 		jerror_t init(void);						///< Called once at program start.
 		jerror_t brun(jana::JEventLoop *eventLoop,  int32_t runnumber);	///< Called everytime a new run number is detected.
