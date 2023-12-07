@@ -709,7 +709,8 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 
 	// Skip to next segment seed if we don't have enough points to fit a 
 	// circle
-	if (num_neighbors<3) continue;    
+	bool enough_neighbors=(num_neighbors<3)?false:true;
+	//if (num_neighbors<3) continue;    
 
 	bool do_sort=false;
 	// Look for hits adjacent to the ones we have in our segment candidate
@@ -732,44 +733,61 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	// Sort if we added another point
 	if (do_sort)
 	  std::stable_sort(neighbors.begin(),neighbors.end(),DFDCSegment_package_cmp);
-    
-	// Arc lengths in helical model are referenced relative to the plane
-	// ref_plane within a segment.  For a 6 hit segment, ref_plane=2 is 
-	// roughly in the center of the segment.
-	ref_plane=0; 
-	
-	// Perform the Riemann Helical Fit on the track segment
-	jerror_t error=RiemannHelicalFit(neighbors);
-		
-	if (error==NOERROR){  
-	  // Since the cell size is 0.5 cm and the Lorentz deflection can be
-	  // mm scale, a circle radius on the order of 1 cm is at the level of 
-	  // how well the points are defined at this stage.  Use a simple circle
-	  // fit assuming the circle goes through the origin.
-	  if (rc<1.0) {
+	if (enough_neighbors){    
+	  // Arc lengths in helical model are referenced relative to the plane
+	  // ref_plane within a segment.  For a 6 hit segment, ref_plane=2 is 
+	  // roughly in the center of the segment.
+	  ref_plane=0; 
+	  
+	  // Perform the Riemann Helical Fit on the track segment
+	  jerror_t error=RiemannHelicalFit(neighbors);
+	  
+	  if (error==NOERROR){  
+	    // Since the cell size is 0.5 cm and the Lorentz deflection can be
+	    // mm scale, a circle radius on the order of 1 cm is at the level of 
+	    // how well the points are defined at this stage.  Use a simple circle
+	    // fit assuming the circle goes through the origin.
+	    if (rc<1.0) {
+	      if (CircleFit(neighbors)==NOERROR){
+		if (LineFit(neighbors)==NOERROR){	  
+		  chisq=ComputeCircleChiSq(neighbors);
+		}
+	      }
+	    }
+
+	    // Create a new segment
+	    DFDCSegment *segment = new DFDCSegment;	
+	    segment->hits=neighbors;
+	    segment->package=(neighbors[0]->wire->layer-1)/6;
+	    FillSegmentData(segment);
+	    
+	    _data.push_back(segment);
+	  }
+	  else {
+	    // Fit assuming particle came from (x,y)=(0,0)
 	    if (CircleFit(neighbors)==NOERROR){
-	      if (LineFit(neighbors)==NOERROR){	  
+	      if (LineFit(neighbors)==NOERROR){
 		chisq=ComputeCircleChiSq(neighbors);
 	      }
 	    }
+	    
+	    // Create a new segment
+	    DFDCSegment *segment = new DFDCSegment;	
+	    segment->hits=neighbors;
+	    segment->package=(neighbors[0]->wire->layer-1)/6;
+	    FillSegmentData(segment);
+	    
+	    _data.push_back(segment);
 	  }
-
-	  // Create a new segment
-	  DFDCSegment *segment = new DFDCSegment;	
-	  segment->hits=neighbors;
-	  segment->package=(neighbors[0]->wire->layer-1)/6;
-	  FillSegmentData(segment);
-
-	  _data.push_back(segment);
-	}
-	else {
+	} // enough neighbors?
+	else if (neighbors.size()>1){
 	  // Fit assuming particle came from (x,y)=(0,0)
 	  if (CircleFit(neighbors)==NOERROR){
 	    if (LineFit(neighbors)==NOERROR){
 	      chisq=ComputeCircleChiSq(neighbors);
 	    }
 	  }
-
+	  
 	  // Create a new segment
 	  DFDCSegment *segment = new DFDCSegment;	
 	  segment->hits=neighbors;
@@ -778,7 +796,6 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 
 	  _data.push_back(segment);
 	}
-
       }
     }
   
