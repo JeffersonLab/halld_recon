@@ -98,6 +98,7 @@ class DFDCPseudo : public JObject {
       double q; ///< anode charge deduced from cathode strips
       int itrack;
       DVector2 xy; ///< rough x,y coordinates in lab coordinate system
+      oid_t wire_id;
 
       void toStrings(vector<pair<string,string> > &items)const{ 
          AddString(items,"u","%3.2f",u);
