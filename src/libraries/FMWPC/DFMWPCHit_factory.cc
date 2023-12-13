@@ -29,6 +29,9 @@ jerror_t DFMWPCHit_factory::init(void)
   gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", FMWPC_HIT_THRESHOLD,
                               "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
   
+  t_raw_min = -10000.;
+  t_raw_max = 10000.;
+
   // default values
   a_scale = 0.;
   t_scale = 0.;
@@ -66,9 +69,25 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   }
   pthread_mutex_unlock(&print_mutex);
   
-  // load geometry from XML here!!
-	  
+  // Read in calibration constants
+
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
+
+  vector<double> fmwpc_timing_cuts;
+
+  if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
+    t_raw_min = -60.;
+    t_raw_max = 900.;
+    jout << "Error loading /FMWPC/timing_cut ! set defaul values -60. and 900." << endl;
+  } else {
+    t_raw_min = fmwpc_timing_cuts[0];
+    t_raw_max = fmwpc_timing_cuts[1];
+    jout << "CDC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
+  }
+
+  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
+  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
+
   
   // load scale factors
   map<string,double> scale_factors;
@@ -242,7 +261,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
-    if (t_raw < 250 || t_raw > 450)
+    if (t_raw <= t_raw_min || t_raw >= t_raw_max)
       continue;
     
     // Scale factor to account for gain variation

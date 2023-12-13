@@ -28,6 +28,10 @@ class DFMWPCHit_factory:public jana::JFactory<DFMWPCHit>{
   ~DFMWPCHit_factory(){};
 //  const char* Tag(void){return "";}
 
+  // timing cut limits
+  double t_raw_min;
+  double t_raw_max;
+
   // overall scale factors.
   double a_scale, amp_a_scale;
   double t_scale;
