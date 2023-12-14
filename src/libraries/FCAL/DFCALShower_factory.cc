@@ -498,9 +498,8 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     zfront=m_insertFront;
 
     Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
-  }
-  else{
-     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
+  } else {
+    // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
     if (USE_RING_E_CORRECTION && energy_dependence_correction_vs_ring.size()>0){
       // Method II: PRIMEXD way, correction per ring
       Egamma=Eclust; // Initialize, before correction
@@ -535,8 +534,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
 	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
       }
-    }
-    if (USE_RING_E_CORRECTION_V2 && nonlinear.size()>0){
+    } else if (USE_RING_E_CORRECTION_V2 && nonlinear.size()>0){
       // Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
       Egamma=Eclust; // Initialize, before correction
       int ring_region = -1;
@@ -565,7 +563,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	Egamma = Eclust / (A - B * exp(-C * Eclust + D) - E / (F + G * exp(-Eclust * H + I))); 
       }
       // End Correction method III     
-    } else {
+    } else if (LOAD_NONLIN_CCDB && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION) {
       // Method I: IU way, one overall correction
       Egamma = 0;
       Ecutoff = cutoff_energy;
