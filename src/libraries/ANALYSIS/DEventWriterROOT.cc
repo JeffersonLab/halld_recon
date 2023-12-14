@@ -1391,7 +1391,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locTreeFillData->Fill_Single<UInt_t>("NumCombos", UInt_t(locParticleCombos.size()));
 	for(size_t loc_i = 0; loc_i < locParticleCombos.size(); ++loc_i)
 	{
-		Fill_ComboData(locTreeFillData, locReaction, locParticleCombos[loc_i], loc_i, locObjectToArrayIndexMap);
+		Fill_ComboData(locTreeFillData, locReaction, locParticleCombos[loc_i], loc_i, locObjectToArrayIndexMap, locTrigger);
 		
 		//ENERGY OF UNUSED SHOWERS (access to event loop required)
 		double locEnergy_UnusedShowers = 0.;
@@ -2087,14 +2087,17 @@ void DEventWriterROOT::Fill_NeutralHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "PhotonRFDeltaTVar"), locPhotonRFDeltaTVar, locArrayIndex);
 }
 
-void DEventWriterROOT::Fill_ComboData(DTreeFillData* locTreeFillData, const DReaction* locReaction, const DParticleCombo* locParticleCombo, unsigned int locComboIndex, const map<pair<oid_t, Particle_t>, size_t>& locObjectToArrayIndexMap) const
+void DEventWriterROOT::Fill_ComboData(DTreeFillData* locTreeFillData, const DReaction* locReaction, const DParticleCombo* locParticleCombo, unsigned int locComboIndex, const map<pair<oid_t, Particle_t>, size_t>& locObjectToArrayIndexMap, const DTrigger* locTrigger) const
 {
 	//MAIN CLASSES
 	const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
 	const DEventRFBunch* locEventRFBunch = locParticleCombo->Get_EventRFBunch();
 
 	//IS COMBO CUT
-	locTreeFillData->Fill_Array<Bool_t>("IsComboCut", kFALSE, locComboIndex);
+	if(locTrigger->Get_L1TriggerBits() == 0)
+		locTreeFillData->Fill_Array<Bool_t>("IsComboCut", kTRUE, locComboIndex);
+	else
+		locTreeFillData->Fill_Array<Bool_t>("IsComboCut", kFALSE, locComboIndex);
 
 	//RF INFO
 	double locRFTime = (locEventRFBunch != NULL) ? locEventRFBunch->dTime : numeric_limits<double>::quiet_NaN();
