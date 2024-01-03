@@ -20,6 +20,9 @@ using namespace std;
 #include <JANA/JApplication.h>
 using namespace jana;
 
+#include <dilog.h>
+#include <sstream>
+
 //----------------
 // Constructor
 //----------------
@@ -407,7 +410,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       
       double e9e25, e1e9;
       getE1925FromHits( e1e9, e9e25, fcalHits,
-			getMaxHit(cluster->getChannelEmax(),fcalHits) );
+			getMaxHit(cluster->getChannelEmax(),fcalHits), eventnumber );
       shower->setE1E9( e1e9 );
       shower->setE9E25( e9e25 );
 
@@ -428,6 +431,19 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setSumV( sumV );
       
       shower->AddAssociatedObject( cluster );
+{
+  std::stringstream msg;
+  std::stringstream evt;
+  evt << eventnumber;
+  msg << "new DFCALShower with docaTrack=" << docaTr
+      << ", timeTrack=" << timeTr
+      << ", nblocks=" << fcalHits.size()
+      << ", E1E9=" << e1e9
+      << ", E9E25=" << e9e25
+      << ", sumU=" << sumU
+      << ", sumV=" << sumV;
+  dilog::get(evt.str().c_str()).printf("%s", msg.str().c_str());
+}
 
       _data.push_back(shower);
     }
@@ -830,7 +846,7 @@ DFCALShower_factory::getUVFromHits( double& sumUSh, double& sumVSh,
 void
 DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
 				       const vector< const DFCALHit* >& hits,
-				       unsigned int maxIndex ) const {
+				       unsigned int maxIndex, int eventnumber ) const {
 
   double E9 = 0;
   double E25 = 0;
@@ -839,7 +855,15 @@ DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh,
  
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end(); ++hit ){
-     
+{
+  std::stringstream evt;
+  evt << eventnumber;
+  dilog::block myloop(evt.str().c_str(), "fcalhits");
+  std::stringstream msg;
+  msg << "  fcalhit with x,y,E=" << (*hit)->x << "," << (*hit)->y << "," << (*hit)->E
+      << ", maxHit with x,y,E=" << maxHit->x << "," << maxHit->y << "," << maxHit->E;
+  dilog::get(evt.str().c_str()).printf("%s", msg.str().c_str());
+}
     if( fabs( (**hit).x - maxHit->x ) < 4.5 && fabs( (**hit).y - maxHit->y ) < 4.5 )
       E9 += (**hit).E;
 
@@ -992,5 +1016,3 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   return;
   
 }
-
-

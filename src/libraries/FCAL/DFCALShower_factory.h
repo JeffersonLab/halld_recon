@@ -53,7 +53,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
 
   void getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
 			 const vector< const DFCALHit* >& hits,
-			 unsigned int maxIndex ) const;
+			 unsigned int maxIndex, int eventnumber ) const;
 
   vector< const DTrackWireBased* >
     filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
