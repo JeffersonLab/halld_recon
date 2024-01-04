@@ -235,7 +235,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
     double p1x = p1 * sin(vertex1.Theta()) * cos(vertex1.Phi());
     double p1y = p1 * sin(vertex1.Theta()) * sin(vertex1.Phi());
     double p1z = p1 * cos(vertex1.Theta());
-    TLorentzVector photon1P4(p1x, p1y, p1z, p1);
+    DLorentzVector photon1P4(p1x, p1y, p1z, p1);
     double tdiff1 = t1 - locRFTime;
     
     Fill2DHistogram("XY","","xy_all", xl1, yl1, ";x [cm];y [cm];Counts", 500, -125., 125., 500, -125., 125.);
@@ -419,7 +419,7 @@ jerror_t JEventProcessor_FCAL_Pi0TOF::evnt(JEventLoop *loop, uint64_t eventnumbe
       double p2x = p2 * sin(vertex2.Theta()) * cos(vertex2.Phi());
       double p2y = p2 * sin(vertex2.Theta()) * sin(vertex2.Phi());
       double p2z = p2 * cos(vertex2.Theta());
-      TLorentzVector photon2P4(p2x, p2y, p2z, p2);
+      DLorentzVector photon2P4(p2x, p2y, p2z, p2);
       double tdiff2 = t2 - locRFTime;
     
       Fill1DHistogram("FCAL_Pi0HFA","","tdiff2", tdiff2, ";t_{#gamma}^{2} - t_{RF} [ns];Count [a.u.]", 1000, -99., 99.);
