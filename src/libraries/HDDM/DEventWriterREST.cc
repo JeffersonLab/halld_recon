@@ -48,6 +48,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
+	REST_WRITE_FMWPC_HITS = true;
+	gPARMS->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
+
 	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
@@ -106,6 +109,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
 	locEventLoop->Get(locDIRCPmtHits);
+
+	std::vector<const DFMWPCHit*> fmwpchits;
+	if(REST_WRITE_FMWPC_HITS) {
+	    locEventLoop->Get(fmwpchits);
+	}
 
 	std::vector<const DEventHitStatistics*> hitStats;
 	locEventLoop->Get(hitStats);
@@ -399,6 +407,19 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 			hit().setT(locDIRCPmtHits[i]->t);
 			hit().setTot(locDIRCPmtHits[i]->tot);
 		}
+	}
+
+	if(REST_WRITE_FMWPC_HITS) {
+	  // push any DFMWPCHit objects to the output record
+	  for (size_t i=0; i < fmwpchits.size(); i++)
+	    {
+	      hddm_r::FmwpcHitList hit = res().addFmwpcHits(1);
+	      hit().setLayer(fmwpchits[i]->layer);
+	      hit().setWire(fmwpchits[i]->wire);
+	      hit().setQ(fmwpchits[i]->q);
+	      hit().setAmp(fmwpchits[i]->amp);
+	      hit().setT(fmwpchits[i]->t);
+	    }
 	}
 
 	// push any DTrackTimeBased objects to the output record

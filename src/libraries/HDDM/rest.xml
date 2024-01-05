@@ -105,6 +105,8 @@
       <tofEnergyDeposition maxOccurs="1" minOccurs="0" dE1="float" dE2="float"/>
     </tofPoint>
     <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
+    <fmwpcHit maxOccurs="unbounded" minOccurs="0" jtag="string" layer="int" wire="int"
+	      q="float" amp="float" t="float" tunit="ns" />
     <RFtime minOccurs="0" jtag="string"
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"

@@ -82,7 +82,7 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   } else {
     t_raw_min = fmwpc_timing_cuts[0];
     t_raw_max = fmwpc_timing_cuts[1];
-    jout << "CDC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
+    jout << "FMWPC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
   }
 
   gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
