@@ -248,6 +248,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// nsamples_integral = (NW - (digihit->pulse_time / 10));      
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
+    /* COMMENTED OUT TO WRITE UNCALIBRATED HITS TO REST
     int scaled_ped = raw_ped << PBIT;
     
     if (maxamp > 0) maxamp = maxamp << ABIT;
@@ -257,7 +258,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     if (maxamp<FMWPC_HIT_THRESHOLD) {
       continue;
-    }
+      }*/
     
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
@@ -274,8 +275,12 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     //   continue;
     // double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
     // 				      - scaled_ped*nsamples_integral);
+    /* LEAVE AS IS
     double q = amp_a_scale*gain*double(maxamp);
     double amp = amp_a_scale*gain*double(maxamp);
+    */
+    double q = gain*double(maxamp);
+    double amp = gain*double(maxamp);
     
     double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
     
