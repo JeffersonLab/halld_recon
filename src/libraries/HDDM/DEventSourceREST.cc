@@ -394,6 +394,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DDIRCPmtHit(record,
 		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), locEventLoop);
    }
+   if (dataClassName =="DFMWPCHit") {
+      return Extract_DFMWPCHit(record,
+		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
+   }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
@@ -1951,6 +1955,47 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->CopyTo(data);
    
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DFMWPCHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
+                                   JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop)
+{
+   /// Copies the data from the fmwpc hit hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DFMWPCHit*> data;
+
+   // loop over fmwpc hit records
+   const hddm_r::FmwpcHitList &hits =
+                 record->getFmwpcHits();
+   hddm_r::FmwpcHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DFMWPCHit *hit = new DFMWPCHit();
+      hit->layer = iter->getLayer();
+      hit->wire = iter->getWire();
+      hit->q = iter->getQ();
+      hit->amp = iter->getAmp();
+      hit->t = iter->getT();
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
    return NOERROR;
 }
 
