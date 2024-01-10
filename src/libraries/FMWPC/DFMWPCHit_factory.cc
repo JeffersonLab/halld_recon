@@ -16,7 +16,7 @@ using namespace std;
 
 using namespace jana;
 
-static int FMWPC_HIT_THRESHOLD = 700;
+static int FMWPC_HIT_THRESHOLD = 0;
 
 //#define ENABLE_UPSAMPLING
 
@@ -197,7 +197,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     const DFMWPCDigiHit *digihit = digihits[i];
 
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
-    if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    //if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
@@ -216,16 +216,17 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     // Grab the pedestal from the digihit since this should be consistent between the old and new formats
-    int raw_ped           = digihit->pedestal;
+    // int raw_ped           = digihit->pedestal;
     int maxamp            = digihit->pulse_peak;
     // int nsamples_integral = 0; // actual number computed below using config info
     
     // There are a few values from the new data type that are critical for the interpretation of the data
     // uint16_t IBIT = 0; // 2^{IBIT} Scale factor for integral
-    uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
-    uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+    // uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
+    // uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
     // uint16_t NW   = 0;
     
+    /* COMMENTED OUT TO WRITE UNCALIBRATED HITS TO REST
 	// Configuration data needed to interpret the hits is stored in the data stream
 	vector<const Df125Config*> configs;
 	digihit->Get(configs);
@@ -248,18 +249,18 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	// nsamples_integral = (NW - (digihit->pulse_time / 10));      
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
-    /* COMMENTED OUT TO WRITE UNCALIBRATED HITS TO REST
     int scaled_ped = raw_ped << PBIT;
     
     if (maxamp > 0) maxamp = maxamp << ABIT;
     if (maxamp <= scaled_ped) continue;
     
     maxamp = maxamp - scaled_ped;
+    */
     
     if (maxamp<FMWPC_HIT_THRESHOLD) {
       continue;
-      }*/
-    
+    }
+
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
     if (t_raw <= t_raw_min || t_raw >= t_raw_max)
@@ -279,7 +280,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     double q = amp_a_scale*gain*double(maxamp);
     double amp = amp_a_scale*gain*double(maxamp);
     */
-    double q = gain*double(maxamp);
+    double q = gain*double(digihit->pulse_integral);
     double amp = gain*double(maxamp);
     
     double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
