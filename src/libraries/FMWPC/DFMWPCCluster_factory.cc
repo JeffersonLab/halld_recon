@@ -184,6 +184,9 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     // global coordinate system
     // set to -777 for not measured coordinate
     auto orientation = fmwpc_wire_orientation[newCluster->layer-1];
+    newCluster->orientation=orientation;
+    newCluster->xoffset=xvec[newCluster->layer-1];
+    newCluster->yoffset=yvec[newCluster->layer-1];
     double x = (orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL  ) ? xvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
     double y = (orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_HORIZONTAL) ? yvec[newCluster->layer-1]+(newCluster->u-72.5)*FMWPC_WIRE_SPACING : -777 ;
     double z = zvec[newCluster->layer-1];
