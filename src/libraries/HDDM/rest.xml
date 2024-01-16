@@ -140,6 +140,12 @@
                 track="int" hit="int" dEdx="float" 
                 deltax="float" deltay="float" tflight="float"
 		tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
+      <fmwpcMatchParams maxOccurs="unbounded" minOccurs="0"
+			track="int">
+	<fmwpcData maxOccurs="6" minOccurs="0"
+		   layer="int" nhits="int"
+		   dist="int" closestwire="int" />
+      </fmwpcMatchParams>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
