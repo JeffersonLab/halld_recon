@@ -288,15 +288,6 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	if (locDetectorMatches->Get_FMWPCMatchParams(locTrackTimeBased,
 						     locFMWPCMatchParamsVec)){
 	  locChargedTrackHypothesis->Set_FMWPCMatchParams(locFMWPCMatchParamsVec[0]);
-	  shared_ptr<const DFMWPCMatchParams> myshared=locChargedTrackHypothesis->Get_FMWPCMatchParams();
-	  if (myshared){
-	    for (int k=0;k<myshared->dLayers.size();k++){
-	      cout << myshared->dLayers[k]<<": " <<myshared->dNhits[k] 
-		   << " " << myshared->dDists[k]
-		   <<"  " << myshared->dClosestWires[k]<<endl;
-	    }
-	  }
-	  
 	}
 
 	//PID
