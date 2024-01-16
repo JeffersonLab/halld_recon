@@ -131,7 +131,10 @@
       <fcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
-                tunit="ns" lunit="cm"/>
+                tunit="ns" lunit="cm">
+	<fcalEnergyParams maxOccurs="1" minOccurs="0"
+		      Ecenter="float" E3x3="float" E5x5="float"/>
+      </fcalMatchParams>
       <fcalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" ehit="float" thit="float"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"

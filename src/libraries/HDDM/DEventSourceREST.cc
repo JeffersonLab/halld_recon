@@ -1699,7 +1699,16 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locShowerMatchParams->dFlightTimeVariance = fcalIter->getTflightvar();
          locShowerMatchParams->dPathLength = fcalIter->getPathlength();
          locShowerMatchParams->dDOCAToShower = fcalIter->getDoca();
-
+	 locShowerMatchParams->dEcenter=0.;
+	 locShowerMatchParams->dE3x3=0.;
+	 locShowerMatchParams->dE5x5=0.;
+	 const hddm_r::FcalEnergyParamsList &fcalEnergyList = fcalIter->getFcalEnergyParamses();
+	 hddm_r::FcalEnergyParamsList::iterator fcalEnergyIter = fcalEnergyList.begin();
+	 for(; fcalEnergyIter != fcalEnergyList.end(); ++fcalEnergyIter){
+	   locShowerMatchParams->dEcenter=fcalEnergyIter->getEcenter();
+	   locShowerMatchParams->dE3x3=fcalEnergyIter->getE3x3();
+	   locShowerMatchParams->dE5x5=fcalEnergyIter->getE5x5();
+	 }
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locFCALShowers[locShowerIndex], std::const_pointer_cast<const DFCALShowerMatchParams>(locShowerMatchParams));
       }
 

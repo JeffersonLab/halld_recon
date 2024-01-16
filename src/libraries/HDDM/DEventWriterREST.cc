@@ -604,6 +604,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				fcalList().setPathlength(locFCALShowerMatchParamsVector[loc_k]->dPathLength);
 				fcalList().setTflight(locFCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				fcalList().setTflightvar(locFCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
+				// Additional energy information
+				hddm_r::FcalEnergyParamsList fcalEnergyParamsList = fcalList().addFcalEnergyParamses(1);
+				fcalEnergyParamsList().setEcenter(locFCALShowerMatchParamsVector[loc_k]->dEcenter);
+				fcalEnergyParamsList().setE3x3(locFCALShowerMatchParamsVector[loc_k]->dE3x3);
+				fcalEnergyParamsList().setE5x5(locFCALShowerMatchParamsVector[loc_k]->dE5x5);
 			}
 
 			vector<shared_ptr<const DFCALSingleHitMatchParams>> locFCALSingleHitMatchParamsVector;
