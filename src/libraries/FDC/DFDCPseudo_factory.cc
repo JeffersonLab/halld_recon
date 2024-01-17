@@ -602,7 +602,7 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                        continue;
                     }
                     double sinangle=newPseu->wire->udir(0);
-                    double cosangle=newPseu->wire->udir(1); 
+                    double cosangle=newPseu->wire->udir(1);
 
                     newPseu->xy.Set((newPseu->w)*cosangle+(newPseu->s)*sinangle
 				    +fdc_x0[ilay],
@@ -618,6 +618,8 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     // Try matching truth hit with this "real" hit.
                     const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
                     if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+
+		    newPseu->wire_id=96*((*xIt)->gLayer-1)+(*xIt)->element-1;
 
                     _data.push_back(newPseu);
 
