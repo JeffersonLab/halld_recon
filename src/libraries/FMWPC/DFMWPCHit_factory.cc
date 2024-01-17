@@ -16,8 +16,6 @@ using namespace std;
 
 using namespace jana;
 
-static int FMWPC_HIT_THRESHOLD = 0;
-
 //#define ENABLE_UPSAMPLING
 
 //------------------
@@ -26,9 +24,8 @@ static int FMWPC_HIT_THRESHOLD = 0;
 jerror_t DFMWPCHit_factory::init(void)
 {
   
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", FMWPC_HIT_THRESHOLD,
-                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
-  
+  hit_threshold = 0.;
+
   t_raw_min = -10000.;
   t_raw_max = 10000.;
 
@@ -72,6 +69,16 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   // Read in calibration constants
 
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
+
+  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_threshold)){
+    hit_threshold = 0.;
+    jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
+  } else {
+    jout << "FMWPC Hit Threshold: " << hit_threshold << endl;
+  }
+
+  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
+                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
 
   vector<double> fmwpc_timing_cuts;
 
@@ -257,7 +264,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     maxamp = maxamp - scaled_ped;
     */
     
-    if (maxamp<FMWPC_HIT_THRESHOLD) {
+    if (maxamp<hit_threshold) {
       continue;
     }
 
