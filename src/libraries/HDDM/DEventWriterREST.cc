@@ -51,6 +51,10 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
+	ADD_FCAL_DATA_FOR_CPP=false;
+	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+
+
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
     DApplication *dapp = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
