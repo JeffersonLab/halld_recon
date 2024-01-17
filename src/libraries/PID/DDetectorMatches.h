@@ -65,7 +65,7 @@ class DFCALShowerMatchParams
 {
 	public:
 		DFCALShowerMatchParams(void) : dFCALShower(NULL),
-		dx(0.0), dFlightTime(0.0), dFlightTimeVariance(0.0), dPathLength(0.0), dDOCAToShower(0.0){}
+    dx(0.0), dFlightTime(0.0), dFlightTimeVariance(0.0), dPathLength(0.0), dDOCAToShower(0.0), dE5x5(0.0), dE3x3(0.0), dEcenter(0.0){}
 
 		const DFCALShower* dFCALShower;
 
@@ -74,6 +74,9 @@ class DFCALShowerMatchParams
 		double dFlightTimeVariance;
 		double dPathLength; //path length from DKinematicData::position() to the shower
 		double dDOCAToShower; //DOCA of track to shower
+		double dE5x5; // energy sum over 5x5 array centered on track projection
+		double dE3x3; // energy sum over 3x3 array centered on track projection
+		double dEcenter; // energy in "center" block
 };
 
 class DCTOFHitMatchParams
