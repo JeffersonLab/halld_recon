@@ -156,6 +156,17 @@ jerror_t JEventProcessor_eta2g_primexd_skim::brun(JEventLoop *eventLoop, int32_t
 //------------------
 jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
+  /*
+  const DL1Trigger *trig = NULL;
+  try {
+    eventLoop->GetSingle(trig);
+  } catch (...) {
+  }
+  if (trig == NULL) { return NOERROR; }
+  
+  uint32_t trigmask = trig->trig_mask;
+  uint32_t fp_trigmask = trig->fp_trig_mask;
+  */
  
   vector< const DFCALShower* > locFCALShowers;
   vector< const DBCALShower* > locBCALShowers;
@@ -178,36 +189,39 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
   loop->Get(locTrackTimeBased);
-
   
-
   vector < const DFCALShower * > matchedShowers;
   
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
   loop->GetSingle(locEventWriterEVIO);
 
+  vector<const DFCALHit *> locFCALHits;
+  
+  loop->Get(locFCALHits);
+
   // always write out BOR events
   if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim" );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim" );
       return NOERROR;
   }
 
   // write out the first few EPICS events to save run number & other meta info
   if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim" );
+      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim" );
       num_epics_events++;
       return NOERROR;
   }
 
   
-  vector< const JObject* > locObjectsToSave;  
+  ////vector< const JObject* > locObjectsToSave;  
 
   bool Candidate = false;
   
   DVector3 vertex;
   vertex.SetXYZ(m_beamSpotX, m_beamSpotY, m_targetZ);
+  /*
   for (unsigned int i = 0 ; i < tof_points.size(); i++) {
     locObjectsToSave.push_back(static_cast<const JObject *>(tof_points[i]));
   }
@@ -233,6 +247,7 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
   double kinfitVertexX = m_beamSpotX;
   double kinfitVertexY = m_beamSpotY;
   double kinfitVertexZ = m_targetZ;
+  //DVector3 vertex(m_beamSpotX, m_beamSpotY, m_targetZ);
   for (unsigned int i = 0 ; i < kinfitVertex.size(); i++) {
     if(i==0)
       locObjectsToSave.push_back(static_cast<const JObject *>(kinfitVertex[0]));
@@ -243,24 +258,41 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
   if(locEventRFBunches.size() > 0) {
     locObjectsToSave.push_back(static_cast<const JObject *>(locEventRFBunches[0]));
   }
+  */
+
+  double FCAL_trg_Esum = 0;
+  
+  for (vector<const DFCALHit*>::const_iterator hit  = locFCALHits.begin(); hit != locFCALHits.end(); hit++ ) {
+    if ((**hit).E > 0.150)
+      FCAL_trg_Esum += (**hit).E;
+  }
   
   DVector3 norm(0.0,0.0,-1);
   DVector3 pos,mom;
   Double_t BCAL_energy_sum = 0;
   Double_t CCAL_energy_sum = 0;
+  Double_t FCAL_energy_sum = 0;
   
   for (unsigned int i=0; i<locBCALShowers.size(); i++) {
     Double_t E = locBCALShowers[i]->E;
     BCAL_energy_sum += E;
-    
   }
 
   for (unsigned int i=0; i<locCCALShowers.size(); i++) {
     Double_t E = locCCALShowers[i]->E;
     CCAL_energy_sum += E;
-    
   }
-  for (unsigned int i=0; i<locFCALShowers.size(); i++) {
+  
+  for (unsigned int i = 0;  i < locFCALShowers.size(); i ++) {
+    double e1 = locFCALShowers[i]->getEnergy();
+    DVector3 position1 = locFCALShowers[i]->getPosition_log() - vertex;
+    double r1 = position1.Mag();
+    double t1 = locFCALShowers[i]->getTime() - (r1 / TMath::C() * 1e7);
+    double p1x = e1 * sin(position1.Theta()) * cos(position1.Phi());
+    double p1y = e1 * sin(position1.Theta()) * sin(position1.Phi());
+    double p1z = e1 * cos(position1.Theta());
+    TLorentzVector PhotonVec1(p1x, p1y, p1z, e1);
+    /*
     const DFCALShower *s1 = locFCALShowers[i];
     
     vector<const DFCALCluster*> associated_clusters1;
@@ -272,8 +304,18 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
     Double_t  E1 = s1->getEnergy();
     Double_t  t1 = s1->getTime();
     TLorentzVector sh1_p(E1*dx1/R1, E1*dy1/R1, E1*dz1/R1, E1);
+    */
     
-    for (unsigned int j=i+1; j<locFCALShowers.size(); j++) {
+    for (unsigned int j = i + 1; j < locFCALShowers.size(); j ++) {
+      double e2 = locFCALShowers[j]->getEnergy();
+      DVector3 position2 = locFCALShowers[j]->getPosition_log() - vertex;
+      double r2 = position2.Mag();
+      double t2 = locFCALShowers[j]->getTime() - (r2 / TMath::C() * 1e7);
+      double p2x = e2 * sin(position2.Theta()) * cos(position2.Phi());
+      double p2y = e2 * sin(position2.Theta()) * sin(position2.Phi());
+      double p2z = e2 * cos(position2.Theta());
+      TLorentzVector PhotonVec2(p2x, p2y, p2z, e2);
+      /*
       const DFCALShower *s2 = locFCALShowers[j];
             
       vector<const DFCALCluster*> associated_clusters2;
@@ -287,26 +329,31 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
       
       TLorentzVector sh2_p(E2*dx2/R2, E2*dy2/R2, E2*dz2/R2, E2);
       TLorentzVector ptot = sh1_p+sh2_p;
-      Double_t inv_mass = ptot.M();
+      */
+      Double_t inv_mass = (PhotonVec1 + PhotonVec2).M();
       
       //Candidate |= (E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) ;
-      Candidate |= (E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.340) ) ;
+      //Candidate |= (E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.380) /*&& BCAL_energy_sum < 0.1 && CCAL_energy_sum < 0.1*/) ;
+      //Candidate |= (e1 > 0.1 && e2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.380) /*&& BCAL_energy_sum < 0.1 && CCAL_energy_sum < 0.1*/) ;
       
       //if(E1 > 0.5 && E2 > 0.5 && s1->getPosition().Pt() > 20*k_cm && s2->getPosition().Pt() > 20*k_cm && (fabs (t1-t2) < 10) && (inv_mass<0.30) ) {
-      if(E1 > 0.1 && E2 > 0.1 && (fabs (t1-t2) < 15) && (inv_mass>0.380) ) {
-	if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
+      if(e1 > 0.1 && e2 > 0.1 && (fabs (t1-t2) < 25) && (inv_mass>0.330) ) {
+	/*
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[i]) == locObjectsToSave.end())
 	  locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[i]));
-	if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
+	  if(find(locObjectsToSave.begin(), locObjectsToSave.end(), locFCALShowers[j]) == locObjectsToSave.end())
 	  locObjectsToSave.push_back(static_cast<const JObject *>(locFCALShowers[j]));
+	*/
+	Candidate = true;
       }
     }
   }		
   
-  if( Candidate ){
+  if( Candidate /*&& FCAL_trg_Esum > 5.0*/){
     
     if( WRITE_EVIO ){
       //locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim", locObjectsToSave );
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim");
+      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
