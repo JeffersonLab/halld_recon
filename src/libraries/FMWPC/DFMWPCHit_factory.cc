@@ -85,7 +85,7 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
     t_raw_min = -60.;
     t_raw_max = 900.;
-    jout << "Error loading /FMWPC/timing_cut ! set defaul values -60. and 900." << endl;
+    jout << "Error loading /FMWPC/timing_cut ! set default values -60. and 900." << endl;
   } else {
     t_raw_min = fmwpc_timing_cuts[0];
     t_raw_max = fmwpc_timing_cuts[1];
