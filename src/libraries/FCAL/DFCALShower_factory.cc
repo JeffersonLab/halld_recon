@@ -72,20 +72,19 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
   
   if (USE_NONLINEAR_CORRECTION_TYPE == 0) {
-    LOAD_NONLIN_CCDB = true;
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 1) {
-    LOAD_NONLIN_CCDB = false;
     expfit_param1 = 2;
     expfit_param1 = 0;
     expfit_param1 = 0;
     SHOWER_POSITION_LOG = true;
     USE_RING_E_CORRECTION_V1 = true;
+    USE_RING_E_CORRECTION_V2 = false;
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 2) {
-    LOAD_NONLIN_CCDB = false;
     expfit_param1 = 2;
     expfit_param1 = 0;
     expfit_param1 = 0;
     SHOWER_POSITION_LOG = true;
+    USE_RING_E_CORRECTION_V1 = false;
     USE_RING_E_CORRECTION_V2 = true;
   }
     
@@ -197,26 +196,28 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
       TString str_coef[] = {"A"};
       jout << Form(" %s", str_coef[0].Data()) << nonlinear_correction_type[0]; 
       jout << endl;
-      if (nonlinear_correction_type[0] == 0) {
-	LOAD_NONLIN_CCDB = true;
-      } else if (nonlinear_correction_type[0] == 1) {
-	LOAD_NONLIN_CCDB = false;
-	expfit_param1 = 2;
-	expfit_param1 = 0;
-	expfit_param1 = 0;
-	SHOWER_POSITION_LOG = true;
-	USE_RING_E_CORRECTION_V1 = true;
-      } else if (nonlinear_correction_type[0] == 2) {
-	LOAD_NONLIN_CCDB = false;
-	expfit_param1 = 2;
-	expfit_param1 = 0;
-	expfit_param1 = 0;
-	SHOWER_POSITION_LOG = true;
-	USE_RING_E_CORRECTION_V2 = true;
-      }
+    }
+    if (nonlinear_correction_type[0] == 0) {
+      LOAD_NONLIN_CCDB = true;
+    } else if (nonlinear_correction_type[0] == 1) {
+      LOAD_NONLIN_CCDB = true;
+      expfit_param1 = 2;
+      expfit_param1 = 0;
+      expfit_param1 = 0;
+      SHOWER_POSITION_LOG = true;
+      USE_RING_E_CORRECTION_V1 = true;	
+      USE_RING_E_CORRECTION_V2 = false;
+    } else if (nonlinear_correction_type[0] == 2) {
+      LOAD_NONLIN_CCDB = false;
+      expfit_param1 = 2;
+      expfit_param1 = 0;
+      expfit_param1 = 0;
+      SHOWER_POSITION_LOG = true;
+      USE_RING_E_CORRECTION_V1 = false;
+      USE_RING_E_CORRECTION_V2 = true;
     }
   }
-  
+    
   // but allow these to be overridden by command line parameters
   energy_dependence_correction_vs_ring.clear();
   nonlinear_correction.clear();
@@ -548,7 +549,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
   } else {
     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
-    if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size()>0){
+    if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
       // Method II: PRIMEXD way, correction per ring
       Egamma=Eclust; // Initialize, before correction
       int ring_region = -1;
@@ -582,7 +583,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
 	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
       }
-    } else if (USE_RING_E_CORRECTION_V2 && nonlinear_correction.size()>0){
+    } else if (USE_RING_E_CORRECTION_V2 && nonlinear_correction.size() > 0) {
       // Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
       Egamma=Eclust; // Initialize, before correction
       int ring_region = -1;
