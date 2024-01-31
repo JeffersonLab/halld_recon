@@ -1990,6 +1990,7 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
       hit->amp = iter->getAmp();
       hit->t = iter->getT();
       hit->QF = iter->getQf();
+      hit->ped = iter->getPed();
 
       data.push_back(hit);
    }

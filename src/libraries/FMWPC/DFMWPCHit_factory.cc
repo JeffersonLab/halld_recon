@@ -223,7 +223,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     // Grab the pedestal from the digihit since this should be consistent between the old and new formats
-    // int raw_ped           = digihit->pedestal;
+    int raw_ped           = digihit->pedestal;
     int maxamp            = digihit->pulse_peak;
     // int nsamples_integral = 0; // actual number computed below using config info
     
@@ -289,6 +289,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     */
     double q = gain*double(digihit->pulse_integral);
     double amp = gain*double(maxamp);
+    double ped = double(raw_ped);
     
     double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
     
@@ -303,6 +304,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->t = t;
     // hit->d = 0.0;
     hit->QF = digihit->QF;
+    hit->ped = ped;
     // hit->itrack = -1;
     // hit->ptype = 0;
 

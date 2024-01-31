@@ -420,6 +420,7 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	      hit().setAmp(fmwpchits[i]->amp);
 	      hit().setT(fmwpchits[i]->t);
 	      hit().setQf(fmwpchits[i]->QF);
+	      hit().setPed(fmwpchits[i]->ped);
 	    }
 	}
 
