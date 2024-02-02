@@ -208,7 +208,7 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
       USE_RING_E_CORRECTION_V1 = true;	
       USE_RING_E_CORRECTION_V2 = false;
     } else if (nonlinear_correction_type[0] == 2) {
-      LOAD_NONLIN_CCDB = false;
+      LOAD_NONLIN_CCDB = true;
       expfit_param1 = 2;
       expfit_param1 = 0;
       expfit_param1 = 0;
