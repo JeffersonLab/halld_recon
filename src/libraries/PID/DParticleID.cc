@@ -1321,7 +1321,6 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
 	for( auto hit : hits ){
 	  auto delta_row = abs( dFCALGeometry->row(hit.ch) - row );
 	  auto delta_col = abs( dFCALGeometry->column(hit.ch) - col );
-	  cout << "Deltas " << delta_row <<" " << delta_col << endl;
 	  if( (delta_row<=2) && (delta_col<=2) ){
 	    locShowerMatchParams->dE5x5 += hit.E;
 	    if( (delta_row<=1) && (delta_col<=1) ){
