@@ -633,10 +633,16 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				fcalList().setTflightvar(locFCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
 				// Additional energy information
 				if (ADD_FCAL_DATA_FOR_CPP){
-				  hddm_r::FcalEnergyParamsList fcalEnergyParamsList = fcalList().addFcalEnergyParamses(1);
-				  fcalEnergyParamsList().setEcenter(locFCALShowerMatchParamsVector[loc_k]->dEcenter);
-				  fcalEnergyParamsList().setE3x3(locFCALShowerMatchParamsVector[loc_k]->dE3x3);
-				  fcalEnergyParamsList().setE5x5(locFCALShowerMatchParamsVector[loc_k]->dE5x5);
+				  // Sanity check for this additional info
+				  double myE5x5=locFCALShowerMatchParamsVector[loc_k]->dE5x5;
+				  double myE3x3=locFCALShowerMatchParamsVector[loc_k]->dE3x3;
+				  double myEcenter=locFCALShowerMatchParamsVector[loc_k]->dEcenter;
+				  if (myEcenter>0. || myE3x3>0. || myE5x5>0.){ 
+				    hddm_r::FcalEnergyParamsList fcalEnergyParamsList = fcalList().addFcalEnergyParamses(1);
+				    fcalEnergyParamsList().setEcenter(myEcenter);
+				    fcalEnergyParamsList().setE3x3(myE3x3);
+				    fcalEnergyParamsList().setE5x5(myE5x5);
+				  }
 				}
 			}
 
