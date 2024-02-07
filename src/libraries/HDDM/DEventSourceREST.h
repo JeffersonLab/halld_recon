@@ -34,6 +34,7 @@
 #include <START_COUNTER/DSCHit.h>
 #include <TOF/DTOFPoint.h>
 #include <FMWPC/DCTOFPoint.h>
+#include <FMWPC/DFMWPCHit.h>
 #include <TRIGGER/DTrigger.h>
 #include <DANA/DApplication.h>
 #include <RF/DRFTime.h>
@@ -98,6 +99,8 @@ class DEventSourceREST:public JEventSource
 #endif
    jerror_t Extract_DDIRCPmtHit(hddm_r::HDDM *record,
                     JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
+   jerror_t Extract_DFMWPCHit(hddm_r::HDDM *record,
+                    JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop);
    jerror_t Extract_DEventHitStatistics(hddm_r::HDDM *record,
                     JFactory<DEventHitStatistics> *factory);
 

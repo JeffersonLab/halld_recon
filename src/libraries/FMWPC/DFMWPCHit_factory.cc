@@ -16,8 +16,6 @@ using namespace std;
 
 using namespace jana;
 
-static int FMWPC_HIT_THRESHOLD = 700;
-
 //#define ENABLE_UPSAMPLING
 
 //------------------
@@ -26,9 +24,11 @@ static int FMWPC_HIT_THRESHOLD = 700;
 jerror_t DFMWPCHit_factory::init(void)
 {
   
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", FMWPC_HIT_THRESHOLD,
-                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
-  
+  hit_threshold = 0.;
+
+  t_raw_min = -10000.;
+  t_raw_max = 10000.;
+
   // default values
   a_scale = 0.;
   t_scale = 0.;
@@ -66,9 +66,35 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
   }
   pthread_mutex_unlock(&print_mutex);
   
-  // load geometry from XML here!!
-	  
+  // Read in calibration constants
+
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
+
+  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_threshold)){
+    hit_threshold = 0.;
+    jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
+  } else {
+    jout << "FMWPC Hit Threshold: " << hit_threshold << endl;
+  }
+
+  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
+                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
+
+  vector<double> fmwpc_timing_cuts;
+
+  if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
+    t_raw_min = -60.;
+    t_raw_max = 900.;
+    jout << "Error loading /FMWPC/timing_cut ! set default values -60. and 900." << endl;
+  } else {
+    t_raw_min = fmwpc_timing_cuts[0];
+    t_raw_max = fmwpc_timing_cuts[1];
+    jout << "FMWPC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
+  }
+
+  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
+  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
+
   
   // load scale factors
   map<string,double> scale_factors;
@@ -178,7 +204,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     const DFMWPCDigiHit *digihit = digihits[i];
 
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
-    if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
+    //if ( digihit->QF != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
     const int &layer  = digihit->layer;
     const int &wire = digihit->wire;
@@ -203,10 +229,11 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     // There are a few values from the new data type that are critical for the interpretation of the data
     // uint16_t IBIT = 0; // 2^{IBIT} Scale factor for integral
-    uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
-    uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+    // uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
+    // uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
     // uint16_t NW   = 0;
     
+    /* COMMENTED OUT TO WRITE UNCALIBRATED HITS TO REST
 	// Configuration data needed to interpret the hits is stored in the data stream
 	vector<const Df125Config*> configs;
 	digihit->Get(configs);
@@ -235,14 +262,15 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     if (maxamp <= scaled_ped) continue;
     
     maxamp = maxamp - scaled_ped;
+    */
     
-    if (maxamp<FMWPC_HIT_THRESHOLD) {
+    if (maxamp<hit_threshold) {
       continue;
     }
-    
+
     // Apply calibration constants here
     double t_raw = double(digihit->pulse_time);
-    if (t_raw < 250 || t_raw > 450)
+    if (t_raw <= t_raw_min || t_raw >= t_raw_max)
       continue;
     
     // Scale factor to account for gain variation
@@ -255,8 +283,13 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     //   continue;
     // double q = a_scale *gain * double((digihit->pulse_integral<<IBIT)
     // 				      - scaled_ped*nsamples_integral);
+    /* LEAVE AS IS
     double q = amp_a_scale*gain*double(maxamp);
     double amp = amp_a_scale*gain*double(maxamp);
+    */
+    double q = gain*double(digihit->pulse_integral);
+    double amp = gain*double(maxamp);
+    double ped = double(raw_ped);
     
     double t = t_scale * t_raw - time_offsets[layer_i][wire_i] + t_base;
     
@@ -271,6 +304,7 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->t = t;
     // hit->d = 0.0;
     hit->QF = digihit->QF;
+    hit->ped = ped;
     // hit->itrack = -1;
     // hit->ptype = 0;
 

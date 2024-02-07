@@ -22,6 +22,7 @@ class DFMWPCHit:public JObject{
 		float amp;   // peak amplitude
 		float t;     // time in ns
 		int QF;      // quality factor
+		float ped;   // pedestal
 
 		void toStrings(vector<pair<string, string> >&items) const {
 			AddString(items, "layer", "%d", layer);
@@ -30,6 +31,7 @@ class DFMWPCHit:public JObject{
 			AddString(items, "amp",    "%10.2f", amp);
 			AddString(items, "t", "%3.3f", t);
 			AddString(items, "QF", "%d", QF);
+			AddString(items, "ped", "%10.2f", ped);
 		}
 
 };
