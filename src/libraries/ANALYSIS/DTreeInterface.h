@@ -213,7 +213,9 @@ template <typename DType> inline void DTreeInterface::Create_Branch_TObject(stri
 		return; //already created
 
 	dMemoryMap_TObject[locBranchName] = (TObject*)(new DType());
-	dTree->Branch(locBranchName.c_str(), (DType**)&(dMemoryMap_TObject[locBranchName]), 32000, 0); //0: don't split
+	TObject **objptr = new TObject*;
+	*objptr = dMemoryMap_TObject[locBranchName];
+	dTree->Branch(locBranchName.c_str(), objptr, 32000, 0); //0: don't split
 }
 
 template <typename DType> inline void DTreeInterface::Create_Branch_FundamentalArray(string locBranchName, string locArraySizeString, unsigned int locInitialSize)
@@ -232,7 +234,9 @@ template <typename DType> inline void DTreeInterface::Create_Branch_ClonesArray(
 		return; //already created
 
 	dMemoryMap_ClonesArray[locBranchName] = new TClonesArray(DType::Class()->GetName(), locInitialSize);
-	dTree->Branch(locBranchName.c_str(), &(dMemoryMap_ClonesArray[locBranchName]), 32000, 0); //0: don't split
+	TClonesArray **arrptr = new TClonesArray*;
+	*arrptr = dMemoryMap_ClonesArray[locBranchName];
+	dTree->Branch(locBranchName.c_str(), arrptr, 32000, 0); //0: don't split
 }
 
 /************************************************************** TEMPLATE SPECIALIZATIONS **************************************************************/

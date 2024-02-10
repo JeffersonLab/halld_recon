@@ -2414,7 +2414,7 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoo
         //Look at the decay products:
         //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         vector<const DKinematicData*> finalParticlesMeasured = locParticleCombos.at(iPC)->Get_FinalParticles_Measured(locReaction, d_AllCharges);
-        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction, d_AllCharges);
+        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction); //, d_AllCharges);
         
         vector<const JObject*> finalParticleObjects = locParticleCombos.at(iPC)->Get_FinalParticle_SourceObjects(d_AllCharges);
         nMeasuredFinalParticles = finalParticlesMeasured.size();
