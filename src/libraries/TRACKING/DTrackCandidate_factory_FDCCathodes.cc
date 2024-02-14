@@ -5,7 +5,7 @@
 // Creator: staylor (on Linux ifarml1.jlab.org 2.4.21-47.0.1.ELsmp i686)
 //
 /// This factory links segments in the FDC packages into track candidates 
-/// by swimming through the field from one package to the next.
+/// by using a helical approximation to propagate from one package to the next.
 
 #include "DTrackCandidate_factory_FDCCathodes.h"
 #include "DANA/DApplication.h"
@@ -74,7 +74,12 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
   gPARMS->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
   ADD_VERTEX_POINT=true;
   gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
- 
+
+  gPARMS->SetDefaultParameter("TRKFIND:FDC_MIN_CUT",MIN_CUT);
+  gPARMS->SetDefaultParameter("TRKFIND:FDC_MAX_CUT",MAX_CUT);
+  gPARMS->SetDefaultParameter("TRKFIND:FDC_CUT_SCALE",CUT_SCALE);
+  gPARMS->SetDefaultParameter("TRKFIND:FDC_CIRCLE_CUT",CIRCLE_CUT);
+  
   if(DEBUG_HISTS) {
     dapp->Lock();
     match_dist_fdc=(TH2F*)gROOT->FindObject("match_dist_fdc");
@@ -85,11 +90,22 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
     }
     match_center_dist2=(TH2F*)gROOT->FindObject("match_center_dist2");
     if (!match_center_dist2){
-      match_center_dist2=new TH2F("match_center_dist2","matching distance squared between two circle centers vs rc",500,0,500.,100,0,100);
+      match_center_dist2=new TH2F("match_center_dist2","matching distance squared between two circle centers vs rc",100,0,50.,100,0,100);
       match_center_dist2->SetXTitle("rc [cm]");
       match_center_dist2->SetYTitle("(#Deltad)^{2} [cm^{2}]");
+    } 
+    match_dy_dx=(TH3F*)gROOT->FindObject("match_dy_dx");
+    if (!match_dy_dx){
+      match_dy_dx=new TH3F("match_dy_dx",";#deltax [cm];#deltay [cm];r_{c} [cm]",
+			   100,-25,25,100,-25,25,100,0,500);
+    }  
+    match_circle_dy_dx=(TH2F*)gROOT->FindObject("match_circle_dy_dx");
+    if (!match_circle_dy_dx){
+      match_circle_dy_dx=new TH2F("match_circle_dy_dx",";#deltax [cm];#deltay [cm]",
+			   100,-25,25,100,-25,25);
     }
-    
+
+
     dapp->Unlock();
   }
     
@@ -151,6 +167,11 @@ inline bool DTrackCandidate_segment_cmp(const DFDCSegment *a, const DFDCSegment 
   return a->rc>b->rc;
 }
 
+
+inline bool DTrackCandidate_track_cmp(vector<const DFDCSegment *>a, 
+				      vector<const DFDCSegment *>b){  
+  return (a[0]->package<b[0]->package);
+}
 
 inline bool DTrackCandidate_segment_cmp_by_z(const DFDCSegment *a, 
 					     const DFDCSegment *b){  
@@ -274,7 +295,7 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   }
 
   // Find track candidates using Hough transform
-  if (unused_segments.size()>1){
+  if (false && unused_segments.size()>1){
     if (LinkSegmentsHough(unused_segments,packages,is_paired,mytracks)){
       unused_segments.clear();
       for (unsigned int j=0;j<4;j++){
@@ -291,17 +312,69 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   }
 
 #ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Pattern recognition");
+  //start_time.TimeDiffNow(cand_prof_times, "Pattern recognition");
 #endif
 
   // For each set of matched segments, redo the helical fit with all the hits 
   // and create a new track candidate
-  for (unsigned int i=0;i<mytracks.size();i++){  
-    MakeCandidate(mytracks[i]);
-  }
+  vector<bool>used_track(mytracks.size());
+  std::sort(mytracks.begin(),mytracks.end(),DTrackCandidate_track_cmp);
+  for (unsigned int i=0;i<mytracks.size();i++){
+    vector<const DFDCSegment *>mytrack=mytracks[i];
+    if (used_track[i]==false && mytrack.size()==2){
+      // Create the fit object and perform the fit
+      DHelicalFit fit;
+      DoHelicalFit(mytrack,fit);
+      
+      bool got_match=false;
+      for (unsigned int j=i+1;j<mytracks.size();j++){
+	vector<const DFDCSegment *>mytrack2=mytracks[j];
+	if (used_track[j]==false && mytrack2.size()==2){
+	  unsigned int pack1_last=mytrack[1]->package;
+	  unsigned int pack2_first=mytrack2[0]->package;
+	  if (pack2_first-pack1_last==1){
+	    // look for a match
+	    double doca2=DocaSqToHelix(fit,mytrack[0],mytrack2[0]);
+	    got_match=doca2<MatchR(fit.r0);
+	    if (got_match){
+	      mytrack.insert(mytrack.end(),mytrack2.begin(),mytrack2.end());
+	      used_track[i]=true;
+	      used_track[j]=true;
 
+	      // Create the fit object and perform the fit with the additional
+	      // hits
+	      DHelicalFit fit2;
+	      DoHelicalFit(mytrack,fit2);
+	      
+	      MakeCandidate(fit2,mytrack);
+	      break;
+	    }	    
+	  } // track segment is in second half of detector
+	} // check for second 2-segment track
+      } //inner loop over tracks
+
+      if (got_match==false){
+	used_track[i]=true;
+
+	// Make a track candidate out of this 2-segment track
+	MakeCandidate(fit,mytrack);
+      }
+    } // check for first 2-segment track 
+  }
+  // By now we should have taken care of the 2-segment track candidates, now
+  // make candidates out of the 3- and 4-segment matches
+  for (unsigned int i=0;i<mytracks.size();i++){
+    if (used_track[i]==false){
+      // Create the fit object and perform the fit
+      DHelicalFit fit;
+      DoHelicalFit(mytracks[i],fit);
+      
+      MakeCandidate(fit,mytracks[i]);
+    }
+  }
+  
 #ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Helical fits");
+  //  start_time.TimeDiffNow(cand_prof_times, "Helical fits");
 #endif  
 
   // Now try to attach stray segments to existing tracks
@@ -351,23 +424,25 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   return NOERROR;
 }
 
+// Project segment1 to a hit in segment 2 and compute the square of the doca
+// between the projection and the hit
+double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DHelicalFit &fit,const DFDCSegment *segment1,const DFDCSegment *segment2) const {
+  const DFDCPseudo *hit1=segment1->hits[0]; 
+  const DFDCPseudo *hit2=segment2->hits[0];
+  double z1=hit1->wire->origin.z();
+  double z2=hit2->wire->origin.z();
+  double x1=hit1->xy.X();
+  double x2=hit2->xy.X();
+  double y1=hit1->xy.Y();
+  double y2=hit2->xy.Y();
+  double Phi1=atan2(y1-fit.y0,x1-fit.x0);
+  double q=FactorForSenseOfRotation*fit.h;
+  double phi=Phi1+(z1-z2)*q/(fit.r0*fit.tanl);
+  double dx=fit.x0+fit.r0*cos(phi)-x2;
+  double dy=fit.y0+fit.r0*sin(phi)-y2;
 
-// Routine to do a crude match between fdc points and a helical approximation to
-// the trajectory
-double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCPseudo *hit){
-  double sperp=(hit->wire->origin.z()-zs)*cotl;
-  double twoks=twokappa*sperp;
-  double sin2ks=sin(twoks);
-  double cos2ks=cos(twoks);
-  double one_minus_cos2ks=1.-cos2ks;
-  double one_over_twokappa=1./twokappa;
- 
-  double x=xs+(cosphi*sin2ks-sinphi*one_minus_cos2ks)*one_over_twokappa;
-  double y=ys+(sinphi*sin2ks+cosphi*one_minus_cos2ks)*one_over_twokappa;
-  double dx=x-hit->xy.X();
-  double dy=y-hit->xy.Y();
+  return dx*dx+dy*dy;
 
-  return (dx*dx+dy*dy);
 }
 
 // Project segment1 to a hit in segment 2 and compute the square of the doca
@@ -382,6 +457,10 @@ double DTrackCandidate_factory_FDCCathodes::DocaSqToHelix(const DFDCSegment *seg
    double phi=segment1->Phi1+(z1-z2)*segment1->q/(segment1->rc*segment1->tanl);
    double dx=segment1->xc+segment1->rc*cos(phi)-x2;
    double dy=segment1->yc+segment1->rc*sin(phi)-y2;
+
+   if (DEBUG_HISTS){
+     match_dy_dx->Fill(dx,dy,segment1->rc);
+   }
    
    return dx*dx+dy*dy;
 }
@@ -424,7 +503,7 @@ DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *seg
   if (doca2_min<MatchR(segment->rc)){
     match=package[match_id];
   }
-
+  
   if(DEBUG_HISTS){
     match_dist_fdc->Fill(segment->rc,doca2_min);
   }
@@ -445,75 +524,44 @@ DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *seg
       }
     }       
   } 
+
   if (match!=NULL) return match;
 
   // Match by centers of circles
   double circle_center_diff2_min=1e6;
   for (unsigned int j=0;j<package.size();j++){
     DFDCSegment *segment2=package[j];
-    
+
     double dx=segment->xc-segment2->xc;
     double dy=segment->yc-segment2->yc;
     double circle_center_diff2=dx*dx+dy*dy;
+
+    if (DEBUG_HISTS){
+      match_circle_dy_dx->Fill(dx,dy);
+    }
     
     if (circle_center_diff2<circle_center_diff2_min){
       circle_center_diff2_min=circle_center_diff2;
-      if (circle_center_diff2_min<9.0){
+      if (circle_center_diff2_min<CIRCLE_CUT){
 	match=segment2;
 	match_id=j;
       }
     }
   }
+  
   if (DEBUG_HISTS){
     match_center_dist2->Fill(segment->rc,circle_center_diff2_min);
   }  
   return match;
 }
 
-// Obtain position and momentum at the exit of a given package using the 
-// helical track model.
-//
-jerror_t DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(const DFDCSegment *segment){
-  // Position of track segment at last hit plane of package
-  xs=segment->xc+segment->rc*cos(segment->Phi1);
-  ys=segment->yc+segment->rc*sin(segment->Phi1);
-  zs=segment->hits[0]->wire->origin.z();
-
-  // Track parameters
-  //double kappa=segment->q/(2.*segment->rc);
-  double my_phi0=segment->phi0;
-  double my_tanl=segment->tanl;
-  double z0=segment->z_vertex; 
-  twokappa=FactorForSenseOfRotation*segment->q/segment->rc;
-
-  cotl=1./my_tanl;
-
-  // Useful intermediate variables
-  double cosp=cos(my_phi0);
-  double sinp=sin(my_phi0);
-  double twoks=twokappa*(zs-z0)*cotl;
-  double sin2ks=sin(twoks);
-  double cos2ks=cos(twoks); 
-  
-  // Get Bfield
-  double Bz=fabs(bfield->GetBz(xs,ys,zs));
-
-  // Momentum
-  p=0.003*Bz*segment->rc/cos(atan(my_tanl));
-
-  cosphi=cosp*cos2ks-sinp*sin2ks;
-  sinphi=sinp*cos2ks+cosp*sin2ks;
-
-  return NOERROR;
-}
-
 // Routine to return momentum and position given the helical parameters and the
 // z-component of the magnetic field
 jerror_t 
-DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(
-				        vector<const DFDCSegment *>segments,
-							    DVector3 &pos,
-							    DVector3 &mom){
+  DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(const DHelicalFit &fit,
+							      vector<const DFDCSegment *>segments,
+							      DVector3 &pos,
+							      DVector3 &mom){
   // Hit in the most upstream package
   const DFDCPseudo *hit=segments[0]->hits[segments[0]->hits.size()-1];
   double zhit=hit->wire->origin.z();
@@ -523,23 +571,24 @@ DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(
   // Position
   double dz=1.;
   double zmin=zhit-dz;
-  double phi1=atan2(yhit-yc,xhit-xc);
-  double q_over_rc_tanl=q/(rc*tanl);
+  double phi1=atan2(yhit-fit.y0,xhit-fit.x0);
+  double q=FactorForSenseOfRotation*fit.h; 
+  double q_over_rc_tanl=q/(fit.r0*fit.tanl);
   double dphi_s=dz*q_over_rc_tanl;
   double dphi1=phi1-dphi_s;// was -
-  double x=xc+rc*cos(dphi1);
-  double y=yc+rc*sin(dphi1);
+  double x=fit.x0+fit.r0*cos(dphi1);
+  double y=fit.y0+fit.r0*sin(dphi1);
   pos.SetXYZ(x,y,zmin);
 
   dphi1*=-1.;
-  if (FactorForSenseOfRotation*q<0) dphi1+=M_PI;
+  if (fit.h<0) dphi1+=M_PI;
   
   // Momentum
   double Bz=fabs(bfield->GetBz(xhit,yhit,zhit));
-  double pt=0.003*Bz*rc; 
+  double pt=0.003*Bz*fit.r0; 
   double px=pt*sin(dphi1);
   double py=pt*cos(dphi1);
-  double pz=pt*tanl;
+  double pz=pt*fit.tanl;
   mom.SetXYZ(px,py,pz);
 
   return NOERROR;
@@ -548,10 +597,9 @@ DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(
 // Routine to return momentum and position given the helical parameters and the
 // z-component of the magnetic field
 jerror_t 
-DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(
-							    const DFDCSegment *segment,
-							    DVector3 &pos,
-							    DVector3 &mom){
+  DTrackCandidate_factory_FDCCathodes::GetPositionAndMomentum(const DFDCSegment *segment,
+							      DVector3 &pos,
+							      DVector3 &mom){
   // Hit in the most upstream package
   const DFDCPseudo *hit=segment->hits[segment->hits.size()-1];
   double zhit=hit->wire->origin.z();
@@ -657,8 +705,8 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
       // stray segments beyond one end or the other of the existing track
       sort(segments.begin(),segments.end(),DTrackCandidate_segment_cmp_by_z);
       unsigned int max_i=segments.size()-1;
-      if (segment->package<segments[0]->package 
-	  || segment->package>segments[max_i]->package){
+      if (segments[0]->package-segment->package==1 
+	  || segment->package-segments[max_i]->package==1){
 	const DFDCPseudo *myhit=segment->hits[0];
 	double doca2=DocaSqToHelix(_data[i],myhit);
 	bool got_match=(doca2<MatchR(_data[i]->rc));
@@ -666,7 +714,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	if (got_match==false){
 	  double dx=segment->xc-_data[i]->xc;
 	  double dy=segment->yc-_data[i]->yc;
-	  if (dx*dx+dy*dy<9.0) got_match=true;
+	  if (dx*dx+dy*dy<CIRCLE_CUT) got_match=true;
 	}
 	if (got_match){
 	  // Add the segment as an associated object to _data[i]
@@ -681,17 +729,17 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	  DoHelicalFit(segments,fit);
 	     
 	  //circle fit parameters
-	  _data[i]->rc=rc;
-	  _data[i]->xc=xc;
-	  _data[i]->yc=yc;
+	  _data[i]->rc=fit.r0;
+	  _data[i]->xc=fit.x0;
+	  _data[i]->yc=fit.y0;
 	
 	  // Get position and momentum just upstream of first hit
 	  DVector3 pos,mom;
-	  GetPositionAndMomentum(segments,pos,mom);
+	  GetPositionAndMomentum(fit,segments,pos,mom);
 	  
 	  _data[i]->chisq=fit.chisq;
 	  _data[i]->Ndof=fit.ndof;
-	  _data[i]->setPID((q > 0.0) ? PiPlus : PiMinus);
+	  _data[i]->setPID((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
 	  _data[i]->setPosition(pos);
 	  _data[i]->setMomentum(mom); 
 	
@@ -793,28 +841,23 @@ bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned
   return false;
 }
 
-// For a given sent of linked segments, perform a helical fit using all the hits
-// and make a new track candidate object
-void DTrackCandidate_factory_FDCCathodes::MakeCandidate(vector<const DFDCSegment *>&mytrack){
-  // Create the fit object and perform the fit
-  DHelicalFit fit;
-  DoHelicalFit(mytrack,fit);
-  
-  // Create new track, starting with the most upstream segment
+// For a given sent of linked segments, make a new track candidate object
+void DTrackCandidate_factory_FDCCathodes::MakeCandidate(const DHelicalFit &fit,
+							vector<const DFDCSegment *>&mytrack){
   DTrackCandidate *track = new DTrackCandidate;
 
   //circle fit parameters
-  track->rc=rc;
-  track->xc=xc;
-  track->yc=yc;
+  track->rc=fit.r0;
+  track->xc=fit.x0;
+  track->yc=fit.y0;
   
   // Get the momentum and position just upstream of first hit
   DVector3 mom,pos;
-  GetPositionAndMomentum(mytrack,pos,mom);
+  GetPositionAndMomentum(fit,mytrack,pos,mom);
     
   track->chisq=fit.chisq;
   track->Ndof=fit.ndof;
-  track->setPID((q > 0.0) ? PiPlus : PiMinus);
+  track->setPID((FactorForSenseOfRotation*fit.h > 0.0) ? PiPlus : PiMinus);
   track->setPosition(pos);
   track->setMomentum(mom);
   
@@ -833,14 +876,13 @@ void DTrackCandidate_factory_FDCCathodes::DoHelicalFit(vector<const DFDCSegment 
     fit.AddHitXYZ(0.,0.,TARGET_Z,BEAM_VAR,BEAM_VAR,0.);
   }
   double max_r=0.;
-  rc=0.,xc=0.,yc=0.,tanl=0.; //initialize helix variables
-  q=mytrack[0]->q;
+
   // create a guess for rc and add hits
-  for (unsigned int m=0;m<mytrack.size();m++){
+  double rc=0.;
+  unsigned int num_segments=mytrack.size();
+  for (unsigned int m=0;m<num_segments;m++){
     rc+=mytrack[m]->rc;
-    xc+=mytrack[m]->xc;
-    yc+=mytrack[m]->yc;
-    tanl+=mytrack[m]->tanl;
+
     for (unsigned int n=0;n<mytrack[m]->hits.size();n++){
       const DFDCPseudo *hit=mytrack[m]->hits[n];
       fit.AddHit(hit);
@@ -851,49 +893,36 @@ void DTrackCandidate_factory_FDCCathodes::DoHelicalFit(vector<const DFDCSegment 
       }
     }
   }
-  double mysize=double(mytrack.size());
-  rc/=mysize;
-  xc/=mysize;
-  yc/=mysize;
-  tanl/=mysize;
+  rc/=double(num_segments);
   
   // Do the fit
   if (fit.FitTrackRiemann(rc)==NOERROR){    
-    // New track parameters
-    tanl=fit.tanl;
-    xc=fit.x0;
-    yc=fit.y0;
-    rc=fit.r0;
-    q=FactorForSenseOfRotation*fit.h;
-    
     // Look for cases where the momentum is unrealistically large...
     const DFDCPseudo *myhit=mytrack[0]->hits[0];
     double Bz=fabs(bfield->GetBz(myhit->xy.X(),myhit->xy.Y(),myhit->wire->origin.z()));
     double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-    
-    // Prune the fake hit at the origin in case we need to use an alternate
-    // fit
+
+    // Guard against unreasonably high momentum or tight curler near the beam
+    // line
+    if (p>10. || (fit.r0<0.5*max_r && max_r<10.0)){
+      // Prune the fake hit at the origin
+      if (ADD_VERTEX_POINT){
+	fit.PruneHit(0);
+      }
+      // Fit a circle and line assuming the track emerges from (0,0,TARGET_Z)
+      fit.FitTrack_FixedZvertex(TARGET_Z);
+    }
+  }
+  else {
+    // If the Riemann fit failed we still want some estimates for the track
+    // parameters...
+
+    // Prune the fake hit at the origin 
     if (ADD_VERTEX_POINT){
       fit.PruneHit(0);
     }
-    if (p>10.){//... try alternate circle fit
-      fit.FitCircle();
-      rc=fit.r0;
-      xc=fit.x0;
-      yc=fit.y0;
-    } 
-    if (rc<0.5*max_r && max_r<10.0){
-      // ... we can also have issues near the beam line:
-      // Try to fix relatively high momentum tracks in the very forward 
-      // direction that look like low momentum tracks due to small pt.
-      // Assume that the particle came from the center of the target.
-      fit.FitTrack_FixedZvertex(TARGET_Z);
-      tanl=fit.tanl;
-      rc=fit.r0;
-      xc=fit.x0;
-      yc=fit.y0;
-      fit.FindSenseOfRotation();
-      q=FactorForSenseOfRotation*fit.h;      
-    }
+    // Fit a circle and line assuming the track emerges from (0,0,TARGET_Z)
+    fit.FitTrack_FixedZvertex(TARGET_Z);
+    fit.FindSenseOfRotation();
   }
 }

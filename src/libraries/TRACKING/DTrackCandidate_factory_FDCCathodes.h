@@ -17,6 +17,7 @@
 #include "DMagneticFieldStepper.h"
 #include <TH1F.h>
 #include <TH2F.h>
+#include <TH3F.h>
 #include "DHelicalFit.h"
 
 /// \htmlonly
@@ -55,17 +56,13 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-  jerror_t GetPositionAndMomentum(const DFDCSegment *segment);
-  jerror_t GetPositionAndMomentum(DVector3 &pos,DVector3 &mom);
-  jerror_t GetPositionAndMomentum(vector<const DFDCSegment *>segments,
+  jerror_t GetPositionAndMomentum(const DHelicalFit &fit,
+				  vector<const DFDCSegment *>segments,
 				  DVector3 &pos,DVector3 &mom); 
   jerror_t GetPositionAndMomentum(const DFDCSegment *segment,
 				  DVector3 &pos,DVector3 &mom);
   
-  double GetCharge(const DVector3 &pos,const DFDCSegment *segment);
-  double GetCharge(const DVector3 &pos,vector<const DFDCSegment *>segments);
-
-  double DocaSqToHelix(const DFDCPseudo *hit);
+  double DocaSqToHelix(const DHelicalFit &fit,const DFDCSegment *segment1,const DFDCSegment *segment2) const;
   double DocaSqToHelix(const DFDCSegment *segment1,const DFDCSegment *segment2) const;
   double DocaSqToHelix(const DTrackCandidate *candidate,const DFDCPseudo *hit) const;
 
@@ -83,27 +80,22 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 			 vector<DFDCSegment *>packages[4],
 			 vector<vector<int> >&is_paired,
 			 vector<vector<const DFDCSegment *>>&mytracks);
-  void MakeCandidate(vector<const DFDCSegment *>&mytrack);
+  void MakeCandidate(const DHelicalFit &fit,
+		     vector<const DFDCSegment *>&mytrack);
   void DoHelicalFit(vector<const DFDCSegment *>&mytrack,DHelicalFit &fit);
 
 
   bool DEBUG_HISTS,USE_FDC,ADD_VERTEX_POINT;
 
-  TH2F *match_dist_fdc,*match_center_dist2;
+  TH2F *match_dist_fdc,*match_center_dist2,*match_circle_dy_dx;
+  TH3F *match_dy_dx;
  
   vector<double>z_wires;
   double TARGET_Z,BEAM_VAR,FDC_HOUGH_THRESHOLD;
+  double MIN_CUT=5.0,MAX_CUT=9.0,CUT_SCALE=200.,CIRCLE_CUT=9.0;
   
   double FactorForSenseOfRotation;
-  
-  // Fit parameters
-  double xc,yc,rc,q,tanl;
-  
-  // Parameters at the end of the segment
-  double xs,ys,zs;
-  double p,cosphi,sinphi,twokappa,cotl;
 
-  DTrackFinder *finder;
 };
 
 inline double DTrackCandidate_factory_FDCCathodes::Match(double p){
@@ -113,9 +105,9 @@ inline double DTrackCandidate_factory_FDCCathodes::Match(double p){
   return cut;
 }
 inline double DTrackCandidate_factory_FDCCathodes::MatchR(double rc) const {
-  double cut=200.0/rc;
-  if (cut>9.0) cut=9.0;
-  if (cut<5.) cut=5.0;
+  double cut=CUT_SCALE/rc;
+  if (cut>MAX_CUT) cut=MAX_CUT;
+  if (cut<MIN_CUT) cut=MIN_CUT;
   return cut;
 }
 
