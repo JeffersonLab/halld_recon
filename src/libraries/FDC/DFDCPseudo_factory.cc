@@ -112,6 +112,8 @@ jerror_t DFDCPseudo_factory::init(void)
 
   DEBUG_HISTS = false;
   gPARMS->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+  MATCH_TO_MC_HIT=false;
+  gPARMS->SetDefaultParameter("FDC:MATCH_TO_MC_HIT",MATCH_TO_MC_HIT);
 
 
   return NOERROR;
@@ -616,9 +618,10 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
 
                     // Try matching truth hit with this "real" hit.
-                    const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
-                    if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
-
+		    if (MATCH_TO_MC_HIT){
+		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
+		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    } 
 		    newPseu->wire_id=96*((*xIt)->gLayer-1)+(*xIt)->element-1;
 
                     _data.push_back(newPseu);
