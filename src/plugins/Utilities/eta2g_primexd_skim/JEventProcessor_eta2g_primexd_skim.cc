@@ -271,7 +271,7 @@ jerror_t JEventProcessor_eta2g_primexd_skim::evnt(JEventLoop *loop, uint64_t eve
   DVector3 pos,mom;
   Double_t BCAL_energy_sum = 0;
   Double_t CCAL_energy_sum = 0;
-  Double_t FCAL_energy_sum = 0;
+  //Double_t FCAL_energy_sum = 0;
   
   for (unsigned int i=0; i<locBCALShowers.size(); i++) {
     Double_t E = locBCALShowers[i]->E;
