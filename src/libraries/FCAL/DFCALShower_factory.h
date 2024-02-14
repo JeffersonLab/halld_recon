@@ -68,6 +68,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   bool LOAD_CCDB_CONSTANTS;
   bool USE_RING_E_CORRECTION_V1;
   bool USE_RING_E_CORRECTION_V2;
+  bool USE_CPP_E_CORRECTION;
   bool SHOWER_POSITION_LOG;
   double SHOWER_ENERGY_THRESHOLD;
   double cutoff_energy;
@@ -81,6 +82,8 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   vector < vector <double> > energy_dependence_correction_vs_ring;
   //V2 based on E/P
   vector < vector <double> > nonlinear_correction;
+  vector <double> nonlinear_correction_cpp;
+  vector <int> block_to_square;
   //Choose directly in DB which non-linear correction version to use
   vector <int> nonlinear_correction_type;
   
