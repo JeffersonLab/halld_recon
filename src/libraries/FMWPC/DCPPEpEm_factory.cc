@@ -483,7 +483,7 @@ bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nCh
   features[ 1] = fcalshowers.size();
   features[ 2] = (stats.size()>0) ? stats[0]->fcal_blocks : fcalhits.size();
   features[ 3] = fmwpchits.size();
-  features[ 4] = 2; // piPlus + piMinus tracks found ??
+  features[ 4] = 4; // lepton and pion tracks found 
 
   // Match to FCAL for pi+ hypothesis
   shared_ptr<const DFCALShowerMatchParams>fcalparms=PiPhyp->Get_FCALShowerMatchParams();
