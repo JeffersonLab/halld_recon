@@ -108,7 +108,7 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
 		const DLorentzDeflections *lorentz_def;
 //		double ref_time;
 //		bool use_tof,use_sc;
-		double TARGET_Z,BEAM_VARIANCE;
+		double TARGET_Z,BEAM_VARIANCE,MATCH_RADIUS;
 		int DEBUG_LEVEL;
 
 		int myeventno;

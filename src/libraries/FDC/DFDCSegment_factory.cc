@@ -14,7 +14,6 @@ using namespace std;
 //#define MAX_DEFLECTION 0.15
 #define EPS 1e-8
 //#define KILL_RADIUS 5.0 
-#define MATCH_RADIUS 2.0
 #define ADJACENT_MATCH_DISTANCE 0.3
 //#define SIGN_CHANGE_CHISQ_CUT 10.0
 //#define USED_IN_SEGMENT 0x8
@@ -84,6 +83,9 @@ jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) {
   
   BEAM_VARIANCE=1.0;
   gPARMS->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
+
+  MATCH_RADIUS=2.0;
+  gPARMS->SetDefaultParameter("FDC:MATCH_RADIUS",MATCH_RADIUS);
   
 
   return NOERROR;
