@@ -4,6 +4,7 @@
 using namespace jana;
 
 #include "DBeamCurrent_factory.h"
+#include "DBeamHelicity_factory.h"
 #include "Df250Config.h"
 #include "Df250PulseIntegral.h"
 #include "Df250StreamingRawData.h"
@@ -46,6 +47,7 @@ using namespace jana;
 #include "DDIRCTDCHit.h"
 #include "DDIRCADCHit.h"
 #include "DGEMSRSWindowRawData.h"
+#include "DHELIDigiHit.h"
 #include "Df125EmulatorAlgorithm_factory.h"
 #include "Df125EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory.h"
@@ -57,6 +59,8 @@ jerror_t DAQ_init(JEventLoop *loop)
 {
 	/// Create and register DTranslationTable factory
 	loop->AddFactory(new DBeamCurrent_factory());
+	loop->AddFactory(new JFactory<DHELIDigiHit>());
+	loop->AddFactory(new DBeamHelicity_factory());
 	loop->AddFactory(new JFactory<Df250Config>());
 	loop->AddFactory(new JFactory<Df250PulseIntegral>());
 	loop->AddFactory(new JFactory<Df250StreamingRawData>());

@@ -35,6 +35,7 @@ enum DetectorSystem_t{
      SYS_TAC	    = 0x20000,
      SYS_TRD        = 0x40000,
      SYS_CTOF       = 0x80000,
+     SYS_HELI       = 0x100000,
 };
 
 inline const char* SystemName(DetectorSystem_t sys)
@@ -106,6 +107,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_CTOF:
 	      return "CTOF";
 	      break;
+	  case SYS_HELI:
+              return "HELI";
+              break;
      }
      return "UNKNOWN";
 }
@@ -158,6 +162,8 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
                 return SYS_TRD;
 	else if(strcmp(locSystemName, "CTOF") == 0)
                 return SYS_CTOF;
+	else if(strcmp(locSystemName, "HELI") == 0)
+                return SYS_HELI;
 	else
 		return SYS_NULL;
 }

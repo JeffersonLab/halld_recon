@@ -43,6 +43,7 @@ using namespace jana;
 #include <DAQ/DCAEN1290TDCHit.h>
 #include <DAQ/DDIRCTDCHit.h>
 #include <DAQ/DGEMSRSWindowRawData.h>
+#include <DAQ/DHELIDigiHit.h>
 
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -106,7 +107,8 @@ using namespace jana;
 		X(DGEMDigiWindowRawData) \
 		X(DCTOFDigiHit) \
  		X(DCTOFTDCDigiHit) \
-		X(DFMWPCDigiHit) 
+		X(DFMWPCDigiHit) \
+		X(DHELIDigiHit)
 
 #define MyfADCTypes(X) \
 		X(DBCALDigiHit) \
@@ -125,7 +127,8 @@ using namespace jana;
 		X(DTACDigiHit) \
 		X(DTRDDigiHit) \
 		X(DCTOFDigiHit) \
-		X(DFMWPCDigiHit) 
+		X(DFMWPCDigiHit) \
+		X(DHELIDigiHit)
 
 
 #include "GlueX.h"
@@ -174,6 +177,7 @@ class DTranslationTable:public jana::JObject{
 			TRD,
 			FMWPC,
 			CTOF,
+			HELI,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -199,6 +203,7 @@ class DTranslationTable:public jana::JObject{
 			        case TRD: return "TRD";
 			        case FMWPC: return "FMWPC";
  			        case CTOF: return "CTOF";
+				case HELI: return "HELI";	
 				case UNKNOWN_DETECTOR:
 				default:
 					return "UNKNOWN";
@@ -406,6 +411,14 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 		
+		class HELIIndex_t{
+			public:
+			uint32_t chan;
+
+			inline bool operator==(const HELIIndex_t &rhs) const {
+			    return (chan==rhs.chan);
+			}
+		};
 
 		// DChannelInfo holds translation between indexing schemes
 		// for one channel.
@@ -435,6 +448,7 @@ class DTranslationTable:public jana::JObject{
 					TRDIndex_t trd;
 					FMWPCIndex_t fmwpc;
 					CTOFIndex_t ctof;
+					HELIIndex_t heli;
 				};
 		};
 
@@ -531,7 +545,7 @@ class DTranslationTable:public jana::JObject{
 		DTACDigiHit* 	    MakeTACDigiHit( 	   const TACIndex_t &idx, 	 const Df250PulseData *pd) const;
 		DTPOLSectorDigiHit* MakeTPOLSectorDigiHit( const TPOLSECTORIndex_t &idx, const Df250WindowRawData *window) const;
 		DCTOFDigiHit*       MakeCTOFDigiHit(       const CTOFIndex_t &idx,       const Df250PulseData *pd) const;
-
+		DHELIDigiHit*       MakeHELIDigiHit(       const HELIIndex_t &idx,       const Df250PulseData *pd) const;
 
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
