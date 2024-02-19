@@ -57,6 +57,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	ADD_FCAL_DATA_FOR_CPP=false;
 	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
+	REST_WRITE_FCAL_HITS = false;
+	gPARMS->SetDefaultParameter("REST:WRITE_FCAL_HITS", REST_WRITE_FCAL_HITS);
+
 
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
@@ -87,6 +90,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 	std::vector<const DFCALShower*> fcalshowers;
 	locEventLoop->Get(fcalshowers);
+
+	std::vector<const DFCALHit*> fcalhits;
+	if(REST_WRITE_FCAL_HITS) {
+	    locEventLoop->Get(fcalhits);
+	}
 
 	std::vector<const DBCALShower*> bcalshowers;
 	locEventLoop->Get(bcalshowers);
@@ -425,6 +433,21 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 	      hit().setT(fmwpchits[i]->t);
 	      hit().setQf(fmwpchits[i]->QF);
 	      hit().setPed(fmwpchits[i]->ped);
+	    }
+	}
+
+	if(REST_WRITE_FCAL_HITS) {
+	  // push any DFCALHit objects to the output record
+	  for (size_t i=0; i < fcalhits.size(); i++)
+	    {
+	      hddm_r::FcalHitList hit = res().addFcalHits(1);
+	      hit().setRow(fcalhits[i]->row);
+	      hit().setColumn(fcalhits[i]->column);
+	      hit().setX(fcalhits[i]->x);
+	      hit().setY(fcalhits[i]->y);
+	      hit().setE(fcalhits[i]->E);
+	      hit().setT(fcalhits[i]->t);
+	      hit().setIntOverPeak(fcalhits[i]->intOverPeak);
 	    }
 	}
 
