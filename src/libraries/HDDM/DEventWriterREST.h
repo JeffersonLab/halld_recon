@@ -61,6 +61,7 @@ class DEventWriterREST : public JObject
 		bool REST_WRITE_FMWPC_HITS;
 		bool REST_WRITE_CCAL_SHOWERS;
 		bool REST_WRITE_TRACK_EXIT_PARAMS;
+		bool ADD_FCAL_DATA_FOR_CPP;
 
         // metadata to save in the REST file
         // these should be consistent during program execution

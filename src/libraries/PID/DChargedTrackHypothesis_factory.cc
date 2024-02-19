@@ -283,6 +283,12 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->Set_DIRCMatchParams(locDIRCMatchParams);
 	if(dPIDAlgorithm->Get_BestCTOFMatchParams(locTrackTimeBased, locDetectorMatches, locCTOFHitMatchParams))
 	  locChargedTrackHypothesis->Set_CTOFHitMatchParams(locCTOFHitMatchParams);
+	// Matching to CPP wire chambers
+	vector<shared_ptr<const DFMWPCMatchParams> > locFMWPCMatchParamsVec;
+	if (locDetectorMatches->Get_FMWPCMatchParams(locTrackTimeBased,
+						     locFMWPCMatchParamsVec)){
+	  locChargedTrackHypothesis->Set_FMWPCMatchParams(locFMWPCMatchParamsVec[0]);
+	}
 
 	//PID
 	if(locChargedTrackHypothesis->t1_detector() == SYS_BCAL)
