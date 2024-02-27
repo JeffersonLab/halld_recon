@@ -14,6 +14,7 @@
 // June 22, 2015 J. Stevens: changed RICH -> DIRC and remove CERE
 // May 7, 2017 R. Dzhygadlo: added DDIRCTruthPmtHit DDIRCTruthBarHit
 // Oct 20, 2017 A. Somov: Added fields for the DPSHit/DPSCHit
+// Jan 16, 2024 A. Somov: Added functions for ECAL
 //
 // DEventSourceHDDM methods
 //
@@ -39,6 +40,8 @@ using namespace std;
 #include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALGeometry.h>
 #include <CCAL/DCCALHit.h>
+#include <ECAL/DECALGeometry.h>
+#include <ECAL/DECALHit.h>
 
 
 //------------------------------------------------------------------
@@ -404,6 +407,15 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
                      dynamic_cast<JFactory<DFCALHit>*>(factory), tag,
                      event.GetJEventLoop());
  
+   if (dataClassName == "DECALTruthShower")
+      return Extract_DECALTruthShower(record,
+		     dynamic_cast<JFactory<DECALTruthShower>*>(factory), tag);
+
+   if (dataClassName == "DECALHit")
+      return Extract_DECALHit(record,
+                     dynamic_cast<JFactory<DECALHit>*>(factory), tag,
+                     event.GetJEventLoop());
+
    if (dataClassName == "DCCALTruthShower")
       return Extract_DCCALTruthShower(record,
                      dynamic_cast<JFactory<DCCALTruthShower>*>(factory), tag);
@@ -600,6 +612,7 @@ jerror_t DEventSourceHDDM::Extract_DMCTrackHit(hddm_s::HDDM *record,
    GetTOFTruthHits(record, data);
    GetCherenkovTruthHits(record, data);
    GetFCALTruthHits(record, data);
+   GetECALTruthHits(record, data);
    GetSCTruthHits(record, data);
 
    // It has happened that some CDC hits have "nan" for the drift time
@@ -780,6 +793,33 @@ jerror_t DEventSourceHDDM::GetFCALTruthHits(hddm_s::HDDM *record,
       mctrackhit->primary = iter->getPrimary();
       mctrackhit->ptype   = iter->getPtype();
       mctrackhit->system  = SYS_FCAL;
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      data.push_back(mctrackhit);
+   }
+
+   return NOERROR;
+}
+
+//-------------------
+// GetECALTruthHits
+//-------------------
+jerror_t DEventSourceHDDM::GetECALTruthHits(hddm_s::HDDM *record,
+                                            vector<DMCTrackHit*>& data)
+{
+   const hddm_s::EcalTruthShowerList &points = record->getEcalTruthShowers();
+   hddm_s::EcalTruthShowerList::iterator iter;
+   for (iter = points.begin(); iter != points.end(); ++iter) {
+      float x = iter->getX();
+      float y = iter->getY();
+      DMCTrackHit *mctrackhit = new DMCTrackHit;
+      mctrackhit->r       = sqrt(x*x + y*y);
+      mctrackhit->phi     = atan2(y,x);
+      mctrackhit->z       = iter->getZ();
+      mctrackhit->track   = iter->getTrack();
+      mctrackhit->primary = iter->getPrimary();
+      mctrackhit->ptype   = iter->getPtype();
+      mctrackhit->system  = SYS_ECAL;
       const hddm_s::TrackIDList &ids = iter->getTrackIDs();
       mctrackhit->itrack = (ids.size())? ids.begin()->getItrack() : 0;
       data.push_back(mctrackhit);
@@ -1741,6 +1781,146 @@ jerror_t DEventSourceHDDM::Extract_DFCALHit(hddm_s::HDDM *record,
   
   return NOERROR;
 }
+
+
+///------------------
+// Extract_DECALTruthShower
+//------------------
+jerror_t DEventSourceHDDM::Extract_DECALTruthShower(hddm_s::HDDM *record,
+                                   JFactory<DECALTruthShower> *factory,
+                                   string tag)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+   
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "")
+      return OBJECT_NOT_AVAILABLE;
+   
+   vector<DECALTruthShower*> data;
+   JObject::oid_t id=1;
+
+   const hddm_s::EcalTruthShowerList &shows = record->getEcalTruthShowers();
+   hddm_s::EcalTruthShowerList::iterator iter;
+   for (iter = shows.begin(); iter != shows.end(); ++iter) {
+      const hddm_s::TrackIDList &ids = iter->getTrackIDs();
+      int itrack = (ids.size())? ids.begin()->getItrack() : 0;
+      DECALTruthShower *decaltruthshower = new DECALTruthShower(
+            id++,
+            iter->getX(),
+            iter->getY(),
+            iter->getZ(),
+            iter->getPx(),
+            iter->getPy(),
+            iter->getPz(),
+            iter->getE(),
+            iter->getT(),
+            iter->getPrimary(),
+            iter->getTrack(),
+            iter->getPtype(),
+            itrack
+            );
+      data.push_back(decaltruthshower);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+
+//------------------
+// Extract_DECALHit
+//------------------
+jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
+                                   JFactory<DECALHit> *factory, string tag,
+                                   JEventLoop* eventLoop)
+{
+   /// Copies the data from the given hddm_s structure. This is called
+   /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
+   /// returs OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory == NULL)
+      return OBJECT_NOT_AVAILABLE;
+   if (tag != "" && tag != "TRUTH")
+      return OBJECT_NOT_AVAILABLE;
+
+   // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
+   vector<const DECALGeometry*> ecalGeomVect;
+   eventLoop->Get( ecalGeomVect );
+   if (ecalGeomVect.size() < 1)
+      return OBJECT_NOT_AVAILABLE;
+   const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
+
+   vector<DECALHit*> data;
+   int hitId = 0;
+
+   if (tag == "") {
+
+      const hddm_s::EcalHitList &hits = record->getEcalHits();
+      hddm_s::EcalHitList::iterator iter;
+      for (iter = hits.begin(); iter != hits.end(); ++iter) {
+         int row = iter->getRow();
+         int column = iter->getColumn();
+ 
+         // Filter out non-physical blocks here
+	 if (!ecalGeom.isBlockActive(row, column))
+	   continue;
+
+         // Get position of blocks on front face. (This should really come from
+         // hdgeant directly so the poisitions can be shifted in mcsmear.)
+	 DVector2 pos = ecalGeom.positionOnFace(row, column);
+
+         DECALHit *mchit = new DECALHit();
+         mchit->row    = row;
+         mchit->column = column;
+         mchit->x      = pos.X();
+         mchit->y      = pos.Y();
+         mchit->E      = iter->getE();
+         mchit->t      = iter->getT();
+         mchit->id     = hitId++;
+	 mchit->intOverPeak = 5.;
+         data.push_back(mchit);
+      }
+   }
+
+   else if (tag == "TRUTH") {
+      const hddm_s::EcalTruthHitList &hits = record->getEcalTruthHits();
+      hddm_s::EcalTruthHitList::iterator iter;
+      for (iter = hits.begin(); iter != hits.end(); ++iter) {
+         int row = iter->getRow();
+         int column = iter->getColumn();
+ 
+         // Filter out non-physical blocks here
+	 if (!ecalGeom.isBlockActive(row, column))
+	   continue;
+
+         // Get position of blocks on front face. (This should really come from
+         // hdgeant directly so the poisitions can be shifted in mcsmear.)
+	 DVector2 pos = ecalGeom.positionOnFace(row, column);
+    
+         DECALHit *mchit = new DECALHit();
+         mchit->row    = row;
+         mchit->column = column;
+         mchit->x      = pos.X();
+         mchit->y      = pos.Y();
+         mchit->E      = iter->getE();
+         mchit->t      = iter->getT();
+         mchit->id     = hitId++;
+	 mchit->intOverPeak = 5.;
+         data.push_back(mchit);
+      }
+   }
+  
+  // Copy into factory
+  factory->CopyTo(data);
+  
+  return NOERROR;
+}
+
 
 //------------------
 // Extract_DCCALTruthShower
