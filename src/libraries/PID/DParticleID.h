@@ -339,6 +339,7 @@ class DParticleID:public jana::JObject
 		double CDC_TIME_CUT_FOR_DEDX;
         
                 bool CDC_TRUNCATE_DEDX;            // dE/dx truncation: ignore hits with highest dE
+		bool ADD_FCAL_DATA_FOR_CPP;
 
 		double dTargetZCenter;
 

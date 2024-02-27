@@ -18,11 +18,12 @@
 #include <PID/DParticleID.h>
 #include <TOF/DTOFPoint.h>
 #include <FMWPC/DCTOFPoint.h>
-#include <TOF/DITOFHit.h>
+#include <FMWPC/DFMWPCCluster.h>
 #include <BCAL/DBCALShower.h>
 #include <FCAL/DFCALShower.h>
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthBarHit.h>
+#include <TOF/DITOFHit.h>
 #include <TMath.h>
 
 using namespace std;
@@ -49,6 +50,7 @@ class DDetectorMatches_factory : public jana::JFactory<DDetectorMatches>
 		void MatchToSC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DSCHit*>& locSCHits, DDetectorMatches* locDetectorMatches) const;
 		void MatchToDIRC(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DDIRCPmtHit*>& locDIRCHits, DDetectorMatches* locDetectorMatches, const vector<const DDIRCTruthBarHit*>& locDIRCBarHits) const;
 		void MatchToCTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DCTOFPoint*>& locCTOFPoints, DDetectorMatches* locDetectorMatches) const;
+		void MatchToFMWPC(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCCluster*>& locFMWPCClusters, DDetectorMatches* locDetectorMatches) const;
 		void MatchToITOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DITOFHit*>& locITOFHits, DDetectorMatches* locDetectorMatches) const;
 
 		void MatchToFCAL(const DParticleID* locParticleID,
@@ -64,4 +66,3 @@ class DDetectorMatches_factory : public jana::JFactory<DDetectorMatches>
 };
 
 #endif // _DDetectorMatches_factory_
-

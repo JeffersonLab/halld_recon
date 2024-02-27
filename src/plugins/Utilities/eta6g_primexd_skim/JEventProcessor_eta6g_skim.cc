@@ -16,6 +16,7 @@ using namespace jana;
 
 // Routine used to create our JEventProcessor
 #include "JANA/JApplication.h"
+#include <DLorentzVector.h>
 #include "TMath.h"
 #include "JANA/JApplication.h"
 #include "DANA/DApplication.h"
@@ -205,7 +206,7 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
   
   vector< const JObject* > locObjectsToSave;  
 
-  bool Candidate = false;
+  //bool Candidate = false;
   vector<const DFCALHit *> locFCALHits;
   
   loop->Get(locFCALHits);  
@@ -251,7 +252,7 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
   }
 
   vector <DLorentzVector> PhotonList; PhotonList.clear(); 
-  int photon_nb = locBCALShowers.size() + locFCALShowers.size() + locCCALShowers.size();
+  //int photon_nb = locBCALShowers.size() + locFCALShowers.size() + locCCALShowers.size();
   for (unsigned int i = 0; i < locBCALShowers.size(); i ++) {
     double e =  locBCALShowers[i]->E;
     double x =  locBCALShowers[i]->x - kinfitVertexX;
@@ -306,8 +307,8 @@ jerror_t JEventProcessor_eta6g_skim::evnt(JEventLoop *loop, uint64_t eventnumber
   }
 
   int pi0_nb = 0;
-  for (int i = 0; i < PhotonList.size(); i ++) {
-    for (int j = i + 1; j < PhotonList.size(); j ++) {
+  for (unsigned int i = 0; i < PhotonList.size(); i ++) {
+    for (unsigned int j = i + 1; j < PhotonList.size(); j ++) {
       Double_t inv_mass = (PhotonList[i] + PhotonList[j]).M();
       if (0.09 <= inv_mass && inv_mass <= 0.2) pi0_nb ++;
     }
