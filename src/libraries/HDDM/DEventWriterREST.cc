@@ -48,8 +48,15 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	REST_WRITE_DIRC_HITS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
+	REST_WRITE_FMWPC_HITS = true;
+	gPARMS->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
+
 	REST_WRITE_CCAL_SHOWERS = true;
 	gPARMS->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
+
+	ADD_FCAL_DATA_FOR_CPP=false;
+	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+
 
     CCDB_CONTEXT_STRING = "";
     // if we can get the calibration context from the DANA interface, then save this as well
@@ -106,6 +113,11 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 
 	std::vector<const DDIRCPmtHit*> locDIRCPmtHits;
 	locEventLoop->Get(locDIRCPmtHits);
+
+	std::vector<const DFMWPCHit*> fmwpchits;
+	if(REST_WRITE_FMWPC_HITS) {
+	    locEventLoop->Get(fmwpchits);
+	}
 
 	std::vector<const DEventHitStatistics*> hitStats;
 	locEventLoop->Get(hitStats);
@@ -401,6 +413,21 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 		}
 	}
 
+	if(REST_WRITE_FMWPC_HITS) {
+	  // push any DFMWPCHit objects to the output record
+	  for (size_t i=0; i < fmwpchits.size(); i++)
+	    {
+	      hddm_r::FmwpcHitList hit = res().addFmwpcHits(1);
+	      hit().setLayer(fmwpchits[i]->layer);
+	      hit().setWire(fmwpchits[i]->wire);
+	      hit().setQ(fmwpchits[i]->q);
+	      hit().setAmp(fmwpchits[i]->amp);
+	      hit().setT(fmwpchits[i]->t);
+	      hit().setQf(fmwpchits[i]->QF);
+	      hit().setPed(fmwpchits[i]->ped);
+	    }
+	}
+
 	// push any DTrackTimeBased objects to the output record
 	for (size_t i=0; i < tracks.size(); ++i)
 	{
@@ -604,27 +631,19 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				fcalList().setPathlength(locFCALShowerMatchParamsVector[loc_k]->dPathLength);
 				fcalList().setTflight(locFCALShowerMatchParamsVector[loc_k]->dFlightTime);
 				fcalList().setTflightvar(locFCALShowerMatchParamsVector[loc_k]->dFlightTimeVariance);
-			}
-
-			vector<shared_ptr<const DCTOFHitMatchParams>> locCTOFHitMatchParamsVector;
-			locDetectorMatches[loc_i]->Get_CTOFMatchParams(tracks[loc_j], locCTOFHitMatchParamsVector);
-			for(size_t loc_k = 0; loc_k < locCTOFHitMatchParamsVector.size(); ++loc_k)
-			{
-				hddm_r::CtofMatchParamsList ctofList = matches().addCtofMatchParamses(1);
-				ctofList().setTrack(loc_j);
-
-				size_t locCTOFindex = 0;
-				for(; locCTOFindex < ctofpoints.size(); ++locCTOFindex)
-				{
-					if(ctofpoints[locCTOFindex] == locCTOFHitMatchParamsVector[loc_k]->dCTOFPoint)
-						break;
+				// Additional energy information
+				if (ADD_FCAL_DATA_FOR_CPP){
+				  // Sanity check for this additional info
+				  double myE5x5=locFCALShowerMatchParamsVector[loc_k]->dE5x5;
+				  double myE3x3=locFCALShowerMatchParamsVector[loc_k]->dE3x3;
+				  double myEcenter=locFCALShowerMatchParamsVector[loc_k]->dEcenter;
+				  if (myEcenter>0. || myE3x3>0. || myE5x5>0.){ 
+				    hddm_r::FcalEnergyParamsList fcalEnergyParamsList = fcalList().addFcalEnergyParamses(1);
+				    fcalEnergyParamsList().setEcenter(myEcenter);
+				    fcalEnergyParamsList().setE3x3(myE3x3);
+				    fcalEnergyParamsList().setE5x5(myE5x5);
+				  }
 				}
-				ctofList().setHit(locCTOFindex);
-				ctofList().setDEdx(locCTOFHitMatchParamsVector[loc_k]->dEdx);
-				ctofList().setTflight(locCTOFHitMatchParamsVector[loc_k]->dFlightTime);
-
-				ctofList().setDeltax(locCTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
-				ctofList().setDeltay(locCTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
 			}
 
 			vector<shared_ptr<const DFCALSingleHitMatchParams>> locFCALSingleHitMatchParamsVector;
@@ -771,6 +790,46 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
 				correlationList().setTrack(loc_j);
 				correlationList().setSystem(SYS_START);
 				correlationList().setCorrelation(locFlightTimePCorrelation);
+			}
+
+			//---------  The following are for CPP -------------//
+			vector<shared_ptr<const DFMWPCMatchParams>> locFMWPCMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_FMWPCMatchParams(tracks[loc_j], locFMWPCMatchParamsVector);
+			for(size_t loc_k = 0; loc_k < locFMWPCMatchParamsVector.size(); ++loc_k){
+			  hddm_r::FmwpcMatchParamsList fmwpcList = matches().addFmwpcMatchParamses(1);
+			  fmwpcList().setTrack(loc_j);
+			  vector<int>locLayers=locFMWPCMatchParamsVector[loc_k]->dLayers;
+			  vector<int>locNhits=locFMWPCMatchParamsVector[loc_k]->dNhits;
+			  vector<int>locDists=locFMWPCMatchParamsVector[loc_k]->dDists;
+			  vector<int>locClosestWires=locFMWPCMatchParamsVector[loc_k]->dClosestWires;
+			  for (size_t loc_m=0;loc_m<locLayers.size();loc_m++){
+			    hddm_r::FmwpcDataList fmwpcDataList = fmwpcList().addFmwpcDatas(1);
+			    fmwpcDataList().setLayer(locLayers[loc_m]);
+			    fmwpcDataList().setNhits(locNhits[loc_m]);
+			    fmwpcDataList().setDist(locDists[loc_m]);
+			    fmwpcDataList().setClosestwire(locClosestWires[loc_m]);
+			  }
+			}
+
+			vector<shared_ptr<const DCTOFHitMatchParams>> locCTOFHitMatchParamsVector;
+			locDetectorMatches[loc_i]->Get_CTOFMatchParams(tracks[loc_j], locCTOFHitMatchParamsVector);
+			for(size_t loc_k = 0; loc_k < locCTOFHitMatchParamsVector.size(); ++loc_k)
+			{
+				hddm_r::CtofMatchParamsList ctofList = matches().addCtofMatchParamses(1);
+				ctofList().setTrack(loc_j);
+
+				size_t locCTOFindex = 0;
+				for(; locCTOFindex < ctofpoints.size(); ++locCTOFindex)
+				{
+					if(ctofpoints[locCTOFindex] == locCTOFHitMatchParamsVector[loc_k]->dCTOFPoint)
+						break;
+				}
+				ctofList().setHit(locCTOFindex);
+				ctofList().setDEdx(locCTOFHitMatchParamsVector[loc_k]->dEdx);
+				ctofList().setTflight(locCTOFHitMatchParamsVector[loc_k]->dFlightTime);
+
+				ctofList().setDeltax(locCTOFHitMatchParamsVector[loc_k]->dDeltaXToHit);
+				ctofList().setDeltay(locCTOFHitMatchParamsVector[loc_k]->dDeltaYToHit);
 			}
 		}
 

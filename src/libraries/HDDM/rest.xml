@@ -105,6 +105,8 @@
       <tofEnergyDeposition maxOccurs="1" minOccurs="0" dE1="float" dE2="float"/>
     </tofPoint>
     <dircHit maxOccurs="unbounded" minOccurs="0" jtag="string" ch="int" t="float" tunit="ns" tot = "float" />
+    <fmwpcHit maxOccurs="unbounded" minOccurs="0" jtag="string" layer="int" wire="int"
+	      q="float" amp="float" t="float" tunit="ns" qf="int" ped="float"/>
     <RFtime minOccurs="0" jtag="string"
             tsync="float" tunit="ns"/>
     <trigger minOccurs="0" maxOccurs="1" jtag="string"
@@ -131,7 +133,10 @@
       <fcalMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" shower="int"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
-                tunit="ns" lunit="cm"/>
+                tunit="ns" lunit="cm">
+	<fcalEnergyParams maxOccurs="1" minOccurs="0"
+		      Ecenter="float" E3x3="float" E5x5="float"/>
+      </fcalMatchParams>
       <fcalSingleHitMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" ehit="float" thit="float"
                 dx="float" doca="float" pathlength="float" tflight="float" tflightvar="float"
@@ -140,6 +145,12 @@
                 track="int" hit="int" dEdx="float" 
                 deltax="float" deltay="float" tflight="float"
 		tunit="ns" lunit="cm" dEdx_unit="GeV/cm"/>
+      <fmwpcMatchParams maxOccurs="unbounded" minOccurs="0"
+			track="int">
+	<fmwpcData maxOccurs="6" minOccurs="0"
+		   layer="int" nhits="int"
+		   dist="int" closestwire="int" />
+      </fmwpcMatchParams>
       <tofMatchParams maxOccurs="unbounded" minOccurs="0"
                 track="int" hit="int"
                 dEdx="float" thit="float" thitvar="float" ehit="float"
