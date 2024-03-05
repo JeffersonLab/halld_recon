@@ -1110,7 +1110,7 @@ jerror_t DTrackCandidate_factory::DoRefit(DHelicalFit &fit,
     double p=0.003*Bz*fit.r0/cos(atan(fit.tanl));
   
     if (p>3.){ // momentum is suspiciously high for a track going through both
-      // the FDC and the CDC... try alternate circle fit...  
+      // the FDC and the CDC... try alternate circle fit...   
       fit.FitCircle();
     }
     return NOERROR;
@@ -1699,7 +1699,11 @@ bool DTrackCandidate_factory::MatchMethod4(const DTrackCandidate *srccan,
 
 	    double p=0.003*fit.r0*Bz_avg/cos(atan(fit.tanl));
 	    if (p>10.){ // Check for extremely stiff tracks, some of which 
-	      // will have unphysical momenta... try alternate circle fit 
+	      // will have unphysical momenta... try alternate circle fit.  
+	      // First prune the fake hit at the origin
+	      if (ADD_VERTEX_POINT){
+		fit.PruneHit(0);
+	      }
 	      fit.FitCircle();
 	    }
 	    // Guess charge from fit
@@ -2277,9 +2281,13 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    Bz=0.5*(Bz+fabs(Bz_fdc)/num_hits_fdc);
 	    
 	    double p=0.003*fit.r0*Bz/cos(atan(fit.tanl));
-	    if (p>10.){
+	    if (p>3.){
 	      // momentum is suspiciously high for a track going through both
 	      // the FDC and the CDC... try alternate circle fit
+	      // First prune the fake hit at the origin
+	      if (ADD_VERTEX_POINT){
+		fit.PruneHit(0);
+	      }
 	      fit.FitCircle();
 	    }
 	    // FDC hit
@@ -2313,7 +2321,8 @@ bool DTrackCandidate_factory::MatchMethod8(const DTrackCandidate *cdccan,
 	    
 	    trackcandidates.push_back(can);		     
 	    
-	    if (DEBUG_LEVEL>0)  _DBG_ << "Matched using Method #8" <<endl;
+	    if (DEBUG_LEVEL>0) 
+	      _DBG_ << "Matched using Method #8" <<endl;
 	    
 	    return true;
 	  } // circle fit
