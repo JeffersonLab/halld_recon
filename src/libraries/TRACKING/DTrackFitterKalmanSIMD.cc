@@ -729,6 +729,7 @@ void DTrackFitterKalmanSIMD::ResetKalmanSIMD(void)
    chisq_ = 0.0;
    ndf_ = 0;
    MASS=0.13957;
+   INV_MASS=1./MASS;
    mass2=MASS*MASS;
    myField.Bx=myField.By=myField.Bz=0.;
    myField.Bmag=0.;
@@ -904,6 +905,7 @@ DTrackFitter::fit_status_t DTrackFitterKalmanSIMD::FitTrack(void)
 
    //Set the mass
    MASS=input_params.mass();
+   INV_MASS=1./MASS;
    mass2=MASS*MASS;
    m_ratio=ELECTRON_MASS/MASS;
    m_ratio_sq=m_ratio*m_ratio;
@@ -1188,12 +1190,11 @@ jerror_t DTrackFitterKalmanSIMD::CalcDeriv(double z,
    D(state_y)=ty;
    D(state_tx)=kq_over_p_dsdz*dtx_Bfac;
    D(state_ty)=kq_over_p_dsdz*dty_Bfac;
-
    D(state_q_over_p)=0.;
    if (CORRECT_FOR_ELOSS && fabs(dEdx)>EPS){
-      double q_over_p_sq=q_over_p*q_over_p;
-      double E=sqrt(1./q_over_p_sq+mass2); 
-      D(state_q_over_p)=-q_over_p_sq*q_over_p*E*dEdx*dsdz;
+     double q_over_p_sq=q_over_p*q_over_p;
+     double qE_over_p=((q_over_p>0)?1.:-1.)*sqrt(1.+mass2*q_over_p_sq);
+     D(state_q_over_p)=-q_over_p_sq*qE_over_p*dEdx*dsdz;
    }
    return NOERROR;
 }
@@ -3067,7 +3068,7 @@ double DTrackFitterKalmanSIMD::GetdEdx(double q_over_p,double K_rho_Z_over_A,
    //return 0.;
 
    double p=fabs(1./q_over_p);
-   double betagamma=p/MASS;
+   double betagamma=p*INV_MASS;
    double betagamma2=betagamma*betagamma;
    double gamma2=1.+betagamma2;
    double beta2=betagamma2/gamma2;
@@ -3928,9 +3929,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanCentral(double anneal_factor,
    DVector2 wirexy=origin+(Sc(state_z)-z0w)*dir;
 
    // Save the starting values for C and S in the deque
-   central_traj[break_point_step_index].Skk=Sc;
-   central_traj[break_point_step_index].Ckk=Cc;
-
+   if (fit_type==kTimeBased){
+     central_traj[break_point_step_index].Skk=Sc;
+     central_traj[break_point_step_index].Ckk=Cc;
+   }
+     
    // doca variables
    double doca2,old_doca2=(xy-wirexy).Mod2();
 
@@ -4322,9 +4325,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
   }
   
   // Save the starting values for C and S in the deque
-  forward_traj[break_point_step_index].Skk=S;
-  forward_traj[break_point_step_index].Ckk=C;
-  
+  if (fit_type==kTimeBased){
+    forward_traj[break_point_step_index].Skk=S;
+    forward_traj[break_point_step_index].Ckk=C;
+  }
+    
   // Initialize chi squared
   chisq=0;
   
@@ -4404,9 +4409,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForward(double fdc_anneal_factor,
     //C=Q.AddSym(J*C*J.Transpose());
     
     // Save the current state and covariance matrix in the deque
-    forward_traj[k].Skk=S;
-    forward_traj[k].Ckk=C;
-    
+    if (fit_type==kTimeBased){
+      forward_traj[k].Skk=S;
+      forward_traj[k].Ckk=C;
+    }
+      
     // Save the current state of the reference trajectory
     S0_=S0;
     
@@ -4981,9 +4988,11 @@ kalman_error_t DTrackFitterKalmanSIMD::KalmanForwardCDC(double anneal,
   double chi2cut=NUM_CDC_SIGMA_CUT*NUM_CDC_SIGMA_CUT;
   
   // Save the starting values for C and S in the deque
-  forward_traj[break_point_step_index].Skk=S;
-  forward_traj[break_point_step_index].Ckk=C;
-  
+  if (fit_type==kTimeBased){
+    forward_traj[break_point_step_index].Skk=S;
+    forward_traj[break_point_step_index].Ckk=C;
+  }
+    
   // z-position
   double z=forward_traj[break_point_step_index].z;
   
