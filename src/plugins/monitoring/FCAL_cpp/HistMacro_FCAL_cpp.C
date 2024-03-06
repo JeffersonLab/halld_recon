@@ -47,6 +47,7 @@
 	if(locHist_FCALMissedTriggerHit != NULL)
 	{
 		locHist_FCALMissedTriggerHit->GetXaxis()->SetTitleSize(0.04);
+		locHist_FCALMissedTriggerHit->GetYaxis()->SetTitleSize(0.04);
 		locHist_FCALMissedTriggerHit->GetXaxis()->SetLabelSize(0.04);
 		locHist_FCALMissedTriggerHit->GetYaxis()->SetLabelSize(0.04);
 		locHist_FCALMissedTriggerHit->GetXaxis()->SetTitle("FCAL Column");
@@ -62,6 +63,7 @@
 	if(locHist_FCALNoiseHitOccupancy != NULL)
 	{
 		locHist_FCALNoiseHitOccupancy->GetXaxis()->SetTitleSize(0.04);
+		locHist_FCALNoiseHitOccupancy->GetYaxis()->SetTitleSize(0.04);
 		locHist_FCALNoiseHitOccupancy->GetXaxis()->SetLabelSize(0.04);
 		locHist_FCALNoiseHitOccupancy->GetYaxis()->SetLabelSize(0.04);
 		locHist_FCALNoiseHitOccupancy->GetXaxis()->SetTitle("FCAL Column");
@@ -76,10 +78,12 @@
 	if(locProfile_FCALTimeShiftMap != NULL)
 	{
 		locProfile_FCALTimeShiftMap->GetXaxis()->SetTitleSize(0.04);
+		locProfile_FCALTimeShiftMap->GetYaxis()->SetTitleSize(0.04);
 		locProfile_FCALTimeShiftMap->GetXaxis()->SetLabelSize(0.04);
 		locProfile_FCALTimeShiftMap->GetYaxis()->SetLabelSize(0.04);
 		locProfile_FCALTimeShiftMap->GetXaxis()->SetTitle("FCAL Column");
 		locProfile_FCALTimeShiftMap->GetYaxis()->SetTitle("FCAL Row");
+		locProfile_FCALTimeShiftMap->GetZaxis()->SetRangeUser(-10,10);
 		locProfile_FCALTimeShiftMap->SetStats(0);
 		locProfile_FCALTimeShiftMap->Draw("COLZ");
 	}
