@@ -34,6 +34,9 @@
 /// 
 class DFDCSegment_factory : public JFactory<DFDCSegment> {
  public:
+
+  int DEBUGSegments;
+
 		
   ///
   /// DFDCSegment_factory::DFDCSegment_factory():

@@ -85,6 +85,10 @@ jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) {
   BEAM_VARIANCE=1.0;
   gPARMS->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
   
+  DEBUGSegments = 0;
+  gPARMS->SetDefaultParameter("FDC:DEBUGSegments",DEBUGSegments);
+
+
 
   return NOERROR;
 }
@@ -114,7 +118,15 @@ jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
       std::stable_sort(package[j].begin(),package[j].end(),DFDCSegment_package_cmp);
       // We need at least 3 points to define a circle, so skip if we don't 
       // have enough points.
-      if (package[j].size()>2) FindSegments(package[j]);
+      if (package[j].size()>2) {
+
+	if (DEBUGSegments){
+	  _DBG_ << "Call DFDCSegment_factory::FindSegment() for package: "<<j
+		<< " with "<<package[j].size()<<" hits"<<endl;
+	}
+	FindSegments(package[j]);
+
+      }
     } 
   } // pseudopoints>2
   
@@ -641,6 +653,15 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
   vector<bool>used(points.size());
   unsigned int total_num_used=0;
 
+  if (DEBUGSegments){
+    _DBG_ << "List of FDCPseudo hits:"<<endl;
+    for (unsigned int k=0; k<points.size(); k++){
+      const DFDCPseudo *h = points[k];
+      _DBG_<<h->u<<" "<<h->v<<" "<<h->t_u<<" "<<h->t_v<<" "<<h->phi_u<<" "
+	   <<h->phi_v<<" "<<h->w<<" "<<h->dw<<" "<<h->w_c<<" "<<h->s<<" "<<h->ds<<endl;
+    }
+  }
+
   // Put indices for the first point in each plane before the most downstream
   // plane in the vector x_list.
   double old_z=points[0]->wire->origin.z();
@@ -656,6 +677,9 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 
   unsigned int start=0;
   // loop over the start indices, starting with the first plane
+  if (DEBUGSegments){
+    _DBG_ << "FindSegments(): Number of starting points = "<< x_list.size()<<endl;
+  }  
   while (start<x_list.size()-1){
     int num_used=0;
     // For each iteration, count how many hits we have used already in segments
@@ -739,9 +763,18 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	ref_plane=0; 
 	
 	// Perform the Riemann Helical Fit on the track segment
+	if (DEBUGSegments){
+	  _DBG_ << "FindSegments(): call RiemannHelicalFit() with "
+		<<neighbors.size()<<" points"<<endl;
+	}  
+
 	jerror_t error=RiemannHelicalFit(neighbors);
 		
 	if (error==NOERROR){  
+	  if (DEBUGSegments){
+	    _DBG_ << "FindSegments(): RiemannHelicalFit() succeeded!"<<endl;
+	  }  
+
 	  // Since the cell size is 0.5 cm and the Lorentz deflection can be
 	  // mm scale, a circle radius on the order of 1 cm is at the level of 
 	  // how well the points are defined at this stage.  Use a simple circle
@@ -763,6 +796,9 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  _data.push_back(segment);
 	}
 	else {
+	  if (DEBUGSegments){
+	    _DBG_ << "FindSegments(): RiemannHelicalFit() failed!"<<endl;
+	  }  
 	  // Fit assuming particle came from (x,y)=(0,0)
 	  if (CircleFit(neighbors)==NOERROR){
 	    if (LineFit(neighbors)==NOERROR){
@@ -781,7 +817,12 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 
       }
     }
-  
+    if (DEBUGSegments){
+      _DBG_ << "FindSegment(): latest Segment:"<<endl;
+      const DFDCSegment *s = _data[_data.size()-1];
+      _DBG_ <<s->xc<<" "<<s->yc<<" "<<s->rc<<" "<<s->tanl<<" "<<s->q<<" "
+	    <<s->D<<" "<<s->z_vertex<<" "<<s->phi0<<" "<<s->Phi1<<" "<<s->chisq<<endl;
+    }
     // Move on to the next plane to start looking for segments
     start++;
   } //while loop over x_list planes
@@ -811,6 +852,13 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	      added_hits=true;
 	      total_num_used++;
 	      segment->hits.push_back(points[i]);
+
+	      if (DEBUGSegments){
+		_DBG_ << "Add Pseudo Point to segment "<<k<<" :"<<endl;
+		const DFDCPseudo *h = points[i];
+		_DBG_<<h->u<<" "<<h->v<<" "<<h->t_u<<" "<<h->t_v<<" "<<h->phi_u<<" "
+		     <<h->phi_v<<" "<<h->w<<" "<<h->dw<<" "<<h->w_c<<" "<<h->s<<" "<<h->ds<<endl;
+	      }
 	    }	  
 	  } // check z position of hit
 
@@ -818,7 +866,17 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
       }// loop over hits
       if (added_hits){
 	stable_sort(segment->hits.begin(),segment->hits.end(),DFDCSegment_package_cmp);
+
+	if (DEBUGSegments){
+	  _DBG_ << "FindSegments(): added more hits to semgment, "
+		<<"redo RiemannHelicalFit()"<<endl;
+	}  
+	
+
 	if (RiemannHelicalFit(segment->hits)==NOERROR){
+	  if (DEBUGSegments){
+	    _DBG_ << "FindSegments(): RiemannHelicalFit() succeeded!"<<endl;
+	  }  
 	  // Since the cell size is 0.5 cm and the Lorentz deflection can be
 	  // mm scale, a circle radius on the order of 1 cm is at the level of 
 	  // how well the points are defined at this stage.  Use a simple circle
@@ -832,6 +890,14 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
 	  }
 	    
 	  FillSegmentData(segment);
+	  
+	  if (DEBUGSegments){
+	    _DBG_ << "print updated segment:"<<endl;
+	    const DFDCSegment *s = segment;
+	    _DBG_ <<s->xc<<" "<<s->yc<<" "<<s->rc<<" "<<s->tanl<<" "<<s->q<<" "
+		  <<s->D<<" "<<s->z_vertex<<" "<<s->phi0<<" "<<s->Phi1<<" "<<s->chisq<<endl;
+	  }  
+	  
 	} 
       }
     } // loop over segments
