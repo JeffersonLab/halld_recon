@@ -818,10 +818,12 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
       }
     }
     if (DEBUGSegments){
-      _DBG_ << "FindSegment(): latest Segment:"<<endl;
-      const DFDCSegment *s = _data[_data.size()-1];
-      _DBG_ <<s->xc<<" "<<s->yc<<" "<<s->rc<<" "<<s->tanl<<" "<<s->q<<" "
-	    <<s->D<<" "<<s->z_vertex<<" "<<s->phi0<<" "<<s->Phi1<<" "<<s->chisq<<endl;
+      if (_data.size()>0) {
+	_DBG_ << "FindSegment(): latest Segment:"<<endl;
+	const DFDCSegment *s = _data[_data.size()-1];
+	_DBG_ <<s->xc<<" "<<s->yc<<" "<<s->rc<<" "<<s->tanl<<" "<<s->q<<" "
+	      <<s->D<<" "<<s->z_vertex<<" "<<s->phi0<<" "<<s->Phi1<<" "<<s->chisq<<endl;
+      }
     }
     // Move on to the next plane to start looking for segments
     start++;
