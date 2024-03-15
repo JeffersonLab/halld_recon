@@ -819,7 +819,7 @@ jerror_t DFDCSegment_factory::FindSegments(vector<const DFDCPseudo*>&points){
     }
     if (DEBUGSegments){
       if (_data.size()>0) {
-	_DBG_ << "FindSegment(): latest Segment:"<<endl;
+	_DBG_ << "FindSegment(): latest Segment: total_num_used="<<total_num_used<<endl;
 	const DFDCSegment *s = _data[_data.size()-1];
 	_DBG_ <<s->xc<<" "<<s->yc<<" "<<s->rc<<" "<<s->tanl<<" "<<s->q<<" "
 	      <<s->D<<" "<<s->z_vertex<<" "<<s->phi0<<" "<<s->Phi1<<" "<<s->chisq<<endl;
