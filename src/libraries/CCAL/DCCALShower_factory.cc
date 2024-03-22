@@ -2309,7 +2309,7 @@ double DCCALShower_factory::d2c( double dx, double dy )
 	i = int(ax);
 	j = int(ay);
 	
-	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
+	if( (i < 499) && (j < 499) && (i >= 0) && (j >= 0) ) {
 	//if( i < 500. && j < 500. ) {
 	
 	  wx = ax-static_cast<double>(i);
@@ -2415,13 +2415,15 @@ void DCCALShower_factory::tgamma_hyc( int nadc, vector<int> ia, vector<int> id,
 	dx0  = 0.; dy0 = 0.;
 	eps0 = 0.;
 	
-	mom2_pht( nadc, ia, id, nzero, iaz, e0, x0, y0, xx, yy, yx );
-	
 	e2 = 0.;
 	x2 = 0.;
 	y2 = 0.;
 	
 	if( nadc <= 0 ) return;
+
+	mom2_pht( nadc, ia, id, nzero, iaz, e0, x0, y0, xx, yy, yx );
+
+	if( e0 <= 0 ) return;
 	
 	// choosing of the starting point
 	
@@ -2442,7 +2444,7 @@ void DCCALShower_factory::tgamma_hyc( int nadc, vector<int> ia, vector<int> id,
 	  u    = dx*dxc/r + dy*dyc/r;
 	  epsc = epsc - 0.01*id[ii]*u*fabs(u);
 	}
-	if (e0 != 0 && rsq != 0)
+	if (rsq != 0) // e0 has been checked above
 	  epsc = epsc/(0.01*e0*rsq);
 	if(  epsc > 0.8 ) epsc =  0.8;
 	if( epsc < -0.8 ) epsc = -0.8;
