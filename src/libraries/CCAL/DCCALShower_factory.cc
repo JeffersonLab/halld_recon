@@ -2243,7 +2243,6 @@ void DCCALShower_factory::chisq1_hyc( int nadc, vector<int> ia, vector<int> id,
 	    }
 	  } else {
 	    chisq = chisq + fa*fa/9.;
-	    cout << "case 0 ch" << endl;
 	    //if( SHOWER_DEBUG ) cout << "case 0 ch" << endl;
 	  }
 	}
@@ -2443,7 +2442,8 @@ void DCCALShower_factory::tgamma_hyc( int nadc, vector<int> ia, vector<int> id,
 	  u    = dx*dxc/r + dy*dyc/r;
 	  epsc = epsc - 0.01*id[ii]*u*fabs(u);
 	}
-	epsc = epsc/(0.01*e0*rsq);
+	if (e0 != 0 && rsq != 0)
+	  epsc = epsc/(0.01*e0*rsq);
 	if(  epsc > 0.8 ) epsc =  0.8;
 	if( epsc < -0.8 ) epsc = -0.8;
 	dxc = dxc/sqrt(1.-(epsc*epsc));
