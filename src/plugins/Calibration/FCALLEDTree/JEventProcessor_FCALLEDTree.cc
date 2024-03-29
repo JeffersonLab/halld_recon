@@ -162,7 +162,7 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     int col = fcalGeom.column((**hit).y);
 
     hXYGeo->Fill( row, col );
-    hXYGeo_w->Fill(row, col, (**hit).E ;
+    hXYGeo_w->Fill(row, col, (**hit).E );
     hE->Fill(fcalGeom.channel((**hit).row, (**hit).column ), (**hit).E);
     hped->Fill(fcalGeom.channel((**hit).row, (**hit).column ), (float)dHit.pedestal/dHit.nsamples_pedestal);
     hpeak->Fill(fcalGeom.channel((**hit).row, (**hit).column ), dHit.pulse_peak - m_ped[m_nHits]);
