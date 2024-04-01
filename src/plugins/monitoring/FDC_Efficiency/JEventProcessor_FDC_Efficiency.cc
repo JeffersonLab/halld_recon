@@ -118,7 +118,7 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
   }	
 
-  gDirectory->cd("/FDC_Efficiency");
+  gDirectory->cd("..");
   gDirectory->mkdir("Track_Quality")->cd();
   hChi2OverNDF = new TH1I("hChi2OverNDF","hChi2OverNDF", 500, 0.0, 1.0);
   hChi2OverNDF_accepted = new TH1I("hChi2OverNDF_accepted","hChi2OverNDF_accepted", 500, 0.0, 1.0);
@@ -135,7 +135,7 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
   hRingsHit_vs_P = new TH2I("hRingsHit_vs_P", "Rings of CDC Contributing to Track vs P (accepted)", 25, -0.5, 24.5, 34, 0.6, 4);
 
-  gDirectory->cd("/FDC_Efficiency");
+  gDirectory->cd("..");
   gDirectory->mkdir("Residuals")->cd();
   hPseudoRes = new TH1I("hPseudoRes","Pseudo Residual in R", 500, 0, 5);
 
