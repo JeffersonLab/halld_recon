@@ -5,6 +5,7 @@ static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
 static bool CCAL_VERBOSE_OUTPUT = false;
 static bool DIRC_OUTPUT = true;
+static bool FDC_VERBOSE_OUTPUT = false;
 
 static bool STORE_PULL_INFO = false;
 static bool STORE_ERROR_MATRIX_INFO = false;
@@ -266,6 +267,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		locMiscInfoMap->Add(new TObjString("REST:JANACALIBCONTEXT"), new TObjString(REST_JANA_CALIB_CONTEXT.c_str()));
 
 	// Note: adding these parameters (e.g. in hd_root) will create warnings with "<-- NO DEFAULT! (TYPO?)". Safe to ignore these.
+	if(gPARMS->Exists("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT"))
+		{gPARMS->GetParameter("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT", FDC_VERBOSE_OUTPUT); cout << "ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT set to " << FDC_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT"))
 		{gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT set to " << BCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
@@ -691,6 +694,12 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC_integral"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_FDC"), locArraySizeString, dInitNumTrackArraySize);
+	if (FDC_VERBOSE_OUTPUT){
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_X"), locArraySizeString, dInitNumTrackArraySize); 
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Y"), locArraySizeString, dInitNumTrackArraySize);  
+	  locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Z"), locArraySizeString, dInitNumTrackArraySize);
+
+	}
 
 	//TIMING INFO
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "HitTime"), locArraySizeString, dInitNumTrackArraySize);
@@ -1815,7 +1824,17 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC"), locChargedTrackHypothesis->Get_dEdx_CDC_amp(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC_integral"), locChargedTrackHypothesis->Get_dEdx_CDC_int(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_FDC"), locTrackTimeBased->ddEdx_FDC, locArrayIndex);
-
+	
+	if (FDC_VERBOSE_OUTPUT){
+	  if (locTrackTimeBased->extrapolations.find(SYS_FDC) != locTrackTimeBased->extrapolations.end()) {  
+	    vector<DTrackFitter::Extrapolation_t>locExtraps=locTrackTimeBased->extrapolations.at(SYS_FDC); 
+	    DVector3 locPos=locExtraps[0].position;
+	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_X"), locPos.x(), locArrayIndex);
+	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Y"), locPos.y(), locArrayIndex);
+	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Z"), locPos.z(), locArrayIndex);
+	  }
+	}
+	
 	//HIT ENERGY
 	double locTOFdEdx = (locChargedTrackHypothesis->Get_TOFHitMatchParams() != NULL) ? locChargedTrackHypothesis->Get_TOFHitMatchParams()->dEdx : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locTOFdEdx, locArrayIndex);
