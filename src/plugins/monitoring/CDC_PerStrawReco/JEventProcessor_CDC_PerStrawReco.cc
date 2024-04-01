@@ -51,22 +51,6 @@ enum {
 //------------------
 jerror_t JEventProcessor_CDC_PerStrawReco::init(void)
 {
-	int numrings = 28;
-    char folder[100];
-    char name[100];
-    char title[256];
-// 	char strawname[100];
-// 	char strawtitle[256];
-// 	char residualname[100];
-// 	char residualtitle[256];
-// 	char binname[150];
-// 	char bintitle[150];
-
-    unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
-        135,135,146,146,158,158,170,170,182,182,197,197,
-        209,209};
-
-
 
     EXCLUDERING=0;
     if (gPARMS){
@@ -78,265 +62,6 @@ jerror_t JEventProcessor_CDC_PerStrawReco::init(void)
     }
 
 
-	vector<TH1F*> empty_h1d;
-	vector<TH2F*> empty_h2d;
-	vector<vector<TH1F*>> empty_h1d_vec;
-	vector<vector<TH2F*>> empty_h2d_vec;
-
-    TDirectory *main = gDirectory;
-    gDirectory->mkdir("CDCReco_Middle")->cd();
-
-	hResiduals.push_back(empty_h1d);
-	hResidualsVsMomentum.push_back(empty_h2d);
-	hResidualsVsTheta.push_back(empty_h2d);
-	hResidualsVsZ.push_back(empty_h2d); 
-	hResidualsVsTrackingFOM.push_back(empty_h2d);
-
-	hDriftTime.push_back(empty_h1d);
-	hDriftDistance.push_back(empty_h1d);
-	hPredictedDriftDistance.push_back(empty_h1d);
-
-	hResidualsVsDriftTime.push_back(empty_h2d);
-	hResidualsVsDriftDistance.push_back(empty_h2d);
-	hResidualsVsPredictedDriftDistance.push_back(empty_h2d);
-	hPredictedDriftDistanceVsDriftTime.push_back(empty_h2d);
-
-    for(int ring=1; ring<=numrings; ring++) {
-    
-        sprintf(folder, "Ring %.2i", ring);
-		gDirectory->mkdir(folder)->cd();
-    
-		hResiduals[kMIDDLE].push_back( new TH1F("Residuals", "Residuals; Residual [cm]; Entries", 200, -0.05, 0.05) );
-		hResidualsVsMomentum[kMIDDLE].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Momentum; Momentum [GeV/c]; Residual [cm]", 50, 0.0, 12.0, 100, -0.05, 0.05) );
-		hResidualsVsTheta[kMIDDLE].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Theta; Theta [deg]; Residual [cm]", 60, 0.0, 180.0, 100, -0.05, 0.05) );
-		hResidualsVsZ[kMIDDLE].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Z; Z (Measured from CDC center) [cm]; Residual [cm]", 100, -75.0, 75.0, 100, -0.05, 0.05) );
-		hResidualsVsTrackingFOM[kMIDDLE].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Tracking FOM; Tracking FOM; Residual [cm]", 100, 0.0, 1.0, 100, -0.05, 0.05) );
-	
-		hDriftTime[kMIDDLE].push_back( new TH1F("Drift Time", "Drift Time; Drift Time [ns]; Entries", 500, -10, 1500) );
-		hDriftDistance[kMIDDLE].push_back( new TH1F("Drift Distance", "Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
-		hPredictedDriftDistance[kMIDDLE].push_back( new TH1F("Predicted Drift Distance", 
-				"Predicted Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
-
-		hResidualsVsDriftTime[kMIDDLE].push_back( new TH2F("Residual Vs. Drift Time", 
-				"Residual Vs. Drift Time; Drift Time [ns]; Residual [cm]", 500, -10, 1500, 100, -0.05, 0.05) );
-		hResidualsVsDriftDistance[kMIDDLE].push_back( new TH2F("Residual Vs. Drift Distance", 
-				"Residual Vs. Drift Distance; Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
-		hResidualsVsPredictedDriftDistance[kMIDDLE].push_back( new TH2F("Residual Vs. Predicted Drift Distance", 
-				"Residual Vs. Predicted Drift Distance; Predicted Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
-		hPredictedDriftDistanceVsDriftTime[kMIDDLE].push_back( new TH2F("Predicted Drift Distance Vs. Drift Time", 
-				"Predicted Drift Distance Vs. Drift Time; Drift Time [ns]; Predicted Drift Distance [cm]", 500, -10, 1500, 100, 0.0, 1.0) );
-				
-		gDirectory->cd("..");
-	}
-
-    gDirectory->cd("/");
-    gDirectory->mkdir("CDCPerStrawReco_Middle")->cd();
-    
-	hStrawDriftTimeVsPhiDOCA.push_back( empty_h2d_vec );
-	hStrawPredictedDistanceVsPhiDOCA.push_back( empty_h2d_vec );
-	hStrawResidual.push_back( empty_h1d_vec );
-	hStrawResidualVsZ.push_back( empty_h2d_vec );
-	
-	hStrawResidualVsDelta.push_back( empty_h2d_vec );
-	hStrawPredictedDriftDistanceVsDriftTime.push_back( empty_h2d_vec );
-	hStrawPredictedDriftDistanceVsDelta.push_back( empty_h2d_vec );
-
-	hPredictedDriftDistanceVsDriftTime_PosDelta.push_back( empty_h2d_vec );
-	hResidualVsDriftTime_PosDelta.push_back( empty_h2d_vec );
-	hResidual_PosDelta.push_back( empty_h1d_vec );
-
-	hPredictedDriftDistanceVsDriftTime_NegDelta.push_back( empty_h2d_vec );
-	hResidualVsDriftTime_NegDelta.push_back( empty_h2d_vec );
-	hResidual_NegDelta.push_back( empty_h1d_vec );
-
-    for(int ring=1; ring<=numrings; ring++) {
-    
-        sprintf(folder, "Ring %.2i", ring);
-		gDirectory->mkdir(folder)->cd();
-		
-		hStrawDriftTimeVsPhiDOCA[kMIDDLE].push_back( empty_h2d );
-		hStrawPredictedDistanceVsPhiDOCA[kMIDDLE].push_back( empty_h2d );
-		hStrawResidual[kMIDDLE].push_back( empty_h1d );
-		hStrawResidualVsZ[kMIDDLE].push_back( empty_h2d );
-		
-		hStrawResidualVsDelta[kMIDDLE].push_back( empty_h2d );
-		hStrawPredictedDriftDistanceVsDriftTime[kMIDDLE].push_back( empty_h2d );
-		hStrawPredictedDriftDistanceVsDelta[kMIDDLE].push_back( empty_h2d );
-
-		hPredictedDriftDistanceVsDriftTime_PosDelta[kMIDDLE].push_back( empty_h2d );
-		hResidualVsDriftTime_PosDelta[kMIDDLE].push_back( empty_h2d );
-		hResidual_PosDelta[kMIDDLE].push_back( empty_h1d );
-
-		hPredictedDriftDistanceVsDriftTime_NegDelta[kMIDDLE].push_back( empty_h2d );
-		hResidualVsDriftTime_NegDelta[kMIDDLE].push_back( empty_h2d );
-		hResidual_NegDelta[kMIDDLE].push_back( empty_h1d );
-    
-	    for(int straw=1; straw<=numstraws[ring-1]; straw++) {
-            sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
-			hStrawDriftTimeVsPhiDOCA[kMIDDLE][ring-1].push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs phi_DOCA", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs phi_DOCA; #phi_{DOCA};Predicted Distance [cm]", ring, straw);
-			hStrawPredictedDistanceVsPhiDOCA[kMIDDLE][ring-1].push_back( new TH2F(name, title,  16, -3.14, 3.14,  400, 0.0, 1.2) );
-            sprintf(name,"Straw %.3i Residual", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual;Residual [cm]", ring, straw);
-			hStrawResidual[kMIDDLE][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-            sprintf(name,"Straw %.3i Residual Vs. Z", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual;Z [cm]; Residual [cm]", ring, straw);
-			hStrawResidualVsZ[kMIDDLE][ring-1].push_back( new TH2F(name, title,  30, -75.0,75.0,200, -0.05, 0.05) );
-			
-            sprintf(name,"Straw %.3i residual Vs delta", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual Vs #delta; #delta [cm]; Residual [cm]",ring,  straw);
-			hStrawResidualVsDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title,  Int_t(2 * max_sag[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time", ring, straw);
-			hStrawPredictedDriftDistanceVsDriftTime[kMIDDLE][ring-1].push_back( new TH2F(name, title, 250, -50, 200, 250, 0.0, 0.4) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs. delta", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. #delta;#delta [cm]; Predicted Drift Distance - Nominal Radius [cm]", ring, straw);
-			hStrawPredictedDriftDistanceVsDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title, 20, -0.25, 0.25, 250, -0.25, 0.25) );
-
-			sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Positive Delta)", ring, straw);
-			hPredictedDriftDistanceVsDriftTime_PosDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
-			sprintf(name,"Straw %.3i Residual Vs. Drift Time Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Positive Delta)", ring, straw);
-			hResidualVsDriftTime_PosDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
-			sprintf(name,"Straw %.3i Residual Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual (Positive Delta); Residual [cm]; Entries", ring, straw);
-			hResidual_PosDelta[kMIDDLE][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-
-			sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Negative Delta)", ring, straw);
-			hPredictedDriftDistanceVsDriftTime_NegDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
-			sprintf(name,"Straw %.3i Residual Vs. Drift Time Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Negative Delta)", ring, straw);
-			hResidualVsDriftTime_NegDelta[kMIDDLE][ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
-			sprintf(name,"Straw %.3i Residual Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
-			hResidual_NegDelta[kMIDDLE][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-
-		}
-
-		gDirectory->cd("..");
-	}
-	
-
-    gDirectory->cd("/");
-    gDirectory->mkdir("CDCReco_Downstream")->cd();
-
-    for(int ring=1; ring<=numrings; ring++) {
-    
-        sprintf(folder, "Ring %.2i", ring);
-		gDirectory->mkdir(folder)->cd();
-    
-		hResiduals[kDOWNSTREAM].push_back( new TH1F("Residuals", "Residuals; Residual [cm]; Entries", 200, -0.05, 0.05) );
-		hResidualsVsMomentum[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Momentum; Momentum [GeV/c]; Residual [cm]", 50, 0.0, 12.0, 100, -0.05, 0.05) );
-		hResidualsVsTheta[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Theta; Theta [deg]; Residual [cm]", 60, 0.0, 180.0, 100, -0.05, 0.05) );
-		hResidualsVsZ[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Z; Z (Measured from CDC center) [cm]; Residual [cm]", 100, -75.0, 75.0, 100, -0.05, 0.05) );
-		hResidualsVsTrackingFOM[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Momentum", 
-				"Residual Vs. Tracking FOM; Tracking FOM; Residual [cm]", 100, 0.0, 1.0, 100, -0.05, 0.05) );
-	
-		hDriftTime[kDOWNSTREAM].push_back( new TH1F("Drift Time", "Drift Time; Drift Time [ns]; Entries", 500, -10, 1500) );
-		hDriftDistance[kDOWNSTREAM].push_back( new TH1F("Drift Distance", "Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
-		hPredictedDriftDistance[kDOWNSTREAM].push_back( new TH1F("Predicted Drift Distance", 
-				"Predicted Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
-
-		hResidualsVsDriftTime[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Drift Time", 
-				"Residual Vs. Drift Time; Drift Time [ns]; Residual [cm]", 500, -10, 1500, 100, -0.05, 0.05) );
-		hResidualsVsDriftDistance[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Drift Distance", 
-				"Residual Vs. Drift Distance; Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
-		hResidualsVsPredictedDriftDistance[kDOWNSTREAM].push_back( new TH2F("Residual Vs. Predicted Drift Distance", 
-				"Residual Vs. Predicted Drift Distance; Predicted Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
-		hPredictedDriftDistanceVsDriftTime[kDOWNSTREAM].push_back( new TH2F("Predicted Drift Distance Vs. Drift Time", 
-				"Predicted Drift Distance Vs. Drift Time; Drift Time [ns]; Predicted Drift Distance [cm]", 500, -10, 1500, 100, 0.0, 1.0) );
-				
-		gDirectory->cd("..");
-	}
-
-
-    gDirectory->cd("/");
-    gDirectory->mkdir("CDCPerStrawReco_Downstream")->cd();
-    
-    for(int ring=1; ring<=numrings; ring++) {
-    
-        sprintf(folder, "Ring %.2i", ring);
-		gDirectory->mkdir(folder)->cd();
-		
-		hStrawDriftTimeVsPhiDOCA[kDOWNSTREAM].push_back( empty_h2d );
-		hStrawPredictedDistanceVsPhiDOCA[kDOWNSTREAM].push_back( empty_h2d );
-		hStrawResidual[kDOWNSTREAM].push_back( empty_h1d );
-		hStrawResidualVsZ[kDOWNSTREAM].push_back( empty_h2d );
-		
-		hStrawResidualVsDelta[kDOWNSTREAM].push_back( empty_h2d );
-		hStrawPredictedDriftDistanceVsDriftTime[kDOWNSTREAM].push_back( empty_h2d );
-		hStrawPredictedDriftDistanceVsDelta[kDOWNSTREAM].push_back( empty_h2d );
-
-		hPredictedDriftDistanceVsDriftTime_PosDelta[kDOWNSTREAM].push_back( empty_h2d );
-		hResidualVsDriftTime_PosDelta[kDOWNSTREAM].push_back( empty_h2d );
-		hResidual_PosDelta[kDOWNSTREAM].push_back( empty_h1d );
-
-		hPredictedDriftDistanceVsDriftTime_NegDelta[kDOWNSTREAM].push_back( empty_h2d );
-		hResidualVsDriftTime_NegDelta[kDOWNSTREAM].push_back( empty_h2d );
-		hResidual_NegDelta[kDOWNSTREAM].push_back( empty_h1d );
-    
-	    for(int straw=1; straw<=numstraws[ring-1]; straw++) {
-            sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
-			hStrawDriftTimeVsPhiDOCA[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs phi_DOCA", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs phi_DOCA; #phi_{DOCA};Predicted Distance [cm]", ring, straw);
-			hStrawPredictedDistanceVsPhiDOCA[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title,  16, -3.14, 3.14,  400, 0.0, 1.2) );
-            sprintf(name,"Straw %.3i Residual", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual;Residual [cm]", ring, straw);
-			hStrawResidual[kDOWNSTREAM][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-            sprintf(name,"Straw %.3i Residual Vs. Z", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual;Z [cm]; Residual [cm]", ring, straw);
-			hStrawResidualVsZ[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title,  30, -75.0,75.0,200, -0.05, 0.05) );
-			
-            sprintf(name,"Straw %.3i residual Vs delta", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Residual Vs #delta; #delta [cm]; Residual [cm]",ring,  straw);
-			hStrawResidualVsDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title,  Int_t(2 * max_sag[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time", ring, straw);
-			hStrawPredictedDriftDistanceVsDriftTime[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 250, -50, 200, 250, 0.0, 0.4) );
-            sprintf(name,"Straw %.3i Predicted Drift Distance Vs. delta", straw);
-            sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. #delta;#delta [cm]; Predicted Drift Distance - Nominal Radius [cm]", ring, straw);
-			hStrawPredictedDriftDistanceVsDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 20, -0.25, 0.25, 250, -0.25, 0.25) );
-
-			sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Positive Delta)", ring, straw);
-			hPredictedDriftDistanceVsDriftTime_PosDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
-			sprintf(name,"Straw %.3i Residual Vs. Drift Time Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Positive Delta)", ring, straw);
-			hResidualVsDriftTime_PosDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
-			sprintf(name,"Straw %.3i Residual Positive Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual (Positive Delta); Residual [cm]; Entries", ring, straw);
-			hResidual_PosDelta[kDOWNSTREAM][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-
-			sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Negative Delta)", ring, straw);
-			hPredictedDriftDistanceVsDriftTime_NegDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
-			sprintf(name,"Straw %.3i Residual Vs. Drift Time Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Negative Delta)", ring, straw);
-			hResidualVsDriftTime_NegDelta[kDOWNSTREAM][ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
-			sprintf(name,"Straw %.3i Residual Negative Delta", straw);
-			sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
-			hResidual_NegDelta[kDOWNSTREAM][ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-
-		}
-
-		gDirectory->cd("..");
-	}
-	
-	main->cd();
-
     return NOERROR;
 }
 
@@ -345,6 +70,22 @@ jerror_t JEventProcessor_CDC_PerStrawReco::init(void)
 //------------------
 jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t runnumber)
 {
+
+	int numrings = 28;
+    char folder[100];
+    char name[100];
+    char title[256];
+// 	char strawname[100];
+// 	char strawtitle[256];
+// 	char residualname[100];
+// 	char residualtitle[256];
+// 	char binname[150];
+// 	char bintitle[150];
+
+//     unsigned int numstraws[28]={42,42,54,54,66,66,80,80,93,93,106,106,123,123,
+//         135,135,146,146,158,158,170,170,182,182,197,197,
+//         209,209};
+
     DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
     JCalibration *jcalib = dapp->GetJCalibration(runnumber);
     // This is called whenever the run number changes
@@ -375,6 +116,307 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
             }
         }
     }
+
+ 	// make histograms here, since we need the sag information
+    japp->RootWriteLock();
+    if(hResiduals.size() == 0) {
+    
+		vector<TH1F*> empty_h1d;
+		vector<TH2F*> empty_h2d;
+		vector<vector<TH1F*>> empty_h1d_vec;
+		vector<vector<TH2F*>> empty_h2d_vec;
+	
+		TDirectory *main = gDirectory;
+		gDirectory->mkdir("CDCReco_Middle")->cd();
+	
+		hResiduals.push_back(empty_h1d);
+		hResidualsVsMomentum.push_back(empty_h2d);
+		hResidualsVsTheta.push_back(empty_h2d);
+		hResidualsVsZ.push_back(empty_h2d); 
+		hResidualsVsTrackingFOM.push_back(empty_h2d);
+	
+		hDriftTime.push_back(empty_h1d);
+		hDriftDistance.push_back(empty_h1d);
+		hPredictedDriftDistance.push_back(empty_h1d);
+	
+		hResidualsVsDriftTime.push_back(empty_h2d);
+		hResidualsVsDriftDistance.push_back(empty_h2d);
+		hResidualsVsPredictedDriftDistance.push_back(empty_h2d);
+		hPredictedDriftDistanceVsDriftTime.push_back(empty_h2d);
+	
+		for(int ring=1; ring<=numrings; ring++) {
+		
+			sprintf(folder, "Ring %.2i", ring);
+			gDirectory->mkdir(folder)->cd();
+		
+			hResiduals.at(kMIDDLE).push_back( new TH1F("Residuals", "Residuals; Residual [cm]; Entries", 200, -0.05, 0.05) );
+			hResidualsVsMomentum.at(kMIDDLE).push_back( new TH2F("Residual Vs. Momentum", 
+					"Residual Vs. Momentum; Momentum [GeV/c]; Residual [cm]", 50, 0.0, 12.0, 100, -0.05, 0.05) );
+			hResidualsVsTheta.at(kMIDDLE).push_back( new TH2F("Residual Vs. Theta", 
+					"Residual Vs. Theta; Theta [deg]; Residual [cm]", 60, 0.0, 180.0, 100, -0.05, 0.05) );
+			hResidualsVsZ.at(kMIDDLE).push_back( new TH2F("Residual Vs. Z", 
+					"Residual Vs. Z; Z (Measured from CDC center) [cm]; Residual [cm]", 100, -75.0, 75.0, 100, -0.05, 0.05) );
+			hResidualsVsTrackingFOM.at(kMIDDLE).push_back( new TH2F("Residual Vs. Tracking FOM", 
+					"Residual Vs. Tracking FOM; Tracking FOM; Residual [cm]", 100, 0.0, 1.0, 100, -0.05, 0.05) );
+		
+			hDriftTime.at(kMIDDLE).push_back( new TH1F("Drift Time", "Drift Time; Drift Time [ns]; Entries", 500, -10, 1500) );
+			hDriftDistance.at(kMIDDLE).push_back( new TH1F("Drift Distance", "Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
+			hPredictedDriftDistance.at(kMIDDLE).push_back( new TH1F("Predicted Drift Distance", 
+					"Predicted Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
+	
+			hResidualsVsDriftTime.at(kMIDDLE).push_back( new TH2F("Residual Vs. Drift Time", 
+					"Residual Vs. Drift Time; Drift Time [ns]; Residual [cm]", 500, -10, 1500, 100, -0.05, 0.05) );
+			hResidualsVsDriftDistance.at(kMIDDLE).push_back( new TH2F("Residual Vs. Drift Distance", 
+					"Residual Vs. Drift Distance; Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
+			hResidualsVsPredictedDriftDistance.at(kMIDDLE).push_back( new TH2F("Residual Vs. Predicted Drift Distance", 
+					"Residual Vs. Predicted Drift Distance; Predicted Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
+			hPredictedDriftDistanceVsDriftTime.at(kMIDDLE).push_back( new TH2F("Predicted Drift Distance Vs. Drift Time", 
+					"Predicted Drift Distance Vs. Drift Time; Drift Time [ns]; Predicted Drift Distance [cm]", 500, -10, 1500, 100, 0.0, 1.0) );
+					
+			gDirectory->cd("..");
+		}
+	
+		gDirectory->cd("/");
+		gDirectory->mkdir("CDCPerStrawReco_Middle")->cd();
+		
+		hStrawDriftTimeVsPhiDOCA.push_back( empty_h2d_vec );
+		hStrawPredictedDistanceVsPhiDOCA.push_back( empty_h2d_vec );
+		hStrawResidual.push_back( empty_h1d_vec );
+		hStrawResidualVsZ.push_back( empty_h2d_vec );
+		
+		hStrawResidualVsDelta.push_back( empty_h2d_vec );
+		hStrawPredictedDriftDistanceVsDriftTime.push_back( empty_h2d_vec );
+		hStrawPredictedDriftDistanceVsDelta.push_back( empty_h2d_vec );
+	
+		hPredictedDriftDistanceVsDriftTime_PosDelta.push_back( empty_h2d_vec );
+		hResidualVsDriftTime_PosDelta.push_back( empty_h2d_vec );
+		hResidual_PosDelta.push_back( empty_h1d_vec );
+	
+		hPredictedDriftDistanceVsDriftTime_NegDelta.push_back( empty_h2d_vec );
+		hResidualVsDriftTime_NegDelta.push_back( empty_h2d_vec );
+		hResidual_NegDelta.push_back( empty_h1d_vec );
+	
+		for(int ring=1; ring<=numrings; ring++) {
+		
+			sprintf(folder, "Ring %.2i", ring);
+			gDirectory->mkdir(folder)->cd();
+			
+			hStrawDriftTimeVsPhiDOCA.at(kMIDDLE).push_back( empty_h2d );
+			hStrawPredictedDistanceVsPhiDOCA.at(kMIDDLE).push_back( empty_h2d );
+			hStrawResidual.at(kMIDDLE).push_back( empty_h1d );
+			hStrawResidualVsZ.at(kMIDDLE).push_back( empty_h2d );
+	
+			hStrawResidualVsDelta.at(kMIDDLE).push_back( empty_h2d );
+			hStrawPredictedDriftDistanceVsDriftTime.at(kMIDDLE).push_back( empty_h2d );
+			hStrawPredictedDriftDistanceVsDelta.at(kMIDDLE).push_back( empty_h2d );
+	
+			hPredictedDriftDistanceVsDriftTime_PosDelta.at(kMIDDLE).push_back( empty_h2d );
+			hResidualVsDriftTime_PosDelta.at(kMIDDLE).push_back( empty_h2d );
+			hResidual_PosDelta.at(kMIDDLE).push_back( empty_h1d );
+	
+			hPredictedDriftDistanceVsDriftTime_NegDelta.at(kMIDDLE).push_back( empty_h2d );
+			hResidualVsDriftTime_NegDelta.at(kMIDDLE).push_back( empty_h2d );
+			hResidual_NegDelta.at(kMIDDLE).push_back( empty_h1d );
+		
+			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
+				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
+				hStrawDriftTimeVsPhiDOCA.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs phi_DOCA", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs phi_DOCA; #phi_{DOCA};Predicted Distance [cm]", ring, straw);
+				hStrawPredictedDistanceVsPhiDOCA.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  16, -3.14, 3.14,  400, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual;Residual [cm]", ring, straw);
+				hStrawResidual.at(kMIDDLE).at(ring-1).push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Vs. Z", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual;Z [cm]; Residual [cm]", ring, straw);
+				hStrawResidualVsZ.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  30, -75.0,75.0,200, -0.05, 0.05) );
+				
+				sprintf(name,"Straw %.3i residual Vs delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs #delta; #delta [cm]; Residual [cm]",ring,  straw);
+				//hStrawResidualVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  Int_t(2 * max_sag.[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
+				hStrawResidualVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  Int_t(2 * max_sag.at(ring - 1).at(straw - 1) / binwidth), -1 * max_sag.at(ring - 1).at(straw - 1), max_sag.at(ring - 1).at(straw - 1), 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time", ring, straw);
+				hStrawPredictedDriftDistanceVsDriftTime.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 250, -50, 200, 250, 0.0, 0.4) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. #delta;#delta [cm]; Predicted Drift Distance - Nominal Radius [cm]", ring, straw);
+				hStrawPredictedDriftDistanceVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 20, -0.25, 0.25, 250, -0.25, 0.25) );
+	
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Positive Delta)", ring, straw);
+				hPredictedDriftDistanceVsDriftTime_PosDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual Vs. Drift Time Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Positive Delta)", ring, straw);
+				hResidualVsDriftTime_PosDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual (Positive Delta); Residual [cm]; Entries", ring, straw);
+				hResidual_PosDelta.at(kMIDDLE).at(ring-1).push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+	
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Negative Delta)", ring, straw);
+				hPredictedDriftDistanceVsDriftTime_NegDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual Vs. Drift Time Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Negative Delta)", ring, straw);
+				hResidualVsDriftTime_NegDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
+				hResidual_NegDelta.at(kMIDDLE).at(ring-1).push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+	
+			}
+	
+			gDirectory->cd("..");
+		}
+		
+	
+		gDirectory->cd("/");
+		gDirectory->mkdir("CDCReco_Downstream")->cd();
+	
+		hResiduals.push_back(empty_h1d);
+		hResidualsVsMomentum.push_back(empty_h2d);
+		hResidualsVsTheta.push_back(empty_h2d);
+		hResidualsVsZ.push_back(empty_h2d); 
+		hResidualsVsTrackingFOM.push_back(empty_h2d);
+	
+		hDriftTime.push_back(empty_h1d);
+		hDriftDistance.push_back(empty_h1d);
+		hPredictedDriftDistance.push_back(empty_h1d);
+	
+		hResidualsVsDriftTime.push_back(empty_h2d);
+		hResidualsVsDriftDistance.push_back(empty_h2d);
+		hResidualsVsPredictedDriftDistance.push_back(empty_h2d);
+		hPredictedDriftDistanceVsDriftTime.push_back(empty_h2d);
+	
+		for(int ring=1; ring<=numrings; ring++) {
+		
+			sprintf(folder, "Ring %.2i", ring);
+			gDirectory->mkdir(folder)->cd();
+		
+			hResiduals.at(kDOWNSTREAM).push_back( new TH1F("Residuals", "Residuals; Residual [cm]; Entries", 200, -0.05, 0.05) );
+			hResidualsVsMomentum.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+					"Residual Vs. Momentum; Momentum [GeV/c]; Residual [cm]", 50, 0.0, 12.0, 100, -0.05, 0.05) );
+			hResidualsVsTheta.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+					"Residual Vs. Theta; Theta [deg]; Residual [cm]", 60, 0.0, 180.0, 100, -0.05, 0.05) );
+			hResidualsVsZ.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+					"Residual Vs. Z; Z (Measured from CDC center) [cm]; Residual [cm]", 100, -75.0, 75.0, 100, -0.05, 0.05) );
+			hResidualsVsTrackingFOM.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+					"Residual Vs. Tracking FOM; Tracking FOM; Residual [cm]", 100, 0.0, 1.0, 100, -0.05, 0.05) );
+		
+			hDriftTime.at(kDOWNSTREAM).push_back( new TH1F("Drift Time", "Drift Time; Drift Time [ns]; Entries", 500, -10, 1500) );
+			hDriftDistance.at(kDOWNSTREAM).push_back( new TH1F("Drift Distance", "Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
+			hPredictedDriftDistance.at(kDOWNSTREAM).push_back( new TH1F("Predicted Drift Distance", 
+					"Predicted Drift Distance; Drift Distance [cm]; Entries", 250, 0.0, 1.2) );
+	
+			hResidualsVsDriftTime.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Drift Time", 
+					"Residual Vs. Drift Time; Drift Time [ns]; Residual [cm]", 500, -10, 1500, 100, -0.05, 0.05) );
+			hResidualsVsDriftDistance.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Drift Distance", 
+					"Residual Vs. Drift Distance; Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
+			hResidualsVsPredictedDriftDistance.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Predicted Drift Distance", 
+					"Residual Vs. Predicted Drift Distance; Predicted Drift Distance [cm]; Residual [cm]", 50, 0.0, 1.0, 100, -0.05, 0.05) );
+			hPredictedDriftDistanceVsDriftTime.at(kDOWNSTREAM).push_back( new TH2F("Predicted Drift Distance Vs. Drift Time", 
+					"Predicted Drift Distance Vs. Drift Time; Drift Time [ns]; Predicted Drift Distance [cm]", 500, -10, 1500, 100, 0.0, 1.0) );
+					
+			gDirectory->cd("..");
+		}
+	
+	
+		gDirectory->cd("/");
+		gDirectory->mkdir("CDCPerStrawReco_Downstream")->cd();
+		
+		hStrawDriftTimeVsPhiDOCA.push_back( empty_h2d_vec );
+		hStrawPredictedDistanceVsPhiDOCA.push_back( empty_h2d_vec );
+		hStrawResidual.push_back( empty_h1d_vec );
+		hStrawResidualVsZ.push_back( empty_h2d_vec );
+		
+		hStrawResidualVsDelta.push_back( empty_h2d_vec );
+		hStrawPredictedDriftDistanceVsDriftTime.push_back( empty_h2d_vec );
+		hStrawPredictedDriftDistanceVsDelta.push_back( empty_h2d_vec );
+	
+		hPredictedDriftDistanceVsDriftTime_PosDelta.push_back( empty_h2d_vec );
+		hResidualVsDriftTime_PosDelta.push_back( empty_h2d_vec );
+		hResidual_PosDelta.push_back( empty_h1d_vec );
+	
+		hPredictedDriftDistanceVsDriftTime_NegDelta.push_back( empty_h2d_vec );
+		hResidualVsDriftTime_NegDelta.push_back( empty_h2d_vec );
+		hResidual_NegDelta.push_back( empty_h1d_vec );
+	
+		for(int ring=1; ring<=numrings; ring++) {
+		
+			sprintf(folder, "Ring %.2i", ring);
+			gDirectory->mkdir(folder)->cd();
+			
+			hStrawDriftTimeVsPhiDOCA.at(kDOWNSTREAM).push_back( empty_h2d );
+			hStrawPredictedDistanceVsPhiDOCA.at(kDOWNSTREAM).push_back( empty_h2d );
+			hStrawResidual.at(kDOWNSTREAM).push_back( empty_h1d );
+			hStrawResidualVsZ.at(kDOWNSTREAM).push_back( empty_h2d );
+			
+			hStrawResidualVsDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+			hStrawPredictedDriftDistanceVsDriftTime.at(kDOWNSTREAM).push_back( empty_h2d );
+			hStrawPredictedDriftDistanceVsDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+	
+			hPredictedDriftDistanceVsDriftTime_PosDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+			hResidualVsDriftTime_PosDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+			hResidual_PosDelta.at(kDOWNSTREAM).push_back( empty_h1d );
+	
+			hPredictedDriftDistanceVsDriftTime_NegDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+			hResidualVsDriftTime_NegDelta.at(kDOWNSTREAM).push_back( empty_h2d );
+			hResidual_NegDelta.at(kDOWNSTREAM).push_back( empty_h1d );
+		
+			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
+				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
+				hStrawDriftTimeVsPhiDOCA.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs phi_DOCA", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs phi_DOCA; #phi_{DOCA};Predicted Distance [cm]", ring, straw);
+				hStrawPredictedDistanceVsPhiDOCA.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title,  16, -3.14, 3.14,  400, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual;Residual [cm]", ring, straw);
+				hStrawResidual.at(kDOWNSTREAM)[ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Vs. Z", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual;Z [cm]; Residual [cm]", ring, straw);
+				hStrawResidualVsZ.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title,  30, -75.0,75.0,200, -0.05, 0.05) );
+				
+				sprintf(name,"Straw %.3i residual Vs delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs #delta; #delta [cm]; Residual [cm]",ring,  straw);
+				hStrawResidualVsDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title,  Int_t(2 * max_sag[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time", ring, straw);
+				hStrawPredictedDriftDistanceVsDriftTime.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 250, -50, 200, 250, 0.0, 0.4) );
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. #delta;#delta [cm]; Predicted Drift Distance - Nominal Radius [cm]", ring, straw);
+				hStrawPredictedDriftDistanceVsDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 20, -0.25, 0.25, 250, -0.25, 0.25) );
+	
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Positive Delta)", ring, straw);
+				hPredictedDriftDistanceVsDriftTime_PosDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual Vs. Drift Time Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Positive Delta)", ring, straw);
+				hResidualVsDriftTime_PosDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Positive Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual (Positive Delta); Residual [cm]; Entries", ring, straw);
+				hResidual_PosDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+	
+				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time (Negative Delta)", ring, straw);
+				hPredictedDriftDistanceVsDriftTime_NegDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 250, -10, 1500, 50, 0.0, 1.2) );
+				sprintf(name,"Straw %.3i Residual Vs. Drift Time Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual Vs. Drift Time (Negative Delta)", ring, straw);
+				hResidualVsDriftTime_NegDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title, 100, -10, 1500, 100, -0.05, 0.05) );
+				sprintf(name,"Straw %.3i Residual Negative Delta", straw);
+				sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
+				hResidual_NegDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
+	
+			}
+	
+			gDirectory->cd("..");
+		}
+	
+		main->cd();
+		
+    }
+    japp->RootUnLock();
+
+
     return NOERROR;
 }
 
