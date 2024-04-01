@@ -132,6 +132,9 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
   m_nHits = 0;
   m_eTot = 0;
   
+    
+  japp->RootFillLock(this);
+
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end();
        ++hit ){
@@ -139,10 +142,8 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     vector< const DFCALDigiHit* > digiHits;
     (**hit).Get( digiHits );
 
-    japp->RootFillLock(this);
-
     if( digiHits.size() != 1 ) std::cout << "ERROR:  wrong size!! " << std::endl;
-    
+
     const DFCALDigiHit& dHit = *(digiHits[0]);
 
     m_chan[m_nHits] = fcalGeom.channel( (**hit).row, (**hit).column );
@@ -171,13 +172,13 @@ jerror_t JEventProcessor_FCALLEDTree::evnt(JEventLoop *loop, uint64_t eventnumbe
     ++m_nHits;
   }
 
-  japp->RootFillUnLock(this);
-
   if (btree == 1) {  
     m_tree->Fill();
   }
   
-  
+  japp->RootFillUnLock(this);
+
+
   return NOERROR;
 }
 
@@ -198,10 +199,11 @@ jerror_t JEventProcessor_FCALLEDTree::erun(void)
 jerror_t JEventProcessor_FCALLEDTree::fini(void)
 {
   // Called before program exit after event processing is finished.
-  japp->RootWriteLock();
-  m_tree->Write();
-  japp->RootUnLock();
-
+  if (btree == 1) {  
+	  japp->RootWriteLock();
+	  m_tree->Write();
+	  japp->RootUnLock();
+  }
   return NOERROR;
 }
 
