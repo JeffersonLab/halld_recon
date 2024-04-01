@@ -196,7 +196,7 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
 	hMeasuredHitsWithDEDxVsTheta = new TH1F("Measured Hits with dE/dx info Vs theta", "Measured Hits with dE/dx info", 100, 0, 180);
 	hMeasuredHitsWithDEDxVsMom = new TH1F("Measured Hits with dE/dx info Vs p", "Measured Hits with dE/dx info", 100, 0 , 4.0);
 	hMeasuredHitsWithDEDxVsDelta = new TH1F("Measured Hits with dE/dx info Vs delta", "Measured Hits with dE/dx info", 100, -0.3 , 0.3);
-	hMeasuredHitsWithDEDxMomVsTheta = new TH2F("Expected hits p Vs Theta",  "Measured Hits with dE/dx info", 100, 0, 180, 100, 0 , 4.0);
+	hMeasuredHitsWithDEDxMomVsTheta = new TH2F("Measured Hits with dE/dx info p Vs Theta",  "Measured Hits with dE/dx info", 100, 0, 180, 100, 0 , 4.0);
 	hMeasuredHitsWithDEDxVsN = new TH1F("Measured Hits with dE/dx info Vs N", "Measured Hits with dE/dx info", 3522, 0.5, 3522.5);
 	
     gDirectory->cd("/CDC_Efficiency");
@@ -228,12 +228,12 @@ jerror_t JEventProcessor_CDC_Efficiency::init(void)
 		hEfficiencyVsChannelROC[ROCnums[i]] = new TProfile(name, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
 	}
 	
-	hEfficiencyWithDEDxVsChannel = new TProfile("Efficiency Vs Channel Number", "Efficiency; Channel Number; Efficiency", 73, -0.5 , 72.5);
+	hEfficiencyWithDEDxVsChannel = new TProfile("Efficiency (with dE/dx) Vs Channel Number", "Efficiency; Channel Number; Efficiency", 73, -0.5 , 72.5);
 	for(int i=0; i<4; i++) {
         char name [200];
-        sprintf(name, "Slot Efficiency ROCID %.2i", ROCnums[i]);
+        sprintf(name, "Slot Efficiency (with dE/dx) ROCID %.2i", ROCnums[i]);
 		hEfficiencyWithDEDxVsSlotROC[ROCnums[i]] = new TProfile(name, "Efficiency; Slot Number; Efficiency", 21, -0.5 , 20.5);
-        sprintf(name, "Channel Efficiency ROCID %.2i", ROCnums[i]);
+        sprintf(name, "Channel Efficiency (with dE/dx) ROCID %.2i", ROCnums[i]);
 		hEfficiencyWithDEDxVsChannelROC[ROCnums[i]] = new TProfile(name, "Efficiency; Channel; Efficiency", 1501, 299.5 , 1800.5);
 	}
 	
