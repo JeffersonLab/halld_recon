@@ -176,7 +176,8 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			gDirectory->cd("..");
 		}
 	
-		gDirectory->cd("/");
+		
+		main->cd();
 		gDirectory->mkdir("CDCPerStrawReco_Middle")->cd();
 		
 		hStrawDriftTimeVsPhiDOCA.push_back( empty_h2d_vec );
@@ -217,11 +218,13 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			hPredictedDriftDistanceVsDriftTime_NegDelta.at(kMIDDLE).push_back( empty_h2d );
 			hResidualVsDriftTime_NegDelta.at(kMIDDLE).push_back( empty_h2d );
 			hResidual_NegDelta.at(kMIDDLE).push_back( empty_h1d );
-		
+	
+			
 			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
 				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
 				hStrawDriftTimeVsPhiDOCA.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
+				
 				sprintf(name,"Straw %.3i Predicted Drift Distance Vs phi_DOCA", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs phi_DOCA; #phi_{DOCA};Predicted Distance [cm]", ring, straw);
 				hStrawPredictedDistanceVsPhiDOCA.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  16, -3.14, 3.14,  400, 0.0, 1.2) );
@@ -231,11 +234,10 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 				sprintf(name,"Straw %.3i Residual Vs. Z", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Residual;Z [cm]; Residual [cm]", ring, straw);
 				hStrawResidualVsZ.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  30, -75.0,75.0,200, -0.05, 0.05) );
-				
+
 				sprintf(name,"Straw %.3i residual Vs delta", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Residual Vs #delta; #delta [cm]; Residual [cm]",ring,  straw);
-				//hStrawResidualVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  Int_t(2 * max_sag.[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
-				hStrawResidualVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  Int_t(2 * max_sag.at(ring - 1).at(straw - 1) / binwidth), -1 * max_sag.at(ring - 1).at(straw - 1), max_sag.at(ring - 1).at(straw - 1), 100, -0.05, 0.05) );
+				hStrawResidualVsDelta.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  Int_t(2 * max_sag[ring - 1][straw - 1] / binwidth), -1 * max_sag[ring - 1][straw - 1], max_sag[ring - 1][straw - 1], 100, -0.05, 0.05) );
 				sprintf(name,"Straw %.3i Predicted Drift Distance Vs. Drift Time", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Predicted Drift Distance Vs. Drift Time", ring, straw);
 				hStrawPredictedDriftDistanceVsDriftTime.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title, 250, -50, 200, 250, 0.0, 0.4) );
@@ -262,14 +264,15 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 				sprintf(name,"Straw %.3i Residual Negative Delta", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
 				hResidual_NegDelta.at(kMIDDLE).at(ring-1).push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-	
+				
 			}
-	
+			
+			
 			gDirectory->cd("..");
 		}
 		
 	
-		gDirectory->cd("/");
+		main->cd();
 		gDirectory->mkdir("CDCReco_Downstream")->cd();
 	
 		hResiduals.push_back(empty_h1d);
@@ -319,8 +322,8 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			gDirectory->cd("..");
 		}
 	
-	
-		gDirectory->cd("/");
+		
+		main->cd();
 		gDirectory->mkdir("CDCPerStrawReco_Downstream")->cd();
 		
 		hStrawDriftTimeVsPhiDOCA.push_back( empty_h2d_vec );
@@ -361,8 +364,10 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			hPredictedDriftDistanceVsDriftTime_NegDelta.at(kDOWNSTREAM).push_back( empty_h2d );
 			hResidualVsDriftTime_NegDelta.at(kDOWNSTREAM).push_back( empty_h2d );
 			hResidual_NegDelta.at(kDOWNSTREAM).push_back( empty_h1d );
-		
+		 
+		 
 			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
+				
 				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
 				hStrawDriftTimeVsPhiDOCA.at(kDOWNSTREAM)[ring-1].push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
@@ -405,12 +410,13 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 				sprintf(name,"Straw %.3i Residual Negative Delta", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Residual (Negative Delta); Residual [cm]; Entries", ring, straw);
 				hResidual_NegDelta.at(kDOWNSTREAM)[ring-1].push_back( new TH1F(name, title, 200, -0.05, 0.05) );
-	
+				
 			}
 	
 			gDirectory->cd("..");
 		}
-	
+		
+		
 		main->cd();
 		
     }
@@ -494,6 +500,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
 			hResidualsVsPredictedDriftDistance[region][ring-1]->Fill(predictedDistance, residual);
 			hPredictedDriftDistanceVsDriftTime[region][ring-1]->Fill(time, predictedDistance);
 
+/*
 			// fill per-straw histograms
 			hStrawDriftTimeVsPhiDOCA[region][ring-1][straw-1]->Fill(docaphi, time);	
 			hStrawPredictedDistanceVsPhiDOCA[region][ring-1][straw-1]->Fill(docaphi, predictedDistance);	
@@ -522,6 +529,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
 				hPredictedDriftDistanceVsDriftTime_NegDelta[region][ring-1][straw-1]->Fill(time, residual);
 				hResidual_NegDelta[region][ring-1][straw-1]->Fill(residual);
             }
+*/
 
         } 
     }
