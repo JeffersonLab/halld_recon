@@ -187,7 +187,7 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 
   }
 
-  gDirectory->cd("/FDC_Efficiency");
+  main->cd("FDC_Efficiency");
   gDirectory->mkdir("Offline")->cd();
   
 	hExpectedHitsVsDOCA = new TH1F("Expected Hits Vs DOCA", "Expected Hits", 100, 0 , 0.5);
