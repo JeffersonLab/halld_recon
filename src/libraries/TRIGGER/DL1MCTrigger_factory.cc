@@ -1459,7 +1459,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 	
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 	  
-	  trigger->trig_mask   = (trigger->trig_mask | en_bit);
+	  trigger->trig_mask   = (trigger->trig_mask | (1 << en_bit));
 	  trigger->trig_time[2]   = samp - 25; 
 	  trig_found++;
 
