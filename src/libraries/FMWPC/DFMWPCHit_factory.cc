@@ -69,19 +69,19 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
 
-  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_threshold)){
+  if (GetCalib(event, "/FMWPC/hit_threshold", hit_threshold)){
     hit_threshold = 0.;
     jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
   } else {
     jout << "FMWPC Hit Threshold: " << hit_threshold << endl;
   }
 
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
+  GetApplication()->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
                               "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
 
   vector<double> fmwpc_timing_cuts;
 
-  if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
+  if (GetCalib(event, "/FMWPC/timing_cut", fmwpc_timing_cuts)){
     t_raw_min = -60.;
     t_raw_max = 900.;
     jout << "Error loading /FMWPC/timing_cut ! set default values -60. and 900." << endl;
@@ -91,9 +91,9 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
     jout << "FMWPC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
   }
 
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
 
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
   
   // load scale factors
   map<string,double> scale_factors;

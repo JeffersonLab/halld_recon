@@ -31,15 +31,13 @@ void FMWPC_init(JFactorySet *factorySet) {
   factorySet->Add(new DFMWPCMatchedTrack_factory());
 
   /// Factories for downstream scintillators
-  loop->AddFactory(new JFactory<DCTOFDigiHit>());
-  loop->AddFactory(new JFactory<DCTOFTDCDigiHit>());
-  loop->AddFactory(new JFactory<DCTOFTruth>());
-  loop->AddFactory(new DCTOFHit_factory());
-  loop->AddFactory(new DCTOFPoint_factory());
+  factorySet->Add(new JFactoryT<DCTOFDigiHit>());
+  factorySet->Add(new JFactoryT<DCTOFTDCDigiHit>());
+  factorySet->Add(new JFactoryT<DCTOFTruth>());
+  factorySet->Add(new DCTOFHit_factory());
+  factorySet->Add(new DCTOFPoint_factory());
 
   // Factory for e+e-/ pi+pi- fitting
-  loop->AddFactory(new DCPPEpEm_factory());
-
-  return NOERROR;
+  factorySet->Add(new DCPPEpEm_factory());
 }
 
