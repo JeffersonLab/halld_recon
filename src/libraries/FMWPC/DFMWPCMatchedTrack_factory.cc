@@ -18,6 +18,7 @@ using namespace std;
 #include <FMWPC/DFMWPCCluster.h>
 #include <FMWPC/DCTOFPoint.h>
 #include <PID/DChargedTrack.h>
+#include <DANA/DEvent.h>
 
 
 //------------------
@@ -39,8 +40,7 @@ void DFMWPCMatchedTrack_factory::Init()
 void DFMWPCMatchedTrack_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
     // Get pointer to DGeometry object
-    DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-    dgeom  = dapp->GetDGeometry(runnumber);
+    dgeom  = DEvent::GetDGeometry(event);
 
     // Get x and y offsets for each chamber.
     if (!dgeom->GetFMWPCXY_vec(xvec, yvec)){
@@ -53,8 +53,6 @@ void DFMWPCMatchedTrack_factory::BeginRun(const std::shared_ptr<const JEvent> &e
 
     // Get the FMWPC wire orientation (should be vertical, horizontal, ...)
     dgeom->GetFMWPCWireOrientation( fmwpc_wire_orientation );
-
-    return NOERROR;
 }
 
 //------------------
@@ -69,13 +67,13 @@ void DFMWPCMatchedTrack_factory::Process(const std::shared_ptr<const JEvent> &ev
     vector<const DCTOFPoint*>      ctofpoints;
     vector<const DChargedTrack*>   chargedtracks;
     const DFCALGeometry*           fcalgeom = nullptr;
-    loop->Get(tbts);
-    loop->Get(fcalhits);
-    loop->Get(fmwpchits);
-    loop->Get(fmwpcclusters);
-    loop->Get(chargedtracks);
-    loop->Get(ctofpoints);
-    loop->GetSingle( fcalgeom );
+    event->Get(tbts);
+    event->Get(fcalhits);
+    event->Get(fmwpchits);
+    event->Get(fmwpcclusters);
+    event->Get(chargedtracks);
+    event->Get(ctofpoints);
+    event->GetSingle( fcalgeom );
 
     // Make sure we found a DFCALGeometry object
     if( ! fcalgeom ){

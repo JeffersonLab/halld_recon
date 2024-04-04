@@ -55,6 +55,7 @@ void DFMWPCHit_factory::Init()
 void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 {
   auto runnumber = event->GetRunNumber();
+  auto app = GetApplication();
   // Only print messages for one thread whenever run number change
   static pthread_mutex_t print_mutex = PTHREAD_MUTEX_INITIALIZER;
   static set<int> runs_announced;
@@ -72,7 +73,7 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 
   vector<double> fmwpc_hit_thresholds;
 
-  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_amp_threshold)){
+  if (GetCalib(event, "/FMWPC/hit_threshold", hit_amp_threshold)){
     hit_amp_threshold = 0.;
     hit_int_threshold = 0.;
     jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
@@ -81,15 +82,14 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
     hit_int_threshold = fmwpc_hit_thresholds[1];
     jout << "FMWPC Hit Thresholds:  Amplitude = " << hit_amp_threshold << "  Integral = " << hit_int_threshold << endl;
   }
-
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_hit_amp_threshold", hit_amp_threshold,
+  app->SetDefaultParameter("FMWPC:FMWPC_hit_amp_threshold", hit_amp_threshold,
                               "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_hit_amp_threshold");
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_hit_int_threshold", hit_amp_threshold,
+  app->SetDefaultParameter("FMWPC:FMWPC_hit_int_threshold", hit_amp_threshold,
                               "Remove FMWPC Hits with total integral smaller than FMWPC_hit_int_threshold");
 
   vector<double> fmwpc_timing_cuts;
 
-  if (eventLoop->GetCalib("/FMWPC/timing_cut", fmwpc_timing_cuts)){
+  if (GetCalib(event, "/FMWPC/timing_cut", fmwpc_timing_cuts)){
     t_raw_min = -60.;
     t_raw_max = 900.;
     jout << "Error loading /FMWPC/timing_cut ! set default values -60. and 900." << endl;
@@ -99,9 +99,9 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
     jout << "FMWPC Timing Cuts: " << t_raw_min << " ... " << t_raw_max << endl;
   }
 
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
-  gPARMS->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
 
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_min", t_raw_min,"Minimum acceptable FMWPC hit time");
+  GetApplication()->SetDefaultParameter("FMWPCHit:t_raw_max", t_raw_max, "Maximum acceptable FMWPC hit time");
   
   // load scale factors
   map<string,double> scale_factors;
