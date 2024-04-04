@@ -85,6 +85,8 @@ def main():
     r.add(re.compile(r'// erun'), '// EndRun')
     r.add(re.compile(r'// fini'), '// Finish')
 
+    r.add(re.compile(r'JEventLoop\* locEventLoop'), 'const std::shared_ptr<const JEvent>& locEvent')
+    r.add(re.compile(r'JEventLoop\* locEvent'), 'const std::shared_ptr<const JEvent>& locEvent')
     r.add(re.compile(r'locEventLoop'), 'locEvent')
     r.add(re.compile(r'event->GetCalib'), 'GetCalib(event, ')
     r.add(re.compile(r'locEvent->GetCalib\('), 'GetCalib(locEvent, ')

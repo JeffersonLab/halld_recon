@@ -41,13 +41,13 @@ void DFCALShower_factory::Init()
   app->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
   // Should we use the PrimeX-D energy correction?
   USE_RING_E_CORRECTION_V1=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
+  app->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
 
   USE_RING_E_CORRECTION_V2=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
+  app->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
 
   USE_CPP_E_CORRECTION=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
+  app->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
   
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   app->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
@@ -71,15 +71,15 @@ void DFCALShower_factory::Init()
   timeConst3 = 0; 
   timeConst4 = 0;
 
-  gPARMS->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
-  gPARMS->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
-  gPARMS->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param2", expfit_param2);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param3", expfit_param3);
+  app->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
+  app->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
+  app->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
+  app->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
+  app->SetDefaultParameter("FCAL:expfit_param2", expfit_param2);
+  app->SetDefaultParameter("FCAL:expfit_param3", expfit_param3);
   
   USE_NONLINEAR_CORRECTION_TYPE = -1;
-  gPARMS->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
+  app->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
   
   if (USE_NONLINEAR_CORRECTION_TYPE == 0) {
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 1) {
@@ -139,10 +139,10 @@ void DFCALShower_factory::Init()
   INSERT_PAR2=0.881;
   INSERT_PAR3=1.055;
   INSERT_PAR4=2.0;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
+  app->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
+  app->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
+  app->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
+  app->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
   // For island algo
   INSERT_POS_RES1=0.168;
@@ -155,13 +155,13 @@ void DFCALShower_factory::Init()
   INSERT_E_VAR1=6.49300e-04;
   INSERT_E_VAR2=1.24109e-04;
   INSERT_E_VAR3=4.70327e-05;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
+  app->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
 }
 
 //------------------

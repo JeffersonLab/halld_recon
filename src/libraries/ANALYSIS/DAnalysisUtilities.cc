@@ -634,10 +634,10 @@ void DAnalysisUtilities::Get_UnusedNeutralParticles(const std::shared_ptr<const 
 	}
 }
 
-void DAnalysisUtilities::Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const
+void DAnalysisUtilities::Get_UnusedTOFPoints(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const
 {
 	locUnusedTOFPoints.clear();
-	locEventLoop->Get(locUnusedTOFPoints);
+	locEvent->Get(locUnusedTOFPoints);
 
 	vector<const DParticleComboStep*> locParticleComboSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_icombo = 0; loc_icombo < locParticleComboSteps.size(); ++loc_icombo) {
@@ -663,7 +663,7 @@ void DAnalysisUtilities::Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DPa
 	}
 }
 
-void DAnalysisUtilities::Get_ThrownParticleSteps(JEventLoop* locEventLoop, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const
+void DAnalysisUtilities::Get_ThrownParticleSteps(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const
 {
  	vector<const DMCThrown*> locMCThrowns;
 	locEvent->Get(locMCThrowns);

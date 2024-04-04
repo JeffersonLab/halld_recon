@@ -9,7 +9,6 @@
 #define _DFMWPCCluster_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
 
 #include "DFMWPCHit.h"
 #include "DVector3.h"

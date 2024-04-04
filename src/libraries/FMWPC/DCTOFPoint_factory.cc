@@ -14,13 +14,13 @@
 #include <cmath>
 using namespace std;
 
+#include <JANA/JEvent.h>
 #include "DCTOFPoint_factory.h"
 #include "DCTOFHit.h"
 #include "HDGEOMETRY/DGeometry.h"
-using namespace jana;
 
 //------------------
-// init
+// Init
 //------------------
 void DCTOFPoint_factory::Init()
 {
@@ -36,11 +36,11 @@ void DCTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
   THRESHOLD=0.0005; // GeV
 
   // Get the geometry
-  DApplication* dapp=dynamic_cast<DApplication*>(eventLoop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  auto runnumber = event->GetRunNumber();
+  auto app = GetApplication();
+  auto geoman = app->GetService<DGeometryManager>();
+  const DGeometry *geom = geoman->GetDGeometry(runnumber);
   geom->GetCTOFPositions(ctof_positions);
- 
-  return NOERROR;
 }
 
 //------------------

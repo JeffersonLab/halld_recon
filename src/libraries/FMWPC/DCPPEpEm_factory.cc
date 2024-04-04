@@ -17,16 +17,15 @@
 using namespace std;
 
 #include "DCPPEpEm_factory.h"
-using namespace jana;
 
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DCPPEpEm_factory::init(void)
+void DCPPEpEm_factory::Init()
 {
-
+  auto app = GetApplication();
   
   vector< string > varsMinus( inputVarsMinus, inputVarsMinus + sizeof( inputVarsMinus )/sizeof( char* ) );
   dEPIClassifierMinus = new ReadMLPMinus( varsMinus );
@@ -34,19 +33,19 @@ jerror_t DCPPEpEm_factory::init(void)
   dEPIClassifierPlus = new ReadMLPPlus( varsPlus );
   
   SPLIT_CUT=0.5;
-  gPARMS->SetDefaultParameter("CPPAnalysis:SPLIT_CUT",SPLIT_CUT); 
+  app->SetDefaultParameter("CPPAnalysis:SPLIT_CUT",SPLIT_CUT); 
   FCAL_THRESHOLD=0.1;
-  gPARMS->SetDefaultParameter("CPPAnalysis:FCAL_THRESHOLD",FCAL_THRESHOLD);
+  app->SetDefaultParameter("CPPAnalysis:FCAL_THRESHOLD",FCAL_THRESHOLD);
   BCAL_THRESHOLD=0.05;
-  gPARMS->SetDefaultParameter("CPPAnalysis:BCAL_THRESHOLD",BCAL_THRESHOLD);
+  app->SetDefaultParameter("CPPAnalysis:BCAL_THRESHOLD",BCAL_THRESHOLD);
   GAMMA_DT_CUT=2.; 
 
   // TODO: The following needs to be replaced by a JANA resource!
   PIMU_MODEL_FILE = "/gapps/tensorflow/example_model.tflite";
-  gPARMS->SetDefaultParameter("CPPAnalysis:PIMU_MODEL_FILE",PIMU_MODEL_FILE, "TFLite model file for pi/mu classification");
+  app->SetDefaultParameter("CPPAnalysis:PIMU_MODEL_FILE",PIMU_MODEL_FILE, "TFLite model file for pi/mu classification");
   
   VERBOSE=1;
-  gPARMS->SetDefaultParameter("CPPAnalysis:VERBOSE", VERBOSE);
+  app->SetDefaultParameter("CPPAnalysis:VERBOSE", VERBOSE);
 
 #ifdef HAVE_TENSORFLOWLITE
   // Load pi/mu classification model
@@ -90,33 +89,33 @@ jerror_t DCPPEpEm_factory::init(void)
   pimu_output = pimu_interpreter->typed_output_tensor<float>(0);
 #endif // HAVE_TENSORFLOWLITE
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DCPPEpEm_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DCPPEpEm_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  return NOERROR;
+  return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
+void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
 {
   vector<const DBeamPhoton*>beamphotons;
-  loop->Get(beamphotons);
-  if (beamphotons.size()==0) return RESOURCE_UNAVAILABLE;
+  event->Get(beamphotons);
+  if (beamphotons.size()==0) return; // RESOURCE_UNAVAILABLE;
 
   vector<const DChargedTrack*>tracks; 
-  loop->Get(tracks);
-  if (tracks.size()!=2) return RESOURCE_UNAVAILABLE;
+  event->Get(tracks);
+  if (tracks.size()!=2) return; // RESOURCE_UNAVAILABLE;
 
   // Return if we do not have 2 oppositely-charged tracks
   double q1=tracks[0]->Get_Charge(),q2=tracks[1]->Get_Charge();
-  if (q1*q2>0) return VALUE_OUT_OF_RANGE;
+  if (q1*q2>0) return; // VALUE_OUT_OF_RANGE;
 
   // Check that we have fitted tracks for e+/e- and pi+/pi- mass hypotheses
   const DChargedTrackHypothesis *hyp=NULL;
@@ -132,15 +131,15 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   const DTrackTimeBased *piminus=PiMhyp->Get_TrackTimeBased();
 
   hyp=tracks[ip]->Get_Hypothesis(KPlus);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (hyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *kplus=hyp->Get_TrackTimeBased();
 
   hyp=tracks[in]->Get_Hypothesis(KMinus);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (hyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *kminus=hyp->Get_TrackTimeBased();
 
   hyp=tracks[ip]->Get_Hypothesis(Positron);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (hyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *positron=hyp->Get_TrackTimeBased();
  
    // FCAL shower associated with the e+ track
@@ -153,7 +152,7 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
     
   hyp=tracks[in]->Get_Hypothesis(Electron);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (hyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *electron=hyp->Get_TrackTimeBased();
   
   // FCAL shower associated with the e- track
@@ -166,7 +165,7 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
   vector<const DNeutralParticle*>neutrals;
-  loop->Get(neutrals);
+  event->Get(neutrals);
   // Find t0 (at "vertex") for event
   double t0_rf=tracks[0]->Get_BestTrackingFOM()->t0();
   DVector3 vertex=tracks[0]->Get_BestTrackingFOM()->position();
@@ -174,8 +173,8 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   // Veto events that have non-splitoff gammas in time with the tracks
   if (VetoNeutrals(t0_rf,vertex,neutrals)==false){
     // Setup for performing kinematic fits
-    DAnalysisUtilities *dAnalysisUtilities=new DAnalysisUtilities(loop);
-    DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(loop);
+    DAnalysisUtilities *dAnalysisUtilities=new DAnalysisUtilities(event);
+    DKinFitUtils_GlueX *dKinFitUtils = new DKinFitUtils_GlueX(event);
     DKinFitter *dKinFitter = new DKinFitter(dKinFitUtils);   
     dKinFitUtils->Reset_NewEvent();
     dKinFitter->Reset_NewEvent();
@@ -274,7 +273,7 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       //--------------------------------
       // Use ML model for pi/mu classification 
       //--------------------------------
-      myCPPEpEm->pimu_ML_classifier = -1; // initialize to "no info" in case anything below fails
+      myCPPEpEm->pimu_ML_classifier = -1; // Initialize to "no info" in case anything below fails
 #ifdef HAVE_TENSORFLOWLITE
       
       // Is this needed? We are creating a new interpreter for every
@@ -314,7 +313,7 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 							    E9E25);
       }
 
-      _data.push_back(myCPPEpEm);
+      Insert(myCPPEpEm);
     }
       
     delete dAnalysisUtilities;
@@ -323,23 +322,23 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
  
   }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DCPPEpEm_factory::erun(void)
+void DCPPEpEm_factory::EndRun()
 {
-  return NOERROR;
+  return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DCPPEpEm_factory::fini(void)
+void DCPPEpEm_factory::Finish()
 {
-  return NOERROR;
+  return;
 }
 
 // Run the kinematic fitter requiring energy and momentum conservation and 

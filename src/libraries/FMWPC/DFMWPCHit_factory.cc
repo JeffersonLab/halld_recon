@@ -183,8 +183,6 @@ void DFMWPCHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
       throw JException(str);
     }
   }
-
-  return NOERROR;
 }
 
 //------------------

@@ -36,6 +36,7 @@ void DFCALCluster_factory_Island::Init()
   
   MAX_HITS_FOR_CLUSTERING = 250;  
   app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+  app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
   MIN_EXCESS_SEED_ENERGY=35.*k_MeV;
   app->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
 			      MIN_EXCESS_SEED_ENERGY);
@@ -113,8 +114,6 @@ void DFCALCluster_factory_Island::BeginRun(const std::shared_ptr<const JEvent> &
   m_Eres[0]=0.0005;
   m_Eres[1]=0.0025;
   m_Eres[2]=0.0009;
-
-  return NOERROR;
 }
 
 //------------------
