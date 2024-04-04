@@ -31,18 +31,18 @@ class DFMWPCCluster:public JObject{
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			AddString(items, "layer", "%d", layer);
-			AddString(items, "orientation", "%d", orientation);
-			AddString(items, "q", "%10.2f", q);
-			AddString(items, "u", "%3.4f", u);
- 			AddString(items, "first_wire", "%3d", first_wire);
-			AddString(items, "last_wire", "%3d", last_wire);
-			AddString(items, "Nhits", "%d", Nhits);
-			AddString(items, "x", "%1.3f", pos.x());
-			AddString(items, "y", "%1.3f", pos.y());
-			AddString(items, "z", "%1.3f", pos.z());
-			AddString(items, "t", "%1.3f", t);
+		void Summarize(JObjectSummary& summary)const{
+			summary.add(layer, "layer", "%d");
+			summary.add(orientation, "orientation", "%d");
+			summary.add(q, "q", "%10.2f");
+			summary.add(u, "u", "%3.4f");
+			summary.add(first_wire, "first_wire", "%3d");
+			summary.add(last_wire, "last_wire", "%3d");
+			summary.add(Nhits, "Nhits", "%d");
+			summary.add(pos.x(), "x", "%1.3f");
+			summary.add(pos.y(), "y", "%1.3f");
+			summary.add(pos.z(), "z", "%1.3f");
+			summary.add(t, "t", "%1.3f");
 		}
 		
 };
