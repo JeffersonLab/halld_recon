@@ -819,12 +819,13 @@ void DHistogramAction_DetectorMatching::Initialize(const std::shared_ptr<const J
 
 	bool locIsRESTEvent = locEvent->GetSingleStrict<DStatusBits>()->GetStatusBit(kSTATUS_REST);
 
-    IGNORE_START_COUNTER = false;
-	if(gPARMS->Exists("MATCHING:IGNORE_START_COUNTER"))
-		gPARMS->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
+  auto parms = locEvent->GetJApplication()->GetJParameterManager();
+  IGNORE_START_COUNTER = false;
+	if(parms->Exists("MATCHING:IGNORE_START_COUNTER"))
+		parms->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
 
 
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
@@ -2799,7 +2800,7 @@ bool DHistogramAction_EventVertex::Perform_Action(const std::shared_ptr<const JE
 	locEvent->GetSingle(locEventRFBunch);
 
 	//Make sure that brun() is called (to get rf period) before using.
-	//Cannot call JEventLoop->Get() because object may be in datastream (REST), bypassing factory brun() call.
+	//Cannot call JEvent->Get() because object may be in datastream (REST), bypassing factory brun() call.
 	//Must do here rather than in Initialize() function because this object is shared by all threads (which each have their own factory)
 	DRFTime_factory* locRFTimeFactory = dynamic_cast<DRFTime_factory*>(locEvent->GetFactory<DRFTime>());
 	// if(!locRFTimeFactory->brun_was_called())
@@ -3659,22 +3660,22 @@ bool DHistogramAction_NumReconstructedObjects::Perform_Action(const std::shared_
 	size_t locNumFDCWireHits = 0, locNumFDCCathodeHits = 0;
 	if(!locIsRESTEvent)
 	{
-		locEventLoop->Get(locTrackWireBasedVector);
-		locEventLoop->Get(locTrackCandidates);
-		locEventLoop->Get(locTrackCandidates_CDC, "CDC");
-		locEventLoop->Get(locTrackCandidates_FDC, "FDCCathodes");
-		locEventLoop->Get(locCDCHits);
-		locEventLoop->Get(locFDCHits);
-		locEventLoop->Get(locFDCPseudoHits);
-		locEventLoop->Get(locFMWPCHits);
-		locEventLoop->Get(locTOFHits);
-		locEventLoop->Get(locBCALHits);
-		locEventLoop->Get(locFCALHits);
-		locEventLoop->Get(locCCALHits);
-		locEventLoop->Get(locTAGHHits);
-		locEventLoop->Get(locTAGMHits);
-		locEventLoop->Get(locRFDigiTimes);
-		locEventLoop->Get(locRFTDCDigiTimes);
+		locEvent->Get(locTrackWireBasedVector);
+		locEvent->Get(locTrackCandidates);
+		locEvent->Get(locTrackCandidates_CDC, "CDC");
+		locEvent->Get(locTrackCandidates_FDC, "FDCCathodes");
+		locEvent->Get(locCDCHits);
+		locEvent->Get(locFDCHits);
+		locEvent->Get(locFDCPseudoHits);
+		locEvent->Get(locFMWPCHits);
+		locEvent->Get(locTOFHits);
+		locEvent->Get(locBCALHits);
+		locEvent->Get(locFCALHits);
+		locEvent->Get(locCCALHits);
+		locEvent->Get(locTAGHHits);
+		locEvent->Get(locTAGMHits);
+		locEvent->Get(locRFDigiTimes);
+		locEvent->Get(locRFTDCDigiTimes);
 
 		for(size_t loc_i = 0; loc_i < locFDCHits.size(); ++loc_i)
 		{
