@@ -42,9 +42,7 @@ void DFMWPCCluster_factory::Init()
   auto app = GetApplication();
   // Future calibration constants
   TIME_SLICE=10000.0; //ns
-  gPARMS->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
-  
-  return NOERROR;
+  app->SetDefaultParameter("FMWPC:CLUSTER_TIME_SLICE",TIME_SLICE);
 }
 
 //------------------
@@ -70,8 +68,6 @@ void DFMWPCCluster_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
 
   // Get the FMWPC wire orientation (should be vertical, horizontal, ...)
   dgeom->GetFMWPCWireOrientation( fmwpc_wire_orientation );
-
-  return NOERROR;
 }
 
 //------------------
@@ -126,7 +122,7 @@ void DFMWPCCluster_factory::Process(const std::shared_ptr<const JEvent> &event)
       }
     }
   }
-  catch (JException d) {
+  catch (JException& d) {
     cout << d << endl;
   }	
   catch (...) {
@@ -145,6 +141,8 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
   /// by wire number and should only contains hits from
   /// the same layer that are in time with each other.
   /// This will form clusters from all contiguous wires.
+  
+  std::vector<DFMWPCCluster*> results;
   
   // Loop over hits
   for(uint32_t istart=0; istart<H.size(); istart++){
@@ -191,10 +189,10 @@ void DFMWPCCluster_factory::pique(vector<const DFMWPCHit*>& H)
     DVector3 pos(x,y,z);
     newCluster->pos = pos;
 
-     _data.push_back(newCluster);
-		
+    results.push_back(newCluster);
     istart = iend-1;
   }
+  Set(results);
 }
 
 //------------------
