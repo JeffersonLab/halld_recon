@@ -262,9 +262,7 @@ vector<const DReaction*> Get_Reactions(const std::shared_ptr<const JEvent>& locE
 		// processing so we can grab the list here and append it to our
 		// overall list.
 		vector<const DReaction*> locReactionsSubset;
-		auto iters = locFactory->GetOrCreate(locEvent, locEvent->GetJApplication(), locEvent->GetRunNumber());
-		// TODO: NWB: There is a reason this is so ugly, but maybe we can try to make it nicer
-		// locFactory->Get(locReactionsSubset);  // NWB: This is what the previous line was before
+		auto iters = locFactory->GetOrCreate(locEvent);
 		locReactions.insert(locReactions.end(), iters.first, iters.second);
 	}
 	return locReactions;
