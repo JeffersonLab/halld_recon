@@ -135,9 +135,9 @@ class JEventSource_EVIOpp: public JEventSource{
 		           uint64_t SearchFileForRunNumber(void);
 		               void EmulateDf250Firmware(DParsedEvent *pe);
 		               void EmulateDf125Firmware(DParsedEvent *pe, const DTranslationTable *ttab);
-		               void AddToCallStack(DParsedEvent *pe, JEventLoop *loop);
-		               void AddSourceObjectsToCallStack(JEventLoop *loop, string className);
-		               void AddEmulatedObjectsToCallStack(JEventLoop *loop, string caller, string callee);
+		               void AddToCallStack(DParsedEvent *pe, const std::shared_ptr<const JEvent>& event);
+		               void AddSourceObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string className);
+		               void AddEmulatedObjectsToCallStack(const std::shared_ptr<const JEvent>& event, string caller, string callee);
 		               void AddROCIDtoParseList(uint32_t rocid){ ROCIDS_TO_PARSE.insert(rocid); }
 		      set<uint32_t> GetROCIDParseList(uint32_t rocid){ return ROCIDS_TO_PARSE; }
 		               void DumpBinary(const uint32_t *iptr, const uint32_t *iend, uint32_t MaxWords=0, const uint32_t *imark=NULL);

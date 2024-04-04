@@ -69,9 +69,9 @@ class DAnalysisUtilities : public JObject
 		void Get_UnusedWireBasedTracks(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackWireBased*>& locUnusedWireBasedTracks) const;
 		void Get_UnusedTrackCandidates(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTrackCandidate*>& locUnusedTrackCandidates) const;
 
-		void Get_UnusedNeutralShowers(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralShower*>& locUnusedNeutralShowers) const;
-		void Get_UnusedNeutralParticles(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DNeutralParticle*>& locUnusedNeutralParticles) const;
-		void Get_UnusedTOFPoints(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const;
+		void Get_UnusedNeutralShowers(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DNeutralShower*>& locUnusedNeutralShowers) const;
+		void Get_UnusedNeutralParticles(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DNeutralParticle*>& locUnusedNeutralParticles) const;
+		void Get_UnusedTOFPoints(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo, vector<const DTOFPoint*>& locUnusedTOFPoints) const;
 
 		void Get_ThrownParticleSteps(const std::shared_ptr<const JEvent>& locEvent, deque<pair<const DMCThrown*, deque<const DMCThrown*> > >& locThrownSteps) const;
 		bool Are_ThrownPIDsSameAsDesired(const std::shared_ptr<const JEvent>& locEvent, const deque<Particle_t>& locDesiredPIDs, Particle_t locMissingPID = Particle_t::Unknown) const;

@@ -34,9 +34,9 @@ void DFCALCluster_factory_Island::Init()
   app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
   
   MAX_HITS_FOR_CLUSTERING = 250;  
-  gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+  app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
   MIN_EXCESS_SEED_ENERGY=35.*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
+  app->SetDefaultParameter("FCAL:MIN_EXCESS_SEED_ENERGY",
 			      MIN_EXCESS_SEED_ENERGY);
   MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
   app->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
@@ -45,17 +45,17 @@ void DFCALCluster_factory_Island::Init()
   app->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
   SHOWER_WIDTH_PAR0=0.6356;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
+  app->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
   SHOWER_WIDTH_PAR1=-1.516e-6;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
+  app->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR1",SHOWER_WIDTH_PAR1);
   SHOWER_WIDTH_PAR2=4.845e-5;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR2",SHOWER_WIDTH_PAR2);  
+  app->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR2",SHOWER_WIDTH_PAR2);  
  
   INSERT_SHOWER_WIDTH_PAR0=0.3284;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR0",
+  app->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR0",
 			      INSERT_SHOWER_WIDTH_PAR0);
   INSERT_SHOWER_WIDTH_PAR1=0.000886;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR1",
+  app->SetDefaultParameter("FCAL:INSERT_SHOWER_WIDTH_PAR1",
 			      INSERT_SHOWER_WIDTH_PAR1);
   MIN_CUTDOWN_FRACTION=0.1;
   app->SetDefaultParameter("FCAL:MIN_CUTDOWN_FRACTION",
@@ -65,28 +65,28 @@ void DFCALCluster_factory_Island::Init()
   app->SetDefaultParameter("FCAL:DEBUG_HISTS",DEBUG_HISTS);
 
   CHISQ_MARGIN=12.5;
-  gPARMS->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
+  app->SetDefaultParameter("FCAL:CHISQ_MARGIN",CHISQ_MARGIN);
 
   SPLIT_PEAKS=false;
-  gPARMS->SetDefaultParameter("FCAL:SPLIT_PEAKS",SPLIT_PEAKS);
+  app->SetDefaultParameter("FCAL:SPLIT_PEAKS",SPLIT_PEAKS);
 
   MERGE_HITS_AT_BOUNDARY=true;
-  gPARMS->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
+  app->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
 
   ENERGY_SHARING_CUTOFF=0.9;
-  gPARMS->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
+  app->SetDefaultParameter("FCAL:ENERGY_SHARING_CUTOFF",ENERGY_SHARING_CUTOFF);
   APPLY_S_CURVE_CORRECTION=true;
-  gPARMS->SetDefaultParameter("FCAL:APPLY_S_CURVE_CORRECTION",
+  app->SetDefaultParameter("FCAL:APPLY_S_CURVE_CORRECTION",
 			      APPLY_S_CURVE_CORRECTION);
 
   S_CURVE_PAR1=-0.0517;
-  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR1",S_CURVE_PAR1);
+  app->SetDefaultParameter("FCAL:S_CURVE_PAR1",S_CURVE_PAR1);
   S_CURVE_PAR2=0.02565;
-  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2); 
+  app->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2); 
   INSERT_S_CURVE_PAR1=-0.1593;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR1",INSERT_S_CURVE_PAR1);
+  app->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR1",INSERT_S_CURVE_PAR1);
   INSERT_S_CURVE_PAR2=0.02337;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
+  app->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
 
   HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
   HistProb=new TH1D("HistProb",";CL",100,0,1);
@@ -111,8 +111,6 @@ void DFCALCluster_factory_Island::BeginRun(const std::shared_ptr<const JEvent> &
   m_Eres[0]=0.0006;
   m_Eres[1]=0.0025;
   m_Eres[2]=0.0009;
-
-  return NOERROR;
 }
 
 //------------------

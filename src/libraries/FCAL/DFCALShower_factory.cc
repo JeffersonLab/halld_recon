@@ -137,8 +137,8 @@ void DFCALShower_factory::Init()
 
   INSERT_PAR1=0.167457;
   INSERT_PAR2=1.1349;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
+  app->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
+  app->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
 
   // For island algo
   INSERT_POS_RES1=0.168;
@@ -151,13 +151,13 @@ void DFCALShower_factory::Init()
   INSERT_E_VAR1=6.49300e-04;
   INSERT_E_VAR2=1.24109e-04;
   INSERT_E_VAR3=4.70327e-05;
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
+  app->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
+  app->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
+  app->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
 }
 
 //------------------
