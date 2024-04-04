@@ -123,11 +123,11 @@ void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
   unsigned int in=(q1>q2)?1:0;
   
   const DChargedTrackHypothesis *PiPhyp=tracks[ip]->Get_Hypothesis(PiPlus);
-  if (PiPhyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (PiPhyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *piplus=PiPhyp->Get_TrackTimeBased();
 
   const DChargedTrackHypothesis *PiMhyp=tracks[in]->Get_Hypothesis(PiMinus);
-  if (PiMhyp==NULL) return RESOURCE_UNAVAILABLE;
+  if (PiMhyp==NULL) return; // RESOURCE_UNAVAILABLE;
   const DTrackTimeBased *piminus=PiMhyp->Get_TrackTimeBased();
 
   hyp=tracks[ip]->Get_Hypothesis(KPlus);
@@ -284,7 +284,7 @@ void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
       // n.b. if we need to use a mutex then we should pass a local
       // array for "input" and the lock the mutex just for the copy
       // to the tflite tensor.
-      if( PiMuFillFeatures(loop, tracks.size(), PiPhyp, PiMhyp, pimu_input) ){
+      if( PiMuFillFeatures(event, tracks.size(), PiPhyp, PiMhyp, pimu_input) ){
 
       	// Run inference
       	if( pimu_interpreter->Invoke() == kTfLiteOk){
@@ -321,8 +321,6 @@ void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
     delete dKinFitUtils;
  
   }
-
-  return;
 }
 
 //------------------
@@ -330,7 +328,6 @@ void DCPPEpEm_factory::Process(const std::shared_ptr<const JEvent>& event)
 //------------------
 void DCPPEpEm_factory::EndRun()
 {
-  return;
 }
 
 //------------------
@@ -338,7 +335,6 @@ void DCPPEpEm_factory::EndRun()
 //------------------
 void DCPPEpEm_factory::Finish()
 {
-  return;
 }
 
 // Run the kinematic fitter requiring energy and momentum conservation and 
@@ -417,7 +413,7 @@ bool DCPPEpEm_factory::VetoNeutrals(double t0_rf,const DVector3 &vect,
 // Return true if values are valid, false otherwise.
 // e.g. return false if there is not at least 1 pi+
 // and 1 pi- candidate.
-bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nChargedTracks,const DChargedTrackHypothesis *PiPhyp, const DChargedTrackHypothesis *PiMhyp, float *features){
+bool DCPPEpEm_factory::PiMuFillFeatures(const std::shared_ptr<const JEvent>& event, unsigned int nChargedTracks,const DChargedTrackHypothesis *PiPhyp, const DChargedTrackHypothesis *PiMhyp, float *features){
   memset(features,0,47*sizeof(float));
 
   // Features list is the following:
@@ -473,10 +469,10 @@ bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nCh
   vector<const DFCALHit*     > fcalhits;
   vector<const DFMWPCHit*    > fmwpchits;
   vector<const DEventHitStatistics*>stats;
-  loop->Get( stats         );
-  loop->Get( fcalshowers   );
-  loop->Get( fcalhits      );
-  loop->Get( fmwpchits     );
+  event->Get( stats         );
+  event->Get( fcalshowers   );
+  event->Get( fcalhits      );
+  event->Get( fmwpchits     );
 
   features[ 0] = nChargedTracks;
   features[ 1] = fcalshowers.size();
