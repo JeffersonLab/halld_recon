@@ -98,7 +98,7 @@ void DBeamPhoton_factory::Process(const std::shared_ptr<const JEvent>& event)
         DBeamPhoton* gamma = Get_Resource();
 
 	Set_BeamPhoton(gamma, tagh_hits[ih], locEventNumber);
-        _data.push_back(gamma);
+        Insert(gamma);
 	   
     }
 
