@@ -58,8 +58,7 @@ void DTOFPaddleHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
   /// values like the number of bars in a plane the length of the bars, the effective
   /// speed of light in the bars and attenuation lengths.  
 
-  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = DEvent::GetDGeometry(event);
   
   // load values from geometry
   map<string,double> paddle_params;
@@ -78,7 +77,7 @@ void DTOFPaddleHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
     ccdb_directory_name="TOF";
   }
   string locTOFParmsTable = ccdb_directory_name + "/tof_parms";
-  if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms)) {
+  if( !DEvent::GetCalib(event, locTOFParmsTable.c_str(), tofparms)) {
     //cout<<"DTOFPaddleHit_factory: loading values from TOF data base"<<endl;
 
     C_EFFECTIVE    =    tofparms["TOF_C_EFFECTIVE"];
@@ -97,10 +96,10 @@ void DTOFPaddleHit_factory::BeginRun(const std::shared_ptr<const JEvent> &event)
   TIME_COINCIDENCE_CUT=2.*HALFPADDLE/C_EFFECTIVE;
 
   string locTOFPropSpeedTable = ccdb_directory_name + "/propagation_speed";
-  if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+  if(DEvent::GetCalib(event, locTOFPropSpeedTable.c_str(), propagation_speed))
     jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
   string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
-  if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
+  if(DEvent::GetCalib(event, locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
 }
 
