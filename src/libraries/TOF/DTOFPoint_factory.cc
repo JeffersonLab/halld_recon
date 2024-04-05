@@ -20,7 +20,7 @@ using namespace std;
 
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
-
+#include <DANA/DEvent.h>
 #include "DTOFPoint_factory.h"
 #include <DANA/DApplication.h>
 #include <HDGEOMETRY/DGeometry.h>
@@ -41,8 +41,7 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 //------------------
 void DTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
-  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+  const DGeometry *geom = DEvent::GetDGeometry(event);
 
   // load values from geometry 
   vector<double> YWIDTH;  ///> y (perpendicular) bar width per bar number	
@@ -70,7 +69,7 @@ void DTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 
   map<string, double> tofparms;
   string locTOFParmsTable = ccdb_directory_name + "/tof_parms";
-  if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms))
+  if( !DEvent::GetCalib(event, locTOFParmsTable.c_str(), tofparms))
     {
       //cout<<"DTOFPoint_factory: loading values from TOF data base"<<endl;
       //HALFPADDLE = tofparms["TOF_HALFPADDLE"];
@@ -86,15 +85,15 @@ void DTOFPoint_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
     }
   
   string locTOFPropSpeedTable = ccdb_directory_name + "/propagation_speed";
-  if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
+  if(DEvent::GetCalib(event, locTOFPropSpeedTable.c_str(), propagation_speed))
     jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
   string locTOFPaddleResolTable = ccdb_directory_name + "/paddle_resolutions";
-  if(eventLoop->GetCalib(locTOFPaddleResolTable.c_str(), paddle_resolutions))
+  if(DEvent::GetCalib(event, locTOFPaddleResolTable.c_str(), paddle_resolutions))
     jout << "Error loading " << locTOFPaddleResolTable << " !" << endl;
  
   // for applying attentuation to half lenfgth paddles
   string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
-  if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
+  if(DEvent::GetCalib(event, locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
     
   dPositionMatchCut_DoubleEnded = 9.0; //1.5*BARWIDTH
