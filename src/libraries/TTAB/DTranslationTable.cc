@@ -811,27 +811,27 @@ void DTranslationTable::ApplyTranslationTable(const std::shared_ptr<const JEvent
       event->GetJCallGraphRecorder()->SetEnabled(true);
 
 		if(CALL_STACK){
-      	Addf250ObjectsToCallStack(loop, "DBCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DFCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DECALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DCCALDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DCCALRefDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DSCDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DTOFDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DCTOFDigiHit");
-      	Addf250ObjectsToCallStack(loop, "DTACDigiHit");
-      	Addf125CDCObjectsToCallStack(loop, "DCDCDigiHit", cdcpulses.size()>0);
-      	Addf125FDCObjectsToCallStack(loop, "DFDCCathodeDigiHit", fdcpulses.size()>0);
-      	Addf125CDCObjectsToCallStack(loop, "DFMWPCDigiHit", cdcpulses.size()>0);
-      	AddF1TDCObjectsToCallStack(loop, "DBCALTDCDigiHit");
-      	AddF1TDCObjectsToCallStack(loop, "DFDCWireDigiHit");
-      	AddF1TDCObjectsToCallStack(loop, "DRFDigiTime");
-      	AddF1TDCObjectsToCallStack(loop, "DRFTDCDigiTime");
-      	AddF1TDCObjectsToCallStack(loop, "DSCTDCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DTOFTDCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DTACTDCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DFWMPCDigiHit");
-      	AddCAEN1290TDCObjectsToCallStack(loop, "DCTOFTDCDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DBCALDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DFCALDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DECALDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DCCALDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DCCALRefDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DSCDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DTOFDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DCTOFDigiHit");
+      	Addf250ObjectsToCallStack(*event, "DTACDigiHit");
+      	Addf125CDCObjectsToCallStack(*event, "DCDCDigiHit", cdcpulses.size()>0);
+      	Addf125FDCObjectsToCallStack(*event, "DFDCCathodeDigiHit", fdcpulses.size()>0);
+      	Addf125CDCObjectsToCallStack(*event, "DFMWPCDigiHit", cdcpulses.size()>0);
+      	AddF1TDCObjectsToCallStack(*event, "DBCALTDCDigiHit");
+      	AddF1TDCObjectsToCallStack(*event, "DFDCWireDigiHit");
+      	AddF1TDCObjectsToCallStack(*event, "DRFDigiTime");
+      	AddF1TDCObjectsToCallStack(*event, "DRFTDCDigiTime");
+      	AddF1TDCObjectsToCallStack(*event, "DSCTDCDigiHit");
+      	AddCAEN1290TDCObjectsToCallStack(*event, "DTOFTDCDigiHit");
+      	AddCAEN1290TDCObjectsToCallStack(*event, "DTACTDCDigiHit");
+      	AddCAEN1290TDCObjectsToCallStack(*event, "DFWMPCDigiHit");
+      	AddCAEN1290TDCObjectsToCallStack(*event, "DCTOFTDCDigiHit");
 		}
    }
 }
@@ -2169,7 +2169,7 @@ void DTranslationTable::AddToCallStack(const JEvent& event,
    /// least not easily!) Therefore, we have to give it a little help here.
 
    JCallGraphRecorder::JCallGraphNode cs;
-   cs.start_time = cs.end_time = 0.0;
+   //cs.start_time = cs.end_time = {0};
    cs.caller_name = caller;
    cs.callee_name = callee;
    cs.data_source = JCallGraphRecorder::DATA_FROM_CACHE;
