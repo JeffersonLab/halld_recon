@@ -16,7 +16,7 @@ using namespace std;
 #define TOF_SIGMA 0.080   // TOF resolution in ns
 
 #include <TROOT.h>
-
+#include <DANA/DEvent.h>
 #include "DTrackTimeBased_factory.h"
 #include <TRACKING/DTrackWireBased.h>
 #include <TRACKING/DReferenceTrajectory.h>
@@ -164,12 +164,12 @@ void DTrackTimeBased_factory::Init()
 	app->SetDefaultParameter("TRKFIT:USE_FCAL_TIME",USE_FCAL_TIME);
 	
 	USE_BCAL_TIME=true;
-	gPARMS->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
+	app->SetDefaultParameter("TRKFIT:USE_BCAL_TIME",USE_BCAL_TIME);
        
-    SAVE_TRUNCATED_DEDX = false;
-    gPARMS->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
+  SAVE_TRUNCATED_DEDX = false;
+  app->SetDefaultParameter("TRK:SAVE_TRUNCATED_DEDX",SAVE_TRUNCATED_DEDX);
 
-	return NOERROR;
+	return;
 }
 
 //------------------
@@ -275,7 +275,7 @@ void DTrackTimeBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
 		root_lock->RootUnLock();
 	}
 
-	JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+	JCalibration *jcalib = DEvent::GetJCalibration(event);
 	map<string, double> targetparms;
 	if (jcalib->Get("TARGET/target_parms",targetparms)==false){
 	  TARGET_Z = targetparms["TARGET_Z_POSITION"];
@@ -285,7 +285,7 @@ void DTrackTimeBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
 	}
 	
 
-	return NOERROR;
+	return;
 }
 
 //------------------
@@ -391,11 +391,11 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
   }
 
   // figure out the number of expected hits for this track based on the final fit
-  for (size_t j=0; j<_data.size();j++){
+  for (size_t j=0; j<mData.size();j++){
     set<const DCDCWire *> expected_hit_straws;
     set<int> expected_hit_fdc_planes;
     
-    vector<DTrackFitter::Extrapolation_t>cdc_extraps=_data[j]->extrapolations.at(SYS_CDC);
+    vector<DTrackFitter::Extrapolation_t>cdc_extraps=mData[j]->extrapolations.at(SYS_CDC);
     for(uint i=0; i<cdc_extraps.size(); i++) {
       // figure out the radial position of the point to see which ring it's in
       DVector3 track_pos=cdc_extraps[i].position;
@@ -430,7 +430,7 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
       expected_hit_straws.insert(cdcwires[ring][best_straw]);
     }
     
-    vector<DTrackFitter::Extrapolation_t>fdc_extraps=_data[j]->extrapolations.at(SYS_FDC);
+    vector<DTrackFitter::Extrapolation_t>fdc_extraps=mData[j]->extrapolations.at(SYS_FDC);
     for(uint i=0; i<fdc_extraps.size(); i++) {
       // check to make sure that the track goes through the sensitive region of the FDC
       // assume one hit per plane
@@ -449,11 +449,11 @@ void DTrackTimeBased_factory::Process(const std::shared_ptr<const JEvent>& event
       }
     }
     
-    _data[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
-    _data[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
+    mData[j]->potential_cdc_hits_on_track = expected_hit_straws.size();
+    mData[j]->potential_fdc_hits_on_track = expected_hit_fdc_planes.size();
   }
 
-  return NOERROR;
+  return;
 }
 
 //------------------
