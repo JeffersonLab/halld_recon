@@ -21,9 +21,9 @@ class DFactoryGenerator_ReactionEfficiency : public JFactoryGenerator
 		
 		void GenerateFactories(JFactorySet* fs)
 		{
-			locEventLoop->AddFactory(new DReaction_factory_ReactionEfficiency());
-			locEventLoop->AddFactory(new DEventWriterROOT_factory_ReactionEfficiency()); 
-			return NOERROR;
+			fs->Add(new DReaction_factory_ReactionEfficiency());
+			fs->Add(new DEventWriterROOT_factory_ReactionEfficiency()); 
+			return;
 		}
 };
 

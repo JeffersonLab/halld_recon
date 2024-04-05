@@ -33,8 +33,8 @@ class DReaction_factory_ReactionEfficiency : public JFactoryT<DReaction>
 
 	private:
 		void registerReaction(DReaction* locReaction, const vector<string>& locReactionsToWrite);
-		jerror_t evnt(JEventLoop* locEventLoop, uint64_t locEventNumber);
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Finish() override;
 
 		deque<DReactionStep*> dReactionStepPool; //to prevent memory leaks
 };

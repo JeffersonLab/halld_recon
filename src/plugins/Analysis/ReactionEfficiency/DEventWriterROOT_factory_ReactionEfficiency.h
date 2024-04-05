@@ -8,15 +8,16 @@
 #ifndef _DEventWriterROOT_factory_ReactionEfficiency_
 #define _DEventWriterROOT_factory_ReactionEfficiency_
 
-#include <JANA/JFactory.h>
-#include <JANA/JEventLoop.h>
+#include <JANA/JFactoryT.h>
 
 #include "DEventWriterROOT_ReactionEfficiency.h"
 
-class DEventWriterROOT_factory_ReactionEfficiency : public jana::JFactory<DEventWriterROOT>
+class DEventWriterROOT_factory_ReactionEfficiency : public JFactoryT<DEventWriterROOT>
 {
 	public:
-		DEventWriterROOT_factory_ReactionEfficiency(){use_factory = 1;}; //prevents JANA from searching the input file for these objects
+		DEventWriterROOT_factory_ReactionEfficiency(){
+                        //use_factory = 1; //prevents JANA from searching the input file for these objects
+                        }; 
 		~DEventWriterROOT_factory_ReactionEfficiency(){};
 		const char* Tag(void){return "ReactionEfficiency";}
 
@@ -25,9 +26,9 @@ class DEventWriterROOT_factory_ReactionEfficiency : public jana::JFactory<DEvent
         private:
 
                 //------------------
-                // brun
+                // BeginRun
                 //------------------
-                jerror_t brun(JEventLoop *loop, int32_t runnumber)
+                void BeginRun(const std::shared_ptr<const JEvent>& event) override
                 {
                         // (See DTAGHGeometry_factory.h)
                         SetFactoryFlag(NOT_OBJECT_OWNER);
@@ -35,36 +36,36 @@ class DEventWriterROOT_factory_ReactionEfficiency : public jana::JFactory<DEvent
 
                         if( dROOTEventWriter == nullptr ) {
                                 dROOTEventWriter = new DEventWriterROOT_ReactionEfficiency();
-                                dROOTEventWriter->Initialize(loop);
-				dROOTEventWriter->Run_Update_Custom(loop);
+                                dROOTEventWriter->Initialize(event);
+				dROOTEventWriter->Run_Update_Custom(event);
                         } else {
-                                dROOTEventWriter->Run_Update(loop);
-				dROOTEventWriter->Run_Update_Custom(loop);
+                                dROOTEventWriter->Run_Update(event);
+				dROOTEventWriter->Run_Update_Custom(event);
                         }
 
-                        return NOERROR;
+                        return;
                 }
 
                 //------------------
-                // evnt
+                // Process
                 //------------------
-                 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+                void Process(const std::shared_ptr<const JEvent>& event) override
                  {
                         // Reuse existing DBCALGeometry object.
-                        if( dROOTEventWriter ) _data.push_back( dROOTEventWriter );
+                        if( dROOTEventWriter ) Insert( dROOTEventWriter );
 
-                        return NOERROR;
+                        return;
                  }
 
 
 		 //------------------
-                // fini
+                // Finish
                 //------------------
-                jerror_t fini(void)
+                void Finish() override
                 {
                         // Delete object: Must be "this" thread so that interfaces deleted properly
                         delete dROOTEventWriter;
-                        return NOERROR;
+                        return;
                 }
 };
 

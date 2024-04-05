@@ -9,18 +9,17 @@
 
 //GLUEX TTREE DOCUMENTATION: https://halldweb.jlab.org/wiki/index.php/Analysis_TTreeFormat
 
-void DEventWriterROOT_ReactionEfficiency::Run_Update_Custom(JEventLoop* locEventLoop)
+void DEventWriterROOT_ReactionEfficiency::Run_Update_Custom(const std::shared_ptr<const JEvent>& locEvent)
 {
 	const DParticleID* locParticleID = NULL;
-	locEventLoop->GetSingle(locParticleID);
+	locEvent->GetSingle(locParticleID);
 	dParticleID = locParticleID;
 	
-	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	bfield = dapp->GetBfield((locEventLoop->GetJEvent()).GetRunNumber());
+	bfield = DEvent::GetBfield(locEvent);
 	rt = new DReferenceTrajectory(bfield);
 }
 
-void DEventWriterROOT_ReactionEfficiency::Create_CustomBranches_DataTree(DTreeBranchRegister& locBranchRegister, JEventLoop* locEventLoop, const DReaction* locReaction, bool locIsMCDataFlag) const
+void DEventWriterROOT_ReactionEfficiency::Create_CustomBranches_DataTree(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, bool locIsMCDataFlag) const
 {
 	//EXAMPLES: Create a branch to hold an array of fundamental type:
 	//If filling for a specific particle, the branch name should match the particle branch name
@@ -31,12 +30,12 @@ void DEventWriterROOT_ReactionEfficiency::Create_CustomBranches_DataTree(DTreeBr
 	locBranchRegister.Register_FundamentalArray<Float_t>("BestMissingMatchDistBCAL", "NumCombos", locInitArraySize);
 }
 
-void DEventWriterROOT_ReactionEfficiency::Create_CustomBranches_ThrownTree(DTreeBranchRegister& locBranchRegister, JEventLoop* locEventLoop) const
+void DEventWriterROOT_ReactionEfficiency::Create_CustomBranches_ThrownTree(DTreeBranchRegister& locBranchRegister, const std::shared_ptr<const JEvent>& locEvent) const
 {
 	//EXAMPLES: See Create_CustomBranches_DataTree
 }
 
-void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_DataTree(DTreeFillData* locTreeFillData, JEventLoop* locEventLoop, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
+void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_DataTree(DTreeFillData* locTreeFillData, const std::shared_ptr<const JEvent>& locEvent, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
 	const DMCThrownMatching* locMCThrownMatching, const DDetectorMatches* locDetectorMatches,
 	const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 	const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const
@@ -65,7 +64,7 @@ void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_DataTree(DTreeFill
 		
 		// compute distance from unused BCAL showers
 		vector<const DNeutralShower*> locUnusedNeutralShowers;
-		dAnalysisUtilities->Get_UnusedNeutralShowers(locEventLoop, locParticleCombo, locUnusedNeutralShowers);
+		dAnalysisUtilities->Get_UnusedNeutralShowers(locEvent, locParticleCombo, locUnusedNeutralShowers);
 		for(size_t loc_i=0; loc_i<locUnusedNeutralShowers.size(); loc_i++) {
 			if(locUnusedNeutralShowers[loc_i]->dDetectorSystem != SYS_BCAL) continue;
 			
@@ -88,7 +87,7 @@ void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_DataTree(DTreeFill
 		}
 		
 		vector<const DTOFPoint*> locUnusedTOFPoints;
-		dAnalysisUtilities->Get_UnusedTOFPoints(locEventLoop, locParticleCombo, locUnusedTOFPoints);
+		dAnalysisUtilities->Get_UnusedTOFPoints(locEvent, locParticleCombo, locUnusedTOFPoints);
 		for(size_t loc_i=0; loc_i<locUnusedTOFPoints.size(); loc_i++) {
 
 			shared_ptr<DTOFHitMatchParams>locHitMatchParams;
@@ -114,7 +113,7 @@ void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_DataTree(DTreeFill
 
 }
 
-void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_ThrownTree(DTreeFillData* locTreeFillData, JEventLoop* locEventLoop, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns) const
+void DEventWriterROOT_ReactionEfficiency::Fill_CustomBranches_ThrownTree(DTreeFillData* locTreeFillData, const std::shared_ptr<const JEvent>& locEvent, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns) const
 {
 	//EXAMPLES: See Fill_CustomBranches_DataTree
 }
