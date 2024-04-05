@@ -23,6 +23,9 @@
 #include <TPOL/DTPOLHit.h>
 #include <RF/DRFTime.h>
 #include <DIRC/DDIRCPmtHit.h>
+#include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DCTOFHit.h>
+
 using namespace std;
 using namespace jana;
 
