@@ -100,7 +100,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(CTOFHits);
 	locEventLoop->Get(FMWPCHits);
 
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCDigiHits.size()==uint(0) && FMWPCHits.size()==uint(0))
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0))
 	{
 		return false;
 	}
@@ -754,15 +754,15 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 
 	//=========================================CTOF=======================================================
 
-	for(uint i=0; i<CTOFHits.size; ++i)
+	for(uint i=0; i<CTOFHits.size(); ++i)
 	  {
 	    if(i == 0)
 	      {
-		hitv->addcppTOFs();
+		hitv->addCppTOFs();
 	      }
 	    bool found = false;
-	    hddm_s::ctofCounterList* CTOF_CounterList = &hitv->getcppTOF().getctofCounters();
-	    hddm_s::ctofCounterList::iterator CTOF_CounterIterator = CTOF_CounterList->begin();
+	    hddm_s::CtofCounterList* CTOF_CounterList = &hitv->getcppTOF().getctofCounters();
+	    hddm_s::CtofCounterList::iterator CTOF_CounterIterator = CTOF_CounterList->begin();
 	    for(CTOF_CounterIterator = CTOF_CounterList->begin(); CTOF_CounterIterator != CTOF_CounterList->end(); CTOF_CounterIterator++)
 	      {
 		if(CTOFHits[i]->bar==CTOF_CounterIterator->getBar())
@@ -773,13 +773,13 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	      }
 	    if(found==false)
 	      {
-		hitv->getcppTOF.addctofCounters();
+		hitv->getCppTOF.addctofCounters();
 		CTOF_CounterIterator=CTOF_CounterList->end()-1;
 		CTOF_CounterIterator->setBar(CTOFHits[i]->bar);
 	      }
 	    CTOF_CounterIterator->addctofHits();
-	    hddm_s::ctofHitList* ctofhitl=&CTOF_CounterIterator->getctofHits();
-	    hddm_s::ctofHitList::iterator ctofhitit=ctofhitl->end()-1;
+	    hddm_s::CtofHitList* ctofhitl=&CTOF_CounterIterator->getctofHits();
+	    hddm_s::CtofHitList::iterator ctofhitit=ctofhitl->end()-1;
 	    ctofhitit->setEnd(CTOFHits[i]->end);
 	    ctofhitit->setT(CTOFHits[i]->t);
 	    ctofhitit->setTADC(CTOFHits[i]->t_adc);
