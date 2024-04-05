@@ -11,7 +11,6 @@
 #include <string>
 #include <iostream>
 
-#include "JANA/JEventLoop.h"
 #include "JANA/JApplication.h"
 
 #include "ANALYSIS/DAnalysisAction.h"
@@ -20,7 +19,6 @@
 #include "ANALYSIS/DAnalysisUtilities.h"
 
 using namespace std;
-using namespace jana;
 
 class DCustomAction_MissingMatch : public DAnalysisAction
 {
@@ -29,23 +27,22 @@ class DCustomAction_MissingMatch : public DAnalysisAction
         DCustomAction_MissingMatch(const DReaction* locReaction, bool locUseKinFitResultsFlag, deque<int> locChargedIndices, string locActionUniqueString = "") : 
 	DAnalysisAction(locReaction, "Custom_MissingMatch", locUseKinFitResultsFlag, locActionUniqueString), dChargedIndices(locChargedIndices) {}
 
-		void Initialize(JEventLoop* locEventLoop);
-		void Run_Update(JEventLoop* locEventLoop) {
+		void Initialize(const std::shared_ptr<const JEvent>& locEvent);
+		void Run_Update(const std::shared_ptr<const JEvent>& locEvent) {
 			const DParticleID* locParticleID = NULL;
-			locEventLoop->GetSingle(locParticleID);
+			locEvent->GetSingle(locParticleID);
 			dParticleID = locParticleID;
 
-			DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-			bfield = dapp->GetBfield((locEventLoop->GetJEvent()).GetRunNumber());
+			bfield = DEvent::GetBfield(locEvent);
 			rt = new DReferenceTrajectory(bfield);
  
-			locEventLoop->GetSingle(dAnalysisUtilities); 
+			locEvent->GetSingle(dAnalysisUtilities); 
 		}
 
 		void Reset_NewEvent(void){}; //RESET HISTOGRAM DUPLICATE-CHECK TRACKING HERE!!
 	private:
 
-		bool Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo);
+		bool Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo);
 
                 const DParticleID* dParticleID;
 		const DMagneticFieldMap *bfield;
