@@ -14,6 +14,8 @@ using namespace std;
 #include <JANA/JEvent.h>
 #include <JANA/Calibrations/JCalibrationManager.h>
 #include <JANA/Compatibility/JLockService.h>
+#include <DANA/DEvent.h>
+
 
 #include "FCAL/DFCALShower_factory.h"
 #include "FCAL/DFCALGeometry.h"
@@ -41,13 +43,13 @@ void DFCALShower_factory::Init()
   app->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
   // Should we use the PrimeX-D energy correction?
   USE_RING_E_CORRECTION_V1=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
+  app->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
 
   USE_RING_E_CORRECTION_V2=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
+  app->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
 
   USE_CPP_E_CORRECTION=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
+  app->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
   
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   app->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
@@ -71,15 +73,15 @@ void DFCALShower_factory::Init()
   timeConst3 = 0; 
   timeConst4 = 0;
 
-  gPARMS->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
-  gPARMS->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
-  gPARMS->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param2", expfit_param2);
-  gPARMS->SetDefaultParameter("FCAL:expfit_param3", expfit_param3);
+  app->SetDefaultParameter("FCAL:cutoff_energy", cutoff_energy);
+  app->SetDefaultParameter("FCAL:linfit_slope", linfit_slope);
+  app->SetDefaultParameter("FCAL:linfit_intercept", linfit_intercept);
+  app->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
+  app->SetDefaultParameter("FCAL:expfit_param2", expfit_param2);
+  app->SetDefaultParameter("FCAL:expfit_param3", expfit_param3);
   
   USE_NONLINEAR_CORRECTION_TYPE = -1;
-  gPARMS->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
+  app->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
   
   if (USE_NONLINEAR_CORRECTION_TYPE == 0) {
   } else if (USE_NONLINEAR_CORRECTION_TYPE == 1) {
@@ -209,7 +211,7 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
   
   // Look in CCDB which non-linear correction version should be used
   nonlinear_correction_type.clear();
-  loop->GetCalib("FCAL/nonlinear_correction_type", nonlinear_correction_type);
+  DEvent::GetCalib(event, "FCAL/nonlinear_correction_type", nonlinear_correction_type);
   if (nonlinear_correction_type.size() > 0 && USE_NONLINEAR_CORRECTION_TYPE < 0) {
     if (debug_level > 0) {
       TString str_coef[] = {"A"};
@@ -288,7 +290,7 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 	}
       }
     }
-    loop->GetCalib("FCAL/nonlinear_correction", nonlinear_correction);
+    DEvent::GetCalib(event, "FCAL/nonlinear_correction", nonlinear_correction);
     if (nonlinear_correction.size() > 0) {
       m_beamSpotX = beam_spot.at("x");
       m_beamSpotY = beam_spot.at("y");
@@ -304,7 +306,7 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
       }
     }
 
-    loop->GetCalib("FCAL/block_to_square", block_to_square);
+    DEvent::GetCalib(event, "FCAL/block_to_square", block_to_square);
     if (block_to_square.size() > 0) {
       if (debug_level > 0) {
 	for (int i = 0; i < (int) block_to_square.size(); i ++) {
@@ -314,7 +316,7 @@ void DFCALShower_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
       }
     }
     
-    loop->GetCalib("FCAL/nonlinear_correction_cpp", nonlinear_correction_cpp);
+    DEvent::GetCalib(event, "FCAL/nonlinear_correction_cpp", nonlinear_correction_cpp);
     if (nonlinear_correction_cpp.size() > 0) {
       m_beamSpotX = beam_spot.at("x");
       m_beamSpotY = beam_spot.at("y");
@@ -380,7 +382,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
   event->Get( allWBTracks );
   vector< const DTrackWireBased* > wbTracks = filterWireBasedTracks( allWBTracks );
 
-  // Loop over list of DFCALCluster objects and calculate the "Non-linear" corrected
+  // event over list of DFCALCluster objects and calculate the "Non-linear" corrected
   // energy and position for each. We'll use a logarithmic energy-weighting to 
   // find the final position and error. 
   for( vector< const DFCALCluster* >::const_iterator clItr = fcalClusters.begin();
@@ -485,7 +487,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
       double flightTime;
       DVector3 projPos, projMom;
 
-      // find the closest track to the shower -- here we loop over the best FOM
+      // find the closest track to the shower -- here we event over the best FOM
       // wire-based track for every track candidate not just the ones associated
       // with the topology
       for( size_t iTrk = 0; iTrk < wbTracks.size(); ++iTrk ){
@@ -493,7 +495,7 @@ void DFCALShower_factory::Process(const std::shared_ptr<const JEvent>& event)
 	if( !wbTracks[iTrk]->GetProjection( SYS_FCAL, projPos, &projMom, &flightTime ) ) continue;
 	
 	// need to swim fcalPos to common z for DOCA calculation -- this really
-	// shouldn't be in the loop if the z-value of projPos doesn't change
+	// shouldn't be in the event if the z-value of projPos doesn't change
 	// with each track
 	
 	DVector3 fcalFacePos = ( shower->getPosition() - vertex );
@@ -1053,7 +1055,7 @@ DFCALShower_factory::filterWireBasedTracks( vector< const DTrackWireBased* >& wb
     sortedTracks[id].push_back( wbTracks[i] );
   }
 
-  // now loop through that list of unique tracks and for each set
+  // now event through that list of unique tracks and for each set
   // of wire based tracks, choose the one with the highest FOM
   // (this is choosing among different particle hypotheses)
   
@@ -1096,7 +1098,7 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
 	return;
   }
   
-  //------   Loop over hits   ------//
+  //------   event over hits   ------//
   
   double sW    =  0.0;
   double xpos  =  0.0;
