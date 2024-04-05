@@ -47,6 +47,7 @@
 	{
 		TH1I* locHist = (TH1I*)locHist_FDCRF_SelfDeltaT->Clone("FDCRF_SelfDeltaT_rebinned");
 		locHist->SetTitle("RF FDC Self timing");
+		locHist->SetStats(0);
 		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
@@ -64,6 +65,7 @@
 	{
 		TH1I* locHist = (TH1I*)locHist_TOFRF_SelfDeltaT->Clone("TOFRF_SelfDeltaT_rebinned");
 		locHist->SetTitle("RF TOF Self timing");
+		locHist->SetStats(0);
 		locHist->Rebin(12);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
@@ -81,6 +83,7 @@
 	{
 		TH1I* locHist = (TH1I*)locHist_TAGHRF_SelfDeltaT->Clone("TAGHRF_SelfDeltaT_rebinned");
 		locHist->SetTitle("RF TAGH Self timing");
+		locHist->SetStats(0);
 		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
@@ -98,6 +101,7 @@
 	{
 		TH1I* locHist = (TH1I*)locHist_PSCRF_SelfDeltaT->Clone("PSCRF_SelfDeltaT_rebinned");
 		locHist->SetTitle("RF PSC Self timing");
+		locHist->SetStats(0);
 		locHist->Rebin(14);
 
 		locHist->GetXaxis()->SetTitleSize(0.05);
