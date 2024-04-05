@@ -4,10 +4,12 @@
 // Created: Wed Jun 19 17:20:17 EDT 2019
 // Creator: jrsteven (on Linux ifarm1402.jlab.org 3.10.0-327.el7.x86_64 x86_64)
 //
-
+#include <DANA/DEvent.h>
 #include "DCustomAction_MissingMatch.h"
+#include "DANA/DStatusBits.h"
 
-void DCustomAction_MissingMatch::Initialize(JEventLoop* locEventLoop)
+
+void DCustomAction_MissingMatch::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -16,7 +18,9 @@ void DCustomAction_MissingMatch::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	auto app = locEvent->GetJApplication();
+	auto jLockService = app->GetService<JLockService>();
+	jLockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		CreateAndChangeTo_ActionDirectory();
 
@@ -27,21 +31,20 @@ void DCustomAction_MissingMatch::Initialize(JEventLoop* locEventLoop)
 		dHistMissingMatchDistBCAL = GetOrCreate_Histogram<TH1F>("HistMissingMatchDistBCAL", "HistMissingMatchDistBCAL", 100, 0.0, 100.0);
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	jLockService->RootUnLock(); //RELEASE ROOT LOCK!!
 
 	// repeated in Run_Update() for possible CCDB updates each run(?)
         const DParticleID* locParticleID = NULL;
-        locEventLoop->GetSingle(locParticleID);
+        locEvent->GetSingle(locParticleID);
         dParticleID = locParticleID;
 
-	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	bfield = dapp->GetBfield((locEventLoop->GetJEvent()).GetRunNumber());
+	bfield = DEvent::GetBfield(locEvent);
 	rt = new DReferenceTrajectory(bfield);
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 }
 
-bool DCustomAction_MissingMatch::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_MissingMatch::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {       
 	// distance of best match to TOF and BCAL
 	double locBestMissingMatchDistTOF = 999;
@@ -89,7 +92,7 @@ bool DCustomAction_MissingMatch::Perform_Action(JEventLoop* locEventLoop, const 
 
 	// compute distance from unused BCAL showers
 	vector<const DNeutralShower*> locUnusedNeutralShowers;
-	dAnalysisUtilities->Get_UnusedNeutralShowers(locEventLoop, locParticleCombo, locUnusedNeutralShowers);
+	dAnalysisUtilities->Get_UnusedNeutralShowers(locEvent, locParticleCombo, locUnusedNeutralShowers);
 	for(size_t loc_i=0; loc_i<locUnusedNeutralShowers.size(); loc_i++) {
 		if(locUnusedNeutralShowers[loc_i]->dDetectorSystem != SYS_BCAL) continue;
 		
@@ -116,7 +119,7 @@ bool DCustomAction_MissingMatch::Perform_Action(JEventLoop* locEventLoop, const 
 
 	// compute distance from TOF
 	vector<const DTOFPoint*> locTOFPoints;
-	locEventLoop->Get(locTOFPoints);
+	locEvent->Get(locTOFPoints);
 	for(size_t loc_i=0; loc_i<locTOFPoints.size(); loc_i++) {
 		
 		// check if TOF point is used by another measured track

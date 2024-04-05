@@ -35,12 +35,12 @@ DReaction_factory_ReactionEfficiency::registerReaction(
 	}
 	if (locReactionsToWrite.empty()) {
 		// process all reactions
-		_data.push_back(locReaction);
+		Insert(locReaction);
 	} else {
 		// process only selected reactions
 		const string locReactionName = locReaction->Get_ReactionName();
 		if (find(locReactionsToWrite.begin(), locReactionsToWrite.end(), locReactionName) != locReactionsToWrite.end()) {
-			_data.push_back(locReaction);
+			Insert(locReaction);
 		}
 	}
 }
@@ -57,9 +57,9 @@ void DReaction_factory_ReactionEfficiency::Process(const std::shared_ptr<const J
 	DReaction* locReaction = NULL; //create with a unique name for each DReaction object. CANNOT (!) be "Thrown"
 
 	double locMinKinFitFOM = 1e-4;
-	gPARMS->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
+	app->SetDefaultParameter("REACTIONEFFIC:MINKINFITFOM", locMinKinFitFOM);
 	string locOnlyReactions = "";  // default: process all reactions
-	gPARMS->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
+	app->SetDefaultParameter("REACTIONEFFIC:ONLY_REACTIONS", locOnlyReactions);  // define reactions to process as semicolon-separated list
 	                                                                                // e.g. REACTIONEFFIC:ONLY_REACTIONS pi0pipmisspim__B1_T1_U1_Effic;pi0pimmisspip__B1_T1_U1_Effic
 	const vector<string> locReactionsToWrite = tokenizeString(locOnlyReactions, ';');
 
@@ -825,7 +825,7 @@ void DReaction_factory_ReactionEfficiency::Process(const std::shared_ptr<const J
 
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
-	return NOERROR;
+	return;
 }
 
 //------------------
