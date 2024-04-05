@@ -61,7 +61,7 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
   app->SetDefaultParameter("PID:CDC_TRUNCATE_DEDX",CDC_TRUNCATE_DEDX);
 
   ADD_FCAL_DATA_FOR_CPP=false;
-  gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+  app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
   const DRootGeom *RootGeom = geo_manager->GetRootGeom(run_number);
   // Get material properties for chamber gas
@@ -150,8 +150,8 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
 	BCAL_PHI_CUT_PAR3 = 0.8;
 	app->SetDefaultParameter("BCAL:PHI_CUT_PAR3",BCAL_PHI_CUT_PAR3);
 
-	gPARMS->SetDefaultParameter("CTOF:MATCH_X_CUT",CTOF_MATCH_X_CUT);
-	gPARMS->SetDefaultParameter("CTOF:MATCH_Y_CUT",CTOF_MATCH_Y_CUT);
+	app->SetDefaultParameter("CTOF:MATCH_X_CUT",CTOF_MATCH_X_CUT);
+	app->SetDefaultParameter("CTOF:MATCH_Y_CUT",CTOF_MATCH_Y_CUT);
 
 	double locSCCutPar = 8.0;
 	app->SetDefaultParameter("SC:SC_CUT_PAR1",locSCCutPar);
