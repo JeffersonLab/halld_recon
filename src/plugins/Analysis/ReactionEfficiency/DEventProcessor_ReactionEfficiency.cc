@@ -69,8 +69,8 @@ void DEventProcessor_ReactionEfficiency::Process(const std::shared_ptr<const JEv
 		//The event writer gets the DAnalysisResults objects from JANA, performing the analysis. 
 	// string is DReaction factory tag: will fill trees for all DReactions that are defined in the specified factory
 	const DEventWriterROOT_ReactionEfficiency* locEventWriterROOT = NULL;
-	locEventLoop->GetSingle(locEventWriterROOT, "ReactionEfficiency");
-	locEventWriterROOT->Fill_DataTrees(locEventLoop, "ReactionEfficiency");
+	locEvent->GetSingle(locEventWriterROOT, "ReactionEfficiency");
+	locEventWriterROOT->Fill_DataTrees(locEvent, "ReactionEfficiency");
 
 	return;
 }
@@ -87,7 +87,7 @@ int DEventProcessor_ReactionEfficiency::Get_FileNumber(const std::shared_ptr<con
 		return -1;
 
 	//get the source file name (strip the path)
-	string locSourceFileName = locEventSource->GetResourceName();
+	string locSourceFileName = GetResourceName();
 
 	//find the last "_" & "." indices
 	size_t locUnderscoreIndex = locSourceFileName.rfind("_");
