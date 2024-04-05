@@ -60,9 +60,9 @@ void DTrackCandidate_factory_FDCCathodes::BeginRun(const std::shared_ptr<const J
   app->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
 
   FDC_HOUGH_THRESHOLD=10.;
-  gPARMS->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
+  app->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
   ADD_VERTEX_POINT=true;
-  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+  app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
  
   if(DEBUG_HISTS) {
     root_lock->RootWriteLock();

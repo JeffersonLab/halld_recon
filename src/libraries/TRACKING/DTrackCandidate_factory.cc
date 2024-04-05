@@ -211,12 +211,12 @@ void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& even
   //app->SetDefaultParameter("TRKFIND:MIN_NUM_HITS", MIN_NUM_HITS);
   
   DEBUG_LEVEL=0;
-  gPARMS->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
+  app->SetDefaultParameter("TRKFIND:DEBUG_LEVEL", DEBUG_LEVEL);
 
   ADD_VERTEX_POINT=true;
-  gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
+  app->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
    
-  return NOERROR;
+  return;
 }
 
 //------------------
