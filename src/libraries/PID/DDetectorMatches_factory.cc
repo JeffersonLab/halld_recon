@@ -61,10 +61,10 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(const std::s
 	event->Get(locDIRCBarHits);
 
 	vector<const DCTOFPoint*> locCTOFPoints;
-	locEventLoop->Get(locCTOFPoints);
+	event->Get(locCTOFPoints);
 
 	vector<const DFMWPCCluster *> locFMWPCClusters;
-	locEventLoop->Get(locFMWPCClusters);
+	event->Get(locFMWPCClusters);
 
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
