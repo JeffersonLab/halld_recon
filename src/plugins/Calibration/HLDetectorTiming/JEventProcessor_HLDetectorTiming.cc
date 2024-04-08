@@ -10,6 +10,8 @@
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactoryT.h>
+#include <DANA/DEvent.h>
+
 
 #include "PID/DChargedTrack.h"
 #include "PID/DEventRFBunch.h"
@@ -464,7 +466,7 @@ void JEventProcessor_HLDetectorTiming::CreateHistograms(string dirname)
 
 
 //------------------
-// init
+// Init
 //------------------
 void JEventProcessor_HLDetectorTiming::Init()
 {
@@ -501,28 +503,28 @@ void JEventProcessor_HLDetectorTiming::Init()
     CCAL_CALIB = false;
     STRAIGHT_TRACK = false;
 
-    if(gPARMS){
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_CDC_TIMING", DO_CDC_TIMING, "Set to > 0 to do CDC Per channel Alignment");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_TDC_ADC_ALIGN", DO_TDC_ADC_ALIGN, "Set to > 0 to do TDC/ADC alignment of SC,TOF,TAGM,TAGH");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_TRACK_BASED", DO_TRACK_BASED, "Set to > 0 to do Track Based timing corrections");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_HIGH_RESOLUTION", DO_HIGH_RESOLUTION, "Set to > 0 to increase the resolution of the track Based timing corrections");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_VERIFY", DO_VERIFY, "Set to > 0 to verify timing with current constants");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:REQUIRE_BEAM", REQUIRE_BEAM, "Set to 0 to skip beam current check");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:BEAM_EVENTS_TO_KEEP", BEAM_EVENTS_TO_KEEP, "Set to the number of beam on events to use");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_OPTIONAL", DO_OPTIONAL, "Set to >0 to enable optional histograms ");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_TRACKS", NO_TRACKS, "Don't use tracking information for timing calibrations");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:CCAL_CALIB", CCAL_CALIB, "Perform CCAL calibrations");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:TRIGGER_MASK", TRIGGER_MASK, "Set to >0 to override use of standard physics trigger");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:STRAIGHT_TRACK", STRAIGHT_TRACK, "Set to >0 to change better for straight track data (field-off, drift chambers-on)");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:NO_START_COUNTER", NO_START_COUNTER, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+    if(app){
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_ROUGH_TIMING", DO_ROUGH_TIMING, "Set to > 0 to do rough timing of all detectors");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_CDC_TIMING", DO_CDC_TIMING, "Set to > 0 to do CDC Per channel Alignment");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_TDC_ADC_ALIGN", DO_TDC_ADC_ALIGN, "Set to > 0 to do TDC/ADC alignment of SC,TOF,TAGM,TAGH");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_TRACK_BASED", DO_TRACK_BASED, "Set to > 0 to do Track Based timing corrections");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_HIGH_RESOLUTION", DO_HIGH_RESOLUTION, "Set to > 0 to increase the resolution of the track Based timing corrections");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_VERIFY", DO_VERIFY, "Set to > 0 to verify timing with current constants");
+        app->SetDefaultParameter("HLDETECTORTIMING:REQUIRE_BEAM", REQUIRE_BEAM, "Set to 0 to skip beam current check");
+        app->SetDefaultParameter("HLDETECTORTIMING:BEAM_EVENTS_TO_KEEP", BEAM_EVENTS_TO_KEEP, "Set to the number of beam on events to use");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_OPTIONAL", DO_OPTIONAL, "Set to >0 to enable optional histograms ");
+        app->SetDefaultParameter("HLDETECTORTIMING:DO_REACTION", DO_REACTION, "Set to >0 to run DReaction");
+        app->SetDefaultParameter("HLDETECTORTIMING:USE_RF_BUNCH", USE_RF_BUNCH, "Set to 0 to disable use of 2 vote RF Bunch");
+        app->SetDefaultParameter("HLDETECTORTIMING:NO_TRACKS", NO_TRACKS, "Don't use tracking information for timing calibrations");
+        app->SetDefaultParameter("HLDETECTORTIMING:CCAL_CALIB", CCAL_CALIB, "Perform CCAL calibrations");
+        app->SetDefaultParameter("HLDETECTORTIMING:TRIGGER_MASK", TRIGGER_MASK, "Set to >0 to override use of standard physics trigger");
+        app->SetDefaultParameter("HLDETECTORTIMING:STRAIGHT_TRACK", STRAIGHT_TRACK, "Set to >0 to change better for straight track data (field-off, drift chambers-on)");
+        app->SetDefaultParameter("HLDETECTORTIMING:NO_START_COUNTER", NO_START_COUNTER, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
 
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_ALL_TRIGGERS", INCLUDE_ALL_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_PS_TRIGGERS", INCLUDE_PS_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:PRIMEX_TRIGGERS", PRIMEX_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
-        gPARMS->SetDefaultParameter("HLDETECTORTIMING:CPP_TRIGGERS", CPP_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        app->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_ALL_TRIGGERS", INCLUDE_ALL_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        app->SetDefaultParameter("HLDETECTORTIMING:INCLUDE_PS_TRIGGERS", INCLUDE_PS_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        app->SetDefaultParameter("HLDETECTORTIMING:PRIMEX_TRIGGERS", PRIMEX_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
+        app->SetDefaultParameter("HLDETECTORTIMING:CPP_TRIGGERS", CPP_TRIGGERS, "Set to >0 to disable the use of the start counter (e.g. for the CPP experiment)");
     }
 
     // Would like the code with no arguments to simply verify the current status of the calibration
@@ -567,17 +569,17 @@ void JEventProcessor_HLDetectorTiming::Init()
 	// this was originally written to select out events from different
 	// trigger types, but the sky is the limit!
 	if(INCLUDE_ALL_TRIGGERS) {
-		dCutFunctions["All Events"] = [](JEventLoop *loop) { return true; };
+		dCutFunctions["All Events"] = [](const std::shared_ptr<const JEvent>& event) { return true; };
 	}
-	dCutFunctions["Physics Triggers"] = [](JEventLoop *loop) { 
+	dCutFunctions["Physics Triggers"] = [](const std::shared_ptr<const JEvent>& event) { 
 			const DTrigger* locTrigger = NULL; 
-    		loop->GetSingle(locTrigger); 
+    		event->GetSingle(locTrigger); 
 			if(!locTrigger->Get_IsPhysicsEvent()) return false; else return true; 
 	};
 	if(INCLUDE_PS_TRIGGERS) {
-		dCutFunctions["PS Triggers"] = [](JEventLoop *loop) { 
+		dCutFunctions["PS Triggers"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 3)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
@@ -586,27 +588,27 @@ void JEventProcessor_HLDetectorTiming::Init()
 		// currently based on 2022-08 run period
 		// see, e.g. https://logbooks.jlab.org/entry/4039521
 		// note that the "physics trigger" in this case is the CCAL + FCAL trigger
-		dCutFunctions["CCAL+FCAL"] = [](JEventLoop *loop) { 
+		dCutFunctions["CCAL+FCAL"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (0x1)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["FCAL (E>3.5 GeV)"] = [](JEventLoop *loop) { 
+		dCutFunctions["FCAL (E>3.5 GeV)"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 1)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["FCAL (E>0.5 GeV)"] = [](JEventLoop *loop) { 
+		dCutFunctions["FCAL (E>0.5 GeV)"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 2)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["CCAL"] = [](JEventLoop *loop) { 
+		dCutFunctions["CCAL"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 10)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
@@ -614,27 +616,27 @@ void JEventProcessor_HLDetectorTiming::Init()
 	}
 	if(CPP_TRIGGERS) {
 		// based on ???
-		dCutFunctions["FCAL"] = [](JEventLoop *loop) { 
+		dCutFunctions["FCAL"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (0x1)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["FCAL+BCAL"] = [](JEventLoop *loop) { 
+		dCutFunctions["FCAL+BCAL"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 1)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["TOF"] = [](JEventLoop *loop) { 
+		dCutFunctions["TOF"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = (locTrigger->Get_L1TriggerBits() & (1 << 2)) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
-		dCutFunctions["FCAL+CTOF"] = [](JEventLoop *loop) { 
+		dCutFunctions["FCAL+CTOF"] = [](const std::shared_ptr<const JEvent>& event) { 
 				const DTrigger* locTrigger = NULL; 
-				loop->GetSingle(locTrigger); 
+				event->GetSingle(locTrigger); 
 				int trig_bit = ((locTrigger->Get_L1TriggerBits() & (0x1)) && (locTrigger->Get_L1FrontPanelTriggerBits() & (1 << 5))) ? 1 : 0;
 				if(locTrigger->Get_L1FrontPanelTriggerBits() == 0 && trig_bit) return true; else return false; 
 		};
@@ -670,7 +672,7 @@ void JEventProcessor_HLDetectorTiming::Init()
     mainDir->cd();
 
 
-    return NOERROR;
+    return;
 }
 
 //------------------
@@ -685,7 +687,7 @@ void JEventProcessor_HLDetectorTiming::BeginRun(const std::shared_ptr<const JEve
 // 	if(dCutFunctions.size() == 0) {
 // 	}
 
-    return NOERROR;
+    return;
 }
 
 //------------------
@@ -694,7 +696,7 @@ void JEventProcessor_HLDetectorTiming::BeginRun(const std::shared_ptr<const JEve
 void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEvent>& event)
 {
 
-   DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
+   //DApplication* app = dynamic_cast<DApplication*>(loop->GetJApplication());
    //   DGeometry* geom = app->GetDGeometry(loop->GetJEvent().GetRunNumber());
    
    // Check for magnetic field
@@ -724,7 +726,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 	map<string, bool> passed_cuts;
 	for (auto const& cut : dCutFunctions) {
 		const string &key = cut.first;
-		passed_cuts[key] = cut.second(loop);
+		passed_cuts[key] = cut.second(event);
 	}
 	
     // Get the particleID object for each run
@@ -752,9 +754,9 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 
     // Get the EPICs events and update beam current. Skip event if current too low (<10 nA).
     vector<const DEPICSvalue *> epicsValues;
-    loop->Get(epicsValues);
+    event->Get(epicsValues);
     
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
     for(unsigned int j = 0; j < epicsValues.size(); j++){
         const DEPICSvalue *thisValue = epicsValues[j];
         if (strcmp((thisValue->name).c_str(), "IBCAD00CRCUR6") == 0){
@@ -770,15 +772,15 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     if (BEAM_CURRENT < 10.0) {
     	dHistBeamEvents->Fill(0);
         if (REQUIRE_BEAM){
-        	japp->RootUnLock(); //RELEASE ROOT LOCK
-            return NOERROR; // Skip events where we can't verify the beam current
+			DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
+            return; // Skip events where we can't verify the beam current
         }
     }
     else{
     	dHistBeamEvents->Fill(1);
         fBeamEventCounter++;
     }
-    japp->RootUnLock(); //RELEASE ROOT LOCK
+	DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
 
     if (fBeamEventCounter >= BEAM_EVENTS_TO_KEEP) { // Able to specify beam ON events instead of just events
         cout<< "Maximum number of Beam Events reached" << endl;
@@ -787,7 +789,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     }
 
     
-    // Get the objects from the event loop
+    // Get the objects from the eveevent
     vector<const DCDCHit *> cdcHitVector;
     vector<const DFDCHit *> fdcHitVector;
     vector<const DSCHit *> scHitVector;
@@ -815,31 +817,31 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     if(CCAL_CALIB) {
       event->Get(ccalHitVector);
     }
-    loop->Get(dircPmtHitVector);
-    loop->Get(psHitVector);
-    loop->Get(pscHitVector);
-    loop->Get(tagmHitVector, "Calib");
-    loop->Get(taghHitVector, "Calib");
-    loop->Get(fmwpcHitVector);
-    loop->Get(ctofHitVector);
-    loop->Get(tpolHitVector);
+    event->Get(dircPmtHitVector);
+    event->Get(psHitVector);
+    event->Get(pscHitVector);
+    event->Get(tagmHitVector, "Calib");
+    event->Get(taghHitVector, "Calib");
+    event->Get(fmwpcHitVector);
+    event->Get(ctofHitVector);
+    event->Get(tpolHitVector);
 
     vector<const DNeutralShower *> neutralShowerVector;
-    loop->Get(neutralShowerVector);
+    event->Get(neutralShowerVector);
     vector<const DCCALShower *> ccalShowerVector;
-    loop->Get(ccalShowerVector);
+    event->Get(ccalShowerVector);
     vector<const DChargedTrack *> chargedTrackVector;
-    loop->Get(chargedTrackVector);
+    event->Get(chargedTrackVector);
 
     
    
 
 	// extract the FCAL Geometry
 	vector<const DFCALGeometry*> fcalGeomVect;
-	loop->Get( fcalGeomVect );
+	event->Get( fcalGeomVect );
 	if (fcalGeomVect.size() < 1){
         cout << "FCAL Geometry not available?" << endl;
-        return OBJECT_NOT_AVAILABLE;
+        return; //OBJECT_NOT_AVAILABLE;
 	}
 	const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
 
@@ -855,18 +857,17 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     
     if(NO_TRACKS) {
 	    // If the drift chambers are turned off, we'll need to use the neutral showers to choose the RF
-	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
+	    event->GetSingle(thisRFBunch, "CalorimeterOnly");
     } else {
         if(NO_START_COUNTER) {
-		    loop->GetSingle(thisRFBunch);   // if there's no start counter, then use the normal RF times 
+		    event->GetSingle(thisRFBunch);   // if there's no start counter, then use the normal RF times 
 		} else {
-	    	loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
+	    	event->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
 	    }
     }
 
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-
+	DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	// Start by filling individual hit times
 	// 
 	// The detectors with both TDCs and ADCs need these two to be aligned
@@ -1287,7 +1288,8 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     // Certainly good enough to take a pass at the time based tracking
     // This will be the final alignment step for now
 
-    if (thisRFBunch->dNumParticleVotes < 2) { japp->RootUnLock(); return NOERROR; }
+    if (thisRFBunch->dNumParticleVotes < 2) { DEvent::GetLockService(event)->RootUnLock(); return; }
+    auto dRFTimeFactory = static_cast<DRFTime_factory*>(event->GetFactory("DRFTime", ""));
 
     // Loop over TAGM hits
     for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
@@ -1414,9 +1416,9 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
     
     // we went this far just to align the tagger with the RF time, nothing else to do without tracks
     if(NO_TRACKS) 
-	    { japp->RootUnLock();  return NOERROR; }
+	    { DEvent::GetLockService(event)->RootUnLock();  return; }
 
-    if (!DO_TRACK_BASED && !DO_VERIFY ) { japp->RootUnLock();  return NOERROR; }   // Before this stage we aren't really ready yet, so just return
+    if (!DO_TRACK_BASED && !DO_VERIFY ) { DEvent::GetLockService(event)->RootUnLock();  return; }   // Before this stage we aren't really ready yet, so just return
 
     // Try using the detector matches
     // Loop over the charged tracks
@@ -1558,7 +1560,7 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 				 // TODO: OPTIMIZE THIS
 				// get DIRC match parameters (contains LUT information)
 				const DDetectorMatches* locDetectorMatches = NULL;
-				loop->GetSingle(locDetectorMatches);
+				event->GetSingle(locDetectorMatches);
 				DDetectorMatches &locDetectorMatch = (DDetectorMatches&)locDetectorMatches[0];
 				shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 				bool foundDIRC = locParticleID->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams);
@@ -1647,10 +1649,10 @@ void JEventProcessor_HLDetectorTiming::Process(const std::shared_ptr<const JEven
 		}
     } // End of loop over time based tracks
 		
-    japp->RootUnLock(); //RELEASE ROOT LOCK - FIX IT
+   DEvent::GetLockService(event)->RootUnLock();
 
 
-    return NOERROR;
+    return;
 }
 
 
