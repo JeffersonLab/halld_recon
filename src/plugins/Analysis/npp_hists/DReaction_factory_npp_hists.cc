@@ -9,10 +9,9 @@
 #include "DReaction_factory_npp_hists.h"
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DReaction_factory_npp_hists::evnt(JEventLoop* locEventLoop, uint64_t locEventNumber)
-{
+void DReaction_factory_npp_hists::Process(const std::shared_ptr<const JEvent>& event){
 	// Make as many DReaction objects as desired
 	DReactionStep* locReactionStep = NULL;
 	DReaction* locReaction = NULL; //create with a unique name for each DReaction object. CANNOT (!) be "Thrown"
@@ -114,18 +113,18 @@ jerror_t DReaction_factory_npp_hists::evnt(JEventLoop* locEventLoop, uint64_t lo
 	// Custom histograms
 	locReaction->Add_AnalysisAction(new DCustomAction_npp_hists(locReaction, true));
 
-	_data.push_back(locReaction); //Register the DReaction with the factory
+	Insert(locReaction); //Register the DReaction with the factory
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DReaction_factory_npp_hists::fini(void)
+void DReaction_factory_npp_hists::Finish()
 {
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
-	return NOERROR;
+	return;
 }
 
