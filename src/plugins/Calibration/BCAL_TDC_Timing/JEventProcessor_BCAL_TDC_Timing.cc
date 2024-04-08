@@ -47,15 +47,16 @@ void InitPlugin(JApplication *app){
 //------------------
 JEventProcessor_BCAL_TDC_Timing::JEventProcessor_BCAL_TDC_Timing()
 {
-	VERBOSE = 0;
+	auto app = GetApplication();
+    VERBOSE = 0;
 	VERBOSEHISTOGRAMS = 0;
 
     DONT_USE_SC = false;
 
-	if(gPARMS){
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
-		gPARMS->SetDefaultParameter("BCAL_TDC_Timing:DONT_USE_SC", DONT_USE_SC, "Don't require tracks to match to the start counter (default 0 to require this matching)");
+	if(app){
+		app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSE", VERBOSE, "Verbosity level");
+		app->SetDefaultParameter("BCAL_TDC_Timing:VERBOSEHISTOGRAMS", VERBOSEHISTOGRAMS, "Create more histograms (default 0 for monitoring)");
+		app->SetDefaultParameter("BCAL_TDC_Timing:DONT_USE_SC", DONT_USE_SC, "Don't require tracks to match to the start counter (default 0 to require this matching)");
 	}
 
 }
