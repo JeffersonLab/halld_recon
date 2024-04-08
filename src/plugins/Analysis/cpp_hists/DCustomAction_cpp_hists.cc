@@ -6,11 +6,12 @@
 //
 
 #include "DCustomAction_cpp_hists.h"
+#include <DANA/DEvent.h>
 
-void DCustomAction_cpp_hists::Run_Update(JEventLoop* locEventLoop)
+
+void DCustomAction_cpp_hists::Run_Update(const std::shared_ptr<const JEvent>& locEvent)
 {
-	DApplication* dapp=dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
-	JCalibration *jcalib = dapp->GetJCalibration((locEventLoop->GetJEvent()).GetRunNumber());
+	JCalibration *jcalib = DEvent::GetJCalibration(locEvent);
 
 	// Parameters for event selection to fill histograms
 	endpoint_energy = 12.;
@@ -34,14 +35,14 @@ void DCustomAction_cpp_hists::Run_Update(JEventLoop* locEventLoop)
 		jout<<"No /PHOTON_BEAM/coherent_energy for this run number: using default range of 0-12 GeV"<<endl;
 	}
 
-	locEventLoop->GetSingle(dAnalysisUtilities);
+	locEvent->GetSingle(dAnalysisUtilities);
 
 }
 
-void DCustomAction_cpp_hists::Initialize(JEventLoop* locEventLoop)
+void DCustomAction_cpp_hists::Initialize(const std::shared_ptr<const JEvent>& locEvent)
 {
   
-	Run_Update(locEventLoop);
+	Run_Update(locEvent);
 
 	//Optional: Create histograms and/or modify member variables.
 	//Create any histograms/trees/etc. within a ROOT lock. 
@@ -50,7 +51,7 @@ void DCustomAction_cpp_hists::Initialize(JEventLoop* locEventLoop)
 
 	//CREATE THE HISTOGRAMS
 	//Since we are creating histograms, the contents of gDirectory will be modified: must use JANA-wide ROOT lock
-	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	{
 		//Required: Create a folder in the ROOT output file that will contain all of the output ROOT objects (if any) for this action.
 			//If another thread has already created the folder, it just changes to it. 
@@ -83,11 +84,11 @@ void DCustomAction_cpp_hists::Initialize(JEventLoop* locEventLoop)
 		//Return to the base directory
 		ChangeTo_BaseDirectory();
 	}
-	japp->RootUnLock(); //RELEASE ROOT LOCK!!
+	DEvent::GetLockService(locEvent)->RootUnLock(); //RELEASE ROOT LOCK!!
 	
 }
 
-bool DCustomAction_cpp_hists::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
+bool DCustomAction_cpp_hists::Perform_Action(const std::shared_ptr<const JEvent>& locEvent, const DParticleCombo* locParticleCombo)
 {
 	//Write custom code to perform an action on the INPUT DParticleCombo (DParticleCombo)
 	//NEVER: Grab DParticleCombo or DAnalysisResults objects (of any tag!) from the JEventLoop within this function
