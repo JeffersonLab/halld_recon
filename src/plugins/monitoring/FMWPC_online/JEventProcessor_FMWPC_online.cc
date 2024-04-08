@@ -13,6 +13,7 @@
 #include "FMWPC/DCTOFTDCDigiHit.h"
 #include "FMWPC/DCTOFHit.h"
 #include <TTAB/DTTabUtilities.h>
+#include <DANA/DEvent.h>
 
 #include <TDirectory.h>
 #include <TH1.h>
@@ -72,7 +73,7 @@ JEventProcessor_FMWPC_online::~JEventProcessor_FMWPC_online(){
 }
 
 //------------------
-// init
+// Init
 //------------------
 void JEventProcessor_FMWPC_online::Init()
 {
@@ -164,19 +165,19 @@ void JEventProcessor_FMWPC_online::BeginRun(const std::shared_ptr<const JEvent> 
   // This is called whenever the run number changes
    // load base time offset
   map<string,double> base_time_offset;
-  if ((eventLoop->GetCalib("/CTOF/adc_base_time_offset",base_time_offset))==false){
+  if ((DEvent::GetCalib(event, "/CTOF/adc_base_time_offset",base_time_offset))==false){
     ctof_t_base_adc = base_time_offset["t0"];
   }
-  if ((eventLoop->GetCalib("/CTOF/tdc_base_time_offset",base_time_offset))==false){
+  if ((DEvent::GetCalib(event, "/CTOF/tdc_base_time_offset",base_time_offset))==false){
     ctof_t_base_tdc = base_time_offset["t0"];
   }
 
   // Channel-by-channel timing offsets
-  eventLoop->GetCalib("/CTOF/adc_timing_offsets", ctof_adc_time_offsets); 
-  eventLoop->GetCalib("/CTOF/tdc_timing_offsets", ctof_tdc_time_offsets);
+  DEvent::GetCalib(event, "/CTOF/adc_timing_offsets", ctof_adc_time_offsets); 
+  DEvent::GetCalib(event, "/CTOF/tdc_timing_offsets", ctof_tdc_time_offsets);
 
 
-  return NOERROR;
+  return;
 }
 
 //------------------
@@ -199,7 +200,7 @@ void JEventProcessor_FMWPC_online::Process(const std::shared_ptr<const JEvent> &
 	// japp->RootFillUnLock(this);
 
         const DTTabUtilities* locTTabUtilities = NULL;
-        loop->GetSingle(locTTabUtilities);
+        event->GetSingle(locTTabUtilities);
   
         // get wire digis
         vector<const DFMWPCDigiHit*>fmwpcdigis;
@@ -211,18 +212,19 @@ void JEventProcessor_FMWPC_online::Process(const std::shared_ptr<const JEvent> &
 
         // get CTOF ADC digis
         vector<const DCTOFDigiHit*>ctofdigis;
-        loop->Get(ctofdigis);
+        event->Get(ctofdigis);
 
         // get CTOF TDC digis
         vector<const DCTOFTDCDigiHit*>ctoftdcdigis;
-        loop->Get(ctoftdcdigis);
+        event->Get(ctoftdcdigis);
+		
 
 	vector<const DCTOFHit*>ctofHits;
-	loop->Get(ctofHits);
-
+	event->Get(ctofHits);
         // FILL HISTOGRAMS
         // Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
-        lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+        auto lockService = DEvent::GetLockService(event);
+		lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
         fmwpc_num_events->Fill(1);
 
@@ -308,9 +310,9 @@ void JEventProcessor_FMWPC_online::Process(const std::shared_ptr<const JEvent> &
 	  }
 	}
 
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
-	return NOERROR;
+	return;
 }
 
 //------------------
