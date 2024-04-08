@@ -77,9 +77,9 @@ class JEventProcessor_HLDetectorTiming:public JEventProcessor{
         int GetCCDBIndexCDC(const DCDCHit *);
         int GetCCDBIndexCDC(int, int);
         
-        map< string, function<bool(jana::JEventLoop *eventLoop)> > dCutFunctions;
+        map< string, function<bool(const std::shared_ptr<const JEvent>& event)> > dCutFunctions;
         
-        double BEAM_CURRENT;
+		double BEAM_CURRENT;
         double Z_TARGET;
         int DO_ROUGH_TIMING, DO_TDC_ADC_ALIGN, DO_TRACK_BASED, DO_VERIFY, REQUIRE_BEAM, BEAM_EVENTS_TO_KEEP, DO_CDC_TIMING, DO_OPTIONAL, DO_FITS, DO_REACTION, USE_RF_BUNCH;
 		int DO_HIGH_RESOLUTION;
