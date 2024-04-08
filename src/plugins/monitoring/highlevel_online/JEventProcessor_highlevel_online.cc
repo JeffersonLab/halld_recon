@@ -278,8 +278,8 @@ void JEventProcessor_highlevel_online::Init()
 	d2gamma = new TH1I("TwoGammaMass", "2#gamma inv. mass;2#gamma inv. mass (GeV)", 400, 0.0, 1.2);
 
 	isExclusive = true;
-	if(gPARMS){
-	  gPARMS->SetDefaultParameter("HIGHLEVEL_ONLINE:EXCLUSIVE", isExclusive, "Require exclusivity for meson production plots");
+	if(app){
+	  app->SetDefaultParameter("HIGHLEVEL_ONLINE:EXCLUSIVE", isExclusive, "Require exclusivity for meson production plots");
 	}
 
 	// pi+ pi-
@@ -367,7 +367,7 @@ void JEventProcessor_highlevel_online::BeginRun(const std::shared_ptr<const JEve
 
 	dCoherentPeakRange = pair<double, double>(8.4, 9.0);
 	map<string, double> photon_beam_param;
-	if(locEventLoop->GetCalib("/PHOTON_BEAM/coherent_energy", photon_beam_param) == false)
+	if(DEvent::GetCalib(event, "/PHOTON_BEAM/coherent_energy", photon_beam_param) == false)
 		dCoherentPeakRange = pair<double, double>(photon_beam_param["cohmin_energy"], photon_beam_param["cohedge_energy"]);
 
 	fcal_cell_thr  =  65;
