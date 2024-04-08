@@ -74,7 +74,8 @@ JEventProcessor_PSC_TW::~JEventProcessor_PSC_TW()
 }
 
 //------------------
-// Init //------------------
+// Init 
+//------------------
 void JEventProcessor_PSC_TW::Init()
 {
 	auto app = GetApplication();
@@ -121,7 +122,7 @@ void JEventProcessor_PSC_TW::Init()
    }
    main->cd();
 
-   return NOERROR;
+   return;
 }
 
 //------------------
