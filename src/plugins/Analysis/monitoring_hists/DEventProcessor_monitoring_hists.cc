@@ -32,7 +32,7 @@ void DEventProcessor_monitoring_hists::Init()
 	app->SetDefaultParameter("MONITOR:MEMORY_EVENTS", dNumMemoryMonitorEvents);
 
     MIN_TRACKING_FOM = 0.0027;
-    gPARMS->SetDefaultParameter("MONITOR:MIN_TRACKING_FOM", MIN_TRACKING_FOM);
+    app->SetDefaultParameter("MONITOR:MIN_TRACKING_FOM", MIN_TRACKING_FOM);
 
 	string locOutputFileName = "hd_root.root";
 	if(app->GetJParameterManager()->Exists("OUTPUT_FILENAME"))
@@ -74,16 +74,16 @@ void DEventProcessor_monitoring_hists::BeginRun(const std::shared_ptr<const JEve
 	dHistogramAction_EventVertex.Initialize(locEvent);
 
     dHistogramAction_DetectorMatching.dMinTrackingFOM = MIN_TRACKING_FOM;
-	dHistogramAction_DetectorMatching.Initialize(locEventLoop);
-	dHistogramAction_DetectorMatchParams.Initialize(locEventLoop);
-	dHistogramAction_Neutrals.Initialize(locEventLoop);
-	dHistogramAction_DetectorPID.Initialize(locEventLoop);
+	dHistogramAction_DetectorMatching.Initialize(locEvent);
+	dHistogramAction_DetectorMatchParams.Initialize(locEvent);
+	dHistogramAction_Neutrals.Initialize(locEvent);
+	dHistogramAction_DetectorPID.Initialize(locEvent);
 
     dHistogramAction_TrackMultiplicity.dMinTrackingFOM = MIN_TRACKING_FOM;
-	dHistogramAction_TrackMultiplicity.Initialize(locEventLoop);
-	dHistogramAction_DetectedParticleKinematics.Initialize(locEventLoop);
-	dHistogramAction_TrackShowerErrors.Initialize(locEventLoop);
-	dHistogramAction_TriggerStudies.Initialize(locEventLoop);
+	dHistogramAction_TrackMultiplicity.Initialize(locEvent);
+	dHistogramAction_DetectedParticleKinematics.Initialize(locEvent);
+	dHistogramAction_TrackShowerErrors.Initialize(locEvent);
+	dHistogramAction_TriggerStudies.Initialize(locEvent);
 
 	if(dNumMemoryMonitorEvents > 0)
 	{
