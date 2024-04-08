@@ -6,24 +6,24 @@
 //
 
 #include "JEventProcessor_FCAL_cpp.h"
-using namespace jana;
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
 
-
 #include <FCAL/DFCALHit.h>
 #include <FCAL/DFCALShower.h>
 #include <TRIGGER/DL1Trigger.h>
 #include <PID/DEventRFBunch.h>
+#include <DANA/DEvent.h>
+
 
 
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_FCAL_cpp());
+	app->Add(new JEventProcessor_FCAL_cpp());
 }
 } // "C"
 
@@ -45,9 +45,9 @@ JEventProcessor_FCAL_cpp::~JEventProcessor_FCAL_cpp()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_FCAL_cpp::init(void)
+void JEventProcessor_FCAL_cpp::Init()
 {
 	// This is called once at program startup. 
 
@@ -72,31 +72,32 @@ jerror_t JEventProcessor_FCAL_cpp::init(void)
 
   main->cd();
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_FCAL_cpp::brun(JEventLoop *loop, int32_t runnumber)
+void JEventProcessor_FCAL_cpp::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
 
   vector<const DFCALGeometry*> fcalGeomVect;
-  loop->Get(fcalGeomVect);
+  event->Get(fcalGeomVect);
   fcalGeom = fcalGeomVect[0];
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_FCAL_cpp::Process(const std::shared_ptr<const JEvent>& event)
 {
 
   vector<const DL1Trigger*> l1trig;
-  loop->Get(l1trig);
+  auto lockService = DEvent::GetLockService(event);
+  event->Get(l1trig);
 
   int fcaltrigger = 0, toftrigger = 0;
   if(l1trig.size()) {
@@ -104,18 +105,18 @@ jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
     if( (l1trig[0]->trig_mask & (1 << (2-1))) && ! fcaltrigger) toftrigger = 1;
   }
 
-  if(!fcaltrigger&&!toftrigger) return NOERROR;
+  if(!fcaltrigger&&!toftrigger) return;
   if(fcaltrigger) ++nfcaltriggers;
   if(toftrigger) ++ntoftriggers;
 
   vector<const DFCALHit*> fcal_hits;
-  loop->Get(fcal_hits);
+  event->Get(fcal_hits);
 
   vector<const DFCALCluster*> fcal_clusters;
-  loop->Get(fcal_clusters);
+  event->Get(fcal_clusters);
 
   vector<const DFCALShower*> fcal_showers;
-  loop->Get(fcal_showers);
+  event->Get(fcal_showers);
 
   double efcaltot = 0., efcalmax = 0.;
   for(unsigned int i = 0; i<fcal_hits.size(); ++i) {
@@ -136,9 +137,9 @@ jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     if(fcaltrigger&&fcale>0.3) fcal_nhit[row][col] += 1.;
     if(fcale<0.3) {
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       h_fcalehit_tall_map->Fill(col,row,fcale);
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
     }
   }
 
@@ -167,35 +168,35 @@ jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
       double t2 = fcal_shower2->getTime();
       double e2 = fcal_shower2->getEnergy();
       if(e2>1.0&&e2<3.0) {
-        japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+        lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK!!
         if(e>1.0&&e<3.0) {
           h_fcalshower_tall->Fill(id,t-t2);
           h_fcalshower_tall_map->Fill(col,row,t-t2);
         }
         if(e2>1.5&&e2<2.5)  h_fcalshower_tw->Fill(e,t-t2);
-        japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+        lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK!!	
       }
     }
   }
 
-	return NOERROR;
+	return;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_FCAL_cpp::erun(void)
+void JEventProcessor_FCAL_cpp::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_FCAL_cpp::fini(void)
+void JEventProcessor_FCAL_cpp::Finish()
 {
 	// Called before program exit after event processing is finished.
 
@@ -242,6 +243,6 @@ jerror_t JEventProcessor_FCAL_cpp::fini(void)
       }
     }
 
-	return NOERROR;
+	return;
 }
 
