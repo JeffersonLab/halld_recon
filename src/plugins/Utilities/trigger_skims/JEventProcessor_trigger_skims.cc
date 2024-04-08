@@ -46,13 +46,13 @@ void JEventProcessor_trigger_skims::Init()
     int sync_writeout_toggle = 1;
     int ctof_writeout_toggle = 1;
 
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
-    gPARMS->SetDefaultParameter("TRIGSKIM:WRITECTOF", ctof_writeout_toggle, "Write out CTOF events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEBCALLED", bcal_led_writeout_toggle, "Write out BCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEFCALLED", fcal_led_writeout_toggle, "Write out FCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITECCALLED", fcal_led_writeout_toggle, "Write out CCAL LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITEDIRCLED", fcal_led_writeout_toggle, "Write out DIRC LED events");
+    app->SetDefaultParameter("TRIGSKIM:WRITERANDOM", random_writeout_toggle, "Write out random pulser events");
+    app->SetDefaultParameter("TRIGSKIM:WRITESYNC", sync_writeout_toggle, "Write out TS sync events");
+    app->SetDefaultParameter("TRIGSKIM:WRITECTOF", ctof_writeout_toggle, "Write out CTOF events");
 
     if(bcal_led_writeout_toggle == 0)
         write_out_bcal_led = false;
@@ -69,7 +69,7 @@ void JEventProcessor_trigger_skims::Init()
     if(ctof_writeout_toggle == 0)
         write_out_ctof = false;
 
-    return NOERROR;
+    return;
 }
 
 //-------------------------------
@@ -89,22 +89,22 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
 	locEvent->GetSingle(locEventWriterEVIO);
 
     // Save BOR events
-    if(locEventLoop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) {
+    if(locEvent->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_BOR_EVENT)) {
         if (write_out_bcal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "BCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "BCAL-LED" );
         if (write_out_ccal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "CCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "CCAL-LED" );
         if (write_out_fcal_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "FCAL-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "FCAL-LED" );
         if (write_out_dirc_led)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "DIRC-LED" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "DIRC-LED" );
         if (write_out_random)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "random" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "random" );
         if (write_out_sync)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "sync" );
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "sync" );
         if (write_out_ctof)
-            locEventWriterEVIO->Write_EVIOEvent( locEventLoop, "ctof" );
-        return NOERROR;
+            locEventWriterEVIO->Write_EVIOEvent( locEvent, "ctof" );
+        return;
     }
 
 	// Save EPICS events
@@ -120,10 +120,10 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
         if (write_out_dirc_led)
             locEventWriterEVIO->Write_EVIOEvent(locEvent, "DIRC-LED");
         if (write_out_random)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "random");
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "random");
         if (write_out_ctof)
-            locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "ctof");
-		return NOERROR;
+            locEventWriterEVIO->Write_EVIOEvent(locEvent, "ctof");
+		return;
 	}
 
 	//bool is_cosmic_trigger = false;
@@ -235,10 +235,10 @@ void JEventProcessor_trigger_skims::Process(const std::shared_ptr<const JEvent>&
       locEventWriterEVIO->Write_EVIOEvent(locEvent, "sync");
     }
     if ( write_out_ctof && is_ctof_event )  {
-      locEventWriterEVIO->Write_EVIOEvent(locEventLoop, "ctof");
+      locEventWriterEVIO->Write_EVIOEvent(locEvent, "ctof");
     }
     
-    return NOERROR;
+    return;
 }
 
 //-------------------------------
