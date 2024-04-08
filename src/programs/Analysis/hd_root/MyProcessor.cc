@@ -149,7 +149,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 		if(!factory)factory = event->GetFactory("D" + name,tag.c_str());
 			if(factory){
 			try{
-				factory->Create(event, event->GetJApplication(), event->GetRunNumber());
+				factory->Create(event);
 			}catch(...){
 				// someone threw an exception
 			}

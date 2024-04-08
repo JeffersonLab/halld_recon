@@ -154,7 +154,8 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 		if(!factory)factory = event->GetFactory("D" + name,tag.c_str());
 		if(factory){
 			try{
-				if(factory->Create(event, event->GetJApplication(), event->GetRunNumber()) > 0){
+				factory->Create(event);
+				if( factory->GetNumObjects() > 0){
 					event_is_boring=0;
 					if(PRINT_SUMMARY_HEADER)break;
 				}
@@ -180,7 +181,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 			string name = fac->GetObjectName();
 			string tag  = fac->GetTag();
 			if(tag.size()>0) name += ":" + tag;
-			if( tosummarize.count(name) ) fac->Create(event, event->GetJApplication(), event->GetRunNumber());
+			if( tosummarize.count(name) ) fac->Create(event);
 		}
 	}
 	
@@ -263,7 +264,7 @@ void MyProcessor::PrintSummaryHeader(const std::shared_ptr<const JEvent>& event,
 
 		if (!do_not_call_get) {
 			// Make sure this factory has been activated
-			factory->Create(event, event->GetJApplication(), event->GetRunNumber());
+			factory->Create(event);
 		}
 		// Retrieve number of rows (whether it has been activated or not)
 		size_t nrows = factory->GetAs<JObject>().size(); // GetAs doesn't trigger creation
