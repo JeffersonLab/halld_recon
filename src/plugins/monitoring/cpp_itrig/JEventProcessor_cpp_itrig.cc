@@ -16,9 +16,9 @@
 
 
 #include "JEventProcessor_cpp_itrig.h"
+#include <DANA/DEvent.h>
 
 using namespace std;
-using namespace jana;
 
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
@@ -47,7 +47,7 @@ static TTree *tree = NULL;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_cpp_itrig());
+	app->Add(new JEventProcessor_cpp_itrig());
 }
 } // "C"
 
@@ -69,18 +69,19 @@ JEventProcessor_cpp_itrig::~JEventProcessor_cpp_itrig()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cpp_itrig::init(void)
+void JEventProcessor_cpp_itrig::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling histograms in this plugin, you should lock the
 	// ROOT mutex like this:
 	//
+  auto app = GetApplication();
 
   MAKE_TREE = 0;
-  if(gPARMS){
-    gPARMS->SetDefaultParameter("cpp_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
+  if(app){
+    app->SetDefaultParameter("cpp_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
   }
 
 
@@ -167,22 +168,22 @@ jerror_t JEventProcessor_cpp_itrig::init(void)
   main->cd();
 
 
-  return NOERROR;
+  return;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cpp_itrig::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cpp_itrig::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
+	return;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cpp_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cpp_itrig::Process(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called for every event. 
 
@@ -194,7 +195,7 @@ jerror_t JEventProcessor_cpp_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
   if (MAKE_TREE) {
     vector<const DCODAEventInfo*> info;
   
-    loop->Get(info);
+    event->Get(info);
   
     if (info.size() != 0) {
       timestamp = (ULong64_t)info[0]->avg_timestamp;
@@ -203,13 +204,13 @@ jerror_t JEventProcessor_cpp_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   
   vector<const Df125TriggerTime*> ttvector;
-  loop->Get(ttvector); 
+  event->Get(ttvector); 
 
   int nd = (int)ttvector.size();
 
   if (nd) {
 
-    ULong64_t eventnum = (ULong64_t)eventnumber;
+    ULong64_t eventnum = (ULong64_t)event->GetRunNumber();
     ULong64_t ttime; //trigger time
     uint32_t rocid, slot, itrigger;
     int tdiff, itrigdiff;
@@ -321,15 +322,14 @@ jerror_t JEventProcessor_cpp_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
         posdiff = posdiff>>1;
       }
 
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-
+      DEvent::GetLockService(event)->RootWriteLock(); //ACQUIRE ROOT LOCK!!
       // increment monitoring histo when trigger time and itrigger are both off by more than 1 bit
 
       if ( diffcount_ttime>1 && diffcount_itrig>1 ) hdiffs->Fill(rocmap[rocid],slot,1);  
 
       if (MAKE_TREE) tree->Fill();
 
-      japp->RootUnLock();
+	    DEvent::GetLockService(event)->RootUnLock(); //RELEASE ROOT LOCK!!
 
     }  // for each Df125TriggerTime
 
@@ -337,27 +337,27 @@ jerror_t JEventProcessor_cpp_itrig::evnt(JEventLoop *loop, uint64_t eventnumber)
   }  // if (nd)  
 
 
-  return NOERROR;
+  return;
 
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cpp_itrig::erun(void)
+void JEventProcessor_cpp_itrig::EndRun()
 {
 	// This is called whenever the run number changes, before it is
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_cpp_itrig::fini(void)
+void JEventProcessor_cpp_itrig::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return;
 }
 
