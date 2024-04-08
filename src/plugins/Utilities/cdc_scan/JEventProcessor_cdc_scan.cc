@@ -28,6 +28,7 @@
 #include "JEventProcessor_cdc_scan.h"
 #include <JANA/JApplication.h>
 
+
 using namespace std;
 
 
@@ -91,14 +92,14 @@ void JEventProcessor_cdc_scan::Init()
 
   EMU = 1;    // set to 0 to skip emulation from window raw data
 
-  if (gPARMS) {
-    gPARMS->SetDefaultParameter("CDC_SCAN:EMU",EMU,"Set to 0 to skip emulation from window raw data");
+  if (app) {
+    app->SetDefaultParameter("CDC_SCAN:EMU",EMU,"Set to 0 to skip emulation from window raw data");
   }
 
   FDC = 1;    // set to 0 to skip FDC data
 
-  if (gPARMS) {
-    gPARMS->SetDefaultParameter("CDC_SCAN:FDC",FDC,"Set to 0 to skip FDC data");
+  if (app) {
+    app->SetDefaultParameter("CDC_SCAN:FDC",FDC,"Set to 0 to skip FDC data");
   }
 
 
@@ -110,7 +111,7 @@ void JEventProcessor_cdc_scan::Init()
   if (!FDC)  cout << "\n cdc_scan: skipping FDC data\n\n";  
 
 
-  japp->RootWriteLock();
+  lockService->RootWriteLock();
   
   t = new TTree("T","Event stats");
 
@@ -274,27 +275,27 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   }
    
   vector <const Df125CDCPulse*> cdcpulses;
-  loop->Get(cdcpulses);
+  event->Get(cdcpulses);
   uint32_t nc = (uint32_t)cdcpulses.size();
 
   
   vector <const Df125FDCPulse*> fdcpulses;
-  loop->Get(fdcpulses);
+  event->Get(fdcpulses);
   uint32_t nf = (uint32_t)fdcpulses.size();
 
 
   vector<const Df125TriggerTime*> ttvector;
-  loop->Get(ttvector);
+  event->Get(ttvector);
   uint32_t ntt = (uint32_t)ttvector.size();
 
   
-  if (nc+nf==0) return NOERROR;  // no DC hits
+  if (nc+nf==0) return;  // no DC hits
 
 
-  ULong64_t eventnum = (ULong64_t)eventnumber;
+  ULong64_t eventnum = (ULong64_t)event->GetEventNumber();
 
   
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
   t->SetBranchAddress("eventnum",&eventnum);
   t->SetBranchAddress("CDCPulsecount",&nc);
@@ -303,7 +304,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
     
   t->Fill();  
 
-  japp->RootUnLock();
+  lockService->RootUnLock();
   
  
   
@@ -339,7 +340,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
       tt->Fill();
     }
 
-    japp->RootUnLock();
+    lockService->RootUnLock();
 
   }
 
@@ -349,7 +350,7 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
 
   if (nc || (nf&&FDC)) {  // branches are almost the same for CDC & FDC - only amp differs
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
     
     p->SetBranchAddress("eventnum",&eventnum);
 
@@ -704,10 +705,10 @@ void JEventProcessor_cdc_scan::Process(const std::shared_ptr<const JEvent> &even
   
     }
 
-    japp->RootUnLock();    
+    lockService->RootUnLock();    
   }
     
-  return NOERROR;
+  return;
 
 }
 
