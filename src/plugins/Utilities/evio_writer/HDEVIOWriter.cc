@@ -42,12 +42,12 @@ HDEVIOWriter::HDEVIOWriter(string sink_name, JApplication* app)
 		// must be a string.
 		string max_output_buffer = "AUTO";
 
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_QUEUE_SIZE" , MAX_OUTPUT_QUEUE_SIZE,  "Maximum number of events output queue can have before processing threads start blocking.");
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_BUFFER_SIZE", max_output_buffer,      "Maximum number of words in output EVIO block. This may be overwritten by ET event size if writing to ET.");
-		gPARMS->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set less than 2 when running online.  Default is 5 for offline running");
-		gPARMS->SetDefaultParameter("EVIOOUT:NEVENTS_PER_BLOCK",      NEVENTS_PER_BLOCK,      "Suggested number of events to write in single output block.");
-		gPARMS->SetDefaultParameter("EVIOOUT:DEBUG_FILES" , DEBUG_FILES,  "Write input and output debug files in addition to the standard output.");
-		gPARMS->SetDefaultParameter("EVIOOUT:THREAD_SLEEP_TIME" , THREAD_SLEEP_TIME,  "Time in microseconds for thread to sleep in between checking to see if we are ready to write to the disk");
+		app->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_QUEUE_SIZE" , MAX_OUTPUT_QUEUE_SIZE,  "Maximum number of events output queue can have before processing threads start blocking.");
+		app->SetDefaultParameter("EVIOOUT:MAX_OUTPUT_BUFFER_SIZE", max_output_buffer,      "Maximum number of words in output EVIO block. This may be overwritten by ET event size if writing to ET.");
+		app->SetDefaultParameter("EVIOOUT:MAX_HOLD_TIME",          MAX_HOLD_TIME,          "Maximum time in seconds to keep events in buffer before flushing them. This is to prevent farm from witholding events from ER when running very slow trigger rates. This should not be set less than 2 when running online.  Default is 5 for offline running");
+		app->SetDefaultParameter("EVIOOUT:NEVENTS_PER_BLOCK",      NEVENTS_PER_BLOCK,      "Suggested number of events to write in single output block.");
+		app->SetDefaultParameter("EVIOOUT:DEBUG_FILES" , DEBUG_FILES,  "Write input and output debug files in addition to the standard output.");
+		app->SetDefaultParameter("EVIOOUT:THREAD_SLEEP_TIME" , THREAD_SLEEP_TIME,  "Time in microseconds for thread to sleep in between checking to see if we are ready to write to the disk");
 
 		// Check if user specified max max buffer size
 		if( max_output_buffer != "AUTO" ){
