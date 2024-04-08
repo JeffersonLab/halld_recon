@@ -782,7 +782,6 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	    hddm_s::CtofHitList::iterator ctofhitit=ctofhitl->end()-1;
 	    ctofhitit->setEnd(CTOFHits[i]->end);
 	    ctofhitit->setT(CTOFHits[i]->t);
-	    ctofhitit->setT_ADC(CTOFHits[i]->t_adc);
 	    ctofhitit->setDE(CTOFHits[i]->dE);
 	  }
 	//=============================================FMWPC================================================
@@ -805,14 +804,14 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	      }
 	    if(foundChamber == false)
 	      {
-		hitv->getForwardMWPCs().addFmwpcChambers();
+		hitv->getForwardMWPC().addFmwpcChambers();
 		FMWPC_ChamberIterator = FMWPC_ChamberList->end()-1;
 		FMWPC_ChamberIterator->setLayer(FMWPCHits[i]->layer);
+		FMWPC_ChamberIterator->setWire(FMWPCHits[i]->wire);
 	      }
 	    FMWPC_ChamberIterator->addFmwpcHits();
 	    hddm_s::FmwpcHitList* fmwpchitl=&FMWPC_ChamberIterator->getFmwpcHits();
 	    hddm_s::FmwpcHitList::iterator fmwpchitit=fmwpchitl->end()-1;
-	    fmwpchitit->setWire(FMWPCHits[i]->wire);
 	    fmwpchitit->setT(FMWPCHits[i]->t);
 	  }
 	
