@@ -194,15 +194,15 @@ jerror_t JEventProcessor_FDC_Efficiency::init(void)
 	hExpectedHitsVsTrackingFOM = new TH1F("Expected Hits Vs Tracking FOM",  "Expected Hits", 100, 0 , 1.0);
 	hExpectedHitsVsTheta = new TH1F("Expected Hits Vs theta", "Expected Hits", 100, 0, 180);
 	hExpectedHitsVsMom = new TH1F("Expected Hits Vs p", "Expected Hits", 100, 0 , 10.0);
-	hExpectedHitsVsPhi = new TH1F("Expected Hits Vs delta", "Expected Hits", 100, -180, 180);
-	hExpectedHitsVsHitCells = new TH1F("Expected Hits Vs N", "Expected Hits", 25, -0.5 , 24.5);
+	hExpectedHitsVsPhi = new TH1F("Expected Hits Vs phi", "Expected Hits", 100, -180, 180);
+	hExpectedHitsVsHitCells = new TH1F("Expected Hits Vs Hit Cells", "Expected Hits", 25, -0.5 , 24.5);
   
 	hMeasuredHitsVsDOCA = new TH1F("Measured Hits Vs DOCA", "Measured Hits", 100, 0 , 0.5);
 	hMeasuredHitsVsTrackingFOM = new TH1F("Measured Hits Vs Tracking FOM",  "Measured Hits", 100, 0 , 1.0);
 	hMeasuredHitsVsTheta = new TH1F("Measured Hits Vs theta", "Measured Hits", 100, 0, 180);
 	hMeasuredHitsVsMom = new TH1F("Measured Hits Vs p", "Measured Hits", 100, 0 , 10.0);
-	hMeasuredHitsVsPhi = new TH1F("Measured Hits Vs delta", "Measured Hits", 100, -180, 180);
-	hMeasuredHitsVsHitCells = new TH1F("Measured Hits Vs N", "Measured Hits", 25, -0.5 , 24.5);
+	hMeasuredHitsVsPhi = new TH1F("Measured Hits Vs phi", "Measured Hits", 100, -180, 180);
+	hMeasuredHitsVsHitCells = new TH1F("Measured Hits Vs Hit Cells", "Measured Hits", 25, -0.5 , 24.5);
 	
 
   main->cd();
