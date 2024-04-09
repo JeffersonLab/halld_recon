@@ -2915,6 +2915,7 @@ jerror_t DEventSourceHDDM::Extract_DCTOFHit(hddm_s::HDDM *record,  JFactory<DCTO
       hit->end  = iter->getEnd();
       hit->dE    = iter->getDE();
       hit->t     = iter->getT();
+      hit->t_adc = hit->t;
       data.push_back(hit);
    }
 
