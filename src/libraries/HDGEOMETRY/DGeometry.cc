@@ -14,6 +14,8 @@
 #include "FDC/DFDCWire.h"
 #include "FDC/DFDCGeometry.h"
 #include <ansi_escape.h>
+#include "TString.h"
+
 
 using namespace std;
 
