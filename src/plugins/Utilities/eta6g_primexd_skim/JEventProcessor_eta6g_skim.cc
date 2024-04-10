@@ -164,13 +164,13 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
   vector< const DBeamPhoton* > locBeamPhotons;
   vector< const DSCHit* > locSCHit;
 
-  loop->Get(locFCALShowers);
-  loop->Get(locBCALShowers);
-  loop->Get(locCCALShowers);
-  loop->Get(kinfitVertex);
-  loop->Get(tof_points);
-  loop->Get(locBeamPhotons);
-  loop->Get(locSCHit);
+  event->Get(locFCALShowers);
+  event->Get(locBCALShowers);
+  event->Get(locCCALShowers);
+  event->Get(kinfitVertex);
+  event->Get(tof_points);
+  event->Get(locBeamPhotons);
+  event->Get(locSCHit);
   
   vector<const DTrackCandidate*> locTrackCandidate;
   event->Get(locTrackCandidate);
@@ -206,7 +206,7 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
   //bool Candidate = false;
   vector<const DFCALHit *> locFCALHits;
   
-  loop->Get(locFCALHits);  
+  event->Get(locFCALHits);  
   DVector3 vertex;
   vertex.SetXYZ(m_beamSpotX, m_beamSpotY, m_targetZ);
   for (unsigned int i = 0 ; i < tof_points.size(); i++) {
@@ -335,8 +335,8 @@ void JEventProcessor_eta6g_skim::Process(const std::shared_ptr<const JEvent>& ev
   if (FCAL_trg_Esum > 3.5 && PhotonList.size() >= 6) {
     //cout <<"eta6g_skim"<<endl;
     if( WRITE_EVIO ){
-      //locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g_skim", locObjectsToSave );
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta6g-skim");
+      //locEventWriterEVIO->Write_EVIOEvent( event, "eta6g_skim", locObjectsToSave );
+      locEventWriterEVIO->Write_EVIOEvent( event, "eta6g-skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
