@@ -24,12 +24,11 @@
 //----------------
 // Constructor
 //----------------
-DEventSourceREST::DEventSourceREST(const char* source_name)
+DEventSourceREST::DEventSourceREST(std::string source_name, JApplication* app)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
    SetTypeName("DEventSourceREST");
-
    ifs = new ifstream(source_name);
    ifs->get();
    ifs->unget();
@@ -51,11 +50,11 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    fin = new hddm_r::istream(*ifs);
    
    PRUNE_DUPLICATE_TRACKS = true;
-   japp->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS,
+   app->SetDefaultParameter("REST:PRUNE_DUPLICATE_TRACKS", PRUNE_DUPLICATE_TRACKS,
    								"Turn on/off cleaning up multiple tracks with the same hypothesis from the same candidate. Set to \"0\" to turn off (it's on by default)");
 
    RECO_DIRC_CALC_LUT = true;
-   japp->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction");
+   app->SetDefaultParameter("REST:DIRC_CALC_LUT", RECO_DIRC_CALC_LUT, "Turn on/off DIRC LUT reconstruction");
 
    dDIRCMaxChannels = 108*64;
 
@@ -64,13 +63,13 @@ DEventSourceREST::DEventSourceREST(const char* source_name)
    dFCALShowerFactory = nullptr;
 
    USE_CCDB_BCAL_COVARIANCE = false;
-   japp->SetDefaultParameter("REST:USE_CCDB_BCAL_COVARIANCE", USE_CCDB_BCAL_COVARIANCE,
+   app->SetDefaultParameter("REST:USE_CCDB_BCAL_COVARIANCE", USE_CCDB_BCAL_COVARIANCE,
    		"Load REST BCAL Shower covariance matrices from CCDB instead of the file.");
    USE_CCDB_FCAL_COVARIANCE = false;
-   japp->SetDefaultParameter("REST:USE_CCDB_FCAL_COVARIANCE", USE_CCDB_FCAL_COVARIANCE,
+   app->SetDefaultParameter("REST:USE_CCDB_FCAL_COVARIANCE", USE_CCDB_FCAL_COVARIANCE,
    		"Load REST BFAL Shower covariance matrices from CCDB instead of the file.");
    		
-   japp->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
+   app->SetDefaultParameter("REST:JANACALIBCONTEXT", REST_JANA_CALIB_CONTEXT);
    calib_generator = new JCalibrationGeneratorCCDB;  // keep this around in case we need to use it
 }
 
@@ -100,7 +99,7 @@ DEventSourceREST::~DEventSourceREST()
 void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
 {
    /// Implementation of JEventSource virtual function
-
+   auto app = event->GetJApplication();
    if (!fin) {
       throw RETURN_STATUS::kUNKNOWN; // EVENT_SOURCE_NOT_OPEN
    }
@@ -174,10 +173,10 @@ void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
          hddm_r::DataVersionStringList::iterator Versioniter;
          for (Versioniter = locVersionStrings.begin(); Versioniter != locVersionStrings.end(); ++Versioniter) {
         	 string HDDM_DATA_VERSION_STRING = Versioniter->getText();
-             if(japp->GetJParameterManager()->Exists("REST:DATAVERSIONSTRING"))
-                japp->GetJParameterManager()->SetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+             if(app->GetJParameterManager()->Exists("REST:DATAVERSIONSTRING"))
+                app->GetJParameterManager()->SetParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
 	     else
-	 	japp->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
+	 	   app->SetDefaultParameter("REST:DATAVERSIONSTRING", HDDM_DATA_VERSION_STRING);
 	     break;
          }
 
@@ -351,83 +350,82 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
 	}
 
    if (dataClassName =="DMCReaction") {
-      return Extract_DMCReaction(record,
-                     dynamic_cast<JFactoryT<DMCReaction>*>(factory), event);
+      return (Extract_DMCReaction(record,
+                     dynamic_cast<JFactoryT<DMCReaction>*>(factory), event));
    }
    if (dataClassName =="DRFTime") {
-      return Extract_DRFTime(record,
-                     dynamic_cast<JFactoryT<DRFTime>*>(factory), event);
+      return (Extract_DRFTime(record,
+                     dynamic_cast<JFactoryT<DRFTime>*>(factory), event));
    }
    if (dataClassName =="DBeamPhoton") {
-      return Extract_DBeamPhoton(record,
-                     dynamic_cast<JFactoryT<DBeamPhoton>*>(factory),
-                     event);
+      return (Extract_DBeamPhoton(record,
+                     dynamic_cast<JFactoryT<DBeamPhoton>*>(factory), event));
    }
    if (dataClassName =="DMCThrown") {
-      return Extract_DMCThrown(record,
-                     dynamic_cast<JFactoryT<DMCThrown>*>(factory));
+      return (Extract_DMCThrown(record,
+                     dynamic_cast<JFactoryT<DMCThrown>*>(factory)));
    }
    if (dataClassName =="DTOFPoint") {
-      return Extract_DTOFPoint(record,
-                     dynamic_cast<JFactoryT<DTOFPoint>*>(factory));
+      return (Extract_DTOFPoint(record,
+                     dynamic_cast<JFactoryT<DTOFPoint>*>(factory)));
    }
    if (dataClassName =="DCTOFPoint") {
-      return Extract_DCTOFPoint(record,
-                     dynamic_cast<JFactory<DCTOFPoint>*>(factory));
+      return (Extract_DCTOFPoint(record,
+                     dynamic_cast<JFactoryT<DCTOFPoint>*>(factory)));
    }
    if (dataClassName =="DSCHit") {
-      return Extract_DSCHit(record,
-                     dynamic_cast<JFactoryT<DSCHit>*>(factory));
+      return (Extract_DSCHit(record,
+                     dynamic_cast<JFactoryT<DSCHit>*>(factory)));
    }
    if (dataClassName =="DFCALShower") {
-      return Extract_DFCALShower(record,
-                     dynamic_cast<JFactoryT<DFCALShower>*>(factory));
+      return (Extract_DFCALShower(record,
+                     dynamic_cast<JFactoryT<DFCALShower>*>(factory)));
    }
    if (dataClassName =="DBCALShower") {
-      return Extract_DBCALShower(record,
-                     dynamic_cast<JFactoryT<DBCALShower>*>(factory));
+      return (Extract_DBCALShower(record,
+                     dynamic_cast<JFactoryT<DBCALShower>*>(factory)));
    }
    if (dataClassName =="DCCALShower") {
-      return Extract_DCCALShower(record,
-                     dynamic_cast<JFactoryT<DCCALShower>*>(factory));
+      return (Extract_DCCALShower(record,
+                     dynamic_cast<JFactoryT<DCCALShower>*>(factory)));
    }
    if (dataClassName =="DTrackTimeBased") {
-      return Extract_DTrackTimeBased(record,
-                     dynamic_cast<JFactoryT<DTrackTimeBased>*>(factory), event);
+      return (Extract_DTrackTimeBased(record,
+                     dynamic_cast<JFactoryT<DTrackTimeBased>*>(factory), event));
    }
    if (dataClassName =="DTrigger") {
-      return Extract_DTrigger(record,
-                     dynamic_cast<JFactoryT<DTrigger>*>(factory));
+      return (Extract_DTrigger(record,
+                     dynamic_cast<JFactoryT<DTrigger>*>(factory)) );
    }
    if (dataClassName =="DDIRCPmtHit") {      
-      return Extract_DDIRCPmtHit(record,
-		     dynamic_cast<JFactoryT<DDIRCPmtHit>*>(factory), event);
+      return (Extract_DDIRCPmtHit(record,
+		     dynamic_cast<JFactoryT<DDIRCPmtHit>*>(factory), event));
    }
    if (dataClassName =="DFMWPCHit") {
-      return Extract_DFMWPCHit(record,
-		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
+      return (Extract_DFMWPCHit(record,
+		     dynamic_cast<JFactoryT<DFMWPCHit>*>(factory), event));
    }
    if (dataClassName =="DFCALHit") {
       return Extract_DFCALHit(record,
-		     dynamic_cast<JFactory<DFCALHit>*>(factory), locEventLoop);
+		     dynamic_cast<JFactory<DFCALHit>*>(factory), event);
    }
    if (dataClassName =="DDetectorMatches") {
-      return Extract_DDetectorMatches(event, record,
-                     dynamic_cast<JFactoryT<DDetectorMatches>*>(factory));
+      return (Extract_DDetectorMatches(event, record,
+                     dynamic_cast<JFactoryT<DDetectorMatches>*>(factory)));
    }
    if (dataClassName =="DEventHitStatistics") {
-      return Extract_DEventHitStatistics(record,
-                     dynamic_cast<JFactoryT<DEventHitStatistics>*>(factory));
+      return (Extract_DEventHitStatistics(record,
+                     dynamic_cast<JFactoryT<DEventHitStatistics>*>(factory)));
    }
 
-   return OBJECT_NOT_AVAILABLE;
+   return true; // true here means OBJECT_NOT_AVAILABLE
 }
 
 //------------------
 // Extract_DMCReaction
 //------------------
 jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
-                                   JFactoryT<DMCReaction> *factory, const std::shared_ptr<const JEvent>& locEventLoop)
+                                   JFactoryT<DMCReaction> *factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the Reaction hddm class. This is called
    /// from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -439,7 +437,7 @@ jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
    std::string tag = factory->GetTag();
 
 	double locTargetCenterZ = 0.0;
-	int locRunNumber = locEventLoop->GetRunNumber();
+	int locRunNumber = locEvent->GetRunNumber();
 	{
 		std::lock_guard<std::mutex> lock(readMutex);
 		locTargetCenterZ = dTargetCenterZMap[locRunNumber];
@@ -486,7 +484,7 @@ jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
 // Extract_DRFTime
 //------------------
 jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
-                                   JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEventLoop)
+                                   JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    if (factory==NULL)
       return OBJECT_NOT_AVAILABLE;
@@ -519,7 +517,7 @@ jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
 		//MC data: generate it
 
 	vector<const DBeamPhoton*> locMCGENPhotons;
-	locEventLoop->Get(locMCGENPhotons, "MCGEN");
+	locEvent->Get(locMCGENPhotons, "MCGEN");
 	if(locMCGENPhotons.empty())
 		return OBJECT_NOT_AVAILABLE; //Experimental data & it's missing: bail
 
@@ -537,7 +535,7 @@ jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
 	else
 	{
 		double locBeamBunchPeriod = 0.0;
-		int locRunNumber = locEventLoop->GetRunNumber();
+		int locRunNumber = locEvent->GetRunNumber();
 		{
 			std::lock_guard<std::mutex> lock(readMutex);
 			locBeamBunchPeriod = dBeamBunchPeriodMap[locRunNumber];
@@ -913,7 +911,7 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
 // Extract_DCTOFPoint
 //------------------
 jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
-                                   JFactory<DCTOFPoint>* factory)
+                                   JFactoryT<DCTOFPoint>* factory)
 {
    /// Copies the data from the ctofPoint hddm record. This is called
    /// from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -922,7 +920,7 @@ jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
    if (factory==NULL) {
       return OBJECT_NOT_AVAILABLE;
    }
-   string tag = (factory->Tag())? factory->Tag() : "";
+   string tag = factory->GetTag();
 
    vector<DCTOFPoint*> data;
 
@@ -942,8 +940,8 @@ jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
       data.push_back(ctofpoint);
    }
 
-   // Copy into factory
-   factory->CopyTo(data);
+   factory->Set(data);
+
 
    return NOERROR;
 }
@@ -1308,7 +1306,7 @@ jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
 // Extract_DTrackTimeBased
 //--------------------------------
 jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
-                                   JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEventLoop)
+                                   JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the chargedTrack hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -1318,7 +1316,7 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       return OBJECT_NOT_AVAILABLE;
    }
    
-   int locRunNumber = locEventLoop->GetRunNumber();
+   int locRunNumber = locEvent->GetRunNumber();
    DVector2 locBeamCenter,locBeamDir;
    double locBeamZ0=0.;
    {
@@ -1605,7 +1603,7 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
 //--------------------------------
 // Extract_DDetectorMatches
 //--------------------------------
-jerror_t DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEventLoop, hddm_r::HDDM *record, JFactoryT<DDetectorMatches>* factory)
+jerror_t DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record, JFactoryT<DDetectorMatches>* factory)
 {
    /// Copies the data from the detectorMatches hddm record. This is
    /// called from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -1618,30 +1616,30 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const 
    vector<DDetectorMatches*> data;
 
    vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-   locEventLoop->Get(locTrackTimeBasedVector);
+   locEvent->Get(locTrackTimeBasedVector);
 
    vector<const DSCHit*> locSCHits;
-   locEventLoop->Get(locSCHits);
+   locEvent->Get(locSCHits);
 
    vector<const DTOFPoint*> locTOFPoints;
-   locEventLoop->Get(locTOFPoints); 
+   locEvent->Get(locTOFPoints); 
 
    vector<const DCTOFPoint*> locCTOFPoints;
-   locEventLoop->Get(locCTOFPoints);
+   locEvent->Get(locCTOFPoints);
 
    vector<const DBCALShower*> locBCALShowers;
-   locEventLoop->Get(locBCALShowers);
+   locEvent->Get(locBCALShowers);
 
    vector<const DFCALShower*> locFCALShowers;
-   locEventLoop->Get(locFCALShowers);
+   locEvent->Get(locFCALShowers);
 
    const DParticleID* locParticleID = NULL;
    vector<const DDIRCPmtHit*> locDIRCHits;
    vector<const DDIRCTruthBarHit*> locDIRCBarHits;
    if(RECO_DIRC_CALC_LUT) {
-	   locEventLoop->GetSingle(locParticleID);
-	   locEventLoop->Get(locDIRCHits);
-	   locEventLoop->Get(locDIRCBarHits);
+	   locEvent->GetSingle(locParticleID);
+	   locEvent->Get(locDIRCHits);
+	   locEvent->Get(locDIRCBarHits);
    }
 
    const hddm_r::DetectorMatchesList &detectormatches = record->getDetectorMatcheses();
@@ -1977,7 +1975,7 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 // Extract_DDIRCPmtHit
 //-----------------------
 jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
-                                   JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEventLoop)
+                                   JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fcalShower hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -1999,7 +1997,7 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
          continue;
 
       // throw away hits from bad or noisy channels (after REST reconstruction)
-      int locRunNumber = locEventLoop->GetRunNumber();
+      int locRunNumber = locEvent->GetRunNumber();
       int box = (iter->getCh() < dDIRCMaxChannels) ? 1 : 0;
       int channel = iter->getCh() % dDIRCMaxChannels;
       dirc_status_state status = static_cast<dirc_status_state>(dDIRCChannelStatusMap[locRunNumber][box][channel]);
@@ -2025,7 +2023,7 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
 // Extract_DFMWPCHit
 //-----------------------
 jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
-                                   JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop)
+                    JFactoryT<DFMWPCHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fmwpc hit hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
@@ -2034,11 +2032,11 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
    if (factory==NULL) {
       return OBJECT_NOT_AVAILABLE;
    }
-   string tag = (factory->Tag())? factory->Tag() : "";
+   string tag = factory->GetTag();
 
    vector<DFMWPCHit*> data;
 
-   // loop over fmwpc hit records
+   // loop over data hit records
    const hddm_r::FmwpcHitList &hits =
                  record->getFmwpcHits();
    hddm_r::FmwpcHitList::iterator iter;
@@ -2057,9 +2055,8 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
 
       data.push_back(hit);
    }
-
    // Copy into factory
-   factory->CopyTo(data);
+   factory->Set(data);
 
    return NOERROR;
 }
@@ -2068,7 +2065,7 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
 // Extract_DFCALHit
 //-----------------------
 jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
-                                   JFactory<DFCALHit>* factory, JEventLoop* locEventLoop)
+                                   JFactoryT<DFCALHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fcal hit hddm record. This is
    /// call from JEventSourceREST::GetObjects. If factory is NULL, this
