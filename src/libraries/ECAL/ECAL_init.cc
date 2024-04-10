@@ -3,10 +3,12 @@
 #include <JANA/JEventLoop.h>
 using namespace jana;
 
+#include <ECAL/DECALTruthShower_factory.h>
 #include <ECAL/DECALGeometry_factory.h>
 
 #include "DECALDigiHit.h"
 #include "DECALHit_factory.h"
+
 
 #include "DECALRefDigiHit.h"
 
@@ -17,6 +19,7 @@ jerror_t ECAL_init(JEventLoop *loop)
   	loop->AddFactory(new JFactory<DECALRefDigiHit>());
 	loop->AddFactory(new DECALHit_factory());
 	loop->AddFactory(new JFactory<DECALHit>("TRUTH"));
+	loop->AddFactory(new DECALTruthShower_factory());
 	loop->AddFactory(new DECALGeometry_factory());
 
 	return NOERROR;
