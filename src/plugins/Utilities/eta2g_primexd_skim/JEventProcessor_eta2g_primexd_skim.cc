@@ -183,7 +183,7 @@ void JEventProcessor_eta2g_primexd_skim::Process(const std::shared_ptr<const JEv
   event->Get(locTrackCandidate);
 
   vector< const DTrackTimeBased* > locTrackTimeBased;
-  loop->Get(locTrackTimeBased);
+  event->Get(locTrackTimeBased);
   
   vector < const DFCALShower * > matchedShowers;
   
@@ -192,19 +192,19 @@ void JEventProcessor_eta2g_primexd_skim::Process(const std::shared_ptr<const JEv
 
   vector<const DFCALHit *> locFCALHits;
   
-  loop->Get(locFCALHits);
+  event->Get(locFCALHits);
 
   // always write out BOR events
   if(GetStatusBit(event, kSTATUS_BOR_EVENT)) {
       //jout << "Found BOR!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim" );
-      return NOERROR;
+      locEventWriterEVIO->Write_EVIOEvent( event, "eta2g-skim" );
+      return;
   }
 
   // write out the first few EPICS events to save run number & other meta info
   if(GetStatusBit(event, kSTATUS_EPICS_EVENT) && (num_epics_events<5)) {
       //jout << "Found EPICS!" << endl;
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim" );
+      locEventWriterEVIO->Write_EVIOEvent( event, "eta2g-skim" );
       num_epics_events++;
       return;
   }
@@ -348,7 +348,7 @@ void JEventProcessor_eta2g_primexd_skim::Process(const std::shared_ptr<const JEv
     
     if( WRITE_EVIO ){
       //locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g_primexd_skim", locObjectsToSave );
-      locEventWriterEVIO->Write_EVIOEvent( loop, "eta2g-skim");
+      locEventWriterEVIO->Write_EVIOEvent( event, "eta2g-skim");
     }
     if( WRITE_HDDM ) {
       vector<const DEventWriterHDDM*> locEventWriterHDDMVector;
