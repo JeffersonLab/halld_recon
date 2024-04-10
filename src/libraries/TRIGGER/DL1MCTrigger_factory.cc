@@ -130,7 +130,7 @@ void DL1MCTrigger_factory::Init()
   app->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET,
 			      "Timing offset between BCAL and FCAL energies at GTP (sampels)");
 
-  gPARMS->SetDefaultParameter("TRIG:SC_OFFSET", SC_OFFSET,
+  app->SetDefaultParameter("TRIG:SC_OFFSET", SC_OFFSET,
 			      "Timing offset between SC and FCAL and BCAL energies at GTP (sampels)");
 
   // Allows to switch off gain and baseline fluctuations
@@ -140,7 +140,7 @@ void DL1MCTrigger_factory::Init()
   app->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
 			      
-  gPARMS->SetDefaultParameter("TRIG:VERBOSE", VERBOSE,
+  app->SetDefaultParameter("TRIG:VERBOSE", VERBOSE,
 			      "Enable more verbose output");
 
 
@@ -365,9 +365,9 @@ void DL1MCTrigger_factory::Process(const std::shared_ptr<const JEvent>& event){
 	vector<const DBCALHit*>  bcal_hits;
 	vector<const DSCHit*>    sc_hits;
 
-	loop->Get(fcal_hits);
-	loop->Get(bcal_hits);
-	loop->Get(sc_hits);
+	event->Get(fcal_hits);
+	event->Get(bcal_hits);
+	event->Get(sc_hits);
 
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
 
