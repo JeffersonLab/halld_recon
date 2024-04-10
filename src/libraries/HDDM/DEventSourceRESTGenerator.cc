@@ -70,5 +70,5 @@ double DEventSourceRESTGenerator::CheckOpenable(std::string source)
 //---------------------------------
 JEventSource* DEventSourceRESTGenerator::MakeJEventSource(std::string source)
 {
-   return new DEventSourceREST(source.c_str());
+   return new DEventSourceREST(source.c_str(), mApplication);
 }
