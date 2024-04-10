@@ -52,13 +52,13 @@ DEventWriterREST::DEventWriterREST(const std::shared_ptr<const JEvent>& locEvent
 	app->SetDefaultParameter("REST:WRITE_DIRC_HITS", REST_WRITE_DIRC_HITS);
 
 	REST_WRITE_FMWPC_HITS = true;
-	gPARMS->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
+	app->SetDefaultParameter("REST:WRITE_FMWPC_HITS", REST_WRITE_FMWPC_HITS);
 
 	REST_WRITE_CCAL_SHOWERS = true;
 	app->SetDefaultParameter("REST:WRITE_CCAL_SHOWERS", REST_WRITE_CCAL_SHOWERS);
 
 	ADD_FCAL_DATA_FOR_CPP=false;
-	gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
+	app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
 
     CCDB_CONTEXT_STRING = "";
