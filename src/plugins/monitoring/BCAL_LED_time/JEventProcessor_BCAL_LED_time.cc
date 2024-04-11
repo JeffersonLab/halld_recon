@@ -275,7 +275,6 @@ void JEventProcessor_BCAL_LED_time::Process(const std::shared_ptr<const JEvent>&
 	// since multiple threads may call this method at the same time.
 
 	auto eventnumber = event->GetEventNumber();
-	auto runnumber = event->GetRunNumber();
 	
 	int chcounter[1536] = { 0 } ;
 	  

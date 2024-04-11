@@ -20,7 +20,6 @@ using namespace std;
 //------------------
 void DNeutralParticleHypothesis_factory::Init()
 {
-	auto app = GetApplication();
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
 	SetFactoryFlag(NOT_OBJECT_OWNER);
 	dResourcePool_NeutralParticleHypothesis = new DResourcePool<DNeutralParticleHypothesis>();

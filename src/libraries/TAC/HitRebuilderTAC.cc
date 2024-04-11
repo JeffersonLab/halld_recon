@@ -17,7 +17,6 @@ using namespace std;
 
 jerror_t HitRebuilderTAC::readCCDB( const std::shared_ptr<const JEvent>& event) {
 
-	auto event_number = event->GetEventNumber();
 	auto run_number = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(run_number);
