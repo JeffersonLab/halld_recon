@@ -1,6 +1,6 @@
 // $Id$
 //
-//    File: JEventProcessor_FCAL_online.cc
+//    File: JEventProcessor_TAGM_online.cc
 // Created: Fri Nov  9 11:58:09 EST 2012
 // Creator: wolin (on Linux stan.jlab.org 2.6.32-279.11.1.el6.x86_64 x86_64)
 
@@ -133,6 +133,7 @@ static TH2F *tagm_adc_mult_2d,  *tagms_adc_mult_2d;
 static TH2F *tagm_tdc_mult_2d,  *tagms_tdc_mult_2d;
 static TH2F *tagm_adc_tdc_mult;
 
+static TH1F *tagmCol9, *tagmCol27, *tagmCol81, *tagmCol99;
 
 //----------------------------------------------------------------------------------
 
@@ -169,6 +170,11 @@ jerror_t JEventProcessor_TAGM_online::init(void) {
   TDirectory *main = gDirectory;
   TDirectory *tagmdir = gDirectory->mkdir("tagm");
   tagmdir->cd();
+
+  tagmCol9  = new TH1F("tagmCol9",  "TAGM Hits in Column9", 7, -0.5, 6.5);
+  tagmCol27 = new TH1F("tagmCol27", "TAGM Hits in Column27", 7, -0.5, 6.5);
+  tagmCol81 = new TH1F("tagmCol81", "TAGM Hits in Column81", 7, -0.5, 6.5);
+  tagmCol99 = new TH1F("tagmCol99", "TAGM Hits in Column99", 7, -0.5, 6.5);
  
   // Book DTAGMDigiHit histosgrams 
   tagm_adc_seen    = new TH1F("tagm_adc_seen", 
@@ -649,6 +655,18 @@ jerror_t JEventProcessor_TAGM_online::evnt(JEventLoop *eventLoop, uint64_t event
       // Calculate the FADC250 multiplicities for each channel
       ++column_adc_hits[column - 1];
       ++column_adc_hits_total;
+    } else {
+      // fill hits into col 9, 27, 81 and 99
+      //cout<<eventnumber<<"  "<<column<<"  "<<row<<endl;
+      if (column == 9){
+	tagmCol9->Fill(row);
+      } else if  (column == 27){
+	tagmCol27->Fill(row);
+      } else if  (column == 81){
+	tagmCol81->Fill(row);
+      } else if  (column == 99){
+	tagmCol99->Fill(row);
+      } 
     }
   }
 
