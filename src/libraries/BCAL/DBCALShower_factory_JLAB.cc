@@ -40,7 +40,6 @@ void DBCALShower_factory_JLAB::Process(const std::shared_ptr<const JEvent>& even
   // at this point ClumpList contains all information to build Clusters
   // event over all Clumps in ClumpList and generate Clusters
 
-  int id = 0;
   for (unsigned int i = 0; i < ClumpList.size(); i++){
 
     const DBCALClump* locClump = ClumpList[i];    

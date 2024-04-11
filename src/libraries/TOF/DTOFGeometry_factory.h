@@ -40,7 +40,6 @@ class DTOFGeometry_factory:public JFactoryT<DTOFGeometry>{
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 
-			auto event_number = event->GetEventNumber();
 			auto run_number = event->GetRunNumber();
 			auto app = event->GetJApplication();
 			auto geo_manager = app->GetService<DGeometryManager>();

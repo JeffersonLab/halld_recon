@@ -97,10 +97,8 @@ void DBCALShower_factory_KLOE::Init()
 //------------------
 void DBCALShower_factory_KLOE::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	auto event_number = event->GetEventNumber();
 	auto run_number = event->GetRunNumber();
 	auto calibration_manager = event->GetJApplication()->GetService<JCalibrationManager>();
-	auto calibration = calibration_manager->GetJCalibration(run_number);
     auto app = GetApplication();
     auto geom_manager = app->GetService<DGeometryManager>();
     auto geom = geom_manager->GetDGeometry(run_number);
