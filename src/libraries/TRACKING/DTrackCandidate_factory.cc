@@ -131,7 +131,6 @@ void DTrackCandidate_factory::Init()
 //------------------
 void DTrackCandidate_factory::BeginRun(const std::shared_ptr<const JEvent>& event){
 
-  auto event_number = event->GetEventNumber();
   auto run_number = event->GetRunNumber();
   auto app = GetApplication();
   auto root_lock = app->GetService<JLockService>();

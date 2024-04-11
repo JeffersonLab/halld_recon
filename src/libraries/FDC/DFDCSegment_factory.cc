@@ -69,7 +69,6 @@ DFDCSegment_factory::~DFDCSegment_factory() {
 ///
 void DFDCSegment_factory::BeginRun(const std::shared_ptr<const JEvent>& event) {
 
-  auto event_number = event->GetEventNumber();
   auto run_number = event->GetRunNumber();
   auto app = event->GetJApplication();
   auto geo_manager = app->GetService<DGeometryManager>();

@@ -242,7 +242,6 @@ void JEventProcessor_RF_online::BeginRun(const std::shared_ptr<const JEvent> &lo
 {
 	// This is called whenever the run number changes
 
-    auto dRFTimeFactory = static_cast<DRFTime_factory*>(locEvent->GetFactory("DRFTime", ""));
     // TODO: NWB: Excise all uses of brun_was_called and Set_brun_called from codebase
 }
 
