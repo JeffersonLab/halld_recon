@@ -574,6 +574,7 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
          }
 
       	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+
 		  hMeasuredHitsVsPathLength->Fill(dx);
 		  hMeasuredHitsVsDOCA->Fill(distanceToWire);
 		  hMeasuredHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
@@ -595,8 +596,11 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
 		  hMeasuredHitsWithDEDxVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
 	   }
 	 }
+      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       }
+
+      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
       //FILL PROFILES: BASED ON FOUND OR NOT
 	  hEfficiencyVsPathLength->Fill(dx,foundHit);
