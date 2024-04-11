@@ -13,7 +13,6 @@
 void DReaction_factory_p2pi_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<double> locBeamPeriodVector;
-	auto calib = GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 

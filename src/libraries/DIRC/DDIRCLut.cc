@@ -20,7 +20,6 @@ using namespace std;
 //---------------------------------
 bool DDIRCLut::Init(const std::shared_ptr<const JEvent>& event) {
 
-	auto event_number = event->GetEventNumber();
 	auto runnumber = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto calibration = app->GetService<JCalibrationManager>()->GetJCalibration(runnumber);

@@ -39,7 +39,6 @@ bool static DParticleID_hypothesis_cmp(const DTrackTimeBased *a,
 //---------------------------------
 DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
 {
-  auto event_number = event->GetEventNumber();
   auto run_number = event->GetRunNumber();
   auto app = event->GetJApplication();
   auto calib_man = app->GetService<JCalibrationManager>();
