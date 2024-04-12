@@ -90,10 +90,11 @@
 
     int Nhits = tagmCol9->GetEntries();
     if (Nhits>1e4) {
-      rs_SavePad("TAGM_Column9",1);
-      rs_SavePad("TAGM_Column27",2);
-      rs_SavePad("TAGM_Column81",3);
-      rs_SavePad("TAGM_Column99",4);    
+      rs_SavePad("TAGM_ColumnsAll4",0);
+      //rs_SavePad("TAGM_Column9",1);
+      //rs_SavePad("TAGM_Column27",2);
+      //rs_SavePad("TAGM_Column81",3);
+      //rs_SavePad("TAGM_Column99",4);    
 
       rs_ResetAllMacroHistos("//HistMacro_TAGMCOL");
     }
