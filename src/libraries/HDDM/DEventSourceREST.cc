@@ -394,6 +394,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DDIRCPmtHit(record,
 		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), locEventLoop);
    }
+   if (dataClassName =="DFMWPCHit") {
+      return Extract_DFMWPCHit(record,
+		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
+   }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
@@ -1699,7 +1703,16 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locShowerMatchParams->dFlightTimeVariance = fcalIter->getTflightvar();
          locShowerMatchParams->dPathLength = fcalIter->getPathlength();
          locShowerMatchParams->dDOCAToShower = fcalIter->getDoca();
-
+	 locShowerMatchParams->dEcenter=0.;
+	 locShowerMatchParams->dE3x3=0.;
+	 locShowerMatchParams->dE5x5=0.;
+	 const hddm_r::FcalEnergyParamsList &fcalEnergyList = fcalIter->getFcalEnergyParamses();
+	 hddm_r::FcalEnergyParamsList::iterator fcalEnergyIter = fcalEnergyList.begin();
+	 for(; fcalEnergyIter != fcalEnergyList.end(); ++fcalEnergyIter){
+	   locShowerMatchParams->dEcenter=fcalEnergyIter->getEcenter();
+	   locShowerMatchParams->dE3x3=fcalEnergyIter->getE3x3();
+	   locShowerMatchParams->dE5x5=fcalEnergyIter->getE5x5();
+	 }
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locFCALShowers[locShowerIndex], std::const_pointer_cast<const DFCALShowerMatchParams>(locShowerMatchParams));
       }
 
@@ -1794,7 +1807,26 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 	       }
 	   }	 
       }
-      
+
+      // Extract track matching data for FMPWCs
+      const hddm_r::FmwpcMatchParamsList &fmwpcList = iter->getFmwpcMatchParamses();
+      hddm_r::FmwpcMatchParamsList::iterator fmwpcIter = fmwpcList.begin();
+      for(; fmwpcIter != fmwpcList.end(); ++fmwpcIter)
+      {
+         size_t locTrackIndex = fmwpcIter->getTrack();
+	 const hddm_r::FmwpcDataList &fmwpcDataList = fmwpcIter->getFmwpcDatas();
+	 hddm_r::FmwpcDataList::iterator fmwpcDataIter = fmwpcDataList.begin();
+
+         auto locFMWPCMatchParams = std::make_shared<DFMWPCMatchParams>();
+	 for(; fmwpcDataIter != fmwpcDataList.end(); ++fmwpcDataIter){
+	   locFMWPCMatchParams->dLayers.push_back(fmwpcDataIter->getLayer());
+	   locFMWPCMatchParams->dNhits.push_back(fmwpcDataIter->getNhits());
+	   locFMWPCMatchParams->dDists.push_back(fmwpcDataIter->getDist());
+	   locFMWPCMatchParams->dClosestWires.push_back(fmwpcDataIter->getClosestwire());
+	 }
+	 locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DFMWPCMatchParams>(locFMWPCMatchParams));
+      }
+
       // Extract track matching data for CTOF
       const hddm_r::CtofMatchParamsList &ctofList = iter->getCtofMatchParamses();
       hddm_r::CtofMatchParamsList::iterator ctofIter = ctofList.begin();
@@ -1951,6 +1983,49 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->CopyTo(data);
    
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DFMWPCHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
+                                   JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop)
+{
+   /// Copies the data from the fmwpc hit hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DFMWPCHit*> data;
+
+   // loop over fmwpc hit records
+   const hddm_r::FmwpcHitList &hits =
+                 record->getFmwpcHits();
+   hddm_r::FmwpcHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DFMWPCHit *hit = new DFMWPCHit();
+      hit->layer = iter->getLayer();
+      hit->wire = iter->getWire();
+      hit->q = iter->getQ();
+      hit->amp = iter->getAmp();
+      hit->t = iter->getT();
+      hit->QF = iter->getQf();
+      hit->ped = iter->getPed();
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
    return NOERROR;
 }
 

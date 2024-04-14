@@ -46,6 +46,8 @@ DParticleID::DParticleID(JEventLoop *loop)
   CDC_TRUNCATE_DEDX = true;
   gPARMS->SetDefaultParameter("PID:CDC_TRUNCATE_DEDX",CDC_TRUNCATE_DEDX);
 
+  ADD_FCAL_DATA_FOR_CPP=false;
+  gPARMS->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
   DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
   if(!dapp){
@@ -1302,6 +1304,37 @@ bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t> &
   locShowerMatchParams->dPathLength = locPathLength;
   locShowerMatchParams->dDOCAToShower = d;
   
+  // The following additional information is needed for CPP ML mu/pi separation
+  if (ADD_FCAL_DATA_FOR_CPP){
+    // Row/column corresponding to projected position
+    auto row = dFCALGeometry->row( (float)locProjPos.y() );
+    auto col = dFCALGeometry->column( (float)locProjPos.x() );
+    if (row>=0 && col>=0){
+      locShowerMatchParams->dE5x5=0.;
+      locShowerMatchParams->dE3x3=0.;
+      locShowerMatchParams->dEcenter=0.;
+      // Get the list of hits from the cluster associated with the shower
+      const DFCALCluster*cluster=NULL;
+      locFCALShower->GetSingle(cluster);
+      if (cluster){
+	vector<DFCALCluster::DFCALClusterHit_t>hits=cluster->GetHits();
+	for( auto hit : hits ){
+	  auto delta_row = abs( dFCALGeometry->row(hit.ch) - row );
+	  auto delta_col = abs( dFCALGeometry->column(hit.ch) - col );
+	  if( (delta_row<=2) && (delta_col<=2) ){
+	    locShowerMatchParams->dE5x5 += hit.E;
+	    if( (delta_row<=1) && (delta_col<=1) ){
+	      locShowerMatchParams->dE3x3 += hit.E;
+	      if( (delta_row==0) && (delta_col==0) ){
+		locShowerMatchParams->dEcenter = hit.E;
+	      }
+	    }
+	  }
+	}
+      }
+    }
+  } // for CPP
+
   return true;
 }
 bool DParticleID::Distance_ToTrack(const vector<DTrackFitter::Extrapolation_t>&extrapolations, const DTOFPoint* locTOFPoint, double locInputStartTime,shared_ptr<DTOFHitMatchParams>& locTOFHitMatchParams, DVector3* locOutputProjPos, DVector3* locOutputProjMom) const

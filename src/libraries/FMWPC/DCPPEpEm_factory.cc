@@ -123,13 +123,13 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   unsigned int ip=(q1>q2)?0:1;
   unsigned int in=(q1>q2)?1:0;
   
-  hyp=tracks[ip]->Get_Hypothesis(PiPlus);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
-  const DTrackTimeBased *piplus=hyp->Get_TrackTimeBased();
+  const DChargedTrackHypothesis *PiPhyp=tracks[ip]->Get_Hypothesis(PiPlus);
+  if (PiPhyp==NULL) return RESOURCE_UNAVAILABLE;
+  const DTrackTimeBased *piplus=PiPhyp->Get_TrackTimeBased();
 
-  hyp=tracks[in]->Get_Hypothesis(PiMinus);
-  if (hyp==NULL) return RESOURCE_UNAVAILABLE;
-  const DTrackTimeBased *piminus=hyp->Get_TrackTimeBased();
+  const DChargedTrackHypothesis *PiMhyp=tracks[in]->Get_Hypothesis(PiMinus);
+  if (PiMhyp==NULL) return RESOURCE_UNAVAILABLE;
+  const DTrackTimeBased *piminus=PiMhyp->Get_TrackTimeBased();
 
   hyp=tracks[ip]->Get_Hypothesis(KPlus);
   if (hyp==NULL) return RESOURCE_UNAVAILABLE;
@@ -285,7 +285,7 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       // n.b. if we need to use a mutex then we should pass a local
       // array for "input" and the lock the mutex just for the copy
       // to the tflite tensor.
-      if( PiMuFillFeatures(loop, piplus, piminus, pimu_input) ){
+      if( PiMuFillFeatures(loop, tracks.size(), PiPhyp, PiMhyp, pimu_input) ){
 
       	// Run inference
       	if( pimu_interpreter->Invoke() == kTfLiteOk){
@@ -418,26 +418,9 @@ bool DCPPEpEm_factory::VetoNeutrals(double t0_rf,const DVector3 &vect,
 // Return true if values are valid, false otherwise.
 // e.g. return false if there is not at least 1 pi+
 // and 1 pi- candidate.
-bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTimeBased *piplus, const DTrackTimeBased *piminus, float *features){
-  
-  vector<const DFMWPCMatchedTrack*> matchedtracks;
-  loop->Get( matchedtracks );
-  
-  // Find the DFMWPCMatchedTrack objects corresponding to
-  // the piplus, piminus tracks used in for the kinematic fit
-  // (i.e. the ones passed into this method as arguments)
-  const DFMWPCMatchedTrack *piplus_mt  = nullptr;
-  const DFMWPCMatchedTrack *piminus_mt = nullptr;
-  for( auto mt : matchedtracks ){
-    const DTrackTimeBased *trk;
-    mt->GetSingleT(trk);
-    if( trk == piplus  ) piplus_mt = mt;
-    if( trk == piminus ) piminus_mt = mt;
-  }
-  
-  // Must have a DFMWPCMatchedTrack for both a pi+ and pi-
-  if( (piplus_mt==nullptr) || (piminus_mt==nullptr) ) return false;
-  
+bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nChargedTracks,const DChargedTrackHypothesis *PiPhyp, const DChargedTrackHypothesis *PiMhyp, float *features){
+  memset(features,0,47*sizeof(float));
+
   // Features list is the following:
   //  0  nChargedTracks
   //  1  nFCALShowers
@@ -487,53 +470,82 @@ bool DCPPEpEm_factory::PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTime
   // 45  FMWPC_dist_closest_wire6_9
   // 46  FMWPC_Nhits_cluster6_9
   
-  vector<const DChargedTrack*> chargedtracks;
   vector<const DFCALShower*  > fcalshowers;
   vector<const DFCALHit*     > fcalhits;
   vector<const DFMWPCHit*    > fmwpchits;
-  loop->Get( chargedtracks );
+  vector<const DEventHitStatistics*>stats;
+  loop->Get( stats         );
   loop->Get( fcalshowers   );
   loop->Get( fcalhits      );
   loop->Get( fmwpchits     );
 
-  features[ 0] = chargedtracks.size();
+  features[ 0] = nChargedTracks;
   features[ 1] = fcalshowers.size();
-  features[ 2] = fcalhits.size();
+  features[ 2] = (stats.size()>0) ? stats[0]->fcal_blocks : fcalhits.size();
   features[ 3] = fmwpchits.size();
-  features[ 4] = matchedtracks.size();
-  features[ 5] = piplus_mt->FCAL_E_center;
-  features[ 6] = piplus_mt->FCAL_E_3x3;
-  features[ 7] = piplus_mt->FCAL_E_5x5;
-  for(int ilayer=0; ilayer<6; ilayer++){
-    features[ 8+3*ilayer] = piplus_mt->FMWPC_closest_wire[ilayer];
-    features[ 9+3*ilayer] = piplus_mt->FMWPC_dist_closest_wire[ilayer];
-    features[10+3*ilayer] = piplus_mt->FMWPC_Nhits_cluster[ilayer];
+  features[ 4] = 4; // lepton and pion tracks found 
+
+  // Match to FCAL for pi+ hypothesis
+  shared_ptr<const DFCALShowerMatchParams>fcalparms=PiPhyp->Get_FCALShowerMatchParams();
+  if (fcalparms!=nullptr){
+    features[ 5] = fcalparms->dEcenter;
+    features[ 6] = fcalparms->dE3x3;
+    features[ 7] = fcalparms->dE5x5;
   }
-  features[26] = piminus_mt->FCAL_E_center;
-  features[27] = piminus_mt->FCAL_E_3x3;
-  features[28] = piminus_mt->FCAL_E_5x5;
-  for(int ilayer=0; ilayer<6; ilayer++){
-    features[29+3*ilayer] = piminus_mt->FMWPC_closest_wire[ilayer];
-    features[30+3*ilayer] = piminus_mt->FMWPC_dist_closest_wire[ilayer];
-    features[31+3*ilayer] = piminus_mt->FMWPC_Nhits_cluster[ilayer];
-  }
-  
+  // Match to FMWPCs for pi+ hypothesis
+  shared_ptr<const DFMWPCMatchParams>fmwpcparms=PiPhyp->Get_FMWPCMatchParams();
   // Before training the model, Nikhil's code replaced feature values
   // where the distance to the closest wire was >30 with values used
   // to indicate no wire hit. 
-  for(int ilayer=0; ilayer<6; ilayer++){
-    if( piminus_mt->FMWPC_dist_closest_wire[ilayer] >30.0 ){
-      features[29+3*ilayer] = -1000.0;
-      features[30+3*ilayer] = 1000000;
-      features[31+3*ilayer] = 0;
+  for (int ilayer=0; ilayer<6; ilayer++){
+    features[ 8+3*ilayer] = -1000.0;
+    features[ 9+3*ilayer] = 1000000;
+    features[10+3*ilayer] = 0;
+  }
+  if (fmwpcparms!=nullptr){
+    for (unsigned int i=0;i<fmwpcparms->dLayers.size();i++){
+      if (fmwpcparms->dDists[i]<30){
+	int ilayer=fmwpcparms->dLayers[i]-1;
+	features[ 8+3*ilayer] = fmwpcparms->dClosestWires[i];
+	features[ 9+3*ilayer] = fmwpcparms->dDists[i];
+	features[10+3*ilayer] = fmwpcparms->dNhits[i];
+      }
     }
   }
 
+  // Match to FCAL for pi- hypothesis
+  fcalparms=PiMhyp->Get_FCALShowerMatchParams();
+  if (fcalparms!=nullptr){
+    features[26] = fcalparms->dEcenter;
+    features[27] = fcalparms->dE3x3;
+    features[28] = fcalparms->dE5x5;
+  }
+  // Match to FMWPCs for pi- hypothesis
+  fmwpcparms=PiMhyp->Get_FMWPCMatchParams();
+  // Before training the model, Nikhil's code replaced feature values
+  // where the distance to the closest wire was >30 with values used
+  // to indicate no wire hit. 
+  for (int ilayer=0; ilayer<6; ilayer++){
+    features[29+3*ilayer] = -1000.0;
+    features[30+3*ilayer] = 1000000;
+    features[31+3*ilayer] = 0;
+  }
+  if (fmwpcparms!=nullptr){
+    for (unsigned int i=0;i<fmwpcparms->dLayers.size();i++){
+      if (fmwpcparms->dDists[i]<30){
+	int ilayer=fmwpcparms->dLayers[i]-1;
+	features[29+3*ilayer] = fmwpcparms->dClosestWires[i];
+	features[30+3*ilayer] = fmwpcparms->dDists[i];
+	features[31+3*ilayer] = fmwpcparms->dNhits[i];
+      }
+    }
+  }
+  
   // These are values Nikhil sent that were used for normalizing the
   // features before training the model.  
   static const float feature_min[] = {2.0,0.0,2.0,0.0,2.0,0.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,0.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,-1000.0,0.0,0.0,0.0};
   static const float feature_max[] = {6.0,10.0,20.0,94.0,8.0,3.924656391143799,5.177245497703552,5.349521217867732,144.0,1000000.0,39.0,144.0,1000000.0,17.0,144.0,1000000.0,12.0,144.0,1000000.0,11.0,144.0,1000000.0,8.0,144.0,1000000.0,7.0,4.154212951660156,5.578885164111853,5.9553504548966885,144.0,1000000.0,39.0,144.0,1000000.0,32.0,144.0,1000000.0,14.0,144.0,1000000.0,35.0,144.0,1000000.0,7.0,144.0,1000000.0,11.0,1.0};
-  for(int i=0; i<48; i++){
+  for(int i=0; i<47; i++){
     features[i] = (features[i] - feature_min[i])/(feature_max[i]-feature_min[i]);
   }
 
