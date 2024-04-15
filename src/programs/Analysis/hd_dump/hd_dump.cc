@@ -30,11 +30,8 @@ int main(int narg, char *argv[])
 	ParseCommandLineArguments(narg, argv);
 
 	auto options = jana::ParseCommandLineOptions(narg, argv);
-	auto app = jana::CreateJApplication(options);
-	japp = app; // TODO: NWB: Remove me when possible
-
-	// Ensure that halld-specific parameters, factories, and sources have been set
-	DApplication dapp(app);  // TODO: NWB: This really ought to not be a ctor
+	DApplication dapp(narg, argv);
+	JApplication* app = dapp.GetJApp();
 
 	// Set tag prefix for JANA streams to empty
 	jout.SetTag("");
