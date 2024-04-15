@@ -46,14 +46,7 @@ MyProcessor::MyProcessor()
 //------------------------------------------------------------------
 MyProcessor::~MyProcessor()
 {
-	//Close the ROOT file
-	if(ROOTfile!=NULL){
-		ROOTfile->Write();
-		ROOTfile->Close();
-		delete ROOTfile;
-		ROOTfile=NULL;
-		cout<<endl<<"Closed ROOT file"<<endl;
-	}
+
 }
 
 //------------------------------------------------------------------
@@ -162,6 +155,12 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 void MyProcessor::Finish()
 {
-    ROOTfile->Close();
+	if(ROOTfile!=NULL){
+		ROOTfile->Write();
+		ROOTfile->Close();
+		delete ROOTfile;
+		ROOTfile=NULL;
+		cout<<endl<<"Closed ROOT file"<<endl;
+	}
 }
 
