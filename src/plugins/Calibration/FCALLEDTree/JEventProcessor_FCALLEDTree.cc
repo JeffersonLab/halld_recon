@@ -88,7 +88,7 @@ jerror_t JEventProcessor_FCALLEDTree::init(void)
   hpeak = new TH2F("peak", ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
   hinteg = new TH2F("integ", ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
 
-  gDirectory->cd();
+  main->cd();
   
  japp->RootUnLock();
   
