@@ -220,7 +220,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			hResidual_NegDelta.at(kMIDDLE).push_back( empty_h1d );
 	
 			
-			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
+			for(unsigned int straw=1; straw<=numstraws[ring-1]; straw++) {
 				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
 				hStrawDriftTimeVsPhiDOCA.at(kMIDDLE).at(ring-1).push_back( new TH2F(name, title,  8, -3.14, 3.14,  500, -10, 1500) );
@@ -366,7 +366,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			hResidual_NegDelta.at(kDOWNSTREAM).push_back( empty_h1d );
 		 
 		 
-			for(int straw=1; straw<=numstraws[ring-1]; straw++) {
+			for(unsigned int straw=1; straw<=numstraws[ring-1]; straw++) {
 				
 				sprintf(name,"Straw %.3i Drift time Vs phi_DOCA", straw);
 				sprintf(title,"Ring %.2i Straw %.3i Drift time Vs phi_DOCA;#phi_{DOCA};Drift Time [ns]", ring, straw);
@@ -476,7 +476,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
             char folder[100];
             sprintf(folder, "Ring %.2i", ring);
 
-			int region;
+	    int region = 0; // safe, because either isMiddle or isDownstream are true
             if (isMiddle) {
             	region = kMIDDLE;
             }
@@ -500,7 +500,7 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
 			hResidualsVsPredictedDriftDistance[region][ring-1]->Fill(predictedDistance, residual);
 			hPredictedDriftDistanceVsDriftTime[region][ring-1]->Fill(time, predictedDistance);
 
-/*
+
 			// fill per-straw histograms
 			hStrawDriftTimeVsPhiDOCA[region][ring-1][straw-1]->Fill(docaphi, time);	
 			hStrawPredictedDistanceVsPhiDOCA[region][ring-1][straw-1]->Fill(docaphi, predictedDistance);	
@@ -526,10 +526,10 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
             }
             else { // Short side of straw
 				hPredictedDriftDistanceVsDriftTime_NegDelta[region][ring-1][straw-1]->Fill(time, predictedDistance);
-				hPredictedDriftDistanceVsDriftTime_NegDelta[region][ring-1][straw-1]->Fill(time, residual);
+				hResidualVsDriftTime_NegDelta[region][ring-1][straw-1]->Fill(time, residual);
 				hResidual_NegDelta[region][ring-1][straw-1]->Fill(residual);
             }
-*/
+
 
         } 
     }
