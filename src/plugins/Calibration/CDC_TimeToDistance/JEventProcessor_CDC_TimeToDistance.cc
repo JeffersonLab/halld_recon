@@ -49,13 +49,73 @@ JEventProcessor_CDC_TimeToDistance::~JEventProcessor_CDC_TimeToDistance()
 //------------------
 jerror_t JEventProcessor_CDC_TimeToDistance::init(void)
 {
-   // Save the current values of the T/D constants
+   int prof_td_max = 1000;
 
    gDirectory->mkdir("CDC_TimeToDistance");
    gDirectory->cd("CDC_TimeToDistance");
    // We need the constants used for this iteration
    // Use a TProfile to avoid problems adding together multiple root files...
    HistCurrentConstants = new TProfile("CDC_TD_Constants", "CDC T/D constants", 125 ,0.5, 125.5);
+
+   dHistZ2tracks0001 = new TH1F("Z_2tracks_0_001", "Vertex z from 2 tracks with fom 0.001+; z (cm)",700,30,100);
+   dHistZ2tracks001 = new TH1F("Z_2tracks_0_01", "Vertex z from 2 tracks with fom 0.01+; z (cm)",700,30,100);
+   dHistZ2tracks01 = new TH1F("Z_2tracks_0_1", "Vertex z from 2 tracks with fom 0.1+; z (cm)",700,30,100);
+
+   dHistResidualVslogFOM = new TH2F("Residual vs logFOM", "Residual vs log10(FOM); log10(FOM); Residual(cm)",
+									 50,-10,0,100, -0.05,0.05);
+   dHistResidualVsFOM = new TH2F("Residual vs FOM", "Residual vs FOM; FOM; Residual(cm)",
+									 50,0,1,100, -0.05,0.05);
+   dHistEarlyDriftTimesPerChannel = new TH2F("Early Drift Times", "Per straw drift times; Drift time [ns];CCDB Index",
+             					     200,-50,50,3522,0.5,3522.5);
+   dHistResidualVsDriftTime = new TH2F("Residual Vs. Drift Time", "Residual Vs. Drift Time; Drift time [ns];Residual [cm]",
+               						 250,0.,1000,100, -0.05,0.05);
+   dHistResidualVsDriftTimeFOM09 = new TH2F("Residual Vs. Drift Time, FOM 0.9+", "Residual Vs. Drift Time, FOM 0.9+; Drift time [ns];Residual [cm]", 
+   									250,0.,1000,100, -0.05,0.05);
+   dHistResidualVsDriftTimeFOM06 = new TH2F("Residual Vs. Drift Time, FOM 0.6+", "Residual Vs. Drift Time, FOM 0.6+; Drift time [ns];Residual [cm]", 
+   									250,0.,1000,100, -0.05,0.05);
+   dHistResidualVsDriftTimeFOM01 = new TH2F("Residual Vs. Drift Time, FOM 0.1+", "Residual Vs. Drift Time, FOM 0.1+; Drift time [ns];Residual [cm]", 
+   									250,0.,1000,100, -0.05,0.05);
+   dHistResidualVsDriftTimeFOM001 = new TH2F("Residual Vs. Drift Time, FOM 0.01+", "Residual Vs. Drift Time, FOM 0.01+; Drift time [ns];Residual [cm]", 
+   									250,0.,1000,100, -0.05,0.05);
+   dHistResidualVsDriftTimeStraightStraws = new TH2F("Residual Vs. Drift Time, max sag < 0.2mm", "Residual Vs. Drift Time (straight straws); Drift time [ns];Residual [cm]",
+               						 250,0.,1000,100, -0.05,0.05);
+
+   dHistBz = new TH1F("Bz", "B_{z};B_{z} [T]", 100, 0.0, 2.5);
+   
+   dHistPredictedDistanceVsDeltaVsDrift = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDriftFOM09 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.9+",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDriftFOM06 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.6+",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDriftFOM01 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.1+",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDriftFOM001 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.01+",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDrift05 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift < 0.05",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDrift10 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift < 0.10",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDrift15 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift < 0.15",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDrift20 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift < 0.20",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDrift25 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift < 0.25",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+   dHistPredictedDistanceVsDeltaVsDriftBz18 = new TProfile2D("Predicted Drift Distance Vs Delta Vs t_drift, Bz 1.8T",
+   										"Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
+               							500, 0, prof_td_max, 200, -0.3, 0.3);
+	
 
    gDirectory->cd("..");
 
@@ -112,11 +172,13 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
    char ccdbTable[128];
    sprintf(ccdbTable,"CDC/cdc_drift_table%s",dIsNoFieldFlag?"::NoBField":"");
 
-   if (jcalib->Get(ccdbTable, tvals)==false){    
+   if (jcalib->Get(ccdbTable, tvals)==false){
+      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
       for(unsigned int i=0; i<tvals.size(); i++){
          map<string, double> &row = tvals[i];
          HistCurrentConstants->Fill(i+1,1000.*row["t"]);
       }
+      japp->RootUnLock(); //RELEASE ROOT LOCK
    }
    else{
       jerr << " CDC time-to-distance table not available... bailing..." << endl;
@@ -125,6 +187,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
 
    sprintf(ccdbTable,"CDC/drift_parameters%s",dIsNoFieldFlag?"::NoBField":"");
    if (jcalib->Get(ccdbTable, tvals)==false){
+      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
       map<string, double> &row = tvals[0]; // long drift side
       HistCurrentConstants->Fill(101,row["a1"]);
       HistCurrentConstants->Fill(102,row["a2"]);
@@ -150,6 +213,7 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
       HistCurrentConstants->Fill(120,row["c3"]);
       HistCurrentConstants->Fill(121,row["B1"]);
       HistCurrentConstants->Fill(122,row["B2"]);
+      japp->RootUnLock(); //RELEASE ROOT LOCK
    }
 
    // Save run number
@@ -203,13 +267,13 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
                 if(!thisTimeBasedTrack->IsSmoothed) least_fom = 0; // don't use this event
             }
         }
-
-        if (least_fom >= 0.001) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_001", z, "Vertex z from 2 tracks with fom 0.001+; z (cm)",700,30,100);     
-
-        if (least_fom >= 0.01) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_01", z, "Vertex z from 2 tracks with fom 0.01+; z (cm)",700,30,100);     
-
-        if (least_fom >= 0.1) Fill1DHistogram("CDC_TimeToDistance","","Z_2tracks_0_1", z, "Vertex z from 2 tracks with fom 0.1+; z (cm)",700,30,100);
-
+        
+        japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+        if (least_fom >= 0.001) dHistZ2tracks0001->Fill(z);
+        if (least_fom >= 0.01) dHistZ2tracks001->Fill(z);    
+        if (least_fom >= 0.1) dHistZ2tracks01->Fill(z);
+        japp->RootUnLock(); //RELEASE ROOT LOCK
+        
    }   // end if 2 tracks
 
 
@@ -247,46 +311,21 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          int ring = thisCDCHit->wire->ring;
          int straw = thisCDCHit->wire->straw;
 
-
-         Fill2DHistogram("CDC_TimeToDistance","","Residual vs logFOM",
-			 log10(thisTimeBasedTrack->FOM), thisPull.resi,
-               "Residual vs log10(FOM); log10(FOM); Residual(cm)",
-			 50,-10,0,100, -0.05,0.05);
-
-
-         Fill2DHistogram("CDC_TimeToDistance","","Residual vs FOM",
-			 thisTimeBasedTrack->FOM, thisPull.resi,
-               "Residual vs FOM; FOM; Residual(cm)",
-			 50,0,1,100, -0.05,0.05);
-
-
+		 japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+		 
+		 dHistResidualVsFOM->Fill(thisTimeBasedTrack->FOM, thisPull.resi);
+		 dHistResidualVslogFOM->Fill(log10(thisTimeBasedTrack->FOM), thisPull.resi);
 
          // Fill Histogram with the drift times near t0 (+-50 ns)
-         Fill2DHistogram("CDC_TimeToDistance","","Early Drift Times",
-               time,straw_offset[ring]+straw,
-               "Per straw drift times; Drift time [ns];CCDB Index",
-               200,-50,50,3522,0.5,3522.5);
+         dHistEarlyDriftTimesPerChannel->Fill(time,straw_offset[ring]+straw);
+         dHistResidualVsDriftTime->Fill(time,residual);
 
-         Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time",
-               time,residual,
-               "Residual Vs. Drift Time; Drift time [ns];Residual [cm]",
-               250,0.,1000,100, -0.05,0.05);
-
-         if (thisTimeBasedTrack->FOM >= 0.9) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.9+", time,residual, "Residual Vs. Drift Time, FOM 0.9+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
-
-         if (thisTimeBasedTrack->FOM >= 0.6) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.6+", time,residual, "Residual Vs. Drift Time, FOM 0.6+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
-
-         if (thisTimeBasedTrack->FOM >= 0.1) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.1+", time,residual, "Residual Vs. Drift Time, FOM 0.1+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
-
-         if (thisTimeBasedTrack->FOM >= 0.01) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, FOM 0.01+", time,residual, "Residual Vs. Drift Time, FOM 0.01+; Drift time [ns];Residual [cm]", 250,0.,1000,100, -0.05,0.05);
-
-
-         if (max_sag[ring - 1][straw - 1] < 0.02) Fill2DHistogram("CDC_TimeToDistance","","Residual Vs. Drift Time, max sag < 0.2mm",
-               time,residual,
-               "Residual Vs. Drift Time (straight straws); Drift time [ns];Residual [cm]",
-               250,0.,1000,100, -0.05,0.05);
-
-
+         if (thisTimeBasedTrack->FOM >= 0.9) dHistResidualVsDriftTimeFOM09->Fill(time,residual);
+         if (thisTimeBasedTrack->FOM >= 0.6) dHistResidualVsDriftTimeFOM06->Fill(time,residual);
+         if (thisTimeBasedTrack->FOM >= 0.1) dHistResidualVsDriftTimeFOM01->Fill(time,residual);
+         if (thisTimeBasedTrack->FOM >= 0.01) dHistResidualVsDriftTimeFOM001->Fill(time,residual);
+         
+         if (max_sag[ring - 1][straw - 1] < 0.02) dHistResidualVsDriftTimeStraightStraws->Fill(time,residual);
 
          if(UNBIASED_RING != 0 && (ring != UNBIASED_RING) ) continue;
 
@@ -299,73 +338,42 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          DVector3 thisHitLocation = thisCDCHit->wire->origin + udir * (dz / udir.CosTheta());
          double Bz = dMagneticField->GetBz(thisHitLocation.X(), thisHitLocation.Y(), thisHitLocation.Z());
          if ( Bz != 0.0 ) {
-            Fill1DHistogram("CDC_TimeToDistance", "", "Bz",
-                  Bz,
-                  "B_{z};B_{z} [T]", 100, 0.0, 2.5);
+         	dHistBz->Fill(Bz);
          }
          double delta = max_sag[ring - 1][straw - 1]*(1.-dz*dz/5625.)
             *cos(docaphi + sag_phi_offset[ring - 1][straw - 1]);
 
-         int prof_td_max = 1000;
 
          // We only really need one histogram here
-         Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift",
-               time, delta, predictedDistance,
-               "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-               500, 0, prof_td_max, 200, -0.3, 0.3);
+         dHistPredictedDistanceVsDeltaVsDrift->Fill(time, delta, predictedDistance);
 
-
-         if (thisTimeBasedTrack->FOM >= 0.01) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.01+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.01+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
-
-         if (thisTimeBasedTrack->FOM >= 0.1) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.1+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.1+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
-
-         if (thisTimeBasedTrack->FOM >= 0.6) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.6+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.6+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
-
-         if (thisTimeBasedTrack->FOM >= 0.9) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, FOM 0.9+", time, delta, predictedDistance, "Predicted Drift Distance Vs. #delta Vs. t_{drift}, FOM 0.9+; t_{drift} [ns]; #delta [cm]", 500, 0, prof_td_max, 200, -0.3, 0.3);
-
-
+		 if (thisTimeBasedTrack->FOM >= 0.9) dHistPredictedDistanceVsDeltaVsDriftFOM09->Fill(time, delta, predictedDistance);
+		 if (thisTimeBasedTrack->FOM >= 0.6) dHistPredictedDistanceVsDeltaVsDriftFOM06->Fill(time, delta, predictedDistance);
+		 if (thisTimeBasedTrack->FOM >= 0.1) dHistPredictedDistanceVsDeltaVsDriftFOM01->Fill(time, delta, predictedDistance);
+		 if (thisTimeBasedTrack->FOM >= 0.01) dHistPredictedDistanceVsDeltaVsDriftFOM001->Fill(time, delta, predictedDistance);
 
 
          // To investigate some features, also do this in bins of Max sag
          if (max_sag[ring - 1][straw - 1] < 0.05){
-            Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.05",
-                  time, delta, predictedDistance,
-                  "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, prof_td_max, 200, -0.3, 0.3);
+         	dHistPredictedDistanceVsDeltaVsDrift05->Fill(time, delta, predictedDistance);
          } 
          else if (max_sag[ring - 1][straw - 1] < 0.10){
-            Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.10",
-                  time, delta, predictedDistance,
-                  "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, prof_td_max, 200, -0.3, 0.3);
+         	dHistPredictedDistanceVsDeltaVsDrift10->Fill(time, delta, predictedDistance);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.15){
-            Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.15",
-                  time, delta, predictedDistance,
-                  "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, prof_td_max, 200, -0.3, 0.3);
+         	dHistPredictedDistanceVsDeltaVsDrift15->Fill(time, delta, predictedDistance);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.20){
-            Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.20",
-                  time, delta, predictedDistance,
-                  "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, prof_td_max, 200, -0.3, 0.3);
+         	dHistPredictedDistanceVsDeltaVsDrift20->Fill(time, delta, predictedDistance);
          }
          else if (max_sag[ring - 1][straw - 1] < 0.25){
-            Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift < 0.25",
-                  time, delta, predictedDistance,
-                  "Predicted Drift Distance Vs. #delta Vs. t_{drift}; t_{drift} [ns]; #delta [cm]",
-                  500, 0, prof_td_max, 200, -0.3, 0.3);
+         	dHistPredictedDistanceVsDeltaVsDrift25->Fill(time, delta, predictedDistance);
          }
 
          // histo for hits in 1.8T region
-         if (Bz > 1/75 && Bz < 1.85) Fill2DProfile("CDC_TimeToDistance", "", "Predicted Drift Distance Vs Delta Vs t_drift, Bz 1.8T",
-               time, delta, predictedDistance,
-               "Predicted Drift Distance Vs. #delta Vs. t_{drift}, 1.8T; t_{drift} [ns]; #delta [cm]",
-               500, 0, prof_td_max, 200, -0.3, 0.3);
-
-
-
+         if (Bz > 1.75 && Bz < 1.85) dHistPredictedDistanceVsDeltaVsDriftBz18->Fill(time, delta, predictedDistance);
+         
+		 japp->RootUnLock(); //RELEASE ROOT LOCK
       }   
    }
    return NOERROR;
