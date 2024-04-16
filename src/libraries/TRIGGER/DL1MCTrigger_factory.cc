@@ -8,6 +8,7 @@ using namespace std;
 #include <JANA/JApplication.h>
 #include <DAQ/DCODAROCInfo.h>
 #include <DAQ/DL1Info.h>
+#include <DANA/DStatusBits.h>
 
 #include <HDDM/DEventSourceHDDM.h>
 
@@ -20,7 +21,7 @@ using namespace jana;
 #include "RCDB/ConfigParser.h"
 #endif
 
-
+static bool print_data_message = true;
 
 //------------------
 // init
@@ -66,8 +67,12 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   BCAL_OFFSET      =  2;
 
+  SC_OFFSET        =  6;
+
   SIMU_BASELINE = 1;
-  SIMU_GAIN = 1;
+  SIMU_GAIN = 0;
+  
+  VERBOSE = 0;
   
 
   simu_baseline_fcal  =  1;
@@ -122,7 +127,9 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   gPARMS->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET,
 			      "Timing offset between BCAL and FCAL energies at GTP (sampels)");
-  
+
+  gPARMS->SetDefaultParameter("TRIG:SC_OFFSET", SC_OFFSET,
+			      "Timing offset between SC and FCAL and BCAL energies at GTP (sampels)");
 
   // Allows to switch off gain and baseline fluctuations
   gPARMS->SetDefaultParameter("TRIG:SIMU_BASELINE", SIMU_BASELINE,
@@ -130,6 +137,9 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
+			      
+  gPARMS->SetDefaultParameter("TRIG:VERBOSE", VERBOSE,
+			      "Enable more verbose output");
 
 
   BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
@@ -188,7 +198,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
 
   if(getenv("JANA_CALIB_CONTEXT") != NULL ){ 
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
-    if(JANA_CALIB_CONTEXT.find("mc_generic") != string::npos){
+    if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
+    if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
+	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
+      if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
@@ -197,6 +210,9 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       simu_gain_fcal = 0;
       simu_gain_bcal = 0;
     }
+  }
+  else {
+      if(print_messages) cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
   }
 
   //  runnumber = 30942;
@@ -250,8 +266,11 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     if(debug){
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
-	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
+	int col = fcalGeom.column(ch);	
+	// Sanity check for regular FCAL (row,col) ranges (anticipating 
+	// future upgrade to FCAL to include insert)
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
 	  hfcal_gains->Fill(fcal_gains[row][col]);
 	  DVector2 aaa = fcalGeom.positionOnFace(row,col);
 	  hfcal_gains2->Fill(float(aaa.X()), float(aaa.Y()), fcal_gains[row][col]);
@@ -278,7 +297,10 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
       for(int ch = 0; ch < (int)fcal_gains_ch.size(); ch++){
 	int row = fcalGeom.row(ch);
 	int col = fcalGeom.column(ch);
-	if(fcalGeom.isBlockActive(row,col)){
+	// Sanity check for regular FCAL (row,col) ranges (anticipating 
+	// future upgrade to FCAL to include insert)
+	if(fcalGeom.isBlockActive(row,col)&&row<DFCALGeometry::kBlocksTall
+	   && col<DFCALGeometry::kBlocksWide){
 	  hfcal_ped->Fill(fcal_pedestals[row][col]);
 	}
       }	
@@ -338,24 +360,39 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
         vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
+	vector<const DSCHit*>    sc_hits;
 
 	loop->Get(fcal_hits);
 	loop->Get(bcal_hits);
+	loop->Get(sc_hits);
 
-
-	// Initialize random number generator
-	// Read seeds from hddm file
-	// Generate seeds according to the event number if they are not stored in hddm
-	// The proceedure is consistent with the mcsmear
-
-	UInt_t seed1 = 0;
-	UInt_t seed2 = 0;
-	UInt_t seed3 = 0;
-	
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
-	GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+
+	// This is temporary, to allow this simulation to be run on data
+	// to help out with trigger efficiency studies - sdobbs (Aug. 26, 2020)
+	if( loop->GetJEvent().GetStatusBit(kSTATUS_EVIO) ){
+		if(print_data_message) {
+			jout << "WARNING: Running L1 trigger simulation on EVIO data" << endl; 
+			print_data_message = false;
+		}
 	
-	gDRandom.SetSeeds(seed1, seed2, seed3);
+		// for data, don't add in baseline shifts, since they already exist
+		simu_baseline_fcal = 0;
+		simu_baseline_bcal = 0;
+	} else {
+		// Initialize random number generator
+		// Read seeds from hddm file
+		// Generate seeds according to the event number if they are not stored in hddm
+		// The proceedure is consistent with the mcsmear
+
+		UInt_t seed1 = 0;
+		UInt_t seed2 = 0;
+		UInt_t seed3 = 0;
+	
+		GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+	
+		gDRandom.SetSeeds(seed1, seed2, seed3);
+	}
 	
 	//	cout << endl;
 	//	cout << " Event = " << eventnumber << endl;
@@ -393,6 +430,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    fcal_hit_en += fcal_hits[ii]->E;
 	    
 	    fcal_signal fcal_tmp;
+	    fcal_tmp.merged = 0;
 	    
 	    fcal_tmp.row     = row;
 	    fcal_tmp.column  = col;
@@ -404,8 +442,9 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	    double fcal_adc_en  = fcal_tmp.energy*FCAL_ADC_PER_MEV*1000;
 	    
-	    // Account for gain fluctuations 
-	    if(simu_gain_fcal){
+	    // Account for gain fluctuations
+	    if(simu_gain_fcal && row<DFCALGeometry::kBlocksTall
+	       && col<DFCALGeometry::kBlocksWide){
 	      
 	      double gain  =  fcal_gains[row][col];	  
 	      
@@ -453,7 +492,11 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	  for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++){
 	    int row     = fcal_merged_hits[ii].row;
 	    int column  = fcal_merged_hits[ii].column;
-	    double pedestal =  fcal_pedestals[row][column];	    
+	    double pedestal = 100.0;
+	    if (row<DFCALGeometry::kBlocksTall
+		&& column<DFCALGeometry::kBlocksWide){
+	      pedestal=fcal_pedestals[row][column];
+	    }
 	    AddBaseline(fcal_merged_hits[ii].adc_en, pedestal, gDRandom);       
 	  }
 	}
@@ -471,7 +514,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++)
 	  for(int jj = 0; jj < sample; jj++)
-	    fcal_hit_adc_en += fcal_merged_hits[ii].adc_amp[jj];	  
+	    if( (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
+	      fcal_hit_adc_en += (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
 	
 	
 	status += FADC_SSP(fcal_merged_hits, 1);
@@ -512,6 +556,7 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    bcal_hit_en += bcal_hits[ii]->E;
 	    
 	    bcal_signal bcal_tmp;	    
+	    bcal_tmp.merged  = 0;
 	    bcal_tmp.module  = module;
 	    bcal_tmp.layer   = layer;
   	    bcal_tmp.sector  = sector;
@@ -593,8 +638,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	// Search for triggers
 
-	l1_found = FindTriggers(trigger);
-	
+	l1_found = FindTriggers(trigger,sc_hits);       
+
 	if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
@@ -906,7 +951,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    }
 	    
 	    catch(...){
-	      if(print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
+	      if(VERBOSE && print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
 		" Channel = " << ch << endl;
 	      continue;
 	    }
@@ -920,6 +965,9 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    tmp.row = channel_info.fcal.row;
 	    tmp.col = channel_info.fcal.col;
 	    
+	    if(VERBOSE)
+	    	cout << " MASKED CHANNEL = " << tmp.row << "   " << tmp.col << endl;
+
 	    fcal_trig_mask.push_back(tmp);
 	  }
 	  
@@ -931,6 +979,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
   }    // Loop over crates       
   
   
+  if(VERBOSE) cout << " NUMBER OF MASKED CHANNELS = " << fcal_trig_mask.size() << endl;
   
 
   // Load BCAL Trigger Masks
@@ -1293,15 +1342,33 @@ void DL1MCTrigger_factory::PrintTriggers(){
 
 
 
-int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
+int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHit*> & sc_hits){
   
+  int debug1 = 0;
+
   int trig_found = 0;
   
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
     
-    if(triggers_enabled[ii].bit == 0){    // Main production trigger found
-      
+    if(debug1)
+      cout << "Trigger Type = " << triggers_enabled[ii].type << endl;
+
+    if(triggers_enabled[ii].type == 3){    // FCAL & BCAL trigger
+
+      int en_bit = triggers_enabled[ii].bit;
+
+      int fcal_bcal_st = 0;
+
+      for(unsigned int jj = 0; jj < triggers_enabled.size(); jj++){   // Check if other triggers are enabled with the same bit
+
+	int en_bit1 = triggers_enabled[jj].bit;
+
+	if(ii != jj)
+	  if( (en_bit == en_bit1) && triggers_enabled[jj].type == 4 ) fcal_bcal_st = 1;
+      }
+
+
       int gtp_energy  = 0;
       int bcal_energy = 0;
       
@@ -1316,35 +1383,63 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	} else{ 
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
-
-
+	
+	
 	gtp_energy = triggers_enabled[ii].gtp.fcal*fcal_gtp[samp] + 
 	  triggers_enabled[ii].gtp.bcal*bcal_energy;
 	
+	if(debug1)
+	  cout << " GTP energy = " << gtp_energy << "   " << triggers_enabled[ii].gtp.en_thr << endl;
+
+
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 
-	  if(triggers_enabled[ii].gtp.fcal_min > 0) {     // FCAL > 0
-	    if(fcal_gtp[samp] > triggers_enabled[ii].gtp.fcal_min){
-	      trigger->trig_mask   = (trigger->trig_mask | 0x1);
-	      trigger->trig_time[0]   = samp - 25;
-	      trig_found++;
-	    }
-	  } else {
-	    
-	    trigger->trig_mask   = (trigger->trig_mask | 0x1);
-	    trigger->trig_time[0]   = samp - 25; 
-	    trig_found++;
-	  }
-	  
-	  break;
+	  if(fcal_gtp[samp] > triggers_enabled[ii].gtp.fcal_min){ // FCAL > fcal_min
 
-	}  // Check energy threshold	
-      }      
-    }     // Trigger Bit 0
+	    int fcal_bcal_st_found = 0;
+
+	    if(fcal_bcal_st == 1){   // FCAL & BCAL & ST
+	      for(unsigned int sc_hit = 0; sc_hit < sc_hits.size(); sc_hit++){
+
+		int sc_time = sc_hits[sc_hit]->t/time_stamp + 0.5 + SC_OFFSET;
+		int fcal_bcal_time =  samp - 25;
+		
+		if(debug1){
+		  cout << sc_time  << "  "  << " Trigger time  " << fcal_bcal_time <<  endl;
+		  cout << " ABS (DT) " << abs(fcal_bcal_time - sc_time) << endl;
+		}
+		
+		if(abs(fcal_bcal_time - sc_time) < 3){    // Coincidence between FCAL, BCAL, and SC found 
+		  trigger->trig_mask     =  (trigger->trig_mask | (1 << en_bit) );
+		  trigger->trig_time[0]  = samp - 25;
+		  trig_found++;
+		  fcal_bcal_st_found = 1;
+		  break;
+		}
+	      }   // Loop over SC hits
+
+	      if(fcal_bcal_st_found == 1) break; // Break from loop over samples	      
+	      
+	    } else  {    // FCAL & BCAL	      
+	      trigger->trig_mask     =  (trigger->trig_mask | (1 << en_bit) );
+	      trigger->trig_time[0]  = samp - 25;
+	      trig_found++;
+	      break;
+	    }
+
+
+	  }  //  Check fcal energy threshold
+	}    //  Check global energy threshold
+
+	
+      }    //  Loop over samples  
+    }      //  FCAL & BCAL triggers
   
 
-    if(triggers_enabled[ii].bit == 2){    //  BCAL trigger found
-            
+    if(triggers_enabled[ii].type == 2){    //  BCAL trigger
+
+      int en_bit = triggers_enabled[ii].bit;
+
       int gtp_energy  = 0;
       int bcal_energy = 0;
       
@@ -1359,9 +1454,9 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	} else{ 
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
-	      
+	
 	gtp_energy = triggers_enabled[ii].gtp.bcal*bcal_energy;
-      
+	
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 	  
 	  trigger->trig_mask   = (trigger->trig_mask | (1 << en_bit));
@@ -1372,7 +1467,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	  
 	}  // Energy threshold			
       }
-    }      // Trigger Bit  3
+    }      // BCAL trigger
 
   }    // Loop over triggers found in the config file
   
@@ -1384,36 +1479,12 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
-  
-  char str[256];
-  
-  if (fcalGeom.numActiveBlocks() != FCAL_MAX_CHANNELS) {
-    sprintf(str, "FCAL geometry is wrong size! channels=%d (should be %d)", 
-	    fcalGeom.numActiveBlocks(), FCAL_MAX_CHANNELS);
-    throw JException(str);
-  }
-  
-  
   for (int ch = 0; ch < static_cast<int>(fcal_const_ch.size()); ch++) {
-    
-    // make sure that we don't try to load info for channels that don't exist
-    if (ch == fcalGeom.numActiveBlocks())
-      break;
-    
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
-    
-    // results from DFCALGeometry should be self consistent, but add in some
-    // sanity checking just to be sure
-    if (fcalGeom.isBlockActive(row,col) == false) {
-      sprintf(str, "DL1MCTrigger: Loading FCAL constant for inactive channel!  "
-	      "row=%d, col=%d", row, col);
-      throw JException(str);
-    }    
-    
     table[row][col] = fcal_const_ch[ch];
   }
-  
+  	
 }
 
 void DL1MCTrigger_factory::Digitize(double adc_amp[sample], int adc_count[sample]){

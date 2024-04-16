@@ -13,6 +13,8 @@
 
 #include <BCAL/DBCALHit.h>
 
+#include "START_COUNTER/DSCHit.h"
+
 #include <DRandom2.h>
 
 #include <TH1.h>
@@ -174,9 +176,13 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		int    ST_NHIT;
 		
 		int BCAL_OFFSET;
-		
+
+		int SC_OFFSET;
+
 		int SIMU_BASELINE;
 		int SIMU_GAIN;
+		
+		int VERBOSE;
 
 
 		double time_shift;
@@ -201,7 +207,7 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 		template <typename T>  int FADC_SSP(vector<T> merged_hits, 
 						    int detector);
 		int GTP(int detector);
-		int FindTriggers(DL1MCTrigger *trigger);
+		int FindTriggers(DL1MCTrigger *trigger, vector<const DSCHit*> &sc_hits);
 		void PrintTriggers();				
 
 		float  BCAL_ADC_PER_MEV_CORRECT;
