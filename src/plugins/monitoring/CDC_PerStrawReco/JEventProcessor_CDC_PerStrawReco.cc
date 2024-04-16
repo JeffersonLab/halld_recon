@@ -298,11 +298,11 @@ jerror_t JEventProcessor_CDC_PerStrawReco::brun(JEventLoop *eventLoop, int32_t r
 			hResiduals.at(kDOWNSTREAM).push_back( new TH1F("Residuals", "Residuals; Residual [cm]; Entries", 200, -0.05, 0.05) );
 			hResidualsVsMomentum.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
 					"Residual Vs. Momentum; Momentum [GeV/c]; Residual [cm]", 50, 0.0, 12.0, 100, -0.05, 0.05) );
-			hResidualsVsTheta.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+			hResidualsVsTheta.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Theta",
 					"Residual Vs. Theta; Theta [deg]; Residual [cm]", 60, 0.0, 180.0, 100, -0.05, 0.05) );
-			hResidualsVsZ.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+			hResidualsVsZ.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Z",
 					"Residual Vs. Z; Z (Measured from CDC center) [cm]; Residual [cm]", 100, -75.0, 75.0, 100, -0.05, 0.05) );
-			hResidualsVsTrackingFOM.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Momentum", 
+			hResidualsVsTrackingFOM.at(kDOWNSTREAM).push_back( new TH2F("Residual Vs. Tracking FOM",
 					"Residual Vs. Tracking FOM; Tracking FOM; Residual [cm]", 100, 0.0, 1.0, 100, -0.05, 0.05) );
 		
 			hDriftTime.at(kDOWNSTREAM).push_back( new TH1F("Drift Time", "Drift Time; Drift Time [ns]; Entries", 500, -10, 1500) );
