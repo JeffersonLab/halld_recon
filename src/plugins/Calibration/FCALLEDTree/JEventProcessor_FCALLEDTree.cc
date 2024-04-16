@@ -83,10 +83,10 @@ jerror_t JEventProcessor_FCALLEDTree::init(void)
 
   hXYGeo = new TH2F("XYGeo", ";row;column #;Counts", 59, 0, 59, 59, 0, 59);
   hXYGeo_w = new TH2F("XYGeo_w", ";row;column #;E_{max}^{sum} [GeV]", 59, 0, 59, 59, 0, 59);
-  hE = new TH2F("E", ";channel;energy;Counts", 2800, 0, 2800, 1200, 0, 12.);
-  hped = new TH2F("ped", ";channel;pedestal;Counts", 2800, 0, 2800, 4096, 0., 4096.);
-  hpeak = new TH2F("peak", ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
-  hinteg = new TH2F("integ", ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+  hE = new TH2F("m_E", ";channel;energy;Counts", 2800, 0, 2800, 1200, 0, 12.);
+  hped = new TH2F("m_ped", ";channel;pedestal;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+  hpeak = new TH2F("m_peak", ";channel;peak;Counts", 2800, 0, 2800, 4096, 0., 4096.);
+  hinteg = new TH2F("m_integ", ";channel;integ;Counts", 2800, 0, 2800, 4096, 0., 4096.);
 
   main->cd();
   
