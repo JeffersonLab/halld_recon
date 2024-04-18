@@ -119,8 +119,8 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
    FillCalibTableShort(channel_global_offset, raw_channel_global_offset);
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_tdiff_u_d" << endl;
    FillCalibTableShort(tdiff_u_d, raw_tdiff_u_d);
-   //if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_bad_channels" << endl;
-   //FillCalibTableShort(bad_channels, raw_bad_channels);
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_bad_channels" << endl;
+   FillCalibTableShort(bad_channels, raw_bad_channels);
    
    std::vector<std::map<string,double> > saturation_ADC_pars;
    if(eventLoop->GetCalib("/BCAL/ADC_saturation", saturation_ADC_pars))
@@ -173,8 +173,8 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       const DBCALDigiHit *digihit = digihits[i];
 
       // throw away hits from bad or noisy channels
-//       int quality = GetConstant(bad_channels,digihit);
-//       if ( quality > 0 ) continue;
+      int quality = GetConstant(bad_channels,digihit);
+      if ( quality > 0 ) continue;
 
       // Error checking for pre-Fall 2016 firmware
       if(digihit->datasource == 1) {
