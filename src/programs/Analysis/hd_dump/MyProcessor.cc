@@ -343,8 +343,8 @@ std::string MyProcessor::PrintFactory(JFactory* factory) {
 	// the data type we are.
 	vector<vector<pair<string,string> > > allitems;
 
-	JObjectSummary summary;
 	for (auto obj : factory->GetAs<JObject>()) {
+		JObjectSummary summary;
 		obj->Summarize(summary);
 		vector<pair<string,string>> oldsummary;
 		for (auto field : summary.get_fields()) {
