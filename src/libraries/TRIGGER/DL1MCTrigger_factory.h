@@ -5,7 +5,6 @@
 
 #include "DL1MCTrigger.h"
 
-
 #include "TTAB/DTranslationTable.h"
 
 #include "FCAL/DFCALGeometry.h"
@@ -20,7 +19,13 @@
 #include <TH1.h>
 #include <TH2.h>
 
+#include <map>
+#include <utility>
+
 typedef  vector< vector<double> >  fcal_constants_t;
+
+typedef pair<double,double> cell_calib_t;  
+typedef vector<cell_calib_t>  bcal_digi_constants_t;
 
 class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 	public:
@@ -33,10 +38,20 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 		static const int FCAL_MAX_CHANNELS = 2800;
 
+		// shortcut geometry factors
+		// these should really be taken from
+		// DBCALGeometry/DGeometry objects
+		static const int BCAL_NUM_MODULES  = 48;
+		static const int BCAL_NUM_LAYERS   =  4;
+		static const int BCAL_NUM_ENDS     =  2;
+		static const int BCAL_NUM_SECTORS  =  4;
+
 		static const int TRIG_BASELINE  = 100;
 
 		fcal_constants_t fcal_gains;
-                fcal_constants_t fcal_pedestals;
+        fcal_constants_t fcal_pedestals;
+        
+        bcal_digi_constants_t bcal_gains;
  
 		int fcal_ssp[sample];
 		int fcal_gtp[sample];
@@ -195,6 +210,7 @@ class DL1MCTrigger_factory:public jana::JFactory<DL1MCTrigger>{
 
 		int simu_gain_fcal;
 		int simu_gain_bcal;
+		double bcal_average_gain;
 
 
 		int Read_RCDB(int32_t runnumber, bool print_messages=true);		

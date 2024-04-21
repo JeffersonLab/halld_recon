@@ -308,6 +308,34 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     
   }
   
+  vector< double > bcal_gains_ch;
+  if (eventLoop->GetCalib("/BCAL/ADC_gains::default", bcal_gains_ch)) {
+	jout << "DL1MCTrigger_factory: Error loading /FCAL/gains !" << endl;
+	bcal_average_gain = 1.;
+	// Load default values of gains if CCDB table is not found
+    for (int module=1; module<=BCAL_NUM_MODULES; module++) {
+        for (int layer=1; layer<=BCAL_NUM_LAYERS; layer++) {
+            for (int sector=1; sector<=BCAL_NUM_SECTORS; sector++) {
+				bcal_gains.push_back( cell_calib_t(1.,1.) );
+			}
+		}
+	}
+  } else {
+  	int channel = 0;
+  	bcal_average_gain = 0.;
+    for (int module=1; module<=BCAL_NUM_MODULES; module++) {
+        for (int layer=1; layer<=BCAL_NUM_LAYERS; layer++) {
+            for (int sector=1; sector<=BCAL_NUM_SECTORS; sector++) {
+				bcal_gains.push_back( cell_calib_t(bcal_gains_ch[channel],bcal_gains_ch[channel+1]) );
+				bcal_average_gain += bcal_gains_ch[channel] + bcal_gains_ch[channel+1];
+				channel += 2;
+			}
+		}
+	}
+	bcal_average_gain /= (double)channel;
+  }
+
+  
   if(!SIMU_BASELINE){
     simu_baseline_fcal = 0;
     simu_baseline_bcal = 0;
@@ -569,6 +597,18 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	    
 	    double bcal_adc_en  = bcal_tmp.energy*BCAL_ADC_PER_MEV*1000;
 
+	    // Account for gain fluctuations
+	    if(simu_gain_bcal){
+	      int the_cell = BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);
+	      double gain  =  1.;
+	      if(end == DBCALGeometry::kUpstream)
+	      	gain  =  bcal_gains[the_cell].first / bcal_average_gain;	   
+	      else
+	        gain  =  bcal_gains[the_cell].second / bcal_average_gain;	   
+	      
+	      bcal_adc_en *= gain;
+	    }
+	    
 	    status = SignalPulse(bcal_adc_en, bcal_tmp.time, bcal_tmp.adc_en, 2);
 	    status = 0;
  
