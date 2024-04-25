@@ -18,22 +18,14 @@ using namespace jana;
 #include "FCAL/DFCALCluster_factory.h"
 #include "FCAL/DFCALHit.h"
 #include "FCAL/DFCALGeometry.h"
-#include "HDGEOMETRY/DGeometry.h"
-
+#include <ECAL/DECALHit.h>
+#include <ECAL/DECALGeometry.h>
+#include <HDGEOMETRY/DGeometry.h>
 
 // Used to sort hits by Energy
-bool FCALHitsSort_C(const DFCALHit* const &thit1, const DFCALHit* const &thit2) {
-    return thit1->E>thit2->E;
-}
-
-const DFCALHit *GetDFCALHitFromClusterHit(const DFCALCluster::DFCALClusterHit_t &theClusterHit, const vector<const DFCALHit*> &fcalhits) {
-    for( vector<const DFCALHit*>::const_iterator fcalhits_itr = fcalhits.begin();
-         fcalhits_itr != fcalhits.end(); fcalhits_itr++) {
-        if(theClusterHit.id == (*fcalhits_itr)->id)
-            return *fcalhits_itr;
-    }
-
-    return NULL;
+bool FCALHitsSort_C(const DFCALCluster::userhit_t &thit1,
+		      const DFCALCluster::userhit_t &thit2) {
+return thit1.E>thit2.E;
 }
 
 //----------------
@@ -91,49 +83,71 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	vector<const DFCALHit*> fcalhits;
 	eventLoop->Get(fcalhits);
+	// Hits in PWO insert
+	vector<const DECALHit*> ecalhits;
+	eventLoop->Get(ecalhits);
 	
 	// LED events will have hits in nearly every channel. Do NOT
 	// try clusterizing if more than 250 hits in FCAL
-	if(fcalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
+	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
 	const DFCALGeometry* fcalGeom=NULL;
-	eventLoop->GetSingle(fcalGeom);
-
-	// Sort hits by energy
-	sort(fcalhits.begin(), fcalhits.end(), FCALHitsSort_C);
+	eventLoop->GetSingle(fcalGeom);	
+	const DECALGeometry* ecalGeom=NULL;
+	eventLoop->GetSingle(ecalGeom);
 
 	// fill user's hit list
-        int nhits = 0;
-        DFCALCluster::userhits_t* hits = 
-	  (DFCALCluster::userhits_t*) malloc(sizeof(DFCALCluster::userhits_t)*FCAL_USER_HITS_MAX);
-
+	vector<DFCALCluster::userhit_t>hits;
+	
 	// Fill the structure that used to be used by clusterizers in Radphi 
 	for (vector<const DFCALHit*>::const_iterator hit  = fcalhits.begin(); 
                                                      hit != fcalhits.end(); hit++ ) {
            if ( (**hit).E <  1e-6 ) continue;
-           hits->hit[nhits].id = (**hit).id;
-	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
-           hits->hit[nhits].x = (**hit).x;
-           hits->hit[nhits].y = (**hit).y;
-           hits->hit[nhits].E = (**hit).E; 
-           hits->hit[nhits].t = (**hit).t;
-	   hits->hit[nhits].intOverPeak = (**hit).intOverPeak;
-           nhits++;
+
+	   DFCALCluster::userhit_t temp_hit;
+           temp_hit.id = (**hit).id;
+	   temp_hit.ch = fcalGeom->channel( (**hit).row, (**hit).column );
+           temp_hit.x = (**hit).x;
+           temp_hit.y = (**hit).y;
+           temp_hit.E = (**hit).E; 
+           temp_hit.t = (**hit).t;
+	   hits.push_back(temp_hit);
       
-           if (nhits >= (int) FCAL_USER_HITS_MAX)  { 
+           if (hits.size() >= (int) FCAL_USER_HITS_MAX)  { 
               cout << "ERROR: FCALCluster_factory: number of hits " 
-		   << nhits << " larger than " << FCAL_USER_HITS_MAX << endl;
+		   << hits.size() << " larger than " << FCAL_USER_HITS_MAX << endl;
               break;
            }
 
         }
-        hits->nhits = nhits;
+	if (hits.size()< (int) FCAL_USER_HITS_MAX){
+	  for (vector<const DECALHit*>::const_iterator hit  = ecalhits.begin(); 
+	       hit != ecalhits.end(); hit++ ) {
+	    if ( (**hit).E <  1e-6 ) continue;
 
-        int hitUsed[nhits]; 
-        for ( int i = 0; i < nhits; i++ ) {
-	  hitUsed[i] = 0; 
-	}
- 
+	    DFCALCluster::userhit_t temp_hit; 
+	    temp_hit.id = (**hit).id;
+	    temp_hit.ch = 10000+ecalGeom->channel( (**hit).row, (**hit).column );
+	    temp_hit.x = (**hit).x;
+	    temp_hit.y = (**hit).y;
+	    temp_hit.E = (**hit).E; 
+	    temp_hit.t = (**hit).t;
+	    hits.push_back(temp_hit);
+      
+	    if (hits.size() >= (int) FCAL_USER_HITS_MAX)  { 
+              cout << "ERROR: FCALCluster_factory: number of hits " 
+		   << hits.size() << " larger than " << FCAL_USER_HITS_MAX << endl;
+              break;
+	    }
+	  }
+        }
+
+	int nhits=(int)hits.size();
+        vector<int>hitUsed(nhits); 
+
+	// Sort hits by energy
+	sort(hits.begin(), hits.end(), FCALHitsSort_C);
+
         const unsigned int max = 999;
 	DFCALCluster* clusterList[max];
 	unsigned int clusterCount = 0;
@@ -162,8 +176,8 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	   // 2. Look for blocks with energy large enough to require formation
 	   //    of a new cluster, and assign them as cluster seeds.
 
-	   for ( int ih = 0; ih < hits->nhits; ih++ ) {
-	      double energy = hits->hit[ih].E;
+	   for ( int ih = 0; ih < nhits; ih++ ) {
+	      double energy = hits[ih].E;
               //cout << "hit: " << ih <<  " E: " << energy << endl;
 	      if (energy < MIN_CLUSTER_SEED_ENERGY)
 		 break;
@@ -174,7 +188,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                  
 	      }
 	      if (energy > totalAllowed) {
-		 clusterList[clusterCount] = new DFCALCluster( hits->nhits );
+		 clusterList[clusterCount] = new DFCALCluster( nhits );
                  hitUsed[ih] = -1;
 		 clusterList[clusterCount]->addHit(ih,1.);
 		 clusterList[clusterCount]->update( hits, fcalFaceZ_TargetIsZeq0, fcalGeom );
@@ -206,12 +220,12 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	   // 3. Share all non-seed blocks among seeded clusters, where
 	   //    any cluster shares a block if it expects at least 1 KeV in it.
 
-	   for ( int ih = 0; ih < hits->nhits; ih++ ) {
+	   for ( int ih = 0; ih < nhits; ih++ ) {
               if ( hitUsed[ih]  < 0) // cannot share seed 
 		 continue;
 	      double totalExpected = 0;
-              //cout << " Share hit: " << ih <<  " E: " << hits->hit[ih].E 
-	      //   << " ch: " << hits->hit[ih].ch << " t: " << hits->hit[ih].t
+              //cout << " Share hit: " << ih <<  " E: " << hits[ih].E 
+	      //   << " ch: " << hits[ih].ch << " t: " << hits[ih].t
 	      //	   << endl;
 	      for ( unsigned int c = 0; c < clusterCount; c++ ) {
 		 if (clusterList[c]->getHits() > 0) {
@@ -225,7 +239,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                     //cout << " expected " << expected ;
 		    if (expected > 1e-6 
 			&& fabs(clusterList[c]->getTimeMaxE()
-				-hits->hit[ih].t)<TIME_CUT	) {
+				-hits[ih].t)<TIME_CUT	) {
 		       clusterList[c]->addHit(ih,expected/totalExpected);
                        ++hitUsed[ih];
 		    }
@@ -242,25 +256,9 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	      continue;
 	   }
 	   else {
-
               clusterList[c]->saveHits( hits );
-
-              // save associated FCAL hit information
-              const vector<DFCALCluster::DFCALClusterHit_t> &clusterHits = clusterList[c]->GetHits();
-              for(size_t loc_i = 0; loc_i < clusterHits.size(); loc_i++) {
-                  const DFCALHit *clusterHit = GetDFCALHitFromClusterHit(clusterHits[loc_i], fcalhits);
-                  if( clusterHit != NULL )
-                      clusterList[c]->AddAssociatedObject( clusterHit );
-              }
-
               _data.push_back( clusterList[c] );
 	   }
-        }
-  
-
-        if (hits) {
-           free(hits);
-           hits=0;
         }
 
 	return NOERROR;
