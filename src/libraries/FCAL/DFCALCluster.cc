@@ -54,21 +54,13 @@ DFCALCluster::~DFCALCluster()
 }
 
 
-void DFCALCluster::saveHits( const userhits_t* const hits )
+void DFCALCluster::saveHits( vector<userhit_t>& hits )
 {
    
    for ( int i=0; i < fNhits; i++) {
-      DFCALClusterHit_t h;
       JObject::oid_t id = getHitID( hits, i ) ;
       if ( id != 0 ) {  
-         h.id = (JObject::oid_t) id;
-	 h.ch = getHitCh( hits, i );
-         h.E = getHitE( hits, i ) ;
-         h.x = getHitX( hits, i ) ;
-         h.y = getHitY( hits, i ) ;
-         h.t = getHitT( hits, i ) ;
-	 h.intOverPeak = getHitIntOverPeak( hits, i );
-         my_hits.push_back(h);
+	my_hits.push_back(id);
       }
       else {
          static uint32_t Nwarns=0;
@@ -104,7 +96,7 @@ void DFCALCluster::resetClusterHits()
    }
 }
 
-bool DFCALCluster::update( const userhits_t* const hitList,
+bool DFCALCluster::update( vector<userhit_t>&hitList,
 			   double fcalFaceZ, const DFCALGeometry *fcalgeom )
 {
 
@@ -113,12 +105,12 @@ bool DFCALCluster::update( const userhits_t* const hitList,
    for ( int h = 0; h < fNhits; h++ ) {
       int ih = fHit[h];
       double frac = fHitf[h];
-      double hitEnergy = hitList->hit[ih].E*frac;
+      double hitEnergy = hitList[ih].E*frac;
 
       energy += hitEnergy;
       
-      t2EWeight += hitEnergy * hitList->hit[ih].t * hitList->hit[ih].t;
-      tEWeight += hitEnergy * hitList->hit[ih].t;
+      t2EWeight += hitEnergy * hitList[ih].t * hitList[ih].t;
+      tEWeight += hitEnergy * hitList[ih].t;
    }
 
    tEWeight /= energy;
@@ -128,9 +120,9 @@ bool DFCALCluster::update( const userhits_t* const hitList,
     int chMax=0;
 
    if (fNhits > 0) { 
-       eMax = hitList->hit[fHit[0]].E;
-       timeMax = hitList->hit[fHit[0]].t;
-       chMax = hitList->hit[fHit[0]].ch;
+       eMax = hitList[fHit[0]].E;
+       timeMax = hitList[fHit[0]].t;
+       chMax = hitList[fHit[0]].ch;
    }
 
    DVector3 centroid;
@@ -156,7 +148,7 @@ bool DFCALCluster::update( const userhits_t* const hitList,
     * to be used in weighting, since negative weights are thrown out
     */
 
-      weight = currentOffset + log(hitList->hit[ih].E*frac/energy);
+      weight = currentOffset + log(hitList[ih].E*frac/energy);
       if (h == 0) {
          centerWeight = weight;
       }
@@ -165,8 +157,8 @@ bool DFCALCluster::update( const userhits_t* const hitList,
                (neighborMaxWeight < weight)? weight:neighborMaxWeight;
       }
       if (weight > 0) {
-         xc  += hitList->hit[ih].x*weight;
-         yc  += hitList->hit[ih].y*weight;
+         xc  += hitList[ih].x*weight;
+         yc  += hitList[ih].y*weight;
          weightSum += weight;
       }
    }
@@ -176,9 +168,9 @@ bool DFCALCluster::update( const userhits_t* const hitList,
     */
    if (neighborMaxWeight > 0) {
       xc += (logFraction-1)*(centerWeight-neighborMaxWeight)
-                             *hitList->hit[0].x;
+                             *hitList[0].x;
       yc += (logFraction-1)*(centerWeight-neighborMaxWeight)
-                             *hitList->hit[0].y;
+                             *hitList[0].y;
       weightSum += (logFraction-1)*(centerWeight-neighborMaxWeight);
    }
    centroid.SetX(xc/weightSum);
@@ -187,8 +179,8 @@ bool DFCALCluster::update( const userhits_t* const hitList,
    for (int h = 0; h < fNhits; h++) {
       int ih = fHit[h];
       double frac = fHitf[h];
-      xc += hitList->hit[ih].x*(hitList->hit[ih].E*frac);
-      yc += hitList->hit[ih].y*(hitList->hit[ih].E*frac);
+      xc += hitList[ih].x*(hitList[ih].E*frac);
+      yc += hitList[ih].y*(hitList[ih].E*frac);
 
    }
    centroid.SetX(xc/energy);
@@ -206,21 +198,21 @@ bool DFCALCluster::update( const userhits_t* const hitList,
    for ( int h = 0; h < fNhits; h++ ) {
       int ih = fHit[h];
       double frac = fHitf[h];
-      double x = hitList->hit[ih].x;
-      double y = hitList->hit[ih].y;
+      double x = hitList[ih].x;
+      double y = hitList[ih].y;
 
-      MOM1x += hitList->hit[ih].E*frac*x;
-      MOM1y += hitList->hit[ih].E*frac*y;
-      MOM2x += hitList->hit[ih].E*frac*SQR(x);
-      MOM2y += hitList->hit[ih].E*frac*SQR(y);
+      MOM1x += hitList[ih].E*frac*x;
+      MOM1y += hitList[ih].E*frac*y;
+      MOM2x += hitList[ih].E*frac*SQR(x);
+      MOM2y += hitList[ih].E*frac*SQR(y);
 
       double phi = atan2( centroid.y() , centroid.x() );
       double u = x*cos(phi) + y*sin(phi);
       double v =-x*sin(phi) + y*cos(phi);
-      MOM1u += hitList->hit[ih].E*frac*u;
-      MOM1v += hitList->hit[ih].E*frac*v;
-      MOM2u += hitList->hit[ih].E*frac*SQR(u);
-      MOM2v += hitList->hit[ih].E*frac*SQR(v);
+      MOM1u += hitList[ih].E*frac*u;
+      MOM1v += hitList[ih].E*frac*v;
+      MOM2u += hitList[ih].E*frac*SQR(u);
+      MOM2v += hitList[ih].E*frac*SQR(v);
    }
 
    bool something_changed = false;
@@ -252,7 +244,7 @@ bool DFCALCluster::update( const userhits_t* const hitList,
       fRMS_u = sqrt(energy*MOM2u - SQR(MOM1u))/(energy);
       fRMS_v = sqrt(energy*MOM2v - SQR(MOM1v))/(energy);
 
-      for (int ih = 0; ih < hitList->nhits; ih++) {
+      for (int ih = 0; ih < (int)hitList.size(); ih++) {
 	shower_profile( hitList, ih,fEallowed[ih],fEexpected[ih],
 			fcalFaceZ+0.5*DFCALGeometry::blockLength(),
 			fcalgeom);
@@ -262,7 +254,7 @@ bool DFCALCluster::update( const userhits_t* const hitList,
    return something_changed;
 }
 
-void DFCALCluster::shower_profile( const userhits_t* const hitList, 
+void DFCALCluster::shower_profile( vector<userhit_t>& hitList, 
                                    const int ihit,
                                    double& Eallowed, double& Eexpected,
 				   double fcalMidplaneZ, const DFCALGeometry *fcalgeom) const
@@ -272,11 +264,11 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    Eallowed = Eexpected = 0;
    if (fEnergy == 0)
       return;
-   double x = hitList->hit[ihit].x;
-   double y = hitList->hit[ihit].y;
+   double x = hitList[ihit].x;
+   double y = hitList[ihit].y;
    double moliere_radius=MOLIERE_RADIUS;
    double min_dist=fcalgeom->blockSize();
-   if (fabs(x)<fcalgeom->insertSize() && fabs(y)<fcalgeom->insertSize()){
+   if (hitList[ihit].ch>9999){
      moliere_radius=PbWO4_MOLIERE_RADIUS;
      min_dist=fcalgeom->insertBlockSize();
    }
