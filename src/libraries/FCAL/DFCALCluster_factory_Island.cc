@@ -13,8 +13,9 @@ using namespace std;
 #include "DFCALCluster_factory_Island.h"
 using namespace jana;
 
-inline bool FCALHit_E_cmp(const DFCALHit *a,const DFCALHit *b){
-  return (a->E>b->E);
+inline bool FCALHit_E_cmp(const DFCALCluster_factory_Island::HitInfo a,
+			  const DFCALCluster_factory_Island::HitInfo b){
+  return (a.E>b.E);
 }
 
 inline bool peak_E_cmp(DFCALCluster_factory_Island::PeakInfo a,
@@ -121,19 +122,36 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
 jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
   vector<const DFCALHit*>fcal_hits;
-  loop->Get(fcal_hits);
-  if (fcal_hits.size()==0) return OBJECT_NOT_AVAILABLE;
+  loop->Get(fcal_hits); 
+  vector<const DECALHit*>ecal_hits;
+  loop->Get(ecal_hits);
+ 
+  unsigned int total_hits=fcal_hits.size()+ecal_hits.size();
+  if (total_hits==0) return OBJECT_NOT_AVAILABLE;
 
   // LED events will have hits in nearly every channel. Do NOT
   // try clusterizing if more than 250 hits in FCAL
-  if(fcal_hits.size() > MAX_HITS_FOR_CLUSTERING) return VALUE_OUT_OF_RANGE;
+  if(total_hits > MAX_HITS_FOR_CLUSTERING) return VALUE_OUT_OF_RANGE;
     
+  // Put hit information into local array
+  vector<HitInfo>hits;
+  for (size_t i=0;i<fcal_hits.size();i++){
+    const DFCALHit *myhit=fcal_hits[i];
+    hits.push_back(HitInfo(myhit->id,myhit->row,myhit->column,myhit->E,
+			   myhit->x,myhit->y,myhit->t));
+  }
+  for (size_t i=0;i<ecal_hits.size();i++){
+    const DECALHit *myhit=ecal_hits[i];
+    hits.push_back(HitInfo(myhit->id,100+myhit->row,100+myhit->column,myhit->E,
+			   myhit->x,myhit->y,myhit->t));
+  }
+
   // Sort the hits according to energy.
-  stable_sort(fcal_hits.begin(),fcal_hits.end(),FCALHit_E_cmp);
+  stable_sort(hits.begin(),hits.end(),FCALHit_E_cmp);
   
   // Associate groups of adjacent hits into cluster candidates
-  vector<vector<const DFCALHit*>>clusterCandidates;
-  FindClusterCandidates(fcal_hits,clusterCandidates);
+  vector<vector<HitInfo>>clusterCandidates;
+  FindClusterCandidates(hits,clusterCandidates);
   
   for (unsigned int i=0;i<clusterCandidates.size();i++){
     // Skip over single hit "clusterCandidates"
@@ -143,17 +161,17 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     if (clusterCandidates[i].size()<4){
       // Create a new DFCALCluster object and add it to the _data list
       DFCALCluster *myCluster= new DFCALCluster(0);
-      vector<const DFCALHit*>clusterCandidate=clusterCandidates[i];
+      vector<HitInfo>clusterCandidate=clusterCandidates[i];
       
       double Etot=0.,t=0,x=0,y=0;
       for (unsigned int k=0;k<clusterCandidate.size();k++){
-	double E=clusterCandidate[k]->E;
+	double E=clusterCandidate[k].E;
 	Etot+=E;
-	t+=E*clusterCandidate[k]->t;
-	x+=E*clusterCandidate[k]->x;
-	y+=E*clusterCandidate[k]->y;
-
-	myCluster->AddAssociatedObject(clusterCandidate[k]);
+	t+=E*clusterCandidate[k].t;
+	x+=E*clusterCandidate[k].x;
+	y+=E*clusterCandidate[k].y;
+	
+	myCluster->addHitID(clusterCandidate[k].id);
       }
       x/=Etot;
       y/=Etot;
@@ -162,8 +180,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       myCluster->setEnergy(Etot);
       myCluster->setTimeEWeight(t);
      
-      int channel=dFCALGeom->channel(clusterCandidate[0]->row,
-				     clusterCandidate[0]->column);
+      int channel=dFCALGeom->channel(clusterCandidate[0].row,
+				     clusterCandidate[0].column);
       myCluster->setChannelEmax(channel);
 
       if (APPLY_S_CURVE_CORRECTION){
@@ -194,7 +212,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     //------------------------------------------------------------------------
     //cout <<"Finding peaks for cluster " << i << endl;
 
-    vector<const DFCALHit*>clusterHits=clusterCandidates[i];
+    vector<HitInfo>clusterHits=clusterCandidates[i];
     vector<PeakInfo>peaks;
 
     // Create weight matrix for hits
@@ -203,10 +221,10 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     double Esum=0.;
     double R=0.; // simple average radius of cluster
     for (unsigned int j=0;j<num_hits;j++){
-      const DFCALHit *hit=clusterHits[j];
-      double E=hit->E;
+      const HitInfo hit=clusterHits[j];
+      double E=hit.E;
       double varE=0.;
-      if (dFCALGeom->isInsertBlock(hit->row,hit->column)){
+      if (dFCALGeom->isInsertBlock(hit.row,hit.column)){
 	varE=m_insert_Eres[0]+m_insert_Eres[1]*E+m_insert_Eres[2]*E*E;
       }
       else{
@@ -214,7 +232,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       }
       W(j,j)=1./varE;
       Esum+=E;
-      R+=sqrt(hit->x*hit->x+hit->y*hit->y);
+      R+=sqrt(hit.x*hit.x+hit.y*hit.y);
     }
     R/=double(num_hits);
 
@@ -223,10 +241,10 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     // Find the minimum and maximum row and column numbers
     int min_row=1000,min_col=1000,max_row=0,max_col=0;
     for (unsigned int j=0;j<num_hits;j++){
-      if (clusterHits[j]->row<min_row) min_row=clusterHits[j]->row;
-      if (clusterHits[j]->column<min_col) min_col=clusterHits[j]->column;
-      if (clusterHits[j]->row>max_row) max_row=clusterHits[j]->row;
-      if (clusterHits[j]->column>max_col) max_col=clusterHits[j]->column;
+      if (clusterHits[j].row<min_row) min_row=clusterHits[j].row;
+      if (clusterHits[j].column<min_col) min_col=clusterHits[j].column;
+      if (clusterHits[j].row>max_row) max_row=clusterHits[j].row;
+      if (clusterHits[j].column>max_col) max_col=clusterHits[j].column;
     }
     // Create arrays to represent the cluster of hits to aid in peak search
     int num_rows=max_row-min_row+3;
@@ -237,20 +255,20 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     unsigned int jmax=0;
     double Emax=0.;
     for (unsigned int j=0;j<num_hits;j++){
-      int ic=clusterHits[j]->column-min_col+1;
-      int ir=clusterHits[j]->row-min_row+1;
-      Emap[ic][ir]=clusterHits[j]->E;
+      int ic=clusterHits[j].column-min_col+1;
+      int ir=clusterHits[j].row-min_row+1;
+      Emap[ic][ir]=clusterHits[j].E;
       imap[ic][ir]=j;
-      if (clusterHits[j]->E>Emax){
-	Emax=clusterHits[j]->E;
+      if (clusterHits[j].E>Emax){
+	Emax=clusterHits[j].E;
 	jmax=j;
       }
     }
 
     // Compute estimate for shower shape parameter b
     double b=0.;
-    if (dFCALGeom->isInsertBlock(clusterHits[jmax]->row,
-				 clusterHits[jmax]->column)){
+    if (dFCALGeom->isInsertBlock(clusterHits[jmax].row,
+				 clusterHits[jmax].column)){
       b=INSERT_SHOWER_WIDTH_PAR0+INSERT_SHOWER_WIDTH_PAR1*R;
     }
     else{
@@ -262,11 +280,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       // Handle the interface between the insert and the lead glass blocks
       double Esum=0.;
       for (unsigned int j=0;j<num_hits;j++){
-	double Ej=clusterHits[j]->E;
+	double Ej=clusterHits[j].E;
 	Esum+=Ej;
       }
       if (Emax>MIN_CLUSTER_SEED_ENERGY){
-	PeakInfo myPeak(Esum,clusterHits[jmax]->x,clusterHits[jmax]->y,0,0,
+	PeakInfo myPeak(Esum,clusterHits[jmax].x,clusterHits[jmax].y,0,0,
 			num_hits);
 	bool good_fit=FitPeaks(W,b,clusterHits,peaks,myPeak,chisq,ndf);
 	if (good_fit){
@@ -279,9 +297,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  myPeak.x=0.;
 	  myPeak.y=0.;
 	  for (unsigned int j=0;j<num_hits;j++){
-	    double Ej=clusterHits[j]->E;
-	    myPeak.x+=Ej*clusterHits[j]->x;
-	    myPeak.y+=Ej*clusterHits[j]->y;
+	    double Ej=clusterHits[j].E;
+	    myPeak.x+=Ej*clusterHits[j].x;
+	    myPeak.y+=Ej*clusterHits[j].y;
 	  }
 	  myPeak.x/=Esum;
 	  myPeak.y/=Esum;
@@ -292,7 +310,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  chisq=0.;
 	  ndf=num_hits-3;
 	  for (unsigned int j=0;j<num_hits;j++){
-	    double dE=clusterHits[j]->E
+	    double dE=clusterHits[j].E
 	      -Esum*CalcClusterEDeriv(b,clusterHits[j],myPeak);
 	    chisq+=W(j,j)*dE*dE;
 	  }
@@ -333,8 +351,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      }
 	    }
 	    if (got_peak){
-	      double x=clusterHits[imap[ic][ir]]->x;
-	      double y=clusterHits[imap[ic][ir]]->y;
+	      double x=clusterHits[imap[ic][ir]].x;
+	      double y=clusterHits[imap[ic][ir]].y;
 	      peak_candidates.push_back(PeakInfo(Esum,x,y,ic,ir,nhits_in_peak));
 	    }
 	  }// cut on minimum energy of central block
@@ -399,7 +417,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    chisq=0.;
 	    ndf=num_hits-3;
 	    for (unsigned int j=0;j<num_hits;j++){
-	      double dE=clusterHits[j]->E
+	      double dE=clusterHits[j].E
 		-Esum*CalcClusterEDeriv(b,clusterHits[j],peak_guess);
 	      chisq+=W(j,j)*dE*dE;
 	    }
@@ -419,7 +437,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	
 	PeakInfo myPeakInfo=peaks[0];
 	for (unsigned int k=0;k<clusterHits.size();k++){
-	  double Ecalc=0.,E=clusterHits[k]->E;
+	  double Ecalc=0.,E=clusterHits[k].E;
 	  Ecalc+=myPeakInfo.E*CalcClusterEDeriv(b,clusterHits[k],myPeakInfo);
 	  HistdE->Fill(E,E-Ecalc);
 	}
@@ -431,7 +449,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       // hit to see if we have excess energy that has not been accounted for
       vector<double>Elist(clusterHits.size());
       for (unsigned int m=0;m<clusterHits.size();m++){
-	Elist[m]=clusterHits[m]->E;
+	Elist[m]=clusterHits[m].E;
 	for (unsigned int k=0;k<peaks.size();k++){
 	  Elist[m]-=peaks[k].E*CalcClusterEDeriv(b,clusterHits[m],peaks[k]);
 	}
@@ -447,8 +465,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       }
       if (Emax>MIN_EXCESS_SEED_ENERGY){
 	// Make a peak candidate out of the excess energy in the cluster of hits
-	int ic=clusterHits[mmax]->column-min_col+1;
-	int ir=clusterHits[mmax]->row-min_row+1;
+	int ic=clusterHits[mmax].column-min_col+1;
+	int ir=clusterHits[mmax].row-min_row+1;
 	int lo_col=ic-1;
 	int hi_col=ic+1;
 	int lo_row=ir-1;
@@ -464,8 +482,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	  }
 	}
-	double x=clusterHits[mmax]->x;
-	double y=clusterHits[mmax]->y;
+	double x=clusterHits[mmax].x;
+	double y=clusterHits[mmax].y;
 	PeakInfo myPeak(excessE,x,y,ic,ir,num_peak_hits);
 	
 	// Save the current list of peaks
@@ -515,12 +533,12 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	myCluster->setEnergy(E);
 
 	// Compute energy-weighted time and find channel corresponding to 
-	// peak position and add hits to the cluster object
+	// peak position and add hit ids to the cluster object
 	unsigned int jmax=0.;
 	double fsum=0.,fmax=0.,t=0.;
 	for (unsigned int j=0;j<clusterHits.size();j++){
 	  double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
-	  t+=f*clusterHits[j]->t;
+	  t+=f*clusterHits[j].t;
 	  fsum+=f;
 	  if (f>fmax){
 	    fmax=f;
@@ -529,16 +547,18 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 
 	myCluster->setTimeEWeight(t/fsum);
-	int channel=dFCALGeom->channel(clusterHits[jmax]->row,
-				       clusterHits[jmax]->column);
+	int channel=dFCALGeom->channel(clusterHits[jmax].row,
+				       clusterHits[jmax].column);
 	myCluster->setChannelEmax(channel);
+	cout << "r: " << clusterHits[jmax].row 
+	     << " c: " << clusterHits[jmax].column 
+	     << " ch: " << channel <<endl;
 	
 	double xc=peaks[k].x,yc=peaks[k].y;
 	if (APPLY_S_CURVE_CORRECTION){
-	  DVector2 blockPos=dFCALGeom->positionOnFace(channel);
-	  double dx=blockPos.X()-xc;
-	  double dy=blockPos.Y()-yc;
-	  if (dFCALGeom->inInsert(channel)==false){
+	  double dx=clusterHits[jmax].x-xc;
+	  double dy=clusterHits[jmax].y-yc;
+	  if (clusterHits[jmax].row<100 && clusterHits[jmax].column<100){
 	    xc+=S_CURVE_PAR1*dx*(4.0157*4.0157/4-dx*dx)+S_CURVE_PAR2;  
 	    yc+=S_CURVE_PAR1*dy*(4.0157*4.0157/4-dy*dy)+S_CURVE_PAR2;
 	  }
@@ -549,22 +569,22 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 	myCluster->setCentroid(xc,yc);
 
-	// Add hits to the cluster object as associated objects
+	// Add hit ids to the cluster object
 	for (unsigned int j=0;j<clusterHits.size();j++){
 	  if (npeaks==1){
-	    myCluster->AddAssociatedObject(clusterHits[j]);
+	    myCluster->addHitID(clusterHits[j].id);
 	  }
 	  else{
 	    // Output hits surrounding peak position
-	    double dx=clusterHits[j]->x-clusterHits[jmax]->x;
-	    double dy=clusterHits[j]->y-clusterHits[jmax]->y;
+	    double dx=clusterHits[j].x-clusterHits[jmax].x;
+	    double dy=clusterHits[j].y-clusterHits[jmax].y;
 	    double d=dFCALGeom->blockSize();
 	    if (dFCALGeom->inInsert(channel)){
 	      d=dFCALGeom->insertBlockSize();
 	    }
 	    double dcut=2.5*d;
 	    if (fabs(dx)<dcut && fabs(dy)<dcut){
-	      myCluster->AddAssociatedObject(clusterHits[j]);
+	      myCluster->addHitID(clusterHits[j].id);
 	    }
 	  }
 	}
@@ -597,9 +617,9 @@ jerror_t DFCALCluster_factory_Island::fini(void)
 // and all adjacent blocks, starting with the block with the highest energy.
 // Each successive cluster candidate starts with the block with the next 
 // highest energy that has not already been included in another cluster.
-void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
-					       vector<vector<const DFCALHit*>>&clusterCandidates) const {
-  vector<const DFCALHit*>clusterCandidate;
+void DFCALCluster_factory_Island::FindClusterCandidates(vector<HitInfo>&fcal_hits,
+					       vector<vector<HitInfo>>&clusterCandidates) const {
+  vector<HitInfo>clusterCandidate;
   clusterCandidate.push_back(fcal_hits[0]);
   
   vector<bool>used_hits(fcal_hits.size());
@@ -611,11 +631,11 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
     for (size_t i=begin_i;i<fcal_hits.size();i++){
       if (used_hits[i]==true) continue;
       
-      double dt=clusterCandidate[0]->t-fcal_hits[i]->t;
+      double dt=clusterCandidate[0].t-fcal_hits[i].t;
       if (fabs(dt)>TIME_CUT) continue;
 
-      int drow=clusterCandidate[0]->row-fcal_hits[i]->row;
-      int dcol=clusterCandidate[0]->column-fcal_hits[i]->column;
+      int drow=clusterCandidate[0].row-fcal_hits[i].row;
+      int dcol=clusterCandidate[0].column-fcal_hits[i].column;
       if (abs(drow)<=1 && abs(dcol)<=1){
 	clusterCandidate.push_back(fcal_hits[i]);
 
@@ -644,20 +664,20 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
   // Merge cluster candidates that appear belong to a single cluster, again
   // looking for adjacent hits.
   double borderCut=0.5*dFCALGeom->blockSize()+dFCALGeom->insertBlockSize();
-  vector<vector<const DFCALHit*>>::iterator iter=clusterCandidates.begin();
+  vector<vector<HitInfo>>::iterator iter=clusterCandidates.begin();
   while (iter!=clusterCandidates.end()){
     bool matched=false;
-    vector<vector<const DFCALHit*>>::iterator iter2=iter+1;
+    vector<vector<HitInfo>>::iterator iter2=iter+1;
     for (;iter2!=clusterCandidates.end();iter2++){     
       for (unsigned int i=0;i<(*iter).size();i++){
 	for (unsigned int j=0;j<(*iter2).size();j++){
-	  double dt=(*iter)[i]->t-(*iter2)[j]->t;
+	  double dt=(*iter)[i].t-(*iter2)[j].t;
 	  if (fabs(dt)>TIME_CUT) continue;
 
-	  int row1=(*iter)[i]->row;
-	  int col1=(*iter)[i]->column;
-	  int row2=(*iter2)[j]->row;
-	  int col2=(*iter2)[j]->column;
+	  int row1=(*iter)[i].row;
+	  int col1=(*iter)[i].column;
+	  int row2=(*iter2)[j].row;
+	  int col2=(*iter2)[j].column;
 
 	  if (abs(row1-row2)<=1 && abs(col1-col2)<=1){
 	    matched=true;
@@ -668,8 +688,8 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 	  // if present
 	  if (MERGE_HITS_AT_BOUNDARY
 	      && dFCALGeom->hitPairHasInsertHit(row1,row2)){
-	    double dx=(*iter)[i]->x-(*iter2)[j]->x;
-	    double dy=(*iter)[i]->y-(*iter2)[j]->y;
+	    double dx=(*iter)[i].x-(*iter2)[j].x;
+	    double dy=(*iter)[i].y-(*iter2)[j].y;
 	    if (fabs(dx)<borderCut && fabs(dy)<borderCut){
 	      matched=true;
 	      break;
@@ -698,7 +718,7 @@ void DFCALCluster_factory_Island::FindClusterCandidates(vector<const DFCALHit*>&
 
 // Fit peaks within a cluster containing a list of hits contained in hitList
 bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
-					   vector<const DFCALHit*>&hitList,
+					   vector<HitInfo>&hitList,
 					   vector<PeakInfo>&peaks,
 					   PeakInfo &myNewPeak,double &chisq,
 					   unsigned int &ndf
@@ -766,7 +786,7 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
       
       Ecalc+=myNewPeak.E*df_dE;
 
-      double Ediff=hitList[i]->E-Ecalc;
+      double Ediff=hitList[i].E-Ecalc;
       dE(i,0)=Ediff;
       //cout << " Ediff " << Ediff << endl;
     }
@@ -826,7 +846,7 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
   }
   vector<int>hit_channels(nhits);
   for (unsigned int i=0;i<nhits;i++){
-    hit_channels[i]=dFCALGeom->channel(hitList[i]->row,hitList[i]->column);
+    hit_channels[i]=dFCALGeom->channel(hitList[i].row,hitList[i].column);
   }
   for (unsigned int j=0;j<peak_channels.size();j++){
     int my_peak_channel=peak_channels[j];
@@ -841,18 +861,18 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
 // Routine to compute the partial derivatives of the shower profile function 
 // with respect to the peak position parameters (xpeak,ypeak)
 double DFCALCluster_factory_Island::CalcClusterXYDeriv(bool isXDeriv,double b,
-						       const DFCALHit *hit,
+						       const HitInfo &hit,
 						       const PeakInfo &myPeakInfo) const {
   double sign1[4]={1,1,-1,-1};
   double sign2[4]={1,-1,-1,1};
   double half_block=0.5*dFCALGeom->blockSize();
-  if (dFCALGeom->isInsertBlock(hit->row,hit->column)){
+  if (dFCALGeom->isInsertBlock(hit.row,hit.column)){
     half_block=0.5*dFCALGeom->insertBlockSize();
   }
   double b2=b*b;
   double f=0.;
-  double dxc=hit->x-myPeakInfo.x;
-  double dyc=hit->y-myPeakInfo.y;
+  double dxc=hit.x-myPeakInfo.x;
+  double dyc=hit.y-myPeakInfo.y;
   double Ec=myPeakInfo.E;
   for (int i=0;i<4;i++){
     double dx=dxc+sign1[i]*half_block;
@@ -875,17 +895,17 @@ double DFCALCluster_factory_Island::CalcClusterXYDeriv(bool isXDeriv,double b,
 // normalization of this function in this equation does not appear to be 
 // correct (it's off by 1/sqrt(2pi)).
 double DFCALCluster_factory_Island::CalcClusterEDeriv(double b,
-						      const DFCALHit *hit,
+						      const HitInfo &hit,
 						      const PeakInfo &myPeakInfo) const {
   double sign1[4]={1,1,-1,-1};
   double sign2[4]={1,-1,-1,1};
   double half_block=0.5*dFCALGeom->blockSize();
-  if (dFCALGeom->isInsertBlock(hit->row,hit->column)){
+  if (dFCALGeom->isInsertBlock(hit.row,hit.column)){
     half_block=0.5*dFCALGeom->insertBlockSize();
   }
   double f=0.;
-  double dxc=hit->x-myPeakInfo.x;
-  double dyc=hit->y-myPeakInfo.y;
+  double dxc=hit.x-myPeakInfo.x;
+  double dyc=hit.y-myPeakInfo.y;
   for (int i=0;i<4;i++){
     double dx=dxc+sign1[i]*half_block;
     double dy=dyc+sign2[i]*half_block;
@@ -897,7 +917,7 @@ double DFCALCluster_factory_Island::CalcClusterEDeriv(double b,
 // Try to split peaks into two following the algorithm (barely) described in 
 // Lednev, IHEP 93-153.
 void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,double b,
-					     vector<const DFCALHit*>&hits,
+					     vector<HitInfo>&hits,
 					     vector<PeakInfo>&peaks,
 					     double &chisq,unsigned int &ndf) const{
   unsigned int npeaks=peaks.size(),nhits=hits.size();
@@ -915,10 +935,10 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,double b,
 	if (i==k) continue;
 	Ecalc+=peaks[k].E*CalcClusterEDeriv(b,hits[j],peaks[k]);
       }
-      Elist[j]=hits[j]->E-Ecalc;
+      Elist[j]=hits[j].E-Ecalc;
       E0+=Elist[j];
-      x0+=Elist[j]*hits[j]->x;
-      y0+=Elist[j]*hits[j]->y;
+      x0+=Elist[j]*hits[j].x;
+      y0+=Elist[j]*hits[j].y;
     }
     x0/=E0;
     y0/=E0;
@@ -926,8 +946,8 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,double b,
     // Find the second moments about the center of the cluster of hits
     double xx=0.,yy=0.,yx=0.;
     for (unsigned int j=0;j<nhits;j++){
-      double dx=hits[j]->x-x0;
-      double dy=hits[j]->y-y0;
+      double dx=hits[j].x-x0;
+      double dy=hits[j].y-y0;
       xx+=Elist[j]*dx*dx;
       yy+=Elist[j]*dy*dy;
       yx+=Elist[j]*dx*dy;
@@ -945,7 +965,7 @@ void DFCALCluster_factory_Island::SplitPeaks(const TMatrixD &W,double b,
     double r = sqrt(dxc*dxc + dyc*dyc);
     double alpha = 0.;
     for(unsigned int i=0;i<nhits;i++) {
-      double u=(hits[i]->x-x0)*dxc/r + (hits[i]->y-y0)*dyc/r;
+      double u=(hits[i].x-x0)*dxc/r + (hits[i].y-y0)*dyc/r;
       alpha-=Elist[i]*u*fabs(u);
     }
     alpha/=E0*rsq;
