@@ -1856,7 +1856,6 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
 
    vector<DECALHit*> data;
-   int hitId = 0;
 
    if (tag == "") {
 
@@ -1881,7 +1880,6 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
          mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
-         mchit->id     = hitId++;
 	 mchit->intOverPeak = 5.;
          data.push_back(mchit);
       }
@@ -1909,7 +1907,6 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
          mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
-         mchit->id     = hitId++;
 	 mchit->intOverPeak = 5.;
          data.push_back(mchit);
       }
