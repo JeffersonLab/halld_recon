@@ -19,6 +19,7 @@
 #include <TH2F.h>
 
 class DFCALHit;
+class DECALHit;
 class DTrackWireBased;
 
 class DFCALShower_factory:public JFactory<DFCALShower>{
@@ -30,6 +31,16 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
 	
  private:
 
+  class HitInfo{
+  public:
+  HitInfo(double E,double x,double y,bool inInsert)
+    :E(E),x(x),y(y),inInsert(inInsert){}
+    double E;
+    double x;
+    double y;
+    bool inInsert;
+  };
+  
   jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
   jerror_t brun(JEventLoop *loop, int32_t runnumber);
   jerror_t erun(void);
@@ -50,10 +61,16 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
 		      const vector< const DFCALHit* >& hits,
 		      const DVector3& showerVec,
 		      const DVector3& trackVec ) const;
-
+  void getUVFromHits( double& sumUSh, double& sumVSh, 
+		      const vector<HitInfo>& hits,
+		      const DVector3& showerVec,
+		      const DVector3& trackVec ) const;
+    
   void getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
 			 const vector< const DFCALHit* >& hits,
 			 unsigned int maxIndex ) const;
+  void getE1925FromHits(vector<HitInfo>&hits,
+			double& e1e9Sh, double& e9e25Sh) const;
 
   vector< const DTrackWireBased* >
     filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
