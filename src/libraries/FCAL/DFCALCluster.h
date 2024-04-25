@@ -37,27 +37,9 @@ class DFCALCluster : public JObject {
       float y;
       float E;
       float t;
-     // this may be pruned at a later stage to reduce size
-     // but it is useful for development now
-      float intOverPeak;
    } userhit_t;
 
-   typedef struct {
-      int nhits;
-      userhit_t hit[1];
-   } userhits_t;
-
-   typedef struct {
-      oid_t id;
-      int ch;
-      float x;
-      float y;
-      float E;
-      float t;
-      float intOverPeak;
-   } DFCALClusterHit_t;
-
-   void saveHits( const userhits_t* const hit );
+   void saveHits( vector<userhit_t>& hit );
 
    void setTimeEWeight(double myTimeEWeight){fTimeEWeight=myTimeEWeight;};
    void setEnergy(double myEnergy){fEnergy=myEnergy;};
@@ -86,38 +68,31 @@ class DFCALCluster : public JObject {
    int getHits() const; // get number of hits owned by a cluster
    int addHit(const int ihit, const double frac);
    void resetClusterHits();
-   bool update( const userhits_t* const hitList, double fcalFaceZ,
+   bool update( vector<userhit_t>& hitList, double fcalFaceZ,
 		const DFCALGeometry *fcalgeom );
+   void addHitID(const oid_t my_id){my_hits.push_back(my_id);}
 
-// get hits that form a cluster after clustering is finished
-   inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
+   // get hits that form a cluster after clustering is finished
+   inline const vector<oid_t> GetHits() const { return my_hits; }
    inline uint32_t GetNHits(void) const { return my_hits.size(); }
 
    void toStrings(vector<pair<string,string> > &items) const {
       AddString(items, "x(cm)", "%3.1f", getCentroid().x());
       AddString(items, "y(cm)", "%3.1f", getCentroid().y());
-      AddString(items, "z(cm)", "%3.1f", getCentroid().z());
       AddString(items, "E(GeV)", "%2.3f", getEnergy());
-      AddString(items, "t(ns)", "%2.3f", getTime());
+      AddString(items, "t(ns)", "%2.3f", getTimeEWeight());
    }
 
    private:
 
-   void shower_profile( const userhits_t* const hitList, 
+   void shower_profile( vector<userhit_t>& hitList, 
                         const int ihit,
                         double& Eallowed, double& Eexpected, 
 			double fcalMidplaneZ, 
 			const DFCALGeometry *fcalgeom ) const ;
 
-   // internal parsers of properties for a hit belonging to a cluster 
-   oid_t  getHitID( const userhits_t* const hitList, const int ihit) const;
-   int    getHitCh( const userhits_t* const hitList, const int ihit) const;
-   double getHitX( const userhits_t* const hitList, const int ihit) const;
-   double getHitY( const userhits_t* const hitList, const int ihit) const;
-   double getHitT( const userhits_t* const hitList, const int ihit) const;
-   double getHitIntOverPeak( const userhits_t* const hitList, const int ihit) const;
-   double getHitE( const userhits_t* const hitList, const int ihit) const;  // hit energy owned by cluster
-   double getHitEhit( const userhits_t* const hitList, const int ihit) const; // energy in a FCAL block
+   // internal parser of oid for a hit belonging to a cluster 
+   oid_t  getHitID( vector<userhit_t>& hitList, const int ihit) const;
 
    double fEnergy;        // total cluster energy (GeV) or 0 if stale
    double fTime;          // cluster time(ns) set equivalent to fTimeMaxE below
@@ -141,7 +116,7 @@ class DFCALCluster : public JObject {
    double *fEallowed;     // allowed energy of hit by cluster (GeV)
 
    // container for hits that form a cluster to be used after clustering is done
-   vector<DFCALClusterHit_t> my_hits; 
+   vector<oid_t> my_hits; 
 
 };
 
@@ -230,83 +205,13 @@ inline int DFCALCluster::getHits() const
    return fNhits;
 }
 
-inline JObject::oid_t DFCALCluster::getHitID(const userhits_t* const hitList, const int ihit ) const
+inline JObject::oid_t DFCALCluster::getHitID(vector<userhit_t>& hitList, const int ihit ) const
 {
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return hitList->hit[ fHit[ ihit ] ].id;
+  if ( ihit >= 0  && ihit < fNhits && hitList.size()>0 && ihit < (int)hitList.size()) {
+     return hitList[ fHit[ ihit ] ].id;
    }
    else {
      return 0;
-   }
-}
-
-inline int DFCALCluster::getHitCh(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return hitList->hit[ fHit[ ihit ] ].ch;
-   }
-   else {
-     return 0;
-   }
-}
-
-inline double DFCALCluster::getHitX(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return  hitList->hit[ fHit[ ihit ] ].x;
-   }
-   else {
-     return 0.;
-   }
-}
-
-inline double DFCALCluster::getHitY(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return  hitList->hit[ fHit[ ihit ] ].y;
-   }
-   else {
-     return 0.;
-   }
-}
-
-inline double DFCALCluster::getHitT(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) { 
-     return  hitList->hit[ fHit[ ihit ] ].t;
-   }
-   else {
-     return 0.;
-   }
-}
-
-inline double DFCALCluster::getHitIntOverPeak(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) { 
-     return  hitList->hit[ fHit[ ihit ] ].intOverPeak;
-   }
-   else {
-     return 0.;
-   }
-}
-
-inline double DFCALCluster::getHitE(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return fHitf[ ihit ] * hitList->hit[ fHit[ ihit ] ].E ;
-   }
-   else {
-     return -1.;
-   }
-}
-
-inline double DFCALCluster::getHitEhit(const userhits_t* const hitList, const int ihit ) const
-{
-   if ( ihit >= 0  && ihit < fNhits && hitList && ihit < hitList->nhits ) {
-     return hitList->hit[ fHit[ ihit ] ].E ;
-   }
-   else {
-     return -1.;
    }
 }
 
