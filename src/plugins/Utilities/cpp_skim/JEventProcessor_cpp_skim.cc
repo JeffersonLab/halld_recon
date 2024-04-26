@@ -86,12 +86,12 @@ jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
   if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) { // Begin of Run event
-    locEventWriterEVIO->Write_EVIOEvent(loop,"c2");
+    locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
     return NOERROR;
   }
 
   if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT)) { // Epics event
-    if(num_epics_events<5) locEventWriterEVIO->Write_EVIOEvent(loop,"c2");
+    if(num_epics_events<5) locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
      ++num_epics_events;
     return NOERROR;
   }
@@ -111,7 +111,7 @@ jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
     if(q<-0.1) ++nneg;
   }
 
-  if(npos*nneg) locEventWriterEVIO->Write_EVIOEvent(loop,"c2");
+  if(npos*nneg) locEventWriterEVIO->Write_EVIOEvent(loop,"cpp_2c");
 
 	return NOERROR;
 }
