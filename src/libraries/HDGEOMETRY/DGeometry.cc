@@ -2064,7 +2064,14 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
 bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+
+   bool good = Get("//composition[@name='XTDfullRow']/mposX[@volume='XTModule']/@ncopy",insert_row_size);
+   // For backward compatibility with prototype geometry definition:
+   if (!good){
+     good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+   }
+   cout << "insert size " << insert_row_size << endl;
+
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
