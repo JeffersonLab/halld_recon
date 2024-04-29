@@ -176,7 +176,7 @@ void ParseCommandLineArguments(int &narg, char *argv[])
 				PRINT_SUMMARY_ALL    = true;
 				PRINT_SUMMARY_HEADER = true;
 				break;
-			case 'b':
+			case 'B':
 				PRINT_STATUS_BITS = true;
 				break;
 			case 'e':
@@ -216,7 +216,7 @@ void Usage()
 	cout<<"   -c        Print summary header lisiting for select factories."<<endl;
 	cout<<"   -V        Print summary header lisiting for all factories."<<endl;
 	cout<<"             (warning: this activates every single factory!)"<<endl;
-	cout<<"   -b        Print event status bits"<<endl;
+	cout<<"   -B        Print event status bits"<<endl;
 	cout<<"   -e        Don't allow automatic EVIO sparse readout for EPICS data"<<endl;
 	cout<<endl;
 
