@@ -202,7 +202,7 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 	
         n_found++; // keep count of number of events printed
 
-        if (n_found==N_TO_FIND) GetApplication()->Quit();
+        if (n_found==N_TO_FIND) GetApplication()->Stop(false);
 
 	// If the program is quitting, then don't bother waiting for the user
 	if(event->GetJApplication()->IsQuitting()) return;
