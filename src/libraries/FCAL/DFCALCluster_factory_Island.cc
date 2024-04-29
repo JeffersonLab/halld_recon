@@ -171,7 +171,10 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	x+=E*clusterCandidate[k].x;
 	y+=E*clusterCandidate[k].y;
 	
-	myCluster->addHitID(clusterCandidate[k].id);
+	int channel=dFCALGeom->channel(clusterCandidate[k].row,
+				       clusterCandidate[k].column);
+	myCluster->addHit(channel,E,clusterCandidate[k].x,
+			  clusterCandidate[k].y);
       }
       x/=Etot;
       y/=Etot;
@@ -550,9 +553,6 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	int channel=dFCALGeom->channel(clusterHits[jmax].row,
 				       clusterHits[jmax].column);
 	myCluster->setChannelEmax(channel);
-	cout << "r: " << clusterHits[jmax].row 
-	     << " c: " << clusterHits[jmax].column 
-	     << " ch: " << channel <<endl;
 	
 	double xc=peaks[k].x,yc=peaks[k].y;
 	if (APPLY_S_CURVE_CORRECTION){
@@ -569,10 +569,13 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	}
 	myCluster->setCentroid(xc,yc);
 
-	// Add hit ids to the cluster object
+	// Add hit data to the cluster object
 	for (unsigned int j=0;j<clusterHits.size();j++){
-	  if (npeaks==1){
-	    myCluster->addHitID(clusterHits[j].id);
+	  int channel=dFCALGeom->channel(clusterHits[j].row,
+					 clusterHits[j].column);
+	  if (npeaks==1){	  		     
+	    myCluster->addHit(channel,clusterHits[j].E,clusterHits[j].x,
+			      clusterHits[j].y);
 	  }
 	  else{
 	    // Output hits surrounding peak position
@@ -584,7 +587,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    }
 	    double dcut=2.5*d;
 	    if (fabs(dx)<dcut && fabs(dy)<dcut){
-	      myCluster->addHitID(clusterHits[j].id);
+	      myCluster->addHit(channel,clusterHits[j].E,clusterHits[j].x,
+				clusterHits[j].y);
 	    }
 	  }
 	}
