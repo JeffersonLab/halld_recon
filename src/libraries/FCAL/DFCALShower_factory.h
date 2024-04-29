@@ -30,17 +30,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   jerror_t FillCovarianceMatrix(DFCALShower* shower);
 	
  private:
-
-  class HitInfo{
-  public:
-  HitInfo(double E,double x,double y,bool inInsert)
-    :E(E),x(x),y(y),inInsert(inInsert){}
-    double E;
-    double x;
-    double y;
-    bool inInsert;
-  };
-  
+ 
   jerror_t evnt(JEventLoop *eventLoop, uint64_t eventnumber);	///< Invoked via JEventProcessor virtual method
   jerror_t brun(JEventLoop *loop, int32_t runnumber);
   jerror_t erun(void);
@@ -54,22 +44,12 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   void GetLogWeightedPosition( const DFCALCluster* cluster, DVector3 &pos_log, 
   				     double Egamma, const DVector3 *aVertex  );
 
-  unsigned int getMaxHit( const vector< const DFCALHit* >& hitVec ) const;
-  unsigned int getMaxHit(int chan_Emax, const vector< const DFCALHit* >& hitVec ) const;
+  void getUVFromHits( double& sumUSh, double& sumVSh, 
+		      const vector<DFCALCluster::DFCALClusterHit_t>& hits,
+		      const DVector3& showerVec,
+		      const DVector3& trackVec ) const;
 
-  void getUVFromHits( double& sumUSh, double& sumVSh, 
-		      const vector< const DFCALHit* >& hits,
-		      const DVector3& showerVec,
-		      const DVector3& trackVec ) const;
-  void getUVFromHits( double& sumUSh, double& sumVSh, 
-		      const vector<HitInfo>& hits,
-		      const DVector3& showerVec,
-		      const DVector3& trackVec ) const;
-    
-  void getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
-			 const vector< const DFCALHit* >& hits,
-			 unsigned int maxIndex ) const;
-  void getE1925FromHits(vector<HitInfo>&hits,
+  void getE1925FromHits(const vector<DFCALCluster::DFCALClusterHit_t>&hits,
 			double& e1e9Sh, double& e9e25Sh) const;
 
   vector< const DTrackWireBased* >
@@ -116,7 +96,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double FCAL_C_EFFECTIVE;
 
   // parameters for insert
-  double INSERT_PAR1,INSERT_PAR2;
+  double INSERT_PAR1,INSERT_PAR2,INSERT_PAR3;
   double INSERT_RADIATION_LENGTH;
   double INSERT_CRITICAL_ENERGY;
   double INSERT_SHOWER_OFFSET;
