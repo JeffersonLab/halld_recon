@@ -54,26 +54,19 @@ DFCALCluster::~DFCALCluster()
 }
 
 
-void DFCALCluster::saveHits( vector<userhit_t>& hits )
+void DFCALCluster::saveHits( vector<userhit_t>& hitList )
 {
-   
-   for ( int i=0; i < fNhits; i++) {
-      JObject::oid_t id = getHitID( hits, i ) ;
-      if ( id != 0 ) {  
-	my_hits.push_back(id);
-      }
-      else {
-         static uint32_t Nwarns=0;
-         if (++Nwarns < 100)
-            std::cout << "Warning: DFCALCluster : corrupted cluster hit "
-                      << i << std::endl;
-         if (Nwarns == 100)
-            std::cout << "Last warning!!! (further warnings supressed)"
-                      << std::endl;
-      }
-   }
+  for ( int i=0; i < fNhits; i++) {
+    if (hitList.size()>0 && i < (int)hitList.size()) {
+      addHit(hitList[fHit[i]].ch,hitList[fHit[i]].E,hitList[fHit[i]].x,
+	     hitList[fHit[i]].y);
+    }
+  }
 }
 
+void DFCALCluster::addHit(int ch,double E,double x,double y){
+  my_hits.push_back(DFCALClusterHit_t(ch,E,x,y));
+}
 
 int DFCALCluster::addHit(const int ihit, const double frac)
 {

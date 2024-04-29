@@ -39,6 +39,16 @@ class DFCALCluster : public JObject {
       float t;
    } userhit_t;
 
+   class DFCALClusterHit_t{
+   public:
+   DFCALClusterHit_t(int ch,double E,double x,double y)
+     :ch(ch),E(E),x(x),y(y){}
+     int ch;
+     double E;
+     double x;
+     double y;
+   };
+   
    void saveHits( vector<userhit_t>& hit );
 
    void setTimeEWeight(double myTimeEWeight){fTimeEWeight=myTimeEWeight;};
@@ -70,10 +80,10 @@ class DFCALCluster : public JObject {
    void resetClusterHits();
    bool update( vector<userhit_t>& hitList, double fcalFaceZ,
 		const DFCALGeometry *fcalgeom );
-   void addHitID(const oid_t my_id){my_hits.push_back(my_id);}
+   void addHit(int ch,double E,double x,double y);
 
    // get hits that form a cluster after clustering is finished
-   inline const vector<oid_t> GetHits() const { return my_hits; }
+   inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
    inline uint32_t GetNHits(void) const { return my_hits.size(); }
 
    void toStrings(vector<pair<string,string> > &items) const {
@@ -90,9 +100,6 @@ class DFCALCluster : public JObject {
                         double& Eallowed, double& Eexpected, 
 			double fcalMidplaneZ, 
 			const DFCALGeometry *fcalgeom ) const ;
-
-   // internal parser of oid for a hit belonging to a cluster 
-   oid_t  getHitID( vector<userhit_t>& hitList, const int ihit) const;
 
    double fEnergy;        // total cluster energy (GeV) or 0 if stale
    double fTime;          // cluster time(ns) set equivalent to fTimeMaxE below
@@ -116,7 +123,7 @@ class DFCALCluster : public JObject {
    double *fEallowed;     // allowed energy of hit by cluster (GeV)
 
    // container for hits that form a cluster to be used after clustering is done
-   vector<oid_t> my_hits; 
+   vector<DFCALClusterHit_t> my_hits; 
 
 };
 
@@ -203,16 +210,6 @@ inline double DFCALCluster::getRMS_v() const
 inline int DFCALCluster::getHits() const
 {
    return fNhits;
-}
-
-inline JObject::oid_t DFCALCluster::getHitID(vector<userhit_t>& hitList, const int ihit ) const
-{
-  if ( ihit >= 0  && ihit < fNhits && hitList.size()>0 && ihit < (int)hitList.size()) {
-     return hitList[ fHit[ ihit ] ].id;
-   }
-   else {
-     return 0;
-   }
 }
 
 #endif // _DFCALCluster_
