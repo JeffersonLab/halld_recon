@@ -153,7 +153,6 @@ class DEventSourceHDDM:public JEventSource
 
       jerror_t Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
       jerror_t Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);
-
       Particle_t IDTrack(float locCharge, float locMass) const;
 
       // add RICH hit and Truth, yqiang Oct 3, 2012
