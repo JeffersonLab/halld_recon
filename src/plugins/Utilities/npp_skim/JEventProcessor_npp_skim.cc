@@ -6,16 +6,17 @@
 //
 
 #include "JEventProcessor_npp_skim.h"
-using namespace jana;
+#include "DANA/DEvent.h"
+
 
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_npp_skim());
+    app->Add(new JEventProcessor_npp_skim());
   }
 } // "C"
 
@@ -37,30 +38,29 @@ JEventProcessor_npp_skim::~JEventProcessor_npp_skim()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_npp_skim::init(void)
+void JEventProcessor_npp_skim::Init(void)
 {
   // This is called once at program startup. 
   
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_npp_skim::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_npp_skim::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
   // This is called whenever the run number changes
   num_epics_events = 0;
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_npp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
-{
+void JEventProcessor_npp_skim::Process(const std::shared_ptr<const JEvent>& event){
   // This is called for every event. Use of common resources like writing
   // to a file or filling a histogram should be mutex protected. Using
   // loop->Get(...) to get reconstructed objects (and thereby activating the
@@ -77,35 +77,35 @@ jerror_t JEventProcessor_npp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 
   vector<const DFCALHit*> locFCALHits;
-  loop->Get(locFCALHits);
-  if(locFCALHits.size()>200) return NOERROR;
+  event->Get(locFCALHits);
+  if(locFCALHits.size()>200) return; //NOERROR;
 
   vector< const DFCALShower* > locFCALShowers;
-  loop->Get(locFCALShowers);
+  event->Get(locFCALShowers);
 
   vector< const DBCALShower* > locBCALShowers;
-  loop->Get(locBCALShowers);
+  event->Get(locBCALShowers);
 
   const DEventWriterEVIO* locEventWriterEVIO = NULL;
-  loop->GetSingle(locEventWriterEVIO);
+  event->GetSingle(locEventWriterEVIO);
   if(locEventWriterEVIO == NULL) {
     cerr << "from JEventProcessor_npp_skim: locEventWriterEVIO is not available" << endl;
     exit(1);
   }
 
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_BOR_EVENT)) { // Begin of Run event
-    locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2g");
-    locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2pi0");
-    return NOERROR;
+  if(GetStatusBit(event, kSTATUS_BOR_EVENT)) { // Begin of Run event
+    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
+    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
+    return; //NOERROR;
   }
 
-  if(loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT)) { // Epics event
+  if(GetStatusBit(event, kSTATUS_EPICS_EVENT)) { // Epics event
     if(num_epics_events<5) {
-      locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2g");
-      locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2pi0");
+      locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
+      locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
     }
     ++num_epics_events;
-    return NOERROR;
+    return; //NOERROR;
   }
 
   bool write_2g = false, write_2pi0 = false;
@@ -249,33 +249,33 @@ jerror_t JEventProcessor_npp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
   }
 
   if(write_2g)   {
-    locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2g");
+    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2g");
   }
 
   if(write_2pi0) {
-    locEventWriterEVIO->Write_EVIOEvent(loop,"npp_2pi0");
+    locEventWriterEVIO->Write_EVIOEvent(event,"npp_2pi0");
   }
 
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_npp_skim::erun(void)
+void JEventProcessor_npp_skim::EndRun(void)
 {
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_npp_skim::fini(void)
+void JEventProcessor_npp_skim::Finish(void)
 {
   // Called before program exit after event processing is finished.
-  return NOERROR;
+  return; //NOERROR;
 }
 
