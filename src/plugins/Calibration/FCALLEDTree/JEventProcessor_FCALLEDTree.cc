@@ -92,9 +92,9 @@ void JEventProcessor_FCALLEDTree::Init()
 
   main->cd();
   
- japp->RootUnLock();
+ lockService->RootUnLock();
   
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
@@ -132,10 +132,6 @@ void JEventProcessor_FCALLEDTree::Process(const std::shared_ptr<const JEvent>& e
   
   m_nHits = 0;
   m_eTot = 0;
-  
-    
-  japp->RootFillLock(this);
-
   for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
        hit != hits.end();
        ++hit ){

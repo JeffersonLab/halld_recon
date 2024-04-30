@@ -86,6 +86,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	locEventLoop->Get(TOFHits);
 	locEventLoop->Get(FCALHits);
 	locEventLoop->Get(ECALHits);
+	locEventLoop->Get(ECALHits);
 	locEventLoop->Get(CCALHits);
 	locEventLoop->Get(BCALDigiHits);
 	locEventLoop->Get(BCALTDCDigiHits);
@@ -99,7 +100,10 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	locEventLoop->Get(DIRCPmtHits);
 	locEventLoop->Get(CTOFHits);
 	locEventLoop->Get(FMWPCHits);
+	locEventLoop->Get(CTOFHits);
+	locEventLoop->Get(FMWPCHits);
 
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && ECALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0) )
 	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && ECALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0) )
 	{
 		return false;
@@ -641,6 +645,51 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 
 
 
+	//========================================ECAL=========================================================
+
+
+	for(uint i=0; i<ECALHits.size(); ++i)
+	  {
+	    if(i == 0)
+	      {
+			hitv->addCrystalEcals();
+		}
+		bool found = false;
+		//ECAL only has one hit per block per event so we need not search
+		hddm_s::EcalBlockList* ECAL_BlockList = &hitv->getCrystalEcal().getEcalBlocks();
+		hddm_s::EcalBlockList::iterator ECAL_BlockIterator = ECAL_BlockList->begin();
+
+		for(ECAL_BlockIterator = ECAL_BlockList->begin(); ECAL_BlockIterator != ECAL_BlockList->end(); ECAL_BlockIterator++)
+				{
+					if(ECALHits[i]->row==ECAL_BlockIterator->getRow() && ECALHits[i]->column==ECAL_BlockIterator->getColumn())
+					{
+						found=true;
+						break;
+					}
+				}
+
+		if(found==false)
+		{
+			hitv->getCrystalEcal().addEcalBlocks();
+			ECAL_BlockIterator=ECAL_BlockList->end()-1;
+			ECAL_BlockIterator->setColumn(ECALHits[i]->column);
+			ECAL_BlockIterator->setRow(ECALHits[i]->row);            
+		}
+
+
+		ECAL_BlockIterator->addEcalHits();
+		hddm_s::EcalHitList* ECAL_HitList = &ECAL_BlockIterator->getEcalHits();
+		hddm_s::EcalHitList::iterator ECAL_HitIterator = ECAL_HitList->end()-1;
+		ECAL_HitIterator->setT(ECALHits[i]->t);
+		ECAL_HitIterator->setE(ECALHits[i]->E);
+
+
+	}
+
+
+
+
+
 	//========================================CCAL=========================================================
 
 	for(uint i=0; i<CCALHits.size(); ++i)
@@ -844,8 +893,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	    hddm_s::FmwpcChamberList::iterator FMWPC_ChamberIterator = FMWPC_ChamberList->begin();
 	    for(FMWPC_ChamberIterator = FMWPC_ChamberList->begin(); FMWPC_ChamberIterator != FMWPC_ChamberList->end(); FMWPC_ChamberIterator++)
 	      {
-		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
-		   FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
+		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer())
 		  {
 		    foundChamber = true;
 		    break;
@@ -876,6 +924,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	TOFHits.clear();
 	FCALHits.clear();
 	ECALHits.clear();
+	ECALHits.clear();
 	CCALHits.clear();
 	SCHits.clear();
 	BCALDigiHits.clear();
@@ -888,6 +937,8 @@ bool DEventWriterHDDM::Write_HDDMEvent(const std::shared_ptr<const JEvent>& locE
 	TPOLHits.clear();
 	RFtimes.clear();
 	DIRCPmtHits.clear();
+	FMWPCHits.clear();
+	CTOFHits.clear();
 	FMWPCHits.clear();
 	CTOFHits.clear();
 

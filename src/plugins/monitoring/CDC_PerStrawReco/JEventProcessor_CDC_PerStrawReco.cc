@@ -57,6 +57,9 @@ void JEventProcessor_CDC_PerStrawReco::Init()
     if(EXCLUDERING == 0 ){
         jout << "Did not set CDCCOSMIC:EXCLUDERING on the command line -- Using Biased fits" << endl;
     }
+
+
+    return; //NOERROR;
 }
 
 //------------------
