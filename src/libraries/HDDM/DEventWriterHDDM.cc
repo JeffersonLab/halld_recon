@@ -843,7 +843,8 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	    hddm_s::FmwpcChamberList::iterator FMWPC_ChamberIterator = FMWPC_ChamberList->begin();
 	    for(FMWPC_ChamberIterator = FMWPC_ChamberList->begin(); FMWPC_ChamberIterator != FMWPC_ChamberList->end(); FMWPC_ChamberIterator++)
 	      {
-		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer())
+		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
+		   FWMPCHits[i]->wire == FWMPC_ChamberIterator->getWire())
 		  {
 		    foundChamber = true;
 		    break;
