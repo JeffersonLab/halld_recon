@@ -8,10 +8,10 @@
 #ifndef _DECALGeometry_factory_
 #define _DECALGeometry_factory_
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "DECALGeometry.h"
 
-class DECALGeometry_factory:public jana::JFactory<DECALGeometry>{
+class DECALGeometry_factory:public JFactoryT<DECALGeometry>{
 	public:
 		DECALGeometry_factory(){};
 		~DECALGeometry_factory(){};
@@ -19,9 +19,9 @@ class DECALGeometry_factory:public jana::JFactory<DECALGeometry>{
 		DECALGeometry *ecalgeometry = nullptr;
 
 		//------------------
-		// brun
+		// BeginRun
 		//------------------
-		jerror_t brun(JEventLoop *loop, int32_t runnumber)
+		void BeginRun(const std::shared_ptr<const JEvent>& event)
 		{
 			SetFactoryFlag(NOT_OBJECT_OWNER);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
@@ -30,29 +30,29 @@ class DECALGeometry_factory:public jana::JFactory<DECALGeometry>{
 
 			ecalgeometry = new DECALGeometry();
 
-			return NOERROR;
+			return; //NOERROR;
 		}
 
 		//------------------
-		// evnt
+		// Process
 		//------------------
-		 jerror_t evnt(JEventLoop *loop, uint64_t eventnumber)
+		 void Process(const std::shared_ptr<const JEvent>& event)
 		 {
 			// Reuse existing DBCALGeometry object.
-			if( ecalgeometry ) _data.push_back( ecalgeometry );
+			if( ecalgeometry ) Insert( ecalgeometry );
 			 
-			 return NOERROR;
+			 return; //NOERROR;
 		 }
 
 		//------------------
-		// erun
+		// EndRun
 		//------------------
-		jerror_t erun(void)
+		void EndRun(void)
 		{
 			if( ecalgeometry ) delete ecalgeometry;
 			ecalgeometry = NULL;
 			
-			return NOERROR;
+			return; //NOERROR;
 		}
 };
 

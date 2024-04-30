@@ -9,12 +9,12 @@
 #define _DECALGeometry_
 
 #include <JANA/JObject.h>
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 
 #include "DVector2.h"
 #include "units.h"
 
-class DECALGeometry:public jana::JObject{
+class DECALGeometry:public JObject{
 
 	public:
 		JOBJECT_PUBLIC(DECALGeometry);
@@ -50,11 +50,11 @@ class DECALGeometry:public jana::JObject{
 		int row   ( float y ) const;
 		int column( float x ) const;
 
-		void toStrings(vector<pair<string,string> > &items)const{
-		  AddString(items, "kECALBlocksWide", "%d", (int) kECALBlocksWide);
-		  AddString(items, "kECALBlocksTall", "%d", (int) kECALBlocksTall);
-		  AddString(items, "kECALMaxChannels", "%d",(int) kECALMaxChannels);
-		  AddString(items, "kECALBeamHoleSize", "%2.3f",(int) kECALBeamHoleSize);
+		void Summarize(JObjectSummary& summary) const{
+		  summary.add((int) kECALBlocksWide, "kECALBlocksWide", "%d");
+		  summary.add((int) kECALBlocksTall, "kECALBlocksTall", "%d");
+		  summary.add((int) kECALMaxChannels, "kECALMaxChannels", "%d");
+		  summary.add((int) kECALBeamHoleSize, "kECALBeamHoleSize", "%2.3f");
 		}
 	
 	private:
