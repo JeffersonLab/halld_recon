@@ -60,8 +60,11 @@ JEventProcessor_BCAL_SiPM_saturation::~JEventProcessor_BCAL_SiPM_saturation()
 //------------------
 void JEventProcessor_BCAL_SiPM_saturation::Init()
 {
+	// This is called once at program startup. 
+	VERBOSE = 0;
+	auto app = GetApplication();
+	app->SetDefaultParameter("BCAL_SiPM_saturation:VERBOSE", VERBOSE, "Verbosity level");
 	Int_t nbins=100;
-
 
 	// This is called once at program startup. 
 	gDirectory->mkdir("BCAL_SiPM_saturation");
@@ -109,9 +112,7 @@ void JEventProcessor_BCAL_SiPM_saturation::Init()
 
 	gDirectory->cd("..");
 
-	VERBOSE = 0;
-	auto app = GetApplication();
-	app->SetDefaultParameter("BCAL_SiPM_saturation:VERBOSE", VERBOSE, "Verbosity level");
+	return; //NOERROR;
 }
 
 //------------------
