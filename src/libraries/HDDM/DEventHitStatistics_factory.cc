@@ -77,7 +77,7 @@ void DEventHitStatistics_factory::Process(const std::shared_ptr<const JEvent>& e
     }
     {
        vector<const DECALHit*> hits;
-	   loop->Get(hits);
+	   event->Get(hits);
        stats->ecal_blocks = hits.size();
     }
     {
