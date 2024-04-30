@@ -535,7 +535,7 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
       double dx = pid_algorithm->CalcdXHit(mom,pos,wire);
       double locTheta = thisTimeBasedTrack->momentum().Theta()*TMath::RadToDeg();
       
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
       hExpectedHitsVsPathLength->Fill(dx);
       hExpectedHitsVsDOCA->Fill(distanceToWire);
       hExpectedHitsVsTrackingFOM->Fill(thisTimeBasedTrack->FOM);
@@ -544,7 +544,7 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
       hExpectedHitsVsDelta->Fill(delta);
       hExpectedHitsMomVsTheta->Fill(locTheta, thisTimeBasedTrack->pmag());
       hExpectedHitsVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
    
       
       // look for a CDC hit match
@@ -576,7 +576,7 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
             ChannelFromRingStraw[ringNum - 1][wireNum - 1] = thisPulse->channel;
          }
 
-      	  japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      	  lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
 		  hMeasuredHitsVsPathLength->Fill(dx);
 		  hMeasuredHitsVsDOCA->Fill(distanceToWire);
@@ -599,11 +599,11 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
 		  hMeasuredHitsWithDEDxVsN->Fill(Nstraws_previous[ringNum-1]+wireNum);            //expected hits by straw number
 	   }
 	 }
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
       }
 
-      japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+      lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 
       //FILL PROFILES: BASED ON FOUND OR NOT
 	  hEfficiencyVsPathLength->Fill(dx,foundHit);
@@ -652,7 +652,7 @@ void JEventProcessor_CDC_Efficiency::Fill_Efficiency_Histos(unsigned int ringNum
 		hEfficiencyWithDEDxDistanceVsDelta->Fill(delta,distanceToWire,foundHitWithdEdx);
 		hEfficiencyWithDEDxZVsDelta->Fill(delta,dz,foundHitWithdEdx);
       }
-      japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+      lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 
 
       //FILL AS FUNCTION OF DOCA
