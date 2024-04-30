@@ -145,6 +145,7 @@ void JEventProcessor_BCAL_SiPM_saturation::BeginRun(const std::shared_ptr<const 
 void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const JEvent>& event)
 {
 
+auto lockService = DEvent::GetLockService(event);
   // If not Physics event call BCAL showers to initialize parameters
   if (!DEvent::GetStatusBit(event, kSTATUS_PHYSICS_EVENT)) {
   	vector<const DBCALShower*> BCALShowers;
@@ -212,7 +213,7 @@ void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const J
 		locNeutralShower->Get(Points);
         uint Ncell = Points.size();
         
-    	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    	lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
 		// Fill histogram for showers
 		dHistEthrown->Fill(Ethrown);
@@ -226,7 +227,7 @@ void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const J
 	
         dHistNCell->Fill(Ncell);
 
-    	japp->RootUnLock(); //RELEASE ROOT LOCK
+    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 
         for (unsigned int j = 0; j < Ncell; j++){
@@ -262,13 +263,13 @@ void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const J
 			if (VERBOSE>=3) cout << " VERBOSE >=3" << " t=" << t << " z=" << z << endl;
 
 
-    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 	
 			// Fill 1D histograms
 			dHistLayer->Fill(layer);
 			dHistEpoint->Fill(Ept);
 
-	    	japp->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 			// cout << " Point: Ept=" << Ept << endl;
 			float upHit=0;
@@ -304,7 +305,7 @@ void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const J
 			}
 
 
-    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    		lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
             // Fill 1D histograms
 			if (layer == 1) {
@@ -327,7 +328,7 @@ void JEventProcessor_BCAL_SiPM_saturation::Process(const std::shared_ptr<const J
 			  cout << " ***Illegal layer=" << layer << endl;
 			}
 
-	    	japp->RootUnLock(); //RELEASE ROOT LOCK
+	    	lockService->RootUnLock(); //RELEASE ROOT LOCK
 
 	     }
 

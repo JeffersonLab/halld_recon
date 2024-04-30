@@ -171,12 +171,12 @@ void JEventProcessor_CDC_TimeToDistance::BeginRun(const std::shared_ptr<const JE
    sprintf(ccdbTable,"CDC/cdc_drift_table%s",dIsNoFieldFlag?"::NoBField":"");
 
    if (jcalib->Get(ccdbTable, tvals)==false){
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+      lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
       for(unsigned int i=0; i<tvals.size(); i++){
          map<string, double> &row = tvals[i];
          HistCurrentConstants->Fill(i+1,1000.*row["t"]);
       }
-      japp->RootUnLock(); //RELEASE ROOT LOCK
+      lockService->RootUnLock(); //RELEASE ROOT LOCK
    }
    else{
       jerr << " CDC time-to-distance table not available... bailing..." << endl;
@@ -185,7 +185,7 @@ void JEventProcessor_CDC_TimeToDistance::BeginRun(const std::shared_ptr<const JE
 
    sprintf(ccdbTable,"CDC/drift_parameters%s",dIsNoFieldFlag?"::NoBField":"");
    if (jcalib->Get(ccdbTable, tvals)==false){
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+      lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
       map<string, double> &row = tvals[0]; // long drift side
       HistCurrentConstants->Fill(101,row["a1"]);
       HistCurrentConstants->Fill(102,row["a2"]);
@@ -211,7 +211,7 @@ void JEventProcessor_CDC_TimeToDistance::BeginRun(const std::shared_ptr<const JE
       HistCurrentConstants->Fill(120,row["c3"]);
       HistCurrentConstants->Fill(121,row["B1"]);
       HistCurrentConstants->Fill(122,row["B2"]);
-      japp->RootUnLock(); //RELEASE ROOT LOCK
+      lockService->RootUnLock(); //RELEASE ROOT LOCK
    }
 
    // Save run number
@@ -264,11 +264,11 @@ void JEventProcessor_CDC_TimeToDistance::Process(const std::shared_ptr<const JEv
             }
         }
         
-        japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+        lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
         if (least_fom >= 0.001) dHistZ2tracks0001->Fill(z);
         if (least_fom >= 0.01) dHistZ2tracks001->Fill(z);    
         if (least_fom >= 0.1) dHistZ2tracks01->Fill(z);
-        japp->RootUnLock(); //RELEASE ROOT LOCK
+        lockService->RootUnLock(); //RELEASE ROOT LOCK
         
    }   // end if 2 tracks
 
@@ -307,7 +307,7 @@ void JEventProcessor_CDC_TimeToDistance::Process(const std::shared_ptr<const JEv
          int ring = thisCDCHit->wire->ring;
          int straw = thisCDCHit->wire->straw;
 
-		 japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+		 lockService->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 		 
 		 dHistResidualVsFOM->Fill(thisTimeBasedTrack->FOM, thisPull.resi);
 		 dHistResidualVslogFOM->Fill(log10(thisTimeBasedTrack->FOM), thisPull.resi);
@@ -369,7 +369,7 @@ void JEventProcessor_CDC_TimeToDistance::Process(const std::shared_ptr<const JEv
          // histo for hits in 1.8T region
          if (Bz > 1.75 && Bz < 1.85) dHistPredictedDistanceVsDeltaVsDriftBz18->Fill(time, delta, predictedDistance);
          
-		 japp->RootUnLock(); //RELEASE ROOT LOCK
+		 lockService->RootUnLock(); //RELEASE ROOT LOCK
       }   
    }
 }
