@@ -23,6 +23,7 @@ class DECALHit:public JObject{
 		float y;
 		float E;
 		float t;
+		int id;
 		float intOverPeak;		
 		
 
