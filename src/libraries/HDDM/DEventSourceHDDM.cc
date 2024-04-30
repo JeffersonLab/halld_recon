@@ -26,7 +26,7 @@ using namespace std;
 
 #include "HDDM/DEventSourceHDDM.h"
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include <JANA/JEvent.h>
 #include <DANA/DStatusBits.h>
 #include <DANA/DEvent.h>
@@ -34,6 +34,8 @@ using namespace std;
 #include <JANA/Compatibility/JGeometryXML.h>
 #include "BCAL/DBCALGeometry.h"
 #include "PAIR_SPECTROMETER/DPSGeometry.h"
+#include "DANA/DObjectID.h"
+
 
 #include <DVector2.h>
 #include <FDC/DFDCGeometry.h>
@@ -43,6 +45,7 @@ using namespace std;
 #include <CCAL/DCCALHit.h>
 #include <ECAL/DECALGeometry.h>
 #include <ECAL/DECALHit.h>
+
 
 
 //------------------------------------------------------------------
@@ -398,12 +401,12 @@ bool DEventSourceHDDM::GetObjects(const std::shared_ptr<const JEvent> &event, JF
  
    if (dataClassName == "DECALTruthShower")
       return Extract_DECALTruthShower(record,
-		     dynamic_cast<JFactory<DECALTruthShower>*>(factory), tag);
+		     dynamic_cast<JFactoryT<DECALTruthShower>*>(factory), tag);
 
    if (dataClassName == "DECALHit")
       return Extract_DECALHit(record,
-                     dynamic_cast<JFactory<DECALHit>*>(factory), tag,
-                     event.GetJEventLoop());
+                     dynamic_cast<JFactoryT<DECALHit>*>(factory), tag,
+                     event);
 
    if (dataClassName == "DCCALTruthShower")
       return Extract_DCCALTruthShower(record,
@@ -1774,7 +1777,7 @@ jerror_t DEventSourceHDDM::Extract_DFCALHit(hddm_s::HDDM *record,
 // Extract_DECALTruthShower
 //------------------
 jerror_t DEventSourceHDDM::Extract_DECALTruthShower(hddm_s::HDDM *record,
-                                   JFactory<DECALTruthShower> *factory,
+                                   JFactoryT<DECALTruthShower> *factory,
                                    string tag)
 {
    /// Copies the data from the given hddm_s structure. This is called
@@ -1787,7 +1790,7 @@ jerror_t DEventSourceHDDM::Extract_DECALTruthShower(hddm_s::HDDM *record,
       return OBJECT_NOT_AVAILABLE;
    
    vector<DECALTruthShower*> data;
-   JObject::oid_t id=1;
+   oid_t id=1;
 
    const hddm_s::EcalTruthShowerList &shows = record->getEcalTruthShowers();
    hddm_s::EcalTruthShowerList::iterator iter;
@@ -1813,7 +1816,7 @@ jerror_t DEventSourceHDDM::Extract_DECALTruthShower(hddm_s::HDDM *record,
    }
 
    // Copy into factory
-   factory->CopyTo(data);
+   factory->Set(data);
 
    return NOERROR;
 }
@@ -1823,8 +1826,8 @@ jerror_t DEventSourceHDDM::Extract_DECALTruthShower(hddm_s::HDDM *record,
 // Extract_DECALHit
 //------------------
 jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
-                                   JFactory<DECALHit> *factory, string tag,
-                                   JEventLoop* eventLoop)
+                                   JFactoryT<DECALHit> *factory, string tag,
+                                   const std::shared_ptr<const JEvent>& event)
 {
    /// Copies the data from the given hddm_s structure. This is called
    /// from JEventSourceHDDM::GetObjects. If factory is NULL, this
@@ -1837,7 +1840,7 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
 
    // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
    vector<const DECALGeometry*> ecalGeomVect;
-   eventLoop->Get( ecalGeomVect );
+   event->Get( ecalGeomVect );
    if (ecalGeomVect.size() < 1)
       return OBJECT_NOT_AVAILABLE;
    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
@@ -1897,13 +1900,13 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
          mchit->id     = hitId++;
-	 mchit->intOverPeak = 5.;
+	      mchit->intOverPeak = 5.;
          data.push_back(mchit);
       }
    }
   
   // Copy into factory
-  factory->CopyTo(data);
+  factory->Set(data);
   
   return NOERROR;
 }
