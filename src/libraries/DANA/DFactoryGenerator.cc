@@ -13,6 +13,7 @@ extern void BCAL_init(JFactorySet *factory_set);
 extern void CDC_init(JFactorySet *factory_set);
 extern void FDC_init(JFactorySet *factory_set);
 extern void FCAL_init(JFactorySet *factory_set);
+extern void ECAL_init(JFactorySet *factory_set);
 extern void CCAL_init(JFactorySet *factory_set);
 extern void RF_init(JFactorySet *factory_set);
 extern void START_COUNTER_init(JFactorySet *factory_set);
@@ -59,7 +60,7 @@ void DFactoryGenerator::GenerateFactories(JFactorySet *factory_set)
 	CDC_init(factory_set);
 	FDC_init(factory_set);
 	FCAL_init(factory_set);
-	ECAL_init(actory_set);
+	ECAL_init(factory_set);
 	CCAL_init(factory_set);
 	RF_init(factory_set);
 	START_COUNTER_init(factory_set);
