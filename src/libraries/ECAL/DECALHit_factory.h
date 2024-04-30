@@ -11,7 +11,7 @@
 #include <vector>
 using namespace std;
 
-#include <JANA/JFactory.h>
+#include <JANA/JFactoryT.h>
 #include "TTAB/DTranslationTable.h"
 
 #include "DECALDigiHit.h"
@@ -19,7 +19,7 @@ using namespace std;
 
 typedef  vector< vector<double> >  ecal_constants_t;
 
-class DECALHit_factory:public jana::JFactory<DECALHit>{
+class DECALHit_factory:public JFactoryT<DECALHit>{
 public:
   DECALHit_factory();
   ~DECALHit_factory(){};
@@ -41,15 +41,15 @@ public:
     return m_activeBlock[row][column];    
   }
 
-private:
-  jerror_t init(void);						///< Called once at program start.2
-  jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-  jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-  jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-  jerror_t fini(void);						///< Called after last event of last event source has been processed.
-  
-  void LoadECALConst(ecal_constants_t &table,
-		     const vector<double> &ecal_const_ch);    
+        private:
+			void Init() override;
+			void BeginRun(const std::shared_ptr<const JEvent>& event) override;
+			void Process(const std::shared_ptr<const JEvent>& event) override;
+			void EndRun() override;
+			void Finish() override;
+
+		void LoadECALConst( ecal_constants_t &table, 
+                                    const vector<double> &ecal_const_ch);    
 
   static const int kECALBlocksWide   = 40;
   static const int kECALBlocksTall   = 40;
