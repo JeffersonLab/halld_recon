@@ -21,6 +21,7 @@ class DECALHit:public JObject{
 		int column;
 		float E;
 		float t;
+		int id;
 		float intOverPeak;		
 		
 
