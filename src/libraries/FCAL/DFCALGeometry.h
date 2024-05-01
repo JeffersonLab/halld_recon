@@ -62,6 +62,7 @@ public:
 	bool isInsertBlock(int row,int column) const;
 	bool isFiducial(double x,double y) const;
 	unsigned int numChannels() const {return m_numChannels;}
+	unsigned int numFcalChannels() const {return m_numFcalChannels;}
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
@@ -96,7 +97,7 @@ public:
 	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
 	int    m_row[kMaxChannels];
 	int    m_column[kMaxChannels];
-	int m_numChannels;
+	unsigned int m_numChannels,m_numFcalChannels;
 
 	int m_insertRowSize=0,m_insertMidBlock=0;
 	double m_insertSize=0.;

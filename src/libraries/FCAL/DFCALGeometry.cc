@@ -29,11 +29,11 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
   DVector2 XY0(m_FCALdX,m_FCALdY);
 
-  vector<double>block;
-  geom->GetFCALBlockSize(block);
-  double back=m_FCALfront+block[2];
-  geom->GetFCALInsertBlockSize(block);
-  m_insertFront=0.5*(back+m_FCALfront-block[2]);
+  // The following is for backward compatibility with an older model for the
+  // FCAL insert, now superceded by a more realistic model of the geometry
+  // (SJT 4/30/24)
+  double back=m_FCALfront+blockLength();
+  m_insertFront=0.5*(back+m_FCALfront-insertBlockLength());
   
   // Initilize the list of active blocks to false, to be adjusted for the
   // actual geometry below.
@@ -73,6 +73,7 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
       }
     }
   }
+  m_numFcalChannels=ch;
  
   if (insert_row_size>0){
     m_insertMidBlock=(insert_row_size-1)/2;
