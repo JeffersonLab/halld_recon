@@ -127,7 +127,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	    DFCALCluster::userhit_t temp_hit; 
 	    temp_hit.id = (**hit).id;
-	    temp_hit.ch = 10000+ecalGeom->channel( (**hit).row, (**hit).column );
+	    temp_hit.ch = fcalGeom->numFcalChannels()+ecalGeom->channel( (**hit).row, (**hit).column );
 	    temp_hit.x = (**hit).x;
 	    temp_hit.y = (**hit).y;
 	    temp_hit.E = (**hit).E; 
