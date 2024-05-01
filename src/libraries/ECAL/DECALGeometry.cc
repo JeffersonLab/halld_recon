@@ -20,24 +20,30 @@ using namespace std;
 DECALGeometry::DECALGeometry() : 
   m_numActiveBlocks( 0 ){
   
-        for( int row = 0; row < kECALBlocksTall; row++ ){
-	  for( int col = 0; col < kECALBlocksWide; col++ ){
+  for( int row = 0; row < kECALBlocksTall; row++ ){
+    for( int col = 0; col < kECALBlocksWide; col++ ){
       
-	    // transform to beam axis
-	    m_positionOnFace[row][col] = 
-	      DVector2(  ( (double)col - kECALMidBlock  + 0.5 ) * blockSize(),
-			 ( (double)row - kECALMidBlock + 0.5 ) * blockSize() );
-	    
-	    m_activeBlock[row][col] = true;
-      
-	    // build the "channel map"
-	    m_channelNumber[row][col]    =  m_numActiveBlocks;
-	    m_row[m_numActiveBlocks]     =  row;
-	    m_column[m_numActiveBlocks]  =  col;
-	    
-	    m_numActiveBlocks++;
-	  }
-	}
+      // transform to beam axis
+      m_positionOnFace[row][col] = 
+	DVector2(  ( (double)col - kECALMidBlock  + 0.5 ) * blockSize(),
+		   ( (double)row - kECALMidBlock + 0.5 ) * blockSize() );
+      if( fabs(m_positionOnFace[row][col].X())>blockSize()
+	  || fabs(m_positionOnFace[row][col].Y())>blockSize()
+	  ){
+	m_activeBlock[row][col] = true;
+	
+	// build the "channel map"
+	m_channelNumber[row][col]    =  m_numActiveBlocks;
+	m_row[m_numActiveBlocks]     =  row;
+	m_column[m_numActiveBlocks]  =  col;
+	
+	m_numActiveBlocks++;
+      }
+      else {
+	m_activeBlock[row][col]=false;
+      }
+    }
+  }
 }
 
 bool
