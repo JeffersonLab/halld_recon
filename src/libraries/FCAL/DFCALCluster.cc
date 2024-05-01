@@ -261,7 +261,7 @@ void DFCALCluster::shower_profile( vector<userhit_t>& hitList,
    double y = hitList[ihit].y;
    double moliere_radius=MOLIERE_RADIUS;
    double min_dist=fcalgeom->blockSize();
-   if (hitList[ihit].ch>9999){
+   if (hitList[ihit].ch>=fcalgeom->numFcalChannels()){
      moliere_radius=PbWO4_MOLIERE_RADIUS;
      min_dist=fcalgeom->insertBlockSize();
    }
