@@ -32,7 +32,7 @@ class DFCALCluster : public JObject {
 
    typedef struct {
       oid_t id;
-      int ch;
+      unsigned int ch;
       float x;
       float y;
       float E;
@@ -43,7 +43,7 @@ class DFCALCluster : public JObject {
    public:
    DFCALClusterHit_t(int ch,double E,double x,double y)
      :ch(ch),E(E),x(x),y(y){}
-     int ch;
+     unsigned int ch;
      double E;
      double x;
      double y;
