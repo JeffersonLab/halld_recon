@@ -8,19 +8,21 @@
 #ifndef _DCDCHit_factory_Calib_
 #define _DCDCHit_factory_Calib_
 
+#include <iostream>
+#include <iomanip>
 #include <vector>
-using namespace std;
-
 #include <JANA/JFactory.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <TTAB/DTranslationTable.h>
 #include <DAQ/Df125PulseIntegral.h>
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125CDCPulse.h>
+#include <CDC/DCDCDigiHit.h>
+#include <CDC/DCDCWire.h>
+#include "CDC/DCDCHit.h"
 
-#include "DCDCHit.h"
-#include "DCDCDigiHit.h"
-#include "DCDCWire.h"
+using namespace std;
+using namespace jana;
 
 // store constants indexed by ring/straw number
 typedef  vector< vector<double> >  cdc_digi_constants_t;
@@ -30,6 +32,8 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   DCDCHit_factory_Calib(){};
   ~DCDCHit_factory_Calib(){};
   const char* Tag(void){return "Calib";}
+
+  int CDC_HIT_THRESHOLD;
 
   // overall scale factors.
   double a_scale, amp_a_scale;
