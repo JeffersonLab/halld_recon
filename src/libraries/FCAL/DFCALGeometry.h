@@ -108,6 +108,8 @@ public:
 	double m_FCALthetaX,m_FCALthetaY,m_FCALthetaZ;
 
  private:
+	void GetGridGeometry(const DGeometry *geom);
+	void GetStaggeredGeometry(const DGeometry *geom);
 	DFCALGeometry(){};// force use of constructor with arguments.
 	
 };

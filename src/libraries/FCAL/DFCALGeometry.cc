@@ -15,13 +15,78 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(const DGeometry *geom){
+DFCALGeometry::DFCALGeometry(const DGeometry *geom){  
+  // Check for presence of PbWO4 insert
+  if (geom->HaveInsert()){ // Geometry based on survey data for positions
+    GetStaggeredGeometry(geom);
+  }
+  else{ // Geometry based on grid(s) of fixed dimensions and block sizes
+    GetGridGeometry(geom);
+  }
+}
+
+// The following routine looks up the position of each row in the xml
+// specification for the geometry
+void DFCALGeometry::GetStaggeredGeometry(const DGeometry *geom){
+  unsigned int ch=0;
+  
+  // Initialize active block map
+  for( int row = 0; row < kBlocksTall; row++ ){
+    for( int col = 0; col < kBlocksWide; col++ ){
+      m_activeBlock[row][col]=false;
+    }
+  }
+
+  // Extract block positions for each section from xml
+  string section_names[4]={"LGLowerRow","LGUpperRow","LGNorthRow","LGSouthRow"};
+  int num_rows=19;
+  for (int i=0;i<4;i++){
+    cout << ">>>>>>>>>>> "<<  section_names[i] << endl; 
+    if (i>1) num_rows=38;
+    for (int j=0;j<num_rows;j++){
+      string my_row_string=section_names[i]+to_string(j);
+      string my_mpos_string="//composition[@name='"+my_row_string
+	+"']/mposX[@volume='LGDblock']/";
+      int ncopy=0,col0=0,row=0;
+      double x0=0,dx=0.;
+      geom->Get(my_mpos_string+"@ncopy",ncopy);
+      geom->Get(my_mpos_string+"column/@value",col0); 
+      geom->Get(my_mpos_string+"row/@value",row);
+      cout << "row " << row <<" col0 " << col0 << endl;
+      geom->Get(my_mpos_string+"@X0",x0);
+      geom->Get(my_mpos_string+"@dX",dx);
+      string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
+      vector<double>pos;
+      geom->Get(my_pos_string+"@X_Y_Z",pos);  
+      //vector<double>rot;
+      //geom->Get(my_pos_string+"@rot",rot);
+      //double phi=rot[2]*M_PI/180.;
+      for (int col=col0;col<col0+ncopy;col++){
+	double x=x0+double(col-col0)*dx;
+	double y=pos[1];//+phi*x; //use small angle approximation
+	m_positionOnFace[row][col].Set(x,y);
+	cout << "r " << row << " c " << col << endl;
+	m_positionOnFace[row][col].Print();
+	m_row[ch]     =  row;
+	m_column[ch]  =  col;
+	m_channelNumber[row][col]=ch;
+	m_activeBlock[row][col] = true;
+	
+	ch++;
+      }
+    }
+  }
+  m_numChannels=ch;
+}
+
+// The following routine calculates the position of each block assuming a 
+// square 59x59 grid.  Blocks in the outer corners are flagged to be ignored.
+void DFCALGeometry::GetGridGeometry(const DGeometry *geom){
+  // Old geometry 
   double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
   
   // inflate the innner radius by 1% to for "safe" comparison
   innerRadius *= 1.01;
-  
-  // Check for presence of PbWO4 insert
   int insert_row_size=0;
   geom->GetFCALInsertRowSize(insert_row_size);
   m_insertSize=insertBlockSize()*double(insert_row_size/2);
