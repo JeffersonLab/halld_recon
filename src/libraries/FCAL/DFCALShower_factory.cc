@@ -538,6 +538,13 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
       shower->setSumU( sumU );
       shower->setSumV( sumV );
+
+      
+      double ECR = 0;
+      getECRFromHits( ECR, fcalHits,
+		      DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ) );
+      
+      shower->setECR( ECR );
       
       shower->AddAssociatedObject( cluster );
 
@@ -1164,4 +1171,24 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
 }
 
-
+void
+DFCALShower_factory::getECRFromHits( double& ECR, 
+				     const vector< const DFCALHit* >& hits,
+				     const DVector3& showerVec) const {
+  // Determine the boundary of the cluster the local total energy
+  // and the sqrt(energy)-weighted centre-of-gravity vector
+  TVector3 hitVec, difVec;
+  ECR = 0.;
+  double sumE = 0.;
+  double radii = 0; 
+  for( vector< const DFCALHit* >::const_iterator hit = hits.begin(); hit != hits.end(); ++hit ){
+    hitVec.SetX( (**hit).x );
+    hitVec.SetY( (**hit).y );
+    hitVec.SetZ( 0 );
+    sumE += (**hit).E;
+    difVec = showerVec - hitVec;
+    radii = difVec.Mag();
+    if (radii > 0) ECR += (**hit).E * pow(radii, 2);
+  }
+  ECR = sqrt(ECR / sumE);
+}

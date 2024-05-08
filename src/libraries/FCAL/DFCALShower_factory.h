@@ -51,6 +51,10 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
 		      const DVector3& showerVec,
 		      const DVector3& trackVec ) const;
 
+  void getECRFromHits( double& ECR, 
+		       const vector< const DFCALHit* >& hits,
+		       const DVector3& showerVec ) const;
+
   void getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
 			 const vector< const DFCALHit* >& hits,
 			 unsigned int maxIndex ) const;
