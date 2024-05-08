@@ -187,6 +187,10 @@ class DEventSourceHDDM:public JEventSource
       JCalibration *jcalib;
       float uscale[192],vscale[192];
 
+	  double tagh_counter_quality[TAGH_MAX_COUNTER+1];
+	  double tagm_fiber_quality[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];
+
+
 };
 
 #endif //_JEVENT_SOURCEHDDM_H_
