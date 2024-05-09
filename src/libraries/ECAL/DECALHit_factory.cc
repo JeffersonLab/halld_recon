@@ -25,15 +25,6 @@ using namespace std;
 // Constructor
 //----------------
 DECALHit_factory::DECALHit_factory(){
-
-  auto app = GetApplication();
-  HIT_DEBUG    =  0;
-  DB_PEDESTAL  =  1;    //   1  -  take from DB
-                        //   0  -  event-by-event pedestal subtraction
-  
-  app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
-  app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
-
 }
 
 
@@ -42,6 +33,14 @@ DECALHit_factory::DECALHit_factory(){
 //------------------
 void DECALHit_factory::Init(void)
 {
+
+  auto app = GetApplication();
+  HIT_DEBUG    =  0;
+  DB_PEDESTAL  =  1;    //   1  -  take from DB
+                        //   0  -  event-by-event pedestal subtraction
+  
+  app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
+  app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
     // initialize calibration tables
     vector< vector<double > > gains_tmp(DECALGeometry::kECALBlocksTall, 
             vector<double>(DECALGeometry::kECALBlocksWide));
