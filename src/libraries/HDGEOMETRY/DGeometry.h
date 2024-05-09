@@ -190,6 +190,7 @@ class DGeometry{
       bool GetECALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
+      bool HaveInsert() const;
       bool GetFCALInsertRowSize(int &insert_row_size) const;
       bool GetFCALBlockSize(vector<double> &block) const;
       bool GetFCALInsertBlockSize(vector<double> &block) const;
