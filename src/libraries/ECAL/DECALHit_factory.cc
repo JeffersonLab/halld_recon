@@ -24,6 +24,14 @@ using namespace std;
 // Constructor
 //----------------
 DECALHit_factory::DECALHit_factory(){
+}
+
+
+//------------------
+// Init
+//------------------
+void DECALHit_factory::Init(void)
+{
 
   auto app = GetApplication();
   HIT_DEBUG    =  0;
