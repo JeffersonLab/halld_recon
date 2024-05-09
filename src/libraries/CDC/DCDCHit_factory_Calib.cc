@@ -6,21 +6,8 @@
 //
 
 
-#include <iostream>
-#include <iomanip>
-using namespace std;
-
-
 #include <CDC/DCDCHit_factory_Calib.h>
-#include <CDC/DCDCDigiHit.h>
-#include <CDC/DCDCWire.h>
-#include <DAQ/Df125PulseIntegral.h>
-#include <DAQ/Df125Config.h>
-#include <DAQ/Df125CDCPulse.h>
 
-using namespace jana;
-
-int CDC_HIT_THRESHOLD = 0;
 
 //#define ENABLE_UPSAMPLING
 
@@ -30,6 +17,7 @@ int CDC_HIT_THRESHOLD = 0;
 jerror_t DCDCHit_factory_Calib::init(void)
 {
   
+  CDC_HIT_THRESHOLD = 0;
   gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
   
