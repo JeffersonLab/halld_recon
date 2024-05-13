@@ -19,13 +19,12 @@ using namespace jana;
 #include "FCAL/DFCALHit.h"
 #include "FCAL/DFCALGeometry.h"
 #include <ECAL/DECALHit.h>
-#include <ECAL/DECALGeometry.h>
 #include <HDGEOMETRY/DGeometry.h>
 
 // Used to sort hits by Energy
 bool FCALHitsSort_C(const DFCALCluster::userhit_t &thit1,
 		      const DFCALCluster::userhit_t &thit2) {
-return thit1.E>thit2.E;
+  return thit1.E>thit2.E;
 }
 
 //----------------
@@ -93,8 +92,6 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	
 	const DFCALGeometry* fcalGeom=NULL;
 	eventLoop->GetSingle(fcalGeom);	
-	const DECALGeometry* ecalGeom=NULL;
-	eventLoop->GetSingle(ecalGeom);
 
 	// fill user's hit list
 	vector<DFCALCluster::userhit_t>hits;
@@ -127,9 +124,10 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	    DFCALCluster::userhit_t temp_hit; 
 	    temp_hit.id = (**hit).id;
-	    temp_hit.ch = fcalGeom->numFcalChannels()+ecalGeom->channel( (**hit).row, (**hit).column );
-	    temp_hit.x = (**hit).x;
-	    temp_hit.y = (**hit).y;
+	    temp_hit.ch = fcalGeom->channel(100+(**hit).row,100+(**hit).column);
+	    DVector2 positionOnFace=fcalGeom->positionOnFace(temp_hit.ch);
+	    temp_hit.x = positionOnFace.X();
+	    temp_hit.y = positionOnFace.Y();
 	    temp_hit.E = (**hit).E; 
 	    temp_hit.t = (**hit).t;
 	    hits.push_back(temp_hit);
