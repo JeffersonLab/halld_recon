@@ -15,10 +15,22 @@ using namespace std;
 //---------------------------------
 // DFCALGeometry    (Constructor)
 //---------------------------------
-DFCALGeometry::DFCALGeometry(const DGeometry *geom){  
+DFCALGeometry::DFCALGeometry(const DGeometry *geom){
+  // Find position of upstream face of FCAL
+  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+ 
   // Check for presence of PbWO4 insert
   if (geom->HaveInsert()){ // Geometry based on survey data for positions
-    GetStaggeredGeometry(geom);
+    // Get size of the insert 
+    int insert_row_size=0;
+    geom->GetFCALInsertRowSize(insert_row_size);
+    m_insertSize=insertBlockSize()*double(insert_row_size/2);
+
+    // Get the z-position of the upstream face of the insert
+    geom->GetECALZ(m_insertFront);
+
+    // Get the x-y positions of the crystals
+    GetSurveyGeometry(geom);
   }
   else{ // Geometry based on grid(s) of fixed dimensions and block sizes
     GetGridGeometry(geom);
@@ -27,21 +39,20 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
 
 // The following routine looks up the position of each row in the xml
 // specification for the geometry
-void DFCALGeometry::GetStaggeredGeometry(const DGeometry *geom){
+void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
   unsigned int ch=0;
   
   // Initialize active block map
-  for( int row = 0; row < kBlocksTall; row++ ){
-    for( int col = 0; col < kBlocksWide; col++ ){
+  for( int row = 0; row < 2*kBlocksTall; row++ ){
+    for( int col = 0; col < 2*kBlocksWide; col++ ){
       m_activeBlock[row][col]=false;
     }
   }
 
-  // Extract block positions for each section from xml
+  // Extract block positions for each section of the lead glass from xml
   string section_names[4]={"LGLowerRow","LGUpperRow","LGNorthRow","LGSouthRow"};
   int num_rows=19;
   for (int i=0;i<4;i++){
-    cout << ">>>>>>>>>>> "<<  section_names[i] << endl; 
     if (i>1) num_rows=38;
     for (int j=0;j<num_rows;j++){
       string my_row_string=section_names[i]+to_string(j);
@@ -52,7 +63,6 @@ void DFCALGeometry::GetStaggeredGeometry(const DGeometry *geom){
       geom->Get(my_mpos_string+"@ncopy",ncopy);
       geom->Get(my_mpos_string+"column/@value",col0); 
       geom->Get(my_mpos_string+"row/@value",row);
-      cout << "row " << row <<" col0 " << col0 << endl;
       geom->Get(my_mpos_string+"@X0",x0);
       geom->Get(my_mpos_string+"@dX",dx);
       string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
@@ -65,8 +75,6 @@ void DFCALGeometry::GetStaggeredGeometry(const DGeometry *geom){
 	double x=x0+double(col-col0)*dx;
 	double y=pos[1];//+phi*x; //use small angle approximation
 	m_positionOnFace[row][col].Set(x,y);
-	cout << "r " << row << " c " << col << endl;
-	m_positionOnFace[row][col].Print();
 	m_row[ch]     =  row;
 	m_column[ch]  =  col;
 	m_channelNumber[row][col]=ch;
@@ -76,6 +84,45 @@ void DFCALGeometry::GetStaggeredGeometry(const DGeometry *geom){
       }
     }
   }
+  m_numFcalChannels=ch;
+  
+  // Now extract the positions of the PWO crystals 
+   for( int i = 0; i < 42; i++ ){
+    string my_row_string="XTrow"+to_string(i);
+    string my_mpos_string="//composition[@name='"+my_row_string
+      +"']/mposX[@volume='XTModule']/";
+    int ncopy=0;
+    double x0=0,dx=0.;
+    geom->Get(my_mpos_string+"@ncopy",ncopy);
+    geom->Get(my_mpos_string+"@X0",x0);
+    geom->Get(my_mpos_string+"@dX",dx);
+    string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
+    vector<double>pos;
+    geom->Get(my_pos_string+"@X_Y_Z",pos);  
+    vector<double>rot;
+    geom->Get(my_pos_string+"@rot",rot);
+    double phi=rot[2]*M_PI/180.;
+    int col0=0,my_row=i;
+    if (i>=40){ //handle right side of beam hole
+      col0=21;
+      my_row=i-21;
+    }
+    for (int col=col0;col<col0+ncopy;col++){
+      double x=x0+double(col-col0)*dx;
+      double y=pos[1]+phi*x; //use small angle approximation
+
+      int row_index=my_row+kBlocksTall;
+      int col_index=col+kBlocksWide;
+      m_positionOnFace[row_index][col_index].Set(x,y);
+      m_row[ch]     =  row_index;
+      m_column[ch]  =  col_index;
+      m_activeBlock[row_index][col_index] = true;
+      m_channelNumber[row_index][col_index] = ch;
+
+      ch++;
+    }
+  }
+
   m_numChannels=ch;
 }
 
@@ -90,8 +137,7 @@ void DFCALGeometry::GetGridGeometry(const DGeometry *geom){
   int insert_row_size=0;
   geom->GetFCALInsertRowSize(insert_row_size);
   m_insertSize=insertBlockSize()*double(insert_row_size/2);
-
-  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+ 
   DVector2 XY0(m_FCALdX,m_FCALdY);
 
   // The following is for backward compatibility with an older model for the
@@ -264,11 +310,8 @@ bool DFCALGeometry::isFiducial(double x,double y) const{
 
 
 bool DFCALGeometry::inInsert(int channel) const{
-  if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
-      && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
-    return true;
-  }
-  return false;
+  if (channel<m_numFcalChannels) return false;
+  return true;
 }
 
 bool DFCALGeometry::isInsertBlock(int row,int column) const{
