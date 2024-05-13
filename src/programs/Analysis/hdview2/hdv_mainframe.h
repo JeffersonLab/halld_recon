@@ -151,6 +151,7 @@ class hdv_mainframe:public TGMainFrame {
 		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);
+		void SetCalorimeterEnergyColor(TPolyLine *poly,double E);
 		
 		void AddGraphicsSideA(std::vector<TObject*> &v);
 		void AddGraphicsSideB(std::vector<TObject*> &v);
@@ -203,6 +204,8 @@ class hdv_mainframe:public TGMainFrame {
 		double r0, phi0, x0, y0, z0;
 		double canvas_width, default_canvas_width;
 		coordsys_t coordinatetype;
+
+		bool got_SC=true;
 
 		std::vector<TObject*> graphics_sideA;
 		std::vector<TObject*> graphics_sideB;

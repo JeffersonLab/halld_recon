@@ -118,6 +118,12 @@ hdv_mainframe::hdv_mainframe(const TGWindow *p, UInt_t w, UInt_t h):TGMainFrame(
   TARGET_Zmid = my_TARGET_Zmid;
   TARGET_Zlen = my_TARGET_Zlen;
 
+  // start counter
+  vector<double>sc_rot_angles;
+  if (!dgeom->Get("//posXYZ[@volume='StartCntr']/@rot", sc_rot_angles)){
+    got_SC=false;
+  }
+
   // Get overall phi shift of BCAL
   float my_BCAL_PHI_SHIFT;
   dgeom->GetBCALPhiShift(my_BCAL_PHI_SHIFT);
@@ -1622,58 +1628,60 @@ void hdv_mainframe::DrawDetectorsXY(void)
 		*/
 		
 		// ----- Start Counter -----
-		// All units are in cm.  These dimensions represent the geometry exactly.
-		Double_t inner_radius = 7.7493;	// Inner radius of the Start Counter
-		Double_t outer_radius = 8.0493;	// Outer radius of the Start Counter
-		Double_t bottom_width = 1.6289; // Width of the bottom edge of scintillator
-		Double_t top_width = 1.692;	// Width of the top edge of scintillator
-		Double_t dtr = 1.745329252e-02;	// Conversion factor from degrees to radians
-
-		// 5 x and 5 y coordinates for each of the 30 paddles
-		Double_t x_coords[31][5];
-		Double_t y_coords[31][5];
-   
-		// Initialize the x-coordinates of channel 0 (phi = [0, 12 deg] in hall coordinates)
-		x_coords[0][0] = -outer_radius;
-		x_coords[0][1] = -(outer_radius - top_width*sin(6.0*dtr));
-		x_coords[0][2] = -(inner_radius - bottom_width*sin(6.0*dtr));
-		x_coords[0][3] = -inner_radius;
-		x_coords[0][4] = -outer_radius;
-		// Initialize the x-coordinates of channel 0 (phi = [0, 12 deg] in hall coordinates)
-		y_coords[0][0] = 0.0;
-		y_coords[0][1] = top_width*cos(6.0*dtr);
-		y_coords[0][2] = bottom_width*cos(6.0*dtr);
-		y_coords[0][3] = 0.0;
-		y_coords[0][4] = 0.0;
-
-		// Create an array of TPolyLine objects 
-		TPolyLine *ch_pline[30];
-   
-		// Define array of points which define the individual scintillators
-		for (int i = 1; i < 31; i++)
-		  { 
-		    // Contruct the x-coordinates of the 30 scintillator paddles 
-		    x_coords[i][0] = x_coords[i-1][1];
-		    x_coords[i][1] = x_coords[i-1][1] + top_width*sin((6.0 + 12.0*i)*dtr);
-		    x_coords[i][2] = x_coords[i-1][2] + bottom_width*sin((6.0 + 12.0*i)*dtr);
-		    x_coords[i][3] = x_coords[i-1][2];
-		    x_coords[i][4] = x_coords[i-1][1];
-		    // Construct the y-coordinates of the 30 scintillator paddles
-		    y_coords[i][0] = y_coords[i-1][1];
-		    y_coords[i][1] = y_coords[i-1][1] + top_width*cos((6.0 + 12.0*i)*dtr);
-		    y_coords[i][2] = y_coords[i-1][2] + bottom_width*cos((6.0 + 12.0*i)*dtr);
-		    y_coords[i][3] = y_coords[i-1][2];
-		    y_coords[i][4] = y_coords[i-1][1];
-         
-		    // Construct the TPolyLine objects that defines the paddles
-		    Double_t x[5] = {x_coords[i-1][0], x_coords[i-1][1], x_coords[i-1][2], x_coords[i-1][3], x_coords[i-1][4]};
-		    Double_t y[5] = {y_coords[i-1][0], y_coords[i-1][1], y_coords[i-1][2], y_coords[i-1][3], y_coords[i-1][4]};
-		    ch_pline[i-1] = new TPolyLine(5, x, y);
-		    ch_pline[i-1]->SetFillColor(18);
-		    ch_pline[i-1]->SetLineColor(1);
-		    ch_pline[i-1]->SetLineWidth(2);
-		    graphics_endA.push_back(ch_pline[i-1]);
-		  }
+		if (got_SC){
+		  // All units are in cm.  These dimensions represent the geometry exactly.
+		  Double_t inner_radius = 7.7493;	// Inner radius of the Start Counter
+		  Double_t outer_radius = 8.0493;	// Outer radius of the Start Counter
+		  Double_t bottom_width = 1.6289; // Width of the bottom edge of scintillator
+		  Double_t top_width = 1.692;	// Width of the top edge of scintillator
+		  Double_t dtr = 1.745329252e-02;	// Conversion factor from degrees to radians
+		  
+		  // 5 x and 5 y coordinates for each of the 30 paddles
+		  Double_t x_coords[31][5];
+		  Double_t y_coords[31][5];
+		  
+		  // Initialize the x-coordinates of channel 0 (phi = [0, 12 deg] in hall coordinates)
+		  x_coords[0][0] = -outer_radius;
+		  x_coords[0][1] = -(outer_radius - top_width*sin(6.0*dtr));
+		  x_coords[0][2] = -(inner_radius - bottom_width*sin(6.0*dtr));
+		  x_coords[0][3] = -inner_radius;
+		  x_coords[0][4] = -outer_radius;
+		  // Initialize the x-coordinates of channel 0 (phi = [0, 12 deg] in hall coordinates)
+		  y_coords[0][0] = 0.0;
+		  y_coords[0][1] = top_width*cos(6.0*dtr);
+		  y_coords[0][2] = bottom_width*cos(6.0*dtr);
+		  y_coords[0][3] = 0.0;
+		  y_coords[0][4] = 0.0;
+		  
+		  // Create an array of TPolyLine objects 
+		  TPolyLine *ch_pline[30];
+		  
+		  // Define array of points which define the individual scintillators
+		  for (int i = 1; i < 31; i++)
+		    { 
+		      // Contruct the x-coordinates of the 30 scintillator paddles 
+		      x_coords[i][0] = x_coords[i-1][1];
+		      x_coords[i][1] = x_coords[i-1][1] + top_width*sin((6.0 + 12.0*i)*dtr);
+		      x_coords[i][2] = x_coords[i-1][2] + bottom_width*sin((6.0 + 12.0*i)*dtr);
+		      x_coords[i][3] = x_coords[i-1][2];
+		      x_coords[i][4] = x_coords[i-1][1];
+		      // Construct the y-coordinates of the 30 scintillator paddles
+		      y_coords[i][0] = y_coords[i-1][1];
+		      y_coords[i][1] = y_coords[i-1][1] + top_width*cos((6.0 + 12.0*i)*dtr);
+		      y_coords[i][2] = y_coords[i-1][2] + bottom_width*cos((6.0 + 12.0*i)*dtr);
+		      y_coords[i][3] = y_coords[i-1][2];
+		      y_coords[i][4] = y_coords[i-1][1];
+		      
+		      // Construct the TPolyLine objects that defines the paddles
+		      Double_t x[5] = {x_coords[i-1][0], x_coords[i-1][1], x_coords[i-1][2], x_coords[i-1][3], x_coords[i-1][4]};
+		      Double_t y[5] = {y_coords[i-1][0], y_coords[i-1][1], y_coords[i-1][2], y_coords[i-1][3], y_coords[i-1][4]};
+		      ch_pline[i-1] = new TPolyLine(5, x, y);
+		      ch_pline[i-1]->SetFillColor(18);
+		      ch_pline[i-1]->SetLineColor(1);
+		      ch_pline[i-1]->SetLineWidth(2);
+		      graphics_endA.push_back(ch_pline[i-1]);
+		    }
+		}
 
 		// ----- TARGET ------
 		TEllipse *target = new TEllipse(0.0, 0.0, 0.5, 0.5);
@@ -1712,7 +1720,8 @@ void hdv_mainframe::DrawDetectorsXY(void)
 
 		fcalblocks.clear();
 		if(GetCheckButton("fcal")){
-		  for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){
+		  cout << "Insert size " << insertSize << endl;
+		  for(int chan=0; chan<fcalgeom->numChannels(); chan++){
 		    if (fcalgeom->isBlockActive(chan)==false) continue;
 		    DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
@@ -2092,7 +2101,7 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  shift[7].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space	  
 		}
 		fcalblocks.clear();
-		for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){ 
+		for(int chan=0; chan<fcalgeom->numChannels(); chan++){ 
 		  if (fcalgeom->isBlockActive(chan)==false) continue;
 		  DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
@@ -2581,6 +2590,49 @@ void hdv_mainframe::GetReconFactory(string &name, string &tag)
 	string::size_type pos = nametag.find(":");
 	name = nametag.substr(0, pos);
 	tag = nametag.substr(pos+1, nametag.size()-(pos+1));
+}
+
+// Set the color of a hit FCAL/ECAL/CCAL block according to energy.
+// The aim is to have a log scale in energy (see BCAL)
+void hdv_mainframe::SetCalorimeterEnergyColor(TPolyLine *poly,double E){
+  E *= 1000;      // Change Energy to MeV
+  double logE = log10(E);      
+
+  float r,g,b;
+  if (logE<0){
+    r = 1.;
+    g = 1.;
+    b = 1.;
+  } else {
+    if (logE<1){
+      r = 1.;
+      g = 1.;
+      b = 1.-logE;
+    } else {
+      if (logE<2){
+	r = 1.;
+	g = 1.-(logE-1);
+	b = 0.;
+      } else {
+	if (logE<3){
+	  r = 1.;
+	  g = 0.;
+	  b = 1.-(logE-2);
+	} else {
+	  if (logE<4){
+	    r = 1.-(logE-3);
+	    g = 0.;
+	    b = 1.;
+	  } else {
+	    r = 0;
+	    g = 0;
+	    b = 0;
+	  }
+	}
+      }
+    }
+  }
+  poly->SetFillColor(TColor::GetColor(r,g,b));
 }
 
 //-------------------
