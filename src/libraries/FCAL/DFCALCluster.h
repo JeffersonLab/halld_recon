@@ -31,19 +31,19 @@ class DFCALCluster : public JObject {
       ~DFCALCluster();
 
    typedef struct {
-      oid_t id;
-      unsigned int ch;
-      float x;
-      float y;
-      float E;
-      float t;
+     oid_t id;
+     int ch;
+     float x;
+     float y;
+     float E;
+     float t;
    } userhit_t;
 
    class DFCALClusterHit_t{
    public:
    DFCALClusterHit_t(int ch,double E,double x,double y)
      :ch(ch),E(E),x(x),y(y){}
-     unsigned int ch;
+     int ch;
      double E;
      double x;
      double y;
