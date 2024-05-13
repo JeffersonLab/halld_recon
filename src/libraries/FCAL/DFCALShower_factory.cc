@@ -389,23 +389,19 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     double zback=m_FCALfront + fcalGeom->blockLength();
     double c_effective=FCAL_C_EFFECTIVE;
     
-    int channel = cluster->getChannelEmax();
-    DVector2 pos=fcalGeom->positionOnFace(channel);
-    // Check if the cluster is in the insert
-    bool in_insert=fcalGeom->inInsert(channel);
+    // Check if the cluster is in the insert 
+    int chEmax = cluster->getChannelEmax();
+    bool in_insert=fcalGeom->inInsert(chEmax);
     if (in_insert){
       zback=m_insertFront + fcalGeom->insertBlockLength();
       c_effective=INSERT_C_EFFECTIVE;
-      in_insert=true;
     }
     
     // Get corrected energy, position, and errZ
     double Ecorrected;
     DVector3 pos_corrected;
     double errZ;
-    double radius = pos.Mod();
-    int ring_nb = (int) (radius / (5 * k_cm));
-    GetCorrectedEnergyAndPosition( cluster, ring_nb , Ecorrected, pos_corrected, errZ, &vertex,in_insert);
+    GetCorrectedEnergyAndPosition( cluster, chEmax , Ecorrected, pos_corrected, errZ, &vertex,in_insert);
     
     DVector3 pos_log;
     GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
@@ -556,35 +552,17 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 //
 // Non-linear and depth corrections should be fixed within DFCALShower member functions
 //--------------------------------
-  void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int ring_nb, double &Ecorrected, DVector3 &pos_corrected, double &errZ, const DVector3 *vertex,bool in_insert)
+  void DFCALShower_factory::GetCorrectedEnergyAndPosition(const DFCALCluster* cluster, int chEmax, double &Ecorrected, DVector3 &pos_corrected, double &errZ, const DVector3 *vertex,bool in_insert)
 {
   // Non-linear energy correction are done here
   //int MAXITER = 1000;
 
   DVector3  posInCal = cluster->getCentroid();
-  int block = cluster->getChannelEmax();
-  int square_nb = -1;
-  if (USE_CPP_E_CORRECTION)
-    square_nb = block_to_square[block];
-  
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
   double Eclust = cluster->getEnergy();
-  
-  double Ecutoff = 0;
-  double A = 0;
-  double B = 0;
-  double C = 0;
-  double D = 0;
-  double E = 0;
-  double F = 0;
-  double G = 0;
-  double H = 0;
-  double I = 0;
   double Egamma = Eclust;
   Ecorrected = 0;
-
-
 
   // block properties
   double radiation_length=FCAL_RADIATION_LENGTH;
@@ -607,81 +585,16 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     }
   } else {
     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
-    if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
-      // Method II: PRIMEXD way, correction per ring
-      Egamma=Eclust; // Initialize, before correction
-      int ring_region = -1;
-      if (0 <= ring_nb && ring_nb <= 2)
-	ring_region = 0;
-      else if (3 <= ring_nb && ring_nb <= 4)
-	ring_region = 1;
-      else if (ring_nb == 5)
-	ring_region = 2;
-      else if (6 <= ring_nb && ring_nb <= 7)
-	ring_region = 3;
-      else if (8 <= ring_nb && ring_nb <= 9)
-	ring_region = 4;
-      else if (10 <= ring_nb && ring_nb <= 11)
-	ring_region = 5;
-      else if (12 <= ring_nb && ring_nb <= 17)
-	ring_region = 6;
-      else if (18 <= ring_nb && ring_nb <= 20)
-	ring_region = 7;
-      else if (21 <= ring_nb && ring_nb <= 23)
-	ring_region = 8;
-      if (ring_region != -1) {	
-	Egamma = 0;
-	A = energy_dependence_correction_vs_ring[ring_region][0];
-	B = energy_dependence_correction_vs_ring[ring_region][1];
-	C = energy_dependence_correction_vs_ring[ring_region][2];
-	//D = energy_dependence_correction_vs_ring[ring_nb][3];
-	//E = energy_dependence_correction_vs_ring[ring_nb][4];
-	//F = energy_dependence_correction_vs_ring[ring_nb][5];
-	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2) + D * pow(Eclust, 3) + E * pow(Eclust, 4) + F * pow(Eclust, 5)); 
-	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
-	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
-      }
-    } else if (USE_RING_E_CORRECTION_V2 && nonlinear_correction.size() > 0) {
-      // Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
-      Egamma=Eclust; // Initialize, before correction
-      int ring_region = -1;
-      if (ring_nb == 1)
-	ring_region = 0;
-      else if (ring_nb == 2)
-	ring_region = 1;
-      else if (ring_nb == 3)
-	ring_region = 2;
-      else if (ring_nb == 4)
-	ring_region = 3;
-      else if (5 <= ring_nb)
-	ring_region = 4;
-      if (ring_region != -1) {	
-	Egamma = 0;
-	A = nonlinear_correction[ring_region][0];
-	B = nonlinear_correction[ring_region][1];
-	C = nonlinear_correction[ring_region][2];
-	D = nonlinear_correction[ring_region][3];
-	E = nonlinear_correction[ring_region][4];
-	F = nonlinear_correction[ring_region][5];
-	G = nonlinear_correction[ring_region][6];
-	H = nonlinear_correction[ring_region][7];
-	I = nonlinear_correction[ring_region][8];
-	//[0]-[1]*exp(-[2]*x+[3]) -[4]/([5]+[6]*exp(-x*[7]+[8])
-	Egamma = Eclust / (A - B * exp(-C * Eclust + D) - E / (F + G * exp(-Eclust * H + I))); 
-      }
-      // End Correction method III     
-    } else if (LOAD_NONLIN_CCDB && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
+    if  (LOAD_NONLIN_CCDB && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
       // Method I: IU way, one overall correction
-      Egamma = 0;
-      Ecutoff = cutoff_energy;
-      A = linfit_slope;
-      B = linfit_intercept;
-      C = expfit_param1;
-      D = expfit_param2;
-      E = expfit_param3;
+      double A = linfit_slope;
+      double B = linfit_intercept;
+      double C = expfit_param1;
+      double D = expfit_param2;
+      double E = expfit_param3;
       // 06/02/2016 Shower Non-linearity Correction by Adesh. 
       // 29/03/2020 ijaegle@jlab.org the linear part correction is applied in (some) data/sim. backward comptability?
-      if ( Eclust <= Ecutoff ) { 
+      if ( Eclust <= cutoff_energy ) { 
 	
 	Egamma = Eclust / (A * Eclust + B); // Linear part
 	
@@ -692,8 +605,70 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       }
       //cout <<"Eclust " << Eclust << " Egamma " << Egamma << " A " << A << " B " << B << " C " << C << " D " << D << " E " << E << endl;
     } // End Correction method I
+    else if (energy_dependence_correction_vs_ring.size()>0){ 
+      DVector2 pos=fcalGeom->positionOnFace(chEmax);
+      double radius=pos.Mod();
+      int ring_nb = (int) (radius / (5 * k_cm));
+
+      if (USE_RING_E_CORRECTION_V1) {    
+	// Method II: PRIMEXD way, correction per ring
+	int ring_region = -1;
+	if (0 <= ring_nb && ring_nb <= 2)
+	  ring_region = 0;
+	else if (3 <= ring_nb && ring_nb <= 4)
+	  ring_region = 1;
+	else if (ring_nb == 5)
+	  ring_region = 2;
+	else if (6 <= ring_nb && ring_nb <= 7)
+	  ring_region = 3;
+	else if (8 <= ring_nb && ring_nb <= 9)
+	  ring_region = 4;
+	else if (10 <= ring_nb && ring_nb <= 11)
+	  ring_region = 5;
+	else if (12 <= ring_nb && ring_nb <= 17)
+	  ring_region = 6;
+	else if (18 <= ring_nb && ring_nb <= 20)
+	  ring_region = 7;
+	else if (21 <= ring_nb && ring_nb <= 23)
+	  ring_region = 8;
+	if (ring_region != -1) {
+	  double A = energy_dependence_correction_vs_ring[ring_region][0];
+	  double B = energy_dependence_correction_vs_ring[ring_region][1];
+	  double C = energy_dependence_correction_vs_ring[ring_region][2];
+	  Egamma = Eclust / (A - exp(-B * Eclust + C)); 
+	}
+      } else if (USE_RING_E_CORRECTION_V2) {
+	// Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
+	int ring_region = -1;
+	if (ring_nb == 1)
+	  ring_region = 0;
+	else if (ring_nb == 2)
+	  ring_region = 1;
+	else if (ring_nb == 3)
+	  ring_region = 2;
+	else if (ring_nb == 4)
+	  ring_region = 3;
+	else if (5 <= ring_nb)
+	  ring_region = 4;
+	if (ring_region != -1) {
+	  double A = nonlinear_correction[ring_region][0];
+	  double B = nonlinear_correction[ring_region][1];
+	  double C = nonlinear_correction[ring_region][2];
+	  double D = nonlinear_correction[ring_region][3];
+	  double E = nonlinear_correction[ring_region][4];
+	  double F = nonlinear_correction[ring_region][5];
+	  double G = nonlinear_correction[ring_region][6];
+	  double H = nonlinear_correction[ring_region][7];
+	  double I = nonlinear_correction[ring_region][8];
+	  //[0]-[1]*exp(-[2]*x+[3]) -[4]/([5]+[6]*exp(-x*[7]+[8])
+	  Egamma = Eclust / (A - B * exp(-C * Eclust + D) - E / (F + G * exp(-Eclust * H + I))); 
+	}
+	// End Correction method III     
+      }
+    }
     
     if (USE_CPP_E_CORRECTION && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
+      int square_nb = block_to_square[chEmax];
       double scalef = nonlinear_correction_cpp[0];
       if (square_nb >= 0 && square_nb <= 13) {
 	double Eshift = 0;
