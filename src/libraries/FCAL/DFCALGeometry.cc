@@ -18,6 +18,11 @@ using namespace std;
 DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   // Find position of upstream face of FCAL
   geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+
+  // Find the size of the sensitive volume of the lead glass
+  vector<double>block;
+  geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
+  m_sensitiveBlockSize=block[0];
  
   // Check for presence of PbWO4 insert
   if (geom->HaveInsert()){ // Geometry based on survey data for positions
@@ -25,6 +30,10 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
     int insert_row_size=0;
     geom->GetFCALInsertRowSize(insert_row_size);
     m_insertSize=insertBlockSize()*double(insert_row_size/2);
+
+    // Find the size of the sensitive volume of the PWO crystals
+    geom->Get("//box[@name='XTBL']/@X_Y_Z",block);
+    m_insertSensitiveBlockSize=block[0];
 
     // Get the z-position of the upstream face of the insert
     geom->GetECALZ(m_insertFront);

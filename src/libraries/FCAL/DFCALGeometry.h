@@ -69,6 +69,8 @@ public:
 	double fcalFrontZ() const {return m_FCALfront;}
 	double insertFrontZ() const {return m_insertFront;}
 	double insertSize() const {return m_insertSize;}
+	double sensitiveBlockSize() const {return m_sensitiveBlockSize;}
+	double insertSensitiveBlockSize() const {return m_insertSensitiveBlockSize;}
 
 	bool inInsert(int channel) const;
 	int channel( int row, int column ) const;
@@ -93,6 +95,8 @@ public:
  protected:
 	bool   m_activeBlock[2*kBlocksTall][2*kBlocksWide];
 	DVector2 m_positionOnFace[2*kBlocksTall][2*kBlocksWide];
+
+	double m_sensitiveBlockSize,m_insertSensitiveBlockSize;
 
 	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
 	int    m_row[kMaxChannels];
