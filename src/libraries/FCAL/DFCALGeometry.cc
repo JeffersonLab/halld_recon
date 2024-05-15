@@ -81,8 +81,8 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
       //geom->Get(my_pos_string+"@rot",rot);
       //double phi=rot[2]*M_PI/180.;
       for (int col=col0;col<col0+ncopy;col++){
-	double x=x0+double(col-col0)*dx;
-	double y=pos[1];//+phi*x; //use small angle approximation
+	double x=m_FCALdX+x0+double(col-col0)*dx;
+	double y=m_FCALdY+pos[1];//+phi*x; //use small angle approximation
 	m_positionOnFace[row][col].Set(x,y);
 	m_row[ch]     =  row;
 	m_column[ch]  =  col;
@@ -117,8 +117,8 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
       my_row=i-21;
     }
     for (int col=col0;col<col0+ncopy;col++){
-      double x=x0+double(col-col0)*dx;
-      double y=pos[1]+phi*x; //use small angle approximation
+      double x=m_FCALdX+x0+double(col-col0)*dx;
+      double y=m_FCALdY+pos[1]+phi*x; //use small angle approximation
 
       int row_index=my_row+kBlocksTall;
       int col_index=col+kBlocksWide;
