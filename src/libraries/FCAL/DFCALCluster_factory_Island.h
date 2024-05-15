@@ -23,32 +23,30 @@
 
 class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 public:
-DFCALCluster_factory_Island(){};
-~DFCALCluster_factory_Island(){};
-const char* Tag(void){return "Island";}
+  DFCALCluster_factory_Island(){};
+  ~DFCALCluster_factory_Island(){};
+  const char* Tag(void){return "Island";}
 
-class HitInfo{
-public:
-HitInfo(JObject::oid_t id,int row,int column,double E,double x,double y,double t)
-:id(id),row(row),column(column),E(E),x(x),y(y),t(t){}
-  JObject::oid_t id;
-int row;
-int column;
-double E;
-double x;
-double y;
-double t;
-};
+  class HitInfo{
+  public:
+  HitInfo(int row,int column,double E,double x,double y,double t)
+    :row(row),column(column),E(E),x(x),y(y),t(t){}
+    int row;
+    int column;
+    double E;
+    double x;
+    double y;
+    double t;
+  };
 
   class PeakInfo{
   public:
-  PeakInfo(double E,double x,double y,int ic,int ir,int nhits):E(E),x(x),y(y),ic(ic),ir(ir),nhits(nhits){}
+  PeakInfo(double E,double x,double y,int ic,int ir):E(E),x(x),y(y),ic(ic),ir(ir){}
     double E;
     double x;
     double y;
     int ic;
     int ir;
-    int nhits;
   }; 
   
  private: 
@@ -66,9 +64,22 @@ double t;
   double CalcClusterEDeriv(double b,const HitInfo &hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,double b,const HitInfo &hit,
 			    const PeakInfo &myPeakInfo) const;
-void SplitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hits,
+  void SplitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hits,
 		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
  
+  void GetRowColRanges(int nrows,int ncols,int ir,int ic,int &lo_row,
+		       int &hi_row, int &lo_col,int &hi_col) const{
+    lo_col=ic-2;
+    if (lo_col<0) lo_col=0;
+    hi_col=ic+2;
+    if (hi_col>=ncols) hi_col=ncols-1;
+    lo_row=ir-2;
+    if (lo_row<0) lo_row=0;
+    hi_row=ir+2;
+    if (hi_row>=nrows) hi_row=nrows-1;
+  }
+
+
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
   double MIN_EXCESS_SEED_ENERGY;
   double SHOWER_WIDTH_PARAMETER,ENERGY_SHARING_CUTOFF;
