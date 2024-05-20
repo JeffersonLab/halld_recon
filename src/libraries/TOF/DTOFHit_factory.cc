@@ -166,6 +166,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     vector<double> raw_adc_offsets;
     vector<double> raw_tdc_offsets;
     vector<double> raw_adc2E;
+    vector<double> raw_adc_bad_channels;
+    vector<double> raw_tdc_bad_channels;
     
     if(print_messages) jout << "In DTOFHit_factory, loading constants..." << endl;
     
@@ -244,6 +246,13 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     string locTOFADCTimeOffetsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_timing_offsets";
     if(eventLoop->GetCalib(locTOFADCTimeOffetsTable.c_str(), raw_adc_offsets))
       jout << "Error loading " << locTOFADCTimeOffetsTable << " !" << endl;
+
+    string locADCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
+    if(eventLoop->GetCalib(locADCBadChannelsTable.c_str(), raw_adc_bad_channels))
+      jout << "Error loading " << locADCBadChannelsTable << " !" << endl;
+    string locTDCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
+    if(eventLoop->GetCalib(locTDCBadChannelsTable.c_str(), raw_tdc_bad_channels))
+      jout << "Error loading " << locTDCBadChannelsTable << " !" << endl;
     
     // check which walk correction to use:
     string locTOFWalkCorrectionType = tofGeom.Get_CCDB_DirectoryName() + "/walkcorr_type";
@@ -322,6 +331,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     FillCalibTable(adc_gains, raw_adc_gains, tofGeom);
     FillCalibTable(adc_time_offsets, raw_adc_offsets, tofGeom);
     FillCalibTable(tdc_time_offsets, raw_tdc_offsets, tofGeom);
+    FillCalibTable(adc_bad_channels, raw_adc_bad_channels, tofGeom);
+    FillCalibTable(tdc_bad_channels, raw_tdc_bad_channels, tofGeom);
     
     
     string locTOFADC2ETable = tofGeom.Get_CCDB_DirectoryName() + "/adc2E";
@@ -374,6 +385,10 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   loop->Get(digihits);
   for(unsigned int i=0; i<digihits.size(); i++){
     const DTOFDigiHit *digihit = digihits[i];
+    
+      // throw away hits from bad or noisy channels
+      int quality = GetConstant(adc_bad_channels,digihit);
+      if ( quality > 0 ) continue;
     
     // Error checking for pre-Fall 2016 firmware
     if(digihit->datasource == 1) {
@@ -498,6 +513,18 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->has_fADC=true;
     hit->has_TDC=false;
     
+    // if the ADC for this channel is good, but the TDC is bad, then
+    // just use the ADC time
+    int tdc_quality = GetConstant(tdc_bad_channels,digihit);
+    if ( tdc_quality > 0 ) {
+    	// we have a lot of checks on whether the TDC time exists right now, 
+    	// so for now, just pretend that there's TDC information here
+    	// probably there is a better way to do this...
+    	hit->t_TDC = hit->t_fADC;
+    	hit->has_TDC = true;
+    }
+
+    
     /*
       cout << "TOF ADC hit =  (" << hit->plane << "," << hit->bar << "," << hit->end << ")  " 
       << t_scale << " " << T << "  "
@@ -522,6 +549,10 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     {
       const DTOFTDCDigiHit *digihit = tdcdigihits[i];
       
+      // throw away TDC hits from bad or noisy channels
+      int quality = GetConstant(tdc_bad_channels,digihit);
+      if ( quality > 0 ) continue;
+
       // Apply calibration constants here
       double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(digihit);
       T += t_base_tdc - GetConstant(tdc_time_offsets, digihit) + tdc_adc_time_offset;
