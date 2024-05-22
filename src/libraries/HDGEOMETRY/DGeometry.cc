@@ -2068,8 +2068,12 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
 // Check for presence of FCAL2 insert
 bool DGeometry::HaveInsert() const{
   int ncopy=0;
-  return Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",
-	     ncopy);
+  jgeom->SetVerbose(0);
+  bool have_insert
+    =Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",
+	 ncopy);
+  jgeom->SetVerbose(1);
+  return have_insert;
 }
 
 //---------------------------------
