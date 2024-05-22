@@ -131,6 +131,7 @@ DFCALShower_factory::DFCALShower_factory()
 
   INSERT_PAR1=0.167457;
   INSERT_PAR2=1.1349;
+  INSERT_PAR3=0.;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
