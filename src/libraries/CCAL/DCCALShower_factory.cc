@@ -30,11 +30,14 @@ DCCALShower_factory::DCCALShower_factory()
   
   SHOWER_DEBUG              =  0;
   DO_NONLINEAR_CORRECTION   =  1;
+  DO_TIMEWALK_CORRECTION    =  1;
   
   CCAL_RADIATION_LENGTH     =  0.86;
   CCAL_CRITICAL_ENERGY      =  1.1e-3;
   
   LOG_POS_CONST             =  4.2;
+
+  CCAL_C_EFFECTIVE          =  13.6;
   
   gPARMS->SetDefaultParameter( "CCAL:SHOWER_DEBUG", SHOWER_DEBUG );
   gPARMS->SetDefaultParameter( "CCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT, 
@@ -51,9 +54,12 @@ DCCALShower_factory::DCCALShower_factory()
 			       "time cut for associating CCAL hits together into a cluster" );
   gPARMS->SetDefaultParameter( "CCAL:DO_NONLINEAR_CORRECTION", DO_NONLINEAR_CORRECTION, 
 			       "set this to zero when no nonlinear correction is desired" );
+  gPARMS->SetDefaultParameter( "CCAL:DO_TIMEWALK_CORRECTION", DO_TIMEWALK_CORRECTION,
+			       "set this to zero when no timewalk correction is desired" );
   gPARMS->SetDefaultParameter( "CCAL:CCAL_RADIATION_LENGTH", CCAL_RADIATION_LENGTH );
   gPARMS->SetDefaultParameter( "CCAL:CCAL_CRITICAL_ENERGY", CCAL_CRITICAL_ENERGY );
   gPARMS->SetDefaultParameter( "CCAL:LOG_POS_CONST", LOG_POS_CONST );
+  gPARMS->SetDefaultParameter( "CCAL:CCAL_C_EFFECTIVE", CCAL_C_EFFECTIVE );
   
   VERBOSE = 0;              ///< >0 once off info ; >2 event by event ; >3 everything
   gPARMS->SetDefaultParameter("DFCALShower:VERBOSE", VERBOSE, "Verbosity level for DFCALShower objects and factories");
@@ -93,6 +99,13 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
     return RESOURCE_UNAVAILABLE;
   }
   
+  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
+  std::map<string, float> beam_spot;
+  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
+  
+  m_beamSpotX = beam_spot.at("x");
+  m_beamSpotY = beam_spot.at("y");
+  
   //------------------------------------------------------//
   //-----------   Read in shower profile data  -----------//
   
@@ -105,7 +118,6 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
   // follow similar procedure as other resources (DMagneticFieldMapFineMesh)
   
   map< string,string > profile_file_name;
-  JCalibration *jcalib = dapp->GetJCalibration(runnumber);
   
   if(jcalib->GetCalib("/CCAL/profile_data/profile_data_map", profile_file_name))
   {
@@ -323,7 +335,7 @@ jerror_t DCCALShower_factory::evnt(JEventLoop *locEventLoop, uint64_t eventnumbe
     shower->y        =   ccalClusters[k].y+m_CCALdY;
     shower->x1       =   ccalClusters[k].x1+m_CCALdX;
     shower->y1       =   ccalClusters[k].y1+m_CCALdY;
-    shower->z        =   m_CCALfront;
+    shower->z        =   ccalClusters[k].z;
     
     shower->chi2     =   ccalClusters[k].chi2;
     shower->sigma_E  =   ccalClusters[k].sigma_E;
@@ -574,6 +586,8 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
     
     if( dime < MIN_CLUSTER_BLOCK_COUNT ) { continue; } 
     if( e < MIN_CLUSTER_ENERGY || e > MAX_CLUSTER_ENERGY ) { continue; }
+
+    if(dime > MAX_CC) dime = MAX_CC;
     
     n_clusters++;
     
@@ -595,7 +609,6 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
 	ecellmax = ecell;
 	idmax = ccal_id;
       }
-      
     }
     
     double xmax = ccalGeom.positionOnFace(idmax).X();
@@ -625,8 +638,8 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
       
       double hittime = 0.;
       for( int ihit = 0; ihit < n_hits; ihit++ ) {
-	int trialid = 12*( locHitPattern[ihit]->row) + locHitPattern[ihit]->column;
-	if( trialid == ccal_id ) {
+	int trialid = 12*(locHitPattern[ihit]->row) + locHitPattern[ihit]->column;
+	if(trialid == ccal_id) {
 	  hittime = locHitPattern[ihit]->t;
 	  break;
 	}
@@ -653,27 +666,40 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
     for(int j = dime; j < MAX_CC; j++)  // zero the rest
       locClusterStorage.id[j] = -1;
     
-    double weightedTime = getEnergyWeightedTime(locClusterStorage, dime);
-    double showerTime   = getCorrectedTime(weightedTime, e);
+    //-------  Get position inside Calorimeter -------//
     
-    //-------  Get position at surface of Calorimeter -------//
-    
-    DVector3 vertex(0.0, 0.0, m_zTarget); // for now, use center of target as vertex
+    // assume interaction vertex comes from center of the beam spot on target:
+    DVector3 vertex(m_beamSpotX, m_beamSpotY, m_zTarget);
     
     double x1, y1;
-    double zV = vertex.Z();
-    double z0 = m_CCALfront - zV;
     if(sW) {
-      double dz = getShowerDepth(e);
-      double zk = 1. / (1. + dz/z0);
-      x1 = zk*xpos/sW;
-      y1 = zk*ypos/sW;
+      x1 = xpos/sW;
+      y1 = ypos/sW;
     } else {
       printf("WRN bad cluster log. coord at event %i: center id = %i, energy = %f\n",
 	     eventnumber, idmax, e);
       x1 = 0.0;
       y1 = 0.0;
     }
+    
+    double dz = getShowerDepth(e);
+    double z  = m_CCALfront + dz;
+    
+    //--------  Get shower time --------//
+    
+    double weightedTime = getEnergyWeightedTime(locClusterStorage, dime);
+    
+    // correct shower time for the time required
+    // for the light to collect at the back of the detector:
+    
+    double zback = m_CCALfront + ccalGeom.blockLength();
+    weightedTime -= (zback - z) / CCAL_C_EFFECTIVE;
+    
+    // now apply timewalk correction:
+    
+    double showerTime;
+    if(DO_TIMEWALK_CORRECTION) showerTime = getCorrectedTime(weightedTime, e);
+    else showerTime = weightedTime;
     
     //--------  Calculate nonlinear-corrected energy --------//
     
@@ -713,6 +739,7 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
     locCluster.y       = y;
     locCluster.x1      = x1;
     locCluster.y1      = y1;
+    locCluster.z       = z;
     locCluster.chi2    = chi2;
     locCluster.time    = showerTime;
     locCluster.emax    = ecellmax;

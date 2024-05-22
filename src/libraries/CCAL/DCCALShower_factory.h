@@ -70,6 +70,7 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
   double nonlin_func(double e, int id);
   
   double m_zTarget;
+  double m_beamSpotX,m_beamSpotY;
   double m_CCALfront;
   double m_CCALdX,m_CCALdY;	
   
@@ -153,11 +154,14 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
   double TIME_CUT;
   int    MAX_HITS_FOR_CLUSTERING;
   int    DO_NONLINEAR_CORRECTION;
+  int    DO_TIMEWALK_CORRECTION;
   
   double CCAL_RADIATION_LENGTH;
   double CCAL_CRITICAL_ENERGY;
   
   double LOG_POS_CONST;
+
+  double CCAL_C_EFFECTIVE;
 };
 
 #endif // _DCCALShower_factory_
