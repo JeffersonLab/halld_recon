@@ -50,6 +50,7 @@ typedef struct {
   double y;       /* Cluster's y-position [cm] */
   double x1;      /* Cluster's x1-position [cm] */
   double y1;      /* Cluster's y1-position [cm] */
+  double z;       /* Cluster's z-position [cm] */
   double chi2;    /* Cluster's profile fit to single shower profile */
   double time;    /* Cluster's time [ns] */
   double sigma_E; 
