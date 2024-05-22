@@ -19,7 +19,7 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   // Find position of upstream face of FCAL
   geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
 
-  // Find the size of the sensitive volume of the lead glass
+  // Find the size of the sensitive volume of each lead glass block
   vector<double>block;
   geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
   m_sensitiveBlockSize=block[0];
@@ -31,7 +31,7 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
     geom->GetFCALInsertRowSize(insert_row_size);
     m_insertSize=insertBlockSize()*double(insert_row_size/2);
 
-    // Find the size of the sensitive volume of the PWO crystals
+    // Find the size of the sensitive volume of each PWO crystal
     geom->Get("//box[@name='XTBL']/@X_Y_Z",block);
     m_insertSensitiveBlockSize=block[0];
 
