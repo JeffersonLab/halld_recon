@@ -1,8 +1,6 @@
 #ifndef _CCAL_H_
 #define _CCAL_H_
 
-
-
 #define MCOL 12
 #define MROW 12
 
@@ -17,8 +15,6 @@
 #define COUNT_ZERO 1
 #define TEST_P 1
 
-
-
 enum ClusterType_t{ 
 	SinglePeak=0, 
 	MultiPeak 
@@ -30,7 +26,6 @@ enum PeakType_t{
 };
 
 
-
 typedef struct {
 
   int  id[MAX_CC];    /* ID of ith block, where i runs from 0 to 8 */
@@ -40,8 +35,8 @@ typedef struct {
   double t[MAX_CC];
 
 } cluster_t;
-		
-		
+
+
 typedef struct {
 
   int type;       /* cluster types: 0,1,2,10,11,12 */
@@ -61,8 +56,8 @@ typedef struct {
   double emax;
   
 } ccalcluster_t;
-		
-		
+
+
 typedef struct {
   
   int type;
@@ -80,7 +75,5 @@ typedef struct {
   int icl_en[MAX_CC];
   
 } gamma_t;
-
-
 
 #endif
