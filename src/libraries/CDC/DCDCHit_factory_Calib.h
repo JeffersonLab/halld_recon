@@ -35,6 +35,9 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
 
   int CDC_HIT_THRESHOLD;
 
+  int ECHO_MAX_T = 7;  // search up to this many samples after the main pulse for afterpulses
+  int ECHO_MAX_A = 500; // keep possible afterpulses larger than this (adc range 0-4095)
+
   // overall scale factors.
   double a_scale, amp_a_scale;
   double t_scale;
@@ -66,6 +69,8 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table, 
 		      vector<unsigned int> &Nstraws);
   
+  void FindRogueHits(jana::JEventLoop *eventLoop, vector<unsigned int> &RogueHits);
+
   // Geometry information
   unsigned int maxChannels;
   unsigned int Nrings; // number of rings (layers)

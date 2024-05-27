@@ -172,11 +172,28 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DCDCDigiHit*> digihits;
   loop->Get(digihits);
   char str[256];
+
+  // flag the small nuisance hits that follow a saturated hit on the same board.
+
+  vector <unsigned int> RogueHits;
+
+  FindRogueHits(eventLoop,RogueHits);
+
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DCDCDigiHit *digihit = digihits[i];
     
     //if ( (digihit->QF & 0x1) != 0 ) continue; // Cut bad timing quality factor hits... (should check effect on efficiency)
     
+    bool skip = 0;
+    if (RogueHits.size()>0) {
+      if (i==RogueHits[0]) {
+	skip = 1;
+        RogueHits.erase(RogueHits.begin());
+      }
+    }
+
+    if (skip) continue;
+
     const int &ring  = digihit->ring;
     const int &straw = digihit->straw;
     
@@ -232,6 +249,7 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       // this amplitude is not set in the translation table for this old data format, so make a (reasonable?) guess
       maxamp = digihit->pulse_integral / 28.8;
     } else {
+
       // Use the modern (2017+) data versions
       // Configuration data needed to interpret the hits is stored in the data stream
       vector<const Df125Config*> configs;
@@ -258,7 +276,9 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
       //of the window
       // Only true after about run 4100
       nsamples_integral = (NW - (digihit->pulse_time / 10));      
+
     }
+
     
     // Complete the pedestal subtraction here since we should know the correct number of samples.
     int scaled_ped = raw_ped << PBIT;
@@ -463,3 +483,138 @@ const double DCDCHit_factory_Calib::GetConstant(const cdc_digi_constants_t &the_
   return the_table[in_hit->ring-1][in_hit->straw-1];
 }
 
+//------------------
+// Identify rogue hits
+//------------------
+void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigned int> &RogueHits)
+{
+  
+  RogueHits.clear();
+
+  vector<const DCDCDigiHit*> digihits;
+  loop->Get(digihits);
+
+  if (digihits.size() == 0) return;
+
+  uint16_t ABIT = 0; // 2^{ABIT} Scale factor for amplitude
+  uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+
+  const Df125Config *config = NULL;
+  digihits[0]->GetSingle(config);
+
+  if(config) { 
+    ABIT = config->ABIT;
+    PBIT = config->PBIT; 
+  } else {
+    ABIT = 3;
+    PBIT = 0;
+  }
+
+  // store list of saturated hit times and their hvb number
+
+  vector<unsigned int> times_thisboard;   // list of times for one preamp at a time
+  vector<unsigned int> sat_boards;  // code for hvb w saturated hits
+  vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
+
+  unsigned int lastboard = 0;
+  
+  for (unsigned int i=0; i < digihits.size(); i++) {
+
+    const DCDCDigiHit *digihit = digihits[i];
+
+    const Df125CDCPulse *cp = NULL;
+    digihit->GetSingle(cp);
+    if (!cp) continue ; 
+
+    uint32_t rocid = cp->rocid;
+    uint32_t slot = cp->slot;
+    uint32_t channel = cp->channel;
+    uint32_t amp = cp->first_max_amp<<ABIT;
+
+    unsigned int preamp = (unsigned int)(channel/24);
+    unsigned int rought = (unsigned int)(cp->le_time/10);
+      
+    if (amp < 4088) continue;    // only saturated hits beyond this point  511<<3 = 4088
+    
+    unsigned int board = rocid*100000 + slot*100 + preamp;  
+
+    if (i==0) lastboard = board;
+
+    if (board == lastboard) { 
+  
+        times_thisboard.push_back(rought); 
+  
+    } else {  //different preamp
+
+        sat_boards.push_back(lastboard);  
+        sat_times.push_back(times_thisboard);
+        times_thisboard.clear();
+        times_thisboard.push_back(rought); 
+
+    } 
+  
+    if ( i == digihits.size()-1) {
+
+        sat_boards.push_back(board);  
+        sat_times.push_back(times_thisboard);
+
+    } 
+  
+    lastboard = board;  
+  } 
+
+  if (sat_times.size() == 0) return;
+
+  
+  // check for small afterpulses
+
+  for (unsigned int i=0; i < digihits.size(); i++) {
+
+    const DCDCDigiHit *digihit = digihits[i];
+
+    const Df125CDCPulse *cp = NULL;
+    digihit->GetSingle(cp);
+    if (!cp) continue ; 
+
+    uint32_t rocid = cp->rocid;
+    uint32_t slot = cp->slot;
+    uint32_t channel = cp->channel;
+
+    unsigned int preamp = (unsigned int)(channel/24);
+    unsigned int rought = (unsigned int)(cp->le_time/10);
+
+    unsigned int dt;  // time difference between saturated & later pulses
+      
+    unsigned int board = rocid*100000 + slot*100 + preamp;  
+    
+    // find board in array
+
+    unsigned int x = 0;
+    bool found = 0;
+    for (unsigned int j=0; j<sat_boards.size(); j++) {
+      if (board == sat_boards[j]) found = 1;
+      if (found) x = j;
+      if (found) break;
+    }
+
+    if (!found) continue;
+
+    // fill RogueHits if this is a problem pulse
+      
+    for (unsigned int j=0; j<sat_times[x].size(); j++) {
+
+      uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
+
+      if (net_amp > (uint32_t)ECHO_MAX_A) continue;  // too big to be considered an afterpulse
+
+      if (rought <= sat_times[x][j] ) continue; // too early 
+
+      dt = rought - sat_times[x][j];
+        
+      if ( (dt > 2) && (dt <= (unsigned int)ECHO_MAX_T) ) RogueHits.push_back(i);
+
+    }
+
+  }
+
+}
