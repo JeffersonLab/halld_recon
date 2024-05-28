@@ -21,13 +21,17 @@ jerror_t DCDCHit_factory_Calib::init(void)
   gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
 
-  ECHO_MAX_T = 7;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
-                              "End of time range (number of samples) to search for afterpulses");
+  ECHO_ORIGIN = 4088;
+  gPARMS->SetDefaultParameter("CDC:ECHO_ORIGIN", ECHO_ORIGIN,
+                              "Min height (adc units 0-4095) for primary pulses considered in the search for afterpulses. Set to 4088 for the saturated value 511");
 
   ECHO_MAX_A = 500;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
                               "Max height (adc units 0-4095) for afterpulses");
+
+  ECHO_MAX_T = 7;
+  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
+                              "End of time range (number of samples) to search for afterpulses");
 
   ECHO_VERBOSE = 0; 
   gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
@@ -553,7 +557,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     unsigned int board = rocid*100000 + slot*100 + preamp;  
 
 
-    if ( amp > 4087) {    //  511<<3 = 4088
+    if ( amp >= ECHO_ORIGIN) {    //  511<<3 = 4088
 
       if (sat_boards.size() == 0 ) {
 
