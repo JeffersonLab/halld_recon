@@ -20,6 +20,19 @@ jerror_t DCDCHit_factory_Calib::init(void)
   CDC_HIT_THRESHOLD = 0;
   gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
+
+  ECHO_MAX_T = 7;
+  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
+                              "End of time range (number of samples) to search for afterpulses");
+
+  ECHO_MAX_A = 500;
+  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
+                              "Max height (adc units 0-4095) for afterpulses");
+
+  ECHO_VERBOSE = 0; 
+  gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
+                              "Produce copious amounts of screen output");
+
   
   // default values
   Nrings = 0;
@@ -172,6 +185,10 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DCDCDigiHit*> digihits;
   loop->Get(digihits);
   char str[256];
+
+
+  if (ECHO_VERBOSE) cout << "\n\n event " << eventnumber << "\n";
+
 
   // flag the small nuisance hits that follow a saturated hit on the same board.
 
@@ -516,7 +533,6 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   vector<unsigned int> sat_boards;  // code for hvb w saturated hits
   vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
 
-  unsigned int lastboard = 0;
   
   for (unsigned int i=0; i < digihits.size(); i++) {
 
@@ -533,37 +549,51 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     unsigned int preamp = (unsigned int)(channel/24);
     unsigned int rought = (unsigned int)(cp->le_time/10);
-      
-    if (amp < 4088) continue;    // only saturated hits beyond this point  511<<3 = 4088
-    
+          
     unsigned int board = rocid*100000 + slot*100 + preamp;  
 
-    if (i==0) lastboard = board;
 
-    if (board == lastboard) { 
-  
-        times_thisboard.push_back(rought); 
-  
-    } else {  //different preamp
+    if ( amp > 4087) {    //  511<<3 = 4088
 
-        sat_boards.push_back(lastboard);  
-        sat_times.push_back(times_thisboard);
-        times_thisboard.clear();
+      if (sat_boards.size() == 0 ) {
+
+        sat_boards.push_back(board);  
         times_thisboard.push_back(rought); 
 
-    } 
-  
-    if ( i == digihits.size()-1) {
+      } else if (board == sat_boards.back()) {
+
+        times_thisboard.push_back(rought); 
+
+      } else {
 
         sat_boards.push_back(board);  
         sat_times.push_back(times_thisboard);
 
+        times_thisboard.clear();
+        times_thisboard.push_back(rought); 
+
+      }
+
+    }  
+
+  
+    if ( i == digihits.size()-1 && times_thisboard.size()>0) {
+        sat_times.push_back(times_thisboard);
     } 
   
-    lastboard = board;  
   } 
 
   if (sat_times.size() == 0) return;
+
+  if (ECHO_VERBOSE) {
+    for (unsigned int i=0; i < sat_boards.size(); i++) {
+      cout << sat_boards[i] << " sat. pulses at: ";
+      for (unsigned int j=0; j < sat_times[i].size(); j++) {
+        cout << sat_times[i][j] << " ";
+      }
+      cout << endl;
+    }
+  }
 
   
   // check for small afterpulses
@@ -597,22 +627,33 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
       if (found) break;
     }
 
+    if (!found && ECHO_VERBOSE) cout << board << " no saturated hits on this hvb\n";
+
     if (!found) continue;
 
     // fill RogueHits if this is a problem pulse
+    uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
+
+    if (ECHO_VERBOSE) {
+      printf("board %u t %u amp %u net_amp %u ",board, rought,cp->first_max_amp, net_amp);
+      if (net_amp > (uint32_t)ECHO_MAX_A) cout << " too big\n";
+    }
+    if (net_amp > (uint32_t)ECHO_MAX_A) continue;  // too big to be considered an afterpulse
+
       
     for (unsigned int j=0; j<sat_times[x].size(); j++) {
-
-      uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
-
-      if (net_amp > (uint32_t)ECHO_MAX_A) continue;  // too big to be considered an afterpulse
 
       if (rought <= sat_times[x][j] ) continue; // too early 
 
       dt = rought - sat_times[x][j];
         
+      if (ECHO_VERBOSE)printf("dt %u ",dt);
+
       if ( (dt > 2) && (dt <= (unsigned int)ECHO_MAX_T) ) RogueHits.push_back(i);
 
+      if ( ECHO_VERBOSE && (dt > 2) && (dt <= (unsigned int)ECHO_MAX_T) ) cout << " Matched - remove \n";
+
+      //      printf("board %u t %u amp %u net_amp %u dt %u ",board, rought,cp->first_max_amp, net_amp, dt);
     }
 
   }

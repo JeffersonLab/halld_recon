@@ -183,7 +183,7 @@ jerror_t DCDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
     
   }
-
+  
   
   for (int k=0 ;k<(int) hits.size(); k++){
     const DCDCHit *hit = hits[k];
@@ -210,9 +210,9 @@ jerror_t DCDCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     // removed hits correclated with Saturation hit on same connector/reamp/HV-board
     // this vector should not be filled if we are running over HDDM data
-    if (Mark4Removal.size() > 0 && Mark4Removal[k]){
-      continue;
-    }
+    //if (Mark4Removal.size() > 0 && Mark4Removal[k]){
+    //  continue;
+    //}
     
     _data.push_back( const_cast<DCDCHit*>(hit) );
     
