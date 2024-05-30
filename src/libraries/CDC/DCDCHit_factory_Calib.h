@@ -35,7 +35,6 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
 
   int CDC_HIT_THRESHOLD;
 
-  unsigned int ECHO_ORIGIN; // threshold to consider large pulses as possibly causing afterpulses (adc range 0-4095), "511" would be 4088
   unsigned int ECHO_MAX_A; // do not suppress possible afterpulses larger than this (adc range 0-4095)
   unsigned int ECHO_MAX_T;  // search up to this many samples after the main pulse for afterpulses
   bool ECHO_VERBOSE; // produce copious screen output
