@@ -118,6 +118,8 @@ void DBCALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
        jout << "Error loading /BCAL/channel_global_offset !" << jendl;
    if(calibration->Get("/BCAL/tdiff_u_d", raw_tdiff_u_d))
        jout << "Error loading /BCAL/tdiff_u_d !" << jendl;
+    if(calibration->Get("/BCAL/bad_channels", raw_bad_channels))
+       jout << "Error loading /BCAL/bad_channels !" << endl;
 
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_gains" << jendl;
    FillCalibTable(gains, raw_gains);
