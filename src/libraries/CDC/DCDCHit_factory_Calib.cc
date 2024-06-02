@@ -21,17 +21,61 @@ jerror_t DCDCHit_factory_Calib::init(void)
   gPARMS->SetDefaultParameter("CDC:CDC_HIT_THRESHOLD", CDC_HIT_THRESHOLD,
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
 
-  ECHO_MAX_A = 500;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
-                              "Max height (adc units 0-4095) for afterpulses");
+  // After a saturated pulse, small afterpulses can occur on other channels in the same preamp
+  // Single-peak afterpulses occur after 3-7 samples, double-peak afterpulses after 7-14+? samples 
+  // If ECHO_OPT>0, likely afterpulses at time <= 'echo_end_search' samples after the main pulse are removed
 
-  ECHO_MAX_T = 7;
+  ECHO_OPT = 2;
+  gPARMS->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
+                              "0:disabled, 1:uniform threshold 2:decreasing threshold");
+
+  ECHO_MAX_A = 350;
+  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
+                              "Max height (adc units 0-4095) for afterpulses, if ECHO_SLANTED_CUT=0");
+
+  ECHO_MAX_T = 11;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
                               "End of time range (number of samples) to search for afterpulses");
 
   ECHO_VERBOSE = 0; 
   gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
                               "Produce copious amounts of screen output");
+
+
+
+  if (ECHO_OPT > 0) { 
+    // make sure that echo_end_search < echo_cut_array_size
+    // echo_cut size is currently 15, should be ample
+
+    unsigned int echo_cut_array_size = sizeof(echo_cut)/sizeof(echo_cut[0]);
+
+    if (ECHO_MAX_T < echo_cut_array_size) {
+      echo_end_search = ECHO_MAX_T; 
+    } else {
+      echo_end_search = echo_cut_array_size-1;
+    }
+  }
+
+
+  if (ECHO_OPT == 1) {   // constant threshold
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+      echo_cut[i] = ECHO_MAX_A;   
+    }
+
+  } else if (ECHO_OPT == 2) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[11] = {0,0,350,350,350,300,250,200,150,150,150};  
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+      if (i<10) {
+        echo_cut[i] = slant_array[i];
+      } else {
+        echo_cut[1] = slant_array[10];  // const after dt=9
+      }
+    }
+  }
 
   
   // default values
@@ -193,8 +237,9 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   // flag the small nuisance hits that follow a saturated hit on the same board.
 
   vector <unsigned int> RogueHits;
+  RogueHits.clear();
 
-  FindRogueHits(eventLoop,RogueHits);
+  if (ECHO_OPT > 0) FindRogueHits(eventLoop,RogueHits);
 
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DCDCDigiHit *digihit = digihits[i];
@@ -634,27 +679,44 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     // fill RogueHits if this is a problem pulse
     uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
 
-    if (ECHO_VERBOSE) {
-      printf("board %u t %u amp %u net_amp %u ",board, rought,cp->first_max_amp, net_amp);
-      if (net_amp > (uint32_t)ECHO_MAX_A) cout << " too big\n";
-    }
-    if (net_amp > (uint32_t)ECHO_MAX_A) continue;  // too big to be considered an afterpulse
+    if (ECHO_VERBOSE) printf("board %u t %u amp %u net_amp %u ",board, rought,cp->first_max_amp, net_amp);
 
-      
+
+    // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
+    // find time delay dt between saturated pulse and this one
+    // then compare pulse height with cut_array[dt]
+
+    found = 0;
+
     for (unsigned int j=0; j<sat_times[x].size(); j++) {
 
-      if (rought <= sat_times[x][j] ) continue; // too early 
+      if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
 
       dt = rought - sat_times[x][j];
         
-      if (ECHO_VERBOSE)printf("dt %u ",dt);
+      if (ECHO_VERBOSE) {
+        printf("dt %u ",dt);
+        if (dt > echo_end_search) {
+          printf(" too late \n");
+        } else { 
+          printf(" compare net amp %u with cut limit %u \n", net_amp, echo_cut[dt] );
+	}
+      }
 
-      if ( (dt >= 2) && (dt <= (unsigned int)ECHO_MAX_T) ) RogueHits.push_back(i);
+      if (dt < 2) continue; // saturated pulse was too late (afterpulses start at dt=2)
 
-      if ( ECHO_VERBOSE && (dt >= 2) && (dt <= (unsigned int)ECHO_MAX_T) ) cout << " Matched - remove \n";
+      if (dt > echo_end_search) continue; // saturated pulse was too early
 
-      //      printf("board %u t %u amp %u net_amp %u dt %u ",board, rought,cp->first_max_amp, net_amp, dt);
+      if (net_amp <= echo_cut[dt]) found = 1;
+
+      if (found) break;
+
     }
+
+    if (found) RogueHits.push_back(i);
+
+    if ( ECHO_VERBOSE && found ) cout << "  Matched pulse & afterpulse - remove afterpulse\n";
+
 
   }
 
