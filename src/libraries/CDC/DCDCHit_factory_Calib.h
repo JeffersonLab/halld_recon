@@ -37,7 +37,7 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
 
   unsigned int ECHO_MAX_A; // do not suppress possible afterpulses larger than this (adc range 0-4095)
   unsigned int ECHO_MAX_T;  // search up to this many samples after the main pulse for afterpulses
-  bool ECHO_OPT; // 0: off, 1: uniform threshold, 2: threshold decreases with dt 
+  unsigned int ECHO_OPT; // 0: off, 1: uniform threshold, 2: threshold decreases with dt 
   bool ECHO_VERBOSE; // produce copious screen output
 
   // overall scale factors.
