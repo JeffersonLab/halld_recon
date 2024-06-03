@@ -66,13 +66,13 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 2) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[11] = {0,0,350,350,350,300,250,200,150,150,150};  
+    unsigned int slant_array[9] = {0,0,350,350,350,300,250,200,150};
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
-      if (i<10) {
+      if (i<9) {
         echo_cut[i] = slant_array[i];
       } else {
-        echo_cut[1] = slant_array[10];  // const after dt=9
+        echo_cut[i] = slant_array[8];  // const after dt=8
       }
     }
   }
