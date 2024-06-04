@@ -1848,13 +1848,6 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
    if (tag != "" && tag != "TRUTH")
       return OBJECT_NOT_AVAILABLE;
 
-   // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
-   vector<const DECALGeometry*> ecalGeomVect;
-   eventLoop->Get( ecalGeomVect );
-   if (ecalGeomVect.size() < 1)
-      return OBJECT_NOT_AVAILABLE;
-   const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
    vector<DECALHit*> data;
 
    if (tag == "") {
@@ -1864,20 +1857,10 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
       for (iter = hits.begin(); iter != hits.end(); ++iter) {
          int row = iter->getRow();
          int column = iter->getColumn();
- 
-         // Filter out non-physical blocks here
-	 if (!ecalGeom.isBlockActive(row, column))
-	   continue;
-
-         // Get position of blocks on front face. (This should really come from
-         // hdgeant directly so the poisitions can be shifted in mcsmear.)
-	 DVector2 pos = ecalGeom.positionOnFace(row, column);
 
          DECALHit *mchit = new DECALHit();
          mchit->row    = row;
          mchit->column = column;
-         mchit->x      = pos.X();
-         mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
 	 mchit->intOverPeak = 5.;
@@ -1891,20 +1874,10 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
       for (iter = hits.begin(); iter != hits.end(); ++iter) {
          int row = iter->getRow();
          int column = iter->getColumn();
- 
-         // Filter out non-physical blocks here
-	 if (!ecalGeom.isBlockActive(row, column))
-	   continue;
-
-         // Get position of blocks on front face. (This should really come from
-         // hdgeant directly so the poisitions can be shifted in mcsmear.)
-	 DVector2 pos = ecalGeom.positionOnFace(row, column);
     
          DECALHit *mchit = new DECALHit();
          mchit->row    = row;
          mchit->column = column;
-         mchit->x      = pos.X();
-         mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
 	 mchit->intOverPeak = 5.;
