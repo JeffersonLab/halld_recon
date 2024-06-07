@@ -91,7 +91,6 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
   const DGeometry *geom = dapp->GetDGeometry(runnumber);
   
   if (geom) {
-    geom->GetTargetZ(m_zTarget);
     geom->GetCCALPosition(m_CCALdX,m_CCALdY,m_CCALfront);
   }
   else{
@@ -100,11 +99,6 @@ jerror_t DCCALShower_factory::brun(JEventLoop *locEventLoop, int32_t runnumber)
   }
   
   JCalibration *jcalib = dapp->GetJCalibration(runnumber);
-  std::map<string, float> beam_spot;
-  jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
-  
-  m_beamSpotX = beam_spot.at("x");
-  m_beamSpotY = beam_spot.at("y");
   
   //------------------------------------------------------//
   //-----------   Read in shower profile data  -----------//
@@ -667,9 +661,6 @@ void DCCALShower_factory::processShowers( vector< gamma_t > gammas, DCCALGeometr
       locClusterStorage.id[j] = -1;
     
     //-------  Get position inside Calorimeter -------//
-    
-    // assume interaction vertex comes from center of the beam spot on target:
-    DVector3 vertex(m_beamSpotX, m_beamSpotY, m_zTarget);
     
     double x1, y1;
     if(sW) {

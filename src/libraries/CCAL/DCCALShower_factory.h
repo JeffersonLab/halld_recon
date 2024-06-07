@@ -69,8 +69,6 @@ class DCCALShower_factory:public JFactory<DCCALShower>{
   double getCorrectedEnergy(double energy, int id);
   double nonlin_func(double e, int id);
   
-  double m_zTarget;
-  double m_beamSpotX,m_beamSpotY;
   double m_CCALfront;
   double m_CCALdX,m_CCALdY;	
   
