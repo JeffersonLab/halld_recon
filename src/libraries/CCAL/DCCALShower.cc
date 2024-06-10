@@ -12,7 +12,6 @@
 
 DCCALShower::DCCALShower():ExyztCovariance(5)
 {
-
   E        =  0.;
   Esum     =  0.;
   
@@ -32,10 +31,9 @@ DCCALShower::DCCALShower():ExyztCovariance(5)
   idmax    =  0;
   id       =  0;
   type     =  0;
-
 }
 
 DCCALShower::~DCCALShower()
 {
-
+  
 }
