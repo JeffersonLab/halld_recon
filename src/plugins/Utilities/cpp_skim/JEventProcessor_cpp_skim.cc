@@ -106,6 +106,12 @@ jerror_t JEventProcessor_cpp_skim::evnt(JEventLoop *loop, uint64_t eventnumber)
     double p = track->momentum().Mag();
     DVector3 origin =  track->position();
     if(p<0.2 || p>15.0 || fabs(origin.Z())>90. || origin.Pt()>2.7) continue;
+
+    double chi  = track->chisq;
+    int ndof = track->Ndof;
+    double prob = TMath::Prob(chi,ndof);
+    if(prob<1.e-3) continue;
+
     double q = track->charge();
     if(q> 0.1) ++npos;
     if(q<-0.1) ++nneg;
