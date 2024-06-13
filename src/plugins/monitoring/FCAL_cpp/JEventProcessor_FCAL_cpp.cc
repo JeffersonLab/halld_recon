@@ -131,11 +131,13 @@ jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
     int row = fcal_hit->row;
     int col = fcal_hit->column;
 
-    if(toftrigger&&fcale>1.0&&(efcaltot-fcale)<1.0&&fcale>0.9*efcalmax) fcal_nhitonly[row][col]  += 1.;
+    if(fcaltrigger&&fcale>1.0&&(efcaltot-fcale)<1.0&&fcale>0.9*efcalmax) fcal_nhitonly[row][col][0]  += 1.;
+    if(toftrigger&&fcale>1.0&&(efcaltot-fcale)<1.0&&fcale>0.9*efcalmax) fcal_nhitonly[row][col][1]   += 1.;
+
     if(fcaltrigger&&fcale>0.3) fcal_nhit[row][col] += 1.;
     if(fcale<0.3) {
       japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
-      h_fcalehit_tall_map->Fill(row,col,fcale);
+      h_fcalehit_tall_map->Fill(col,row,fcale);
       japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
     }
   }
@@ -168,7 +170,7 @@ jerror_t JEventProcessor_FCAL_cpp::evnt(JEventLoop *loop, uint64_t eventnumber)
         japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
         if(e>1.0&&e<3.0) {
           h_fcalshower_tall->Fill(id,t-t2);
-          h_fcalshower_tall_map->Fill(row,col,t-t2);
+          h_fcalshower_tall_map->Fill(col,row,t-t2);
         }
         if(e2>1.5&&e2<2.5)  h_fcalshower_tw->Fill(e,t-t2);
         japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
@@ -201,18 +203,42 @@ jerror_t JEventProcessor_FCAL_cpp::fini(void)
   for(int i = 0; i<59;  ++i)
     for(int j = 0; j<59;  ++j) {
 
-      h_fcal_nclust->SetBinContent(i+1, j+1, fcal_nclust[i][j]/double(nfcaltriggers));
-      h_fcal_nclust->SetBinError(i+1, j+1, sqrt(fcal_nclust[i][j])/double(nfcaltriggers));
+      h_fcal_nclust->SetBinContent(i+1, j+1, fcal_nclust[j][i]/double(nfcaltriggers));
+      h_fcal_nclust->SetBinError(i+1, j+1, sqrt(fcal_nclust[j][i])/double(nfcaltriggers));
 
       if(ntoftriggers) {
-        h_fcal_nhitonly->SetBinContent(i+1, j+1,    fcal_nhitonly[i][j] /double(ntoftriggers));
-        h_fcal_nhitonly->SetBinError(i+1, j+1, sqrt(fcal_nhitonly[i][j])/double(ntoftriggers));
+        int n0 = fcal_nhitonly[j][i][0], n1 = fcal_nhitonly[j][i][1];
+
+        double p, ep;
+
+        if(n0==0 && n1==0) {
+          p   = 0.;
+          ep  = 1.;
+        }
+
+        if(n0==0 && n1>0) {
+          p   = 1.;
+          ep  = 1./double(n1);
+        }
+
+        if(n0>0  && n1==0) {
+          p   = 0.;
+          ep  = 1./double(n0);
+        }
+
+        if(n0>0  && n1>0) {
+          p   = double(n1) / double(n0+n1);
+          ep  = sqrt( p*(1.-p)/double(n0+n1) );
+        }
+
+        h_fcal_nhitonly->SetBinContent(i+1, j+1,  p);
+        h_fcal_nhitonly->SetBinError(i+1, j+1, ep);
       }
 
       if(fcal_nclust[i][j]) {
-        double r = fcal_nhit[i][j]/fcal_nclust[i][j];
+        double r = fcal_nhit[j][i]/fcal_nclust[j][i];
         h_fcal_hcr->SetBinContent(i+1, j+1, r);
-        h_fcal_hcr->SetBinError(i+1, j+1, sqrt(fcal_nhit[i][j]*(1.+r))/fcal_nclust[i][j]);
+        h_fcal_hcr->SetBinError(i+1, j+1, sqrt(fcal_nhit[j][i]*(1.+r))/fcal_nclust[j][i]);
       }
     }
 
