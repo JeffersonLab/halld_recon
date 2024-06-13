@@ -1831,11 +1831,13 @@ void DCCALShower_factory::gamma_hyc( int nadc, vector<int> ia, vector<int> id, d
 	x2 = 0.;
 	y2 = 0.;	
 	
+	if(nadc <= 0) return;
 	
 	fill_zeros( nadc, ia, nzero, iaz );
 	mom1_pht( nadc, ia, id, nzero, iaz, e1, x1, y1 ); // calculate initial values of (E,x,y)
 	
-	if( nadc <= 0 ) return;
+	// if shower energy is zero somehow, don't continue processing:
+	if( e1 <= 0 ) return;
 	
 	chimem = chisq;
 	chisq1_hyc( nadc, ia, id, nzero, iaz, e1, x1, y1, chi0 ); // initial value of chi2
@@ -2149,9 +2151,6 @@ void DCCALShower_factory::chisq1_hyc( int nadc, vector<int> ia, vector<int> id,
 	      fcell = cell_hyc( dx, dy );
 	      chisq = chisq + e1*fcell*fcell/sigma2(dx, dy, fcell, e1);
 	    }
-	  } else {
-	    chisq = chisq + id[ii]*id[ii]/9.;
-	    //if( SHOWER_DEBUG ) cout << "case 0 ch" << endl;
 	  }
 	}
 	
@@ -2207,7 +2206,7 @@ double DCCALShower_factory::d2c( double dx, double dy )
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
 	  
-	  d2c = ad2c[i][j]     * (1.-wx) * (1.-wy) + 
+	  d2c = ad2c[i][j] * (1.-wx) * (1.-wy) + 
 	  	ad2c[i+1][j]   *     wx  * (1.-wy) + 
 		ad2c[i][j+1]   * (1.-wx) *     wy  +
 		ad2c[i+1][j+1] *     wx  *     wy; 
@@ -2229,12 +2228,12 @@ double DCCALShower_factory::cell_hyc( double dx, double dy )
 	i = static_cast<int>(ax);
 	j = static_cast<int>(ay);
 	
-	if( i < 499 && j < 499 && i >= 0 && j >= 0 ) {
+	if( (i < 499) && (j < 499) && (i >= 0) && (j >= 0) ) {
 	
 	  wx = ax-static_cast<double>(i);
 	  wy = ay-static_cast<double>(j);
 	  //std::cout << "i " << i << " j " << j << " wx " << wx << " wy " << wy << std::endl;
-	  cell_hyc = acell[i][j]     * (1.-wx) * (1.-wy) + 
+	  cell_hyc = acell[i][j] * (1.-wx) * (1.-wy) + 
 	  	     acell[i+1][j]   *     wx  * (1.-wy) + 
 		     acell[i][j+1]   * (1.-wx) *     wy  +
 		     acell[i+1][j+1] *     wx  *     wy; 
