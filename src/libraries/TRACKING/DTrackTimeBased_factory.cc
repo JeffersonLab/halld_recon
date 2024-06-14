@@ -184,7 +184,7 @@ void DTrackTimeBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
   auto root_lock = app->GetService<JLockService>();
 
   // Get the geometry
-  auto geom = geo_manager->GetDGeometry(run_number);
+  geom = geo_manager->GetDGeometry(run_number);
 
    // Check for magnetic field
   dIsNoFieldFlag = (dynamic_cast<const DMagneticFieldMapNoField*>(geo_manager->GetBfield(run_number)) != NULL);
@@ -830,8 +830,10 @@ bool DTrackTimeBased_factory::DoFit(const DTrackWireBased *track,
 				    double mass){  
   if(DEBUG_LEVEL>1){_DBG__;_DBG_<<"---- Starting time based fit with mass: "<<mass<<endl;}
   // Get the hits from the wire-based track
-  vector<const DFDCPseudo*>myfdchits = track->Get<DFDCPseudo>();
-  vector<const DCDCTrackHit *>mycdchits = track->Get<DCDCTrackHit>();
+  vector<const DFDCPseudo*>myfdchits;
+  track->GetT(myfdchits);
+  vector<const DCDCTrackHit *>mycdchits;
+  track->GetT(mycdchits);
 
   // Do the fit
   DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
@@ -1042,8 +1044,10 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
   *static_cast<DTrackingData*>(timebased_track) = *static_cast<const DTrackingData*>(src_track);
 
   // Get the hits used in the fit  
-  vector<const DCDCTrackHit *>src_cdchits = src_track->Get<DCDCTrackHit>();
-  vector<const DFDCPseudo *>src_fdchits = src_track->Get<DFDCPseudo>();
+  vector<const DCDCTrackHit *>src_cdchits;
+  src_track->GetT(src_cdchits);
+  vector<const DFDCPseudo *>src_fdchits;
+  src_track->GetT(src_fdchits);
 
   // Copy over DKinematicData part from the result of a successful fit
   timebased_track->setPID(IDTrack(q, my_mass));
@@ -1065,8 +1069,8 @@ void DTrackTimeBased_factory::AddMissingTrackHypothesis(vector<DTrackTimeBased*>
 			 timebased_track->start_times[0].system);
 
   // Add DTrack object as associate object
-  vector<const DTrackWireBased*>wire_based_track = src_track->Get<DTrackWireBased>();
-
+  vector<const DTrackWireBased*>wire_based_track;
+  src_track->GetT(wire_based_track);
   timebased_track->AddAssociatedObject(wire_based_track[0]);
 
   // (Partially) compensate for the difference in energy loss between the 
