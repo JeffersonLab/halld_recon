@@ -174,7 +174,7 @@ void DTrackWireBased_factory::BeginRun(const std::shared_ptr<const JEvent>& even
 	auto app = GetApplication();
 
 	auto geo_manager = app->GetService<DGeometryManager>();
-	auto geom = geo_manager->GetDGeometry(run_number);
+	geom = geo_manager->GetDGeometry(run_number);
 
    // Check for magnetic field
    const DMagneticFieldMap *bfield = geo_manager->GetBfield(run_number);
@@ -413,8 +413,10 @@ void DTrackWireBased_factory::DoFit(unsigned int c_id,
       DReferenceTrajectory *rt,
       const std::shared_ptr<const JEvent>& event, double mass){
    // Get the hits from the candidate
-  vector<const DFDCPseudo*> myfdchits = candidate->Get<DFDCPseudo>();
-  vector<const DCDCTrackHit*> mycdchits = candidate->Get<DCDCTrackHit>();
+  vector<const DFDCPseudo*>myfdchits;
+  candidate->GetT(myfdchits);
+  vector<const DCDCTrackHit *>mycdchits;
+  candidate->GetT(mycdchits);
 
    // Do the fit
    DTrackFitter::fit_status_t status = DTrackFitter::kFitNotDone;
@@ -604,8 +606,10 @@ void DTrackWireBased_factory::AddMissingTrackHypothesis(vector<DTrackWireBased*>
   }
 
   // Get the hits used in the fit and add them as associated objects 
-  vector<const DCDCTrackHit *>cdchits = src_track->Get<DCDCTrackHit>();
-  vector<const DFDCPseudo *>fdchits = src_track->Get<DFDCPseudo>();
+  vector<const DCDCTrackHit *>cdchits;
+  src_track->GetT(cdchits);
+  vector<const DFDCPseudo *>fdchits;
+  src_track->GetT(fdchits);
 
   for(unsigned int m=0; m<fdchits.size(); m++)
     wirebased_track->AddAssociatedObject(fdchits[m]); 

@@ -68,7 +68,7 @@ void DTrackTimeBased_factory_THROWN::BeginRun(const std::shared_ptr<const JEvent
 	auto runnumber = event->GetRunNumber();
 	auto app = event->GetJApplication();
 	auto geo_manager = app->GetService<DGeometryManager>();
-	auto geom = geo_manager->GetDGeometry(runnumber);
+	geom = geo_manager->GetDGeometry(runnumber);
 
 	// Set magnetic field pointer
 	bfield = geo_manager->GetBfield();

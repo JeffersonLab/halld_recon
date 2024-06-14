@@ -219,7 +219,7 @@ DParticleID::DParticleID(const std::shared_ptr<const JEvent>& event)
         event->GetSingle(dFCALGeometry);
 
 	//TOF calibration constants & geometry
-	event->Get(&dTOFGeometry);
+	event->GetSingle(dTOFGeometry);
 	dHalfPaddle_OneSided = dTOFGeometry->Get_ShortBarLength();
 	double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();   // calc this in geometry?
 	ONESIDED_PADDLE_MIDPOINT_MAG = dHalfPaddle_OneSided + locBeamHoleWidth/2.0;
@@ -380,7 +380,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
   dedx_t de_and_dx(0.,0.,0.,0.);
 
   //Get the list of cdc hits used in the fit
-  vector<const DCDCTrackHit*>cdchits = track->Get<DCDCTrackHit>();
+  vector<const DCDCTrackHit*>cdchits;
+  track->GetT(cdchits);
 
   // Loop over cdc hits
   vector<DTrackFitter::Extrapolation_t>cdc_extrapolations=track->extrapolations.at(SYS_CDC);
@@ -419,7 +420,8 @@ jerror_t DParticleID::GetDCdEdxHits(const DTrackTimeBased *track, vector<dedx_t>
   }
   
   //Get the list of fdc hits used in the fit
-  vector<const DFDCPseudo*>fdchits = track->Get<DFDCPseudo>();
+  vector<const DFDCPseudo*>fdchits;
+  track->GetT(fdchits);
 
   // loop over fdc hits
   vector<DTrackFitter::Extrapolation_t>fdc_extrapolations=track->extrapolations.at(SYS_FDC);
