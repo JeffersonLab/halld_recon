@@ -209,7 +209,7 @@ jerror_t JEventProcessor_FCAL_cpp::fini(void)
       if(ntoftriggers) {
         int n0 = fcal_nhitonly[j][i][0], n1 = fcal_nhitonly[j][i][1];
 
-        double p, ep;
+        double p = 0., ep = 0.;
 
         if(n0==0 && n1==0) {
           p   = 0.;
