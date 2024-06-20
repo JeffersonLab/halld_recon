@@ -41,12 +41,13 @@ class DFCALCluster : public JObject {
 
    class DFCALClusterHit_t{
    public:
-   DFCALClusterHit_t(int ch,double E,double x,double y)
-     :ch(ch),E(E),x(x),y(y){}
+   DFCALClusterHit_t(int ch,double E,double x,double y,double t)
+     :ch(ch),E(E),x(x),y(y),t(t){}
      int ch;
      double E;
      double x;
      double y;
+     double t;
    };
    
    void saveHits( vector<userhit_t>& hit );
@@ -80,7 +81,7 @@ class DFCALCluster : public JObject {
    void resetClusterHits();
    bool update( vector<userhit_t>& hitList, double fcalFaceZ,
 		const DFCALGeometry *fcalgeom );
-   void addHit(int ch,double E,double x,double y);
+   void addHit(int ch,double E,double x,double y,double t);
 
    // get hits that form a cluster after clustering is finished
    inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
