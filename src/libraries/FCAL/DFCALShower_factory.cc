@@ -129,8 +129,8 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.167457;
-  INSERT_PAR2=1.1349;
+  INSERT_PAR1=0.0447
+  INSERT_PAR2=1.0107;
   INSERT_PAR3=0.;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
@@ -577,13 +577,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     shower_offset=INSERT_SHOWER_OFFSET;
     critical_energy=INSERT_CRITICAL_ENERGY;
     zfront=m_insertFront;
-
-    if (Eclust>INSERT_PAR3){
-      Egamma=INSERT_PAR2*Eclust;
-    }
-    else {
-      Egamma=INSERT_PAR1*(sqrt(Eclust)-sqrt(INSERT_PAR3))+INSERT_PAR2*INSERT_PAR2;
-    }
+    Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
   } else {
     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
     if  (LOAD_NONLIN_CCDB && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
