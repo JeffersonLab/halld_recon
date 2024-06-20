@@ -59,13 +59,13 @@ void DFCALCluster::saveHits( vector<userhit_t>& hitList )
   for ( int i=0; i < fNhits; i++) {
     if (hitList.size()>0 && i < (int)hitList.size()) {
       addHit(hitList[fHit[i]].ch,hitList[fHit[i]].E,hitList[fHit[i]].x,
-	     hitList[fHit[i]].y);
+	     hitList[fHit[i]].y,hitList[fHit[i]].t);
     }
   }
 }
 
-void DFCALCluster::addHit(int ch,double E,double x,double y){
-  my_hits.push_back(DFCALClusterHit_t(ch,E,x,y));
+void DFCALCluster::addHit(int ch,double E,double x,double y,double t){
+  my_hits.push_back(DFCALClusterHit_t(ch,E,x,y,t));
 }
 
 int DFCALCluster::addHit(const int ihit, const double frac)
