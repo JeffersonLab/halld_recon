@@ -37,6 +37,7 @@ using namespace jana;
 
 
 static TTree *T = NULL;
+static TTree *TT = NULL;
 
 
 extern "C"{
@@ -104,6 +105,20 @@ jerror_t JEventProcessor_cdc_echo::init(void)
 
   japp->RootWriteLock();
 
+  uint16_t ntrackhits,ntrackhits_sat,ntrackhits_echo;
+  double FOM;
+  
+  TT = new TTree("TT","Track data");
+  TT->Branch("eventnum",&eventnum,"eventnum/l");
+  TT->Branch("ntrackhits",&ntrackhits,"ntrackhits/s");
+  TT->Branch("nsat",&ntrackhits_sat,"nsat/s");
+  TT->Branch("necho",&ntrackhits_echo,"necho/s");
+  TT->Branch("FOM",&FOM,"FOM/D");
+
+
+
+
+  
   T = new TTree("T","Echo Pulse data");
 
   T->Branch("eventnum",&eventnum,"eventnum/l");
@@ -349,10 +364,15 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (uint32_t i=0; i<(uint32_t)tracks.size(); i++) {  // not finished!
       
       const DTrackTimeBased *track = tracks[i];
-
+      
       vector<DTrackFitter::pull_t> pulls = track->pulls;
 
-      for (uint32_t j=0; j<pulls.size(); j++) {
+      uint16_t ntrackhits = (uint16_t)pulls.size();
+      uint16_t ntrackhits_sat = 0;
+      uint16_t ntrackhits_echo = 0;      
+      double FOM = track->FOM;
+      
+      for (uint32_t j=0; j<(uint32_t)pulls.size(); j++) {
 
         if (pulls[j].cdc_hit == NULL) continue;
 
@@ -369,9 +389,23 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
         slot = cp->slot;
         channel = cp->channel;
         ontrack[rocid-25][slot-3][channel] = 1;
-	
+
+        if (cp->first_max_amp == 511) ntrackhits_sat++;
+	if (parentamp[rocid-25][slot-3][channel] >0) ntrackhits_echo++;
       }
 	
+      japp->RootWriteLock();    
+
+      TT->SetBranchAddress("eventnum",&eventnum);
+      TT->SetBranchAddress("ntrackhits",&ntrackhits);
+      TT->SetBranchAddress("nsat",&ntrackhits_sat);
+      TT->SetBranchAddress("necho",&ntrackhits_echo);
+      TT->SetBranchAddress("FOM",&FOM);      
+
+      TT->Fill();
+
+      japp->RootUnLock();          
+
     }    
 
 
