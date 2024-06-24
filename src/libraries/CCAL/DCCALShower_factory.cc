@@ -880,7 +880,7 @@ void DCCALShower_factory::main_island(vector<int> &ia, vector<int> &id, vector<g
 	The vector 'ia' will hold the addresses of modules that were hit.
 	They're defined as 100*(12-column)+(12-row) where 'row' and 'column' are 
 	defined in the DCCALGeometry.
-	For example, the top left corner of the CCAL (looking upstream) is address 101.
+	For example, the top left corner of the CCAL (looking downstream) is address 101.
 	The bottom right corner is address 1212.
 	
 	The 'id' vector holds the energies of the hit modules (in units of 0.1 MeVs).
@@ -915,16 +915,16 @@ void DCCALShower_factory::main_island(vector<int> &ia, vector<int> &id, vector<g
 		
 		if(ecl > MIN_ENERGY) {
 			
-			vector< int > icl_a; // addresses of current cluster
-			vector< int > icl_d; // energies of current cluster
+			vector<int> icl_a; // addresses of current cluster
+			vector<int> icl_d; // energies of current cluster
 			
-			icl_a.insert( icl_a.begin(), ia.begin()+ipncl, ia.begin()+ipncl+lencl[icl] );
-			icl_d.insert( icl_d.begin(), id.begin()+ipncl, id.begin()+ipncl+lencl[icl] );
+			icl_a.insert(icl_a.begin(), ia.begin()+ipncl, ia.begin()+ipncl+lencl[icl]);
+			icl_d.insert(icl_d.begin(), id.begin()+ipncl, id.begin()+ipncl+lencl[icl]);
 			
 			if(SHOWER_DEBUG) {
 				cout << "\n\n======================" << endl;
 				cout << "Processing Cluster " << icl << ":" << endl;
-				for( unsigned int ih = 0; ih < icl_a.size(); ih++ ) {
+				for(unsigned int ih = 0; ih < icl_a.size(); ih++) {
 					cout << icl_a[ih] << " " << icl_d[ih] << endl;
 				}
 			}
