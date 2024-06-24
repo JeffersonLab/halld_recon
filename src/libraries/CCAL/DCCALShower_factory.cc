@@ -878,8 +878,10 @@ void DCCALShower_factory::main_island(vector<int> &ia, vector<int> &id, vector<g
 	
 	/*
 	The vector 'ia' will hold the addresses of modules that were hit.
-	They're defined as 100*(i+1)+(j+1) where i is column and j is row of the hit module.
-	Row 0, column 0 is bottom right corner of CCAL (looking upstream).
+	They're defined as 100*(12-column)+(12-row) where 'row' and 'column' are 
+	defined in the DCCALGeometry.
+	For example, the top left corner of the CCAL (looking upstream) is address 101.
+	The bottom right corner is address 1212.
 	
 	The 'id' vector holds the energies of the hit modules (in units of 0.1 MeVs).
 	*/
@@ -1771,10 +1773,12 @@ void DCCALShower_factory::gamma_hyc(int nadc, vector<int> ia, vector<int> id, do
 	x2 = 0.;
 	y2 = 0.;	
 	
+	if(nadc <= 0) return;
+	
 	fill_zeros(nadc, ia, nzero, iaz);
 	mom1_pht(nadc, ia, id, nzero, iaz, e1, x1, y1); // calculate initial values of (E,x,y)
 	
-	if(nadc <= 0) return;
+	if(e1 <= 0) return;
 	
 	chimem = chisq;
 	chisq1_hyc(nadc, ia, id, nzero, iaz, e1, x1, y1, chi0); // initial value of chi2
@@ -1890,34 +1894,34 @@ void DCCALShower_factory::fill_zeros(int nadc, vector<int> ia, int &nneib, vecto
 			nneib = nneib+1;
 			ian.push_back(iy + (ix-1)*100);
 			
-			if(iy > 1) { // fill bottom left neib
+			if(iy > 1) { // fill top left neib
 				nneib = nneib+1;
 				ian.push_back(iy-1 + (ix-1)*100);
 			}
-			if(iy < MROW) { // fill top left neib
+			if(iy < MROW) { // fill bottom left neib
 				nneib = nneib+1;
 				ian.push_back(iy+1 + (ix-1)*100);
 			}
 		}
-		if(ix < MCOL) {
+		if(ix < MCOL) { // fill right neib
 			nneib = nneib+1;
 			ian.push_back(iy + (ix+1)*100);
 			
-			if(iy > 1) { // fill bottom right neib
+			if(iy > 1) { // fill top right neib
 				nneib = nneib+1;
 				ian.push_back(iy-1 + (ix+1)*100);
 			}
-			if(iy < MROW) { // fill top right neib
+			if(iy < MROW) { // fill bottom right neib
 				nneib = nneib+1;
 				ian.push_back(iy+1 + (ix+1)*100);
 			}
 		}
 		
-		if(iy > 1) { // fill bottom neib
+		if(iy > 1) { // fill top neib
 			nneib = nneib+1;
 			ian.push_back(iy-1 + ix*100);
 		}
-		if(iy < MROW) { // fill top neib
+		if(iy < MROW) { // fill bottom neib
 			nneib = nneib+1;
 			ian.push_back(iy+1 + ix*100);
 		}
@@ -2065,7 +2069,7 @@ void DCCALShower_factory::chisq1_hyc(int nadc, vector<int> ia, vector<int> id,
 		}
 	}
 	
-	for(int ii = 0; ii < nneib; ii++ ) {
+	for(int ii = 0; ii < nneib; ii++) {
 		ix = iaz[ii]/100;
 		iy = iaz[ii] - ix*100;
 		dx = x1 - static_cast<double>(ix);
@@ -2075,10 +2079,13 @@ void DCCALShower_factory::chisq1_hyc(int nadc, vector<int> ia, vector<int> id,
 				fcell = cell_hyc(dx, dy);
 				chisq = chisq + e1*fcell*fcell/sigma2(dx, dy, fcell, e1);
 			}
-		} else {
+		}
+		/*
+		else {
 			chisq = chisq + id[ii]*id[ii]/9.;
 			//if( SHOWER_DEBUG ) cout << "case 0 ch" << endl;
 		}
+		*/
 	}
 	
 	return;
