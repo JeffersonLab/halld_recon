@@ -1,4 +1,4 @@
-#! /apps/bin/python3
+#! /usr/bin/python
 # coding:utf-8
 
 import sys
@@ -12,7 +12,7 @@ def main():
   args = sys.argv
   if len(args) != 3:
     print('usage: ./mille.py input_parameter_file runnum')
-    exit(0)
+    exit(1)
 
   input_par_file = args[1]
   runnum = int(args[2])
@@ -34,11 +34,18 @@ def main():
   if os.path.exists(output_file):
     print('Error: file exists')
     print(output_file)
-    exit(0)
+    exit(1)
+
+  workingDir = os.getcwd()
+  if workingDir.find("slurm")!=-1:
+    cp_command = "cp " + ccdb_path + " " + workingDir + "/ccdb.sqlite"
+    os.system(cp_command)
+    ccdb_path = workingDir + "/ccdb.sqlite"
 
   sqlite_str = 'sqlite:///' + ccdb_path
   os.environ['CCDB_CONNECTION'] = sqlite_str
   os.environ['JANA_CALIB_URL'] = sqlite_str
+#  os.environ['JANA_GEOMETRY_URL'] = 'ccdb:///GEOMETRY/cpp_HDDS.xml'
 
   cmd_list = ['hd_root']
   if is_straight:
@@ -49,7 +56,8 @@ def main():
     cmd_list.append('-PTRACKINGPULLS:MAKE_TREE=1')
     cmd_list.append('-PTRACKINGPULLS:TREEFILE=%stree%06d.root' % (output_dir, runnum))
     cmd_list.append('-PTRKFIT:ALIGNMENT=1')
-    cmd_list.append('-PNTHEADS=4')
+    cmd_list.append('-PNTHREADS=24')
+    cmd_list.append('-PJANA:BATCH_MODE=1')
   if num_of_events > 0:
     cmd_list.append('-PEVENTS_TO_KEEP=%d' % num_of_events)
   cmd_list.append(evio_path)
