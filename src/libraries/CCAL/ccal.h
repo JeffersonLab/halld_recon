@@ -27,54 +27,54 @@ enum PeakType_t{
 
 
 typedef struct {
-
-  int  id[MAX_CC];    /* ID of ith block, where i runs from 0 to 8 */
-  double E[MAX_CC];   /* Energy of ith block */
-  double x[MAX_CC];   /* Center of ith block x-coord */
-  double y[MAX_CC];   /* Center of ith block y-coord */
-  double t[MAX_CC];
-
+    
+    int  id[MAX_CC];    /* ID of ith block, where i runs from 0 to 8 */
+    double E[MAX_CC];   /* Energy of ith block */
+    double x[MAX_CC];   /* Center of ith block x-coord */
+    double y[MAX_CC];   /* Center of ith block y-coord */
+    double t[MAX_CC];
+    
 } cluster_t;
 
 
 typedef struct {
-
-  int type;       /* cluster types: 0,1,2,10,11,12 */
-  int nhits;      /* Number of hits in cluster */
-  int id;         /* Indicates multiple gammas in same peak */
-  int idmax;      /* Cluster's central cell's ID */
-  
-  double E;       /* Cluster's energy [GeV] */
-  double Esum;    /* Cluster energy calculated as sum of blocks' energies [GeV] */
-  double x;       /* Cluster's x-position [cm] */
-  double y;       /* Cluster's y-position [cm] */
-  double x1;      /* Cluster's x1-position [cm] */
-  double y1;      /* Cluster's y1-position [cm] */
-  double z;       /* Cluster's z-position [cm] */
-  double chi2;    /* Cluster's profile fit to single shower profile */
-  double time;    /* Cluster's time [ns] */
-  double sigma_E; 
-  double emax;
-  
+    
+    int type;       /* cluster types: 0,1,2,10,11,12 */
+    int nhits;      /* Number of hits in cluster */
+    int id;         /* Indicates multiple gammas in same peak */
+    int idmax;      /* Cluster's central cell's ID */
+    
+    double E;       /* Cluster's energy [GeV] */
+    double Esum;    /* Cluster energy calculated as sum of blocks' energies [GeV] */
+    double x;       /* Cluster's x-position [cm] */
+    double y;       /* Cluster's y-position [cm] */
+    double x1;      /* Cluster's x1-position [cm] */
+    double y1;      /* Cluster's y1-position [cm] */
+    double z;       /* Cluster's z-position [cm] */
+    double chi2;    /* Cluster's profile fit to single shower profile */
+    double time;    /* Cluster's time [ns] */
+    double sigma_E; 
+    double emax;
+    
 } ccalcluster_t;
 
 
 typedef struct {
-  
-  int type;
-  int dime;
-  int id;
-		
-  double chi2;
-  double energy;
-  double x;
-  double y;
-  double xc;
-  double yc;
-		  
-  int icl_in[MAX_CC];
-  int icl_en[MAX_CC];
-  
+    
+    int type;
+    int dime;
+    int id;
+    
+    double chi2;
+    double energy;
+    double x;
+    double y;
+    double xc;
+    double yc;
+    
+    int icl_in[MAX_CC];
+    int icl_en[MAX_CC];
+    
 } gamma_t;
 
 #endif
