@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 #include <vector>
-
+#include <TH1.h>
 
 #include "JEventProcessor_cdc_echo.h"
 #include <JANA/JApplication.h>
@@ -21,6 +21,7 @@ using namespace jana;
 
 #include "CDC/DCDCHit.h"
 #include "CDC/DCDCDigiHit.h"
+
 #include "DAQ/Df125WindowRawData.h"     
 #include "DAQ/Df125CDCPulse.h"
 #include "DAQ/Df125Config.h"
@@ -28,7 +29,7 @@ using namespace jana;
 
 #include <TRACKING/DTrackTimeBased.h>
 #include <TRACKING/DTrackFitter.h>
-
+#include "CDC/DCDCTrackHit.h"
 
 
 #include <TTree.h>
@@ -75,53 +76,53 @@ jerror_t JEventProcessor_cdc_echo::init(void)
 	//
 
 
-  /*  ECHO_ORIGIN = 4088;
-  gPARMS->SetDefaultParameter("CDC:ECHO_ORIGIN", ECHO_ORIGIN,
-                              "Min height (adc units 0-4095) for primary pulses considered in the search for afterpulses. Set to 4088 for the saturated value 511");
+  //  ECHO_ORIGIN = 4088;
+  // gPARMS->SetDefaultParameter("CDC:ECHO_ORIGIN", ECHO_ORIGIN, "Min height (adc units 0-4095) for primary pulses considered in the search for afterpulses. Set to 4088 for the saturated value 511");
 
-  ECHO_MAX_A = 500;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
+  ECHO_A = 500;
+  gPARMS->SetDefaultParameter("CDC:ECHO_A", ECHO_A,
                               "Max height (adc units 0-4095) for afterpulses");
 
-  ECHO_MAX_T = 7;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
+  ECHO_DT = 15;
+  gPARMS->SetDefaultParameter("CDC:ECHO_DT", ECHO_DT,
                               "End of time range (number of samples) to search for afterpulses");
 
-  */
 
+   // increment counts histo    0: tracks  1:all pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6:  echoes on tracks  7: saturated pulses  8:saturated hits  9:saturated hits on tracks
+  
+  counts =  new TH1I("counts","0: tracks  1:pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6: echoes on tracks  7: sat pulses  8:sat hits  9:sat hits on tracks",10,0,10);
+
+
+  
   const uint32_t NSAMPLES = 200;
 
-
-
-
-
-  ULong64_t eventnum;  
+  ULong64_t eventnumber;  
   
   uint32_t rocid, slot, preamp, channel;
   uint32_t time, q, pedestal, amp, integral, overflows;
+
+  uint16_t integral8;
   
   uint32_t ns;
   uint16_t adc[NSAMPLES];
 
-  japp->RootWriteLock();
-
   uint16_t ntrackhits,ntrackhits_sat,ntrackhits_echo;
   double FOM;
+
+  japp->RootWriteLock();
   
   TT = new TTree("TT","Track data");
-  TT->Branch("eventnum",&eventnum,"eventnum/l");
+  TT->Branch("eventnum",&eventnumber,"eventnum/l");
   TT->Branch("ntrackhits",&ntrackhits,"ntrackhits/s");
   TT->Branch("nsat",&ntrackhits_sat,"nsat/s");
   TT->Branch("necho",&ntrackhits_echo,"necho/s");
   TT->Branch("FOM",&FOM,"FOM/D");
 
-
-
-
+  
   
   T = new TTree("T","Echo Pulse data");
 
-  T->Branch("eventnum",&eventnum,"eventnum/l");
+  T->Branch("eventnum",&eventnumber,"eventnum/l");
 
   T->Branch("rocid",&rocid,"rocid/i");
   T->Branch("slot",&slot,"slot/i");
@@ -134,7 +135,7 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   T->Branch("amp",&amp,"amp/i");  
   T->Branch("integral",&integral,"integral/i");    
   T->Branch("overflows",&overflows,"overflows/i");    
-
+  T->Branch("integral8",&integral8,"integral8/s");
   
 
   uint32_t parentamp, parentint, trough, iovera;
@@ -175,99 +176,90 @@ jerror_t JEventProcessor_cdc_echo::brun(JEventLoop *eventLoop, int32_t runnumber
 jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
   
-  // Only look at physics triggers
+    // Only look at physics triggers
+    
+    const DTrigger* locTrigger = NULL; 
+    loop->GetSingle(locTrigger); 
+    if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
+      return NOERROR;
+    if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
+      return NOERROR;
+    }
+     
+    vector <const Df125CDCPulse*> cdcpulses;
+    loop->Get(cdcpulses);
+    uint32_t nc = (uint32_t)cdcpulses.size();
   
-  const DTrigger* locTrigger = NULL; 
-  loop->GetSingle(locTrigger); 
-  if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-    return NOERROR;
-  if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-    return NOERROR;
-  }
-   
-  vector <const Df125CDCPulse*> cdcpulses;
-  loop->Get(cdcpulses);
-  uint32_t nc = (uint32_t)cdcpulses.size();
-
-  vector <const DCDCHit*> cdchits;
-  loop->Get(cdchits);
-  uint32_t nh = (uint32_t)cdchits.size();
-
-
-  if (nc==0) return NOERROR;  // no DC hits
-
-  const Df125Config* config = NULL;
-  cdcpulses[0]->GetSingle(config);
-
-  const uint16_t ABIT=config->ABIT;
-  const uint16_t PBIT=config->PBIT;
-
-  ULong64_t eventnum = (ULong64_t)eventnumber;
-
-  const uint32_t NSAMPLES = 200;   // 100 for FDC
-
-
-  const uint16_t MAX_ECHO_AMP = 500; //on scale 0-4095.  not an echo if larger. 
-
-  const uint16_t MIN_ORIG_AMP = 4088; // threshold for original pulses
-
-  const uint16_t MAX_DT = 15;
-
-  // look for echo pulses
-
+    if (nc==0) return NOERROR;  // no CDC pulses
   
-  if (nc) {
+    
+    vector <const DCDCHit*> cdchits;
+    loop->Get(cdchits);
+    uint32_t nh = (uint32_t)cdchits.size();
+     
+    const Df125Config* config = NULL;
+    cdcpulses[0]->GetSingle(config);
+  
+    const uint16_t ABIT=config->ABIT;
+    const uint16_t PBIT=config->PBIT; 
+    const uint32_t NSAMPLES = config->NW;   // 200 for CDC;   // 100 for FDC    
+ 
+    const uint16_t MIN_ORIG_AMP = 4088; // threshold for original pulses  
 
+    // look for saturated pulses
+    
     uint32_t rocid,slot,channel,preamp,time,q,pedestal,amp,integral,overflows;
     uint32_t rought, iovera;
     uint16_t nhit, dt, dc, ns;
-
+  
     uint16_t adc[NSAMPLES] = {0}; 
-
+  
     uint16_t nsat[4][15][3] = {0};   // number of saturated hits in each preamp
     uint32_t tsat[4][15][3][24] = {0};   // rough time of each saturated hit
     uint16_t csat[4][15][3][24] = {0};   // saturated chan num
     uint32_t asat[4][15][3][24] = {0};   // saturated chan amp
     uint32_t isat[4][15][3][24] = {0};   // saturated chan integral
     uint16_t esat[4][15][3][24] = {0};   // number of echoes found for each saturated chan num
-
-
-    // sort(x[0][0], x[0][0]+4) will sort the first 4 values in x[0][0][]
-
-    for (uint32_t i=0; i<nc; i++) {
-
-      const Df125CDCPulse *cp = cdcpulses[i];
-      rocid = cp->rocid;
-      slot = cp->slot;
-      channel = cp->channel;
-      overflows = cp->overflow_count;
-      preamp = uint16_t(channel/24);
-      rought = uint32_t(cp->le_time/10);
-      
-      //      printf("rocid %i slot %i preamp %i chan %i rough_t %i amp %i overflows %i\n",rocid,slot,preamp,channel,rought, cp->first_max_amp, overflows);
-
-      if (overflows == 0) continue;
-      if (cp->first_max_amp<<ABIT < MIN_ORIG_AMP) continue;     
-
-      uint16_t loc=nsat[rocid-25][slot-3][preamp];
-
-      tsat[rocid-25][slot-3][preamp][loc] = rought; 
-      csat[rocid-25][slot-3][preamp][loc] = channel; 
-      asat[rocid-25][slot-3][preamp][loc] = cp->first_max_amp;
-      isat[rocid-25][slot-3][preamp][loc] = cp->integral;       
-
-      nsat[rocid-25][slot-3][preamp]++;
-
-    }
-
-    
-    // so now i have, for each preamp, nsat times in array tsat, not ordered in time
-
-    //record these so that i can check cdchits later on
+  
+    // record these so that i can check to see if the pulses made it into cdchits later on
+    // cdchits also has some cuts on time window
     
     uint16_t parent[4][15][72] = {0};   // set to the index number of the parent saturated pulse
     uint32_t parentamp[4][15][72] = {0};   // set to the max amp of the parent saturated pulse
     uint32_t parentint[4][15][72] = {0};   // set to the integral of the parent saturated pulse    
+    
+      // sort(x[0][0], x[0][0]+4) will sort the first 4 values in x[0][0][]
+  
+    for (uint32_t i=0; i<nc; i++) {
+  
+        const Df125CDCPulse *cp = cdcpulses[i];
+        rocid = cp->rocid;
+        slot = cp->slot;
+        channel = cp->channel;
+        overflows = cp->overflow_count;
+        preamp = uint16_t(channel/24);
+        rought = uint32_t(cp->le_time/10);
+        
+        //      printf("rocid %i slot %i preamp %i chan %i rough_t %i amp %i overflows %i\n",rocid,slot,preamp,channel,rought, cp->first_max_amp, overflows);
+  
+        if (overflows == 0) continue;
+        if (cp->first_max_amp<<ABIT < MIN_ORIG_AMP) continue;     
+  
+        uint16_t loc=nsat[rocid-25][slot-3][preamp];
+  
+        tsat[rocid-25][slot-3][preamp][loc] = rought; 
+        csat[rocid-25][slot-3][preamp][loc] = channel; 
+        asat[rocid-25][slot-3][preamp][loc] = cp->first_max_amp;
+        isat[rocid-25][slot-3][preamp][loc] = cp->integral;       
+  
+        nsat[rocid-25][slot-3][preamp]++;
+
+	parent[rocid-25][slot-3][channel] = nsat[rocid-25][slot-3][preamp];    //n+1;   first parent has value 1, to avoid confusion w 0=no parent
+  
+    }
+  
+    
+    // so now i have, for each preamp, nsat times in array tsat, not ordered in time
 
     for (uint32_t i=0; i<nc; i++) {
       
@@ -278,78 +270,61 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       preamp = uint16_t(channel/24);
       rought = uint32_t(cp->le_time/10);
 
-
-      uint32_t amp = cp->first_max_amp<<ABIT;
-
+      uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
+      
       uint16_t x=nsat[rocid-25][slot-3][preamp];           // number of sat hits for this preamp
- 
-      // found is set true and parent array filled if this is a problem pulse
-
-      if (amp >= MIN_ORIG_AMP && cp->overflow_count>0) {   //check sat hits
-        bool found = 0;  
-        for (uint32_t n=0; n<x; n++) {
-          if (rought < tsat[rocid-25][slot-3][preamp][n]) continue; // too early
-  	  dt = rought - tsat[rocid-25][slot-3][preamp][n]; 
-          if (dt==0) found=1;
-          if (found) parent[rocid-25][slot-3][channel] = n+1;   // set to itself
-          //if (found) printf("likely parent rocid %i slot %i preamp %i chan %i rough_t %i dt %i amp %i\n",rocid,slot,preamp,channel,rought,dt, amp);
-          if (found) break;
-        }
-
-      } else {   // check echoes
-        bool found = 0;  
-        uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
-
+       
+      if (net_amp <= ECHO_A ) {         // check for echoes
+	
         // assume there are many saturated pulses
 	// assign the echo pulse to the saturated pulse that precedes it and is closest in time to it 
 
 	uint16_t prevdt = 200; // impossibly big, so the first dt found will be smaller
-	
-        for (uint16_t n=0; n<x; n++) {
-          if (rought < tsat[rocid-25][slot-3][preamp][n]) continue; // too early
+
+        for (uint16_t n=0; n<x; n++) {	  
+
+	  if (rought < tsat[rocid-25][slot-3][preamp][n]) continue; // too early
 	  
   	  dt = (uint16_t)(rought - tsat[rocid-25][slot-3][preamp][n]);
-  
-          if ((dt>=2) && (dt<=MAX_DT) && (dt < prevdt) && (net_amp <= MAX_ECHO_AMP)) found=1;
 
+          bool found = 0;  
+
+          if ((dt>=2) && (dt<=ECHO_DT) && (dt < prevdt) ) found=1;
+	  
 	  if (found) {
 	    prevdt = dt;
-            parent[rocid-25][slot-3][channel] = n+1;   //
-            parentamp[rocid-25][slot-3][channel] = asat[rocid-25][slot-3][preamp][n];   //;   //
-            parentint[rocid-25][slot-3][channel] = isat[rocid-25][slot-3][preamp][n];   //;   //	    
-            esat[rocid-25][slot-3][preamp][n]++;   //
+            parent[rocid-25][slot-3][channel] = n+1;   
+            parentamp[rocid-25][slot-3][channel] = asat[rocid-25][slot-3][preamp][n];   
+            parentint[rocid-25][slot-3][channel] = isat[rocid-25][slot-3][preamp][n];  
+            esat[rocid-25][slot-3][preamp][n]++;   
+
+           //printf("likely echo rocid %i slot %i preamp %i chan %i rough_t %i dt %i net amp %i\n",rocid,slot,preamp,channel,rought,dt, (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) );
 	  }
-          //if (found) printf("likely echo rocid %i slot %i preamp %i chan %i rough_t %i dt %i net amp %i\n",rocid,slot,preamp,channel,rought,dt, (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) );
-
         }
-
-      }   // if found is set, save pulse info to the tree
-
-
+      }
     }
 
+    // The echo identification has finished.  The code below finds more info to add to the tree & histo.
 
+    
     // look to see if the problem pulses are present in cdchits too.  if we are not pruning, they will be.
 
     uint16_t cdchitpresent[4][15][72] = {0};
-
-    //cout << nh << " hits " << endl;
-    
+   
     for (uint32_t i=0; i<nh; i++) {
       
       const DCDCHit *hit = cdchits[i];
-      //      const Df125CDCPulse *cp = NULL;
-      //hit->GetSingle(cp);
-      vector <const Df125CDCPulse*> pulse;
-      hit->Get(pulse);
-      if (pulse.size()==0) cout << "no pulse\n";
 
+      vector <const Df125CDCPulse*> pulse;
+      hit->Get(pulse);       
+      
       const Df125CDCPulse *cp = pulse[0];
 
       rocid = cp->rocid;
       slot = cp->slot;
       channel = cp->channel;
       cdchitpresent[rocid-25][slot-3][channel] = 1;
+      
     }
 
     
@@ -359,11 +334,23 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
     vector<const DTrackTimeBased*> tracks;
     loop->Get(tracks);
-    if (tracks.size() ==0) return NOERROR;
+
    
-    for (uint32_t i=0; i<(uint32_t)tracks.size(); i++) {  // not finished!
+    for (uint32_t i=0; i<(uint32_t)tracks.size(); i++) {  
       
       const DTrackTimeBased *track = tracks[i];
+
+      vector<const DCDCTrackHit*> locCDCHits;
+      track->Get(locCDCHits);
+
+      if (locCDCHits.size() == 0) continue;
+
+      // increment counts histo    0: tracks  1:all pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6:  echoes on tracks  7: saturated pulses  8:saturated hits  9:saturated hits on tracks
+
+      japp->RootWriteLock();    
+      counts->Fill(0);
+      japp->RootUnLock();
+
       
       vector<DTrackFitter::pull_t> pulls = track->pulls;
 
@@ -396,7 +383,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
       japp->RootWriteLock();    
 
-      TT->SetBranchAddress("eventnum",&eventnum);
+      TT->SetBranchAddress("eventnum",&eventnumber);
       TT->SetBranchAddress("ntrackhits",&ntrackhits);
       TT->SetBranchAddress("nsat",&ntrackhits_sat);
       TT->SetBranchAddress("necho",&ntrackhits_echo);
@@ -407,12 +394,6 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       japp->RootUnLock();          
 
     }    
-
-
-
-    
-    // also want to record non-echo hits
-    // could make histos as func of straw number for initial hits, final hits, hits on tracks
 
 
     
@@ -428,14 +409,39 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       channel = cp->channel;
       preamp = uint16_t(channel/24);
       rought = uint32_t(cp->le_time/10);
-
+      amp = cp->first_max_amp;
+      
       nhit = parent[rocid-25][slot-3][channel] - 1;
 
       //      printf("rocid %i slot %i preamp %i chan %i rough_t %i dt %i amp %i parent %i echoes %i\n",rocid,slot,preamp,channel,rought,dt, cp->first_max_amp, parent[rocid-25][slot-3][channel], esat[rocid-25][slot-3][preamp][nhit]);
 
-      if (!parent[rocid-25][slot-3][channel]) continue;
+
+      // increment counts histo    0: tracks  1:all pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6:  echoes on tracks  7: saturated pulses  8:saturated hits  9:saturated hits on tracks
+      
+      japp->RootWriteLock();
+
+      counts->Fill(1);
+
+      if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(2);       
+      if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(3);
+
+	      
+      if ( parentamp[rocid-25][slot-3][channel] >0 ) {  // probable echoes
+	counts->Fill(4);
+        if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(5);      
+        if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(6);
+      }
+
+      if ( amp ==511 ) { // saturated pulses
+	counts->Fill(7);
+        if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(8);      
+        if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(9);
+      }
+             
+      japp->RootUnLock();
 
 
+      if (parent[rocid-25][slot-3][channel] == 0 ) continue; // not a parent or an echo
 
       dt = rought - tsat[rocid-25][slot-3][preamp][nhit];
 
@@ -454,10 +460,41 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       uint32_t ptint = parentint[rocid-25][slot-3][channel];      
 
       uint16_t numsat = nsat[rocid-25][slot-3][preamp];
+
+      uint16_t integral8=0;  // integral over 8 samples, calculated later
+
+    
+      time = cp->le_time;
+      pedestal = cp->pedestal;
+      integral = cp->integral;
+      q = cp->time_quality_bit;
+      overflows = cp->overflow_count;
+
+
+      iovera = (uint32_t)(integral/amp);
+ 
+      const Df125WindowRawData *wrd;
+      cp->GetSingle(wrd);
+
+      if (wrd) {
+        ns = (uint32_t)wrd->samples.size();
+
+        uint32_t nsave = (ns<=NSAMPLES) ? ns : NSAMPLES ;  // save the first NSAMPLES values of the array
+      
+        for (uint j=0; j<nsave; j++) adc[j] = wrd->samples[j];
+        for (uint j=nsave; j<NSAMPLES; j++) adc[j]=0;   
+
+        for (uint j=(uint)rought; j<rought+8 ; j++) {
+  	  if (j==NSAMPLES) break;
+    	  integral8 += adc[j];
+        }
+
+      }
       
       japp->RootWriteLock();    
+
   
-      T->SetBranchAddress("eventnum",&eventnum);
+      T->SetBranchAddress("eventnum",&eventnumber);
   
       T->SetBranchAddress("rocid",&rocid);
       T->SetBranchAddress("slot",&slot);
@@ -469,6 +506,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       T->SetBranchAddress("pedestal",&pedestal);
       T->SetBranchAddress("amp",&amp);
       T->SetBranchAddress("integral",&integral);
+      T->SetBranchAddress("integral8",&integral8);      
       T->SetBranchAddress("overflows",&overflows);
   
       T->SetBranchAddress("t",&rought);
@@ -488,37 +526,14 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       T->SetBranchAddress("nsamples",&ns);
       T->SetBranchAddress("adc",&adc);
-    
-      time = cp->le_time;
-      pedestal = cp->pedestal;
-      integral = cp->integral;
-      q = cp->time_quality_bit;
-      overflows = cp->overflow_count;
-      amp = cp->first_max_amp;
-
-      iovera = (uint32_t)(integral/amp);
- 
-      const Df125WindowRawData *wrd;
-      cp->GetSingle(wrd);
-
-      if (wrd) {
-        ns = (uint32_t)wrd->samples.size();
-
-        uint32_t nsave = (ns<=NSAMPLES) ? ns : NSAMPLES ;  // save the first NSAMPLES values of the array
       
-        for (uint j=0; j<nsave; j++) adc[j] = wrd->samples[j];
-        for (uint j=nsave; j<NSAMPLES; j++) adc[j]=0;   
-      }	  
-
       T->Fill();
-
     
       japp->RootUnLock();    
+
     }
-  }
-
-
-  return NOERROR;
+  
+    return NOERROR;
 
 }
 

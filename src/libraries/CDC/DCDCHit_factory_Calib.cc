@@ -31,11 +31,11 @@ jerror_t DCDCHit_factory_Calib::init(void)
 
   ECHO_MAX_A = 350;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
-                              "Max height (adc units 0-4095) for afterpulses, if ECHO_SLANTED_CUT=0");
+                              "Max height (adc units 0-4095) for afterpulses, if ECHO_OPT=1");
 
-  ECHO_MAX_T = 11;
+  ECHO_MAX_T = 6;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
-                              "End of time range (number of samples) to search for afterpulses");
+                              "End of time range (number of samples, max 6) to search for afterpulses");
 
   ECHO_VERBOSE = 0; 
   gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
@@ -45,7 +45,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
 
   if (ECHO_OPT > 0) { 
     // make sure that echo_end_search < echo_cut_array_size
-    // echo_cut size is currently 15, should be ample
+    // echo_cut size is currently 7, should be ample
 
     unsigned int echo_cut_array_size = sizeof(echo_cut)/sizeof(echo_cut[0]);
 
@@ -66,15 +66,31 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 2) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[9] = {0,0,350,350,350,300,250,200,150};
+    unsigned int slant_array[7] = {0, 0, 625, 560, 440, 440, 410};   //99th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
-      if (i<9) {
         echo_cut[i] = slant_array[i];
-      } else {
-        echo_cut[i] = slant_array[8];  // const after dt=8
-      }
     }
+
+  } else if (ECHO_OPT == 3) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[7] = {0, 0, 511, 463, 343, 334, 300};   //95th
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+        echo_cut[i] = slant_array[i];
+    }
+
+  } else if (ECHO_OPT == 4) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[7] = {0, 0, 467, 414, 295, 289, 276};   //90th
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+        echo_cut[i] = slant_array[i];
+    }
+
+
   }
 
   
