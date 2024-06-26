@@ -66,7 +66,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 2) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 625, 560, 440, 440, 410};   //99th
+    unsigned int slant_array[7] = {0, 0, 554, 503, 377, 388, 345}; // 99.7%
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -75,7 +75,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 3) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 511, 463, 343, 334, 300};   //95th
+    unsigned int slant_array[7] = {0, 0, 375, 306, 239, 242, 234}; // 95th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -84,7 +84,34 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 4) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 467, 414, 295, 289, 276};   //90th
+    unsigned int slant_array[7] = {0, 0, 327, 265, 212, 215, 210};// 90th
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+        echo_cut[i] = slant_array[i];
+    }
+
+  } else if (ECHO_OPT == 5) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[7] = {0, 0, 554, 503, 377, 388, 345}; // 99.7%
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+        echo_cut[i] = slant_array[i];
+    }
+
+  } else if (ECHO_OPT == 6) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[7] = {0, 0, 375, 306, 239, 242, 234}; // 95th
+
+    for (unsigned int i=0; i<=echo_end_search; i++) {
+        echo_cut[i] = slant_array[i];
+    }
+
+  } else if (ECHO_OPT == 7) {  // threshold decreases w dt
+    
+    // echo pulse height[dt]  (dt<2 is not checked)
+    unsigned int slant_array[7] = {0, 0, 327, 265, 212, 215, 210};// 90th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -594,6 +621,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   vector<unsigned int> sat_boards;  // code for hvb w saturated hits
   vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
 
+  vector<unsigned int> super_sat_boards;  // code for hvb w saturated integral
   
   for (unsigned int i=0; i < digihits.size(); i++) {
 
@@ -607,7 +635,8 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     uint32_t slot = cp->slot;
     uint32_t channel = cp->channel;
     uint32_t amp = cp->first_max_amp<<ABIT;
-
+    uint32_t integral = cp->integral;
+    
     unsigned int preamp = (unsigned int)(channel/24);
     unsigned int rought = (unsigned int)(cp->le_time/10);
           
@@ -619,7 +648,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
       if (sat_boards.size() == 0 ) {
 
         sat_boards.push_back(board);  
-        times_thisboard.push_back(rought); 
+        times_thisboard.push_back(rought);
 
       } else if (board == sat_boards.back()) {
 
@@ -641,7 +670,22 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     if ( i == digihits.size()-1 && times_thisboard.size()>0) {
         sat_times.push_back(times_thisboard);
     } 
-  
+
+
+    if ( integral == 16383 ) {
+
+      if (super_sat_boards.size() == 0 ) {
+
+        super_sat_boards.push_back(board);  
+
+      } else if (board != super_sat_boards.back()) {
+
+        super_sat_boards.push_back(board);  
+
+      }
+
+    }  
+    
   } 
 
   if (sat_times.size() == 0) return;
@@ -692,6 +736,16 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     if (!found) continue;
 
+
+    // check board in saturated integral list
+    bool super_sat = 0;
+    for (unsigned int j=0; j<super_sat_boards.size(); j++) {
+      if (board == super_sat_boards[j]) super_sat = 1;
+      if (super_sat) break;
+    }
+
+
+    
     // fill RogueHits if this is a problem pulse
     uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
 
@@ -725,6 +779,8 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
       if (net_amp <= echo_cut[dt]) found = 1;
 
+      if (ECHO_OPT>4 && super_sat && net_amp <= 1.2*echo_cut[dt]) found = 1; 
+      
       if (found) break;
 
     }
