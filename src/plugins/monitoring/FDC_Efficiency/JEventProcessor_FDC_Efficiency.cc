@@ -308,8 +308,10 @@ jerror_t JEventProcessor_FDC_Efficiency::evnt(JEventLoop *loop, uint64_t eventnu
     vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
     for (unsigned int i = 0; i < pulls.size(); i++){
       const DFDCPseudo * thisTrackFDCHit = pulls[i].fdc_hit;
-      if (thisTrackFDCHit != NULL){      
+      if (thisTrackFDCHit != NULL){
+	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	hPullTime[thisTrackFDCHit->wire->layer]->Fill(pulls[i].tdrift);
+	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	if ( find(cellsHit.begin(), cellsHit.end(), thisTrackFDCHit->wire->layer) == cellsHit.end())
 	  cellsHit.push_back(thisTrackFDCHit->wire->layer);
       }
