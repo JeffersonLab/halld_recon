@@ -262,7 +262,7 @@ vector<const DReaction*> Get_Reactions(const std::shared_ptr<const JEvent>& locE
 		// processing so we can grab the list here and append it to our
 		// overall list.
 		vector<const DReaction*> locReactionsSubset;
-		auto iters = locFactory->GetOrCreate(locEvent);
+		auto iters = locFactory->CreateAndGetData(locEvent);
 		locReactions.insert(locReactions.end(), iters.first, iters.second);
 	}
 	return locReactions;
