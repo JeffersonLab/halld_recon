@@ -3,6 +3,7 @@
 
 #include "ANALYSIS/DHistogramActions.h"
 #include "TOF/DTOFGeometry.h"
+#include "PID/DBeamKLong.h"
 
 void DHistogramAction_ObjectMemory::Initialize(JEventLoop* locEventLoop)
 {
@@ -2070,13 +2071,22 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 
 	const DParticleID* locParticleID = NULL;
 	locEventLoop->GetSingle(locParticleID);
+	
+	double beam_velocity = SPEED_OF_LIGHT;
+	
+	vector<const DBeamKLong *> locBeamKLongs;
+	locEventLoop->Get(locBeamKLongs);
+	if(locBeamKLongs.size() > 0) {
+		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
+	}
+
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock
 	//Note, the mutex is unique to this DReaction + action_string combo: actions of same class with different hists will have a different mutex
 	Lock_Action(); //ACQUIRE ROOT LOCK!!
 	{
-		if(locEventRFBunch->dTimeSource != SYS_NULL) //only histogram beta for neutrals if the t0 is well known
+		if(locEventRFBunch->dTimeSource != SYS_NULL || (beam_velocity<0.99*SPEED_OF_LIGHT) ) //only histogram beta for neutrals if the t0 is well known
 		{
 			for(size_t loc_i = 0; loc_i < locNeutralParticles.size(); ++loc_i)
 			{
@@ -2112,7 +2122,7 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 			if(dHistMap_dEdXVsP[SYS_START].find(locCharge) == dHistMap_dEdXVsP[SYS_START].end())
 				continue;
 
-			double locStartTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch);
+			double locStartTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch, beam_velocity);
 			auto locTrackTimeBased = locChargedTrackHypothesis->Get_TrackTimeBased();
 
 			Particle_t locPID = locChargedTrackHypothesis->PID();
@@ -2814,8 +2824,9 @@ bool DHistogramAction_EventVertex::Perform_Action(JEventLoop* locEventLoop, cons
 		for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
 		{
 			const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTracks[loc_i]->Get_BestFOM();
+			//double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch, beam_velocity);  // CHANGE
 			double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch);
-			double locShiftedRFTime = locRFTimeFactory->Step_TimeToNearInputTime(locPropagatedRFTime, locChargedTrackHypothesis->time());
+			double locShiftedRFTime = locRFTimeFactory->Step_TimeToNearInputTime(locPropagatedRFTime, locChargedTrackHypothesis->time());  // CHANGE?
 			double locDeltaT = locShiftedRFTime - locChargedTrackHypothesis->time();
 			dRFTrackDeltaT->Fill(locDeltaT);
 		}

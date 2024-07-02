@@ -221,7 +221,7 @@ class DParticleID:public jana::JObject
 		double Calc_TOFFlightTimePCorrelation(const DTrackingData* locTrack, DDetectorMatches* locDetectorMatches) const;
 		double Calc_SCFlightTimePCorrelation(const DTrackingData* locTrack, const DDetectorMatches* locDetectorMatches) const;
 
-		double Calc_PropagatedRFTime(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch) const;
+		double Calc_PropagatedRFTime(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch, double velocity = SPEED_OF_LIGHT) const;
 		double Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locTimingPull) const;
 		double Calc_TimingChiSq(const DNeutralParticleHypothesis* locNeutralHypo, unsigned int &locNDF, double& locTimingPull) const;
 		void Calc_ChargedPIDFOM(DChargedTrackHypothesis* locChargedTrackHypothesis) const;

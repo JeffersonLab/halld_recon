@@ -3323,10 +3323,10 @@ double DParticleID::Calc_SCFlightTimePCorrelation(const DTrackingData* locTrack,
 	return locFlightTimePCorrelation;
 }
 
-double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch) const
+double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch, double velocity ) const
 {
 	//Propagate RF time to the track vertex-z
-	return locEventRFBunch->dTime + (locKinematicData->z() - dTargetZCenter)/SPEED_OF_LIGHT;
+	return locEventRFBunch->dTime + (locKinematicData->z() - dTargetZCenter)/velocity;
 }
 
 double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locPull) const
