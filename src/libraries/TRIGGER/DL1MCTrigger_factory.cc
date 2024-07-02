@@ -191,7 +191,9 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
     cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
     if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
-	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
+	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) 
+	 || (JANA_CALIB_CONTEXT.find("mc_klong") != string::npos) 
+	 || (JANA_CALIB_CONTEXT.find("klong") != string::npos) ){
       cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
