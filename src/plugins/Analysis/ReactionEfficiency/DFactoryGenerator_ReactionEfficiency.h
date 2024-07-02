@@ -12,6 +12,7 @@
 #include <JANA/JFactoryGenerator.h>
 
 #include "DReaction_factory_ReactionEfficiency.h"
+#include "DEventWriterROOT_factory_ReactionEfficiency.h"
 
 class DFactoryGenerator_ReactionEfficiency : public jana::JFactoryGenerator
 {
@@ -22,6 +23,7 @@ class DFactoryGenerator_ReactionEfficiency : public jana::JFactoryGenerator
 		jerror_t GenerateFactories(jana::JEventLoop* locEventLoop)
 		{
 			locEventLoop->AddFactory(new DReaction_factory_ReactionEfficiency());
+			locEventLoop->AddFactory(new DEventWriterROOT_factory_ReactionEfficiency()); 
 			return NOERROR;
 		}
 };

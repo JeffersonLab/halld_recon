@@ -66,6 +66,12 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 	vector<const DDIRCTruthBarHit*> locDIRCBarHits;
 	locEventLoop->Get(locDIRCBarHits);
 
+	vector<const DCTOFPoint*> locCTOFPoints;
+	locEventLoop->Get(locCTOFPoints);
+
+	vector<const DFMWPCCluster *> locFMWPCClusters;
+	locEventLoop->Get(locFMWPCClusters);
+
 	DDetectorMatches* locDetectorMatches = new DDetectorMatches();
 
 	//Match tracks to showers/hits
@@ -76,6 +82,10 @@ DDetectorMatches* DDetectorMatches_factory::Create_DDetectorMatches(jana::JEvent
 		MatchToFCAL(locParticleID, locTrackTimeBasedVector[loc_i], locFCALShowers, locDetectorMatches);
 		MatchToSC(locParticleID, locTrackTimeBasedVector[loc_i], locSCHits, locDetectorMatches);
 		MatchToDIRC(locParticleID, locTrackTimeBasedVector[loc_i], locDIRCHits, locDetectorMatches, locDIRCBarHits);
+		if (locTrackTimeBasedVector[loc_i]->PID()<10){ // GEANT ids; ignore proton=14 and kaons=11+12
+		  MatchToCTOF(locParticleID, locTrackTimeBasedVector[loc_i], locCTOFPoints, locDetectorMatches);
+		  MatchToFMWPC(locTrackTimeBasedVector[loc_i], locFMWPCClusters, locDetectorMatches);
+		}
 	}
 
 	//Find nearest tracks to showers
@@ -135,6 +145,92 @@ void DDetectorMatches_factory::MatchToBCAL(const DParticleID* locParticleID, con
 	  if(locParticleID->Cut_MatchDistance(extrapolations, locBCALShowers[loc_i], locInputStartTime, locShowerMatchParams))
 	    locDetectorMatches->Add_Match(locTrackTimeBased, locBCALShowers[loc_i], locShowerMatchParams);
 	}
+}
+
+void DDetectorMatches_factory::MatchToFMWPC(const DTrackTimeBased* locTrackTimeBased, const vector<const DFMWPCCluster*>& locFMWPCClusters, DDetectorMatches* locDetectorMatches) const{
+  auto fmwpc_projections=locTrackTimeBased->extrapolations.at(SYS_FMWPC);
+  if (fmwpc_projections.size()==0) return;
+  
+  // Loop over projections filling in arrays of matching info
+  vector<int>locLayers;
+  vector<int>locNhits;
+  vector<int>locDists;
+  vector<int>locClosestWires;
+  const double FMWPC_WIRE_SPACING=1.016; //cm
+  bool got_match=false;
+  for( int layer=1; layer<=(int)fmwpc_projections.size(); layer++){
+    auto proj = fmwpc_projections[layer-1];
+    // x and y projections from track
+    double xpos=proj.position.x();
+    double ypos=proj.position.y();
+ 
+    // Loop over DFMWPCClusters and find closest match to this projection
+    int min_dist = 1000000;
+    int wire_trk_proj=0;
+    const DFMWPCCluster* closest_fmwpc_cluster= nullptr;
+    for(auto fmwpccluster : locFMWPCClusters){
+      if( fmwpccluster->layer != layer ) continue;
+      
+      // Convert into local coordinates so we can work with wire numbers
+      double s=fmwpccluster->orientation==DGeometry::kFMWPC_WIRE_ORIENTATION_VERTICAL ? xpos+fmwpccluster->xoffset : ypos+fmwpccluster->yoffset;
+      wire_trk_proj = round(71.5 + s/FMWPC_WIRE_SPACING) + 1; // 1-144
+      
+      // If the projection is outside of the wire range then bail now
+      if( (wire_trk_proj<1) || (wire_trk_proj>144) ) continue; 
+
+      int dist=1000000;
+      if( wire_trk_proj >= fmwpccluster->first_wire ){
+	dist = wire_trk_proj - fmwpccluster->last_wire; // distance beyond last wire (will be negative if inside cluster)
+	if( dist < 0 ) dist = 0; // force dist to 0 if inside cluster
+      }else{
+	dist = fmwpccluster->first_wire - wire_trk_proj; // distance before first wire
+      }
+      
+      if( dist < min_dist ){
+	min_dist = dist;
+	closest_fmwpc_cluster = fmwpccluster;
+      }
+    }
+  
+    // If a DFMWPCCluster was found, add the match info to the track
+    if( closest_fmwpc_cluster ){
+      int closest_wire=wire_trk_proj;
+      if (wire_trk_proj < closest_fmwpc_cluster->first_wire ) {
+	closest_wire = closest_fmwpc_cluster->first_wire;
+      }
+      else if (wire_trk_proj > closest_fmwpc_cluster->last_wire){
+	closest_wire = closest_fmwpc_cluster->last_wire;
+      }
+      locLayers.push_back(layer);
+      locNhits.push_back(closest_fmwpc_cluster->Nhits);
+      locDists.push_back(min_dist);
+      locClosestWires.push_back(closest_wire);
+
+      got_match=true;
+    }
+  }
+  if (got_match){
+    shared_ptr<DFMWPCMatchParams>locFMWPCMatchParams=std::make_shared<DFMWPCMatchParams>();
+    locFMWPCMatchParams->dLayers=locLayers;
+    locFMWPCMatchParams->dNhits=locNhits;
+    locFMWPCMatchParams->dDists=locDists;
+    locFMWPCMatchParams->dClosestWires=locClosestWires;
+    locDetectorMatches->Add_Match(locTrackTimeBased,locFMWPCMatchParams);
+  }
+}
+
+void DDetectorMatches_factory::MatchToCTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DCTOFPoint*>& locCTOFPoints, DDetectorMatches* locDetectorMatches) const
+{
+  vector<DTrackFitter::Extrapolation_t> extrapolations=locTrackTimeBased->extrapolations.at(SYS_CTOF);
+  if (extrapolations.size()==0) return;
+  
+  double locInputStartTime = locTrackTimeBased->t0();
+  for(size_t loc_i = 0; loc_i < locCTOFPoints.size(); ++loc_i)
+    {
+      shared_ptr<DCTOFHitMatchParams> locCTOFHitMatchParams;
+      if(locParticleID->Cut_MatchDistance(extrapolations, locCTOFPoints[loc_i], locInputStartTime, locCTOFHitMatchParams))
+	locDetectorMatches->Add_Match(locTrackTimeBased, locCTOFPoints[loc_i], locCTOFHitMatchParams);
+    }
 }
 
 void DDetectorMatches_factory::MatchToTOF(const DParticleID* locParticleID, const DTrackTimeBased* locTrackTimeBased, const vector<const DTOFPoint*>& locTOFPoints, DDetectorMatches* locDetectorMatches) const

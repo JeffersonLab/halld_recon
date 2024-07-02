@@ -48,6 +48,7 @@ using namespace jana;
 #include <BCAL/DBCALTDCDigiHit.h>
 #include <CDC/DCDCDigiHit.h>
 #include <FCAL/DFCALDigiHit.h>
+#include <ECAL/DECALDigiHit.h>
 #include <CCAL/DCCALDigiHit.h>
 #include <CCAL/DCCALRefDigiHit.h>
 #include <FDC/DFDCCathodeDigiHit.h>
@@ -81,6 +82,7 @@ using namespace jana;
 		X(DBCALTDCDigiHit) \
 		X(DCDCDigiHit) \
 		X(DFCALDigiHit) \
+		X(DECALDigiHit) \
 		X(DCCALDigiHit) \
 		X(DCCALRefDigiHit) \
 		X(DFDCCathodeDigiHit) \
@@ -112,6 +114,7 @@ using namespace jana;
 		X(DBCALDigiHit) \
 		X(DCDCDigiHit) \
 		X(DFCALDigiHit) \
+		X(DECALDigiHit) \
 		X(DCCALDigiHit) \
 		X(DCCALRefDigiHit) \
 		X(DFDCCathodeDigiHit) \
@@ -174,6 +177,7 @@ class DTranslationTable:public jana::JObject{
 			TRD,
 			FMWPC,
 			CTOF,
+                        ECAL,
 			NUM_DETECTOR_TYPES
 		};
 
@@ -182,6 +186,7 @@ class DTranslationTable:public jana::JObject{
 				case BCAL: return "BCAL";
 				case CDC: return "CDC";
 				case FCAL: return "FCAL";
+				case ECAL: return "ECAL";
 				case CCAL: return "CCAL";
 			        case CCAL_REF: return "CCAL_REF";
 				case FDC_CATHODES: return "FDC_CATHODES";
@@ -238,6 +243,16 @@ class DTranslationTable:public jana::JObject{
 			}
 		};
 
+		class ECALIndex_t{
+ 		        public:
+			int row;
+			int col;
+
+			inline bool operator==(const ECALIndex_t &rhs) const {
+			    return (row==rhs.row) && (col==rhs.col);
+			}
+		};
+	
 		class CCALIndex_t{
  		        public:
 			int row;
@@ -430,6 +445,7 @@ class DTranslationTable:public jana::JObject{
 					TPOLSECTORIndex_t tpolsector;
 					TACIndex_t tac;
 					CCALIndex_t ccal;
+					ECALIndex_t ecal;
 					CCALRefIndex_t ccal_ref;
 					DIRCIndex_t dirc;
 					TRDIndex_t trd;
@@ -518,6 +534,7 @@ class DTranslationTable:public jana::JObject{
 		// fADC250 -- Fall 2016 -> ?
 		DBCALDigiHit*       MakeBCALDigiHit(       const BCALIndex_t &idx,       const Df250PulseData *pd) const;
 		DFCALDigiHit*       MakeFCALDigiHit(       const FCALIndex_t &idx,       const Df250PulseData *pd) const;
+		DECALDigiHit*       MakeECALDigiHit(       const ECALIndex_t &idx,       const Df250PulseData *pd) const;
 		DCCALDigiHit*       MakeCCALDigiHit(       const CCALIndex_t &idx,       const Df250PulseData *pd) const;
 		DCCALRefDigiHit*    MakeCCALRefDigiHit(    const CCALRefIndex_t &idx,    const Df250PulseData *pd) const;
 		DSCDigiHit*         MakeSCDigiHit(         const SCIndex_t &idx,         const Df250PulseData *pd) const;
@@ -536,6 +553,7 @@ class DTranslationTable:public jana::JObject{
 		// fADC250 -- commissioning -> Fall 2016
 		DBCALDigiHit*       MakeBCALDigiHit(const BCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DFCALDigiHit*       MakeFCALDigiHit(const FCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
+		DECALDigiHit*       MakeECALDigiHit(const ECALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DCCALDigiHit*       MakeCCALDigiHit(const CCALIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DCCALRefDigiHit*    MakeCCALRefDigiHit(const CCALRefIndex_t &idx, const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;
 		DSCDigiHit*         MakeSCDigiHit(  const SCIndex_t &idx,   const Df250PulseIntegral *pi, const Df250PulseTime *pt, const Df250PulsePedestal *pp) const;

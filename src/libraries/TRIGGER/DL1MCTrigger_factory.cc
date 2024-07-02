@@ -67,8 +67,12 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   BCAL_OFFSET      =  2;
 
+  SC_OFFSET        =  6;
+
   SIMU_BASELINE = 1;
-  SIMU_GAIN = 1;
+  SIMU_GAIN = 0;
+  
+  VERBOSE = 0;
   
 
   simu_baseline_fcal  =  1;
@@ -123,7 +127,9 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   gPARMS->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET,
 			      "Timing offset between BCAL and FCAL energies at GTP (sampels)");
-  
+
+  gPARMS->SetDefaultParameter("TRIG:SC_OFFSET", SC_OFFSET,
+			      "Timing offset between SC and FCAL and BCAL energies at GTP (sampels)");
 
   // Allows to switch off gain and baseline fluctuations
   gPARMS->SetDefaultParameter("TRIG:SIMU_BASELINE", SIMU_BASELINE,
@@ -131,6 +137,9 @@ jerror_t DL1MCTrigger_factory::init(void)
 
   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
 			      "Enable simulation of gain variations");
+			      
+  gPARMS->SetDefaultParameter("TRIG:VERBOSE", VERBOSE,
+			      "Enable more verbose output");
 
 
   BCAL_ADC_PER_MEV_CORRECT  =  22.7273;
@@ -189,12 +198,13 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
 
   if(getenv("JANA_CALIB_CONTEXT") != NULL ){ 
     JANA_CALIB_CONTEXT = getenv("JANA_CALIB_CONTEXT");
-    cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
+    if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT =" << JANA_CALIB_CONTEXT << endl;
     if ( (JANA_CALIB_CONTEXT.find("mc_generic") != string::npos)
 	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) 
 	 || (JANA_CALIB_CONTEXT.find("mc_klong") != string::npos) 
 	 || (JANA_CALIB_CONTEXT.find("klong") != string::npos) ){
-      cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
+	 || (JANA_CALIB_CONTEXT.find("mc_cpp") != string::npos) ){
+      if(print_messages) cout << " ---------DL1MCTrigger (Brun): JANA_CALIB_CONTEXT found mc_generic or mc_cpp" << endl;
       use_rcdb = 0;
       // Don't simulate baseline fluctuations for mc_generic
       simu_baseline_fcal = 0;
@@ -205,7 +215,7 @@ jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumb
     }
   }
   else {
-      cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
+      if(print_messages) cout << " ---------**** DL1MCTrigger (Brun): JANA_CALIB_CONTEXT = NULL" << endl;
   }
 
   //  runnumber = 30942;
@@ -353,9 +363,11 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
         vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
+	vector<const DSCHit*>    sc_hits;
 
 	loop->Get(fcal_hits);
 	loop->Get(bcal_hits);
+	loop->Get(sc_hits);
 
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
 
@@ -505,7 +517,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	for(unsigned int ii = 0; ii < fcal_merged_hits.size(); ii++)
 	  for(int jj = 0; jj < sample; jj++)
-	    fcal_hit_adc_en += fcal_merged_hits[ii].adc_amp[jj];	  
+	    if( (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE) > 0.)
+	      fcal_hit_adc_en += (fcal_merged_hits[ii].adc_amp[jj] - TRIG_BASELINE);
 	
 	
 	status += FADC_SSP(fcal_merged_hits, 1);
@@ -628,8 +641,8 @@ jerror_t DL1MCTrigger_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 
 	// Search for triggers
 
-	l1_found = FindTriggers(trigger);
-	
+	l1_found = FindTriggers(trigger,sc_hits);       
+
 	if(l1_found){
 	  
 	  int fcal_gtp_max = 0;
@@ -941,7 +954,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    }
 	    
 	    catch(...){
-	      if(print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
+	      if(VERBOSE && print_messages) cout << "Exception: FCAL channel is not in the translation table  " <<  " Crate = " << 10 + crate << "  Slot = " << slot << 
 		" Channel = " << ch << endl;
 	      continue;
 	    }
@@ -955,6 +968,9 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
 	    tmp.row = channel_info.fcal.row;
 	    tmp.col = channel_info.fcal.col;
 	    
+	    if(VERBOSE)
+	    	cout << " MASKED CHANNEL = " << tmp.row << "   " << tmp.col << endl;
+
 	    fcal_trig_mask.push_back(tmp);
 	  }
 	  
@@ -966,6 +982,7 @@ int  DL1MCTrigger_factory::Read_RCDB(int32_t runnumber, bool print_messages)
   }    // Loop over crates       
   
   
+  if(VERBOSE) cout << " NUMBER OF MASKED CHANNELS = " << fcal_trig_mask.size() << endl;
   
 
   // Load BCAL Trigger Masks
@@ -1328,15 +1345,33 @@ void DL1MCTrigger_factory::PrintTriggers(){
 
 
 
-int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
+int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHit*> & sc_hits){
   
+  int debug1 = 0;
+
   int trig_found = 0;
   
   // Main production trigger  
   for(unsigned int ii = 0; ii < triggers_enabled.size(); ii++){
     
-    if(triggers_enabled[ii].bit == 0){    // Main production trigger found
-      
+    if(debug1)
+      cout << "Trigger Type = " << triggers_enabled[ii].type << endl;
+
+    if(triggers_enabled[ii].type == 3){    // FCAL & BCAL trigger
+
+      int en_bit = triggers_enabled[ii].bit;
+
+      int fcal_bcal_st = 0;
+
+      for(unsigned int jj = 0; jj < triggers_enabled.size(); jj++){   // Check if other triggers are enabled with the same bit
+
+	int en_bit1 = triggers_enabled[jj].bit;
+
+	if(ii != jj)
+	  if( (en_bit == en_bit1) && triggers_enabled[jj].type == 4 ) fcal_bcal_st = 1;
+      }
+
+
       int gtp_energy  = 0;
       int bcal_energy = 0;
       
@@ -1351,35 +1386,63 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	} else{ 
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
-
-
+	
+	
 	gtp_energy = triggers_enabled[ii].gtp.fcal*fcal_gtp[samp] + 
 	  triggers_enabled[ii].gtp.bcal*bcal_energy;
 	
+	if(debug1)
+	  cout << " GTP energy = " << gtp_energy << "   " << triggers_enabled[ii].gtp.en_thr << endl;
+
+
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 
-	  if(triggers_enabled[ii].gtp.fcal_min > 0) {     // FCAL > 0
-	    if(fcal_gtp[samp] > triggers_enabled[ii].gtp.fcal_min){
-	      trigger->trig_mask   = (trigger->trig_mask | 0x1);
-	      trigger->trig_time[0]   = samp - 25;
-	      trig_found++;
-	    }
-	  } else {
-	    
-	    trigger->trig_mask   = (trigger->trig_mask | 0x1);
-	    trigger->trig_time[0]   = samp - 25; 
-	    trig_found++;
-	  }
-	  
-	  break;
+	  if(fcal_gtp[samp] > triggers_enabled[ii].gtp.fcal_min){ // FCAL > fcal_min
 
-	}  // Check energy threshold	
-      }      
-    }     // Trigger Bit 0
+	    int fcal_bcal_st_found = 0;
+
+	    if(fcal_bcal_st == 1){   // FCAL & BCAL & ST
+	      for(unsigned int sc_hit = 0; sc_hit < sc_hits.size(); sc_hit++){
+
+		int sc_time = sc_hits[sc_hit]->t/time_stamp + 0.5 + SC_OFFSET;
+		int fcal_bcal_time =  samp - 25;
+		
+		if(debug1){
+		  cout << sc_time  << "  "  << " Trigger time  " << fcal_bcal_time <<  endl;
+		  cout << " ABS (DT) " << abs(fcal_bcal_time - sc_time) << endl;
+		}
+		
+		if(abs(fcal_bcal_time - sc_time) < 3){    // Coincidence between FCAL, BCAL, and SC found 
+		  trigger->trig_mask     =  (trigger->trig_mask | (1 << en_bit) );
+		  trigger->trig_time[0]  = samp - 25;
+		  trig_found++;
+		  fcal_bcal_st_found = 1;
+		  break;
+		}
+	      }   // Loop over SC hits
+
+	      if(fcal_bcal_st_found == 1) break; // Break from loop over samples	      
+	      
+	    } else  {    // FCAL & BCAL	      
+	      trigger->trig_mask     =  (trigger->trig_mask | (1 << en_bit) );
+	      trigger->trig_time[0]  = samp - 25;
+	      trig_found++;
+	      break;
+	    }
+
+
+	  }  //  Check fcal energy threshold
+	}    //  Check global energy threshold
+
+	
+      }    //  Loop over samples  
+    }      //  FCAL & BCAL triggers
   
 
-    if(triggers_enabled[ii].bit == 2){    //  BCAL trigger found
-            
+    if(triggers_enabled[ii].type == 2){    //  BCAL trigger
+
+      int en_bit = triggers_enabled[ii].bit;
+
       int gtp_energy  = 0;
       int bcal_energy = 0;
       
@@ -1394,12 +1457,12 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	} else{ 
 	  bcal_energy = bcal_gtp[bcal_samp];
 	}
-	      
+	
 	gtp_energy = triggers_enabled[ii].gtp.bcal*bcal_energy;
-      
+	
 	if(gtp_energy >= triggers_enabled[ii].gtp.en_thr){
 	  
-	  trigger->trig_mask   = (trigger->trig_mask | 0x4);
+	  trigger->trig_mask   = (trigger->trig_mask | (1 << en_bit));
 	  trigger->trig_time[2]   = samp - 25; 
 	  trig_found++;
 
@@ -1407,7 +1470,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger){
 	  
 	}  // Energy threshold			
       }
-    }      // Trigger Bit  3
+    }      // BCAL trigger
 
   }    // Loop over triggers found in the config file
   

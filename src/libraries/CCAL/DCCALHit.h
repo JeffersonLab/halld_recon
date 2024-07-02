@@ -14,8 +14,8 @@ using namespace jana;
 
 class DCCALHit:public jana::JObject{
 	public:
-  
-               JOBJECT_PUBLIC(DCCALHit);
+		
+		JOBJECT_PUBLIC(DCCALHit);
 		
 		DCCALHit(){}
 		
@@ -27,9 +27,9 @@ class DCCALHit:public jana::JObject{
 		float t;
 		float intOverPeak;		
 		
-
+		
 		void toStrings(vector<pair<string,string> > &items)const{
-		  AddString(items, "row", "%4d", row);
+			AddString(items, "row", "%4d", row);
 			AddString(items, "column", "%4d", column);
 			AddString(items, "x(cm)", "%3.1f", x);
 			AddString(items, "y(cm)", "%3.1f", y);

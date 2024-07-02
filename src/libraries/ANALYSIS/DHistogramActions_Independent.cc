@@ -4043,7 +4043,19 @@ bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, c
 	locEventLoop->GetSingle(locTrigger);
 	if(locTrigger == nullptr)
 		return true;
+		
+	// allow for this histogram to be called for a particular reaction, and then only plot it for 
+	// events that pass some reasonable kinematic fit cut
+ 	if(dKinFitCLCut >= 0.) {
+		const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
+		if(locKinFitResults == NULL)
+			return true;
+		double locConfidenceLevel = locKinFitResults->Get_ConfidenceLevel();
+		if(locConfidenceLevel < dKinFitCLCut)
+			return true;
+	}
 
+	
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock

@@ -10,6 +10,7 @@
 //         Oct 8, 2013 Yi Qiang: added dedicated object for RICH Truth Hit
 //         June 22, 2015 J. Stevens: changed RICH -> DIRC and remove CERE
 //         May 7, 2017 R. Dzhygadlo: added DDIRCTruthPmtHit DDIRCTruthBarHit
+//         Jan 16, 2024 A. Somov: added functions for ECAL
 
 #ifndef _JEVENT_SOURCEHDDM_H_
 #define _JEVENT_SOURCEHDDM_H_
@@ -41,6 +42,8 @@ using namespace std;
 #include "FDC/DFDCHit.h"
 #include "FCAL/DFCALTruthShower.h"
 #include "FCAL/DFCALHit.h"
+#include "ECAL/DECALTruthShower.h"
+#include "ECAL/DECALHit.h"
 #include "CCAL/DCCALTruthShower.h"
 #include "CCAL/DCCALHit.h"
 #include "TOF/DTOFTruth.h"
@@ -98,10 +101,11 @@ class DEventSourceHDDM:public JEventSource
       jerror_t GetTOFTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetCherenkovTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetFCALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
+      jerror_t GetECALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetCCALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetSCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
 
-	   jerror_t Extract_DRFTime(hddm_s::HDDM *record, JFactory<DRFTime> *factory, JEventLoop* locEventLoop);
+      jerror_t Extract_DRFTime(hddm_s::HDDM *record, JFactory<DRFTime> *factory, JEventLoop* locEventLoop);
       jerror_t Extract_DBCALTruthShower(hddm_s::HDDM *record, JFactory<DBCALTruthShower> *factory, string tag);
       jerror_t Extract_DBCALTruthCell(hddm_s::HDDM *record, JFactory<DBCALTruthCell> *factory, string tag);
       jerror_t Extract_DBCALSiPMHit(hddm_s::HDDM *record, JFactory<DBCALSiPMHit> *factory, string tag);
@@ -114,6 +118,8 @@ class DEventSourceHDDM:public JEventSource
       jerror_t Extract_DCDCHit(JEventLoop* locEventLoop, hddm_s::HDDM *record, JFactory<DCDCHit> *factory, string tag);
       jerror_t Extract_DFDCHit(hddm_s::HDDM *record, JFactory<DFDCHit> *factory, string tag);
       jerror_t Extract_DFCALTruthShower(hddm_s::HDDM *record, JFactory<DFCALTruthShower> *factory, string tag);
+      jerror_t Extract_DECALHit(hddm_s::HDDM *record, JFactory<DECALHit> *factory, string tag, JEventLoop* eventLoop);
+      jerror_t Extract_DECALTruthShower(hddm_s::HDDM *record, JFactory<DECALTruthShower> *factory, string tag);
       jerror_t Extract_DCCALHit(hddm_s::HDDM *record, JFactory<DCCALHit> *factory, string tag, JEventLoop* eventLoop);
       jerror_t Extract_DCCALTruthShower(hddm_s::HDDM *record, JFactory<DCCALTruthShower> *factory, string tag);
       jerror_t Extract_DFCALHit(hddm_s::HDDM *record, JFactory<DFCALHit> *factory, string tag, JEventLoop* eventLoop);

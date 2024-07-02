@@ -5,13 +5,31 @@ import os
 import sys
 import ccdb
 import math
+import glob
 import subprocess
 
 
 def main():
-  # user setting
-  runnum = 40856
-  pede_path = '/home/keigo/work/20191126/target/pede'
+  args = sys.argv
+  if len(args) != 2:
+    print('usage: ./pede.py input_parameter_file')
+    exit(0)
+
+  input_par_file = args[1]
+
+  par = get_par(input_par_file)
+
+  pede_path = par['path_to_pede']
+  in_ccdb_path = par['path_to_input_ccdb_sqlite']
+  out_ccdb_path = par['path_to_output_ccdb_sqlite']
+  runnum = int(par['runnum'])
+  mil_path = par['path_to_mil']
+  if par['use_multiple_mil_files'].upper().startswith('T'):
+    mil_list = []
+    for x in glob.glob(mil_path.rstrip('/') + '/*.mil'):
+      mil_list.append(os.path.abspath(x))
+  else:
+    mil_list = [mil_path]
 
   # CCDB table list
   table_list = []
@@ -31,33 +49,16 @@ def main():
   table_list.append('/CDC/wire_alignment')
   table_list.append('/CDC/timing_offsets')
 
-
-  args = sys.argv
-  if len(args) != 3:
-    print('usage: ./pede.py old_ver new_ver')
-    exit(0)
-
-  old_ver = int(args[1])
-  new_ver = int(args[2])
-  old_ccdb_path = 'ccdb/ccdb_v%02d.sqlite' % old_ver
-  new_ccdb_path = 'ccdb/ccdb_v%02d.sqlite' % new_ver
-  mil_list = ['mil/fieldon_mille_out_v%02d.mil' % old_ver]
-
-  # Copies old CCDB to a new one.
-  if os.path.exists(new_ccdb_path):
-    print('Error: file exists')
-    print(new_ccdb_path)
-    exit(0)
-  subprocess.call(['cp', old_ccdb_path, new_ccdb_path])
-
-  dict0 = ccdb2dict(new_ccdb_path, runnum, table_list)
+  dict0 = ccdb2dict(in_ccdb_path, runnum, table_list)
 
   # Runs pede.
   generate_mp2str_txt(mil_list, dict0)
   subprocess.call([pede_path, 'mp2str.txt'])
 
   add_res_to_dict(dict0)  # Updates dict0.
-  dict2ccdb(new_ccdb_path, runnum, dict0)
+  if not os.path.exists(out_ccdb_path):
+    subprocess.call(['cp', in_ccdb_path, out_ccdb_path])
+  dict2ccdb(out_ccdb_path, runnum, dict0)
 
   # Deletes temporary files.
   for x in ['millepede.res', 'millepede.end', 'millepede.end~', 'millepede.his', 'millepede.log', 'mp2str.txt']:
@@ -158,7 +159,7 @@ def dict2ccdb(ccdb_path, runnum, dict0):
     tmp_file = k.strip('/').replace('/', '_') + '_%s.txt' % rand_id
     with open(tmp_file, 'w') as f:
       f.writelines(['  '.join(x) + '\n' for x in dict0[k]])
-    subprocess.call(['ccdb', '-r', '%d' % runnum, '-c', ccdb_sqlite, 'add', k, tmp_file])
+    subprocess.call(['ccdb', '-c', ccdb_sqlite, 'add', k, '-r', '%d-%d' % (runnum, runnum), tmp_file])
     subprocess.call(['rm', tmp_file])
 
 
@@ -181,17 +182,17 @@ def par_list():
   fixCDCGlobalPhiZ = True
   fixCDCWires = True
 
-  fixFDCCathodeOffsets = True
-  fixFDCCathodeAngles = True
-  fixFDCCellOffsetsWires = True
-  fixFDCCellOffsetsCathodes = True
-  fixFDCWireRotationX = True
-  fixFDCWireRotationY = True
-  fixFDCWireRotationZ = True
-  fixFDCZ = True
-  fixFDCPitch = True
-  fixFDCGap = True
-  fixFDCT0 = False
+  fixFDCCathodeOffsets = False
+  fixFDCCathodeAngles = False
+  fixFDCCellOffsetsWires = False
+  fixFDCCellOffsetsCathodes = False
+  fixFDCWireRotationX = False
+  fixFDCWireRotationY = False
+  fixFDCWireRotationZ = False
+  fixFDCZ = False
+  fixFDCPitch = False
+  fixFDCGap = False
+  fixFDCT0 = True
 
   translationPresigma = 0.0005
   rotationPresigma = 0.0001
@@ -481,6 +482,19 @@ def cdc_constraints():
   ret_str += ''.join(ldyu)
   ret_str += ''.join(ldyd)
   return ret_str
+
+
+def get_par(input_par_file):
+  with open(input_par_file) as f:
+    l0 = f.readlines()
+
+  mydict = {}
+  for x in l0:
+    if x.strip().startswith('#') or len(x.strip().split()) < 2:
+      continue
+    mydict[x.strip().split()[0]] = x.strip().split()[1]
+
+  return mydict
 
 
 if __name__ == '__main__':

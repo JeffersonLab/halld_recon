@@ -204,8 +204,10 @@ bool DEventWriterEVIO::Write_EVIOEvent(JEventLoop* locEventLoop, string locOutpu
 		//check to see if the EVIO file is open
 		if(Get_EVIOOutputters().find(locOutputFileName) == Get_EVIOOutputters().end()) {
 			//not open, open it
-			if(!Open_OutputFile(locEventLoop, locOutputFileName))
-				return false; //failed to open
+		  if(!Open_OutputFile(locEventLoop, locOutputFileName)){
+		    japp->Unlock("EVIOWriter"); // release lock
+		    return false; //failed to open
+		  }
 		}
 
 		//open: get handle, write event
