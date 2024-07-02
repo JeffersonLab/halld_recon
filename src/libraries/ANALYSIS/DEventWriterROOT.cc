@@ -1118,10 +1118,10 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	map<const DMCThrown*, unsigned int> locThrownIndexMap;
 	Group_ThrownParticles(locMCThrowns_FinalState, locMCThrowns_Decaying, locMCThrownsToSave, locThrownIndexMap);
 
-	vector<const DBeamPhoton*> locTaggedMCGenBeams;
+	vector<const DBeamPhoton*> locTaggedMCGenBeams;  // CHANGE
 	locEventLoop->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
-	vector<const DBeamPhoton*> locMCGenBeams;
+	vector<const DBeamPhoton*> locMCGenBeams;  // CHANGE
 	locEventLoop->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
@@ -1219,10 +1219,10 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locEventLoop->Get(locMCReactions);
 	const DMCReaction* locMCReaction = locMCReactions.empty() ? NULL : locMCReactions[0];
 
-	vector<const DBeamPhoton*> locTaggedMCGenBeams;
+	vector<const DBeamPhoton*> locTaggedMCGenBeams;   // CHANGE
 	locEventLoop->Get(locTaggedMCGenBeams, "TAGGEDMCGEN");
 
-	vector<const DBeamPhoton*> locMCGenBeams;
+	vector<const DBeamPhoton*> locMCGenBeams;  // CHANGE
 	locEventLoop->Get(locMCGenBeams, "MCGEN");
 
 	vector<const DMCTrajectoryPoint*> locDMCTrajectoryPoints;
@@ -1270,7 +1270,7 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//GET BEAM PHOTONS
 	bool locBeamUsedFlag = DAnalysis::Get_IsFirstStepBeam(locReaction);
-	vector<const DBeamPhoton*> locBeamPhotons = Get_BeamPhotons(locParticleCombos);
+	vector<const DBeamParticle*> locBeamParticles = Get_BeamParticles(locParticleCombos);
 
 	//create map of particles to array index:
 		//used for pointing combo particles to the appropriate measured-particle array index
@@ -1278,9 +1278,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 	//indices: beam
 	map<pair<oid_t, Particle_t>, size_t> locObjectToArrayIndexMap; //particle_t necessary for neutral showers!
-	for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i)
+	for(size_t loc_i = 0; loc_i < locBeamParticles.size(); ++loc_i)
 	{
-		pair<oid_t, Particle_t> locBeamPair(locBeamPhotons[loc_i]->id, locBeamPhotons[loc_i]->PID());
+		pair<oid_t, Particle_t> locBeamPair(locBeamParticles[loc_i]->id, locBeamParticles[loc_i]->PID());
 		locObjectToArrayIndexMap[locBeamPair] = loc_i;
 	}
 
@@ -1361,9 +1361,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	if(locBeamUsedFlag)
 	{
 		//however, only fill with beam particles that are in the combos
-		locTreeFillData->Fill_Single<UInt_t>("NumBeam", UInt_t(locBeamPhotons.size()));
-		for(size_t loc_i = 0; loc_i < locBeamPhotons.size(); ++loc_i)
-			Fill_BeamData(locTreeFillData, loc_i, locBeamPhotons[loc_i], locVertex, locMCThrownMatching);
+		locTreeFillData->Fill_Single<UInt_t>("NumBeam", UInt_t(locBeamParticles.size()));
+		for(size_t loc_i = 0; loc_i < locBeamParticles.size(); ++loc_i)
+			Fill_BeamData(locTreeFillData, loc_i, locBeamParticles[loc_i], locVertex, locMCThrownMatching);
 	}
 
 	//INDEPENDENT CHARGED TRACKS
@@ -1413,10 +1413,10 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	}
 
 	//Kinematic fit data (pulls and covariance matrices)
-	Fill_KinFitData(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
+	Fill_KinFitData(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamParticles, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
 
 	//CUSTOM
-	Fill_CustomBranches_DataTree(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamPhotons, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
+	Fill_CustomBranches_DataTree(locTreeFillData, locEventLoop, locReaction, locMCReaction, locMCThrownsToSave, locMCThrownMatching, locDetectorMatches, locBeamParticles, locChargedTrackHypotheses, locNeutralParticleHypotheses, locParticleCombos);
 
 	//FILL
 	DTreeInterface* locTreeInterface = dTreeInterfaceMap.find(locReaction)->second;
@@ -1426,27 +1426,27 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 
 }
 
-vector<const DBeamPhoton*> DEventWriterROOT::Get_BeamPhotons(const deque<const DParticleCombo*>& locParticleCombos) const
+vector<const DBeamParticle*> DEventWriterROOT::Get_BeamParticles(const deque<const DParticleCombo*>& locParticleCombos) const
 {
 	//however, only fill with beam particles that are in the combos
-	set<const DBeamPhoton*> locBeamPhotonSet;
-	vector<const DBeamPhoton*> locBeamPhotons;
+	set<const DBeamParticle*> locBeamParticleSet;
+	vector<const DBeamParticle*> locBeamParticles;
 	for(size_t loc_j = 0; loc_j < locParticleCombos.size(); ++loc_j)
 	{
 		const DParticleComboStep* locParticleComboStep = locParticleCombos[loc_j]->Get_ParticleComboStep(0);
 		const DKinematicData* locKinematicData = locParticleComboStep->Get_InitialParticle_Measured();
 		if(locKinematicData == NULL)
 			continue;
-		const DBeamPhoton* locBeamPhoton = dynamic_cast<const DBeamPhoton*>(locKinematicData);
-		if(locBeamPhoton == NULL)
+		const DBeamParticle* locBeamParticle = dynamic_cast<const DBeamParticle*>(locKinematicData);
+		if(locBeamParticle == NULL)
 			continue;
-		if(locBeamPhotonSet.find(locBeamPhoton) != locBeamPhotonSet.end())
+		if(locBeamParticleSet.find(locBeamParticle) != locBeamParticleSet.end())
 			continue; //already included
-		locBeamPhotonSet.insert(locBeamPhoton);
-		locBeamPhotons.push_back(locBeamPhoton);
+		locBeamParticleSet.insert(locBeamParticle);
+		locBeamParticles.push_back(locBeamParticle);
 	}
 
-	return locBeamPhotons;
+	return locBeamParticles;
 }
 
 vector<const DChargedTrackHypothesis*> DEventWriterROOT::Get_ChargedHypotheses(JEventLoop* locEventLoop) const
@@ -1715,38 +1715,38 @@ void DEventWriterROOT::Fill_ThrownParticleTrajectoryInfo(DTreeFillData* locTreeF
 
 }
 
-void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamPhoton* locBeamPhoton, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const
+void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned int locArrayIndex, const DBeamParticle* locBeamParticle, const DVertex* locVertex, const DMCThrownMatching* locMCThrownMatching) const
 {
 	string locParticleBranchName = "Beam";
 
 	//IDENTIFIER
-	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID"), PDGtype(locBeamPhoton->PID()), locArrayIndex);
+	locTreeFillData->Fill_Array<Int_t>(Build_BranchName(locParticleBranchName, "PID"), PDGtype(locBeamParticle->PID()), locArrayIndex);
 
 	//MATCHING
-	if(locMCThrownMatching != NULL)
+	if(locMCThrownMatching != NULL)  // CHANGE
 	{
 	        // Tag the thrown beam photon by comparing energy, time and counter
 	        const DBeamPhoton* locBeamPhotonTaggedMCGEN = locMCThrownMatching->Get_TaggedMCGENBeamPhoton();
 		Bool_t locIsGeneratorFlag = kFALSE;
-		if (locBeamPhotonTaggedMCGEN != NULL)
-		  locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
+	//	if (locBeamPhotonTaggedMCGEN != NULL)
+	//	  locIsGeneratorFlag = (locBeamPhotonTaggedMCGEN->energy() == locBeamPhoton->energy() && locBeamPhotonTaggedMCGEN->dCounter == locBeamPhoton->dCounter && locBeamPhotonTaggedMCGEN->time() == locBeamPhoton->time()) ? kTRUE : kFALSE;
 		locTreeFillData->Fill_Array<Bool_t>(Build_BranchName(locParticleBranchName, "IsGenerator"), locIsGeneratorFlag, locArrayIndex);
 	}
 
 	//KINEMATICS: MEASURED
 
 	//use production vertex, propagate photon time
-	DVector3 locTargetCenter = locBeamPhoton->position();
+	DVector3 locTargetCenter = locBeamParticle->position();
 	DVector3 locProductionVertex = locVertex->dSpacetimeVertex.Vect();
 	double locDeltaPath = (locProductionVertex - locTargetCenter).Mag();
 	bool locDownstreamFlag = ((locProductionVertex.Z() - locTargetCenter.Z()) > 0.0);
 	double locDeltaT = locDownstreamFlag ? locDeltaPath/29.9792458 : -1.0*locDeltaPath/29.9792458;
-	double locTime = locBeamPhoton->time() + locDeltaT;
+	double locTime = locBeamParticle->time() + locDeltaT;
 
 	TLorentzVector locX4_Measured(locProductionVertex.X(), locProductionVertex.Y(), locProductionVertex.Z(), locTime);
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Measured"), locX4_Measured, locArrayIndex);
 
-	DLorentzVector locDP4 = locBeamPhoton->lorentzMomentum();
+	DLorentzVector locDP4 = locBeamParticle->lorentzMomentum();
 	TLorentzVector locP4_Measured(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_Measured"), locP4_Measured, locArrayIndex);
 }
@@ -2138,17 +2138,17 @@ void DEventWriterROOT::Fill_ComboStepData(DTreeFillData* locTreeFillData, const 
 	//beam & production vertex
 	Particle_t locInitialPID = locReactionStep->Get_InitialPID();
 	const DKinematicData* locInitialParticle = locParticleComboStep->Get_InitialParticle();
-	const DBeamPhoton* locBeamPhoton = dynamic_cast<const DBeamPhoton*>(locInitialParticle);
-	if(locBeamPhoton != NULL)
+	const DBeamParticle* locBeamParticle = dynamic_cast<const DBeamParticle*>(locInitialParticle);
+	if(locBeamParticle != NULL)
 	{
 		const DKinematicData* locInitParticleMeasured = locParticleComboStep->Get_InitialParticle_Measured();
-		const DBeamPhoton* locMeasuredBeamPhoton = dynamic_cast<const DBeamPhoton*>(locInitParticleMeasured);
+		const DBeamParticle* locMeasuredBeamParticle = dynamic_cast<const DBeamParticle*>(locInitParticleMeasured);
 
 		//get array index
-		pair<oid_t, Particle_t> locBeamPair(locMeasuredBeamPhoton->id, locMeasuredBeamPhoton->PID());
+		pair<oid_t, Particle_t> locBeamPair(locMeasuredBeamParticle->id, locMeasuredBeamParticle->PID());
 		size_t locBeamIndex = locObjectToArrayIndexMap.find(locBeamPair)->second;
 
-		Fill_ComboBeamData(locTreeFillData, locComboIndex, locBeamPhoton, locBeamIndex, locKinFitType);
+		Fill_ComboBeamData(locTreeFillData, locComboIndex, locBeamParticle, locBeamIndex, locKinFitType);
 	}
 	else //decaying
 	{
@@ -2254,7 +2254,7 @@ void DEventWriterROOT::Fill_ComboStepData(DTreeFillData* locTreeFillData, const 
 	}
 }
 
-void DEventWriterROOT::Fill_ComboBeamData(DTreeFillData* locTreeFillData, unsigned int locComboIndex, const DBeamPhoton* locBeamPhoton, size_t locBeamIndex, DKinFitType locKinFitType) const
+void DEventWriterROOT::Fill_ComboBeamData(DTreeFillData* locTreeFillData, unsigned int locComboIndex, const DBeamParticle* locBeamParticle, size_t locBeamIndex, DKinFitType locKinFitType) const
 {
 	string locParticleBranchName = "ComboBeam";
 
@@ -2266,15 +2266,15 @@ void DEventWriterROOT::Fill_ComboBeamData(DTreeFillData* locTreeFillData, unsign
 	{
 		if(locKinFitType != d_P4Fit)
 		{
-			DVector3 locPosition = locBeamPhoton->position();
-			TLorentzVector locX4_KinFit(locPosition.X(), locPosition.Y(), locPosition.Z(), locBeamPhoton->time());
+			DVector3 locPosition = locBeamParticle->position();
+			TLorentzVector locX4_KinFit(locPosition.X(), locPosition.Y(), locPosition.Z(), locBeamParticle->time());
 			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_KinFit"), locX4_KinFit, locComboIndex);
 		}
 
 		//if charged, bends in b-field, update p4 when vertex changes
-		if(((locKinFitType != d_VertexFit) && (locKinFitType != d_SpacetimeFit)) || (ParticleCharge(locBeamPhoton->PID()) != 0))
+		if(((locKinFitType != d_VertexFit) && (locKinFitType != d_SpacetimeFit)) || (ParticleCharge(locBeamParticle->PID()) != 0))
 		{
-			DLorentzVector locDP4 = locBeamPhoton->lorentzMomentum();
+			DLorentzVector locDP4 = locBeamParticle->lorentzMomentum();
 			TLorentzVector locP4_KinFit(locDP4.Px(), locDP4.Py(), locDP4.Pz(), locDP4.E());
 			locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "P4_KinFit"), locP4_KinFit, locComboIndex);
 		}
@@ -2362,7 +2362,7 @@ void DEventWriterROOT::Fill_ComboNeutralData(DTreeFillData* locTreeFillData, uns
 
 void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoop* locEventLoop, const DReaction* locReaction, const DMCReaction* locMCReaction, const vector<const DMCThrown*>& locMCThrowns,
 		const DMCThrownMatching* locMCThrownMatching, const DDetectorMatches* locDetectorMatches,
-		const vector<const DBeamPhoton*>& locBeamPhotons, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
+		const vector<const DBeamParticle*>& locBeamParticles, const vector<const DChargedTrackHypothesis*>& locChargedHypos,
 		const vector<const DNeutralParticleHypothesis*>& locNeutralHypos, const deque<const DParticleCombo*>& locParticleCombos) const
 {
 	if(!STORE_PULL_INFO && !STORE_ERROR_MATRIX_INFO)
@@ -2392,14 +2392,14 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoo
         map<Particle_t,int> assignMap = getNameForParticle(locReaction,pidVector);
         
         
-        //Look at beam photons:
+        //Look at beam Particles:
         //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         const DParticleComboStep* locParticleComboStep = locParticleCombos[iPC]->Get_ParticleComboStep(0);
-        const DKinematicData* beamPhoton = locParticleComboStep->Get_InitialParticle_Measured();
+        const DKinematicData* beamParticle = locParticleComboStep->Get_InitialParticle_Measured();
         
         if(kfitType == d_P4Fit || kfitType == d_P4AndVertexFit){
 		  if(writeOutPulls){	
-             map<DKinFitPullType, double> someBeamMap = getPulls(beamPhoton,NULL,kfitType);
+             map<DKinFitPullType, double> someBeamMap = getPulls(beamParticle,NULL,kfitType);
              fillTreePullBranches(locTreeFillData,"ComboBeam",kfitType,someBeamMap,iPC,true);
              someBeamMap.clear();
 	      }
