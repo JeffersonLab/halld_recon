@@ -40,7 +40,6 @@ using namespace std;
 #include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALGeometry.h>
 #include <CCAL/DCCALHit.h>
-#include <ECAL/DECALGeometry.h>
 #include <ECAL/DECALHit.h>
 
 
