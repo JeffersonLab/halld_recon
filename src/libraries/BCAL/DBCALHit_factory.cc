@@ -120,7 +120,7 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_tdiff_u_d" << endl;
    FillCalibTableShort(tdiff_u_d, raw_tdiff_u_d);
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_bad_channels" << endl;
-   FillCalibTableShort(bad_channels, raw_bad_channels);
+   FillCalibTable(bad_channels, raw_bad_channels);
    
    std::vector<std::map<string,double> > saturation_ADC_pars;
    if(eventLoop->GetCalib("/BCAL/ADC_saturation", saturation_ADC_pars))
