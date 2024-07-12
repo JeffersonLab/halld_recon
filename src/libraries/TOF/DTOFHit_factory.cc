@@ -250,7 +250,7 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     string locADCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
     if(eventLoop->GetCalib(locADCBadChannelsTable.c_str(), raw_adc_bad_channels))
       jout << "Error loading " << locADCBadChannelsTable << " !" << endl;
-    string locTDCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
+    string locTDCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/tdc_bad_channels";
     if(eventLoop->GetCalib(locTDCBadChannelsTable.c_str(), raw_tdc_bad_channels))
       jout << "Error loading " << locTDCBadChannelsTable << " !" << endl;
     
@@ -379,16 +379,20 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   const DTTabUtilities* locTTabUtilities = NULL;
   loop->GetSingle(locTTabUtilities);
-  
+
+  //
   // First, make hits out of all fADC250 hits
+  //
   vector<const DTOFDigiHit*> digihits;
   loop->Get(digihits);
   for(unsigned int i=0; i<digihits.size(); i++){
     const DTOFDigiHit *digihit = digihits[i];
-    
-      // throw away hits from bad or noisy channels
-      int quality = GetConstant(adc_bad_channels,digihit);
-      if ( quality > 0 ) continue;
+
+    //
+    // throw away hits from bad or noisy channels
+    //
+    int quality = GetConstant(adc_bad_channels,digihit);
+    if ( quality > 0 ) continue;
     
     // Error checking for pre-Fall 2016 firmware
     if(digihit->datasource == 1) {
@@ -512,19 +516,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     hit->has_fADC=true;
     hit->has_TDC=false;
-    
-    // if the ADC for this channel is good, but the TDC is bad, then
-    // just use the ADC time
-    int tdc_quality = GetConstant(tdc_bad_channels,digihit);
-    if ( tdc_quality > 0 ) {
-    	// we have a lot of checks on whether the TDC time exists right now, 
-    	// so for now, just pretend that there's TDC information here
-    	// probably there is a better way to do this...
-    	hit->t_TDC = hit->t_fADC;
-    	hit->has_TDC = true;
-    }
-
-    
+        
     /*
       cout << "TOF ADC hit =  (" << hit->plane << "," << hit->bar << "," << hit->end << ")  " 
       << t_scale << " " << T << "  "
@@ -535,7 +527,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->AddAssociatedObject(digihit);
     
     _data.push_back(hit);
-  }
+  } // looping over all fADC hits done
   
   //Get the TDC hits
   vector<const DTOFTDCDigiHit*> tdcdigihits;
@@ -549,10 +541,6 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     {
       const DTOFTDCDigiHit *digihit = tdcdigihits[i];
       
-      // throw away TDC hits from bad or noisy channels
-      int quality = GetConstant(tdc_bad_channels,digihit);
-      if ( quality > 0 ) continue;
-
       // Apply calibration constants here
       double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(digihit);
       T += t_base_tdc - GetConstant(tdc_time_offsets, digihit) + tdc_adc_time_offset;
@@ -583,7 +571,8 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	_data.push_back(hit);
 	*/
-      } else if (hit->has_TDC) { // this tof ADC hit has already a matching TDC, make new tof ADC hit
+      } else if (hit->has_TDC) {
+	// found matching ADC hit but this ADC hit has already a matching TDC, make new tof ADC hit
 	DTOFHit *newhit = new DTOFHit;
 	newhit->plane = hit->plane;
 	newhit->bar = hit->bar;
@@ -599,10 +588,24 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	_data.push_back(newhit);
 	hit = newhit;
       }
-      hit->has_TDC=true;
-      hit->t_TDC=T;
-      
-      if (hit->dE>0.){
+      // now add the TDC information to the DTOF Hit if the TDC quality is ok
+      // just use the ADC time if TDC quality is bad
+      int tdc_quality = GetConstant(tdc_bad_channels,digihit);
+      if ( tdc_quality > 0 ) {
+    	// we have a lot of checks on whether the TDC time exists right now, 
+    	// so for now, just pretend that there's TDC information here
+    	// probably there is a better way to do this...
+    	hit->t_TDC = hit->t_fADC;
+    	hit->has_TDC = true;
+      } else {
+	hit->has_TDC=true;
+	hit->t_TDC=T;
+      }
+
+      //
+      // only apply walk correction if the time for the TDC is actually coming from the TDC
+      //
+      if ((hit->dE>0.) && (!tdc_quality)){
 
 	// time walk correction
 	// Note at this point the dE value is still in ADC units
