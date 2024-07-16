@@ -103,7 +103,7 @@ jerror_t JEventProcessor_cdc_echo::init(void)
 
   uint16_t integral8;
   
-  uint32_t ns;
+  uint16_t ns;
   uint16_t adc[NSAMPLES];
 
   uint16_t ntrackhits,ntrackhits_sat,ntrackhits_echo;
@@ -112,16 +112,17 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   japp->RootWriteLock();
   
   TT = new TTree("TT","Track data");
+
   TT->Branch("eventnum",&eventnumber,"eventnum/l");
   TT->Branch("ntrackhits",&ntrackhits,"ntrackhits/s");
   TT->Branch("nsat",&ntrackhits_sat,"nsat/s");
   TT->Branch("necho",&ntrackhits_echo,"necho/s");
   TT->Branch("FOM",&FOM,"FOM/D");
+
   
   T = new TTree("T","Echo Pulse data");
 
   T->Branch("eventnum",&eventnumber,"eventnum/l");
-
   T->Branch("rocid",&rocid,"rocid/i");
   T->Branch("slot",&slot,"slot/i");
   T->Branch("preamp",&preamp,"preamp/i");
@@ -133,9 +134,12 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   T->Branch("amp",&amp,"amp/i");  
   T->Branch("integral",&integral,"integral/i");    
   T->Branch("overflows",&overflows,"overflows/i");    
-  T->Branch("integral8",&integral8,"integral8/s");
-  
 
+  T->Branch("integral8",&integral8,"integral8/s");
+
+  uint16_t timeovert;
+  T->Branch("timeovert",&timeovert,"timeovert/s");
+  
   uint32_t parentamp, parentint, trough, iovera;
   uint16_t dt, dc, nechoes, numsat, hitpresent, hitontrack;
   T->Branch("parentamp",&parentamp,"parentamp/i");
@@ -149,10 +153,10 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   T->Branch("hitpresent",&hitpresent,"hitpresent/s");
   T->Branch("hitontrack",&hitontrack,"hitontrack/s");      
 
-  T->Branch("nsamples",&ns,"nsamples/i");
+  T->Branch("nsamples",&ns,"nsamples/s");
   
   T->Branch("adc",&adc,Form("adc[%i]/s",NSAMPLES));         
-
+  
   japp->RootUnLock();
 
 
@@ -205,11 +209,12 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
     const uint16_t MIN_ORIG_AMP = 4088; // threshold for original pulses  
 
     // look for saturated pulses
-    
+        
     uint32_t rocid,slot,channel,preamp,time,q,pedestal,amp,integral,overflows;
     uint32_t rought, iovera;
     uint16_t nhit, dt, dc, ns;
-  
+    uint16_t timeovert;
+
     uint16_t adc[NSAMPLES] = {0}; 
   
     uint16_t nsat[4][15][3] = {0};   // number of saturated hits in each preamp
@@ -235,8 +240,8 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
         slot = cp->slot;
         channel = cp->channel;
         overflows = cp->overflow_count;
-        preamp = uint32_t(channel/24);
-        rought = uint32_t(cp->le_time/10);
+        preamp = (uint32_t)(channel/24);
+        rought = (uint32_t)(cp->le_time/10);
         
         //      printf("rocid %i slot %i preamp %i chan %i rough_t %i amp %i overflows %i\n",rocid,slot,preamp,channel,rought, cp->first_max_amp, overflows);
   
@@ -265,8 +270,8 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       rocid = cp->rocid;
       slot = cp->slot;
       channel = cp->channel;
-      preamp = uint32_t(channel/24);
-      rought = uint32_t(cp->le_time/10);
+      preamp = (uint32_t)(channel/24);
+      rought = (uint32_t)(cp->le_time/10);
 
       uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
       
@@ -303,7 +308,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     // The echo identification has finished.  The code below finds more info to add to the tree & histo.
-
+    
     
     // look to see if the problem pulses are present in cdchits too.  if we are not pruning, they will be.
 
@@ -324,7 +329,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       cdchitpresent[rocid-25][slot-3][channel] = 1;
       
     }
-
+   
     
     // find out if the hits are on tracks or not.
 
@@ -405,12 +410,12 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       rocid = cp->rocid;
       slot = cp->slot;
       channel = cp->channel;
-      preamp = uint32_t(channel/24);
-      rought = uint32_t(cp->le_time/10);
+      preamp = (uint32_t)(channel/24);
+      rought = (uint32_t)(cp->le_time/10);
       amp = cp->first_max_amp;
       
       nhit = parent[rocid-25][slot-3][channel] - 1;
-
+      
       //      printf("rocid %i slot %i preamp %i chan %i rough_t %i dt %i amp %i parent %i echoes %i\n",rocid,slot,preamp,channel,rought,dt, cp->first_max_amp, parent[rocid-25][slot-3][channel], esat[rocid-25][slot-3][preamp][nhit]);
 
 
@@ -419,25 +424,25 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       japp->RootWriteLock();
 
       counts->Fill(1);
-
+      
       if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(2);       
       if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(3);
 
-	      
+      /*	      
       if ( parentamp[rocid-25][slot-3][channel] >0 ) {  // probable echoes
 	counts->Fill(4);
         if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(5);      
         if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(6);
-      }
+	}*/
 
       if ( amp ==511 ) { // saturated pulses
 	counts->Fill(7);
         if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(8);      
         if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(9);
       }
-             
+           
       japp->RootUnLock();
-
+      
 
       if (parent[rocid-25][slot-3][channel] == 0 ) continue; // not a parent or an echo
 
@@ -449,7 +454,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       int temp = (int)channel - (int)csat[rocid-25][slot-3][preamp][nhit]; 
       if (temp<0) temp = -temp;
-      dc = uint16_t(temp);
+      dc = (uint16_t)(temp);
 
       uint16_t hitpresent = cdchitpresent[rocid-25][slot-3][channel];
       uint16_t hitontrack = ontrack[rocid-25][slot-3][channel];      
@@ -474,29 +479,48 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       const Df125WindowRawData *wrd;
       cp->GetSingle(wrd);
 
+      timeovert = 0;
+      
       if (wrd) {
         ns = (uint16_t)wrd->samples.size();
 
         uint16_t nsave = (ns<=NSAMPLES) ? ns : NSAMPLES ;  // save the first NSAMPLES values of the array
       
-        for (uint j=0; j<nsave; j++) adc[j] = wrd->samples[j];
-        for (uint j=nsave; j<NSAMPLES; j++) adc[j]=0;   
-
-        for (uint j=(uint)rought; j<(uint)rought+8 ; j++) {
+        for (uint16_t j=0; j<nsave; j++) adc[j] = wrd->samples[j];
+        for (uint16_t j=nsave; j<NSAMPLES; j++) adc[j]=0;   
+	
+        for (uint16_t j=(uint16_t)rought; j<(uint16_t)rought+8 ; j++) {
   	  if (j==NSAMPLES) break;
     	  integral8 += adc[j];
         }
+	
+        uint16_t threshold = pedestal + 100;
+	bool overthreshold = false;
+	
+        for (uint16_t j=(uint16_t)rought; j<(uint16_t)rought+20 ; j++) {
+  	  if (j==NSAMPLES) break;
+          if (adc[j]>threshold) overthreshold = true;
+	  if (adc[j]>threshold && overthreshold) timeovert++;
+	  if (adc[j]<threshold && overthreshold) break;
+        }
 
       }
-
+      
 
       ULong64_t eventnum = (ULong64_t)eventnumber;
       
       japp->RootWriteLock();    
 
-  
+      if ( parentamp[rocid-25][slot-3][channel] >0 && timeovert < 8 ) {  // probable echoes
+	counts->Fill(4);
+        if ( cdchitpresent[rocid-25][slot-3][channel] >0 ) counts->Fill(5);      
+        if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(6);
+      }
+
+
+	
       T->SetBranchAddress("eventnum",&eventnum);
-  
+      
       T->SetBranchAddress("rocid",&rocid);
       T->SetBranchAddress("slot",&slot);
       T->SetBranchAddress("channel",&channel);
@@ -507,9 +531,10 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       T->SetBranchAddress("pedestal",&pedestal);
       T->SetBranchAddress("amp",&amp);
       T->SetBranchAddress("integral",&integral);
-      T->SetBranchAddress("integral8",&integral8);      
       T->SetBranchAddress("overflows",&overflows);
-  
+      T->SetBranchAddress("integral8",&integral8);
+      T->SetBranchAddress("timeovert",&timeovert);
+
       T->SetBranchAddress("t",&rought);
       //      T->SetBranchAddress("nhit",&nhit);    
       T->SetBranchAddress("nechoes",&nechoes);    

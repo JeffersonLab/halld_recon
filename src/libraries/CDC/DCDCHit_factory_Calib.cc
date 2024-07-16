@@ -47,7 +47,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
     // make sure that echo_end_search < echo_cut_array_size
     // echo_cut size is currently 7, should be ample
 
-    unsigned int echo_cut_array_size = sizeof(echo_cut)/sizeof(echo_cut[0]);
+    unsigned int echo_cut_array_size = (unsigned int)(sizeof(echo_cut)/sizeof(echo_cut[0]));
 
     if (ECHO_MAX_T < echo_cut_array_size) {
       echo_end_search = ECHO_MAX_T; 
@@ -623,7 +623,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
   vector<unsigned int> super_sat_boards;  // code for hvb w saturated integral
   
-  for (unsigned int i=0; i < digihits.size(); i++) {
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
 
     const DCDCDigiHit *digihit = digihits[i];
 
@@ -640,7 +640,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     unsigned int preamp = (unsigned int)(channel/24);
     unsigned int rought = (unsigned int)(cp->le_time/10);
           
-    unsigned int board = rocid*100000 + slot*100 + preamp;  
+    unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
 
     //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
     if ( amp >= 4088 && cp->overflow_count>0 ) {    
@@ -691,9 +691,9 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   if (sat_times.size() == 0) return;
 
   if (ECHO_VERBOSE) {
-    for (unsigned int i=0; i < sat_boards.size(); i++) {
+    for (unsigned int i=0; i < (unsigned int)sat_boards.size(); i++) {
       cout << sat_boards[i] << " sat. pulses at: ";
-      for (unsigned int j=0; j < sat_times[i].size(); j++) {
+      for (unsigned int j=0; j < (unsigned int)sat_times[i].size(); j++) {
         cout << sat_times[i][j] << " ";
       }
       cout << endl;
@@ -703,7 +703,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   
   // check for small afterpulses
 
-  for (unsigned int i=0; i < digihits.size(); i++) {
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
 
     const DCDCDigiHit *digihit = digihits[i];
 
@@ -720,13 +720,13 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     unsigned int dt;  // time difference between saturated & later pulses
       
-    unsigned int board = rocid*100000 + slot*100 + preamp;  
+    unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
     
     // find board in array
 
     unsigned int x = 0;
     bool found = 0;
-    for (unsigned int j=0; j<sat_boards.size(); j++) {
+    for (unsigned int j=0; j<(unsigned int)sat_boards.size(); j++) {
       if (board == sat_boards[j]) found = 1;
       if (found) x = j;
       if (found) break;
@@ -739,7 +739,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     // check board in saturated integral list
     bool super_sat = 0;
-    for (unsigned int j=0; j<super_sat_boards.size(); j++) {
+    for (unsigned int j=0; j<(unsigned int)super_sat_boards.size(); j++) {
       if (board == super_sat_boards[j]) super_sat = 1;
       if (super_sat) break;
     }
@@ -747,7 +747,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     
     // fill RogueHits if this is a problem pulse
-    uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT);
+    unsigned int net_amp = (unsigned int)(cp->first_max_amp<<ABIT) - (unsigned int)(cp->pedestal<<PBIT);
 
     if (ECHO_VERBOSE) printf("board %u t %u amp %u net_amp %u ",board, rought,cp->first_max_amp, net_amp);
 
@@ -758,7 +758,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
     found = 0;
 
-    for (unsigned int j=0; j<sat_times[x].size(); j++) {
+    for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
 
       if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
 
