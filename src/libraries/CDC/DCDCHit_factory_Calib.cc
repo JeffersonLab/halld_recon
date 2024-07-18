@@ -33,9 +33,9 @@ jerror_t DCDCHit_factory_Calib::init(void)
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
                               "Max height (adc units 0-4095) for afterpulses, if ECHO_OPT=1");
 
-  ECHO_MAX_T = 6;
+  ECHO_MAX_T = 7;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
-                              "End of time range (number of samples, max 6) to search for afterpulses");
+                              "End of time range (number of samples, max 7) to search for afterpulses");
 
   ECHO_VERBOSE = 0; 
   gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
@@ -66,7 +66,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 2) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 554, 503, 377, 388, 345}; // 99.7%
+    unsigned int slant_array[8] = {0, 0, 554, 503, 377, 388, 345, 345}; // 99.7%
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -75,7 +75,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 3) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 375, 306, 239, 242, 234}; // 95th
+    unsigned int slant_array[8] = {0, 0, 375, 306, 239, 242, 234, 234}; // 95th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -84,7 +84,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 4) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 327, 265, 212, 215, 210};// 90th
+    unsigned int slant_array[8] = {0, 0, 327, 265, 212, 215, 210, 210};// 90th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -93,7 +93,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 5) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 554, 503, 377, 388, 345}; // 99.7%
+    unsigned int slant_array[8] = {0, 0, 554, 503, 377, 388, 345, 345}; // 99.7%
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -102,7 +102,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 6) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 375, 306, 239, 242, 234}; // 95th
+    unsigned int slant_array[8] = {0, 0, 375, 306, 239, 242, 234, 234}; // 95th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -111,7 +111,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 7) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[7] = {0, 0, 327, 265, 212, 215, 210};// 90th
+    unsigned int slant_array[8] = {0, 0, 327, 265, 212, 215, 210, 210};// 90th
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -779,7 +779,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
       if (net_amp <= echo_cut[dt]) found = 1;
 
-      if (ECHO_OPT>4 && super_sat && net_amp <= 1.2*echo_cut[dt]) found = 1; 
+      if (ECHO_OPT>4 && super_sat && net_amp <= 1.5*echo_cut[dt]) found = 1; 
       
       if (found) break;
 

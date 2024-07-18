@@ -79,7 +79,7 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   vector<unsigned int> Nstraws; // number of straws for each ring
   
   unsigned int echo_end_search;
-  unsigned int echo_cut[7]; //  
+  unsigned int echo_cut[8]; //  
 };
 
 #endif // _DCDCHit_factory_Calib_
