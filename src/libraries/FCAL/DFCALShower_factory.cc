@@ -404,10 +404,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     double errZ;
     GetCorrectedEnergyAndPosition( cluster, chEmax , Ecorrected, pos_corrected, errZ, &vertex,in_insert);
     
-    DVector3 pos_log;
-    GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
-    
-    if (Ecorrected>0.){		
+    if (Ecorrected>SHOWER_ENERGY_THRESHOLD){
+      DVector3 pos_log;
+      GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
+      
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
       //takes the Cherenkov light to reach the back of the detector
@@ -1034,15 +1034,8 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   DVector3  posInCal = cluster->getCentroid();
   
-  vector<const DFCALHit*> locHitVector;
-  cluster->Get(locHitVector);
-  
-  int loc_nhits = (int)locHitVector.size();
-  if( loc_nhits < 1 ) {
-  	pos_log = posInCal;
-	return;
-  }
-  
+  vector<DFCALCluster::DFCALClusterHit_t> locHitVector=cluster->GetHits();
+    
   //------   Loop over hits   ------//
   
   double sW    =  0.0;
@@ -1052,13 +1045,11 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   double ecluster = cluster->getEnergy();
   
-  for( int ih = 0; ih < loc_nhits; ih++ ) {
-  	
-	const DFCALHit *locHit = locHitVector[ih];
+  for( int ih = 0; ih < (int)locHitVector.size(); ih++ ) {
 	
-	double xcell = locHit->x;
-	double ycell = locHit->y;
-	double ecell = locHit->E;
+	double xcell = locHitVector[ih].x;
+	double ycell = locHitVector[ih].y;
+	double ecell = locHitVector[ih].E;
 	
 	W  =  log_position_const + log( ecell / ecluster );
 	if( W > 0. ) {
@@ -1066,7 +1057,6 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
 		xpos  +=  xcell * W;
 		ypos  +=  ycell * W;
 	}
-	
   }
   
   double x1, y1;
