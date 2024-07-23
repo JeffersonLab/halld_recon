@@ -39,8 +39,6 @@ jerror_t DFCALCluster_factory_Island::init(void)
   MIN_CLUSTER_SEED_ENERGY=35.*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY",
 			      MIN_CLUSTER_SEED_ENERGY);
-  SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
-  gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
   SHOWER_WIDTH_PAR0=0.958;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_WIDTH_PAR0",SHOWER_WIDTH_PAR0);  
@@ -82,9 +80,11 @@ jerror_t DFCALCluster_factory_Island::init(void)
   INSERT_S_CURVE_PAR2=0.02337;
   gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
 
-  HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
-  HistProb=new TH1D("HistProb",";CL",100,0,1);
-  
+  if (DEBUG_HISTS){
+    if (HistdE==NULL) HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
+    if (HistProb==NULL) HistProb=new TH1D("HistProb",";CL",100,0,1);
+  }
+    
   return NOERROR;
 }
 
@@ -101,11 +101,11 @@ jerror_t DFCALCluster_factory_Island::brun(jana::JEventLoop *eventLoop, int32_t 
   eventLoop->GetSingle(dFCALGeom);
   m_zdiff=dFCALGeom->fcalFrontZ()-targetZ;
 
-  m_insert_Eres[0]=0.0001;
+  m_insert_Eres[0]=0.00025;
   m_insert_Eres[1]=0.00025;
   m_insert_Eres[2]=4.4e-5;
 
-  m_Eres[0]=0.0006;
+  m_Eres[0]=0.0005;
   m_Eres[1]=0.0025;
   m_Eres[2]=0.0009;
 
@@ -180,6 +180,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	
       myCluster->setEnergy(Etot);
       myCluster->setTimeEWeight(t);
+      myCluster->setStatus(0);
      
       int channel=dFCALGeom->channel(clusterCandidate[0].row,
 				     clusterCandidate[0].column);
@@ -277,7 +278,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
   
     if (MERGE_HITS_AT_BOUNDARY && min_row<100 && max_row>=100
 	&& Emax>MIN_CLUSTER_SEED_ENERGY){
-      PeakInfo myPeak(Esum,clusterHits[jmax].x,clusterHits[jmax].y,0,0);
+      PeakInfo myPeak(Esum,clusterHits[jmax].x,clusterHits[jmax].y,0,0,0);
       bool good_fit=FitPeaks(W,b,clusterHits,peaks,myPeak,chisq,ndf);
       if (good_fit){
 	peaks.push_back(myPeak);
@@ -312,44 +313,88 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       // Handle clusters fully in insert or in lead glass region   
       // Loop over hits looking for peaks.
       vector<PeakInfo>peak_candidates;
+      double Emax=0.;
+      int ir_max=0,ic_max=0;
+      // First find the peak corresponding with the highest energy block
       for (int ic=1;ic<num_cols-1;ic++){
 	for (int ir=1;ir<num_rows-1;ir++){
 	  double E=Emap[ic][ir];
-	  if (E>MIN_CLUSTER_SEED_ENERGY
-	      && num_hits>3*(peak_candidates.size()+1)
-	      ){
-	    bool got_peak=true;
-	    int lo_col=ic-1;
-	    int hi_col=ic+1;
-	    int lo_row=ir-1;
-	    int hi_row=ir+1;
-	    for (int j=lo_col;j<=hi_col;j++){
-	      for (int k=lo_row;k<=hi_row;k++){
-		if (j==ic && k==ir) continue;
-		
-		double Ejk=Emap[j][k];
-		if (Ejk<0.001) continue;
-
-		got_peak=(E-Ejk>0)&&got_peak;
-	      }
-	    }
-	    if (got_peak){
-	      double Epeak=0;
-	      GetRowColRanges(num_rows,num_cols,ir,ic,lo_row,hi_row,lo_col,
-			      hi_col);
-	      for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
-		for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
-		  double E=Emap[my_ic][my_ir];
-		  if (E>0) Epeak+=E;
+	  if (E>Emax){
+	    Emax=E;
+	    ir_max=ir;
+	    ic_max=ic;
+	  }
+	}
+      }
+      double Epeak=0;
+      int lo_col=0,hi_col=0,lo_row=0,hi_row=0;
+      // Maximum distance in row/column number from peak 
+      int idiff=(min_row<100)?1:2;
+      GetRowColRanges(idiff,num_rows,num_cols,ir_max,ic_max,lo_row,
+		      hi_row,lo_col,hi_col);
+      for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
+	for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
+	  double E=Emap[my_ic][my_ir];
+	  if (E>0) Epeak+=E;
+	}
+      }
+      // x and y will be filled in later
+      //cout << "Max ic " << ic_max << " ir " << ir_max << endl;
+      peak_candidates.push_back(PeakInfo(Epeak,0.,0.,ic_max,ir_max,0));
+      
+      // Look for additional peaks
+      if (num_hits>6){
+	for (int ic=1;ic<num_cols-1;ic++){
+	  for (int ir=1;ir<num_rows-1;ir++){
+	    if (ir==ir_max && ic==ic_max) continue;
+	    
+	    double E=Emap[ic][ir];
+	    if (E>MIN_CLUSTER_SEED_ENERGY){
+	      bool got_peak=true;
+	      int lo_col=ic-1;
+	      int hi_col=ic+1;
+	      int lo_row=ir-1;
+	      int hi_row=ir+1;
+	      int nhits_in_peak=1;
+	      for (int j=lo_col;j<=hi_col;j++){
+		for (int k=lo_row;k<=hi_row;k++){
+		  if (j==ic && k==ir) continue;
+		  
+		  double Ejk=Emap[j][k];
+		  if (Ejk<0.001) continue;
+		  
+		  nhits_in_peak++;
+		  got_peak=(E-Ejk>0)&&got_peak;
 		}
 	      }
-	      // x and y will be filled in later
-	      peak_candidates.push_back(PeakInfo(Epeak,0.,0.,ic,ir));
-	    }
-	  }// cut on minimum energy of central block
-	} // loop over rows
-      } // loop over columns
-    
+	      if (got_peak){
+		// Skip small upward energy fluctuation at boundary if
+		// the block with the local maximum energy is not
+		// surrounded by enough blocks
+		if (ic==1 || ir==1 || ic==num_cols-2 || ir==num_rows-2){
+		  //cout << "At boundary " << nhits_in_peak << endl;
+		  if (nhits_in_peak<3)
+		    continue;
+		}
+		Epeak=0;
+		GetRowColRanges(idiff,num_rows,num_cols,ir,ic,lo_row,
+				hi_row,lo_col,hi_col);
+		for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
+		  for (int my_ic=lo_col;my_ic<=hi_col;my_ic++){
+		    double E=Emap[my_ic][my_ir];
+		    if (E>0) Epeak+=E;
+		  }
+		}
+		// x and y will be filled in later
+		//cout << "ic " << ic << " ir " << ir << endl;
+		peak_candidates.push_back(PeakInfo(Epeak,0.,0.,ic,ir,0));
+		if (num_hits<=3*(peak_candidates.size()+1)) break;
+	      }
+	    }// cut on minimum energy of central block
+	  } // loop over rows
+	} // loop over columns
+      } // check that there are enough hits to justify looking for another peak
+	
       // Sort peak candidates by energy
       //cout << "---> Candidates:   "<< peak_candidates.size() << endl;
       if (peak_candidates.size()>0){
@@ -362,8 +407,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	PeakInfo myPeak=peak_candidates[i];
 
 	int lo_col=0,hi_col=0,lo_row=0,hi_row=0;
-	GetRowColRanges(num_rows,num_cols,myPeak.ir,myPeak.ic,lo_row,hi_row,
-			lo_col,hi_col);
+	GetRowColRanges(idiff,num_rows,num_cols,myPeak.ir,myPeak.ic,
+			lo_row,hi_row,lo_col,hi_col);
 	// Find the centroid for the peak candidate
 	double x=0.,y=0.;
 	for (int j=lo_col;j<=hi_col;j++){
@@ -399,7 +444,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  ndf_old=ndf;
 	  bool good_fit=FitPeaks(W,b,clusterHits,peaks,myPeak,chisq,ndf);
 	  //cout << "Main fits " << chisq/ndf << " " << chisq_old/ndf_old<<endl;
-	  if (good_fit && chisq/ndf<chisq_old/ndf_old){
+	  if (good_fit){// && chisq/ndf<chisq_old/ndf_old){
+	    if (peaks.size()>0) myPeak.status=1;
 	    peaks.push_back(myPeak);
 	  }
 	  else if (peaks.size()==0){
@@ -465,7 +511,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  int ir=clusterHits[mmax].row-min_row+1;
 	  double excessE=0.,x=0.,y=0.;
 	  int lo_col=0,hi_col=0,lo_row=0,hi_row=0;
-	  GetRowColRanges(num_rows,num_cols,ir,ic,lo_row,hi_row,lo_col,hi_col);
+	  int idiff=(clusterHits[mmax].row>=100)?1:2;
+	  GetRowColRanges(idiff,num_rows,num_cols,ir,ic,lo_row,hi_row,
+			  lo_col,hi_col);
 	  for (int j=lo_col;j<=hi_col;j++){
 	    for (int k=lo_row;k<=hi_row;k++){
 	      int index=imap[j][k];
@@ -478,7 +526,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  }
 	  x/=excessE;
 	  y/=excessE;
-	  PeakInfo myPeak(excessE,x,y,ic,ir);
+	  PeakInfo myPeak(excessE,x,y,ic,ir,2);
 
 	  // Save the current list of peaks
 	  vector<PeakInfo>saved_peaks=peaks;
@@ -515,74 +563,76 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 
     // Add the clusters to the output of the factory
     for (unsigned int k=0;k<npeaks;k++){
+      DFCALCluster *myCluster= new DFCALCluster(0);
+      myCluster->setStatus(peaks[k].status);
       // using the measured energy gives slightly better energy resolution
       double E=peak_fractions[k]*Esum;
-      //cout << "E " << E << " " << peaks[k].E << endl;
-      if (E>SHOWER_ENERGY_THRESHOLD){
-	DFCALCluster *myCluster= new DFCALCluster(0);
-	myCluster->setEnergy(E);
-	//myCluster->setEnergy(peaks[k].E);
-
-	// Compute energy-weighted time and find channel corresponding to 
-	// peak position and add hit ids to the cluster object
-	unsigned int jmax=0.;
-	double fsum=0.,fmax=0.,t=0.;
-	for (unsigned int j=0;j<clusterHits.size();j++){
-	  double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
-	  t+=f*clusterHits[j].t;
-	  fsum+=f;
-	  if (f>fmax){
-	    fmax=f;
-	    jmax=j;
-	  }
+      //cout << "E " << E << " " << peaks[k].E << " status " << peaks[k].status << endl;
+      myCluster->setEnergy(E);
+      //myCluster->setEnergy(peaks[k].E);
+      
+      // Compute energy-weighted time and find channel corresponding to 
+      // peak position and add hit ids to the cluster object
+      unsigned int jmax=0.;
+      double fsum=0.,fmax=0.,t=0.;
+      for (unsigned int j=0;j<clusterHits.size();j++){
+	double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
+	t+=f*clusterHits[j].t;
+	fsum+=f;
+	if (f>fmax){
+	  fmax=f;
+	  jmax=j;
 	}
-
-	myCluster->setTimeEWeight(t/fsum);
-	int channel=dFCALGeom->channel(clusterHits[jmax].row,
-				       clusterHits[jmax].column);
-	myCluster->setChannelEmax(channel);
-	
-	double xc=peaks[k].x,yc=peaks[k].y;
-	if (APPLY_S_CURVE_CORRECTION){
-	  double dx=clusterHits[jmax].x-xc;
-	  double dy=clusterHits[jmax].y-yc;
-	  if (clusterHits[jmax].row<100 && clusterHits[jmax].column<100){
-	    xc+=S_CURVE_PAR1*dx*(4.0157*4.0157/4-dx*dx)+S_CURVE_PAR2;  
-	    yc+=S_CURVE_PAR1*dy*(4.0157*4.0157/4-dy*dy)+S_CURVE_PAR2;
-	  }
-	  else{
-	    xc+=INSERT_S_CURVE_PAR1*dx*(2.05*2.05/4-dx*dx)+INSERT_S_CURVE_PAR2;  
-	    yc+=INSERT_S_CURVE_PAR1*dy*(2.05*2.05/4-dy*dy)+INSERT_S_CURVE_PAR2;
-	  }
-	}
-	myCluster->setCentroid(xc,yc);
-
-	// Add hit data to the cluster object
-	for (unsigned int j=0;j<clusterHits.size();j++){
-	  int channel=dFCALGeom->channel(clusterHits[j].row,
-					 clusterHits[j].column);
-	  if (npeaks==1){	  		     
-	    myCluster->addHit(channel,clusterHits[j].E,clusterHits[j].x,
-			      clusterHits[j].y,clusterHits[j].t);
-	  }
-	  else{
-	    // Output hits surrounding peak position
-	    double dx=clusterHits[j].x-clusterHits[jmax].x;
-	    double dy=clusterHits[j].y-clusterHits[jmax].y;
-	    double d=dFCALGeom->blockSize();
-	    if (dFCALGeom->inInsert(channel)){
-	      d=dFCALGeom->insertBlockSize();
-	    }
-	    double dcut=2.5*d;
-	    if (fabs(dx)<dcut && fabs(dy)<dcut){
-	      myCluster->addHit(channel,clusterHits[j].E,clusterHits[j].x,
-				clusterHits[j].y,clusterHits[j].t);
-	    }
-	  }
-	}
-	
-	_data.push_back(myCluster);
       }
+      
+      myCluster->setTimeEWeight(t/fsum);
+      int channel=dFCALGeom->channel(clusterHits[jmax].row,
+				     clusterHits[jmax].column);
+      myCluster->setChannelEmax(channel);
+      
+      double xc=peaks[k].x,yc=peaks[k].y;
+      if (APPLY_S_CURVE_CORRECTION){
+	double dx=clusterHits[jmax].x-xc;
+	double dy=clusterHits[jmax].y-yc;
+	if (clusterHits[jmax].row<100 && clusterHits[jmax].column<100){
+	  xc+=S_CURVE_PAR1*dx*(4.0157*4.0157/4-dx*dx)+S_CURVE_PAR2;  
+	  yc+=S_CURVE_PAR1*dy*(4.0157*4.0157/4-dy*dy)+S_CURVE_PAR2;
+	}
+	else{
+	  xc+=INSERT_S_CURVE_PAR1*dx*(2.05*2.05/4-dx*dx)+INSERT_S_CURVE_PAR2;  
+	  yc+=INSERT_S_CURVE_PAR1*dy*(2.05*2.05/4-dy*dy)+INSERT_S_CURVE_PAR2;
+	}
+      }
+      myCluster->setCentroid(xc,yc);
+      
+      // Add hit data to the cluster object
+      for (unsigned int j=0;j<clusterHits.size();j++){
+	int channel=dFCALGeom->channel(clusterHits[j].row,
+					 clusterHits[j].column);
+	//if (npeaks==1){	  		     
+	  myCluster->addHit(channel,clusterHits[j].E,clusterHits[j].x,
+			    clusterHits[j].y,clusterHits[j].t);
+	  /*
+      }
+	else{
+	  // Output hits surrounding peak position
+	  double dx=clusterHits[j].x-clusterHits[jmax].x;
+	  double dy=clusterHits[j].y-clusterHits[jmax].y;
+	  double d=dFCALGeom->blockSize();
+	  if (dFCALGeom->inInsert(channel)){
+	    d=dFCALGeom->insertBlockSize();
+	  }
+	  double dcut=2.5*d;
+	  if (fabs(dx)<dcut && fabs(dy)<dcut){
+	    myCluster->addHit(channel,clusterHits[j].E,
+			      clusterHits[j].x,clusterHits[j].y,
+			      clusterHits[j].t);
+	  }
+	}
+	  */
+      }
+      
+      _data.push_back(myCluster);
     }
   }
 
