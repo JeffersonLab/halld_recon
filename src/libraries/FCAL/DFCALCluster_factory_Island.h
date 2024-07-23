@@ -41,12 +41,13 @@ public:
 
   class PeakInfo{
   public:
-  PeakInfo(double E,double x,double y,int ic,int ir):E(E),x(x),y(y),ic(ic),ir(ir){}
+    PeakInfo(double E,double x,double y,int ic,int ir,int status):E(E),x(x),y(y),ic(ic),ir(ir),status(status){}
     double E;
     double x;
     double y;
     int ic;
     int ir;
+    int status;
   }; 
   
  private: 
@@ -67,20 +68,20 @@ public:
   void SplitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hits,
 		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
  
-  void GetRowColRanges(int nrows,int ncols,int ir,int ic,int &lo_row,
+  void GetRowColRanges(int idiff,int nrows,int ncols,int ir,int ic,int &lo_row,
 		       int &hi_row, int &lo_col,int &hi_col) const{
-    lo_col=ic-2;
+    lo_col=ic-idiff;
     if (lo_col<0) lo_col=0;
-    hi_col=ic+2;
+    hi_col=ic+idiff;
     if (hi_col>=ncols) hi_col=ncols-1;
-    lo_row=ir-2;
+    lo_row=ir-idiff;
     if (lo_row<0) lo_row=0;
-    hi_row=ir+2;
+    hi_row=ir+idiff;
     if (hi_row>=nrows) hi_row=nrows-1;
   }
 
 
-  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
+  double TIME_CUT,MIN_CLUSTER_SEED_ENERGY;
   double MIN_EXCESS_SEED_ENERGY;
   double SHOWER_WIDTH_PARAMETER,ENERGY_SHARING_CUTOFF;
   double INSERT_SHOWER_WIDTH_PAR0,INSERT_SHOWER_WIDTH_PAR1;
@@ -97,8 +98,8 @@ public:
   double S_CURVE_PAR1,S_CURVE_PAR2,INSERT_S_CURVE_PAR1,INSERT_S_CURVE_PAR2;
   
   const DFCALGeometry *dFCALGeom=NULL;
-  TH2D *HistdE;
-  TH1D *HistProb;
+  TH2D *HistdE=NULL;
+  TH1D *HistProb=NULL;
 };
 
 #endif // _DFCALCluster_factory_Island_
