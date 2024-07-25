@@ -330,6 +330,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       int lo_col=0,hi_col=0,lo_row=0,hi_row=0;
       // Maximum distance in row/column number from peak 
       int idiff=(min_row<100)?1:2;
+      idiff=1;
       GetRowColRanges(idiff,num_rows,num_cols,ir_max,ic_max,lo_row,
 		      hi_row,lo_col,hi_col);
       for (int my_ir=lo_row;my_ir<=hi_row;my_ir++){
@@ -432,7 +433,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// Guesses for peak position parameters
 	myPeak.x=x/myPeak.E;
 	myPeak.y=y/myPeak.E;
-
+	
 	if (myPeak.E>MIN_CLUSTER_SEED_ENERGY){
 	  // Save the current peak list
 	  vector<PeakInfo>saved_peaks=peaks;
@@ -509,9 +510,9 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  // Make a peak candidate out of the excess energy in the cluster of hits
 	  int ic=clusterHits[mmax].column-min_col+1;
 	  int ir=clusterHits[mmax].row-min_row+1;
-	  double excessE=0.,x=0.,y=0.;
+	  double excessE=0.;
 	  int lo_col=0,hi_col=0,lo_row=0,hi_row=0;
-	  int idiff=(clusterHits[mmax].row>=100)?1:2;
+	  int idiff=3;
 	  GetRowColRanges(idiff,num_rows,num_cols,ir,ic,lo_row,hi_row,
 			  lo_col,hi_col);
 	  for (int j=lo_col;j<=hi_col;j++){
@@ -519,13 +520,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      int index=imap[j][k];
 	      if (Elist[index]>0){
 		excessE+=Elist[index];
-		x+=Elist[index]*clusterHits[index].x;
-		y+=Elist[index]*clusterHits[index].y;
 	      }
 	    }
 	  }
-	  x/=excessE;
-	  y/=excessE;
+	  double x=clusterHits[mmax].x;
+	  double y=clusterHits[mmax].y;
 	  PeakInfo myPeak(excessE,x,y,ic,ir,2);
 
 	  // Save the current list of peaks
