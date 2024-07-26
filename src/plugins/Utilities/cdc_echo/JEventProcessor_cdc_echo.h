@@ -29,11 +29,10 @@ class JEventProcessor_cdc_echo:public jana::JEventProcessor{
 
 
                 TH1I *counts = NULL;
-
-                int EMU; // set to 1 to run emulation if window raw data is present
-                int FDC; // set to 0 to skip FDC data
-
-		
+                TH2I *amp_t = NULL;
+                TH2I *amp_tt = NULL;
+ 
+  		
   //  unsigned int ECHO_ORIGIN; // threshold to consider large pulses as possibly causing afterpulses (adc range 0-4095), "511" would be 4088
   unsigned int ECHO_A; // do not suppress possible afterpulses larger than this (adc range 0-4095)
   unsigned int ECHO_DT;  // search up to this many samples after the main pulse for afterpulses

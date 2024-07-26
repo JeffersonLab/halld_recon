@@ -66,7 +66,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 2) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 554, 503, 377, 388, 345, 345}; // 99.7%
+    unsigned int slant_array[8] = {0, 0, 437, 367, 299, 313, 290, 272 }; // 98%  all integrals
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -75,7 +75,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 3) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 375, 306, 239, 242, 234, 234}; // 95th
+    unsigned int slant_array[8] = {0, 0, 387, 311, 266, 275, 257, 243}; // 98th unsaturated int
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
@@ -84,8 +84,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 4) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 327, 265, 212, 215, 210, 210};// 90th
-
+    unsigned int slant_array[8] = {0, 0, 491, 423, 343, 364, 332, 306}; // 99th all integral
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
     }
@@ -102,8 +101,9 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 6) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 375, 306, 239, 242, 234, 234}; // 95th
-
+   
+    unsigned int slant_array[8] = {0, 0, 387, 311, 266, 275, 257, 243}; // 98th unsaturated int
+    
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
     }
@@ -111,7 +111,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   } else if (ECHO_OPT == 7) {  // threshold decreases w dt
     
     // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 327, 265, 212, 215, 210, 210};// 90th
+    unsigned int slant_array[8] = {0, 0, 439, 358, 304, 317, 292, 272}; // 99% unsaturated integral
 
     for (unsigned int i=0; i<=echo_end_search; i++) {
         echo_cut[i] = slant_array[i];
