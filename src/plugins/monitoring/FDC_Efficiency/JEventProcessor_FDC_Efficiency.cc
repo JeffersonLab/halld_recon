@@ -310,9 +310,9 @@ void JEventProcessor_FDC_Efficiency::Process(const std::shared_ptr<const JEvent>
     for (unsigned int i = 0; i < pulls.size(); i++){
       const DFDCPseudo * thisTrackFDCHit = pulls[i].fdc_hit;
       if (thisTrackFDCHit != NULL){
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	lockService->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	hPullTime[thisTrackFDCHit->wire->layer]->Fill(pulls[i].tdrift);
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	lockService->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
 	if ( find(cellsHit.begin(), cellsHit.end(), thisTrackFDCHit->wire->layer) == cellsHit.end())
 	  cellsHit.push_back(thisTrackFDCHit->wire->layer);
       }
