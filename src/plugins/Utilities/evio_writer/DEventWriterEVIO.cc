@@ -205,7 +205,7 @@ bool DEventWriterEVIO::Write_EVIOEvent(const std::shared_ptr<const JEvent>& locE
 		//check to see if the EVIO file is open
 		if(Get_EVIOOutputters().find(locOutputFileName) == Get_EVIOOutputters().end()) {
 			//not open, open it
-		  if(!Open_OutputFile(locEventLoop, locOutputFileName)){
+		  if(!Open_OutputFile(locEvent, locOutputFileName)){
 		    lockService->Unlock("EVIOWriter"); // release lock
 		    return false; //failed to open
 		  }
