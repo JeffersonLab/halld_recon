@@ -442,7 +442,7 @@ void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEve
         double Jphi = atan2(JTy, JTx)*180/acos(-1);
 	double MLPClassifierMinus=cppepem->pimem_ML_classifier;
   	double MLPClassifierPlus=cppepem->pipep_ML_classifier;
-	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	hpimem_ML_classifier->Fill(MLPClassifierMinus);
 	hpipep_ML_classifier->Fill(MLPClassifierPlus);
 	if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
@@ -486,7 +486,7 @@ void JEventProcessor_FMWPC_Performance::Process(const std::shared_ptr<const JEve
 	    hCosTheta_mumu->Fill(CosTheta,weight);
 	    hCosTheta_vs_psi_mumu->Fill(psi*TMath::RadToDeg(), CosTheta);
 	  }
-	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	DEvent::GetLockService(event)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   }
   
   
