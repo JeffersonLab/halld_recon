@@ -13,7 +13,10 @@
 #include "TRIGGER/DTrigger.h"
 #include "PID/DVertex.h"
 
-#include "TRACKING/DTrackTimeBased.h"
+#include <TRACKING/DTrackTimeBased.h>
+#include <PID/DChargedTrackHypothesis.h>
+#include <PID/DChargedTrack.h>
+#include <TRACKING/DTrackFitter.h>
 
 #include <vector>
 
