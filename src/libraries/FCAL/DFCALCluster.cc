@@ -39,6 +39,7 @@ DFCALCluster::DFCALCluster( const int nhits )
       fEallowed = 0;
       fEexpected = 0;
    }
+   fHitList.clear();
 }
 
 DFCALCluster::~DFCALCluster()
@@ -51,6 +52,7 @@ DFCALCluster::~DFCALCluster()
       delete [] fEallowed;
    if (fEexpected)
       delete [] fEexpected;
+   fHitList.clear();
 }
 
 
@@ -65,7 +67,7 @@ void DFCALCluster::saveHits( vector<userhit_t>& hitList )
 }
 
 void DFCALCluster::addHit(int ch,double E,double x,double y,double t){
-  my_hits.push_back(DFCALClusterHit_t(ch,E,x,y,t));
+  fHitList.push_back(DFCALClusterHit_t(ch,E,x,y,t));
 }
 
 int DFCALCluster::addHit(const int ihit, const double frac)

@@ -87,8 +87,8 @@ public:
   void addHit(int ch,double E,double x,double y,double t);
   
   // get hits that form a cluster after clustering is finished
-  inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
-  inline uint32_t GetNHits(void) const { return my_hits.size(); }
+  inline const vector<DFCALClusterHit_t> GetHits() const { return fHitList; }
+  inline uint32_t GetNHits(void) const { return fHitList.size(); }
   
   void toStrings(vector<pair<string,string> > &items) const {
     AddString(items, "x(cm)", "%3.1f", getCentroid().x());
@@ -128,7 +128,7 @@ private:
   int fStatus=0; // Status word: 0 = main peak found; 1 = second peak found; 2 = split found    
   
   // container for hits that form a cluster to be used after clustering is done
-  vector<DFCALClusterHit_t> my_hits; 
+  vector<DFCALClusterHit_t> fHitList; 
 };
 
 inline double DFCALCluster::getEexpected(const int ihit) const
