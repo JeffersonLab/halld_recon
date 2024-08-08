@@ -151,6 +151,15 @@
           <trackID minOccurs="0" itrack="int"/>
         </fcalTruthShower>
       </forwardEMcal>
+      <CrystalEcal minOccurs="0">
+        <ecalBlock column="int" maxOccurs="unbounded" minOccurs="0" row="int">
+          <ecalHit E="float" maxOccurs="unbounded" t="float"/>
+          <ecalTruthHit E="float" maxOccurs="unbounded" t="float"/>
+        </ecalBlock>
+        <ecalTruthShower E="float" maxOccurs="unbounded" minOccurs="0" primary="boolean" ptype="int" px="float" py="float" pz="float" t="float" track="int" x="float" y="float" z="float">
+          <trackID minOccurs="0" itrack="int"/>
+        </ecalTruthShower>
+      </CrystalEcal>
       <ComptonEMcal minOccurs="0">
         <ccalBlock column="int" maxOccurs="unbounded" minOccurs="0" row="int">
           <ccalHit E="float" maxOccurs="unbounded" t="float"/>
@@ -160,6 +169,8 @@
           <trackID minOccurs="0" itrack="int"/>
         </ccalTruthShower>
       </ComptonEMcal>
+
+
       <upstreamEMveto minOccurs="0">
         <upvPaddle layer="int" maxOccurs="unbounded" minOccurs="0" row="int">
           <!-- upv hits are either north / beam-left (end=0) or south / beam-right (end=1)-->
