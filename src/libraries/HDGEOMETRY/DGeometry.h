@@ -163,6 +163,8 @@ class DGeometry{
       bool GetBCALDepth(float &bcal_depth) const; ///< depth (or height) of BCAL module in cm
       bool GetBCALPhiShift(float &bcal_phi_shift) const; ///< phi angle in degrees that first BCAL module is shifted from being centered at ph=0.0
 
+      bool GetECALZ(double &z_ecal) const; /// z-location of front face of CCAL in cm
+
       bool GetCCALZ(double &z_ccal) const; /// z-location of front face of CCAL in cm
 
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
@@ -185,6 +187,7 @@ class DGeometry{
       bool GetTRDZ(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm
       
       bool GetFCALPosition(double &x,double &y,double &z) const;
+      bool GetECALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
       bool GetFCALInsertRowSize(int &insert_row_size) const;
