@@ -305,6 +305,8 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
   vector<const DChargedTrack *> chargedTrackVector;
   loop->Get(chargedTrackVector);
 
+  japp->RootWriteLock();   //ACQUIRE ROOT LOCK!!
+
   for (size_t i = 0; i < chargedTrackVector.size(); i++) {
     // TODO: Should be changed to use PID FOM when ready
     const DChargedTrackHypothesis *bestHypothesis =
@@ -329,13 +331,13 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     double pmag = bestHypothesis->momentum().Mag();
 
     if (pmag < 0.5) continue;
-
+    
     // Fill some track information
     hTrackingFOM->Fill(trackingFOM);
     hTrack_PVsTheta->Fill(theta, pmag);
     hTrack_PhiVsTheta->Fill(theta, phi);
     hTrack_PVsPhi->Fill(phi, pmag);
-    
+
     // Get the pulls vector from the track
     auto track = bestHypothesis->Get_TrackTimeBased();
 
@@ -605,6 +607,9 @@ jerror_t JEventProcessor_TrackingPulls::evnt(JEventLoop *loop,
     if (MAKE_TREE)
       dTreeInterface->Fill(dTreeFillData);
   }
+
+  japp->RootUnLock();   //RELEASE ROOT LOCK!!
+     
 
   return NOERROR;
 }
