@@ -9,7 +9,7 @@ Import('env osname')
 subdirs = ['include', 'BCAL', 'FCAL', 'DANA', 'TAGGER', 'HDGEOMETRY', 'TRACKING']
 subdirs.extend(['CCAL', 'START_COUNTER', 'RF', 'TRIGGER', 'CDC', 'FDC', 'PID', 'KINFITTER', 'ANALYSIS'])
 subdirs.extend(['CERE', 'DIRC', 'HDDM', 'TOF', 'PAIR_SPECTROMETER', 'TPOL', 'FMWPC', 'TAC', 'TRD'])
-subdirs.extend(['DAQ', 'TTAB', 'EVENTSTORE'])
+subdirs.extend(['DAQ', 'TTAB', 'EVENTSTORE', 'ECAL'])
 
 
 SConscript(dirs=subdirs, exports='env osname', duplicate=0)

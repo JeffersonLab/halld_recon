@@ -26,6 +26,8 @@ enum DetectorSystem_t{
      SYS_DIRC       = 0x0200,
      SYS_CCAL       = 0x0400,
      SYS_CCAL_REF   = 0x0500,
+     SYS_ECAL       = 0x0600,
+     SYS_ECAL_REF   = 0x0700,
      SYS_TAGH       = 0x0800,
      SYS_RF         = 0x1000,
      SYS_PS         = 0x2000,
