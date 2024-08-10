@@ -1,12 +1,9 @@
 // $Id$
 //
-//    File: DChargedTrackHypothesis_factory.cc
-// Created: Tue Aug  9 14:29:24 EST 2011
-// Creator: pmatt (on Linux ifarml6 2.6.18-128.el5 x86_64)
+//    File: DChargedTrackHypothesis_factory_KLVertex.cc
 //
 
-#include "DChargedTrackHypothesis_factory.h"
-#include "PID/DBeamKLong.h"
+#include "DChargedTrackHypothesis_factory_KLVertex.h"
 
 inline bool DChargedTrackHypothesis_SortByEnergy(const DChargedTrackHypothesis* locChargedTrackHypothesis1, const DChargedTrackHypothesis* locChargedTrackHypothesis2)
 {
@@ -28,14 +25,14 @@ inline bool DChargedTrackHypothesis_SortByEnergy(const DChargedTrackHypothesis* 
 //------------------
 // init
 //------------------
-jerror_t DChargedTrackHypothesis_factory::init(void)
+jerror_t DChargedTrackHypothesis_factory_KLVertex::init(void)
 {
 	//Setting this flag makes it so that JANA does not delete the objects in _data.  This factory will manage this memory. 
-	SetFactoryFlag(NOT_OBJECT_OWNER);
-	dResourcePool_ChargedTrackHypothesis = new DResourcePool<DChargedTrackHypothesis>();
-	dResourcePool_ChargedTrackHypothesis->Set_ControlParams(30, 20, 200, 2000, 0);
-	dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
-	dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
+// 	SetFactoryFlag(NOT_OBJECT_OWNER);
+// 	dResourcePool_ChargedTrackHypothesis = new DResourcePool<DChargedTrackHypothesis>();
+// 	dResourcePool_ChargedTrackHypothesis->Set_ControlParams(30, 20, 200, 2000, 0);
+// 	dResourcePool_TMatrixFSym = std::make_shared<DResourcePool<TMatrixFSym>>();
+// 	dResourcePool_TMatrixFSym->Set_ControlParams(20, 20, 50);
 
 	CDC_CORRECT_DEDX_THETA = true;
 	gPARMS->SetDefaultParameter("PID:CDC_CORRECT_DEDX_THETA",CDC_CORRECT_DEDX_THETA);
@@ -46,7 +43,7 @@ jerror_t DChargedTrackHypothesis_factory::init(void)
 //------------------
 // brun
 //------------------
-jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
+jerror_t DChargedTrackHypothesis_factory_KLVertex::brun(jana::JEventLoop *locEventLoop, int32_t runnumber)
 {
 	locEventLoop->GetSingle(dPIDAlgorithm);
 
@@ -185,20 +182,20 @@ jerror_t DChargedTrackHypothesis_factory::brun(jana::JEventLoop *locEventLoop, i
 //------------------
 // evnt
 //------------------
-jerror_t DChargedTrackHypothesis_factory::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
+jerror_t DChargedTrackHypothesis_factory_KLVertex::evnt(jana::JEventLoop* locEventLoop, uint64_t eventnumber)
 {
 	//Recycle
-	dResourcePool_ChargedTrackHypothesis->Recycle(dCreated);
-	dCreated.clear();
+// 	dResourcePool_ChargedTrackHypothesis->Recycle(dCreated);
+// 	dCreated.clear();
 	_data.clear();
 
  	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
 	locEventLoop->Get(locTrackTimeBasedVector);
 
-	vector<const DEventRFBunch*> locEventRFBunches;
-	locEventLoop->Get(locEventRFBunches);
-	if (locEventRFBunches.size() == 0)
-	   return NOERROR;
+// 	vector<const DEventRFBunch*> locEventRFBunches;
+// 	locEventLoop->Get(locEventRFBunches);
+// 	if (locEventRFBunches.size() == 0)
+// 	   return NOERROR;
 
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches);
@@ -206,7 +203,7 @@ jerror_t DChargedTrackHypothesis_factory::evnt(jana::JEventLoop* locEventLoop, u
 	map<JObject::oid_t, vector<DChargedTrackHypothesis*> > locChargedTrackHypotheses;
 	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); loc_i++)
 	{
-		DChargedTrackHypothesis* locChargedTrackHypothesis = Create_ChargedTrackHypothesis(locEventLoop, locTrackTimeBasedVector[loc_i], locDetectorMatches, locEventRFBunches[0]);
+		DChargedTrackHypothesis* locChargedTrackHypothesis = Create_ChargedTrackHypothesis(locEventLoop, locTrackTimeBasedVector[loc_i], locDetectorMatches);
 		locChargedTrackHypotheses[locChargedTrackHypothesis->Get_TrackTimeBased()->candidateid].push_back(locChargedTrackHypothesis);
 	}
 
@@ -228,31 +225,27 @@ jerror_t DChargedTrackHypothesis_factory::evnt(jana::JEventLoop* locEventLoop, u
 	return NOERROR;
 }
 
-DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHypothesis(JEventLoop* locEventLoop, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches, const DEventRFBunch* locEventRFBunch)
+DChargedTrackHypothesis* DChargedTrackHypothesis_factory_KLVertex::Create_ChargedTrackHypothesis(JEventLoop* locEventLoop, const DTrackTimeBased* locTrackTimeBased, const DDetectorMatches* locDetectorMatches)
 {
-	DChargedTrackHypothesis* locChargedTrackHypothesis = Get_Resource();
+	DChargedTrackHypothesis* locChargedTrackHypothesis = new DChargedTrackHypothesis();
+	//DChargedTrackHypothesis* locChargedTrackHypothesis = Get_Resource();
 	locChargedTrackHypothesis->Share_FromInput_Kinematics(static_cast<const DKinematicData*>(locTrackTimeBased));
 	locChargedTrackHypothesis->Set_TrackTimeBased(locTrackTimeBased);
 
-	auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+	//auto locCovarianceMatrix = dResourcePool_TMatrixFSym->Get_SharedResource();
+	shared_ptr<TMatrixFSym> locCovarianceMatrix = std::make_shared<TMatrixFSym>();
 	locCovarianceMatrix->ResizeTo(7, 7);
 	if(locChargedTrackHypothesis->errorMatrix() != nullptr)
 		*locCovarianceMatrix = *(locChargedTrackHypothesis->errorMatrix());
 
-	// RF Time
+/*
+	// RF Time - don't do this right now!  need to figure things out for vertexing in the first place
 	if(locEventRFBunch->dTimeSource != SYS_NULL)
 	{
-		double locBeamVelocity = SPEED_OF_LIGHT;
-		vector<const DBeamKLong *> locBeamKLongs;
-		locEventLoop->Get(locBeamKLongs);
-		if(locBeamKLongs.size() > 0) {
-			locBeamVelocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
-		}
-
-		double locPropagatedRFTime = dPIDAlgorithm->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch, locBeamVelocity);
+		double locPropagatedRFTime = dPIDAlgorithm->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch);
 		locChargedTrackHypothesis->Set_T0(locPropagatedRFTime, locEventRFBunch->dTimeVariance, locEventRFBunch->dTimeSource);
 	}
-
+*/
 	// Start Counter
 	shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
 	if(dPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased, locDetectorMatches, locSCHitMatchParams))
@@ -268,8 +261,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 //		Add_TimeToTrackingMatrix(locChargedTrackHypothesis, locCovarianceMatrix, locSCHitMatchParams->dFlightTimeVariance, locSCHitMatchParams->dHitTimeVariance, locFlightTimePCorrelation); //uncomment when ready!!
 		(*locCovarianceMatrix)(6, 6) = 0.3*0.3+locSCHitMatchParams->dFlightTimeVariance;
 
-		if(locEventRFBunch->dTimeSource == SYS_NULL)
-			locChargedTrackHypothesis->Set_T0(locPropagatedTime, locPropagatedTimeUncertainty, SYS_START); //update when ready
+		locChargedTrackHypothesis->Set_T0(locPropagatedTime, locPropagatedTimeUncertainty, SYS_START); //update when ready
 	}
 
 	// MATCHES
@@ -277,8 +269,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
 	shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
 	shared_ptr<const DFCALSingleHitMatchParams> locFCALSingleHitMatchParams;
-	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;	
-	shared_ptr<const DCTOFHitMatchParams> locCTOFHitMatchParams;
+	shared_ptr<const DDIRCMatchParams> locDIRCMatchParams;
 	if(dPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased, locDetectorMatches, locBCALShowerMatchParams))
 		locChargedTrackHypothesis->Set_BCALShowerMatchParams(locBCALShowerMatchParams);
 	if(dPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased, locDetectorMatches, locTOFHitMatchParams))
@@ -289,14 +280,6 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 		locChargedTrackHypothesis->Set_FCALSingleHitMatchParams(locFCALSingleHitMatchParams);
 	if(dPIDAlgorithm->Get_DIRCMatchParams(locTrackTimeBased, locDetectorMatches, locDIRCMatchParams))
 		locChargedTrackHypothesis->Set_DIRCMatchParams(locDIRCMatchParams);
-	if(dPIDAlgorithm->Get_BestCTOFMatchParams(locTrackTimeBased, locDetectorMatches, locCTOFHitMatchParams))
-	  locChargedTrackHypothesis->Set_CTOFHitMatchParams(locCTOFHitMatchParams);
-	// Matching to CPP wire chambers
-	vector<shared_ptr<const DFMWPCMatchParams> > locFMWPCMatchParamsVec;
-	if (locDetectorMatches->Get_FMWPCMatchParams(locTrackTimeBased,
-						     locFMWPCMatchParamsVec)){
-	  locChargedTrackHypothesis->Set_FMWPCMatchParams(locFMWPCMatchParamsVec[0]);
-	}
 
 	//PID
 	if(locChargedTrackHypothesis->t1_detector() == SYS_BCAL)
@@ -357,7 +340,7 @@ DChargedTrackHypothesis* DChargedTrackHypothesis_factory::Create_ChargedTrackHyp
 	return locChargedTrackHypothesis;
 }
 
-void DChargedTrackHypothesis_factory::Add_TimeToTrackingMatrix(DChargedTrackHypothesis* locChargedTrackHypothesis, TMatrixFSym* locCovarianceMatrix, double locFlightTimeVariance, double locHitTimeVariance, double locFlightTimePCorrelation) const
+void DChargedTrackHypothesis_factory_KLVertex::Add_TimeToTrackingMatrix(DChargedTrackHypothesis* locChargedTrackHypothesis, TMatrixFSym* locCovarianceMatrix, double locFlightTimeVariance, double locHitTimeVariance, double locFlightTimePCorrelation) const
 {
 	DVector3 locMomentum = locChargedTrackHypothesis->momentum();
 
@@ -452,7 +435,7 @@ void DChargedTrackHypothesis_factory::Add_TimeToTrackingMatrix(DChargedTrackHypo
 	(*locCovarianceMatrix)(6, 6) = locCov_PxPyPzT(3, 3);
 }
 
-double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, double thisdedx){
+double DChargedTrackHypothesis_factory_KLVertex::Correct_CDC_dEdx_amp(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
 
   thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm
@@ -533,7 +516,7 @@ double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_amp(double theta_deg, d
   return dedxcf;
 }
 
-double DChargedTrackHypothesis_factory::Correct_CDC_dEdx_int(double theta_deg, double thisdedx){
+double DChargedTrackHypothesis_factory_KLVertex::Correct_CDC_dEdx_int(double theta_deg, double thisdedx){
   int thetabin1, thetabin2, dedxbin1, dedxbin2;
 
   thisdedx *= 1.0e6;  // correction tables use degrees and keV/cm

@@ -315,6 +315,11 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	VT_TRACER("DAnalysisResults_factory::evnt()");
 #endif
 
+
+	// HACK
+	if(eventnumber == 0)
+		return NOERROR;
+
 	if(dDebugLevel > 0)
 		cout << "Analyze event: " << eventnumber << endl;
 
@@ -325,7 +330,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 	int locStartIndex = 0;
 	double locTrueBeamE = -1.;   // we want to fill some MC histograms as a function of beam energy, for trigger studies
 
-	if(dIsMCFlag) {
+	if(dIsMCFlag) {   // CHANGE
 		const DBeamPhoton *locBeamPhoton = nullptr;
 		locEventLoop->GetSingle(locBeamPhoton, "MCGEN");
 		if(locBeamPhoton != nullptr) 

@@ -363,7 +363,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 			locObjString_Position = new TObjString(locPositionStream.str().c_str());
 
 			locPositionToPIDMap->Add(locObjString_Position, locObjString_PID);
-			if((loc_i == 0) && ((locPID == Gamma) || (locPID == Electron) || (locPID == Positron)))
+			if((loc_i == 0) && ((locPID == Gamma) || (locPID == Electron) || (locPID == Positron) || (locPID == KLong)))
 			{
 				locParticleNameStream << "ComboBeam";
 				locObjString_ParticleName = new TObjString(locParticleNameStream.str().c_str());

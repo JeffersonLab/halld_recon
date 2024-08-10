@@ -1,8 +1,6 @@
 // $Id$
 //
 //    File: DVertex_KLong_factory.cc
-// Created: Tue Apr  6 17:01:54 EDT 2010
-// Creator: davidl (on Darwin Amelia.local 9.8.0 i386)
 //
 
 #include "DVertex_KLong_factory.h"
@@ -34,8 +32,8 @@ jerror_t DVertex_KLong_factory::brun(jana::JEventLoop* locEventLoop, int32_t run
 
 	// Get Target parameters from XML
 	dTargetZCenter = 65.0;
-	dTargetLength = 30.0;
-	dTargetRadius = 1.5; //FIX: grab from database!!!
+	dTargetLength = 35.0;
+	dTargetRadius = 3.0; //FIX: grab from database!!!
 	m_beamSpotX = 0;
 	m_beamSpotY = 0;
 	DApplication* locApplication = dynamic_cast<DApplication*>(locEventLoop->GetJApplication());
@@ -75,19 +73,24 @@ jerror_t DVertex_KLong_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 		//if no good tracks (or none with matched hits), use all tracks
 		//if no tracks, use target center
 
-// 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
-// 	locEventLoop->Get(locTrackTimeBasedVector);
+ 	vector<const DTrackTimeBased*> locTrackTimeBasedVector;
+ 	locEventLoop->Get(locTrackTimeBasedVector);
 
-	vector<const DChargedTrack*> locChargedTrackVector;
-	locEventLoop->Get(locChargedTrackVector);
+// 	vector<const DChargedTrack*> locChargedTrackVector;
+// 	locEventLoop->Get(locChargedTrackVector, "KLVertex");
+	//locEventLoop->Get(locChargedTrackVector);
 
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches);
+
+	const DParticleID* locParticleID = NULL;
+	locEventLoop->GetSingle(locParticleID);
 
 	// give option for just using the target center, e.g. if the magnetic
 	// field is off and/or tracking is otherwise not working well
 	if(dForceTargetCenter)
 		return Create_Vertex_NoTracks();
+
 
 // 	select the best DTrackTimeBased for each track: use best tracking FOM
 // 	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
@@ -99,7 +102,7 @@ jerror_t DVertex_KLong_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 // 		else if(locTrackTimeBasedVector[loc_i]->FOM > locBestTrackTimeBasedMap[locCandidateID]->FOM)
 // 			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
 // 	}
-
+/**
 	//separate the tracks based on high/low tracking FOM & has hit-match
 	//map<JObject::oid_t, const DTrackTimeBased*>::iterator locIterator;
 	vector<const DTrackTimeBased*> locTrackTimeBasedVector_OnePerTrack, locTrackTimeBasedVector_OnePerTrack_Good;
@@ -119,6 +122,42 @@ jerror_t DVertex_KLong_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 			locKinematicDataVector_OnePerTrack_Good.push_back(locChargedTrackHypothesis);
 		}
 	}
+**/
+
+	//select the best DTrackTimeBased for each track: use best tracking FOM
+	map<JObject::oid_t, const DTrackTimeBased*> locBestTrackTimeBasedMap; //lowest tracking chisq/ndf for each candidate id
+	for(size_t loc_i = 0; loc_i < locTrackTimeBasedVector.size(); ++loc_i)
+	{
+		JObject::oid_t locCandidateID = locTrackTimeBasedVector[loc_i]->candidateid;
+		if(locBestTrackTimeBasedMap.find(locCandidateID) == locBestTrackTimeBasedMap.end())
+			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
+		else if(locTrackTimeBasedVector[loc_i]->FOM > locBestTrackTimeBasedMap[locCandidateID]->FOM)
+			locBestTrackTimeBasedMap[locCandidateID] = locTrackTimeBasedVector[loc_i];
+	}
+
+	//separate the tracks based on high/low tracking FOM & has hit-match
+	map<JObject::oid_t, const DTrackTimeBased*>::iterator locIterator;
+	vector<const DTrackTimeBased*> locTrackTimeBasedVector_OnePerTrack, locTrackTimeBasedVector_OnePerTrack_Good;
+	vector<const DKinematicData*> locKinematicDataVector_OnePerTrack, locKinematicDataVector_OnePerTrack_Good;
+ 	vector< shared_ptr<DTrackTimeBased> > locTrackTimeBasedVector_Saved;    // memory management
+	for(locIterator = locBestTrackTimeBasedMap.begin(); locIterator != locBestTrackTimeBasedMap.end(); ++locIterator)
+	{
+		//DTrackTimeBased* locTrackTimeBased = new DTrackTimeBased(*locIterator->second);
+		shared_ptr<DTrackTimeBased> locTrackTimeBased(new DTrackTimeBased(*locIterator->second));
+		locTrackTimeBased->setErrorMatrix(locIterator->second->errorMatrix());
+		locTrackTimeBasedVector_Saved.push_back(locTrackTimeBased);
+		
+		// dislike the use of locIterator->second
+		Set_TrackTime(locEventLoop, locTrackTimeBased.get(), locIterator->second, locDetectorMatches, locParticleID);
+		
+		locTrackTimeBasedVector_OnePerTrack.push_back(const_cast<DTrackTimeBased*>(locTrackTimeBased.get()));
+		locKinematicDataVector_OnePerTrack.push_back(const_cast<DKinematicData*>(static_cast<DKinematicData*>(locTrackTimeBased.get())));
+		if((locTrackTimeBased->FOM >= dMinTrackingFOM) && locDetectorMatches->Get_IsMatchedToHit(locTrackTimeBased.get())) {
+			locTrackTimeBasedVector_OnePerTrack_Good.push_back(locTrackTimeBased.get());
+			locKinematicDataVector_OnePerTrack_Good.push_back(locTrackTimeBased.get());
+		}
+	}
+
 
 	vector<const DTrackTimeBased*> locTrackTimeBasedVectorToUse = (locTrackTimeBasedVector_OnePerTrack_Good.size() >= 2) ? locTrackTimeBasedVector_OnePerTrack_Good : locTrackTimeBasedVector_OnePerTrack;
 	vector<const DKinematicData*> locKinematicDataVectorToUse = (locKinematicDataVector_OnePerTrack_Good.size() >= 2) ? locKinematicDataVector_OnePerTrack : locKinematicDataVector_OnePerTrack;
@@ -131,11 +170,18 @@ jerror_t DVertex_KLong_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 
 	// first calculate a rough vertex
 	DVector3 locRoughPosition = dAnalysisUtilities->Calc_CrudeVertex(locTrackTimeBasedVectorToUse);
+	
+// 	cout << " rough position = " << locRoughPosition.x() << "  " << locRoughPosition.y() << "  " << locRoughPosition.z() << endl;
+// 	cout << " crude time = " << dAnalysisUtilities->Calc_CrudeTime(locKinematicDataVectorToUse, const_cast<DVector3&>(locRoughPosition)) << endl;
+// 	cout << " crude weighted time = " << dAnalysisUtilities->Calc_CrudeWeightedTime(locKinematicDataVectorToUse, const_cast<DVector3&>(locRoughPosition)) << endl;
+	
 	double locRoughTime = 0.;
+	// can't use weighted average until we propagate the variances...
 	if(dUseWeightedAverage)
 		locRoughTime = dAnalysisUtilities->Calc_CrudeWeightedTime(locKinematicDataVectorToUse, const_cast<DVector3&>(locRoughPosition));
 	else
 		locRoughTime = dAnalysisUtilities->Calc_CrudeTime(locKinematicDataVectorToUse, const_cast<DVector3&>(locRoughPosition));
+//	double locRoughTime = dAnalysisUtilities->Calc_CrudeTime(locKinematicDataVectorToUse, const_cast<DVector3&>(locRoughPosition));
 
 	// if only want rough guess, save it and exit
 	if(dNoKinematicFitFlag || (locTrackTimeBasedVectorToUse[0]->errorMatrix() == nullptr))
@@ -156,11 +202,114 @@ jerror_t DVertex_KLong_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnum
 	dKinFitter->Add_Constraint(locVertexConstraint);
 
 	// fit, save, and return
-	if(!dKinFitter->Fit_Reaction()) //if fit fails to converge: use rough results
+	if(!dKinFitter->Fit_Reaction()) { //if fit fails to converge: use rough results
+// 		cout << "Using rough vertex" << endl;
 		return Create_Vertex_Rough(locRoughPosition, locRoughTime);
+	}
 
+// 	cout << "Using good vertex" << endl;
 	//save kinfit results
 	return Create_Vertex_KinFit(locKinematicDataVectorToUse);
+}
+
+
+// double DVertex_KLong_factory::Calc_CrudeVertexTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const
+// {
+// // 	//first crudely estimate the beam velocity
+// //     // distance between KPT and dTargetCenterZ is assumed to be 24 m
+// // 	const double c = 29.9792458;
+// //     double KL_distance = ( locCommonVertex - dTargetCenterZ ) + ( 24. * 100. );
+// // 	double KL_propagation_time = 0.;
+// // 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
+// // 		KL_propagation_time
+// //     double beta = (KL_distance / KL_propagation_time) / c;
+// //     
+// //     if(beta > 1.)  // don't break special relativity
+// //     	beta = 1;
+// 
+// 	//crudely propagate the track times to the common vertex and return the average track time
+// 	DVector3 locPOCA;
+// 	DVector3 locDeltaVertex;
+// 	double locAverageTime = 0.0;
+// 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
+// 	{
+// 		double locTime = 0.0;
+// 		double locE = locParticles[loc_i]->Get_ShowerEnergy();
+// 		if((locParticles[loc_i]->Get_Charge() == 0) && (locE > 0.0))
+// 		{
+// 			double locMass = locParticles[loc_i]->Get_Mass();
+// 			double locPMag = sqrt(locE*locE - locMass*locMass);
+// 			DVector3 locPosition = locParticles[loc_i]->Get_Position();
+// 			DVector3 locDPosition(locPosition.X(), locPosition.Y(), locPosition.Z());
+// 			DVector3 locDeltaVertex = locDPosition - locCommonVertex;
+// 			locTime = locParticles[loc_i]->Get_Time() + locDeltaVertex.Mag()*locE/(beta*29.9792458*locPMag);
+// 		}
+// 		else
+// 		{
+// 			Calc_DOCAToVertex(locParticles[loc_i], locCommonVertex, locPOCA);
+// 			locDeltaVertex = locPOCA - DVector3(locParticles[loc_i]->Get_Position().X(),locParticles[loc_i]->Get_Position().Y(),locParticles[loc_i]->Get_Position().Z());
+// 			DVector3 locMomentum(locParticles[loc_i]->Get_Momentum().X(),locParticles[loc_i]->Get_Momentum().Y(),locParticles[loc_i]->Get_Momentum().Z());
+// 			locTime = locParticles[loc_i]->Get_Time() + locDeltaVertex.Dot(locMomentum)*locParticles[loc_i]->Get_Energy()/(beta*29.9792458*locMomentum.Mag2());
+// 		}
+// 		locAverageTime += locTime;
+// 	}
+// 	return locAverageTime/(double(locParticles.size()));
+// }
+
+void DVertex_KLong_factory::Set_TrackTime(JEventLoop* locEventLoop, DTrackTimeBased* locTrackTimeBased, const DTrackTimeBased* locTrackTimeBased_ToMatch,  const DDetectorMatches* locDetectorMatches, const DParticleID* locPIDAlgorithm)
+{
+	shared_ptr<const DSCHitMatchParams> locSCHitMatchParams;
+	shared_ptr<const DBCALShowerMatchParams> locBCALShowerMatchParams;
+	shared_ptr<const DTOFHitMatchParams> locTOFHitMatchParams;
+	shared_ptr<const DFCALShowerMatchParams> locFCALShowerMatchParams;
+	
+	vector<shared_ptr<const DSCHitMatchParams> > locSCHitMatchParamsVec;
+	locDetectorMatches->Get_SCMatchParams(locTrackTimeBased_ToMatch, locSCHitMatchParamsVec);
+
+	shared_ptr<TMatrixFSym> locCovarianceMatrix( new TMatrixFSym(*locTrackTimeBased->errorMatrix()) );
+
+	// default
+	(*locCovarianceMatrix)(6,6) = 9.0e9;
+
+// cout << "DVertex_KLong_factory::Set_TrackTime()" << endl;
+// cout << " starting time = " << locTrackTimeBased->time() << endl;
+// cout << " candidate = " << locTrackTimeBased->candidateid << endl;
+// cout << " PID = " << locTrackTimeBased->PID() << endl;
+// 
+// cout << " SC check = " << locPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locSCHitMatchParams) << endl;
+// cout << " num SC matches = " << locSCHitMatchParamsVec.size() << endl;
+// //cout << " num SC matches = " << locDetectorMatches->Get_NumTrackSCMatches() << endl;
+// 
+	
+	// BCAL
+	if(locPIDAlgorithm->Get_BestBCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locBCALShowerMatchParams))
+	{
+		const DBCALShower* locBCALShower = locBCALShowerMatchParams->dBCALShower;
+		locTrackTimeBased->setTime(locBCALShower->t - locBCALShowerMatchParams->dFlightTime);
+		(*locCovarianceMatrix)(6,6) = 0.25*0.25+locBCALShowerMatchParams->dFlightTimeVariance;
+	}
+	// TOF
+	else if(locPIDAlgorithm->Get_BestTOFMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locTOFHitMatchParams))
+	{
+		locTrackTimeBased->setTime(locTOFHitMatchParams->dHitTime - locTOFHitMatchParams->dFlightTime);
+		(*locCovarianceMatrix)(6,6) = 0.1*0.1+locTOFHitMatchParams->dFlightTimeVariance;
+	}
+	// FCAL
+	else if(locPIDAlgorithm->Get_BestFCALMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locFCALShowerMatchParams))
+	{
+		const DFCALShower* locFCALShower = locFCALShowerMatchParams->dFCALShower;
+		locTrackTimeBased->setTime(locFCALShower->getTime() - locFCALShowerMatchParams->dFlightTime);
+		(*locCovarianceMatrix)(6,6) = 0.7*0.7+locFCALShowerMatchParams->dFlightTimeVariance;
+	}
+	// Start Counter
+	else if(locPIDAlgorithm->Get_BestSCMatchParams(locTrackTimeBased_ToMatch, locDetectorMatches, locSCHitMatchParams))
+	{
+		double locPropagatedTime = locSCHitMatchParams->dHitTime - locSCHitMatchParams->dFlightTime;
+		locTrackTimeBased->setTime(locPropagatedTime);
+		(*locCovarianceMatrix)(6,6) = 0.3*0.3+locSCHitMatchParams->dFlightTimeVariance;
+	}
+
+	locTrackTimeBased->setErrorMatrix(locCovarianceMatrix);
 }
 
 

@@ -7,6 +7,7 @@
 
 #include "DParticleID.h"
 #include "START_COUNTER/DSCHit_factory.h"
+#include "PID/DVertex.h"
 
 #ifndef M_TWO_PI
 #define M_TWO_PI 6.28318530717958647692
@@ -3449,8 +3450,19 @@ double DParticleID::Calc_SCFlightTimePCorrelation(const DTrackingData* locTrack,
 
 double DParticleID::Calc_PropagatedRFTime(const DKinematicData* locKinematicData, const DEventRFBunch* locEventRFBunch, double velocity ) const
 {
-	//Propagate RF time to the track vertex-z
-	return locEventRFBunch->dTime + (locKinematicData->z() - dTargetZCenter)/velocity;
+	if(velocity < SPEED_OF_LIGHT) {
+		// currently for the heavy beam particles, we cheat and define the EventRFBunch to the be
+		// the estimated time of the beam-induced interaction, so we define times wrt to that
+		const DVertex *locVertex = nullptr;
+		locEventRFBunch->GetSingle(locVertex);
+		if(locVertex == nullptr) {
+			jerr << "In DParticleID::Calc_PropagatedRFTime - could not find DVertex!" << endl;
+		}
+		return locEventRFBunch->dTime + (locKinematicData->z() - locVertex->dSpacetimeVertex.Z())/velocity;
+	} else {
+		//Propagate RF time to the track vertex-z
+		return locEventRFBunch->dTime + (locKinematicData->z() - dTargetZCenter)/velocity;
+	}
 }
 
 double DParticleID::Calc_TimingChiSq(const DChargedTrackHypothesis* locChargedHypo, unsigned int &locNDF, double& locPull) const

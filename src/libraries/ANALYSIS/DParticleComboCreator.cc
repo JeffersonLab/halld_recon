@@ -25,9 +25,9 @@ DParticleComboCreator::DParticleComboCreator(JEventLoop* locEventLoop, const DSo
 	locEventLoop->Get(locChargedTrackHypotheses); //make sure that brun() is called for the default factory!!!
 	dChargedTrackHypothesisFactory = static_cast<DChargedTrackHypothesis_factory*>(locEventLoop->GetFactory("DChargedTrackHypothesis"));
 
-	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons); //make sure that brun() is called for the default factory!!!
-	dBeamPhotonfactory = static_cast<DBeamPhoton_factory*>(locEventLoop->GetFactory("DBeamPhoton"));
+	vector<const DBeamParticle*> locBeamParticles;
+	locEventLoop->Get(locBeamParticles); //make sure that brun() is called for the default factory!!!
+	dBeamParticlefactory = static_cast<DBeamParticle_factory*>(locEventLoop->GetFactory("DBeamParticle"));
 
 	//error matrix //too lazy to compute properly right now ... need to hack DAnalysisUtilities::Calc_DOCA()
 	dVertexCovMatrix.ResizeTo(4, 4);
@@ -63,7 +63,7 @@ void DParticleComboCreator::Reset(void)
 		cout << "Total # of Particle Combos Allocated (All threads): " << dResourcePool_ParticleCombo.Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of Charged Hypos (All threads): " << dChargedTrackHypothesisFactory->Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of Neutral Hypos (All threads): " << dNeutralParticleHypothesisFactory->Get_NumObjectsAllThreads() << endl;
-		cout << "Total # of Beam Photons (All threads): " << dBeamPhotonfactory->Get_NumObjectsAllThreads() << endl;
+		cout << "Total # of Beam Particles (All threads): " << dBeamParticlefactory->Get_NumObjectsAllThreads() << endl;
 		cout << "Total # of KinematicDatas (All threads): " << dResourcePool_KinematicData.Get_NumObjectsAllThreads() << endl;
 	}
 
@@ -85,8 +85,8 @@ void DParticleComboCreator::Reset(void)
 	dNeutralHypoMap.clear();
 	dKinFitNeutralHypoMap.clear();
 
-	dBeamPhotonfactory->Recycle_Resources(dCreated_BeamPhoton);
-	dKinFitBeamPhotonMap.clear();
+	dBeamParticlefactory->Recycle_Resources(dCreated_BeamParticle);
+	dKinFitBeamParticleMap.clear();
 
 	dResourcePool_KinematicData.Recycle(dCreated_KinematicData);
 
@@ -96,7 +96,7 @@ void DParticleComboCreator::Reset(void)
 	decltype(dCreated_ParticleComboStep)().swap(dCreated_ParticleComboStep);
 	decltype(dCreated_ChargedHypo)().swap(dCreated_ChargedHypo);
 	decltype(dCreated_NeutralHypo)().swap(dCreated_NeutralHypo);
-	decltype(dCreated_BeamPhoton)().swap(dCreated_BeamPhoton);
+	decltype(dCreated_BeamParticle)().swap(dCreated_BeamParticle);
 }
 
 bool DParticleComboCreator::Get_CreateNeutralErrorMatrixFlag_Combo(const DReactionVertexInfo* locReactionVertexInfo, DKinFitType locKinFitType)
@@ -220,7 +220,8 @@ const DParticleCombo* DParticleComboCreator::Build_ParticleCombo(const DReaction
 			cout << "time offset: " << locTimeOffset << endl;
 
 		//build spacetime vertex
-		auto locPropagatedRFTime = dSourceComboTimeHandler->Calc_PropagatedRFTime(locPrimaryVertexZ, locRFBunchShift, locTimeOffset);
+		auto locBeamVelocity = locBeamParticle->pmag() / locBeamParticle->energy();
+		auto locPropagatedRFTime = dSourceComboTimeHandler->Calc_PropagatedRFTime(locPrimaryVertexZ, locRFBunchShift, locTimeOffset, locBeamVelocity);
 		if(dDebugLevel >= 20)
 			cout << "prop rf time: " << locPropagatedRFTime << endl;
 		DLorentzVector locSpacetimeVertex(locVertex, locPropagatedRFTime);
@@ -373,7 +374,7 @@ const DParticleCombo* DParticleComboCreator::Create_KinFitCombo_NewCombo(const D
 				locNewComboStep->Set_InitialParticle(locInitialParticle_Measured);
 			else //create a new one
 			{
-				locNewComboStep->Set_InitialParticle(Create_BeamPhoton_KinFit(static_cast<const DBeamPhoton*>(locInitialParticle_Measured), locKinFitParticle.get(), locSpacetimeVertex));
+				locNewComboStep->Set_InitialParticle(Create_BeamParticle_KinFit(static_cast<const DBeamParticle*>(locInitialParticle_Measured), locKinFitParticle.get(), locSpacetimeVertex));
 				locNewComboStep->Set_InitialKinFitParticle(locKinFitParticle);
 			}
 		}
@@ -638,30 +639,68 @@ bool DParticleComboCreator::Search_ForParticleInDecay(const shared_ptr<const DKi
 	return false; //not found (yet)
 }
 
-const DBeamPhoton* DParticleComboCreator::Create_BeamPhoton_KinFit(const DBeamPhoton* locBeamPhoton, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex)
+const DBeamParticle* DParticleComboCreator::Create_BeamParticle_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex)
 {
-	auto locBeamIterator = dKinFitBeamPhotonMap.find(locKinFitParticle);
-	if(locBeamIterator != dKinFitBeamPhotonMap.end())
+	if(locBeamParticle->mass() < 0.005)
+		Create_BeamPhoton_KinFit(locBeamParticle, locKinFitParticle, locSpacetimeVertex);
+	else
+		Create_BeamKLong_KinFit(locBeamParticle, locKinFitParticle, locSpacetimeVertex);
+	
+}
+
+const DBeamParticle* DParticleComboCreator::Create_BeamPhoton_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex)
+{
+	auto locBeamIterator = dKinFitBeamParticleMap.find(locKinFitParticle);
+	if(locBeamIterator != dKinFitBeamParticleMap.end())
 		return locBeamIterator->second;
 
-	DBeamPhoton* locNewBeamPhoton = dBeamPhotonfactory->Get_Resource();
-	dCreated_BeamPhoton.push_back(locNewBeamPhoton);
-	dKinFitBeamPhotonMap.emplace(locKinFitParticle, locNewBeamPhoton);
+	DBeamParticle* locNewBeamParticle = dBeamParticlefactory->Get_Resource();
+	dCreated_BeamParticle.push_back(locNewBeamParticle);
+	dKinFitBeamParticleMap.emplace(locKinFitParticle, locNewBeamParticle);
 
-	locNewBeamPhoton->dCounter = locBeamPhoton->dCounter;
-	locNewBeamPhoton->dSystem = locBeamPhoton->dSystem;
-	locNewBeamPhoton->setPID(locBeamPhoton->PID());
-	locNewBeamPhoton->setMomentum(DVector3(locKinFitParticle->Get_Momentum().X(),locKinFitParticle->Get_Momentum().Y(),locKinFitParticle->Get_Momentum().Z()));
+	locNewBeamParticle->dBeamPhoton = locBeamParticle->dBeamPhoton;
+// 	locNewBeamParticle->dCounter = locBeamParticle->dCounter;
+// 	locNewBeamParticle->dSystem = locBeamParticle->dSystem;
+	locNewBeamParticle->setPID(locBeamParticle->PID());
+	locNewBeamParticle->setMomentum(DVector3(locKinFitParticle->Get_Momentum().X(),locKinFitParticle->Get_Momentum().Y(),locKinFitParticle->Get_Momentum().Z()));
 	if(locKinFitParticle->Get_CommonVxParamIndex() >= 0)
-		locNewBeamPhoton->setPosition(DVector3(locKinFitParticle->Get_Position().X(),locKinFitParticle->Get_Position().Y(),locKinFitParticle->Get_Position().Z()));
+		locNewBeamParticle->setPosition(DVector3(locKinFitParticle->Get_Position().X(),locKinFitParticle->Get_Position().Y(),locKinFitParticle->Get_Position().Z()));
 	else
-		locNewBeamPhoton->setPosition(locSpacetimeVertex.Vect());
+		locNewBeamParticle->setPosition(locSpacetimeVertex.Vect());
 	if(locKinFitParticle->Get_CommonTParamIndex() >= 0)
-		locNewBeamPhoton->setTime(locKinFitParticle->Get_Time());
+		locNewBeamParticle->setTime(locKinFitParticle->Get_Time());
 	else
-		locNewBeamPhoton->setTime(locBeamPhoton->time() + (locNewBeamPhoton->position().Z() - locBeamPhoton->position().Z())/SPEED_OF_LIGHT);
-	locNewBeamPhoton->setErrorMatrix(locKinFitParticle->Get_CovarianceMatrix());
-	return locNewBeamPhoton;
+		locNewBeamParticle->setTime(locBeamParticle->time() + (locNewBeamParticle->position().Z() - locBeamParticle->position().Z())/SPEED_OF_LIGHT);
+	locNewBeamParticle->setErrorMatrix(locKinFitParticle->Get_CovarianceMatrix());
+	return locNewBeamParticle;
+}
+
+const DBeamParticle* DParticleComboCreator::Create_BeamKLong_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex)
+{
+	auto locBeamIterator = dKinFitBeamParticleMap.find(locKinFitParticle);
+	if(locBeamIterator != dKinFitBeamParticleMap.end())
+		return locBeamIterator->second;
+
+	DBeamParticle* locNewBeamParticle = dBeamParticlefactory->Get_Resource();
+	dCreated_BeamParticle.push_back(locNewBeamParticle);
+	dKinFitBeamParticleMap.emplace(locKinFitParticle, locNewBeamParticle);
+
+	locNewBeamParticle->dBeamKLong = locBeamParticle->dBeamKLong;
+
+	locNewBeamParticle->setPID(locBeamParticle->PID());
+	locNewBeamParticle->setMomentum(DVector3(locKinFitParticle->Get_Momentum().X(),locKinFitParticle->Get_Momentum().Y(),locKinFitParticle->Get_Momentum().Z()));
+	if(locKinFitParticle->Get_CommonVxParamIndex() >= 0)
+		locNewBeamParticle->setPosition(DVector3(locKinFitParticle->Get_Position().X(),locKinFitParticle->Get_Position().Y(),locKinFitParticle->Get_Position().Z()));
+	else
+		locNewBeamParticle->setPosition(locSpacetimeVertex.Vect());
+	if(locKinFitParticle->Get_CommonTParamIndex() >= 0)
+		locNewBeamParticle->setTime(locKinFitParticle->Get_Time());
+	else {
+		jerr << "SET KLONG TIME" << endl;
+		//locNewBeamParticle->setTime(locBeamParticle->time() + (locNewBeamParticle->position().Z() - locBeamParticle->position().Z())/SPEED_OF_LIGHT);
+	}
+	locNewBeamParticle->setErrorMatrix(locKinFitParticle->Get_CovarianceMatrix());
+	return locNewBeamParticle;
 }
 
 const DChargedTrackHypothesis* DParticleComboCreator::Create_ChargedHypo_KinFit(const DChargedTrack* locChargedTrack, Particle_t locPID, const DKinFitParticle* locKinFitParticle, double locPropagatedRFTime)

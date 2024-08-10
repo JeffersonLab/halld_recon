@@ -31,6 +31,8 @@ using namespace jana;
 #include "FMWPC/DFMWPCHit.h"
 #include "FMWPC/DCTOFHit.h"
 
+#include "PID/DBeamKLong.h"
+
 
 extern "C"{
 void InitPlugin(JApplication *app){
@@ -832,7 +834,14 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     loop->Get(chargedTrackVector);
 
     
-   
+    // handle different beams
+	double beam_velocity = SPEED_OF_LIGHT;
+	vector<const DBeamKLong *> locBeamKLongs;
+	loop->Get(locBeamKLongs);
+	if(locBeamKLongs.size() > 0) {
+		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
+	}
+	
 
 	// extract the FCAL Geometry
 	vector<const DFCALGeometry*> fcalGeomVect;
@@ -853,6 +862,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 	// retrieve RF bunch information
 	const DEventRFBunch *thisRFBunch = NULL;
     
+    /*
     if(NO_TRACKS) {
 	    // If the drift chambers are turned off, we'll need to use the neutral showers to choose the RF
 	    loop->GetSingle(thisRFBunch, "CalorimeterOnly");
@@ -863,7 +873,9 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 	    	loop->GetSingle(thisRFBunch, "Calibrations"); // SC only hits
 	    }
     }
+	*/
 
+	loop->GetSingle(thisRFBunch, "KLong"); 
 
     japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
@@ -1287,7 +1299,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     // Certainly good enough to take a pass at the time based tracking
     // This will be the final alignment step for now
 
-    if (thisRFBunch->dNumParticleVotes < 2) { japp->RootUnLock(); return NOERROR; }
+    //if (thisRFBunch->dNumParticleVotes < 2) { japp->RootUnLock(); return NOERROR; }    // TEMP
 
     // Loop over TAGM hits
     for (unsigned int j = 0 ; j < tagmHitVector.size(); j++){
@@ -1345,7 +1357,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
     DVector3 locTargetCenter(0.,0.,Z_TARGET);
 
     for (i = 0; i <  neutralShowerVector.size(); i++) {
-	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();
+	    double locPathLength = (neutralShowerVector[i]->dSpacetimeVertex.Vect() - locTargetCenter).Mag();   // CHANGE: 
 	    double locDeltaT = neutralShowerVector[i]->dSpacetimeVertex.T() - locPathLength/29.9792458 - thisRFBunch->dTime;
 
 		for (auto const& cut : passed_cuts) {
@@ -1466,7 +1478,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
         // the idea will be to fix the SC time and reference the other PID detectors off of this
 
         // These "flightTime" corrected time are essentially that detector's estimate of the target time
-        float targetCenterCorrection = ((pionHypothesis->position()).Z() - Z_TARGET) / SPEED_OF_LIGHT;
+        float targetCenterCorrection = ((pionHypothesis->position()).Z() - Z_TARGET) / beam_velocity;
         float flightTimeCorrectedSCTime = 0.; 
         double locSCzIntersection = 0.;
  		bool sc_match_pid = false;
@@ -1611,7 +1623,7 @@ jerror_t JEventProcessor_HLDetectorTiming::evnt(JEventLoop *loop, uint64_t event
 			if (locBCALShowerMatchParams != NULL) {
 			   	float flightTimeCorrectedBCALTime = locBCALShowerMatchParams->dBCALShower->t - locBCALShowerMatchParams->dFlightTime - targetCenterCorrection;
 				dBCALShowerRFTime[key]->Fill(flightTimeCorrectedBCALTime - thisRFBunch->dTime);
-				
+								
 			   	if(!NO_START_COUNTER) {
 			   		dBCALShowerSCTime[key]->Fill(flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime);
 			   		dBCALShowerSCTimeVsCorrection[key]->Fill(locBCALShowerMatchParams->dFlightTime, flightTimeCorrectedBCALTime - flightTimeCorrectedSCTime);

@@ -8,7 +8,7 @@
 #include "PID/DEventRFBunch.h"
 #include "PID/DChargedTrackHypothesis_factory.h"
 #include "PID/DNeutralParticleHypothesis_factory.h"
-#include "PID/DBeamPhoton_factory.h"
+#include "PID/DBeamParticle_factory.h"
 #include "PID/DParticleID.h"
 
 #include "ANALYSIS/DKinFitUtils_GlueX.h"
@@ -58,7 +58,9 @@ class DParticleComboCreator
 
 		//CREATE PARTICLES
 		const DChargedTrackHypothesis* Create_ChargedHypo(const DChargedTrack* locChargedTrack, Particle_t locPID, double locPropagatedRFTime, bool locIsProductionVertex, const DSourceCombo* locReactionFullCombo, const DSourceCombo* locVertexPrimaryFullCombo, const DKinematicData* locBeamParticle, DVector3 locVertex);
-		const DBeamPhoton* Create_BeamPhoton_KinFit(const DBeamPhoton* locBeamPhoton, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex);
+		const DBeamParticle* Create_BeamParticle_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex);
+		const DBeamParticle* Create_BeamPhoton_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex);
+		const DBeamParticle* Create_BeamKLong_KinFit(const DBeamParticle* locBeamParticle, const DKinFitParticle* locKinFitParticle, const DLorentzVector& locSpacetimeVertex);
 		const DChargedTrackHypothesis* Create_ChargedHypo_KinFit(const DChargedTrack* locChargedTrack, Particle_t locPID, const DKinFitParticle* locKinFitParticle, double locPropagatedRFTime);
 		const DNeutralParticleHypothesis* Create_NeutralHypo_KinFit(const DNeutralParticleHypothesis* locOrigHypo, DKinFitParticle* locKinFitParticle, double locPropagatedRFTime);
 		DKinematicData* Build_KinematicData(const DKinFitResults* locKinFitResults, DKinFitParticle* locKinFitParticle, DLorentzVector locSpacetimeVertex, bool locProductionVertexFlag);
@@ -78,7 +80,7 @@ class DParticleComboCreator
 		//FACTORIES
 		DNeutralParticleHypothesis_factory* dNeutralParticleHypothesisFactory;
 		DChargedTrackHypothesis_factory* dChargedTrackHypothesisFactory;
-		DBeamPhoton_factory* dBeamPhotonfactory;
+		DBeamParticle_factory* dBeamParticlefactory;
 
 		//CREATED OBJECT MAPS
 		map<tuple<DReactionStep, const DSourceCombo*, bool, bool, const DSourceCombo*, const DKinematicData*>, const DParticleComboStep*> dComboStepMap; //kindata is beam (null if not in step): for vertex
@@ -88,7 +90,7 @@ class DParticleComboCreator
 		map<tuple<const DReactionVertexInfo*, const DSourceCombo*, const DKinematicData*, int, bool>, DParticleCombo*> dComboMap;
 		unordered_map<const DKinFitParticle*, DChargedTrackHypothesis*> dKinFitChargedHypoMap;
 		unordered_map<const DKinFitParticle*, DNeutralParticleHypothesis*> dKinFitNeutralHypoMap;
-		unordered_map<const DKinFitParticle*, DBeamPhoton*> dKinFitBeamPhotonMap;
+		unordered_map<const DKinFitParticle*, DBeamParticle*> dKinFitBeamParticleMap;
 
 		//RESOURCE POOLS
 		DResourcePool<DEventRFBunch> dResourcePool_EventRFBunch;
@@ -100,7 +102,7 @@ class DParticleComboCreator
 		vector<DParticleComboStep*> dCreated_ParticleComboStep;
 		vector<DChargedTrackHypothesis*> dCreated_ChargedHypo;
 		vector<DNeutralParticleHypothesis*> dCreated_NeutralHypo;
-		vector<DBeamPhoton*> dCreated_BeamPhoton;
+		vector<DBeamParticle*> dCreated_BeamParticle;
 
 		DParticleCombo* Get_ParticleComboResource(void)
 		{

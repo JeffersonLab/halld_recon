@@ -19,6 +19,7 @@
 #include "PID/DChargedTrackHypothesis.h"
 #include "PID/DEventRFBunch.h"
 #include "PID/DDetectorMatches.h"
+#include "PID/DBeamParticle.h"
 #include "ANALYSIS/DSourceCombo.h"
 #include "ANALYSIS/DReactionVertexInfo.h"
 #include "ANALYSIS/DAnalysisUtilities.h"
@@ -46,7 +47,7 @@ class DSourceComboTimeHandler
 		void Reset(void);
 		void Set_DebugLevel(int locDebugLevel){dDebugLevel = locDebugLevel;}
 		void Setup(const vector<const DNeutralShower*>& locNeutralShowers, const DEventRFBunch* locInitialEventRFBunch, const DDetectorMatches* locDetectorMatches);
-		void Set_BeamParticles(const vector<const DBeamPhoton*>& locBeamParticles);
+		void Set_BeamParticles(const vector<const DBeamParticle*>& locBeamParticles);
 
 		//GET SETUP RESULTS
 		const DEventRFBunch* Get_InitialEventRFBunch(void) const{return dInitialEventRFBunch;}
@@ -69,7 +70,7 @@ class DSourceComboTimeHandler
 		int Calc_RFBunchShift(double locTimeToStepTo) const{return Calc_RFBunchShift(dInitialEventRFBunch->dTime, locTimeToStepTo);}
 		int Calc_RFBunchShift(double locTimeToStep, double locTimeToStepTo) const;
 		double Calc_RFTime(int locNumRFBunchShifts) const;
-		double Calc_PropagatedRFTime(double locPrimaryVertexZ, int locNumRFBunchShifts, double locDetachedVertexTimeOffset) const;
+		double Calc_PropagatedRFTime(double locPrimaryVertexZ, int locNumRFBunchShifts, double locDetachedVertexTimeOffset, double locBeamVelocity) const;
 		double Get_BeamBunchPeriod(void) const{return dBeamBunchPeriod;}
 
 		//SELECT RF BUNCHES
@@ -80,7 +81,7 @@ class DSourceComboTimeHandler
 		bool Cut_Timing_MissingMassVertices(const DReactionVertexInfo* locReactionVertexInfo, const DSourceCombo* locReactionFullCombo, const DKinematicData* locBeamParticle, int locRFBunch);
 
 		//GET POCA TO VERTEX
-		DLorentzVector Get_ChargedPOCAToVertexX4(const DChargedTrackHypothesis* locHypothesis, bool locIsProductionVertex, const DSourceCombo* locReactionFullCombo, const DSourceCombo* locVertexPrimaryCombo, const DKinematicData* locBeamPhoton, bool locIsCombo2ndVertex, DVector3 locVertex);
+		DLorentzVector Get_ChargedPOCAToVertexX4(const DChargedTrackHypothesis* locHypothesis, bool locIsProductionVertex, const DSourceCombo* locReactionFullCombo, const DSourceCombo* locVertexPrimaryCombo, const DKinematicData* locBeamParticle, bool locIsCombo2ndVertex, DVector3 locVertex);
 
 		//VERTEX-Z BINNING UTILITY FUNCTIONS
 		size_t Get_NumVertexZBins(void) const{return dNumPhotonVertexZBins;}
@@ -106,7 +107,7 @@ class DSourceComboTimeHandler
 
 		bool Compute_RFChiSqs_UnknownVertices(const DSourceCombo* locReactionFullCombo, Charge_t locCharge, const vector<int>& locRFBunches, unordered_map<int, double>& locChiSqByRFBunch, map<int, map<Particle_t, map<DetectorSystem_t, vector<pair<float, float>>>>>& locRFDeltaTsForHisting);
 		bool Cut_PhotonPID(const DNeutralShower* locNeutralShower, const DVector3& locVertex, double locPropagatedRFTime, bool locTargetCenterFlag, bool locDetachedVertex);
-		bool Cut_TrackPID(const DChargedTrackHypothesis* locHypothesis, bool locIsProductionVertex, const DSourceCombo* locFullReactionCombo, const DSourceCombo* locVertexPrimaryCombo, const DKinematicData* locBeamPhoton, bool locIsCombo2ndVertex, DVector3 locVertex, double locPropagatedRFTime, bool locDetachedVertex);
+		bool Cut_TrackPID(const DChargedTrackHypothesis* locHypothesis, bool locIsProductionVertex, const DSourceCombo* locFullReactionCombo, const DSourceCombo* locVertexPrimaryCombo, const DKinematicData* locBeamParticle, bool locIsCombo2ndVertex, DVector3 locVertex, double locPropagatedRFTime, bool locDetachedVertex);
 
 		pair<double, double> Calc_RFDeltaTChiSq(const DNeutralShower* locNeutralShower, const TVector3& locVertex, double locPropagatedRFTime) const;
 		pair<double, double> Calc_RFDeltaTChiSq(const DChargedTrackHypothesis* locHypothesis, double locVertexTime, double locPropagatedRFTime) const;
@@ -218,13 +219,19 @@ inline double DSourceComboTimeHandler::Get_PhotonVertexZBinCenter(signed char lo
 	return dPhotonVertexZRangeLow + (double(locVertexZBin) + 0.5)*dPhotonVertexZBinWidth;
 }
 
-inline void DSourceComboTimeHandler::Set_BeamParticles(const vector<const DBeamPhoton*>& locBeamParticles)
+inline void DSourceComboTimeHandler::Set_BeamParticles(const vector<const DBeamParticle*>& locBeamParticles)
 {
 	for(const auto& locBeamParticle : locBeamParticles)
 	{
-		auto locRFBunch = Calc_RFBunchShift(dInitialEventRFBunch->dTime, locBeamParticle->time());
-		dBeamParticlesByRFBunch[locRFBunch].push_back(locBeamParticle);
-		dBeamRFDeltaTs.emplace_back(locBeamParticle->energy(), locBeamParticle->time() - dInitialEventRFBunch->dTime);
+		if(locBeamParticle->mass() < 0.005) {   // beam photons
+			auto locRFBunch = Calc_RFBunchShift(dInitialEventRFBunch->dTime, locBeamParticle->time());
+			dBeamParticlesByRFBunch[locRFBunch].push_back(locBeamParticle);
+			dBeamRFDeltaTs.emplace_back(locBeamParticle->energy(), locBeamParticle->time() - dInitialEventRFBunch->dTime);
+		} else {  // massive beam particles
+			int locRFBunch = 0.;   // put everything in the same "RF bunch"? - actually might not need this, but let's special case it for now
+			dBeamParticlesByRFBunch[locRFBunch].push_back(locBeamParticle);
+			dBeamRFDeltaTs.emplace_back(locBeamParticle->energy(), locBeamParticle->time() - dInitialEventRFBunch->dTime);		
+		}
 	}
 }
 
@@ -268,10 +275,10 @@ inline double DSourceComboTimeHandler::Calc_RFTime(int locNumRFBunchShifts) cons
 	return dInitialEventRFBunch->dTime + locNumRFBunchShifts*dBeamBunchPeriod;
 }
 
-inline double DSourceComboTimeHandler::Calc_PropagatedRFTime(double locPrimaryVertexZ, int locNumRFBunchShifts, double locDetachedVertexTimeOffset) const
+inline double DSourceComboTimeHandler::Calc_PropagatedRFTime(double locPrimaryVertexZ, int locNumRFBunchShifts, double locDetachedVertexTimeOffset, double locBeamVelocity=1.) const
 {
 	//propagate rf time to vertex and add time offset (faster to just do it here rather than for each particle)
-	return Calc_RFTime(locNumRFBunchShifts) + (locPrimaryVertexZ - dTargetCenter.Z())/SPEED_OF_LIGHT + locDetachedVertexTimeOffset;
+	return Calc_RFTime(locNumRFBunchShifts) + (locPrimaryVertexZ - dTargetCenter.Z())/(locBeamVelocity*SPEED_OF_LIGHT) + locDetachedVertexTimeOffset;
 }
 
 inline shared_ptr<const DKinematicData> DSourceComboTimeHandler::Create_KinematicData_Photon(const DNeutralShower* locNeutralShower, const DVector3& locVertex) const

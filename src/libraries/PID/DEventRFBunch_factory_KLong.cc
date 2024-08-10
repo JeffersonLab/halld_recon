@@ -44,6 +44,8 @@ jerror_t DEventRFBunch_factory_KLong::evnt(jana::JEventLoop *locEventLoop, uint6
 	locEventRFBunch->dTimeVariance = locVertex->dCovarianceMatrix(3,3);
 	locEventRFBunch->dNumParticleVotes = locVertex->dKinFitNDF; /// this is an overcount! figure this out better
 	locEventRFBunch->dTimeSource = SYS_NULL;   // could say SYS_START?  but I think that this implies that we should measure with respect the accelerator RF
+
+	locEventRFBunch->AddAssociatedObject(locVertices[0]);
 	_data.push_back(locEventRFBunch);
 
 	return NOERROR;

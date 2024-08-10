@@ -18,6 +18,7 @@
 #include "DVector3.h"
 
 #include "PID/DVertex.h"
+#include "PID/DParticleID.h"
 #include "PID/DDetectorMatches.h"
 #include "TRACKING/DTrackTimeBased.h"
 
@@ -39,6 +40,9 @@ class DVertex_KLong_factory : public jana::JFactory<DVertex>
 		jerror_t Create_Vertex_OneTrack(const DTrackTimeBased* locTrackTimeBased);
 		jerror_t Create_Vertex_Rough(DVector3 locPosition, double locTime);
 		jerror_t Create_Vertex_KinFit(vector<const DKinematicData*> &locKinematicDataVector);
+
+		void Set_TrackTime(JEventLoop* locEventLoop, DTrackTimeBased* locTrackTimeBased, const DTrackTimeBased* locTrackTimeBased_ToMatch, const DDetectorMatches* locDetectorMatches, const DParticleID* locPIDAlgorithm);
+		//double Calc_CrudeVertexTime(const vector<DKinFitParticle*>& locParticles, const DVector3& locCommonVertex) const;
 
 		const char* Tag(void){return "KLong";}
 

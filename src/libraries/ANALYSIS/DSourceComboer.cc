@@ -1300,8 +1300,8 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	vector<const DChargedTrack*> locChargedTracks;
 	locEventLoop->Get(locChargedTracks, "Combo");
 
-	vector<const DBeamPhoton*> locBeamPhotons;
-	locEventLoop->Get(locBeamPhotons);
+	vector<const DBeamParticle*> locBeamParticles;
+	locEventLoop->Get(locBeamParticles);
 
 	const DEventRFBunch* locInitialRFBunch = nullptr;
 	locEventLoop->GetSingle(locInitialRFBunch);
@@ -1340,7 +1340,7 @@ void DSourceComboer::Reset_NewEvent(JEventLoop* locEventLoop)
 	}
 		
 	//SETUP BEAM PARTICLES
-	dSourceComboTimeHandler->Set_BeamParticles(locBeamPhotons);
+	dSourceComboTimeHandler->Set_BeamParticles(locBeamParticles);
 
 	//SETUP TRACKS
 	dNumChargedTracks = locChargedTracks.size();

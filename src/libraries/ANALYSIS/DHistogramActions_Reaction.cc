@@ -2495,7 +2495,11 @@ bool DHistogramAction_KinFitResults::Perform_Action(JEventLoop* locEventLoop, co
 				else //is neutral shower
 				{
 					auto locNeutralHypo = dynamic_cast<const DNeutralParticleHypothesis*>(locParticle);
-					locParticlePulls = locPulls[locNeutralHypo->Get_NeutralShower()];
+					if(locNeutralHypo == nullptr) {
+						jerr << "In DHistogramAction_KinFitResults::Perform_Action() - bad locNeutralHypo, ignore ... " << endl;
+					} else {
+						locParticlePulls = locPulls[locNeutralHypo->Get_NeutralShower()];
+					}
 				}
 				if(locParticlePulls.empty())
 					continue;

@@ -1226,6 +1226,13 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	const DEventRFBunch* locEventRFBunch = nullptr;
 	locEventLoop->GetSingle(locEventRFBunch);
 
+	double beam_velocity = SPEED_OF_LIGHT;
+	vector<const DBeamKLong *> locBeamKLongs;
+	locEventLoop->Get(locBeamKLongs);
+	if(locBeamKLongs.size() > 0) {
+		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
+	}
+
 	string locDetectorMatchesTag = locIsTimeBased ? "" : "WireBased";
 	const DDetectorMatches* locDetectorMatches = NULL;
 	locEventLoop->GetSingle(locDetectorMatches, locDetectorMatchesTag.c_str());
@@ -1313,7 +1320,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 	    break; //e.g. REST data: no trajectory
 
 	  double locBestDeltaX = 999.9, locBestDeltaY = 999.9, locBestDistance_Vertical = 999.9, locBestDistance_Horizontal = 999.9;
-	  double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch);
+	  double locStartTime = locParticleID->Calc_PropagatedRFTime(locKinematicData, locEventRFBunch, beam_velocity);
 	  
 	  const DTOFPaddleHit* locClosestTOFPaddleHit_Vertical = locParticleID->Get_ClosestTOFPaddleHit_Vertical(extrapolations.at(SYS_TOF), locTOFPaddleHits, locStartTime, locBestDeltaX, locBestDistance_Vertical);
 	  pair<double, double> locDistancePair_Vertical(locBestDeltaX, locBestDistance_Vertical);
@@ -2073,7 +2080,6 @@ bool DHistogramAction_DetectorPID::Perform_Action(JEventLoop* locEventLoop, cons
 	locEventLoop->GetSingle(locParticleID);
 	
 	double beam_velocity = SPEED_OF_LIGHT;
-	
 	vector<const DBeamKLong *> locBeamKLongs;
 	locEventLoop->Get(locBeamKLongs);
 	if(locBeamKLongs.size() > 0) {
@@ -2793,6 +2799,13 @@ bool DHistogramAction_EventVertex::Perform_Action(JEventLoop* locEventLoop, cons
 	const DEventRFBunch* locEventRFBunch = NULL;
 	locEventLoop->GetSingle(locEventRFBunch);
 
+	double beam_velocity = SPEED_OF_LIGHT;
+	vector<const DBeamKLong *> locBeamKLongs;
+	locEventLoop->Get(locBeamKLongs);
+	if(locBeamKLongs.size() > 0) {
+		beam_velocity *= locBeamKLongs[0]->pmag() / locBeamKLongs[0]->energy();
+	}
+
 	//Make sure that brun() is called (to get rf period) before using.
 	//Cannot call JEventLoop->Get() because object may be in datastream (REST), bypassing factory brun() call.
 	//Must do here rather than in Initialize() function because this object is shared by all threads (which each have their own factory)
@@ -2824,9 +2837,11 @@ bool DHistogramAction_EventVertex::Perform_Action(JEventLoop* locEventLoop, cons
 		for(size_t loc_i = 0; loc_i < locChargedTracks.size(); ++loc_i)
 		{
 			const DChargedTrackHypothesis* locChargedTrackHypothesis = locChargedTracks[loc_i]->Get_BestFOM();
-			//double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch, beam_velocity);  // CHANGE
-			double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch);
-			double locShiftedRFTime = locRFTimeFactory->Step_TimeToNearInputTime(locPropagatedRFTime, locChargedTrackHypothesis->time());  // CHANGE?
+			double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch, beam_velocity);  // CHANGE
+			//double locPropagatedRFTime = locParticleID->Calc_PropagatedRFTime(locChargedTrackHypothesis, locEventRFBunch);
+			double locShiftedRFTime = 0.;
+			if(!(beam_velocity < SPEED_OF_LIGHT))
+				locShiftedRFTime = locRFTimeFactory->Step_TimeToNearInputTime(locPropagatedRFTime, locChargedTrackHypothesis->time());  // CHANGE?
 			double locDeltaT = locShiftedRFTime - locChargedTrackHypothesis->time();
 			dRFTrackDeltaT->Fill(locDeltaT);
 		}

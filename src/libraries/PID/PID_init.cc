@@ -3,6 +3,7 @@
 #include <JANA/JEventLoop.h>
 using namespace jana;
 
+#include "DBeamParticle_factory.h"
 #include "DBeamPhoton_factory.h"
 #include "DBeamPhoton_factory_TRUTH.h"
 #include "DBeamPhoton_factory_TAGGEDMCGEN.h"
@@ -10,8 +11,10 @@ using namespace jana;
 #include "DParticleID_factory.h"
 #include "DParticleID_factory_PID1.h"
 #include "DChargedTrack_factory.h"
+//#include "DChargedTrack_factory_KLVertex.h"
 #include "DChargedTrack_factory_PreSelect.h"
 #include "DChargedTrackHypothesis_factory.h"
+//#include "DChargedTrackHypothesis_factory_KLVertex.h"
 #include "DNeutralParticle_factory.h"
 #include "DNeutralParticle_factory_PreSelect.h"
 #include "DNeutralParticleHypothesis_factory.h"
@@ -42,6 +45,7 @@ jerror_t PID_init(JEventLoop *loop)
 {
 	/// Create and register PID data factories
 	loop->AddFactory(new JFactory<DMCReaction>());
+	loop->AddFactory(new DBeamParticle_factory);
 	loop->AddFactory(new DBeamPhoton_factory);
 	loop->AddFactory(new DBeamPhoton_factory_TRUTH);
 	loop->AddFactory(new DBeamPhoton_factory_TAGGEDMCGEN);
@@ -49,8 +53,10 @@ jerror_t PID_init(JEventLoop *loop)
 	loop->AddFactory(new DParticleID_factory);
 	loop->AddFactory(new DParticleID_factory_PID1);
 	loop->AddFactory(new DChargedTrack_factory);
+	//loop->AddFactory(new DChargedTrack_factory_KLVertex);
 	loop->AddFactory(new DChargedTrack_factory_PreSelect);
 	loop->AddFactory(new DChargedTrackHypothesis_factory);
+	//loop->AddFactory(new DChargedTrackHypothesis_factory_KLVertex);
 	loop->AddFactory(new DNeutralParticle_factory);
 	loop->AddFactory(new DNeutralParticle_factory_PreSelect);
 	loop->AddFactory(new DNeutralParticleHypothesis_factory);

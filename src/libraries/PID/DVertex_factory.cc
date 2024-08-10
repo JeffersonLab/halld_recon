@@ -69,8 +69,10 @@ jerror_t DVertex_factory::evnt(JEventLoop* locEventLoop, uint64_t eventnumber)
 	if(dUseKLongVertex) {
 		vector<const DVertex *> locKLongVertices;
 		locEventLoop->Get(locKLongVertices, "KLong");
-		for(auto vertex : locKLongVertices)
-			_data.push_back(const_cast<DVertex *>(vertex));
+		for(auto vertex : locKLongVertices) {
+			DVertex *vertexCopy = new DVertex(*vertex);
+			_data.push_back(vertexCopy);
+		}
 		return NOERROR;
 	}
  
