@@ -35,10 +35,9 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
 
   int CDC_HIT_THRESHOLD;
 
-  unsigned int ECHO_MAX_A; // do not suppress possible afterpulses larger than this (adc range 0-4095)
-  unsigned int ECHO_MAX_T;  // search up to this many samples after the main pulse for afterpulses
-  unsigned int ECHO_OPT; // 0: off, 1: uniform threshold, 2: threshold decreases with dt 
-  bool ECHO_VERBOSE; // produce copious screen output
+  unsigned int ECHO_OPT; // 0: switch afterpulse clean-up off; 1: clean-up is on (default)
+  unsigned int ECHO_MAX_T;  // if ECHO_OPT=1, search for afterpulses up to ECHO_MAX_T samples after the main pulse
+  unsigned int ECHO_MAX_A; // if ECHO_OPT=1, suppress possible afterpulses with amplitude <= ECHO_MAX_A (adc range 0-4095)
 
   // overall scale factors.
   double a_scale, amp_a_scale;
@@ -78,8 +77,6 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   unsigned int Nrings; // number of rings (layers)
   vector<unsigned int> Nstraws; // number of straws for each ring
   
-  unsigned int echo_end_search;
-  unsigned int echo_cut[8]; //  
 };
 
 #endif // _DCDCHit_factory_Calib_

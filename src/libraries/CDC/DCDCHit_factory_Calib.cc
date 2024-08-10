@@ -22,12 +22,12 @@ jerror_t DCDCHit_factory_Calib::init(void)
                               "Remove CDC Hits with peak amplitudes smaller than CDC_HIT_THRESHOLD");
 
   // After a saturated pulse, small afterpulses can occur on other channels in the same preamp
-  // Single-peak afterpulses occur after 3-7 samples, double-peak afterpulses after 7-14+? samples 
-  // If ECHO_OPT>0, likely afterpulses at time <= 'echo_end_search' samples after the main pulse are removed
+  // Single-peak afterpulses occur after 3-7 samples
+  // If ECHO_OPT=1, likely afterpulses are removed
 
-  ECHO_OPT = 2;
+  ECHO_OPT = 1;
   gPARMS->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
-                              "0:disabled, 1:uniform threshold 2:decreasing threshold");
+                              "0:do not suppress afterpulses, 1:suppress afterpulses");
 
   ECHO_MAX_A = 350;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
@@ -35,91 +35,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
 
   ECHO_MAX_T = 7;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
-                              "End of time range (number of samples, max 7) to search for afterpulses");
-
-  ECHO_VERBOSE = 0; 
-  gPARMS->SetDefaultParameter("CDC:ECHO_VERBOSE", ECHO_VERBOSE,
-                              "Produce copious amounts of screen output");
-
-
-
-  if (ECHO_OPT > 0) { 
-    // make sure that echo_end_search < echo_cut_array_size
-    // echo_cut size is currently 7, should be ample
-
-    unsigned int echo_cut_array_size = (unsigned int)(sizeof(echo_cut)/sizeof(echo_cut[0]));
-
-    if (ECHO_MAX_T < echo_cut_array_size) {
-      echo_end_search = ECHO_MAX_T; 
-    } else {
-      echo_end_search = echo_cut_array_size-1;
-    }
-  }
-
-
-  if (ECHO_OPT == 1) {   // constant threshold
-
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-      echo_cut[i] = ECHO_MAX_A;   
-    }
-
-  } else if (ECHO_OPT == 2) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 437, 367, 299, 313, 290, 272 }; // 98%  all integrals
-
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-  } else if (ECHO_OPT == 3) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 387, 311, 266, 275, 257, 243}; // 98th unsaturated int
-
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-  } else if (ECHO_OPT == 4) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 491, 423, 343, 364, 332, 306}; // 99th all integral
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-  } else if (ECHO_OPT == 5) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 554, 503, 377, 388, 345, 345}; // 99.7%
-
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-  } else if (ECHO_OPT == 6) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-   
-    unsigned int slant_array[8] = {0, 0, 387, 311, 266, 275, 257, 243}; // 98th unsaturated int
-    
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-  } else if (ECHO_OPT == 7) {  // threshold decreases w dt
-    
-    // echo pulse height[dt]  (dt<2 is not checked)
-    unsigned int slant_array[8] = {0, 0, 439, 358, 304, 317, 292, 272}; // 99% unsaturated integral
-
-    for (unsigned int i=0; i<=echo_end_search; i++) {
-        echo_cut[i] = slant_array[i];
-    }
-
-
-  }
-
+                              "End of time range (number of samples) to search for afterpulses");
   
   // default values
   Nrings = 0;
@@ -274,9 +190,6 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
   char str[256];
 
 
-  if (ECHO_VERBOSE) cout << "\n\n event " << eventnumber << "\n";
-
-
   // flag the small nuisance hits that follow a saturated hit on the same board.
 
   vector <unsigned int> RogueHits;
@@ -284,6 +197,7 @@ jerror_t DCDCHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   if (ECHO_OPT > 0) FindRogueHits(eventLoop,RogueHits);
 
+  
   for (unsigned int i=0; i < digihits.size(); i++) {
     const DCDCDigiHit *digihit = digihits[i];
     
@@ -593,6 +507,36 @@ const double DCDCHit_factory_Calib::GetConstant(const cdc_digi_constants_t &the_
 //------------------
 void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigned int> &RogueHits)
 {
+
+  /* // Beni's trick for getting the DAQ channel info for simulated data 
+     // Keeping it here in case this code is moved into Hit_factory.cc 
+  // loop over hits and find roc/slot/con numbers
+  for (unsigned int k=0 ;k<hits.size(); k++){
+    const DCDCHit *hit = hits[k];
+    vector <const Df125CDCPulse*> pulse;
+    hit->Get(pulse);
+    
+    if(pulse.size()==0) {
+      // for hits without lower-level hit info, e.g. HDDM data, we have to use the translation table
+      // to figure out which DAQ channels his hit corresponds to
+      try {
+	DTranslationTable::DChannelInfo channel_info;
+	channel_info.det_sys = DTranslationTable::CDC;
+	channel_info.cdc.ring = hit->ring;
+	channel_info.cdc.straw = hit->straw;
+	DTranslationTable::csc_t daq_index = ttab[0]->GetDAQIndex(channel_info);
+	
+	hit_info.rocid = daq_index.rocid;
+	hit_info.slot = daq_index.slot;
+	hit_info.connector = daq_index.channel / 24;
+      } catch(...) { 
+	cout << "Cannot find Translation Table data for hit on ring " << hit->ring
+	     << " straw " << hit->straw << ", skipping this info ..." << endl;
+	continue;
+      }  
+    }
+    
+   */
   
   RogueHits.clear();
 
@@ -620,8 +564,6 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   vector<unsigned int> times_thisboard;   // list of times for one preamp at a time
   vector<unsigned int> sat_boards;  // code for hvb w saturated hits
   vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
-
-  vector<unsigned int> super_sat_boards;  // code for hvb w saturated integral
   
   for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
 
@@ -635,7 +577,6 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     uint32_t slot = cp->slot;
     uint32_t channel = cp->channel;
     uint32_t amp = cp->first_max_amp<<ABIT;
-    uint32_t integral = cp->integral;
     
     unsigned int preamp = (unsigned int)(channel/24);
     unsigned int rought = (unsigned int)(cp->le_time/10);
@@ -670,41 +611,16 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     if ( i == digihits.size()-1 && times_thisboard.size()>0) {
         sat_times.push_back(times_thisboard);
     } 
-
-
-    if ( integral == 16383 ) {
-
-      if (super_sat_boards.size() == 0 ) {
-
-        super_sat_boards.push_back(board);  
-
-      } else if (board != super_sat_boards.back()) {
-
-        super_sat_boards.push_back(board);  
-
-      }
-
-    }  
     
   } 
 
   if (sat_times.size() == 0) return;
 
-  if (ECHO_VERBOSE) {
-    for (unsigned int i=0; i < (unsigned int)sat_boards.size(); i++) {
-      cout << sat_boards[i] << " sat. pulses at: ";
-      for (unsigned int j=0; j < (unsigned int)sat_times[i].size(); j++) {
-        cout << sat_times[i][j] << " ";
-      }
-      cout << endl;
-    }
-  }
-
   
   // check for small afterpulses
 
   for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
-
+    
     const DCDCDigiHit *digihit = digihits[i];
 
     const Df125CDCPulse *cp = NULL;
@@ -722,7 +638,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
       
     unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
     
-    // find board in array
+    // find out if there's a saturated hit on the same HVB
 
     unsigned int x = 0;
     bool found = 0;
@@ -732,64 +648,35 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
       if (found) break;
     }
 
-    if (!found && ECHO_VERBOSE) cout << board << " no saturated hits on this hvb\n";
-
     if (!found) continue;
-
-
-    // check board in saturated integral list
-    bool super_sat = 0;
-    for (unsigned int j=0; j<(unsigned int)super_sat_boards.size(); j++) {
-      if (board == super_sat_boards[j]) super_sat = 1;
-      if (super_sat) break;
-    }
-
 
     
     // fill RogueHits if this is a problem pulse
+    
     unsigned int net_amp = (unsigned int)(cp->first_max_amp<<ABIT) - (unsigned int)(cp->pedestal<<PBIT);
 
-    if (ECHO_VERBOSE) printf("board %u t %u amp %u net_amp %u ",board, rought,cp->first_max_amp, net_amp);
+    if (net_amp < ECHO_MAX_A) {
 
+      // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
 
-    // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
-    // find time delay dt between saturated pulse and this one
-    // then compare pulse height with cut_array[dt]
+      found = 0;
 
-    found = 0;
+      for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
 
-    for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
+        if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
 
-      if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
+        dt = rought - sat_times[x][j];   // time delay between saturated pulse and this one
 
-      dt = rought - sat_times[x][j];
-        
-      if (ECHO_VERBOSE) {
-        printf("dt %u ",dt);
-        if (dt > echo_end_search) {
-          printf(" too late \n");
-        } else { 
-          printf(" compare net amp %u with cut limit %u \n", net_amp, echo_cut[dt] );
-	}
+	if (dt >=2 && dt <= ECHO_MAX_T) found = 1;    // afterpulses start at dt=2
+	
+        if (found) break;
+
       }
 
-      if (dt < 2) continue; // saturated pulse was too late (afterpulses start at dt=2)
-
-      if (dt > echo_end_search) continue; // saturated pulse was too early
-
-      if (net_amp <= echo_cut[dt]) found = 1;
-
-      if (ECHO_OPT>4 && super_sat && net_amp <= 1.5*echo_cut[dt]) found = 1; 
-      
-      if (found) break;
+      if (found) RogueHits.push_back(i);
 
     }
-
-    if (found) RogueHits.push_back(i);
-
-    if ( ECHO_VERBOSE && found ) cout << "  Matched pulse & afterpulse - remove afterpulse\n";
-
-
+    
   }
 
 }
