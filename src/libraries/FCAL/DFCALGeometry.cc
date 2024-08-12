@@ -124,7 +124,7 @@ DFCALGeometry::row( float y, bool in_insert ) const
   y-=m_FCALdY;
 
   if (in_insert){
-    return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock + 0.5);
+    return kBlocksTall+static_cast<int>( y / insertBlockSize() + m_insertMidBlock )+1;
   }
   int my_row=static_cast<int>( y / blockSize() + kMidBlock + 0.5);
   if (my_row<0) return -1;
@@ -138,7 +138,7 @@ DFCALGeometry::column( float x, bool in_insert ) const
   x-=m_FCALdX;
   
   if (in_insert){
-    return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock + 0.5);
+    return kBlocksWide+static_cast<int>( x / insertBlockSize() + m_insertMidBlock )+1;
   }
   int my_col=static_cast<int>( x / blockSize() + kMidBlock + 0.5);
   if (my_col<0) return -1;

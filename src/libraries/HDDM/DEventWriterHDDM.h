@@ -11,6 +11,7 @@
 #include <CDC/DCDCHit.h>
 #include <TOF/DTOFHit.h>
 #include <FCAL/DFCALHit.h>
+#include <ECAL/DECALHit.h>
 #include <CCAL/DCCALHit.h>
 #include <BCAL/DBCALDigiHit.h>
 #include <BCAL/DBCALTDCDigiHit.h>
@@ -23,6 +24,9 @@
 #include <TPOL/DTPOLHit.h>
 #include <RF/DRFTime.h>
 #include <DIRC/DDIRCPmtHit.h>
+#include <FMWPC/DFMWPCHit.h>
+#include <FMWPC/DCTOFHit.h>
+
 using namespace std;
 using namespace jana;
 

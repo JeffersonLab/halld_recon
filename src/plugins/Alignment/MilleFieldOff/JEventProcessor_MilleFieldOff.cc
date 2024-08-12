@@ -151,9 +151,11 @@ jerror_t JEventProcessor_MilleFieldOff::evnt(JEventLoop *loop,
         label_W[2] = label_layer_offset + 3;
         label_W[3] = label_layer_offset + 4;
         label_W[4] = label_layer_offset + 5;
-        // label_W[5] = label_layer_offset + 900 +
-        // pulls[iPull].fdc_hit->wire->wire;
-        label_W[5] = label_layer_offset + 999;
+        if (fdc_hit->wire->wire <= 48) {
+          label_W[5] = label_layer_offset + 997;
+        } else {
+          label_W[5] = label_layer_offset + 998;
+        }
 
         milleWriter->mille(NLC, derLc_W, NGL_W, derGl_W, label_W, resi, err);
 

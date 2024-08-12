@@ -33,9 +33,15 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("FCAL:LOAD_NONLIN_CCDB", LOAD_NONLIN_CCDB);
   gPARMS->SetDefaultParameter("FCAL:LOAD_TIMING_CCDB", LOAD_TIMING_CCDB);
   // Should we use the PrimeX-D energy correction?
-  USE_RING_E_CORRECTION=false;
-  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION",USE_RING_E_CORRECTION);
+  USE_RING_E_CORRECTION_V1=false;
+  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V1",USE_RING_E_CORRECTION_V1);
 
+  USE_RING_E_CORRECTION_V2=false;
+  gPARMS->SetDefaultParameter("FCAL:USE_RING_E_CORRECTION_V2",USE_RING_E_CORRECTION_V2);
+
+  USE_CPP_E_CORRECTION=false;
+  gPARMS->SetDefaultParameter("FCAL:USE_CPP_CORRECTION",USE_CPP_E_CORRECTION);
+  
   SHOWER_ENERGY_THRESHOLD = 50*k_MeV;
   gPARMS->SetDefaultParameter("FCAL:SHOWER_ENERGY_THRESHOLD", SHOWER_ENERGY_THRESHOLD);
 
@@ -64,6 +70,33 @@ DFCALShower_factory::DFCALShower_factory()
   gPARMS->SetDefaultParameter("FCAL:expfit_param1", expfit_param1);
   gPARMS->SetDefaultParameter("FCAL:expfit_param2", expfit_param2);
   gPARMS->SetDefaultParameter("FCAL:expfit_param3", expfit_param3);
+  
+  USE_NONLINEAR_CORRECTION_TYPE = -1;
+  gPARMS->SetDefaultParameter("FCAL:USE_NONLINEAR_CORRECTION_TYPE",USE_NONLINEAR_CORRECTION_TYPE);
+  
+  if (USE_NONLINEAR_CORRECTION_TYPE == 0) {
+  } else if (USE_NONLINEAR_CORRECTION_TYPE == 1) {
+    expfit_param1 = 2;
+    expfit_param1 = 0;
+    expfit_param1 = 0;
+    SHOWER_POSITION_LOG = true;
+    USE_RING_E_CORRECTION_V1 = true;
+    USE_RING_E_CORRECTION_V2 = false;
+    USE_CPP_E_CORRECTION = false;
+  } else if (USE_NONLINEAR_CORRECTION_TYPE == 2) {
+    expfit_param1 = 2;
+    expfit_param1 = 0;
+    expfit_param1 = 0;
+    SHOWER_POSITION_LOG = true;
+    USE_RING_E_CORRECTION_V1 = false;
+    USE_RING_E_CORRECTION_V2 = true;
+    USE_CPP_E_CORRECTION = false;
+  } else if (USE_NONLINEAR_CORRECTION_TYPE == 3) {
+    SHOWER_POSITION_LOG = true;
+    USE_RING_E_CORRECTION_V1 = false;
+    USE_RING_E_CORRECTION_V2 = false;
+    USE_CPP_E_CORRECTION = true;
+  }
 
   gPARMS->SetDefaultParameter("FCAL:P0", timeConst0);
   gPARMS->SetDefaultParameter("FCAL:P1", timeConst1);
@@ -95,25 +128,29 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.0843;
-  INSERT_PAR2=1.1356;
+  INSERT_PAR1=0.167457;
+  INSERT_PAR2=1.1349;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
 
-  INSERT_POS_RES1=0.11;
-  INSERT_POS_RES2=0.22;
-  // For Island algorithm:
-  // INSERT_POS_RES1=0.18;
-  // INSERT_POS_RES2=0.055;
-  INSERT_E_VAR1=0.001223;
-  INSERT_E_VAR2=0.;
-  INSERT_E_VAR3=2.025e-5;
+  // For island algo
+  INSERT_POS_RES1=0.168;
+  INSERT_POS_RES2=0.0636;
+  INSERT_POS_PHI1=0.0;
+  INSERT_POS_PHI2=0.0;
+  // For default algorithm:
+  // INSERT_POS_RES1=0.10;
+  // INSERT_POS_RES2=0.21;
+  INSERT_E_VAR1=6.49300e-04;
+  INSERT_E_VAR2=1.24109e-04;
+  INSERT_E_VAR3=4.70327e-05;
   gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES1",INSERT_POS_RES1);
-  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_RES2",INSERT_POS_RES2); 
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI1",INSERT_POS_PHI1);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_POS_PHI2",INSERT_POS_PHI2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR2",INSERT_E_VAR2);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR3",INSERT_E_VAR3);
   gPARMS->SetDefaultParameter("FCAL:INSERT_E_VAR1",INSERT_E_VAR1);
- 
 }
 
 //------------------
@@ -161,9 +198,50 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
   std::map<string, float> beam_spot;
   jcalib->Get("PHOTON_BEAM/beam_spot", beam_spot);
   
-  // by default, load non-linear shower corrections from the CCDB
+  // Look in CCDB which non-linear correction version should be used
+  nonlinear_correction_type.clear();
+  loop->GetCalib("FCAL/nonlinear_correction_type", nonlinear_correction_type);
+  if (nonlinear_correction_type.size() > 0 && USE_NONLINEAR_CORRECTION_TYPE < 0) {
+    if (debug_level > 0) {
+      TString str_coef[] = {"A"};
+      jout << Form(" %s", str_coef[0].Data()) << nonlinear_correction_type[0]; 
+      jout << endl;
+    }
+    
+    if (nonlinear_correction_type[0] == 0) {
+      LOAD_NONLIN_CCDB = true;
+    } else if (nonlinear_correction_type[0] == 1) {
+      LOAD_NONLIN_CCDB = true;
+      expfit_param1 = 2;
+      expfit_param1 = 0;
+      expfit_param1 = 0;
+      SHOWER_POSITION_LOG = true;
+      USE_RING_E_CORRECTION_V1 = true;	
+      USE_RING_E_CORRECTION_V2 = false;
+      USE_CPP_E_CORRECTION = false;
+    } else if (nonlinear_correction_type[0] == 2) {
+      LOAD_NONLIN_CCDB = true;
+      expfit_param1 = 2;
+      expfit_param1 = 0;
+      expfit_param1 = 0;
+      SHOWER_POSITION_LOG = true;
+      USE_RING_E_CORRECTION_V1 = false;
+      USE_RING_E_CORRECTION_V2 = true;
+      USE_CPP_E_CORRECTION = false;
+    } else if (nonlinear_correction_type[0] == 3) {
+      LOAD_NONLIN_CCDB = true;
+      SHOWER_POSITION_LOG = true;
+      USE_RING_E_CORRECTION_V1 = false;
+      USE_RING_E_CORRECTION_V2 = false;
+      USE_CPP_E_CORRECTION = true;
+    }
+  }
+  
   // but allow these to be overridden by command line parameters
   energy_dependence_correction_vs_ring.clear();
+  nonlinear_correction.clear();
+  nonlinear_correction_cpp.clear();
+  block_to_square.clear();
   if(LOAD_NONLIN_CCDB) {
     map<string, double> shower_calib_piecewise;
     loop->GetCalib("FCAL/shower_calib_piecewise", shower_calib_piecewise);
@@ -175,7 +253,9 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
     expfit_param3 = shower_calib_piecewise["expfit_param3"];
     m_beamSpotX = 0;
     m_beamSpotY = 0;
-
+    //expfit_param1 = 1.10358;
+    //expfit_param2 = 0.31385;
+    //expfit_param3 = -2.02585;
     if(debug_level>0) {
       jout << "cutoff_energy = " << cutoff_energy << endl;
       jout << "linfit_slope = " << linfit_slope << endl;
@@ -199,8 +279,44 @@ jerror_t DFCALShower_factory::brun(JEventLoop *loop, int32_t runnumber)
 	}
       }
     }
+    loop->GetCalib("FCAL/nonlinear_correction", nonlinear_correction);
+    if (nonlinear_correction.size() > 0) {
+      m_beamSpotX = beam_spot.at("x");
+      m_beamSpotY = beam_spot.at("y");
+      if (debug_level > 0) {
+	TString str_coef[] = {"A", "B", "C", "D", "E", "F", "G", "H", "I"};
+	for (int i = 0; i < 5; i ++) {
+	  //for (int j = 0; j < 6; j ++) {
+	  for (int j = 0; j < 9; j ++) {
+	    jout << "Ring # " << i << Form(" %s", str_coef[j].Data()) << nonlinear_correction[i][j]; 
+	  }
+	  jout << endl;
+	}
+      }
+    }
+
+    loop->GetCalib("FCAL/block_to_square", block_to_square);
+    if (block_to_square.size() > 0) {
+      if (debug_level > 0) {
+	for (int i = 0; i < (int) block_to_square.size(); i ++) {
+	  jout << block_to_square[i];
+	}
+	jout << endl;
+      }
+    }
+    
+    loop->GetCalib("FCAL/nonlinear_correction_cpp", nonlinear_correction_cpp);
+    if (nonlinear_correction_cpp.size() > 0) {
+      m_beamSpotX = beam_spot.at("x");
+      m_beamSpotY = beam_spot.at("y");
+      if (debug_level > 0) {
+	for (int i = 0; i < (int) nonlinear_correction_cpp.size(); i ++) {
+	  jout << nonlinear_correction_cpp[i];
+	}
+	jout << endl;
+      }
+    }
   }
-  
   if (LOAD_TIMING_CCDB) {
     // Get timing correction polynomial, J. Mirabelli 10/31/17
     map<string,double> timing_correction;
@@ -320,18 +436,24 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       }
       else{
 	// Some guesses for insert resolution
-	double sigx=INSERT_POS_RES1/sqrt(Ecorrected)+INSERT_POS_RES2;
+	double phi=pos_corrected.Phi();
+	double fsinphi=fabs(sin(phi));
+	double fcosphi=fabs(cos(phi));
+	double sigx=(INSERT_POS_RES1+INSERT_POS_PHI1*fsinphi)/sqrt(Ecorrected)
+	  +INSERT_POS_RES2+INSERT_POS_PHI2*fsinphi; 
+	double sigy=(INSERT_POS_RES1+INSERT_POS_PHI1*fcosphi)/sqrt(Ecorrected)
+	  +INSERT_POS_RES2+INSERT_POS_PHI2*fcosphi;
 	shower->ExyztCovariance(1,1)=sigx*sigx;
-	shower->ExyztCovariance(2,2)=sigx*sigx;
+	shower->ExyztCovariance(2,2)=sigy*sigy;
 	shower->ExyztCovariance(0,0)
 	  =Ecorrected*Ecorrected*(INSERT_E_VAR1/Ecorrected
 				  + INSERT_E_VAR2/(Ecorrected*Ecorrected)
 				  + INSERT_E_VAR3);
+	// Make sure off-diagonal elements are zero, for now...
 	for (unsigned int i=0;i<5;i++){
 	  for(unsigned int j=0;j<5;j++){
 	    if (i!=j) shower->ExyztCovariance(i,j)=0.;
 	  }
-	  
 	}
       }
 
@@ -437,7 +559,11 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   //int MAXITER = 1000;
 
   DVector3  posInCal = cluster->getCentroid();
- 
+  int block = cluster->getChannelEmax();
+  int square_nb = -1;
+  if (USE_CPP_E_CORRECTION)
+    square_nb = block_to_square[block];
+  
   float x0 = posInCal.Px();
   float y0 = posInCal.Py();
   double Eclust = cluster->getEnergy();
@@ -448,8 +574,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   double C = 0;
   double D = 0;
   double E = 0;
+  double F = 0;
+  double G = 0;
+  double H = 0;
+  double I = 0;
   double Egamma = Eclust;
   Ecorrected = 0;
+
+
 
   // block properties
   double radiation_length=FCAL_RADIATION_LENGTH;
@@ -465,10 +597,9 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     zfront=m_insertFront;
 
     Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
-  }
-  else{
-     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
-    if (USE_RING_E_CORRECTION && energy_dependence_correction_vs_ring.size()>0){
+  } else {
+    // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
+    if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
       // Method II: PRIMEXD way, correction per ring
       Egamma=Eclust; // Initialize, before correction
       int ring_region = -1;
@@ -502,8 +633,36 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	//Egamma = Eclust / (A + B * Eclust + C * pow(Eclust, 2)); 
 	Egamma = Eclust / (A - exp(-B * Eclust + C)); 
       }
-      // End Correction method II     
-    } else {
+    } else if (USE_RING_E_CORRECTION_V2 && nonlinear_correction.size() > 0) {
+      // Method III: E/P method, correction per for the first 4 then one correction for ring 5 to 23
+      Egamma=Eclust; // Initialize, before correction
+      int ring_region = -1;
+      if (ring_nb == 1)
+	ring_region = 0;
+      else if (ring_nb == 2)
+	ring_region = 1;
+      else if (ring_nb == 3)
+	ring_region = 2;
+      else if (ring_nb == 4)
+	ring_region = 3;
+      else if (5 <= ring_nb)
+	ring_region = 4;
+      if (ring_region != -1) {	
+	Egamma = 0;
+	A = nonlinear_correction[ring_region][0];
+	B = nonlinear_correction[ring_region][1];
+	C = nonlinear_correction[ring_region][2];
+	D = nonlinear_correction[ring_region][3];
+	E = nonlinear_correction[ring_region][4];
+	F = nonlinear_correction[ring_region][5];
+	G = nonlinear_correction[ring_region][6];
+	H = nonlinear_correction[ring_region][7];
+	I = nonlinear_correction[ring_region][8];
+	//[0]-[1]*exp(-[2]*x+[3]) -[4]/([5]+[6]*exp(-x*[7]+[8])
+	Egamma = Eclust / (A - B * exp(-C * Eclust + D) - E / (F + G * exp(-Eclust * H + I))); 
+      }
+      // End Correction method III     
+    } else if (LOAD_NONLIN_CCDB && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
       // Method I: IU way, one overall correction
       Egamma = 0;
       Ecutoff = cutoff_energy;
@@ -523,7 +682,29 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// if all C=D=E=0 by mistake then Egamma = - Eclust
 	Egamma = Eclust / (C - exp(-D * Eclust + E)); // Non-linear part
       }
-    } // End Correction method I 
+      //cout <<"Eclust " << Eclust << " Egamma " << Egamma << " A " << A << " B " << B << " C " << C << " D " << D << " E " << E << endl;
+    } // End Correction method I
+    
+    if (USE_CPP_E_CORRECTION && !USE_RING_E_CORRECTION_V2 && !USE_RING_E_CORRECTION_V1) {
+      double scalef = nonlinear_correction_cpp[0];
+      if (square_nb >= 0 && square_nb <= 13) {
+	double Eshift = 0;
+	if (square_nb == 10) {
+	  Eshift = atan(nonlinear_correction_cpp[4 + square_nb * 3] * Egamma + nonlinear_correction_cpp[5 + square_nb * 3]);
+	  Eshift *= nonlinear_correction_cpp[3 + square_nb * 3] * Eshift;
+	} else {
+	  Eshift = nonlinear_correction_cpp[3 + square_nb * 3] * atan(nonlinear_correction_cpp[4 + square_nb * 3] * Egamma + nonlinear_correction_cpp[5 + square_nb * 3]);
+	}
+	Eshift = scalef * Eshift;
+	if (Eshift > 0.) {
+	  Egamma *= (1. + nonlinear_correction_cpp[1] * 1.e-2 * Egamma + nonlinear_correction_cpp[2] * 1.e-2 * Egamma * Egamma) / Eshift;
+	} else {
+	  if (VERBOSE > 3) jerr << "CPP nonlinear correction has a wrong Eshift" << endl;
+	} 
+      } else {
+	if (VERBOSE > 3) jerr << "CPP nonlinear correction has no square_nb" << endl;
+      }
+    }
   }
   //End energy dependence correction
   
@@ -555,11 +736,12 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     
     posInCal.SetZ( zed + zV );
     errZ = zed - zed1;
+    
   }
   
   Ecorrected = Egamma;
   pos_corrected = posInCal;
- 
+
 }
 
 

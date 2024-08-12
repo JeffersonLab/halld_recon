@@ -6,34 +6,17 @@
 #
 # utilities used for generating files like hddm_s.c and hddm_s.h
 # from the input event.xml have their source in:
-# src/programs/Utilities/hddm
+# https://github.com/jeffersonlab/HDDM
 #
 # The HDDM library is made up of code maintained in the
 # src/libraries/HDDM directory as well as code generated
 # from XML files in that same directory using the above
 # utilities.
 #
-# What this means is that we need to tell scons that a file like "hddm_s.c"
-# depends on the utility "hddm-c" being made first. Because those live
-# in very separate directories we have to somehow get the Node objects for
-# both the utility and the source in one place so we can explicitly
-# declare this dependency using the scons "Requires()" routine. The way
-# this is done is by adding the list of dependent nodes to a special
-# variable in the top-level build environment. (In this case two lists
-# because the C and C++ interfaces must be handled independently.)
-# These variables, "HDDMC_SRC" and "HDDMCPP_SRC" are lists of nodes that
-# can be used in the src/programs/Utilities/hddm/SConscript file to
-# declare this dependency. It is done there since the top-level SConstruct
-# file sources this file (the one you're reading) first (via the
-# libraries/SConscript file) and the one there second (via the
-# programs/SConscript file). Thus, it is the only place where both the
-# source Nodes and utility Nodes are both available.
-#
 # To actually generate the C/C++ source from the XML we create two builders
 # (one for C and the other for C++) here. The builders run the utilities
-# hddm-c and hddm-cpp from the variant dir tree. This path, relative to
-# the top-level directory (the one containing SConstruct) is hardwired
-# here (e.g. "#.%s/programs/Utilities/hddm/hddm-c"). To further complicate
+# hddm-c and hddm-cpp from the external HDDM package, which are assumed
+# to be found somewhere in the current PATH. To further complicate
 # matters, the output of hddm-c is two files (e.g. hddm_s.c and hddm_s.h)
 # which do not depend on the name of the input file ("event.xml"). We specify
 # two products of the input XML, but the value that $TARGET gets set to
@@ -67,9 +50,6 @@ env.Decider('MD5-timestamp')
 #---------------
 def HDDM_C(target, source, env):
 
-	# Get full path to tool
-	hddmc   = str(env.File("#.%s/programs/Utilities/hddm/hddm-c" % osname))
-
 	# Get basename with full path for target.
 	# The first target should always be the header
 	# file name to be generated so we just drop the
@@ -77,7 +57,7 @@ def HDDM_C(target, source, env):
 	target_base = re.sub('\.h$', '', str(target[0]))
 
 	# Form command to be executed and execute it
-	cmd = [hddmc, '-o', target_base, str(source[0])]
+	cmd = ["hddm-c", '-o', target_base, str(source[0])]
 	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
@@ -86,9 +66,6 @@ def HDDM_C(target, source, env):
 #---------------
 def HDDM_CPP(target, source, env):
 
-	# Get full path to tool
-	hddmcpp = str(env.File("#.%s/programs/Utilities/hddm/hddm-cpp" % osname))
-
 	# Get basename with full path for target.
 	# The first target should always be the header
 	# file name to be generated so we just drop the
@@ -96,13 +73,7 @@ def HDDM_CPP(target, source, env):
 	target_base = re.sub('\.hpp$', '', str(target[0]))
 
 	# Form command to be executed and execute it
-	cmd = [hddmcpp, '-o', target_base, str(source[0])]
-	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
-	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
-
-	# C++ interface must have source file names modified
-	# so as not to generate same .o filenames as their C counteparts
-	cmd = ['mv', '%s.cpp' % target_base, '%s++.cpp' % target_base]
+	cmd = ["hddm-cpp", '-o', target_base, str(source[0])]
 	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
 
@@ -111,14 +82,11 @@ def HDDM_CPP(target, source, env):
 #---------------
 def HDDM_PY(target, source, env):
 
-	# Get full path to tool
-	hddmpy = str(env.File("#.%s/programs/Utilities/hddm/hddm-py" % osname))
-
     # separate the target directory and basename
 	target_base = re.sub('\.cpy$', '', str(target[1]))
 
 	# Form command to be executed and execute it
-	cmd = [hddmpy, '-o', target_base, str(source[0])]
+	cmd = ["hddm-py", '-o', target_base, str(source[0])]
 	if( int(env['SHOWBUILD']) > 0): print(' '.join(cmd))
 	cmdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()
     
@@ -145,25 +113,19 @@ env.Append(BUILDERS = {'HDDMC'   : bldc})
 env.Append(BUILDERS = {'HDDMCPP' : bldcpp})
 env.Append(BUILDERS = {'HDDMPY'  : bldpy})
 
-
 # Add the C/C++ HDDM (de)serializer source dependencies
 # by hand. The output file names depend on the class
 # tag defined inside the XML file. So, specifying the
 # inputs and outputs explicitly here is just easier.
-# The HDDMC_SRC and HDDMCPP_SRC variables are used by
-# the SConscript in src/programs/Utilities/hddm.
-hddmc = str(env.File("#.%s/programs/Utilities/hddm/hddm-c" % osname))
-hddmcpp = str(env.File("#.%s/programs/Utilities/hddm/hddm-cpp" % osname))
-hddmpy = str(env.File("#.%s/programs/Utilities/hddm/hddm-py" % osname))
-env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_s.h', 'hddm_s.c'], ['event.xml', hddmc]))
-env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_mc_s.h', 'hddm_mc_s.c'], ['mc.xml',hddmc]))
-env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_r.h', 'hddm_r.c'], ['rest.xml', hddmc]))
-env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_s.hpp', 'hddm_s++.cpp'], ['event.xml', hddmcpp]))
-env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_mc_s.hpp', 'hddm_mc_s++.cpp'], ['mc.xml', hddmcpp]))
-env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_r.hpp', 'hddm_r++.cpp'], ['rest.xml', hddmcpp]))
-env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_s.py', 'pyhddm_s.cpy'], ['event.xml', hddmpy]))
-env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_mc_s.py', 'pyhddm_mc_s.cpy'], ['mc.xml', hddmpy]))
-env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_r.py', 'pyhddm_r.cpy'], ['rest.xml', hddmpy]))
+env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_s.h', 'hddm_s.c'], ['event.xml']))
+env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_mc_s.h', 'hddm_mc_s.c'], ['mc.xml']))
+env.AppendUnique(HDDMC_SRC   = env.HDDMC(['hddm_r.h', 'hddm_r.c'], ['rest.xml']))
+env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_s.hpp', 'hddm_s++.cpp'], ['event.xml']))
+env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_mc_s.hpp', 'hddm_mc_s++.cpp'], ['mc.xml']))
+env.AppendUnique(HDDMCPP_SRC = env.HDDMCPP(['hddm_r.hpp', 'hddm_r++.cpp'], ['rest.xml']))
+env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_s.py', 'pyhddm_s.cpy'], ['event.xml']))
+env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_mc_s.py', 'pyhddm_mc_s.cpy'], ['mc.xml']))
+env.AppendUnique(HDDMPY_SRC  = env.HDDMPY(['setup_hddm_r.py', 'pyhddm_r.cpy'], ['rest.xml']))
 
 # Additional dependencies in the generated module source files
 env.Depends(['setup_hddm_s.py', 'pyhddm_s.cpy'], ['hddm_s.hpp', 'hddm_s++.cpp'])

@@ -27,6 +27,7 @@
 #include "TRACKING/DTrackTimeBased.h"
 #include "TRIGGER/DTrigger.h"
 #include "DIRC/DDIRCPmtHit.h"
+#include "FMWPC/DFMWPCHit.h"
 #include "HDDM/DEventHitStatistics.h"
 #include "RF/DRFTime.h"
 
@@ -57,8 +58,10 @@ class DEventWriterREST : public JObject
 		bool HDDM_USE_COMPRESSION;
 		bool HDDM_USE_INTEGRITY_CHECKS;
 		bool REST_WRITE_DIRC_HITS;
+		bool REST_WRITE_FMWPC_HITS;
 		bool REST_WRITE_CCAL_SHOWERS;
 		bool REST_WRITE_TRACK_EXIT_PARAMS;
+		bool ADD_FCAL_DATA_FOR_CPP;
 
         // metadata to save in the REST file
         // these should be consistent during program execution

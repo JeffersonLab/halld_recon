@@ -20,18 +20,21 @@ class DFMWPCCluster:public jana::JObject{
 		
 		vector<const DFMWPCHit*> members; ///< DFMWPCHits that make up this cluster
 		int layer; ///< #1-6 FMWPC layer
+		int orientation; ///< Vertical/Horizontal
+		float xoffset,yoffset; ///< x and y offsets of wires
 		float q; ///< total charge in the cluster
 		float u; ///< center of gravity of cluster in wire coordinates
 		int first_wire; ///< first wire in cluster 1-144
 		int last_wire; ///< last wire in cluster 1-144
 		int Nhits; ///< Number of wire hits in cluster
-		DVector3 pos; ///< position (x,y,z) in global coodinates
+		DVector3 pos; ///< position (x,y,z) in global coordinates
 		float t;     // time in ns
 		
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
 		void toStrings(vector<pair<string,string> > &items)const{
 			AddString(items, "layer", "%d", layer);
+			AddString(items, "orientation", "%d", orientation);
 			AddString(items, "q", "%10.2f", q);
 			AddString(items, "u", "%3.4f", u);
  			AddString(items, "first_wire", "%3d", first_wire);

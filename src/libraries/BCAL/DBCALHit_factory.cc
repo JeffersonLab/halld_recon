@@ -61,6 +61,7 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
    vector<double> raw_ADC_timing_offsets;
    vector<double> raw_channel_global_offset;
    vector<double> raw_tdiff_u_d;
+   vector<double> raw_bad_channels;
 
     if(print_messages) jout << "In DBCALHit_factory, loading constants..." << endl;
    
@@ -105,6 +106,8 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
        jout << "Error loading /BCAL/channel_global_offset !" << endl;
    if(eventLoop->GetCalib("/BCAL/tdiff_u_d", raw_tdiff_u_d))
        jout << "Error loading /BCAL/tdiff_u_d !" << endl;
+   if(eventLoop->GetCalib("/BCAL/bad_channels", raw_bad_channels))
+       jout << "Error loading /BCAL/bad_channels !" << endl;
 
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_gains" << endl;
    FillCalibTable(gains, raw_gains);
@@ -116,6 +119,8 @@ jerror_t DBCALHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
    FillCalibTableShort(channel_global_offset, raw_channel_global_offset);
    if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_tdiff_u_d" << endl;
    FillCalibTableShort(tdiff_u_d, raw_tdiff_u_d);
+   if (PRINTCALIBRATION) jout << "DBCALHit_factory >> raw_bad_channels" << endl;
+   FillCalibTable(bad_channels, raw_bad_channels);
    
    std::vector<std::map<string,double> > saturation_ADC_pars;
    if(eventLoop->GetCalib("/BCAL/ADC_saturation", saturation_ADC_pars))
@@ -166,6 +171,10 @@ jerror_t DBCALHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
    loop->Get(digihits);
    for(unsigned int i=0; i<digihits.size(); i++){
       const DBCALDigiHit *digihit = digihits[i];
+
+      // throw away hits from bad or noisy channels
+      int quality = GetConstant(bad_channels,digihit);
+      if ( quality > 0 ) continue;
 
       // Error checking for pre-Fall 2016 firmware
       if(digihit->datasource == 1) {

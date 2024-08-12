@@ -167,6 +167,8 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop*
 	locBranchRegister.Register_Single<UInt_t>("RunNumber");
 	locBranchRegister.Register_Single<ULong64_t>("EventNumber");
 	locBranchRegister.Register_Single<UInt_t>("L1TriggerBits");
+	locBranchRegister.Register_Single<Double_t>("L1BCALEnergy");
+	locBranchRegister.Register_Single<Double_t>("L1FCALEnergy");
 
 	//create X4_Production
 	locBranchRegister.Register_Single<TLorentzVector>("X4_Production");
@@ -1344,6 +1346,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locTreeFillData->Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
 	locTreeFillData->Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
 	locTreeFillData->Fill_Single<UInt_t>("L1TriggerBits", locTrigger->Get_L1TriggerBits());
+	locTreeFillData->Fill_Single<Double_t>("L1BCALEnergy", locTrigger->Get_GTP_BCALEnergy());
+	locTreeFillData->Fill_Single<Double_t>("L1FCALEnergy", locTrigger->Get_GTP_FCALEnergy());
+
 
 	//PRODUCTION X4
 	DLorentzVector locProductionX4 = locVertex->dSpacetimeVertex;
@@ -2409,7 +2414,7 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoo
         //Look at the decay products:
         //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         vector<const DKinematicData*> finalParticlesMeasured = locParticleCombos.at(iPC)->Get_FinalParticles_Measured(locReaction, d_AllCharges);
-        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction, d_AllCharges);
+        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction); //, d_AllCharges);
         
         vector<const JObject*> finalParticleObjects = locParticleCombos.at(iPC)->Get_FinalParticle_SourceObjects(d_AllCharges);
         nMeasuredFinalParticles = finalParticlesMeasured.size();
