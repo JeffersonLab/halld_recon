@@ -11,6 +11,7 @@ static bool STORE_ERROR_MATRIX_INFO = false;
 static bool STORE_MC_TRAJECTORIES = false;
 
 static bool STORE_SC_VETO_INFO = false;
+static bool STORE_THROWN_DECAYING_PARTICLES = true;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
@@ -113,6 +114,10 @@ void DEventWriterROOT::Create_ThrownTree(JEventLoop* locEventLoop, string locOut
 	dThrownTreeInterface = DTreeInterface::Create_DTreeInterface("Thrown_Tree", locOutputFileName); //set up this thread
 	if(dThrownTreeInterface->Get_BranchesCreatedFlag())
 		return; //branches already created: return
+
+	// set parameters specifically for thrown trees
+	if(gPARMS->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
+	    {gPARMS->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 
 	//TTREE BRANCHES
 	DTreeBranchRegister locBranchRegister;
@@ -283,6 +288,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 
 	if(gPARMS->Exists("ANALYSIS:STORE_SC_VETO_INFO"))
 	    {gPARMS->GetParameter("ANALYSIS:STORE_SC_VETO_INFO",STORE_SC_VETO_INFO); cout << "ANALYSIS:STORE_SC_VETO_INFO set to " << STORE_SC_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -1108,7 +1114,8 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
 
 	vector<const DMCThrown*> locMCThrowns_Decaying;
-	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+	if(STORE_THROWN_DECAYING_PARTICLES)
+		locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
 
 	const DMCReaction* locMCReaction = NULL;
 	locEventLoop->GetSingle(locMCReaction);
