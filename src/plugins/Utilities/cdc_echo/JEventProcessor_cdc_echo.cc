@@ -226,7 +226,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
     uint16_t nhit, dt, dc, ns;
     uint16_t timeovert;
 
-    uint16_t adc[NSAMPLES] = {0}; 
+    uint16_t adc[NSAMPLES]; 
   
     uint16_t nsat[4][15][3] = {0};   // number of saturated hits in each preamp
     uint32_t tsat[4][15][3][24] = {0};   // rough time of each saturated hit
