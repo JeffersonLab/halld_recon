@@ -15,4 +15,4 @@ src/SBMS/*.pyc
 *.png
 *.swp
 *.mil
-# halld_recon_prereqs_version.xml
+halld_recon_prereqs_version.xml
