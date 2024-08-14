@@ -1553,7 +1553,7 @@ void DL1MCTrigger_factory_DATA::LoadFCALConst(fcal_constants_t &table, const vec
   for (int ch = 0; ch < static_cast<int>(fcal_const_ch.size()); ch++) {
     
     // make sure that we don't try to load info for channels that don't exist
-    if (ch == (int) fcalGeom.numChannels())
+    if (ch == (int)fcalGeom.numChannels())
       break;
     
     int row = fcalGeom.row(ch);
