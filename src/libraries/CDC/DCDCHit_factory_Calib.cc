@@ -28,7 +28,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   ECHO_OPT = 1;
   gPARMS->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
                               "0:do not suppress afterpulses, 1:suppress afterpulses");
-
+  
   ECHO_MAX_A = 350;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
                               "Max height (adc units 0-4095) for afterpulses, if ECHO_OPT=1");
@@ -564,6 +564,9 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   vector<unsigned int> times_thisboard;   // list of times for one preamp at a time
   vector<unsigned int> sat_boards;  // code for hvb w saturated hits
   vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
+
+  vector<unsigned int> boards_found; // list of boards found so far (in case the hits are not in order)
+  
   
   for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
 
@@ -582,26 +585,43 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     unsigned int rought = (unsigned int)(cp->le_time/10);
           
     unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
-
+    
     //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
     if ( amp >= 4088 && cp->overflow_count>0 ) {    
 
       if (sat_boards.size() == 0 ) {
 
-        sat_boards.push_back(board);  
+	sat_boards.push_back(board);  
         times_thisboard.push_back(rought);
 
       } else if (board == sat_boards.back()) {
 
         times_thisboard.push_back(rought); 
-
+	
       } else {
 
-        sat_boards.push_back(board);  
-        sat_times.push_back(times_thisboard);
+	// check to see if there were hits from this board earlier
 
-        times_thisboard.clear();
-        times_thisboard.push_back(rought); 
+	bool found = 0;
+        unsigned int x;
+	
+	for (unsigned int j = 0; j< sat_boards.size(); j++) {
+          if (board == sat_boards[j]) found = 1;
+          if (found) x=j;
+	}
+
+        if (found) {
+
+	  sat_times[x].push_back(rought);
+	  
+	} else {  
+	  
+	  sat_boards.push_back(board);  
+          sat_times.push_back(times_thisboard);
+	
+          times_thisboard.clear();
+          times_thisboard.push_back(rought);
+	}
 
       }
 
