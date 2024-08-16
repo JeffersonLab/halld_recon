@@ -37,6 +37,12 @@ jerror_t DCDCHit_factory_Calib::init(void)
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
                               "End of time range (number of samples) to search for afterpulses");
   
+  ECHO_SCRAMBLE = 0;
+  gPARMS->SetDefaultParameter("CDC:ECHO_SCRAMBLE", ECHO_SCRAMBLE,
+                              "0: do nothing, 1: randomize the order of the digihits in FindRogueHits");
+
+  if (ECHO_SCRAMBLE) cout << "Digihit order will be randomized in FindRogueHits\n";
+  
   // default values
   Nrings = 0;
   a_scale = 0.;
@@ -559,18 +565,28 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     PBIT = 0;
   }
 
+
   // store list of saturated hit times and their hvb number
-
-  vector<unsigned int> times_thisboard;   // list of times for one preamp at a time
-  vector<unsigned int> sat_boards;  // code for hvb w saturated hits
-  vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
-
-  vector<unsigned int> boards_found; // list of boards found so far (in case the hits are not in order)
   
+  unsigned int sat_boards[149];         // list of hvb numbers (codes) with saturated hits
+  unsigned int sat_times[149][24];    // list of saturated hit times for each hvb
   
-  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
+  unsigned int num_sat_boards = 0;                  // how many hvbs have saturated hits  
+  unsigned int num_times[149] = {0};              // how many saturated hits for each hvb
 
-    const DCDCDigiHit *digihit = digihits[i];
+
+  vector <unsigned int> hitlist;
+  
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) hitlist.push_back(i);
+
+  if (ECHO_SCRAMBLE) random_shuffle (hitlist.begin(), hitlist.end() );
+  
+  if (hitlist.size() != digihits.size()) cout<< "help!\n";
+
+
+  for (unsigned int i=0; i < (unsigned int)hitlist.size(); i++) {    
+    
+    const DCDCDigiHit *digihit = digihits[hitlist[i]];
 
     const Df125CDCPulse *cp = NULL;
     digihit->GetSingle(cp);
@@ -589,58 +605,39 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
     if ( amp >= 4088 && cp->overflow_count>0 ) {    
 
-      if (sat_boards.size() == 0 ) {
+      unsigned int thisboardindex;
 
-	sat_boards.push_back(board);  
-        times_thisboard.push_back(rought);
-
-      } else if (board == sat_boards.back()) {
-
-        times_thisboard.push_back(rought); 
-	
-      } else {
-
-	// check to see if there were hits from this board earlier
-
-	bool found = 0;
-        unsigned int x;
-	
-	for (unsigned int j = 0; j< sat_boards.size(); j++) {
-          if (board == sat_boards[j]) found = 1;
-          if (found) x=j;
-	}
-
-        if (found) {
-
-	  sat_times[x].push_back(rought);
-	  
-	} else {  
-	  
-	  sat_boards.push_back(board);  
-          sat_times.push_back(times_thisboard);
-	
-          times_thisboard.clear();
-          times_thisboard.push_back(rought);
-	}
-
+      // has this board already been counted?
+      bool found = 0;
+      
+      for (unsigned int j=0; j< num_sat_boards; j++ ) {
+	if (board == sat_boards[j]) found = 1;
+	if (found) thisboardindex=j;
+	if (found) break;
+      }
+      
+      if (!found) {
+        thisboardindex = num_sat_boards;
+	sat_boards[thisboardindex] = board;
+	num_sat_boards++;
       }
 
-    }  
-
-  
-    if ( i == digihits.size()-1 && times_thisboard.size()>0) {
-        sat_times.push_back(times_thisboard);
-    } 
-    
+      // add the hit time to the list for this board
+      
+      unsigned int k = num_times[thisboardindex];
+      
+      sat_times[thisboardindex][k] = rought;
+      num_times[thisboardindex]++;
+            
+    }
   } 
-
-  if (sat_times.size() == 0) return;
-
+  
+  if (num_sat_boards == 0) return;
   
   // check for small afterpulses
 
   for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
-    
+
     const DCDCDigiHit *digihit = digihits[i];
 
     const Df125CDCPulse *cp = NULL;
@@ -660,16 +657,16 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
     
     // find out if there's a saturated hit on the same HVB
 
-    unsigned int x = 0;
     bool found = 0;
-    for (unsigned int j=0; j<(unsigned int)sat_boards.size(); j++) {
+    unsigned int thisboardindex;
+        
+    for (unsigned int j=0; j<num_sat_boards; j++) {
       if (board == sat_boards[j]) found = 1;
-      if (found) x = j;
+      if (found) thisboardindex = j;
       if (found) break;
     }
-
+        
     if (!found) continue;
-
     
     // fill RogueHits if this is a problem pulse
     
@@ -681,11 +678,11 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
 
       found = 0;
 
-      for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
+      for (unsigned int j=0; j<num_times[thisboardindex]; j++) {
 
-        if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
+        if (rought <= sat_times[thisboardindex][j] ) continue; // saturated pulse was too late 
 
-        dt = rought - sat_times[x][j];   // time delay between saturated pulse and this one
+        dt = rought - sat_times[thisboardindex][j];   // time delay between saturated pulse and this one
 
 	if (dt >=2 && dt <= ECHO_MAX_T) found = 1;    // afterpulses start at dt=2
 	

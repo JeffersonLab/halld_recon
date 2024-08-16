@@ -39,6 +39,8 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   unsigned int ECHO_MAX_T;  // if ECHO_OPT=1, search for afterpulses up to ECHO_MAX_T samples after the main pulse
   unsigned int ECHO_MAX_A; // if ECHO_OPT=1, suppress possible afterpulses with amplitude <= ECHO_MAX_A (adc range 0-4095)
 
+  unsigned int ECHO_SCRAMBLE; // Default 0: do nothing; 1: scramble order of digithit vector for testing 
+  
   // overall scale factors.
   double a_scale, amp_a_scale;
   double t_scale;
