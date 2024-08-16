@@ -36,12 +36,7 @@ jerror_t DCDCHit_factory_Calib::init(void)
   ECHO_MAX_T = 7;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
                               "End of time range (number of samples) to search for afterpulses");
-  
-  ECHO_SCRAMBLE = 0;
-  gPARMS->SetDefaultParameter("CDC:ECHO_SCRAMBLE", ECHO_SCRAMBLE,
-                              "0: do nothing, 1: randomize the order of the digihits in FindRogueHits");
 
-  if (ECHO_SCRAMBLE) cout << "Digihit order will be randomized in FindRogueHits\n";
   
   // default values
   Nrings = 0;
@@ -575,18 +570,9 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   unsigned int num_times[149] = {0};              // how many saturated hits for each hvb
 
 
-  vector <unsigned int> hitlist;
-  
-  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) hitlist.push_back(i);
-
-  if (ECHO_SCRAMBLE) random_shuffle (hitlist.begin(), hitlist.end() );
-  
-  if (hitlist.size() != digihits.size()) cout<< "help!\n";
-
-
-  for (unsigned int i=0; i < (unsigned int)hitlist.size(); i++) {    
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {    
     
-    const DCDCDigiHit *digihit = digihits[hitlist[i]];
+    const DCDCDigiHit *digihit = digihits[i];
 
     const Df125CDCPulse *cp = NULL;
     digihit->GetSingle(cp);
