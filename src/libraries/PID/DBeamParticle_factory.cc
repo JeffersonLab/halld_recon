@@ -62,14 +62,16 @@ jerror_t DBeamParticle_factory::evnt(jana::JEventLoop *locEventLoop, uint64_t lo
 		}
 	}
 
-	// load KL beam particles
-	vector <const DBeamKLong*> locBeamKLongs;
-	locEventLoop->Get(locBeamKLongs);
-	
-	for(auto locBeamKLong : locBeamKLongs) {
-		DBeamParticle* beam = new DBeamParticle(*locBeamKLong);
-		beam->dBeamKLong = locBeamKLong;
-		_data.push_back(beam);
+	if(!dSkipKLongBeam) {
+		// load KL beam particles
+		vector <const DBeamKLong*> locBeamKLongs;
+		locEventLoop->Get(locBeamKLongs);
+		
+		for(auto locBeamKLong : locBeamKLongs) {
+			DBeamParticle* beam = new DBeamParticle(*locBeamKLong);
+			beam->dBeamKLong = locBeamKLong;
+			_data.push_back(beam);
+		}
 	}
 
 

@@ -48,7 +48,8 @@ class DBeamParticle_factory:public jana::JFactory<DBeamParticle>
  			return NOERROR;
 		}
 
-		double dSkipTaggedPhotons = false;
+		double dSkipTaggedPhotons = true;    // default for KLF, fix this before merging
+		double dSkipKLongBeam = false;
 
 
 		//RESOURCE POOL
