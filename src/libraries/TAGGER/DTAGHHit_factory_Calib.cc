@@ -211,6 +211,11 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < tdcdigihits.size(); i++) {
         const DTAGHTDCDigiHit *digihit = tdcdigihits[i];
 
+        // throw away hits from bad or noisy counters
+        int quality = counter_quality[digihit->counter_id];
+        if (quality == k_counter_dead || quality == k_counter_bad || quality == k_counter_noisy)
+            continue;
+
         // Apply calibration constants here
         int counter = digihit->counter_id;
         double T = locTTabUtilities->Convert_DigiTimeToNs_F1TDC(digihit) - tdc_time_offsets[counter] + t_tdc_base;
