@@ -36,7 +36,6 @@ jerror_t DCDCHit_factory_Calib::init(void)
   ECHO_MAX_T = 7;
   gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
                               "End of time range (number of samples) to search for afterpulses");
-
   
   // default values
   Nrings = 0;
@@ -553,133 +552,127 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   digihits[0]->GetSingle(config);
 
   if(config) { 
-    ABIT = config->ABIT;
-    PBIT = config->PBIT; 
+      ABIT = config->ABIT;
+      PBIT = config->PBIT; 
   } else {
-    ABIT = 3;
-    PBIT = 0;
+      ABIT = 3;
+      PBIT = 0;
   }
 
-
   // store list of saturated hit times and their hvb number
-  
-  unsigned int sat_boards[149];         // list of hvb numbers (codes) with saturated hits
-  unsigned int sat_times[149][24];    // list of saturated hit times for each hvb
-  
-  unsigned int num_sat_boards = 0;                  // how many hvbs have saturated hits  
-  unsigned int num_times[149] = {0};              // how many saturated hits for each hvb
 
+  vector<unsigned int> sat_boards;  // code for hvb w saturated hits
+  vector<vector<unsigned int>> sat_times;  // saturated hit times, a vector of these for each board
+  
+  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
 
-  for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {    
-    
     const DCDCDigiHit *digihit = digihits[i];
-
-    const Df125CDCPulse *cp = NULL;
-    digihit->GetSingle(cp);
-    if (!cp) continue ; 
-
-    uint32_t rocid = cp->rocid;
-    uint32_t slot = cp->slot;
-    uint32_t channel = cp->channel;
-    uint32_t amp = cp->first_max_amp<<ABIT;
-    
-    unsigned int preamp = (unsigned int)(channel/24);
-    unsigned int rought = (unsigned int)(cp->le_time/10);
-          
-    unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
-    
-    //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
-    if ( amp >= 4088 && cp->overflow_count>0 ) {    
-
-      unsigned int thisboardindex;
-
-      // has this board already been counted?
-      bool found = 0;
-      
-      for (unsigned int j=0; j< num_sat_boards; j++ ) {
-	if (board == sat_boards[j]) found = 1;
-	if (found) thisboardindex=j;
-	if (found) break;
-      }
-      
-      if (!found) {
-        thisboardindex = num_sat_boards;
-	sat_boards[thisboardindex] = board;
-	num_sat_boards++;
-      }
-
-      // add the hit time to the list for this board
-      
-      unsigned int k = num_times[thisboardindex];
-      
-      sat_times[thisboardindex][k] = rought;
-      num_times[thisboardindex]++;
-            
-    }
-  } 
   
-  if (num_sat_boards == 0) return;
+      const Df125CDCPulse *cp = NULL;
+      digihit->GetSingle(cp);
+      if (!cp) continue ; 
+  
+      uint32_t rocid = cp->rocid;
+      uint32_t slot = cp->slot;
+      uint32_t channel = cp->channel;
+      uint32_t amp = cp->first_max_amp<<ABIT;
+      
+      unsigned int preamp = (unsigned int)(channel/24);
+      unsigned int rought = (unsigned int)(cp->le_time/10);
+            
+      unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
+      
+      //  511<<3 = 4088, so check overflows too, and ensure that the overflows are from the first pulse
+      if ( amp >= 4088 && cp->overflow_count>0 ) {    
+
+        // check to see if this board was already registered 
+
+        bool found = 0;
+        unsigned int x = 0;
+
+	while (!found && x < sat_boards.size()) {
+	    if (board == sat_boards[x]) found = 1;
+            x++;
+        }
+	  
+        if (found) {   // add the time to the list saved earlier
+
+	   sat_times[x-1].push_back(rought);
+	  
+	} else {       // new board.  register its number and start a new list of times
+	  
+	   sat_boards.push_back(board);  
+           sat_times.push_back({rought});
+
+	 }  
+      }      
+  } 
+
+    
+  if (sat_times.size() == 0) return;
+
   
   // check for small afterpulses
 
   for (unsigned int i=0; i < (unsigned int)digihits.size(); i++) {
-
-    const DCDCDigiHit *digihit = digihits[i];
-
-    const Df125CDCPulse *cp = NULL;
-    digihit->GetSingle(cp);
-    if (!cp) continue ; 
-
-    uint32_t rocid = cp->rocid;
-    uint32_t slot = cp->slot;
-    uint32_t channel = cp->channel;
-
-    unsigned int preamp = (unsigned int)(channel/24);
-    unsigned int rought = (unsigned int)(cp->le_time/10);
-
-    unsigned int dt;  // time difference between saturated & later pulses
+    
+      const DCDCDigiHit *digihit = digihits[i];
+  
+      const Df125CDCPulse *cp = NULL;
+      digihit->GetSingle(cp);
+      if (!cp) continue ; 
+  
+      uint32_t rocid = cp->rocid;
+      uint32_t slot = cp->slot;
+      uint32_t channel = cp->channel;
+  
+      unsigned int preamp = (unsigned int)(channel/24);
+      unsigned int rought = (unsigned int)(cp->le_time/10);
+  
+      unsigned int dt;  // time difference between saturated & later pulses
+        
+      unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
       
-    unsigned int board = (unsigned int)rocid*100000 + (unsigned int)slot*100 + preamp;  
-    
-    // find out if there's a saturated hit on the same HVB
+      // find out if there's a saturated hit on the same HVB
+  
+      bool found = 0;
+      unsigned int x = 0;
 
-    bool found = 0;
-    unsigned int thisboardindex;
-        
-    for (unsigned int j=0; j<num_sat_boards; j++) {
-      if (board == sat_boards[j]) found = 1;
-      if (found) thisboardindex = j;
-      if (found) break;
-    }
-        
-    if (!found) continue;
-    
-    // fill RogueHits if this is a problem pulse
-    
-    unsigned int net_amp = (unsigned int)(cp->first_max_amp<<ABIT) - (unsigned int)(cp->pedestal<<PBIT);
-
-    if (net_amp < ECHO_MAX_A) {
-
-      // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
-
-      found = 0;
-
-      for (unsigned int j=0; j<num_times[thisboardindex]; j++) {
-
-        if (rought <= sat_times[thisboardindex][j] ) continue; // saturated pulse was too late 
-
-        dt = rought - sat_times[thisboardindex][j];   // time delay between saturated pulse and this one
-
-	if (dt >=2 && dt <= ECHO_MAX_T) found = 1;    // afterpulses start at dt=2
-	
-        if (found) break;
-
+      while (!found && x < sat_boards.size()) {
+          if (board == sat_boards[x]) found = 1;
+          x++;
       }
-
-      if (found) RogueHits.push_back(i);
-
-    }
-    
+      
+      if (!found) continue;
+  
+      x = x-1;
+      
+      // fill RogueHits if this is a problem pulse
+      
+      unsigned int net_amp = (unsigned int)(cp->first_max_amp<<ABIT) - (unsigned int)(cp->pedestal<<PBIT);
+  
+      if (net_amp < ECHO_MAX_A) {
+  
+          // look at times of saturated pulses to see if any is a candidate for causing this hit as an afterpulse
+  
+          found = 0;
+  
+          for (unsigned int j=0; j<(unsigned int)sat_times[x].size(); j++) {
+  
+              if (rought <= sat_times[x][j] ) continue; // saturated pulse was too late 
+  
+              dt = rought - sat_times[x][j];   // time delay between saturated pulse and this one
+  
+    	      if (dt >=2 && dt <= ECHO_MAX_T) found = 1;    // afterpulses start at dt=2
+  	
+              if (found) break;
+  
+          }
+  
+          if (found) RogueHits.push_back(i);
+  
+      }
+      
   }
 
 }
