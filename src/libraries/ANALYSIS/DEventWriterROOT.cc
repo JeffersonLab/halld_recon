@@ -1743,10 +1743,17 @@ void DEventWriterROOT::Fill_BeamData(DTreeFillData* locTreeFillData, unsigned in
 	//use production vertex, propagate photon time
 	DVector3 locTargetCenter = locBeamParticle->position();
 	DVector3 locProductionVertex = locVertex->dSpacetimeVertex.Vect();
-	double locDeltaPath = (locProductionVertex - locTargetCenter).Mag();
-	bool locDownstreamFlag = ((locProductionVertex.Z() - locTargetCenter.Z()) > 0.0);
-	double locDeltaT = locDownstreamFlag ? locDeltaPath/29.9792458 : -1.0*locDeltaPath/29.9792458;
-	double locTime = locBeamParticle->time() + locDeltaT;
+	double locTime = 0.;
+	auto locBeamVelocity = locBeamParticle->pmag() / locBeamParticle->energy();
+
+	if(locBeamParticle->mass() > 0.1) {   // massive beam particle
+		locTime = locBeamParticle->time();
+	} else {
+		double locDeltaPath = (locProductionVertex - locTargetCenter).Mag();
+		bool locDownstreamFlag = ((locProductionVertex.Z() - locTargetCenter.Z()) > 0.0);
+		double locDeltaT = locDownstreamFlag ? locDeltaPath/29.9792458 : -1.0*locDeltaPath/29.9792458;
+		locTime = locBeamParticle->time() + locDeltaT;
+	}
 
 	TLorentzVector locX4_Measured(locProductionVertex.X(), locProductionVertex.Y(), locProductionVertex.Z(), locTime);
 	locTreeFillData->Fill_Array<TLorentzVector>(Build_BranchName(locParticleBranchName, "X4_Measured"), locX4_Measured, locArrayIndex);
