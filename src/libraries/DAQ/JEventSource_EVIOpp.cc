@@ -1160,10 +1160,10 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe, const DTranslat
 		// This should rarely happen since CDC_long and FDC_long mores have the raw data
 		// along with the calculated quantities in a pulse word. Pure raw mode would be the only time
 		// when this would not be the case. 
-        // While this is infrequently used, usually different detectors use 
-        // different types, so let's pick the pulse type based on the 
-        // translated detector info (this came up in FMWPC testing)
-
+	        // While this is infrequently used, usually different detectors use 
+	        // different types, so let's pick the pulse type based on the 
+	        // translated detector info (this came up in FMWPC testing)
+	
 		DTranslationTable::Detector_t locDetector = DTranslationTable::UNKNOWN_DETECTOR;
 		if(ttab) {
  			auto rocid_by_system = ttab->Get_ROCID_By_System();
@@ -1175,29 +1175,28 @@ void JEventSource_EVIOpp::EmulateDf125Firmware(DParsedEvent *pe, const DTranslat
  				locDetector = DTranslationTable::FMWPC;
 		}
 
-        if(f125CDCPulse == NULL && ( locDetector == DTranslationTable::CDC || locDetector == DTranslationTable::FMWPC ) ){
-            f125CDCPulse           = pe->NEW_Df125CDCPulse();
-            f125CDCPulse->rocid    = wrd->rocid;
-            f125CDCPulse->slot     = wrd->slot;
-            f125CDCPulse->channel  = wrd->channel;
-            f125CDCPulse->emulated = true;
-            f125CDCPulse->AddAssociatedObject(wrd);
-        }
-        else if(f125FDCPulse == NULL && ( locDetector == DTranslationTable::FDC_CATHODES ) ){
-            f125FDCPulse           = pe->NEW_Df125FDCPulse();
-            f125FDCPulse->rocid    = wrd->rocid;
-            f125FDCPulse->slot     = wrd->slot;
-            f125FDCPulse->channel  = wrd->channel;
-            f125FDCPulse->emulated = true;
-            f125FDCPulse->AddAssociatedObject(wrd);
-        }
-        
-        // if there's no translation table or the hits have no pulse data
-        // and can't be matched to a known detector (not a good situation!)
-        // then give up
-        if( f125FDCPulse == NULL && f125CDCPulse == NULL )
-        	return;
-
+	        if(f125CDCPulse == NULL && ( locDetector == DTranslationTable::CDC || locDetector == DTranslationTable::FMWPC ) ){
+	            f125CDCPulse           = pe->NEW_Df125CDCPulse();
+	            f125CDCPulse->rocid    = wrd->rocid;
+	            f125CDCPulse->slot     = wrd->slot;
+	            f125CDCPulse->channel  = wrd->channel;
+	            f125CDCPulse->emulated = true;
+	            f125CDCPulse->AddAssociatedObject(wrd);
+	        }
+	        else if(f125FDCPulse == NULL && ( locDetector == DTranslationTable::FDC_CATHODES ) ){
+	            f125FDCPulse           = pe->NEW_Df125FDCPulse();
+	            f125FDCPulse->rocid    = wrd->rocid;
+	            f125FDCPulse->slot     = wrd->slot;
+	            f125FDCPulse->channel  = wrd->channel;
+	            f125FDCPulse->emulated = true;
+	            f125FDCPulse->AddAssociatedObject(wrd);
+	        }
+	        
+	        // if there's no translation table or the hits have no pulse data
+	        // and can't be matched to a known detector (not a good situation!)
+	        // then give up
+	        if( f125FDCPulse == NULL && f125CDCPulse == NULL ) return;
+	
 		// Flag all objects as emulated and their values will be replaced with emulated quantities
 		if (F125_EMULATION_MODE == kEmulationAlways){
 			if(f125CDCPulse!=NULL) f125CDCPulse->emulated = 1;
