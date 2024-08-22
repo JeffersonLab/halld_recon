@@ -28,6 +28,7 @@
 #include <TRACKING/DTrackTimeBased.h>
 #include <FCAL/DFCALShower.h>
 #include <FCAL/DFCALShower_factory.h>
+#include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALShower.h>
 #include <BCAL/DBCALShower.h>
 #include <BCAL/DBCALShower_factory_IU.h>
@@ -101,6 +102,8 @@ class DEventSourceREST:public JEventSource
                     JFactory<DDIRCPmtHit>* factory, JEventLoop* locEventLoop);
    jerror_t Extract_DFMWPCHit(hddm_r::HDDM *record,
                     JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop);
+   jerror_t Extract_DFCALHit(hddm_r::HDDM *record,
+                    JFactory<DFCALHit>* factory, JEventLoop* locEventLoop);
    jerror_t Extract_DEventHitStatistics(hddm_r::HDDM *record,
                     JFactory<DEventHitStatistics> *factory);
 
