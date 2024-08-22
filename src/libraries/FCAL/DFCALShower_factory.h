@@ -19,6 +19,7 @@
 #include <TH2F.h>
 
 class DFCALHit;
+class DECALHit;
 class DTrackWireBased;
 
 class DFCALShower_factory:public JFactory<DFCALShower>{
@@ -47,13 +48,12 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   unsigned int getMaxHit(int chan_Emax, const vector< const DFCALHit* >& hitVec ) const;
 
   void getUVFromHits( double& sumUSh, double& sumVSh, 
-		      const vector< const DFCALHit* >& hits,
+		      const vector<DFCALCluster::DFCALClusterHit_t>& hits,
 		      const DVector3& showerVec,
 		      const DVector3& trackVec ) const;
 
-  void getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
-			 const vector< const DFCALHit* >& hits,
-			 unsigned int maxIndex ) const;
+  void getE1925FromHits(const vector<DFCALCluster::DFCALClusterHit_t>&hits,
+			double& e1e9Sh, double& e9e25Sh) const;
 
   vector< const DTrackWireBased* >
     filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const;
