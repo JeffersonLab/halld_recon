@@ -142,6 +142,7 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	    hits->hit[nhits].intOverPeak=(**hit).intOverPeak;
 	  
 	    int ch=fcalGeom->channel(100+(**hit).row,100+(**hit).column);
+	    hits->hit[nhits].ch=ch;
 	    DVector2 positionOnFace=fcalGeom->positionOnFace(ch);
 	    hits->hit[nhits].x = positionOnFace.X();
 	    hits->hit[nhits].y = positionOnFace.Y();
