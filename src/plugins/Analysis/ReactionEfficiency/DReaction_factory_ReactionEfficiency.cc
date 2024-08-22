@@ -740,8 +740,18 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
 	
 	// MISSING MASS SQUARED
-	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "MM2")); 
-	
+	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "pippippimpim"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	const std::deque<Particle_t> locFourPi = {PiPlus, PiPlus, PiMinus, PiMinus};
+	const std::deque<Particle_t> locPipPim = {PiPlus, PiMinus};
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locFourPi, false, 600, 0.0, 3.0, "pippippimpim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPipPim, false, 600, 0.0, 3.0, "pippim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, false, 300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locFourPi, true, 600, 0.0, 3.0, "pippippimpim_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPipPim, true, 600, 0.0, 3.0, "pippim_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, true, 300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_kinFit"));
+
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
 
