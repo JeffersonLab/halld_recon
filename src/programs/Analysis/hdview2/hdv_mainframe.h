@@ -151,7 +151,8 @@ class hdv_mainframe:public TGMainFrame {
 		TPolyLine* GetCCALPolyLine(int row, int col);
 		TPolyLine* GetBCALPolyLine(int mod, int layer, int sector);
 		TPolyLine* GetTOFPolyLine(int translate_side, int tof_ch);
-		
+		void SetCalorimeterEnergyColor(TPolyLine *poly,double E) const;	
+			
 		void AddGraphicsSideA(std::vector<TObject*> &v);
 		void AddGraphicsSideB(std::vector<TObject*> &v);
 		void AddGraphicsEndA(std::vector<TObject*> &v);
