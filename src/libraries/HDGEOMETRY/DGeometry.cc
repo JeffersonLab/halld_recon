@@ -2058,13 +2058,30 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
   }
 }
 
+// Check for presence of FCAL2 insert
+bool DGeometry::HaveInsert() const{
+  int ncopy=0;
+  jgeom->SetVerbose(0);
+  bool have_insert
+    =Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",
+	 ncopy);
+  jgeom->SetVerbose(1);
+  return have_insert;
+}
+
 //---------------------------------
 // GetFCALInsertRowSize
 //---------------------------------
 bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+
+   bool good = Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",insert_row_size);
+   // For backward compatibility with prototype geometry definition:
+   if (!good){
+     good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+   }
+
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
@@ -2083,7 +2100,7 @@ bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LGBL']/@X_Y_Z",block);
+   bool good = Get("//box[@name='LGBU']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
@@ -2101,12 +2118,12 @@ bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 bool DGeometry::GetFCALInsertBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LTB1']/@X_Y_Z",block);
+   bool good = Get("//box[@name='XTMD']/@X_Y_Z",block);
+   // for backward compatiblity
+   if (!good) good=Get("//box[@name='LTB1']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       return false;
    }else{
       return true;
