@@ -112,7 +112,7 @@ class MyProcessor:public JEventProcessor
  private:	
   
   hdv_mainframe *hdvmf;
-  hdv_fulllistframe *fulllistmf;
+  hdv_fulllistframe *fulllistmf=NULL;
   hdv_debugerframe *debugermf;
   JEventLoop *loop;
   JEvent last_jevent;
