@@ -47,15 +47,17 @@ class DFCALCluster : public JObject {
       userhit_t hit[1];
    } userhits_t;
 
-   typedef struct {
-      oid_t id;
-      int ch;
-      float x;
-      float y;
-      float E;
-      float t;
-      float intOverPeak;
-   } DFCALClusterHit_t;
+  class DFCALClusterHit_t{
+  public:
+    DFCALClusterHit_t(oid_t id,int ch,double E,double x,double y,double t)
+      :id(id),ch(ch),E(E),x(x),y(y),t(t){}
+    oid_t id;
+    int ch;
+    double E;
+    double x;
+    double y;
+    double t;
+  };
 
    void saveHits( const userhits_t* const hit );
 
@@ -88,10 +90,11 @@ class DFCALCluster : public JObject {
    void resetClusterHits();
    bool update( const userhits_t* const hitList, double fcalFaceZ,
 		const DFCALGeometry *fcalgeom );
+  void addHit(oid_t id,int ch,double E,double x,double y,double t);
 
 // get hits that form a cluster after clustering is finished
-   inline const vector<DFCALClusterHit_t> GetHits() const { return my_hits; }
-   inline uint32_t GetNHits(void) const { return my_hits.size(); }
+   inline const vector<DFCALClusterHit_t> GetHits() const { return fHitList; }
+   inline uint32_t GetNHits(void) const { return fHitList.size(); }
 
    void toStrings(vector<pair<string,string> > &items) const {
       AddString(items, "x(cm)", "%3.1f", getCentroid().x());
@@ -141,7 +144,7 @@ class DFCALCluster : public JObject {
    double *fEallowed;     // allowed energy of hit by cluster (GeV)
 
    // container for hits that form a cluster to be used after clustering is done
-   vector<DFCALClusterHit_t> my_hits; 
+   vector<DFCALClusterHit_t> fHitList; 
 
 };
 
