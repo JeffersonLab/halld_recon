@@ -724,7 +724,7 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 
 
 	/**************************************************** pippippimpimmissprot__B1_T1_U1_Effic ****************************************************/
-	
+
 	locReaction = new DReaction("pippippimpimmissprot__B1_T1_U1_Effic");
 	locReactionStep = new DReactionStep(Gamma, Proton, {PiPlus, PiPlus, PiMinus, PiMinus}, Proton);
 	locReaction->Add_ReactionStep(locReactionStep);
@@ -734,11 +734,11 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Set_NumPlusMinusRFBunches(1); // B1
 	locReaction->Set_MaxExtraGoodTracks(1); // T1
 	locReaction->Enable_TTreeOutput("tree_pippippimpimmissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
-	
+
 	// KINEMATIC FIT
 	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
-	
+
 	// MISSING MASS SQUARED
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "pippippimpim"));
 
@@ -751,6 +751,43 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locFourPi, true, 600, 0.0, 3.0, "pippippimpim_kinFit"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPipPim, true, 600, 0.0, 3.0, "pippim_kinFit"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, true, 300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_kinFit"));
+
+	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
+
+
+	/**************************************************** omegamissprot__B1_T1_U1_Effic ****************************************************/
+
+	locReaction = new DReaction("omegamissprot__B1_T1_U1_Effic");
+	locReactionStep = new DReactionStep(Gamma, Proton, {omega}, Proton);
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(omega, {Pi0, PiPlus, PiMinus});
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+	locReactionStep = new DReactionStep(Pi0, {Gamma, Gamma});
+	// locReactionStep->Set_KinFitConstrainInitMassFlag(false);  / M7 = disable pi0 mass constraint
+	locReaction->Add_ReactionStep(locReactionStep);
+	dReactionStepPool.push_back(locReactionStep); //register so will be deleted later: prevent memory leak
+
+	locReaction->Set_KinFitType(d_P4AndVertexFit);
+	locReaction->Set_NumPlusMinusRFBunches(1); // B1
+	locReaction->Set_MaxExtraGoodTracks(1); // T1
+	locReaction->Enable_TTreeOutput("tree_omegamissprot__B1_T1_U1_Effic.root", true); // U1 = true -> true/false: do/don't save unused hypotheses
+
+	// KINEMATIC FIT
+	locReaction->Add_AnalysisAction(new DHistogramAction_KinFitResults(locReaction, 0.05)); //5% confidence level cut on pull histograms only
+	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, locMinKinFitFOM)); //0% confidence level cut //require kinematic fit converges
+
+	// MISSING MASS SQUARED
+	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "omega"));
+
+	// HISTOGRAM MASSES //false/true: measured/kinfit data
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, false,  600, 0.0, 3.0, "omega_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0,   false, 2000, 0.0, 2.0, "Pi0_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 0, {PiPlus, PiMinus}, {Pi0, PiPlus}, false, 200, 0.0, 4.0, 200, 0.0, 4.0, "omega_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, true,  600, 0.0, 3.0, "omega_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0,   true, 2000, 0.0, 2.0, "Pi0_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 0, {PiPlus, PiMinus}, {Pi0, PiPlus}, true, 200, 0.0, 4.0, 200, 0.0, 4.0, "omega_kinFit"));
 
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
@@ -845,4 +882,3 @@ jerror_t DReaction_factory_ReactionEfficiency::fini(void)
 		delete dReactionStepPool[loc_i]; //cleanup memory
 	return NOERROR;
 }
-
