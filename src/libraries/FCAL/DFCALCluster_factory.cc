@@ -17,8 +17,9 @@ using namespace jana;
 #include "FCAL/DFCALCluster.h"
 #include "FCAL/DFCALCluster_factory.h"
 #include "FCAL/DFCALHit.h"
+#include <ECAL/DECALHit.h>
 #include "FCAL/DFCALGeometry.h"
-#include "HDGEOMETRY/DGeometry.h"
+#include <HDGEOMETRY/DGeometry.h>
 
 
 // Used to sort hits by Energy
@@ -91,10 +92,13 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 
 	vector<const DFCALHit*> fcalhits;
 	eventLoop->Get(fcalhits);
+	// Hits in PWO insert
+	vector<const DECALHit*> ecalhits;
+	eventLoop->Get(ecalhits);
 	
 	// LED events will have hits in nearly every channel. Do NOT
 	// try clusterizing if more than 250 hits in FCAL
-	if(fcalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
+	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
 	
 	const DFCALGeometry* fcalGeom=NULL;
 	eventLoop->GetSingle(fcalGeom);
@@ -125,8 +129,32 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 		   << nhits << " larger than " << FCAL_USER_HITS_MAX << endl;
               break;
            }
-
         }
+	// Now add the ECAL hits
+	if (nhits < (int) FCAL_USER_HITS_MAX){
+	  for (vector<const DECALHit*>::const_iterator hit  = ecalhits.begin(); 
+	       hit != ecalhits.end(); hit++ ) {
+	    if ( (**hit).E <  1e-6 ) continue;
+	    
+	    hits->hit[nhits].id = (**hit).id;
+	    hits->hit[nhits].E = (**hit).E; 
+	    hits->hit[nhits].t = (**hit).t;
+	    hits->hit[nhits].intOverPeak=(**hit).intOverPeak;
+	  
+	    int ch=fcalGeom->channel(100+(**hit).row,100+(**hit).column);
+	    DVector2 positionOnFace=fcalGeom->positionOnFace(ch);
+	    hits->hit[nhits].x = positionOnFace.X();
+	    hits->hit[nhits].y = positionOnFace.Y();
+	    
+	    nhits++;
+	    
+	    if (nhits >= (int) FCAL_USER_HITS_MAX)  { 
+              cout << "ERROR: FCALCluster_factory: number of hits " 
+		   << nhits << " larger than " << FCAL_USER_HITS_MAX << endl;
+              break;
+	    }	    
+	  }
+	}
         hits->nhits = nhits;
 
         int hitUsed[nhits]; 
