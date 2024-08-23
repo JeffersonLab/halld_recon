@@ -32,6 +32,7 @@ using namespace jana;
 
 // root hist pointers
 static TH1I* h1epics_AD00 = NULL;
+static TH1I* h1epics_IHWP = NULL;
 static TH2I* h2epics_pos_inner = NULL;
 static TH2I* h2epics_pos_outer = NULL;
 static TH1F* h1epics_AD00_VSevent = NULL;
@@ -83,6 +84,10 @@ jerror_t JEventProcessor_EPICS_dump::init(void) {
 	h1epics_AD00 = new TH1I("h1epics_AD00", "Current AD00",nbins,0,500);
 	h1epics_AD00->SetXTitle("Current AD00 (nA)");
 	h1epics_AD00->SetYTitle("counts");
+
+	h1epics_IHWP = new TH1I("h1epics_IHWP", "Insertable Halfwave Plate (IGL1I00DI24_24M)", 2, 0, 2);	
+      	h1epics_IHWP->GetXaxis()->SetBinLabel(1,"in");
+	h1epics_IHWP->GetXaxis()->SetBinLabel(2,"out");
 	
 	h2epics_pos_inner = new TH2I("h1epics_pos_inner", "Position AC inner",nbins,-10,10,nbins,-10,10);
 	h2epics_pos_inner->SetXTitle("Position AC inner x (mm)");
@@ -176,6 +181,9 @@ jerror_t JEventProcessor_EPICS_dump::evnt(jana::JEventLoop* locEventLoop, uint64
 			h1epics_AD00_VSevent->Fill((float)locEventNumber,fconv);
 			h1epics_entries_VSevent->Fill((float)locEventNumber);
 			//cout << "IBCAD00CRCUR6 " << epics_val->name << " fconv=" << fconv << endl; 
+		}
+		else if (epics_val->name == "IGL1I00DI24_24M") {
+			h1epics_IHWP->Fill(iconv);
 		}
 		else if (epics_val->name == "AC:inner:position:x") {
 			xpos_inner = fconv;

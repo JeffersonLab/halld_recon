@@ -18,6 +18,7 @@
 #include "PID/DBeamPhoton.h"
 #include "TRACKING/DMCThrown.h"
 #include "FCAL/DFCALShower.h"
+#include "FCAL/DFCALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "PID/DNeutralShower.h"
 #include <PID/DDetectorMatches.h>
@@ -62,6 +63,7 @@ class DEventWriterREST : public JObject
 		bool REST_WRITE_CCAL_SHOWERS;
 		bool REST_WRITE_TRACK_EXIT_PARAMS;
 		bool ADD_FCAL_DATA_FOR_CPP;
+		bool REST_WRITE_FCAL_HITS;
 
         // metadata to save in the REST file
         // these should be consistent during program execution

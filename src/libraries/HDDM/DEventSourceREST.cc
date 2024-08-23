@@ -398,6 +398,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DFMWPCHit(record,
 		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
    }
+   if (dataClassName =="DFCALHit") {
+      return Extract_DFCALHit(record,
+		     dynamic_cast<JFactory<DFCALHit>*>(factory), locEventLoop);
+   }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
                      dynamic_cast<JFactory<DDetectorMatches>*>(factory));
@@ -2019,6 +2023,49 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
       hit->t = iter->getT();
       hit->QF = iter->getQf();
       hit->ped = iter->getPed();
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DFCALHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
+                                   JFactory<DFCALHit>* factory, JEventLoop* locEventLoop)
+{
+   /// Copies the data from the fcal hit hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DFCALHit*> data;
+
+   // loop over fmwpc hit records
+   const hddm_r::FcalHitList &hits =
+                 record->getFcalHits();
+   hddm_r::FcalHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DFCALHit *hit = new DFCALHit();
+      hit->row = iter->getRow();
+      hit->column = iter->getColumn();
+      hit->x = iter->getX();
+      hit->y = iter->getY();
+      hit->E = iter->getE();
+      hit->t = iter->getT();
+      hit->intOverPeak = iter->getIntOverPeak();
 
       data.push_back(hit);
    }
