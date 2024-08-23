@@ -14,6 +14,9 @@
 #include "PID/DVertex.h"
 
 #include "TRACKING/DTrackTimeBased.h"
+#include <PID/DChargedTrackHypothesis.h>
+#include <PID/DChargedTrack.h>
+#include <TRACKING/DTrackFitter.h>
 
 #include <vector>
 
@@ -30,6 +33,10 @@ class JEventProcessor_CDC_dedx:public jana::JEventProcessor{
 		const char* className(void){return "JEventProcessor_CDC_dedx";}
 
 	private:
+
+                TH2D *bestfom_dedx_p = NULL;
+                TH2D *bestfom_dedx_p_pos = NULL;
+                TH2D *bestfom_dedx_p_neg = NULL;
 
                 TH2D *dedx_p = NULL;
                 TH2D *dedx_p_pos = NULL;
