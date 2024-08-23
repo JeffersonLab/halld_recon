@@ -110,31 +110,37 @@ jerror_t JEventProcessor_cdc_amp_t::evnt(JEventLoop *loop, uint64_t eventnumber)
     }
 
     // digihits/cdcpulses
+
+    uint16_t ABIT = 3; // 2^{ABIT} Scale factor for amplitude
+    uint16_t PBIT = 0; // 2^{PBIT} Scale factor for pedestal
+
+    vector<const DCDCDigiHit*> digihits;
+    loop->Get(digihits);
+
+    if (digihits.size() > 0) {
+
+      const Df125Config *config = NULL;
+      digihits[0]->GetSingle(config);
+
+      if(config) { 
+          ABIT = config->ABIT;
+          PBIT = config->PBIT; 
+      }
+    }
     
     vector <const Df125CDCPulse*> cdcpulses;
     loop->Get(cdcpulses);
   
-    if (cdcpulses.size()>0) {
-
-      uint16_t ABIT=3;
-      uint16_t PBIT=0;
-      
-      const Df125Config* config = NULL;
-      cdcpulses[0]->GetSingle(config);
-  
-      if (config) ABIT=config->ABIT;
-      if (config) PBIT=config->PBIT; 
-
-      for (unsigned int i=0; i<(unsigned int)cdcpulses.size(); i++) {
+    for (unsigned int i=0; i<(unsigned int)cdcpulses.size(); i++) {
 	
-        const Df125CDCPulse* cp = cdcpulses[i];
-	uint32_t rought = (uint32_t)(cp->le_time/10);
-        uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
+      const Df125CDCPulse* cp = cdcpulses[i];
+      uint32_t rought = (uint32_t)(cp->le_time/10);
+      uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
 
-        japp->RootWriteLock();    
-        amp_t->Fill((int)rought,(int)net_amp);
-        japp->RootUnLock();    
-      }
+      japp->RootWriteLock();    
+      amp_t->Fill((int)rought,(int)net_amp);
+      japp->RootUnLock();    
+
     }
 
     
@@ -188,16 +194,7 @@ jerror_t JEventProcessor_cdc_amp_t::evnt(JEventLoop *loop, uint64_t eventnumber)
 
 	if (cdcpulses.size() > 0) {
 
-          const Df125CDCPulse* cp = cdcpulses[i];
-
-	  uint16_t ABIT=3;
-          uint16_t PBIT=0;
-      
-          const Df125Config* config = NULL;
-          cp->GetSingle(config);
-  
-          if (config) ABIT=config->ABIT;
-          if (config) PBIT=config->PBIT; 
+          const Df125CDCPulse* cp = cdcpulses[0];
 
   	  uint32_t rought = (uint32_t)(cp->le_time/10);
           uint32_t net_amp = (cp->first_max_amp<<ABIT) - (cp->pedestal<<PBIT) ;
@@ -206,15 +203,11 @@ jerror_t JEventProcessor_cdc_amp_t::evnt(JEventLoop *loop, uint64_t eventnumber)
           amp_tt->Fill((int)rought,(int)net_amp);
           japp->RootUnLock();
 	}
-
 	
       }
     }	
 
-    
-
-
-  
+      
 
 	return NOERROR;
 }
