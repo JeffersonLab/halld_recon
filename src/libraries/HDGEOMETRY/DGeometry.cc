@@ -1768,20 +1768,23 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 //---------------------------------
 bool DGeometry::GetECALZ(double &z_ecal) const
 {
-   vector<double> CrystalEcalpos;
-   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos);
-   jgeom->SetVerbose(1);   // reenable error messages
+  z_ecal=0;
+  if (GetFCALZ(z_ecal)){    
+    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    vector<double>CrystalEcalpos;
+    if (Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos)){
+      vector<double> FCALCenter;
+      Get("//section/composition/posXYZ[@volume='forwardEMcal]/@X_Y_Z", FCALCenter);
+      vector<double>block;
+      Get("//box[@name='XTBL']/@X_Y_Z",block);
 
-   if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ECAL position."<<endl;  
-      z_ecal = 1279.376;   
-      return false;
-   }else{
-	   z_ecal = CrystalEcalpos[2];
+      jgeom->SetVerbose(1);   // reenable error messages
+     
+      z_ecal += FCALCenter[2]+CrystalEcalpos[2]-0.5*block[2];
       return true;
-   }
+    }
+  }
+  return false;
 }
 
 
