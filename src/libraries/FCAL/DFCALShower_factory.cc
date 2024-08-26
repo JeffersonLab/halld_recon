@@ -405,10 +405,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     int ring_nb = (int) (radius / (5 * k_cm));
     GetCorrectedEnergyAndPosition( cluster, ring_nb , Ecorrected, pos_corrected, errZ, &vertex,in_insert);
     
-    DVector3 pos_log;
-    GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
-    
-    if (Ecorrected>0.){		
+    if (Ecorrected>SHOWER_ENERGY_THRESHOLD){
+      DVector3 pos_log;
+      GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );	
+
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
       //takes the Cherenkov light to reach the back of the detector
