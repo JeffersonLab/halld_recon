@@ -23,8 +23,11 @@ using namespace jana;
 
 
 // Used to sort hits by Energy
-bool FCALHitsSort_C(const DFCALHit* const &thit1, const DFCALHit* const &thit2) {
-    return thit1->E>thit2->E;
+int FCALHitsSort_C(const void *a,const void *b){
+  const DFCALCluster::userhit_t hit1=*(const DFCALCluster::userhit_t *)a;
+  const DFCALCluster::userhit_t hit2=*(const DFCALCluster::userhit_t *)b;
+  if (hit1.E<hit2.E) return 1;
+  return -1;
 }
 
 const DFCALHit *GetDFCALHitFromClusterHit(const DFCALCluster::DFCALClusterHit_t &theClusterHit, const vector<const DFCALHit*> &fcalhits) {
@@ -103,9 +106,6 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	const DFCALGeometry* fcalGeom=NULL;
 	eventLoop->GetSingle(fcalGeom);
 
-	// Sort hits by energy
-	sort(fcalhits.begin(), fcalhits.end(), FCALHitsSort_C);
-
 	// fill user's hit list
         int nhits = 0;
         DFCALCluster::userhits_t* hits = 
@@ -162,7 +162,10 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
         for ( int i = 0; i < nhits; i++ ) {
 	  hitUsed[i] = 0; 
 	}
- 
+
+	// Sort the hit array by energy
+	qsort(&hits->hit[0],nhits,sizeof(DFCALCluster::userhit_t),FCALHitsSort_C);
+	
         const unsigned int max = 999;
 	DFCALCluster* clusterList[max];
 	unsigned int clusterCount = 0;
