@@ -1787,7 +1787,6 @@ bool DGeometry::GetECALZ(double &z_ecal) const
   return false;
 }
 
-
 //---------------------------------
 // GetCCALZ
 //---------------------------------
@@ -2088,13 +2087,26 @@ bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       insert_row_size = 0;   
       return false;
    }else{
       return true;
    }
+}
+
+//---------------------------------
+// GetFCALInsertSize
+//---------------------------------
+double DGeometry::GetFCALInsertSize() const{
+  int insertRowSize=0;
+  if (GetFCALInsertRowSize(insertRowSize)){
+    vector<double>insertBlock;
+    // Use nominal crystal separation to be on the safe side.  This is slightly
+    // larger than the actual measured separations from the survey.
+    return 0.5*double(insertRowSize)*2.09;
+  }
+
+  return 0.;
 }
 
 //---------------------------------
