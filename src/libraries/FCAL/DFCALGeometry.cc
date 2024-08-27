@@ -27,9 +27,7 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   // Check for presence of PbWO4 insert
   if (geom->HaveInsert()){ // Geometry based on survey data for positions
     // Get size of the insert 
-    int insert_row_size=0;
-    geom->GetFCALInsertRowSize(insert_row_size);
-    m_insertSize=insertBlockSize()*double(insert_row_size/2);
+    m_insertSize=geom->GetFCALInsertSize();
 
     // Find the size of the sensitive volume of each PWO crystal
     geom->Get("//box[@name='XTBL']/@X_Y_Z",block);
