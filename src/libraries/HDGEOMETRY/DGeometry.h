@@ -194,6 +194,7 @@ class DGeometry{
       bool GetFCALBlockSize(vector<double> &block) const;
       bool GetFCALInsertBlockSize(vector<double> &block) const;
       bool HaveInsert() const;
+      double GetFCALInsertSize() const;
 
       bool GetStartCounterGeom(vector<vector<DVector3> >&pos,
             vector<vector<DVector3> >&norm) const; // < vectors containing positions and norm 3-vectors for start counter 
