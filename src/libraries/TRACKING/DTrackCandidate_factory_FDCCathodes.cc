@@ -650,25 +650,6 @@ void DTrackCandidate_factory_FDCCathodes::LinkSegments(unsigned int pack1,
   }
 }
 
-// Routine for matching to a segment using the stepper
-bool DTrackCandidate_factory_FDCCathodes::GetTrackMatch(double q,
-							DVector3 &pos,
-							DVector3 &mom,
-							const DFDCSegment *segment){
-  const DVector3 norm(0,0,1.);
-  stepper->SetCharge(q);
-  
-  const DFDCPseudo *hit=segment->hits[0];
-  if (stepper->SwimToPlane(pos,mom,hit->wire->origin,norm,NULL)==false){
-    double dx=hit->xy.X()-pos.x();
-    double dy=hit->xy.Y()-pos.y();
-    double d2=dx*dx+dy*dy;
-   
-    if (d2<Match(mom.Mag())) return true;
-  }
-  return false;
-}
-
 // Routine that tries to link a stray segment with an already existing track
 // candidate
 bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *segment){

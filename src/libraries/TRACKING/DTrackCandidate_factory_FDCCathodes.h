@@ -76,8 +76,6 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double Match(double p);
   double MatchR(double rc) const;
 
-  bool GetTrackMatch(double q,DVector3 &pos,DVector3 &mom,
-		     const DFDCSegment *segment);
   bool LinkStraySegment(const DFDCSegment *segment);
   bool LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segements,
 			 vector<DFDCSegment *>packages[4],
