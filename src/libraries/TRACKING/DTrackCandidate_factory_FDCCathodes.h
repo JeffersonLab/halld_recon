@@ -73,7 +73,6 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 			     unsigned int &match_id);
   void LinkSegments(unsigned int pack1,vector<DFDCSegment *>packages[4],
 		    vector<pair<const DFDCSegment*,const DFDCSegment*> >&paired_segments, vector<vector<int> >&is_paired); 
-  double Match(double p);
   double MatchR(double rc) const;
 
   bool LinkStraySegment(const DFDCSegment *segment);
@@ -109,12 +108,6 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double cumulative_time=0.,cumulative_events=0.;
 };
 
-inline double DTrackCandidate_factory_FDCCathodes::Match(double p){
-  double cut=5.5/p;
-  if (cut>9.0) cut=9.0;
-  if (cut<5.) cut=5.0;
-  return cut;
-}
 inline double DTrackCandidate_factory_FDCCathodes::MatchR(double rc) const {
   double cut=200.0/rc;
   if (cut>9.0) cut=9.0;
