@@ -99,8 +99,6 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double xs,ys,zs;
   double p,cosphi,sinphi,twokappa,cotl;
 
-  DTrackFinder *finder;
-
   // For profiling
   bool PROFILE_TIME;
   unsigned int NUM_PROFILE_FDC_CANDIDATES;
