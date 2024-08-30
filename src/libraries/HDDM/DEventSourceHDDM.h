@@ -89,7 +89,7 @@ class DEventSourceHDDM:public JEventSource
       virtual const char* className(void){return static_className();}
       static const char* static_className(void){return "DEventSourceHDDM";}
 
-      void GetEvent(std::shared_ptr<JEvent> event) override;
+      Result Emit(JEvent& event) override;
       void FinishEvent(JEvent &event) override;
       bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) override;
       

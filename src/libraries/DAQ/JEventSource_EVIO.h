@@ -181,7 +181,7 @@ class JEventSource_EVIO: public JEventSource {
 				          JEventSource_EVIO(std::string source_name, JApplication* app);
 		         virtual ~JEventSource_EVIO();
 
-		            void GetEvent(std::shared_ptr<JEvent> event) override;
+      				Result Emit(JEvent& event) override;
 				    bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) override;
 					void FinishEvent(JEvent &event) override;
 

@@ -26,6 +26,7 @@ DEventSourceREST::DEventSourceREST(std::string source_name, JApplication* app)
 {
    /// Constructor for DEventSourceREST object
    SetTypeName("DEventSourceREST");
+   SetCallbackStyle(CallbackStyle::ExpertMode);
    ifs = new ifstream(source_name);
    ifs->get();
    ifs->unget();
@@ -91,14 +92,14 @@ DEventSourceREST::~DEventSourceREST()
 }
 
 //----------------
-// GetEvent
+// Emit
 //----------------
-void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
+JEventSource::Result DEventSourceREST::Emit(JEvent& event)
 {
    /// Implementation of JEventSource virtual function
-   auto app = event->GetJApplication();
+   auto app = event.GetJApplication();
    if (!fin) {
-      throw RETURN_STATUS::kUNKNOWN; // EVENT_SOURCE_NOT_OPEN
+      return Result::FailureFinished; // EVENT_SOURCE_NOT_OPEN
    }
 
    // Each open hddm file takes up about 1M of memory so it's
@@ -108,8 +109,7 @@ void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
       fin = NULL;
       delete ifs;
       ifs = NULL;
-
-      throw RETURN_STATUS::kNO_MORE_EVENTS;
+      return Result::FailureFinished;
    }
 
 #if HDDM_SETPOSITION_EXAMPLE
@@ -141,14 +141,14 @@ void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
             fin = NULL;
             delete ifs;
             ifs = NULL;
-	        throw RETURN_STATUS::kNO_MORE_EVENTS;
+	        return Result::FailureFinished;
          }
       }
    }catch(std::runtime_error &e){
       cerr << "Exception caught while trying to read REST file!" << endl;
 	  cerr << e.what() << endl;
 	  _DBG__;
-	   throw RETURN_STATUS::kNO_MORE_EVENTS;
+	   return Result::FailureFinished;
    }
 
    // Copy the reference info into the JEvent object
@@ -195,26 +195,27 @@ void DEventSourceREST::GetEvent(std::shared_ptr<JEvent> event)
                fin = NULL;
                delete ifs;
                ifs = NULL;
-	           throw RETURN_STATUS::kNO_MORE_EVENTS;
+	           return Result::FailureFinished;
             }
          }
 
          continue;
       }
-      event->SetEventNumber(re.getEventNo());
-      event->SetRunNumber(re.getRunNo());
-      event->SetJEventSource(this);
-      event->Insert(record);
+      event.SetEventNumber(re.getEventNo());
+      event.SetRunNumber(re.getRunNo());
+      event.SetJEventSource(this);
+      event.Insert(record);
 
       auto statusBits = new DStatusBits;
       statusBits->SetStatusBit(kSTATUS_REST);
       statusBits->SetStatusBit(kSTATUS_FROM_FILE);
 	  statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
-	  event->Insert(statusBits);
+	  event.Insert(statusBits);
 
 	  // ++Nevents_read; // TODO: NWB: This is going away. Verify this is fine.
       break;
    }
+   return Result::Success;
 }
 
 //----------------

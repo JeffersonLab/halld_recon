@@ -127,7 +127,7 @@ class JEventSource_EVIOpp: public JEventSource{
 		               void Dispatcher(void);
 		           jerror_t SkipEVIOBlocks(uint32_t N);
 		
-		           void GetEvent(std::shared_ptr<JEvent> event) override;
+      				Result Emit(JEvent& event) override;
 		               void FinishEvent(JEvent &event) override;
 		           bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory* factory) override;
 

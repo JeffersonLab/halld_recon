@@ -29,7 +29,7 @@ class DEventSourceEVIO:public JEventSource{
 		DEventSourceEVIO(const char* source_name);
 		virtual ~DEventSourceEVIO();
 
-		jerror_t GetEvent(JEvent &event);
+      	Result Emit(JEvent& event) override;
 		void FreeEvent(JEvent &event);
 		jerror_t GetObjects(JEvent &event, JFactory *factory);
 		

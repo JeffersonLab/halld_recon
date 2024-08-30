@@ -19,6 +19,7 @@ using namespace std;
 DEventSourceEVIO::DEventSourceEVIO(const char* source_name):JEventSource(source_name)
 {
 	// Open the EVIO file, catching any exceptions
+	SetCallbackStyle(CallbackStyle::ExpertMode);
 	try {
 		chan = new evioFileChannel(source_name,"r", 65536);
 		chan->open();
@@ -77,11 +78,11 @@ DEventSourceEVIO::~DEventSourceEVIO()
 }
 
 //---------------------------------
-// GetEvent
+// Emit
 //---------------------------------
-void DEventSourceEVIO::GetEvent(JEvent &event)
+JEventSource::Result DEventSourceEVIO::Emit(JEvent& event)
 {
-	if(chan==NULL)return NO_MORE_EVENTS_IN_SOURCE;
+	if(chan==NULL) return Result::FailureFinished;
 	if(chan->read()){
 		
 		evioDOMTree *evt = new evioDOMTree(chan);
@@ -93,10 +94,10 @@ void DEventSourceEVIO::GetEvent(JEvent &event)
 		event.SetRef(evt);
 		
 	}else{
-		return NO_MORE_EVENTS_IN_SOURCE;
+		return Result::FailureFinished;
 	}
 
-	return;
+	return Result::Success;
 }
 
 //---------------------------------

@@ -66,6 +66,7 @@ set<uint32_t> ROCIDS_TO_PARSE;
 // If EVIO support is not available, define dummy methods
 #ifndef HAVE_EVIO
 JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(source_name){
+    SetCallbackStyle(CallbackStyle::ExpertMode);
 	cerr << endl;
 	cerr << "You are trying to use code requiring EVIO when support" << endl;
 	cerr << "for EVIO was not built into this binary. Set your" << endl;
@@ -75,9 +76,9 @@ JEventSource_EVIO::JEventSource_EVIO(const char* source_name):JEventSource(sourc
 	exit(-1);
 }
          JEventSource_EVIO::~JEventSource_EVIO(){}
-jerror_t JEventSource_EVIO::GetEvent(jana::JEvent &event){return NOERROR;}
+// jerror_t JEventSource_EVIO::GetEvent(jana::JEvent &event){return NOERROR;}
     void JEventSource_EVIO::FreeEvent(jana::JEvent &event){}
-jerror_t JEventSource_EVIO::GetObjects(jana::JEvent &event, jana::JFactory_base *factory){return NOERROR;}
+// jerror_t JEventSource_EVIO::GetObjects(jana::JEvent &event, jana::JFactory_base *factory){return NOERROR;}
 jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 //:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -89,6 +90,7 @@ jerror_t JEventSource_EVIO::ReadEVIOEvent(uint32_t* &buf){return NOERROR;}
 JEventSource_EVIO::JEventSource_EVIO(std::string source_name, JApplication* app):JEventSource(source_name)
 {
 	// Initialize connection objects and flags to NULL
+    SetCallbackStyle(CallbackStyle::ExpertMode);
 	Nunparsed = 0;
 	no_more_events_in_source = false;
 	et_connected = false;
@@ -597,11 +599,12 @@ void JEventSource_EVIO::Cleanup(void)
 }
 
 //----------------
-// GetEvent
+// Emit
 //----------------
-void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event)
+JEventSource::Result JEventSource_EVIO::Emit(JEvent& event)
+
 {
-	auto app = event->GetJApplication();
+	auto app = event.GetJApplication();
 	DStatusBits* statusBits = new DStatusBits;
 
 	if(VERBOSE>1) evioout << "GetEvent called for &event = " << hex << &event << dec << endl;
@@ -669,7 +672,7 @@ void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event)
 			pthread_mutex_lock(&stored_events_mutex);
 			if(stored_events.empty()){
 				pthread_mutex_unlock(&stored_events_mutex);
-				throw RETURN_STATUS::kNO_MORE_EVENTS;
+				return Result::FailureFinished;
 			}
 
 			objs_ptr = stored_events.front();
@@ -709,10 +712,10 @@ void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event)
 	// Store a pointer to the ObjList object for this event in the
 	// JEvent as the Reference value. Parsing will be done later
 	// in GetObjects() -> ParseEvents() using the eviobuff pointer.
-	event->SetJEventSource(this);
-	event->SetEventNumber((uint64_t)objs_ptr->event_number);
-	event->SetRunNumber(objs_ptr->run_number);
-	event->Insert(objs_ptr);
+	event.SetJEventSource(this);
+	event.SetEventNumber((uint64_t)objs_ptr->event_number);
+	event.SetRunNumber(objs_ptr->run_number);
+	event.Insert(objs_ptr);
 	statusBits->SetStatusBit(kSTATUS_EVIO);
 	if( source_type == kFileSource ) statusBits->SetStatusBit(kSTATUS_FROM_FILE);
 	if( source_type == kETSource   ) statusBits->SetStatusBit(kSTATUS_FROM_ET);
@@ -721,10 +724,11 @@ void JEventSource_EVIO::GetEvent(std::shared_ptr<JEvent> event)
 	
 	// EPICS and BOR events are barrier events
 	if(statusBits->GetStatusBit(kSTATUS_EPICS_EVENT) || statusBits->GetStatusBit(kSTATUS_BOR_EVENT) ){
-		event->SetSequential(true);
+		event.SetSequential(true);
 	}
 	
 	Nevents_read++;
+    return Result::Success;
 }
 
 //----------------

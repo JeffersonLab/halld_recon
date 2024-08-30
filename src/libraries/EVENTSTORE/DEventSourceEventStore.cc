@@ -44,6 +44,7 @@ static bool TEST_MODE = false;
 //---------------------------------
 DEventSourceEventStore::DEventSourceEventStore(std::string source_name):JEventSource(source_name) {
 	SetTypeName("DEventSourceEventStore");
+	SetCallbackStyle(CallbackStyle::ExpertMode);
 }
 
 //---------------------------------
@@ -269,26 +270,26 @@ DEventSourceEventStore::~DEventSourceEventStore()
 }
 
 //---------------------------------
-// GetEvent
+// Emit
 //---------------------------------
-void DEventSourceEventStore::GetEvent(std::shared_ptr<JEvent> event)
+JEventSource::Result DEventSourceEventStore::Emit(JEvent& event)
 {
 
 	auto statusBits = new DStatusBits;
 	statusBits->SetStatusBit(kSTATUS_FROM_FILE);
 	statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
-	event->Insert(statusBits);
+	event.Insert(statusBits);
 
 	// FOR DEBUGGING - EMIT EVENTS FOREVER
 	if(TEST_MODE) {
 		// output some fake event with skim information
-    	event->SetEventNumber(1);
-    	event->SetRunNumber(10000);
-    	event->SetJEventSource(this);
+    	event.SetEventNumber(1);
+    	event.SetRunNumber(10000);
+    	event.SetJEventSource(this);
    		//event.SetRef(NULL);
 
 		DEventStoreEvent *the_es_event = new DEventStoreEvent();
-		event->Insert(the_es_event);
+		event.Insert(the_es_event);
 		for(int i=0; i<4; i++)
 			if(gRandom->Uniform() < 0.5)
 				the_es_event->Add_Skim(skim_list[i]);
@@ -298,15 +299,15 @@ void DEventSourceEventStore::GetEvent(std::shared_ptr<JEvent> event)
 	while(event_source == NULL) {
 		while(OpenNextFile() != NOERROR) {}  // keep trying to open files until none are left
 		if(event_source == NULL)
-			throw RETURN_STATUS::kNO_MORE_EVENTS;
+			return Result::FailureFinished;
 	
 		// skip to next event
 		jerror_t retval;
 		if( (retval = MoveToNextEvent()) != NOERROR)
-			throw RETURN_STATUS::kERROR; // if we can't get to another event, then we're done
+			return Result::FailureFinished; // if we can't get to another event, then we're done
 		
 		// read the next event in
-		event_source->GetEvent(event);
+		event_source->Emit(event);
 		if(retval == NOERROR) {
 			// To store the skim and other EventStore information for the event
 			// we wrap the actual event data and store our information in the wrapper
@@ -316,7 +317,7 @@ void DEventSourceEventStore::GetEvent(std::shared_ptr<JEvent> event)
 			// TODO: NWB: Uncomment previous line. Problem: `Ref` is untyped, and our sources now Insert()
 			//            a typed object which `GetRef` can't find. To fix this, we need a "Ref" container
 			//            which _all_ of our eventsources can insert.
-			event->Insert(the_es_event);
+			event.Insert(the_es_event);
 
 			// tag event with skims
 		} else if(retval == NO_MORE_EVENTS_IN_SOURCE) {
@@ -325,6 +326,7 @@ void DEventSourceEventStore::GetEvent(std::shared_ptr<JEvent> event)
 			event_source = NULL;
 		}
 	}
+	return Result::Success;
 }
 
 //---------------------------------

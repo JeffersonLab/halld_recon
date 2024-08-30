@@ -28,7 +28,7 @@ class DEventSourceEventStore : public JEventSource {
 		~DEventSourceEventStore() override;
 
 		void Open() override;
-		void GetEvent(std::shared_ptr<JEvent> event) override;
+    	Result Emit(JEvent& event) override;
 		void FinishEvent(JEvent &event) override;
 		bool GetObjects(const std::shared_ptr<const JEvent>& event, JFactory* factory) override;
 

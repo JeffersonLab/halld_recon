@@ -53,7 +53,7 @@ class DEventSourceREST:public JEventSource
    DEventSourceREST(std::string source_name, JApplication* app);
    virtual ~DEventSourceREST();
 
-		void GetEvent(std::shared_ptr<JEvent> event) override;
+    Result Emit(JEvent& event) override;
 		bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) override;
 		void FinishEvent(JEvent &event) override;
 		

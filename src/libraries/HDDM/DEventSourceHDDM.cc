@@ -72,6 +72,7 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
 : JEventSource(source_name)
 {
    /// Constructor for DEventSourceHDDM object
+   SetCallbackStyle(CallbackStyle::ExpertMode);
    ifs = new ifstream(source_name);
    ifs->get();
    ifs->unget();
@@ -122,14 +123,15 @@ DEventSourceHDDM::~DEventSourceHDDM()
 }
 
 //----------------
-// GetEvent
+// Emit
 //----------------
-void DEventSourceHDDM::GetEvent(std::shared_ptr<JEvent> event)
+JEventSource::Result DEventSourceHDDM::Emit(JEvent& event)
+
 {
    /// Implementation of JEventSource virtual function
 
    if (!fin)
-      return; // EVENT_SOURCE_NOT_OPEN;
+      return Result::FailureFinished; // EVENT_SOURCE_NOT_OPEN;
 
    // Each open HDDM file takes up about 1M of memory so it's
    // worthwhile to close it as soon as we can.
@@ -138,7 +140,7 @@ void DEventSourceHDDM::GetEvent(std::shared_ptr<JEvent> event)
       fin = NULL;
       delete ifs;
       ifs = NULL;
-      throw RETURN_STATUS::kNO_MORE_EVENTS;
+      return Result::FailureFinished;
    }
    
    hddm_s::HDDM *record = new hddm_s::HDDM();
@@ -148,7 +150,7 @@ void DEventSourceHDDM::GetEvent(std::shared_ptr<JEvent> event)
          fin = NULL;
          delete ifs;
          ifs = NULL;
-         throw RETURN_STATUS::kNO_MORE_EVENTS;
+         return Result::FailureFinished;
       }
    }
 
@@ -163,16 +165,17 @@ void DEventSourceHDDM::GetEvent(std::shared_ptr<JEvent> event)
    }
 
    // Copy the reference info into the JEvent object
-   event->SetJEventSource(this);
-   event->SetEventNumber(event_number);
-   event->SetRunNumber(run_number);
-   event->Insert(record); // Transfer ownership of record to event
+   event.SetJEventSource(this);
+   event.SetEventNumber(event_number);
+   event.SetRunNumber(run_number);
+   event.Insert(record); // Transfer ownership of record to event
 
    auto statusBits = new DStatusBits;
    statusBits->SetStatusBit(kSTATUS_HDDM);
    statusBits->SetStatusBit(kSTATUS_FROM_FILE);
    statusBits->SetStatusBit(kSTATUS_PHYSICS_EVENT);
-   event->Insert(statusBits);
+   event.Insert(statusBits);
+   return Result::Success;
 }
 
 //----------------
