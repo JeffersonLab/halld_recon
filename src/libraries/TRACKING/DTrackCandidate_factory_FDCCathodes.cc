@@ -96,10 +96,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
     
     dapp->Unlock();
   }
-    
-  // Initialize the stepper
-  stepper=new DMagneticFieldStepper(bfield);
-  stepper->SetStepSize(1.0);
 
   // For profiling
   PROFILE_TIME=false;
@@ -117,11 +113,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
 //------------------
 jerror_t DTrackCandidate_factory_FDCCathodes::erun(void)
 {
-  if (stepper) {
-    delete stepper;
-    stepper = nullptr;
-  }
-  
   return NOERROR;
 }
 //------------------
@@ -129,11 +120,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::erun(void)
 //------------------
 jerror_t DTrackCandidate_factory_FDCCathodes::fini(void)
 {
-  if (stepper) {
-    delete stepper;
-    stepper = nullptr;
-  }  
-
 #ifdef PROFILE_TRK_TIMES
   double Nevents = cand_prof_times["Nevents"].real;
   cout << "Average track finding/initial fitting times for " << Nevents << " events:" << endl; 

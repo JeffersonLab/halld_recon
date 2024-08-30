@@ -47,7 +47,6 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   
  private:  
   const DMagneticFieldMap *bfield;
-  DMagneticFieldStepper *stepper;
 		
   jerror_t init(void);						///< Called once at program start.
   jerror_t brun(JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
