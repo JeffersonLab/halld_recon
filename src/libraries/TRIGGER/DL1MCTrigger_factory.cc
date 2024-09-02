@@ -168,6 +168,7 @@ jerror_t DL1MCTrigger_factory::init(void)
 //------------------
 jerror_t DL1MCTrigger_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
+  if (BYPASS) return NOERROR;
 
   int use_rcdb = 1;
 
@@ -1479,7 +1480,7 @@ int DL1MCTrigger_factory::FindTriggers(DL1MCTrigger *trigger, vector<const DSCHi
 // Fill fcal calibration tables similar to FCALHit factory
 void DL1MCTrigger_factory::LoadFCALConst(fcal_constants_t &table, const vector<double> &fcal_const_ch, 
 					 const DFCALGeometry  &fcalGeom){
-  for (int ch = 0; ch < static_cast<int>(fcal_const_ch.size()); ch++) {
+  for (int ch = 0; ch < fcalGeom.numFcalChannels(); ch++) {
     int row = fcalGeom.row(ch);
     int col = fcalGeom.column(ch);
     table[row][col] = fcal_const_ch[ch];
