@@ -39,6 +39,7 @@ DFCALCluster::DFCALCluster( const int nhits )
       fEallowed = 0;
       fEexpected = 0;
    }
+   fHitList.clear();
 }
 
 DFCALCluster::~DFCALCluster()
@@ -51,6 +52,7 @@ DFCALCluster::~DFCALCluster()
       delete [] fEallowed;
    if (fEexpected)
       delete [] fEexpected;
+   fHitList.clear();
 }
 
 
@@ -58,17 +60,10 @@ void DFCALCluster::saveHits( const userhits_t* const hits )
 {
    
    for ( int i=0; i < fNhits; i++) {
-      DFCALClusterHit_t h;
       JObject::oid_t id = getHitID( hits, i ) ;
       if ( id != 0 ) {  
-         h.id = (JObject::oid_t) id;
-	 h.ch = getHitCh( hits, i );
-         h.E = getHitE( hits, i ) ;
-         h.x = getHitX( hits, i ) ;
-         h.y = getHitY( hits, i ) ;
-         h.t = getHitT( hits, i ) ;
-	 h.intOverPeak = getHitIntOverPeak( hits, i );
-         my_hits.push_back(h);
+	addHit(id,getHitCh( hits, i ),getHitE( hits, i ),getHitX( hits, i ),
+	       getHitY( hits, i ),getHitT( hits, i ));
       }
       else {
          static uint32_t Nwarns=0;
@@ -82,6 +77,9 @@ void DFCALCluster::saveHits( const userhits_t* const hits )
    }
 }
 
+void DFCALCluster::addHit(oid_t id,int ch,double E,double x,double y,double t){
+  fHitList.push_back(DFCALClusterHit_t(id,ch,E,x,y,t));
+}
 
 int DFCALCluster::addHit(const int ihit, const double frac)
 {
@@ -276,7 +274,7 @@ void DFCALCluster::shower_profile( const userhits_t* const hitList,
    double y = hitList->hit[ihit].y;
    double moliere_radius=MOLIERE_RADIUS;
    double min_dist=fcalgeom->blockSize();
-   if (fabs(x)<fcalgeom->insertSize() && fabs(y)<fcalgeom->insertSize()){
+   if (hitList->hit[ihit].ch>=fcalgeom->numFcalChannels()){
      moliere_radius=PbWO4_MOLIERE_RADIUS;
      min_dist=fcalgeom->insertBlockSize();
    }

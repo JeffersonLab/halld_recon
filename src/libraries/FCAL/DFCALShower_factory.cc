@@ -512,14 +512,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setTimeTrack( timeTr );
 
       // now compute some variables at the hit level
+      unsigned int num_hits=cluster->GetNHits();
+      shower->setNumBlocks(num_hits);
       
-      vector< const DFCALHit* > fcalHits;
-      cluster->Get( fcalHits );
-      shower->setNumBlocks( fcalHits.size() );
-      
-      double e9e25, e1e9;
-      getE1925FromHits( e1e9, e9e25, fcalHits,
-			getMaxHit(cluster->getChannelEmax(),fcalHits) );
+      // Get (E,x,y) for each hit in the cluster
+      const vector<DFCALCluster::DFCALClusterHit_t>hits=cluster->GetHits();
+
+      double e9e25, e1e9;      
+      getE1925FromHits(hits, e1e9, e9e25);
       shower->setE1E9( e1e9 );
       shower->setE9E25( e9e25 );
 
@@ -528,7 +528,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       // if there is no nearest track, the defaults for xTr and yTr will result
       // in using the beam axis as the directional axis
       //if (!SHOWER_POSITION_LOG)
-      getUVFromHits( sumU, sumV, fcalHits,
+      getUVFromHits( sumU, sumV, hits,
 		     DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
 		     DVector3( xTr, yTr, 0 ) );
       //else
@@ -961,7 +961,7 @@ DFCALShower_factory::getMaxHit( const vector< const DFCALHit* >& hitVec ) const 
 
 void
 DFCALShower_factory::getUVFromHits( double& sumUSh, double& sumVSh, 
-				    const vector< const DFCALHit* >& hits,
+				    const vector<DFCALCluster::DFCALClusterHit_t>& hits,
 				    const DVector3& showerVec,
 				    const DVector3& trackVec ) const {
 
@@ -982,46 +982,60 @@ DFCALShower_factory::getUVFromHits( double& sumUSh, double& sumVSh,
 
   double sumE = 0;
   
-  for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
+  for( vector<DFCALCluster::DFCALClusterHit_t>::const_iterator hit = hits.begin();
        hit != hits.end(); ++hit ){
 
-    hitLoc.SetX( (**hit).x - showerVec.X() );
-    hitLoc.SetY( (**hit).y - showerVec.Y() );
+    hitLoc.SetX( (*hit).x - showerVec.X() );
+    hitLoc.SetY( (*hit).y - showerVec.Y() );
 
-    sumUSh += (**hit).E * pow( u.Dot( hitLoc ), 2 );
-    sumVSh += (**hit).E * pow( v.Dot( hitLoc ), 2 );
+    sumUSh += (*hit).E * pow( u.Dot( hitLoc ), 2 );
+    sumVSh += (*hit).E * pow( v.Dot( hitLoc ), 2 );
 
-    sumE += (**hit).E;
+    sumE += (*hit).E;
   }
 
   sumUSh /= sumE;
   sumVSh /= sumE;
 }
 
-void
-DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
-				       const vector< const DFCALHit* >& hits,
-				       unsigned int maxIndex ) const {
-
+void DFCALShower_factory::getE1925FromHits(const vector<DFCALCluster::DFCALClusterHit_t>&hits,
+					   double& e1e9Sh, double& e9e25Sh) const {
+  unsigned int maxIndex=0;
+  double maxE=0;
+  for (unsigned int i=0;i<hits.size();i++){
+    if (hits[i].E>maxE){
+      maxE=hits[i].E;
+      maxIndex=i;
+    }
+  }
+  
   double E9 = 0;
   double E25 = 0;
+  double E9cut=0.,E25cut=0.;
 
-  const DFCALHit* maxHit = hits[maxIndex];
- 
-  for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
-       hit != hits.end(); ++hit ){
-     
-    if( fabs( (**hit).x - maxHit->x ) < 4.5 && fabs( (**hit).y - maxHit->y ) < 4.5 )
-      E9 += (**hit).E;
-
-    if( fabs( (**hit).x - maxHit->x ) < 8.5 && fabs( (**hit).y - maxHit->y ) < 8.5 )
-      E25 += (**hit).E;
+  const DFCALCluster::DFCALClusterHit_t maxHit = hits[maxIndex];
+  bool maxHitInInsert=fcalGeom->inInsert(maxHit.ch);
+  if (maxHitInInsert){
+    E9cut=2.3;
+    E25cut=4.3;
+  }
+  else {
+    E9cut=4.5;
+    E25cut=8.5;
+  }
+  
+  for( vector<DFCALCluster::DFCALClusterHit_t>::const_iterator hit = hits.begin();
+       hit != hits.end(); ++hit ){  
+    if(fabs((*hit).x - maxHit.x) < E9cut && fabs((*hit).y - maxHit.y) < E9cut )
+      E9 += (*hit).E;      
+    if(fabs((*hit).x - maxHit.x) < E25cut && fabs((*hit).y - maxHit.y) < E25cut)
+      E25 += (*hit).E;
   }
 
-  e1e9Sh = maxHit->E/E9;
+  e1e9Sh = maxE/E9;
   e9e25Sh = E9/E25;
+  
 }
-
 
 vector< const DTrackWireBased* >
 DFCALShower_factory::filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const {
@@ -1078,15 +1092,8 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   DVector3  posInCal = cluster->getCentroid();
   
-  vector<const DFCALHit*> locHitVector;
-  cluster->Get(locHitVector);
-  
-  int loc_nhits = (int)locHitVector.size();
-  if( loc_nhits < 1 ) {
-  	pos_log = posInCal;
-	return;
-  }
-  
+  vector<DFCALCluster::DFCALClusterHit_t> locHitVector=cluster->GetHits();
+    
   //------   Loop over hits   ------//
   
   double sW    =  0.0;
@@ -1096,13 +1103,11 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   double ecluster = cluster->getEnergy();
   
-  for( int ih = 0; ih < loc_nhits; ih++ ) {
-  	
-	const DFCALHit *locHit = locHitVector[ih];
+  for( int ih = 0; ih < (int)locHitVector.size(); ih++ ) {
 	
-	double xcell = locHit->x;
-	double ycell = locHit->y;
-	double ecell = locHit->E;
+	double xcell = locHitVector[ih].x;
+	double ycell = locHitVector[ih].y;
+	double ecell = locHitVector[ih].E;
 	
 	W  =  log_position_const + log( ecell / ecluster );
 	if( W > 0. ) {
@@ -1110,7 +1115,6 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
 		xpos  +=  xcell * W;
 		ypos  +=  ycell * W;
 	}
-	
   }
   
   double x1, y1;

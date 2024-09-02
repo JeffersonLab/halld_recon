@@ -12,6 +12,8 @@
 #include "DFCALCluster.h"
 #include "DFCALGeometry.h"
 #include "DFCALHit.h"
+#include <ECAL/DECALHit.h>
+
 #include "TMatrixD.h"
 #include "TH1D.h"
 #include "TH2D.h"
@@ -21,6 +23,19 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   DFCALCluster_factory_Island(){};
   ~DFCALCluster_factory_Island(){};
   const char* Tag(void){return "Island";}
+
+  class HitInfo{
+  public:
+    HitInfo(JObject::oid_t id,int row,int column,double E,double x,double y,double t)
+      :id(id),row(row),column(column),E(E),x(x),y(y),t(t){}
+    JObject::oid_t id;
+    int row;
+    int column;
+    double E;
+    double x;
+    double y;
+    double t;
+  };
   
   class PeakInfo{
   public:
@@ -40,15 +55,15 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-  void FindClusterCandidates(vector<const DFCALHit*>&fcal_hits,
-		    vector<vector<const DFCALHit*>>&clusterCandidates) const;
-  bool FitPeaks(const TMatrixD &W,double b,vector<const DFCALHit*>&hitList,
+  void FindClusterCandidates(vector<HitInfo>&fcal_hits,
+			     vector<vector<HitInfo>>&clusterCandidates) const;
+  bool FitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hitList,
 		vector<PeakInfo>&peaks,PeakInfo &myPeak,double &chisq,
 		unsigned int &ndf) const;
-  double CalcClusterEDeriv(double b,const DFCALHit *hit,const PeakInfo &myPeakInfo) const;
-  double CalcClusterXYDeriv(bool isXDeriv,double b,const DFCALHit *hit,
+  double CalcClusterEDeriv(double b,const HitInfo &hit,const PeakInfo &myPeakInfo) const;
+  double CalcClusterXYDeriv(bool isXDeriv,double b,const HitInfo &hit,
 			    const PeakInfo &myPeakInfo) const;
-  void SplitPeaks(const TMatrixD &W,double b,vector<const DFCALHit*>&hits,
+  void SplitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hits,
 		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
  
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
