@@ -108,6 +108,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_CTOF:
 	      return "CTOF";
 	      break;
+     case SYS_ECAL:
+	      return "ECAL";
+	      break;
      }
      return "UNKNOWN";
 }
@@ -160,6 +163,8 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
                 return SYS_TRD;
 	else if(strcmp(locSystemName, "CTOF") == 0)
                 return SYS_CTOF;
+	else if(strcmp(locSystemName, "ECAL") == 0)
+                return SYS_ECAL;
 	else
 		return SYS_NULL;
 }
