@@ -90,6 +90,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_ECAL_REF:
               return "ECAL_REF";
               break;
+          case SYS_RF:
+              return "RF";
+              break;
           case SYS_PS:
               return "PS";
               break;
