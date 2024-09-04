@@ -90,9 +90,6 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_ECAL_REF:
               return "ECAL_REF";
               break;
-          case SYS_ECAL:
-              return "RF";
-              break;
           case SYS_PS:
               return "PS";
               break;
@@ -113,9 +110,6 @@ inline const char* SystemName(DetectorSystem_t sys)
 	      break;
           case SYS_CTOF:
 	      return "CTOF";
-	      break;
-     case SYS_ECAL:
-	      return "ECAL";
 	      break;
      }
      return "UNKNOWN";
