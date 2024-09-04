@@ -115,6 +115,32 @@ def executable(env, exename=''):
 		# Install targets 
 		env.Install(bindir, myexe)
 
+##################################
+# script
+##################################
+def script(env, scriptname, installname=None):
+
+	# Only thing to do for script is to install it.
+
+	# Cleaning and installation are restricted to the directory
+	# scons was launched from or its descendents
+	CurrentDir = env.Dir('.').srcnode().abspath
+	if not CurrentDir.startswith(env.GetLaunchDir()):
+		# Not in launch directory. Tell scons not to clean these targets
+		env.NoClean([scriptname])
+	else:
+		# We're in launch directory (or descendent) schedule installation
+
+		# Installation directories for executable and headers
+		installdir = env.subst('$INSTALLDIR')
+		bindir = env.subst('$BINDIR')
+
+		# Install targets 
+		if installname==None:
+			env.Install(bindir, scriptname)
+		else:
+			env.InstallAs(bindir+'/'+installname, scriptname)
+
 
 ##################################
 # python_so_module
@@ -600,7 +626,7 @@ def AddDANA(env):
 	AddET(env)
 	AddMySQL(env)   # needed for EventStore
 	DANA_LIBS  = "DANA ANALYSIS KINFITTER PID TAGGER TRACKING START_COUNTER"
-	DANA_LIBS += " CERE DIRC CDC TRIGGER PAIR_SPECTROMETER RF"
+	DANA_LIBS += " CERE DIRC CDC TRIGGER PAIR_SPECTROMETER RF TRD"
 	DANA_LIBS += " FDC TOF BCAL FCAL CCAL TPOL HDGEOMETRY TTAB FMWPC TAC"
 	DANA_LIBS += " DAQ JANA EVENTSTORE"
 	DANA_LIBS += " expat gfortran" 
