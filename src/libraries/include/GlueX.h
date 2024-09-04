@@ -84,6 +84,12 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_CCAL_REF:
               return "CCAL_REF";
               break;
+          case SYS_ECAL:
+              return "ECAL";
+              break;
+          case SYS_ECAL_REF:
+              return "ECAL_REF";
+              break;
           case SYS_RF:
               return "RF";
               break;
@@ -143,6 +149,10 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
 	else if(strcmp(locSystemName, "CCAL") == 0)
 		return SYS_CCAL;
 	else if(strcmp(locSystemName, "CCAL_REF") == 0)
+		return SYS_CCAL_REF;
+	else if(strcmp(locSystemName, "ECAL") == 0)
+		return SYS_CCAL;
+	else if(strcmp(locSystemName, "ECAL_REF") == 0)
 		return SYS_CCAL_REF;
 	else if(strcmp(locSystemName, "RF") == 0)
 		return SYS_RF;
