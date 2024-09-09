@@ -301,7 +301,6 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	myPeak.x/=Esum;
 	myPeak.y/=Esum;
 	peaks.push_back(myPeak);
-	cout << "Fit did not work " << endl;
 	
 	// Compute chisq estimate just in case we need to make a split
 	chisq=0.;
