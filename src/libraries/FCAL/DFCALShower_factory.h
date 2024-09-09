@@ -99,7 +99,7 @@ class DFCALShower_factory:public JFactory<DFCALShower>{
   double FCAL_C_EFFECTIVE;
 
   // parameters for insert
-  double INSERT_PAR1,INSERT_PAR2;
+  double INSERT_PAR1,INSERT_PAR2,INSERT_PAR3,INSERT_PAR4;
   double INSERT_RADIATION_LENGTH;
   double INSERT_CRITICAL_ENERGY;
   double INSERT_SHOWER_OFFSET;

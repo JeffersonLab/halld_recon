@@ -128,10 +128,14 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.167457;
-  INSERT_PAR2=1.1349;
+  INSERT_PAR1=0.016;
+  INSERT_PAR2=0.881;
+  INSERT_PAR3=1.055;
+  INSERT_PAR4=2.0;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
   // For island algo
   INSERT_POS_RES1=0.168;
@@ -581,8 +585,6 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   double Egamma = Eclust;
   Ecorrected = 0;
 
-
-
   // block properties
   double radiation_length=FCAL_RADIATION_LENGTH;
   double shower_offset=FCAL_SHOWER_OFFSET;
@@ -596,7 +598,13 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     critical_energy=INSERT_CRITICAL_ENERGY;
     zfront=m_insertFront;
 
-    Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
+    if (Eclust<INSERT_PAR4){
+      Egamma=Eclust/(INSERT_PAR1*Eclust+INSERT_PAR2);
+    }
+    else {
+      Egamma=INSERT_PAR4/(INSERT_PAR1*INSERT_PAR4+INSERT_PAR2)
+	+INSERT_PAR3*(Eclust-INSERT_PAR4);
+    }
   } else {
     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
     if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
