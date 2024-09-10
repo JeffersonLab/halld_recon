@@ -38,6 +38,7 @@ using namespace std;
 #include "JANA/JGeometry.h"
 #include "TRACKING/DMCTrajectoryPoint.h"
 #include "FCAL/DFCALHit.h"
+#include "ECAL/DECALHit.h"
 #include "CCAL/DCCALHit.h"
 #include "CCAL/DCCALShower.h"
 #include "TOF/DTOFGeometry.h"
@@ -679,6 +680,20 @@ void MyProcessor::FillGraphics(void)
 
 	// FCAL hits
 	if(hdvmf->GetCheckButton("fcal")){
+	  // Get FCAL2 insert hits if present
+	  vector<const DECALHit*> ecalhits;
+	  loop->Get(ecalhits);
+	  
+	  for(unsigned int i=0; i<ecalhits.size(); i++){
+	    const DECALHit *hit = ecalhits[i]; 
+	    if (hit->E<0.) continue;
+
+	    TPolyLine *poly = hdvmf->GetFCALPolyLine(100+hit->row,100+hit->column);
+	    if(!poly) continue;
+	   
+	    hdvmf->SetCalorimeterEnergyColor(poly,hit->E);
+	  }
+
 	  vector<const DFCALHit*> fcalhits;
 	  loop->Get(fcalhits);
 	  
@@ -686,58 +701,8 @@ void MyProcessor::FillGraphics(void)
 	    const DFCALHit *hit = fcalhits[i];
 	    TPolyLine *poly = hdvmf->GetFCALPolyLine(hit->row, hit->column);
 	    if(!poly)continue;
-	    
-#if 0			
-	    double a = hit->E/0.005;
-	    double f = sqrt(a>1.0 ? 1.0:a<0.0 ? 0.0:a);
-	    double grey = 0.8;
-	    double s = 1.0 - f;
-	    
-	    float r = s*grey;
-	    float g = s*grey;
-	    float b = f*(1.0-grey) + grey;
-#endif
 
-	    // The aim is to have a log scale in energy (see BCAL)
-	    double E = 1000*hit->E;      // Change Energy to MeV
-	    if(E<0.0) continue;
-	    double logE = log10(E);      
-
-	    float r,g,b;
-	    if (logE<0){
-	      r = 1.;
-	      g = 1.;
-	      b = 1.;
-	    } else {
-	      if (logE<1){
-		r = 1.;
-		g = 1.;
-		b = 1.-logE;
-	      } else {
-		if (logE<2){
-		  r = 1.;
-		  g = 1.-(logE-1);
-		  b = 0.;
-		} else {
-		  if (logE<3){
-		    r = 1.;
-		    g = 0.;
-		    b = 1.-(logE-2);
-		  } else {
-		    if (logE<4){
-		      r = 1.-(logE-3);
-		      g = 0.;
-		      b = 1.;
-		    } else {
-		      r = 0;
-		      g = 0;
-		      b = 0;
-		    }
-		  }
-		}
-	      }
-	    }
-	    poly->SetFillColor(TColor::GetColor(r,g,b));
+	    hdvmf->SetCalorimeterEnergyColor(poly,hit->E);
 	  }
 	}
 
@@ -751,47 +716,9 @@ void MyProcessor::FillGraphics(void)
 	    TPolyLine *poly = hdvmf->GetCCALPolyLine(hit->row, hit->column);
 	    if(!poly)continue;
 
-	    // The aim is to have a log scale in energy (see BCAL)
-	    double E = 1000*hit->E;      // Change Energy to MeV
-	    E /= 1000.0; // CCAL is currently not calibrated and appears to be at least 1E3 too large  2018-12-10 DL
-	    if(E<0.0) continue;
-	    double logE = log10(E);
-
-	    float r,g,b;
-	    if (logE<0){
-	    	r = 1.;
-	    	g = 1.;
-	    	b = 1.;
-	    } else {
-	    	if (logE<1){
-	    		r = 1.;
-	    		g = 1.;
-	    		b = 1.-logE;
-	    	} else {
-	    		if (logE<2){
-	    			r = 1.;
-	    			g = 1.-(logE-1);
-	    			b = 0.;
-	    		} else {
-	    			if (logE<3){
-	    				r = 1.;
-	    				g = 0.;
-	    				b = 1.-(logE-2);
-	    			} else {
-	    				if (logE<4){
-	    					r = 1.-(logE-3);
-	    					g = 0.;
-	    					b = 1.;
-	    				} else {
-	    					r = 0;
-	    					g = 0;
-	    					b = 0;
-	    				}
-	    			}
-	    		}
-	    	}
-	    }
-	    poly->SetFillColor(TColor::GetColor(r,g,b));
+	    // The following code converts from GeV units to MeV units, but the
+	    // CCAL energy units are already in MeV...
+	    hdvmf->SetCalorimeterEnergyColor(poly,0.001*hit->E);
 	  }
 	}
 
