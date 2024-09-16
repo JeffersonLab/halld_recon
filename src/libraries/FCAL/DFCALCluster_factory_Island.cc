@@ -69,18 +69,22 @@ jerror_t DFCALCluster_factory_Island::init(void)
   MERGE_HITS_AT_BOUNDARY=true;
   gPARMS->SetDefaultParameter("FCAL:MERGE_HITS_AT_BOUNDARY",MERGE_HITS_AT_BOUNDARY);
 
-  APPLY_S_CURVE_CORRECTION=true;
+  APPLY_S_CURVE_CORRECTION=false;
   gPARMS->SetDefaultParameter("FCAL:APPLY_S_CURVE_CORRECTION",
 			      APPLY_S_CURVE_CORRECTION);
 
-  S_CURVE_PAR1=-0.0517;
+  S_CURVE_PAR1=-0.374;
   gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR1",S_CURVE_PAR1);
-  S_CURVE_PAR2=0.02565;
+  S_CURVE_PAR2=1.59;
+  gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2);
+  S_CURVE_PAR3=1.55;
   gPARMS->SetDefaultParameter("FCAL:S_CURVE_PAR2",S_CURVE_PAR2); 
-  INSERT_S_CURVE_PAR1=-0.1593;
+  INSERT_S_CURVE_PAR1=-0.203;
   gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR1",INSERT_S_CURVE_PAR1);
-  INSERT_S_CURVE_PAR2=0.02337;
+  INSERT_S_CURVE_PAR2=2.982;
   gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR2",INSERT_S_CURVE_PAR2);
+  INSERT_S_CURVE_PAR3=0.0;
+  gPARMS->SetDefaultParameter("FCAL:INSERT_S_CURVE_PAR3",INSERT_S_CURVE_PAR3);
 
   if (DEBUG_HISTS){
     if (HistdE==NULL) HistdE=new TH2D("HistdE",";E [GeV];#deltaE [GeV]",100,0,10,201,-0.25,0.25);
@@ -597,16 +601,12 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	double dx=blockPos.X()-xc;
 	double dy=blockPos.Y()-yc;	  
 	if (dFCALGeom->inInsert(channel)==false){
-	  double d=dFCALGeom->sensitiveBlockSize();
-	  double d_sq_over_4=0.25*d*d;
-	  xc+=S_CURVE_PAR1*dx*(d_sq_over_4-dx*dx)+S_CURVE_PAR2;  
-	  yc+=S_CURVE_PAR1*dy*(d_sq_over_4-dy*dy)+S_CURVE_PAR2;
+	  xc+=S_CURVE_PAR1*sin(S_CURVE_PAR2*(dx-S_CURVE_PAR3));
+	  yc+=S_CURVE_PAR1*sin(S_CURVE_PAR2*(dy-S_CURVE_PAR3));
 	}
 	else{
-	  double d=dFCALGeom->insertSensitiveBlockSize();
-	  double d_sq_over_4=0.25*d*d;
-	  xc+=INSERT_S_CURVE_PAR1*dx*(d_sq_over_4-dx*dx)+INSERT_S_CURVE_PAR2;  
-	  yc+=INSERT_S_CURVE_PAR1*dy*(d_sq_over_4-dy*dy)+INSERT_S_CURVE_PAR2;
+	  xc+=INSERT_S_CURVE_PAR1*sin(INSERT_S_CURVE_PAR2*dx);
+	  yc+=INSERT_S_CURVE_PAR1*sin(INSERT_S_CURVE_PAR2*dy);
 	}
       }
       myCluster->setCentroid(xc,yc);
