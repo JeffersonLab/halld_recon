@@ -19,7 +19,7 @@
 #include "TH2D.h"
 
 class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
- public:
+public:
   DFCALCluster_factory_Island(){};
   ~DFCALCluster_factory_Island(){};
   const char* Tag(void){return "Island";}
@@ -39,13 +39,13 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   
   class PeakInfo{
   public:
-  PeakInfo(double E,double x,double y,int ic,int ir,int nhits):E(E),x(x),y(y),ic(ic),ir(ir),nhits(nhits){}
+    PeakInfo(double E,double x,double y,int ic,int ir,int status):E(E),x(x),y(y),ic(ic),ir(ir),status(status){}
     double E;
     double x;
     double y;
     int ic;
     int ir;
-    int nhits;
+    int status;
   }; 
   
  private: 
@@ -63,14 +63,23 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
   double CalcClusterEDeriv(double b,const HitInfo &hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,double b,const HitInfo &hit,
 			    const PeakInfo &myPeakInfo) const;
-  void SplitPeaks(const TMatrixD &W,double b,vector<HitInfo>&hits,
-		  vector<PeakInfo>&peaks,double &chisq,unsigned int &ndf) const;
- 
+  void GetRowColRanges(int idiff,int nrows,int ncols,int ir,int ic,int &lo_row,
+		       int &hi_row, int &lo_col,int &hi_col) const{
+    lo_col=ic-idiff;
+    if (lo_col<0) lo_col=0;
+    hi_col=ic+idiff;
+    if (hi_col>=ncols) hi_col=ncols-1;
+    lo_row=ir-idiff;
+    if (lo_row<0) lo_row=0;
+    hi_row=ir+idiff;
+    if (hi_row>=nrows) hi_row=nrows-1;
+  }
+
   double TIME_CUT,MIN_CLUSTER_SEED_ENERGY,SHOWER_ENERGY_THRESHOLD;
-  double MIN_EXCESS_SEED_ENERGY;
+  double MIN_EXCESS_SEED_ENERGY,MIN_E_FRACTION;
   double SHOWER_WIDTH_PARAMETER,ENERGY_SHARING_CUTOFF;
   double INSERT_SHOWER_WIDTH_PAR0,INSERT_SHOWER_WIDTH_PAR1;
-  double SHOWER_WIDTH_PAR0,SHOWER_WIDTH_PAR1,SHOWER_WIDTH_PAR2;
+  double SHOWER_WIDTH_PAR0,SHOWER_WIDTH_PAR1;
   double MIN_CUTDOWN_FRACTION,CHISQ_MARGIN,MASS_CUT;
   bool DEBUG_HISTS;
   unsigned int MAX_HITS_FOR_CLUSTERING;
@@ -80,11 +89,12 @@ class DFCALCluster_factory_Island:public jana::JFactory<DFCALCluster>{
 
   bool SPLIT_PEAKS,MERGE_HITS_AT_BOUNDARY;
   bool APPLY_S_CURVE_CORRECTION;
-  double S_CURVE_PAR1,S_CURVE_PAR2,INSERT_S_CURVE_PAR1,INSERT_S_CURVE_PAR2;
+  double S_CURVE_PAR1,S_CURVE_PAR2,S_CURVE_PAR3;
+  double INSERT_S_CURVE_PAR1,INSERT_S_CURVE_PAR2,INSERT_S_CURVE_PAR3;
   
   const DFCALGeometry *dFCALGeom=NULL;
-  TH2D *HistdE;
-  TH1D *HistProb;
+  TH2D *HistdE=NULL;
+  TH1D *HistProb=NULL;
 };
 
 #endif // _DFCALCluster_factory_Island_
