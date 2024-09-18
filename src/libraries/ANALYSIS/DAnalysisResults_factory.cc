@@ -406,6 +406,7 @@ jerror_t DAnalysisResults_factory::evnt(JEventLoop* locEventLoop, uint64_t event
 			auto locActions = locReaction->Get_AnalysisActions();
 			for(auto& locAction : locActions)
 				locAction->Reset_NewEvent();
+			locStartIndex = 0; // reset MC trigger studies for next reaction
 
 			if(dDebugLevel > 0)
 				cout << "Combos built, execute actions for reaction: " << locReaction->Get_ReactionName() << endl;
