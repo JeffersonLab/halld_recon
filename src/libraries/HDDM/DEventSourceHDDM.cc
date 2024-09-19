@@ -1849,7 +1849,7 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
 
    // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
    vector<const DECALGeometry*> ecalGeomVect;
-   event->Get( ecalGeomVect );
+   event->Get(ecalGeomVect);
    if (ecalGeomVect.size() < 1)
       return OBJECT_NOT_AVAILABLE;
    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);

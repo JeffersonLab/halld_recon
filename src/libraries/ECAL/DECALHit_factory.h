@@ -16,6 +16,7 @@ using namespace std;
 
 #include "DECALDigiHit.h"
 #include "DECALHit.h"
+#include "DECALGeometry.h"
 
 typedef  vector< vector<double> >  ecal_constants_t;
 
