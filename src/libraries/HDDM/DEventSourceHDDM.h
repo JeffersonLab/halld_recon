@@ -80,6 +80,8 @@ using namespace std;
 #include "TPOL/DTPOLHit.h"
 #include "TPOL/DTPOLTruthHit.h"
 #include "DResourcePool.h"
+#include "ECAL/DECALGeometry.h"
+
 
 class DEventSourceHDDM:public JEventSource
 {

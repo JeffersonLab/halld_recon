@@ -27,6 +27,8 @@ using namespace jana;
 #include "DAQ/Df125CDCPulse.h"
 #include "DAQ/Df125Config.h"
 #include "TRIGGER/DTrigger.h"
+#include "DANA/DEvent.h"
+
 
 #include <TRACKING/DTrackTimeBased.h>
 #include <PID/DChargedTrackHypothesis.h>
@@ -48,7 +50,7 @@ static TTree *TT = NULL;
 extern "C"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddProcessor(new JEventProcessor_cdc_echo());
+	app->Add(new JEventProcessor_cdc_echo());
 }
 } // "C"
 
@@ -70,9 +72,9 @@ JEventProcessor_cdc_echo::~JEventProcessor_cdc_echo()
 }
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_cdc_echo::init(void)
+void JEventProcessor_cdc_echo::Init()
 {
 	// This is called once at program startup. If you are creating
 	// and filling histograms in this plugin, you should lock the
@@ -81,14 +83,16 @@ jerror_t JEventProcessor_cdc_echo::init(void)
 
 
   //  ECHO_ORIGIN = 4088;
-  // gPARMS->SetDefaultParameter("CDC:ECHO_ORIGIN", ECHO_ORIGIN, "Min height (adc units 0-4095) for primary pulses considered in the search for afterpulses. Set to 4088 for the saturated value 511");
+  // japp->SetDefaultParameter("CDC:ECHO_ORIGIN", ECHO_ORIGIN, "Min height (adc units 0-4095) for primary pulses considered in the search for afterpulses. Set to 4088 for the saturated value 511");
+  auto app = GetApplication();
+  auto lock_svc = app->GetService<JLockService>();
 
   ECHO_A = 500;
-  gPARMS->SetDefaultParameter("CDC:ECHO_A", ECHO_A,
+  app->SetDefaultParameter("CDC:ECHO_A", ECHO_A,
                               "Max height (adc units 0-4095) for afterpulses");
 
   ECHO_DT = 15;
-  gPARMS->SetDefaultParameter("CDC:ECHO_DT", ECHO_DT,
+  app->SetDefaultParameter("CDC:ECHO_DT", ECHO_DT,
                               "End of time range (number of samples) to search for afterpulses");
 
 
@@ -115,7 +119,7 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   uint16_t ntrackhits,ntrackhits_cdc, ntrackhits_fdc, ntrackhits_dc, ntrackhits_sat,ntrackhits_echo;
   double FOM;
 
-  japp->RootWriteLock();
+  lock_svc->RootWriteLock(); 
   
   TT = new TTree("TT","Track data");
 
@@ -168,46 +172,45 @@ jerror_t JEventProcessor_cdc_echo::init(void)
   
   T->Branch("adc",&adc,Form("adc[%i]/s",NSAMPLES));         
   
-  japp->RootUnLock();
+  lock_svc->RootUnLock();
 
-
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_cdc_echo::brun(JEventLoop *eventLoop, int32_t runnumber)
+void JEventProcessor_cdc_echo::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 	// This is called whenever the run number changes
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
+void JEventProcessor_cdc_echo::Process(const std::shared_ptr<const JEvent>& event)
 {
   
     // Only look at physics triggers
-    
+    auto eventnumber = event->GetEventNumber();
     const DTrigger* locTrigger = NULL; 
-    loop->GetSingle(locTrigger); 
+    event->GetSingle(locTrigger); 
     if(locTrigger->Get_L1FrontPanelTriggerBits() != 0)
-      return NOERROR;
+      return; //NOERROR;
     if (!locTrigger->Get_IsPhysicsEvent()){ // do not look at PS triggers
-      return NOERROR;
+      return; //NOERROR;
     }
      
     vector <const Df125CDCPulse*> cdcpulses;
-    loop->Get(cdcpulses);
+    event->Get(cdcpulses);
     uint32_t nc = (uint32_t)cdcpulses.size();
   
-    if (nc==0) return NOERROR;  // no CDC pulses
+    if (nc==0) return; //NOERROR;  // no CDC pulses
   
     
     vector <const DCDCHit*> cdchits;
-    loop->Get(cdchits);
+    event->Get(cdchits);
     uint32_t nh = (uint32_t)cdchits.size();
      
     const Df125Config* config = NULL;
@@ -376,10 +379,10 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
     uint16_t ontrack[4][15][72] = {0};
 
     //    vector<const DTrackTimeBased*> tracks;
-    //  loop->Get(tracks);
+    //  event->Get(tracks);
 
     vector<const DChargedTrack*> ctracks;
-    loop->Get(ctracks);
+    event->Get(ctracks);
     
     for (uint32_t i=0; i<(uint32_t)ctracks.size(); i++) {  
       
@@ -403,10 +406,10 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       if (locCDCHits.size() > 0) {
       
-          japp->RootFillLock(this);    
+          DEvent::GetLockService(event)->RootFillLock(this);     
           counts->Fill(0);
-          japp->RootFillUnLock(this);
-      } 
+          DEvent::GetLockService(event)->RootFillUnLock(this);
+      }
       
       vector<DTrackFitter::pull_t> pulls = track->pulls;
 
@@ -441,7 +444,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       ULong64_t eventnum = (ULong64_t)eventnumber;
       
-      japp->RootFillLock(this);    
+      DEvent::GetLockService(event)->RootFillLock(this);     
 
       TT->SetBranchAddress("eventnum",&eventnum);
       TT->SetBranchAddress("ntrackhits",&ntrackhits);
@@ -454,8 +457,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       TT->Fill();
 
-      japp->RootFillUnLock(this);          
-
+      DEvent::GetLockService(event)->RootFillUnLock(this);          
     }    
 
 
@@ -481,7 +483,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       // increment counts histo    0: tracks  1:all pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6:  echoes on tracks  7: saturated pulses  8:saturated hits  9:saturated hits on tracks
       
-      japp->RootFillLock(this);
+      DEvent::GetLockService(event)->RootFillLock(this); 
 
       counts->Fill(1);
 
@@ -508,8 +510,8 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
         if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(9);
       }
            
-      japp->RootFillUnLock(this);
-      
+      DEvent::GetLockService(event)->RootFillUnLock(this);
+    
 
       if (parent[rocid-25][slot-3][channel] == 0 ) continue; // not a parent or an echo
 
@@ -578,7 +580,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       ULong64_t eventnum = (ULong64_t)eventnumber;
       
-      japp->RootFillLock(this);    
+      DEvent::GetLockService(event)->RootFillLock(this);     
 
       if ( parentamp[rocid-25][slot-3][channel] >0 && timeovert < 8 ) {  // probable echoes
 	counts->Fill(4);
@@ -626,31 +628,30 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       T->Fill();
     
-      japp->RootFillUnLock(this);    
-
+      DEvent::GetLockService(event)->RootFillUnLock(this);    
     }
   
-    return NOERROR;
+    return; //NOERROR;
 
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_cdc_echo::erun(void)
+void JEventProcessor_cdc_echo::EndRun()
 {
 	// This is called whenever the run number changes);
 	// changed to give you a chance to clean up before processing
 	// events from the next run number.
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_cdc_echo::fini(void)
+void JEventProcessor_cdc_echo::Finish()
 {
 	// Called before program exit after event processing is finished.
-	return NOERROR;
+	return; //NOERROR;
 }
 

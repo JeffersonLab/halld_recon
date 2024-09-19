@@ -9,7 +9,7 @@
 #include <JANA/JObject.h>
 #include <JANA/JFactory.h>
 
-class DBeamHelicity:public jana::JObject{
+class DBeamHelicity:public JObject{
  public:
   JOBJECT_PUBLIC(DBeamHelicity);
   
@@ -23,13 +23,13 @@ class DBeamHelicity:public jana::JObject{
   
 		// This method is used primarily for pretty printing
 		// the second argument to AddString is printf style format
-  void toStrings(vector<pair<string,string> > &items)const{
-    AddString(items, "pattern sync", "%d", pattern_sync);
-    AddString(items, "t_settle",     "%d", t_settle);
-    AddString(items, "helicity",     "%d", helicity);
-    AddString(items, "pair_sync",    "%d", pair_sync);
-    AddString(items, "ihwp",         "%d", ihwp);
-    AddString(items, "beam_on",      "%d", beam_on);
+  void Summarize(JObjectSummary& summary) const override{
+    summary.add(pattern_sync, "pattern sync", "%d");
+    summary.add(t_settle, "t_settle",     "%d");
+    summary.add(helicity, "helicity",     "%d");
+    summary.add(pair_sync, "pair_sync",    "%d");
+    summary.add(ihwp, "ihwp",         "%d");
+    summary.add(beam_on, "beam_on",      "%d");
   } 
 };
 

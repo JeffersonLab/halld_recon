@@ -30,15 +30,15 @@ void DCDCHit_factory_Calib::Init()
   // If ECHO_OPT=1, likely afterpulses are removed
 
   ECHO_OPT = 1;
-  gPARMS->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
+  app->SetDefaultParameter("CDC:ECHO_OPT", ECHO_OPT,
                               "0:do not suppress afterpulses, 1:suppress afterpulses");
   
   ECHO_MAX_A = 350;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
+  app->SetDefaultParameter("CDC:ECHO_MAX_A", ECHO_MAX_A,
                               "Max height (adc units 0-4095) for afterpulses, if ECHO_OPT=1");
 
   ECHO_MAX_T = 7;
-  gPARMS->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
+  app->SetDefaultParameter("CDC:ECHO_MAX_T", ECHO_MAX_T,
                               "End of time range (number of samples) to search for afterpulses");
   
   // default values
@@ -201,7 +201,7 @@ void DCDCHit_factory_Calib::Process(const std::shared_ptr<const JEvent>& event)
   vector <unsigned int> RogueHits;
   RogueHits.clear();
 
-  if (ECHO_OPT > 0) FindRogueHits(eventLoop,RogueHits);
+  if (ECHO_OPT > 0) FindRogueHits(event,RogueHits);
 
   
   for (unsigned int i=0; i < digihits.size(); i++) {
@@ -508,12 +508,12 @@ const double DCDCHit_factory_Calib::GetConstant(const cdc_digi_constants_t &the_
 //------------------
 // Identify rogue hits
 //------------------
-void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigned int> &RogueHits)
+void DCDCHit_factory_Calib::FindRogueHits(const std::shared_ptr<const JEvent>& event, vector<unsigned int> &RogueHits)
 {
 
   /* // Beni's trick for getting the DAQ channel info for simulated data 
      // Keeping it here in case this code is moved into Hit_factory.cc 
-  // loop over hits and find roc/slot/con numbers
+  // iterate over hits and find roc/slot/con numbers
   for (unsigned int k=0 ;k<hits.size(); k++){
     const DCDCHit *hit = hits[k];
     vector <const Df125CDCPulse*> pulse;
@@ -544,7 +544,7 @@ void DCDCHit_factory_Calib::FindRogueHits(jana::JEventLoop *loop, vector<unsigne
   RogueHits.clear();
 
   vector<const DCDCDigiHit*> digihits;
-  loop->Get(digihits);
+  event->Get(digihits);
 
   if (digihits.size() == 0) return;
 

@@ -16,25 +16,24 @@ using namespace std;
 #include <DAQ/DHELIDigiHit.h>
 #include <DAQ/DEPICSvalue.h>
 #include "DBeamHelicity_factory.h"
-using namespace jana;
 
 //init static class variable
 int DBeamHelicity_factory::dIHWP   = 0;
 int DBeamHelicity_factory::dBeamOn = 1;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DBeamHelicity_factory::init(void)
+void DBeamHelicity_factory::Init()
 {
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DBeamHelicity_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
+void DBeamHelicity_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Grab information from CCDB tables here
@@ -43,21 +42,21 @@ jerror_t DBeamHelicity_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 
 	// Half Waveplate status at run start (could be from RCDB?)
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DBeamHelicity_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
+void DBeamHelicity_factory::Process(const std::shared_ptr<const JEvent>& event){
+  auto eventnumber = event->GetEventNumber();
   double beamcurr     = 0.0;
   double beamthresh   = 10.0;
   
   // get info from EPICS variables
   vector<const DEPICSvalue*> epicsvalues;
-  loop->Get(epicsvalues);
-  bool isEPICS = loop->GetJEvent().GetStatusBit(kSTATUS_EPICS_EVENT);
-
+  event->Get(epicsvalues);
+  bool isEPICS = event->GetSingle<DStatusBits>()->GetStatusBit(kSTATUS_EPICS_EVENT);
   //kl I don't thing this works. Each thread has a separate instance of the factory, so these values only get set in the thread which
   //processed the EPICS event. Locking doesn't help. Worry about this lated when everything is moved into a factory.
   if(isEPICS) {
@@ -73,13 +72,13 @@ jerror_t DBeamHelicity_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
 	std::cout << "Got IBCAD00CRCUR6 = " << beamcurr << ". Setting dBeamOn = " <<  dBeamOn << "Event = "<< eventnumber << endl;
       }
     }
-    return NOERROR;
+    return; //NOERROR;
   }
   
   // get helicity bits from fADC
   vector<const DHELIDigiHit*> locHELIDigiHits;
-  loop->Get(locHELIDigiHits);
-  if(locHELIDigiHits.empty()) return NOERROR;
+  event->Get(locHELIDigiHits);
+  if(locHELIDigiHits.empty()) return; //NOERROR;
   
   DBeamHelicity *locBeamHelicity = new DBeamHelicity;
   locBeamHelicity->pattern_sync  = 0;
@@ -101,23 +100,23 @@ jerror_t DBeamHelicity_factory::evnt(JEventLoop *loop, uint64_t eventnumber){
     if(locHELIDigiHit->chan == 3) locBeamHelicity->pair_sync = 1;
   }
   
-  _data.push_back(locBeamHelicity);
+  Insert(locBeamHelicity);
   
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DBeamHelicity_factory::erun(void)
+void DBeamHelicity_factory::EndRun()
 {
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DBeamHelicity_factory::fini(void)
+void DBeamHelicity_factory::Finish()
 {
-	return NOERROR;
+	return; //NOERROR;
 }
