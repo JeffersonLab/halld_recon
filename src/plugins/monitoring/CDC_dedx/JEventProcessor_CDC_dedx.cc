@@ -46,6 +46,13 @@ jerror_t JEventProcessor_CDC_dedx::init(void)
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC_dedx")->cd();
 
+  bestfom_dedx_p = new TH2D("bestfom_dedx_p","CDC dE/dx vs p, 4+ hits used, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+  bestfom_dedx_p_pos = new TH2D("bestfom_dedx_p_pos","CDC dE/dx vs p, q+, 4+ hits used, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+  bestfom_dedx_p_neg = new TH2D("bestfom_dedx_p_neg","CDC dE/dx vs p, q-, 4+ hits used, best FOM;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
+
+
   dedx_p = new TH2D("dedx_p","CDC dE/dx vs p, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
 
   dedx_p_pos = new TH2D("dedx_p_pos","CDC dE/dx vs p, q+, 4+ hits used;p (GeV/c);dE/dx (keV/cm)",250,0,10,400,0,25);
@@ -106,6 +113,46 @@ jerror_t JEventProcessor_CDC_dedx::evnt(JEventLoop *loop, uint64_t eventnumber)
   if ((vertexz < 52.0) || (vertexz > 78.0)) return NOERROR;
 
 
+
+  vector<const DChargedTrack*> ctracks;
+  loop->Get(ctracks);
+  
+  for (uint32_t i=0; i<(uint32_t)ctracks.size(); i++) {  
+      
+    // get the best hypo
+    const DChargedTrackHypothesis *hyp=ctracks[i]->Get_BestFOM();    
+    if (hyp == NULL) continue;
+      
+    const DTrackTimeBased *track = hyp->Get_TrackTimeBased();
+    //    uint16_t ntrackhits_cdc = (uint16_t)track->measured_cdc_hits_on_track;
+
+    int nhits = (int)track->dNumHitsUsedFordEdx_CDC; 
+    if (nhits < 4) continue;
+
+    double charge = track->charge();
+    DVector3 mom = track->momentum();
+    double p = mom.Mag();
+
+    double dedx = 1.0e6*track->ddEdx_CDC_amp;
+
+    if (dedx > 0) {
+
+      japp->RootFillLock(this);
+
+      bestfom_dedx_p->Fill(p,dedx);
+    
+      if (charge > 0) {
+        bestfom_dedx_p_pos->Fill(p,dedx);
+      } else {
+        bestfom_dedx_p_neg->Fill(p,dedx);
+      } 
+
+      japp->RootFillUnLock(this);
+
+    }
+  }
+
+  
   vector<const DTrackTimeBased*> tracks;
   loop->Get(tracks);
   if (tracks.size() ==0) return NOERROR;
