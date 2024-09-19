@@ -7,8 +7,7 @@
 // See JEventProcessor_HELI_online.h for some mode detailed documentation.
 
 #include "JEventProcessor_HELI_online.h"
-using namespace jana;
-
+using namespace std;
 
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
@@ -16,7 +15,7 @@ using namespace jana;
 extern "C"{
   void InitPlugin(JApplication *app){
     InitJANAPlugin(app);
-    app->AddProcessor(new JEventProcessor_HELI_online());
+    app->Add(new JEventProcessor_HELI_online());
   }
 } // "C"
 
@@ -29,6 +28,7 @@ string  HELILOG     = "helicity.log";
 // JEventProcessor_HELI_online (Constructor)
 //------------------
 JEventProcessor_HELI_online::JEventProcessor_HELI_online(){
+  SetTypeName("JEventProcessor_HELI_online");
 }
 
 //------------------
@@ -40,9 +40,9 @@ JEventProcessor_HELI_online::~JEventProcessor_HELI_online(){
 
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t JEventProcessor_HELI_online::init(void){
+void JEventProcessor_HELI_online::Init(void){
   // This is called once at program startup. 
   
   
@@ -89,11 +89,11 @@ jerror_t JEventProcessor_HELI_online::init(void){
 
   dFile           = NULL;
 
-  
-  if(gPARMS){                                              //override with command line if needed
-    gPARMS->SetDefaultParameter("HELI:VERBOSE", HELIVERBOSE, "Set level of verbosity on helicity");
-    gPARMS->SetDefaultParameter("HELI:SETUP",   HELISETUP,   "Set name of helicity setup file.");
-    gPARMS->SetDefaultParameter("HELI:LOG",     HELILOG,     "Set name of helicity log file.");
+  auto app = GetApplication();
+  if(app){                                              //override with command line if needed
+    app->SetDefaultParameter("HELI:VERBOSE", HELIVERBOSE, "Set level of verbosity on helicity");
+    app->SetDefaultParameter("HELI:SETUP",   HELISETUP,   "Set name of helicity setup file.");
+    app->SetDefaultParameter("HELI:LOG",     HELILOG,     "Set name of helicity log file.");
   }
 
   readParms(1);                                            //read parameters for run ranges tables  0: from caldb, 1: from ./helicity_setup.txt
@@ -113,15 +113,15 @@ jerror_t JEventProcessor_HELI_online::init(void){
       dHelBits[n]=0;
     }
   }
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t JEventProcessor_HELI_online::brun(JEventLoop *eventLoop, int32_t runnumber){
+void JEventProcessor_HELI_online::BeginRun(const std::shared_ptr<const JEvent>& event){
   // This is called whenever the run number changes
-
+  auto runnumber = event->GetEventNumber();
   // Init all the counters
   fEventInRun     = 0;  
   fPlusInRun      = 0;	  
@@ -162,23 +162,24 @@ jerror_t JEventProcessor_HELI_online::brun(JEventLoop *eventLoop, int32_t runnum
   fUseHWPEPICS    = fHWPEPICSUseValue;
   fUseTSettle     = fUseTSetValue;
 
-  return NOERROR;
+  return; //NOERROR;
 }
 
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t JEventProcessor_HELI_online::evnt(JEventLoop *loop, uint64_t eventnumber){
+void JEventProcessor_HELI_online::Process(const std::shared_ptr<const JEvent>& event){
 
+  auto eventnumber = event->GetEventNumber();
   vector<const DBeamHelicity*> locBH;
-  loop->Get(locBH);                                       //get the BH from the current evnt
+  event->Get(locBH);                                       //get the BH from the current evnt
   
   if(locBH.empty()){ 
-    return NOERROR;
+    return; //NOERROR;
   }
   
-  LockState();                                            //lock this thread
+  m_mtx.lock();                                           //lock this thread
 
   //do some event inits
 
@@ -197,8 +198,8 @@ jerror_t JEventProcessor_HELI_online::evnt(JEventLoop *loop, uint64_t eventnumbe
   if(fUseTSettle && f_t_settle){ 
     fHelicity = 0;  
     if(HELIVERBOSE > 1)printEvent();
-    UnlockState();                                            // Unlock main mutex
-    return NOERROR;
+    m_mtx.unlock();                                            // Unlock main mutex
+    return; //NOERROR;
   }
 
    
@@ -347,15 +348,15 @@ jerror_t JEventProcessor_HELI_online::evnt(JEventLoop *loop, uint64_t eventnumbe
 
   if(HELIVERBOSE > 1)printEvent();
 
-  UnlockState();                                            // Unlock main mutex
+  m_mtx.unlock();                                            // Unlock main mutex
   
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t JEventProcessor_HELI_online::erun(void){
+void JEventProcessor_HELI_online::EndRun(){
   // This is called whenever the run number changes, before it is
   // changed to give you a chance to clean up before processing
   // events from the next run number.
@@ -373,16 +374,16 @@ jerror_t JEventProcessor_HELI_online::erun(void){
     fprintf(dFile,"#Seed %d\n",fBits);
   }
     
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t JEventProcessor_HELI_online::fini(void){
+void JEventProcessor_HELI_online::Finish(void){
   // Called before program exit after event processing is finished.
   fclose(dFile);
-  return NOERROR;
+  return; //NOERROR;
 }
 
 int  JEventProcessor_HELI_online::nextRand(uint32_t *bits){  // Apply the shift register algorithm to generate pseudorandom number (0,1)

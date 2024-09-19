@@ -16,11 +16,11 @@
 class DFCALCluster_factory:public JFactoryT<DFCALCluster>{
 
 	public:
-		DFCALCluster_factory();
+		DFCALCluster_factory(){};
 		~DFCALCluster_factory(){};
 			
 	private:
-
+		void Init();
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;	
 		void Process(const std::shared_ptr<const JEvent>& event) override;	
 

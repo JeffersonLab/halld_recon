@@ -81,7 +81,7 @@ class JEventProcessor_highlevel_online:public JEventProcessor
 
 		void Init() override;
 		void BeginRun(const std::shared_ptr<const JEvent>& event) override;
-		void Process(const std::shared_ptr<const JEvent>& event) override;
+		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
 		void EndRun() override;
 		void Finish() override;
 

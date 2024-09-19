@@ -23,7 +23,8 @@ using namespace std;
 //----------------
 // Constructor
 //----------------
-DECALHit_factory::DECALHit_factory(){
+DECALHit_factory::DECALHit_factory()
+{
 }
 
 
@@ -32,43 +33,33 @@ DECALHit_factory::DECALHit_factory(){
 //------------------
 void DECALHit_factory::Init(void)
 {
+    auto app = GetApplication();
+    HIT_DEBUG    =  0;
+    DB_PEDESTAL  =  1;    //   1  -  take from DB
+                          //   0  -  event-by-event pedestal subtraction
 
-  auto app = GetApplication();
-  HIT_DEBUG    =  0;
-  DB_PEDESTAL  =  1;    //   1  -  take from DB
-                        //   0  -  event-by-event pedestal subtraction
-  
-  app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
-  app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
+    app->SetDefaultParameter("ECAL:HIT_DEBUG",    HIT_DEBUG);
+    app->SetDefaultParameter("ECAL:DB_PEDESTAL",  DB_PEDESTAL);
 
-  m_numActiveBlocks=0;
-  for (int row=0;row<kECALBlocksTall;row++){
-    for (int col=0;col<kECALBlocksWide;col++){
-      if (col>=kECALMidBlock-1 && col<=kECALMidBlock
-	  && row>=kECALMidBlock-1 && row<=kECALMidBlock){
-	m_activeBlock[row][col]=false;
+    m_numActiveBlocks=0;
+    for (int row=0;row<kECALBlocksTall;row++){
+      for (int col=0;col<kECALBlocksWide;col++){
+        if (col>=kECALMidBlock-1 && col<=kECALMidBlock
+      && row>=kECALMidBlock-1 && row<=kECALMidBlock){
+    m_activeBlock[row][col]=false;
+        }
+        else{
+    m_row[m_numActiveBlocks]=row;
+    m_column[m_numActiveBlocks]=col;
+    m_channelNumber[row][col]=m_numActiveBlocks;
+    m_activeBlock[row][col]=true;
+
+    m_numActiveBlocks++;
+        }
       }
-      else{
-	m_row[m_numActiveBlocks]=row;
-	m_column[m_numActiveBlocks]=col;
-	m_channelNumber[row][col]=m_numActiveBlocks;
-	m_activeBlock[row][col]=true;
 
-	m_numActiveBlocks++;
-      }
     }
-
-  }
   
-
-}
-
-
-//------------------
-// Init
-//------------------
-void DECALHit_factory::Init(void)
-{
     // initialize calibration tables
     vector< vector<double > > gains_tmp(kECALBlocksTall, 
             vector<double>(kECALBlocksWide));
@@ -112,14 +103,6 @@ void DECALHit_factory::BeginRun(const std::shared_ptr<const JEvent>& event)
         runs_announced.insert(runnumber);
     }
     pthread_mutex_unlock(&print_mutex);
-
-    // extract the ECAL Geometry
-    vector<const DECALGeometry*> ecalGeomVect;
-    event->Get( ecalGeomVect );
-    if (ecalGeomVect.size() < 1)
-      return; //OBJECT_NOT_AVAILABLE;
-    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
 
     vector< double > ecal_gains_ch;
     vector< double > ecal_pedestals_ch;
@@ -237,15 +220,6 @@ void DECALHit_factory::Process(const std::shared_ptr<const JEvent>& event)
     /// Note that this code does NOT get called for simulated
     /// data in HDDM format. The HDDM event source will copy
     /// the precalibrated values directly into the _data vector.
-
-
-    // extract the ECAL Geometry
-    vector<const DECALGeometry*> ecalGeomVect;
-    event->Get( ecalGeomVect );
-    if (ecalGeomVect.size() < 1)
-      return; //OBJECT_NOT_AVAILABLE;
-    const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
 
     vector<const DECALDigiHit*> digihits;
 

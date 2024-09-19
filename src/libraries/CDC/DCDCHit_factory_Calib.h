@@ -73,7 +73,7 @@ class DCDCHit_factory_Calib:public JFactoryT<DCDCHit>{
   void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table, 
 		      vector<unsigned int> &Nstraws);
   
-  void FindRogueHits(jana::JEventLoop *eventLoop, vector<unsigned int> &RogueHits);
+  void FindRogueHits(const std::shared_ptr<const JEvent>& event, vector<unsigned int> &RogueHits);
 
   // Geometry information
   unsigned int maxChannels;
