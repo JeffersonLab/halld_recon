@@ -61,7 +61,7 @@ DEventWriterREST::DEventWriterREST(const std::shared_ptr<const JEvent>& locEvent
 	app->SetDefaultParameter("PID:ADD_FCAL_DATA_FOR_CPP",ADD_FCAL_DATA_FOR_CPP);
 
 	REST_WRITE_FCAL_HITS = false;
-	gPARMS->SetDefaultParameter("REST:WRITE_FCAL_HITS", REST_WRITE_FCAL_HITS);
+	app->SetDefaultParameter("REST:WRITE_FCAL_HITS", REST_WRITE_FCAL_HITS);
 
 
     CCDB_CONTEXT_STRING = "";

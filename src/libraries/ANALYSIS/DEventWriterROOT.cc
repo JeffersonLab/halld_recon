@@ -116,8 +116,8 @@ void DEventWriterROOT::Create_ThrownTree(const std::shared_ptr<const JEvent>& lo
 		return; //branches already created: return
 
 	// set parameters specifically for thrown trees
-	if(gPARMS->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
-	    {gPARMS->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+	// if(japp->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
+	japp->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;
 
 	//TTREE BRANCHES
 	DTreeBranchRegister locBranchRegister;

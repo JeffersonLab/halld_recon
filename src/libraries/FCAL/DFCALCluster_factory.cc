@@ -43,7 +43,7 @@ const DFCALHit *GetDFCALHitFromClusterHit(const DFCALCluster::DFCALClusterHit_t 
 //----------------
 // Constructor
 //----------------
-DFCALCluster_factory::DFCALCluster_factory()
+void DFCALCluster_factory::Init()
 {
 	// Set defaults
 	MIN_CLUSTER_BLOCK_COUNT = 2;
@@ -51,10 +51,11 @@ DFCALCluster_factory::DFCALCluster_factory()
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
 
-	japp->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
-	japp->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
-	japp->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
-	japp->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+	auto app = GetApplication();
+	app->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
+	app->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
+	app->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
+	app->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
 }
 
 //------------------
@@ -99,13 +100,10 @@ void DFCALCluster_factory::Process(const std::shared_ptr<const JEvent>& event)
 	
 	// LED events will have hits in nearly every channel. Do NOT
 	// try clusterizing if more than 250 hits in FCAL
-	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return NOERROR;
+	if(fcalhits.size()+ecalhits.size() > MAX_HITS_FOR_CLUSTERING) return; //NOERROR;
 	
 	const DFCALGeometry* fcalGeom=NULL;
 	event->GetSingle(fcalGeom);
-
-	// Sort hits by energy
-	sort(fcalhits.begin(), fcalhits.end(), FCALHitsSort_C);
 
 	// fill user's hit list
         int nhits = 0;

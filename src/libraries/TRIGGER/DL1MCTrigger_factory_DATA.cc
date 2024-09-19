@@ -12,9 +12,9 @@ using namespace std;
 
 #include <HDDM/DEventSourceHDDM.h>
 
-using namespace jana;
-
 #include "DL1MCTrigger_factory_DATA.h"
+#include "DANA/DEvent.h"
+
 
 #if HAVE_RCDB
 #include "RCDB/Connection.h"
@@ -24,12 +24,13 @@ using namespace jana;
 thread_local DTreeFillData DL1MCTrigger_factory_DATA::dTreeFillData;
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t DL1MCTrigger_factory_DATA::init(void)
+void DL1MCTrigger_factory_DATA::Init(void)
 {
 
   debug = 0;
+  auto app = GetApplication();
 
   if(debug){
     hfcal_gains   = new TH1F("fcal_gains", "fcal_gains",  80,  -1., 3.);
@@ -81,55 +82,55 @@ jerror_t DL1MCTrigger_factory_DATA::init(void)
   simu_gain_fcal  =  0;
   simu_gain_bcal  =  0;
 
-  gPARMS->SetDefaultParameter("TRIG:BYPASS", BYPASS,
+  app->SetDefaultParameter("TRIG:BYPASS", BYPASS,
                               "Bypass trigger by hard coding physics bit");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_ADC_PER_MEV", FCAL_ADC_PER_MEV,
+  app->SetDefaultParameter("TRIG:FCAL_ADC_PER_MEV", FCAL_ADC_PER_MEV,
 			      "FCAL energy calibration for the Trigger");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_CELL_THR", FCAL_CELL_THR,
+  app->SetDefaultParameter("TRIG:FCAL_CELL_THR", FCAL_CELL_THR,
 			      "FCAL energy threshold per cell");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_EN_SC", FCAL_EN_SC,
+  app->SetDefaultParameter("TRIG:FCAL_EN_SC", FCAL_EN_SC,
 			      "FCAL energy threshold");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_NSA", FCAL_NSA,
+  app->SetDefaultParameter("TRIG:FCAL_NSA", FCAL_NSA,
 			      "FCAL NSA");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_NSB", FCAL_NSB,
+  app->SetDefaultParameter("TRIG:FCAL_NSB", FCAL_NSB,
 			      "FCAL NSB");
-  gPARMS->SetDefaultParameter("TRIG:FCAL_WINDOW", FCAL_WINDOW,
+  app->SetDefaultParameter("TRIG:FCAL_WINDOW", FCAL_WINDOW,
 			      "FCAL GTP integration window");
 
-  gPARMS->SetDefaultParameter("TRIG:BCAL_ADC_PER_MEV", BCAL_ADC_PER_MEV,
+  app->SetDefaultParameter("TRIG:BCAL_ADC_PER_MEV", BCAL_ADC_PER_MEV,
 			      "BCAL energy calibration for the Trigger");
-  gPARMS->SetDefaultParameter("TRIG:BCAL_CELL_THR", BCAL_CELL_THR,
+  app->SetDefaultParameter("TRIG:BCAL_CELL_THR", BCAL_CELL_THR,
 			      "BCAL energy threshold per cell");
-  gPARMS->SetDefaultParameter("TRIG:BCAL_EN_SC", BCAL_EN_SC,
+  app->SetDefaultParameter("TRIG:BCAL_EN_SC", BCAL_EN_SC,
 			      "BCAL energy threshold");
-  gPARMS->SetDefaultParameter("TRIG:BCAL_NSA", BCAL_NSA,
+  app->SetDefaultParameter("TRIG:BCAL_NSA", BCAL_NSA,
 			      "BCAL NSA");
-  gPARMS->SetDefaultParameter("TRIG:BCAL_NSB", BCAL_NSB,
+  app->SetDefaultParameter("TRIG:BCAL_NSB", BCAL_NSB,
 			      "BCAL NSB");
-  gPARMS->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
+  app->SetDefaultParameter("TRIG:BCAL_WINDOW", BCAL_WINDOW,
 			      "BCAL GTP integration window");
 
-  gPARMS->SetDefaultParameter("TRIG:ST_ADC_PER_MEV", ST_ADC_PER_MEV,
+  app->SetDefaultParameter("TRIG:ST_ADC_PER_MEV", ST_ADC_PER_MEV,
 			      "ST energy calibration for the Trigger");
-  gPARMS->SetDefaultParameter("TRIG:ST_CELL_THR", ST_CELL_THR,
+  app->SetDefaultParameter("TRIG:ST_CELL_THR", ST_CELL_THR,
 			      "ST energy threshold per cell");
-  gPARMS->SetDefaultParameter("TRIG:ST_NSA", ST_NSA,
+  app->SetDefaultParameter("TRIG:ST_NSA", ST_NSA,
 			      "ST NSA");
-  gPARMS->SetDefaultParameter("TRIG:ST_NSB", ST_NSB,
+  app->SetDefaultParameter("TRIG:ST_NSB", ST_NSB,
 			      "ST NSB");  
-  gPARMS->SetDefaultParameter("TRIG:ST_WINDOW", ST_WINDOW,
+  app->SetDefaultParameter("TRIG:ST_WINDOW", ST_WINDOW,
 			      "ST window for merging hits (GTP)");
-  gPARMS->SetDefaultParameter("TRIG:ST_NHIT", ST_NHIT,
+  app->SetDefaultParameter("TRIG:ST_NHIT", ST_NHIT,
 			      "Number of hits in ST");
   
-  gPARMS->SetDefaultParameter("TRIG:FCAL_BCAL_EN", FCAL_BCAL_EN,
+  app->SetDefaultParameter("TRIG:FCAL_BCAL_EN", FCAL_BCAL_EN,
 			      "Energy threshold for the FCAL & BCAL trigger");
 
-  gPARMS->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET,
+  app->SetDefaultParameter("TRIG:BCAL_OFFSET", BCAL_OFFSET,
 			      "Timing offset between BCAL and FCAL energies at GTP (sampels)");
-  gPARMS->SetDefaultParameter("TRIG:OUTPUT_TREE", OUTPUT_TREE,
+  app->SetDefaultParameter("TRIG:OUTPUT_TREE", OUTPUT_TREE,
 			      "Write out tree with trigger information, for debugging.");
-  gPARMS->SetDefaultParameter("TRIG:USE_RAW_SAMPLES", USE_RAW_SAMPLES,
+  app->SetDefaultParameter("TRIG:USE_RAW_SAMPLES", USE_RAW_SAMPLES,
 			      "Use the measured raw fADC samples instead of the simulated ones (only works for raw mode data).");
   
   if(OUTPUT_TREE) {
@@ -158,7 +159,7 @@ jerror_t DL1MCTrigger_factory_DATA::init(void)
 
 
   // Allows to switch off gain and baseline fluctuations
-  gPARMS->SetDefaultParameter("TRIG:SIMU_BASELINE", SIMU_BASELINE,
+  app->SetDefaultParameter("TRIG:SIMU_BASELINE", SIMU_BASELINE,
 			      "Enable simulation of pedestal variations");
 
 //   gPARMS->SetDefaultParameter("TRIG:SIMU_GAIN", SIMU_GAIN,
@@ -188,16 +189,16 @@ jerror_t DL1MCTrigger_factory_DATA::init(void)
     simu_baseline_bcal = 0;
   }
 
-  return NOERROR;
+  return; // NOERROR;
 }
 
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void DL1MCTrigger_factory_DATA::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-
+  auto runnumber = event->GetRunNumber();
   int use_rcdb = 1;
 
   int status   = 0;
@@ -241,7 +242,7 @@ jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t ru
   //  runnumber = 30942;
 
   if(use_rcdb == 1){
-    status = Read_RCDB(runnumber, print_messages);
+    status = Read_RCDB(event, print_messages);
     if(print_messages) PrintTriggers();
   }
 
@@ -265,9 +266,9 @@ jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t ru
 
    // extract the FCAL Geometry
   vector<const DFCALGeometry*> fcalGeomVect;
-  eventLoop->Get( fcalGeomVect );
+  event->Get( fcalGeomVect );
   if (fcalGeomVect.size() < 1)
-    return OBJECT_NOT_AVAILABLE;
+    return; //OBJECT_NOT_AVAILABLE;
   const DFCALGeometry& fcalGeom = *(fcalGeomVect[0]);
   
   if(print_messages) jout << "In DL1MCTrigger_factory_DATA, loading constants..." << endl;
@@ -275,7 +276,7 @@ jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t ru
   vector< double > fcal_gains_ch;
   vector< double > fcal_pedestals_ch;
   
-  if (eventLoop->GetCalib("/FCAL/gains", fcal_gains_ch)){
+  if (DEvent::GetCalib(event, "/FCAL/gains", fcal_gains_ch)){
     jout << "DL1MCTrigger_factory_DATA: Error loading /FCAL/gains !" << endl;
     // Load default values of gains if CCDB table is not found
     for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
@@ -302,7 +303,7 @@ jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t ru
 
   }
 
-  if (eventLoop->GetCalib("/FCAL/pedestals", fcal_pedestals_ch)){
+  if (DEvent::GetCalib(event, "/FCAL/pedestals", fcal_pedestals_ch)){
     jout << "DL1MCTrigger_factory_DATA: Error loading /FCAL/pedestals !" << endl;
     // Load default values of pedestals if CCDB table is not found
     for(int ii = 0; ii < DFCALGeometry::kBlocksTall; ii++){
@@ -345,27 +346,27 @@ jerror_t DL1MCTrigger_factory_DATA::brun(jana::JEventLoop *eventLoop, int32_t ru
 
 //cerr << "end DL1MCTrigger_factory_DATA::brun() ... " << endl;
 
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t DL1MCTrigger_factory_DATA::evnt(JEventLoop *loop, uint64_t eventnumber){
+void DL1MCTrigger_factory_DATA::Process(const std::shared_ptr<const JEvent>& event){
 
 	if(BYPASS) {
                 DL1MCTrigger *trigger = new DL1MCTrigger;
                 trigger->trig_mask = 1;
-                _data.push_back(trigger);
-		return NOERROR;
+                Insert(trigger);
+		return; //NOERROR;
         }
 
         int l1_found = 1;  
 
 	int status = 0;
 
-    JEvent& event = loop->GetJEvent();
-    int32_t runnumber = event.GetRunNumber();
+    int32_t runnumber = event->GetRunNumber();
+    auto eventnumber = event->GetEventNumber();
 
 //cerr << "in DL1MCTrigger_factory_DATA::evnt() ... " << endl;
 
@@ -385,8 +386,8 @@ jerror_t DL1MCTrigger_factory_DATA::evnt(JEventLoop *loop, uint64_t eventnumber)
     vector<const DFCALHit*>  fcal_hits;
 	vector<const DBCALHit*>  bcal_hits;
 
-	loop->Get(fcal_hits);
-	loop->Get(bcal_hits);
+	event->Get(fcal_hits);
+	event->Get(bcal_hits);
 
 
 	// Initialize random number generator
@@ -399,7 +400,7 @@ jerror_t DL1MCTrigger_factory_DATA::evnt(JEventLoop *loop, uint64_t eventnumber)
 	UInt_t seed3 = 0;
 	
 	DRandom2 gDRandom(0); // declared extern in DRandom2.h
-	GetSeeds(loop, eventnumber, seed1, seed2, seed3);
+	GetSeeds(event, seed1, seed2, seed3);
 	
 	gDRandom.SetSeeds(seed1, seed2, seed3);
 	
@@ -753,7 +754,7 @@ jerror_t DL1MCTrigger_factory_DATA::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  trigger->bcal_gtp     =  bcal_gtp_max;
 	  trigger->bcal_gtp_en  =  bcal_gtp_max/BCAL_ADC_PER_MEV_CORRECT/2./1000.;	  	  
 	  
-	  _data.push_back(trigger);	 
+	  Insert(trigger);	 
 	  
 	  if(OUTPUT_TREE) {
 	  	dTreeFillData.Fill_Single<ULong64_t>("RunNumber", runnumber);
@@ -775,40 +776,40 @@ jerror_t DL1MCTrigger_factory_DATA::evnt(JEventLoop *loop, uint64_t eventnumber)
 	  delete trigger;
 	}
 	
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t DL1MCTrigger_factory_DATA::erun(void)
+void DL1MCTrigger_factory_DATA::EndRun(void)
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t DL1MCTrigger_factory_DATA::fini(void)
+void DL1MCTrigger_factory_DATA::Finish(void)
 {
     if(OUTPUT_TREE) {
   		delete dTreeInterface;
     }
 
-	return NOERROR;
+	return; //NOERROR;
 }
 
 //*********************
 // Read RCDB 
 //*********************
 
-int  DL1MCTrigger_factory_DATA::Read_RCDB(int32_t runnumber, bool print_messages)
+int  DL1MCTrigger_factory_DATA::Read_RCDB(const std::shared_ptr<const JEvent>& event, bool print_messages)
 {
 
+auto runnumber = event->GetRunNumber();
 #if HAVE_RCDB
 
   vector<const DTranslationTable*> ttab;  
-  eventLoop->Get(ttab);
+  event->Get(ttab);
   
   vector<string> SectionNames = {"TRIGGER", "GLOBAL", "FCAL", "BCAL", "TOF", "ST", "TAGH",
 				 "TAGM", "PS", "PSC", "TPOL", "CDC", "FDC"};
@@ -1605,14 +1606,12 @@ void DL1MCTrigger_factory_DATA::AddBaseline(double adc_amp[sample], double pedes
 
 
 
-void DL1MCTrigger_factory_DATA::GetSeeds(JEventLoop *loop, uint64_t eventnumber, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3){
+void DL1MCTrigger_factory_DATA::GetSeeds(const std::shared_ptr<const JEvent>& event, UInt_t &seed1, UInt_t &seed2, UInt_t &seed3){
 
   // Use seeds similar to mcsmear
-
-  JEvent& event = loop->GetJEvent();
+  auto eventnumber = event->GetEventNumber();
   
-  
-  JEventSource *source = event.GetJEventSource();
+  JEventSource *source = event->GetJEventSource();
   
   DEventSourceHDDM *hddm_source = dynamic_cast<DEventSourceHDDM*>(source);
   
@@ -1627,7 +1626,7 @@ void DL1MCTrigger_factory_DATA::GetSeeds(JEventLoop *loop, uint64_t eventnumber,
     seed3 = 709975946 + eventnumber;
   } else {
   
-    hddm_s::HDDM *record = (hddm_s::HDDM*)event.GetRef();
+    hddm_s::HDDM *record = const_cast<hddm_s::HDDM *>(event->GetSingle<hddm_s::HDDM>());
     if (!record){
       seed1 = 259921049 + eventnumber;
       seed2 = 442249570 + eventnumber;

@@ -27,7 +27,7 @@ class DFCALCluster_factory_Island:public JFactoryT<DFCALCluster>{
   ~DFCALCluster_factory_Island(){};
   class HitInfo{
   public:
-    HitInfo(int row,int column,double E,double x,double y,double t)
+    HitInfo(int id,int row,int column,double E,double x,double y,double t)
       :id(id),row(row),column(column),E(E),x(x),y(y),t(t){}
     oid_t id;
     int row;
