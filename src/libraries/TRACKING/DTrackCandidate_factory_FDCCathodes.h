@@ -75,20 +75,18 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
   double MatchR(double rc) const;
 
   bool LinkStraySegment(const DFDCSegment *segment);
-  bool LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segements,
-			 vector<DFDCSegment *>packages[4],
-			 vector<vector<int> >&is_paired,
-			 vector<vector<const DFDCSegment *>>&mytracks);
   void MakeCandidate(vector<const DFDCSegment *>&mytrack);
   void DoHelicalFit(vector<const DFDCSegment *>&mytrack,DHelicalFit &fit);
 
 
   bool DEBUG_HISTS,USE_FDC,ADD_VERTEX_POINT;
 
+  double SEGMENT_MATCH_SCALE=200.,SEGMENT_MATCH_HI_CUT=9.0;
+  double SEGMENT_MATCH_LO_CUT=5.0;
   TH2F *match_dist_fdc,*match_center_dist2;
  
   vector<double>z_wires;
-  double TARGET_Z,BEAM_VAR,FDC_HOUGH_THRESHOLD;
+  double TARGET_Z,BEAM_VAR;
   
   double FactorForSenseOfRotation;
   
@@ -106,9 +104,9 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 };
 
 inline double DTrackCandidate_factory_FDCCathodes::MatchR(double rc) const {
-  double cut=200.0/rc;
-  if (cut>9.0) cut=9.0;
-  if (cut<5.) cut=5.0;
+  double cut=SEGMENT_MATCH_SCALE/rc;
+  if (cut>SEGMENT_MATCH_HI_CUT) cut=SEGMENT_MATCH_HI_CUT;
+  if (cut<SEGMENT_MATCH_LO_CUT) cut=SEGMENT_MATCH_LO_CUT;
   return cut;
 }
 
