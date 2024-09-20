@@ -112,6 +112,8 @@ jerror_t DFDCPseudo_factory::init(void)
 
   DEBUG_HISTS = false;
   gPARMS->SetDefaultParameter("FDC:DEBUG_HISTS",DEBUG_HISTS);
+  MATCH_TRUTH_HITS = false;
+  gPARMS->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
 
 
   return NOERROR;
@@ -325,8 +327,10 @@ jerror_t DFDCPseudo_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
 	// makes that difficult. Here we have the full wire definition so
 	// we make the connection here.
 	vector<const DMCTrackHit*> mctrackhits;
-	eventLoop->Get(mctrackhits);
-
+	if (MATCH_TRUTH_HITS){
+	  eventLoop->Get(mctrackhits);
+	}
+	  
 	vector<const DFDCCathodeCluster*>::iterator uIt = uClus.begin();
 	vector<const DFDCCathodeCluster*>::iterator vIt = vClus.begin();
 	vector<const DFDCHit*>::iterator xIt = xHits.begin();
@@ -624,9 +628,11 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
                     newPseu->covxy=(sigy2-sigx2)*sinangle*cosangle;
 
                     // Try matching truth hit with this "real" hit.
-                    const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
-                    if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
-
+		    if (mctrackhits.size()>0){
+		      const DMCTrackHit *mctrackhit = DTrackHitSelectorTHROWN::GetMCTrackHit(newPseu->wire, DRIFT_SPEED*newPseu->time, mctrackhits);
+		      if(mctrackhit)newPseu->AddAssociatedObject(mctrackhit);
+		    }
+		      
                     _data.push_back(newPseu);
 
                     if (DEBUG_HISTS){
@@ -693,7 +699,7 @@ void DFDCPseudo_factory::CalcMeanTime(vector<const DFDCHit *>::const_iterator pe
 jerror_t DFDCPseudo_factory::FindCentroid(const vector<const DFDCHit*>& H,
       vector<const DFDCHit *>::const_iterator peak,
       vector<centroid_t>&centroids){
-   centroid_t temp;
+  centroid_t temp={0};
    double err_diff1=0.,err_diff2=0.;
 
    // Fill in time info in temp  1/2/2008 D.L.
@@ -914,7 +920,7 @@ jerror_t DFDCPseudo_factory::FindNewParmVec(const DMatrix3x1 &N,
 jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
       vector<const DFDCHit *>::const_iterator peak,
       vector<centroid_t>&centroids){
-   centroid_t temp;
+  centroid_t temp={0};
 
    if ((*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD && (*(peak+1))->pulse_height<MIDDLE_STRIP_THRESHOLD) {
       return VALUE_OUT_OF_RANGE;
@@ -968,7 +974,7 @@ jerror_t DFDCPseudo_factory::TwoStripCluster(const vector<const DFDCHit*>& H,
 jerror_t DFDCPseudo_factory::ThreeStripCluster(const vector<const DFDCHit*>& H,
       vector<const DFDCHit *>::const_iterator peak,
       vector<centroid_t>&centroids){
-   centroid_t temp;
+  centroid_t temp={0};
 
    if ((*(peak-1))->pulse_height<MIDDLE_STRIP_THRESHOLD &&
          (*peak)->pulse_height<MIDDLE_STRIP_THRESHOLD &&
