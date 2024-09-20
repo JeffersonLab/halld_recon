@@ -13,7 +13,6 @@
 #include "FDC/DFDCPseudo_factory.h"
 #include "FDC/DFDCSegment_factory.h"
 #include "DHelicalFit.h"
-#include "DHoughFind.h"
 #include <TROOT.h>
 #include <TH1F.h>
 #include <TH2F.h>
@@ -74,8 +73,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
   BEAM_VAR=1.;
   gPARMS->SetDefaultParameter("TRKFIND:BEAM_VAR",BEAM_VAR);
 
-  FDC_HOUGH_THRESHOLD=10.;
-  gPARMS->SetDefaultParameter("TRKFIND:FDC_HOUGH_THRESHOLD",FDC_HOUGH_THRESHOLD);
   ADD_VERTEX_POINT=true;
   gPARMS->SetDefaultParameter("TRKFIND:ADD_VERTEX_POINT", ADD_VERTEX_POINT);
  
@@ -103,6 +100,14 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
   NUM_PROFILE_FDC_CANDIDATES=0;
   gPARMS->SetDefaultParameter("TRKFIND:NUM_PROFILE_FDC_CANDIDATES",
 			      NUM_PROFILE_FDC_CANDIDATES);
+
+  // For matching
+  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_SCALE",
+			      SEGMENT_MATCH_SCALE);
+  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_HI_CUT",
+			      SEGMENT_MATCH_HI_CUT);
+  gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_LO_CUT",
+			      SEGMENT_MATCH_LO_CUT);
 
   return NOERROR;
 }
@@ -272,33 +277,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   for (unsigned int i=0;i<triplets.size();i++){
     if (is_quadrupled[i]==0){
       mytracks.push_back(triplets[i]);
-    }
-  }
-
-  // Make a list of all of the unused segments so far
-  vector<pair<unsigned int,unsigned int> >unused_segments;
-  for (unsigned int j=0;j<4;j++){
-    for (unsigned int i=0;i<packages[j].size();i++){
-      if (is_paired[j][i]==0){
-	unused_segments.push_back(make_pair(j,i));
-      }
-    }
-  }
-
-  // Find track candidates using Hough transform
-  if (unused_segments.size()>1){
-    if (LinkSegmentsHough(unused_segments,packages,is_paired,mytracks)){
-      unused_segments.clear();
-      for (unsigned int j=0;j<4;j++){
-	for (unsigned int i=0;i<packages[j].size();i++){
-	  if (is_paired[j][i]==0){
-	    unused_segments.push_back(make_pair(j,i));
-	  }
-	}
-      }
-      if (unused_segments.size()>1){
-	LinkSegmentsHough(unused_segments,packages,is_paired,mytracks);
-      }
     }
   }
 
@@ -703,95 +681,6 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
     }
   } // loop over track candidates
 
-  return false;
-}
-
-// Find circles using Hough transform
-bool DTrackCandidate_factory_FDCCathodes::LinkSegmentsHough(vector<pair<unsigned int,unsigned int> >&unused_segments,
-							    vector<DFDCSegment *>packages[4],
-							    vector<vector<int> >&is_paired,
-							    vector<vector<const DFDCSegment *>>&mytracks){
-  DHoughFind hough(-400.0, +400.0, -400.0, +400.0, 100, 100);
-    
-  vector<pair<unsigned int, unsigned int> >associated_segments;
-  for (unsigned int i=0;i<unused_segments.size();i++){
-    unsigned int packNum=unused_segments[i].first;
-    unsigned int segmentNum=unused_segments[i].second;    
-    const DFDCSegment* segment=packages[packNum][segmentNum];
-    for (unsigned int m=0;m<segment->hits.size();m++){
-      hough.AddPoint(segment->hits[m]->xy);
-      associated_segments.push_back(unused_segments[i]);
-    }
-  }
-        
-  DVector2 Ro = hough.Find();
-  if(hough.GetMaxBinContent()>FDC_HOUGH_THRESHOLD){	
-    // Zoom in on resonance a little
-    double width = 60.0;
-    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 
-		    100, 100);
-    Ro = hough.Find();
-    
-    // Zoom in on resonance once more
-    width = 8.0;
-    hough.SetLimits(Ro.X()-width, Ro.X()+width, Ro.Y()-width, Ro.Y()+width, 100, 100);
-    Ro = hough.Find();
-    
-    vector<DVector2> points=hough.GetPoints();
-    set<pair<unsigned int, unsigned int> >associated_segments_to_use;
-    unsigned int num_hits_to_use=0;
-    for (unsigned int m=0;m<points.size();m++){
-      // Calculate distance between Hough transformed line (i.e.
-      // the line on which a circle that passes through both the
-      // origin and the point at hit->pos) and the circle center.
-      DVector2 h=0.5*points[m];
-      DVector2 g(h.Y(), -h.X()); 
-      g /= g.Mod();
-      DVector2 Ro_minus_h=Ro-h;	
-      double dist = fabs(g.X()*Ro_minus_h.Y() - g.Y()*Ro_minus_h.X());
-      
-      // If this is not close enough to the found circle's center,
-      // reject it for this track candidate
-      if(dist < 2.0){
-	num_hits_to_use++;
-	associated_segments_to_use.emplace(associated_segments[m]);
-      }
-    }
-    if (num_hits_to_use>5&&associated_segments_to_use.size()>1){
-      bool same_package=false;
-      set<pair<unsigned int,unsigned int> >::iterator it=associated_segments_to_use.begin();
-      for (; it!=associated_segments_to_use.end(); ++it){
-	unsigned int first_packNo=(*it).first;
-	unsigned int first_segmentNo=(*it).second;
-	set<pair<unsigned int,unsigned int> >::iterator it2=associated_segments_to_use.begin();
-	for (; it2!=associated_segments_to_use.end(); ++it2){
-	  unsigned int packNo=(*it2).first;
-	  unsigned int segmentNo=(*it2).second;
-	  if (packNo==first_packNo){
-	    if (segmentNo==first_segmentNo) continue;
-	    
-	    same_package=true;
-	    break;
-	  }
-	}
-      }
-      if (same_package==false){
-	// Make a track out these associated segments
-	vector<const DFDCSegment*>mytrack;
-	set<pair<unsigned int,unsigned int> >::iterator it=associated_segments_to_use.begin();
-	for (; it!=associated_segments_to_use.end(); ++it){
-	  unsigned int packNo=(*it).first;
-	  unsigned int segmentNo=(*it).second;
-	  mytrack.push_back(packages[packNo][segmentNo]);
-	  is_paired[packNo][segmentNo]=1;
-	}
-	mytracks.push_back(mytrack);
-	
-	return true;
-      }
-    }
-  } // got resonance
-  
   return false;
 }
 
