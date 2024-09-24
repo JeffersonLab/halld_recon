@@ -217,7 +217,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
   eventLoop->Get(digihits);
 
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
   fithisto = kFALSE;
 
@@ -600,7 +600,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  japp->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
   return NOERROR;
 }

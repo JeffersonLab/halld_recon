@@ -8,7 +8,6 @@
 #include "JEventProcessor_CDC_PerStrawReco.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
-#include "HistogramTools.h"
 
 using namespace jana;
 
@@ -435,6 +434,8 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
     vector <const DChargedTrack *> chargedTrackVector;
     loop->Get(chargedTrackVector);
 
+    japp->RootFillLock(this);
+    
     for (unsigned int iTrack = 0; iTrack < chargedTrackVector.size(); iTrack++){
 
         const DChargedTrackHypothesis* bestHypothesis = chargedTrackVector[iTrack]->Get_BestTrackingFOM();
@@ -533,6 +534,8 @@ jerror_t JEventProcessor_CDC_PerStrawReco::evnt(JEventLoop *loop, uint64_t event
 
         } 
     }
+
+    japp->RootFillUnLock(this);
     return NOERROR;
 }
 
