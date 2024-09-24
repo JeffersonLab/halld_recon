@@ -108,6 +108,8 @@ jerror_t DTrackCandidate_factory_FDCCathodes::brun(JEventLoop* eventLoop,
 			      SEGMENT_MATCH_HI_CUT);
   gPARMS->SetDefaultParameter("TRKFIND:SEGMENT_MATCH_LO_CUT",
 			      SEGMENT_MATCH_LO_CUT);
+  gPARMS->SetDefaultParameter("TRKFIND:CENTER_MATCH_CUT",
+			      CENTER_MATCH_CUT);
 
   return NOERROR;
 }
@@ -256,14 +258,22 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
     }
   }
 
-  // Start gathering groups into a list of linked segments to elevate to track
-  // candidates
-  vector<vector<const DFDCSegment *> >mytracks;
+  // Elevate quadruplets to track candidates
   for (unsigned int i=0;i<quadruplets.size();i++){
-    mytracks.push_back(quadruplets[i]);
+    MakeCandidate(quadruplets[i]);
   }
+
+  // if we could not link some of the triplets to other segments, create
+  // three-segment track candidates
+  for (unsigned int i=0;i<triplets.size();i++){
+    if (is_quadrupled[i]==0){
+      MakeCandidate(triplets[i]);
+    }
+  }
+
   // If we could not link some of the pairs together, create two-segment 
   // "tracks"
+  vector<vector<const DFDCSegment *> >mytracks;
   for (unsigned int i=0;i<is_tripled.size();i++){
     if (is_tripled[i]==0){
       vector<const DFDCSegment *>mytrack;
@@ -272,27 +282,66 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
       mytracks.push_back(mytrack);
     }
   }
-  // if we could not link some of the triplets to other segments, create 
-  // three-segment "tracks"
-  for (unsigned int i=0;i<triplets.size();i++){
-    if (is_quadrupled[i]==0){
-      mytracks.push_back(triplets[i]);
+
+  // For each set of matched segments, redo the helical fit with all the hits,
+  // create a new track candidate and try to match to another pair of matched
+  // segments
+  vector<int>is_matched(mytracks.size());
+  for (unsigned int i=0;i<mytracks.size();i++){
+    if (is_matched[i]==0){
+      MakeCandidate(mytracks[i]);
+      for (unsigned int j=i+1;j<mytracks.size();j++){
+	if (mytracks[j][0]->package > mytracks[i][1]->package){
+	  // Try to connect the track stubs together
+	  const DFDCPseudo *myhit=mytracks[j][0]->hits[0];
+	  unsigned int index=_data.size()-1;
+	  double doca2=DocaSqToHelix(_data[index],myhit);
+	  bool got_match=(doca2<MatchR(_data[index]->rc));
+	  // if this does not work, try to match using the centers of the
+	  // circles
+	  if (got_match==false){
+	    double dx=mytracks[j][0]->xc-_data[index]->xc;
+	    double dy=mytracks[j][0]->yc-_data[index]->yc;
+	    if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
+	  }
+	  if (got_match==false){
+	    double dx=mytracks[j][1]->xc-_data[index]->xc;
+	    double dy=mytracks[j][1]->yc-_data[index]->yc;
+	    if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
+	  }
+	  if (got_match){
+	    is_matched[j]=1;
+
+	    // Add the new segments as associated objects to _data[index]
+	    _data[index]->AddAssociatedObject(mytracks[j][0]);
+	    _data[index]->AddAssociatedObject(mytracks[j][1]);
+
+	    vector<const DFDCSegment*>segments=mytracks[i];
+	    segments.insert(segments.end(),mytracks[j].begin(),mytracks[j].end());
+
+	    // Create fit object and perform helical fit
+	    DHelicalFit fit;
+	    DoHelicalFit(segments,fit);
+    
+	    //circle fit parameters
+	    _data[index]->rc=rc;
+	    _data[index]->xc=xc;
+	    _data[index]->yc=yc;
+
+	    // Get position and momentum just upstream of first hit
+	    DVector3 pos,mom;
+	    GetPositionAndMomentum(segments,pos,mom);
+	    
+	    _data[index]->chisq=fit.chisq;
+	    _data[index]->Ndof=fit.ndof;
+	    _data[index]->setPID((q > 0.0) ? PiPlus : PiMinus);
+	    _data[index]->setPosition(pos);
+	    _data[index]->setMomentum(mom);
+	  }
+	}
+      }
     }
   }
-
-#ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Pattern recognition");
-#endif
-
-  // For each set of matched segments, redo the helical fit with all the hits 
-  // and create a new track candidate
-  for (unsigned int i=0;i<mytracks.size();i++){  
-    MakeCandidate(mytracks[i]);
-  }
-
-#ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Helical fits");
-#endif  
 
   // Now try to attach stray segments to existing tracks
   for (unsigned int i=0;i<4;i++){
@@ -334,7 +383,7 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   }
 
 #ifdef PROFILE_TRK_TIMES
-  start_time.TimeDiffNow(cand_prof_times, "Full sequence");
+  start_time.TimeDiffNow(cand_prof_times, "Track finding");
 #endif
 
   if (PROFILE_TIME && (_data.size()==NUM_PROFILE_FDC_CANDIDATES
@@ -457,7 +506,7 @@ DFDCSegment *DTrackCandidate_factory_FDCCathodes::GetTrackMatch(DFDCSegment *seg
     
     if (circle_center_diff2<circle_center_diff2_min){
       circle_center_diff2_min=circle_center_diff2;
-      if (circle_center_diff2_min<9.0){
+      if (circle_center_diff2_min<CENTER_MATCH_CUT){
 	match=segment2;
 	match_id=j;
       }
@@ -646,7 +695,7 @@ bool DTrackCandidate_factory_FDCCathodes::LinkStraySegment(const DFDCSegment *se
 	if (got_match==false){
 	  double dx=segment->xc-_data[i]->xc;
 	  double dy=segment->yc-_data[i]->yc;
-	  if (dx*dx+dy*dy<9.0) got_match=true;
+	  if (dx*dx+dy*dy<CENTER_MATCH_CUT) got_match=true;
 	}
 	if (got_match){
 	  // Add the segment as an associated object to _data[i]

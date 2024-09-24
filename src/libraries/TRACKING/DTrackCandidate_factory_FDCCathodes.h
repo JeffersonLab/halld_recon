@@ -81,8 +81,9 @@ class DTrackCandidate_factory_FDCCathodes:public JFactory<DTrackCandidate>{
 
   bool DEBUG_HISTS,USE_FDC,ADD_VERTEX_POINT;
 
-  double SEGMENT_MATCH_SCALE=200.,SEGMENT_MATCH_HI_CUT=9.0;
+  double SEGMENT_MATCH_SCALE=1000.,SEGMENT_MATCH_HI_CUT=25.0;
   double SEGMENT_MATCH_LO_CUT=5.0;
+  double CENTER_MATCH_CUT=25.0;
   TH2F *match_dist_fdc,*match_center_dist2;
  
   vector<double>z_wires;
