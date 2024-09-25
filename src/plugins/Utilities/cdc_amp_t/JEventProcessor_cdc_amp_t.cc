@@ -61,11 +61,16 @@ jerror_t JEventProcessor_cdc_amp_t::init(void)
 {
 	// This is called once at program startup. 
 
+    TDirectory *main = gDirectory;
+    gDirectory->mkdir("cdc_amp_t")->cd();
+
     amp_t = new TH2I("amp_t","Digihit pulse height - pedestal vs sample number;sample number;pulse height-pedestal", 200,0,200,205,0,4100);
     amp_tt = new TH2I("amp_tt","Digihit pulse height - pedestal vs sample number, hits on tracks;sample number; pulse height-pedestal", 200,0,200,205,0,4100);
   
     hitamp_t = new TH2I("hitamp_t","Hit amplitude vs time;time (ns);hit amplitude", 125,0,1000,205,0,4100);
     hitamp_tt = new TH2I("hitamp_tt","Tracked hit amplitude vs time;time (ns);hit amplitude", 125,0,1000,205,0,4100);
+
+    main->cd();
 
     return NOERROR;
 }
