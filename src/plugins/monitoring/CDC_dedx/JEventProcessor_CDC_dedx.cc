@@ -6,6 +6,8 @@
 //
 
 #include "JEventProcessor_CDC_dedx.h"
+#include "DANA/DEvent.h"
+
 
 
 // Routine used to create our JEventProcessor
@@ -109,7 +111,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
 
 
   vector<const DChargedTrack*> ctracks;
-  loop->Get(ctracks);
+  event->Get(ctracks);
   
   for (uint32_t i=0; i<(uint32_t)ctracks.size(); i++) {  
       
@@ -131,7 +133,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
 
     if (dedx > 0) {
 
-      japp->RootFillLock(this);
+      DEvent::GetLockService(event)->RootFillLock(this); 
 
       bestfom_dedx_p->Fill(p,dedx);
     
@@ -141,8 +143,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
         bestfom_dedx_p_neg->Fill(p,dedx);
       } 
 
-      japp->RootFillUnLock(this);
-
+      DEvent::GetLockService(event)->RootFillUnLock(this); 
     }
   }
 
