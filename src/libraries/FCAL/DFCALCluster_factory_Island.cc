@@ -635,11 +635,11 @@ void DFCALCluster_factory_Island::Process(const std::shared_ptr<const JEvent> &e
 	  }
 	}
       }
-      Insert.push_back(myCluster);
+      Insert(myCluster);
     } // loop over peaks
   } // looper over cluster candidates
 
-  return NOERROR;
+  return; //NOERROR;
 }
 
 //------------------
