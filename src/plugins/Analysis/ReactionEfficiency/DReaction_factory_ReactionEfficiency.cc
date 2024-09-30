@@ -745,12 +745,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
 	const std::deque<Particle_t> locFourPi = {PiPlus, PiPlus, PiMinus, PiMinus};
 	const std::deque<Particle_t> locPipPim = {PiPlus, PiMinus};
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locFourPi, false, 600, 0.0, 3.0, "pippippimpim_measured"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPipPim, false, 600, 0.0, 3.0, "pippim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass  (locReaction, 0, locFourPi, false, 600, 0.0, 3.0, "pippippimpim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass  (locReaction, 0, locFourPi, true,  600, 0.0, 3.0, "pippippimpim_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass  (locReaction, 0, locPipPim, false, 600, 0.0, 3.0, "pippim_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass  (locReaction, 0, locPipPim, true,  600, 0.0, 3.0, "pippim_kinFit"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, false, 300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_measured"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locFourPi, true, 600, 0.0, 3.0, "pippippimpim_kinFit"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, 0, locPipPim, true, 600, 0.0, 3.0, "pippim_kinFit"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, true, 300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_2DInvariantMass(locReaction, 0, locFourPi, locPipPim, true,  300, 0, 3.0, 300, 0, 3.0, "pippim_vs_pippippimpim_kinFit"));
 
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
@@ -782,12 +782,12 @@ jerror_t DReaction_factory_ReactionEfficiency::evnt(JEventLoop* locEventLoop, ui
 	locReaction->Add_AnalysisAction(new DHistogramAction_MissingMassSquared(locReaction, false, 100, -1.0, 4.5, "omega"));
 
 	// HISTOGRAM MASSES //false/true: measured/kinfit data
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, false,  600, 0.0, 3.0, "omega_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, false, 600,  0.0, 3.0, "omega_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, true,  600,  0.0, 3.0, "omega_kinFit"));
 	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0,   false, 2000, 0.0, 2.0, "Pi0_measured"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 0, {PiPlus, PiMinus}, {Pi0, PiPlus}, false, 200, 0.0, 4.0, 200, 0.0, 4.0, "omega_measured"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, omega, true,  600, 0.0, 3.0, "omega_kinFit"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0,   true, 2000, 0.0, 2.0, "Pi0_kinFit"));
-	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 0, {PiPlus, PiMinus}, {Pi0, PiPlus}, true, 200, 0.0, 4.0, 200, 0.0, 4.0, "omega_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_InvariantMass(locReaction, Pi0,   true,  2000, 0.0, 2.0, "Pi0_kinFit"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 1, {PiPlus, PiMinus}, {Pi0, PiPlus}, false, 200, 0.0, 2.0, 200, 0.0, 2.0, "omega_measured"));
+	locReaction->Add_AnalysisAction(new DHistogramAction_Dalitz(locReaction, 1, {PiPlus, PiMinus}, {Pi0, PiPlus}, true,  200, 0.0, 2.0, 200, 0.0, 2.0, "omega_kinFit"));
 
 	registerReaction(locReaction, locReactionsToWrite); //Register the DReaction with the factory
 
