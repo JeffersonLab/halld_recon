@@ -6,6 +6,8 @@
 //
 
 #include "DReaction_factory_p2pi_hists.h"
+#include "DANA/DEvent.h"
+
 
 //------------------
 // BeginRun
@@ -13,6 +15,7 @@
 void DReaction_factory_p2pi_hists::BeginRun(const std::shared_ptr<const JEvent> &locEvent)
 {
 	vector<double> locBeamPeriodVector;
+	DEvent::GetCalib(locEvent, "PHOTON_BEAM/RF/beam_period", locBeamPeriodVector);
 	dBeamBunchPeriod = locBeamPeriodVector[0];
 }
 
