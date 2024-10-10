@@ -7,6 +7,9 @@
 //******************************************************************************
 
 #include "DFDCCathodeCluster_factory.h"
+#include <chrono>
+#include <ratio>
+using namespace std::chrono;
 
 bool DFDCHit_cmp(const DFDCHit* a, const DFDCHit* b) {
   if (a->gLayer==b->gLayer){
@@ -82,6 +85,10 @@ DFDCCathodeCluster_factory::~DFDCCathodeCluster_factory() {
 jerror_t DFDCCathodeCluster_factory::init(void){
   TIME_SLICE=100.0; //ns,  Changed from 10->100 4/7/16 SJT
   gPARMS->SetDefaultParameter("FDC:CLUSTER_TIME_SLICE",TIME_SLICE);
+
+  PROFILE_TIME=false;
+  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
+  
   return NOERROR;	
 }
 
@@ -95,11 +102,16 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
   vector<const DFDCHit*> uHits;
   vector<const DFDCHit*> vHits;
   vector<vector<const DFDCHit*> >thisLayer;
-  
+ 
   try {
     eventLoop->Get(allHits);
 
     if (allHits.size()>0) {
+      high_resolution_clock::time_point t0,t1;
+      if (PROFILE_TIME){
+	t0 = high_resolution_clock::now();
+      }
+        
       // Sort hits by layer number and by time
       sort(allHits.begin(),allHits.end(),DFDCHit_cmp);
       
@@ -190,6 +202,13 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
       
       // Ensure that the data are still in order of Z position.
       std::sort(_data.begin(), _data.end(), DFDCCathodeCluster_gPlane_cmp);
+
+      if (PROFILE_TIME){
+	t1 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
+	cumulative_time+=double(time_span.count());
+	cumulative_events+=1.0;
+      } 
     }
   }
   catch (JException d) {
@@ -200,8 +219,20 @@ jerror_t DFDCCathodeCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventN
   }
   
   return NOERROR;	
-}			
+}
 
+//------------------
+// fini
+//------------------
+jerror_t DFDCCathodeCluster_factory::fini(void)
+{
+  if (PROFILE_TIME){
+    cout << "Average cathode cluster creation time = "
+	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
+  }
+
+  return NOERROR;
+}
 //-----------------------------
 // pique
 //-----------------------------

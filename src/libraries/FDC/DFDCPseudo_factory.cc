@@ -13,6 +13,10 @@
 #include <TROOT.h>
 #include <FDC/DFDCCathodeDigiHit.h>
 
+#include <chrono>
+#include <ratio>
+using namespace std::chrono;
+
 #define HALF_CELL 0.5
 #define MAX_DEFLECTION 0.15
 #define X0 0
@@ -115,10 +119,24 @@ jerror_t DFDCPseudo_factory::init(void)
   MATCH_TRUTH_HITS = false;
   gPARMS->SetDefaultParameter("FDC:MATCH_TRUTH_HITS",MATCH_TRUTH_HITS);
 
-
+  PROFILE_TIME=false;
+  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
+  
   return NOERROR;
 }
 
+//------------------
+// fini
+//------------------
+jerror_t DFDCPseudo_factory::fini(void)
+{
+  if (PROFILE_TIME){
+    cout << "Average pseudo-point creation time = "
+	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
+  }
+
+  return NOERROR;
+}
 
 //------------------
 // brun
@@ -285,78 +303,83 @@ jerror_t DFDCPseudo_factory::erun(void){
 jerror_t DFDCPseudo_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
   if (!USE_FDC) return NOERROR;
 
-	// Get all FDC hits (anode and cathode)	
-	vector<const DFDCHit*> fdcHits;
-	eventLoop->Get(fdcHits);
-	if (fdcHits.size()==0) return NOERROR;
+  // Get all FDC hits (anode and cathode)	
+  vector<const DFDCHit*> fdcHits;
+  eventLoop->Get(fdcHits);
+  if (fdcHits.size()==0) return NOERROR;
 
-	// For events with a very large number of hits, assume
-	// we can't reconstruct them so bail early
-	// Feb. 8, 2008  D.L. (updated to config param. Nov. 18, 2010 D.L.)
-	if(fdcHits.size()>MAX_ALLOWED_FDC_HITS){
-		_DBG_<<"Too many hits in FDC ("<<fdcHits.size()<<", max="<<MAX_ALLOWED_FDC_HITS<<")! Pseudopoint reconstruction in FDC bypassed for event "<<eventLoop->GetJEvent().GetEventNumber()<<endl;
-		return NOERROR;
-	}
+  // For events with a very large number of hits, assume
+  // we can't reconstruct them so bail early
+  // Feb. 8, 2008  D.L. (updated to config param. Nov. 18, 2010 D.L.)
+  if(fdcHits.size()>MAX_ALLOWED_FDC_HITS){
+    _DBG_<<"Too many hits in FDC ("<<fdcHits.size()<<", max="<<MAX_ALLOWED_FDC_HITS<<")! Pseudopoint reconstruction in FDC bypassed for event "<<eventLoop->GetJEvent().GetEventNumber()<<endl;
+    return NOERROR;
+  }
+  
+  // Get cathode clusters
+  vector<const DFDCCathodeCluster*> cathClus;
+  eventLoop->Get(cathClus);
+  if (cathClus.size()==0) return NOERROR;
 
-	// Get cathode clusters
-	vector<const DFDCCathodeCluster*> cathClus;
-	eventLoop->Get(cathClus);
-	if (cathClus.size()==0) return NOERROR;
+  // If this is simulated data then we want to match up the truth hit
+  // with this "real" hit. Ideally, this would be done at the
+  // DFDCHit object level, but the organization of the data in HDDM
+  // makes that difficult. Here we have the full wire definition so
+  // we make the connection here.
+  vector<const DMCTrackHit*> mctrackhits;
+  if (MATCH_TRUTH_HITS){
+    eventLoop->Get(mctrackhits);
+  }
 
-	// Sift through hits and select out anode hits.
-	vector<const DFDCHit*> xHits;
-	for (unsigned int i=0; i < fdcHits.size(); i++)
-		if (fdcHits[i]->type == 0)
-			xHits.push_back(fdcHits[i]);
-	// Make sure the wires are also in order of ascending z position
-	std::sort(xHits.begin(), xHits.end(), DFDCAnode_gLayer_cmp);
-			
-	// Sift through clusters and put U and V clusters into respective vectors.
-	vector<const DFDCCathodeCluster*> uClus;	
-	vector<const DFDCCathodeCluster*> vClus;
-	for (unsigned int i=0; i < cathClus.size(); i++) {
-		if (cathClus[i]->plane == 1)
-			vClus.push_back(cathClus[i]);
-		else
-			uClus.push_back(cathClus[i]);
-	}
+  high_resolution_clock::time_point t0,t1;
+  if (PROFILE_TIME){
+    t0 = high_resolution_clock::now();
+  }
+  
+  // Sift through hits and select out anode hits.
+  vector<const DFDCHit*> xHits;
+  for (unsigned int i=0; i < fdcHits.size(); i++)
+    if (fdcHits[i]->type == 0)
+      xHits.push_back(fdcHits[i]);
+  // Make sure the wires are also in order of ascending z position
+  std::sort(xHits.begin(), xHits.end(), DFDCAnode_gLayer_cmp);
 	
-	// If this is simulated data then we want to match up the truth hit
-	// with this "real" hit. Ideally, this would be done at the
-	// DFDCHit object level, but the organization of the data in HDDM
-	// makes that difficult. Here we have the full wire definition so
-	// we make the connection here.
-	vector<const DMCTrackHit*> mctrackhits;
-	if (MATCH_TRUTH_HITS){
-	  eventLoop->Get(mctrackhits);
-	}
-	  
-	vector<const DFDCCathodeCluster*>::iterator uIt = uClus.begin();
-	vector<const DFDCCathodeCluster*>::iterator vIt = vClus.begin();
-	vector<const DFDCHit*>::iterator xIt = xHits.begin();
+  // For each layer, get its sets of V, X, and U hits, and then pass them
+  // to the geometrical organization routine, DFDCPseudo_factory::makePseudo()
+  vector<const DFDCCathodeCluster*> oneLayerU;
+  vector<const DFDCCathodeCluster*> oneLayerV;
+  vector<const DFDCHit*> oneLayerX;
+  vector<const DFDCHit*>::iterator xIt = xHits.begin();
+  vector<const DFDCCathodeCluster*>::iterator cIt = cathClus.begin();
+  for (int iLayer=1; iLayer <= 24; iLayer++) {
+    for (; ((cIt != cathClus.end() && (*cIt)->gLayer == iLayer)); cIt++){
+      if ((*cIt)->plane==1){
+	oneLayerV.push_back(*cIt);
+      }
+      else {
+	oneLayerU.push_back(*cIt);
+      }
+    }
+    for (; ((xIt != xHits.end() && (*xIt)->gLayer == iLayer)); xIt++)
+      oneLayerX.push_back(*xIt);
+    if (oneLayerU.size()>0 && oneLayerV.size()>0 && oneLayerX.size()>0)
+      makePseudo(oneLayerX, oneLayerU, oneLayerV,iLayer, mctrackhits);
+    oneLayerU.clear();
+    oneLayerV.clear();
+    oneLayerX.clear();
+  }
 	
-	// For each layer, get its sets of V, X, and U hits, and then pass them to the geometrical
-	// organization routine, DFDCPseudo_factory::makePseudo()
-	vector<const DFDCCathodeCluster*> oneLayerU;
-	vector<const DFDCCathodeCluster*> oneLayerV;
-	vector<const DFDCHit*> oneLayerX;
-	for (int iLayer=1; iLayer <= 24; iLayer++) {
-	  for (; ((uIt != uClus.end() && (*uIt)->gLayer == iLayer)); uIt++)
-	    oneLayerU.push_back(*uIt);
-	  for (; ((vIt != vClus.end() && (*vIt)->gLayer == iLayer)); vIt++)
-	    oneLayerV.push_back(*vIt);
-	  for (; ((xIt != xHits.end() && (*xIt)->gLayer == iLayer)); xIt++)
-	    oneLayerX.push_back(*xIt);
-	  if (oneLayerU.size()>0 && oneLayerV.size()>0 && oneLayerX.size()>0)
-	    makePseudo(oneLayerX, oneLayerU, oneLayerV,iLayer, mctrackhits);
-	  oneLayerU.clear();
-	  oneLayerV.clear();
-	  oneLayerX.clear();
-	}
-	// Make sure the data are both time- and z-ordered
-	std::sort(_data.begin(),_data.end(),DFDCPseudo_cmp);
-	
-	return NOERROR;
+  // Make sure the data are both time- and z-ordered
+  std::sort(_data.begin(),_data.end(),DFDCPseudo_cmp);
+
+  if (PROFILE_TIME){
+    t1 = high_resolution_clock::now();
+    duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
+    cumulative_time+=double(time_span.count());
+    cumulative_events+=1.0;
+  }
+  
+  return NOERROR;
 }
 
 /// 
@@ -382,87 +405,93 @@ void DFDCPseudo_factory::makePseudo(vector<const DFDCHit*>& x,
     if (DEBUG_HISTS) u_cl_size->Fill(u[i]->members.size());
     if (u[i]->members.size()>2){
       for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin()+1;strip+1!=u[i]->members.end();strip++){  
-	      //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
-         if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
-            // Some values needed for cathode alignment
-            unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
-            DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp; 
-            XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
-            XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
-            XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
-            NTemp(0) = double ((*(strip-1))->pulse_height);
-            NTemp(1) = double ((*(strip))->pulse_height);
-            NTemp(2) = double ((*(strip+1))->pulse_height);
-            NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
-            NTempRaw(1) = double ((*(strip))->pulse_height_raw);
-            NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
-            indexTemp(0) = (*(strip-1))->element;
-            indexTemp(1) = (*(strip))->element;
-            indexTemp(2) = (*(strip+1))->element;
-            upeaks[upeaks.size()-1].cluster=i;
-            upeaks[upeaks.size()-1].X = XTemp;
-            upeaks[upeaks.size()-1].N = NTemp;
-            upeaks[upeaks.size()-1].NRaw = NTempRaw;
-            upeaks[upeaks.size()-1].index = indexTemp;
-         }
-         else if (u[i]->members.size()==3){
-            if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-               upeaks[upeaks.size()-1].cluster=i;
-            }
-         }
+	//printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
+	if (FindCentroid(u[i]->members,strip,upeaks)==NOERROR){
+	  // Some values needed for cathode alignment
+	  unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
+	  DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
+	  vector<const DFDCHit*>::const_iterator strip_m=strip-1;
+	  vector<const DFDCHit*>::const_iterator strip_p=strip+1;
+	  XTemp(0) = fdccathodes[index][(*(strip_m))->element-1]->u;
+	  XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
+	  XTemp(2) = fdccathodes[index][(*(strip_p))->element-1]->u;
+	  NTemp(0) = double ((*(strip_m))->pulse_height);
+	  NTemp(1) = double ((*(strip))->pulse_height);
+	  NTemp(2) = double ((*(strip_p))->pulse_height);
+	  NTempRaw(0) = double ((*(strip_m))->pulse_height_raw);
+	  NTempRaw(1) = double ((*(strip))->pulse_height_raw);
+	  NTempRaw(2) = double ((*(strip_p))->pulse_height_raw);
+	  indexTemp(0) = (*(strip_m))->element;
+	  indexTemp(1) = (*(strip))->element;
+	  indexTemp(2) = (*(strip_p))->element;
+	  unsigned int uindex=upeaks.size()-1;
+	  upeaks[uindex].cluster=i;
+	  upeaks[uindex].X = XTemp;
+	  upeaks[uindex].N = NTemp;
+	  upeaks[uindex].NRaw = NTempRaw;
+	  upeaks[uindex].index = indexTemp;
+	}
+	else if (u[i]->members.size()==3){
+	  if (ThreeStripCluster(u[i]->members,strip,upeaks)==NOERROR){
+	    upeaks[upeaks.size()-1].cluster=i;
+	  }
+	}
       }
     }
     else if (u[i]->members.size()==2){
        for (vector<const DFDCHit*>::const_iterator strip=u[i]->members.begin();strip+1!=u[i]->members.end();strip++){  
           if (TwoStripCluster(u[i]->members,strip,upeaks)==NOERROR){
-             upeaks[upeaks.size()-1].cluster=i;
+	    upeaks[upeaks.size()-1].cluster=i;
           }
        }
     }
   }  
   //  printf("---------v cluster --------\n");	
   for (unsigned int i=0;i<v.size();i++){
-     //printf("Cluster %d\n",i);
-     if (DEBUG_HISTS) v_cl_size->Fill(v[i]->members.size());
-     if (v[i]->members.size()>2){
-        for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin()+1;strip+1!=v[i]->members.end();strip++){		
-           //printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
-           if (FindCentroid(v[i]->members,strip,vpeaks)==NOERROR){
-              // Some values needed for cathode alignment
-              unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
-              DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
-              XTemp(0) = fdccathodes[index][(*(strip-1))->element-1]->u;
-              XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
-              XTemp(2) = fdccathodes[index][(*(strip+1))->element-1]->u;
-              NTemp(0) = double ((*(strip-1))->pulse_height);
-              NTemp(1) = double ((*(strip))->pulse_height);
-              NTemp(2) = double ((*(strip+1))->pulse_height);
-              NTempRaw(0) = double ((*(strip-1))->pulse_height_raw);
-              NTempRaw(1) = double ((*(strip))->pulse_height_raw);
-              NTempRaw(2) = double ((*(strip+1))->pulse_height_raw);
-              indexTemp(0) = (*(strip-1))->element;
-              indexTemp(1) = (*(strip))->element;
-              indexTemp(2) = (*(strip+1))->element;
-              vpeaks[vpeaks.size()-1].cluster=i;
-              vpeaks[vpeaks.size()-1].X = XTemp;
-              vpeaks[vpeaks.size()-1].N = NTemp;
-              vpeaks[vpeaks.size()-1].NRaw = NTempRaw;
-              vpeaks[vpeaks.size()-1].index = indexTemp;
-           }
-           else if (v[i]->members.size()==3){
-              if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
-                 vpeaks[vpeaks.size()-1].cluster=i;
-              }
-           }
-        }
-     }
-     else if (v[i]->members.size()==2){
-        for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin();strip+1!=v[i]->members.end();strip++){  
-           if (TwoStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
-              vpeaks[vpeaks.size()-1].cluster=i;
-           }
-        }
-     }
+    //printf("Cluster %d\n",i);
+    if (DEBUG_HISTS) v_cl_size->Fill(v[i]->members.size());
+    if (v[i]->members.size()>2){
+      for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin()+1;strip+1!=v[i]->members.end();strip++){		
+	//printf("  %d %f %f\n",(*strip)->element,(*strip)->pulse_height,(*strip)->t);
+	if (FindCentroid(v[i]->members,strip,vpeaks)==NOERROR){
+	  // Some values needed for cathode alignment
+	  unsigned int index=2*((*strip)->gLayer-1)+(1-(*strip)->plane/2);
+	  DMatrix3x1 XTemp,NTemp,NTempRaw,indexTemp;
+	  vector<const DFDCHit*>::const_iterator strip_m=strip-1;
+	  vector<const DFDCHit*>::const_iterator strip_p=strip+1;
+	  XTemp(0) = fdccathodes[index][(*(strip_m))->element-1]->u;
+	  XTemp(1) = fdccathodes[index][(*(strip))->element-1]->u;
+	  XTemp(2) = fdccathodes[index][(*(strip_p))->element-1]->u;
+	  NTemp(0) = double ((*(strip_m))->pulse_height);
+	  NTemp(1) = double ((*(strip))->pulse_height);
+	  NTemp(2) = double ((*(strip_p))->pulse_height);
+	  NTempRaw(0) = double ((*(strip_m))->pulse_height_raw);
+	  NTempRaw(1) = double ((*(strip))->pulse_height_raw);
+	  NTempRaw(2) = double ((*(strip_p))->pulse_height_raw);
+	  indexTemp(0) = (*(strip_m))->element;
+	  indexTemp(1) = (*(strip))->element;
+	  indexTemp(2) = (*(strip_p))->element;
+	  unsigned int vindex=vpeaks.size()-1;
+	  vpeaks[vindex].cluster=i;
+	  vpeaks[vindex].X = XTemp;
+	  vpeaks[vindex].N = NTemp;
+	  vpeaks[vindex].NRaw = NTempRaw;
+	  vpeaks[vindex].index = indexTemp;
+	}
+	else if (v[i]->members.size()==3){
+	  if (ThreeStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
+	    vpeaks[vpeaks.size()-1].cluster=i;
+	  }
+	}
+      }
+    }
+    else if (v[i]->members.size()==2){
+      for (vector<const DFDCHit*>::const_iterator strip=v[i]->members.begin();strip+1!=v[i]->members.end();strip++){  
+	if (TwoStripCluster(v[i]->members,strip,vpeaks)==NOERROR){
+	  vpeaks[vpeaks.size()-1].cluster=i;
+	}
+      }
+    }
   }
   if (upeaks.size()*vpeaks.size()>0){
      // Rotation angles for strips

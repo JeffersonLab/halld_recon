@@ -65,6 +65,7 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
 		jerror_t brun(JEventLoop *loop, int32_t runnumber);
 		jerror_t erun(void);
+  jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 		/// 
 		/// DFDCPseudo_factory::makePseudo():
@@ -140,6 +141,8 @@ class DFDCPseudo_factory : public JFactory<DFDCPseudo> {
 		TH1F *u_cl_size, *v_cl_size, *u_cl_n, *v_cl_n, *x_dist_2, *x_dist_3, *x_dist_23, *x_dist_33;
 		TH1F *d_uv;
 
+  bool PROFILE_TIME;
+  double cumulative_time=0.,cumulative_events=0.;
 //		JStreamLog* _log;
 };
 

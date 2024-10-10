@@ -9,6 +9,10 @@
 #include <cmath>
 using namespace std;
 
+#include <chrono>
+#include <ratio>
+using namespace std::chrono;
+
 // some of these aren't being used anymore, so I've commented them out - sdobbs, 6/3/14
 //#define HALF_CELL 0.5
 //#define MAX_DEFLECTION 0.15
@@ -85,6 +89,21 @@ jerror_t DFDCSegment_factory::brun(JEventLoop* eventLoop, int32_t runnumber) {
   BEAM_VARIANCE=1.0;
   gPARMS->SetDefaultParameter("FDC:BEAM_VARIANCE",BEAM_VARIANCE);
   
+  PROFILE_TIME=false;
+  gPARMS->SetDefaultParameter("TRK:PROFILE_TIME", PROFILE_TIME);
+  
+  return NOERROR;
+}
+
+//------------------
+// fini
+//------------------
+jerror_t DFDCSegment_factory::fini(void)
+{
+  if (PROFILE_TIME){
+    cout << "Average segment finding time = "
+	 << 1000.*cumulative_time/cumulative_events << " ms" << endl;
+  }
 
   return NOERROR;
 }
@@ -102,6 +121,11 @@ jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
   // Skip segment finding if there aren't enough points to form a sensible 
   // segment 
   if (pseudopoints.size()>=3){
+    high_resolution_clock::time_point t0,t1;
+    if (PROFILE_TIME){
+      t0 = high_resolution_clock::now();
+    }
+    
     // Group pseudopoints by package
     vector<const DFDCPseudo*>package[4];
     for (vector<const DFDCPseudo*>::const_iterator i=pseudopoints.begin();
@@ -115,7 +139,14 @@ jerror_t DFDCSegment_factory::evnt(JEventLoop* eventLoop, uint64_t eventNo) {
       // We need at least 3 points to define a circle, so skip if we don't 
       // have enough points.
       if (package[j].size()>2) FindSegments(package[j]);
-    } 
+    }
+
+    if (PROFILE_TIME){
+      t1 = high_resolution_clock::now();
+      duration<double> time_span = duration_cast<duration<double>>(t1 - t0);
+      cumulative_time+=double(time_span.count());
+      cumulative_events+=1.0;
+    }
   } // pseudopoints>2
   
   return NOERROR;

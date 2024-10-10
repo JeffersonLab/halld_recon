@@ -85,6 +85,7 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
 		/// converts pseudopoints into space points.
 		///
 		jerror_t evnt(JEventLoop *eventLoop, uint64_t eventNo);
+  jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 	private:
 		JStreamLog* _log;
@@ -112,6 +113,8 @@ class DFDCSegment_factory : public JFactory<DFDCSegment> {
 		int DEBUG_LEVEL;
 
 		int myeventno;
+  bool PROFILE_TIME;
+  double cumulative_time=0.,cumulative_events=0.;
 };
 
 #endif // DFACTORY_DFDCSEGMENT_H
