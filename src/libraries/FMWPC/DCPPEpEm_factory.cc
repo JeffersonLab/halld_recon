@@ -98,6 +98,7 @@ jerror_t DCPPEpEm_factory::init(void)
 //------------------
 jerror_t DCPPEpEm_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 {
+
   return NOERROR;
 }
 
@@ -195,126 +196,109 @@ jerror_t DCPPEpEm_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
       }
       if (got_beam_photon==false) continue;
 
-      // Create a new CPPEpEm object
-      DCPPEpEm *myCPPEpEm=new DCPPEpEm;
-      myCPPEpEm->Ebeam=beamphotons[i]->lorentzMomentum().E();
-      myCPPEpEm->weight=weight;
-      myCPPEpEm->ElectronShower=ElectronShower;
-      myCPPEpEm->PositronShower=PositronShower;
-
+      // Count the number of successful kinematic fits
+      unsigned int nFits=0;
+      // Output of kinematic fits
+      double pippim_chisq=0.,epem_chisq=0.,kpkm_chisq=0.;
+      DLorentzVector pip_v4,pim_v4,ep_v4,em_v4,kp_v4,km_v4;
+      DVector3 pippim_pos;
+      
       //--------------------------------
       // Kinematic fit for pi+/pi- case
       //--------------------------------
       dKinFitter->Reset_NewFit();
-      DoKinematicFit(beamphotons[i],piminus,piplus,dKinFitUtils,dKinFitter,
-		     dAnalysisUtilities);
-      // fit quality
-      myCPPEpEm->pippim_chisq=dKinFitter->Get_ChiSq();
-
-      // Get the fitted 4-vectors
-      set<shared_ptr<DKinFitParticle>>myParticles=dKinFitter->Get_KinFitParticles();
-      set<shared_ptr<DKinFitParticle>>::iterator locParticleIterator=myParticles.begin();
-      for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
-	if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle){
-	  if ((*locParticleIterator)->Get_PID()==211){
-	    myCPPEpEm->pip_v4=(*locParticleIterator)->Get_P4();
-	  }
-	  else{
-	    myCPPEpEm->pim_v4=(*locParticleIterator)->Get_P4();
-    	  }
-	}
+      if (DoKinematicFit(beamphotons[i],piminus,piplus,dKinFitUtils,dKinFitter,
+			 dAnalysisUtilities)){
+	GetKinFitResults(dKinFitter,211,pippim_chisq,pip_v4,pim_v4,&pippim_pos);
+	nFits++;
       }
 
        //--------------------------------
       // Kinematic fit for K+/K- case
       //--------------------------------
       dKinFitter->Reset_NewFit();
-      DoKinematicFit(beamphotons[i],kminus,kplus,dKinFitUtils,dKinFitter,
-		     dAnalysisUtilities);
-        // fit quality
-      myCPPEpEm->kpkm_chisq=dKinFitter->Get_ChiSq();
-
-      // Get the fitted 4-vectors
-      myParticles=dKinFitter->Get_KinFitParticles();
-      locParticleIterator=myParticles.begin();
-      for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
-	if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle){
-	  if ((*locParticleIterator)->Get_PID()==-321){
-	    myCPPEpEm->km_v4=(*locParticleIterator)->Get_P4();
-	  }
-	  else{
-	    myCPPEpEm->kp_v4=(*locParticleIterator)->Get_P4();
-    	  }
-	}
+      if (DoKinematicFit(beamphotons[i],kminus,kplus,dKinFitUtils,dKinFitter,
+			 dAnalysisUtilities)){
+	GetKinFitResults(dKinFitter,321,kpkm_chisq,kp_v4,km_v4);
+	nFits++;
       }
-
+	
       //--------------------------------
       // Kinematic fit for e+/e- case
       //--------------------------------
       dKinFitter->Reset_NewFit();
-      DoKinematicFit(beamphotons[i],electron,positron,dKinFitUtils,dKinFitter,
-		     dAnalysisUtilities);
-        // fit quality
-      myCPPEpEm->epem_chisq=dKinFitter->Get_ChiSq();
-
-      // Get the fitted 4-vectors
-      myParticles=dKinFitter->Get_KinFitParticles();
-      locParticleIterator=myParticles.begin();
-      for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
-	if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle){
-	  if ((*locParticleIterator)->Get_PID()==11){
-	    myCPPEpEm->em_v4=(*locParticleIterator)->Get_P4();
-	  }
-	  else{
-	    myCPPEpEm->ep_v4=(*locParticleIterator)->Get_P4();
-    	  }
-	}
+      if (DoKinematicFit(beamphotons[i],electron,positron,dKinFitUtils,
+			 dKinFitter,dAnalysisUtilities)){
+	GetKinFitResults(dKinFitter,-11,epem_chisq,ep_v4,em_v4);
+	nFits++;
       }
       
-      //--------------------------------
-      // Use ML model for pi/mu classification 
-      //--------------------------------
-      myCPPEpEm->pimu_ML_classifier = -1; // initialize to "no info" in case anything below fails
+      // If at least one kinematic fit converged, output the results
+      if (nFits>0){
+	// Create a new CPPEpEm object
+	DCPPEpEm *myCPPEpEm=new DCPPEpEm;
+	myCPPEpEm->Ebeam=beamphotons[i]->lorentzMomentum().E();
+	myCPPEpEm->weight=weight;
+	myCPPEpEm->ElectronShower=ElectronShower;
+	myCPPEpEm->PositronShower=PositronShower;
+
+	// Fit results
+	myCPPEpEm->epem_chisq=epem_chisq;
+	myCPPEpEm->ep_v4=ep_v4;
+	myCPPEpEm->em_v4=em_v4;
+	myCPPEpEm->kpkm_chisq=kpkm_chisq;
+	myCPPEpEm->kp_v4=kp_v4;
+	myCPPEpEm->km_v4=km_v4;
+	myCPPEpEm->pippim_chisq=pippim_chisq;
+	myCPPEpEm->pip_v4=pip_v4;
+	myCPPEpEm->pim_v4=pim_v4;
+	myCPPEpEm->pippim_pos=pippim_pos;
+	  
+	//--------------------------------
+	// Use ML model for pi/mu classification 
+	//--------------------------------
+	myCPPEpEm->pimu_ML_classifier = -1; // initialize to "no info" in case anything below fails
 #ifdef HAVE_TENSORFLOWLITE
       
-      // Is this needed? We are creating a new interpreter for every
-      // thread so in principle it is not
-      //const std::lock_guard<std::mutex> pimu_lock(pimu_model_mutex);
-      
-      // Fill in all model features
-      // n.b. if we need to use a mutex then we should pass a local
-      // array for "input" and the lock the mutex just for the copy
-      // to the tflite tensor.
-      if( PiMuFillFeatures(loop, tracks.size(), PiPhyp, PiMhyp, pimu_input) ){
-
-      	// Run inference
-      	if( pimu_interpreter->Invoke() == kTfLiteOk){
-      	  if( pimu_output ) myCPPEpEm->pimu_ML_classifier = pimu_output[0];
-      	}
-      }
+	// Is this needed? We are creating a new interpreter for every
+	// thread so in principle it is not
+	//const std::lock_guard<std::mutex> pimu_lock(pimu_model_mutex);
+	
+	// Fill in all model features
+	// n.b. if we need to use a mutex then we should pass a local
+	// array for "input" and the lock the mutex just for the copy
+	// to the tflite tensor.
+	if( PiMuFillFeatures(loop, tracks.size(), PiPhyp, PiMhyp, pimu_input) ){
+	  
+	  // Run inference
+	  if( pimu_interpreter->Invoke() == kTfLiteOk){
+	    if( pimu_output ) myCPPEpEm->pimu_ML_classifier = pimu_output[0];
+	  }
+	}
 #endif // HAVE_TENSORFLOWLITE
-
+	
        //--------------------------------
-      // Use ML model for pi/e classification 
-      //--------------------------------
-      myCPPEpEm->pipep_ML_classifier=-1;
-      myCPPEpEm->pimem_ML_classifier=-1;
-      if (ElectronShower){
-	double EOverP=ElectronShower->getEnergy()/myCPPEpEm->em_v4.P();
-	double E9E25=ElectronShower->getE9E25();
-	myCPPEpEm->pipep_ML_classifier=getEPIClassifierMinus(EOverP,
-							     ElectronTrackDoca,
-							     E9E25);
-      }
-      if (PositronShower){
-	double EOverP=PositronShower->getEnergy()/myCPPEpEm->ep_v4.P();
-	double E9E25=PositronShower->getE9E25();
-	myCPPEpEm->pimem_ML_classifier=getEPIClassifierPlus(EOverP,
-							    PositronTrackDoca,
-							    E9E25);
-      }
+	// Use ML model for pi/e classification 
+	//--------------------------------
+	myCPPEpEm->pipep_ML_classifier=-1;
+	myCPPEpEm->pimem_ML_classifier=-1;
+	if (ElectronShower){
+	  double EOverP=ElectronShower->getEnergy()/myCPPEpEm->em_v4.P();
+	  double E9E25=ElectronShower->getE9E25();
+	  myCPPEpEm->pipep_ML_classifier=getEPIClassifierMinus(EOverP,
+							       ElectronTrackDoca,
+							       E9E25);
+	}
+	if (PositronShower){
+	  double EOverP=PositronShower->getEnergy()/myCPPEpEm->ep_v4.P();
+	  double E9E25=PositronShower->getE9E25();
+	  myCPPEpEm->pimem_ML_classifier=getEPIClassifierPlus(EOverP,
+							      PositronTrackDoca,
+							      E9E25);
+	}
 
-      _data.push_back(myCPPEpEm);
+	_data.push_back(myCPPEpEm);
+      }
     }
       
     delete dAnalysisUtilities;
@@ -344,7 +328,7 @@ jerror_t DCPPEpEm_factory::fini(void)
 
 // Run the kinematic fitter requiring energy and momentum conservation and 
 // applying a vertex constraint
-void DCPPEpEm_factory::DoKinematicFit(const DBeamPhoton *beamphoton,
+bool DCPPEpEm_factory::DoKinematicFit(const DBeamPhoton *beamphoton,
 				      const DTrackTimeBased *negative,
 				      const DTrackTimeBased *positive,
 				      DKinFitUtils_GlueX *dKinFitUtils,
@@ -384,7 +368,7 @@ void DCPPEpEm_factory::DoKinematicFit(const DBeamPhoton *beamphoton,
   dKinFitter->Add_Constraint(locVertexConstraint);
   
   // PERFORM THE KINEMATIC FIT
-  dKinFitter->Fit_Reaction();
+  return dKinFitter->Fit_Reaction();
 }
 
 // Veto events that have neutral particles in time with the tracks that are not
@@ -574,3 +558,29 @@ double DCPPEpEm_factory::getEPIClassifierPlus(double EoverP_plus, double FCAL_DO
   return epiMVAplus;
 }
 
+void DCPPEpEm_factory::GetKinFitResults(DKinFitter *dKinFitter,
+					int PID,double &chisq,
+					DLorentzVector &positive_v4,
+					DLorentzVector &negative_v4,
+					DVector3 *vertex) const{
+  // fit quality
+  chisq=dKinFitter->Get_ChiSq();
+
+  // Get the fitted 4-vectors
+  set<shared_ptr<DKinFitParticle>>myParticles=dKinFitter->Get_KinFitParticles();
+  set<shared_ptr<DKinFitParticle>>::iterator locParticleIterator=myParticles.begin();
+  for(; locParticleIterator != myParticles.end(); ++locParticleIterator){
+    if ((*locParticleIterator)->Get_KinFitParticleType()==d_DetectedParticle){
+      if ((*locParticleIterator)->Get_PID()==PID){
+	positive_v4=(*locParticleIterator)->Get_P4();
+	if (vertex!=NULL){
+	  *vertex=(*locParticleIterator)->Get_Position();
+	}
+      }
+      else{
+	negative_v4=(*locParticleIterator)->Get_P4();
+      }
+    }
+  }
+}
+					

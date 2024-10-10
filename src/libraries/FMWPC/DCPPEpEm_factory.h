@@ -48,35 +48,40 @@ jerror_t init(void);						///< Called once at program start.
   jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
   jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
-void DoKinematicFit(const DBeamPhoton *beamphoton,
+  bool DoKinematicFit(const DBeamPhoton *beamphoton,
 		      const DTrackTimeBased *negative,
 		      const DTrackTimeBased *positive,
 		      DKinFitUtils_GlueX *dKinFitUtils,
 		      DKinFitter *dKinFitter,
 		      DAnalysisUtilities *dAnalysisUtilities) const;
-bool VetoNeutrals(double t0_rf,const DVector3 &vect,
+  bool VetoNeutrals(double t0_rf,const DVector3 &vect,
 		    vector<const DNeutralParticle*>&neutrals) const;
+  void GetKinFitResults(DKinFitter *dKinFitter,
+			int PID,double &chisq,
+			DLorentzVector &positive_v4,
+			DLorentzVector &negative_v4,
+			DVector3 *vertex=NULL) const;
 
- bool PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nChargedTracks,const DChargedTrackHypothesis *piplus, const DChargedTrackHypothesis *piminus, float *features);
+  bool PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nChargedTracks,const DChargedTrackHypothesis *piplus, const DChargedTrackHypothesis *piminus, float *features);
 
-double SPLIT_CUT,FCAL_THRESHOLD,BCAL_THRESHOLD,GAMMA_DT_CUT;
-string PIMU_MODEL_FILE;
-int    VERBOSE;
-std::mutex pimu_model_mutex;
+  double SPLIT_CUT,FCAL_THRESHOLD,BCAL_THRESHOLD,GAMMA_DT_CUT;
+  string PIMU_MODEL_FILE;
+  int    VERBOSE;
+  std::mutex pimu_model_mutex;
 
 #if HAVE_TENSORFLOWLITE
-std::unique_ptr<tflite::FlatBufferModel> pimu_model;
-std::unique_ptr<tflite::Interpreter>     pimu_interpreter;
-float *pimu_input  = nullptr;
-float *pimu_output = nullptr;
+  std::unique_ptr<tflite::FlatBufferModel> pimu_model;
+  std::unique_ptr<tflite::Interpreter>     pimu_interpreter;
+  float *pimu_input  = nullptr;
+  float *pimu_output = nullptr;
 #endif // HAVE_TENSORFLOWLITE
-
- ReadMLPMinus* dEPIClassifierMinus;
- ReadMLPPlus* dEPIClassifierPlus;
- const char* inputVarsMinus[3] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
- const char* inputVarsPlus[3] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
- double getEPIClassifierMinus(double EoverP_minus, double FCAL_DOCA_minus, double FCAL_E9E25_minus);
- double getEPIClassifierPlus(double EoverP_plus, double FCAL_DOCA_plus, double FCAL_E9E25_plus);
+  
+  ReadMLPMinus* dEPIClassifierMinus;
+  ReadMLPPlus* dEPIClassifierPlus;
+  const char* inputVarsMinus[3] = { "EoverP_minus", "FCAL_DOCA_em", "FCAL_E9E25_em" };
+  const char* inputVarsPlus[3] = { "EoverP_plus", "FCAL_DOCA_ep", "FCAL_E9E25_ep" };
+  double getEPIClassifierMinus(double EoverP_minus, double FCAL_DOCA_minus, double FCAL_E9E25_minus);
+  double getEPIClassifierPlus(double EoverP_plus, double FCAL_DOCA_plus, double FCAL_E9E25_plus);
 
 };
 
