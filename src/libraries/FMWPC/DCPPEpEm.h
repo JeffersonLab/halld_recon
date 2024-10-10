@@ -25,6 +25,7 @@ class DCPPEpEm:public jana::JObject{
   DLorentzVector pim_v4,pip_v4; // four vectors for pion hypothesis pairs
   DLorentzVector em_v4,ep_v4; // four vectors for e+/e- hypothesis pairs
   DLorentzVector km_v4,kp_v4; // four vectors for K+/K- hypothesis pairs
+  DVector3 pippim_pos; // common vertex position
 
   // This method is used primarily for pretty printing
   // the second argument to AddString is printf style format
@@ -35,10 +36,10 @@ class DCPPEpEm:public jana::JObject{
 	      (ElectronShower!=NULL)?ElectronShower->getEnergy():0.);
     AddString(items, "Positron E", "%f", 
 	      (PositronShower!=NULL)?PositronShower->getEnergy():0.);
-    AddString(items, "kpkm_chisq", "%f", kpkm_chisq);
     AddString(items, "pimu_ML_classifier", "%f", pimu_ML_classifier); 
     AddString(items, "pimem_ML_classifier", "%f", pimem_ML_classifier);
     AddString(items, "pipep_ML_classifier", "%f", pipep_ML_classifier);
+    AddString(items, "kpkm_chisq", "%f", kpkm_chisq);
     AddString(items, "K+ momentum", "%f", kp_v4.P());
     AddString(items, "K- momentum", "%f", km_v4.P());
     AddString(items, "pippim_chisq", "%f", pippim_chisq);
@@ -47,6 +48,7 @@ class DCPPEpEm:public jana::JObject{
     AddString(items, "epem_chisq", "%f", epem_chisq);
     AddString(items, "e+ momentum", "%f", ep_v4.P());
     AddString(items, "e- momentum", "%f", em_v4.P());
+    AddString(items, "pi+pi- vertex","%f", pippim_pos.z());
   }
   
 };
