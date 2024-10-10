@@ -127,6 +127,15 @@ jerror_t DTrackCandidate_factory_FDCCathodes::erun(void)
 //------------------
 jerror_t DTrackCandidate_factory_FDCCathodes::fini(void)
 {
+if (PROFILE_TIME){
+    cout << "Average segment linking time = "
+	 << 1000.*cumulative_time/cumulative_events << " ms";
+    if (NUM_PROFILE_FDC_CANDIDATES>0){
+      cout << " for " << NUM_PROFILE_FDC_CANDIDATES << " candidates" << endl;
+    }
+    else cout << endl;      
+  }
+
 #ifdef PROFILE_TRK_TIMES
   double Nevents = cand_prof_times["Nevents"].real;
   cout << "Average track finding/initial fitting times for " << Nevents << " events:" << endl; 
@@ -140,16 +149,6 @@ jerror_t DTrackCandidate_factory_FDCCathodes::fini(void)
 	<< endl;
   }
 #endif
-  if (PROFILE_TIME){
-    cout << "FDCCathodes candidate factory:" << endl;
-    cout << "  Average track finding time = "
-	 << 1000.*cumulative_time/cumulative_events << " ms";
-    if (NUM_PROFILE_FDC_CANDIDATES>0){
-      cout << " for " << NUM_PROFILE_FDC_CANDIDATES << " candidates" << endl;
-    }
-    else cout << endl;      
-  }
-
   
   return NOERROR;
 }
@@ -183,16 +182,17 @@ jerror_t DTrackCandidate_factory_FDCCathodes::evnt(JEventLoop *loop, uint64_t ev
   prof_time start_time;
 #endif
   
-  high_resolution_clock::time_point t0,t1;
-  if (PROFILE_TIME){
-    t0 = high_resolution_clock::now();
-  }
-  
   vector<const DFDCSegment*>segments;
   eventLoop->Get(segments);
 
   // abort if there are no segments
   if (segments.size()==0.) return NOERROR;
+  
+  high_resolution_clock::time_point t0,t1;
+  if (PROFILE_TIME){
+    t0 = high_resolution_clock::now();
+  }
+  
 
 #ifdef PROFILE_TRK_TIMES
   cand_prof_times["Nevents"].real += 1.0;
