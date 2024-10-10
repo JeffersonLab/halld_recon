@@ -12,7 +12,6 @@ using namespace jana;
 // Routine used to create our JEventProcessor
 #include <JANA/JApplication.h>
 #include <JANA/JFactory.h>
-#include "HistogramTools.h"
 #include "PID/DVertex.h"
 #include "PID/DChargedTrack.h"
 #include "TRACKING/DTrackTimeBased.h"
@@ -173,21 +172,23 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
    sprintf(ccdbTable,"CDC/cdc_drift_table%s",dIsNoFieldFlag?"::NoBField":"");
 
    if (jcalib->Get(ccdbTable, tvals)==false){
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
       for(unsigned int i=0; i<tvals.size(); i++){
          map<string, double> &row = tvals[i];
          HistCurrentConstants->Fill(i+1,1000.*row["t"]);
       }
-      japp->RootUnLock(); //RELEASE ROOT LOCK
+      japp->RootFillUnLock(this); //RELEASE ROOT LOCK
    }
    else{
       jerr << " CDC time-to-distance table not available... bailing..." << endl;
       exit(0);
    }
+   
+   japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
    sprintf(ccdbTable,"CDC/drift_parameters%s",dIsNoFieldFlag?"::NoBField":"");
    if (jcalib->Get(ccdbTable, tvals)==false){
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+
       map<string, double> &row = tvals[0]; // long drift side
       HistCurrentConstants->Fill(101,row["a1"]);
       HistCurrentConstants->Fill(102,row["a2"]);
@@ -213,12 +214,14 @@ jerror_t JEventProcessor_CDC_TimeToDistance::brun(JEventLoop *eventLoop, int32_t
       HistCurrentConstants->Fill(120,row["c3"]);
       HistCurrentConstants->Fill(121,row["B1"]);
       HistCurrentConstants->Fill(122,row["B2"]);
-      japp->RootUnLock(); //RELEASE ROOT LOCK
+
    }
 
    // Save run number
    HistCurrentConstants->Fill(125,runnumber);
-
+   
+   japp->RootFillUnLock(this); //RELEASE ROOT LOCK
+      
    return NOERROR;
 }
 
@@ -268,11 +271,11 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
             }
         }
         
-        japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+        japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
         if (least_fom >= 0.001) dHistZ2tracks0001->Fill(z);
         if (least_fom >= 0.01) dHistZ2tracks001->Fill(z);    
         if (least_fom >= 0.1) dHistZ2tracks01->Fill(z);
-        japp->RootUnLock(); //RELEASE ROOT LOCK
+        japp->RootFillUnLock(this); //RELEASE ROOT LOCK
         
    }   // end if 2 tracks
 
@@ -290,6 +293,9 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
 
       if (thisTimeBasedTrack->FOM < MIN_FOM) continue;  // was 1e-10
       vector<DTrackFitter::pull_t> pulls = thisTimeBasedTrack->pulls;
+
+      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
+
       // Loop over the pulls to get the appropriate information for our ring
       for (unsigned int i = 0; i < pulls.size(); i++){
          DTrackFitter::pull_t thisPull = pulls[i];
@@ -311,10 +317,10 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          int ring = thisCDCHit->wire->ring;
          int straw = thisCDCHit->wire->straw;
 
-		 japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+
 		 
-		 dHistResidualVsFOM->Fill(thisTimeBasedTrack->FOM, thisPull.resi);
-		 dHistResidualVslogFOM->Fill(log10(thisTimeBasedTrack->FOM), thisPull.resi);
+ 	 dHistResidualVsFOM->Fill(thisTimeBasedTrack->FOM, thisPull.resi);
+	 dHistResidualVslogFOM->Fill(log10(thisTimeBasedTrack->FOM), thisPull.resi);
 
          // Fill Histogram with the drift times near t0 (+-50 ns)
          dHistEarlyDriftTimesPerChannel->Fill(time,straw_offset[ring]+straw);
@@ -347,10 +353,10 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          // We only really need one histogram here
          dHistPredictedDistanceVsDeltaVsDrift->Fill(time, delta, predictedDistance);
 
-		 if (thisTimeBasedTrack->FOM >= 0.9) dHistPredictedDistanceVsDeltaVsDriftFOM09->Fill(time, delta, predictedDistance);
-		 if (thisTimeBasedTrack->FOM >= 0.6) dHistPredictedDistanceVsDeltaVsDriftFOM06->Fill(time, delta, predictedDistance);
-		 if (thisTimeBasedTrack->FOM >= 0.1) dHistPredictedDistanceVsDeltaVsDriftFOM01->Fill(time, delta, predictedDistance);
-		 if (thisTimeBasedTrack->FOM >= 0.01) dHistPredictedDistanceVsDeltaVsDriftFOM001->Fill(time, delta, predictedDistance);
+	 if (thisTimeBasedTrack->FOM >= 0.9) dHistPredictedDistanceVsDeltaVsDriftFOM09->Fill(time, delta, predictedDistance);
+	 if (thisTimeBasedTrack->FOM >= 0.6) dHistPredictedDistanceVsDeltaVsDriftFOM06->Fill(time, delta, predictedDistance);
+	 if (thisTimeBasedTrack->FOM >= 0.1) dHistPredictedDistanceVsDeltaVsDriftFOM01->Fill(time, delta, predictedDistance);
+	 if (thisTimeBasedTrack->FOM >= 0.01) dHistPredictedDistanceVsDeltaVsDriftFOM001->Fill(time, delta, predictedDistance);
 
 
          // To investigate some features, also do this in bins of Max sag
@@ -373,8 +379,10 @@ jerror_t JEventProcessor_CDC_TimeToDistance::evnt(JEventLoop *loop, uint64_t eve
          // histo for hits in 1.8T region
          if (Bz > 1.75 && Bz < 1.85) dHistPredictedDistanceVsDeltaVsDriftBz18->Fill(time, delta, predictedDistance);
          
-		 japp->RootUnLock(); //RELEASE ROOT LOCK
+
       }   
+
+      japp->RootFillUnLock(this); //RELEASE ROOT LOCK
    }
    return NOERROR;
 }

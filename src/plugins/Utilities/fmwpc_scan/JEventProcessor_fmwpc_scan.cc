@@ -55,9 +55,7 @@ jerror_t JEventProcessor_fmwpc_scan::init(void)
 {
 	// This is called once at program startup. 
 
-  const uint32_t NSAMPLES = 300;
-
-  japp->RootWriteLock();
+  const uint32_t NSAMPLES = 200;
 
   t = new TTree("T","FWMPC events");
   
@@ -109,9 +107,6 @@ jerror_t JEventProcessor_fmwpc_scan::init(void)
   uint16_t adc[NSAMPLES];
   t->Branch("adc",&adc,Form("adc[%i]/s",NSAMPLES));         
 
-  japp->RootUnLock();
-
-
   return NOERROR;
 
 }
@@ -154,7 +149,7 @@ jerror_t JEventProcessor_fmwpc_scan::evnt(JEventLoop *loop, uint64_t eventnumber
   if (!nmp) return NOERROR;
 
 
-  const uint NSAMPLES=300;
+  const uint NSAMPLES=200;
 
   for (uint32_t i=0; i<nmp; i++) {
 
@@ -165,13 +160,14 @@ jerror_t JEventProcessor_fmwpc_scan::evnt(JEventLoop *loop, uint64_t eventnumber
 
       const Df125WindowRawData *wrd = NULL;
       cp->GetSingle(wrd);
-
+      
       uint32_t eventnum = eventnumber&0xFFFFFFFF;
       uint32_t rocid = cp->rocid;
       uint32_t slot = cp->slot;
       uint32_t channel = cp->channel;
       uint32_t itrigger = cp->itrigger;
 
+      
       uint32_t word1 = cp->word1;
       uint32_t word2 = cp->word2;
       uint32_t time = cp->le_time;
@@ -180,17 +176,18 @@ jerror_t JEventProcessor_fmwpc_scan::evnt(JEventLoop *loop, uint64_t eventnumber
       uint32_t q = cp->time_quality_bit;
       uint32_t overflows = cp->overflow_count;
       uint32_t amp = cp->first_max_amp;
-
+      
       bool emulated = cp->emulated;
 
       uint16_t adc[NSAMPLES]= {0};
 
-      uint32_t ns = (uint32_t)wrd->samples.size();
+      uint32_t ns = 0;
+      if (wrd) ns = (uint32_t)wrd->samples.size();
 
       for (uint j=0; j<ns; j++) {
           adc[j] = wrd->samples[j];
       }
-
+      
 
       japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
@@ -201,7 +198,7 @@ jerror_t JEventProcessor_fmwpc_scan::evnt(JEventLoop *loop, uint64_t eventnumber
       t->SetBranchAddress("itrigger",&itrigger); 
       t->SetBranchAddress("word1",&word1);
       t->SetBranchAddress("word2",&word2);
-
+      
       t->SetBranchAddress("pedestal",&pedestal);
       t->SetBranchAddress("integral",&integral);
       t->SetBranchAddress("amp",&amp);
@@ -214,9 +211,9 @@ jerror_t JEventProcessor_fmwpc_scan::evnt(JEventLoop *loop, uint64_t eventnumber
       t->SetBranchAddress("adc",&adc);
       
       t->Fill();
-      japp->RootUnLock();
+      japp->RootUnLock(); 
   }
-
+      
 
 
   return NOERROR;

@@ -1,3 +1,4 @@
+
 // $Id$
 //
 //    File: JEventProcessor_fa125_itrig.cc
@@ -177,7 +178,10 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
 	// This is called for every event. 
 
   // Event count used by RootSpy->RSAI so it knows how many events have been seen.
+
+  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!  
   hevents->Fill(0.5);
+  japp->RootFillUnLock(this); 
 
   ULong64_t timestamp = 0;
 
@@ -311,7 +315,7 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
         posdiff = posdiff>>1;
       }
 
-      japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+      japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
       // increment monitoring histo when trigger time and itrigger are both off by more than 1 bit
 
@@ -319,7 +323,7 @@ jerror_t JEventProcessor_fa125_itrig::evnt(JEventLoop *loop, uint64_t eventnumbe
 
       if (MAKE_TREE) tree->Fill();
 
-      japp->RootUnLock();
+      japp->RootFillUnLock(this);
 
     }  // for each Df125TriggerTime
 

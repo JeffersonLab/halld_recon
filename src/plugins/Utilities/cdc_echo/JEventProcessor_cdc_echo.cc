@@ -403,9 +403,9 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       if (locCDCHits.size() > 0) {
       
-          japp->RootWriteLock();    
+          japp->RootFillLock(this);    
           counts->Fill(0);
-          japp->RootUnLock();
+          japp->RootFillUnLock(this);
       } 
       
       vector<DTrackFitter::pull_t> pulls = track->pulls;
@@ -441,7 +441,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       ULong64_t eventnum = (ULong64_t)eventnumber;
       
-      japp->RootWriteLock();    
+      japp->RootFillLock(this);    
 
       TT->SetBranchAddress("eventnum",&eventnum);
       TT->SetBranchAddress("ntrackhits",&ntrackhits);
@@ -454,7 +454,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       TT->Fill();
 
-      japp->RootUnLock();          
+      japp->RootFillUnLock(this);          
 
     }    
 
@@ -481,7 +481,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       // increment counts histo    0: tracks  1:all pulses  2:hits  3:hits on tracks  4: echo pulses  5: echo hits  6:  echoes on tracks  7: saturated pulses  8:saturated hits  9:saturated hits on tracks
       
-      japp->RootWriteLock();
+      japp->RootFillLock(this);
 
       counts->Fill(1);
 
@@ -508,7 +508,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
         if ( ontrack[rocid-25][slot-3][channel] >0 ) counts->Fill(9);
       }
            
-      japp->RootUnLock();
+      japp->RootFillUnLock(this);
       
 
       if (parent[rocid-25][slot-3][channel] == 0 ) continue; // not a parent or an echo
@@ -578,7 +578,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
 
       ULong64_t eventnum = (ULong64_t)eventnumber;
       
-      japp->RootWriteLock();    
+      japp->RootFillLock(this);    
 
       if ( parentamp[rocid-25][slot-3][channel] >0 && timeovert < 8 ) {  // probable echoes
 	counts->Fill(4);
@@ -626,7 +626,7 @@ jerror_t JEventProcessor_cdc_echo::evnt(JEventLoop *loop, uint64_t eventnumber)
       
       T->Fill();
     
-      japp->RootUnLock();    
+      japp->RootFillUnLock(this);    
 
     }
   
