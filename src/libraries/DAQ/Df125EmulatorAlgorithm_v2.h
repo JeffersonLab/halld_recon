@@ -18,11 +18,11 @@ class Df125EmulatorAlgorithm_v2:public Df125EmulatorAlgorithm{
         void EmulateFirmware(const Df125WindowRawData*, Df125CDCPulse*, Df125FDCPulse*);
 
         // Many helper functions from the old fa125algos files
-        void fa125_hit(Int_t&, Int_t&, Int_t&, const uint16_t[], Int_t, Int_t, Int_t, Int_t, Int_t, Int_t);   // look for a hit
+        void fa125_hit(Int_t&, Int_t&, Int_t&, const uint16_t[], Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t);   // look for a hit
         void fa125_time(Int_t&, Int_t&, Int_t[], Int_t, Int_t, Int_t, Int_t); // find hit time
         void fa125_integral(Long_t&, Int_t&, Int_t, const uint16_t[], Int_t, Int_t); // find integral
         void fa125_max(Int_t&, Int_t&, Int_t, const uint16_t[], Int_t); // find first max amplitude after hit
-        void fa125_algos(Int_t&, Int_t&, Int_t&, Long_t&, Int_t&, Int_t&, Int_t&, const uint16_t[], Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t);
+  void fa125_algos(Int_t&, Int_t&, Int_t&, Long_t&, Int_t&, Int_t&, Int_t&, const uint16_t[], Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t, Int_t);
 
 
     protected:
@@ -79,6 +79,8 @@ class Df125EmulatorAlgorithm_v2:public Df125EmulatorAlgorithm{
         Int_t CDC_ABIT ;    // scaling factor for amplitude
         Int_t CDC_PBIT ;    // scaling factor for pedestal
 
+        Int_t CDC_TOT;  // minimum time over threshold
+  
         Int_t FDC_WS ;      // hit window start - must be >= F125_FDC_NP
         Int_t FDC_WE ;      // hit window end - must be at least 20 less than number of samples available
         Int_t FDC_IE ;      // end integration at the earlier of WE, or this many samples after threshold crossing of TH

@@ -60,7 +60,7 @@ Df125EmulatorAlgorithm_v2::Df125EmulatorAlgorithm_v2(){
     CDC_H_DEF   = 125;      // 5 sigma hit threshold
     CDC_TH_DEF  = 100;      // 4 sigma high timing threshold
     CDC_TL_DEF  =  25;      // 1 sigma low timing threshold
-
+    
     CDC_IBIT_DEF =  4;      // Scaling factor for integral
     CDC_ABIT_DEF =  3;      // Scaling factor for amplitude
     CDC_PBIT_DEF =  0;      // Scaling factor for pedestal
@@ -85,6 +85,8 @@ Df125EmulatorAlgorithm_v2::Df125EmulatorAlgorithm_v2(){
     // If set in the command line, they override both BORConfig and the default parameter values above
     // The default parameters above are used if BORConfig is not found and there are no command line parameter overrides
 
+    CDC_TOT = 2; // min samples over threshold
+    
     CDC_WS = -9;         // hit window start - must be >= F125_CDC_NP
     CDC_WE = -9;         // hit window end - must be at least 20 less than number of samples available, eg WE=179 for 200 samples
     CDC_IE = -9;         // end integration at the earlier of WE, or this many samples after threshold crossing of TH  
@@ -134,6 +136,8 @@ Df125EmulatorAlgorithm_v2::Df125EmulatorAlgorithm_v2(){
         gPARMS->SetDefaultParameter("EMULATION125:CDC_IBIT",CDC_IBIT,"Set CDC_IBIT for firmware emulation, will be overwritten by BORConfig if present");
         gPARMS->SetDefaultParameter("EMULATION125:CDC_ABIT",CDC_ABIT,"Set CDC_ABIT for firmware emulation, will be overwritten by BORConfig if present");
         gPARMS->SetDefaultParameter("EMULATION125:CDC_PBIT",CDC_PBIT,"Set CDC_PBIT for firmware emulation, will be overwritten by BORConfig if present");
+        gPARMS->SetDefaultParameter("EMULATION125:CDC_TOT",  CDC_TOT,  "Set CDC_TOT for firmware emulation");
+	
         gPARMS->SetDefaultParameter("EMULATION125:FDC_WS",  FDC_WS,  "Set FDC_WS for firmware emulation, will be overwritten by BORConfig if present");
         gPARMS->SetDefaultParameter("EMULATION125:FDC_WE",  FDC_WE,  "Set FDC_WE for firmware emulation, will be overwritten by BORConfig if present");
         gPARMS->SetDefaultParameter("EMULATION125:FDC_IE",  FDC_IE,  "Set FDC_IE for firmware emulation, will be overwritten by BORConfig if present");
@@ -300,7 +304,7 @@ void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawDat
    
 
     // Perform the emulation
-    fa125_algos(time, q_code, pedestal, integral, overflows, maxamp, pktime, &rawData->samples[0], WS, WE, IE, P1, P2, PG, H, TH, TL);
+    fa125_algos(time, q_code, pedestal, integral, overflows, maxamp, pktime, &rawData->samples[0], WS, WE, IE, P1, P2, PG, H, TH, TL, CDC_TOT);
 
     // Scale down
     
@@ -352,7 +356,7 @@ void Df125EmulatorAlgorithm_v2::EmulateFirmware(const Df125WindowRawData *rawDat
     return;
 }
 
-void Df125EmulatorAlgorithm_v2::fa125_algos(Int_t &time, Int_t &q_code, Int_t &pedestal, Long_t &integral, Int_t &overflows, Int_t &maxamp, Int_t &pktime, const uint16_t adc[], Int_t WINDOW_START, Int_t WINDOW_END, Int_t INT_END, Int_t P1, Int_t P2, Int_t PG, Int_t HIT_THRES, Int_t HIGH_THRESHOLD, Int_t LOW_THRESHOLD) {
+void Df125EmulatorAlgorithm_v2::fa125_algos(Int_t &time, Int_t &q_code, Int_t &pedestal, Long_t &integral, Int_t &overflows, Int_t &maxamp, Int_t &pktime, const uint16_t adc[], Int_t WINDOW_START, Int_t WINDOW_END, Int_t INT_END, Int_t P1, Int_t P2, Int_t PG, Int_t HIT_THRES, Int_t HIGH_THRESHOLD, Int_t LOW_THRESHOLD, Int_t MIN_TOT) {
 
     const Int_t NU = 20;  //number of samples sent to time algo
     const Int_t PED = 5;  //sample to be used as pedestal for timing is in place 5
@@ -375,7 +379,7 @@ void Df125EmulatorAlgorithm_v2::fa125_algos(Int_t &time, Int_t &q_code, Int_t &p
     pktime=0;     // sample number containing maxamp
 
     // look for hit using mean pedestal of NPED samples before trigger
-    fa125_hit(hitfound, hitsample, pedestal, adc, WINDOW_START, WINDOW_END, HIT_THRES, P1, P2, PG);
+    fa125_hit(hitfound, hitsample, pedestal, adc, WINDOW_START, WINDOW_END, HIT_THRES, P1, P2, PG, MIN_TOT);
 
     if (hitfound==1) {
         for (i=0; i<NU; i++) {
@@ -394,7 +398,7 @@ void Df125EmulatorAlgorithm_v2::fa125_algos(Int_t &time, Int_t &q_code, Int_t &p
     }
 }
 
-void Df125EmulatorAlgorithm_v2::fa125_hit(Int_t &hitfound, Int_t &hitsample, Int_t &pedestal, const uint16_t adc[], Int_t WINDOW_START, Int_t WINDOW_END, Int_t HIT_THRES, Int_t P1, Int_t P2, Int_t PG) {
+void Df125EmulatorAlgorithm_v2::fa125_hit(Int_t &hitfound, Int_t &hitsample, Int_t &pedestal, const uint16_t adc[], Int_t WINDOW_START, Int_t WINDOW_END, Int_t HIT_THRES, Int_t P1, Int_t P2, Int_t PG, Int_t MIN_TOT) {
 
     pedestal=0;  //pedestal
     Int_t threshold=0;
@@ -420,10 +424,18 @@ void Df125EmulatorAlgorithm_v2::fa125_hit(Int_t &hitfound, Int_t &hitsample, Int
     while ((hitfound==0) && (i<WINDOW_END-1)) {
         i++;
         if (adc[i] >= threshold) {
-            if (adc[i+1] >= threshold) {
+	  /*if (adc[i+1] >= threshold) {
                 hitfound = 1;
                 hitsample = i;
-            }
+		}*/
+
+	    hitfound = 1;
+            for (int j=1; j<MIN_TOT; j++) {
+	      if (adc[i+j] < threshold) hitfound = 0;
+              if (!hitfound) break;
+	    }
+	    if (hitfound) hitsample = i;
+	    
         }
     }
 
