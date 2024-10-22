@@ -15,6 +15,7 @@
 #include "TRIGGER/DTrigger.h"
 #include "HDGEOMETRY/DMagneticFieldMapNoField.h"
 #include "DANA/DEvent.h"
+#include "HistogramTools.h"
 
 
 extern "C"{

@@ -188,9 +188,9 @@ void JEventProcessor_cpp_itrig::Process(const std::shared_ptr<const JEvent>& eve
 	// This is called for every event. 
 
   // Event count used by RootSpy->RSAI so it knows how many events have been seen.
-  japp->RootFillLock(this);
+  DEvent::GetLockService(event)->RootFillLock(this);
   hevents->Fill(0.5);
-  japp->RootFillUnLock(this);
+  DEvent::GetLockService(event)->RootFillUnLock(this);
   
   ULong64_t timestamp = 0;
 
