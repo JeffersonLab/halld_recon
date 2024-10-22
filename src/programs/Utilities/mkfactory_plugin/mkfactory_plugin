@@ -58,14 +58,6 @@ open(FILE,">$pluginname/$ccfile");
 close(FILE);
 print " - $ccfile\n";
 
-# Create C++ Header File for Factory Generator Class
-$dhfile = $fname = "JFactoryGenerator_${classname}${tag_suffix}.h";
-open(FILE,">$pluginname/$dhfile");
-&PrintFileHeader();
-&PrintFactoryGeneratorClass();
-close(FILE);
-print " - $dhfile\n";
-
 # Copy SConstruct file
 &CopySConstruct();
 print " - SConstruct\n";
@@ -96,30 +88,55 @@ sub PrintDataClass()
 	# all variables (like FILE and $classname) are global.
 
 	$content = "
-\#ifndef _${classname}_
-\#define _${classname}_
+/// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
 
-\#include <JANA/JObject.h>
-\#include <JANA/JFactory.h>
 
-class ${classname}:public jana::JObject{
-	public:
-		JOBJECT_PUBLIC(${classname});
-		
-		// Add data members here. For example:
-		// int id;
-		// double E;
-		
-		// This method is used primarily for pretty printing
-		// the second argument to AddString is printf style format
-		void toStrings(vector<pair<string,string> > &items)const{
-			// AddString(items, \"id\", \"%4d\", id);
-			// AddString(items, \"E\", \"%f\", E);
-		}
-		
+#ifndef _${classname}_h_
+#define _${classname}_h_
+
+#include <JANA/JObject.h>
+
+/// JObjects are plain-old data containers for inputs, intermediate results, and outputs.
+/// They have member functions for introspection and maintaining associations with other JObjects, but
+/// all of the numerical code which goes into their creation should live in a JFactory instead.
+/// You are allowed to include STL containers and pointers to non-POD datatypes inside your JObjects,
+/// however, it is highly encouraged to keep them flat and include only primitive datatypes if possible.
+/// Think of a JObject as being a row in a database table, with event number as an implicit foreign key.
+
+struct ${classname} : public JObject {
+    int x;     // Pixel coordinates centered around 0,0
+    int y;     // Pixel coordinates centered around 0,0
+    double E;  // Energy loss in GeV
+    double t;  // Time in ms
+
+
+    /// Make it convenient to construct one of these things
+    ${classname}(int x, int y, double E, double t) : x(x), y(y), E(E), t(t) {}
+
+
+    /// Override className to tell JANA to store the exact name of this class where we can
+    /// access it at runtime. JANA provides a NAME_OF_THIS macro so that this will return the correct value
+    /// even if you rename the class using automatic refactoring tools.
+
+    const std::string className() const override {
+        return NAME_OF_THIS;
+    }
+
+    /// Override Summarize to tell JANA how to produce a convenient string representation for our JObject.
+    /// This can be used called from user code, but also lets JANA automatically inspect its own data. For instance,
+    /// adding JCsvWriter<Hit> will automatically generate a CSV file containing each hit. Warning: This is obviously
+    /// slow, so use this for debugging and monitoring but not inside the performance critical code paths.
+
+    void Summarize(JObjectSummary& summary) const override {
+        summary.add(x, NAME_OF(x), \"%d\", \"Pixel coordinates centered around 0,0\");
+        summary.add(y, NAME_OF(y), \"%d\", \"Pixel coordinates centered around 0,0\");
+        summary.add(E, NAME_OF(E), \"%f\", \"Energy loss in GeV\");
+        summary.add(t, NAME_OF(t), \"%f\", \"Time in ms\");
+    }
 };
 
-\#endif // _${classname}_
+
+#endif // _${classname}_h_
 
 ";
 	print FILE $content;
@@ -132,30 +149,32 @@ class ${classname}:public jana::JObject{
 sub PrintFactoryClass()
 {
 	$content = "
+/// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
+
+
 \#ifndef _${classname}_factory${tag_suffix}_
 \#define _${classname}_factory${tag_suffix}_
 
-\#include <JANA/JFactory.h>
+\#include <JANA/JFactoryT.h>
 \#include \"${classname}.h\"
 
-class ${classname}_factory${tag_suffix}:public jana::JFactory<${classname}>{
+class ${classname}_factory${tag_suffix}:public JFactoryT<${classname}>{
 	public:
-		${classname}_factory${tag_suffix}(){};
-		~${classname}_factory${tag_suffix}(){};
+		${classname}_factory${tag_suffix}(){
+			SetTag(\"${tag_suffix}\");
+		}
+		~${classname}_factory${tag_suffix}(){}
 ";
-
-	if($USE_TAG){
-		$content .= "		const char* Tag(void){return \"$tag\";}";
-	}
 
 	$content .=	"
 
 	private:
-		jerror_t init(void);						///< Called once at program start.
-		jerror_t brun(jana::JEventLoop *eventLoop, int32_t runnumber);	///< Called everytime a new run number is detected.
-		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
-		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
-		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+		void Init() override;                       ///< Called once at program start.
+		void BeginRun(const std::shared_ptr<const JEvent>& event) override; ///< Called everytime a new run number is detected.
+		void Process(const std::shared_ptr<const JEvent>& event) override;  ///< Called every event.
+		void EndRun() override;                     ///< Called everytime run number changes, provided BeginRun has been called.
+		void Finish() override;                     ///< Called after last event of last event source has been processed.
+
 };
 
 \#endif // _${classname}_factory${tag_suffix}_
@@ -171,44 +190,50 @@ class ${classname}_factory${tag_suffix}:public jana::JFactory<${classname}>{
 sub PrintFactoryMethods()
 {
 	$content = "
+/// For more information on the syntax changes between JANA1 and JANA2, visit: https://jeffersonlab.github.io/JANA2/#/jana1to2/jana1-to-jana2
 
 \#include <iostream>
 \#include <iomanip>
-using namespace std;
 
 \#include \"${classname}_factory${tag_suffix}.h\"
-\#include \"JFactoryGenerator_${classname}${tag_suffix}.h\"
-using namespace jana;
 
 // Routine used to create our JEventProcessor
 \#include \<JANA/JApplication.h\>
+\#include \<JANA/JFactoryGenerator.h\>
+\#include \<JANA/JEvent.h\>
+
 extern \"C\"{
 void InitPlugin(JApplication *app){
 	InitJANAPlugin(app);
-	app->AddFactoryGenerator(new JFactoryGenerator_${classname}${tag_suffix}());
+	app->Add(new JFactoryGeneratorT<${classname}_factory${tag_suffix}>());
 }
 } // \"C\"
 
 //------------------
-// init
+// Init
 //------------------
-jerror_t ${classname}_factory${tag_suffix}::init(void)
+void ${classname}_factory${tag_suffix}::Init()
 {
-	return NOERROR;
+	auto app = GetApplication();
+    
+    /// Acquire any parameters
+    // app->GetParameter(\"parameter_name\", m_destination);
+    
+    /// Set any factory flags
+    // SetFactoryFlag(JFactory_Flags_t::NOT_OBJECT_OWNER);
 }
 
 //------------------
-// brun
+// BeginRun
 //------------------
-jerror_t ${classname}_factory${tag_suffix}::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
+void ${classname}_factory${tag_suffix}::BeginRun(const std::shared_ptr<const JEvent>& event)
 {
-	return NOERROR;
 }
 
 //------------------
-// evnt
+// Process
 //------------------
-jerror_t ${classname}_factory${tag_suffix}::evnt(JEventLoop *loop, uint64_t eventnumber)
+void ${classname}_factory${tag_suffix}::Process(const std::shared_ptr<const JEvent>& event)
 {
 
 	// Code to generate factory data goes here. Add it like:
@@ -217,64 +242,30 @@ jerror_t ${classname}_factory${tag_suffix}::evnt(JEventLoop *loop, uint64_t even
 	// my${classname}->x = x;
 	// my${classname}->y = y;
 	// ...
-	// _data.push_back(my${classname});
-	//
+	// Insert(my${classname});
+	// For whole collection
+	// Use Set like this
+	// std::vector<fac1*> results;
+    // results.push_back(new fac1(...));
+    // Set(results);
 	// Note that the objects you create here will be deleted later
-	// by the system and the _data vector will be cleared automatically.
+	// by the system and the mData vector will be cleared automatically.
 
-	return NOERROR;
 }
 
 //------------------
-// erun
+// EndRun
 //------------------
-jerror_t ${classname}_factory${tag_suffix}::erun(void)
+void ${classname}_factory${tag_suffix}::EndRun()
 {
-	return NOERROR;
 }
 
 //------------------
-// fini
+// Finish
 //------------------
-jerror_t ${classname}_factory${tag_suffix}::fini(void)
+void ${classname}_factory${tag_suffix}::Finish()
 {
-	return NOERROR;
 }
-
-";
-	print FILE $content;
-	
-}
-
-###############
-# PrintFactoryGeneratorClass
-###############
-sub PrintFactoryGeneratorClass()
-{
-	$content = "
-\#ifndef _JFactoryGenerator_${classname}${tag_suffix}_
-\#define _JFactoryGenerator_${classname}${tag_suffix}_
-
-\#include <JANA/jerror.h>
-\#include <JANA/JFactoryGenerator.h>
-
-\#include \"${classname}_factory${tag_suffix}.h\"
-
-class JFactoryGenerator_${classname}${tag_suffix}: public jana::JFactoryGenerator{
-	public:
-		JFactoryGenerator_${classname}${tag_suffix}(){}
-		virtual ~JFactoryGenerator_${classname}${tag_suffix}(){}
-		virtual const char* className(void){return static_className();}
-		static const char* static_className(void){return \"JFactoryGenerator_${classname}${tag_suffix}\";}
-		
-		jerror_t GenerateFactories(jana::JEventLoop *loop){
-			loop->AddFactory(new ${classname}_factory${tag_suffix}());
-			return NOERROR;
-		}
-
-};
-
-\#endif // _JFactoryGenerator_${classname}${tag_suffix}_
 
 ";
 	print FILE $content;
