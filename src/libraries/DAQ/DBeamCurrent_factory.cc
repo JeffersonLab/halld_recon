@@ -119,7 +119,7 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 		}
 		last_Ibeam = Ibeam;
 	}
-	
+
 	// Loop through all boundaries and update the time to
 	// all trip points.
 	double t_max = IntegratedTime();
@@ -156,7 +156,7 @@ jerror_t DBeamCurrent_factory::brun(jana::JEventLoop *loop, int32_t runnumber)
 	lock_guard<mutex> lck(mtx);
 	static set<int32_t> runs_loaded;
 	if(runs_loaded.find(runnumber) == runs_loaded.end()){
-		jout << "Electron beam current trip map for run " << runnumber << " loaded with " << boundaries.size() << " boundaries (" << trip.size() << " trips over " << t_max << " sec)" << endl;
+		jout << "Electron beam current trip map for run " << runnumber << " loaded with " << boundaries.size() << " boundaries (" << trip.size() << " trips over " << t_max << " sec) using threshold " << cutoffval << endl;
 		runs_loaded.insert(runnumber);
 	}
 
@@ -198,7 +198,7 @@ jerror_t DBeamCurrent_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 		}
 	}
 
-	// Get tme relative to RCDB recorded start time of event
+	// Get time relative to RCDB recorded start time of event
 	// (all times in trip map are recorded relative to this as well)	
 	double t = (mytimestamp - (double)rcdb_250MHz_offset_tics)/ticks_per_sec;
 
