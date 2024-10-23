@@ -271,11 +271,12 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     maxamp = maxamp - scaled_ped;
     */
-    
+
+    // apply different thresholds to the amplitude and the integral
     if (maxamp < hit_amp_threshold) {
       continue;
     }
-    if (digihit->pulse_integral < hit_int_threshold) {   /// ???
+    if (digihit->pulse_integral < hit_int_threshold) {  
       continue;
     }
 
