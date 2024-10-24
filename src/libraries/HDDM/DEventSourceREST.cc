@@ -15,6 +15,9 @@
 #include <JANA/JEvent.h>
 #include <DANA/DStatusBits.h>
 
+#include <TAGGER/DTAGHHit_factory_Calib.h>
+#include <TAGGER/DTAGMHit_factory_Calib.h>
+
 #include <DVector2.h>
 #include <DEventSourceREST.h>
 
@@ -307,6 +310,19 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 			     << " dx/dz=" << dBeamDirMap[locRunNumber].X() 
 			     << " dy/dz=" << dBeamDirMap[locRunNumber].Y() 
 			     << endl;
+
+			// load tagger quality tables
+// 			dTAGHCounterQualities[locRunNumber] = new double[TAGH_MAX_COUNTER+1];
+// 			dTAGMFiberQualities[locRunNumber] = new double*[TAGM_MAX_ROW+1];
+// 			for(int i; i<TAGM_MAX_ROW+1; i++)
+// 				dTAGMFiberQualities[locRunNumber][i] = new double[TAGM_MAX_COLUMN+1];
+
+			if(!DTAGHHit_factory_Calib::load_ccdb_constants(locEventLoop, "counter_quality", "code", dTAGHCounterQualities[locRunNumber])) {
+				jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceREST::GetObjects() ... " << endl;
+			}
+			if(!DTAGMHit_factory_Calib::load_ccdb_constants(locEventLoop, "fiber_quality", "code", dTAGMFiberQualities[locRunNumber])) {
+				jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceREST::GetObjects() ... " << endl;
+			}
 
 			// tagger related configs for reverse mapping tagger energy to counter number
 			if( REST_JANA_CALIB_CONTEXT != "" ) {
@@ -659,7 +675,12 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(column == 0) {
 			continue;
 		}
-
+     
+		// throw away hits from bad or noisy counters
+		int quality = dTAGMFiberQualities[locRunNumber][0][column];  // I think this works for the row? - we are generally not worrying about the quality of individual fibers
+		if (quality != DTAGMHit_factory_Calib::k_fiber_good )
+			continue;
+         
 		DBeamPhoton* gamma = new DBeamPhoton();
 
 		double Elo_tagm = tagmGeom->getElow(column);
@@ -720,7 +741,12 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(counter == 0) {
 			continue;
 		}
-
+         	
+		// throw away hits from bad or noisy counters
+		int quality = dTAGHCounterQualities[locRunNumber][counter];
+		if (quality != DTAGHHit_factory_Calib::k_counter_good )
+			continue;
+         
       	DBeamPhoton* gamma = new DBeamPhoton();
 
 		double Elo_tagh = taghGeom->getElow(counter);
