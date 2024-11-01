@@ -22,12 +22,19 @@ class DEventWriterREST_factory : public JFactoryT<DEventWriterREST>
 			app->SetDefaultParameter("REST:DATAVERSIONSTRING", locDummyString);
 		}
 
+
 		void Process(const std::shared_ptr<const JEvent>& locEvent) override
 		{
 			// Create single DEventWriterREST object and marks the factory as persistent so it doesn't get deleted every event.
 			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			Insert(new DEventWriterREST(locEvent, dOutputFileBaseName));
+		}
+		void Finish(){
+			for(auto& eventWriterObject:mData){
+				delete  eventWriterObject;
+				eventWriterObject = nullptr;
+			}
 		}
 		std::string dOutputFileBaseName;
 };
