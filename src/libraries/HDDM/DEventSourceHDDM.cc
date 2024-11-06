@@ -251,10 +251,10 @@ bool DEventSourceHDDM::GetObjects(const std::shared_ptr<const JEvent> &event, JF
       
 
 		// load dead channel tables
-		if(!DTAGHHit_factory_Calib::load_ccdb_constants(loop, "counter_quality", "code", tagh_counter_quality)) {
+		if(!DTAGHHit_factory_Calib::load_ccdb_constants(jcalib, "counter_quality", "code", tagh_counter_quality)) {
 			jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceHDDM::GetObjects() ... " << endl;
 		}
-		if(!DTAGMHit_factory_Calib::load_ccdb_constants(loop, "fiber_quality", "code", tagm_fiber_quality)) {
+		if(!DTAGMHit_factory_Calib::load_ccdb_constants(jcalib, "fiber_quality", "code", tagm_fiber_quality)) {
 			jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceHDDM::GetObjects() ... " << endl;
 		}
    }
