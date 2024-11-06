@@ -310,10 +310,10 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
 // 			for(int i; i<TAGM_MAX_ROW+1; i++)
 // 				dTAGMFiberQualities[locRunNumber][i] = new double[TAGM_MAX_COLUMN+1];
 
-			if(!DTAGHHit_factory_Calib::load_ccdb_constants(locEventLoop, "counter_quality", "code", dTAGHCounterQualities[locRunNumber])) {
+			if(!DTAGHHit_factory_Calib::load_ccdb_constants(jcalib, "counter_quality", "code", dTAGHCounterQualities[locRunNumber])) {
 				jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceREST::GetObjects() ... " << endl;
 			}
-			if(!DTAGMHit_factory_Calib::load_ccdb_constants(locEventLoop, "fiber_quality", "code", dTAGMFiberQualities[locRunNumber])) {
+			if(!DTAGMHit_factory_Calib::load_ccdb_constants(jcalib, "fiber_quality", "code", dTAGMFiberQualities[locRunNumber])) {
 				jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceREST::GetObjects() ... " << endl;
 			}
 

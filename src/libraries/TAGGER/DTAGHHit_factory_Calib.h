@@ -47,7 +47,6 @@ class DTAGHHit_factory_Calib:public JFactoryT<DTAGHHit>{
         double tdc_twalk_c3[TAGH_MAX_COUNTER+1];
 
         bool static load_ccdb_constants(JCalibration* calibration,
-        	jana::JEventLoop *eventLoop, 
             std::string table_name,
             std::string column_name,
             double table[TAGH_MAX_COUNTER+1]);
