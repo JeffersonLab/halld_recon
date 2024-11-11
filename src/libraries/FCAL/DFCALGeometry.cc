@@ -82,19 +82,19 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
 	double x=m_FCALdX+x0+double(col-col0)*dx;
 	double y=m_FCALdY+pos[1];//+phi*x; //use small angle approximation
 	m_positionOnFace[row][col].Set(x,y);
+	ch=row*kBlocksTall+col;
 	m_row[ch]     =  row;
 	m_column[ch]  =  col;
 	m_channelNumber[row][col]=ch;
 	m_activeBlock[row][col] = true;
-	
-	ch++;
       }
     }
   }
-  m_numFcalChannels=ch;
-  
-  // Now extract the positions of the PWO crystals 
-   for( int i = 0; i < 42; i++ ){
+  m_numFcalChannels=2800; // for backward-compatibility
+
+  // Now extract the positions of the PWO crystals
+  ch=m_numFcalChannels;
+  for( int i = 0; i < 42; i++ ){
     string my_row_string="XTrow"+to_string(i);
     string my_mpos_string="//composition[@name='"+my_row_string
       +"']/mposX[@volume='XTModule']/";
