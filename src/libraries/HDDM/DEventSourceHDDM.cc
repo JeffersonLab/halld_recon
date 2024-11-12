@@ -42,6 +42,9 @@ using namespace std;
 #include <CCAL/DCCALHit.h>
 #include <ECAL/DECALHit.h>
 
+#include <TAGGER/DTAGHHit_factory_Calib.h>
+#include <TAGGER/DTAGMHit_factory_Calib.h>
+
 
 //------------------------------------------------------------------
 // Binary predicate used to sort hits
@@ -252,6 +255,13 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       psGeom = psGeomVect[0];
       
 
+		// load dead channel tables
+		if(!DTAGHHit_factory_Calib::load_ccdb_constants(loop, "counter_quality", "code", tagh_counter_quality)) {
+			jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceHDDM::GetObjects() ... " << endl;
+		}
+		if(!DTAGMHit_factory_Calib::load_ccdb_constants(loop, "fiber_quality", "code", tagm_fiber_quality)) {
+			jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceHDDM::GetObjects() ... " << endl;
+		}
    }
 
    // Warning: This class is not completely thread-safe and can fail if running
@@ -2472,6 +2482,12 @@ jerror_t DEventSourceHDDM::Extract_DTAGMHit(hddm_s::HDDM *record,
          const hddm_s::TaggerHitList &hits = iter->getTaggerHits();
          hddm_s::TaggerHitList::iterator hiter;
          for (hiter = hits.begin(); hiter != hits.end(); ++hiter) {
+         
+         	// throw away hits from bad or noisy counters
+        	int quality = tagm_fiber_quality[hiter->getRow()][hiter->getColumn()];
+        	if (quality != DTAGMHit_factory_Calib::k_fiber_good )
+            	continue;
+         
             DTAGMHit *taghit = new DTAGMHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
@@ -2535,6 +2551,12 @@ jerror_t DEventSourceHDDM::Extract_DTAGHHit( hddm_s::HDDM *record,
          const hddm_s::TaggerHitList &hits = iter->getTaggerHits();
          hddm_s::TaggerHitList::iterator hiter;
          for (hiter = hits.begin(); hiter != hits.end(); ++hiter) {
+         	
+         	// throw away hits from bad or noisy counters
+        	int quality = tagh_counter_quality[hiter->getCounterId()];
+        	if (quality != DTAGHHit_factory_Calib::k_counter_good )
+            	continue;
+         
             DTAGHHit *taghit = new DTAGHHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();

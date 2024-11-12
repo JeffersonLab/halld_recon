@@ -99,17 +99,17 @@ jerror_t DTAGMHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     else
         jerr << "Unable to get TAGM_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/microscope/base_time_offset !" << endl;
 
-    if (load_ccdb_constants("fadc_gains", "gain", fadc_gains) &&
-    load_ccdb_constants("fadc_pedestals", "pedestal", fadc_pedestals) &&
-    load_ccdb_constants("fadc_time_offsets", "offset", fadc_time_offsets) &&
-    load_ccdb_constants("tdc_time_offsets", "offset", tdc_time_offsets) &&
-    load_ccdb_constants("fiber_quality", "code", fiber_quality) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c0", tw_c0) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c1", tw_c1) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "c2", tw_c2) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "threshold", tw_c3) &&
-    load_ccdb_constants("tdc_timewalk_corrections", "reference", ref) &&
-    load_ccdb_constants("integral_cuts", "integral", int_cuts))
+    if (load_ccdb_constants(eventLoop, "fadc_gains", "gain", fadc_gains) &&
+    load_ccdb_constants(eventLoop, "fadc_pedestals", "pedestal", fadc_pedestals) &&
+    load_ccdb_constants(eventLoop, "fadc_time_offsets", "offset", fadc_time_offsets) &&
+    load_ccdb_constants(eventLoop, "tdc_time_offsets", "offset", tdc_time_offsets) &&
+    load_ccdb_constants(eventLoop, "fiber_quality", "code", fiber_quality) &&
+    load_ccdb_constants(eventLoop, "tdc_timewalk_corrections", "c0", tw_c0) &&
+    load_ccdb_constants(eventLoop, "tdc_timewalk_corrections", "c1", tw_c1) &&
+    load_ccdb_constants(eventLoop, "tdc_timewalk_corrections", "c2", tw_c2) &&
+    load_ccdb_constants(eventLoop, "tdc_timewalk_corrections", "threshold", tw_c3) &&
+    load_ccdb_constants(eventLoop, "tdc_timewalk_corrections", "reference", ref) &&
+    load_ccdb_constants(eventLoop, "integral_cuts", "integral", int_cuts))
     {
         return NOERROR;
     }
@@ -329,7 +329,7 @@ jerror_t DTAGMHit_factory_Calib::fini(void)
 //---------------------
 // load_ccdb_constants
 //---------------------
-bool DTAGMHit_factory_Calib::load_ccdb_constants(
+bool DTAGMHit_factory_Calib::load_ccdb_constants( jana::JEventLoop *eventLoop, 
         std::string table_name,
         std::string column_name,
         double result[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1])

@@ -97,15 +97,15 @@ jerror_t DTAGHHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     else
         jerr << "Unable to get TAGH_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << endl;
 
-    if (load_ccdb_constants("fadc_gains", "gain", fadc_gains) &&
-        load_ccdb_constants("fadc_pedestals", "pedestal", fadc_pedestals) &&
-        load_ccdb_constants("fadc_time_offsets", "offset", fadc_time_offsets) &&
-        load_ccdb_constants("tdc_time_offsets", "offset", tdc_time_offsets) &&
-        load_ccdb_constants("counter_quality", "code", counter_quality) &&
-        load_ccdb_constants("tdc_timewalk", "c0", tdc_twalk_c0) &&
-        load_ccdb_constants("tdc_timewalk", "c1", tdc_twalk_c1) &&
-        load_ccdb_constants("tdc_timewalk", "c2", tdc_twalk_c2) &&
-        load_ccdb_constants("tdc_timewalk", "c3", tdc_twalk_c3))
+    if (load_ccdb_constants(eventLoop, "fadc_gains", "gain", fadc_gains) &&
+        load_ccdb_constants(eventLoop, "fadc_pedestals", "pedestal", fadc_pedestals) &&
+        load_ccdb_constants(eventLoop, "fadc_time_offsets", "offset", fadc_time_offsets) &&
+        load_ccdb_constants(eventLoop, "tdc_time_offsets", "offset", tdc_time_offsets) &&
+        load_ccdb_constants(eventLoop, "counter_quality", "code", counter_quality) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c0", tdc_twalk_c0) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c1", tdc_twalk_c1) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c2", tdc_twalk_c2) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c3", tdc_twalk_c3))
     {
         return NOERROR;
     }
@@ -278,7 +278,7 @@ jerror_t DTAGHHit_factory_Calib::fini(void)
 //---------------------
 // load_ccdb_constants
 //---------------------
-bool DTAGHHit_factory_Calib::load_ccdb_constants(
+bool DTAGHHit_factory_Calib::load_ccdb_constants( jana::JEventLoop *eventLoop, 
     std::string table_name,
     std::string column_name,
     double result[TAGH_MAX_COUNTER+1])
