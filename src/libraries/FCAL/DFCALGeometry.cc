@@ -23,7 +23,11 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
   vector<double>block;
   geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
   m_sensitiveBlockSize=block[0];
- 
+
+  // For backward compatibility, get grid-based geometry.  Override this
+  // geometry if the insert is present.
+  GetGridGeometry(geom);
+  
   // Check for presence of PbWO4 insert
   if (geom->HaveInsert()){ // Geometry based on survey data for positions
     // Get size of the insert 
@@ -39,16 +43,11 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
     // Get the x-y positions of the crystals
     GetSurveyGeometry(geom);
   }
-  else{ // Geometry based on grid(s) of fixed dimensions and block sizes
-    GetGridGeometry(geom);
-  }
 }
 
 // The following routine looks up the position of each row in the xml
 // specification for the geometry
 void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
-  unsigned int ch=0;
-  
   // Initialize active block map
   for( int row = 0; row < 2*kBlocksTall; row++ ){
     for( int col = 0; col < 2*kBlocksWide; col++ ){
@@ -82,18 +81,12 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
 	double x=m_FCALdX+x0+double(col-col0)*dx;
 	double y=m_FCALdY+pos[1];//+phi*x; //use small angle approximation
 	m_positionOnFace[row][col].Set(x,y);
-	ch=row*kBlocksTall+col;
-	m_row[ch]     =  row;
-	m_column[ch]  =  col;
-	m_channelNumber[row][col]=ch;
 	m_activeBlock[row][col] = true;
       }
     }
   }
-  m_numFcalChannels=2800; // for backward-compatibility
 
   // Now extract the positions of the PWO crystals
-  ch=m_numFcalChannels;
   for( int i = 0; i < 42; i++ ){
     string my_row_string="XTrow"+to_string(i);
     string my_mpos_string="//composition[@name='"+my_row_string
@@ -121,16 +114,9 @@ void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
       int row_index=my_row+kBlocksTall;
       int col_index=col+kBlocksWide;
       m_positionOnFace[row_index][col_index].Set(x,y);
-      m_row[ch]     =  row_index;
-      m_column[ch]  =  col_index;
       m_activeBlock[row_index][col_index] = true;
-      m_channelNumber[row_index][col_index] = ch;
-
-      ch++;
     }
   }
-
-  m_numChannels=ch;
 }
 
 // The following routine calculates the position of each block assuming a 
