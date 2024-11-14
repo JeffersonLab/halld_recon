@@ -61,13 +61,16 @@ public:
 	}
 	bool isInsertBlock(int row,int column) const;
 	bool isFiducial(double x,double y) const;
-	unsigned int numChannels() const {return m_numChannels;}
+	int numChannels() const {return m_numChannels;}
+	int numFcalChannels() const {return m_numFcalChannels;}
 	
 	DVector2 positionOnFace( int row, int column ) const;
 	DVector2 positionOnFace( int channel ) const;
 	double fcalFrontZ() const {return m_FCALfront;}
 	double insertFrontZ() const {return m_insertFront;}
 	double insertSize() const {return m_insertSize;}
+	double sensitiveBlockSize() const {return m_sensitiveBlockSize;}
+	double insertSensitiveBlockSize() const {return m_insertSensitiveBlockSize;}
 
 	bool inInsert(int channel) const;
 	int channel( int row, int column ) const;
@@ -93,10 +96,12 @@ public:
 	bool   m_activeBlock[2*kBlocksTall][2*kBlocksWide];
 	DVector2 m_positionOnFace[2*kBlocksTall][2*kBlocksWide];
 
+	double m_sensitiveBlockSize,m_insertSensitiveBlockSize;
+
 	int    m_channelNumber[2*kBlocksTall][2*kBlocksWide];
 	int    m_row[kMaxChannels];
 	int    m_column[kMaxChannels];
-	int m_numChannels;
+	int m_numChannels,m_numFcalChannels;
 
 	int m_insertRowSize=0,m_insertMidBlock=0;
 	double m_insertSize=0.;
@@ -107,6 +112,8 @@ public:
 	double m_FCALthetaX,m_FCALthetaY,m_FCALthetaZ;
 
  private:
+	void GetGridGeometry(const DGeometry *geom);
+	void GetSurveyGeometry(const DGeometry *geom);
 	DFCALGeometry(){};// force use of constructor with arguments.
 	
 };

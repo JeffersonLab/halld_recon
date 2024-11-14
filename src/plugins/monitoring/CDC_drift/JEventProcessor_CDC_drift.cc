@@ -99,8 +99,6 @@ jerror_t JEventProcessor_CDC_drift::init(void) {
   const Int_t TMAX = 2000;  //max for time
 
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-
   // create root folder for cdc and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC_drift")->cd();
@@ -145,8 +143,6 @@ jerror_t JEventProcessor_CDC_drift::init(void) {
     tfit->Branch("tdiff_ns",&tdiff,"tdiff/D");
 
   } 
-
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
 
   main->cd();
 
@@ -217,7 +213,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
   eventLoop->Get(digihits);
 
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
   fithisto = kFALSE;
 
@@ -600,7 +596,7 @@ jerror_t JEventProcessor_CDC_drift::evnt(JEventLoop *eventLoop, uint64_t eventnu
 
 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  japp->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
   return NOERROR;
 }

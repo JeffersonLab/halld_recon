@@ -295,7 +295,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   ULong64_t eventnum = (ULong64_t)eventnumber;
 
   
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
   t->SetBranchAddress("eventnum",&eventnum);
   t->SetBranchAddress("CDCPulsecount",&nc);
@@ -304,7 +304,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
     
   t->Fill();  
 
-  japp->RootUnLock();
+  japp->RootFillUnLock(this);
   
  
   
@@ -312,7 +312,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   if (ntt > 0) { //   Df125TriggerTime 
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!    
 
     tt->SetBranchAddress("eventnum",&eventnum);
 
@@ -340,7 +340,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
       tt->Fill();
     }
 
-    japp->RootUnLock();
+    japp->RootFillUnLock(this);
 
   }
 
@@ -350,7 +350,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
 
   if (nc || (nf&&FDC)) {  // branches are almost the same for CDC & FDC - only amp differs
 
-    japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+    japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
     
     p->SetBranchAddress("eventnum",&eventnum);
 
@@ -705,7 +705,7 @@ jerror_t JEventProcessor_cdc_scan::evnt(JEventLoop *loop, uint64_t eventnumber)
   
     }
 
-    japp->RootUnLock();    
+    japp->RootFillUnLock(this);    
   }
     
   return NOERROR;

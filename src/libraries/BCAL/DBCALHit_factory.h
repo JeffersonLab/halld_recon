@@ -58,6 +58,7 @@ class DBCALHit_factory:public jana::JFactory<DBCALHit>{
 		bcal_digi_constants_t ADC_timing_offsets;
         bcal_digi_constants_t channel_global_offset;
         bcal_digi_constants_t tdiff_u_d;
+        bcal_digi_constants_t bad_channels;
 		
 		const int GetCalibIndex( int module, int layer, int sector ) const {
 			return BCAL_NUM_LAYERS*BCAL_NUM_SECTORS*(module-1) + BCAL_NUM_SECTORS*(layer-1) + (sector-1);

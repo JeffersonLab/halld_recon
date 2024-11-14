@@ -11,6 +11,10 @@
 
 #include <JANA/JEventProcessor.h>
 
+#include "TH1F.h"
+#include "TH2F.h"
+
+
 class JEventProcessor_BCAL_SiPM_saturation:public jana::JEventProcessor{
 	public:
 		JEventProcessor_BCAL_SiPM_saturation();
@@ -28,6 +32,30 @@ class JEventProcessor_BCAL_SiPM_saturation:public jana::JEventProcessor{
 
 
 		vector< vector<double> > attenuation_parameters;    // store attenuation length
+		
+		TH1F *dHistEthrown;
+    	TH1F *dHistEshower;
+    	TH1F *dHistThrownTheta;
+    	TH1F *dHistNCell;
+    	TH1F *dHistLayer;
+    	TH1F *dHistEpoint;
+
+    	TH1F *dHistPeakLayer1;
+    	TH1F *dHistIntegralLayer1;
+    	TH1F *dHistPeakLayer2;
+    	TH1F *dHistIntegralLayer2;
+    	TH1F *dHistPeakLayer3;
+    	TH1F *dHistIntegralLayer3;
+    	TH1F *dHistPeakLayer4;
+    	TH1F *dHistIntegralLayer4;
+    	TH1F *dHistEcalc;
+    	TH1F *dHistEcalcEpt;
+
+
+    	TH2F *dHistEshowerVsEthrown;
+    	TH2F *dHistEdiffVsEthrown;
+    	TH2F *dHistEdiffFracVsEthrown;
+    	
 };
 
 #endif // _JEventProcessor_BCAL_SiPM_saturation_

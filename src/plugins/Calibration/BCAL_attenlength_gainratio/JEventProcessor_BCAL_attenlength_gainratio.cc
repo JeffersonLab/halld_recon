@@ -104,7 +104,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
 	hist2D_intattenlength = new TH2F("hist2D_intattenlength",histtitle,48,0.5,48.5,16,0.5,16.5);
 	sprintf(histtitle,"Gain ratio from integ.;Module;Layer and Sector;G_{U}/G_{D}");
 	hist2D_intgainratio = new TH2F("hist2D_intgainratio",histtitle,48,0.5,48.5,16,0.5,16.5);
-
+	
     if (VERBOSEHISTOGRAMS) {
         sprintf(histtitle,"Atten. length from peak;Module;Layer and Sector");
         hist2D_peakattenlength = new TH2F("hist2D_peakattenlength",histtitle,48,0.5,48.5,16,0.5,16.5);
@@ -126,6 +126,7 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
 
 	TDirectory *dirlogpeakratiovsZ = bcalgainratio->mkdir("logpeakratiovsZ");
 	TDirectory *dirlogintratiovsZ = bcalgainratio->mkdir("logintratiovsZ");
+	TDirectory *dirlogEratiovsZ = bcalgainratio->mkdir("logEratiovsZ");
 	TDirectory *dirEvsZ = bcalgainratio->mkdir("EvsZ");
 
 	// Create histograms
@@ -142,7 +143,33 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::init(void)
             }
         }
     }
+    
+    dirlogEratiovsZ->cd();
+	for (int layer=0; layer<numlayer; layer++) {
+		sprintf(histname,"logEratiovsZ_layer%i",layer);
+		sprintf(histtitle,"Layer %i;Z Position (cm);log of E ratio   ln(E_{US}/E_{DS}) ",layer);
+        logEratiovsZ_layers[layer] = new TH2I(histname, histtitle, 500,-250.0,250.0,500,-3,3);
+	}
+    if (VERBOSEHISTOGRAMS) {
+        for (int module=0; module<nummodule; module++) {
+            for (int layer=0; layer<numlayer; layer++) {
+                for (int sector=0; sector<numsector; sector++) {
+                    sprintf(histname,"logEratiovsZ_%02i%i%i",module+1,layer+1,sector+1);
+                    sprintf(modtitle,"Channel (M%i,L%i,S%i)",module+1,layer+1,sector+1);
+                    sprintf(histtitle,"%s;Z Position (cm);log of E ratio   ln(E_{US}/E_{DS})",modtitle);
+                    logEratiovsZ[module][layer][sector] = new TH2I(histname,histtitle, 250,-250.0,250.0,400,-4,4);
+                }
+            }
+        }
+    }
+    
 	dirlogintratiovsZ->cd();
+	for (int layer=0; layer<numlayer; layer++) {
+        sprintf(histname,"logintratiovsZ_layer%i",layer);
+        sprintf(histtitle,"Layer %i;Z Position (cm);log of integral ratio US/DS",layer);
+        logintratiovsZ_layers[layer] = new TH2I(histname, histtitle, 500,-250.0,250.0,500,-3,3);
+	}
+
 	for (int module=0; module<nummodule; module++) {
 		for (int layer=0; layer<numlayer; layer++) {
 			for (int sector=0; sector<numsector; sector++) {
@@ -217,8 +244,6 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 	  digihits_vec.push_back(digihits);
 	}
 
-    char name[255], histtitle[255];
-
 	// FILL HISTOGRAMS
 	// Since we are filling histograms local to this plugin, it will not interfere with other ROOT operations: can use plugin-wide ROOT fill lock
 	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
@@ -288,26 +313,12 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 			logintratiovsZ_all->Fill(zpos, logintratio);
             logpeakratiovsZ_all->Fill(zpos, logpeakratio);
 
-            sprintf(name,"logintratiovsZ_layer%i",layer);
-            sprintf(histtitle,"Layer %i;Z Position (cm);log of integral ratio US/DS",layer);
-            Fill2DHistogram("bcalgainratio", "logintratiovsZ", name,
-                            zpos, logintratio, histtitle, 500,-250.0,250.0,500,-3,3);
-
-            if (VERBOSEHISTOGRAMS) {
-                sprintf(name,"logEratiovsZ_%02i%i%i",module,layer,sector);
-                sprintf(histtitle,"Channel (M%i,L%i,S%i);Z Position (cm);log of E ratio   ln(E_{US}/E_{DS}) ",module,layer,sector);
-                Fill2DHistogram("bcalgainratio", "logEratiovsZ", name,
-                                zpos, logEratio, histtitle, 250,-250.0,250.0,400,-4,4);
-            }
-
-            sprintf(name,"logEratiovsZ_layer%i",layer);
-            sprintf(histtitle,"Layer %i;Z Position (cm);log of E ratio   ln(E_{US}/E_{DS}) ",layer);
-            Fill2DHistogram("bcalgainratio", "logEratiovsZ", name,
-                            zpos, logEratio, histtitle, 500,-250.0,250.0,500,-3,3);
-
+			logintratiovsZ_layers[layer-1]->Fill(zpos, logintratio);
+			logEratiovsZ_layers[layer-1]->Fill(zpos, logEratio);
 
             if (VERBOSEHISTOGRAMS) {
                 logpeakratiovsZ[module-1][layer-1][sector-1]->Fill(zpos, logpeakratio);
+                logEratiovsZ[module-1][layer-1][sector-1]->Fill(zpos, logEratio);
             }
 		}
         if (VERBOSEHISTOGRAMS) EvsZ[module-1][layer-1][sector-1]->Fill(zpos, pointE);
@@ -320,6 +331,10 @@ jerror_t JEventProcessor_BCAL_attenlength_gainratio::evnt(JEventLoop *loop, uint
 
 	return NOERROR;
 }
+
+
+// FINISHFINISHFINISHFINISHFINISHFINISHFINISH
+
 
 //------------------
 // erun

@@ -439,8 +439,9 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 
         double Jphi = atan2(JTy, JTx)*180/acos(-1);
 	double MLPClassifierMinus=cppepem->pimem_ML_classifier;
-	hpimem_ML_classifier->Fill(MLPClassifierMinus);
   	double MLPClassifierPlus=cppepem->pipep_ML_classifier;
+	japp->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
+	hpimem_ML_classifier->Fill(MLPClassifierMinus);
 	hpipep_ML_classifier->Fill(MLPClassifierPlus);
 	if(MLPClassifierPlus > 0.8 && MLPClassifierMinus > 0.8){
 	  hphiJT->Fill(Jphi, weight);
@@ -483,6 +484,7 @@ jerror_t JEventProcessor_FMWPC_Performance::evnt(JEventLoop *loop, uint64_t even
 	    hCosTheta_mumu->Fill(CosTheta,weight);
 	    hCosTheta_vs_psi_mumu->Fill(psi*TMath::RadToDeg(), CosTheta);
 	  }
+	japp->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
   }
   
   

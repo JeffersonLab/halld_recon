@@ -52,7 +52,7 @@ class DTAGMHit_factory_Calib: public jana::JFactory<DTAGMHit> {
       double ref[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];
       double int_cuts[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1];
 
-      bool load_ccdb_constants(std::string table_name,
+      bool static load_ccdb_constants(jana::JEventLoop *eventLoop, std::string table_name,
                                std::string column_name,
                                double table[TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1]);
    private:

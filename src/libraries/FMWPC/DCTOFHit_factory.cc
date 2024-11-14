@@ -73,7 +73,7 @@ jerror_t DCTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   vector<const DCTOFTDCDigiHit*> tdcdigihits;
   loop->Get(tdcdigihits);
   
-  for(unsigned int i=0; i<digihits.size(); i++){
+  for(unsigned int i=0;i<digihits.size(); i++){
     const DCTOFDigiHit *digihit = digihits[i];
 
     for (unsigned int j=0;j<tdcdigihits.size();j++){

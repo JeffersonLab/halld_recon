@@ -20,6 +20,7 @@ class DEventHitStatistics:public jana::JObject{
       int fdc_pseudos;
       int bcal_cells;
       int fcal_blocks;
+      int ecal_blocks;
       int ccal_blocks;
       int tof_paddles;
       int dirc_PMTs;
@@ -30,6 +31,7 @@ class DEventHitStatistics:public jana::JObject{
         AddString(items, "fdc pseudo-hits", "%d", fdc_pseudos);
         AddString(items, "bcal cells hit", "%d", bcal_cells);
         AddString(items, "fcal blocks hit", "%d", fcal_blocks);
+        AddString(items, "ecal blocks hit", "%d", ecal_blocks);
         AddString(items, "ccal blocks hit", "%d", ccal_blocks);
         AddString(items, "tof paddle hits","%d", tof_paddles);
         AddString(items, "dirc PMT hits","%d", dirc_PMTs);

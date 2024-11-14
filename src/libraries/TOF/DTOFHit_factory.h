@@ -82,6 +82,8 @@ class DTOFHit_factory:public jana::JFactory<DTOFHit>{
   tof_digi_constants_t adc_gains;
   tof_digi_constants_t adc_time_offsets;
   tof_digi_constants_t tdc_time_offsets;
+  tof_digi_constants_t adc_bad_channels;
+  tof_digi_constants_t tdc_bad_channels;
   
   vector<vector<double> >timewalk_parameters;       ///< walk parameters for walk correction v0
   vector<vector<double> >timewalk_parameters_AMP;   ///< walk parameters for walk correction v1

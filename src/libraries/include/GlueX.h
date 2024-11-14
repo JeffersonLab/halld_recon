@@ -5,6 +5,7 @@
 // Creator: davidl (on Darwin Harriet.local 7.8.0 powerpc)
 // Modified: yqiang, Oct 10 2012, add RICH
 // Modified: jrsteven, June 22 2015, move RICH -> DIRC and remove CERE
+// Modified: somov, Jan 16 2024, added ECAL
 //
 
 #ifndef _GlueX_
@@ -26,6 +27,8 @@ enum DetectorSystem_t{
      SYS_DIRC       = 0x0200,
      SYS_CCAL       = 0x0400,
      SYS_CCAL_REF   = 0x0500,
+     SYS_ECAL       = 0x0600,
+     SYS_ECAL_REF   = 0x0700,
      SYS_TAGH       = 0x0800,
      SYS_RF         = 0x1000,
      SYS_PS         = 0x2000,
@@ -35,6 +38,7 @@ enum DetectorSystem_t{
      SYS_TAC	    = 0x20000,
      SYS_TRD        = 0x40000,
      SYS_CTOF       = 0x80000,
+     SYS_HELI       = 0x100000,
 };
 
 inline const char* SystemName(DetectorSystem_t sys)
@@ -76,6 +80,12 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_DIRC:
               return "DIRC";
               break;
+          case SYS_ECAL:
+              return "ECAL";
+              break;
+          case SYS_ECAL_REF:
+              return "ECAL_REF";
+              break;
           case SYS_CCAL:
               return "CCAL";
               break;
@@ -106,6 +116,9 @@ inline const char* SystemName(DetectorSystem_t sys)
           case SYS_CTOF:
 	      return "CTOF";
 	      break;
+	  case SYS_HELI:
+              return "HELI";
+              break;
      }
      return "UNKNOWN";
 }
@@ -138,6 +151,10 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
 		return SYS_START;
 	else if(strcmp(locSystemName, "DIRC") == 0)
 		return SYS_DIRC;
+	else if(strcmp(locSystemName, "ECAL") == 0)
+		return SYS_ECAL;
+	else if(strcmp(locSystemName, "ECAL_REF") == 0)
+		return SYS_ECAL_REF;
 	else if(strcmp(locSystemName, "CCAL") == 0)
 		return SYS_CCAL;
 	else if(strcmp(locSystemName, "CCAL_REF") == 0)
@@ -158,6 +175,8 @@ inline DetectorSystem_t NameToSystem(const char* locSystemName)
                 return SYS_TRD;
 	else if(strcmp(locSystemName, "CTOF") == 0)
                 return SYS_CTOF;
+	else if(strcmp(locSystemName, "HELI") == 0)
+                return SYS_HELI;
 	else
 		return SYS_NULL;
 }

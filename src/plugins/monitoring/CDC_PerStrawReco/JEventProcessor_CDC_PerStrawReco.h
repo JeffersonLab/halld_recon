@@ -10,6 +10,9 @@
 
 #include <JANA/JEventProcessor.h>
 
+#include <TH1F.h>
+#include <TH2F.h>
+
 class JEventProcessor_CDC_PerStrawReco:public jana::JEventProcessor{
 	public:
 		JEventProcessor_CDC_PerStrawReco();
@@ -25,6 +28,42 @@ class JEventProcessor_CDC_PerStrawReco:public jana::JEventProcessor{
         int EXCLUDERING;
         vector<vector<double> >max_sag;
         vector<vector<double> >sag_phi_offset;
+        
+        vector<vector<TH1F*>> hResiduals;
+		vector<vector<TH2F*>> hResidualsVsMomentum;
+		vector<vector<TH2F*>> hResidualsVsTheta;
+		vector<vector<TH2F*>> hResidualsVsZ;
+		vector<vector<TH2F*>> hResidualsVsTrackingFOM;
+		
+        vector<vector<TH1F*>> hDriftTime;
+        vector<vector<TH1F*>> hDriftDistance;
+        vector<vector<TH1F*>> hPredictedDriftDistance;
+
+		vector<vector<TH2F*>> hResidualsVsDriftTime;
+		vector<vector<TH2F*>> hResidualsVsDriftDistance;
+		vector<vector<TH2F*>> hResidualsVsPredictedDriftDistance;
+		vector<vector<TH2F*>> hPredictedDriftDistanceVsDriftTime;
+		
+		
+        vector<vector<vector<TH1F*>>> hStrawResidual;
+		vector<vector<vector<TH2F*>>> hStrawDriftTimeVsPhiDOCA;
+		vector<vector<vector<TH2F*>>> hStrawPredictedDistanceVsPhiDOCA;
+		vector<vector<vector<TH2F*>>> hStrawResidualVsZ;
+
+		vector<vector<vector<TH2F*>>> hStrawResidualVsDelta;
+		vector<vector<vector<TH2F*>>> hStrawPredictedDriftDistanceVsDriftTime;
+		vector<vector<vector<TH2F*>>> hStrawPredictedDriftDistanceVsDelta;
+
+		vector<vector<vector<TH2F*>>> hPredictedDriftDistanceVsDriftTime_PosDelta;
+		vector<vector<vector<TH2F*>>> hResidualVsDriftTime_PosDelta;
+		vector<vector<vector<TH1F*>>> hResidual_PosDelta;
+
+		vector<vector<vector<TH2F*>>> hPredictedDriftDistanceVsDriftTime_NegDelta;
+		vector<vector<vector<TH2F*>>> hResidualVsDriftTime_NegDelta;
+		vector<vector<vector<TH1F*>>> hResidual_NegDelta;
+
+
+
 };
 
 #endif // _JEventProcessor_CDC_PerStrawReco_

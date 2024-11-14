@@ -10,7 +10,6 @@
  *************************************/
 
 #include "JEventProcessor_BCAL_ADC_4ns.h"
-#include "HistogramTools.h" 
 #include "BCAL/DBCALHit.h"
 #include "BCAL/DBCALTDCHit.h"
 #include "BCAL/DBCALCluster.h"
@@ -63,6 +62,27 @@ JEventProcessor_BCAL_ADC_4ns::~JEventProcessor_BCAL_ADC_4ns()
 jerror_t JEventProcessor_BCAL_ADC_4ns::init(void)
 {
 	// This is called once at program startup. 
+	char channame[50], histtitle[255];
+
+	float zminhall = 0;
+	float zmaxhall = 450; 
+
+	// create root folder and cd to it, store main dir
+	TDirectory *main = gDirectory;  // save current directory
+	TDirectory *adchistdir = main->mkdir("BCAL_ADC_Deltat")->mkdir("ZvsDeltat");
+	adchistdir->cd();
+
+	for (int module=0; module<nummodule; module++) {
+		for (int layer=0; layer<numlayer; layer++) {
+			for (int sector=0; sector<numsector; sector++) {
+				sprintf(channame,"M%02iL%iS%i",module+1,layer+1,sector+1);
+				sprintf(histtitle,"%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]",channame);
+				hZvsDeltat[module][layer][sector] = new TH2F(channame,histtitle,480, -30, 30, 250, zminhall, zmaxhall);
+			}
+		}
+	}
+	
+	main->cd();
 
 	return NOERROR;
 }
@@ -116,16 +136,18 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumb
       }
       if (bestHypothesis == NULL) continue;
       // Now from this hypothesis we can get the detector matches to the BCAL
-      const DBCALShowerMatchParams* bcalMatch = bestHypothesis->Get_BCALShowerMatchParams();
+      //const DBCALShowerMatchParams* bcalMatch = bestHypothesis->Get_BCALShowerMatchParams();
+      auto bcalMatch = bestHypothesis->Get_BCALShowerMatchParams();
       if (bcalMatch == NULL) continue; 
-      const DSCHitMatchParams* scMatch = bestHypothesis->Get_SCHitMatchParams();
+     // const DSCHitMatchParams* scMatch = bestHypothesis->Get_SCHitMatchParams();
+      auto scMatch = bestHypothesis->Get_SCHitMatchParams();
       if (scMatch == NULL) continue;
       DVector3 position = bestHypothesis->position();
 
       // We also need the reference trajectory, which is buried deep in there
       const DTrackTimeBased *timeBasedTrack = nullptr;
       bestHypothesis->GetSingle(timeBasedTrack);
-      const DReferenceTrajectory *rt = timeBasedTrack->rt;
+      const DReferenceTrajectory *rt = timeBasedTrack->rt;  // TOFIX: this is deprecated
       if (timeBasedTrack->FOM < 0.0027) continue; // 3-sigma cut on tracking FOM
 
       if (timeBasedTrack->Ndof < 10) continue; // CDC: 5 params in fit, 10 dof => [15 hits]; FDC [10 hits]
@@ -152,8 +174,6 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumb
          float zmaxhall = 450; 
          if (rt->GetIntersectionWithRadius(rpoint,proj_pos, &pathLength, &flightTime)==NOERROR){
             // Now proj_pos contains the projected position of the track at this particular point within the BCAL
-            char channame[255];
-            sprintf(channame, "M%02iL%iS%i", thisPoint->module(), thisPoint->layer(), thisPoint->sector());
             double trackHitZ = proj_pos.z();
 
             vector <const DBCALHit*> hitVector;
@@ -163,9 +183,7 @@ jerror_t JEventProcessor_BCAL_ADC_4ns::evnt(JEventLoop *loop, uint64_t eventnumb
             double Deltat = hitVector[0]->t_raw - hitVector[1]->t_raw;
             if (hitVector[0]->end==1) Deltat = -Deltat;
 
-            sprintf(title, "%s  Z_{Track} vs #Delta t;#Delta t = t_{US}-t_{DS};Z_{Track} [cm]", channame);
-            Fill2DHistogram ("BCAL_ADC_Deltat", "ZvsDeltat", channame, Deltat, trackHitZ, title,
-                             480, -30, 30, 250, zminhall, zmaxhall); 
+			hZvsDeltat[thisPoint->module()][thisPoint->layer()][thisPoint->sector()]->Fill(Deltat, trackHitZ);
          }
       }
    }

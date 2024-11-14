@@ -166,6 +166,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     vector<double> raw_adc_offsets;
     vector<double> raw_tdc_offsets;
     vector<double> raw_adc2E;
+    vector<double> raw_adc_bad_channels;
+    vector<double> raw_tdc_bad_channels;
     
     if(print_messages) jout << "In DTOFHit_factory, loading constants..." << endl;
     
@@ -244,6 +246,13 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     string locTOFADCTimeOffetsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_timing_offsets";
     if(eventLoop->GetCalib(locTOFADCTimeOffetsTable.c_str(), raw_adc_offsets))
       jout << "Error loading " << locTOFADCTimeOffetsTable << " !" << endl;
+
+    string locADCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/adc_bad_channels";
+    if(eventLoop->GetCalib(locADCBadChannelsTable.c_str(), raw_adc_bad_channels))
+      jout << "Error loading " << locADCBadChannelsTable << " !" << endl;
+    string locTDCBadChannelsTable = tofGeom.Get_CCDB_DirectoryName() + "/tdc_bad_channels";
+    if(eventLoop->GetCalib(locTDCBadChannelsTable.c_str(), raw_tdc_bad_channels))
+      jout << "Error loading " << locTDCBadChannelsTable << " !" << endl;
     
     // check which walk correction to use:
     string locTOFWalkCorrectionType = tofGeom.Get_CCDB_DirectoryName() + "/walkcorr_type";
@@ -322,6 +331,8 @@ jerror_t DTOFHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
     FillCalibTable(adc_gains, raw_adc_gains, tofGeom);
     FillCalibTable(adc_time_offsets, raw_adc_offsets, tofGeom);
     FillCalibTable(tdc_time_offsets, raw_tdc_offsets, tofGeom);
+    FillCalibTable(adc_bad_channels, raw_adc_bad_channels, tofGeom);
+    FillCalibTable(tdc_bad_channels, raw_tdc_bad_channels, tofGeom);
     
     
     string locTOFADC2ETable = tofGeom.Get_CCDB_DirectoryName() + "/adc2E";
@@ -368,12 +379,20 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   
   const DTTabUtilities* locTTabUtilities = NULL;
   loop->GetSingle(locTTabUtilities);
-  
+
+  //
   // First, make hits out of all fADC250 hits
+  //
   vector<const DTOFDigiHit*> digihits;
   loop->Get(digihits);
   for(unsigned int i=0; i<digihits.size(); i++){
     const DTOFDigiHit *digihit = digihits[i];
+
+    //
+    // throw away hits from bad or noisy ADC channels
+    //
+    int adc_quality = GetConstant(adc_bad_channels,digihit);
+    if ( adc_quality > 0 ) continue;
     
     // Error checking for pre-Fall 2016 firmware
     if(digihit->datasource == 1) {
@@ -497,7 +516,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     hit->has_fADC=true;
     hit->has_TDC=false;
-    
+        
     /*
       cout << "TOF ADC hit =  (" << hit->plane << "," << hit->bar << "," << hit->end << ")  " 
       << t_scale << " " << T << "  "
@@ -508,7 +527,7 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     hit->AddAssociatedObject(digihit);
     
     _data.push_back(hit);
-  }
+  } // looping over all fADC hits done
   
   //Get the TDC hits
   vector<const DTOFTDCDigiHit*> tdcdigihits;
@@ -521,6 +540,12 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
   for(unsigned int i=0; i<tdcdigihits.size(); i++)
     {
       const DTOFTDCDigiHit *digihit = tdcdigihits[i];
+
+      int tdc_quality = GetConstant(tdc_bad_channels,digihit);
+      if (tdc_quality){
+	// do not bother with this hit!
+	continue;
+      }
       
       // Apply calibration constants here
       double T = locTTabUtilities->Convert_DigiTimeToNs_CAEN1290TDC(digihit);
@@ -534,9 +559,8 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	<< T << "  " << GetConstant(tdc_time_offsets, digihit) << endl;
       */
       
-      // Look for existing hits to see if there is a match
-      // or create new one if there is no match
       DTOFHit *hit = FindMatch(digihit->plane, digihit->bar, digihit->end, T);
+
       //DTOFHit *hit = FindMatch(digihit->plane, hit->bar, hit->end, T);
       if(!hit){
 	continue; // Do not use unmatched TDC hits
@@ -552,7 +576,8 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	_data.push_back(hit);
 	*/
-      } else if (hit->has_TDC) { // this tof ADC hit has already a matching TDC, make new tof ADC hit
+      } else if (hit->has_TDC) {
+	// found matching ADC hit but this ADC hit has already a matching TDC, make new tof ADC hit
 	DTOFHit *newhit = new DTOFHit;
 	newhit->plane = hit->plane;
 	newhit->bar = hit->bar;
@@ -568,9 +593,10 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	_data.push_back(newhit);
 	hit = newhit;
       }
+
       hit->has_TDC=true;
       hit->t_TDC=T;
-      
+
       if (hit->dE>0.){
 
 	// time walk correction
@@ -600,7 +626,9 @@ jerror_t DTOFHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	T -= tcorr;
       }
+      // save the walk corrected TDC time
       hit->t=T;
+      
       
       hit->AddAssociatedObject(digihit);
     }
@@ -627,7 +655,9 @@ DTOFHit* DTOFHit_factory::FindMatch(int plane, int bar, int end, double T)
   /// in ns. The default time window is 20ns. 
 
     DTOFHit* best_match = NULL;
-
+    double MatchWindow = (double )DELTA_T_ADC_TDC_MAX;
+ 
+    
     // Loop over existing hits (from fADC) and look for a match
     // in both the sector and the time.
 
@@ -641,7 +671,7 @@ DTOFHit* DTOFHit_factory::FindMatch(int plane, int bar, int end, double T)
 
         //double delta_T = fabs(hit->t - T);
         double delta_T = fabs(T - hit->t);
-        if(delta_T > DELTA_T_ADC_TDC_MAX) continue;
+        if(delta_T > MatchWindow) continue;
 
         // if there are multiple hits, pick the one that is closest in time
         if(best_match != NULL) {

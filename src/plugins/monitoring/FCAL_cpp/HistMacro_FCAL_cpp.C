@@ -54,7 +54,7 @@
 		locHist_FCALMissedTriggerHit->GetYaxis()->SetTitle("FCAL Row");
 		locHist_FCALMissedTriggerHit->SetStats(0);
 		locHist_FCALMissedTriggerHit->Draw("COLZ");
-		gPad->SetLogz();
+//	gPad->SetLogz();
 	}
 
 	locCanvas->cd(3);

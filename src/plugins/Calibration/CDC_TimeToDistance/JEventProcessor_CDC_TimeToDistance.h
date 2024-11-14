@@ -9,7 +9,10 @@
 #define _JEventProcessor_CDC_TimeToDistance_
 
 #include <JANA/JEventProcessor.h>
+#include "TProfile2D.h"
 #include "TProfile.h"
+#include "TH1F.h"
+#include "TH2F.h"
 #include "HDGEOMETRY/DMagneticFieldMap.h"
 
 class JEventProcessor_CDC_TimeToDistance:public jana::JEventProcessor{
@@ -26,10 +29,41 @@ class JEventProcessor_CDC_TimeToDistance:public jana::JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
         vector<vector<double> >max_sag;
         vector<vector<double> >sag_phi_offset;
-        TProfile *HistCurrentConstants;
+        
         const DMagneticFieldMap* dMagneticField;
         int UNBIASED_RING;
         double MIN_FOM;
+
+        TProfile *HistCurrentConstants;
+
+        TH1F *dHistZ2tracks0001;
+        TH1F *dHistZ2tracks001;
+        TH1F *dHistZ2tracks01;
+
+        TH2F *dHistResidualVslogFOM;
+        TH2F *dHistResidualVsFOM;
+        TH2F *dHistEarlyDriftTimesPerChannel;
+        TH2F *dHistResidualVsDriftTime;
+        TH2F *dHistResidualVsDriftTimeFOM09;
+        TH2F *dHistResidualVsDriftTimeFOM06;
+        TH2F *dHistResidualVsDriftTimeFOM01;
+        TH2F *dHistResidualVsDriftTimeFOM001;
+        TH2F *dHistResidualVsDriftTimeStraightStraws;
+
+        TH1F *dHistBz; 
+   
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDriftFOM09;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDriftFOM06;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDriftFOM01;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDriftFOM001;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift05;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift10;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift15;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift20;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDrift25;
+        TProfile2D *dHistPredictedDistanceVsDeltaVsDriftBz18;
+
 };
 
 #endif // _JEventProcessor_CDC_TimeToDistance_

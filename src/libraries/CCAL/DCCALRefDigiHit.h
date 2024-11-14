@@ -14,7 +14,7 @@
 class DCCALRefDigiHit:public jana::JObject{
 	public:
 		JOBJECT_PUBLIC(DCCALRefDigiHit);
-
+		
 		int id;    /// Reference counter number
 		
 		uint32_t pulse_integral; ///< identified pulse integral as returned by FPGA algorithm

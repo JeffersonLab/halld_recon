@@ -97,15 +97,15 @@ jerror_t DTAGHHit_factory_Calib::brun(jana::JEventLoop *eventLoop, int32_t runnu
     else
         jerr << "Unable to get TAGH_TDC_BASE_TIME_OFFSET from /PHOTON_BEAM/hodoscope/base_time_offset !" << endl;
 
-    if (load_ccdb_constants("fadc_gains", "gain", fadc_gains) &&
-        load_ccdb_constants("fadc_pedestals", "pedestal", fadc_pedestals) &&
-        load_ccdb_constants("fadc_time_offsets", "offset", fadc_time_offsets) &&
-        load_ccdb_constants("tdc_time_offsets", "offset", tdc_time_offsets) &&
-        load_ccdb_constants("counter_quality", "code", counter_quality) &&
-        load_ccdb_constants("tdc_timewalk", "c0", tdc_twalk_c0) &&
-        load_ccdb_constants("tdc_timewalk", "c1", tdc_twalk_c1) &&
-        load_ccdb_constants("tdc_timewalk", "c2", tdc_twalk_c2) &&
-        load_ccdb_constants("tdc_timewalk", "c3", tdc_twalk_c3))
+    if (load_ccdb_constants(eventLoop, "fadc_gains", "gain", fadc_gains) &&
+        load_ccdb_constants(eventLoop, "fadc_pedestals", "pedestal", fadc_pedestals) &&
+        load_ccdb_constants(eventLoop, "fadc_time_offsets", "offset", fadc_time_offsets) &&
+        load_ccdb_constants(eventLoop, "tdc_time_offsets", "offset", tdc_time_offsets) &&
+        load_ccdb_constants(eventLoop, "counter_quality", "code", counter_quality) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c0", tdc_twalk_c0) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c1", tdc_twalk_c1) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c2", tdc_twalk_c2) &&
+        load_ccdb_constants(eventLoop, "tdc_timewalk", "c3", tdc_twalk_c3))
     {
         return NOERROR;
     }
@@ -211,6 +211,11 @@ jerror_t DTAGHHit_factory_Calib::evnt(JEventLoop *loop, uint64_t eventnumber)
     for (unsigned int i=0; i < tdcdigihits.size(); i++) {
         const DTAGHTDCDigiHit *digihit = tdcdigihits[i];
 
+        // throw away hits from bad or noisy counters
+        int quality = counter_quality[digihit->counter_id];
+        if (quality == k_counter_dead || quality == k_counter_bad || quality == k_counter_noisy)
+            continue;
+
         // Apply calibration constants here
         int counter = digihit->counter_id;
         double T = locTTabUtilities->Convert_DigiTimeToNs_F1TDC(digihit) - tdc_time_offsets[counter] + t_tdc_base;
@@ -273,7 +278,7 @@ jerror_t DTAGHHit_factory_Calib::fini(void)
 //---------------------
 // load_ccdb_constants
 //---------------------
-bool DTAGHHit_factory_Calib::load_ccdb_constants(
+bool DTAGHHit_factory_Calib::load_ccdb_constants( jana::JEventLoop *eventLoop, 
     std::string table_name,
     std::string column_name,
     double result[TAGH_MAX_COUNTER+1])

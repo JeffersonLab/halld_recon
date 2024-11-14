@@ -33,7 +33,7 @@ class JEventProcessor_FCAL_cpp:public jana::JEventProcessor{
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
 
 
-  double fcal_nhit[NROW][NCOL], fcal_nclust[NROW][NCOL], fcal_nhitonly[NROW][NCOL], nfcaltriggers, ntoftriggers;
+  double fcal_nhit[NROW][NCOL], fcal_nclust[NROW][NCOL], fcal_nhitonly[NROW][NCOL][2], nfcaltriggers, ntoftriggers;
 
   const DFCALGeometry *fcalGeom;
 

@@ -37,6 +37,8 @@
                              E1E9="float" E9E25="float"/>
        <fcalShowerNBlocks minOccurs="0" numBlocks="int"/>
     </fcalShower>
+    <fcalHit maxOccurs="unbounded" minOccurs="0" jtag="string" row="int" column="int"
+	      x="float" y="float" E="float" Eunit="GeV" t="float" tunit="ns" intOverPeak="float"/>
     <bcalShower minOccurs="0" maxOccurs="unbounded" jtag="string"
                 x="float" y="float" z="float" t="float" E="float"
                 xerr="float" yerr="float" zerr="float" terr="float" Eerr="float"

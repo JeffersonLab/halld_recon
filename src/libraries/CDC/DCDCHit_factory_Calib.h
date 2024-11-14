@@ -8,19 +8,21 @@
 #ifndef _DCDCHit_factory_Calib_
 #define _DCDCHit_factory_Calib_
 
+#include <iostream>
+#include <iomanip>
 #include <vector>
-using namespace std;
-
 #include <JANA/JFactory.h>
 #include <HDGEOMETRY/DGeometry.h>
 #include <TTAB/DTranslationTable.h>
 #include <DAQ/Df125PulseIntegral.h>
 #include <DAQ/Df125Config.h>
 #include <DAQ/Df125CDCPulse.h>
+#include <CDC/DCDCDigiHit.h>
+#include <CDC/DCDCWire.h>
+#include "CDC/DCDCHit.h"
 
-#include "DCDCHit.h"
-#include "DCDCDigiHit.h"
-#include "DCDCWire.h"
+using namespace std;
+using namespace jana;
 
 // store constants indexed by ring/straw number
 typedef  vector< vector<double> >  cdc_digi_constants_t;
@@ -31,6 +33,12 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   ~DCDCHit_factory_Calib(){};
   const char* Tag(void){return "Calib";}
 
+  int CDC_HIT_THRESHOLD;
+
+  unsigned int ECHO_OPT; // 0: switch afterpulse clean-up off; 1: clean-up is on (default)
+  unsigned int ECHO_MAX_T;  // if ECHO_OPT=1, search for afterpulses up to ECHO_MAX_T samples after the main pulse
+  unsigned int ECHO_MAX_A; // if ECHO_OPT=1, suppress possible afterpulses with amplitude <= ECHO_MAX_A (adc range 0-4095)
+  
   // overall scale factors.
   double a_scale, amp_a_scale;
   double t_scale;
@@ -62,6 +70,8 @@ class DCDCHit_factory_Calib:public jana::JFactory<DCDCHit>{
   void FillCalibTable(vector< vector<double> > &table, vector<double> &raw_table, 
 		      vector<unsigned int> &Nstraws);
   
+  void FindRogueHits(jana::JEventLoop *eventLoop, vector<unsigned int> &RogueHits);
+
   // Geometry information
   unsigned int maxChannels;
   unsigned int Nrings; // number of rings (layers)

@@ -1712,7 +1712,7 @@ void hdv_mainframe::DrawDetectorsXY(void)
 
 		fcalblocks.clear();
 		if(GetCheckButton("fcal")){
-		  for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){
+		  for(int chan=0; chan<fcalgeom->numChannels(); chan++){
 		    if (fcalgeom->isBlockActive(chan)==false) continue;
 		    DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
@@ -2092,7 +2092,7 @@ void hdv_mainframe::DrawDetectorsRPhi(void)
 		  shift[7].Set(+blocksize/2, -blocksize/2);  // define a single enclosed space	  
 		}
 		fcalblocks.clear();
-		for(unsigned int chan=0; chan<fcalgeom->numChannels(); chan++){ 
+		for(int chan=0; chan<fcalgeom->numChannels(); chan++){ 
 		  if (fcalgeom->isBlockActive(chan)==false) continue;
 		  DVector2 fcalBlockPos=fcalgeom->positionOnFace(chan);
 
@@ -2685,4 +2685,47 @@ void hdv_mainframe::RedrawAuxillaryWindows(void)
 	if( trkmf ) trkmf->DoNewEvent();
 	if( fmwpcmf ) fmwpcmf->DoNewEvent();
 	
+}
+
+// Set the color of a hit FCAL/ECAL/CCAL block according to energy.
+// The aim is to have a log scale in energy (see BCAL)
+void hdv_mainframe::SetCalorimeterEnergyColor(TPolyLine *poly,double E) const{
+  E *= 1000;      // Change Energy to MeV
+  double logE = log10(E);      
+  
+  float r,g,b;
+  if (logE<0){
+    r = 1.;
+    g = 1.;
+    b = 1.;
+  } else {
+    if (logE<1){
+      r = 1.;
+      g = 1.;
+      b = 1.-logE;
+    } else {
+      if (logE<2){
+	r = 1.;
+	g = 1.-(logE-1);
+	b = 0.;
+      } else {
+	if (logE<3){
+	  r = 1.;
+	  g = 0.;
+	  b = 1.-(logE-2);
+	} else {
+	  if (logE<4){
+	    r = 1.-(logE-3);
+	    g = 0.;
+	    b = 1.;
+	  } else {
+	    r = 0;
+	    g = 0;
+	    b = 0;
+	  }
+	}
+      }
+    }
+  }
+  poly->SetFillColor(TColor::GetColor(r,g,b));
 }

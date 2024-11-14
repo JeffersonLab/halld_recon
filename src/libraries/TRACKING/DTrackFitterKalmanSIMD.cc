@@ -330,8 +330,16 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
       +0.5*cdc_endplate_dim[2];
         
    // Outer detector geometry parameters
-   geom->GetFCALZ(dFCALz);
+   geom->GetFCALPosition(dFCALx,dFCALy,dFCALz);
    dFCALzBack=dFCALz+45.;
+   // The following initializes ECAL position variables to large values so that
+   // we don't make extroplations to the FCAL insert face if it is not present
+   dECALz=dECALzBack=1000.;
+   dECALsize=0.;
+   if (geom->GetECALZ(dECALz)){
+     dECALzBack=dECALz+20.;
+     dECALsize=geom->GetFCALInsertSize();
+   }
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
    geom->GetFMWPCZ_vec(dFMWPCz_vec);
    geom->GetFMWPCSize(dFMWPCsize);
@@ -8696,11 +8704,11 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
   const double z_outer_max=1000.;
   const double x_max=130.;
   const double y_max=130.;
-  const double fcal_radius_sq=120.47*120.47;
   bool hit_tof=false; 
   bool hit_dirc=false;
   bool hit_fcal=false;
   bool got_fmwpc=(dFMWPCz_vec.size()>0)?true:false;
+  bool got_ecal=(dECALz<1000.)?true:false;
   unsigned int fmwpc_index=0;
   unsigned int trd_index=0;
   while (z>Z_MIN && z<z_outer_max && fabs(S(state_x))<x_max 
@@ -8785,6 +8793,10 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
       newz=dFCALz+EPS;
       ds=(newz-z)/dz_ds;
     }
+    if (got_ecal==true && newz>dECALz){
+      newz=dECALz+EPS;
+      ds=(newz-z)/dz_ds;
+    }
     if (fmwpc_index<dFMWPCz_vec.size()&&newz>dFMWPCz_vec[fmwpc_index]){
       newz=dFMWPCz_vec[fmwpc_index]+EPS;
       ds=(newz-z)/dz_ds;
@@ -8819,58 +8831,31 @@ jerror_t DTrackFitterKalmanSIMD::ExtrapolateToOuterDetectors(const DMatrix5x1 &S
     }
     if (hit_fcal==false && newz>dFCALz){
       double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
-      if (r2>fcal_radius_sq) return NOERROR;
+      if (r2>dFCALradiusSq) return NOERROR;
 
       hit_fcal=true;
-      AddExtrapolation(SYS_FCAL,z,S,t,s);
-
-      // Propagate the track to the back of the FCAL block
-      int num=int(45./dz);
-      int m=0;
-      for (;m<num;m++){	
-	// propagate t and s to back of FCAL block
-	double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
-	double one_over_beta2=1.+mass2*q_over_p_sq;
-	if (one_over_beta2>BIG) one_over_beta2=BIG;
-	ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
-	t+=ds*sqrt(one_over_beta2); // in units where c=1
-	s+=ds;
-
-	newz=z+dz;
-	// Step through field
-	Step(z,newz,dEdx,S);
-	z=newz;
-	
-	r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
-	if (r2>fcal_radius_sq){
-	  // Break out of the loop if the track exits out of the FCAL before 
-	  // reaching the back end of the block
-	  break;
-	}
+      // We've reached the front face of the FCAL. Now we need to determine if
+      // we need to follow the track further in z to match to the ECAL instead
+      // if the insert is present.
+      if (got_ecal==false
+	  || (got_ecal==true && (fabs(S(state_x)-dFCALx)>dECALsize
+				 || fabs(S(state_y)-dFCALy)>dECALsize))){
+	PropagateThroughFCAL(SYS_FCAL,dEdx,dz,z,S,t,s);
       }
-      if (m==num){
-	newz=dFCALzBack;
-
-	// Propagate t and s to back of FCAL block
-	double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
-	double one_over_beta2=1.+mass2*q_over_p_sq;
-	if (one_over_beta2>BIG) one_over_beta2=BIG;
-	dz=newz-z;
-	ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
-	t+=ds*sqrt(one_over_beta2); // in units where c=1
-	s+=ds;
-
-	// Step through field
-	Step(z,newz,dEdx,S); 
-	z=newz;
-      }
-      // add another extrapolation point at downstream end of FCAL
-      AddExtrapolation(SYS_FCAL,z,S,t,s);   
-      // .. and exit if the muon detector is not installed
-      if (got_fmwpc==false) return NOERROR;
+      // exit if the muon detector or ECAL is not installed
+      if (got_ecal==false && got_fmwpc==false) return NOERROR;
     }
+    if (got_ecal==true && newz>dECALz){
+      if (fabs(S(state_x)-dFCALx)>dECALsize
+	  || fabs(S(state_y)-dFCALy)>dECALsize) return NOERROR;
+      PropagateThroughFCAL(SYS_ECAL,dEdx,dz,z,S,t,s);
+
+      // .. and exit
+      return NOERROR;
+    }
+
     // Deal with muon detector
-    if (hit_fcal==true 
+    if (hit_fcal==true && got_ecal==false
 	&& (fabs(S(state_x))>dFMWPCsize || (fabs(S(state_y))>dFMWPCsize))){  
       return NOERROR;
     }
@@ -10249,4 +10234,64 @@ void DTrackFitterKalmanSIMD::AddExtrapolation(DetectorSystem_t detector,
 	 << momentum.x() <<","<<momentum.y()<<","<<momentum.z()<<")" 
 	 << endl;
   }
+}
+
+// Propagate the track in the forward direction through the FCAL
+void DTrackFitterKalmanSIMD::PropagateThroughFCAL(const DetectorSystem_t detector,const double dEdx,const double dz,double &z,DMatrix5x1 &S,double &t,double &s){
+  AddExtrapolation(SYS_FCAL,z,S,t,s);
+
+  // Propagate the track to the back of the FCAL/ECAL block
+  double length=(detector==SYS_FCAL)?45.:20.;
+  int num=int(length/dz);
+  int m=0;
+  for (;m<num;m++){
+    // propagate t and s to back of FCAL/ECAL block
+    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+    double one_over_beta2=1.+mass2*q_over_p_sq;
+    if (one_over_beta2>BIG) break;
+    double ds=dz*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
+    t+=ds*sqrt(one_over_beta2); // in units where c=1
+    s+=ds;
+
+    double newz=z+dz;
+    // Step through field
+    Step(z,newz,dEdx,S);
+    z=newz;
+
+    if (detector==SYS_FCAL){
+      double r2=S(state_x)*S(state_x)+S(state_y)*S(state_y);
+      if (r2>dFCALradiusSq){
+	// Break out of the loop if the track exits out of the FCAL before
+	// reaching the back end of the block
+	break;
+      }
+      // Break out of the loop if the track would go into the insert region
+      // if ECAL is present
+      if (fabs(S(state_x)-dFCALx)<dECALsize
+	  && fabs(S(state_y)-dFCALy)<dECALsize) break;
+    }
+    else {
+      // Check for outer dimensions of the insert
+      if (fabs(S(state_x)-dFCALx)>dECALsize
+	  || fabs(S(state_y)-dFCALy)>dECALsize) break;
+    }
+  }
+  if (m==num){
+    double newz=(detector==SYS_FCAL)?dFCALzBack:dECALzBack;
+
+    // Propagate t and s to back of FCAL/ECAL block
+    double q_over_p_sq=S(state_q_over_p)*S(state_q_over_p);
+    double one_over_beta2=1.+mass2*q_over_p_sq;
+    if (one_over_beta2<BIG){
+      double ds=(newz-z)*sqrt(1.+S(state_tx)*S(state_tx)+S(state_ty)*S(state_ty));
+      t+=ds*sqrt(one_over_beta2); // in units where c=1
+      s+=ds;
+
+      // Step through field
+      Step(z,newz,dEdx,S);
+      z=newz;
+    }
+  }
+  // add another extrapolation point at downstream end of FCAL/ECAL
+  AddExtrapolation(SYS_FCAL,z,S,t,s);
 }

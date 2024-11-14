@@ -18,23 +18,23 @@ using namespace std;
 DCCALGeometry::DCCALGeometry() : 
   m_numActiveBlocks( 0 ){
   
-        for( int row = 0; row < kCCALBlocksTall; row++ ){
-	  for( int col = 0; col < kCCALBlocksWide; col++ ){
-      
-	    // transform to beam axis
-	    m_positionOnFace[row][col] = 
-	      DVector2(  ( (double)col - kCCALMidBlock  + 0.5 ) * blockSize(),
-			 ( (double)row - kCCALMidBlock + 0.5 ) * blockSize() );
-	    
-	    m_activeBlock[row][col] = true;
-      
-	    // build the "channel map"
-	    m_channelNumber[row][col]    =  m_numActiveBlocks;
-	    m_row[m_numActiveBlocks]     =  row;
-	    m_column[m_numActiveBlocks]  =  col;
-	    
-	    m_numActiveBlocks++;
-	  }
+	for( int row = 0; row < kCCALBlocksTall; row++ ){
+		for( int col = 0; col < kCCALBlocksWide; col++ ){
+			
+			// transform to beam axis
+			m_positionOnFace[row][col] = 
+			DVector2(  ( (double)col - kCCALMidBlock  + 0.5 ) * blockSize(),
+				( (double)row - kCCALMidBlock + 0.5 ) * blockSize() );
+			
+			m_activeBlock[row][col] = true;
+			
+			// build the "channel map"
+			m_channelNumber[row][col]    =  m_numActiveBlocks;
+			m_row[m_numActiveBlocks]     =  row;
+			m_column[m_numActiveBlocks]  =  col;
+			
+			m_numActiveBlocks++;
+		}
 	}
 }
 
@@ -49,7 +49,7 @@ DCCALGeometry::isBlockActive( int row, int column ) const
 	// 12/13/05  DL
 	if( row < 0 ||  row >= kCCALBlocksTall )return false;
 	if( column < 0 ||  column >= kCCALBlocksWide )return false;
-
+	
 	assert(    row >= 0 &&    row < kCCALBlocksTall );
 	assert( column >= 0 && column < kCCALBlocksWide );
 	

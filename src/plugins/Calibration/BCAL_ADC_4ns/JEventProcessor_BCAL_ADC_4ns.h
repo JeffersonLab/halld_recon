@@ -10,11 +10,18 @@
 
 #include <JANA/JEventProcessor.h>
 
+#include <TH2F.h>
+
 class JEventProcessor_BCAL_ADC_4ns:public jana::JEventProcessor{
 	public:
 		JEventProcessor_BCAL_ADC_4ns();
 		~JEventProcessor_BCAL_ADC_4ns();
 		const char* className(void){return "JEventProcessor_BCAL_ADC_4ns";}
+
+		static const int nummodule=48;
+		static const int numlayer=4;
+		static const int numsector=4;
+
 
 	private:
 		jerror_t init(void);						///< Called once at program start.
@@ -22,6 +29,9 @@ class JEventProcessor_BCAL_ADC_4ns:public jana::JEventProcessor{
 		jerror_t evnt(jana::JEventLoop *eventLoop, uint64_t eventnumber);	///< Called every event.
 		jerror_t erun(void);						///< Called everytime run number changes, provided brun has been called.
 		jerror_t fini(void);						///< Called after last event of last event source has been processed.
+
+		TH2F *hZvsDeltat[JEventProcessor_BCAL_ADC_4ns::nummodule][JEventProcessor_BCAL_ADC_4ns::numlayer][JEventProcessor_BCAL_ADC_4ns::numsector];
+
 };
 
 #endif // _JEventProcessor_BCAL_ADC_4ns_

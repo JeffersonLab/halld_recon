@@ -1,0 +1,77 @@
+# Helicity setup file. For some information on Helicity see: https://wiki.jlab.org/ciswiki/images/4/4c/Helicity_RSI_draft1.pdf.
+
+# Only lines starting with # (comment) or Keyword are allowed.
+# This mimics a calibration database, which would be better.
+# All lines are of the form: 
+# Parameter     RunMin  RunMax  Value         # Don't have gaps in the run ranges. 
+
+# Reporting delay. Allowed values are:
+
+# 0 = No delay 
+# 1 = 1 window 
+# 2 = 2 windows 
+# 3 = 4 windows
+# 4 = 8 windows 
+# 5 = 12 windows 
+# 6 = 16 windows 
+# 7 = 24 windows
+# 8 = 32 windows 
+# 9 = 40 windows 
+# 10 = 48 windows 
+# 11 = 64 windows
+# 12 = 72 windows 
+# 13 = 96 windows 
+# 14 = 112 windows 
+# 15 = 128 windows
+
+HEL_DELAYd        120282 999999  4               # = 8 Windows
+#
+# Helicity pattern. Values are:
+# 0 = Pair
+# 1 = Quartet
+# 2 = Octet
+# 3 = Toggle
+# 4 = Hexo-Quad
+# 5 = Octo-Quad
+HEL_PATTERNd      120282 999999  1               # = Quartet
+#
+#
+HEL_USE_T_SETTLE  120282 999999  0               # normally 1, but set to zero 0 if the signal was messed up or missing.
+#
+#
+# Half wave plate parameters 
+# 
+HEL_HWP_PV        120282 999999  IGL1I00OD16_16  # or maybe IGL1I00DI24_24M if it gets fixed
+HEL_HWP_USE_EPICS 120282 999999  1               # set to 0 to use DB / File table only. 1 to override with EPICS from live, or DB 
+
+#Table of states from the archiver 0=out 1=in -1=unknown
+#                 RunMin RunMax Value
+
+HEL_HWP_STATE     120282 120442  0
+HEL_HWP_STATE     120283 120445 -1
+HEL_HWP_STATE     120446 120516  1   
+HEL_HWP_STATE     120517 120518 -1
+HEL_HWP_STATE     120518 120596  0   
+HEL_HWP_STATE     120597 120597 -1   
+HEL_HWP_STATE     120598 120651  1   
+HEL_HWP_STATE     120652 120652 -1 
+HEL_HWP_STATE     120653 120668  0   
+HEL_HWP_STATE     120669 120669 -1 
+HEL_HWP_STATE     120670 120731  1   
+HEL_HWP_STATE     120732 120765  0   
+HEL_HWP_STATE     120766 120766 -1 
+HEL_HWP_STATE     120767 120842  1   
+HEL_HWP_STATE     120843 120843 -1
+HEL_HWP_STATE     120844 120852  0   
+HEL_HWP_STATE     120853 120853 -1 
+HEL_HWP_STATE     120854 120855  1   
+HEL_HWP_STATE     120956 120959 -1  
+HEL_HWP_STATE     120980 121088  0   
+HEL_HWP_STATE     121089 121089 -1
+HEL_HWP_STATE     121090 121164  1   
+HEL_HWP_STATE     121165 121165 -1 
+HEL_HWP_STATE     121166 121193  0   
+HEL_HWP_STATE     121194 121194 -1
+HEL_HWP_STATE     121195 121277  1   
+
+

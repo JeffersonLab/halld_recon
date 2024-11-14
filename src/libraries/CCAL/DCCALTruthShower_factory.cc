@@ -34,7 +34,7 @@ jerror_t DCCALTruthShower_factory::brun(jana::JEventLoop *eventLoop, int32_t run
 //------------------
 jerror_t DCCALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 {
-
+	
 	// Code to generate factory data goes here. Add it like:
 	//
 	// DCCALTruthShower *myDCCALTruthShower = new DCCALTruthShower;
@@ -45,7 +45,7 @@ jerror_t DCCALTruthShower_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	//
 	// Note that the objects you create here will be deleted later
 	// by the system and the _data vector will be cleared automatically.
-
+	
 	return NOERROR;
 }
 

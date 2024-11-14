@@ -18,25 +18,25 @@ class DCCALTruthShower:public jana::JObject{
 		DCCALTruthShower(){}
 		
 		DCCALTruthShower( oid_t id,
-				  float x, float y, float z,
-				  float px, float py, float pz,
-				  float E, float t,
-				  bool primary, int track, int type,
-				  int itrack=0) :
-		  JObject( id ),
-		  m_x( x ),
-		  m_y( y ),
-		  m_z( z ),
-		  m_px( px ),
-		  m_py( py ),
-		  m_pz( pz ),
-		  m_E( E ),
-		  m_t( t ),
-		  m_primary(primary),
-		  m_track(track),
-		  m_type(type),
-		  m_itrack(itrack){}
-	
+				float x, float y, float z,
+				float px, float py, float pz,
+				float E, float t,
+				bool primary, int track, int type,
+				int itrack=0) :
+			JObject( id ),
+			m_x( x ),
+			m_y( y ),
+			m_z( z ),
+			m_px( px ),
+			m_py( py ),
+			m_pz( pz ),
+			m_E( E ),
+			m_t( t ),
+			m_primary(primary),
+			m_track(track),
+			m_type(type),
+			m_itrack(itrack){}
+		
 		float x() const { return m_x; }
 		float y() const { return m_y; }
 		float z() const { return m_z; }
@@ -49,7 +49,7 @@ class DCCALTruthShower:public jana::JObject{
 		int track() const { return m_track; }
 		int type() const { return m_type; }
 		int itrack() const { return m_itrack; }
-
+		
 		void toStrings(vector<pair<string,string> > &items)const{
 			AddString(items, "x(cm)", "%3.1f", x());
 			AddString(items, "y(cm)", "%3.1f", y());
@@ -64,7 +64,7 @@ class DCCALTruthShower:public jana::JObject{
 			AddString(items, "type", "%d", type());
 			AddString(items, "itrack", "%d", itrack());
 		}
-
+		
 	private:
 		
 		float m_x;
