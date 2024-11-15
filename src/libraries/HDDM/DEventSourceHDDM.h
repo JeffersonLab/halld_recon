@@ -95,7 +95,7 @@ class DEventSourceHDDM:public JEventSource
       void FinishEvent(JEvent &event) override;
       bool GetObjects(const std::shared_ptr<const JEvent> &event, JFactory *factory) override;
       
-      jerror_t Extract_DMCTrackHit(hddm_s::HDDM *record, JFactoryT<DMCTrackHit> *factory, string tag);
+      bool Extract_DMCTrackHit(hddm_s::HDDM *record, JFactoryT<DMCTrackHit> *factory, string tag);
       jerror_t GetCDCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetFDCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetBCALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
@@ -106,64 +106,64 @@ class DEventSourceHDDM:public JEventSource
       jerror_t GetCCALTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
       jerror_t GetSCTruthHits(hddm_s::HDDM *record, vector<DMCTrackHit*>& data);
 
-	   jerror_t Extract_DRFTime(hddm_s::HDDM *record, JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEvent);
-      jerror_t Extract_DBCALTruthShower(hddm_s::HDDM *record, JFactoryT<DBCALTruthShower> *factory, string tag);
-      jerror_t Extract_DBCALTruthCell(hddm_s::HDDM *record, JFactoryT<DBCALTruthCell> *factory, string tag);
-      jerror_t Extract_DBCALSiPMHit(hddm_s::HDDM *record, JFactoryT<DBCALSiPMHit> *factory, string tag);
-      jerror_t Extract_DBCALSiPMSpectrum(hddm_s::HDDM *record, JFactoryT<DBCALSiPMSpectrum>* factory, string tag);
-      jerror_t Extract_DBCALDigiHit(hddm_s::HDDM *record, JFactoryT<DBCALDigiHit> *factory, string tag);
-      jerror_t Extract_DBCALIncidentParticle(hddm_s::HDDM *record, JFactoryT<DBCALIncidentParticle> *factory, string tag);
-      jerror_t Extract_DBCALTDCDigiHit(hddm_s::HDDM *record, JFactoryT<DBCALTDCDigiHit> *factory, string tag);
-      jerror_t Extract_DMCReaction(hddm_s::HDDM *record, JFactoryT<DMCReaction> *factory, string tag, const std::shared_ptr<const JEvent>& loop);
-      jerror_t Extract_DMCThrown(hddm_s::HDDM *record, JFactoryT<DMCThrown> *factory, string tag);
-      jerror_t Extract_DCDCHit(const std::shared_ptr<const JEvent>& locEvent, hddm_s::HDDM *record, JFactoryT<DCDCHit> *factory, string tag);
-      jerror_t Extract_DFDCHit(hddm_s::HDDM *record, JFactoryT<DFDCHit> *factory, string tag);
-      jerror_t Extract_DFCALTruthShower(hddm_s::HDDM *record, JFactoryT<DFCALTruthShower> *factory, string tag);
-      jerror_t Extract_DECALHit(hddm_s::HDDM *record, JFactoryT<DECALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
-      jerror_t Extract_DECALTruthShower(hddm_s::HDDM *record, JFactoryT<DECALTruthShower> *factory, string tag);
-      jerror_t Extract_DCCALHit(hddm_s::HDDM *record, JFactoryT<DCCALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
-      jerror_t Extract_DCCALTruthShower(hddm_s::HDDM *record, JFactoryT<DCCALTruthShower> *factory, string tag);
-      jerror_t Extract_DFCALHit(hddm_s::HDDM *record, JFactoryT<DFCALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
-      jerror_t Extract_DMCTrajectoryPoint(hddm_s::HDDM *record, JFactoryT<DMCTrajectoryPoint> *factory, string tag);
-      jerror_t Extract_DTOFTruth(hddm_s::HDDM *record,  JFactoryT<DTOFTruth> *factory, string tag);
+	   bool Extract_DRFTime(hddm_s::HDDM *record, JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEvent);
+      bool Extract_DBCALTruthShower(hddm_s::HDDM *record, JFactoryT<DBCALTruthShower> *factory, string tag);
+      bool Extract_DBCALTruthCell(hddm_s::HDDM *record, JFactoryT<DBCALTruthCell> *factory, string tag);
+      bool Extract_DBCALSiPMHit(hddm_s::HDDM *record, JFactoryT<DBCALSiPMHit> *factory, string tag);
+      bool Extract_DBCALSiPMSpectrum(hddm_s::HDDM *record, JFactoryT<DBCALSiPMSpectrum>* factory, string tag);
+      bool Extract_DBCALDigiHit(hddm_s::HDDM *record, JFactoryT<DBCALDigiHit> *factory, string tag);
+      bool Extract_DBCALIncidentParticle(hddm_s::HDDM *record, JFactoryT<DBCALIncidentParticle> *factory, string tag);
+      bool Extract_DBCALTDCDigiHit(hddm_s::HDDM *record, JFactoryT<DBCALTDCDigiHit> *factory, string tag);
+      bool Extract_DMCReaction(hddm_s::HDDM *record, JFactoryT<DMCReaction> *factory, string tag, const std::shared_ptr<const JEvent>& loop);
+      bool Extract_DMCThrown(hddm_s::HDDM *record, JFactoryT<DMCThrown> *factory, string tag);
+      bool Extract_DCDCHit(const std::shared_ptr<const JEvent>& locEvent, hddm_s::HDDM *record, JFactoryT<DCDCHit> *factory, string tag);
+      bool Extract_DFDCHit(hddm_s::HDDM *record, JFactoryT<DFDCHit> *factory, string tag);
+      bool Extract_DFCALTruthShower(hddm_s::HDDM *record, JFactoryT<DFCALTruthShower> *factory, string tag);
+      bool Extract_DECALHit(hddm_s::HDDM *record, JFactoryT<DECALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
+      bool Extract_DECALTruthShower(hddm_s::HDDM *record, JFactoryT<DECALTruthShower> *factory, string tag);
+      bool Extract_DCCALHit(hddm_s::HDDM *record, JFactoryT<DCCALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
+      bool Extract_DCCALTruthShower(hddm_s::HDDM *record, JFactoryT<DCCALTruthShower> *factory, string tag);
+      bool Extract_DFCALHit(hddm_s::HDDM *record, JFactoryT<DFCALHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
+      bool Extract_DMCTrajectoryPoint(hddm_s::HDDM *record, JFactoryT<DMCTrajectoryPoint> *factory, string tag);
+      bool Extract_DTOFTruth(hddm_s::HDDM *record,  JFactoryT<DTOFTruth> *factory, string tag);
 
-      jerror_t Extract_DTOFHit( hddm_s::HDDM *record,  JFactoryT<DTOFHit>* factory, JFactoryT<DTOFHitMC>* factoryMC, string tag);
-      jerror_t Extract_DTOFHitMC( hddm_s::HDDM *record,  JFactoryT<DTOFHitMC>* factoryMC, JFactoryT<DTOFHit>* factory, string tag);
+      bool Extract_DTOFHit( hddm_s::HDDM *record,  JFactoryT<DTOFHit>* factory, JFactoryT<DTOFHitMC>* factoryMC, string tag);
+      bool Extract_DTOFHitMC( hddm_s::HDDM *record,  JFactoryT<DTOFHitMC>* factoryMC, JFactoryT<DTOFHit>* factory, string tag);
 
-      jerror_t Extract_DSCHit(hddm_s::HDDM *record,  JFactoryT<DSCHit> *factory, string tag);
-      jerror_t Extract_DSCTruthHit(hddm_s::HDDM *record,  JFactoryT<DSCTruthHit> *factory, string tag);
+      bool Extract_DSCHit(hddm_s::HDDM *record,  JFactoryT<DSCHit> *factory, string tag);
+      bool Extract_DSCTruthHit(hddm_s::HDDM *record,  JFactoryT<DSCTruthHit> *factory, string tag);
 
-      jerror_t Extract_DTrackTimeBased(hddm_s::HDDM *record,  JFactoryT<DTrackTimeBased> *factory, string tag, int32_t runnumber, const std::shared_ptr<const JEvent>& locEvent);
+      bool Extract_DTrackTimeBased(hddm_s::HDDM *record,  JFactoryT<DTrackTimeBased> *factory, string tag, int32_t runnumber, const std::shared_ptr<const JEvent>& locEvent);
       string StringToTMatrixFSym(string &str_vals, TMatrixFSym* mat, int Nrows, int Ncols);
       
-      jerror_t Extract_DTAGMHit( hddm_s::HDDM *record,  JFactoryT<DTAGMHit>* factory, string tag);
-      jerror_t Extract_DTAGHHit( hddm_s::HDDM *record,  JFactoryT<DTAGHHit>* factory, string tag);
+      bool Extract_DTAGMHit( hddm_s::HDDM *record,  JFactoryT<DTAGMHit>* factory, string tag);
+      bool Extract_DTAGHHit( hddm_s::HDDM *record,  JFactoryT<DTAGHHit>* factory, string tag);
 
-      jerror_t Extract_DPSHit(hddm_s::HDDM *record,JFactoryT<DPSHit>* factory, 
+      bool Extract_DPSHit(hddm_s::HDDM *record,JFactoryT<DPSHit>* factory, 
 			      string tag);
-      jerror_t Extract_DPSCHit(hddm_s::HDDM *record,JFactoryT<DPSCHit>* factory, 
+      bool Extract_DPSCHit(hddm_s::HDDM *record,JFactoryT<DPSCHit>* factory, 
 			       string tag);
-      jerror_t Extract_DPSTruthHit(hddm_s::HDDM *record,JFactoryT<DPSTruthHit>* factory, 
+      bool Extract_DPSTruthHit(hddm_s::HDDM *record,JFactoryT<DPSTruthHit>* factory, 
 			      string tag);
-      jerror_t Extract_DPSCTruthHit(hddm_s::HDDM *record,JFactoryT<DPSCTruthHit>* factory, 
+      bool Extract_DPSCTruthHit(hddm_s::HDDM *record,JFactoryT<DPSCTruthHit>* factory, 
 			       string tag);
-      jerror_t Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactoryT<DFMWPCTruthHit> *factory, string tag);
-      jerror_t Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactoryT<DFMWPCHit> *factory, string tag);
-      jerror_t Extract_DFMWPCTruth(hddm_s::HDDM *record,  JFactoryT<DFMWPCTruth> *factory, string tag);
-      jerror_t Extract_DCTOFHit(hddm_s::HDDM *record,  JFactoryT<DCTOFHit> *factory, string tag);
-      jerror_t Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactoryT<DCTOFTruth> *factory, string tag);
+      bool Extract_DFMWPCTruthHit(hddm_s::HDDM *record,  JFactoryT<DFMWPCTruthHit> *factory, string tag);
+      bool Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactoryT<DFMWPCHit> *factory, string tag);
+      bool Extract_DFMWPCTruth(hddm_s::HDDM *record,  JFactoryT<DFMWPCTruth> *factory, string tag);
+      bool Extract_DCTOFHit(hddm_s::HDDM *record,  JFactoryT<DCTOFHit> *factory, string tag);
+      bool Extract_DCTOFTruth(hddm_s::HDDM *record,  JFactoryT<DCTOFTruth> *factory, string tag);
 
-      jerror_t Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
-      jerror_t Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);
+      bool Extract_DTPOLHit(hddm_s::HDDM *record, JFactoryT<DTPOLHit>* factory, string tag);
+      bool Extract_DTPOLTruthHit(hddm_s::HDDM *record, JFactoryT<DTPOLTruthHit>* factory, string tag);
       Particle_t IDTrack(float locCharge, float locMass) const;
 
       // add RICH hit and Truth, yqiang Oct 3, 2012
       // modifed by yqiang, Oct 10 2012 now include both truth hits in DMCThrown
       // Oct 8, 2013, added dedicated object for RICH truth hit
-      jerror_t Extract_DCereHit(hddm_s::HDDM *record, JFactoryT<DCereHit> *factory, string tag);
-      jerror_t Extract_DDIRCTruthBarHit(hddm_s::HDDM *record, JFactoryT<DDIRCTruthBarHit> *factory, string tag);
-      jerror_t Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record, JFactoryT<DDIRCTruthPmtHit> *factory, string tag);
-      jerror_t Extract_DDIRCPmtHit(hddm_s::HDDM *record, JFactoryT<DDIRCPmtHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
+      bool Extract_DCereHit(hddm_s::HDDM *record, JFactoryT<DCereHit> *factory, string tag);
+      bool Extract_DDIRCTruthBarHit(hddm_s::HDDM *record, JFactoryT<DDIRCTruthBarHit> *factory, string tag);
+      bool Extract_DDIRCTruthPmtHit(hddm_s::HDDM *record, JFactoryT<DDIRCTruthPmtHit> *factory, string tag);
+      bool Extract_DDIRCPmtHit(hddm_s::HDDM *record, JFactoryT<DDIRCPmtHit> *factory, string tag, const std::shared_ptr<const JEvent>& event);
 
       std::ifstream *ifs;
       hddm_s::istream *fin;

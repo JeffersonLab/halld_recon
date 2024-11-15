@@ -9,7 +9,9 @@
 class DEventWriterEVIO_factory : public JFactoryT<DEventWriterEVIO>
 {
 	public:
-		DEventWriterEVIO_factory() = default;
+		DEventWriterEVIO_factory() {
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
+		}
 		~DEventWriterEVIO_factory() override = default;
 
 	private:

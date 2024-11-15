@@ -25,6 +25,7 @@ class DMCThrown_factory_Decaying : public JFactoryT<DMCThrown>
 	public:
 		DMCThrown_factory_Decaying(){
 			SetTag("Decaying");
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
 		};
 		~DMCThrown_factory_Decaying(){};
 
