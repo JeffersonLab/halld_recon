@@ -9,7 +9,9 @@
 class DEventWriterREST_factory : public JFactoryT<DEventWriterREST>
 {
 	public:
-		DEventWriterREST_factory() = default;
+		DEventWriterREST_factory(){
+			SetRegenerateFlag(true);
+		};
 		~DEventWriterREST_factory() = default;
 
 	private:

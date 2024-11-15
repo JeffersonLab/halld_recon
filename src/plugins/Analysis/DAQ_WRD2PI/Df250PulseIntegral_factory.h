@@ -14,8 +14,8 @@
 
 class Df250PulseIntegral_factory:public JFactoryT<Df250PulseIntegral>{
 	public:
-                Df250PulseIntegral_factory(){
-		  use_factory=1;
+        Df250PulseIntegral_factory(){
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
 		  ped_samples=5;
 		};
 		~Df250PulseIntegral_factory(){};

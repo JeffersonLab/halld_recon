@@ -18,6 +18,7 @@ using namespace std;
 //---------------------------------
 DEventSourceEVIO::DEventSourceEVIO(const char* source_name):JEventSource(source_name)
 {
+	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
 	// Open the EVIO file, catching any exceptions
 	try {
 		chan = new evioFileChannel(source_name,"r", 65536);
@@ -121,7 +122,7 @@ void DEventSourceEVIO::FreeEvent(JEvent &event)
 //---------------------------------
 // GetObjects
 //---------------------------------
-jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory *factory)
+bool DEventSourceEVIO::GetObjects(JEvent &event, JFactory *factory)
 {
 	/// This gets called through the virtual method of the
 	/// JEventSource base class. It creates the objects of the type
@@ -144,13 +145,13 @@ jerror_t DEventSourceEVIO::GetObjects(JEvent &event, JFactory *factory)
 	if(dataClassName =="DTrackTimeBased")
 	  return Extract_DTrackTimeBased(evt, dynamic_cast<JFactoryT<DTrackTimeBased>*>(factory));	
 
-	return OBJECT_NOT_AVAILABLE;
+	return false; //OBJECT_NOT_AVAILABLE
 }
 
 //---------------------------------
 // Extract_DTrackTimeBased
 //---------------------------------
-jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory)
+bool DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory)
 {
 	// Note: Since this is a reconstructed factory, we want to generally return OBJECT_NOT_AVAILABLE
 	// rather than NOERROR. The reason being that the caller interprets "NOERROR" to mean "yes I
@@ -158,7 +159,7 @@ jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<
 	// skip any attempt at reconstruction. On the other hand, a value of "OBJECT_NOT_AVAILABLE" tells
 	// it "I cannot provide those type of objects for this event.
 
-  if(factory==NULL)return OBJECT_NOT_AVAILABLE;
+  if(factory==NULL)return false; //OBJECT_NOT_AVAILABLE;
 
 	vector<DTrackTimeBased*> data;
 	vector<DReferenceTrajectory*> rts;
@@ -270,6 +271,6 @@ jerror_t DEventSourceEVIO::Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<
 
 	// If we get to here then there was not even a placeholder in the HDDM file.
 	// Return OBJECT_NOT_AVAILABLE to indicate reconstruction should be tried.
-	return OBJECT_NOT_AVAILABLE;
+	return false; //OBJECT_NOT_AVAILABLE;
 }
 		

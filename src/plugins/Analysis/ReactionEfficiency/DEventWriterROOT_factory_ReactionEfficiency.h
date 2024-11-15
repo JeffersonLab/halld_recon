@@ -16,7 +16,7 @@ class DEventWriterROOT_factory_ReactionEfficiency : public JFactoryT<DEventWrite
 {
 	public:
 		DEventWriterROOT_factory_ReactionEfficiency(){
-                        //use_factory = 1; //prevents JANA from searching the input file for these objects
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
                         }; 
 		~DEventWriterROOT_factory_ReactionEfficiency(){};
 		const char* Tag(void){return "ReactionEfficiency";}

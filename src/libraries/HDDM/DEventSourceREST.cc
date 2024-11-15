@@ -28,6 +28,7 @@ DEventSourceREST::DEventSourceREST(std::string source_name, JApplication* app)
  : JEventSource(source_name)
 {
    /// Constructor for DEventSourceREST object
+   EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
    SetTypeName("DEventSourceREST");
    ifs = new ifstream(source_name);
    ifs->get();
@@ -418,13 +419,13 @@ bool DEventSourceREST::GetObjects(const std::shared_ptr<const JEvent> &event, JF
                      dynamic_cast<JFactoryT<DEventHitStatistics>*>(factory)));
    }
 
-   return true; // true here means OBJECT_NOT_AVAILABLE
+   return false; //OBJECT_NOT_AVAILABLE
 }
 
 //------------------
 // Extract_DMCReaction
 //------------------
-jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
                                    JFactoryT<DMCReaction> *factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the Reaction hddm class. This is called
@@ -432,7 +433,7 @@ jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
    
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    std::string tag = factory->GetTag();
 
@@ -477,17 +478,17 @@ jerror_t DEventSourceREST::Extract_DMCReaction(hddm_r::HDDM *record,
    // Copy into factories
    factory->Set(dmcreactions);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //------------------
 // Extract_DRFTime
 //------------------
-jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
                                    JFactoryT<DRFTime> *factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    if (factory==NULL)
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    string tag = factory->GetTag();
 
    vector<DRFTime*> locRFTimes;
@@ -509,7 +510,7 @@ jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
 	{
 		//found in the file, copy into factory and return
 		factory->Set(locRFTimes);
-		return NOERROR;
+		return true; //NOERROR;
 	}
 
 	//Not found in the file, so either:
@@ -519,7 +520,7 @@ jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
 	vector<const DBeamPhoton*> locMCGENPhotons;
 	locEvent->Get(locMCGENPhotons, "MCGEN");
 	if(locMCGENPhotons.empty())
-		return OBJECT_NOT_AVAILABLE; //Experimental data & it's missing: bail
+		return false; //OBJECT_NOT_AVAILABLE: Experimental data & it's missing: bail
 
 	//Is MC data. Either:
 		//No tag: return photon_time propagated by +/- n*locBeamBunchPeriod to get close to 0.0
@@ -558,13 +559,13 @@ jerror_t DEventSourceREST::Extract_DRFTime(hddm_r::HDDM *record,
    // Copy into factories
    factory->Set(locRFTimes);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //------------------
 // Extract_DBeamPhoton
 //------------------
-jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
                                    JFactoryT<DBeamPhoton> *factory,
                                    const std::shared_ptr<const JEvent>& eventLoop)
 {
@@ -573,7 +574,7 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    /// copy the beam photon data from the Reaction hddm class.
 
    if (factory==NULL)
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    string tag = factory->GetTag();
 
 	vector<DBeamPhoton*> dbeam_photons;
@@ -582,14 +583,14 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    vector<const DTAGHGeometry*> taghGeomVect;
    eventLoop->Get(taghGeomVect);
    if (taghGeomVect.empty())
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    const DTAGHGeometry* taghGeom = taghGeomVect[0];
 
    // extract the TAGM geometry
    vector<const DTAGMGeometry*> tagmGeomVect;
    eventLoop->Get(tagmGeomVect);
    if (tagmGeomVect.empty())
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    const DTAGMGeometry* tagmGeom = tagmGeomVect[0];
 
 	if(tag == "MCGEN")
@@ -613,7 +614,7 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		// Copy into factories
 		factory->Set(dbeam_photons);
 
-		return NOERROR;
+		return true; //NOERROR;
 	}
 
 	double locTargetCenterZ = 0.0;
@@ -663,7 +664,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(column == 0) {
 			continue;
 		}
-     
 		// throw away hits from bad or noisy counters
 		int quality = dTAGMFiberQualities[locRunNumber][0][column];  // I think this works for the row? - we are generally not worrying about the quality of individual fibers
 		if (quality != DTAGMHit_factory_Calib::k_fiber_good )
@@ -758,18 +758,18 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    }
 
 	if((tag == "TAGGEDMCGEN") && dbeam_photons.empty())
-		return OBJECT_NOT_AVAILABLE; //EITHER: didn't hit a tagger counter //OR: old MC data (pre-saving TAGGEDMCGEN): try using TAGGEDMCGEN factory
+		return false; //OBJECT_NOT_AVAILABLE - EITHER: didn't hit a tagger counter //OR: old MC data (pre-saving TAGGEDMCGEN): try using TAGGEDMCGEN factory
 
 	// Copy into factories
 	factory->Set(dbeam_photons);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //------------------
 // Extract_DMCThrown
 //------------------
-jerror_t DEventSourceREST::Extract_DMCThrown(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DMCThrown(hddm_r::HDDM *record,
                                    JFactoryT<DMCThrown> *factory)
 {
    /// Copies the data from the hddm vertex records. This is called
@@ -777,7 +777,7 @@ jerror_t DEventSourceREST::Extract_DMCThrown(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -825,13 +825,13 @@ jerror_t DEventSourceREST::Extract_DMCThrown(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //------------------
 // Extract_DTOFPoint
 //------------------
-jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
                                    JFactoryT<DTOFPoint>* factory)
 {
    /// Copies the data from the tofPoint hddm record. This is called
@@ -839,7 +839,7 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -904,13 +904,13 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //------------------
 // Extract_DCTOFPoint
 //------------------
-jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
                                    JFactoryT<DCTOFPoint>* factory)
 {
    /// Copies the data from the ctofPoint hddm record. This is called
@@ -918,7 +918,7 @@ jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -943,14 +943,14 @@ jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
    factory->Set(data);
 
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 
 //------------------
 // Extract_DSCHit
 //------------------
-jerror_t DEventSourceREST::Extract_DSCHit(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DSCHit(hddm_r::HDDM *record,
                                    JFactoryT<DSCHit>* factory)
 {
    /// Copies the data from the startHit hddm record. This is called
@@ -958,7 +958,7 @@ jerror_t DEventSourceREST::Extract_DSCHit(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -981,20 +981,20 @@ jerror_t DEventSourceREST::Extract_DSCHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DTrigger
 //-----------------------
-jerror_t DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger>* factory)
+bool DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTrigger>* factory)
 {
 	/// Copies the data from the trigger hddm record. This is
 	/// call from JEventSourceREST::GetObjects. If factory is NULL, this
 	/// returns OBJECT_NOT_AVAILABLE immediately.
 
 	if (factory==NULL)
-		return OBJECT_NOT_AVAILABLE;
+		return false; //OBJECT_NOT_AVAILABLE
 	string tag = factory->GetTag();
 
 	vector<DTrigger*> data;
@@ -1029,13 +1029,13 @@ jerror_t DEventSourceREST::Extract_DTrigger(hddm_r::HDDM *record, JFactoryT<DTri
 	// Copy into factory
 	factory->Set(data);
 
-	return NOERROR;
+	return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DFCALShower
 //-----------------------
-jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
                                    JFactoryT<DFCALShower>* factory)
 {
    /// Copies the data from the fcalShower hddm record. This is
@@ -1043,7 +1043,7 @@ jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -1120,13 +1120,13 @@ jerror_t DEventSourceREST::Extract_DFCALShower(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DBCALShower
 //-----------------------
-jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
                                    JFactoryT<DBCALShower>* factory)
 {
    /// Copies the data from the bcalShower hddm record. This is
@@ -1134,7 +1134,7 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -1247,13 +1247,13 @@ jerror_t DEventSourceREST::Extract_DBCALShower(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DCCALShower
 //-----------------------
-jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
                                    JFactoryT<DCCALShower>* factory)
 {
    /// Copies the data from the ccalShower hddm record. This is
@@ -1261,7 +1261,7 @@ jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -1299,13 +1299,13 @@ jerror_t DEventSourceREST::Extract_DCCALShower(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //--------------------------------
 // Extract_DTrackTimeBased
 //--------------------------------
-jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
                                    JFactoryT<DTrackTimeBased>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the chargedTrack hddm record. This is
@@ -1313,7 +1313,7 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    
    int locRunNumber = locEvent->GetRunNumber();
@@ -1597,20 +1597,20 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //--------------------------------
 // Extract_DDetectorMatches
 //--------------------------------
-jerror_t DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record, JFactoryT<DDetectorMatches>* factory)
+bool DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const JEvent>& locEvent, hddm_r::HDDM *record, JFactoryT<DDetectorMatches>* factory)
 {
    /// Copies the data from the detectorMatches hddm record. This is
    /// called from JEventSourceREST::GetObjects. If factory is NULL, this
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if(factory==NULL)
-     return OBJECT_NOT_AVAILABLE;
+     return false; //OBJECT_NOT_AVAILABLE
 
    string tag = factory->GetTag();
    vector<DDetectorMatches*> data;
@@ -1913,7 +1913,7 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(const std::shared_ptr<const 
    // Copy data to factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 // Transform the 5x5 tracking error matrix into a 7x7 error matrix in cartesian
@@ -1974,7 +1974,7 @@ uint32_t DEventSourceREST::Convert_SignedIntToUnsigned(int32_t locSignedInt) con
 //-----------------------
 // Extract_DDIRCPmtHit
 //-----------------------
-jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
                                    JFactoryT<DDIRCPmtHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fcalShower hddm record. This is
@@ -1982,7 +1982,7 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -2016,13 +2016,13 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
    
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DFMWPCHit
 //-----------------------
-jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
                     JFactoryT<DFMWPCHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fmwpc hit hddm record. This is
@@ -2030,7 +2030,7 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -2058,13 +2058,13 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //-----------------------
 // Extract_DFCALHit
 //-----------------------
-jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
                                    JFactoryT<DFCALHit>* factory, const std::shared_ptr<const JEvent>& locEvent)
 {
    /// Copies the data from the fcal hit hddm record. This is
@@ -2072,7 +2072,7 @@ jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
    vector<DFCALHit*> data;
@@ -2100,13 +2100,13 @@ jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
 
-   return NOERROR;
+   return true; //NOERROR;
 }
 
 //----------------------------
 // Extract_DEventHitStatistics
 //----------------------------
-jerror_t DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
+bool DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
                                    JFactoryT<DEventHitStatistics>* factory)
 {
    /// Copies the data from the hitStatistics hddm record. This is
@@ -2114,7 +2114,7 @@ jerror_t DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
    /// returns OBJECT_NOT_AVAILABLE immediately.
 
    if (factory==NULL) {
-      return OBJECT_NOT_AVAILABLE;
+      return false; //OBJECT_NOT_AVAILABLE
    }
    string tag = factory->GetTag();
 
@@ -2146,5 +2146,5 @@ jerror_t DEventSourceREST::Extract_DEventHitStatistics(hddm_r::HDDM *record,
    // Copy into factory
    factory->Set(data);
    
-   return NOERROR;
+   return true; //NOERROR;
 }

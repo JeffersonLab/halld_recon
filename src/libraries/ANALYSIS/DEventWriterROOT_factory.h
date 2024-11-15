@@ -9,7 +9,9 @@
 class DEventWriterROOT_factory : public JFactoryT<DEventWriterROOT>
 {
 	public:
-		DEventWriterROOT_factory() = default;
+		DEventWriterROOT_factory() {
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
+		}
 		~DEventWriterROOT_factory() = default;
 		
 		DEventWriterROOT *dROOTEventWriter = nullptr;

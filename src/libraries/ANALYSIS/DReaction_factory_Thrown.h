@@ -23,6 +23,7 @@ class DReaction_factory_Thrown:public JFactoryT<DReaction>
 		DReaction_factory_Thrown(){
 			SetObjectName("DReaction"); // As opposed to "DAnalysis::DReaction"
 			SetTag("Thrown");
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
 		}
 		~DReaction_factory_Thrown(){};
 
