@@ -50,11 +50,13 @@ DFCALCluster_factory::DFCALCluster_factory()
         MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
-
+	REMOVE_BAD_BLOCK = 0;
+	
 	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
 	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
 	gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
+	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
 
 }
 
@@ -83,6 +85,10 @@ jerror_t DFCALCluster_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 
 	fcalFaceZ_TargetIsZeq0 = fcalFrontFaceZ - targetZ;
 
+	bad_blocks_list.clear();
+	if (eventLoop->GetCalib("/FCAL/bad_block", bad_blocks_list))
+	  jout << "Error loading /FCAL/bad_block !" << endl;
+	
 	return NOERROR;
 }
 
@@ -114,7 +120,12 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	// Fill the structure that used to be used by clusterizers in Radphi 
 	for (vector<const DFCALHit*>::const_iterator hit  = fcalhits.begin(); 
                                                      hit != fcalhits.end(); hit++ ) {
-           if ( (**hit).E <  1e-6 ) continue;
+
+	   if ( (**hit).E <  1e-6 ) continue;
+	   if (REMOVE_BAD_BLOCK == 1 &&
+	       bad_blocks_list.size() > 0 &&
+	       0 <= fcalGeom->channel( (**hit).row, (**hit).column ) && fcalGeom->channel( (**hit).row, (**hit).column ) <= 2799 &&
+	       bad_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
            hits->hit[nhits].id = (**hit).id;
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
