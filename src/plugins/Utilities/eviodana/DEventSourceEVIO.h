@@ -31,7 +31,7 @@ class DEventSourceEVIO:public JEventSource{
 
 		jerror_t GetEvent(JEvent &event);
 		void FreeEvent(JEvent &event);
-		jerror_t GetObjects(JEvent &event, JFactory *factory);
+		bool GetObjects(JEvent &event, JFactory *factory);
 		
 		template<class T> const vector<T>& GetVector(evioDOMNodeList* nodeList, string) const;
 		
@@ -39,7 +39,7 @@ class DEventSourceEVIO:public JEventSource{
 	
 		map<string, pair<int, int> > tagMap; // first=tag, second=num
 		
-		jerror_t Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory);
+		bool Extract_DTrackTimeBased(evioDOMTree *evt,  JFactoryT<DTrackTimeBased> *factory);
 	
 	private:
 		evioFileChannel *chan;

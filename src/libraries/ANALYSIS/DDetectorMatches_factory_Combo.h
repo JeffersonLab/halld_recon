@@ -28,6 +28,7 @@ class DDetectorMatches_factory_Combo : public JFactoryT<DDetectorMatches>
 	public:
 		DDetectorMatches_factory_Combo(){
 			SetTag("Combo");
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
 		}
 		~DDetectorMatches_factory_Combo(){};
 

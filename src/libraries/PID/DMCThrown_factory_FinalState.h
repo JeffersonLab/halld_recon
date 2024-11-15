@@ -25,7 +25,8 @@ class DMCThrown_factory_FinalState : public JFactoryT<DMCThrown>
 	public:
 		DMCThrown_factory_FinalState(){
 			SetTag("FinalState");
-		}; //prevents JANA from searching the input file for these objects
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
+		}; 
 		~DMCThrown_factory_FinalState(){};
 
 	private:

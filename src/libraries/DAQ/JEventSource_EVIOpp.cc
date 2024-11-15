@@ -673,7 +673,7 @@ bool JEventSource_EVIOpp::GetObjects(const std::shared_ptr<const JEvent> &event,
 	// Get name of data class we're trying to extract and the factory tag
 	string dataClassName = factory->GetObjectName();
 	string tag = factory->GetTag();
-	if(tag.length()!=0) return OBJECT_NOT_AVAILABLE; // can't provide tagged factory objects
+	if(tag.length()!=0) return false; // can't provide tagged factory objects
 	
 	// Get any translation tables we'll need to apply
 	vector<const DTranslationTable*> translationTables;
