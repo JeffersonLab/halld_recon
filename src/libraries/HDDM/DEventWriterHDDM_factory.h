@@ -9,7 +9,9 @@
 class DEventWriterHDDM_factory : public JFactoryT<DEventWriterHDDM>
 {
 	public:
-		DEventWriterHDDM_factory() = default;
+		DEventWriterHDDM_factory() {
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
+		}
 		~DEventWriterHDDM_factory() = default;
 
 	private:

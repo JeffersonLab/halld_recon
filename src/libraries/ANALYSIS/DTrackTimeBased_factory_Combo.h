@@ -22,6 +22,7 @@ class DTrackTimeBased_factory_Combo:public JFactoryT<DTrackTimeBased>
 	public:
 		DTrackTimeBased_factory_Combo(){
 			SetTag("Combo");
+			SetRegenerateFlag(true); //prevents JANA from searching the input file for these objects
 		}
 		~DTrackTimeBased_factory_Combo() = default;
 
