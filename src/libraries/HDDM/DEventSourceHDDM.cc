@@ -1848,13 +1848,6 @@ bool DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
    if (tag != "" && tag != "TRUTH")
       return false; //OBJECT_NOT_AVAILABLE;
 
-   // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
-   vector<const DECALGeometry*> ecalGeomVect;
-   event->Get(ecalGeomVect);
-   if (ecalGeomVect.size() < 1)
-      return false; //OBJECT_NOT_AVAILABLE;
-   const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
    vector<DECALHit*> data;
 
    if (tag == "") {
