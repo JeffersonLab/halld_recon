@@ -1834,11 +1834,13 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	
 	if (FDC_VERBOSE_OUTPUT){
 	  if (locTrackTimeBased->extrapolations.find(SYS_FDC) != locTrackTimeBased->extrapolations.end()) {  
-	    vector<DTrackFitter::Extrapolation_t>locExtraps=locTrackTimeBased->extrapolations.at(SYS_FDC); 
-	    DVector3 locPos=locExtraps[0].position;
-	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_X"), locPos.x(), locArrayIndex);
-	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Y"), locPos.y(), locArrayIndex);
-	    locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Z"), locPos.z(), locArrayIndex);
+	    vector<DTrackFitter::Extrapolation_t>locExtraps=locTrackTimeBased->extrapolations.at(SYS_FDC);
+	    if (locExtraps.size()>0){
+	      DVector3 locPos=locExtraps[0].position;
+	      locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_X"), locPos.x(), locArrayIndex);
+	      locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Y"), locPos.y(), locArrayIndex);
+	      locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "FDC_pos1_Z"), locPos.z(), locArrayIndex);
+	    }
 	  }
 	}
 	
