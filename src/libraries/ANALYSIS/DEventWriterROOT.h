@@ -90,6 +90,14 @@ class DEventWriterROOT : public JObject
 		unsigned int dInitNumComboArraySize;
 
 		double dTargetCenterZ;
+  double dFdcPackages[4];
+  vector<string>dFDCxLeaves={"FDC_pos1_X","FDC_pos2_X","FDC_pos3_X",
+    "FDC_pos4_X"};
+  vector<string>dFDCyLeaves={"FDC_pos1_Y","FDC_pos2_Y","FDC_pos3_Y",
+    "FDC_pos4_Y"};
+  vector<string>dFDCzLeaves={"FDC_pos1_Z","FDC_pos2_Z","FDC_pos3_Z",
+    "FDC_pos4_Z"};
+  
 
 		//DEFAULT ACTIONS LISTED SEPARATELY FROM CUSTOM (in case in derived class user does something bizarre)
 		map<const DReaction*, DCutAction_ThrownTopology*> dCutActionMap_ThrownTopology;

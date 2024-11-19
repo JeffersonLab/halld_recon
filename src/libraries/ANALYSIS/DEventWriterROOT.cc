@@ -5,6 +5,7 @@ static bool BCAL_VERBOSE_OUTPUT = false;
 static bool FCAL_VERBOSE_OUTPUT = false;
 static bool CCAL_VERBOSE_OUTPUT = false;
 static bool DIRC_OUTPUT = true;
+static bool FDC_VERBOSE_OUTPUT = true;
 
 static bool STORE_PULL_INFO = false;
 static bool STORE_ERROR_MATRIX_INFO = false;
@@ -54,6 +55,14 @@ void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 	DGeometry* locGeometry = locApplication->GetDGeometry(locEventLoop->GetJEvent().GetRunNumber());
 	dTargetCenterZ = 65.0;
 	locGeometry->GetTargetZ(dTargetCenterZ);
+
+	// Get upstream positions of each FDC package
+	vector<double>fdc_z_wires;
+	locGeometry->GetFDCZ(fdc_z_wires);
+	dFdcPackages[0]=fdc_z_wires[0]-1.; // just upstream
+	dFdcPackages[1]=fdc_z_wires[6]-1.;
+	dFdcPackages[2]=fdc_z_wires[12]-1.;
+	dFdcPackages[3]=fdc_z_wires[18]-1.;
 
 	//CREATE TTREES
 	for(auto& locVertexInfo : locVertexInfos)
@@ -271,6 +280,8 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		locMiscInfoMap->Add(new TObjString("REST:JANACALIBCONTEXT"), new TObjString(REST_JANA_CALIB_CONTEXT.c_str()));
 
 	// Note: adding these parameters (e.g. in hd_root) will create warnings with "<-- NO DEFAULT! (TYPO?)". Safe to ignore these.
+	if(gPARMS->Exists("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT"))
+		{gPARMS->GetParameter("ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT", FDC_VERBOSE_OUTPUT); cout << "ANALYSIS:FDC_VERBOSE_ROOT_OUTPUT set to " << FDC_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT"))
 		{gPARMS->GetParameter("ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT", BCAL_VERBOSE_OUTPUT); cout << "ANALYSIS:BCAL_VERBOSE_ROOT_OUTPUT set to " << BCAL_VERBOSE_OUTPUT << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
 	if(gPARMS->Exists("ANALYSIS:FCAL_VERBOSE_ROOT_OUTPUT"))
@@ -697,6 +708,13 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC_integral"), locArraySizeString, dInitNumTrackArraySize);
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_FDC"), locArraySizeString, dInitNumTrackArraySize);
+	if (FDC_VERBOSE_OUTPUT){
+	  for (unsigned int j=0;j<4;j++){
+	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, dFDCxLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize); 
+	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, dFDCyLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize);  
+	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,dFDCzLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize);
+	  }
+	}
 
 	//TIMING INFO
 	locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, "HitTime"), locArraySizeString, dInitNumTrackArraySize);
@@ -1822,7 +1840,26 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC"), locChargedTrackHypothesis->Get_dEdx_CDC_amp(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_CDC_integral"), locChargedTrackHypothesis->Get_dEdx_CDC_int(), locArrayIndex);
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_FDC"), locTrackTimeBased->ddEdx_FDC, locArrayIndex);
-
+	
+	if (FDC_VERBOSE_OUTPUT){
+	  if (locTrackTimeBased->extrapolations.find(SYS_FDC) != locTrackTimeBased->extrapolations.end()) {
+	    vector<DTrackFitter::Extrapolation_t>locExtraps=locTrackTimeBased->extrapolations.at(SYS_FDC);
+	    unsigned int locPackageIndex=0;
+	    for (unsigned int j=0;j<locExtraps.size();j++){
+	      DVector3 locPos=locExtraps[j].position;
+	      if (locPos.z()>dFdcPackages[locPackageIndex]){
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCxLeaves[locPackageIndex].c_str()), locPos.x(), locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCyLeaves[locPackageIndex].c_str()), locPos.y(), locArrayIndex);
+		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCzLeaves[locPackageIndex].c_str()), locPos.z(), locArrayIndex);
+	      
+		locPackageIndex++;
+		if (locPackageIndex>3) break;
+	      }
+	   
+	    }
+	  }
+	}
+	
 	//HIT ENERGY
 	double locTOFdEdx = (locChargedTrackHypothesis->Get_TOFHitMatchParams() != NULL) ? locChargedTrackHypothesis->Get_TOFHitMatchParams()->dEdx : 0.0;
 	locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, "dEdx_TOF"), locTOFdEdx, locArrayIndex);
