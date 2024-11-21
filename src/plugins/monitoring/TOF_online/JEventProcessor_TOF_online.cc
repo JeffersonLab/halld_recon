@@ -97,6 +97,8 @@ JEventProcessor_TOF_online::~JEventProcessor_TOF_online() {
 
 void JEventProcessor_TOF_online::Init() {
 
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
   // create root folder for tof and cd to it, store main dir
   TDirectory *main = gDirectory;
   gDirectory->mkdir("tof")->cd();
