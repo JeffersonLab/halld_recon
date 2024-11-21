@@ -64,7 +64,8 @@ void JEventProcessor_BCAL_inv_mass::Init()
 	// This is called once at program startup. If you are creating
 	// and filling historgrams in this plugin, you should lock the
 	// ROOT mutex like this:
-
+	auto app = GetApplication();
+  	lockService = app->GetService<JLockService>();
 	if(bcal_diphoton_mass_500 != NULL){
 	  return;
 	}
