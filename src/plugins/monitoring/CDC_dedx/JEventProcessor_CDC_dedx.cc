@@ -41,7 +41,8 @@ JEventProcessor_CDC_dedx::~JEventProcessor_CDC_dedx()
 void JEventProcessor_CDC_dedx::Init()
 {
 	// This is called once at program startup. 
-
+  auto app = GetApplication();
+  lockService = app->GetService<JLockService>();
   TDirectory *main = gDirectory;
   gDirectory->mkdir("CDC_dedx")->cd();
 
@@ -133,7 +134,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
 
     if (dedx > 0) {
 
-      DEvent::GetLockService(event)->RootFillLock(this); 
+      lockService->RootFillLock(this); 
 
       bestfom_dedx_p->Fill(p,dedx);
     
@@ -143,7 +144,7 @@ void JEventProcessor_CDC_dedx::Process(const std::shared_ptr<const JEvent>& even
         bestfom_dedx_p_neg->Fill(p,dedx);
       } 
 
-      DEvent::GetLockService(event)->RootFillUnLock(this); 
+      lockService->RootFillUnLock(this); 
     }
   }
 
