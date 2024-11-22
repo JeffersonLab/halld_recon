@@ -53,7 +53,8 @@ extern "C"
 //------------------
 void JEventProcessor_FCAL_invmass::Init()
 {
-
+	auto app = GetApplication();
+	lockService = app->GetService<JLockService>();
 	if(InvMass1 && InvMass2 != NULL){
 		lockService->RootUnLock();
 		return;
