@@ -348,9 +348,8 @@ void DSourceComboTimeHandler::Create_CutFunctions(void)
 DSourceComboTimeHandler::DSourceComboTimeHandler(const std::shared_ptr<const JEvent>& locEvent, DSourceComboer* locSourceComboer, const DSourceComboVertexer* locSourceComboVertexer) :
 		dSourceComboer(locSourceComboer), dSourceComboVertexer(locSourceComboVertexer)
 {
-	auto app = locEvent->GetJApplication();
-	app->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
-	app->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
+	japp->SetDefaultParameter("COMBO:DEBUG_LEVEL", dDebugLevel);
+	japp->SetDefaultParameter("COMBO:PRINT_CUTS", dPrintCutFlag);
 
 	//Setup cuts
 	Define_DefaultCuts();
