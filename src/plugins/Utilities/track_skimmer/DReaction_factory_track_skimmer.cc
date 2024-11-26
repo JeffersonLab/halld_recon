@@ -42,7 +42,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 
 	//X -> 2pi0
 	locReactionStep = new DReactionStep();
-	locReactionStep->Set_InitialParticleID(Unknown);
+	locReactionStep->Set_InitialParticleID(UnknownParticle);
 	locReactionStep->Add_FinalParticleID(Pi0);
 	locReactionStep->Add_FinalParticleID(Pi0);
 	locReaction->Add_ReactionStep(locReactionStep);
@@ -68,7 +68,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 
 	//X -> 3pi0
 	locReactionStep = new DReactionStep();
-	locReactionStep->Set_InitialParticleID(Unknown);
+	locReactionStep->Set_InitialParticleID(UnknownParticle);
 	locReactionStep->Add_FinalParticleID(Pi0);
 	locReactionStep->Add_FinalParticleID(Pi0);
 	locReactionStep->Add_FinalParticleID(Pi0);
@@ -508,7 +508,7 @@ jerror_t DReaction_factory_track_skimmer::init(void)
 
 	//X -> e+ e-
 	DReactionStep* locReactionStep_ee = new DReactionStep();
-	locReactionStep_ee->Set_InitialParticleID(Unknown);
+	locReactionStep_ee->Set_InitialParticleID(UnknownParticle);
 	locReactionStep_ee->Add_FinalParticleID(Electron);
 	locReactionStep_ee->Add_FinalParticleID(Positron);
 	locReaction->Add_ReactionStep(locReactionStep_ee);

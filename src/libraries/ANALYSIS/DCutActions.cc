@@ -93,12 +93,12 @@ bool DCutAction_PIDFOM::Perform_Action(JEventLoop* locEventLoop, const DParticle
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dStepPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dStepPID))
+		if((dStepPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dStepPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
 		{
-			if((locParticles[loc_j]->PID() != dParticleID) && (dParticleID != Unknown))
+			if((locParticles[loc_j]->PID() != dParticleID) && (dParticleID != UnknownParticle))
 				continue;
 			if(ParticleCharge(dParticleID) == 0)
 			{
@@ -304,7 +304,7 @@ bool DCutAction_InvariantMass::Perform_Action(JEventLoop* locEventLoop, const DP
 	for(size_t loc_i = 0; loc_i < locParticleCombo->Get_NumParticleComboSteps(); ++loc_i)
 	{
 		const DReactionStep* locReactionStep = Get_Reaction()->Get_ReactionStep(loc_i);
-		if((dInitialPID != Unknown) && (locReactionStep->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (locReactionStep->Get_InitialPID() != dInitialPID))
 			continue;
 		if((dStepIndex != -1) && (int(loc_i) != dStepIndex))
 			continue;
@@ -388,7 +388,7 @@ bool DCutAction_MaxTrackDOCA::Perform_Action(JEventLoop* locEventLoop, const DPa
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dInitialPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_Charged);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
@@ -540,7 +540,7 @@ bool DCutAction_BDTSignalCombo::Perform_Action(JEventLoop* locEventLoop, const D
 
 				const DMCThrown* locMCThrownParent = locMCThrownMyIDMap[locParentID];
 				Particle_t locPID = locMCThrownParent->PID();
-				if((locPID == Unknown) || IsResonance(locPID) || (locPID == omega) || (locPID == phiMeson))
+				if((locPID == UnknownParticle) || IsResonance(locPID) || (locPID == omega) || (locPID == phiMeson))
 				{
 					//intermediate (unknown, resonance, phi, or omega) particle: go to its parent
 					locParentID = locMCThrownParent->parentid;
@@ -676,7 +676,7 @@ bool DCutAction_TrueCombo::Perform_Action(JEventLoop* locEventLoop, const DParti
 
 				const DMCThrown* locMCThrownParent = locMCThrownMyIDMap[locParentID];
 				Particle_t locPID = locMCThrownParent->PID();
-				if((locPID == Unknown) || IsResonance(locPID))
+				if((locPID == UnknownParticle) || IsResonance(locPID))
 				{
 					//intermediate (unknown or resonance) particle: go to its parent
 					locParentID = locMCThrownParent->parentid;
@@ -741,12 +741,12 @@ bool DCutAction_TruePID::Perform_Action(JEventLoop* locEventLoop, const DParticl
 	auto locSteps = locParticleCombo->Get_ParticleComboSteps();
 	for(size_t loc_i = 0; loc_i < locSteps.size(); ++loc_i)
 	{
-		if((dInitialPID != Unknown) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
+		if((dInitialPID != UnknownParticle) && (Get_Reaction()->Get_ReactionStep(loc_i)->Get_InitialPID() != dInitialPID))
 			continue;
 		auto locParticles = locSteps[loc_i]->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 		for(size_t loc_j = 0; loc_j < locParticles.size(); ++loc_j)
 		{
-			if((locParticles[loc_j]->PID() != dTruePID) && (dTruePID != Unknown))
+			if((locParticles[loc_j]->PID() != dTruePID) && (dTruePID != UnknownParticle))
 				continue;
 
 			for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
@@ -1120,13 +1120,13 @@ string DCutAction_PIDDeltaT::Get_ActionName(void) const
 
 bool DCutAction_PIDDeltaT::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	auto locParticles = Get_UseKinFitResultsFlag() ? locParticleCombo->Get_FinalParticles(Get_Reaction(), false, false, d_AllCharges) : locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 
 		auto locChargedHypo = dynamic_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
@@ -1164,13 +1164,13 @@ string DCutAction_PIDTimingBeta::Get_ActionName(void) const
 
 bool DCutAction_PIDTimingBeta::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_AllCharges);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 
 		auto locChargedHypo = dynamic_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
@@ -1207,12 +1207,12 @@ string DCutAction_NoPIDHit::Get_ActionName(void) const
 
 bool DCutAction_NoPIDHit::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 
 	auto locParticles = locParticleCombo->Get_FinalParticles_Measured(Get_Reaction(), d_Charged);
 	for(size_t loc_i = 0; loc_i < locParticles.size(); ++loc_i)
 	{
-		if((dPID != Unknown) && (locParticles[loc_i]->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticles[loc_i]->PID() != dPID))
 			continue;
 		auto locChargedHypo = static_cast<const DChargedTrackHypothesis*>(locParticles[loc_i]);
 		if(locChargedHypo->t1_detector() == SYS_NULL)
@@ -1231,7 +1231,7 @@ string DCutAction_FlightDistance::Get_ActionName(void) const
 
 bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
   // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
@@ -1258,7 +1258,7 @@ bool DCutAction_FlightDistance::Perform_Action(JEventLoop* locEventLoop, const D
 		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
 		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 
-		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
 			continue;
 
 		// fill info on decaying particles, which is on the particle combo step level
@@ -1298,7 +1298,7 @@ string DCutAction_FlightSignificance::Get_ActionName(void) const
 
 bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, const DParticleCombo* locParticleCombo)
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
   // unused variable	DKinFitType locKinFitType = Get_Reaction()->Get_KinFitType();
 
 	// for now, require a kinematic fit to make these selections, assuming that the common decay vertex
@@ -1325,7 +1325,7 @@ bool DCutAction_FlightSignificance::Perform_Action(JEventLoop* locEventLoop, con
 		const DParticleComboStep* locParticleComboStep = locParticleCombo->Get_ParticleComboStep(loc_i);
 		//auto locParticles = Get_UseKinFitResultsFlag() ? locParticleComboStep->Get_FinalParticles(Get_Reaction()->Get_ReactionStep(loc_i), false, false, d_AllCharges) : locParticleComboStep->Get_FinalParticles_Measured(Get_Reaction()->Get_ReactionStep(loc_i), d_AllCharges);
 
-		if((dPID != Unknown) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
+		if((dPID != UnknownParticle) && (locParticleComboStep->Get_InitialParticle()->PID() != dPID))
 			continue;
 
 		// fill info on decaying particles, which is on the particle combo step level

@@ -101,7 +101,7 @@ class DKinematicData : public JObject, public DResettable
 				void Release(void){};
 
 				//MEMBERS
-				Particle_t dPID = Unknown;
+				Particle_t dPID = UnknownParticle;
 				DVector3 dMomentum;
 				DVector3 dPosition;
 				double dTime = 0.0; // Time of the track propagated at dPosition
@@ -199,7 +199,7 @@ inline void DKinematicData::Release(void)
 
 inline void DKinematicData::DKinematicInfo::Reset(void)
 {
-	dPID = Unknown;
+	dPID = UnknownParticle;
 	dMomentum = DVector3();
 	dPosition = DVector3();
 	dTime = 0.0;
