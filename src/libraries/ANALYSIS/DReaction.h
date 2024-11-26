@@ -180,7 +180,7 @@ inline bool Get_IsFirstStepBeam(const DReaction* locReaction)
 {
 	//impossible for first step to be rescattering: makes no sense: if has target, treat as beam. else treat as decaying & don't care about production mechanism
 	auto locFirstStep = locReaction->Get_ReactionStep(0);
-	return ((locFirstStep->Get_TargetPID() != Unknown) || (locFirstStep->Get_SecondBeamPID() != Unknown));
+	return ((locFirstStep->Get_TargetPID() != UnknownParticle) || (locFirstStep->Get_SecondBeamPID() != UnknownParticle));
 }
 
 inline bool Check_ChannelEquality(const DReaction* lhs, const DReaction* rhs, bool locSameOrderFlag = true, bool locRightSubsetOfLeftFlag = false)
@@ -243,7 +243,7 @@ inline vector<pair<int, int>> Get_MissingDecayProductIndices(const DReaction* lo
 	auto locReactionStep = locReaction->Get_ReactionStep(locStepIndex);
 	if(locReactionStep->Get_IsInclusiveFlag())
 		locMissingDecayProductIndices.emplace_back(locStepIndex, DReactionStep::Get_ParticleIndex_Inclusive());
-	if(locReactionStep->Get_MissingPID() != Unknown)
+	if(locReactionStep->Get_MissingPID() != UnknownParticle)
 		locMissingDecayProductIndices.emplace_back(locStepIndex, locReactionStep->Get_MissingParticleIndex());
 
 	for(size_t loc_i = 0; loc_i < locReactionStep->Get_NumFinalPIDs(); ++loc_i)

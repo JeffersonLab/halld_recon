@@ -60,7 +60,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma
-	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.77-0.15, 0.77+0.15));
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, UnknownParticle, false, 0.77-0.15, 0.77+0.15));
 	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
 	
 	// MASSES, POST-KINFIT
@@ -107,7 +107,7 @@ jerror_t DReaction_factory_dirc_tree::evnt(JEventLoop* locEventLoop, uint64_t lo
 	
 	// Kinematic Fit Results
 	locReaction->Add_AnalysisAction(new DCutAction_KinFitFOM(locReaction, 5.73303E-7)); // confidence level cut //+/- 5 sigma	
-	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, Unknown, false, 0.95, 1.05));
+	// locReaction->Add_AnalysisAction(new DCutAction_InvariantMass(locReaction, UnknownParticle, false, 0.95, 1.05));
 	// locReaction->Add_AnalysisAction(new DCutAction_MissingMassSquared(locReaction, false, -0.02, 0.02));
 		
 

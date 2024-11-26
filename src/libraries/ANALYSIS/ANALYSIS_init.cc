@@ -58,7 +58,7 @@ jerror_t ANALYSIS_init(JEventLoop *loop)
 	DHistogramAction_TrackVertexComparison(NULL);
 	DHistogramAction_ParticleComboKinematics(NULL, false);
 	DHistogramAction_TruePID(NULL);
-	DHistogramAction_InvariantMass(NULL, Unknown, false, 0, 0.0, 0.0);
+	DHistogramAction_InvariantMass(NULL, UnknownParticle, false, 0, 0.0, 0.0);
 	DHistogramAction_MissingMass(NULL, false, 0, 0.0, 0.0);
 	DHistogramAction_MissingMassSquared(NULL, false, 0, 0.0, 0.0);
 	DHistogramAction_KinFitResults(NULL, 0.0);
@@ -69,19 +69,19 @@ jerror_t ANALYSIS_init(JEventLoop *loop)
 
 	DCutAction_MinTrackHits(NULL, 0);
 	DCutAction_ThrownTopology(NULL, true);
-	DCutAction_PIDFOM(NULL, Unknown, Unknown, 0.0);
+	DCutAction_PIDFOM(NULL, UnknownParticle, UnknownParticle, 0.0);
 	DCutAction_AllTracksHaveDetectorMatch(NULL);
 	DCutAction_CombinedPIDFOM(NULL, 0.0);
 	DCutAction_EachPIDFOM(NULL, 0.0);
 	DCutAction_CombinedTrackingFOM(NULL, 0.0);
 	DCutAction_MissingMass(NULL, false, 0.0, 0.0);
 	DCutAction_MissingMassSquared(NULL, false, 0.0, 0.0);
-	DCutAction_InvariantMass(NULL, Unknown, false, 0.0, 0.0);
+	DCutAction_InvariantMass(NULL, UnknownParticle, false, 0.0, 0.0);
 	DCutAction_AllVertexZ(NULL, 0.0, 0.0);
 	DCutAction_ProductionVertexZ(NULL, 0.0, 0.0);
-	DCutAction_MaxTrackDOCA(NULL, Unknown, 0.0);
+	DCutAction_MaxTrackDOCA(NULL, UnknownParticle, 0.0);
 	DCutAction_KinFitFOM(NULL, 0.0);
-	DCutAction_TruePID(NULL, Unknown, Unknown, 0.0);
+	DCutAction_TruePID(NULL, UnknownParticle, UnknownParticle, 0.0);
 	DCutAction_AllTruePID(NULL, 0.0);
 	DCutAction_GoodEventRFBunch(NULL, false);
 	DCutAction_TransverseMomentum(NULL, 0.0);

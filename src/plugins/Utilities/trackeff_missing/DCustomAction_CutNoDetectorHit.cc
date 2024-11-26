@@ -15,7 +15,7 @@ void DCustomAction_CutNoDetectorHit::Initialize(JEventLoop* locEventLoop)
 	//NEVER: Get anything from the JEventLoop while in a lock: May deadlock
 
 	auto locMissingPIDs = Get_Reaction()->Get_MissingPIDs();
-	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : Unknown;
+	dMissingPID = (locMissingPIDs.size() == 1) ? locMissingPIDs[0] : UnknownParticle;
 	if(locMissingPIDs.size() != 1)
 		return; //invalid reaction setup
 
@@ -94,7 +94,7 @@ bool DCustomAction_CutNoDetectorHit::Perform_Action(JEventLoop* locEventLoop, co
 	//NEVER: Grab objects that are created post-kinfit (e.g. DKinFitResults, etc.) from the JEventLoop if Get_UseKinFitResultsFlag() == false: CAN CAUSE INFINITE DEPENDENCY LOOP
 	//NEVER: Get anything from the JEventLoop while in a lock: May deadlock
 
-	if(dMissingPID == Unknown)
+	if(dMissingPID == UnknownParticle)
 		return false; //invalid reaction setup
 	if(ParticleCharge(dMissingPID) == 0)
 		return false; //NOT SUPPORTED

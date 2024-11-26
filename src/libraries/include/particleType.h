@@ -16,7 +16,7 @@ typedef enum {
    * http://wwwasdoc.web.cern.ch/wwwasdoc/geant/node72.html
   */
 
-  Unknown        =  0,
+  UnknownParticle =  0,
   Gamma          =  1,
   Positron       =  2,
   Electron       =  3,
@@ -199,7 +199,7 @@ inline static char* ParticleType(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:
+  case UnknownParticle:
     return (char*)"Unknown";
   case Gamma:
     return (char*)"Photon";
@@ -460,7 +460,7 @@ inline static char* EnumString(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:
+  case UnknownParticle:
     return (char*)"Unknown";
   case Gamma:
     return (char*)"Gamma";
@@ -721,7 +721,7 @@ inline static char* EvtGenString(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:
+  case UnknownParticle:
     return (char*)"Unknown";
   case Gamma:
     return (char*)"gamma";
@@ -982,7 +982,7 @@ inline static char* ShortName(Particle_t locPID)
   locPID = RemapParticleID(locPID);
 
   switch (locPID) {
-  case Unknown:
+  case UnknownParticle:
 	return (char*)"x";
   case Gamma:
 	return (char*)"g";
@@ -1243,7 +1243,7 @@ inline static char* ShortName(Particle_t locPID)
 inline static Particle_t ParticleEnum(const char* locParticleName)
 {
   if(strcmp(locParticleName, "Unknown") == 0)
-    return Unknown;
+    return UnknownParticle;
   else if(strcmp(locParticleName, "Photon") == 0)
     return Gamma;
   else if(strcmp(locParticleName, "Positron") == 0)
@@ -1493,7 +1493,7 @@ inline static Particle_t ParticleEnum(const char* locParticleName)
   else if(strcmp(locParticleName, "SigmaC++") == 0)
     return Sigma_cPlusPlus;
   else
-    return Unknown;
+    return UnknownParticle;
 }
 
 inline static unsigned short int IsFixedMass(Particle_t p)
@@ -1616,7 +1616,7 @@ inline static unsigned short int IsResonance(Particle_t p)
 
 	if(IsFixedMass(p) == 1)
 		return 0;
-	if(p == Unknown)
+	if(p == UnknownParticle)
 		return 0;
 	if(p == phiMeson)
 		return 0;
@@ -1664,7 +1664,7 @@ inline static char* ParticleName_ROOT(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:
+  case UnknownParticle:
     return (char*)"X";
   case Gamma:
     return (char*)"#gamma";
@@ -1925,7 +1925,7 @@ inline static double ParticleMass(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:		return HUGE_VAL;
+  case UnknownParticle:		return HUGE_VAL;
   case Gamma:		return 0;
   case Positron:	return 0.000510998928;
   case Electron:	return 0.000510998928;
@@ -2062,7 +2062,7 @@ inline static int ParticleCharge(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:		return  0;
+  case UnknownParticle:		return  0;
   case Gamma:		return  0;
   case Positron:	return +1;
   case Electron:	return -1;
@@ -2200,7 +2200,7 @@ inline static int PDGtype(Particle_t p)
   p = RemapParticleID(p);
 
   switch (p) {
-  case Unknown:		return  0;
+  case UnknownParticle:		return  0;
   case Gamma:		return  22;
   case Positron:	return -11;
   case Electron:	return  11;
@@ -2332,7 +2332,7 @@ inline static int PDGtype(Particle_t p)
 inline static Particle_t PDGtoPType(int locPDG_PID)
 {
   switch (locPDG_PID) {
-  case 0:				return Unknown;
+  case 0:			return UnknownParticle;
   case 22:			return Gamma;
   case -11:			return Positron;
   case 11:			return Electron;
@@ -2456,7 +2456,7 @@ inline static Particle_t PDGtoPType(int locPDG_PID)
   case -413:         return DstarMinus;
   case 4122:         return Lambda_c;
   case 4222:         return Sigma_cPlusPlus;
-  default:			return Unknown;
+  default:			 return UnknownParticle;
   }
 }
 
@@ -2864,7 +2864,7 @@ inline static Particle_t DemultiplexPID(int locBit, int locIsDecayingFlag)
 			case 13:  return Proton;
 			case 14:  return AntiProton;
 			case 15:  return AntiNeutron;
-			default:  return Unknown;
+			default:  return UnknownParticle;
 		}
 	}
 
@@ -2922,7 +2922,7 @@ inline static Particle_t DemultiplexPID(int locBit, int locIsDecayingFlag)
 		case 48:  return DMinus;
 		case 49:  return DstarMinus;
 		case 50:  return Sigma_cPlusPlus;
-		default:  return Unknown;
+		default:  return UnknownParticle;
 	}
 }
 
@@ -2937,7 +2937,7 @@ typedef enum
 
 inline static int Is_CorrectCharge(Particle_t locPID, Charge_t locCharge)
 {
-	if(locPID == Unknown)
+	if(locPID == UnknownParticle)
 		return (locCharge == d_AllCharges);
 	int locIntCharge = ParticleCharge(locPID);
 	switch(locCharge)
@@ -2984,7 +2984,7 @@ inline static Particle_t IDTrack(float locCharge, float locMass)
                 if (fabs(locMass - ParticleMass(Gamma)) < locMassTolerance) return Gamma;
                 if (fabs(locMass - ParticleMass(Neutron)) < locMassTolerance) return Neutron;
         }
-        return Unknown;
+        return UnknownParticle;
 }
 
 

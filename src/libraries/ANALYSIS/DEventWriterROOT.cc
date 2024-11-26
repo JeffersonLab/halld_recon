@@ -316,7 +316,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 		auto locFinalParticleIDs = locReactionStep->Get_FinalPIDs();
 
 		auto locTargetPID = locReactionStep->Get_TargetPID();
-		if(locTargetPID != Unknown)
+		if(locTargetPID != UnknownParticle)
 		{
 			if(locTargetParticleNumberMap.find(locTargetPID) == locTargetParticleNumberMap.end())
 				locTargetParticleNumberMap[locTargetPID] = 1;
@@ -351,7 +351,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 
 	//Create map objects
 	map<Particle_t, unsigned int> locParticleNumberMap_Current, locDecayingParticleNumberMap_Current, locTargetParticleNumberMap_Current;
-	Particle_t locTargetPID = Unknown;
+	Particle_t locTargetPID = UnknownParticle;
 	TObjString *locObjString_PID, *locObjString_Position, *locObjString_ParticleName;
 	map<int, string> locDecayingParticleNames; //key is step index where they decay
 	for(size_t loc_i = 0; loc_i < locReaction->Get_NumReactionSteps(); ++loc_i)
@@ -395,7 +395,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 
 		//target particle
 		Particle_t locTempTargetPID = locReactionStep->Get_TargetPID();
-		if(locTempTargetPID != Unknown)
+		if(locTempTargetPID != UnknownParticle)
 		{
 			locTargetPID = locTempTargetPID;
 
@@ -861,7 +861,7 @@ void DEventWriterROOT::Create_Branches_Combo(DTreeBranchRegister& locBranchRegis
 		//initial particle
 		Particle_t locInitialPID = locReactionStep->Get_InitialPID();
 		//should check to make sure the beam particle isn't missing...
-		if((loc_i == 0) && (locReactionStep->Get_InitialPID() != Unknown))
+		if((loc_i == 0) && (locReactionStep->Get_InitialPID() != UnknownParticle))
 			Create_Branches_BeamComboParticle(locBranchRegister, locInitialPID, locKinFitType);
 		else //decaying
 		{
