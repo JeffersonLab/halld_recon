@@ -16,16 +16,17 @@
 #include <FDC/DFDCCathodeDigiHit.h>
 #include <FDC/DFDCWireDigiHit.h>
 
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
 void FDC_init(JFactorySet* factorySet)
 {
 	/// Create and register FDC data factories
-	factorySet->Add(new JGetObjectsFactory<DFDCCathodeDigiHit>());
-	factorySet->Add(new JGetObjectsFactory<DFDCWireDigiHit>());
+	factorySet->Add(new JFactoryT<DFDCCathodeDigiHit>());
+	factorySet->Add(new JFactoryT<DFDCWireDigiHit>());
 	factorySet->Add(new DFDCHit_factory());
-	factorySet->Add(new JGetObjectsFactory<DFDCHit>("TRUTH"));
-	factorySet->Add(new JGetObjectsFactory<DFDCHit>("CALIB"));
+	factorySet->Add(new JFactoryT<DFDCHit>("TRUTH"));
+	factorySet->Add(new JFactoryT<DFDCHit>("CALIB"));
 	factorySet->Add(new DFDCPseudo_factory());
 	factorySet->Add(new DFDCCathodeCluster_factory());
 	factorySet->Add(new DFDCSegment_factory());
