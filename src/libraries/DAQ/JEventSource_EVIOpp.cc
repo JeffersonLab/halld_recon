@@ -47,6 +47,9 @@ bool sortf250pulsenumbers(const Df250PulseData *a, const Df250PulseData *b) {
 //----------------
 JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(source_name)
 {
+    SetTypeName(NAME_OF_THIS);
+    EnableGetObjects(true);
+
 	DONE = false;
 	DISPATCHER_END = false;
 	NEVENTS_PROCESSED = 0;
@@ -61,7 +64,6 @@ JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(s
 	
 	// Define base set of status bits
 	DStatusBits::SetStatusBitDescriptions();
-	// TODO: NWB: Figure out a better way of setting nevts_read correctly
 
 	// Get configuration parameters
 	VERBOSE = 0;
@@ -420,13 +422,10 @@ void JEventSource_EVIOpp::Dispatcher(void)
                         PHYSICS_BLOCKS_SKIPPED++;
                         // buff is not byte swapped so number of events should be first
                         // byte of second word
-                        uint32_t M = (buff[1]>>24);
-                        /// TODO: NWB: Can we forego this?
-                        /*
-                        Nevents_read += M;  // (this is never really used)
-								if(dapp) dapp->AddNEventsRead( M ); // This is so the JANA ticker will reflect how many events were actually read
+                        //uint32_t M = (buff[1]>>24);
+                        //Nevents_read += M;  // (this is never really used)
+								//if(dapp) dapp->AddNEventsRead( M ); // This is so the JANA ticker will reflect how many events were actually read
 								continue;
-                         */
 					 }
 				}
 
@@ -584,7 +583,6 @@ void JEventSource_EVIOpp::GetEvent(std::shared_ptr<JEvent> event)
 			// since that is what JEventSource::GetEvent stores there.
 			// In principle, if this ever gets fixed in JANA then it
 			// will not break this code.
-			// TODO: NWB: Probably need to bring this back
 			// done_reading = true;
 			// pthread_mutex_lock(&in_progress_mutex);
 			// auto it = in_progess_events.find(Ncalls_to_GetEvent);
@@ -710,8 +708,6 @@ bool JEventSource_EVIOpp::GetObjects(const std::shared_ptr<const JEvent> &event,
 	// Optionally record call stack
 	if(RECORD_CALL_STACK) AddToCallStack(pe, event);
 
-
-	// TODO: NWB: JANA1 queries GetObjects FIRST, this is going to break calibration skims
 	// Decide whether this is a data type the source supplies
     // If the data type is that of some derived data that is nominally
     // supplied by another factory, but is being stored in EVIO format
@@ -719,9 +715,8 @@ bool JEventSource_EVIOpp::GetObjects(const std::shared_ptr<const JEvent> &event,
     // say that we supply this data ONLY IF we actually have data
     // of this type.  Otherwise, we feign ignorance so that the 
     // data is produced by its usual factory
-	bool isParsed = pe->IsParsedDataType(dataClassName);
-	bool isDerived = pe->IsNonEmptyDerivedDataType(dataClassName);
-	bool isSuppliedType = isParsed || isDerived;
+    bool isSuppliedType = pe->IsParsedDataType(dataClassName)
+                           && pe->IsNonEmptyDerivedDataType(dataClassName);
 	for(auto tt : translationTables){
 		if(isSuppliedType) break;  // once this is set, it's set
 		isSuppliedType = tt->IsSuppliedType(dataClassName);

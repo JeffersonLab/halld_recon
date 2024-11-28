@@ -18,7 +18,10 @@
 class DTranslationTable_factory : public JFactoryT<DTranslationTable> {
 
 	public:
-		DTranslationTable_factory(){};
+		DTranslationTable_factory(){
+            // Translation tables need to be accessible from JEventSourceEVIOpp::GetObjects()
+            SetRegenerateFlag(true);
+        };
 		~DTranslationTable_factory(){};
 
 		DTranslationTable *tt = nullptr;
