@@ -1,11 +1,11 @@
 #include "DESSkimData.h"
 
 #include <JANA/JFactorySet.h>
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactoryT.h>
 
 void EVENTSTORE_init(JFactorySet *factorySet)
 {
-    factorySet->Add(new JGetObjectsFactory<DESSkimData>());
+    factorySet->Add(new JFactoryT<DESSkimData>());
 }
 
 

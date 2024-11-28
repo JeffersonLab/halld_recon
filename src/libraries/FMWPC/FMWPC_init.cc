@@ -18,14 +18,15 @@
 #include "DFMWPCMatchedTrack_factory.h"
 #include "DCPPEpEm_factory.h"
 
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
 void FMWPC_init(JFactorySet *factorySet) {
   /// Create and register FMWPC data factories
-  //factorySet->Add(new JGetObjectsFactory<DFMWPCHit>());
-  factorySet->Add(new JGetObjectsFactory<DFMWPCDigiHit>());
-  factorySet->Add(new JGetObjectsFactory<DFMWPCTruthHit>());
-  factorySet->Add(new JGetObjectsFactory<DFMWPCTruth>());
+  //factorySet->Add(new JFactoryT<DFMWPCHit>());
+  factorySet->Add(new JFactoryT<DFMWPCDigiHit>());
+  factorySet->Add(new JFactoryT<DFMWPCTruthHit>());
+  factorySet->Add(new JFactoryT<DFMWPCTruth>());
   factorySet->Add(new DFMWPCHit_factory());
   factorySet->Add(new DFMWPCCluster_factory());
   factorySet->Add(new DFMWPCMatchedTrack_factory());

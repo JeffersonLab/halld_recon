@@ -8,14 +8,14 @@
 #include "DCDCTrackHit_factory.h"
 
 #include <JANA/JFactorySet.h>
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactoryT.h>
 
 void CDC_init(JFactorySet *factorySet)
 {
   /// Create and register CDC data factories
-  factorySet->Add(new JGetObjectsFactory<DCDCDigiHit>());
+  factorySet->Add(new JFactoryT<DCDCDigiHit>());
   factorySet->Add(new DCDCHit_factory());
   factorySet->Add(new DCDCHit_factory_Calib());
-  factorySet->Add(new JGetObjectsFactory<DCDCHit>("TRUTH"));
+  factorySet->Add(new JFactoryT<DCDCHit>("TRUTH"));
   factorySet->Add(new DCDCTrackHit_factory());
 }

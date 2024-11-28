@@ -15,7 +15,7 @@
 #include "DDIRCTruthBarHit.h"
 
 #include <JANA/JFactorySet.h>
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactoryT.h>
 
 void DIRC_init(JFactorySet *factorySet) {
 
@@ -24,9 +24,9 @@ void DIRC_init(JFactorySet *factorySet) {
 	factorySet->Add(new DDIRCPmtHit_factory());
 	factorySet->Add(new DDIRCLEDRef_factory());
 	factorySet->Add(new DDIRCLut_factory());
-	factorySet->Add(new JGetObjectsFactory<DDIRCTDCDigiHit>());
-	factorySet->Add(new JGetObjectsFactory<DDIRCTruthPmtHit>());
-	factorySet->Add(new JGetObjectsFactory<DDIRCTruthBarHit>());
+	factorySet->Add(new JFactoryT<DDIRCTDCDigiHit>());
+	factorySet->Add(new JFactoryT<DDIRCTruthPmtHit>());
+	factorySet->Add(new JFactoryT<DDIRCTruthBarHit>());
 
 }
 

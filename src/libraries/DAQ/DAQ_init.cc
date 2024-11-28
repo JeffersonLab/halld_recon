@@ -53,7 +53,7 @@
 #include "Df250EmulatorAlgorithm_factory_v2.h"
 #include "Df250EmulatorAlgorithm_factory_v3.h"
 
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactorySet.h>
 
 #define MyTypes(X) \
 
@@ -68,48 +68,48 @@ void DAQ_init(JFactorySet *factorySet) {
     factorySet->Add(new Df250EmulatorAlgorithm_factory_v2());
     factorySet->Add(new Df250EmulatorAlgorithm_factory_v3());
 
-    factorySet->Add(new JGetObjectsFactory<Df250Config>());
-    factorySet->Add(new JGetObjectsFactory<Df250PulseIntegral>());
-    factorySet->Add(new JGetObjectsFactory<Df250StreamingRawData>());
-    factorySet->Add(new JGetObjectsFactory<Df250WindowSum>());
-    factorySet->Add(new JGetObjectsFactory<Df250PulseRawData>());
-    factorySet->Add(new JGetObjectsFactory<Df250TriggerTime>());
-    factorySet->Add(new JGetObjectsFactory<Df250PulseTime>());
-    factorySet->Add(new JGetObjectsFactory<Df250PulsePedestal>());
-    factorySet->Add(new JGetObjectsFactory<Df250PulseData>());
-    factorySet->Add(new JGetObjectsFactory<Df250WindowRawData>());
-    factorySet->Add(new JGetObjectsFactory<Df125Config>());
-    factorySet->Add(new JGetObjectsFactory<Df125TriggerTime>());
-    factorySet->Add(new JGetObjectsFactory<Df125PulseIntegral>());
-    factorySet->Add(new JGetObjectsFactory<Df125PulseTime>());
-    factorySet->Add(new JGetObjectsFactory<Df125PulsePedestal>());
-    factorySet->Add(new JGetObjectsFactory<Df125PulseRawData>());
-    factorySet->Add(new JGetObjectsFactory<Df125WindowRawData>());
-    factorySet->Add(new JGetObjectsFactory<Df125CDCPulse>());
-    factorySet->Add(new JGetObjectsFactory<Df125FDCPulse>());
-    factorySet->Add(new JGetObjectsFactory<DF1TDCHit>());
-    factorySet->Add(new JGetObjectsFactory<DF1TDCConfig>());
-    factorySet->Add(new JGetObjectsFactory<DF1TDCTriggerTime>());
-    factorySet->Add(new JGetObjectsFactory<DCAEN1290TDCConfig>());
-    factorySet->Add(new JGetObjectsFactory<DCAEN1290TDCHit>());
-    factorySet->Add(new JGetObjectsFactory<DCODAEventInfo>());
-    factorySet->Add(new JGetObjectsFactory<DCODAControlEvent>());
-    factorySet->Add(new JGetObjectsFactory<DCODAROCInfo>());
-    factorySet->Add(new JGetObjectsFactory<DTSscalers>());
-    factorySet->Add(new JGetObjectsFactory<DEPICSvalue>());
-    factorySet->Add(new JGetObjectsFactory<DEventTag>());
-	factorySet->Add(new JGetObjectsFactory<DHELIDigiHit>());
-    factorySet->Add(new JGetObjectsFactory<Df250BORConfig>());
-    factorySet->Add(new JGetObjectsFactory<Df125BORConfig>());
-    factorySet->Add(new JGetObjectsFactory<DF1TDCBORConfig>());
-    factorySet->Add(new JGetObjectsFactory<DCAEN1290TDCBORConfig>());
-    factorySet->Add(new JGetObjectsFactory<DTSGBORConfig>());
-    factorySet->Add(new JGetObjectsFactory<DL1Info>());
-    factorySet->Add(new JGetObjectsFactory<Df250Scaler>());
-    factorySet->Add(new JGetObjectsFactory<Df250AsyncPedestal>());
-    factorySet->Add(new JGetObjectsFactory<DDIRCTriggerTime>());
-    factorySet->Add(new JGetObjectsFactory<DDIRCTDCHit>());
-    factorySet->Add(new JGetObjectsFactory<DDIRCADCHit>());
-    factorySet->Add(new JGetObjectsFactory<DGEMSRSWindowRawData>());
+    factorySet->Add(new JFactoryT<Df250Config>());
+    factorySet->Add(new JFactoryT<Df250PulseIntegral>());
+    factorySet->Add(new JFactoryT<Df250StreamingRawData>());
+    factorySet->Add(new JFactoryT<Df250WindowSum>());
+    factorySet->Add(new JFactoryT<Df250PulseRawData>());
+    factorySet->Add(new JFactoryT<Df250TriggerTime>());
+    factorySet->Add(new JFactoryT<Df250PulseTime>());
+    factorySet->Add(new JFactoryT<Df250PulsePedestal>());
+    factorySet->Add(new JFactoryT<Df250PulseData>());
+    factorySet->Add(new JFactoryT<Df250WindowRawData>());
+    factorySet->Add(new JFactoryT<Df125Config>());
+    factorySet->Add(new JFactoryT<Df125TriggerTime>());
+    factorySet->Add(new JFactoryT<Df125PulseIntegral>());
+    factorySet->Add(new JFactoryT<Df125PulseTime>());
+    factorySet->Add(new JFactoryT<Df125PulsePedestal>());
+    factorySet->Add(new JFactoryT<Df125PulseRawData>());
+    factorySet->Add(new JFactoryT<Df125WindowRawData>());
+    factorySet->Add(new JFactoryT<Df125CDCPulse>());
+    factorySet->Add(new JFactoryT<Df125FDCPulse>());
+    factorySet->Add(new JFactoryT<DF1TDCHit>());
+    factorySet->Add(new JFactoryT<DF1TDCConfig>());
+    factorySet->Add(new JFactoryT<DF1TDCTriggerTime>());
+    factorySet->Add(new JFactoryT<DCAEN1290TDCConfig>());
+    factorySet->Add(new JFactoryT<DCAEN1290TDCHit>());
+    factorySet->Add(new JFactoryT<DCODAEventInfo>());
+    factorySet->Add(new JFactoryT<DCODAControlEvent>());
+    factorySet->Add(new JFactoryT<DCODAROCInfo>());
+    factorySet->Add(new JFactoryT<DTSscalers>());
+    factorySet->Add(new JFactoryT<DEPICSvalue>());
+    factorySet->Add(new JFactoryT<DEventTag>());
+	factorySet->Add(new JFactoryT<DHELIDigiHit>());
+    factorySet->Add(new JFactoryT<Df250BORConfig>());
+    factorySet->Add(new JFactoryT<Df125BORConfig>());
+    factorySet->Add(new JFactoryT<DF1TDCBORConfig>());
+    factorySet->Add(new JFactoryT<DCAEN1290TDCBORConfig>());
+    factorySet->Add(new JFactoryT<DTSGBORConfig>());
+    factorySet->Add(new JFactoryT<DL1Info>());
+    factorySet->Add(new JFactoryT<Df250Scaler>());
+    factorySet->Add(new JFactoryT<Df250AsyncPedestal>());
+    factorySet->Add(new JFactoryT<DDIRCTriggerTime>());
+    factorySet->Add(new JFactoryT<DDIRCTDCHit>());
+    factorySet->Add(new JFactoryT<DDIRCADCHit>());
+    factorySet->Add(new JFactoryT<DGEMSRSWindowRawData>());
 }
 
