@@ -10,16 +10,16 @@
 #include "DCCALRefDigiHit.h"
 
 #include <JANA/JFactorySet.h>
-#include <JANA/Compatibility/JGetObjectsFactory.h>
+#include <JANA/JFactoryT.h>
 
 void CCAL_init(JFactorySet *factorySet)
 {
 	/// Create and register CCAL data factories
-	factorySet->Add(new JGetObjectsFactory<DCCALDigiHit>());
-	factorySet->Add(new JGetObjectsFactory<DCCALRefDigiHit>());
+	factorySet->Add(new JFactoryT<DCCALDigiHit>());
+	factorySet->Add(new JFactoryT<DCCALRefDigiHit>());
 	factorySet->Add(new DCCALHit_factory());
 	factorySet->Add(new DCCALShower_factory());
-	factorySet->Add(new JGetObjectsFactory<DCCALHit>("TRUTH"));
+	factorySet->Add(new JFactoryT<DCCALHit>("TRUTH"));
 	factorySet->Add(new DCCALTruthShower_factory());
 	factorySet->Add(new DCCALGeometry_factory());
 }
