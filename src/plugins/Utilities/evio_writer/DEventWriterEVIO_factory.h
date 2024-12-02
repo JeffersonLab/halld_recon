@@ -22,6 +22,13 @@ class DEventWriterEVIO_factory : public JFactoryT<DEventWriterEVIO>
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			Insert(new DEventWriterEVIO(locEvent));
 		}
+		void Finish(){
+			for(auto& obj:mData){
+				delete obj;
+				obj = nullptr;
+			}
+			mData.clear();
+		}
 };
 
 #endif // _DEventWriterEVIO_factory_

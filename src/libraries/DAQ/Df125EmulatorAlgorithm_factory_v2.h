@@ -24,6 +24,14 @@ class Df125EmulatorAlgorithm_factory_v2:public JFactoryT<Df125EmulatorAlgorithm>
 		};
 
 		~Df125EmulatorAlgorithm_factory_v2(){};
+	
+	private:	
+		void Finish()
+		{
+			for(auto locInfo : mData)
+				delete locInfo;
+			mData.clear();
+		}
 
 };
 
