@@ -1,7 +1,5 @@
 // $Id$
 
-#include <JANA/Compatibility/JGetObjectsFactory.h>
-
 #include "DTrackWireBased_factory.h"
 #include "DTrackTimeBased_factory.h"
 #include "DTrackWireBased_factory_StraightLine.h"
@@ -31,6 +29,8 @@
 #include "DMCTrackHit.h"
 #include "DMCTrajectoryPoint.h"
 
+#include <JANA/JFactorySet.h>
+#include <JANA/JFactoryT.h>
 
 void TRACKING_init(JFactorySet *factorySet)
 {
@@ -61,7 +61,7 @@ void TRACKING_init(JFactorySet *factorySet)
    factorySet->Add(new DTrackFitter_factory_KalmanSIMD_ALT1());
    factorySet->Add(new DTrackFitter_factory_StraightTrack());
 
-   factorySet->Add(new JGetObjectsFactory<DMCThrown>());
-   factorySet->Add(new JGetObjectsFactory<DMCTrackHit>());
-   factorySet->Add(new JGetObjectsFactory<DMCTrajectoryPoint>());
+   factorySet->Add(new JFactoryT<DMCThrown>());
+   factorySet->Add(new JFactoryT<DMCTrackHit>());
+   factorySet->Add(new JFactoryT<DMCTrajectoryPoint>());
 }
