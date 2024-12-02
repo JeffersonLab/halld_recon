@@ -51,7 +51,7 @@ class DEventProcessor_monitoring_hists : public JEventProcessor
 		DHistogramAction_ObjectMemory dHistogramAction_ObjectMemory;
 		DHistogramAction_TriggerStudies dHistogramAction_TriggerStudies;
 
-		TH1D* dHist_IsEvent; //counts events
+		TH1D* dHist_IsEvent; //counts physics events
 
 		unsigned int dNumMemoryMonitorEvents;
 
