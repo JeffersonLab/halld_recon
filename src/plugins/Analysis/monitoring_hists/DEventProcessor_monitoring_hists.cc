@@ -35,10 +35,9 @@ void DEventProcessor_monitoring_hists::Init()
     app->SetDefaultParameter("MONITOR:MIN_TRACKING_FOM", MIN_TRACKING_FOM);
 
 	string locOutputFileName = "hd_root.root";
-	if(app->GetJParameterManager()->Exists("OUTPUT_FILENAME"))
+	if(app->GetJParameterManager()->Exists("OUTPUT_FILENAME")) {
 		app->GetParameter("OUTPUT_FILENAME", locOutputFileName);
-
-	// TODO: NWB: Rejigger Exists() to be less weird and ugly
+    }
 
 	//go to file
 	TFile* locFile = (TFile*)gROOT->FindObject(locOutputFileName.c_str());
@@ -53,7 +52,7 @@ void DEventProcessor_monitoring_hists::Init()
 		locSubDirectory = new TDirectoryFile("Independent", "Independent");
 	locSubDirectory->cd();
 
-	dHist_IsEvent = new TH1D("IsEvent", "Is the event an event?", 2, -0.5, 1.5);
+	dHist_IsEvent = new TH1D("IsEvent", "Is the event a physics event?", 2, -0.5, 1.5);
 	dHist_IsEvent->GetXaxis()->SetBinLabel(1, "False");
 	dHist_IsEvent->GetXaxis()->SetBinLabel(2, "True");
 
@@ -121,14 +120,15 @@ void DEventProcessor_monitoring_hists::Process(const std::shared_ptr<const JEven
 	//CHECK TRIGGER TYPE
 	const DTrigger* locTrigger = NULL;
 	locEvent->GetSingle(locTrigger);
-	if(!locTrigger->Get_IsPhysicsEvent())
-		return;
+    bool is_physics_event = locTrigger->Get_IsPhysicsEvent();
 
 	GetLockService(locEvent)->RootFillLock(this); //ACQUIRE ROOT FILL LOCK
 	{
-		dHist_IsEvent->Fill(1);
+		dHist_IsEvent->Fill(is_physics_event);
 	}
 	GetLockService(locEvent)->RootFillUnLock(this); //RELEASE ROOT FILL LOCK
+	
+    if(!is_physics_event) return;
 
 	//Fill reaction-independent histograms.
 	dHistogramAction_NumReconstructedObjects(locEvent);
