@@ -43,7 +43,13 @@ class DReaction_factory_ReactionFilter : public JFactoryT<DReaction>
 		bool dDebugFlag = false;
 
 		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
-
+		void Finish(){
+			for(auto& obj:mData){
+				delete obj;
+				obj = nullptr;
+			}
+			mData.clear();
+		}
 		//UTILITY FUNCTIONS
 		map<size_t, tuple<string, string, string, vector<string>>> Parse_Input(void);
 		bool Convert_StringToPID(string locString, Particle_t& locPID, bool& locIsMissingFlag);

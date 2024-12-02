@@ -37,6 +37,7 @@ class DEventWriterREST_factory : public JFactoryT<DEventWriterREST>
 				delete  eventWriterObject;
 				eventWriterObject = nullptr;
 			}
+			mData.clear();
 		}
 		std::string dOutputFileBaseName;
 };

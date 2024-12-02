@@ -26,9 +26,17 @@ class DTrackFitter_factory_LSLM:public JFactoryT<DTrackFitter>{
 			SetFactoryFlag(PERSISTENT);
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			Insert(fitter);
-			
 			return;
 		}
+		
+		void Finish(){
+			for(auto& obj:mData){
+				delete  obj;
+				obj = nullptr;
+			}
+			mData.clear();
+		}
+		
 };
 
 #endif // _DTrackFitter_factory_LSLM_

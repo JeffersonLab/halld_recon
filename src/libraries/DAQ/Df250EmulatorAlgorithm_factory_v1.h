@@ -28,6 +28,13 @@ class Df250EmulatorAlgorithm_factory_v1:public JFactoryT<Df250EmulatorAlgorithm>
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			Insert(emulator);
 		}
+
+		void Finish()
+		{
+			for(auto locInfo : mData)
+				delete locInfo;
+			mData.clear();
+		}
 };
 
 #endif // _Df250EmulatorAlgorithm_factory_v1_
