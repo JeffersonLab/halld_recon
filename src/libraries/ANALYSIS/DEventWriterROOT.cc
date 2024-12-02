@@ -712,7 +712,6 @@ void DEventWriterROOT::Create_Branches_ChargedHypotheses(DTreeBranchRegister& lo
 	  for (unsigned int j=0;j<4;j++){
 	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, dFDCxLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize); 
 	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName, dFDCyLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize);  
-	    locBranchRegister.Register_FundamentalArray<Float_t>(Build_BranchName(locParticleBranchName,dFDCzLeaves[j].c_str()), locArraySizeString, dInitNumTrackArraySize);
 	  }
 	}
 
@@ -1844,18 +1843,23 @@ void DEventWriterROOT::Fill_ChargedHypo(DTreeFillData* locTreeFillData, unsigned
 	if (FDC_VERBOSE_OUTPUT){
 	  if (locTrackTimeBased->extrapolations.find(SYS_FDC) != locTrackTimeBased->extrapolations.end()) {
 	    vector<DTrackFitter::Extrapolation_t>locExtraps=locTrackTimeBased->extrapolations.at(SYS_FDC);
-	    unsigned int locPackageIndex=0;
+	    int locPackageIndex=-1,locOldIndex=-1;
 	    for (unsigned int j=0;j<locExtraps.size();j++){
 	      DVector3 locPos=locExtraps[j].position;
-	      if (locPos.z()>dFdcPackages[locPackageIndex]){
+	      double locZ=locPos.z();
+	   
+	      if (locZ>dFdcPackages[3]) locPackageIndex=3;
+	      else if (locZ>dFdcPackages[2]) locPackageIndex=2;
+	      else if (locZ>dFdcPackages[1]) locPackageIndex=1;
+	      else locPackageIndex=0;
+
+	      if (locPackageIndex!=locOldIndex){
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCxLeaves[locPackageIndex].c_str()), locPos.x(), locArrayIndex);
 		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCyLeaves[locPackageIndex].c_str()), locPos.y(), locArrayIndex);
-		locTreeFillData->Fill_Array<Float_t>(Build_BranchName(locParticleBranchName, dFDCzLeaves[locPackageIndex].c_str()), locPos.z(), locArrayIndex);
-	      
-		locPackageIndex++;
-		if (locPackageIndex>3) break;
 	      }
-	   
+	      
+	      if (locPackageIndex==3) break;
+	      locOldIndex=locPackageIndex;
 	    }
 	  }
 	}
