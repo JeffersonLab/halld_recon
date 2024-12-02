@@ -24,6 +24,13 @@ class DTrackFinder_factory:public JFactoryT<DTrackFinder>{
    
     Insert(new DTrackFinder(GetApplication()));
   }
+  
+  void Finish()
+  {
+    for(auto locInfo : mData)
+      delete locInfo;
+    mData.clear();
+  }
 };
 
 #endif // _DTrackFinder_factory_

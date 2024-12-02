@@ -29,6 +29,13 @@ class DEventWriterHDDM_factory : public JFactoryT<DEventWriterHDDM>
 			ClearFactoryFlag(WRITE_TO_OUTPUT);
 			Insert(new DEventWriterHDDM(locEvent, dOutputFileBaseName));
 		}
+		
+		void Finish()
+		{
+			for(auto locInfo : mData)
+				delete locInfo;
+			mData.clear();
+		}
 
 		string dOutputFileBaseName;
 };
