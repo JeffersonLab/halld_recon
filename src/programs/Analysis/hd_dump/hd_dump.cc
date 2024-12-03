@@ -75,7 +75,7 @@ int main(int narg, char *argv[])
 
 	// Run JANA
 	auto exitCode = jana::Execute(app, options);
-	// delete app; TODO: RR Look at https://shorturl.at/bcoV9 for details of this error and figure out the real reason!
+	delete app;
 
 	if( exitCode ) cerr << "Exit code: " << exitCode << endl;
 	return exitCode;

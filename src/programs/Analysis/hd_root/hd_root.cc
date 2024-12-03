@@ -48,6 +48,8 @@ int main(int narg, char *argv[])
 	// Run JANA
 	auto exitCode = jana::Execute(app, dapp.GetUserOptions());
 
+    delete app;
+
 	if( exitCode ) cerr << "Exit code: " << exitCode << endl;
 	return exitCode;
 }
