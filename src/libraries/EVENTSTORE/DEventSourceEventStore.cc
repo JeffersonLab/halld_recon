@@ -45,6 +45,7 @@ static bool TEST_MODE = false;
 DEventSourceEventStore::DEventSourceEventStore(std::string source_name):JEventSource(source_name) {
 	SetTypeName("DEventSourceEventStore");
 	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
+	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
 }
 
 //---------------------------------

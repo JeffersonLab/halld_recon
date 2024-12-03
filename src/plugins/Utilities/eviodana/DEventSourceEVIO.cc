@@ -19,6 +19,7 @@ using namespace std;
 DEventSourceEVIO::DEventSourceEVIO(const char* source_name):JEventSource(source_name)
 {
 	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
+	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
 	// Open the EVIO file, catching any exceptions
 	try {
 		chan = new evioFileChannel(source_name,"r", 65536);
