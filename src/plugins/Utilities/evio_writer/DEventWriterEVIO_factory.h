@@ -15,7 +15,7 @@ class DEventWriterEVIO_factory : public JFactoryT<DEventWriterEVIO>
 		~DEventWriterEVIO_factory() override = default;
 
 	private:
-		void Process(const std::shared_ptr<const JEvent>& locEvent, uint64_t locEventNumber)
+		void Process(const std::shared_ptr<const JEvent>& locEvent)
 		{
 			// Create single DEventWriterEVIO object and marks the factory as persistent so it doesn't get deleted every event.
 			SetFactoryFlag(PERSISTENT);

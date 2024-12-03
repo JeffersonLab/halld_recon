@@ -22,7 +22,7 @@ class JEventProcessor_pi0fcaltofskim:public JEventProcessor{
   enum { kMaxHits = 500, kMaxClus = 20 };
 
   JEventProcessor_pi0fcaltofskim();
-  ~JEventProcessor_pi0fcaltofskim();
+  ~JEventProcessor_pi0fcaltofskim(){};
 
  private:
   void Init() override;
