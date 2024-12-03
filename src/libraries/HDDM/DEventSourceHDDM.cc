@@ -75,6 +75,7 @@ DEventSourceHDDM::DEventSourceHDDM(const char* source_name)
 {
    /// Constructor for DEventSourceHDDM object
    EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
+	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
    ifs = new ifstream(source_name);
    ifs->get();
    ifs->unget();

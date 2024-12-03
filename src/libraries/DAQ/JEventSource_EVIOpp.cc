@@ -48,7 +48,8 @@ bool sortf250pulsenumbers(const Df250PulseData *a, const Df250PulseData *b) {
 JEventSource_EVIOpp::JEventSource_EVIOpp(std::string source_name):JEventSource(source_name)
 {
     SetTypeName(NAME_OF_THIS);
-    EnableGetObjects(true);
+	EnableGetObjects(true);  // Check the source first for existing objects; only invoke the factory to create them if they aren't found in the source.
+	EnableFinishEvent(true); // Ensure ::FinishEvent gets called. By default, it is disabled (false).
 
 	DONE = false;
 	DISPATCHER_END = false;
