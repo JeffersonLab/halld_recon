@@ -1020,9 +1020,32 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 				  if(fabs(locMissingP4.M2()) > 0.01)
 				    continue;
 				  dpip_pim->Fill(rhomom.M());
+				  // CircMonitor : now have exclusive rho
+				  // Need decay helicity angles
+				  // locBeamPhoton + proton -> rhomom (pipmom + pimmom) + protonP4
+				  
+				  //define rho decay rest frame
+				  auto   decBoost= -rhomom.BoostVector();
+				  DLorentzVector decBar=protonP4;
+				  decBar.Boost(decBoost);
+				  HSLorentzVector decGamma=locBeamPhoton;
+				  decGamma.Boost(decBoost);
+				  auto  zV=-decBar.Vect().Unit();
+				  auto  yV=decBar.Vect().Cross(decGamma.Vect()).Unit();
+				  auto  xV=yV.Cross(zV).Unit();
+				  //transform pi+ to rho decay frame
+				  auto decD1=pipmom;
+				  decD1.boost(decBoost);
+    
+				  TVector3 angles(decD1.Vect().Dot(xV),decD1.Vect().Dot(yV),decD1.Vect().Dot(zV));
+				  auto rhoDecayCosTh=TMath::Cos(angles.Theta());
+				  auto rhoDecayPhi=angles.Phi();
+
+
 				  break;
 				}
 			      }
+
 			  }
 			}
 			// for inclusive rho: require missing energy to be near 0
@@ -1037,7 +1060,6 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 			      break;
 			    }
 			}
-
 			for(uint32_t i=0; i<pi0s.size(); i++){
 			  DLorentzVector &pi0mom = pi0s[i];
 			  DLorentzVector omegamom(pi0mom + rhomom);
