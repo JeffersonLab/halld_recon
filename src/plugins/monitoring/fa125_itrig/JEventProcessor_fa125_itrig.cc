@@ -82,7 +82,6 @@ void JEventProcessor_fa125_itrig::Init()
   lockService = app->GetService<JLockService>();
   app->SetDefaultParameter("fa125_itrig:MAKE_TREE", MAKE_TREE, "Make a ROOT tree file");
 
-  lockService->RootWriteLock();
 
   TDirectory *main = gDirectory;
   gDirectory->mkdir("fa125_itrig")->cd();
