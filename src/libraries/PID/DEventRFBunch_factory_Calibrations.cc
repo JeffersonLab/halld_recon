@@ -88,9 +88,10 @@ void DEventRFBunch_factory_Calibrations::Process(const std::shared_ptr<const JEv
 		break;
 	}
 
-	if(!locHitFoundFlag)
+	if(!locHitFoundFlag){
 		Create_NaNRFBunch();
 		return; // TODO: NWB: Verify
+	}
 
 	//Select RF Bunch:
 	Select_RFBunch(event, locTrackWireBasedVector, locRFTime);
