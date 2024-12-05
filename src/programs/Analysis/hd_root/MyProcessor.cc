@@ -46,7 +46,18 @@ MyProcessor::MyProcessor()
 //------------------------------------------------------------------
 MyProcessor::~MyProcessor()
 {
+    // Moving forward, resources _really_ need to be closed in the Finish() callback
+    // instead. So why we doing that here? Because lots of other GlueX components fill
+    // histograms in THEIR destructors, and ROOT will helpfully segfault if you try to 
+    // fill a histogram after you've closed the corresponding file.
 
+	if(ROOTfile!=NULL){
+		ROOTfile->Write();
+		ROOTfile->Close();
+		delete ROOTfile;
+		ROOTfile=NULL;
+		cout<<endl<<"Closed ROOT file"<<endl;
+	}
 }
 
 //------------------------------------------------------------------
@@ -155,12 +166,5 @@ void MyProcessor::Process(const std::shared_ptr<const JEvent>& event)
 //------------------------------------------------------------------
 void MyProcessor::Finish()
 {
-	if(ROOTfile!=NULL){
-		ROOTfile->Write();
-		ROOTfile->Close();
-		delete ROOTfile;
-		ROOTfile=NULL;
-		cout<<endl<<"Closed ROOT file"<<endl;
-	}
 }
 
