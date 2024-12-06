@@ -217,16 +217,13 @@ class DParsedEvent{
 		#define copyfactoryptr(A) fac_##A = event->GetFactory<A>();
 		class DFactoryPointers{
 			public:
-				std::shared_ptr<const JEvent> event;
+				bool initialized = false;
 				MyTypes(makefactoryptr)
 				MyDerivedTypes(makefactoryptr)
 				MyBORTypes(makefactoryptr)
 
-				DFactoryPointers():event(nullptr){}
-				~DFactoryPointers(){}
-
 				void Init(const std::shared_ptr<const JEvent>& event){
-					this->event = event;
+					this->initialized = true;
 					MyTypes(copyfactoryptr)
 					MyDerivedTypes(copyfactoryptr)
 					MyBORTypes(copyfactoryptr)
@@ -250,11 +247,9 @@ class DParsedEvent{
 		#define insertborintofactory(A)         {auto fac=event->Insert(borptrs->v##A); fac->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER); fac->EnableGetAs<JObject>(); }
 		#define insertintofactorynonempty(A)    if(!v##A.empty()) event->Insert(v##A)->SetFactoryFlag(JFactory::NOT_OBJECT_OWNER);
 
-		// TODO: NWB: Should these be PERSISTENT as well seeing as we maintain a pool?
-
 	void CopyToFactories(const std::shared_ptr<const JEvent>& event){
 			DFactoryPointers &facptrs = factory_pointers[&(*event)];
-			if(facptrs.event == nullptr) facptrs.Init(event);
+			if(!facptrs.initialized) facptrs.Init(event);
 
 			// Copy all data vectors to appropriate factories
 			MyTypes(copytofactory)
