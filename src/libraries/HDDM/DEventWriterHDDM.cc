@@ -862,11 +862,11 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	    hddm_s::FmwpcHitList::iterator fmwpchitit=fmwpchitl->end()-1;
 	    fmwpchitit->setT(FMWPCHits[i]->t);
 	    fmwpchitit->addFmwpcHitQs();
-        fmwpchitit->addFmwpcHitQs().begin()->setQ(FMWPCHits[i]->q);	    
+        fmwpchitit->getFmwpcHitQs().begin()->setQ(FMWPCHits[i]->q);	    
 	    fmwpchitit->addFmwpcDigiHits();
-        fmwpchitit->addFmwpcDigiHits().begin()->setAmp(FMWPCHits[i]->amp);
-        fmwpchitit->addFmwpcDigiHits().begin()->setPed(FMWPCHits[i]->ped);
-        fmwpchitit->addFmwpcDigiHits().begin()->setQf(FMWPCHits[i]->QF);
+        fmwpchitit->getFmwpcDigiHits().begin()->setAmp(FMWPCHits[i]->amp);
+        fmwpchitit->getFmwpcDigiHits().begin()->setPed(FMWPCHits[i]->ped);
+        fmwpchitit->getFmwpcDigiHits().begin()->setQf(FMWPCHits[i]->QF);
     
 	  }
 	
