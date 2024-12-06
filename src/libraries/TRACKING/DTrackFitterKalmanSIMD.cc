@@ -340,6 +340,7 @@ DTrackFitterKalmanSIMD::DTrackFitterKalmanSIMD(JEventLoop *loop):DTrackFitter(lo
      dECALzBack=dECALz+20.;
      dECALsize=geom->GetFCALInsertSize();
    }
+   else dECALz=1000.;
    if (geom->GetDIRCZ(dDIRCz)==false) dDIRCz=1000.;
    geom->GetFMWPCZ_vec(dFMWPCz_vec);
    geom->GetFMWPCSize(dFMWPCsize);

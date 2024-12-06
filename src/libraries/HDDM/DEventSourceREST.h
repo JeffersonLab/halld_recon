@@ -42,6 +42,8 @@
 #include <DIRC/DDIRCPmtHit.h>
 #include <DIRC/DDIRCTruthBarHit.h>
 #include <PID/DParticleID.h>
+#include <TAGGER/DTAGMHit.h>
+#include <TAGGER/DTAGHHit.h>
 #include <TAGGER/DTAGMGeometry.h>
 #include <TAGGER/DTAGHGeometry.h>
 #include <HDDM/DEventHitStatistics.h>
@@ -142,6 +144,13 @@ class DEventSourceREST:public JEventSource
    	map<unsigned int, JCalibration *> dJCalib_olds; //unsigned int is run number
    	map<unsigned int, DTAGHGeometry *> dTAGHGeoms; //unsigned int is run number
    	map<unsigned int, DTAGMGeometry *> dTAGMGeoms; //unsigned int is run number
+
+	//map<unsigned int, double *> dTAGHCounterQualities;
+	map<unsigned int, double [TAGH_MAX_COUNTER+1]> dTAGHCounterQualities;
+	//map<unsigned int, double **> dTAGMFiberQualities;
+	map<unsigned int, double [TAGM_MAX_ROW+1][TAGM_MAX_COLUMN+1]> dTAGMFiberQualities;
+	
+	
 
 };
 
