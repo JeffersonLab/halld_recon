@@ -346,10 +346,10 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 	}
 	
 	/*************************************************************** CircMonitor  ***************************************************************/
-	dHist_rhoDecPhi_pp = new TH1I("rhoDecPhipp", "Azimuthal Decay Angle of rho with hel=+1, cosTh=+1", 40, -TMath::Pi(),TMath::Pi());
-	dHist_rhoDecPhi_pm = new TH1I("rhoDecPhipm", "Azimuthal Decay Angle of rho with hel=+1, cosTh=-1", 40, -TMath::Pi(),TMath::Pi());
-	dHist_rhoDecPhi_mp = new TH1I("rhoDecPhimp", "Azimuthal Decay Angle of rho with hel=-1, cosTh=+1", 40, -TMath::Pi(),TMath::Pi());
-	dHist_rhoDecPhi_mm = new TH1I("rhoDecPhimm", "Azimuthal Decay Angle of rho with hel=-1, cosTh=-1", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_pp = new TH1F("rhoDecPhipp", "Azimuthal Decay Angle of rho with hel=+1, cos(#theta)>0", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_pm = new TH1F("rhoDecPhipm", "Azimuthal Decay Angle of rho with hel=+1, cos(#theta)<0", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_mp = new TH1F("rhoDecPhimp", "Azimuthal Decay Angle of rho with hel=-1, cos(#theta)>0", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_mm = new TH1F("rhoDecPhimm", "Azimuthal Decay Angle of rho with hel=-1, cos(#theta)<0", 40, -TMath::Pi(),TMath::Pi());
 
 	// back to main dir
 	main->cd();
