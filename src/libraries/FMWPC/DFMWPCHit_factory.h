@@ -29,7 +29,8 @@ class DFMWPCHit_factory:public jana::JFactory<DFMWPCHit>{
 //  const char* Tag(void){return "";}
 
   // hit threshold
-  double hit_threshold;
+  double hit_amp_threshold;
+  double hit_int_threshold;
 
   // timing cut limits
   double t_raw_min;

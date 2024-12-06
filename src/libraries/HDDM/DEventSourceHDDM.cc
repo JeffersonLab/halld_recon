@@ -3009,7 +3009,10 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       hit->t     = iter->getT();
       const hddm_s::FmwpcHitQList &charges=iter->getFmwpcHitQs();
       hit->q     = (charges.size()) ? charges.begin()->getQ() : 0.;
-      hit->amp   = (charges.size()) ? hit->q/28.8 : 0.; // copied from CDC
+      const hddm_s::FmwpcDigiHitList &digis=iter->getFmwpcDigiHits();
+      hit->amp   = (digis.size()) ? digis.begin()->getAmp()  : 0.; 
+      hit->QF   = (digis.size()) ? digis.begin()->getQf()  : 0.; 
+      hit->ped   = (digis.size()) ? digis.begin()->getPed()  : 0.; 
       data.push_back(hit);
    }
 
