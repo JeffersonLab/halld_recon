@@ -70,7 +70,11 @@ class JEventProcessor_highlevel_online:public jana::JEventProcessor
 		TH1I *dptrans;
 		TH1I *dme_rho;
 		TH1I *dme_omega;
-		
+		TH1I *dHist_rhoDecPhi_pp=nullptr;
+		TH1I *dHist_rhoDecPhi_mp=nullptr;
+		TH1I *dHist_rhoDecPhi_pm=nullptr;
+		TH1I *dHist_rhoDecPhi_mm=nullptr;
+
 		TH2D *dF1TDC_fADC_tdiff;
 		map<pair<int,int>, double> f1tdc_bin_map; // key=<rocid,slot> val=bin
 		

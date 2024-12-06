@@ -345,6 +345,11 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin, str);
 	}
 	
+	/*************************************************************** CircMonitor  ***************************************************************/
+	dHist_rhoDecPhi_pp = new TH1I("rhoDecPhipp", "Azimuthal Decay Angle of rho with hel=+1, cosTh=+1", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_pm = new TH1I("rhoDecPhipm", "Azimuthal Decay Angle of rho with hel=+1, cosTh=-1", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_mp = new TH1I("rhoDecPhimp", "Azimuthal Decay Angle of rho with hel=-1, cosTh=+1", 40, -TMath::Pi(),TMath::Pi());
+	dHist_rhoDecPhi_mm = new TH1I("rhoDecPhimm", "Azimuthal Decay Angle of rho with hel=-1, cosTh=-1", 40, -TMath::Pi(),TMath::Pi());
 
 	// back to main dir
 	main->cd();
@@ -1020,6 +1025,7 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 				  if(fabs(locMissingP4.M2()) > 0.01)
 				    continue;
 				  dpip_pim->Fill(rhomom.M());
+				  
 				  // CircMonitor : now have exclusive rho
 				  // Need decay helicity angles
 				  // locBeamPhoton + proton -> rhomom (pipmom + pimmom) + protonP4
@@ -1028,19 +1034,26 @@ jerror_t JEventProcessor_highlevel_online::evnt(JEventLoop *locEventLoop, uint64
 				  auto   decBoost= -rhomom.BoostVector();
 				  DLorentzVector decBar=protonP4;
 				  decBar.Boost(decBoost);
-				  HSLorentzVector decGamma=locBeamPhoton;
+				  DLorentzVector decGamma=locBeamPhoton->lorentzMomentum();
 				  decGamma.Boost(decBoost);
 				  auto  zV=-decBar.Vect().Unit();
 				  auto  yV=decBar.Vect().Cross(decGamma.Vect()).Unit();
 				  auto  xV=yV.Cross(zV).Unit();
 				  //transform pi+ to rho decay frame
 				  auto decD1=pipmom;
-				  decD1.boost(decBoost);
-    
+				  decD1.Boost(decBoost);
+				  //calculate decay angles
 				  TVector3 angles(decD1.Vect().Dot(xV),decD1.Vect().Dot(yV),decD1.Vect().Dot(zV));
 				  auto rhoDecayCosTh=TMath::Cos(angles.Theta());
 				  auto rhoDecayPhi=angles.Phi();
 
+				  //Get the event helicity. Should be +-1
+				  auto helicity = yV.Y() > 0 ? 1 : -1; //nonsense, needs replaced!!!
+				  //Fill histograms for making asymmetry
+				  if(helicity==1&&rhoDecayCosTh>0)dHist_rhoDecPhi_pp->Fill(rhoDecayPhi);
+				  else if(helicity==1&&rhoDecayCosTh<0)dHist_rhoDecPhi_pm->Fill(-rhoDecayPhi);//note -ve
+				  else if(helicity==-1&&rhoDecayCosTh>0)dHist_rhoDecPhi_mp->Fill(rhoDecayPhi);//note +ve
+				  else if(helicity==-1&&rhoDecayCosTh<0)dHist_rhoDecPhi_mm->Fill(-rhoDecayPhi);//note -ve
 
 				  break;
 				}
