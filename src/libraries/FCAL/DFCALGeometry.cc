@@ -16,24 +16,128 @@ using namespace std;
 // DFCALGeometry    (Constructor)
 //---------------------------------
 DFCALGeometry::DFCALGeometry(const DGeometry *geom){
+  // Find position of upstream face of FCAL
+  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+
+  // Find the size of the sensitive volume of each lead glass block
+  vector<double>block;
+  geom->Get("//box[@name='LGBL']/@X_Y_Z",block);
+  m_sensitiveBlockSize=block[0];
+
+  // For backward compatibility, get grid-based geometry.  Override this
+  // geometry if the insert is present.
+  GetGridGeometry(geom);
+  
+  // Check for presence of PbWO4 insert
+  if (geom->HaveInsert()){ // Geometry based on survey data for positions
+    // Get size of the insert 
+    m_insertSize=geom->GetFCALInsertSize();
+
+    // Find the size of the sensitive volume of each PWO crystal
+    geom->Get("//box[@name='XTBL']/@X_Y_Z",block);
+    m_insertSensitiveBlockSize=block[0];
+
+    // Get the z-position of the upstream face of the insert
+    geom->GetECALZ(m_insertFront);
+
+    // Get the x-y positions of the crystals
+    GetSurveyGeometry(geom);
+  }
+}
+
+// The following routine looks up the position of each row in the xml
+// specification for the geometry
+void DFCALGeometry::GetSurveyGeometry(const DGeometry *geom){
+  // Initialize active block map
+  for( int row = 0; row < 2*kBlocksTall; row++ ){
+    for( int col = 0; col < 2*kBlocksWide; col++ ){
+      m_activeBlock[row][col]=false;
+    }
+  }
+
+  // Extract block positions for each section of the lead glass from xml
+  string section_names[4]={"LGLowerRow","LGUpperRow","LGNorthRow","LGSouthRow"};
+  int num_rows=19;
+  for (int i=0;i<4;i++){
+    if (i>1) num_rows=38;
+    for (int j=0;j<num_rows;j++){
+      string my_row_string=section_names[i]+to_string(j);
+      string my_mpos_string="//composition[@name='"+my_row_string
+	+"']/mposX[@volume='LGDblock']/";
+      int ncopy=0,col0=0,row=0;
+      double x0=0,dx=0.;
+      geom->Get(my_mpos_string+"@ncopy",ncopy);
+      geom->Get(my_mpos_string+"column/@value",col0); 
+      geom->Get(my_mpos_string+"row/@value",row);
+      geom->Get(my_mpos_string+"@X0",x0);
+      geom->Get(my_mpos_string+"@dX",dx);
+      string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
+      vector<double>pos;
+      geom->Get(my_pos_string+"@X_Y_Z",pos);  
+      //vector<double>rot;
+      //geom->Get(my_pos_string+"@rot",rot);
+      //double phi=rot[2]*M_PI/180.;
+      for (int col=col0;col<col0+ncopy;col++){
+	double x=m_FCALdX+x0+double(col-col0)*dx;
+	double y=m_FCALdY+pos[1];//+phi*x; //use small angle approximation
+	m_positionOnFace[row][col].Set(x,y);
+	m_activeBlock[row][col] = true;
+      }
+    }
+  }
+
+  // Now extract the positions of the PWO crystals
+  for( int i = 0; i < 42; i++ ){
+    string my_row_string="XTrow"+to_string(i);
+    string my_mpos_string="//composition[@name='"+my_row_string
+      +"']/mposX[@volume='XTModule']/";
+    int ncopy=0;
+    double x0=0,dx=0.;
+    geom->Get(my_mpos_string+"@ncopy",ncopy);
+    geom->Get(my_mpos_string+"@X0",x0);
+    geom->Get(my_mpos_string+"@dX",dx);
+    string my_pos_string="//posXYZ[@volume='"+my_row_string+"']/";
+    vector<double>pos;
+    geom->Get(my_pos_string+"@X_Y_Z",pos);  
+    vector<double>rot;
+    geom->Get(my_pos_string+"@rot",rot);
+    double phi=rot[2]*M_PI/180.;
+    int col0=0,my_row=i;
+    if (i>=40){ //handle right side of beam hole
+      col0=21;
+      my_row=i-21;
+    }
+    for (int col=col0;col<col0+ncopy;col++){
+      double x=m_FCALdX+x0+double(col-col0)*dx;
+      double y=m_FCALdY+pos[1]+phi*x; //use small angle approximation
+
+      int row_index=my_row+kBlocksTall;
+      int col_index=col+kBlocksWide;
+      m_positionOnFace[row_index][col_index].Set(x,y);
+      m_activeBlock[row_index][col_index] = true;
+    }
+  }
+}
+
+// The following routine calculates the position of each block assuming a 
+// square 59x59 grid.  Blocks in the outer corners are flagged to be ignored.
+void DFCALGeometry::GetGridGeometry(const DGeometry *geom){
+  // Old geometry 
   double innerRadius = ( kBeamHoleSize - 1 ) / 2. * blockSize() * sqrt(2.);
   
   // inflate the innner radius by 1% to for "safe" comparison
   innerRadius *= 1.01;
-  
-  // Check for presence of PbWO4 insert
   int insert_row_size=0;
   geom->GetFCALInsertRowSize(insert_row_size);
   m_insertSize=insertBlockSize()*double(insert_row_size/2);
-
-  geom->GetFCALPosition(m_FCALdX,m_FCALdY,m_FCALfront);
+ 
   DVector2 XY0(m_FCALdX,m_FCALdY);
 
-  vector<double>block;
-  geom->GetFCALBlockSize(block);
-  double back=m_FCALfront+block[2];
-  geom->GetFCALInsertBlockSize(block);
-  m_insertFront=0.5*(back+m_FCALfront-block[2]);
+  // The following is for backward compatibility with an older model for the
+  // FCAL insert, now superceded by a more realistic model of the geometry
+  // (SJT 4/30/24)
+  double back=m_FCALfront+blockLength();
+  m_insertFront=0.5*(back+m_FCALfront-insertBlockLength());
   
   // Initilize the list of active blocks to false, to be adjusted for the
   // actual geometry below.
@@ -73,6 +177,7 @@ DFCALGeometry::DFCALGeometry(const DGeometry *geom){
       }
     }
   }
+  m_numFcalChannels=ch;
  
   if (insert_row_size>0){
     m_insertMidBlock=(insert_row_size-1)/2;
@@ -198,11 +303,8 @@ bool DFCALGeometry::isFiducial(double x,double y) const{
 
 
 bool DFCALGeometry::inInsert(int channel) const{
-  if (fabs(positionOnFace(channel).X()-m_FCALdX)<m_insertSize
-      && fabs(positionOnFace(channel).Y()-m_FCALdY)<m_insertSize){
-    return true;
-  }
-  return false;
+  if (channel<m_numFcalChannels) return false;
+  return true;
 }
 
 bool DFCALGeometry::isInsertBlock(int row,int column) const{

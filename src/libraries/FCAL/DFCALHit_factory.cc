@@ -272,9 +272,11 @@ void DFCALHit_factory::FillCalibTable( fcal_digi_constants_t &table,
 {
     for (int channel=0; channel < static_cast<int>(raw_table.size()); channel++)
     {
+      if (fcalGeom.isBlockActive(channel)){
         int row = fcalGeom.row(channel);
         int col = fcalGeom.column(channel);
         table[row][col] = raw_table[channel];
+      }
     }
 }
 

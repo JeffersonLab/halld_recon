@@ -56,8 +56,6 @@ JEventProcessor_CDC_roc_hits::~JEventProcessor_CDC_roc_hits() {
 
 jerror_t JEventProcessor_CDC_roc_hits::init(void) {
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
-
 
   TSTART = 200;
   TSTOP = 1200;
@@ -119,8 +117,6 @@ cdc_netamp_roc28   = new TH2D("cdc_netamp_roc28","CDC pulse peak amplitude minus
   
   main->cd();
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
-
 
   return NOERROR;
 }
@@ -165,7 +161,7 @@ jerror_t JEventProcessor_CDC_roc_hits::evnt(JEventLoop *eventLoop, uint64_t even
   vector<const DCDCDigiHit*> digihits;
   eventLoop->Get(digihits);
 
-  japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+  japp->RootFillLock(this); //ACQUIRE ROOT LOCK!!
 
   if(digihits.size() > 0) cdc_nevents->Fill(1);
 
@@ -279,7 +275,7 @@ jerror_t JEventProcessor_CDC_roc_hits::evnt(JEventLoop *eventLoop, uint64_t even
   }
 
 
-  japp->RootUnLock(); //RELEASE ROOT LOCK!!
+  japp->RootFillUnLock(this); //RELEASE ROOT LOCK!!
 
 
   return NOERROR;

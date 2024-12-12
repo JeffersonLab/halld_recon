@@ -1,0 +1,22 @@
+#Run hd_root with HELI_online plugin to generate helicity log file (text format).
+#Then scripts to make log tables. 
+
+Here are the jana configs needed.
+
+PLUGINS HELI_online,EPICS_dump,monitoring_hists,ReactionFilter,danarest
+
+#Ncores if you want to use all of the hyperthreads available
+NTHREADS 12
+
+TT:NO_CCDB 1
+TT:XML_FILENAME /group/halld/Users/jrsteven/TranslationTable/tt_helicity.xml
+
+HELI:VERBOSE 2
+HELI:LOG helicity.log
+HELI:SETUP helicity_setup.txt
+
+
+
+#scripts have comments or usage if run with no args.
+#The .C file is an example of how to read the tables in root.
+

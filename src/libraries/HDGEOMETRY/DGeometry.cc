@@ -1768,22 +1768,24 @@ bool DGeometry::GetBCALPhiShift(float &bcal_phi_shift) const
 //---------------------------------
 bool DGeometry::GetECALZ(double &z_ecal) const
 {
-   vector<double> CrystalEcalpos;
-   jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos);
-   jgeom->SetVerbose(1);   // reenable error messages
+  z_ecal=0;
+  if (GetFCALZ(z_ecal)){    
+    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
+    vector<double>CrystalEcalpos;
+    if (Get("//section/composition/posXYZ[@volume='CrystalECAL']/@X_Y_Z", CrystalEcalpos)){
+      vector<double> FCALCenter;
+      Get("//section/composition/posXYZ[@volume='forwardEMcal]/@X_Y_Z", FCALCenter);
+      vector<double>block;
+      Get("//box[@name='XTBL']/@X_Y_Z",block);
 
-   if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ECAL position."<<endl;  
-      z_ecal = 1279.376;   
-      return false;
-   }else{
-	   z_ecal = CrystalEcalpos[2];
+      jgeom->SetVerbose(1);   // reenable error messages
+     
+      z_ecal += FCALCenter[2]+CrystalEcalpos[2]-0.5*block[2];
       return true;
-   }
+    }
+  }
+  return false;
 }
-
 
 //---------------------------------
 // GetCCALZ
@@ -2058,18 +2060,33 @@ bool DGeometry::GetCCALPosition(double &x,double &y,double &z) const
   }
 }
 
+// Check for presence of FCAL2 insert
+bool DGeometry::HaveInsert() const{
+  int ncopy=0;
+  jgeom->SetVerbose(0);
+  bool have_insert
+    =Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",
+	 ncopy);
+  jgeom->SetVerbose(1);
+  return have_insert;
+}
+
 //---------------------------------
 // GetFCALInsertRowSize
 //---------------------------------
 bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+
+   bool good = Get("//composition[@name='XTrow0']/mposX[@volume='XTModule']/@ncopy",insert_row_size);
+   // For backward compatibility with prototype geometry definition:
+   if (!good){
+     good = Get("//composition[@name='LeadTungstateFullRow']/mposX[@volume='LTBLwrapped']/@ncopy",insert_row_size);
+   }
+
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       insert_row_size = 0;   
       return false;
    }else{
@@ -2078,12 +2095,27 @@ bool DGeometry::GetFCALInsertRowSize(int &insert_row_size) const
 }
 
 //---------------------------------
+// GetFCALInsertSize
+//---------------------------------
+double DGeometry::GetFCALInsertSize() const{
+  int insertRowSize=0;
+  if (GetFCALInsertRowSize(insertRowSize)){
+    vector<double>insertBlock;
+    // Use nominal crystal separation to be on the safe side.  This is slightly
+    // larger than the actual measured separations from the survey.
+    return 0.5*double(insertRowSize)*2.09;
+  }
+
+  return 0.;
+}
+
+//---------------------------------
 // GetFCALBlockSize
 //---------------------------------
 bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LGBL']/@X_Y_Z",block);
+   bool good = Get("//box[@name='LGBU']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
@@ -2101,12 +2133,12 @@ bool DGeometry::GetFCALBlockSize(vector<double> &block) const
 bool DGeometry::GetFCALInsertBlockSize(vector<double> &block) const
 {
    jgeom->SetVerbose(0);   // don't print error messages for optional detector elements
-   bool good = Get("//box[@name='LTB1']/@X_Y_Z",block);
+   bool good = Get("//box[@name='XTMD']/@X_Y_Z",block);
+   // for backward compatiblity
+   if (!good) good=Get("//box[@name='LTB1']/@X_Y_Z",block);
    jgeom->SetVerbose(1);   // reenable error messages
 
    if(!good){
-	  // NEED TO RETHINK ERROR REPORTING FOR OPTIONAL DETECTOR ELEMENTS
-      //_DBG_<<"Unable to retrieve ComptonEMcal position."<<endl;  
       return false;
    }else{
       return true;

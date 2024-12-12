@@ -44,7 +44,8 @@ class DTAGHHit_factory_Calib:public jana::JFactory<DTAGHHit>{
         double tdc_twalk_c2[TAGH_MAX_COUNTER+1];
         double tdc_twalk_c3[TAGH_MAX_COUNTER+1];
 
-        bool load_ccdb_constants(std::string table_name,
+        bool static load_ccdb_constants(jana::JEventLoop *eventLoop, 
+            std::string table_name,
             std::string column_name,
             double table[TAGH_MAX_COUNTER+1]);
 

@@ -40,8 +40,10 @@ using namespace std;
 #include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALGeometry.h>
 #include <CCAL/DCCALHit.h>
-#include <ECAL/DECALGeometry.h>
 #include <ECAL/DECALHit.h>
+
+#include <TAGGER/DTAGHHit_factory_Calib.h>
+#include <TAGGER/DTAGMHit_factory_Calib.h>
 
 
 //------------------------------------------------------------------
@@ -253,6 +255,13 @@ jerror_t DEventSourceHDDM::GetObjects(JEvent &event, JFactory_base *factory)
       psGeom = psGeomVect[0];
       
 
+		// load dead channel tables
+		if(!DTAGHHit_factory_Calib::load_ccdb_constants(loop, "counter_quality", "code", tagh_counter_quality)) {
+			jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceHDDM::GetObjects() ... " << endl;
+		}
+		if(!DTAGMHit_factory_Calib::load_ccdb_constants(loop, "fiber_quality", "code", tagm_fiber_quality)) {
+			jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceHDDM::GetObjects() ... " << endl;
+		}
    }
 
    // Warning: This class is not completely thread-safe and can fail if running
@@ -1848,15 +1857,7 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
    if (tag != "" && tag != "TRUTH")
       return OBJECT_NOT_AVAILABLE;
 
-   // extract the ECAL Geometry (for isBlockActive() and positionOnFace())
-   vector<const DECALGeometry*> ecalGeomVect;
-   eventLoop->Get( ecalGeomVect );
-   if (ecalGeomVect.size() < 1)
-      return OBJECT_NOT_AVAILABLE;
-   const DECALGeometry& ecalGeom = *(ecalGeomVect[0]);
-
    vector<DECALHit*> data;
-   int hitId = 0;
 
    if (tag == "") {
 
@@ -1865,23 +1866,12 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
       for (iter = hits.begin(); iter != hits.end(); ++iter) {
          int row = iter->getRow();
          int column = iter->getColumn();
- 
-         // Filter out non-physical blocks here
-	 if (!ecalGeom.isBlockActive(row, column))
-	   continue;
-
-         // Get position of blocks on front face. (This should really come from
-         // hdgeant directly so the poisitions can be shifted in mcsmear.)
-	 DVector2 pos = ecalGeom.positionOnFace(row, column);
 
          DECALHit *mchit = new DECALHit();
          mchit->row    = row;
          mchit->column = column;
-         mchit->x      = pos.X();
-         mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
-         mchit->id     = hitId++;
 	 mchit->intOverPeak = 5.;
          data.push_back(mchit);
       }
@@ -1893,23 +1883,12 @@ jerror_t DEventSourceHDDM::Extract_DECALHit(hddm_s::HDDM *record,
       for (iter = hits.begin(); iter != hits.end(); ++iter) {
          int row = iter->getRow();
          int column = iter->getColumn();
- 
-         // Filter out non-physical blocks here
-	 if (!ecalGeom.isBlockActive(row, column))
-	   continue;
-
-         // Get position of blocks on front face. (This should really come from
-         // hdgeant directly so the poisitions can be shifted in mcsmear.)
-	 DVector2 pos = ecalGeom.positionOnFace(row, column);
     
          DECALHit *mchit = new DECALHit();
          mchit->row    = row;
          mchit->column = column;
-         mchit->x      = pos.X();
-         mchit->y      = pos.Y();
          mchit->E      = iter->getE();
          mchit->t      = iter->getT();
-         mchit->id     = hitId++;
 	 mchit->intOverPeak = 5.;
          data.push_back(mchit);
       }
@@ -2503,6 +2482,12 @@ jerror_t DEventSourceHDDM::Extract_DTAGMHit(hddm_s::HDDM *record,
          const hddm_s::TaggerHitList &hits = iter->getTaggerHits();
          hddm_s::TaggerHitList::iterator hiter;
          for (hiter = hits.begin(); hiter != hits.end(); ++hiter) {
+         
+         	// throw away hits from bad or noisy counters
+        	int quality = tagm_fiber_quality[hiter->getRow()][hiter->getColumn()];
+        	if (quality != DTAGMHit_factory_Calib::k_fiber_good )
+            	continue;
+         
             DTAGMHit *taghit = new DTAGMHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
@@ -2566,6 +2551,12 @@ jerror_t DEventSourceHDDM::Extract_DTAGHHit( hddm_s::HDDM *record,
          const hddm_s::TaggerHitList &hits = iter->getTaggerHits();
          hddm_s::TaggerHitList::iterator hiter;
          for (hiter = hits.begin(); hiter != hits.end(); ++hiter) {
+         	
+         	// throw away hits from bad or noisy counters
+        	int quality = tagh_counter_quality[hiter->getCounterId()];
+        	if (quality != DTAGHHit_factory_Calib::k_counter_good )
+            	continue;
+         
             DTAGHHit *taghit = new DTAGHHit();
             taghit->E = hiter->getE();
             taghit->t = hiter->getT();
@@ -3018,7 +3009,10 @@ jerror_t DEventSourceHDDM::Extract_DFMWPCHit(hddm_s::HDDM *record,  JFactory<DFM
       hit->t     = iter->getT();
       const hddm_s::FmwpcHitQList &charges=iter->getFmwpcHitQs();
       hit->q     = (charges.size()) ? charges.begin()->getQ() : 0.;
-      hit->amp   = (charges.size()) ? hit->q/28.8 : 0.; // copied from CDC
+      const hddm_s::FmwpcDigiHitList &digis=iter->getFmwpcDigiHits();
+      hit->amp   = (digis.size()) ? digis.begin()->getAmp()  : 0.; 
+      hit->QF   = (digis.size()) ? digis.begin()->getQf()  : 0.; 
+      hit->ped   = (digis.size()) ? digis.begin()->getPed()  : 0.; 
       data.push_back(hit);
    }
 

@@ -128,10 +128,14 @@ DFCALShower_factory::DFCALShower_factory()
   INSERT_CRITICAL_ENERGY = 0.00964;
   INSERT_SHOWER_OFFSET = 1.0;
 
-  INSERT_PAR1=0.167457;
-  INSERT_PAR2=1.1349;
+  INSERT_PAR1=0.016;
+  INSERT_PAR2=0.881;
+  INSERT_PAR3=1.055;
+  INSERT_PAR4=2.0;
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR1",INSERT_PAR1);
   gPARMS->SetDefaultParameter("FCAL:INSERT_PAR2",INSERT_PAR2);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR3",INSERT_PAR3);
+  gPARMS->SetDefaultParameter("FCAL:INSERT_PAR4",INSERT_PAR4);
 
   // For island algo
   INSERT_POS_RES1=0.168;
@@ -405,10 +409,10 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     int ring_nb = (int) (radius / (5 * k_cm));
     GetCorrectedEnergyAndPosition( cluster, ring_nb , Ecorrected, pos_corrected, errZ, &vertex,in_insert);
     
-    DVector3 pos_log;
-    GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );
-    
-    if (Ecorrected>0.){		
+    if (Ecorrected>SHOWER_ENERGY_THRESHOLD){
+      DVector3 pos_log;
+      GetLogWeightedPosition( cluster, pos_log, Ecorrected, &vertex );	
+
       //up to this point, all times have been times at which light reaches
       //the back of the detector. Here we correct for the time that it 
       //takes the Cherenkov light to reach the back of the detector
@@ -512,14 +516,14 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       shower->setTimeTrack( timeTr );
 
       // now compute some variables at the hit level
+      unsigned int num_hits=cluster->GetNHits();
+      shower->setNumBlocks(num_hits);
       
-      vector< const DFCALHit* > fcalHits;
-      cluster->Get( fcalHits );
-      shower->setNumBlocks( fcalHits.size() );
-      
-      double e9e25, e1e9;
-      getE1925FromHits( e1e9, e9e25, fcalHits,
-			getMaxHit(cluster->getChannelEmax(),fcalHits) );
+      // Get (E,x,y) for each hit in the cluster
+      const vector<DFCALCluster::DFCALClusterHit_t>hits=cluster->GetHits();
+
+      double e9e25, e1e9;      
+      getE1925FromHits(hits, e1e9, e9e25);
       shower->setE1E9( e1e9 );
       shower->setE9E25( e9e25 );
 
@@ -528,7 +532,7 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
       // if there is no nearest track, the defaults for xTr and yTr will result
       // in using the beam axis as the directional axis
       //if (!SHOWER_POSITION_LOG)
-      getUVFromHits( sumU, sumV, fcalHits,
+      getUVFromHits( sumU, sumV, hits,
 		     DVector3( shower->getPosition().X(), shower->getPosition().Y(), 0 ),
 		     DVector3( xTr, yTr, 0 ) );
       //else
@@ -581,8 +585,6 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
   double Egamma = Eclust;
   Ecorrected = 0;
 
-
-
   // block properties
   double radiation_length=FCAL_RADIATION_LENGTH;
   double shower_offset=FCAL_SHOWER_OFFSET;
@@ -596,7 +598,13 @@ jerror_t DFCALShower_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
     critical_energy=INSERT_CRITICAL_ENERGY;
     zfront=m_insertFront;
 
-    Egamma=INSERT_PAR1*sqrt(Eclust)+INSERT_PAR2*Eclust;
+    if (Eclust<INSERT_PAR4){
+      Egamma=Eclust/(INSERT_PAR1*Eclust+INSERT_PAR2);
+    }
+    else {
+      Egamma=INSERT_PAR4/(INSERT_PAR1*INSERT_PAR4+INSERT_PAR2)
+	+INSERT_PAR3*(Eclust-INSERT_PAR4);
+    }
   } else {
     // 06/04/2020 ijaegle@jlab.org allows two different energy dependence correction
     if (USE_RING_E_CORRECTION_V1 && energy_dependence_correction_vs_ring.size() > 0) {
@@ -961,7 +969,7 @@ DFCALShower_factory::getMaxHit( const vector< const DFCALHit* >& hitVec ) const 
 
 void
 DFCALShower_factory::getUVFromHits( double& sumUSh, double& sumVSh, 
-				    const vector< const DFCALHit* >& hits,
+				    const vector<DFCALCluster::DFCALClusterHit_t>& hits,
 				    const DVector3& showerVec,
 				    const DVector3& trackVec ) const {
 
@@ -982,46 +990,60 @@ DFCALShower_factory::getUVFromHits( double& sumUSh, double& sumVSh,
 
   double sumE = 0;
   
-  for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
+  for( vector<DFCALCluster::DFCALClusterHit_t>::const_iterator hit = hits.begin();
        hit != hits.end(); ++hit ){
 
-    hitLoc.SetX( (**hit).x - showerVec.X() );
-    hitLoc.SetY( (**hit).y - showerVec.Y() );
+    hitLoc.SetX( (*hit).x - showerVec.X() );
+    hitLoc.SetY( (*hit).y - showerVec.Y() );
 
-    sumUSh += (**hit).E * pow( u.Dot( hitLoc ), 2 );
-    sumVSh += (**hit).E * pow( v.Dot( hitLoc ), 2 );
+    sumUSh += (*hit).E * pow( u.Dot( hitLoc ), 2 );
+    sumVSh += (*hit).E * pow( v.Dot( hitLoc ), 2 );
 
-    sumE += (**hit).E;
+    sumE += (*hit).E;
   }
 
   sumUSh /= sumE;
   sumVSh /= sumE;
 }
 
-void
-DFCALShower_factory::getE1925FromHits( double& e1e9Sh, double& e9e25Sh, 
-				       const vector< const DFCALHit* >& hits,
-				       unsigned int maxIndex ) const {
-
+void DFCALShower_factory::getE1925FromHits(const vector<DFCALCluster::DFCALClusterHit_t>&hits,
+					   double& e1e9Sh, double& e9e25Sh) const {
+  unsigned int maxIndex=0;
+  double maxE=0;
+  for (unsigned int i=0;i<hits.size();i++){
+    if (hits[i].E>maxE){
+      maxE=hits[i].E;
+      maxIndex=i;
+    }
+  }
+  
   double E9 = 0;
   double E25 = 0;
+  double E9cut=0.,E25cut=0.;
 
-  const DFCALHit* maxHit = hits[maxIndex];
- 
-  for( vector< const DFCALHit* >::const_iterator hit = hits.begin();
-       hit != hits.end(); ++hit ){
-     
-    if( fabs( (**hit).x - maxHit->x ) < 4.5 && fabs( (**hit).y - maxHit->y ) < 4.5 )
-      E9 += (**hit).E;
-
-    if( fabs( (**hit).x - maxHit->x ) < 8.5 && fabs( (**hit).y - maxHit->y ) < 8.5 )
-      E25 += (**hit).E;
+  const DFCALCluster::DFCALClusterHit_t maxHit = hits[maxIndex];
+  bool maxHitInInsert=fcalGeom->inInsert(maxHit.ch);
+  if (maxHitInInsert){
+    E9cut=2.3;
+    E25cut=4.3;
+  }
+  else {
+    E9cut=4.5;
+    E25cut=8.5;
+  }
+  
+  for( vector<DFCALCluster::DFCALClusterHit_t>::const_iterator hit = hits.begin();
+       hit != hits.end(); ++hit ){  
+    if(fabs((*hit).x - maxHit.x) < E9cut && fabs((*hit).y - maxHit.y) < E9cut )
+      E9 += (*hit).E;      
+    if(fabs((*hit).x - maxHit.x) < E25cut && fabs((*hit).y - maxHit.y) < E25cut)
+      E25 += (*hit).E;
   }
 
-  e1e9Sh = maxHit->E/E9;
+  e1e9Sh = maxE/E9;
   e9e25Sh = E9/E25;
+  
 }
-
 
 vector< const DTrackWireBased* >
 DFCALShower_factory::filterWireBasedTracks( vector< const DTrackWireBased* >& wbTracks ) const {
@@ -1078,15 +1100,8 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   DVector3  posInCal = cluster->getCentroid();
   
-  vector<const DFCALHit*> locHitVector;
-  cluster->Get(locHitVector);
-  
-  int loc_nhits = (int)locHitVector.size();
-  if( loc_nhits < 1 ) {
-  	pos_log = posInCal;
-	return;
-  }
-  
+  vector<DFCALCluster::DFCALClusterHit_t> locHitVector=cluster->GetHits();
+    
   //------   Loop over hits   ------//
   
   double sW    =  0.0;
@@ -1096,13 +1111,11 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
   
   double ecluster = cluster->getEnergy();
   
-  for( int ih = 0; ih < loc_nhits; ih++ ) {
-  	
-	const DFCALHit *locHit = locHitVector[ih];
+  for( int ih = 0; ih < (int)locHitVector.size(); ih++ ) {
 	
-	double xcell = locHit->x;
-	double ycell = locHit->y;
-	double ecell = locHit->E;
+	double xcell = locHitVector[ih].x;
+	double ycell = locHitVector[ih].y;
+	double ecell = locHitVector[ih].E;
 	
 	W  =  log_position_const + log( ecell / ecluster );
 	if( W > 0. ) {
@@ -1110,7 +1123,6 @@ void DFCALShower_factory::GetLogWeightedPosition( const DFCALCluster* cluster, D
 		xpos  +=  xcell * W;
 		ypos  +=  ycell * W;
 	}
-	
   }
   
   double x1, y1;

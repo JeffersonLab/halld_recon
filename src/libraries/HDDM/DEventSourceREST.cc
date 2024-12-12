@@ -15,6 +15,9 @@
 #include <JANA/JEvent.h>
 #include <DANA/DStatusBits.h>
 
+#include <TAGGER/DTAGHHit_factory_Calib.h>
+#include <TAGGER/DTAGMHit_factory_Calib.h>
+
 #include <DVector2.h>
 #include <DEventSourceREST.h>
 
@@ -308,6 +311,19 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
 			     << " dy/dz=" << dBeamDirMap[locRunNumber].Y() 
 			     << endl;
 
+			// load tagger quality tables
+// 			dTAGHCounterQualities[locRunNumber] = new double[TAGH_MAX_COUNTER+1];
+// 			dTAGMFiberQualities[locRunNumber] = new double*[TAGM_MAX_ROW+1];
+// 			for(int i; i<TAGM_MAX_ROW+1; i++)
+// 				dTAGMFiberQualities[locRunNumber][i] = new double[TAGM_MAX_COLUMN+1];
+
+			if(!DTAGHHit_factory_Calib::load_ccdb_constants(locEventLoop, "counter_quality", "code", dTAGHCounterQualities[locRunNumber])) {
+				jerr << "Error loading /PHOTON_BEAM/hodoscope/counter_quality in DEventSourceREST::GetObjects() ... " << endl;
+			}
+			if(!DTAGMHit_factory_Calib::load_ccdb_constants(locEventLoop, "fiber_quality", "code", dTAGMFiberQualities[locRunNumber])) {
+				jerr << "Error loading /PHOTON_BEAM/microscope/fiber_quality in DEventSourceREST::GetObjects() ... " << endl;
+			}
+
 			// tagger related configs for reverse mapping tagger energy to counter number
 			if( REST_JANA_CALIB_CONTEXT != "" ) {
 				JCalibration *jcalib_old = calib_generator->MakeJCalibration(jcalib->GetURL(), locRunNumber, REST_JANA_CALIB_CONTEXT );
@@ -397,6 +413,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName =="DFMWPCHit") {
       return Extract_DFMWPCHit(record,
 		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
+   }
+   if (dataClassName =="DFCALHit") {
+      return Extract_DFCALHit(record,
+		     dynamic_cast<JFactory<DFCALHit>*>(factory), locEventLoop);
    }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
@@ -655,7 +675,12 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(column == 0) {
 			continue;
 		}
-
+     
+		// throw away hits from bad or noisy counters
+		int quality = dTAGMFiberQualities[locRunNumber][0][column];  // I think this works for the row? - we are generally not worrying about the quality of individual fibers
+		if (quality != DTAGMHit_factory_Calib::k_fiber_good )
+			continue;
+         
 		DBeamPhoton* gamma = new DBeamPhoton();
 
 		double Elo_tagm = tagmGeom->getElow(column);
@@ -716,7 +741,12 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 		if(counter == 0) {
 			continue;
 		}
-
+         	
+		// throw away hits from bad or noisy counters
+		int quality = dTAGHCounterQualities[locRunNumber][counter];
+		if (quality != DTAGHHit_factory_Calib::k_counter_good )
+			continue;
+         
       	DBeamPhoton* gamma = new DBeamPhoton();
 
 		double Elo_tagh = taghGeom->getElow(counter);
@@ -1378,6 +1408,22 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
+      // Positions at each FDC package
+      const hddm_r::FdcTrackPosList locFdcTrackPosList = iter->getFdcTrackPoses();
+      hddm_r::FdcTrackPosList::iterator locFdcTrackPosIterator = locFdcTrackPosList.begin();
+      if (locFdcTrackPosIterator!=locFdcTrackPosList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_FDC,myvector);
+	for(; locFdcTrackPosIterator != locFdcTrackPosList.end(); ++locFdcTrackPosIterator){
+	  DVector3 pos(locFdcTrackPosIterator->getX(),
+		       locFdcTrackPosIterator->getY(),
+		       locFdcTrackPosIterator->getZ());
+	  DVector3 mom;
+	  tra->extrapolations[SYS_FDC].push_back(DTrackFitter::Extrapolation_t(pos,mom,0.,0.));
+	}
+      }
+
       // Track parameters at exit of tracking volume
       const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
       hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	
@@ -2019,6 +2065,49 @@ jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
       hit->t = iter->getT();
       hit->QF = iter->getQf();
       hit->ped = iter->getPed();
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DFCALHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFCALHit(hddm_r::HDDM *record,
+                                   JFactory<DFCALHit>* factory, JEventLoop* locEventLoop)
+{
+   /// Copies the data from the fcal hit hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DFCALHit*> data;
+
+   // loop over fmwpc hit records
+   const hddm_r::FcalHitList &hits =
+                 record->getFcalHits();
+   hddm_r::FcalHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DFCALHit *hit = new DFCALHit();
+      hit->row = iter->getRow();
+      hit->column = iter->getColumn();
+      hit->x = iter->getX();
+      hit->y = iter->getY();
+      hit->E = iter->getE();
+      hit->t = iter->getT();
+      hit->intOverPeak = iter->getIntOverPeak();
 
       data.push_back(hit);
    }
