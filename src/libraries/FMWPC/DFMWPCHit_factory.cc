@@ -24,7 +24,8 @@ using namespace jana;
 jerror_t DFMWPCHit_factory::init(void)
 {
   
-  hit_threshold = 0.;
+  hit_amp_threshold = 0.;
+  hit_int_threshold = 0.;
 
   t_raw_min = -10000.;
   t_raw_max = 10000.;
@@ -70,15 +71,22 @@ jerror_t DFMWPCHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 
   if(print_messages) jout << "In DFMWPCHit_factory, loading constants..." << std::endl;
 
-  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_threshold)){
-    hit_threshold = 0.;
+  vector<double> fmwpc_hit_thresholds;
+
+  if (eventLoop->GetCalib("/FMWPC/hit_threshold", hit_amp_threshold)){
+    hit_amp_threshold = 0.;
+    hit_int_threshold = 0.;
     jout << "Error loading /FMWPC/hit_threshold ! set default value to 0." << endl;
   } else {
-    jout << "FMWPC Hit Threshold: " << hit_threshold << endl;
+    hit_amp_threshold = fmwpc_hit_thresholds[0];
+    hit_int_threshold = fmwpc_hit_thresholds[1];
+    jout << "FMWPC Hit Thresholds:  Amplitude = " << hit_amp_threshold << "  Integral = " << hit_int_threshold << endl;
   }
 
-  gPARMS->SetDefaultParameter("FMWPC:FMWPC_HIT_THRESHOLD", hit_threshold,
-                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_HIT_THRESHOLD");
+  gPARMS->SetDefaultParameter("FMWPC:FMWPC_hit_amp_threshold", hit_amp_threshold,
+                              "Remove FMWPC Hits with peak amplitudes smaller than FMWPC_hit_amp_threshold");
+  gPARMS->SetDefaultParameter("FMWPC:FMWPC_hit_int_threshold", hit_amp_threshold,
+                              "Remove FMWPC Hits with total integral smaller than FMWPC_hit_int_threshold");
 
   vector<double> fmwpc_timing_cuts;
 
@@ -263,8 +271,12 @@ jerror_t DFMWPCHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
     
     maxamp = maxamp - scaled_ped;
     */
-    
-    if (maxamp<hit_threshold) {
+
+    // apply different thresholds to the amplitude and the integral
+    if (maxamp < hit_amp_threshold) {
+      continue;
+    }
+    if (digihit->pulse_integral < hit_int_threshold) {  
       continue;
     }
 
