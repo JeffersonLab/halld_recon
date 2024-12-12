@@ -1408,6 +1408,22 @@ jerror_t DEventSourceREST::Extract_DTrackTimeBased(hddm_r::HDDM *record,
       tra->setErrorMatrix(loc7x7ErrorMatrix);
       (*loc7x7ErrorMatrix)(6, 6) = fit.getT0err()*fit.getT0err();
 
+      // Positions at each FDC package
+      const hddm_r::FdcTrackPosList locFdcTrackPosList = iter->getFdcTrackPoses();
+      hddm_r::FdcTrackPosList::iterator locFdcTrackPosIterator = locFdcTrackPosList.begin();
+      if (locFdcTrackPosIterator!=locFdcTrackPosList.end()){
+	// Create the extrapolation vector
+	vector<DTrackFitter::Extrapolation_t>myvector;
+	tra->extrapolations.emplace(SYS_FDC,myvector);
+	for(; locFdcTrackPosIterator != locFdcTrackPosList.end(); ++locFdcTrackPosIterator){
+	  DVector3 pos(locFdcTrackPosIterator->getX(),
+		       locFdcTrackPosIterator->getY(),
+		       locFdcTrackPosIterator->getZ());
+	  DVector3 mom;
+	  tra->extrapolations[SYS_FDC].push_back(DTrackFitter::Extrapolation_t(pos,mom,0.,0.));
+	}
+      }
+
       // Track parameters at exit of tracking volume
       const hddm_r::ExitParamsList& locExitParamsList = iter->getExitParamses();
       hddm_r::ExitParamsList::iterator locExitParamsIterator = locExitParamsList.begin();	

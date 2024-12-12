@@ -28,6 +28,9 @@ DEventWriterREST::DEventWriterREST(JEventLoop* locEventLoop, string locOutputFil
 	}
 	japp->Unlock("RESTWriter");
 	
+	REST_WRITE_FDC_TRACK_POS=true;
+	gPARMS->SetDefaultParameter("REST:WRITE_FDC_TRACK_POS", REST_WRITE_FDC_TRACK_POS,"Add track positions at each FDC package");
+
 	REST_WRITE_TRACK_EXIT_PARAMS=true;
 	gPARMS->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
 
@@ -549,6 +552,24 @@ bool DEventWriterREST::Write_RESTEvent(JEventLoop* locEventLoop, string locOutpu
                elo3().setDEdxAmp(tracks[i]->ddEdx_FDC_amp_trunc[it]);
             }
 		}
+		if (REST_WRITE_FDC_TRACK_POS){
+		  if (tracks[i]->extrapolations.find(SYS_FDC) != tracks[i]->extrapolations.end()) {
+		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_FDC);
+		    double oldz=0.;
+		    for (unsigned int k=0;k<extraps.size();k++){
+		      DVector3 pos=extraps[k].position;
+		      // Write out one position per package
+		      if (pos.z()>oldz+20.){
+			hddm_r::FdcTrackPosList locFdcTrackPoses = tra().addFdcTrackPoses(1);
+			locFdcTrackPoses().setX(pos.x());
+			locFdcTrackPoses().setY(pos.y());
+			locFdcTrackPoses().setZ(pos.z());
+			oldz=pos.z();
+		      }
+		    }
+		  }
+		}
+
 		if (REST_WRITE_TRACK_EXIT_PARAMS){
 		  if (tracks[i]->extrapolations.find(SYS_NULL) != tracks[i]->extrapolations.end()) {
 		    vector<DTrackFitter::Extrapolation_t>extraps=tracks[i]->extrapolations.at(SYS_NULL);
