@@ -843,32 +843,32 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	    hddm_s::FmwpcChamberList::iterator FMWPC_ChamberIterator = FMWPC_ChamberList->begin();
 	    for(FMWPC_ChamberIterator = FMWPC_ChamberList->begin(); FMWPC_ChamberIterator != FMWPC_ChamberList->end(); FMWPC_ChamberIterator++)
 	    {
-			if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
-		   		FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
-		    {
-		    	foundChamber = true;
-		    	break;
-		    }
+	      if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
+		 FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
+		{
+		  foundChamber = true;
+		  break;
+		}
 	    }
 	    if(foundChamber == false)
-	    {
-			hitv->getForwardMWPC().addFmwpcChambers();
-			FMWPC_ChamberIterator = FMWPC_ChamberList->end()-1;
-			FMWPC_ChamberIterator->setLayer(FMWPCHits[i]->layer);
-			FMWPC_ChamberIterator->setWire(FMWPCHits[i]->wire);
-	    }
+	      {
+		hitv->getForwardMWPC().addFmwpcChambers();
+		FMWPC_ChamberIterator = FMWPC_ChamberList->end()-1;
+		FMWPC_ChamberIterator->setLayer(FMWPCHits[i]->layer);
+		FMWPC_ChamberIterator->setWire(FMWPCHits[i]->wire);
+	      }
 	    FMWPC_ChamberIterator->addFmwpcHits();
 	    hddm_s::FmwpcHitList* fmwpchitl=&FMWPC_ChamberIterator->getFmwpcHits();
 	    hddm_s::FmwpcHitList::iterator fmwpchitit=fmwpchitl->end()-1;
 	    fmwpchitit->setT(FMWPCHits[i]->t);
 	    fmwpchitit->addFmwpcHitQs();
-        fmwpchitit->getFmwpcHitQs().begin()->setQ(FMWPCHits[i]->q);	    
+	    fmwpchitit->getFmwpcHitQs().begin()->setQ(FMWPCHits[i]->q);
 	    fmwpchitit->addFmwpcDigiHits();
-        fmwpchitit->getFmwpcDigiHits().begin()->setAmp(FMWPCHits[i]->amp);
-        fmwpchitit->getFmwpcDigiHits().begin()->setPed(FMWPCHits[i]->ped);
-        fmwpchitit->getFmwpcDigiHits().begin()->setQf(FMWPCHits[i]->QF);
+	    fmwpchitit->getFmwpcDigiHits().begin()->setAmp(FMWPCHits[i]->amp);
+	    fmwpchitit->getFmwpcDigiHits().begin()->setPed(FMWPCHits[i]->ped);
+	    fmwpchitit->getFmwpcDigiHits().begin()->setQf(FMWPCHits[i]->QF);
     
-	  }
+	}
 	
 
 	//*fout << *record; //stream the new record into the file
