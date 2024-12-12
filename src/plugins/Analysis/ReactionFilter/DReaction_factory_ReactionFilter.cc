@@ -84,6 +84,8 @@ DReactionStep* DReaction_factory_ReactionFilter::Create_DefaultDecayStep(Particl
 		return (new DReactionStep(OmegaMinus, {KMinus, Lambda}));
 	else if(locPID == Lambda_c)
 		return (new DReactionStep(Lambda_c, {PiPlus, KMinus, Proton}));
+	else if(locPID == Sigma_cPlusPlus)
+	        return (new DReactionStep(Sigma_cPlusPlus, {PiPlus, Lambda_c}));
 
 	return nullptr;
 }
@@ -226,6 +228,7 @@ jerror_t DReaction_factory_ReactionFilter::evnt(JEventLoop* locEventLoop, uint64
 
 		// KINEMATICS & OTHER INFO
 		locReaction->Add_AnalysisAction(new DHistogramAction_ParticleComboKinematics(locReaction, true));
+		locReaction->Add_AnalysisAction(new DHistogramAction_TriggerStudies(locReaction, "", 0.05));
 
 		_data.push_back(locReaction); //Register the DReaction with the factory
 	}

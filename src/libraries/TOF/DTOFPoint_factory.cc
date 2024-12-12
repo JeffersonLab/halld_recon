@@ -19,6 +19,8 @@
 using namespace std;
 
 #include "DTOFPoint_factory.h"
+#include <DANA/DApplication.h>
+#include <HDGEOMETRY/DGeometry.h>
 
 bool Compare_TOFSpacetimeHitMatches_Distance(const DTOFPoint_factory::tof_spacetimehitmatch_t& locTOFSpacetimeHitMatch1, const DTOFPoint_factory::tof_spacetimehitmatch_t& locTOFSpacetimeHitMatch2)
 {
@@ -36,10 +38,35 @@ bool Compare_TOFPoint_Time(const DTOFPoint *locTOFPoint1, const DTOFPoint *locTO
 //------------------
 jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
 {
-  loop->GetSingle(dTOFGeometry);
-  
+  DApplication* dapp = dynamic_cast<DApplication*>(loop->GetJApplication());
+  const DGeometry *geom = dapp->GetDGeometry(runnumber);
+
+  // load values from geometry 
+  vector<double> YWIDTH;  ///> y (perpendicular) bar width per bar number	
+  geom->GetTOFPaddlePerpPositions(YPOS, YWIDTH);
+  geom->GetTOFZ(CenterVertPlane,CenterHorizPlane,CenterMidPlane);
+
+  map<string,double> paddle_params;
+  geom->GetTOFPaddleParameters(paddle_params);
+ 
+  FirstShortBar = paddle_params["FIRSTSHORTBAR"];
+  LastShortBar = paddle_params["LASTSHORTBAR"]; 
+  HALFPADDLE = paddle_params["HALFLONGBARLENGTH"];
+  HALFPADDLE_ONESIDED = paddle_params["HALFSHORTBARLENGTH"];
+  double locBeamHoleWidth = paddle_params["LONGBARLENGTH"]
+    - 2.0*paddle_params["SHORTBARLENGTH"];
+  ONESIDED_PADDLE_MIDPOINT_MAG = HALFPADDLE_ONESIDED + locBeamHoleWidth/2.0;
+  NUM_BARS = paddle_params["NLONGBARS"]+paddle_params["NSHORTBARS"]/2;
+
+  string ccdb_directory_name;
+  if (NUM_BARS == 46) {
+    ccdb_directory_name="TOF2";
+  } else {
+    ccdb_directory_name="TOF";
+  }
+
   map<string, double> tofparms;
-  string locTOFParmsTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/tof_parms";
+  string locTOFParmsTable = ccdb_directory_name + "/tof_parms";
   if( !loop->GetCalib(locTOFParmsTable.c_str(), tofparms))
     {
       //cout<<"DTOFPoint_factory: loading values from TOF data base"<<endl;
@@ -55,26 +82,18 @@ jerror_t DTOFPoint_factory::brun(JEventLoop *loop, int32_t runnumber)
       ATTEN_LENGTH = 400.;
     }
   
-  string locTOFPropSpeedTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/propagation_speed";
+  string locTOFPropSpeedTable = ccdb_directory_name + "/propagation_speed";
   if(eventLoop->GetCalib(locTOFPropSpeedTable.c_str(), propagation_speed))
     jout << "Error loading " << locTOFPropSpeedTable << " !" << endl;
-  string locTOFPaddleResolTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/paddle_resolutions";
+  string locTOFPaddleResolTable = ccdb_directory_name + "/paddle_resolutions";
   if(eventLoop->GetCalib(locTOFPaddleResolTable.c_str(), paddle_resolutions))
     jout << "Error loading " << locTOFPaddleResolTable << " !" << endl;
  
   // for applying attentuation to half lenfgth paddles
-  string locTOFAttenLengthTable = dTOFGeometry->Get_CCDB_DirectoryName() + "/attenuation_lengths";
+  string locTOFAttenLengthTable = ccdb_directory_name + "/attenuation_lengths";
   if(eventLoop->GetCalib(locTOFAttenLengthTable.c_str(), AttenuationLengths))
     jout << "Error loading " << locTOFAttenLengthTable << " !" << endl;
- 
-  
-  HALFPADDLE = dTOFGeometry->Get_HalfLongBarLength();
-  HALFPADDLE_ONESIDED = dTOFGeometry->Get_HalfShortBarLength();
-  double locBeamHoleWidth = dTOFGeometry->Get_LongBarLength() - 2.0*dTOFGeometry->Get_ShortBarLength();
-  ONESIDED_PADDLE_MIDPOINT_MAG = HALFPADDLE_ONESIDED + locBeamHoleWidth/2.0;
-  
-  NUM_BARS = dTOFGeometry->Get_NBars();
-  
+    
   dPositionMatchCut_DoubleEnded = 9.0; //1.5*BARWIDTH
   //	dTimeMatchCut_PositionWellDefined = 1.0;
   dTimeMatchCut_PositionWellDefined = 10.0;
@@ -199,11 +218,11 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_
   int id = NUM_BARS + locTOFHit->bar - 1;
   double v = propagation_speed[id];
   
-  if((locTOFHit->bar < dTOFGeometry->Get_FirstShortBar()) || (locTOFHit->bar > dTOFGeometry->Get_LastShortBar())) //double-ended bars
+  if((locTOFHit->bar < FirstShortBar) || (locTOFHit->bar >LastShortBar)) //double-ended bars
     {
       locTOFSpacetimeHit->dIsDoubleEndedBar = true;
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = false;
-      locTOFSpacetimeHit->y = dTOFGeometry->bar2y(bar);
+      locTOFSpacetimeHit->y = bar2y(bar);
       if(locTOFHit->meantime != locTOFHit->meantime)
 	{
 	  //NaN: only one energy hit above threshold on the double-ended bar
@@ -239,14 +258,14 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_
   if(locTOFHit->t_south != 0.)
     {
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = false;
-      locTOFSpacetimeHit->y = dTOFGeometry->bar2y(bar,1);
+      locTOFSpacetimeHit->y = bar2y(bar,1);
       locTOFSpacetimeHit->x = -1.0*ONESIDED_PADDLE_MIDPOINT_MAG;
       locTOFSpacetimeHit->t = locTOFHit->t_south - HALFPADDLE_ONESIDED/v;
     }
   else
     {
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = true;
-      locTOFSpacetimeHit->y = dTOFGeometry->bar2y(bar,0);
+      locTOFSpacetimeHit->y = bar2y(bar,0);
       locTOFSpacetimeHit->x = ONESIDED_PADDLE_MIDPOINT_MAG;
       locTOFSpacetimeHit->t = locTOFHit->t_north - HALFPADDLE_ONESIDED/v;
     }
@@ -264,12 +283,12 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_
   int id = locTOFHit->bar - 1;
   double v = propagation_speed[id];
   
-  if((locTOFHit->bar < dTOFGeometry->Get_FirstShortBar()) || (locTOFHit->bar > dTOFGeometry->Get_LastShortBar()))
+  if((locTOFHit->bar < FirstShortBar) || (locTOFHit->bar > LastShortBar))
     {
       //double-ended bars
       locTOFSpacetimeHit->dIsDoubleEndedBar = true;
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = false;
-      locTOFSpacetimeHit->x = dTOFGeometry->bar2y(bar);
+      locTOFSpacetimeHit->x = bar2y(bar);
       if(locTOFHit->meantime != locTOFHit->meantime)
 	{
 	  //NaN: only one energy hit above threshold on the double-ended bar
@@ -303,14 +322,14 @@ DTOFPoint_factory::tof_spacetimehit_t* DTOFPoint_factory::Build_TOFSpacetimeHit_
   if(locTOFHit->t_south != 0.)
     {
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = false;
-      locTOFSpacetimeHit->x = dTOFGeometry->bar2y(bar,0);
+      locTOFSpacetimeHit->x = bar2y(bar,0);
       locTOFSpacetimeHit->y = -1.0*ONESIDED_PADDLE_MIDPOINT_MAG;
       locTOFSpacetimeHit->t = locTOFHit->t_south - HALFPADDLE_ONESIDED/v;
     }
   else
     {
       locTOFSpacetimeHit->dIsSingleEndedNorthPaddle = true;
-      locTOFSpacetimeHit->x = dTOFGeometry->bar2y(bar,1);
+      locTOFSpacetimeHit->x = bar2y(bar,1);
       locTOFSpacetimeHit->y = ONESIDED_PADDLE_MIDPOINT_MAG;
       locTOFSpacetimeHit->t = locTOFHit->t_north - HALFPADDLE_ONESIDED/v;
     }
@@ -332,13 +351,13 @@ bool DTOFPoint_factory::Match_Hits(tof_spacetimehit_t* locTOFSpacetimeHit_Horizo
       if(locTOFSpacetimeHit_Horizontal->dIsSingleEndedNorthPaddle)
 	{
 	  //horizontal is on north (+x) side
-	  if(locTOFSpacetimeHit_Vertical->TOFHit->bar < dTOFGeometry->Get_FirstShortBar())
+	  if(locTOFSpacetimeHit_Vertical->TOFHit->bar < FirstShortBar)
 	    return false; //vertical is on south (-x) side: CANNOT MATCH
 	}
       else
 	{
 	  //horizontal is on south (-x) side
-	  if(locTOFSpacetimeHit_Vertical->TOFHit->bar > dTOFGeometry->Get_LastShortBar())
+	  if(locTOFSpacetimeHit_Vertical->TOFHit->bar > LastShortBar)
 	    return false; //vertical is on north (+x) side: CANNOT MATCH
 	}
     }
@@ -348,13 +367,13 @@ bool DTOFPoint_factory::Match_Hits(tof_spacetimehit_t* locTOFSpacetimeHit_Horizo
       if(locTOFSpacetimeHit_Vertical->dIsSingleEndedNorthPaddle)
 	{
 	  //vertical is on north (+y) side
-	  if(locTOFSpacetimeHit_Horizontal->TOFHit->bar < dTOFGeometry->Get_FirstShortBar())
+	  if(locTOFSpacetimeHit_Horizontal->TOFHit->bar < FirstShortBar)
 	    return false; //horizontal is on south (-y) side: CANNOT MATCH
 	}
       else
 	{
 	  //vertical is on south (-y) side
-	  if(locTOFSpacetimeHit_Horizontal->TOFHit->bar > dTOFGeometry->Get_LastShortBar())
+	  if(locTOFSpacetimeHit_Horizontal->TOFHit->bar > LastShortBar)
 	    return false; //horizontal is on north (+y) side: CANNOT MATCH
 	}
     }
@@ -407,7 +426,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       //is x/y resolution from energy calibration better than x/y resolution from paddle edges?
       locMatchX = locTOFSpacetimeHit_Horizontal->x;
       locMatchY = locTOFSpacetimeHit_Vertical->y;
-      locMatchZ = dTOFGeometry->Get_CenterMidPlane(); //z: midpoint between tof planes
+      locMatchZ = CenterMidPlane; //z: midpoint between tof planes
       locMatchT = 0.5*(locTOFSpacetimeHit_Horizontal->t + locTOFSpacetimeHit_Vertical->t);
       locMatchdE = 0.5*(locTOFHit_Horizontal->dE + locTOFHit_Vertical->dE);
       locMatchTErr = 0.5 * sqrt(locVMatchTErr*locVMatchTErr + locHMatchTErr*locHMatchTErr);
@@ -422,7 +441,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       locMatchX = locTOFSpacetimeHit_Horizontal->x;
       locMatchY = locTOFSpacetimeHit_Horizontal->y;
       locMatchT = locTOFSpacetimeHit_Horizontal->t;
-      locMatchZ = dTOFGeometry->Get_CenterHorizPlane(); //z: center of horizontal plane
+      locMatchZ = CenterHorizPlane; //z: center of horizontal plane
       locMatchdE = locTOFHit_Horizontal->dE;
       locMatchTErr = locHMatchTErr;
       locMatchdE2 = locTOFHit_Horizontal->dE;
@@ -459,7 +478,7 @@ void DTOFPoint_factory::Create_MatchedTOFPoint(const tof_spacetimehit_t* locTOFS
       locMatchX = locTOFSpacetimeHit_Vertical->x;
       locMatchY = locTOFSpacetimeHit_Vertical->y;
       locMatchT = locTOFSpacetimeHit_Vertical->t;
-      locMatchZ = dTOFGeometry->Get_CenterVertPlane(); //z: center of vertical plane
+      locMatchZ = CenterVertPlane; //z: center of vertical plane
       locMatchdE = locTOFHit_Vertical->dE;
       locMatchTErr = locVMatchTErr;
       locMatchdE1 = locTOFHit_Vertical->dE;
@@ -518,7 +537,7 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
 {
   const DTOFPaddleHit* locPaddleHit = locTOFSpacetimeHit->TOFHit;
   bool locIsHorizontalBarFlag = (locPaddleHit->orientation == 1);
-  float locPointZ = locIsHorizontalBarFlag ? dTOFGeometry->Get_CenterHorizPlane() : dTOFGeometry->Get_CenterVertPlane();
+  float locPointZ = locIsHorizontalBarFlag ? CenterHorizPlane : CenterVertPlane;
   
   int id_vert = locPaddleHit->bar - 1;
   int id_horiz = NUM_BARS + locPaddleHit->bar - 1;
@@ -557,10 +576,12 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
     }
   else
     {
-      //position not well defined: save anyway:
+     return; 
+
+     //position not well defined: save anyway:
       //Will use track matching to define position in the other direction
       //Then, will update the hit energy and time based on that position
-      
+     /*
       DTOFPoint* locTOFPoint = new DTOFPoint;
       locTOFPoint->AddAssociatedObject(locPaddleHit);
       
@@ -589,6 +610,7 @@ void DTOFPoint_factory::Create_UnMatchedTOFPoint(const tof_spacetimehit_t* locTO
       return;
       
       _data.push_back(locTOFPoint);
+     */
     }
 }
 

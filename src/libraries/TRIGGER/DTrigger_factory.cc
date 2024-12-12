@@ -12,7 +12,7 @@ jerror_t DTrigger_factory::init(void)
 	EMULATE_FCAL_LED_TRIGGER = false;
 	EMULATE_BCAL_LED_TRIGGER = false;
 
-    EMULATE_CAL_ENERGY_SUMS = false;
+    EMULATE_CAL_ENERGY_SUMS = true;
 	
 	BCAL_LED_NHITS_THRESHOLD = 200;
 	FCAL_LED_NHITS_THRESHOLD = 200;
@@ -80,7 +80,7 @@ jerror_t DTrigger_factory::evnt(JEventLoop* locEventLoop, uint64_t locEventNumbe
         // eventually we'll get the values directly from the firmware
         if(EMULATE_CAL_ENERGY_SUMS) {
             vector<const DL1MCTrigger*> locMCTriggers;
-            locEventLoop->Get(locMCTriggers);
+            locEventLoop->Get(locMCTriggers, "DATA");
             const DL1MCTrigger* locMCTrigger = locMCTriggers.empty() ? NULL : locMCTriggers[0];
 
             if(locMCTrigger != NULL)

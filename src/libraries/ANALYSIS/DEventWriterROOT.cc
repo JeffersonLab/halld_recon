@@ -11,6 +11,7 @@ static bool STORE_ERROR_MATRIX_INFO = false;
 static bool STORE_MC_TRAJECTORIES = false;
 
 static bool STORE_SC_VETO_INFO = false;
+static bool STORE_THROWN_DECAYING_PARTICLES = true;
 
 void DEventWriterROOT::Initialize(JEventLoop* locEventLoop)
 {
@@ -114,6 +115,10 @@ void DEventWriterROOT::Create_ThrownTree(JEventLoop* locEventLoop, string locOut
 	if(dThrownTreeInterface->Get_BranchesCreatedFlag())
 		return; //branches already created: return
 
+	// set parameters specifically for thrown trees
+	if(gPARMS->Exists("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES"))
+	    {gPARMS->GetParameter("ANALYSIS:STORE_THROWN_DECAYING_PARTICLES",STORE_THROWN_DECAYING_PARTICLES); cout << "ANALYSIS:STORE_THROWN_DECAYING_PARTICLES set to " << STORE_THROWN_DECAYING_PARTICLES << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+
 	//TTREE BRANCHES
 	DTreeBranchRegister locBranchRegister;
 
@@ -167,6 +172,8 @@ void DEventWriterROOT::Create_DataTree(const DReaction* locReaction, JEventLoop*
 	locBranchRegister.Register_Single<UInt_t>("RunNumber");
 	locBranchRegister.Register_Single<ULong64_t>("EventNumber");
 	locBranchRegister.Register_Single<UInt_t>("L1TriggerBits");
+	locBranchRegister.Register_Single<Double_t>("L1BCALEnergy");
+	locBranchRegister.Register_Single<Double_t>("L1FCALEnergy");
 
 	//create X4_Production
 	locBranchRegister.Register_Single<TLorentzVector>("X4_Production");
@@ -281,6 +288,7 @@ TMap* DEventWriterROOT::Create_UserInfoMaps(DTreeBranchRegister& locBranchRegist
 
 	if(gPARMS->Exists("ANALYSIS:STORE_SC_VETO_INFO"))
 	    {gPARMS->GetParameter("ANALYSIS:STORE_SC_VETO_INFO",STORE_SC_VETO_INFO); cout << "ANALYSIS:STORE_SC_VETO_INFO set to " << STORE_SC_VETO_INFO << ", IGNORE the \"<-- NO DEFAULT! (TYPO?)\" message " << endl;}
+
 
 	if(locKinFitType != d_NoFit)
 	{
@@ -1106,7 +1114,8 @@ void DEventWriterROOT::Fill_ThrownTree(JEventLoop* locEventLoop) const
 	locEventLoop->Get(locMCThrowns_FinalState, "FinalState");
 
 	vector<const DMCThrown*> locMCThrowns_Decaying;
-	locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
+	if(STORE_THROWN_DECAYING_PARTICLES)
+		locEventLoop->Get(locMCThrowns_Decaying, "Decaying");
 
 	const DMCReaction* locMCReaction = NULL;
 	locEventLoop->GetSingle(locMCReaction);
@@ -1344,6 +1353,9 @@ void DEventWriterROOT::Fill_DataTree(JEventLoop* locEventLoop, const DReaction* 
 	locTreeFillData->Fill_Single<UInt_t>("RunNumber", locEventLoop->GetJEvent().GetRunNumber());
 	locTreeFillData->Fill_Single<ULong64_t>("EventNumber", locEventLoop->GetJEvent().GetEventNumber());
 	locTreeFillData->Fill_Single<UInt_t>("L1TriggerBits", locTrigger->Get_L1TriggerBits());
+	locTreeFillData->Fill_Single<Double_t>("L1BCALEnergy", locTrigger->Get_GTP_BCALEnergy());
+	locTreeFillData->Fill_Single<Double_t>("L1FCALEnergy", locTrigger->Get_GTP_FCALEnergy());
+
 
 	//PRODUCTION X4
 	DLorentzVector locProductionX4 = locVertex->dSpacetimeVertex;
@@ -2409,7 +2421,7 @@ void DEventWriterROOT::Fill_KinFitData(DTreeFillData* locTreeFillData, JEventLoo
         //Look at the decay products:
         //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
         vector<const DKinematicData*> finalParticlesMeasured = locParticleCombos.at(iPC)->Get_FinalParticles_Measured(locReaction, d_AllCharges);
-        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction, d_AllCharges);
+        vector<const DKinematicData*> finalParticles = locParticleCombos.at(iPC)->Get_FinalParticles(locReaction); //, d_AllCharges);
         
         vector<const JObject*> finalParticleObjects = locParticleCombos.at(iPC)->Get_FinalParticle_SourceObjects(d_AllCharges);
         nMeasuredFinalParticles = finalParticlesMeasured.size();

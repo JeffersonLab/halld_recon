@@ -55,6 +55,8 @@ class DEventProcessor_monitoring_hists : public JEventProcessor
 		TH1D* dHist_IsEvent; //counts events
 
 		unsigned int dNumMemoryMonitorEvents;
+
+        double MIN_TRACKING_FOM;
 };
 
 #endif // _DEventProcessor_monitoring_hists_

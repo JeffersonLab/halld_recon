@@ -163,6 +163,8 @@ class DGeometry{
       bool GetBCALDepth(float &bcal_depth) const; ///< depth (or height) of BCAL module in cm
       bool GetBCALPhiShift(float &bcal_phi_shift) const; ///< phi angle in degrees that first BCAL module is shifted from being centered at ph=0.0
 
+      bool GetECALZ(double &z_ecal) const; /// z-location of front face of CCAL in cm
+
       bool GetCCALZ(double &z_ccal) const; /// z-location of front face of CCAL in cm
 
       bool GetFCALZ(double &z_fcal) const; ///< z-location of front face of FCAL in cm
@@ -176,6 +178,7 @@ class DGeometry{
 
       bool GetDIRCZ(double &z_dirc) const; ///< z-location of DIRC in cm
       bool GetTOFZ(vector<double> &z_tof) const; ///< z-location of front face of each of TOF in cm
+      bool GetTOFZ(double &CenterVPlane,double &CenterHPlane,double &CenterMPlane) const; ///< method used by DTOFPoint code, returning z-locations of centers of paddles
 	  bool GetTOFPaddlePerpPositions(vector<double> &y_tof, vector<double> &y_widths) const;
 	  bool GetTOFPaddleParameters(map<string,double> &paddle_params) const;
       bool GetTargetZ(double &z_target) const; ///< z-location of center of target
@@ -184,6 +187,7 @@ class DGeometry{
       bool GetTRDZ(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm
       
       bool GetFCALPosition(double &x,double &y,double &z) const;
+      bool GetECALPosition(double &x,double &y,double &z) const;
       bool GetCCALPosition(double &x,double &y,double &z) const;
 
       bool GetFCALInsertRowSize(int &insert_row_size) const;

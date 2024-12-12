@@ -19,7 +19,9 @@ using namespace std;
 #include <TH1.h>
 #include <TH2.h>
 #include <TH3.h>
+#include <TProfile.h>
 #include <TMath.h>
+
 
 #include <JANA/JFactory.h>
 #include <JANA/JEventProcessor.h>
@@ -97,9 +99,67 @@ class JEventProcessor_CDC_Efficiency:public jana::JEventProcessor{
 		TH2I *ChargeVsTrackLength;
 		TH1I * hChi2OverNDF;
 		TH2I *hResVsT;
-		
+
 	 
-		
+		TH1F *hExpectedHitsVsPathLength;
+		TH1F *hExpectedHitsVsDOCA;
+		TH1F *hExpectedHitsVsTrackingFOM;
+		TH1F *hExpectedHitsVsTheta;
+		TH1F *hExpectedHitsVsMom;
+		TH1F *hExpectedHitsVsDelta;
+		TH2F *hExpectedHitsMomVsTheta;
+		TH1F *hExpectedHitsVsN;
+	
+		TH1F *hMeasuredHitsVsPathLength;
+		TH1F *hMeasuredHitsVsDOCA;
+		TH1F *hMeasuredHitsVsTrackingFOM;
+		TH1F *hMeasuredHitsVsTheta;
+		TH1F *hMeasuredHitsVsMom;
+		TH1F *hMeasuredHitsVsDelta;
+		TH2F *hMeasuredHitsMomVsTheta;
+		TH1F *hMeasuredHitsVsN;
+	
+		TH1F *hMeasuredHitsWithDEDxVsPathLength;
+		TH1F *hMeasuredHitsWithDEDxVsDOCA;
+		TH1F *hMeasuredHitsWithDEDxVsTrackingFOM;
+		TH1F *hMeasuredHitsWithDEDxVsTheta;
+		TH1F *hMeasuredHitsWithDEDxVsMom;
+		TH1F *hMeasuredHitsWithDEDxVsDelta;
+		TH2F *hMeasuredHitsWithDEDxMomVsTheta;
+		TH1F *hMeasuredHitsWithDEDxVsN;
+	
+		TProfile *hEfficiencyVsPathLength;
+		TProfile *hEfficiencyVsDOCA;
+		TProfile *hEfficiencyVsTrackingFOM;
+		TProfile *hEfficiencyVsTheta;
+		TProfile *hEfficiencyVsMom;
+		TProfile *hEfficiencyVsDelta;
+		TProfile *hEfficiencyVsN;
+	
+		TProfile *hEfficiencyWithDEDxVsPathLength;
+		TProfile *hEfficiencyWithDEDxVsDOCA;
+		TProfile *hEfficiencyWithDEDxVsTrackingFOM;
+		TProfile *hEfficiencyWithDEDxVsTheta;
+		TProfile *hEfficiencyWithDEDxVsMom;
+		TProfile *hEfficiencyWithDEDxVsDelta;
+		TProfile *hEfficiencyWithDEDxVsN;
+	
+		TProfile *hEfficiencyVsChannel;
+		map<int, TProfile *> hEfficiencyVsSlotROC;
+		map<int, TProfile *> hEfficiencyVsChannelROC;
+	
+		TProfile *hEfficiencyWithDEDxVsChannel;
+		map<int, TProfile *> hEfficiencyWithDEDxVsSlotROC;
+		map<int, TProfile *> hEfficiencyWithDEDxVsChannelROC;
+	
+		TProfile2D *hEfficiencyMomVsTheta;
+		TProfile2D *hEfficiencyDistanceVsDelta;
+		TProfile2D *hEfficiencyZVsDelta;
+
+		TProfile2D *hEfficiencyWithDEDxMomVsTheta;
+		TProfile2D *hEfficiencyWithDEDxDistanceVsDelta;
+		TProfile2D *hEfficiencyWithDEDxZVsDelta;
+
 
 };
 

@@ -67,6 +67,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	vector<const DCDCHit*> CDCHits;
 	vector<const DTOFHit*> TOFHits;
 	vector<const DFCALHit*> FCALHits;
+	vector<const DECALHit*> ECALHits;
 	vector<const DCCALHit*> CCALHits;
 	vector<const DSCHit*> SCHits;
 	vector<const DBCALDigiHit*> BCALDigiHits;
@@ -79,11 +80,14 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	vector<const DTPOLHit*> TPOLHits;
 	vector<const DRFTime*> RFtimes;
 	vector<const DDIRCPmtHit*> DIRCPmtHits;
+	vector<const DCTOFHit*> CTOFHits;
+	vector<const DFMWPCHit*> FMWPCHits;
 
 	locEventLoop->Get(CDCHits, CDC_TAG.c_str());	
 	locEventLoop->Get(FDCHits, FDC_TAG.c_str());
 	locEventLoop->Get(TOFHits);
 	locEventLoop->Get(FCALHits);
+	locEventLoop->Get(ECALHits);
 	locEventLoop->Get(CCALHits);
 	locEventLoop->Get(BCALDigiHits);
 	locEventLoop->Get(BCALTDCDigiHits);
@@ -95,8 +99,10 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	locEventLoop->Get(TPOLHits);
 	locEventLoop->Get(RFtimes);
 	locEventLoop->Get(DIRCPmtHits);
+	locEventLoop->Get(CTOFHits);
+	locEventLoop->Get(FMWPCHits);
 
-	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0))
+	if(CDCHits.size()== uint(0) && TOFHits.size()==uint(0) && FCALHits.size()==uint(0) && BCALDigiHits.size()==uint(0) && BCALTDCDigiHits.size()==uint(0) && SCHits.size()==uint(0) && PSHits.size()==uint(0) && PSCHits.size()==uint(0) && FDCHits.size()==uint(0) && TAGHHits.size()==uint(0) && TAGMHits.size()==uint(0) && TPOLHits.size()==uint(0) && RFtimes.size()==uint(0) && DIRCPmtHits.size()==uint(0) && CCALHits.size()==uint(0) && ECALHits.size()==uint(0) && CTOFHits.size()==uint(0) && FMWPCHits.size()==uint(0) )
 	{
 		return false;
 	}
@@ -592,6 +598,51 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 
 
 
+	//========================================ECAL=========================================================
+
+
+	for(uint i=0; i<ECALHits.size(); ++i)
+	  {
+	    if(i == 0)
+	      {
+			hitv->addCrystalEcals();
+		}
+		bool found = false;
+		//ECAL only has one hit per block per event so we need not search
+		hddm_s::EcalBlockList* ECAL_BlockList = &hitv->getCrystalEcal().getEcalBlocks();
+		hddm_s::EcalBlockList::iterator ECAL_BlockIterator = ECAL_BlockList->begin();
+
+		for(ECAL_BlockIterator = ECAL_BlockList->begin(); ECAL_BlockIterator != ECAL_BlockList->end(); ECAL_BlockIterator++)
+				{
+					if(ECALHits[i]->row==ECAL_BlockIterator->getRow() && ECALHits[i]->column==ECAL_BlockIterator->getColumn())
+					{
+						found=true;
+						break;
+					}
+				}
+
+		if(found==false)
+		{
+			hitv->getCrystalEcal().addEcalBlocks();
+			ECAL_BlockIterator=ECAL_BlockList->end()-1;
+			ECAL_BlockIterator->setColumn(ECALHits[i]->column);
+			ECAL_BlockIterator->setRow(ECALHits[i]->row);            
+		}
+
+
+		ECAL_BlockIterator->addEcalHits();
+		hddm_s::EcalHitList* ECAL_HitList = &ECAL_BlockIterator->getEcalHits();
+		hddm_s::EcalHitList::iterator ECAL_HitIterator = ECAL_HitList->end()-1;
+		ECAL_HitIterator->setT(ECALHits[i]->t);
+		ECAL_HitIterator->setE(ECALHits[i]->E);
+
+
+	}
+
+
+
+
+
 	//========================================CCAL=========================================================
 
 	for(uint i=0; i<CCALHits.size(); ++i)
@@ -748,6 +799,71 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 		iter->setT(DIRCPmtHits[i]->t);
 	}
 
+	//=========================================CTOF=======================================================
+
+	for(uint i=0; i<CTOFHits.size(); ++i)
+	  {
+	    if(i == 0)
+	      {
+		hitv->addCppTOFs();
+	      }
+	    bool found = false;
+	    hddm_s::CtofCounterList* CTOF_CounterList = &hitv->getCppTOF().getCtofCounters();
+	    hddm_s::CtofCounterList::iterator CTOF_CounterIterator = CTOF_CounterList->begin();
+	    for(CTOF_CounterIterator = CTOF_CounterList->begin(); CTOF_CounterIterator != CTOF_CounterList->end(); CTOF_CounterIterator++)
+	      {
+		if(CTOFHits[i]->bar==CTOF_CounterIterator->getBar())
+		  {
+		    found=true;
+		    break;
+		  }
+	      }
+	    if(found==false)
+	      {
+		hitv->getCppTOF().addCtofCounters();
+		CTOF_CounterIterator=CTOF_CounterList->end()-1;
+		CTOF_CounterIterator->setBar(CTOFHits[i]->bar);
+	      }
+	    CTOF_CounterIterator->addCtofHits();
+	    hddm_s::CtofHitList* ctofhitl=&CTOF_CounterIterator->getCtofHits();
+	    hddm_s::CtofHitList::iterator ctofhitit=ctofhitl->end()-1;
+	    ctofhitit->setEnd(CTOFHits[i]->end);
+	    ctofhitit->setT(CTOFHits[i]->t);
+	    ctofhitit->setDE(CTOFHits[i]->dE);
+	  }
+	//=============================================FMWPC================================================
+	for(uint i=0;i<FMWPCHits.size();++i)
+	  {
+	    if(i==0)
+	      {
+	      hitv->addForwardMWPCs();
+	      }
+	    bool foundChamber=false;
+	    hddm_s::FmwpcChamberList* FMWPC_ChamberList = &hitv->getForwardMWPC().getFmwpcChambers();
+	    hddm_s::FmwpcChamberList::iterator FMWPC_ChamberIterator = FMWPC_ChamberList->begin();
+	    for(FMWPC_ChamberIterator = FMWPC_ChamberList->begin(); FMWPC_ChamberIterator != FMWPC_ChamberList->end(); FMWPC_ChamberIterator++)
+	      {
+		if(FMWPCHits[i]->layer == FMWPC_ChamberIterator->getLayer() &&
+		   FMWPCHits[i]->wire == FMWPC_ChamberIterator->getWire())
+		  {
+		    foundChamber = true;
+		    break;
+		  }
+	      }
+	    if(foundChamber == false)
+	      {
+		hitv->getForwardMWPC().addFmwpcChambers();
+		FMWPC_ChamberIterator = FMWPC_ChamberList->end()-1;
+		FMWPC_ChamberIterator->setLayer(FMWPCHits[i]->layer);
+		FMWPC_ChamberIterator->setWire(FMWPCHits[i]->wire);
+	      }
+	    FMWPC_ChamberIterator->addFmwpcHits();
+	    hddm_s::FmwpcHitList* fmwpchitl=&FMWPC_ChamberIterator->getFmwpcHits();
+	    hddm_s::FmwpcHitList::iterator fmwpchitit=fmwpchitl->end()-1;
+	    fmwpchitit->setT(FMWPCHits[i]->t);
+	  }
+	
+
 	//*fout << *record; //stream the new record into the file
 
 	// write the resulting record to the output stream
@@ -758,6 +874,7 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	CDCHits.clear();
 	TOFHits.clear();
 	FCALHits.clear();
+	ECALHits.clear();
 	CCALHits.clear();
 	SCHits.clear();
 	BCALDigiHits.clear();
@@ -770,6 +887,8 @@ bool DEventWriterHDDM::Write_HDDMEvent(JEventLoop* locEventLoop, string locOutpu
 	TPOLHits.clear();
 	RFtimes.clear();
 	DIRCPmtHits.clear();
+	FMWPCHits.clear();
+	CTOFHits.clear();
 
 	return locWriteStatus;
 }

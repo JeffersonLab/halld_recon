@@ -63,7 +63,55 @@ JEventProcessor_BCAL_SiPM_saturation::~JEventProcessor_BCAL_SiPM_saturation()
 //------------------
 jerror_t JEventProcessor_BCAL_SiPM_saturation::init(void)
 {
+	Int_t nbins=100;
+
+
 	// This is called once at program startup. 
+	gDirectory->mkdir("BCAL_SiPM_saturation");
+	gDirectory->cd("BCAL_SiPM_saturation");
+
+	gDirectory->mkdir("Hists1D");
+	gDirectory->cd("Hists1D");
+
+    dHistEthrown = new TH1F("Ethrown", "BCAL SiPM Saturation; Thrown Energy (GeV)",4*nbins,0,10);
+    dHistEshower = new TH1F("Eshower", "BCAL SiPM Saturation; Shower Energy (GeV)",10*nbins,0,10);
+    dHistThrownTheta = new TH1F("Thrown Theta", "BCAL SiPM Saturation; Thrown Theta (degrees)",4*90,0,90);
+    dHistNCell = new TH1F("NCell", "BCAL SiPM Saturation; Number of cells",nbins,0,100 );
+    dHistLayer = new TH1F("layer", "BCAL SiPM Saturation; Layer Number",5,0,5);
+    dHistEpoint = new TH1F("Ept", "BCAL SiPM Saturation; Point Energy (GeV)",10*nbins,0,10);
+
+
+   	nbins=5100;
+
+    dHistPeakLayer1 = new TH1F("Hit pulse_peak layer=1", "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
+    dHistIntegralLayer1 = new TH1F("Hit integral layer=1", "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
+    dHistPeakLayer2 = new TH1F("Hit pulse_peak layer=2", "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
+    dHistIntegralLayer2 = new TH1F("Hit integral layer=2", "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
+    dHistPeakLayer3 = new TH1F("Hit pulse_peak layer=3", "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
+    dHistIntegralLayer3 = new TH1F("Hit integral layer=3", "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
+    dHistPeakLayer4 = new TH1F("Hit pulse_peak layer=4", "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
+    dHistIntegralLayer4 = new TH1F("Hit integral layer=4", "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
+    dHistEcalc = new TH1F("Ecalc", "BCAL SiPM Saturation; Calc Energy (GeV)",4*nbins,0,10);
+    dHistEcalcEpt = new TH1F("Ecalc-Ept", "BCAL SiPM Saturation; Calc-Pt Energy (GeV)",nbins,-0.05,0.05);
+
+	gDirectory->cd("..");
+
+	gDirectory->mkdir("Hists2D");
+	gDirectory->cd("Hists2D");
+
+   	nbins=100;
+
+    dHistEshowerVsEthrown = new TH2F("Eshower_vs_Ethrown",  "BCAL SiPM Saturation; Thrown Energy (GeV); Shower Energy (GeV)",
+                         4*nbins,0,10,4*nbins,0,10);
+    dHistEdiffVsEthrown = new TH2F("EDiff_vs_Ethrown",  "BCAL SiPM Saturation; Thrown Energy (GeV); (Shower - Thrown) Energy (GeV)",
+                         4*nbins,0,10,nbins,-0.5,0.5);
+    dHistEdiffFracVsEthrown = new TH2F("EDiff/Ethrown_vs_Ethrown", "BCAL SiPM Saturation; Thrown Energy (GeV); (EShower - EThrown)/Ethrown",
+                         4*nbins,0,10,nbins,-0.2,0.2);
+
+	gDirectory->cd("..");
+
+	gDirectory->cd("..");
+
 
 	return NOERROR;
 }
@@ -140,15 +188,15 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
         if (locDetector != SYS_BCAL) continue;
         // Get shower properties
         vector<const DBCALShower*> BCALShowers;
-	locNeutralShower->Get(BCALShowers);
+		locNeutralShower->Get(BCALShowers);
 
-	// Should be only one BCAL shower for each neutral shower
-	const DBCALShower* locBCALShower= BCALShowers[0];
-        Eshower = locBCALShower->E;
+		// Should be only one BCAL shower for each neutral shower
+		const DBCALShower* locBCALShower= BCALShowers[0];
+			Eshower = locBCALShower->E;
 
-	// for MC select showers that are greater than 50% of thrown energy
-	if (NumThrown == 1 && Eshower < Ethrown/2.) 
-	  continue;
+		// for MC select showers that are greater than 50% of thrown energy
+		if (NumThrown == 1 && Eshower < Ethrown/2.) 
+		  continue;
    
         /*float E_preshower = locBCALShower->E_preshower;
         float z = locBCALShower->z;
@@ -161,89 +209,82 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 
         // cout << " Shower i=" << i << " E_shower=" << Eshower << " E_preshower=" << E_preshower << " x=" << x << " y=" << y << " z=" << z << " R=" << R << " sigLong=" << sigLong << " sigTrans=" << sigTrans << " sigTheta=" << sigTheta << endl;
 
-	Int_t nbins=100;
-
-	// Fill histogram for showers
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Ethrown", Ethrown,
-                         "BCAL SiPM Saturation; Thrown Energy (GeV)",4*nbins,0,10);
-
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Eshower", Eshower,
-                         "BCAL SiPM Saturation; Shower Energy (GeV)",10*nbins,0,10);
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Thrown Theta", thetathrown,
-                         "BCAL SiPM Saturation; Thrown Theta (degrees)",4*90,0,90);
-
-        // Fill 2D histograms
-        Fill2DHistogram ("BCAL_SiPM_saturation", "Hists2D", "Eshower_vs_Ethrown", Ethrown, Eshower,
-                         "BCAL SiPM Saturation; Thrown Energy (GeV); Shower Energy (GeV)",
-                         4*nbins,0,10,4*nbins,0,10);
-        Fill2DHistogram ("BCAL_SiPM_saturation", "Hists2D", "EDiff_vs_Ethrown", Ethrown, Eshower - Ethrown,
-                         "BCAL SiPM Saturation; Thrown Energy (GeV); (Shower - Thrown) Energy (GeV)",
-                         4*nbins,0,10,nbins,-0.5,0.5);
-        Fill2DHistogram ("BCAL_SiPM_saturation", "Hists2D", "EDiff/Ethrown_vs_Ethrown", Ethrown, Ethrown>0? (Eshower - Ethrown)/Ethrown : 0,
-                         "BCAL SiPM Saturation; Thrown Energy (GeV); (EShower - EThrown)/Ethrown",
-                         4*nbins,0,10,nbins,-0.2,0.2);
-	
-        // Get vector of points in this shower
+        // Get vector of points in this shower 
+        // load these earlier to collect the histogram fill calls below
         vector<const DBCALPoint*> Points;
 		locNeutralShower->Get(Points);
         uint Ncell = Points.size();
+        
+    	japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "NCell", Ncell,
-                         "BCAL SiPM Saturation; Number of cells",nbins,0,100);
+		// Fill histogram for showers
+		dHistEthrown->Fill(Ethrown);
+		dHistEshower->Fill(Eshower);
+		dHistThrownTheta->Fill(thetathrown);
+
+        // Fill 2D histograms
+		dHistEshowerVsEthrown->Fill(Ethrown, Eshower);
+		dHistEdiffVsEthrown->Fill(Ethrown, Eshower - Ethrown);
+		dHistEdiffFracVsEthrown->Fill(Ethrown, Ethrown>0? (Eshower - Ethrown)/Ethrown : 0);
+	
+        dHistNCell->Fill(Ncell);
+
+    	japp->RootUnLock(); //RELEASE ROOT LOCK
+
 
         for (unsigned int j = 0; j < Ncell; j++){
             const DBCALPoint* locPoint = Points[j];
             float t = locPoint->t();
             float z = locPoint->z();
-	    float Ept = locPoint->E();
-	    int module= locPoint->module();
-	    int layer = locPoint->layer();
-	    int sector = locPoint->sector();
-	    // cout << " j=" << j << " t=" << t << endl;
+			float Ept = locPoint->E();
+			int module= locPoint->module();
+			int layer = locPoint->layer();
+			int sector = locPoint->sector();
+			// cout << " j=" << j << " t=" << t << endl;
 
-	    // calculate point energy (code taken from DBCALPoint.cc)
-	    float z_bcal_center = 212;
-	    float fibLen = 390;
-	    float zLocal = z - z_bcal_center; 
+			// calculate point energy (code taken from DBCALPoint.cc)
+			float z_bcal_center = 212;
+			float fibLen = 390;
+			float zLocal = z - z_bcal_center; 
 
 
-	    float dUp = 0.5 * fibLen + zLocal;
-	    float dDown = 0.5 * fibLen - zLocal;
-	    if (dUp>fibLen)   dUp=fibLen;
-	    if (dUp<0)        dUp=0;
-	    if (dDown>fibLen) dDown=fibLen;
-	    if (dDown<0)      dDown=0;
-	    int channel = (module-1)*16 + (layer-1)*4 + (sector-1);
-	    // cout << " module=" << module << " layer=" << layer << " sector=" << sector << " channel=" << channel << endl;
-	    // cout << " attenuation length 00=" << attenuation_parameters[channel][0] << endl;
-	    float attenuation_length = attenuation_parameters[channel][0];
-	    float attUp = exp( -dUp / attenuation_length );
-	    float attDown = exp( -dDown / attenuation_length );
+			float dUp = 0.5 * fibLen + zLocal;
+			float dDown = 0.5 * fibLen - zLocal;
+			if (dUp>fibLen)   dUp=fibLen;
+			if (dUp<0)        dUp=0;
+			if (dDown>fibLen) dDown=fibLen;
+			if (dDown<0)      dDown=0;
+			int channel = (module-1)*16 + (layer-1)*4 + (sector-1);
+			// cout << " module=" << module << " layer=" << layer << " sector=" << sector << " channel=" << channel << endl;
+			// cout << " attenuation length 00=" << attenuation_parameters[channel][0] << endl;
+			float attenuation_length = attenuation_parameters[channel][0];
+			float attUp = exp( -dUp / attenuation_length );
+			float attDown = exp( -dDown / attenuation_length );
  
 
-	    if (VERBOSE>=3) cout << " VERBOSE >=3" << " t=" << t << " z=" << z << endl;
+			if (VERBOSE>=3) cout << " VERBOSE >=3" << " t=" << t << " z=" << z << endl;
 
 
-        // Fill 1D histograms
+    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
+	
+			// Fill 1D histograms
+			dHistLayer->Fill(layer);
+			dHistEpoint->Fill(Ept);
 
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "layer", layer,
-                         "BCAL SiPM Saturation; Layer Number",5,0,5);
+	    	japp->RootUnLock(); //RELEASE ROOT LOCK
 
-        Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Ept", Ept,
-                         "BCAL SiPM Saturation; Point Energy (GeV)",10*nbins,0,10);
+			// cout << " Point: Ept=" << Ept << endl;
+			float upHit=0;
+			float downHit=0;
+			// following two lines commented out to supress warning
+			//	float uppeak=0;
+			//	float downpeak=0;
 
-	// cout << " Point: Ept=" << Ept << endl;
-	float upHit=0;
-	float downHit=0;
-	// following two lines commented out to supress warning
-	//	float uppeak=0;
-	//	float downpeak=0;
+            vector<const DBCALHit*> Hits;
+			locPoint->Get(Hits);
+            uint Nhits = Hits.size();
 
-             vector<const DBCALHit*> Hits;
-		locPoint->Get(Hits);
-                uint Nhits = Hits.size();
-
-             for (unsigned int j = 0; j < Nhits; j++){
+            for (unsigned int j = 0; j < Nhits; j++){
                 const DBCALHit* locHit = Hits[j];
 	        float Ehit = locHit->E;
 	        /*int module = locHit->module;
@@ -252,55 +293,44 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
 	        int end = locHit->end;
 	        int pulse_peak = locHit->pulse_peak;
 
-		// cout << " module=" << module << " layer=" << layer << " sector=" << sector << " pulse_peak/Ehit=" << pulse_peak/Ehit << endl;
+			// cout << " module=" << module << " layer=" << layer << " sector=" << sector << " pulse_peak/Ehit=" << pulse_peak/Ehit << endl;
 
-		if (end == 0) {
-		  upHit = Ehit;
-		  // following line commented out to supress warning
-		  //		  uppeak = pulse_peak;
-		}
-		if (end == 1) {
-		  downHit = Ehit;
-		  // following line commented out to supress warning
-		  //		  downpeak = pulse_peak;
-		}
+			if (end == 0) {
+			  upHit = Ehit;
+			  // following line commented out to supress warning
+			  //		  uppeak = pulse_peak;
+			}
+			if (end == 1) {
+			  downHit = Ehit;
+			  // following line commented out to supress warning
+			  //		  downpeak = pulse_peak;
+			}
 
 
-	    nbins=5100;
+    		japp->RootWriteLock(); //ACQUIRE ROOT LOCK!!
 
             // Fill 1D histograms
-	    if (layer == 1) {
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit pulse_peak layer=1", pulse_peak,
-                         "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
+			if (layer == 1) {
+				dHistPeakLayer1->Fill(pulse_peak);
+				dHistIntegralLayer1->Fill(Ehit);
+			}
+			else if (layer == 2) {
+				dHistPeakLayer2->Fill(pulse_peak);
+				dHistIntegralLayer2->Fill(Ehit);
+			}
+			else if (layer == 3) {
+				dHistPeakLayer3->Fill(pulse_peak);
+				dHistIntegralLayer3->Fill(Ehit);
+			}
+			else if (layer == 4) {
+				dHistPeakLayer4->Fill(pulse_peak);
+				dHistIntegralLayer4->Fill(Ehit);
+			}
+			else {
+			  cout << " ***Illegal layer=" << layer << endl;
+			}
 
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit integral layer=1", Ehit,
-			     "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
-	    }
-	    else if (layer == 2) {
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit pulse_peak layer=2", pulse_peak,
-                         "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
-
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit integral layer=2", Ehit,
-			     "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
-	    }
-	    else if (layer == 3) {
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit pulse_peak layer=3", pulse_peak,
-                         "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
-
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit integral layer=3", Ehit,
-			     "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
-	    }
-	    else if (layer == 4) {
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit pulse_peak layer=4", pulse_peak,
-                         "BCAL SiPM Saturation; Hit Pulse_peak (counts)",nbins,-100,5000);
-
-            Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Hit integral layer=4", Ehit,
-			     "BCAL SiPM Saturation; Hit integral (GeV)",nbins,0, 10);
-	    }
-	    else {
-	      cout << " ***Illegal layer=" << layer << endl;
-	    }
-
+	    	japp->RootUnLock(); //RELEASE ROOT LOCK
 
 	     }
 
@@ -315,10 +345,8 @@ jerror_t JEventProcessor_BCAL_SiPM_saturation::evnt(JEventLoop *loop, uint64_t e
                      << " lambda=" << attenuation_length << " Eup=" << upHit << " Edown=" << downHit << " Point: Ept=" 
                      << Ept << " Ecalc=" << Ecalc << " Diff=" << Ept-Ecalc <<  endl;*/
 
-		Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Ecalc", Ecalc,
-                         "BCAL SiPM Saturation; Calc Energy (GeV)",4*nbins,0,10);
-		Fill1DHistogram ("BCAL_SiPM_saturation", "Hists1D", "Ecalc-Ept", Ecalc-Ept,
-				 "BCAL SiPM Saturation; Calc-Pt Energy (GeV)",nbins,-0.05,0.05);
+		dHistEcalc->Fill(Ecalc);
+		dHistEcalcEpt->Fill(Ecalc-Ept);
 
 	}
 

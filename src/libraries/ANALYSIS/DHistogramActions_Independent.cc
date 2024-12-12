@@ -819,6 +819,11 @@ void DHistogramAction_DetectorMatching::Initialize(JEventLoop* locEventLoop)
 
 	bool locIsRESTEvent = locEventLoop->GetJEvent().GetStatusBit(kSTATUS_REST);
 
+    IGNORE_START_COUNTER = false;
+	if(gPARMS->Exists("MATCHING:IGNORE_START_COUNTER"))
+		gPARMS->GetParameter("MATCHING:IGNORE_START_COUNTER", IGNORE_START_COUNTER);
+
+
 	Run_Update(locEventLoop);
 
 	//CREATE THE HISTOGRAMS
@@ -1474,7 +1479,7 @@ void DHistogramAction_DetectorMatching::Fill_MatchingHists(JEventLoop* locEventL
 			double locP = locTrack->momentum().Mag();
 
 			//BCAL
-			if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_START))
+			if(IGNORE_START_COUNTER || locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_START))
 			{
 				if(locDetectorMatches->Get_IsMatchedToDetector(locTrack, SYS_BCAL))
 				{
@@ -4032,7 +4037,19 @@ bool DHistogramAction_TriggerStudies::Perform_Action(JEventLoop* locEventLoop, c
 	locEventLoop->GetSingle(locTrigger);
 	if(locTrigger == nullptr)
 		return true;
+		
+	// allow for this histogram to be called for a particular reaction, and then only plot it for 
+	// events that pass some reasonable kinematic fit cut
+ 	if(dKinFitCLCut >= 0.) {
+		const DKinFitResults* locKinFitResults = locParticleCombo->Get_KinFitResults();
+		if(locKinFitResults == NULL)
+			return true;
+		double locConfidenceLevel = locKinFitResults->Get_ConfidenceLevel();
+		if(locConfidenceLevel < dKinFitCLCut)
+			return true;
+	}
 
+	
 
 	//FILL HISTOGRAMS
 	//Since we are filling histograms local to this action, it will not interfere with other ROOT operations: can use action-wide ROOT lock

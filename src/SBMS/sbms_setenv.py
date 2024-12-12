@@ -86,6 +86,13 @@ def mk_setenv_csh(env):
 	str += 'setenv HDDS_HOME %s\n' % os.getenv('HDDS_HOME', '$HOME/hdds')
 	str += '\n'
 
+	# HDDM
+	str += '# HDDM\n'
+	str += 'setenv HDDM_HOME %s\n' % os.getenv('HDDM_HOME', '$HOME/hddm')
+	str += 'setenv PATH ${HDDM_HOME}/bin:${PATH}\n'
+	str += 'setenv HDDM_DIR $HDDM_HOME\n'
+	str += '\n'
+
 	# JANA
 	str += '# JANA\n'
 	str += 'setenv JANA_HOME %s\n' % os.getenv('JANA_HOME', '$HOME/jana')
@@ -257,6 +264,13 @@ def mk_setenv_bash(env):
 	# HDDS
 	str += '# HDDS\n'
 	str += 'export HDDS_HOME=%s\n' % os.getenv('HDDS_HOME', '$HOME/hdds')
+	str += '\n'
+
+	# HDDM
+	str += '# HDDM\n'
+	str += 'export HDDM_HOME=%s\n' % os.getenv('HDDM_HOME', '$HOME/hddm')
+	str += 'export PATH=${HDDM_HOME}/bin:${PATH}\n'
+	str += 'export HDDM_DIR=$HDDM_HOME\n'
 	str += '\n'
 
 	# JANA

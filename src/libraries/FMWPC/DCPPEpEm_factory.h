@@ -28,6 +28,7 @@
 #include <ANALYSIS/DKinFitUtils_GlueX.h>
 #include <FMWPC/DFMWPCMatchedTrack.h>
 #include <FMWPC/DFMWPCHit.h>
+#include <HDDM/DEventHitStatistics.h>
 
 
 class ReadMLPMinus;
@@ -56,7 +57,7 @@ void DoKinematicFit(const DBeamPhoton *beamphoton,
 bool VetoNeutrals(double t0_rf,const DVector3 &vect,
 		    vector<const DNeutralParticle*>&neutrals) const;
 
-bool PiMuFillFeatures(jana::JEventLoop *loop, const DTrackTimeBased *piplus, const DTrackTimeBased *piminus, float *features);
+ bool PiMuFillFeatures(jana::JEventLoop *loop, unsigned int nChargedTracks,const DChargedTrackHypothesis *piplus, const DChargedTrackHypothesis *piminus, float *features);
 
 double SPLIT_CUT,FCAL_THRESHOLD,BCAL_THRESHOLD,GAMMA_DT_CUT;
 string PIMU_MODEL_FILE;

@@ -15,6 +15,7 @@
 #include <BCAL/DBCALHit.h>
 #include <FCAL/DFCALHit.h>
 #include <CCAL/DCCALHit.h>
+#include <ECAL/DECALHit.h>
 #include <TOF/DTOFPaddleHit.h>
 #include <DIRC/DDIRCPmtHit.h>
 
@@ -76,6 +77,11 @@ jerror_t DEventHitStatistics_factory::evnt(JEventLoop *loop, uint64_t eventnumbe
        vector<const DFCALHit*> hits;
 	   loop->Get(hits);
        stats->fcal_blocks = hits.size();
+    }
+    {
+       vector<const DECALHit*> hits;
+	   loop->Get(hits);
+       stats->ecal_blocks = hits.size();
     }
     {
        vector<const DCCALHit*> hits;

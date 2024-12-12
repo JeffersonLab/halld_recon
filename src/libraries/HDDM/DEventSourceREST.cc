@@ -362,6 +362,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
       return Extract_DTOFPoint(record,
                      dynamic_cast<JFactory<DTOFPoint>*>(factory));
    }
+   if (dataClassName =="DCTOFPoint") {
+      return Extract_DCTOFPoint(record,
+                     dynamic_cast<JFactory<DCTOFPoint>*>(factory));
+   }
    if (dataClassName =="DSCHit") {
       return Extract_DSCHit(record,
                      dynamic_cast<JFactory<DSCHit>*>(factory));
@@ -389,6 +393,10 @@ jerror_t DEventSourceREST::GetObjects(JEvent &event, JFactory_base *factory)
    if (dataClassName =="DDIRCPmtHit") {      
       return Extract_DDIRCPmtHit(record,
 		     dynamic_cast<JFactory<DDIRCPmtHit>*>(factory), locEventLoop);
+   }
+   if (dataClassName =="DFMWPCHit") {
+      return Extract_DFMWPCHit(record,
+		     dynamic_cast<JFactory<DFMWPCHit>*>(factory), locEventLoop);
    }
    if (dataClassName =="DDetectorMatches") {
       return Extract_DDetectorMatches(locEventLoop, record,
@@ -616,8 +624,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
    {
 		if (locTAGMiter->getJtag() != tag)
 		 continue;
-
-		DBeamPhoton* gamma = new DBeamPhoton();
 		
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int column = 0;
@@ -650,12 +656,14 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			continue;
 		}
 
-		double Elo = tagmGeom->getElow(column);
-		double Ehi = tagmGeom->getEhigh(column);
-		double Ebeam = (Elo + Ehi)/2.;
+		DBeamPhoton* gamma = new DBeamPhoton();
+
+		double Elo_tagm = tagmGeom->getElow(column);
+		double Ehi_tagm = tagmGeom->getEhigh(column);
+		double Ebeam_tagm = (Elo_tagm + Ehi_tagm)/2.;
 
 		// read the rest of the data from the REST file
-		DVector3 mom(0.0, 0.0, Ebeam);
+		DVector3 mom(0.0, 0.0, Ebeam_tagm);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
@@ -678,8 +686,6 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
       if (locTAGHiter->getJtag() != tag)
          continue;
 
-      DBeamPhoton* gamma = new DBeamPhoton();
-
 		// load the counter number (if it exists) and set the energy based on the counter
 		unsigned int counter = 0;
 		hddm_r::TaghChannelList &locTaghChannelList = locTAGHiter->getTaghChannels();
@@ -687,7 +693,7 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			// it's easy if the column is already set 
 			counter = locTaghChannelList().getCounter();
 		} else {
-			// if the TAGM column isn't saved in the REST file, then we do one of two things
+			// if the TAGH column isn't saved in the REST file, then we do one of two things
 			//   1) if there's no special CCDB context associated with the file, we can just
 			//      reverse engineer the counter, assuming the latest CCDB
 			//   2) If there is a special CCDB context specified, then use that instead
@@ -711,7 +717,13 @@ jerror_t DEventSourceREST::Extract_DBeamPhoton(hddm_r::HDDM *record,
 			continue;
 		}
 
-		DVector3 mom(0.0, 0.0, locTAGHiter->getE());
+      	DBeamPhoton* gamma = new DBeamPhoton();
+
+		double Elo_tagh = taghGeom->getElow(counter);
+		double Ehi_tagh = taghGeom->getEhigh(counter);
+		double Ebeam_tagh = (Elo_tagh + Ehi_tagh)/2.;
+
+		DVector3 mom(0.0, 0.0, Ebeam_tagh);
 		gamma->setPID(Gamma);
 		gamma->setMomentum(mom);
 		gamma->setPosition(pos);
@@ -876,6 +888,46 @@ jerror_t DEventSourceREST::Extract_DTOFPoint(hddm_r::HDDM *record,
 
    return NOERROR;
 }
+
+//------------------
+// Extract_DCTOFPoint
+//------------------
+jerror_t DEventSourceREST::Extract_DCTOFPoint(hddm_r::HDDM *record,
+                                   JFactory<DCTOFPoint>* factory)
+{
+   /// Copies the data from the ctofPoint hddm record. This is called
+   /// from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DCTOFPoint*> data;
+
+   // loop over ctofPoint records
+   const hddm_r::CtofPointList &ctofs = record->getCtofPoints();
+   hddm_r::CtofPointList::iterator iter;
+   for (iter = ctofs.begin(); iter != ctofs.end(); ++iter) {
+      if (iter->getJtag() != tag) {
+         continue;
+      }
+      DCTOFPoint *ctofpoint = new DCTOFPoint();
+      ctofpoint->bar = iter->getBar();
+      ctofpoint->pos = DVector3(iter->getX(),iter->getY(),iter->getZ());
+      ctofpoint->t = iter->getT();
+      ctofpoint->dE = iter->getDE();
+      
+      data.push_back(ctofpoint);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
+   return NOERROR;
+}
+
 
 //------------------
 // Extract_DSCHit
@@ -1537,7 +1589,10 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
    locEventLoop->Get(locSCHits);
 
    vector<const DTOFPoint*> locTOFPoints;
-   locEventLoop->Get(locTOFPoints);
+   locEventLoop->Get(locTOFPoints); 
+
+   vector<const DCTOFPoint*> locCTOFPoints;
+   locEventLoop->Get(locCTOFPoints);
 
    vector<const DBCALShower*> locBCALShowers;
    locEventLoop->Get(locBCALShowers);
@@ -1648,7 +1703,16 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
          locShowerMatchParams->dFlightTimeVariance = fcalIter->getTflightvar();
          locShowerMatchParams->dPathLength = fcalIter->getPathlength();
          locShowerMatchParams->dDOCAToShower = fcalIter->getDoca();
-
+	 locShowerMatchParams->dEcenter=0.;
+	 locShowerMatchParams->dE3x3=0.;
+	 locShowerMatchParams->dE5x5=0.;
+	 const hddm_r::FcalEnergyParamsList &fcalEnergyList = fcalIter->getFcalEnergyParamses();
+	 hddm_r::FcalEnergyParamsList::iterator fcalEnergyIter = fcalEnergyList.begin();
+	 for(; fcalEnergyIter != fcalEnergyList.end(); ++fcalEnergyIter){
+	   locShowerMatchParams->dEcenter=fcalEnergyIter->getEcenter();
+	   locShowerMatchParams->dE3x3=fcalEnergyIter->getE3x3();
+	   locShowerMatchParams->dE5x5=fcalEnergyIter->getE5x5();
+	 }
          locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locFCALShowers[locShowerIndex], std::const_pointer_cast<const DFCALShowerMatchParams>(locShowerMatchParams));
       }
 
@@ -1742,6 +1806,43 @@ jerror_t DEventSourceREST::Extract_DDetectorMatches(JEventLoop* locEventLoop, hd
 			 locTOFHitMatchParams->dEdx = locTOFHitMatchParams->dEdx2;
 	       }
 	   }	 
+      }
+
+      // Extract track matching data for FMPWCs
+      const hddm_r::FmwpcMatchParamsList &fmwpcList = iter->getFmwpcMatchParamses();
+      hddm_r::FmwpcMatchParamsList::iterator fmwpcIter = fmwpcList.begin();
+      for(; fmwpcIter != fmwpcList.end(); ++fmwpcIter)
+      {
+         size_t locTrackIndex = fmwpcIter->getTrack();
+	 const hddm_r::FmwpcDataList &fmwpcDataList = fmwpcIter->getFmwpcDatas();
+	 hddm_r::FmwpcDataList::iterator fmwpcDataIter = fmwpcDataList.begin();
+
+         auto locFMWPCMatchParams = std::make_shared<DFMWPCMatchParams>();
+	 for(; fmwpcDataIter != fmwpcDataList.end(); ++fmwpcDataIter){
+	   locFMWPCMatchParams->dLayers.push_back(fmwpcDataIter->getLayer());
+	   locFMWPCMatchParams->dNhits.push_back(fmwpcDataIter->getNhits());
+	   locFMWPCMatchParams->dDists.push_back(fmwpcDataIter->getDist());
+	   locFMWPCMatchParams->dClosestWires.push_back(fmwpcDataIter->getClosestwire());
+	 }
+	 locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], std::const_pointer_cast<const DFMWPCMatchParams>(locFMWPCMatchParams));
+      }
+
+      // Extract track matching data for CTOF
+      const hddm_r::CtofMatchParamsList &ctofList = iter->getCtofMatchParamses();
+      hddm_r::CtofMatchParamsList::iterator ctofIter = ctofList.begin();
+      for(; ctofIter != ctofList.end(); ++ctofIter)
+      {
+         size_t locHitIndex = ctofIter->getHit();
+         size_t locTrackIndex = ctofIter->getTrack();
+
+         auto locCTOFHitMatchParams = std::make_shared<DCTOFHitMatchParams>();
+         locCTOFHitMatchParams->dCTOFPoint = locCTOFPoints[locHitIndex];
+         locCTOFHitMatchParams->dEdx = ctofIter->getDEdx();
+         locCTOFHitMatchParams->dFlightTime = ctofIter->getTflight();
+         locCTOFHitMatchParams->dDeltaXToHit = ctofIter->getDeltax();
+         locCTOFHitMatchParams->dDeltaYToHit = ctofIter->getDeltay();
+
+         locDetectorMatches->Add_Match(locTrackTimeBasedVector[locTrackIndex], locCTOFPoints[locHitIndex], std::const_pointer_cast<const DCTOFHitMatchParams>(locCTOFHitMatchParams));
       }
 
       const hddm_r::BcalDOCAtoTrackList &bcaldocaList = iter->getBcalDOCAtoTracks();
@@ -1882,6 +1983,49 @@ jerror_t DEventSourceREST::Extract_DDIRCPmtHit(hddm_r::HDDM *record,
    // Copy into factory
    factory->CopyTo(data);
    
+   return NOERROR;
+}
+
+//-----------------------
+// Extract_DFMWPCHit
+//-----------------------
+jerror_t DEventSourceREST::Extract_DFMWPCHit(hddm_r::HDDM *record,
+                                   JFactory<DFMWPCHit>* factory, JEventLoop* locEventLoop)
+{
+   /// Copies the data from the fmwpc hit hddm record. This is
+   /// call from JEventSourceREST::GetObjects. If factory is NULL, this
+   /// returns OBJECT_NOT_AVAILABLE immediately.
+
+   if (factory==NULL) {
+      return OBJECT_NOT_AVAILABLE;
+   }
+   string tag = (factory->Tag())? factory->Tag() : "";
+
+   vector<DFMWPCHit*> data;
+
+   // loop over fmwpc hit records
+   const hddm_r::FmwpcHitList &hits =
+                 record->getFmwpcHits();
+   hddm_r::FmwpcHitList::iterator iter;
+   for (iter = hits.begin(); iter != hits.end(); ++iter) {
+      if (iter->getJtag() != tag)
+         continue;
+
+      DFMWPCHit *hit = new DFMWPCHit();
+      hit->layer = iter->getLayer();
+      hit->wire = iter->getWire();
+      hit->q = iter->getQ();
+      hit->amp = iter->getAmp();
+      hit->t = iter->getT();
+      hit->QF = iter->getQf();
+      hit->ped = iter->getPed();
+
+      data.push_back(hit);
+   }
+
+   // Copy into factory
+   factory->CopyTo(data);
+
    return NOERROR;
 }
 
