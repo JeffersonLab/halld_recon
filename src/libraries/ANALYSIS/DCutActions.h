@@ -481,7 +481,7 @@ class DCutAction_InvariantMass : public DAnalysisAction
 			//call with step = 0, PIDs = pi+, pi-, and will histogram rho mass
 		DCutAction_InvariantMass(const DReaction* locReaction, size_t locStepIndex, deque<Particle_t> locToIncludePIDs, bool locUseKinFitResultsFlag, double locMinMass, double locMaxMass, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_InvariantMass", locUseKinFitResultsFlag, locActionUniqueString),
-		dInitialPID(Unknown), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs), dMinMass(locMinMass), dMaxMass(locMaxMass){}
+		dInitialPID(UnknownParticle), dStepIndex(locStepIndex), dToIncludePIDs(locToIncludePIDs), dMinMass(locMinMass), dMaxMass(locMaxMass){}
 
 		string Get_ActionName(void) const;
 		void Initialize(JEventLoop* locEventLoop);
@@ -650,12 +650,12 @@ class DCutAction_TrackShowerEOverP : public DAnalysisAction
 
 class DCutAction_PIDDeltaT : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 
 	public:
 
-		DCutAction_PIDDeltaT(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locDeltaTCut, Particle_t locPID = Unknown, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
+		DCutAction_PIDDeltaT(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locDeltaTCut, Particle_t locPID = UnknownParticle, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_PIDDeltaT", locUseKinFitResultsFlag, locActionUniqueString),
 		dDeltaTCut(locDeltaTCut), dPID(locPID), dSystem(locSystem){}
 
@@ -674,13 +674,13 @@ class DCutAction_PIDDeltaT : public DAnalysisAction
 
 class DCutAction_PIDTimingBeta : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 	//if dSystem = SYS_NULL, apply cut to all systems
 	//RECOMMENDED ONLY FOR CUTTING ON NEUTRALS (e.g. separating photons and neutrons)
 
 	public:
 
-		DCutAction_PIDTimingBeta(const DReaction* locReaction, double locMinBeta, double locMaxBeta, Particle_t locPID = Unknown, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
+		DCutAction_PIDTimingBeta(const DReaction* locReaction, double locMinBeta, double locMaxBeta, Particle_t locPID = UnknownParticle, DetectorSystem_t locSystem = SYS_NULL, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_PIDTimingBeta", false, locActionUniqueString),
 		dMinBeta(locMinBeta), dMaxBeta(locMaxBeta), dPID(locPID), dSystem(locSystem){}
 
@@ -700,11 +700,11 @@ class DCutAction_PIDTimingBeta : public DAnalysisAction
 
 class DCutAction_NoPIDHit : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all PIDs
+	//if dPID = UnknownParticle, apply cut to all PIDs
 
 	public:
 
-		DCutAction_NoPIDHit(const DReaction* locReaction, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_NoPIDHit(const DReaction* locReaction, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_NoPIDHit", false, locActionUniqueString),
 		dPID(locPID){}
 
@@ -752,11 +752,11 @@ class DCutAction_OneVertexKinFit : public DAnalysisAction
 
 class DCutAction_FlightDistance : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all relevant PIDs
+	//if dPID = UnknownParticle, apply cut to all relevant PIDs
 
 	public:
 
-		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_FlightDistance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightDistance, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_FlightDistance", locUseKinFitResultsFlag, locActionUniqueString),
 		dMinFlightDistance(locMinFlightDistance), dPID(locPID) {}
 
@@ -775,11 +775,11 @@ class DCutAction_FlightDistance : public DAnalysisAction
 
 class DCutAction_FlightSignificance : public DAnalysisAction
 {
-	//if dPID = Unknown, apply cut to all relevant PIDs
+	//if dPID = UnknownParticle, apply cut to all relevant PIDs
 
 	public:
 
-		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = Unknown, string locActionUniqueString = "") :
+		DCutAction_FlightSignificance(const DReaction* locReaction, bool locUseKinFitResultsFlag, double locMinFlightSignificance, Particle_t locPID = UnknownParticle, string locActionUniqueString = "") :
 		DAnalysisAction(locReaction, "Cut_FlightSignificance", locUseKinFitResultsFlag, locActionUniqueString),
 		dMinFlightSignificance(locMinFlightSignificance), dPID(locPID) {}
 

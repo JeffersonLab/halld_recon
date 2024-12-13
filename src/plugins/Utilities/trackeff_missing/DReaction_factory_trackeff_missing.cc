@@ -242,7 +242,7 @@ void DReaction_factory_trackeff_missing::Add_MassHistograms(DReaction* locReacti
 
 	//if nothing missing, overall missing mass squared
 	if((locNumMissingParticles == 0) && (locNumInclusiveSteps == 0) && (!locUseKinFitResultsFlag || !locP4Fit))
-		Create_MissingMassSquaredHistogram(locReaction, Unknown, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
+		Create_MissingMassSquaredHistogram(locReaction, UnknownParticle, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
 }
 
 void DReaction_factory_trackeff_missing::Add_PostKinfitTimingCuts(DReaction* locReaction)
@@ -297,11 +297,11 @@ void DReaction_factory_trackeff_missing::Create_MissingMassSquaredHistogram(DRea
 
 	//build name string
 	ostringstream locActionUniqueNameStream;
-	if((locPID == Unknown) && (locMissingMassOffOfStepIndex == 0))
+	if((locPID == UnknownParticle) && (locMissingMassOffOfStepIndex == 0))
 		locActionUniqueNameStream << locBaseUniqueName;
 	else if(locMissingMassOffOfStepIndex == 0)
 		locActionUniqueNameStream << ParticleType(locPID) << "_" << locBaseUniqueName;
-	else if(locPID == Unknown)
+	else if(locPID == UnknownParticle)
 		locActionUniqueNameStream << "Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;
 	else
 		locActionUniqueNameStream << ParticleType(locPID) << "_Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;

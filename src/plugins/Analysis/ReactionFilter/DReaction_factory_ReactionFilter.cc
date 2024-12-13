@@ -12,7 +12,7 @@
  * To distinguish between forms 1 & 2: If first step, form 1 is assumed
  *
  * PID: Geant PID
- * parentheses around any means missing, Unknown means inclusive
+ * parentheses around any means missing, UnknownParticle means inclusive
  *
  * CONTROL MODE EXAMPLES:
  * -PReaction1=1_14__14_8_9 #g, p -> p, pi+, pi-
@@ -244,7 +244,7 @@ DReactionStep* DReaction_factory_ReactionFilter::Create_ReactionStep(const DReac
 	auto locBeamMissingFlag = (std::get<4>(locStepTuple) == DReactionStep::Get_ParticleIndex_Initial());
 //	auto locSecondBeamMissingFlag = (std::get<4>(locStepTuple) == DReactionStep::Get_ParticleIndex_SecondBeam());
 
-	if(std::get<1>(locStepTuple) == Unknown) //no target or 2nd beam: pure decay
+	if(std::get<1>(locStepTuple) == UnknownParticle) //no target or 2nd beam: pure decay
 		return (new DReactionStep(std::get<0>(locStepTuple), std::get<2>(locStepTuple), std::get<3>(locStepTuple), locInclusiveFlag));
 	else //rescattering decay //2nd beam is not allowed for now (and in fact, is undistinguishable in input scheme)
 		return (new DReactionStep(std::get<0>(locStepTuple), std::get<1>(locStepTuple), std::get<2>(locStepTuple), std::get<3>(locStepTuple), locInclusiveFlag, locBeamMissingFlag));
@@ -449,7 +449,7 @@ void DReaction_factory_ReactionFilter::Add_MassHistograms(DReaction* locReaction
 
 	//if nothing missing, overall missing mass squared
 	if((locNumMissingParticles == 0) && (locNumInclusiveSteps == 0) && (!locUseKinFitResultsFlag || !locP4Fit))
-		Create_MissingMassSquaredHistogram(locReaction, Unknown, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
+		Create_MissingMassSquaredHistogram(locReaction, UnknownParticle, locUseKinFitResultsFlag, locBaseUniqueName, 0, {});
 }
 
 void DReaction_factory_ReactionFilter::Add_PostKinfitTimingCuts(DReaction* locReaction)
@@ -504,11 +504,11 @@ void DReaction_factory_ReactionFilter::Create_MissingMassSquaredHistogram(DReact
 
 	//build name string
 	ostringstream locActionUniqueNameStream;
-	if((locPID == Unknown) && (locMissingMassOffOfStepIndex == 0))
+	if((locPID == UnknownParticle) && (locMissingMassOffOfStepIndex == 0))
 		locActionUniqueNameStream << locBaseUniqueName;
 	else if(locMissingMassOffOfStepIndex == 0)
 		locActionUniqueNameStream << ParticleType(locPID) << "_" << locBaseUniqueName;
-	else if(locPID == Unknown)
+	else if(locPID == UnknownParticle)
 		locActionUniqueNameStream << "Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;
 	else
 		locActionUniqueNameStream << ParticleType(locPID) << "_Step" << locMissingMassOffOfStepIndex << "_" << locBaseUniqueName;
@@ -549,12 +549,12 @@ bool DReaction_factory_ReactionFilter::Convert_StringToPID(string locString, Par
 string DReaction_factory_ReactionFilter::Create_StepNameString(const DReactionStepTuple& locStepTuple, bool locFirstStepFlag)
 {
 	string locNameString = "";
-	auto locFirstStepTargetPID = locFirstStepFlag ? std::get<1>(locStepTuple) : Unknown;
+	auto locFirstStepTargetPID = locFirstStepFlag ? std::get<1>(locStepTuple) : UnknownParticle;
 	if(!locFirstStepFlag || locFirstStepTargetPID != 14) //use initial state if target is not a proton
 	{
 		locNameString = ShortName(std::get<0>(locStepTuple));
 		auto locSecondPID = std::get<1>(locStepTuple);
-		if(locSecondPID != Unknown)
+		if(locSecondPID != UnknownParticle)
 			locNameString += ShortName(locSecondPID);
 		locNameString += "_";
 	}
@@ -565,7 +565,7 @@ string DReaction_factory_ReactionFilter::Create_StepNameString(const DReactionSt
 		locNameString += ShortName(locFinalPID);
 	}
 	auto locMissFinalPID = std::get<3>(locStepTuple);
-	if(locMissFinalPID != Unknown)
+	if(locMissFinalPID != UnknownParticle)
 		locNameString += string("miss") + ShortName(locMissFinalPID);
 
 	if(std::get<4>(locStepTuple) == DReactionStep::Get_ParticleIndex_Inclusive())
@@ -633,7 +633,7 @@ map<size_t, tuple<string, string, string, vector<string>>> DReaction_factory_Rea
 bool DReaction_factory_ReactionFilter::Parse_StepPIDString(string locStepString, DReactionStepTuple& locStepTuple)
 {
 	//return tuple: initial pid, target/2nd-beam pid, detected final pids, missing final pid (if any), missing particle index
-	locStepTuple = std::make_tuple(Unknown, Unknown, vector<Particle_t>{}, Unknown, DReactionStep::Get_ParticleIndex_None());
+	locStepTuple = std::make_tuple(UnknownParticle, UnknownParticle, vector<Particle_t>{}, UnknownParticle, DReactionStep::Get_ParticleIndex_None());
 
 	//find separator
 	auto locStateSeparationIndex = locStepString.find("__");
@@ -673,7 +673,7 @@ bool DReaction_factory_ReactionFilter::Parse_StepPIDString(string locStepString,
 		if(dDebugFlag)
 			cout << "remaining string, underscore index, particle string: " << locRemainingStepString << ", " << locUnderscoreIndex << ", " << locParticleString << endl;
 
-		Particle_t locPID = Unknown;
+		Particle_t locPID = UnknownParticle;
 		bool locIsMissingFlag = false;
 		if(!Convert_StringToPID(locParticleString, locPID, locIsMissingFlag))
 		{
@@ -682,7 +682,7 @@ bool DReaction_factory_ReactionFilter::Parse_StepPIDString(string locStepString,
 		}
 		if(locIsMissingFlag)
 		{
-			if(locPID != Unknown)
+			if(locPID != UnknownParticle)
 				std::get<3>(locStepTuple) = locPID;
 			else
 				std::get<4>(locStepTuple) = DReactionStep::Get_ParticleIndex_Inclusive();
@@ -695,7 +695,7 @@ bool DReaction_factory_ReactionFilter::Parse_StepPIDString(string locStepString,
 		locRemainingStepString = locRemainingStepString.substr(locUnderscoreIndex + 1);
 	}
 
-	if(std::get<3>(locStepTuple) != Unknown)
+	if(std::get<3>(locStepTuple) != UnknownParticle)
 		std::get<4>(locStepTuple) = std::get<2>(locStepTuple).size();
 
 	if(dDebugFlag)

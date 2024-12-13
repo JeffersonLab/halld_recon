@@ -3047,7 +3047,7 @@ bool DHistogramAction_DetectedParticleKinematics::Perform_Action(JEventLoop* loc
 		double locBeta_Timing = locChargedTrackHypothesis->measuredBeta();
 		double locDeltaBeta = locBeta_Timing - locChargedTrackHypothesis->lorentzMomentum().Beta();
 
-		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? Unknown : locChargedTrackHypothesis->PID();
+		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? UnknownParticle : locChargedTrackHypothesis->PID();
 		if(dHistMap_P.find(locPID) == dHistMap_P.end())
 			continue; //not interested in histogramming
 
@@ -3327,7 +3327,7 @@ bool DHistogramAction_TrackShowerErrors::Perform_Action(JEventLoop* locEventLoop
 	{
 		const DChargedTrackHypothesis* locChargedTrackHypothesis = locPreSelectChargedTracks[loc_i]->Get_BestFOM();
 
-		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? Unknown : locChargedTrackHypothesis->PID();
+		Particle_t locPID = (locChargedTrackHypothesis->Get_FOM() < dMinPIDFOM) ? UnknownParticle : locChargedTrackHypothesis->PID();
 		if(dHistMap_TrackPxErrorVsP.find(locPID) == dHistMap_TrackPxErrorVsP.end())
 			continue; //not interested in histogramming
 
