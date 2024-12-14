@@ -33,15 +33,16 @@ class DReaction_factory_ReactionFilter : public JFactoryT<DReaction>
 
 			// This is so that the created DReaction objects persist throughout the life of the program instead of being cleared each event.
 			SetFactoryFlag(PERSISTENT);
-
-			auto app = GetApplication();
-			app->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
-			app->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
 		}
 
 	private:
 		bool dDebugFlag = false;
 
+		void Init(){
+			auto app = GetApplication();
+			app->SetDefaultParameter("REACTIONFILTER:KINFIT_CHISQCUT", dKinFitChiSqCut, "Maximum value of the kinematic fit chi^2/d.o.f. to keep (default: all)");
+			app->SetDefaultParameter("REACTIONFILTER:FLIGHTSIG_CUT", dFlightSignificanceCut, "Minimum value of the  (default: no cut)");
+		}
 		void Process(const std::shared_ptr<const JEvent>& locEvent) override;
 		void Finish(){
 			for(auto& obj:mData){
