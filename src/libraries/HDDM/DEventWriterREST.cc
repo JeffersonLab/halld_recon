@@ -32,7 +32,7 @@ DEventWriterREST::DEventWriterREST(const std::shared_ptr<const JEvent>& locEvent
 	lockService->Unlock("RESTWriter");
 	
 	REST_WRITE_FDC_TRACK_POS=true;
-	gPARMS->SetDefaultParameter("REST:WRITE_FDC_TRACK_POS", REST_WRITE_FDC_TRACK_POS,"Add track positions at each FDC package");
+	app->SetDefaultParameter("REST:WRITE_FDC_TRACK_POS", REST_WRITE_FDC_TRACK_POS,"Add track positions at each FDC package");
 
 	REST_WRITE_TRACK_EXIT_PARAMS=true;
 	app->SetDefaultParameter("REST:WRITE_TRACK_EXIT_PARAMS", REST_WRITE_TRACK_EXIT_PARAMS,"Add track parameters at exit to tracking volume");
