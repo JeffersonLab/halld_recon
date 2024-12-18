@@ -282,6 +282,8 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
     else{
       b=SHOWER_WIDTH_PAR0+SHOWER_WIDTH_PAR1*R;
     }
+    b=0.8;
+    double a=0.8;
     
     if (MERGE_HITS_AT_BOUNDARY && min_row<100 && max_row>=100
 	&& Emax>MIN_CLUSTER_SEED_ENERGY){
@@ -311,7 +313,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	ndf=num_hits-3;
 	for (unsigned int j=0;j<num_hits;j++){
 	  double dE=clusterHits[j].E
-	    -Esum*CalcClusterEDeriv(b,clusterHits[j],myPeak);
+	    -Esum*CalcClusterEDeriv(a,b,clusterHits[j],myPeak);
 	  chisq+=W(j,j)*dE*dE;
 	}
       }
@@ -427,7 +429,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	      // Subtract background due to the set of peaks already in the 
 	      // list from the current peak
 	      for (unsigned int m=0;m<peaks.size();m++){
-		double dE=peaks[m].E*CalcClusterEDeriv(b,clusterHits[index],
+		double dE=peaks[m].E*CalcClusterEDeriv(a,b,clusterHits[index],
 						       peaks[m]);
 		E-=dE;
 		myPeak.E-=dE;
@@ -451,7 +453,6 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	  chisq_old=chisq;
 	  ndf_old=ndf;
 	  bool good_fit=FitPeaks(W,b,clusterHits,peaks,myPeak,chisq,ndf);
-	  //cout << "Main fits " << chisq/ndf << " " << chisq_old/ndf_old<<endl;
 	  if (good_fit){
 	    if (peaks.size()>0) myPeak.status=DFCALCluster::EXTRA_PEAK;
 	    peaks.push_back(myPeak);
@@ -467,7 +468,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
 	    ndf=num_hits-3;
 	    for (unsigned int j=0;j<num_hits;j++){
 	      double dE=clusterHits[j].E
-		-Esum*CalcClusterEDeriv(b,clusterHits[j],peak_guess);
+		-Esum*CalcClusterEDeriv(a,b,clusterHits[j],peak_guess);
 	      chisq+=W(j,j)*dE*dE;
 	    }
 	  }
@@ -489,7 +490,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       for (unsigned int m=0;m<clusterHits.size();m++){
 	Elist[m]=clusterHits[m].E;
 	for (unsigned int k=0;k<peaks.size();k++){
-	  Elist[m]-=peaks[k].E*CalcClusterEDeriv(b,clusterHits[m],peaks[k]);
+	  Elist[m]-=peaks[k].E*CalcClusterEDeriv(a,b,clusterHits[m],peaks[k]);
 	}
       }
       double Emax=0.;
@@ -550,11 +551,11 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       PeakInfo myPeakInfo=peaks[0];
       for (unsigned int k=0;k<clusterHits.size();k++){
 	double Ecalc=0.,E=clusterHits[k].E;
-	Ecalc+=myPeakInfo.E*CalcClusterEDeriv(b,clusterHits[k],myPeakInfo);
+	Ecalc+=myPeakInfo.E*CalcClusterEDeriv(a,b,clusterHits[k],myPeakInfo);
 	HistdE->Fill(E,E-Ecalc);
       }
     }
-    
+  
     // Estimate fraction of "seen" energy for each peak
     size_t npeaks=peaks.size();
     vector<double>peak_fractions(npeaks);
@@ -581,7 +582,7 @@ jerror_t DFCALCluster_factory_Island::evnt(JEventLoop *loop, uint64_t eventnumbe
       unsigned int jmax=0.;
       double fsum=0.,fmax=0.,t=0.;
       for (unsigned int j=0;j<clusterHits.size();j++){
-	double f=CalcClusterEDeriv(b,clusterHits[j],peaks[k]);
+	double f=CalcClusterEDeriv(a,b,clusterHits[j],peaks[k]);
 	t+=f*clusterHits[j].t;
 	fsum+=f;
 	if (f>fmax){
@@ -775,11 +776,13 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
   vector<PeakInfo>saved_peaks=peaks;
   PeakInfo saved_new_peak=myNewPeak; 
 
+  double a=0.8;
+  
   // Iterate to find best shower energy and position
   chisq=1e6;
   unsigned int min_iter=5,max_iter=50;
   double min_frac=MIN_CUTDOWN_FRACTION;
-  double cutdown_scale=(1.-min_frac)/double(min_iter); //for cut-down for parameter adjustment
+  double cutdown_scale=(a-min_frac)/double(min_iter); //for cut-down for parameter adjustment
   for (unsigned int k=0;k<max_iter;k++){
     //    _DBG_ << "E " << myNewPeak.E << endl;
     // Make sure the energy is positive!
@@ -817,18 +820,18 @@ bool DFCALCluster_factory_Island::FitPeaks(const TMatrixD &W,double b,
 	}
 
 	// Compute the Jacobian matrix elements
-	df_dE=CalcClusterEDeriv(b,hitList[i],myPeakInfo);
+	df_dE=CalcClusterEDeriv(a,b,hitList[i],myPeakInfo);
 	A(i,3*j+0)=df_dE;
-	A(i,3*j+1)=CalcClusterXYDeriv(true,b,hitList[i],myPeakInfo);
-	A(i,3*j+2)=CalcClusterXYDeriv(false,b,hitList[i],myPeakInfo);
+	A(i,3*j+1)=CalcClusterXYDeriv(true,a,b,hitList[i],myPeakInfo);
+	A(i,3*j+2)=CalcClusterXYDeriv(false,a,b,hitList[i],myPeakInfo);
 
 	Ecalc+=myPeakInfo.E*df_dE;
       }
       // Add contributions from the peak we wish to add
-      df_dE=CalcClusterEDeriv(b,hitList[i],myNewPeak);
+      df_dE=CalcClusterEDeriv(a,b,hitList[i],myNewPeak);
       A(i,3*npeaks+0)=df_dE;
-      A(i,3*npeaks+1)=CalcClusterXYDeriv(true,b,hitList[i],myNewPeak);
-      A(i,3*npeaks+2)=CalcClusterXYDeriv(false,b,hitList[i],myNewPeak);
+      A(i,3*npeaks+1)=CalcClusterXYDeriv(true,a,b,hitList[i],myNewPeak);
+      A(i,3*npeaks+2)=CalcClusterXYDeriv(false,a,b,hitList[i],myNewPeak);
       
       Ecalc+=myNewPeak.E*df_dE;
 
@@ -938,6 +941,139 @@ double DFCALCluster_factory_Island::CalcClusterEDeriv(double b,
     double dx=dxc+sign1[i]*half_block;
     double dy=dyc+sign2[i]*half_block;
     f+=sign1[i]*sign2[i]/(2*M_PI)*atan(dx*dy/(b*sqrt(b*b+dx*dx+dy*dy)));
+  }
+  return f;
+}
+
+// Partial derivative of shower profile function w.r.t. E
+double DFCALCluster_factory_Island::CalcClusterEDeriv(double a,double b,
+						      const HitInfo &hit,
+						      const PeakInfo &myPeakInfo) const {
+  double sign1[4]={1,1,-1,-1};
+  double sign2[4]={1,-1,-1,1};
+  double half_block=0.5*dFCALGeom->sensitiveBlockSize();
+  if (dFCALGeom->isInsertBlock(hit.row,hit.column)){
+    half_block=0.5*dFCALGeom->insertSensitiveBlockSize();
+  }
+  double f=0.;
+  double dxc=hit.x-myPeakInfo.x;
+  double dyc=hit.y-myPeakInfo.y;
+  double denom=sqrt(myPeakInfo.x*myPeakInfo.x+myPeakInfo.y*myPeakInfo.y);
+  double c=myPeakInfo.x/denom;
+  double s=myPeakInfo.y/denom;
+  double b_sq=b*b;
+  double s_sq=s*s;
+  double c_sq=c*c;
+  double a_sq=a*a;
+  double a_sq_minus_1=a_sq-1.;
+  double g=sqrt(a_sq*c_sq+s_sq);
+  double g_sq=g*g;
+  for (int i=0;i<4;i++){
+    double dx=dxc+sign1[i]*half_block;
+    double dx_sq=dx*dx;
+    double dy=dyc+sign2[i]*half_block;
+    double u=c*dx+s*dy;
+    double v=-s*dx+c*dy;
+    double d=sqrt(b_sq + a_sq*u*u + v*v);
+    
+    f+=-sign1[i]*sign2[i]/(2*M_PI)
+      *(- atan(a*dy/(b*g))
+	+ atan((2*a*a_sq_minus_1*b*c*dx*g*s)
+	       /(-a_sq*dx_sq*g_sq + a_sq_minus_1*a_sq_minus_1*b_sq*c_sq*s_sq))
+	- atan((a*(b_sq + d*dx*g + dx_sq*g_sq - c*dx*dy*s + a_sq*c*dx*dy*s))
+	       /(b*(c_sq*dy*g + a_sq_minus_1*c*(d + dx*g)*s + a_sq*dy*g*s_sq)))
+	);
+  }
+  //  cout << "Ederiv " << f << endl;
+  return f;
+}
+
+// Partial derivative of shower profile function w.r.t. X(Y)
+double DFCALCluster_factory_Island::CalcClusterXYDeriv(bool isXDeriv,
+						       double a,double b,
+						       const HitInfo &hit,
+						       const PeakInfo &myPeakInfo) const {
+  double sign1[4]={1,1,-1,-1};
+  double sign2[4]={1,-1,-1,1};
+  double half_block=0.5*dFCALGeom->sensitiveBlockSize();
+  if (dFCALGeom->isInsertBlock(hit.row,hit.column)){
+    half_block=0.5*dFCALGeom->insertSensitiveBlockSize();
+  }
+  double f=0.;
+  double dxc=hit.x-myPeakInfo.x;
+  double dyc=hit.y-myPeakInfo.y;
+  double Ec=myPeakInfo.E;
+  double denom=sqrt(myPeakInfo.x*myPeakInfo.x+myPeakInfo.y*myPeakInfo.y);
+  double denom3=pow(denom,3.);
+  double c=myPeakInfo.x/denom;
+  double s=myPeakInfo.y/denom;
+  double b_sq=b*b;
+  double s_sq=s*s;
+  double c_sq=c*c;
+  double a_sq=a*a;
+  double a_sq_minus_1=a_sq-1.;
+  double g=sqrt(a_sq*c_sq+s_sq);
+  double g_sq=g*g;
+  double partial_g=0.,partial_c=0,partial_s=0.;
+  if (isXDeriv){
+    partial_c= myPeakInfo.y*myPeakInfo.y/denom3;
+    partial_s= -myPeakInfo.x*myPeakInfo.y/denom3;
+    partial_g= a_sq_minus_1*c*s_sq/(g*denom);
+  }
+  else {
+    partial_c= -myPeakInfo.x*myPeakInfo.y/denom3;
+    partial_s= myPeakInfo.x*myPeakInfo.x/denom3;
+    partial_g= -a_sq_minus_1*c_sq*s/(g*denom);
+  }
+  for (int i=0;i<4;i++){
+    double dx=dxc+sign1[i]*half_block;
+    double dy=dyc+sign2[i]*half_block;
+    double dx_sq=dx*dx;
+    double dy_sq=dy*dy;
+    double u=c*dx+s*dy;
+    double v=-s*dx+c*dy;
+    double d=sqrt(b_sq + a_sq*u*u + v*v);
+    double d_sq=d*d;
+    double dg=d+g*dx;
+    double nn=b_sq + dx*(dg*g + a_sq_minus_1*c*dy*s);
+    double nn_sq=nn*nn;
+    double f1=a_sq_minus_1*c*s*dg + c_sq*g*dy + a_sq*g*s_sq*dy;
+    double f1_sq=f1*f1;
+    double f2=-2.*a*a_sq_minus_1*b/
+      (a_sq*dx_sq*g_sq + a_sq_minus_1*a_sq_minus_1*b_sq*c_sq*s_sq);
+    double f3=dx_sq + a_sq*dy_sq;
+    double f4=b_sq + g_sq*dx_sq - c*s*dx*dy + a_sq*c*s*dx*dy + g*dx*d;
+    double factor=-sign1[i]*sign2[i]*Ec/(2*M_PI);
+    
+    if (isXDeriv){
+      f+= factor*(f2*c*g*s
+		  -a*(a_sq_minus_1*c*nn*s*(d*g + a_sq*c*u - s*v)
+		      - (c_sq*dy*g + a_sq_minus_1*c*dg*s + a_sq*dy*g*s_sq)
+		      *(d_sq*g + 2.*d*dx*g_sq + a_sq_minus_1*c*d*dy*s
+			+ a_sq*c*dx*g*u - dx*g*s*v))
+		  /(b*d*f1_sq*(1. + a_sq*nn_sq/(b_sq*f1_sq))));
+    }
+    else { 
+      f+= factor*((a*b*g)/(a_sq*dy_sq + b_sq*g_sq)
+		  - (a*(-2*dx + (nn*(2.*c_sq*d*g + 2*a_sq*d*g*s_sq
+				     - a_sq_minus_1*c*s*(-2*c_sq*dy
+							 - 2*a_sq_minus_1*c*dx*s
+							 - 2*a_sq*dy*s_sq)))/f1_sq))
+		  /(2.*b*d*(1 + (a_sq*nn_sq)/(b_sq*f1_sq))));
+    }
+    f+= factor*f2*(c*partial_s*g - c*partial_g*s + partial_c*g*s);
+    f+= factor*(a*(-(partial_g*dx*f1*(d + 2*dx*g))
+		   - (partial_s*dx*f1*(a_sq_minus_1*c*dy*dg + f3*g*s))/d
+		   + f4*partial_g*(c_sq*dy + a_sq_minus_1*c*dx*s + a_sq*dy*s_sq)
+		   + f4*partial_s*(a_sq_minus_1*c*dg + 2*a_sq*dy*g*s
+				   + (a_sq_minus_1*c*s*(a_sq_minus_1*c*dx*dy
+							+ f3*s))/d)
+		   - (partial_c*dx*f1*(dy*(c*dy*g - dg*s)
+				       + a_sq*(c*dx_sq*g + dg*dy*s)))/d
+		   + partial_c*f4*(2*c*dy*g + a_sq_minus_1*dg*s
+				   + (a_sq_minus_1*c*s*(dy*(c*dy - dx*s)
+							+ a_sq*dx*(c*dx + dy*s)))/d)))
+      /((b + (a_sq*f4*f4)/(b*f1_sq))*f1_sq);    
   }
   return f;
 }

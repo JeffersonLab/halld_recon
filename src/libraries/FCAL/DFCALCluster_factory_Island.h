@@ -63,6 +63,13 @@ public:
   double CalcClusterEDeriv(double b,const HitInfo &hit,const PeakInfo &myPeakInfo) const;
   double CalcClusterXYDeriv(bool isXDeriv,double b,const HitInfo &hit,
 			    const PeakInfo &myPeakInfo) const;
+  double CalcClusterEDeriv(double a,double b,
+			   const HitInfo &hit,
+			   const PeakInfo &myPeakInfo) const;
+  double CalcClusterXYDeriv(bool isXDeriv,
+			    double a,double b,
+			    const HitInfo &hit,
+			    const PeakInfo &myPeakInfo) const;
   void GetRowColRanges(int idiff,int nrows,int ncols,int ir,int ic,int &lo_row,
 		       int &hi_row, int &lo_col,int &hi_col) const{
     lo_col=ic-idiff;
