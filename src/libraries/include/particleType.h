@@ -1622,6 +1622,14 @@ inline static unsigned short int IsResonance(Particle_t p)
 		return 0;
 	if(p == omega)
 		return 0;
+	if(p == Rho0)
+		return 0;
+	if(p == RhoPlus)
+		return 0;
+	if(p == RhoMinus)
+		return 0;
+	if(p == DeltaPlusPlus)
+		return 0;
 	return 1;
 }
 
