@@ -921,8 +921,8 @@ bool DEventWriterREST::Write_RESTEvent(string locOutputFileName, hddm_r::HDDM& l
 		{
 			//open: get pointer, write event
 			hddm_r::ostream* locOutputRESTFileStream = Get_RESTOutputFilePointers()[locOutputFileName].second;
-			lockService->Unlock("RESTWriter");
 			*(locOutputRESTFileStream) << locRecord;
+			lockService->Unlock("RESTWriter");
 			return true;
 		}
 
