@@ -50,13 +50,15 @@ DFCALCluster_factory::DFCALCluster_factory()
         MIN_CLUSTER_SEED_ENERGY = 0.035; // GeV
 	TIME_CUT = 15.0 ; //ns
 	MAX_HITS_FOR_CLUSTERING = 250;
-	REMOVE_BAD_BLOCK = 0;
+	REMOVE_BAD_FCAL_BLOCK = 0;
+	REMOVE_BAD_ECAL_BLOCK = 0;
 	
 	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_BLOCK_COUNT", MIN_CLUSTER_BLOCK_COUNT);
 	gPARMS->SetDefaultParameter("FCAL:MIN_CLUSTER_SEED_ENERGY", MIN_CLUSTER_SEED_ENERGY);
 	gPARMS->SetDefaultParameter("FCAL:MAX_HITS_FOR_CLUSTERING", MAX_HITS_FOR_CLUSTERING);
 	gPARMS->SetDefaultParameter("FCAL:TIME_CUT",TIME_CUT,"time cut for associating FCAL hits together into a cluster");
-	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_BLOCK",REMOVE_BAD_BLOCK,"remove bad block");
+	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_FCAL_BLOCK",REMOVE_BAD_FCAL_BLOCK,"remove bad fcal block");
+	gPARMS->SetDefaultParameter("FCAL:REMOVE_BAD_ECAL_BLOCK",REMOVE_BAD_FCAL_BLOCK,"remove bad ecal block");
 
 }
 
@@ -85,9 +87,13 @@ jerror_t DFCALCluster_factory::brun(JEventLoop *eventLoop, int32_t runnumber)
 
 	fcalFaceZ_TargetIsZeq0 = fcalFrontFaceZ - targetZ;
 
-	bad_blocks_list.clear();
-	if (eventLoop->GetCalib("/FCAL/bad_block", bad_blocks_list))
+	bad_fcal_blocks_list.clear();
+	if (eventLoop->GetCalib("/FCAL/bad_block", bad_fcal_blocks_list))
 	  jout << "Error loading /FCAL/bad_block !" << endl;
+
+	bad_ecal_blocks_list.clear();
+	if (eventLoop->GetCalib("/ECAL/bad_block", bad_ecal_blocks_list))
+	  jout << "Error loading /ECAL/bad_block !" << endl;
 	
 	return NOERROR;
 }
@@ -122,10 +128,10 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
                                                      hit != fcalhits.end(); hit++ ) {
 
 	   if ( (**hit).E <  1e-6 ) continue;
-	   if (REMOVE_BAD_BLOCK == 1 &&
-	       bad_blocks_list.size() > 0 &&
+	   if (REMOVE_BAD_FCAL_BLOCK == 1 &&
+	       bad_fcal_blocks_list.size() > 0 &&
 	       0 <= fcalGeom->channel( (**hit).row, (**hit).column ) && fcalGeom->channel( (**hit).row, (**hit).column ) <= 2799 &&
-	       bad_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
+	       bad_fcal_blocks_list[fcalGeom->channel( (**hit).row, (**hit).column )] == 1) continue;
            hits->hit[nhits].id = (**hit).id;
 	   hits->hit[nhits].ch = fcalGeom->channel( (**hit).row, (**hit).column );
            hits->hit[nhits].x = (**hit).x;
@@ -146,7 +152,10 @@ jerror_t DFCALCluster_factory::evnt(JEventLoop *eventLoop, uint64_t eventnumber)
 	  for (vector<const DECALHit*>::const_iterator hit  = ecalhits.begin(); 
 	       hit != ecalhits.end(); hit++ ) {
 	    if ( (**hit).E <  1e-6 ) continue;
-	    
+            if (REMOVE_BAD_ECAL_BLOCK == 1 &&
+	       bad_ecal_blocks_list.size() > 0 &&
+	       //0 <= fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) && fcalGeom->channel( 100+(**hit).row, 100+(**hit).column ) <= 1599 &&
+	       bad_ecal_blocks_list[fcalGeom->channel( 100+(**hit).row, 100+(**hit).column )] == 1) continue;
 	    hits->hit[nhits].id = (**hit).id;
 	    hits->hit[nhits].E = (**hit).E; 
 	    hits->hit[nhits].t = (**hit).t;

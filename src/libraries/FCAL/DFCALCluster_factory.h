@@ -31,8 +31,10 @@ class DFCALCluster_factory:public JFactory<DFCALCluster>{
 		float MIN_CLUSTER_SEED_ENERGY;
 		float TIME_CUT;
 		uint32_t MAX_HITS_FOR_CLUSTERING;
-                int REMOVE_BAD_BLOCK;
-                vector <int> bad_blocks_list;
+                int REMOVE_BAD_FCAL_BLOCK;
+                int REMOVE_BAD_ECAL_BLOCK;
+                vector <int> bad_fcal_blocks_list;
+                vector <int> bad_ecal_blocks_list;
   
 		// this is the location of the front 
 		// of the FCAL in a coordinate system 
