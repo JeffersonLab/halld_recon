@@ -184,7 +184,8 @@ class DGeometry{
       bool GetTargetZ(double &z_target) const; ///< z-location of center of target
       bool GetTargetLength(double &target_length) const; ///< z-location of center of target
 
-      bool GetTRDZ(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm
+      bool GetTRDZ(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm       // REDO these for new geometry 
+      //bool GetTRDXY(vector<double> &z_trd) const; ///< z-locations for each of the TRD/GEM planes in cm    // REDO these for new geometry 
       
       bool GetFCALPosition(double &x,double &y,double &z) const;
       bool GetECALPosition(double &x,double &y,double &z) const;
