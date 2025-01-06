@@ -14,10 +14,13 @@ class DTRDHit: public JObject {
 public:
   JOBJECT_PUBLIC (DTRDHit);
 
+  int   plane;        // plane number  (X=1, Y=2)
+  int   strip;        // strip number  (different numbers for X and Y planes, from CCDB)
+
   float t;	      // detection time
-  float pulse_height; // matching terminology in FDCHit
-  int   plane;        // plane number
-  int   strip;        // strip number
+  float pulse_height; // signal amplitude
+  //float q;
+  
 
   void toStrings(vector<pair<string, string> >&items) const {
     AddString(items, "t", "%1.3f", t);
