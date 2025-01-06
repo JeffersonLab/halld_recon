@@ -341,7 +341,7 @@ jerror_t JEventProcessor_highlevel_online::init(void)
 		int slot  = p.first.second;
 		int jbin  = p.second;
 		char str[256];
-		sprintf(str, "R %d - S %d", rocid, slot);
+		sprintf(str, "R %d & S %d", rocid, slot);
 		dF1TDC_fADC_tdiff->GetXaxis()->SetBinLabel(jbin, str);
 	}
 	
