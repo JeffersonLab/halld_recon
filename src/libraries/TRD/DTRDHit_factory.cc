@@ -26,6 +26,11 @@ jerror_t DTRDHit_factory::init(void)
     a_scale      = 2.4E4/1.3E5;  // NOTE: currently fixed to FDC values, currently not used
     t_scale      = 8.0/10.0;     // 8 ns/count and integer time is in 1/10th of sample
     t_base       = { 0.,  0.};   // ns, per plane
+    
+    PEAK_THRESHOLD = 0.;  // fADC units
+    gPARMS->SetDefaultParameter("TRD:PEAK_THRESHOLD", PEAK_THRESHOLD, 
+			      "Threshold in fADC units for hit amplitudes");
+
 
 	return NOERROR;
 }
@@ -73,6 +78,9 @@ jerror_t DTRDHit_factory::brun(jana::JEventLoop *eventLoop, int32_t runnumber)
 		jerr << "Error parsing /TRD/trd_geometry !" << endl;	
 	
 	// load constant tables
+	trd_digi_constants_t empty_table;
+	time_offsets.push_back(empty_table);
+	time_offsets.push_back(empty_table);
 	if (eventLoop->GetCalib("/TRD/plane1/timing_offsets", time_offsets[0]))
 		jout << "Error loading /TRD/plane1/timing_offsets !" << endl;
 	if (eventLoop->GetCalib("/TRD/plane2/timing_offsets", time_offsets[1]))
@@ -138,10 +146,7 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
             	PBIT = config->PBIT == 0xffff ? 0 : config->PBIT;
             	//NW   = config->NW   == 0xffff ? 80 : config->NW;
             	//IE   = config->IE   == 0xffff ? 16 : config->IE;
-         	} else {
-         		// actually we probably need to set some reasonable defaults here for testing......
-         	
-         	
+         	} else {         	
             	static int Nwarnings = 0;
             	if(Nwarnings<10) {
                 	_DBG_ << "NO Df125Config object associated with Df125FDCPulse object!" << endl;
@@ -161,10 +166,13 @@ jerror_t DTRDHit_factory::evnt(JEventLoop *loop, uint64_t eventnumber)
 	
 	    // subtract pedestal
 	    double pulse_height = pulse_peak - scaled_ped;
+	    
+	    if(pulse_height < PEAK_THRESHOLD)
+	    	continue;
 
 	    // Time cut now
 	    double T = (double)digihit->pulse_time * t_scale;
-	    //if(T < 145.) continue;
+	    //if(T < 145.) continue;  // pull timing window cuts from CCDB
 
 	    // Build hit object
 	    DTRDHit *hit = new DTRDHit;
