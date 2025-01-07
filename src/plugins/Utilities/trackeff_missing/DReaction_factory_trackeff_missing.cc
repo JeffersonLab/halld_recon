@@ -140,6 +140,9 @@ void DReaction_factory_trackeff_missing::Process(const std::shared_ptr<const JEv
 //------------------
 void DReaction_factory_trackeff_missing::Finish()
 {
+	for(auto obj : mData)
+		delete obj;
+	mData.clear();
 	for(size_t loc_i = 0; loc_i < dReactionStepPool.size(); ++loc_i)
 		delete dReactionStepPool[loc_i]; //cleanup memory
 }
